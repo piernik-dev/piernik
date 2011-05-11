@@ -46,7 +46,7 @@ module mpisetup
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, comm, comm3d, req, status, ierr, info, &
         &    master, slave, have_mpi, has_dir, eff_dim, is_uneven, is_mpi_noncart, &
         &    nproc, pcoords, proc, procn, psize, procxyl, procyxl, &
-        &    dom, geometry_type, &
+        &    dom, geometry_type, procmask, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
         &    integration_order, limiter, smalld, smallei, smallp, use_smalld, magic_mass, local_magic_mass, &
@@ -88,15 +88,19 @@ module mpisetup
    integer, allocatable, dimension(:) :: primes
    real :: ideal_bsize
    integer, protected :: geometry_type  !< the type of geometry: cartesian: GEO_XYZ, cylindrical: GEO_RPZ, other: GEO_INVALID
+   integer, dimension(:), allocatable :: procmask !< (0:nproc-1)-sized auxiliary array for searching overlaps, neighbours etc. BEWARE: antiparallel
 
    ! Namelist variables
 
    integer, dimension(ndims), protected :: psize !< desired number of MPI blocks in x, y and z-dimension
    logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
    logical :: allow_uneven    !< allows different values of n[xyz]b on divverent processes
+   logical :: allow_noncart   !< allows more than one neighbour on a boundary
    real    :: dd_unif_quality !< uniform domain decomposition may be rejected it its quality is below this threshold (e.g. very elongated local domains are found)
+   real    :: dd_rect_quality !< rectilinear domain decomposition may be rejected it its quality is below this threshold (not used yet)
+   logical :: use_comm3d      !< If .false. then do not call any MPI_Cart_* functions
 
-   namelist /MPI_BLOCKS/ psize, reorder, allow_uneven, dd_unif_quality
+   namelist /MPI_BLOCKS/ psize, reorder, allow_uneven, allow_noncart, dd_unif_quality, dd_rect_quality, use_comm3d
 
    integer, protected :: nxd  !< number of %grid cells in physical domain (without boundary cells) in x-direction (if == 1 then x-dimension is reduced to a point with no boundary cells)
    integer, protected :: nyd  !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
@@ -160,7 +164,9 @@ contains
 !! <tr><td>psize(3)       </td><td>1      </td><td>integer</td><td>\copydoc mpisetup::psize          </td></tr>
 !! <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc mpisetup::reorder        </td></tr>
 !! <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc mpisetup::allow_uneven   </td></tr>
+!! <tr><td>allow_noncart  </td><td>.false.</td><td>logical</td><td>\copydoc mpisetup::allow_noncart  </td></tr>
 !! <tr><td>dd_unif_quality</td><td>0.9    </td><td>real   </td><td>\copydoc mpisetup::dd_unif_quality</td></tr>
+!! <tr><td>dd_rect_quality</td><td>0.9    </td><td>real   </td><td>\copydoc mpisetup::dd_rect_quality</td></tr>
 !! </table>
 !! \n \n
 !! @b DOMAIN
@@ -211,7 +217,7 @@ contains
 !<
    subroutine init_mpi
 
-      use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, dpi, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF, DD_CART
+      use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, dpi, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF, DD_CART, DD_UE
       use mpi,           only: MPI_COMM_WORLD, MPI_COMM_NULL, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
       use dataio_pub,    only: die, printinfo, msg, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
@@ -235,7 +241,9 @@ contains
       integer :: cwd_status, host_status
       logical :: par_file_exist
       logical :: tmp_log_exist
-      integer :: p
+      integer :: p, px, py
+      real :: maxcnt
+      integer, dimension(:), allocatable :: pz_slab, py_slab
       integer, dimension(ndims) :: pc
 
       call MPI_Init( ierr )
@@ -322,7 +330,9 @@ contains
       geometry = "cartesian"
 
       reorder   = .false.      !< \todo test it!
-      allow_uneven = .false.
+      allow_uneven = .true.
+      allow_noncart = .false.  !< experimental implementation
+      use_comm3d = .true.      !< \todo make a big benchmark with and without comm3d
 
       bnd_xl = 'per'
       bnd_xr = 'per'
@@ -347,6 +357,7 @@ contains
       dt_max_grow = dt_default_grow  !< for sensitive setups consider setting this as low as 1.1
       dt_min      = tiny(1.)
       dd_unif_quality = 0.9
+      dd_rect_quality = 0.9
 
       integration_order  = 2
 
@@ -405,11 +416,14 @@ contains
          rbuff(16) = zmin
          rbuff(17) = zmax
          rbuff(18) = dd_unif_quality
+         rbuff(19) = dd_rect_quality
 
          lbuff(1) = use_smalld
          lbuff(2) = reorder
-         lbuff(3) = allow_uneven
-         lbuff(4) = repeat_step
+         lbuff(3) = repeat_step
+         lbuff(4) = allow_uneven
+         lbuff(5) = allow_noncart
+         lbuff(6) = use_comm3d
 
       endif
 
@@ -422,8 +436,10 @@ contains
 
          use_smalld    = lbuff(1)
          reorder       = lbuff(2)
-         allow_uneven  = lbuff(3)
-         repeat_step   = lbuff(4)
+         repeat_step   = lbuff(3)
+         allow_uneven  = lbuff(4)
+         allow_noncart = lbuff(5)
+         use_comm3d    = lbuff(6)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)
@@ -443,6 +459,7 @@ contains
          zmin        = rbuff(16)
          zmax        = rbuff(17)
          dd_unif_quality = rbuff(18)
+         dd_rect_quality = rbuff(19)
 
          bnd_xl     = cbuff(1)
          bnd_xr     = cbuff(2)
@@ -533,13 +550,15 @@ contains
 
       call dom%set_derived ! finish up with the rest of domain_container members
 
-#ifdef MULTIGRID
-      if (allow_uneven .and. master) call warn("[mpisetup:init_mpi] Multigrid solver is not yet capable of using unevenly divided domains.")
-      allow_uneven = .false.
-#endif /* MULTIGRID */
-      if (allow_uneven .and. master .and. have_mpi) call warn("[mpisetup:init_mpi] Uneven domain decomposition is experimental.")
+      if (master .and. have_mpi) then
+         if (allow_uneven) call warn("[mpisetup:init_mpi] Uneven domain decomposition is experimental.")
+         if (allow_noncart) call warn("[mpisetup:init_mpi] Non-cartesian domain decomposition is highly experimental.")
+      endif
       is_uneven = .false.
       is_mpi_noncart = .false.
+
+      if (allocated(procmask)) call die("[mpisetup:init_mpi] procmask already allocated")
+      allocate(procmask(0:nproc-1))
 
       where (.not. has_dir(:)) psize(:) = 1
       call divide_domain
@@ -567,40 +586,45 @@ contains
 
       select case (dom%pdiv_type)
          case (DD_CART)
-            if (is_mpi_noncart) call die("[mpisetup:init_mpi] MPI_Cart_create cannot be used for non-rectilinear domain decomposition")
 
-            call MPI_Cart_create(comm, ndims, psize, dom%periodic, reorder, comm3d, ierr)
-            call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
+            if (is_mpi_noncart) call die("[mpisetup:init_mpi] inconsistent decomposition specs")
 
-            do p = 0, nproc-1
-               call MPI_Cart_coords(comm3d, p, ndims, pc, ierr)
-               where (has_dir(:))
-                  dom%se(p, :, LO) = (dom%n_d(:) *  pc(:) ) / psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
-                  dom%se(p, :, HI) = (dom%n_d(:) * (pc(:)+1))/psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
-               endwhere
-            enddo
+            if (use_comm3d) then
+               if (is_mpi_noncart) call die("[mpisetup:init_mpi] MPI_Cart_create cannot be used for non-rectilinear or AMR domains")
+               if (master) call printinfo("[mpisetup:init_mpi] Cartesian decomposition with comm3d")
 
-            ! Compute neighbors
-            do p = xdim, zdim
-               call MPI_Cart_shift(comm3d, p-xdim, 1, procn(p, LO), procn(p, HI), ierr)
-            enddo
+               call MPI_Cart_create(comm, ndims, psize, dom%periodic, reorder, comm3d, ierr)
+               call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
 
-            if (any(dom%bnd(xdim:ydim, LO) == BND_COR)) then
-               if (pcoords(xdim) == 0 .and. pcoords(ydim) > 0) then
-                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-                  call MPI_Cart_rank(comm3d,pc,procxyl,ierr)
-               else
-                  procxyl = MPI_PROC_NULL
+               do p = 0, nproc-1
+                  call MPI_Cart_coords(comm3d, p, ndims, pc, ierr)
+                  where (has_dir(:))
+                     dom%se(p, :, LO) = (dom%n_d(:) *  pc(:) ) / psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
+                     dom%se(p, :, HI) = (dom%n_d(:) * (pc(:)+1))/psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
+                  endwhere
+               enddo
+
+               ! Compute neighbors
+               do p = xdim, zdim
+                  call MPI_Cart_shift(comm3d, p-xdim, 1, procn(p, LO), procn(p, HI), ierr)
+               enddo
+
+               if (any(dom%bnd(xdim:ydim, LO) == BND_COR)) then
+                  if (pcoords(xdim) == 0 .and. pcoords(ydim) > 0) then
+                     pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+                     call MPI_Cart_rank(comm3d,pc,procxyl,ierr)
+                  else
+                     procxyl = MPI_PROC_NULL
+                  endif
+                  if (pcoords(ydim) == 0 .and. pcoords(xdim) > 0 ) then
+                     pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
+                     call MPI_Cart_rank(comm3d,pc,procyxl,ierr)
+                  else
+                     procyxl = MPI_PROC_NULL
+                  endif
                endif
-               if (pcoords(ydim) == 0 .and. pcoords(xdim) > 0 ) then
-                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-                  call MPI_Cart_rank(comm3d,pc,procyxl,ierr)
-               else
-                  procyxl = MPI_PROC_NULL
-               endif
-            endif
 
-            if (any(dom%bnd(xdim:ydim, HI) == BND_COR)) call die("[mpisetup:init_mpi] Corner boundary on the right side not implemented anywhere")
+               if (any(dom%bnd(xdim:ydim, HI) == BND_COR)) call die("[mpisetup:init_mpi] Corner boundary on the right side not implemented anywhere")
 !!$               if (pcoords(xdim) == psize(xdim)-1 .and. pcoords(ydim) < psize(ydim)-1) then
 !!$                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
 !!$                  call MPI_Cart_rank(comm3d,pc,procxyr,ierr)
@@ -614,12 +638,65 @@ contains
 !!$                  procyxr = MPI_PROC_NULL
 !!$               endif
 !!$            endif
+            else
+               if (master) call printinfo("[mpisetup:init_mpi] Cartesian decomposition without comm3d")
+               do p = 0, nproc-1
+                  if (product(psize(:)) /= nproc) call die("[mpisetup:init_mpi] product(psize(:)) /= nproc")
+                  pc(xdim) = mod(p, psize(xdim))
+                  pc(ydim) = mod(p/psize(xdim), psize(ydim))
+                  pc(zdim) = p/product(psize(xdim:ydim))
+                  where (has_dir(:))
+                     dom%se(p, :, LO) = (dom%n_d(:) *  pc(:) ) / psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
+                     dom%se(p, :, HI) = (dom%n_d(:) * (pc(:)+1))/psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
+                  endwhere
+               enddo
+
+               if (any(dom%bnd(xdim:ydim, LO:HI) == BND_COR)) call die("[mpisetup:init_mpi] BND_COR not implemented for use_comm3d == .false.")
+            endif
+         case (DD_UE)
+            if (master) call printinfo("[mpisetup:init_mpi] Non-cartesian decomposition (no comm3d possible)")
+            allocate(pz_slab(psize(zdim) + 1))
+            do p = 0, psize(zdim)
+               pz_slab(p+1) = (p * nproc) / psize(zdim)
+            enddo
+            do p = 1, psize(zdim)
+               dom%se(pz_slab(p):pz_slab(p+1)-1, zdim, LO) = nint((dom%n_d(zdim) *  pz_slab(p)   ) / real(nproc))
+               dom%se(pz_slab(p):pz_slab(p+1)-1, zdim, HI) = nint((dom%n_d(zdim) *  pz_slab(p+1) ) / real(nproc)) - 1
+
+               allocate(py_slab(psize(ydim) + 1))
+               do py = 0, psize(ydim)
+                  py_slab(py+1) = (py * (pz_slab(p+1)-pz_slab(p))) / psize(ydim) !> \todo try to sort lengths
+               enddo
+               do py = 1, psize(ydim)
+                  dom%se(pz_slab(p)+py_slab(py):pz_slab(p)+py_slab(py+1)-1, ydim, LO) = nint((dom%n_d(ydim) *  py_slab(py)   ) / real(pz_slab(p+1)-pz_slab(p)))
+                  dom%se(pz_slab(p)+py_slab(py):pz_slab(p)+py_slab(py+1)-1, ydim, HI) = nint((dom%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - 1
+                  do px = 0, py_slab(py+1)-py_slab(py) - 1
+                     dom%se(pz_slab(p)+py_slab(py)+px, xdim, LO) = (dom%n_d(xdim) *  px    ) / (py_slab(py+1)-py_slab(py))
+                     dom%se(pz_slab(p)+py_slab(py)+px, xdim, HI) = (dom%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1
+                  enddo
+               enddo
+               if (allocated(py_slab)) deallocate(py_slab)
+            enddo
+            if (allocated(pz_slab)) deallocate(pz_slab)
          case default
             call die("[mpisetup:init_mpi] unknown strategy for generating domain division")
       end select
 
+      if (any(dom%bnd(:, :) == BND_COR) .and. comm3d == MPI_COMM_NULL) call die("[mpisetup:init_mpi] Corner BC not implemented without comm3d")
+
+      if ((dom%periodic(xdim) .and. dom%se(proc, xdim, HI) /= dom%n_d(xdim) - 1) .or. dom%se(proc, xdim, LO) /= 0)                 bnd_xl = 'mpi'
+      if ((dom%periodic(xdim) .and. dom%se(proc, xdim, LO) /= 0)                 .or. dom%se(proc, xdim, HI) /= dom%n_d(xdim) - 1) bnd_xr = 'mpi'
+      if ((dom%periodic(ydim) .and. dom%se(proc, ydim, HI) /= dom%n_d(ydim) - 1) .or. dom%se(proc, ydim, LO) /= 0)                 bnd_yl = 'mpi'
+      if ((dom%periodic(ydim) .and. dom%se(proc, ydim, LO) /= 0)                 .or. dom%se(proc, ydim, HI) /= dom%n_d(ydim) - 1) bnd_yr = 'mpi'
+      if ((dom%periodic(zdim) .and. dom%se(proc, zdim, HI) /= dom%n_d(zdim) - 1) .or. dom%se(proc, zdim, LO) /= 0)                 bnd_zl = 'mpi'
+      if ((dom%periodic(zdim) .and. dom%se(proc, zdim, LO) /= 0)                 .or. dom%se(proc, zdim, HI) /= dom%n_d(zdim) - 1) bnd_zr = 'mpi'
+
+      ! For shear boundaries and some domain decompositions it is possible that a boundary can be mixed 'per' with 'mpi'
 #ifdef SHEAR_BND
+      if (comm3d == MPI_COMM_NULL) call die("[mpisetup:init_mpi] SHEAR_BND not implemented without comm3d")
+
       if (psize(ydim) > 1) call die("[mpisetup:initmpi] Shear-pediodic boundary conditions do not permit psize(ydim) > 1")
+      ! This will be possible when is_mpi_noncart will be fully implemented
 
 #ifndef FFTW
       if (pcoords(xdim) == 0) then
@@ -634,37 +711,86 @@ contains
          bnd_xr = 'mpi'
       endif
 #endif /* !FFTW */
-
-#else /* !SHEAR_BND */
-      if (procn(xdim, LO) /= MPI_PROC_NULL .and. procn(xdim, LO) /= proc) bnd_xl = 'mpi'
-      if (procn(xdim, HI) /= MPI_PROC_NULL .and. procn(xdim, HI) /= proc) bnd_xr = 'mpi'
-#endif /* !SHEAR_BND */
-
-      if (procn(ydim, LO) /= MPI_PROC_NULL .and. procn(ydim, LO) /= proc) bnd_yl = 'mpi'
-      if (procn(ydim, HI) /= MPI_PROC_NULL .and. procn(ydim, HI) /= proc) bnd_yr = 'mpi'
-
-      if (procn(zdim, LO) /= MPI_PROC_NULL .and. procn(zdim, LO) /= proc) bnd_zl = 'mpi'
-      if (procn(zdim, HI) /= MPI_PROC_NULL .and. procn(zdim, HI) /= proc) bnd_zr = 'mpi'
+#endif /* SHEAR_BND */
 
 #ifdef DEBUG
-      do p = xdim, zdim
-         write(msg,*) 'dir',p,': ',procn(p, LO), proc, procn(p, HI)
-         call printinfo(msg)
-      enddo
+      if (comm3d /= MPI_COMM_NULL) then
+         do p = xdim, zdim
+            write(msg,*) 'dir',p,': ',procn(p, LO), proc, procn(p, HI)
+            call printinfo(msg)
+         enddo
+      endif
 #endif /* DEBUG */
 
-#ifdef VERBOSE
-      call printinfo("[mpisetup:init_mpi]: finished. \o/")
-#endif /* VERBOSE */
+!#ifdef VERBOSE
+      if (master) then
+         maxcnt = 0
+         do p = 0, nproc - 1
+            write(msg,'(a,i4,a,2(3i6,a),i8,a)')"[mpisetup:init_mpi] segment @",p," : [",dom%se(p, :, LO),"] : [",dom%se(p, :, HI),"] #",product(dom%se(p, :, HI)-dom%se(p, :, LO)+1)," cells"
+            call printinfo(msg)
+            maxcnt = max(maxcnt, product(real(dom%se(p, :, HI)-dom%se(p, :, LO)+1)))
+         enddo
+         write(msg,'(a,f8.5)')"[mpisetup:init_mpi] Load balance: ",product(real(dom%n_d(:)))/(nproc*maxcnt) !> \todo add calculation of total internal boundary surface in cells
+         call printinfo(msg)
+      endif
+!      call identify_neighbours(dom%se(proc, :, :), dom)
+!#endif /* VERBOSE */
 
    end subroutine init_mpi
 
 !-----------------------------------------------------------------------------
+!
+! \todo: prepare some useful lists here, so routines grid:: arr3d_boundaries, grid::grid_mpi_boundaries_prep, fluidboundaries, magboundaries, multigridmpifuncs
+! can use them and no longer rely on pcoords(:), psize(:), proc[xyz][lr], proc{xy,yx}l, ...
+! note that corner boundaries will require transposing on the acceptor side
+!
+   subroutine identify_neighbours(area, domain)
+
+      use constants,  only: xdim, zdim, LO, HI
+#ifdef VERBOSE
+      use dataio_pub, only: printinfo, msg
+#endif
+
+      implicit none
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: area
+      type(domain_container), intent(in) :: domain
+
+      integer :: p, pp
+      logical, dimension(xdim:zdim, LO:HI) :: neigh
+      logical :: sharing, cor, fac
+      integer(kind=8), dimension(xdim:zdim) :: per
+
+      pp = 0 !nproc/3
+
+      do p = 0, nproc-1
+         per(:) = 0
+         where (dom%periodic(:)) per(:) = dom%n_d(:)
+         call is_neigh(area(:,:), domain%se(p, :, :), neigh(:,:), sharing, cor, fac, per)
+#ifdef VERBOSE
+         if (proc == pp) then
+            write(msg,'(a,i4,a,6i4,a,l2,a,6l2,2(a,l2))')"m:in <@>",p," [",domain%se(p,:,:),"] * ",sharing, " > [",neigh(:,:),"] ?f",fac," ?c ",cor
+            call printinfo(msg)
+         endif
+#endif
+      enddo
+#ifdef VERBOSE
+      if (proc == pp) then
+         write(msg,'(a,i4,a,6i4)')"m:in <@>",pp," <",area(:,:)
+         call printinfo(msg)
+      endif
+#endif
+
+   end subroutine identify_neighbours
+
+!!-----------------------------------------------------------------------------
 !!
 !> \brief is_neigh_per checks if two given blocks placed within a periodic domain are overlapping and determines whether the second block can provide face or corner guardcells
 !!
-!! to handle shearing box which is divided in y-direction atthe edges, one has to provide another subroutine (is_neigh_per_shear) and add it to interface is_neigh
+!! \details to handle shearing box which is divided in y-direction atthe edges, one has to provide another subroutine (is_neigh_per_shear) and add it to interface is_neigh
 !!
+!! \deprecated corner and face aren't used
+!<
    subroutine is_neigh_per(this, other, neigh, share, corner, face, periods)
 
       use constants,  only: xdim, ydim, zdim, LO, HI
@@ -760,6 +886,7 @@ contains
 
       if (allocated(dom%se)) deallocate(dom%se)
       if (allocated(primes)) deallocate(primes)
+      if (allocated(procmask)) deallocate(procmask)
 
       if (comm3d /= MPI_COMM_NULL) call MPI_Comm_free(comm3d, ierr)
 
@@ -808,7 +935,7 @@ contains
 !
    subroutine divide_domain
 
-      use constants,  only: DD_CART
+      use constants,  only: DD_CART, DD_UE
       use dataio_pub, only: die, warn, printinfo, msg
 
       implicit none
@@ -840,7 +967,7 @@ contains
       call divide_domain_uniform
       if (product(psize) == nproc) then
          quality = ideal_bsize / sum(psize(:)/real(dom%n_d(:)) * product(real(dom%n_d(:))), MASK = dom%n_d(:) > 1)
-         if (quality >= dd_unif_quality .or. .not. allow_uneven) then
+         if (quality >= dd_unif_quality .or. .not. (allow_uneven .or. allow_noncart)) then
             dom%pdiv(:) = psize(:)
             return
          endif
@@ -850,13 +977,26 @@ contains
 
       if (allow_uneven) then
          call divide_domain_rectlinear
+         quality = 1 !< \todo make an estimate
          if (product(psize) == nproc) then
-            ! if (quality > dd_rect_quality .or. .not. allow_noncart) return
-            dom%pdiv(:) = psize(:)
-            return
+            if (quality > dd_rect_quality .or. .not. allow_noncart) then
+               dom%pdiv(:) = psize(:)
+               return
+            endif
          endif
       else
          if (master) call warn("[mpisetup:divide_domain] Did not try uneven domain division")
+      endif
+
+      if (allow_noncart) then
+         dom%pdiv_type = DD_UE
+         psize(:) = dom%pdiv(:)
+         call divide_domain_slices
+         ! if good_enough then return
+         dom%pdiv(:) = psize(:)
+         return
+      else
+         if (master) call warn("[mpisetup:divide_domain] Did not try non-cartesian domain division")
       endif
 
       write(msg,'(a,3i6,a,i4,a)') "[mpisetup:divide_domain] Cannot divide domain with [",dom%n_d(:)," ] cells to ",nproc," piecess. "
@@ -1003,6 +1143,12 @@ contains
          ! \todo add a factor that estimates lower cost when x-direction is not chopped too much
          quality = quality * (1. - (0.001 * ldom(xdim) + 0.0001 * ldom(ydim))/nproc) ! \deprecated estimate these magic numbers
 
+#ifdef DEBUG
+         if (master) then
+            write(msg,'(a,i3,a,3i4,a,i10,2(a,f10.7))')"m:ddr ",ii," psize= [",ldom(:)," ], bcells= ", bsize, ", balance = ", load_balance, ", est_quality = ", quality
+            call printinfo(msg)
+         endif
+#endif
          if (quality > best) then
             best = quality
             psize(:) = ldom(:)
@@ -1026,6 +1172,10 @@ contains
       is_uneven = any(mod(dom%n_d(:), psize(:)) /= 0)
 
       if (master) then
+#ifdef DEBUG
+         write(msg,'(a,3f10.2,a,i10)')"m:ddr id psize = [",(nproc/product(dble(dom%n_d(:))))**(1./eff_dim)*dom%n_d(:),"], bcells= ", int(ideal_bsize)
+         call printinfo(msg)
+#endif
          write(msg,'(a,3i4,a)')      "[mpisetup:divide_domain_rectlinear] Domain divided to [",psize(:)," ] pieces"
          call printinfo(msg)
          if (is_uneven) then
@@ -1039,6 +1189,55 @@ contains
       endif
 
    end subroutine divide_domain_rectlinear
+
+!>
+!! \brief Divide the computational domain into local domains. Allow their size to depend significantly on CPU rank and allow for more than one neighbour on a single boundary.
+!! Try to minimize the imbalance and total internal boundaries size.
+!<
+   subroutine divide_domain_slices
+
+      use constants,  only: xdim, ydim, zdim
+      use dataio_pub, only: msg, printinfo, warn
+
+      implicit none
+
+      real, parameter :: minfac = 1.3 ! prevent domain division to halves if cell count in a given direction is too low. (not verified for optimality)
+      real :: optc
+
+      !> \todo Try to make an intelligent guess for slicing, then go down to the local minimum and explore neighbourhood. Exploring all possibilities is an O(nproc)**2 task
+      ! The best solution is probably near (nproc/product(dble(dom%n_d(:))))**(1./eff_dim)*dom%n_d(:)
+
+      is_mpi_noncart = .true.
+      is_uneven = .true.
+
+      if (all(psize(ydim:zdim) == 1)) then
+         if (has_dir(zdim)) then
+            optc = (product(dom%n_d(:))/real(nproc)) ** (1./eff_dim) ! number of cells for ideal cubes
+            if (dom%n_d(zdim) > minfac*optc) psize(zdim) = ceiling(dom%n_d(zdim)/optc)
+         endif
+         if (has_dir(ydim)) then
+            optc = (product(dom%n_d(xdim:ydim))*psize(zdim)/real(nproc)) ** (1./count(has_dir(xdim:ydim)))
+            if (dom%n_d(ydim) > minfac*optc) psize(ydim) = ceiling(dom%n_d(ydim)/optc)
+         endif
+      endif
+      if (has_dir(xdim)) psize(xdim) = (nproc - 1)/(psize(ydim)*psize(zdim)) + 1 !sometimes it might be less by 1
+
+      where (.not. has_dir(:)) psize(:) = 1 ! just in case
+      do while (product(psize(:)) < nproc)
+         write(msg,'(a,3i4,a)') "[mpisetup:divide_domain_slices] imperfect noncartesian division to [",psize(:)," ] pieces"
+         if (master) call warn(msg)
+         if (has_dir(xdim)) then
+            psize(xdim) = psize(xdim) + 1
+         else if (has_dir(ydim)) then
+            psize(ydim) = psize(ydim) + 1
+         else
+            psize(zdim) = psize(zdim) + 1
+         endif
+      enddo
+      write(msg,'(a,3i4,a)') "[mpisetup:divide_domain_slices] performed noncartesian division to [",psize(:)," ] pieces"
+      if (master) call printinfo(msg)
+
+   end subroutine divide_domain_slices
 
 !-----------------------------------------------------------------------------
 

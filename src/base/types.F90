@@ -36,7 +36,8 @@ module types
    implicit none
 
    private
-   public :: axes, domain_container, segment, tsl_container, value, problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd, at_user_settings
+   public :: axes, domain_container, segment, bnd_list, tsl_container, value, &
+        &    problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd, at_user_settings
 
    type :: value
       real                      :: val
@@ -92,9 +93,19 @@ module types
 
    ! specify segment of data for boundary exchange, prolongation and restriction.
    type :: segment
-      integer :: proc                                    !< target process
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se !< range
+      integer :: proc                                     !< target process
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
    end type segment
+
+   !< segment type for boundary exchange
+   type, extends(segment) :: bnd_segment
+      integer :: mbc                                      !< Multigrid MPI Boundary conditions Container
+      integer :: lh                                       !< low or high boundary; \todo store full tag here
+   end type bnd_segment
+
+   type :: bnd_list
+      type(bnd_segment), dimension(:), allocatable :: seg !< list of boundary segments to exchange
+   end type bnd_list
 
    type :: axes
       real, allocatable, dimension(:) :: x      !< array of x-positions of %grid cells centers

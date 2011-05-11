@@ -18,6 +18,7 @@
 
  $MPI_BLOCKS
     psize = 1, 1, 1
+    allow_uneven = .true.
  /
 
  $UNITS
@@ -90,14 +91,17 @@
  /
 
  $MULTIGRID_SOLVER
-    level_max = 3
-    stdout = .true.
-    gb_no_fft = .true.
+    level_max = 2
+    stdout    = .true.
+    dirty_debug = .true.
  /
 
  $MULTIGRID_GRAVITY
-    nsmool = 8
-    grav_bnd_str = "dir"
+    nsmool    = 4
+    grav_bnd_str  = "dirichlet"
+    gb_no_fft = .true.
+    prefer_rbgs_relaxation = .true. ! ToDo: convert face prolongation for FFT
+    coarsen_multipole = 0 ! ToDo: fix multigridmultipole:prolong_ext_bnd0
  /
 
  $INTERACTIONS

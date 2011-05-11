@@ -104,8 +104,9 @@ contains
 
    subroutine prolong_level_hord(lev, iv)
 
+      use constants,          only: ndims
       use dataio_pub,         only: die, warn, msg
-      use mpisetup,           only: master
+      use mpisetup,           only: master, eff_dim
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: ord_prolong, extbnd_antimirror
 
@@ -125,6 +126,8 @@ contains
       endif
 
       call mpi_multigrid_bnd(lev, iv, abs(ord_prolong/2), extbnd_antimirror) ! exchange guardcells with corners
+
+      if (eff_dim<ndims) call die("[multigridexperimental:prolong_level_hord] 1D and 2D not finished")
 
       select case (ord_prolong)
       case (-4)
@@ -150,8 +153,6 @@ contains
 
       use dataio_pub,    only: die
       use multigridvars, only: plvl, lvl
-      use constants,     only: ndims
-      use mpisetup,      only: eff_dim
 
       implicit none
 
@@ -162,10 +163,10 @@ contains
 
       real, parameter :: P0 = 1., P1 = 1./8.
 
-      if (eff_dim<ndims) call die("[multigridexperimental:prolong_level2I] 1D and 2D not finished")
-
       coarse => lvl(lev)
-      fine   => lvl(lev + 1)
+      if (.not. associated(coarse)) call die("[multigridexperimental:prolong_level2I] coarse == null()")
+      fine   => coarse%finer
+      if (.not. associated(fine)) call die("[multigridexperimental:prolong_level2I] fine == null()")
 
       ! convolve with the prolongation operator
       fine%prolong_x(          fine%is    :fine%ie-1:2, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1) = &  ! x-odd cells
@@ -206,8 +207,6 @@ contains
 
       use dataio_pub,    only: die
       use multigridvars, only: plvl, lvl
-      use constants,     only: ndims
-      use mpisetup,      only: eff_dim
 
       implicit none
 
@@ -217,10 +216,10 @@ contains
       type(plvl), pointer :: coarse, fine
       real, parameter :: P_1 = -3./32., P0 = 30./32., P1 = 5./32.
 
-      if (eff_dim<ndims) call die("[multigridexperimental:prolong_level2D] 1D and 2D not finished")
-
       coarse => lvl(lev)
-      fine   => lvl(lev + 1)
+      if (.not. associated(coarse)) call die("[multigridexperimental:prolong_level2D] coarse == null()")
+      fine   => coarse%finer
+      if (.not. associated(fine)) call die("[multigridexperimental:prolong_level2D] fine == null()")
 
       ! convolve with the prolongation operator
       fine%prolong_x(          fine%is    :fine%ie-1:2, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1) = &  ! x-odd cells
@@ -261,8 +260,6 @@ contains
 
       use dataio_pub,    only: die
       use multigridvars, only: plvl, lvl
-      use constants,     only: ndims
-      use mpisetup,      only: eff_dim
 
       implicit none
 
@@ -273,10 +270,10 @@ contains
 
       real, parameter :: P0 = 1., P1 = 11./64., P2 = 3./128.
 
-      if (eff_dim<ndims) call die("[multigridexperimental:prolong_level4I] 1D and 2D not finished")
-
       coarse => lvl(lev)
-      fine   => lvl(lev + 1)
+      if (.not. associated(coarse)) call die("[multigridexperimental:prolong_level4I] coarse == null()")
+      fine   => coarse%finer
+      if (.not. associated(fine)) call die("[multigridexperimental:prolong_level4I] fine == null()")
 
       ! convolve with the prolongation operator
       fine%prolong_x(          fine%is    :fine%ie-1:2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2) = &  ! x-odd cells
@@ -329,8 +326,6 @@ contains
 
       use dataio_pub,    only: die
       use multigridvars, only: plvl, lvl
-      use constants,     only: ndims
-      use mpisetup,      only: eff_dim
 
       implicit none
 
@@ -341,10 +336,10 @@ contains
 
       real, parameter :: P_2 = 35./2048., P_1 = -252./2048., P0 = 1890./2048., P1 = 420./2048., P2 = -45./2048.
 
-      if (eff_dim<ndims) call die("[multigridexperimental:prolong_level4D] 1D and 2D not finished")
-
       coarse => lvl(lev)
-      fine   => lvl(lev + 1)
+      if (.not. associated(coarse)) call die("[multigridexperimental:prolong_level4D] coarse == null()")
+      fine   => coarse%finer
+      if (.not. associated(fine)) call die("[multigridexperimental:prolong_level4D] fine == null()")
 
       ! convolve with the prolongation operator
       fine%prolong_x(          fine%is    :fine%ie-1:2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2) = &  ! x-odd cells

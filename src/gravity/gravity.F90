@@ -781,7 +781,7 @@ contains
       use func,       only: get_extremum
       use grid,       only: cg
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: psize, pcoords, master, nproc, comm, comm3d, ierr
+      use mpisetup,   only: psize, pcoords, master, nproc, comm, comm3d, ierr, have_mpi, is_mpi_noncart
 
       implicit none
 
@@ -799,6 +799,7 @@ contains
                                              dgpz(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1), &
                                              ddgp(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1)
 
+      if (have_mpi .and. is_mpi_noncart) call die("[gravity:grav_accel2pot] is_mpi_noncart is not implemented") ! MPI_Cart_coords, psize, pcoords
       if (comm3d == MPI_COMM_NULL) call die("[gravity:grav_accel2pot] comm3d == MPI_COMM_NULL")
 
       allocate(gpwork(cg%nx, cg%ny, cg%nz))

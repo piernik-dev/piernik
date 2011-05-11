@@ -49,9 +49,9 @@ contains
 
       use arrays,        only: wcr   !< \todo doesn't it belong only to this module? What's the point in keeping it in arrays...
       use dataio_pub,    only: die
-      use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL
+      use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL, MPI_COMM_NULL
       use constants,     only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI
-      use mpisetup,      only: comm, ierr, has_dir, psize, procn
+      use mpisetup,      only: comm, comm3d, ierr, has_dir, psize, procn
       use grid,          only: cg
 
       implicit none
@@ -60,6 +60,12 @@ contains
       integer, dimension(nreq)                    :: req3d
       integer, dimension(MPI_STATUS_SIZE, nreq)   :: status3d
       integer                                     :: i, d, lh
+      real, dimension(:,:,:,:), pointer :: pwcr
+
+      if (comm3d == MPI_COMM_NULL) then
+         pwcr => wcr
+         call cg%internal_boundaries(CR, pa4d=pwcr)
+      endif
 
       req3d(:) = MPI_REQUEST_NULL
 
@@ -68,28 +74,32 @@ contains
             do lh = LO, HI
                select case (cg%bnd(d, lh))
                   case (BND_PER)
-                     do i = 1, ceiling(cg%nb/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
-                        select case (2*d+lh)
-                           case (2*xdim+LO)
-                              wcr(:,1:cg%nb, :, :) = wcr(:,cg%ieb:cg%ie, :, :)
-                           case (2*ydim+LO)
-                              wcr(:,:, 1:cg%nb, :) = wcr(:,:, cg%jeb:cg%je, :)
-                           case (2*zdim+LO)
-                              wcr(:,:, :, 1:cg%nb) = wcr(:,:, :, cg%keb:cg%ke)
-                           case (2*xdim+HI)
-                              wcr(:,cg%ie+1:cg%nx, :, :) = wcr(:,cg%is:cg%isb, :, :)
-                           case (2*ydim+HI)
-                              wcr(:,:, cg%je+1:cg%ny, :) = wcr(:,:, cg%js:cg%jsb, :)
-                           case (2*zdim+HI)
-                              wcr(:,:, :, cg%ke+1:cg%nz) = wcr(:,:, :, cg%ks:cg%ksb)
-                        end select
-                     enddo
+                     if (comm3d /= MPI_COMM_NULL) then
+                        do i = 1, ceiling(cg%nb/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
+                           select case (2*d+lh)
+                              case (2*xdim+LO)
+                                 wcr(:,1:cg%nb, :, :) = wcr(:,cg%ieb:cg%ie, :, :)
+                              case (2*ydim+LO)
+                                 wcr(:,:, 1:cg%nb, :) = wcr(:,:, cg%jeb:cg%je, :)
+                              case (2*zdim+LO)
+                                 wcr(:,:, :, 1:cg%nb) = wcr(:,:, :, cg%keb:cg%ke)
+                              case (2*xdim+HI)
+                                 wcr(:,cg%ie+1:cg%nx, :, :) = wcr(:,cg%is:cg%isb, :, :)
+                              case (2*ydim+HI)
+                                 wcr(:,:, cg%je+1:cg%ny, :) = wcr(:,:, cg%js:cg%jsb, :)
+                              case (2*zdim+HI)
+                                 wcr(:,:, :, cg%ke+1:cg%nz) = wcr(:,:, :, cg%ks:cg%ksb)
+                           end select
+                        enddo
+                     endif
                   case (BND_MPI)
-                     if (psize(d) > 1) then
-                        call MPI_Isend(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BLK),  procn(d, lh), 2*d+(LO+HI-lh), comm, req3d(4*(d-xdim)+1+2*(lh-LO)), ierr)
-                        call MPI_Irecv(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BND),  procn(d, lh), 2*d+       lh,  comm, req3d(4*(d-xdim)+2+2*(lh-LO)), ierr)
-                     else
-                        call die("[crdiffiusion:all_wcr_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
+                     if (comm3d /= MPI_COMM_NULL) then
+                        if (psize(d) > 1) then
+                           call MPI_Isend(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BLK),  procn(d, lh), 2*d+(LO+HI-lh), comm3d, req3d(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                           call MPI_Irecv(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BND),  procn(d, lh), 2*d+       lh,  comm3d, req3d(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                        else
+                           call die("[crdiffiusion:all_wcr_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
+                        endif
                      endif
                   case default ! Set gradient == 0 on the external boundaries
                      do i = 1, cg%nb
@@ -116,7 +126,7 @@ contains
          !! \warning outside xdim-zdim loop MPI_Waitall may change the operations order (at least for openmpi-1.4.3)
          !! and as a result may leave mpi-corners uninitiallized
          !<
-         call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
+         if (comm3d /= MPI_COMM_NULL) call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
       enddo
 
    end subroutine all_wcr_boundaries

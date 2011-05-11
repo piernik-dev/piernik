@@ -626,7 +626,7 @@ contains
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpisetup,      only: comm, comm3d, ierr, psize, t, has_dir, dom, master, have_mpi, is_uneven
+      use mpisetup,      only: comm, comm3d, ierr, psize, t, has_dir, dom, master, have_mpi, is_uneven, is_mpi_noncart
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
 #ifdef PGPLOT
       use viz,           only: draw_me
@@ -664,6 +664,7 @@ contains
       real, dimension(1)                  :: timebuffer
 
       if (have_mpi .and. is_uneven) call die("[dataio_hdf5:write_plot_hdf5] is_uneven is not implemented") ! nib,njb,pisize*pjsize, ...
+      if (have_mpi .and. is_mpi_noncart) call die("[dataio_hdf5:write_plot_hdf5] is_mpi_noncart is not implemented") ! MPI_Cart_sub, psize
       if (comm3d == MPI_COMM_NULL) then
          call warn("[dataio_hdf5:write_plot_hdf5] comm3d == MPI_COMM_NULL. Bailing out")
          return
@@ -798,10 +799,10 @@ contains
 !<
    subroutine set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
 
-      use constants,  only: ndims, AT_ALL_B, AT_OUT_B, AT_NO_B, AT_USER
+      use constants,  only: ndims, AT_ALL_B, AT_OUT_B, AT_NO_B, AT_USER, LO, HI
       use dataio_pub, only: die, warn
       use grid,       only: cg
-      use mpisetup,   only: dom, has_dir, psize, pcoords, is_uneven
+      use mpisetup,   only: dom, has_dir, psize, pcoords, is_uneven, is_mpi_noncart
       use types,      only: at_user_settings
 
       implicit none
@@ -812,6 +813,7 @@ contains
 
       select case (area_type)
          case (AT_ALL_B)                           ! whole domain with mpi boundaries
+            if (is_mpi_noncart) call die("[dataio_hdf5:set_dims_to_write] allbnd dump is too hard to implement with noncartesian domain division")
             if (is_uneven) call warn("[dataio_hdf5:set_dims_to_write] allbnd dump with uneven domain division")
             chnk(:)   = [cg%nx, cg%ny, cg%nz]
             area(:)   = dom%n_d(:) + 2 * cg%nb * psize(:) ! \todo invent something better
@@ -820,8 +822,8 @@ contains
             loffs(:)  = cg%off(:) + 2 * cg%nb * pcoords(:) !\todo invent something better
          case (AT_OUT_B)                                   ! physical domain with outer boundaries
             area(:)   = [dom%nxt, dom%nyt, dom%nzt]
-            lleft(:)  = [cg%is,   cg%js,   cg%ks  ]
-            lright(:) = [cg%ie,   cg%je,   cg%ke  ]
+            lleft(:)  = cg%ijkse(:, LO)
+            lright(:) = cg%ijkse(:, HI)
             chnk(:)   = cg%n_b(:)
             where (cg%off(:) == 0 .and. has_dir(:))
                lleft(:)  = lleft(:)  - cg%nb
@@ -835,8 +837,8 @@ contains
             where (loffs(:)>0) loffs(:) = loffs(:) + cg%nb ! the block adjacent to the left boundary are cg%nb cells wider than cg%n[xyz]b
          case (AT_NO_B)                                    ! only physical domain without any boundaries
             area(:)   = dom%n_d(:)
-            lleft(:)  = [cg%is,   cg%js,   cg%ks  ]
-            lright(:) = [cg%ie,   cg%je,   cg%ke  ]
+            lleft(:)  = cg%ijkse(:, LO)
+            lright(:) = cg%ijkse(:, HI)
             chnk(:)   = cg%n_b(:)
             loffs(:)  = cg%off(:)
          case (AT_USER)                                    ! user defined domain (with no reference to simulations domain)

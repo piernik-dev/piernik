@@ -40,7 +40,6 @@
 
 module multigrid_diffusion
 ! pulled by MULTIGRID && COSM_RAYS
-#if defined(COSM_RAYS) && defined(MULTIGRID)
 
    use multigridvars, only: correction, vcycle_stats
    use constants,     only: cbuff_len
@@ -105,9 +104,9 @@ contains
 !<
    subroutine init_multigrid_diff
 
-      use multigridvars, only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror
+      use multigridvars, only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, single_base
       use constants,     only: GEO_XYZ
-      use mpisetup,      only: comm, ierr, master, slave, ibuff, rbuff, lbuff, cbuff, buffer_dim, geometry_type
+      use mpisetup,      only: comm, ierr, master, slave, nproc, ibuff, rbuff, lbuff, cbuff, buffer_dim, geometry_type
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, warn, msg
@@ -209,6 +208,11 @@ contains
       if (overrelax /= 1 .and. master) then
          write(msg, '(a,f8.5)')"[multigrid_diffusion:init_multigrid_diff] Overrelaxation factor = ", overrelax
          call warn(msg)
+      endif
+
+      if (single_base .and. nproc > 1) then
+         call warn("[multigrid_diffusion:init_multigrid_diff] single_base disabled just in case")
+         single_base = (nproc == 1)
       endif
 
    end subroutine init_multigrid_diff
@@ -405,7 +409,7 @@ contains
 
       use arrays,             only: b
       use grid,               only: cg, D_x, D_y, D_z
-      use multigridvars,      only: roof, level_min, level_max, extbnd_mirror
+      use multigridvars,      only: base, roof, extbnd_mirror
       use multigridbasefuncs, only: restrict_all
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use fluidindex,         only: ibx, iby, ibz
@@ -422,7 +426,7 @@ contains
          call set_dirty(diff_bx+ib-ibx)
          roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = b(ib, cg%is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z)
          call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines
-         do il = level_min, level_max-1
+         do il = base%level, roof%coarser%level
             call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror, .true.) !> \todo use global boundary type for B
             !>
             !! |deprecated BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
@@ -442,7 +446,7 @@ contains
 
    subroutine vcycle_hg(cr_id)
 
-      use multigridvars,      only: source, defect, solution, correction, base, roof, level_min, level_max, ts, tot_ts
+      use multigridvars,      only: source, defect, solution, correction, base, roof, plvl, ts, tot_ts
       use multigridbasefuncs, only: norm_sq, restrict_all, prolong_level
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, brief_v_log, dirty_label
 !      use multigridmpifuncs,  only: mpi_multigrid_bnd
@@ -459,9 +463,10 @@ contains
 
       real, parameter    :: barely_greater_than_1 = 1.05
       integer, parameter :: convergence_history = 2
-      integer            :: v, l
+      integer            :: v
       real               :: norm_lhs, norm_rhs, norm_old
       logical            :: dump_every_step
+      type(plvl), pointer :: curl
 
       write(vstat%cprefix,'("C",i1,"-")') cr_id !> \deprecated BEWARE: this is another place with 0 <= cr_id <= 9 limit
       write(dirty_label, '("md_",i1,"_dump")')  cr_id
@@ -476,7 +481,7 @@ contains
 
          call set_dirty(defect)
 
-         call residual(level_max, source, solution, defect, cr_id)
+         call residual(roof%level, source, solution, defect, cr_id)
          call norm_sq(defect, norm_lhs)
          ts = set_timer("multigrid_diffusion")
          tot_ts = tot_ts + ts
@@ -508,13 +513,15 @@ contains
          call set_dirty(correction)
          base%mgvar(:, :, :, correction) = 0.
 
-         do l = level_min, level_max
-            call approximate_solution(l, defect, correction, cr_id)
-            call prolong_level(l, correction)
+         curl => base
+         do while (associated(curl))
+            call approximate_solution(curl%level, defect, correction, cr_id)
+            call prolong_level(curl%level, correction)
+            curl => curl%finer
          enddo
 
-         call check_dirty(level_max, correction, "c_residual")
-         call check_dirty(level_max, defect, "d_residual")
+         call check_dirty(roof%level, correction, "c_residual")
+         call check_dirty(roof%level, defect, "d_residual")
          roof%mgvar     (roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = &
               roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) - &
               roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction)
@@ -523,7 +530,7 @@ contains
 
       if (dump_every_step) call numbered_ascii_dump(dirty_label)
 
-      call check_dirty(level_max, solution, "v_soln")
+      call check_dirty(roof%level, solution, "v_soln")
 
       if (v > max_cycles) then
          if (master .and. norm_lhs/norm_rhs > norm_tol) then
@@ -553,7 +560,7 @@ contains
    !> \deprecated BEWARE: almost replicated code (see crdiffusion.F90)
    subroutine diff_flux_x(i, j, k, soln, lev, cr_id, Keff)
 
-      use multigridvars,     only: lvl
+      use multigridvars,     only: lvl, plvl
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt, has_dir
       use constants,         only: ydim, zdim
@@ -571,29 +578,31 @@ contains
 
       real                :: fcrdif, decr1, decr2, decr3
       real                :: b1b, b2b, b3b, magb
+      type(plvl), pointer :: curl
 
+      curl => lvl(lev)
       ! Assumes has_dir(xdim)
-      decr1 = (lvl(lev)%mgvar(i, j, k, soln) - lvl(lev)%mgvar(i-1, j, k, soln)) / lvl(lev)%dx
+      decr1 = (curl%mgvar(i, j, k, soln) - curl%mgvar(i-1, j, k, soln)) / curl%dx
       fcrdif = K_crs_perp(cr_id) * decr1
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
       if (K_crs_paral(cr_id) /= 0.) then
 
-         b1b = lvl(lev)%mgvar(i, j, k, diff_bx)
+         b1b = curl%mgvar(i, j, k, diff_bx)
 
          if (has_dir(ydim)) then
-            b2b = sum(lvl(lev)%mgvar(i-1:i, j:j+1, k, diff_by))*0.25
-            decr2 = ((lvl(lev)%mgvar(i-1, j+1, k, soln) + lvl(lev)%mgvar(i, j+1, k, soln))- &
-                 &   (lvl(lev)%mgvar(i-1, j-1, k, soln) + lvl(lev)%mgvar(i, j-1, k, soln))) * 0.25 / lvl(lev)%dy
+            b2b = sum(curl%mgvar(i-1:i, j:j+1, k, diff_by))*0.25
+            decr2 = ((curl%mgvar(i-1, j+1, k, soln) + curl%mgvar(i, j+1, k, soln))- &
+                 &   (curl%mgvar(i-1, j-1, k, soln) + curl%mgvar(i, j-1, k, soln))) * 0.25 / curl%dy
          else
             b2b = 0.
             decr2 = 0.
          endif
 
          if (has_dir(zdim)) then
-            b3b = sum(lvl(lev)%mgvar(i-1:i, j, k:k+1, diff_bz))*0.25
-            decr3 = ((lvl(lev)%mgvar(i-1, j, k+1, soln) + lvl(lev)%mgvar(i, j, k+1, soln)) - &
-                 &   (lvl(lev)%mgvar(i-1, j, k-1, soln) + lvl(lev)%mgvar(i, j, k-1, soln))) * 0.25 / lvl(lev)%dz
+            b3b = sum(curl%mgvar(i-1:i, j, k:k+1, diff_bz))*0.25
+            decr3 = ((curl%mgvar(i-1, j, k+1, soln) + curl%mgvar(i, j, k+1, soln)) - &
+                 &   (curl%mgvar(i-1, j, k-1, soln) + curl%mgvar(i, j, k-1, soln))) * 0.25 / curl%dz
          else
             b3b = 0.
             decr3 = 0.
@@ -607,7 +616,7 @@ contains
 
       endif
 
-      wa(i, j, k) = fcrdif * diff_theta * dt / lvl(lev)%dx
+      wa(i, j, k) = fcrdif * diff_theta * dt / curl%dx
 
    end subroutine diff_flux_x
 
@@ -618,7 +627,7 @@ contains
 
    subroutine diff_flux_y(i, j, k, soln, lev, cr_id, Keff)
 
-      use multigridvars,     only: lvl
+      use multigridvars,     only: lvl, plvl
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt, has_dir
       use constants,         only: xdim, zdim
@@ -636,29 +645,31 @@ contains
 
       real                :: fcrdif, decr1, decr2, decr3
       real                :: b1b, b2b, b3b, magb
+      type(plvl), pointer :: curl
 
+      curl => lvl(lev)
       ! Assumes has_dir(ydim)
-      decr2 = (lvl(lev)%mgvar(i, j, k, soln) - lvl(lev)%mgvar(i, j-1, k, soln)) / lvl(lev)%dy
+      decr2 = (curl%mgvar(i, j, k, soln) - curl%mgvar(i, j-1, k, soln)) / curl%dy
       fcrdif = K_crs_perp(cr_id) * decr2
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
       if (K_crs_paral(cr_id) /= 0.) then
 
          if (has_dir(xdim)) then
-            b1b = sum(lvl(lev)%mgvar(i:i+1, j-1:j, k, diff_bx))*0.25
-            decr1 = ((lvl(lev)%mgvar(i+1, j-1, k, soln) + lvl(lev)%mgvar(i+1, j,  k, soln)) - &
-                 &   (lvl(lev)%mgvar(i-1, j-1, k, soln) + lvl(lev)%mgvar(i-1, j,  k, soln))) * 0.25 / lvl(lev)%dx
+            b1b = sum(curl%mgvar(i:i+1, j-1:j, k, diff_bx))*0.25
+            decr1 = ((curl%mgvar(i+1, j-1, k, soln) + curl%mgvar(i+1, j,  k, soln)) - &
+                 &   (curl%mgvar(i-1, j-1, k, soln) + curl%mgvar(i-1, j,  k, soln))) * 0.25 / curl%dx
          else
             b1b = 0.
             decr1 = 0.
          endif
 
-         b2b = lvl(lev)%mgvar(i, j, k, diff_by)
+         b2b = curl%mgvar(i, j, k, diff_by)
 
          if (has_dir(zdim)) then
-            b3b = sum(lvl(lev)%mgvar(i, j-1:j, k:k+1, diff_bz))*0.25
-            decr3 = ((lvl(lev)%mgvar(i, j-1, k+1, soln) + lvl(lev)%mgvar(i, j,  k+1, soln)) - &
-                 &   (lvl(lev)%mgvar(i, j-1, k-1, soln) + lvl(lev)%mgvar(i, j,  k-1, soln))) * 0.25 / lvl(lev)%dz
+            b3b = sum(curl%mgvar(i, j-1:j, k:k+1, diff_bz))*0.25
+            decr3 = ((curl%mgvar(i, j-1, k+1, soln) + curl%mgvar(i, j,  k+1, soln)) - &
+                 &   (curl%mgvar(i, j-1, k-1, soln) + curl%mgvar(i, j,  k-1, soln))) * 0.25 / curl%dz
          else
             b3b = 0.
             decr3 = 0.
@@ -672,7 +683,7 @@ contains
 
       endif
 
-      wa(i, j, k) = fcrdif * diff_theta * dt / lvl(lev)%dy
+      wa(i, j, k) = fcrdif * diff_theta * dt / curl%dy
 
    end subroutine diff_flux_y
 
@@ -683,7 +694,7 @@ contains
 
    subroutine diff_flux_z(i, j, k, soln, lev, cr_id, Keff)
 
-      use multigridvars,     only: lvl
+      use multigridvars,     only: lvl, plvl
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt, has_dir
       use constants,         only: xdim, ydim
@@ -701,33 +712,35 @@ contains
 
       real                :: fcrdif, decr1, decr2, decr3
       real                :: b1b, b2b, b3b, magb
+      type(plvl), pointer :: curl
 
+      curl => lvl(lev)
       ! Assumes has_dir(zdim)
-      decr3 = (lvl(lev)%mgvar(i, j, k, soln) - lvl(lev)%mgvar(i, j, k-1, soln)) / lvl(lev)%dz
+      decr3 = (curl%mgvar(i, j, k, soln) - curl%mgvar(i, j, k-1, soln)) / curl%dz
       fcrdif = K_crs_perp(cr_id) * decr3
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
       if (K_crs_paral(cr_id) /= 0.) then
 
          if (has_dir(xdim)) then
-            b1b = sum(lvl(lev)%mgvar(i:i+1, j, k-1:k, diff_bx))*0.25
-            decr1 = ((lvl(lev)%mgvar(i+1, j, k-1, soln) + lvl(lev)%mgvar(i+1, j,  k, soln)) - &
-                 &   (lvl(lev)%mgvar(i-1, j, k-1, soln) + lvl(lev)%mgvar(i-1, j,  k, soln))) * 0.25 / lvl(lev)%dx
+            b1b = sum(curl%mgvar(i:i+1, j, k-1:k, diff_bx))*0.25
+            decr1 = ((curl%mgvar(i+1, j, k-1, soln) + curl%mgvar(i+1, j,  k, soln)) - &
+                 &   (curl%mgvar(i-1, j, k-1, soln) + curl%mgvar(i-1, j,  k, soln))) * 0.25 / curl%dx
          else
             b1b = 0.
             decr1 = 0.
          endif
 
          if (has_dir(ydim)) then
-            b2b = sum(lvl(lev)%mgvar(i, j:j+1, k-1:k, diff_by))*0.25
-            decr2 = ((lvl(lev)%mgvar(i, j+1, k-1, soln) + lvl(lev)%mgvar(i,  j+1, k, soln)) - &
-                 &   (lvl(lev)%mgvar(i, j-1, k-1, soln) + lvl(lev)%mgvar(i,  j-1, k, soln))) * 0.25 / lvl(lev)%dy
+            b2b = sum(curl%mgvar(i, j:j+1, k-1:k, diff_by))*0.25
+            decr2 = ((curl%mgvar(i, j+1, k-1, soln) + curl%mgvar(i,  j+1, k, soln)) - &
+                 &   (curl%mgvar(i, j-1, k-1, soln) + curl%mgvar(i,  j-1, k, soln))) * 0.25 / curl%dy
          else
             b2b = 0.
             decr2 = 0.
          endif
 
-         b3b =  lvl(lev)%mgvar(i, j, k, diff_bz)
+         b3b =  curl%mgvar(i, j, k, diff_bz)
 
          magb = b1b**2 + b2b**2 + b3b**2
          if (magb /= 0.) then
@@ -737,7 +750,7 @@ contains
 
       endif
 
-      wa(i, j, k) = fcrdif * diff_theta * dt / lvl(lev)%dz
+      wa(i, j, k) = fcrdif * diff_theta * dt / curl%dz
 
    end subroutine diff_flux_z
 
@@ -752,7 +765,7 @@ contains
 
       use mpisetup,          only: has_dir
       use constants,         only: xdim, ydim, zdim
-      use multigridvars,     only: lvl
+      use multigridvars,     only: lvl, plvl
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use arrays,            only: wa
       use multigridhelpers,  only: check_dirty
@@ -766,55 +779,57 @@ contains
       integer, intent(in) :: cr_id !< CR component index
 
       integer             :: i, j, k
+      type(plvl), pointer :: curl
 
+      curl => lvl(lev)
       call mpi_multigrid_bnd(lev, soln, 1, diff_extbnd, .true.) ! corners are required for fluxes
 
-      do k = lvl(lev)%ks, lvl(lev)%ke
-         lvl(         lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def)                =   &
-              &   lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   soln)               -   &
-              &   lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   src)
+      do k = curl%ks, curl%ke
+         curl%mgvar     (curl%is:curl%ie, curl%js:curl%je, k, def)  =   &
+              curl%mgvar(curl%is:curl%ie, curl%js:curl%je, k, soln) -   &
+              curl%mgvar(curl%is:curl%ie, curl%js:curl%je, k, src)
       enddo
 
       if (has_dir(xdim)) then
-         do k = lvl(lev)%ks, lvl(lev)%ke
-            do j = lvl(lev)%js, lvl(lev)%je
-               do i = lvl(lev)%is, lvl(lev)%ie+1
+         do k = curl%ks, curl%ke
+            do j = curl%js, curl%je
+               do i = curl%is, curl%ie+1
                   call diff_flux_x(i, j, k, soln, lev, cr_id)
                enddo
             enddo
-            lvl     (lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def) = &
-                 lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def) - &
-                 ( wa(lvl(lev)%is+1:lvl(lev)%ie+1, lvl(lev)%js  :lvl(lev)%je,   k)        - &
-                 & wa(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k) )
+            curl%mgvar     (curl%is  :curl%ie,   curl%js:curl%je, k, def) = &
+                 curl%mgvar(curl%is  :curl%ie,   curl%js:curl%je, k, def) - &
+                 (       wa(curl%is+1:curl%ie+1, curl%js:curl%je, k)      - &
+                 &       wa(curl%is  :curl%ie,   curl%js:curl%je, k) )
          enddo
       endif
 
       if (has_dir(ydim)) then
-         do k = lvl(lev)%ks, lvl(lev)%ke
-            do j = lvl(lev)%js, lvl(lev)%je+1
-               do i = lvl(lev)%is, lvl(lev)%ie
+         do k = curl%ks, curl%ke
+            do j = curl%js, curl%je+1
+               do i = curl%is, curl%ie
                   call diff_flux_y(i, j, k, soln, lev, cr_id)
                enddo
             enddo
-            lvl     (lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def) = &
-                 lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k,   def) - &
-                 ( wa(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js+1:lvl(lev)%je+1, k)        - &
-                 & wa(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   k) )
+            curl%mgvar     (curl%is:curl%ie, curl%js  :curl%je,   k, def) = &
+                 curl%mgvar(curl%is:curl%ie, curl%js  :curl%je,   k, def) - &
+                 (       wa(curl%is:curl%ie, curl%js+1:curl%je+1, k)      - &
+                 &       wa(curl%is:curl%ie, curl%js  :curl%je,   k) )
          enddo
       endif
 
       if (has_dir(zdim)) then
-         do k = lvl(lev)%ks, lvl(lev)%ke+1
-            do j = lvl(lev)%js, lvl(lev)%je
-               do i = lvl(lev)%is, lvl(lev)%ie
+         do k = curl%ks, curl%ke+1
+            do j = curl%js, curl%je
+               do i = curl%is, curl%ie
                   call diff_flux_z(i, j, k, soln, lev, cr_id)
                enddo
             enddo
          enddo
-         lvl     (lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def) = &
-              lvl(lev)%mgvar(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke,   def) - &
-              ( wa(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks+1:lvl(lev)%ke+1)      - &
-              & wa(lvl(lev)%is  :lvl(lev)%ie,   lvl(lev)%js  :lvl(lev)%je,   lvl(lev)%ks  :lvl(lev)%ke  ) )
+         curl%mgvar     (curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke, def) = &
+              curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke, def) - &
+              (       wa(curl%is:curl%ie, curl%js:curl%je, curl%ks+1:curl%ke+1)    - &
+              &       wa(curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke  ) )
       endif
 
       call check_dirty(lev, def, "res def")
@@ -832,7 +847,7 @@ contains
 
    subroutine approximate_solution(lev, src, soln, cr_id)
 
-      use multigridvars,      only: level_min, lvl, extbnd_donothing
+      use multigridvars,      only: lvl, plvl, base, extbnd_donothing
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use mpisetup,           only: dt, has_dir
       use constants,          only: xdim, ydim, zdim
@@ -850,16 +865,19 @@ contains
       integer :: n, i, j, k, i1, j1, k1, id, jd, kd
       integer :: nsmoo
       real    :: Keff1, Keff2, dLdu, temp
+      type(plvl), pointer :: curl
 
-      if (lev == level_min) then
+      curl => lvl(lev)
+
+      if (associated(curl, base)) then
          nsmoo = nsmoob
       else
          nsmoo = nsmool
       endif
 
-      i1 = lvl(lev)%is; id = 1 ! mv to multigridvars, init_multigrid
-      j1 = lvl(lev)%js; jd = 1
-      k1 = lvl(lev)%ks; kd = 1
+      i1 = curl%is; id = 1 ! mv to multigridvars, init_multigrid
+      j1 = curl%js; jd = 1
+      k1 = curl%ks; kd = 1
       if (has_dir(xdim)) then
          id = RED_BLACK
       else if (has_dir(ydim)) then
@@ -875,14 +893,14 @@ contains
             call mpi_multigrid_bnd(lev, soln, 1, extbnd_donothing, .true.)
          endif
 
-         if (kd == RED_BLACK) k1 = lvl(lev)%ks + mod(n, RED_BLACK)
-         do k = k1, lvl(lev)%ke, kd
-            if (jd == RED_BLACK) j1 = lvl(lev)%js + mod(n+k, RED_BLACK)
-            do j = j1, lvl(lev)%je, jd
-               if (id == RED_BLACK) i1 = lvl(lev)%is + mod(n+j+k, RED_BLACK)
-               do i = i1, lvl(lev)%ie, id
+         if (kd == RED_BLACK) k1 = curl%ks + mod(n, RED_BLACK)
+         do k = k1, curl%ke, kd
+            if (jd == RED_BLACK) j1 = curl%js + mod(n+k, RED_BLACK)
+            do j = j1, curl%je, jd
+               if (id == RED_BLACK) i1 = curl%is + mod(n+j+k, RED_BLACK)
+               do i = i1, curl%ie, id
 
-                  temp = lvl(lev)%mgvar(i, j, k, soln) - lvl(lev)%mgvar(i, j, k, src)
+                  temp = curl%mgvar(i, j, k, soln) - curl%mgvar(i, j, k, src)
                   dLdu = 0.
 
                   if (has_dir(xdim)) then
@@ -891,7 +909,7 @@ contains
                      call diff_flux_x(i+1, j, k, soln, lev, cr_id, Keff2)
 
                      temp = temp - (wa(i+1, j, k) - wa(i, j, k))
-                     dLdu = dLdu - 2 * (Keff1 + Keff2) * lvl(lev)%idx2
+                     dLdu = dLdu - 2 * (Keff1 + Keff2) * curl%idx2
 
                   endif
 
@@ -901,7 +919,7 @@ contains
                      call diff_flux_y(i, j+1, k, soln, lev, cr_id, Keff2)
 
                      temp = temp - (wa(i, j+1, k) - wa(i, j, k))
-                     dLdu = dLdu - 2 * (Keff1 + Keff2) * lvl(lev)%idy2
+                     dLdu = dLdu - 2 * (Keff1 + Keff2) * curl%idy2
 
                   endif
 
@@ -911,12 +929,12 @@ contains
                      call diff_flux_z(i, j, k+1, soln, lev, cr_id, Keff2)
 
                      temp = temp - (wa(i, j, k+1) - wa(i, j, k))
-                     dLdu = dLdu - 2 * (Keff1 + Keff2) * lvl(lev)%idz2
+                     dLdu = dLdu - 2 * (Keff1 + Keff2) * curl%idz2
 
                   endif
 
                   ! ToDo add an option to automagically fine-tune overrelax
-                  lvl(lev)%mgvar(i, j, k, soln) = lvl(lev)%mgvar(i, j, k, soln) - overrelax * temp/(1.e0 - 0.5e0 * diff_theta * dt * dLdu)
+                  curl%mgvar(i, j, k, soln) = curl%mgvar(i, j, k, soln) - overrelax * temp/(1.e0 - 0.5e0 * diff_theta * dt * dLdu)
 
                enddo
             enddo
@@ -924,9 +942,5 @@ contains
       enddo
 
    end subroutine approximate_solution
-
-#else /* !(COSM_RAYS && MULTIGRID) */
-#warning This should not happen. Probably the multigrid_diffusion.F90 file is included in object directory by mistake.
-#endif /* !(COSM_RAYS && MULTIGRID) */
 
 end module multigrid_diffusion

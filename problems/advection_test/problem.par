@@ -1,6 +1,6 @@
  $DOMAIN
     nxd = 64
-    nyd = 1
+    nyd = 64
     nzd = 1
     ! set nyd and nzd to 64 if you want to have iy or iz /=0,
     ! when prefer_rbgs_relaxation is .true.

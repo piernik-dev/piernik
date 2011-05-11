@@ -56,7 +56,7 @@ module multipole
    integer                   :: lmax                             !< Maximum l-order of multipole moments
    integer                   :: mmax                             !< Maximum m-order of multipole moments. Equal to lmax by default.
    integer                   :: ord_prolong_mpole                !< boundary prolongation operator order; allowed values are -2 .. 2
-   integer                   :: coarsen_multipole                !< If > 0 then evaluate multipoles at level_max-coarsen_multipole level
+   integer                   :: coarsen_multipole                !< If > 0 then evaluate multipoles at roof%level-coarsen_multipole level
    logical                   :: use_point_monopole               !< Don't evaluate multipole moments, use point-like mass approximation (crudest possible)
    logical                   :: interp_pt2mom                    !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
    logical                   :: interp_mom2pot                   !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
@@ -121,7 +121,7 @@ contains
       use dataio_pub,    only: die, warn
       use mpisetup,      only: master, dom, eff_dim, geometry_type
       use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI
-      use multigridvars, only: level_min, level_max, lvl
+      use multigridvars, only: lvl, roof, base
       use grid,          only: cg
 
       implicit none
@@ -177,11 +177,11 @@ contains
       if (mmax < 0) mmax = lmax
 
       if (coarsen_multipole < 0) coarsen_multipole = 0
-      if (level_max - coarsen_multipole < level_min) then
-         if (master) call warn("[multipole:init_multipole] too deep multipole coarsening, setting level_min.")
-         coarsen_multipole = level_max - level_min
+      if (roof%level - coarsen_multipole < base%level) then
+         if (master) call warn("[multipole:init_multipole] too deep multipole coarsening, setting base%level.")
+         coarsen_multipole = roof%level - base%level
       endif
-      lmpole => lvl(level_max - coarsen_multipole)
+      lmpole => lvl(roof%level - coarsen_multipole)
       if (coarsen_multipole > 0) then
          if (interp_pt2mom) then
             call warn("[multipole:init_multipole] coarsen_multipole > 0 disables interp_pt2mom.")
@@ -280,13 +280,13 @@ contains
 
    subroutine multipole_solver
 
-      use multigridvars,      only: level_max, solution, lvl
+      use multigridvars,      only: roof, solution, lvl, plvl
       use multigridhelpers,   only: dirtyH, dirty_debug
       use multigridbasefuncs, only: zero_boundaries
 
       implicit none
 
-      integer :: lev
+      type(plvl), pointer :: curl
 
       if (dirty_debug) then
          lmpole%bnd_x(:, :, :) = dirtyH
@@ -296,9 +296,11 @@ contains
          call zero_boundaries(lmpole%level)
       endif
 
-      if (lmpole%level <  level_max) then
-         do lev = level_max, lmpole%level + 1, -1
-             call lvl(lev)%restrict_level(solution)  ! Overkill, only some layers next to external boundary are needed.
+      if (.not. associated(lmpole, roof)) then
+         curl => roof
+         do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = roof%level, lmpole%level + 1, -1
+            call curl%restrict_level(solution)  ! Overkill, only some layers next to external boundary are needed.
+            curl => curl%coarser
          enddo                                ! An alternative: do potential2img_mass on the roof and restrict bnd_[xyz] data.
       endif
       call potential2img_mass
@@ -313,9 +315,11 @@ contains
          call moments2bnd_potential
       endif
 
-      if (lmpole%level <  level_max) then
-         do lev = lmpole%level, level_max - 1
-            call prolong_ext_bnd(lev)
+      if (.not. associated(lmpole, roof)) then
+         curl => lmpole
+         do while (associated(curl) .and. .not. associated(curl, roof)) ! do lev = lmpole%level, roof%level - 1
+            call prolong_ext_bnd(curl%level)
+            curl => curl%finer
          enddo
       endif
 
@@ -512,12 +516,22 @@ contains
 
    subroutine prolong_ext_bnd(lev)
 
-      use multigridvars,   only: is_external
-      use dataio_pub,      only: die
+      use constants,       only: ndims
+      use dataio_pub,      only: die, warn
+      use mpisetup,        only: eff_dim
+      use multigridvars,   only: is_external, is_mg_uneven, base, roof
 
       implicit none
 
       integer, intent(in) :: lev !< level to prolong from
+
+      if (lev >= roof%level .or. lev < base%level) then
+         call warn("[multigridmultipole:prolong_ext_bnd0] invalid level")
+         return
+      endif
+
+      if (is_mg_uneven) call die("[multigridmultipole:prolong_ext_bnd0] uneven decomposition not implemented yet")
+      if (eff_dim<ndims) call die("[multigridmultipole:prolong_ext_bnd0] 1D and 2D not finished")
 
       if (abs(ord_prolong_mpole) > 2) call die("[multipole:prolong_ext_bnd] interpolation order too high")
 
@@ -539,10 +553,9 @@ contains
 
    subroutine prolong_ext_bnd0(lev)
 
-      use multigridvars,   only: lvl, is_external, level_max
-      use constants,       only: HI, LO, ndims, xdim, ydim, zdim
+      use multigridvars,   only: lvl, is_external
+      use constants,       only: HI, LO, xdim, ydim, zdim
       use dataio_pub,      only: die
-      use mpisetup,        only: eff_dim
 
       implicit none
 
@@ -551,12 +564,10 @@ contains
       type(plvl), pointer :: coarse, fine
       integer :: lh
 
-      if (lev >= level_max) return
-
-      if (eff_dim<ndims) call die("[multigridmultipole:prolong_ext_bnd0] 1D and 2D not finished")
-
       coarse => lvl(lev)
-      fine   => lvl(lev + 1)
+      if (.not. associated(coarse)) call die("[multigridmultipole:prolong_ext_bnd0] coarse == null()")
+      fine   => coarse%finer
+      if (.not. associated(fine)) call die("[multigridmultipole:prolong_ext_bnd0] fine == null()")
 
       do lh = LO, HI
          if (is_external(xdim, lh)) then
@@ -588,10 +599,9 @@ contains
 
    subroutine prolong_ext_bnd2(lev)
 
-      use multigridvars,   only: lvl, is_external, level_max
-      use constants,       only: HI, LO, ndims, xdim, ydim, zdim
+      use multigridvars,   only: lvl, is_external
+      use constants,       only: HI, LO, xdim, ydim, zdim
       use dataio_pub,      only: die
-      use mpisetup,        only: eff_dim
 
       implicit none
 
@@ -607,9 +617,10 @@ contains
       real, dimension(-1:1)         :: p
       real, dimension(-1:1,-1:1,2,2):: pp   ! 2D prolongation stencil
 
-      if (lev >= level_max) return
-
-      if (eff_dim<ndims) call die("[multigridmultipole:prolong_ext_bnd2] 1D and 2D not finished")
+      coarse => lvl(lev)
+      if (.not. associated(coarse)) call die("[multigridmultipole:prolong_ext_bnd0] coarse == null()")
+      fine   => coarse%finer
+      if (.not. associated(fine)) call die("[multigridmultipole:prolong_ext_bnd0] fine == null()")
 
       select case (ord_prolong_mpole)
          case (0)
@@ -630,9 +641,6 @@ contains
          pp(i,:,2,1) = p(-i)*p(:)
          pp(i,:,2,2) = p(-i)*p(1:-1:-1)
       enddo
-
-      coarse => lvl(lev)
-      fine   => lvl(lev + 1)
 
       !at edges and corners we can only inject
       call prolong_ext_bnd0(lev) ! overkill: replace this

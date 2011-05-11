@@ -72,7 +72,7 @@ contains
 
       use dataio_pub,            only: die
       use multigridhelpers,      only: dirty_debug, check_dirty, dirtyH
-      use multigridvars,         only: plvl, lvl, level_min, level_max, ord_prolong, ngridvars, is_mg_uneven
+      use multigridvars,         only: plvl, lvl, base, roof, ord_prolong, ngridvars, is_mg_uneven
       use multigridexperimental, only: prolong_level_hord
 
       implicit none
@@ -82,19 +82,21 @@ contains
 
       type(plvl), pointer :: coarse, fine
 
-      if (lev >= level_max) return ! can't prolong finest level
-      if (lev <  level_min) call die("[multigridbasefuncs:prolong_level] level <= 0.")
+      if (lev >= roof%level) return ! can't prolong finest level
+      if (lev <  base%level) call die("[multigridbasefuncs:prolong_level] level < base%level.")
       if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:prolong_level] Invalid variable index.")
 
       coarse => lvl(lev)
-      fine   => lvl(lev + 1)
+      if (.not. associated(coarse)) call die("[multigridbasefuncs:prolong_level] coarse == null()")
+      fine   => coarse%finer
+      if (.not. associated(fine)) call die("[multigridbasefuncs:prolong_level] fine == null()")
 
       if (dirty_debug) fine%mgvar(:, :, :, iv) = dirtyH
 
       call check_dirty(coarse%level, iv, "prolong-")
 
       if (ord_prolong == 0 .or. is_mg_uneven) then
-         call prolong_level0(lev, iv)
+         call coarse%prolong_level0(iv)
       else
          call prolong_level_hord(lev, iv) ! experimental part
       endif
@@ -103,39 +105,6 @@ contains
 
    end subroutine prolong_level
 
-!!$ ============================================================================
-!>
-!! \brief 0th order prolongation : injection
-!<
-
-   subroutine prolong_level0(lev, iv)
-
-      use multigridvars, only: plvl, lvl
-      use grid,          only: D_x, D_y, D_z
-
-      implicit none
-
-      integer, intent(in)      :: lev   !< level to prolong from
-      integer, intent(in)      :: iv    !< variable to be prolonged
-
-      type(plvl), pointer :: coarse, fine
-
-      coarse => lvl(lev)
-      fine   => lvl(lev + 1)
-
-      ! No guardcells required here
-
-      ! Possible optimization candidate: reduce L1 and L2 cache misses on both read and write (RBGS only, secondary importance)
-      fine%mgvar       (fine%is    :fine%ie-D_x:(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) = &
-           coarse%mgvar(coarse%is  :coarse%ie,           coarse%js  :coarse%je,           coarse%ks  :coarse%ke,           iv)
-      fine%mgvar       (fine%is+D_x:fine%ie    :(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) = &
-           fine%mgvar  (fine%is    :fine%ie-D_x:(1+D_x), fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv)
-      fine%mgvar       (fine%is    :fine%ie,             fine%js+D_y:fine%je    :(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv) = &
-           fine%mgvar  (fine%is    :fine%ie,             fine%js    :fine%je-D_y:(1+D_y), fine%ks    :fine%ke-D_z:(1+D_z), iv)
-      fine%mgvar       (fine%is    :fine%ie,             fine%js    :fine%je,             fine%ks+D_z:fine%ke    :(1+D_z), iv) = &
-           fine%mgvar  (fine%is    :fine%ie,             fine%js    :fine%je,             fine%ks    :fine%ke-D_z:(1+D_z), iv)
-
-   end subroutine prolong_level0
 
 !!$ ============================================================================
 !>
@@ -146,23 +115,25 @@ contains
 
       use dataio_pub,         only: die
       use multigridhelpers,   only: check_dirty
-      use multigridvars,      only: level_min, level_max, ngridvars, lvl
+      use multigridvars,      only: roof, base, ngridvars, lvl, plvl
 
       implicit none
 
       integer, intent(in)      :: iv    !< variable to be restricted
 
-      integer :: i
+      type(plvl), pointer :: curl
 
       if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:restrict_all] Invalid variable index.")
 
-      call check_dirty(level_max, iv, "restrict_all-")
+      call check_dirty(roof%level, iv, "restrict_all-")
 
-      do i = level_max, level_min+1, -1
-         call lvl(i)%restrict_level(iv)
+      curl => roof
+      do while (associated(curl) .and. .not. associated(curl, base))
+         call curl%restrict_level(iv)
+         curl => curl%coarser
       enddo
 
-      call check_dirty(level_min, iv, "restrict_all+")
+      call check_dirty(base%level, iv, "restrict_all+")
 
    end subroutine restrict_all
 
@@ -215,7 +186,7 @@ contains
       use dataio_pub,    only: die
       use mpisetup,      only: comm, ierr, geometry_type
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use multigridvars, only: lvl, level_min, level_max, ngridvars
+      use multigridvars, only: lvl, plvl, base, roof, ngridvars
       use constants,     only: GEO_XYZ, GEO_RPZ
 
       implicit none
@@ -225,46 +196,56 @@ contains
 
       real                :: lsum, avg, vol
       integer             :: i
+      type(plvl), pointer :: curl
 
-      if (lev < level_min .or. lev > level_max) call die("[multigridbasefuncs:substract_average] Invalid level number.")
+      if (lev < base%level .or. lev > roof%level) call die("[multigridbasefuncs:substract_average] Invalid level number.")
       if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:substract_average] Invalid variable index.")
+
+      curl => lvl(lev)
 
       select case (geometry_type)
          case (GEO_XYZ)
-            lsum = sum(lvl(lev)%mgvar(lvl(lev)%is:lvl(lev)%ie, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, iv)) * lvl(lev)%dvol
+            lsum = sum(curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ks:curl%ke, iv)) * curl%dvol
          case (GEO_RPZ)
             lsum = 0.
-            do i = lvl(lev)%is, lvl(lev)%ie
-               lsum = lsum + sum(lvl(lev)%mgvar(i, lvl(lev)%js:lvl(lev)%je, lvl(lev)%ks:lvl(lev)%ke, iv)) * lvl(lev)%dvol * lvl(lev)%x(i)
+            do i = curl%is, curl%ie
+               lsum = lsum + sum(curl%mgvar(i, curl%js:curl%je, curl%ks:curl%ke, iv)) * curl%dvol * curl%x(i)
             enddo
          case default
             call die("[multigridbasefuncs:substract_average] Unsupported geometry.")
       end select
       call MPI_Allreduce(lsum, avg, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
-      call MPI_Allreduce(lvl(lev)%vol, vol, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr) ! This probably can be calculated in init_multigrid
+      call MPI_Allreduce(curl%vol, vol, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr) ! This probably can be calculated in init_multigrid
       avg = avg / vol
 
-      lvl(lev)%mgvar(:, :, :, iv) = lvl(lev)%mgvar(:, :, :, iv) - avg
+      curl%mgvar(:, :, :, iv) = curl%mgvar(:, :, :, iv) - avg
 
    end subroutine substract_average
 
 !!$ ============================================================================
 !>
 !! \brief Prolong solution data at level (lev-1) to faces at level lev
+!!
+!! \details It looks that parallel prolongation order 0 is the best from range -2 .. 2. Quite good is also order 2.(tests were performed with the maclaurin problem at r4051).
+!! There were no experiments with higher order prolongation, but it seems there is not much room for any improvements.
+!! The tests were performed on uniform grid, where the interpolation affects only convergence factors.
+!! On a refinement step the interpolation type affects also sulution by influencing the way how fine and coarse grids are coupled.
+!!
+!! \todo move to plvl or multigrid_gravity
+!!
+!! OPT: completely unoptimized
 !<
 
    subroutine prolong_faces(lev, soln)
 
-#ifdef DEBUG
-      use piernikdebug, only: aux_R
-#endif
       use grid,               only: D_x, D_y, D_z
-      use mpisetup,           only: has_dir
-      use constants,          only: xdim, ydim, zdim, LO, HI
+      use mpisetup,           only: has_dir, comm3d, comm
+      use mpi,                only: MPI_COMM_NULL
+      use constants,          only: xdim, ydim, zdim, LO, HI, LONG
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: plvl, lvl, ord_prolong_face, level_min, level_max, extbnd_antimirror
+      use multigridvars,      only: plvl, lvl, ord_prolong_face_norm, ord_prolong_face_par, base, roof, extbnd_antimirror, single_base, is_mg_uneven
 
       implicit none
 
@@ -273,162 +254,221 @@ contains
 
       integer                       :: i, j, k
       type(plvl), pointer           :: coarse, fine
-      real, parameter, dimension(3) :: p0  = [ 0.,       1.,     0.     ] ! injection
-      real, parameter, dimension(3) :: p1  = [ 0.,       3./4.,  1./4.  ] ! 1D linear prolongation stencil
-      real, parameter, dimension(3) :: p2i = [ -1./8.,   1.,     1./8.  ] ! 1D integral cubic prolongation stencil
-      real, parameter, dimension(3) :: p2d = [ -3./32., 30./32., 5./32. ] ! 1D direct cubic prolongation stencil
-      real, dimension(-1:1)         :: p
-      real, dimension(-1:1,-1:1,2,2):: pp   ! 2D prolongation stencil
+      integer, parameter            :: s_wdth  = 3           ! interpolation stencil width
+      integer, parameter            :: s_rng = (s_wdth-1)/2  ! stencil range around 0
+      real, parameter, dimension(s_wdth) :: p0  = [ 0.,       1.,     0.     ] ! injection
+      real, parameter, dimension(s_wdth) :: p1  = [ 0.,       3./4.,  1./4.  ] ! 1D linear prolongation stencil
+      real, parameter, dimension(s_wdth) :: p2i = [ -1./8.,   1.,     1./8.  ] ! 1D integral cubic prolongation stencil
+      real, parameter, dimension(s_wdth) :: p2d = [ -3./32., 30./32., 5./32. ] ! 1D direct cubic prolongation stencil
+      real, dimension(-s_rng:s_rng)                    :: p
+      real, dimension(-s_rng:s_rng, -s_rng:s_rng, 2, 2):: pp   ! 2D prolongation stencil
       real                          :: pp_norm
-#ifdef DEBUG
-      real :: a, b
+      real :: opfn1, opfn3
+      integer :: b_rng
 
-      ! coefficients for intepolation perpendicular to the face
-      ! 1./2.   * ( 0   0   1   1   0 0 ) ! average, direct linear
-      ! 1./16.  * ( 0  -1   8   8  -1 0 ) ! direct cubic
-      ! 1./256. * ( 3 -25 150 150 -25 3 ) ! direct quintic
-      a = 1. + aux_R(1)/8 ! an additional 0.5 factor is applied late on pp(:,:,:,:)
-      b = -aux_R(1)/8
-      ! the optimal value of aux_R(1) seems to depend on ord_prolong_face
-      ! for ord_prolong_face =  0 it is ~1.7 (best convergence, reduction form 8/9 cycles to 7 cycles in maclaurin test for 1e-10 norm_tol)
-      ! for ord_prolong_face =  2 it is ~2,2 (slightly worse convergence, 8 cycles instead of 9/10 cycles)
-      ! for ord_prolong_face = -2 it is ~2.5 (convergence in 8 cycles instead of 10 cycles)
-      ! for ord_prolong_face =  1 it is ~3.6 (worst convergence, 11 -> 9 cycles in maclaurin test for 1e-10 norm_tol)
+      ! coefficients for intepolation perpendicular to the face can be expressed as
+      ! 1/2*| 1 0 ... ] + a2*| 1 -1 0 ... ] + a4*| 1 -2 1 0 ... ] + a6*| 1 -3 3 -1 0 ... ] + a8*| 1 -4 6 -4 1 0 ... ] + ...
+      ! 1./2.   * ( 0   0   1   1   0 0 ) ! average, direct linear (a2 =  0.,      ...)
+      ! 1./16.  * ( 0  -1   9   9  -1 0 ) ! direct cubic           (a2 =  1./16.,  a4 = 0.,      ...)
+      ! 1./256. * ( 3 -25 150 150 -25 3 ) ! direct quintic         (a2 = 19./256., a4 = 3./256., a6 = 0., ...)
 
-#endif
+      ! factor 2./8. (a2 = 1./8.) was found experimentally
+      opfn1 = 1. + 2./8. ! an additional factor equal to 0.5 is applied later as normalization of  pp(:,:,:,:)
+      opfn3 = -2./8.
+      ! the optimal value of a2 seems to depend at least on ord_prolong_face_par
+      ! for ord_prolong_face_par =  0 it is ~1.7 (best convergence, reduction form 8/9 cycles to 7 cycles in maclaurin test for norm_tol=1e-10 and nsmool=8)
+      ! for ord_prolong_face_par =  2 it is ~2,2 (slightly worse convergence, 8 cycles instead of 9/10 cycles)
+      ! for ord_prolong_face_par = -2 it is ~2.5 (convergence in 8 cycles instead of 10 cycles)
+      ! for ord_prolong_face_par =  1 it is ~3.6 (worst convergence, 11 -> 9 cycles)
 
-      if (lev < level_min .or. lev > level_max) call die("[multigridbasefuncs:prolong_faces] Invalid level")
+      if (lev < base%level .or. lev > roof%level) call die("[multigridbasefuncs:prolong_faces] Invalid level")
 
-      if (lev == level_min) then
+      if (lev == base%level) then
          call warn("[multigridbasefuncs:prolong_faces] Cannot prolong anything to base level")
          return
       endif
 
-      select case (ord_prolong_face)
-         case (0)
-            p(:) = p0(:)
-         case (1,-1)
-            p(:) = p1(:)
-         case (2)
-            p(:) = p2i(:)
-         case (-2)
-            p(:) = p2d(:)
-         case default
-            p(:) = p0(:)
-      end select
+      fine => lvl(lev)
+      if (.not. associated(fine)) call die("[multigridbasefuncs:prolong_faces] fine == null()")
+      coarse => fine%coarser
+      if (.not. associated(coarse)) call die("[multigridbasefuncs:prolong_faces] coarse == null()")
 
-      do i = -1, 1
-         pp(i,:,1,1) = 0.5*p( i)*p(:)       ! 0.5 because of face averaging
-         pp(i,:,1,2) = 0.5*p( i)*p(1:-1:-1) ! or use matmul()
-         pp(i,:,2,1) = 0.5*p(-i)*p(:)
-         pp(i,:,2,2) = 0.5*p(-i)*p(1:-1:-1)
-      enddo
-#ifdef DEBUG
-      call mpi_multigrid_bnd(lev-1, soln, 2, extbnd_antimirror, .true.)
-#else
-      call mpi_multigrid_bnd(lev-1, soln, 1, extbnd_antimirror) !> \deprecated BEWARE for higher prolongation order more guardcell are required
-#endif
-      call check_dirty(lev-1, soln, "prolong_faces", 1)
+      if (comm3d == MPI_COMM_NULL .or. single_base .or. is_mg_uneven) then
+         call die("[multigridbasefuncs:prolong_faces] comm3d == MPI_COMM_NULL not implemented yet")
+      else
+         select case (ord_prolong_face_par)
+            case (0)
+               p(:) = p0(:)
+            case (1,-1)
+               p(:) = p1(:)
+            case (2)
+               p(:) = p2i(:)
+            case (-2)
+               p(:) = p2d(:)
+            case default
+               p(:) = p0(:)
+         end select
 
-      coarse => lvl(lev - 1)
-      fine   => lvl(lev)
-#ifdef DEBUG
-      if (has_dir(xdim)) then
-         pp_norm = 2.*sum(pp(-D_y:D_y, -D_z:D_z, 1, 1)) ! normalization is required for ord_prolong_face == 1 and -2
-         do j = coarse%js, coarse%je
-            do k = coarse%ks, coarse%ke
-               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    LO) =sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * (a*(coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))+b*(coarse%mgvar(coarse%is+1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    LO) =sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (a*(coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))+b*(coarse%mgvar(coarse%is+1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,LO) =sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (a*(coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))+b*(coarse%mgvar(coarse%is+1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,LO) =sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (a*(coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))+b*(coarse%mgvar(coarse%is+1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    HI)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * (a*(coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))+b*(coarse%mgvar(coarse%ie-1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    HI)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (a*(coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))+b*(coarse%mgvar(coarse%ie-1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,HI)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (a*(coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))+b*(coarse%mgvar(coarse%ie-1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,HI)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (a*(coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))+b*(coarse%mgvar(coarse%ie-1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
-            enddo
+         do i = -s_rng, s_rng
+            pp(i,:,1,1) = 0.5*p( i)*p(:)       ! 0.5 because of face averaging
+            pp(i,:,1,2) = 0.5*p( i)*p(1:-1:-1) ! or use matmul()
+            pp(i,:,2,1) = 0.5*p(-i)*p(:)
+            pp(i,:,2,2) = 0.5*p(-i)*p(1:-1:-1)
          enddo
-      endif
 
-      if (has_dir(ydim)) then
-         pp_norm = 2.*sum(pp(-D_x:D_x, -D_z:D_z, 1, 1))
-         do i = coarse%is, coarse%ie
-            do k = coarse%ks, coarse%ke
-               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    LO) =sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * (a*(coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))+b*(coarse%mgvar(i-D_x:i+D_x,coarse%js+1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-2,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    LO) =sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (a*(coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))+b*(coarse%mgvar(i-D_x:i+D_x,coarse%js+1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-2,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,LO) =sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (a*(coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))+b*(coarse%mgvar(i-D_x:i+D_x,coarse%js+1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-2,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,LO) =sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (a*(coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))+b*(coarse%mgvar(i-D_x:i+D_x,coarse%js+1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-2,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    HI)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * (a*(coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))+b*(coarse%mgvar(i-D_x:i+D_x,coarse%je-1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+2,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    HI)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (a*(coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))+b*(coarse%mgvar(i-D_x:i+D_x,coarse%je-1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+2,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,HI)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (a*(coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))+b*(coarse%mgvar(i-D_x:i+D_x,coarse%je-1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+2,k-D_z:k+D_z,soln)))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,HI)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (a*(coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))+b*(coarse%mgvar(i-D_x:i+D_x,coarse%je-1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+2,k-D_z:k+D_z,soln)))) / pp_norm
-            enddo
-         enddo
-      endif
+         b_rng = s_rng
+         if (ord_prolong_face_norm > 0) b_rng = max(b_rng, ord_prolong_face_norm+1)
+         call mpi_multigrid_bnd(lev-1, soln, b_rng, extbnd_antimirror, corners=(ord_prolong_face_par/=0)) !> \deprecated BEWARE for higher prolongation order more guardcell are required
+         call check_dirty(lev-1, soln, "prolong_faces", s_rng)
 
-      if (has_dir(zdim)) then
-         pp_norm = 2.*sum(pp(-D_x:D_x, -D_y:D_y, 1, 1))
-         do i = coarse%is, coarse%ie
-            do j = coarse%js, coarse%je
-               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    LO) =sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * (a*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))+b*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks+1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-2,soln)))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    LO) =sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (a*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))+b*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks+1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-2,soln)))) / pp_norm
-               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,LO) =sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (a*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))+b*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks+1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-2,soln)))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,LO) =sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (a*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))+b*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks+1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-2,soln)))) / pp_norm
-               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    HI)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * (a*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))+b*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke-1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+2,soln)))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    HI)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (a*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))+b*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke-1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+2,soln)))) / pp_norm
-               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,HI)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (a*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))+b*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke-1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+2,soln)))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,HI)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (a*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))+b*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke-1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+2,soln)))) / pp_norm
-            enddo
-         enddo
-      endif
-#else
-      if (has_dir(xdim)) then
-         pp_norm = 2.*sum(pp(-D_y:D_y, -D_z:D_z, 1, 1)) ! normalization is required for ord_prolong_face == 1 and -2
-         do j = coarse%js, coarse%je
-            do k = coarse%ks, coarse%ke
-               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    LO) =sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    LO) =sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,LO) =sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,LO) =sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    HI)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    HI)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,HI)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,HI)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
-            enddo
-         enddo
-      endif
+         if (ord_prolong_face_norm > 0) then
+            if (has_dir(xdim)) then
+               pp_norm = 2.*sum(pp(-D_y:D_y, -D_z:D_z, 1, 1)) ! normalization is required for ord_prolong_face_par == 1 and -2
+               do j = coarse%js, coarse%je
+                  do k = coarse%ks, coarse%ke
+                     fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    LO)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * ( &
+                          opfn1*(coarse%mgvar(coarse%is,  j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(coarse%is+1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    LO)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * ( &
+                          opfn1*(coarse%mgvar(coarse%is,  j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(coarse%is+1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,LO)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * ( &
+                          opfn1*(coarse%mgvar(coarse%is  ,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(coarse%is+1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,LO)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * ( &
+                          opfn1*(coarse%mgvar(coarse%is,  j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(coarse%is+1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    HI)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * ( &
+                          opfn1*(coarse%mgvar(coarse%ie,  j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(coarse%ie-1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    HI)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * ( &
+                          opfn1*(coarse%mgvar(coarse%ie,  j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(coarse%ie-1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,HI)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * ( &
+                          opfn1*(coarse%mgvar(coarse%ie,  j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(coarse%ie-1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,HI)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * ( &
+                          opfn1*(coarse%mgvar(coarse%ie,  j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(coarse%ie-1,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+2,j-D_y:j+D_y,k-D_z:k+D_z,soln)))) / pp_norm
+                  enddo
+               enddo
+            endif
 
-      if (has_dir(ydim)) then
-         pp_norm = 2.*sum(pp(-D_x:D_x, -D_z:D_z, 1, 1))
-         do i = coarse%is, coarse%ie
-            do k = coarse%ks, coarse%ke
-               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    LO) =sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    LO) =sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,LO) =sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,LO) =sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    HI)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    HI)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,HI)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
-               fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,HI)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
-            enddo
-         enddo
-      endif
+            if (has_dir(ydim)) then
+               pp_norm = 2.*sum(pp(-D_x:D_x, -D_z:D_z, 1, 1))
+               do i = coarse%is, coarse%ie
+                  do k = coarse%ks, coarse%ke
+                     fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    LO)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,coarse%js,  k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,coarse%js+1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-2,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    LO)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,coarse%js,  k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,coarse%js+1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-2,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,LO)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,coarse%js,  k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,coarse%js+1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-2,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,LO)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,coarse%js,  k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,coarse%js+1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-2,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    HI)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,coarse%je,  k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,coarse%je-1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+2,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    HI)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,coarse%je,  k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,coarse%je-1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+2,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,HI)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,coarse%je,  k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,coarse%je-1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+2,k-D_z:k+D_z,soln)))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,HI)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,coarse%je,  k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,coarse%je-1,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+2,k-D_z:k+D_z,soln)))) / pp_norm
+                  enddo
+               enddo
+            endif
 
-      if (has_dir(zdim)) then
-         pp_norm = 2.*sum(pp(-D_x:D_x, -D_y:D_y, 1, 1))
-         do i = coarse%is, coarse%ie
-            do j = coarse%js, coarse%je
-               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    LO) =sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    LO) =sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,LO) =sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,LO) =sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    HI)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    HI)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,HI)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
-               fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,HI)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
-            enddo
-         enddo
+            if (has_dir(zdim)) then
+               pp_norm = 2.*sum(pp(-D_x:D_x, -D_y:D_y, 1, 1))
+               do i = coarse%is, coarse%ie
+                  do j = coarse%js, coarse%je
+                     fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    LO)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,  soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks+1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-2,soln)))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    LO)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,  soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks+1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-2,soln)))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,LO)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,  soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks+1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-2,soln)))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,LO)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,  soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks+1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-2,soln)))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    HI)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,  soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke-1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+2,soln)))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    HI)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,  soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke-1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+2,soln)))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,HI)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,  soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke-1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+2,soln)))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,HI)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * ( &
+                          opfn1*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,  soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln)) + &
+                          opfn3*(coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke-1,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+2,soln)))) / pp_norm
+                  enddo
+               enddo
+            endif
+
+         else
+
+            if (has_dir(xdim)) then
+               pp_norm = 2.*sum(pp(-D_y:D_y, -D_z:D_z, 1, 1)) ! normalization is required for ord_prolong_face_par == 1 and -2
+               do j = coarse%js, coarse%je
+                  do k = coarse%ks, coarse%ke
+                     fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    LO)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    LO)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,LO)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,LO)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (coarse%mgvar(coarse%is,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%is-1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    HI)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 1) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k,    HI)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 1) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+D_z,HI)=sum(pp(-D_y:D_y, -D_z:D_z, 1, 2) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_x(-fine%js+2*j+D_y,-fine%ks+2*k+D_z,HI)=sum(pp(-D_y:D_y, -D_z:D_z, 2, 2) * (coarse%mgvar(coarse%ie,j-D_y:j+D_y,k-D_z:k+D_z,soln) + coarse%mgvar(coarse%ie+1,j-D_y:j+D_y,k-D_z:k+D_z,soln))) / pp_norm
+                  enddo
+               enddo
+            endif
+
+            if (has_dir(ydim)) then
+               pp_norm = 2.*sum(pp(-D_x:D_x, -D_z:D_z, 1, 1))
+               do i = coarse%is, coarse%ie
+                  do k = coarse%ks, coarse%ke
+                     fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    LO)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    LO)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,LO)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,LO)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%js,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%js-1,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    HI)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k,    HI)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+D_z,HI)=sum(pp(-D_x:D_x, -D_z:D_z, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
+                     fine%bnd_y(-fine%is+2*i+D_x,-fine%ks+2*k+D_z,HI)=sum(pp(-D_x:D_x, -D_z:D_z, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,coarse%je,k-D_z:k+D_z,soln) + coarse%mgvar(i-D_x:i+D_x,coarse%je+1,k-D_z:k+D_z,soln))) / pp_norm
+                  enddo
+               enddo
+            endif
+
+            if (has_dir(zdim)) then
+               pp_norm = 2.*sum(pp(-D_x:D_x, -D_y:D_y, 1, 1))
+               do i = coarse%is, coarse%ie
+                  do j = coarse%js, coarse%je
+                     fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    LO)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    LO)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,LO)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,LO)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ks-1,soln))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    HI)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j,    HI)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 1) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+D_y,HI)=sum(pp(-D_x:D_x, -D_y:D_y, 1, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
+                     fine%bnd_z(-fine%is+2*i+D_x,-fine%js+2*j+D_y,HI)=sum(pp(-D_x:D_x, -D_y:D_y, 2, 2) * (coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke,soln) + coarse%mgvar(i-D_x:i+D_x,j-D_y:j+D_y,coarse%ke+1,soln))) / pp_norm
+                  enddo
+               enddo
+            endif
+         endif
       endif
-#endif
 
    end subroutine prolong_faces
 

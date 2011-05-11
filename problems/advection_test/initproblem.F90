@@ -52,8 +52,8 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die, user_vars_hdf5
-      use mpisetup,      only: ierr, rbuff, master, slave, buffer_dim, comm, dom
+      use dataio_pub,    only: warn, user_vars_hdf5
+      use mpisetup,      only: ierr, rbuff, master, slave, buffer_dim, comm, dom, proc, nproc
       use mpi,           only: MPI_DOUBLE_PRECISION
       use types,         only: finalize_problem, cleanup_problem
       use list_hdf5,     only: problem_write_restart, problem_read_restart
@@ -91,7 +91,18 @@ contains
 
       endif
 
-      if (pulse_size <= 0. .or. pulse_size >= 1.) call die("[initproblem:read_problem_par] Pulse width should be between 0. and 1.")
+      if (pulse_size <= 0. .or. pulse_size >= 1.) then
+         pulse_size = 0.5
+         if (master) call warn("[initproblem:read_problem_par] Pulse width was invalid. Adjusted to 0.5.")
+      endif
+      if (pulse_amp <= 0.) then
+         if (nproc > 1) then
+            pulse_amp = 1. + proc/real(nproc-1)
+            pulse_size = 1.
+         else
+            pulse_amp = 2.
+         endif
+      endif
 
       pulse_x_min = dom%x0 - dom%Lx * pulse_size/2.
       pulse_x_max = dom%x0 + dom%Lx * pulse_size/2.

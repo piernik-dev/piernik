@@ -66,20 +66,22 @@ contains
    subroutine set_dirty(iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: ngridvars, lvl, level_min, level_max
+      use multigridvars, only: ngridvars, lvl, plvl, base
 
       implicit none
 
       integer, intent(in) :: iv   !< index of variable in lvl()%mgvar which we want to pollute
 
-      integer :: l
+      type(plvl), pointer :: curl
 
       if (.not. dirty_debug) return
 
       if (iv < 1 .or. iv > ngridvars) call die("[multigridhelpers:set_dirty] Invalid variable index.")
 
-      do l = level_min, level_max
-         lvl(l)%mgvar(:, :, :, iv) = dirtyH
+      curl => base
+      do while (associated(curl))
+         curl%mgvar(:, :, :, iv) = dirtyH
+         curl => curl%finer
       enddo
 
    end subroutine set_dirty
@@ -93,7 +95,7 @@ contains
 
       use dataio_pub,    only: die, warn, msg
       use mpisetup,      only: proc, eff_dim
-      use multigridvars, only: ngridvars, lvl, level_min, level_max, mg_nb
+      use multigridvars, only: ngridvars, lvl, plvl, base, roof, mg_nb
       use constants,     only: ndims
 
       implicit none
@@ -103,19 +105,13 @@ contains
       character(len=*),  intent(in) :: label  !< label to indicate the origin of call
       integer, optional, intent(in) :: expand !< also check guardcells
 
-      integer :: l, l1, l2, i, j, k, ng
+      integer :: i, j, k, ng
+      type(plvl), pointer :: curl
+      logical :: all_levels
 
       if (.not. dirty_debug) return
 
       if (iv < 1 .or. iv > ngridvars) call die("[multigridhelpers:check_dirty] Invalid variable index.")
-
-      if (lev < level_min .or. lev > level_max) then
-         l1 = level_min
-         l2 = level_max
-      else
-         l1 = lev
-         l2 = lev
-      endif
 
       if (present(expand) .and. eff_dim==ndims) then ! for 1D and 2D one should define ng_x,ng_y and ng_z
          if (expand > mg_nb) then
@@ -127,21 +123,32 @@ contains
          ng = 0
       endif
 
-      do l = l1, l2
-         if (.not. lvl(l)%empty) then
-            do k = lvl(l)%ks-ng, lvl(l)%ke+ng
-               do j = lvl(l)%js-ng, lvl(l)%je+ng
-                  do i = lvl(l)%is-ng, lvl(l)%ie+ng
-                     if (abs(lvl(l)%mgvar(i, j, k, iv)) > dirtyL) then
-                        if (count([i<lvl(l)%is .or. i>lvl(l)%ie, j<lvl(l)%js .or. j>lvl(l)%je, k<lvl(l)%ks .or. k>lvl(l)%ke]) <=1) then ! excludes corners
+      all_levels = (lev < base%level .or. lev > roof%level)
+      if (all_levels) then
+         curl => base
+      else
+         curl => lvl(lev)
+      endif
+      do while (associated(curl))
+         if (.not. curl%empty) then
+            do k = curl%ks-ng, curl%ke+ng
+               do j = curl%js-ng, curl%je+ng
+                  do i = curl%is-ng, curl%ie+ng
+                     if (abs(curl%mgvar(i, j, k, iv)) > dirtyL) then
+!                        if (count([i<curl%is .or. i>curl%ie, j<curl%js .or. j>curl%je, k<curl%ks .or. k>curl%ke]) <=1) then ! excludes corners
                            write(msg, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &
-                                "[multigridhelpers:check_dirty] ", label, "@", proc, " lvl(", l, ")%mgvar(", i, ",", j, ",", k, ",", iv, ") = ", lvl(l)%mgvar(i, j, k, iv)
+                                "[multigridhelpers:check_dirty] ", label, "@", proc, " lvl(", curl%level, ")%mgvar(", i, ",", j, ",", k, ",", iv, ") = ", curl%mgvar(i, j, k, iv)
                            call warn(msg)
-                        endif
+!                        endif
                      endif
                   enddo
                enddo
             enddo
+         endif
+         if (all_levels) then
+            curl => curl%finer
+         else
+            curl => null()
          endif
       enddo
 
@@ -260,7 +267,7 @@ contains
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: msg
       use mpisetup,      only: master
-      use multigridvars, only: level_min, level_max, lvl, ngridvars
+      use multigridvars, only: base, lvl, plvl, ngridvars
 
       implicit none
 
@@ -268,24 +275,27 @@ contains
 
       integer, parameter :: fu=30
       integer            :: l, i, j, k
+      type(plvl), pointer :: curl
 
       if (.not. do_ascii_dump) return
 
       open(fu, file=filename, status="unknown")
 
       write(fu, '("#",a3,2a4,a6,10a20,/)')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)", "source", "solution", "defect", "correction", "bx", "by", "bz"
-      do l = level_min, level_max
-         do i = lvl(l)%is, lvl(l)%ie
-            do j = lvl(l)%js, lvl(l)%je
-               do k = lvl(l)%ks, lvl(l)%ke
-                  write(fu, '(3i4,i6,10es20.11e3)')i-lvl(l)%is+lvl(l)%off(xdim), j-lvl(l)%js+lvl(l)%off(ydim), k-lvl(l)%ks+lvl(l)%off(zdim), &
-                       &                           l, lvl(l)%x(i), lvl(l)%y(j), lvl(l)%z(k), lvl(l)%mgvar(i, j, k, 1:ngridvars)
+      curl => base
+      do while (associated(curl))
+         do i = curl%is, curl%ie
+            do j = curl%js, curl%je
+               do k = curl%ks, curl%ke
+                  write(fu, '(3i4,i6,10es20.11e3)')i-curl%is+curl%off(xdim), j-curl%js+curl%off(ydim), k-curl%ks+curl%off(zdim), &
+                       &                           l, curl%x(i), curl%y(j), curl%z(k), curl%mgvar(i, j, k, 1:ngridvars)
                enddo
                write(fu, '(/)')
             enddo
             write(fu, '(/,/)')
          enddo
          write(fu, '(/,/,/)')
+         curl => curl%finer
       enddo
 
       close(fu)
