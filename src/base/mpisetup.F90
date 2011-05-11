@@ -647,7 +647,7 @@ contains
       if (procn(zdim, HI) /= MPI_PROC_NULL .and. procn(zdim, HI) /= proc) bnd_zr = 'mpi'
 
 #ifdef DEBUG
-      do p = xdir, zdir
+      do p = xdim, zdim
          write(msg,*) 'dir',p,': ',procn(p, LO), proc, procn(p, HI)
          call printinfo(msg)
       enddo
