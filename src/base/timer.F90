@@ -41,7 +41,7 @@ module timer
    type, private :: timer_info
       character(len=S_LEN) :: key
       logical              :: reset
-      real(kind=8)         :: time = 0.0
+      real(kind=8)         :: time
    end type timer_info
 
    type, private :: timer_list
@@ -57,7 +57,7 @@ module timer
 
    integer :: cpuhours, cpumins, cpusecs, wchours, wcmins, wcsecs
    real    :: zcps, cputot, cpuallp, wctot, cpu_start, cpu_stop
-   integer :: iarray(3)
+   integer, dimension(3) :: iarray
    real(kind=4), dimension(2) :: tarray
    integer :: clock_start, clock_end
 
@@ -67,40 +67,41 @@ contains
    !! \brief Wrapper for timer handling.
    !! Only this routine should be used outside timer module.
    !! USAGE: call set_timer(name,reset)
-   !!    1) if first called with "name", create timer "name" and set it with current cpu_time(), no output
-   !!    2) if timer "name" exists, print "name" - current time, set "name" with current cpu_time()
-   !!    (optional) if reset is true suppress output, set "name" with current cpu_time
+   !!    1) if first called with "name", create timer "name" and set it with current MPI_Wtime(), no output
+   !!    2) if timer "name" exists, print "name" - current time, set "name" with current MPI_Wtime()
+   !!    (optional) if reset is true suppress output, set "name" with current MPI_Wtime
    !<
    real function set_timer(str,reset)
+
       implicit none
+
       character(len=*), intent(in) :: str    !< name of the timer
       logical, intent(in), optional :: reset !< if true all output is suppressed, use for resetting timers
       type(timer_info) :: temp
+
       temp%key = trim(str)
-      if (present(reset)) then
-         temp%reset = .true.
-      else
-         temp%reset = .false.
-      endif
+      temp%reset = present(reset)
       call search_timer(temp)
       set_timer = temp%time
 
    end function set_timer
 
    function delete_timer(tp) result (item)
+
       implicit none
-      type(timer_node), pointer :: tp
+
+      type(timer_node), pointer :: tp, temp
       type(timer_info) :: item
-      type(timer_node), pointer :: temp
 
       temp => tp
       item = tp%info
       tp => tp%node%next
       deallocate(temp)
-      return
+
    end function delete_timer
 
    subroutine cleanup_timers
+
 #ifdef VERBOSE
       use dataio_pub,    only: msg, warn
 #endif /* VERBOSE */
@@ -121,16 +122,17 @@ contains
          call warn(msg)
 #endif /* VERBOSE */
       enddo
-      return
 
    end subroutine cleanup_timers
 
    subroutine search_timer(item)
+
       implicit none
+
       type(timer_info), intent(inout) :: item
       type(timer_list), pointer :: tp
-      tp => timer_root
 
+      tp => timer_root
       do
          if ( associated(tp%next)) then
             if ( item%key == tp%next%info%key ) then
@@ -146,14 +148,17 @@ contains
          endif
          return
       enddo
+
    contains
 
       real function modify_timer(tp,reset)
+
          use mpi, only: MPI_Wtime
+
          implicit none
+
          type(timer_node), pointer :: tp
          logical, intent(in) :: reset
-
          real :: time_old
 
          time_old = tp%info%time
@@ -164,21 +169,24 @@ contains
          else
             modify_timer = tp%info%time
          endif
+
       end function modify_timer
 
       subroutine insert_timer(tp, item)
+
+         use mpi, only: MPI_Wtime
+
          implicit none
-         type(timer_node), pointer :: tp
+
+         type(timer_node), pointer :: tp, temp
          type(timer_info), intent(in) :: item
-         type(timer_node), pointer :: temp
 
          allocate(temp)
          temp%info = item
-         call cpu_time(temp%info%time)
+         temp%info%time = MPI_Wtime()
          temp%node%next => tp
          tp => temp
 
-         return
       end subroutine insert_timer
 
    end subroutine search_timer
@@ -189,14 +197,15 @@ contains
 !! "wctot" will be the total elapsed wall clock time (in seconds) since the job began.
 !<
    subroutine timer_start
+
       implicit none
+
       real(kind=4) :: dtime
 
 #ifdef PERFMON
       call itime ( iarray )
 #endif /* PERFMON */
       wctot  = iarray(1) * 3600. + iarray(2) * 60. + iarray(3)
-
       cputot  = dtime ( tarray )
       cpu_start = tarray(1) +tarray(2)
 
@@ -205,7 +214,9 @@ contains
 !------------------------------------------------------------------------------------------
 
    function time_left(wend) result (tf)
+
       implicit none
+
       real, intent(in), optional :: wend
       logical :: tf
       integer :: clock, cnt_rate, cnt_max

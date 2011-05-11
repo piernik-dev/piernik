@@ -376,7 +376,7 @@ contains
 #endif /* MULTIGRID */
       call cleanup_arrays;      call nextdot(.false.)
       call cleanup_fluids;      call nextdot(.false.)
-      call cleanup_fluidindex;  call nextdot(.false.)
+      call cleanup_fluidindex;  call nextdot(.false., print_t = .true.)
       call cleanup_timers;      call nextdot(.false.)
       call cleanup_mpi;         call nextdot(.true.)
 
@@ -412,7 +412,7 @@ contains
 !>
 !! Just print a dot on the screen, do not put a newline unless asked to do so.
 !<
-   subroutine nextdot(advance)
+   subroutine nextdot(advance, print_t)
 
       use mpisetup,  only: master
       use constants, only: stdout
@@ -420,12 +420,17 @@ contains
       implicit none
 
       logical, intent(in) :: advance
-
-      ts = set_timer(tmr_fu)
+      logical, optional, intent(in) :: print_t
 
       if (master) then
+         if (present(print_t)) then
+            if (print_t) then
+               ts = set_timer(tmr_fu)
+               write(stdout,'(f7.2,a)',advance='no') ts," s "
+            endif
+         endif
          if (advance) then
-            write(stdout,'(a,f7.2,a)')".", ts," s"
+            write(stdout,'(a)')"."
          else
             write(stdout,'(a)',advance='no')"."
          endif
