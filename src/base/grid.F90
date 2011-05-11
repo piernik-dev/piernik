@@ -400,7 +400,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
 
-      nc = [ numfluids, ndims, numcrs, 1 ]      !< number of fluids, magnetic field components, CRs, and 1 for rank-3 array
+      nc = [ numfluids, ndims, max(numcrs,1), 1 ]      !< number of fluids, magnetic field components, CRs, and 1 for rank-3 array
       HBstart = [ cg%ie, cg%je, cg%ke ]
       do d = xdim, zdim
          if (has_dir(d)) then
