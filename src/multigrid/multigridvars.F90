@@ -238,6 +238,9 @@ contains
             ! OPT: old code operations: Ir:Dr:Dw:Dr_m:Dw_m = 13:8:1:1:0.1, this code 130:20:8:1.4:0.2
             ! OPT: computation of ic consumes ~30% Ir
             ! OPT: convert the loop over i (at least) to array section operation
+            ! previous implementation of restriction (sum of array sections without loops) was probably faster and did produce slightly different results
+            ! (with typical relative difference at level 1e-15 due to different numerical roundoffs)
+            ! It is possible that future optimisations will affect the results and bit-to-bit comparisions (with h5diff) will fail
             do k = fse(zdim, LO), fse(zdim, HI)
                kc = (k-off1(zdim)-this%ks)/2+cse(zdim, LO)
                do j = fse(ydim, LO), fse(ydim, HI)
