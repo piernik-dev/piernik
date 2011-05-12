@@ -779,25 +779,23 @@ contains
       use constants,  only: xdim, ydim, zdim, ndims, MAXL
       use dataio_pub, only: die
       use func,       only: get_extremum
-      use grid,       only: cg
+      use grid,       only: cg, D_x, D_y, D_z
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: psize, pcoords, master, nproc, comm, comm3d, ierr, have_mpi, is_mpi_noncart
 
       implicit none
 
-      integer                             :: i, j, k, ip
-      real, allocatable, dimension(:,:,:), target :: gpwork
-      real, dimension(:,:,:), pointer     :: p
-      real                                :: gravrx(cg%nx), gravry(cg%ny), gravrz(cg%nz)
-      type(value)                         :: gp_max
-      integer                             :: px, py, pz, pc(3)
-      real                                :: dgpx_proc, dgpx_all(0:nproc-1), &
-                                             dgpy_proc, dgpy_all(0:nproc-1), &
-                                             dgpz_proc, dgpz_all(0:nproc-1), &
-                                             dgpx(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1), &
-                                             dgpy(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1), &
-                                             dgpz(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1), &
-                                             ddgp(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1)
+      integer                                                          :: i, j, k, ip, px, py, pz
+      integer, dimension(3)                                            :: pc
+      real, allocatable, dimension(:,:,:), target                      :: gpwork
+      real, dimension(:,:,:), pointer                                  :: p
+      real, dimension(cg%nx)                                           :: gravrx
+      real, dimension(cg%ny)                                           :: gravry
+      real, dimension(cg%nz)                                           :: gravrz
+      real                                                             :: dgpx_proc, dgpy_proc, dgpz_proc, ddgph
+      real, dimension(0:nproc-1)                                       :: dgpx_all,  dgpy_all,  dgpz_all
+      real, dimension(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1) :: dgpx,      dgpy,      dgpz,     ddgp
+      type(value)                                                      :: gp_max
 
       if (have_mpi .and. is_mpi_noncart) call die("[gravity:grav_accel2pot] is_mpi_noncart is not implemented") ! MPI_Cart_coords, psize, pcoords
       if (comm3d == MPI_COMM_NULL) call die("[gravity:grav_accel2pot] comm3d == MPI_COMM_NULL")
@@ -826,9 +824,9 @@ contains
          enddo
       enddo
 
-      dgpx_proc = gpwork(cg%is, 1, 1)-gpwork(1,1,1)
-      dgpy_proc = gpwork(1, cg%js, 1)-gpwork(1,1,1)
-      dgpz_proc = gpwork(1, 1, cg%ks)-gpwork(1,1,1)
+      dgpx_proc = gpwork(cg%ie+D_x, cg%js,     cg%ks    )-gpwork(cg%is,cg%js,cg%ks)
+      dgpy_proc = gpwork(cg%is,     cg%je+D_y, cg%ks    )-gpwork(cg%is,cg%js,cg%ks)
+      dgpz_proc = gpwork(cg%is,     cg%js,     cg%ke+D_z)-gpwork(cg%is,cg%js,cg%ks)
 
       call MPI_Gather ( dgpx_proc, 1, MPI_DOUBLE_PRECISION, dgpx_all, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr )
       call MPI_Gather ( dgpy_proc, 1, MPI_DOUBLE_PRECISION, dgpy_all, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr )
@@ -876,7 +874,8 @@ contains
       py = pcoords(ydim)
       pz = pcoords(zdim)
 
-      gpwork = gpwork + ddgp(px,py,pz)
+      ddgph  = gpwork(1,1,1)-gpwork(cg%is,cg%js,cg%ks)
+      gpwork = gpwork + ddgp(px,py,pz) + ddgph
       p => gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, gp_max)
 
