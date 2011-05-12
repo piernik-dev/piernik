@@ -1,6 +1,6 @@
  $DOMAIN
-    nxd = 512
-    nyd = 512
+    nxd = 128
+    nyd = 128
     nzd = 1
     bnd_xl = 'per'
     bnd_xr = 'per'
@@ -31,13 +31,13 @@
 
  $END_CONTROL
     tend   = 0.60
-    nend   = 20
+    nend   = 200000
  /
 
  $OUTPUT_CONTROL
     problem_name = 'otvortex'
     run_id       = 'rs4'
-    dt_hdf  = 0.012
+    dt_hdf  = 0.12
     dt_res  = 0.0
     dt_log  = 0.00001
     dt_tsl  = 0.00001
