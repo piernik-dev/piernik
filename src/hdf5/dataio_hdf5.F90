@@ -813,7 +813,7 @@ contains
 
       select case (area_type)
          case (AT_ALL_B)                           ! whole domain with mpi boundaries
-            if (is_mpi_noncart) call die("[dataio_hdf5:set_dims_to_write] allbnd dump is too hard to implement with noncartesian domain division")
+            if (is_mpi_noncart) call die("[dataio_hdf5:set_dims_to_write] allbnd dump is too hard to implement with noncartesian domain division") !psize, pcoords
             if (is_uneven) call warn("[dataio_hdf5:set_dims_to_write] allbnd dump with uneven domain division")
             chnk(:)   = [cg%nx, cg%ny, cg%nz]
             area(:)   = dom%n_d(:) + 2 * cg%nb * psize(:) ! \todo invent something better
@@ -1773,8 +1773,6 @@ contains
       call H5Tclose_f(type_id, error)
       call H5Pclose_f(prp_id, error)
 
-      !bufsize = 3
-      !call h5ltset_attribute_int_f(file_id, "/", "psize", psize, bufsize, error) ! unused and will be obsolete soon
       !> \todo store full domain decomposition for all procs here [cg%n_b(:), cg%off(:)] @(0:nproc-1) ! MPI_Gather them?
 
       fe = len_trim(problem_name)

@@ -68,7 +68,7 @@ module mpisetup
 
    integer, protected        :: comm, comm3d
    integer, dimension(ndims), protected :: pcoords
-   integer, protected :: procxyl, procyxl!, procxyr, procyxr
+   integer, protected :: procxyl, procyxl
    integer, protected, dimension(ndims, LO:HI) :: procn   !< array of neighbours proc numbers
    logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
    integer, protected    :: eff_dim                  !< effective dimensionality of the simulation
@@ -625,19 +625,7 @@ contains
                endif
 
                if (any(dom%bnd(xdim:ydim, HI) == BND_COR)) call die("[mpisetup:init_mpi] Corner boundary on the right side not implemented anywhere")
-!!$               if (pcoords(xdim) == psize(xdim)-1 .and. pcoords(ydim) < psize(ydim)-1) then
-!!$                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-!!$                  call MPI_Cart_rank(comm3d,pc,procxyr,ierr)
-!!$               else
-!!$                  procxyr = MPI_PROC_NULL
-!!$               endif
-!!$               if (pcoords(ydim) == psize(ydim)-1 .and. pcoords(xdim) < psize(xdim)-1 ) then
-!!$                  pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-!!$                  call MPI_Cart_rank(comm3d,pc,procyxr,ierr)
-!!$               else
-!!$                  procyxr = MPI_PROC_NULL
-!!$               endif
-!!$            endif
+
             else
                if (master) call printinfo("[mpisetup:init_mpi] Cartesian decomposition without comm3d")
                do p = 0, nproc-1
