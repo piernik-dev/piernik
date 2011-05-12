@@ -180,7 +180,7 @@ contains
 
          if (cg%bnd(xdim, LO) == BND_COR) then
 !   - lower to left
-            if (pcoords(1) == 0 .and. pcoords(2) == 0) then
+            if (pcoords(xdim) == 0 .and. pcoords(ydim) == 0) then
                do i=1, cg%nb
                   do j=cg%js, cg%ny
                      b(ibx,i,j,:) = -b(iby,j,cg%isb+1-i,:)
@@ -215,7 +215,7 @@ contains
 
          if (cg%bnd(ydim, LO) == BND_COR) then
 !   - left to lower
-            if (pcoords(2) == 0 .and. pcoords(1) == 0 ) then
+            if (pcoords(ydim) == 0 .and. pcoords(xdim) == 0 ) then
                do j=1, cg%nb
                   do i=cg%is, cg%nx
                      b(ibx,i,j,:) =  b(iby,cg%isb+1-j,i,:)

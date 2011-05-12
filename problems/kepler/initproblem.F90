@@ -261,8 +261,8 @@ contains
       use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,                only: cg
       use hydrostatic,         only: hydrostatic_zeq_densmid
-      use mpisetup,            only: has_dir, dom, master, geometry_type, pcoords, dom, comm, ierr
-      use mpi,                 only: MPI_DOUBLE_PRECISION
+      use mpisetup,            only: has_dir, dom, master, geometry_type, pcoords, dom, comm, comm3d, ierr
+      use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use interactions,        only: epstein_factor
 
       implicit none
@@ -276,6 +276,7 @@ contains
       type(component_fluid), pointer  :: fl
 
 !   Secondary parameters
+      if (comm3d == MPI_COMM_NULL) call die("[initproblem:init_prob] comm3d == MPI_COMM_NULL not implemented") !pcoords
 
       sqr_gm = sqrt(newtong*ptmass)
       do k = 1, cg%nz

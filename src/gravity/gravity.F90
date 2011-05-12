@@ -872,9 +872,9 @@ contains
 
       call MPI_Bcast(ddgp, nproc, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      px = pcoords(1)
-      py = pcoords(2)
-      pz = pcoords(3)
+      px = pcoords(xdim)
+      py = pcoords(ydim)
+      pz = pcoords(zdim)
 
       gpwork = gpwork + ddgp(px,py,pz)
       p => gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
