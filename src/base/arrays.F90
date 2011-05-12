@@ -60,7 +60,6 @@ module arrays
 
 #ifdef COSM_RAYS
    real, allocatable, dimension(:,:,:),   target :: divvel   !< Array storing \f$\nabla\cdot\mathbf{v}\f$, needed in cosmic ray transport
-   real, allocatable, dimension(:,:,:,:), target :: wcr      !< Temporary array used in crdiffusion module
 #endif /* COSM_RAYS  */
 
 #ifdef ISO_LOCAL
@@ -87,7 +86,7 @@ contains
 
       implicit none
 
-      type(var_numbers), intent(in) :: flind !< fluid database; cannot use fluidindex::flind here due to circular dependences in some setups
+      type(var_numbers), intent(in) :: flind !< fluid database; cannot use fluidindex::flind here due to circular dependencies in some setups
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[arrays:init_arrays] grid or fluids not initialized.")
 
@@ -122,8 +121,6 @@ contains
 
 #ifdef COSM_RAYS
       call my_allocate(divvel, ma3d, "divvel")
-      ma4d = [flind%crs%all, cg%nx, cg%ny, cg%nz]
-      call my_allocate(wcr, ma4d, "wcr")
 #endif /* COSM_RAYS  */
 
 #ifdef ISO_LOCAL
@@ -164,7 +161,6 @@ contains
 
 #ifdef COSM_RAYS
       if (allocated(divvel))  deallocate(divvel)
-      if (allocated(wcr))     deallocate(wcr)
 #endif /* COSM_RAYS */
 
 #ifdef ISO_LOCAL

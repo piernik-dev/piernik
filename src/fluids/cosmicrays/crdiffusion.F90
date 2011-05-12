@@ -36,9 +36,28 @@ module crdiffusion
    implicit none
 
    private
-   public :: cr_diff_x, cr_diff_y, cr_diff_z
+   public :: cr_diff_x, cr_diff_y, cr_diff_z, init_crdiffusion, cleanup_crdiffusion
+
+   real, allocatable, dimension(:,:,:,:), target :: wcr      !< Temporary array used in crdiffusion module
 
 contains
+
+   subroutine init_crdiffusion(crsall)
+      use grid,          only: cg
+      use diagnostics,   only: ma4d, my_allocate
+      implicit none
+      integer, intent(in) :: crsall
+
+      ma4d = [crsall, cg%nx, cg%ny, cg%nz]
+      call my_allocate(wcr, ma4d, "wcr")
+   end subroutine init_crdiffusion
+
+   subroutine cleanup_crdiffusion
+      use diagnostics, only: my_deallocate
+      implicit none
+      call my_deallocate(wcr)
+   end subroutine cleanup_crdiffusion
+
 !>
 !! \brief boundaries for wcr
 !! This procedure is a shameless copy of grid::arr3d_boundaries adapted for wcr
@@ -47,7 +66,6 @@ contains
 !<
    subroutine all_wcr_boundaries
 
-      use arrays,        only: wcr   !< \todo doesn't it belong only to this module? What's the point in keeping it in arrays...
       use dataio_pub,    only: die
       use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL, MPI_COMM_NULL
       use constants,     only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI
@@ -136,7 +154,7 @@ contains
 !<
    subroutine cr_diff_x
 
-      use arrays,         only: b, u, wcr
+      use arrays,         only: b, u
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
@@ -203,7 +221,7 @@ contains
 !<
    subroutine cr_diff_y
 
-      use arrays,         only: b, u, wcr
+      use arrays,         only: b, u
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
@@ -270,7 +288,7 @@ contains
 !<
    subroutine cr_diff_z
 
-      use arrays,         only: b, u, wcr
+      use arrays,         only: b, u
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp

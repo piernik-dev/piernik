@@ -220,6 +220,9 @@ contains
 #ifdef CORIOLIS
       use coriolis,              only: init_coriolis
 #endif /* CORIOLIS */
+#ifdef COSM_RAYS
+      use crdiffusion,           only: init_crdiffusion
+#endif /* COSM_RAYS */
       implicit none
 
       call parse_cmdline
@@ -251,6 +254,11 @@ contains
       code_progress = PIERNIK_INIT_BASE      ! Now we can initialize things that depend on all the above fundamental calls
 
       call init_arrays(flind) ! depends on grid and fluids
+
+#ifdef COSM_RAYS
+      call init_crdiffusion(flind%crs%all) ! depends on grid and fluids
+#endif /* COSM_RAYS */
+
       code_progress = PIERNIK_INIT_ARRAYS    ! It looks that init_arrays can be delayed if necessary
 
       call init_geometry ! depends on grid
@@ -362,6 +370,9 @@ contains
 #ifdef MULTIGRID
       use multigrid,    only: cleanup_multigrid
 #endif /* MULTIGRID */
+#ifdef COSM_RAYS
+      use crdiffusion,  only: cleanup_crdiffusion
+#endif /* COSM_RAYS */
       implicit none
 
       if (associated(cleanup_problem)) call cleanup_problem;        call  nextdot(.false.)
@@ -374,6 +385,9 @@ contains
 #ifdef MULTIGRID
       call cleanup_multigrid;   call nextdot(.false.)
 #endif /* MULTIGRID */
+#ifdef COSM_RAYS
+      call cleanup_crdiffusion; call nextdot(.false.)
+#endif /* COSM_RAYS */
       call cleanup_arrays;      call nextdot(.false.)
       call cleanup_fluids;      call nextdot(.false.)
       call cleanup_fluidindex;  call nextdot(.false., print_t = .true.)
