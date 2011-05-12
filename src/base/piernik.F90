@@ -372,6 +372,7 @@ contains
 #endif /* MULTIGRID */
 #ifdef COSM_RAYS
       use crdiffusion,  only: cleanup_crdiffusion
+      use crhelpers,    only: cleanup_crhelpers
 #endif /* COSM_RAYS */
       implicit none
 
@@ -387,6 +388,7 @@ contains
 #endif /* MULTIGRID */
 #ifdef COSM_RAYS
       call cleanup_crdiffusion; call nextdot(.false.)
+      call cleanup_crhelpers;   call nextdot(.false.)
 #endif /* COSM_RAYS */
       call cleanup_arrays;      call nextdot(.false.)
       call cleanup_fluids;      call nextdot(.false.)

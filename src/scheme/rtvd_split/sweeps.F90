@@ -98,12 +98,13 @@ contains
       use constants,       only: xdim, ydim, zdim
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
-      use crhelpers,       only: div_v
+      use crhelpers,       only: div_v, set_div_v1d
 #endif /* COSM_RAYS */
 
       implicit none
       real, dimension(nmag, cg%nx)      :: b_x
       real, dimension(flind%all, cg%nx) :: u_x, u0_x
+      real, dimension(:), pointer       :: div_v1d => null()
       integer                           :: j, k, jp, kp, istep
 
       b_x = 0.0
@@ -127,11 +128,14 @@ contains
 #endif /* MAGNETIC */
 
                call set_geo_coeffs(xdim,flind,j,k)
+#ifdef COSM_RAYS
+               call set_div_v1d(div_v1d,xdim,j,k)
+#endif /* COSM_RAYS */
 
                u_x (iarr_all_swpx,:) = u (:,:,j,k)
                u0_x(iarr_all_swpx,:) = uh(:,:,j,k)
 
-               call relaxing_tvd(cg%nx, u_x, u0_x, b_x, istep, xdim, j, k, cg%dx, dt)
+               call relaxing_tvd(cg%nx, u_x, u0_x, b_x, div_v1d, istep, xdim, j, k, cg%dx, dt)
                u(:,:,j,k)=u_x(iarr_all_swpx,:)
             enddo
          enddo
@@ -150,12 +154,13 @@ contains
       use constants,       only: xdim, ydim, zdim
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
-      use crhelpers,       only: div_v
+      use crhelpers,       only: div_v, set_div_v1d
 #endif /* COSM_RAYS */
 
       implicit none
       real, dimension(nmag, cg%ny)      :: b_y
       real, dimension(flind%all, cg%ny) :: u_y, u0_y
+      real, dimension(:), pointer       :: div_v1d => null()
       integer                           :: i, k, ip, kp, istep
       b_y = 0.0
       u_y = 0.0
@@ -179,11 +184,14 @@ contains
 #endif /* MAGNETIC */
 
                call set_geo_coeffs(ydim,flind,k,i)
+#ifdef COSM_RAYS
+               call set_div_v1d(div_v1d,ydim,k,i)
+#endif /* COSM_RAYS */
 
                u_y (iarr_all_swpy,:) = u (:,i,:,k)
                u0_y(iarr_all_swpy,:) = uh(:,i,:,k)
 
-               call relaxing_tvd(cg%ny, u_y, u0_y, b_y, istep, ydim, k, i, cg%dy, dt)
+               call relaxing_tvd(cg%ny, u_y, u0_y, b_y, div_v1d, istep, ydim, k, i, cg%dy, dt)
                u(:,i,:,k)=u_y(iarr_all_swpy,:)
 
             enddo
@@ -204,12 +212,13 @@ contains
       use constants,       only: xdim, ydim, zdim
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
-      use crhelpers,       only: div_v
+      use crhelpers,       only: div_v, set_div_v1d
 #endif /* COSM_RAYS */
 
       implicit none
       real, dimension(nmag, cg%nz)      :: b_z
       real, dimension(flind%all, cg%nz) :: u_z, u0_z
+      real, dimension(:), pointer       :: div_v1d => null()
       integer                           :: i, j, ip, jp, istep
 
       b_z = 0.0
@@ -234,6 +243,9 @@ contains
 #endif /* MAGNETIC */
 
                call set_geo_coeffs(zdim,flind,i,j)
+#ifdef COSM_RAYS
+               call set_div_v1d(div_v1d,zdim,i,j)
+#endif /* COSM_RAYS */
 
                !OPT: It looks that u_z gets re-assigned to something inside relaxing_tvd. \todo try to merge these assignments
                !OPT: 3% D1mr, 3% D2mr, 20% D1mw, Ir:Dr:Dw ~ 10:4:1
@@ -241,7 +253,7 @@ contains
                u_z (iarr_all_swpz,:) = u (:,i,j,:)
                u0_z(iarr_all_swpz,:) = uh(:,i,j,:)
 
-               call relaxing_tvd(cg%nz, u_z, u0_z, b_z, istep, zdim, i, j, cg%dz, dt)
+               call relaxing_tvd(cg%nz, u_z, u0_z, b_z, div_v1d, istep, zdim, i, j, cg%dz, dt)
                u(:,i,j,:)=u_z(iarr_all_swpz,:)
             enddo
          enddo

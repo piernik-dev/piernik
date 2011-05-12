@@ -32,13 +32,39 @@ module crhelpers
    implicit none
 
    private
-   public :: div_v, div_vx, div_vy, div_vz, whichfaq
+   public :: div_v, set_div_v1d, cleanup_crhelpers
+
+   real, dimension(:,:,:), allocatable, target :: divvel
 
 contains
 
+   subroutine cleanup_crhelpers
+      use diagnostics, only: my_deallocate
+      implicit none
+      call my_deallocate(divvel)
+   end subroutine cleanup_crhelpers
+
+   subroutine set_div_v1d(p, dir, i1, i2)
+      use constants,   only: xdim, ydim, zdim
+      implicit none
+      real, dimension(:), pointer, intent(inout) :: p
+      integer, intent(in) :: dir, i1, i2
+
+      select case (dir)
+         case (xdim)
+            p => divvel(:, i1, i2)
+         case (ydim)
+            p => divvel(i2, :, i1)
+         case (zdim)
+            p => divvel(i1, i2, :)
+      end select
+      return
+   end subroutine set_div_v1d
+
    subroutine div_v(ifluid)
 
-      use arrays,      only: u, divvel
+      use diagnostics, only: ma3d, my_allocate
+      use arrays,      only: u
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,        only: cg
       use constants,   only: xdim, ydim, zdim
@@ -51,6 +77,11 @@ contains
       real, dimension(cg%nz) :: vz
       integer                :: i, j, k, ifluid
       integer                :: idnf, imxf, imyf, imzf
+
+      if (.not.allocated(divvel)) then
+         ma3d = [cg%nx, cg%ny, cg%nz]
+         call my_allocate(divvel, ma3d, "divvel")
+      endif
 
       idnf = iarr_all_dn(ifluid)
       imxf = iarr_all_mx(ifluid)
@@ -90,64 +121,5 @@ contains
       endif
 
    end subroutine div_v
-
-   subroutine div_vx(k,j)
-
-      use arrays, only: divvel
-      use grid,   only: cg
-
-      implicit none
-
-      real, dimension(cg%nx) :: divv
-      integer                :: j, k
-
-      divv = divvel(:,j,k)
-
-   end subroutine div_vx
-
-   subroutine div_vy(k,i)
-
-      use arrays, only: divvel
-      use grid,   only: cg
-
-      implicit none
-
-      real, dimension(cg%ny) :: divv
-      integer                :: i, k
-
-      divv = divvel(i,:,k)
-
-   end subroutine div_vy
-
-   subroutine  div_vz(j,i)
-
-      use arrays, only: divvel
-      use grid,   only: cg
-
-      implicit none
-
-      real, dimension(cg%nz) :: divv
-      integer                :: i, j
-
-      divv = divvel(i,j,:)
-
-   end subroutine div_vz
-
-   subroutine whichfaq(faq,i,j,n)
-      implicit none
-      real    :: faq
-      integer :: i, j, n
-
-      faq = 0.5
-      if (i == 0) then
-         i   = 1
-         faq = 1.0
-      endif
-      if (j-1 == n) then
-         j   = n
-         faq = 1.0
-      endif
-
-   end subroutine whichfaq
 
 end module crhelpers

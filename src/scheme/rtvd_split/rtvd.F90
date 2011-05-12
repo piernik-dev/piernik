@@ -229,13 +229,13 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if berrer pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, u0, bb, istep, sweep, i1, i2, dx, dt)
+   subroutine relaxing_tvd(n, u, u0, bb, divv, istep, sweep, i1, i2, dx, dt)
 
       use dataio_pub,       only: msg, die
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
       use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass
-      use constants,        only: xdim, ydim, zdim
+      use constants,        only: xdim, ydim
       use gridgeometry,     only: gc, geometry_source_terms
 #ifdef BALSARA
       use interactions,     only: balsara_implicit_interactions
@@ -250,7 +250,6 @@ contains
       use gravity,          only: grav_pot2accel
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      use arrays,           only: divvel
       use initcosmicrays,   only: iarr_crs, iarr_crn, gamma_crs, cr_active, smallecr
 #ifdef COSM_RAYS_SOURCES
       use sourcecosmicrays, only: src_crn
@@ -275,6 +274,7 @@ contains
       real, dimension(flind%all,n), intent(inout) :: u                  !< vector of conservative variables
       real, dimension(flind%all,n), intent(in)    :: u0                 !< vector of conservative variables
       real, dimension(nmag,n),     intent(in)     :: bb                 !< local copy of magnetic field
+      real, dimension(:), pointer, intent(in)     :: divv
       integer,                     intent(in)     :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                     intent(in)     :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                     intent(in)     :: i2                 !< coordinate of sweep in the 2nd remaining direction
@@ -322,7 +322,7 @@ contains
 #endif /* IONIZED && MAGNETIC */
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      real, dimension(n)             :: divv,grad_pcr,ecr
+      real, dimension(n)             :: grad_pcr,ecr
       real, dimension(n)             :: decr
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS_DW
@@ -444,18 +444,6 @@ contains
 #if defined COSM_RAYS && defined IONIZED
    ! ---- 2 -----------------------
    ! \todo move to proper module
-      ! ---- 1 --------------------
-      ! \todo move divv selection to sweeps?
-      select case (sweep)
-         case (xdim)
-            divv = divvel(:,i1,i2)
-         case (ydim)
-            divv = divvel(i2,:,i1)
-            case (zdim)
-            divv = divvel(i1,i2,:)
-      end select
-      ! ---- 1 ----------------------
-
       grad_pcr(:) = 0
       if (flind%crn%all > 0) then !> \deprecated BEWARE: quick hack
          do icr = 1, 1 !> \deprecated flind_crs  !BEWARE TEMPORARY!

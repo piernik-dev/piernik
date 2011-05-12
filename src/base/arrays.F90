@@ -58,10 +58,6 @@ module arrays
 #endif /* SELF_GRAV */
 #endif /* GRAV */
 
-#ifdef COSM_RAYS
-   real, allocatable, dimension(:,:,:),   target :: divvel   !< Array storing \f$\nabla\cdot\mathbf{v}\f$, needed in cosmic ray transport
-#endif /* COSM_RAYS  */
-
 #ifdef ISO_LOCAL
    real, allocatable, dimension(:,:,:),   target :: cs_iso2_arr !< Array storing squared local isothermal sound speed
 #endif /* ISO_LOCAL */
@@ -119,10 +115,6 @@ contains
 #endif /* SELF_GRAV */
 #endif /* GRAV */
 
-#ifdef COSM_RAYS
-      call my_allocate(divvel, ma3d, "divvel")
-#endif /* COSM_RAYS  */
-
 #ifdef ISO_LOCAL
       call my_allocate(cs_iso2_arr, ma3d, "cs_iso2_arr")
 #endif /* ISO_LOCAL */
@@ -158,10 +150,6 @@ contains
       if (allocated(sgpm))    deallocate(sgpm)
 #endif /* SELF_GRAV */
 #endif /* GRAV */
-
-#ifdef COSM_RAYS
-      if (allocated(divvel))  deallocate(divvel)
-#endif /* COSM_RAYS */
 
 #ifdef ISO_LOCAL
       if (allocated(cs_iso2_arr)) deallocate(cs_iso2_arr)
