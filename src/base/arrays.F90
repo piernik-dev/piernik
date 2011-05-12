@@ -42,10 +42,6 @@ module arrays
    real, allocatable, dimension(:,:,:,:), target :: b0   !< Copy of main array of magnetic field's components
    real, allocatable, dimension(:,:,:),   target :: wa   !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 
-#ifdef RESISTIVE
-   real, allocatable, dimension(:,:,:)       :: wcu      !< Temporary array used in resistivity module
-#endif /* RESISTIVE */
-
 #ifdef GRAV
    real, allocatable, dimension(:,:,:), target :: gpot     !< Array for sum of gravitational potential at t += dt
    real, allocatable, dimension(:,:,:), target :: hgpot    !< Array for sum of gravitational potential at t += 0.5*dt
@@ -98,10 +94,6 @@ contains
       ma3d = [cg%nx, cg%ny, cg%nz]
       call my_allocate(wa, ma3d, "wa")
 
-#ifdef RESISTIVE
-      call my_allocate(wcu, ma3d, "wcu")
-#endif /* RESISTIVE */
-
 #ifdef GRAV
       call my_allocate(gpot, ma3d, "gpot")
       call my_allocate(hgpot, ma3d, "hgpot")
@@ -134,10 +126,6 @@ contains
       if (allocated(uh))      deallocate(uh)
       if (allocated(b0))      deallocate(b0)
       if (allocated(wa))      deallocate(wa)
-
-#ifdef RESISTIVE
-      if (allocated(wcu))     deallocate(wcu)
-#endif /* RESISTIVE */
 
 #ifdef GRAV
       if (allocated(gpot))    deallocate(gpot)

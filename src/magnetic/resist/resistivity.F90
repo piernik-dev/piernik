@@ -41,7 +41,7 @@ module resistivity
    private
    public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, etamax,   &
         &     diffuseby_x, diffusebz_x, diffusebx_y, diffusebz_y, diffusebx_z, diffuseby_z, &
-        &     cu2max, deimin, eta1_active
+        &     cu2max, deimin, eta1_active, wcu
 
    real    :: cfl_resist                     !< CFL factor for resistivity effect
    real    :: eta_0                          !< uniform resistivity
@@ -53,6 +53,7 @@ module resistivity
    real    :: dt_resist, dt_eint
    double precision :: d_eta_factor
    type(value) :: etamax, cu2max, deimin
+   real, dimension(:,:,:), allocatable, target :: wcu
    real, dimension(:,:,:), allocatable, target :: wb, eh, eta
    real, dimension(:,:,:), allocatable         :: dbx, dby, dbz
    logical, save :: eta1_active = .true.       !< resistivity off-switcher while eta_1 == 0.0
@@ -63,6 +64,7 @@ contains
 
       implicit none
 
+      if (allocated(wcu)) deallocate(wcu)
       if (allocated(eta)) deallocate(eta)
       if (allocated(wb) ) deallocate(wb)
       if (allocated(eh) ) deallocate(eh)
@@ -151,6 +153,7 @@ contains
       endif
 #endif /* ISO */
 
+      if (.not.allocated(wcu) ) allocate( wcu(cg%nx, cg%ny, cg%nz))
       if (eta1_active) then
          if (.not.allocated(wb) ) allocate( wb(cg%nx, cg%ny, cg%nz))
          if (.not.allocated(eh) ) allocate( eh(cg%nx, cg%ny, cg%nz))
@@ -331,7 +334,7 @@ contains
 
    subroutine diffuseby_x
 
-      use arrays,        only: wcu, b
+      use arrays,        only: b
       use fluidindex,    only: iby
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -364,7 +367,7 @@ contains
 
    subroutine diffusebz_x
 
-      use arrays,        only: wcu, b
+      use arrays,        only: b
       use fluidindex,    only: ibz
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -397,7 +400,7 @@ contains
 
    subroutine diffusebz_y
 
-      use arrays,        only: wcu, b
+      use arrays,        only: b
       use fluidindex,    only: ibz
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -430,7 +433,7 @@ contains
 
    subroutine diffusebx_y
 
-      use arrays,        only: wcu, b
+      use arrays,        only: b
       use fluidindex,    only: ibx
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -463,7 +466,7 @@ contains
 
    subroutine diffusebx_z
 
-      use arrays,        only: wcu, b
+      use arrays,        only: b
       use fluidindex,    only: ibx
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -496,7 +499,7 @@ contains
 
    subroutine diffuseby_z
 
-      use arrays,        only: wcu, b
+      use arrays,        only: b
       use fluidindex,    only: iby
       use grid,          only: cg
       use magboundaries, only: bnd_emf

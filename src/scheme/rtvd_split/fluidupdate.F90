@@ -362,7 +362,7 @@ contains
       use magboundaries, only: all_mag_boundaries
       use types,         only: custom_emf_bnd
 #ifdef RESISTIVE
-      use arrays,        only: wcu
+      use resistivity,   only: wcu
 #endif /* RESISTIVE */
 
       implicit none
