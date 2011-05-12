@@ -749,7 +749,7 @@ contains
       use constants,  only: xdim, zdim, LO, HI
 #ifdef VERBOSE
       use dataio_pub, only: printinfo, msg
-#endif
+#endif /* VERBOSE */
 
       implicit none
 
@@ -772,14 +772,14 @@ contains
             write(msg,'(a,i4,a,6i4,a,l2,a,6l2,2(a,l2))')"m:in <@>",p," [",domain%se(p,:,:),"] * ",sharing, " > [",neigh(:,:),"] ?f",fac," ?c ",cor
             call printinfo(msg)
          endif
-#endif
+#endif /* VERBOSE */
       enddo
 #ifdef VERBOSE
       if (proc == pp) then
          write(msg,'(a,i4,a,6i4)')"m:in <@>",pp," <",area(:,:)
          call printinfo(msg)
       endif
-#endif
+#endif /* VERBOSE */
 
    end subroutine identify_neighbours
 
@@ -1148,7 +1148,7 @@ contains
             write(msg,'(a,i3,a,3i4,a,i10,2(a,f10.7))')"m:ddr ",ii," psize= [",ldom(:)," ], bcells= ", bsize, ", balance = ", load_balance, ", est_quality = ", quality
             call printinfo(msg)
          endif
-#endif
+#endif /* DEBUG */
          if (quality > best) then
             best = quality
             psize(:) = ldom(:)
@@ -1175,7 +1175,7 @@ contains
 #ifdef DEBUG
          write(msg,'(a,3f10.2,a,i10)')"m:ddr id psize = [",(nproc/product(dble(dom%n_d(:))))**(1./eff_dim)*dom%n_d(:),"], bcells= ", int(ideal_bsize)
          call printinfo(msg)
-#endif
+#endif /* DEBUG */
          write(msg,'(a,3i4,a)')      "[mpisetup:divide_domain_rectlinear] Domain divided to [",psize(:)," ] pieces"
          call printinfo(msg)
          if (is_uneven) then

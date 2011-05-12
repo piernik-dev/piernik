@@ -219,7 +219,7 @@ contains
 #ifdef MAGNETIC
                b(:,i,j,k)         = 0.0
                u(ieni,i,j,k)      = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
-#endif
+#endif /* MAGNETIC */
 #endif /* !ISO */
             enddo
          enddo

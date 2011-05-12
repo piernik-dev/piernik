@@ -927,9 +927,9 @@ contains
       else
 #ifdef COSM_RAYS
          vstat%cprefix = "G-"
-#else
+#else /* !COSM_RAYS */
          vstat%cprefix = ""
-#endif /* COSM_RAYS */
+#endif /* !COSM_RAYS */
       endif
 
       call init_source(dens)

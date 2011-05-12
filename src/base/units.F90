@@ -220,7 +220,7 @@ contains
       to_stdout = .false.
 #ifdef VERBOSE
       to_stdout = .true.
-#endif  /* VERBOSE */
+#endif /* VERBOSE */
       s_len_u  = ' undefined'; s_time_u = s_len_u; s_mass_u = s_len_u
 
 !>

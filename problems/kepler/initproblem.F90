@@ -651,7 +651,7 @@ contains
             u(iarr_all_mz,:,j,k) = u(iarr_all_mz,:,j,k) - dt*(u(iarr_all_mz,:,j,k) - mtz0(:,:,j,k))*funcR(:,:)
 #ifndef ISO
             u(iarr_all_en,:,j,k) = u(iarr_all_en,:,j,k) - dt*(u(iarr_all_en,:,j,k) - ene0(:,:,j,k)*funcR(:,:)
-#endif
+#endif /* !ISO */
          enddo
       enddo
       where ( u(iarr_all_dn,:,:,:) < 2.*smalld )
@@ -723,7 +723,7 @@ contains
          u(iarr_all_mz,i,:,:) = u(iarr_all_mz, cg%is,:,:)
 #ifndef ISO
          u(iarr_all_en,i,:,:) = u(iarr_all_en, cg%is,:,:)
-#endif
+#endif /* !ISO */
       enddo
 
       do i = cg%nb,1,-1
@@ -749,7 +749,7 @@ contains
       u(iarr_all_mz, cg%ie+1:cg%nx,:,:) = mtz0(:, cg%ie+1:cg%nx,:,:)
 #ifndef ISO
       u(iarr_all_en, cg%ie+1:cg%nx,:,:) = ene0(:, cg%ie+1:cg%nx,:,:)
-#endif
+#endif /* !ISO */
    end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------
    function get_lcutoff(width,dist,n,vmin,vmax) result(y)

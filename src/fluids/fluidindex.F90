@@ -118,9 +118,9 @@ contains
 
 #ifdef ISO
       if (.false.) fnord = have_ener ! suppress compiler warning on unused argument
-#else
+#else /* !ISO */
       if (have_ener) iarr_all_en(fl%pos) = fl%ien
-#endif /* ISO */
+#endif /* !ISO */
 
    end subroutine set_fluidindex_arrays
 
