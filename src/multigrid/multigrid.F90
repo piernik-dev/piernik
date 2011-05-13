@@ -78,8 +78,8 @@ contains
       use grid,                only: cg, D_x, D_y, D_z
       use multigridvars,       only: lvl, plvl, roof, base, mg_nb, ngridvars, correction, single_base, &
            &                         is_external, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
-      use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_LOR, MPI_MIN, MPI_MAX
-      use mpisetup,            only: comm, ierr, proc, master, slave, nproc, has_dir, buffer_dim, ibuff, lbuff, dom, eff_dim, geometry_type, is_uneven
+      use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_LOR, MPI_MIN, MPI_MAX, MPI_COMM_NULL
+      use mpisetup,            only: comm, comm3d, ierr, proc, master, slave, nproc, has_dir, buffer_dim, ibuff, lbuff, dom, eff_dim, geometry_type, is_uneven
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
       use multigridmpifuncs,   only: mpi_multigrid_prep
       use dataio_pub,          only: warn, die, code_progress
@@ -186,7 +186,7 @@ contains
       !! Sanity checks
       if (abs(ord_prolong) > 2*mg_nb) call die("[multigrid:init_multigrid] not enough guardcells for given prolongation operator order")
       if (ord_prolong_face_norm < 0) then
-         call warn("[multigrid:init_multigrid] ord_prolong_face_norm < 0 is not defined, defaulting to 0")
+         if (master) call warn("[multigrid:init_multigrid] ord_prolong_face_norm < 0 is not defined, defaulting to 0")
          ord_prolong_face_norm = 0
       endif
 
@@ -305,7 +305,7 @@ contains
          if ( .not. allocated(curl%prolong_x) .or. .not. allocated(curl%prolong_xy) .or. .not. allocated(curl%mgvar) .or. &
               ((.not. allocated(curl%x) .or. .not. allocated(curl%y) .or. .not. allocated(curl%z)) .and. .not. curl%empty) ) &
               call die("[multigrid:init_multigrid] some multigrid arrays not allocated")
-         mb_alloc  = mb_alloc + size(curl%prolong_x) + size(curl%prolong_xy) + size(curl%mgvar) + size(curl%x)  + size(curl%y) + size(curl%z)
+         mb_alloc  = mb_alloc + size(curl%prolong_x) + size(curl%prolong_xy) + size(curl%mgvar)
 
          if ( allocated(curl%bnd_x) .or. allocated(curl%bnd_y) .or. allocated(curl%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
          allocate( curl%bnd_x(curl%js:curl%je, curl%ks:curl%ke, LO:HI), stat=aerr(1) )
@@ -332,9 +332,9 @@ contains
       if (any(dom%se(:,:,:) /= roof%dom%se(:,:,:))) call die("[multigrid:init_multigrid] dom%se or roof%dom%se corrupted") ! this should detect changes in compiler behavior
 
       call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, 1, MPI_LOGICAL, MPI_LOR, comm, ierr)
-      if ((is_mg_uneven .or. is_uneven) .and. ord_prolong /= 0) then
+      if ((is_mg_uneven .or. is_uneven .or. comm3d == MPI_COMM_NULL) .and. ord_prolong /= 0) then
          ord_prolong = 0
-         if (master) call warn("[multigrid:init_multigrid] prolongation order /= injection not implemented on uneven domains.")
+         if (master) call warn("[multigrid:init_multigrid] prolongation order /= injection not implemented on uneven or noncartesian domains yet.")
       endif
 
       call mpi_multigrid_prep

@@ -223,7 +223,7 @@ contains
 
          ! FIXME when ready
          if (geometry_type == GEO_RPZ) then
-            call warn("[multigrid_gravity:init_multigrid_grav] cynindrical geometry support is under development.")
+            call warn("[multigrid_gravity:init_multigrid_grav] cylindrical geometry support is under development.")
             ! switch off FFT-related bits
             base_no_fft = .true.
             prefer_rbgs_relaxation = .true.
@@ -232,6 +232,11 @@ contains
             ! ord_prolong_mpole = 0
          else if (geometry_type /= GEO_XYZ) then
             call die("[multigrid_gravity:init_multigrid_grav] non-cartesian geometry not implemented yet.")
+         endif
+
+         if (comm3d == MPI_COMM_NULL .and. .not. prefer_rbgs_relaxation) then
+            prefer_rbgs_relaxation = .true.
+            call warn("[multigrid_gravity:init_multigrid_grav] Enforcing RBGS relaxation because comm3d == MPI_COMM_NULL")
          endif
 
          rbuff(1) = norm_tol
