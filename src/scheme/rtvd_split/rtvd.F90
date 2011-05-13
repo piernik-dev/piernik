@@ -331,7 +331,7 @@ contains
 
       real, dimension(2,2), parameter:: rk2coef = reshape( (/1.0,0.5,0.0,1.0/),(/2,2/))
 
-#if !defined(ISO_LOCAL) && !defined(GRAV) && !(defined COSM_RAYS && defined IONIZED)
+#if (!defined(ISO_LOCAL) && !defined(GRAV)) || !(defined COSM_RAYS && defined IONIZED)
       integer                        :: dummy
       if (.false.) dummy = i1 + i2 ! suppress compiler warnings on unused arguments
 #endif /* !ISO_LOCAL && !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
@@ -471,6 +471,8 @@ contains
       u1(iarr_crn,:)  = u1(iarr_crn,:) +  rk2coef(integration_order,istep)*srccrn(:,:)*dt
 #endif /* COSM_RAYS_SOURCES */
    ! ---- 2 ----------------------
+#else /* !(COSM_RAYS && IONIZED) */
+      if (.false.) dummy = size(divv(:)) ! suppress compiler warnings
 #endif /* COSM_RAYS && IONIZED */
 
 #if defined IONIZED || defined NEUTRAL
