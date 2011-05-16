@@ -38,7 +38,7 @@
 module grid
 
    use constants, only: xdim, zdim, ndims, LO, HI, BND, BLK, FLUID, ARR
-   use types,    only: axes, bnd_list
+   use types,     only: axes, bnd_list, array4d
 
    implicit none
 
@@ -102,6 +102,8 @@ module grid
       integer, dimension(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK) :: mbc !< MPI Boundary conditions Container
       type(bnd_list), dimension(:, :), allocatable :: i_bnd, o_bnd    !> description of incoming and outgoing boundary data,
       !< the shape is (xdim:zdim, FLUID:ARR) for cg (base grid container)) and (xdim:zdim, mg_nb) for plvl (multigrid level container)
+
+      type(array4d) :: u, b
 
    contains
 

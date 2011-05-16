@@ -36,8 +36,17 @@ module types
    implicit none
 
    private
-   public :: axes, domain_container, segment, bnd_list, tsl_container, value, &
+   public :: axes, domain_container, segment, bnd_list, tsl_container, value, array4d, &
         &    problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd, at_user_settings
+
+   type :: array4d
+      real, dimension(:,:,:,:), pointer :: arr => null()
+      contains
+         procedure :: init => array4d_init
+         procedure :: clean => array4d_clean
+         procedure :: get_sweep => array4d_get_sweep
+         procedure :: check => array4d_check_if_dirty
+   end type array4d
 
    type :: value
       real                      :: val
@@ -162,6 +171,52 @@ module types
    procedure(indx_args),pointer :: at_user_settings           => NULL()
 
 contains
+
+   subroutine array4d_init(this,nn,nx,ny,nz)
+      use constants, only: big_float
+      implicit none
+      class(array4d), intent(inout) :: this
+      integer, intent(in)           :: nn,nx,ny,nz
+
+      if (.not.associated(this%arr)) allocate(this%arr(nn,nx,ny,nz))
+      this%arr = big_float
+!     if (.not.associated(this%arr)) this%arr = reshape( [(big_float,i=1,nn*nx*ny*nz)], [nn,nx,ny,nz] )   ! lhs realloc
+      return
+   end subroutine array4d_init
+
+   subroutine array4d_clean(this)
+      implicit none
+      class(array4d), intent(inout) :: this
+
+      if (associated(this%arr)) deallocate(this%arr)
+      return
+   end subroutine array4d_clean
+
+   logical function array4d_check_if_dirty(this)
+      use constants, only: big_float
+      implicit none
+      class(array4d), intent(inout) :: this
+
+      array4d_check_if_dirty = any( this%arr >= big_float )
+
+   end function array4d_check_if_dirty
+
+   function array4d_get_sweep(this,ndim,i1,i2) result(p1d)
+      use constants, only: xdim, ydim, zdim
+      implicit none
+      class(array4d), intent(inout)      :: this
+      real, dimension(:,:),  pointer     :: p1d
+      integer, intent(in)                :: ndim, i1, i2
+
+      select case (ndim)
+         case (xdim)
+            p1d => this%arr(:,:,i1,i2)
+         case (ydim)
+            p1d => this%arr(:,i2,:,i1)
+         case (zdim)
+            p1d => this%arr(:,i1,i2,:)
+      end select
+   end function array4d_get_sweep
 
    subroutine set_derived(this)
 
