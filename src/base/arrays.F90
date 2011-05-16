@@ -84,11 +84,17 @@ contains
 
       ma4d = [flind%all, cg%nx, cg%ny, cg%nz]
       call my_allocate(u, ma4d, "u")
+!     call cg%u%init(flind%all, cg%nx, cg%ny, cg%nz) ! \todo use after u -> cg%u transition
+      call cg%u%init(u)
+
       if (repeat_step) call my_allocate(u0, ma4d, "u0")
       call my_allocate(uh, ma4d, "uh")
 
       ma4d = [ndims, cg%nx, cg%ny, cg%nz]
       call my_allocate(b, ma4d, "b")
+!     call cg%b%init(ndims, cg%nx, cg%ny, cg%nz)  ! \todo use after b -> cg%b transition
+      call cg%b%init(b)
+
       if (repeat_step) call my_allocate(b0, ma4d, "b0")
 
       ma3d = [cg%nx, cg%ny, cg%nz]
@@ -118,10 +124,13 @@ contains
 !<
 
    subroutine cleanup_arrays
+      use grid, only: cg
       implicit none
 
-      if (allocated(u))       deallocate(u)
+!      if (allocated(u))       deallocate(u)
+      call cg%u%clean() ! \todo use after u -> cg%u transition
       if (allocated(b))       deallocate(b)
+      call cg%u%clean() ! \todo use after b -> cg%b transition
       if (allocated(u0))      deallocate(u0)
       if (allocated(uh))      deallocate(uh)
       if (allocated(b0))      deallocate(b0)

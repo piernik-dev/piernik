@@ -119,7 +119,6 @@ contains
    subroutine init_prob
 
       use constants,      only: ION, DST
-      use arrays,         only: u, b
       use dataio_pub,     only: msg, die, printinfo
       use fluidindex,     only: flind, ibx, iby, ibz
       use grid,           only: cg
@@ -147,12 +146,12 @@ contains
          do k = 1, cg%nz
             do j = 1, cg%ny
                do i = 1, cg%nx
-                  u(fl%idn,i,j,k) = d0
-                  u(fl%imx,i,j,k) = 0.0
-                  u(fl%imy,i,j,k) = 0.0
-                  u(fl%imz,i,j,k) = 0.0
-                  u(fl%ien,i,j,k) = p0/(fl%gam_1)
-                  u(fl%ien,i,j,k) = u(fl%ien,i,j,k) + 0.5*(u(fl%imx,i,j,k)**2 +u(fl%imy,i,j,k)**2 + u(fl%imz,i,j,k)**2)/u(fl%idn,i,j,k)
+                  cg%u%arr(fl%idn,i,j,k) = d0
+                  cg%u%arr(fl%imx,i,j,k) = 0.0
+                  cg%u%arr(fl%imy,i,j,k) = 0.0
+                  cg%u%arr(fl%imz,i,j,k) = 0.0
+                  cg%u%arr(fl%ien,i,j,k) = p0/(fl%gam_1)
+                  cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(cg%u%arr(fl%imx,i,j,k)**2 +cg%u%arr(fl%imy,i,j,k)**2 + cg%u%arr(fl%imz,i,j,k)**2)/cg%u%arr(fl%idn,i,j,k)
                enddo
             enddo
          enddo
@@ -163,7 +162,7 @@ contains
             do j = 1, cg%ny
                do i = 1, cg%nx
                   r = sqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
-                  if ( r**2 < r0**2) u(fl%ien,i,j,k)   = u(fl%ien,i,j,k) + Eexpl
+                  if ( r**2 < r0**2) cg%u%arr(fl%ien,i,j,k)   = cg%u%arr(fl%ien,i,j,k) + Eexpl
                enddo
             enddo
          enddo
@@ -172,10 +171,10 @@ contains
             do k = 1, cg%nz
                do j = 1, cg%ny
                   do i = 1, cg%nx
-                     b(ibx,i,j,k) = bx0
-                     b(iby,i,j,k) = by0
-                     b(ibz,i,j,k) = bz0
-                     u(fl%ien,i,j,k) = u(fl%ien,i,j,k) + 0.5*(b(ibx,i,j,k)**2 + b(iby,i,j,k)**2 + b(ibz,i,j,k)**2)
+                     cg%b%arr(ibx,i,j,k) = bx0
+                     cg%b%arr(iby,i,j,k) = by0
+                     cg%b%arr(ibz,i,j,k) = bz0
+                     cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(cg%b%arr(ibx,i,j,k)**2 + cg%b%arr(iby,i,j,k)**2 + cg%b%arr(ibz,i,j,k)**2)
                   enddo
                enddo
             enddo
@@ -186,7 +185,6 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_plt_hdf5(var,ij,xn,tab,ierrh)
 
-      use arrays,        only: u
       use grid,          only: cg
 
       implicit none
@@ -200,9 +198,9 @@ contains
       ierrh = 0
       select case (var)
          case ("fooo")   ! Totally bogus quantity, just to check user_plt_hdf5 works
-            if (ij=="yz") tab(:,:) = u(2, xn, cg%js:cg%je, cg%ks:cg%ke)*u(3, xn, cg%js:cg%je, cg%ks:cg%ke)* .123456789
-            if (ij=="xz") tab(:,:) = u(2, cg%is:cg%ie, xn, cg%ks:cg%ke)*u(3, cg%is:cg%ie, xn, cg%ks:cg%ke)* .123456789
-            if (ij=="xy") tab(:,:) = u(2, cg%is:cg%ie, cg%js:cg%je, xn)*u(3, cg%is:cg%ie, cg%js:cg%je, xn)* .123456789
+            if (ij=="yz") tab(:,:) = cg%u%arr(2, xn, cg%js:cg%je, cg%ks:cg%ke)*cg%u%arr(3, xn, cg%js:cg%je, cg%ks:cg%ke)* .123456789
+            if (ij=="xz") tab(:,:) = cg%u%arr(2, cg%is:cg%ie, xn, cg%ks:cg%ke)*cg%u%arr(3, cg%is:cg%ie, xn, cg%ks:cg%ke)* .123456789
+            if (ij=="xy") tab(:,:) = cg%u%arr(2, cg%is:cg%ie, cg%js:cg%je, xn)*cg%u%arr(3, cg%is:cg%ie, cg%js:cg%je, xn)* .123456789
          case default
             ierrh = -1
       end select
@@ -210,8 +208,6 @@ contains
    end subroutine sedov_plt_hdf5
 !-----------------------------------------------------------------------------
    subroutine sedov_vars_hdf5(var,tab, ierrh)
-
-      use arrays, only: u
 
       implicit none
 

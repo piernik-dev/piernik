@@ -42,10 +42,12 @@ module types
    type :: array4d
       real, dimension(:,:,:,:), pointer :: arr => null()
       contains
-         procedure :: init => array4d_init
+         procedure :: array4d_init           ! \todo check why private here does not  work as expected
+         procedure :: array4d_associate
          procedure :: clean => array4d_clean
          procedure :: get_sweep => array4d_get_sweep
          procedure :: check => array4d_check_if_dirty
+         generic, public :: init => array4d_init, array4d_associate
    end type array4d
 
    type :: value
@@ -183,6 +185,15 @@ contains
 !     if (.not.associated(this%arr)) this%arr = reshape( [(big_float,i=1,nn*nx*ny*nz)], [nn,nx,ny,nz] )   ! lhs realloc
       return
    end subroutine array4d_init
+
+   subroutine array4d_associate(this,other)
+      implicit none
+      class(array4d), intent(inout) :: this
+      real, allocatable, dimension(:,:,:,:), target :: other
+
+      if (.not.associated(this%arr)) this%arr => other
+      return
+   end subroutine array4d_associate
 
    subroutine array4d_clean(this)
       implicit none
