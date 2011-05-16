@@ -129,7 +129,7 @@ contains
 
 !      if (allocated(u))       deallocate(u)
       call cg%u%clean() ! \todo use after u -> cg%u transition
-      if (allocated(b))       deallocate(b)
+!      if (allocated(b))       deallocate(b)
       call cg%u%clean() ! \todo use after b -> cg%b transition
       if (allocated(u0))      deallocate(u0)
       if (allocated(uh))      deallocate(uh)
