@@ -6,4 +6,4 @@ F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-le
 F90FLAGS += -g -O2
 F90FLAGS += -fno-realloc-lhs
 LDFLAGS   = -Wl,--as-needed -Wl,-O1
-LIBS      = -lfgsl
+#LIBS      = -lfgsl
