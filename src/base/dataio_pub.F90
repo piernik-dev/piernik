@@ -174,6 +174,7 @@ contains
          select case (arg)
          case ('-v', '--version')
 !            print '(2a)', 'cmdline version ', cmdlversion
+            write(stdout, '(a,f4.2)') 'output version: ',piernik_hdf5_version
             call init_version
             write(stdout,'(a)') "###############     Source configuration     ###############"
             do j=1,nenv
