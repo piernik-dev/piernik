@@ -193,7 +193,7 @@ contains
 
    subroutine brief_v_log(vs)
 
-      use constants,     only: fplen
+      use constants,     only: fplen, fmt_len
       use multigridvars, only: stdout, vcycle_stats
       use mpisetup,      only: slave
       use dataio_pub,    only: msg, warn
@@ -203,8 +203,9 @@ contains
       type(vcycle_stats), intent(in) :: vs
 
       real                   :: at
-      integer                :: i, lm
+      integer                :: i, lm, ftype
       character(len=fplen)   :: normred
+      character(len=fmt_len), parameter, dimension(2) :: fmt_norm = [ '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f13.10,a)', '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,e13.6,a) ' ]
 
       if (slave) return
 
@@ -213,8 +214,9 @@ contains
       at = 0.
       if (vs%count > 0) at = sum(vs%time(1:vs%count))/vs%count ! average V-cycle time on PE# 0
 
-      write(msg, '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f12.9,a)') &
-           "[multigrid] ", vs%count, trim(vs%cprefix), "cycles, dt_wall=", vs%time(0), " +", vs%count, "*", at, ", norm/rhs= ", vs%norm_final, " : "
+      ftype = 1
+      if (vs%norm_final < 1e-8) ftype = 2
+      write(msg, fmt_norm(ftype))"[multigrid] ", vs%count, trim(vs%cprefix), "cycles, dt_wall=", vs%time(0), " +", vs%count, "*", at, ", norm/rhs= ", vs%norm_final, " : "
 
       do i = 0, min(vs%count, ubound(vs%factor, 1))
          if (vs%factor(i) < 1.0e4) then

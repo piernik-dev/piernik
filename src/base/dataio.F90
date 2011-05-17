@@ -47,7 +47,7 @@
 module dataio
 
    use dataio_pub,    only: domain, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id
-   use constants,     only: cwdlen, cbuff_len, varlen, idlen
+   use constants,     only: cwdlen, fmt_len, cbuff_len, varlen, idlen
 
    implicit none
 
@@ -90,8 +90,8 @@ module dataio
    real                  :: umsg_param              !< parameter changed by a user/system message
 
    character(len=cwdlen) :: filename               !< string of characters indicating currently used file
-   character(len=cwdlen), protected, target :: fmt_loc
-   character(len=cwdlen), protected, target :: fmt_dtloc
+   character(len=fmt_len), protected, target :: fmt_loc, fmt_dtloc
+
    namelist /END_CONTROL/ nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &

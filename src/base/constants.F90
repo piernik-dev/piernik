@@ -78,6 +78,7 @@ module constants
 
    ! string lengths
    integer, parameter :: cwdlen = 512                    !< allow for quite long CWD
+   integer, parameter :: fmt_len = 128                   !< length of format string
    integer, parameter :: cbuff_len = 32                  !< length for problem parameters
    integer, parameter :: fplen = 24                      !< length of buffer for printed FP or integer number
    integer, parameter :: domlen = 16                     !< should be <= cbuff_len
