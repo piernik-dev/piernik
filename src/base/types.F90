@@ -45,9 +45,11 @@ module types
          procedure :: array4d_init           ! \todo check why private here does not  work as expected
          procedure :: array4d_associate
          procedure :: clean => array4d_clean
-         procedure :: get_sweep => array4d_get_sweep
+         procedure :: array4d_get_sweep
+         procedure :: array4d_get_sweep_one_var
          procedure :: check => array4d_check_if_dirty
          generic, public :: init => array4d_init, array4d_associate
+         generic, public :: get_sweep => array4d_get_sweep_one_var, array4d_get_sweep
    end type array4d
 
    type :: value
@@ -211,6 +213,23 @@ contains
       array4d_check_if_dirty = any( this%arr >= big_float )
 
    end function array4d_check_if_dirty
+
+   function array4d_get_sweep_one_var(this,ndim,nn,i1,i2) result(p1d)
+      use constants, only: xdim, ydim, zdim
+      implicit none
+      class(array4d), intent(inout)      :: this
+      integer, intent(in)                :: ndim, nn, i1, i2
+      real, dimension(:),  pointer       :: p1d
+
+      select case (ndim)
+         case (xdim)
+            p1d => this%arr(nn,:,i1,i2)
+         case (ydim)
+            p1d => this%arr(nn,i2,:,i1)
+         case (zdim)
+            p1d => this%arr(nn,i1,i2,:)
+      end select
+   end function array4d_get_sweep_one_var
 
    function array4d_get_sweep(this,ndim,i1,i2) result(p1d)
       use constants, only: xdim, ydim, zdim

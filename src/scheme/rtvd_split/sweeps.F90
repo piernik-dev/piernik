@@ -39,7 +39,6 @@ contains
 
 #if defined SHEAR && defined FLUID_INTERACTIONS
    subroutine source_terms_y
-      use arrays,          only: u
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind
       use grid,            only: cg
@@ -54,7 +53,7 @@ contains
       integer :: ind,i
       real, parameter, dimension(2) :: fac = [0.5, 1.0]
 
-      u1(:,:,:) = u(:,:,1,:)
+      u1(:,:,:) = cg%u%arr(:,:,1,:)
 
       do i = 1,2
          where (u1(iarr_all_dn,:,:) > 0.0)
@@ -77,9 +76,9 @@ contains
          enddo
 
          where (u1(iarr_all_dn,:,:) > 0.0)
-            u1(iarr_all_my,:,:) = u1(iarr_all_my,:,:) + fac(i)*dt*rotaccr(:,:,:)*u(iarr_all_dn,:,1,:)
+            u1(iarr_all_my,:,:) = u1(iarr_all_my,:,:) + fac(i)*dt*rotaccr(:,:,:)*cg%u%arr(iarr_all_dn,:,1,:)
          endwhere
-         u(iarr_all_my,:,1,:) = u1(iarr_all_my,:,:)
+         cg%u%arr(iarr_all_my,:,1,:) = u1(iarr_all_my,:,:)
       enddo
 
       call all_fluid_boundaries
@@ -89,7 +88,7 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweepx
 
-      use arrays,          only: u, b, uh
+      use arrays,          only: uh
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpx, ibx, iby, ibz, nmag
       use grid,            only: cg
@@ -113,7 +112,7 @@ contains
 #ifdef COSM_RAYS
       call div_v(flind%ion%pos)
 #endif /* COSM_RAYS */
-      uh = u
+      uh = cg%u%arr
       do istep = 1, integration_order
          do k=cg%ks, cg%ke
             kp=k+1
@@ -121,10 +120,10 @@ contains
                jp=j+1
 
 #ifdef MAGNETIC
-               b_x=0.5*b(:,:,j,k)
-               b_x(ibx,1:cg%nx-1)=b_x(ibx,1:cg%nx-1)+b_x(ibx,2:cg%nx);       b_x(ibx, cg%nx) = b_x(ibx, cg%nx-1)
-               if (has_dir(ydim) .and. j <= cg%je)  b_x(iby,:)=b_x(iby,:)+0.5*b(iby,:,jp,k)
-               if (has_dir(zdim) .and. k <= cg%ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*b(ibz,:,j,kp)
+               b_x=0.5*cg%b%get_sweep(xdim,j,k)
+               b_x(ibx,1:cg%nx-1) = b_x(ibx,1:cg%nx-1)+b_x(ibx,2:cg%nx);       b_x(ibx, cg%nx) = b_x(ibx, cg%nx-1)
+               if (has_dir(ydim) .and. j <= cg%je)  b_x(iby,:)=b_x(iby,:)+0.5*cg%b%get_sweep(xdim,iby,jp,k)
+               if (has_dir(zdim) .and. k <= cg%ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*cg%b%get_sweep(xdim,ibz,j,kp)
 #endif /* MAGNETIC */
 
                call set_geo_coeffs(xdim,flind,j,k)
@@ -132,11 +131,11 @@ contains
                call set_div_v1d(div_v1d,xdim,j,k)
 #endif /* COSM_RAYS */
 
-               u_x (iarr_all_swpx,:) = u (:,:,j,k)
+               u_x (iarr_all_swpx,:) = cg%u%get_sweep(xdim,j,k)
                u0_x(iarr_all_swpx,:) = uh(:,:,j,k)
 
                call relaxing_tvd(cg%nx, u_x, u0_x, b_x, div_v1d, istep, xdim, j, k, cg%dx, dt)
-               u(:,:,j,k)=u_x(iarr_all_swpx,:)
+               cg%u%arr(:,:,j,k)=u_x(iarr_all_swpx,:)
             enddo
          enddo
          call all_fluid_boundaries    ! \todo : call only x for istep=1, call all for istep=2
@@ -145,7 +144,7 @@ contains
    end subroutine sweepx
 !------------------------------------------------------------------------------------------
    subroutine sweepy
-      use arrays,          only: u, b, uh
+      use arrays,          only: uh
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpy, ibx, iby, ibz, nmag
       use grid,            only: cg
@@ -168,7 +167,7 @@ contains
 #ifdef COSM_RAYS
       call div_v(flind%ion%pos)
 #endif /* COSM_RAYS */
-      uh = u
+      uh = cg%u%arr
       do istep = 1, integration_order
          do k=cg%ks, cg%ke
             kp=k+1
@@ -176,10 +175,10 @@ contains
                ip=i+1
 
 #ifdef MAGNETIC
-               b_y(:,:) = 0.5*b(:,i,:,k)
+               b_y(:,:) = 0.5*cg%b%get_sweep(ydim,k,i)
                b_y(iby,1:cg%ny-1)=b_y(iby,1:cg%ny-1)+b_y(iby,2:cg%ny);       b_y(iby, cg%ny) = b_y(iby, cg%ny-1)
-               if (has_dir(xdim) .and. i <= cg%ie) b_y(ibx,:)=b_y(ibx,:)+0.5*b(ibx,ip,:,k)
-               if (has_dir(zdim) .and. k <= cg%ke) b_y(ibz,:)=b_y(ibz,:)+0.5*b(ibz,i,:,kp)
+               if (has_dir(xdim) .and. i <= cg%ie) b_y(ibx,:)=b_y(ibx,:)+0.5*cg%b%get_sweep(ydim,ibx,k,ip)
+               if (has_dir(zdim) .and. k <= cg%ke) b_y(ibz,:)=b_y(ibz,:)+0.5*cg%b%get_sweep(ydim,ibz,kp,i)
                b_y((/iby,ibx,ibz/),:)=b_y(:,:)
 #endif /* MAGNETIC */
 
@@ -188,11 +187,11 @@ contains
                call set_div_v1d(div_v1d,ydim,k,i)
 #endif /* COSM_RAYS */
 
-               u_y (iarr_all_swpy,:) = u (:,i,:,k)
+               u_y (iarr_all_swpy,:) = cg%u%get_sweep(ydim,k,i)
                u0_y(iarr_all_swpy,:) = uh(:,i,:,k)
 
                call relaxing_tvd(cg%ny, u_y, u0_y, b_y, div_v1d, istep, ydim, k, i, cg%dy, dt)
-               u(:,i,:,k)=u_y(iarr_all_swpy,:)
+               cg%u%arr(:,i,:,k)=u_y(iarr_all_swpy,:)
 
             enddo
          enddo
@@ -203,7 +202,7 @@ contains
    end subroutine sweepy
 !------------------------------------------------------------------------------------------
    subroutine sweepz
-      use arrays,          only: u, b, uh
+      use arrays,          only: uh
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpz, ibx, iby, ibz, nmag
       use grid,            only: cg
@@ -227,7 +226,7 @@ contains
 #ifdef COSM_RAYS
       call div_v(flind%ion%pos)
 #endif /* COSM_RAYS */
-      uh = u
+      uh = cg%u%arr
       do istep = 1, integration_order
          do j=cg%js, cg%je
             jp=j+1
@@ -235,10 +234,10 @@ contains
                ip=i+1
 
 #ifdef MAGNETIC
-               b_z(:,:) = 0.5*b(:,i,j,:)
+               b_z(:,:) = 0.5*cg%b%get_sweep(zdim,i,j)
                b_z(ibz,1:cg%nz-1) = b_z(ibz,1:cg%nz-1) + b_z(ibz,2:cg%nz);   b_z(ibz, cg%nz) = b_z(ibz, cg%nz-1)
-               if (has_dir(xdim) .and. i <= cg%ie) b_z(ibx,:) = b_z(ibx,:) + 0.5*b(ibx,ip,j,:)
-               if (has_dir(ydim) .and. j <= cg%je) b_z(iby,:) = b_z(iby,:) + 0.5*b(iby,i,jp,:)
+               if (has_dir(xdim) .and. i <= cg%ie) b_z(ibx,:) = b_z(ibx,:) + 0.5*cg%b%get_sweep(zdim,ibx,ip,j)
+               if (has_dir(ydim) .and. j <= cg%je) b_z(iby,:) = b_z(iby,:) + 0.5*cg%b%get_sweep(zdim,iby,i,jp)
                b_z((/ibz,iby,ibx/),:)=b_z(:,:)
 #endif /* MAGNETIC */
 
@@ -250,11 +249,11 @@ contains
                !OPT: It looks that u_z gets re-assigned to something inside relaxing_tvd. \todo try to merge these assignments
                !OPT: 3% D1mr, 3% D2mr, 20% D1mw, Ir:Dr:Dw ~ 10:4:1
                !OPT: The same applies to sweepy and sweepz
-               u_z (iarr_all_swpz,:) = u (:,i,j,:)
+               u_z (iarr_all_swpz,:) = cg%u%get_sweep(zdim,i,j)
                u0_z(iarr_all_swpz,:) = uh(:,i,j,:)
 
                call relaxing_tvd(cg%nz, u_z, u0_z, b_z, div_v1d, istep, zdim, i, j, cg%dz, dt)
-               u(:,i,j,:)=u_z(iarr_all_swpz,:)
+               cg%u%arr(:,i,j,:)=u_z(iarr_all_swpz,:)
             enddo
          enddo
 
