@@ -175,9 +175,9 @@ contains
          case ('-v', '--version')
 !            print '(2a)', 'cmdline version ', cmdlversion
             call init_version
-            print *, "###############     Source configuration     ###############"
+            write(stdout,'(a)') "###############     Source configuration     ###############"
             do j=1,nenv
-               print *, env(j)
+               write(stdout,'(a)') env(j)
             enddo
             stop
          case ('-p', '--param')
