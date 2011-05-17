@@ -119,7 +119,7 @@ module multigridvars
       real, allocatable, dimension(:,:,:)   :: bnd_x, bnd_y, bnd_z    !< given boundary values for potential; \todo make an array of pointers, indexed by (xdim:zdim)
 
       ! geometrical factors, cell counters, etc.
-      integer :: level                                                !< multigrid level, level_min == 1: coarsest, level_max: finest
+      integer :: level                                                !< grid levels are tagged by some consecutive integer numbers
       real    :: vol                                                  !< processor domain volume; BEWARE: for cylindrical geometry multiply by appropriate x(:) to get real volume
       real    :: dxy, dxz, dyz                                        !< cell surface area
       real    :: idx2, idy2, idz2                                     !< inverse of d{x,y,z} square

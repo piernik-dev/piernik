@@ -94,7 +94,7 @@ contains
 
       implicit none
 
-      integer, parameter    :: level_min = 1          !< Base (coarsest) level number
+      integer, parameter    :: level_min = 1          !< Base (coarsest) level number, chosen arbitrarily.
       integer               :: level_max              !< Levels of multigrid refinement
 
       integer               :: ierrh, j
@@ -191,13 +191,17 @@ contains
       endif
 
       if (allocated(lvl)) call die("[multigrid:init_multigrid] lvl already allocated")
-      allocate(lvl(level_min:level_max), stat=aerr(1))
+      if (level_max < 1) then
+         if (master) call warn("[multigrid:init_multigrid] level_max < 1: solving on a single grid may be extremely slow")
+         level_max = 1
+      endif
+      allocate(lvl(level_min:level_min+level_max-1), stat=aerr(1))
       if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: lvl")
       mb_alloc = mb_alloc + size(lvl)
 
       ! handy shortcuts
-      base => lvl(level_min)
-      roof => lvl(level_max)
+      base => lvl(lbound(lvl, dim=1))
+      roof => lvl(ubound(lvl, dim=1))
 
       ! set up connections between levels
       base%level = level_min
@@ -253,7 +257,7 @@ contains
 
          if (any(curl%n_b(:) < curl%nb .and. has_dir(:) .and. .not. curl%empty)) then
             write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
-                 curl%nb, " > ", curl%n_b(:), " at level ", curl%level, ". You may try to set level_max <=", roof%level-curl%level
+                 curl%nb, " > ", curl%n_b(:), " at level ", curl%level, ". You may try to set level_max <=", roof%level-curl%level+level_min-1
             call die(msg)
          endif
 
