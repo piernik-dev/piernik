@@ -149,16 +149,17 @@ contains
    subroutine parse_cmdline
 
       use constants, only: stdout
+      use version,   only: nenv,env, init_version
 
       implicit none
 
-      integer :: i
+      integer :: i, j
       logical :: skip_next
       character(len=8)            :: date   ! QA_WARN len defined by ISO standard
       character(len=10)           :: time   ! QA_WARN len defined by ISO standard
       character(len=5)            :: zone   ! QA_WARN len defined by ISO standard
       character(len=cwdlen)       :: arg
-      character(len=*), parameter :: version = '1.0'
+!      character(len=*), parameter :: cmdlversion = '1.0'
       logical, save               :: do_time = .false.
 
       skip_next = .false.
@@ -172,7 +173,12 @@ contains
 
          select case (arg)
          case ('-v', '--version')
-            print '(2a)', 'cmdline version ', version
+!            print '(2a)', 'cmdline version ', cmdlversion
+            call init_version
+            print *, "###############     Source configuration     ###############"
+            do j=1,nenv
+               print *, env(j)
+            enddo
             stop
          case ('-p', '--param')
             call get_command_argument(i+1,arg)
