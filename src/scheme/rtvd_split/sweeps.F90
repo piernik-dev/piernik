@@ -120,10 +120,10 @@ contains
                jp=j+1
 
 #ifdef MAGNETIC
-               b_x=0.5*cg%b%get_sweep(xdim,j,k)
+               b_x=0.5*cg%b%arr(:,:,j,k)
                b_x(ibx,1:cg%nx-1) = b_x(ibx,1:cg%nx-1)+b_x(ibx,2:cg%nx);       b_x(ibx, cg%nx) = b_x(ibx, cg%nx-1)
-               if (has_dir(ydim) .and. j <= cg%je)  b_x(iby,:)=b_x(iby,:)+0.5*cg%b%get_sweep(xdim,iby,jp,k)
-               if (has_dir(zdim) .and. k <= cg%ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*cg%b%get_sweep(xdim,ibz,j,kp)
+               if (has_dir(ydim) .and. j <= cg%je)  b_x(iby,:)=b_x(iby,:)+0.5*cg%b%arr(iby,:,jp,k)
+               if (has_dir(zdim) .and. k <= cg%ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*cg%b%arr(ibz,:,j,kp)
 #endif /* MAGNETIC */
 
                call set_geo_coeffs(xdim,flind,j,k)
@@ -131,7 +131,7 @@ contains
                call set_div_v1d(div_v1d,xdim,j,k)
 #endif /* COSM_RAYS */
 
-               u_x (iarr_all_swpx,:) = cg%u%get_sweep(xdim,j,k)
+               u_x (iarr_all_swpx,:) = cg%u%arr(:,:,j,k)
                u0_x(iarr_all_swpx,:) = uh(:,:,j,k)
 
                call relaxing_tvd(cg%nx, u_x, u0_x, b_x, div_v1d, istep, xdim, j, k, cg%dx, dt)
@@ -175,10 +175,10 @@ contains
                ip=i+1
 
 #ifdef MAGNETIC
-               b_y(:,:) = 0.5*cg%b%get_sweep(ydim,k,i)
+               b_y(:,:) = 0.5*cg%b%arr(:,i,:,k)
                b_y(iby,1:cg%ny-1)=b_y(iby,1:cg%ny-1)+b_y(iby,2:cg%ny);       b_y(iby, cg%ny) = b_y(iby, cg%ny-1)
-               if (has_dir(xdim) .and. i <= cg%ie) b_y(ibx,:)=b_y(ibx,:)+0.5*cg%b%get_sweep(ydim,ibx,k,ip)
-               if (has_dir(zdim) .and. k <= cg%ke) b_y(ibz,:)=b_y(ibz,:)+0.5*cg%b%get_sweep(ydim,ibz,kp,i)
+               if (has_dir(xdim) .and. i <= cg%ie) b_y(ibx,:)=b_y(ibx,:)+0.5*cg%b%arr(ibx,ip,:,k)
+               if (has_dir(zdim) .and. k <= cg%ke) b_y(ibz,:)=b_y(ibz,:)+0.5*cg%b%arr(ibz,i,:,kp)
                b_y((/iby,ibx,ibz/),:)=b_y(:,:)
 #endif /* MAGNETIC */
 
@@ -187,7 +187,7 @@ contains
                call set_div_v1d(div_v1d,ydim,k,i)
 #endif /* COSM_RAYS */
 
-               u_y (iarr_all_swpy,:) = cg%u%get_sweep(ydim,k,i)
+               u_y (iarr_all_swpy,:) = cg%u%arr(:,i,:,k)
                u0_y(iarr_all_swpy,:) = uh(:,i,:,k)
 
                call relaxing_tvd(cg%ny, u_y, u0_y, b_y, div_v1d, istep, ydim, k, i, cg%dy, dt)
@@ -234,10 +234,10 @@ contains
                ip=i+1
 
 #ifdef MAGNETIC
-               b_z(:,:) = 0.5*cg%b%get_sweep(zdim,i,j)
+               b_z(:,:) = 0.5*cg%b%arr(:,i,j,:)
                b_z(ibz,1:cg%nz-1) = b_z(ibz,1:cg%nz-1) + b_z(ibz,2:cg%nz);   b_z(ibz, cg%nz) = b_z(ibz, cg%nz-1)
-               if (has_dir(xdim) .and. i <= cg%ie) b_z(ibx,:) = b_z(ibx,:) + 0.5*cg%b%get_sweep(zdim,ibx,ip,j)
-               if (has_dir(ydim) .and. j <= cg%je) b_z(iby,:) = b_z(iby,:) + 0.5*cg%b%get_sweep(zdim,iby,i,jp)
+               if (has_dir(xdim) .and. i <= cg%ie) b_z(ibx,:) = b_z(ibx,:) + 0.5*cg%b%arr(ibx,ip,j,:)
+               if (has_dir(ydim) .and. j <= cg%je) b_z(iby,:) = b_z(iby,:) + 0.5*cg%b%arr(iby,i,jp,:)
                b_z((/ibz,iby,ibx/),:)=b_z(:,:)
 #endif /* MAGNETIC */
 
@@ -249,7 +249,7 @@ contains
                !OPT: It looks that u_z gets re-assigned to something inside relaxing_tvd. \todo try to merge these assignments
                !OPT: 3% D1mr, 3% D2mr, 20% D1mw, Ir:Dr:Dw ~ 10:4:1
                !OPT: The same applies to sweepy and sweepz
-               u_z (iarr_all_swpz,:) = cg%u%get_sweep(zdim,i,j)
+               u_z (iarr_all_swpz,:) = cg%u%arr(:,i,j,:)
                u0_z(iarr_all_swpz,:) = uh(:,i,j,:)
 
                call relaxing_tvd(cg%nz, u_z, u0_z, b_z, div_v1d, istep, zdim, i, j, cg%dz, dt)
