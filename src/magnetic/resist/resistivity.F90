@@ -105,7 +105,7 @@ contains
 
       namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
 
-      if (code_progress < PIERNIK_INIT_BASE) call die("[arrays:init_arrays] grid not initialized.")
+      if (code_progress < PIERNIK_INIT_BASE) call die("[resistivity:init_resistivity] grid not initialized.")
 
       cfl_resist  =  0.4
       eta_0       =  0.0
@@ -174,7 +174,6 @@ contains
 
    subroutine compute_resist
 
-      use arrays,       only: b, u
       use constants,    only: small, xdim, ydim, zdim, MINL, MAXL
       use fluidindex,   only: ibx, iby, ibz
       use func,         only: get_extremum
@@ -194,13 +193,13 @@ contains
 !--- square current computing in cell corner step by step
 
       if (has_dir(xdim)) then
-         dbx(2:cg%nx,:,:) = (b(iby,2:cg%nx,:,:)-b(iby,1:cg%nx-1,:,:))*cg%idl(xdim) ;      dbx(1,:,:) = dbx(2,:,:)
+         dbx(2:cg%nx,:,:) = (cg%b%arr(iby,2:cg%nx,:,:)-cg%b%arr(iby,1:cg%nx-1,:,:))*cg%idl(xdim) ;      dbx(1,:,:) = dbx(2,:,:)
       endif
       if (has_dir(ydim)) then
-         dby(:,2:cg%ny,:) = (b(ibx,:,2:cg%ny,:)-b(ibx,:,1:cg%ny-1,:))*cg%idl(ydim) ;      dby(:,1,:) = dby(:,2,:)
+         dby(:,2:cg%ny,:) = (cg%b%arr(ibx,:,2:cg%ny,:)-cg%b%arr(ibx,:,1:cg%ny-1,:))*cg%idl(ydim) ;      dby(:,1,:) = dby(:,2,:)
       endif
       if (has_dir(zdim)) then
-         dbz(:,:,2:cg%nz) = (b(iby,:,:,2:cg%nz)-b(iby,:,:,1:cg%nz-1))*cg%idl(zdim) ;      dbz(:,:,1) = dbz(:,:,2)
+         dbz(:,:,2:cg%nz) = (cg%b%arr(iby,:,:,2:cg%nz)-cg%b%arr(iby,:,:,1:cg%nz-1))*cg%idl(zdim) ;      dbz(:,:,1) = dbz(:,:,2)
       endif
 
 !--- current_z **2
@@ -250,8 +249,8 @@ contains
       call get_extremum(p, MAXL, cu2max)
 
 #ifndef ISO
-      wb = ( u(flind%ion%ien,:,:,:) - 0.5*( u(flind%ion%imx,:,:,:)**2  + u(flind%ion%imy,:,:,:)**2  + u(flind%ion%imz,:,:,:)**2 ) &
-           / u(flind%ion%idn,:,:,:) - 0.5 * ( b(ibx,:,:,:)**2  +   b(iby,:,:,:)**2  +   b(ibz,:,:,:)**2))/ ( eta * wb+small)
+      wb = ( cg%u%arr(flind%ion%ien,:,:,:) - 0.5*( cg%u%arr(flind%ion%imx,:,:,:)**2  + cg%u%arr(flind%ion%imy,:,:,:)**2  + cg%u%arr(flind%ion%imz,:,:,:)**2 ) &
+           / cg%u%arr(flind%ion%idn,:,:,:) - 0.5 * ( cg%b%arr(ibx,:,:,:)**2  +   cg%b%arr(iby,:,:,:)**2  +   cg%b%arr(ibz,:,:,:)**2))/ ( eta * wb+small)
       dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
 
       call get_extremum(p, MINL, deimin)
@@ -334,7 +333,6 @@ contains
 
    subroutine diffuseby_x
 
-      use arrays,        only: b
       use fluidindex,    only: iby
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -343,7 +341,7 @@ contains
 
       implicit none
 
-      real, dimension(:), pointer :: b1d, eta1d
+      real, dimension(:), pointer :: eta1d
       real, dimension(cg%nx)      :: wcu1d
       integer                     :: j, k
 
@@ -352,9 +350,8 @@ contains
 
       do j = 1, cg%ny
          do k = 1, cg%nz
-            b1d    => b(iby,:,j,k)
             eta1d  => eta(:,j,k)
-            call tvdd_1d(b1d, eta1d, cg%idl(xdim), dt, wcu1d)
+            call tvdd_1d(cg%b%get_sweep(xdim,iby,j,k), eta1d, cg%idl(xdim), dt, wcu1d)
             wcu(:,j,k) = wcu1d
          enddo
       enddo
@@ -367,7 +364,6 @@ contains
 
    subroutine diffusebz_x
 
-      use arrays,        only: b
       use fluidindex,    only: ibz
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -376,7 +372,7 @@ contains
 
       implicit none
 
-      real, dimension(:), pointer :: b1d, eta1d
+      real, dimension(:), pointer :: eta1d
       real, dimension(cg%nx)      :: wcu1d
       integer                     :: j, k
 
@@ -385,9 +381,8 @@ contains
 
       do j = 1, cg%ny
          do k = 1, cg%nz
-            b1d    => b(ibz,:,j,k)
             eta1d  => eta(:,j,k)
-            call tvdd_1d(b1d, eta1d, cg%idl(xdim), dt, wcu1d)
+            call tvdd_1d(cg%b%get_sweep(xdim,ibz,j,k), eta1d, cg%idl(xdim), dt, wcu1d)
             wcu(:,j,k) = wcu1d
          enddo
       enddo
@@ -400,7 +395,6 @@ contains
 
    subroutine diffusebz_y
 
-      use arrays,        only: b
       use fluidindex,    only: ibz
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -409,7 +403,7 @@ contains
 
       implicit none
 
-      real, dimension(:), pointer :: b1d, eta1d
+      real, dimension(:), pointer :: eta1d
       real, dimension(cg%ny)      :: wcu1d
       integer                     :: i, k
 
@@ -418,9 +412,8 @@ contains
 
       do i = 1, cg%nx
          do k = 1, cg%nz
-            b1d    => b(ibz,i,:,k)
             eta1d  => eta(i,:,k)
-            call tvdd_1d(b1d, eta1d, cg%idl(ydim), dt, wcu1d)
+            call tvdd_1d(cg%b%get_sweep(ydim,ibz,k,i), eta1d, cg%idl(ydim), dt, wcu1d)
             wcu(i,:,k) = wcu1d
          enddo
       enddo
@@ -433,7 +426,6 @@ contains
 
    subroutine diffusebx_y
 
-      use arrays,        only: b
       use fluidindex,    only: ibx
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -442,7 +434,7 @@ contains
 
       implicit none
 
-      real, dimension(:), pointer :: b1d, eta1d
+      real, dimension(:), pointer :: eta1d
       real, dimension(cg%ny)      :: wcu1d
       integer                     :: i, k
 
@@ -451,9 +443,8 @@ contains
 
       do i = 1, cg%nx
          do k = 1, cg%nz
-            b1d    => b(ibx,i,:,k)
             eta1d  => eta(i,:,k)
-            call tvdd_1d(b1d, eta1d, cg%idl(ydim), dt, wcu1d)
+            call tvdd_1d(cg%b%get_sweep(ydim,ibx,k,i), eta1d, cg%idl(ydim), dt, wcu1d)
             wcu(i,:,k) = wcu1d
          enddo
       enddo
@@ -466,7 +457,6 @@ contains
 
    subroutine diffusebx_z
 
-      use arrays,        only: b
       use fluidindex,    only: ibx
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -475,7 +465,7 @@ contains
 
       implicit none
 
-      real, dimension(:), pointer :: b1d, eta1d
+      real, dimension(:), pointer :: eta1d
       real, dimension(cg%nz)      :: wcu1d
       integer                     :: i, j
 
@@ -484,9 +474,8 @@ contains
 
       do i = 1, cg%nx
          do j = 1, cg%ny
-            b1d    => b(ibx,i,j,:)
             eta1d  => eta(i,j,:)
-            call tvdd_1d(b1d, eta1d, cg%idl(zdim), dt, wcu1d)
+            call tvdd_1d(cg%b%get_sweep(zdim,ibx,i,j), eta1d, cg%idl(zdim), dt, wcu1d)
             wcu(i,j,:) = wcu1d
          enddo
       enddo
@@ -499,7 +488,6 @@ contains
 
    subroutine diffuseby_z
 
-      use arrays,        only: b
       use fluidindex,    only: iby
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -508,7 +496,7 @@ contains
 
       implicit none
 
-      real, dimension(:), pointer :: b1d, eta1d
+      real, dimension(:), pointer :: eta1d
       real, dimension(cg%nz)      :: wcu1d
       integer                     :: i, j
 
@@ -517,9 +505,8 @@ contains
 
       do i = 1, cg%nx
          do j = 1, cg%ny
-            b1d    => b(iby,i,j,:)
             eta1d  => eta(i,j,:)
-            call tvdd_1d(b1d, eta1d, cg%idl(zdim), dt, wcu1d)
+            call tvdd_1d(cg%b%get_sweep(zdim,iby,i,j), eta1d, cg%idl(zdim), dt, wcu1d)
             wcu(i,j,:) = wcu1d
          enddo
       enddo
