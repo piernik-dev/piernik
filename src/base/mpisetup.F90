@@ -53,7 +53,7 @@ module mpisetup
 
    integer, protected :: nproc, proc, ierr, info
 
-   integer, parameter :: nreq = size([LO, HI]) * size([BLK, BND]) ! just another way of defining '4' ;-)
+   integer, parameter :: nreq = size([LO, HI]) * size([BLK, BND]) * ndims ! just another way of defining '4 * 3' ;-)
    integer, allocatable, dimension(:)   :: req
    integer, allocatable, dimension(:,:) :: status
 
@@ -672,11 +672,11 @@ contains
 
       if (allocated(req) .or. allocated(status)) call die("[mpisetup:init_mpi] req or status already allocated")
       if (comm3d == MPI_COMM_NULL) then
-         allocate(req(nreq))
-         allocate(status(MPI_STATUS_SIZE, nreq))
-      else
          allocate(req(4*nproc)) ! 4 = count([i_bnd, o_bnd]) * two sides
          allocate(status(MPI_STATUS_SIZE, size(req)))
+      else
+         allocate(req(nreq))
+         allocate(status(MPI_STATUS_SIZE, nreq))
       endif
 
       if (any(dom%bnd(:, :) == BND_COR) .and. comm3d == MPI_COMM_NULL) call die("[mpisetup:init_mpi] Corner BC not implemented without comm3d")
