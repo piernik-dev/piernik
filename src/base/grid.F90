@@ -38,7 +38,7 @@
 module grid
 
    use constants, only: xdim, zdim, ndims, LO, HI, BND, BLK, FLUID, ARR
-   use types,     only: axes, bnd_list, array4d
+   use types,     only: axes, bnd_list, array4d, array3d
 
    implicit none
 
@@ -104,6 +104,7 @@ module grid
       !< the shape is (xdim:zdim, FLUID:ARR) for cg (base grid container)) and (xdim:zdim, mg_nb) for plvl (multigrid level container)
 
       type(array4d) :: u, b
+      type(array3d) :: cs_iso2
 
    contains
 
@@ -390,6 +391,10 @@ contains
 
       this%ijkse(:, LO) = [ this%is, this%js, this%ks ]
       this%ijkse(:, HI) = [ this%ie, this%je, this%ke ]
+
+#ifdef ISO
+      call this%cs_iso2%init(this%nx,this%ny,this%nz)
+#endif /* ISO */
 
    end subroutine init
 
@@ -854,6 +859,8 @@ contains
          enddo
          deallocate(this%o_bnd)
       endif
+
+      call this%cs_iso2%clean
 
    end subroutine cleanup
 
