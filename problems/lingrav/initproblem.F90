@@ -89,7 +89,7 @@ contains
 
    subroutine init_prob
 
-      use arrays,      only: u, b, dprof
+      use arrays,      only: dprof
       use fluidindex,  only: ibx, iby, ibz, flind
       use grid,        only: cg
       use hydrostatic, only: hydrostatic_zeq_densmid
@@ -109,24 +109,26 @@ contains
 
       csim2 = flind%ion%cs2*(1.0+alpha)
 
+      cg%cs_iso2%arr(:,:,:) = flind%ion%cs2
+
       call hydrostatic_zeq_densmid(1, 1, d0, csim2)
 
       do k = 1, cg%nz
          do j = 1, cg%ny
             do i = 1, cg%nx
-               u(idni,i,j,k)   = max(smalld,dprof(k))
+               cg%u%arr(idni,i,j,k)   = max(smalld,dprof(k))
 
-               u(imxi,i,j,k) = 0.0
-               u(imyi,i,j,k) = 0.0
-               u(imzi,i,j,k) = 0.0
+               cg%u%arr(imxi,i,j,k) = 0.0
+               cg%u%arr(imyi,i,j,k) = 0.0
+               cg%u%arr(imzi,i,j,k) = 0.0
 #ifdef SHEAR
-               u(imyi,i,j,k) = -qshear*omega*x(i)*u(idni,i,j,k)
+               cg%u%arr(imyi,i,j,k) = -qshear*omega*x(i)*cg%u%arr(idni,i,j,k)
 #endif /* SHEAR */
 
 #ifndef ISO
-               u(ieni,i,j,k)   = flind%ion%cs2/(flind%ion%gam_1) * u(idni,i,j,k) &
-                               + 0.5*(u(imxi,i,j,k)**2 + u(imyi,i,j,k)**2 + &
-                                      u(imzi,i,j,k)**2 ) / u(idni,i,j,k)
+               cg%u%arr(ieni,i,j,k)   = flind%ion%cs2/(flind%ion%gam_1) * cg%u%arr(idni,i,j,k) &
+                               + 0.5*(cg%u%arr(imxi,i,j,k)**2 + cg%u%arr(imyi,i,j,k)**2 + &
+                                      cg%u%arr(imzi,i,j,k)**2 ) / cg%u%arr(idni,i,j,k)
 #endif /* !ISO */
 
             enddo
@@ -136,11 +138,11 @@ contains
       do k = 1, cg%nz
          do j = 1, cg%ny
             do i = 1, cg%nx
-               b(ibx,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
-               b(iby,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
-               b(ibz,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
+               cg%b%arr(ibx,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
+               cg%b%arr(iby,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
+               cg%b%arr(ibz,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
-               u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
+               cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
 #endif /* !ISO */
             enddo
          enddo
