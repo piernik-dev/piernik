@@ -860,16 +860,13 @@ contains
 
    subroutine write_restart_hdf5(debug_res)
 
-      use arrays,     only: u, b
+      use grid,       only: cg
       use constants,  only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B
       use dataio_pub, only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
       use hdf5,       only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use list_hdf5,  only: problem_write_restart
       use mpisetup,   only: comm, info, ierr, master, nstep
       use mpi,        only: MPI_CHARACTER
-#ifdef ISO_LOCAL
-      use arrays,     only: cs_iso2_arr
-#endif /* ISO_LOCAL */
 #ifdef GRAV
       use arrays,     only: gp
 #endif /* GRAV */
@@ -878,7 +875,6 @@ contains
 
       logical, optional, intent(in) :: debug_res
 
-      real, pointer, dimension(:,:,:,:) :: pa4d
       real, pointer, dimension(:,:,:)   :: pa3d
       integer, parameter    :: extlen = 4
       character(len=extlen) :: file_extension
@@ -912,11 +908,8 @@ contains
       ! Write all data in parallel
       if (associated(problem_write_restart)) call problem_write_restart(file_id)
       if (associated(pa3d)) nullify(pa3d)
-#ifdef ISO_LOCAL
-      pa3d => cs_iso2_arr
-      call write_arr_to_restart(file_id, pa3d, AT_NO_B, "cs_iso2")
-      nullify(pa3d)
-#endif /* ISO_LOCAL */
+
+      if (associated(cg%cs_iso2%arr)) call write_arr_to_restart(file_id, cg%cs_iso2%arr, AT_NO_B, "cs_iso2")
 #ifdef GRAV
       pa3d => gp
       call write_arr_to_restart(file_id, pa3d, AT_OUT_B, "gp")
@@ -924,21 +917,15 @@ contains
 #endif /* GRAV */
       if (associated(pa3d)) nullify(pa3d)
 
-      if (associated(pa4d)) nullify(pa4d)
-
       ! Write fluids
       area_type = AT_NO_B
       if (present(debug_res)) area_type = AT_ALL_B
-      pa4d => u
-      call write_arr_to_restart(file_id, pa4d, area_type, dname(FLUID))
-      nullify(pa4d)
+      if (associated(cg%u%arr)) call write_arr_to_restart(file_id, cg%u%arr, area_type, dname(FLUID))
 
       ! Write magnetic field
       area_type = AT_OUT_B ! unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
       if (present(debug_res)) area_type = AT_ALL_B
-      pa4d => b
-      call write_arr_to_restart(file_id, pa4d, area_type, dname(MAG))
-      nullify(pa4d)
+      if (associated(cg%b%arr)) call write_arr_to_restart(file_id, cg%b%arr, area_type, dname(MAG))
 
 !     \todo writing axes using collective I/O takes order of magnitude more than
 !        dumping U and B arrays alltogether, since XYZ-axis is not even read
@@ -1370,7 +1357,7 @@ contains
 
    subroutine read_restart_hdf5(chdf)
 
-      use arrays,        only: u, b
+      use grid,          only: cg
       use dataio_pub,    only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, hdf
       use fluidindex,    only: flind
       use func,          only: fix_string
@@ -1381,9 +1368,6 @@ contains
       use mpisetup,      only: comm, ierr, magic_mass, master, t, info, comm, dt, dom, has_dir
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use constants,     only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B
-#ifdef ISO_LOCAL
-      use arrays,        only: cs_iso2_arr
-#endif /* ISO_LOCAL */
 #ifdef GRAV
       use arrays,        only: gp
 #endif /* GRAV */
@@ -1404,7 +1388,6 @@ contains
       real, dimension(1)    :: rbuf
       integer, dimension(1) :: ibuf
 
-      real, dimension(:,:,:,:), pointer :: p4d
       real, dimension(:,:,:), pointer :: p3d
 
       real                  :: restart_hdf5_version
@@ -1480,27 +1463,18 @@ contains
       if (associated(problem_read_restart)) call problem_read_restart(file_id)
 
       if (associated(p3d)) nullify(p3d)
-#ifdef ISO_LOCAL
-      p3d => cs_iso2_arr(:,:,:)
-      call read_arr_from_restart(file_id, p3d, AT_NO_B, "cs_iso2")
-      nullify(p3d)
-#endif /* ISO_LOCAL */
+      if (associated(cg%cs_iso2%arr)) call read_arr_from_restart(file_id, cg%cs_iso2%arr, AT_NO_B, "cs_iso2")
 #ifdef GRAV
       p3d => gp(:,:,:)
       call read_arr_from_restart(file_id, p3d, AT_OUT_B, "gp")
       nullify(p3d)
 #endif /* GRAV */
 
-      if (associated(p4d)) nullify(p4d)
       !  READ FLUID VARIABLES
-      p4d => u(:, :, :, :)
-      call read_arr_from_restart(file_id, p4d, AT_NO_B, dname(FLUID))
-      nullify(p4d)
+      if (associated(cg%u%arr)) call read_arr_from_restart(file_id, cg%u%arr, AT_NO_B, dname(FLUID))
 
       !  READ MAG VARIABLES
-      p4d => b(:,:,:,:)
-      call read_arr_from_restart(file_id, p4d, AT_OUT_B, dname(MAG))
-      nullify(p4d)
+      if (associated(cg%b%arr)) call read_arr_from_restart(file_id, cg%b%arr, AT_OUT_B, dname(MAG))
 
       call h5fclose_f(file_id, error)
 
