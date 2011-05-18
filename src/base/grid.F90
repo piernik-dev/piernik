@@ -105,6 +105,7 @@ module grid
 
       type(array4d) :: u, b
       type(array3d) :: cs_iso2
+      type(array3d) :: wa
 
    contains
 

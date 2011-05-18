@@ -55,10 +55,12 @@ module types
    type :: array3d
       real, dimension(:,:,:), pointer :: arr => null()
       contains
-         procedure :: init  => array3d_init
+         procedure :: array3d_init
+         procedure :: array3d_associate
          procedure :: clean => array3d_clean
          procedure :: check => array3d_check_if_dirty
          procedure :: get_sweep => array3d_get_sweep
+         generic, public :: init => array3d_init, array3d_associate
    end type array3d
 
    type :: value
@@ -234,6 +236,15 @@ contains
       if (.not.associated(this%arr)) this%arr => other
       return
    end subroutine array4d_associate
+
+   subroutine array3d_associate(this,other)
+      implicit none
+      class(array3d), intent(inout) :: this
+      real, allocatable, dimension(:,:,:), target :: other
+
+      if (.not.associated(this%arr)) this%arr => other
+      return
+   end subroutine array3d_associate
 
    subroutine array4d_clean(this)
       implicit none

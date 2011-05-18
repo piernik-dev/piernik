@@ -95,6 +95,8 @@ contains
 
       ma3d = [cg%nx, cg%ny, cg%nz]
       call my_allocate(wa, ma3d, "wa")
+!     call cg%wa%init(cg%nx, cg%ny, cg%nz)        ! \todo use after wa -> cg%wa transition
+      call cg%wa%init(wa)
 
 #ifdef GRAV
       call my_allocate(gpot, ma3d, "gpot")
@@ -120,13 +122,14 @@ contains
       implicit none
 
 !      if (allocated(u))       deallocate(u)
-      call cg%u%clean() ! \todo use after u -> cg%u transition
+      call cg%u%clean()
 !      if (allocated(b))       deallocate(b)
-      call cg%u%clean() ! \todo use after b -> cg%b transition
+      call cg%b%clean()
       if (allocated(u0))      deallocate(u0)
       if (allocated(uh))      deallocate(uh)
       if (allocated(b0))      deallocate(b0)
-      if (allocated(wa))      deallocate(wa)
+!      if (allocated(wa))      deallocate(wa)
+      call cg%wa%clean()
 
 #ifdef GRAV
       if (allocated(gpot))    deallocate(gpot)
