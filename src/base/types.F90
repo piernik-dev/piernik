@@ -36,7 +36,7 @@ module types
    implicit none
 
    private
-   public :: axes, domain_container, segment, bnd_list, tsl_container, value, array4d, &
+   public :: axes, domain_container, segment, bnd_list, tsl_container, value, array4d, array3d, &
         &    problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd, at_user_settings
 
    type :: array4d
@@ -51,6 +51,15 @@ module types
          generic, public :: init => array4d_init, array4d_associate
          generic, public :: get_sweep => array4d_get_sweep_one_var, array4d_get_sweep
    end type array4d
+
+   type :: array3d
+      real, dimension(:,:,:), pointer :: arr => null()
+      contains
+         procedure :: init  => array3d_init
+         procedure :: clean => array3d_clean
+         procedure :: check => array3d_check_if_dirty
+         procedure :: get_sweep => array3d_get_sweep
+   end type array3d
 
    type :: value
       real                      :: val
@@ -176,6 +185,35 @@ module types
 
 contains
 
+   subroutine array3d_init(this,nx,ny,nz)
+      use constants, only: big_float
+      implicit none
+      class(array3d), intent(inout) :: this
+      integer, intent(in)           :: nx,ny,nz
+
+      if (.not.associated(this%arr)) allocate(this%arr(nx,ny,nz))
+      this%arr = big_float
+!     if (.not.associated(this%arr)) this%arr = reshape( [(big_float,i=1,nx*ny*nz)], [nx,ny,nz] )   ! lhs realloc
+      return
+   end subroutine array3d_init
+
+   subroutine array3d_clean(this)
+      implicit none
+      class(array3d), intent(inout) :: this
+
+      if (associated(this%arr)) deallocate(this%arr)
+      return
+   end subroutine array3d_clean
+
+   logical function array3d_check_if_dirty(this)
+      use constants, only: big_float
+      implicit none
+      class(array3d), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) :/
+
+      array3d_check_if_dirty = any( this%arr >= big_float )
+
+   end function array3d_check_if_dirty
+
    subroutine array4d_init(this,nn,nx,ny,nz)
       use constants, only: big_float
       implicit none
@@ -199,7 +237,7 @@ contains
 
    subroutine array4d_clean(this)
       implicit none
-      class(array4d), intent(inout) :: this
+      class(array4d), intent(inout) :: this                  !! Unlimited polymorphism at (1) not yet supported
 
       if (associated(this%arr)) deallocate(this%arr)
       return
@@ -208,11 +246,32 @@ contains
    logical function array4d_check_if_dirty(this)
       use constants, only: big_float
       implicit none
-      class(array4d), intent(inout) :: this
+      class(array4d), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) when I grow older
 
       array4d_check_if_dirty = any( this%arr >= big_float )
 
    end function array4d_check_if_dirty
+
+   function array3d_get_sweep(this,ndim,i1,i2) result(p1d)
+      use constants, only: xdim, ydim, zdim
+      implicit none
+      class(array3d), intent(inout) :: this
+      real, dimension(:),  pointer  :: p1d
+      integer, intent(in)           :: ndim, i1, i2
+
+      if (.not.associated(this%arr)) then
+         p1d => null()
+      else
+         select case (ndim)
+            case (xdim)
+               p1d => this%arr(:,i1,i2)
+            case (ydim)
+               p1d => this%arr(i2,:,i1)
+            case (zdim)
+               p1d => this%arr(i1,i2,:)
+         end select
+      endif
+   end function array3d_get_sweep
 
    function array4d_get_sweep_one_var(this,ndim,nn,i1,i2) result(p1d)
       use constants, only: xdim, ydim, zdim
