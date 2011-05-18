@@ -36,7 +36,8 @@ module fluidupdate   ! SPLIT
 contains
 
    subroutine repeat_fluidstep
-      use arrays,       only: u, u0, b, b0
+      use grid,         only: cg
+      use arrays,       only: u0, b0
       use mpisetup,     only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, master, repeat_step
       use dataio_pub,   only: warn
       implicit none
@@ -45,19 +46,18 @@ contains
 
       if (cfl_violated) then
          t = t-2.0*dtm
-         u = u0
-         b = b0
+         cg%u%arr = u0
+         cg%b%arr = b0
          dt = dtm/dt_max_grow**2
          nstep = nstep-1
          if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
       else
-         u0 = u
-         b0 = b
+         u0 = cg%u%arr
+         b0 = cg%b%arr
       endif
    end subroutine repeat_fluidstep
 
    subroutine fluid_update
-      use arrays,        only: u, b
       use dataio_pub,    only: halfstep
       use mpisetup,      only: dt, dtm, t
 #ifdef SN_SRC
@@ -265,7 +265,6 @@ contains
    subroutine magfieldbyzx
 
       use advects,     only: advectby_x, advectbz_x
-      use arrays,      only: b
       use fluidindex,  only: ibx, iby, ibz
       use constants,   only: xdim, ydim, zdim
 #ifdef RESISTIVE
@@ -297,7 +296,6 @@ contains
    subroutine magfieldbzxy
 
       use advects,     only: advectbx_y, advectbz_y
-      use arrays,      only: b
       use fluidindex,  only: ibx, iby, ibz
       use constants,   only: xdim, ydim, zdim
 #ifdef RESISTIVE
@@ -329,7 +327,6 @@ contains
    subroutine magfieldbxyz
 
       use advects,     only: advectbx_z, advectby_z
-      use arrays,      only: b
       use fluidindex,  only: ibx, iby, ibz
       use constants,   only: xdim, ydim, zdim
 #ifdef RESISTIVE
@@ -356,7 +353,6 @@ contains
 
    subroutine mag_add(ib1,dim1,ib2,dim2)
 
-      use arrays,        only: b, wa
       use func,          only: pshift, mshift
       use grid,          only: cg
       use magboundaries, only: all_mag_boundaries
@@ -372,22 +368,22 @@ contains
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
       if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
-      b(ib1,:,:,:) = b(ib1,:,:,:) - wcu*cg%idl(dim1)
+      cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) - wcu*cg%idl(dim1)
       wcu = pshift(wcu,dim1)
-      b(ib1,:,:,:) = b(ib1,:,:,:) + wcu*cg%idl(dim1)
+      cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) + wcu*cg%idl(dim1)
       wcu = mshift(wcu,dim1)
-      b(ib2,:,:,:) = b(ib2,:,:,:) + wcu*cg%idl(dim2)
+      cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) + wcu*cg%idl(dim2)
       wcu = pshift(wcu,dim2)
-      b(ib2,:,:,:) = b(ib2,:,:,:) - wcu*cg%idl(dim2)
+      cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - wcu*cg%idl(dim2)
 #endif /* RESISTIVE */
 ! ADVECTION FULL STEP
-      if (associated(custom_emf_bnd)) call custom_emf_bnd(wa)
-      b(ib1,:,:,:) = b(ib1,:,:,:) - wa*cg%idl(dim1)
-      wa = mshift(wa,dim1)
-      b(ib1,:,:,:) = b(ib1,:,:,:) + wa*cg%idl(dim1)
-      b(ib2,:,:,:) = b(ib2,:,:,:) - wa*cg%idl(dim2)
-      wa = pshift(wa,dim2)
-      b(ib2,:,:,:) = b(ib2,:,:,:) + wa*cg%idl(dim2)
+      if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa%arr)
+      cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) - cg%wa%arr*cg%idl(dim1)
+      cg%wa%arr = mshift(cg%wa%arr,dim1)
+      cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) + cg%wa%arr*cg%idl(dim1)
+      cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - cg%wa%arr*cg%idl(dim2)
+      cg%wa%arr = pshift(cg%wa%arr,dim2)
+      cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) + cg%wa%arr*cg%idl(dim2)
 
       call all_mag_boundaries
 
