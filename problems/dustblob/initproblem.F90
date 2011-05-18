@@ -100,8 +100,8 @@ contains
 
    subroutine init_prob
 
-      use arrays,       only: u
       use grid,         only: cg
+      use fluidindex,   only: flind
       use initdust,     only: idnd, imxd, imyd, imzd
       use initneutral,  only: idnn, imxn, imyn, imzn, gamma_neu
       use mpisetup,     only: smalld, has_dir
@@ -115,6 +115,8 @@ contains
       real    :: xi,yj,zk, rc
       integer :: i, j, k
 
+      if (associated(cg%cs_iso2%arr)) cg%cs_iso2%arr(:,:,:) = flind%neu%cs2
+
       do i = 1, cg%nx
          xi = cg%x(i)
          do j = 1, cg%ny
@@ -127,22 +129,22 @@ contains
                   rc = sqrt((xi-x0)**2+(yj-y0)**2)
                endif
 
-               u(idnn,i,j,k) = d_gas
-               u(imxn,i,j,k) = 0.0
-               u(imyn,i,j,k) = d_gas*v_gas
-               u(imzn,i,j,k) = 0.0
+               cg%u%arr(idnn,i,j,k) = d_gas
+               cg%u%arr(imxn,i,j,k) = 0.0
+               cg%u%arr(imyn,i,j,k) = d_gas*v_gas
+               cg%u%arr(imzn,i,j,k) = 0.0
                if (rc <= r0) then
-                  u(idnd,i,j,k) = d_dust
-                  u(imyd,i,j,k) = d_dust*v_dust
+                  cg%u%arr(idnd,i,j,k) = d_dust
+                  cg%u%arr(imyd,i,j,k) = d_dust*v_dust
                else
-                  u(idnd,i,j,k) = smalld
-                  u(imyd,i,j,k) = 0.0
+                  cg%u%arr(idnd,i,j,k) = smalld
+                  cg%u%arr(imyd,i,j,k) = 0.0
                endif
-               u(imxd,i,j,k) = 0.0
-               u(imzd,i,j,k) = 0.0
+               cg%u%arr(imxd,i,j,k) = 0.0
+               cg%u%arr(imzd,i,j,k) = 0.0
 #ifndef ISO
-               u(ienn,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(u(imxn,i,j,k)**2 + &
-                  u(imyn,i,j,k)**2+u(imzn,i,j,k)**2)/u(idnn,i,j,k)
+               cg%u%arr(ienn,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(cg%u%arr(imxn,i,j,k)**2 + &
+                  cg%u%arr(imyn,i,j,k)**2+cg%u%arr(imzn,i,j,k)**2)/cg%u%arr(idnn,i,j,k)
 #endif /* !ISO */
             enddo
          enddo
