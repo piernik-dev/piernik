@@ -1042,7 +1042,6 @@ contains
 #endif /* MAGNETIC */
 
 #ifdef ISO
-#ifdef ISO_LOCAL
 !        wa            = cs_iso2_arr(:,:,:)*u(idni,:,:,:)
 !        call get_extremum(p, MINL, prei_min)
 !        call get_extremum(p, MAXL, prei_max) ; NULLIFY(p)
@@ -1052,7 +1051,6 @@ contains
 !        wa            = mH / kboltz * cs_iso2_arr(:,:,:)
 !        call get_extremum(p, MINL, temi_min)
 !        call get_extremum(p, MAXL, temi_max)
-#endif /* ISO_LOCAL */
 #else /* !ISO */
 !        wa(:,:,:) = (u(ieni,:,:,:) &                ! eint
 !                  - 0.5*((u(imxi,:,:,:)**2 +u(imyi,:,:,:)**2 + u(imzi,:,:,:)**2)/u(idni,:,:,:)))
