@@ -43,8 +43,8 @@ contains
 
    subroutine compute_c_max(fl,cs,i,j,k,cx,cy,cz,c_max)
 
-      use arrays,      only: u
       use fluidtypes,  only: component_fluid
+      use grid,        only: cg
 
       implicit none
 
@@ -54,10 +54,10 @@ contains
       real, intent(inout)                        :: cx, cy, cz, c_max
       real                                       :: vx, vy, vz
 
-      if ( u(fl%idn,i,j,k) > 0.0) then
-         vx = abs(u(fl%imx,i,j,k)/u(fl%idn,i,j,k))
-         vy = abs(u(fl%imy,i,j,k)/u(fl%idn,i,j,k))
-         vz = abs(u(fl%imz,i,j,k)/u(fl%idn,i,j,k))
+      if ( cg%u%arr(fl%idn,i,j,k) > 0.0) then
+         vx = abs(cg%u%arr(fl%imx,i,j,k)/cg%u%arr(fl%idn,i,j,k))
+         vy = abs(cg%u%arr(fl%imy,i,j,k)/cg%u%arr(fl%idn,i,j,k))
+         vz = abs(cg%u%arr(fl%imz,i,j,k)/cg%u%arr(fl%idn,i,j,k))
       else
          vx = 0.0; vy = 0.0; vz = 0.0
       endif

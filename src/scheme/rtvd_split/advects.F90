@@ -42,7 +42,6 @@ contains
 
    subroutine advectby_x
 
-      use arrays,        only: wa
       use fluidindex,    only: iby, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -86,14 +85,13 @@ contains
       enddo
 
       do j = xdim, zdim
-         if (has_dir(j)) call bnd_emf(wa,'vxby',j)
+         if (has_dir(j)) call bnd_emf(cg%wa%arr,'vxby',j)
       enddo
 
    end subroutine advectby_x
 
    subroutine advectbz_x
 
-      use arrays,        only: wa
       use fluidindex,    only: ibz, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -138,14 +136,13 @@ contains
       enddo
 
       do j = xdim, zdim
-         if (has_dir(j)) call bnd_emf(wa,'vxbz',j)
+         if (has_dir(j)) call bnd_emf(cg%wa%arr,'vxbz',j)
       enddo
 
    end subroutine advectbz_x
 
    subroutine advectbz_y
 
-      use arrays,        only: wa
       use fluidindex,    only: ibz, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -190,14 +187,13 @@ contains
       enddo
 
       do i = xdim, zdim
-         if (has_dir(i)) call bnd_emf(wa,'vybz',i)
+         if (has_dir(i)) call bnd_emf(cg%wa%arr,'vybz',i)
       enddo
 
    end subroutine advectbz_y
 
    subroutine advectbx_y
 
-      use arrays,        only: wa
       use fluidindex,    only: ibx, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -242,13 +238,13 @@ contains
       enddo
 
       do i = xdim, zdim
-         if (has_dir(i)) call bnd_emf(wa,'vybx',i)
+         if (has_dir(i)) call bnd_emf(cg%wa%arr,'vybx',i)
       enddo
 
    end subroutine advectbx_y
 
    subroutine advectbx_z
-      use arrays,        only: wa
+
       use fluidindex,    only: ibx, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -291,13 +287,12 @@ contains
       enddo
 
       do i = xdim, zdim
-         if (has_dir(i)) call bnd_emf(wa,'vzbx',i)
+         if (has_dir(i)) call bnd_emf(cg%wa%arr,'vzbx',i)
       enddo
    end subroutine advectbx_z
 
    subroutine advectby_z
 
-      use arrays,        only: wa
       use fluidindex,    only: iby, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -342,7 +337,7 @@ contains
       enddo
 
       do i = xdim, zdim
-         if (has_dir(i)) call bnd_emf(wa,'vzby',i)
+         if (has_dir(i)) call bnd_emf(cg%wa%arr,'vzby',i)
       enddo
 
    end subroutine advectby_z

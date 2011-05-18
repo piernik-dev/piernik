@@ -43,7 +43,6 @@ contains
 
    real function timestep_dst() result(dt)
       use fluidtypes,    only: component_fluid
-      use arrays,        only: u
       use grid,          only: cg
       use fluidindex,    only: flind
       use timestepfuncs, only: compute_c_max, compute_dt

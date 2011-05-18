@@ -70,7 +70,6 @@ contains
 
    subroutine bnd_b(dir)
 
-      use arrays,        only: b
       use constants,     only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub,    only: msg, warn, die
       use fluidindex,    only: ibx, iby, ibz
@@ -106,8 +105,8 @@ contains
             allocate(send_left(3, cg%nb, cg%ny, cg%nz),send_right(3, cg%nb, cg%ny, cg%nz), &
                  &   recv_left(3, cg%nb, cg%ny, cg%nz),recv_right(3, cg%nb, cg%ny, cg%nz))
 
-            send_left (:,:,:,:)  = b(:, cg%is:cg%isb,:,:)
-            send_right(:,:,:,:)  = b(:, cg%ieb:cg%ie,:,:)
+            send_left (:,:,:,:)  = cg%b%arr(:, cg%is:cg%isb,:,:)
+            send_right(:,:,:,:)  = cg%b%arr(:, cg%ieb:cg%ie,:,:)
 
             if (cg%bnd(xdim, LO) == BND_SHE) then
 !
@@ -148,8 +147,8 @@ contains
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
 
-            b(:,        1:cg%nb-1,:,:) = recv_left (:,  1:cg%nb-1,:,:)
-            b(:,cg%ie+1+1:cg%nx,  :,:) = recv_right(:,1+1:cg%nb,  :,:)
+            cg%b%arr(:,        1:cg%nb-1,:,:) = recv_left (:,  1:cg%nb-1,:,:)
+            cg%b%arr(:,cg%ie+1+1:cg%nx,  :,:) = recv_right(:,1+1:cg%nb,  :,:)
 
             if (allocated(send_left))  deallocate(send_left)
             if (allocated(send_right)) deallocate(send_right)
@@ -164,10 +163,10 @@ contains
 
                jtag = 20*dir
                itag = jtag - 10
-               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BLK), procn(dir,LO), itag, comm3d, req(1), ierr)
-               call MPI_Isend(b(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BLK), procn(dir,HI), jtag, comm3d, req(3), ierr)
-               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BND), procn(dir,LO), jtag, comm3d, req(2), ierr)
-               call MPI_Irecv(b(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BND), procn(dir,HI), itag, comm3d, req(4), ierr)
+               call MPI_Isend(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BLK), procn(dir,LO), itag, comm3d, req(1), ierr)
+               call MPI_Isend(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BLK), procn(dir,HI), jtag, comm3d, req(3), ierr)
+               call MPI_Irecv(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BND), procn(dir,LO), jtag, comm3d, req(2), ierr)
+               call MPI_Irecv(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BND), procn(dir,HI), itag, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
@@ -183,9 +182,9 @@ contains
             if (pcoords(xdim) == 0 .and. pcoords(ydim) == 0) then
                do i=1, cg%nb
                   do j=cg%js, cg%ny
-                     b(ibx,i,j,:) = -b(iby,j,cg%isb+1-i,:)
-                     b(iby,i,j,:) =  b(ibx,j,cg%isb+1-i,:)
-                     b(ibz,i,j,:) =  b(ibz,j,cg%isb+1-i,:)
+                     cg%b%arr(ibx,i,j,:) = -cg%b%arr(iby,j,cg%isb+1-i,:)
+                     cg%b%arr(iby,i,j,:) =  cg%b%arr(ibx,j,cg%isb+1-i,:)
+                     cg%b%arr(ibz,i,j,:) =  cg%b%arr(ibz,j,cg%isb+1-i,:)
                   enddo
                enddo
             endif
@@ -193,7 +192,7 @@ contains
             if (procxyl > 0) then
                allocate(send_left(3, cg%nb, cg%ny, cg%nz), recv_left(3, cg%nx, cg%nb, cg%nz))
 
-               send_left(:,:,:,:) = b(:, cg%is:cg%isb,:,:)
+               send_left(:,:,:,:) = cg%b%arr(:, cg%is:cg%isb,:,:)
 
                call MPI_Isend(send_left, 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
                call MPI_Irecv(recv_left, 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
@@ -202,9 +201,9 @@ contains
 
                do i=1, cg%nb
                   do j=1, cg%ny
-                     b(ibx,i,j,:) = -recv_left(iby,j, cg%is-i,:)
-                     b(iby,i,j,:) =  recv_left(ibx,j, cg%is-i,:)
-                     b(ibz,i,j,:) =  recv_left(ibz,j, cg%is-i,:)
+                     cg%b%arr(ibx,i,j,:) = -recv_left(iby,j, cg%is-i,:)
+                     cg%b%arr(iby,i,j,:) =  recv_left(ibx,j, cg%is-i,:)
+                     cg%b%arr(ibz,i,j,:) =  recv_left(ibz,j, cg%is-i,:)
                   enddo
                enddo
 
@@ -218,17 +217,17 @@ contains
             if (pcoords(ydim) == 0 .and. pcoords(xdim) == 0 ) then
                do j=1, cg%nb
                   do i=cg%is, cg%nx
-                     b(ibx,i,j,:) =  b(iby,cg%isb+1-j,i,:)
-                     b(iby,i,j,:) = -b(ibx,cg%isb+1-j,i,:)
-                     b(ibz,i,j,:) =  b(ibz,cg%isb+1-j,i,:)
+                     cg%b%arr(ibx,i,j,:) =  cg%b%arr(iby,cg%isb+1-j,i,:)
+                     cg%b%arr(iby,i,j,:) = -cg%b%arr(ibx,cg%isb+1-j,i,:)
+                     cg%b%arr(ibz,i,j,:) =  cg%b%arr(ibz,cg%isb+1-j,i,:)
                   enddo
                enddo
 !   - interior to corner
                do j=1, cg%nb
                   do i=1, cg%nb
-                     b(ibx,i,j,:) =  -b(ibx,cg%isb+1-i,cg%jsb+1-j,:)
-                     b(iby,i,j,:) =  -b(iby,cg%isb+1-i,cg%jsb+1-j,:)
-                     b(ibz,i,j,:) =   b(ibz,cg%isb+1-i,cg%jsb+1-j,:)
+                     cg%b%arr(ibx,i,j,:) =  -cg%b%arr(ibx,cg%isb+1-i,cg%jsb+1-j,:)
+                     cg%b%arr(iby,i,j,:) =  -cg%b%arr(iby,cg%isb+1-i,cg%jsb+1-j,:)
+                     cg%b%arr(ibz,i,j,:) =   cg%b%arr(ibz,cg%isb+1-i,cg%jsb+1-j,:)
                   enddo
                enddo
             endif
@@ -236,7 +235,7 @@ contains
             if (procyxl > 0) then
                allocate(send_left(3, cg%nx, cg%nb, cg%nz), recv_left(3, cg%nb, cg%ny, cg%nz))
 
-               send_left(:,:,:,:) = b(:,:, cg%js:cg%jsb,:)
+               send_left(:,:,:,:) = cg%b%arr(:,:, cg%js:cg%jsb,:)
 
                call MPI_Isend   (send_left , 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
                call MPI_Irecv   (recv_left , 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
@@ -245,9 +244,9 @@ contains
 
                do j=1, cg%nb
                   do i=1, cg%nx
-                     b(ibx,i,j,:) =  recv_left(iby, cg%js-j,i,:)
-                     b(iby,i,j,:) = -recv_left(ibx, cg%js-j,i,:)
-                     b(ibz,i,j,:) =  recv_left(ibz, cg%js-j,i,:)
+                     cg%b%arr(ibx,i,j,:) =  recv_left(iby, cg%js-j,i,:)
+                     cg%b%arr(iby,i,j,:) = -recv_left(ibx, cg%js-j,i,:)
+                     cg%b%arr(ibz,i,j,:) =  recv_left(ibz, cg%js-j,i,:)
                   enddo
                enddo
 
@@ -279,9 +278,9 @@ contains
                case (BND_COR, BND_INF, BND_MPI, BND_REF, BND_SHE)
                   ! Do nothing
                case (BND_PER)
-                  if (comm3d /= MPI_COMM_NULL) b(:,1:cg%nb,:,:)              = b(:, cg%ieb:cg%ie,:,:)
+                  if (comm3d /= MPI_COMM_NULL) cg%b%arr(:,1:cg%nb,:,:)              = cg%b%arr(:, cg%ieb:cg%ie,:,:)
                case (BND_OUT, BND_OUTD, BND_OUTH)
-                  b(:,1,:,:) = b(:,2,:,:)
+                  cg%b%arr(:,1,:,:) = cg%b%arr(:,2,:,:)
                case default
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(xdim, LO)," not implemented in ",dir
                   if (master) call warn(msg)
@@ -291,9 +290,9 @@ contains
                case (BND_COR, BND_INF, BND_MPI, BND_REF, BND_SHE)
                   ! Do nothing
                case (BND_PER)
-                  if (comm3d /= MPI_COMM_NULL) b(:, cg%ie+1:cg%nx,:,:) = b(:, cg%is:cg%isb,:,:)
+                  if (comm3d /= MPI_COMM_NULL) cg%b%arr(:, cg%ie+1:cg%nx,:,:) = cg%b%arr(:, cg%is:cg%isb,:,:)
                case (BND_OUT, BND_OUTD, BND_OUTH)
-                  b(:, cg%nx,:,:) = b(:, cg%nx-1,:,:)
+                  cg%b%arr(:, cg%nx,:,:) = cg%b%arr(:, cg%nx-1,:,:)
                case default
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(xdim, HI)," not implemented in ",dir
                   if (master) call warn(msg)
@@ -305,9 +304,9 @@ contains
                case (BND_COR, BND_INF, BND_MPI, BND_REF)
                   ! Do nothing
                case (BND_PER)
-                  if (comm3d /= MPI_COMM_NULL) b(:,:,1:cg%nb,:)              = b(:,:, cg%jeb:cg%je,:)
+                  if (comm3d /= MPI_COMM_NULL) cg%b%arr(:,:,1:cg%nb,:)              = cg%b%arr(:,:, cg%jeb:cg%je,:)
                case (BND_OUT, BND_OUTD, BND_OUTH)
-                  b(:,:,1,:) = b(:,:,2,:)
+                  cg%b%arr(:,:,1,:) = cg%b%arr(:,:,2,:)
                case default
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(ydim, LO)," not implemented in ",dir
                   if (master) call warn(msg)
@@ -317,9 +316,9 @@ contains
                case (BND_COR, BND_INF, BND_MPI, BND_REF)
                   ! Do nothing
                case (BND_PER)
-                  if (comm3d /= MPI_COMM_NULL) b(:,:, cg%je+1:cg%ny,:) = b(:,:, cg%js:cg%jsb,:)
+                  if (comm3d /= MPI_COMM_NULL) cg%b%arr(:,:, cg%je+1:cg%ny,:) = cg%b%arr(:,:, cg%js:cg%jsb,:)
                case (BND_OUT, BND_OUTD, BND_OUTH)
-                  b(:,:, cg%ny,:) = b(:,:, cg%ny-1,:)
+                  cg%b%arr(:,:, cg%ny,:) = cg%b%arr(:,:, cg%ny-1,:)
                case default
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(ydim, HI)," not implemented in ",dir
                   if (master) call warn(msg)
@@ -332,9 +331,9 @@ contains
                case (BND_MPI, BND_REF)
                   ! Do nothing
                case (BND_PER)
-                  if (comm3d /= MPI_COMM_NULL) b(:,:,:,1:cg%nb)              = b(:,:,:, cg%keb:cg%ke)
+                  if (comm3d /= MPI_COMM_NULL) cg%b%arr(:,:,:,1:cg%nb)              = cg%b%arr(:,:,:, cg%keb:cg%ke)
                case (BND_OUT, BND_OUTD, BND_OUTH)
-                  b(:,:,:,1) = b(:,:,:,2)
+                  cg%b%arr(:,:,:,1) = cg%b%arr(:,:,:,2)
                case default
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(zdim, LO)," not implemented in ",dir
                   if (master) call warn(msg)
@@ -344,9 +343,9 @@ contains
                case (BND_MPI, BND_REF)
                   ! Do nothing
                case (BND_PER)
-                  if (comm3d /= MPI_COMM_NULL) b(:,:,:, cg%ke+1:cg%nz) = b(:,:,:, cg%ks:cg%ksb)
+                  if (comm3d /= MPI_COMM_NULL) cg%b%arr(:,:,:, cg%ke+1:cg%nz) = cg%b%arr(:,:,:, cg%ks:cg%ksb)
                case (BND_OUT, BND_OUTD, BND_OUTH)
-                  b(:,:,:, cg%nz) = b(:,:,:, cg%nz-1)
+                  cg%b%arr(:,:,:, cg%nz) = cg%b%arr(:,:,:, cg%nz-1)
                case default
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(zdim, HI)," not implemented in ",dir
                   if (master) call warn(msg)
@@ -604,7 +603,6 @@ contains
 
    subroutine all_mag_boundaries
 
-      use arrays,    only: b
       use mpisetup,  only: has_dir, comm3d
       use mpi,       only: MPI_COMM_NULL
       use constants, only: xdim, zdim, MAG
@@ -613,11 +611,9 @@ contains
       implicit none
 
       integer :: dir
-      real, dimension(:,:,:,:), pointer :: pb
 
       if (comm3d == MPI_COMM_NULL) then
-         pb => b
-         call cg%internal_boundaries(MAG, pa4d=pb)
+         call cg%internal_boundaries(MAG, pa4d=cg%b%arr)
       endif
 
       do dir = xdim, zdim
