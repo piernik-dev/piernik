@@ -114,12 +114,12 @@ contains
       ymid = dom%y0
       zmid = dom%z0
 
-      u(idni,:,:,:) = d0
-      u(imyi,:,:,:) = 0.0
-      u(imzi,:,:,:) = 0.0
+      cg%u%arr(idni,:,:,:) = d0
+      cg%u%arr(imyi,:,:,:) = 0.0
+      cg%u%arr(imzi,:,:,:) = 0.0
 
-      b(ibx,:,:,:)  = 0.0
-      b(ibz,:,:,:)  = 0.0
+      cg%b%arr(ibx,:,:,:)  = 0.0
+      cg%b%arr(ibz,:,:,:)  = 0.0
 
       call read_problem_par
 
@@ -130,23 +130,23 @@ contains
             do i = 1, cg%nx
 
                vzab = v0*cos(2.*pi*cg%y(j)/dom%Ly)
-               u(imxi,i,j,k) = u(idni,i,j,k)*vzab
+               cg%u%arr(imxi,i,j,k) = cg%u%arr(idni,i,j,k)*vzab
 
                if (abs(cg%x(i)-xmid) <= 0.25*dom%Lx) then
-                  b(iby,i,j,k) = -b0
+                  cg%b%arr(iby,i,j,k) = -b0
                else
-                  b(iby,i,j,k) =  b0
+                  cg%b%arr(iby,i,j,k) =  b0
                endif
             enddo
          enddo
       enddo
 
 #ifndef ISO
-      u(ieni,:,:,:)   = 0.5*beta &
-                      + 0.5*(u(imxi,:,:,:)**2  + u(imyi,:,:,:)**2 &
-                           + u(imzi,:,:,:)**2) / u(idni,:,:,:)
+      cg%u%arr(ieni,:,:,:)   = 0.5*beta &
+                      + 0.5*(cg%u%arr(imxi,:,:,:)**2  + cg%u%arr(imyi,:,:,:)**2 &
+                           + cg%u%arr(imzi,:,:,:)**2) / cg%u%arr(idni,:,:,:)
 
-      u(ieni,:,:,:)   = u(ieni,:,:,:) + 0.5*sum(b(:,:,:,:)**2,1)
+      cg%u%arr(ieni,:,:,:)   = cg%u%arr(ieni,:,:,:) + 0.5*sum(cg%b%arr(:,:,:,:)**2,1)
 #endif /* !ISO */
 
    end subroutine init_prob
