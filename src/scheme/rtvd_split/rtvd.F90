@@ -113,8 +113,8 @@ contains
       integer, intent(in) :: n       !< array size
       real, intent(in)    :: dt      !< time step
       real, intent(in)    :: idi     !< cell length, depends on direction x, y or z
-      real, dimension(n)  :: vibj    !< face-centered electromotive force components (b*vg)
-      real, dimension(n)  :: b       !< magnetic field
+      real, dimension(:), pointer, intent(out)    :: vibj    !< face-centered electromotive force components (b*vg)
+      real, dimension(:), pointer, intent(in)     :: b       !< magnetic field
       real, dimension(n)  :: vg      !< velocity in the center of cell boundary
 ! locals
       real, dimension(n)  :: b1      !< magnetic field
@@ -176,7 +176,7 @@ contains
          if (dwm*dwp > 0.0) dw=2.0*dwm*dwp/(dwm+dwp)
          vibj(i)=(w+dw)*dt
       enddo
-
+      return
    end subroutine tvdb
 !/*
 !>

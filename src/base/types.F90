@@ -216,6 +216,15 @@ contains
 
    end function array3d_check_if_dirty
 
+   subroutine array3d_associate(this,other)
+      implicit none
+      class(array3d), intent(inout) :: this
+      real, allocatable, dimension(:,:,:), target :: other
+
+      if (.not.associated(this%arr)) this%arr => other
+      return
+   end subroutine array3d_associate
+
    subroutine array4d_init(this,nn,nx,ny,nz)
       use constants, only: big_float
       implicit none
@@ -236,15 +245,6 @@ contains
       if (.not.associated(this%arr)) this%arr => other
       return
    end subroutine array4d_associate
-
-   subroutine array3d_associate(this,other)
-      implicit none
-      class(array3d), intent(inout) :: this
-      real, allocatable, dimension(:,:,:), target :: other
-
-      if (.not.associated(this%arr)) this%arr => other
-      return
-   end subroutine array3d_associate
 
    subroutine array4d_clean(this)
       implicit none

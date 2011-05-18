@@ -36,12 +36,13 @@ module advects
 
    private
    public  :: advectby_x, advectbz_x, advectbz_y, advectbx_y, advectbx_z, advectby_z
+   real, dimension(:), pointer :: vibj => null()
 
 contains
 
    subroutine advectby_x
 
-      use arrays,        only: b, u, wa
+      use arrays,        only: wa
       use fluidindex,    only: iby, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -50,11 +51,9 @@ contains
       use rtvd,          only: tvdb
 
       implicit none
-      real, dimension(cg%nx) :: vxby, by_x, vx
+      real, dimension(cg%nx) :: vx
       real, dimension(cg%nx) :: vx0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       integer             :: j, k, jm, j_s, j_e
-
-      vxby = 0.0
 
       if (has_dir(ydim)) then ! This can be converted by use grid, only: Dy; j_s = 1 + D_y; j_e = 1 + D_y * (cg%ny - 1) . How will it impact performance?
          j_s = 2
@@ -69,21 +68,20 @@ contains
             jm=j-1
             vx=0.0
             if (jm == 0) then
-               !vx = u(flind%ion%imx,:,1,k) / u(flind%ion%idn,:,1,k)
-               vx0 = u(flind%ion%imx,:,1,k) / u(flind%ion%idn,:,1,k) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vx = cg%u%arr(flind%ion%imx,:,1,k) / cg%u%arr(flind%ion%idn,:,1,k)
+               vx0 = cg%u%arr(flind%ion%imx,:,1,k) / cg%u%arr(flind%ion%idn,:,1,k) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             else
-               !vx =(u(flind%ion%imx,:,jm,k)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,jm,k)+u(flind%ion%idn,:,j,k))
-               vx0 =(u(flind%ion%imx,:,jm,k)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,jm,k)+u(flind%ion%idn,:,j,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vx =(cg%u%arr(flind%ion%imx,:,jm,k)+cg%u%arr(flind%ion%imx,:,j,k))/(cg%u%arr(flind%ion%idn,:,jm,k)+cg%u%arr(flind%ion%idn,:,j,k))
+               vx0 =(cg%u%arr(flind%ion%imx,:,jm,k)+cg%u%arr(flind%ion%imx,:,j,k))/(cg%u%arr(flind%ion%idn,:,jm,k)+cg%u%arr(flind%ion%idn,:,j,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             endif
             !vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
             vx(2:cg%nx-1)=(vx0(1:cg%nx-2) + vx0(3:cg%nx) + 2.0*vx0(2:cg%nx-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
             vx(1)  = vx(2)
             vx(cg%nx) = vx(cg%nx-1)
-            by_x=b(iby,:,j,k)
 
-            call tvdb(vxby,by_x,vx, cg%nx,dt, cg%idx)
+            vibj => cg%wa%get_sweep(xdim,j,k)
+            call tvdb(vibj, cg%b%get_sweep(xdim,iby,j,k), vx, cg%nx,dt, cg%idx)
 
-            wa(:,j,k) = vxby
          enddo
       enddo
 
@@ -95,7 +93,7 @@ contains
 
    subroutine advectbz_x
 
-      use arrays,        only: b, u, wa
+      use arrays,        only: wa
       use fluidindex,    only: ibz, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -105,11 +103,9 @@ contains
 
       implicit none
 
-      real, dimension(cg%nx) :: vxbz, bz_x, vx
+      real, dimension(cg%nx) :: vx
       real, dimension(cg%nx) :: vx0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       integer             :: j, k, km, k_s, k_e
-
-      vxbz = 0.0
 
       if (has_dir(zdim)) then
          k_s = 2
@@ -124,21 +120,20 @@ contains
          do j=cg%js, cg%je
             vx=0.0
             if (km == 0) then
-               !vx = u(flind%ion%imx,:,j,1) / u(flind%ion%idn,:,j,1)
-               vx0 = u(flind%ion%imx,:,j,1) / u(flind%ion%idn,:,j,1) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vx = cg%u%arr(flind%ion%imx,:,j,1) / cg%u%arr(flind%ion%idn,:,j,1)
+               vx0 = cg%u%arr(flind%ion%imx,:,j,1) / cg%u%arr(flind%ion%idn,:,j,1) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             else
-               !vx = (u(flind%ion%imx,:,j,km)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,j,km)+u(flind%ion%idn,:,j,k))
-               vx0 = (u(flind%ion%imx,:,j,km)+u(flind%ion%imx,:,j,k))/(u(flind%ion%idn,:,j,km)+u(flind%ion%idn,:,j,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vx = (cg%u%arr(flind%ion%imx,:,j,km)+cg%u%arr(flind%ion%imx,:,j,k))/(cg%u%arr(flind%ion%idn,:,j,km)+cg%u%arr(flind%ion%idn,:,j,k))
+               vx0 = (cg%u%arr(flind%ion%imx,:,j,km)+cg%u%arr(flind%ion%imx,:,j,k))/(cg%u%arr(flind%ion%idn,:,j,km)+cg%u%arr(flind%ion%idn,:,j,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             endif
             !vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
             vx(2:cg%nx-1)=(vx0(1:cg%nx-2) + vx0(3:cg%nx) + 2.0*vx0(2:cg%nx-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
             vx(1)  = vx(2)
             vx(cg%nx) = vx(cg%nx-1)
-            bz_x=b(ibz,:,j,k)
 
-            call tvdb(vxbz,bz_x,vx, cg%nx,dt, cg%idx)
+            vibj => cg%wa%get_sweep(xdim,j,k)
+            call tvdb(vibj, cg%b%get_sweep(xdim,ibz,j,k), vx, cg%nx,dt, cg%idx)
 
-            wa(:,j,k) = vxbz
          enddo
       enddo
 
@@ -150,21 +145,20 @@ contains
 
    subroutine advectbz_y
 
-      use arrays,        only: b, u, wa
+      use arrays,        only: wa
       use fluidindex,    only: ibz, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, zdim
+      use constants,     only: xdim, ydim, zdim
       use rtvd,          only: tvdb
 
       implicit none
 
-      real, dimension(cg%ny) :: vybz, bz_y, vy
+      real, dimension(cg%ny) :: vy
       real, dimension(cg%ny) :: vy0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       integer             :: i, k, km, k_s, k_e
 
-      vybz = 0.0
       if (has_dir(zdim)) then
          k_s = 2
          k_e = cg%nz
@@ -178,21 +172,20 @@ contains
          do i=cg%is, cg%ie
             vy=0.0
             if (km == 0) then
-               !vy = u(flind%ion%imy,i,:,1) / u(flind%ion%idn,i,:,1)
-               vy0 = u(flind%ion%imy,i,:,1) / u(flind%ion%idn,i,:,1) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vy = cg%u%arr(flind%ion%imy,i,:,1) / cg%u%arr(flind%ion%idn,i,:,1)
+               vy0 = cg%u%arr(flind%ion%imy,i,:,1) / cg%u%arr(flind%ion%idn,i,:,1) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             else
-               !vy=(u(flind%ion%imy,i,:,km)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,i,:,km)+u(flind%ion%idn,i,:,k))
-               vy0=(u(flind%ion%imy,i,:,km)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,i,:,km)+u(flind%ion%idn,i,:,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vy=(cg%u%arr(flind%ion%imy,i,:,km)+cg%u%arr(flind%ion%imy,i,:,k))/(cg%u%arr(flind%ion%idn,i,:,km)+cg%u%arr(flind%ion%idn,i,:,k))
+               vy0=(cg%u%arr(flind%ion%imy,i,:,km)+cg%u%arr(flind%ion%imy,i,:,k))/(cg%u%arr(flind%ion%idn,i,:,km)+cg%u%arr(flind%ion%idn,i,:,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             endif
             !vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
             vy(2:cg%ny-1)=(vy0(1:cg%ny-2) + vy0(3:cg%ny) + 2.0*vy0(2:cg%ny-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
             vy(1)  = vy(2)
             vy(cg%ny) = vy(cg%ny-1)
-            bz_y=b(ibz,i,:,k)
 
-            call tvdb(vybz,bz_y,vy, cg%ny,dt, cg%idy)
+            vibj => cg%wa%get_sweep(ydim,k,i)
+            call tvdb(vibj, cg%b%get_sweep(ydim,ibz,k,i), vy, cg%ny,dt, cg%idy)
 
-            wa(i,:,k) = vybz
          enddo
       enddo
 
@@ -204,21 +197,19 @@ contains
 
    subroutine advectbx_y
 
-      use arrays,        only: b, u, wa
+      use arrays,        only: wa
       use fluidindex,    only: ibx, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, zdim
+      use constants,     only: xdim, ydim, zdim
       use rtvd,          only: tvdb
 
       implicit none
 
-      real, dimension(cg%ny) :: vybx, bx_y, vy
+      real, dimension(cg%ny) :: vy
       real, dimension(cg%ny) :: vy0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       integer             :: k, i, im, i_s, i_e
-
-      vybx = 0.0
 
       if (has_dir(xdim)) then
          i_s = 2
@@ -233,21 +224,20 @@ contains
             im=i-1
             vy=0.0
             if (im == 0) then
-               !vy = u(flind%ion%imy,1,:,k) / u(flind%ion%idn,1,:,k)
-               vy0 = u(flind%ion%imy,1,:,k) / u(flind%ion%idn,1,:,k) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vy = cg%u%arr(flind%ion%imy,1,:,k) / cg%u%arr(flind%ion%idn,1,:,k)
+               vy0 = cg%u%arr(flind%ion%imy,1,:,k) / cg%u%arr(flind%ion%idn,1,:,k) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             else
-               !vy=(u(flind%ion%imy,im,:,k)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,im,:,k)+u(flind%ion%idn,i,:,k))
-               vy0=(u(flind%ion%imy,im,:,k)+u(flind%ion%imy,i,:,k))/(u(flind%ion%idn,im,:,k)+u(flind%ion%idn,i,:,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vy=(cg%u%arr(flind%ion%imy,im,:,k)+cg%u%arr(flind%ion%imy,i,:,k))/(cg%u%arr(flind%ion%idn,im,:,k)+cg%u%arr(flind%ion%idn,i,:,k))
+               vy0=(cg%u%arr(flind%ion%imy,im,:,k)+cg%u%arr(flind%ion%imy,i,:,k))/(cg%u%arr(flind%ion%idn,im,:,k)+cg%u%arr(flind%ion%idn,i,:,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             endif
             !vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
             vy(2:cg%ny-1)=(vy0(1:cg%ny-2) + vy0(3:cg%ny) + 2.0*vy0(2:cg%ny-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
             vy(1)  = vy(2)
             vy(cg%ny) = vy(cg%ny-1)
-            bx_y=b(ibx,i,:,k)
 
-            call tvdb(vybx,bx_y,vy, cg%ny,dt, cg%idy)
+            vibj => cg%wa%get_sweep(ydim,k,i)
+            call tvdb(vibj, cg%b%get_sweep(ydim,ibx,k,i), vy, cg%ny,dt, cg%idy)
 
-            wa(i,:,k) = vybx
          enddo
       enddo
 
@@ -258,7 +248,7 @@ contains
    end subroutine advectbx_y
 
    subroutine advectbx_z
-      use arrays,        only: b, u, wa
+      use arrays,        only: wa
       use fluidindex,    only: ibx, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -267,11 +257,9 @@ contains
       use rtvd,          only: tvdb
 
       implicit none
-      real, dimension(cg%nz)  :: vzbx, bx_z, vz
+      real, dimension(cg%nz)  :: vz
       real, dimension(cg%nz)  :: vz0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       integer              :: j, i, im, i_s, i_e
-
-      vzbx = 0.0
 
       if (has_dir(xdim)) then
          i_s = 2
@@ -285,33 +273,31 @@ contains
             im=i-1
             vz=0.0
             if (im == 0) then
-               !vz = u(flind%ion%imz,1,j,:) / u(flind%ion%idn,1,j,:)
-               vz0 = u(flind%ion%imz,1,j,:) / u(flind%ion%idn,1,j,:) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vz = cg%u%arr(flind%ion%imz,1,j,:) / cg%u%arr(flind%ion%idn,1,j,:)
+               vz0 = cg%u%arr(flind%ion%imz,1,j,:) / cg%u%arr(flind%ion%idn,1,j,:) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             else
-               !vz = (u(flind%ion%imz,im,j,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,im,j,:)+u(flind%ion%idn,i,j,:))
-               vz0 = (u(flind%ion%imz,im,j,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,im,j,:)+u(flind%ion%idn,i,j,:)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vz = (cg%u%arr(flind%ion%imz,im,j,:)+cg%u%arr(flind%ion%imz,i,j,:))/(cg%u%arr(flind%ion%idn,im,j,:)+cg%u%arr(flind%ion%idn,i,j,:))
+               vz0 = (cg%u%arr(flind%ion%imz,im,j,:)+cg%u%arr(flind%ion%imz,i,j,:))/(cg%u%arr(flind%ion%idn,im,j,:)+cg%u%arr(flind%ion%idn,i,j,:)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             endif
             !vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
             vz(2:cg%nz-1)=(vz0(1:cg%nz-2) + vz0(3:cg%nz) + 2.0*vz0(2:cg%nz-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
             vz(1)  = vz(2)
             vz(cg%nz) = vz(cg%nz-1)
-            bx_z=b(ibx,i,j,:)
 
-            call tvdb(vzbx,bx_z,vz, cg%nz,dt, cg%idz)
+            vibj => cg%wa%get_sweep(zdim,i,j)
+            call tvdb(vibj, cg%b%get_sweep(zdim,ibx,i,j), vz, cg%nz,dt, cg%idz)
 
-            wa(i,j,:) = vzbx
          enddo
       enddo
 
       do i = xdim, zdim
          if (has_dir(i)) call bnd_emf(wa,'vzbx',i)
       enddo
-
    end subroutine advectbx_z
 
    subroutine advectby_z
 
-      use arrays,        only: b, u, wa
+      use arrays,        only: wa
       use fluidindex,    only: iby, flind
       use grid,          only: cg
       use magboundaries, only: bnd_emf
@@ -321,11 +307,10 @@ contains
 
       implicit none
 
-      real, dimension(cg%nz) :: vzby, by_z, vz
+      real, dimension(cg%nz) :: vz
       real, dimension(cg%nz) :: vz0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       integer             :: i, j, jm, j_s, j_e
 
-      vzby = 0.0
       if (has_dir(ydim)) then
          j_s = 2
          j_e = cg%ny
@@ -339,21 +324,20 @@ contains
          do i=cg%is, cg%ie
             vz=0.0
             if (jm == 0) then
-               !vz = u(flind%ion%imz,i,1,:) / u(flind%ion%idn,i,1,:)
-               vz0 = u(flind%ion%imz,i,1,:) / u(flind%ion%idn,i,1,:) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vz = cg%u%arr(flind%ion%imz,i,1,:) / cg%u%arr(flind%ion%idn,i,1,:)
+               vz0 = cg%u%arr(flind%ion%imz,i,1,:) / cg%u%arr(flind%ion%idn,i,1,:) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             else
-               !vz=(u(flind%ion%imz,i,jm,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,i,jm,:)+u(flind%ion%idn,i,j,:))
-               vz0=(u(flind%ion%imz,i,jm,:)+u(flind%ion%imz,i,j,:))/(u(flind%ion%idn,i,jm,:)+u(flind%ion%idn,i,j,:)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vz=(cg%u%arr(flind%ion%imz,i,jm,:)+cg%u%arr(flind%ion%imz,i,j,:))/(cg%u%arr(flind%ion%idn,i,jm,:)+cg%u%arr(flind%ion%idn,i,j,:))
+               vz0=(cg%u%arr(flind%ion%imz,i,jm,:)+cg%u%arr(flind%ion%imz,i,j,:))/(cg%u%arr(flind%ion%idn,i,jm,:)+cg%u%arr(flind%ion%idn,i,j,:)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
             endif
             !vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
             vz(2:cg%nz-1)=(vz0(1:cg%nz-2) + vz0(3:cg%nz) + 2.0*vz0(2:cg%nz-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
             vz(1)  = vz(2)
             vz(cg%nz) = vz(cg%nz-1)
-            by_z=b(iby,i,j,:)
 
-            call tvdb(vzby,by_z,vz, cg%nz,dt, cg%idz)
+            vibj => cg%wa%get_sweep(zdim,i,j)
+            call tvdb(vibj, cg%b%get_sweep(zdim,iby,i,j), vz, cg%nz,dt, cg%idz)
 
-            wa(i,j,:) = vzby
          enddo
       enddo
 
