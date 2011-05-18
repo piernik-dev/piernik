@@ -35,7 +35,6 @@
 !<
 module mpisetup
 
-   use mpi,        only: MPI_STATUS_SIZE
    use types,      only: domain_container
    use constants,  only: ndims, cbuff_len, LO, HI, BLK, BND
 
@@ -53,9 +52,10 @@ module mpisetup
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step
 
    integer, protected :: nproc, proc, ierr, info
+
    integer, parameter :: nreq = size([LO, HI]) * size([BLK, BND]) ! just another way of defining '4' ;-)
-   integer, dimension(MPI_STATUS_SIZE, nreq) :: status
-   integer, dimension(nreq) :: req
+   integer, allocatable, dimension(:)   :: req
+   integer, allocatable, dimension(:,:) :: status
 
    logical, protected    :: master, slave
 
@@ -218,7 +218,7 @@ contains
    subroutine init_mpi
 
       use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, dpi, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF, DD_CART, DD_UE
-      use mpi,           only: MPI_COMM_WORLD, MPI_COMM_NULL, MPI_INFO_NULL, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_PROC_NULL
+      use mpi,           only: MPI_COMM_WORLD, MPI_COMM_NULL, MPI_INFO_NULL, MPI_PROC_NULL, MPI_STATUS_SIZE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
       use dataio_pub,    only: die, printinfo, msg, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 
@@ -670,6 +670,15 @@ contains
             call die("[mpisetup:init_mpi] unknown strategy for generating domain division")
       end select
 
+      if (allocated(req) .or. allocated(status)) call die("[mpisetup:init_mpi] req or status already allocated")
+      if (comm3d == MPI_COMM_NULL) then
+         allocate(req(nreq))
+         allocate(status(MPI_STATUS_SIZE, nreq))
+      else
+         allocate(req(4*nproc)) ! 4 = count([i_bnd, o_bnd]) * two sides
+         allocate(status(MPI_STATUS_SIZE, size(req)))
+      endif
+
       if (any(dom%bnd(:, :) == BND_COR) .and. comm3d == MPI_COMM_NULL) call die("[mpisetup:init_mpi] Corner BC not implemented without comm3d")
 
       if ((dom%periodic(xdim) .and. dom%se(proc, xdim, HI) /= dom%n_d(xdim) - 1) .or. dom%se(proc, xdim, LO) /= 0)                 bnd_xl = 'mpi'
@@ -875,6 +884,8 @@ contains
       if (allocated(dom%se)) deallocate(dom%se)
       if (allocated(primes)) deallocate(primes)
       if (allocated(procmask)) deallocate(procmask)
+      if (allocated(req)) deallocate(req)
+      if (allocated(status)) deallocate(status)
 
       if (comm3d /= MPI_COMM_NULL) call MPI_Comm_free(comm3d, ierr)
 

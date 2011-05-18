@@ -287,11 +287,10 @@ contains
 
    subroutine mpi_multigrid_bnd(lev, iv, ng, mode, corners)
 
+      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK
       use dataio_pub,    only: die
-      use grid,          only: req, status
-      use mpisetup,      only: comm, comm3d, ierr, procn, proc, psize, has_dir, have_mpi, is_mpi_noncart
-      use constants,     only: ndims, xdim, ydim, zdim, LO, HI, BND, BLK
-      use mpi,           only: MPI_STATUS_SIZE, MPI_REQUEST_NULL, MPI_COMM_NULL
+      use mpi,           only: MPI_REQUEST_NULL, MPI_COMM_NULL
+      use mpisetup,      only: comm, comm3d, ierr, procn, proc, psize, has_dir, have_mpi, is_mpi_noncart, req, status
       use multigridvars, only: lvl, plvl, base, roof, is_external, ngridvars
 
       implicit none
@@ -302,11 +301,8 @@ contains
       integer, intent(in) :: mode              !< what to do with external boundaries
       logical, intent(in), optional :: corners !< if .true. then don't forget aboutpay close attention to corners
 
-      integer, parameter                        :: dreq = 4
-      integer, parameter                        :: nreq = ndims*dreq
-      integer, dimension(nreq)                  :: req3d
-      integer, dimension(MPI_STATUS_SIZE, nreq) :: status3d
-      logical                                   :: cor
+      integer, parameter :: dreq = 4
+      logical :: cor
       integer :: d, g, tag, doff
       integer(kind=8), dimension(:,:), pointer :: ise
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: ose
@@ -378,16 +374,16 @@ contains
       else
          if (have_mpi .and. is_mpi_noncart) call die("[multigridmpifuncs:mpi_multigrid_bnd] is_mpi_noncart is not implemented") !procxl, procxr, procyl, procyr, proczl, proczr, psize,
 
-         req3d(:) = MPI_REQUEST_NULL
+         req(:) = MPI_REQUEST_NULL
 
          do d = xdim, zdim
             if (has_dir(d)) then
                doff = dreq*(d-xdim)
                if (psize(d) > 1) then ! \todo remove psize(:), try to rely on offsets or boundary types
-                  if (.not. is_external(d, LO)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, LO, BLK, ng), procn(d, LO), 17+doff, comm3d, req3d(1+doff), ierr)
-                  if (.not. is_external(d, HI)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, HI, BLK, ng), procn(d, HI), 19+doff, comm3d, req3d(2+doff), ierr)
-                  if (.not. is_external(d, LO)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, LO, BND, ng), procn(d, LO), 19+doff, comm3d, req3d(3+doff), ierr)
-                  if (.not. is_external(d, HI)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, HI, BND, ng), procn(d, HI), 17+doff, comm3d, req3d(4+doff), ierr)
+                  if (.not. is_external(d, LO)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, LO, BLK, ng), procn(d, LO), 17+doff, comm3d, req(1+doff), ierr)
+                  if (.not. is_external(d, HI)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, HI, BLK, ng), procn(d, HI), 19+doff, comm3d, req(2+doff), ierr)
+                  if (.not. is_external(d, LO)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, LO, BND, ng), procn(d, LO), 19+doff, comm3d, req(3+doff), ierr)
+                  if (.not. is_external(d, HI)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, HI, BND, ng), procn(d, HI), 17+doff, comm3d, req(4+doff), ierr)
                else
                   if (is_external(d, LO) .neqv. is_external(d, HI)) call die("[multigridmpifuncs:mpi_multigrid_bnd] inconsiztency in is_external(:)")
                   if (.not. is_external(d, LO)) then
@@ -404,7 +400,7 @@ contains
                      end select
                   endif
                endif
-               if (cor) call MPI_Waitall(dreq, req3d(1+doff:4+doff), status3d(:,1+doff:4+doff), ierr)
+               if (cor) call MPI_Waitall(dreq, req(1+doff:4+doff), status(:,1+doff:4+doff), ierr)
             endif
          enddo
 
@@ -412,7 +408,7 @@ contains
 !! \todo Make a benchmark of a massively parallel run to determine difference in execution between calling MPI_Waitall for each direction and calling it once.
 !! If the difference is small then set cor permanently to .true.
 !<
-         if (.not. cor) call MPI_Waitall(nreq, req3d(:), status3d(:,:), ierr)
+         if (.not. cor) call MPI_Waitall(size(req(:)), req(:), status(:,:), ierr)
 
       endif
 

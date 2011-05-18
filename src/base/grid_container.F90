@@ -1,0 +1,510 @@
+! $Id$
+!
+! PIERNIK Code Copyright (C) 2006 Michal Hanasz
+!
+!    This file is part of PIERNIK code.
+!
+!    PIERNIK is free software: you can redistribute it and/or modify
+!    it under the terms of the GNU General Public License as published by
+!    the Free Software Foundation, either version 3 of the License, or
+!    (at your option) any later version.
+!
+!    PIERNIK is distributed in the hope that it will be useful,
+!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!    GNU General Public License for more details.
+!
+!    You should have received a copy of the GNU General Public License
+!    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
+!
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
+!    Ue-Li Pen
+!        see: Pen, Arras & Wong (2003) for algorithm and
+!             http://www.cita.utoronto.ca/~pen/MHD
+!             for original source code "mhd.f90"
+!
+!    For full list of developers see $PIERNIK_HOME/license/pdt.txt
+!
+#include "piernik.h"
+#include "macros.h"
+!>
+!! \brief Module containing the grid container type and its associated methods
+!<
+module grid_cont
+
+   use constants, only: xdim, zdim, ndims, LO, HI, BND, BLK, FLUID, ARR
+   use types,     only: axes, bnd_list, array4d, array3d
+
+   implicit none
+
+   private
+   public :: grid_container
+
+   type, extends(axes) :: grid_container
+      real    :: dx                             !< length of the %grid cell in x-direction
+      real    :: dy                             !< length of the %grid cell in y-direction
+      real    :: dz                             !< length of the %grid cell in z-direction
+      real    :: idx                            !< inverted length of the %grid cell in x-direction
+      real    :: idy                            !< inverted length of the %grid cell in y-direction
+      real    :: idz                            !< inverted length of the %grid cell in z-direction
+      real    :: dxmn                           !< the smallest length of the %grid cell (among dx, dy, and dz)
+      real    :: dvol                           !< volume of one %grid cell
+      real    :: xminb                          !< current block left x-boundary position
+      real    :: xmaxb                          !< current block right x-boundary position
+      real    :: yminb                          !< current block left y-boundary position
+      real    :: ymaxb                          !< current block right y-boundary position
+      real    :: zminb                          !< current block left z-boundary position
+      real    :: zmaxb                          !< current block right z-boundary position
+
+      real, dimension(ndims)          :: dl     !< array of %grid cell sizes in all directions
+      real, dimension(ndims)          :: idl    !< array of inverted %grid cell sizes in all directions
+      real, allocatable, dimension(:) :: inv_x  !< array of invert x-positions of %grid cells centers
+      real, allocatable, dimension(:) :: inv_y  !< array of invert y-positions of %grid cells centers
+      real, allocatable, dimension(:) :: inv_z  !< array of invert z-positions of %grid cells centers
+      real, allocatable, dimension(:) :: xl     !< array of x-positions of %grid cells left borders
+      real, allocatable, dimension(:) :: yl     !< array of y-positions of %grid cells left borders
+      real, allocatable, dimension(:) :: zl     !< array of z-positions of %grid cells left borders
+      real, allocatable, dimension(:) :: xr     !< array of x-positions of %grid cells right borders
+      real, allocatable, dimension(:) :: yr     !< array of y-positions of %grid cells right borders
+      real, allocatable, dimension(:) :: zr     !< array of z-positions of %grid cells right borders
+
+      integer :: nx                             !< number of %grid cells in one block in x-direction
+      integer :: ny                             !< number of %grid cells in one block in y-direction
+      integer :: nz                             !< number of %grid cells in one block in z-direction
+      integer :: nxb                            !< number of %grid cells in one block (without boundary cells) in x-direction
+      integer :: nyb                            !< number of %grid cells in one block (without boundary cells) in y-direction
+      integer :: nzb                            !< number of %grid cells in one block (without boundary cells) in z-direction
+      integer :: is                             !< index of the first %grid cell of physical domain in x-direction
+      integer :: ie                             !< index of the last %grid cell of physical domain in x-direction
+      integer :: js                             !< index of the first %grid cell of physical domain in y-direction
+      integer :: je                             !< index of the last %grid cell of physical domain in y-direction
+      integer :: ks                             !< index of the first %grid cell of physical domain in z-direction
+      integer :: ke                             !< index of the last %grid cell of physical domain in z-direction
+      integer :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
+      integer :: isb, ieb, jsb, jeb, ksb, keb   !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
+      integer(kind=8), dimension(ndims) :: off  !< offset of the local domain within computational domain
+      integer, dimension(ndims) :: n_b          !< [nxb, nyb, nzb]
+      integer, dimension(xdim:zdim, LO:HI) :: ijkse !< [[is, js, ks], [ie, je, ke]]
+      integer :: maxxyz                         !< maximum number of %grid cells in any direction
+
+      logical :: empty                          !< .true. if there are no cells to process (e.g. some processes at base level in multigrid gravity)
+
+      integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
+
+      ! \todo a pointer to the next cg, grid level
+
+      integer, dimension(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK) :: mbc !< MPI Boundary conditions Container
+      type(bnd_list), dimension(:, :), allocatable :: i_bnd, o_bnd    !> description of incoming and outgoing boundary data,
+      !< the shape is (xdim:zdim, FLUID:ARR) for cg (base grid container)) and (xdim:zdim, mg_nb) for plvl (multigrid level container)
+
+      type(array4d) :: u, b
+      type(array3d) :: cs_iso2
+      type(array3d) :: wa
+
+   contains
+
+      procedure :: init
+      procedure :: cleanup
+      procedure :: internal_boundaries
+
+   end type grid_container
+
+contains
+
+   subroutine init(this, dom)
+
+      use constants,  only: PIERNIK_INIT_MPI, xdim, ydim, zdim, INVALID
+      use dataio_pub, only: die, warn, code_progress
+      use mpisetup,   only: has_dir, translate_bnds_to_ints_dom, proc
+      use types,      only: domain_container
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this ! intent(out) would silently clear everything, that was already set (also the fields in types derived from grid_container)
+      type(domain_container), intent(in) :: dom
+
+      integer :: i, j, k
+
+      if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init] MPI not initialized.")
+
+      this%nb = dom%nb
+      this%dxmn = huge(1.0)
+
+      this%off(:) = dom%se(proc, :, LO)  ! Block offset on the dom% should be between 0 and nxd-nxb
+      this%n_b(:) = int(dom%se(proc, :, HI) - dom%se(proc, :, LO) + 1, 4) ! Block 'physical' grid sizes
+
+      if (all(this%n_b(:) == 0)) then
+         this%empty = .true.
+      else if (any(this%n_b(:) == 0)) then
+         call die("[grid_init] Mixed positive and non-positive grid sizes")
+      else
+         this%empty = .false.
+      endif
+
+      this%nxb = this%n_b(xdim)
+      this%nyb = this%n_b(ydim)
+      this%nzb = this%n_b(zdim)
+
+      this%bnd(:,:) = translate_bnds_to_ints_dom()
+      this%mbc(:, :, :, :) = INVALID
+
+      if (this%empty) then
+         this%nx    = 0
+         this%is    = this%nb + 1
+         this%ie    = this%nb
+         this%isb   = 0 ! ???
+         this%ieb   = 0 ! ???
+         this%dx    = 1.0
+         this%xminb = dom%xmin
+         this%xmaxb = dom%xmax
+
+         this%ny    = 0
+         this%js    = this%nb + 1
+         this%je    = this%nb
+         this%jsb   = 0
+         this%jeb   = 0
+         this%dy    = 1.0
+         this%yminb = dom%ymin
+         this%ymaxb = dom%ymax
+
+         this%nz    = 0
+         this%ks    = this%nb + 1
+         this%ke    = this%nb
+         this%ksb   = 0
+         this%keb   = 0
+         this%dz    = 1.0
+         this%zminb = dom%zmin
+         this%zmaxb = dom%zmax
+
+         this%idx = 1./this%dx
+         this%idy = 1./this%dy
+         this%idz = 1./this%dz
+
+         this%dl(xdim:zdim) = [ this%dx, this%dy, this%dz ]
+         this%idl(:) = 1./this%dl(:)
+
+         this%dvol = 0.
+         this%maxxyz = 0
+
+      else
+
+         do i = xdim, zdim
+            if (has_dir(i)) then
+               if (this%n_b(i) < 1) call die("[grid_init] Too many CPUs for a small grid.")
+               if (this%n_b(i) < this%nb) call warn("[grid_init] domain size in some directions is < nb, which may result in incomplete boundary cell update")
+            endif
+         enddo
+
+         if (has_dir(xdim)) then
+            this%nx    = this%nxb + 2 * this%nb       ! Block total grid sizes
+            this%is    = this%nb + 1
+            this%ie    = this%nb + this%nxb
+            this%isb   = 2*this%nb
+            this%ieb   = this%nxb+1
+            this%dx    = dom%Lx / dom%n_d(xdim)
+            this%dxmn  = min(this%dxmn, this%dx)
+            this%xminb = dom%xmin + this%dx *  this%off(xdim)
+            this%xmaxb = dom%xmin + this%dx * (this%off(xdim) + this%nxb)
+         else
+            this%nx    = 1
+            this%is    = 1
+            this%ie    = 1
+            this%isb   = 1
+            this%ieb   = 1
+            this%dx    = 1.0
+            this%xminb = dom%xmin
+            this%xmaxb = dom%xmax
+         endif
+
+         if (has_dir(ydim)) then
+            this%ny    = this%nyb + 2 * this%nb
+            this%js    = this%nb + 1
+            this%je    = this%nb + this%nyb
+            this%jsb   = 2*this%nb
+            this%jeb   = this%nyb+1
+            this%dy    = dom%Ly / dom%n_d(ydim)
+            this%dxmn  = min(this%dxmn, this%dy)
+            this%yminb = dom%ymin + this%dy *  this%off(ydim)
+            this%ymaxb = dom%ymin + this%dy * (this%off(ydim) + this%nyb)
+         else
+            this%ny    = 1
+            this%js    = 1
+            this%je    = 1
+            this%jsb   = 1
+            this%jeb   = 1
+            this%dy    = 1.0
+            this%yminb = dom%ymin
+            this%ymaxb = dom%ymax
+         endif
+
+         if (has_dir(zdim)) then
+            this%nz    = this%nzb + 2 * this%nb
+            this%ks    = this%nb + 1
+            this%ke    = this%nb + this%nzb
+            this%ksb   = 2*this%nb
+            this%keb   = this%nzb+1
+            this%dz    = dom%Lz / dom%n_d(zdim)
+            this%dxmn  = min(this%dxmn, this%dz)
+            this%zminb = dom%zmin + this%dz *  this%off(zdim)
+            this%zmaxb = dom%zmin + this%dz * (this%off(zdim) + this%nzb)
+         else
+            this%nz    = 1
+            this%ks    = 1
+            this%ke    = 1
+            this%ksb   = 1
+            this%keb   = 1
+            this%dz    = 1.0
+            this%zminb = dom%zmin
+            this%zmaxb = dom%zmax
+         endif
+
+         this%idx = 1./this%dx
+         this%idy = 1./this%dy
+         this%idz = 1./this%dz
+
+         this%dl(xdim:zdim) = [ this%dx, this%dy, this%dz ]
+         this%idl(:) = 1./this%dl(:)
+
+         this%dvol = product(this%dl(:))
+
+         allocate(this%x(this%nx), this%xl(this%nx), this%xr(this%nx), this%inv_x(this%nx))
+         allocate(this%y(this%ny), this%yl(this%ny), this%yr(this%ny), this%inv_y(this%ny))
+         allocate(this%z(this%nz), this%zl(this%nz), this%zr(this%nz), this%inv_z(this%nz))
+         this%maxxyz = maxval([size(this%x), size(this%y), size(this%z)])
+
+!--- Assignments -----------------------------------------------------------
+         ! left zone boundaries:  xl, yl, zl
+         ! zone centers:          x,  y,  z
+         ! right zone boundaries: xr, yr, zr
+
+!--- x-grids --------------------------------------------------------------
+
+         if (has_dir(xdim)) then
+            do i= 1, this%nx
+               this%x(i)  = this%xminb + 0.5*this%dx + (i-this%nb-1)*this%dx
+               this%xl(i) = this%x(i)  - 0.5*this%dx
+               this%xr(i) = this%x(i)  + 0.5*this%dx
+            enddo
+         else
+            this%x  =  0.5*(this%xminb + this%xmaxb)
+            this%xl = -0.5*this%dx
+            this%xr =  0.5*this%dx
+         endif
+         where ( this%x /= 0.0 )
+            this%inv_x = 1./this%x
+         elsewhere
+            this%inv_x = 0.
+         endwhere
+
+!--- y-grids --------------------------------------------------------------
+
+         if (has_dir(ydim)) then
+            do j= 1, this%ny
+               this%y(j)  = this%yminb + 0.5*this%dy + (j-this%nb-1)*this%dy
+               this%yl(j) = this%y(j)  - 0.5*this%dy
+               this%yr(j) = this%y(j)  + 0.5*this%dy
+            enddo
+         else
+            this%y  =  0.5*(this%yminb + this%ymaxb)
+            this%yl = -0.5*this%dy
+            this%yr =  0.5*this%dy
+         endif
+         where ( this%y /= 0.0 )
+            this%inv_y = 1./this%y
+         elsewhere
+            this%inv_y = 0.
+         endwhere
+
+!--- z-grids --------------------------------------------------------------
+
+         if (has_dir(zdim)) then
+            do k= 1, this%nz
+               this%z(k)  = this%zminb + 0.5*this%dz + (k-this%nb-1) * this%dz
+               this%zl(k) = this%z(k)  - 0.5*this%dz
+               this%zr(k) = this%z(k)  + 0.5*this%dz
+            enddo
+         else
+            this%z  =  0.5*(this%zminb + this%zmaxb)
+            this%zl = -0.5*this%dz
+            this%zr =  0.5*this%dz
+         endif
+         where ( this%z /= 0.0 )
+            this%inv_z = 1./this%z
+         elsewhere
+            this%inv_z = 0.
+         endwhere
+      endif
+
+      this%ijkse(:, LO) = [ this%is, this%js, this%ks ]
+      this%ijkse(:, HI) = [ this%ie, this%je, this%ke ]
+
+#ifdef ISO
+      call this%cs_iso2%init(this%nx,this%ny,this%nz)
+#endif /* ISO */
+
+   end subroutine init
+
+!-----------------------------------------------------------------------------
+!
+! This routine exchanges guardcells for BND_MPI and BND_PER boundaries.in u(:,:,:,:), b(:,:,:,:) and rank-3 arrays passed through argument list
+! (preferably only pointers to the actual arrays are passed).
+! The corners should be properly updated if this%[io]_bnd(:, ind) was set up appropriately (MPI_Waitall is called separately for each dimension).
+!
+
+   subroutine internal_boundaries(this, ind, pa3d, pa4d)
+
+      use constants,  only: FLUID, MAG, CR, ARR, LO, HI, xdim, ydim, zdim
+      use dataio_pub, only: die
+      use mpisetup,   only: comm, ierr, proc, has_dir, req, status
+
+      implicit none
+
+      class(grid_container) :: this
+      integer, intent(in)   :: ind   !< second index in [io]_bnd arrays
+      real, optional, pointer, dimension(:,:,:)   :: pa3d
+      real, optional, pointer, dimension(:,:,:,:) :: pa4d
+
+      integer :: g, tag, d, nr
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: ise, ose
+
+      if (ind < minval([FLUID, MAG, CR, ARR]) .or. ind > maxval([FLUID, MAG, CR, ARR])) call die("[grid:internal_boundaries] wrong index")
+
+      select case (ind)
+         case (FLUID, MAG, CR)
+            if (.not. present(pa4d)) call die("[grid:internal_boundaries] pa4d not provided")
+            if (.not. associated(pa4d)) call die("[grid:internal_boundaries] pa4d == null()")
+         case (ARR)
+            if (.not. present(pa3d)) call die("[grid:internal_boundaries] pa3d not provided")
+            if (.not. associated(pa3d)) call die("[grid:internal_boundaries] pa3d == null()")
+         case default
+            call die("[grid:internal_boundaries] not implemented yet")
+            return
+      end select
+      if (present(pa3d) .and. present(pa4d)) call die("[grid:internal_boundaries] Both pa3d and pa4d are present")
+
+      do d = xdim, zdim
+         nr = 0
+         if (has_dir(d)) then
+
+            if (allocated(this%i_bnd(d, ind)%seg)) then
+               do g = 1, ubound(this%i_bnd(d, ind)%seg(:), dim=1)
+                  if (proc == this%i_bnd(d, ind)%seg(g)%proc) then
+                     ise = this%i_bnd(d, ind)%seg(g)%se
+                     ose(:,:) = ise(:,:)
+                     if (ise(d, LO) < this%n_b(d)) then
+                        ose(d, :) = ise(d, :) + this%n_b(d)
+                     else
+                        ose(d, :) = ise(d, :) - this%n_b(d)
+                     endif
+                     ! boundaries are always paired
+                     if (ind == ARR) then
+                        pa3d     (ise(xdim, LO):ise(xdim,HI), ise(ydim, LO):ise(ydim, HI), ise(zdim, LO):ise(zdim, HI)) = &
+                             pa3d(ose(xdim, LO):ose(xdim,HI), ose(ydim, LO):ose(ydim, HI), ose(zdim, LO):ose(zdim, HI))
+                     else
+                        pa4d     (:, ise(xdim, LO):ise(xdim,HI), ise(ydim, LO):ise(ydim, HI), ise(zdim, LO):ise(zdim, HI)) = &
+                             pa4d(:, ose(xdim, LO):ose(xdim,HI), ose(ydim, LO):ose(ydim, HI), ose(zdim, LO):ose(zdim, HI))
+                     endif
+                  else
+                     ! BEWARE: Here we assume, that we have at most one chunk to communicate with a given process on a single side od the domain.
+                     ! This will not be true when we allow many blocks per process and tag will need to be modified to include g or seg(g)%lh should become seg(g)%tag
+                     tag = this%i_bnd(d, ind)%seg(g)%lh + HI*d
+                     nr = nr + 1
+                     if (ind == ARR) then
+                        call MPI_Irecv(pa3d(1, 1, 1), 1, this%i_bnd(d, ind)%seg(g)%mbc, this%i_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
+                     else
+                        call MPI_Irecv(pa4d(1, 1, 1, 1), 1, this%i_bnd(d, ind)%seg(g)%mbc, this%i_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
+                     endif
+                  endif
+               enddo
+            endif
+            if (allocated(this%o_bnd(d, ind)%seg)) then
+               do g = 1, ubound(this%o_bnd(d, ind)%seg(:), dim=1)
+                  if (proc /= this%o_bnd(d, ind)%seg(g)%proc) then
+                     tag = this%o_bnd(d, ind)%seg(g)%lh + HI*d
+                     nr = nr + 1
+                     ! for noncartesian division some y-boundary corner cells are independent from x-boundary face cells, (similarly for z-direction).
+                     if (ind == ARR) then
+                        call MPI_Isend(pa3d(1, 1, 1), 1, this%o_bnd(d, ind)%seg(g)%mbc, this%o_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
+                     else
+                        call MPI_Isend(pa4d(1, 1, 1, 1), 1, this%o_bnd(d, ind)%seg(g)%mbc, this%o_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
+                     endif
+                  endif
+               enddo
+            endif
+            if (ubound(this%i_bnd(d, ind)%seg(:), dim=1) /= ubound(this%o_bnd(d, ind)%seg(:), dim=1)) call die("g:ib u/=u")
+            if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
+         endif
+      enddo
+
+   end subroutine internal_boundaries
+
+!>
+!! \brief Routines that deallocates directional meshes.
+!<
+
+   subroutine cleanup(this)
+
+      use mpisetup,  only: has_dir, ierr
+      use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, BLK, INVALID
+
+      implicit none
+
+      class(grid_container) :: this
+      integer :: d, t, g
+
+      if (allocated(this%x))     deallocate(this%x)
+      if (allocated(this%xl))    deallocate(this%xl)
+      if (allocated(this%xr))    deallocate(this%xr)
+      if (allocated(this%inv_x)) deallocate(this%inv_x)
+      if (allocated(this%y))     deallocate(this%y)
+      if (allocated(this%yl))    deallocate(this%yl)
+      if (allocated(this%yr))    deallocate(this%yr)
+      if (allocated(this%inv_y)) deallocate(this%inv_y)
+      if (allocated(this%z))     deallocate(this%z)
+      if (allocated(this%zl))    deallocate(this%zl)
+      if (allocated(this%zr))    deallocate(this%zr)
+      if (allocated(this%inv_z)) deallocate(this%inv_z)
+
+      do d = xdim, zdim
+         if (has_dir(d)) then
+            do t = FLUID, ARR
+               if (this%mbc(t, d, LO, BLK) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BLK), ierr)
+               if (this%mbc(t, d, LO, BND) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BND), ierr)
+               if (this%mbc(t, d, HI, BLK) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BLK), ierr)
+               if (this%mbc(t, d, HI, BND) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BND), ierr)
+            enddo
+         endif
+      enddo
+
+      if (allocated(this%i_bnd)) then
+         do d = xdim, zdim
+            do t = 1, ubound(this%i_bnd, dim=2)
+               if (allocated(this%i_bnd(d, t)%seg)) then
+                  do g = 1, ubound(this%i_bnd(d, t)%seg(:), dim=1)
+                     if (this%i_bnd(d, t)%seg(g)%mbc /= INVALID) call MPI_Type_free(this%i_bnd(d, t)%seg(g)%mbc, ierr)
+                  enddo
+                  deallocate(this%i_bnd(d, t)%seg)
+               endif
+            enddo
+         enddo
+         deallocate(this%i_bnd)
+      endif
+      if (allocated(this%o_bnd)) then
+         do d = xdim, zdim
+            do t = 1, ubound(this%o_bnd, dim=2)
+               if (allocated(this%o_bnd(d, t)%seg)) then
+                  do g = 1, ubound(this%o_bnd(d, t)%seg(:), dim=1)
+                     if (this%o_bnd(d, t)%seg(g)%mbc /= INVALID) call MPI_Type_free(this%o_bnd(d, t)%seg(g)%mbc, ierr)
+                  enddo
+                  deallocate(this%o_bnd(d, t)%seg)
+               endif
+            enddo
+         enddo
+         deallocate(this%o_bnd)
+      endif
+
+      call this%cs_iso2%clean
+
+   end subroutine cleanup
+
+end module grid_cont

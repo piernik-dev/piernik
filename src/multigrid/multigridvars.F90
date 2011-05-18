@@ -39,7 +39,7 @@ module multigridvars
 ! pulled by MULTIGRID
 
    use constants, only: xdim, zdim, LO, HI, BND, BLK
-   use grid,      only: grid_container
+   use grid_cont, only: grid_container
    use types,     only: domain_container, segment
 
    implicit none
@@ -168,8 +168,8 @@ contains
 
       use constants,  only: xdim, ydim, zdim, LO, HI, LONG
       use dataio_pub, only: msg, warn, die
-      use grid,       only: D_x, D_y, D_z, req, status
-      use mpisetup,   only: proc, comm, ierr, has_dir
+      use grid,       only: D_x, D_y, D_z
+      use mpisetup,   only: proc, comm, ierr, has_dir, req, status
       use mpi,        only: MPI_DOUBLE_PRECISION
 
       implicit none
@@ -294,8 +294,7 @@ contains
 
       use constants,  only: xdim, ydim, zdim, LO, HI, LONG
       use dataio_pub, only: msg, warn, die
-      use grid,       only: req, status
-      use mpisetup,   only: proc, comm, ierr, has_dir
+      use mpisetup,   only: proc, comm, ierr, has_dir, req, status
       use mpi,        only: MPI_DOUBLE_PRECISION
 
       implicit none
