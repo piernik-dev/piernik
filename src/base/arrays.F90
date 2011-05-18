@@ -54,10 +54,6 @@ module arrays
 #endif /* SELF_GRAV */
 #endif /* GRAV */
 
-#ifdef ISO_LOCAL
-   real, allocatable, dimension(:,:,:),   target :: cs_iso2_arr !< Array storing squared local isothermal sound speed
-#endif /* ISO_LOCAL */
-
 contains
 
 !>
@@ -113,10 +109,6 @@ contains
 #endif /* SELF_GRAV */
 #endif /* GRAV */
 
-#ifdef ISO_LOCAL
-      call my_allocate(cs_iso2_arr, ma3d, "cs_iso2_arr")
-#endif /* ISO_LOCAL */
-
    end subroutine init_arrays
 
 !>
@@ -147,10 +139,6 @@ contains
       if (allocated(sgpm))    deallocate(sgpm)
 #endif /* SELF_GRAV */
 #endif /* GRAV */
-
-#ifdef ISO_LOCAL
-      if (allocated(cs_iso2_arr)) deallocate(cs_iso2_arr)
-#endif /* ISO_LOCAL */
 
    end subroutine cleanup_arrays
 

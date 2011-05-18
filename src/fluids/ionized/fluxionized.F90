@@ -109,9 +109,9 @@ contains
 #endif /* !MAGNETIC */
       vx(RNG)=uui(imx,RNG)/uui(idn,RNG); vx(1) = vx(2); vx(n) = vx(nm)
 
-#ifndef ISO_LOCAL
+#ifndef ISO
       if (associated(cs_iso2)) call die("[fluxionized:flux_ion] cs_iso2 should not be present")
-#endif /* !ISO_LOCAL */
+#endif /* !ISO */
 
 #ifdef ISO
 #ifdef ISO_LOCAL

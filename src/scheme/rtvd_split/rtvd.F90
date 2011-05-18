@@ -229,13 +229,12 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if berrer pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, u0, bb, divv, istep, sweep, i1, i2, dx, dt)
+   subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt)
 
       use dataio_pub,       only: msg, die
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
       use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass
-      use constants,        only: xdim, ydim
       use gridgeometry,     only: gc, geometry_source_terms
 #ifdef BALSARA
       use interactions,     only: balsara_implicit_interactions
@@ -258,9 +257,6 @@ contains
 #ifdef FLUID_INTERACTIONS_DW
       use interactions,     only: fluid_interactions_dw
 #endif /* FLUID_INTERACTIONS_DW */
-#ifdef ISO_LOCAL
-      use arrays,           only: cs_iso2_arr
-#endif /* ISO_LOCAL */
 #ifdef CORIOLIS
       use coriolis,         only: coriolis_force
 #endif /* CORIOLIS */
@@ -275,6 +271,7 @@ contains
       real, dimension(flind%all,n), intent(in)    :: u0                 !< vector of conservative variables
       real, dimension(nmag,n),     intent(in)     :: bb                 !< local copy of magnetic field
       real, dimension(:), pointer, intent(in)     :: divv
+      real, dimension(:), pointer, intent(in)     :: cs_iso2            !< square of local isothermal sound speed
       integer,                     intent(in)     :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                     intent(in)     :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                     intent(in)     :: i2                 !< coordinate of sweep in the 2nd remaining direction
@@ -304,9 +301,6 @@ contains
       real, dimension(flind%fluids,n), target :: density    !< gas density
       real, dimension(flind%fluids,n), target :: vel_sweep  !< velocity in the direction of current sweep
       real, dimension(:,:), pointer  :: dens, vx
-#ifdef ISO_LOCAL
-      real, dimension(n)             :: cs_iso2            !< square of local isothermal sound speed (optional for ISO_LOCAL)
-#endif /* ISO_LOCAL */
 
 #ifdef COSM_RAYS
       integer                       :: icr
@@ -331,13 +325,13 @@ contains
 
       real, dimension(2,2), parameter:: rk2coef = reshape( (/1.0,0.5,0.0,1.0/),(/2,2/))
 
-#if (!defined(ISO_LOCAL) && !defined(GRAV)) || !(defined COSM_RAYS && defined IONIZED)
+#if !defined(GRAV) || !(defined COSM_RAYS && defined IONIZED)
       integer                        :: dummy
       if (.false.) dummy = i1 + i2 ! suppress compiler warnings on unused arguments
-#endif /* !ISO_LOCAL && !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
-#if !defined(ISO_LOCAL) && !defined(SHEAR) && !defined(GRAV) && ! defined(FLUID_INTERACTIONS_DW) && !(defined COSM_RAYS && defined IONIZED)
+#endif /* !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
+#if !defined(SHEAR) && !defined(GRAV) && ! defined(FLUID_INTERACTIONS_DW) && !(defined COSM_RAYS && defined IONIZED)
       if (.false.) dummy = sweep
-#endif /* !ISO_LOCAL && !SHEAR && !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
+#endif /* !SHEAR && !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
 
       !OPT: try to avoid these explicit initializations of u1(:,:) and u0(:,:)
       dtx       = dt / dx
@@ -347,23 +341,9 @@ contains
       vx   => vel_sweep
       dens => density
 
-#ifdef ISO_LOCAL
-      if (sweep == xdim) then
-         cs_iso2(:) =  cs_iso2_arr(:,i1,i2)
-      else if (sweep == ydim)  then
-         cs_iso2(:) =  cs_iso2_arr(i2,:,i1)
-      else
-         cs_iso2(:) =  cs_iso2_arr(i1,i2,:)
-      endif
-#endif /* ISO_LOCAL */
-
       density(:,:) = u(iarr_all_dn,:)
 ! Fluxes calculation for cells centers
-#ifdef ISO_LOCAL
       call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2)
-#else /* !ISO_LOCAL */
-      call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep)
-#endif /* !ISO_LOCAL */
 ! Right and left fluxes decoupling
 
       fl = (u1*cfr-w)*0.5

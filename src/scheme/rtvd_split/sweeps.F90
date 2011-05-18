@@ -134,7 +134,7 @@ contains
                u_x (iarr_all_swpx,:) = cg%u%arr(:,:,j,k)
                u0_x(iarr_all_swpx,:) = uh(:,:,j,k)
 
-               call relaxing_tvd(cg%nx, u_x, u0_x, b_x, div_v1d, istep, xdim, j, k, cg%dx, dt)
+               call relaxing_tvd(cg%nx, u_x, u0_x, b_x, div_v1d, cg%cs_iso2%get_sweep(xdim,j,k), istep, xdim, j, k, cg%dx, dt)
                cg%u%arr(:,:,j,k)=u_x(iarr_all_swpx,:)
             enddo
          enddo
@@ -190,7 +190,7 @@ contains
                u_y (iarr_all_swpy,:) = cg%u%arr(:,i,:,k)
                u0_y(iarr_all_swpy,:) = uh(:,i,:,k)
 
-               call relaxing_tvd(cg%ny, u_y, u0_y, b_y, div_v1d, istep, ydim, k, i, cg%dy, dt)
+               call relaxing_tvd(cg%ny, u_y, u0_y, b_y, div_v1d, cg%cs_iso2%get_sweep(ydim,k,i), istep, ydim, k, i, cg%dy, dt)
                cg%u%arr(:,i,:,k)=u_y(iarr_all_swpy,:)
 
             enddo
@@ -252,7 +252,7 @@ contains
                u_z (iarr_all_swpz,:) = cg%u%arr(:,i,j,:)
                u0_z(iarr_all_swpz,:) = uh(:,i,j,:)
 
-               call relaxing_tvd(cg%nz, u_z, u0_z, b_z, div_v1d, istep, zdim, i, j, cg%dz, dt)
+               call relaxing_tvd(cg%nz, u_z, u0_z, b_z, div_v1d, cg%cs_iso2%get_sweep(zdim,i,j), istep, zdim, i, j, cg%dz, dt)
                cg%u%arr(:,i,j,:)=u_z(iarr_all_swpz,:)
             enddo
          enddo

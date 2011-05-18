@@ -148,7 +148,7 @@ contains
       real, dimension(nmag,n),         intent(in),  target  :: bb       !< array with current magnetic field state
       real, dimension(flind%fluids,n), intent(out), target  :: vx       !< array storing velocity in current sweep direction (reused later)
       real, dimension(flind%fluids,n), intent(out), target  :: pp       !< array storing pressure in current sweeo (reused later)
-      real, dimension(n), optional,    intent(in),  target  :: cs_iso2  !< array with current sound speed squared
+      real, dimension(:),              intent(in),  pointer :: cs_iso2  !< array with current sound speed squared
 
       real, dimension(:,:), pointer                     :: pflux, pcfr, puu, pbb
       real, dimension(:), pointer                       :: pcs2, pvx, ppp
@@ -162,8 +162,8 @@ contains
 !<
       pbb   =>   bb(:,:)
 
-      if (present(cs_iso2)) then
-         pcs2  => cs_iso2(:)           !> \todo It would be better to always set cs2 as an array, even if global
+      if (associated(cs_iso2)) then
+         pcs2  => cs_iso2(:)
       else
          pcs2  => null()
       endif
