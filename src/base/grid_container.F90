@@ -288,7 +288,7 @@ contains
 
          if (has_dir(xdim)) then
             do i= 1, this%nx
-               this%x(i)  = this%xminb + 0.5*this%dx + (i-this%nb-1)*this%dx
+               this%x(i)  = dom%xmin   + 0.5*this%dx + real(i-this%nb-1+this%off(xdim))*this%dx
                this%xl(i) = this%x(i)  - 0.5*this%dx
                this%xr(i) = this%x(i)  + 0.5*this%dx
             enddo
@@ -307,7 +307,7 @@ contains
 
          if (has_dir(ydim)) then
             do j= 1, this%ny
-               this%y(j)  = this%yminb + 0.5*this%dy + (j-this%nb-1)*this%dy
+               this%y(j)  = dom%ymin   + 0.5*this%dy + real(j-this%nb-1+this%off(ydim))*this%dy
                this%yl(j) = this%y(j)  - 0.5*this%dy
                this%yr(j) = this%y(j)  + 0.5*this%dy
             enddo
@@ -326,7 +326,7 @@ contains
 
          if (has_dir(zdim)) then
             do k= 1, this%nz
-               this%z(k)  = this%zminb + 0.5*this%dz + (k-this%nb-1) * this%dz
+               this%z(k)  = dom%zmin   + 0.5*this%dz + real(k-this%nb-1+this%off(zdim))*this%dz
                this%zl(k) = this%z(k)  - 0.5*this%dz
                this%zr(k) = this%z(k)  + 0.5*this%dz
             enddo
