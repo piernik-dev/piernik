@@ -666,7 +666,6 @@ contains
 
       use units,     only: newtong
       use gravity,   only: ptmass, sum_potential
-      use arrays,    only: gp
       use grid,      only: cg
 
       implicit none
@@ -679,7 +678,7 @@ contains
          do i = 1, cg%nx
             do k = 1, cg%nz
                r2 = cg%x(i)**2! + cg%z(k)**2
-               gp(i,:,k) = -newtong*ptmass / sqrt(r2)
+               cg%gp%arr(i,:,k) = -newtong*ptmass / sqrt(r2)
             enddo
          enddo
       endif
