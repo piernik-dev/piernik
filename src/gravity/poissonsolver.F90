@@ -45,7 +45,7 @@ contains
    subroutine poisson_solve(dens)
 
       use constants,      only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE
-      use arrays,         only: u, sgp
+      use arrays,         only: sgp
       use dataio_pub,     only: die
       use grid,           only: cg
       use mpisetup,       only: has_dir
@@ -54,7 +54,7 @@ contains
 
       real, dimension(:,:,:), intent(in)  :: dens
 #ifdef SHEAR
-      real, dimension(:,:,:), allocatable :: ala
+      real, dimension(:,:,:), allocatable :: temp
 #endif /* SHEAR */
 
       if (.not. all(has_dir(:))) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !> \deprecated BEWARE 2D and 1D probably need small fixes
@@ -72,9 +72,9 @@ contains
       elseif ( all(cg%bnd(xdim,LO:HI) == BND_SHE) .and. all(cg%bnd(ydim,LO:HI) == BND_PER) ) then ! 2D shearing box
 
          if (dimensions=='3d') then
-            if (.not.allocated(ala)) allocate(ala(cg%nxb, cg%nyb, cg%nzb))
-            ala = dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            call poisson_xyzp(ala(:,:,:), sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+            if (.not.allocated(temp)) allocate(temp(cg%nxb, cg%nyb, cg%nzb))
+            temp = dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            call poisson_xyzp(temp(:,:,:), sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 
             sgp(:,:,1:cg%nb)        = sgp(:,:, cg%keb:cg%ke)
             sgp(:,:, cg%ke+1:cg%nz) = sgp(:,:, cg%ks:cg%ksb)
@@ -90,7 +90,7 @@ contains
          sgp(:,1:cg%nb,:)        = sgp(:, cg%jeb:cg%je,:)
          sgp(:, cg%je+1:cg%ny,:) = sgp(:, cg%js:cg%jsb,:)
 
-         if (allocated(ala)) deallocate(ala)
+         if (allocated(temp)) deallocate(temp)
 #endif /* SHEAR */
       else
          call die("[poissonsolver:poisson_solve not implemented for current boundary conditions")
@@ -106,7 +106,6 @@ contains
 #ifdef SHEAR
    subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
 
-      use arrays,    only: x
       use constants, only: dpi
       use units,     only: newtong
       use grid,      only: cg
@@ -152,7 +151,7 @@ contains
 ! determine input array dimension
 !
       n = size(den, 1)
-      xx(:) = x(cg%is:cg%ie)
+      xx(:) = cg%x(cg%is:cg%ie)
       if (n /= size(den,2)) stop 'cg%nx /= cg%ny in poisson_xy'
 
 ! compute dimensions for complex arrays
