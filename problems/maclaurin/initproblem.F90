@@ -344,7 +344,6 @@ contains
 
    subroutine finalize_problem_maclaurin
 
-      use arrays,        only: sgp
       use constants,     only: GEO_RPZ
       use dataio_pub,    only: msg, printinfo
       use grid,          only: cg
@@ -367,10 +366,10 @@ contains
             do i = cg%is, cg%ie
                potential =  apot(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
                if (geometry_type == GEO_RPZ) fac = cg%x(i)
-               norm(1) = norm(1) + (potential - sgp(i, j, k))**2 * fac
+               norm(1) = norm(1) + (potential - cg%sgp%arr(i, j, k))**2 * fac
                norm(2) = norm(2) + potential**2 * fac
-               dev(1) = min(dev(1), (potential - sgp(i, j, k))/potential)
-               dev(2) = max(dev(2), (potential - sgp(i, j, k))/potential)
+               dev(1) = min(dev(1), (potential - cg%sgp%arr(i, j, k))/potential)
+               dev(2) = max(dev(2), (potential - cg%sgp%arr(i, j, k))/potential)
             enddo
          enddo
       enddo
@@ -394,7 +393,6 @@ contains
 
    subroutine maclaurin_error_vars(var, tab, ierrh)
 
-      use arrays,        only: sgp
       use grid,          only: cg
 
       implicit none
@@ -408,7 +406,7 @@ contains
          case ("apot")
             tab(:,:,:) = real(apot(:,:,:), 4)
          case ("errp")
-            tab(:,:,:) = real(apot(:,:,:) - sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(apot(:,:,:) - cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select
