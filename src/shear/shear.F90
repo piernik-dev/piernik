@@ -157,7 +157,6 @@ contains
 
    subroutine yshift(ts,dts)
 
-      use arrays,   only: u
       use grid,     only: cg
       use mpisetup, only: dom
 
@@ -173,11 +172,11 @@ contains
       delj  = mod(int(dely/cg%dy), cg%nyb)
       eps   = mod(dely, cg%dy)/cg%dy
 #ifdef FFTW
-      do i=lbound(u,1),ubound(u,1)
-         u(i,:, cg%js:cg%je,:) = unshear_fft( u(i,:, cg%js:cg%je,:), cg%x(:),ddly)
+      do i=lbound(cg%u%arr,1),ubound(cg%u%arr,1)
+         cg%u%arr(i,:, cg%js:cg%je,:) = unshear_fft( cg%u%arr(i,:, cg%js:cg%je,:), cg%x(:),ddly)
       enddo
-      u(:,:,1:cg%nb,:)       = u(:,:, cg%ny-2*cg%js:cg%je,:)
-      u(:,:, cg%je+1:cg%ny,:) = u(:,:, cg%js:cg%jsb,:)
+      cg%u%arr(:,:,1:cg%nb,:)        = cg%u%arr(:,:, cg%ny-2*cg%js:cg%je,:)
+      cg%u%arr(:,:, cg%je+1:cg%ny,:) = cg%u%arr(:,:, cg%js:cg%jsb,:)
 #endif /* FFTW */
    end subroutine yshift
 !--------------------------------------------------------------------------------------------------
