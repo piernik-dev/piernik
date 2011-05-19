@@ -45,7 +45,6 @@ contains
    subroutine poisson_solve(dens)
 
       use constants,      only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE
-      use arrays,         only: sgp
       use dataio_pub,     only: die
       use grid,           only: cg
       use mpisetup,       only: has_dir
@@ -61,12 +60,12 @@ contains
 
       if ( all(cg%bnd(xdim:ydim,LO:HI) == BND_PER) .and. all(cg%bnd(zdim,LO:HI) /= BND_PER) )  then ! Periodic in X and Y, nonperiodic in Z
 
-         call poisson_xyp(dens(cg%is:cg%ie, cg%js:cg%je,:), sgp(cg%is:cg%ie, cg%js:cg%je,:), cg%dz)
+         call poisson_xyp(dens(cg%is:cg%ie, cg%js:cg%je,:), cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je,:), cg%dz)
 
          call die("[poissonsolver:poisson_solve] poisson_xyp called")
 
       elseif ( all(cg%bnd(xdim:zdim,LO:HI) == BND_PER) ) then ! Fully 3D periodic
-         call poisson_xyzp(dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) !> \deprecated BEWARE: something may not be fully initialized here
+         call poisson_xyzp(dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) !> \deprecated BEWARE: something may not be fully initialized here
 
 #ifdef SHEAR
       elseif ( all(cg%bnd(xdim,LO:HI) == BND_SHE) .and. all(cg%bnd(ydim,LO:HI) == BND_PER) ) then ! 2D shearing box
@@ -74,21 +73,21 @@ contains
          if (dimensions=='3d') then
             if (.not.allocated(temp)) allocate(temp(cg%nxb, cg%nyb, cg%nzb))
             temp = dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            call poisson_xyzp(temp(:,:,:), sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+            call poisson_xyzp(temp(:,:,:), cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 
-            sgp(:,:,1:cg%nb)        = sgp(:,:, cg%keb:cg%ke)
-            sgp(:,:, cg%ke+1:cg%nz) = sgp(:,:, cg%ks:cg%ksb)
+            cg%sgp%arr(:,:,1:cg%nb)        = cg%sgp%arr(:,:, cg%keb:cg%ke)
+            cg%sgp%arr(:,:, cg%ke+1:cg%nz) = cg%sgp%arr(:,:, cg%ks:cg%ksb)
 
          else
             call poisson_xy2d(dens(cg%is:cg%ie,   cg%js:cg%je,1), &
-                 &            sgp (cg%is:cg%ie,   cg%js:cg%je,1), &
-                 &            sgp (1:cg%nb,       cg%js:cg%je,1), &
-                 &            sgp (cg%is+1:cg%nx, cg%js:cg%je,1), &
+                 &     cg%sgp%arr (cg%is:cg%ie,   cg%js:cg%je,1), &
+                 &     cg%sgp%arr (1:cg%nb,       cg%js:cg%je,1), &
+                 &     cg%sgp%arr (cg%is+1:cg%nx, cg%js:cg%je,1), &
                  &            cg%dx)
 
          endif
-         sgp(:,1:cg%nb,:)        = sgp(:, cg%jeb:cg%je,:)
-         sgp(:, cg%je+1:cg%ny,:) = sgp(:, cg%js:cg%jsb,:)
+         cg%sgp%arr(:,1:cg%nb,:)        = cg%sgp%arr(:, cg%jeb:cg%je,:)
+         cg%sgp%arr(:, cg%je+1:cg%ny,:) = cg%sgp%arr(:, cg%js:cg%jsb,:)
 
          if (allocated(temp)) deallocate(temp)
 #endif /* SHEAR */

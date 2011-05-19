@@ -140,7 +140,6 @@ contains
 !
    subroutine init_prob
 
-      use arrays,            only: u, b, sgp, gpot, hgpot
       use constants,         only: pi
       use units,             only: newtong
       use dataio_pub,        only: msg, die, warn, printinfo
@@ -168,9 +167,9 @@ contains
 
       t_save = t
       Cint_old = huge(1.)
-      b(:,    :, :, :) = 0.
-      u(idni, :, :, :) = smalld
-      u(ieni, :, :, :) = smallei
+      cg%b%arr(:,    :, :, :) = 0.
+      cg%u%arr(idni, :, :, :) = smalld
+      cg%u%arr(ieni, :, :, :) = smallei
 
       ! Initialize density with uniform sphere
       il = cg%ie+1
@@ -204,7 +203,7 @@ contains
          do j = jl, jh
             do i = il, ih
                if ((cg%x(i)-clump_pos_x)**2 + (cg%y(j)-clump_pos_y)**2 + (cg%z(k)-clump_pos_z)**2 < clump_r**2) then
-                  u(idni, i, j, k) = totME(1)
+                  cg%u%arr(idni, i, j, k) = totME(1)
                   iC =iC + 1
                endif
             enddo
@@ -221,26 +220,26 @@ contains
       iC = 1
       doneC = .false.
       Clast(:) = 0. ; Clim = 0. ; Clim_old = 0.
-      Ccomment = ""
+      Ccomment = ''
 
       do while (.not. doneC)
 
          t = iC * sqrt(tiny(1.0)) ! trick to allow solution extrapolation in multigrid_solve_grav
 
-         call multigrid_solve_grav(u(idni,:,:,:))
+         call multigrid_solve_grav(cg%u%arr(idni,:,:,:))
          if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence (extremely risky)
             if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
-               sgp = (sgp*hgpot - gpot**2)/(sgp + hgpot - 2.*gpot)
-               Ccomment = " Exp warp"
+               cg%sgp%arr = (cg%sgp%arr*cg%hgpot%arr - cg%gpot%arr**2)/(cg%sgp%arr + cg%hgpot%arr - 2.*cg%gpot%arr)
+               Ccomment = ' Exp warp'
                Clast(:) = 0. ; Clim = 0.
             else
-               Ccomment = ""
+               Ccomment = ''
             endif
          endif
-         hgpot = gpot
-         gpot = sgp
+         cg%hgpot%arr = cg%gpot%arr
+         cg%gpot%arr  = cg%sgp%arr
 
-         Cint = [ minval(sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), maxval(sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) ] ! rotation will modify this
+         Cint = [ minval(cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), maxval(cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) ] ! rotation will modify this
 
          call MPI_Allreduce (MPI_IN_PLACE, Cint(LOW),  1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
          call MPI_Allreduce (MPI_IN_PLACE, Cint(HIGH), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
@@ -379,20 +378,20 @@ contains
 
       ! final touch
       t = t_save ! restore initial time
-      call multigrid_solve_grav(u(idni,:,:,:))
-      gpot = sgp
+      call multigrid_solve_grav(cg%u%arr(idni,:,:,:))
+      cg%gpot%arr = cg%sgp%arr
 
-      where (u(idni, :, :, :) < smalld) u(idni, :, :, :) = smalld
-      u(imxi, :, :, :) = clump_vel_x * u(idni,:,:,:)
-      u(imyi, :, :, :) = clump_vel_y * u(idni,:,:,:)
-      u(imzi, :, :, :) = clump_vel_z * u(idni,:,:,:)
+      where (cg%u%arr(idni, :, :, :) < smalld) cg%u%arr(idni, :, :, :) = smalld
+      cg%u%arr(imxi, :, :, :) = clump_vel_x * cg%u%arr(idni,:,:,:)
+      cg%u%arr(imyi, :, :, :) = clump_vel_y * cg%u%arr(idni,:,:,:)
+      cg%u%arr(imzi, :, :, :) = clump_vel_z * cg%u%arr(idni,:,:,:)
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-               u(ieni,i,j,k) = max(smallei,                                             &
-                    &              presrho(u(idni, i, j, k)) / (gamma_ion-1.0)        + &
-                    &              0.5 * sum(u(imxi:imzi,i,j,k)**2,1) / u(idni,i,j,k) + &
-                    &              0.5 * sum(b(:,i,j,k)**2,1))
+               cg%u%arr(ieni,i,j,k) = max(smallei,                                             &
+                    &              presrho(cg%u%arr(idni, i, j, k)) / (gamma_ion-1.0)        + &
+                    &              0.5 * sum(cg%u%arr(imxi:imzi,i,j,k)**2,1) / cg%u%arr(idni,i,j,k) + &
+                    &              0.5 * sum(cg%b%arr(:,i,j,k)**2,1))
             enddo
          enddo
       enddo
@@ -409,7 +408,6 @@ contains
 
    subroutine virialCheck(tol)
 
-      use arrays,            only: u, sgp
       use dataio_pub,        only: msg, die, warn, printinfo
       use grid,              only: cg
       use initionized,       only: idni
@@ -432,9 +430,9 @@ contains
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-!               TWP(1) = TWP(1) + u(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
-               TWP(2) = TWP(2) + u(idni, i, j, k) * sgp(i, j, k) * 0.5 !W
-               TWP(3) = TWP(3) + presrho(u(idni, i, j, k))             !P
+!               TWP(1) = TWP(1) + cg%u%arr(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
+               TWP(2) = TWP(2) + cg%u%arr(idni, i, j, k) * cg%sgp%arr(i, j, k) * 0.5 !W
+               TWP(3) = TWP(3) + presrho(cg%u%arr(idni, i, j, k))             !P
             enddo
          enddo
       enddo
@@ -466,7 +464,6 @@ contains
 
    subroutine totalMEnthalpic(C, totME, mode)
 
-      use arrays,      only: sgp, u
       use grid,        only: cg
       use initionized, only: idni
       use mpisetup,    only: comm, ierr
@@ -488,10 +485,10 @@ contains
             do i = cg%is, cg%ie
                select case (mode)
                case (REL_CALC)
-                  totME     = totME     + rhoH(h(C,     sgp(i,j,k)))
+                  totME     = totME     + rhoH(h(C,     cg%sgp%arr(i,j,k)))
                case (REL_SET)
-                  rho = rhoH(h(C, sgp(i,j,k)))
-                  u(idni, i, j, k) = rho
+                  rho = rhoH(h(C, cg%sgp%arr(i,j,k)))
+                  cg%u%arr(idni, i, j, k) = rho
                   totME = totME + rho
                end select
             enddo
