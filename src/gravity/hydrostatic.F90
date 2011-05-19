@@ -228,14 +228,13 @@ contains
    subroutine get_gprofs_gparray(iia,jja)
 
       use types,   only: axes
-      use arrays,  only: gp
       use gravity, only: tune_zeq, grav_type
       use grid,    only: cg
 
       implicit none
 
       integer, intent(in)                  :: iia, jja
-      real, allocatable, dimension(:,:,:)  :: gpots
+      real, pointer, dimension(:,:,:)      :: gpots
       type(axes)                           :: ax
       integer                              :: nstot1
 
@@ -251,7 +250,7 @@ contains
       call grav_type(gpots,ax)
       gprofs(1:nstot) = (gpots(1,1,1:nstot) - gpots(1,1,2:nstot1))/dzs
       gprofs = tune_zeq*gprofs
-      if (allocated(gpots)) deallocate(gpots)
+      if (associated(gpots)) deallocate(gpots)
       if (allocated(ax%x))  deallocate(ax%x)
       if (allocated(ax%y))  deallocate(ax%y)
       if (allocated(ax%z))  deallocate(ax%z)

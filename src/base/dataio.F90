@@ -679,9 +679,6 @@ contains
 #ifdef COSM_RAYS
       use fluidindex,      only: iarr_all_crs
 #endif /* COSM_RAYS */
-#ifdef GRAV
-      use arrays,          only: gpot
-#endif /* GRAV */
 #ifdef RESISTIVE
       use resistivity,     only: eta1_active
 #endif /* RESISTIVE */
@@ -756,7 +753,7 @@ contains
       tot_momy = mpi_addmul(cg%u%arr(iarr_all_my, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
       tot_momz = mpi_addmul(cg%u%arr(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 #ifdef GRAV
-      tot_epot = mpi_addmul(cg%u%arr(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) *gpot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_epot = mpi_addmul(cg%u%arr(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) * cg%gpot%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 #endif /* GRAV */
 
       cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
@@ -981,9 +978,6 @@ contains
       use resistivity,        only: deimin
 #endif /* !ISO */
 #endif /* RESISTIVE */
-#ifdef VARIABLE_GP
-      use arrays,             only: gpot
-#endif /* VARIABLE_GP */
 #if defined VARIABLE_GP || defined MAGNETIC
       use grid,               only: D_x, D_y, D_z
 #endif /* VARIABLE_GP || MAGNETIC */
@@ -1050,7 +1044,7 @@ contains
 !        call get_extremum(p, MAXL, temi_max)
 #else /* !ISO */
 !        cg%wa%arr(:,:,:) = (cg%u%arr(ieni,:,:,:) &                ! eint
-!                  - 0.5*((cg%u%arr(imxi,:,:,:)**2 +cg%u%arr(imyi,:,:,:)**2 + cg%u%arr(imzi,:,:,:)**2)/cg%u%arr(idni,:,:,:)))
+!                    - 0.5*((cg%u%arr(imxi,:,:,:)**2 +cg%u%arr(imyi,:,:,:)**2 + cg%u%arr(imzi,:,:,:)**2)/cg%u%arr(idni,:,:,:)))
 #ifdef MAGNETIC
 !        cg%wa%arr(:,:,:) = cg%wa%arr(:,:,:) - 0.5*(cg%b%arr(ibx,:,:,:)**2 + cg%b%arr(iby,:,:,:)**2 + cg%b%arr(ibz,:,:,:)**2)
 #endif /* MAGNETIC */
@@ -1060,11 +1054,11 @@ contains
       if (has_dst) call get_common_vars(flind%dst)
 
 #ifdef VARIABLE_GP
-      cg%wa%arr(1:nxu,:,:) = abs((gpot(nxl:cg%nx,:,:)-gpot(1:nxu,:,:))*cg%idx) ; cg%wa%arr(cg%nx,:,:) = cg%wa%arr(nxu,:,:)
+      cg%wa%arr(1:nxu,:,:) = abs((cg%gpot%arr(nxl:cg%nx,:,:)-cg%gpot%arr(1:nxu,:,:))*cg%idx) ; cg%wa%arr(cg%nx,:,:) = cg%wa%arr(nxu,:,:)
       call get_extremum(p, MAXL, gpxmax)
-      cg%wa%arr(:,1:nyu,:) = abs((gpot(:,nyl:cg%ny,:)-gpot(:,1:nyu,:))*cg%idy) ; cg%wa%arr(:,cg%ny,:) = cg%wa%arr(:,nyu,:)
+      cg%wa%arr(:,1:nyu,:) = abs((cg%gpot%arr(:,nyl:cg%ny,:)-cg%gpot%arr(:,1:nyu,:))*cg%idy) ; cg%wa%arr(:,cg%ny,:) = cg%wa%arr(:,nyu,:)
       call get_extremum(p, MAXL, gpymax)
-      cg%wa%arr(:,:,1:nzu) = abs((gpot(:,:,nzl:cg%nz)-gpot(:,:,1:nzu))*cg%idz) ; cg%wa%arr(:,:,cg%nz) = cg%wa%arr(:,:,nzu)
+      cg%wa%arr(:,:,1:nzu) = abs((cg%gpot%arr(:,:,nzl:cg%nz)-cg%gpot%arr(:,:,1:nzu))*cg%idz) ; cg%wa%arr(:,:,cg%nz) = cg%wa%arr(:,:,nzu)
       call get_extremum(p, MAXL, gpzmax)
 #endif /* VARIABLE_GP */
 

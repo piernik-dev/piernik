@@ -97,9 +97,16 @@ module grid_cont
       type(bnd_list), dimension(:, :), allocatable :: i_bnd, o_bnd    !> description of incoming and outgoing boundary data,
       !< the shape is (xdim:zdim, FLUID:ARR) for cg (base grid container)) and (xdim:zdim, mg_nb) for plvl (multigrid level container)
 
-      type(array4d) :: u, b
+      type(array4d) :: u                        !< Main array of all fluids' components
+      type(array4d) :: uh                       !< Main array of all fluids' components (for t += dt/2)
+      type(array4d) :: b                        !< Main array of magnetic field's components
       type(array3d) :: cs_iso2
-      type(array3d) :: wa
+      type(array3d) :: wa                       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+      type(array3d) :: gpot                     !< Array for sum of gravitational potential at t += dt
+      type(array3d) :: hgpot                    !< Array for sum of gravitational potential at t += 0.5*dt
+      type(array3d) :: gp                       !< Array for gravitational potential from external fields
+      type(array3d) :: sgp                      !< Array for gravitational potential from multigrid or FFT solver
+      type(array3d) :: sgpm                     !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
 
    contains
 
@@ -341,6 +348,15 @@ contains
 #ifdef ISO
       call this%cs_iso2%init(this%nx,this%ny,this%nz)
 #endif /* ISO */
+#ifdef GRAV
+      call this%gpot%init(this%nx,this%ny,this%nz)
+      call this%hgpot%init(this%nx,this%ny,this%nz)
+      call this%gp%init(this%nx,this%ny,this%nz)
+#ifdef SELF_GRAV
+      call this%sgp%init(this%nx,this%ny,this%nz)
+      call this%sgpm%init(this%nx,this%ny,this%nz)
+#endif /* SELF_GRAV */
+#endif /* GRAV */
 
    end subroutine init
 
@@ -504,6 +520,11 @@ contains
       endif
 
       call this%cs_iso2%clean
+      call this%gpot%clean
+      call this%hgpot%clean
+      call this%gp%clean
+      call this%sgp%clean
+      call this%sgpm%clean
 
    end subroutine cleanup
 

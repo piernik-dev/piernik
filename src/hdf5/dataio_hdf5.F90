@@ -250,9 +250,6 @@ contains
       use constants,     only: varlen
       use dataio_pub,    only: planelen
       use grid,          only: cg
-#ifdef GRAV
-      use arrays,        only: gpot
-#endif /* GRAV */
       use fluidindex,    only: flind, ibx, iby, ibz
 #ifdef COSM_RAYS
       use fluidindex,    only: iarr_all_crs
@@ -418,23 +415,19 @@ contains
             if (ij=="xy") tab(:,:) = cg%b%arr(ibz, cg%is:cg%ie, cg%js:cg%je, xn)
 #ifdef GRAV
          case ("gpot")
-            if (ij=="yz") tab(:,:) = gpot(xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = gpot(cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = gpot(cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%gpot%arr(xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%gpot%arr(cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%gpot%arr(cg%is:cg%ie, cg%js:cg%je, xn)
 #endif /* GRAV */
+#ifdef COSM_RAYS
+         case ("ecr*")
+            i = iarr_all_crs(ichar(var(4:4))-48)
+            if (ij=="yz") tab(:,:) = cg%u%arr(i, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(i, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(i, cg%is:cg%ie, cg%js:cg%je, xn)
+#endif /* COSM_RAYS */
          case default
-#ifdef COSM_RAYS
-            if (var(1:3) == 'ecr') then
-               i = iarr_all_crs(ichar(var(4:4))-48)
-               if (ij=="yz") tab(:,:) = cg%u%arr(i, xn, cg%js:cg%je, cg%ks:cg%ke)
-               if (ij=="xz") tab(:,:) = cg%u%arr(i, cg%is:cg%ie, xn, cg%ks:cg%ke)
-               if (ij=="xy") tab(:,:) = cg%u%arr(i, cg%is:cg%ie, cg%js:cg%je, xn)
-            else
-#endif /* COSM_RAYS */
             ierrh = -1
-#ifdef COSM_RAYS
-            endif
-#endif /* COSM_RAYS */
       end select
 
    end subroutine common_plt_hdf5
@@ -447,12 +440,6 @@ contains
       use constants,     only: varlen
       use fluidindex,    only: flind, ibx, iby, ibz
       use grid,          only: cg  ! QA_WARN required for RNG
-#ifdef GRAV
-      use arrays,        only: gpot
-#ifdef MULTIGRID
-      use arrays,        only: sgp
-#endif /* MULTIGRID */
-#endif /* GRAV */
 
       implicit none
       character(len=varlen), intent(in) :: var
@@ -537,15 +524,18 @@ contains
             tab(:,:,:) = real(cg%b%arr(iby,RNG),4)
          case ("magz")
             tab(:,:,:) = real(cg%b%arr(ibz,RNG),4)
-#ifdef GRAV
          case ("gpot")
-            tab(:,:,:) = real(gpot(RNG),4)
-#ifdef MULTIGRID
+            if (associated(cg%gpot%arr)) then
+               tab(:,:,:) = real(cg%gpot%arr(RNG),4)
+            else
+               tab = 0.0
+            endif
          case ("mgso")
-            tab(:,:,:) = real(sgp(RNG),4)
-#endif /* MULTIGRID */
-#endif /* GRAV */
-
+            if (associated(cg%sgp%arr)) then
+               tab(:,:,:) = real(cg%sgp%arr(RNG),4)
+            else
+               tab = 0.0
+            endif
          case default
             ierrh = -1
       end select
@@ -864,15 +854,11 @@ contains
       use list_hdf5,  only: problem_write_restart
       use mpisetup,   only: comm, info, ierr, master, nstep
       use mpi,        only: MPI_CHARACTER
-#ifdef GRAV
-      use arrays,     only: gp
-#endif /* GRAV */
 
       implicit none
 
       logical, optional, intent(in) :: debug_res
 
-      real, pointer, dimension(:,:,:)   :: pa3d
       integer, parameter    :: extlen = 4
       character(len=extlen) :: file_extension
       character(len=cwdlen) :: filename  !> HDF File name
@@ -904,15 +890,9 @@ contains
 
       ! Write all data in parallel
       if (associated(problem_write_restart)) call problem_write_restart(file_id)
-      if (associated(pa3d)) nullify(pa3d)
 
       if (associated(cg%cs_iso2%arr)) call write_arr_to_restart(file_id, cg%cs_iso2%arr, AT_NO_B, "cs_iso2")
-#ifdef GRAV
-      pa3d => gp
-      call write_arr_to_restart(file_id, pa3d, AT_OUT_B, "gp")
-      nullify(pa3d)
-#endif /* GRAV */
-      if (associated(pa3d)) nullify(pa3d)
+      if (associated(cg%gp%arr))      call write_arr_to_restart(file_id, cg%gp%arr, AT_OUT_B, "gp")
 
       ! Write fluids
       area_type = AT_NO_B
@@ -1365,9 +1345,6 @@ contains
       use mpisetup,      only: comm, ierr, magic_mass, master, t, info, comm, dt, dom, has_dir
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use constants,     only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B
-#ifdef GRAV
-      use arrays,        only: gp
-#endif /* GRAV */
 
       implicit none
 
@@ -1384,8 +1361,6 @@ contains
 
       real, dimension(1)    :: rbuf
       integer, dimension(1) :: ibuf
-
-      real, dimension(:,:,:), pointer :: p3d
 
       real                  :: restart_hdf5_version
 
@@ -1459,13 +1434,8 @@ contains
 
       if (associated(problem_read_restart)) call problem_read_restart(file_id)
 
-      if (associated(p3d)) nullify(p3d)
       if (associated(cg%cs_iso2%arr)) call read_arr_from_restart(file_id, cg%cs_iso2%arr, AT_NO_B, "cs_iso2")
-#ifdef GRAV
-      p3d => gp(:,:,:)
-      call read_arr_from_restart(file_id, p3d, AT_OUT_B, "gp")
-      nullify(p3d)
-#endif /* GRAV */
+      if (associated(cg%gp%arr))      call read_arr_from_restart(file_id, cg%gp%arr, AT_OUT_B, "gp")
 
       !  READ FLUID VARIABLES
       if (associated(cg%u%arr)) call read_arr_from_restart(file_id, cg%u%arr, AT_NO_B, dname(FLUID))

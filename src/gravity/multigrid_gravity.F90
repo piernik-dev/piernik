@@ -392,13 +392,13 @@ contains
 
    subroutine init_multigrid_grav_post(mb_alloc)
 
-      use arrays,             only: sgp
       use multigridvars,      only: lvl, plvl, roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, is_mg_uneven
       use mpisetup,           only: master, nproc, geometry_type, dom, proc, is_uneven
       use multigridhelpers,   only: vcycle_stats_init, dirty_debug, dirtyH
       use constants,          only: pi, dpi, GEO_XYZ
       use dataio_pub,         only: die, warn
       use multipole,          only: init_multipole, coarsen_multipole
+      use grid,               only: cg
 
       implicit none
 
@@ -447,7 +447,7 @@ contains
          enddo
       endif
 
-      sgp(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
+      cg%sgp%arr(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
 
       curl => base
       do while (associated(curl))
@@ -904,7 +904,6 @@ contains
 
       use constants,     only: xdim, ydim, zdim
       use timer,         only: set_timer
-      use arrays,        only: sgp
       use grid,          only: cg
       use mpisetup,      only: has_dir
       use dataio_pub,    only: die
@@ -966,7 +965,7 @@ contains
          keb = 1
       endif
 
-      sgp(isb:ieb, jsb:jeb, ksb:keb) = roof%mgvar(:, :, :, solution)
+      cg%sgp%arr(isb:ieb, jsb:jeb, ksb:keb) = roof%mgvar(:, :, :, solution)
 
       if (isolated) then
          grav_bnd = bnd_givenval
@@ -977,7 +976,7 @@ contains
 
          call vcycle_hg(outer)
 
-         sgp(isb:ieb, jsb:jeb, ksb:keb) = sgp(isb:ieb, jsb:jeb, ksb:keb) + roof%mgvar(:, :, :, solution)
+         cg%sgp%arr(isb:ieb, jsb:jeb, ksb:keb) = cg%sgp%arr(isb:ieb, jsb:jeb, ksb:keb) + roof%mgvar(:, :, :, solution)
 
          grav_bnd = bnd_isolated ! restore
 

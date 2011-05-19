@@ -90,7 +90,7 @@ module gravity
       subroutine grav_types(gp,ax,flatten)
          use types, only: axes
          implicit none
-         real, dimension(:,:,:), intent(inout) :: gp        !< COMMENT ME
+         real, dimension(:,:,:), pointer       :: gp        !< COMMENT ME
          type(axes),             intent(in)    :: ax        !< COMMENT ME
          logical,      optional, intent(in)    :: flatten   !< COMMENT ME
       end subroutine grav_types
@@ -145,13 +145,13 @@ contains
 !<
    subroutine init_grav
 
-      use arrays,        only: gpot
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml    ! QA_WARN required for diff_nml
       use dataio_pub,    only: warn, die, code_progress
       use constants,     only: PIERNIK_INIT_ARRAYS
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
-      use units,     only: newtong
+      use units,         only: newtong
+      use grid,          only: cg
 #ifdef CORIOLIS
       use coriolis,      only: set_omega
 #endif /* CORIOLIS */
@@ -264,7 +264,7 @@ contains
 #endif /* CORIOLIS */
       endif
 
-      gpot(:,:,:) = 0.0
+      cg%gpot%arr(:,:,:) = 0.0
 
       if (.not.user_grav) then
          grav_pot_3d => default_grav_pot_3d
@@ -279,7 +279,6 @@ contains
 
 #ifdef SELF_GRAV
       use grid,              only: cg
-      use arrays,            only: sgp, sgpm
       use fluidindex,        only: iarr_all_sg
 #ifdef POISSON_FFT
       use poissonsolver,     only: poisson_solve
@@ -294,7 +293,7 @@ contains
 #ifdef SELF_GRAV
       logical, save :: frun = .true.
 
-      sgpm = sgp
+      cg%sgpm%arr = cg%sgp%arr
 
 #ifdef POISSON_FFT
       call poisson_solve( sum(cg%u%arr(iarr_all_sg,:,:,:),1) )
@@ -314,7 +313,7 @@ contains
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
       call all_sgp_boundaries
       if (frun) then
-         sgpm = sgp
+         cg%sgpm%arr = cg%sgp%arr
          frun = .false.
       endif
 #endif /* SELF_GRAV */
@@ -325,11 +324,8 @@ contains
 
    subroutine sum_potential
 
-      use arrays,   only: gpot, gp, hgpot
+      use grid,     only: cg
       use mpisetup, only: dt, dtm
-#ifdef SELF_GRAV
-      use arrays,   only: sgp, sgpm
-#endif /* SELF_GRAV */
 
       implicit none
       real :: h
@@ -341,12 +337,12 @@ contains
       endif
 
 #ifdef SELF_GRAV
-      gpot  = gp + (1.+h)    *sgp -     h*sgpm
-      hgpot = gp + (1.+0.5*h)*sgp - 0.5*h*sgpm
+      cg%gpot%arr  = cg%gp%arr + (1.+h)    *cg%sgp%arr -     h*cg%sgpm%arr
+      cg%hgpot%arr = cg%gp%arr + (1.+0.5*h)*cg%sgp%arr - 0.5*h*cg%sgpm%arr
 #else /* !SELF_GRAV */
       !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
-      gpot  = gp
-      hgpot = gp
+      cg%gpot%arr  = cg%gp%arr
+      cg%hgpot%arr = cg%gp%arr
 #endif /* !SELF_GRAV */
 
    end subroutine sum_potential
@@ -357,16 +353,11 @@ contains
 
    subroutine all_sgp_boundaries
 
-      use arrays, only: sgp
-      use grid,   only: arr3d_boundaries
+      use grid,   only: arr3d_boundaries, cg
 
       implicit none
 
-      real, dimension(:,:,:), pointer :: ap3d
-
-      if (.not.associated(ap3d)) ap3d => sgp
-      call arr3d_boundaries(ap3d)
-      if (associated(ap3d)) nullify(ap3d)
+      if (associated(cg%sgp%arr)) call arr3d_boundaries(cg%sgp%arr)
 
    end subroutine all_sgp_boundaries
 
@@ -378,7 +369,7 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), intent(inout) :: gp
+      real, dimension(:,:,:), pointer       :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
 
@@ -394,7 +385,7 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), intent(inout) :: gp
+      real, dimension(:,:,:), pointer       :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
       integer :: i, j, k
@@ -417,7 +408,7 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), intent(inout) :: gp
+      real, dimension(:,:,:), pointer       :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
       integer :: i, j, k
@@ -441,7 +432,7 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), intent(inout) :: gp
+      real, dimension(:,:,:), pointer       :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
 
@@ -482,7 +473,7 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), intent(inout) :: gp
+      real, dimension(:,:,:), pointer       :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
 
@@ -532,7 +523,7 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), intent(inout) :: gp
+      real, dimension(:,:,:), pointer       :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
 
@@ -565,7 +556,7 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), intent(inout) :: gp
+      real, dimension(:,:,:), pointer       :: gp
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
 
@@ -623,7 +614,6 @@ contains
 
    subroutine default_grav_pot_3d
 
-      use arrays,       only: gp
       use dataio_pub,   only: die, warn
       use grid,         only: cg
       use mpisetup,     only: master, geometry_type
@@ -655,26 +645,26 @@ contains
 
       select case (external_gp)
          case ("null", "grav_null", "GRAV_NULL")
-            call grav_null(gp,ax)                    ; grav_type => grav_null
+            call grav_null(cg%gp%arr,ax)                    ; grav_type => grav_null
          case ("linear", "grav_lin", "GRAV_LINEAR")
-            call grav_linear(gp,ax)                  ; grav_type => grav_linear
+            call grav_linear(cg%gp%arr,ax)                  ; grav_type => grav_linear
          case ("uniform", "grav_unif", "GRAV_UNIFORM")
-            call grav_uniform(gp,ax)                 ; grav_type => grav_uniform
+            call grav_uniform(cg%gp%arr,ax)                 ; grav_type => grav_uniform
          case ("softened ptmass", "ptmass_soft", "GRAV_PTMASS")
-            call grav_ptmass_softened(gp,ax,.false.) ; grav_type => grav_ptmass_softened
+            call grav_ptmass_softened(cg%gp%arr,ax,.false.) ; grav_type => grav_ptmass_softened
          case ("stiff ptmass", "ptmass_stiff", "GRAV_PTMASSSTIFF")
-            call grav_ptmass_stiff(gp,ax)            ; grav_type => grav_ptmass_stiff
+            call grav_ptmass_stiff(cg%gp%arr,ax)            ; grav_type => grav_ptmass_stiff
          case ("ptmass", "ptmass_pure", "GRAV_PTMASSPURE")
-            call grav_ptmass_pure(gp,ax,.false.)     ; grav_type => grav_ptmass_pure
+            call grav_ptmass_pure(cg%gp%arr,ax,.false.)     ; grav_type => grav_ptmass_pure
          case ("flat softened ptmass", "flat_ptmass_soft", "GRAV_PTFLAT")
-            call grav_ptmass_softened(gp,ax,.true.)  ; grav_type => grav_ptmass_softened
+            call grav_ptmass_softened(cg%gp%arr,ax,.true.)  ; grav_type => grav_ptmass_softened
          case ("flat ptmass", "flat_ptmass")
-            call grav_ptmass_pure(gp,ax,.true.)      ; grav_type => grav_ptmass_pure
+            call grav_ptmass_pure(cg%gp%arr,ax,.true.)      ; grav_type => grav_ptmass_pure
          case ("roche", "grav_roche", "GRAV_ROCHE")
 #ifndef CORIOLIS
             call die("[gravity:default_grav_pot_3d] define CORIOLIS in piernik.def for Roche potential")
 #endif /* !CORIOLIS */
-            call grav_roche(gp,ax)                   ; grav_type => grav_roche
+            call grav_roche(cg%gp%arr,ax)                   ; grav_type => grav_roche
          case ("user", "grav_user", "GRAV_USER")
             call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
          case default
@@ -703,7 +693,6 @@ contains
 !<
    subroutine grav_pot2accel(sweep, i1,i2, n, grav,istep)
 
-      use arrays,    only: gpot, hgpot
       use grid,      only: cg
       use constants, only: xdim, ydim, zdim
 
@@ -723,20 +712,20 @@ contains
 !      if (istep==1) then
 !         select case (sweep)
 !            case (xdim)
-!               grav(3:n-2) = onetw*(hgpot(5:n,i1,i2) - 8.*hgpot(4:n-1,i1,i2) + 8.*hgpot(2:n-3,i1,i2) - hgpot(1:n-4,i1,i2) )/dl(xdim)
+!               grav(3:n-2) = onetw*(cg%hgpot%arr(5:n,i1,i2) - 8.*cg%hgpot%arr(4:n-1,i1,i2) + 8.*cg%hgpot%arr(2:n-3,i1,i2) - cg%hgpot%arr(1:n-4,i1,i2) )/dl(xdim)
 !            case (ydim)
-!               grav(3:n-2) = onetw*(hgpot(i2,5:n,i1) - 8.*hgpot(i2,4:n-1,i1) + 8.*hgpot(i2,2:n-3,i1) - hgpot(i2,1:n-4,i1) )/dl(xdim)
+!               grav(3:n-2) = onetw*(cg%hgpot%arr(i2,5:n,i1) - 8.*cg%hgpot%arr(i2,4:n-1,i1) + 8.*cg%hgpot%arr(i2,2:n-3,i1) - cg%hgpot%arr(i2,1:n-4,i1) )/dl(xdim)
 !            case (zdim)
-!               grav(3:n-2) = onetw*(hgpot(i1,i2,5:n) - 8.*hgpot(i1,i2,4:n-1) + 8.*hgpot(i1,i2,2:n-3) - hgpot(i1,i2,1:n-4) )/dl(xdim)
+!               grav(3:n-2) = onetw*(cg%hgpot%arr(i1,i2,5:n) - 8.*cg%hgpot%arr(i1,i2,4:n-1) + 8.*cg%hgpot%arr(i1,i2,2:n-3) - cg%hgpot%arr(i1,i2,1:n-4) )/dl(xdim)
 !         end select
 !      else
 !         select case (sweep)
 !            case (xdim)
-!               grav(3:n-2) = onetw*(gpot(5:n,i1,i2) - 8.*gpot(4:n-1,i1,i2) + 8.*gpot(2:n-3,i1,i2) - gpot(1:n-4,i1,i2) )/dl(xdim)
+!               grav(3:n-2) = onetw*(cg%gpot%arr(5:n,i1,i2) - 8.*cg%gpot%arr(4:n-1,i1,i2) + 8.*cg%gpot%arr(2:n-3,i1,i2) - cg%gpot%arr(1:n-4,i1,i2) )/dl(xdim)
 !            case (ydim)
-!               grav(3:n-2) = onetw*(gpot(i2,5:n,i1) - 8.*gpot(i2,4:n-1,i1) + 8.*gpot(i2,2:n-3,i1) - gpot(i2,1:n-4,i1) )/dl(xdim)
+!               grav(3:n-2) = onetw*(cg%gpot%arr(i2,5:n,i1) - 8.*cg%gpot%arr(i2,4:n-1,i1) + 8.*cg%gpot%arr(i2,2:n-3,i1) - cg%gpot%arr(i2,1:n-4,i1) )/dl(xdim)
 !            case (zdim)
-!               grav(3:n-2) = onetw*(gpot(i1,i2,5:n) - 8.*gpot(i1,i2,4:n-1) + 8.*gpot(i1,i2,2:n-3) - gpot(i1,i2,1:n-4) )/dl(xdim)
+!               grav(3:n-2) = onetw*(cg%gpot%arr(i1,i2,5:n) - 8.*cg%gpot%arr(i1,i2,4:n-1) + 8.*cg%gpot%arr(i1,i2,2:n-3) - cg%gpot%arr(i1,i2,1:n-4) )/dl(xdim)
 !         end select
 !      endif
 !      grav(2) = grav(3); grav(n-1) = grav(n-2)
@@ -744,21 +733,21 @@ contains
       if (istep==1) then
          select case (sweep)
             case (xdim)
-               grav(2:n-1) = 0.5*(hgpot(1:n-2,i1,i2) - hgpot(3:n,i1,i2))/cg%dl(xdim)
+               grav(2:n-1) = 0.5*(cg%hgpot%arr(1:n-2,i1,i2) - cg%hgpot%arr(3:n,i1,i2))/cg%dl(xdim)
             case (ydim)
-               grav(2:n-1) = 0.5*(hgpot(i2,1:n-2,i1) - hgpot(i2,3:n,i1))/cg%dl(ydim)
+               grav(2:n-1) = 0.5*(cg%hgpot%arr(i2,1:n-2,i1) - cg%hgpot%arr(i2,3:n,i1))/cg%dl(ydim)
             case (zdim)
-               grav(2:n-1) = 0.5*(hgpot(i1,i2,1:n-2) - hgpot(i1,i2,3:n))/cg%dl(zdim)
+               grav(2:n-1) = 0.5*(cg%hgpot%arr(i1,i2,1:n-2) - cg%hgpot%arr(i1,i2,3:n))/cg%dl(zdim)
          end select
 
       else
          select case (sweep)
             case (xdim)
-               grav(2:n-1) = 0.5*(gpot(1:n-2,i1,i2) - gpot(3:n,i1,i2))/cg%dl(xdim)
+               grav(2:n-1) = 0.5*(cg%gpot%arr(1:n-2,i1,i2) - cg%gpot%arr(3:n,i1,i2))/cg%dl(xdim)
             case (ydim)
-               grav(2:n-1) = 0.5*(gpot(i2,1:n-2,i1) - gpot(i2,3:n,i1))/cg%dl(ydim)
+               grav(2:n-1) = 0.5*(cg%gpot%arr(i2,1:n-2,i1) - cg%gpot%arr(i2,3:n,i1))/cg%dl(ydim)
             case (zdim)
-               grav(2:n-1) = 0.5*(gpot(i1,i2,1:n-2) - gpot(i1,i2,3:n))/cg%dl(zdim)
+               grav(2:n-1) = 0.5*(cg%gpot%arr(i1,i2,1:n-2) - cg%gpot%arr(i1,i2,3:n))/cg%dl(zdim)
          end select
       endif
 
@@ -776,7 +765,6 @@ contains
    subroutine grav_accel2pot
 
       use types,      only: value
-      use arrays,     only: gp
       use constants,  only: xdim, ydim, zdim, ndims, MAXL
       use dataio_pub, only: die
       use func,       only: get_extremum
@@ -883,7 +871,7 @@ contains
       call MPI_Bcast(gp_max%val, 1, MPI_DOUBLE_PRECISION, gp_max%proc, comm, ierr)
       gpwork = gpwork - gp_max%val
 
-      gp=gpwork
+      cg%gp%arr = gpwork
       if (allocated(gpwork)) deallocate(gpwork)
 
    end subroutine grav_accel2pot

@@ -43,15 +43,8 @@ module arrays
    real, allocatable, dimension(:,:,:),   target :: wa   !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 
 #ifdef GRAV
-   real, allocatable, dimension(:,:,:), target :: gpot     !< Array for sum of gravitational potential at t += dt
-   real, allocatable, dimension(:,:,:), target :: hgpot    !< Array for sum of gravitational potential at t += 0.5*dt
-   real, allocatable, dimension(:,:,:), target :: gp       !< Array for gravitational potential from external fields
    real, allocatable, dimension(:), target     :: dprof    !< Array used for storing density during calculation of hydrostatic equilibrium
    real, allocatable, dimension(:), target     :: eprof    !< Array used for storing energy during calculation of hydrostatic equilibrium
-#ifdef SELF_GRAV
-   real, allocatable, dimension(:,:,:), target :: sgp      !< Array for gravitational potential from multigrid or FFT solver
-   real, allocatable, dimension(:,:,:), target :: sgpm     !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
-#endif /* SELF_GRAV */
 #endif /* GRAV */
 
 contains
@@ -99,16 +92,9 @@ contains
       call cg%wa%init(wa)
 
 #ifdef GRAV
-      call my_allocate(gpot, ma3d, "gpot")
-      call my_allocate(hgpot, ma3d, "hgpot")
-      call my_allocate(gp, ma3d, "gp")
       ma1d = [cg%nz]
       call my_allocate(dprof, ma1d, "dprof")
       call my_allocate(eprof, ma1d, "eprof")
-#ifdef SELF_GRAV
-      call my_allocate(sgp, ma3d, "sgp")
-      call my_allocate(sgpm, ma3d, "sgpm")
-#endif /* SELF_GRAV */
 #endif /* GRAV */
 
    end subroutine init_arrays
@@ -132,15 +118,8 @@ contains
       call cg%wa%clean()
 
 #ifdef GRAV
-      if (allocated(gpot))    deallocate(gpot)
-      if (allocated(hgpot))   deallocate(hgpot)
-      if (allocated(gp))      deallocate(gp)
       if (allocated(dprof))   deallocate(dprof)
       if (allocated(eprof))   deallocate(eprof)
-#ifdef SELF_GRAV
-      if (allocated(sgp))     deallocate(sgp)
-      if (allocated(sgpm))    deallocate(sgpm)
-#endif /* SELF_GRAV */
 #endif /* GRAV */
 
    end subroutine cleanup_arrays
