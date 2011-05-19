@@ -234,6 +234,7 @@ contains
       use dataio_pub,       only: msg, die
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
+      use grid,             only: cg
       use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass
       use gridgeometry,     only: gc, geometry_source_terms
 #ifdef BALSARA
@@ -377,8 +378,10 @@ contains
 
       if (use_smalld) then
          ! This is needed e.g. for outflow boundaries in presence of perp. gravity
+         local_magic_mass = local_magic_mass - sum(u1(iarr_all_dn,cg%nb+1:n-cg%nb))
          u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
-            local_magic_mass = local_magic_mass + sum( abs(u1(iarr_all_dn,2:n-1) - u0(iarr_all_dn,2:n-1)) )
+!         local_magic_mass = local_magic_mass + sum( abs(u1(iarr_all_dn,cg%nb+1:n-cg%nb) - u0(iarr_all_dn,cg%nb+1:n-cg%nb)) )
+         local_magic_mass = local_magic_mass + sum(u1(iarr_all_dn,cg%nb+1:n-cg%nb))
       else
          if (any(u1(iarr_all_dn,:) < 0.0)) then
             write(msg,'(3A,I4,1X,I4,A)') "[rtvd:relaxing_tvd] negative density in sweep ",sweep,"( ", i1, i2, " )"
