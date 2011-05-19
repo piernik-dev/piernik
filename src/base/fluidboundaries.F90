@@ -102,7 +102,6 @@ contains
 
    subroutine bnd_u(dir)
 
-      use arrays,              only: u, b
       use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
       use dataio_pub,          only: msg, warn, die
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
@@ -151,17 +150,17 @@ contains
          if (dir == xdim) then
 #ifndef FFTW
             allocate(send_right(flind%all, cg%nb,ny,nz), send_left(flind%all, cg%nb,ny,nz), &
-                 &   recv_left(flind%all, cg%nb,ny,nz), recv_right(flind%all, cg%nb,ny,nz) )
-            send_left(:,:,:,:)          =  u(:, cg%is:cg%isb,:,:)
-            send_right(:,:,:,:)         =  u(:, cg%ieb:cg%ie,:,:)
+                 &    recv_left(flind%all, cg%nb,ny,nz), recv_right(flind%all, cg%nb,ny,nz) )
+            send_left(:,:,:,:)          =  cg%u%arr(:, cg%is:cg%isb,:,:)
+            send_right(:,:,:,:)         =  cg%u%arr(:, cg%ieb:cg%ie,:,:)
 !
 ! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
 !
             if (cg%bnd(xdim, LO) == BND_SHE) then
                do i=1, cg%nb
-                  send_left (iarr_all_my,i,:,:) = send_left(iarr_all_my,i,:,:) + qshear*omega * x(cg%nb+i) * send_left(iarr_all_dn,i,:,:)
+                  send_left (iarr_all_my,i,:,:) = send_left(iarr_all_my,i,:,:) + qshear*omega * cg%x(cg%nb+i) * send_left(iarr_all_dn,i,:,:)
 #ifndef ISO
-                  send_left (iarr_all_en,i,:,:) = send_left(iarr_all_en,i,:,:) - 0.5*(qshear*omega * x(cg%nb+i))**2 * send_left(iarr_all_dn,i,:,:)
+                  send_left (iarr_all_en,i,:,:) = send_left(iarr_all_en,i,:,:) - 0.5*(qshear*omega * cg%x(cg%nb+i))**2 * send_left(iarr_all_dn,i,:,:)
 #endif /* !ISO */
                enddo
 !
@@ -184,9 +183,9 @@ contains
 !
             if (cg%bnd(xdim, HI) == BND_SHE) then
                do i=1, cg%nb
-                  send_right(iarr_all_my,i,:,:) = send_right(iarr_all_my,i,:,:) +qshear*omega * x(cg%nxb+i) * send_right(iarr_all_dn,i,:,:)
+                  send_right(iarr_all_my,i,:,:) = send_right(iarr_all_my,i,:,:) +qshear*omega * cg%x(cg%nxb+i) * send_right(iarr_all_dn,i,:,:)
 #ifndef ISO
-                  send_right(iarr_all_en,i,:,:) = send_right(iarr_all_en,i,:,:) -0.5*(qshear*omega * x(cg%nxb+i))**2 * send_right(iarr_all_dn,i,:,:)
+                  send_right(iarr_all_en,i,:,:) = send_right(iarr_all_en,i,:,:) -0.5*(qshear*omega * cg%x(cg%nxb+i))**2 * send_right(iarr_all_dn,i,:,:)
 #endif /* !ISO */
                enddo
 !
@@ -220,9 +219,9 @@ contains
             if (cg%bnd(xdim, HI) == BND_SHE) then
                do i=1, cg%nb
 #ifndef ISO
-                  recv_right (iarr_all_en,i,:,:) = recv_right (iarr_all_en,i,:,:) +0.5*(qshear*omega * x(cg%ie+i))**2 * recv_right(iarr_all_dn,i,:,:)
+                  recv_right (iarr_all_en,i,:,:) = recv_right (iarr_all_en,i,:,:) +0.5*(qshear*omega * cg%x(cg%ie+i))**2 * recv_right(iarr_all_dn,i,:,:)
 #endif /* !ISO */
-                  recv_right (iarr_all_my,i,:,:) = recv_right (iarr_all_my,i,:,:) -qshear*omega * x(cg%ie+i)     * recv_right(iarr_all_dn,i,:,:)
+                  recv_right (iarr_all_my,i,:,:) = recv_right (iarr_all_my,i,:,:) -qshear*omega * cg%x(cg%ie+i)     * recv_right(iarr_all_dn,i,:,:)
                enddo
             endif !(cg%bnd(xdim, HI) == BND_SHE)
 !
@@ -231,18 +230,18 @@ contains
             if (cg%bnd(xdim, LO) == BND_SHE) then
                do i=1, cg%nb
 #ifndef ISO
-                  recv_left(iarr_all_en,i,:,:) = recv_left(iarr_all_en,i,:,:) +0.5*(qshear*omega * x(i))**2 * recv_left(iarr_all_dn,i,:,:)
+                  recv_left(iarr_all_en,i,:,:) = recv_left(iarr_all_en,i,:,:) +0.5*(qshear*omega * cg%x(i))**2 * recv_left(iarr_all_dn,i,:,:)
 #endif /* !ISO */
-                  recv_left(iarr_all_my,i,:,:) = recv_left(iarr_all_my,i,:,:) -qshear*omega * x(i)     * recv_left(iarr_all_dn,i,:,:)
+                  recv_left(iarr_all_my,i,:,:) = recv_left(iarr_all_my,i,:,:) -qshear*omega * cg%x(i)     * recv_left(iarr_all_dn,i,:,:)
                enddo
             endif !(cg%bnd(xdim, LO) == BND_SHE)
 
-            u(:, 1:cg%nb,      :,:) = recv_left (:,1:cg%nb,:,:)
-            u(:, cg%ie+1:cg%nx,:,:) = recv_right(:,1:cg%nb,:,:)
+            cg%u%arr(:, 1:cg%nb,      :,:) = recv_left (:,1:cg%nb,:,:)
+            cg%u%arr(:, cg%ie+1:cg%nx,:,:) = recv_right(:,1:cg%nb,:,:)
 
             !> \deprecated BEWARE: smalld is called only for the first fluid
-            u(iarr_all_dn(1), 1:cg%nb, :, :)     = max(u(iarr_all_dn(1),       1:cg%nb,:,:), smalld)
-            u(iarr_all_dn(1), cg%ie+1:cg%nx,:,:) = max(u(iarr_all_dn(1), cg%ie+1:cg%nx,:,:), smalld)
+            cg%u%arr(iarr_all_dn(1), 1:cg%nb, :, :)     = max(cg%u%arr(iarr_all_dn(1),       1:cg%nb,:,:), smalld)
+            cg%u%arr(iarr_all_dn(1), cg%ie+1:cg%nx,:,:) = max(cg%u%arr(iarr_all_dn(1), cg%ie+1:cg%nx,:,:), smalld)
             if (allocated(send_left))  deallocate(send_left)
             if (allocated(send_right)) deallocate(send_right)
             if (allocated(recv_left))  deallocate(recv_left)
@@ -265,8 +264,8 @@ contains
                if (.not.allocated(recv_right)) allocate(recv_right(flind%all, cg%nb, cg%nyb, cg%nz))
 
                do i = lbound(u,1), ubound(u,1)
-                  send_left( i,1:cg%nb,:,:) = unshear_fft(u(i, cg%is:cg%isb, cg%js:cg%je,:), cg%x(cg%is:cg%isb),dely,.true.)
-                  send_right(i,1:cg%nb,:,:) = unshear_fft(u(i, cg%ieb:cg%ie, cg%js:cg%je,:), cg%x(cg%ieb:cg%ie),dely,.true.)
+                  send_left( i,1:cg%nb,:,:) = unshear_fft(cg%u%arr(i, cg%is:cg%isb, cg%js:cg%je,:), cg%x(cg%is:cg%isb),dely,.true.)
+                  send_right(i,1:cg%nb,:,:) = unshear_fft(cg%u%arr(i, cg%ieb:cg%ie, cg%js:cg%je,:), cg%x(cg%ieb:cg%ie),dely,.true.)
                enddo
 
                call MPI_Isend(send_left , flind%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,LO), 10, comm, req(1), ierr)
@@ -277,8 +276,8 @@ contains
                call MPI_Waitall(4,req(:),status(:,:),ierr)
 
                do i = lbound(u,1), ubound(u,1)
-                  u(i,1:cg%nb,        cg%js:cg%je,:) = unshear_fft(recv_left (i,1:cg%nb,:,:), cg%x(1:cg%nb),dely)
-                  u(i, cg%ie+1:cg%nx, cg%js:cg%je,:) = unshear_fft(recv_right(i,1:cg%nb,:,:), cg%x(cg%ie+1:cg%nx),dely)
+                  cg%u%arr(i,1:cg%nb,        cg%js:cg%je,:) = unshear_fft(recv_left (i,1:cg%nb,:,:), cg%x(1:cg%nb),dely)
+                  cg%u%arr(i, cg%ie+1:cg%nx, cg%js:cg%je,:) = unshear_fft(recv_right(i,1:cg%nb,:,:), cg%x(cg%ie+1:cg%nx),dely)
                enddo
 
                if (allocated(send_left))  deallocate(send_left)
@@ -294,10 +293,10 @@ contains
 
                jtag = 20*dir
                itag = jtag - 10
-               call MPI_Isend(u(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BLK), procn(dir,LO), itag, comm3d, req(1), ierr)
-               call MPI_Isend(u(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BLK), procn(dir,HI), jtag, comm3d, req(2), ierr)
-               call MPI_Irecv(u(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BND), procn(dir,LO), jtag, comm3d, req(3), ierr)
-               call MPI_Irecv(u(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BND), procn(dir,HI), itag, comm3d, req(4), ierr)
+               call MPI_Isend(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BLK), procn(dir,LO), itag, comm3d, req(1), ierr)
+               call MPI_Isend(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BLK), procn(dir,HI), jtag, comm3d, req(2), ierr)
+               call MPI_Irecv(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BND), procn(dir,LO), jtag, comm3d, req(3), ierr)
+               call MPI_Irecv(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BND), procn(dir,HI), itag, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
@@ -312,15 +311,15 @@ contains
             if (pcoords(xdim) == 0 .and. pcoords(ydim) == 0) then
                do i=1, cg%nb
                   do j=cg%js, cg%ny
-                     u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,j,cg%isb+1-i,:)
-                     u(iarr_all_mx,i,j,:) = -u(iarr_all_my,j,cg%isb+1-i,:)
-                     u(iarr_all_my,i,j,:) =  u(iarr_all_mx,j,cg%isb+1-i,:)
-                     u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,j,cg%isb+1-i,:)
+                     cg%u%arr(iarr_all_dn,i,j,:) =  cg%u%arr(iarr_all_dn,j,cg%isb+1-i,:)
+                     cg%u%arr(iarr_all_mx,i,j,:) = -cg%u%arr(iarr_all_my,j,cg%isb+1-i,:)
+                     cg%u%arr(iarr_all_my,i,j,:) =  cg%u%arr(iarr_all_mx,j,cg%isb+1-i,:)
+                     cg%u%arr(iarr_all_mz,i,j,:) =  cg%u%arr(iarr_all_mz,j,cg%isb+1-i,:)
 #ifndef ISO
-                     u(iarr_all_en,i,j,:) =  u(iarr_all_en,j,cg%isb+1-i,:)
+                     cg%u%arr(iarr_all_en,i,j,:) =  cg%u%arr(iarr_all_en,j,cg%isb+1-i,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                     u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,j,cg%isb+1-i,:)
+                     cg%u%arr(iarr_all_crs,i,j,:) =  cg%u%arr(iarr_all_crs,j,cg%isb+1-i,:)
 #endif /* COSM_RAYS */
                   enddo
                enddo
@@ -329,7 +328,7 @@ contains
             if (procxyl > 0) then
                allocate(send_left(flind%all, cg%nb, cg%ny, cg%nz), recv_left(flind%all, cg%nx, cg%nb, cg%nz))
 
-               send_left(:,:,:,:) = u(:, cg%is:cg%isb,:,:)
+               send_left(:,:,:,:) = cg%u%arr(:, cg%is:cg%isb,:,:)
 
                call MPI_Isend(send_left, flind%all*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
                call MPI_Irecv(recv_left, flind%all*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
@@ -338,15 +337,15 @@ contains
 
                do i=1, cg%nb
                   do j=1, cg%ny
-                     u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn,j, cg%is-i,:)
-                     u(iarr_all_mx,i,j,:) = -recv_left(iarr_all_my,j, cg%is-i,:)
-                     u(iarr_all_my,i,j,:) =  recv_left(iarr_all_mx,j, cg%is-i,:)
-                     u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz,j, cg%is-i,:)
+                     cg%u%arr(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn,j, cg%is-i,:)
+                     cg%u%arr(iarr_all_mx,i,j,:) = -recv_left(iarr_all_my,j, cg%is-i,:)
+                     cg%u%arr(iarr_all_my,i,j,:) =  recv_left(iarr_all_mx,j, cg%is-i,:)
+                     cg%u%arr(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz,j, cg%is-i,:)
 #ifndef ISO
-                     u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,j, cg%is-i,:)
+                     cg%u%arr(iarr_all_en,i,j,:) =  recv_left(iarr_all_en,j, cg%is-i,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                     u(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs,j, cg%is-i,:)
+                     cg%u%arr(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs,j, cg%is-i,:)
 #endif /* COSM_RAYS */
                   enddo
                enddo
@@ -361,30 +360,30 @@ contains
             if (pcoords(ydim) == 0 .and. pcoords(xdim) == 0 ) then
                do j=1, cg%nb
                   do i=cg%is, cg%nx
-                     u(iarr_all_dn,i,j,:) =  u(iarr_all_dn,cg%isb+1-j,i,:)
-                     u(iarr_all_mx,i,j,:) =  u(iarr_all_my,cg%isb+1-j,i,:)
-                     u(iarr_all_my,i,j,:) = -u(iarr_all_mx,cg%isb+1-j,i,:)
-                     u(iarr_all_mz,i,j,:) =  u(iarr_all_mz,cg%isb+1-j,i,:)
+                     cg%u%arr(iarr_all_dn,i,j,:) =  cg%u%arr(iarr_all_dn,cg%isb+1-j,i,:)
+                     cg%u%arr(iarr_all_mx,i,j,:) =  cg%u%arr(iarr_all_my,cg%isb+1-j,i,:)
+                     cg%u%arr(iarr_all_my,i,j,:) = -cg%u%arr(iarr_all_mx,cg%isb+1-j,i,:)
+                     cg%u%arr(iarr_all_mz,i,j,:) =  cg%u%arr(iarr_all_mz,cg%isb+1-j,i,:)
 #ifndef ISO
-                     u(iarr_all_en,i,j,:) =  u(iarr_all_en,cg%isb+1-j,i,:)
+                     cg%u%arr(iarr_all_en,i,j,:) =  cg%u%arr(iarr_all_en,cg%isb+1-j,i,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                     u(iarr_all_crs,i,j,:) =  u(iarr_all_crs,cg%isb+1-j,i,:)
+                     cg%u%arr(iarr_all_crs,i,j,:) =  cg%u%arr(iarr_all_crs,cg%isb+1-j,i,:)
 #endif /* COSM_RAYS */
                   enddo
                enddo
 !   - interior to corner
                do j=1, cg%nb
                   do i=1, cg%nb
-                     u(iarr_all_dn,i,j,:) =   u(iarr_all_dn,cg%isb+1-i,cg%jsb+1-j,:)
-                     u(iarr_all_mx,i,j,:) =  -u(iarr_all_mx,cg%isb+1-i,cg%jsb+1-j,:)
-                     u(iarr_all_my,i,j,:) =  -u(iarr_all_my,cg%isb+1-i,cg%jsb+1-j,:)
-                     u(iarr_all_mz,i,j,:) =   u(iarr_all_mz,cg%isb+1-i,cg%jsb+1-j,:)
+                     cg%u%arr(iarr_all_dn,i,j,:) =   cg%u%arr(iarr_all_dn,cg%isb+1-i,cg%jsb+1-j,:)
+                     cg%u%arr(iarr_all_mx,i,j,:) =  -cg%u%arr(iarr_all_mx,cg%isb+1-i,cg%jsb+1-j,:)
+                     cg%u%arr(iarr_all_my,i,j,:) =  -cg%u%arr(iarr_all_my,cg%isb+1-i,cg%jsb+1-j,:)
+                     cg%u%arr(iarr_all_mz,i,j,:) =   cg%u%arr(iarr_all_mz,cg%isb+1-i,cg%jsb+1-j,:)
 #ifndef ISO
-                     u(iarr_all_en,i,j,:) =   u(iarr_all_en,cg%isb+1-i,cg%jsb+1-j,:)
+                     cg%u%arr(iarr_all_en,i,j,:) =   cg%u%arr(iarr_all_en,cg%isb+1-i,cg%jsb+1-j,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                     u(iarr_all_crs,i,j,:) =   u(iarr_all_crs,cg%isb+1-i,cg%jsb+1-j,:)
+                     cg%u%arr(iarr_all_crs,i,j,:) =   cg%u%arr(iarr_all_crs,cg%isb+1-i,cg%jsb+1-j,:)
 #endif /* COSM_RAYS */
                   enddo
                enddo
@@ -393,7 +392,7 @@ contains
             if (procyxl > 0) then
                allocate(send_left(flind%all, cg%nx, cg%nb, cg%nz), recv_left(flind%all, cg%nb, cg%ny, cg%nz))
 
-               send_left(:,:,:,:) = u(:,:, cg%js:cg%jsb,:)
+               send_left(:,:,:,:) = cg%u%arr(:,:, cg%js:cg%jsb,:)
 
                call MPI_Isend(send_left, flind%all*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
                call MPI_Irecv(recv_left, flind%all*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
@@ -402,15 +401,15 @@ contains
 
                do j=1, cg%nb
                   do i=1, cg%nx
-                     u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn, cg%js-j,i,:)
-                     u(iarr_all_mx,i,j,:) =  recv_left(iarr_all_my, cg%js-j,i,:)
-                     u(iarr_all_my,i,j,:) = -recv_left(iarr_all_mx, cg%js-j,i,:)
-                     u(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz, cg%js-j,i,:)
+                     cg%u%arr(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn, cg%js-j,i,:)
+                     cg%u%arr(iarr_all_mx,i,j,:) =  recv_left(iarr_all_my, cg%js-j,i,:)
+                     cg%u%arr(iarr_all_my,i,j,:) = -recv_left(iarr_all_mx, cg%js-j,i,:)
+                     cg%u%arr(iarr_all_mz,i,j,:) =  recv_left(iarr_all_mz, cg%js-j,i,:)
 #ifndef ISO
-                     u(iarr_all_en,i,j,:) =  recv_left(iarr_all_en, cg%js-j,i,:)
+                     cg%u%arr(iarr_all_en,i,j,:) =  recv_left(iarr_all_en, cg%js-j,i,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                     u(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs, cg%js-j,i,:)
+                     cg%u%arr(iarr_all_crs,i,j,:) =  recv_left(iarr_all_crs, cg%js-j,i,:)
 #endif /* COSM_RAYS */
                   enddo
                enddo
@@ -435,38 +434,38 @@ contains
          case (BND_COR, BND_INF, BND_MPI)
             ! Do nothing
          case (BND_PER)
-             if (comm3d /= MPI_COMM_NULL) u(:,:,1:cg%nb,:)                         = u(:,:, cg%jeb:cg%je,:)
+             if (comm3d /= MPI_COMM_NULL) cg%u%arr(:,:,1:cg%nb,:)                         = cg%u%arr(:,:, cg%jeb:cg%je,:)
          case (BND_USER)
             call user_bnd_yl
          case (BND_REF)
             do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%js-ib,:)   = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%nb+ib,:)
-               u(iarr_all_my,:, cg%js-ib,:)                 =-u(iarr_all_my,:, cg%nb+ib,:)
+               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%js-ib,:)   = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%nb+ib,:)
+               cg%u%arr(iarr_all_my,:, cg%js-ib,:)                 =-cg%u%arr(iarr_all_my,:, cg%nb+ib,:)
 #ifndef ISO
-               u(iarr_all_en,:, cg%js-ib,:)                 = u(iarr_all_en,:, cg%nb+ib,:)
+               cg%u%arr(iarr_all_en,:, cg%js-ib,:)                 = cg%u%arr(iarr_all_en,:, cg%nb+ib,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:, cg%js-ib,:)                 = u(iarr_all_crs,:, cg%nb+ib,:)
+               cg%u%arr(iarr_all_crs,:, cg%js-ib,:)                 = cg%u%arr(iarr_all_crs,:, cg%nb+ib,:)
 #endif /* COSM_RAYS */
             enddo
          case (BND_OUT)
             do ib=1, cg%nb
-               u(:,:,ib,:)                         = u(:,:, cg%js,:)
+               cg%u%arr(:,:,ib,:)                         = cg%u%arr(:,:, cg%js,:)
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,ib,:)                      = smallecr
+               cg%u%arr(iarr_all_crs,:,ib,:)                      = smallecr
 #endif /* COSM_RAYS */
             enddo
          case (BND_OUTD)
             do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,ib,:)        = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%js,:)
-               u(iarr_all_my,:,ib,:)                      = min(u(iarr_all_my,:, cg%js,:),0.0)
+               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,ib,:)        = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%js,:)
+               cg%u%arr(iarr_all_my,:,ib,:)                      = min(cg%u%arr(iarr_all_my,:, cg%js,:),0.0)
 #ifndef ISO
-               u(iarr_all_en,:,ib,:)                      = u(iarr_all_en,:, cg%js,:)
+               cg%u%arr(iarr_all_en,:,ib,:)                      = cg%u%arr(iarr_all_en,:, cg%js,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,ib,:)                      = smallecr
+               cg%u%arr(iarr_all_crs,:,ib,:)                      = smallecr
 #endif /* COSM_RAYS */
             enddo
          case default
@@ -478,38 +477,38 @@ contains
          case (BND_COR, BND_INF, BND_MPI)
             ! Do nothing
          case (BND_PER)
-            if (comm3d /= MPI_COMM_NULL) u(:,:, cg%je+1:cg%ny,:)            = u(:,:, cg%js:cg%jsb,:)
+            if (comm3d /= MPI_COMM_NULL) cg%u%arr(:,:, cg%je+1:cg%ny,:)            = cg%u%arr(:,:, cg%js:cg%jsb,:)
          case (BND_USER)
             call user_bnd_yr
          case (BND_REF)
             do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je+ib,:) = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je+1-ib,:)
-               u(iarr_all_my,:, cg%je+ib,:)               =-u(iarr_all_my,:, cg%je+1-ib,:)
+               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je+ib,:) = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je+1-ib,:)
+               cg%u%arr(iarr_all_my,:, cg%je+ib,:)               =-cg%u%arr(iarr_all_my,:, cg%je+1-ib,:)
 #ifndef ISO
-               u(iarr_all_en,:, cg%je+ib,:)               = u(iarr_all_en,:, cg%je+1-ib,:)
+               cg%u%arr(iarr_all_en,:, cg%je+ib,:)               = cg%u%arr(iarr_all_en,:, cg%je+1-ib,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:, cg%je+ib,:)               = u(iarr_all_crs,:, cg%je+1-ib,:)
+               cg%u%arr(iarr_all_crs,:, cg%je+ib,:)               = cg%u%arr(iarr_all_crs,:, cg%je+1-ib,:)
 #endif /* COSM_RAYS */
             enddo
          case (BND_OUT)
             do ib=1, cg%nb
-               u(:,:, cg%je+ib,:)                  = u(:,:, cg%je,:)
+               cg%u%arr(:,:, cg%je+ib,:)                  = cg%u%arr(:,:, cg%je,:)
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:, cg%je+ib,:)               = smallecr
+               cg%u%arr(iarr_all_crs,:, cg%je+ib,:)               = smallecr
 #endif /* COSM_RAYS */
             enddo
          case (BND_OUTD)
             do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je+ib,:) = u((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je,:)
-               u(iarr_all_my,:, cg%je+ib,:)               = max(u(iarr_all_my,:, cg%je,:),0.0)
+               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je+ib,:) = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je,:)
+               cg%u%arr(iarr_all_my,:, cg%je+ib,:)               = max(cg%u%arr(iarr_all_my,:, cg%je,:),0.0)
 #ifndef ISO
-               u(iarr_all_en,:, cg%je+ib,:)               = u(iarr_all_en,:, cg%je,:)
+               cg%u%arr(iarr_all_en,:, cg%je+ib,:)               = cg%u%arr(iarr_all_en,:, cg%je,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:, cg%je+ib,:)               = smallecr
+               cg%u%arr(iarr_all_crs,:, cg%je+ib,:)               = smallecr
 #endif /* COSM_RAYS */
             enddo
          case default
@@ -525,37 +524,37 @@ contains
          case (BND_USER)
             call user_bnd_zl
          case (BND_PER)
-            if (comm3d /= MPI_COMM_NULL) u(:,:,:,1:cg%nb)                         = u(:,:,:, cg%keb:cg%ke)
+            if (comm3d /= MPI_COMM_NULL) cg%u%arr(:,:,:,1:cg%nb)                         = cg%u%arr(:,:,:, cg%keb:cg%ke)
          case (BND_REF)
             do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ks-ib)   = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%nb+ib)
-               u(iarr_all_mz,:,:, cg%ks-ib)                 =-u(iarr_all_mz,:,:, cg%nb+ib)
+               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ks-ib)   = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%nb+ib)
+               cg%u%arr(iarr_all_mz,:,:, cg%ks-ib)                 =-cg%u%arr(iarr_all_mz,:,:, cg%nb+ib)
 #ifndef ISO
-               u(iarr_all_en,:,:, cg%ks-ib)                 = u(iarr_all_en,:,:, cg%nb+ib)
+               cg%u%arr(iarr_all_en,:,:, cg%ks-ib)                 = cg%u%arr(iarr_all_en,:,:, cg%nb+ib)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,:, cg%ks-ib)                 = u(iarr_all_crs,:,:, cg%nb+ib)
+               cg%u%arr(iarr_all_crs,:,:, cg%ks-ib)                 = cg%u%arr(iarr_all_crs,:,:, cg%nb+ib)
 #endif /* COSM_RAYS */
             enddo
          case (BND_OUT)
             do ib=1, cg%nb
-               u(:,:,:,ib)                         = u(:,:,:, cg%ks)
+               cg%u%arr(:,:,:,ib)                         = cg%u%arr(:,:,:, cg%ks)
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,:,ib)                      = smallecr
+               cg%u%arr(iarr_all_crs,:,:,ib)                      = smallecr
 #endif /* COSM_RAYS */
             enddo
          case (BND_OUTD)
             do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,ib)        = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ks)
+               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,ib)        = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ks)
 !> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
-               u(iarr_all_mz,:,:,ib)                      = min(u(iarr_all_mz,:,:, cg%ks),0.0)
+               cg%u%arr(iarr_all_mz,:,:,ib)                      = min(cg%u%arr(iarr_all_mz,:,:, cg%ks),0.0)
 #ifndef ISO
-               u(iarr_all_en,:,:,ib)                      = u(iarr_all_en,:,:, cg%ks)
+               cg%u%arr(iarr_all_en,:,:,ib)                      = cg%u%arr(iarr_all_en,:,:, cg%ks)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,:,ib)                      = smallecr
+               cg%u%arr(iarr_all_crs,:,:,ib)                      = smallecr
 #endif /* COSM_RAYS */
             enddo
 #ifdef GRAV
@@ -576,37 +575,37 @@ contains
          case (BND_USER)
             call user_bnd_zr
          case (BND_PER)
-            if (comm3d /= MPI_COMM_NULL) u(:,:,:, cg%ke+1:cg%nz)            = u(:,:,:, cg%ks:cg%ksb)
+            if (comm3d /= MPI_COMM_NULL) cg%u%arr(:,:,:, cg%ke+1:cg%nz)            = cg%u%arr(:,:,:, cg%ks:cg%ksb)
          case (BND_REF)
             do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+ib) = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+1-ib)
-               u(iarr_all_mz,:,:, cg%ke+ib)               =-u(iarr_all_mz,:,:, cg%ke+1-ib)
+               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+ib) = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+1-ib)
+               cg%u%arr(iarr_all_mz,:,:, cg%ke+ib)               =-cg%u%arr(iarr_all_mz,:,:, cg%ke+1-ib)
 #ifndef ISO
-               u(iarr_all_en,:,:, cg%ke+ib)               = u(iarr_all_en,:,:, cg%ke+1-ib)
+               cg%u%arr(iarr_all_en,:,:, cg%ke+ib)               = cg%u%arr(iarr_all_en,:,:, cg%ke+1-ib)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,:, cg%ke+ib)               = u(iarr_all_crs,:,:, cg%ke+1-ib)
+               cg%u%arr(iarr_all_crs,:,:, cg%ke+ib)               = cg%u%arr(iarr_all_crs,:,:, cg%ke+1-ib)
 #endif /* COSM_RAYS */
             enddo
          case (BND_OUT)
             do ib=1, cg%nb
-               u(:,:,:, cg%ke+ib)                  = u(:,:,:, cg%ke)
+               cg%u%arr(:,:,:, cg%ke+ib)                  = cg%u%arr(:,:,:, cg%ke)
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,:, cg%ke+ib)               = smallecr
+               cg%u%arr(iarr_all_crs,:,:, cg%ke+ib)               = smallecr
 #endif /* COSM_RAYS */
             enddo
          case (BND_OUTD)
             do ib=1, cg%nb
 
-               u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+ib) = u((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke)
+               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+ib) = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke)
 !> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
-               u(iarr_all_mz,:,:, cg%ke+ib)               = max(u(iarr_all_mz,:,:, cg%ke),0.0)
+               cg%u%arr(iarr_all_mz,:,:, cg%ke+ib)               = max(cg%u%arr(iarr_all_mz,:,:, cg%ke),0.0)
 #ifndef ISO
-               u(iarr_all_en,:,:, cg%ke+ib)               = u(iarr_all_en,:,:, cg%ke)
+               cg%u%arr(iarr_all_en,:,:, cg%ke+ib)               = cg%u%arr(iarr_all_en,:,:, cg%ke)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_all_crs,:,:, cg%ke+ib)               = smallecr
+               cg%u%arr(iarr_all_crs,:,:, cg%ke+ib)               = smallecr
 #endif /* COSM_RAYS */
             enddo
 #ifdef GRAV
@@ -627,7 +626,6 @@ contains
 
    subroutine all_fluid_boundaries
 
-      use arrays,    only: u
       use mpisetup,  only: has_dir, comm3d
       use mpi,       only: MPI_COMM_NULL
       use constants, only: xdim, zdim, FLUID
@@ -636,11 +634,9 @@ contains
       implicit none
 
       integer :: dir
-      real, dimension(:,:,:,:), pointer :: pu
 
       if (comm3d == MPI_COMM_NULL) then
-         pu => u
-         call cg%internal_boundaries(FLUID, pa4d=pu)
+         call cg%internal_boundaries(FLUID, pa4d=cg%u%arr)
       endif
 
       do dir = xdim, zdim
