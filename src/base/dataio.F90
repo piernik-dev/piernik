@@ -664,7 +664,6 @@ contains
 !
    subroutine write_timeslice
 
-      use arrays,          only: u, b, wa
       use dataio_pub,      only: cwd, user_tsl
       use fluids_pub,      only: has_ion, has_dst, has_neu
       use constants,       only: cwdlen, xdim, ydim, zdim
@@ -752,35 +751,35 @@ contains
          endif
       endif
 
-      tot_mass = mpi_addmul(u(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
-      tot_momx = mpi_addmul(u(iarr_all_mx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
-      tot_momy = mpi_addmul(u(iarr_all_my, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
-      tot_momz = mpi_addmul(u(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_mass = mpi_addmul(cg%u%arr(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_momx = mpi_addmul(cg%u%arr(iarr_all_mx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_momy = mpi_addmul(cg%u%arr(iarr_all_my, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_momz = mpi_addmul(cg%u%arr(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 #ifdef GRAV
-      tot_epot = mpi_addmul(u(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) *gpot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_epot = mpi_addmul(cg%u%arr(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) *gpot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 #endif /* GRAV */
 
-      wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-           & 0.5 * (u(iarr_all_mx(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
-           &      + u(iarr_all_my(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
-           &      + u(iarr_all_mz(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)/ &
-           & max(u(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke),smalld)
-      tot_ekin = mpi_addmul(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
+           & 0.5 * (cg%u%arr(iarr_all_mx(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
+           &      + cg%u%arr(iarr_all_my(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
+           &      + cg%u%arr(iarr_all_mz(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)/ &
+           & max(cg%u%arr(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke),smalld)
+      tot_ekin = mpi_addmul(cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 
-      wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-           & 0.5 * (b(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
-           &        b(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
-           &        b(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
-      tot_emag = mpi_addmul(wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
+           & 0.5 * (cg%b%arr(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
+           &        cg%b%arr(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
+           &        cg%b%arr(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
+      tot_emag = mpi_addmul(cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 
-      tot_mflx = mpi_addmul(b(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dy*cg%dz/dom%n_d(xdim))
-      tot_mfly = mpi_addmul(b(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dz/dom%n_d(ydim))
-      tot_mflz = mpi_addmul(b(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dy/dom%n_d(zdim))
+      tot_mflx = mpi_addmul(cg%b%arr(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dy*cg%dz/dom%n_d(xdim))
+      tot_mfly = mpi_addmul(cg%b%arr(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dz/dom%n_d(ydim))
+      tot_mflz = mpi_addmul(cg%b%arr(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dy/dom%n_d(zdim))
 #ifdef ISO
       tot_eint = cs_iso2*tot_mass
       tot_ener = tot_eint+tot_ekin+tot_emag
 #else /* !ISO */
-      tot_ener = mpi_addmul(u(iarr_all_en, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_ener = mpi_addmul(cg%u%arr(iarr_all_en, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
       tot_eint = tot_ener - tot_ekin - tot_emag
 #endif /* !ISO */
 #ifdef GRAV
@@ -788,7 +787,7 @@ contains
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-      tot_encr = mpi_addmul(u(iarr_all_crs, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_encr = mpi_addmul(cg%u%arr(iarr_all_crs, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 #endif /* COSM_RAYS */
 
       call write_log(tsl)
@@ -888,7 +887,6 @@ contains
 
    subroutine get_common_vars(fl)
 
-      use arrays,     only: u, b, wa
       use constants,  only: ION, DST, MINL, MAXL
       use fluidtypes, only: phys_prop, component_fluid
       use func,       only: get_extremum
@@ -903,18 +901,18 @@ contains
       real, dimension(:,:,:), pointer              :: p
 
       pr => fl%snap
-      wa = u(fl%idn,:,:,:)
-      p => wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+      cg%wa%arr = cg%u%arr(fl%idn,:,:,:)
+      p => cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, pr%dens_max)
       call get_extremum(p, MINL, pr%dens_min)
 
-      p = abs(u(fl%imx,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      p = abs(cg%u%arr(fl%imx,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u%arr(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       call get_extremum(p, MAXL, pr%velx_max)
 
-      p = abs(u(fl%imy,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      p = abs(cg%u%arr(fl%imy,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u%arr(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       call get_extremum(p, MAXL, pr%vely_max)
 
-      p = abs(u(fl%imz,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      p = abs(cg%u%arr(fl%imz,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u%arr(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       call get_extremum(p, MAXL, pr%velz_max)
 
 #ifdef ISO
@@ -933,20 +931,20 @@ contains
       pr%temp_max        = pr%temp_min
 #else /* !ISO */
       if (fl%tag /= DST) then
-         wa(:,:,:) = (u(fl%ien,:,:,:) &                ! eint
-                   - 0.5*((u(fl%imx,:,:,:)**2 +u(fl%imy,:,:,:)**2 + u(fl%imz,:,:,:)**2)/u(fl%idn,:,:,:)))
-         if (fl%tag == ION) wa(:,:,:) = wa(:,:,:) - 0.5*(sum(b**2,dim=1))
+         cg%wa%arr(:,:,:) = (cg%u%arr(fl%ien,:,:,:) &                ! eint
+                   - 0.5*((cg%u%arr(fl%imx,:,:,:)**2 +cg%u%arr(fl%imy,:,:,:)**2 + cg%u%arr(fl%imz,:,:,:)**2)/cg%u%arr(fl%idn,:,:,:)))
+         if (fl%tag == ION) cg%wa%arr(:,:,:) = cg%wa%arr(:,:,:) - 0.5*(sum(cg%b%arr(:,:,:,:)**2,dim=1))
 
-         wa(:,:,:) = max(fl%gam_1*wa(:,:,:),smallp)  ! pres
+         cg%wa%arr(:,:,:) = max(fl%gam_1*cg%wa%arr(:,:,:),smallp)  ! pres
 
          call get_extremum(p, MAXL, pr%pres_max)
          call get_extremum(p, MINL, pr%pres_min)
 
-         wa(:,:,:) = fl%gam*wa(:,:,:)/u(fl%idn,:,:,:) ! sound speed squared
+         cg%wa%arr(:,:,:) = fl%gam*cg%wa%arr(:,:,:)/cg%u%arr(fl%idn,:,:,:) ! sound speed squared
          call get_extremum(p, MAXL, pr%cs_max)
          pr%cs_max%val = sqrt(pr%cs_max%val)
 
-         wa(:,:,:) = (mH * wa(:,:,:))/ (kboltz * fl%gam) ! temperature
+         cg%wa%arr(:,:,:) = (mH * cg%wa%arr(:,:,:))/ (kboltz * fl%gam) ! temperature
          call get_extremum(p, MAXL, pr%temp_max)
          call get_extremum(p, MINL, pr%temp_min)
       endif
@@ -963,7 +961,6 @@ contains
 !
    subroutine  write_log(tsl)
 
-      use arrays,             only: wa, u, b
       use constants,          only: small, MINL, MAXL
       use dataio_pub,         only: msg, printinfo
       use fluids_pub,         only: has_dst, has_ion, has_neu
@@ -1018,7 +1015,7 @@ contains
       nyu = cg%ny - D_y
       nzu = cg%nz - D_z
 #endif /* VARIABLE_GP || MAGNETIC */
-      p => wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+      p => cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       id = '' ! suppress compiler warnings if noe of the modules requiring the id variable are swithed on.
       if (cg%dxmn >= sqrt(huge(1.0))) then
          dxmn_safe = sqrt(huge(1.0))
@@ -1033,29 +1030,29 @@ contains
          call get_common_vars(flind%ion)
 
 #ifdef MAGNETIC
-         wa(:,:,:)  = sqrt(b(1,:,:,:)*b(1,:,:,:) + b(2,:,:,:)*b(2,:,:,:) + b(3,:,:,:)*b(3,:,:,:))
+         cg%wa%arr(:,:,:)  = sqrt(cg%b%arr(1,:,:,:)*cg%b%arr(1,:,:,:) + cg%b%arr(2,:,:,:)*cg%b%arr(2,:,:,:) + cg%b%arr(3,:,:,:)*cg%b%arr(3,:,:,:))
          call get_extremum(p, MAXL, b_max)
          call get_extremum(p, MINL, b_min)
 
-         wa(:,:,:)  = wa(:,:,:) / sqrt(u(flind%ion%idn,:,:,:))
+         cg%wa%arr(:,:,:)  = cg%wa%arr(:,:,:) / sqrt(cg%u%arr(flind%ion%idn,:,:,:))
          call get_extremum(p, MAXL, vai_max)
 #endif /* MAGNETIC */
 
 #ifdef ISO
-!        wa            = cs_iso2_arr(:,:,:)*u(idni,:,:,:)
+!        cg%wa%arr        = cg%cs_iso2%arr(:,:,:)*cg%u%arr(idni,:,:,:)
 !        call get_extremum(p, MINL, prei_min)
 !        call get_extremum(p, MAXL, prei_max) ; NULLIFY(p)
-!        p => cs_iso2_arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+!        p => cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 !        call get_extremum(p, MAXL, csi_max)  ; NULLIFY(p)
-!        p => wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-!        wa            = mH / kboltz * cs_iso2_arr(:,:,:)
+!        p => cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+!        cg%wa%arr        = mH / kboltz * cs_iso2_arr(:,:,:)
 !        call get_extremum(p, MINL, temi_min)
 !        call get_extremum(p, MAXL, temi_max)
 #else /* !ISO */
-!        wa(:,:,:) = (u(ieni,:,:,:) &                ! eint
-!                  - 0.5*((u(imxi,:,:,:)**2 +u(imyi,:,:,:)**2 + u(imzi,:,:,:)**2)/u(idni,:,:,:)))
+!        cg%wa%arr(:,:,:) = (cg%u%arr(ieni,:,:,:) &                ! eint
+!                  - 0.5*((cg%u%arr(imxi,:,:,:)**2 +cg%u%arr(imyi,:,:,:)**2 + cg%u%arr(imzi,:,:,:)**2)/cg%u%arr(idni,:,:,:)))
 #ifdef MAGNETIC
-!        wa(:,:,:) = wa(:,:,:) - 0.5*(b(ibx,:,:,:)**2 + b(iby,:,:,:)**2 + b(ibz,:,:,:)**2)
+!        cg%wa%arr(:,:,:) = cg%wa%arr(:,:,:) - 0.5*(cg%b%arr(ibx,:,:,:)**2 + cg%b%arr(iby,:,:,:)**2 + cg%b%arr(ibz,:,:,:)**2)
 #endif /* MAGNETIC */
 #endif /* !ISO */
       endif
@@ -1063,36 +1060,36 @@ contains
       if (has_dst) call get_common_vars(flind%dst)
 
 #ifdef VARIABLE_GP
-      wa(1:nxu,:,:) = abs((gpot(nxl:cg%nx,:,:)-gpot(1:nxu,:,:))*cg%idx) ; wa(cg%nx,:,:) = wa(nxu,:,:)
+      cg%wa%arr(1:nxu,:,:) = abs((gpot(nxl:cg%nx,:,:)-gpot(1:nxu,:,:))*cg%idx) ; cg%wa%arr(cg%nx,:,:) = cg%wa%arr(nxu,:,:)
       call get_extremum(p, MAXL, gpxmax)
-      wa(:,1:nyu,:) = abs((gpot(:,nyl:cg%ny,:)-gpot(:,1:nyu,:))*cg%idy) ; wa(:,cg%ny,:) = wa(:,nyu,:)
+      cg%wa%arr(:,1:nyu,:) = abs((gpot(:,nyl:cg%ny,:)-gpot(:,1:nyu,:))*cg%idy) ; cg%wa%arr(:,cg%ny,:) = cg%wa%arr(:,nyu,:)
       call get_extremum(p, MAXL, gpymax)
-      wa(:,:,1:nzu) = abs((gpot(:,:,nzl:cg%nz)-gpot(:,:,1:nzu))*cg%idz) ; wa(:,:,cg%nz) = wa(:,:,nzu)
+      cg%wa%arr(:,:,1:nzu) = abs((gpot(:,:,nzl:cg%nz)-gpot(:,:,1:nzu))*cg%idz) ; cg%wa%arr(:,:,cg%nz) = cg%wa%arr(:,:,nzu)
       call get_extremum(p, MAXL, gpzmax)
 #endif /* VARIABLE_GP */
 
 #ifdef MAGNETIC
-      wa(1:nxu,1:nyu,1:nzu) = &
-                 (b(ibx,nxl:cg%nx,  1:nyu  ,  1:nzu  ) - b(ibx,1:nxu,1:nyu,1:nzu))*cg%dy*cg%dz &
-               + (b(iby,  1:nxu  ,nyl:cg%ny,  1:nzu  ) - b(iby,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dz &
-               + (b(ibz,  1:nxu  ,  1:nyu  ,nzl:cg%nz) - b(ibz,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dy
-      wa = abs(wa)
+      cg%wa%arr(1:nxu,1:nyu,1:nzu) = &
+                 (cg%b%arr(ibx,nxl:cg%nx,  1:nyu  ,  1:nzu  ) - cg%b%arr(ibx,1:nxu,1:nyu,1:nzu))*cg%dy*cg%dz &
+               + (cg%b%arr(iby,  1:nxu  ,nyl:cg%ny,  1:nzu  ) - cg%b%arr(iby,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dz &
+               + (cg%b%arr(ibz,  1:nxu  ,  1:nyu  ,nzl:cg%nz) - cg%b%arr(ibz,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dy
+      cg%wa%arr = abs(cg%wa%arr)
 
-      wa(cg%ie,:,:) = wa(cg%ie-D_x,:,:)
-      wa(:,cg%je,:) = wa(:,cg%je-D_y,:)
-      wa(:,:,cg%ke) = wa(:,:,cg%ke-D_z)
+      cg%wa%arr(cg%ie,:,:) = cg%wa%arr(cg%ie-D_x,:,:)
+      cg%wa%arr(:,cg%je,:) = cg%wa%arr(:,cg%je-D_y,:)
+      cg%wa%arr(:,:,cg%ke) = cg%wa%arr(:,:,cg%ke-D_z)
 
       call get_extremum(p, MAXL, divb_max)
 #endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
-      wa            = sum(u(iarr_all_crs,:,:,:),1)
+      cg%wa%arr        = sum(cg%u%arr(iarr_all_crs,:,:,:),1)
       call get_extremum(p, MAXL, encr_max)
       call get_extremum(p, MINL, encr_min)
 #endif /* COSM_RAYS */
 
       if (has_interactions) then
-         wa = L2norm(u(flind%dst%imx,:,:,:),u(flind%dst%imy,:,:,:),u(flind%dst%imz,:,:,:),u(flind%neu%imx,:,:,:),u(flind%neu%imy,:,:,:),u(flind%neu%imz,:,:,:) ) * u(flind%dst%idn,:,:,:)
+         cg%wa%arr = L2norm(cg%u%arr(flind%dst%imx,:,:,:),cg%u%arr(flind%dst%imy,:,:,:),cg%u%arr(flind%dst%imz,:,:,:),cg%u%arr(flind%neu%imx,:,:,:),cg%u%arr(flind%neu%imy,:,:,:),cg%u%arr(flind%neu%imz,:,:,:) ) * cg%u%arr(flind%dst%idn,:,:,:)
          call get_extremum(p, MAXL, drag)
       endif
       NULLIFY(p)
