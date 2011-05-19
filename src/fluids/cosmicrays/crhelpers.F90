@@ -64,7 +64,6 @@ contains
    subroutine div_v(ifluid)
 
       use diagnostics, only: ma3d, my_allocate
-      use arrays,      only: u
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,        only: cg
       use constants,   only: xdim, ydim, zdim
@@ -93,7 +92,7 @@ contains
       if (has_dir(xdim)) then
          do k = 1, cg%nz
             do j = 1, cg%ny
-               vx = u(imxf,:,j,k) / u(idnf,:,j,k)
+               vx = cg%u%arr(imxf,:,j,k) / cg%u%arr(idnf,:,j,k)
                divvel(2:cg%nx-1,j,k) = ( vx(3:cg%nx) - vx(1:cg%nx-2) )  / (2.*cg%dx)
             enddo
          enddo
@@ -103,7 +102,7 @@ contains
       if (has_dir(ydim)) then
          do k = 1, cg%nz
             do i = 1, cg%nx
-               vy = u(imyf,i,:,k) / u(idnf,i,:,k)
+               vy = cg%u%arr(imyf,i,:,k) / cg%u%arr(idnf,i,:,k)
                divvel(i,2:cg%ny-1,k) = divvel(i,2:cg%ny-1,k)+( vy(3:cg%ny) - vy(1:cg%ny-2) )  / (2.*cg%dy)
             enddo
          enddo
@@ -113,7 +112,7 @@ contains
       if (has_dir(zdim)) then
          do j = 1, cg%ny
             do i = 1, cg%nx
-               vz = u(imzf,i,j,:) / u(idnf,i,j,:)
+               vz = cg%u%arr(imzf,i,j,:) / cg%u%arr(idnf,i,j,:)
                divvel(i,j,2:cg%nz-1) = divvel(i,j,2:cg%nz-1)+( vz(3:cg%nz) - vz(1:cg%nz-2) )  / (2.*cg%dz)
             enddo
          enddo

@@ -151,7 +151,6 @@ contains
 !<
    subroutine cr_diff_x
 
-      use arrays,         only: b, u
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
@@ -173,26 +172,26 @@ contains
          do j=cg%js, cg%je
             do i=2, cg%nx     ! if we are here this implies nxb /= 1
 
-               decr1 =  (u(iarr_crs,i,  j,  k) - u(iarr_crs,i-1,j,  k)) * cg%idx
+               decr1 =  (cg%u%arr(iarr_crs,i,  j,  k) - cg%u%arr(iarr_crs,i-1,j,  k)) * cg%idx
                fcrdif1 = K_crs_perp * decr1
 
-               b1b =  b(ibx,i,  j,  k)
+               b1b =  cg%b%arr(ibx,i,  j,  k)
 
                if (has_dir(ydim)) then
-                  dqm = 0.5*((u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k )) - (u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i ,j-1,k ))) * cg%idy
-                  dqp = 0.5*((u(iarr_crs,i-1,j+1,k ) + u(iarr_crs,i ,j+1,k )) - (u(iarr_crs,i-1,j  ,k ) + u(iarr_crs,i ,j  ,k ))) * cg%idy
+                  dqm = 0.5*((cg%u%arr(iarr_crs,i-1,j  ,k ) + cg%u%arr(iarr_crs,i ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j-1,k ) + cg%u%arr(iarr_crs,i ,j-1,k ))) * cg%idy
+                  dqp = 0.5*((cg%u%arr(iarr_crs,i-1,j+1,k ) + cg%u%arr(iarr_crs,i ,j+1,k )) - (cg%u%arr(iarr_crs,i-1,j  ,k ) + cg%u%arr(iarr_crs,i ,j  ,k ))) * cg%idy
                   decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                  b2b = sum(b(iby,i-1:i, j:j+1, k    ))*0.25
+                  b2b = sum(cg%b%arr(iby,i-1:i, j:j+1, k    ))*0.25
                else
                   decr2 = 0.
                   b2b = 0.
                endif
 
                if (has_dir(zdim)) then
-                  dqm = 0.5*((u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  )) - (u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i ,j ,k-1))) * cg%idz
-                  dqp = 0.5*((u(iarr_crs,i-1,j ,k+1) + u(iarr_crs,i ,j ,k+1)) - (u(iarr_crs,i-1,j ,k  ) + u(iarr_crs,i ,j ,k  ))) * cg%idz
+                  dqm = 0.5*((cg%u%arr(iarr_crs,i-1,j ,k  ) + cg%u%arr(iarr_crs,i ,j ,k  )) - (cg%u%arr(iarr_crs,i-1,j ,k-1) + cg%u%arr(iarr_crs,i ,j ,k-1))) * cg%idz
+                  dqp = 0.5*((cg%u%arr(iarr_crs,i-1,j ,k+1) + cg%u%arr(iarr_crs,i ,j ,k+1)) - (cg%u%arr(iarr_crs,i-1,j ,k  ) + cg%u%arr(iarr_crs,i ,j ,k  ))) * cg%idz
                   decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                  b3b = sum(b(ibz,i-1:i, j,     k:k+1))*0.25
+                  b3b = sum(cg%b%arr(ibz,i-1:i, j,     k:k+1))*0.25
                else
                   decr3 = 0.
                   b3b = 0.
@@ -208,8 +207,8 @@ contains
       enddo
 
       call all_wcr_boundaries
-      u(iarr_crs,1:cg%nx-1,:,:) = u(iarr_crs,1:cg%nx-1,:,:) - ( wcr(:,2:cg%nx,:,:) - wcr(:,1:cg%nx-1,:,:) )
-      u(iarr_crs, cg%nx,:,:) = u(iarr_crs, cg%nx-1,:,:) ! for sanity
+      cg%u%arr(iarr_crs,1:cg%nx-1,:,:) = cg%u%arr(iarr_crs,1:cg%nx-1,:,:) - ( wcr(:,2:cg%nx,:,:) - wcr(:,1:cg%nx-1,:,:) )
+      cg%u%arr(iarr_crs, cg%nx,:,:) = cg%u%arr(iarr_crs, cg%nx-1,:,:) ! for sanity
 
    end subroutine cr_diff_x
 
@@ -218,7 +217,6 @@ contains
 !<
    subroutine cr_diff_y
 
-      use arrays,         only: b, u
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
@@ -240,26 +238,26 @@ contains
          do j=2, cg%ny ! if we are here nyb /= 1
             do i=cg%is, cg%ie
 
-               decr2 = (u(iarr_crs,i,j,k) - u(iarr_crs,i,j-1,k)) * cg%idy
+               decr2 = (cg%u%arr(iarr_crs,i,j,k) - cg%u%arr(iarr_crs,i,j-1,k)) * cg%idy
                fcrdif2 = K_crs_perp * decr2
 
-               b2b =  b(iby,i,j,k)
+               b2b =  cg%b%arr(iby,i,j,k)
 
                if (has_dir(xdim)) then
-                  dqm = 0.5*((u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i-1,j-1,k ) + u(iarr_crs,i-1,j  ,k ))) * cg%idx
-                  dqp = 0.5*((u(iarr_crs,i+1,j-1,k ) + u(iarr_crs,i+1,j  ,k )) - (u(iarr_crs,i  ,j-1,k ) + u(iarr_crs,i  ,j  ,k ))) * cg%idx
+                  dqm = 0.5*((cg%u%arr(iarr_crs,i  ,j-1,k ) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j-1,k ) + cg%u%arr(iarr_crs,i-1,j  ,k ))) * cg%idx
+                  dqp = 0.5*((cg%u%arr(iarr_crs,i+1,j-1,k ) + cg%u%arr(iarr_crs,i+1,j  ,k )) - (cg%u%arr(iarr_crs,i  ,j-1,k ) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idx
                   decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                  b1b = sum(b(ibx,i:i+1, j-1:j, k))*0.25
+                  b1b = sum(cg%b%arr(ibx,i:i+1, j-1:j, k))*0.25
                else
                   decr1 = 0.
                   b1b = 0.
                endif
 
                if (has_dir(zdim)) then
-                  dqm = 0.5*((u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  )) - (u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i ,j  ,k-1))) * cg%idz
-                  dqp = 0.5*((u(iarr_crs,i ,j-1,k+1) + u(iarr_crs,i ,j  ,k+1)) - (u(iarr_crs,i ,j-1,k  ) + u(iarr_crs,i ,j  ,k  ))) * cg%idz
+                  dqm = 0.5*((cg%u%arr(iarr_crs,i ,j-1,k  ) + cg%u%arr(iarr_crs,i ,j  ,k  )) - (cg%u%arr(iarr_crs,i ,j-1,k-1) + cg%u%arr(iarr_crs,i ,j  ,k-1))) * cg%idz
+                  dqp = 0.5*((cg%u%arr(iarr_crs,i ,j-1,k+1) + cg%u%arr(iarr_crs,i ,j  ,k+1)) - (cg%u%arr(iarr_crs,i ,j-1,k  ) + cg%u%arr(iarr_crs,i ,j  ,k  ))) * cg%idz
                   decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                  b3b = sum(b(ibz,i, j-1:j, k:k+1))*0.25
+                  b3b = sum(cg%b%arr(ibz,i, j-1:j, k:k+1))*0.25
                else
                   decr3 = 0.
                   b3b = 0.
@@ -275,8 +273,8 @@ contains
       enddo
 
       call all_wcr_boundaries
-      u(iarr_crs,:,1:cg%ny-1,:) = u(iarr_crs,:,1:cg%ny-1,:) - ( wcr(:,:,2:cg%ny,:) - wcr(:,:,1:cg%ny-1,:) )
-      u(iarr_crs,:, cg%ny,:) = u(iarr_crs,:, cg%ny-1,:) ! for sanity
+      cg%u%arr(iarr_crs,:,1:cg%ny-1,:) = cg%u%arr(iarr_crs,:,1:cg%ny-1,:) - ( wcr(:,:,2:cg%ny,:) - wcr(:,:,1:cg%ny-1,:) )
+      cg%u%arr(iarr_crs,:, cg%ny,:) = cg%u%arr(iarr_crs,:, cg%ny-1,:) ! for sanity
 
    end subroutine cr_diff_y
 
@@ -285,7 +283,6 @@ contains
 !<
    subroutine cr_diff_z
 
-      use arrays,         only: b, u
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
@@ -307,26 +304,26 @@ contains
          do j=cg%js, cg%je
             do i=cg%is, cg%ie
 
-               decr3 =  (u(iarr_crs,i,j,k    ) - u(iarr_crs,i,j,  k-1)) * cg%idz
+               decr3 =  (cg%u%arr(iarr_crs,i,j,k    ) - cg%u%arr(iarr_crs,i,j,  k-1)) * cg%idz
                fcrdif3 = K_crs_perp * decr3
 
-               b3b =  b(ibz,i,j,k)
+               b3b =  cg%b%arr(ibz,i,j,k)
 
                if (has_dir(xdim)) then
-                  dqm = 0.5*((u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i-1,j ,k-1) + u(iarr_crs,i-1,j  ,k ))) * cg%idx
-                  dqp = 0.5*((u(iarr_crs,i+1,j ,k-1) + u(iarr_crs,i+1,j  ,k )) - (u(iarr_crs,i  ,j ,k-1) + u(iarr_crs,i  ,j  ,k ))) * cg%idx
+                  dqm = 0.5*((cg%u%arr(iarr_crs,i  ,j ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j ,k-1) + cg%u%arr(iarr_crs,i-1,j  ,k ))) * cg%idx
+                  dqp = 0.5*((cg%u%arr(iarr_crs,i+1,j ,k-1) + cg%u%arr(iarr_crs,i+1,j  ,k )) - (cg%u%arr(iarr_crs,i  ,j ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idx
                   decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                  b1b = sum(b(ibx,i:i+1, j,     k-1:k))*0.25
+                  b1b = sum(cg%b%arr(ibx,i:i+1, j,     k-1:k))*0.25
                else
                   decr1 = 0.
                   b1b = 0.
                endif
 
                if (has_dir(ydim)) then
-                  dqm = 0.5*((u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k )) - (u(iarr_crs,i ,j-1,k-1) + u(iarr_crs,i  ,j-1,k ))) * cg%idy
-                  dqp = 0.5*((u(iarr_crs,i ,j+1,k-1) + u(iarr_crs,i  ,j+1,k )) - (u(iarr_crs,i ,j  ,k-1) + u(iarr_crs,i  ,j  ,k ))) * cg%idy
+                  dqm = 0.5*((cg%u%arr(iarr_crs,i ,j  ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i ,j-1,k-1) + cg%u%arr(iarr_crs,i  ,j-1,k ))) * cg%idy
+                  dqp = 0.5*((cg%u%arr(iarr_crs,i ,j+1,k-1) + cg%u%arr(iarr_crs,i  ,j+1,k )) - (cg%u%arr(iarr_crs,i ,j  ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idy
                   decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                  b2b = sum(b(iby,i,     j:j+1, k-1:k))*0.25
+                  b2b = sum(cg%b%arr(iby,i,     j:j+1, k-1:k))*0.25
                else
                   decr2 = 0.
                   b2b = 0.
@@ -342,8 +339,8 @@ contains
       enddo
 
       call all_wcr_boundaries
-      u(iarr_crs,:,:,1:cg%nz-1) = u(iarr_crs,:,:,1:cg%nz-1) - ( wcr(:,:,:,2:cg%nz) - wcr(:,:,:,1:cg%nz-1) )
-      u(iarr_crs,:,:, cg%nz) = u(iarr_crs,:,:, cg%nz-1) ! for sanity
+      cg%u%arr(iarr_crs,:,:,1:cg%nz-1) = cg%u%arr(iarr_crs,:,:,1:cg%nz-1) - ( wcr(:,:,:,2:cg%nz) - wcr(:,:,:,1:cg%nz-1) )
+      cg%u%arr(iarr_crs,:,:, cg%nz) = cg%u%arr(iarr_crs,:,:, cg%nz-1) ! for sanity
 
    end subroutine cr_diff_z
 

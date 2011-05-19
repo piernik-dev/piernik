@@ -303,7 +303,6 @@ contains
    subroutine cr_add_hdf5(flind_crs)
 
       use grid,      only: cg
-      use arrays,    only: u
       use list_hdf5, only: add_lhdf5, lhdf5_info
 
       implicit none
@@ -326,7 +325,7 @@ contains
    end subroutine cr_add_hdf5
 
    subroutine get_cr(ivec,rvec,outtab)
-      use arrays,       only: u
+      use grid,         only: cg
       use dataio_pub,   only: die
       implicit none
 
@@ -336,7 +335,7 @@ contains
 
       if (allocated(outtab)) call die("[initcosmicrays:get_cr]: outtab already allocated")
       allocate(outtab(ivec(1),ivec(2),ivec(3)))
-      outtab(:,:,:) = u(ivec(10),ivec(4):ivec(5),ivec(6):ivec(7),ivec(8):ivec(9))
+      outtab(:,:,:) = cg%u%arr(ivec(10),ivec(4):ivec(5),ivec(6):ivec(7),ivec(8):ivec(9))
       return
       if (.false.) write(0,*) rvec
    end subroutine get_cr

@@ -65,9 +65,9 @@ module multigrid_diffusion
    character(len=cbuff_len) :: diff_bnd_str                           !< Type of diffusion boundary conditions. Can be "isolated", "reflecting" or "zero" (there are some aliases as well)
 
    ! mgvar entries for the B field
-   integer, parameter :: diff_bx = correction+1                       !< index of B_x in the b(:,:,:,:) array
-   integer, parameter :: diff_by = diff_bx + 1                        !< index of B_y in the b(:,:,:,:) array
-   integer, parameter :: diff_bz = diff_by + 1                        !< index of B_z in the b(:,:,:,:) array
+   integer, parameter :: diff_bx = correction+1                       !< index of B_x in the cg%b%arr(:,:,:,:) array
+   integer, parameter :: diff_by = diff_bx + 1                        !< index of B_y in the cg%b%arr(:,:,:,:) array
+   integer, parameter :: diff_bz = diff_by + 1                        !< index of B_z in the cg%b%arr(:,:,:,:) array
 
    ! miscellaneous
    logical, allocatable, dimension(:) :: norm_was_zero                !< Flag for suppressing repeated warnings on nonexistent CR components
@@ -349,7 +349,6 @@ contains
       use multigridvars,      only: roof, source, defect, correction
       use initcosmicrays,     only: iarr_crs
       use grid,               only: cg
-      use arrays,             only: u
       use multigridbasefuncs, only: norm_sq
       use dataio_pub,         only: die
       use multigridhelpers,   only: set_dirty, check_dirty
@@ -363,8 +362,8 @@ contains
       call set_dirty(defect)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
       if (diff_theta /= 0.) then
-         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction) = (1. -1./diff_theta) * u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, defect)     =     -1./diff_theta  * u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction) = (1. -1./diff_theta) * cg%u%arr(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, defect)     =     -1./diff_theta  * cg%u%arr(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          call residual(roof%level, defect, correction, source, cr_id)
       else
          call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
@@ -384,7 +383,6 @@ contains
 
       use multigridvars,  only: roof, solution
       use grid,           only: cg
-      use arrays,         only: u
       use initcosmicrays, only: iarr_crs
       use multigridhelpers,   only: set_dirty, check_dirty
 
@@ -393,7 +391,7 @@ contains
       integer, intent(in) :: cr_id !< CR component index
 
       call set_dirty(solution)
-      roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = u(iarr_crs(cr_id),  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+      roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = cg%u%arr(iarr_crs(cr_id),  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call check_dirty(roof%level, solution, "init solution")
 
    end subroutine init_solution
@@ -407,7 +405,6 @@ contains
 
    subroutine init_b
 
-      use arrays,             only: b
       use grid,               only: cg, D_x, D_y, D_z
       use multigridvars,      only: base, roof, extbnd_mirror
       use multigridbasefuncs, only: restrict_all
@@ -424,13 +421,13 @@ contains
 
       do ib = ibx, ibz
          call set_dirty(diff_bx+ib-ibx)
-         roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = b(ib, cg%is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z)
+         roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = cg%b%arr(ib, cg%is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z)
          call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines
          do il = base%level, roof%coarser%level
             call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror, .true.) !> \todo use global boundary type for B
             !>
             !! |deprecated BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
-            !! the problem is that the b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
+            !! the problem is that the cg%b%arr(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
             !<
             write(dirty_label, '(a,i1)')"init b",ib
             call check_dirty(il, diff_bx+ib-ibx, dirty_label)
@@ -451,7 +448,6 @@ contains
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, brief_v_log, dirty_label
 !      use multigridmpifuncs,  only: mpi_multigrid_bnd
       use initcosmicrays,     only: iarr_crs
-      use arrays,             only: u
       use grid,               only: cg
       use dataio_pub,         only: msg, warn
       use mpisetup,           only: master
@@ -547,8 +543,8 @@ contains
       call norm_sq(defect, norm_lhs)
 !     Do we need to take care of boundaries here?
 !      call mpi_multigrid_bnd(roof%level, solution, 1, diff_extbnd)
-!      u(iarr_crs(cr_id), is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z) = roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, solution)
-      u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution)
+!      cg%u%arr(iarr_crs(cr_id), is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z) = roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, solution)
+      cg%u%arr(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution)
 
    end subroutine vcycle_hg
 
@@ -564,7 +560,7 @@ contains
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt, has_dir
       use constants,         only: ydim, zdim
-      use arrays,            only: wa
+      use grid,              only: cg
 
       implicit none
 
@@ -616,7 +612,7 @@ contains
 
       endif
 
-      wa(i, j, k) = fcrdif * diff_theta * dt / curl%dx
+      cg%wa%arr(i, j, k) = fcrdif * diff_theta * dt / curl%dx
 
    end subroutine diff_flux_x
 
@@ -631,7 +627,7 @@ contains
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt, has_dir
       use constants,         only: xdim, zdim
-      use arrays,            only: wa
+      use grid,              only: cg
 
       implicit none
 
@@ -683,7 +679,7 @@ contains
 
       endif
 
-      wa(i, j, k) = fcrdif * diff_theta * dt / curl%dy
+      cg%wa%arr(i, j, k) = fcrdif * diff_theta * dt / curl%dy
 
    end subroutine diff_flux_y
 
@@ -698,7 +694,7 @@ contains
       use initcosmicrays,    only: K_crs_perp, K_crs_paral
       use mpisetup,          only: dt, has_dir
       use constants,         only: xdim, ydim
-      use arrays,            only: wa
+      use grid,              only: cg
 
       implicit none
 
@@ -750,7 +746,7 @@ contains
 
       endif
 
-      wa(i, j, k) = fcrdif * diff_theta * dt / curl%dz
+      cg%wa%arr(i, j, k) = fcrdif * diff_theta * dt / curl%dz
 
    end subroutine diff_flux_z
 
@@ -765,9 +761,9 @@ contains
 
       use mpisetup,          only: has_dir
       use constants,         only: xdim, ydim, zdim
+      use grid,              only: cg
       use multigridvars,     only: lvl, plvl
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use arrays,            only: wa
       use multigridhelpers,  only: check_dirty
 
       implicit none
@@ -799,8 +795,8 @@ contains
             enddo
             curl%mgvar     (curl%is  :curl%ie,   curl%js:curl%je, k, def) = &
                  curl%mgvar(curl%is  :curl%ie,   curl%js:curl%je, k, def) - &
-                 (       wa(curl%is+1:curl%ie+1, curl%js:curl%je, k)      - &
-                 &       wa(curl%is  :curl%ie,   curl%js:curl%je, k) )
+                 (       cg%wa%arr(curl%is+1:curl%ie+1, curl%js:curl%je, k)      - &
+                 &       cg%wa%arr(curl%is  :curl%ie,   curl%js:curl%je, k) )
          enddo
       endif
 
@@ -813,8 +809,8 @@ contains
             enddo
             curl%mgvar     (curl%is:curl%ie, curl%js  :curl%je,   k, def) = &
                  curl%mgvar(curl%is:curl%ie, curl%js  :curl%je,   k, def) - &
-                 (       wa(curl%is:curl%ie, curl%js+1:curl%je+1, k)      - &
-                 &       wa(curl%is:curl%ie, curl%js  :curl%je,   k) )
+                 (       cg%wa%arr(curl%is:curl%ie, curl%js+1:curl%je+1, k)      - &
+                 &       cg%wa%arr(curl%is:curl%ie, curl%js  :curl%je,   k) )
          enddo
       endif
 
@@ -828,8 +824,8 @@ contains
          enddo
          curl%mgvar     (curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke, def) = &
               curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke, def) - &
-              (       wa(curl%is:curl%ie, curl%js:curl%je, curl%ks+1:curl%ke+1)    - &
-              &       wa(curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke  ) )
+              (       cg%wa%arr(curl%is:curl%ie, curl%js:curl%je, curl%ks+1:curl%ke+1)    - &
+              &       cg%wa%arr(curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke  ) )
       endif
 
       call check_dirty(lev, def, "res def")
@@ -851,7 +847,7 @@ contains
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use mpisetup,           only: dt, has_dir
       use constants,          only: xdim, ydim, zdim
-      use arrays,             only: wa
+      use grid,               only: cg
 
       implicit none
 
@@ -908,7 +904,7 @@ contains
                      call diff_flux_x(i,   j, k, soln, lev, cr_id, Keff1)
                      call diff_flux_x(i+1, j, k, soln, lev, cr_id, Keff2)
 
-                     temp = temp - (wa(i+1, j, k) - wa(i, j, k))
+                     temp = temp - (cg%wa%arr(i+1, j, k) - cg%wa%arr(i, j, k))
                      dLdu = dLdu - 2 * (Keff1 + Keff2) * curl%idx2
 
                   endif
@@ -918,7 +914,7 @@ contains
                      call diff_flux_y(i, j,   k, soln, lev, cr_id, Keff1)
                      call diff_flux_y(i, j+1, k, soln, lev, cr_id, Keff2)
 
-                     temp = temp - (wa(i, j+1, k) - wa(i, j, k))
+                     temp = temp - (cg%wa%arr(i, j+1, k) - cg%wa%arr(i, j, k))
                      dLdu = dLdu - 2 * (Keff1 + Keff2) * curl%idy2
 
                   endif
@@ -928,7 +924,7 @@ contains
                      call diff_flux_z(i, j, k,   soln, lev, cr_id, Keff1)
                      call diff_flux_z(i, j, k+1, soln, lev, cr_id, Keff2)
 
-                     temp = temp - (wa(i, j, k+1) - wa(i, j, k))
+                     temp = temp - (cg%wa%arr(i, j, k+1) - cg%wa%arr(i, j, k))
                      dLdu = dLdu - 2 * (Keff1 + Keff2) * curl%idz2
 
                   endif
