@@ -130,7 +130,7 @@ contains
       class(grid_container), intent(inout) :: this ! intent(out) would silently clear everything, that was already set (also the fields in types derived from grid_container)
       type(domain_container), intent(in) :: dom
 
-      integer :: i, j, k
+      integer :: i
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init] MPI not initialized.")
 
@@ -287,9 +287,7 @@ contains
 !--- x-grids --------------------------------------------------------------
 
          if (has_dir(xdim)) then
-            do i= 1, this%nx
-               this%x(i)  = dom%xmin   + 0.5*this%dx + real(i-this%nb-1+this%off(xdim))*this%dx
-            enddo
+            this%x(:) = dom%xmin + this%dx * ([(i, i=1, this%nx)] - 0.5 - this%nb + this%off(xdim))
          else
             this%x(:) = 0.5*(this%xminb + this%xmaxb)
          endif
@@ -305,9 +303,7 @@ contains
 !--- y-grids --------------------------------------------------------------
 
          if (has_dir(ydim)) then
-            do j= 1, this%ny
-               this%y(j)  = dom%ymin   + 0.5*this%dy + real(j-this%nb-1+this%off(ydim))*this%dy
-            enddo
+            this%y(:) = dom%ymin + this%dy * ([(i, i=1, this%ny)] - 0.5 - this%nb + this%off(ydim))
          else
             this%y(:) = 0.5*(this%yminb + this%ymaxb)
          endif
@@ -323,9 +319,7 @@ contains
 !--- z-grids --------------------------------------------------------------
 
          if (has_dir(zdim)) then
-            do k= 1, this%nz
-               this%z(k)  = dom%zmin   + 0.5*this%dz + real(k-this%nb-1+this%off(zdim))*this%dz
-            enddo
+            this%z(:) = dom%zmin + this%dz * ([(i, i=1, this%nz)] - 0.5 - this%nb + this%off(zdim))
          else
             this%z(:) = 0.5*(this%zminb + this%zmaxb)
          endif
