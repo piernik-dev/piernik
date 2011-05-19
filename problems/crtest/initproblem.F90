@@ -143,7 +143,6 @@ contains
 
    subroutine init_prob
 
-      use arrays,         only: b, u
       use dataio_pub,     only: die, warn
       use fluidindex,     only: ibx, iby, ibz
       use grid,           only: cg
@@ -180,26 +179,26 @@ contains
          K_crn_perp(icr)  = 0.
       endif
 
-      b(ibx, :, :, :) = bx0
-      b(iby, :, :, :) = by0
-      b(ibz, :, :, :) = bz0
-      u(idni, :, :, :) = d0
-      u(imxi:imzi, :, :, :) = 0.0
+      cg%b%arr(ibx, :, :, :) = bx0
+      cg%b%arr(iby, :, :, :) = by0
+      cg%b%arr(ibz, :, :, :) = bz0
+      cg%u%arr(idni, :, :, :) = d0
+      cg%u%arr(imxi:imzi, :, :, :) = 0.0
 
 #ifndef ISO
       do k = 1, cg%nz
          do j = 1, cg%ny
             do i = 1, cg%nx
-               u(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
-                    &          0.5*sum(u(imxi:imzi,i,j,k)**2,1)/u(idni,i,j,k) + &
-                    &          0.5*sum(b(:,i,j,k)**2,1)
+               cg%u%arr(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
+                    &          0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1)/cg%u%arr(idni,i,j,k) + &
+                    &          0.5*sum(cg%b%arr(:,i,j,k)**2,1)
             enddo
          enddo
       enddo
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-      u(iecr, :, :, :)      =  beta_cr*cs_iso**2 * u(idni, :, :, :)/(gamma_crs(icr)-1.0)
+      cg%u%arr(iecr, :, :, :)      =  beta_cr*cs_iso**2 * cg%u%arr(idni, :, :, :)/(gamma_crs(icr)-1.0)
 
 ! Explosions
       do k = cg%ks, cg%ke
@@ -207,7 +206,7 @@ contains
             do i = cg%is, cg%ie
                r2 = (cg%x(i)-x0)**2+(cg%y(j)-y0)**2+(cg%z(k)-z0)**2
                if (cg%x(i)> 2*x0-dom%xmax .and. cg%y(j) > 2*y0-dom%ymax) &
-                  u(iecr, i, j, k)= u(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
+                  cg%u%arr(iecr, i, j, k)= cg%u%arr(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
             enddo
          enddo
       enddo
@@ -222,7 +221,6 @@ contains
 
    subroutine compute_analytic_ecr1
 
-      use arrays,         only: b, u
       use dataio_pub,     only: die
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
@@ -282,7 +280,6 @@ contains
 
    subroutine check_norm
 
-      use arrays,         only: u
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
       use constants,      only: PIERNIK_FINISHED
       use grid,           only: cg
@@ -317,10 +314,10 @@ contains
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
                crt = aecr1(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
-               norm(1) = norm(1) + (crt - u(iecr, i, j, k))**2
+               norm(1) = norm(1) + (crt - cg%u%arr(iecr, i, j, k))**2
                norm(2) = norm(2) + crt**2
-               dev(1) = min(dev(1), (crt - u(iecr, i, j, k)))
-               dev(2) = max(dev(2), (crt - u(iecr, i, j, k)))
+               dev(1) = min(dev(1), (crt - cg%u%arr(iecr, i, j, k)))
+               dev(2) = max(dev(2), (crt - cg%u%arr(iecr, i, j, k)))
             enddo
          enddo
       enddo
@@ -344,7 +341,6 @@ contains
 
    subroutine crtest_analytic_ecr1(var, tab, ierrh)
 
-      use arrays,         only: u
       use grid,           only: cg
       use initcosmicrays, only: iarr_crs
 
@@ -361,7 +357,7 @@ contains
          case ("acr1")
             tab(:,:,:) = real(aecr1(:,:,:), 4)
          case ("err1")
-            tab(:,:,:) = real(aecr1(:,:,:) - u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(aecr1(:,:,:) - cg%u%arr(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

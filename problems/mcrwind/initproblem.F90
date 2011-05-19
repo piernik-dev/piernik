@@ -111,7 +111,7 @@ contains
 
    subroutine init_prob
 
-      use arrays,         only: u, b, dprof
+      use arrays,         only: dprof
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use hydrostatic,    only: hydrostatic_zeq_densmid
@@ -147,34 +147,34 @@ contains
       do k = 1, cg%nz
          do j = 1, cg%ny
             do i = 1, cg%nx
-               u(idni,i,j,k)   = max(smalld,dprof(k))
+               cg%u%arr(idni,i,j,k)   = max(smalld,dprof(k))
 
-               u(imxi,i,j,k) = 0.0
-               u(imyi,i,j,k) = 0.0
-               u(imzi,i,j,k) = 0.0
+               cg%u%arr(imxi,i,j,k) = 0.0
+               cg%u%arr(imyi,i,j,k) = 0.0
+               cg%u%arr(imzi,i,j,k) = 0.0
 #ifdef SHEAR
-               u(imyi,i,j,k) = -qshear*omega*cg%x(i)*u(idni,i,j,k)
+               cg%u%arr(imyi,i,j,k) = -qshear*omega*cg%x(i)*cg%u%arr(idni,i,j,k)
 #endif /* SHEAR */
 
 #ifndef ISO
-               u(ieni,i,j,k)   = flind%ion%cs2/(flind%ion%gam_1) * u(idni,i,j,k) &
-                               + 0.5*(u(imxi,i,j,k)**2 + u(imyi,i,j,k)**2 + &
-                                      u(imzi,i,j,k)**2 ) / u(idni,i,j,k)
+               cg%u%arr(ieni,i,j,k)   = flind%ion%cs2/(flind%ion%gam_1) * cg%u%arr(idni,i,j,k) &
+                               + 0.5*(cg%u%arr(imxi,i,j,k)**2 + cg%u%arr(imyi,i,j,k)**2 + &
+                                      cg%u%arr(imzi,i,j,k)**2 ) / cg%u%arr(idni,i,j,k)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               u(iarr_crn,i,j,k)  = 0.0
-               u(iarr_crn(1),i,j,k)   = beta_cr*flind%ion%cs2 * u(idni,i,j,k)/( gamma_crn(1) - 1.0 )
+               cg%u%arr(iarr_crn,i,j,k)  = 0.0
+               cg%u%arr(iarr_crn(1),i,j,k)   = beta_cr*flind%ion%cs2 * cg%u%arr(idni,i,j,k)/( gamma_crn(1) - 1.0 )
 !#ifdef GALAXY
 !! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
 !
 !
-!               u(iarr_crn(icr_H1),i,j,k)= u(iarr_crn(icr_H1),i,j,k) &
+!               cg%u%arr(iarr_crn(icr_H1),i,j,k)= cg%u%arr(iarr_crn(icr_H1),i,j,k) &
 !                     + amp_cr*exp(-((x(i)- x0    )**2 + (y(j)- y0    )**2 + (z(k)-z0)**2)/r_sn**2) &
 !                     + amp_cr*exp(-((x(i)-(x0+Lx))**2 + (y(j)- y0    )**2 + (z(k)-z0)**2)/r_sn**2) &
 !                     + amp_cr*exp(-((x(i)- x0    )**2 + (y(j)-(y0+Ly))**2 + (z(k)-z0)**2)/r_sn**2) &
 !                     + amp_cr*exp(-((x(i)-(x0+Lx))**2 + (y(j)-(y0+Ly))**2 + (z(k)-z0)**2)/r_sn**2)
 !
-!               u(iarr_crn(icr_C12),i,j,k)= u(iarr_crn(icr_C12),i,j,k) &
+!               cg%u%arr(iarr_crn(icr_C12),i,j,k)= cg%u%arr(iarr_crn(icr_C12),i,j,k) &
 !                     + 0.1*amp_cr*exp(-((x(i)- x0    )**2 + (y(j)- y0    )**2 + (z(k)-z0)**2)/r_sn**2) &
 !                     + 0.1*amp_cr*exp(-((x(i)-(x0+Lx))**2 + (y(j)- y0    )**2 + (z(k)-z0)**2)/r_sn**2) &
 !                     + 0.1*amp_cr*exp(-((x(i)- x0    )**2 + (y(j)-(y0+Ly))**2 + (z(k)-z0)**2)/r_sn**2) &
@@ -196,11 +196,11 @@ contains
       do k = 1, cg%nz
          do j = 1, cg%ny
             do i = 1, cg%nx
-               b(ibx,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
-               b(iby,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
-               b(ibz,i,j,k)   = b0*sqrt(u(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
+               cg%b%arr(ibx,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
+               cg%b%arr(iby,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
+               cg%b%arr(ibz,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
-               u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
+               cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
 #endif /* !ISO */
             enddo
          enddo
@@ -287,7 +287,6 @@ contains
 !<
    subroutine cr_sn_beware(pos)
 
-      use arrays,         only: u
       use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
       use fluidindex,     only: flind
       use grid,           only: cg
@@ -326,12 +325,12 @@ contains
                            * exp(-((cg%x(i)-xsn+real(ipm)*dom%Lx)**2  &
                            + (cg%y(j)-ysna+real(jpm)*dom%Ly)**2  &
                            + (cg%z(k)-zsn)**2)/r_sn**2)
-!                     u(iarr_crn,i,j,k) = u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
+!                     cg%u%arr(iarr_crn,i,j,k) = cg%u%arr(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
                      do icr=1,flind%crn%all
-                        if (icr == icr_H1) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + decr
-                        if (icr == icr_C12) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_C12*12*decr
-                        if (icr == icr_N14) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_N14*14*decr
-                        if (icr == icr_O16) u(iarr_crn(icr),i,j,k) = u(iarr_crn(icr),i,j,k) + primary_O16*16*decr
+                        if (icr == icr_H1) cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + decr
+                        if (icr == icr_C12) cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_C12*12*decr
+                        if (icr == icr_N14) cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_N14*14*decr
+                        if (icr == icr_O16) cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_O16*16*decr
                      enddo
 
                   enddo ! jpm

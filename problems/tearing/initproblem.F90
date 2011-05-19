@@ -95,7 +95,6 @@ contains
 
    subroutine init_prob
 
-      use arrays,       only: u, b
       use constants,    only: pi
       use fluidindex,   only: ibx, iby, ibz, flind
       use grid,         only: cg

@@ -131,15 +131,11 @@ contains
 
    subroutine init_prob
 
-      use arrays,        only: u
       use constants,     only: pi, GEO_XYZ, GEO_RPZ
       use dataio_pub,    only: msg, printinfo, warn, die
       use grid,          only: cg
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
       use mpisetup,      only: master, dom, geometry_type
-#ifdef MAGNETIC
-      use arrays,        only: b
-#endif /* MAGNETIC */
 
       implicit none
 
@@ -180,19 +176,19 @@ contains
                      enddo
                   enddo
                enddo
-               u(idni, i, j, k) = dm / nsub**3
+               cg%u%arr(idni, i, j, k) = dm / nsub**3
 
             enddo
          enddo
       enddo
 
-      u(imxi:imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+      cg%u%arr(imxi:imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 
 #ifndef ISO
 #ifdef MAGNETIC
-      b(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+      cg%b%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 #endif /* MAGNETIC */
-      u(ieni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = p0/(gamma_ion - 1.0)
+      cg%u%arr(ieni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = p0/(gamma_ion - 1.0)
 #endif /* !ISO */
 
       if (master) then

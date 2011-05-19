@@ -134,16 +134,12 @@ contains
 
    subroutine init_prob
 
-      use arrays,        only: u
       use constants,     only: pi
       use units,         only: fpiG, newtong
       use dataio_pub,    only: tend, msg, printinfo, warn
       use grid,          only: cg
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
       use mpisetup,      only: master, dom
-#ifdef MAGNETIC
-      use arrays,        only: b
-#endif /* MAGNETIC */
 
       implicit none
 
@@ -202,23 +198,23 @@ contains
                xi = cg%x(i)-dom%xmin
                select case (mode)
                case (0)
-                  u(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi + ky*yj + kz*zk))
+                  cg%u%arr(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi + ky*yj + kz*zk))
                   pres            = p0 * (1. + gamma_ion * amp * sin(kx*xi + ky*yj + kz*zk))
                case (1)
-                  u(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
+                  cg%u%arr(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
                   pres            = p0 * (1. + gamma_ion * amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
                case default ! should not happen
-                  u(idni,i,j,k)   = d0
+                  cg%u%arr(idni,i,j,k)   = d0
                   pres            = p0
                end select
 
-               u(imxi:imzi,i,j,k) = 0.0
+               cg%u%arr(imxi:imzi,i,j,k) = 0.0
 #ifndef ISO
-               u(ieni,i,j,k)      = pres/(gamma_ion-1.0) + 0.5*sum(u(imxi:imzi,i,j,k)**2,1) / u(idni,i,j,k)
+               cg%u%arr(ieni,i,j,k)      = pres/(gamma_ion-1.0) + 0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1) / cg%u%arr(idni,i,j,k)
 
 #ifdef MAGNETIC
-               b(:,i,j,k)         = 0.0
-               u(ieni,i,j,k)      = u(ieni,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
+               cg%b%arr(:,i,j,k)         = 0.0
+               cg%u%arr(ieni,i,j,k)      = cg%u%arr(ieni,i,j,k) + 0.5*sum(cg%b%arr(:,i,j,k)**2,1)
 #endif /* MAGNETIC */
 #endif /* !ISO */
             enddo

@@ -61,7 +61,6 @@ contains
 
    subroutine init_prob
 
-      use arrays,        only: u,b
       use dataio_pub,    only: msg, printinfo
       use grid,          only: cg
       use initneutral,   only: idnn,imxn,imyn,imzn,ienn, gamma_neu
@@ -126,15 +125,15 @@ contains
       do k = 1, cg%nz
          do j = 1, cg%ny
             do i = 1, cg%nx
-               u(idnn,i,j,k) = d0
-               u(imxn,i,j,k) = u(idnn,i,j,k) * dv(1,i,j,k) * cma
-               u(imyn,i,j,k) = u(idnn,i,j,k) * dv(2,i,j,k) * cma
-               u(imzn,i,j,k) = u(idnn,i,j,k) * dv(3,i,j,k) * cma
-               u(ienn,i,j,k) = c_si**2*d0/(gamma_neu*(gamma_neu-1.0))
-               u(ienn,i,j,k) = u(ienn,i,j,k) + 0.5*(u(imxn,i,j,k)**2 &
-                             + u(imyn,i,j,k)**2 + u(imzn,i,j,k) )/u(idnn,i,j,k)
-               b(:,i,j,k)   = 0.0
-               u(ienn,i,j,k)   = u(ienn,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
+               cg%u%arr(idnn,i,j,k) = d0
+               cg%u%arr(imxn,i,j,k) = cg%u%arr(idnn,i,j,k) * dv(1,i,j,k) * cma
+               cg%u%arr(imyn,i,j,k) = cg%u%arr(idnn,i,j,k) * dv(2,i,j,k) * cma
+               cg%u%arr(imzn,i,j,k) = cg%u%arr(idnn,i,j,k) * dv(3,i,j,k) * cma
+               cg%u%arr(ienn,i,j,k) = c_si**2*d0/(gamma_neu*(gamma_neu-1.0))
+               cg%u%arr(ienn,i,j,k) = cg%u%arr(ienn,i,j,k) + 0.5*(cg%u%arr(imxn,i,j,k)**2 &
+                             + cg%u%arr(imyn,i,j,k)**2 + cg%u%arr(imzn,i,j,k) )/cg%u%arr(idnn,i,j,k)
+               cg%b%arr(:,i,j,k)   = 0.0
+               cg%u%arr(ienn,i,j,k)   = cg%u%arr(ienn,i,j,k) + 0.5*sum(cg%b%arr(:,i,j,k)**2,1)
             enddo
          enddo
       enddo

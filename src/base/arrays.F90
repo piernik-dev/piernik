@@ -35,9 +35,7 @@ module arrays
 
    public  ! QA_WARN nothing to hide here
 
-   real, allocatable, dimension(:,:,:,:), target :: u    !< Main array of all fluids' components
    real, allocatable, dimension(:,:,:,:), target :: uh   !< Main array of all fluids' components (for t += dt/2)
-   real, allocatable, dimension(:,:,:,:), target :: b    !< Main array of magnetic field's components
    real, allocatable, dimension(:,:,:,:), target :: u0   !< Copy of main array of all fluids' components
    real, allocatable, dimension(:,:,:,:), target :: b0   !< Copy of main array of magnetic field's components
    real, allocatable, dimension(:,:,:),   target :: wa   !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
@@ -56,7 +54,7 @@ contains
    subroutine init_arrays(flind)
 
       use constants,   only: PIERNIK_INIT_BASE, ndims
-      use diagnostics, only: ma3d, ma4d, my_allocate
+      use diagnostics, only: ma4d, my_allocate
       use dataio_pub,  only: die, code_progress
       use fluidtypes,  only: var_numbers
       use grid,        only: cg
@@ -72,24 +70,17 @@ contains
       if (code_progress < PIERNIK_INIT_BASE) call die("[arrays:init_arrays] grid or fluids not initialized.")
 
       ma4d = [flind%all, cg%nx, cg%ny, cg%nz]
-      call my_allocate(u, ma4d, "u")
-!     call cg%u%init(flind%all, cg%nx, cg%ny, cg%nz) ! \todo use after u -> cg%u transition
-      call cg%u%init(u)
+      call cg%u%init(flind%all, cg%nx, cg%ny, cg%nz)
 
       if (repeat_step) call my_allocate(u0, ma4d, "u0")
       call my_allocate(uh, ma4d, "uh")
 
       ma4d = [ndims, cg%nx, cg%ny, cg%nz]
-      call my_allocate(b, ma4d, "b")
-!     call cg%b%init(ndims, cg%nx, cg%ny, cg%nz)  ! \todo use after b -> cg%b transition
-      call cg%b%init(b)
+      call cg%b%init(ndims, cg%nx, cg%ny, cg%nz)
 
       if (repeat_step) call my_allocate(b0, ma4d, "b0")
 
-      ma3d = [cg%nx, cg%ny, cg%nz]
-      call my_allocate(wa, ma3d, "wa")
-!     call cg%wa%init(cg%nx, cg%ny, cg%nz)        ! \todo use after wa -> cg%wa transition
-      call cg%wa%init(wa)
+      call cg%wa%init(cg%nx, cg%ny, cg%nz)
 
 #ifdef GRAV
       ma1d = [cg%nz]
@@ -107,14 +98,11 @@ contains
       use grid, only: cg
       implicit none
 
-!      if (allocated(u))       deallocate(u)
       call cg%u%clean()
-!      if (allocated(b))       deallocate(b)
       call cg%b%clean()
       if (allocated(u0))      deallocate(u0)
       if (allocated(uh))      deallocate(uh)
       if (allocated(b0))      deallocate(b0)
-!      if (allocated(wa))      deallocate(wa)
       call cg%wa%clean()
 
 #ifdef GRAV

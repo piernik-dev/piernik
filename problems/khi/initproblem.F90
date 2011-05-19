@@ -100,7 +100,6 @@ contains
 
    subroutine init_prob
 
-      use arrays,      only: u
       use constants,   only: dpi, zdim
       use grid,        only: cg
       use mpisetup,    only: has_dir, dom
@@ -127,22 +126,22 @@ contains
             rcy = cg%y(j)
             rc=rcy-0.5*dom%Ly
             if (rc > 0.0) then
-               u(idnn,i,j,:) = dtop
-               u(imxn,i,j,:) = vtop*dtop
+               cg%u%arr(idnn,i,j,:) = dtop
+               cg%u%arr(imxn,i,j,:) = vtop*dtop
             endif
             if (rc <= 0.0) then
-               u(idnn,i,j,:) = dbot
-               u(imxn,i,j,:) = vbot*dbot
+               cg%u%arr(idnn,i,j,:) = dbot
+               cg%u%arr(imxn,i,j,:) = vbot*dbot
             endif
             if (abs(rc) < lpert) then
-               u(imyn,i,j,:) = vp*sin(k0*rcx)*u(idnn,i,j,:)
+               cg%u%arr(imyn,i,j,:) = vp*sin(k0*rcx)*cg%u%arr(idnn,i,j,:)
             endif
             if (has_dir(zdim)) then
-               u(imzn,i,j,:) = vtransf*u(1,i,j,:)
+               cg%u%arr(imzn,i,j,:) = vtransf*cg%u%arr(1,i,j,:)
             else
-               u(imzn,i,j,:) = 0.0
+               cg%u%arr(imzn,i,j,:) = 0.0
             endif
-            u(ienn,i,j,:) = p0/(gamma_neu-1.0)
+            cg%u%arr(ienn,i,j,:) = p0/(gamma_neu-1.0)
          enddo
       enddo
 

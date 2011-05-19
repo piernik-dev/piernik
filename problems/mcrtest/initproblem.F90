@@ -126,7 +126,6 @@ contains
 
    subroutine init_prob
 
-      use arrays,         only: b, u
       use dataio_pub,     only: msg, warn, printinfo
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
@@ -171,19 +170,19 @@ contains
          K_crn_perp(:)  = 0.
       endif
 
-      b(ibx, :, :, :) = bx0
-      b(iby, :, :, :) = by0
-      b(ibz, :, :, :) = bz0
-      u(idni, :, :, :) = d0
-      u(imxi:imzi, :, :, :) = 0.0
+      cg%b%arr(ibx, :, :, :) = bx0
+      cg%b%arr(iby, :, :, :) = by0
+      cg%b%arr(ibz, :, :, :) = bz0
+      cg%u%arr(idni, :, :, :) = d0
+      cg%u%arr(imxi:imzi, :, :, :) = 0.0
 
 #ifndef ISO
       do k = 1, cg%nz
          do j = 1, cg%ny
             do i = 1, cg%nx
-               u(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
-                    &          0.5*sum(u(imxi:imzi,i,j,k)**2,1)/u(idni,i,j,k) + &
-                    &          0.5*sum(b(:,i,j,k)**2,1)
+               cg%u%arr(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
+                    &          0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1)/cg%u%arr(idni,i,j,k) + &
+                    &          0.5*sum(cg%b%arr(:,i,j,k)**2,1)
             enddo
          enddo
       enddo
@@ -191,7 +190,7 @@ contains
 
 #ifdef COSM_RAYS
       do icr = 1, flind%crs%all
-         u(iarr_crs(icr), :, :, :) =  beta_cr*cs_iso**2 * u(idni, :, :, :)/(gamma_crn(icr)-1.0)
+         cg%u%arr(iarr_crs(icr), :, :, :) =  beta_cr*cs_iso**2 * cg%u%arr(idni, :, :, :)/(gamma_crn(icr)-1.0)
       enddo
 
 ! Explosions
@@ -206,11 +205,11 @@ contains
 
                            r2 = (cg%x(i)-xsn+real(ipm)*dom%Lx)**2+(cg%y(j)-ysn+real(jpm)*dom%Ly)**2+(cg%z(k)-zsn+real(kpm)*dom%Lz)**2
                            if (icr == icr_H1) then
-                              u(iarr_crn(icr), i, j, k) = u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
+                              cg%u%arr(iarr_crn(icr), i, j, k) = cg%u%arr(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
                            elseif (icr == icr_C12) then
-                              u(iarr_crn(icr), i, j, k) = u(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
+                              cg%u%arr(iarr_crn(icr), i, j, k) = cg%u%arr(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
                            else
-                              u(iarr_crn(icr), i, j, k) = 0.0
+                              cg%u%arr(iarr_crn(icr), i, j, k) = 0.0
                            endif
 
                         enddo
@@ -222,7 +221,7 @@ contains
       enddo
 
       do icr = 1, flind%crs%all
-         maxv = maxval(u(iarr_crs(icr),:,:,:))
+         maxv = maxval(cg%u%arr(iarr_crs(icr),:,:,:))
          call MPI_Allreduce(MPI_IN_PLACE, maxv, 1, MPI_INTEGER, MPI_MAX, comm, ierr)
          if (master) then
             write(msg,*) '[initproblem:init_prob] icr=',icr,' maxecr =',maxv

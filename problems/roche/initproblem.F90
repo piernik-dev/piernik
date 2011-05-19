@@ -119,7 +119,6 @@ contains
 
    subroutine init_prob
 
-      use arrays,      only: u, b
       use grid,        only: cg
       use initneutral, only: idnn, imxn, imyn, imzn
       use initneutral, only: ienn, gamma_neu
@@ -143,19 +142,19 @@ contains
             do k = 1,cg%nz
                zk = cg%z(k)
 !blob
-               u(idn,i,j,k) = dnamb + &
+               cg%u%arr(idn,i,j,k) = dnamb + &
                     dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
-               u(idn,i,j,k) = max(u(idn,i,j,k), smalld)
-               u(ienn,i,j,k) = pamb/(gamma_neu-1.0) + &
+               cg%u%arr(idn,i,j,k) = max(cg%u%arr(idn,i,j,k), smalld)
+               cg%u%arr(ienn,i,j,k) = pamb/(gamma_neu-1.0) + &
                     pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
 
                vx = vxfac*sqrt(gamma_neu*pblob/dnblob)
                vy = 0.0
                vz = 0.0
 
-               u(imx,i,j,k) = vx*(u(idn,i,j,k)-dnamb)
-               u(imy,i,j,k) = vy*(u(idn,i,j,k)-dnamb)
-               u(imz,i,j,k) = vz*(u(idn,i,j,k)-dnamb)
+               cg%u%arr(imx,i,j,k) = vx*(cg%u%arr(idn,i,j,k)-dnamb)
+               cg%u%arr(imy,i,j,k) = vy*(cg%u%arr(idn,i,j,k)-dnamb)
+               cg%u%arr(imz,i,j,k) = vz*(cg%u%arr(idn,i,j,k)-dnamb)
 
             enddo
          enddo
@@ -168,7 +167,6 @@ contains
 
    subroutine impose_inflow
 
-      use arrays,         only: b, u
       use grid,           only: cg
       use gravity,        only: ptm_x,ptm2_x
       use initneutral, only: idnn, imxn, imyn, imzn
@@ -203,23 +201,23 @@ contains
 
                if (r1<rclear) then
 
-                  u(idn,i,j,k) = smalld + u(idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
-!                  u(idn,i,j,k) = dnamb + u(idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                  u(imx,i,j,k) = u(imx,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                  u(imy,i,j,k) = u(imy,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                  u(imz,i,j,k) = u(imz,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                  u(ien,i,j,k) = smallei + u(ien,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                  cg%u%arr(idn,i,j,k) = smalld + cg%u%arr(idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
+!                  cg%u%arr(idn,i,j,k) = dnamb + cg%u%arr(idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                  cg%u%arr(imx,i,j,k) = cg%u%arr(imx,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                  cg%u%arr(imy,i,j,k) = cg%u%arr(imy,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                  cg%u%arr(imz,i,j,k) = cg%u%arr(imz,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                  cg%u%arr(ien,i,j,k) = smallei + cg%u%arr(ien,i,j,k)*exp((r1/rclear-1.0)/1.0)
 
 
                endif
 
                if (r2<rclear) then
 
-                  u(idn,i,j,k) = smalld + u(idn,i,j,k)*exp((r2/rclear-1.0)/1.0)
-                  u(imx,i,j,k) = u(imx,i,j,k)*exp((r2/rclear-1.0)/1.0)
-                  u(imy,i,j,k) = u(imy,i,j,k)*exp((r2/rclear-1.0)/1.0)
-                  u(imz,i,j,k) = u(imz,i,j,k)*exp((r2/rclear-1.0)/1.0)
-                  u(ien,i,j,k) = smallei + u(ien,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                  cg%u%arr(idn,i,j,k) = smalld + cg%u%arr(idn,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                  cg%u%arr(imx,i,j,k) = cg%u%arr(imx,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                  cg%u%arr(imy,i,j,k) = cg%u%arr(imy,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                  cg%u%arr(imz,i,j,k) = cg%u%arr(imz,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                  cg%u%arr(ien,i,j,k) = smallei + cg%u%arr(ien,i,j,k)*exp((r2/rclear-1.0)/1.0)
 
                endif
 
@@ -235,34 +233,34 @@ contains
             do i = 1,cg%nx
                xi = cg%x(i)
 !blob
-               dnold = u(idn,i,j,k)
+               dnold = cg%u%arr(idn,i,j,k)
                dntemp = dnamb + dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
-               u(idn,i,j,k) = max(dntemp, dnold)
+               cg%u%arr(idn,i,j,k) = max(dntemp, dnold)
 !              cooling
 !              ~sound speed ~temp
                csaim = pamb/dnamb/(gamma_neu-1.0)
-               enaim = csaim * u(idnn,i,j,k)
-               enold = u(ienn,i,j,k)
+               enaim = csaim * cg%u%arr(idnn,i,j,k)
+               enold = cg%u%arr(ienn,i,j,k)
                coolfac = max((taucool / dt), 1.0)
-!               u(ienn,i,j,k) = enold - (enold - enaim)/coolfac
-!               u(ienn,i,j,k) = max(enaim,u(ienn,i,j,k))
+!               cg%u%arr(ienn,i,j,k) = enold - (enold - enaim)/coolfac
+!               cg%u%arr(ienn,i,j,k) = max(enaim,cg%u%arr(ienn,i,j,k))
 
 !hot blob
-               enold = u(ienn,i,j,k)
+               enold = cg%u%arr(ienn,i,j,k)
                entemp = pamb/(gamma_neu-1.0) + &
                      pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
-               u(ienn,i,j,k) = max(entemp, enold)
+               cg%u%arr(ienn,i,j,k) = max(entemp, enold)
 !no inflow
-!               u(idnn,i,j,k) = dnold
-!               u(ienn,i,j,k) = enold
+!               cg%u%arr(idnn,i,j,k) = dnold
+!               cg%u%arr(ienn,i,j,k) = enold
 
                vx = vxfac*sqrt(gamma_neu*pblob/dnblob)
                vy = 0.0
                vz = 0.0
 
-               u(imx,i,j,k) = u(imx,i,j,k) + vx*(u(idn,i,j,k)-dnold)
-               u(imy,i,j,k) = u(imy,i,j,k) + vy*(u(idn,i,j,k)-dnold)
-               u(imz,i,j,k) = u(imz,i,j,k) + vz*(u(idn,i,j,k)-dnold)
+               cg%u%arr(imx,i,j,k) = cg%u%arr(imx,i,j,k) + vx*(cg%u%arr(idn,i,j,k)-dnold)
+               cg%u%arr(imy,i,j,k) = cg%u%arr(imy,i,j,k) + vy*(cg%u%arr(idn,i,j,k)-dnold)
+               cg%u%arr(imz,i,j,k) = cg%u%arr(imz,i,j,k) + vz*(cg%u%arr(idn,i,j,k)-dnold)
 
 
 

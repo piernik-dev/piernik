@@ -186,7 +186,6 @@ contains
       use dataio_pub,   only: printinfo, warn
       use fluidindex,   only: flind
       use grid,         only: cg
-      use arrays,       only: u
       use constants,    only: dpi
 
       implicit none
@@ -206,9 +205,9 @@ contains
 
       do i = cg%is, cg%ie
          do k = cg%ks, cg%ke
-            u(flind%dst%imx,i,:,k) = u(flind%dst%imx,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * u(flind%dst%idn,i,:,k)
-            u(flind%dst%imy,i,:,k) = u(flind%dst%imy,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * u(flind%dst%idn,i,:,k)
-            u(flind%dst%imz,i,:,k) = u(flind%dst%imz,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * u(flind%dst%idn,i,:,k)
+            cg%u%arr(flind%dst%imx,i,:,k) = cg%u%arr(flind%dst%imx,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u%arr(flind%dst%idn,i,:,k)
+            cg%u%arr(flind%dst%imy,i,:,k) = cg%u%arr(flind%dst%imy,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u%arr(flind%dst%idn,i,:,k)
+            cg%u%arr(flind%dst%imz,i,:,k) = cg%u%arr(flind%dst%imz,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u%arr(flind%dst%idn,i,:,k)
          enddo
       enddo
 #ifdef DEBUG
@@ -223,7 +222,6 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_random_noise
       use grid,         only: cg
-      use arrays,       only: u
       use fluidindex,   only: flind
       use mpisetup,     only: proc, master
       use dataio_pub,   only: printinfo
@@ -244,9 +242,9 @@ contains
 
       allocate(noise(3,cg%nx,cg%ny,cg%nz))
       call random_number(noise)
-      u(flind%dst%imx,:,:,:) = u(flind%dst%imx,:,:,:) +amp_noise -2.0*amp_noise*noise(1,:,:,:) * u(flind%dst%idn,:,:,:)
-      u(flind%dst%imy,:,:,:) = u(flind%dst%imy,:,:,:) +amp_noise -2.0*amp_noise*noise(2,:,:,:) * u(flind%dst%idn,:,:,:)
-      u(flind%dst%imz,:,:,:) = u(flind%dst%imz,:,:,:) +amp_noise -2.0*amp_noise*noise(3,:,:,:) * u(flind%dst%idn,:,:,:)
+      cg%u%arr(flind%dst%imx,:,:,:) = cg%u%arr(flind%dst%imx,:,:,:) +amp_noise -2.0*amp_noise*noise(1,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
+      cg%u%arr(flind%dst%imy,:,:,:) = cg%u%arr(flind%dst%imy,:,:,:) +amp_noise -2.0*amp_noise*noise(2,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
+      cg%u%arr(flind%dst%imz,:,:,:) = cg%u%arr(flind%dst%imz,:,:,:) +amp_noise -2.0*amp_noise*noise(3,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
       deallocate(noise)
    end subroutine add_random_noise
 !-----------------------------------------------------------------------------
@@ -254,7 +252,7 @@ contains
 
       use dataio_pub,          only: msg, printinfo, die
       use fluidtypes,          only: component_fluid
-      use arrays,              only: u, b, dprof
+      use arrays,              only: dprof
       use constants,           only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ, DST
       use units,               only: newtong, gram, cm, kboltz, mH
       use fluidindex,          only: ibx, iby, ibz, flind
@@ -302,36 +300,36 @@ contains
                   vy = sqr_gm * ( xi)/(rc**2+r_smooth**2)**0.75
                   vz = 0.0
 
-                  u(fl%idn,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
+                  cg%u%arr(fl%idn,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
 
                   if (has_dir(zdim)) then
-                     u(fl%idn,i,j,k) = dprof(k)/cosh(u(fl%idn,i,j,k))
-                     u(fl%idn,i,j,k) = max(u(fl%idn,i,j,k), dout)
+                     cg%u%arr(fl%idn,i,j,k) = dprof(k)/cosh(cg%u%arr(fl%idn,i,j,k))
+                     cg%u%arr(fl%idn,i,j,k) = max(cg%u%arr(fl%idn,i,j,k), dout)
                   else
-                     u(fl%idn,i,j,k) = dout + (d0 - dout)/cosh(u(fl%idn,i,j,k))
+                     cg%u%arr(fl%idn,i,j,k) = dout + (d0 - dout)/cosh(cg%u%arr(fl%idn,i,j,k))
                   endif
-                  u(fl%idn,i,j,k) = u(fl%idn,i,j,k)
-                  u(fl%imx,i,j,k) = vx*u(fl%idn,i,j,k)
-                  u(fl%imy,i,j,k) = vy*u(fl%idn,i,j,k)
-                  u(fl%imz,i,j,k) = vz*u(fl%idn,i,j,k)
+                  cg%u%arr(fl%idn,i,j,k) = cg%u%arr(fl%idn,i,j,k)
+                  cg%u%arr(fl%imx,i,j,k) = vx*cg%u%arr(fl%idn,i,j,k)
+                  cg%u%arr(fl%imy,i,j,k) = vy*cg%u%arr(fl%idn,i,j,k)
+                  cg%u%arr(fl%imz,i,j,k) = vz*cg%u%arr(fl%idn,i,j,k)
                   if (fl%ien > 0) then
-                     u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*u(fl%idn,i,j,k)
-!                     u(fl%ien,i,j,k) = max(u(fl%ien,i,j,k), smallei)
-                     u(fl%ien,i,j,k) = u(fl%ien,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(fl%idn,i,j,k)
+                     cg%u%arr(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u%arr(fl%idn,i,j,k)
+!                     cg%u%arr(fl%ien,i,j,k) = max(cg%u%arr(fl%ien,i,j,k), smallei)
+                     cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(fl%idn,i,j,k)
                   endif
                   if (trim(mag_field_orient) == 'toroidal') then
-                     b(ibx,i,j,k)   = -b0*sqrt(u(fl%idn,i,j,k)/d0)*yj/rc
-                     b(iby,i,j,k)   =  b0*sqrt(u(fl%idn,i,j,k)/d0)*xi/rc
-                     b(ibz,i,j,k)   =  0.0
+                     cg%b%arr(ibx,i,j,k)   = -b0*sqrt(cg%u%arr(fl%idn,i,j,k)/d0)*yj/rc
+                     cg%b%arr(iby,i,j,k)   =  b0*sqrt(cg%u%arr(fl%idn,i,j,k)/d0)*xi/rc
+                     cg%b%arr(ibz,i,j,k)   =  0.0
                   else if (trim(mag_field_orient) == 'vertical') then
-                     b(ibx,i,j,k)   =  0.0
-                     b(iby,i,j,k)   =  0.0
-                     b(ibz,i,j,k)   =  b0
+                     cg%b%arr(ibx,i,j,k)   =  0.0
+                     cg%b%arr(iby,i,j,k)   =  0.0
+                     cg%b%arr(ibz,i,j,k)   =  b0
                   else if (trim(mag_field_orient) == 'none') then
-                     b(:,i,j,k)     =  0.0
+                     cg%b%arr(:,i,j,k)     =  0.0
                   endif
 
-                  if (fl%ien > 0) u(fl%ien,i,j,k)   = u(fl%ien,i,j,k) + 0.5*sum(b(:,i,j,k)**2,1)
+                  if (fl%ien > 0) cg%u%arr(fl%ien,i,j,k)   = cg%u%arr(fl%ien,i,j,k) + 0.5*sum(cg%b%arr(:,i,j,k)**2,1)
                enddo
             enddo
          enddo
@@ -429,9 +427,9 @@ contains
 
                   do k = 1, cg%nz
                      zk = cg%z(k)
-!                     u(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),1.e-10))
-                     u(fl%idn,i,j,k) = dens_prof(i)
-                     if (fl%tag == DST) u(fl%idn,i,j,k) = eps * u(fl%idn,i,j,k)
+!                     cg%u%arr(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),1.e-10))
+                     cg%u%arr(fl%idn,i,j,k) = dens_prof(i)
+                     if (fl%tag == DST) cg%u%arr(fl%idn,i,j,k) = eps * cg%u%arr(fl%idn,i,j,k)
 
                      vr   = 0.0
                      ! that condition is not necessary since cs2 == 0.0 for dust
@@ -443,13 +441,13 @@ contains
                      endif
                      vz   = 0.0
 
-                     u(fl%imx,i,j,k) = vr   * u(fl%idn,i,j,k)
-                     u(fl%imy,i,j,k) = vphi * u(fl%idn,i,j,k)
-                     u(fl%imz,i,j,k) = vz   * u(fl%idn,i,j,k)
+                     cg%u%arr(fl%imx,i,j,k) = vr   * cg%u%arr(fl%idn,i,j,k)
+                     cg%u%arr(fl%imy,i,j,k) = vphi * cg%u%arr(fl%idn,i,j,k)
+                     cg%u%arr(fl%imz,i,j,k) = vz   * cg%u%arr(fl%idn,i,j,k)
                      if (fl%ien > 0) then
-                        u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*u(fl%idn,i,j,k)
-                        u(fl%ien,i,j,k) = u(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*u(fl%idn,i,j,k)
-                        ene0(p,i,j,k)   = u(fl%ien,i,j,k)
+                        cg%u%arr(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u%arr(fl%idn,i,j,k)
+                        cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*cg%u%arr(fl%idn,i,j,k)
+                        ene0(p,i,j,k)   = cg%u%arr(fl%ien,i,j,k)
                      else
                         ene0(p,i,j,k)   = 0.0
                      endif
@@ -458,12 +456,12 @@ contains
                enddo
             enddo
 
-            den0(p,:,:,:) = u(fl%idn,:,:,:)
-            mtx0(p,:,:,:) = u(fl%imx,:,:,:)
-            mty0(p,:,:,:) = u(fl%imy,:,:,:)
-            mtz0(p,:,:,:) = u(fl%imz,:,:,:)
+            den0(p,:,:,:) = cg%u%arr(fl%idn,:,:,:)
+            mtx0(p,:,:,:) = cg%u%arr(fl%imx,:,:,:)
+            mty0(p,:,:,:) = cg%u%arr(fl%imy,:,:,:)
+            mtz0(p,:,:,:) = cg%u%arr(fl%imz,:,:,:)
          enddo
-         b = 0.0
+         cg%b%arr(:,:,:,:) = 0.0
          if (allocated(grav)) deallocate(grav)
          if (allocated(dens_prof)) deallocate(dens_prof)
 #ifdef DEBUG
@@ -591,7 +589,6 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
       use mpisetup,        only: dt, t, relax_time, smalld !, grace_period_passed
-      use arrays,          only: u
       use grid,            only: cg
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
@@ -646,18 +643,18 @@ contains
 
       do j = 1, cg%ny
          do k = 1, cg%nz
-            u(iarr_all_dn,:,j,k) = u(iarr_all_dn,:,j,k) - dt*(u(iarr_all_dn,:,j,k) - den0(:,:,j,k))*funcR(:,:)
-            u(iarr_all_mx,:,j,k) = u(iarr_all_mx,:,j,k) - dt*(u(iarr_all_mx,:,j,k) - mtx0(:,:,j,k))*funcR(:,:)
-            u(iarr_all_my,:,j,k) = u(iarr_all_my,:,j,k) - dt*(u(iarr_all_my,:,j,k) - mty0(:,:,j,k))*funcR(:,:)
-            u(iarr_all_mz,:,j,k) = u(iarr_all_mz,:,j,k) - dt*(u(iarr_all_mz,:,j,k) - mtz0(:,:,j,k))*funcR(:,:)
+            cg%u%arr(iarr_all_dn,:,j,k) = cg%u%arr(iarr_all_dn,:,j,k) - dt*(cg%u%arr(iarr_all_dn,:,j,k) - den0(:,:,j,k))*funcR(:,:)
+            cg%u%arr(iarr_all_mx,:,j,k) = cg%u%arr(iarr_all_mx,:,j,k) - dt*(cg%u%arr(iarr_all_mx,:,j,k) - mtx0(:,:,j,k))*funcR(:,:)
+            cg%u%arr(iarr_all_my,:,j,k) = cg%u%arr(iarr_all_my,:,j,k) - dt*(cg%u%arr(iarr_all_my,:,j,k) - mty0(:,:,j,k))*funcR(:,:)
+            cg%u%arr(iarr_all_mz,:,j,k) = cg%u%arr(iarr_all_mz,:,j,k) - dt*(cg%u%arr(iarr_all_mz,:,j,k) - mtz0(:,:,j,k))*funcR(:,:)
 #ifndef ISO
-            u(iarr_all_en,:,j,k) = u(iarr_all_en,:,j,k) - dt*(u(iarr_all_en,:,j,k) - ene0(:,:,j,k)*funcR(:,:)
+            cg%u%arr(iarr_all_en,:,j,k) = cg%u%arr(iarr_all_en,:,j,k) - dt*(cg%u%arr(iarr_all_en,:,j,k) - ene0(:,:,j,k)*funcR(:,:)
 #endif /* !ISO */
          enddo
       enddo
-      where ( u(iarr_all_dn,:,:,:) < 2.*smalld )
-         u(iarr_all_mx,:,:,:) = u(iarr_all_mx,:,:,:)*0.1
-         u(iarr_all_mz,:,:,:) = u(iarr_all_mz,:,:,:)*0.1
+      where ( cg%u%arr(iarr_all_dn,:,:,:) < 2.*smalld )
+         cg%u%arr(iarr_all_mx,:,:,:) = cg%u%arr(iarr_all_mx,:,:,:)*0.1
+         cg%u%arr(iarr_all_mz,:,:,:) = cg%u%arr(iarr_all_mz,:,:,:)*0.1
       endwhere
       call all_fluid_boundaries
    end subroutine problem_customize_solution_kepler
@@ -690,7 +687,6 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xl
       use grid,         only: cg
-      use arrays,       only: u
       use gravity,      only: grav_pot2accel
       use fluidindex,   only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
 #ifndef ISO
@@ -714,41 +710,40 @@ contains
       call grav_pot2accel(xdim,1,1, cg%nx, grav, 1)
 
       do i = 1, cg%nb
-         u(iarr_all_dn,i,:,:) = u(iarr_all_dn, cg%is,:,:)
-         u(iarr_all_mx,i,:,:) = min(0.0,u(iarr_all_mx, cg%is,:,:))
+         cg%u%arr(iarr_all_dn,i,:,:) = cg%u%arr(iarr_all_dn, cg%is,:,:)
+         cg%u%arr(iarr_all_mx,i,:,:) = min(0.0,cg%u%arr(iarr_all_mx, cg%is,:,:))
 !         do p = 1, size(flind%all_fluids)
-!            u(iarr_all_my(p),i,:,:) = sqrt( abs(grav(i)) * cg%x(i) - cs2_arr(p)*dens_exp) *  u(iarr_all_dn(p),i,:,:)
+!            cg%u%arr(iarr_all_my(p),i,:,:) = sqrt( abs(grav(i)) * cg%x(i) - cs2_arr(p)*dens_exp) *  cg%u%arr(iarr_all_dn(p),i,:,:)
 !         enddo
-         u(iarr_all_my,i,:,:) = u(iarr_all_my, cg%is,:,:)
-         u(iarr_all_mz,i,:,:) = u(iarr_all_mz, cg%is,:,:)
+         cg%u%arr(iarr_all_my,i,:,:) = cg%u%arr(iarr_all_my, cg%is,:,:)
+         cg%u%arr(iarr_all_mz,i,:,:) = cg%u%arr(iarr_all_mz, cg%is,:,:)
 #ifndef ISO
-         u(iarr_all_en,i,:,:) = u(iarr_all_en, cg%is,:,:)
+         cg%u%arr(iarr_all_en,i,:,:) = cg%u%arr(iarr_all_en, cg%is,:,:)
 #endif /* !ISO */
       enddo
 
       do i = cg%nb,1,-1
-         vym(:,:,:) = u(iarr_all_my,i+2,:,:)/u(iarr_all_dn,i+1,:,:)
-         vy(:,:,:)  = u(iarr_all_my,i+1,:,:)/u(iarr_all_dn,i+1,:,:)
-!         u(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*u(iarr_all_dn,i,:,:)
+         vym(:,:,:) = cg%u%arr(iarr_all_my,i+2,:,:)/cg%u%arr(iarr_all_dn,i+1,:,:)
+         vy(:,:,:)  = cg%u%arr(iarr_all_my,i+1,:,:)/cg%u%arr(iarr_all_dn,i+1,:,:)
+!         cg%u%arr(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*cg%u%arr(iarr_all_dn,i,:,:)
       enddo
 
    end subroutine my_bnd_xl
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xr
       use grid,   only: cg
-      use arrays, only: u
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
       use fluidindex,  only: iarr_all_en
 #endif /* ISO */
       implicit none
 
-      u(iarr_all_dn, cg%ie+1:cg%nx,:,:) = den0(:, cg%ie+1:cg%nx,:,:)
-      u(iarr_all_mx, cg%ie+1:cg%nx,:,:) = mtx0(:, cg%ie+1:cg%nx,:,:)
-      u(iarr_all_my, cg%ie+1:cg%nx,:,:) = mty0(:, cg%ie+1:cg%nx,:,:)
-      u(iarr_all_mz, cg%ie+1:cg%nx,:,:) = mtz0(:, cg%ie+1:cg%nx,:,:)
+      cg%u%arr(iarr_all_dn, cg%ie+1:cg%nx,:,:) = den0(:, cg%ie+1:cg%nx,:,:)
+      cg%u%arr(iarr_all_mx, cg%ie+1:cg%nx,:,:) = mtx0(:, cg%ie+1:cg%nx,:,:)
+      cg%u%arr(iarr_all_my, cg%ie+1:cg%nx,:,:) = mty0(:, cg%ie+1:cg%nx,:,:)
+      cg%u%arr(iarr_all_mz, cg%ie+1:cg%nx,:,:) = mtz0(:, cg%ie+1:cg%nx,:,:)
 #ifndef ISO
-      u(iarr_all_en, cg%ie+1:cg%nx,:,:) = ene0(:, cg%ie+1:cg%nx,:,:)
+      cg%u%arr(iarr_all_en, cg%ie+1:cg%nx,:,:) = ene0(:, cg%ie+1:cg%nx,:,:)
 #endif /* !ISO */
    end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------
@@ -795,7 +790,6 @@ contains
 !-----------------------------------------------------------------------------
    subroutine prob_vars_hdf5(var,tab, ierrh)
 
-      use arrays,       only: u
       use grid,         only: cg
       use interactions, only: epstein_factor
       use fluidindex,   only: flind
@@ -809,7 +803,7 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("tauf")
-            tab(:,:,:) = real(epstein_factor(flind%neu%pos) / u(flind%neu%idn,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(epstein_factor(flind%neu%pos) / cg%u%arr(flind%neu%idn,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

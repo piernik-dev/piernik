@@ -109,7 +109,6 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use arrays,       only: u,b
       use grid,         only: cg
       use initionized,  only: idni,imxi,imyi,imzi
 #ifndef ISO
@@ -153,21 +152,21 @@ contains
                   bz  = bzr
                endif
 
-               u(idni,i,j,k) = rho
-               u(imxi,i,j,k) = vx*u(idni,i,j,k)
-               u(imyi,i,j,k) = vy*u(idni,i,j,k)
-               u(imzi,i,j,k) = vz*u(idni,i,j,k)
+               cg%u%arr(idni,i,j,k) = rho
+               cg%u%arr(imxi,i,j,k) = vx*cg%u%arr(idni,i,j,k)
+               cg%u%arr(imyi,i,j,k) = vy*cg%u%arr(idni,i,j,k)
+               cg%u%arr(imzi,i,j,k) = vz*cg%u%arr(idni,i,j,k)
 #ifndef ISO
-               u(ieni,i,j,k) = pre ! pre here means eint
-               u(ieni,i,j,k) = max(u(ieni,i,j,k), smallei)
-               u(ieni,i,j,k) = u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*u(idni,i,j,k)
+               cg%u%arr(ieni,i,j,k) = pre ! pre here means eint
+               cg%u%arr(ieni,i,j,k) = max(cg%u%arr(ieni,i,j,k), smallei)
+               cg%u%arr(ieni,i,j,k) = cg%u%arr(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(idni,i,j,k)
 #endif /* !ISO */
-               b(1,i,j,k)   =  bx
-               b(2,i,j,k)   =  by
-               b(3,i,j,k)   =  bz
+               cg%b%arr(1,i,j,k)   =  bx
+               cg%b%arr(2,i,j,k)   =  by
+               cg%b%arr(3,i,j,k)   =  bz
 
 #ifndef ISO
-               u(ieni,i,j,k)   = u(ieni,i,j,k) +0.5*sum(b(:,i,j,k)**2,1)
+               cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
 #endif /* !ISO */
             enddo
          enddo

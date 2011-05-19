@@ -96,7 +96,6 @@ contains
 
    subroutine init_prob
 
-      use arrays,    only: u
       use constants, only: pi
       use grid,      only: cg
       use initdust,  only: idnd, imxd, imyd, imzd
@@ -116,10 +115,10 @@ contains
          do j = 1, cg%ny
             do k = 1, cg%nz
 
-               u(idnd,i,j,k) = d0
-               u(imxd,i,j,k) = d0*k_x/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
-               u(imyd,i,j,k) = d0*k_y/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
-               u(imzd,i,j,k) = d0*k_z/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
+               cg%u%arr(idnd,i,j,k) = d0
+               cg%u%arr(imxd,i,j,k) = d0*k_x/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
+               cg%u%arr(imyd,i,j,k) = d0*k_y/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
+               cg%u%arr(imzd,i,j,k) = d0*k_z/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
 
             enddo
          enddo
