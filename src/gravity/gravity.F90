@@ -38,7 +38,7 @@
 module gravity
 ! pulled by GRAV
 
-   use constants, only: cbuff_len
+   use constants, only: cbuff_len, ndims
 
    implicit none
 
@@ -51,7 +51,7 @@ module gravity
    character(len=gp_stat_len) :: gp_status       !< variable set as 'undefined' in grav_pot_3d when grav_accel is supposed to use
    character(len=gproft_len)  :: gprofs_target   !< variable set pointing gravity routine in hydrostatic_zeq ('accel' or ready gp array 'gparr')
    character(len=cbuff_len)   :: external_gp     !< variable allowing to choose external gravitational potential
-   real, dimension(3)         :: g_dir           !< vector used by GRAV_UNIFORM and GRAV_LINEAR type of %gravity
+   real, dimension(ndims)     :: g_dir           !< vector used by GRAV_UNIFORM and GRAV_LINEAR type of %gravity
    real    :: r_gc                  !< galactocentric radius of the local simulation region used by local Galactic type of %gravity in grav_accel
    real    :: ptmass                !< mass value of point %gravity source used by GRAV_PTMASS, GRAV_PTMASSSTIFF, GRAV_PTMASSPURE, GRAV_PTFLAT type of %gravity
    real    :: ptm_x                 !< point mass position x-component

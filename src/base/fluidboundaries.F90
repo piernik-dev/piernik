@@ -263,7 +263,7 @@ contains
                if (allocated(recv_right)) deallocate(recv_right)
                if (.not.allocated(recv_right)) allocate(recv_right(flind%all, cg%nb, cg%nyb, cg%nz))
 
-               do i = lbound(u,1), ubound(u,1)
+               do i = lbound(cg%u%arr,1), ubound(cg%u%arr,1)
                   send_left( i,1:cg%nb,:,:) = unshear_fft(cg%u%arr(i, cg%is:cg%isb, cg%js:cg%je,:), cg%x(cg%is:cg%isb),dely,.true.)
                   send_right(i,1:cg%nb,:,:) = unshear_fft(cg%u%arr(i, cg%ieb:cg%ie, cg%js:cg%je,:), cg%x(cg%ieb:cg%ie),dely,.true.)
                enddo
@@ -275,7 +275,7 @@ contains
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
 
-               do i = lbound(u,1), ubound(u,1)
+               do i = lbound(cg%u%arr,1), ubound(cg%u%arr,1)
                   cg%u%arr(i,1:cg%nb,        cg%js:cg%je,:) = unshear_fft(recv_left (i,1:cg%nb,:,:), cg%x(1:cg%nb),dely)
                   cg%u%arr(i, cg%ie+1:cg%nx, cg%js:cg%je,:) = unshear_fft(recv_right(i,1:cg%nb,:,:), cg%x(cg%ie+1:cg%nx),dely)
                enddo
