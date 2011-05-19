@@ -247,7 +247,6 @@ contains
 !<
    subroutine common_plt_hdf5(var,ij,xn,tab,ierrh)
 
-      use arrays,        only: u, b
       use constants,     only: varlen
       use dataio_pub,    only: planelen
       use grid,          only: cg
@@ -274,101 +273,101 @@ contains
       !> \todo compactify this long select
       select case (var)
          case ("dend")
-            if (ij=="yz") tab(:,:) = u(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("denn")
-            if (ij=="yz") tab(:,:) = u(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("deni")
-            if (ij=="yz") tab(:,:) = u(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlxd")
-            if (ij=="yz") tab(:,:) = u(flind%dst%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           u(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%dst%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           u(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%dst%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%dst%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%dst%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%dst%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
+                           cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlxn")
-            if (ij=="yz") tab(:,:) = u(flind%neu%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           u(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%neu%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           u(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%neu%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%neu%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
+                           cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlxi")
-            if (ij=="yz") tab(:,:) = u(flind%ion%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           u(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%ion%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           u(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           u(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%ion%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%ion%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
+                           cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlyd")
-            if (ij=="yz") tab(:,:) = u(flind%dst%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           u(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%dst%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           u(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%dst%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%dst%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%dst%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%dst%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
+                           cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlyn")
-            if (ij=="yz") tab(:,:) = u(flind%neu%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           u(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%neu%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           u(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%neu%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%neu%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
+                           cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlyi")
-            if (ij=="yz") tab(:,:) = u(flind%ion%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           u(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%ion%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           u(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           u(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%ion%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%ion%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
+                           cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlzd")
-            if (ij=="yz") tab(:,:) = u(flind%dst%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           u(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%dst%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           u(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%dst%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           u(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%dst%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%dst%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%dst%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
+                           cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlzn")
-            if (ij=="yz") tab(:,:) = u(flind%neu%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           u(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%neu%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           u(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%neu%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%neu%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
+                           cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlzi")
-            if (ij=="yz") tab(:,:) = u(flind%ion%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           u(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%ion%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           u(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%ion%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           u(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%ion%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%ion%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+                           cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%ion%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
+                           cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("enen")
 #ifdef ISO
             if (ij=="yz") tab(:,:) = 0.5 * (                     &
-                          u(flind%neu%imx, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
-                        + u(flind%neu%imy, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
-                        + u(flind%neu%imz, xn, cg%js:cg%je, cg%ks:cg%ke)**2) / &
-                             u(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+                          cg%u%arr(flind%neu%imx, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
+                        + cg%u%arr(flind%neu%imy, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
+                        + cg%u%arr(flind%neu%imz, xn, cg%js:cg%je, cg%ks:cg%ke)**2) / &
+                             cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
             if (ij=="xz") tab(:,:) = 0.5 * (                     &
-                          u(flind%neu%imx, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
-                         +u(flind%neu%imy, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
-                         +u(flind%neu%imz, cg%is:cg%ie, xn, cg%ks:cg%ke)**2) / &
-                             u(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+                          cg%u%arr(flind%neu%imx, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
+                         +cg%u%arr(flind%neu%imy, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
+                         +cg%u%arr(flind%neu%imz, cg%is:cg%ie, xn, cg%ks:cg%ke)**2) / &
+                             cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
             if (ij=="xy") tab(:,:) = 0.5 * (                     &
-                          u(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
-                         +u(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
-                         +u(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2) / &
-                             u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+                          cg%u%arr(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
+                         +cg%u%arr(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
+                         +cg%u%arr(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2) / &
+                             cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
 #else /* !ISO */
-            if (ij=="yz") tab(:,:) = u(flind%neu%ien, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%neu%ien, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%neu%ien, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%neu%ien, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%neu%ien, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%neu%ien, cg%is:cg%ie, cg%js:cg%je, xn)
 #endif /* !ISO */
          case ('prei')
             tab(:,:) = 0.0
@@ -377,46 +376,46 @@ contains
             tab = 0.0
 #else /* !ISO */
             if (ij=="xy") then
-               tab(:,:) = real( u(flind%neu%ien, cg%is:cg%ie, cg%js:cg%je, xn) - &
-                 0.5 *( u(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn)**2 + u(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn)**2 + &
-                        u(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2 ) / u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn),4)*(flind%neu%gam_1)
+               tab(:,:) = real( cg%u%arr(flind%neu%ien, cg%is:cg%ie, cg%js:cg%je, xn) - &
+                 0.5 *( cg%u%arr(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn)**2 + cg%u%arr(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn)**2 + &
+                        cg%u%arr(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2 ) / cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn),4)*(flind%neu%gam_1)
             endif
 #endif /* !ISO */
          case ("enei")
 #ifdef ISO
             if (ij=="yz") tab(:,:) = 0.5 * (                     &
-                          u(flind%ion%imx, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
-                        + u(flind%ion%imy, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
-                        + u(flind%ion%imz, xn, cg%js:cg%je, cg%ks:cg%ke)**2) / &
-                             u(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+                          cg%u%arr(flind%ion%imx, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
+                        + cg%u%arr(flind%ion%imy, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
+                        + cg%u%arr(flind%ion%imz, xn, cg%js:cg%je, cg%ks:cg%ke)**2) / &
+                             cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
             if (ij=="xz") tab(:,:) = 0.5 * (                     &
-                          u(flind%ion%imx, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
-                         +u(flind%ion%imy, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
-                         +u(flind%ion%imz, cg%is:cg%ie, xn, cg%ks:cg%ke)**2) / &
-                             u(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+                          cg%u%arr(flind%ion%imx, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
+                         +cg%u%arr(flind%ion%imy, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
+                         +cg%u%arr(flind%ion%imz, cg%is:cg%ie, xn, cg%ks:cg%ke)**2) / &
+                             cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
             if (ij=="xy") tab(:,:) = 0.5 * (                     &
-                          u(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
-                         +u(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
-                         +u(flind%ion%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2) / &
-                             u(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+                          cg%u%arr(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
+                         +cg%u%arr(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
+                         +cg%u%arr(flind%ion%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2) / &
+                             cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
 #else /* !ISO */
-            if (ij=="yz") tab(:,:) = u(flind%ion%ien, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = u(flind%ion%ien, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = u(flind%ion%ien, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%u%arr(flind%ion%ien, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%u%arr(flind%ion%ien, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%u%arr(flind%ion%ien, cg%is:cg%ie, cg%js:cg%je, xn)
 #endif /* !ISO */
 
          case ("magx")
-            if (ij=="yz") tab(:,:) = b(ibx, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = b(ibx, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = b(ibx, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%b%arr(ibx, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%b%arr(ibx, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%b%arr(ibx, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("magy")
-            if (ij=="yz") tab(:,:) = b(iby, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = b(iby, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = b(iby, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%b%arr(iby, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%b%arr(iby, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%b%arr(iby, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("magz")
-            if (ij=="yz") tab(:,:) = b(ibz, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = b(ibz, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = b(ibz, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij=="yz") tab(:,:) = cg%b%arr(ibz, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij=="xz") tab(:,:) = cg%b%arr(ibz, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij=="xy") tab(:,:) = cg%b%arr(ibz, cg%is:cg%ie, cg%js:cg%je, xn)
 #ifdef GRAV
          case ("gpot")
             if (ij=="yz") tab(:,:) = gpot(xn, cg%js:cg%je, cg%ks:cg%ke)
@@ -427,9 +426,9 @@ contains
 #ifdef COSM_RAYS
             if (var(1:3) == 'ecr') then
                i = iarr_all_crs(ichar(var(4:4))-48)
-               if (ij=="yz") tab(:,:) = u(i, xn, cg%js:cg%je, cg%ks:cg%ke)
-               if (ij=="xz") tab(:,:) = u(i, cg%is:cg%ie, xn, cg%ks:cg%ke)
-               if (ij=="xy") tab(:,:) = u(i, cg%is:cg%ie, cg%js:cg%je, xn)
+               if (ij=="yz") tab(:,:) = cg%u%arr(i, xn, cg%js:cg%je, cg%ks:cg%ke)
+               if (ij=="xz") tab(:,:) = cg%u%arr(i, cg%is:cg%ie, xn, cg%ks:cg%ke)
+               if (ij=="xy") tab(:,:) = cg%u%arr(i, cg%is:cg%ie, cg%js:cg%je, xn)
             else
 #endif /* COSM_RAYS */
             ierrh = -1
@@ -445,7 +444,6 @@ contains
 !<
    subroutine common_vars_hdf5(var,tab, ierrh)
 
-      use arrays,        only: u, b
       use constants,     only: varlen
       use fluidindex,    only: flind, ibx, iby, ibz
       use grid,          only: cg  ! QA_WARN required for RNG
@@ -471,74 +469,74 @@ contains
 #ifdef COSM_RAYS
          case ("ecr1" : "ecr9")
             read(var,'(A3,I1)') aux,i !> \deprecated BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(u(flind%crs%beg+i-1,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%crs%beg+i-1,RNG),4)
 #endif /* COSM_RAYS */
          case ("dend")
-            tab(:,:,:) = real(u(flind%dst%idn,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%dst%idn,RNG),4)
          case ("denn")
-            tab(:,:,:) = real(u(flind%neu%idn,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%neu%idn,RNG),4)
          case ("deni")
-            tab(:,:,:) = real(u(flind%ion%idn,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%ion%idn,RNG),4)
          case ("vlxd")
-            tab(:,:,:) = real(u(flind%dst%imx,RNG) / u(flind%dst%idn,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%dst%imx,RNG) / cg%u%arr(flind%dst%idn,RNG),4)
          case ("vlxn")
-            tab(:,:,:) = real(u(flind%neu%imx,RNG) / u(flind%neu%idn,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%neu%imx,RNG) / cg%u%arr(flind%neu%idn,RNG),4)
          case ("vlxi")
-            tab(:,:,:) = real(u(flind%ion%imx,RNG) / u(flind%ion%idn,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%ion%imx,RNG) / cg%u%arr(flind%ion%idn,RNG),4)
          case ("vlyd")
-            tab(:,:,:) = real(u(flind%dst%imy,RNG) / u(flind%dst%idn,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%dst%imy,RNG) / cg%u%arr(flind%dst%idn,RNG),4)
          case ("vlyn")
-            tab(:,:,:) = real(u(flind%neu%imy,RNG) / u(flind%neu%idn,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%neu%imy,RNG) / cg%u%arr(flind%neu%idn,RNG),4)
          case ("vlyi")
-            tab(:,:,:) = real(u(flind%ion%imy,RNG) / u(flind%ion%idn,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%ion%imy,RNG) / cg%u%arr(flind%ion%idn,RNG),4)
          case ("vlzd")
-            tab(:,:,:) = real(u(flind%dst%imz,RNG) / u(flind%dst%idn,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%dst%imz,RNG) / cg%u%arr(flind%dst%idn,RNG),4)
          case ("vlzn")
-            tab(:,:,:) = real(u(flind%neu%imz,RNG) / u(flind%neu%idn,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%neu%imz,RNG) / cg%u%arr(flind%neu%idn,RNG),4)
          case ("vlzi")
-            tab(:,:,:) = real(u(flind%ion%imz,RNG) / u(flind%ion%idn,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%ion%imz,RNG) / cg%u%arr(flind%ion%idn,RNG),4)
 #ifdef NEUTRAL
          case ("pren")
 #ifdef ISO
             tab = 0.0
 #else /* !ISO */
-            tab(:,:,:) = real( u(flind%neu%ien,RNG) - &
-              0.5 *( u(flind%neu%imx,RNG)**2 + u(flind%neu%imy,RNG)**2 + u(flind%neu%imz,RNG)**2 ) / u(flind%neu%idn,RNG),4)*real(flind%neu%gam_1, 4)
+            tab(:,:,:) = real( cg%u%arr(flind%neu%ien,RNG) - &
+              0.5 *( cg%u%arr(flind%neu%imx,RNG)**2 + cg%u%arr(flind%neu%imy,RNG)**2 + cg%u%arr(flind%neu%imz,RNG)**2 ) / cg%u%arr(flind%neu%idn,RNG),4)*real(flind%neu%gam_1, 4)
 #endif /* !ISO */
 #endif /* NEUTRAL */
          case ("enen")
 #ifdef ISO
-            tab(:,:,:) = real(0.5 *( u(flind%neu%imx,RNG)**2 + &
-                                     u(flind%neu%imy,RNG)**2 + &
-                                     u(flind%neu%imz,RNG)**2 ) &
-                              / u(flind%neu%idn,RNG),4)
+            tab(:,:,:) = real(0.5 *( cg%u%arr(flind%neu%imx,RNG)**2 + &
+                                     cg%u%arr(flind%neu%imy,RNG)**2 + &
+                                     cg%u%arr(flind%neu%imz,RNG)**2 ) &
+                              / cg%u%arr(flind%neu%idn,RNG),4)
 #else /* !ISO */
-            tab(:,:,:) = real(u(flind%neu%ien,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%neu%ien,RNG),4)
 #endif /* !ISO */
          case ("enei")
 #ifdef ISO
-            tab(:,:,:) = real(0.5 *( u(flind%ion%imx,RNG)**2 + &
-                                     u(flind%ion%imy,RNG)**2 + &
-                                     u(flind%ion%imz,RNG)**2 ) &
-                              / u(flind%ion%idn,RNG),4)
+            tab(:,:,:) = real(0.5 *( cg%u%arr(flind%ion%imx,RNG)**2 + &
+                                     cg%u%arr(flind%ion%imy,RNG)**2 + &
+                                     cg%u%arr(flind%ion%imz,RNG)**2 ) &
+                              / cg%u%arr(flind%ion%idn,RNG),4)
 #else /* !ISO */
-            tab(:,:,:) = real(u(flind%ion%ien,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%ion%ien,RNG),4)
 #endif /* !ISO */
          case ("prei")
 #ifdef ISO
             tab = 0.0
 #else /* !ISO */
-            tab(:,:,:) = real( u(flind%ion%ien,RNG) - &
-              0.5 *( u(flind%ion%imx,RNG)**2 + u(flind%ion%imy,RNG)**2 + u(flind%ion%imz,RNG)**2 ) / u(flind%ion%idn,RNG),4)*real(flind%ion%gam_1, 4)
-            tab(:,:,:) = tab(:,:,:) - real( 0.5*(flind%ion%gam_1)*(b(ibx,RNG)**2 + &
-               b(iby,RNG)**2 + b(ibz,RNG)**2),4)
+            tab(:,:,:) = real( cg%u%arr(flind%ion%ien,RNG) - &
+              0.5 *( cg%u%arr(flind%ion%imx,RNG)**2 + cg%u%arr(flind%ion%imy,RNG)**2 + cg%u%arr(flind%ion%imz,RNG)**2 ) / cg%u%arr(flind%ion%idn,RNG),4)*real(flind%ion%gam_1, 4)
+            tab(:,:,:) = tab(:,:,:) - real( 0.5*(flind%ion%gam_1)*(cg%b%arr(ibx,RNG)**2 + &
+               cg%b%arr(iby,RNG)**2 + cg%b%arr(ibz,RNG)**2),4)
 #endif /* !ISO */
          case ("magx")
-            tab(:,:,:) = real(b(ibx,RNG),4)
+            tab(:,:,:) = real(cg%b%arr(ibx,RNG),4)
          case ("magy")
-            tab(:,:,:) = real(b(iby,RNG),4)
+            tab(:,:,:) = real(cg%b%arr(iby,RNG),4)
          case ("magz")
-            tab(:,:,:) = real(b(ibz,RNG),4)
+            tab(:,:,:) = real(cg%b%arr(ibz,RNG),4)
 #ifdef GRAV
          case ("gpot")
             tab(:,:,:) = real(gpot(RNG),4)
@@ -621,7 +619,6 @@ contains
    subroutine write_plot_hdf5(var,plane,nimg)
 
       use constants,     only: xdim, ydim, zdim, varlen, cwdlen
-      use arrays,        only: u
       use dataio_pub,    only: vizit, fmin, fmax, log_file, msg, die, warn, user_plt_hdf5, planelen
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
@@ -1298,7 +1295,7 @@ contains
       endif
 
       call clean_arr_read(memspace, plist_id, filespace, dset_id)
-      ! rank-4 arrays (u(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
+      ! rank-4 arrays (cg%u%arr(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
 
    end subroutine read_4darr_from_restart
 

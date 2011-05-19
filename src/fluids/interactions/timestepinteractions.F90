@@ -43,7 +43,7 @@ contains
 !<
    real function timestep_interactions() result(dt)
 
-      use arrays,       only: u, b
+      use grid,         only: cg
       use func,         only: L2norm
       use constants,    only: small
       use fluidindex,   only: flind
@@ -57,14 +57,15 @@ contains
       real :: dt_interact_all         !< timestep due to %interactions for all MPI blocks
       real :: val                     !< variable used to store the maximum value of relative momentum
 
-      !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(u(iarr_all_dn,:,:,:))
+      !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(cg%u%arr(iarr_all_dn,:,:,:))
 
       !> \deprecated BEWARE: works only with neu+dust!!!!
 
       if (has_interactions) then
-         !       val = maxval (  sqrt( (u(flind%dst%imx,:,:,:)-u(flind%neu%imx,:,:,:))**2 + (u(flind%dst%imy,:,:,:)-u(flind%neu%imy,:,:,:))**2 + &
-         !                             (u(flind%dst%imz,:,:,:)-u(flind%neu%imz,:,:,:))**2   ) * u(flind%dst%idn,:,:,:) )
-         val = maxval ( L2norm(u(flind%dst%imx,:,:,:),u(flind%dst%imy,:,:,:),u(flind%dst%imz,:,:,:),u(flind%neu%imx,:,:,:),u(flind%neu%imy,:,:,:),u(flind%neu%imz,:,:,:) ) * u(flind%dst%idn,:,:,:) )
+         !       val = maxval (  sqrt( (cg%u%arr(flind%dst%imx,:,:,:)-cg%u%arr(flind%neu%imx,:,:,:))**2 + (cg%u%arr(flind%dst%imy,:,:,:)-cg%u%arr(flind%neu%imy,:,:,:))**2 + &
+         !                             (cg%u%arr(flind%dst%imz,:,:,:)-cg%u%arr(flind%neu%imz,:,:,:))**2   ) * cg%u%arr(flind%dst%idn,:,:,:) )
+         val = maxval ( L2norm(cg%u%arr(flind%dst%imx,:,:,:),cg%u%arr(flind%dst%imy,:,:,:),cg%u%arr(flind%dst%imz,:,:,:), &
+                            &  cg%u%arr(flind%neu%imx,:,:,:),cg%u%arr(flind%neu%imy,:,:,:),cg%u%arr(flind%neu%imz,:,:,:) ) * cg%u%arr(flind%dst%idn,:,:,:) )
          dt_interact_proc = flind%neu%cs / (maxval(collfaq) * val + small)
 
          call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
