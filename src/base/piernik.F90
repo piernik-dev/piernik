@@ -189,7 +189,7 @@ contains
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
       use fluidindex,            only: flind
-      use grid,                  only: init_grid, grid_mpi_boundaries_prep
+      use grid,                  only: init_grid, grid_mpi_boundaries_prep, cg
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use gridgeometry,          only: init_geometry
       use initproblem,           only: init_prob, read_problem_par
@@ -239,7 +239,7 @@ contains
       call init_piernikdebug ! Make it available as early as possible - right after init_mpi
 #endif /* DEBUG */
 
-      call init_grid
+      call init_grid         ! Most of the cg's vars are now initialized, only arrays left
 
       call init_time_step
 
@@ -346,7 +346,7 @@ contains
       call diagnose_arrays ! may depend on everything
 #endif /* VERBOSE */
 
-      call sanitize_smallx_checks ! depends on init_prob || init_dataio/read_restart_hdf5
+      call sanitize_smallx_checks(cg) ! depends on init_prob || init_dataio/read_restart_hdf5
 
    end subroutine init_piernik
 

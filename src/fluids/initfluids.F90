@@ -188,36 +188,37 @@ contains
 
    end subroutine cleanup_fluids
 
-   subroutine sanitize_smallx_checks
+   subroutine sanitize_smallx_checks(cg)
 
+      use grid_cont,  only: grid_container
       use mpisetup,   only: smalld, smallp, master, comm, ierr
       use constants,  only: big_float, DST
       use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
       use func,       only: emag, ekin
       use dataio_pub, only: warn, msg
       use fluidtypes, only: component_fluid
-      use arrays,     only: u, b
       use fluidindex, only: flind, ibx, iby, ibz
 
       implicit none
 
-      type(component_fluid), pointer  :: fl
-      integer                         :: i
-      real, pointer, dimension(:,:,:) :: dn, mx, my, mz, en, bx, by, bz
-      real, parameter                 :: safety_factor = 1.e-4
-      real, parameter                 :: max_dens_span = 5.0
-      real                            :: maxdens, span
+      type(grid_container), intent(in) :: cg
+      type(component_fluid), pointer   :: fl
+      integer                          :: i
+      real, pointer, dimension(:,:,:)  :: dn, mx, my, mz, en, bx, by, bz
+      real, parameter                  :: safety_factor = 1.e-4
+      real, parameter                  :: max_dens_span = 5.0
+      real                             :: maxdens, span
 
       maxdens = 0.0
 
-      bx => b(ibx,:,:,:)
-      by => b(iby,:,:,:)
-      bz => b(ibz,:,:,:)
+      bx => cg%b%arr(ibx,:,:,:)
+      by => cg%b%arr(iby,:,:,:)
+      bz => cg%b%arr(ibz,:,:,:)
 
       if (smalld >= big_float) then
          do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
             fl => flind%all_fluids(i)
-            dn => u(fl%idn,:,:,:)
+            dn => cg%u%arr(fl%idn,:,:,:)
 
             maxdens = max(maxval(dn), maxdens)
             smalld  = min(minval(dn), smalld)
@@ -239,12 +240,12 @@ contains
          do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
             fl => flind%all_fluids(i)
             if (fl%tag == DST) cycle
-            dn => u(fl%idn,:,:,:)
-            mx => u(fl%imx,:,:,:)
-            my => u(fl%imy,:,:,:)
-            mz => u(fl%imz,:,:,:)
+            dn => cg%u%arr(fl%idn,:,:,:)
+            mx => cg%u%arr(fl%imx,:,:,:)
+            my => cg%u%arr(fl%imy,:,:,:)
+            mz => cg%u%arr(fl%imz,:,:,:)
             if (fl%has_energy) then
-               en => u(fl%ien,:,:,:)
+               en => cg%u%arr(fl%ien,:,:,:)
                if (fl%is_magnetized) then
                   smallp = min( minval( en - ekin(mx,my,mz,dn) - emag(bx,by,bz))/fl%gam_1, smallp)
                else
