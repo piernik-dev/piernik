@@ -289,18 +289,17 @@ contains
          if (has_dir(xdim)) then
             do i= 1, this%nx
                this%x(i)  = dom%xmin   + 0.5*this%dx + real(i-this%nb-1+this%off(xdim))*this%dx
-               this%xl(i) = this%x(i)  - 0.5*this%dx
-               this%xr(i) = this%x(i)  + 0.5*this%dx
             enddo
          else
-            this%x  =  0.5*(this%xminb + this%xmaxb)
-            this%xl = -0.5*this%dx
-            this%xr =  0.5*this%dx
+            this%x(:) = 0.5*(this%xminb + this%xmaxb)
          endif
+         this%xl(:) = this%x(:) - 0.5*this%dx
+         this%xr(:) = this%x(:) + 0.5*this%dx
+
          where ( this%x /= 0.0 )
-            this%inv_x = 1./this%x
+            this%inv_x(:) = 1./this%x(:)
          elsewhere
-            this%inv_x = 0.
+            this%inv_x(:) = 0.
          endwhere
 
 !--- y-grids --------------------------------------------------------------
@@ -308,18 +307,17 @@ contains
          if (has_dir(ydim)) then
             do j= 1, this%ny
                this%y(j)  = dom%ymin   + 0.5*this%dy + real(j-this%nb-1+this%off(ydim))*this%dy
-               this%yl(j) = this%y(j)  - 0.5*this%dy
-               this%yr(j) = this%y(j)  + 0.5*this%dy
             enddo
          else
-            this%y  =  0.5*(this%yminb + this%ymaxb)
-            this%yl = -0.5*this%dy
-            this%yr =  0.5*this%dy
+            this%y(:) = 0.5*(this%yminb + this%ymaxb)
          endif
+         this%yl(:) = this%y(:) - 0.5*this%dy
+         this%yr(:) = this%y(:) + 0.5*this%dy
+
          where ( this%y /= 0.0 )
-            this%inv_y = 1./this%y
+            this%inv_y(:) = 1./this%y(:)
          elsewhere
-            this%inv_y = 0.
+            this%inv_y(:) = 0.
          endwhere
 
 !--- z-grids --------------------------------------------------------------
@@ -327,19 +325,19 @@ contains
          if (has_dir(zdim)) then
             do k= 1, this%nz
                this%z(k)  = dom%zmin   + 0.5*this%dz + real(k-this%nb-1+this%off(zdim))*this%dz
-               this%zl(k) = this%z(k)  - 0.5*this%dz
-               this%zr(k) = this%z(k)  + 0.5*this%dz
             enddo
          else
-            this%z  =  0.5*(this%zminb + this%zmaxb)
-            this%zl = -0.5*this%dz
-            this%zr =  0.5*this%dz
+            this%z(:) = 0.5*(this%zminb + this%zmaxb)
          endif
+         this%zl(:) = this%z(:) - 0.5*this%dz
+         this%zr(:) = this%z(:) + 0.5*this%dz
+
          where ( this%z /= 0.0 )
-            this%inv_z = 1./this%z
+            this%inv_z(:) = 1./this%z(:)
          elsewhere
-            this%inv_z = 0.
+            this%inv_z(:) = 0.
          endwhere
+
       endif
 
       this%ijkse(:, LO) = [ this%is, this%js, this%ks ]
