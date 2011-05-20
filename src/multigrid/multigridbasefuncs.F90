@@ -239,19 +239,20 @@ contains
    subroutine prolong_faces(lev, soln)
 
       use grid,               only: D_x, D_y, D_z
-      use mpisetup,           only: has_dir, comm
+      use mpisetup,           only: has_dir, proc, comm, ierr, req, status, master
+      use mpi,                only: MPI_DOUBLE_PRECISION
       use constants,          only: xdim, ydim, zdim, LO, HI, LONG
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: plvl, lvl, ord_prolong_face_norm, ord_prolong_face_par, base, roof, extbnd_antimirror, need_general_pf
+      use multigridvars,      only: plvl, lvl, ord_prolong_face_norm, ord_prolong_face_par, base, roof, extbnd_antimirror, is_external, need_general_pf
 
       implicit none
 
       integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
+      integer, intent(in) :: soln !< index of solution in lvl()%mgvar ! \todo change the name
 
-      integer                       :: i, j, k
+      integer                       :: i, j, k, d, lh, g, g1, gc, ib, jb, ibh, jbh
       type(plvl), pointer           :: coarse, fine
       integer, parameter            :: s_wdth  = 3           ! interpolation stencil width
       integer, parameter            :: s_rng = (s_wdth-1)/2  ! stencil range around 0
@@ -262,8 +263,19 @@ contains
       real, dimension(-s_rng:s_rng)                    :: p
       real, dimension(-s_rng:s_rng, -s_rng:s_rng, 2, 2):: pp   ! 2D prolongation stencil
       real                          :: pp_norm
+
+      integer, dimension(xdim:zdim) :: ii
+      integer, dimension(xdim:zdim) :: off1
+      integer :: nr
+      integer(kind=8), dimension(:,:), pointer :: cse ! shortcut for coarse segment
+      type c_bnd
+         real, dimension(:, :), pointer :: bnd
+      end type c_bnd
+      type(c_bnd), dimension(xdim:zdim, LO:HI) :: p_bnd
+      real, dimension(:,:), pointer :: buf2
       real :: opfn1, opfn3
       integer :: b_rng
+      integer, dimension(xdim:zdim), parameter :: d1 = [ ydim, xdim, xdim ] , d2 = [ zdim, zdim, ydim ]
 
       ! coefficients for intepolation perpendicular to the face can be expressed as
       ! 1/2*| 1 0 ... ] + a2*| 1 -1 0 ... ] + a4*| 1 -2 1 0 ... ] + a6*| 1 -3 3 -1 0 ... ] + a8*| 1 -4 6 -4 1 0 ... ] + ...
@@ -293,7 +305,163 @@ contains
       if (.not. associated(coarse)) call die("[multigridbasefuncs:prolong_faces] coarse == null()")
 
       if (need_general_pf) then
-         call die("[multigridbasefuncs:prolong_faces] comm3d == MPI_COMM_NULL not implemented yet")
+
+         if (ord_prolong_face_par /= 0) then
+            ord_prolong_face_par = 0
+            if (master) call warn("[multigridbasefuncs:prolong_faces] only injection is supported for the current domain decomposition type.")
+            ! The tests made with comm3d suggests that paralel interpolation only degrades convergence rate.
+            ! Implement ord_prolong_face_par /= 0 if and only if it improves the coupling between fine and coarse solutions
+         endif
+
+         if (ord_prolong_face_norm /= 0) then
+            ord_prolong_face_norm = 0
+            call warn("[multigridbasefuncs:prolong_faces] ord_prolong_face_norm /= 0 not implemented yet for the current domain decomposition type.")
+         endif
+
+         do lh = LO, HI ! \todo convert plvl%bnd_[xyz] to an array and make obsolete the following pointer assignments
+            p_bnd(xdim, lh)%bnd => fine%bnd_x(:, :, lh)
+            p_bnd(ydim, lh)%bnd => fine%bnd_y(:, :, lh)
+            p_bnd(zdim, lh)%bnd => fine%bnd_z(:, :, lh)
+            do d = xdim, zdim
+               p_bnd(d, lh)%bnd(:, :) = 0. ! \todo mark dirty somehow, eg use a "magic" small value, like 1.234567890123456789e-123
+            enddo
+         enddo
+
+         nr = 0
+
+         ! Gather coarse data for internal boundaries from others
+         do d = xdim, zdim
+            do lh = LO, HI
+               if (allocated(fine%pfc_tgt(d, lh)%seg)) then
+                  do g = 1, ubound(fine%pfc_tgt(d, lh)%seg(:), dim=1)
+                     if (fine%pfc_tgt(d, lh)%seg(g)%proc /= proc) then
+                        nr = nr + 1
+                        call MPI_Irecv(fine%pfc_tgt(d, lh)%seg(g)%buf(1, 1, 1), size(fine%pfc_tgt(d, lh)%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, &
+                             &         fine%pfc_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), ierr)
+                     endif
+                  enddo
+               endif
+            enddo
+         enddo
+
+         ! Send own coarse data to others
+         off1(:) = int(mod(fine%off(:), 2_LONG), kind=4)
+         do d = xdim, zdim
+            do lh = LO, HI
+               if (allocated(coarse%pff_tgt(d, lh)%seg)) then
+                  do g = 1, ubound(coarse%pff_tgt(d, lh)%seg(:), dim=1)
+
+                     cse => coarse%pff_tgt(d, lh)%seg(g)%se
+
+                     if (coarse%pff_tgt(d, lh)%seg(g)%proc /= proc) then
+                        nr = nr + 1
+
+                        ! this will be a weighted sum over layers for ord_prolong_face_norm/=0
+                        nullify(buf2)
+                        select case (d)
+                           case (xdim)
+                              buf2 => coarse%pff_tgt(d, lh)%seg(g)%buf(1, :, :)
+                           case (ydim)
+                              buf2 => coarse%pff_tgt(d, lh)%seg(g)%buf(:, 1, :)
+                           case (zdim)
+                              buf2 => coarse%pff_tgt(d, lh)%seg(g)%buf(:, :, 1)
+                           case default
+                              call die("mbf:pf dir")
+                              buf2 => fine%pfc_tgt(d, lh)%seg(g)%buf(-1, -1:-1, -1:-1) ! suppress compiler warnings
+                        end select
+                        buf2(:,:) = coarse%pff_tgt(d, lh)%seg(g)%coeff(1) * &
+                             sum(coarse%mgvar(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI), soln), dim=d)
+                        call MPI_Isend(coarse%pff_tgt(d, lh)%seg(g)%buf(1, 1, 1), size(coarse%pff_tgt(d, lh)%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, &
+                             &         coarse%pff_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), ierr)
+                     endif
+                  enddo
+               endif
+            enddo
+         enddo
+
+         ! Make a copy of local coarse data to buffer (\todo: can be merged with interpolation step)
+         do d = xdim, zdim
+            do lh = LO, HI
+               if (allocated(fine%pfc_tgt(d, lh)%seg)) then
+                  do g = 1, ubound(fine%pfc_tgt(d, lh)%seg(:), dim=1)
+                     if (fine%pfc_tgt(d, lh)%seg(g)%proc == proc) then
+                        nullify(cse)
+                        gc = 0
+                        do g1 = 1, ubound(coarse%pff_tgt(d, lh)%seg(:), dim=1) !> \todo should be set up in mpi_multigrid_prep_grav
+                           if (coarse%pff_tgt(d, lh)%seg(g1)%proc == proc) then
+                              if (.not. associated(cse)) then
+                                 cse => coarse%pff_tgt(d, lh)%seg(g1)%se
+                                 gc = g1
+                              else
+                                 call die("[multigridbasefuncs:prolong_faces] multiple local coarse grid targets")
+                              endif
+                           endif
+                        enddo
+                        if (.not. associated(cse)) call die("[multigridbasefuncs:prolong_faces] missing coarse grid target")
+
+                        ! this will be a weighted sum over layers for ord_prolong_face_norm/=0
+                        nullify(buf2)
+                        select case (d)
+                           case (xdim)
+                              buf2 => fine%pfc_tgt(d, lh)%seg(g)%buf(1,:,:)
+                           case (ydim)
+                              buf2 => fine%pfc_tgt(d, lh)%seg(g)%buf(:,1,:)
+                           case (zdim)
+                              buf2 => fine%pfc_tgt(d, lh)%seg(g)%buf(:,:,1)
+                           case default
+                              call die("mbf:pf dir")
+                              buf2 => fine%pfc_tgt(d, lh)%seg(g)%buf(-1, -1:-1, -1:-1) ! suppress compiler warnings
+                        end select
+                        buf2(:,:) = coarse%pff_tgt(d, lh)%seg(gc)%coeff(1) * &
+                             sum(coarse%mgvar(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI), soln), dim=d)
+                     endif
+                  enddo
+               endif
+            enddo
+         enddo
+
+         if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
+
+         ! Interpolate content of buffers to boundary face-layes lvl(lev)%bnd_[xyz](:, :, :)
+         do d = xdim, zdim
+            if (has_dir(d)) then
+               do lh = LO, HI
+                  ! make external homogenous Dirichlet boundaries, where applicable, interpolate (inject) otherwise.
+                  ! \todo for homogenous neumann boundary lay2 should be .false. and pc_bnd(1, :, :) should contain layer of the coarse data next to the external boundary
+                  if (is_external(d, lh)) then
+                     p_bnd(d, lh)%bnd(:,:) = 0. ! BEWARE homogenous Dirichlt by default
+                  else
+                     p_bnd(d, lh)%bnd(:,:) = 0
+                     if (allocated(fine%pfc_tgt(d, lh)%seg)) then
+                        do g = 1, ubound(fine%pfc_tgt(d, lh)%seg(:), dim=1)
+
+                           ii(d) = 1
+                           do i = 1, ubound(fine%pfc_tgt(d, lh)%seg(g)%buf, dim=d1(d))
+                              ii(d1(d)) = i
+                              do j = 1, ubound(fine%pfc_tgt(d, lh)%seg(g)%buf, dim=d2(d))
+                                 ii(d2(d)) = j
+
+! ? + off (0 or 1)
+                                 ib = 2*i - 1 + int(fine%pfc_tgt(d, lh)%seg(g)%se(d1(d), LO), kind=4) - int(mod(fine%off(d1(d)), 2_LONG), 4)
+                                 jb = 2*j - 1 + int(fine%pfc_tgt(d, lh)%seg(g)%se(d2(d), LO), kind=4) - int(mod(fine%off(d2(d)), 2_LONG), 4)
+
+                                 ibh = ib
+                                 if (has_dir(d1(d)) .and. ubound(p_bnd(d, lh)%bnd(:,:), dim=1) > ib) ibh = ib + 1
+                                 if (has_dir(d1(d)) .and. lbound(p_bnd(d, lh)%bnd(:,:), dim=1) > ib) ib  = ib + 1
+                                 jbh = jb
+                                 if (has_dir(d2(d)) .and. ubound(p_bnd(d, lh)%bnd(:,:), dim=2) > jb) jbh = jb + 1
+                                 if (has_dir(d2(d)) .and. lbound(p_bnd(d, lh)%bnd(:,:), dim=2) > jb) jb  = jb + 1
+
+                                 p_bnd(d, lh)%bnd(ib:ibh, jb:jbh) = p_bnd(d, lh)%bnd(ib:ibh, jb:jbh) + fine%pfc_tgt(d, lh)%seg(g)%buf(ii(xdim), ii(ydim), ii(zdim))
+                              enddo
+                           enddo
+                        enddo
+                     endif
+                  endif
+               enddo
+            endif
+         enddo
+
       else
          select case (ord_prolong_face_par)
             case (0)

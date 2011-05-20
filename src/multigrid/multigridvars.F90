@@ -106,6 +106,7 @@ module multigridvars
 
    type, extends(segment) :: pr_segment                               !< segment type for prolongation and restriction
       real, allocatable, dimension(:,:,:) :: buf                      !< buffer for the coarse data (incoming prolongation and outgoing restriction) for each nonlocal operations
+      real, allocatable, dimension(:) :: coeff                        !< coefficients for face prolongation
    end type pr_segment                                                !> (not allocated for outgoing prolongation, incoming restriction and for local operations)
 
    type :: tgt_list                                                   !< target list container for prolongations, restrictions and boundary exchanges
@@ -132,6 +133,7 @@ module multigridvars
 
       type(tgt_list) :: f_tgt                                         !< description of incoming restriction and outgoing prolongation data (this should be a linked list)
       type(tgt_list) :: c_tgt                                         !< description of outgoing restriction and incoming prolongation data
+      type(tgt_list), dimension(xdim:zdim, LO:HI) :: pff_tgt, pfc_tgt !< description outgoing and incoming face prolongation data
 
       ! data for FFT solver
       integer                                :: nxc                   !< first index (complex or real: fft(:,:,:) or fftr(:,:,:)) cell count

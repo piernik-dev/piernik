@@ -203,7 +203,7 @@ contains
       use_point_monopole     = .false.
       trust_fft_solution     = .false.
       base_no_fft            = .false.
-      prefer_rbgs_relaxation =  is_uneven
+      prefer_rbgs_relaxation = .false.
       fft_full_relax         = .false.
       fft_patient            = .false.
       interp_pt2mom          = .false.
@@ -232,11 +232,6 @@ contains
             ! ord_prolong_mpole = 0
          else if (geometry_type /= GEO_XYZ) then
             call die("[multigrid_gravity:init_multigrid_grav] non-cartesian geometry not implemented yet.")
-         endif
-
-         if (comm3d == MPI_COMM_NULL .and. .not. prefer_rbgs_relaxation) then
-            prefer_rbgs_relaxation = .true.
-            call warn("[multigrid_gravity:init_multigrid_grav] Enforcing RBGS relaxation because comm3d == MPI_COMM_NULL")
          endif
 
          rbuff(1) = norm_tol
@@ -352,6 +347,7 @@ contains
          if (master) call warn("[multigrid_gravity:init_multigrid_grav] Use of FFT not allowed by current boundary type/combination.")
       endif
 
+      ! something is a bit messed up here
       if (comm3d /= MPI_COMM_NULL .and. .not. base_no_fft) then
          base_no_fft = .true.
          if (master) call warn("[multigrid_gravity:init_multigrid_grav] comm3d disables use of FFT at base level")
@@ -393,7 +389,7 @@ contains
    subroutine init_multigrid_grav_post(mb_alloc)
 
       use multigridvars,    only: lvl, plvl, roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, is_mg_uneven, need_general_pf, single_base
-      use mpisetup,         only: master, nproc, geometry_type, dom, proc, comm3d, is_uneven
+      use mpisetup,         only: master, nproc, geometry_type, dom, proc, comm3d
       use multigridhelpers, only: vcycle_stats_init, dirty_debug, dirtyH
       use constants,        only: pi, dpi, GEO_XYZ
       use dataio_pub,       only: die, warn
@@ -413,15 +409,12 @@ contains
 
       need_general_pf = comm3d == MPI_COMM_NULL .or. single_base .or. is_mg_uneven
 
-      if ((is_uneven .or. is_mg_uneven) .and. .not. prefer_rbgs_relaxation) then
-         prefer_rbgs_relaxation = .true.
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] FFT relaxation not implemented on uneven domains. Forcing red-black Gauss-Seidel.") !prolong_faces
-      endif
-
       if (need_general_pf .and. coarsen_multipole /= 0) then
          coarsen_multipole = 0
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] multipole coarsening on uneven domains not implemented yet.")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] multipole coarsening on uneven domains or with comm3d == MPI_COMM_NULL is not implemented yet.")
       endif
+
+      call mpi_multigrid_prep_grav !supplement to mpi_multigrid_prep
 
       ! solution recycling
       ord_time_extrap = min(nold_max-1, max(-1, ord_time_extrap))
@@ -623,17 +616,201 @@ contains
 
 !!$ ============================================================================
 !>
+!! \brief Set up communication for face prolongation
+!! \todo implement also prolongation of coarsened multipoles
+!<
+
+   subroutine mpi_multigrid_prep_grav
+
+      use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG
+      use dataio_pub,    only: warn, die
+      use mpisetup,      only: has_dir, proc, nproc, is_neigh, procmask, master, inflate_req, req
+      use multigridvars, only: base, lvl, plvl, pr_segment, ord_prolong_face_norm, is_external, need_general_pf
+
+      implicit none
+
+      integer :: d, g, j, lh, hl
+      logical, dimension(xdim:zdim, LO:HI) :: neigh
+      logical :: sharing, corner, face
+      integer(kind=8), dimension(xdim:zdim) :: ijks, per
+      logical, dimension(xdim:zdim) :: dmask
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened, b_layer
+      type(pr_segment), pointer :: seg
+      type(plvl), pointer   :: curl                   !> current level (a pointer sliding along the linked list)
+      logical :: is_internal_fine
+
+      if (.not. need_general_pf) return
+
+      call inflate_req(size([LO, HI]) * 2 * nproc * ndims)
+
+      if (ord_prolong_face_norm > 0) then
+         if (master) call warn("[multigrid_gravity:mpi_multigrid_prep_grav] ord_prolong_face_norm > 0 not fully implemented yet, defaulting to 0")
+         ord_prolong_face_norm = 0
+      endif
+
+      curl => base
+      do while (associated(curl))
+
+         ijks(:) = curl%ijkse(:, LO) - curl%off(:)  ! add this to convert absolute cell coordinates to local indices. (+mg_nb - off(:))
+         per(:) = 0
+         where (curl%dom%periodic(:)) per(:) = curl%dom%n_d(:)
+
+         do d = xdim, zdim
+            dmask(:) = .false.
+            dmask(d) = .true.
+            do lh = LO, HI
+               if (has_dir(d) .and. .not. curl%empty) then
+                  hl = LO+HI-lh
+
+                  ! find coarse target for receiving data to be prolonged
+                  if (associated(curl%coarser) .and. .not. is_external(d, lh)) then
+                     procmask(:) = 0
+                     ! two layers of cells are required for even locations (+ two layers per each interpolation order)
+                     ! one layer of cells is required for odd locations (the local domain face is exactly at the centers of coarse cells)
+                     coarsened(:, :) = curl%dom%se(proc, :, :)/2
+                     coarsened(d, hl) = coarsened(d, lh)
+                     select case (lh)
+                        case (LO)
+                           if (mod(curl%off(d),               2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
+                        case (HI)
+                           if (mod(curl%off(d) + curl%n_b(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
+                     end select
+
+                     do j = 0, nproc-1
+                        call is_neigh(coarsened(:,:), curl%coarser%dom%se(j, :, :), neigh(:,:), sharing, corner, face, per)
+                        if (sharing) procmask(j) = 1
+                     enddo
+                     allocate(curl%pfc_tgt(d, lh)%seg(count(procmask(:) /= 0)))
+
+                     g = 0
+                     do j = 0, nproc-1
+                        if (procmask(j) /= 0) then
+                           g = g + 1
+                           if (.not. allocated(curl%pfc_tgt(d, lh)%seg) .or. g>ubound(curl%pfc_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pfc_tgt g>")
+                           seg => curl%pfc_tgt(d, lh)%seg(g)
+                           if (allocated(seg%buf)) then
+                              call warn("mg:mmpg o seg%buf a a")
+                              deallocate(seg%buf)
+                           endif
+                           seg%proc = j
+                           ! find cross-section of own face segment with refined coarse segment
+                           b_layer(:, :) = curl%dom%se(proc, :, :)
+                           b_layer(d, hl) = b_layer(d, lh)
+                           !b_layer(d, lh) = b_layer(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
+
+                           where (.not. dmask(:)) ! find extents perpendicular to d
+                              seg%se(:, LO) = max(b_layer(:, LO), curl%coarser%dom%se(j, :, LO)*2  )
+                              seg%se(:, HI) = min(b_layer(:, HI), curl%coarser%dom%se(j, :, HI)*2+1)
+                           endwhere
+                           seg%se(d, :) = b_layer(d, :)
+                           !if (j /= proc)
+                           allocate(seg%buf(seg%se(xdim, HI)/2-seg%se(xdim, LO)/2 + 1, &
+                                &           seg%se(ydim, HI)/2-seg%se(ydim, LO)/2 + 1, &
+                                &           seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
+                           ! not counted in mb_alloc
+
+                           seg%se(:, LO) = seg%se(:, LO) - curl%off(:) !+ ijks(:)
+                           seg%se(:, HI) = seg%se(:, HI) - curl%off(:) !+ ijks(:)
+                        endif
+                     enddo
+
+                  endif
+
+                  ! find fine target(s) for sending the data to be prolonged
+                  if (associated(curl%finer)) then
+                     procmask(:) = 0
+                     do j = 0, nproc-1
+                        is_internal_fine = curl%finer%dom%periodic(d)
+                        coarsened(:, :) = curl%finer%dom%se(j, :, :)/2
+                        coarsened(d, hl) = coarsened(d, lh)
+                        select case (lh)
+                           case (LO)
+                              if (mod(curl%finer%dom%se(j, d, LO),     2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
+                              is_internal_fine = is_internal_fine .or. (curl%finer%dom%se(j, d, lh) /= 0)
+                           case (HI)
+                              if (mod(curl%finer%dom%se(j, d, HI) + 1, 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
+                              is_internal_fine = is_internal_fine .or. (curl%finer%dom%se(j, d, lh) + 1 < curl%finer%dom%n_d(d))
+                        end select
+                        if (is_internal_fine) then
+                           call is_neigh(coarsened(:, :), curl%dom%se(proc, :, :), neigh(:,:), sharing, corner, face, per)
+                           if (sharing) procmask(j) = 1
+                        endif
+                     enddo
+                     allocate(curl%pff_tgt(d, lh)%seg(count(procmask(:) /= 0)))
+
+                     g = 0
+                     do j = 0, nproc-1
+                        if (procmask(j) /= 0) then
+                           g = g + 1
+                           if (.not. allocated(curl%pff_tgt(d, lh)%seg) .or. g>ubound(curl%pff_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pff_tgt g>")
+                           seg => curl%pff_tgt(d, lh)%seg(g)
+                           if (allocated(seg%buf)) then
+                              call warn("mg:mmpg o seg%buf a a")
+                              deallocate(seg%buf)
+                           endif
+                           seg%proc = j
+
+                           ! find cross-section of own segment with coarsened fine face segment
+                           coarsened(:, :) = curl%finer%dom%se(j, :, :)
+                           coarsened(d, hl) = coarsened(d, lh)
+                           coarsened(:, :) = coarsened(:, :)/2
+                           where (.not. dmask(:))
+                              seg%se(:, LO) = max(curl%dom%se(proc, :, LO), coarsened(:, LO))
+                              seg%se(:, HI) = min(curl%dom%se(proc, :, HI), coarsened(:, HI))
+                           endwhere
+                           seg%se(d, :) = coarsened(d, :)
+                           !if (j /= proc)
+                           allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
+                                &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
+                                &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
+
+                           coarsened(:, :) = curl%finer%dom%se(j, :, :)
+                           coarsened(d, hl) = coarsened(d, lh)
+                           coarsened(d, lh) = coarsened(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
+                           coarsened(:, :) = coarsened(:, :)/2
+                           if (coarsened(d, LO) /= coarsened(d, HI)) coarsened(d, :) = coarsened(d, :) + [ -ord_prolong_face_norm, ord_prolong_face_norm ]
+                           seg%se(:, LO) = max(curl%dom%se(proc, :, LO), coarsened(:, LO)) + ijks(:)
+                           seg%se(:, HI) = min(curl%dom%se(proc, :, HI), coarsened(:, HI)) + ijks(:)
+
+                           allocate(seg%coeff(1)) !> \todo 1 .. 2*ord_prolong_face_norm, depending on width of the crosssection
+                           seg%coeff(1) = 1.
+                           select case (lh)
+                              case (LO)
+                                 if (mod(curl%finer%dom%se(j, d, lh),     2_LONG) == 0) seg%coeff(1) = 0.5 ! requires corrections for ord_prolong_face_norm
+                              case (HI)
+                                 if (mod(curl%finer%dom%se(j, d, lh) + 1, 2_LONG) == 0) seg%coeff(1) = 0.5
+                           end select
+
+                        endif
+                     enddo
+
+                  endif
+
+               endif
+            enddo
+         enddo
+
+         curl => curl%finer
+      enddo
+
+   end subroutine mpi_multigrid_prep_grav
+
+!!$ ============================================================================
+!>
 !! \brief Cleanup
 !<
 
    subroutine cleanup_multigrid_grav
 
+      use constants,     only: LO, HI, ndims
       use multipole,     only: cleanup_multipole
-      use multigridvars, only: lvl, plvl, base
+      use multigridvars, only: lvl, plvl, base, tgt_list
 
       implicit none
 
-      integer :: i
+      integer :: i, g, ib
+      integer, parameter :: nseg = 2*(HI-LO+1)*ndims
+      type(tgt_list), dimension(nseg) :: io_tgt
       type(plvl), pointer :: curl
 
       call cleanup_multipole
@@ -656,6 +833,18 @@ contains
 
             if (curl%planf /= 0) call dfftw_destroy_plan(curl%planf)
             if (curl%plani /= 0) call dfftw_destroy_plan(curl%plani)
+
+            io_tgt(1:nseg) = [ curl%pfc_tgt, curl%pff_tgt ]
+            do ib = 1, nseg
+               if (allocated(io_tgt(ib)%seg)) then
+                  do g = 1, ubound(io_tgt(ib)%seg, dim=1)
+                     if (allocated(io_tgt(ib)%seg(g)%buf)) deallocate(io_tgt(ib)%seg(g)%buf)
+                     if (allocated(io_tgt(ib)%seg(g)%coeff)) deallocate(io_tgt(ib)%seg(g)%coeff)
+                  enddo
+                  deallocate(io_tgt(ib)%seg)
+               endif
+            enddo
+
             curl => curl%finer
          enddo
       endif
