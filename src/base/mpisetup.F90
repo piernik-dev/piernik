@@ -36,12 +36,12 @@
 module mpisetup
 
    use types,      only: domain_container
-   use constants,  only: ndims, cbuff_len, LO, HI, BLK, BND
+   use constants,  only: ndims, cbuff_len, LO, HI
 
    implicit none
 
    private
-   public :: cleanup_mpi, init_mpi, mpifind, translate_bnds_to_ints_dom, is_neigh, &
+   public :: cleanup_mpi, init_mpi, mpifind, translate_bnds_to_ints_dom, inflate_req, is_neigh, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, comm, comm3d, req, status, ierr, info, &
         &    master, slave, have_mpi, has_dir, eff_dim, is_uneven, is_mpi_noncart, &
         &    nproc, pcoords, proc, procn, psize, procxyl, procyxl, &
@@ -53,7 +53,6 @@ module mpisetup
 
    integer, protected :: nproc, proc, ierr, info
 
-   integer, parameter :: nreq = size([LO, HI]) * size([BLK, BND]) * ndims ! just another way of defining '4 * 3' ;-)
    integer, allocatable, dimension(:)   :: req
    integer, allocatable, dimension(:,:) :: status
 
@@ -217,8 +216,8 @@ contains
 !<
    subroutine init_mpi
 
-      use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, dpi, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF, DD_CART, DD_UE
-      use mpi,           only: MPI_COMM_WORLD, MPI_COMM_NULL, MPI_INFO_NULL, MPI_PROC_NULL, MPI_STATUS_SIZE, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
+      use constants,     only: cwdlen, xdim, ydim, zdim, LO, HI, big_float, dpi, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF, DD_CART, DD_UE, BLK, BND
+      use mpi,           only: MPI_COMM_WORLD, MPI_COMM_NULL, MPI_INFO_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
       use dataio_pub,    only: die, printinfo, msg, cwd, ansi_white, ansi_black, warn, tmp_log_file
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
 
@@ -672,11 +671,9 @@ contains
 
       if (allocated(req) .or. allocated(status)) call die("[mpisetup:init_mpi] req or status already allocated")
       if (comm3d == MPI_COMM_NULL) then
-         allocate(req(4*nproc)) ! 4 = count([i_bnd, o_bnd]) * two sides
-         allocate(status(MPI_STATUS_SIZE, size(req)))
+         call inflate_req(size([LO, HI]) * 2 * nproc) ! 2 = count([i_bnd, o_bnd])
       else
-         allocate(req(nreq))
-         allocate(status(MPI_STATUS_SIZE, nreq))
+         call inflate_req(size([LO, HI]) * size([BLK, BND]) * ndims) ! just another way of defining '4 * 3' ;-)
       endif
 
       if (any(dom%bnd(:, :) == BND_COR) .and. comm3d == MPI_COMM_NULL) call die("[mpisetup:init_mpi] Corner BC not implemented without comm3d")
@@ -735,6 +732,37 @@ contains
 
    end subroutine init_mpi
 
+!-----------------------------------------------------------------------------
+
+   subroutine inflate_req(nreq)
+
+      use dataio_pub, only: warn, msg
+      use mpi,        only: MPI_STATUS_SIZE
+
+      implicit none
+
+      integer, intent(in) :: nreq
+
+      integer :: sreq
+
+      if (allocated(req)) then
+         sreq = size(req)
+         if (sreq < nreq) then
+            write(msg, '(2(a,i6))')"[mpisetup:inflate_req] reallocating req and status from ",sreq," to ",nreq
+            if (master) call warn(msg)
+            deallocate(req)
+            if (allocated(status)) deallocate(status)
+         endif
+      else
+         sreq = 0
+      endif
+
+      if (sreq < nreq) then
+         allocate(req(nreq))
+         allocate(status(MPI_STATUS_SIZE, nreq))
+      endif
+
+   end subroutine inflate_req
 !-----------------------------------------------------------------------------
 !
 ! \todo: prepare some useful lists here, so routines grid:: arr3d_boundaries, grid::grid_mpi_boundaries_prep, fluidboundaries, magboundaries, multigridmpifuncs

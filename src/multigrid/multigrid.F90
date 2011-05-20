@@ -306,8 +306,7 @@ contains
          allocate( curl%prolong_x (curl%nx, curl%nyb/2+2*curl%nb, curl%nzb/2+2*curl%nb),            stat=aerr(2) )
          allocate( curl%prolong_xy(curl%nx, curl%ny,                  curl%nzb/2+2*curl%nb),            stat=aerr(3) )
          if (any(aerr(1:3) /= 0)) call die("[multigrid:init_multigrid] Allocation error: curl%*")
-         if ( .not. allocated(curl%prolong_x) .or. .not. allocated(curl%prolong_xy) .or. .not. allocated(curl%mgvar) .or. &
-              ((.not. allocated(curl%x) .or. .not. allocated(curl%y) .or. .not. allocated(curl%z)) .and. .not. curl%empty) ) &
+         if ( .not. allocated(curl%prolong_x) .or. .not. allocated(curl%prolong_xy) .or. .not. allocated(curl%mgvar) ) &
               call die("[multigrid:init_multigrid] some multigrid arrays not allocated")
          mb_alloc  = mb_alloc + size(curl%prolong_x) + size(curl%prolong_xy) + size(curl%mgvar)
 

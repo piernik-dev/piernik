@@ -392,13 +392,14 @@ contains
 
    subroutine init_multigrid_grav_post(mb_alloc)
 
-      use multigridvars,      only: lvl, plvl, roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, is_mg_uneven
-      use mpisetup,           only: master, nproc, geometry_type, dom, proc, is_uneven
-      use multigridhelpers,   only: vcycle_stats_init, dirty_debug, dirtyH
-      use constants,          only: pi, dpi, GEO_XYZ
-      use dataio_pub,         only: die, warn
-      use multipole,          only: init_multipole, coarsen_multipole
-      use grid,               only: cg
+      use multigridvars,    only: lvl, plvl, roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, is_mg_uneven, need_general_pf, single_base
+      use mpisetup,         only: master, nproc, geometry_type, dom, proc, comm3d, is_uneven
+      use multigridhelpers, only: vcycle_stats_init, dirty_debug, dirtyH
+      use constants,        only: pi, dpi, GEO_XYZ
+      use dataio_pub,       only: die, warn
+      use multipole,        only: init_multipole, coarsen_multipole
+      use mpi,              only: MPI_COMM_NULL
+      use grid,             only: cg
 
       implicit none
 
@@ -410,12 +411,14 @@ contains
       integer :: i, j
       type(plvl), pointer :: curl
 
+      need_general_pf = comm3d == MPI_COMM_NULL .or. single_base .or. is_mg_uneven
+
       if ((is_uneven .or. is_mg_uneven) .and. .not. prefer_rbgs_relaxation) then
          prefer_rbgs_relaxation = .true.
          if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] FFT relaxation not implemented on uneven domains. Forcing red-black Gauss-Seidel.") !prolong_faces
       endif
 
-      if ((is_uneven .or. is_mg_uneven) .and. coarsen_multipole /= 0) then
+      if (need_general_pf .and. coarsen_multipole /= 0) then
          coarsen_multipole = 0
          if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] multipole coarsening on uneven domains not implemented yet.")
       endif

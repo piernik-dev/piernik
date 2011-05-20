@@ -239,13 +239,12 @@ contains
    subroutine prolong_faces(lev, soln)
 
       use grid,               only: D_x, D_y, D_z
-      use mpisetup,           only: has_dir, comm3d, comm
-      use mpi,                only: MPI_COMM_NULL
+      use mpisetup,           only: has_dir, comm
       use constants,          only: xdim, ydim, zdim, LO, HI, LONG
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: plvl, lvl, ord_prolong_face_norm, ord_prolong_face_par, base, roof, extbnd_antimirror, single_base, is_mg_uneven
+      use multigridvars,      only: plvl, lvl, ord_prolong_face_norm, ord_prolong_face_par, base, roof, extbnd_antimirror, need_general_pf
 
       implicit none
 
@@ -293,7 +292,7 @@ contains
       coarse => fine%coarser
       if (.not. associated(coarse)) call die("[multigridbasefuncs:prolong_faces] coarse == null()")
 
-      if (comm3d == MPI_COMM_NULL .or. single_base .or. is_mg_uneven) then
+      if (need_general_pf) then
          call die("[multigridbasefuncs:prolong_faces] comm3d == MPI_COMM_NULL not implemented yet")
       else
          select case (ord_prolong_face_par)
