@@ -250,7 +250,8 @@ contains
 
       use constants,     only: varlen, xdim, ydim, zdim
       use grid,          only: cg
-      use fluidindex,    only: flind, ibx, iby, ibz
+      use fluidindex,    only: flind, ibx
+      use fluidtypes,    only: component_fluid
 #ifdef COSM_RAYS
       use fluidindex,    only: iarr_all_crs
 #endif /* COSM_RAYS */
@@ -263,7 +264,8 @@ contains
       integer, intent(out)              :: ierrh !< error handling
       real, dimension(:,:), intent(out) :: tab !< array containing given quantity
 
-      integer :: is, ie, js, je, ks, ke
+      integer :: is, ie, js, je, ks, ke, i_xyz
+      type(component_fluid), pointer :: fl_dni
 #ifdef COSM_RAYS
       integer :: i
 #endif /* COSM_RAYS */
@@ -285,40 +287,38 @@ contains
             ke = int(xn, kind=4)
       end select
 
-      !> \todo compactify this long select
+      if (any([ "den", "vlx", "vly", "vlz", "ene" ] == var(1:3))) then
+         select case (var(4:4))
+            case ("d")
+               fl_dni => flind%dst
+            case ("n")
+               fl_dni => flind%neu
+            case ("i")
+               fl_dni => flind%ion
+            case default
+               nullify(fl_dni)
+         end select
+      else
+         nullify(fl_dni)
+      endif
+
+      i_xyz = -1
+      if (var(1:2) == "vl" .and. any([ "x", "y", "z" ] == var(3:3))) i_xyz = ichar(var(3:3)) - ichar("x")
+      if (var(1:3) == "mag" .and. any([ "x", "y", "z" ] == var(4:4))) i_xyz = ichar(var(4:4)) - ichar("x")
+
       select case (var)
-         case ("dend")
-            tab(:,:) = reshape(cg%u%arr(flind%dst%idn, is:ie, js:je, ks:ke), shape(tab))
-         case ("denn")
-            tab(:,:) = reshape(cg%u%arr(flind%neu%idn, is:ie, js:je, ks:ke), shape(tab))
-         case ("deni")
-            tab(:,:) = reshape(cg%u%arr(flind%ion%idn, is:ie, js:je, ks:ke), shape(tab))
-         case ("vlxd")
-            tab(:,:) = reshape(cg%u%arr(flind%dst%imx, is:ie, js:je, ks:ke) / cg%u%arr(flind%dst%idn, is:ie, js:je, ks:ke), shape(tab))
-         case ("vlxn")
-            tab(:,:) = reshape(cg%u%arr(flind%neu%imx, is:ie, js:je, ks:ke) / cg%u%arr(flind%neu%idn, is:ie, js:je, ks:ke), shape(tab))
-         case ("vlxi")
-            tab(:,:) = reshape(cg%u%arr(flind%ion%imx, is:ie, js:je, ks:ke) / cg%u%arr(flind%ion%idn, is:ie, js:je, ks:ke), shape(tab))
-         case ("vlyd")
-            tab(:,:) = reshape(cg%u%arr(flind%dst%imy, is:ie, js:je, ks:ke) / cg%u%arr(flind%dst%idn, is:ie, js:je, ks:ke), shape(tab))
-         case ("vlyn")
-            tab(:,:) = reshape(cg%u%arr(flind%neu%imy, is:ie, js:je, ks:ke) / cg%u%arr(flind%neu%idn, is:ie, js:je, ks:ke), shape(tab))
-         case ("vlyi")
-            tab(:,:) = reshape(cg%u%arr(flind%ion%imy, is:ie, js:je, ks:ke) / cg%u%arr(flind%ion%idn, is:ie, js:je, ks:ke), shape(tab))
-         case ("vlzd")
-            tab(:,:) = reshape(cg%u%arr(flind%dst%imz, is:ie, js:je, ks:ke) / cg%u%arr(flind%dst%idn, is:ie, js:je, ks:ke), shape(tab))
-         case ("vlzn")
-            tab(:,:) = reshape(cg%u%arr(flind%neu%imz, is:ie, js:je, ks:ke) / cg%u%arr(flind%neu%idn, is:ie, js:je, ks:ke), shape(tab))
-         case ("vlzi")
-            tab(:,:) = reshape(cg%u%arr(flind%ion%imz, is:ie, js:je, ks:ke) / cg%u%arr(flind%ion%idn, is:ie, js:je, ks:ke), shape(tab))
-         case ("enen")
+         case ("dend", "deni", "denn")
+            tab(:,:) = reshape(cg%u%arr(fl_dni%idn, is:ie, js:je, ks:ke), shape(tab))
+         case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
+            tab(:,:) = reshape(cg%u%arr(fl_dni%imx + i_xyz, is:ie, js:je, ks:ke) / cg%u%arr(fl_dni%idn, is:ie, js:je, ks:ke), shape(tab))
+         case ("enen", "enei")
 #ifdef ISO
-            tab(:,:) = reshape(0.5 * ( cg%u%arr(flind%neu%imx, is:ie, js:je, ks:ke)**2 + &
-                 &                     cg%u%arr(flind%neu%imy, is:ie, js:je, ks:ke)**2 + &
-                 &                     cg%u%arr(flind%neu%imz, is:ie, js:je, ks:ke)**2 ) / &
-                 &                     cg%u%arr(flind%neu%idn, is:ie, js:je, ks:ke), shape(tab))
+            tab(:,:) = reshape(0.5 * ( cg%u%arr(fl_dni%imx, is:ie, js:je, ks:ke)**2 + &
+                 &                     cg%u%arr(fl_dni%imy, is:ie, js:je, ks:ke)**2 + &
+                 &                     cg%u%arr(fl_dni%imz, is:ie, js:je, ks:ke)**2 ) / &
+                 &                     cg%u%arr(fl_dni%idn, is:ie, js:je, ks:ke), shape(tab))
 #else /* !ISO */
-            tab(:,:) = reshape(cg%u%arr(flind%neu%ien, is:ie, js:je, ks:ke), shape(tab))
+            tab(:,:) = reshape(cg%u%arr(fl_dni%ien, is:ie, js:je, ks:ke), shape(tab))
 #endif /* !ISO */
          case ('prei')
             tab(:,:) = 0.0
@@ -326,6 +326,7 @@ contains
 #ifdef ISO
             tab = 0.0
 #else /* !ISO */
+            ! BEWARE: Why there is only one case here?
             if (ij==zdim) then
                tab(:,:) = real( cg%u%arr(flind%neu%ien, is:ie, js:je, xn) - &
                     0.5 *( cg%u%arr(flind%neu%imx, is:ie, js:je, xn)**2 + &
@@ -333,21 +334,8 @@ contains
                     &      cg%u%arr(flind%neu%imz, is:ie, js:je, xn)**2 ) / cg%u%arr(flind%neu%idn, is:ie, js:je, xn), 4)*(flind%neu%gam_1)
             endif
 #endif /* !ISO */
-         case ("enei")
-#ifdef ISO
-            tab(:,:) = reshape(0.5 * ( cg%u%arr(flind%ion%imx, is:ie, js:je, ks:ke)**2 + &
-                 &                     cg%u%arr(flind%ion%imy, is:ie, js:je, ks:ke)**2 + &
-                 &                     cg%u%arr(flind%ion%imz, is:ie, js:je, ks:ke)**2 ) / &
-                 &                     cg%u%arr(flind%ion%idn, is:ie, js:je, ks:ke), shape(tab))
-#else /* !ISO */
-            tab(:,:) = reshape(cg%u%arr(flind%ion%ien, is:ie, js:je, ks:ke), shape(tab))
-#endif /* !ISO */
-         case ("magx")
-            tab(:,:) = reshape(cg%b%arr(ibx, is:ie, js:je, ks:ke), shape(tab))
-         case ("magy")
-            tab(:,:) = reshape(cg%b%arr(iby, is:ie, js:je, ks:ke), shape(tab))
-         case ("magz")
-            tab(:,:) = reshape(cg%b%arr(ibz, is:ie, js:je, ks:ke), shape(tab))
+         case ("magx", "magy", "magz")
+            tab(:,:) = reshape(cg%b%arr(ibx + i_xyz, is:ie, js:je, ks:ke), shape(tab))
 #ifdef GRAV
          case ("gpot")
             tab(:,:) = reshape(cg%gpot%arr(is:ie, js:je, ks:ke), shape(tab))
