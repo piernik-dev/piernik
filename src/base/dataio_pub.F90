@@ -115,7 +115,7 @@ module dataio_pub
       subroutine plt_hdf5(var,ij,xn,tab,ierrh)
          implicit none
          character(len=*), intent(in)        :: var   !< quantity to be plotted
-         character(len=*), intent(in)        :: ij    !< plane of plot
+         integer, intent(in)                 :: ij    !< direction perpendicular to the plane of plot, xdim means "yz" plane and so on
          integer(kind=8), intent(in)         :: xn    !< no. of cell at which we are slicing the local block
          integer, intent(inout)              :: ierrh !< error handling
          real, dimension(:,:), intent(inout) :: tab   !< array  containing given quantity

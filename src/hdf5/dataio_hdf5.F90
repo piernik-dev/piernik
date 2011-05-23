@@ -247,8 +247,7 @@ contains
 !<
    subroutine common_plt_hdf5(var,ij,xn,tab,ierrh)
 
-      use constants,     only: varlen
-      use dataio_pub,    only: planelen
+      use constants,     only: varlen, xdim, ydim, zdim
       use grid,          only: cg
       use fluidindex,    only: flind, ibx, iby, ibz
 #ifdef COSM_RAYS
@@ -257,7 +256,7 @@ contains
 
       implicit none
       character(len=varlen)   :: var !< quantity to be plotted
-      character(len=planelen) :: ij  !< plane of plot
+      integer                 :: ij  !< direction perpendicular to the plane of plot, xdim means "yz" plane
       integer(kind=8)         :: xn  !< no. of cell at which we are slicing the local block
       integer                 :: ierrh !< error handling
       real, dimension(:,:)    :: tab !< array containing given quantity
@@ -270,101 +269,101 @@ contains
       !> \todo compactify this long select
       select case (var)
          case ("dend")
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("denn")
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("deni")
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlxd")
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%dst%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%dst%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
                            cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%dst%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%dst%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
                            cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%dst%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%dst%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
                            cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlxn")
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%neu%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%neu%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
                            cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%neu%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%neu%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
                            cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
                            cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlxi")
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%ion%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%ion%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
                            cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%ion%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%ion%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
                            cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
                            cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlyd")
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%dst%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%dst%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
                            cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%dst%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%dst%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
                            cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%dst%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%dst%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
                            cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlyn")
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%neu%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%neu%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
                            cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%neu%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%neu%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
                            cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
                            cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlyi")
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%ion%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%ion%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
                            cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%ion%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%ion%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
                            cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
                            cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlzd")
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%dst%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%dst%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
                            cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%dst%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%dst%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
                            cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%dst%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%dst%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
                            cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlzn")
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%neu%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%neu%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
                            cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%neu%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%neu%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
                            cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
                            cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("vlzi")
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%ion%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%ion%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
                            cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%ion%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%ion%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
                            cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%ion%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%ion%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
                            cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("enen")
 #ifdef ISO
-            if (ij=="yz") tab(:,:) = 0.5 * (                     &
+            if (ij==xdim) tab(:,:) = 0.5 * (                     &
                           cg%u%arr(flind%neu%imx, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
                         + cg%u%arr(flind%neu%imy, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
                         + cg%u%arr(flind%neu%imz, xn, cg%js:cg%je, cg%ks:cg%ke)**2) / &
                              cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = 0.5 * (                     &
+            if (ij==ydim) tab(:,:) = 0.5 * (                     &
                           cg%u%arr(flind%neu%imx, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
                          +cg%u%arr(flind%neu%imy, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
                          +cg%u%arr(flind%neu%imz, cg%is:cg%ie, xn, cg%ks:cg%ke)**2) / &
                              cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = 0.5 * (                     &
+            if (ij==zdim) tab(:,:) = 0.5 * (                     &
                           cg%u%arr(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
                          +cg%u%arr(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
                          +cg%u%arr(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2) / &
                              cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
 #else /* !ISO */
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%neu%ien, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%neu%ien, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%neu%ien, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%neu%ien, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%neu%ien, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%neu%ien, cg%is:cg%ie, cg%js:cg%je, xn)
 #endif /* !ISO */
          case ('prei')
             tab(:,:) = 0.0
@@ -372,7 +371,7 @@ contains
 #ifdef ISO
             tab = 0.0
 #else /* !ISO */
-            if (ij=="xy") then
+            if (ij==zdim) then
                tab(:,:) = real( cg%u%arr(flind%neu%ien, cg%is:cg%ie, cg%js:cg%je, xn) - &
                  0.5 *( cg%u%arr(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn)**2 + cg%u%arr(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn)**2 + &
                         cg%u%arr(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2 ) / cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn),4)*(flind%neu%gam_1)
@@ -380,51 +379,51 @@ contains
 #endif /* !ISO */
          case ("enei")
 #ifdef ISO
-            if (ij=="yz") tab(:,:) = 0.5 * (                     &
+            if (ij==xdim) tab(:,:) = 0.5 * (                     &
                           cg%u%arr(flind%ion%imx, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
                         + cg%u%arr(flind%ion%imy, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
                         + cg%u%arr(flind%ion%imz, xn, cg%js:cg%je, cg%ks:cg%ke)**2) / &
                              cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = 0.5 * (                     &
+            if (ij==ydim) tab(:,:) = 0.5 * (                     &
                           cg%u%arr(flind%ion%imx, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
                          +cg%u%arr(flind%ion%imy, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
                          +cg%u%arr(flind%ion%imz, cg%is:cg%ie, xn, cg%ks:cg%ke)**2) / &
                              cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = 0.5 * (                     &
+            if (ij==zdim) tab(:,:) = 0.5 * (                     &
                           cg%u%arr(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
                          +cg%u%arr(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
                          +cg%u%arr(flind%ion%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2) / &
                              cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
 #else /* !ISO */
-            if (ij=="yz") tab(:,:) = cg%u%arr(flind%ion%ien, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(flind%ion%ien, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(flind%ion%ien, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij==xdim) tab(:,:) = cg%u%arr(flind%ion%ien, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij==ydim) tab(:,:) = cg%u%arr(flind%ion%ien, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij==zdim) tab(:,:) = cg%u%arr(flind%ion%ien, cg%is:cg%ie, cg%js:cg%je, xn)
 #endif /* !ISO */
 
          case ("magx")
-            if (ij=="yz") tab(:,:) = cg%b%arr(ibx, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%b%arr(ibx, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%b%arr(ibx, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij==xdim) tab(:,:) = cg%b%arr(ibx, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij==ydim) tab(:,:) = cg%b%arr(ibx, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij==zdim) tab(:,:) = cg%b%arr(ibx, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("magy")
-            if (ij=="yz") tab(:,:) = cg%b%arr(iby, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%b%arr(iby, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%b%arr(iby, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij==xdim) tab(:,:) = cg%b%arr(iby, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij==ydim) tab(:,:) = cg%b%arr(iby, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij==zdim) tab(:,:) = cg%b%arr(iby, cg%is:cg%ie, cg%js:cg%je, xn)
          case ("magz")
-            if (ij=="yz") tab(:,:) = cg%b%arr(ibz, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%b%arr(ibz, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%b%arr(ibz, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij==xdim) tab(:,:) = cg%b%arr(ibz, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij==ydim) tab(:,:) = cg%b%arr(ibz, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij==zdim) tab(:,:) = cg%b%arr(ibz, cg%is:cg%ie, cg%js:cg%je, xn)
 #ifdef GRAV
          case ("gpot")
-            if (ij=="yz") tab(:,:) = cg%gpot%arr(xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%gpot%arr(cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%gpot%arr(cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij==xdim) tab(:,:) = cg%gpot%arr(xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij==ydim) tab(:,:) = cg%gpot%arr(cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij==zdim) tab(:,:) = cg%gpot%arr(cg%is:cg%ie, cg%js:cg%je, xn)
 #endif /* GRAV */
 #ifdef COSM_RAYS
          case ("ecr*")
             i = iarr_all_crs(ichar(var(4:4))-48)
-            if (ij=="yz") tab(:,:) = cg%u%arr(i, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij=="xz") tab(:,:) = cg%u%arr(i, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij=="xy") tab(:,:) = cg%u%arr(i, cg%is:cg%ie, cg%js:cg%je, xn)
+            if (ij==xdim) tab(:,:) = cg%u%arr(i, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij==ydim) tab(:,:) = cg%u%arr(i, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij==zdim) tab(:,:) = cg%u%arr(i, cg%is:cg%ie, cg%js:cg%je, xn)
 #endif /* COSM_RAYS */
          case default
             ierrh = -1
@@ -544,8 +543,8 @@ contains
 
    subroutine write_plot
 
-      use constants,     only: cwdlen
-      use dataio_pub,    only: log_file
+      use constants,     only: cwdlen, xdim, zdim
+      use dataio_pub,    only: log_file, planelen
       use hdf5,          only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
       use mpisetup,      only: t, comm, ierr, master
 
@@ -554,44 +553,44 @@ contains
       integer, save     :: nimg = 0, error = 0
       real, save        :: last_plt_time = 0.0
       character(len=cwdlen) :: fname
-      integer           :: i, fe
+      integer           :: i, fe, d
       logical, save     :: first_entry = .true.
       integer(HID_T)    :: file_id                 !> File identifier
       integer(HID_T)    :: gr_id, gr2_id           !> Groups identifier
+      character(len=planelen), dimension(xdim:zdim), parameter :: pl_id = [ "yz", "xz", "xy" ]
+      integer, dimension(xdim:zdim) :: pl_i
 
       if ( ((t-last_plt_time > dt_plt) .or. first_entry ) .and. dt_plt > 0.0 ) then
+
+         pl_i(:) = [ ix, iy, iz ]
+
          fe = len_trim(log_file)
          write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
          call H5open_f(error)
 
          if (master .and. first_entry) then
             call H5Fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
-            call H5Gcreate_f(file_id,"xy",gr_id,error)
-            do i=1,nhdf_vars
-               call H5Gcreate_f(gr_id,hdf_vars(i),gr2_id,error)
-               call H5Gclose_f(gr2_id,error)
+
+            do d = xdim, zdim
+               if (pl_i(d) > 0) then
+                  call H5Gcreate_f(file_id, pl_id(d), gr_id,error)
+                  do i=1,nhdf_vars
+                     call H5Gcreate_f(gr_id,hdf_vars(i), gr2_id,error)
+                     call H5Gclose_f(gr2_id, error)
+                  enddo
+                  call H5Gclose_f(gr_id, error)
+               endif
             enddo
-            call H5Gclose_f(gr_id,error)
-            call H5Gcreate_f(file_id,"yz",gr_id,error)
-            do i = 1, nhdf_vars
-               call H5Gcreate_f(gr_id,hdf_vars(i),gr2_id,error)
-               call H5Gclose_f(gr2_id,error)
-            enddo
-            call H5Gclose_f(gr_id,error)
-            call H5Gcreate_f(file_id,"xz",gr_id,error)
-            do i = 1, nhdf_vars
-               call H5Gcreate_f(gr_id,hdf_vars(i),gr2_id,error)
-               call H5Gclose_f(gr2_id,error)
-            enddo
-            call H5Gclose_f(gr_id,error)
-            call H5Fclose_f(file_id,error)
-            first_entry = .false.
+
+            call H5Fclose_f(file_id, error)
          endif
+
          call MPI_Barrier(comm,ierr)
-         do i = 1,nhdf_vars
-            if (ix > 0) call write_plot_hdf5(hdf_vars(i),"yz",nimg)
-            if (iy > 0) call write_plot_hdf5(hdf_vars(i),"xz",nimg)
-            if (iz > 0) call write_plot_hdf5(hdf_vars(i),"xy",nimg)
+
+         do i = 1, nhdf_vars
+            do d = xdim, zdim
+               if (pl_i(d) > 0) call write_plot_hdf5(hdf_vars(i), d, nimg)
+            enddo
          enddo
 
          nimg = nimg+1
@@ -606,14 +605,14 @@ contains
 
    !> \todo use parallel HDF5 here, rewrite without pijsize (something like write_axes_to_restart)
 
-   subroutine write_plot_hdf5(var,plane,nimg)
+   subroutine write_plot_hdf5(var, plane, nimg)
 
       use constants,     only: xdim, ydim, zdim, varlen, cwdlen
       use dataio_pub,    only: vizit, fmin, fmax, log_file, msg, die, warn, user_plt_hdf5, planelen
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpisetup,      only: comm, comm3d, ierr, psize, t, has_dir, dom, master, have_mpi, is_uneven, is_mpi_noncart
+      use mpisetup,      only: comm, comm3d, ierr, psize, t, has_dir, dom, master, is_uneven, is_mpi_noncart
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
 #ifdef PGPLOT
       use viz,           only: draw_me
@@ -621,9 +620,10 @@ contains
 
       implicit none
 
-      character(len=planelen), intent(in) :: plane
+      integer, intent(in)                 :: plane  ! xdim means "yz" and so on
       character(len=varlen), intent(in)   :: var                           !> not yet implemented
       integer, intent(in)                 :: nimg
+
       logical, dimension(3)               :: remain
       logical                             :: ok_plt_var
       real, dimension(:), allocatable     :: buff
@@ -650,125 +650,124 @@ contains
 
       real, dimension(1)                  :: timebuffer
 
-      if (have_mpi .and. is_uneven) call die("[dataio_hdf5:write_plot_hdf5] is_uneven is not implemented") ! nib,njb,pisize*pjsize, ...
-      if (have_mpi .and. is_mpi_noncart) call die("[dataio_hdf5:write_plot_hdf5] is_mpi_noncart is not implemented") ! MPI_Cart_sub, psize
-      if (comm3d == MPI_COMM_NULL) then
+      if (comm3d == MPI_COMM_NULL .or. is_uneven .or. is_mpi_noncart) then
+         ! nib,njb,pisize*pjsize, ...
+         ! MPI_Cart_sub, psize
          call warn("[dataio_hdf5:write_plot_hdf5] comm3d == MPI_COMM_NULL. Bailing out")
          return
-      endif
+      else
+         rank = 2
+         fe = len_trim(log_file)
+         if (master) write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
+         call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm, ierr)
 
-      rank = 2
-      fe = len_trim(log_file)
-      if (master) write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
-      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm, ierr)
+         nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
+         remain(:) = .true.
+         remain(plane) = .false.
+         select case (plane)
+            case (xdim)
+               if (has_dir(xdim)) then
+                  xn     = ix + cg%nb - cg%off(xdim)
+               else
+                  xn     = 1
+               endif
+               pij    = "yz_"
+               nib    = cg%nyb
+               nid    = dom%n_d(ydim)
+               njb    = cg%nzb
+               njd    = dom%n_d(zdim)
+               nkb    = cg%nxb
+               pisize = psize(ydim)
+               pjsize = psize(zdim)
+            case (ydim)
+               if (has_dir(ydim)) then
+                  xn     = iy + cg%nb - cg%off(ydim)
+               else
+                  xn     = 1
+               endif
+               pij    = "xz_"
+               nib    = cg%nxb
+               nid    = dom%n_d(xdim)
+               njb    = cg%nzb
+               njd    = dom%n_d(zdim)
+               nkb    = cg%nyb
+               pisize = psize(xdim)
+               pjsize = psize(zdim)
+            case (zdim)
+               if (has_dir(zdim)) then
+                  xn = iz + cg%nb - cg%off(zdim)
+               else
+                  xn = 1
+               endif
+               pij    = "xy_"
+               nib    = cg%nxb
+               nid    = dom%n_d(xdim)
+               njb    = cg%nyb
+               njd    = dom%n_d(ydim)
+               nkb    = cg%nzb
+               pisize = psize(xdim)
+               pjsize = psize(ydim)
+            case default
+               call die("[dataio_hdf5:write_plot_hdf5] nonrecognized plane")
+         end select
 
-      nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
-      select case (plane)
-         case ("yz")
-            if (has_dir(xdim)) then
-               xn     = ix + cg%nb - cg%off(xdim)
-            else
-               xn     = 1
+         dims(1) = nid
+         dims(2) = njd
+         call MPI_Barrier(comm,ierr)
+         call MPI_Cart_sub(comm3d,remain,comm2d,ierr)
+         call MPI_Comm_size(comm2d, ls, ierr)
+         call MPI_Comm_rank(comm2d, lp, ierr)
+         if ((xn > cg%nb .and. xn <= nkb+cg%nb).or.xn == 1) then
+            allocate(temp(nib,njb,pisize*pjsize),img(nid,njd))
+            allocate(buff(nid*njd))
+            allocate(send(nib,njb))
+
+            ok_plt_var = .false.
+            call common_plt_hdf5(var,plane,xn,send,ierrh)
+            if (associated(user_plt_hdf5) .and. ierrh /= 0) call user_plt_hdf5(var,plane,xn,send,ierrh)
+            if (ierrh==0) ok_plt_var = .true.
+            if (.not.ok_plt_var) then
+               write(msg,'(2a)') var, " is not defined in common_plt_hdf5, neither in user_plt_hdf5 !!!"
+               call die(msg)
             endif
-            remain = (/.false.,.true.,.true./)
-            pij    = "yz_"
-            nib    = cg%nyb
-            nid    = dom%n_d(ydim)
-            njb    = cg%nzb
-            njd    = dom%n_d(zdim)
-            nkb    = cg%nxb
-            pisize = psize(ydim)
-            pjsize = psize(zdim)
-         case ("xz")
-            if (has_dir(ydim)) then
-               xn     = iy + cg%nb - cg%off(ydim)
-            else
-               xn     = 1
-            endif
-            remain = (/.true.,.false.,.true./)
-            pij    = "xz_"
-            nib    = cg%nxb
-            nid    = dom%n_d(xdim)
-            njb    = cg%nzb
-            njd    = dom%n_d(zdim)
-            nkb    = cg%nyb
-            pisize = psize(xdim)
-            pjsize = psize(zdim)
-         case ("xy")
-            if (has_dir(zdim)) then
-               xn = iz + cg%nb - cg%off(zdim)
-            else
-               xn = 1
-            endif
-            remain = (/.true.,.true.,.false./)
-            pij    = "xy_"
-            nib    = cg%nxb
-            nid    = dom%n_d(xdim)
-            njb    = cg%nyb
-            njd    = dom%n_d(ydim)
-            nkb    = cg%nzb
-            pisize = psize(xdim)
-            pjsize = psize(ydim)
-         case default
-            call die("[dataio_hdf5:write_plot_hdf5] nonrecognized plane")
-      end select
 
-      dims(1) = nid
-      dims(2) = njd
-      call MPI_Barrier(comm,ierr)
-      call MPI_Cart_sub(comm3d,remain,comm2d,ierr)
-      call MPI_Comm_size(comm2d, ls, ierr)
-      call MPI_Comm_rank(comm2d, lp, ierr)
-      if ((xn > cg%nb .and. xn <= nkb+cg%nb).or.xn == 1) then
-         allocate(temp(nib,njb,pisize*pjsize),img(nid,njd))
-         allocate(buff(nid*njd))
-         allocate(send(nib,njb))
+            temp = -1.0
+            call MPI_Gather(send, nib*njb, MPI_DOUBLE_PRECISION, temp, nib*njb, MPI_DOUBLE_PRECISION, 0, comm2d,ierr)
 
-         ok_plt_var = .false.
-         call common_plt_hdf5(var,plane,xn,send,ierrh)
-         if (associated(user_plt_hdf5) .and. ierrh /= 0) call user_plt_hdf5(var,plane,xn,send,ierrh)
-         if (ierrh==0) ok_plt_var = .true.
-         if (.not.ok_plt_var) then
-            write(msg,'(2a)') var, " is not defined in common_plt_hdf5, neither in user_plt_hdf5 !!!"
-            call die(msg)
-         endif
-
-         temp = -1.0
-         call MPI_Gather(send, nib*njb, MPI_DOUBLE_PRECISION, temp, nib*njb, MPI_DOUBLE_PRECISION, 0, comm2d,ierr)
-
-         if (lp == 0) then
-            imax = maxval(temp); imin = minval(temp)
-            di = imax-imin
-            do i = 0, pisize-1
-               do j = 0, pjsize-1
-                  img(i*nib+1:(i+1)*nib,j*njb+1:(j+1)*njb) = temp(:,:,(j+1)+i*pjsize)
+            if (lp == 0) then
+               imax = maxval(temp); imin = minval(temp)
+               di = imax-imin
+               do i = 0, pisize-1
+                  do j = 0, pjsize-1
+                     img(i*nib+1:(i+1)*nib,j*njb+1:(j+1)*njb) = temp(:,:,(j+1)+i*pjsize)
+                  enddo
                enddo
-            enddo
-            if (vizit) then
+               if (vizit) then
 #ifdef PGPLOT
-               call draw_me(real(img,4), real(fmin,4), real(fmax,4))
+                  call draw_me(real(img,4), real(fmin,4), real(fmax,4))
 #else /* !PGPLOT */
-               call warn("[dataio_hdf5:write_plot_hdf5] vizit used without PGPLOT")
+                  call warn("[dataio_hdf5:write_plot_hdf5] vizit used without PGPLOT")
 #endif /* !PGPLOT */
-            else
-               call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
-               call H5Gopen_f(file_id,plane,gr_id,error)
-               call H5Gopen_f(gr_id,var,gr2_id,error)
-               write(vdname,'(a3,a4,a1,i4.4)') pij,var,"_",nimg
-               call h5ltmake_dataset_double_f(gr2_id, vdname, rank, dims, img, error)
-               bufsize = 1
-               timebuffer = (/t/)
-               call h5ltset_attribute_double_f(gr2_id,vdname,"time",timebuffer,bufsize,error)
-               call H5Gclose_f(gr2_id,error)
-               call H5Gclose_f(gr_id,error)
-               call H5Fclose_f(file_id,error)
+               else
+                  call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
+                  call H5Gopen_f(file_id,pij(1:2),gr_id,error)
+                  call H5Gopen_f(gr_id,var,gr2_id,error)
+                  write(vdname,'(a3,a4,a1,i4.4)') pij,var,"_",nimg
+                  call h5ltmake_dataset_double_f(gr2_id, vdname, rank, dims, img, error)
+                  bufsize = 1
+                  timebuffer = (/t/)
+                  call h5ltset_attribute_double_f(gr2_id,vdname,"time",timebuffer,bufsize,error)
+                  call H5Gclose_f(gr2_id,error)
+                  call H5Gclose_f(gr_id,error)
+                  call H5Fclose_f(file_id,error)
+               endif
             endif
+            if (allocated(send)) deallocate(send)
+            if (allocated(temp)) deallocate(temp)
+            if (allocated(img))  deallocate(img)
          endif
-         if (allocated(send)) deallocate(send)
-         if (allocated(temp)) deallocate(temp)
-         if (allocated(img))  deallocate(img)
+         call MPI_Barrier(comm,ierr)
       endif
-      call MPI_Barrier(comm,ierr)
 
    end subroutine write_plot_hdf5
 

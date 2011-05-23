@@ -185,12 +185,13 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_plt_hdf5(var,ij,xn,tab,ierrh)
 
-      use grid,          only: cg
+      use constants, only: xdim, ydim, zdim
+      use grid,      only: cg
 
       implicit none
 
       character(len=*), intent(in)        :: var   !< quantity to be plotted
-      character(len=*), intent(in)        :: ij    !< plane of plot
+      integer, intent(in)                 :: ij    !< plane of plot
       integer(kind=8), intent(in)         :: xn    !< no. of cell at which we are slicing the local block
       integer, intent(inout)              :: ierrh !< error handling
       real, dimension(:,:), intent(inout) :: tab   !< array  containing given quantity
@@ -198,9 +199,9 @@ contains
       ierrh = 0
       select case (var)
          case ("fooo")   ! Totally bogus quantity, just to check user_plt_hdf5 works
-            if (ij=="yz") tab(:,:) = cg%u%arr(2, xn, cg%js:cg%je, cg%ks:cg%ke)*cg%u%arr(3, xn, cg%js:cg%je, cg%ks:cg%ke)* .123456789
-            if (ij=="xz") tab(:,:) = cg%u%arr(2, cg%is:cg%ie, xn, cg%ks:cg%ke)*cg%u%arr(3, cg%is:cg%ie, xn, cg%ks:cg%ke)* .123456789
-            if (ij=="xy") tab(:,:) = cg%u%arr(2, cg%is:cg%ie, cg%js:cg%je, xn)*cg%u%arr(3, cg%is:cg%ie, cg%js:cg%je, xn)* .123456789
+            if (ij==xdim) tab(:,:) = cg%u%arr(2, xn, cg%js:cg%je, cg%ks:cg%ke)*cg%u%arr(3, xn, cg%js:cg%je, cg%ks:cg%ke)* .123456789
+            if (ij==ydim) tab(:,:) = cg%u%arr(2, cg%is:cg%ie, xn, cg%ks:cg%ke)*cg%u%arr(3, cg%is:cg%ie, xn, cg%ks:cg%ke)* .123456789
+            if (ij==zdim) tab(:,:) = cg%u%arr(2, cg%is:cg%ie, cg%js:cg%je, xn)*cg%u%arr(3, cg%is:cg%ie, cg%js:cg%je, xn)* .123456789
          case default
             ierrh = -1
       end select
