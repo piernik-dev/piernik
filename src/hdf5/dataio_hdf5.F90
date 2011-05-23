@@ -256,115 +256,69 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
-      character(len=varlen)   :: var !< quantity to be plotted
-      integer                 :: ij  !< direction perpendicular to the plane of plot, xdim means "yz" plane
-      integer(kind=8)         :: xn  !< no. of cell at which we are slicing the local block
-      integer                 :: ierrh !< error handling
-      real, dimension(:,:)    :: tab !< array containing given quantity
+
+      character(len=varlen), intent(in) :: var !< quantity to be plotted
+      integer, intent(in)               :: ij  !< direction perpendicular to the plane of plot, xdim means "yz" plane
+      integer(kind=8), intent(in)       :: xn  !< no. of cell at which we are slicing the local block
+      integer, intent(out)              :: ierrh !< error handling
+      real, dimension(:,:), intent(out) :: tab !< array containing given quantity
+
+      integer :: is, ie, js, je, ks, ke
 #ifdef COSM_RAYS
-      integer                 :: i
+      integer :: i
 #endif /* COSM_RAYS */
 
       ierrh = 0
 
+      is=cg%is; ie=cg%ie
+      js=cg%js; je=cg%je
+      ks=cg%ks; ke=cg%ke
+      select case (ij)
+         case (xdim)
+            is = int(xn, kind=4)
+            ie = int(xn, kind=4)
+         case (ydim)
+            js = int(xn, kind=4)
+            je = int(xn, kind=4)
+         case (zdim)
+            ks = int(xn, kind=4)
+            ke = int(xn, kind=4)
+      end select
+
       !> \todo compactify this long select
       select case (var)
          case ("dend")
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%dst%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("denn")
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%neu%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("deni")
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%ion%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("vlxd")
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%dst%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%dst%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%dst%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%dst%imx, is:ie, js:je, ks:ke) / cg%u%arr(flind%dst%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("vlxn")
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%neu%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%neu%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%neu%imx, is:ie, js:je, ks:ke) / cg%u%arr(flind%neu%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("vlxi")
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%ion%imx, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%ion%imx, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%ion%imx, is:ie, js:je, ks:ke) / cg%u%arr(flind%ion%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("vlyd")
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%dst%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%dst%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%dst%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%dst%imy, is:ie, js:je, ks:ke) / cg%u%arr(flind%dst%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("vlyn")
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%neu%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%neu%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%neu%imy, is:ie, js:je, ks:ke) / cg%u%arr(flind%neu%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("vlyi")
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%ion%imy, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%ion%imy, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%ion%imy, is:ie, js:je, ks:ke) / cg%u%arr(flind%ion%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("vlzd")
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%dst%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%dst%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%dst%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%dst%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%dst%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           cg%u%arr(flind%dst%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%dst%imz, is:ie, js:je, ks:ke) / cg%u%arr(flind%dst%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("vlzn")
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%neu%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%neu%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%neu%imz, is:ie, js:je, ks:ke) / cg%u%arr(flind%neu%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("vlzi")
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%ion%imz, xn, cg%js:cg%je, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%ion%imz, cg%is:cg%ie, xn, cg%ks:cg%ke) / &
-                           cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%ion%imz, cg%is:cg%ie, cg%js:cg%je, xn) / &
-                           cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%ion%imz, is:ie, js:je, ks:ke) / cg%u%arr(flind%ion%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("enen")
 #ifdef ISO
-            if (ij==xdim) tab(:,:) = 0.5 * (                     &
-                          cg%u%arr(flind%neu%imx, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
-                        + cg%u%arr(flind%neu%imy, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
-                        + cg%u%arr(flind%neu%imz, xn, cg%js:cg%je, cg%ks:cg%ke)**2) / &
-                             cg%u%arr(flind%neu%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = 0.5 * (                     &
-                          cg%u%arr(flind%neu%imx, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
-                         +cg%u%arr(flind%neu%imy, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
-                         +cg%u%arr(flind%neu%imz, cg%is:cg%ie, xn, cg%ks:cg%ke)**2) / &
-                             cg%u%arr(flind%neu%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = 0.5 * (                     &
-                          cg%u%arr(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
-                         +cg%u%arr(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
-                         +cg%u%arr(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2) / &
-                             cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(0.5 * ( cg%u%arr(flind%neu%imx, is:ie, js:je, ks:ke)**2 + &
+                 &                     cg%u%arr(flind%neu%imy, is:ie, js:je, ks:ke)**2 + &
+                 &                     cg%u%arr(flind%neu%imz, is:ie, js:je, ks:ke)**2 ) / &
+                 &                     cg%u%arr(flind%neu%idn, is:ie, js:je, ks:ke), shape(tab))
 #else /* !ISO */
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%neu%ien, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%neu%ien, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%neu%ien, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%neu%ien, is:ie, js:je, ks:ke), shape(tab))
 #endif /* !ISO */
          case ('prei')
             tab(:,:) = 0.0
@@ -373,58 +327,35 @@ contains
             tab = 0.0
 #else /* !ISO */
             if (ij==zdim) then
-               tab(:,:) = real( cg%u%arr(flind%neu%ien, cg%is:cg%ie, cg%js:cg%je, xn) - &
-                 0.5 *( cg%u%arr(flind%neu%imx, cg%is:cg%ie, cg%js:cg%je, xn)**2 + cg%u%arr(flind%neu%imy, cg%is:cg%ie, cg%js:cg%je, xn)**2 + &
-                        cg%u%arr(flind%neu%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2 ) / cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, xn),4)*(flind%neu%gam_1)
+               tab(:,:) = real( cg%u%arr(flind%neu%ien, is:ie, js:je, xn) - &
+                    0.5 *( cg%u%arr(flind%neu%imx, is:ie, js:je, xn)**2 + &
+                    &      cg%u%arr(flind%neu%imy, is:ie, js:je, xn)**2 + &
+                    &      cg%u%arr(flind%neu%imz, is:ie, js:je, xn)**2 ) / cg%u%arr(flind%neu%idn, is:ie, js:je, xn), 4)*(flind%neu%gam_1)
             endif
 #endif /* !ISO */
          case ("enei")
 #ifdef ISO
-            if (ij==xdim) tab(:,:) = 0.5 * (                     &
-                          cg%u%arr(flind%ion%imx, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
-                        + cg%u%arr(flind%ion%imy, xn, cg%js:cg%je, cg%ks:cg%ke)**2 &
-                        + cg%u%arr(flind%ion%imz, xn, cg%js:cg%je, cg%ks:cg%ke)**2) / &
-                             cg%u%arr(flind%ion%idn, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = 0.5 * (                     &
-                          cg%u%arr(flind%ion%imx, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
-                         +cg%u%arr(flind%ion%imy, cg%is:cg%ie, xn, cg%ks:cg%ke)**2 &
-                         +cg%u%arr(flind%ion%imz, cg%is:cg%ie, xn, cg%ks:cg%ke)**2) / &
-                             cg%u%arr(flind%ion%idn, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = 0.5 * (                     &
-                          cg%u%arr(flind%ion%imx, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
-                         +cg%u%arr(flind%ion%imy, cg%is:cg%ie, cg%js:cg%je, xn)**2 &
-                         +cg%u%arr(flind%ion%imz, cg%is:cg%ie, cg%js:cg%je, xn)**2) / &
-                             cg%u%arr(flind%ion%idn, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(0.5 * ( cg%u%arr(flind%ion%imx, is:ie, js:je, ks:ke)**2 + &
+                 &                     cg%u%arr(flind%ion%imy, is:ie, js:je, ks:ke)**2 + &
+                 &                     cg%u%arr(flind%ion%imz, is:ie, js:je, ks:ke)**2 ) / &
+                 &                     cg%u%arr(flind%ion%idn, is:ie, js:je, ks:ke), shape(tab))
 #else /* !ISO */
-            if (ij==xdim) tab(:,:) = cg%u%arr(flind%ion%ien, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(flind%ion%ien, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(flind%ion%ien, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%u%arr(flind%ion%ien, is:ie, js:je, ks:ke), shape(tab))
 #endif /* !ISO */
-
          case ("magx")
-            if (ij==xdim) tab(:,:) = cg%b%arr(ibx, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%b%arr(ibx, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%b%arr(ibx, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%b%arr(ibx, is:ie, js:je, ks:ke), shape(tab))
          case ("magy")
-            if (ij==xdim) tab(:,:) = cg%b%arr(iby, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%b%arr(iby, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%b%arr(iby, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%b%arr(iby, is:ie, js:je, ks:ke), shape(tab))
          case ("magz")
-            if (ij==xdim) tab(:,:) = cg%b%arr(ibz, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%b%arr(ibz, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%b%arr(ibz, cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%b%arr(ibz, is:ie, js:je, ks:ke), shape(tab))
 #ifdef GRAV
          case ("gpot")
-            if (ij==xdim) tab(:,:) = cg%gpot%arr(xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%gpot%arr(cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%gpot%arr(cg%is:cg%ie, cg%js:cg%je, xn)
+            tab(:,:) = reshape(cg%gpot%arr(is:ie, js:je, ks:ke), shape(tab))
 #endif /* GRAV */
 #ifdef COSM_RAYS
          case ("ecr*")
-            i = iarr_all_crs(ichar(var(4:4))-48)
-            if (ij==xdim) tab(:,:) = cg%u%arr(i, xn, cg%js:cg%je, cg%ks:cg%ke)
-            if (ij==ydim) tab(:,:) = cg%u%arr(i, cg%is:cg%ie, xn, cg%ks:cg%ke)
-            if (ij==zdim) tab(:,:) = cg%u%arr(i, cg%is:cg%ie, cg%js:cg%je, xn)
+            i = iarr_all_crs(ichar(var(4:4))-ichar('0'))
+            tab(:,:) = reshape(cg%u%arr(i, is:ie, js:je, ks:ke), shape(tab))
 #endif /* COSM_RAYS */
          case default
             ierrh = -1
