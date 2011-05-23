@@ -51,6 +51,7 @@ module dataio_hdf5
    public :: parfile, parfilelines
 
    integer, parameter :: dnamelen=5
+   integer, parameter :: planelen = 2           !< length of plane names e.g. "xy", "yz", "rp" etc.
    character(len=dnamelen), dimension(FLUID:MAG) :: dname = [ "fluid", "mag  " ]  !< dataset names for restart files
 
    character(len=S_LEN), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
@@ -544,7 +545,7 @@ contains
    subroutine write_plot
 
       use constants,     only: cwdlen, xdim, zdim
-      use dataio_pub,    only: log_file, planelen
+      use dataio_pub,    only: log_file
       use hdf5,          only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
       use mpisetup,      only: t, comm, ierr, master
 
@@ -608,7 +609,7 @@ contains
    subroutine write_plot_hdf5(var, plane, nimg)
 
       use constants,     only: xdim, ydim, zdim, varlen, cwdlen
-      use dataio_pub,    only: vizit, fmin, fmax, log_file, msg, die, warn, user_plt_hdf5, planelen
+      use dataio_pub,    only: vizit, fmin, fmax, log_file, msg, die, warn, user_plt_hdf5
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f

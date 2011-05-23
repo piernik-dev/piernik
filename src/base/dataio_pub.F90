@@ -43,7 +43,6 @@ module dataio_pub
    real, parameter    :: piernik_hdf5_version = 1.17   !< output version
 
    ! Buffer lengths used only in I/O routines
-   integer, parameter :: planelen = 2           !< length of planes names e.g. "xy","yz","rp" etc.
    integer, parameter :: msglen = 1024          !< 1kB for a message ought to be enough for anybody ;-)
    integer, parameter :: ansilen = 7, ansirst=4 !< length of our ANSI color-strings
    integer, parameter :: maxparfilelen   = 128  !< max length of line in problem.par file
