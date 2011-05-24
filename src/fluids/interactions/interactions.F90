@@ -229,16 +229,17 @@ contains
 
    end function fluid_interactions_aero_drag_ep
 
-   subroutine balsara_implicit_interactions(u1,u0,vx,istep)
+   subroutine balsara_implicit_interactions(u1,u0,vx,cs_iso2,istep)
       ! Balsara Dinshaw S., Tilley David A., Rettig Terrence, Brittain Sean D. MNRAS (2009) 397: 24.
       ! Tilley, David A., Balsara, Dinshaw S. MNRAS (2008) 389: 1058.
       use fluidindex, only: iarr_all_dn, iarr_all_mx, flind
       use mpisetup,   only: dt
       implicit none
-      real, dimension(:,:), intent(inout) :: u1
-      real, dimension(:,:), intent(in)    :: u0
-      real, dimension(:,:), intent(in)    :: vx
-      integer, intent(in)                 :: istep
+      real, dimension(:,:), intent(inout)      :: u1
+      real, dimension(:,:), intent(in)         :: u0
+      real, dimension(:,:), intent(in)         :: vx
+      real, dimension(:), pointer,  intent(in) :: cs_iso2
+      integer, intent(in)                      :: istep
 
       real, dimension(flind%fluids,size(u1,2)) :: vprim
       real, dimension(size(u1,2))              :: delta, drag
@@ -250,7 +251,7 @@ contains
       !  4) remove hardcoded integers
 
       if (epstein_factor(flind%neu%pos) <= 0.0) return
-      drag(:) = dt*0.5 / (grain_size * grain_dens) * sqrt( flind%neu%cs2 + abs( vx(1,:) - vx(2,:) )**2)
+      drag(:) = dt*0.5 / (grain_size * grain_dens) * sqrt( cs_iso2(:) + abs( vx(1,:) - vx(2,:) )**2)
 
       delta(:) = 1.0 + drag(:) * (u1(iarr_all_dn(1),:) + u1(iarr_all_dn(2),:))
       delta(:) = 1./delta(:)

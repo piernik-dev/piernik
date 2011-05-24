@@ -151,22 +151,16 @@ contains
       real, dimension(:),              intent(in),  pointer :: cs_iso2  !< array with current sound speed squared
 
       real, dimension(:,:), pointer                     :: pflux, pcfr, puu, pbb
-      real, dimension(:), pointer                       :: pcs2, pvx, ppp
+      real, dimension(:), pointer                       :: pvx, ppp
       type(component_fluid), pointer                    :: pfl
 
       integer :: p
 !>
-!! \todo pbb and pcs2 may need more careful treatment
-!!  currently both arrays don't matter for dst and neu and
-!!  are properly set for ion
+!! \todo pbb may need more careful treatment
+!!  currently it doesn't matter for dst and neu and
+!!  is properly set for ion
 !<
       pbb   =>   bb(:,:)
-
-      if (associated(cs_iso2)) then
-         pcs2  => cs_iso2(:)
-      else
-         pcs2  => null()
-      endif
 
       do p = 1, flind%fluids
          pfl   => flind%all_fluids(p)
@@ -176,7 +170,7 @@ contains
          pvx   =>   vx(pfl%pos,:)
          ppp   =>   pp(pfl%pos,:)
 
-         call flist(pfl%pos)%flux_func(pflux, pcfr, puu, n, pvx, ppp, pbb, pcs2)
+         call flist(pfl%pos)%flux_func(pflux, pcfr, puu, n, pvx, ppp, pbb, cs_iso2)
       enddo
 
 #ifdef COSM_RAYS

@@ -464,6 +464,9 @@ contains
 
    end subroutine grav_ptmass_pure
 
+   !>
+   !! \todo this procedure is incompatible with cg%cs_iso2
+   !<
    subroutine grav_ptmass_softened(gp, ax, flatten)
 
       use units,  only: newtong

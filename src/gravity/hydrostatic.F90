@@ -311,6 +311,10 @@ contains
 
    end subroutine finish_hydrostatic
 
+   !>
+   !! \todo this procedure is incompatible with cg%cs_iso2
+   !<
+
    subroutine outh_bnd(kb,kk,minmax)
 
       use dataio_pub,          only: die

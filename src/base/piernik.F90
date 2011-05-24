@@ -247,7 +247,7 @@ contains
 
       call init_fluidboundaries
 
-      call init_fluids
+      call init_fluids(cg)
 
       call init_interactions
 

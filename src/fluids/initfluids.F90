@@ -106,9 +106,10 @@ module initfluids
 
 contains
 
-   subroutine init_fluids
+   subroutine init_fluids(cg)
 
-      use fluidindex,      only: fluid_index
+      use grid_cont,       only: grid_container
+      use fluidindex,      only: fluid_index, flind
       use fluxes,          only: set_limiter, init_fluxes
       use mpisetup,        only: limiter
       use dataio_pub,      only: die, code_progress
@@ -133,6 +134,7 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
+      type(grid_container), intent(inout) :: cg
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[initfluids:init_fluids] MPI not initialized.") ! limiter, init_ionized, init_neutral, init_dust, init_cosmicrays
 
@@ -153,7 +155,9 @@ contains
       call init_cosmicrays
 #endif /* COSM_RAYS */
 
-      call fluid_index
+      call fluid_index    ! flind has valid values afterwards
+
+      if (associated(cg%cs_iso2%arr)) cg%cs_iso2%arr(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
 
       call init_fluxes
 
@@ -252,7 +256,7 @@ contains
                   smallp = min( minval( en - ekin(mx,my,mz,dn))/fl%gam_1, smallp )
                endif
             else
-               smallp = min( minval( fl%cs2*dn ), smallp )
+               smallp = min( minval( cg%cs_iso2%arr*dn ), smallp )
             endif
          enddo
          smallp = smallp * safety_factor

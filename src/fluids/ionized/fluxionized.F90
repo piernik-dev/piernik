@@ -114,11 +114,7 @@ contains
 #endif /* !ISO */
 
 #ifdef ISO
-#ifdef ISO_LOCAL
       p(RNG) = cs_iso2(RNG) * uui(idn,RNG)
-#else /* !ISO_LOCAL */
-      p(RNG) = flind%ion%cs2 * uui(idn,RNG)
-#endif /* !ISO_LOCAL */
       ps(RNG)= p(RNG) + pmag(RNG)
 #else /* !ISO */
       ps(RNG)=(uui(ien,RNG) - &

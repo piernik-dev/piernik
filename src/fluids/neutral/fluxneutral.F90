@@ -104,9 +104,9 @@ contains
 #endif /* LOCAL_FR_SPEED */
 
       nm = n-1
-      vx(RNG) = uun(imx,RNG)/uun(idn,RNG)  ; vx(1) = vx(2); vx(n) = vx(nm)
+      vx(RNG) = uun(imx,RNG)/uun(idn,RNG) ; vx(1) = vx(2); vx(n) = vx(nm)
 #ifdef ISO
-      p(RNG)  = flind%neu%cs2*uun(idn,RNG) ; p(1) = p(2); p(n) = p(nm)
+      p(RNG)  = cs_iso2(RNG)*uun(idn,RNG) ; p(1) = p(2); p(n) = p(nm)
 #else /* !ISO */
       p(RNG)  = (uun(ien,RNG)  &
            - 0.5*( uun(imx,RNG)**2 + uun(imy,RNG)**2 + uun(imz,RNG)**2 ) &
