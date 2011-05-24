@@ -84,6 +84,7 @@ module constants
    integer, parameter :: domlen = 16                     !< should be <= cbuff_len
    integer, parameter :: varlen = 4                      !< length of state variable names in hdf files
    integer, parameter :: idlen  = 3                      !< COMMENT ME
+   integer, parameter :: singlechar = 1                  !< a single character
 
    ! simulation state
    enum, bind(C)

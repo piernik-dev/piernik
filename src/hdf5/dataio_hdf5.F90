@@ -243,17 +243,55 @@ contains
 
    end subroutine cleanup_hdf5
 
+   subroutine common_shortcuts(var, fl_dni, i_xyz)
+
+      use constants,  only: varlen,singlechar
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+
+      implicit none
+
+      character(len=varlen), intent(in) :: var
+      type(component_fluid), pointer, intent(out) :: fl_dni
+      integer, intent(out) :: i_xyz
+
+      character(len=singlechar) :: dc
+
+      nullify(fl_dni)
+      if (any([ "den", "vlx", "vly", "vlz", "ene" ] == var(1:3))) then
+         select case (var(4:4))
+            case ("d")
+               fl_dni => flind%dst
+            case ("n")
+               fl_dni => flind%neu
+            case ("i")
+               fl_dni => flind%ion
+         end select
+      endif
+
+      i_xyz = huge(1)
+      if (var(1:2) == "vl") then
+         dc = var(3:3)
+      else if (var(1:3) == "mag") then
+         dc = var(4:4)
+      else
+         dc = '_'
+      endif
+      if (any([ "x", "y", "z" ] == dc)) i_xyz = ichar(dc) - ichar("x")
+
+   end subroutine common_shortcuts
+
 !>
 !! \brief Routine calculating quantities for plot files
 !<
    subroutine common_plt_hdf5(var,ij,xn,tab,ierrh)
 
-      use constants,     only: varlen, xdim, ydim, zdim
-      use grid,          only: cg
-      use fluidindex,    only: flind, ibx
-      use fluidtypes,    only: component_fluid
+      use constants,  only: varlen, xdim, ydim, zdim
+      use grid,       only: cg
+      use fluidindex, only: flind, ibx
+      use fluidtypes, only: component_fluid
 #ifdef COSM_RAYS
-      use fluidindex,    only: iarr_all_crs
+      use fluidindex, only: iarr_all_crs
 #endif /* COSM_RAYS */
 
       implicit none
@@ -287,24 +325,7 @@ contains
             ke = int(xn, kind=4)
       end select
 
-      if (any([ "den", "vlx", "vly", "vlz", "ene" ] == var(1:3))) then
-         select case (var(4:4))
-            case ("d")
-               fl_dni => flind%dst
-            case ("n")
-               fl_dni => flind%neu
-            case ("i")
-               fl_dni => flind%ion
-            case default
-               nullify(fl_dni)
-         end select
-      else
-         nullify(fl_dni)
-      endif
-
-      i_xyz = -1
-      if (var(1:2) == "vl" .and. any([ "x", "y", "z" ] == var(3:3))) i_xyz = ichar(var(3:3)) - ichar("x")
-      if (var(1:3) == "mag" .and. any([ "x", "y", "z" ] == var(4:4))) i_xyz = ichar(var(4:4)) - ichar("x")
+      call common_shortcuts(var, fl_dni, i_xyz)
 
       select case (var)
          case ("dend", "deni", "denn")
@@ -331,7 +352,7 @@ contains
                tab(:,:) = real( cg%u%arr(flind%neu%ien, is:ie, js:je, xn) - &
                     0.5 *( cg%u%arr(flind%neu%imx, is:ie, js:je, xn)**2 + &
                     &      cg%u%arr(flind%neu%imy, is:ie, js:je, xn)**2 + &
-                    &      cg%u%arr(flind%neu%imz, is:ie, js:je, xn)**2 ) / cg%u%arr(flind%neu%idn, is:ie, js:je, xn), 4)*(flind%neu%gam_1)
+                    &      cg%u%arr(flind%neu%imz, is:ie, js:je, xn)**2 ) / cg%u%arr(flind%neu%idn, is:ie, js:je, xn), kind=4)*(flind%neu%gam_1)
             endif
 #endif /* !ISO */
          case ("magx", "magy", "magz")
@@ -356,102 +377,78 @@ contains
 !<
    subroutine common_vars_hdf5(var,tab, ierrh)
 
-      use constants,     only: varlen
-      use fluidindex,    only: flind, ibx, iby, ibz
-      use grid,          only: cg  ! QA_WARN required for RNG
+      use constants,  only: varlen
+      use fluidindex, only: flind, ibx, iby, ibz
+      use fluidtypes, only: component_fluid
+      use grid,       only: cg  ! QA_WARN required for RNG
 
       implicit none
+
       character(len=varlen), intent(in) :: var
       real(kind=4), dimension(:,:,:)    :: tab
       integer, intent(out)              :: ierrh
+
+      type(component_fluid), pointer :: fl_dni
+      integer :: i_xyz
 #ifdef COSM_RAYS
       integer :: i
       integer, parameter    :: auxlen = varlen - 1
       character(len=auxlen) :: aux
 #endif /* COSM_RAYS */
 
+      call common_shortcuts(var, fl_dni, i_xyz)
+
       ierrh = 0
       select case (var)
 #ifdef COSM_RAYS
          case ("ecr1" : "ecr9")
             read(var,'(A3,I1)') aux,i !> \deprecated BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u%arr(flind%crs%beg+i-1,RNG),4)
+            tab(:,:,:) = real(cg%u%arr(flind%crs%beg+i-1, RNG), kind=4)
 #endif /* COSM_RAYS */
-         case ("dend")
-            tab(:,:,:) = real(cg%u%arr(flind%dst%idn,RNG),4)
-         case ("denn")
-            tab(:,:,:) = real(cg%u%arr(flind%neu%idn,RNG),4)
-         case ("deni")
-            tab(:,:,:) = real(cg%u%arr(flind%ion%idn,RNG),4)
-         case ("vlxd")
-            tab(:,:,:) = real(cg%u%arr(flind%dst%imx,RNG) / cg%u%arr(flind%dst%idn,RNG),4)
-         case ("vlxn")
-            tab(:,:,:) = real(cg%u%arr(flind%neu%imx,RNG) / cg%u%arr(flind%neu%idn,RNG),4)
-         case ("vlxi")
-            tab(:,:,:) = real(cg%u%arr(flind%ion%imx,RNG) / cg%u%arr(flind%ion%idn,RNG),4)
-         case ("vlyd")
-            tab(:,:,:) = real(cg%u%arr(flind%dst%imy,RNG) / cg%u%arr(flind%dst%idn,RNG),4)
-         case ("vlyn")
-            tab(:,:,:) = real(cg%u%arr(flind%neu%imy,RNG) / cg%u%arr(flind%neu%idn,RNG),4)
-         case ("vlyi")
-            tab(:,:,:) = real(cg%u%arr(flind%ion%imy,RNG) / cg%u%arr(flind%ion%idn,RNG),4)
-         case ("vlzd")
-            tab(:,:,:) = real(cg%u%arr(flind%dst%imz,RNG) / cg%u%arr(flind%dst%idn,RNG),4)
-         case ("vlzn")
-            tab(:,:,:) = real(cg%u%arr(flind%neu%imz,RNG) / cg%u%arr(flind%neu%idn,RNG),4)
-         case ("vlzi")
-            tab(:,:,:) = real(cg%u%arr(flind%ion%imz,RNG) / cg%u%arr(flind%ion%idn,RNG),4)
+         case ("dend", "deni", "denn")
+            tab(:,:,:) = real(cg%u%arr(fl_dni%idn, RNG), kind=4)
+         case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
+            tab(:,:,:) = real(cg%u%arr(fl_dni%imx + i_xyz, RNG) / cg%u%arr(fl_dni%idn, RNG), kind=4)
+         case ("enen", "enei")
+#ifdef ISO
+            tab(:,:,:) = real(0.5 *( cg%u%arr(fl_dni%imx, RNG)**2 + &
+                 &                   cg%u%arr(fl_dni%imy, RNG)**2 + &
+                 &                   cg%u%arr(fl_dni%imz, RNG)**2 ) / cg%u%arr(fl_dni%idn, RNG), kind=4)
+#else /* !ISO */
+            tab(:,:,:) = real(cg%u%arr(fl_dni%ien, RNG), kind=4)
+#endif /* !ISO */
 #ifdef NEUTRAL
          case ("pren")
 #ifdef ISO
             tab = 0.0
 #else /* !ISO */
-            tab(:,:,:) = real( cg%u%arr(flind%neu%ien,RNG) - &
-              0.5 *( cg%u%arr(flind%neu%imx,RNG)**2 + cg%u%arr(flind%neu%imy,RNG)**2 + cg%u%arr(flind%neu%imz,RNG)**2 ) / cg%u%arr(flind%neu%idn,RNG),4)*real(flind%neu%gam_1, 4)
+            tab(:,:,:) = real( cg%u%arr(flind%neu%ien, RNG) - 0.5 * ( &
+                 &             cg%u%arr(flind%neu%imx, RNG)**2 + &
+                 &             cg%u%arr(flind%neu%imy, RNG)**2 + &
+                 &             cg%u%arr(flind%neu%imz, RNG)**2 ) / cg%u%arr(flind%neu%idn, RNG), kind=4) * real(flind%neu%gam_1, kind=4)
 #endif /* !ISO */
 #endif /* NEUTRAL */
-         case ("enen")
-#ifdef ISO
-            tab(:,:,:) = real(0.5 *( cg%u%arr(flind%neu%imx,RNG)**2 + &
-                                     cg%u%arr(flind%neu%imy,RNG)**2 + &
-                                     cg%u%arr(flind%neu%imz,RNG)**2 ) &
-                              / cg%u%arr(flind%neu%idn,RNG),4)
-#else /* !ISO */
-            tab(:,:,:) = real(cg%u%arr(flind%neu%ien,RNG),4)
-#endif /* !ISO */
-         case ("enei")
-#ifdef ISO
-            tab(:,:,:) = real(0.5 *( cg%u%arr(flind%ion%imx,RNG)**2 + &
-                                     cg%u%arr(flind%ion%imy,RNG)**2 + &
-                                     cg%u%arr(flind%ion%imz,RNG)**2 ) &
-                              / cg%u%arr(flind%ion%idn,RNG),4)
-#else /* !ISO */
-            tab(:,:,:) = real(cg%u%arr(flind%ion%ien,RNG),4)
-#endif /* !ISO */
          case ("prei")
 #ifdef ISO
             tab = 0.0
 #else /* !ISO */
-            tab(:,:,:) = real( cg%u%arr(flind%ion%ien,RNG) - &
-              0.5 *( cg%u%arr(flind%ion%imx,RNG)**2 + cg%u%arr(flind%ion%imy,RNG)**2 + cg%u%arr(flind%ion%imz,RNG)**2 ) / cg%u%arr(flind%ion%idn,RNG),4)*real(flind%ion%gam_1, 4)
-            tab(:,:,:) = tab(:,:,:) - real( 0.5*(flind%ion%gam_1)*(cg%b%arr(ibx,RNG)**2 + &
-               cg%b%arr(iby,RNG)**2 + cg%b%arr(ibz,RNG)**2),4)
+            tab(:,:,:) = real( cg%u%arr(flind%ion%ien, RNG) - 0.5 *( &
+                 &             cg%u%arr(flind%ion%imx, RNG)**2 + &
+                 &             cg%u%arr(flind%ion%imy, RNG)**2 + &
+                 &             cg%u%arr(flind%ion%imz, RNG)**2 ) / cg%u%arr(flind%ion%idn, RNG), kind=4) * real(flind%ion%gam_1, kind=4) - &
+                 &       real( 0.5*(flind%ion%gam_1)*(cg%b%arr(ibx, RNG)**2 + cg%b%arr(iby, RNG)**2 + cg%b%arr(ibz, RNG)**2), kind=4)
 #endif /* !ISO */
-         case ("magx")
-            tab(:,:,:) = real(cg%b%arr(ibx,RNG),4)
-         case ("magy")
-            tab(:,:,:) = real(cg%b%arr(iby,RNG),4)
-         case ("magz")
-            tab(:,:,:) = real(cg%b%arr(ibz,RNG),4)
+         case ("magx", "magy", "magz")
+            tab(:,:,:) = real(cg%b%arr(ibx + i_xyz, RNG), kind=4)
          case ("gpot")
             if (associated(cg%gpot%arr)) then
-               tab(:,:,:) = real(cg%gpot%arr(RNG),4)
+               tab(:,:,:) = real(cg%gpot%arr(RNG), kind=4)
             else
                tab = 0.0
             endif
          case ("mgso")
             if (associated(cg%sgp%arr)) then
-               tab(:,:,:) = real(cg%sgp%arr(RNG),4)
+               tab(:,:,:) = real(cg%sgp%arr(RNG), kind=4)
             else
                tab = 0.0
             endif
@@ -664,7 +661,7 @@ contains
                enddo
                if (vizit) then
 #ifdef PGPLOT
-                  call draw_me(real(img,4), real(fmin,4), real(fmax,4))
+                  call draw_me(real(img, kind=4), real(fmin, kind=4), real(fmax, kind=4))
 #else /* !PGPLOT */
                   call warn("[dataio_hdf5:write_plot_hdf5] vizit used without PGPLOT")
 #endif /* !PGPLOT */
