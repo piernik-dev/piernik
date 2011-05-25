@@ -29,10 +29,10 @@
 !!
 !! <table border="0">
 !! <tr><td width="40pt"><b></b></td><td width="760pt">
-!! \copydetails constants
+!! \copydetails units
 !! </td></tr></table>
 !! \n \n
-!! \copydetails constants::init_constants
+!! \copydetails units::init_units
 !!
 !<
 

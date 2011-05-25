@@ -10,23 +10,23 @@
 !! </ul>
 !!
 !! \anchor isothermal
-!! \b \#define \b ISO - the choice between adiabatic and isothermal fluids (if defined then isothermal fluid is set, otherwise adiabatic)
+!! \b \#define \b "ISO" - the choice between adiabatic and isothermal fluids (if defined then isothermal fluid is set, otherwise adiabatic)
 !!
-!! \b \#define \b IONIZED - to include parts of the code related to ionized fluid
+!! \b \#define \b "IONIZED" - to include parts of the code related to ionized fluid
 !!
-!! \b \#define \b NEUTRAL - to include parts of the code related to neutral fluid
+!! \b \#define \b "NEUTRAL" - to include parts of the code related to neutral fluid
 !!
-!! \b \#define \b DUST - to include parts of the code related to dust fluid
+!! \b \#define \b "DUST" - to include parts of the code related to dust fluid
 !!
-!! \b \#define \b COSM_RAYS - to include parts of the code related to cosmic ray component
+!! \b \#define \b "COSM_RAYS" - to include parts of the code related to cosmic ray component
 !!
-!! \b \#define \b MAGNETIC - to include parts of the code related to magnetic field (otherwise magnetic field is switched off even if ionized fluid is simulated)
+!! \b \#define \b "MAGNETIC" - to include parts of the code related to magnetic field (otherwise magnetic field is switched off even if ionized fluid is simulated)
 !!
-!! \b \#define \b FLUID_INTERACTIONS - to take into account interactions between different fluids (eg. drag force)
+!! \b \#define \b "FLUID_INTERACTIONS" - to take into account interactions between different fluids (eg. drag force)
 !!
-!! \b \#define \b RESIST - to include resistive dissipation of magnetic field
+!! \b \#define \b "RESIST" - to include resistive dissipation of magnetic field
 !!
-!! \b \#define \b GRAV - to include gravitational forces
+!! \b \#define \b "GRAV" - to include gravitational forces
 !!
 !! If no %gravity type is defined then vertical component of galactic %gravity is used:
 !!
@@ -37,9 +37,10 @@
 !! where \f$r_{gc}\f$ is galactocentric radius and \f$r_{gcSun}\f$ is the galactocentric radius of Sun.
 !! </td></tr></table>
 !! \n \n
-!! \b \#define \b MULTIGRID - to include self–gravity (multigrid solver, uses FFT when possible, recommended)
-!! \b \#define \b POISSON_FFT - to include self–gravity (pure FFT solver)
+!! \b \#define \b "MULTIGRID" - to include self–gravity (multigrid solver, uses FFT when possible, recommended)
 !!
-!! \b \#define \b SHEAR - to include Coriolis and tidal forces in gas equation of motion and use  <a href="http://cdsads.u-strasbg.fr/abs/1995ApJ...440..742H">Hawley, Gammie and Balbus (1995)</a> type approach for shearing BCS
+!! \b \#define \b "POISSON_FFT" - to include self–gravity (pure FFT solver)
+!!
+!! \b \#define \b "SHEAR" - to include Coriolis and tidal forces in gas equation of motion and use  <a href="http://cdsads.u-strasbg.fr/abs/1995ApJ...440..742H">Hawley, Gammie and Balbus (1995)</a> type approach for shearing BCS
 !! @n @n
 !<
