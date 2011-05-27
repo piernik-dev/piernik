@@ -96,7 +96,7 @@ contains
 !! \brief Procedure initializing HDF5 module
 !<
 
-   subroutine init_hdf5(vars,tix,tiy,tiz,tdt_plt)
+   subroutine init_hdf5(vars, tix, tiy, tiz, tdt_plt)
 
       use fluidindex,    only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
@@ -202,10 +202,10 @@ contains
 #ifndef NEW_HDF5
                do k = 1, size(iarr_all_crs,1)
                   if (k<=9) then
-                     write(aux,'(A3,I1)') 'ecr',k
+                     write(aux,'(A3,I1)') 'ecr', k
                      hdf_vars(j) = aux ; j = j + 1
                   else
-                     write(msg, '(a,i3)')"[dataio_hdf5:init_hdf5] Cannot create name for CR energy component #",k
+                     write(msg, '(a,i3)')"[dataio_hdf5:init_hdf5] Cannot create name for CR energy component #", k
                      call warn(msg)
                   endif
                enddo
@@ -245,7 +245,7 @@ contains
 
    subroutine common_shortcuts(var, fl_dni, i_xyz)
 
-      use constants,  only: varlen,singlechar
+      use constants,  only: varlen, singlechar
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
 
@@ -284,7 +284,7 @@ contains
 !>
 !! \brief Routine calculating quantities for plot files
 !<
-   subroutine common_plt_hdf5(var,ij,xn,tab,ierrh)
+   subroutine common_plt_hdf5(var, ij, xn, tab, ierrh)
 
       use constants,  only: varlen, xdim, ydim, zdim
       use grid,       only: cg
@@ -375,7 +375,7 @@ contains
 !>
 !! \brief Routine calculating quantities for .hdf files
 !<
-   subroutine common_vars_hdf5(var,tab, ierrh)
+   subroutine common_vars_hdf5(var, tab, ierrh)
 
       use constants,  only: varlen
       use fluidindex, only: flind, ibx, iby, ibz
@@ -402,7 +402,7 @@ contains
       select case (var)
 #ifdef COSM_RAYS
          case ("ecr1" : "ecr9")
-            read(var,'(A3,I1)') aux,i !> \deprecated BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
+            read(var,'(A3,I1)') aux, i !> \deprecated BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
             tab(:,:,:) = real(cg%u%arr(flind%crs%beg+i-1, RNG), kind=4)
 #endif /* COSM_RAYS */
          case ("dend", "deni", "denn")
@@ -490,9 +490,9 @@ contains
 
             do d = xdim, zdim
                if (pl_i(d) > 0) then
-                  call H5Gcreate_f(file_id, pl_id(d), gr_id,error)
-                  do i=1,nhdf_vars
-                     call H5Gcreate_f(gr_id,hdf_vars(i), gr2_id,error)
+                  call H5Gcreate_f(file_id, pl_id(d), gr_id, error)
+                  do i=1, nhdf_vars
+                     call H5Gcreate_f(gr_id, hdf_vars(i), gr2_id, error)
                      call H5Gclose_f(gr2_id, error)
                   enddo
                   call H5Gclose_f(gr_id, error)
@@ -502,7 +502,7 @@ contains
             call H5Fclose_f(file_id, error)
          endif
 
-         call MPI_Barrier(comm,ierr)
+         call MPI_Barrier(comm, ierr)
 
          do i = 1, nhdf_vars
             do d = xdim, zdim
@@ -520,11 +520,9 @@ contains
 
    end subroutine write_plot
 
-   !> \todo use parallel HDF5 here, rewrite without pijsize (something like write_axes_to_restart)
-
    subroutine write_plot_hdf5(var, plane, nimg)
 
-      use constants,     only: xdim, ydim, zdim, varlen, cwdlen
+      use constants,     only: xdim, ydim, zdim, ndims, varlen, cwdlen
       use dataio_pub,    only: vizit, fmin, fmax, log_file, msg, die, warn, user_plt_hdf5
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
@@ -542,7 +540,6 @@ contains
       integer, intent(in)                 :: nimg
 
       logical, dimension(3)               :: remain
-      logical                             :: ok_plt_var
       real, dimension(:), allocatable     :: buff
       real, dimension(:,:), allocatable   :: send, img
       real, dimension(:,:,:), allocatable :: temp
@@ -550,113 +547,73 @@ contains
       integer                             :: ierrh, i, j
       integer                             :: comm2d, lp, ls, error
       integer(kind=8)                     :: xn
-      integer, parameter                  :: suffixed_planelen = planelen + 1  !< plane name + suffix e.g "xy_"
-      character(len=suffixed_planelen)    :: pij
+      character(len=planelen), dimension(xdim:zdim), parameter :: pij = [ "yz", "xz", "xy" ]
       character(len=cwdlen)               :: fname
       integer, parameter                  :: vdn_len = 12
       character(len=vdn_len)              :: vdname
-
       integer(HID_T)                      :: file_id                       !> File identifier
-      integer(HID_T)                      :: gr_id,gr2_id                  !> Group identifier
-      integer(HSIZE_T), dimension(2)      :: dims
+      integer(HID_T)                      :: gr_id, gr2_id                  !> Group identifier
       integer(SIZE_T)                     :: bufsize
-      integer                             :: rank
-
-      integer                             :: nib, nid, njb, njd, nkb
+      integer, parameter                  :: rank = 2
+      integer(HSIZE_T), dimension(rank)   :: dims
+      integer                             :: nib, njb, nkb
       integer                             :: pisize, pjsize, fe
-
+      integer, dimension(xdim:zdim), parameter :: d1 = [ ydim, xdim, xdim ] , d2 = [ zdim, zdim, ydim ] ! d1(d) and d2(2) are perpendicular to direction d
+      integer, dimension(xdim:zdim)       :: i_xyz
       real, dimension(1)                  :: timebuffer
 
+      fe = len_trim(log_file)
+      if (master) write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
+      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm, ierr)
+
+      i_xyz = [ ix, iy, iz ]
+      xn = 1
+      if (has_dir(plane)) xn = i_xyz(plane) + cg%nb - cg%off(plane)
+
+      nib = cg%n_b(d1(plane))
+      njb = cg%n_b(d2(plane))
+      nkb = cg%n_b(plane)
+
+      dims(:) = [ dom%n_d(d1(plane)), dom%n_d(d2(plane)) ] ! Dataset dimensions
+
       if (comm3d == MPI_COMM_NULL .or. is_uneven .or. is_mpi_noncart) then
-         ! nib,njb,pisize*pjsize, ...
+         ! nib, njb, pisize*pjsize, ...
          ! MPI_Cart_sub, psize
          call warn("[dataio_hdf5:write_plot_hdf5] comm3d == MPI_COMM_NULL. Bailing out")
          return
       else
-         rank = 2
-         fe = len_trim(log_file)
-         if (master) write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
-         call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm, ierr)
 
-         nib = 0; nid = 0; njb = 0; njd = 0; nkb = 0; pisize = 0; pjsize = 0
          remain(:) = .true.
          remain(plane) = .false.
-         select case (plane)
-            case (xdim)
-               if (has_dir(xdim)) then
-                  xn     = ix + cg%nb - cg%off(xdim)
-               else
-                  xn     = 1
-               endif
-               pij    = "yz_"
-               nib    = cg%nyb
-               nid    = dom%n_d(ydim)
-               njb    = cg%nzb
-               njd    = dom%n_d(zdim)
-               nkb    = cg%nxb
-               pisize = psize(ydim)
-               pjsize = psize(zdim)
-            case (ydim)
-               if (has_dir(ydim)) then
-                  xn     = iy + cg%nb - cg%off(ydim)
-               else
-                  xn     = 1
-               endif
-               pij    = "xz_"
-               nib    = cg%nxb
-               nid    = dom%n_d(xdim)
-               njb    = cg%nzb
-               njd    = dom%n_d(zdim)
-               nkb    = cg%nyb
-               pisize = psize(xdim)
-               pjsize = psize(zdim)
-            case (zdim)
-               if (has_dir(zdim)) then
-                  xn = iz + cg%nb - cg%off(zdim)
-               else
-                  xn = 1
-               endif
-               pij    = "xy_"
-               nib    = cg%nxb
-               nid    = dom%n_d(xdim)
-               njb    = cg%nyb
-               njd    = dom%n_d(ydim)
-               nkb    = cg%nzb
-               pisize = psize(xdim)
-               pjsize = psize(ydim)
-            case default
-               call die("[dataio_hdf5:write_plot_hdf5] nonrecognized plane")
-         end select
+         pisize = psize(d1(plane))
+         pjsize = psize(d2(plane))
 
-         dims(1) = nid
-         dims(2) = njd
-         call MPI_Barrier(comm,ierr)
-         call MPI_Cart_sub(comm3d,remain,comm2d,ierr)
+         call MPI_Barrier(comm, ierr)
+         call MPI_Cart_sub(comm3d, remain, comm2d, ierr)
          call MPI_Comm_size(comm2d, ls, ierr)
          call MPI_Comm_rank(comm2d, lp, ierr)
          if ((xn > cg%nb .and. xn <= nkb+cg%nb).or.xn == 1) then
-            allocate(temp(nib,njb,pisize*pjsize),img(nid,njd))
-            allocate(buff(nid*njd))
-            allocate(send(nib,njb))
 
-            ok_plt_var = .false.
-            call common_plt_hdf5(var,plane,xn,send,ierrh)
-            if (associated(user_plt_hdf5) .and. ierrh /= 0) call user_plt_hdf5(var,plane,xn,send,ierrh)
-            if (ierrh==0) ok_plt_var = .true.
-            if (.not.ok_plt_var) then
+            allocate(temp(nib, njb, pisize*pjsize), img(dims(1), dims(2)))
+            allocate(buff(dims(1)*dims(2)))
+            allocate(send(nib, njb))
+
+            call common_plt_hdf5(var, plane, xn, send, ierrh)
+            if (associated(user_plt_hdf5) .and. ierrh /= 0) call user_plt_hdf5(var, plane, xn, send, ierrh)
+            if (ierrh /= 0) then
                write(msg,'(2a)') var, " is not defined in common_plt_hdf5, neither in user_plt_hdf5 !!!"
                call die(msg)
             endif
 
             temp = -1.0
-            call MPI_Gather(send, nib*njb, MPI_DOUBLE_PRECISION, temp, nib*njb, MPI_DOUBLE_PRECISION, 0, comm2d,ierr)
+            call MPI_Gather(send, nib*njb, MPI_DOUBLE_PRECISION, temp, nib*njb, MPI_DOUBLE_PRECISION, 0, comm2d, ierr)
 
             if (lp == 0) then
                imax = maxval(temp); imin = minval(temp)
                di = imax-imin
                do i = 0, pisize-1
                   do j = 0, pjsize-1
-                     img(i*nib+1:(i+1)*nib,j*njb+1:(j+1)*njb) = temp(:,:,(j+1)+i*pjsize)
+                     img(i*nib+1:(i+1)*nib, j*njb+1:(j+1)*njb) = temp(:,:,(j+1)+i*pjsize)
                   enddo
                enddo
                if (vizit) then
@@ -667,23 +624,24 @@ contains
 #endif /* !PGPLOT */
                else
                   call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
-                  call H5Gopen_f(file_id,pij(1:2),gr_id,error)
-                  call H5Gopen_f(gr_id,var,gr2_id,error)
-                  write(vdname,'(a3,a4,a1,i4.4)') pij,var,"_",nimg
+                  call H5Gopen_f(file_id, pij(plane), gr_id, error)
+                  call H5Gopen_f(gr_id, var, gr2_id, error)
+                  write(vdname,'(a2,a1,a4,a1,i4.4)') pij(plane),"_", var,"_", nimg
                   call h5ltmake_dataset_double_f(gr2_id, vdname, rank, dims, img, error)
                   bufsize = 1
-                  timebuffer = (/t/)
-                  call h5ltset_attribute_double_f(gr2_id,vdname,"time",timebuffer,bufsize,error)
-                  call H5Gclose_f(gr2_id,error)
-                  call H5Gclose_f(gr_id,error)
-                  call H5Fclose_f(file_id,error)
+                  timebuffer = [ t ]
+                  call h5ltset_attribute_double_f(gr2_id, vdname,"time", timebuffer, bufsize, error)
+                  call H5Gclose_f(gr2_id, error)
+                  call H5Gclose_f(gr_id, error)
+                  call H5Fclose_f(file_id, error)
                endif
             endif
             if (allocated(send)) deallocate(send)
             if (allocated(temp)) deallocate(temp)
             if (allocated(img))  deallocate(img)
          endif
-         call MPI_Barrier(comm,ierr)
+
+         call MPI_Barrier(comm, ierr)
       endif
 
    end subroutine write_plot_hdf5
@@ -1015,7 +973,7 @@ contains
       integer :: dir
       integer :: error
       integer, parameter :: rank=1
-      integer(HSIZE_T),  dimension(rank) :: offset, count, stride, block, dimsf, chunk_dims
+      integer(HSIZE_T), dimension(rank) :: offset, count, stride, block, dimsf, chunk_dims
       integer(HID_T) :: dset_id                !> Dataset identifier
       integer(HID_T) :: dplist_id, plist_id    !> Property list identifiers
       integer(HID_T) :: dfilespace, filespace  !> Dataspace identifiers in file
@@ -1109,7 +1067,7 @@ contains
       ! Create dataset.and filespace
       call h5dopen_f(file_id, dname, dset_id, error)
       if (error /= 0) then
-         write(msg, '(3a)') "[dataio_hdf5:prep_arr_read] Opening dataset '",dname,"' failed."
+         write(msg, '(3a)') "[dataio_hdf5:prep_arr_read] Opening dataset '", dname,"' failed."
          call die(msg)
       endif
 
@@ -1186,7 +1144,7 @@ contains
            &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       if (error /= 0) then
-         write(msg, '(3a)') "[dataio_hdf5:read_4darr_from_restart] Reading dataset '",dname,"' failed."
+         write(msg, '(3a)') "[dataio_hdf5:read_4darr_from_restart] Reading dataset '", dname,"' failed."
          call die(msg)
       endif
 
@@ -1237,7 +1195,7 @@ contains
            &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
 
       if (error /= 0) then
-         write(msg, '(3a)') "[dataio_hdf5:read_3darr_from_restart] Reading dataset '",dname,"' failed."
+         write(msg, '(3a)') "[dataio_hdf5:read_3darr_from_restart] Reading dataset '", dname,"' failed."
          call die(msg)
       endif
 
@@ -1283,15 +1241,15 @@ contains
       nu = flind%all
 
       if (master) then
-         write(filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_',chdf%nres,'.res'
-         write(msg, '(2a)') 'Reading restart file: ',trim(filename)
+         write(filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_', chdf%nres,'.res'
+         write(msg, '(2a)') 'Reading restart file: ', trim(filename)
          call printio(msg)
       endif
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
 
       inquire(file = filename, exist = file_exist)
       if (.not. file_exist) then
-         write(msg,'(3a)') '[dataio_hdf5:read_restart_hdf5]: Restart file: ',trim(filename),' does not exist'
+         write(msg,'(3a)') '[dataio_hdf5:read_restart_hdf5]: Restart file: ', trim(filename),' does not exist'
          call die(msg)
       endif
 
@@ -1302,17 +1260,17 @@ contains
          call h5ltget_attribute_double_f(file_id,"/","piernik", rbuf, error)
          if (error /= 0) call die("[dataio_hdf5:read_restart_hdf5] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
          if (rbuf(1) > piernik_hdf5_version) then
-            write(msg,'(2(a,f5.2))')"[dataio_hdf5:read_restart_hdf5] Cannot read future versions of the restart file: ",rbuf(1)," > ",piernik_hdf5_version
+            write(msg,'(2(a,f5.2))')"[dataio_hdf5:read_restart_hdf5] Cannot read future versions of the restart file: ", rbuf(1)," > ", piernik_hdf5_version
             call die(msg)
          else if (int(rbuf(1)) < int(piernik_hdf5_version)) then
-            write(msg,'(2(a,f5.2))')"[dataio_hdf5:read_restart_hdf5] The restart file is too ancient. It is unlikely that it could work correctly: ",rbuf(1)," << ",piernik_hdf5_version
+            write(msg,'(2(a,f5.2))')"[dataio_hdf5:read_restart_hdf5] The restart file is too ancient. It is unlikely that it could work correctly: ", rbuf(1)," << ", piernik_hdf5_version
             call die(msg)
          else if (rbuf(1) < piernik_hdf5_version) then
-            write(msg,'(2(a,f5.2))')"[dataio_hdf5:read_restart_hdf5] Old versions of the restart file may not always work fully correctly: ",rbuf(1)," < ",piernik_hdf5_version
+            write(msg,'(2(a,f5.2))')"[dataio_hdf5:read_restart_hdf5] Old versions of the restart file may not always work fully correctly: ", rbuf(1)," < ", piernik_hdf5_version
             call warn(msg)
          endif
 
-         call h5ltget_attribute_int_f(file_id,"/","nxd", ibuf,error)
+         call h5ltget_attribute_int_f(file_id,"/","nxd", ibuf, error)
          if (ibuf(1) /= dom%n_d(xdim) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nxd does not match")
          if (has_dir(xdim)) then
             call h5ltget_attribute_double_f(file_id,"/","xmin", rbuf, error)
@@ -1321,7 +1279,7 @@ contains
             if (rbuf(1) /= dom%xmax .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] xmax does not match")
          endif
 
-         call h5ltget_attribute_int_f(file_id,"/","nyd", ibuf,error)
+         call h5ltget_attribute_int_f(file_id,"/","nyd", ibuf, error)
          if (ibuf(1) /= dom%n_d(ydim) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nyd does not match")
          if (has_dir(ydim)) then
             call h5ltget_attribute_double_f(file_id,"/","ymin", rbuf, error)
@@ -1330,7 +1288,7 @@ contains
             if (rbuf(1) /= dom%ymax .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] ymax does not match")
          endif
 
-         call h5ltget_attribute_int_f(file_id,"/","nzd", ibuf,error)
+         call h5ltget_attribute_int_f(file_id,"/","nzd", ibuf, error)
          if (ibuf(1) /= dom%n_d(zdim) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nzd does not match")
          if (has_dir(zdim)) then
             call h5ltget_attribute_double_f(file_id,"/","zmin", rbuf, error)
@@ -1364,37 +1322,37 @@ contains
       if (master) then
          call h5fopen_f (filename, H5F_ACC_RDONLY_F, file_id, error)
          bufsize = 1
-         call h5ltget_attribute_double_f(file_id,"/","piernik", rbuf,error)
+         call h5ltget_attribute_double_f(file_id,"/","piernik", rbuf, error)
          restart_hdf5_version = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","time", rbuf,error)
+         call h5ltget_attribute_double_f(file_id,"/","time", rbuf, error)
          t = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","timestep", rbuf,error)
+         call h5ltget_attribute_double_f(file_id,"/","timestep", rbuf, error)
          dt = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","magic_mass", rbuf,error)
+         call h5ltget_attribute_double_f(file_id,"/","magic_mass", rbuf, error)
          magic_mass = rbuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","nstep", ibuf,error)
+         call h5ltget_attribute_int_f(file_id,"/","nstep", ibuf, error)
          chdf%nstep = ibuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","nres", ibuf,error)
+         call h5ltget_attribute_int_f(file_id,"/","nres", ibuf, error)
          chdf%nres = ibuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","nhdf", ibuf,error)
+         call h5ltget_attribute_int_f(file_id,"/","nhdf", ibuf, error)
          chdf%nhdf = ibuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","step_res", ibuf,error)
+         call h5ltget_attribute_int_f(file_id,"/","step_res", ibuf, error)
          chdf%step_res = ibuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","step_hdf", ibuf,error)
+         call h5ltget_attribute_int_f(file_id,"/","step_hdf", ibuf, error)
          chdf%step_hdf = ibuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","next_t_tsl", rbuf,error)
+         call h5ltget_attribute_double_f(file_id,"/","next_t_tsl", rbuf, error)
          chdf%next_t_tsl = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","next_t_log", rbuf,error)
+         call h5ltget_attribute_double_f(file_id,"/","next_t_log", rbuf, error)
          chdf%next_t_log = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","last_hdf_time", rbuf,error)
+         call h5ltget_attribute_double_f(file_id,"/","last_hdf_time", rbuf, error)
          chdf%last_hdf_time = rbuf(1)
 
-         call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name,error)
-         call h5ltget_attribute_string_f(file_id,"/","domain", chdf%domain,error)
-         call h5ltget_attribute_string_f(file_id,"/","run_id", chdf%new_id,error)
+         call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name, error)
+         call h5ltget_attribute_string_f(file_id,"/","domain", chdf%domain, error)
+         call h5ltget_attribute_string_f(file_id,"/","run_id", chdf%new_id, error)
 
          if (restart_hdf5_version > 1.11) then
-            call h5ltget_attribute_int_f(file_id,"/","require_init_prob", ibuf,error)
+            call h5ltget_attribute_int_f(file_id,"/","require_init_prob", ibuf, error)
             require_init_prob = ibuf(1)
          endif
 
@@ -1404,7 +1362,7 @@ contains
 
          call h5fclose_f(file_id, error)
 
-         write(msg,'(2a)') 'Done reading restart file: ',trim(filename)
+         write(msg,'(2a)') 'Done reading restart file: ', trim(filename)
          call printio(msg)
       endif
       call h5close_f(error)
@@ -1460,7 +1418,7 @@ contains
       ! Initialize HDF5 library and Fortran interfaces.
       !
       if (master) then
-         write(fname, '(a,a1,a3,a1,i4.4,a3)') trim(problem_name),"_",trim(run_id),"_",chdf%nhdf,".h5"
+         write(fname, '(a,a1,a3,a1,i4.4,a3)') trim(problem_name),"_", trim(run_id),"_", chdf%nhdf,".h5"
          write(msg,'(3a)') 'Writing datafile ', trim(fname), " ... "
          call printio(msg, .true.)
       endif
@@ -1480,14 +1438,14 @@ contains
       if (.not.allocated(data)) allocate(data(cg%nxb, cg%nyb, cg%nzb))
       do i = 1, nhdf_vars
          ierrh = 0; ok_var = .false.
-         call common_vars_hdf5(hdf_vars(i),data,ierrh)
-         if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i),data,ierrh)
+         call common_vars_hdf5(hdf_vars(i), data, ierrh)
+         if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh)
          if (ierrh>=0) ok_var = .true.
          if (.not.ok_var) then
-            write(msg,'(3a)') "[dataio_hdf5:write_hdf5]: ",hdf_vars(i)," is not defined in common_vars_hdf5, neither in user_vars_hdf5."
+            write(msg,'(3a)') "[dataio_hdf5:write_hdf5]: ", hdf_vars(i)," is not defined in common_vars_hdf5, neither in user_vars_hdf5."
             call die(msg)
          endif
-         call write_arr(data,hdf_vars(i),file_id)
+         call write_arr(data, hdf_vars(i), file_id)
       enddo
       if (allocated(data)) deallocate(data)
       !
@@ -1570,7 +1528,7 @@ contains
       rbuffer(7)  = dom%ymax                 ; rbuffer_name(7)  = "ymax" !rr1
       rbuffer(8)  = dom%zmin                 ; rbuffer_name(8)  = "zmin" !rr1
       rbuffer(9)  = dom%zmax                 ; rbuffer_name(9)  = "zmax" !rr1
-      rbuffer(10) = piernik_hdf5_version     ; rbuffer_name(10) = "piernik" !rr1,rr2
+      rbuffer(10) = piernik_hdf5_version     ; rbuffer_name(10) = "piernik" !rr1, rr2
       rbuffer(11) = magic_mass               ; rbuffer_name(11) = "magic_mass" !rr2
       rbuffer(12) = chdf%next_t_tsl          ; rbuffer_name(12) = "next_t_tsl" !rr2
       rbuffer(13) = chdf%next_t_log          ; rbuffer_name(13) = "next_t_log" !rr2
