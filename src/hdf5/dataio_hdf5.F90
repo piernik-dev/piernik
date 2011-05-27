@@ -40,7 +40,7 @@ module dataio_hdf5
 
 ! pulled by ANY
 
-   use constants,     only: FLUID, MAG
+   use constants,     only: FLUID, MAG, xdim, zdim
    use dataio_pub,    only: maxparfilelen, maxparfilelines
    use list_hdf5,     only: S_LEN
 
@@ -52,14 +52,13 @@ module dataio_hdf5
 
    integer, parameter :: dnamelen=5
    integer, parameter :: planelen = 2           !< length of plane names e.g. "xy", "yz", "rp" etc.
+   character(len=planelen), dimension(xdim:zdim), parameter :: pl_id = [ "yz", "xz", "xy" ]
    character(len=dnamelen), dimension(FLUID:MAG) :: dname = [ "fluid", "mag  " ]  !< dataset names for restart files
 
    character(len=S_LEN), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
    integer :: nhdf_vars !< number of quantities plotted to hdf files
-   integer :: ix !< no. of cell (1 <= ix < nxd) for YZ slice in plt files
-   integer :: iy !< no. of cell (1 <= iy < nyd) for XZ slice in plt files
-   integer :: iz !< no. of cell (1 <= iz < nzd) for XY slice in plt files
-   real    :: dt_plt !< frequency of plt output
+   integer, dimension(xdim:zdim) :: pl_i !< no. of cell ( 1 <= pl_i(:) < dom%n_d(:) ) for YZ, XZ and XY slices in plt files
+   real :: dt_plt !< frequency of plt output
 
    ! storage for the problem.par
    character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
@@ -121,7 +120,8 @@ contains
       character(len=varlen) :: aux
 #endif /* COSM_RAYS && !NEW_HDF5 */
 
-      ix = tix; iy = tiy; iz = tiz; dt_plt = tdt_plt
+      pl_i(:) = [ tix, tiy, tiz ]
+      dt_plt = tdt_plt
 
       nvars = 1
       do while ( len(trim(vars(nvars))) > 1)
@@ -243,6 +243,9 @@ contains
 
    end subroutine cleanup_hdf5
 
+!>
+!! \brief decode some useful indices from variable name, if possible
+!<
    subroutine common_shortcuts(var, fl_dni, i_xyz)
 
       use constants,  only: varlen, singlechar
@@ -470,19 +473,14 @@ contains
       integer, save     :: nimg = 0, error = 0
       real, save        :: last_plt_time = 0.0
       character(len=cwdlen) :: fname
-      integer           :: i, fe, d
+      integer           :: i, d
       logical, save     :: first_entry = .true.
       integer(HID_T)    :: file_id                 !> File identifier
       integer(HID_T)    :: gr_id, gr2_id           !> Groups identifier
-      character(len=planelen), dimension(xdim:zdim), parameter :: pl_id = [ "yz", "xz", "xy" ]
-      integer, dimension(xdim:zdim) :: pl_i
 
       if ( ((t-last_plt_time > dt_plt) .or. first_entry ) .and. dt_plt > 0.0 ) then
 
-         pl_i(:) = [ ix, iy, iz ]
-
-         fe = len_trim(log_file)
-         write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
+         write(fname,'(2a)') trim(log_file(1:len_trim(log_file)-3)),"plt"
          call H5open_f(error)
 
          if (master .and. first_entry) then
@@ -551,7 +549,6 @@ contains
       integer                             :: ierrh, p
       integer                             :: error
       integer(kind=8)                     :: xn, xn_r
-      character(len=planelen), dimension(xdim:zdim), parameter :: pij = [ "yz", "xz", "xy" ]
       character(len=cwdlen)               :: fname
       integer, parameter                  :: vdn_len = 12
       character(len=vdn_len)              :: vdname
@@ -559,22 +556,16 @@ contains
       integer(HID_T)                      :: gr_id, gr2_id                  !> Group identifier
       integer, parameter                  :: rank = 2
       integer(HSIZE_T), dimension(rank)   :: dims
-      integer                             :: nib, njb
       integer, dimension(xdim:zdim), parameter :: d1 = [ ydim, xdim, xdim ] , d2 = [ zdim, zdim, ydim ] ! d1(d) and d2(2) are perpendicular to direction d
-      integer, dimension(xdim:zdim)       :: i_xyz
       integer(SIZE_T), parameter          :: bufsize = 1
       real, dimension(bufsize)            :: timebuffer
       integer, parameter                  :: tag = 101
 
-      i_xyz = [ ix, iy, iz ]
       xn = 1
-      if (has_dir(plane)) xn = i_xyz(plane) + cg%nb - cg%off(plane)
+      if (has_dir(plane)) xn = pl_i(plane) + cg%nb - cg%off(plane)
 
-      nib = cg%n_b(d1(plane))
-      njb = cg%n_b(d2(plane))
-
-      if ((xn > cg%nb .and. xn <= cg%n_b(plane)+cg%nb) .or. xn == 1) then
-         allocate(send(nib, njb))
+      if ((xn > cg%nb .and. xn <= cg%n_b(plane)+cg%nb) .or. (xn == 1 .and. .not. has_dir(plane))) then
+         allocate(send(cg%n_b(d1(plane)), cg%n_b(d2(plane))))
          call common_plt_hdf5(var, plane, xn, send, ierrh)
          if (associated(user_plt_hdf5) .and. ierrh /= 0) call user_plt_hdf5(var, plane, xn, send, ierrh)
          if (ierrh /= 0) then
@@ -592,8 +583,8 @@ contains
 
          do p = 0, nproc-1
             xn_r = 1
-            if (has_dir(plane)) xn_r = i_xyz(plane) + cg%nb - dom%se(p, plane, LO)
-            if ((xn_r > cg%nb .and. xn_r <= int(dom%se(p, plane, HI) - dom%se(p, plane, LO) + 1, 4) + cg%nb) .or. xn_r == 1) then
+            if (has_dir(plane)) xn_r = pl_i(plane) + cg%nb - dom%se(p, plane, LO)
+            if ((xn_r > cg%nb .and. xn_r <= int(dom%se(p, plane, HI) - dom%se(p, plane, LO) + 1, 4) + cg%nb) .or. (xn_r == 1 .and. .not. has_dir(plane))) then
                if (p == proc) then
                   img(1+dom%se(p, d1(plane), LO):1+dom%se(p, d1(plane), HI), 1+dom%se(p, d2(plane), LO):1+dom%se(p, d2(plane), HI)) = send(:,:)
                else
@@ -613,9 +604,9 @@ contains
 #endif /* !PGPLOT */
          else
             call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
-            call H5Gopen_f(file_id, pij(plane), gr_id, error)
+            call H5Gopen_f(file_id, pl_id(plane), gr_id, error)
             call H5Gopen_f(gr_id, var, gr2_id, error)
-            write(vdname,'(a2,"_",a4,"_",i4.4)') pij(plane), var, nimg
+            write(vdname,'(a2,"_",a4,"_",i4.4)') pl_id(plane), var, nimg
             call h5ltmake_dataset_double_f(gr2_id, vdname, rank, dims, img, error)
             timebuffer(:) = [ t ]
             call h5ltset_attribute_double_f(gr2_id, vdname, "time", timebuffer, bufsize, error)
@@ -626,9 +617,8 @@ contains
 
          if (allocated(img))  deallocate(img)
       else
-         if ((xn > cg%nb .and. xn <= cg%n_b(plane)+cg%nb) .or. xn == 1) then
-            call MPI_Send(send, size(send), MPI_DOUBLE_PRECISION, 0, tag, comm, ierr)
-         endif
+         if ((xn > cg%nb .and. xn <= cg%n_b(plane)+cg%nb) .or. (xn == 1 .and. .not. has_dir(plane))) &
+              call MPI_Send(send, size(send), MPI_DOUBLE_PRECISION, 0, tag, comm, ierr)
       endif
 
       call MPI_Barrier(comm, ierr) ! We must synchronize everyone before we reuse buffers and variables
