@@ -520,15 +520,23 @@ contains
 
    end subroutine write_plot
 
+! /details This routine appends a nimg-th slice of data, taken perpendiclularly to the plane direction, of the var field
+!
+! In AMR it will probably work only on base level (or any other regular, uniform grid) unless someone decides to complicate the format
+!
+! I/O is not paralelized here because it is not straightforwart to paralelize, when vizit is .true.
+!
+! /todo non-blocking receive ?
+
    subroutine write_plot_hdf5(var, plane, nimg)
 
-      use constants,     only: xdim, ydim, zdim, ndims, varlen, cwdlen
+      use constants,     only: xdim, ydim, zdim, varlen, cwdlen, LO, HI
       use dataio_pub,    only: vizit, fmin, fmax, log_file, msg, die, warn, user_plt_hdf5
       use grid,          only: cg
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpisetup,      only: comm, comm3d, ierr, psize, t, has_dir, dom, master, is_uneven, is_mpi_noncart
-      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
+      use mpisetup,      only: comm, ierr, t, has_dir, dom, master, proc, nproc, status
+      use mpi,           only: MPI_DOUBLE_PRECISION
 #ifdef PGPLOT
       use viz,           only: draw_me
 #endif /* PGPLOT */
@@ -539,32 +547,24 @@ contains
       character(len=varlen), intent(in)   :: var                           !> not yet implemented
       integer, intent(in)                 :: nimg
 
-      logical, dimension(3)               :: remain
-      real, dimension(:), allocatable     :: buff
-      real, dimension(:,:), allocatable   :: send, img
-      real, dimension(:,:,:), allocatable :: temp
-      real                                :: imax, imin, di
-      integer                             :: ierrh, i, j
-      integer                             :: comm2d, lp, ls, error
-      integer(kind=8)                     :: xn
+      real, dimension(:,:), allocatable   :: send, img, recv
+      integer                             :: ierrh, p
+      integer                             :: error
+      integer(kind=8)                     :: xn, xn_r
       character(len=planelen), dimension(xdim:zdim), parameter :: pij = [ "yz", "xz", "xy" ]
       character(len=cwdlen)               :: fname
       integer, parameter                  :: vdn_len = 12
       character(len=vdn_len)              :: vdname
       integer(HID_T)                      :: file_id                       !> File identifier
       integer(HID_T)                      :: gr_id, gr2_id                  !> Group identifier
-      integer(SIZE_T)                     :: bufsize
       integer, parameter                  :: rank = 2
       integer(HSIZE_T), dimension(rank)   :: dims
-      integer                             :: nib, njb, nkb
-      integer                             :: pisize, pjsize, fe
+      integer                             :: nib, njb
       integer, dimension(xdim:zdim), parameter :: d1 = [ ydim, xdim, xdim ] , d2 = [ zdim, zdim, ydim ] ! d1(d) and d2(2) are perpendicular to direction d
       integer, dimension(xdim:zdim)       :: i_xyz
-      real, dimension(1)                  :: timebuffer
-
-      fe = len_trim(log_file)
-      if (master) write(fname,'(2a)') trim(log_file(1:fe-3)),"plt"
-      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm, ierr)
+      integer(SIZE_T), parameter          :: bufsize = 1
+      real, dimension(bufsize)            :: timebuffer
+      integer, parameter                  :: tag = 101
 
       i_xyz = [ ix, iy, iz ]
       xn = 1
@@ -572,77 +572,68 @@ contains
 
       nib = cg%n_b(d1(plane))
       njb = cg%n_b(d2(plane))
-      nkb = cg%n_b(plane)
 
-      dims(:) = [ dom%n_d(d1(plane)), dom%n_d(d2(plane)) ] ! Dataset dimensions
+      if ((xn > cg%nb .and. xn <= cg%n_b(plane)+cg%nb) .or. xn == 1) then
+         allocate(send(nib, njb))
+         call common_plt_hdf5(var, plane, xn, send, ierrh)
+         if (associated(user_plt_hdf5) .and. ierrh /= 0) call user_plt_hdf5(var, plane, xn, send, ierrh)
+         if (ierrh /= 0) then
+            write(msg,'(2a)') var, " is not defined in common_plt_hdf5, neither in user_plt_hdf5 !!!"
+            call die(msg)
+         endif
+      endif
 
-      if (comm3d == MPI_COMM_NULL .or. is_uneven .or. is_mpi_noncart) then
-         ! nib, njb, pisize*pjsize, ...
-         ! MPI_Cart_sub, psize
-         call warn("[dataio_hdf5:write_plot_hdf5] comm3d == MPI_COMM_NULL. Bailing out")
-         return
-      else
+      if (master) then
 
-         remain(:) = .true.
-         remain(plane) = .false.
-         pisize = psize(d1(plane))
-         pjsize = psize(d2(plane))
+         write(fname,'(2a)') trim(log_file(1:len_trim(log_file)-3)),"plt"
 
-         call MPI_Barrier(comm, ierr)
-         call MPI_Cart_sub(comm3d, remain, comm2d, ierr)
-         call MPI_Comm_size(comm2d, ls, ierr)
-         call MPI_Comm_rank(comm2d, lp, ierr)
-         if ((xn > cg%nb .and. xn <= nkb+cg%nb).or.xn == 1) then
+         dims(:) = [ dom%n_d(d1(plane)), dom%n_d(d2(plane)) ] ! Dataset dimensions
+         allocate(img(dims(1), dims(2)))
 
-            allocate(temp(nib, njb, pisize*pjsize), img(dims(1), dims(2)))
-            allocate(buff(dims(1)*dims(2)))
-            allocate(send(nib, njb))
-
-            call common_plt_hdf5(var, plane, xn, send, ierrh)
-            if (associated(user_plt_hdf5) .and. ierrh /= 0) call user_plt_hdf5(var, plane, xn, send, ierrh)
-            if (ierrh /= 0) then
-               write(msg,'(2a)') var, " is not defined in common_plt_hdf5, neither in user_plt_hdf5 !!!"
-               call die(msg)
-            endif
-
-            temp = -1.0
-            call MPI_Gather(send, nib*njb, MPI_DOUBLE_PRECISION, temp, nib*njb, MPI_DOUBLE_PRECISION, 0, comm2d, ierr)
-
-            if (lp == 0) then
-               imax = maxval(temp); imin = minval(temp)
-               di = imax-imin
-               do i = 0, pisize-1
-                  do j = 0, pjsize-1
-                     img(i*nib+1:(i+1)*nib, j*njb+1:(j+1)*njb) = temp(:,:,(j+1)+i*pjsize)
-                  enddo
-               enddo
-               if (vizit) then
-#ifdef PGPLOT
-                  call draw_me(real(img, kind=4), real(fmin, kind=4), real(fmax, kind=4))
-#else /* !PGPLOT */
-                  call warn("[dataio_hdf5:write_plot_hdf5] vizit used without PGPLOT")
-#endif /* !PGPLOT */
+         do p = 0, nproc-1
+            xn_r = 1
+            if (has_dir(plane)) xn_r = i_xyz(plane) + cg%nb - dom%se(p, plane, LO)
+            if ((xn_r > cg%nb .and. xn_r <= int(dom%se(p, plane, HI) - dom%se(p, plane, LO) + 1, 4) + cg%nb) .or. xn_r == 1) then
+               if (p == proc) then
+                  img(1+dom%se(p, d1(plane), LO):1+dom%se(p, d1(plane), HI), 1+dom%se(p, d2(plane), LO):1+dom%se(p, d2(plane), HI)) = send(:,:)
                else
-                  call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
-                  call H5Gopen_f(file_id, pij(plane), gr_id, error)
-                  call H5Gopen_f(gr_id, var, gr2_id, error)
-                  write(vdname,'(a2,a1,a4,a1,i4.4)') pij(plane),"_", var,"_", nimg
-                  call h5ltmake_dataset_double_f(gr2_id, vdname, rank, dims, img, error)
-                  bufsize = 1
-                  timebuffer = [ t ]
-                  call h5ltset_attribute_double_f(gr2_id, vdname,"time", timebuffer, bufsize, error)
-                  call H5Gclose_f(gr2_id, error)
-                  call H5Gclose_f(gr_id, error)
-                  call H5Fclose_f(file_id, error)
+                  allocate(recv(dom%se(p, d1(plane), HI)-dom%se(p, d1(plane), LO)+1, dom%se(p, d2(plane), HI)-dom%se(p, d2(plane), LO)+1))
+                  call MPI_Recv(recv, size(recv), MPI_DOUBLE_PRECISION, p, tag, comm, status(:,p), ierr)
+                  img(1+dom%se(p, d1(plane), LO):1+dom%se(p, d1(plane), HI), 1+dom%se(p, d2(plane), LO):1+dom%se(p, d2(plane), HI)) = recv(:,:)
+                  deallocate(recv)
                endif
             endif
-            if (allocated(send)) deallocate(send)
-            if (allocated(temp)) deallocate(temp)
-            if (allocated(img))  deallocate(img)
+         enddo
+
+         if (vizit) then
+#ifdef PGPLOT
+            call draw_me(real(img, kind=4), real(fmin, kind=4), real(fmax, kind=4))
+#else /* !PGPLOT */
+            call warn("[dataio_hdf5:write_plot_hdf5] vizit used without PGPLOT")
+#endif /* !PGPLOT */
+         else
+            call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
+            call H5Gopen_f(file_id, pij(plane), gr_id, error)
+            call H5Gopen_f(gr_id, var, gr2_id, error)
+            write(vdname,'(a2,"_",a4,"_",i4.4)') pij(plane), var, nimg
+            call h5ltmake_dataset_double_f(gr2_id, vdname, rank, dims, img, error)
+            timebuffer(:) = [ t ]
+            call h5ltset_attribute_double_f(gr2_id, vdname, "time", timebuffer, bufsize, error)
+            call H5Gclose_f(gr2_id, error)
+            call H5Gclose_f(gr_id, error)
+            call H5Fclose_f(file_id, error)
          endif
 
-         call MPI_Barrier(comm, ierr)
+         if (allocated(img))  deallocate(img)
+      else
+         if ((xn > cg%nb .and. xn <= cg%n_b(plane)+cg%nb) .or. xn == 1) then
+            call MPI_Send(send, size(send), MPI_DOUBLE_PRECISION, 0, tag, comm, ierr)
+         endif
       endif
+
+      call MPI_Barrier(comm, ierr) ! We must synchronize everyone before we reuse buffers and variables
+
+      if (allocated(send)) deallocate(send)
 
    end subroutine write_plot_hdf5
 
