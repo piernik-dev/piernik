@@ -624,12 +624,15 @@ contains
 
       use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG
       use dataio_pub,    only: warn, die
-      use mpisetup,      only: has_dir, proc, nproc, is_neigh, procmask, master, inflate_req, req
+      use mpisetup,      only: has_dir, proc, nproc, is_neigh, procmask, inflate_req, req
       use multigridvars, only: base, lvl, plvl, pr_segment, ord_prolong_face_norm, is_external, need_general_pf
+#ifdef DEBUG
+      use piernikdebug,  only: aux_R
+#endif /* DEBUG */
 
       implicit none
 
-      integer :: d, g, j, lh, hl
+      integer :: d, g, j, lh, hl, l, nl
       logical, dimension(xdim:zdim, LO:HI) :: neigh
       logical :: sharing, corner, face
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
@@ -638,15 +641,41 @@ contains
       type(pr_segment), pointer :: seg
       type(plvl), pointer   :: curl                   !> current level (a pointer sliding along the linked list)
       logical :: is_internal_fine
+      integer, parameter :: max_opfn = 2
+      real, dimension(0:max_opfn) :: opfn_c_ff, opfn_c_cf
 
       if (.not. need_general_pf) return
 
       call inflate_req(size([LO, HI]) * 2 * nproc * ndims)
 
-      if (ord_prolong_face_norm > 0) then
-         if (master) call warn("[multigrid_gravity:mpi_multigrid_prep_grav] ord_prolong_face_norm > 0 not fully implemented yet, defaulting to 0")
-         ord_prolong_face_norm = 0
-      endif
+      if (ord_prolong_face_norm > max_opfn) ord_prolong_face_norm = max_opfn
+      select case (ord_prolong_face_norm)
+         case (0)
+            opfn_c_ff(:) = [ 0.5, 0., 0. ]
+            opfn_c_cf(:) = [ 1.0, 0., 0. ]
+         case (1)
+#ifdef DEBUG
+            ! the maximum convergence is at aux_R(1) = 0.25 +/- 0.05
+            opfn_c_ff(:) = 0.5 * [ 1+aux_R(1), -aux_R(1), 0. ]
+            ! the maximum convergence is at aux_R(2) = -0.05 +/- 0.05 and 0
+            opfn_c_cf(:) = [ 1.0 + 2*aux_R(2), -aux_R(2), 0. ]
+#else /* !DEBUG */
+            opfn_c_ff(:) = [  5., -1., 0. ] / 8.  ! adjusted experimentally
+            opfn_c_cf(:) = [ 18.,  1., 0. ] / 20. ! adjusted experimentally
+#endif /* !DEBUG */
+         case (2)
+#ifdef DEBUG
+            ! the maximum convergence is at aux_R(1) = 0.35 +/- 0.1 and aux_R(3) = 0.20 +- 0.05
+            opfn_c_ff(:) = 0.5 * [ 1+aux_R(1), -2.*aux_R(1)+aux_R(3), aux_R(1)-aux_R(3) ]
+            ! the maximum convergence is at aux_R(2) = -0.01 +/- 0.02 and aux_R(4) = -0.125 +- 0.025
+            opfn_c_cf(:) = [ 1.0 + 2*aux_R(2), -2.*aux_R(2)+aux_R(4), aux_R(2)-aux_R(4) ]
+#else /* !DEBUG */
+            opfn_c_ff(:) = [ 27., -10., 3. ] / 40. ! adjusted experimentally
+            opfn_c_cf(:) = [  8.,  -1., 1. ] / 8.
+#endif /* !DEBUG */
+         case default
+            call die("mg:mmpg opfn_c_[cf]f(:)")
+      end select
 
       curl => base
       do while (associated(curl))
@@ -768,18 +797,22 @@ contains
                            coarsened(d, hl) = coarsened(d, lh)
                            coarsened(d, lh) = coarsened(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
                            coarsened(:, :) = coarsened(:, :)/2
-                           if (coarsened(d, LO) /= coarsened(d, HI)) coarsened(d, :) = coarsened(d, :) + [ -ord_prolong_face_norm, ord_prolong_face_norm ]
+                           coarsened(d, :) = coarsened(d, :) + [ -ord_prolong_face_norm, ord_prolong_face_norm ]
+
                            seg%se(:, LO) = max(curl%dom%se(proc, :, LO), coarsened(:, LO)) + ijks(:)
                            seg%se(:, HI) = min(curl%dom%se(proc, :, HI), coarsened(:, HI)) + ijks(:)
 
-                           allocate(seg%coeff(1)) !> \todo 1 .. 2*ord_prolong_face_norm, depending on width of the crosssection
-                           seg%coeff(1) = 1.
-                           select case (lh)
-                              case (LO)
-                                 if (mod(curl%finer%dom%se(j, d, lh),     2_LONG) == 0) seg%coeff(1) = 0.5 ! requires corrections for ord_prolong_face_norm
-                              case (HI)
-                                 if (mod(curl%finer%dom%se(j, d, lh) + 1, 2_LONG) == 0) seg%coeff(1) = 0.5
-                           end select
+                           coarsened(d, :) = coarsened(d, :) - [ -ord_prolong_face_norm, ord_prolong_face_norm ] ! revert broadening
+                           allocate(seg%f_lay(seg%se(d, HI) - seg%se(d, LO) + 1))
+                           do l = 1, size(seg%f_lay(:))
+                              seg%f_lay(l)%layer = l + int(seg%se(d, LO), kind=4) - 1
+                              nl = int(minval(abs(seg%f_lay(l)%layer - ijks(d) - coarsened(d, :))), kind=4)
+                              if (mod(curl%finer%dom%se(j, d, lh) + lh - LO, 2_LONG) == 0) then ! fine face at coarse face
+                                 seg%f_lay(l)%coeff = opfn_c_ff(nl)
+                              else                                                              ! fine face at coarse center
+                                 seg%f_lay(l)%coeff = opfn_c_cf(nl)
+                              endif
+                           enddo
 
                         endif
                      enddo
@@ -839,7 +872,7 @@ contains
                if (allocated(io_tgt(ib)%seg)) then
                   do g = 1, ubound(io_tgt(ib)%seg, dim=1)
                      if (allocated(io_tgt(ib)%seg(g)%buf)) deallocate(io_tgt(ib)%seg(g)%buf)
-                     if (allocated(io_tgt(ib)%seg(g)%coeff)) deallocate(io_tgt(ib)%seg(g)%coeff)
+                     if (allocated(io_tgt(ib)%seg(g)%f_lay)) deallocate(io_tgt(ib)%seg(g)%f_lay)
                   enddo
                   deallocate(io_tgt(ib)%seg)
                endif

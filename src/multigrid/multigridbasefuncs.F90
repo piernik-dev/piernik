@@ -245,14 +245,14 @@ contains
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: plvl, lvl, ord_prolong_face_norm, ord_prolong_face_par, base, roof, extbnd_antimirror, is_external, need_general_pf
+      use multigridvars,      only: plvl, lvl, ord_prolong_face_norm, ord_prolong_face_par, base, roof, extbnd_antimirror, is_external, need_general_pf, pr_segment
 
       implicit none
 
       integer, intent(in) :: lev  !< level for which approximate the solution
       integer, intent(in) :: soln !< index of solution in lvl()%mgvar ! \todo change the name
 
-      integer                       :: i, j, k, d, lh, g, g1, gc, ib, jb, ibh, jbh
+      integer                       :: i, j, k, d, lh, g, g1, gc, ib, jb, ibh, jbh, l
       type(plvl), pointer           :: coarse, fine
       integer, parameter            :: s_wdth  = 3           ! interpolation stencil width
       integer, parameter            :: s_rng = (s_wdth-1)/2  ! stencil range around 0
@@ -268,14 +268,15 @@ contains
       integer, dimension(xdim:zdim) :: off1
       integer :: nr
       integer(kind=8), dimension(:,:), pointer :: cse ! shortcut for coarse segment
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
       type c_bnd
          real, dimension(:, :), pointer :: bnd
       end type c_bnd
       type(c_bnd), dimension(xdim:zdim, LO:HI) :: p_bnd
-      real, dimension(:,:), pointer :: buf2
       real :: opfn1, opfn3
       integer :: b_rng
       integer, dimension(xdim:zdim), parameter :: d1 = [ ydim, xdim, xdim ] , d2 = [ zdim, zdim, ydim ]
+      type(pr_segment), pointer :: pseg
 
       ! coefficients for intepolation perpendicular to the face can be expressed as
       ! 1/2*| 1 0 ... ] + a2*| 1 -1 0 ... ] + a4*| 1 -2 1 0 ... ] + a6*| 1 -3 3 -1 0 ... ] + a8*| 1 -4 6 -4 1 0 ... ] + ...
@@ -313,11 +314,6 @@ contains
             ! Implement ord_prolong_face_par /= 0 if and only if it improves the coupling between fine and coarse solutions
          endif
 
-         if (ord_prolong_face_norm /= 0) then
-            ord_prolong_face_norm = 0
-            call warn("[multigridbasefuncs:prolong_faces] ord_prolong_face_norm /= 0 not implemented yet for the current domain decomposition type.")
-         endif
-
          do lh = LO, HI ! \todo convert plvl%bnd_[xyz] to an array and make obsolete the following pointer assignments
             p_bnd(xdim, lh)%bnd => fine%bnd_x(:, :, lh)
             p_bnd(ydim, lh)%bnd => fine%bnd_y(:, :, lh)
@@ -351,28 +347,19 @@ contains
                if (allocated(coarse%pff_tgt(d, lh)%seg)) then
                   do g = 1, ubound(coarse%pff_tgt(d, lh)%seg(:), dim=1)
 
-                     cse => coarse%pff_tgt(d, lh)%seg(g)%se
+                     pseg => coarse%pff_tgt(d, lh)%seg(g)
+                     cse => pseg%se
 
-                     if (coarse%pff_tgt(d, lh)%seg(g)%proc /= proc) then
+                     if (pseg%proc /= proc) then
                         nr = nr + 1
-
-                        ! this will be a weighted sum over layers for ord_prolong_face_norm/=0
-                        nullify(buf2)
-                        select case (d)
-                           case (xdim)
-                              buf2 => coarse%pff_tgt(d, lh)%seg(g)%buf(1, :, :)
-                           case (ydim)
-                              buf2 => coarse%pff_tgt(d, lh)%seg(g)%buf(:, 1, :)
-                           case (zdim)
-                              buf2 => coarse%pff_tgt(d, lh)%seg(g)%buf(:, :, 1)
-                           case default
-                              call die("mbf:pf dir")
-                              buf2 => fine%pfc_tgt(d, lh)%seg(g)%buf(-1, -1:-1, -1:-1) ! suppress compiler warnings
-                        end select
-                        buf2(:,:) = coarse%pff_tgt(d, lh)%seg(g)%coeff(1) * &
-                             sum(coarse%mgvar(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI), soln), dim=d)
-                        call MPI_Isend(coarse%pff_tgt(d, lh)%seg(g)%buf(1, 1, 1), size(coarse%pff_tgt(d, lh)%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, &
-                             &         coarse%pff_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), ierr)
+                        se(:,:) = cse(:,:)
+                        pseg%buf(:, :, :) = 0. ! this can be avoided by extracting first assignment from the loop
+                        do l = 1, ubound(pseg%f_lay(:), dim=1)
+                           se(d,:) = pseg%f_lay(l)%layer
+                           pseg%buf(:, :, :) = pseg%buf(:, :, :) + pseg%f_lay(l)%coeff * &
+                                coarse%mgvar(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI), soln)
+                        enddo
+                        call MPI_Isend(pseg%buf(1, 1, 1), size(pseg%buf(:, :, :)), MPI_DOUBLE_PRECISION, pseg%proc, HI*d+lh, comm, req(nr), ierr)
                      endif
                   enddo
                endif
@@ -399,21 +386,14 @@ contains
                         enddo
                         if (.not. associated(cse)) call die("[multigridbasefuncs:prolong_faces] missing coarse grid target")
 
-                        ! this will be a weighted sum over layers for ord_prolong_face_norm/=0
-                        nullify(buf2)
-                        select case (d)
-                           case (xdim)
-                              buf2 => fine%pfc_tgt(d, lh)%seg(g)%buf(1,:,:)
-                           case (ydim)
-                              buf2 => fine%pfc_tgt(d, lh)%seg(g)%buf(:,1,:)
-                           case (zdim)
-                              buf2 => fine%pfc_tgt(d, lh)%seg(g)%buf(:,:,1)
-                           case default
-                              call die("mbf:pf dir")
-                              buf2 => fine%pfc_tgt(d, lh)%seg(g)%buf(-1, -1:-1, -1:-1) ! suppress compiler warnings
-                        end select
-                        buf2(:,:) = coarse%pff_tgt(d, lh)%seg(gc)%coeff(1) * &
-                             sum(coarse%mgvar(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI), soln), dim=d)
+                        se(:,:) = cse(:,:)
+                        pseg => fine%pfc_tgt(d, lh)%seg(g)
+                        pseg%buf(:,:,:) = 0. ! this can be avoided by extracting first assignment from the loop
+                        do l = 1, ubound(coarse%pff_tgt(d, lh)%seg(gc)%f_lay(:), dim=1)
+                           se(d,:) = coarse%pff_tgt(d, lh)%seg(gc)%f_lay(l)%layer
+                           pseg%buf(:,:,:) =  pseg%buf(:,:,:) + coarse%pff_tgt(d, lh)%seg(gc)%f_lay(l)%coeff * &
+                                coarse%mgvar(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI), soln)
+                        enddo
                      endif
                   enddo
                endif
@@ -429,7 +409,7 @@ contains
                   ! make external homogenous Dirichlet boundaries, where applicable, interpolate (inject) otherwise.
                   ! \todo for homogenous neumann boundary lay2 should be .false. and pc_bnd(1, :, :) should contain layer of the coarse data next to the external boundary
                   if (is_external(d, lh)) then
-                     p_bnd(d, lh)%bnd(:,:) = 0. ! BEWARE homogenous Dirichlt by default
+                     p_bnd(d, lh)%bnd(:,:) = 0. ! BEWARE homogenous Dirichlet by default
                   else
                      p_bnd(d, lh)%bnd(:,:) = 0
                      if (allocated(fine%pfc_tgt(d, lh)%seg)) then
@@ -483,6 +463,7 @@ contains
             pp(i,:,2,2) = 0.5*p(-i)*p(1:-1:-1)
          enddo
 
+         if (ord_prolong_face_norm > 1) ord_prolong_face_norm = 1
          b_rng = s_rng
          if (ord_prolong_face_norm > 0) b_rng = max(b_rng, ord_prolong_face_norm+1)
          call mpi_multigrid_bnd(lev-1, soln, b_rng, extbnd_antimirror, corners=(ord_prolong_face_par/=0)) !> \deprecated BEWARE for higher prolongation order more guardcell are required

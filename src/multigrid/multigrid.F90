@@ -113,7 +113,7 @@ contains
       ! Default values for namelist variables
       level_max             = 1
       ord_prolong           = 0
-      ord_prolong_face_norm = 1
+      ord_prolong_face_norm = 2
       ord_prolong_face_par  = 0
       ! May all the logical parameters be .false. by default
       stdout                = .false.

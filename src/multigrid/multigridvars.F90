@@ -61,7 +61,7 @@ module multigridvars
 
    ! namelist parameters
    integer            :: ord_prolong                                  !< Prolongation operator order; allowed values are -4 -2, 0 (default), 2 and 4; -2 is often fast
-   integer            :: ord_prolong_face_norm                        !< Face prolongation operator order in the direction normal to the face; allowed values are 0 and 1
+   integer            :: ord_prolong_face_norm                        !< Face prolongation operator order in the direction normal to the face; allowed values are 0, 1  and 2
    integer            :: ord_prolong_face_par                         !< Face prolongation operator order in the directions parallel to the face; allowed values are -2 .. 2
    logical            :: stdout                                       !< print verbose messages to stdout
    logical            :: verbose_vcycle                               !< Print one line of log per V-cycle, summary otherwise
@@ -104,10 +104,15 @@ module multigridvars
       character(len=prefix_len)       :: cprefix                      !< prefix for distinguishing V-cycles in the log (e.g inner or outer potential, CR component)
    end type vcycle_stats
 
+   type :: c_layer
+      integer :: layer                                                !< index of a layer with face-prolongation coefficient coeff
+      real    :: coeff                                                !< coefficient for face prolongation
+   end type c_layer
+
    type, extends(segment) :: pr_segment                               !< segment type for prolongation and restriction
       real, allocatable, dimension(:,:,:) :: buf                      !< buffer for the coarse data (incoming prolongation and outgoing restriction) for each nonlocal operations
-      real, allocatable, dimension(:) :: coeff                        !< coefficients for face prolongation
-   end type pr_segment                                                !> (not allocated for outgoing prolongation, incoming restriction and for local operations)
+      type(c_layer), dimension(:), allocatable :: f_lay               !< face layers to contribute to the prolonged face value
+   end type pr_segment                                                !< (not allocated for outgoing prolongation, incoming restriction and for local operations)
 
    type :: tgt_list                                                   !< target list container for prolongations, restrictions and boundary exchanges
       type(pr_segment), dimension(:), allocatable :: seg              !< a segment of data to be received or sent
