@@ -186,6 +186,7 @@ contains
 
    subroutine write_arr(data,dsetname,file_id)
 
+      use constants,  only: ndims
       use grid,       only: cg
       use hdf5,       only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, &
            &                H5T_NATIVE_REAL, h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, h5dcreate_f, h5sclose_f, &
@@ -196,7 +197,7 @@ contains
 
       real(kind=4), dimension(:,:,:) :: data    !< array of output values
 
-      integer, parameter :: rank = 3            !< Dataset rank
+      integer, parameter :: rank = ndims        !< Dataset rank = 3
 
       character(len=*) :: dsetname              !< Dataset name
 
@@ -206,8 +207,7 @@ contains
       integer(HID_T) :: filespace               !< Dataspace identifier in file
       integer(HID_T) :: memspace                !< Dataspace identifier in memory
 
-      integer, parameter :: ndims = 3
-      integer(HSIZE_T), dimension(ndims) :: count, offset, stride, block, dimsf, chunk_dims
+      integer(HSIZE_T), dimension(rank) :: count, offset, stride, block, dimsf, chunk_dims
       integer :: error
 
       chunk_dims = cg%n_b(:) ! Chunks dimensions
