@@ -359,7 +359,6 @@ contains
       use arrays,       only: cleanup_arrays
       use dataio,       only: cleanup_dataio
       use grid,         only: cg
-      use gridgeometry, only: cleanup_geometry
       use initfluids,   only: cleanup_fluids
       use fluidindex,   only: cleanup_fluidindex
       use mpisetup,     only: cleanup_mpi
@@ -378,7 +377,6 @@ contains
 
       if (associated(cleanup_problem)) call cleanup_problem;        call  nextdot(.false.)
       call cg%cleanup;          call nextdot(.false.)
-      call cleanup_geometry;    call nextdot(.false.)
       call cleanup_dataio;      call nextdot(.false.)
 #ifdef RESISTIVE
       call cleanup_resistivity; call nextdot(.false.)

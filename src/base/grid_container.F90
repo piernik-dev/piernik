@@ -106,6 +106,10 @@ module grid_cont
       type(array3d) :: sgp                      !< Array for gravitational potential from multigrid or FFT solver
       type(array3d) :: sgpm                     !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
 
+      real, allocatable, dimension(:,:,:) :: gc_xdim !< array of geometrical coefficients in x-direction
+      real, allocatable, dimension(:,:,:) :: gc_ydim !< array of geometrical coefficients in y-direction
+      real, allocatable, dimension(:,:,:) :: gc_zdim !< array of geometrical coefficients in z-direction
+
    contains
 
       procedure :: init
@@ -488,6 +492,10 @@ contains
       if (allocated(this%zl))    deallocate(this%zl)
       if (allocated(this%zr))    deallocate(this%zr)
       if (allocated(this%inv_z)) deallocate(this%inv_z)
+
+      if (allocated(this%gc_xdim)) deallocate(this%gc_xdim)
+      if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)
+      if (allocated(this%gc_zdim)) deallocate(this%gc_zdim)
 
       do d = xdim, zdim
          if (has_dir(d)) then

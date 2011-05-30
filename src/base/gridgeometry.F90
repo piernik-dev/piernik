@@ -38,14 +38,10 @@ module gridgeometry
    implicit none
 
    private
-   public   :: gc, init_geometry, cleanup_geometry, set_geo_coeffs, geometry_source_terms
+   public   :: gc, init_geometry, set_geo_coeffs, geometry_source_terms
 
    real, dimension(:,:,:), pointer :: gc            !< array of geometrical coefficients
    integer, parameter              :: ngc = 3       !< number of geometrical coefficients
-
-   real, allocatable, dimension(:,:,:), target  :: gc_xdim !< array of geometrical coefficients in x-direction
-   real, allocatable, dimension(:,:,:), target  :: gc_ydim !< array of geometrical coefficients in y-direction
-   real, allocatable, dimension(:,:,:), target  :: gc_zdim !< array of geometrical coefficients in z-direction
 
    interface
       !>
@@ -120,40 +116,26 @@ contains
    end subroutine init_geometry
 
 !>
-!! \brief Generic routine for module cleanup
-!!
-!! Currently, deallocates auxiliary arrays for geometrical coefficients
-!<
-   subroutine cleanup_geometry
-      implicit none
-
-      if (allocated(gc_xdim)) deallocate(gc_xdim)
-      if (allocated(gc_ydim)) deallocate(gc_ydim)
-      if (allocated(gc_zdim)) deallocate(gc_zdim)
-
-   end subroutine cleanup_geometry
-
-!>
 !! \brief Routine allocating auxiliary arrays
 !!
 !! We need to allocate those arrays later to have flind%all
 !<
    subroutine geo_coeffs_arrays(flind)
 
-      use fluidtypes,    only: var_numbers
       use dataio_pub,    only: die
+      use fluidtypes,    only: var_numbers
       use grid,          only: cg
 
       implicit none
 
       type(var_numbers), intent(in) :: flind
 
-      if ( any( [allocated(gc_xdim), allocated(gc_ydim), allocated(gc_zdim)] ) ) then
+      if ( any( [allocated(cg%gc_xdim), allocated(cg%gc_ydim), allocated(cg%gc_zdim)] ) ) then
          call die("[gridgeometry:geo_coeffs_arrays] double allocation")
       else
-         allocate(gc_xdim(ngc,flind%all, cg%nx))
-         allocate(gc_ydim(ngc,flind%all, cg%ny))
-         allocate(gc_zdim(ngc,flind%all, cg%nz))
+         allocate(cg%gc_xdim(ngc,flind%all, cg%nx))
+         allocate(cg%gc_ydim(ngc,flind%all, cg%ny))
+         allocate(cg%gc_zdim(ngc,flind%all, cg%nz))
       endif
 
    end subroutine geo_coeffs_arrays
@@ -162,9 +144,10 @@ contains
 !<
    subroutine set_cart_coeffs(sweep,flind,i1,i2)
 
-      use fluidtypes,    only: var_numbers
-      use dataio_pub,    only: die, msg
       use constants,     only: xdim, ydim, zdim
+      use dataio_pub,    only: die, msg
+      use fluidtypes,    only: var_numbers
+      use grid,          only: cg
 
       implicit none
 
@@ -175,19 +158,19 @@ contains
 
       if (frun) then
          call geo_coeffs_arrays(flind)
-         gc_xdim = 1.0
-         gc_ydim = 1.0
-         gc_zdim = 1.0
+         cg%gc_xdim(:,:,:) = 1.0
+         cg%gc_ydim(:,:,:) = 1.0
+         cg%gc_zdim(:,:,:) = 1.0
          frun = .false.
       endif
 
       select case (sweep)
          case (xdim)
-            gc => gc_xdim
+            gc => cg%gc_xdim
          case (ydim)
-            gc => gc_ydim
+            gc => cg%gc_ydim
          case (zdim)
-            gc => gc_zdim
+            gc => cg%gc_zdim
          case default
             write(msg,'(a,i2)') "[gridgeometry:set_cart_coeffs] Unknown sweep : ",sweep
             call die(msg)
@@ -200,10 +183,10 @@ contains
 !<
    subroutine set_cyl_coeffs(sweep,flind,i1,i2)
 
-      use fluidtypes,    only: var_numbers
+      use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die, msg
       use grid,          only: cg
-      use constants,     only: xdim, ydim, zdim
+      use fluidtypes,    only: var_numbers
 
       implicit none
 
@@ -216,30 +199,30 @@ contains
       if (frun) then
          call geo_coeffs_arrays(flind)
 
-         gc_xdim(1,:,:) = spread( cg%inv_x(:), 1, flind%all)
-         gc_xdim(2,:,:) = spread( cg%xr(:), 1, flind%all)
-         gc_xdim(3,:,:) = spread( cg%xl(:), 1, flind%all)
+         cg%gc_xdim(1,:,:) = spread( cg%inv_x(:), 1, flind%all)
+         cg%gc_xdim(2,:,:) = spread( cg%xr(:), 1, flind%all)
+         cg%gc_xdim(3,:,:) = spread( cg%xl(:), 1, flind%all)
 
          do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-            gc_xdim(1,flind%all_fluids(i)%imy,:) = gc_xdim(1,flind%all_fluids(i)%imy,:) * cg%inv_x(:)
-            gc_xdim(2,flind%all_fluids(i)%imy,:) = gc_xdim(2,flind%all_fluids(i)%imy,:) * cg%xr(:)
-            gc_xdim(3,flind%all_fluids(i)%imy,:) = gc_xdim(3,flind%all_fluids(i)%imy,:) * cg%xl(:)
+            cg%gc_xdim(1,flind%all_fluids(i)%imy,:) = cg%gc_xdim(1,flind%all_fluids(i)%imy,:) * cg%inv_x(:)
+            cg%gc_xdim(2,flind%all_fluids(i)%imy,:) = cg%gc_xdim(2,flind%all_fluids(i)%imy,:) * cg%xr(:)
+            cg%gc_xdim(3,flind%all_fluids(i)%imy,:) = cg%gc_xdim(3,flind%all_fluids(i)%imy,:) * cg%xl(:)
          enddo
-         gc_ydim(2:3,:,:) = 1.0     ! [ 1/r , 1 , 1]
+         cg%gc_ydim(2:3,:,:) = 1.0     ! [ 1/r , 1 , 1]
 
-         gc_zdim = 1.0              ! [ 1, 1, 1]
+         cg%gc_zdim = 1.0              ! [ 1, 1, 1]
 
          frun = .false.
       endif
 
       select case (sweep)
          case (xdim)
-            gc => gc_xdim
+            gc => cg%gc_xdim
          case (ydim)
-            gc_ydim(1,:,:)   = cg%inv_x(i2)
-            gc => gc_ydim
+            cg%gc_ydim(1,:,:)   = cg%inv_x(i2)
+            gc => cg%gc_ydim
          case (zdim)
-            gc => gc_zdim
+            gc => cg%gc_zdim
          case default
             write(msg,'(a,i2)') "[gridgeometry:set_cyl_coeffs] Unknown sweep : ",sweep
             call die(msg)
