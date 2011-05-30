@@ -41,7 +41,7 @@ module mpisetup
    implicit none
 
    private
-   public :: cleanup_mpi, init_mpi, mpifind, translate_bnds_to_ints_dom, inflate_req, is_neigh, &
+   public :: cleanup_mpi, init_mpi, mpifind, translate_bnds_to_ints_dom, inflate_req, is_overlap, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, comm, comm3d, req, status, ierr, info, &
         &    master, slave, have_mpi, has_dir, eff_dim, is_uneven, is_mpi_noncart, &
         &    nproc, pcoords, proc, procn, psize, procxyl, procyxl, &
@@ -145,8 +145,8 @@ module mpisetup
 
    namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld, cfl_max, relax_time, repeat_step
 
-   interface is_neigh
-      module procedure is_neigh_simple, is_neigh_per
+   interface is_overlap
+      module procedure is_overlap_simple, is_overlap_per
    end interface
 
 contains
@@ -727,7 +727,6 @@ contains
          write(msg,'(a,f8.5)')"[mpisetup:init_mpi] Load balance: ",product(real(dom%n_d(:)))/(nproc*maxcnt) !> \todo add calculation of total internal boundary surface in cells
          call printinfo(msg)
       endif
-!      call identify_neighbours(dom%se(proc, :, :), dom)
 !#endif /* VERBOSE */
 
    end subroutine init_mpi
@@ -763,78 +762,27 @@ contains
       endif
 
    end subroutine inflate_req
-!-----------------------------------------------------------------------------
-!
-! \todo: prepare some useful lists here, so routines grid:: arr3d_boundaries, grid::grid_mpi_boundaries_prep, fluidboundaries, magboundaries, multigridmpifuncs
-! can use them and no longer rely on pcoords(:), psize(:), proc[xyz][lr], proc{xy,yx}l, ...
-! note that corner boundaries will require transposing on the acceptor side
-!
-   subroutine identify_neighbours(area, domain)
-
-      use constants,  only: xdim, zdim, LO, HI
-#ifdef VERBOSE
-      use dataio_pub, only: printinfo, msg
-#endif /* VERBOSE */
-
-      implicit none
-
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: area
-      type(domain_container), intent(in) :: domain
-
-      integer :: p, pp
-      logical, dimension(xdim:zdim, LO:HI) :: neigh
-      logical :: sharing, cor, fac
-      integer(kind=8), dimension(xdim:zdim) :: per
-
-      pp = 0 !nproc/3
-
-      do p = 0, nproc-1
-         per(:) = 0
-         where (dom%periodic(:)) per(:) = dom%n_d(:)
-         call is_neigh(area(:,:), domain%se(p, :, :), neigh(:,:), sharing, cor, fac, per)
-#ifdef VERBOSE
-         if (proc == pp) then
-            write(msg,'(a,i4,a,6i4,a,l2,a,6l2,2(a,l2))')"m:in <@>",p," [",domain%se(p,:,:),"] * ",sharing, " > [",neigh(:,:),"] ?f",fac," ?c ",cor
-            call printinfo(msg)
-         endif
-#endif /* VERBOSE */
-      enddo
-#ifdef VERBOSE
-      if (proc == pp) then
-         write(msg,'(a,i4,a,6i4)')"m:in <@>",pp," <",area(:,:)
-         call printinfo(msg)
-      endif
-#endif /* VERBOSE */
-
-   end subroutine identify_neighbours
 
 !!-----------------------------------------------------------------------------
 !!
-!> \brief is_neigh_per checks if two given blocks placed within a periodic domain are overlapping and determines whether the second block can provide face or corner guardcells
-!!
-!! \details to handle shearing box which is divided in y-direction atthe edges, one has to provide another subroutine (is_neigh_per_shear) and add it to interface is_neigh
-!!
-!! \deprecated corner and face aren't used
+!> \brief is_overlap_per checks if two given blocks placed within a periodic domain are overlapping.
+!! \details to handle shearing box which is divided in y-direction atthe edges, one has to provide another subroutine (is_overlap_per_shear) and add it to interface is_overlap
 !<
-   subroutine is_neigh_per(this, other, neigh, share, corner, face, periods)
+   subroutine is_overlap_per(this, other, share, periods)
 
       use constants,  only: xdim, ydim, zdim, LO, HI
 
       implicit none
 
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this, other !< two boxes
-      logical, dimension(xdim:zdim, LO:HI), intent(out)        :: neigh       !< on which sides the other can offer useful guardcells?
       logical, intent(out)                                     :: share       !< is there overlap between this and the other?
-      logical, intent(out)                                     :: corner      !< is there overlap in edge or corner guardcells? (anything but face guardcells)
-      logical, intent(out)                                     :: face        !< are there any directly (face) neighbouring grid cells?
-      integer(kind=8), dimension(xdim:zdim), intent(in)                :: periods     !< where >0 then the direction is periodic with the given number of cells
+      integer(kind=8), dimension(xdim:zdim), intent(in)        :: periods     !< where >0 then the direction is periodic with the given number of cells
 
       integer :: i, j, k
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: oth
-      logical, dimension(xdim:zdim, LO:HI) :: nei
-      logical :: sha, cor, fac
+      logical :: sha
 
-      neigh(:,:) = .false. ; share = .false. ; corner = .false. ; face = .false.
+      share = .false.
       do i = -1, 1
          if ((has_dir(xdim) .or. periods(xdim)>0) .or. i==0) then
             do j = -1, 1
@@ -842,11 +790,8 @@ contains
                   do k = -1, 1
                      if ((has_dir(zdim) .or. periods(zdim)>0) .or. k==0) then
                         oth(:,:) = other(:,:) + reshape([i*periods(xdim), j*periods(ydim), k*periods(zdim), i*periods(xdim), j*periods(ydim), k*periods(zdim)], [3,2])
-                        call is_neigh_simple(this, oth, nei, sha, cor, fac)
-                        neigh(:,:) = neigh(:,:) .or. nei(:,:)
+                        call is_overlap_simple(this, oth, sha)
                         share = share .or. sha
-                        face = face .or. fac
-                        corner = (corner .or. cor) .and. .not. face
                      endif
                   enddo
                endif
@@ -854,51 +799,25 @@ contains
          endif
       enddo
 
-   end subroutine is_neigh_per
+   end subroutine is_overlap_per
 
 !!-----------------------------------------------------------------------------
 !!
-!> \brief is_neigh_simple checks if two given blocks placed within a nonperiodic domain are overlapping and determines whether the second block can provide face or corner guardcells
-!!
-
-   subroutine is_neigh_simple(this, other, neigh, share, corner, face)
+!> \brief is_overlap_simple checks if two given blocks placed within a nonperiodic domain are overlapping.
+!! This routine is not supposed to take care of periodic domain - use is_overlap_per when you check overlap for boxes that cross the periodic domain boundary
+!<
+   subroutine is_overlap_simple(this, other, share)
 
       use constants,  only: xdim, zdim, LO, HI
 
       implicit none
 
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this, other !< two boxes
-      logical, dimension(xdim:zdim, LO:HI), intent(out)        :: neigh       !< on which sides the other can offer useful guardcells?
       logical, intent(out)                                     :: share       !< is there overlap between this and the other?
-      logical, intent(out)                                     :: corner      !< is there overlap in edge or corner guardcells? (anything but face guardcells)
-      logical, intent(out)                                     :: face        !< are there any directly (face) neighbouring grid cells?
 
-      logical, dimension(xdim:zdim, LO:HI) :: d_neigh
-      logical, dimension(xdim:zdim)        :: d_share
-      logical                              :: aux
-      integer                              :: d
+      share = all(((other(:, LO) <= this(:, HI)) .and. (other(:, HI) >= this(:, LO))) .or. (.not. has_dir(:)))
 
-      ! periodicity ignored
-
-      do d = xdim, zdim
-         if (has_dir(d)) then
-            d_neigh(d, LO) = (other(d, HI) + 1 >= this(d, LO)) .and. (other(d, LO) <  this(d, LO))
-            d_neigh(d, HI) = (other(d, LO) - 1 <= this(d, HI)) .and. (other(d, HI) >  this(d, HI))
-            d_share(d)     = (other(d, LO)     <= this(d, HI)) .and. (other(d, HI) >= this(d, LO))
-         else
-            d_neigh(d, :) = .false.
-            d_share(d)    = .true.
-         endif
-      enddo
-
-      aux = all(d_neigh(:, LO) .or. d_neigh(:, HI) .or. d_share(:))
-
-      neigh(:,:) = d_neigh(:, :) .and. aux
-      share = all(d_share(:))
-      corner = count(d_share(:))<=1 .and. count((d_neigh(:, LO) .or. d_neigh(:, HI)) .and. aux) > 1
-      face = count(neigh(:, :)) > 0 .and. .not. corner
-
-   end subroutine is_neigh_simple
+   end subroutine is_overlap_simple
 
 !-----------------------------------------------------------------------------
 

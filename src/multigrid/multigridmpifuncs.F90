@@ -53,15 +53,14 @@ contains
       use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ndims, INVALID
       use dataio_pub,    only: warn, die
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_COMM_NULL
-      use mpisetup,      only: ierr, has_dir, comm3d, proc, nproc, is_neigh, procmask
+      use mpisetup,      only: ierr, has_dir, comm3d, proc, nproc, is_overlap, procmask
       use multigridvars, only: lvl, plvl, base, pr_segment
 
       implicit none
 
       integer :: ib, d, g, j, lh, hl
       integer, dimension(ndims) :: sizes, subsizes, starts
-      logical, dimension(xdim:zdim, LO:HI) :: neigh
-      logical :: sharing, corner, face
+      logical :: sharing
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened, b_layer, bp_layer, poff
       type(pr_segment), pointer :: seg
@@ -77,7 +76,7 @@ contains
             procmask(:) = 0
             do j = 0, nproc-1
                coarsened(:,:) = curl%finer%dom%se(j, :, :)/2
-               call is_neigh(curl%dom%se(proc, :, :), coarsened(:,:), neigh(:,:), sharing, corner, face)
+               call is_overlap(curl%dom%se(proc, :, :), coarsened(:,:), sharing)
                if (sharing) procmask(j) = 1 ! we can store also neigh(:,:), face and corner as a bitmask, if necessary
             enddo
             allocate(curl%f_tgt%seg(count(procmask(:) /= 0)))
@@ -108,7 +107,7 @@ contains
             procmask(:) = 0
             coarsened(:,:) = curl%dom%se(proc, :, :)/2
             do j = 0, nproc-1
-               call is_neigh(coarsened(:,:), curl%coarser%dom%se(j, :, :), neigh(:,:), sharing, corner, face)
+               call is_overlap(coarsened(:,:), curl%coarser%dom%se(j, :, :), sharing)
                if (sharing) procmask(j) = 1
             enddo
             allocate(curl%c_tgt%seg(count(procmask(:) /= 0)))
@@ -162,7 +161,7 @@ contains
                      b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
                      b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
                      do j = 0, nproc-1
-                        call is_neigh(b_layer(:,:), curl%dom%se(j, :, :), neigh(:,:), sharing, corner, face, per(:))
+                        call is_overlap(b_layer(:,:), curl%dom%se(j, :, :), sharing, per(:))
                         if (sharing) procmask(j) = procmask(j) + 1
                      enddo
                   enddo
@@ -185,7 +184,7 @@ contains
                               bp_layer(:, LO) = mod(b_layer(:, LO) + per(:), per(:))
                               bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:))
                            endwhere
-                           call is_neigh(bp_layer(:,:), curl%dom%se(j, :, :), neigh(:,:), sharing, corner, face)
+                           call is_overlap(bp_layer(:,:), curl%dom%se(j, :, :), sharing)
 
                            if (sharing) then
                               poff(:,:) = bp_layer(:,:) - b_layer(:,:) ! displacement due to periodicity

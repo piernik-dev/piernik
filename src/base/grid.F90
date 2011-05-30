@@ -97,7 +97,7 @@ contains
       use dataio_pub, only: die, code_progress
       use constants,  only: PIERNIK_INIT_BASE, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: ierr, has_dir, comm3d, dom, proc, nproc, is_neigh, procmask
+      use mpisetup,   only: ierr, has_dir, comm3d, dom, proc, nproc, is_overlap, procmask
 
       implicit none
 
@@ -111,8 +111,7 @@ contains
 
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer, bp_layer, poff
-      logical, dimension(xdim:zdim, LO:HI) :: neigh
-      logical :: sharing, corner, face
+      logical :: sharing
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
 
@@ -141,7 +140,7 @@ contains
                   b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
                   b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
                   do j = 0, nproc-1
-                     call is_neigh(b_layer(:,:), dom%se(j, :, :), neigh(:,:), sharing, corner, face, per(:))
+                     call is_overlap(b_layer(:,:), dom%se(j, :, :), sharing, per(:))
                      if (sharing) procmask(j) = procmask(j) + 1
                   enddo
                enddo
@@ -165,7 +164,7 @@ contains
                            bp_layer(:, LO) = mod(b_layer(:, LO) + per(:), per(:))
                            bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:))
                         endwhere
-                        call is_neigh(bp_layer(:,:), dom%se(j, :, :), neigh(:,:), sharing, corner, face)
+                        call is_overlap(bp_layer(:,:), dom%se(j, :, :), sharing)
 
                         if (sharing) then
                            poff(:,:) = bp_layer(:,:) - b_layer(:,:) ! displacement due to periodicity

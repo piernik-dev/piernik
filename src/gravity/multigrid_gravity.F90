@@ -624,7 +624,7 @@ contains
 
       use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG
       use dataio_pub,    only: warn, die
-      use mpisetup,      only: has_dir, proc, nproc, is_neigh, procmask, inflate_req, req
+      use mpisetup,      only: has_dir, proc, nproc, is_overlap, procmask, inflate_req, req
       use multigridvars, only: base, lvl, plvl, pr_segment, ord_prolong_face_norm, is_external, need_general_pf
 #ifdef DEBUG
       use piernikdebug,  only: aux_R
@@ -633,8 +633,7 @@ contains
       implicit none
 
       integer :: d, g, j, lh, hl, l, nl
-      logical, dimension(xdim:zdim, LO:HI) :: neigh
-      logical :: sharing, corner, face
+      logical :: sharing
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
       logical, dimension(xdim:zdim) :: dmask
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened, b_layer
@@ -706,7 +705,7 @@ contains
                      end select
 
                      do j = 0, nproc-1
-                        call is_neigh(coarsened(:,:), curl%coarser%dom%se(j, :, :), neigh(:,:), sharing, corner, face, per)
+                        call is_overlap(coarsened(:,:), curl%coarser%dom%se(j, :, :), sharing, per)
                         if (sharing) procmask(j) = 1
                      enddo
                      allocate(curl%pfc_tgt(d, lh)%seg(count(procmask(:) /= 0)))
@@ -761,7 +760,7 @@ contains
                               is_internal_fine = is_internal_fine .or. (curl%finer%dom%se(j, d, lh) + 1 < curl%finer%dom%n_d(d))
                         end select
                         if (is_internal_fine) then
-                           call is_neigh(coarsened(:, :), curl%dom%se(proc, :, :), neigh(:,:), sharing, corner, face, per)
+                           call is_overlap(coarsened(:, :), curl%dom%se(proc, :, :), sharing, per)
                            if (sharing) procmask(j) = 1
                         endif
                      enddo
