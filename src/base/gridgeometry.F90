@@ -69,14 +69,18 @@ module gridgeometry
       !!
       !! Currently, gsrc function returns accelerations
       !<
-      function gsrc(u,p,sweep) result(res)
+      function gsrc(u, p, sweep, cg) result(res)
+
+         use grid_cont, only: grid_container
 
          implicit none
 
-         integer, intent(in)                    :: sweep !< direction (x, y or z) we are doing calculations for
-         real, dimension(:,:), intent(in)       :: u     !< sweep of fluid conservative variables
-         real, dimension(:,:), intent(in)       :: p     !< sweep of pressure
-         real, dimension(size(p,1),size(p,2))   :: res   !< output sweep of accelerations
+         integer, intent(in)              :: sweep !< direction (x, y or z) we are doing calculations for
+         real, dimension(:,:), intent(in) :: u     !< sweep of fluid conservative variables
+         real, dimension(:,:), intent(in) :: p     !< sweep of pressure
+         type(grid_container), intent(in) :: cg    !< current grid container
+
+         real, dimension(size(p,1),size(p,2)) :: res   !< output sweep of accelerations
 
       end function gsrc
 
@@ -247,33 +251,39 @@ contains
 !>
 !! \brief routine calculating geometrical source term for cartesian grid
 !<
-   function cart_geometry_source_terms(u,p,sweep) result(res)
+   function cart_geometry_source_terms(u, p, sweep, cg) result(res)
+
+      use grid_cont,  only: grid_container
 
       implicit none
 
-      integer, intent(in)                    :: sweep
-      real, dimension(:,:), intent(in)       :: u, p
+      integer, intent(in)              :: sweep
+      real, dimension(:,:), intent(in) :: u, p
+      type(grid_container), intent(in) :: cg
+
       real, dimension(size(p,1),size(p,2))   :: res
 
       res = 0.0
       return
-      if (.false.) write(0,*) sweep, u, p
+      if (.false.) write(0,*) sweep, u, p, cg%inv_x(1)
 
    end function cart_geometry_source_terms
 !>
 !! \brief routine calculating geometrical source term for cylindrical grid
 !<
-   function cyl_geometry_source_terms(u,p,sweep) result(res)
+   function cyl_geometry_source_terms(u, p, sweep, cg) result(res)
 
-      use fluidindex, only: iarr_all_dn, iarr_all_my
-      use grid,       only: cg
       use constants,  only: xdim
+      use fluidindex, only: iarr_all_dn, iarr_all_my
+      use grid_cont,  only: grid_container
 
       implicit none
 
-      integer, intent(in)                    :: sweep
-      real, dimension(:,:), intent(in)       :: u, p
-      real, dimension(size(p,1),size(p,2))   :: res
+      integer, intent(in)              :: sweep
+      real, dimension(:,:), intent(in) :: u, p
+      type(grid_container), intent(in) :: cg
+
+      real, dimension(size(p,1),size(p,2)) :: res
       integer :: i
 
       if (sweep == xdim) then

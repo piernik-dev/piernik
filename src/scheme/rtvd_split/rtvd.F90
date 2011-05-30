@@ -391,7 +391,7 @@ contains
 
 ! Source terms -------------------------------------
 
-      geosrc = geometry_source_terms(u,pressure,sweep)
+      geosrc = geometry_source_terms(u, pressure, sweep, cg)
 
       u1(iarr_all_mx,:) = u1(iarr_all_mx,:) + rk2coef(integration_order,istep)*geosrc(:,:)*dt
 
