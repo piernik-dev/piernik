@@ -91,8 +91,6 @@ module grid_cont
 
       integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
 
-      ! \todo a pointer to the next cg, grid level
-
       integer, dimension(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK) :: mbc !< MPI Boundary conditions Container
       type(bnd_list), dimension(:, :), allocatable :: i_bnd, o_bnd    !> description of incoming and outgoing boundary data,
       !< the shape is (xdim:zdim, FLUID:ARR) for cg (base grid container)) and (xdim:zdim, mg_nb) for plvl (multigrid level container)
@@ -115,6 +113,24 @@ module grid_cont
       procedure :: internal_boundaries
 
    end type grid_container
+
+   ! the prv and nxt pointers are not elements of the grid_container type to allow membership in several lists simultaneously
+   type gc_list_element
+      type(grid_container), pointer :: cg       !< the current grid container
+      type(grid_container), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
+   end type gc_list_element
+
+   type gc_list
+      type(gc_list_element), dimension(:), allocatable :: cg_l
+   end type gc_list
+
+   ! On an uniform, nowhere refined grid, gc_levels will have only one element, and all gc_all elements ill be members of gc_leafs, gc_base and gc_levels(1) lists
+   type gc_set
+      type(grid_container), dimension(:), allocatable :: gc_all    !< all grid containers
+      type(gc_list), dimension(:), allocatable        :: gc_levels !< grid containers grouped by level
+      type(gc_list)                                   :: gc_leafs  !< grid containers that are not fully covered by finer grids
+      type(gc_list)                                   :: gc_base   !< grid containers on the base level
+   end type gc_set
 
 contains
 
