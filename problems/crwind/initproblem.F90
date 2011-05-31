@@ -105,7 +105,6 @@ contains
 
    subroutine init_prob
 
-      use arrays,         only: dprof
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cg
       use hydrostatic,    only: hydrostatic_zeq_densmid
@@ -138,7 +137,7 @@ contains
       do k = 1, cg%nz
          do j = 1, cg%ny
             do i = 1, cg%nx
-               cg%u%arr(idni,i,j,k)   = max(smalld,dprof(k))
+               cg%u%arr(idni,i,j,k)   = max(smalld, cg%dprof(k))
 
                cg%u%arr(imxi,i,j,k) = 0.0
                cg%u%arr(imyi,i,j,k) = 0.0

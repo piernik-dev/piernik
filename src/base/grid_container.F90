@@ -106,6 +106,14 @@ module grid_cont
       type(array3d) :: sgp                      !< Array for gravitational potential from multigrid or FFT solver
       type(array3d) :: sgpm                     !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
 
+      type(array4d) :: u0                       !< Copy of main array of all fluids' components
+      type(array4d) :: b0                       !< Copy of main array of magnetic field's components
+
+#ifdef GRAV
+      real, allocatable, dimension(:) :: dprof  !< Array used for storing density during calculation of hydrostatic equilibrium
+#endif /* GRAV */
+
+
       real, allocatable, dimension(:,:,:) :: gc_xdim !< array of geometrical coefficients in x-direction
       real, allocatable, dimension(:,:,:) :: gc_ydim !< array of geometrical coefficients in y-direction
       real, allocatable, dimension(:,:,:) :: gc_zdim !< array of geometrical coefficients in z-direction

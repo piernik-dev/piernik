@@ -180,7 +180,6 @@ contains
 !<
    subroutine init_piernik
 
-      use arrays,                only: init_arrays
       use units,                 only: init_units
       use dataio,                only: init_dataio, write_data
       use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, code_progress
@@ -189,7 +188,7 @@ contains
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
       use fluidindex,            only: flind
-      use grid,                  only: init_grid, grid_mpi_boundaries_prep, cg
+      use grid,                  only: init_grid, init_arrays, grid_mpi_boundaries_prep, cg
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use gridgeometry,          only: init_geometry
       use initproblem,           only: init_prob, read_problem_par
@@ -356,9 +355,8 @@ contains
    subroutine cleanup_piernik
 
       use types,        only: cleanup_problem
-      use arrays,       only: cleanup_arrays
       use dataio,       only: cleanup_dataio
-      use grid,         only: cg
+      use grid,         only: cg, cleanup_arrays
       use initfluids,   only: cleanup_fluids
       use fluidindex,   only: cleanup_fluidindex
       use mpisetup,     only: cleanup_mpi

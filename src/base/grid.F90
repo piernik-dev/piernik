@@ -42,7 +42,7 @@ module grid
    implicit none
 
    private
-   public :: init_grid, grid_mpi_boundaries_prep, arr3d_boundaries
+   public :: init_grid, init_arrays, cleanup_arrays, grid_mpi_boundaries_prep, arr3d_boundaries
    public :: total_ncells, cg, D_x, D_y, D_z
 
    integer, protected :: total_ncells                   !< total number of %grid cells
@@ -85,6 +85,62 @@ contains
 #endif /* VERBOSE */
 
    end subroutine init_grid
+
+!>
+!! Routine that allocates all arrays
+!<
+
+   subroutine init_arrays(flind)
+
+      use constants,   only: PIERNIK_INIT_BASE, ndims
+      use diagnostics, only: my_allocate
+      use dataio_pub,  only: die, code_progress
+      use fluidtypes,  only: var_numbers
+      use mpisetup,    only: repeat_step
+
+      implicit none
+
+      type(var_numbers), intent(in) :: flind !< fluid database; cannot use fluidindex::flind here due to circular dependencies in some setups
+
+      if (code_progress < PIERNIK_INIT_BASE) call die("[arrays:init_arrays] grid or fluids not initialized.")
+
+      call cg%u%init(flind%all, cg%nx, cg%ny, cg%nz)
+      call cg%uh%init(flind%all, cg%nx, cg%ny, cg%nz)
+      if (repeat_step) call cg%u0%init(flind%all, cg%nx, cg%ny, cg%nz)
+
+      call cg%b%init(ndims, cg%nx, cg%ny, cg%nz)
+      if (repeat_step) call cg%b0%init(ndims, cg%nx, cg%ny, cg%nz)
+
+      call cg%wa%init(cg%nx, cg%ny, cg%nz)
+
+#ifdef GRAV
+      call my_allocate(cg%dprof, [cg%nz], "dprof")
+#endif /* GRAV */
+
+   end subroutine init_arrays
+
+!>
+!! Routine that deallocates all arrays
+!<
+
+   subroutine cleanup_arrays
+
+      implicit none
+
+      call cg%u%clean()
+      call cg%u0%clean()
+      call cg%uh%clean()
+
+      call cg%b%clean()
+      call cg%b0%clean()
+
+      call cg%wa%clean()
+
+#ifdef GRAV
+      if (allocated(cg%dprof)) deallocate(cg%dprof)
+#endif /* GRAV */
+
+   end subroutine cleanup_arrays
 
 !>
 !! \brief Set up subsets of u,b and sgp arrays for MPI communication
