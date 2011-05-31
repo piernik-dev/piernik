@@ -252,7 +252,6 @@ contains
 
       use dataio_pub,          only: msg, printinfo, die
       use fluidtypes,          only: component_fluid
-      use arrays,              only: dprof
       use constants,           only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ, DST
       use units,               only: newtong, gram, cm, kboltz, mH
       use fluidindex,          only: ibx, iby, ibz, flind
@@ -303,7 +302,7 @@ contains
                   cg%u%arr(fl%idn,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
 
                   if (has_dir(zdim)) then
-                     cg%u%arr(fl%idn,i,j,k) = dprof(k)/cosh(cg%u%arr(fl%idn,i,j,k))
+                     cg%u%arr(fl%idn,i,j,k) = cg%dprof(k)/cosh(cg%u%arr(fl%idn,i,j,k))
                      cg%u%arr(fl%idn,i,j,k) = max(cg%u%arr(fl%idn,i,j,k), dout)
                   else
                      cg%u%arr(fl%idn,i,j,k) = dout + (d0 - dout)/cosh(cg%u%arr(fl%idn,i,j,k))
