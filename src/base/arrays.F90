@@ -35,10 +35,10 @@ module arrays
 
    public  ! QA_WARN nothing to hide here
 
-   real, allocatable, dimension(:,:,:,:), target :: uh   !< Main array of all fluids' components (for t += dt/2)
+!  real, allocatable, dimension(:,:,:,:), target :: uh   !< Main array of all fluids' components (for t += dt/2)
    real, allocatable, dimension(:,:,:,:), target :: u0   !< Copy of main array of all fluids' components
    real, allocatable, dimension(:,:,:,:), target :: b0   !< Copy of main array of magnetic field's components
-   real, allocatable, dimension(:,:,:),   target :: wa   !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+!  real, allocatable, dimension(:,:,:),   target :: wa   !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 
 #ifdef GRAV
    real, allocatable, dimension(:), target     :: dprof    !< Array used for storing density during calculation of hydrostatic equilibrium
@@ -73,7 +73,7 @@ contains
       call cg%u%init(flind%all, cg%nx, cg%ny, cg%nz)
 
       if (repeat_step) call my_allocate(u0, ma4d, "u0")
-      call my_allocate(uh, ma4d, "uh")
+      call cg%uh%init(flind%all, cg%nx, cg%ny, cg%nz)
 
       ma4d = [ndims, cg%nx, cg%ny, cg%nz]
       call cg%b%init(ndims, cg%nx, cg%ny, cg%nz)
@@ -101,7 +101,7 @@ contains
       call cg%u%clean()
       call cg%b%clean()
       if (allocated(u0))      deallocate(u0)
-      if (allocated(uh))      deallocate(uh)
+      call cg%uh%clean()
       if (allocated(b0))      deallocate(b0)
       call cg%wa%clean()
 

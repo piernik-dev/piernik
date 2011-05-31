@@ -88,7 +88,6 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweepx
 
-      use arrays,          only: uh
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpx, ibx, iby, ibz, nmag
       use grid,            only: cg
@@ -112,7 +111,7 @@ contains
 #ifdef COSM_RAYS
       call div_v(flind%ion%pos)
 #endif /* COSM_RAYS */
-      uh = cg%u%arr
+      cg%uh%arr = cg%u%arr
       do istep = 1, integration_order
          do k=cg%ks, cg%ke
             kp=k+1
@@ -132,7 +131,7 @@ contains
 #endif /* COSM_RAYS */
 
                u_x (iarr_all_swpx,:) = cg%u%arr(:,:,j,k)
-               u0_x(iarr_all_swpx,:) = uh(:,:,j,k)
+               u0_x(iarr_all_swpx,:) = cg%uh%arr(:,:,j,k)
 
                call relaxing_tvd(cg%nx, u_x, u0_x, b_x, div_v1d, cg%cs_iso2%get_sweep(xdim,j,k), istep, xdim, j, k, cg%dx, dt)
                cg%u%arr(:,:,j,k)=u_x(iarr_all_swpx,:)
@@ -144,7 +143,7 @@ contains
    end subroutine sweepx
 !------------------------------------------------------------------------------------------
    subroutine sweepy
-      use arrays,          only: uh
+
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpy, ibx, iby, ibz, nmag
       use grid,            only: cg
@@ -167,7 +166,7 @@ contains
 #ifdef COSM_RAYS
       call div_v(flind%ion%pos)
 #endif /* COSM_RAYS */
-      uh = cg%u%arr
+      cg%uh%arr = cg%u%arr
       do istep = 1, integration_order
          do k=cg%ks, cg%ke
             kp=k+1
@@ -188,7 +187,7 @@ contains
 #endif /* COSM_RAYS */
 
                u_y (iarr_all_swpy,:) = cg%u%arr(:,i,:,k)
-               u0_y(iarr_all_swpy,:) = uh(:,i,:,k)
+               u0_y(iarr_all_swpy,:) = cg%uh%arr(:,i,:,k)
 
                call relaxing_tvd(cg%ny, u_y, u0_y, b_y, div_v1d, cg%cs_iso2%get_sweep(ydim,k,i), istep, ydim, k, i, cg%dy, dt)
                cg%u%arr(:,i,:,k)=u_y(iarr_all_swpy,:)
@@ -202,7 +201,7 @@ contains
    end subroutine sweepy
 !------------------------------------------------------------------------------------------
    subroutine sweepz
-      use arrays,          only: uh
+
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpz, ibx, iby, ibz, nmag
       use grid,            only: cg
@@ -226,7 +225,7 @@ contains
 #ifdef COSM_RAYS
       call div_v(flind%ion%pos)
 #endif /* COSM_RAYS */
-      uh = cg%u%arr
+      cg%uh%arr = cg%u%arr
       do istep = 1, integration_order
          do j=cg%js, cg%je
             jp=j+1
@@ -250,7 +249,7 @@ contains
                !OPT: 3% D1mr, 3% D2mr, 20% D1mw, Ir:Dr:Dw ~ 10:4:1
                !OPT: The same applies to sweepy and sweepz
                u_z (iarr_all_swpz,:) = cg%u%arr(:,i,j,:)
-               u0_z(iarr_all_swpz,:) = uh(:,i,j,:)
+               u0_z(iarr_all_swpz,:) = cg%uh%arr(:,i,j,:)
 
                call relaxing_tvd(cg%nz, u_z, u0_z, b_z, div_v1d, cg%cs_iso2%get_sweep(zdim,i,j), istep, zdim, i, j, cg%dz, dt)
                cg%u%arr(:,i,j,:)=u_z(iarr_all_swpz,:)
