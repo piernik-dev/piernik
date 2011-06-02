@@ -50,7 +50,7 @@ module fluidboundaries_pub
    end interface
 
    procedure(user_bnd), pointer :: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
-   procedure(), pointer         :: func_bnd_xl, func_bnd_xr
+   procedure(user_bnd), pointer :: func_bnd_xl, func_bnd_xr
 
 contains
 
