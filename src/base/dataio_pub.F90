@@ -110,39 +110,6 @@ module dataio_pub
    character(len=ansirst) :: ansi_black
    character(len=ansilen) :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
 
-   interface
-      subroutine plt_hdf5(var,ij,xn,tab,ierrh)
-         implicit none
-         character(len=*), intent(in)        :: var   !< quantity to be plotted
-         integer, intent(in)                 :: ij    !< direction perpendicular to the plane of plot, xdim means "yz" plane and so on
-         integer(kind=8), intent(in)         :: xn    !< no. of cell at which we are slicing the local block
-         integer, intent(inout)              :: ierrh !< error handling
-         real, dimension(:,:), intent(inout) :: tab   !< array  containing given quantity
-      end subroutine plt_hdf5
-   end interface
-
-   interface
-      subroutine vars_hdf5(var, tab, ierrh)
-         implicit none
-         character(len=*), intent(in)                    :: var
-         real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-         integer, intent(inout)                          :: ierrh
-      end subroutine vars_hdf5
-   end interface
-
-   interface
-      subroutine tsl_out(user_vars, tsl_names)
-         implicit none
-         real, dimension(:), intent(inout), allocatable                       :: user_vars
-         character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
-
-      end subroutine tsl_out
-   end interface
-
-   procedure(plt_hdf5),  pointer :: user_plt_hdf5 => Null()
-   procedure(vars_hdf5), pointer :: user_vars_hdf5 => Null()
-   procedure(tsl_out),   pointer :: user_tsl => Null()
-
 contains
 !-----------------------------------------------------------------------------
    subroutine colormessage(nm, mode)

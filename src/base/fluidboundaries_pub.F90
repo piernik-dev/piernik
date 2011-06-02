@@ -36,9 +36,17 @@ module fluidboundaries_pub
       & func_bnd_xl, func_bnd_xr
 
    interface
-      subroutine user_bnd
+
+      subroutine user_bnd(cg)
+
+         use grid_cont, only: grid_container
+
          implicit none
+
+         type(grid_container), pointer, intent(in) :: cg
+
       end subroutine user_bnd
+
    end interface
 
    procedure(user_bnd), pointer :: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
@@ -47,10 +55,17 @@ module fluidboundaries_pub
 contains
 
 !--------------------------------------------------------------------------------------------------
-   subroutine default_bnd
-      use dataio_pub,    only: die
+   subroutine default_bnd(cg)
+
+      use grid_cont,  only: grid_container
+      use dataio_pub, only: die
+
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
+
       call die("User boundaries are not defined")
+
    end subroutine default_bnd
 !--------------------------------------------------------------------------------------------------
    subroutine init_fluidboundaries

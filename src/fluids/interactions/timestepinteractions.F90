@@ -41,9 +41,9 @@ contains
 !! \warning works only with neutrals and dust case !!!!
 !! \todo check if subtraction of momenta is really the case (i am confused again - DW)
 !<
-   real function timestep_interactions() result(dt)
+   real function timestep_interactions(cg) result(dt)
 
-      use grid,         only: cg
+      use grid_cont,    only: grid_container
       use func,         only: L2norm
       use constants,    only: small
       use fluidindex,   only: flind
@@ -56,6 +56,8 @@ contains
       real :: dt_interact_proc        !< timestep due to %interactions for the current process (MPI block) only
       real :: dt_interact_all         !< timestep due to %interactions for all MPI blocks
       real :: val                     !< variable used to store the maximum value of relative momentum
+
+      type(grid_container), pointer, intent(in) :: cg
 
       !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(cg%u%arr(iarr_all_dn,:,:,:))
 

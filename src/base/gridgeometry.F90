@@ -47,9 +47,10 @@ module gridgeometry
       !>
       !! \brief interface for routine setting grid coefficients
       !<
-      subroutine set_gc(sweep,flind,i1,i2)
+      subroutine set_gc(sweep, flind, i1, i2, cg)
 
-         use fluidtypes,      only: var_numbers
+         use fluidtypes, only: var_numbers
+         use grid_cont,  only: grid_container
 
          implicit none
 
@@ -57,6 +58,7 @@ module gridgeometry
          type(var_numbers), intent(in) :: flind         !< \copydoc fluidindex::flind
          integer, intent(in)           :: i1            !< coordinate of sweep in the 1st remaining direction
          integer, intent(in)           :: i2            !< coordinate of sweep in the 2st remaining direction
+         type(grid_container), pointer, intent(in) :: cg            !< current grid container
 
       end subroutine set_gc
 
@@ -120,15 +122,16 @@ contains
 !!
 !! We need to allocate those arrays later to have flind%all
 !<
-   subroutine geo_coeffs_arrays(flind)
+   subroutine geo_coeffs_arrays(flind, cg)
 
-      use dataio_pub,    only: die
-      use fluidtypes,    only: var_numbers
-      use grid,          only: cg
+      use dataio_pub, only: die
+      use fluidtypes, only: var_numbers
+      use grid_cont,  only: grid_container
 
       implicit none
 
       type(var_numbers), intent(in) :: flind
+      type(grid_container), pointer, intent(in) :: cg
 
       if ( any( [allocated(cg%gc_xdim), allocated(cg%gc_ydim), allocated(cg%gc_zdim)] ) ) then
          call die("[gridgeometry:geo_coeffs_arrays] double allocation")
@@ -142,25 +145,33 @@ contains
 !>
 !! \brief routine setting geometrical coefficients for cartesian grid
 !<
-   subroutine set_cart_coeffs(sweep,flind,i1,i2)
+   subroutine set_cart_coeffs(sweep, flind, i1, i2, cg)
 
-      use constants,     only: xdim, ydim, zdim
-      use dataio_pub,    only: die, msg
-      use fluidtypes,    only: var_numbers
-      use grid,          only: cg
+      use constants,  only: xdim, ydim, zdim
+      use dataio_pub, only: die, msg
+      use fluidtypes, only: var_numbers
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
 
       implicit none
 
       integer, intent(in)           :: sweep
       type(var_numbers), intent(in) :: flind
       integer, intent(in)           :: i1, i2
-      logical, save                 :: frun = .true.
+      type(grid_container), pointer, intent(in) :: cg
+
+      logical, save                  :: frun = .true.
+      type(cg_list_element), pointer :: cgl
 
       if (frun) then
-         call geo_coeffs_arrays(flind)
-         cg%gc_xdim(:,:,:) = 1.0
-         cg%gc_ydim(:,:,:) = 1.0
-         cg%gc_zdim(:,:,:) = 1.0
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         call geo_coeffs_arrays(flind, cg)
+         cgl%cg%gc_xdim(:,:,:) = 1.0
+         cgl%cg%gc_ydim(:,:,:) = 1.0
+         cgl%cg%gc_zdim(:,:,:) = 1.0
+         cgl => cgl%nxt
+      enddo
          frun = .false.
       endif
 
@@ -181,36 +192,44 @@ contains
 !>
 !! \brief routine setting geometrical coefficients for cylindrical grid
 !<
-   subroutine set_cyl_coeffs(sweep,flind,i1,i2)
+   subroutine set_cyl_coeffs(sweep, flind, i1, i2, cg)
 
-      use constants,     only: xdim, ydim, zdim
-      use dataio_pub,    only: die, msg
-      use grid,          only: cg
-      use fluidtypes,    only: var_numbers
+      use constants,  only: xdim, ydim, zdim
+      use dataio_pub, only: die, msg
+      use fluidtypes, only: var_numbers
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
 
       implicit none
 
       integer, intent(in)           :: sweep
       type(var_numbers), intent(in) :: flind
       integer, intent(in)           :: i1, i2
-      integer                       :: i
-      logical, save                 :: frun = .true.
+      type(grid_container), pointer, intent(in)  :: cg
+
+      integer                        :: i
+      logical, save                  :: frun = .true.
+      type(cg_list_element), pointer :: cgl
 
       if (frun) then
-         call geo_coeffs_arrays(flind)
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         call geo_coeffs_arrays(flind, cgl%cg)
 
-         cg%gc_xdim(1,:,:) = spread( cg%inv_x(:), 1, flind%all)
-         cg%gc_xdim(2,:,:) = spread( cg%xr(:), 1, flind%all)
-         cg%gc_xdim(3,:,:) = spread( cg%xl(:), 1, flind%all)
+         cgl%cg%gc_xdim(1,:,:) = spread( cgl%cg%inv_x(:), 1, flind%all)
+         cgl%cg%gc_xdim(2,:,:) = spread( cgl%cg%xr(:),    1, flind%all)
+         cgl%cg%gc_xdim(3,:,:) = spread( cgl%cg%xl(:),    1, flind%all)
 
          do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-            cg%gc_xdim(1,flind%all_fluids(i)%imy,:) = cg%gc_xdim(1,flind%all_fluids(i)%imy,:) * cg%inv_x(:)
-            cg%gc_xdim(2,flind%all_fluids(i)%imy,:) = cg%gc_xdim(2,flind%all_fluids(i)%imy,:) * cg%xr(:)
-            cg%gc_xdim(3,flind%all_fluids(i)%imy,:) = cg%gc_xdim(3,flind%all_fluids(i)%imy,:) * cg%xl(:)
+            cgl%cg%gc_xdim(1, flind%all_fluids(i)%imy, :) = cgl%cg%gc_xdim(1, flind%all_fluids(i)%imy, :) * cgl%cg%inv_x(:)
+            cgl%cg%gc_xdim(2, flind%all_fluids(i)%imy, :) = cgl%cg%gc_xdim(2, flind%all_fluids(i)%imy, :) * cgl%cg%xr(:)
+            cgl%cg%gc_xdim(3, flind%all_fluids(i)%imy, :) = cgl%cg%gc_xdim(3, flind%all_fluids(i)%imy, :) * cgl%cg%xl(:)
          enddo
-         cg%gc_ydim(2:3,:,:) = 1.0     ! [ 1/r , 1 , 1]
+         cgl%cg%gc_ydim(2:3,:,:) = 1.0     ! [ 1/r , 1 , 1]
 
-         cg%gc_zdim = 1.0              ! [ 1, 1, 1]
+         cgl%cg%gc_zdim(:,:,:) = 1.0              ! [ 1, 1, 1]
+         cgl => cgl%nxt
+      enddo
 
          frun = .false.
       endif

@@ -243,17 +243,17 @@ contains
       endwhere
 
       p => eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-      call get_extremum(p, MAXL, etamax) ; NULLIFY(p)
+      call get_extremum(p, MAXL, etamax, cg) ; NULLIFY(p)
       call MPI_Bcast(etamax%val, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       p => wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-      call get_extremum(p, MAXL, cu2max)
+      call get_extremum(p, MAXL, cu2max, cg)
 
 #ifndef ISO
       wb = ( cg%u%arr(flind%ion%ien,:,:,:) - 0.5*( cg%u%arr(flind%ion%imx,:,:,:)**2  + cg%u%arr(flind%ion%imy,:,:,:)**2  + cg%u%arr(flind%ion%imz,:,:,:)**2 ) &
            / cg%u%arr(flind%ion%idn,:,:,:) - 0.5 * ( cg%b%arr(ibx,:,:,:)**2  +   cg%b%arr(iby,:,:,:)**2  +   cg%b%arr(ibz,:,:,:)**2))/ ( eta * wb+small)
       dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
 
-      call get_extremum(p, MINL, deimin)
+      call get_extremum(p, MINL, deimin, cg)
 #endif /* !ISO */
       NULLIFY(p)
 
@@ -261,14 +261,16 @@ contains
 
 !-----------------------------------------------------------------------
 
-   subroutine timestep_resist
+   subroutine timestep_resist(cg)
 
       use constants, only: big
-      use grid,      only: cg
+      use grid_cont, only: grid_container
       use mpisetup,  only: comm, ierr
       use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_IN_PLACE
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       if (etamax%val /= 0.) then
          dt_resist = cfl_resist * cg%dxmn**2 / (2. * etamax%val)

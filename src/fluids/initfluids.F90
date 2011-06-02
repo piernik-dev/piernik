@@ -106,9 +106,10 @@ module initfluids
 
 contains
 
-   subroutine init_fluids(cg)
+   subroutine init_fluids
 
-      use grid_cont,       only: grid_container
+      use grid,            only: cga
+      use grid_cont,       only: cg_list_element, grid_container
       use fluidindex,      only: fluid_index, flind
       use fluxes,          only: set_limiter, init_fluxes
       use mpisetup,        only: limiter
@@ -134,7 +135,9 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
-      type(grid_container), intent(inout) :: cg
+
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[initfluids:init_fluids] MPI not initialized.") ! limiter, init_ionized, init_neutral, init_dust, init_cosmicrays
 
@@ -157,7 +160,16 @@ contains
 
       call fluid_index    ! flind has valid values afterwards
 
-      if (associated(cg%cs_iso2%arr)) cg%cs_iso2%arr(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initfluids:init_fluids] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         if (associated(cg%cs_iso2%arr)) cg%cs_iso2%arr(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
+
+         cgl => cgl%nxt
+      enddo
 
       call init_fluxes
 
@@ -192,20 +204,22 @@ contains
 
    end subroutine cleanup_fluids
 
-   subroutine sanitize_smallx_checks(cg)
+   subroutine sanitize_smallx_checks
 
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: smalld, smallp, master, comm, ierr
       use constants,  only: big_float, DST
-      use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
-      use func,       only: emag, ekin
-      use dataio_pub, only: warn, msg
-      use fluidtypes, only: component_fluid
+      use dataio_pub, only: warn, msg, die
       use fluidindex, only: flind, ibx, iby, ibz
+      use fluidtypes, only: component_fluid
+      use func,       only: emag, ekin
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
+      use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
+      use mpisetup,   only: smalld, smallp, master, comm, ierr
 
       implicit none
 
-      type(grid_container), intent(in) :: cg
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
       type(component_fluid), pointer   :: fl
       integer                          :: i
       real, pointer, dimension(:,:,:)  :: dn, mx, my, mz, en, bx, by, bz
@@ -215,57 +229,66 @@ contains
 
       maxdens = 0.0
 
-      bx => cg%b%arr(ibx,:,:,:)
-      by => cg%b%arr(iby,:,:,:)
-      bz => cg%b%arr(ibz,:,:,:)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initfluids:sanitize_smallx_checks] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval, minval
 
-      if (smalld >= big_float) then
-         do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-            fl => flind%all_fluids(i)
-            dn => cg%u%arr(fl%idn,:,:,:)
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-            maxdens = max(maxval(dn), maxdens)
-            smalld  = min(minval(dn), smalld)
-         enddo
-         span   = log10(maxdens) - log10(smalld)
-         smalld = smalld * safety_factor
-         call MPI_Allreduce(MPI_IN_PLACE, smalld, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-         if (master) then
-            write(msg,'(A,ES11.4)') "[initfluids:sanitize_smallx_checks] adjusted smalld to ", smalld
-            call warn(msg)
-            if (span > max_dens_span) then
-               write(msg,'(A,I3,A)') "[initfluids:sanitize_smallx_checks] density spans over ", int(span), " orders of magnitude!"
+         bx => cg%b%arr(ibx,:,:,:)
+         by => cg%b%arr(iby,:,:,:)
+         bz => cg%b%arr(ibz,:,:,:)
+
+         if (smalld >= big_float) then
+            do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
+               fl => flind%all_fluids(i)
+               dn => cg%u%arr(fl%idn,:,:,:)
+
+               maxdens = max(maxval(dn), maxdens)
+               smalld  = min(minval(dn), smalld)
+            enddo
+            span   = log10(maxdens) - log10(smalld)
+            smalld = smalld * safety_factor
+            call MPI_Allreduce(MPI_IN_PLACE, smalld, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+            if (master) then
+               write(msg,'(A,ES11.4)') "[initfluids:sanitize_smallx_checks] adjusted smalld to ", smalld
+               call warn(msg)
+               if (span > max_dens_span) then
+                  write(msg,'(A,I3,A)') "[initfluids:sanitize_smallx_checks] density spans over ", int(span), " orders of magnitude!"
+                  call warn(msg)
+               endif
+            endif
+         endif
+
+         if (smallp >= big_float) then
+            do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
+               fl => flind%all_fluids(i)
+               if (fl%tag == DST) cycle
+               dn => cg%u%arr(fl%idn,:,:,:)
+               mx => cg%u%arr(fl%imx,:,:,:)
+               my => cg%u%arr(fl%imy,:,:,:)
+               mz => cg%u%arr(fl%imz,:,:,:)
+               if (fl%has_energy) then
+                  en => cg%u%arr(fl%ien,:,:,:)
+                  if (fl%is_magnetized) then
+                     smallp = min( minval( en - ekin(mx,my,mz,dn) - emag(bx,by,bz))/fl%gam_1, smallp)
+                  else
+                     smallp = min( minval( en - ekin(mx,my,mz,dn))/fl%gam_1, smallp )
+                  endif
+               else
+                  smallp = min( minval( cg%cs_iso2%arr*dn ), smallp )
+               endif
+            enddo
+            smallp = smallp * safety_factor
+            call MPI_Allreduce(MPI_IN_PLACE, smallp, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+            if (master) then
+               write(msg,'(A,ES11.4)') "[initfluids:sanitize_smallx_checks] adjusted smallp to ", smallp
                call warn(msg)
             endif
          endif
-      endif
 
-      if (smallp >= big_float) then
-         do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-            fl => flind%all_fluids(i)
-            if (fl%tag == DST) cycle
-            dn => cg%u%arr(fl%idn,:,:,:)
-            mx => cg%u%arr(fl%imx,:,:,:)
-            my => cg%u%arr(fl%imy,:,:,:)
-            mz => cg%u%arr(fl%imz,:,:,:)
-            if (fl%has_energy) then
-               en => cg%u%arr(fl%ien,:,:,:)
-               if (fl%is_magnetized) then
-                  smallp = min( minval( en - ekin(mx,my,mz,dn) - emag(bx,by,bz))/fl%gam_1, smallp)
-               else
-                  smallp = min( minval( en - ekin(mx,my,mz,dn))/fl%gam_1, smallp )
-               endif
-            else
-               smallp = min( minval( cg%cs_iso2%arr*dn ), smallp )
-            endif
-         enddo
-         smallp = smallp * safety_factor
-         call MPI_Allreduce(MPI_IN_PLACE, smallp, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-         if (master) then
-            write(msg,'(A,ES11.4)') "[initfluids:sanitize_smallx_checks] adjusted smallp to ", smallp
-            call warn(msg)
-         endif
-      endif
+         cgl => cgl%nxt
+      enddo
 
       if (associated(dn)) nullify(dn)
       if (associated(mx)) nullify(mx)

@@ -194,7 +194,7 @@ contains
 !<
    subroutine init_dataio
 
-      use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, BND_USER
+      use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC !, BND_USER
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
            &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress
@@ -204,7 +204,7 @@ contains
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use timer,           only: time_left
       use version,         only: nenv,env, init_version
-      use grid,            only: cg
+!      use grid,            only: cg
 #ifdef MAGNETIC
       use magboundaries,   only: all_mag_boundaries
 #endif /* MAGNETIC */
@@ -423,12 +423,13 @@ contains
          nres_start  = nrestart
          nhdf_start  = nhdf-1
          if (new_id /= '') run_id=new_id
-         if (all(cg%bnd(:,:) /= BND_USER)) then
+!         if (all(cg%bnd(:,:) /= BND_USER)) then
+         ! \todo make sure that all_fluid_boundaries and all_mag_boundaries can handle BND_USER boundaries right now, or do the boundaries later
             call all_fluid_boundaries
 #ifdef MAGNETIC
             call all_mag_boundaries
 #endif /* MAGNETIC */
-         endif
+!         endif
       endif
       call set_container_chdf(nstep)
 
@@ -664,12 +665,14 @@ contains
 !
    subroutine write_timeslice
 
-      use dataio_pub,      only: cwd, user_tsl
+      use dataio_pub,      only: cwd, die
+      use dataio_user,     only: user_tsl
       use fluids_pub,      only: has_ion, has_dst, has_neu
       use constants,       only: cwdlen, xdim, ydim, zdim
       use diagnostics,     only: pop_vector
       use fluidindex,      only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
-      use grid,            only: cg
+      use grid,            only: cga
+      use grid_cont,       only: grid_container
       use mpisetup,        only: master, t, dt, smalld, nstep, dom
       use types,           only: tsl_container
       use fluidtypes,      only: phys_prop
@@ -695,6 +698,7 @@ contains
                     tot_epot = 0.0, tot_mflx = 0.0, tot_mfly = 0.0, tot_mflz = 0.0
 
       type(tsl_container) :: tsl
+      type(grid_container), pointer :: cg
 
 #ifdef COSM_RAYS
       real, save :: tot_encr = 0.0
@@ -702,6 +706,9 @@ contains
       real     :: cs_iso2
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet") !nontrivial mpi_addmul
+
       if (has_ion) then
          cs_iso2 = flind%ion%cs2
       elseif (has_neu) then
@@ -834,8 +841,9 @@ contains
    subroutine common_shout(pr, fluid, pres_tn, temp_tn, cs_tn)
 
       use constants,       only: small
-      use dataio_pub,      only: msg, printinfo
-      use grid,            only: cg
+      use dataio_pub,      only: msg, printinfo, die
+      use grid,            only: cga
+      use grid_cont,       only: grid_container
       use mpisetup,        only: cfl, has_dir
       use fluidtypes,      only: phys_prop
 
@@ -846,6 +854,10 @@ contains
       logical, intent(in)          :: pres_tn, temp_tn, cs_tn
 
       real :: dxmn_safe
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet") !nontrivial  cfl*cg%d[xyz]
 
       if (cg%dxmn >= sqrt(huge(1.0))) then
          dxmn_safe = sqrt(huge(1.0))
@@ -885,9 +897,11 @@ contains
    subroutine get_common_vars(fl)
 
       use constants,  only: ION, DST, MINL, MAXL
+      use dataio_pub, only: die
       use fluidtypes, only: phys_prop, component_fluid
       use func,       only: get_extremum
-      use grid,       only: cg
+      use grid,       only: cga
+      use grid_cont,  only: grid_container
       use mpisetup,   only: smallp
       use units,      only: mH, kboltz
 
@@ -896,21 +910,25 @@ contains
       type(component_fluid), intent(inout), target :: fl
       type(phys_prop), pointer                     :: pr
       real, dimension(:,:,:), pointer              :: p
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[dataio:get_common_vars] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
 
       pr => fl%snap
       cg%wa%arr = cg%u%arr(fl%idn,:,:,:)
       p => cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-      call get_extremum(p, MAXL, pr%dens_max)
-      call get_extremum(p, MINL, pr%dens_min)
+      call get_extremum(p, MAXL, pr%dens_max, cg)
+      call get_extremum(p, MINL, pr%dens_min, cg)
 
       p = abs(cg%u%arr(fl%imx,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u%arr(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      call get_extremum(p, MAXL, pr%velx_max)
+      call get_extremum(p, MAXL, pr%velx_max, cg)
 
       p = abs(cg%u%arr(fl%imy,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u%arr(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      call get_extremum(p, MAXL, pr%vely_max)
+      call get_extremum(p, MAXL, pr%vely_max, cg)
 
       p = abs(cg%u%arr(fl%imz,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u%arr(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      call get_extremum(p, MAXL, pr%velz_max)
+      call get_extremum(p, MAXL, pr%velz_max, cg)
 
 #ifdef ISO
       pr%pres_min        = pr%dens_min
@@ -934,16 +952,16 @@ contains
 
          cg%wa%arr(:,:,:) = max(fl%gam_1*cg%wa%arr(:,:,:),smallp)  ! pres
 
-         call get_extremum(p, MAXL, pr%pres_max)
-         call get_extremum(p, MINL, pr%pres_min)
+         call get_extremum(p, MAXL, pr%pres_max, cg)
+         call get_extremum(p, MINL, pr%pres_min, cg)
 
          cg%wa%arr(:,:,:) = fl%gam*cg%wa%arr(:,:,:)/cg%u%arr(fl%idn,:,:,:) ! sound speed squared
-         call get_extremum(p, MAXL, pr%cs_max)
+         call get_extremum(p, MAXL, pr%cs_max, cg)
          pr%cs_max%val = sqrt(pr%cs_max%val)
 
          cg%wa%arr(:,:,:) = (mH * cg%wa%arr(:,:,:))/ (kboltz * fl%gam) ! temperature
-         call get_extremum(p, MAXL, pr%temp_max)
-         call get_extremum(p, MINL, pr%temp_min)
+         call get_extremum(p, MAXL, pr%temp_max, cg)
+         call get_extremum(p, MINL, pr%temp_min, cg)
       endif
 #endif /* !ISO */
       NULLIFY(p)
@@ -959,11 +977,12 @@ contains
    subroutine  write_log(tsl)
 
       use constants,          only: small, MINL, MAXL
-      use dataio_pub,         only: msg, printinfo
+      use dataio_pub,         only: msg, printinfo, die
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: ibx, iby, ibz, flind
       use func,               only: get_extremum
-      use grid,               only: cg
+      use grid,               only: cga
+      use grid_cont,          only: grid_container
       use mpisetup,           only: cfl, t, dt, master, has_dir
       use types,              only: tsl_container, value
       use interactions,       only: has_interactions, collfaq
@@ -1001,7 +1020,13 @@ contains
       character(len=idlen) :: id
 #if defined VARIABLE_GP || defined MAGNETIC
       integer :: nxl, nyl, nzl, nxu, nyu, nzu !< shortcuts for indices to compute all gradients regardless of dimensionality of the simulation
+#endif /* VARIABLE_GP || MAGNETIC */
+      type(grid_container), pointer :: cg
 
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[dataio:write_log] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
+
+#if defined VARIABLE_GP || defined MAGNETIC
       nxl = 1 + D_x
       nyl = 1 + D_y
       nzl = 1 + D_z
@@ -1025,23 +1050,23 @@ contains
 
 #ifdef MAGNETIC
          cg%wa%arr(:,:,:)  = sqrt(cg%b%arr(1,:,:,:)*cg%b%arr(1,:,:,:) + cg%b%arr(2,:,:,:)*cg%b%arr(2,:,:,:) + cg%b%arr(3,:,:,:)*cg%b%arr(3,:,:,:))
-         call get_extremum(p, MAXL, b_max)
-         call get_extremum(p, MINL, b_min)
+         call get_extremum(p, MAXL, b_max, cg)
+         call get_extremum(p, MINL, b_min, cg)
 
          cg%wa%arr(:,:,:)  = cg%wa%arr(:,:,:) / sqrt(cg%u%arr(flind%ion%idn,:,:,:))
-         call get_extremum(p, MAXL, vai_max)
+         call get_extremum(p, MAXL, vai_max, cg)
 #endif /* MAGNETIC */
 
 #ifdef ISO
 !        cg%wa%arr        = cg%cs_iso2%arr(:,:,:)*cg%u%arr(idni,:,:,:)
-!        call get_extremum(p, MINL, prei_min)
-!        call get_extremum(p, MAXL, prei_max) ; NULLIFY(p)
+!        call get_extremum(p, MINL, prei_min, cg)
+!        call get_extremum(p, MAXL, prei_max, cg) ; NULLIFY(p)
 !        p => cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-!        call get_extremum(p, MAXL, csi_max)  ; NULLIFY(p)
+!        call get_extremum(p, MAXL, csi_max, cg)  ; NULLIFY(p)
 !        p => cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 !        cg%wa%arr        = mH / kboltz * cs_iso2_arr(:,:,:)
-!        call get_extremum(p, MINL, temi_min)
-!        call get_extremum(p, MAXL, temi_max)
+!        call get_extremum(p, MINL, temi_min, cg)
+!        call get_extremum(p, MAXL, temi_max, cg)
 #else /* !ISO */
 !        cg%wa%arr(:,:,:) = (cg%u%arr(ieni,:,:,:) &                ! eint
 !                    - 0.5*((cg%u%arr(imxi,:,:,:)**2 +cg%u%arr(imyi,:,:,:)**2 + cg%u%arr(imzi,:,:,:)**2)/cg%u%arr(idni,:,:,:)))
@@ -1055,11 +1080,11 @@ contains
 
 #ifdef VARIABLE_GP
       cg%wa%arr(1:nxu,:,:) = abs((cg%gpot%arr(nxl:cg%nx,:,:)-cg%gpot%arr(1:nxu,:,:))*cg%idx) ; cg%wa%arr(cg%nx,:,:) = cg%wa%arr(nxu,:,:)
-      call get_extremum(p, MAXL, gpxmax)
+      call get_extremum(p, MAXL, gpxmax, cg)
       cg%wa%arr(:,1:nyu,:) = abs((cg%gpot%arr(:,nyl:cg%ny,:)-cg%gpot%arr(:,1:nyu,:))*cg%idy) ; cg%wa%arr(:,cg%ny,:) = cg%wa%arr(:,nyu,:)
-      call get_extremum(p, MAXL, gpymax)
+      call get_extremum(p, MAXL, gpymax, cg)
       cg%wa%arr(:,:,1:nzu) = abs((cg%gpot%arr(:,:,nzl:cg%nz)-cg%gpot%arr(:,:,1:nzu))*cg%idz) ; cg%wa%arr(:,:,cg%nz) = cg%wa%arr(:,:,nzu)
-      call get_extremum(p, MAXL, gpzmax)
+      call get_extremum(p, MAXL, gpzmax, cg)
 #endif /* VARIABLE_GP */
 
 #ifdef MAGNETIC
@@ -1073,18 +1098,18 @@ contains
       cg%wa%arr(:,cg%je,:) = cg%wa%arr(:,cg%je-D_y,:)
       cg%wa%arr(:,:,cg%ke) = cg%wa%arr(:,:,cg%ke-D_z)
 
-      call get_extremum(p, MAXL, divb_max)
+      call get_extremum(p, MAXL, divb_max, cg)
 #endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
       cg%wa%arr        = sum(cg%u%arr(iarr_all_crs,:,:,:),1)
-      call get_extremum(p, MAXL, encr_max)
-      call get_extremum(p, MINL, encr_min)
+      call get_extremum(p, MAXL, encr_max, cg)
+      call get_extremum(p, MINL, encr_min, cg)
 #endif /* COSM_RAYS */
 
       if (has_interactions) then
          cg%wa%arr = L2norm(cg%u%arr(flind%dst%imx,:,:,:),cg%u%arr(flind%dst%imy,:,:,:),cg%u%arr(flind%dst%imz,:,:,:),cg%u%arr(flind%neu%imx,:,:,:),cg%u%arr(flind%neu%imy,:,:,:),cg%u%arr(flind%neu%imz,:,:,:) ) * cg%u%arr(flind%dst%idn,:,:,:)
-         call get_extremum(p, MAXL, drag)
+         call get_extremum(p, MAXL, drag, cg)
       endif
       NULLIFY(p)
 

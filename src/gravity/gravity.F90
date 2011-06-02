@@ -771,7 +771,8 @@ contains
       use constants,  only: xdim, ydim, zdim, ndims, MAXL
       use dataio_pub, only: die
       use func,       only: get_extremum
-      use grid,       only: cg, D_x, D_y, D_z
+      use grid,       only: cga, D_x, D_y, D_z
+      use grid_cont,  only: grid_container !, cg_list_element
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: psize, pcoords, master, nproc, comm, comm3d, ierr, have_mpi, is_mpi_noncart
 
@@ -781,13 +782,18 @@ contains
       integer, dimension(3)                                            :: pc
       real, allocatable, dimension(:,:,:), target                      :: gpwork
       real, dimension(:,:,:), pointer                                  :: p
-      real, dimension(cg%nx)                                           :: gravrx
-      real, dimension(cg%ny)                                           :: gravry
-      real, dimension(cg%nz)                                           :: gravrz
+      real, dimension(:), allocatable                                  :: gravrx, gravry, gravrz
       real                                                             :: dgpx_proc, dgpy_proc, dgpz_proc, ddgph
       real, dimension(0:nproc-1)                                       :: dgpx_all,  dgpy_all,  dgpz_all
       real, dimension(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1) :: dgpx,      dgpy,      dgpz,     ddgp
       type(value)                                                      :: gp_max
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[gravity:grav_accel2pot] multiple grid pieces per procesor not implemented yet") !nontrivial
+
+      if (any([allocated(gravrx), allocated(gravry), allocated(gravrz)])) call die("[gravity:grav_accel2pot] gravr[xyz] already allocated")
+      allocate(gravrx(cg%nx), gravry(cg%ny), gravrz(cg%nz))
 
       if (have_mpi .and. is_mpi_noncart) call die("[gravity:grav_accel2pot] is_mpi_noncart is not implemented") ! MPI_Cart_coords, psize, pcoords
       if (comm3d == MPI_COMM_NULL) call die("[gravity:grav_accel2pot] comm3d == MPI_COMM_NULL")
@@ -869,13 +875,17 @@ contains
       ddgph  = gpwork(1,1,1)-gpwork(cg%is,cg%js,cg%ks)
       gpwork = gpwork + ddgp(px,py,pz) + ddgph
       p => gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-      call get_extremum(p, MAXL, gp_max)
+      call get_extremum(p, MAXL, gp_max, cg)
 
       call MPI_Bcast(gp_max%val, 1, MPI_DOUBLE_PRECISION, gp_max%proc, comm, ierr)
       gpwork = gpwork - gp_max%val
 
       cg%gp%arr = gpwork
       if (allocated(gpwork)) deallocate(gpwork)
+
+      deallocate(gravrx)
+      deallocate(gravry)
+      deallocate(gravrz)
 
    end subroutine grav_accel2pot
 

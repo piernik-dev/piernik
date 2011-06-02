@@ -49,7 +49,8 @@ contains
 
       use constants,     only: pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die, warn, user_vars_hdf5
+      use dataio_pub,    only: die, warn
+      use dataio_user,   only: user_vars_hdf5
       use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, smalld
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use list_hdf5,     only: additional_attrs
@@ -387,15 +388,16 @@ contains
 ! "errp" is the difference between analytical potential and computed potential
 !
 
-   subroutine maclaurin_error_vars(var, tab, ierrh)
+   subroutine maclaurin_error_vars(var, tab, ierrh, cg)
 
-      use grid,          only: cg
+      use grid_cont, only: grid_container
 
       implicit none
 
       character(len=*), intent(in)                    :: var
       real(kind=4), dimension(:,:,:), intent(inout)   :: tab
       integer, intent(inout)                          :: ierrh
+      type(grid_container), pointer, intent(in)       :: cg
 
       ierrh = 0
       select case (trim(var))

@@ -60,14 +60,17 @@ module timestepionized
 
 contains
 
-   real function timestep_ion() result(dt)
+   real function timestep_ion(cg) result(dt)
 
       use fluidtypes,    only: component_fluid
-      use grid,          only: D_x, D_y, D_z, cg
+      use grid,          only: D_x, D_y, D_z
+      use grid_cont,     only: grid_container
       use fluidindex,    only: flind, ibx, iby, ibz
       use timestepfuncs, only: compute_c_max, compute_dt
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       real :: cx                  !< maximum velocity for X direction
       real :: cy                  !< maximum velocity for Y direction
@@ -108,11 +111,11 @@ contains
                p  = ps - pmag
                cs = sqrt(abs(  (2.*pmag+fl%gam*p)/cg%u%arr(fl%idn,i,j,k)) )
 #endif /* !ISO */
-               call compute_c_max(fl,cs,i,j,k,cx,cy,cz,c_max)
+               call compute_c_max(fl, cs, i, j, k, cx, cy, cz, c_max, cg)
             enddo
          enddo
       enddo
-      call compute_dt(fl,cx,cy,cz,c_max,c_ion,dt)
+      call compute_dt(fl, cx, cy, cz, c_max, c_ion, dt, cg)
 
    end function timestep_ion
 

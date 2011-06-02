@@ -50,7 +50,7 @@ contains
       use grid,          only: cg
       use mpisetup,      only: ibuff, rbuff, buffer_dim, master, slave, comm, ierr
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use dataio_pub,    only: user_plt_hdf5, user_vars_hdf5, user_tsl
+      use dataio_user,   only: user_plt_hdf5, user_vars_hdf5, user_tsl
 
       implicit none
 
@@ -183,10 +183,10 @@ contains
 
    end subroutine init_prob
 !-----------------------------------------------------------------------------
-   subroutine sedov_plt_hdf5(var,ij,xn,tab,ierrh)
+   subroutine sedov_plt_hdf5(var, ij, xn, tab, ierrh, cg)
 
       use constants, only: xdim, ydim, zdim
-      use grid,      only: cg
+      use grid_cont, only: grid_container
 
       implicit none
 
@@ -195,6 +195,7 @@ contains
       integer(kind=8), intent(in)         :: xn    !< no. of cell at which we are slicing the local block
       integer, intent(inout)              :: ierrh !< error handling
       real, dimension(:,:), intent(inout) :: tab   !< array  containing given quantity
+      type(grid_container), pointer, intent(in) :: cg
 
       ierrh = 0
       select case (var)
@@ -208,13 +209,16 @@ contains
 
    end subroutine sedov_plt_hdf5
 !-----------------------------------------------------------------------------
-   subroutine sedov_vars_hdf5(var,tab, ierrh)
+   subroutine sedov_vars_hdf5(var, tab, ierrh, cg)
+
+      use grid_cont,  only: grid_container
 
       implicit none
 
       character(len=*), intent(in)                    :: var
       real(kind=4), dimension(:,:,:), intent(inout)   :: tab
       integer, intent(inout)                          :: ierrh
+      type(grid_container), pointer, intent(in)       :: cg
 
       ierrh = 0
       select case (trim(var))

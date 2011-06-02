@@ -45,15 +45,17 @@ contains
 !! \brief Following subroutine evaluates some constants, there is no need to run it
 !! more than once, apart from wasting CPU cycles...
 !<
-   subroutine timestep_crs
+   subroutine timestep_crs(cg)
 
-      use grid,                only: cg
+      use grid_cont,           only: grid_container
       use initcosmicrays,      only: cfl_cr, K_crs_paral, K_crs_perp, use_split
 #ifdef MULTIGRID
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
 #endif /* MULTIGRID */
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       logical, save :: frun = .true.
 

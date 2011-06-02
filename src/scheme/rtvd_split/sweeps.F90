@@ -86,11 +86,11 @@ contains
    end subroutine source_terms_y
 #endif /* SHEAR && FLUID_INTERACTIONS */
 !------------------------------------------------------------------------------------------
-   subroutine sweepx
+   subroutine sweepx(cg)
 
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpx, ibx, iby, ibz, nmag
-      use grid,            only: cg
+      use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
       use mpisetup,        only: dt, has_dir, integration_order
       use constants,       only: xdim, ydim, zdim
@@ -100,6 +100,9 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
+
       real, dimension(nmag, cg%nx)      :: b_x
       real, dimension(flind%all, cg%nx) :: u_x, u0_x
       real, dimension(:), pointer       :: div_v1d => null()
@@ -125,7 +128,7 @@ contains
                if (has_dir(zdim) .and. k <= cg%ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*cg%b%arr(ibz,:,j,kp)
 #endif /* MAGNETIC */
 
-               call set_geo_coeffs(xdim,flind,j,k)
+               call set_geo_coeffs(xdim, flind, j, k, cg)
 #ifdef COSM_RAYS
                call set_div_v1d(div_v1d,xdim,j,k)
 #endif /* COSM_RAYS */
@@ -133,7 +136,7 @@ contains
                u_x (iarr_all_swpx,:) = cg%u%arr(:,:,j,k)
                u0_x(iarr_all_swpx,:) = cg%uh%arr(:,:,j,k)
 
-               call relaxing_tvd(cg%nx, u_x, u0_x, b_x, div_v1d, cg%cs_iso2%get_sweep(xdim,j,k), istep, xdim, j, k, cg%dx, dt)
+               call relaxing_tvd(cg%nx, u_x, u0_x, b_x, div_v1d, cg%cs_iso2%get_sweep(xdim,j,k), istep, xdim, j, k, cg%dx, dt, cg)
                cg%u%arr(:,:,j,k)=u_x(iarr_all_swpx,:)
             enddo
          enddo
@@ -142,11 +145,11 @@ contains
 
    end subroutine sweepx
 !------------------------------------------------------------------------------------------
-   subroutine sweepy
+   subroutine sweepy(cg)
 
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpy, ibx, iby, ibz, nmag
-      use grid,            only: cg
+      use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
       use mpisetup,        only: dt, has_dir, integration_order
       use constants,       only: xdim, ydim, zdim
@@ -156,6 +159,9 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
+
       real, dimension(nmag, cg%ny)      :: b_y
       real, dimension(flind%all, cg%ny) :: u_y, u0_y
       real, dimension(:), pointer       :: div_v1d => null()
@@ -181,7 +187,7 @@ contains
                b_y((/iby,ibx,ibz/),:)=b_y(:,:)
 #endif /* MAGNETIC */
 
-               call set_geo_coeffs(ydim,flind,k,i)
+               call set_geo_coeffs(ydim, flind, k, i, cg)
 #ifdef COSM_RAYS
                call set_div_v1d(div_v1d,ydim,k,i)
 #endif /* COSM_RAYS */
@@ -189,7 +195,7 @@ contains
                u_y (iarr_all_swpy,:) = cg%u%arr(:,i,:,k)
                u0_y(iarr_all_swpy,:) = cg%uh%arr(:,i,:,k)
 
-               call relaxing_tvd(cg%ny, u_y, u0_y, b_y, div_v1d, cg%cs_iso2%get_sweep(ydim,k,i), istep, ydim, k, i, cg%dy, dt)
+               call relaxing_tvd(cg%ny, u_y, u0_y, b_y, div_v1d, cg%cs_iso2%get_sweep(ydim,k,i), istep, ydim, k, i, cg%dy, dt, cg)
                cg%u%arr(:,i,:,k)=u_y(iarr_all_swpy,:)
 
             enddo
@@ -200,11 +206,11 @@ contains
 
    end subroutine sweepy
 !------------------------------------------------------------------------------------------
-   subroutine sweepz
+   subroutine sweepz(cg)
 
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpz, ibx, iby, ibz, nmag
-      use grid,            only: cg
+      use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
       use mpisetup,        only: dt, has_dir, integration_order
       use constants,       only: xdim, ydim, zdim
@@ -214,6 +220,9 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
+
       real, dimension(nmag, cg%nz)      :: b_z
       real, dimension(flind%all, cg%nz) :: u_z, u0_z
       real, dimension(:), pointer       :: div_v1d => null()
@@ -240,7 +249,7 @@ contains
                b_z((/ibz,iby,ibx/),:)=b_z(:,:)
 #endif /* MAGNETIC */
 
-               call set_geo_coeffs(zdim,flind,i,j)
+               call set_geo_coeffs(zdim, flind, i, j, cg)
 #ifdef COSM_RAYS
                call set_div_v1d(div_v1d,zdim,i,j)
 #endif /* COSM_RAYS */
@@ -251,7 +260,7 @@ contains
                u_z (iarr_all_swpz,:) = cg%u%arr(:,i,j,:)
                u0_z(iarr_all_swpz,:) = cg%uh%arr(:,i,j,:)
 
-               call relaxing_tvd(cg%nz, u_z, u0_z, b_z, div_v1d, cg%cs_iso2%get_sweep(zdim,i,j), istep, zdim, i, j, cg%dz, dt)
+               call relaxing_tvd(cg%nz, u_z, u0_z, b_z, div_v1d, cg%cs_iso2%get_sweep(zdim,i,j), istep, zdim, i, j, cg%dz, dt, cg)
                cg%u%arr(:,i,j,:)=u_z(iarr_all_swpz,:)
             enddo
          enddo

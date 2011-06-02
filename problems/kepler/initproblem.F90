@@ -69,7 +69,7 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_pub,          only: user_vars_hdf5
+      use dataio_user,         only: user_vars_hdf5
       use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, geometry_type
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use gravity,             only: grav_pot_3d
@@ -488,6 +488,7 @@ contains
    subroutine write_initial_fld_to_restart(file_id)
 
       use constants,   only: AT_NO_B
+      use grid,        only: cg
       use hdf5,        only: HID_T
       use dataio_hdf5, only: write_arr_to_restart
       use fluidindex,  only: flind
@@ -504,31 +505,31 @@ contains
          if (allocated(den0)) then
             write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_den0'
             p3d => den0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname, cg)
             nullify(p3d)
          endif
          if (allocated(mtx0)) then
             write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtx0'
             p3d => mtx0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname, cg)
             nullify(p3d)
          endif
          if (allocated(mty0)) then
             write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mty0'
             p3d => mty0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname, cg)
             nullify(p3d)
          endif
          if (allocated(mtz0)) then
             write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtz0'
             p3d => mtz0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname, cg)
             nullify(p3d)
          endif
          if (allocated(ene0)) then
             write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_ene0'
             p3d => ene0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname)
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname, cg)
             nullify(p3d)
          endif
       enddo
@@ -562,23 +563,23 @@ contains
       if (.not.associated(p3d)) p3d => harr(:,:,:)
       do i=1, flind%fluids
          write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_den0'
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname, cg)
          den0(i,:,:,:) = harr(:,:,:)
 
          write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtx0'
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname, cg)
          mtx0(i,:,:,:) = harr(:,:,:)
 
          write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mty0'
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname, cg)
          mty0(i,:,:,:) = harr(:,:,:)
 
          write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtz0'
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname, cg)
          mtz0(i,:,:,:) = harr(:,:,:)
 
          write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_ene0'
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname)
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname, cg)
          ene0(i,:,:,:) = harr(:,:,:)
       enddo
       if (associated(p3d)) nullify(p3d)
@@ -684,16 +685,19 @@ contains
 
    end subroutine my_grav_pot_3d
 !-----------------------------------------------------------------------------
-   subroutine my_bnd_xl
-      use grid,         only: cg
-      use gravity,      only: grav_pot2accel
-      use fluidindex,   only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
+   subroutine my_bnd_xl(cg)
+
+      use grid_cont,  only: grid_container
+      use gravity,    only: grav_pot2accel
+      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
 #ifndef ISO
-      use fluidindex,   only: iarr_all_en
+      use fluidindex, only: iarr_all_en
 #endif /* ISO */
-      use constants,    only: xdim
+      use constants,  only: xdim
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       integer :: i
       real, dimension(cg%nx) :: grav
@@ -729,13 +733,17 @@ contains
 
    end subroutine my_bnd_xl
 !-----------------------------------------------------------------------------
-   subroutine my_bnd_xr
-      use grid,   only: cg
-      use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+   subroutine my_bnd_xr(cg)
+
+      use grid_cont,  only: grid_container
+      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
-      use fluidindex,  only: iarr_all_en
+      use fluidindex, only: iarr_all_en
 #endif /* ISO */
+
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       cg%u%arr(iarr_all_dn, cg%ie+1:cg%nx,:,:) = den0(:, cg%ie+1:cg%nx,:,:)
       cg%u%arr(iarr_all_mx, cg%ie+1:cg%nx,:,:) = mtx0(:, cg%ie+1:cg%nx,:,:)
@@ -787,9 +795,9 @@ contains
       get_ncells = count(y > -0.99 .and. y < 0.99)
    end function get_ncells
 !-----------------------------------------------------------------------------
-   subroutine prob_vars_hdf5(var,tab, ierrh)
+   subroutine prob_vars_hdf5(var,tab, ierrh, cg)
 
-      use grid,         only: cg
+      use grid_cont,  only: grid_container
       use interactions, only: epstein_factor
       use fluidindex,   only: flind
 
@@ -798,6 +806,7 @@ contains
       character(len=*), intent(in)                    :: var
       real(kind=4), dimension(:,:,:), intent(inout)   :: tab
       integer, intent(inout)                          :: ierrh
+      type(grid_container), pointer, intent(in)       :: cg
 
       ierrh = 0
       select case (trim(var))

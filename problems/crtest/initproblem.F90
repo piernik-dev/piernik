@@ -50,7 +50,8 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die, user_vars_hdf5
+      use dataio_pub,    only: die
+      use dataio_user,   only: user_vars_hdf5
       use diagnostics,   only: my_allocate
       use grid,          only: cg
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
@@ -339,9 +340,9 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine crtest_analytic_ecr1(var, tab, ierrh)
+   subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
 
-      use grid,           only: cg
+      use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs
 
       implicit none
@@ -349,6 +350,7 @@ contains
       character(len=*), intent(in)                    :: var
       real(kind=4), dimension(:,:,:), intent(inout)   :: tab
       integer, intent(inout)                          :: ierrh
+      type(grid_container), pointer, intent(in)       :: cg
 
       call compute_analytic_ecr1
 

@@ -37,18 +37,20 @@ module fluidboundaries
 
 contains
 
-   subroutine init_fluidboundaries
+   subroutine init_fluidboundaries(cg)
 
       use dataio_pub,            only: msg, warn, die, code_progress
       use constants,             only: PIERNIK_INIT_MPI, xdim, LO, HI, &
            &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_INF, BND_USER
       use fluidboundaries_funcs, only: bnd_null, bnd_xl_per, bnd_xl_ref, bnd_xl_out, bnd_xl_outd, bnd_xr_per, bnd_xr_ref, bnd_xr_out, bnd_xr_outd
       use fluidboundaries_pub,   only: user_bnd_xl, user_bnd_xr, func_bnd_xl, func_bnd_xr
-      use grid,                  only: cg
+      use grid_cont,             only: grid_container
       use mpi,                   only: MPI_COMM_NULL
       use mpisetup,              only: comm3d
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[fluidboundaries:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
 
@@ -100,13 +102,13 @@ contains
 
    end subroutine init_fluidboundaries
 
-   subroutine bnd_u(dir)
+   subroutine bnd_u(dir, cg)
 
       use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
       use dataio_pub,          only: msg, warn, die
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid,                only: cg
+      use grid_cont,           only: grid_container
       use mpisetup,            only: ierr, psize, procn, procxyl, procyxl, smalld, pcoords, req, status, comm, comm3d, proc, has_dir
       use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
 #ifdef COSM_RAYS
@@ -126,6 +128,7 @@ contains
       implicit none
 
       integer, intent(in) :: dir
+      type(grid_container), pointer, intent(in) :: cg
 
       logical, save    :: frun = .true.
       integer :: i, j, ib, itag, jtag
@@ -140,7 +143,7 @@ contains
       if (.not. any([xdim, ydim, zdim] == dir)) call die("[fluidboundaries:bnd_u] Invalid direction.")
 
       if (frun) then
-         call init_fluidboundaries
+         call init_fluidboundaries(cg)
          frun = .false.
       endif
 
@@ -426,8 +429,8 @@ contains
 
       select case (dir)
       case (xdim)
-         call func_bnd_xl
-         call func_bnd_xr
+         call func_bnd_xl(cg)
+         call func_bnd_xr(cg)
       case (ydim)
 
          select case (cg%bnd(ydim, LO))
@@ -436,7 +439,7 @@ contains
          case (BND_PER)
              if (comm3d /= MPI_COMM_NULL) cg%u%arr(:,:,1:cg%nb,:)                         = cg%u%arr(:,:, cg%jeb:cg%je,:)
          case (BND_USER)
-            call user_bnd_yl
+            call user_bnd_yl(cg)
          case (BND_REF)
             do ib=1, cg%nb
 
@@ -479,7 +482,7 @@ contains
          case (BND_PER)
             if (comm3d /= MPI_COMM_NULL) cg%u%arr(:,:, cg%je+1:cg%ny,:)            = cg%u%arr(:,:, cg%js:cg%jsb,:)
          case (BND_USER)
-            call user_bnd_yr
+            call user_bnd_yr(cg)
          case (BND_REF)
             do ib=1, cg%nb
 
@@ -522,7 +525,7 @@ contains
          case (BND_MPI)
             ! Do nothing if mpi
          case (BND_USER)
-            call user_bnd_zl
+            call user_bnd_zl(cg)
          case (BND_PER)
             if (comm3d /= MPI_COMM_NULL) cg%u%arr(:,:,:,1:cg%nb)                         = cg%u%arr(:,:,:, cg%keb:cg%ke)
          case (BND_REF)
@@ -573,7 +576,7 @@ contains
          case (BND_MPI)
             ! Do nothing if mpi
          case (BND_USER)
-            call user_bnd_zr
+            call user_bnd_zr(cg)
          case (BND_PER)
             if (comm3d /= MPI_COMM_NULL) cg%u%arr(:,:,:, cg%ke+1:cg%nz)            = cg%u%arr(:,:,:, cg%ks:cg%ksb)
          case (BND_REF)
@@ -629,18 +632,25 @@ contains
       use mpisetup,  only: has_dir, comm3d
       use mpi,       only: MPI_COMM_NULL
       use constants, only: xdim, zdim, FLUID
-      use grid,      only: cg
+      use grid,      only: cga
+      use grid_cont, only: cg_list_element
 
       implicit none
 
+      type(cg_list_element), pointer :: cgl
       integer :: dir
 
-      if (comm3d == MPI_COMM_NULL) then
-         call cg%internal_boundaries(FLUID, pa4d=cg%u%arr)
-      endif
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
 
-      do dir = xdim, zdim
-         if (has_dir(dir)) call bnd_u(dir)
+         if (comm3d == MPI_COMM_NULL) then
+            call cgl%cg%internal_boundaries(FLUID, pa4d=cgl%cg%u%arr)
+         endif
+
+         do dir = xdim, zdim
+            if (has_dir(dir)) call bnd_u(dir, cgl%cg)
+         enddo
+         cgl => cgl%nxt
       enddo
 
    end subroutine all_fluid_boundaries

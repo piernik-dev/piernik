@@ -229,12 +229,12 @@ contains
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
 ! OPT: try an explicit loop over n to see if berrer pipelining can be achieved
 
-   subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt)
+   subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg)
 
       use dataio_pub,       only: msg, die
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
-      use grid,             only: cg
+      use grid_cont,        only: grid_container
       use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass
       use gridgeometry,     only: gc, geometry_source_terms
 #ifdef BALSARA
@@ -273,12 +273,14 @@ contains
       real, dimension(nmag,n),     intent(in)     :: bb                 !< local copy of magnetic field
       real, dimension(:), pointer, intent(in)     :: divv
       real, dimension(:), pointer, intent(in)     :: cs_iso2            !< square of local isothermal sound speed
+      integer,                     intent(in)     :: istep              !< step number in the time integration scheme
       integer,                     intent(in)     :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                     intent(in)     :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                     intent(in)     :: i2                 !< coordinate of sweep in the 2nd remaining direction
       real,                        intent(in)     :: dx                 !< cell length
       real,                        intent(in)     :: dt                 !< time step
-      integer,                     intent(in)     :: istep              !< step number in the time integration scheme
+      type(grid_container), pointer, intent(in)   :: cg                 !< current grid piece
+
 #ifdef GRAV
       integer                        :: ind                !< fluid index
       real, dimension(n)             :: gravacc            !< acceleration caused by gravitation

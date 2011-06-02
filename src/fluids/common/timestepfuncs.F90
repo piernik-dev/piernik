@@ -41,10 +41,10 @@ module timestepfuncs
 
 contains
 
-   subroutine compute_c_max(fl,cs,i,j,k,cx,cy,cz,c_max)
+   subroutine compute_c_max(fl, cs, i, j, k, cx, cy, cz, c_max, cg)
 
-      use fluidtypes,  only: component_fluid
-      use grid,        only: cg
+      use fluidtypes, only: component_fluid
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -52,6 +52,8 @@ contains
       real, intent(in)                           :: cs
       integer, intent(in)                        :: i, j, k
       real, intent(inout)                        :: cx, cy, cz, c_max
+      type(grid_container), pointer, intent(in)  :: cg
+
       real                                       :: vx, vy, vz
 
       if ( cg%u%arr(fl%idn,i,j,k) > 0.0) then
@@ -69,11 +71,11 @@ contains
 
    end subroutine compute_c_max
 
-   subroutine compute_dt(fl,cx,cy,cz,c_max,c_out,dt_out)
+   subroutine compute_dt(fl, cx, cy, cz, c_max, c_out, dt_out, cg)
 
-      use fluidtypes, only: component_fluid
-      use grid,       only: cg
       use constants,  only: big, xdim, ydim, zdim, GEO_RPZ
+      use fluidtypes, only: component_fluid
+      use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
       use mpisetup,   only: comm, ierr, cfl, has_dir, dom, geometry_type
 
@@ -82,6 +84,8 @@ contains
       type(component_fluid), pointer, intent(inout) :: fl
       real, intent(in)  :: cx, cy, cz, c_max
       real, intent(out) :: c_out, dt_out
+      type(grid_container), pointer, intent(in) :: cg
+
       real :: dt_proc             !< minimum timestep for the current processor
       real :: dt_all              !< minimum timestep for all the processors
       real :: c_max_all           !< maximum speed for the fluid for all the processors

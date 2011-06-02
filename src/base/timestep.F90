@@ -86,6 +86,8 @@ contains
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
       use fluids_pub,           only: has_ion, has_dst, has_neu
+      use grid,                 only: cga
+      use grid_cont,            only: cg_list_element, grid_container
       use mpisetup,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, master, cflcontrol
       use timestepionized,      only: timestep_ion, c_ion
       use timestepneutral,      only: timestep_neu, c_neu
@@ -105,6 +107,10 @@ contains
       implicit none
 
       real, intent(inout) :: dt !< the timestep
+
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+
 ! Timestep computation
 
       dt_old = dt
@@ -112,36 +118,43 @@ contains
       c_all = 0.0
       dt = huge(1.0)
 
-      if (has_ion) then
-         dt    = min(dt, timestep_ion())
-         c_all = max(c_all,c_ion)
-      endif
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      if (has_neu) then
-         dt    = min(dt, timestep_neu())
-         c_all = max(c_all,c_neu)
-      endif
+         if (has_ion) then
+            dt    = min(dt, timestep_ion(cg))
+            c_all = max(c_all,c_ion)
+         endif
 
-      if (has_dst) then
-         dt    = min(dt, timestep_dst())
-         c_all = max(c_all,c_dst)
-      endif
+         if (has_neu) then
+            dt    = min(dt, timestep_neu(cg))
+            c_all = max(c_all,c_neu)
+         endif
+
+         if (has_dst) then
+            dt    = min(dt, timestep_dst(cg))
+            c_all = max(c_all,c_dst)
+         endif
 
 #ifdef COSM_RAYS
-      call timestep_crs
-      dt=min(dt,dt_crs)
+         call timestep_crs(cg)
+         dt=min(dt,dt_crs)
 #endif /* COSM_RAYS */
 
 #ifdef RESISTIVE
-      call timestep_resist
-      dt = min(dt,dt_resist)
+         call timestep_resist(cg)
+         dt = min(dt,dt_resist)
 #endif /* RESISTIVE */
 
 #ifndef BALSARA
-      dt = min(dt,timestep_interactions())
+         dt = min(dt,timestep_interactions(cg))
 #endif /* BALSARA */
 
-      ! finally apply some sanity factors
+         cgl => cgl%nxt
+      enddo
+
+     ! finally apply some sanity factors
       if (nstep <=1) then
          if (dt_initial > 0.) dt = min(dt, dt_initial)
       else

@@ -287,10 +287,10 @@ contains
 !>
 !! \brief Routine calculating quantities for plot files
 !<
-   subroutine common_plt_hdf5(var, ij, xn, tab, ierrh)
+   subroutine common_plt_hdf5(var, ij, xn, tab, ierrh, cg)
 
       use constants,  only: varlen, xdim, ydim, zdim
-      use grid,       only: cg
+      use grid_cont,  only: grid_container
       use fluidindex, only: flind, ibx
       use fluidtypes, only: component_fluid
 #ifdef COSM_RAYS
@@ -304,6 +304,7 @@ contains
       integer(kind=8), intent(in)       :: xn  !< no. of cell at which we are slicing the local block
       integer, intent(out)              :: ierrh !< error handling
       real, dimension(:,:), intent(out) :: tab !< array containing given quantity
+      type(grid_container), pointer, intent(in) :: cg
 
       integer :: is, ie, js, je, ks, ke, i_xyz
       type(component_fluid), pointer :: fl_dni
@@ -378,18 +379,19 @@ contains
 !>
 !! \brief Routine calculating quantities for .hdf files
 !<
-   subroutine common_vars_hdf5(var, tab, ierrh)
+   subroutine common_vars_hdf5(var, tab, ierrh, cg)
 
       use constants,  only: varlen
       use fluidindex, only: flind, ibx, iby, ibz
       use fluidtypes, only: component_fluid
-      use grid,       only: cg  ! QA_WARN required for RNG
+      use grid_cont,  only: grid_container
 
       implicit none
 
       character(len=varlen), intent(in) :: var
       real(kind=4), dimension(:,:,:)    :: tab
       integer, intent(out)              :: ierrh
+      type(grid_container), pointer, intent(in) :: cg
 
       type(component_fluid), pointer :: fl_dni
       integer :: i_xyz
@@ -528,15 +530,17 @@ contains
 
    subroutine write_plot_hdf5(var, plane, nimg)
 
-      use constants,     only: xdim, ydim, zdim, varlen, cwdlen, LO, HI
-      use dataio_pub,    only: vizit, fmin, fmax, log_file, msg, die, warn, user_plt_hdf5
-      use grid,          only: cg
-      use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
-      use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpisetup,      only: comm, ierr, t, has_dir, dom, master, proc, nproc, status
-      use mpi,           only: MPI_DOUBLE_PRECISION
+      use constants,   only: xdim, ydim, zdim, varlen, cwdlen, LO, HI
+      use dataio_pub,  only: vizit, fmin, fmax, log_file, msg, die, warn
+      use dataio_user, only: user_plt_hdf5
+      use grid,        only: cga
+      use grid_cont,   only: grid_container!, cg_list_element
+      use hdf5,        only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
+      use h5lt,        only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
+      use mpisetup,    only: comm, ierr, t, has_dir, dom, master, proc, nproc, status
+      use mpi,         only: MPI_DOUBLE_PRECISION
 #ifdef PGPLOT
-      use viz,           only: draw_me
+      use viz,         only: draw_me
 #endif /* PGPLOT */
 
       implicit none
@@ -560,14 +564,18 @@ contains
       integer(SIZE_T), parameter          :: bufsize = 1
       real, dimension(bufsize)            :: timebuffer
       integer, parameter                  :: tag = 101
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[dataio_hdf5:write_plot_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial message tagging
 
       xn = 1
       if (has_dir(plane)) xn = pl_i(plane) + cg%nb - cg%off(plane)
 
       if ((xn > cg%nb .and. xn <= cg%n_b(plane)+cg%nb) .or. (xn == 1 .and. .not. has_dir(plane))) then
          allocate(send(cg%n_b(d1(plane)), cg%n_b(d2(plane))))
-         call common_plt_hdf5(var, plane, xn, send, ierrh)
-         if (associated(user_plt_hdf5) .and. ierrh /= 0) call user_plt_hdf5(var, plane, xn, send, ierrh)
+         call common_plt_hdf5(var, plane, xn, send, ierrh, cg)
+         if (associated(user_plt_hdf5) .and. ierrh /= 0) call user_plt_hdf5(var, plane, xn, send, ierrh, cg)
          if (ierrh /= 0) then
             write(msg,'(2a)') var, " is not defined in common_plt_hdf5, neither in user_plt_hdf5 !!!"
             call die(msg)
@@ -639,11 +647,11 @@ contains
 !! \param lright right limits of data from array to be dumped
 !! \loffs offset in area for this process
 !<
-   subroutine set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+   subroutine set_dims_to_write(area_type, area, chnk, lleft, lright, loffs, cg)
 
       use constants,  only: ndims, AT_ALL_B, AT_OUT_B, AT_NO_B, AT_USER, LO, HI
       use dataio_pub, only: die, warn
-      use grid,       only: cg
+      use grid_cont,  only: grid_container
       use mpisetup,   only: dom, has_dir, psize, pcoords, is_uneven, is_mpi_noncart
       use types,      only: at_user_settings
 
@@ -652,6 +660,7 @@ contains
       integer,                           intent(in)  :: area_type
       integer,         dimension(ndims), intent(out) :: area, lleft, lright, chnk
       integer(kind=8), dimension(ndims), intent(out) :: loffs
+      type(grid_container), pointer,     intent(in)  :: cg
 
       select case (area_type)
          case (AT_ALL_B)                           ! whole domain with mpi boundaries
@@ -702,13 +711,14 @@ contains
 
    subroutine write_restart_hdf5(debug_res)
 
-      use grid,       only: cg
       use constants,  only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B
       use dataio_pub, only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
       use hdf5,       only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use list_hdf5,  only: problem_write_restart
-      use mpisetup,   only: comm, info, ierr, master, nstep
       use mpi,        only: MPI_CHARACTER
+      use mpisetup,   only: comm, info, ierr, master, nstep
 
       implicit none
 
@@ -721,6 +731,8 @@ contains
       integer(HID_T)        :: plist_id      !> Property list identifier
       integer               :: area_type
       integer               :: error
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       ! Construct the filename
       if (present(debug_res)) then
@@ -746,18 +758,23 @@ contains
       ! Write all data in parallel
       if (associated(problem_write_restart)) call problem_write_restart(file_id)
 
-      if (associated(cg%cs_iso2%arr)) call write_arr_to_restart(file_id, cg%cs_iso2%arr, AT_NO_B, "cs_iso2")
-      if (associated(cg%gp%arr))      call write_arr_to_restart(file_id, cg%gp%arr, AT_OUT_B, "gp")
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         if (associated(cg%cs_iso2%arr)) call write_arr_to_restart(file_id, cg%cs_iso2%arr, AT_NO_B, "cs_iso2", cg)
+         if (associated(cg%gp%arr))      call write_arr_to_restart(file_id, cg%gp%arr, AT_OUT_B, "gp", cg)
 
-      ! Write fluids
-      area_type = AT_NO_B
-      if (present(debug_res)) area_type = AT_ALL_B
-      if (associated(cg%u%arr)) call write_arr_to_restart(file_id, cg%u%arr, area_type, dname(FLUID))
+         ! Write fluids
+         area_type = AT_NO_B
+         if (present(debug_res)) area_type = AT_ALL_B
+         if (associated(cg%u%arr)) call write_arr_to_restart(file_id, cg%u%arr, area_type, dname(FLUID), cg)
 
-      ! Write magnetic field
-      area_type = AT_OUT_B ! unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
-      if (present(debug_res)) area_type = AT_ALL_B
-      if (associated(cg%b%arr)) call write_arr_to_restart(file_id, cg%b%arr, area_type, dname(MAG))
+         ! Write magnetic field
+         area_type = AT_OUT_B ! unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
+         if (present(debug_res)) area_type = AT_ALL_B
+         if (associated(cg%b%arr)) call write_arr_to_restart(file_id, cg%b%arr, area_type, dname(MAG), cg)
+         cgl => cgl%nxt
+      enddo
 
 !     \todo writing axes using collective I/O takes order of magnitude more than
 !        dumping U and B arrays alltogether, since XYZ-axis is not even read
@@ -847,10 +864,11 @@ contains
       call h5sclose_f(dfilespace, error)
    end subroutine clean_arr_write
 
-   subroutine write_4darr_to_restart(file_id, pa4d, area_type, dname)
+   subroutine write_4darr_to_restart(file_id, pa4d, area_type, dname, cg)
 
       use constants,  only: xdim, ydim, zdim, ndims
       use dataio_pub, only: die
+      use grid_cont,  only: grid_container
       use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f
 
       implicit none
@@ -859,6 +877,7 @@ contains
       real, pointer, dimension(:,:,:,:), intent(in) :: pa4d      !> 4-D array pointer
       integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                  :: dname
+      type(grid_container), pointer, intent(in)     :: cg
 
       integer, parameter :: rank4 = 1 + ndims
       integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
@@ -873,7 +892,7 @@ contains
       integer :: rank
       integer :: error
 
-      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs, cg)
 
       if (.not.associated(pa4d)) call die("[dataio_hdf5:write_4darr_to_restart] Null pointer given.")
       dimsf      = [size(pa4d,1), area(:)]   ! Dataset dimensions
@@ -890,10 +909,11 @@ contains
 
    end subroutine write_4darr_to_restart
 
-   subroutine write_3darr_to_restart(file_id, pa3d, area_type, dname)
+   subroutine write_3darr_to_restart(file_id, pa3d, area_type, dname, cg)
 
       use constants,  only: xdim, ydim, zdim, ndims
       use dataio_pub, only: die
+      use grid_cont,  only: grid_container
       use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f
 
       implicit none
@@ -902,6 +922,7 @@ contains
       real, pointer, dimension(:,:,:), intent(in)   :: pa3d      !> 3-D array pointer, mutually exclusive with pa4d
       integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                  :: dname
+      type(grid_container), pointer, intent(in)     :: cg
 
       integer, parameter :: rank4 = 1 + ndims
       integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
@@ -918,7 +939,7 @@ contains
 
       if (.not. associated(pa3d)) call die("[dataio_hdf5:write_3darr_to_restart] Null pointer given.")
 
-      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs, cg)
 
       dimsf = [1, area(:)]      ! Dataset dimensions
       chunk_dims = [1, chnk(:)] ! Chunks dimensions
@@ -934,87 +955,88 @@ contains
       call clean_arr_write(memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
 
    end subroutine write_3darr_to_restart
-   !----------------------------------------------------------------------------------
-   !
-   !  WRITE Axes
-   !
-   subroutine write_axes_to_restart(file_id)
 
-      use constants,  only: xdim, ydim, zdim, ndims
-      use hdf5,       only: HSIZE_T, HID_T, H5T_NATIVE_DOUBLE, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, &
-           &                h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, h5dcreate_f, h5dget_space_f, h5dwrite_f, &
-           &                h5sclose_f, h5pclose_f, h5dclose_f, h5sselect_hyperslab_f
-      use mpisetup,   only: dom, is_uneven
-      use grid,       only: cg
-
-      implicit none
-
-      integer(HID_T), intent(in) :: file_id !> File identifier
-
-      integer :: dir
-      integer :: error
-      integer, parameter :: rank=1
-      integer(HSIZE_T), dimension(rank) :: offset, count, stride, block, dimsf, chunk_dims
-      integer(HID_T) :: dset_id                !> Dataset identifier
-      integer(HID_T) :: dplist_id, plist_id    !> Property list identifiers
-      integer(HID_T) :: dfilespace, filespace  !> Dataspace identifiers in file
-      integer(HID_T) :: memspace               !> Dataspace identifier in memory
-      integer, parameter :: asis_n_len = 6
-      character(len=asis_n_len) :: dset_axis_n !> Dataspace name
-      character(len=ndims), parameter :: axis_n = "XYZ"
-
-      do dir = xdim, zdim
-
-         write(dset_axis_n,'(a,"-axis")')axis_n(dir:dir)
-         dimsf      = [dom%n_d(dir)] ! Dataset dimensions
-         chunk_dims = [cg%n_b(dir)]  ! Chunk dimensions
-
-         ! Create the file space for the dataset and make it chunked if possible
-         call h5screate_simple_f(rank, dimsf, dfilespace, error)
-         call h5pcreate_f(H5P_DATASET_CREATE_F, dplist_id, error)
-         if (.not. is_uneven) call h5pset_chunk_f(dplist_id, rank, chunk_dims, error)
-         call h5dcreate_f(file_id, dset_axis_n, H5T_NATIVE_DOUBLE, dfilespace, dset_id, error, dplist_id)
-
-         ! It is sufficient that only one CPU writes each piece of axis data.
-         ! The other CPUs also need to call at least everything up to h5dcreate_f, and then just close the stuff.
-         if (cg%off(mod(dir, ndims)+1) == 0 .and. cg%off(mod(dir+ndims-2, ndims)+1) == 0) then
-
-            call h5dget_space_f(dset_id, filespace, error)
-
-            ! Each contributing process defines dataset in memory and writes it to the hyperslab in the file.
-            stride(:) = 1
-            count(:)  = 1
-            block(:)  = chunk_dims(:)
-            offset(:) = [ cg%off(dir) ]
-            call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-
-            call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-            call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
-
-            ! Create the memory space for the dataset.
-            call h5screate_simple_f(rank, chunk_dims, memspace, error)
-            ! What a pity that cg%[xyz](:) cannot have a target attribute (at least in gfortran 4.5.1)
-            select case (dir)
-               case (xdim)
-                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%x(cg%is:cg%ie), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-               case (ydim)
-                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%y(cg%js:cg%je), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-               case (zdim)
-                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%z(cg%ks:cg%ke), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-            end select
-            call h5sclose_f(memspace, error)
-            call h5pclose_f(plist_id, error)
-            call h5sclose_f(filespace, error)
-
-         endif
-
-         call h5dclose_f(dset_id, error)
-         call h5pclose_f(dplist_id, error)
-         call h5sclose_f(dfilespace, error)
-
-      enddo
-
-   end subroutine write_axes_to_restart
+!!$   !----------------------------------------------------------------------------------
+!!$   !
+!!$   !  WRITE Axes
+!!$   !
+!!$   subroutine write_axes_to_restart(file_id)
+!!$
+!!$      use constants,  only: xdim, ydim, zdim, ndims
+!!$      use hdf5,       only: HSIZE_T, HID_T, H5T_NATIVE_DOUBLE, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, &
+!!$           &                h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, h5dcreate_f, h5dget_space_f, h5dwrite_f, &
+!!$           &                h5sclose_f, h5pclose_f, h5dclose_f, h5sselect_hyperslab_f
+!!$      use mpisetup,   only: dom, is_uneven
+!!$      use grid,       only: cg
+!!$
+!!$      implicit none
+!!$
+!!$      integer(HID_T), intent(in) :: file_id !> File identifier
+!!$
+!!$      integer :: dir
+!!$      integer :: error
+!!$      integer, parameter :: rank=1
+!!$      integer(HSIZE_T), dimension(rank) :: offset, count, stride, block, dimsf, chunk_dims
+!!$      integer(HID_T) :: dset_id                !> Dataset identifier
+!!$      integer(HID_T) :: dplist_id, plist_id    !> Property list identifiers
+!!$      integer(HID_T) :: dfilespace, filespace  !> Dataspace identifiers in file
+!!$      integer(HID_T) :: memspace               !> Dataspace identifier in memory
+!!$      integer, parameter :: asis_n_len = 6
+!!$      character(len=asis_n_len) :: dset_axis_n !> Dataspace name
+!!$      character(len=ndims), parameter :: axis_n = "XYZ"
+!!$
+!!$      do dir = xdim, zdim
+!!$
+!!$         write(dset_axis_n,'(a,"-axis")')axis_n(dir:dir)
+!!$         dimsf      = [dom%n_d(dir)] ! Dataset dimensions
+!!$         chunk_dims = [cg%n_b(dir)]  ! Chunk dimensions
+!!$
+!!$         ! Create the file space for the dataset and make it chunked if possible
+!!$         call h5screate_simple_f(rank, dimsf, dfilespace, error)
+!!$         call h5pcreate_f(H5P_DATASET_CREATE_F, dplist_id, error)
+!!$         if (.not. is_uneven) call h5pset_chunk_f(dplist_id, rank, chunk_dims, error)
+!!$         call h5dcreate_f(file_id, dset_axis_n, H5T_NATIVE_DOUBLE, dfilespace, dset_id, error, dplist_id)
+!!$
+!!$         ! It is sufficient that only one CPU writes each piece of axis data.
+!!$         ! The other CPUs also need to call at least everything up to h5dcreate_f, and then just close the stuff.
+!!$         if (cg%off(mod(dir, ndims)+1) == 0 .and. cg%off(mod(dir+ndims-2, ndims)+1) == 0) then
+!!$
+!!$            call h5dget_space_f(dset_id, filespace, error)
+!!$
+!!$            ! Each contributing process defines dataset in memory and writes it to the hyperslab in the file.
+!!$            stride(:) = 1
+!!$            count(:)  = 1
+!!$            block(:)  = chunk_dims(:)
+!!$            offset(:) = [ cg%off(dir) ]
+!!$            call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+!!$
+!!$            call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+!!$            call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+!!$
+!!$            ! Create the memory space for the dataset.
+!!$            call h5screate_simple_f(rank, chunk_dims, memspace, error)
+!!$            ! What a pity that cg%[xyz](:) cannot have a target attribute (at least in gfortran 4.5.1)
+!!$            select case (dir)
+!!$               case (xdim)
+!!$                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%x(cg%is:cg%ie), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+!!$               case (ydim)
+!!$                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%y(cg%js:cg%je), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+!!$               case (zdim)
+!!$                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%z(cg%ks:cg%ke), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+!!$            end select
+!!$            call h5sclose_f(memspace, error)
+!!$            call h5pclose_f(plist_id, error)
+!!$            call h5sclose_f(filespace, error)
+!!$
+!!$         endif
+!!$
+!!$         call h5dclose_f(dset_id, error)
+!!$         call h5pclose_f(dplist_id, error)
+!!$         call h5sclose_f(dfilespace, error)
+!!$
+!!$      enddo
+!!$
+!!$   end subroutine write_axes_to_restart
 
 ! This routine reads only interior cells of a pointed array from the restart file.
 ! Boundary cells are exchanged with the neughbours. Corner boundary cells are not guaranteed to be correct (area_type = AT_ALL_B not implemented yet).
@@ -1085,10 +1107,11 @@ contains
 
    end subroutine clean_arr_read
 
-   subroutine read_4darr_from_restart(file_id, pa4d, area_type, dname)
+   subroutine read_4darr_from_restart(file_id, pa4d, area_type, dname, cg)
 
       use constants,  only: xdim, ydim, zdim, ndims
       use dataio_pub, only: msg, die
+      use grid_cont,  only: grid_container
       use hdf5,       only: HID_T, HSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, h5dread_f
 
       implicit none
@@ -1097,6 +1120,7 @@ contains
       real, dimension(:,:,:,:), pointer, intent(inout) :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
       integer, intent(in)                              :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                     :: dname
+      type(grid_container), pointer, intent(in)        :: cg
 
       integer(HID_T)        :: dset_id       ! Dataset identifier
       integer(HID_T)        :: plist_id      ! Property list identifier
@@ -1111,7 +1135,7 @@ contains
       integer :: ir, rank
       integer :: error
 
-      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs, cg)
 
       dimsf = [size(pa4d,1), area(:)]      ! Dataset dimensions
       chunk_dims = [size(pa4d,1), chnk(:)] ! Chunks dimensions
@@ -1134,11 +1158,12 @@ contains
 
    end subroutine read_4darr_from_restart
 
-   subroutine read_3darr_from_restart(file_id, pa3d, area_type, dname)
+   subroutine read_3darr_from_restart(file_id, pa3d, area_type, dname, cg)
 
       use constants,  only: xdim, ydim, zdim, ndims
       use dataio_pub, only: msg, die
       use grid,       only: arr3d_boundaries
+      use grid_cont,  only: grid_container
       use hdf5,       only: HID_T, HSIZE_T, SIZE_T, h5dread_f, H5T_NATIVE_DOUBLE
 
       implicit none
@@ -1147,6 +1172,7 @@ contains
       real, dimension(:,:,:), pointer, intent(inout)   :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
       integer, intent(in)                              :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                     :: dname
+      type(grid_container), pointer, intent(in)        :: cg
 
       integer(HID_T)        :: dset_id       ! Dataset identifier
       integer(HID_T)        :: plist_id      ! Property list identifier
@@ -1161,7 +1187,7 @@ contains
       integer :: ir, rank
       integer :: error
 
-      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs)
+      call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs, cg)
 
       dimsf = [1, area(:)]      ! Dataset dimensions
       chunk_dims = [1, chnk(:)] ! Chunks dimensions
@@ -1189,17 +1215,18 @@ contains
 
    subroutine read_restart_hdf5(chdf)
 
-      use grid,          only: cg
+      use constants,     only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B
       use dataio_pub,    only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, hdf
       use fluidindex,    only: flind
       use func,          only: fix_string
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element, grid_container
       use hdf5,          only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
            &                   h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,          only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use list_hdf5,     only: problem_read_restart
-      use mpisetup,      only: comm, ierr, magic_mass, master, t, info, comm, dt, dom, has_dir
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use constants,     only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B
+      use mpisetup,      only: comm, ierr, magic_mass, master, t, info, comm, dt, dom, has_dir
 
       implicit none
 
@@ -1218,6 +1245,8 @@ contains
       integer, dimension(1) :: ibuf
 
       real                  :: restart_hdf5_version
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       nu = flind%all
 
@@ -1289,14 +1318,20 @@ contains
 
       if (associated(problem_read_restart)) call problem_read_restart(file_id)
 
-      if (associated(cg%cs_iso2%arr)) call read_arr_from_restart(file_id, cg%cs_iso2%arr, AT_NO_B, "cs_iso2")
-      if (associated(cg%gp%arr))      call read_arr_from_restart(file_id, cg%gp%arr, AT_OUT_B, "gp")
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      !  READ FLUID VARIABLES
-      if (associated(cg%u%arr)) call read_arr_from_restart(file_id, cg%u%arr, AT_NO_B, dname(FLUID))
+         if (associated(cg%cs_iso2%arr)) call read_arr_from_restart(file_id, cg%cs_iso2%arr, AT_NO_B, "cs_iso2", cg)
+         if (associated(cg%gp%arr))      call read_arr_from_restart(file_id, cg%gp%arr, AT_OUT_B, "gp", cg)
 
-      !  READ MAG VARIABLES
-      if (associated(cg%b%arr)) call read_arr_from_restart(file_id, cg%b%arr, AT_OUT_B, dname(MAG))
+         !  READ FLUID VARIABLES
+         if (associated(cg%u%arr)) call read_arr_from_restart(file_id, cg%u%arr, AT_NO_B, dname(FLUID), cg)
+
+         !  READ MAG VARIABLES
+         if (associated(cg%b%arr)) call read_arr_from_restart(file_id, cg%b%arr, AT_OUT_B, dname(MAG), cg)
+         cgl => cgl%nxt
+      enddo
 
       call h5fclose_f(file_id, error)
 
@@ -1373,17 +1408,19 @@ contains
 !
    subroutine write_hdf5(chdf)
 
-      use constants,     only: cwdlen
-      use dataio_pub,    only: printio, msg, die, user_vars_hdf5, nhdf, problem_name, run_id, hdf
-      use grid,          only: cg
-      use hdf5,          only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
+      use constants,   only: cwdlen
+      use dataio_pub,  only: printio, msg, die, nhdf, problem_name, run_id, hdf
+      use dataio_user, only: user_vars_hdf5
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use hdf5,        only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
-      use mpisetup,      only: comm, ierr, info, master
-      use mpi,           only: MPI_CHARACTER
+      use mpisetup,    only: comm, ierr, info, master
+      use mpi,         only: MPI_CHARACTER
 #ifdef NEW_HDF5
-      use list_hdf5,     only: iterate_lhdf5
+      use list_hdf5,   only: iterate_lhdf5
 #endif /* NEW_HDF5 */
-      use list_hdf5,     only: write_arr
+      use list_hdf5,   only: write_arr
 
       implicit none
 
@@ -1393,7 +1430,8 @@ contains
       integer                 :: ierrh, error, i
       logical                 :: ok_var
       character(len=cwdlen)   :: fname
-
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
       real(kind=4), allocatable :: data (:,:,:)  ! Data to write
 
       ! Initialize HDF5 library and Fortran interfaces.
@@ -1416,22 +1454,28 @@ contains
       !
       call h5fcreate_f(trim(fname), H5F_ACC_TRUNC_F, file_id, error, creation_prp = H5P_DEFAULT_F, access_prp = plist_id)
       call h5pclose_f(plist_id, error)
-      if (.not.allocated(data)) allocate(data(cg%nxb, cg%nyb, cg%nzb))
-      do i = 1, nhdf_vars
-         ierrh = 0; ok_var = .false.
-         call common_vars_hdf5(hdf_vars(i), data, ierrh)
-         if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh)
-         if (ierrh>=0) ok_var = .true.
-         if (.not.ok_var) then
-            write(msg,'(3a)') "[dataio_hdf5:write_hdf5]: ", hdf_vars(i)," is not defined in common_vars_hdf5, neither in user_vars_hdf5."
-            call die(msg)
-         endif
-         call write_arr(data, hdf_vars(i), file_id)
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         if (.not.allocated(data)) allocate(data(cg%nxb, cg%nyb, cg%nzb))
+         do i = 1, nhdf_vars
+            ierrh = 0; ok_var = .false.
+            call common_vars_hdf5(hdf_vars(i), data, ierrh, cg)
+            if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
+            if (ierrh>=0) ok_var = .true.
+            if (.not.ok_var) then
+               write(msg,'(3a)') "[dataio_hdf5:write_hdf5]: ", hdf_vars(i)," is not defined in common_vars_hdf5, neither in user_vars_hdf5."
+               call die(msg)
+            endif
+            call write_arr(data, hdf_vars(i), file_id)
+         enddo
+         if (allocated(data)) deallocate(data)
+
+         cgl => cgl%nxt
       enddo
-      if (allocated(data)) deallocate(data)
-      !
-      ! Close the property list.
-      !
+
 #ifdef NEW_HDF5
       call iterate_lhdf5(file_id)
 #endif /* NEW_HDF5 */
@@ -1456,7 +1500,7 @@ contains
 
       use constants,     only: cbuff_len
       use dataio_pub,    only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, hdf
-      use grid,          only: cg
+      use grid,          only: cga
       use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_RDWR_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
            &                   h5open_f, h5fopen_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
            &                   h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
@@ -1520,7 +1564,7 @@ contains
       ibuffer(4)   = chdf%nstep              ; ibuffer_name(4)   = "step_res" !rr2
       ibuffer(5)   = chdf%step_hdf           ; ibuffer_name(5)   = "step_hdf" !rr2
       ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
-      ibuffer(9)   = cg%nb                   ; ibuffer_name(9)   = "nb"
+      ibuffer(9)   = cga%cg_all(1)%nb        ; ibuffer_name(9)   = "nb"                             ! BEWARE: assuming cga%cg_all(:)%nb equal everywhere
       ibuffer(10)  = require_init_prob       ; ibuffer_name(10)  = "require_init_prob" !rr2
 
       bufsize = 1

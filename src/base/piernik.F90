@@ -188,7 +188,7 @@ contains
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
       use fluidindex,            only: flind
-      use grid,                  only: init_grid, init_arrays, grid_mpi_boundaries_prep, cg
+      use grid,                  only: init_grid, init_arrays, grid_mpi_boundaries_prep
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use gridgeometry,          only: init_geometry
       use initproblem,           only: init_prob, read_problem_par
@@ -246,7 +246,7 @@ contains
 
       call init_fluidboundaries
 
-      call init_fluids(cg)
+      call init_fluids
 
       call init_interactions
 
@@ -345,7 +345,7 @@ contains
       call diagnose_arrays ! may depend on everything
 #endif /* VERBOSE */
 
-      call sanitize_smallx_checks(cg) ! depends on init_prob || init_dataio/read_restart_hdf5
+      call sanitize_smallx_checks ! depends on init_prob || init_dataio/read_restart_hdf5
 
    end subroutine init_piernik
 
@@ -356,7 +356,7 @@ contains
 
       use types,        only: cleanup_problem
       use dataio,       only: cleanup_dataio
-      use grid,         only: cg, cleanup_arrays
+      use grid,         only: cleanup_grid
       use initfluids,   only: cleanup_fluids
       use fluidindex,   only: cleanup_fluidindex
       use mpisetup,     only: cleanup_mpi
@@ -374,7 +374,6 @@ contains
       implicit none
 
       if (associated(cleanup_problem)) call cleanup_problem;        call  nextdot(.false.)
-      call cg%cleanup;          call nextdot(.false.)
       call cleanup_dataio;      call nextdot(.false.)
 #ifdef RESISTIVE
       call cleanup_resistivity; call nextdot(.false.)
@@ -386,7 +385,7 @@ contains
       call cleanup_crdiffusion; call nextdot(.false.)
       call cleanup_crhelpers;   call nextdot(.false.)
 #endif /* COSM_RAYS */
-      call cleanup_arrays;      call nextdot(.false.)
+      call cleanup_grid;        call nextdot(.false.)
       call cleanup_fluids;      call nextdot(.false.)
       call cleanup_fluidindex;  call nextdot(.false., print_t = .true.)
       call cleanup_timers;      call nextdot(.false.)

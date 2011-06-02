@@ -60,14 +60,16 @@ module timestepneutral
 
 contains
 
-   real function timestep_neu() result(dt)
+   real function timestep_neu(cg) result(dt)
 
       use fluidtypes,    only: component_fluid
-      use grid,          only: cg
+      use grid_cont,     only: grid_container
       use fluidindex,    only: flind
       use timestepfuncs, only: compute_c_max, compute_dt
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       real :: cx                  !< maximum velocity for X direction
       real :: cy                  !< maximum velocity for Y direction
@@ -96,11 +98,11 @@ contains
 
                cs = sqrt(abs(  (fl%gam*p)/cg%u%arr(fl%idn,i,j,k)) )
 #endif /* !ISO */
-               call compute_c_max(fl,cs,i,j,k,cx,cy,cz,c_max)
+               call compute_c_max(fl, cs, i, j, k, cx, cy, cz, c_max, cg)
             enddo
          enddo
       enddo
-      call compute_dt(fl,cx,cy,cz,c_max,c_neu,dt)
+      call compute_dt(fl, cx, cy, cz, c_max, c_neu, dt, cg)
 
    end function timestep_neu
 

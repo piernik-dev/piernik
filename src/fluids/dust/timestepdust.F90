@@ -41,13 +41,16 @@ module timestepdust
 
 contains
 
-   real function timestep_dst() result(dt)
+   real function timestep_dst(cg) result(dt)
+
       use fluidtypes,    only: component_fluid
-      use grid,          only: cg
+      use grid_cont,     only: grid_container
       use fluidindex,    only: flind
       use timestepfuncs, only: compute_c_max, compute_dt
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       real :: cx                  !< maximum velocity for X direction
       real :: cy                  !< maximum velocity for Y direction
@@ -65,11 +68,11 @@ contains
       do k= cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-               call compute_c_max(fl,0.0,i,j,k,cx,cy,cz,c_max)
+               call compute_c_max(fl, 0.0, i, j, k, cx, cy, cz, c_max, cg)
             enddo
          enddo
       enddo
-      call compute_dt(fl,cx,cy,cz,c_max,c_dst,dt)
+      call compute_dt(fl, cx, cy, cz, c_max, c_dst, dt, cg)
 
    end function timestep_dst
 

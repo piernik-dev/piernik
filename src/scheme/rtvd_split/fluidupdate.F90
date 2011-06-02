@@ -37,25 +37,37 @@ contains
 
    subroutine repeat_fluidstep
 
-      use grid,         only: cg
-      use mpisetup,     only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, master, repeat_step
-      use dataio_pub,   only: warn
+      use dataio_pub, only: warn
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
+      use mpisetup,   only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, master, repeat_step
 
       implicit none
 
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+
       if (.not.repeat_step) return
 
-      if (cfl_violated) then
-         t = t-2.0*dtm
-         cg%u%arr = cg%u0%arr
-         cg%b%arr = cg%b0%arr
-         dt = dtm/dt_max_grow**2
-         nstep = nstep-1
-         if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
-      else
-         cg%u0%arr = cg%u%arr
-         cg%b0%arr = cg%b%arr
-      endif
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         if (cfl_violated) then
+            t = t-2.0*dtm
+            cg%u%arr = cg%u0%arr
+            cg%b%arr = cg%b0%arr
+            dt = dtm/dt_max_grow**2
+            nstep = nstep-1
+            if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
+         else
+            cg%u0%arr = cg%u%arr
+            cg%b0%arr = cg%b%arr
+         endif
+
+         cgl => cgl%nxt
+      enddo
+
    end subroutine repeat_fluidstep
 
    subroutine fluid_update
@@ -95,6 +107,7 @@ contains
       use constants,       only: xdim, ydim, zdim
 #ifdef SHEAR
       use fluidboundaries, only: bnd_u
+      use grid,            only: cg
       use mpisetup,        only: has_dir, t, dt
       use shear,           only: yshift
 #endif /* SHEAR */
@@ -117,8 +130,8 @@ contains
 
 #ifdef SHEAR
       if (has_dir(ydim)) call yshift(t, dt)
-      if (has_dir(xdim)) call bnd_u(xdim)
-      if (has_dir(ydim)) call bnd_u(ydim)
+      if (has_dir(xdim)) call bnd_u(xdim, cg)
+      if (has_dir(ydim)) call bnd_u(ydim, cg)
 #endif /* SHEAR */
 
 #ifdef GRAV
@@ -150,9 +163,11 @@ contains
 !<
    subroutine make_sweep(dir, forward)
 
-      use dataio_pub,     only: msg, die
-      use mpisetup,       only: has_dir
       use constants,      only: xdim, ydim, zdim
+      use dataio_pub,     only: msg, die
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
+      use mpisetup,       only: has_dir
       use sweeps,         only: sweepx, sweepy, sweepz
 #if defined SHEAR && defined FLUID_INTERACTIONS
       use sweeps,         only: source_terms_y
@@ -174,85 +189,95 @@ contains
       integer, intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical, intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
-      select case (dir)
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
-         case (xdim)
-            if (has_dir(xdim)) then
-               if (.not. forward) then
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         select case (dir)
+
+            case (xdim)
+               if (has_dir(xdim)) then
+                  if (.not. forward) then
 #ifdef COSM_RAYS
-                  if (use_split) call cr_diff_x
+                     if (use_split) call cr_diff_x
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-                  call magfieldbyzx
+                     call magfieldbyzx
 #endif /* MAGNETIC */
-               endif
+                  endif
 
-               call sweepx
+                  call sweepx(cg)
 
-               if (forward) then
+                  if (forward) then
 #ifdef MAGNETIC
-                  call magfieldbyzx
+                     call magfieldbyzx
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-                  if (use_split) call cr_diff_x
+                     if (use_split) call cr_diff_x
 #endif /* COSM_RAYS */
+                  endif
                endif
-            endif
 
-         case (ydim)
-            if (has_dir(ydim)) then
-               if (.not. forward) then
+            case (ydim)
+               if (has_dir(ydim)) then
+                  if (.not. forward) then
 #ifdef COSM_RAYS
-                  if (use_split) call cr_diff_y
+                     if (use_split) call cr_diff_y
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-                  call magfieldbzxy
+                     call magfieldbzxy
 #endif /* MAGNETIC */
-               endif
-               call sweepy
+                  endif
+                  call sweepy(cg)
 
-               if (forward) then
+                  if (forward) then
 #ifdef MAGNETIC
-                  call magfieldbzxy
+                     call magfieldbzxy
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-                  if (use_split) call cr_diff_y
+                     if (use_split) call cr_diff_y
 #endif /* COSM_RAYS */
-               endif
-            else
+                  endif
+               else
 #if defined SHEAR && defined FLUID_INTERACTIONS
-               call source_terms_y
+                  call source_terms_y
 #endif /* SHEAR */
-            endif
-
-         case (zdim)
-            if (has_dir(zdim)) then
-               if (.not. forward) then
-#ifdef COSM_RAYS
-                  if (use_split) call cr_diff_z
-#endif /* COSM_RAYS */
-#ifdef MAGNETIC
-                  call magfieldbxyz
-#endif /* MAGNETIC */
                endif
 
-               call sweepz
-
-               if (forward) then
+            case (zdim)
+               if (has_dir(zdim)) then
+                  if (.not. forward) then
+#ifdef COSM_RAYS
+                     if (use_split) call cr_diff_z
+#endif /* COSM_RAYS */
 #ifdef MAGNETIC
-                  call magfieldbxyz
+                     call magfieldbxyz
+#endif /* MAGNETIC */
+                  endif
+
+                  call sweepz(cg)
+
+                  if (forward) then
+#ifdef MAGNETIC
+                     call magfieldbxyz
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-                  if (use_split) call cr_diff_z
+                     if (use_split) call cr_diff_z
 #endif /* COSM_RAYS */
+                  endif
                endif
-            endif
 
-         case default
-            write(msg,'(a,i10)')"[fluidupdate:make_sweep] Illegal direction ",dir
-            call die(msg)
+            case default
+               write(msg,'(a,i10)')"[fluidupdate:make_sweep] Illegal direction ",dir
+               call die(msg)
 
-      end select
+         end select
+
+         cgl => cgl%nxt
+      enddo
 
 #ifdef DEBUG
       call set_container_chdf(nstep)

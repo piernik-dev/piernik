@@ -116,20 +116,26 @@ contains
    end function mshift
 
 !> \todo move to a better place (possibly dataio_pub since stop types module stops using die routine)
-   subroutine get_extremum(tab,minmax,prop)
+   subroutine get_extremum(tab, minmax, prop, cg)
 
-      use constants,     only: MINL, MAXL, ndims, xdim, ydim, zdim
-      use dataio_pub,    only: msg, warn
-      use types,         only: value
-      use grid,          only: cg
-      use mpisetup,      only: mpifind, comm, ierr, master, proc, status, has_dir
-      use mpi,           only: MPI_DOUBLE_PRECISION
+      use constants,  only: MINL, MAXL, ndims, xdim, ydim, zdim
+      use dataio_pub, only: msg, warn, die
+      use types,      only: value
+      use grid,       only: cga
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: mpifind, comm, ierr, master, proc, status, has_dir
+      use mpi,        only: MPI_DOUBLE_PRECISION
 
       implicit none
 
       real, dimension(:,:,:), intent(in), pointer  :: tab
       integer,                intent(in)  :: minmax
       type(value),            intent(out) :: prop
+      type(grid_container), pointer, intent(in) :: cg
+
+      integer, parameter :: tag = 12
+
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[func:get_extremum] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       select case (minmax)
          case (MINL)
@@ -150,9 +156,9 @@ contains
       if (has_dir(zdim)) prop%coords(zdim) = cg%z(prop%loc(zdim))
       if (prop%proc /= 0) then
          if (proc == prop%proc) then
-            call MPI_Send  (prop%coords, ndims, MPI_DOUBLE_PRECISION, 0, 12, comm, ierr)
+            call MPI_Send  (prop%coords, ndims, MPI_DOUBLE_PRECISION, 0, tag, comm, ierr)
          else if (master) then
-            call MPI_Recv  (prop%coords, ndims, MPI_DOUBLE_PRECISION, prop%proc, 12, comm, status, ierr)
+            call MPI_Recv  (prop%coords, ndims, MPI_DOUBLE_PRECISION, prop%proc, tag, comm, status, ierr)
          endif
       endif
 

@@ -51,12 +51,13 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: warn, user_vars_hdf5
-      use mpisetup,      only: ierr, rbuff, master, slave, buffer_dim, comm, dom, proc, nproc
-      use mpi,           only: MPI_DOUBLE_PRECISION
-      use types,         only: finalize_problem, cleanup_problem
-      use list_hdf5,     only: problem_write_restart, problem_read_restart
+      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_pub,  only: warn
+      use dataio_user, only: user_vars_hdf5
+      use mpisetup,    only: ierr, rbuff, master, slave, buffer_dim, comm, dom, proc, nproc
+      use mpi,         only: MPI_DOUBLE_PRECISION
+      use types,       only: finalize_problem, cleanup_problem
+      use list_hdf5,   only: problem_write_restart, problem_read_restart
 
       implicit none
 
@@ -123,19 +124,26 @@ contains
 
    subroutine init_prob
 
-      use grid,          only: cg
-      use fluidindex,    only: flind
-      use mpisetup,      only: smalld, smallei
-      use diagnostics,   only: my_allocate
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use fluidindex,  only: flind
+      use mpisetup,    only: smalld, smallei
+      use diagnostics, only: my_allocate
 
       implicit none
 
       integer :: i, j, k
       real    :: pulse_low_density, pulse_pressure
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       !BEWARE: hardcoded magic numbers
       pulse_low_density = smalld * 1e5
       pulse_pressure = smallei * flind%neu%gam_1 * 1e2
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
       cg%b%arr(:, :, :, :) = 0.
       cg%u%arr(flind%neu%idn, :, :, :) = pulse_low_density
@@ -172,20 +180,23 @@ contains
             enddo
          enddo
       enddo
+         cgl => cgl%nxt
+      enddo
 
    end subroutine init_prob
 
 !-----------------------------------------------------------------------------
 
-   subroutine inid_var_hdf5(var, tab, ierrh)
+   subroutine inid_var_hdf5(var, tab, ierrh, cg)
 
-      use grid, only: cg
+      use grid_cont, only: grid_container
 
       implicit none
 
       character(len=*), intent(in)                    :: var
       real(kind=4), dimension(:,:,:), intent(inout)   :: tab
       integer, intent(inout)                          :: ierrh
+      type(grid_container), pointer, intent(in) :: cg
 
       ierrh = 0
       select case (trim(var))
@@ -202,19 +213,25 @@ contains
    subroutine write_IC_to_restart(file_id)
 
       use constants,   only: AT_NO_B
-      use dataio_pub,  only: warn
+      use dataio_pub,  only: warn, die
       use dataio_hdf5, only: write_arr_to_restart
+      use grid,        only: cga
+      use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id
       real, dimension(:,:,:), pointer :: p3d
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:write_IC_to_restart] multiple grid pieces per procesor not implemented yet") !nontrivial inid
 
       if (allocated(inid)) then
          if (associated(p3d)) nullify(p3d)
          p3d => inid
-         call write_arr_to_restart(file_id, p3d, AT_NO_B, inid_n)
+         call write_arr_to_restart(file_id, p3d, AT_NO_B, inid_n, cg)
       else
          call warn("[initproblem:write_IC_to_restart] Cannot store inid(:,:,:) in the restart file because it mysteriously deallocated.")
       endif
@@ -226,10 +243,11 @@ contains
    subroutine read_IC_from_restart(file_id)
 
       use constants,   only: AT_NO_B
-      use dataio_pub,  only: warn
+      use dataio_pub,  only: warn, die
       use dataio_hdf5, only: read_arr_from_restart
       use diagnostics, only: my_allocate
-      use grid,        only: cg
+      use grid,        only: cga
+      use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
 
       implicit none
@@ -237,13 +255,17 @@ contains
       integer(HID_T), intent(in) :: file_id
 
       real, dimension(:,:,:), pointer :: p3d
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:read_IC_from_restart] multiple grid pieces per procesor not implemented yet") !nontrivial inid
 
       if (associated(p3d)) nullify(p3d)
       if (.not.allocated(inid)) call my_allocate(inid, [cg%nx, cg%ny, cg%nz], inid_n)
       p3d => inid(:,:,:)
 
       if (allocated(inid) .and. associated(p3d)) then
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, inid_n)
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, inid_n, cg)
          nullify(p3d)
       else
          call warn("[initproblem:read_IC_from_restart] Cannot read inid(:,:,:). It's really weird...")
@@ -255,17 +277,22 @@ contains
 
    subroutine finalize_problem_adv
 
-      use dataio_pub,    only: msg, printinfo, warn
-      use grid,          only: cg
-      use mpisetup,      only: master, comm, ierr
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use fluidindex,    only: flind
+      use dataio_pub, only: msg, printinfo, warn, die
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
+      use mpisetup,   only: master, comm, ierr
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use fluidindex, only: flind
 
       implicit none
 
       integer            :: i, j, k
       real, dimension(2) :: norm, dev
       real               :: dini
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:finalize_problem_adv] multiple grid pieces per procesor not implemented yet") !nontrivial inid
 
       if (.not. allocated(inid)) then
          if (master) call warn("[initproblem:finalize_problem_adv] Cannot compare results with the initial conditions. Perhaps there is no 'inid' array in the restart file?")
@@ -275,6 +302,10 @@ contains
       norm(:) = 0.
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
@@ -287,6 +318,9 @@ contains
             enddo
          enddo
       enddo
+         cgl => cgl%nxt
+      enddo
+
       call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)

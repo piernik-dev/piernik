@@ -38,7 +38,7 @@ module grid_cont
    implicit none
 
    private
-   public :: grid_container
+   public :: grid_container, cg_list_element, cg_list, cg_set
 
    type, extends(axes) :: grid_container
       real    :: dx                             !< length of the %grid cell in x-direction
@@ -127,22 +127,22 @@ module grid_cont
    end type grid_container
 
    ! the prv and nxt pointers are not elements of the grid_container type to allow membership in several lists simultaneously
-   type gc_list_element
-      type(grid_container), pointer :: cg       !< the current grid container
-      type(grid_container), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
-   end type gc_list_element
+   type cg_list_element
+      type(grid_container), pointer :: cg        !< the current grid container
+      type(cg_list_element), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
+   end type cg_list_element
 
-   type gc_list
-      type(gc_list_element), dimension(:), allocatable :: cg_l
-   end type gc_list
+   type cg_list
+      type(cg_list_element), dimension(:), allocatable :: cg_l
+   end type cg_list
 
-   ! On an uniform, nowhere refined grid, gc_levels will have only one element, and all gc_all elements ill be members of gc_leafs, gc_base and gc_levels(1) lists
-   type gc_set
-      type(grid_container), dimension(:), allocatable :: gc_all    !< all grid containers
-      type(gc_list), dimension(:), allocatable        :: gc_levels !< grid containers grouped by level
-      type(gc_list)                                   :: gc_leafs  !< grid containers that are not fully covered by finer grids
-      type(gc_list)                                   :: gc_base   !< grid containers on the base level
-   end type gc_set
+   ! On an uniform, nowhere refined grid, cg_levels will have only one element, and all cg_all elements ill be members of cg_leafs, cg_base and cg_levels(1) lists
+   type cg_set
+      type(grid_container), dimension(:), allocatable :: cg_all    !< all grid containers
+      type(cg_list), dimension(:), allocatable        :: cg_levels !< grid containers grouped by level
+      type(cg_list)                                   :: cg_leafs  !< grid containers that are not fully covered by finer grids
+      type(cg_list)                                   :: cg_base   !< grid containers on the base level
+   end type cg_set
 
 contains
 

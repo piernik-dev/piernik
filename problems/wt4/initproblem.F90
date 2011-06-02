@@ -415,6 +415,7 @@ contains
 
       use constants,   only: AT_NO_B
       use dataio_hdf5, only: write_arr_to_restart
+      use grid,        only: cg
       use hdf5,        only: HID_T
 
       implicit none
@@ -426,17 +427,17 @@ contains
       if ( divine_intervention_type == 3) then
          if (allocated(den0)) then
             p3d => den0(:, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, "den0")
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, "den0", cg)
             nullify(p3d)
          endif
          if (allocated(vlx0)) then
             p3d => vlx0(:, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, "vlx0")
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, "vlx0", cg)
             nullify(p3d)
          endif
          if (allocated(vly0)) then
             p3d => vly0(:, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, "vly0")
+            call write_arr_to_restart(file_id, p3d, AT_NO_B, "vly0", cg)
             nullify(p3d)
          endif
       endif
@@ -465,13 +466,13 @@ contains
          if (.not.allocated(vly0)) allocate(vly0(cg%nx, cg%ny, cg%nz))
 
          if (.not.associated(p3d)) p3d => den0(:,:,:)
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, "den0")
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, "den0", cg)
          if (associated(p3d)) nullify(p3d)
          if (.not.associated(p3d)) p3d => vlx0(:,:,:)
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, "vlx0")
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, "vlx0", cg)
          if (associated(p3d)) nullify(p3d)
          if (.not.associated(p3d)) p3d => vly0(:,:,:)
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, "vly0")
+         call read_arr_from_restart(file_id, p3d, AT_NO_B, "vly0", cg)
          if (associated(p3d)) nullify(p3d)
       endif
 

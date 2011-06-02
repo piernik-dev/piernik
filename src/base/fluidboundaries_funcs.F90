@@ -37,33 +37,42 @@ module fluidboundaries_funcs
 
 contains
 
-   subroutine bnd_null
+   subroutine bnd_null(cg)
+
+      use grid_cont, only: grid_container
+
       implicit none
-      return
+
+      type(grid_container), pointer, intent(in) :: cg
+
    end subroutine bnd_null
 
-   subroutine bnd_xl_per
+   subroutine bnd_xl_per(cg)
 
-      use grid,   only: cg
+      use grid_cont, only: grid_container
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       cg%u%arr(:,1:cg%nb,:,:) = cg%u%arr(:, cg%ieb:cg%ie,:,:)
 
    end subroutine bnd_xl_per
 
-   subroutine bnd_xl_ref
+   subroutine bnd_xl_ref(cg)
 
-      use grid,           only: cg
-      use fluidindex,     only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use grid_cont,  only: grid_container
+      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
-      use fluidindex,     only: iarr_all_en
+      use fluidindex, only: iarr_all_en
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use fluidindex,     only: iarr_all_crs
+      use fluidindex, only: iarr_all_crs
 #endif /* COSM_RAYS */
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       integer :: ib
 
@@ -80,15 +89,17 @@ contains
 
    end subroutine bnd_xl_ref
 
-   subroutine bnd_xl_out
+   subroutine bnd_xl_out(cg)
 
-      use grid,           only: cg
+      use grid_cont,      only: grid_container
 #ifdef COSM_RAYS
       use initcosmicrays, only: smallecr
       use fluidindex,     only: iarr_all_crs
 #endif /* COSM_RAYS */
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       integer :: ib
 
@@ -101,9 +112,9 @@ contains
 
    end subroutine bnd_xl_out
 
-   subroutine bnd_xl_outd
+   subroutine bnd_xl_outd(cg)
 
-      use grid,           only: cg
+      use grid_cont,      only: grid_container
       use fluidindex,     only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
       use fluidindex,     only: iarr_all_en
@@ -114,6 +125,8 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       integer :: ib
 
@@ -130,28 +143,32 @@ contains
 
    end subroutine bnd_xl_outd
 
-   subroutine bnd_xr_per
+   subroutine bnd_xr_per(cg)
 
-      use grid,   only: cg
+      use grid_cont, only: grid_container
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       cg%u%arr(:, cg%ie+1:cg%nx,:,:) = cg%u%arr(:, cg%is:cg%isb,:,:)
 
    end subroutine bnd_xr_per
 
-   subroutine bnd_xr_ref
+   subroutine bnd_xr_ref(cg)
 
-      use grid,           only: cg
-      use fluidindex,     only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use grid_cont,  only: grid_container
+      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
-      use fluidindex,     only: iarr_all_en
+      use fluidindex, only: iarr_all_en
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use fluidindex,     only: iarr_all_crs
+      use fluidindex, only: iarr_all_crs
 #endif /* COSM_RAYS */
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       integer :: ib
 
@@ -168,15 +185,17 @@ contains
 
    end subroutine bnd_xr_ref
 
-   subroutine bnd_xr_out
+   subroutine bnd_xr_out(cg)
 
-      use grid,           only: cg
+      use grid_cont,      only: grid_container
 #ifdef COSM_RAYS
       use initcosmicrays, only: smallecr
       use fluidindex,     only: iarr_all_crs
 #endif /* COSM_RAYS */
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       integer :: ib
 
@@ -189,9 +208,9 @@ contains
 
    end subroutine bnd_xr_out
 
-   subroutine bnd_xr_outd
+   subroutine bnd_xr_outd(cg)
 
-      use grid,           only: cg
+      use grid_cont,      only: grid_container
       use fluidindex,     only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
       use fluidindex,     only: iarr_all_en
@@ -202,6 +221,8 @@ contains
 #endif /* COSM_RAYS */
 
       implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
 
       integer :: ib
 
