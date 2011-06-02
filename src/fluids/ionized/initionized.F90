@@ -145,10 +145,10 @@ contains
 #endif /* !ISO */
 
       ma1d = [flind%ion%all]
-      call my_allocate(flind%ion%iarr,       ma1d, "ion%iarr")
-      call my_allocate(flind%ion%iarr_swpx,  ma1d, "ion%iarr_swpx")
-      call my_allocate(flind%ion%iarr_swpy,  ma1d, "ion%iarr_swpy")
-      call my_allocate(flind%ion%iarr_swpz,  ma1d, "ion%iarr_swpz")
+      call my_allocate(flind%ion%iarr,       ma1d)
+      call my_allocate(flind%ion%iarr_swpx,  ma1d)
+      call my_allocate(flind%ion%iarr_swpy,  ma1d)
+      call my_allocate(flind%ion%iarr_swpz,  ma1d)
 
       !\deprecated repeated magic integers (multifile: initneutral)
       flind%ion%iarr(1:4)      = [idni,imxi,imyi,imzi]

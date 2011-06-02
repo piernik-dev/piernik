@@ -140,10 +140,10 @@ contains
 #endif /* !ISO */
 
       ma1d = [flind%neu%all]
-      call my_allocate(flind%neu%iarr,       ma1d, "neu%iarr")
-      call my_allocate(flind%neu%iarr_swpx,  ma1d, "neu%iarr_swpx")
-      call my_allocate(flind%neu%iarr_swpy,  ma1d, "neu%iarr_swpy")
-      call my_allocate(flind%neu%iarr_swpz,  ma1d, "neu%iarr_swpz")
+      call my_allocate(flind%neu%iarr,       ma1d)
+      call my_allocate(flind%neu%iarr_swpx,  ma1d)
+      call my_allocate(flind%neu%iarr_swpy,  ma1d)
+      call my_allocate(flind%neu%iarr_swpz,  ma1d)
 
       !\deprecated repeated magic integers
       flind%neu%iarr(1:4)      = [idnn,imxn,imyn,imzn]

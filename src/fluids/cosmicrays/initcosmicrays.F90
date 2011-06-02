@@ -209,9 +209,9 @@ contains
       if (ncrs > ncr_max) call die("[initcosmicrays:init_cosmicrays] ncrs > ncr_max") !> \warning higher ncr_max limit would require changes in names of components in dataio_hdf5
 
       ma1d = [ncrs]
-      call my_allocate(gamma_crs,   ma1d, "gamma_crs")
-      call my_allocate(K_crs_paral, ma1d, "K_crs_paral")
-      call my_allocate(K_crs_perp,  ma1d, "K_crs_perp")
+      call my_allocate(gamma_crs,   ma1d)
+      call my_allocate(K_crs_paral, ma1d)
+      call my_allocate(K_crs_perp,  ma1d)
 
       if (ncrn > 0) then
          gamma_crs  (1:ncrn) = gamma_crn  (1:ncrn)
@@ -226,11 +226,11 @@ contains
       endif
 
       ma1d = [ncrn]
-      call my_allocate(iarr_crn, ma1d, "iarr_crn")
+      call my_allocate(iarr_crn, ma1d)
       ma1d = [ncre]
-      call my_allocate(iarr_cre, ma1d, "iarr_cre")
+      call my_allocate(iarr_cre, ma1d)
       ma1d = [ncrs]
-      call my_allocate(iarr_crs, ma1d, "iarr_crs")
+      call my_allocate(iarr_crs, ma1d)
 
    end subroutine init_cosmicrays
 

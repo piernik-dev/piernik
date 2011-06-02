@@ -111,10 +111,10 @@ contains
       flind%all      = imzd
 
       ma1d = [flind%dst%all]
-      call my_allocate(flind%dst%iarr,      ma1d, "dst%iarr")
-      call my_allocate(flind%dst%iarr_swpx, ma1d, "dst%iarr_swpx")
-      call my_allocate(flind%dst%iarr_swpy, ma1d, "dst%iarr_swpy")
-      call my_allocate(flind%dst%iarr_swpz, ma1d, "dst%iarr_swpz")
+      call my_allocate(flind%dst%iarr,      ma1d)
+      call my_allocate(flind%dst%iarr_swpx, ma1d)
+      call my_allocate(flind%dst%iarr_swpy, ma1d)
+      call my_allocate(flind%dst%iarr_swpz, ma1d)
 
       flind%dst%iarr      = [idnd,imxd,imyd,imzd]
       flind%dst%iarr_swpx = [idnd,imxd,imyd,imzd]
