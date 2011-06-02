@@ -66,6 +66,8 @@ contains
 
       call die("User boundaries are not defined")
 
+      if (.true. .or. cg%empty) return ! suppress compiler warnings
+
    end subroutine default_bnd
 !--------------------------------------------------------------------------------------------------
    subroutine init_fluidboundaries

@@ -228,6 +228,8 @@ contains
             ierrh = -1
       end select
 
+      if (.true. .or. cg%empty) return ! suppress compiler warnings
+
    end subroutine sedov_vars_hdf5
 !-----------------------------------------------------------------------------
    subroutine sedov_tsl(user_vars, tsl_names)

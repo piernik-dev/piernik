@@ -45,6 +45,8 @@ contains
 
       type(grid_container), pointer, intent(in) :: cg
 
+      if (.true. .or. cg%empty) return ! suppress compiler warnings
+
    end subroutine bnd_null
 
    subroutine bnd_xl_per(cg)
