@@ -58,6 +58,7 @@ module grid_cont
 
       real, dimension(ndims)          :: dl     !< array of %grid cell sizes in all directions
       real, dimension(ndims)          :: idl    !< array of inverted %grid cell sizes in all directions
+
       real, allocatable, dimension(:) :: inv_x  !< array of invert x-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_y  !< array of invert y-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_z  !< array of invert z-positions of %grid cells centers
@@ -67,6 +68,8 @@ module grid_cont
       real, allocatable, dimension(:) :: xr     !< array of x-positions of %grid cells right borders
       real, allocatable, dimension(:) :: yr     !< array of y-positions of %grid cells right borders
       real, allocatable, dimension(:) :: zr     !< array of z-positions of %grid cells right borders
+
+      real, allocatable, dimension(:) :: dprof  !< Array used for storing density during calculation of hydrostatic equilibrium
 
       integer :: nx                             !< number of %grid cells in one block in x-direction
       integer :: ny                             !< number of %grid cells in one block in y-direction
@@ -81,23 +84,29 @@ module grid_cont
       integer :: ks                             !< index of the first %grid cell of physical domain in z-direction
       integer :: ke                             !< index of the last %grid cell of physical domain in z-direction
       integer :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
-      integer :: isb, ieb, jsb, jeb, ksb, keb   !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
-      integer(kind=8), dimension(ndims) :: off  !< offset of the local domain within computational domain
-      integer, dimension(ndims) :: n_b          !< [nxb, nyb, nzb]
-      integer, dimension(xdim:zdim, LO:HI) :: ijkse !< [[is, js, ks], [ie, je, ke]]
       integer :: maxxyz                         !< maximum number of %grid cells in any direction
+      integer :: isb, ieb, jsb, jeb, ksb, keb   !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
 
       logical :: empty                          !< .true. if there are no cells to process (e.g. some processes at base level in multigrid gravity)
 
-      integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
+      integer(kind=8), dimension(ndims) :: off  !< offset of the local domain within computational domain
+      integer, dimension(ndims)         :: n_b  !< [nxb, nyb, nzb]
+
+      integer, dimension(ndims, LO:HI)  :: ijkse !< [[is, js, ks], [ie, je, ke]]
+      integer, dimension(ndims, LO:HI)  :: bnd  !< type of boundary conditions coded in integers
 
       integer, dimension(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK) :: mbc !< MPI Boundary conditions Container
-      type(bnd_list), dimension(:, :), allocatable :: i_bnd, o_bnd    !> description of incoming and outgoing boundary data,
-      !< the shape is (xdim:zdim, FLUID:ARR) for cg (base grid container)) and (xdim:zdim, mg_nb) for plvl (multigrid level container)
 
-      type(array4d) :: u                        !< Main array of all fluids' components
-      type(array4d) :: uh                       !< Main array of all fluids' components (for t += dt/2)
-      type(array4d) :: b                        !< Main array of magnetic field's components
+      !>
+      !! description of incoming and outgoing boundary data,
+      !! the shape is (xdim:zdim, FLUID:ARR) for cg (base grid container)) and (xdim:zdim, mg_nb) for plvl (multigrid level container)
+      !<
+      type(bnd_list), dimension(:, :), allocatable :: i_bnd, o_bnd
+
+      real, allocatable, dimension(:,:,:) :: gc_xdim !< array of geometrical coefficients in x-direction
+      real, allocatable, dimension(:,:,:) :: gc_ydim !< array of geometrical coefficients in y-direction
+      real, allocatable, dimension(:,:,:) :: gc_zdim !< array of geometrical coefficients in z-direction
+
       type(array3d) :: cs_iso2
       type(array3d) :: wa                       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
       type(array3d) :: gpot                     !< Array for sum of gravitational potential at t += dt
@@ -106,17 +115,11 @@ module grid_cont
       type(array3d) :: sgp                      !< Array for gravitational potential from multigrid or FFT solver
       type(array3d) :: sgpm                     !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
 
+      type(array4d) :: u                        !< Main array of all fluids' components
+      type(array4d) :: uh                       !< Main array of all fluids' components (for t += dt/2)
       type(array4d) :: u0                       !< Copy of main array of all fluids' components
       type(array4d) :: b0                       !< Copy of main array of magnetic field's components
-
-#ifdef GRAV
-      real, allocatable, dimension(:) :: dprof  !< Array used for storing density during calculation of hydrostatic equilibrium
-#endif /* GRAV */
-
-
-      real, allocatable, dimension(:,:,:) :: gc_xdim !< array of geometrical coefficients in x-direction
-      real, allocatable, dimension(:,:,:) :: gc_ydim !< array of geometrical coefficients in y-direction
-      real, allocatable, dimension(:,:,:) :: gc_zdim !< array of geometrical coefficients in z-direction
+      type(array4d) :: b                        !< Main array of magnetic field's components
 
    contains
 
