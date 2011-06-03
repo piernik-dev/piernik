@@ -1363,7 +1363,7 @@ contains
          chdf%step_res = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","step_hdf", ibuf, error)
          chdf%step_hdf = ibuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","next_t_sl", rbuf, error)
+         call h5ltget_attribute_double_f(file_id,"/","next_t_tsl", rbuf, error)
          chdf%next_t_tsl = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","next_t_log", rbuf, error)
          chdf%next_t_log = rbuf(1)
