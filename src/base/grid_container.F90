@@ -49,12 +49,8 @@ module grid_cont
       real    :: idz                            !< inverted length of the %grid cell in z-direction
       real    :: dxmn                           !< the smallest length of the %grid cell (among dx, dy, and dz)
       real    :: dvol                           !< volume of one %grid cell
-      real    :: xminb                          !< current block left x-boundary position
-      real    :: xmaxb                          !< current block right x-boundary position
-      real    :: yminb                          !< current block left y-boundary position
-      real    :: ymaxb                          !< current block right y-boundary position
-      real    :: zminb                          !< current block left z-boundary position
-      real    :: zmaxb                          !< current block right z-boundary position
+      real    :: vol                            !< volume of the grid; BEWARE: for cylindrical geometry it need to be multiplied by appropriate x(:) to get real volume
+      real, dimension(ndims, LO:HI) :: fbnd     !< current block boundary positions
 
       real, dimension(ndims)          :: dl     !< array of %grid cell sizes in all directions
       real, dimension(ndims)          :: idl    !< array of inverted %grid cell sizes in all directions
@@ -193,8 +189,8 @@ contains
          this%isb   = 0 ! ???
          this%ieb   = 0 ! ???
          this%dx    = 1.0
-         this%xminb = dom%xmin
-         this%xmaxb = dom%xmax
+         this%fbnd(xdim, LO) = dom%xmin
+         this%fbnd(xdim, HI) = dom%xmax
 
          this%ny    = 0
          this%js    = this%nb + 1
@@ -202,8 +198,8 @@ contains
          this%jsb   = 0
          this%jeb   = 0
          this%dy    = 1.0
-         this%yminb = dom%ymin
-         this%ymaxb = dom%ymax
+         this%fbnd(ydim, LO) = dom%ymin
+         this%fbnd(ydim, HI) = dom%ymax
 
          this%nz    = 0
          this%ks    = this%nb + 1
@@ -211,8 +207,8 @@ contains
          this%ksb   = 0
          this%keb   = 0
          this%dz    = 1.0
-         this%zminb = dom%zmin
-         this%zmaxb = dom%zmax
+         this%fbnd(zdim, LO) = dom%zmin
+         this%fbnd(zdim, HI) = dom%zmax
 
          this%idx = 1./this%dx
          this%idy = 1./this%dy
@@ -221,6 +217,7 @@ contains
          this%dl(xdim:zdim) = [ this%dx, this%dy, this%dz ]
          this%idl(:) = 1./this%dl(:)
 
+         this%vol = 0.
          this%dvol = 0.
          this%maxxyz = 0
 
@@ -241,8 +238,8 @@ contains
             this%ieb   = this%nxb+1
             this%dx    = dom%Lx / dom%n_d(xdim)
             this%dxmn  = min(this%dxmn, this%dx)
-            this%xminb = dom%xmin + this%dx *  this%off(xdim)
-            this%xmaxb = dom%xmin + this%dx * (this%off(xdim) + this%nxb)
+            this%fbnd(xdim, LO) = dom%xmin + this%dx *  this%off(xdim)
+            this%fbnd(xdim, HI) = dom%xmin + this%dx * (this%off(xdim) + this%nxb)
          else
             this%nx    = 1
             this%is    = 1
@@ -250,8 +247,8 @@ contains
             this%isb   = 1
             this%ieb   = 1
             this%dx    = 1.0
-            this%xminb = dom%xmin
-            this%xmaxb = dom%xmax
+            this%fbnd(xdim, LO) = dom%xmin
+            this%fbnd(xdim, HI) = dom%xmax
          endif
 
          if (has_dir(ydim)) then
@@ -262,8 +259,8 @@ contains
             this%jeb   = this%nyb+1
             this%dy    = dom%Ly / dom%n_d(ydim)
             this%dxmn  = min(this%dxmn, this%dy)
-            this%yminb = dom%ymin + this%dy *  this%off(ydim)
-            this%ymaxb = dom%ymin + this%dy * (this%off(ydim) + this%nyb)
+            this%fbnd(ydim, LO) = dom%ymin + this%dy *  this%off(ydim)
+            this%fbnd(ydim, HI) = dom%ymin + this%dy * (this%off(ydim) + this%nyb)
          else
             this%ny    = 1
             this%js    = 1
@@ -271,8 +268,8 @@ contains
             this%jsb   = 1
             this%jeb   = 1
             this%dy    = 1.0
-            this%yminb = dom%ymin
-            this%ymaxb = dom%ymax
+            this%fbnd(ydim, LO) = dom%ymin
+            this%fbnd(ydim, HI) = dom%ymax
          endif
 
          if (has_dir(zdim)) then
@@ -283,8 +280,8 @@ contains
             this%keb   = this%nzb+1
             this%dz    = dom%Lz / dom%n_d(zdim)
             this%dxmn  = min(this%dxmn, this%dz)
-            this%zminb = dom%zmin + this%dz *  this%off(zdim)
-            this%zmaxb = dom%zmin + this%dz * (this%off(zdim) + this%nzb)
+            this%fbnd(zdim, LO) = dom%zmin + this%dz *  this%off(zdim)
+            this%fbnd(zdim, HI) = dom%zmin + this%dz * (this%off(zdim) + this%nzb)
          else
             this%nz    = 1
             this%ks    = 1
@@ -292,9 +289,11 @@ contains
             this%ksb   = 1
             this%keb   = 1
             this%dz    = 1.0
-            this%zminb = dom%zmin
-            this%zmaxb = dom%zmax
+            this%fbnd(zdim, LO) = dom%zmin
+            this%fbnd(zdim, HI) = dom%zmax
          endif
+
+         this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=has_dir(:))
 
          this%idx = 1./this%dx
          this%idy = 1./this%dy
@@ -320,7 +319,7 @@ contains
          if (has_dir(xdim)) then
             this%x(:) = dom%xmin + this%dx * ([(i, i=1, this%nx)] - 0.5 - this%nb + this%off(xdim))
          else
-            this%x(:) = 0.5*(this%xminb + this%xmaxb)
+            this%x(:) = 0.5*(this%fbnd(xdim, LO) + this%fbnd(xdim, HI))
          endif
          this%xl(:) = this%x(:) - 0.5*this%dx
          this%xr(:) = this%x(:) + 0.5*this%dx
@@ -336,7 +335,7 @@ contains
          if (has_dir(ydim)) then
             this%y(:) = dom%ymin + this%dy * ([(i, i=1, this%ny)] - 0.5 - this%nb + this%off(ydim))
          else
-            this%y(:) = 0.5*(this%yminb + this%ymaxb)
+            this%y(:) = 0.5*(this%fbnd(ydim, LO) + this%fbnd(ydim, HI))
          endif
          this%yl(:) = this%y(:) - 0.5*this%dy
          this%yr(:) = this%y(:) + 0.5*this%dy
@@ -352,7 +351,7 @@ contains
          if (has_dir(zdim)) then
             this%z(:) = dom%zmin + this%dz * ([(i, i=1, this%nz)] - 0.5 - this%nb + this%off(zdim))
          else
-            this%z(:) = 0.5*(this%zminb + this%zmaxb)
+            this%z(:) = 0.5*(this%fbnd(zdim, LO) + this%fbnd(zdim, HI))
          endif
          this%zl(:) = this%z(:) - 0.5*this%dz
          this%zr(:) = this%z(:) + 0.5*this%dz

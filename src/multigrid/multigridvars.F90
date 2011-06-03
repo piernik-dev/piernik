@@ -127,7 +127,7 @@ module multigridvars
 
       ! geometrical factors, cell counters, etc.
       integer :: level                                                !< grid levels are tagged by some consecutive integer numbers
-      real    :: vol                                                  !< processor domain volume; BEWARE: for cylindrical geometry multiply by appropriate x(:) to get real volume
+
       real    :: dxy, dxz, dyz                                        !< cell surface area
       real    :: idx2, idy2, idz2                                     !< inverse of d{x,y,z} square
       real    :: dvol2                                                !< square of cell volume

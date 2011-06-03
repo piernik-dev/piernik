@@ -41,7 +41,7 @@ module multipole
 ! pulled by MULTIGRID && GRAV
    ! needed for global vars in this module
    use multigridvars, only: plvl
-   use constants,     only: ndims, LO, HI
+   use constants,     only: ndims
 
    implicit none
 
@@ -69,22 +69,17 @@ module multipole
    integer                   :: irmax                            !< maximum Q(:, :, r) index in use
 
    type(plvl), pointer       :: lmpole                           !< pointer to the level where multipoles are evaluated
-   real, dimension(0:ndims)   :: CoM                              !< Total mass and center of mass coordinates
+   real, dimension(0:ndims)  :: CoM                              !< Total mass and center of mass coordinates
    logical                   :: zaxis_inside                     !< true when z-axis belongs to the inner radial boundary in polar coordinates
 
-   ! boundaries
-   real, dimension(LO:HI) :: fbnd_x                           !< coordinates at x-faces of local domain
-   real, dimension(LO:HI) :: fbnd_y                           !< coordinates at y-faces of local domain
-   real, dimension(LO:HI) :: fbnd_z                           !< coordinates at z-faces of local domain
-
    ! multipoles and auxiliary factors
-   real, dimension(:,:,:),   allocatable :: Q                    !< The whole moment array with dependence on radius
-   real, dimension(:,:,:),   allocatable :: k12                  !< array of Legendre recurrence factors
-   real, dimension(:),       allocatable :: sfac                 !< 0..m_max sized array of azimuthal sine factors
-   real, dimension(:),       allocatable :: cfac                 !< 0..m_max sized array of azimuthal cosine factors
-   real, dimension(:),       allocatable :: ofact                !< arrays of Legendre normalization factor (compressed)
-   real, dimension(:),       allocatable :: rn                   !< 0..l_max sized array of positive powers of r
-   real, dimension(:),       allocatable :: irn                  !< 0..l_max sized array of negative powers of r
+   real, dimension(:,:,:), allocatable :: Q                      !< The whole moment array with dependence on radius
+   real, dimension(:,:,:), allocatable :: k12                    !< array of Legendre recurrence factors
+   real, dimension(:),     allocatable :: sfac                   !< 0..m_max sized array of azimuthal sine factors
+   real, dimension(:),     allocatable :: cfac                   !< 0..m_max sized array of azimuthal cosine factors
+   real, dimension(:),     allocatable :: ofact                  !< arrays of Legendre normalization factor (compressed)
+   real, dimension(:),     allocatable :: rn                     !< 0..l_max sized array of positive powers of r
+   real, dimension(:),     allocatable :: irn                    !< 0..l_max sized array of negative powers of r
 
 contains
 
@@ -120,9 +115,8 @@ contains
 
       use dataio_pub,    only: die, warn
       use mpisetup,      only: master, dom, eff_dim, geometry_type
-      use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI
+      use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
       use multigridvars, only: lvl, roof, base
-      use grid,          only: cg
 
       implicit none
 
@@ -130,11 +124,6 @@ contains
 
       integer, dimension(4) :: aerr
       integer               :: l,m
-
-      ! external face coordinates
-      fbnd_x(LO:HI) = [ cg%xminb, cg%xmaxb ]
-      fbnd_y(LO:HI) = [ cg%yminb, cg%ymaxb ]
-      fbnd_z(LO:HI) = [ cg%zminb, cg%zmaxb ]
 
       ! assume that Center of Mass is approximately in the center of computational domain by default
       CoM(0) = 1.
@@ -353,7 +342,7 @@ contains
             do j = lmpole%js, lmpole%je
                do k = lmpole%ks, lmpole%ke
                   r2 = (lmpole%y(j)-CoM(ydim))**2 + (lmpole%z(k) - CoM(zdim))**2
-                  lmpole%bnd_x(j, k, lh) = - newtong * CoM(0) / sqrt(r2 + (fbnd_x(lh)-CoM(xdim))**2)
+                  lmpole%bnd_x(j, k, lh) = - newtong * CoM(0) / sqrt(r2 + (lmpole%fbnd(xdim, lh)-CoM(xdim))**2)
                enddo
             enddo
          endif
@@ -361,7 +350,7 @@ contains
             do i = lmpole%is, lmpole%ie
                do k = lmpole%ks, lmpole%ke
                   r2 = (lmpole%x(i)-CoM(xdim))**2 + (lmpole%z(k) - CoM(zdim))**2
-                  lmpole%bnd_y(i, k, lh) = - newtong * CoM(0) / sqrt(r2 + (fbnd_y(lh)-CoM(ydim))**2)
+                  lmpole%bnd_y(i, k, lh) = - newtong * CoM(0) / sqrt(r2 + (lmpole%fbnd(ydim, lh)-CoM(ydim))**2)
                enddo
             enddo
          endif
@@ -369,7 +358,7 @@ contains
             do i = lmpole%is, lmpole%ie
                do j = lmpole%js, lmpole%je
                   r2 = (lmpole%x(i)-CoM(xdim))**2 + (lmpole%y(j) - CoM(ydim))**2
-                  lmpole%bnd_z(i, j, lh) = - newtong * CoM(0) / sqrt(r2 + (fbnd_z(lh)-CoM(zdim))**2)
+                  lmpole%bnd_z(i, j, lh) = - newtong * CoM(0) / sqrt(r2 + (lmpole%fbnd(zdim, lh)-CoM(zdim))**2)
                enddo
             enddo
          endif
@@ -403,7 +392,7 @@ contains
       do lh = LO, HI
          if (is_external(xdim, lh)) then
             dsum(0)    =      sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, lh) )
-            dsum(xdim) = dsum(0) * fbnd_x(lh)
+            dsum(xdim) = dsum(0) * lmpole%fbnd(xdim, lh)
             dsum(ydim) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, lh),  dim=2) * lmpole%y(lmpole%js:lmpole%je) )
             dsum(zdim) = sum( sum( lmpole%bnd_x(lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, lh),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
             lsum(:)    = lsum(:) + dsum(:) * lmpole%dyz
@@ -411,7 +400,7 @@ contains
          if (is_external(ydim, lh)) then
             dsum(0)    =      sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, lh) )
             dsum(xdim) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, lh),  dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
-            dsum(ydim) = dsum(0) * fbnd_y(lh)
+            dsum(ydim) = dsum(0) * lmpole%fbnd(ydim, lh)
             dsum(zdim) = sum( sum( lmpole%bnd_y(lmpole%is:lmpole%ie, lmpole%ks:lmpole%ke, lh),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
             lsum(:)    = lsum(:) + dsum(:) * lmpole%dxz
          endif
@@ -419,7 +408,7 @@ contains
             dsum(0)    =      sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lh) )
             dsum(xdim) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lh),  dim=2) * lmpole%x(lmpole%is:lmpole%ie) )
             dsum(ydim) = sum( sum( lmpole%bnd_z(lmpole%is:lmpole%ie, lmpole%js:lmpole%je, lh),  dim=1) * lmpole%z(lmpole%ks:lmpole%ke) )
-            dsum(zdim) = dsum(0) * fbnd_z(lh)
+            dsum(zdim) = dsum(0) * lmpole%fbnd(zdim, lh)
             lsum(:)    = lsum(:) + dsum(:) * lmpole%dxy
          endif
       enddo
@@ -713,12 +702,12 @@ contains
       !OPT: try to exchange loops i < j < k -> k < j < i
       ! scan
       if (any(is_external(xdim, :))) then
-         if (geometry_type == GEO_RPZ) geofac(:) = [ fbnd_x(LO), fbnd_x(HI) ]
+         if (geometry_type == GEO_RPZ) geofac(:) = [ lmpole%fbnd(xdim, LO), lmpole%fbnd(xdim, HI) ]
          do j = lmpole%js, lmpole%je
             do k = lmpole%ks, lmpole%ke
                if (is_external(xdim, LO) .and. (geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
-                    &                     call point2moments(lmpole%bnd_x(j, k, LO)*lmpole%dyz*geofac(LO), fbnd_x(LO)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
-               if (is_external(xdim, HI)) call point2moments(lmpole%bnd_x(j, k, HI)*lmpole%dyz*geofac(HI), fbnd_x(HI)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+                    &                     call point2moments(lmpole%bnd_x(j, k, LO)*lmpole%dyz*geofac(LO), lmpole%fbnd(xdim, LO)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(xdim, HI)) call point2moments(lmpole%bnd_x(j, k, HI)*lmpole%dyz*geofac(HI), lmpole%fbnd(xdim, HI)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
@@ -726,8 +715,8 @@ contains
       if (any(is_external(ydim, :))) then
          do i = lmpole%is, lmpole%ie
             do k = lmpole%ks, lmpole%ke
-               if (is_external(ydim, LO)) call point2moments(lmpole%bnd_y(i, k, LO)*lmpole%dxz, lmpole%x(i)-CoM(xdim), fbnd_y(LO)-CoM(ydim), lmpole%z(k)-CoM(zdim))
-               if (is_external(ydim, HI)) call point2moments(lmpole%bnd_y(i, k, HI)*lmpole%dxz, lmpole%x(i)-CoM(xdim), fbnd_y(HI)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(ydim, LO)) call point2moments(lmpole%bnd_y(i, k, LO)*lmpole%dxz, lmpole%x(i)-CoM(xdim), lmpole%fbnd(ydim, LO)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(ydim, HI)) call point2moments(lmpole%bnd_y(i, k, HI)*lmpole%dxz, lmpole%x(i)-CoM(xdim), lmpole%fbnd(ydim, HI)-CoM(ydim), lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
@@ -736,8 +725,8 @@ contains
          do i = lmpole%is, lmpole%ie
             if (geometry_type == GEO_RPZ) geofac(LO) = lmpole%x(i)
             do j = lmpole%js, lmpole%je
-               if (is_external(zdim, LO)) call point2moments(lmpole%bnd_z(i, j, LO)*lmpole%dxy*geofac(LO), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), fbnd_z(LO)-CoM(zdim))
-               if (is_external(zdim, HI)) call point2moments(lmpole%bnd_z(i, j, HI)*lmpole%dxy*geofac(LO), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), fbnd_z(HI)-CoM(zdim))
+               if (is_external(zdim, LO)) call point2moments(lmpole%bnd_z(i, j, LO)*lmpole%dxy*geofac(LO), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%fbnd(zdim, LO)-CoM(zdim))
+               if (is_external(zdim, HI)) call point2moments(lmpole%bnd_z(i, j, HI)*lmpole%dxy*geofac(LO), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%fbnd(zdim, HI)-CoM(zdim))
             enddo
          enddo
       endif
@@ -880,8 +869,8 @@ contains
          do j = lmpole%js, lmpole%je
             do k = lmpole%ks, lmpole%ke
                if (is_external(xdim, LO) .and. (geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
-                    &                     call moments2pot(lmpole%bnd_x(j, k, LO), fbnd_x(LO)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
-               if (is_external(xdim, HI)) call moments2pot(lmpole%bnd_x(j, k, HI), fbnd_x(HI)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+                    &                     call moments2pot(lmpole%bnd_x(j, k, LO), lmpole%fbnd(xdim, LO)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(xdim, HI)) call moments2pot(lmpole%bnd_x(j, k, HI), lmpole%fbnd(xdim, HI)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
@@ -889,8 +878,8 @@ contains
       if (any(is_external(ydim, :))) then
          do i = lmpole%is, lmpole%ie
             do k = lmpole%ks, lmpole%ke
-               if (is_external(ydim, LO)) call moments2pot(lmpole%bnd_y(i, k, LO), lmpole%x(i)-CoM(xdim), fbnd_y(LO)-CoM(ydim), lmpole%z(k)-CoM(zdim))
-               if (is_external(ydim, HI)) call moments2pot(lmpole%bnd_y(i, k, HI), lmpole%x(i)-CoM(xdim), fbnd_y(HI)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(ydim, LO)) call moments2pot(lmpole%bnd_y(i, k, LO), lmpole%x(i)-CoM(xdim), lmpole%fbnd(ydim, LO)-CoM(ydim), lmpole%z(k)-CoM(zdim))
+               if (is_external(ydim, HI)) call moments2pot(lmpole%bnd_y(i, k, HI), lmpole%x(i)-CoM(xdim), lmpole%fbnd(ydim, HI)-CoM(ydim), lmpole%z(k)-CoM(zdim))
             enddo
          enddo
       endif
@@ -898,8 +887,8 @@ contains
       if (any(is_external(zdim, :))) then
          do i = lmpole%is, lmpole%ie
             do j = lmpole%js, lmpole%je
-               if (is_external(zdim, LO)) call moments2pot(lmpole%bnd_z(i, j, LO), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), fbnd_z(LO)-CoM(zdim))
-               if (is_external(zdim, HI)) call moments2pot(lmpole%bnd_z(i, j, HI), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), fbnd_z(HI)-CoM(zdim))
+               if (is_external(zdim, LO)) call moments2pot(lmpole%bnd_z(i, j, LO), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%fbnd(zdim, LO)-CoM(zdim))
+               if (is_external(zdim, HI)) call moments2pot(lmpole%bnd_z(i, j, HI), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%fbnd(zdim, HI)-CoM(zdim))
             enddo
          enddo
       endif
@@ -1117,10 +1106,10 @@ contains
 
 !!$   subroutine test_multipoles
 !!$
-!!$      use dataio_pub,         only: die, printinfo, msg
-!!$      use units,          only: newtong
-!!$      use multigridhelpers,   only: dirty_debug
-!!$      use debug,              only: aux_R, aux_I
+!!$      use dataio_pub,       only: die, printinfo, msg
+!!$      use units,            only: newtong
+!!$      use multigridhelpers, only: dirty_debug
+!!$      use debug,            only: aux_R, aux_I
 !!$
 !!$      implicit none
 !!$

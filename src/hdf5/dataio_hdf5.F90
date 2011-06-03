@@ -1642,11 +1642,14 @@ contains
    end subroutine set_common_attributes
 
    subroutine write_grid_containter(cg, file_id, plist_id)
-      use hdf5,      only: HID_T, SIZE_T, HSIZE_T, H5T_NATIVE_INTEGER, H5T_STD_I8LE, H5T_NATIVE_DOUBLE, H5T_COMPOUND_F, h5screate_simple_f, &
-         & h5tarray_create_f, h5tget_size_f, h5tcreate_f, h5tinsert_f, h5dwrite_f, h5sclose_f, h5tclose_f, h5dclose_f, h5dcreate_f
+
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI
       use grid_cont, only: grid_container
-      use constants, only: ndims, LO, HI
+      use hdf5,      only: HID_T, SIZE_T, HSIZE_T, H5T_NATIVE_INTEGER, H5T_STD_I8LE, H5T_NATIVE_DOUBLE, H5T_COMPOUND_F, &
+           &               h5screate_simple_f, h5tarray_create_f, h5tget_size_f, h5tcreate_f, h5tinsert_f, h5dwrite_f, h5sclose_f, h5tclose_f, h5dclose_f, h5dcreate_f
+
       implicit none
+
       type(grid_container), pointer, intent(in) :: cg
       integer(HID_T), intent(in)                :: file_id, plist_id
 
@@ -1897,12 +1900,12 @@ contains
       call h5dwrite_f(dset_id, dmem_id(25), cg%idz,    dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(26), cg%dxmn,   dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(27), cg%dvol,   dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(28), cg%xminb,  dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(29), cg%xmaxb,  dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(30), cg%yminb,  dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(31), cg%ymaxb,  dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(32), cg%zminb,  dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(33), cg%zmaxb,  dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(28), cg%fbnd(xdim, LO), dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(29), cg%fbnd(xdim, HI), dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(30), cg%fbnd(ydim, LO), dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(31), cg%fbnd(ydim, HI), dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(32), cg%fbnd(zdim, LO), dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(33), cg%fbnd(zdim, HI), dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(34), cg%dl,     dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(35), cg%idl,    dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(36), cg%x,      dims, error, xfer_prp=plist_id)

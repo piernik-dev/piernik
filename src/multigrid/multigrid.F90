@@ -263,8 +263,6 @@ contains
 
          if (any(curl%n_b(:) * 2**(roof%level - curl%level) /= roof%n_b(:) .and. has_dir(:)) .and. .not. curl%empty .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
 
-         curl%vol  = 1.
-
          !> \todo check if these are correctly defined for multipole solver
          curl%dxy = 1.
          curl%dxz = 1.
@@ -272,7 +270,6 @@ contains
 
          if (has_dir(xdim)) then
             curl%idx2  = 1. / curl%dx**2                      ! auxiliary invariants
-            curl%vol   = curl%vol * (cg%xmaxb-cg%xminb)
             curl%dxy   = curl%dxy * curl%dx
             curl%dxz   = curl%dxz * curl%dx
          else
@@ -281,7 +278,6 @@ contains
 
          if (has_dir(ydim)) then
             curl%idy2  = 1. / curl%dy**2
-            curl%vol   = curl%vol * (cg%ymaxb-cg%yminb)
             curl%dxy   = curl%dxy * curl%dy
             curl%dyz   = curl%dyz * curl%dy
          else
@@ -290,7 +286,6 @@ contains
 
          if (has_dir(zdim)) then
             curl%idz2  = 1. / curl%dz**2
-            curl%vol   = curl%vol * (cg%zmaxb-cg%zminb)
             curl%dxz   = curl%dxz * curl%dz
             curl%dyz   = curl%dyz * curl%dz
          else
