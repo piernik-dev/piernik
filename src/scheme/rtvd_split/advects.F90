@@ -42,6 +42,7 @@ contains
 
    subroutine advectby_x
 
+      use dataio_pub,    only: die
       use fluidindex,    only: iby, flind
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
@@ -109,6 +110,7 @@ contains
 
    subroutine advectbz_x
 
+      use dataio_pub,    only: die
       use fluidindex,    only: ibz, flind
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
@@ -176,6 +178,7 @@ contains
 
    subroutine advectbz_y
 
+      use dataio_pub,    only: die
       use fluidindex,    only: ibz, flind
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
@@ -243,6 +246,7 @@ contains
 
    subroutine advectbx_y
 
+      use dataio_pub,    only: die
       use fluidindex,    only: ibx, flind
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
@@ -310,6 +314,7 @@ contains
 
    subroutine advectbx_z
 
+      use dataio_pub,    only: die
       use fluidindex,    only: ibx, flind
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
@@ -376,6 +381,7 @@ contains
 
    subroutine advectby_z
 
+      use dataio_pub,    only: die
       use fluidindex,    only: iby, flind
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
