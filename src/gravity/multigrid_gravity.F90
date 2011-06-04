@@ -395,7 +395,8 @@ contains
       use dataio_pub,       only: die, warn
       use multipole,        only: init_multipole, coarsen_multipole
       use mpi,              only: MPI_COMM_NULL
-      use grid,             only: cg
+      use grid,             only: cga
+      use grid_cont,        only: cg_list_element
 
       implicit none
 
@@ -406,6 +407,7 @@ contains
       integer, dimension(6)            :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
       integer :: i, j
       type(plvl), pointer :: curl
+      type(cg_list_element), pointer :: cgl
 
       need_general_pf = comm3d == MPI_COMM_NULL .or. single_base .or. is_mg_uneven
 
@@ -443,7 +445,11 @@ contains
          enddo
       endif
 
-      cg%sgp%arr(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cgl%cg%sgp%arr(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
+         cgl => cgl%nxt
+      enddo
 
       curl => base
       do while (associated(curl))
@@ -990,7 +996,8 @@ contains
       use problem_pub,        only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
       use units,              only: fpiG
-      use grid,               only: cg
+      use grid,               only: cga
+      use grid_cont,          only: grid_container
       use dataio_pub,         only: die
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridbasefuncs, only: substract_average
@@ -1003,6 +1010,10 @@ contains
       real, optional, dimension(:,:,:), intent(in)  :: dens !< input source field or nothing for empty space
       real :: fac
       integer :: i
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid_gravity:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       call set_dirty(source)
 
@@ -1128,7 +1139,8 @@ contains
 
       use constants,     only: xdim, ydim, zdim
       use timer,         only: set_timer
-      use grid,          only: cg
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element, grid_container
       use mpisetup,      only: has_dir
       use dataio_pub,    only: die
       use multipole,     only: multipole_solver
@@ -1140,12 +1152,18 @@ contains
 
       logical :: isolated
       integer :: isb, ieb, jsb, jeb, ksb, keb
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       ts =  set_timer("multigrid", .true.)
-      if ( (has_dir(xdim) .and. cg%is-mg_nb <= 0) .or. &
-           (has_dir(ydim) .and. cg%js-mg_nb <= 0) .or. &
-           (has_dir(zdim) .and. cg%ks-mg_nb <= 0) )    &
-           call die("[multigrid_gravity:multigrid_solve_grav] Current implementation requires at least 2 guardcells in the hydro part")
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         if ( (has_dir(xdim) .and. cgl%cg%is-mg_nb <= 0) .or. &
+              (has_dir(ydim) .and. cgl%cg%js-mg_nb <= 0) .or. &
+              (has_dir(zdim) .and. cgl%cg%ks-mg_nb <= 0) )    &
+              call die("[multigrid_gravity:multigrid_solve_grav] Current implementation requires at least 2 guardcells in the hydro part")
+         cgl => cgl%nxt
+      enddo
 
       isolated = (grav_bnd == bnd_isolated) !> \deprecated BEWARE: not elegant; probably there should be two global grav_bnd variables
 
@@ -1164,32 +1182,39 @@ contains
 
       call vcycle_hg(inner)
 
-      !> \todo move to multigridvars and init_multigrid
-      if (has_dir(xdim)) then
-         isb = cg%is-mg_nb
-         ieb = cg%ie+mg_nb
-      else
-         isb = 1
-         ieb = 1
-      endif
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      if (has_dir(ydim)) then
-         jsb = cg%js-mg_nb
-         jeb = cg%je+mg_nb
-      else
-         jsb = 1
-         jeb = 1
-      endif
+         !> \todo move to multigridvars and init_multigrid
+         if (has_dir(xdim)) then
+            isb = cg%is-mg_nb
+            ieb = cg%ie+mg_nb
+         else
+            isb = 1
+            ieb = 1
+         endif
 
-      if (has_dir(zdim)) then
-         ksb = cg%ks-mg_nb
-         keb = cg%ke+mg_nb
-      else
-         ksb = 1
-         keb = 1
-      endif
+         if (has_dir(ydim)) then
+            jsb = cg%js-mg_nb
+            jeb = cg%je+mg_nb
+         else
+            jsb = 1
+            jeb = 1
+         endif
 
-      cg%sgp%arr(isb:ieb, jsb:jeb, ksb:keb) = roof%mgvar(:, :, :, solution)
+         if (has_dir(zdim)) then
+            ksb = cg%ks-mg_nb
+            keb = cg%ke+mg_nb
+         else
+            ksb = 1
+            keb = 1
+         endif
+
+         cg%sgp%arr(isb:ieb, jsb:jeb, ksb:keb) = roof%mgvar(:, :, :, solution)
+
+         cgl => cgl%nxt
+      enddo
 
       if (isolated) then
          grav_bnd = bnd_givenval
@@ -1200,7 +1225,39 @@ contains
 
          call vcycle_hg(outer)
 
-         cg%sgp%arr(isb:ieb, jsb:jeb, ksb:keb) = cg%sgp%arr(isb:ieb, jsb:jeb, ksb:keb) + roof%mgvar(:, :, :, solution)
+         cgl => cga%cg_leafs%cg_l(1)
+         do while (associated(cgl))
+            cg => cgl%cg
+
+            !> \todo move to multigridvars and init_multigrid
+            if (has_dir(xdim)) then
+               isb = cg%is-mg_nb
+               ieb = cg%ie+mg_nb
+            else
+               isb = 1
+               ieb = 1
+            endif
+
+            if (has_dir(ydim)) then
+               jsb = cg%js-mg_nb
+               jeb = cg%je+mg_nb
+            else
+               jsb = 1
+               jeb = 1
+            endif
+
+            if (has_dir(zdim)) then
+               ksb = cg%ks-mg_nb
+               keb = cg%ke+mg_nb
+            else
+               ksb = 1
+               keb = 1
+            endif
+
+            cg%sgp%arr(isb:ieb, jsb:jeb, ksb:keb) = cg%sgp%arr(isb:ieb, jsb:jeb, ksb:keb) + roof%mgvar(:, :, :, solution)
+
+            cgl => cgl%nxt
+         enddo
 
          grav_bnd = bnd_isolated ! restore
 

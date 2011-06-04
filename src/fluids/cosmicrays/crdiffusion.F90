@@ -43,13 +43,29 @@ module crdiffusion
 contains
 
    subroutine init_crdiffusion(crsall)
-      use grid,          only: cg
-      use diagnostics,   only: ma4d, my_allocate
-      implicit none
-      integer, intent(in) :: crsall
 
-      ma4d = [crsall, cg%nx, cg%ny, cg%nz]
-      call my_allocate(wcr, ma4d, "wcr")
+      use dataio_pub,  only: die
+      use diagnostics, only: ma4d, my_allocate
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+
+      implicit none
+
+      integer, intent(in) :: crsall
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:init_crdiffusion] multiple grid pieces per procesor not implemented yet") !nontrivial crsall
+      !> \todo provide hooks for rank-4 user/physics arrays in grid container
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         ma4d = [crsall, cg%nx, cg%ny, cg%nz]
+         call my_allocate(wcr, ma4d, "wcr")
+         cgl => cgl%nxt
+      enddo
+
    end subroutine init_crdiffusion
 
    subroutine cleanup_crdiffusion
@@ -68,7 +84,8 @@ contains
 
       use constants,  only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI
       use dataio_pub, only: die
-      use grid,       only: cg
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_REQUEST_NULL, MPI_COMM_NULL
       use mpisetup,   only: comm, comm3d, ierr, has_dir, psize, procn, req, status
 
@@ -76,72 +93,82 @@ contains
 
       integer :: i, d, lh
       real, dimension(:,:,:,:), pointer :: pwcr
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
-      if (comm3d == MPI_COMM_NULL) then
-         pwcr => wcr
-         call cg%internal_boundaries(CR, pa4d=pwcr)
-      endif
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:all_wcr_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      req(:) = MPI_REQUEST_NULL
+         if (comm3d == MPI_COMM_NULL) then
+            pwcr => wcr
+            call cg%internal_boundaries(CR, pa4d=pwcr)
+         endif
 
-      do d = xdim, zdim
-         if (has_dir(d)) then
-            do lh = LO, HI
-               select case (cg%bnd(d, lh))
-                  case (BND_PER)
-                     if (comm3d /= MPI_COMM_NULL) then
-                        do i = 1, ceiling(cg%nb/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
+         req(:) = MPI_REQUEST_NULL
+
+         do d = xdim, zdim
+            if (has_dir(d)) then
+               do lh = LO, HI
+                  select case (cg%bnd(d, lh))
+                     case (BND_PER)
+                        if (comm3d /= MPI_COMM_NULL) then
+                           do i = 1, ceiling(cg%nb/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
+                              select case (2*d+lh)
+                                 case (2*xdim+LO)
+                                    wcr(:,1:cg%nb, :, :) = wcr(:,cg%ieb:cg%ie, :, :)
+                                 case (2*ydim+LO)
+                                    wcr(:,:, 1:cg%nb, :) = wcr(:,:, cg%jeb:cg%je, :)
+                                 case (2*zdim+LO)
+                                    wcr(:,:, :, 1:cg%nb) = wcr(:,:, :, cg%keb:cg%ke)
+                                 case (2*xdim+HI)
+                                    wcr(:,cg%ie+1:cg%nx, :, :) = wcr(:,cg%is:cg%isb, :, :)
+                                 case (2*ydim+HI)
+                                    wcr(:,:, cg%je+1:cg%ny, :) = wcr(:,:, cg%js:cg%jsb, :)
+                                 case (2*zdim+HI)
+                                    wcr(:,:, :, cg%ke+1:cg%nz) = wcr(:,:, :, cg%ks:cg%ksb)
+                              end select
+                           enddo
+                        endif
+                     case (BND_MPI)
+                        if (comm3d /= MPI_COMM_NULL) then
+                           if (psize(d) > 1) then
+                              call MPI_Isend(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BLK),  procn(d, lh), 2*d+(LO+HI-lh), comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                              call MPI_Irecv(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BND),  procn(d, lh), 2*d+       lh,  comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                           else
+                              call die("[crdiffiusion:all_wcr_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
+                           endif
+                        endif
+                     case default ! Set gradient == 0 on the external boundaries
+                        do i = 1, cg%nb
                            select case (2*d+lh)
                               case (2*xdim+LO)
-                                 wcr(:,1:cg%nb, :, :) = wcr(:,cg%ieb:cg%ie, :, :)
+                                 wcr(:, i, :, :) = wcr(:, cg%is, :, :)
                               case (2*ydim+LO)
-                                 wcr(:,:, 1:cg%nb, :) = wcr(:,:, cg%jeb:cg%je, :)
+                                 wcr(:, :, i, :) = wcr(:, :, cg%js, :)
                               case (2*zdim+LO)
-                                 wcr(:,:, :, 1:cg%nb) = wcr(:,:, :, cg%keb:cg%ke)
+                                 wcr(:, :, :, i) = wcr(:, :, :, cg%ks)
                               case (2*xdim+HI)
-                                 wcr(:,cg%ie+1:cg%nx, :, :) = wcr(:,cg%is:cg%isb, :, :)
+                                 wcr(:, cg%ie+i, :, :) = wcr(:, cg%ie, :, :)
                               case (2*ydim+HI)
-                                 wcr(:,:, cg%je+1:cg%ny, :) = wcr(:,:, cg%js:cg%jsb, :)
+                                 wcr(:, :, cg%je+i, :) = wcr(:, :, cg%je, :)
                               case (2*zdim+HI)
-                                 wcr(:,:, :, cg%ke+1:cg%nz) = wcr(:,:, :, cg%ks:cg%ksb)
+                                 wcr(:, :, :, cg%ke+i) = wcr(:, :, :, cg%ke)
                            end select
                         enddo
-                     endif
-                  case (BND_MPI)
-                     if (comm3d /= MPI_COMM_NULL) then
-                        if (psize(d) > 1) then
-                           call MPI_Isend(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BLK),  procn(d, lh), 2*d+(LO+HI-lh), comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
-                           call MPI_Irecv(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BND),  procn(d, lh), 2*d+       lh,  comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
-                        else
-                           call die("[crdiffiusion:all_wcr_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
-                        endif
-                     endif
-                  case default ! Set gradient == 0 on the external boundaries
-                     do i = 1, cg%nb
-                        select case (2*d+lh)
-                           case (2*xdim+LO)
-                              wcr(:, i, :, :) = wcr(:, cg%is, :, :)
-                           case (2*ydim+LO)
-                              wcr(:, :, i, :) = wcr(:, :, cg%js, :)
-                           case (2*zdim+LO)
-                              wcr(:, :, :, i) = wcr(:, :, :, cg%ks)
-                           case (2*xdim+HI)
-                              wcr(:, cg%ie+i, :, :) = wcr(:, cg%ie, :, :)
-                           case (2*ydim+HI)
-                              wcr(:, :, cg%je+i, :) = wcr(:, :, cg%je, :)
-                           case (2*zdim+HI)
-                              wcr(:, :, :, cg%ke+i) = wcr(:, :, :, cg%ke)
-                        end select
-                     enddo
-               end select
+                  end select
 
-            enddo
-         endif
-         !>
-         !! \warning outside xdim-zdim loop MPI_Waitall may change the operations order (at least for openmpi-1.4.3)
-         !! and as a result may leave mpi-corners uninitiallized
-         !<
-         if (comm3d /= MPI_COMM_NULL) call MPI_Waitall(size(req(:)), req(:), status(:,:), ierr)
+               enddo
+            endif
+            !>
+            !! \warning outside xdim-zdim loop MPI_Waitall may change the operations order (at least for openmpi-1.4.3)
+            !! and as a result may leave mpi-corners uninitiallized
+            !<
+            if (comm3d /= MPI_COMM_NULL) call MPI_Waitall(size(req(:)), req(:), status(:,:), ierr)
+         enddo
+
+         cgl => cgl%nxt
       enddo
 
    end subroutine all_wcr_boundaries
@@ -151,11 +178,13 @@ contains
 !<
    subroutine cr_diff_x
 
+      use constants,      only: xdim, ydim, zdim
+      use dataio_pub,     only: die
       use fluidindex,     only: ibx, iby, ibz, flind
-      use grid,           only: cg
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
       use mpisetup,       only: dt, has_dir
-      use constants,      only: xdim, ydim, zdim
 
       implicit none
 
@@ -163,52 +192,63 @@ contains
       real    :: b1b, b2b, b3b, bb
       real, dimension(flind%crs%all)  :: decr1, decr2, decr3, fcrdif1
       real, dimension(flind%crs%all)  :: dqp, dqm
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       !=======================================================================
 
       if (.not.has_dir(xdim)) return
 
-      do k=cg%ks, cg%ke
-         do j=cg%js, cg%je
-            do i=2, cg%nx     ! if we are here this implies nxb /= 1
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:cr_diff_x] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
 
-               decr1 =  (cg%u%arr(iarr_crs,i,  j,  k) - cg%u%arr(iarr_crs,i-1,j,  k)) * cg%idx
-               fcrdif1 = K_crs_perp * decr1
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-               b1b =  cg%b%arr(ibx,i,  j,  k)
+         do k=cg%ks, cg%ke
+            do j=cg%js, cg%je
+               do i=2, cg%nx     ! if we are here this implies nxb /= 1
 
-               if (has_dir(ydim)) then
-                  dqm = 0.5*((cg%u%arr(iarr_crs,i-1,j  ,k ) + cg%u%arr(iarr_crs,i ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j-1,k ) + cg%u%arr(iarr_crs,i ,j-1,k ))) * cg%idy
-                  dqp = 0.5*((cg%u%arr(iarr_crs,i-1,j+1,k ) + cg%u%arr(iarr_crs,i ,j+1,k )) - (cg%u%arr(iarr_crs,i-1,j  ,k ) + cg%u%arr(iarr_crs,i ,j  ,k ))) * cg%idy
-                  decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                  b2b = sum(cg%b%arr(iby,i-1:i, j:j+1, k    ))*0.25
-               else
-                  decr2 = 0.
-                  b2b = 0.
-               endif
+                  decr1 =  (cg%u%arr(iarr_crs,i,  j,  k) - cg%u%arr(iarr_crs,i-1,j,  k)) * cg%idx
+                  fcrdif1 = K_crs_perp * decr1
 
-               if (has_dir(zdim)) then
-                  dqm = 0.5*((cg%u%arr(iarr_crs,i-1,j ,k  ) + cg%u%arr(iarr_crs,i ,j ,k  )) - (cg%u%arr(iarr_crs,i-1,j ,k-1) + cg%u%arr(iarr_crs,i ,j ,k-1))) * cg%idz
-                  dqp = 0.5*((cg%u%arr(iarr_crs,i-1,j ,k+1) + cg%u%arr(iarr_crs,i ,j ,k+1)) - (cg%u%arr(iarr_crs,i-1,j ,k  ) + cg%u%arr(iarr_crs,i ,j ,k  ))) * cg%idz
-                  decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                  b3b = sum(cg%b%arr(ibz,i-1:i, j,     k:k+1))*0.25
-               else
-                  decr3 = 0.
-                  b3b = 0.
-               endif
+                  b1b =  cg%b%arr(ibx,i,  j,  k)
 
-               bb = b1b**2 + b2b**2 + b3b**2
-               if (bb /= 0.) fcrdif1 = fcrdif1 + K_crs_paral * b1b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
+                  if (has_dir(ydim)) then
+                     dqm = 0.5*((cg%u%arr(iarr_crs,i-1,j  ,k ) + cg%u%arr(iarr_crs,i ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j-1,k ) + cg%u%arr(iarr_crs,i ,j-1,k ))) * cg%idy
+                     dqp = 0.5*((cg%u%arr(iarr_crs,i-1,j+1,k ) + cg%u%arr(iarr_crs,i ,j+1,k )) - (cg%u%arr(iarr_crs,i-1,j  ,k ) + cg%u%arr(iarr_crs,i ,j  ,k ))) * cg%idy
+                     decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                     b2b = sum(cg%b%arr(iby,i-1:i, j:j+1, k    ))*0.25
+                  else
+                     decr2 = 0.
+                     b2b = 0.
+                  endif
 
-               wcr(:,i,j,k) = - fcrdif1 * dt * cg%idx
+                  if (has_dir(zdim)) then
+                     dqm = 0.5*((cg%u%arr(iarr_crs,i-1,j ,k  ) + cg%u%arr(iarr_crs,i ,j ,k  )) - (cg%u%arr(iarr_crs,i-1,j ,k-1) + cg%u%arr(iarr_crs,i ,j ,k-1))) * cg%idz
+                     dqp = 0.5*((cg%u%arr(iarr_crs,i-1,j ,k+1) + cg%u%arr(iarr_crs,i ,j ,k+1)) - (cg%u%arr(iarr_crs,i-1,j ,k  ) + cg%u%arr(iarr_crs,i ,j ,k  ))) * cg%idz
+                     decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                     b3b = sum(cg%b%arr(ibz,i-1:i, j,     k:k+1))*0.25
+                  else
+                     decr3 = 0.
+                     b3b = 0.
+                  endif
 
+                  bb = b1b**2 + b2b**2 + b3b**2
+                  if (bb /= 0.) fcrdif1 = fcrdif1 + K_crs_paral * b1b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
+
+                  wcr(:,i,j,k) = - fcrdif1 * dt * cg%idx
+
+               enddo
             enddo
          enddo
-      enddo
 
-      call all_wcr_boundaries
-      cg%u%arr(iarr_crs,1:cg%nx-1,:,:) = cg%u%arr(iarr_crs,1:cg%nx-1,:,:) - ( wcr(:,2:cg%nx,:,:) - wcr(:,1:cg%nx-1,:,:) )
-      cg%u%arr(iarr_crs, cg%nx,:,:) = cg%u%arr(iarr_crs, cg%nx-1,:,:) ! for sanity
+         call all_wcr_boundaries
+         cg%u%arr(iarr_crs,1:cg%nx-1,:,:) = cg%u%arr(iarr_crs,1:cg%nx-1,:,:) - ( wcr(:,2:cg%nx,:,:) - wcr(:,1:cg%nx-1,:,:) )
+         cg%u%arr(iarr_crs, cg%nx,:,:) = cg%u%arr(iarr_crs, cg%nx-1,:,:) ! for sanity
+
+         cgl => cgl%nxt
+      enddo
 
    end subroutine cr_diff_x
 
@@ -217,11 +257,13 @@ contains
 !<
    subroutine cr_diff_y
 
+      use constants,      only: xdim, ydim, zdim
+      use dataio_pub,     only: die
       use fluidindex,     only: ibx, iby, ibz, flind
-      use grid,           only: cg
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
       use mpisetup,       only: dt, has_dir
-      use constants,      only: xdim, ydim, zdim
 
       implicit none
 
@@ -229,52 +271,63 @@ contains
       real    :: b1b, b2b, b3b, bb
       real, dimension(flind%crs%all)  :: decr1, decr2, decr3, fcrdif2
       real, dimension(flind%crs%all)  :: dqp, dqm
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
 !=======================================================================
 
       if (.not.has_dir(ydim)) return
 
-      do k=cg%ks, cg%ke
-         do j=2, cg%ny ! if we are here nyb /= 1
-            do i=cg%is, cg%ie
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:cr_diff_y] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
 
-               decr2 = (cg%u%arr(iarr_crs,i,j,k) - cg%u%arr(iarr_crs,i,j-1,k)) * cg%idy
-               fcrdif2 = K_crs_perp * decr2
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-               b2b =  cg%b%arr(iby,i,j,k)
+         do k=cg%ks, cg%ke
+            do j=2, cg%ny ! if we are here nyb /= 1
+               do i=cg%is, cg%ie
 
-               if (has_dir(xdim)) then
-                  dqm = 0.5*((cg%u%arr(iarr_crs,i  ,j-1,k ) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j-1,k ) + cg%u%arr(iarr_crs,i-1,j  ,k ))) * cg%idx
-                  dqp = 0.5*((cg%u%arr(iarr_crs,i+1,j-1,k ) + cg%u%arr(iarr_crs,i+1,j  ,k )) - (cg%u%arr(iarr_crs,i  ,j-1,k ) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idx
-                  decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                  b1b = sum(cg%b%arr(ibx,i:i+1, j-1:j, k))*0.25
-               else
-                  decr1 = 0.
-                  b1b = 0.
-               endif
+                  decr2 = (cg%u%arr(iarr_crs,i,j,k) - cg%u%arr(iarr_crs,i,j-1,k)) * cg%idy
+                  fcrdif2 = K_crs_perp * decr2
 
-               if (has_dir(zdim)) then
-                  dqm = 0.5*((cg%u%arr(iarr_crs,i ,j-1,k  ) + cg%u%arr(iarr_crs,i ,j  ,k  )) - (cg%u%arr(iarr_crs,i ,j-1,k-1) + cg%u%arr(iarr_crs,i ,j  ,k-1))) * cg%idz
-                  dqp = 0.5*((cg%u%arr(iarr_crs,i ,j-1,k+1) + cg%u%arr(iarr_crs,i ,j  ,k+1)) - (cg%u%arr(iarr_crs,i ,j-1,k  ) + cg%u%arr(iarr_crs,i ,j  ,k  ))) * cg%idz
-                  decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                  b3b = sum(cg%b%arr(ibz,i, j-1:j, k:k+1))*0.25
-               else
-                  decr3 = 0.
-                  b3b = 0.
-               endif
+                  b2b =  cg%b%arr(iby,i,j,k)
 
-               bb = b1b**2 + b2b**2 + b3b**2
-               if (bb /= 0.) fcrdif2 = fcrdif2 + K_crs_paral * b2b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
+                  if (has_dir(xdim)) then
+                     dqm = 0.5*((cg%u%arr(iarr_crs,i  ,j-1,k ) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j-1,k ) + cg%u%arr(iarr_crs,i-1,j  ,k ))) * cg%idx
+                     dqp = 0.5*((cg%u%arr(iarr_crs,i+1,j-1,k ) + cg%u%arr(iarr_crs,i+1,j  ,k )) - (cg%u%arr(iarr_crs,i  ,j-1,k ) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idx
+                     decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                     b1b = sum(cg%b%arr(ibx,i:i+1, j-1:j, k))*0.25
+                  else
+                     decr1 = 0.
+                     b1b = 0.
+                  endif
 
-               wcr(:,i,j,k) = - fcrdif2 * dt * cg%idy
+                  if (has_dir(zdim)) then
+                     dqm = 0.5*((cg%u%arr(iarr_crs,i ,j-1,k  ) + cg%u%arr(iarr_crs,i ,j  ,k  )) - (cg%u%arr(iarr_crs,i ,j-1,k-1) + cg%u%arr(iarr_crs,i ,j  ,k-1))) * cg%idz
+                     dqp = 0.5*((cg%u%arr(iarr_crs,i ,j-1,k+1) + cg%u%arr(iarr_crs,i ,j  ,k+1)) - (cg%u%arr(iarr_crs,i ,j-1,k  ) + cg%u%arr(iarr_crs,i ,j  ,k  ))) * cg%idz
+                     decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                     b3b = sum(cg%b%arr(ibz,i, j-1:j, k:k+1))*0.25
+                  else
+                     decr3 = 0.
+                     b3b = 0.
+                  endif
 
+                  bb = b1b**2 + b2b**2 + b3b**2
+                  if (bb /= 0.) fcrdif2 = fcrdif2 + K_crs_paral * b2b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
+
+                  wcr(:,i,j,k) = - fcrdif2 * dt * cg%idy
+
+               enddo
             enddo
          enddo
-      enddo
 
-      call all_wcr_boundaries
-      cg%u%arr(iarr_crs,:,1:cg%ny-1,:) = cg%u%arr(iarr_crs,:,1:cg%ny-1,:) - ( wcr(:,:,2:cg%ny,:) - wcr(:,:,1:cg%ny-1,:) )
-      cg%u%arr(iarr_crs,:, cg%ny,:) = cg%u%arr(iarr_crs,:, cg%ny-1,:) ! for sanity
+         call all_wcr_boundaries
+         cg%u%arr(iarr_crs,:,1:cg%ny-1,:) = cg%u%arr(iarr_crs,:,1:cg%ny-1,:) - ( wcr(:,:,2:cg%ny,:) - wcr(:,:,1:cg%ny-1,:) )
+         cg%u%arr(iarr_crs,:, cg%ny,:) = cg%u%arr(iarr_crs,:, cg%ny-1,:) ! for sanity
+
+         cgl => cgl%nxt
+      enddo
 
    end subroutine cr_diff_y
 
@@ -283,11 +336,13 @@ contains
 !<
    subroutine cr_diff_z
 
+      use constants,      only: xdim, ydim, zdim
+      use dataio_pub,     only: die
       use fluidindex,     only: ibx, iby, ibz, flind
-      use grid,           only: cg
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
       use mpisetup,       only: dt, has_dir
-      use constants,      only: xdim, ydim, zdim
 
       implicit none
 
@@ -295,52 +350,63 @@ contains
       real    :: b1b, b2b, b3b, bb
       real, dimension(flind%crs%all) :: decr1, decr2, decr3, fcrdif3
       real, dimension(flind%crs%all) :: dqp, dqm
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
 !=======================================================================
 
       if (.not.has_dir(zdim)) return
 
-      do k=2, cg%nz      ! nzb /= 1
-         do j=cg%js, cg%je
-            do i=cg%is, cg%ie
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:cr_diff_z] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
 
-               decr3 =  (cg%u%arr(iarr_crs,i,j,k    ) - cg%u%arr(iarr_crs,i,j,  k-1)) * cg%idz
-               fcrdif3 = K_crs_perp * decr3
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-               b3b =  cg%b%arr(ibz,i,j,k)
+         do k=2, cg%nz      ! nzb /= 1
+            do j=cg%js, cg%je
+               do i=cg%is, cg%ie
 
-               if (has_dir(xdim)) then
-                  dqm = 0.5*((cg%u%arr(iarr_crs,i  ,j ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j ,k-1) + cg%u%arr(iarr_crs,i-1,j  ,k ))) * cg%idx
-                  dqp = 0.5*((cg%u%arr(iarr_crs,i+1,j ,k-1) + cg%u%arr(iarr_crs,i+1,j  ,k )) - (cg%u%arr(iarr_crs,i  ,j ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idx
-                  decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                  b1b = sum(cg%b%arr(ibx,i:i+1, j,     k-1:k))*0.25
-               else
-                  decr1 = 0.
-                  b1b = 0.
-               endif
+                  decr3 =  (cg%u%arr(iarr_crs,i,j,k    ) - cg%u%arr(iarr_crs,i,j,  k-1)) * cg%idz
+                  fcrdif3 = K_crs_perp * decr3
 
-               if (has_dir(ydim)) then
-                  dqm = 0.5*((cg%u%arr(iarr_crs,i ,j  ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i ,j-1,k-1) + cg%u%arr(iarr_crs,i  ,j-1,k ))) * cg%idy
-                  dqp = 0.5*((cg%u%arr(iarr_crs,i ,j+1,k-1) + cg%u%arr(iarr_crs,i  ,j+1,k )) - (cg%u%arr(iarr_crs,i ,j  ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idy
-                  decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                  b2b = sum(cg%b%arr(iby,i,     j:j+1, k-1:k))*0.25
-               else
-                  decr2 = 0.
-                  b2b = 0.
-               endif
+                  b3b =  cg%b%arr(ibz,i,j,k)
 
-               bb = b1b**2 + b2b**2 + b3b**2
-               if (bb /= 0.) fcrdif3 = fcrdif3 + K_crs_paral * b3b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
+                  if (has_dir(xdim)) then
+                     dqm = 0.5*((cg%u%arr(iarr_crs,i  ,j ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j ,k-1) + cg%u%arr(iarr_crs,i-1,j  ,k ))) * cg%idx
+                     dqp = 0.5*((cg%u%arr(iarr_crs,i+1,j ,k-1) + cg%u%arr(iarr_crs,i+1,j  ,k )) - (cg%u%arr(iarr_crs,i  ,j ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idx
+                     decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                     b1b = sum(cg%b%arr(ibx,i:i+1, j,     k-1:k))*0.25
+                  else
+                     decr1 = 0.
+                     b1b = 0.
+                  endif
 
-               wcr(:,i,j,k) = - fcrdif3 * dt * cg%idz
+                  if (has_dir(ydim)) then
+                     dqm = 0.5*((cg%u%arr(iarr_crs,i ,j  ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i ,j-1,k-1) + cg%u%arr(iarr_crs,i  ,j-1,k ))) * cg%idy
+                     dqp = 0.5*((cg%u%arr(iarr_crs,i ,j+1,k-1) + cg%u%arr(iarr_crs,i  ,j+1,k )) - (cg%u%arr(iarr_crs,i ,j  ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idy
+                     decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                     b2b = sum(cg%b%arr(iby,i,     j:j+1, k-1:k))*0.25
+                  else
+                     decr2 = 0.
+                     b2b = 0.
+                  endif
 
+                  bb = b1b**2 + b2b**2 + b3b**2
+                  if (bb /= 0.) fcrdif3 = fcrdif3 + K_crs_paral * b3b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
+
+                  wcr(:,i,j,k) = - fcrdif3 * dt * cg%idz
+
+               enddo
             enddo
          enddo
-      enddo
 
-      call all_wcr_boundaries
-      cg%u%arr(iarr_crs,:,:,1:cg%nz-1) = cg%u%arr(iarr_crs,:,:,1:cg%nz-1) - ( wcr(:,:,:,2:cg%nz) - wcr(:,:,:,1:cg%nz-1) )
-      cg%u%arr(iarr_crs,:,:, cg%nz) = cg%u%arr(iarr_crs,:,:, cg%nz-1) ! for sanity
+         call all_wcr_boundaries
+         cg%u%arr(iarr_crs,:,:,1:cg%nz-1) = cg%u%arr(iarr_crs,:,:,1:cg%nz-1) - ( wcr(:,:,:,2:cg%nz) - wcr(:,:,:,1:cg%nz-1) )
+         cg%u%arr(iarr_crs,:,:, cg%nz) = cg%u%arr(iarr_crs,:,:, cg%nz-1) ! for sanity
+
+         cgl => cgl%nxt
+      enddo
 
    end subroutine cr_diff_z
 

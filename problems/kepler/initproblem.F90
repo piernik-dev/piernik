@@ -291,7 +291,7 @@ contains
                xi = cg%x(i)
                rc = sqrt(xi**2+yj**2)
 
-               if (has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2)
+               if (has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2, cg=cg)
 
                do k = 1, cg%nz
 
@@ -367,7 +367,7 @@ contains
          if (.not.allocated(taus)) allocate(taus(cg%nx)) ! not deallocated
 
          call source_terms_grav
-         call grav_pot2accel(xdim,1,1, cg%nx, grav, 1)
+         call grav_pot2accel(xdim,1,1, cg%nx, grav, 1, cg)
 
          dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
 
@@ -710,7 +710,7 @@ contains
          cs2_arr(i) = flind%all_fluids(i)%cs2
       enddo
 
-      call grav_pot2accel(xdim,1,1, cg%nx, grav, 1)
+      call grav_pot2accel(xdim,1,1, cg%nx, grav, 1, cg)
 
       do i = 1, cg%nb
          cg%u%arr(iarr_all_dn,i,:,:) = cg%u%arr(iarr_all_dn, cg%is,:,:)

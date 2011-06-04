@@ -53,12 +53,16 @@ contains
       use dataio_pub,    only: die
       use dataio_user,   only: user_vars_hdf5
       use diagnostics,   only: my_allocate
-      use grid,          only: cg
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element, grid_container
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave
+      use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave, dom
       use types,         only: problem_customize_solution, finalize_problem, cleanup_problem
 
       implicit none
+
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       d0           = 1.0e5     !< density
       p0           = 1.0       !< pressure
@@ -68,7 +72,7 @@ contains
       x0           = 0.0       !< x-position of the blob
       y0           = 0.0       !< y-position of the blob
       z0           = 0.0       !< z-position of the blob
-      r0           = 5.*cg%dxmn   !< radius of the blob
+      r0           = 5.* minval([dom%Lx, dom%lY, dom%Lz]/dom%n_d) !< radius of the blob
 
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
@@ -118,8 +122,18 @@ contains
 
       if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
-      call my_allocate(aecr1, [cg%nxb, cg%nyb, cg%nzb], "aecr1")
-      aecr1(:,:,:) = 0.
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:read_problem_par] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
+      !> \todo provide mechanism for rank-3 user arrays in grid_container
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         call my_allocate(aecr1, [cg%nxb, cg%nyb, cg%nzb], "aecr1")
+         aecr1(:,:,:) = 0.
+         cgl => cgl%nxt
+      enddo
+
 
       problem_customize_solution => check_norm
       finalize_problem           => check_norm
@@ -146,7 +160,8 @@ contains
 
       use dataio_pub,     only: die, warn
       use fluidindex,     only: ibx, iby, ibz
-      use grid,           only: cg
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
       use mpisetup,       only: has_dir, dom
       use constants,      only: xdim, ydim, zdim
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
@@ -158,6 +173,8 @@ contains
       integer, parameter :: icr = 1 !< Only first CR component
       integer :: iecr
       real    :: cs_iso, r2
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       iecr = -1
       if (ncrn+ncre >= icr) then
@@ -180,42 +197,48 @@ contains
          K_crn_perp(icr)  = 0.
       endif
 
-      cg%b%arr(ibx, :, :, :) = bx0
-      cg%b%arr(iby, :, :, :) = by0
-      cg%b%arr(ibz, :, :, :) = bz0
-      cg%u%arr(idni, :, :, :) = d0
-      cg%u%arr(imxi:imzi, :, :, :) = 0.0
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         cg%b%arr(ibx, :, :, :) = bx0
+         cg%b%arr(iby, :, :, :) = by0
+         cg%b%arr(ibz, :, :, :) = bz0
+         cg%u%arr(idni, :, :, :) = d0
+         cg%u%arr(imxi:imzi, :, :, :) = 0.0
 
 #ifndef ISO
-      do k = 1, cg%nz
-         do j = 1, cg%ny
-            do i = 1, cg%nx
-               cg%u%arr(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
-                    &          0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1)/cg%u%arr(idni,i,j,k) + &
-                    &          0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+         do k = 1, cg%nz
+            do j = 1, cg%ny
+               do i = 1, cg%nx
+                  cg%u%arr(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
+                       &                 0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1)/cg%u%arr(idni,i,j,k) + &
+                       &                 0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+               enddo
             enddo
          enddo
-      enddo
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-      cg%u%arr(iecr, :, :, :)      =  beta_cr*cs_iso**2 * cg%u%arr(idni, :, :, :)/(gamma_crs(icr)-1.0)
+         cg%u%arr(iecr, :, :, :)      =  beta_cr*cs_iso**2 * cg%u%arr(idni, :, :, :)/(gamma_crs(icr)-1.0)
 
 ! Explosions
-      do k = cg%ks, cg%ke
-         do j = cg%js, cg%je
-            do i = cg%is, cg%ie
-               r2 = (cg%x(i)-x0)**2+(cg%y(j)-y0)**2+(cg%z(k)-z0)**2
-               if (cg%x(i)> 2*x0-dom%xmax .and. cg%y(j) > 2*y0-dom%ymax) &
-                  cg%u%arr(iecr, i, j, k)= cg%u%arr(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  r2 = (cg%x(i)-x0)**2+(cg%y(j)-y0)**2+(cg%z(k)-z0)**2
+                  if (cg%x(i)> 2*x0-dom%xmax .and. cg%y(j) > 2*y0-dom%ymax) &
+                       cg%u%arr(iecr, i, j, k)= cg%u%arr(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
+               enddo
             enddo
          enddo
-      enddo
 #endif /* COSM_RAYS */
+
+         cgl => cgl%nxt
+      enddo
 
       call check_norm
 
-      return
    end subroutine init_prob
 
 !-----------------------------------------------------------------------------
@@ -223,7 +246,8 @@ contains
    subroutine compute_analytic_ecr1
 
       use dataio_pub,     only: die
-      use grid,           only: cg
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use mpisetup,       only: t
 
@@ -233,6 +257,10 @@ contains
       real               :: r_par2, r_perp2, delx, dely, delz, magb, ampt, r0_par2, r0_perp2, bxn, byn, bzn
       integer            :: iecr
       integer, parameter :: icr = 1 !< Only first CR component
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:compute_analytic_ecr1] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
 
       iecr = -1
 
@@ -260,19 +288,26 @@ contains
 
       ampt     = amp_cr * r0**2 / sqrt(r0_par2 * r0_perp2)
 
-      do k = cg%ks, cg%ke
-         delz = cg%z(k) - z0
-         do j = cg%js, cg%je
-            dely = cg%y(j) - y0
-            do i = cg%is, cg%ie
-               delx = cg%x(i) - x0
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-               r_par2 = (bxn*delx + byn*dely + bzn*delz)**2 ! square of the distance form the center of the bump in direction parallel to the magnetic field
-               r_perp2 = delx**2 + dely**2 + delz**2 - r_par2
-               aecr1(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
+         do k = cg%ks, cg%ke
+            delz = cg%z(k) - z0
+            do j = cg%js, cg%je
+               dely = cg%y(j) - y0
+               do i = cg%is, cg%ie
+                  delx = cg%x(i) - x0
 
+                  r_par2 = (bxn*delx + byn*dely + bzn*delz)**2 ! square of the distance form the center of the bump in direction parallel to the magnetic field
+                  r_perp2 = delx**2 + dely**2 + delz**2 - r_par2
+                  aecr1(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
+
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
    end subroutine compute_analytic_ecr1
@@ -283,7 +318,8 @@ contains
 
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
       use constants,      only: PIERNIK_FINISHED
-      use grid,           only: cg
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre
       use mpisetup,       only: master, comm, ierr, t, nstep
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
@@ -295,6 +331,10 @@ contains
       real               :: crt
       integer            :: iecr
       integer, parameter :: icr = 1 !< Only first CR component
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
 
       iecr = -1
 
@@ -311,16 +351,22 @@ contains
       norm(:) = 0.
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
-      do k = cg%ks, cg%ke
-         do j = cg%js, cg%je
-            do i = cg%is, cg%ie
-               crt = aecr1(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
-               norm(1) = norm(1) + (crt - cg%u%arr(iecr, i, j, k))**2
-               norm(2) = norm(2) + crt**2
-               dev(1) = min(dev(1), (crt - cg%u%arr(iecr, i, j, k)))
-               dev(2) = max(dev(2), (crt - cg%u%arr(iecr, i, j, k)))
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  crt = aecr1(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
+                  norm(1) = norm(1) + (crt - cg%u%arr(iecr, i, j, k))**2
+                  norm(2) = norm(2) + crt**2
+                  dev(1) = min(dev(1), (crt - cg%u%arr(iecr, i, j, k)))
+                  dev(2) = max(dev(2), (crt - cg%u%arr(iecr, i, j, k)))
+               enddo
             enddo
          enddo
+         cgl => cgl%nxt
       enddo
 
       call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)

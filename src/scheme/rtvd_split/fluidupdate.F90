@@ -379,8 +379,10 @@ contains
 
    subroutine mag_add(ib1,dim1,ib2,dim2)
 
+      use dataio_pub,    only: die
       use func,          only: pshift, mshift
-      use grid,          only: cg
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: all_mag_boundaries
       use types,         only: custom_emf_bnd
 #ifdef RESISTIVE
@@ -390,26 +392,35 @@ contains
       implicit none
 
       integer             :: ib1,ib2,dim1,dim2
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
-      if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
-      cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) - wcu*cg%idl(dim1)
-      wcu = pshift(wcu,dim1)
-      cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) + wcu*cg%idl(dim1)
-      wcu = mshift(wcu,dim1)
-      cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) + wcu*cg%idl(dim2)
-      wcu = pshift(wcu,dim2)
-      cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - wcu*cg%idl(dim2)
+         if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
+         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) - wcu*cg%idl(dim1)
+         wcu = pshift(wcu,dim1)
+         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) + wcu*cg%idl(dim1)
+         wcu = mshift(wcu,dim1)
+         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) + wcu*cg%idl(dim2)
+         wcu = pshift(wcu,dim2)
+         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - wcu*cg%idl(dim2)
 #endif /* RESISTIVE */
 ! ADVECTION FULL STEP
-      if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa%arr)
-      cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) - cg%wa%arr*cg%idl(dim1)
-      cg%wa%arr = mshift(cg%wa%arr,dim1)
-      cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) + cg%wa%arr*cg%idl(dim1)
-      cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - cg%wa%arr*cg%idl(dim2)
-      cg%wa%arr = pshift(cg%wa%arr,dim2)
-      cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) + cg%wa%arr*cg%idl(dim2)
+         if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa%arr)
+         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) - cg%wa%arr*cg%idl(dim1)
+         cg%wa%arr = mshift(cg%wa%arr,dim1)
+         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) + cg%wa%arr*cg%idl(dim1)
+         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - cg%wa%arr*cg%idl(dim2)
+         cg%wa%arr = pshift(cg%wa%arr,dim2)
+         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) + cg%wa%arr*cg%idl(dim2)
+         cgl => cgl%nxt
+      enddo
 
       call all_mag_boundaries
 

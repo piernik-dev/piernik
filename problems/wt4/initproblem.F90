@@ -198,10 +198,11 @@ contains
 
    subroutine read_IC_file
 
-      use dataio_pub,    only: msg, die
-      use grid,          only: cg
-      use mpisetup,      only: proc, master, nproc, comm, status, ierr
-      use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use constants,  only: xdim, ydim, zdim , LO, HI
+      use dataio_pub, only: msg, die
+      use grid,       only: cg
+      use mpisetup,   only: proc, master, nproc, comm, status, ierr
+      use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
 
@@ -212,12 +213,12 @@ contains
       integer, dimension(2*NDIM)          :: ic_rng
 
       ! calculate index ranges for the subset of IC file covering local domain with a safety margin for interpolation
-      ic_is = min(ic_nx, max(1,     1+floor((cg%xminb + ic_xysize/2.)/ic_dx) - margin) )
-      ic_ie = max(1,     min(ic_nx, ceiling((cg%xmaxb + ic_xysize/2.)/ic_dx) + margin) )
-      ic_js = min(ic_ny, max(1,     1+floor((cg%yminb + ic_xysize/2.)/ic_dx) - margin) )
-      ic_je = max(1,     min(ic_ny, ceiling((cg%ymaxb + ic_xysize/2.)/ic_dx) + margin) )
-      ic_ks = min(ic_nz, max(1,     1+floor((cg%zminb + ic_zsize/2. )/ic_dx) - margin) )
-      ic_ke = max(1,     min(ic_nz, ceiling((cg%zmaxb + ic_zsize/2. )/ic_dx) + margin) )
+      ic_is = min(ic_nx, max(1,     1+floor((cg%fbnd(xdim, LO) + ic_xysize/2.)/ic_dx) - margin) )
+      ic_ie = max(1,     min(ic_nx, ceiling((cg%fbnd(xdim, HI) + ic_xysize/2.)/ic_dx) + margin) )
+      ic_js = min(ic_ny, max(1,     1+floor((cg%fbnd(ydim, LO) + ic_xysize/2.)/ic_dx) - margin) )
+      ic_je = max(1,     min(ic_ny, ceiling((cg%fbnd(ydim, HI) + ic_xysize/2.)/ic_dx) + margin) )
+      ic_ks = min(ic_nz, max(1,     1+floor((cg%fbnd(zdim, LO) + ic_zsize/2. )/ic_dx) - margin) )
+      ic_ke = max(1,     min(ic_nz, ceiling((cg%fbnd(zdim, HI) + ic_zsize/2. )/ic_dx) + margin) )
 
       if (allocated(ic_data)) call die("[initproblem:read_IC_file] ic_data already allocated")
       allocate(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, ic_vars))

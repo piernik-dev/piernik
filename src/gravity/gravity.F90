@@ -81,10 +81,16 @@ module gravity
          implicit none
       end subroutine user_grav_pot_3d
 
-      subroutine gprofs_default(iia,jja)
+      subroutine gprofs_default(iia, jja, cg)
+
+         use grid_cont, only: grid_container
+
          implicit none
+
          integer, intent(in) :: iia                    !< COMMENT ME
          integer, intent(in) :: jja                    !< COMMENT ME
+         type(grid_container), pointer, intent(in) :: cg    !< COMMENT ME
+
       end subroutine gprofs_default
 
       subroutine grav_types(gp,ax,flatten)
@@ -151,12 +157,15 @@ contains
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,         only: newtong
-      use grid,          only: cg
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element
 #ifdef CORIOLIS
       use coriolis,      only: set_omega
 #endif /* CORIOLIS */
 
       implicit none
+
+      type(cg_list_element), pointer :: cgl
 
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target, variable_gp
@@ -264,7 +273,11 @@ contains
 #endif /* CORIOLIS */
       endif
 
-      cg%gpot%arr(:,:,:) = 0.0
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cgl%cg%gpot%arr(:,:,:) = 0.0
+         cgl => cgl%nxt
+      enddo
 
       if (.not.user_grav) then
          grav_pot_3d => default_grav_pot_3d
@@ -278,7 +291,9 @@ contains
    subroutine source_terms_grav
 
 #ifdef SELF_GRAV
-      use grid,              only: cg
+      use dataio_pub,        only: die
+      use grid,              only: cga
+      use grid_cont,         only: cg_list_element, grid_container
       use fluidindex,        only: iarr_all_sg
 #ifdef POISSON_FFT
       use poissonsolver,     only: poisson_solve
@@ -292,43 +307,61 @@ contains
 
 #ifdef SELF_GRAV
       logical, save :: frun = .true.
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
-      cg%sgpm%arr = cg%sgp%arr
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[gravity:source_terms_grav] multiple grid pieces per procesor not implemented yet") !nontrivial all cg% must be solved at a time (nontrivial for multigrid, rarely possible dor FFT poisson solver)
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         cg%sgpm%arr = cg%sgp%arr
 
 #ifdef POISSON_FFT
-      call poisson_solve( sum(cg%u%arr(iarr_all_sg,:,:,:),1) )
+         call poisson_solve( sum(cg%u%arr(iarr_all_sg,:,:,:),1) )
 #endif /* POISSON_FFT */
 #ifdef MULTIGRID
-      if (size(iarr_all_sg) == 1) then
-         call multigrid_solve_grav(cg%u%arr(iarr_all_sg(1),:,:,:))
-      else
-         call multigrid_solve_grav( sum(cg%u%arr(iarr_all_sg,:,:,:),1) )
-         !>
+         if (size(iarr_all_sg) == 1) then
+            call multigrid_solve_grav(cg%u%arr(iarr_all_sg(1),:,:,:))
+         else
+            call multigrid_solve_grav( sum(cg%u%arr(iarr_all_sg,:,:,:),1) )
+            !>
          !! \deprecated BEWARE Here a lot of heap space is required and some compilers may generate code that do segfaults for big enough domains.
-         !! It is the weakest point of this type in Maclaurin test. Next one (in fluidboundaries.F90) is 8 times less sensitive.
-         !<
-      endif
+            !! It is the weakest point of this type in Maclaurin test. Next one (in fluidboundaries.F90) is 8 times less sensitive.
+            !<
+         endif
 #endif /* MULTIGRID */
+         cgl => cgl%nxt
+      enddo
 
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
       call all_sgp_boundaries
       if (frun) then
-         cg%sgpm%arr = cg%sgp%arr
+         cgl => cga%cg_leafs%cg_l(1)
+         do while (associated(cgl))
+            cgl%cg%sgpm%arr = cgl%cg%sgp%arr
+            cgl => cgl%nxt
+         enddo
          frun = .false.
       endif
 #endif /* SELF_GRAV */
       if (variable_gp) call grav_pot_3d
+
       call sum_potential
 
    end subroutine source_terms_grav
 
    subroutine sum_potential
 
-      use grid,     only: cg
-      use mpisetup, only: dt, dtm
+      use grid,      only: cga
+      use grid_cont, only: cg_list_element, grid_container
+      use mpisetup,  only: dt, dtm
 
       implicit none
+
       real :: h
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       if (dtm /= 0) then
          h = dt/dtm
@@ -336,14 +369,19 @@ contains
          h = 0.0
       endif
 
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 #ifdef SELF_GRAV
-      cg%gpot%arr  = cg%gp%arr + (1.+h)    *cg%sgp%arr -     h*cg%sgpm%arr
-      cg%hgpot%arr = cg%gp%arr + (1.+0.5*h)*cg%sgp%arr - 0.5*h*cg%sgpm%arr
+         cg%gpot%arr  = cg%gp%arr + (1.+h)    *cg%sgp%arr -     h*cg%sgpm%arr
+         cg%hgpot%arr = cg%gp%arr + (1.+0.5*h)*cg%sgp%arr - 0.5*h*cg%sgpm%arr
 #else /* !SELF_GRAV */
-      !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
-      cg%gpot%arr  = cg%gp%arr
-      cg%hgpot%arr = cg%gp%arr
+         !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
+         cg%gpot%arr  = cg%gp%arr
+         cg%hgpot%arr = cg%gp%arr
 #endif /* !SELF_GRAV */
+         cgl => cgl%nxt
+      enddo
 
    end subroutine sum_potential
 
@@ -353,11 +391,20 @@ contains
 
    subroutine all_sgp_boundaries
 
-      use grid,   only: arr3d_boundaries, cg
+      use dataio_pub, only: die
+      use grid,       only: arr3d_boundaries, cga
+      use grid_cont,  only: cg_list_element
 
       implicit none
+      type(cg_list_element), pointer :: cgl
 
-      if (associated(cg%sgp%arr)) call arr3d_boundaries(cg%sgp%arr)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[gravity:all_sgp_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         if (associated(cgl%cg%sgp%arr)) call arr3d_boundaries(cgl%cg%sgp%arr)
+         cgl => cgl%nxt
+      enddo
 
    end subroutine all_sgp_boundaries
 
@@ -618,85 +665,95 @@ contains
    subroutine default_grav_pot_3d
 
       use dataio_pub,   only: die, warn
-      use grid,         only: cg
+      use grid,         only: cga
+      use grid_cont,    only: cg_list_element, grid_container
       use mpisetup,     only: master, geometry_type
       use types,        only: axes
       use constants,    only: GEO_XYZ
 
       implicit none
+
       type(axes) :: ax
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
-      if (.not.allocated(ax%x)) allocate(ax%x(size(cg%x)))
-      if (.not.allocated(ax%y)) allocate(ax%y(size(cg%y)))
-      if (.not.allocated(ax%z)) allocate(ax%z(size(cg%z)))
-      ax%x = cg%x
-      ax%y = cg%y
-      ax%z = cg%z
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         if (.not.allocated(ax%x)) allocate(ax%x(size(cg%x)))
+         if (.not.allocated(ax%y)) allocate(ax%y(size(cg%y)))
+         if (.not.allocated(ax%z)) allocate(ax%z(size(cg%z)))
+         ax%x = cg%x
+         ax%y = cg%y
+         ax%z = cg%z
 
-      gp_status = ''
+         gp_status = ''
 
-      if (geometry_type /= GEO_XYZ) then
-          select case (external_gp)
-             case ("null", "grav_null", "GRAV_NULL")
-                ! No gravity - no problem, selfgravity has to check the geometry during initialization
-             case ("user", "grav_user", "GRAV_USER")
-                ! The User knows what he/she is doing ...
-             case default ! standard cases do not support cylindrical geometry yet
-                call die("[gravity:default_grav_pot_3d] Non-cartesian geometry is not implemented.")
-          end select
-       endif
+         if (geometry_type /= GEO_XYZ) then
+            select case (external_gp)
+               case ("null", "grav_null", "GRAV_NULL")
+                  ! No gravity - no problem, selfgravity has to check the geometry during initialization
+               case ("user", "grav_user", "GRAV_USER")
+                  ! The User knows what he/she is doing ...
+               case default ! standard cases do not support cylindrical geometry yet
+                  call die("[gravity:default_grav_pot_3d] Non-cartesian geometry is not implemented.")
+            end select
+         endif
 
-      select case (external_gp)
-         case ("null", "grav_null", "GRAV_NULL")
-            call grav_null(cg%gp%arr,ax)                    ; grav_type => grav_null
-         case ("linear", "grav_lin", "GRAV_LINEAR")
-            call grav_linear(cg%gp%arr,ax)                  ; grav_type => grav_linear
-         case ("uniform", "grav_unif", "GRAV_UNIFORM")
-            call grav_uniform(cg%gp%arr,ax)                 ; grav_type => grav_uniform
-         case ("softened ptmass", "ptmass_soft", "GRAV_PTMASS")
-            call grav_ptmass_softened(cg%gp%arr,ax,.false.) ; grav_type => grav_ptmass_softened
-         case ("stiff ptmass", "ptmass_stiff", "GRAV_PTMASSSTIFF")
-            call grav_ptmass_stiff(cg%gp%arr,ax)            ; grav_type => grav_ptmass_stiff
-         case ("ptmass", "ptmass_pure", "GRAV_PTMASSPURE")
-            call grav_ptmass_pure(cg%gp%arr,ax,.false.)     ; grav_type => grav_ptmass_pure
-         case ("flat softened ptmass", "flat_ptmass_soft", "GRAV_PTFLAT")
-            call grav_ptmass_softened(cg%gp%arr,ax,.true.)  ; grav_type => grav_ptmass_softened
-         case ("flat ptmass", "flat_ptmass")
-            call grav_ptmass_pure(cg%gp%arr,ax,.true.)      ; grav_type => grav_ptmass_pure
-         case ("roche", "grav_roche", "GRAV_ROCHE")
+         select case (external_gp)
+            case ("null", "grav_null", "GRAV_NULL")
+               call grav_null(cg%gp%arr,ax)                    ; grav_type => grav_null
+            case ("linear", "grav_lin", "GRAV_LINEAR")
+               call grav_linear(cg%gp%arr,ax)                  ; grav_type => grav_linear
+            case ("uniform", "grav_unif", "GRAV_UNIFORM")
+               call grav_uniform(cg%gp%arr,ax)                 ; grav_type => grav_uniform
+            case ("softened ptmass", "ptmass_soft", "GRAV_PTMASS")
+               call grav_ptmass_softened(cg%gp%arr,ax,.false.) ; grav_type => grav_ptmass_softened
+            case ("stiff ptmass", "ptmass_stiff", "GRAV_PTMASSSTIFF")
+               call grav_ptmass_stiff(cg%gp%arr,ax)            ; grav_type => grav_ptmass_stiff
+            case ("ptmass", "ptmass_pure", "GRAV_PTMASSPURE")
+               call grav_ptmass_pure(cg%gp%arr,ax,.false.)     ; grav_type => grav_ptmass_pure
+            case ("flat softened ptmass", "flat_ptmass_soft", "GRAV_PTFLAT")
+               call grav_ptmass_softened(cg%gp%arr,ax,.true.)  ; grav_type => grav_ptmass_softened
+            case ("flat ptmass", "flat_ptmass")
+               call grav_ptmass_pure(cg%gp%arr,ax,.true.)      ; grav_type => grav_ptmass_pure
+            case ("roche", "grav_roche", "GRAV_ROCHE")
 #ifndef CORIOLIS
-            call die("[gravity:default_grav_pot_3d] define CORIOLIS in piernik.def for Roche potential")
+               call die("[gravity:default_grav_pot_3d] define CORIOLIS in piernik.def for Roche potential")
 #endif /* !CORIOLIS */
-            call grav_roche(cg%gp%arr,ax)                   ; grav_type => grav_roche
-         case ("user", "grav_user", "GRAV_USER")
-            call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
-         case default
-            gp_status = 'undefined'
-      end select
+               call grav_roche(cg%gp%arr,ax)                   ; grav_type => grav_roche
+            case ("user", "grav_user", "GRAV_USER")
+               call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
+            case default
+               gp_status = 'undefined'
+         end select
 
 !-----------------------
 
-      if (gp_status == 'undefined') then
-         if (associated(grav_accel)) then
-            if (master) call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
-            call grav_accel2pot
-         else
-            call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
+         if (gp_status == 'undefined') then
+            if (associated(grav_accel)) then
+               if (master) call warn("[gravity:default_grav_pot_3d]: using 'grav_accel' defined by user")
+               call grav_accel2pot
+            else
+               call die("[gravity:default_grav_pot_3d]: GRAV is defined, but 'gp' is not initialized")
+            endif
          endif
-      endif
 
-      if (allocated(ax%x)) deallocate(ax%x)
-      if (allocated(ax%y)) deallocate(ax%y)
-      if (allocated(ax%z)) deallocate(ax%z)
+         if (allocated(ax%x)) deallocate(ax%x)
+         if (allocated(ax%y)) deallocate(ax%y)
+         if (allocated(ax%z)) deallocate(ax%z)
+
+         cgl => cgl%nxt
+      enddo
 
    end subroutine default_grav_pot_3d
 
 !>
 !! \brief Routine that compute values of gravitational acceleration using gravitational potential array gp
 !<
-   subroutine grav_pot2accel(sweep, i1,i2, n, grav,istep)
+   subroutine grav_pot2accel(sweep, i1, i2, n, grav, istep, cg)
 
-      use grid,      only: cg
+      use grid_cont, only: grid_container
       use constants, only: xdim, ydim, zdim
 
       implicit none
@@ -707,6 +764,8 @@ contains
       integer, intent(in)            :: n          !< number of elements of returned array grav
       real, dimension(n),intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
       integer, intent(in)            :: istep      !< istep=1 for halfstep, istep=2 for fullstep
+      type(grid_container), pointer, intent(in) :: cg
+
 !> \todo offer high order gradient as an option in parameter file
 !      real, parameter :: onetw = 1./12.
 

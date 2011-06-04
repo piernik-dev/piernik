@@ -238,7 +238,6 @@ contains
 
    subroutine cosmicray_index(flind)
 
-      use grid,            only: cg
       use fluidtypes,      only: var_numbers
 
       implicit none
@@ -277,7 +276,7 @@ contains
 #ifdef NEW_HDF5
       call cr_add_hdf5(ncrs)
 #else /* !NEW_HDF5 */
-      if (.false.) icr = 0 * cg%is !suppress compiler warnings on unused arguments
+      if (.false.) icr = 0 * flind%crn%beg !suppress compiler warnings on unused arguments
 #endif /* !NEW_HDF5 */
 
    end subroutine cosmicray_index

@@ -137,7 +137,8 @@ contains
       use constants,     only: pi
       use units,         only: fpiG, newtong
       use dataio_pub,    only: tend, msg, printinfo, warn
-      use grid,          only: cg
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element, grid_container
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
       use mpisetup,      only: master, dom
 
@@ -147,6 +148,8 @@ contains
       real    :: xi, yj, zk, kn, Tamp, pres, Tamp_rounded, Tamp_aux
       real    :: cs0, omg, omg2, kJ
       integer, parameter :: g_lun = 137
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       cs0  = sqrt(gamma_ion * p0 / d0)
       kn   = sqrt(kx**2 + ky**2 + kz**2)
@@ -190,35 +193,40 @@ contains
       endif
 ! Uniform equilibrium state
 
-      do k = cg%ks, cg%ke
-         zk = cg%z(k)-dom%zmin
-         do j = cg%js, cg%je
-            yj = cg%y(j)-dom%ymin
-            do i = cg%is, cg%ie
-               xi = cg%x(i)-dom%xmin
-               select case (mode)
-               case (0)
-                  cg%u%arr(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi + ky*yj + kz*zk))
-                  pres            = p0 * (1. + gamma_ion * amp * sin(kx*xi + ky*yj + kz*zk))
-               case (1)
-                  cg%u%arr(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
-                  pres            = p0 * (1. + gamma_ion * amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
-               case default ! should not happen
-                  cg%u%arr(idni,i,j,k)   = d0
-                  pres            = p0
-               end select
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         do k = cg%ks, cg%ke
+            zk = cg%z(k)-dom%zmin
+            do j = cg%js, cg%je
+               yj = cg%y(j)-dom%ymin
+               do i = cg%is, cg%ie
+                  xi = cg%x(i)-dom%xmin
+                  select case (mode)
+                     case (0)
+                        cg%u%arr(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi + ky*yj + kz*zk))
+                        pres            = p0 * (1. + gamma_ion * amp * sin(kx*xi + ky*yj + kz*zk))
+                     case (1)
+                        cg%u%arr(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
+                        pres            = p0 * (1. + gamma_ion * amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
+                     case default ! should not happen
+                        cg%u%arr(idni,i,j,k)   = d0
+                        pres            = p0
+                  end select
 
-               cg%u%arr(imxi:imzi,i,j,k) = 0.0
+                  cg%u%arr(imxi:imzi,i,j,k) = 0.0
 #ifndef ISO
-               cg%u%arr(ieni,i,j,k)      = pres/(gamma_ion-1.0) + 0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1) / cg%u%arr(idni,i,j,k)
+                  cg%u%arr(ieni,i,j,k)      = pres/(gamma_ion-1.0) + 0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1) / cg%u%arr(idni,i,j,k)
 
 #ifdef MAGNETIC
-               cg%b%arr(:,i,j,k)         = 0.0
-               cg%u%arr(ieni,i,j,k)      = cg%u%arr(ieni,i,j,k) + 0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+                  cg%b%arr(:,i,j,k)         = 0.0
+                  cg%u%arr(ieni,i,j,k)      = cg%u%arr(ieni,i,j,k) + 0.5*sum(cg%b%arr(:,i,j,k)**2,1)
 #endif /* MAGNETIC */
 #endif /* !ISO */
+               enddo
             enddo
          enddo
+         cgl => cgl%nxt
       enddo
 
       if (Tamp > 0) then

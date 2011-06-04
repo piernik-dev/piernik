@@ -132,65 +132,74 @@ contains
 
    subroutine init_prob
 
-      use constants,     only: pi, GEO_XYZ, GEO_RPZ
-      use dataio_pub,    only: msg, printinfo, warn, die
-      use grid,          only: cg
-      use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
-      use mpisetup,      only: master, dom, geometry_type
+      use constants,   only: pi, GEO_XYZ, GEO_RPZ
+      use dataio_pub,  only: msg, printinfo, warn, die
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use initionized, only: gamma_ion, idni, imxi, imzi, ieni
+      use mpisetup,    only: master, dom, geometry_type
 
       implicit none
 
       integer :: i, j, k, ii, jj, kk
       real    :: xx, yy, zz, rr, dm
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
-      do k = cg%ks, cg%ke
-         do j = cg%js, cg%je
-            do i = cg%is, cg%ie
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-               !< \todo use subsampling only near the surface of the spheroid
-               dm = 0.
-               do kk = -nsub+1, nsub-1, 2
-                  zz = ((cg%z(k) + kk*cg%dz/(2.*nsub) - z0)/a3)**2
-                  do jj = -nsub+1, nsub-1, 2
-                     do ii = -nsub+1, nsub-1, 2
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
 
-                        select case (geometry_type)
-                           case (GEO_XYZ)
-                              yy = ((cg%y(j) + jj*cg%dy/(2.*nsub) - y0)/a1)**2
-                              xx = ((cg%x(i) + ii*cg%dx/(2.*nsub) - x0)/a1)**2
-                              rr = xx + yy + zz
-                           case (GEO_RPZ)
-                              yy = cg%y(j) + jj*cg%dy/(2.*nsub) - y0
-                              xx = cg%x(i) + ii*cg%dx/(2.*nsub)
-                              rr = (xx**2 + x0**2 - 2. * xx * x0 * cos(yy))/a1**2 + zz
-                           case default
-                              call die("[initproblem:init_prob] Unsupported geometry_type")
-                              rr = 0.
-                        end select
+                  !< \todo use subsampling only near the surface of the spheroid
+                  dm = 0.
+                  do kk = -nsub+1, nsub-1, 2
+                     zz = ((cg%z(k) + kk*cg%dz/(2.*nsub) - z0)/a3)**2
+                     do jj = -nsub+1, nsub-1, 2
+                        do ii = -nsub+1, nsub-1, 2
 
-                        if (rr <= 1.) then
-                           dm = dm + d0
-                        else
-                           dm = dm + d1
-                        endif
+                           select case (geometry_type)
+                              case (GEO_XYZ)
+                                 yy = ((cg%y(j) + jj*cg%dy/(2.*nsub) - y0)/a1)**2
+                                 xx = ((cg%x(i) + ii*cg%dx/(2.*nsub) - x0)/a1)**2
+                                 rr = xx + yy + zz
+                              case (GEO_RPZ)
+                                 yy = cg%y(j) + jj*cg%dy/(2.*nsub) - y0
+                                 xx = cg%x(i) + ii*cg%dx/(2.*nsub)
+                                 rr = (xx**2 + x0**2 - 2. * xx * x0 * cos(yy))/a1**2 + zz
+                              case default
+                                 call die("[initproblem:init_prob] Unsupported geometry_type")
+                                 rr = 0.
+                           end select
 
+                           if (rr <= 1.) then
+                              dm = dm + d0
+                           else
+                              dm = dm + d1
+                           endif
+
+                        enddo
                      enddo
                   enddo
-               enddo
-               cg%u%arr(idni, i, j, k) = dm / nsub**3
+                  cg%u%arr(idni, i, j, k) = dm / nsub**3
 
+               enddo
             enddo
          enddo
-      enddo
 
-      cg%u%arr(imxi:imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         cg%u%arr(imxi:imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 
 #ifndef ISO
 #ifdef MAGNETIC
-      cg%b%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         cg%b%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 #endif /* MAGNETIC */
-      cg%u%arr(ieni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = p0/(gamma_ion - 1.0)
+         cg%u%arr(ieni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = p0/(gamma_ion - 1.0)
 #endif /* !ISO */
+         cgl => cgl%nxt
+      enddo
 
       if (master) then
          write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
@@ -244,7 +253,8 @@ contains
       use constants,     only: pi, GEO_XYZ, GEO_RPZ
       use units,         only: newtong
       use dataio_pub,    only: warn, die
-      use grid,          only: cg
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element, grid_container
       use mpisetup,      only: master, geometry_type
 
       implicit none
@@ -253,8 +263,17 @@ contains
       real               :: potential, r2, rr
       real               :: AA1, AA3, a12, a32, x02, y02, z02, lam, h, cdphi
       real, parameter    :: small_e = 1e-3
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
-      call my_allocate(apot, [cg%nxb, cg%nyb, cg%nzb], "apot")
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:compute_maclaurin_potential] multiple grid pieces per procesor not implemented yet") !nontrivial apot
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         call my_allocate(apot, [cg%nxb, cg%nyb, cg%nzb], "apot")
+         cgl => cgl%nxt
+      enddo
 
       AA1 = 2./3. ; AA3 = 2./3.
       if (e < 0. .and. master) call warn("[initproblem:compute_maclaurin_potential] e<0. not fully implemented yet!")
@@ -272,52 +291,60 @@ contains
 
       a12 = a1**2
       a32 = a3**2
-      do k = cg%ks, cg%ke
-         z02 = (cg%z(k)-z0)**2
-         do j = cg%js, cg%je
-            do i = cg%is, cg%ie
-               select case (geometry_type)
-                  case (GEO_XYZ)
-                     y02 = (cg%y(j)-y0)**2
-                     x02 = (cg%x(i)-x0)**2
-                     r2 = (x02+y02)/a12 + z02/a32
-                  case (GEO_RPZ)
-                     cdphi = cos(cg%y(j)-y0)
-                     r2 = (cg%x(i)**2 + x0**2 - 2. * cg%x(i) * x0 * cdphi)/a12 + z02/a32
-                     x02 = r2 * cdphi**2
-                     y02 = r2 - x02
-                  case default
-                     call die("[initproblem:compute_maclaurin_potential] Invalid geometry_type.")
-                     r2 = 0 ; x02 = 0 ; y02 = 0 ! suppress compiler warnings
-               end select
-               rr = r2 * a12
-               if (r2 > 1.) then
-                  if (e > small_e) then
-                     lam = 0.5 * (a12 + a32 - (x02 + y02 + z02))
-                     lam = -lam + sqrt(lam**2 + a12 * z02 + a32 * (x02 + y02 - a12))
-                     h = a1 * e / sqrt(a32 + lam)
-                     ! for e < small_e the expressions (atan(h) - h / (1. + h**2)) and (h - atan(h)) should be replaced with Taylor expansions
-                     potential = - 2. * a1 * a3 / e * (atan(h) - ((x02 + y02) * (atan(h) - h / (1. + h**2)) + 2. * z02 * (h - atan(h)))/(2. * a12 * e**2))
-                  else if (e < -small_e) then
-                     lam = 0.5 * (a12 + a32 - (x02 + y02 + z02))
-                     lam = - lam + sqrt(lam**2 + a12 * z02 + a32 * (x02 + y02 - a12))
-                     h = sqrt((a32 - a12)/(a12 + lam))
-                     potential = - a12 * a3 / (a32 - a12) * ( &
-                          (2.*(a32 - a12) + x02 + y02 - 2.*z02)/sqrt(a32 - a12) * log(h + sqrt(1. + h**2)) - &
-                          (x02 + y02) * sqrt(a32 + lam)/(a12 + lam) + 2.*z02 / sqrt(a32 + lam) )
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         do k = cg%ks, cg%ke
+            z02 = (cg%z(k)-z0)**2
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  select case (geometry_type)
+                     case (GEO_XYZ)
+                        y02 = (cg%y(j)-y0)**2
+                        x02 = (cg%x(i)-x0)**2
+                        r2 = (x02+y02)/a12 + z02/a32
+                     case (GEO_RPZ)
+                        cdphi = cos(cg%y(j)-y0)
+                        r2 = (cg%x(i)**2 + x0**2 - 2. * cg%x(i) * x0 * cdphi)/a12 + z02/a32
+                        x02 = r2 * cdphi**2
+                        y02 = r2 - x02
+                     case default
+                        call die("[initproblem:compute_maclaurin_potential] Invalid geometry_type.")
+                        r2 = 0 ; x02 = 0 ; y02 = 0 ! suppress compiler warnings
+                  end select
+                  rr = r2 * a12
+                  if (r2 > 1.) then
+                     if (e > small_e) then
+                        lam = 0.5 * (a12 + a32 - (x02 + y02 + z02))
+                        lam = -lam + sqrt(lam**2 + a12 * z02 + a32 * (x02 + y02 - a12))
+                        h = a1 * e / sqrt(a32 + lam)
+                        ! for e < small_e the expressions (atan(h) - h / (1. + h**2)) and (h - atan(h)) should be replaced with Taylor expansions
+                        potential = - 2. * a1 * a3 / e * (atan(h) - ((x02 + y02) * (atan(h) - h / (1. + h**2)) + 2. * z02 * (h - atan(h)))/(2. * a12 * e**2))
+                     else if (e < -small_e) then
+                        lam = 0.5 * (a12 + a32 - (x02 + y02 + z02))
+                        lam = - lam + sqrt(lam**2 + a12 * z02 + a32 * (x02 + y02 - a12))
+                        h = sqrt((a32 - a12)/(a12 + lam))
+                        potential = - a12 * a3 / (a32 - a12) * ( &
+                             &      (2.*(a32 - a12) + x02 + y02 - 2.*z02)/sqrt(a32 - a12) * log(h + sqrt(1. + h**2)) - &
+                             &      (x02 + y02) * sqrt(a32 + lam)/(a12 + lam) + 2.*z02 / sqrt(a32 + lam) )
+                     else
+                        potential = - 4./3. * a1**3 / sqrt(rr)
+                     endif
                   else
-                     potential = - 4./3. * a1**3 / sqrt(rr)
+                     if (abs(e) > small_e) then
+                        potential = - (AA1*(2*a12 - x02 - y02) + AA3 * (a32 - z02))
+                     else
+                        potential = - 2./3. * (3*a12 - rr)
+                     endif
                   endif
-               else
-                  if (abs(e) > small_e) then
-                     potential = - (AA1*(2*a12 - x02 - y02) + AA3 * (a32 - z02))
-                  else
-                     potential = - 2./3. * (3*a12 - rr)
-                  endif
-               endif
-               apot(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = potential * pi * newtong * d0
+                  apot(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = potential * pi * newtong * d0
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
    end subroutine compute_maclaurin_potential
@@ -341,35 +368,47 @@ contains
 
    subroutine finalize_problem_maclaurin
 
-      use constants,     only: GEO_RPZ
-      use dataio_pub,    only: msg, printinfo
-      use grid,          only: cg
-      use mpisetup,      only: master, comm, ierr, geometry_type
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use constants,  only: GEO_RPZ
+      use dataio_pub, only: msg, printinfo, die
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
+      use mpisetup,   only: master, comm, ierr, geometry_type
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none
 
       integer            :: i, j, k
       real, dimension(2) :: norm, dev
       real               :: potential, fac
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:finalize_problem_maclaurin] multiple grid pieces per procesor not implemented yet") !nontrivial apot
 
       fac = 1.
       norm(:) = 0.
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      do k = cg%ks, cg%ke
-         do j = cg%js, cg%je
-            do i = cg%is, cg%ie
-               potential =  apot(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
-               if (geometry_type == GEO_RPZ) fac = cg%x(i)
-               norm(1) = norm(1) + (potential - cg%sgp%arr(i, j, k))**2 * fac
-               norm(2) = norm(2) + potential**2 * fac
-               dev(1) = min(dev(1), (potential - cg%sgp%arr(i, j, k))/potential)
-               dev(2) = max(dev(2), (potential - cg%sgp%arr(i, j, k))/potential)
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  potential =  apot(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
+                  if (geometry_type == GEO_RPZ) fac = cg%x(i)
+                  norm(1) = norm(1) + (potential - cg%sgp%arr(i, j, k))**2 * fac
+                  norm(2) = norm(2) + potential**2 * fac
+                  dev(1) = min(dev(1), (potential - cg%sgp%arr(i, j, k))/potential)
+                  dev(2) = max(dev(2), (potential - cg%sgp%arr(i, j, k))/potential)
+               enddo
             enddo
          enddo
+         cgl => cgl%nxt
       enddo
+
       call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
       call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)

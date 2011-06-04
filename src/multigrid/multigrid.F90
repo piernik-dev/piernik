@@ -75,16 +75,17 @@ contains
 !<
    subroutine init_multigrid
 
-      use grid,                only: cg, D_x, D_y, D_z
-      use multigridvars,       only: lvl, plvl, roof, base, mg_nb, ngridvars, correction, single_base, &
-           &                         is_external, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
+      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI
+      use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use dataio_pub,          only: warn, die, code_progress
+      use grid,                only: D_x, D_y, D_z, cga
+      use grid_cont,           only: cg_list_element, grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_LOR, MPI_MIN, MPI_MAX, MPI_COMM_NULL
       use mpisetup,            only: comm, comm3d, ierr, proc, master, slave, nproc, has_dir, buffer_dim, ibuff, lbuff, dom, eff_dim, geometry_type, is_uneven
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
       use multigridmpifuncs,   only: mpi_multigrid_prep
-      use dataio_pub,          only: warn, die, code_progress
-      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI
-      use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use multigridvars,       only: lvl, plvl, roof, base, mg_nb, ngridvars, correction, single_base, &
+           &                         is_external, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
 #endif /* GRAV */
@@ -102,6 +103,8 @@ contains
       real                  :: mb_alloc, min_m, max_m !< Allocation counter
       integer, dimension(3) :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
       type(plvl), pointer   :: curl                   !> current level (a pointer sliding along the linked list)
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, multidim_code_3D
 
@@ -157,13 +160,20 @@ contains
 
       endif
 
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial is_external
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
       ! mark external faces
-      is_external(:, :) = .false.
-      do j=xdim, zdim
-         if (has_dir(j) .and. .not. dom%periodic(j)) then
-            is_external(j, LO) = (cg%off(j) == 0)
-            is_external(j, HI) = (cg%off(j)+cg%n_b(j) == dom%n_d(j))
-         endif
+         is_external(:, :) = .false.
+         do j=xdim, zdim
+            if (has_dir(j) .and. .not. dom%periodic(j)) then
+               is_external(j, LO) = (cg%off(j) == 0)
+               is_external(j, HI) = (cg%off(j)+cg%n_b(j) == dom%n_d(j))
+            endif
+         enddo
+         cgl => cgl%nxt
       enddo
 
       is_mg_uneven = is_uneven
@@ -195,6 +205,9 @@ contains
          if (master) call warn("[multigrid:init_multigrid] level_max < 1: solving on a single grid may be extremely slow")
          level_max = 1
       endif
+
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial lvl
+
       allocate(lvl(level_min:level_min+level_max-1), stat=aerr(1))
       if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: lvl")
       mb_alloc = mb_alloc + size(lvl)

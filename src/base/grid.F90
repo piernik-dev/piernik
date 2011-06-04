@@ -449,6 +449,8 @@ contains
 
       !> \todo fill corners with big_float ?
 
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[grid:arr3d_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop
+
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
          cg => cgl%cg

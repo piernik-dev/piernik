@@ -71,18 +71,20 @@ contains
 !! \param coldens column density value for given x and y coordinates
 !! \param csim2 sqare of sound velocity
 !<
-   subroutine hydrostatic_zeq_coldens(iia,jja,coldens,csim2)
+   subroutine hydrostatic_zeq_coldens(iia, jja, coldens, csim2, cg)
 
-      use grid, only: cg
+      use grid_cont, only: grid_container
 
       implicit none
 
       integer, intent(in)   :: iia, jja
       real,    intent(in)   :: coldens, csim2
+      type(grid_container), pointer, intent(in) :: cg
+
       real                  :: sdprof, sd
 
       sdprof = 1.0
-      call hydrostatic_zeq_densmid(iia,jja,sdprof,csim2,sd)
+      call hydrostatic_zeq_densmid(iia, jja, sdprof, csim2, sd, cg)
       cg%dprof = cg%dprof * coldens / sd
 
    end subroutine hydrostatic_zeq_coldens
@@ -96,23 +98,23 @@ contains
 !! \param csim2 sqare of sound velocity
 !! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
 !<
-   subroutine hydrostatic_zeq_densmid(iia,jja,d0,csim2,sd)
+   subroutine hydrostatic_zeq_densmid(iia, jja, d0, csim2, sd, cg)
 
       use constants,  only: small
       use dataio_pub, only: die
+      use grid_cont,  only: grid_container
 
       implicit none
 
       integer, intent(in) :: iia, jja
       real,    intent(in) :: d0, csim2
       real,    intent(inout), optional :: sd
+      type(grid_container), pointer, intent(in) :: cg
 
-      if (d0 <= small) then
-         call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
-      endif
+      if (d0 <= small) call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
       dmid = d0
 
-      call start_hydrostatic(iia,jja,csim2,sd)
+      call start_hydrostatic(iia, jja, csim2, sd, cg)
       call finish_hydrostatic
 
    end subroutine hydrostatic_zeq_densmid
@@ -124,7 +126,8 @@ contains
 
       use dataio_pub, only: die
       use gravity,    only: nsub
-      use grid,       only: cg
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
       use mpisetup,   only: dom
 
       implicit none
@@ -133,6 +136,8 @@ contains
       real, allocatable, dimension(:) :: dprofs
       integer :: ksub, ksmid, k
       real    :: factor
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       allocate(dprofs(nstot))
 
@@ -162,14 +167,20 @@ contains
          enddo
       endif
 
-      cg%dprof(:) =0.0
-      do k=1, cg%nz
-         do ksub=1, nstot
-            if (zs(ksub) > cg%zl(k) .and. zs(ksub) < cg%zr(k)) then
-               cg%dprof(k) = cg%dprof(k) + dprofs(ksub)/real(nsub)
-            endif
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         cg%dprof(:) =0.0
+         do k=1, cg%nz
+            do ksub=1, nstot
+               if (zs(ksub) > cg%zl(k) .and. zs(ksub) < cg%zr(k)) then
+                  cg%dprof(k) = cg%dprof(k) + dprofs(ksub)/real(nsub)
+               endif
+            enddo
          enddo
+         cgl => cgl%nxt
       enddo
+
       if (present(sd)) then
          sd = 0.0
          do ksub=1, nstot
@@ -201,15 +212,17 @@ contains
       factor = (4.0 + up*factor)/(4.0 - up*factor)
    end subroutine hzeq_scheme_v2
 
-   subroutine get_gprofs_accel(iia,jja)
+   subroutine get_gprofs_accel(iia, jja, cg)
 
-      use gravity,   only: tune_zeq, grav_accel
-      use grid,      only: cg
       use constants, only: zdim
+      use gravity,   only: tune_zeq, grav_accel
+      use grid_cont, only: grid_container
 
       implicit none
 
       integer, intent(in) :: iia, jja
+      type(grid_container), pointer, intent(in) :: cg
+
       integer :: ia, ja
 
       ia = min(cg%nx,max(1, iia))
@@ -224,15 +237,17 @@ contains
 !! \deprecated probably now the routine should have different name than gparray which got from the commented part of code
 !! \warning in case of moving 'use types, only: axes'' behind use gravity there could be gcc(4.5) internal compiler error: in fold_convert_loc, at fold-const.c:2792 (solved in >=gcc-4.6)
 !<
-   subroutine get_gprofs_gparray(iia,jja)
+   subroutine get_gprofs_gparray(iia, jja, cg)
 
-      use types,   only: axes
-      use gravity, only: tune_zeq, grav_type
-      use grid,    only: cg
+      use gravity,   only: tune_zeq, grav_type
+      use grid_cont, only: grid_container
+      use types,     only: axes
 
       implicit none
 
       integer, intent(in)                  :: iia, jja
+      type(grid_container), pointer, intent(in) :: cg
+
       real, pointer, dimension(:,:,:)      :: gpots
       type(axes)                           :: ax
       integer                              :: nstot1
@@ -264,12 +279,12 @@ contains
 !! \param csim2 sqare of sound velocity
 !! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
 !<
-   subroutine start_hydrostatic(iia,jja,csim2,sd)
+   subroutine start_hydrostatic(iia, jja, csim2, sd, cg)
 
+      use constants,  only: zdim
       use dataio_pub, only: die
       use gravity,    only: get_gprofs, gprofs_target, nsub
-      use grid,       only: cg
-      use constants,  only: zdim
+      use grid_cont,  only: grid_container
       use mpisetup,   only: dom
 
       implicit none
@@ -277,6 +292,7 @@ contains
       integer, intent(in) :: iia, jja
       real,    intent(in) :: csim2
       real,    intent(inout), optional :: sd
+      type(grid_container), pointer, intent(in) :: cg
       integer :: ksub
 
       if (.not.associated(get_gprofs)) then
@@ -295,7 +311,7 @@ contains
       do ksub=1, nstot
          zs(ksub) = dom%zmin-cg%nb*cg%dl(zdim) + (real(ksub)-0.5)*dzs
       enddo
-      call get_gprofs(iia,jja)
+      call get_gprofs(iia, jja, cg)
       gprofs = gprofs / csim2 *dzs
       call hydrostatic_main(sd)
 
@@ -314,21 +330,22 @@ contains
    !! \todo this procedure is incompatible with cg%cs_iso2
    !<
 
-   subroutine outh_bnd(kb,kk,minmax)
+   subroutine outh_bnd(kb, kk, minmax)
 
-      use dataio_pub,          only: die
-      use gravity,             only: grav_accel, nsub, tune_zeq_bnd
-      use grid,                only: cg
-      use mpisetup,            only: smalld
-      use constants,           only: zdim
-      use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use constants,      only: zdim
+      use dataio_pub,     only: die
+      use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use gravity,        only: grav_accel, nsub, tune_zeq_bnd
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
+      use mpisetup,       only: smalld
 #ifndef ISO
-      use fluidindex,          only: iarr_all_en
-      use mpisetup,            only: smallei
+      use fluidindex,     only: iarr_all_en
+      use mpisetup,       only: smallei
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use fluidindex,          only: iarr_all_crs
-      use initcosmicrays,      only: smallecr
+      use fluidindex,     only: iarr_all_crs
+      use initcosmicrays, only: smallecr
 #endif /* COSM_RAYS */
 
       implicit none
@@ -337,76 +354,102 @@ contains
       character(len=*), intent(in)                :: minmax
 
       integer                                     :: ksub, i, j
-      real, dimension(flind%fluids, cg%nx, cg%ny) :: db, csi2b
+      real, dimension(:,:,:),allocatable          :: db, csi2b
 #ifndef ISO
       integer                                     :: ifluid
-      real, dimension(flind%fluids, cg%nx, cg%ny) :: ekb, eib
+      real, dimension(:,:,:),allocatable          :: ekb, eib
 #endif /* !ISO */
       real, dimension(nsub+1)                     :: zs, gprofs
       real, dimension(flind%fluids,nsub+1)        :: dprofs
       real, dimension(flind%fluids)               :: factor
       real                                        :: dzs,z1,z2
+      type(cg_list_element), pointer              :: cgl
+      type(grid_container), pointer               :: cg
 
       if (.not.associated(grav_accel)) call die("[hydrostatic:outh_bnd] grav_accel not associated")
 
-      db = cg%u%arr(iarr_all_dn,:,:,kb)
-      db = max(db,smalld)
-#ifdef ISO
-      csi2b = maxval(flind%all_fluids(:)%cs2)   !> \deprecated BEWARE should be fluid dependent
-#else /* !ISO */
-      ekb = 0.5*(cg%u%arr(iarr_all_mx,:,:,kb)**2+cg%u%arr(iarr_all_my,:,:,kb)**2+cg%u%arr(iarr_all_mz,:,:,kb)**2)/db
-      eib = cg%u%arr(iarr_all_en,:,:,kb) - ekb
-      eib = max(eib,smallei)
-      do ifluid=1,flind%fluids
-         csi2b(ifluid,:,:) = (flind%all_fluids(ifluid)%gam_1)*eib(ifluid,:,:)/db(ifluid,:,:)
-      enddo
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[hydrostatic:outh_bnd] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         if (any([allocated(db), allocated(csi2b)])) call die("[hydrostatic:outh_bnd] db or csi2b already allocated")
+         allocate(db(flind%fluids, cg%nx, cg%ny), csi2b(flind%fluids, cg%nx, cg%ny))
+#ifndef ISO
+         if (any([allocated(ekb), allocated(eib)])) call die("[hydrostatic:outh_bnd] ekb or eib already allocated")
+         allocate(ekb(flind%fluids, cg%nx, cg%ny), eib(flind%fluids, cg%nx, cg%ny))
 #endif /* !ISO */
-      z1 = cg%z(kb)
-      z2 = cg%z(kk)
-      dzs = (z2-z1)/real(nsub)
 
-      do ksub=1, nsub+1
-         zs(ksub) = z1 + dzs/2 + (ksub-1)*dzs
-      enddo
+         db = cg%u%arr(iarr_all_dn,:,:,kb)
+         db = max(db,smalld)
+#ifdef ISO
+         csi2b = maxval(flind%all_fluids(:)%cs2)   !> \deprecated BEWARE should be fluid dependent
+#else /* !ISO */
+         ekb = 0.5*(cg%u%arr(iarr_all_mx,:,:,kb)**2+cg%u%arr(iarr_all_my,:,:,kb)**2+cg%u%arr(iarr_all_mz,:,:,kb)**2)/db
+         eib = cg%u%arr(iarr_all_en,:,:,kb) - ekb
+         eib = max(eib,smallei)
+         do ifluid=1,flind%fluids
+            csi2b(ifluid,:,:) = (flind%all_fluids(ifluid)%gam_1)*eib(ifluid,:,:)/db(ifluid,:,:)
+         enddo
+#endif /* !ISO */
+         z1 = cg%z(kb)
+         z2 = cg%z(kk)
+         dzs = (z2-z1)/real(nsub)
 
-      do j=1, cg%ny
-         do i=1, cg%nx
+         do ksub=1, nsub+1
+            zs(ksub) = z1 + dzs/2 + (ksub-1)*dzs
+         enddo
 
-            call grav_accel(zdim, i, j, zs, nsub, gprofs)
-            gprofs=tune_zeq_bnd * gprofs
+         do j=1, cg%ny
+            do i=1, cg%nx
 
-            dprofs(:,1) = db(:,i,j)
-            do ksub=1, nsub
-               factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))  &
-                        /(1.0 - 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))
-               dprofs(:,ksub+1) = factor * dprofs(:,ksub)
-            enddo
+               call grav_accel(zdim, i, j, zs, nsub, gprofs)
+               gprofs=tune_zeq_bnd * gprofs
 
-            db(:,i,j)  = dprofs(:,nsub+1)
-            db(:,i,j)  = max(db(:,i,j), smalld)
+               dprofs(:,1) = db(:,i,j)
+               do ksub=1, nsub
+                  factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(:,i,j)) / &
+                       &   (1.0 - 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))
+                  dprofs(:,ksub+1) = factor * dprofs(:,ksub)
+               enddo
 
-            cg%u%arr(iarr_all_dn,i,j,kk)      =     db(:,i,j)
-            cg%u%arr(iarr_all_mx,i,j,kk)      =     cg%u%arr(iarr_all_mx,i,j,kb)
-            cg%u%arr(iarr_all_my,i,j,kk)      =     cg%u%arr(iarr_all_my,i,j,kb)
-            cg%u%arr(iarr_all_mz,i,j,kk)      =     cg%u%arr(iarr_all_mz,i,j,kb)
-            !> \deprecated to use outh together with outd user should manually interfere in the code of outh_bnd routine
+               db(:,i,j)  = dprofs(:,nsub+1)
+               db(:,i,j)  = max(db(:,i,j), smalld)
+
+               cg%u%arr(iarr_all_dn,i,j,kk)      =     db(:,i,j)
+               cg%u%arr(iarr_all_mx,i,j,kk)      =     cg%u%arr(iarr_all_mx,i,j,kb)
+               cg%u%arr(iarr_all_my,i,j,kk)      =     cg%u%arr(iarr_all_my,i,j,kb)
+               cg%u%arr(iarr_all_mz,i,j,kk)      =     cg%u%arr(iarr_all_mz,i,j,kb)
+               !> \deprecated to use outh together with outd user should manually interfere in the code of outh_bnd routine
 ! zakomentowac nastepna linie jesli warunek diodowy nie ma byc stosowany razem z hydrostatycznym
 !           if (minmax == 'max') then
 !              cg%u%arr(iarr_all_mz,i,j,kk)          =     max(cg%u%arr(iarr_all_mz,i,j,kk),0.0)
 !           else
 !              cg%u%arr(iarr_all_mz,i,j,kk)          =     min(cg%u%arr(iarr_all_mz,i,j,kk),0.0)
 !           endif
-            if (.false.) print *, minmax
+               if (.false.) print *, minmax
 #ifndef ISO
-            eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(flind%all_fluids(:)%gam_1)
-            eib(:,i,j) = max(eib(:,i,j), smallei)
-            cg%u%arr(iarr_all_en,i,j,kk)      =     ekb(:,i,j) + eib(:,i,j)
+               eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(flind%all_fluids(:)%gam_1)
+               eib(:,i,j) = max(eib(:,i,j), smallei)
+               cg%u%arr(iarr_all_en,i,j,kk)      =     ekb(:,i,j) + eib(:,i,j)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-            cg%u%arr(iarr_all_crs,i,j,kk)     =     smallecr
+               cg%u%arr(iarr_all_crs,i,j,kk)     =     smallecr
 #endif /* COSM_RAYS */
-         enddo ! i
-      enddo ! j
+            enddo ! i
+         enddo ! j
+
+         deallocate(db)
+         deallocate(csi2b)
+#ifndef ISO
+         deallocate(ekb)
+         deallocate(eib)
+#endif /* !ISO */
+
+         cgl => cgl%nxt
+      enddo
+
    end subroutine outh_bnd
 
 #endif /* GRAV */

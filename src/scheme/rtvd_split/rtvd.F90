@@ -411,7 +411,7 @@ contains
 #endif /* CORIOLIS */
 
 #ifdef GRAV
-      call grav_pot2accel(sweep, i1, i2, n, gravacc, istep)
+      call grav_pot2accel(sweep, i1, i2, n, gravacc, istep, cg)
       do ind = 1, flind%fluids
          acc(ind,:) =  acc(ind,:) + gravacc(:)
       enddo

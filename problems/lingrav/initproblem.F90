@@ -110,7 +110,7 @@ contains
 
       cg%cs_iso2%arr(:,:,:) = flind%ion%cs2
 
-      call hydrostatic_zeq_densmid(1, 1, d0, csim2)
+      call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg=cg)
 
       do k = 1, cg%nz
          do j = 1, cg%ny

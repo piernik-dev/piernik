@@ -108,6 +108,7 @@ contains
       use dataio_pub,          only: msg, warn, die
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use grid,                only: cga
       use grid_cont,           only: grid_container
       use mpisetup,            only: ierr, psize, procn, procxyl, procyxl, smalld, pcoords, req, status, comm, comm3d, proc, has_dir
       use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
@@ -146,6 +147,8 @@ contains
          call init_fluidboundaries(cg)
          frun = .false.
       endif
+
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[fluidboundaries:bnd_u] multiple grid pieces per procesor not implemented yet") !nontrivial communication
 
 ! MPI block communication
       if (comm3d /= MPI_COMM_NULL) then
@@ -629,16 +632,19 @@ contains
 
    subroutine all_fluid_boundaries
 
-      use mpisetup,  only: has_dir, comm3d
-      use mpi,       only: MPI_COMM_NULL
-      use constants, only: xdim, zdim, FLUID
-      use grid,      only: cga
-      use grid_cont, only: cg_list_element
+      use constants,  only: xdim, zdim, FLUID
+      use dataio_pub, only: die
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element
+      use mpi,        only: MPI_COMM_NULL
+      use mpisetup,   only: has_dir, comm3d
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
       integer :: dir
+
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[fluidboundaries:all_fluid_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial communication
 
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))

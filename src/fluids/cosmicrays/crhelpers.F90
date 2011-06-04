@@ -63,24 +63,33 @@ contains
 
    subroutine div_v(ifluid)
 
+      use constants,   only: xdim, ydim, zdim
+      use dataio_pub,  only: die
       use diagnostics, only: ma3d, my_allocate
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid,        only: cg
-      use constants,   only: xdim, ydim, zdim
+      use grid,        only: cga
+      use grid_cont,   only: grid_container
       use mpisetup,    only: has_dir
 
       implicit none
 
-      real, dimension(cg%nx) :: vx
-      real, dimension(cg%ny) :: vy
-      real, dimension(cg%nz) :: vz
+      real, dimension(:), allocatable :: vx
+      real, dimension(:), allocatable :: vy
+      real, dimension(:), allocatable :: vz
       integer                :: i, j, k, ifluid
       integer                :: idnf, imxf, imyf, imzf
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crhelpers:div_v] multiple grid pieces per procesor not implemented yet") !nontrivial divvel
 
       if (.not.allocated(divvel)) then
          ma3d = [cg%nx, cg%ny, cg%nz]
          call my_allocate(divvel, ma3d, "divvel")
       endif
+
+      if (any([allocated(vx), allocated(vy), allocated(vz)])) call die("[crhelpers:div_v] v[xyz] already allocated")
+      allocate(vx(cg%nx), vy(cg%ny), vz(cg%nz))
 
       idnf = iarr_all_dn(ifluid)
       imxf = iarr_all_mx(ifluid)
@@ -118,6 +127,10 @@ contains
          enddo
          divvel(:,:,1) = divvel(:,:,2); divvel(:,:, cg%nz) = divvel(:,:, cg%nz-1) ! for sanity
       endif
+
+      deallocate(vx)
+      deallocate(vy)
+      deallocate(vz)
 
    end subroutine div_v
 

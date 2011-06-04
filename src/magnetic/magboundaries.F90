@@ -40,14 +40,19 @@ contains
 
       use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK
       use dataio_pub, only: die
-      use mpisetup,   only: ierr, req, comm3d, procn, status, psize, have_mpi, is_mpi_noncart
-      use grid,       only: cg
+      use grid,       only: cga
+      use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
+      use mpisetup,   only: ierr, req, comm3d, procn, status, psize, have_mpi, is_mpi_noncart
 
       implicit none
 
       real, dimension(:,:,:,:) :: A
       integer                  :: i, itag, jtag
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[magboundaries:bnd_a] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
 
       if (have_mpi .and. is_mpi_noncart) call die("[magboundaries:bnd_a] is_mpi_noncart is not implemented") !procn, psize
       if (comm3d == MPI_COMM_NULL) call die("[magboundaries:bnd_a] comm3d == MPI_COMM_NULL")
@@ -70,14 +75,15 @@ contains
 
    subroutine bnd_b(dir)
 
-      use constants,     only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
-      use dataio_pub,    only: msg, warn, die
-      use fluidindex,    only: ibx, iby, ibz
-      use grid,          only: cg
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,      only: ierr, req, comm3d, procn, proc, status, psize, procxyl, procyxl, pcoords, comm, master, have_mpi, is_mpi_noncart
+      use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
+      use dataio_pub, only: msg, warn, die
+      use fluidindex, only: ibx, iby, ibz
+      use grid,       only: cga
+      use grid_cont,  only: grid_container
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
+      use mpisetup,   only: ierr, req, comm3d, procn, proc, status, psize, procxyl, procyxl, pcoords, comm, master, have_mpi, is_mpi_noncart
 #ifdef SHEAR
-      use shear,         only: eps,delj
+      use shear,      only: eps,delj
 #endif /* SHEAR */
 
       implicit none
@@ -95,6 +101,10 @@ contains
       logical, save                         :: bnd_yr_not_provided = .false.
       logical, save                         :: bnd_zl_not_provided = .false.
       logical, save                         :: bnd_zr_not_provided = .false.
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[magboundaries:bnd_b] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
 
 ! MPI block comunication
       if (comm3d /= MPI_COMM_NULL) then
@@ -359,19 +369,20 @@ contains
 
    subroutine bnd_emf(var, name, dir)
 
-      use constants,     only: xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
-      use dataio_pub,    only: msg, warn
-      use grid,          only: cg
-      use mpisetup,      only: master
+      use constants,  only: xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
+      use dataio_pub, only: msg, warn, die
+      use grid,       only: cga
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: master
 
       implicit none
 
       real, dimension(:,:,:), intent(inout) :: var
       character(len=*), intent(in)          :: name
       integer, intent(in)                   :: dir
-      real, dimension(cg%ny, cg%nz)                :: dvarx
-      real, dimension(cg%nx, cg%nz)                :: dvary
-      real, dimension(cg%nx, cg%ny)                :: dvarz
+      real, dimension(:,:), allocatable     :: dvarx
+      real, dimension(:,:), allocatable     :: dvary
+      real, dimension(:,:), allocatable     :: dvarz
       integer                               :: ib
       logical, save                         :: frun = .true.
       logical, save                         :: bnd_xl_not_provided = .false.
@@ -382,6 +393,13 @@ contains
       logical, save                         :: bnd_zr_not_provided = .false.
       integer                               :: ledge, redge, lnbcells, rnbcells, zndiff, rrbase
       real                                  :: bndsign
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[magboundaries:bnd_emf] multiple grid pieces per procesor not implemented yet") !nontrivial
+
+      if (any([allocated(dvarx), allocated(dvary), allocated(dvarz)])) call die("[magboundaries:bnd_emf] dvar[xyz] already allocated")
+      allocate(dvarx(cg%ny, cg%nz), dvary(cg%nx, cg%nz), dvarz(cg%nx, cg%ny))
 
       if (frun) then
          bnd_xl_not_provided = any( [BND_COR, BND_INF, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
@@ -407,11 +425,11 @@ contains
                &      cg%bnd(xdim, LO) == BND_OUTD, cg%bnd(xdim, HI) == BND_OUTD, cg%bnd(xdim, LO) == BND_OUTH, cg%bnd(xdim, HI) == BND_OUTH] )) then
                select case (name)
                   case ("vxby","vxbz")
-                     call compute_bnd_indxs(1, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(1, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
                   case ("vybx","vzbx","emfy","emfz")
-                     call compute_bnd_indxs(2, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(2, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
                   case ("vybz","vzby","emfx")
-                     call compute_bnd_indxs(3, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(3, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
                end select  ! (name)
             endif
 
@@ -459,11 +477,11 @@ contains
                &      cg%bnd(ydim, LO) == BND_OUTD, cg%bnd(ydim, HI) == BND_OUTD, cg%bnd(ydim, LO) == BND_OUTH, cg%bnd(ydim, HI) == BND_OUTH] )) then
                select case (name)
                   case ("vybz","vybx")
-                     call compute_bnd_indxs(1, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(1, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
                   case ("vzby","vxby","emfz","emfx")
-                     call compute_bnd_indxs(2, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(2, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
                   case ("vzbx","vxbz","emfy")
-                     call compute_bnd_indxs(3, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(3, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
                end select  ! (name)
             endif
 
@@ -511,11 +529,11 @@ contains
                &      cg%bnd(zdim, LO) == BND_OUTD, cg%bnd(zdim, HI) == BND_OUTD, cg%bnd(zdim, LO) == BND_OUTH, cg%bnd(zdim, HI) == BND_OUTH] )) then
                select case (name)
                   case ("vzbx","vzby")
-                     call compute_bnd_indxs(1, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(1, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
                   case ("vxbz","vybz","emfy","emfx")
-                     call compute_bnd_indxs(2, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(2, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
                   case ("vxby","vybx","emfz")
-                     call compute_bnd_indxs(3, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+                     call compute_bnd_indxs(3, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
                end select  ! (name)
             endif
 
@@ -559,13 +577,17 @@ contains
 
       end select ! (dim)
 
+      deallocate(dvarx)
+      deallocate(dvary)
+      deallocate(dvarz)
+
    end subroutine bnd_emf
 !>
 !! \brief Routine delivers common boundary cells indexes in cases of reflection or outflow boundary types
 !<
-   subroutine compute_bnd_indxs(bndcase,ndirb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+   subroutine compute_bnd_indxs(bndcase, ndirb, ledge, redge, lnbcells, rnbcells, bndsign, zndiff, rrbase, cg)
 
-      use grid, only: cg
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -578,6 +600,7 @@ contains
       real,    intent(out) :: bndsign     !< 1. or -1. to change the sign or not
       integer, intent(out) :: zndiff      !< COMMENT ME
       integer, intent(out) :: rrbase      !< COMMENT ME
+      type(grid_container), pointer, intent(in) :: cg
 
       select case (bndcase)
          case (1)
@@ -603,14 +626,20 @@ contains
 
    subroutine all_mag_boundaries
 
-      use mpisetup,  only: has_dir, comm3d
-      use mpi,       only: MPI_COMM_NULL
-      use constants, only: xdim, zdim, MAG
-      use grid,      only: cg
+      use constants,  only: xdim, zdim, MAG
+      use dataio_pub, only: die
+      use grid,       only: cga
+      use grid_cont,  only: grid_container
+      use mpi,        only: MPI_COMM_NULL
+      use mpisetup,   only: has_dir, comm3d
 
       implicit none
 
       integer :: dir
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[magboundaries:all_mag_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       if (comm3d == MPI_COMM_NULL) then
          call cg%internal_boundaries(MAG, pa4d=cg%b%arr)

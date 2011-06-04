@@ -405,6 +405,9 @@ contains
       integer :: g, tag, d, nr
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: ise, ose
 
+!BEWARE: MPI_Waitall should be called after all grid containers post Isends and Irecvs
+! This routine thus cannot be a metod of the grid_container type
+
       if (ind < minval([FLUID, MAG, CR, ARR]) .or. ind > maxval([FLUID, MAG, CR, ARR])) call die("[grid:internal_boundaries] wrong index")
 
       select case (ind)
