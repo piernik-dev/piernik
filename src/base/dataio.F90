@@ -1115,7 +1115,7 @@ contains
 
       if (master)  then
          if (.not.present(tsl)) then
-            call printinfo('===========================================================================', .false.)
+            call printinfo('================================================================================================================', .false.)
             if (has_ion) then
                call common_shout(flind%ion%snap,'ION',.true.,.true.,.true.)
 #ifdef MAGNETIC
@@ -1172,7 +1172,7 @@ contains
             write(msg, fmt_loc)   'max(|gpz|)  ', id, gpzmax%val, gpzmax%proc, pack(gpzmax%loc,has_dir), pack(gpzmax%coords,has_dir)
             call printinfo(msg, .false.)
 #endif /* VARIABLE_GP */
-            call printinfo('===========================================================================', .false.)
+            call printinfo('================================================================================================================', .false.)
          else
 #ifdef MAGNETIC
             tsl%b_min = b_min%val
