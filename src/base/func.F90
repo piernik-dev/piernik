@@ -124,7 +124,7 @@ contains
       use grid,       only: cga
       use grid_cont,  only: grid_container
       use mpisetup,   only: mpifind, comm, ierr, master, proc, status, has_dir
-      use mpi,        only: MPI_DOUBLE_PRECISION
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER
 
       implicit none
 
@@ -133,7 +133,8 @@ contains
       type(value),            intent(out) :: prop
       type(grid_container), pointer, intent(in) :: cg
 
-      integer, parameter :: tag = 12
+      integer, parameter :: tag1 = 11
+      integer, parameter :: tag2 = 12
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[func:get_extremum] multiple grid pieces per procesor not implemented yet") !nontrivial
 
@@ -156,9 +157,11 @@ contains
       if (has_dir(zdim)) prop%coords(zdim) = cg%z(prop%loc(zdim))
       if (prop%proc /= 0) then
          if (proc == prop%proc) then
-            call MPI_Send  (prop%coords, ndims, MPI_DOUBLE_PRECISION, 0, tag, comm, ierr)
+            call MPI_Send  (prop%loc,    ndims, MPI_INTEGER,          0, tag1, comm, ierr)
+            call MPI_Send  (prop%coords, ndims, MPI_DOUBLE_PRECISION, 0, tag2, comm, ierr)
          else if (master) then
-            call MPI_Recv  (prop%coords, ndims, MPI_DOUBLE_PRECISION, prop%proc, tag, comm, status, ierr)
+            call MPI_Recv  (prop%loc,    ndims, MPI_INTEGER,          prop%proc, tag1, comm, status, ierr)
+            call MPI_Recv  (prop%coords, ndims, MPI_DOUBLE_PRECISION, prop%proc, tag2, comm, status, ierr)
          endif
       endif
 
