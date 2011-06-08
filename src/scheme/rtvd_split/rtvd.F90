@@ -98,8 +98,8 @@ contains
 !!
 !!The scheme proposed by Pen et al. (2003), consists of the following steps:
 !!\n (1) Computation of the edge--centered EMF component \f$ v_x B_y\f$.
-!!\n (2) Update of $B_y$, according to the equation \f$\partial_t B_y = \partial_x (v_x B_y)\f$.
-!!\n (3) Update of $B_x$, according to the equation \f$\partial_t B_x = \partial_y (v_x B_y)\f$.
+!!\n (2) Update of \f $B_y \f$, according to the equation \f$\partial_t B_y = \partial_x (v_x B_y)\f$.
+!!\n (3) Update of \f$ B_x \f$, according to the equation \f$\partial_t B_x = \partial_y (v_x B_y)\f$.
 !!
 !!Analogous procedure applies to remaining EMF components.
 !<
