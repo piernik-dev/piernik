@@ -38,25 +38,13 @@ module list_hdf5
    implicit none
 
    private
-   public :: write_arr, S_LEN, additional_attrs, problem_write_restart, problem_read_restart
+   public :: write_arr, S_LEN
 #ifdef NEW_HDF5
    public :: add_lhdf5, lhdf5_info, iterate_lhdf5
    integer, parameter :: HID_T = c_int
 #endif /* NEW_HDF5 */
 
    integer, parameter :: S_LEN = 30
-
-   interface
-      subroutine add_attr(file_id)
-         use hdf5, only: HID_T
-         implicit none
-         integer(HID_T), intent(in) :: file_id
-      end subroutine add_attr
-   end interface
-
-   procedure(add_attr), pointer :: additional_attrs
-   procedure(add_attr), pointer :: problem_write_restart
-   procedure(add_attr), pointer :: problem_read_restart
 
 #ifdef NEW_HDF5
    type :: lhdf5_info

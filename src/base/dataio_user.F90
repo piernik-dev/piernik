@@ -78,8 +78,37 @@ module dataio_user
       end subroutine tsl_out
    end interface
 
-   procedure(plt_hdf5),  pointer :: user_plt_hdf5 => Null()
-   procedure(vars_hdf5), pointer :: user_vars_hdf5 => Null()
-   procedure(tsl_out),   pointer :: user_tsl => Null()
+   interface
+      subroutine add_attr(file_id)
+
+         use hdf5,      only: HID_T
+
+         implicit none
+
+         integer(HID_T), intent(in) :: file_id
+
+      end subroutine add_attr
+   end interface
+
+   interface
+      subroutine add_data(file_id, cg)
+
+         use grid_cont, only: grid_container
+         use hdf5,      only: HID_T
+
+         implicit none
+
+         integer(HID_T), intent(in) :: file_id
+         type(grid_container), pointer, intent(in) :: cg
+
+      end subroutine add_data
+   end interface
+
+   procedure(add_attr),  pointer :: additional_attrs      => Null()
+   procedure(add_data),  pointer :: problem_write_restart => Null()
+   procedure(add_data),  pointer :: problem_read_restart  => Null()
+   procedure(plt_hdf5),  pointer :: user_plt_hdf5         => Null()
+   procedure(vars_hdf5), pointer :: user_vars_hdf5        => Null()
+   procedure(tsl_out),   pointer :: user_tsl              => Null()
 
 end module dataio_user

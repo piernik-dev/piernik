@@ -75,35 +75,17 @@ module dataio_hdf5
 contains
 
 !>
-!! \brief Empty routine assigned to additional_attrs unless the problem provides something else (see maclaurin or wt4 for examples)
-!<
-
-   subroutine null_attrs(file_id)
-
-      use hdf5, only: HID_T
-
-      implicit none
-
-      integer(HID_T), intent(in) :: file_id
-
-      integer :: dummy ! just for suppressing compiler warning
-      if (.false.) dummy = kind(file_id)
-
-   end subroutine null_attrs
-
-!>
 !! \brief Procedure initializing HDF5 module
 !<
 
    subroutine init_hdf5(vars, tix, tiy, tiz, tdt_plt)
 
-      use fluidindex,    only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
-      use constants,     only: varlen
-      use fluids_pub,    only: has_ion, has_dst, has_neu
+      use constants,   only: varlen
+      use fluids_pub,  only: has_ion, has_dst, has_neu
+      use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifdef COSM_RAYS
-      use fluidindex,    only: iarr_all_crs
-      use dataio_pub,    only: warn, msg
+      use dataio_pub,  only: warn, msg
+      use fluidindex,  only: iarr_all_crs
 #endif /* COSM_RAYS */
 
       implicit none
@@ -226,10 +208,6 @@ contains
                hdf_vars(j) = trim(vars(i)) ; j = j + 1
          end select
       enddo
-
-      if ( .not. associated(additional_attrs))      additional_attrs      => null_attrs
-      if ( .not. associated(problem_write_restart)) problem_write_restart => null_attrs
-      if ( .not. associated(problem_read_restart))  problem_read_restart  => null_attrs
 
    end subroutine init_hdf5
 
@@ -711,14 +689,15 @@ contains
 
    subroutine write_restart_hdf5(debug_res)
 
-      use constants,  only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B
-      use dataio_pub, only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
-      use hdf5,       only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f!, H5P_DATASET_XFER_F, h5pset_preserve_f
-      use list_hdf5,  only: problem_write_restart
-      use mpi,        only: MPI_CHARACTER
-      use mpisetup,   only: comm, info, ierr, master, nstep
+      use constants,   only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B
+      use dataio_pub,  only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
+      !, H5P_DATASET_XFER_F, h5pset_preserve_f
+      use dataio_user, only: problem_write_restart
+      use mpi,         only: MPI_CHARACTER
+      use mpisetup,    only: comm, info, ierr, master, nstep
 
       implicit none
 
@@ -756,11 +735,12 @@ contains
       call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error, access_prp = plist_id)
 
       ! Write all data in parallel
-      if (associated(problem_write_restart)) call problem_write_restart(file_id)
-
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
          cg => cgl%cg
+
+         if (associated(problem_write_restart)) call problem_write_restart(file_id, cg)
+
          if (associated(cg%cs_iso2%arr)) call write_arr_to_restart(file_id, cg%cs_iso2%arr, AT_NO_B, "cs_iso2", cg)
          if (associated(cg%gp%arr))      call write_arr_to_restart(file_id, cg%gp%arr, AT_OUT_B, "gp", cg)
 
@@ -1224,6 +1204,7 @@ contains
 
       use constants,     only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B
       use dataio_pub,    only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, hdf
+      use dataio_user,   only: problem_read_restart
       use fluidindex,    only: flind
       use func,          only: fix_string
       use grid,          only: cga
@@ -1231,7 +1212,6 @@ contains
       use hdf5,          only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
            &                   h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,          only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
-      use list_hdf5,     only: problem_read_restart
       use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,      only: comm, ierr, magic_mass, master, t, info, comm, dt, dom, has_dir
 
@@ -1323,11 +1303,11 @@ contains
       call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error, access_prp = plist_id)
       call h5pclose_f(plist_id, error)
 
-      if (associated(problem_read_restart)) call problem_read_restart(file_id)
-
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
          cg => cgl%cg
+
+         if (associated(problem_read_restart)) call problem_read_restart(file_id, cg)
 
          if (associated(cg%cs_iso2%arr)) call read_arr_from_restart(file_id, cg%cs_iso2%arr, AT_NO_B, "cs_iso2", cg)
          if (associated(cg%gp%arr))      call read_arr_from_restart(file_id, cg%gp%arr, AT_OUT_B, "gp", cg)
@@ -1505,17 +1485,17 @@ contains
 !<
    subroutine set_common_attributes(filename, chdf)
 
-      use constants,     only: cbuff_len
-      use dataio_pub,    only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, hdf
-      use grid,          only: cga
-      use hdf5,          only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_RDWR_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
-           &                   h5open_f, h5fopen_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
-           &                   h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
-      use list_hdf5,     only: additional_attrs
-      use mpisetup,      only: slave, t, dt, local_magic_mass, comm, ierr, magic_mass, dom
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use version,       only: env, nenv
+      use constants,   only: cbuff_len
+      use dataio_pub,  only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, hdf
+      use dataio_user, only: additional_attrs
+      use grid,        only: cga
+      use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_RDWR_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
+           &                 h5open_f, h5fopen_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
+           &                 h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
+      use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
+      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,    only: slave, t, dt, local_magic_mass, comm, ierr, magic_mass, dom
+      use version,     only: env, nenv
 
       implicit none
 
@@ -1629,7 +1609,7 @@ contains
       fe = len_trim(run_id)
       call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
 
-      call additional_attrs(file_id)
+      if (associated(additional_attrs)) call additional_attrs(file_id)
 
       call h5fclose_f(file_id, error)
       call h5close_f(error)

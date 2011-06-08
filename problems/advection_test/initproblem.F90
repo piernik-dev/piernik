@@ -53,11 +53,10 @@ contains
 
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,  only: warn
-      use dataio_user, only: user_vars_hdf5
+      use dataio_user, only: user_vars_hdf5, problem_write_restart, problem_read_restart
       use mpisetup,    only: ierr, rbuff, master, slave, buffer_dim, comm, dom, proc, nproc
       use mpi,         only: MPI_DOUBLE_PRECISION
       use types,       only: finalize_problem, cleanup_problem
-      use list_hdf5,   only: problem_write_restart, problem_read_restart
 
       implicit none
 
@@ -210,7 +209,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine write_IC_to_restart(file_id)
+   subroutine write_IC_to_restart(file_id, cg)
 
       use constants,   only: AT_NO_B
       use dataio_pub,  only: warn, die
@@ -222,10 +221,10 @@ contains
       implicit none
 
       integer(HID_T), intent(in) :: file_id
-      real, dimension(:,:,:), pointer :: p3d
-      type(grid_container), pointer :: cg
+      type(grid_container), pointer, intent(in) :: cg
 
-      cg => cga%cg_all(1)
+      real, dimension(:,:,:), pointer :: p3d
+
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:write_IC_to_restart] multiple grid pieces per procesor not implemented yet") !nontrivial inid
 
       if (allocated(inid)) then
@@ -240,7 +239,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine read_IC_from_restart(file_id)
+   subroutine read_IC_from_restart(file_id, cg)
 
       use constants,   only: AT_NO_B
       use dataio_pub,  only: warn, die
@@ -253,11 +252,10 @@ contains
       implicit none
 
       integer(HID_T), intent(in) :: file_id
+      type(grid_container), pointer, intent(in) :: cg
 
       real, dimension(:,:,:), pointer :: p3d
-      type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:read_IC_from_restart] multiple grid pieces per procesor not implemented yet") !nontrivial inid
 
       if (associated(p3d)) nullify(p3d)

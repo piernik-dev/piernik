@@ -79,12 +79,12 @@ contains
 
    subroutine read_problem_par
 
-      use constants,     only: pi
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use mpisetup,      only: ierr, rbuff, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm
-      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use list_hdf5,     only: additional_attrs, problem_write_restart, problem_read_restart
-      use types,         only: problem_customize_solution, finalize_problem
+      use constants,   only: pi
+      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_user, only: additional_attrs, problem_write_restart, problem_read_restart
+      use mpisetup,    only: ierr, rbuff, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm
+      use mpi,         only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
+      use types,       only: problem_customize_solution, finalize_problem
 
       implicit none
 
@@ -412,16 +412,18 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine write_initial_fld_to_restart(file_id)
+   subroutine write_initial_fld_to_restart(file_id, cg)
 
       use constants,   only: AT_NO_B
       use dataio_hdf5, only: write_arr_to_restart
-      use grid,        only: cg
+      use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
 
       implicit none
 
       integer(HID_T),intent(in)  :: file_id
+      type(grid_container), pointer, intent(in) :: cg
+
       real, dimension(:,:,:), pointer :: p3d
 
       if (associated(p3d)) nullify(p3d)
@@ -447,16 +449,17 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine read_initial_fld_from_restart(file_id)
+   subroutine read_initial_fld_from_restart(file_id, cg)
 
       use constants,   only: AT_NO_B
       use dataio_hdf5, only: read_arr_from_restart
-      use grid,        only: cg
+      use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
 
       implicit none
 
       integer(HID_T),intent(in) :: file_id
+      type(grid_container), pointer, intent(in) :: cg
 
       real, dimension(:,:,:), pointer :: p3d
 
