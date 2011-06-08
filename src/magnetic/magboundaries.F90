@@ -445,7 +445,7 @@ contains
                   ledge = ledge + 1 ; lnbcells = lnbcells + 1
                   dvarx = var(ledge+1,:,:)-var(ledge,:,:)
                   do ib=1,lnbcells
-                     var(ib,:,:) = var(cg%is,:,:) - real(cg%is-ib)*dvarx
+                     var(ib,:,:) = var(ledge,:,:) - real(ledge-ib)*dvarx
                   enddo
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, LO)," not implemented for ",name, " in ", dir
@@ -497,7 +497,7 @@ contains
                   ledge = ledge + 1 ; lnbcells = lnbcells + 1
                   dvary = var(:,ledge+1,:)-var(:,ledge,:)
                   do ib=1,lnbcells
-                     var(:,ib,:) = var(:, cg%js,:) - real(cg%js-ib)*dvary
+                     var(:,ib,:) = var(:,ledge,:) - real(ledge-ib)*dvary
                   enddo
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, LO)," not implemented for ",name, " in ", dir
@@ -549,7 +549,7 @@ contains
                   ledge = ledge + 1 ; lnbcells = lnbcells + 1
                   dvarz = var(:,:,ledge+1)-var(:,:,ledge)
                   do ib=1,lnbcells
-                     var(:,:,ib) = var(:,:, cg%ks) - real(cg%ks-ib)*dvarz
+                     var(:,:,ib) = var(:,:,ledge) - real(ledge-ib)*dvarz
                   enddo
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, LO)," not implemented for ",name, " in ", dir
