@@ -575,15 +575,15 @@ contains
 ! compute eigenvalues for each p, q and r and solve linear system
 !> \todo this can be done only once if we do not change arrays
 
-      kx(:) = (cos(dpi/nx*(/(j,j=0,np-1)/))-1.)/cg%dx**2
-      ky(:) = (cos(dpi/ny*(/(j,j=0,ny-1)/))-1.)/cg%dy**2
-      kz(:) = (cos(dpi/nz*(/(j,j=0,nz-1)/))-1.)/cg%dz**2
+      kx(:) = (cos(dpi/nx*[( j,j=0,np-1 )])-1.)/cg%dx**2
+      ky(:) = (cos(dpi/ny*[( j,j=0,ny-1 )])-1.)/cg%dy**2
+      kz(:) = (cos(dpi/nz*[( j,j=0,nz-1 )])-1.)/cg%dz**2
 
 ! Correction for 4-th order (5-point) Laplacian - seems not to be important, at least in Jeans test.
 ! For integral approximation of the 4-th order Laplacian replace (7.-cos(x))/6. by (13.-cos(x))/12.
-!    kx(:) = kx(:) * (7.-cos(dpi/nx*(/(j,j=0,np-1)/)))/6.
-!    ky(:) = ky(:) * (7.-cos(dpi/ny*(/(j,j=0,ny-1)/)))/6.
-!    kz(:) = kz(:) * (7.-cos(dpi/nz*(/(j,j=0,nz-1)/)))/6.
+!    kx(:) = kx(:) * (7.-cos(dpi/nx*[( j,j=0,np-1 )]))/6.
+!    ky(:) = ky(:) * (7.-cos(dpi/ny*[( j,j=0,ny-1 )]))/6.
+!    kz(:) = kz(:) * (7.-cos(dpi/nz*[( j,j=0,nz-1 )]))/6.
       forall (i=1:np,j=1:ny,k=1:nz, (kx(i)+ky(j)+kz(k) - 3.0) /= 0.0)
          fft(i,j,k) = 0.5 * ctmp(i,j,k) / (kx(i)+ky(j)+kz(k) - 3.0)
       endforall

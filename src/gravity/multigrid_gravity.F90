@@ -565,9 +565,9 @@ contains
                   ! 2*(3*a+4*b+2*c+4*(a+2*b+c)*cos(d)+2*(a+2*(b+c))*cos(2*d)) * sin(d/2)**2 * sin(k*x)
                   ! asymptotically: -d**2/2 for d<pi
 
-                  kx(:) = curl%idx2 * (cos(dpi/curl%nxb*(/(j, j=0, curl%nxc-1)/)) - 1.)
-                  ky(:) = curl%idy2 * (cos(dpi/curl%nyb*(/(j, j=0, curl%nyb-1)/)) - 1.)
-                  kz(:) = curl%idz2 * (cos(dpi/curl%nzb*(/(j, j=0, curl%nzb-1)/)) - 1.)
+                  kx(:) = curl%idx2 * (cos(dpi/curl%nxb*[( j, j=0, curl%nxc-1 )]) - 1.)
+                  ky(:) = curl%idy2 * (cos(dpi/curl%nyb*[( j, j=0, curl%nyb-1 )]) - 1.)
+                  kz(:) = curl%idz2 * (cos(dpi/curl%nzb*[( j, j=0, curl%nzb-1 )]) - 1.)
                   call dfftw_plan_dft_r2c_3d(curl%planf, curl%nxb, curl%nyb, curl%nzb, curl%src, curl%fft, fftw_flags)
                   call dfftw_plan_dft_c2r_3d(curl%plani, curl%nxb, curl%nyb, curl%nzb, curl%fft, curl%src, fftw_flags)
 
@@ -579,9 +579,9 @@ contains
                   mb_alloc  = mb_alloc + size(curl%fftr)
 
                   curl%fft_norm = 1. / (8. * real( curl%nxb * curl%nyb * curl%nzb ))
-                  kx(:) = curl%idx2 * (cos(pi/curl%nxb*(/(j, j=1, curl%nxc)/)) - 1.)
-                  ky(:) = curl%idy2 * (cos(pi/curl%nyb*(/(j, j=1, curl%nyb)/)) - 1.)
-                  kz(:) = curl%idz2 * (cos(pi/curl%nzb*(/(j, j=1, curl%nzb)/)) - 1.)
+                  kx(:) = curl%idx2 * (cos(pi/curl%nxb*[( j, j=1, curl%nxc )]) - 1.)
+                  ky(:) = curl%idy2 * (cos(pi/curl%nyb*[( j, j=1, curl%nyb )]) - 1.)
+                  kz(:) = curl%idz2 * (cos(pi/curl%nzb*[( j, j=1, curl%nzb )]) - 1.)
                   call dfftw_plan_r2r_3d(curl%planf, curl%nxb, curl%nyb, curl%nzb, curl%src,  curl%fftr, FFTW_RODFT10, FFTW_RODFT10, FFTW_RODFT10, fftw_flags)
                   call dfftw_plan_r2r_3d(curl%plani, curl%nxb, curl%nyb, curl%nzb, curl%fftr, curl%src,  FFTW_RODFT01, FFTW_RODFT01, FFTW_RODFT01, fftw_flags)
 
