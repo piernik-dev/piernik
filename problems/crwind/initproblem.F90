@@ -106,7 +106,8 @@ contains
    subroutine init_prob
 
       use fluidindex,     only: ibx, iby, ibz, flind
-      use grid,           only: cg
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid
       use initcosmicrays, only: gamma_crs, iarr_crs
       use initionized,    only: idni, imxi, imyi, imzi
@@ -115,14 +116,13 @@ contains
 #ifdef SHEAR
       use shear,          only: qshear, omega
 #endif /* SHEAR */
-#ifdef GALAXY
-      use grid,           only: cg
-#endif /* GALAXY */
 
       implicit none
 
       integer :: i, j, k
       real    :: b0, csim2
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
 !   Secondary parameters
 
@@ -130,53 +130,61 @@ contains
 
       csim2 = flind%ion%cs2*(1.0+alpha)
 
-      if (associated(cg%cs_iso2%arr)) cg%cs_iso2%arr(:,:,:) = flind%ion%cs2
 
-      call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg=cg)
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      do k = 1, cg%nz
-         do j = 1, cg%ny
-            do i = 1, cg%nx
-               cg%u%arr(idni,i,j,k)   = max(smalld, cg%dprof(k))
+         if (associated(cg%cs_iso2%arr)) cg%cs_iso2%arr(:,:,:) = flind%ion%cs2
 
-               cg%u%arr(imxi,i,j,k) = 0.0
-               cg%u%arr(imyi,i,j,k) = 0.0
-               cg%u%arr(imzi,i,j,k) = 0.0
+         call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg=cg)
+
+         do k = 1, cg%nz
+            do j = 1, cg%ny
+               do i = 1, cg%nx
+                  cg%u%arr(idni,i,j,k)   = max(smalld, cg%dprof(k))
+
+                  cg%u%arr(imxi,i,j,k) = 0.0
+                  cg%u%arr(imyi,i,j,k) = 0.0
+                  cg%u%arr(imzi,i,j,k) = 0.0
 #ifdef SHEAR
-               cg%u%arr(imyi,i,j,k) = -qshear*omega*cg%x(i)*cg%u%arr(idni,i,j,k)
+                  cg%u%arr(imyi,i,j,k) = -qshear*omega*cg%x(i)*cg%u%arr(idni,i,j,k)
 #endif /* SHEAR */
 
 #ifndef ISO
-               cg%u%arr(ieni,i,j,k)   = flind%ion%cs2/(flind%ion%gam_1) * cg%u%arr(idni,i,j,k) &
-                               + 0.5*(cg%u%arr(imxi,i,j,k)**2 + cg%u%arr(imyi,i,j,k)**2 + &
-                                      cg%u%arr(imzi,i,j,k)**2 ) / cg%u%arr(idni,i,j,k)
+                  cg%u%arr(ieni,i,j,k) = flind%ion%cs2/(flind%ion%gam_1) * cg%u%arr(idni,i,j,k) + &
+                       &                 0.5*(cg%u%arr(imxi,i,j,k)**2 + cg%u%arr(imyi,i,j,k)**2 + &
+                       &                 cg%u%arr(imzi,i,j,k)**2 ) / cg%u%arr(idni,i,j,k)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               cg%u%arr(iarr_crs,i,j,k)   =  beta_cr*flind%ion%cs2 * cg%u%arr(idni,i,j,k)/( gamma_crs - 1.0 )
+                  cg%u%arr(iarr_crs,i,j,k) =  beta_cr*flind%ion%cs2 * cg%u%arr(idni,i,j,k)/( gamma_crs - 1.0 )
 #ifdef GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
-               cg%u%arr(iarr_crs,i,j,k)= cg%u%arr(iarr_crs,i,j,k) &
-                     + amp_cr*exp(-((cg%x(i)- x0        )**2 + (cg%y(j)- y0        )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
-                     + amp_cr*exp(-((cg%x(i)-(x0+dom%Lx))**2 + (cg%y(j)- y0        )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
-                     + amp_cr*exp(-((cg%x(i)- x0        )**2 + (cg%y(j)-(y0+dom%Ly))**2 + (cg%z(k)-z0)**2)/r_sn**2) &
-                     + amp_cr*exp(-((cg%x(i)-(x0+dom%Lx))**2 + (cg%y(j)-(y0+dom%Ly))**2 + (cg%z(k)-z0)**2)/r_sn**2)
+                  cg%u%arr(iarr_crs,i,j,k)= cg%u%arr(iarr_crs,i,j,k) &
+                       + amp_cr*exp(-((cg%x(i)- x0        )**2 + (cg%y(j)- y0        )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
+                       + amp_cr*exp(-((cg%x(i)-(x0+dom%Lx))**2 + (cg%y(j)- y0        )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
+                       + amp_cr*exp(-((cg%x(i)- x0        )**2 + (cg%y(j)-(y0+dom%Ly))**2 + (cg%z(k)-z0)**2)/r_sn**2) &
+                       + amp_cr*exp(-((cg%x(i)-(x0+dom%Lx))**2 + (cg%y(j)-(y0+dom%Ly))**2 + (cg%z(k)-z0)**2)/r_sn**2)
 #endif /* GALAXY */
 #endif /* COSM_RAYS */
+               enddo
             enddo
          enddo
-      enddo
 
-      do k = 1, cg%nz
-         do j = 1, cg%ny
-            do i = 1, cg%nx
-               cg%b%arr(ibx,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
-               cg%b%arr(iby,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
-               cg%b%arr(ibz,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
+         do k = 1, cg%nz
+            do j = 1, cg%ny
+               do i = 1, cg%nx
+                  cg%b%arr(ibx,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b%arr(iby,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b%arr(ibz,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
-               cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+                  cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
 #endif /* !ISO */
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
    end subroutine init_prob

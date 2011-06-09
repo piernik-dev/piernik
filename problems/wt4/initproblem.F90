@@ -200,7 +200,8 @@ contains
 
       use constants,  only: xdim, ydim, zdim , LO, HI
       use dataio_pub, only: msg, die
-      use grid,       only: cg
+      use grid,       only: cga
+      use grid_cont,  only: grid_container
       use mpisetup,   only: proc, master, nproc, comm, status, ierr
       use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
@@ -211,6 +212,10 @@ contains
       real, allocatable, dimension(:,:,:) :: ic_v
       integer, parameter                  :: NDIM = 3
       integer, dimension(2*NDIM)          :: ic_rng
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:read_IC_file] multiple grid pieces per procesor not implemented yet") !nontrivial ic_[ijk[se], allocate
 
       ! calculate index ranges for the subset of IC file covering local domain with a safety margin for interpolation
       ic_is = min(ic_nx, max(1,     1+floor((cg%fbnd(xdim, LO) + ic_xysize/2.)/ic_dx) - margin) )
@@ -283,112 +288,122 @@ contains
 
    subroutine init_prob
 
-      use constants,     only: small
-      use units,         only: kboltz, mH
-      use dataio_pub,    only: warn, printinfo, msg
-      use grid,          only: cg
-      use initionized,   only: idni, imxi, imyi, imzi
-      use mpisetup,      only: master, smalld
+      use constants,   only: small
+      use dataio_pub,  only: warn, printinfo, msg
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use initionized, only: idni, imxi, imyi, imzi
+      use mpisetup,    only: master, smalld
+      use units,       only: kboltz, mH
 
       implicit none
 
       real, parameter :: beat_dx = 1e-5
       integer :: i, j, k, iic, jic, kic
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
-      if (master) then
-         if (max(cg%dx, cg%dy, cg%dz) > ic_dx) then
-            write(msg,'(a)')     "[initproblem:init_prob] Too low resolution" ! call die
-            call warn(msg)
-         endif
-         if (abs(ic_dx/cg%dx-anint(ic_dx/cg%dx)) > beat_dx) then
-            write(msg,'(a,f8.4)')"[initproblem:init_prob] X-direction requires interpolation ic_dx/dx= ", ic_dx/cg%dx
-            call warn(msg)
-         endif
-         if (abs(ic_dx/cg%dy-anint(ic_dx/cg%dy)) > beat_dx) then
-            write(msg,'(a,f8.4)')"[initproblem:init_prob] Y-direction requires interpolation ic_dx/dy= ", ic_dx/cg%dy
-            call warn(msg)
-         endif
-         if (abs(ic_dx/cg%dz-anint(ic_dx/cg%dz)) > beat_dx) then
-            write(msg,'(a,f8.4)')"[initproblem:init_prob] Z-direction requires interpolation ic_dx/dz= ", ic_dx/cg%dz
-            call warn(msg)
-         endif
-      endif
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      if (fake_ic) then
-         cg%u%arr(idni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1.
-         cg%u%arr(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
-         cg%u%arr(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
-         cg%u%arr(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
-         cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1e-2
-      else
-         call read_IC_file
-         do k = cg%ks, cg%ke
-            kic = nint((cg%z(k) + ic_zsize/2.)/ic_dx)
-            do j = cg%js, cg%je
-               jic = nint((cg%y(j) + ic_xysize/2.)/ic_dx)
-               do i = cg%is, cg%ie
-                  iic = nint((cg%x(i) + ic_xysize/2.)/ic_dx)
-                  if (iic >= ic_is .and. iic <= ic_ie .and. jic >= ic_js .and. jic <= ic_je .and. kic >= ic_ks .and. kic <= ic_ke) then
-                     cg%u%arr(idni, i, j, k)     = ic_data(iic, jic, kic, 1) ! simple injection
-                     cg%u%arr(imxi, i, j, k)     = ic_data(iic, jic, kic, 2)
-                     cg%u%arr(imyi, i, j, k)     = ic_data(iic, jic, kic, 3)
-                     cg%u%arr(imzi, i, j, k)     = ic_data(iic, jic, kic, 4)
+         if (master) then
+            if (max(cg%dx, cg%dy, cg%dz) > ic_dx) then
+               write(msg,'(a)')     "[initproblem:init_prob] Too low resolution"
+               call warn(msg)
+            endif
+            if (abs(ic_dx/cg%dx-anint(ic_dx/cg%dx)) > beat_dx) then
+               write(msg,'(a,f8.4)')"[initproblem:init_prob] X-direction requires interpolation ic_dx/dx= ", ic_dx/cg%dx
+               call warn(msg)
+            endif
+            if (abs(ic_dx/cg%dy-anint(ic_dx/cg%dy)) > beat_dx) then
+               write(msg,'(a,f8.4)')"[initproblem:init_prob] Y-direction requires interpolation ic_dx/dy= ", ic_dx/cg%dy
+               call warn(msg)
+            endif
+            if (abs(ic_dx/cg%dz-anint(ic_dx/cg%dz)) > beat_dx) then
+               write(msg,'(a,f8.4)')"[initproblem:init_prob] Z-direction requires interpolation ic_dx/dz= ", ic_dx/cg%dz
+               call warn(msg)
+            endif
+         endif
+
+         if (fake_ic) then
+            cg%u%arr(idni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1.
+            cg%u%arr(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
+            cg%u%arr(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
+            cg%u%arr(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
+            cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1e-2
+         else
+            call read_IC_file
+            do k = cg%ks, cg%ke
+               kic = nint((cg%z(k) + ic_zsize/2.)/ic_dx)
+               do j = cg%js, cg%je
+                  jic = nint((cg%y(j) + ic_xysize/2.)/ic_dx)
+                  do i = cg%is, cg%ie
+                     iic = nint((cg%x(i) + ic_xysize/2.)/ic_dx)
+                     if (iic >= ic_is .and. iic <= ic_ie .and. jic >= ic_js .and. jic <= ic_je .and. kic >= ic_ks .and. kic <= ic_ke) then
+                        cg%u%arr(idni, i, j, k)     = ic_data(iic, jic, kic, 1) ! simple injection
+                        cg%u%arr(imxi, i, j, k)     = ic_data(iic, jic, kic, 2)
+                        cg%u%arr(imyi, i, j, k)     = ic_data(iic, jic, kic, 3)
+                        cg%u%arr(imzi, i, j, k)     = ic_data(iic, jic, kic, 4)
       !               cs_iso2_arr(i, j, k) = ic_data(iic, jic, kic, 5)
-                     cg%cs_iso2%arr(i, j, k) = (gamma_loc) * kboltz * T_disk / mean_mol_weight / mH
-                  else
-                     cg%u%arr(idni, i, j, k)     = smalld
-                     cg%u%arr(imxi, i, j, k)     = small
-                     cg%u%arr(imyi, i, j, k)     = small
-                     cg%u%arr(imzi, i, j, k)     = small
-                     cg%cs_iso2%arr(i, j, k)     = mincs2
-                  endif
+                        cg%cs_iso2%arr(i, j, k) = (gamma_loc) * kboltz * T_disk / mean_mol_weight / mH
+                     else
+                        cg%u%arr(idni, i, j, k)     = smalld
+                        cg%u%arr(imxi, i, j, k)     = small
+                        cg%u%arr(imyi, i, j, k)     = small
+                        cg%u%arr(imzi, i, j, k)     = small
+                        cg%cs_iso2%arr(i, j, k)     = mincs2
+                     endif
+                  enddo
                enddo
             enddo
+            if (allocated(ic_data)) deallocate(ic_data)
+         endif
+
+         do i = 1, cg%nb
+            cg%u%arr(:,i,:,:)           = cg%u%arr(:, cg%is,:,:)
+            cg%u%arr(:, cg%ie+i,:,:)    = cg%u%arr(:, cg%ie,:,:)
+            cg%cs_iso2%arr(i,:,:)       = cg%cs_iso2%arr(cg%is,:,:)
+            cg%cs_iso2%arr(cg%ie+i,:,:) = cg%cs_iso2%arr(cg%ie,:,:)
+
+            cg%u%arr(:,:,i,:)           = cg%u%arr(:,:, cg%js,:)
+            cg%u%arr(:,:,cg%je+i,:)     = cg%u%arr(:,:, cg%je,:)
+            cg%cs_iso2%arr(:,i,:)       = cg%cs_iso2%arr(:, cg%js,:)
+            cg%cs_iso2%arr(:,cg%je+i,:) = cg%cs_iso2%arr(:, cg%je,:)
+
+            cg%u%arr(:,:,:,i)           = cg%u%arr(:,:,:, cg%ks)
+            cg%u%arr(:,:,:, cg%ke+i)    = cg%u%arr(:,:,:, cg%ke)
+            cg%cs_iso2%arr(:,:,i)       = cg%cs_iso2%arr(:,:, cg%ks)
+            cg%cs_iso2%arr(:,:,cg%ke+i) = cg%cs_iso2%arr(:,:, cg%ke)
          enddo
-         if (allocated(ic_data)) deallocate(ic_data)
-      endif
+         if (master ) then
+            write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(dens)    = ', minval(cg%u%arr(idni,:,:,:)),      ' maxval(dens)    = ', maxval(cg%u%arr(idni,:,:,:))
+            call printinfo(msg, .true.)
+            write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(cs_iso2) = ', minval(cg%cs_iso2%arr(:,:,:)), ' maxval(cs_iso2) = ', maxval(cg%cs_iso2%arr(:,:,:))
+            call printinfo(msg, .true.)
+         endif
 
-      do i = 1, cg%nb
-         cg%u%arr(:,i,:,:)           = cg%u%arr(:, cg%is,:,:)
-         cg%u%arr(:, cg%ie+i,:,:)    = cg%u%arr(:, cg%ie,:,:)
-         cg%cs_iso2%arr(i,:,:)       = cg%cs_iso2%arr(cg%is,:,:)
-         cg%cs_iso2%arr(cg%ie+i,:,:) = cg%cs_iso2%arr(cg%ie,:,:)
+         cg%b%arr(:, 1:cg%nx, 1:cg%ny, 1:cg%nz) = 0.0
 
-         cg%u%arr(:,:,i,:)           = cg%u%arr(:,:, cg%js,:)
-         cg%u%arr(:,:,cg%je+i,:)     = cg%u%arr(:,:, cg%je,:)
-         cg%cs_iso2%arr(:,i,:)       = cg%cs_iso2%arr(:, cg%js,:)
-         cg%cs_iso2%arr(:,cg%je+i,:) = cg%cs_iso2%arr(:, cg%je,:)
+         ! BEWARE: den0, vlx0 and vly0 are used only with divine_intervention_type = 3
+         if (.not.allocated(den0)) allocate(den0(cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(vlx0)) allocate(vlx0(cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(vly0)) allocate(vly0(cg%nx, cg%ny, cg%nz))
 
-         cg%u%arr(:,:,:,i)           = cg%u%arr(:,:,:, cg%ks)
-         cg%u%arr(:,:,:, cg%ke+i)    = cg%u%arr(:,:,:, cg%ke)
-         cg%cs_iso2%arr(:,:,i)       = cg%cs_iso2%arr(:,:, cg%ks)
-         cg%cs_iso2%arr(:,:,cg%ke+i) = cg%cs_iso2%arr(:,:, cg%ke)
+         den0 = cg%u%arr(idni,:,:,:)
+         vlx0 = cg%u%arr(imxi,:,:,:) / den0
+         vly0 = cg%u%arr(imyi,:,:,:) / den0
+
+         ! It would be cool to dump a restart file here but this would make a cyclic dependency
+
+
+         cgl => cgl%nxt
       enddo
-      if (master ) then
-         write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(dens)    = ', minval(cg%u%arr(idni,:,:,:)),      ' maxval(dens)    = ', maxval(cg%u%arr(idni,:,:,:))
-         call printinfo(msg, .true.)
-         write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(cs_iso2) = ', minval(cg%cs_iso2%arr(:,:,:)), ' maxval(cs_iso2) = ', maxval(cg%cs_iso2%arr(:,:,:))
-         call printinfo(msg, .true.)
-      endif
-
-      cg%b%arr(:, 1:cg%nx, 1:cg%ny, 1:cg%nz) = 0.0
-
-      ! BEWARE: den0, vlx0 and vly0 are used only with divine_intervention_type = 3
-      if (.not.allocated(den0)) allocate(den0(cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(vlx0)) allocate(vlx0(cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(vly0)) allocate(vly0(cg%nx, cg%ny, cg%nz))
-
-      den0 = cg%u%arr(idni,:,:,:)
-      vlx0 = cg%u%arr(imxi,:,:,:) / den0
-      vly0 = cg%u%arr(imyi,:,:,:) / den0
-
-      ! It would be cool to dump a restart file here but this would make a cyclic dependency
 
 #ifndef UMUSCL
       if (master ) call warn("[initproblem:init_problem]: Without UMUSCL you'll likely get Monet-like density maps.")
 #endif /* !UMUSCL */
 
-      return
    end subroutine init_prob
 
 !-----------------------------------------------------------------------------
@@ -486,7 +501,8 @@ contains
 
    subroutine problem_customize_solution_wt4
 
-      use grid,        only: cg
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
       use initionized, only: idni, imxi, imyi, imzi
 
       implicit none
@@ -496,73 +512,82 @@ contains
       real, parameter :: max_ambient = 100. ! do not modify solution if density is above max_ambient * ambient_density
       real, allocatable, dimension(:,:) :: alf
       real            :: rc, ambient_density_min
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
-      if (.not. allocated(mod_str)) allocate(mod_str(cg%is:cg%ie)) !BEWARE not deallocated anywhere yet
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      select case (divine_intervention_type)
-         case (1)                                                                                ! crude
-            where (cg%u%arr(idni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) < ambient_density)
-               cg%u%arr(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-               cg%u%arr(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-               cg%u%arr(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-               cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = mincs2
-            elsewhere
-               cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = maxcs2
-            endwhere
-         case (2)                                                                                ! smooth
-            ambient_density_min = ambient_density / max_ambient
-            do k = cg%ks, cg%ke
-               do j = cg%js, cg%je
-                  mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density_min / (max(0., cg%u%arr(idni, cg%is:cg%ie, j, k)) + ambient_density_min) - 1./max_ambient)
-                  ! ifort can have memory leaks on WHERE - let's provide explicit loop for this crappy compiler
-                  ! The __IFORT__ macro has to be defined manually, e.g. in appropriate compiler.in file
+         if (.not. allocated(mod_str)) allocate(mod_str(cg%is:cg%ie)) !BEWARE not deallocated anywhere yet
+
+         select case (divine_intervention_type)
+            case (1)                                                                                ! crude
+               where (cg%u%arr(idni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) < ambient_density)
+                  cg%u%arr(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+                  cg%u%arr(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+                  cg%u%arr(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+                  cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = mincs2
+               elsewhere
+                  cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = maxcs2
+               endwhere
+            case (2)                                                                                ! smooth
+               ambient_density_min = ambient_density / max_ambient
+               do k = cg%ks, cg%ke
+                  do j = cg%js, cg%je
+                     mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density_min / (max(0., cg%u%arr(idni, cg%is:cg%ie, j, k)) + ambient_density_min) - 1./max_ambient)
+                     ! ifort can have memory leaks on WHERE - let's provide explicit loop for this crappy compiler
+                     ! The __IFORT__ macro has to be defined manually, e.g. in appropriate compiler.in file
 #ifdef __IFORT__
-                  do i = cg%is, cg%ie
-                     if (mod_str(i) > max_ambient**(-2)) then
-                        cg%u%arr(idni,     i, j, k) = cg%u%arr(idni, i, j, k) + ambient_density_min * mod_str(i)
-                        cg%u%arr(imxi,     i, j, k) = cg%u%arr(imxi, i, j, k) * (1. - damp_factor   * mod_str(i))
-                        cg%u%arr(imyi,     i, j, k) = cg%u%arr(imyi, i, j, k) * (1. - damp_factor   * mod_str(i))
-                        cg%u%arr(imzi,     i, j, k) = cg%u%arr(imzi, i, j, k) * (1. - damp_factor   * mod_str(i))
-                        cg%cs_iso2%arr(i, j, k) = maxcs2           -  (maxcs2-mincs2)    * mod_str(i)
-                     endif
-                  enddo
+                     do i = cg%is, cg%ie
+                        if (mod_str(i) > max_ambient**(-2)) then
+                           cg%u%arr(idni,     i, j, k) = cg%u%arr(idni, i, j, k) + ambient_density_min * mod_str(i)
+                           cg%u%arr(imxi,     i, j, k) = cg%u%arr(imxi, i, j, k) * (1. - damp_factor   * mod_str(i))
+                           cg%u%arr(imyi,     i, j, k) = cg%u%arr(imyi, i, j, k) * (1. - damp_factor   * mod_str(i))
+                           cg%u%arr(imzi,     i, j, k) = cg%u%arr(imzi, i, j, k) * (1. - damp_factor   * mod_str(i))
+                           cg%cs_iso2%arr(i, j, k) = maxcs2           -  (maxcs2-mincs2)    * mod_str(i)
+                        endif
+                     enddo
 #else /* !__IFORT__ */
-                  where (mod_str(cg%is:cg%ie) > max_ambient**(-2))
-                     cg%u%arr(idni,     cg%is:cg%ie, j, k) = cg%u%arr(idni, cg%is:cg%ie, j, k) + ambient_density_min * mod_str(cg%is:cg%ie)
-                     cg%u%arr(imxi,     cg%is:cg%ie, j, k) = cg%u%arr(imxi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
-                     cg%u%arr(imyi,     cg%is:cg%ie, j, k) = cg%u%arr(imyi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
-                     cg%u%arr(imzi,     cg%is:cg%ie, j, k) = cg%u%arr(imzi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
-                     cg%cs_iso2%arr(cg%is:cg%ie, j, k) = maxcs2               -  (maxcs2-mincs2)    * mod_str(cg%is:cg%ie)
-                  endwhere
+                     where (mod_str(cg%is:cg%ie) > max_ambient**(-2))
+                        cg%u%arr(idni,     cg%is:cg%ie, j, k) = cg%u%arr(idni, cg%is:cg%ie, j, k) + ambient_density_min * mod_str(cg%is:cg%ie)
+                        cg%u%arr(imxi,     cg%is:cg%ie, j, k) = cg%u%arr(imxi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
+                        cg%u%arr(imyi,     cg%is:cg%ie, j, k) = cg%u%arr(imyi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
+                        cg%u%arr(imzi,     cg%is:cg%ie, j, k) = cg%u%arr(imzi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
+                        cg%cs_iso2%arr(cg%is:cg%ie, j, k) = maxcs2               -  (maxcs2-mincs2)    * mod_str(cg%is:cg%ie)
+                     endwhere
 #endif /* !__IFORT__ */
-               enddo
-            enddo
-         case (3)
-            if (.not. allocated(alf)) then
-               allocate(alf(cg%nx, cg%ny))
-               do i = 1, cg%nx
-                  do j = 1, cg%ny
-                     rc = sqrt(cg%x(i)**2 + cg%y(j)**2)
-                     alf(i,j) = -alfasupp*0.5*(tanh((rc-r_in)/r_in*f_in)-1.)
-                     alf(i,j) = alf(i,j) + alfasupp*0.5*(tanh((rc-r_out)/r_out*f_out) + 1.)
                   enddo
                enddo
-            endif
-            do k = 1, cg%nz
-               cg%u%arr(idni, :, :, k) = (1. - alf(:,:))*cg%u%arr(idni, :, :, k) + alf*den0(:, :, k)
-               cg%u%arr(imxi, :, :, k) = (1. - alf(:,:))*cg%u%arr(imxi, :, :, k) + alf*den0(:, :, k) * vlx0(:, :, k)
-               cg%u%arr(imyi, :, :, k) = (1. - alf(:,:))*cg%u%arr(imyi, :, :, k) + alf*den0(:, :, k) * vly0(:, :, k)
-            enddo
-            do k = cg%ks, cg%ke
-               do j = cg%js, cg%je
-                  mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density / (max(0., cg%u%arr(idni, cg%is:cg%ie, j, k)) + ambient_density) - 1./max_ambient)
-                  where (mod_str(cg%is:cg%ie) > max_ambient**(-2))
-                     cg%u%arr(imzi,     cg%is:cg%ie, j, k) = cg%u%arr(imzi, cg%is:cg%ie, j, k) * (1. - damp_factor * mod_str(cg%is:cg%ie))
-                  endwhere
+            case (3)
+               if (.not. allocated(alf)) then
+                  allocate(alf(cg%nx, cg%ny))
+                  do i = 1, cg%nx
+                     do j = 1, cg%ny
+                        rc = sqrt(cg%x(i)**2 + cg%y(j)**2)
+                        alf(i,j) = -alfasupp*0.5*(tanh((rc-r_in)/r_in*f_in)-1.)
+                        alf(i,j) = alf(i,j) + alfasupp*0.5*(tanh((rc-r_out)/r_out*f_out) + 1.)
+                     enddo
+                  enddo
+               endif
+               do k = 1, cg%nz
+                  cg%u%arr(idni, :, :, k) = (1. - alf(:,:))*cg%u%arr(idni, :, :, k) + alf*den0(:, :, k)
+                  cg%u%arr(imxi, :, :, k) = (1. - alf(:,:))*cg%u%arr(imxi, :, :, k) + alf*den0(:, :, k) * vlx0(:, :, k)
+                  cg%u%arr(imyi, :, :, k) = (1. - alf(:,:))*cg%u%arr(imyi, :, :, k) + alf*den0(:, :, k) * vly0(:, :, k)
                enddo
-            enddo
+               do k = cg%ks, cg%ke
+                  do j = cg%js, cg%je
+                     mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density / (max(0., cg%u%arr(idni, cg%is:cg%ie, j, k)) + ambient_density) - 1./max_ambient)
+                     where (mod_str(cg%is:cg%ie) > max_ambient**(-2))
+                        cg%u%arr(imzi,     cg%is:cg%ie, j, k) = cg%u%arr(imzi, cg%is:cg%ie, j, k) * (1. - damp_factor * mod_str(cg%is:cg%ie))
+                     endwhere
+                  enddo
+               enddo
 
-      end select
+         end select
+
+         cgl => cgl%nxt
+      enddo
 
    end subroutine problem_customize_solution_wt4
 

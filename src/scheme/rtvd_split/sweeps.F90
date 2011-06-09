@@ -26,9 +26,13 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
+
 module sweeps     ! split sweeps
+
 ! pulled by ANY
+
    implicit none
+
    private
    public  :: sweepx, sweepy, sweepz
 #if defined SHEAR && defined FLUID_INTERACTIONS
@@ -39,19 +43,30 @@ contains
 
 #if defined SHEAR && defined FLUID_INTERACTIONS
    subroutine source_terms_y
+
+      use dataio_pub,      only: die
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind
-      use grid,            only: cg
+      use grid,            only: cga
+      use grid_cont,       only: grid_container
       use mpisetup,        only: dt
       use shear,           only: omega, qshear
       use interactions,    only: dragc_gas_dust
 
       implicit none
-      real, dimension(size(iarr_all_my), cg%nx, cg%nz) :: vxr, v_r, rotaccr
-      real, dimension(cg%nx, cg%nz)      :: epsa
-      real, dimension(flind%all, cg%nx, cg%nz) :: u1
+      real, dimension(:,:,:), allocatable :: vxr, v_r, rotaccr
+      real, dimension(:,:), allocatable   :: epsa
+      real, dimension(:,:,:), allocatable :: u1
       integer :: ind,i
       real, parameter, dimension(2) :: fac = [0.5, 1.0]
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[sweeps:source_terms_y] multiple grid pieces per procesor not implemented yet") !nontrivial u1
+
+      allocate(vxr(size(iarr_all_my), cg%nx, cg%nz), v_r(size(iarr_all_my), cg%nx, cg%nz), rotaccr(size(iarr_all_my), cg%nx, cg%nz))
+      allocate(epsa(cg%nx, cg%nz))
+      allocate(u1(flind%all, cg%nx, cg%nz))
 
       u1(:,:,:) = cg%u%arr(:,:,1,:)
 
@@ -80,6 +95,10 @@ contains
          endwhere
          cg%u%arr(iarr_all_my,:,1,:) = u1(iarr_all_my,:,:)
       enddo
+
+      deallocate(vxr, v_r, rotaccr)
+      deallocate(epsa)
+      deallocate(u1)
 
       call all_fluid_boundaries
 

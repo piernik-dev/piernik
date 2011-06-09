@@ -102,115 +102,129 @@ contains
 !-----------------------------------------------------------------------------
 
    real function dens_Rdistr(R,Rin,n)
+
       implicit none
+
       real, intent(in) :: R,Rin,n
       real :: ninv
+
       ninv = 1./n
       dens_Rdistr = (R - Rin)**ninv / R**(2.+ninv)
+
    end function dens_Rdistr
 
    subroutine init_prob
 
-      use grid,        only: cg
       use constants,   only: pi, dpi
-      use units,       only: newtong
       use gravity,     only: ptmass
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
       use initneutral, only: idnn, imxn, imyn, imzn
       use initdust,    only: idnd, imxd, imyd, imzd
       use initneutral, only: cs_iso_neu, cs_iso_neu2
       use mpisetup,    only: smalld, dom
+      use units,       only: newtong
 #ifndef ISO
       use initneutral, only: ienn, gamma_neu
       use mpisetup,    only: smallei
 #endif /* !ISO */
+
       implicit none
 
       integer :: i,j,k
       real :: xi,yj,zk, rc, H0, sqr_gm, rho0
       real :: n,norm, H, ninv
       real :: gradP, iOmega, ilook, gradgp
-      real, dimension(3, cg%nz) :: noise
+      real, dimension(:, :), allocatable :: noise
       real, dimension(:), allocatable :: omega,omegad
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 #ifndef ISO
       real :: vx, vy, vz
 #endif /* !ISO */
 
-      allocate(omega(cg%nx),omegad(cg%nx))
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         allocate(omega(cg%nx),omegad(cg%nx), noise(3, cg%nz))
 !   Secondary parameters
 
-      sqr_gm = sqrt(newtong*ptmass)
+         sqr_gm = sqrt(newtong*ptmass)
 
-      n = 0.5*Rin / (R0 - Rin)
-      ninv = 1./n
-      if (sigma_model == 'hayashi') then
-         sigma0 = 0.2* R0**(-1.5)
-      endif
-      H0 = R0 * HtoR
-      cs_iso_neu2 = H0 * (pi*newtong) * sigma0
-      cs_iso_neu = sqrt(cs_iso_neu2)
+         n = 0.5*Rin / (R0 - Rin)
+         ninv = 1./n
+         if (sigma_model == 'hayashi') then
+            sigma0 = 0.2* R0**(-1.5)
+         endif
+         H0 = R0 * HtoR
+         cs_iso_neu2 = H0 * (pi*newtong) * sigma0
+         cs_iso_neu = sqrt(cs_iso_neu2)
 
-      rho0 = sigma0 / (sqrt(dpi)*H0)
+         rho0 = sigma0 / (sqrt(dpi)*H0)
 
-      norm = 1. / dens_Rdistr(R0,Rin,n)
+         norm = 1. / dens_Rdistr(R0,Rin,n)
 
-      do k = 1, cg%nz
-         zk = cg%z(k)
+         do k = 1, cg%nz
+            zk = cg%z(k)
+            do j = 1, cg%ny
+               yj = cg%y(j)
+               do i = 1, cg%nx
+                  xi = cg%x(i)
+                  rc = sqrt(xi**2+yj**2)
+                  H = HtoR * rc
+                  cg%u%arr(idnn,i,j,k) = max(rho0 * norm * dens_RdistR(rc,Rin,n) * exp(- 0.25 * zk**2 / H**2 ), smalld)
+                  cg%u%arr(idnd,i,j,k) = eps*cg%u%arr(idnn,i,j,k)
+               enddo
+            enddo
+         enddo
+
+         do i = 2, cg%nx-1   ! 2d
+            rc= cg%x(i)*sqrt(2.0)
+            gradgp=  0.5*(cg%gp%arr(i+1,i+1,max(cg%nz/2,1))-cg%gp%arr(i-1,i-1,max(cg%nz/2,1)))/cg%dx/sqrt(2.)
+            gradp = -0.5*(cg%u%arr(idnn,i+1,i+1,max(cg%nz/2,1))-cg%u%arr(idnn,i-1,i-1,max(cg%nz/2,1)))/cg%dx /sqrt(2.)*cs_iso_neu2
+            omega(i)  = sqrt( abs( (gradgp-gradp)/rc ) )
+            omegad(i) = sqrt( abs(    gradgp/rc      ) )
+         enddo
+         omega(1)  = omega(2);  omega(cg%nx)  = omega(cg%nx-1)
+         omegad(1) = omegad(2); omegad(cg%nx) = omegad(cg%nx-1)
+
+         call random_seed()
+
          do j = 1, cg%ny
             yj = cg%y(j)
             do i = 1, cg%nx
                xi = cg%x(i)
                rc = sqrt(xi**2+yj**2)
-               H = HtoR * rc
-               cg%u%arr(idnn,i,j,k) = max(rho0 * norm * dens_RdistR(rc,Rin,n) * exp(- 0.25 * zk**2 / H**2 ), smalld)
-               cg%u%arr(idnd,i,j,k) = eps*cg%u%arr(idnn,i,j,k)
-            enddo
-         enddo
-      enddo
+               call random_number(noise)
 
-      do i = 2, cg%nx-1   ! 2d
-         rc= cg%x(i)*sqrt(2.0)
-         gradgp=  0.5*(cg%gp%arr(i+1,i+1,max(cg%nz/2,1))-cg%gp%arr(i-1,i-1,max(cg%nz/2,1)))/cg%dx/sqrt(2.)
-         gradp = -0.5*(cg%u%arr(idnn,i+1,i+1,max(cg%nz/2,1))-cg%u%arr(idnn,i-1,i-1,max(cg%nz/2,1)))/cg%dx &
-                            /sqrt(2.)*cs_iso_neu2
-         omega(i)  = sqrt( abs( (gradgp-gradp)/rc ) )
-         omegad(i) = sqrt( abs(    gradgp/rc      ) )
-      enddo
-      omega(1)  = omega(2);  omega(cg%nx)  = omega(cg%nx-1)
-      omegad(1) = omegad(2); omegad(cg%nx) = omegad(cg%nx-1)
-
-      call random_seed()
-
-      do j = 1, cg%ny
-         yj = cg%y(j)
-         do i = 1, cg%nx
-            xi = cg%x(i)
-            rc = sqrt(xi**2+yj**2)
-            call random_number(noise)
-
-            ilook = (rc-dom%xmin)/cg%dx/sqrt(2.) + 0.5 + cg%nb
-            iOmega = omega(int(ilook))+(rc-cg%x(int(ilook))*sqrt(2.))*(omega(int(ilook)+1)-omega(int(ilook))) &
-                 &   / (cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
+               ilook = (rc-dom%xmin)/cg%dx/sqrt(2.) + 0.5 + cg%nb
+               iOmega = omega(int(ilook))+(rc-cg%x(int(ilook))*sqrt(2.))*(omega(int(ilook)+1)-omega(int(ilook))) &
+                    &   / (cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
 !
 !
-            cg%u%arr(imxn,i,j,:) = -yj*iOmega*cg%u%arr(idnn,i,j,:)
-            cg%u%arr(imyn,i,j,:) =  xi*iOmega*cg%u%arr(idnn,i,j,:)
-            cg%u%arr(imzn,i,j,:) = 0.0
+               cg%u%arr(imxn,i,j,:) = -yj*iOmega*cg%u%arr(idnn,i,j,:)
+               cg%u%arr(imyn,i,j,:) =  xi*iOmega*cg%u%arr(idnn,i,j,:)
+               cg%u%arr(imzn,i,j,:) = 0.0
 #ifndef ISO
-            cg%u%arr(ienn,i,j,:) = cs_iso_neu2/(gamma_neu-1.0)*cg%u%arr(idnn,i,j,:)
-            cg%u%arr(ienn,i,j,:) = max(cg%u%arr(ienn,i,j,:), smallei)
-            cg%u%arr(ienn,i,j,:) = cg%u%arr(ienn,i,j,:) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(idnn,i,j,:)
+               cg%u%arr(ienn,i,j,:) = cs_iso_neu2/(gamma_neu-1.0)*cg%u%arr(idnn,i,j,:)
+               cg%u%arr(ienn,i,j,:) = max(cg%u%arr(ienn,i,j,:), smallei)
+               cg%u%arr(ienn,i,j,:) = cg%u%arr(ienn,i,j,:) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(idnn,i,j,:)
 #endif /* !ISO */
 
-            iOmega = omegad(int(ilook))+(rc-cg%x(int(ilook))*sqrt(2.))*(omegad(int(ilook)+1)-omegad(int(ilook))) &
-                         /(cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
-            cg%u%arr(imxd,i,j,:) = -yj*iOmega*cg%u%arr(idnd,i,j,:) + amp*(noise(1,:)-0.5)
-            cg%u%arr(imyd,i,j,:) =  xi*iOmega*cg%u%arr(idnd,i,j,:) + amp*(noise(2,:)-0.5)
-            cg%u%arr(imzd,i,j,:) = 0.0 + amp*(noise(3,:)-0.5)
+               iOmega = omegad(int(ilook))+(rc-cg%x(int(ilook))*sqrt(2.))*(omegad(int(ilook)+1)-omegad(int(ilook))) &
+                    &   /(cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
+               cg%u%arr(imxd,i,j,:) = -yj*iOmega*cg%u%arr(idnd,i,j,:) + amp*(noise(1,:)-0.5)
+               cg%u%arr(imyd,i,j,:) =  xi*iOmega*cg%u%arr(idnd,i,j,:) + amp*(noise(2,:)-0.5)
+               cg%u%arr(imzd,i,j,:) = 0.0 + amp*(noise(3,:)-0.5)
 
+            enddo
          enddo
-      enddo
 
-      deallocate(omega,omegad)
+         deallocate(omega, omegad, noise)
+
+         cgl => cgl%nxt
+      enddo
 
    end subroutine init_prob
 

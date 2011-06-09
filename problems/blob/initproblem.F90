@@ -103,43 +103,54 @@ contains
 
    subroutine init_prob
 
-      use grid,         only: cg
-      use mpisetup,     only: has_dir
-      use constants,    only: zdim
-      use initneutral,  only: gamma_neu, idnn, imxn, imyn, imzn, ienn
+      use constants,   only: zdim
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use initneutral, only: gamma_neu, idnn, imxn, imyn, imzn, ienn
+      use mpisetup,    only: has_dir
 
       implicit none
 
       real    :: penv, rcx, rcy, rrel
       integer :: i, j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       penv = 3.2*rblob*sqrt(chi)/tkh/(Mext*gamma_neu/denv)
 
-      cg%u%arr(imzn, :, :, :) = 0.0
-      cg%u%arr(ienn, :, :, :) = penv/(gamma_neu-1.0)
 
-      do i = 1, cg%nx
-         rcx = (cg%x(i)-blobxc)**2
-         do j = 1, cg%ny
-            rcy = (cg%y(j)-blobyc)**2
-            do k = 1, cg%nz
-               if (has_dir(zdim)) then
-                  rrel = sqrt(rcx + rcy + (cg%z(k)-blobzc)**2)
-               else
-                  rrel = sqrt(rcx + rcy)
-               endif
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-               if (rblob >= rrel) then
-                  cg%u%arr(idnn,i,j,k) = chi*denv
-                  cg%u%arr(imxn,i,j,k) = chi*denv*vgal
-                  cg%u%arr(imyn,i,j,k) = 0.0
-               else
-                  cg%u%arr(idnn,i,j,k) = denv
-                  cg%u%arr(imxn,i,j,k) = denv*vgal
-                  cg%u%arr(imyn,i,j,k) = Mext*gamma_neu*penv
-               endif
+         cg%u%arr(imzn, :, :, :) = 0.0
+         cg%u%arr(ienn, :, :, :) = penv/(gamma_neu-1.0)
+
+         do i = 1, cg%nx
+            rcx = (cg%x(i)-blobxc)**2
+            do j = 1, cg%ny
+               rcy = (cg%y(j)-blobyc)**2
+               do k = 1, cg%nz
+                  if (has_dir(zdim)) then
+                     rrel = sqrt(rcx + rcy + (cg%z(k)-blobzc)**2)
+                  else
+                     rrel = sqrt(rcx + rcy)
+                  endif
+
+                  if (rblob >= rrel) then
+                     cg%u%arr(idnn,i,j,k) = chi*denv
+                     cg%u%arr(imxn,i,j,k) = chi*denv*vgal
+                     cg%u%arr(imyn,i,j,k) = 0.0
+                  else
+                     cg%u%arr(idnn,i,j,k) = denv
+                     cg%u%arr(imxn,i,j,k) = denv*vgal
+                     cg%u%arr(imyn,i,j,k) = Mext*gamma_neu*penv
+                  endif
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
    end subroutine init_prob

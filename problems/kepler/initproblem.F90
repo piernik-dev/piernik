@@ -69,12 +69,11 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_user,         only: user_vars_hdf5
+      use dataio_user,         only: user_vars_hdf5, problem_write_restart, problem_read_restart
       use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, geometry_type
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use gravity,             only: grav_pot_3d
       use types,               only: problem_customize_solution, problem_grace_passed
-      use list_hdf5,           only: problem_write_restart, problem_read_restart
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr
       use constants,           only: GEO_RPZ
 
@@ -182,17 +181,20 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_sine
 
-      use mpisetup,     only: master, dom
-      use dataio_pub,   only: printinfo, warn
-      use fluidindex,   only: flind
-      use grid,         only: cg
-      use constants,    only: dpi
+      use constants,  only: dpi
+      use dataio_pub, only: printinfo, warn
+      use fluidindex, only: flind
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
+      use mpisetup,   only: master, dom
 
       implicit none
 
       real, parameter :: amp = 1.e-6
       real :: kx, kz
       integer :: i, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       if (.not. associated(flind%dst)) then
          if (master) call warn("[initproblem:add_sine]: Cannot add sine wave perturbation to dust, because there is no dust.")
@@ -203,33 +205,45 @@ contains
       kx = 15.*dpi/dom%Lx
       kz =  5.*dpi/dom%Lz
 
-      do i = cg%is, cg%ie
-         do k = cg%ks, cg%ke
-            cg%u%arr(flind%dst%imx,i,:,k) = cg%u%arr(flind%dst%imx,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u%arr(flind%dst%idn,i,:,k)
-            cg%u%arr(flind%dst%imy,i,:,k) = cg%u%arr(flind%dst%imy,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u%arr(flind%dst%idn,i,:,k)
-            cg%u%arr(flind%dst%imz,i,:,k) = cg%u%arr(flind%dst%imz,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u%arr(flind%dst%idn,i,:,k)
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         do i = cg%is, cg%ie
+            do k = cg%ks, cg%ke
+               cg%u%arr(flind%dst%imx,i,:,k) = cg%u%arr(flind%dst%imx,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u%arr(flind%dst%idn,i,:,k)
+               cg%u%arr(flind%dst%imy,i,:,k) = cg%u%arr(flind%dst%imy,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u%arr(flind%dst%idn,i,:,k)
+               cg%u%arr(flind%dst%imz,i,:,k) = cg%u%arr(flind%dst%imz,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u%arr(flind%dst%idn,i,:,k)
+            enddo
          enddo
-      enddo
 #ifdef DEBUG
-      open(456, file="perturbation.dat", status="unknown")
-      do k = cg%ks, cg%ke
-         write(456,*) cg%z(k), sin(kz*cg%z(k))
-      enddo
-      close(456)
+         open(456, file="perturbation.dat", status="unknown")
+         do k = cg%ks, cg%ke
+            write(456,*) cg%z(k), sin(kz*cg%z(k))
+         enddo
+         close(456)
 #endif /* DEBUG */
+
+         cgl => cgl%nxt
+      enddo
 
    end subroutine add_sine
 !-----------------------------------------------------------------------------
    subroutine add_random_noise
-      use grid,         only: cg
-      use fluidindex,   only: flind
-      use mpisetup,     only: proc, master
-      use dataio_pub,   only: printinfo
+
+      use dataio_pub, only: printinfo
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
+      use fluidindex, only: flind
+      use mpisetup,   only: proc, master
 
       implicit none
+
       integer, dimension(:), allocatable  :: seed
       integer :: n, clock, i
       real, dimension(:,:,:,:), allocatable :: noise
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       if (amp_noise <= 0.0) return
       if (master) call printinfo("[initproblem:add_random_noise]: adding random noise to dust")
@@ -240,27 +254,36 @@ contains
       call random_seed(put=seed)
       deallocate(seed)
 
-      allocate(noise(3,cg%nx,cg%ny,cg%nz))
-      call random_number(noise)
-      cg%u%arr(flind%dst%imx,:,:,:) = cg%u%arr(flind%dst%imx,:,:,:) +amp_noise -2.0*amp_noise*noise(1,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
-      cg%u%arr(flind%dst%imy,:,:,:) = cg%u%arr(flind%dst%imy,:,:,:) +amp_noise -2.0*amp_noise*noise(2,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
-      cg%u%arr(flind%dst%imz,:,:,:) = cg%u%arr(flind%dst%imz,:,:,:) +amp_noise -2.0*amp_noise*noise(3,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
-      deallocate(noise)
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         allocate(noise(3,cg%nx,cg%ny,cg%nz))
+         call random_number(noise)
+         cg%u%arr(flind%dst%imx,:,:,:) = cg%u%arr(flind%dst%imx,:,:,:) +amp_noise -2.0*amp_noise*noise(1,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
+         cg%u%arr(flind%dst%imy,:,:,:) = cg%u%arr(flind%dst%imy,:,:,:) +amp_noise -2.0*amp_noise*noise(2,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
+         cg%u%arr(flind%dst%imz,:,:,:) = cg%u%arr(flind%dst%imz,:,:,:) +amp_noise -2.0*amp_noise*noise(3,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
+         deallocate(noise)
+
+         cgl => cgl%nxt
+      enddo
+
    end subroutine add_random_noise
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use dataio_pub,          only: msg, printinfo, die
-      use fluidtypes,          only: component_fluid
-      use constants,           only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ, DST
-      use units,               only: newtong, gram, cm, kboltz, mH
-      use fluidindex,          only: ibx, iby, ibz, flind
-      use gravity,             only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
-      use grid,                only: cg
-      use hydrostatic,         only: hydrostatic_zeq_densmid
-      use mpisetup,            only: has_dir, dom, master, geometry_type, pcoords, dom, comm, comm3d, ierr
-      use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use interactions,        only: epstein_factor
+      use constants,    only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ, DST
+      use dataio_pub,   only: msg, printinfo, die
+      use fluidindex,   only: ibx, iby, ibz, flind
+      use fluidtypes,   only: component_fluid
+      use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
+      use grid,         only: cga
+      use grid_cont,    only: cg_list_element, grid_container
+      use hydrostatic,  only: hydrostatic_zeq_densmid
+      use interactions, only: epstein_factor
+      use mpi,          only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
+      use mpisetup,     only: has_dir, dom, master, geometry_type, pcoords, dom, comm, comm3d, ierr
+      use units,        only: newtong, gram, cm, kboltz, mH
 
       implicit none
 
@@ -271,208 +294,219 @@ contains
 
       real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der, gdens
       type(component_fluid), pointer  :: fl
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
 !   Secondary parameters
       if (comm3d == MPI_COMM_NULL) call die("[initproblem:init_prob] comm3d == MPI_COMM_NULL not implemented") !pcoords
 
-      sqr_gm = sqrt(newtong*ptmass)
-      do k = 1, cg%nz
-         if (cg%z(k) < 0.0) kmid = k       ! the midplane is in between ksmid and ksmid+1
-      enddo
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      if (associated(flind%ion) .and. geometry_type == GEO_XYZ) then
-         fl => flind%ion
-         csim2 = fl%cs2*(1.0+alpha)
-         b0    = sqrt(2.*alpha*d0*fl%cs2)
+         if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
-         do j = 1, cg%ny
-            yj = cg%y(j)
-            do i = 1, cg%nx
-               xi = cg%x(i)
-               rc = sqrt(xi**2+yj**2)
-
-               if (has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2, cg=cg)
-
-               do k = 1, cg%nz
-
-                  vx = sqr_gm * (-yj)/(rc**2+r_smooth**2)**0.75
-                  vy = sqr_gm * ( xi)/(rc**2+r_smooth**2)**0.75
-                  vz = 0.0
-
-                  cg%u%arr(fl%idn,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
-
-                  if (has_dir(zdim)) then
-                     cg%u%arr(fl%idn,i,j,k) = cg%dprof(k)/cosh(cg%u%arr(fl%idn,i,j,k))
-                     cg%u%arr(fl%idn,i,j,k) = max(cg%u%arr(fl%idn,i,j,k), dout)
-                  else
-                     cg%u%arr(fl%idn,i,j,k) = dout + (d0 - dout)/cosh(cg%u%arr(fl%idn,i,j,k))
-                  endif
-                  cg%u%arr(fl%idn,i,j,k) = cg%u%arr(fl%idn,i,j,k)
-                  cg%u%arr(fl%imx,i,j,k) = vx*cg%u%arr(fl%idn,i,j,k)
-                  cg%u%arr(fl%imy,i,j,k) = vy*cg%u%arr(fl%idn,i,j,k)
-                  cg%u%arr(fl%imz,i,j,k) = vz*cg%u%arr(fl%idn,i,j,k)
-                  if (fl%ien > 0) then
-                     cg%u%arr(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u%arr(fl%idn,i,j,k)
-!                     cg%u%arr(fl%ien,i,j,k) = max(cg%u%arr(fl%ien,i,j,k), smallei)
-                     cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(fl%idn,i,j,k)
-                  endif
-                  if (trim(mag_field_orient) == 'toroidal') then
-                     cg%b%arr(ibx,i,j,k)   = -b0*sqrt(cg%u%arr(fl%idn,i,j,k)/d0)*yj/rc
-                     cg%b%arr(iby,i,j,k)   =  b0*sqrt(cg%u%arr(fl%idn,i,j,k)/d0)*xi/rc
-                     cg%b%arr(ibz,i,j,k)   =  0.0
-                  else if (trim(mag_field_orient) == 'vertical') then
-                     cg%b%arr(ibx,i,j,k)   =  0.0
-                     cg%b%arr(iby,i,j,k)   =  0.0
-                     cg%b%arr(ibz,i,j,k)   =  b0
-                  else if (trim(mag_field_orient) == 'none') then
-                     cg%b%arr(:,i,j,k)     =  0.0
-                  endif
-
-                  if (fl%ien > 0) cg%u%arr(fl%ien,i,j,k)   = cg%u%arr(fl%ien,i,j,k) + 0.5*sum(cg%b%arr(:,i,j,k)**2,1)
-               enddo
-            enddo
+         sqr_gm = sqrt(newtong*ptmass)
+         do k = 1, cg%nz
+            if (cg%z(k) < 0.0) kmid = k       ! the midplane is in between ksmid and ksmid+1
          enddo
-      else if (geometry_type == GEO_RPZ) then
-         if (master) then
-            call printinfo("------------------------------------------------------------------")
-            call printinfo(" Assuming temperature profile for MMSN ")
-            call printinfo(" T(R) = 150 ( R / 1 AU )^(-0.429) K")
-            write(msg,'(A,F5.1,A)') " T(xmin) = ", mmsn_T(dom%xmin)," K"
-            call printinfo(msg)
-            write(msg,'(A,F5.1,A)') " T(xmax) = ", mmsn_T(dom%xmax)," K"
-            call printinfo(msg)
-            write(msg,'(A,F5.1,A)') " T_mean  = ", 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax))," K"
-            call printinfo(msg)
-            write(msg,'(A,F9.5)') " cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax)) / mH
-            call printinfo(msg)
-            if (associated(flind%neu)) then
-               write(msg,'(A,F12.3,A)') " T_real(cs2) = ", flind%neu%cs2*mH/kboltz, " K"
-               call printinfo(msg)
-            endif
-            call printinfo("------------------------------------------------------------------")
-         endif
-         call grav_pot_3d
 
-         if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%nx, cg%ny, cg%nz))
-
-         if (.not.allocated(grav)) allocate(grav(cg%nx))
-         if (.not.allocated(ln_dens_der)) allocate(ln_dens_der(cg%nx))
-         if (.not.allocated(dens_prof)) allocate(dens_prof(cg%nx))
-         if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(cg%nx))
-         if (.not.allocated(tauf)) allocate(tauf(cg%nx))
-         if (.not.allocated(taus)) allocate(taus(cg%nx)) ! not deallocated
-
-         call source_terms_grav
-         call grav_pot2accel(xdim,1,1, cg%nx, grav, 1, cg)
-
-         dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
-
-         tauf(:) = epstein_factor(flind%neu%pos)/dens_prof(:)
-
-         middle_of_nx = cg%nx/2 + 1
-         n_x_cut      = maxloc(cg%x, mask=cg%x<=x_cut)
-         if (densfile /= "") then
-            allocate(gdens(dom%n_d(xdim)+cg%nb*2))
-            if (master) call read_dens_profile(densfile,gdens)
-            call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, 0, comm, ierr)
-
-            dens_prof(:)    = gdens(1+pcoords(xdim)*cg%nxb:cg%nx+pcoords(xdim)*cg%nxb)
-            deallocate(gdens)
-         else
-            dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%nx, 0.0, 1.0) + dens_amb
-         endif
-
-         !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
-         ln_dens_der  = log(dens_prof)
-         ln_dens_der(2:cg%nx)  = ( ln_dens_der(2:cg%nx) - ln_dens_der(1:cg%nx-1) ) / cg%dx
-         ln_dens_der(1)        = ln_dens_der(2)
-         T_inner               = dpi*cg%x(cg%is) / sqrt( abs(grav(cg%is)) * cg%x(cg%is) )
-         write(msg,*) "T_inner = ", T_inner
-         if (master) call printinfo(msg)
-         write(msg,*) "III Kepler Law gives T = ", sqr_gm/dpi , " yr at 1 AU"
-         if (master) call printinfo(msg)
-#ifdef DEBUG
-         open(143,file="dens_prof.dat",status="unknown")
-         do p = 1, cg%nx
-            write(143,'(4(ES14.4,1X))') cg%x(p), dens_prof(p), sqrt( max(cg%x(p)*(flind%neu%cs2*ln_dens_der(p) + abs(grav(p))),0.0) ), &
-               sqrt( max(abs(grav(p)) * cg%x(p) - flind%neu%cs2*dens_exp,0.0))
-         enddo
-         close(143)
-#endif /* DEBUG */
-
-         do p = 1, flind%fluids
-            fl => flind%all_fluids(p)
-            if (fl%tag /= DST .and. master) then
-               write(msg,'(A,F9.5)') "[init_problem:initprob] cs2 used = ", fl%cs2
-               call printinfo(msg)
-            endif
+         if (associated(flind%ion) .and. geometry_type == GEO_XYZ) then
+            fl => flind%ion
+            csim2 = fl%cs2*(1.0+alpha)
+            b0    = sqrt(2.*alpha*d0*fl%cs2)
 
             do j = 1, cg%ny
                yj = cg%y(j)
                do i = 1, cg%nx
                   xi = cg%x(i)
-                  rc = xi + r_smooth
+                  rc = sqrt(xi**2+yj**2)
 
-                  gprim = newtong*ptmass / xi**3
-                  if (fl%cs > 0) then
-                     H2 = 2.0*fl%cs2/gprim
-                  else
-                     H2 = 1.0
-                  endif
+                  if (has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2, cg=cg)
 
                   do k = 1, cg%nz
-                     zk = cg%z(k)
-!                     cg%u%arr(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),1.e-10))
-                     cg%u%arr(fl%idn,i,j,k) = dens_prof(i)
-                     if (fl%tag == DST) cg%u%arr(fl%idn,i,j,k) = eps * cg%u%arr(fl%idn,i,j,k)
 
-                     vr   = 0.0
-                     ! that condition is not necessary since cs2 == 0.0 for dust
-                     if (fl%tag /= DST) then
-!                        vphi = sqrt( max(abs(grav(i)) * rc - fl%cs2*dens_exp,0.0))
-                         vphi = sqrt( max(cg%x(i)*(fl%cs2*ln_dens_der(i) + abs(grav(i))),0.0) )
+                     vx = sqr_gm * (-yj)/(rc**2+r_smooth**2)**0.75
+                     vy = sqr_gm * ( xi)/(rc**2+r_smooth**2)**0.75
+                     vz = 0.0
+
+                     cg%u%arr(fl%idn,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
+
+                     if (has_dir(zdim)) then
+                        cg%u%arr(fl%idn,i,j,k) = cg%dprof(k)/cosh(cg%u%arr(fl%idn,i,j,k))
+                        cg%u%arr(fl%idn,i,j,k) = max(cg%u%arr(fl%idn,i,j,k), dout)
                      else
-                        vphi = sqrt( max(abs(grav(i)) * rc, 0.0))
+                        cg%u%arr(fl%idn,i,j,k) = dout + (d0 - dout)/cosh(cg%u%arr(fl%idn,i,j,k))
                      endif
-                     vz   = 0.0
-
-                     cg%u%arr(fl%imx,i,j,k) = vr   * cg%u%arr(fl%idn,i,j,k)
-                     cg%u%arr(fl%imy,i,j,k) = vphi * cg%u%arr(fl%idn,i,j,k)
-                     cg%u%arr(fl%imz,i,j,k) = vz   * cg%u%arr(fl%idn,i,j,k)
+                     cg%u%arr(fl%idn,i,j,k) = cg%u%arr(fl%idn,i,j,k)
+                     cg%u%arr(fl%imx,i,j,k) = vx*cg%u%arr(fl%idn,i,j,k)
+                     cg%u%arr(fl%imy,i,j,k) = vy*cg%u%arr(fl%idn,i,j,k)
+                     cg%u%arr(fl%imz,i,j,k) = vz*cg%u%arr(fl%idn,i,j,k)
                      if (fl%ien > 0) then
                         cg%u%arr(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u%arr(fl%idn,i,j,k)
-                        cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*cg%u%arr(fl%idn,i,j,k)
-                        ene0(p,i,j,k)   = cg%u%arr(fl%ien,i,j,k)
-                     else
-                        ene0(p,i,j,k)   = 0.0
+!                     cg%u%arr(fl%ien,i,j,k) = max(cg%u%arr(fl%ien,i,j,k), smallei)
+                        cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(fl%idn,i,j,k)
                      endif
+                     if (trim(mag_field_orient) == 'toroidal') then
+                        cg%b%arr(ibx,i,j,k)   = -b0*sqrt(cg%u%arr(fl%idn,i,j,k)/d0)*yj/rc
+                        cg%b%arr(iby,i,j,k)   =  b0*sqrt(cg%u%arr(fl%idn,i,j,k)/d0)*xi/rc
+                        cg%b%arr(ibz,i,j,k)   =  0.0
+                     else if (trim(mag_field_orient) == 'vertical') then
+                        cg%b%arr(ibx,i,j,k)   =  0.0
+                        cg%b%arr(iby,i,j,k)   =  0.0
+                        cg%b%arr(ibz,i,j,k)   =  b0
+                     else if (trim(mag_field_orient) == 'none') then
+                        cg%b%arr(:,i,j,k)     =  0.0
+                     endif
+
+                     if (fl%ien > 0) cg%u%arr(fl%ien,i,j,k)   = cg%u%arr(fl%ien,i,j,k) + 0.5*sum(cg%b%arr(:,i,j,k)**2,1)
                   enddo
-                  taus(i) = vphi/cg%x(i)*tauf(i) ! compiler complains that vphi may be used uninitialized here
                enddo
             enddo
+         else if (geometry_type == GEO_RPZ) then
+            if (master) then
+               call printinfo("------------------------------------------------------------------")
+               call printinfo(" Assuming temperature profile for MMSN ")
+               call printinfo(" T(R) = 150 ( R / 1 AU )^(-0.429) K")
+               write(msg,'(A,F5.1,A)') " T(xmin) = ", mmsn_T(dom%xmin)," K"
+               call printinfo(msg)
+               write(msg,'(A,F5.1,A)') " T(xmax) = ", mmsn_T(dom%xmax)," K"
+               call printinfo(msg)
+               write(msg,'(A,F5.1,A)') " T_mean  = ", 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax))," K"
+               call printinfo(msg)
+               write(msg,'(A,F9.5)') " cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax)) / mH
+               call printinfo(msg)
+               if (associated(flind%neu)) then
+                  write(msg,'(A,F12.3,A)') " T_real(cs2) = ", flind%neu%cs2*mH/kboltz, " K"
+                  call printinfo(msg)
+               endif
+               call printinfo("------------------------------------------------------------------")
+            endif
+            call grav_pot_3d
 
-            den0(p,:,:,:) = cg%u%arr(fl%idn,:,:,:)
-            mtx0(p,:,:,:) = cg%u%arr(fl%imx,:,:,:)
-            mty0(p,:,:,:) = cg%u%arr(fl%imy,:,:,:)
-            mtz0(p,:,:,:) = cg%u%arr(fl%imz,:,:,:)
-         enddo
-         cg%b%arr(:,:,:,:) = 0.0
-         if (allocated(grav)) deallocate(grav)
-         if (allocated(dens_prof)) deallocate(dens_prof)
+            if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%nx, cg%ny, cg%nz))
+            if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%nx, cg%ny, cg%nz))
+            if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%nx, cg%ny, cg%nz))
+            if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%nx, cg%ny, cg%nz))
+            if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%nx, cg%ny, cg%nz))
+
+            if (.not.allocated(grav)) allocate(grav(cg%nx))
+            if (.not.allocated(ln_dens_der)) allocate(ln_dens_der(cg%nx))
+            if (.not.allocated(dens_prof)) allocate(dens_prof(cg%nx))
+            if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(cg%nx))
+            if (.not.allocated(tauf)) allocate(tauf(cg%nx))
+            if (.not.allocated(taus)) allocate(taus(cg%nx)) ! not deallocated
+
+            call source_terms_grav
+            call grav_pot2accel(xdim,1,1, cg%nx, grav, 1, cg)
+
+            dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
+
+            tauf(:) = epstein_factor(flind%neu%pos)/dens_prof(:)
+
+            middle_of_nx = cg%nx/2 + 1
+            n_x_cut      = maxloc(cg%x, mask=cg%x<=x_cut)
+            if (densfile /= "") then
+               allocate(gdens(dom%n_d(xdim)+cg%nb*2))
+               if (master) call read_dens_profile(densfile,gdens)
+               call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, 0, comm, ierr)
+
+               dens_prof(:)    = gdens(1+pcoords(xdim)*cg%nxb:cg%nx+pcoords(xdim)*cg%nxb)
+               deallocate(gdens)
+            else
+               dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%nx, 0.0, 1.0) + dens_amb
+            endif
+
+            !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
+            ln_dens_der  = log(dens_prof)
+            ln_dens_der(2:cg%nx)  = ( ln_dens_der(2:cg%nx) - ln_dens_der(1:cg%nx-1) ) / cg%dx
+            ln_dens_der(1)        = ln_dens_der(2)
+            T_inner               = dpi*cg%x(cg%is) / sqrt( abs(grav(cg%is)) * cg%x(cg%is) )
+            write(msg,*) "T_inner = ", T_inner
+            if (master) call printinfo(msg)
+            write(msg,*) "III Kepler Law gives T = ", sqr_gm/dpi , " yr at 1 AU"
+            if (master) call printinfo(msg)
 #ifdef DEBUG
-         open(123,file="tau.dat",status="unknown")
-         do i = 1, cg%nx
-            write(123,*) cg%x(i), tauf(i), taus(i)
-         enddo
-         close(123)
+            open(143,file="dens_prof.dat",status="unknown")
+            do p = 1, cg%nx
+               write(143,'(4(ES14.4,1X))') cg%x(p), dens_prof(p), sqrt( max(cg%x(p)*(flind%neu%cs2*ln_dens_der(p) + abs(grav(p))),0.0) ), &
+                    sqrt( max(abs(grav(p)) * cg%x(p) - flind%neu%cs2*dens_exp,0.0))
+            enddo
+            close(143)
 #endif /* DEBUG */
-      else
-         call die("[initproblem:init_prob] I don't know what to do... :/")
-      endif
+
+            do p = 1, flind%fluids
+               fl => flind%all_fluids(p)
+               if (fl%tag /= DST .and. master) then
+                  write(msg,'(A,F9.5)') "[init_problem:initprob] cs2 used = ", fl%cs2
+                  call printinfo(msg)
+               endif
+
+               do j = 1, cg%ny
+                  yj = cg%y(j)
+                  do i = 1, cg%nx
+                     xi = cg%x(i)
+                     rc = xi + r_smooth
+
+                     gprim = newtong*ptmass / xi**3
+                     if (fl%cs > 0) then
+                        H2 = 2.0*fl%cs2/gprim
+                     else
+                        H2 = 1.0
+                     endif
+
+                     do k = 1, cg%nz
+                        zk = cg%z(k)
+!                     cg%u%arr(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),1.e-10))
+                        cg%u%arr(fl%idn,i,j,k) = dens_prof(i)
+                        if (fl%tag == DST) cg%u%arr(fl%idn,i,j,k) = eps * cg%u%arr(fl%idn,i,j,k)
+
+                        vr   = 0.0
+                     ! that condition is not necessary since cs2 == 0.0 for dust
+                        if (fl%tag /= DST) then
+!                        vphi = sqrt( max(abs(grav(i)) * rc - fl%cs2*dens_exp,0.0))
+                           vphi = sqrt( max(cg%x(i)*(fl%cs2*ln_dens_der(i) + abs(grav(i))),0.0) )
+                        else
+                           vphi = sqrt( max(abs(grav(i)) * rc, 0.0))
+                        endif
+                        vz   = 0.0
+
+                        cg%u%arr(fl%imx,i,j,k) = vr   * cg%u%arr(fl%idn,i,j,k)
+                        cg%u%arr(fl%imy,i,j,k) = vphi * cg%u%arr(fl%idn,i,j,k)
+                        cg%u%arr(fl%imz,i,j,k) = vz   * cg%u%arr(fl%idn,i,j,k)
+                        if (fl%ien > 0) then
+                           cg%u%arr(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u%arr(fl%idn,i,j,k)
+                           cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*cg%u%arr(fl%idn,i,j,k)
+                           ene0(p,i,j,k)   = cg%u%arr(fl%ien,i,j,k)
+                        else
+                           ene0(p,i,j,k)   = 0.0
+                        endif
+                     enddo
+                     taus(i) = vphi/cg%x(i)*tauf(i) ! compiler complains that vphi may be used uninitialized here
+                  enddo
+               enddo
+
+               den0(p,:,:,:) = cg%u%arr(fl%idn,:,:,:)
+               mtx0(p,:,:,:) = cg%u%arr(fl%imx,:,:,:)
+               mty0(p,:,:,:) = cg%u%arr(fl%imy,:,:,:)
+               mtz0(p,:,:,:) = cg%u%arr(fl%imz,:,:,:)
+            enddo
+            cg%b%arr(:,:,:,:) = 0.0
+            if (allocated(grav)) deallocate(grav)
+            if (allocated(dens_prof)) deallocate(dens_prof)
+#ifdef DEBUG
+            open(123,file="tau.dat",status="unknown")
+            do i = 1, cg%nx
+               write(123,*) cg%x(i), tauf(i), taus(i)
+            enddo
+            close(123)
+#endif /* DEBUG */
+         else
+            call die("[initproblem:init_prob] I don't know what to do... :/")
+         endif
+
+         cgl => cgl%nxt
+      enddo
 
    end subroutine init_prob
 !-----------------------------------------------------------------------------
@@ -485,10 +519,10 @@ contains
       mmsn_T = T_0 * r**(-k)
    end function mmsn_T
 !-----------------------------------------------------------------------------
-   subroutine write_initial_fld_to_restart(file_id)
+   subroutine write_initial_fld_to_restart(file_id, cg)
 
       use constants,   only: AT_NO_B
-      use grid,        only: cg
+      use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
       use dataio_hdf5, only: write_arr_to_restart
       use fluidindex,  only: flind
@@ -496,6 +530,8 @@ contains
       implicit none
 
       integer(HID_T),intent(in)  :: file_id
+      type(grid_container), pointer, intent(in) :: cg
+
       integer :: i
       character(len=dname_len) :: dname
       real, dimension(:,:,:), pointer :: p3d
@@ -536,17 +572,18 @@ contains
 
    end subroutine write_initial_fld_to_restart
 !-----------------------------------------------------------------------------
-   subroutine read_initial_fld_from_restart(file_id)
+   subroutine read_initial_fld_from_restart(file_id, cg)
 
       use constants,   only: AT_NO_B
       use hdf5,        only: HID_T
-      use grid,        only: cg
+      use grid_cont,   only: grid_container
       use fluidindex,  only: flind
       use dataio_hdf5, only: read_arr_from_restart
 
       implicit none
 
       integer(HID_T),intent(in) :: file_id
+      type(grid_container), pointer, intent(in) :: cg
 
       character(len=dname_len) :: dname
       real, dimension(:,:,:), pointer :: p3d
@@ -588,10 +625,13 @@ contains
    end subroutine read_initial_fld_from_restart
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
-      use mpisetup,        only: dt, t, relax_time, smalld !, grace_period_passed
-      use grid,            only: cg
+
+      use dataio_pub,      only: die
+      use grid,            only: cga
+      use grid_cont,       only: cg_list_element, grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use mpisetup,        only: dt, t, relax_time, smalld !, grace_period_passed
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
 #endif /* ISO */
@@ -600,11 +640,15 @@ contains
 !      use dataio_pub,      only: msg, printinfo
 !      use mpisetup,        only: master
 #endif /* VERBOSE */
+
       implicit none
+
       integer                               :: j, k
       logical, save                         :: frun = .true.
       real, dimension(:,:), allocatable, save :: funcR
       real, save :: x0, x1, y0, y1, a, b
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
 !      if (grace_period_passed() .and. t <= x1) then
 !         dragc_gas_dust = a*t+b
@@ -614,69 +658,90 @@ contains
 !#endif /* VERBOSE */
 !      endif
 
-      if (frun) then
-         x0 = relax_time + 2.0
-         x1 = x0 + 30.0
-         y0 = drag_max
-         y1 = drag_min
-         a = (y0 - y1)/(x0 - x1)
-         b = y0 - a*x0
-         allocate(funcR(size(iarr_all_dn), cg%nx) )
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
 
-         funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0 + max( tanh((cg%x(:)-r_out+1.0)**f_out), 0.0)
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-         if (use_inner_orbital_period) then
-            funcR(1,:) = funcR(1,:) / T_inner
-         else
-            funcR(1,:) = funcR(1,:) * dumping_coeff
-         endif
+         if (frun) then
+            x0 = relax_time + 2.0
+            x1 = x0 + 30.0
+            y0 = drag_max
+            y1 = drag_min
+            a = (y0 - y1)/(x0 - x1)
+            b = y0 - a*x0
+            allocate(funcR(size(iarr_all_dn), cg%nx) )
+
+            funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0 + max( tanh((cg%x(:)-r_out+1.0)**f_out), 0.0)
+
+            if (use_inner_orbital_period) then
+               funcR(1,:) = funcR(1,:) / T_inner
+            else
+               funcR(1,:) = funcR(1,:) * dumping_coeff
+            endif
 #ifdef DEBUG
-         open(212,file="funcR.dat",status="unknown")
-         do j = 1, cg%nx
-            write(212,*) cg%x(j),funcR(1,j)
-         enddo
-         close(212)
+            open(212,file="funcR.dat",status="unknown")
+            do j = 1, cg%nx
+               write(212,*) cg%x(j),funcR(1,j)
+            enddo
+            close(212)
 #endif /* DEBUG */
-         frun = .false.
-         funcR(:,:) = spread(funcR(1,:),1,size(iarr_all_dn))
-      endif
+            frun = .false.
+            funcR(:,:) = spread(funcR(1,:),1,size(iarr_all_dn))
+         endif
 
-      do j = 1, cg%ny
-         do k = 1, cg%nz
-            cg%u%arr(iarr_all_dn,:,j,k) = cg%u%arr(iarr_all_dn,:,j,k) - dt*(cg%u%arr(iarr_all_dn,:,j,k) - den0(:,:,j,k))*funcR(:,:)
-            cg%u%arr(iarr_all_mx,:,j,k) = cg%u%arr(iarr_all_mx,:,j,k) - dt*(cg%u%arr(iarr_all_mx,:,j,k) - mtx0(:,:,j,k))*funcR(:,:)
-            cg%u%arr(iarr_all_my,:,j,k) = cg%u%arr(iarr_all_my,:,j,k) - dt*(cg%u%arr(iarr_all_my,:,j,k) - mty0(:,:,j,k))*funcR(:,:)
-            cg%u%arr(iarr_all_mz,:,j,k) = cg%u%arr(iarr_all_mz,:,j,k) - dt*(cg%u%arr(iarr_all_mz,:,j,k) - mtz0(:,:,j,k))*funcR(:,:)
+         do j = 1, cg%ny
+            do k = 1, cg%nz
+               cg%u%arr(iarr_all_dn,:,j,k) = cg%u%arr(iarr_all_dn,:,j,k) - dt*(cg%u%arr(iarr_all_dn,:,j,k) - den0(:,:,j,k))*funcR(:,:)
+               cg%u%arr(iarr_all_mx,:,j,k) = cg%u%arr(iarr_all_mx,:,j,k) - dt*(cg%u%arr(iarr_all_mx,:,j,k) - mtx0(:,:,j,k))*funcR(:,:)
+               cg%u%arr(iarr_all_my,:,j,k) = cg%u%arr(iarr_all_my,:,j,k) - dt*(cg%u%arr(iarr_all_my,:,j,k) - mty0(:,:,j,k))*funcR(:,:)
+               cg%u%arr(iarr_all_mz,:,j,k) = cg%u%arr(iarr_all_mz,:,j,k) - dt*(cg%u%arr(iarr_all_mz,:,j,k) - mtz0(:,:,j,k))*funcR(:,:)
 #ifndef ISO
-            cg%u%arr(iarr_all_en,:,j,k) = cg%u%arr(iarr_all_en,:,j,k) - dt*(cg%u%arr(iarr_all_en,:,j,k) - ene0(:,:,j,k)*funcR(:,:)
+               cg%u%arr(iarr_all_en,:,j,k) = cg%u%arr(iarr_all_en,:,j,k) - dt*(cg%u%arr(iarr_all_en,:,j,k) - ene0(:,:,j,k)*funcR(:,:)
 #endif /* !ISO */
+            enddo
          enddo
+         where ( cg%u%arr(iarr_all_dn,:,:,:) < 2.*smalld )
+            cg%u%arr(iarr_all_mx,:,:,:) = cg%u%arr(iarr_all_mx,:,:,:)*0.1
+            cg%u%arr(iarr_all_mz,:,:,:) = cg%u%arr(iarr_all_mz,:,:,:)*0.1
+         endwhere
+
+         cgl => cgl%nxt
       enddo
-      where ( cg%u%arr(iarr_all_dn,:,:,:) < 2.*smalld )
-         cg%u%arr(iarr_all_mx,:,:,:) = cg%u%arr(iarr_all_mx,:,:,:)*0.1
-         cg%u%arr(iarr_all_mz,:,:,:) = cg%u%arr(iarr_all_mz,:,:,:)*0.1
-      endwhere
+
       call all_fluid_boundaries
+
    end subroutine problem_customize_solution_kepler
 !-----------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
       use units,     only: newtong
       use gravity,   only: ptmass, sum_potential
-      use grid,      only: cg
+      use grid,      only: cga
+      use grid_cont, only: cg_list_element, grid_container
 
       implicit none
 
       logical, save :: frun = .true.
       real          :: r2
       integer       :: i, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       if (frun) then
-         do i = 1, cg%nx
-            do k = 1, cg%nz
-               r2 = cg%x(i)**2! + cg%z(k)**2
-               cg%gp%arr(i,:,k) = -newtong*ptmass / sqrt(r2)
+         cgl => cga%cg_leafs%cg_l(1)
+         do while (associated(cgl))
+            cg => cgl%cg
+
+            do i = 1, cg%nx
+               do k = 1, cg%nz
+                  r2 = cg%x(i)**2! + cg%z(k)**2
+                  cg%gp%arr(i,:,k) = -newtong*ptmass / sqrt(r2)
+               enddo
             enddo
+
+            cgl => cgl%nxt
          enddo
       endif
 
@@ -819,11 +884,15 @@ contains
    end subroutine prob_vars_hdf5
 !-----------------------------------------------------------------------------
    subroutine read_dens_profile(densfile,gdens)
-      use grid,       only: cg
+
       use dataio_pub, only: printinfo, msg, warn
       use fgsl,       only: fgsl_size_t, fgsl_interp_accel, fgsl_interp, fgsl_int, fgsl_char, fgsl_strmax, fgsl_interp_cspline, &
-         & fgsl_interp_accel_alloc, fgsl_interp_alloc, fgsl_interp_name, fgsl_interp_init, fgsl_interp_eval, fgsl_interp_free, fgsl_interp_accel_free !, fgsl_spline
+           &                fgsl_interp_accel_alloc, fgsl_interp_alloc, fgsl_interp_name, fgsl_interp_init, fgsl_interp_eval, fgsl_interp_free, fgsl_interp_accel_free
+      !, fgsl_spline
+      use mpisetup,   only: dom
+
       implicit none
+
       character(len=*), intent(in)                   :: densfile
       real, dimension(:), intent(out)                :: gdens
 
@@ -845,11 +914,11 @@ contains
       close(1)
 
       nmax = n
-      nxd = size(gdens) - 2*cg%nb
+      nxd = size(gdens) - 2*dom%nb
 
       if (nxd == n) then
          call printinfo("[initproblem:read_dens_profile] Saved profile has required dimension \o/")
-         gdens(cg%nb+1:cg%nb+nxd) = y(:)
+         gdens(dom%nb+1:dom%nb+nxd) = y(:)
       else
          call warn("[initproblem:read_dens_profile] Saved profile has different dimension :/")
          write(msg,'(A,I5,A,I5,A)') "[initproblem:read_dens_profile] Performing spline interpolation from",n," to ",nxd," cells."
@@ -860,16 +929,16 @@ contains
          fstatus = fgsl_interp_init(a_interp,x,y,nmax)
          do i = 1, nxd
             xi = (1-i /real(nxd))*x(1) + (i/real(nxd))*x(n)
-            gdens(cg%nb+i) = fgsl_interp_eval(a_interp, x, y, xi, acc)
+            gdens(dom%nb+i) = fgsl_interp_eval(a_interp, x, y, xi, acc)
          enddo
 
          call fgsl_interp_free(a_interp)
          call fgsl_interp_accel_free(acc)
       endif
 
-      do i = 1, cg%nb
-         gdens(i)           = gdens(cg%nb+1)
-         gdens(nxd+cg%nb+i) = gdens(nxd+cg%nb)
+      do i = 1, dom%nb
+         gdens(i)           = gdens(dom%nb+1)
+         gdens(nxd+dom%nb+i) = gdens(nxd+dom%nb)
       enddo
       deallocate(x,y)
       return

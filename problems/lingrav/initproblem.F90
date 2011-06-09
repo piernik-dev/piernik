@@ -49,6 +49,7 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
+
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml   ! QA_WARN required for diff_nml
       use mpisetup,      only: rbuff, buffer_dim, master, slave, comm, ierr
       use mpi,           only: MPI_DOUBLE_PRECISION
@@ -90,7 +91,8 @@ contains
    subroutine init_prob
 
       use fluidindex,  only: ibx, iby, ibz, flind
-      use grid,        only: cg
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
       use hydrostatic, only: hydrostatic_zeq_densmid
       use initionized, only: idni, imxi, imyi, imzi
       use mpisetup,    only: smalld
@@ -102,49 +104,59 @@ contains
 
       integer :: i,j,k
       real :: b0, csim2
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+
 !   Secondary parameters
 
       b0 = sqrt(2.*alpha*d0*flind%ion%cs2)
 
       csim2 = flind%ion%cs2*(1.0+alpha)
 
-      cg%cs_iso2%arr(:,:,:) = flind%ion%cs2
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg=cg)
+         cg%cs_iso2%arr(:,:,:) = flind%ion%cs2
 
-      do k = 1, cg%nz
-         do j = 1, cg%ny
-            do i = 1, cg%nx
-               cg%u%arr(idni,i,j,k)   = max(smalld, cg%dprof(k))
+         call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg=cg)
 
-               cg%u%arr(imxi,i,j,k) = 0.0
-               cg%u%arr(imyi,i,j,k) = 0.0
-               cg%u%arr(imzi,i,j,k) = 0.0
+         do k = 1, cg%nz
+            do j = 1, cg%ny
+               do i = 1, cg%nx
+                  cg%u%arr(idni,i,j,k)   = max(smalld, cg%dprof(k))
+
+                  cg%u%arr(imxi,i,j,k) = 0.0
+                  cg%u%arr(imyi,i,j,k) = 0.0
+                  cg%u%arr(imzi,i,j,k) = 0.0
 #ifdef SHEAR
-               cg%u%arr(imyi,i,j,k) = -qshear*omega*x(i)*cg%u%arr(idni,i,j,k)
+                  cg%u%arr(imyi,i,j,k) = -qshear*omega*x(i)*cg%u%arr(idni,i,j,k)
 #endif /* SHEAR */
 
 #ifndef ISO
-               cg%u%arr(ieni,i,j,k)   = flind%ion%cs2/(flind%ion%gam_1) * cg%u%arr(idni,i,j,k) &
-                               + 0.5*(cg%u%arr(imxi,i,j,k)**2 + cg%u%arr(imyi,i,j,k)**2 + &
-                                      cg%u%arr(imzi,i,j,k)**2 ) / cg%u%arr(idni,i,j,k)
+                  cg%u%arr(ieni,i,j,k) = flind%ion%cs2/(flind%ion%gam_1) * cg%u%arr(idni,i,j,k) + &
+                       &                 0.5*(cg%u%arr(imxi,i,j,k)**2 + cg%u%arr(imyi,i,j,k)**2 + &
+                       &                 cg%u%arr(imzi,i,j,k)**2 ) / cg%u%arr(idni,i,j,k)
 #endif /* !ISO */
 
+               enddo
             enddo
          enddo
-      enddo
 
-      do k = 1, cg%nz
-         do j = 1, cg%ny
-            do i = 1, cg%nx
-               cg%b%arr(ibx,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
-               cg%b%arr(iby,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
-               cg%b%arr(ibz,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
+         do k = 1, cg%nz
+            do j = 1, cg%ny
+               do i = 1, cg%nx
+                  cg%b%arr(ibx,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b%arr(iby,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b%arr(ibz,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
-               cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+                  cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
 #endif /* !ISO */
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
    end subroutine init_prob

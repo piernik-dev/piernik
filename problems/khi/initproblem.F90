@@ -101,14 +101,17 @@ contains
    subroutine init_prob
 
       use constants,   only: dpi, zdim
-      use grid,        only: cg
-      use mpisetup,    only: has_dir, dom
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
       use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
+      use mpisetup,    only: has_dir, dom
 
       implicit none
 
       real :: dtop, lambda, p0, vtop, vbot, k0, vp, rcx, rcy, rc
       integer :: i,j
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       dtop = dbot/chi
       lambda = 1./6.
@@ -120,32 +123,38 @@ contains
       k0    = dpi/lambda
       vp    = (Mtop*sqrt(chi)+Mbot)*sqrt(gamma_neu*p0/dbot)/dpert
 
-      do i = 1, cg%nx
-         rcx = cg%x(i)
-         do j = 1, cg%ny
-            rcy = cg%y(j)
-            rc=rcy-0.5*dom%Ly
-            if (rc > 0.0) then
-               cg%u%arr(idnn,i,j,:) = dtop
-               cg%u%arr(imxn,i,j,:) = vtop*dtop
-            endif
-            if (rc <= 0.0) then
-               cg%u%arr(idnn,i,j,:) = dbot
-               cg%u%arr(imxn,i,j,:) = vbot*dbot
-            endif
-            if (abs(rc) < lpert) then
-               cg%u%arr(imyn,i,j,:) = vp*sin(k0*rcx)*cg%u%arr(idnn,i,j,:)
-            endif
-            if (has_dir(zdim)) then
-               cg%u%arr(imzn,i,j,:) = vtransf*cg%u%arr(1,i,j,:)
-            else
-               cg%u%arr(imzn,i,j,:) = 0.0
-            endif
-            cg%u%arr(ienn,i,j,:) = p0/(gamma_neu-1.0)
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         do i = 1, cg%nx
+            rcx = cg%x(i)
+            do j = 1, cg%ny
+               rcy = cg%y(j)
+               rc=rcy-0.5*dom%Ly
+               if (rc > 0.0) then
+                  cg%u%arr(idnn,i,j,:) = dtop
+                  cg%u%arr(imxn,i,j,:) = vtop*dtop
+               endif
+               if (rc <= 0.0) then
+                  cg%u%arr(idnn,i,j,:) = dbot
+                  cg%u%arr(imxn,i,j,:) = vbot*dbot
+               endif
+               if (abs(rc) < lpert) then
+                  cg%u%arr(imyn,i,j,:) = vp*sin(k0*rcx)*cg%u%arr(idnn,i,j,:)
+               endif
+               if (has_dir(zdim)) then
+                  cg%u%arr(imzn,i,j,:) = vtransf*cg%u%arr(1,i,j,:)
+               else
+                  cg%u%arr(imzn,i,j,:) = 0.0
+               endif
+               cg%u%arr(ienn,i,j,:) = p0/(gamma_neu-1.0)
+            enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
-      return
    end subroutine init_prob
 
 end module initproblem

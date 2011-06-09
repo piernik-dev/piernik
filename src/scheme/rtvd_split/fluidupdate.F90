@@ -106,8 +106,10 @@ contains
       use types,           only: problem_customize_solution
       use constants,       only: xdim, ydim, zdim
 #ifdef SHEAR
+      use dataio_pub,      only: die
       use fluidboundaries, only: bnd_u
-      use grid,            only: cg
+      use grid,            only: cga
+      use grid_cont,       only: grid_container
       use mpisetup,        only: has_dir, t, dt
       use shear,           only: yshift
 #endif /* SHEAR */
@@ -127,8 +129,12 @@ contains
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
       integer :: s
-
 #ifdef SHEAR
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[fluidupdate:make_3sweeps] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
+
       if (has_dir(ydim)) call yshift(t, dt)
       if (has_dir(xdim)) call bnd_u(xdim, cg)
       if (has_dir(ydim)) call bnd_u(ydim, cg)

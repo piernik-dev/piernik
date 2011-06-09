@@ -54,9 +54,8 @@ contains
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
-      use grid,          only: cg
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave
+      use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave, dom, has_dir
 
       implicit none
 
@@ -70,7 +69,7 @@ contains
       x0           = 0.0       !< x-position of the blob
       y0           = 0.0       !< y-position of the blob
       z0           = 0.0       !< z-position of the blob
-      r0           = 5.*cg%dxmn   !< radius of the blob
+      r0           = 5.* minval([dom%Lx, dom%Ly, dom%Lz]/dom%n_d(:), mask=has_dir(:))  !< radius of the blob
 
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
@@ -126,9 +125,10 @@ contains
 
    subroutine init_prob
 
-      use dataio_pub,     only: msg, warn, printinfo
+      use dataio_pub,     only: msg, warn, printinfo, die
       use fluidindex,     only: ibx, iby, ibz, flind
-      use grid,           only: cg
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
       use mpisetup,       only: comm, ierr, master, has_dir, dom
@@ -146,7 +146,8 @@ contains
       real    :: xsn, ysn, zsn
       real    :: r2, maxv
       integer :: ipm, jpm, kpm
-
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 #ifndef COSM_RAYS_SOURCES
       integer, parameter :: icr_H1 = 1, icr_C12 = 2
 #endif /* !COSM_RAYS_SOURCES */
@@ -170,55 +171,66 @@ contains
          K_crn_perp(:)  = 0.
       endif
 
-      cg%b%arr(ibx, :, :, :) = bx0
-      cg%b%arr(iby, :, :, :) = by0
-      cg%b%arr(ibz, :, :, :) = bz0
-      cg%u%arr(idni, :, :, :) = d0
-      cg%u%arr(imxi:imzi, :, :, :) = 0.0
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         cg%b%arr(ibx, :, :, :) = bx0
+         cg%b%arr(iby, :, :, :) = by0
+         cg%b%arr(ibz, :, :, :) = bz0
+         cg%u%arr(idni, :, :, :) = d0
+         cg%u%arr(imxi:imzi, :, :, :) = 0.0
 
 #ifndef ISO
-      do k = 1, cg%nz
-         do j = 1, cg%ny
-            do i = 1, cg%nx
-               cg%u%arr(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
-                    &          0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1)/cg%u%arr(idni,i,j,k) + &
-                    &          0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+         do k = 1, cg%nz
+            do j = 1, cg%ny
+               do i = 1, cg%nx
+                  cg%u%arr(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
+                       &                0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1)/cg%u%arr(idni,i,j,k) + &
+                       &                0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+               enddo
             enddo
          enddo
-      enddo
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-      do icr = 1, flind%crs%all
-         cg%u%arr(iarr_crs(icr), :, :, :) =  beta_cr*cs_iso**2 * cg%u%arr(idni, :, :, :)/(gamma_crn(icr)-1.0)
-      enddo
+         do icr = 1, flind%crs%all
+            cg%u%arr(iarr_crs(icr), :, :, :) =  beta_cr*cs_iso**2 * cg%u%arr(idni, :, :, :)/(gamma_crn(icr)-1.0)
+         enddo
 
 ! Explosions
-      do icr = 1, flind%crn%all
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
+         do icr = 1, flind%crn%all
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
 
-                  do ipm=-1,1
-                     do jpm=-1,1
-                        do kpm=-1,1
+                     do ipm=-1,1
+                        do jpm=-1,1
+                           do kpm=-1,1
 
-                           r2 = (cg%x(i)-xsn+real(ipm)*dom%Lx)**2+(cg%y(j)-ysn+real(jpm)*dom%Ly)**2+(cg%z(k)-zsn+real(kpm)*dom%Lz)**2
-                           if (icr == icr_H1) then
-                              cg%u%arr(iarr_crn(icr), i, j, k) = cg%u%arr(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
-                           elseif (icr == icr_C12) then
-                              cg%u%arr(iarr_crn(icr), i, j, k) = cg%u%arr(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
-                           else
-                              cg%u%arr(iarr_crn(icr), i, j, k) = 0.0
-                           endif
+                              r2 = (cg%x(i)-xsn+real(ipm)*dom%Lx)**2+(cg%y(j)-ysn+real(jpm)*dom%Ly)**2+(cg%z(k)-zsn+real(kpm)*dom%Lz)**2
+                              if (icr == icr_H1) then
+                                 cg%u%arr(iarr_crn(icr), i, j, k) = cg%u%arr(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
+                              elseif (icr == icr_C12) then
+                                 cg%u%arr(iarr_crn(icr), i, j, k) = cg%u%arr(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
+                              else
+                                 cg%u%arr(iarr_crn(icr), i, j, k) = 0.0
+                              endif
 
+                           enddo
                         enddo
                      enddo
                   enddo
                enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
 
       do icr = 1, flind%crs%all
          maxv = maxval(cg%u%arr(iarr_crs(icr),:,:,:))

@@ -93,15 +93,18 @@ contains
 !<
    subroutine init_resistivity
 
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die, code_progress
-      use constants,     only: PIERNIK_INIT_BASE, zdim, xdim, ydim
-      use grid,          only: cg
-      use mpisetup,      only: rbuff, ibuff, ierr, comm, master, slave, eff_dim, has_dir, buffer_dim
-      use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use constants,  only: PIERNIK_INIT_BASE, zdim, xdim, ydim
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use dataio_pub, only: die, code_progress
+      use grid,       only: cga
+      use grid_cont,  only: grid_container
+      use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use mpisetup,   only: rbuff, ibuff, ierr, comm, master, slave, eff_dim, has_dir, buffer_dim
 
       implicit none
+
       real :: dims_twice
+      type(grid_container), pointer :: cg
 
       namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
 
@@ -145,6 +148,9 @@ contains
 
       if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[resistivity:init_resistivity] multiple grid pieces per procesor not implemented yet") !nontrivial eta, ...
+
       if (.not.allocated(eta)) allocate(eta(cg%nx, cg%ny, cg%nz))
 #ifdef ISO
       if (eta_1 == 0.) then
@@ -174,73 +180,88 @@ contains
 
    subroutine compute_resist
 
-      use constants,    only: small, xdim, ydim, zdim, MINL, MAXL
-      use fluidindex,   only: ibx, iby, ibz
-      use func,         only: get_extremum
-      use grid,         only: cg
-      use mpisetup,     only: comm, ierr, has_dir
-      use mpi,          only: MPI_DOUBLE_PRECISION
+      use constants,  only: small, xdim, ydim, zdim, MINL, MAXL
+      use dataio_pub, only: die
+      use fluidindex, only: ibx, iby, ibz
+      use func,       only: get_extremum
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
+      use mpi,        only: MPI_DOUBLE_PRECISION
+      use mpisetup,   only: comm, ierr, has_dir
 #ifndef ISO
-      use fluidindex,   only: flind
+      use fluidindex, only: flind
 #endif /* !ISO */
 
       implicit none
+
       real, dimension(:,:,:), pointer :: p
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       if (.not.eta1_active) return
 !> \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array - should change  with rev. 3893
 !> \deprecated BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
 !--- square current computing in cell corner step by step
 
-      if (has_dir(xdim)) then
-         dbx(2:cg%nx,:,:) = (cg%b%arr(iby,2:cg%nx,:,:)-cg%b%arr(iby,1:cg%nx-1,:,:))*cg%idl(xdim) ;      dbx(1,:,:) = dbx(2,:,:)
-      endif
-      if (has_dir(ydim)) then
-         dby(:,2:cg%ny,:) = (cg%b%arr(ibx,:,2:cg%ny,:)-cg%b%arr(ibx,:,1:cg%ny-1,:))*cg%idl(ydim) ;      dby(:,1,:) = dby(:,2,:)
-      endif
-      if (has_dir(zdim)) then
-         dbz(:,:,2:cg%nz) = (cg%b%arr(iby,:,:,2:cg%nz)-cg%b%arr(iby,:,:,1:cg%nz-1))*cg%idl(zdim) ;      dbz(:,:,1) = dbz(:,:,2)
-      endif
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         if (has_dir(xdim)) then
+            dbx(2:cg%nx,:,:) = (cg%b%arr(iby,2:cg%nx,:,:)-cg%b%arr(iby,1:cg%nx-1,:,:))*cg%idl(xdim) ;      dbx(1,:,:) = dbx(2,:,:)
+         endif
+         if (has_dir(ydim)) then
+            dby(:,2:cg%ny,:) = (cg%b%arr(ibx,:,2:cg%ny,:)-cg%b%arr(ibx,:,1:cg%ny-1,:))*cg%idl(ydim) ;      dby(:,1,:) = dby(:,2,:)
+         endif
+         if (has_dir(zdim)) then
+            dbz(:,:,2:cg%nz) = (cg%b%arr(iby,:,:,2:cg%nz)-cg%b%arr(iby,:,:,1:cg%nz-1))*cg%idl(zdim) ;      dbz(:,:,1) = dbz(:,:,2)
+         endif
 
 !--- current_z **2
-      eh = dbx - dby
-      if (has_dir(zdim)) then
-         wb(:,:,2:cg%nz) =                   0.25*(eh(:,:,2:cg%nz) + eh(:,:,1:cg%nz-1))**2 ; wb(:,:,1) = wb(:,:,2)
-      else
-         wb = eh**2
-      endif
+         eh = dbx - dby
+         if (has_dir(zdim)) then
+            wb(:,:,2:cg%nz) =                   0.25*(eh(:,:,2:cg%nz) + eh(:,:,1:cg%nz-1))**2 ; wb(:,:,1) = wb(:,:,2)
+         else
+            wb = eh**2
+         endif
 !--- current_x **2
-      eh = dby - dbz
-      if (has_dir(xdim)) then
-         wb(2:cg%nx,:,:) = wb(2:cg%nx,:,:) + 0.25*(eh(2:cg%nx,:,:) + eh(1:cg%nx-1,:,:))**2 ; wb(1,:,:) = wb(2,:,:)
-      else
-         wb = wb + eh**2
-      endif
+         eh = dby - dbz
+         if (has_dir(xdim)) then
+            wb(2:cg%nx,:,:) = wb(2:cg%nx,:,:) + 0.25*(eh(2:cg%nx,:,:) + eh(1:cg%nx-1,:,:))**2 ; wb(1,:,:) = wb(2,:,:)
+         else
+            wb = wb + eh**2
+         endif
 !--- current_y **2
-      eh = dbz - dbx
-      if (has_dir(ydim)) then
-         wb(:,2:cg%ny,:) = wb(:,2:cg%ny,:) + 0.25*(eh(:,2:cg%ny,:) + eh(:,1:cg%ny-1,:))**2 ; wb(:,1,:) = wb(:,2,:)
-      else
-         wb = wb + eh**2
-      endif
+         eh = dbz - dbx
+         if (has_dir(ydim)) then
+            wb(:,2:cg%ny,:) = wb(:,2:cg%ny,:) + 0.25*(eh(:,2:cg%ny,:) + eh(:,1:cg%ny-1,:))**2 ; wb(:,1,:) = wb(:,2,:)
+         else
+            wb = wb + eh**2
+         endif
 
-      eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
+         eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
 
-      eh = 0.0
-      if (has_dir(xdim)) then
-         eh(2:cg%nx-1,:,:) = eh(2:cg%nx-1,:,:) + eta(1:cg%nx-2,:,:) + eta(3:cg%nx,:,:) ;  eh(1,:,:) = eh(2,:,:) ; eh(cg%nx,:,:) = eh(cg%nx-1,:,:)
-      endif
-      if (has_dir(ydim)) then
-         eh(:,2:cg%ny-1,:) = eh(:,2:cg%ny-1,:) + eta(:,1:cg%ny-2,:) + eta(:,3:cg%ny,:) ;  eh(:,1,:) = eh(:,2,:) ; eh(:,cg%ny,:) = eh(:,cg%ny-1,:)
-      endif
-      if (has_dir(zdim)) then
-         eh(:,:,2:cg%nz-1) = eh(:,:,2:cg%nz-1) + eta(:,:,1:cg%nz-2) + eta(:,:,3:cg%nz) ;  eh(:,:,1) = eh(:,:,2) ; eh(:,:,cg%nz) = eh(:,:,cg%nz-1)
-      endif
-      eh = real((eh + eta_scale*eta)*d_eta_factor)
+         eh = 0.0
+         if (has_dir(xdim)) then
+            eh(2:cg%nx-1,:,:) = eh(2:cg%nx-1,:,:) + eta(1:cg%nx-2,:,:) + eta(3:cg%nx,:,:) ;  eh(1,:,:) = eh(2,:,:) ; eh(cg%nx,:,:) = eh(cg%nx-1,:,:)
+         endif
+         if (has_dir(ydim)) then
+            eh(:,2:cg%ny-1,:) = eh(:,2:cg%ny-1,:) + eta(:,1:cg%ny-2,:) + eta(:,3:cg%ny,:) ;  eh(:,1,:) = eh(:,2,:) ; eh(:,cg%ny,:) = eh(:,cg%ny-1,:)
+         endif
+         if (has_dir(zdim)) then
+            eh(:,:,2:cg%nz-1) = eh(:,:,2:cg%nz-1) + eta(:,:,1:cg%nz-2) + eta(:,:,3:cg%nz) ;  eh(:,:,1) = eh(:,:,2) ; eh(:,:,cg%nz) = eh(:,:,cg%nz-1)
+         endif
+         eh = real((eh + eta_scale*eta)*d_eta_factor)
 
-      where (eta > eta_0)
-         eta = eh
-      endwhere
+         where (eta > eta_0)
+            eta = eh
+         endwhere
+
+         cgl => cgl%nxt
+      enddo
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
 
       p => eta(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, etamax, cg) ; NULLIFY(p)
@@ -332,11 +353,13 @@ contains
    end subroutine tvdd_1d
 
 !-------------------------------------------------------------------------------
-
+!> BEWARE: code redundancy: merge the following routines into a single routine
+!
    subroutine diffuseby_x
 
       use fluidindex,    only: iby
-      use grid,          only: cg
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
       use constants,     only: xdim, zdim
@@ -344,18 +367,30 @@ contains
       implicit none
 
       real, dimension(:), pointer :: eta1d
-      real, dimension(cg%nx)      :: wcu1d
+      real, dimension(:), allocatable :: wcu1d
       integer                     :: j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       call compute_resist
-      eta(:,:,1:cg%nz-1) = 0.5*(eta(:,:,1:cg%nz-1)+eta(:,:,2:cg%nz))
 
-      do j = 1, cg%ny
-         do k = 1, cg%nz
-            eta1d  => eta(:,j,k)
-            call tvdd_1d(cg%b%get_sweep(xdim,iby,j,k), eta1d, cg%idl(xdim), dt, wcu1d)
-            wcu(:,j,k) = wcu1d
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         allocate(wcu1d(cg%nx))
+
+         eta(:,:,1:cg%nz-1) = 0.5*(eta(:,:,1:cg%nz-1)+eta(:,:,2:cg%nz))
+
+         do j = 1, cg%ny
+            do k = 1, cg%nz
+               eta1d  => eta(:,j,k)
+               call tvdd_1d(cg%b%get_sweep(xdim,iby,j,k), eta1d, cg%idl(xdim), dt, wcu1d)
+               wcu(:,j,k) = wcu1d
+            enddo
          enddo
+
+         deallocate(wcu1d)
+         cgl => cgl%nxt
       enddo
 
       do j = xdim, zdim
@@ -367,7 +402,8 @@ contains
    subroutine diffusebz_x
 
       use fluidindex,    only: ibz
-      use grid,          only: cg
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
       use constants,     only: xdim, zdim
@@ -375,18 +411,30 @@ contains
       implicit none
 
       real, dimension(:), pointer :: eta1d
-      real, dimension(cg%nx)      :: wcu1d
+      real, dimension(:), allocatable :: wcu1d
       integer                     :: j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       call compute_resist
-      eta(:,1:cg%ny-1,:) = 0.5*(eta(:,1:cg%ny-1,:)+eta(:,2:cg%ny,:))
 
-      do j = 1, cg%ny
-         do k = 1, cg%nz
-            eta1d  => eta(:,j,k)
-            call tvdd_1d(cg%b%get_sweep(xdim,ibz,j,k), eta1d, cg%idl(xdim), dt, wcu1d)
-            wcu(:,j,k) = wcu1d
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         allocate(wcu1d(cg%nx))
+
+         eta(:,1:cg%ny-1,:) = 0.5*(eta(:,1:cg%ny-1,:)+eta(:,2:cg%ny,:))
+
+         do j = 1, cg%ny
+            do k = 1, cg%nz
+               eta1d  => eta(:,j,k)
+               call tvdd_1d(cg%b%get_sweep(xdim,ibz,j,k), eta1d, cg%idl(xdim), dt, wcu1d)
+               wcu(:,j,k) = wcu1d
+            enddo
          enddo
+
+         deallocate(wcu1d)
+         cgl => cgl%nxt
       enddo
 
       do j = xdim, zdim
@@ -398,7 +446,8 @@ contains
    subroutine diffusebz_y
 
       use fluidindex,    only: ibz
-      use grid,          only: cg
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
       use constants,     only: xdim, ydim, zdim
@@ -406,18 +455,30 @@ contains
       implicit none
 
       real, dimension(:), pointer :: eta1d
-      real, dimension(cg%ny)      :: wcu1d
+      real, dimension(:), allocatable :: wcu1d
       integer                     :: i, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       call compute_resist
-      eta(1:cg%nx-1,:,:) = 0.5*(eta(1:cg%nx-1,:,:)+eta(2:cg%nx,:,:))
 
-      do i = 1, cg%nx
-         do k = 1, cg%nz
-            eta1d  => eta(i,:,k)
-            call tvdd_1d(cg%b%get_sweep(ydim,ibz,k,i), eta1d, cg%idl(ydim), dt, wcu1d)
-            wcu(i,:,k) = wcu1d
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         allocate(wcu1d(cg%ny))
+
+         eta(1:cg%nx-1,:,:) = 0.5*(eta(1:cg%nx-1,:,:)+eta(2:cg%nx,:,:))
+
+         do i = 1, cg%nx
+            do k = 1, cg%nz
+               eta1d  => eta(i,:,k)
+               call tvdd_1d(cg%b%get_sweep(ydim,ibz,k,i), eta1d, cg%idl(ydim), dt, wcu1d)
+               wcu(i,:,k) = wcu1d
+            enddo
          enddo
+
+         deallocate(wcu1d)
+         cgl => cgl%nxt
       enddo
 
       do i = xdim, zdim
@@ -429,7 +490,8 @@ contains
    subroutine diffusebx_y
 
       use fluidindex,    only: ibx
-      use grid,          only: cg
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
       use constants,     only: xdim, ydim, zdim
@@ -437,18 +499,30 @@ contains
       implicit none
 
       real, dimension(:), pointer :: eta1d
-      real, dimension(cg%ny)      :: wcu1d
+      real, dimension(:), allocatable :: wcu1d
       integer                     :: i, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       call compute_resist
-      eta(:,:,1:cg%nz-1) = 0.5*(eta(:,:,1:cg%nz-1)+eta(:,:,2:cg%nz))
 
-      do i = 1, cg%nx
-         do k = 1, cg%nz
-            eta1d  => eta(i,:,k)
-            call tvdd_1d(cg%b%get_sweep(ydim,ibx,k,i), eta1d, cg%idl(ydim), dt, wcu1d)
-            wcu(i,:,k) = wcu1d
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         allocate(wcu1d(cg%ny))
+
+         eta(:,:,1:cg%nz-1) = 0.5*(eta(:,:,1:cg%nz-1)+eta(:,:,2:cg%nz))
+
+         do i = 1, cg%nx
+            do k = 1, cg%nz
+               eta1d  => eta(i,:,k)
+               call tvdd_1d(cg%b%get_sweep(ydim,ibx,k,i), eta1d, cg%idl(ydim), dt, wcu1d)
+               wcu(i,:,k) = wcu1d
+            enddo
          enddo
+
+         deallocate(wcu1d)
+         cgl => cgl%nxt
       enddo
 
       do i = xdim, zdim
@@ -460,7 +534,8 @@ contains
    subroutine diffusebx_z
 
       use fluidindex,    only: ibx
-      use grid,          only: cg
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
       use constants,     only: xdim, zdim
@@ -468,18 +543,30 @@ contains
       implicit none
 
       real, dimension(:), pointer :: eta1d
-      real, dimension(cg%nz)      :: wcu1d
+      real, dimension(:), allocatable :: wcu1d
       integer                     :: i, j
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       call compute_resist
-      eta(:,1:cg%ny-1,:) = 0.5*(eta(:,1:cg%ny-1,:)+eta(:,2:cg%ny,:))
 
-      do i = 1, cg%nx
-         do j = 1, cg%ny
-            eta1d  => eta(i,j,:)
-            call tvdd_1d(cg%b%get_sweep(zdim,ibx,i,j), eta1d, cg%idl(zdim), dt, wcu1d)
-            wcu(i,j,:) = wcu1d
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         allocate(wcu1d(cg%nz))
+
+         eta(:,1:cg%ny-1,:) = 0.5*(eta(:,1:cg%ny-1,:)+eta(:,2:cg%ny,:))
+
+         do i = 1, cg%nx
+            do j = 1, cg%ny
+               eta1d  => eta(i,j,:)
+               call tvdd_1d(cg%b%get_sweep(zdim,ibx,i,j), eta1d, cg%idl(zdim), dt, wcu1d)
+               wcu(i,j,:) = wcu1d
+            enddo
          enddo
+
+         deallocate(wcu1d)
+         cgl => cgl%nxt
       enddo
 
       do i = xdim, zdim
@@ -491,7 +578,8 @@ contains
    subroutine diffuseby_z
 
       use fluidindex,    only: iby
-      use grid,          only: cg
+      use grid,          only: cga
+      use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use mpisetup,      only: dt, has_dir
       use constants,     only: xdim, zdim
@@ -499,18 +587,30 @@ contains
       implicit none
 
       real, dimension(:), pointer :: eta1d
-      real, dimension(cg%nz)      :: wcu1d
+      real, dimension(:), allocatable :: wcu1d
       integer                     :: i, j
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       call compute_resist
-      eta(1:cg%nx-1,:,:) = 0.5*(eta(1:cg%nx-1,:,:)+eta(2:cg%nx,:,:))
 
-      do i = 1, cg%nx
-         do j = 1, cg%ny
-            eta1d  => eta(i,j,:)
-            call tvdd_1d(cg%b%get_sweep(zdim,iby,i,j), eta1d, cg%idl(zdim), dt, wcu1d)
-            wcu(i,j,:) = wcu1d
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+         allocate(wcu1d(cg%nz))
+
+         eta(1:cg%nx-1,:,:) = 0.5*(eta(1:cg%nx-1,:,:)+eta(2:cg%nx,:,:))
+
+         do i = 1, cg%nx
+            do j = 1, cg%ny
+               eta1d  => eta(i,j,:)
+               call tvdd_1d(cg%b%get_sweep(zdim,iby,i,j), eta1d, cg%idl(zdim), dt, wcu1d)
+               wcu(i,j,:) = wcu1d
+            enddo
          enddo
+
+         deallocate(wcu1d)
+         cgl => cgl%nxt
       enddo
 
       do j = xdim, zdim

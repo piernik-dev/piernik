@@ -51,8 +51,7 @@ contains
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml   ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
-      use grid,          only: cg
-      use mpisetup,      only: ierr, rbuff, ibuff, lbuff, master, slave, buffer_dim, comm, dom
+      use mpisetup,      only: ierr, rbuff, ibuff, lbuff, master, slave, buffer_dim, comm, dom, has_dir
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
 
       implicit none
@@ -128,7 +127,7 @@ contains
       clump_pos_x = dom%x0
       clump_pos_y = dom%y0
       clump_pos_z = dom%z0
-      clump_r = max(clump_r, cg%dx, cg%dy, cg%dz)
+      clump_r = max(clump_r, maxval([dom%Lx, dom%Ly, dom%Lz]/dom%n_d(:), mask=has_dir(:)))
 
    end subroutine read_problem_par
 
@@ -141,13 +140,14 @@ contains
    subroutine init_prob
 
       use constants,         only: pi
-      use units,             only: newtong
       use dataio_pub,        only: msg, die, warn, printinfo
-      use grid,              only: cg
+      use grid,              only: cga
+      use grid_cont,         only: cg_list_element, grid_container
       use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
-      use mpisetup,          only: master, smalld, smallei, comm, ierr, t, dom
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
+      use mpisetup,          only: master, smalld, smallei, comm, ierr, t, dom
       use multigrid_gravity, only: multigrid_solve_grav
+      use units,             only: newtong
 
       implicit none
 
@@ -164,50 +164,61 @@ contains
       integer, parameter        :: cmt_len=9 ! length of the " Exp warp" string
       character(len=cmt_len)    :: Ccomment
       real                      :: t_save
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       t_save = t
       Cint_old = huge(1.)
-      cg%b%arr(:,    :, :, :) = 0.
-      cg%u%arr(idni, :, :, :) = smalld
-      cg%u%arr(ieni, :, :, :) = smallei
-
-      ! Initialize density with uniform sphere
-      il = cg%ie+1
-      ih = cg%is-1
-      do i = cg%is, cg%ie
-         if (abs(cg%x(i) - clump_pos_x) <= clump_r) then
-            il = min(i, il)
-            ih = max(i, ih)
-         endif
-      enddo
-      jl = cg%je+1
-      jh = cg%js-1
-      do j = cg%js, cg%je
-         if (abs(cg%y(j) - clump_pos_y) <= clump_r) then
-            jl = min(j, jl)
-            jh = max(j, jh)
-         endif
-      enddo
-      kl = cg%ke+1
-      kh = cg%ks-1
-      do k = cg%ks, cg%ke
-         if (abs(cg%z(k) - clump_pos_z) <= clump_r) then
-            kl = min(k, kl)
-            kh = max(k, kh)
-         endif
-      enddo
 
       iC = 0
       totME(1) = clump_mass / (4./3. * pi * clump_r**3)
-      do k = kl, kh
-         do j = jl, jh
-            do i = il, ih
-               if ((cg%x(i)-clump_pos_x)**2 + (cg%y(j)-clump_pos_y)**2 + (cg%z(k)-clump_pos_z)**2 < clump_r**2) then
-                  cg%u%arr(idni, i, j, k) = totME(1)
-                  iC =iC + 1
-               endif
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         cg%b%arr(:,    :, :, :) = 0.
+         cg%u%arr(idni, :, :, :) = smalld
+         cg%u%arr(ieni, :, :, :) = smallei
+
+         ! Initialize density with uniform sphere
+         il = cg%ie+1
+         ih = cg%is-1
+         do i = cg%is, cg%ie
+            if (abs(cg%x(i) - clump_pos_x) <= clump_r) then
+               il = min(i, il)
+               ih = max(i, ih)
+            endif
+         enddo
+         jl = cg%je+1
+         jh = cg%js-1
+         do j = cg%js, cg%je
+            if (abs(cg%y(j) - clump_pos_y) <= clump_r) then
+               jl = min(j, jl)
+               jh = max(j, jh)
+            endif
+         enddo
+         kl = cg%ke+1
+         kh = cg%ks-1
+         do k = cg%ks, cg%ke
+            if (abs(cg%z(k) - clump_pos_z) <= clump_r) then
+               kl = min(k, kl)
+               kh = max(k, kh)
+            endif
+         enddo
+
+         do k = kl, kh
+            do j = jl, jh
+               do i = il, ih
+                  if ((cg%x(i)-clump_pos_x)**2 + (cg%y(j)-clump_pos_y)**2 + (cg%z(k)-clump_pos_z)**2 < clump_r**2) then
+                     cg%u%arr(idni, i, j, k) = totME(1)
+                     iC =iC + 1
+                  endif
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
       call MPI_Allreduce (MPI_IN_PLACE, iC, 1, MPI_INTEGER, MPI_SUM, comm, ierr)
@@ -215,6 +226,9 @@ contains
          write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * cg%dvol, " (", iC, " cells)"
          call printinfo(msg, .true.)
       endif
+
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial
+      cg => cga%cg_all(1)
 
       ! Find C - the level of enthalpy at which density vanishes
       iC = 1
@@ -409,7 +423,8 @@ contains
    subroutine virialCheck(tol)
 
       use dataio_pub,        only: msg, die, warn, printinfo
-      use grid,              only: cg
+      use grid,              only: cga
+      use grid_cont,         only: cg_list_element, grid_container
       use initionized,       only: idni
       use mpisetup,          only: master, comm, ierr
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
@@ -422,24 +437,34 @@ contains
 
       integer               :: i, j, k
       integer, parameter    :: nTWP = 3
-      real, dimension(nTWP) :: TWP
+      real, dimension(nTWP) :: TWP, TWPcg
       real                  :: vc
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       TWP(:) = 0.
 
-      do k = cg%ks, cg%ke
-         do j = cg%js, cg%je
-            do i = cg%is, cg%ie
-!               TWP(1) = TWP(1) + cg%u%arr(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
-               TWP(2) = TWP(2) + cg%u%arr(idni, i, j, k) * cg%sgp%arr(i, j, k) * 0.5 !W
-               TWP(3) = TWP(3) + presrho(cg%u%arr(idni, i, j, k))             !P
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         TWPcg(:) = 0.
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+!               TWPcg(1) = TWPcg(1) + cg%u%arr(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
+                  TWPcg(2) = TWPcg(2) + cg%u%arr(idni, i, j, k) * cg%sgp%arr(i, j, k) * 0.5 !W
+                  TWPcg(3) = TWPcg(3) + presrho(cg%u%arr(idni, i, j, k))             !P
+               enddo
             enddo
          enddo
+         TWP = TWP + TWPcg * cg%dvol
+
+         cgl => cgl%nxt
       enddo
 
       call MPI_Allreduce (MPI_IN_PLACE, TWP, nTWP, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
-      TWP = TWP * cg%dvol
       vc = abs(2.*TWP(1) + TWP(2) + 3*TWP(3))/abs(TWP(2))
       if (master .and. (verbose .or. tol < 1.0)) then
          write(msg,'(a,es15.7,a,3es15.7,a)')"[initproblem:virialCheck] VC=",vc, " TWP=(",TWP(:),")"
@@ -464,7 +489,8 @@ contains
 
    subroutine totalMEnthalpic(C, totME, mode)
 
-      use grid,        only: cg
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
       use initionized, only: idni
       use mpisetup,    only: comm, ierr
       use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
@@ -476,28 +502,38 @@ contains
       integer, intent(in)  :: mode
 
       integer              :: i, j, k
-      real                 :: rho
+      real                 :: rho, totMEcg
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       totME = 0.
 
-      do k = cg%ks, cg%ke
-         do j = cg%js, cg%je
-            do i = cg%is, cg%ie
-               select case (mode)
-               case (REL_CALC)
-                  totME     = totME     + rhoH(h(C,     cg%sgp%arr(i,j,k)))
-               case (REL_SET)
-                  rho = rhoH(h(C, cg%sgp%arr(i,j,k)))
-                  cg%u%arr(idni, i, j, k) = rho
-                  totME = totME + rho
-               end select
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         totMEcg = 0.
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  select case (mode)
+                     case (REL_CALC)
+                        totMEcg = totMEcg + rhoH(h(C, cg%sgp%arr(i,j,k)))
+                     case (REL_SET)
+                        rho = rhoH(h(C, cg%sgp%arr(i,j,k)))
+                        cg%u%arr(idni, i, j, k) = rho
+                        totMEcg = totME + rho
+                  end select
+               enddo
             enddo
          enddo
+
+         totME = totME + totMEcg * cg%dvol
+
+         cgl => cgl%nxt
       enddo
 
       call MPI_Allreduce (MPI_IN_PLACE, totME, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
-
-      totME = totME * cg%dvol
 
    end subroutine totalMEnthalpic
 

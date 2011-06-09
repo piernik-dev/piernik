@@ -100,12 +100,13 @@ contains
 
    subroutine init_prob
 
-      use grid,         only: cg
-      use fluidindex,   only: flind
-      use initdust,     only: idnd, imxd, imyd, imzd
-      use initneutral,  only: idnn, imxn, imyn, imzn, gamma_neu
-      use mpisetup,     only: smalld, has_dir
-      use constants,    only: zdim
+      use constants,   only: zdim
+      use fluidindex,  only: flind
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use initdust,    only: idnd, imxd, imyd, imzd
+      use initneutral, only: idnn, imxn, imyn, imzn, gamma_neu
+      use mpisetup,    only: smalld, has_dir
 #ifndef ISO
       use initneutral,  only: ienn
 #endif /* !ISO */
@@ -114,40 +115,49 @@ contains
 
       real    :: xi,yj,zk, rc
       integer :: i, j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
-      if (associated(cg%cs_iso2%arr)) cg%cs_iso2%arr(:,:,:) = flind%neu%cs2
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      do i = 1, cg%nx
-         xi = cg%x(i)
-         do j = 1, cg%ny
-            yj = cg%y(j)
-            do k = 1, cg%nz
-               if (has_dir(zdim)) then
-                  zk = cg%z(k)
-                  rc = sqrt((xi-x0)**2+(yj-y0)**2+(zk-z0)**2)
-               else
-                  rc = sqrt((xi-x0)**2+(yj-y0)**2)
-               endif
+         if (associated(cg%cs_iso2%arr)) cg%cs_iso2%arr(:,:,:) = flind%neu%cs2
 
-               cg%u%arr(idnn,i,j,k) = d_gas
-               cg%u%arr(imxn,i,j,k) = 0.0
-               cg%u%arr(imyn,i,j,k) = d_gas*v_gas
-               cg%u%arr(imzn,i,j,k) = 0.0
-               if (rc <= r0) then
-                  cg%u%arr(idnd,i,j,k) = d_dust
-                  cg%u%arr(imyd,i,j,k) = d_dust*v_dust
-               else
-                  cg%u%arr(idnd,i,j,k) = smalld
-                  cg%u%arr(imyd,i,j,k) = 0.0
-               endif
-               cg%u%arr(imxd,i,j,k) = 0.0
-               cg%u%arr(imzd,i,j,k) = 0.0
+         do i = 1, cg%nx
+            xi = cg%x(i)
+            do j = 1, cg%ny
+               yj = cg%y(j)
+               do k = 1, cg%nz
+                  if (has_dir(zdim)) then
+                     zk = cg%z(k)
+                     rc = sqrt((xi-x0)**2+(yj-y0)**2+(zk-z0)**2)
+                  else
+                     rc = sqrt((xi-x0)**2+(yj-y0)**2)
+                  endif
+
+                  cg%u%arr(idnn,i,j,k) = d_gas
+                  cg%u%arr(imxn,i,j,k) = 0.0
+                  cg%u%arr(imyn,i,j,k) = d_gas*v_gas
+                  cg%u%arr(imzn,i,j,k) = 0.0
+                  if (rc <= r0) then
+                     cg%u%arr(idnd,i,j,k) = d_dust
+                     cg%u%arr(imyd,i,j,k) = d_dust*v_dust
+                  else
+                     cg%u%arr(idnd,i,j,k) = smalld
+                     cg%u%arr(imyd,i,j,k) = 0.0
+                  endif
+                  cg%u%arr(imxd,i,j,k) = 0.0
+                  cg%u%arr(imzd,i,j,k) = 0.0
 #ifndef ISO
-               cg%u%arr(ienn,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(cg%u%arr(imxn,i,j,k)**2 + &
-                  cg%u%arr(imyn,i,j,k)**2+cg%u%arr(imzn,i,j,k)**2)/cg%u%arr(idnn,i,j,k)
+                  cg%u%arr(ienn,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(cg%u%arr(imxn,i,j,k)**2 + &
+                       &                 cg%u%arr(imyn,i,j,k)**2+cg%u%arr(imzn,i,j,k)**2)/cg%u%arr(idnn,i,j,k)
 #endif /* !ISO */
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
    end subroutine init_prob

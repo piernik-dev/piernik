@@ -112,7 +112,8 @@ contains
    subroutine init_prob
 
       use fluidindex,     only: ibx, iby, ibz, flind
-      use grid,           only: cg
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid
       use initionized,    only: idni, imxi, imyi, imzi
       use mpisetup,       only: smalld
@@ -130,6 +131,8 @@ contains
       integer            :: i, j, k
       real               :: b0, csim2
       real, dimension(3) :: sn_pos
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       call grav_pot_3d
 
@@ -141,28 +144,32 @@ contains
 
       csim2 = flind%ion%cs2*(1.0+alpha)
 
-      call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg=cg)
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      do k = 1, cg%nz
-         do j = 1, cg%ny
-            do i = 1, cg%nx
-               cg%u%arr(idni,i,j,k)   = max(smalld, cg%dprof(k))
+         call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg=cg)
 
-               cg%u%arr(imxi,i,j,k) = 0.0
-               cg%u%arr(imyi,i,j,k) = 0.0
-               cg%u%arr(imzi,i,j,k) = 0.0
+         do k = 1, cg%nz
+            do j = 1, cg%ny
+               do i = 1, cg%nx
+                  cg%u%arr(idni,i,j,k)   = max(smalld, cg%dprof(k))
+
+                  cg%u%arr(imxi,i,j,k) = 0.0
+                  cg%u%arr(imyi,i,j,k) = 0.0
+                  cg%u%arr(imzi,i,j,k) = 0.0
 #ifdef SHEAR
-               cg%u%arr(imyi,i,j,k) = -qshear*omega*cg%x(i)*cg%u%arr(idni,i,j,k)
+                  cg%u%arr(imyi,i,j,k) = -qshear*omega*cg%x(i)*cg%u%arr(idni,i,j,k)
 #endif /* SHEAR */
 
 #ifndef ISO
-               cg%u%arr(ieni,i,j,k)   = flind%ion%cs2/(flind%ion%gam_1) * cg%u%arr(idni,i,j,k) &
-                               + 0.5*(cg%u%arr(imxi,i,j,k)**2 + cg%u%arr(imyi,i,j,k)**2 + &
-                                      cg%u%arr(imzi,i,j,k)**2 ) / cg%u%arr(idni,i,j,k)
+                  cg%u%arr(ieni,i,j,k) = flind%ion%cs2/(flind%ion%gam_1) * cg%u%arr(idni,i,j,k) + &
+                       &                 0.5*(cg%u%arr(imxi,i,j,k)**2 + cg%u%arr(imyi,i,j,k)**2 + &
+                       &                 cg%u%arr(imzi,i,j,k)**2 ) / cg%u%arr(idni,i,j,k)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               cg%u%arr(iarr_crn,i,j,k)  = 0.0
-               cg%u%arr(iarr_crn(1),i,j,k)   = beta_cr*flind%ion%cs2 * cg%u%arr(idni,i,j,k)/( gamma_crn(1) - 1.0 )
+                  cg%u%arr(iarr_crn,i,j,k)  = 0.0
+                  cg%u%arr(iarr_crn(1),i,j,k) = beta_cr*flind%ion%cs2 * cg%u%arr(idni,i,j,k)/( gamma_crn(1) - 1.0 )
 !#ifdef GALAXY
 !! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
 !
@@ -182,8 +189,11 @@ contains
 !
 !#endif /* GALAXY */
 #endif /* COSM_RAYS */
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
 #ifdef COSM_RAYS
@@ -192,20 +202,27 @@ contains
 
 #endif /* COSM_RAYS */
 
-      do k = 1, cg%nz
-         do j = 1, cg%ny
-            do i = 1, cg%nx
-               cg%b%arr(ibx,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
-               cg%b%arr(iby,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
-               cg%b%arr(ibz,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
+
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         do k = 1, cg%nz
+            do j = 1, cg%ny
+               do i = 1, cg%nx
+                  cg%b%arr(ibx,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b%arr(iby,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b%arr(ibz,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
-               cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+                  cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
 #endif /* !ISO */
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
-      return
    end subroutine init_prob
 
    subroutine my_grav_pot_3d
@@ -283,61 +300,80 @@ contains
 !! \brief Routine that inserts an amount of cosmic ray energy around the position of supernova
 !! \param pos real, dimension(3), array of supernova position components
 !! \author M. Hanasz
+!!
+!! BEWARE: the code is very similar to snsources:cr_sn . Merge?
+!!
 !<
    subroutine cr_sn_beware(pos)
 
+      use constants,      only: xdim, ydim, zdim, ndims
       use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
       use fluidindex,     only: flind
-      use grid,           only: cg
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crn
       use snsources,      only: r_sn
       use mpisetup,       only: dom
 
       implicit none
 
-      real, dimension(3), intent(in) :: pos
+      real, dimension(ndims), intent(in) :: pos
 
       integer :: i, j, k, ipm, jpm, icr
       real    :: decr, xsn, ysn, zsn
       real    :: ysna !, ysni, ysno
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
-      xsn = pos(1)
-      ysn = pos(2)
-      zsn = pos(3)
+      xsn = pos(xdim)
+      ysn = pos(ydim)
+      zsn = pos(zdim)
 
-      do k=1, cg%nz
-         do j=1, cg%ny
-            do i=1, cg%nx
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-               do ipm=-1,1
+         do k=1, cg%nz
+            do j=1, cg%ny
+               do i=1, cg%nx
 
-                  ysna = ysn
+                  do ipm=-1,1
+
+                     ysna = ysn
 ! ToDo: when implementing SHEAR, use select case construct or an assignment like this: ysna = ysn_array(ipm)
 !                  if (ipm == -1) ysna = ysn   ! if (SHEAR) => ysna = ysno
 !                  if (ipm == 0) ysna = ysn
 !                  if (ipm == 1) ysna = ysn   ! if (SHEAR) => ysna = ysni
 
-                  do jpm=-1,1
+                     do jpm=-1,1
 
 !                     decr = amp_ecr_sn * ethu  &
-                     decr = amp_cr  &
-                           * exp(-((cg%x(i)-xsn+real(ipm)*dom%Lx)**2  &
-                           + (cg%y(j)-ysna+real(jpm)*dom%Ly)**2  &
-                           + (cg%z(k)-zsn)**2)/r_sn**2)
+                        decr = amp_cr  &
+                             * exp(-((cg%x(i)-xsn+real(ipm)*dom%Lx)**2  &
+                             + (cg%y(j)-ysna+real(jpm)*dom%Ly)**2  &
+                             + (cg%z(k)-zsn)**2)/r_sn**2)
 !                     cg%u%arr(iarr_crn,i,j,k) = cg%u%arr(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
-                     do icr=1,flind%crn%all
-                        if (icr == icr_H1) cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + decr
-                        if (icr == icr_C12) cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_C12*12*decr
-                        if (icr == icr_N14) cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_N14*14*decr
-                        if (icr == icr_O16) cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_O16*16*decr
-                     enddo
+                        do icr = 1, flind%crn%all
+                           select case (icr)
+                              case (icr_H1)
+                                 cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + decr
+                              case (icr_C12)
+                                 cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_C12*12*decr
+                              case (icr_N14)
+                                 cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_N14*14*decr
+                              case (icr_O16)
+                                 cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_O16*16*decr
+                           end select
+                        enddo
 
-                  enddo ! jpm
-               enddo ! ipm
+                     enddo ! jpm
+                  enddo ! ipm
 
-            enddo ! i
-         enddo ! j
-      enddo ! k
+               enddo ! i
+            enddo ! j
+         enddo ! k
+         cgl => cgl%nxt
+      enddo
 
    end subroutine cr_sn_beware
 

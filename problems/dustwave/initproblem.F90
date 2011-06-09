@@ -97,7 +97,8 @@ contains
    subroutine init_prob
 
       use constants, only: pi
-      use grid,      only: cg
+      use grid,      only: cga
+      use grid_cont, only: cg_list_element, grid_container
       use initdust,  only: idnd, imxd, imyd, imzd
       use mpisetup,  only: dom
 
@@ -105,23 +106,33 @@ contains
 
       integer :: i,j,k
       real    :: k_x,k_y,k_z,k_a
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       k_x = 2.*pi/dom%Lx*real(m_x)
       k_y = 2.*pi/dom%Ly*real(m_y)
       k_z = 2.*pi/dom%Lz*real(m_z)
       k_a = sqrt(k_x**2+k_y**2+k_z**2)
 
-      do i = 1, cg%nx
-         do j = 1, cg%ny
-            do k = 1, cg%nz
 
-               cg%u%arr(idnd,i,j,k) = d0
-               cg%u%arr(imxd,i,j,k) = d0*k_x/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
-               cg%u%arr(imyd,i,j,k) = d0*k_y/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
-               cg%u%arr(imzd,i,j,k) = d0*k_z/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
+         do i = 1, cg%nx
+            do j = 1, cg%ny
+               do k = 1, cg%nz
+
+                  cg%u%arr(idnd,i,j,k) = d0
+                  cg%u%arr(imxd,i,j,k) = d0*k_x/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
+                  cg%u%arr(imyd,i,j,k) = d0*k_y/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
+                  cg%u%arr(imzd,i,j,k) = d0*k_z/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
+
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
    end subroutine init_prob

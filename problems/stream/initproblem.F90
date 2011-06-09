@@ -103,25 +103,29 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
-      use constants,     only: pi, dpi
-      use dataio_pub,    only: msg, printinfo, run_id
-      use fluidindex,    only: flind
-      use grid,          only: cg
-      use mpisetup,      only: proc, dom
-      use shear,         only: omega
-      use fluidtypes,    only: component_fluid
-      use interactions,  only: dragc_gas_dust
+
+      use constants,    only: pi, dpi
+      use dataio_pub,   only: msg, printinfo, run_id
+      use fluidindex,   only: flind
+      use grid,         only: cga
+      use grid_cont,    only: cg_list_element, grid_container
+      use mpisetup,     only: proc, dom
+      use shear,        only: omega
+      use fluidtypes,   only: component_fluid
+      use interactions, only: dragc_gas_dust
 #ifdef SHEAR
-      use shear,         only: eta_gas, csvk
+      use shear,        only: eta_gas, csvk
 #endif /* SHEAR */
       implicit none
 
       real                                :: rcx, rcy, ux, uy, wx, wy, taus, eta, vk, beta !, inv
       integer                             :: i, j, k, n, clock
-      real(kind=4), dimension(3, cg%nx, cg%ny, cg%nz) :: noise
+      real(kind=4), dimension(:,:,:,:), allocatable :: noise
       integer, dimension(:), allocatable  :: seed
       complex(kind=8), dimension(7)       :: coeff
       type(component_fluid), pointer      :: dst, neu
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
 #ifdef DUST
       dst => flind%dst
@@ -194,71 +198,82 @@ contains
       write(msg,*) '\eta vk / \Omega = ', eta_gas * neu%cs / csvk / omega
       call printinfo(msg)
 
-      do i = 1, cg%nx
-         rcx = cg%x(i)
-         do j = 1, cg%ny
-            rcy = cg%y(j)
-            do k = 1, cg%nz
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         allocate(noise(3, cg%nx, cg%ny, cg%nz))
+
+         do i = 1, cg%nx
+            rcx = cg%x(i)
+            do j = 1, cg%ny
+               rcy = cg%y(j)
+               do k = 1, cg%nz
 #ifdef NEUTRAL
-               cg%u%arr(neu%idn,i,j,k) = rhog
-               cg%u%arr(neu%imx,i,j,k) = ux * rhog
-               cg%u%arr(neu%imy,i,j,k) = uy * rhog
-               cg%u%arr(neu%imz,i,j,k) = 0.0
+                  cg%u%arr(neu%idn,i,j,k) = rhog
+                  cg%u%arr(neu%imx,i,j,k) = ux * rhog
+                  cg%u%arr(neu%imy,i,j,k) = uy * rhog
+                  cg%u%arr(neu%imz,i,j,k) = 0.0
 #ifndef ISO
-               cg%u%arr(neu%ien,i,j,:) = 1.0/(gamma_neu-1.0)
+                  cg%u%arr(neu%ien,i,j,:) = 1.0/(gamma_neu-1.0)
 #endif /* !ISO */
 #endif /* NEUTRAL */
 #ifdef DUST
-               cg%u%arr(dst%idn,i,j,k) = eps*rhog
-               cg%u%arr(dst%imx,i,j,k) = wx * eps*rhog
-               cg%u%arr(dst%imy,i,j,k) = wy * eps*rhog
-               cg%u%arr(dst%imz,i,j,k) = 0.0
+                  cg%u%arr(dst%idn,i,j,k) = eps*rhog
+                  cg%u%arr(dst%imx,i,j,k) = wx * eps*rhog
+                  cg%u%arr(dst%imy,i,j,k) = wy * eps*rhog
+                  cg%u%arr(dst%imz,i,j,k) = 0.0
 
 ! Linear test
-               if (linear) then
+                  if (linear) then
 !               cg%u%arr(dst%idn,i,j,k) =  cg%u%arr(dst%idn,i,j,k) + amp*eps*sin(kz*cg%z(k))*cos(kx*cg%x(i))
-                  cg%u%arr(dst%idn,i,j,k) =  cg%u%arr(dst%idn,i,j,k) + amp*eps*cos(kz*cg%z(k))*cos(kx*cg%x(i))
+                     cg%u%arr(dst%idn,i,j,k) =  cg%u%arr(dst%idn,i,j,k) + amp*eps*cos(kz*cg%z(k))*cos(kx*cg%x(i))
 ! ...                cg%u%arr(dst%idn,i,j,k) =  cg%u%arr(dst%idn,i,j,k) + amp*eps*cos(kx*x(i))*cos(kz*cg%z(k))
 ! B              cg%u%arr(dst%idn,i,j,k) =  cg%u%arr(dst%idn,i,j,k) + amp * eps *&
 ! B                 ( real(coeff(7))*cos(kx*cg%x(i)) - &
 ! B                  aimag(coeff(7))*sin(kx*cg%x(i))) * cos(kz*z(k))
-                  cg%u%arr(dst%imx,i,j,k) =  cg%u%arr(dst%imx,i,j,k) + eta*vk*amp * &
-                       ( real(coeff(1))*cos(kx*cg%x(i)) - &
-                       aimag(coeff(1))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
-                  cg%u%arr(dst%imy,i,j,k) =  cg%u%arr(dst%imy,i,j,k) + eta*vk*amp * &
-                       ( real(coeff(2))*cos(kx*cg%x(i)) - &
-                       aimag(coeff(2))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
-                  cg%u%arr(dst%imz,i,j,k) =  cg%u%arr(dst%imz,i,j,k) + eta*vk*(-amp) * &
-                       (aimag(coeff(3))*cos(kx*cg%x(i)) + &
-                       real(coeff(3))*sin(kx*cg%x(i))) * sin(kz*cg%z(k))
-                  cg%u%arr(neu%imx,i,j,k) =  cg%u%arr(neu%imx,i,j,k) + eta*vk*amp * &
-                       ( real(coeff(4))*cos(kx*cg%x(i)) - &
-                       aimag(coeff(4))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
-                  cg%u%arr(neu%imy,i,j,k) =  cg%u%arr(neu%imy,i,j,k) + eta*vk*amp * &
-                       ( real(coeff(5))*cos(kx*cg%x(i)) - &
-                       aimag(coeff(5))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
-                  cg%u%arr(neu%imz,i,j,k) =  cg%u%arr(neu%imz,i,j,k) + eta*vk*(-amp) * &
-                       (aimag(coeff(6))*cos(kx*cg%x(i)) + &
-                       real(coeff(6))*sin(kx*cg%x(i))) * sin(kz*cg%z(k))
+                     cg%u%arr(dst%imx,i,j,k) =  cg%u%arr(dst%imx,i,j,k) + eta*vk*amp * &
+                          ( real(coeff(1))*cos(kx*cg%x(i)) - &
+                          aimag(coeff(1))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
+                     cg%u%arr(dst%imy,i,j,k) =  cg%u%arr(dst%imy,i,j,k) + eta*vk*amp * &
+                          ( real(coeff(2))*cos(kx*cg%x(i)) - &
+                          aimag(coeff(2))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
+                     cg%u%arr(dst%imz,i,j,k) =  cg%u%arr(dst%imz,i,j,k) + eta*vk*(-amp) * &
+                          (aimag(coeff(3))*cos(kx*cg%x(i)) + &
+                          real(coeff(3))*sin(kx*cg%x(i))) * sin(kz*cg%z(k))
+                     cg%u%arr(neu%imx,i,j,k) =  cg%u%arr(neu%imx,i,j,k) + eta*vk*amp * &
+                          ( real(coeff(4))*cos(kx*cg%x(i)) - &
+                          aimag(coeff(4))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
+                     cg%u%arr(neu%imy,i,j,k) =  cg%u%arr(neu%imy,i,j,k) + eta*vk*amp * &
+                          ( real(coeff(5))*cos(kx*cg%x(i)) - &
+                          aimag(coeff(5))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
+                     cg%u%arr(neu%imz,i,j,k) =  cg%u%arr(neu%imz,i,j,k) + eta*vk*(-amp) * &
+                          (aimag(coeff(6))*cos(kx*cg%x(i)) + &
+                          real(coeff(6))*sin(kx*cg%x(i))) * sin(kz*cg%z(k))
 !               cg%u%arr(neu%idn,i,j,k) =  cg%u%arr(neu%idn,i,j,k) + amp * &
 !                  ( real(coeff(7))*cos(kx*cg%x(i)) - &
 !                   aimag(coeff(7))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
-                  cg%u%arr(neu%idn,i,j,k) =  cg%u%arr(neu%idn,i,j,k) + (eta*vk)**2 * amp * &
-                       ( real(coeff(7))*cos(kx*cg%x(i)) - &
-                       aimag(coeff(7))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
-               endif
+                     cg%u%arr(neu%idn,i,j,k) =  cg%u%arr(neu%idn,i,j,k) + (eta*vk)**2 * amp * &
+                          ( real(coeff(7))*cos(kx*cg%x(i)) - &
+                          aimag(coeff(7))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
+                  endif
 !-------
 
 #endif /* DUST */
+               enddo
             enddo
          enddo
+         if (.not.linear) then
+            call random_number(noise)
+            cg%u%arr(dst%imx,:,:,:) = cg%u%arr(dst%imx,:,:,:) +amp -2.0*amp*noise(1,:,:,:) * cg%u%arr(dst%idn,:,:,:)
+            cg%u%arr(dst%imy,:,:,:) = cg%u%arr(dst%imy,:,:,:) +amp -2.0*amp*noise(2,:,:,:) * cg%u%arr(dst%idn,:,:,:)
+            cg%u%arr(dst%imz,:,:,:) = cg%u%arr(dst%imz,:,:,:) +amp -2.0*amp*noise(3,:,:,:) * cg%u%arr(dst%idn,:,:,:)
+         endif
+
+         deallocate(noise)
+
+         cgl => cgl%nxt
       enddo
-      if (.not.linear) then
-         call random_number(noise)
-         cg%u%arr(dst%imx,:,:,:) = cg%u%arr(dst%imx,:,:,:) +amp -2.0*amp*noise(1,:,:,:) * cg%u%arr(dst%idn,:,:,:)
-         cg%u%arr(dst%imy,:,:,:) = cg%u%arr(dst%imy,:,:,:) +amp -2.0*amp*noise(2,:,:,:) * cg%u%arr(dst%idn,:,:,:)
-         cg%u%arr(dst%imz,:,:,:) = cg%u%arr(dst%imz,:,:,:) +amp -2.0*amp*noise(3,:,:,:) * cg%u%arr(dst%idn,:,:,:)
-      endif
 
       write(msg,*) 'linear = ',linear
       call printinfo(msg)

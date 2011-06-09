@@ -47,8 +47,7 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use grid,          only: cg
-      use mpisetup,      only: ibuff, rbuff, buffer_dim, master, slave, comm, ierr
+      use mpisetup,      only: ibuff, rbuff, buffer_dim, master, slave, comm, ierr, dom, has_dir
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use dataio_user,   only: user_plt_hdf5, user_vars_hdf5, user_tsl
 
@@ -65,7 +64,7 @@ contains
       x0      = 0.0
       y0      = 0.0
       z0      = 0.0
-      r0      = cg%dxmn/2.
+      r0      = minval([dom%Lx, dom%Ly, dom%Lz]/dom%n_d(:), mask=has_dir(:))/2.
       n_sn    = 1
       dt_sn   = 0.0
 
@@ -118,17 +117,20 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,      only: ION, DST
-      use dataio_pub,     only: msg, die, printinfo
-      use fluidindex,     only: flind, ibx, iby, ibz
-      use grid,           only: cg
-      use fluidtypes,     only: component_fluid
-      use mpisetup,       only: master
+      use constants,  only: ION, DST
+      use dataio_pub, only: msg, die, printinfo
+      use fluidindex, only: flind, ibx, iby, ibz
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
+      use fluidtypes, only: component_fluid
+      use mpisetup,   only: master
 
       implicit none
-      integer :: i, j, k, p
 
+      integer :: i, j, k, p
       type(component_fluid), pointer :: fl
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       if (flind%energ < flind%fluids) call die("[initproblem:init_prob] Not all fluids are adiabatic!")
 
@@ -143,42 +145,51 @@ contains
          if (master) call printinfo(msg)
 
 ! Uniform equilibrium state
-         do k = 1, cg%nz
-            do j = 1, cg%ny
-               do i = 1, cg%nx
-                  cg%u%arr(fl%idn,i,j,k) = d0
-                  cg%u%arr(fl%imx,i,j,k) = 0.0
-                  cg%u%arr(fl%imy,i,j,k) = 0.0
-                  cg%u%arr(fl%imz,i,j,k) = 0.0
-                  cg%u%arr(fl%ien,i,j,k) = p0/(fl%gam_1)
-                  cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(cg%u%arr(fl%imx,i,j,k)**2 +cg%u%arr(fl%imy,i,j,k)**2 + cg%u%arr(fl%imz,i,j,k)**2)/cg%u%arr(fl%idn,i,j,k)
-               enddo
-            enddo
-         enddo
 
-! Explosion
+         cgl => cga%cg_leafs%cg_l(1)
+         do while (associated(cgl))
+            cg => cgl%cg
 
-         do k = 1, cg%nz
-            do j = 1, cg%ny
-               do i = 1, cg%nx
-                  r = sqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
-                  if ( r**2 < r0**2) cg%u%arr(fl%ien,i,j,k)   = cg%u%arr(fl%ien,i,j,k) + Eexpl
-               enddo
-            enddo
-         enddo
-
-         if (fl%tag == ION) then
             do k = 1, cg%nz
                do j = 1, cg%ny
                   do i = 1, cg%nx
-                     cg%b%arr(ibx,i,j,k) = bx0
-                     cg%b%arr(iby,i,j,k) = by0
-                     cg%b%arr(ibz,i,j,k) = bz0
-                     cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(cg%b%arr(ibx,i,j,k)**2 + cg%b%arr(iby,i,j,k)**2 + cg%b%arr(ibz,i,j,k)**2)
+                     cg%u%arr(fl%idn,i,j,k) = d0
+                     cg%u%arr(fl%imx,i,j,k) = 0.0
+                     cg%u%arr(fl%imy,i,j,k) = 0.0
+                     cg%u%arr(fl%imz,i,j,k) = 0.0
+                     cg%u%arr(fl%ien,i,j,k) = p0/(fl%gam_1)
+                     cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(cg%u%arr(fl%imx,i,j,k)**2 +cg%u%arr(fl%imy,i,j,k)**2 + cg%u%arr(fl%imz,i,j,k)**2)/cg%u%arr(fl%idn,i,j,k)
                   enddo
                enddo
             enddo
-         endif
+
+! Explosion
+
+            do k = 1, cg%nz
+               do j = 1, cg%ny
+                  do i = 1, cg%nx
+                     r = sqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
+                     if ( r**2 < r0**2) cg%u%arr(fl%ien,i,j,k)   = cg%u%arr(fl%ien,i,j,k) + Eexpl
+                  enddo
+               enddo
+            enddo
+
+            if (fl%tag == ION) then
+               do k = 1, cg%nz
+                  do j = 1, cg%ny
+                     do i = 1, cg%nx
+                        cg%b%arr(ibx,i,j,k) = bx0
+                        cg%b%arr(iby,i,j,k) = by0
+                        cg%b%arr(ibz,i,j,k) = bz0
+                        cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(cg%b%arr(ibx,i,j,k)**2 + cg%b%arr(iby,i,j,k)**2 + cg%b%arr(ibz,i,j,k)**2)
+                     enddo
+                  enddo
+               enddo
+            endif
+
+            cgl => cgl%nxt
+         enddo
+
       enddo
 
    end subroutine init_prob

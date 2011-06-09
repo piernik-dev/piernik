@@ -81,7 +81,7 @@ module dataio_user
    interface
       subroutine add_attr(file_id)
 
-         use hdf5,      only: HID_T
+         use hdf5, only: HID_T
 
          implicit none
 

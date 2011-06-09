@@ -46,12 +46,11 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, buffer_dim, proc, comm, ierr
-      use mpi,           only: MPI_DOUBLE_PRECISION
-      use grid,          only: cg
-!      use constants,     only: mH, kboltz, gasRconst
-      use types,       only: problem_customize_solution
+      use constants,  only: xdim
+      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use mpisetup,   only: rbuff, buffer_dim, proc, comm, ierr, dom
+      use mpi,        only: MPI_DOUBLE_PRECISION
+      use types,      only: problem_customize_solution
 
       implicit none
 
@@ -63,7 +62,7 @@ contains
       dnblob           = 1.0
       dnambfac            = 1.e-5
       p0ambfac         = 1.e-4
-      rclear           = (cg%x(2)-cg%x(1))
+      rclear           = dom%Lx/dom%n_d(xdim) ! BEWARE: why the x-direction is so special here?
       vxfac            = 1.0
       taucool          = 1.0e30
 
@@ -119,65 +118,70 @@ contains
 
    subroutine init_prob
 
-      use grid,        only: cg
-      use initneutral, only: idnn, imxn, imyn, imzn
-      use initneutral, only: ienn, gamma_neu
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
       use mpisetup,    only: smalld
-
 
       implicit none
 
       integer :: i, j, k, imx,imy,imz,idn
       real    :: xi, yj, vx, vy, vz, zk
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       imx=imxn
       imy=imyn
       imz=imzn
       idn=idnn
 
-      do j = 1,cg%ny
-         yj = cg%y(j)
-         do i = 1,cg%nx
-            xi = cg%x(i)
-            do k = 1,cg%nz
-               zk = cg%z(k)
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         do j = 1,cg%ny
+            yj = cg%y(j)
+            do i = 1,cg%nx
+               xi = cg%x(i)
+               do k = 1,cg%nz
+                  zk = cg%z(k)
 !blob
-               cg%u%arr(idn,i,j,k) = dnamb + &
-                    dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
-               cg%u%arr(idn,i,j,k) = max(cg%u%arr(idn,i,j,k), smalld)
-               cg%u%arr(ienn,i,j,k) = pamb/(gamma_neu-1.0) + &
-                    pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
+                  cg%u%arr(idn,i,j,k) = dnamb + dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
+                  cg%u%arr(idn,i,j,k) = max(cg%u%arr(idn,i,j,k), smalld)
+                  cg%u%arr(ienn,i,j,k) = pamb/(gamma_neu-1.0) + pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
 
-               vx = vxfac*sqrt(gamma_neu*pblob/dnblob)
-               vy = 0.0
-               vz = 0.0
+                  vx = vxfac*sqrt(gamma_neu*pblob/dnblob)
+                  vy = 0.0
+                  vz = 0.0
 
-               cg%u%arr(imx,i,j,k) = vx*(cg%u%arr(idn,i,j,k)-dnamb)
-               cg%u%arr(imy,i,j,k) = vy*(cg%u%arr(idn,i,j,k)-dnamb)
-               cg%u%arr(imz,i,j,k) = vz*(cg%u%arr(idn,i,j,k)-dnamb)
+                  cg%u%arr(imx,i,j,k) = vx*(cg%u%arr(idn,i,j,k)-dnamb)
+                  cg%u%arr(imy,i,j,k) = vy*(cg%u%arr(idn,i,j,k)-dnamb)
+                  cg%u%arr(imz,i,j,k) = vz*(cg%u%arr(idn,i,j,k)-dnamb)
 
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
-
-      return
    end subroutine init_prob
 !-----------------------------------------------------------------------------
 
    subroutine impose_inflow
 
-      use grid,           only: cg
-      use gravity,        only: ptm_x,ptm2_x
-      use initneutral, only: idnn, imxn, imyn, imzn
-      use initneutral, only: ienn, gamma_neu
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use gravity,     only: ptm_x,ptm2_x
+      use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
       use mpisetup,    only: smalld, smallei, t, dt
 
       implicit none
 
-      integer            :: i, j, k, imx,imy,imz,idn,ien
-      real    :: xi, yj,zk,r1,r2,dntemp,vx,vy,vz, dnold, enold, entemp, &
-           csaim, enaim, coolfac
+      integer :: i, j, k, imx,imy,imz,idn,ien
+      real :: xi, yj,zk,r1,r2,dntemp,vx,vy,vz, dnold, enold, entemp, csaim, enaim, coolfac
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
 
       imx=imxn
@@ -187,85 +191,89 @@ contains
       ien=ienn
 
 !clearing the compact star
-      do k = 1,cg%nz
-         zk = cg%z(k)
-         do j = 1,cg%ny
-            yj = cg%y(j)
-            do i = 1,cg%nx
-               xi = cg%x(i)
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         do k = 1,cg%nz
+            zk = cg%z(k)
+            do j = 1,cg%ny
+               yj = cg%y(j)
+               do i = 1,cg%nx
+                  xi = cg%x(i)
 
 
-               r1=sqrt((xi-ptm_x)**2  + yj**2 + zk**2)
-               r2=sqrt((xi-ptm2_x)**2 + yj**2 + zk**2)
+                  r1=sqrt((xi-ptm_x)**2  + yj**2 + zk**2)
+                  r2=sqrt((xi-ptm2_x)**2 + yj**2 + zk**2)
 
 
-               if (r1<rclear) then
+                  if (r1<rclear) then
 
-                  cg%u%arr(idn,i,j,k) = smalld + cg%u%arr(idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
-!                  cg%u%arr(idn,i,j,k) = dnamb + cg%u%arr(idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                  cg%u%arr(imx,i,j,k) = cg%u%arr(imx,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                  cg%u%arr(imy,i,j,k) = cg%u%arr(imy,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                  cg%u%arr(imz,i,j,k) = cg%u%arr(imz,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                  cg%u%arr(ien,i,j,k) = smallei + cg%u%arr(ien,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                     cg%u%arr(idn,i,j,k) = smalld + cg%u%arr(idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
+! cg%u%arr(idn,i,j,k) = dnamb + cg%u%arr(idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                     cg%u%arr(imx,i,j,k) = cg%u%arr(imx,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                     cg%u%arr(imy,i,j,k) = cg%u%arr(imy,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                     cg%u%arr(imz,i,j,k) = cg%u%arr(imz,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                     cg%u%arr(ien,i,j,k) = smallei + cg%u%arr(ien,i,j,k)*exp((r1/rclear-1.0)/1.0)
 
 
-               endif
+                  endif
 
-               if (r2<rclear) then
+                  if (r2<rclear) then
 
-                  cg%u%arr(idn,i,j,k) = smalld + cg%u%arr(idn,i,j,k)*exp((r2/rclear-1.0)/1.0)
-                  cg%u%arr(imx,i,j,k) = cg%u%arr(imx,i,j,k)*exp((r2/rclear-1.0)/1.0)
-                  cg%u%arr(imy,i,j,k) = cg%u%arr(imy,i,j,k)*exp((r2/rclear-1.0)/1.0)
-                  cg%u%arr(imz,i,j,k) = cg%u%arr(imz,i,j,k)*exp((r2/rclear-1.0)/1.0)
-                  cg%u%arr(ien,i,j,k) = smallei + cg%u%arr(ien,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                     cg%u%arr(idn,i,j,k) = smalld + cg%u%arr(idn,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                     cg%u%arr(imx,i,j,k) = cg%u%arr(imx,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                     cg%u%arr(imy,i,j,k) = cg%u%arr(imy,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                     cg%u%arr(imz,i,j,k) = cg%u%arr(imz,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                     cg%u%arr(ien,i,j,k) = smallei + cg%u%arr(ien,i,j,k)*exp((r2/rclear-1.0)/1.0)
 
-               endif
+                  endif
 
+               enddo
             enddo
          enddo
-      enddo
 
 !imposing inflow
-      do k = 1,cg%nz
-         zk = cg%z(k)
-         do j = 1,cg%ny
-            yj = cg%y(j)
-            do i = 1,cg%nx
-               xi = cg%x(i)
+         do k = 1,cg%nz
+            zk = cg%z(k)
+            do j = 1,cg%ny
+               yj = cg%y(j)
+               do i = 1,cg%nx
+                  xi = cg%x(i)
 !blob
-               dnold = cg%u%arr(idn,i,j,k)
-               dntemp = dnamb + dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
-               cg%u%arr(idn,i,j,k) = max(dntemp, dnold)
+                  dnold = cg%u%arr(idn,i,j,k)
+                  dntemp = dnamb + dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
+                  cg%u%arr(idn,i,j,k) = max(dntemp, dnold)
 !              cooling
 !              ~sound speed ~temp
-               csaim = pamb/dnamb/(gamma_neu-1.0)
-               enaim = csaim * cg%u%arr(idnn,i,j,k)
-               enold = cg%u%arr(ienn,i,j,k)
-               coolfac = max((taucool / dt), 1.0)
+                  csaim = pamb/dnamb/(gamma_neu-1.0)
+                  enaim = csaim * cg%u%arr(idnn,i,j,k)
+                  enold = cg%u%arr(ienn,i,j,k)
+                  coolfac = max((taucool / dt), 1.0)
 !               cg%u%arr(ienn,i,j,k) = enold - (enold - enaim)/coolfac
 !               cg%u%arr(ienn,i,j,k) = max(enaim,cg%u%arr(ienn,i,j,k))
 
 !hot blob
-               enold = cg%u%arr(ienn,i,j,k)
-               entemp = pamb/(gamma_neu-1.0) + &
-                     pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
-               cg%u%arr(ienn,i,j,k) = max(entemp, enold)
+                  enold = cg%u%arr(ienn,i,j,k)
+                  entemp = pamb/(gamma_neu-1.0) + pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
+                  cg%u%arr(ienn,i,j,k) = max(entemp, enold)
 !no inflow
 !               cg%u%arr(idnn,i,j,k) = dnold
 !               cg%u%arr(ienn,i,j,k) = enold
 
-               vx = vxfac*sqrt(gamma_neu*pblob/dnblob)
-               vy = 0.0
-               vz = 0.0
+                  vx = vxfac*sqrt(gamma_neu*pblob/dnblob)
+                  vy = 0.0
+                  vz = 0.0
 
-               cg%u%arr(imx,i,j,k) = cg%u%arr(imx,i,j,k) + vx*(cg%u%arr(idn,i,j,k)-dnold)
-               cg%u%arr(imy,i,j,k) = cg%u%arr(imy,i,j,k) + vy*(cg%u%arr(idn,i,j,k)-dnold)
-               cg%u%arr(imz,i,j,k) = cg%u%arr(imz,i,j,k) + vz*(cg%u%arr(idn,i,j,k)-dnold)
+                  cg%u%arr(imx,i,j,k) = cg%u%arr(imx,i,j,k) + vx*(cg%u%arr(idn,i,j,k)-dnold)
+                  cg%u%arr(imy,i,j,k) = cg%u%arr(imy,i,j,k) + vy*(cg%u%arr(idn,i,j,k)-dnold)
+                  cg%u%arr(imz,i,j,k) = cg%u%arr(imz,i,j,k) + vz*(cg%u%arr(idn,i,j,k)-dnold)
 
-
-
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
    end subroutine impose_inflow

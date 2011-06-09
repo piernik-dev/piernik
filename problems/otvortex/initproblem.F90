@@ -78,13 +78,14 @@ contains
 
    subroutine init_prob
 
-      use constants,    only: pi, dpi, fpi
-      use grid,         only: cg
-      use initionized,  only: idni, imxi, imyi, imzi
+      use constants,   only: pi, dpi, fpi
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use initionized, only: idni, imxi, imyi, imzi
+      use mpisetup,    only: smallei
 #ifndef ISO
-      use initionized,  only: ieni, gamma_ion
+      use initionized, only: ieni, gamma_ion
 #endif /* !ISO */
-      use mpisetup,     only: smallei
 
       implicit none
 
@@ -92,56 +93,65 @@ contains
       real    :: xi, yj, zk
       real    :: vx, vy, vz, rho, pre, bx, by, bz, b0
       real, dimension(:,:,:),allocatable :: A
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
 !   Secondary parameters
 
-      if (.not.allocated(A)) allocate(A(cg%nx, cg%ny,1))
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      rho = 25.0/(36.0*pi)
-      pre =  5.0/(12.0*pi)
-      b0  = 1./sqrt(fpi)
-      vz = 0.0
-      bz0 = 0.0
+         if (.not.allocated(A)) allocate(A(cg%nx, cg%ny,1))
 
-      do j=1, cg%ny
-         do i = 1, cg%nx
-            A(i,j,1) = b0*(cos(fpi*cg%xl(i))/fpi + cos(dpi*cg%yl(j))/dpi)
-         enddo
-      enddo
+         rho = 25.0/(36.0*pi)
+         pre =  5.0/(12.0*pi)
+         b0  = 1./sqrt(fpi)
+         vz = 0.0
+         bz0 = 0.0
 
-      do j = 1, cg%ny
-         yj = cg%y(j)
-         do i = 1, cg%nx
-            xi = cg%x(i)
-            do k = 1, cg%nz
-               zk = cg%z(k)
-
-               vx  = -sin(dpi*yj)
-               vy  = sin(dpi*xi)
-               bx  = b0*vx
-               by  = b0*sin(fpi*xi)
-               bz  = 0.0
-
-               cg%u%arr(idni,i,j,k) = rho
-               cg%u%arr(imxi,i,j,k) = vx*cg%u%arr(idni,i,j,k)
-               cg%u%arr(imyi,i,j,k) = vy*cg%u%arr(idni,i,j,k)
-               cg%u%arr(imzi,i,j,k) = vz*cg%u%arr(idni,i,j,k)
-#ifndef ISO
-               cg%u%arr(ieni,i,j,k) = pre/(gamma_ion-1.0)
-               cg%u%arr(ieni,i,j,k) = max(cg%u%arr(ieni,i,j,k), smallei)
-               cg%u%arr(ieni,i,j,k) = cg%u%arr(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(idni,i,j,k)
-#endif /* !ISO */
-               cg%b%arr(1,i,j,k)  = bx
-               cg%b%arr(2,i,j,k)  = by
-               cg%b%arr(3,i,j,k)  = bz
-
-#ifndef ISO
-               cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
-#endif /* !ISO */
+         do j=1, cg%ny
+            do i = 1, cg%nx
+               A(i,j,1) = b0*(cos(fpi*cg%xl(i))/fpi + cos(dpi*cg%yl(j))/dpi)
             enddo
          enddo
+
+         do j = 1, cg%ny
+            yj = cg%y(j)
+            do i = 1, cg%nx
+               xi = cg%x(i)
+               do k = 1, cg%nz
+                  zk = cg%z(k)
+
+                  vx  = -sin(dpi*yj)
+                  vy  = sin(dpi*xi)
+                  bx  = b0*vx
+                  by  = b0*sin(fpi*xi)
+                  bz  = 0.0
+
+                  cg%u%arr(idni,i,j,k) = rho
+                  cg%u%arr(imxi,i,j,k) = vx*cg%u%arr(idni,i,j,k)
+                  cg%u%arr(imyi,i,j,k) = vy*cg%u%arr(idni,i,j,k)
+                  cg%u%arr(imzi,i,j,k) = vz*cg%u%arr(idni,i,j,k)
+#ifndef ISO
+                  cg%u%arr(ieni,i,j,k) = pre/(gamma_ion-1.0)
+                  cg%u%arr(ieni,i,j,k) = max(cg%u%arr(ieni,i,j,k), smallei)
+                  cg%u%arr(ieni,i,j,k) = cg%u%arr(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(idni,i,j,k)
+#endif /* !ISO */
+                  cg%b%arr(1,i,j,k)  = bx
+                  cg%b%arr(2,i,j,k)  = by
+                  cg%b%arr(3,i,j,k)  = bz
+
+#ifndef ISO
+                  cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+#endif /* !ISO */
+               enddo
+            enddo
+         enddo
+         if (allocated(A)) deallocate(A)
+
+         cgl => cgl%nxt
       enddo
-      if (allocated(A)) deallocate(A)
 
    end subroutine init_prob
 

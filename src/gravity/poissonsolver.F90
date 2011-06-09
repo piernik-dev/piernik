@@ -44,17 +44,22 @@ contains
 !<
    subroutine poisson_solve(dens)
 
-      use constants,      only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE
-      use dataio_pub,     only: die
-      use grid,           only: cg
-      use mpisetup,       only: has_dir
+      use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE
+      use dataio_pub, only: die
+      use grid,       only: cga
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: has_dir
 
       implicit none
 
       real, dimension(:,:,:), intent(in)  :: dens
+      type(grid_container), pointer :: cg
 #ifdef SHEAR
       real, dimension(:,:,:), allocatable :: temp
 #endif /* SHEAR */
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[poissonsolver:poisson_solve] multiple grid pieces per procesor not implemented yet") !nontrivial (impossible?)
 
       if (.not. all(has_dir(:))) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !> \deprecated BEWARE 2D and 1D probably need small fixes
 
@@ -65,7 +70,7 @@ contains
          call die("[poissonsolver:poisson_solve] poisson_xyp called")
 
       elseif ( all(cg%bnd(xdim:zdim,LO:HI) == BND_PER) ) then ! Fully 3D periodic
-         call poisson_xyzp(dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) !> \deprecated BEWARE: something may not be fully initialized here
+         call poisson_xyzp(dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg) !> \deprecated BEWARE: something may not be fully initialized here
 
 #ifdef SHEAR
       elseif ( all(cg%bnd(xdim,LO:HI) == BND_SHE) .and. all(cg%bnd(ydim,LO:HI) == BND_PER) ) then ! 2D shearing box
@@ -519,16 +524,17 @@ contains
 !>
 !! \brief solves Poisson equation for periodic bnd conditions in X, Y and Z
 !<
-   subroutine poisson_xyzp(den, pot)
+   subroutine poisson_xyzp(den, pot, cg)
 
       use constants, only: dpi
       use units,     only: fpiG
-      use grid,      only: cg
+      use grid_cont, only: grid_container
 
       implicit none
 
       real, dimension(:,:,:), intent(in)  :: den
       real, dimension(:,:,:), intent(out) :: pot
+      type(grid_container), pointer, intent(in) :: cg
 
       complex, dimension(:,:,:), allocatable :: fft
       complex, dimension(:,:,:), allocatable :: ctmp

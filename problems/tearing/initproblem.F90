@@ -95,58 +95,69 @@ contains
 
    subroutine init_prob
 
-      use constants,    only: pi
-      use fluidindex,   only: ibx, iby, ibz, flind
-      use grid,         only: cg
-      use initionized,  only: idni, imxi, imyi, imzi
-      use mpisetup,     only: dom
+      use constants,   only: pi
+      use fluidindex,  only: ibx, iby, ibz, flind
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use initionized, only: idni, imxi, imyi, imzi
+      use mpisetup,    only: dom
 #ifndef ISO
-      use initionized,  only: ieni
+      use initionized, only: ieni
 #endif /* !ISO */
 
       implicit none
 
       integer  :: i, j, k
       real     :: xmid, ymid, zmid, vzab, b0
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       xmid = dom%x0
       ymid = dom%y0
       zmid = dom%z0
 
-      cg%u%arr(idni,:,:,:) = d0
-      cg%u%arr(imyi,:,:,:) = 0.0
-      cg%u%arr(imzi,:,:,:) = 0.0
 
-      cg%b%arr(ibx,:,:,:)  = 0.0
-      cg%b%arr(ibz,:,:,:)  = 0.0
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      call read_problem_par
+         cg%u%arr(idni,:,:,:) = d0
+         cg%u%arr(imyi,:,:,:) = 0.0
+         cg%u%arr(imzi,:,:,:) = 0.0
 
-      b0 = sqrt(2.*alpha*d0*flind%ion%cs2)
+         cg%b%arr(ibx,:,:,:)  = 0.0
+         cg%b%arr(ibz,:,:,:)  = 0.0
 
-      do k = 1, cg%nz
-         do j = 1, cg%ny
-            do i = 1, cg%nx
+         call read_problem_par
 
-               vzab = v0*cos(2.*pi*cg%y(j)/dom%Ly)
-               cg%u%arr(imxi,i,j,k) = cg%u%arr(idni,i,j,k)*vzab
+         b0 = sqrt(2.*alpha*d0*flind%ion%cs2)
 
-               if (abs(cg%x(i)-xmid) <= 0.25*dom%Lx) then
-                  cg%b%arr(iby,i,j,k) = -b0
-               else
-                  cg%b%arr(iby,i,j,k) =  b0
-               endif
+         do k = 1, cg%nz
+            do j = 1, cg%ny
+               do i = 1, cg%nx
+
+                  vzab = v0*cos(2.*pi*cg%y(j)/dom%Ly)
+                  cg%u%arr(imxi,i,j,k) = cg%u%arr(idni,i,j,k)*vzab
+
+                  if (abs(cg%x(i)-xmid) <= 0.25*dom%Lx) then
+                     cg%b%arr(iby,i,j,k) = -b0
+                  else
+                     cg%b%arr(iby,i,j,k) =  b0
+                  endif
+               enddo
             enddo
          enddo
-      enddo
 
 #ifndef ISO
-      cg%u%arr(ieni,:,:,:)   = 0.5*beta &
-                      + 0.5*(cg%u%arr(imxi,:,:,:)**2  + cg%u%arr(imyi,:,:,:)**2 &
-                           + cg%u%arr(imzi,:,:,:)**2) / cg%u%arr(idni,:,:,:)
+         cg%u%arr(ieni,:,:,:) = 0.5*beta + &
+              &               0.5*(cg%u%arr(imxi,:,:,:)**2  + cg%u%arr(imyi,:,:,:)**2 + &
+              &               cg%u%arr(imzi,:,:,:)**2) / cg%u%arr(idni,:,:,:)
 
-      cg%u%arr(ieni,:,:,:)   = cg%u%arr(ieni,:,:,:) + 0.5*sum(cg%b%arr(:,:,:,:)**2,1)
+         cg%u%arr(ieni,:,:,:)   = cg%u%arr(ieni,:,:,:) + 0.5*sum(cg%b%arr(:,:,:,:)**2,1)
 #endif /* !ISO */
+
+         cgl => cgl%nxt
+      enddo
 
    end subroutine init_prob
 

@@ -118,9 +118,12 @@ contains
    end subroutine init_shear
 !--------------------------------------------------------------------------------------------------
    function shear_acc(sweep,u) result(rotacc)
+
       use fluidindex, only: flind, iarr_all_dn, iarr_all_my
       use constants,  only: xdim, ydim
+
       implicit none
+
       real, dimension(:,:), intent(in)        :: u
       integer, intent(in)                     :: sweep
       real, dimension(2)                      :: df                 !< \deprecated  additional acceleration term used in streaming problem
@@ -153,19 +156,27 @@ contains
             rotacc(ind,:) = 0.0
          endif
       enddo
+
    end function shear_acc
 
    subroutine yshift(ts,dts)
 
-      use grid,     only: cg
-      use mpisetup, only: dom
+      use dataio_pub, only: die
+      use grid,       only: cga
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: dom
 
       implicit none
 
       real, intent(in) :: ts, dts
+
+      type(grid_container), pointer :: cg
 #ifdef FFTW
       integer :: i
 #endif /* FFTW */
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[shear:yshift] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       ddly  = dts * qshear*omega*dom%Lx
       dely  = ts  * qshear*omega*dom%Lx
@@ -183,9 +194,11 @@ contains
 #ifdef FFTW
    function unshear_fft(qty,x,ddy,inv)
 
-      use constants, only: dpi
-      use grid,      only: cg
-      use mpisetup,  only: dom
+      use constants,  only: dpi
+      use dataio_pub, only: die
+      use grid,       only: cga
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: dom
 
       implicit none
 
@@ -204,6 +217,10 @@ contains
       complex*16      , dimension(:)   , allocatable :: ctmp
       real(kind=8)    , dimension(:)   , allocatable :: rtmp
       real(kind=8)    , dimension(:)     , allocatable :: ky
+      type(grid_container), pointer :: cg
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[shear:unshear_fft] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       St = - ddy / cg%dy / dom%Lx
       if (.not.present(inv)) St = -St
@@ -249,8 +266,10 @@ contains
 !--------------------------------------------------------------------------------------------------
    function unshear(qty,x,inv)
 
-      use grid,     only: cg
-      use mpisetup, only: dom
+      use dataio_pub, only: die
+      use grid,       only: cga
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: dom
 
       implicit none
 
@@ -261,10 +280,14 @@ contains
       real, dimension(:,:), allocatable:: temp
       integer :: i,sg,my,nx,ny,nz,ndl
       real    :: fx,dl,ddl
+      type(grid_container), pointer :: cg
 
       nx = size(qty,1)
       ny = size(qty,2)
       nz = size(qty,3)
+
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[shear:unshear] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       my = 3*cg%nyb+2*cg%nb
 

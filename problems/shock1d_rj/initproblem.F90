@@ -109,67 +109,77 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use grid,         only: cg
-      use initionized,  only: idni,imxi,imyi,imzi
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use initionized, only: idni,imxi,imyi,imzi
 #ifndef ISO
-      use initionized,  only: ieni
-      use mpisetup,     only: smallei
+      use initionized, only: ieni
+      use mpisetup,    only: smallei
 #endif /* !ISO */
       implicit none
 
       integer  :: i,j,k
       real     :: xi,yj,zk
       real     :: vx,vy,vz,rho,pre,bx,by,bz
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       call read_problem_par
 
 !   Secondary parameters
 
-      do j = 1, cg%ny
-         yj = cg%y(j)
-         do i = 1, cg%nx
-            xi = cg%x(i)
-            do k = 1, cg%nz
-               zk = cg%z(k)
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-               if ((xi <= 0.5)) then
-                  rho = dl
-                  pre = el
-                  vx  = vxl
-                  vy  = vyl
-                  vz  = vzl
-                  bx  = bxl
-                  by  = byl
-                  bz  = bzl
-               else
-                  rho = dr
-                  pre = er
-                  vx  = vxr
-                  vy  = vyr
-                  vz  = vzr
-                  bx  = bxr
-                  by  = byr
-                  bz  = bzr
-               endif
+         do j = 1, cg%ny
+            yj = cg%y(j)
+            do i = 1, cg%nx
+               xi = cg%x(i)
+               do k = 1, cg%nz
+                  zk = cg%z(k)
 
-               cg%u%arr(idni,i,j,k) = rho
-               cg%u%arr(imxi,i,j,k) = vx*cg%u%arr(idni,i,j,k)
-               cg%u%arr(imyi,i,j,k) = vy*cg%u%arr(idni,i,j,k)
-               cg%u%arr(imzi,i,j,k) = vz*cg%u%arr(idni,i,j,k)
+                  if ((xi <= 0.5)) then
+                     rho = dl
+                     pre = el
+                     vx  = vxl
+                     vy  = vyl
+                     vz  = vzl
+                     bx  = bxl
+                     by  = byl
+                     bz  = bzl
+                  else
+                     rho = dr
+                     pre = er
+                     vx  = vxr
+                     vy  = vyr
+                     vz  = vzr
+                     bx  = bxr
+                     by  = byr
+                     bz  = bzr
+                  endif
+
+                  cg%u%arr(idni,i,j,k) = rho
+                  cg%u%arr(imxi,i,j,k) = vx*cg%u%arr(idni,i,j,k)
+                  cg%u%arr(imyi,i,j,k) = vy*cg%u%arr(idni,i,j,k)
+                  cg%u%arr(imzi,i,j,k) = vz*cg%u%arr(idni,i,j,k)
 #ifndef ISO
-               cg%u%arr(ieni,i,j,k) = pre ! pre here means eint
-               cg%u%arr(ieni,i,j,k) = max(cg%u%arr(ieni,i,j,k), smallei)
-               cg%u%arr(ieni,i,j,k) = cg%u%arr(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(idni,i,j,k)
+                  cg%u%arr(ieni,i,j,k) = pre ! pre here means eint
+                  cg%u%arr(ieni,i,j,k) = max(cg%u%arr(ieni,i,j,k), smallei)
+                  cg%u%arr(ieni,i,j,k) = cg%u%arr(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(idni,i,j,k)
 #endif /* !ISO */
-               cg%b%arr(1,i,j,k)   =  bx
-               cg%b%arr(2,i,j,k)   =  by
-               cg%b%arr(3,i,j,k)   =  bz
+                  cg%b%arr(1,i,j,k)   =  bx
+                  cg%b%arr(2,i,j,k)   =  by
+                  cg%b%arr(3,i,j,k)   =  bz
 
 #ifndef ISO
-               cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+                  cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
 #endif /* !ISO */
+               enddo
             enddo
          enddo
+
+         cgl => cgl%nxt
       enddo
 
    end subroutine init_prob

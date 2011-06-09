@@ -161,7 +161,8 @@ contains
    subroutine cr_sn(pos)
 
       use fluidindex,     only: flind
-      use grid,           only: cg
+      use grid,           only: cga
+      use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crn
       use mpisetup,       only: dom
 #ifdef COSM_RAYS_SOURCES
@@ -172,48 +173,62 @@ contains
 
       real, dimension(3), intent(in) :: pos
       integer  :: i, j, k, ipm, jpm
+      real     :: decr, xsn, ysn, zsn
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 #ifdef COSM_RAYS_SOURCES
       integer  :: icr
 #endif /* COSM_RAYS_SOURCES */
-      real     :: decr, xsn, ysn, zsn
+
       xsn = pos(1)
       ysn = pos(2)
       zsn = pos(3)
 
-      do k=1, cg%nz
-         do j=1, cg%ny
-            do i=1, cg%nx
+      cgl => cga%cg_leafs%cg_l(1)
+      do while (associated(cgl))
+         cg => cgl%cg
 
-               do ipm=-1,1
+         do k=1, cg%nz
+            do j=1, cg%ny
+               do i=1, cg%nx
 
-                  if (ipm == -1) ysna = ysno
-                  if (ipm ==  0) ysna = ysn
-                  if (ipm ==  1) ysna = ysni
+                  do ipm=-1,1
 
-                  do jpm=-1,1
+                     if (ipm == -1) ysna = ysno
+                     if (ipm ==  0) ysna = ysn
+                     if (ipm ==  1) ysna = ysni
 
-                     decr = amp_ecr_sn * ethu  &
-                           * exp(-((cg%x(i)-xsn +real(ipm)*dom%Lx)**2  &
-                                 + (cg%y(j)-ysna+real(jpm)*dom%Ly)**2  &
-                                 + (cg%z(k)-zsn)**2)/r_sn**2)
+                     do jpm=-1,1
+
+                        decr = amp_ecr_sn * ethu  &
+                             * exp(-((cg%x(i)-xsn +real(ipm)*dom%Lx)**2  &
+                             + (cg%y(j)-ysna+real(jpm)*dom%Ly)**2  &
+                             + (cg%z(k)-zsn)**2)/r_sn**2)
 
 #ifdef COSM_RAYS_SOURCES
-                     do icr=1,flind%crn%all
-                        if (icr == icr_H1 ) cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + decr
-                        if (icr == icr_C12) cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_C12*12*decr
-                        if (icr == icr_N14) cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_N14*14*decr
-                        if (icr == icr_O16) cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_O16*16*decr
-                     enddo
+                        do icr=1,flind%crn%all
+                           select case (icr)
+                              case (icr_H1 )
+                                 cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + decr
+                              case (icr_C12)
+                                 cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_C12*12*decr
+                              case (icr_N14)
+                                 cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_N14*14*decr
+                              case (icr_O16)
+                                 cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_O16*16*decr
+                           end select
+                        enddo
 #endif /* COSM_RAYS_SOURCES */
 
-                  enddo ! jpm
-               enddo ! ipm
+                     enddo ! jpm
+                  enddo ! ipm
 
-            enddo ! i
-         enddo ! j
-      enddo ! k
+               enddo ! i
+            enddo ! j
+         enddo ! k
 
-      return
+         cgl => cgl%nxt
+      enddo
 
    end subroutine cr_sn
 
@@ -224,10 +239,11 @@ contains
 !<
    subroutine rand_coords(pos)
 
-      use grid,      only: cg
       use mpisetup,  only: has_dir, dom
       use constants, only: zdim
 #ifdef SHEAR
+      use grid,      only: cga
+      use grid_cont, only: grid_container
       use shear,     only: delj, eps
 #endif /* SHEAR */
 
@@ -236,8 +252,8 @@ contains
 #ifdef SHEAR
       integer :: jsn,jremap
       real :: dysn
+      type(grid_container), pointer :: cg
 #endif /* SHEAR */
-
       real, dimension(3), intent(out) :: pos
       real, dimension(4) :: rand
       real :: xsn,ysn,zsn,znorm
@@ -255,6 +271,9 @@ contains
       endif
 
 #ifdef SHEAR
+      cg => cga%cg_all(1)
+      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[snsources:rand_coords] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
+
       jsn  = js+int((ysn-dom%ymin)/cg%dy)
       dysn  = dmod(ysn, cg%dy)
 
