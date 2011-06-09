@@ -153,7 +153,7 @@ contains
 
       real, parameter           :: virial_tol = 0.01
       integer, parameter        :: LOW=1, HIGH=LOW+1, TRY=3, NLIM=3
-      integer                   :: i, j, k, tt,tmax, iC, iM, il, ih, jl, jh, kl, kh
+      integer                   :: i, j, k, tt,tmax, iC, iC_cg, iM, il, ih, jl, jh, kl, kh
       logical                   :: doneC, doneM
       real, dimension(LOW:HIGH) :: Cint, totME
       character(len=HIGH)       :: ind
@@ -164,6 +164,7 @@ contains
       integer, parameter        :: cmt_len=9 ! length of the " Exp warp" string
       character(len=cmt_len)    :: Ccomment
       real                      :: t_save
+      real                      :: Msph
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
@@ -173,10 +174,12 @@ contains
       iC = 0
       totME(1) = clump_mass / (4./3. * pi * clump_r**3)
 
+      Msph = 0.
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
          cg => cgl%cg
 
+         iC_cg = 0
          cg%b%arr(:,    :, :, :) = 0.
          cg%u%arr(idni, :, :, :) = smalld
          cg%u%arr(ieni, :, :, :) = smallei
@@ -212,18 +215,22 @@ contains
                do i = il, ih
                   if ((cg%x(i)-clump_pos_x)**2 + (cg%y(j)-clump_pos_y)**2 + (cg%z(k)-clump_pos_z)**2 < clump_r**2) then
                      cg%u%arr(idni, i, j, k) = totME(1)
-                     iC =iC + 1
+                     iC_cg = iC_cg + 1
                   endif
                enddo
             enddo
          enddo
 
+         iC = iC + iC_cg
+         Msph = Msph + iC_cg * totME(1) * cg%dvol
+
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce (MPI_IN_PLACE, iC, 1, MPI_INTEGER, MPI_SUM, comm, ierr)
+      call MPI_Allreduce (MPI_IN_PLACE, iC,   1, MPI_INTEGER,          MPI_SUM, comm, ierr)
+      call MPI_Allreduce (MPI_IN_PLACE, Msph, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
       if (master .and. verbose) then
-         write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", iC*totME(1) * cg%dvol, " (", iC, " cells)"
+         write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
          call printinfo(msg, .true.)
       endif
 

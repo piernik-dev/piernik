@@ -455,6 +455,7 @@ contains
                         H2 = 1.0
                      endif
 
+                     vphi = 0.
                      do k = 1, cg%nz
                         zk = cg%z(k)
 !                     cg%u%arr(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),1.e-10))

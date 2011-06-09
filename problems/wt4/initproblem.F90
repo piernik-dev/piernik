@@ -501,6 +501,7 @@ contains
 
    subroutine problem_customize_solution_wt4
 
+      use dataio_pub,  only: warn
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use initionized, only: idni, imxi, imyi, imzi
@@ -519,7 +520,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (.not. allocated(mod_str)) allocate(mod_str(cg%is:cg%ie)) !BEWARE not deallocated anywhere yet
+         allocate(mod_str(cg%is:cg%ie))
 
          select case (divine_intervention_type)
             case (1)                                                                                ! crude
@@ -560,16 +561,14 @@ contains
                   enddo
                enddo
             case (3)
-               if (.not. allocated(alf)) then
-                  allocate(alf(cg%nx, cg%ny))
-                  do i = 1, cg%nx
-                     do j = 1, cg%ny
-                        rc = sqrt(cg%x(i)**2 + cg%y(j)**2)
-                        alf(i,j) = -alfasupp*0.5*(tanh((rc-r_in)/r_in*f_in)-1.)
-                        alf(i,j) = alf(i,j) + alfasupp*0.5*(tanh((rc-r_out)/r_out*f_out) + 1.)
-                     enddo
+               allocate(alf(cg%nx, cg%ny))
+               do i = 1, cg%nx
+                  do j = 1, cg%ny
+                     rc = sqrt(cg%x(i)**2 + cg%y(j)**2)
+                     alf(i,j) = -alfasupp*0.5*(tanh((rc-r_in)/r_in*f_in)-1.)
+                     alf(i,j) = alf(i,j) + alfasupp*0.5*(tanh((rc-r_out)/r_out*f_out) + 1.)
                   enddo
-               endif
+               enddo
                do k = 1, cg%nz
                   cg%u%arr(idni, :, :, k) = (1. - alf(:,:))*cg%u%arr(idni, :, :, k) + alf*den0(:, :, k)
                   cg%u%arr(imxi, :, :, k) = (1. - alf(:,:))*cg%u%arr(imxi, :, :, k) + alf*den0(:, :, k) * vlx0(:, :, k)
@@ -583,8 +582,12 @@ contains
                      endwhere
                   enddo
                enddo
-
+               deallocate(alf)
+            case default
+               call warn("[initproblem:problem_customize_solution_wt4] Unknown divine_intervention_type")
          end select
+
+         deallocate(mod_str)
 
          cgl => cgl%nxt
       enddo
