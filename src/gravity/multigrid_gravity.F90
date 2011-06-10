@@ -156,13 +156,14 @@ contains
 !<
    subroutine init_multigrid_grav
 
-      use multigridvars,      only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, single_base
-      use constants,          only: GEO_XYZ, GEO_RPZ, BND_PER
-      use multipole,          only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
-      use mpisetup,           only: buffer_dim, comm, comm3d, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, dom, has_dir, eff_dim, geometry_type, is_uneven
-      use mpi,                only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
-      use dataio_pub,         only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use dataio_pub,         only: msg, die, warn
+      use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use dataio_pub,    only: msg, die, warn
+      use domain,        only: dom, has_dir, eff_dim, geometry_type, is_uneven
+      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
+      use mpisetup,      only: buffer_dim, comm, comm3d, ierr, master, slave, ibuff, cbuff, rbuff, lbuff
+      use multigridvars, only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, single_base
+      use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
 
       implicit none
 
@@ -389,7 +390,8 @@ contains
    subroutine init_multigrid_grav_post(mb_alloc)
 
       use multigridvars,    only: lvl, plvl, roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, is_mg_uneven, need_general_pf, single_base
-      use mpisetup,         only: master, nproc, geometry_type, dom, proc, comm3d
+      use mpisetup,         only: master, nproc, proc, comm3d
+      use domain,           only: geometry_type, dom
       use multigridhelpers, only: vcycle_stats_init, dirty_debug, dirtyH
       use constants,        only: pi, dpi, GEO_XYZ
       use dataio_pub,       only: die, warn
@@ -630,7 +632,8 @@ contains
 
       use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG
       use dataio_pub,    only: warn, die
-      use mpisetup,      only: has_dir, proc, nproc, is_overlap, procmask, inflate_req, req
+      use domain,        only: has_dir, is_overlap
+      use mpisetup,      only: proc, nproc, procmask, inflate_req, req
       use multigridvars, only: base, lvl, plvl, pr_segment, ord_prolong_face_norm, is_external, need_general_pf
 #ifdef DEBUG
       use piernikdebug,  only: aux_R
@@ -904,9 +907,10 @@ contains
 
    subroutine init_solution(history)
 
-      use mpisetup,         only: master, t
-      use multigridhelpers, only: set_dirty, check_dirty, mg_write_log
       use dataio_pub,       only: msg, die
+      use global,           only: t
+      use mpisetup,         only: master
+      use multigridhelpers, only: set_dirty, check_dirty, mg_write_log
       use multigridvars,    only: lvl, plvl, base, roof, stdout, solution
 
       implicit none
@@ -992,18 +996,18 @@ contains
 
    subroutine init_source(dens)
 
+      use constants,          only: GEO_RPZ, LO, HI, xdim, ydim, zdim
+      use dataio_pub,         only: die
+      use domain,             only: geometry_type
+      use grid,               only: cga
+      use grid_cont,          only: grid_container
+      use multigridbasefuncs, only: substract_average
+      use multigridhelpers,   only: set_dirty, check_dirty
+      use multigridvars,      only: roof, source, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval
+      use units,              only: fpiG
 #ifdef JEANS_PROBLEM
       use problem_pub,        only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
-      use units,              only: fpiG
-      use grid,               only: cga
-      use grid_cont,          only: grid_container
-      use dataio_pub,         only: die
-      use multigridhelpers,   only: set_dirty, check_dirty
-      use multigridbasefuncs, only: substract_average
-      use multigridvars,      only: roof, source, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval
-      use mpisetup,           only: geometry_type
-      use constants,          only: GEO_RPZ, LO, HI, xdim, ydim, zdim
 
       implicit none
 
@@ -1099,7 +1103,7 @@ contains
 
    subroutine store_solution(history)
 
-      use mpisetup,          only: t
+      use global,            only: t
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: roof, bnd_isolated, bnd_givenval, solution, mg_nb, extbnd_extrapolate, extbnd_mirror
 
@@ -1138,13 +1142,13 @@ contains
    subroutine multigrid_solve_grav(dens)
 
       use constants,     only: xdim, ydim, zdim
-      use timer,         only: set_timer
+      use dataio_pub,    only: die
+      use domain,        only: has_dir
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
-      use mpisetup,      only: has_dir
-      use dataio_pub,    only: die
-      use multipole,     only: multipole_solver
       use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, mg_nb, tot_ts, ts
+      use multipole,     only: multipole_solver
+      use timer,         only: set_timer
 
       implicit none
 
@@ -1463,7 +1467,7 @@ contains
 
       use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
       use dataio_pub,         only: die
-      use mpisetup,           only: has_dir, eff_dim, geometry_type
+      use domain,             only: has_dir, eff_dim, geometry_type
       use multigridhelpers,   only: multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: lvl, plvl, extbnd_antimirror
@@ -1576,11 +1580,12 @@ contains
 
    subroutine residual4(lev, src, soln, def)
 
-      use dataio_pub,         only: die, warn
-      use mpisetup,           only: master, eff_dim
-      use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, plvl, bnd_givenval, extbnd_antimirror
-      use constants,          only: ndims
+      use dataio_pub,        only: die, warn
+      use domain,            only: eff_dim
+      use mpisetup,          only: master
+      use multigridmpifuncs, only: mpi_multigrid_bnd
+      use multigridvars,     only: lvl, plvl, bnd_givenval, extbnd_antimirror
+      use constants,         only: ndims
 
       implicit none
 
@@ -1718,12 +1723,12 @@ contains
 
    subroutine approximate_solution_rbgs(lev, src, soln)
 
-      use dataio_pub,         only: die
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
-      use mpisetup,           only: has_dir, eff_dim, geometry_type
-      use multigridhelpers,   only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
-      use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, plvl, base, extbnd_antimirror
+      use constants,         only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
+      use dataio_pub,        only: die
+      use domain,            only: has_dir, eff_dim, geometry_type
+      use multigridhelpers,  only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
+      use multigridmpifuncs, only: mpi_multigrid_bnd
+      use multigridvars,     only: lvl, plvl, base, extbnd_antimirror
 
       implicit none
 
@@ -1875,13 +1880,13 @@ contains
 
    subroutine approximate_solution_fft(lev, src, soln)
 
-      use constants,          only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ
-      use grid,               only: D_x, D_y, D_z
-      use mpisetup,           only: has_dir, eff_dim, geometry_type
-      use dataio_pub,         only: die, warn
-      use multigridhelpers,   only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
-      use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, plvl, base, extbnd_antimirror, single_base
+      use constants,         only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ
+      use dataio_pub,        only: die, warn
+      use domain,            only: has_dir, eff_dim, geometry_type
+      use grid,              only: D_x, D_y, D_z
+      use multigridhelpers,  only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
+      use multigridmpifuncs, only: mpi_multigrid_bnd
+      use multigridvars,     only: lvl, plvl, base, extbnd_antimirror, single_base
 
       implicit none
 

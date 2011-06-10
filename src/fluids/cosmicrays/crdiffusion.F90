@@ -84,10 +84,11 @@ contains
 
       use constants,  only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI
       use dataio_pub, only: die
+      use domain,     only: has_dir, psize, procn
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_REQUEST_NULL, MPI_COMM_NULL
-      use mpisetup,   only: comm, comm3d, ierr, has_dir, psize, procn, req, status
+      use mpisetup,   only: comm, comm3d, ierr, req, status
 
       implicit none
 
@@ -180,11 +181,12 @@ contains
 
       use constants,      only: xdim, ydim, zdim
       use dataio_pub,     only: die
+      use domain,         only: has_dir
       use fluidindex,     only: ibx, iby, ibz, flind
+      use global,         only: dt
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use mpisetup,       only: dt, has_dir
 
       implicit none
 
@@ -259,11 +261,12 @@ contains
 
       use constants,      only: xdim, ydim, zdim
       use dataio_pub,     only: die
+      use domain,         only: has_dir
       use fluidindex,     only: ibx, iby, ibz, flind
+      use global,         only: dt
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use mpisetup,       only: dt, has_dir
 
       implicit none
 
@@ -338,11 +341,12 @@ contains
 
       use constants,      only: xdim, ydim, zdim
       use dataio_pub,     only: die
+      use domain,         only: has_dir
       use fluidindex,     only: ibx, iby, ibz, flind
+      use global,         only: dt
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use mpisetup,       only: dt, has_dir
 
       implicit none
 

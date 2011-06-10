@@ -78,14 +78,15 @@ contains
 !
    subroutine flux_neu(fluxn,cfrn,uun,n,vx,p,bb,cs_iso2)
 
-      use constants,       only: small
-      use fluidindex,      only: idn, imx, imy, imz, ien, flind
-      use mpisetup,        only: cfr_smooth, smallp
+      use constants,  only: small
+      use fluidindex, only: idn, imx, imy, imz, ien, flind
+      use global,     only: cfr_smooth, smallp
 #ifdef GLOBAL_FR_SPEED
-      use timestep,        only: c_all
+      use timestep,   only: c_all
 #endif /* GLOBAL_FR_SPEED */
 
       implicit none
+
       integer, intent(in)                        :: n         !< number of cells in the current sweep
       real, dimension(:,:), intent(out), pointer :: fluxn     !< flux of neutral fluid
       real, dimension(:,:), intent(in),  pointer :: uun       !< part of u for neutral fluid

@@ -66,10 +66,10 @@ contains
       use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: die
       use diagnostics, only: ma3d, my_allocate
+      use domain,      only: has_dir
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,        only: cga
       use grid_cont,   only: grid_container
-      use mpisetup,    only: has_dir
 
       implicit none
 

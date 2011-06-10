@@ -97,10 +97,10 @@ contains
    subroutine init_prob
 
       use constants, only: pi
+      use domain,    only: dom
       use grid,      only: cga
       use grid_cont, only: cg_list_element, grid_container
       use initdust,  only: idnd, imxd, imyd, imzd
-      use mpisetup,  only: dom
 
       implicit none
 

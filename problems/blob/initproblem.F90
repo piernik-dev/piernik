@@ -104,10 +104,10 @@ contains
    subroutine init_prob
 
       use constants,   only: zdim
+      use domain,      only: has_dir
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use initneutral, only: gamma_neu, idnn, imxn, imyn, imzn, ienn
-      use mpisetup,    only: has_dir
 
       implicit none
 

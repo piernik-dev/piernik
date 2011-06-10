@@ -74,10 +74,10 @@ contains
 
    subroutine flux_ion(fluxi, cfri, uui, n, vx, ps, bb, cs_iso2)
 
-      use constants,       only: small
-      use dataio_pub,      only: die
-      use fluidindex,      only: idn, imx, imy, imz, ien, flind, ibx, iby, ibz
-      use mpisetup,        only: cfr_smooth
+      use constants,  only: small
+      use dataio_pub, only: die
+      use fluidindex, only: idn, imx, imy, imz, ien, flind, ibx, iby, ibz
+      use global,     only: cfr_smooth
 
       implicit none
 

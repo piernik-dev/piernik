@@ -52,8 +52,9 @@ contains
 
       use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ndims, INVALID
       use dataio_pub,    only: warn, die
+      use domain,        only: is_overlap, has_dir
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_COMM_NULL
-      use mpisetup,      only: ierr, has_dir, comm3d, proc, nproc, is_overlap, procmask
+      use mpisetup,      only: ierr, comm3d, proc, nproc, procmask
       use multigridvars, only: lvl, plvl, base, pr_segment
 
       implicit none
@@ -288,8 +289,9 @@ contains
 
       use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK
       use dataio_pub,    only: die
+      use domain,        only: is_mpi_noncart, procn, psize, has_dir
       use mpi,           only: MPI_REQUEST_NULL, MPI_COMM_NULL
-      use mpisetup,      only: comm, comm3d, ierr, procn, proc, psize, has_dir, have_mpi, is_mpi_noncart, req, status
+      use mpisetup,      only: proc, comm, comm3d, ierr, have_mpi, req, status
       use multigridvars, only: lvl, plvl, base, roof, is_external, ngridvars
 
       implicit none

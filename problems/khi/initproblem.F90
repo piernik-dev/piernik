@@ -101,10 +101,10 @@ contains
    subroutine init_prob
 
       use constants,   only: dpi, zdim
+      use domain,      only: has_dir, dom
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
-      use mpisetup,    only: has_dir, dom
 
       implicit none
 

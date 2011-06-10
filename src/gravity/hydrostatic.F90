@@ -125,10 +125,10 @@ contains
    subroutine hydrostatic_main(sd)
 
       use dataio_pub, only: die
+      use domain,     only: dom
       use gravity,    only: nsub
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
-      use mpisetup,   only: dom
 
       implicit none
 
@@ -283,9 +283,9 @@ contains
 
       use constants,  only: zdim
       use dataio_pub, only: die
+      use domain,     only: dom
       use gravity,    only: get_gprofs, gprofs_target, nsub
       use grid_cont,  only: grid_container
-      use mpisetup,   only: dom
 
       implicit none
 
@@ -335,13 +335,13 @@ contains
       use constants,      only: zdim
       use dataio_pub,     only: die
       use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use global,         only: smalld
       use gravity,        only: grav_accel, nsub, tune_zeq_bnd
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
-      use mpisetup,       only: smalld
 #ifndef ISO
       use fluidindex,     only: iarr_all_en
-      use mpisetup,       only: smallei
+      use global,         only: smallei
 #endif /* !ISO */
 #ifdef COSM_RAYS
       use fluidindex,     only: iarr_all_crs

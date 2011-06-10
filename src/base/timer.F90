@@ -255,10 +255,11 @@ contains
 !<
    subroutine timer_stop
 
-      use dataio_pub,    only: msg, printinfo
-      use grid,          only: total_ncells
-      use mpisetup,      only: comm, ierr, nstep, master
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use dataio_pub, only: msg, printinfo
+      use global,     only: nstep
+      use grid,       only: total_ncells
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,   only: comm, ierr, master
 
       implicit none
 

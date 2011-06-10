@@ -49,15 +49,16 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die
-      use dataio_user,   only: user_vars_hdf5
-      use diagnostics,   only: my_allocate
-      use grid,          only: cga
-      use grid_cont,     only: cg_list_element, grid_container
-      use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave, dom
-      use types,         only: problem_customize_solution, finalize_problem, cleanup_problem
+      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_pub,  only: die
+      use dataio_user, only: user_vars_hdf5
+      use diagnostics, only: my_allocate
+      use domain,      only: dom
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use mpi,         only: MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use mpisetup,    only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave
+      use types,       only: problem_customize_solution, finalize_problem, cleanup_problem
 
       implicit none
 
@@ -158,12 +159,12 @@ contains
 
    subroutine init_prob
 
+      use constants,      only: xdim, ydim, zdim
       use dataio_pub,     only: die, warn
+      use domain,         only: has_dir, dom
       use fluidindex,     only: ibx, iby, ibz
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
-      use mpisetup,       only: has_dir, dom
-      use constants,      only: xdim, ydim, zdim
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
 
@@ -249,7 +250,7 @@ contains
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
-      use mpisetup,       only: t
+      use global,         only: t
 
       implicit none
 
@@ -318,10 +319,11 @@ contains
 
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
       use constants,      only: PIERNIK_FINISHED
+      use global,         only: t, nstep
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre
-      use mpisetup,       only: master, comm, ierr, t, nstep
+      use mpisetup,       only: master, comm, ierr
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
 
       implicit none

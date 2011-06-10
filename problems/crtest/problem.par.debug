@@ -1,4 +1,4 @@
- $DOMAIN
+ $BASE_DOMAIN
     nxd = 96
     nyd = 96
     nzd = 1

@@ -71,12 +71,13 @@ contains
 !<
    subroutine init_snsources
 
+      use constants,      only: PIERNIK_INIT_BASE, xdim, ydim
       use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
-      use constants,      only: PIERNIK_INIT_BASE, xdim, ydim
-      use mpi,            only: MPI_DOUBLE_PRECISION
-      use mpisetup,       only: rbuff, buffer_dim, comm, ierr, master, slave, has_dir, dom
+      use domain,         only: has_dir, dom
       use initcosmicrays, only: cr_eff
+      use mpi,            only: MPI_DOUBLE_PRECISION
+      use mpisetup,       only: rbuff, buffer_dim, comm, ierr, master, slave
 
       implicit none
 
@@ -127,7 +128,7 @@ contains
    subroutine random_sn
 
       use constants, only: small
-      use mpisetup,  only: t
+      use global,    only: t
 
       implicit none
       real :: dt_sn
@@ -160,11 +161,11 @@ contains
 !<
    subroutine cr_sn(pos)
 
+      use domain,         only: dom
       use fluidindex,     only: flind
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crn
-      use mpisetup,       only: dom
 #ifdef COSM_RAYS_SOURCES
       use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
 #endif /* COSM_RAYS_SOURCES */
@@ -239,8 +240,8 @@ contains
 !<
    subroutine rand_coords(pos)
 
-      use mpisetup,  only: has_dir, dom
       use constants, only: zdim
+      use domain,    only: has_dir, dom
 #ifdef SHEAR
       use grid,      only: cga
       use grid_cont, only: grid_container

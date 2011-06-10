@@ -31,17 +31,18 @@
 !<
 program piernik
 ! pulled by ANY
-   use dataio,        only: write_data, user_msg_handler, check_log, check_tsl
-   use dataio_pub,    only: nend, tend, msg, printinfo, warn, die, code_progress
-   use constants,     only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout
-   use fluidupdate,   only: fluid_update
-   use mpisetup,      only: comm, ierr, master, t, nstep, dt, dtm, cfl_violated
-   use timer,         only: time_left
-   use types,         only: finalize_problem
-   use timestep,      only: time_step
-   use timer,         only: set_timer
+
+   use constants,   only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout
+   use dataio,      only: write_data, user_msg_handler, check_log, check_tsl
+   use dataio_pub,  only: nend, tend, msg, printinfo, warn, die, code_progress
+   use fluidupdate, only: fluid_update
+   use global,      only: t, nstep, dt, dtm, cfl_violated
+   use mpisetup,    only: comm, ierr, master
+   use timer,       only: time_left, set_timer
+   use timestep,    only: time_step
+   use types,       only: finalize_problem
 #ifdef PERFMON
-   use timer,         only: timer_start, timer_stop
+   use timer,       only: timer_start, timer_stop
 #endif /* PERFMON */
 
    implicit none
@@ -159,7 +160,7 @@ contains
 
       use constants,  only: cwdlen
       use dataio_pub, only: printinfo, msg
-      use mpisetup,   only: dt, t
+      use global,     only: dt, t
 
       implicit none
 
@@ -183,11 +184,13 @@ contains
       use units,                 only: init_units
       use dataio,                only: init_dataio, write_data
       use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, code_progress
-      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_BASE, PIERNIK_INIT_ARRAYS, PIERNIK_INIT_IO_IC
+      use domain,                only: init_domain
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_BASE, PIERNIK_INIT_ARRAYS, PIERNIK_INIT_IO_IC
       use diagnostics,           only: diagnose_arrays, check_environment
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_pub,   only: init_fluidboundaries
       use fluidindex,            only: flind
+      use global,                only: init_global
       use grid,                  only: init_grid, init_arrays, grid_mpi_boundaries_prep
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use gridgeometry,          only: init_geometry
@@ -237,6 +240,12 @@ contains
 #ifdef DEBUG
       call init_piernikdebug ! Make it available as early as possible - right after init_mpi
 #endif /* DEBUG */
+
+      call init_global
+
+      call init_domain
+
+      code_progress = PIERNIK_INIT_DOMAIN ! Base domain is known and initial domain decomposition is known
 
       call init_grid         ! Most of the cg's vars are now initialized, only arrays left
 
@@ -356,6 +365,8 @@ contains
 
       use types,        only: cleanup_problem
       use dataio,       only: cleanup_dataio
+      use domain,       only: cleanup_domain
+      use global,       only: cleanup_global
       use grid,         only: cleanup_grid
       use initfluids,   only: cleanup_fluids
       use fluidindex,   only: cleanup_fluidindex
@@ -387,6 +398,8 @@ contains
 #endif /* COSM_RAYS */
       call cleanup_grid;        call nextdot(.false.)
       call cleanup_fluids;      call nextdot(.false.)
+      call cleanup_global;      call nextdot(.false.)
+      call cleanup_domain;      call nextdot(.false.)
       call cleanup_fluidindex;  call nextdot(.false., print_t = .true.)
       call cleanup_timers;      call nextdot(.false.)
       call cleanup_mpi;         call nextdot(.true.)
@@ -399,9 +412,10 @@ contains
 !<
    subroutine grace_period
 
-      use mpisetup,     only: grace_period_passed, relax_time, master
       use dataio_pub,   only: printinfo
+      use global,       only: grace_period_passed, relax_time
       use interactions, only: interactions_grace_passed
+      use mpisetup,     only: master
       use types,        only: problem_grace_passed
 
       implicit none

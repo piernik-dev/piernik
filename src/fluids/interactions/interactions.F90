@@ -232,9 +232,12 @@ contains
    subroutine balsara_implicit_interactions(u1,u0,vx,cs_iso2,istep)
       ! Balsara Dinshaw S., Tilley David A., Rettig Terrence, Brittain Sean D. MNRAS (2009) 397: 24.
       ! Tilley, David A., Balsara, Dinshaw S. MNRAS (2008) 389: 1058.
+
       use fluidindex, only: iarr_all_dn, iarr_all_mx, flind
-      use mpisetup,   only: dt
+      use global,     only: dt
+
       implicit none
+
       real, dimension(:,:), intent(inout)      :: u1
       real, dimension(:,:), intent(in)         :: u0
       real, dimension(:,:), intent(in)         :: vx

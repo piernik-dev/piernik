@@ -97,7 +97,7 @@ contains
 
       use dataio_pub, only: msg, die, code_progress
       use constants,  only: PIERNIK_INIT_BASE, GEO_XYZ, GEO_RPZ
-      use mpisetup,   only: geometry_type
+      use domain,     only: geometry_type
 
       implicit none
 

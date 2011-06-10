@@ -88,7 +88,7 @@ contains
       use initionized, only: idni,imxi,imyi,imzi
 #ifndef ISO
       use initionized, only: ieni, gamma_ion
-      use mpisetup,    only: smallei
+      use global,      only: smallei
 #endif /* !ISO */
       use shear,       only: qshear, omega
 

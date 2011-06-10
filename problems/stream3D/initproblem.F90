@@ -116,17 +116,17 @@ contains
    subroutine init_prob
 
       use constants,   only: pi, dpi
+      use domain,      only: dom
+      use global,      only: smalld
       use gravity,     only: ptmass
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
-      use initneutral, only: idnn, imxn, imyn, imzn
+      use initneutral, only: idnn, imxn, imyn, imzn, cs_iso_neu, cs_iso_neu2
       use initdust,    only: idnd, imxd, imyd, imzd
-      use initneutral, only: cs_iso_neu, cs_iso_neu2
-      use mpisetup,    only: smalld, dom
       use units,       only: newtong
 #ifndef ISO
       use initneutral, only: ienn, gamma_neu
-      use mpisetup,    only: smallei
+      use global,      only: smallei
 #endif /* !ISO */
 
       implicit none

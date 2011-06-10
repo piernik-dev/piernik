@@ -38,9 +38,11 @@ contains
    subroutine repeat_fluidstep
 
       use dataio_pub, only: warn
+      use global,     only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
-      use mpisetup,   only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, master, repeat_step
+      use mpisetup,   only: master
+
 
       implicit none
 
@@ -71,10 +73,11 @@ contains
    end subroutine repeat_fluidstep
 
    subroutine fluid_update
-      use dataio_pub,    only: halfstep
-      use mpisetup,      only: dt, dtm, t
+
+      use dataio_pub, only: halfstep
+      use global,     only: dt, dtm, t
 #ifdef SN_SRC
-      use snsources,     only: random_sn
+      use snsources,  only: random_sn
 #endif /* SN_SRC */
 
       implicit none
@@ -103,21 +106,22 @@ contains
 !<
    subroutine make_3sweeps(forward)
 
-      use types,           only: problem_customize_solution
-      use constants,       only: xdim, ydim, zdim
+      use constants,           only: xdim, ydim, zdim
+      use types,               only: problem_customize_solution
 #ifdef SHEAR
-      use dataio_pub,      only: die
-      use fluidboundaries, only: bnd_u
-      use grid,            only: cga
-      use grid_cont,       only: grid_container
-      use mpisetup,        only: has_dir, t, dt
-      use shear,           only: yshift
+      use dataio_pub,          only: die
+      use domain,              only: has_dir
+      use fluidboundaries,     only: bnd_u
+      use global,              only: t, dt
+      use grid,                only: cga
+      use grid_cont,           only: grid_container
+      use shear,               only: yshift
 #endif /* SHEAR */
 #ifdef GRAV
-      use gravity,         only: source_terms_grav
+      use gravity,             only: source_terms_grav
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      use initcosmicrays,     only: use_split
+      use initcosmicrays,      only: use_split
 #ifdef MULTIGRID
       use multigrid_diffusion, only: multigrid_solve_diff
       use fluidboundaries,     only: all_fluid_boundaries
@@ -171,9 +175,9 @@ contains
 
       use constants,      only: xdim, ydim, zdim
       use dataio_pub,     only: msg, die
+      use domain,         only: has_dir
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
-      use mpisetup,       only: has_dir
       use sweeps,         only: sweepx, sweepy, sweepz
 #if defined SHEAR && defined FLUID_INTERACTIONS
       use sweeps,         only: source_terms_y
@@ -186,7 +190,7 @@ contains
       use dataio,         only: write_data
       use dataio_hdf5,    only: write_hdf5
       use dataio_pub,     only: chdf, set_container_chdf
-      use mpisetup,       only: nstep
+      use global,         only: nstep
       use piernikdebug,   only: force_hdf5_dump, force_log_dump
 #endif /* DEBUG */
 

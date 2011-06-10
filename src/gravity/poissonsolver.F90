@@ -46,9 +46,9 @@ contains
 
       use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE
       use dataio_pub, only: die
+      use domain,     only: has_dir
       use grid,       only: cga
       use grid_cont,  only: grid_container
-      use mpisetup,   only: has_dir
 
       implicit none
 
@@ -111,10 +111,10 @@ contains
    subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
 
       use constants, only: dpi
-      use units,     only: newtong
+      use domain,    only: dom
       use grid,      only: cg
       use shear,     only: dely
-      use mpisetup,  only: dom
+      use units,     only: newtong
 
       implicit none
 

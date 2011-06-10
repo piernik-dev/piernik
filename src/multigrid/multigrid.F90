@@ -78,10 +78,11 @@ contains
       use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
+      use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven
       use grid,                only: D_x, D_y, D_z, cga
       use grid_cont,           only: cg_list_element, grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_LOR, MPI_MIN, MPI_MAX, MPI_COMM_NULL
-      use mpisetup,            only: comm, comm3d, ierr, proc, master, slave, nproc, has_dir, buffer_dim, ibuff, lbuff, dom, eff_dim, geometry_type, is_uneven
+      use mpisetup,            only: comm, comm3d, ierr, proc, master, slave, nproc, buffer_dim, ibuff, lbuff
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
       use multigridmpifuncs,   only: mpi_multigrid_prep
       use multigridvars,       only: lvl, plvl, roof, base, mg_nb, ngridvars, correction, single_base, &
@@ -378,14 +379,15 @@ contains
 
    subroutine cleanup_multigrid
 
-      use multigridvars,      only: lvl, plvl, base, tot_ts, tgt_list
-      use mpisetup,           only: master, nproc, comm, ierr, has_dir
-      use constants,          only: xdim, zdim, LO, HI, BND, BLK, INVALID
-      use mpi,                only: MPI_DOUBLE_PRECISION
-      use multigridhelpers,   only: mg_write_log
-      use dataio_pub,         only: msg
+      use constants,           only: xdim, zdim, LO, HI, BND, BLK, INVALID
+      use dataio_pub,          only: msg
+      use domain,              only: has_dir
+      use mpi,                 only: MPI_DOUBLE_PRECISION
+      use mpisetup,            only: master, nproc, comm, ierr
+      use multigridhelpers,    only: mg_write_log
+      use multigridvars,       only: lvl, plvl, base, tot_ts, tgt_list
 #ifdef GRAV
-      use multigrid_gravity,  only: cleanup_multigrid_grav
+      use multigrid_gravity,   only: cleanup_multigrid_grav
 #endif /* GRAV */
 #ifdef COSM_RAYS
       use multigrid_diffusion, only: cleanup_multigrid_diff

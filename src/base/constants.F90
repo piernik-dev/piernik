@@ -90,6 +90,7 @@ module constants
    enum, bind(C)
       enumerator :: PIERNIK_START                        ! before initialization
       enumerator :: PIERNIK_INIT_MPI                     ! initialized MPI
+      enumerator :: PIERNIK_INIT_DOMAIN                  ! initialized domain
       enumerator :: PIERNIK_INIT_BASE                    ! initialized most fundamental modules that depend only on MPI: constants, grid, fluids, etc.
       enumerator :: PIERNIK_INIT_ARRAYS                  ! initialized arrays
       enumerator :: PIERNIK_INIT_IO_IC                   ! initialized all physics

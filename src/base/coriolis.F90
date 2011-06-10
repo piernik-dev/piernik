@@ -51,9 +51,9 @@ contains
 
    subroutine init_coriolis
 
-      use dataio_pub, only: die, code_progress
       use constants,  only: PIERNIK_INIT_BASE, GEO_XYZ
-      use mpisetup,   only: geometry_type
+      use dataio_pub, only: die, code_progress
+      use domain,     only: geometry_type
 
       implicit none
 

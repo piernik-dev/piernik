@@ -101,14 +101,15 @@ contains
    subroutine init_prob
 
       use constants,   only: zdim
+      use domain,      only: has_dir
       use fluidindex,  only: flind
+      use global,      only: smalld
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use initdust,    only: idnd, imxd, imyd, imzd
       use initneutral, only: idnn, imxn, imyn, imzn, gamma_neu
-      use mpisetup,    only: smalld, has_dir
 #ifndef ISO
-      use initneutral,  only: ienn
+      use initneutral, only: ienn
 #endif /* !ISO */
 
       implicit none

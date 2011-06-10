@@ -112,11 +112,11 @@ contains
    subroutine init_prob
 
       use fluidindex,     only: ibx, iby, ibz, flind
+      use global,         only: smalld
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid
       use initionized,    only: idni, imxi, imyi, imzi
-      use mpisetup,       only: smalld
 #ifdef SHEAR
       use shear,          only: qshear, omega
 #endif /* SHEAR */
@@ -308,12 +308,12 @@ contains
 
       use constants,      only: xdim, ydim, zdim, ndims
       use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
+      use domain,         only: dom
       use fluidindex,     only: flind
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crn
       use snsources,      only: r_sn
-      use mpisetup,       only: dom
 
       implicit none
 

@@ -443,10 +443,11 @@ contains
 
    subroutine write_plot
 
-      use constants,     only: cwdlen, xdim, zdim
-      use dataio_pub,    only: log_file
-      use hdf5,          only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
-      use mpisetup,      only: t, comm, ierr, master
+      use constants,  only: cwdlen, xdim, zdim
+      use dataio_pub, only: log_file
+      use global,     only: t
+      use hdf5,       only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
+      use mpisetup,   only: comm, ierr, master
 
       implicit none
 
@@ -511,12 +512,14 @@ contains
       use constants,   only: xdim, ydim, zdim, varlen, cwdlen, LO, HI
       use dataio_pub,  only: vizit, fmin, fmax, log_file, msg, die, warn
       use dataio_user, only: user_plt_hdf5
+      use domain,      only: dom, has_dir
+      use global,      only: t
       use grid,        only: cga
       use grid_cont,   only: grid_container!, cg_list_element
       use hdf5,        only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,        only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpisetup,    only: comm, ierr, t, has_dir, dom, master, proc, nproc, status
       use mpi,         only: MPI_DOUBLE_PRECISION
+      use mpisetup,    only: comm, ierr, proc, nproc, status, master
 #ifdef PGPLOT
       use viz,         only: draw_me
 #endif /* PGPLOT */
@@ -629,8 +632,8 @@ contains
 
       use constants,  only: ndims, AT_ALL_B, AT_OUT_B, AT_NO_B, AT_USER, LO, HI
       use dataio_pub, only: die, warn
+      use domain,     only: dom, has_dir, psize, pcoords, is_uneven, is_mpi_noncart
       use grid_cont,  only: grid_container
-      use mpisetup,   only: dom, has_dir, psize, pcoords, is_uneven, is_mpi_noncart
       use types,      only: at_user_settings
 
       implicit none
@@ -691,13 +694,14 @@ contains
 
       use constants,   only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B
       use dataio_pub,  only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
+      use global,      only: nstep
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use dataio_user, only: problem_write_restart
       use mpi,         only: MPI_CHARACTER
-      use mpisetup,    only: comm, info, ierr, master, nstep
+      use mpisetup,    only: comm, info, ierr, master
 
       implicit none
 
@@ -792,7 +796,7 @@ contains
            &                H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
            &                h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, &
            &                h5pset_chunk_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f
-      use mpisetup,   only: is_uneven
+      use domain,     only: is_uneven
       use constants,  only: ndims, AT_OUT_B, LONG
 
       implicit none
@@ -953,7 +957,7 @@ contains
 !!$      use hdf5,       only: HSIZE_T, HID_T, H5T_NATIVE_DOUBLE, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, &
 !!$           &                h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, h5dcreate_f, h5dget_space_f, h5dwrite_f, &
 !!$           &                h5sclose_f, h5pclose_f, h5dclose_f, h5sselect_hyperslab_f
-!!$      use mpisetup,   only: dom, is_uneven
+!!$      use domain,     only: dom, is_uneven
 !!$      use grid,       only: cg
 !!$
 !!$      implicit none
@@ -1202,18 +1206,20 @@ contains
 
    subroutine read_restart_hdf5(chdf)
 
-      use constants,     only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B
-      use dataio_pub,    only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, hdf
-      use dataio_user,   only: problem_read_restart
-      use fluidindex,    only: flind
-      use func,          only: fix_string
-      use grid,          only: cga
-      use grid_cont,     only: cg_list_element, grid_container
-      use hdf5,          only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
-           &                   h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
-      use h5lt,          only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
-      use mpi,           only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,      only: comm, ierr, magic_mass, master, t, info, comm, dt, dom, has_dir
+      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B
+      use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, hdf
+      use dataio_user, only: problem_read_restart
+      use domain,      only: dom, has_dir
+      use fluidindex,  only: flind
+      use func,        only: fix_string
+      use global,      only: magic_mass, t, dt
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use hdf5,        only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
+           &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
+      use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
+      use mpi,         only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use mpisetup,    only: comm, ierr, info, comm, master
 
       implicit none
 
@@ -1401,7 +1407,7 @@ contains
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use hdf5,        only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
-           &                   h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
+           &                 h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use mpisetup,    only: comm, ierr, info, master
       use mpi,         only: MPI_CHARACTER
 #ifdef NEW_HDF5
@@ -1488,13 +1494,15 @@ contains
       use constants,   only: cbuff_len
       use dataio_pub,  only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, hdf
       use dataio_user, only: additional_attrs
+      use domain,      only: dom
+      use global,      only: magic_mass, t, dt, local_magic_mass
       use grid,        only: cga
       use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_RDWR_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
            &                 h5open_f, h5fopen_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
            &                 h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
       use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,    only: slave, t, dt, local_magic_mass, comm, ierr, magic_mass, dom
+      use mpisetup,    only: slave, comm, ierr
       use version,     only: env, nenv
 
       implicit none

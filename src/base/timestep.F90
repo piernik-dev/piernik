@@ -46,18 +46,18 @@ contains
 !>
 !! \brief Initialization routine
 !!
-!! \details This routine sets cfl_manager according to mpisetup::cflcontrol parameter.
+!! \details This routine sets cfl_manager according to global::cflcontrol parameter.
 !<
 
    subroutine init_time_step
 
+      use constants,  only: PIERNIK_INIT_DOMAIN
       use dataio_pub, only: msg, die, warn, code_progress
-      use constants,  only: PIERNIK_INIT_MPI
-      use mpisetup,   only: cflcontrol
+      use global,     only: cflcontrol
 
       implicit none
 
-      if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init_grid] MPI not initialized.") ! cflcontrol
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] MPI not initialized.") ! cflcontrol
 
       if (associated(cfl_manager)) call die("[timestep:init_time_step] cfl_manager already associated.")
       select case (cflcontrol)
@@ -86,19 +86,20 @@ contains
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
       use fluids_pub,           only: has_ion, has_dst, has_neu
+      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, cflcontrol
       use grid,                 only: cga
       use grid_cont,            only: cg_list_element, grid_container
-      use mpisetup,             only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, master, cflcontrol
+      use mpisetup,             only: master
+      use timestepdust,         only: timestep_dst, c_dst
+      use timestepinteractions, only: timestep_interactions
       use timestepionized,      only: timestep_ion, c_ion
       use timestepneutral,      only: timestep_neu, c_neu
-      use timestepdust,         only: timestep_dst, c_dst
 #ifdef COSM_RAYS
       use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
       use resistivity,          only: dt_resist, timestep_resist
 #endif /* RESISTIVE */
-      use timestepinteractions, only: timestep_interactions
 #ifdef DEBUG
       use piernikdebug,         only: has_const_dt, constant_dt
       use dataio_pub,           only: printinfo
@@ -192,8 +193,9 @@ contains
    subroutine cfl_warn
 
       use dataio_pub, only: msg, warn
-      use mpisetup,   only: cfl, cfl_max, master, cfl_violated, comm, ierr
+      use global,     only: cfl, cfl_max, cfl_violated
       use mpi,        only: MPI_LOGICAL
+      use mpisetup,   only: comm, ierr, master
 
       implicit none
 
@@ -227,7 +229,8 @@ contains
    subroutine cfl_auto
 
       use dataio_pub, only: msg, warn
-      use mpisetup,   only: cfl, cfl_max, master, dt, dt_old
+      use global,     only: cfl, cfl_max, dt, dt_old
+      use mpisetup,   only: master
 
       implicit none
 

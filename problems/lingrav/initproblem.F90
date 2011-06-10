@@ -91,11 +91,11 @@ contains
    subroutine init_prob
 
       use fluidindex,  only: ibx, iby, ibz, flind
+      use global,      only: smalld
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use hydrostatic, only: hydrostatic_zeq_densmid
       use initionized, only: idni, imxi, imyi, imzi
-      use mpisetup,    only: smalld
 #ifdef SHEAR
       use shear,       only: qshear, omega
 #endif /* SHEAR */

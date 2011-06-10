@@ -40,7 +40,7 @@ contains
    subroutine init_fluidboundaries(cg)
 
       use dataio_pub,            only: msg, warn, die, code_progress
-      use constants,             only: PIERNIK_INIT_MPI, xdim, LO, HI, &
+      use constants,             only: PIERNIK_INIT_DOMAIN, xdim, LO, HI, &
            &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_INF, BND_USER
       use fluidboundaries_funcs, only: bnd_null, bnd_xl_per, bnd_xl_ref, bnd_xl_out, bnd_xl_outd, bnd_xr_per, bnd_xr_ref, bnd_xr_out, bnd_xr_outd
       use fluidboundaries_pub,   only: user_bnd_xl, user_bnd_xr, func_bnd_xl, func_bnd_xr
@@ -52,7 +52,7 @@ contains
 
       type(grid_container), pointer, intent(in) :: cg
 
-      if (code_progress < PIERNIK_INIT_MPI) call die("[fluidboundaries:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[fluidboundaries:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
 
       select case (cg%bnd(xdim, LO))
          case (BND_COR, BND_MPI, BND_SHE, BND_INF)
@@ -106,12 +106,14 @@ contains
 
       use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
       use dataio_pub,          only: msg, warn, die
+      use domain,              only: psize, procn, procxyl, procyxl, pcoords, has_dir
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use global,              only: smalld
       use grid,                only: cga
       use grid_cont,           only: grid_container
-      use mpisetup,            only: ierr, psize, procn, procxyl, procyxl, smalld, pcoords, req, status, comm, comm3d, proc, has_dir
       use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
+      use mpisetup,            only: ierr, req, status, comm, comm3d, proc
 #ifdef COSM_RAYS
       use initcosmicrays,      only: smallecr
       use fluidindex,          only: iarr_all_crs
@@ -634,10 +636,11 @@ contains
 
       use constants,  only: xdim, zdim, FLUID
       use dataio_pub, only: die
+      use domain,     only: has_dir
       use grid,       only: cga
       use grid_cont,  only: cg_list_element
       use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: has_dir, comm3d
+      use mpisetup,   only: comm3d
 
       implicit none
 

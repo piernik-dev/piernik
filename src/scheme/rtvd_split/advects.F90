@@ -42,13 +42,14 @@ contains
 
    subroutine advectby_x
 
+      use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
+      use domain,        only: has_dir
       use fluidindex,    only: iby, flind
+      use global,        only: dt
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -110,13 +111,14 @@ contains
 
    subroutine advectbz_x
 
+      use constants,     only: xdim, zdim
       use dataio_pub,    only: die
+      use domain,        only: has_dir
       use fluidindex,    only: ibz, flind
+      use global,        only: dt
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -178,13 +180,14 @@ contains
 
    subroutine advectbz_y
 
+      use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
+      use domain,        only: has_dir
       use fluidindex,    only: ibz, flind
+      use global,        only: dt
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -246,13 +249,14 @@ contains
 
    subroutine advectbx_y
 
+      use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
+      use domain,        only: has_dir
       use fluidindex,    only: ibx, flind
+      use global,        only: dt
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -314,13 +318,14 @@ contains
 
    subroutine advectbx_z
 
+      use constants,     only: xdim, zdim
       use dataio_pub,    only: die
+      use domain,        only: has_dir
       use fluidindex,    only: ibx, flind
+      use global,        only: dt
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, zdim
       use rtvd,          only: tvdb
 
       implicit none
@@ -381,13 +386,14 @@ contains
 
    subroutine advectby_z
 
+      use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
+      use domain,        only: has_dir
       use fluidindex,    only: iby, flind
+      use global,        only: dt
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
       use rtvd,          only: tvdb
 
       implicit none

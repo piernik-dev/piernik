@@ -74,10 +74,12 @@ contains
    subroutine compute_dt(fl, cx, cy, cz, c_max, c_out, dt_out, cg)
 
       use constants,  only: big, xdim, ydim, zdim, GEO_RPZ
+      use domain,     only: dom, geometry_type, has_dir
       use fluidtypes, only: component_fluid
+      use global,     only: cfl
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
-      use mpisetup,   only: comm, ierr, cfl, has_dir, dom, geometry_type
+      use mpisetup,   only: comm, ierr
 
       implicit none
 

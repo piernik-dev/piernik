@@ -40,10 +40,11 @@ contains
 
       use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK
       use dataio_pub, only: die
+      use domain,     only: psize, is_mpi_noncart, procn
       use grid,       only: cga
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: ierr, req, comm3d, procn, status, psize, have_mpi, is_mpi_noncart
+      use mpisetup,   only: ierr, req, comm3d, status, have_mpi
 
       implicit none
 
@@ -77,11 +78,12 @@ contains
 
       use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub, only: msg, warn, die
+      use domain,     only: procn, psize, procxyl, procyxl, pcoords, is_mpi_noncart
       use fluidindex, only: ibx, iby, ibz
       use grid,       only: cga
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: ierr, req, comm3d, procn, proc, status, psize, procxyl, procyxl, pcoords, comm, master, have_mpi, is_mpi_noncart
+      use mpisetup,   only: ierr, req, comm3d, proc, status, comm, master, have_mpi
 #ifdef SHEAR
       use shear,      only: eps,delj
 #endif /* SHEAR */
@@ -628,10 +630,11 @@ contains
 
       use constants,  only: xdim, zdim, MAG
       use dataio_pub, only: die
+      use domain,     only: has_dir
       use grid,       only: cga
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: has_dir, comm3d
+      use mpisetup,   only: comm3d
 
       implicit none
 

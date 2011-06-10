@@ -94,7 +94,8 @@ contains
    subroutine check_dirty(lev, iv, label, expand)
 
       use dataio_pub,    only: die, warn, msg
-      use mpisetup,      only: proc, eff_dim
+      use domain,        only: eff_dim
+      use mpisetup,      only: proc
       use multigridvars, only: ngridvars, lvl, plvl, base, roof, mg_nb
       use constants,     only: ndims
 
@@ -316,8 +317,9 @@ contains
 
    subroutine numbered_ascii_dump(basename, a)
 
-      use mpisetup,      only: proc, nstep
-      use dataio_pub,    only: halfstep, msg
+      use dataio_pub, only: halfstep, msg
+      use global,     only: nstep
+      use mpisetup,   only: proc
 
       implicit none
 

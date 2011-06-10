@@ -108,8 +108,8 @@ contains
 
    subroutine check_log
 
-      use mpisetup,      only: t
-      use dataio_pub,    only: next_t_log
+      use global,     only: t
+      use dataio_pub, only: next_t_log
 
       implicit none
 
@@ -124,8 +124,8 @@ contains
 
    subroutine check_tsl
 
-      use mpisetup,      only: t
-      use dataio_pub,    only: next_t_tsl
+      use global,     only: t
+      use dataio_pub, only: next_t_tsl
 
       implicit none
 
@@ -199,9 +199,11 @@ contains
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
            &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use domain,          only: eff_dim
       use fluidboundaries, only: all_fluid_boundaries
-      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, t, nstep, eff_dim
+      use global,          only: t, nstep
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
+      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim
       use timer,           only: time_left
       use version,         only: nenv,env, init_version
 !      use grid,            only: cg
@@ -444,10 +446,11 @@ contains
 
    subroutine user_msg_handler(end_sim)
 
-      use dataio_hdf5,   only: write_hdf5, write_restart_hdf5
-      use dataio_pub,    only: chdf, step_hdf, msg, printinfo, warn, set_container_chdf
-      use mpisetup,      only: comm, ierr, master, nstep
-      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use dataio_hdf5, only: write_hdf5, write_restart_hdf5
+      use dataio_pub,  only: chdf, step_hdf, msg, printinfo, warn, set_container_chdf
+      use mpisetup,    only: comm, ierr, master
+      use global,      only: nstep
+      use mpi,         only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
 
       implicit none
 
@@ -552,9 +555,9 @@ contains
 !
    subroutine write_data(output)
 
-      use dataio_hdf5,   only: write_hdf5, write_restart_hdf5, write_plot
-      use dataio_pub,    only: chdf, nres, last_hdf_time, step_hdf, set_container_chdf
-      use mpisetup,      only: t, nstep
+      use dataio_hdf5, only: write_hdf5, write_restart_hdf5, write_plot
+      use dataio_pub,  only: chdf, nres, last_hdf_time, step_hdf, set_container_chdf
+      use global,      only: t, nstep
 
       implicit none
 
@@ -637,25 +640,37 @@ contains
    end subroutine find_last_restart
 
    function mpi_sum4d_and_multiply(tab,factor) result(output)
-      use mpisetup, only: comm, ierr
+
       use mpi,      only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup, only: comm, ierr
+
       implicit none
+
       real, dimension(:,:,:,:), intent(in) :: tab
       real, intent(in)                     :: factor
       real :: local, output
+
       local = sum(tab(:,:,:,:)) * factor
+
       call MPI_Allreduce(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+
    end function mpi_sum4d_and_multiply
 
    function mpi_sum3d_and_multiply(tab,factor) result(output)
-      use mpisetup, only: comm, ierr
+
       use mpi,      only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup, only: comm, ierr
+
       implicit none
+
       real, dimension(:,:,:), intent(in) :: tab
       real, intent(in)                   :: factor
       real :: local, output
+
       local = sum(tab(:,:,:)) * factor
+
       call MPI_Allreduce(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+
    end function mpi_sum3d_and_multiply
 !---------------------------------------------------------------------
 !>
@@ -665,25 +680,27 @@ contains
 !
    subroutine write_timeslice
 
-      use dataio_pub,      only: cwd, die
-      use dataio_user,     only: user_tsl
-      use fluids_pub,      only: has_ion, has_dst, has_neu
-      use constants,       only: cwdlen, xdim, ydim, zdim
-      use diagnostics,     only: pop_vector
-      use fluidindex,      only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
-      use grid,            only: cga
-      use grid_cont,       only: grid_container
-      use mpisetup,        only: master, t, dt, smalld, nstep, dom
-      use types,           only: tsl_container
-      use fluidtypes,      only: phys_prop
+      use constants,   only: cwdlen, xdim, ydim, zdim
+      use dataio_pub,  only: cwd, die
+      use dataio_user, only: user_tsl
+      use diagnostics, only: pop_vector
+      use domain,      only: dom
+      use fluids_pub,  only: has_ion, has_dst, has_neu
+      use fluidindex,  only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
+      use fluidtypes,  only: phys_prop
+      use global,      only: t, dt, smalld, nstep
+      use grid,        only: cga
+      use grid_cont,   only: grid_container
+      use mpisetup,    only: master
+      use types,       only: tsl_container
 #ifndef ISO
-      use fluidindex,      only: iarr_all_en
+      use fluidindex,  only: iarr_all_en
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use fluidindex,      only: iarr_all_crs
+      use fluidindex,  only: iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-      use resistivity,     only: eta1_active
+      use resistivity, only: eta1_active
 #endif /* RESISTIVE */
 
       implicit none
@@ -840,12 +857,13 @@ contains
 
    subroutine common_shout(pr, fluid, pres_tn, temp_tn, cs_tn)
 
-      use constants,       only: small
-      use dataio_pub,      only: msg, printinfo, die
-      use grid,            only: cga
-      use grid_cont,       only: grid_container
-      use mpisetup,        only: cfl, has_dir
-      use fluidtypes,      only: phys_prop
+      use constants,   only: small
+      use dataio_pub,  only: msg, printinfo, die
+      use domain,      only: has_dir
+      use global,      only: cfl
+      use grid,        only: cga
+      use grid_cont,   only: grid_container
+      use fluidtypes,  only: phys_prop
 
       implicit none
 
@@ -900,9 +918,9 @@ contains
       use dataio_pub, only: die
       use fluidtypes, only: phys_prop, component_fluid
       use func,       only: get_extremum
+      use global,     only: smallp
       use grid,       only: cga
       use grid_cont,  only: grid_container
-      use mpisetup,   only: smallp
       use units,      only: mH, kboltz
 
       implicit none
@@ -978,15 +996,16 @@ contains
 
       use constants,          only: small, MINL, MAXL
       use dataio_pub,         only: msg, printinfo, die
+      use domain,             only: has_dir
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: ibx, iby, ibz, flind
-      use func,               only: get_extremum
+      use func,               only: get_extremum, L2norm
+      use global,             only: cfl, t, dt
       use grid,               only: cga
       use grid_cont,          only: grid_container
-      use mpisetup,           only: cfl, t, dt, master, has_dir
-      use types,              only: tsl_container, value
       use interactions,       only: has_interactions, collfaq
-      use func,               only: L2norm
+      use mpisetup,           only: master
+      use types,              only: tsl_container, value
 #ifdef COSM_RAYS
       use fluidindex,         only: iarr_all_crs
       use timestepcosmicrays, only: dt_crs

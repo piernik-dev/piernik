@@ -113,9 +113,10 @@ contains
 
    subroutine init_multipole(mb_alloc)
 
-      use dataio_pub,    only: die, warn
-      use mpisetup,      only: master, dom, eff_dim, geometry_type
       use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
+      use dataio_pub,    only: die, warn
+      use domain,        only: dom, eff_dim, geometry_type
+      use mpisetup,      only: master
       use multigridvars, only: lvl, roof, base
 
       implicit none
@@ -327,7 +328,7 @@ contains
       use dataio_pub,    only: die
       use constants,     only: xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
       use multigridvars, only: is_external
-      use mpisetup,      only: geometry_type
+      use domain,        only: geometry_type
       use units,         only: newtong
 
       implicit none
@@ -374,11 +375,12 @@ contains
 
    subroutine find_img_CoM
 
-      use multigridvars,   only: is_external
-      use dataio_pub,      only: die
-      use constants,       only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
-      use mpisetup,        only: comm, ierr, geometry_type
-      use mpi,             only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use constants,     only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
+      use dataio_pub,    only: die
+      use domain,        only: geometry_type
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,      only: comm, ierr
+      use multigridvars, only: is_external
 
       implicit none
 
@@ -431,9 +433,9 @@ contains
 
    subroutine potential2img_mass
 
-      use multigridvars,   only: is_external, solution
-      use mpisetup,        only: geometry_type
-      use constants,       only: GEO_RPZ, LO, HI, xdim, ydim, zdim
+      use constants,     only: GEO_RPZ, LO, HI, xdim, ydim, zdim
+      use domain,        only: geometry_type
+      use multigridvars, only: is_external, solution
 
       implicit none
 
@@ -505,10 +507,10 @@ contains
 
    subroutine prolong_ext_bnd(lev)
 
-      use constants,       only: ndims
-      use dataio_pub,      only: die, warn
-      use mpisetup,        only: eff_dim
-      use multigridvars,   only: is_external, is_mg_uneven, base, roof
+      use constants,     only: ndims
+      use dataio_pub,    only: die, warn
+      use domain,        only: eff_dim
+      use multigridvars, only: is_external, is_mg_uneven, base, roof
 
       implicit none
 
@@ -679,11 +681,12 @@ contains
 
    subroutine img_mass2moments
 
-      use dataio_pub,    only: die
-      use multigridvars, only: is_external
-      use mpisetup,      only: comm, ierr, geometry_type
       use constants,     only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI
+      use dataio_pub,    only: die
+      use domain,        only: geometry_type
+      use multigridvars, only: is_external
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,      only: comm, ierr
 
       implicit none
 
@@ -857,7 +860,7 @@ contains
       use dataio_pub,      only: die
       use constants,       only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI
       use multigridvars,   only: is_external
-      use mpisetup,        only: geometry_type
+      use domain,          only: geometry_type
 
       implicit none
 
@@ -992,9 +995,9 @@ contains
 
    subroutine geomfac4moments(factor, x, y, z, sin_th, cos_th, ir, delta)
 
-      use dataio_pub, only: die, msg
-      use mpisetup,   only: geometry_type
       use constants,  only: GEO_XYZ, GEO_RPZ
+      use dataio_pub, only: die, msg
+      use domain,     only: geometry_type
 
       implicit none
 

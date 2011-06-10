@@ -353,9 +353,9 @@ contains
 
    subroutine sum_potential
 
+      use global,    only: dt, dtm
       use grid,      only: cga
       use grid_cont, only: cg_list_element, grid_container
-      use mpisetup,  only: dt, dtm
 
       implicit none
 
@@ -516,10 +516,10 @@ contains
    !<
    subroutine grav_ptmass_softened(gp, ax, flatten)
 
-      use units,  only: newtong
       use fluidindex, only: flind
-      use mpisetup,   only: smalld
+      use global,     only: smalld
       use types,      only: axes
+      use units,      only: newtong
 
       implicit none
 
@@ -664,12 +664,13 @@ contains
 
    subroutine default_grav_pot_3d
 
-      use dataio_pub,   only: die, warn
-      use grid,         only: cga
-      use grid_cont,    only: cg_list_element, grid_container
-      use mpisetup,     only: master, geometry_type
-      use types,        only: axes
-      use constants,    only: GEO_XYZ
+      use constants,  only: GEO_XYZ
+      use dataio_pub, only: die, warn
+      use domain,     only: geometry_type
+      use grid,       only: cga
+      use grid_cont,  only: cg_list_element, grid_container
+      use mpisetup,   only: master
+      use types,      only: axes
 
       implicit none
 
@@ -829,11 +830,12 @@ contains
       use types,      only: value
       use constants,  only: xdim, ydim, zdim, ndims, MAXL
       use dataio_pub, only: die
+      use domain,     only: is_mpi_noncart, psize, pcoords
       use func,       only: get_extremum
       use grid,       only: cga, D_x, D_y, D_z
       use grid_cont,  only: grid_container !, cg_list_element
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: psize, pcoords, master, nproc, comm, comm3d, ierr, have_mpi, is_mpi_noncart
+      use mpisetup,   only: master, nproc, comm, comm3d, ierr, have_mpi
 
       implicit none
 

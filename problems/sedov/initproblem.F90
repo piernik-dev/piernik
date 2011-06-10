@@ -46,10 +46,11 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use mpisetup,      only: ibuff, rbuff, buffer_dim, master, slave, comm, ierr, dom, has_dir
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use dataio_user,   only: user_plt_hdf5, user_vars_hdf5, user_tsl
+      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_user, only: user_plt_hdf5, user_vars_hdf5, user_tsl
+      use domain,      only: dom, has_dir
+      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use mpisetup,    only: ibuff, rbuff, buffer_dim, master, slave, comm, ierr
 
       implicit none
 
@@ -120,9 +121,9 @@ contains
       use constants,  only: ION, DST
       use dataio_pub, only: msg, die, printinfo
       use fluidindex, only: flind, ibx, iby, ibz
+      use fluidtypes, only: component_fluid
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
-      use fluidtypes, only: component_fluid
       use mpisetup,   only: master
 
       implicit none
@@ -245,9 +246,9 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_tsl(user_vars, tsl_names)
 
-      use diagnostics,     only: pop_vector
-      use mpisetup,        only: proc, master, comm, ierr
-      use mpi,             only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use diagnostics, only: pop_vector
+      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,    only: proc, master, comm, ierr
 
       implicit none
 

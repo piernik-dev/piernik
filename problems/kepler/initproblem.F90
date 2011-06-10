@@ -68,14 +68,15 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
+      use constants,           only: GEO_RPZ
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_user,         only: user_vars_hdf5, problem_write_restart, problem_read_restart
-      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, geometry_type
-      use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use gravity,             only: grav_pot_3d
-      use types,               only: problem_customize_solution, problem_grace_passed
+      use domain,              only: geometry_type
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr
-      use constants,           only: GEO_RPZ
+      use gravity,             only: grav_pot_3d
+      use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
+      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr
+      use types,               only: problem_customize_solution, problem_grace_passed
 
       implicit none
 
@@ -183,10 +184,11 @@ contains
 
       use constants,  only: dpi
       use dataio_pub, only: printinfo, warn
+      use domain,     only: dom
       use fluidindex, only: flind
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
-      use mpisetup,   only: master, dom
+      use mpisetup,   only: master
 
       implicit none
 
@@ -274,6 +276,7 @@ contains
 
       use constants,    only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ, DST
       use dataio_pub,   only: msg, printinfo, die
+      use domain,       only: geometry_type, pcoords, dom, has_dir
       use fluidindex,   only: ibx, iby, ibz, flind
       use fluidtypes,   only: component_fluid
       use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
@@ -282,7 +285,7 @@ contains
       use hydrostatic,  only: hydrostatic_zeq_densmid
       use interactions, only: epstein_factor
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,     only: has_dir, dom, master, geometry_type, pcoords, dom, comm, comm3d, ierr
+      use mpisetup,     only: master, comm, comm3d, ierr
       use units,        only: newtong, gram, cm, kboltz, mH
 
       implicit none
@@ -632,7 +635,7 @@ contains
       use grid_cont,       only: cg_list_element, grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use mpisetup,        only: dt, t, relax_time, smalld !, grace_period_passed
+      use global,          only: dt, t, relax_time, smalld !, grace_period_passed
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
 #endif /* ISO */
@@ -890,7 +893,7 @@ contains
       use fgsl,       only: fgsl_size_t, fgsl_interp_accel, fgsl_interp, fgsl_int, fgsl_char, fgsl_strmax, fgsl_interp_cspline, &
            &                fgsl_interp_accel_alloc, fgsl_interp_alloc, fgsl_interp_name, fgsl_interp_init, fgsl_interp_eval, fgsl_interp_free, fgsl_interp_accel_free
       !, fgsl_spline
-      use mpisetup,   only: dom
+      use domain,     only: dom
 
       implicit none
 

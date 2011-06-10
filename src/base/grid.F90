@@ -73,17 +73,17 @@ contains
 !<
    subroutine init_grid
 
-      use constants,  only: PIERNIK_INIT_MPI, xdim, ydim, zdim
+      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim
       use dataio_pub, only: printinfo, die, code_progress
       use grid_cont,  only: cg_list_element
-      use mpisetup,   only: dom, has_dir
+      use domain,     only: dom, has_dir
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
       integer :: g
 
-      if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init_grid] MPI not initialized.")
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] MPI not initialized.")
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: commencing...")
@@ -155,9 +155,9 @@ contains
       use constants,   only: PIERNIK_INIT_BASE, ndims
       use diagnostics, only: my_allocate
       use dataio_pub,  only: die, code_progress
+      use global,      only: repeat_step
       use fluidtypes,  only: var_numbers
       use grid_cont,   only: cg_list_element, grid_container
-      use mpisetup,    only: repeat_step
 
       implicit none
 
@@ -238,11 +238,12 @@ contains
 
    subroutine grid_mpi_boundaries_prep(numfluids, numcrs)
 
-      use dataio_pub, only: die, code_progress
       use constants,  only: PIERNIK_INIT_BASE, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID
+      use dataio_pub, only: die, code_progress
+      use domain,     only: has_dir, dom, is_overlap
       use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: ierr, has_dir, comm3d, dom, proc, nproc, is_overlap, procmask
+      use mpisetup,   only: ierr, comm3d, proc, nproc, procmask
 
       implicit none
 
@@ -430,9 +431,10 @@ contains
 
       use constants,  only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B
       use dataio_pub, only: die, msg
+      use domain,     only: has_dir, psize, procn
       use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
-      use mpisetup,   only: ierr, has_dir, psize, procn, comm, comm3d, proc, req, status
+      use mpisetup,   only: ierr, comm, comm3d, proc, req, status
 
       implicit none
 

@@ -54,7 +54,8 @@ contains
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,  only: warn
       use dataio_user, only: user_vars_hdf5, problem_write_restart, problem_read_restart
-      use mpisetup,    only: ierr, rbuff, master, slave, buffer_dim, comm, dom, proc, nproc
+      use domain,      only: dom
+      use mpisetup,    only: ierr, rbuff, master, slave, buffer_dim, comm, proc, nproc
       use mpi,         only: MPI_DOUBLE_PRECISION
       use types,       only: finalize_problem, cleanup_problem
 
@@ -123,11 +124,11 @@ contains
 
    subroutine init_prob
 
+      use diagnostics, only: my_allocate
+      use fluidindex,  only: flind
+      use global,      only: smalld, smallei
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
-      use fluidindex,  only: flind
-      use mpisetup,    only: smalld, smallei
-      use diagnostics, only: my_allocate
 
       implicit none
 
@@ -276,11 +277,11 @@ contains
    subroutine finalize_problem_adv
 
       use dataio_pub, only: msg, printinfo, warn, die
+      use fluidindex, only: flind
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
-      use mpisetup,   only: master, comm, ierr
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use fluidindex, only: flind
+      use mpisetup,   only: master, comm, ierr
 
       implicit none
 

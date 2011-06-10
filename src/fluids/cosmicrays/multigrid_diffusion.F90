@@ -104,12 +104,13 @@ contains
 !<
    subroutine init_multigrid_diff
 
-      use multigridvars, only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, single_base
       use constants,     only: GEO_XYZ
-      use mpisetup,      only: comm, ierr, master, slave, nproc, ibuff, rbuff, lbuff, cbuff, buffer_dim, geometry_type
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, warn, msg
+      use domain,        only: geometry_type
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
+      use mpisetup,      only: comm, ierr, master, slave, nproc, ibuff, rbuff, lbuff, cbuff, buffer_dim
+      use multigridvars, only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, single_base
 
       implicit none
 
@@ -268,12 +269,13 @@ contains
 
    subroutine multigrid_solve_diff
 
-      use dataio_pub,         only: halfstep, warn, printinfo, msg
-      use crdiffusion,        only: cr_diff_x, cr_diff_y, cr_diff_z
-      use timer,              only: set_timer
-      use multigridvars,      only: ts, tot_ts, stdout
-      use fluidindex,         only: flind
-      use mpisetup,           only: dt, master
+      use dataio_pub,    only: halfstep, warn, printinfo, msg
+      use crdiffusion,   only: cr_diff_x, cr_diff_y, cr_diff_z
+      use timer,         only: set_timer
+      use multigridvars, only: ts, tot_ts, stdout
+      use fluidindex,    only: flind
+      use mpisetup,      only: master
+      use global,        only: dt
 
       implicit none
 
@@ -593,10 +595,11 @@ contains
 
       use constants,      only: ydim, zdim
       use dataio_pub,     only: die
+      use domain,         only: has_dir
+      use global,         only: dt
       use grid,           only: cga
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
-      use mpisetup,       only: dt, has_dir
       use multigridvars,  only: lvl, plvl
 
       implicit none
@@ -666,10 +669,11 @@ contains
 
       use constants,      only: xdim, zdim
       use dataio_pub,     only: die
+      use domain,         only: has_dir
+      use global,         only: dt
       use grid,           only: cga
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
-      use mpisetup,       only: dt, has_dir
       use multigridvars,  only: lvl, plvl
 
       implicit none
@@ -739,10 +743,11 @@ contains
 
       use constants,      only: xdim, ydim
       use dataio_pub,     only: die
+      use domain,         only: has_dir
+      use global,         only: dt
       use grid,           only: cga
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
-      use mpisetup,       only: dt, has_dir
       use multigridvars,  only: lvl, plvl
 
       implicit none
@@ -814,9 +819,9 @@ contains
 
       use constants,         only: xdim, ydim, zdim
       use dataio_pub,        only: die
+      use domain,            only: has_dir
       use grid,              only: cga
       use grid_cont,         only: grid_container
-      use mpisetup,          only: has_dir
       use multigridhelpers,  only: check_dirty
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: lvl, plvl
@@ -904,9 +909,10 @@ contains
 
       use constants,         only: xdim, ydim, zdim
       use dataio_pub,        only: die
+      use domain,            only: has_dir
+      use global,            only: dt
       use grid,              only: cga
       use grid_cont,         only: grid_container
-      use mpisetup,          only: dt, has_dir
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: lvl, plvl, base, extbnd_donothing
 

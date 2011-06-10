@@ -48,8 +48,9 @@ contains
 
       use constants,  only: xdim
       use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use mpisetup,   only: rbuff, buffer_dim, proc, comm, ierr, dom
+      use domain,     only: dom
       use mpi,        only: MPI_DOUBLE_PRECISION
+      use mpisetup,   only: rbuff, buffer_dim, proc, comm, ierr
       use types,      only: problem_customize_solution
 
       implicit none
@@ -118,10 +119,10 @@ contains
 
    subroutine init_prob
 
+      use global,      only: smalld
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
-      use mpisetup,    only: smalld
 
       implicit none
 
@@ -170,11 +171,11 @@ contains
 
    subroutine impose_inflow
 
+      use global,      only: smalld, smallei, t, dt
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use gravity,     only: ptm_x,ptm2_x
       use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
-      use mpisetup,    only: smalld, smallei, t, dt
 
       implicit none
 

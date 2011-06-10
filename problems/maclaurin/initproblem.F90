@@ -47,13 +47,14 @@ contains
 
    subroutine read_problem_par
 
-      use constants,     only: pi
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die, warn
-      use dataio_user,   only: user_vars_hdf5, additional_attrs
-      use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, smalld
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use types,         only: finalize_problem, cleanup_problem
+      use constants,   only: pi
+      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_pub,  only: die, warn
+      use dataio_user, only: user_vars_hdf5, additional_attrs
+      use global,      only: smalld
+      use mpisetup,    only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm
+      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use types,       only: finalize_problem, cleanup_problem
 
       implicit none
 
@@ -133,10 +134,11 @@ contains
 
       use constants,   only: pi, GEO_XYZ, GEO_RPZ
       use dataio_pub,  only: msg, printinfo, warn, die
+      use domain,      only: dom, geometry_type
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use initionized, only: gamma_ion, idni, imxi, imzi, ieni
-      use mpisetup,    only: master, dom, geometry_type
+      use mpisetup,    only: master
 
       implicit none
 
@@ -248,13 +250,14 @@ contains
 !
    subroutine compute_maclaurin_potential
 
-      use diagnostics,   only: my_allocate
-      use constants,     only: pi, GEO_XYZ, GEO_RPZ
-      use units,         only: newtong
-      use dataio_pub,    only: warn, die
-      use grid,          only: cga
-      use grid_cont,     only: cg_list_element, grid_container
-      use mpisetup,      only: master, geometry_type
+      use constants,   only: pi, GEO_XYZ, GEO_RPZ
+      use dataio_pub,  only: warn, die
+      use diagnostics, only: my_allocate
+      use domain,      only: geometry_type
+      use grid,        only: cga
+      use grid_cont,   only: cg_list_element, grid_container
+      use mpisetup,    only: master
+      use units,       only: newtong
 
       implicit none
 
@@ -369,10 +372,11 @@ contains
 
       use constants,  only: GEO_RPZ
       use dataio_pub, only: msg, printinfo, die
+      use domain,     only: geometry_type
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
-      use mpisetup,   only: master, comm, ierr, geometry_type
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,   only: master, comm, ierr
 
       implicit none
 

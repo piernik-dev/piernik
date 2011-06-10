@@ -112,7 +112,7 @@ contains
       use grid_cont,       only: cg_list_element, grid_container
       use fluidindex,      only: fluid_index, flind
       use fluxes,          only: set_limiter, init_fluxes
-      use mpisetup,        only: limiter
+      use global,          only: limiter
       use dataio_pub,      only: die, code_progress
       use constants,       only: PIERNIK_INIT_MPI
 #ifdef VERBOSE
@@ -211,10 +211,11 @@ contains
       use fluidindex, only: flind, ibx, iby, ibz
       use fluidtypes, only: component_fluid
       use func,       only: emag, ekin
+      use global,     only: smalld, smallp
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
-      use mpisetup,   only: smalld, smallp, master, comm, ierr
+      use mpisetup,   only: master, comm, ierr
 
       implicit none
 

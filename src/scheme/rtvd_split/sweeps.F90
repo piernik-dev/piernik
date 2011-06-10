@@ -47,11 +47,11 @@ contains
       use dataio_pub,      only: die
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind
+      use global,          only: dt
       use grid,            only: cga
       use grid_cont,       only: grid_container
-      use mpisetup,        only: dt
-      use shear,           only: omega, qshear
       use interactions,    only: dragc_gas_dust
+      use shear,           only: omega, qshear
 
       implicit none
       real, dimension(:,:,:), allocatable :: vxr, v_r, rotaccr
@@ -107,12 +107,13 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweepx(cg)
 
+      use constants,       only: xdim, ydim, zdim
+      use domain,          only: has_dir
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpx, ibx, iby, ibz, nmag
+      use global,          only: dt, integration_order
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
-      use mpisetup,        only: dt, has_dir, integration_order
-      use constants,       only: xdim, ydim, zdim
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v, set_div_v1d
@@ -166,12 +167,13 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweepy(cg)
 
+      use constants,       only: xdim, ydim, zdim
+      use domain,          only: has_dir
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpy, ibx, iby, ibz, nmag
+      use global,          only: dt, integration_order
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
-      use mpisetup,        only: dt, has_dir, integration_order
-      use constants,       only: xdim, ydim, zdim
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v, set_div_v1d
@@ -227,12 +229,13 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweepz(cg)
 
+      use constants,       only: xdim, ydim, zdim
+      use domain,          only: has_dir
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpz, ibx, iby, ibz, nmag
+      use global,          only: dt, integration_order
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
-      use mpisetup,        only: dt, has_dir, integration_order
-      use constants,       only: xdim, ydim, zdim
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v, set_div_v1d

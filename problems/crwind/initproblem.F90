@@ -105,13 +105,14 @@ contains
 
    subroutine init_prob
 
+      use domain,         only: dom
       use fluidindex,     only: ibx, iby, ibz, flind
+      use global,         only: smalld
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid
       use initcosmicrays, only: gamma_crs, iarr_crs
       use initionized,    only: idni, imxi, imyi, imzi
-      use mpisetup,       only: smalld, dom
       use snsources,      only: r_sn
 #ifdef SHEAR
       use shear,          only: qshear, omega

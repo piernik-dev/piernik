@@ -290,10 +290,11 @@ contains
 
       use constants,   only: small
       use dataio_pub,  only: warn, printinfo, msg
+      use global,      only: smalld
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use initionized, only: idni, imxi, imyi, imzi
-      use mpisetup,    only: master, smalld
+      use mpisetup,    only: master
       use units,       only: kboltz, mH
 
       implicit none

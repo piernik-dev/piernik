@@ -147,9 +147,10 @@ contains
 
    subroutine init(this, dom)
 
-      use constants,  only: PIERNIK_INIT_MPI, xdim, ydim, zdim, INVALID
+      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, INVALID
       use dataio_pub, only: die, warn, code_progress
-      use mpisetup,   only: has_dir, translate_bnds_to_ints_dom, proc
+      use domain,     only: has_dir, translate_bnds_to_ints_dom
+      use mpisetup,   only: proc
       use types,      only: domain_container
 
       implicit none
@@ -159,7 +160,7 @@ contains
 
       integer :: i
 
-      if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init] MPI not initialized.")
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init] MPI not initialized.")
 
       this%nb = dom%nb
       this%dxmn = huge(1.0)
@@ -393,7 +394,8 @@ contains
 
       use constants,  only: FLUID, MAG, CR, ARR, LO, HI, xdim, ydim, zdim
       use dataio_pub, only: die
-      use mpisetup,   only: comm, ierr, proc, has_dir, req, status
+      use domain,     only: has_dir
+      use mpisetup,   only: comm, ierr, proc, req, status
 
       implicit none
 
@@ -485,7 +487,8 @@ contains
 
    subroutine cleanup(this)
 
-      use mpisetup,  only: has_dir, ierr
+      use domain,    only: has_dir
+      use mpisetup,  only: ierr
       use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, BLK, INVALID
 
       implicit none

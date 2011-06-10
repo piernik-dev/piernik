@@ -47,12 +47,12 @@ contains
 
    subroutine read_problem_par
 
-      use constants,     only: pi
+      use constants,     only: xdim, ydim, zdim, pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml    ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
-      use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, has_dir, dom
-      use constants,     only: xdim, ydim, zdim
+      use domain,        only: has_dir, dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm
       use problem_pub,   only: jeans_d0, jeans_mode
 
       implicit none
@@ -135,12 +135,13 @@ contains
    subroutine init_prob
 
       use constants,     only: pi
-      use units,         only: fpiG, newtong
       use dataio_pub,    only: tend, msg, printinfo, warn
+      use domain,        only: dom
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
-      use mpisetup,      only: master, dom
+      use mpisetup,      only: master
+      use units,         only: fpiG, newtong
 
       implicit none
 

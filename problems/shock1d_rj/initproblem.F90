@@ -114,7 +114,7 @@ contains
       use initionized, only: idni,imxi,imyi,imzi
 #ifndef ISO
       use initionized, only: ieni
-      use mpisetup,    only: smallei
+      use global,      only: smallei
 #endif /* !ISO */
       implicit none
 

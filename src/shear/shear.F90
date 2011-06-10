@@ -162,9 +162,9 @@ contains
    subroutine yshift(ts,dts)
 
       use dataio_pub, only: die
+      use domain,     only: dom
       use grid,       only: cga
       use grid_cont,  only: grid_container
-      use mpisetup,   only: dom
 
       implicit none
 
@@ -196,9 +196,9 @@ contains
 
       use constants,  only: dpi
       use dataio_pub, only: die
+      use domain,     only: dom
       use grid,       only: cga
       use grid_cont,  only: grid_container
-      use mpisetup,   only: dom
 
       implicit none
 
@@ -267,9 +267,9 @@ contains
    function unshear(qty,x,inv)
 
       use dataio_pub, only: die
+      use domain,     only: dom
       use grid,       only: cga
       use grid_cont,  only: grid_container
-      use mpisetup,   only: dom
 
       implicit none
 

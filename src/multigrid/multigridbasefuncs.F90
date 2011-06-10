@@ -144,11 +144,12 @@ contains
 
    subroutine norm_sq(iv, norm)
 
-      use dataio_pub,    only: die
-      use mpisetup,      only: comm, ierr, geometry_type
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use multigridvars, only: ngridvars, roof
       use constants,     only: GEO_XYZ, GEO_RPZ
+      use dataio_pub,    only: die
+      use domain,        only: geometry_type
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,      only: comm, ierr
+      use multigridvars, only: ngridvars, roof
 
       implicit none
 
@@ -183,11 +184,12 @@ contains
 
    subroutine substract_average(lev, iv)
 
-      use dataio_pub,    only: die
-      use mpisetup,      only: comm, ierr, geometry_type
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use multigridvars, only: lvl, plvl, base, roof, ngridvars
       use constants,     only: GEO_XYZ, GEO_RPZ
+      use dataio_pub,    only: die
+      use domain,        only: geometry_type
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,      only: comm, ierr
+      use multigridvars, only: lvl, plvl, base, roof, ngridvars
 
       implicit none
 
@@ -239,7 +241,8 @@ contains
    subroutine prolong_faces(lev, soln)
 
       use grid,               only: D_x, D_y, D_z
-      use mpisetup,           only: has_dir, proc, comm, ierr, req, status, master
+      use mpisetup,           only: proc, comm, ierr, req, status, master
+      use domain,             only: has_dir
       use mpi,                only: MPI_DOUBLE_PRECISION
       use constants,          only: xdim, ydim, zdim, LO, HI, LONG
       use dataio_pub,         only: die, warn

@@ -120,11 +120,12 @@ contains
 
       use constants,  only: MINL, MAXL, ndims, xdim, ydim, zdim
       use dataio_pub, only: msg, warn, die
-      use types,      only: value
+      use domain,     only: has_dir
       use grid,       only: cga
       use grid_cont,  only: grid_container
-      use mpisetup,   only: mpifind, comm, ierr, master, proc, status, has_dir
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use mpisetup,   only: mpifind, comm, ierr, master, proc, status
+      use types,      only: value
 
       implicit none
 

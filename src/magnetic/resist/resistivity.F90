@@ -96,10 +96,11 @@ contains
       use constants,  only: PIERNIK_INIT_BASE, zdim, xdim, ydim
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress
+      use domain,     only: eff_dim, has_dir
       use grid,       only: cga
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,   only: rbuff, ibuff, ierr, comm, master, slave, eff_dim, has_dir, buffer_dim
+      use mpisetup,   only: rbuff, ibuff, ierr, comm, master, slave, buffer_dim
 
       implicit none
 
@@ -182,12 +183,13 @@ contains
 
       use constants,  only: small, xdim, ydim, zdim, MINL, MAXL
       use dataio_pub, only: die
+      use domain,     only: has_dir
       use fluidindex, only: ibx, iby, ibz
       use func,       only: get_extremum
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION
-      use mpisetup,   only: comm, ierr, has_dir
+      use mpisetup,   only: comm, ierr
 #ifndef ISO
       use fluidindex, only: flind
 #endif /* !ISO */
@@ -357,12 +359,13 @@ contains
 !
    subroutine diffuseby_x
 
+      use constants,     only: xdim, zdim
+      use domain,        only: has_dir
       use fluidindex,    only: iby
+      use global,        only: dt
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, zdim
 
       implicit none
 
@@ -401,12 +404,13 @@ contains
 
    subroutine diffusebz_x
 
+      use constants,     only: xdim, zdim
+      use domain,        only: has_dir
       use fluidindex,    only: ibz
+      use global,        only: dt
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, zdim
 
       implicit none
 
@@ -445,12 +449,13 @@ contains
 
    subroutine diffusebz_y
 
+      use constants,     only: xdim, ydim, zdim
+      use domain,        only: has_dir
       use fluidindex,    only: ibz
+      use global,        only: dt
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
 
       implicit none
 
@@ -489,12 +494,13 @@ contains
 
    subroutine diffusebx_y
 
+      use constants,     only: xdim, ydim, zdim
+      use domain,        only: has_dir
       use fluidindex,    only: ibx
+      use global,        only: dt
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, ydim, zdim
 
       implicit none
 
@@ -533,12 +539,13 @@ contains
 
    subroutine diffusebx_z
 
+      use constants,     only: xdim, zdim
+      use domain,        only: has_dir
       use fluidindex,    only: ibx
+      use global,        only: dt
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, zdim
 
       implicit none
 
@@ -577,12 +584,13 @@ contains
 
    subroutine diffuseby_z
 
+      use constants,     only: xdim, zdim
+      use domain,        only: has_dir
       use fluidindex,    only: iby
+      use global,        only: dt
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
-      use mpisetup,      only: dt, has_dir
-      use constants,     only: xdim, zdim
 
       implicit none
 

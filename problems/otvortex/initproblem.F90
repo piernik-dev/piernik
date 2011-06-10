@@ -79,10 +79,10 @@ contains
    subroutine init_prob
 
       use constants,   only: pi, dpi, fpi
+      use global,      only: smallei
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use initionized, only: idni, imxi, imyi, imzi
-      use mpisetup,    only: smallei
 #ifndef ISO
       use initionized, only: ieni, gamma_ion
 #endif /* !ISO */

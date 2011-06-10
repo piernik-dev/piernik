@@ -104,11 +104,12 @@ contains
 
    subroutine prolong_level_hord(lev, iv)
 
-      use constants,          only: ndims
-      use dataio_pub,         only: die, warn, msg
-      use mpisetup,           only: master, eff_dim
-      use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: ord_prolong, extbnd_antimirror
+      use constants,         only: ndims
+      use dataio_pub,        only: die, warn, msg
+      use domain,            only: eff_dim
+      use mpisetup,          only: master
+      use multigridmpifuncs, only: mpi_multigrid_bnd
+      use multigridvars,     only: ord_prolong, extbnd_antimirror
 
       implicit none
 

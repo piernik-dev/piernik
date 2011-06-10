@@ -51,8 +51,9 @@ contains
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml   ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
-      use mpisetup,      only: ierr, rbuff, ibuff, lbuff, master, slave, buffer_dim, comm, dom, has_dir
+      use domain,        only: dom, has_dir
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
+      use mpisetup,      only: ierr, rbuff, ibuff, lbuff, master, slave, buffer_dim, comm
 
       implicit none
 
@@ -141,11 +142,13 @@ contains
 
       use constants,         only: pi
       use dataio_pub,        only: msg, die, warn, printinfo
+      use domain,            only: dom
+      use global,            only: smalld, smallei, t
       use grid,              only: cga
       use grid_cont,         only: cg_list_element, grid_container
       use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
-      use mpisetup,          only: master, smalld, smallei, comm, ierr, t, dom
+      use mpisetup,          only: master, comm, ierr
       use multigrid_gravity, only: multigrid_solve_grav
       use units,             only: newtong
 
@@ -578,7 +581,7 @@ contains
    real function rhoH(H)
 
       use initionized, only: gamma_ion
-      use mpisetup,    only: smalld
+      use global,      only: smalld
 
       implicit none
 

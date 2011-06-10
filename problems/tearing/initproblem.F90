@@ -96,11 +96,11 @@ contains
    subroutine init_prob
 
       use constants,   only: pi
+      use domain,      only: dom
       use fluidindex,  only: ibx, iby, ibz, flind
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use initionized, only: idni, imxi, imyi, imzi
-      use mpisetup,    only: dom
 #ifndef ISO
       use initionized, only: ieni
 #endif /* !ISO */

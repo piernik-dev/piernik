@@ -234,8 +234,8 @@ contains
       use dataio_pub,       only: msg, die
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
+      use global,           only: smalld, integration_order, use_smalld, local_magic_mass
       use grid_cont,        only: grid_container
-      use mpisetup,         only: smalld, integration_order, use_smalld, local_magic_mass
       use gridgeometry,     only: gc, geometry_source_terms
 #ifdef BALSARA
       use interactions,     only: balsara_implicit_interactions
@@ -244,7 +244,7 @@ contains
 #endif /* !BALSARA */
 #ifndef ISO
       use fluidindex,       only: iarr_all_en
-      use mpisetup,         only: smallei
+      use global,           only: smallei
 #endif /* !ISO */
 #ifdef GRAV
       use gravity,          only: grav_pot2accel

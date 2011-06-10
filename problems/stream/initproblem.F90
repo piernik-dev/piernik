@@ -106,13 +106,14 @@ contains
 
       use constants,    only: pi, dpi
       use dataio_pub,   only: msg, printinfo, run_id
+      use domain,       only: dom
       use fluidindex,   only: flind
+      use fluidtypes,   only: component_fluid
       use grid,         only: cga
       use grid_cont,    only: cg_list_element, grid_container
-      use mpisetup,     only: proc, dom
-      use shear,        only: omega
-      use fluidtypes,   only: component_fluid
       use interactions, only: dragc_gas_dust
+      use mpisetup,     only: proc
+      use shear,        only: omega
 #ifdef SHEAR
       use shear,        only: eta_gas, csvk
 #endif /* SHEAR */
@@ -284,9 +285,9 @@ contains
 
    subroutine compare(t)
 
-      use constants,    only: dpi
-      use dataio_pub,   only: run_id
-      use mpisetup,     only: dom
+      use constants,  only: dpi
+      use dataio_pub, only: run_id
+      use domain,     only: dom
 
       implicit none
 

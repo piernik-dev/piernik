@@ -176,8 +176,9 @@ contains
 
       use constants,  only: xdim, ydim, zdim, LO, HI, LONG
       use dataio_pub, only: msg, warn, die
+      use domain,     only: has_dir
       use grid,       only: D_x, D_y, D_z
-      use mpisetup,   only: proc, comm, ierr, has_dir, req, status
+      use mpisetup,   only: proc, comm, ierr, req, status
       use mpi,        only: MPI_DOUBLE_PRECISION
 
       implicit none
@@ -302,7 +303,8 @@ contains
 
       use constants,  only: xdim, ydim, zdim, LO, HI, LONG
       use dataio_pub, only: msg, warn, die
-      use mpisetup,   only: proc, comm, ierr, has_dir, req, status
+      use domain,     only: has_dir
+      use mpisetup,   only: proc, comm, ierr, req, status
       use mpi,        only: MPI_DOUBLE_PRECISION
 
       implicit none

@@ -54,8 +54,9 @@ contains
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
+      use domain,        only: dom, has_dir
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave, dom, has_dir
+      use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave
 
       implicit none
 
@@ -125,15 +126,16 @@ contains
 
    subroutine init_prob
 
+      use constants,      only: xdim, ydim, zdim
       use dataio_pub,     only: msg, warn, printinfo, die
+      use domain,         only: has_dir, dom
       use fluidindex,     only: ibx, iby, ibz, flind
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
-      use mpisetup,       only: comm, ierr, master, has_dir, dom
-      use constants,      only: xdim, ydim, zdim
       use mpi,            only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX
+      use mpisetup,       only: comm, ierr, master
 #ifdef COSM_RAYS_SOURCES
       use crcomposition,  only: icr_H1, icr_C12
 #endif /* COSM_RAYS_SOURCES */
