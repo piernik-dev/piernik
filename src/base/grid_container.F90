@@ -149,9 +149,8 @@ contains
 
       use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, INVALID
       use dataio_pub, only: die, warn, code_progress
-      use domain,     only: has_dir, translate_bnds_to_ints_dom
+      use domain,     only: has_dir, translate_bnds_to_ints_dom, domain_container
       use mpisetup,   only: proc
-      use types,      only: domain_container
 
       implicit none
 

@@ -39,8 +39,9 @@ module multigridvars
 ! pulled by MULTIGRID
 
    use constants, only: xdim, zdim, LO, HI, BND, BLK
+   use domain,    only: domain_container
    use grid_cont, only: grid_container
-   use types,     only: domain_container, segment
+   use types,     only: segment
 
    implicit none
 
