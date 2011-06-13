@@ -47,7 +47,15 @@ contains
 
    subroutine problem_pointers
 
+      use dataio_user, only: user_vars_hdf5, additional_attrs
+      use types,       only: finalize_problem, cleanup_problem
+
       implicit none
+
+      additional_attrs => init_prob_attrs
+      finalize_problem => finalize_problem_maclaurin
+      user_vars_hdf5   => maclaurin_error_vars
+      cleanup_problem  => cleanup_maclaurin
 
    end subroutine problem_pointers
 
@@ -58,11 +66,9 @@ contains
       use constants,   only: pi
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,  only: die, warn
-      use dataio_user, only: user_vars_hdf5, additional_attrs
       use global,      only: smalld
       use mpisetup,    only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use types,       only: finalize_problem, cleanup_problem
 
       implicit none
 
@@ -128,11 +134,6 @@ contains
       endif
 
       call compute_maclaurin_potential
-
-      additional_attrs => init_prob_attrs
-      finalize_problem => finalize_problem_maclaurin
-      user_vars_hdf5   => maclaurin_error_vars
-      cleanup_problem  => cleanup_maclaurin
 
    end subroutine read_problem_par
 

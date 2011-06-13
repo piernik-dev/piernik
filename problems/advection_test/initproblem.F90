@@ -51,7 +51,16 @@ contains
 
    subroutine problem_pointers
 
+      use dataio_user, only: user_vars_hdf5, problem_write_restart, problem_read_restart
+      use types,       only: finalize_problem, cleanup_problem
+
       implicit none
+
+      finalize_problem      => finalize_problem_adv
+      cleanup_problem       => cleanup_adv
+      user_vars_hdf5        => inid_var_hdf5
+      problem_write_restart => write_IC_to_restart
+      problem_read_restart  => read_IC_from_restart
 
    end subroutine problem_pointers
 
@@ -61,11 +70,9 @@ contains
 
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,  only: warn
-      use dataio_user, only: user_vars_hdf5, problem_write_restart, problem_read_restart
       use domain,      only: dom
       use mpisetup,    only: ierr, rbuff, master, slave, buffer_dim, comm, proc, nproc
       use mpi,         only: MPI_DOUBLE_PRECISION
-      use types,       only: finalize_problem, cleanup_problem
 
       implicit none
 
@@ -119,12 +126,6 @@ contains
       pulse_y_max = dom%y0 + dom%Ly * pulse_size/2.
       pulse_z_min = dom%z0 - dom%Lz * pulse_size/2.
       pulse_z_max = dom%z0 + dom%Lz * pulse_size/2.
-
-      finalize_problem      => finalize_problem_adv
-      cleanup_problem       => cleanup_adv
-      user_vars_hdf5        => inid_var_hdf5
-      problem_write_restart => write_IC_to_restart
-      problem_read_restart  => read_IC_from_restart
 
    end subroutine read_problem_par
 

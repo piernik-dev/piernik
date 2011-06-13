@@ -46,7 +46,11 @@ contains
 
    subroutine problem_pointers
 
+      use types, only: problem_customize_solution
+
       implicit none
+
+      problem_customize_solution => impose_inflow
 
    end subroutine problem_pointers
 
@@ -59,7 +63,6 @@ contains
       use domain,     only: dom
       use mpi,        only: MPI_DOUBLE_PRECISION
       use mpisetup,   only: rbuff, buffer_dim, proc, comm, ierr
-      use types,      only: problem_customize_solution
 
       implicit none
 
@@ -118,8 +121,6 @@ contains
 !      pblob = kboltz * dnblob * Tblob / mH / gasRconst
       pamb = p0ambfac * pblob
       dnamb = dnambfac * dnblob
-
-      problem_customize_solution => impose_inflow
 
    end subroutine read_problem_par
 

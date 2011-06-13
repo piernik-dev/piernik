@@ -42,11 +42,20 @@ module initproblem
    real    :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn
 
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, n_sn, dt_sn
+
 contains
+
 !-----------------------------------------------------------------------------
+
    subroutine problem_pointers
 
+      use dataio_user, only: user_plt_hdf5, user_vars_hdf5, user_tsl
+
       implicit none
+
+      user_plt_hdf5  => sedov_plt_hdf5
+      user_vars_hdf5 => sedov_vars_hdf5
+      user_tsl       => sedov_tsl
 
    end subroutine problem_pointers
 
@@ -55,7 +64,6 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_user, only: user_plt_hdf5, user_vars_hdf5, user_tsl
       use domain,      only: dom, has_dir
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use mpisetup,    only: ibuff, rbuff, buffer_dim, master, slave, comm, ierr
@@ -117,10 +125,6 @@ contains
          n_sn         = ibuff(1)
 
       endif
-
-      user_plt_hdf5  => sedov_plt_hdf5
-      user_vars_hdf5 => sedov_vars_hdf5
-      user_tsl       => sedov_tsl
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------

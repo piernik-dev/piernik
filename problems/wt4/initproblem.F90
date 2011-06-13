@@ -79,7 +79,16 @@ contains
 
    subroutine problem_pointers
 
+      use dataio_user, only: additional_attrs, problem_write_restart, problem_read_restart
+      use types,       only: problem_customize_solution, finalize_problem
+
       implicit none
+
+      problem_customize_solution => problem_customize_solution_wt4
+      additional_attrs           => init_prob_attrs
+      problem_write_restart      => write_initial_fld_to_restart
+      problem_read_restart       => read_initial_fld_from_restart
+      finalize_problem           => cleanup_wt4
 
    end subroutine problem_pointers
 
@@ -89,10 +98,8 @@ contains
 
       use constants,   only: pi
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_user, only: additional_attrs, problem_write_restart, problem_read_restart
       use mpisetup,    only: ierr, rbuff, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm
       use mpi,         only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use types,       only: problem_customize_solution, finalize_problem
 
       implicit none
 
@@ -181,12 +188,6 @@ contains
       endif
 
       if (mass_mul < 0.) mass_mul = 1.
-
-      problem_customize_solution => problem_customize_solution_wt4
-      additional_attrs           => init_prob_attrs
-      problem_write_restart      => write_initial_fld_to_restart
-      problem_read_restart       => read_initial_fld_from_restart
-      finalize_problem           => cleanup_wt4
 
    end subroutine read_problem_par
 

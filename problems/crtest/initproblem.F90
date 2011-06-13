@@ -49,7 +49,15 @@ contains
 
    subroutine problem_pointers
 
+      use dataio_user, only: user_vars_hdf5
+      use types,       only: problem_customize_solution, finalize_problem, cleanup_problem
+
       implicit none
+
+      problem_customize_solution => check_norm
+      finalize_problem           => check_norm
+      cleanup_problem            => cleanup_crtest
+      user_vars_hdf5             => crtest_analytic_ecr1
 
    end subroutine problem_pointers
 
@@ -59,14 +67,12 @@ contains
 
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,  only: die
-      use dataio_user, only: user_vars_hdf5
       use diagnostics, only: my_allocate
       use domain,      only: dom
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use mpi,         only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,    only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave
-      use types,       only: problem_customize_solution, finalize_problem, cleanup_problem
 
       implicit none
 
@@ -142,12 +148,6 @@ contains
          aecr1(:,:,:) = 0.
          cgl => cgl%nxt
       enddo
-
-
-      problem_customize_solution => check_norm
-      finalize_problem           => check_norm
-      cleanup_problem            => cleanup_crtest
-      user_vars_hdf5             => crtest_analytic_ecr1
 
    end subroutine read_problem_par
 

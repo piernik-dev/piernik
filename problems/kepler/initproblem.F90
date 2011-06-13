@@ -174,7 +174,7 @@ contains
 
       endif
 
-      if (geometry_type == GEO_RPZ) then
+      if (geometry_type == GEO_RPZ) then ! BEWARE: cannot move this to problem_pointers because geometry_type is set up in init_domain
          problem_write_restart => write_initial_fld_to_restart
          problem_read_restart  => read_initial_fld_from_restart
          problem_customize_solution => problem_customize_solution_kepler

@@ -51,7 +51,11 @@ contains
 
    subroutine problem_pointers
 
+      use gravity, only: grav_accel
+
       implicit none
+
+      grav_accel => galactic_grav_accel
 
    end subroutine problem_pointers
 
@@ -63,7 +67,7 @@ contains
       use mpisetup,      only: rbuff, buffer_dim, comm, ierr, master, slave
       use mpi,           only: MPI_DOUBLE_PRECISION
 #ifdef GRAV
-      use gravity,       only: grav_accel, grav_pot_3d, user_grav
+      use gravity,       only: grav_pot_3d, user_grav
 #endif /* GRAV */
 
       implicit none
@@ -110,7 +114,6 @@ contains
 
       endif
 
-      grav_accel  => galactic_grav_accel
       if (user_grav) grav_pot_3d => my_grav_pot_3d
 
    end subroutine read_problem_par
