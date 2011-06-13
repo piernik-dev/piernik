@@ -34,7 +34,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob
+   public :: read_problem_par, init_prob, problem_pointers
 
    real              :: d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
 
@@ -42,6 +42,14 @@ module initproblem
                                d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
 
 contains
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
 

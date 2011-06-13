@@ -36,7 +36,7 @@ module initproblem
    implicit none
 
    private
-   public  :: read_problem_par, init_prob
+   public  :: read_problem_par, init_prob, problem_pointers
 
    integer :: n_sn
    real    :: d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, dt_sn, r, t_sn
@@ -44,6 +44,14 @@ module initproblem
    namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, Eexpl, x0, y0, z0, r0, n_sn, dt_sn
 contains
 !-----------------------------------------------------------------------------
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
+
+!-----------------------------------------------------------------------------
+
    subroutine read_problem_par
 
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml

@@ -36,7 +36,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob
+   public :: read_problem_par, init_prob, problem_pointers
 
    integer, parameter :: ic_nx = 512, ic_ny = 512, ic_nz = 52 !< initial conditions size
    integer, parameter :: ic_vars = 5                          !< number of quantities in the IC
@@ -74,6 +74,14 @@ module initproblem
       &                        r_in, r_out, f_in, f_out, alfasupp, fake_ic, T_disk, mean_mol_weight
 
 contains
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
 

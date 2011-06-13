@@ -33,7 +33,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob
+   public :: read_problem_par, init_prob, problem_pointers
 
    real               :: clump_mass, clump_pos_x, clump_pos_y, clump_pos_z, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM
    logical            :: crashNotConv, exp_speedup, verbose
@@ -44,6 +44,14 @@ module initproblem
    namelist /PROBLEM_CONTROL/  clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose
 
 contains
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
 

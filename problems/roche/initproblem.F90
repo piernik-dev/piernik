@@ -33,7 +33,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob
+   public :: read_problem_par, init_prob, problem_pointers
 
    real :: dblob, xblob, yblob, zblob, dnamb, rclear, pblob, dnblob, dnin, vxfac, p0ambfac, dnambfac, taucool, Tblob, pamb
 
@@ -41,6 +41,14 @@ module initproblem
                                vxfac, p0ambfac, taucool, dnambfac
 
 contains
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
 

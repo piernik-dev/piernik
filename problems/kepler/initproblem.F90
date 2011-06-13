@@ -38,7 +38,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob
+   public :: read_problem_par, init_prob, problem_pointers
 
    real                     :: d0, r_max, dout, alpha, r_in, r_out, f_in, f_out
    real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
@@ -66,6 +66,14 @@ module initproblem
 
 contains
 !-----------------------------------------------------------------------------
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
+
+!-----------------------------------------------------------------------------
+
    subroutine read_problem_par
 
       use constants,           only: GEO_RPZ

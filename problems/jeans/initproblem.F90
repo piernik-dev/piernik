@@ -33,7 +33,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob
+   public :: read_problem_par, init_prob, problem_pointers
    public :: d0, mode
 
    real              :: d0, p0, amp, kx, ky, kz
@@ -42,6 +42,14 @@ module initproblem
    namelist /PROBLEM_CONTROL/  d0, p0, ix, iy, iz, amp, mode
 
 contains
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
 

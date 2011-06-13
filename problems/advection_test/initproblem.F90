@@ -35,7 +35,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob
+   public :: read_problem_par, init_prob, problem_pointers
 
    real :: pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp, &
         &  pulse_x_min, pulse_x_max, pulse_y_min, pulse_y_max, pulse_z_min, pulse_z_max
@@ -46,6 +46,14 @@ module initproblem
    character(len=varlen), parameter :: inid_n = "inid"
 
 contains
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
 

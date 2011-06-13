@@ -38,13 +38,21 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob
+   public :: read_problem_par, init_prob, problem_pointers
 
    real :: d0, bxn, byn, bzn, alpha
 
    namelist /PROBLEM_CONTROL/ d0, bxn, byn, bzn, alpha
 
 contains
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
 

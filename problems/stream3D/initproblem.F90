@@ -38,7 +38,7 @@ module initproblem
    implicit none
 
    private
-   public  :: read_problem_par, init_prob
+   public  :: read_problem_par, init_prob, problem_pointers
 
    real    :: sigma0, Rin, R0, HtoR, eps, amp
    character(len=cbuff_len) :: sigma_model
@@ -46,6 +46,14 @@ module initproblem
    namelist /PROBLEM_CONTROL/  sigma0, amp, Rin, R0, HtoR, sigma_model, eps
 
 contains
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
 

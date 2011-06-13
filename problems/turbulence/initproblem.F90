@@ -10,7 +10,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob
+   public :: read_problem_par, init_prob, problem_pointers
 
    integer           :: n_sn
    real              :: d0, Mrms, t_sn, c_si
@@ -18,6 +18,14 @@ module initproblem
    namelist /PROBLEM_CONTROL/  d0, c_si, Mrms
 
 contains
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
 

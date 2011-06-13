@@ -194,7 +194,7 @@ contains
       use grid,                  only: init_grid, init_arrays, grid_mpi_boundaries_prep
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use gridgeometry,          only: init_geometry
-      use initproblem,           only: init_prob, read_problem_par
+      use initproblem,           only: init_prob, read_problem_par, problem_pointers
       use mpisetup,              only: init_mpi
       use timestep,              only: init_time_step
 #ifdef MAGNETIC
@@ -240,6 +240,8 @@ contains
 #ifdef DEBUG
       call init_piernikdebug ! Make it available as early as possible - right after init_mpi
 #endif /* DEBUG */
+
+      call problem_pointers ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
 
       call init_global
 

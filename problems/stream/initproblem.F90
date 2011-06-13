@@ -35,7 +35,7 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob
+   public :: read_problem_par, init_prob, problem_pointers
 
    character(len=cbuff_len) :: fnoise
    real :: rhog, eps, amp, kx, kz
@@ -46,6 +46,14 @@ module initproblem
                                rhog, eps, amp, fnoise, kx,kz, linear
 
 contains
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
 

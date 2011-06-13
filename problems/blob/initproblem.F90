@@ -37,13 +37,21 @@ module initproblem
    implicit none
 
    private
-   public :: read_problem_par, init_prob
+   public :: read_problem_par, init_prob, problem_pointers
 
    real   :: chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
 
    namelist /PROBLEM_CONTROL/  chi, rblob, blobxc, blobyc, blobzc, Mext, denv, tkh, vgal
 
 contains
+
+!-----------------------------------------------------------------------------
+
+   subroutine problem_pointers
+
+      implicit none
+
+   end subroutine problem_pointers
 
 !-----------------------------------------------------------------------------
 
