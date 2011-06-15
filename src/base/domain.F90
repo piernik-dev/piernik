@@ -502,7 +502,7 @@ contains
       if (comm3d == MPI_COMM_NULL) then
          call inflate_req(size([LO, HI]) * 2 * nproc) ! 2 = count([i_bnd, o_bnd])
       else
-         call inflate_req(size([LO, HI]) * size([BLK, BND]) * ndims) ! just another way of defining '4 * 3' ;-)
+         call inflate_req(max(size([LO, HI]) * size([BLK, BND]) * ndims, nproc)) ! just another way of defining '4 * 3' ;-)
       endif
 
       if (any(dom%bnd(:, :) == BND_COR) .and. comm3d == MPI_COMM_NULL) call die("[domain:init_domain] Corner BC not implemented without comm3d")
