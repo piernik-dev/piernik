@@ -36,7 +36,7 @@ module piernikdebug
    implicit none
 
    private
-   public :: init_piernikdebug, has_const_dt, constant_dt, force_hdf5_dump, force_log_dump, aux_R, aux_I, aux_L, aux_S
+   public :: init_piernikdebug, has_const_dt, constant_dt, force_hdf5_dump, force_res_dump, force_allbnd_dump, force_log_dump, aux_R, aux_I, aux_L, aux_S
 
    ! Auxiliary input parameters for debugging, quick tweaks and tests of new features.
    ! Their purpose is to avoid messing up existing namelists until it becomes clear that certain parameter is really useful.
@@ -50,9 +50,11 @@ module piernikdebug
    real, protected    :: constant_dt               !< value of timestep regardless of fluid state
    logical, protected :: has_const_dt              !< true if piernikdebug::constant_dt > 0
    logical, protected :: force_hdf5_dump           !< dump hdf5 every sweep regardless of dataio_pub::dt_hdf
+   logical, protected :: force_res_dump            !< dump restart every sweep regardless of dataio_pub::dt_res
+   logical, protected :: force_allbnd_dump         !< dump restart with all boundaries every sweep regardless of dataio_pub::dt_res
    logical, protected :: force_log_dump            !< dump log every sweep regardless of dataio_pub:dt_log
 
-   namelist /PIERNIK_DEBUG/ constant_dt, force_hdf5_dump, force_log_dump, aux_R, aux_I, aux_L, aux_S
+   namelist /PIERNIK_DEBUG/ constant_dt, force_hdf5_dump, force_res_dump, force_allbnd_dump, force_log_dump, aux_R, aux_I, aux_L, aux_S
 
 contains
 
@@ -81,6 +83,8 @@ contains
 
          lbuff(1) = force_hdf5_dump
          lbuff(2) = force_log_dump
+         lbuff(3) = force_res_dump
+         lbuff(4) = force_allbnd_dump
 
          rbuff(buffer_dim-naux+1:buffer_dim) = aux_R(:)
          ibuff(buffer_dim-naux+1:buffer_dim) = aux_I(:)
@@ -97,8 +101,10 @@ contains
       if (slave) then
          constant_dt = rbuff(1)
 
-         force_hdf5_dump = lbuff(1)
-         force_log_dump  = lbuff(2)
+         force_hdf5_dump   = lbuff(1)
+         force_log_dump    = lbuff(2)
+         force_res_dump    = lbuff(3)
+         force_allbnd_dump = lbuff(4)
 
          aux_R(:) = rbuff(buffer_dim-naux+1:buffer_dim)
          aux_I(:) = ibuff(buffer_dim-naux+1:buffer_dim)

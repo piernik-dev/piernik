@@ -188,10 +188,10 @@ contains
 #endif /* COSM_RAYS */
 #ifdef DEBUG
       use dataio,         only: write_data
-      use dataio_hdf5,    only: write_hdf5
+      use dataio_hdf5,    only: write_hdf5, write_restart_hdf5
       use dataio_pub,     only: chdf, set_container_chdf
       use global,         only: nstep
-      use piernikdebug,   only: force_hdf5_dump, force_log_dump
+      use piernikdebug,   only: force_hdf5_dump, force_log_dump, force_res_dump, force_allbnd_dump
 #endif /* DEBUG */
 
       implicit none
@@ -254,7 +254,7 @@ contains
                else
 #if defined SHEAR && defined FLUID_INTERACTIONS
                   call source_terms_y
-#endif /* SHEAR */
+#endif /* SHEAR && FLUID_INTERACTIONS */
                endif
 
             case (zdim)
@@ -291,8 +291,10 @@ contains
 
 #ifdef DEBUG
       call set_container_chdf(nstep)
-      if (force_hdf5_dump) call write_hdf5(chdf)
-      if (force_log_dump) call write_data(output='log')
+      if (force_hdf5_dump)   call write_hdf5(chdf)
+      if (force_res_dump)    call write_restart_hdf5
+      if (force_allbnd_dump) call write_restart_hdf5(debug_res=.true.)
+      if (force_log_dump)    call write_data(output='log')
 #endif /* DEBUG */
 
    end subroutine make_sweep
