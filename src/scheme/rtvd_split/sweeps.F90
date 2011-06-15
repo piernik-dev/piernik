@@ -107,11 +107,11 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweepx(cg)
 
-      use constants,       only: xdim, ydim, zdim
-      use domain,          only: has_dir
+      use constants,       only: xdim
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpx, ibx, iby, ibz, nmag
       use global,          only: dt, integration_order
+      use grid,            only: D_y, D_z
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
       use rtvd,            only: relaxing_tvd
@@ -137,15 +137,15 @@ contains
       cg%uh%arr = cg%u%arr
       do istep = 1, integration_order
          do k=cg%ks, cg%ke
-            kp=k+1
+            kp=k+D_z
             do j=cg%js, cg%je
-               jp=j+1
+               jp=j+D_y
 
 #ifdef MAGNETIC
                b_x=0.5*cg%b%arr(:,:,j,k)
                b_x(ibx,1:cg%nx-1) = b_x(ibx,1:cg%nx-1)+b_x(ibx,2:cg%nx);       b_x(ibx, cg%nx) = b_x(ibx, cg%nx-1)
-               if (has_dir(ydim) .and. j <= cg%je)  b_x(iby,:)=b_x(iby,:)+0.5*cg%b%arr(iby,:,jp,k)
-               if (has_dir(zdim) .and. k <= cg%ke)  b_x(ibz,:)=b_x(ibz,:)+0.5*cg%b%arr(ibz,:,j,kp)
+               b_x(iby,:)=b_x(iby,:)+0.5*cg%b%arr(iby,:,jp,k)
+               b_x(ibz,:)=b_x(ibz,:)+0.5*cg%b%arr(ibz,:,j,kp)
 #endif /* MAGNETIC */
 
                call set_geo_coeffs(xdim, flind, j, k, cg)
@@ -167,11 +167,11 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweepy(cg)
 
-      use constants,       only: xdim, ydim, zdim
-      use domain,          only: has_dir
+      use constants,       only: ydim
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpy, ibx, iby, ibz, nmag
       use global,          only: dt, integration_order
+      use grid,            only: D_x, D_z
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
       use rtvd,            only: relaxing_tvd
@@ -196,15 +196,15 @@ contains
       cg%uh%arr = cg%u%arr
       do istep = 1, integration_order
          do k=cg%ks, cg%ke
-            kp=k+1
+            kp=k+D_z
             do i=cg%is, cg%ie
-               ip=i+1
+               ip=i+D_x
 
 #ifdef MAGNETIC
                b_y(:,:) = 0.5*cg%b%arr(:,i,:,k)
                b_y(iby,1:cg%ny-1)=b_y(iby,1:cg%ny-1)+b_y(iby,2:cg%ny);       b_y(iby, cg%ny) = b_y(iby, cg%ny-1)
-               if (has_dir(xdim) .and. i <= cg%ie) b_y(ibx,:)=b_y(ibx,:)+0.5*cg%b%arr(ibx,ip,:,k)
-               if (has_dir(zdim) .and. k <= cg%ke) b_y(ibz,:)=b_y(ibz,:)+0.5*cg%b%arr(ibz,i,:,kp)
+               b_y(ibx,:)=b_y(ibx,:)+0.5*cg%b%arr(ibx,ip,:,k)
+               b_y(ibz,:)=b_y(ibz,:)+0.5*cg%b%arr(ibz,i,:,kp)
                b_y((/iby,ibx,ibz/),:)=b_y(:,:)
 #endif /* MAGNETIC */
 
@@ -229,11 +229,11 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweepz(cg)
 
-      use constants,       only: xdim, ydim, zdim
-      use domain,          only: has_dir
+      use constants,       only: zdim
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swpz, ibx, iby, ibz, nmag
       use global,          only: dt, integration_order
+      use grid,            only: D_x, D_y
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
       use rtvd,            only: relaxing_tvd
@@ -259,15 +259,15 @@ contains
       cg%uh%arr = cg%u%arr
       do istep = 1, integration_order
          do j=cg%js, cg%je
-            jp=j+1
+            jp=j+D_y
             do i=cg%is, cg%ie
-               ip=i+1
+               ip=i+D_x
 
 #ifdef MAGNETIC
                b_z(:,:) = 0.5*cg%b%arr(:,i,j,:)
                b_z(ibz,1:cg%nz-1) = b_z(ibz,1:cg%nz-1) + b_z(ibz,2:cg%nz);   b_z(ibz, cg%nz) = b_z(ibz, cg%nz-1)
-               if (has_dir(xdim) .and. i <= cg%ie) b_z(ibx,:) = b_z(ibx,:) + 0.5*cg%b%arr(ibx,ip,j,:)
-               if (has_dir(ydim) .and. j <= cg%je) b_z(iby,:) = b_z(iby,:) + 0.5*cg%b%arr(iby,i,jp,:)
+               b_z(ibx,:) = b_z(ibx,:) + 0.5*cg%b%arr(ibx,ip,j,:)
+               b_z(iby,:) = b_z(iby,:) + 0.5*cg%b%arr(iby,i,jp,:)
                b_z((/ibz,iby,ibx/),:)=b_z(:,:)
 #endif /* MAGNETIC */
 
