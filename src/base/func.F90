@@ -124,7 +124,7 @@ contains
       use grid,       only: cga
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use mpisetup,   only: mpifind, comm, ierr, master, proc, status
+      use mpisetup,   only: mpifind, comm, ierr, master, slave, proc, status
       use types,      only: value
 
       implicit none
@@ -153,17 +153,17 @@ contains
 
       call mpifind(prop, minmax)
 
-      if (has_dir(xdim)) prop%coords(xdim) = cg%x(prop%loc(xdim))
-      if (has_dir(ydim)) prop%coords(ydim) = cg%y(prop%loc(ydim))
-      if (has_dir(zdim)) prop%coords(zdim) = cg%z(prop%loc(zdim))
-      if (prop%proc /= 0) then
-         if (proc == prop%proc) then
+      if (proc == prop%proc) then
+         if (has_dir(xdim)) prop%coords(xdim) = cg%x(prop%loc(xdim))
+         if (has_dir(ydim)) prop%coords(ydim) = cg%y(prop%loc(ydim))
+         if (has_dir(zdim)) prop%coords(zdim) = cg%z(prop%loc(zdim))
+         if (slave) then
             call MPI_Send  (prop%loc,    ndims, MPI_INTEGER,          0, tag1, comm, ierr)
             call MPI_Send  (prop%coords, ndims, MPI_DOUBLE_PRECISION, 0, tag2, comm, ierr)
-         else if (master) then
-            call MPI_Recv  (prop%loc,    ndims, MPI_INTEGER,          prop%proc, tag1, comm, status, ierr)
-            call MPI_Recv  (prop%coords, ndims, MPI_DOUBLE_PRECISION, prop%proc, tag2, comm, status, ierr)
          endif
+      else if (master) then
+         call MPI_Recv  (prop%loc,    ndims, MPI_INTEGER,          prop%proc, tag1, comm, status, ierr)
+         call MPI_Recv  (prop%coords, ndims, MPI_DOUBLE_PRECISION, prop%proc, tag2, comm, status, ierr)
       endif
 
    end subroutine get_extremum
