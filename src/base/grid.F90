@@ -270,11 +270,11 @@ contains
                   procmask(:) = 0
                   do lh = LO, HI
                      hl = LO+HI-lh ! HI for LO, LO for HI
-                     b_layer(:,:) = dom%se(proc, :, :)
+                     b_layer(:,:) = dom%pse(proc)%sel(1, :, :)
                      b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
                      b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
                      do j = 0, nproc-1
-                        call is_overlap(b_layer(:,:), dom%se(j, :, :), sharing, per(:))
+                        call is_overlap(b_layer(:,:), dom%pse(j)%sel(1, :, :), sharing, per(:))
                         if (sharing) procmask(j) = procmask(j) + 1
                      enddo
                   enddo
@@ -289,7 +289,7 @@ contains
                      if (procmask(j) /= 0) then
                         do lh = LO, HI
                            hl = LO+HI-lh
-                           b_layer(:,:) = dom%se(proc, :, :)
+                           b_layer(:,:) = dom%pse(proc)%sel(1, :, :)
                            b_layer(d, lh) = b_layer(d, lh) + lh-hl
                            b_layer(d, hl) = b_layer(d, lh)
 
@@ -298,12 +298,12 @@ contains
                               bp_layer(:, LO) = mod(b_layer(:, LO) + per(:), per(:))
                               bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:))
                            endwhere
-                           call is_overlap(bp_layer(:,:), dom%se(j, :, :), sharing)
+                           call is_overlap(bp_layer(:,:), dom%pse(j)%sel(1, :, :), sharing)
 
                            if (sharing) then
                               poff(:,:) = bp_layer(:,:) - b_layer(:,:) ! displacement due to periodicity
-                              bp_layer(:, LO) = max(bp_layer(:, LO), dom%se(j, :, LO))
-                              bp_layer(:, HI) = min(bp_layer(:, HI), dom%se(j, :, HI))
+                              bp_layer(:, LO) = max(bp_layer(:, LO), dom%pse(j)%sel(1, :, LO))
+                              bp_layer(:, HI) = min(bp_layer(:, HI), dom%pse(j)%sel(1, :, HI))
 
                               b_layer(:,:) = bp_layer(:,:) - poff(:,:)
                               g = g + 1

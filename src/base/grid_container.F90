@@ -164,8 +164,8 @@ contains
       this%nb = dom%nb
       this%dxmn = huge(1.0)
 
-      this%off(:) = dom%se(proc, :, LO)  ! Block offset on the dom% should be between 0 and nxd-nxb
-      this%n_b(:) = int(dom%se(proc, :, HI) - dom%se(proc, :, LO) + 1, 4) ! Block 'physical' grid sizes
+      this%off(:) = dom%pse(proc)%sel(1, :, LO)  ! Block offset on the dom% should be between 0 and nxd-nxb
+      this%n_b(:) = int(dom%pse(proc)%sel(1, :, HI) - dom%pse(proc)%sel(1, :, LO) + 1, 4) ! Block 'physical' grid sizes
 
       if (all(this%n_b(:) == 0)) then
          this%empty = .true.

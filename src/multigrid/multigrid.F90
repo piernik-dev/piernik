@@ -99,7 +99,7 @@ contains
       integer, parameter    :: level_min = 1          !< Base (coarsest) level number, chosen arbitrarily.
       integer               :: level_max              !< Levels of multigrid refinement
 
-      integer               :: ierrh, j
+      integer               :: ierrh, j, p
       logical, save         :: frun = .true.          !< First run flag
       real                  :: mb_alloc, min_m, max_m !< Allocation counter
       integer, dimension(3) :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
@@ -251,18 +251,25 @@ contains
                write(msg, '(a,3f10.1)')"[multigrid:init_multigrid] Fractional number of domain cells: ", 0.5*curl%finer%dom%n_d(:)
                call die(msg) ! handling this would require coarse grids bigger than base grid
             endif
-            if (.not. allocated(curl%dom%se)) then
+            if (.not. allocated(curl%dom%pse)) then
                if (master) call warn("[multigrid:init_multigrid] curl%dom%se not allocated implicitly")! this should detect changes in compiler behavior
-               allocate(curl%dom%se(0:nproc-1, xdim:zdim, LO:HI))
+               allocate(curl%dom%pse(0:nproc-1))
+               do p = 0, nproc-1
+                  allocate(curl%dom%pse(p)%sel(1, xdim:zdim, LO:HI))
+               enddo
                !else curl%dom%se was implicitly allocated during assignment
             endif
-            if (associated(curl, base) .and. single_base) then ! Use curl%dom%se(nproc, :, :) with care, because this is an antiparallel thing
-               curl%dom%se(:,  :, LO) = 0
-               curl%dom%se(0,  :, HI) = curl%dom%n_d(:)-1 ! put the whole base level on the master CPU (\todo try a random or the last one)
-               curl%dom%se(1:, :, HI) = -1
+            if (associated(curl, base) .and. single_base) then ! Use curl%dom%pse(nproc)%sel(1, :, :) with care, because this is an antiparallel thing
+               do p = 0, nproc-1
+                  curl%dom%pse(p)%sel(1,  :, LO) = 0
+                  curl%dom%pse(p)%sel(1,  :, HI) = -1
+               enddo
+               curl%dom%pse(0)%sel(1,  :, HI) = curl%dom%n_d(:)-1 ! put the whole base level on the master CPU (\todo try a random or the last one)
             else
-               curl%dom%se(:, :, LO) = (curl%finer%dom%se(:, :, LO) + 1) / 2
-               curl%dom%se(:, :, HI) =  curl%finer%dom%se(:, :, HI)      / 2
+               do p = 0, nproc-1
+                  curl%dom%pse(p)%sel(1, :, LO) = (curl%finer%dom%pse(p)%sel(1, :, LO) + 1) / 2
+                  curl%dom%pse(p)%sel(1, :, HI) =  curl%finer%dom%pse(p)%sel(1, :, HI)      / 2
+               enddo
             endif
             call curl%dom%set_derived ! fix what was inherited from finer level or dom and should be recalculated
          endif
@@ -341,7 +348,10 @@ contains
          curl => curl%coarser ! descend until null() is encountered
       enddo
 
-      if (any(dom%se(:,:,:) /= roof%dom%se(:,:,:))) call die("[multigrid:init_multigrid] dom%se or roof%dom%se corrupted") ! this should detect changes in compiler behavior
+      do p = 0, nproc-1
+         if (any(dom%pse(p)%sel(1,:,:) /= roof%dom%pse(p)%sel(1,:,:))) call die("[multigrid:init_multigrid] dom%se or roof%dom%se corrupted")
+         ! this should detect changes in compiler behavior
+      enddo
 
       call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, 1, MPI_LOGICAL, MPI_LOR, comm, ierr)
       if ((is_mg_uneven .or. is_uneven .or. comm3d == MPI_COMM_NULL) .and. ord_prolong /= 0) then
@@ -417,7 +427,12 @@ contains
             if (allocated(curl%bnd_x))      deallocate(curl%bnd_x)
             if (allocated(curl%bnd_y))      deallocate(curl%bnd_y)
             if (allocated(curl%bnd_z))      deallocate(curl%bnd_z)
-            if (allocated(curl%dom%se))     deallocate(curl%dom%se)
+            if (allocated(curl%dom%pse)) then
+               do g = 0, nproc-1
+                  deallocate(curl%dom%pse(g)%sel)
+               enddo
+               deallocate(curl%dom%pse)
+            endif
             io_tgt(1:nseg) = [ curl%f_tgt, curl%c_tgt ]
             do ib = 1, nseg
                if (allocated(io_tgt(ib)%seg)) then

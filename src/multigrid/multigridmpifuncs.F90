@@ -76,8 +76,8 @@ contains
          if (associated(curl%finer)) then
             procmask(:) = 0
             do j = 0, nproc-1
-               coarsened(:,:) = curl%finer%dom%se(j, :, :)/2
-               call is_overlap(curl%dom%se(proc, :, :), coarsened(:,:), sharing)
+               coarsened(:,:) = curl%finer%dom%pse(j)%sel(1, :, :)/2
+               call is_overlap(curl%dom%pse(proc)%sel(1, :, :), coarsened(:,:), sharing)
                if (sharing) procmask(j) = 1 ! we can store also neigh(:,:), face and corner as a bitmask, if necessary
             enddo
             allocate(curl%f_tgt%seg(count(procmask(:) /= 0)))
@@ -94,8 +94,8 @@ contains
                   endif
                   seg%proc = j
                   ! find cross-section of own segment with coarsened fine segment
-                  seg%se(:, LO) = max(curl%dom%se(proc, :, LO), curl%finer%dom%se(j, :, LO)/2) + ijks(:)
-                  seg%se(:, HI) = min(curl%dom%se(proc, :, HI), curl%finer%dom%se(j, :, HI)/2) + ijks(:)
+                  seg%se(:, LO) = max(curl%dom%pse(proc)%sel(1, :, LO), curl%finer%dom%pse(j)%sel(1, :, LO)/2) + ijks(:)
+                  seg%se(:, HI) = min(curl%dom%pse(proc)%sel(1, :, HI), curl%finer%dom%pse(j)%sel(1, :, HI)/2) + ijks(:)
                   if (j /= proc) allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, seg%se(ydim, HI)-seg%se(ydim, LO) + 1, seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                   ! not counted in mb_alloc
                endif
@@ -106,9 +106,9 @@ contains
          !> \deprecated almost duplicated code
          if (associated(curl%coarser)) then
             procmask(:) = 0
-            coarsened(:,:) = curl%dom%se(proc, :, :)/2
+            coarsened(:,:) = curl%dom%pse(proc)%sel(1, :, :)/2
             do j = 0, nproc-1
-               call is_overlap(coarsened(:,:), curl%coarser%dom%se(j, :, :), sharing)
+               call is_overlap(coarsened(:,:), curl%coarser%dom%pse(j)%sel(1, :, :), sharing)
                if (sharing) procmask(j) = 1
             enddo
             allocate(curl%c_tgt%seg(count(procmask(:) /= 0)))
@@ -125,8 +125,8 @@ contains
                   endif
                   seg%proc = j
                   ! find cross-section of own segment with refined coarse segment
-                  seg%se(:, LO) = max(curl%dom%se(proc, :, LO), curl%coarser%dom%se(j, :, LO)*2  )
-                  seg%se(:, HI) = min(curl%dom%se(proc, :, HI), curl%coarser%dom%se(j, :, HI)*2+1)
+                  seg%se(:, LO) = max(curl%dom%pse(proc)%sel(1, :, LO), curl%coarser%dom%pse(j)%sel(1, :, LO)*2  )
+                  seg%se(:, HI) = min(curl%dom%pse(proc)%sel(1, :, HI), curl%coarser%dom%pse(j)%sel(1, :, HI)*2+1)
                   if (j /= proc) allocate(seg%buf(seg%se(xdim, HI)/2-seg%se(xdim, LO)/2 + 1, &
                        &                          seg%se(ydim, HI)/2-seg%se(ydim, LO)/2 + 1, &
                        &                          seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
@@ -158,11 +158,11 @@ contains
                   procmask(:) = 0
                   do lh = LO, HI
                      hl = LO+HI-lh ! HI for LO, LO for HI
-                     b_layer(:,:) = curl%dom%se(proc, :, :)
+                     b_layer(:,:) = curl%dom%pse(proc)%sel(1, :, :)
                      b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
                      b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
                      do j = 0, nproc-1
-                        call is_overlap(b_layer(:,:), curl%dom%se(j, :, :), sharing, per(:))
+                        call is_overlap(b_layer(:,:), curl%dom%pse(j)%sel(1, :, :), sharing, per(:))
                         if (sharing) procmask(j) = procmask(j) + 1
                      enddo
                   enddo
@@ -177,7 +177,7 @@ contains
                      if (procmask(j) /= 0) then
                         do lh = LO, HI
                            hl = LO+HI-lh
-                           b_layer(:,:) = curl%dom%se(proc, :, :)
+                           b_layer(:,:) = curl%dom%pse(proc)%sel(1, :, :)
                            b_layer(d, lh) = b_layer(d, lh) + lh-hl
                            b_layer(d, hl) = b_layer(d, lh)
                            bp_layer(:, :) = b_layer(:, :)
@@ -185,12 +185,12 @@ contains
                               bp_layer(:, LO) = mod(b_layer(:, LO) + per(:), per(:))
                               bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:))
                            endwhere
-                           call is_overlap(bp_layer(:,:), curl%dom%se(j, :, :), sharing)
+                           call is_overlap(bp_layer(:,:), curl%dom%pse(j)%sel(1, :, :), sharing)
 
                            if (sharing) then
                               poff(:,:) = bp_layer(:,:) - b_layer(:,:) ! displacement due to periodicity
-                              bp_layer(:, LO) = max(bp_layer(:, LO), curl%dom%se(j, :, LO))
-                              bp_layer(:, HI) = min(bp_layer(:, HI), curl%dom%se(j, :, HI))
+                              bp_layer(:, LO) = max(bp_layer(:, LO), curl%dom%pse(j)%sel(1, :, LO))
+                              bp_layer(:, HI) = min(bp_layer(:, HI), curl%dom%pse(j)%sel(1, :, HI))
                               b_layer(:,:) = bp_layer(:,:) - poff(:,:)
                               g = g + 1
                               do ib = 1, curl%nb

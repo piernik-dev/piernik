@@ -572,14 +572,14 @@ contains
 
          do p = 0, nproc-1
             xn_r = 1
-            if (has_dir(plane)) xn_r = pl_i(plane) + cg%nb - dom%se(p, plane, LO)
-            if ((xn_r > cg%nb .and. xn_r <= int(dom%se(p, plane, HI) - dom%se(p, plane, LO) + 1, 4) + cg%nb) .or. (xn_r == 1 .and. .not. has_dir(plane))) then
+            if (has_dir(plane)) xn_r = pl_i(plane) + cg%nb - dom%pse(p)%sel(1, plane, LO)
+            if ((xn_r > cg%nb .and. xn_r <= int(dom%pse(p)%sel(1, plane, HI) - dom%pse(p)%sel(1, plane, LO) + 1, 4) + cg%nb) .or. (xn_r == 1 .and. .not. has_dir(plane))) then
                if (p == proc) then
-                  img(1+dom%se(p, d1(plane), LO):1+dom%se(p, d1(plane), HI), 1+dom%se(p, d2(plane), LO):1+dom%se(p, d2(plane), HI)) = send(:,:)
+                  img(1+dom%pse(p)%sel(1, d1(plane), LO):1+dom%pse(p)%sel(1, d1(plane), HI), 1+dom%pse(p)%sel(1, d2(plane), LO):1+dom%pse(p)%sel(1, d2(plane), HI)) = send(:,:)
                else
-                  allocate(recv(dom%se(p, d1(plane), HI)-dom%se(p, d1(plane), LO)+1, dom%se(p, d2(plane), HI)-dom%se(p, d2(plane), LO)+1))
+                  allocate(recv(dom%pse(p)%sel(1, d1(plane), HI)-dom%pse(p)%sel(1, d1(plane), LO)+1, dom%pse(p)%sel(1, d2(plane), HI)-dom%pse(p)%sel(1, d2(plane), LO)+1))
                   call MPI_Recv(recv, size(recv), MPI_DOUBLE_PRECISION, p, tag, comm, status(:,p), ierr)
-                  img(1+dom%se(p, d1(plane), LO):1+dom%se(p, d1(plane), HI), 1+dom%se(p, d2(plane), LO):1+dom%se(p, d2(plane), HI)) = recv(:,:)
+                  img(1+dom%pse(p)%sel(1, d1(plane), LO):1+dom%pse(p)%sel(1, d1(plane), HI), 1+dom%pse(p)%sel(1, d2(plane), LO):1+dom%pse(p)%sel(1, d2(plane), HI)) = recv(:,:)
                   deallocate(recv)
                endif
             endif

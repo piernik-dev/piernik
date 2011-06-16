@@ -52,6 +52,10 @@ module domain
 !      The multigrid solver will operate also on a stack of coarser domains - parents of the base domain.
 !      The coarser domains must be no smaller than the base domain.
 
+   type :: cuboids
+      integer(kind=8), dimension(:,:,:), allocatable :: sel !< list of grid chunks (:, xdim:zdim, LO:HI)
+   end type cuboids
+
    type :: domain_container
       ! primary parameters, read from /DOMAIN_SIZES/, /BOUNDARIES/ and /DOMAIN_LIMITS/ namelists
       real    :: xmin                           !< physical domain left x-boundary position
@@ -64,8 +68,7 @@ module domain
       integer                   :: nb           !< number of boundary cells surrounding the physical domain, same for all directions
       integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
 
-      integer(kind=8), dimension(:,:,:), allocatable :: se !< span of all domains (0:nproc-1, xdim:zdim, LO:HI); Use with care, because this is an antiparallel thing
-      !! \todo add hooks to parent and a list of children domains
+      type(cuboids), dimension(:), allocatable :: pse  !< lists of grid chunks on each process (0:nproc-1); Use with care, because this is an antiparallel thing
 
       ! derived parameters
       real    :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
@@ -406,9 +409,12 @@ contains
       endif
       if (any(dom%bnd(zdim, LO:HI) == BND_COR)) call die("[domain:init_domain] Corner BC not allowed for z-direction")
 
-      if (allocated(dom%se)) call die("[domain:init_domain] dom%se already allocated")
-      allocate(dom%se(0:nproc-1, xdim:zdim, LO:HI))
-      dom%se(:, :, :) = 0
+      if (allocated(dom%pse)) call die("[domain:init_domain] dom%pse already allocated")
+      allocate(dom%pse(0:nproc-1))
+      do p = 0, nproc-1
+         allocate(dom%pse(p)%sel(1, xdim:zdim, LO:HI))
+         dom%pse(p)%sel(:, :, :) = 0
+      enddo
 
       procn(:,:) = MPI_PROC_NULL
       comm3d = MPI_COMM_NULL
@@ -428,8 +434,8 @@ contains
                do p = 0, nproc-1
                   call MPI_Cart_coords(comm3d, p, ndims, pc, ierr)
                   where (has_dir(:))
-                     dom%se(p, :, LO) = (dom%n_d(:) *  pc(:) ) / psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
-                     dom%se(p, :, HI) = (dom%n_d(:) * (pc(:)+1))/psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
+                     dom%pse(p)%sel(1, :, LO) = (dom%n_d(:) *  pc(:) ) / psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
+                     dom%pse(p)%sel(1, :, HI) = (dom%n_d(:) * (pc(:)+1))/psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
                   endwhere
                enddo
 
@@ -463,8 +469,8 @@ contains
                   pc(ydim) = mod(p/psize(xdim), psize(ydim))
                   pc(zdim) = p/product(psize(xdim:ydim))
                   where (has_dir(:))
-                     dom%se(p, :, LO) = (dom%n_d(:) *  pc(:) ) / psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
-                     dom%se(p, :, HI) = (dom%n_d(:) * (pc(:)+1))/psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
+                     dom%pse(p)%sel(1, :, LO) = (dom%n_d(:) *  pc(:) ) / psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
+                     dom%pse(p)%sel(1, :, HI) = (dom%n_d(:) * (pc(:)+1))/psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
                   endwhere
                enddo
 
@@ -477,19 +483,22 @@ contains
                pz_slab(p+1) = (p * nproc) / psize(zdim)
             enddo
             do p = 1, psize(zdim)
-               dom%se(pz_slab(p):pz_slab(p+1)-1, zdim, LO) = nint((dom%n_d(zdim) *  pz_slab(p)   ) / real(nproc))
-               dom%se(pz_slab(p):pz_slab(p+1)-1, zdim, HI) = nint((dom%n_d(zdim) *  pz_slab(p+1) ) / real(nproc)) - 1
-
+               do px = pz_slab(p), pz_slab(p+1)-1
+                  dom%pse(px)%sel(1, zdim, LO) = nint((dom%n_d(zdim) *  pz_slab(p)   ) / real(nproc))
+                  dom%pse(px)%sel(1, zdim, HI) = nint((dom%n_d(zdim) *  pz_slab(p+1) ) / real(nproc)) - 1
+               enddo
                allocate(py_slab(psize(ydim) + 1))
                do py = 0, psize(ydim)
                   py_slab(py+1) = (py * (pz_slab(p+1)-pz_slab(p))) / psize(ydim) !> \todo try to sort lengths
                enddo
                do py = 1, psize(ydim)
-                  dom%se(pz_slab(p)+py_slab(py):pz_slab(p)+py_slab(py+1)-1, ydim, LO) = nint((dom%n_d(ydim) *  py_slab(py)   ) / real(pz_slab(p+1)-pz_slab(p)))
-                  dom%se(pz_slab(p)+py_slab(py):pz_slab(p)+py_slab(py+1)-1, ydim, HI) = nint((dom%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - 1
+                  do px = pz_slab(p)+py_slab(py), pz_slab(p)+py_slab(py+1)-1
+                     dom%pse(px)%sel(1, ydim, LO) = nint((dom%n_d(ydim) *  py_slab(py)   ) / real(pz_slab(p+1)-pz_slab(p)))
+                     dom%pse(px)%sel(1, ydim, HI) = nint((dom%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - 1
+                  enddo
                   do px = 0, py_slab(py+1)-py_slab(py) - 1
-                     dom%se(pz_slab(p)+py_slab(py)+px, xdim, LO) = (dom%n_d(xdim) *  px    ) / (py_slab(py+1)-py_slab(py))
-                     dom%se(pz_slab(p)+py_slab(py)+px, xdim, HI) = (dom%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1
+                     dom%pse(pz_slab(p)+py_slab(py)+px)%sel(1, xdim, LO) = (dom%n_d(xdim) *  px    ) / (py_slab(py+1)-py_slab(py))
+                     dom%pse(pz_slab(p)+py_slab(py)+px)%sel(1, xdim, HI) = (dom%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1
                   enddo
                enddo
                if (allocated(py_slab)) deallocate(py_slab)
@@ -507,12 +516,12 @@ contains
 
       if (any(dom%bnd(:, :) == BND_COR) .and. comm3d == MPI_COMM_NULL) call die("[domain:init_domain] Corner BC not implemented without comm3d")
 
-      if ((dom%periodic(xdim) .and. dom%se(proc, xdim, HI) /= dom%n_d(xdim) - 1) .or. dom%se(proc, xdim, LO) /= 0)                 bnd_xl = 'mpi'
-      if ((dom%periodic(xdim) .and. dom%se(proc, xdim, LO) /= 0)                 .or. dom%se(proc, xdim, HI) /= dom%n_d(xdim) - 1) bnd_xr = 'mpi'
-      if ((dom%periodic(ydim) .and. dom%se(proc, ydim, HI) /= dom%n_d(ydim) - 1) .or. dom%se(proc, ydim, LO) /= 0)                 bnd_yl = 'mpi'
-      if ((dom%periodic(ydim) .and. dom%se(proc, ydim, LO) /= 0)                 .or. dom%se(proc, ydim, HI) /= dom%n_d(ydim) - 1) bnd_yr = 'mpi'
-      if ((dom%periodic(zdim) .and. dom%se(proc, zdim, HI) /= dom%n_d(zdim) - 1) .or. dom%se(proc, zdim, LO) /= 0)                 bnd_zl = 'mpi'
-      if ((dom%periodic(zdim) .and. dom%se(proc, zdim, LO) /= 0)                 .or. dom%se(proc, zdim, HI) /= dom%n_d(zdim) - 1) bnd_zr = 'mpi'
+      if ((dom%periodic(xdim) .and. dom%pse(proc)%sel(1, xdim, HI) /= dom%n_d(xdim) - 1) .or. dom%pse(proc)%sel(1, xdim, LO) /= 0)                 bnd_xl = 'mpi'
+      if ((dom%periodic(xdim) .and. dom%pse(proc)%sel(1, xdim, LO) /= 0)                 .or. dom%pse(proc)%sel(1, xdim, HI) /= dom%n_d(xdim) - 1) bnd_xr = 'mpi'
+      if ((dom%periodic(ydim) .and. dom%pse(proc)%sel(1, ydim, HI) /= dom%n_d(ydim) - 1) .or. dom%pse(proc)%sel(1, ydim, LO) /= 0)                 bnd_yl = 'mpi'
+      if ((dom%periodic(ydim) .and. dom%pse(proc)%sel(1, ydim, LO) /= 0)                 .or. dom%pse(proc)%sel(1, ydim, HI) /= dom%n_d(ydim) - 1) bnd_yr = 'mpi'
+      if ((dom%periodic(zdim) .and. dom%pse(proc)%sel(1, zdim, HI) /= dom%n_d(zdim) - 1) .or. dom%pse(proc)%sel(1, zdim, LO) /= 0)                 bnd_zl = 'mpi'
+      if ((dom%periodic(zdim) .and. dom%pse(proc)%sel(1, zdim, LO) /= 0)                 .or. dom%pse(proc)%sel(1, zdim, HI) /= dom%n_d(zdim) - 1) bnd_zr = 'mpi'
 
       ! For shear boundaries and some domain decompositions it is possible that a boundary can be mixed 'per' with 'mpi'
 #ifdef SHEAR_BND
@@ -549,9 +558,10 @@ contains
       if (master) then
          maxcnt = 0
          do p = 0, nproc - 1
-            write(msg,'(a,i4,a,2(3i6,a),i8,a)')"[domain:init_domain] segment @",p," : [",dom%se(p, :, LO),"] : [",dom%se(p, :, HI),"] #",product(dom%se(p, :, HI)-dom%se(p, :, LO)+1)," cells"
+            write(msg,'(a,i4,a,2(3i6,a),i8,a)')"[domain:init_domain] segment @",p," : [",dom%pse(p)%sel(1, :, LO),"] : [",dom%pse(p)%sel(1, :, HI),"] #", &
+                 &                             product(dom%pse(p)%sel(1, :, HI)-dom%pse(p)%sel(1, :, LO)+1)," cells"
             call printinfo(msg)
-            maxcnt = max(maxcnt, product(real(dom%se(p, :, HI)-dom%se(p, :, LO)+1)))
+            maxcnt = max(maxcnt, product(real(dom%pse(p)%sel(1, :, HI)-dom%pse(p)%sel(1, :, LO)+1)))
          enddo
          write(msg,'(a,f8.5)')"[domain:init_domain] Load balance: ",product(real(dom%n_d(:)))/(nproc*maxcnt) !> \todo add calculation of total internal boundary surface in cells
          call printinfo(msg)
@@ -620,9 +630,18 @@ contains
 
    subroutine cleanup_domain
 
+      use mpisetup, only: nproc
+
       implicit none
 
-      if (allocated(dom%se)) deallocate(dom%se)
+      integer :: p
+
+      if (allocated(dom%pse)) then
+         do p = 0, nproc - 1
+            deallocate(dom%pse(p)%sel)
+         enddo
+         deallocate(dom%pse)
+      endif
       if (allocated(primes)) deallocate(primes)
 
    end subroutine cleanup_domain
