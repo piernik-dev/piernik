@@ -106,7 +106,7 @@ contains
 
       use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
       use dataio_pub,          only: msg, warn, die
-      use domain,              only: psize, procn, procxyl, procyxl, pcoords, has_dir
+      use domain,              only: cdd, has_dir
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use global,              only: smalld
@@ -157,7 +157,7 @@ contains
 #ifdef SHEAR_BND
          if (dir == xdim) then
 #ifndef FFTW
-            allocate(send_right(flind%all, cg%nb,ny,nz), send_left(flind%all, cg%nb,ny,nz), &
+            allocate(send_right(flind%all, cg%nb,ny,nz), send_left (flind%all, cg%nb,ny,nz), &
                  &    recv_left(flind%all, cg%nb,ny,nz), recv_right(flind%all, cg%nb,ny,nz) )
             send_left(:,:,:,:)          =  cg%u%arr(:, cg%is:cg%isb,:,:)
             send_right(:,:,:,:)         =  cg%u%arr(:, cg%ieb:cg%ie,:,:)
@@ -214,10 +214,10 @@ contains
 !
 ! wysylamy na drugi brzeg
 !
-            call MPI_Isend(send_left , flind%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,LO), 10, comm, req(1), ierr)
-            call MPI_Isend(send_right, flind%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,HI), 20, comm, req(3), ierr)
-            call MPI_Irecv(recv_left , flind%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,LO), 20, comm, req(2), ierr)
-            call MPI_Irecv(recv_right, flind%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,HI), 10, comm, req(4), ierr)
+            call MPI_Isend(send_left , flind%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), 10, comm, req(1), ierr)
+            call MPI_Isend(send_right, flind%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), 20, comm, req(3), ierr)
+            call MPI_Irecv(recv_left , flind%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), 20, comm, req(2), ierr)
+            call MPI_Irecv(recv_right, flind%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), 10, comm, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
 
@@ -276,10 +276,10 @@ contains
                   send_right(i,1:cg%nb,:,:) = unshear_fft(cg%u%arr(i, cg%ieb:cg%ie, cg%js:cg%je,:), cg%x(cg%ieb:cg%ie),dely,.true.)
                enddo
 
-               call MPI_Isend(send_left , flind%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,LO), 10, comm, req(1), ierr)
-               call MPI_Isend(send_right, flind%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,HI), 20, comm, req(3), ierr)
-               call MPI_Irecv(recv_left , flind%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,LO), 20, comm, req(2), ierr)
-               call MPI_Irecv(recv_right, flind%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,HI), 10, comm, req(4), ierr)
+               call MPI_Isend(send_left , flind%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), 10, comm, req(1), ierr)
+               call MPI_Isend(send_right, flind%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), 20, comm, req(3), ierr)
+               call MPI_Irecv(recv_left , flind%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), 20, comm, req(2), ierr)
+               call MPI_Irecv(recv_right, flind%all*cg%nyb*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), 10, comm, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
 
@@ -297,14 +297,14 @@ contains
 #endif /* FFTW */
          else
 #endif /* SHEAR_BND */
-            if (psize(dir) > 1) then
+            if (cdd%psize(dir) > 1) then
 
                jtag = 20*dir
                itag = jtag - 10
-               call MPI_Isend(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BLK), procn(dir,LO), itag, comm3d, req(1), ierr)
-               call MPI_Isend(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BLK), procn(dir,HI), jtag, comm3d, req(2), ierr)
-               call MPI_Irecv(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BND), procn(dir,LO), jtag, comm3d, req(3), ierr)
-               call MPI_Irecv(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BND), procn(dir,HI), itag, comm3d, req(4), ierr)
+               call MPI_Isend(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BLK), cdd%procn(dir,LO), itag, comm3d, req(1), ierr)
+               call MPI_Isend(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BLK), cdd%procn(dir,HI), jtag, comm3d, req(2), ierr)
+               call MPI_Irecv(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BND), cdd%procn(dir,LO), jtag, comm3d, req(3), ierr)
+               call MPI_Irecv(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BND), cdd%procn(dir,HI), itag, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
@@ -316,7 +316,7 @@ contains
 
          if (cg%bnd(xdim, LO) == BND_COR) then
 !   - lower to left
-            if (pcoords(xdim) == 0 .and. pcoords(ydim) == 0) then
+            if (cdd%pcoords(xdim) == 0 .and. cdd%pcoords(ydim) == 0) then
                do i=1, cg%nb
                   do j=cg%js, cg%ny
                      cg%u%arr(iarr_all_dn,i,j,:) =  cg%u%arr(iarr_all_dn,j,cg%isb+1-i,:)
@@ -333,13 +333,13 @@ contains
                enddo
             endif
 
-            if (procxyl > 0) then
+            if (cdd%procxyl > 0) then
                allocate(send_left(flind%all, cg%nb, cg%ny, cg%nz), recv_left(flind%all, cg%nx, cg%nb, cg%nz))
 
                send_left(:,:,:,:) = cg%u%arr(:, cg%is:cg%isb,:,:)
 
-               call MPI_Isend(send_left, flind%all*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
-               call MPI_Irecv(recv_left, flind%all*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
+               call MPI_Isend(send_left, flind%all*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, cdd%procxyl, 70, comm, req(1), ierr)
+               call MPI_Irecv(recv_left, flind%all*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, cdd%procxyl, 80, comm, req(2), ierr)
 
                call MPI_Waitall(2,req(:),status(:,:),ierr)
 
@@ -365,7 +365,7 @@ contains
 
          if (cg%bnd(ydim, LO) == BND_COR) then
 !   - left to lower
-            if (pcoords(ydim) == 0 .and. pcoords(xdim) == 0 ) then
+            if (cdd%pcoords(ydim) == 0 .and. cdd%pcoords(xdim) == 0 ) then
                do j=1, cg%nb
                   do i=cg%is, cg%nx
                      cg%u%arr(iarr_all_dn,i,j,:) =  cg%u%arr(iarr_all_dn,cg%isb+1-j,i,:)
@@ -397,13 +397,13 @@ contains
                enddo
             endif
 
-            if (procyxl > 0) then
+            if (cdd%procyxl > 0) then
                allocate(send_left(flind%all, cg%nx, cg%nb, cg%nz), recv_left(flind%all, cg%nb, cg%ny, cg%nz))
 
                send_left(:,:,:,:) = cg%u%arr(:,:, cg%js:cg%jsb,:)
 
-               call MPI_Isend(send_left, flind%all*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
-               call MPI_Irecv(recv_left, flind%all*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
+               call MPI_Isend(send_left, flind%all*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, cdd%procyxl, 80, comm, req(1), ierr)
+               call MPI_Irecv(recv_left, flind%all*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, cdd%procyxl, 70, comm, req(2), ierr)
 
                call MPI_Waitall(2,req(:),status(:,:),ierr)
 

@@ -632,8 +632,10 @@ contains
 
       use constants,  only: ndims, AT_ALL_B, AT_OUT_B, AT_NO_B, AT_USER, LO, HI
       use dataio_pub, only: die, warn
-      use domain,     only: dom, has_dir, psize, pcoords, is_uneven, is_mpi_noncart
+      use domain,     only: dom, has_dir, cdd, is_uneven, is_mpi_noncart
       use grid_cont,  only: grid_container
+      use mpi,        only: MPI_COMM_NULL
+      use mpisetup,   only: comm3d
       use types,      only: at_user_settings
 
       implicit none
@@ -646,12 +648,13 @@ contains
       select case (area_type)
          case (AT_ALL_B)                           ! whole domain with mpi boundaries
             if (is_mpi_noncart) call die("[dataio_hdf5:set_dims_to_write] allbnd dump is too hard to implement with noncartesian domain division") !psize, pcoords
+            if (comm3d == MPI_COMM_NULL) call die("[dataio_hdf5:set_dims_to_write] allbnd dump requires comm3d and cdd%")
             if (is_uneven) call warn("[dataio_hdf5:set_dims_to_write] allbnd dump with uneven domain division")
             chnk(:)   = [cg%nx, cg%ny, cg%nz]
-            area(:)   = dom%n_d(:) + 2 * cg%nb * psize(:) ! \todo invent something better
+            area(:)   = dom%n_d(:) + 2 * cg%nb * cdd%psize(:) ! \todo invent something better
             lleft(:)  = 1
             lright(:) = chnk
-            loffs(:)  = cg%off(:) + 2 * cg%nb * pcoords(:) !\todo invent something better
+            loffs(:)  = cg%off(:) + 2 * cg%nb * cdd%pcoords(:) !\todo invent something better
          case (AT_OUT_B)                                   ! physical domain with outer boundaries
             area(:)   = [dom%nxt, dom%nyt, dom%nzt]
             lleft(:)  = cg%ijkse(:, LO)

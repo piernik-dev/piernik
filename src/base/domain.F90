@@ -43,8 +43,7 @@ module domain
 
    private
    public :: cleanup_domain, init_domain, translate_bnds_to_ints_dom, is_overlap, domain_container, &
-        &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, &
-        &    pcoords, procn, psize, procxyl, procyxl
+        &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, cdd
 
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
@@ -97,9 +96,16 @@ module domain
 
    end type domain_container
 
-   integer, dimension(ndims), protected :: pcoords
-   integer, protected :: procxyl, procyxl
-   integer, protected, dimension(ndims, LO:HI) :: procn   !< array of neighbours proc numbers
+   type cart_decomposition
+      integer, dimension(ndims)        :: psize   !< number of divisions in each direction
+      integer, dimension(ndims)        :: pcoords !< own process coordinates within psize(:)-shaped array of processes
+      integer, dimension(ndims, LO:HI) :: procn   !< array of neighbours proc numbers
+      integer                          :: procxyl !< neighbour in corner boundaries
+      integer                          :: procyxl !< neighbour in corner boundaries
+   end type cart_decomposition
+
+   type(cart_decomposition), protected :: cdd !< Cartesian Domain Decomposition stuff
+
    logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
    integer, protected    :: eff_dim                  !< effective dimensionality of the simulation
 
@@ -114,7 +120,7 @@ module domain
 
    ! Namelist variables
 
-   integer, dimension(ndims), protected :: psize !< desired number of MPI blocks in x, y and z-dimension
+   integer, dimension(ndims) :: psize !< desired number of MPI blocks in x, y and z-dimension
    logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
    logical :: allow_uneven    !< allows different values of n[xyz]b on divverent processes
    logical :: allow_noncart   !< allows more than one neighbour on a boundary
@@ -416,7 +422,13 @@ contains
          dom%pse(p)%sel(:, :, :) = 0
       enddo
 
-      procn(:,:) = MPI_PROC_NULL
+      ! cdd% will contain valid values if and only if comm3d becomes valid communicator
+      cdd%procn(:,:) = MPI_PROC_NULL
+      cdd%psize(:) = -1
+      cdd%pcoords(:) = -1
+      cdd%procxyl = MPI_PROC_NULL
+      cdd%procyxl = MPI_PROC_NULL
+
       comm3d = MPI_COMM_NULL
 
       select case (dom%pdiv_type)
@@ -425,37 +437,34 @@ contains
             if (is_mpi_noncart) call die("[domain:init_domain] inconsistent decomposition specs")
 
             if (use_comm3d) then
+               cdd%psize(:) = dom%pdiv(:)
                if (is_mpi_noncart) call die("[domain:init_domain] MPI_Cart_create cannot be used for non-rectilinear or AMR domains")
                if (master) call printinfo("[domain:init_domain] Cartesian decomposition with comm3d")
 
-               call MPI_Cart_create(comm, ndims, psize, dom%periodic, reorder, comm3d, ierr)
-               call MPI_Cart_coords(comm3d, proc, ndims, pcoords, ierr)
+               call MPI_Cart_create(comm, ndims, cdd%psize, dom%periodic, reorder, comm3d, ierr)
+               call MPI_Cart_coords(comm3d, proc, ndims, cdd%pcoords, ierr)
 
                do p = 0, nproc-1
                   call MPI_Cart_coords(comm3d, p, ndims, pc, ierr)
                   where (has_dir(:))
-                     dom%pse(p)%sel(1, :, LO) = (dom%n_d(:) *  pc(:) ) / psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
-                     dom%pse(p)%sel(1, :, HI) = (dom%n_d(:) * (pc(:)+1))/psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
+                     dom%pse(p)%sel(1, :, LO) = (dom%n_d(:) *  pc(:) ) / cdd%psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
+                     dom%pse(p)%sel(1, :, HI) = (dom%n_d(:) * (pc(:)+1))/cdd%psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
                   endwhere
                enddo
 
                ! Compute neighbors
                do p = xdim, zdim
-                  call MPI_Cart_shift(comm3d, p-xdim, 1, procn(p, LO), procn(p, HI), ierr)
+                  call MPI_Cart_shift(comm3d, p-xdim, 1, cdd%procn(p, LO), cdd%procn(p, HI), ierr)
                enddo
 
                if (any(dom%bnd(xdim:ydim, LO) == BND_COR)) then
-                  if (pcoords(xdim) == 0 .and. pcoords(ydim) > 0) then
-                     pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-                     call MPI_Cart_rank(comm3d,pc,procxyl,ierr)
-                  else
-                     procxyl = MPI_PROC_NULL
+                  if (cdd%pcoords(xdim) == 0 .and. cdd%pcoords(ydim) > 0) then
+                     pc(:) = [ cdd%pcoords(ydim), cdd%pcoords(xdim), cdd%pcoords(zdim) ]
+                     call MPI_Cart_rank(comm3d, pc, cdd%procxyl, ierr)
                   endif
-                  if (pcoords(ydim) == 0 .and. pcoords(xdim) > 0 ) then
-                     pc = (/pcoords(ydim),pcoords(xdim),pcoords(zdim)/)
-                     call MPI_Cart_rank(comm3d,pc,procyxl,ierr)
-                  else
-                     procyxl = MPI_PROC_NULL
+                  if (cdd%pcoords(ydim) == 0 .and. cdd%pcoords(xdim) > 0 ) then
+                     pc(:) = [ cdd%pcoords(ydim), cdd%pcoords(xdim), cdd%pcoords(zdim) ]
+                     call MPI_Cart_rank(comm3d, pc, cdd%procyxl, ierr)
                   endif
                endif
 
@@ -465,9 +474,7 @@ contains
                if (master) call printinfo("[domain:init_domain] Cartesian decomposition without comm3d")
                do p = 0, nproc-1
                   if (product(psize(:)) /= nproc) call die("[domain:init_domain] product(psize(:)) /= nproc")
-                  pc(xdim) = mod(p, psize(xdim))
-                  pc(ydim) = mod(p/psize(xdim), psize(ydim))
-                  pc(zdim) = p/product(psize(xdim:ydim))
+                  pc(:) = [ mod(p, psize(xdim)), mod(p/psize(xdim), psize(ydim)), p/product(psize(xdim:ydim)) ]
                   where (has_dir(:))
                      dom%pse(p)%sel(1, :, LO) = (dom%n_d(:) *  pc(:) ) / psize(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
                      dom%pse(p)%sel(1, :, HI) = (dom%n_d(:) * (pc(:)+1))/psize(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
@@ -531,13 +538,13 @@ contains
       ! This will be possible when is_mpi_noncart will be fully implemented
 
 #ifndef FFTW
-      if (pcoords(xdim) == 0) then
+      if (cdd%pcoords(xdim) == 0) then
          bnd_xl = 'she'
       else
          bnd_xl = 'mpi'
       endif
 
-      if (pcoords(xdim) == psize(xdim)-1) then
+      if (cdd%pcoords(xdim) == psize(xdim)-1) then
          bnd_xr = 'she'
       else
          bnd_xr = 'mpi'
@@ -548,7 +555,7 @@ contains
 #ifdef DEBUG
       if (comm3d /= MPI_COMM_NULL) then
          do p = xdim, zdim
-            write(msg,*) 'dir',p,': ',procn(p, LO), proc, procn(p, HI)
+            write(msg,*) 'dir',p,': ',cdd%procn(p, LO), proc, cdd%procn(p, HI)
             call printinfo(msg)
          enddo
       endif

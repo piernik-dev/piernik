@@ -474,8 +474,8 @@ contains
 
    subroutine grav_ptmass_pure(gp, ax, flatten)
 
-      use units,  only: newtong
-      use types,      only: axes
+      use units, only: newtong
+      use types, only: axes
 
       implicit none
 
@@ -830,7 +830,7 @@ contains
       use types,      only: value
       use constants,  only: xdim, ydim, zdim, ndims, MAXL
       use dataio_pub, only: die
-      use domain,     only: is_mpi_noncart, psize, pcoords
+      use domain,     only: is_mpi_noncart, cdd
       use func,       only: get_extremum
       use grid,       only: cga, D_x, D_y, D_z
       use grid_cont,  only: grid_container !, cg_list_element
@@ -846,7 +846,7 @@ contains
       real, dimension(:), allocatable                                  :: gravrx, gravry, gravrz
       real                                                             :: dgpx_proc, dgpy_proc, dgpz_proc, ddgph
       real, dimension(0:nproc-1)                                       :: dgpx_all,  dgpy_all,  dgpz_all
-      real, dimension(0:psize(xdim)-1,0:psize(ydim)-1,0:psize(zdim)-1) :: dgpx,      dgpy,      dgpz,     ddgp
+      real, dimension(0:cdd%psize(xdim)-1,0:cdd%psize(ydim)-1,0:cdd%psize(zdim)-1) :: dgpx,      dgpy,      dgpz,     ddgp
       type(value)                                                      :: gp_max
       type(grid_container), pointer :: cg
 
@@ -907,19 +907,19 @@ contains
          enddo
 
          ddgp(0,0,0) = 0.0
-         do i = 1, psize(xdim)-1
+         do i = 1, cdd%psize(xdim)-1
             ddgp(i,0,0) = ddgp(i-1,0,0) + dgpx(i-1,0,0)
          enddo
 
-         do i=0, psize(xdim)-1
-            do j = 1, psize(ydim)-1
+         do i=0, cdd%psize(xdim)-1
+            do j = 1, cdd%psize(ydim)-1
                ddgp(i,j,0) = ddgp(i,j-1,0) + dgpy(i,j-1,0)
             enddo
          enddo
 
-         do i=0, psize(xdim)-1
-            do j=0, psize(ydim)-1
-               do k = 1, psize(zdim)-1
+         do i=0, cdd%psize(xdim)-1
+            do j=0, cdd%psize(ydim)-1
+               do k = 1, cdd%psize(zdim)-1
                   ddgp(i,j,k)= ddgp(i,j,k-1) + dgpz(i,j,k-1)
                enddo
             enddo
@@ -929,9 +929,9 @@ contains
 
       call MPI_Bcast(ddgp, nproc, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-      px = pcoords(xdim)
-      py = pcoords(ydim)
-      pz = pcoords(zdim)
+      px = cdd%pcoords(xdim)
+      py = cdd%pcoords(ydim)
+      pz = cdd%pcoords(zdim)
 
       ddgph  = gpwork(1,1,1)-gpwork(cg%is,cg%js,cg%ks)
       gpwork = gpwork + ddgp(px,py,pz) + ddgph

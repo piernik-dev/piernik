@@ -40,7 +40,7 @@ contains
 
       use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK
       use dataio_pub, only: die
-      use domain,     only: psize, is_mpi_noncart, procn
+      use domain,     only: cdd, is_mpi_noncart
       use grid,       only: cga
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
@@ -59,14 +59,14 @@ contains
       if (comm3d == MPI_COMM_NULL) call die("[magboundaries:bnd_a] comm3d == MPI_COMM_NULL")
 
       do i = xdim, zdim
-         if (psize(i) > 1) then
+         if (cdd%psize(i) > 1) then
 
             jtag = 20*i
             itag = jtag - 10
-            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BLK), procn(i,LO), itag, comm3d, req(1), ierr)
-            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BLK), procn(i,HI), jtag, comm3d, req(3), ierr)
-            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BND), procn(i,LO), jtag, comm3d, req(2), ierr)
-            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BND), procn(i,HI), itag, comm3d, req(4), ierr)
+            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BLK), cdd%procn(i,LO), itag, comm3d, req(1), ierr)
+            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BLK), cdd%procn(i,HI), jtag, comm3d, req(3), ierr)
+            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BND), cdd%procn(i,LO), jtag, comm3d, req(2), ierr)
+            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BND), cdd%procn(i,HI), itag, comm3d, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
@@ -78,7 +78,7 @@ contains
 
       use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub, only: msg, warn, die
-      use domain,     only: procn, psize, procxyl, procyxl, pcoords, is_mpi_noncart
+      use domain,     only: cdd, is_mpi_noncart
       use fluidindex, only: ibx, iby, ibz
       use grid,       only: cga
       use grid_cont,  only: grid_container
@@ -152,10 +152,10 @@ contains
 !
 ! wysylamy na drugi brzeg
 !
-            call MPI_Isend(send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,LO), 10, comm, req(1), ierr)
-            call MPI_Isend(send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,HI), 20, comm, req(3), ierr)
-            call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,LO), 20, comm, req(2), ierr)
-            call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, procn(dir,HI), 10, comm, req(4), ierr)
+            call MPI_Isend(send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), 10, comm, req(1), ierr)
+            call MPI_Isend(send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), 20, comm, req(3), ierr)
+            call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), 20, comm, req(2), ierr)
+            call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), 10, comm, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
 
@@ -171,14 +171,14 @@ contains
          else
 #endif /* SHEAR */
 
-            if (psize(dir) > 1) then
+            if (cdd%psize(dir) > 1) then
 
                jtag = 20*dir
                itag = jtag - 10
-               call MPI_Isend(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BLK), procn(dir,LO), itag, comm3d, req(1), ierr)
-               call MPI_Isend(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BLK), procn(dir,HI), jtag, comm3d, req(3), ierr)
-               call MPI_Irecv(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BND), procn(dir,LO), jtag, comm3d, req(2), ierr)
-               call MPI_Irecv(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BND), procn(dir,HI), itag, comm3d, req(4), ierr)
+               call MPI_Isend(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BLK), cdd%procn(dir,LO), itag, comm3d, req(1), ierr)
+               call MPI_Isend(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BLK), cdd%procn(dir,HI), jtag, comm3d, req(3), ierr)
+               call MPI_Irecv(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BND), cdd%procn(dir,LO), jtag, comm3d, req(2), ierr)
+               call MPI_Irecv(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BND), cdd%procn(dir,HI), itag, comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
@@ -191,7 +191,7 @@ contains
 
          if (cg%bnd(xdim, LO) == BND_COR) then
 !   - lower to left
-            if (pcoords(xdim) == 0 .and. pcoords(ydim) == 0) then
+            if (cdd%pcoords(xdim) == 0 .and. cdd%pcoords(ydim) == 0) then
                do i=1, cg%nb
                   do j=cg%js, cg%ny
                      cg%b%arr(ibx,i,j,:) = -cg%b%arr(iby,j,cg%isb+1-i,:)
@@ -201,13 +201,13 @@ contains
                enddo
             endif
 
-            if (procxyl > 0) then
+            if (cdd%procxyl > 0) then
                allocate(send_left(3, cg%nb, cg%ny, cg%nz), recv_left(3, cg%nx, cg%nb, cg%nz))
 
                send_left(:,:,:,:) = cg%b%arr(:, cg%is:cg%isb,:,:)
 
-               call MPI_Isend(send_left, 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 70, comm, req(1), ierr)
-               call MPI_Irecv(recv_left, 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procxyl, 80, comm, req(2), ierr)
+               call MPI_Isend(send_left, 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, cdd%procxyl, 70, comm, req(1), ierr)
+               call MPI_Irecv(recv_left, 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, cdd%procxyl, 80, comm, req(2), ierr)
 
                call MPI_Waitall(2,req(:),status(:,:),ierr)
 
@@ -226,7 +226,7 @@ contains
 
          if (cg%bnd(ydim, LO) == BND_COR) then
 !   - left to lower
-            if (pcoords(ydim) == 0 .and. pcoords(xdim) == 0 ) then
+            if (cdd%pcoords(ydim) == 0 .and. cdd%pcoords(xdim) == 0 ) then
                do j=1, cg%nb
                   do i=cg%is, cg%nx
                      cg%b%arr(ibx,i,j,:) =  cg%b%arr(iby,cg%isb+1-j,i,:)
@@ -244,13 +244,13 @@ contains
                enddo
             endif
 
-            if (procyxl > 0) then
+            if (cdd%procyxl > 0) then
                allocate(send_left(3, cg%nx, cg%nb, cg%nz), recv_left(3, cg%nb, cg%ny, cg%nz))
 
                send_left(:,:,:,:) = cg%b%arr(:,:, cg%js:cg%jsb,:)
 
-               call MPI_Isend   (send_left , 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 80, comm, req(1), ierr)
-               call MPI_Irecv   (recv_left , 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, procyxl, 70, comm, req(2), ierr)
+               call MPI_Isend   (send_left , 3*cg%nx*cg%nb*cg%nz, MPI_DOUBLE_PRECISION, cdd%procyxl, 80, comm, req(1), ierr)
+               call MPI_Irecv   (recv_left , 3*cg%nb*cg%ny*cg%nz, MPI_DOUBLE_PRECISION, cdd%procyxl, 70, comm, req(2), ierr)
 
                call MPI_Waitall(2,req(:),status(:,:),ierr)
 

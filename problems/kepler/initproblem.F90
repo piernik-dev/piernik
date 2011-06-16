@@ -284,7 +284,7 @@ contains
 
       use constants,    only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ, DST
       use dataio_pub,   only: msg, printinfo, die
-      use domain,       only: geometry_type, pcoords, dom, has_dir
+      use domain,       only: geometry_type, cdd, dom, has_dir
       use fluidindex,   only: ibx, iby, ibz, flind
       use fluidtypes,   only: component_fluid
       use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
@@ -422,7 +422,7 @@ contains
                if (master) call read_dens_profile(densfile,gdens)
                call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-               dens_prof(:)    = gdens(1+pcoords(xdim)*cg%nxb:cg%nx+pcoords(xdim)*cg%nxb)
+               dens_prof(:)    = gdens(1+cdd%pcoords(xdim)*cg%nxb:cg%nx+cdd%pcoords(xdim)*cg%nxb)
                deallocate(gdens)
             else
                dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%nx, 0.0, 1.0) + dens_amb

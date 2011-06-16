@@ -84,7 +84,7 @@ contains
 
       use constants,  only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI
       use dataio_pub, only: die
-      use domain,     only: has_dir, psize, procn
+      use domain,     only: has_dir, cdd
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_REQUEST_NULL, MPI_COMM_NULL
@@ -134,9 +134,9 @@ contains
                         endif
                      case (BND_MPI)
                         if (comm3d /= MPI_COMM_NULL) then
-                           if (psize(d) > 1) then
-                              call MPI_Isend(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BLK),  procn(d, lh), 2*d+(LO+HI-lh), comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
-                              call MPI_Irecv(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BND),  procn(d, lh), 2*d+       lh,  comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                           if (cdd%psize(d) > 1) then
+                              call MPI_Isend(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BLK), cdd%procn(d, lh), 2*d+(LO+HI-lh), comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                              call MPI_Irecv(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BND), cdd%procn(d, lh), 2*d+       lh,  comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
                            else
                               call die("[crdiffiusion:all_wcr_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
                            endif

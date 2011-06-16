@@ -415,7 +415,7 @@ contains
 
       use constants,  only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B
       use dataio_pub, only: die, msg
-      use domain,     only: has_dir, psize, procn
+      use domain,     only: has_dir, cdd
       use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
       use mpisetup,   only: ierr, comm, comm3d, proc, req, status
@@ -483,11 +483,11 @@ contains
                         endif
                      case (BND_MPI)
                         if (comm3d /= MPI_COMM_NULL) then
-                           if (psize(d) > 1) then
-                              call MPI_Isend(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BLK), procn(d, lh), 2*d+(LO+HI-lh), comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
-                              call MPI_Irecv(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BND), procn(d, lh), 2*d+       lh,  comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                           if (cdd%psize(d) > 1) then
+                              call MPI_Isend(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BLK), cdd%procn(d, lh), 2*d+(LO+HI-lh), comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                              call MPI_Irecv(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BND), cdd%procn(d, lh), 2*d+       lh,  comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
                            else
-                              call die("[grid:arr3d_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
+                              call die("[grid:arr3d_boundaries] bnd_[xyz][lr] == 'mpi' && cdd%psize([xyz]dim) <= 1")
                            endif
                         endif
                      case (BND_SHE) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
