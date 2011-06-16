@@ -28,9 +28,6 @@
 #include "piernik.h"
 #include "macros.h"
 
-!> \todo remove the TRANSIENT symbol as soon as everything become compatible with multiple grid_containers and lists of them
-#define TRANSIENT
-
 !>
 !! \brief (DW) Module containing routines to specify required computational mesh.
 !! \date January/February 2006
@@ -42,27 +39,18 @@
 module grid
 
    use grid_cont, only: cg_set
-#ifdef TRANSIENT
-   use grid_cont, only: grid_container
-#endif
 
    implicit none
 
    private
    public :: init_grid, init_arrays, grid_mpi_boundaries_prep, arr3d_boundaries, cleanup_grid
    public :: total_ncells, cga, D_x, D_y, D_z
-#ifdef TRANSIENT
-   public :: cg
-#endif
 
    integer, protected :: total_ncells !< total number of %grid cells
    integer, protected :: D_x          !< set to 1 when x-direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
    integer, protected :: D_y          !< set to 1 when y-direction exists, 0 otherwise.
    integer, protected :: D_z          !< set to 1 when z-direction exists, 0 otherwise.
    type(cg_set), target :: cga        !< A container for all grids.
-#ifdef TRANSIENT
-   type(grid_container), pointer :: cg !< A container for the grid. For AMR this will be a dynamically resized array
-#endif
 
 contains
 
@@ -96,10 +84,6 @@ contains
       do g = lbound(cga%cg_levels(:), dim=1), ubound(cga%cg_levels(:), dim=1)
          allocate(cga%cg_levels(g)%cg_l(size(cga%cg_all)))
       enddo
-
-#ifdef TRANSIENT
-      cg => cga%cg_all(1)
-#endif
 
       !for an uniform grid set up trivial lists of grid containers
       do g = lbound(cga%cg_all(:), dim=1), ubound(cga%cg_all(:), dim=1)
