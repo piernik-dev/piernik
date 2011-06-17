@@ -30,7 +30,7 @@
 !>
 !! \brief (KK)
 !!
-!! This module provides global simulationvariables such as t or nstep and some numerical parameters, like cfl
+!! This module provides global simulation variables such as t or nstep and some numerical parameters, like cfl
 !!
 !! In this module following namelists of parameters are specified:
 !! \copydetails global::init_global
@@ -48,12 +48,12 @@ module global
         &    integration_order, limiter, smalld, smallei, smallp, use_smalld, magic_mass, local_magic_mass, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step
 
-   real, parameter       :: dt_default_grow = 2.
-   logical               :: cfl_violated             !< True when cfl condition is violated
-   real                  :: t, dt, dt_old, dtm
-   real, save            :: magic_mass = 0.0
-   real, save            :: local_magic_mass = 0.0
-   integer               :: nstep
+   real, parameter :: dt_default_grow = 2.
+   logical         :: cfl_violated             !< True when cfl condition is violated
+   real            :: t, dt, dt_old, dtm
+   real, save      :: magic_mass = 0.0
+   real, save      :: local_magic_mass = 0.0
+   integer         :: nstep
 
    ! Namelist variables
 
@@ -72,13 +72,14 @@ module global
    !! \f$c_{\textrm{fr}} = \sqrt{v^2 + \frac{1}{2}(\max{v} - \min{v})c_{\textrm{fr}}^{\textrm{smooth}}} + \ldots\f$
    !<
    real    :: cfr_smooth
-   integer, protected :: integration_order           !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
+   integer, protected :: integration_order !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
    character(len=cbuff_len) :: limiter     !< type of flux limiter
    character(len=cbuff_len) :: cflcontrol  !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
    logical                  :: repeat_step !< repeat fluid step if cfl condition is violated (significantly increases mem usage)
    real    :: relax_time                   !< relaxation/grace time, additional physics will be turned off until global::t >= global::relax_time
 
-   namelist /NUMERICAL_SETUP/  cfl, smalld, smallei, integration_order, cfr_smooth, dt_initial, dt_max_grow, dt_min, smallc, smallp, limiter, cflcontrol, use_smalld, cfl_max, relax_time, repeat_step
+   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
+        &                     repeat_step, limiter, relax_time, integration_order, cfr_smooth
 
 contains
 
@@ -90,23 +91,23 @@ contains
 !! @b NUMERICAL_SETUP
 !! \n \n
 !! <table border="+1">
-!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>cfl              </td><td>0.7   </td><td>real value between 0.0 and 1.0       </td><td>\copydoc global::cfl              </td></tr>
-!! <tr><td>cfl_max          </td><td>0.9   </td><td>real value between cfl and 1.0       </td><td>\copydoc global::cfl_max          </td></tr>
-!! <tr><td>cflcontrol       </td><td>       </td><td>string                              </td><td>\copydoc global::cflcontrol       </td></tr>
-!! <tr><td>repeat_step      </td><td>.true.</td><td>logical value                        </td><td>\copydoc global::use_smalld       </td></tr>
-!! <tr><td>smallp           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc global::smallp           </td></tr>
-!! <tr><td>smalld           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc global::smalld           </td></tr>
-!! <tr><td>use_smalld       </td><td>.true.</td><td>logical value                        </td><td>\copydoc global::use_smalld       </td></tr>
-!! <tr><td>smallei          </td><td>1.e-10</td><td>real value                           </td><td>\copydoc global::smallei          </td></tr>
-!! <tr><td>smallc           </td><td>1.e-10</td><td>real value                           </td><td>\copydoc global::smallc           </td></tr>
-!! <tr><td>integration_order</td><td>2     </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc global::integration_order</td></tr>
-!! <tr><td>cfr_smooth       </td><td>0.0   </td><td>real value                           </td><td>\copydoc global::cfr_smooth       </td></tr>
-!! <tr><td>dt_initial       </td><td>-1.   </td><td>positive real value or -1.           </td><td>\copydoc global::dt_initial       </td></tr>
-!! <tr><td>dt_max_grow      </td><td>2.    </td><td>real value > 1.1                     </td><td>\copydoc global::dt_max_grow      </td></tr>
-!! <tr><td>dt_min           </td><td>0.    </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
-!! <tr><td>limiter          </td><td>vanleer</td><td>string                              </td><td>\copydoc global::limiter          </td></tr>
-!! <tr><td>relax_time       </td><td>0.0   </td><td>real value                           </td><td>\copydoc global::relax_time       </td></tr>
+!!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!!   <tr><td>cfl              </td><td>0.7    </td><td>real value between 0.0 and 1.0       </td><td>\copydoc global::cfl              </td></tr>
+!!   <tr><td>cfl_max          </td><td>0.9    </td><td>real value between cfl and 1.0       </td><td>\copydoc global::cfl_max          </td></tr>
+!!   <tr><td>cflcontrol       </td><td>warn   </td><td>string                               </td><td>\copydoc global::cflcontrol       </td></tr>
+!!   <tr><td>repeat_step      </td><td>.true. </td><td>logical value                        </td><td>\copydoc global::use_smalld       </td></tr>
+!!   <tr><td>smallp           </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smallp           </td></tr>
+!!   <tr><td>smalld           </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smalld           </td></tr>
+!!   <tr><td>use_smalld       </td><td>.true. </td><td>logical value                        </td><td>\copydoc global::use_smalld       </td></tr>
+!!   <tr><td>smallei          </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smallei          </td></tr>
+!!   <tr><td>smallc           </td><td>1.e-10 </td><td>real value                           </td><td>\copydoc global::smallc           </td></tr>
+!!   <tr><td>integration_order</td><td>2      </td><td>1 or 2 (or 3 - currently unavailable)</td><td>\copydoc global::integration_order</td></tr>
+!!   <tr><td>cfr_smooth       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::cfr_smooth       </td></tr>
+!!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1.           </td><td>\copydoc global::dt_initial       </td></tr>
+!!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value > 1.1                     </td><td>\copydoc global::dt_max_grow      </td></tr>
+!!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
+!!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
+!!   <tr><td>relax_time       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::relax_time       </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -141,27 +142,22 @@ contains
       dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
       dt_max_grow = dt_default_grow  !< for sensitive setups consider setting this as low as 1.1
       dt_min      = tiny(1.)
-
+      relax_time  = 0.
       integration_order  = 2
 
       if (master) then
          diff_nml(NUMERICAL_SETUP)
 
          ! Sanitize input parameters, if possible
+         if (cfl <= 0. .or. cfl >1.0) call die("[global:init_global] CFL value should be >0. and <=1.")
          cfl_max = min(max(cfl_max, min(cfl*1.1, cfl+0.05, (1.+cfl)/2.) ), 1.0) ! automatically sanitize cfl_max
          if (integration_order > 2) call die ('[global:init_global]: "ORIG" scheme integration_order must be 1 or 2')
 
          if (dt_max_grow < 1.01) then
-            if (master) then
-               write(msg,'(2(a,g10.3))')"[global:init_global] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
-               call warn(msg)
-            endif
+            write(msg,'(2(a,g10.3))')"[global:init_global] dt_max_grow = ",dt_max_grow," is way too low. Resetting to ",dt_default_grow
+            call warn(msg)
             dt_max_grow = dt_default_grow
          endif
-
-      endif
-
-      if (master) then
 
          cbuff(1) = limiter
          cbuff(2) = cflcontrol
