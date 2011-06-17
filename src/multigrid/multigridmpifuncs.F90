@@ -52,9 +52,9 @@ contains
 
       use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ndims, INVALID
       use dataio_pub,    only: warn, die
-      use domain,        only: is_overlap, has_dir
+      use domain,        only: is_overlap, has_dir, cdd
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_COMM_NULL
-      use mpisetup,      only: ierr, comm3d, proc, nproc, procmask
+      use mpisetup,      only: ierr, proc, nproc, procmask
       use multigridvars, only: lvl, plvl, base, pr_segment
 
       implicit none
@@ -139,7 +139,7 @@ contains
 
          !BEWARE: almost replicated code (grid:grid_mpi_boundaries_prep)
          ! find neighbours and set up the MPI containers
-         if (comm3d == MPI_COMM_NULL) then
+         if (cdd%comm3d == MPI_COMM_NULL) then
 
             ! assume that cuboids fill the domain and don't collide
 
@@ -291,7 +291,7 @@ contains
       use dataio_pub,    only: die
       use domain,        only: is_mpi_noncart, cdd, has_dir
       use mpi,           only: MPI_REQUEST_NULL, MPI_COMM_NULL
-      use mpisetup,      only: proc, comm, comm3d, ierr, have_mpi, req, status
+      use mpisetup,      only: proc, comm, ierr, have_mpi, req, status
       use multigridvars, only: lvl, plvl, base, roof, is_external, ngridvars
 
       implicit none
@@ -326,7 +326,7 @@ contains
       ! Set the external boundary, where appropriate
       if (any(is_external(:, :))) call multigrid_ext_bnd(lev, iv, ng, mode, cor)
 
-      if (comm3d == MPI_COMM_NULL) then
+      if (cdd%comm3d == MPI_COMM_NULL) then
 
          ! \todo call curl%internal_boundaries(ib, curl%mgvar)
          ! or    call curl%internal_boundaries(ib, curl%mgvar(:, :, :, iv)) (pointers in both cases)
@@ -381,10 +381,10 @@ contains
             if (has_dir(d)) then
                doff = dreq*(d-xdim)
                if (cdd%psize(d) > 1) then ! \todo remove psize(:), try to rely on offsets or boundary types
-                  if (.not. is_external(d, LO)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, LO, BLK, ng), cdd%procn(d, LO), 17+doff, comm3d, req(1+doff), ierr)
-                  if (.not. is_external(d, HI)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, HI, BLK, ng), cdd%procn(d, HI), 19+doff, comm3d, req(2+doff), ierr)
-                  if (.not. is_external(d, LO)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, LO, BND, ng), cdd%procn(d, LO), 19+doff, comm3d, req(3+doff), ierr)
-                  if (.not. is_external(d, HI)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, HI, BND, ng), cdd%procn(d, HI), 17+doff, comm3d, req(4+doff), ierr)
+                  if (.not. is_external(d, LO)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, LO, BLK, ng), cdd%procn(d, LO), 17+doff, cdd%comm3d, req(1+doff), ierr)
+                  if (.not. is_external(d, HI)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, HI, BLK, ng), cdd%procn(d, HI), 19+doff, cdd%comm3d, req(2+doff), ierr)
+                  if (.not. is_external(d, LO)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, LO, BND, ng), cdd%procn(d, LO), 19+doff, cdd%comm3d, req(3+doff), ierr)
+                  if (.not. is_external(d, HI)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, HI, BND, ng), cdd%procn(d, HI), 17+doff, cdd%comm3d, req(4+doff), ierr)
                else
                   if (is_external(d, LO) .neqv. is_external(d, HI)) call die("[multigridmpifuncs:mpi_multigrid_bnd] inconsiztency in is_external(:)")
                   if (.not. is_external(d, LO)) then

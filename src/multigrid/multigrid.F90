@@ -78,11 +78,11 @@ contains
       use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
-      use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven
+      use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven, cdd
       use grid,                only: D_x, D_y, D_z, cga
       use grid_cont,           only: cg_list_element, grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_LOR, MPI_MIN, MPI_MAX, MPI_COMM_NULL
-      use mpisetup,            only: comm, comm3d, ierr, proc, master, slave, nproc, buffer_dim, ibuff, lbuff
+      use mpisetup,            only: comm, ierr, proc, master, slave, nproc, buffer_dim, ibuff, lbuff
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
       use multigridmpifuncs,   only: mpi_multigrid_prep
       use multigridvars,       only: lvl, plvl, roof, base, mg_nb, ngridvars, correction, single_base, &
@@ -354,7 +354,7 @@ contains
       enddo
 
       call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, 1, MPI_LOGICAL, MPI_LOR, comm, ierr)
-      if ((is_mg_uneven .or. is_uneven .or. comm3d == MPI_COMM_NULL) .and. ord_prolong /= 0) then
+      if ((is_mg_uneven .or. is_uneven .or. cdd%comm3d == MPI_COMM_NULL) .and. ord_prolong /= 0) then
          ord_prolong = 0
          if (master) call warn("[multigrid:init_multigrid] prolongation order /= injection not implemented on uneven or noncartesian domains yet.")
       endif

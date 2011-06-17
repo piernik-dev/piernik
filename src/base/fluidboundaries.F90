@@ -39,14 +39,14 @@ contains
 
    subroutine init_fluidboundaries(cg)
 
-      use dataio_pub,            only: msg, warn, die, code_progress
       use constants,             only: PIERNIK_INIT_DOMAIN, xdim, LO, HI, &
            &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_INF, BND_USER
+      use dataio_pub,            only: msg, warn, die, code_progress
+      use domain,                only: cdd
       use fluidboundaries_funcs, only: bnd_null, bnd_xl_per, bnd_xl_ref, bnd_xl_out, bnd_xl_outd, bnd_xr_per, bnd_xr_ref, bnd_xr_out, bnd_xr_outd
       use fluidboundaries_pub,   only: user_bnd_xl, user_bnd_xr, func_bnd_xl, func_bnd_xr
       use grid_cont,             only: grid_container
       use mpi,                   only: MPI_COMM_NULL
-      use mpisetup,              only: comm3d
 
       implicit none
 
@@ -58,7 +58,7 @@ contains
          case (BND_COR, BND_MPI, BND_SHE, BND_INF)
             func_bnd_xl => bnd_null
          case (BND_PER)
-            if (comm3d == MPI_COMM_NULL) then
+            if (cdd%comm3d == MPI_COMM_NULL) then
                func_bnd_xl => bnd_null
             else
                func_bnd_xl => bnd_xl_per
@@ -81,7 +81,7 @@ contains
          case (BND_COR, BND_MPI, BND_SHE, BND_INF)
             func_bnd_xr => bnd_null
          case (BND_PER)
-            if (comm3d == MPI_COMM_NULL) then
+            if (cdd%comm3d == MPI_COMM_NULL) then
                func_bnd_xr => bnd_null
             else
                func_bnd_xr => bnd_xr_per
@@ -113,7 +113,7 @@ contains
       use grid,                only: cga
       use grid_cont,           only: grid_container
       use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,            only: ierr, req, status, comm, comm3d, proc
+      use mpisetup,            only: ierr, req, status, comm, proc
 #ifdef COSM_RAYS
       use initcosmicrays,      only: smallecr
       use fluidindex,          only: iarr_all_crs
@@ -153,7 +153,7 @@ contains
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[fluidboundaries:bnd_u] multiple grid pieces per procesor not implemented yet") !nontrivial communication
 
 ! MPI block communication
-      if (comm3d /= MPI_COMM_NULL) then
+      if (cdd%comm3d /= MPI_COMM_NULL) then
 #ifdef SHEAR_BND
          if (dir == xdim) then
 #ifndef FFTW
@@ -301,10 +301,10 @@ contains
 
                jtag = 20*dir
                itag = jtag - 10
-               call MPI_Isend(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BLK), cdd%procn(dir,LO), itag, comm3d, req(1), ierr)
-               call MPI_Isend(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BLK), cdd%procn(dir,HI), jtag, comm3d, req(2), ierr)
-               call MPI_Irecv(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BND), cdd%procn(dir,LO), jtag, comm3d, req(3), ierr)
-               call MPI_Irecv(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BND), cdd%procn(dir,HI), itag, comm3d, req(4), ierr)
+               call MPI_Isend(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BLK), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
+               call MPI_Isend(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BLK), cdd%procn(dir,HI), jtag, cdd%comm3d, req(2), ierr)
+               call MPI_Irecv(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BND), cdd%procn(dir,LO), jtag, cdd%comm3d, req(3), ierr)
+               call MPI_Irecv(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BND), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
@@ -442,7 +442,7 @@ contains
          case (BND_COR, BND_INF, BND_MPI)
             ! Do nothing
          case (BND_PER)
-             if (comm3d /= MPI_COMM_NULL) cg%u%arr(:,:,1:cg%nb,:)                         = cg%u%arr(:,:, cg%jeb:cg%je,:)
+             if (cdd%comm3d /= MPI_COMM_NULL) cg%u%arr(:,:,1:cg%nb,:)                         = cg%u%arr(:,:, cg%jeb:cg%je,:)
          case (BND_USER)
             call user_bnd_yl(cg)
          case (BND_REF)
@@ -485,7 +485,7 @@ contains
          case (BND_COR, BND_INF, BND_MPI)
             ! Do nothing
          case (BND_PER)
-            if (comm3d /= MPI_COMM_NULL) cg%u%arr(:,:, cg%je+1:cg%ny,:)            = cg%u%arr(:,:, cg%js:cg%jsb,:)
+            if (cdd%comm3d /= MPI_COMM_NULL) cg%u%arr(:,:, cg%je+1:cg%ny,:)            = cg%u%arr(:,:, cg%js:cg%jsb,:)
          case (BND_USER)
             call user_bnd_yr(cg)
          case (BND_REF)
@@ -532,7 +532,7 @@ contains
          case (BND_USER)
             call user_bnd_zl(cg)
          case (BND_PER)
-            if (comm3d /= MPI_COMM_NULL) cg%u%arr(:,:,:,1:cg%nb)                         = cg%u%arr(:,:,:, cg%keb:cg%ke)
+            if (cdd%comm3d /= MPI_COMM_NULL) cg%u%arr(:,:,:,1:cg%nb)                         = cg%u%arr(:,:,:, cg%keb:cg%ke)
          case (BND_REF)
             do ib=1, cg%nb
 
@@ -583,7 +583,7 @@ contains
          case (BND_USER)
             call user_bnd_zr(cg)
          case (BND_PER)
-            if (comm3d /= MPI_COMM_NULL) cg%u%arr(:,:,:, cg%ke+1:cg%nz)            = cg%u%arr(:,:,:, cg%ks:cg%ksb)
+            if (cdd%comm3d /= MPI_COMM_NULL) cg%u%arr(:,:,:, cg%ke+1:cg%nz)            = cg%u%arr(:,:,:, cg%ks:cg%ksb)
          case (BND_REF)
             do ib=1, cg%nb
 
@@ -636,11 +636,10 @@ contains
 
       use constants,  only: xdim, zdim, FLUID
       use dataio_pub, only: die
-      use domain,     only: has_dir
+      use domain,     only: has_dir, cdd
       use grid,       only: cga
       use grid_cont,  only: cg_list_element
       use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: comm3d
 
       implicit none
 
@@ -652,7 +651,7 @@ contains
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
 
-         if (comm3d == MPI_COMM_NULL) then
+         if (cdd%comm3d == MPI_COMM_NULL) then
             call cgl%cg%internal_boundaries(FLUID, pa4d=cgl%cg%u%arr)
          endif
 

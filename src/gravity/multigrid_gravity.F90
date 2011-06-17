@@ -159,9 +159,9 @@ contains
       use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
-      use domain,        only: dom, has_dir, eff_dim, geometry_type, is_uneven
+      use domain,        only: dom, has_dir, eff_dim, geometry_type, is_uneven, cdd
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
-      use mpisetup,      only: buffer_dim, comm, comm3d, ierr, master, slave, ibuff, cbuff, rbuff, lbuff
+      use mpisetup,      only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff
       use multigridvars, only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, single_base
       use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
 
@@ -349,9 +349,9 @@ contains
       endif
 
       ! something is a bit messed up here
-      if (comm3d /= MPI_COMM_NULL .and. .not. base_no_fft) then
+      if (cdd%comm3d /= MPI_COMM_NULL .and. .not. base_no_fft) then
          base_no_fft = .true.
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav] comm3d disables use of FFT at base level")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav] cdd%comm3d disables use of FFT at base level")
       endif
 
       single_base = .not. base_no_fft
@@ -389,16 +389,16 @@ contains
 
    subroutine init_multigrid_grav_post(mb_alloc)
 
-      use multigridvars,    only: lvl, plvl, roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, is_mg_uneven, need_general_pf, single_base
-      use mpisetup,         only: master, nproc, proc, comm3d
-      use domain,           only: geometry_type, dom
-      use multigridhelpers, only: vcycle_stats_init, dirty_debug, dirtyH
       use constants,        only: pi, dpi, GEO_XYZ
       use dataio_pub,       only: die, warn
-      use multipole,        only: init_multipole, coarsen_multipole
-      use mpi,              only: MPI_COMM_NULL
+      use domain,           only: geometry_type, dom, cdd
       use grid,             only: cga
       use grid_cont,        only: cg_list_element
+      use mpi,              only: MPI_COMM_NULL
+      use mpisetup,         only: master, nproc, proc
+      use multigridhelpers, only: vcycle_stats_init, dirty_debug, dirtyH
+      use multigridvars,    only: lvl, plvl, roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, is_mg_uneven, need_general_pf, single_base
+      use multipole,        only: init_multipole, coarsen_multipole
 
       implicit none
 
@@ -411,11 +411,11 @@ contains
       type(plvl), pointer :: curl
       type(cg_list_element), pointer :: cgl
 
-      need_general_pf = comm3d == MPI_COMM_NULL .or. single_base .or. is_mg_uneven
+      need_general_pf = cdd%comm3d == MPI_COMM_NULL .or. single_base .or. is_mg_uneven
 
       if (need_general_pf .and. coarsen_multipole /= 0) then
          coarsen_multipole = 0
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] multipole coarsening on uneven domains or with comm3d == MPI_COMM_NULL is not implemented yet.")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] multipole coarsening on uneven domains or with cdd%comm3d == MPI_COMM_NULL is not implemented yet.")
       endif
 
       call mpi_multigrid_prep_grav !supplement to mpi_multigrid_prep

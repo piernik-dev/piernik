@@ -88,7 +88,7 @@ contains
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_REQUEST_NULL, MPI_COMM_NULL
-      use mpisetup,   only: comm, comm3d, ierr, req, status
+      use mpisetup,   only: comm, ierr, req, status
 
       implicit none
 
@@ -102,7 +102,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (comm3d == MPI_COMM_NULL) then
+         if (cdd%comm3d == MPI_COMM_NULL) then
             pwcr => wcr
             call cg%internal_boundaries(CR, pa4d=pwcr)
          endif
@@ -114,7 +114,7 @@ contains
                do lh = LO, HI
                   select case (cg%bnd(d, lh))
                      case (BND_PER)
-                        if (comm3d /= MPI_COMM_NULL) then
+                        if (cdd%comm3d /= MPI_COMM_NULL) then
                            do i = 1, ceiling(cg%nb/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
                               select case (2*d+lh)
                                  case (2*xdim+LO)
@@ -133,10 +133,10 @@ contains
                            enddo
                         endif
                      case (BND_MPI)
-                        if (comm3d /= MPI_COMM_NULL) then
+                        if (cdd%comm3d /= MPI_COMM_NULL) then
                            if (cdd%psize(d) > 1) then
-                              call MPI_Isend(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BLK), cdd%procn(d, lh), 2*d+(LO+HI-lh), comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
-                              call MPI_Irecv(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BND), cdd%procn(d, lh), 2*d+       lh,  comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                              call MPI_Isend(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BLK), cdd%procn(d, lh), 2*d+(LO+HI-lh), cdd%comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                              call MPI_Irecv(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BND), cdd%procn(d, lh), 2*d+       lh,  cdd%comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
                            else
                               call die("[crdiffiusion:all_wcr_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
                            endif
@@ -166,7 +166,7 @@ contains
             !! \warning outside xdim-zdim loop MPI_Waitall may change the operations order (at least for openmpi-1.4.3)
             !! and as a result may leave mpi-corners uninitiallized
             !<
-            if (comm3d /= MPI_COMM_NULL) call MPI_Waitall(size(req(:)), req(:), status(:,:), ierr)
+            if (cdd%comm3d /= MPI_COMM_NULL) call MPI_Waitall(size(req(:)), req(:), status(:,:), ierr)
          enddo
 
          cgl => cgl%nxt

@@ -42,11 +42,10 @@ module mpisetup
    private
    public :: cleanup_mpi, init_mpi, mpifind, inflate_req, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, ierr, &
-        &    master, slave, nproc, proc, procmask, comm, info, comm3d, have_mpi
+        &    master, slave, nproc, proc, procmask, comm, info, have_mpi
 
    integer, protected :: nproc, proc, ierr, info
    integer, protected :: comm
-   integer :: comm3d ! BEWARE: this probably should be moved to the domain module
 
    logical, protected :: master, slave
    logical, protected :: have_mpi           !< .true. when run on more than one processor
@@ -196,15 +195,12 @@ contains
    subroutine cleanup_mpi
 
       use dataio_pub, only: printinfo
-      use mpi,        only: MPI_COMM_NULL
 
       implicit none
 
       if (allocated(procmask)) deallocate(procmask)
       if (allocated(req)) deallocate(req)
       if (allocated(status)) deallocate(status)
-
-      if (comm3d /= MPI_COMM_NULL) call MPI_Comm_free(comm3d, ierr)
 
       if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
       call MPI_Barrier(comm,ierr)

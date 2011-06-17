@@ -224,10 +224,10 @@ contains
 
       use constants,  only: PIERNIK_INIT_BASE, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID
       use dataio_pub, only: die, code_progress
-      use domain,     only: has_dir, dom, is_overlap
+      use domain,     only: has_dir, dom, is_overlap, cdd
       use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: ierr, comm3d, proc, nproc, procmask
+      use mpisetup,   only: ierr, proc, nproc, procmask
 
       implicit none
 
@@ -252,7 +252,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
          ! find neighbours and set up the MPI containers
-         if (comm3d == MPI_COMM_NULL) then
+         if (cdd%comm3d == MPI_COMM_NULL) then
 
             if (allocated(cg%i_bnd) .or. allocated(cg%o_bnd)) call die("[grid:grid_mpi_boundaries_prep] cg%i_bnd or cg%o_bnd already allocated")
             allocate(cg%i_bnd(xdim:zdim, FLUID:ARR), cg%o_bnd(xdim:zdim, FLUID:ARR))
@@ -418,7 +418,7 @@ contains
       use domain,     only: has_dir, cdd
       use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
-      use mpisetup,   only: ierr, comm, comm3d, proc, req, status
+      use mpisetup,   only: ierr, comm, proc, req, status
 
       implicit none
 
@@ -441,7 +441,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (comm3d == MPI_COMM_NULL) then
+         if (cdd%comm3d == MPI_COMM_NULL) then
 
             do_permpi = .true.
             if (present(area_type)) then
@@ -460,7 +460,7 @@ contains
 
                   select case (cg%bnd(d, lh))
                      case (BND_PER)
-                        if (comm3d /= MPI_COMM_NULL) then
+                        if (cdd%comm3d /= MPI_COMM_NULL) then
                            if (present(area_type)) then
                               if (area_type /= AT_NO_B) cycle
                            endif
@@ -482,10 +482,10 @@ contains
                            enddo
                         endif
                      case (BND_MPI)
-                        if (comm3d /= MPI_COMM_NULL) then
+                        if (cdd%comm3d /= MPI_COMM_NULL) then
                            if (cdd%psize(d) > 1) then
-                              call MPI_Isend(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BLK), cdd%procn(d, lh), 2*d+(LO+HI-lh), comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
-                              call MPI_Irecv(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BND), cdd%procn(d, lh), 2*d+       lh,  comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                              call MPI_Isend(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BLK), cdd%procn(d, lh), 2*d+(LO+HI-lh), cdd%comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                              call MPI_Irecv(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BND), cdd%procn(d, lh), 2*d+       lh,  cdd%comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
                            else
                               call die("[grid:arr3d_boundaries] bnd_[xyz][lr] == 'mpi' && cdd%psize([xyz]dim) <= 1")
                            endif
@@ -524,7 +524,7 @@ contains
                enddo
             endif
             !> \warning outside xdim-zdim loop MPI_Waitall may change the operations order and as a result may leave mpi-corners uninitiallized
-            if (comm3d /= MPI_COMM_NULL) call MPI_Waitall(size(req(:)), req(:), status(:,:), ierr)
+            if (cdd%comm3d /= MPI_COMM_NULL) call MPI_Waitall(size(req(:)), req(:), status(:,:), ierr)
          enddo
 
          cgl => cgl%nxt

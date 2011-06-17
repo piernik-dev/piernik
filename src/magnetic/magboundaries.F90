@@ -44,7 +44,7 @@ contains
       use grid,       only: cga
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: ierr, req, comm3d, status, have_mpi
+      use mpisetup,   only: ierr, req, status, have_mpi
 
       implicit none
 
@@ -56,17 +56,17 @@ contains
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[magboundaries:bnd_a] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
 
       if (have_mpi .and. is_mpi_noncart) call die("[magboundaries:bnd_a] is_mpi_noncart is not implemented") !procn, psize
-      if (comm3d == MPI_COMM_NULL) call die("[magboundaries:bnd_a] comm3d == MPI_COMM_NULL")
+      if (cdd%comm3d == MPI_COMM_NULL) call die("[magboundaries:bnd_a] cdd%comm3d == MPI_COMM_NULL")
 
       do i = xdim, zdim
          if (cdd%psize(i) > 1) then
 
             jtag = 20*i
             itag = jtag - 10
-            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BLK), cdd%procn(i,LO), itag, comm3d, req(1), ierr)
-            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BLK), cdd%procn(i,HI), jtag, comm3d, req(3), ierr)
-            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BND), cdd%procn(i,LO), jtag, comm3d, req(2), ierr)
-            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BND), cdd%procn(i,HI), itag, comm3d, req(4), ierr)
+            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BLK), cdd%procn(i,LO), itag, cdd%comm3d, req(1), ierr)
+            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BLK), cdd%procn(i,HI), jtag, cdd%comm3d, req(3), ierr)
+            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BND), cdd%procn(i,LO), jtag, cdd%comm3d, req(2), ierr)
+            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BND), cdd%procn(i,HI), itag, cdd%comm3d, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
@@ -83,7 +83,7 @@ contains
       use grid,       only: cga
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: ierr, req, comm3d, proc, status, comm, master, have_mpi
+      use mpisetup,   only: ierr, req, proc, status, comm, master, have_mpi
 #ifdef SHEAR
       use shear,      only: eps,delj
 #endif /* SHEAR */
@@ -109,7 +109,7 @@ contains
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[magboundaries:bnd_b] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
 
 ! MPI block comunication
-      if (comm3d /= MPI_COMM_NULL) then
+      if (cdd%comm3d /= MPI_COMM_NULL) then
 
          if (have_mpi .and. is_mpi_noncart) call die("[magboundaries:bnd_b] is_mpi_noncart is not implemented") !procn, procxyl, procyxl, psize, pcoords
 #ifdef SHEAR
@@ -175,10 +175,10 @@ contains
 
                jtag = 20*dir
                itag = jtag - 10
-               call MPI_Isend(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BLK), cdd%procn(dir,LO), itag, comm3d, req(1), ierr)
-               call MPI_Isend(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BLK), cdd%procn(dir,HI), jtag, comm3d, req(3), ierr)
-               call MPI_Irecv(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BND), cdd%procn(dir,LO), jtag, comm3d, req(2), ierr)
-               call MPI_Irecv(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BND), cdd%procn(dir,HI), itag, comm3d, req(4), ierr)
+               call MPI_Isend(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BLK), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
+               call MPI_Isend(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BLK), cdd%procn(dir,HI), jtag, cdd%comm3d, req(3), ierr)
+               call MPI_Irecv(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BND), cdd%procn(dir,LO), jtag, cdd%comm3d, req(2), ierr)
+               call MPI_Irecv(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BND), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
@@ -290,7 +290,7 @@ contains
                case (BND_COR, BND_INF, BND_MPI, BND_REF, BND_SHE)
                   ! Do nothing
                case (BND_PER)
-                  if (comm3d /= MPI_COMM_NULL) cg%b%arr(:,1:cg%nb,:,:)              = cg%b%arr(:, cg%ieb:cg%ie,:,:)
+                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b%arr(:,1:cg%nb,:,:)              = cg%b%arr(:, cg%ieb:cg%ie,:,:)
                case (BND_OUT, BND_OUTD, BND_OUTH)
                   cg%b%arr(:,1,:,:) = cg%b%arr(:,2,:,:)
                case default
@@ -302,7 +302,7 @@ contains
                case (BND_COR, BND_INF, BND_MPI, BND_REF, BND_SHE)
                   ! Do nothing
                case (BND_PER)
-                  if (comm3d /= MPI_COMM_NULL) cg%b%arr(:, cg%ie+1:cg%nx,:,:) = cg%b%arr(:, cg%is:cg%isb,:,:)
+                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b%arr(:, cg%ie+1:cg%nx,:,:) = cg%b%arr(:, cg%is:cg%isb,:,:)
                case (BND_OUT, BND_OUTD, BND_OUTH)
                   cg%b%arr(:, cg%nx,:,:) = cg%b%arr(:, cg%nx-1,:,:)
                case default
@@ -316,7 +316,7 @@ contains
                case (BND_COR, BND_INF, BND_MPI, BND_REF)
                   ! Do nothing
                case (BND_PER)
-                  if (comm3d /= MPI_COMM_NULL) cg%b%arr(:,:,1:cg%nb,:)              = cg%b%arr(:,:, cg%jeb:cg%je,:)
+                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b%arr(:,:,1:cg%nb,:)              = cg%b%arr(:,:, cg%jeb:cg%je,:)
                case (BND_OUT, BND_OUTD, BND_OUTH)
                   cg%b%arr(:,:,1,:) = cg%b%arr(:,:,2,:)
                case default
@@ -328,7 +328,7 @@ contains
                case (BND_COR, BND_INF, BND_MPI, BND_REF)
                   ! Do nothing
                case (BND_PER)
-                  if (comm3d /= MPI_COMM_NULL) cg%b%arr(:,:, cg%je+1:cg%ny,:) = cg%b%arr(:,:, cg%js:cg%jsb,:)
+                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b%arr(:,:, cg%je+1:cg%ny,:) = cg%b%arr(:,:, cg%js:cg%jsb,:)
                case (BND_OUT, BND_OUTD, BND_OUTH)
                   cg%b%arr(:,:, cg%ny,:) = cg%b%arr(:,:, cg%ny-1,:)
                case default
@@ -343,7 +343,7 @@ contains
                case (BND_MPI, BND_REF)
                   ! Do nothing
                case (BND_PER)
-                  if (comm3d /= MPI_COMM_NULL) cg%b%arr(:,:,:,1:cg%nb)              = cg%b%arr(:,:,:, cg%keb:cg%ke)
+                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b%arr(:,:,:,1:cg%nb)              = cg%b%arr(:,:,:, cg%keb:cg%ke)
                case (BND_OUT, BND_OUTD, BND_OUTH)
                   cg%b%arr(:,:,:,1) = cg%b%arr(:,:,:,2)
                case default
@@ -355,7 +355,7 @@ contains
                case (BND_MPI, BND_REF)
                   ! Do nothing
                case (BND_PER)
-                  if (comm3d /= MPI_COMM_NULL) cg%b%arr(:,:,:, cg%ke+1:cg%nz) = cg%b%arr(:,:,:, cg%ks:cg%ksb)
+                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b%arr(:,:,:, cg%ke+1:cg%nz) = cg%b%arr(:,:,:, cg%ks:cg%ksb)
                case (BND_OUT, BND_OUTD, BND_OUTH)
                   cg%b%arr(:,:,:, cg%nz) = cg%b%arr(:,:,:, cg%nz-1)
                case default
@@ -630,11 +630,10 @@ contains
 
       use constants,  only: xdim, zdim, MAG
       use dataio_pub, only: die
-      use domain,     only: has_dir
+      use domain,     only: has_dir, cdd
       use grid,       only: cga
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: comm3d
 
       implicit none
 
@@ -644,7 +643,7 @@ contains
       cg => cga%cg_all(1)
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[magboundaries:all_mag_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
-      if (comm3d == MPI_COMM_NULL) then
+      if (cdd%comm3d == MPI_COMM_NULL) then
          call cg%internal_boundaries(MAG, pa4d=cg%b%arr)
       endif
 

@@ -835,7 +835,7 @@ contains
       use grid,       only: cga, D_x, D_y, D_z
       use grid_cont,  only: grid_container !, cg_list_element
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: master, nproc, comm, comm3d, ierr, have_mpi
+      use mpisetup,   only: master, nproc, comm, ierr, have_mpi
 
       implicit none
 
@@ -857,7 +857,7 @@ contains
       allocate(gravrx(cg%nx), gravry(cg%ny), gravrz(cg%nz))
 
       if (have_mpi .and. is_mpi_noncart) call die("[gravity:grav_accel2pot] is_mpi_noncart is not implemented") ! MPI_Cart_coords, psize, pcoords
-      if (comm3d == MPI_COMM_NULL) call die("[gravity:grav_accel2pot] comm3d == MPI_COMM_NULL")
+      if (cdd%comm3d == MPI_COMM_NULL) call die("[gravity:grav_accel2pot] cdd%comm3d == MPI_COMM_NULL")
 
       allocate(gpwork(cg%nx, cg%ny, cg%nz))
       gpwork(1,1,1) = 0.0
@@ -887,14 +887,14 @@ contains
       dgpy_proc = gpwork(cg%is,     cg%je+D_y, cg%ks    )-gpwork(cg%is,cg%js,cg%ks)
       dgpz_proc = gpwork(cg%is,     cg%js,     cg%ke+D_z)-gpwork(cg%is,cg%js,cg%ks)
 
-      call MPI_Gather ( dgpx_proc, 1, MPI_DOUBLE_PRECISION, dgpx_all, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr )
-      call MPI_Gather ( dgpy_proc, 1, MPI_DOUBLE_PRECISION, dgpy_all, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr )
-      call MPI_Gather ( dgpz_proc, 1, MPI_DOUBLE_PRECISION, dgpz_all, 1, MPI_DOUBLE_PRECISION, 0, comm3d, ierr )
+      call MPI_Gather ( dgpx_proc, 1, MPI_DOUBLE_PRECISION, dgpx_all, 1, MPI_DOUBLE_PRECISION, 0, cdd%comm3d, ierr )
+      call MPI_Gather ( dgpy_proc, 1, MPI_DOUBLE_PRECISION, dgpy_all, 1, MPI_DOUBLE_PRECISION, 0, cdd%comm3d, ierr )
+      call MPI_Gather ( dgpz_proc, 1, MPI_DOUBLE_PRECISION, dgpz_all, 1, MPI_DOUBLE_PRECISION, 0, cdd%comm3d, ierr )
 
       if (master) then
 
          do ip = 0, nproc-1
-            call MPI_Cart_coords(comm3d, ip, ndims, pc, ierr)
+            call MPI_Cart_coords(cdd%comm3d, ip, ndims, pc, ierr)
 
             px = pc(1)
             py = pc(2)

@@ -94,6 +94,7 @@ module domain
    end type domain_container
 
    type cart_decomposition
+      integer                          :: comm3d  !< cartesian communicator
       integer, dimension(ndims)        :: psize   !< number of divisions in each direction
       integer, dimension(ndims)        :: pcoords !< own process coordinates within psize(:)-shaped array of processes
       integer, dimension(ndims, LO:HI) :: procn   !< array of neighbours proc numbers
@@ -222,7 +223,7 @@ contains
       use dataio_pub, only: die, printinfo, msg, warn, code_progress
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
-      use mpisetup,   only: buffer_dim, cbuff, ibuff, lbuff, rbuff, master, slave, proc, nproc, comm, comm3d, ierr, have_mpi, inflate_req
+      use mpisetup,   only: buffer_dim, cbuff, ibuff, lbuff, rbuff, master, slave, proc, nproc, comm, ierr, have_mpi, inflate_req
 
       implicit none
 
@@ -433,7 +434,7 @@ contains
       cdd%pcoords(:) = -1
       cdd%procxyl = MPI_PROC_NULL
       cdd%procyxl = MPI_PROC_NULL
-      comm3d = MPI_COMM_NULL
+      cdd%comm3d = MPI_COMM_NULL
 
       dom_divided = .false.
       if (associated(user_divide_domain)) call user_divide_domain(dom_divided)
@@ -454,7 +455,7 @@ contains
 
       ! For shear boundaries and some domain decompositions it is possible that a boundary can be mixed 'per' with 'mpi'
 
-      if (comm3d == MPI_COMM_NULL) then
+      if (cdd%comm3d == MPI_COMM_NULL) then
          call inflate_req(size([LO, HI]) * 2 * nproc) ! 2 = count([i_bnd, o_bnd])
          if (any(dom%bnd(:, :) == BND_COR)) call die("[domain:init_domain] Corner BC not implemented without comm3d")
 #ifdef SHEAR_BND
@@ -536,7 +537,7 @@ contains
       use constants,  only: xdim, ydim, zdim, ndims, LO, HI, BND_COR
       use dataio_pub, only: printinfo, die
       use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: master, nproc, comm, comm3d, proc, ierr
+      use mpisetup,   only: master, nproc, comm, proc, ierr
 
       implicit none
 
@@ -554,22 +555,22 @@ contains
          cdd%psize(:) = p_size(:)
          if (is_mpi_noncart .or. is_refined) call die("[domain:cartesian_tiling] MPI_Cart_create cannot be used for non-rectilinear or AMR domains")
 
-         call MPI_Cart_create(comm, ndims, cdd%psize, dom%periodic, reorder, comm3d, ierr)
-         call MPI_Cart_coords(comm3d, proc, ndims, cdd%pcoords, ierr)
+         call MPI_Cart_create(comm, ndims, cdd%psize, dom%periodic, reorder, cdd%comm3d, ierr)
+         call MPI_Cart_coords(cdd%comm3d, proc, ndims, cdd%pcoords, ierr)
 
          ! Compute neighbors
          do p = xdim, zdim
-            call MPI_Cart_shift(comm3d, p-xdim, 1, cdd%procn(p, LO), cdd%procn(p, HI), ierr)
+            call MPI_Cart_shift(cdd%comm3d, p-xdim, 1, cdd%procn(p, LO), cdd%procn(p, HI), ierr)
          enddo
 
          if (any(dom%bnd(xdim:ydim, LO) == BND_COR)) then
             if (cdd%pcoords(xdim) == 0 .and. cdd%pcoords(ydim) > 0) then
                pc(:) = [ cdd%pcoords(ydim), cdd%pcoords(xdim), cdd%pcoords(zdim) ]
-               call MPI_Cart_rank(comm3d, pc, cdd%procxyl, ierr)
+               call MPI_Cart_rank(cdd%comm3d, pc, cdd%procxyl, ierr)
             endif
             if (cdd%pcoords(ydim) == 0 .and. cdd%pcoords(xdim) > 0 ) then
                pc(:) = [ cdd%pcoords(ydim), cdd%pcoords(xdim), cdd%pcoords(zdim) ]
-               call MPI_Cart_rank(comm3d, pc, cdd%procyxl, ierr)
+               call MPI_Cart_rank(cdd%comm3d, pc, cdd%procyxl, ierr)
             endif
          endif
 
@@ -581,11 +582,11 @@ contains
       endif
 
       do p = 0, nproc-1
-         if (comm3d == MPI_COMM_NULL) then
+         if (cdd%comm3d == MPI_COMM_NULL) then
             if (use_comm3d) call die("[domain:cartesian_tiling] MPI_Cart_create failed")
             pc(:) = [ mod(p, p_size(xdim)), mod(p/p_size(xdim), p_size(ydim)), p/product(p_size(xdim:ydim)) ]
          else
-            call MPI_Cart_coords(comm3d, p, ndims, pc, ierr)
+            call MPI_Cart_coords(cdd%comm3d, p, ndims, pc, ierr)
          endif
          where (has_dir(:))
             dom%pse(p)%sel(1, :, LO) = (dom%n_d(:) *  pc(:) ) / p_size(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
@@ -702,11 +703,14 @@ contains
 
    subroutine cleanup_domain
 
-      use mpisetup, only: nproc
+      use mpi,      only: MPI_COMM_NULL
+      use mpisetup, only: nproc, ierr
 
       implicit none
 
       integer :: p
+
+      if (cdd%comm3d /= MPI_COMM_NULL) call MPI_Comm_free(cdd%comm3d, ierr)
 
       if (allocated(dom%pse)) then
          do p = 0, nproc - 1
