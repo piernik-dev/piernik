@@ -42,8 +42,8 @@ module domain
    implicit none
 
    private
-   public :: cleanup_domain, init_domain, translate_bnds_to_ints_dom, is_overlap, domain_container, &
-        &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, cdd
+   public :: cleanup_domain, init_domain, translate_bnds_to_ints_dom, is_overlap, domain_container, user_divide_domain, &
+        &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, cdd
 
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
@@ -113,10 +113,15 @@ module domain
 
    logical, protected :: is_uneven          !< .true. when n[xyz]b depend on process number
    logical, protected :: is_mpi_noncart     !< .true. when there exist a process that has more than one neighbour in any direction
+   logical, protected :: is_refined         !< .true. when AMR or static refinement is employed
 
+   integer, protected :: geometry_type  !< the type of geometry: cartesian: GEO_XYZ, cylindrical: GEO_RPZ, other: GEO_INVALID
+
+   ! Private variables
+
+   logical :: dom_divided  !< Flags that domain decomposition was succesfull and quality of solution meets the criteria
    integer, allocatable, dimension(:) :: primes
    real :: ideal_bsize
-   integer, protected :: geometry_type  !< the type of geometry: cartesian: GEO_XYZ, cylindrical: GEO_RPZ, other: GEO_INVALID
 
    ! Namelist variables
 
@@ -124,11 +129,12 @@ module domain
    logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
    logical :: allow_uneven    !< allows different values of n[xyz]b on divverent processes
    logical :: allow_noncart   !< allows more than one neighbour on a boundary
+   logical :: allow_AMR       !< allows AMR
    real    :: dd_unif_quality !< uniform domain decomposition may be rejected it its quality is below this threshold (e.g. very elongated local domains are found)
    real    :: dd_rect_quality !< rectilinear domain decomposition may be rejected it its quality is below this threshold (not used yet)
    logical :: use_comm3d      !< If .false. then do not call any MPI_Cart_* functions
 
-   namelist /MPI_BLOCKS/ psize, reorder, allow_uneven, allow_noncart, dd_unif_quality, dd_rect_quality, use_comm3d
+   namelist /MPI_BLOCKS/ psize, reorder, allow_uneven, allow_noncart, allow_AMR, dd_unif_quality, dd_rect_quality, use_comm3d
 
    integer, protected :: nxd  !< number of %grid cells in physical domain (without boundary cells) in x-direction (if == 1 then x-dimension is reduced to a point with no boundary cells)
    integer, protected :: nyd  !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
@@ -155,6 +161,18 @@ module domain
       module procedure is_overlap_simple, is_overlap_per
    end interface
 
+   interface
+      subroutine divide_domain_template(dom_divided)
+
+         implicit none
+
+         logical, intent(inout) :: dom_divided
+
+      end subroutine divide_domain_template
+   end interface
+
+   procedure(divide_domain_template), pointer :: user_divide_domain => Null()
+
 contains
 
 !-----------------------------------------------------------------------------
@@ -170,6 +188,7 @@ contains
 !! <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc domain::reorder        </td></tr>
 !! <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_uneven   </td></tr>
 !! <tr><td>allow_noncart  </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_noncart  </td></tr>
+!! <tr><td>allow_AMR      </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_AMR      </td></tr>
 !! <tr><td>dd_unif_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_unif_quality</td></tr>
 !! <tr><td>dd_rect_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_rect_quality</td></tr>
 !! </table>
@@ -233,6 +252,7 @@ contains
       reorder   = .false.      !< \todo test it!
       allow_uneven = .true.
       allow_noncart = .false.  !< experimental implementation
+      allow_AMR = .false.      !< not implemented yet
       use_comm3d = .true.      !< \todo make a big benchmark with and without comm3d
 
       bnd_xl = 'per'
@@ -280,7 +300,8 @@ contains
          lbuff(1) = reorder
          lbuff(2) = allow_uneven
          lbuff(3) = allow_noncart
-         lbuff(4) = use_comm3d
+         lbuff(4) = allow_AMR
+         lbuff(5) = use_comm3d
 
       endif
 
@@ -294,7 +315,8 @@ contains
          reorder       = lbuff(1)
          allow_uneven  = lbuff(2)
          allow_noncart = lbuff(3)
-         use_comm3d    = lbuff(4)
+         allow_AMR     = lbuff(4)
+         use_comm3d    = lbuff(5)
 
          xmin            = rbuff(1)
          xmax            = rbuff(2)
@@ -391,16 +413,29 @@ contains
 
       call dom%set_derived ! finish up with the rest of domain_container members
 
-      if (master .and. have_mpi) then
-         if (allow_uneven) call warn("[domain:init_domain] Uneven domain decomposition is experimental.")
-         if (allow_noncart) call warn("[domain:init_domain] Non-cartesian domain decomposition is highly experimental.")
+#ifdef MULTIGRID
+      if (allow_AMR .and. master) call warn("[domain:init_domain] Multigrid solver is not yet capable of using AMR domains.")
+      allow_AMR = .false.
+#endif /* MULTIGRID */
+      if (master) then
+         if (have_mpi) then
+            if (allow_uneven) call warn("[domain:init_domain] Uneven domain decomposition is experimental.")
+            if (allow_noncart) call warn("[domain:init_domain] Non-cartesian domain decomposition is highly experimental.")
+         endif
+         if (allow_AMR) call warn("[domain:init_domain allow_AMR is not implemented")
       endif
       is_uneven = .false.
       is_mpi_noncart = .false.
+      is_refined = .false.
 
       where (.not. has_dir(:)) psize(:) = 1
-      call divide_domain
 
+      dom_divided = .false.
+      if (associated(user_divide_domain)) call user_divide_domain(dom_divided)
+      if (.not. dom_divided) call divide_domain(dom_divided)
+      if (.not. dom_divided) call die("[domain:init_domain] Domain dedomposition failed")
+
+      if (is_refined) is_mpi_noncart = .true.
       if (is_mpi_noncart) is_uneven = .true.
 
       ! most of the code below is incompatible with noncartesian domain decomposition and shoould be called from divide_domain_uniform and divide_domain_rectlinear
@@ -438,7 +473,7 @@ contains
 
             if (use_comm3d) then
                cdd%psize(:) = dom%pdiv(:)
-               if (is_mpi_noncart) call die("[domain:init_domain] MPI_Cart_create cannot be used for non-rectilinear or AMR domains")
+               if (is_mpi_noncart .or. is_refined) call die("[domain:init_domain] MPI_Cart_create cannot be used for non-rectilinear or AMR domains")
                if (master) call printinfo("[domain:init_domain] Cartesian decomposition with comm3d")
 
                call MPI_Cart_create(comm, ndims, cdd%psize, dom%periodic, reorder, comm3d, ierr)
@@ -575,6 +610,8 @@ contains
       endif
 !#endif /* VERBOSE */
 
+      if (is_refined) call die("[domain:init_domain] Refinements are not implemented")
+
    end subroutine init_domain
 
 !!-----------------------------------------------------------------------------
@@ -659,7 +696,7 @@ contains
 !
 !> \todo make this a member of types::domain_container
 !
-   subroutine divide_domain
+   subroutine divide_domain(dom_divided)
 
       use constants,  only: DD_CART, DD_UE
       use dataio_pub, only: die, warn, printinfo, msg
@@ -667,13 +704,21 @@ contains
 
       implicit none
 
+      logical, intent(inout) :: dom_divided
+
       real :: quality
+
+      if (dom_divided) then
+         call warn("[domain:divide_domain] Domain already decomposed")
+         return
+      endif
 
       dom%pdiv_type = DD_CART
       dom%pdiv(:) = psize(:)
 
       if (product(psize) == nproc) then
          if (all(mod(dom%n_d(:), psize(:)) == 0)) then
+            dom_divided = .true.
             if (master .and. have_mpi) then
                write(msg,'(a,3i4,a,3i6,a)')"[domain:divide_domain] Domain divided to [",psize(:)," ] pieces, each of [",dom%n_d(:)/psize(:)," ] cells."
                call printinfo(msg)
@@ -695,6 +740,7 @@ contains
       if (product(psize) == nproc) then
          quality = ideal_bsize / sum(psize(:)/real(dom%n_d(:)) * product(real(dom%n_d(:))), MASK = dom%n_d(:) > 1)
          if (quality >= dd_unif_quality .or. .not. (allow_uneven .or. allow_noncart)) then
+            dom_divided = .true.
             dom%pdiv(:) = psize(:)
             return
          endif
@@ -707,6 +753,7 @@ contains
          quality = 1 !< \todo make an estimate
          if (product(psize) == nproc) then
             if (quality > dd_rect_quality .or. .not. allow_noncart) then
+               dom_divided = .true.
                dom%pdiv(:) = psize(:)
                return
             endif
@@ -720,6 +767,7 @@ contains
          psize(:) = dom%pdiv(:)
          call divide_domain_slices
          ! if good_enough then return
+         dom_divided = .true.
          dom%pdiv(:) = psize(:)
          return
       else

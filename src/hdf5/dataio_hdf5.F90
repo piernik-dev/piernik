@@ -954,6 +954,7 @@ contains
 !!$   !
 !!$   !  WRITE Axes
 !!$   !
+!!$   ! AMR: the axes should be associated with fluid and datasets
 !!$   subroutine write_axes_to_restart(file_id)
 !!$
 !!$      use constants,  only: xdim, ydim, zdim, ndims
