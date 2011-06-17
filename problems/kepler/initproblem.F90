@@ -293,7 +293,7 @@ contains
       use hydrostatic,  only: hydrostatic_zeq_densmid
       use interactions, only: epstein_factor
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,     only: master, comm, comm3d, ierr
+      use mpisetup,     only: master, comm, ierr
       use units,        only: newtong, gram, cm, kboltz, mH
 
       implicit none
@@ -309,7 +309,7 @@ contains
       type(grid_container), pointer :: cg
 
 !   Secondary parameters
-      if (comm3d == MPI_COMM_NULL) call die("[initproblem:init_prob] comm3d == MPI_COMM_NULL not implemented") !pcoords
+      if (cdd%comm3d == MPI_COMM_NULL) call die("[initproblem:init_prob] comm3d == MPI_COMM_NULL not implemented") !pcoords
 
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
