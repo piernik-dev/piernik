@@ -67,8 +67,6 @@ module domain
       integer                   :: nb           !< number of boundary cells surrounding the physical domain, same for all directions
       integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
 
-      type(cuboids), dimension(:), allocatable :: pse  !< lists of grid chunks on each process (0:nproc-1); Use with care, because this is an antiparallel thing
-
       ! derived parameters
       real    :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
       real    :: Ly                             !< span of the physical domain in y-direction (ymax-ymin)
@@ -80,15 +78,17 @@ module domain
 
       logical, dimension(ndims) :: periodic     !< .true. for periodic and shearing boundary pairs
 
+      ! decomposition
+      integer :: pdiv_type                      !< 0 for cartesian decomposition of base level, /= 0 for more spthisticated patterns
+      integer, dimension(xdim:zdim) :: pdiv     !< when pdiv_type == 0 it is like psize(:)
+      type(cuboids), dimension(:), allocatable :: pse  !< lists of grid chunks on each process (0:nproc-1); Use with care, because this is an antiparallel thing
+
       ! Do not use n[xyz]t components in the Piernik source tree without a good reason
       ! Avoid as a plague allocating buffers of that size because it negates benefits of parallelization
       ! \todo move them to another type, that extends domain_container?
       integer :: nxt                            !< total number of %grid cells in the whole domain in x-direction
       integer :: nyt                            !< total number of %grid cells in the whole domain in y-direction
       integer :: nzt                            !< total number of %grid cells in the whole domain in z-direction
-
-      integer :: pdiv_type                      !< 0 for cartesian decomposition of base level, /= 0 for more spthisticated patterns
-      integer, dimension(xdim:zdim) :: pdiv     !< when pdiv_type == 0 it is like psize(:)
 
     contains
 
@@ -109,9 +109,9 @@ module domain
    logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
    integer, protected    :: eff_dim                  !< effective dimensionality of the simulation
 
-   type(domain_container), protected :: dom
+   type(domain_container), protected :: dom !< complete description of base level domain
 
-   logical, protected :: is_uneven          !< .true. when n[xyz]b depend on process number
+   logical, protected :: is_uneven          !< .true. when n[xyz]b depend on process rank
    logical, protected :: is_mpi_noncart     !< .true. when there exist a process that has more than one neighbour in any direction
    logical, protected :: is_refined         !< .true. when AMR or static refinement is employed
 
@@ -127,32 +127,32 @@ module domain
 
    integer, dimension(ndims) :: psize !< desired number of MPI blocks in x, y and z-dimension
    logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
-   logical :: allow_uneven    !< allows different values of n[xyz]b on divverent processes
-   logical :: allow_noncart   !< allows more than one neighbour on a boundary
-   logical :: allow_AMR       !< allows AMR
-   real    :: dd_unif_quality !< uniform domain decomposition may be rejected it its quality is below this threshold (e.g. very elongated local domains are found)
-   real    :: dd_rect_quality !< rectilinear domain decomposition may be rejected it its quality is below this threshold (not used yet)
-   logical :: use_comm3d      !< If .false. then do not call any MPI_Cart_* functions
+   logical :: allow_uneven            !< allows different values of n[xyz]b on divverent processes
+   logical :: allow_noncart           !< allows more than one neighbour on a boundary
+   logical :: allow_AMR               !< allows AMR
+   real    :: dd_unif_quality         !< uniform domain decomposition may be rejected it its quality is below this threshold (e.g. very elongated local domains are found)
+   real    :: dd_rect_quality         !< rectilinear domain decomposition may be rejected it its quality is below this threshold (not used yet)
+   logical :: use_comm3d              !< If .false. then do not call any MPI_Cart_* functions
 
    namelist /MPI_BLOCKS/ psize, reorder, allow_uneven, allow_noncart, allow_AMR, dd_unif_quality, dd_rect_quality, use_comm3d
 
-   integer, protected :: nxd  !< number of %grid cells in physical domain (without boundary cells) in x-direction (if == 1 then x-dimension is reduced to a point with no boundary cells)
-   integer, protected :: nyd  !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
-   integer, protected :: nzd  !< number of %grid cells in physical domain (without boundary cells) in z-direction (-- || --)
-   integer, protected :: nb   !< number of boundary cells surrounding the physical domain, same for all directions
-   character(len=cbuff_len) :: bnd_xl     !< type of boundary conditions for the left  x-boundary
-   character(len=cbuff_len) :: bnd_xr     !< type of boundary conditions for the right x-boundary
-   character(len=cbuff_len) :: bnd_yl     !< type of boundary conditions for the left  y-boundary
-   character(len=cbuff_len) :: bnd_yr     !< type of boundary conditions for the right y-boundary
-   character(len=cbuff_len) :: bnd_zl     !< type of boundary conditions for the left  z-boundary
-   character(len=cbuff_len) :: bnd_zr     !< type of boundary conditions for the right z-boundary
-   real    :: xmin                           !< physical domain left x-boundary position
-   real    :: xmax                           !< physical domain right x-boundary position
-   real    :: ymin                           !< physical domain left y-boundary position
-   real    :: ymax                           !< physical domain right y-boundary position
-   real    :: zmin                           !< physical domain left z-boundary position
-   real    :: zmax                           !< physical domain right z-boundary position
-   character(len=cbuff_len) :: geometry      !< define system of coordinates: "cartesian" or "cylindrical"
+   integer, protected :: nxd            !< number of %grid cells in physical domain (without boundary cells) in x-direction (if == 1 then x-dimension is reduced to a point with no boundary cells)
+   integer, protected :: nyd            !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
+   integer, protected :: nzd            !< number of %grid cells in physical domain (without boundary cells) in z-direction (-- || --)
+   integer, protected :: nb             !< number of boundary cells surrounding the physical domain, same for all directions
+   character(len=cbuff_len) :: bnd_xl   !< type of boundary conditions for the left  x-boundary
+   character(len=cbuff_len) :: bnd_xr   !< type of boundary conditions for the right x-boundary
+   character(len=cbuff_len) :: bnd_yl   !< type of boundary conditions for the left  y-boundary
+   character(len=cbuff_len) :: bnd_yr   !< type of boundary conditions for the right y-boundary
+   character(len=cbuff_len) :: bnd_zl   !< type of boundary conditions for the left  z-boundary
+   character(len=cbuff_len) :: bnd_zr   !< type of boundary conditions for the right z-boundary
+   real :: xmin                         !< physical domain left x-boundary position
+   real :: xmax                         !< physical domain right x-boundary position
+   real :: ymin                         !< physical domain left y-boundary position
+   real :: ymax                         !< physical domain right y-boundary position
+   real :: zmin                         !< physical domain left z-boundary position
+   real :: zmax                         !< physical domain right z-boundary position
+   character(len=cbuff_len) :: geometry !< define system of coordinates: "cartesian" or "cylindrical"
 
    namelist /BASE_DOMAIN/ nxd, nyd, nzd, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry
    !namelist /BASE_DOMAIN/ dom, geometry, nb
@@ -183,37 +183,38 @@ contains
 !! @b MPI_BLOCKS
 !! \n \n
 !! <table border="+1">
-!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>psize(3)       </td><td>1      </td><td>integer</td><td>\copydoc domain::psize          </td></tr>
-!! <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc domain::reorder        </td></tr>
-!! <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_uneven   </td></tr>
-!! <tr><td>allow_noncart  </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_noncart  </td></tr>
-!! <tr><td>allow_AMR      </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_AMR      </td></tr>
-!! <tr><td>dd_unif_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_unif_quality</td></tr>
-!! <tr><td>dd_rect_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_rect_quality</td></tr>
+!!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!!   <tr><td>psize(3)       </td><td>1      </td><td>integer</td><td>\copydoc domain::psize          </td></tr>
+!!   <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc domain::reorder        </td></tr>
+!!   <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_uneven   </td></tr>
+!!   <tr><td>allow_noncart  </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_noncart  </td></tr>
+!!   <tr><td>allow_AMR      </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_AMR      </td></tr>
+!!   <tr><td>dd_unif_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_unif_quality</td></tr>
+!!   <tr><td>dd_rect_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_rect_quality</td></tr>
+!!   <tr><td>use_comm3d     </td><td>.true. </td><td>logical</td><td>\copydoc domain::use_comm3d     </td></tr>
 !! </table>
 !! \n \n
 !! @b BASE_DOMAIN
 !! \n \n
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!!   <tr><td>nxd</td><td>1</td><td>positive integer    </td><td>\copydoc domain::nxd</td></tr>
-!!   <tr><td>nyd</td><td>1</td><td>positive integer    </td><td>\copydoc domain::nyd</td></tr>
-!!   <tr><td>nzd</td><td>1</td><td>positive integer    </td><td>\copydoc domain::nzd</td></tr>
-!!   <tr><td>nb </td><td>4</td><td>non-negative integer</td><td>\copydoc domain::nb </td></tr>
-!!   <tr><td>bnd_xl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc domain::bnd_xl</td></tr>
-!!   <tr><td>bnd_xr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc domain::bnd_xr</td></tr>
-!!   <tr><td>bnd_yl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc domain::bnd_yl</td></tr>
-!!   <tr><td>bnd_yr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc domain::bnd_yr</td></tr>
-!!   <tr><td>bnd_zl</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc domain::bnd_zl</td></tr>
-!!   <tr><td>bnd_zr</td><td>'per'</td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc domain::bnd_zr</td></tr>
-!!   <tr><td> xmin     </td><td> 0.          </td><td> real                     </td><td> physical domain left x-boundary position  </td></tr>
-!!   <tr><td> xmax     </td><td> 1.          </td><td> real                     </td><td> physical domain right x-boundary position </td></tr>
-!!   <tr><td> ymin     </td><td> 0.          </td><td> real                     </td><td> physical domain left y-boundary position  </td></tr>
-!!   <tr><td> ymax     </td><td> 1.          </td><td> real                     </td><td> physical domain right y-boundary position </td></tr>
-!!   <tr><td> zmin     </td><td> 0.          </td><td> real                     </td><td> physical domain left z-boundary position  </td></tr>
-!!   <tr><td> zmax     </td><td> 1.          </td><td> real                     </td><td> physical domain right z-boundary position </td></tr>
-!!   <tr><td> geometry </td><td> "cartesian" </td><td> character(len=cbuff_len) </td><td> \copydoc domain::geometry                   </td></tr>
+!!   <tr><td>nxd     </td><td>1          </td><td>positive integer                          </td><td>\copydoc domain::nxd     </td></tr>
+!!   <tr><td>nyd     </td><td>1          </td><td>positive integer                          </td><td>\copydoc domain::nyd     </td></tr>
+!!   <tr><td>nzd     </td><td>1          </td><td>positive integer                          </td><td>\copydoc domain::nzd     </td></tr>
+!!   <tr><td>nb      </td><td>4          </td><td>positive integer                          </td><td>\copydoc domain::nb      </td></tr>
+!!   <tr><td>bnd_xl  </td><td>'per'      </td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc domain::bnd_xl  </td></tr>
+!!   <tr><td>bnd_xr  </td><td>'per'      </td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc domain::bnd_xr  </td></tr>
+!!   <tr><td>bnd_yl  </td><td>'per'      </td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc domain::bnd_yl  </td></tr>
+!!   <tr><td>bnd_yr  </td><td>'per'      </td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc domain::bnd_yr  </td></tr>
+!!   <tr><td>bnd_zl  </td><td>'per'      </td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc domain::bnd_zl  </td></tr>
+!!   <tr><td>bnd_zr  </td><td>'per'      </td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc domain::bnd_zr  </td></tr>
+!!   <tr><td>xmin    </td><td>0.         </td><td>real                                      </td><td>\copydoc domain::xmin    </td></tr>
+!!   <tr><td>xmax    </td><td>1.         </td><td>real                                      </td><td>\copydoc domain::xmax    </td></tr>
+!!   <tr><td>ymin    </td><td>0.         </td><td>real                                      </td><td>\copydoc domain::ymin    </td></tr>
+!!   <tr><td>ymax    </td><td>1.         </td><td>real                                      </td><td>\copydoc domain::ymax    </td></tr>
+!!   <tr><td>zmin    </td><td>0.         </td><td>real                                      </td><td>\copydoc domain::zmin    </td></tr>
+!!   <tr><td>zmax    </td><td>1.         </td><td>real                                      </td><td>\copydoc domain::zmax    </td></tr>
+!!   <tr><td>geometry</td><td>"cartesian"</td><td>character(len=cbuff_len)                  </td><td>\copydoc domain::geometry</td></tr>
 !! </table>
 !! \n \n
 !<
@@ -400,6 +401,7 @@ contains
       if (xmin > xmax) call die("[[domain:init_domain] Negative span in X-direction")
       if (ymin > ymax) call die("[[domain:init_domain] Negative span in Y-direction")
       if (zmin > zmax) call die("[[domain:init_domain] Negative span in Z-direction")
+      if (nb < 1) call die("[[domain:init_domain] no guardcells")
 
       ! set up the global domain
       dom%nb = nb
@@ -437,18 +439,6 @@ contains
 
       if (is_refined) is_mpi_noncart = .true.
       if (is_mpi_noncart) is_uneven = .true.
-
-      ! most of the code below is incompatible with noncartesian domain decomposition and shoould be called from divide_domain_uniform and divide_domain_rectlinear
-
-      if (any(dom%bnd(xdim:ydim, LO:HI) == BND_COR)) then
-         if (is_mpi_noncart) call die("[domain:init_domain] Corner BC with noncartesian domain division not implemented")
-         if (psize(xdim) /= psize(ydim) .or. dom%n_d(xdim) /= dom%n_d(ydim)) then
-            write(msg, '(a,4(i4,a))')"[domain:init_domain] Corner BC require psize(xdim) equal to psize(ydim) and nxd equal to nyd. Detected: [",psize(xdim),",",psize(ydim),&
-                 &                   "] and [",dom%n_d(xdim),",",dom%n_d(ydim),"]"
-            call die(msg)
-         endif
-      endif
-      if (any(dom%bnd(zdim, LO:HI) == BND_COR)) call die("[domain:init_domain] Corner BC not allowed for z-direction")
 
       if (allocated(dom%pse)) call die("[domain:init_domain] dom%pse already allocated")
       allocate(dom%pse(0:nproc-1))
@@ -516,7 +506,6 @@ contains
                   endwhere
                enddo
 
-               if (any(dom%bnd(xdim:ydim, LO:HI) == BND_COR)) call die("[domain:init_domain] BND_COR not implemented for use_comm3d == .false.")
             endif
          case (DD_UE)
             if (master) call printinfo("[domain:init_domain] Non-cartesian decomposition (no comm3d possible)")
@@ -550,13 +539,7 @@ contains
             call die("[domain:init_domain] unknown strategy for generating domain division")
       end select
 
-      if (comm3d == MPI_COMM_NULL) then
-         call inflate_req(size([LO, HI]) * 2 * nproc) ! 2 = count([i_bnd, o_bnd])
-      else
-         call inflate_req(max(size([LO, HI]) * size([BLK, BND]) * ndims, nproc)) ! just another way of defining '4 * 3' ;-)
-      endif
-
-      if (any(dom%bnd(:, :) == BND_COR) .and. comm3d == MPI_COMM_NULL) call die("[domain:init_domain] Corner BC not implemented without comm3d")
+      ! bnd_[xyz][lr] now become altered according to local topology of processes
 
       if ((dom%periodic(xdim) .and. dom%pse(proc)%sel(1, xdim, HI) /= dom%n_d(xdim) - 1) .or. dom%pse(proc)%sel(1, xdim, LO) /= 0)                 bnd_xl = 'mpi'
       if ((dom%periodic(xdim) .and. dom%pse(proc)%sel(1, xdim, LO) /= 0)                 .or. dom%pse(proc)%sel(1, xdim, HI) /= dom%n_d(xdim) - 1) bnd_xr = 'mpi'
@@ -566,35 +549,42 @@ contains
       if ((dom%periodic(zdim) .and. dom%pse(proc)%sel(1, zdim, LO) /= 0)                 .or. dom%pse(proc)%sel(1, zdim, HI) /= dom%n_d(zdim) - 1) bnd_zr = 'mpi'
 
       ! For shear boundaries and some domain decompositions it is possible that a boundary can be mixed 'per' with 'mpi'
-#ifdef SHEAR_BND
-      if (comm3d == MPI_COMM_NULL) call die("[domain:init_domain] SHEAR_BND not implemented without comm3d")
 
-      if (psize(ydim) > 1) call die("[domain:initmpi] Shear-pediodic boundary conditions do not permit psize(ydim) > 1")
-      ! This will be possible when is_mpi_noncart will be fully implemented
+      if (comm3d == MPI_COMM_NULL) then
+         call inflate_req(size([LO, HI]) * 2 * nproc) ! 2 = count([i_bnd, o_bnd])
+         if (any(dom%bnd(:, :) == BND_COR)) call die("[domain:init_domain] Corner BC not implemented without comm3d")
+#ifdef SHEAR_BND
+         call die("[domain:init_domain] SHEAR_BND not implemented without comm3d")
+#endif /* SHEAR_BND */
+      else
+         call inflate_req(max(size([LO, HI]) * size([BLK, BND]) * ndims, nproc)) ! just another way of defining '4 * 3' ;-)
+         ! write_plot_hdf5 requires nproc entries for the status array
+
+         if (any(dom%bnd(xdim:ydim, :) == BND_COR) .and. (cdd%psize(xdim) /= cdd%psize(ydim) .or. dom%n_d(xdim) /= dom%n_d(ydim))) then
+            write(msg, '(a,4(i4,a))')"[domain:init_domain] Corner BC require psize(xdim) equal to psize(ydim) and nxd equal to nyd. Detected: [", &
+                 &                   cdd%psize(xdim),",",cdd%psize(ydim), "] and [",dom%n_d(xdim),",",dom%n_d(ydim),"]"
+            call die(msg)
+         endif
+         if (any(dom%bnd(zdim, :) == BND_COR)) call die("[domain:init_domain] Corner BC not allowed for z-direction")
+
+#ifdef SHEAR_BND
+         if (cdd%psize(ydim) > 1) call die("[domain:initmpi] Shear-pediodic boundary conditions do not permit psize(ydim) > 1")
+         ! This will be possible when is_mpi_noncart will be fully implemented
 
 #ifndef FFTW
-      if (cdd%pcoords(xdim) == 0) then
-         bnd_xl = 'she'
-      else
          bnd_xl = 'mpi'
-      endif
-
-      if (cdd%pcoords(xdim) == psize(xdim)-1) then
-         bnd_xr = 'she'
-      else
          bnd_xr = 'mpi'
-      endif
+         if (cdd%pcoords(xdim) == 0)             bnd_xl = 'she'
+         if (cdd%pcoords(xdim) == psize(xdim)-1) bnd_xr = 'she'
 #endif /* !FFTW */
 #endif /* SHEAR_BND */
-
 #ifdef DEBUG
-      if (comm3d /= MPI_COMM_NULL) then
          do p = xdim, zdim
             write(msg,*) 'dir',p,': ',cdd%procn(p, LO), proc, cdd%procn(p, HI)
             call printinfo(msg)
          enddo
-      endif
 #endif /* DEBUG */
+      endif
 
 !#ifdef VERBOSE
       if (master) then
@@ -967,6 +957,7 @@ contains
 
    end subroutine divide_domain_rectlinear
 
+!-----------------------------------------------------------------------------
 !>
 !! \brief Divide the computational domain into local domains. Allow their size to depend significantly on CPU rank and allow for more than one neighbour on a single boundary.
 !! Try to minimize the imbalance and total internal boundaries size.
@@ -1115,6 +1106,8 @@ contains
       enddo
    end function translate_bnds_to_ints
 
+!-----------------------------------------------------------------------------
+
    subroutine set_derived(this)
 
       use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE
@@ -1130,12 +1123,12 @@ contains
 
       this%periodic(:) = .false.
       do d = xdim, zdim
-         if ((any(this%bnd(d, LO:HI) == BND_PER) .or. (d==xdim .and. any(this%bnd(d, LO:HI) == BND_SHE))) .and. has_dir(d)) then
+         if ((any(this%bnd(d, :) == BND_PER) .or. (d==xdim .and. any(this%bnd(d, :) == BND_SHE))) .and. has_dir(d)) then
             this%periodic(d) = .true.
             if (this%bnd(d, LO) /= this%bnd(d, HI)) call die("[types:set_derived] Periodic BC do not match")
          endif
       enddo
-      if (any(this%bnd(ydim:zdim, LO:HI) == BND_SHE)) call die("[types:set_derived] Shearing BC not allowed for y- and z-direction")
+      if (any(this%bnd(ydim:zdim, :) == BND_SHE)) call die("[types:set_derived] Shearing BC not allowed for y- and z-direction")
 
       !> \todo convert L[xyz], [xyz]0 and n[xyz]t to (xdim:zdim)-sized arrays
 
