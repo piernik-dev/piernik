@@ -41,12 +41,12 @@ module mpisetup
 
    private
    public :: cleanup_mpi, init_mpi, mpifind, inflate_req, &
-        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, ierr, info, &
-        &    master, slave, nproc, proc, procmask, comm, comm3d, have_mpi
+        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, ierr, &
+        &    master, slave, nproc, proc, procmask, comm, info, comm3d, have_mpi
 
    integer, protected :: nproc, proc, ierr, info
    integer, protected :: comm
-   integer :: comm3d
+   integer :: comm3d ! BEWARE: this probably should be moved to the domain module
 
    logical, protected :: master, slave
    logical, protected :: have_mpi           !< .true. when run on more than one processor
@@ -81,29 +81,28 @@ contains
       character(len=cwdlen) :: cwd_proc
       character(len=hnlen)  :: host_proc
       integer               :: pid_proc
-
       character(len=cwdlen), allocatable, dimension(:) :: cwd_all
       character(len=hnlen) , allocatable, dimension(:) :: host_all
       integer              , allocatable, dimension(:) :: pid_all
-
       integer(kind=1)       :: getcwd, hostnm
       integer(kind=4)       :: getpid
       integer :: cwd_status, host_status
       logical :: par_file_exist
       logical :: tmp_log_exist
-
       integer :: iproc
 
       call MPI_Init( ierr )
-      call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierr)
-      master = (proc == 0)
-      slave  = (proc /= 0)
       comm = MPI_COMM_WORLD
       info = MPI_INFO_NULL
+
+      call MPI_Comm_rank(comm, proc, ierr)
       call MPI_Comm_size(comm, nproc, ierr)
+
+      master = (proc == 0)
+      slave  = .not. master
       have_mpi = (nproc > 1)
 
-      !Assume that any tmp_log_file existed before Piernik was started and contains invalid/outydated/... data.
+      !Assume that any tmp_log_file existed before Piernik was started and contains invalid/outdated/... data.
       !Delete it now and keep in mind that any warn, die, printinfo or printio messages issued before this point will be lost as well.
       if (master) then
          inquire(file = tmp_log_file, exist = tmp_log_exist)
@@ -111,17 +110,14 @@ contains
             open(3, file=tmp_log_file)
             close(3, status="delete")
          endif
-      endif
 #ifdef VERBOSE
-      if (master) call printinfo("[mpisetup:init_mpi]: commencing...")
+         call printinfo("[mpisetup:init_mpi]: commencing...")
 #endif /* VERBOSE */
+      endif
 
       if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
-
       !> \deprecated BEWARE on slave it is probably enough to allocate only one element or none at all (may depend on MPI implementation)
-      allocate(cwd_all(0:nproc))
-      allocate(host_all(0:nproc))
-      allocate(pid_all(0:nproc))
+      allocate(cwd_all(0:nproc), host_all(0:nproc), pid_all(0:nproc))
 
       pid_proc    = getpid()
       host_status = hostnm(host_proc)
@@ -136,8 +132,6 @@ contains
       call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0, comm, ierr)
       call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, ierr)
       call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, ierr)
-
-      ! cwd = trim(cwd_proc)  !> \deprecated BEWARE: It's redundant, we get cwd for command line in init_piernik subroutine
 
       if (master) then
          inquire(file=par_file, exist=par_file_exist)
@@ -158,9 +152,7 @@ contains
          call printinfo("###############     Namelist parameters     ###############", .false.)
       endif
 
-      deallocate(host_all)
-      deallocate(pid_all)
-      deallocate(cwd_all)
+      deallocate(host_all, pid_all, cwd_all)
 
       if (allocated(procmask)) call die("[mpisetup:init_mpi] procmask already allocated")
       allocate(procmask(0:nproc-1))
