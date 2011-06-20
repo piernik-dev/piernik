@@ -205,7 +205,7 @@ contains
                b_y(iby,1:cg%ny-1)=b_y(iby,1:cg%ny-1)+b_y(iby,2:cg%ny);       b_y(iby, cg%ny) = b_y(iby, cg%ny-1)
                b_y(ibx,:)=b_y(ibx,:)+0.5*cg%b%arr(ibx,ip,:,k)
                b_y(ibz,:)=b_y(ibz,:)+0.5*cg%b%arr(ibz,i,:,kp)
-               b_y((/iby,ibx,ibz/),:)=b_y(:,:)
+               b_y( [ iby, ibx, ibz ],:)=b_y(:,:)
 #endif /* MAGNETIC */
 
                call set_geo_coeffs(ydim, flind, k, i, cg)
@@ -268,7 +268,7 @@ contains
                b_z(ibz,1:cg%nz-1) = b_z(ibz,1:cg%nz-1) + b_z(ibz,2:cg%nz);   b_z(ibz, cg%nz) = b_z(ibz, cg%nz-1)
                b_z(ibx,:) = b_z(ibx,:) + 0.5*cg%b%arr(ibx,ip,j,:)
                b_z(iby,:) = b_z(iby,:) + 0.5*cg%b%arr(iby,i,jp,:)
-               b_z((/ibz,iby,ibx/),:)=b_z(:,:)
+               b_z( [ ibz, iby, ibx ],:)=b_z(:,:)
 #endif /* MAGNETIC */
 
                call set_geo_coeffs(zdim, flind, i, j, cg)

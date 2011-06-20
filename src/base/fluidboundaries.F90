@@ -448,7 +448,7 @@ contains
          case (BND_REF)
             do ib=1, cg%nb
 
-               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%js-ib,:)   = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%nb+ib,:)
+               cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%js-ib,:)   = cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%nb+ib,:)
                cg%u%arr(iarr_all_my,:, cg%js-ib,:)                 =-cg%u%arr(iarr_all_my,:, cg%nb+ib,:)
 #ifndef ISO
                cg%u%arr(iarr_all_en,:, cg%js-ib,:)                 = cg%u%arr(iarr_all_en,:, cg%nb+ib,:)
@@ -467,7 +467,7 @@ contains
          case (BND_OUTD)
             do ib=1, cg%nb
 
-               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:,ib,:)        = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%js,:)
+               cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:,ib,:)        = cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%js,:)
                cg%u%arr(iarr_all_my,:,ib,:)                      = min(cg%u%arr(iarr_all_my,:, cg%js,:),0.0)
 #ifndef ISO
                cg%u%arr(iarr_all_en,:,ib,:)                      = cg%u%arr(iarr_all_en,:, cg%js,:)
@@ -491,7 +491,7 @@ contains
          case (BND_REF)
             do ib=1, cg%nb
 
-               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je+ib,:) = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je+1-ib,:)
+               cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%je+ib,:) = cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%je+1-ib,:)
                cg%u%arr(iarr_all_my,:, cg%je+ib,:)               =-cg%u%arr(iarr_all_my,:, cg%je+1-ib,:)
 #ifndef ISO
                cg%u%arr(iarr_all_en,:, cg%je+ib,:)               = cg%u%arr(iarr_all_en,:, cg%je+1-ib,:)
@@ -510,7 +510,7 @@ contains
          case (BND_OUTD)
             do ib=1, cg%nb
 
-               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je+ib,:) = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_mz/),:, cg%je,:)
+               cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%je+ib,:) = cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%je,:)
                cg%u%arr(iarr_all_my,:, cg%je+ib,:)               = max(cg%u%arr(iarr_all_my,:, cg%je,:),0.0)
 #ifndef ISO
                cg%u%arr(iarr_all_en,:, cg%je+ib,:)               = cg%u%arr(iarr_all_en,:, cg%je,:)
@@ -536,7 +536,7 @@ contains
          case (BND_REF)
             do ib=1, cg%nb
 
-               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ks-ib)   = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%nb+ib)
+               cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%ks-ib)   = cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%nb+ib)
                cg%u%arr(iarr_all_mz,:,:, cg%ks-ib)                 =-cg%u%arr(iarr_all_mz,:,:, cg%nb+ib)
 #ifndef ISO
                cg%u%arr(iarr_all_en,:,:, cg%ks-ib)                 = cg%u%arr(iarr_all_en,:,:, cg%nb+ib)
@@ -555,7 +555,7 @@ contains
          case (BND_OUTD)
             do ib=1, cg%nb
 
-               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:,ib)        = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ks)
+               cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:,ib)        = cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%ks)
 !> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
                cg%u%arr(iarr_all_mz,:,:,ib)                      = min(cg%u%arr(iarr_all_mz,:,:, cg%ks),0.0)
 #ifndef ISO
@@ -587,7 +587,7 @@ contains
          case (BND_REF)
             do ib=1, cg%nb
 
-               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+ib) = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+1-ib)
+               cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%ke+ib) = cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%ke+1-ib)
                cg%u%arr(iarr_all_mz,:,:, cg%ke+ib)               =-cg%u%arr(iarr_all_mz,:,:, cg%ke+1-ib)
 #ifndef ISO
                cg%u%arr(iarr_all_en,:,:, cg%ke+ib)               = cg%u%arr(iarr_all_en,:,:, cg%ke+1-ib)
@@ -606,7 +606,7 @@ contains
          case (BND_OUTD)
             do ib=1, cg%nb
 
-               cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke+ib) = cg%u%arr((/iarr_all_dn,iarr_all_mx,iarr_all_my/),:,:, cg%ke)
+               cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%ke+ib) = cg%u%arr( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%ke)
 !> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
                cg%u%arr(iarr_all_mz,:,:, cg%ke+ib)               = max(cg%u%arr(iarr_all_mz,:,:, cg%ke),0.0)
 #ifndef ISO

@@ -260,7 +260,7 @@ contains
       call random_seed(size=n)
       allocate(seed(n))
       call system_clock(count=clock)
-      seed = clock*proc + 37 * (/ (i-1, i = 1, n) /)
+      seed = clock*proc + 37 * [ (i-1, i = 1, n) ]
       call random_seed(put=seed)
       deallocate(seed)
 
