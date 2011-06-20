@@ -42,7 +42,7 @@ module domain
    implicit none
 
    private
-   public :: cleanup_domain, init_domain, translate_bnds_to_ints_dom, is_overlap, domain_container, user_divide_domain, &
+   public :: cleanup_domain, init_domain, translate_bnds_to_ints_dom, is_overlap, domain_container, user_divide_domain, allocate_pse, deallocate_pse, &
         &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, cdd
 
 ! AMR: There will be at least one domain container for the base grid.
@@ -511,7 +511,7 @@ contains
 
 !!-----------------------------------------------------------------------------
 
-   subroutine allocate_pse
+   subroutine allocate_pse(n_cg)
 
       use constants,  only: xdim, zdim, LO, HI
       use dataio_pub, only: die
@@ -519,16 +519,40 @@ contains
 
       implicit none
 
+      integer, dimension(nproc), intent(in), optional :: n_cg
       integer :: p
 
       if (allocated(dom%pse)) call die("[domain:allocate_pse] dom%pse already allocated")
       allocate(dom%pse(0:nproc-1))
       do p = 0, nproc-1
-         allocate(dom%pse(p)%sel(1, xdim:zdim, LO:HI))
+         if (present(n_cg)) then
+            allocate(dom%pse(p)%sel(n_cg(p+1), xdim:zdim, LO:HI))
+         else
+            allocate(dom%pse(p)%sel(1, xdim:zdim, LO:HI))
+         endif
          dom%pse(p)%sel(:, :, :) = 0
       enddo
 
    end subroutine allocate_pse
+
+!!-----------------------------------------------------------------------------
+
+   subroutine deallocate_pse
+
+      use mpisetup, only: nproc
+
+      implicit none
+
+      integer :: p
+
+      if (allocated(dom%pse)) then
+         do p = 0, nproc - 1
+            deallocate(dom%pse(p)%sel)
+         enddo
+         deallocate(dom%pse)
+      endif
+
+   end subroutine deallocate_pse
 
 !!-----------------------------------------------------------------------------
 
@@ -704,20 +728,13 @@ contains
    subroutine cleanup_domain
 
       use mpi,      only: MPI_COMM_NULL
-      use mpisetup, only: nproc, ierr
+      use mpisetup, only: ierr
 
       implicit none
 
-      integer :: p
-
       if (cdd%comm3d /= MPI_COMM_NULL) call MPI_Comm_free(cdd%comm3d, ierr)
 
-      if (allocated(dom%pse)) then
-         do p = 0, nproc - 1
-            deallocate(dom%pse(p)%sel)
-         enddo
-         deallocate(dom%pse)
-      endif
+      call deallocate_pse
       if (allocated(primes)) deallocate(primes)
 
    end subroutine cleanup_domain
@@ -944,7 +961,6 @@ contains
             ldom(:) = ldom(:) * fac(n,1)**[i, j, k]
          enddo
 
-         ii = ii + 1
          bsize = int(sum(ldom(:)/dble(dom%n_d(:)) * product(dom%n_d(:)), MASK = dom%n_d(:) > 1)) !ldom(1)*dom%n_d(2)*dom%n_d(3) + ldom(2)*dom%n_d(1)*dom%n_d(3) + ldom(3)*dom%n_d(1)*dom%n_d(2)
          load_balance = product(real(dom%n_d(:))) / ( real(nproc) * product( int((dom%n_d(:)-1)/ldom(:)) + 1 ) )
 
@@ -952,8 +968,11 @@ contains
          ! \todo add a factor that estimates lower cost when x-direction is not chopped too much
          quality = quality * (1. - (0.001 * ldom(xdim) + 0.0001 * ldom(ydim))/nproc) ! \deprecated estimate these magic numbers
 
+         if (any(ldom(:) > dom%n_d)) quality = 0
+
 #ifdef DEBUG
-         if (master) then
+         if (quality > 0 .and. master) then
+            ii = ii + 1
             write(msg,'(a,i3,a,3i4,a,i10,2(a,f10.7))')"m:ddr ",ii," p_size= [",ldom(:)," ], bcells= ", bsize, ", balance = ", load_balance, ", est_quality = ", quality
             call printinfo(msg)
          endif
@@ -1085,7 +1104,7 @@ contains
       if (master) then
          write(msg,'(2(A,I5))') "There are ", no_primes, " prime numbers less than", n
          call printinfo(msg)
-         print "(5i7)", tab
+         print "(15i7)", tab
       endif
 #endif /* DEBUG */
    end subroutine Eratosthenes_sieve
