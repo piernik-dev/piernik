@@ -78,7 +78,7 @@ contains
       x0           = 0.0       !< x-position of the blob
       y0           = 0.0       !< y-position of the blob
       z0           = 0.0       !< z-position of the blob
-      r0           = 5.* minval([dom%Lx, dom%Ly, dom%Lz]/dom%n_d(:), mask=has_dir(:))  !< radius of the blob
+      r0           = 5.* minval(dom%L_(:)/dom%n_d(:), mask=has_dir(:))  !< radius of the blob
 
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
@@ -219,7 +219,7 @@ contains
                         do jpm=-1,1
                            do kpm=-1,1
 
-                              r2 = (cg%x(i)-xsn+real(ipm)*dom%Lx)**2+(cg%y(j)-ysn+real(jpm)*dom%Ly)**2+(cg%z(k)-zsn+real(kpm)*dom%Lz)**2
+                              r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
                               if (icr == icr_H1) then
                                  cg%u%arr(iarr_crn(icr), i, j, k) = cg%u%arr(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
                               elseif (icr == icr_C12) then

@@ -81,7 +81,7 @@ contains
       x0      = 0.0
       y0      = 0.0
       z0      = 0.0
-      r0      = minval([dom%Lx, dom%Ly, dom%Lz]/dom%n_d(:), mask=has_dir(:))/2.
+      r0      = minval(dom%L_(:)/dom%n_d(:), mask=has_dir(:))/2.
       n_sn    = 1
       dt_sn   = 0.0
 

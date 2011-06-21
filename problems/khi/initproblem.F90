@@ -108,7 +108,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: dpi, zdim
+      use constants,   only: dpi, ydim, zdim
       use domain,      only: has_dir, dom
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
@@ -139,7 +139,7 @@ contains
             rcx = cg%x(i)
             do j = 1, cg%ny
                rcy = cg%y(j)
-               rc=rcy-0.5*dom%Ly
+               rc=rcy-0.5*dom%L_(ydim)
                if (rc > 0.0) then
                   cg%u%arr(idnn,i,j,:) = dtop
                   cg%u%arr(imxn,i,j,:) = vtop*dtop

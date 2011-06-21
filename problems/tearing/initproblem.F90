@@ -103,7 +103,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: pi
+      use constants,   only: pi, xdim, ydim
       use domain,      only: dom
       use fluidindex,  only: ibx, iby, ibz, flind
       use grid,        only: cga
@@ -144,10 +144,10 @@ contains
             do j = 1, cg%ny
                do i = 1, cg%nx
 
-                  vzab = v0*cos(2.*pi*cg%y(j)/dom%Ly)
+                  vzab = v0*cos(2.*pi*cg%y(j)/dom%L_(ydim))
                   cg%u%arr(imxi,i,j,k) = cg%u%arr(idni,i,j,k)*vzab
 
-                  if (abs(cg%x(i)-xmid) <= 0.25*dom%Lx) then
+                  if (abs(cg%x(i)-xmid) <= 0.25*dom%L_(xdim)) then
                      cg%b%arr(iby,i,j,k) = -b0
                   else
                      cg%b%arr(iby,i,j,k) =  b0

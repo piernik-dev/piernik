@@ -110,7 +110,7 @@ contains
 #ifdef SHEAR
    subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
 
-      use constants, only: dpi
+      use constants, only: dpi, xdim, ydim
       use domain,    only: dom
       use grid,      only: cg
       use shear,     only: dely
@@ -150,8 +150,8 @@ contains
 !----------------------------------------------------------------------
 !
 
-      St = dely / dom%Lx
-      St = -St * cg%nyb / dom%Ly
+      St = dely / dom%L_(xdim)
+      St = -St * cg%nyb / dom%L_(ydim)
 ! determine input array dimension
 !
       n = size(den, 1)

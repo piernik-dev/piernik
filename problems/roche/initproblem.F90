@@ -74,7 +74,7 @@ contains
       dnblob           = 1.0
       dnambfac            = 1.e-5
       p0ambfac         = 1.e-4
-      rclear           = dom%Lx/dom%n_d(xdim) ! BEWARE: why the x-direction is so special here?
+      rclear           = dom%L_(xdim)/dom%n_d(xdim) ! BEWARE: why the x-direction is so special here?
       vxfac            = 1.0
       taucool          = 1.0e30
 

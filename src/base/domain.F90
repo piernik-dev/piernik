@@ -68,9 +68,7 @@ module domain
       integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
 
       ! derived parameters
-      real    :: Lx                             !< span of the physical domain in x-direction (xmax-xmin)
-      real    :: Ly                             !< span of the physical domain in y-direction (ymax-ymin)
-      real    :: Lz                             !< span of the physical domain in z-direction (zmax-zmin)
+      real, dimension(ndims) :: L_              !< span of the physical domain [ xmax-xmin, ymax-ymin, zmax-zmin ]
       real    :: x0                             !< center of the physical domain in x-direction (xmax+xmin)/2.
       real    :: y0                             !< center of the physical domain in y-direction (ymax+ymin)/2.
       real    :: z0                             !< center of the physical domain in z-direction (zmax+zmin)/2.
@@ -1224,36 +1222,32 @@ contains
       !> \todo convert L[xyz], [xyz]0 and n[xyz]t to (xdim:zdim)-sized arrays
 
       ! auxiliary lengths
-      this%Lx = this%xmax - this%xmin
-      this%Ly = this%ymax - this%ymin
-      this%Lz = this%zmax - this%zmin
+      this%L_(:) = [ this%xmax - this%xmin, this%ymax - this%ymin, this%zmax - this%zmin ]
       this%x0 = (this%xmax + this%xmin)/2.
       this%y0 = (this%ymax + this%ymin)/2.
       this%z0 = (this%zmax + this%zmin)/2.
 
       !volume and total grid sizes
-      this%Vol = 1.
+      this%Vol = product(this%L_(:), mask=has_dir(:))
+      !> \deprecated BEWARE: Vol computed above is not true for non-cartesian geometry
+
       if (has_dir(xdim)) then
-         this%Vol = this%Vol * this%Lx
          this%nxt = this%n_d(xdim) + 2 * this%nb
       else
          this%nxt = 1
       endif
 
       if (has_dir(ydim)) then
-         this%Vol = this%Vol * this%Ly
          this%nyt = this%n_d(ydim) + 2 * this%nb
       else
          this%nyt = 1
       endif
 
       if (has_dir(zdim)) then
-         this%Vol = this%Vol * this%Lz
          this%nzt = this%n_d(zdim) + 2 * this%nb
       else
          this%nzt = 1
       endif
-      !> \deprecated BEWARE: Vol computed above is not true for non-cartesian geometry
 
    end subroutine set_derived
 

@@ -104,7 +104,7 @@ contains
 
    subroutine init_prob
 
-      use constants, only: pi
+      use constants, only: pi, xdim, ydim, zdim
       use domain,    only: dom
       use grid,      only: cga
       use grid_cont, only: cg_list_element, grid_container
@@ -117,9 +117,9 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      k_x = 2.*pi/dom%Lx*real(m_x)
-      k_y = 2.*pi/dom%Ly*real(m_y)
-      k_z = 2.*pi/dom%Lz*real(m_z)
+      k_x = 2.*pi/dom%L_(xdim)*real(m_x)
+      k_y = 2.*pi/dom%L_(ydim)*real(m_y)
+      k_z = 2.*pi/dom%L_(zdim)*real(m_z)
       k_a = sqrt(k_x**2+k_y**2+k_z**2)
 
 

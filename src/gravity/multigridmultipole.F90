@@ -136,18 +136,18 @@ contains
             CoM(zdim) = dom%z0
             zaxis_inside = .false.
          case (GEO_RPZ)
-            if (dom%Ly >= (2.-small)*pi) then
+            if (dom%L_(ydim) >= (2.-small)*pi) then
                CoM(xdim) = 0.
                CoM(ydim) = 0.
             else
 !!$               CoM(xdim) = 2./3. * (dom%xmax**3-dom%xmin**3)/(dom%xmax**2-dom%xmin**2)
-!!$               if (dom%Ly /= 0.) CoM(xdim) = CoM(xdim) * sin(dom%Ly/2.)/(dom%Ly/2.)
+!!$               if (dom%L_(ydim) /= 0.) CoM(xdim) = CoM(xdim) * sin(dom%L_(ydim)/2.)/(dom%L_(ydim)/2.)
 !!$               CoM(ydim) = dom%y0
                CoM(xdim) = 0.
                CoM(ydim) = 0.
             endif
             CoM(zdim) = dom%z0
-            zaxis_inside = dom%xmin <= dom%Lx/dom%n_d(xdim)
+            zaxis_inside = dom%xmin <= dom%L_(xdim)/dom%n_d(xdim)
             if (master) then
                if (zaxis_inside) call warn("[multipole:init_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
                if (use_point_monopole) call warn("[multipole:init_multipole] Point-like monopole is not implemented.")
@@ -195,17 +195,17 @@ contains
          select case (geometry_type)
             case (GEO_XYZ)
                drq = min(lmpole%dx, lmpole%dy, lmpole%dz) / 2.
-               rqbin = int(sqrt(dom%Lx**2 + dom%Ly**2 + dom%Lz**2)/drq) + 1
+               rqbin = int(sqrt(sum(dom%L_(:)**2))/drq) + 1
                ! arithmetic average of the closest and farthest points of computational domain with respect to its center
                !>
                !!\todo check what happens if there are points that are really close to the domain center (maybe we should use a harmonic average?)
                !! Issue a warning or error if it is known that given lmax leads to FP overflows in rn(:) and irn(:)
                !<
-               rscale = ( min(dom%Lx, dom%Ly, dom%Lz) + sqrt(dom%Lx**2 + dom%Ly**2 + dom%Lz**2) )/4.
+               rscale = ( minval(dom%L_(:)) + sqrt(sum(dom%L_(:)**2)) )/4.
             case (GEO_RPZ)
                drq = min(lmpole%dx, dom%x0*lmpole%dy, lmpole%dz) / 2.
-               rqbin = int(sqrt((2.*dom%xmax)**2 + dom%Lz**2)/drq) + 1
-               rscale = ( min(2.*dom%xmax, dom%Lz) + sqrt((2.*dom%xmax)**2 + dom%Lz**2) )/4.
+               rqbin = int(sqrt((2.*dom%xmax)**2 + dom%L_(zdim)**2)/drq) + 1
+               rscale = ( min(2.*dom%xmax, dom%L_(zdim)) + sqrt((2.*dom%xmax)**2 + dom%L_(zdim)**2) )/4.
             case default
                call die("[multipole:init_multipole] Unsupported geometry.")
          end select

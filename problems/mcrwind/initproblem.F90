@@ -360,8 +360,8 @@ contains
 
 !                     decr = amp_ecr_sn * ethu  &
                         decr = amp_cr  &
-                             * exp(-((cg%x(i)-xsn+real(ipm)*dom%Lx)**2  &
-                             + (cg%y(j)-ysna+real(jpm)*dom%Ly)**2  &
+                             * exp(-((cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2  &
+                             + (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2  &
                              + (cg%z(k)-zsn)**2)/r_sn**2)
 !                     cg%u%arr(iarr_crn,i,j,k) = cg%u%arr(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
                         do icr = 1, flind%crn%all

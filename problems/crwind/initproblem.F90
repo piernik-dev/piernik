@@ -113,6 +113,7 @@ contains
 
    subroutine init_prob
 
+      use constants,      only: xdim, ydim
       use domain,         only: dom
       use fluidindex,     only: ibx, iby, ibz, flind
       use global,         only: smalld
@@ -170,10 +171,10 @@ contains
 #ifdef GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
                   cg%u%arr(iarr_crs,i,j,k)= cg%u%arr(iarr_crs,i,j,k) &
-                       + amp_cr*exp(-((cg%x(i)- x0        )**2 + (cg%y(j)- y0        )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
-                       + amp_cr*exp(-((cg%x(i)-(x0+dom%Lx))**2 + (cg%y(j)- y0        )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
-                       + amp_cr*exp(-((cg%x(i)- x0        )**2 + (cg%y(j)-(y0+dom%Ly))**2 + (cg%z(k)-z0)**2)/r_sn**2) &
-                       + amp_cr*exp(-((cg%x(i)-(x0+dom%Lx))**2 + (cg%y(j)-(y0+dom%Ly))**2 + (cg%z(k)-z0)**2)/r_sn**2)
+                       + amp_cr*exp(-((cg%x(i)- x0              )**2 + (cg%y(j)- y0              )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
+                       + amp_cr*exp(-((cg%x(i)-(x0+dom%L_(xdim)))**2 + (cg%y(j)- y0              )**2 + (cg%z(k)-z0)**2)/r_sn**2) &
+                       + amp_cr*exp(-((cg%x(i)- x0              )**2 + (cg%y(j)-(y0+dom%L_(ydim)))**2 + (cg%z(k)-z0)**2)/r_sn**2) &
+                       + amp_cr*exp(-((cg%x(i)-(x0+dom%L_(xdim)))**2 + (cg%y(j)-(y0+dom%L_(ydim)))**2 + (cg%z(k)-z0)**2)/r_sn**2)
 #endif /* GALAXY */
 #endif /* COSM_RAYS */
                enddo

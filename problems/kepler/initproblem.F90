@@ -190,7 +190,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_sine
 
-      use constants,  only: dpi
+      use constants,  only: dpi, xdim, zdim
       use dataio_pub, only: printinfo, warn
       use domain,     only: dom
       use fluidindex, only: flind
@@ -212,8 +212,8 @@ contains
       endif
       if (master) call printinfo("[initproblem:add_sine]: adding sine wave perturbation to dust")
 
-      kx = 15.*dpi/dom%Lx
-      kz =  5.*dpi/dom%Lz
+      kx = 15.*dpi/dom%L_(xdim)
+      kz =  5.*dpi/dom%L_(zdim)
 
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))

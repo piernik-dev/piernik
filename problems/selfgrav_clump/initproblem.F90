@@ -136,7 +136,7 @@ contains
       clump_pos_x = dom%x0
       clump_pos_y = dom%y0
       clump_pos_z = dom%z0
-      clump_r = max(clump_r, maxval([dom%Lx, dom%Ly, dom%Lz]/dom%n_d(:), mask=has_dir(:)))
+      clump_r = max(clump_r, maxval(dom%L_(:)/dom%n_d(:), mask=has_dir(:)))
 
    end subroutine read_problem_par
 
@@ -429,7 +429,7 @@ contains
       enddo
 
       if (master) then
-         write(msg, '(a,g13.7)')"[initproblem:init_prob] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval([dom%Lx, dom%Ly, dom%Lz])/2.)**3/(newtong * clump_mass) )
+         write(msg, '(a,g13.7)')"[initproblem:init_prob] Relaxation finished. Largest orbital period: ",2.*pi*sqrt( (minval(dom%L_(:))/2.)**3/(newtong * clump_mass) )
          call printinfo(msg, .true.)
       endif
 

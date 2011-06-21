@@ -237,7 +237,7 @@ contains
             this%ie    = this%nb + this%nxb
             this%isb   = 2*this%nb
             this%ieb   = this%nxb+1
-            this%dx    = dom%Lx / dom%n_d(xdim)
+            this%dx    = dom%L_(xdim) / dom%n_d(xdim)
             this%dxmn  = min(this%dxmn, this%dx)
             this%fbnd(xdim, LO) = dom%xmin + this%dx *  this%off(xdim)
             this%fbnd(xdim, HI) = dom%xmin + this%dx * (this%off(xdim) + this%nxb)
@@ -258,7 +258,7 @@ contains
             this%je    = this%nb + this%nyb
             this%jsb   = 2*this%nb
             this%jeb   = this%nyb+1
-            this%dy    = dom%Ly / dom%n_d(ydim)
+            this%dy    = dom%L_(ydim) / dom%n_d(ydim)
             this%dxmn  = min(this%dxmn, this%dy)
             this%fbnd(ydim, LO) = dom%ymin + this%dy *  this%off(ydim)
             this%fbnd(ydim, HI) = dom%ymin + this%dy * (this%off(ydim) + this%nyb)
@@ -279,7 +279,7 @@ contains
             this%ke    = this%nb + this%nzb
             this%ksb   = 2*this%nb
             this%keb   = this%nzb+1
-            this%dz    = dom%Lz / dom%n_d(zdim)
+            this%dz    = dom%L_(zdim) / dom%n_d(zdim)
             this%dxmn  = min(this%dxmn, this%dz)
             this%fbnd(zdim, LO) = dom%zmin + this%dz *  this%off(zdim)
             this%fbnd(zdim, HI) = dom%zmin + this%dz * (this%off(zdim) + this%nzb)

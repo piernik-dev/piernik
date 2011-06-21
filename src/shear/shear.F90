@@ -119,8 +119,8 @@ contains
 !--------------------------------------------------------------------------------------------------
    function shear_acc(sweep,u) result(rotacc)
 
-      use fluidindex, only: flind, iarr_all_dn, iarr_all_my
       use constants,  only: xdim, ydim
+      use fluidindex, only: flind, iarr_all_dn, iarr_all_my
 
       implicit none
 
@@ -161,6 +161,7 @@ contains
 
    subroutine yshift(ts,dts)
 
+      use constants,  only: xdim
       use dataio_pub, only: die
       use domain,     only: dom
       use grid,       only: cga
@@ -178,8 +179,8 @@ contains
       cg => cga%cg_all(1)
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[shear:yshift] multiple grid pieces per procesor not implemented yet") !nontrivial
 
-      ddly  = dts * qshear*omega*dom%Lx
-      dely  = ts  * qshear*omega*dom%Lx
+      ddly  = dts * qshear*omega*dom%L_(xdim)
+      dely  = ts  * qshear*omega*dom%L_(xdim)
       delj  = mod(int(dely/cg%dy), cg%nyb)
       eps   = mod(dely, cg%dy)/cg%dy
 #ifdef FFTW
@@ -194,7 +195,7 @@ contains
 #ifdef FFTW
    function unshear_fft(qty,x,ddy,inv)
 
-      use constants,  only: dpi
+      use constants,  only: dpi, xdim
       use dataio_pub, only: die
       use domain,     only: dom
       use grid,       only: cga
@@ -222,7 +223,7 @@ contains
       cg => cga%cg_all(1)
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[shear:unshear_fft] multiple grid pieces per procesor not implemented yet") !nontrivial
 
-      St = - ddy / cg%dy / dom%Lx
+      St = - ddy / cg%dy / dom%L_(xdim)
       if (.not.present(inv)) St = -St
 
       nx = size(qty,1)
@@ -266,6 +267,7 @@ contains
 !--------------------------------------------------------------------------------------------------
    function unshear(qty,x,inv)
 
+      use constants,  only: xdim
       use dataio_pub, only: die
       use domain,     only: dom
       use grid,       only: cga
@@ -291,7 +293,7 @@ contains
 
       my = 3*cg%nyb+2*cg%nb
 
-      fx = dely / dom%Lx
+      fx = dely / dom%L_(xdim)
       sg = -1
 
       if (.not.allocated(temp)) allocate(temp(my,nz))

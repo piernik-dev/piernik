@@ -104,9 +104,9 @@ contains
                   do m=-kp,kp
                      do n = -kp,kp
                         call random_number(mn)
-!                     somx = dpi*(float(n)*y(j) + float(m)*z(k)) / dom%Lx
-!                     somy = dpi*(float(n)*x(i) + float(m)*z(k)) / dom%Ly
-!                     somz = dpi*(float(n)*x(i) + float(m)*y(j)) / dom%Lz
+!                     somx = dpi*(float(n)*y(j) + float(m)*z(k)) / dom%L_(xdim)
+!                     somy = dpi*(float(n)*x(i) + float(m)*z(k)) / dom%L_(ydim)
+!                     somz = dpi*(float(n)*x(i) + float(m)*y(j)) / dom%L_(zdim)
 !                     deltav(1) = deltav(1) + mn(1)*sin(somx) + mn(2)*cos(somx)
 !                     deltav(2) = deltav(2) + mn(3)*sin(somy) + mn(4)*cos(somy)
 !                     deltav(3) = deltav(3) + mn(5)*sin(somz) + mn(6)*cos(somz)

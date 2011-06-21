@@ -123,9 +123,9 @@ contains
       if (.not. has_dir(ydim)) iy = 0
       if (.not. has_dir(zdim)) iz = 0
 
-      kx = 2. * pi * ix / dom%Lx
-      ky = 2. * pi * iy / dom%Ly
-      kz = 2. * pi * iz / dom%Lz
+      kx = 2. * pi * ix / dom%L_(xdim)
+      ky = 2. * pi * iy / dom%L_(ydim)
+      kz = 2. * pi * iz / dom%L_(zdim)
       if (mode == 1) then
          kx = kx / 2.
          ky = ky / 2.

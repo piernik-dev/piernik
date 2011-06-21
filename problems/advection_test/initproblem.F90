@@ -68,11 +68,12 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use dataio_pub,  only: warn
-      use domain,      only: dom
-      use mpisetup,    only: ierr, rbuff, master, slave, buffer_dim, comm, proc, nproc
-      use mpi,         only: MPI_DOUBLE_PRECISION
+      use constants,  only: xdim, ydim, zdim
+      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_pub, only: warn
+      use domain,     only: dom
+      use mpisetup,   only: ierr, rbuff, master, slave, buffer_dim, comm, proc, nproc
+      use mpi,        only: MPI_DOUBLE_PRECISION
 
       implicit none
 
@@ -120,12 +121,12 @@ contains
          endif
       endif
 
-      pulse_x_min = dom%x0 - dom%Lx * pulse_size/2.
-      pulse_x_max = dom%x0 + dom%Lx * pulse_size/2.
-      pulse_y_min = dom%y0 - dom%Ly * pulse_size/2.
-      pulse_y_max = dom%y0 + dom%Ly * pulse_size/2.
-      pulse_z_min = dom%z0 - dom%Lz * pulse_size/2.
-      pulse_z_max = dom%z0 + dom%Lz * pulse_size/2.
+      pulse_x_min = dom%x0 - dom%L_(xdim) * pulse_size/2.
+      pulse_x_max = dom%x0 + dom%L_(xdim) * pulse_size/2.
+      pulse_y_min = dom%y0 - dom%L_(ydim) * pulse_size/2.
+      pulse_y_max = dom%y0 + dom%L_(ydim) * pulse_size/2.
+      pulse_z_min = dom%z0 - dom%L_(zdim) * pulse_size/2.
+      pulse_z_max = dom%z0 + dom%L_(zdim) * pulse_size/2.
 
    end subroutine read_problem_par
 

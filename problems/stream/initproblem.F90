@@ -112,7 +112,7 @@ contains
 
    subroutine init_prob
 
-      use constants,    only: pi, dpi
+      use constants,    only: pi, dpi, xdim, zdim
       use dataio_pub,   only: msg, printinfo, run_id
       use domain,       only: dom
       use fluidindex,   only: flind
@@ -156,8 +156,8 @@ contains
          coeff(1) = (-0.1398623, 0.0372951 ) ! w_x
          coeff(2) = ( 0.1305628, 0.0640574 ) ! w_y
          coeff(3) = ( 0.1639549,-0.0233277 ) ! w_z
-         kx = dpi/dom%Lx
-         kz = dpi/dom%Lz
+         kx = dpi/dom%L_(xdim)
+         kz = dpi/dom%L_(zdim)
       else if (run_id == 'lnB') then
          call printinfo("Lin B")
          coeff(4) = (-0.0174121,-0.2770347 ) ! u_x
@@ -167,11 +167,11 @@ contains
          coeff(1) = ( 0.0462916,-0.2743072 ) ! w_x
          coeff(2) = ( 0.2739304, 0.0039293 ) ! w_y
          coeff(3) = ( 0.0083263, 0.2768866 ) ! w_z
-         kx = dpi/dom%Lx
-         kz = dpi/dom%Lz
+         kx = dpi/dom%L_(xdim)
+         kz = dpi/dom%L_(zdim)
       else
-         kx = dpi/dom%Lx
-         kz = dpi/dom%Lz
+         kx = dpi/dom%L_(xdim)
+         kz = dpi/dom%L_(zdim)
          coeff(:) = ( 0.0, 0.0 )
       endif
 
@@ -293,7 +293,7 @@ contains
 
    subroutine compare(t)
 
-      use constants,  only: dpi
+      use constants,  only: dpi, xdim, zdim
       use dataio_pub, only: run_id
       use domain,     only: dom
 
@@ -326,8 +326,8 @@ contains
          coeff(8) = ( 0.4998786, 0.0154764 ) ! omega
       endif
 
-      kx = dpi/dom%Lx
-      kz = dpi/dom%Lz
+      kx = dpi/dom%L_(xdim)
+      kz = dpi/dom%L_(zdim)
 
    end subroutine compare
 

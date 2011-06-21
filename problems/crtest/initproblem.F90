@@ -87,7 +87,7 @@ contains
       x0           = 0.0       !< x-position of the blob
       y0           = 0.0       !< y-position of the blob
       z0           = 0.0       !< z-position of the blob
-      r0           = 5.* minval([dom%Lx, dom%lY, dom%Lz]/dom%n_d) !< radius of the blob
+      r0           = 5.* minval(dom%L_(:)/dom%n_d) !< radius of the blob
 
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
