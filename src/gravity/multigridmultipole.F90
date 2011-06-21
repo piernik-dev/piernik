@@ -113,7 +113,7 @@ contains
 
    subroutine init_multipole(mb_alloc)
 
-      use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
+      use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI
       use dataio_pub,    only: die, warn
       use domain,        only: dom, eff_dim, geometry_type
       use mpisetup,      only: master
@@ -138,14 +138,14 @@ contains
                CoM(xdim) = 0.
                CoM(ydim) = 0.
             else
-!!$               CoM(xdim) = 2./3. * (dom%xmax**3-dom%xmin**3)/(dom%xmax**2-dom%xmin**2)
+!!$               CoM(xdim) = 2./3. * (dom%edge(xdim, HI)**3-dom%edge(xdim, LO)**3)/(dom%edge(xdim, HI)**2-dom%edge(xdim, LO)**2)
 !!$               if (dom%L_(ydim) /= 0.) CoM(xdim) = CoM(xdim) * sin(dom%L_(ydim)/2.)/(dom%L_(ydim)/2.)
 !!$               CoM(ydim) = dom%C_(ydim)
                CoM(xdim) = 0.
                CoM(ydim) = 0.
             endif
             CoM(zdim) = dom%C_(zdim)
-            zaxis_inside = dom%xmin <= dom%L_(xdim)/dom%n_d(xdim)
+            zaxis_inside = dom%edge(xdim, LO) <= dom%L_(xdim)/dom%n_d(xdim)
             if (master) then
                if (zaxis_inside) call warn("[multipole:init_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
                if (use_point_monopole) call warn("[multipole:init_multipole] Point-like monopole is not implemented.")
@@ -202,8 +202,8 @@ contains
                rscale = ( minval(dom%L_(:)) + sqrt(sum(dom%L_(:)**2)) )/4.
             case (GEO_RPZ)
                drq = min(lmpole%dx, dom%C_(xdim)*lmpole%dy, lmpole%dz) / 2.
-               rqbin = int(sqrt((2.*dom%xmax)**2 + dom%L_(zdim)**2)/drq) + 1
-               rscale = ( min(2.*dom%xmax, dom%L_(zdim)) + sqrt((2.*dom%xmax)**2 + dom%L_(zdim)**2) )/4.
+               rqbin = int(sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2)/drq) + 1
+               rscale = ( min(2.*dom%edge(xdim, HI), dom%L_(zdim)) + sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2) )/4.
             case default
                call die("[multipole:init_multipole] Unsupported geometry.")
          end select

@@ -142,7 +142,7 @@ contains
 
    subroutine init_prob
 
-      use constants,     only: pi
+      use constants,     only: pi, xdim, ydim, zdim, LO
       use dataio_pub,    only: tend, msg, printinfo, warn
       use domain,        only: dom
       use grid,          only: cga
@@ -206,11 +206,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
          do k = cg%ks, cg%ke
-            zk = cg%z(k)-dom%zmin
+            zk = cg%z(k)-dom%edge(zdim, LO)
             do j = cg%js, cg%je
-               yj = cg%y(j)-dom%ymin
+               yj = cg%y(j)-dom%edge(ydim, LO)
                do i = cg%is, cg%ie
-                  xi = cg%x(i)-dom%xmin
+                  xi = cg%x(i)-dom%edge(xdim, LO)
                   select case (mode)
                      case (0)
                         cg%u%arr(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi + ky*yj + kz*zk))

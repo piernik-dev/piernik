@@ -167,7 +167,7 @@ contains
 
    subroutine init_prob
 
-      use constants,      only: xdim, ydim, zdim
+      use constants,      only: xdim, ydim, zdim, HI
       use dataio_pub,     only: die, warn
       use domain,         only: has_dir, dom
       use fluidindex,     only: ibx, iby, ibz
@@ -236,7 +236,7 @@ contains
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
                   r2 = (cg%x(i)-x0)**2+(cg%y(j)-y0)**2+(cg%z(k)-z0)**2
-                  if (cg%x(i)> 2*x0-dom%xmax .and. cg%y(j) > 2*y0-dom%ymax) &
+                  if (cg%x(i)> 2*x0-dom%edge(xdim, HI) .and. cg%y(j) > 2*y0-dom%edge(ydim, HI)) &
                        cg%u%arr(iecr, i, j, k)= cg%u%arr(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
                enddo
             enddo

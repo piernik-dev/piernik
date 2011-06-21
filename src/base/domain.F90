@@ -57,12 +57,7 @@ module domain
 
    type :: domain_container
       ! primary parameters, read from /DOMAIN_SIZES/, /BOUNDARIES/ and /DOMAIN_LIMITS/ namelists
-      real    :: xmin                           !< physical domain left x-boundary position
-      real    :: xmax                           !< physical domain right x-boundary position
-      real    :: ymin                           !< physical domain left y-boundary position
-      real    :: ymax                           !< physical domain right y-boundary position
-      real    :: zmin                           !< physical domain left z-boundary position
-      real    :: zmax                           !< physical domain right z-boundary position
+      real, dimension(ndims, LO:HI) :: edge     !< physical domain boundary positions
       integer, dimension(ndims) :: n_d          !< number of grid cells in physical domain in x-, y- and z-direction (where equal to 1, the dimension is reduced to a point with no boundary cells)
       integer                   :: nb           !< number of boundary cells surrounding the physical domain, same for all directions
       integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
@@ -398,12 +393,8 @@ contains
       ! set up the global domain
       dom%nb = nb
 
-      dom%xmin = xmin
-      dom%ymin = ymin
-      dom%zmin = zmin
-      dom%xmax = xmax
-      dom%ymax = ymax
-      dom%zmax = zmax
+      dom%edge(:, LO) = [ xmin, ymin, zmin ]
+      dom%edge(:, HI) = [ xmax, ymax, zmax ]
 
       call dom%set_derived ! finish up with the rest of domain_container members
 
@@ -694,7 +685,7 @@ contains
 !!-----------------------------------------------------------------------------
 !!
 !> \brief is_overlap_per checks if two given blocks placed within a periodic domain are overlapping.
-!! \details to handle shearing box which is divided in y-direction atthe edges, one has to provide another subroutine (is_overlap_per_shear) and add it to interface is_overlap
+!! \details to handle shearing box which is divided in y-direction at the edges, one has to provide another subroutine (is_overlap_per_shear) and add it to interface is_overlap
 !<
    subroutine is_overlap_per(this, other, share, periods)
 
@@ -1220,8 +1211,8 @@ contains
       !> \todo convert L[xyz], [xyz]0 and n[xyz]t to (xdim:zdim)-sized arrays
 
       ! auxiliary lengths
-      this%L_(:) = [ this%xmax - this%xmin, this%ymax - this%ymin, this%zmax - this%zmin ]
-      this%C_(:) = [ (this%xmax + this%xmin)/2., (this%ymax + this%ymin)/2., (this%zmax + this%zmin)/2. ]
+      this%L_(:) = this%edge(:, HI) - this%edge(:, LO)
+      this%C_(:) = (this%edge(:, HI) + this%edge(:, LO))/2
 
       !volume and total grid sizes
       this%Vol = product(this%L_(:), mask=has_dir(:))

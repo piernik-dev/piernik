@@ -73,7 +73,7 @@ contains
 
    subroutine compute_dt(fl, cx, cy, cz, c_max, c_out, dt_out, cg)
 
-      use constants,  only: big, xdim, ydim, zdim, GEO_RPZ
+      use constants,  only: big, xdim, ydim, zdim, GEO_RPZ, LO
       use domain,     only: dom, geometry_type, has_dir
       use fluidtypes, only: component_fluid
       use global,     only: cfl
@@ -102,7 +102,7 @@ contains
       endif
       if (has_dir(ydim) .and. cy /= 0) then
          dt_proc_y = cg%dy/cy
-         if (geometry_type == GEO_RPZ) dt_proc_y = dt_proc_y * dom%xmin
+         if (geometry_type == GEO_RPZ) dt_proc_y = dt_proc_y * dom%edge(xdim, LO)
       else
          dt_proc_y = big
       endif

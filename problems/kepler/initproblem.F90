@@ -282,7 +282,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,    only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ, DST
+      use constants,    only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
       use dataio_pub,   only: msg, printinfo, die
       use domain,       only: geometry_type, cdd, dom, has_dir
       use fluidindex,   only: ibx, iby, ibz, flind
@@ -379,13 +379,13 @@ contains
                call printinfo("------------------------------------------------------------------")
                call printinfo(" Assuming temperature profile for MMSN ")
                call printinfo(" T(R) = 150 ( R / 1 AU )^(-0.429) K")
-               write(msg,'(A,F5.1,A)') " T(xmin) = ", mmsn_T(dom%xmin)," K"
+               write(msg,'(A,F5.1,A)') " T(xmin) = ", mmsn_T(dom%edge(xdim, LO))," K"
                call printinfo(msg)
-               write(msg,'(A,F5.1,A)') " T(xmax) = ", mmsn_T(dom%xmax)," K"
+               write(msg,'(A,F5.1,A)') " T(xmax) = ", mmsn_T(dom%edge(xdim, HI))," K"
                call printinfo(msg)
-               write(msg,'(A,F5.1,A)') " T_mean  = ", 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax))," K"
+               write(msg,'(A,F5.1,A)') " T_mean  = ", 0.5*(mmsn_T(dom%edge(xdim, LO))+mmsn_T(dom%edge(xdim, HI)))," K"
                call printinfo(msg)
-               write(msg,'(A,F9.5)') " cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(dom%xmin)+mmsn_T(dom%xmax)) / mH
+               write(msg,'(A,F9.5)') " cs2(T_mean) = ", kboltz * 0.5*(mmsn_T(dom%edge(xdim, LO))+mmsn_T(dom%edge(xdim, HI))) / mH
                call printinfo(msg)
                if (associated(flind%neu)) then
                   write(msg,'(A,F12.3,A)') " T_real(cs2) = ", flind%neu%cs2*mH/kboltz, " K"

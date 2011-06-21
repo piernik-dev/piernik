@@ -1209,7 +1209,7 @@ contains
 
    subroutine read_restart_hdf5(chdf)
 
-      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B
+      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B, LO, HI
       use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, hdf
       use dataio_user, only: problem_read_restart
       use domain,      only: dom, has_dir
@@ -1280,27 +1280,27 @@ contains
          if (ibuf(1) /= dom%n_d(xdim) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nxd does not match")
          if (has_dir(xdim)) then
             call h5ltget_attribute_double_f(file_id,"/","xmin", rbuf, error)
-            if (rbuf(1) /= dom%xmin .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] xmin does not match")
+            if (rbuf(1) /= dom%edge(xdim, LO) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] xmin does not match")
             call h5ltget_attribute_double_f(file_id,"/","xmax", rbuf, error)
-            if (rbuf(1) /= dom%xmax .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] xmax does not match")
+            if (rbuf(1) /= dom%edge(xdim, HI) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] xmax does not match")
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nyd", ibuf, error)
          if (ibuf(1) /= dom%n_d(ydim) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nyd does not match")
          if (has_dir(ydim)) then
             call h5ltget_attribute_double_f(file_id,"/","ymin", rbuf, error)
-            if (rbuf(1) /= dom%ymin .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] ymin does not match")
+            if (rbuf(1) /= dom%edge(ydim, LO) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] ymin does not match")
             call h5ltget_attribute_double_f(file_id,"/","ymax", rbuf, error)
-            if (rbuf(1) /= dom%ymax .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] ymax does not match")
+            if (rbuf(1) /= dom%edge(ydim, HI) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] ymax does not match")
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nzd", ibuf, error)
          if (ibuf(1) /= dom%n_d(zdim) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] nzd does not match")
          if (has_dir(zdim)) then
             call h5ltget_attribute_double_f(file_id,"/","zmin", rbuf, error)
-            if (rbuf(1) /= dom%zmin .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] zmin does not match")
+            if (rbuf(1) /= dom%edge(zdim, LO) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] zmin does not match")
             call h5ltget_attribute_double_f(file_id,"/","zmax", rbuf, error)
-            if (rbuf(1) /= dom%zmax .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] zmax does not match")
+            if (rbuf(1) /= dom%edge(zdim, HI) .or. error /= 0) call die("[dataio_hdf5:read_restart_hdf5] zmax does not match")
          endif
 
          call h5fclose_f(file_id, error)
@@ -1494,7 +1494,7 @@ contains
 !<
    subroutine set_common_attributes(filename, chdf)
 
-      use constants,   only: cbuff_len
+      use constants,   only: cbuff_len, xdim, ydim, zdim
       use dataio_pub,  only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, hdf
       use dataio_user, only: additional_attrs
       use domain,      only: dom
@@ -1542,19 +1542,16 @@ contains
       call h5open_f(error)
       call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error)
 
-      rbuffer(1)  = t                        ; rbuffer_name(1)  = "time" !rr2
-      rbuffer(2)  = dt                       ; rbuffer_name(2)  = "timestep" !rr2
-      rbuffer(3)  = chdf%last_hdf_time       ; rbuffer_name(3)  = "last_hdf_time" !rr2
-      rbuffer(4)  = dom%xmin                 ; rbuffer_name(4)  = "xmin" !rr1
-      rbuffer(5)  = dom%xmax                 ; rbuffer_name(5)  = "xmax" !rr1
-      rbuffer(6)  = dom%ymin                 ; rbuffer_name(6)  = "ymin" !rr1
-      rbuffer(7)  = dom%ymax                 ; rbuffer_name(7)  = "ymax" !rr1
-      rbuffer(8)  = dom%zmin                 ; rbuffer_name(8)  = "zmin" !rr1
-      rbuffer(9)  = dom%zmax                 ; rbuffer_name(9)  = "zmax" !rr1
-      rbuffer(10) = piernik_hdf5_version     ; rbuffer_name(10) = "piernik" !rr1, rr2
-      rbuffer(11) = magic_mass               ; rbuffer_name(11) = "magic_mass" !rr2
-      rbuffer(12) = chdf%next_t_tsl          ; rbuffer_name(12) = "next_t_tsl" !rr2
-      rbuffer(13) = chdf%next_t_log          ; rbuffer_name(13) = "next_t_log" !rr2
+      rbuffer(1)   = t                       ; rbuffer_name(1)   = "time" !rr2
+      rbuffer(2)   = dt                      ; rbuffer_name(2)   = "timestep" !rr2
+      rbuffer(3)   = chdf%last_hdf_time      ; rbuffer_name(3)   = "last_hdf_time" !rr2
+      rbuffer(4:5) = dom%edge(xdim, :)       ; rbuffer_name(4:5) = [ "xmin", "xmax" ] !rr1
+      rbuffer(6:7) = dom%edge(ydim, :)       ; rbuffer_name(6:7) = [ "ymin", "ymax" ] !rr1
+      rbuffer(8:9) = dom%edge(zdim, :)       ; rbuffer_name(8:9) = [ "zmin", "zmax" ] !rr1
+      rbuffer(10)  = piernik_hdf5_version    ; rbuffer_name(10)  = "piernik" !rr1, rr2
+      rbuffer(11)  = magic_mass              ; rbuffer_name(11)  = "magic_mass" !rr2
+      rbuffer(12)  = chdf%next_t_tsl         ; rbuffer_name(12)  = "next_t_tsl" !rr2
+      rbuffer(13)  = chdf%next_t_log         ; rbuffer_name(13)  = "next_t_log" !rr2
 
       ibuffer(1)   = chdf%nstep              ; ibuffer_name(1)   = "nstep" !rr2
       ibuffer(2)   = chdf%nres+1             ; ibuffer_name(2)   = "nres" !rr2

@@ -124,6 +124,7 @@ contains
 !<
    subroutine hydrostatic_main(sd)
 
+      use constants,  only:  zdim, LO, HI
       use dataio_pub, only: die
       use domain,     only: dom
       use gravity,    only: nsub
@@ -184,7 +185,7 @@ contains
       if (present(sd)) then
          sd = 0.0
          do ksub=1, nstot
-            if (zs(ksub) > dom%zmin .and. zs(ksub) < dom%zmax) then
+            if (zs(ksub) > dom%edge(zdim, LO) .and. zs(ksub) < dom%edge(zdim, HI)) then
                sd = sd + dprofs(ksub)*dzs
             endif
          enddo
@@ -192,7 +193,6 @@ contains
 
       if (allocated(dprofs)) deallocate(dprofs)
 
-      return
    end subroutine hydrostatic_main
 
    subroutine hzeq_scheme_v1(ksub, up, factor)
@@ -281,7 +281,7 @@ contains
 !<
    subroutine start_hydrostatic(iia, jja, csim2, sd, cg)
 
-      use constants,  only: zdim
+      use constants,  only: zdim, LO, HI
       use dataio_pub, only: die
       use domain,     only: dom
       use gravity,    only: get_gprofs, gprofs_target, nsub
@@ -306,10 +306,10 @@ contains
          end select
       endif
       nstot = nsub * dom%nzt
-      dzs = (dom%zmax-dom%zmin)/real(nstot-2*cg%nb*nsub)
+      dzs = (dom%edge(zdim, HI)-dom%edge(zdim, LO))/real(nstot-2*cg%nb*nsub)
       allocate(zs(nstot), gprofs(nstot))
       do ksub=1, nstot
-         zs(ksub) = dom%zmin-cg%nb*cg%dl(zdim) + (real(ksub)-0.5)*dzs
+         zs(ksub) = dom%edge(zdim, LO)-cg%nb*cg%dl(zdim) + (real(ksub)-0.5)*dzs
       enddo
       call get_gprofs(iia, jja, cg)
       gprofs = gprofs / csim2 *dzs

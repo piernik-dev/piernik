@@ -184,14 +184,14 @@ contains
       this%mbc(:, :, :, :) = INVALID
 
       if (this%empty) then
+         this%fbnd(:,:) = dom%edge(:,:)
+
          this%nx    = 0
          this%is    = this%nb + 1
          this%ie    = this%nb
          this%isb   = 0 ! ???
          this%ieb   = 0 ! ???
          this%dx    = 1.0
-         this%fbnd(xdim, LO) = dom%xmin
-         this%fbnd(xdim, HI) = dom%xmax
 
          this%ny    = 0
          this%js    = this%nb + 1
@@ -199,8 +199,6 @@ contains
          this%jsb   = 0
          this%jeb   = 0
          this%dy    = 1.0
-         this%fbnd(ydim, LO) = dom%ymin
-         this%fbnd(ydim, HI) = dom%ymax
 
          this%nz    = 0
          this%ks    = this%nb + 1
@@ -208,8 +206,6 @@ contains
          this%ksb   = 0
          this%keb   = 0
          this%dz    = 1.0
-         this%fbnd(zdim, LO) = dom%zmin
-         this%fbnd(zdim, HI) = dom%zmax
 
          this%idx = 1./this%dx
          this%idy = 1./this%dy
@@ -239,8 +235,8 @@ contains
             this%ieb   = this%nxb+1
             this%dx    = dom%L_(xdim) / dom%n_d(xdim)
             this%dxmn  = min(this%dxmn, this%dx)
-            this%fbnd(xdim, LO) = dom%xmin + this%dx *  this%off(xdim)
-            this%fbnd(xdim, HI) = dom%xmin + this%dx * (this%off(xdim) + this%nxb)
+            this%fbnd(xdim, LO) = dom%edge(xdim, LO) + this%dx *  this%off(xdim)
+            this%fbnd(xdim, HI) = dom%edge(xdim, LO) + this%dx * (this%off(xdim) + this%nxb)
          else
             this%nx    = 1
             this%is    = 1
@@ -248,8 +244,7 @@ contains
             this%isb   = 1
             this%ieb   = 1
             this%dx    = 1.0
-            this%fbnd(xdim, LO) = dom%xmin
-            this%fbnd(xdim, HI) = dom%xmax
+            this%fbnd(xdim, :) = dom%edge(xdim, :)
          endif
 
          if (has_dir(ydim)) then
@@ -260,8 +255,8 @@ contains
             this%jeb   = this%nyb+1
             this%dy    = dom%L_(ydim) / dom%n_d(ydim)
             this%dxmn  = min(this%dxmn, this%dy)
-            this%fbnd(ydim, LO) = dom%ymin + this%dy *  this%off(ydim)
-            this%fbnd(ydim, HI) = dom%ymin + this%dy * (this%off(ydim) + this%nyb)
+            this%fbnd(ydim, LO) = dom%edge(ydim, LO) + this%dy *  this%off(ydim)
+            this%fbnd(ydim, HI) = dom%edge(ydim, LO) + this%dy * (this%off(ydim) + this%nyb)
          else
             this%ny    = 1
             this%js    = 1
@@ -269,8 +264,7 @@ contains
             this%jsb   = 1
             this%jeb   = 1
             this%dy    = 1.0
-            this%fbnd(ydim, LO) = dom%ymin
-            this%fbnd(ydim, HI) = dom%ymax
+            this%fbnd(ydim, :) = dom%edge(ydim, :)
          endif
 
          if (has_dir(zdim)) then
@@ -281,8 +275,8 @@ contains
             this%keb   = this%nzb+1
             this%dz    = dom%L_(zdim) / dom%n_d(zdim)
             this%dxmn  = min(this%dxmn, this%dz)
-            this%fbnd(zdim, LO) = dom%zmin + this%dz *  this%off(zdim)
-            this%fbnd(zdim, HI) = dom%zmin + this%dz * (this%off(zdim) + this%nzb)
+            this%fbnd(zdim, LO) = dom%edge(zdim, LO) + this%dz *  this%off(zdim)
+            this%fbnd(zdim, HI) = dom%edge(zdim, LO) + this%dz * (this%off(zdim) + this%nzb)
          else
             this%nz    = 1
             this%ks    = 1
@@ -290,8 +284,7 @@ contains
             this%ksb   = 1
             this%keb   = 1
             this%dz    = 1.0
-            this%fbnd(zdim, LO) = dom%zmin
-            this%fbnd(zdim, HI) = dom%zmax
+            this%fbnd(zdim, :) = dom%edge(zdim, :)
          endif
 
          this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=has_dir(:))
@@ -318,7 +311,7 @@ contains
 !--- x-grids --------------------------------------------------------------
 
          if (has_dir(xdim)) then
-            this%x(:) = dom%xmin + this%dx * ([(i, i=1, this%nx)] - 0.5 - this%nb + this%off(xdim))
+            this%x(:) = dom%edge(xdim, LO) + this%dx * ([(i, i=1, this%nx)] - 0.5 - this%nb + this%off(xdim))
          else
             this%x(:) = 0.5*(this%fbnd(xdim, LO) + this%fbnd(xdim, HI))
          endif
@@ -334,7 +327,7 @@ contains
 !--- y-grids --------------------------------------------------------------
 
          if (has_dir(ydim)) then
-            this%y(:) = dom%ymin + this%dy * ([(i, i=1, this%ny)] - 0.5 - this%nb + this%off(ydim))
+            this%y(:) = dom%edge(ydim, LO) + this%dy * ([(i, i=1, this%ny)] - 0.5 - this%nb + this%off(ydim))
          else
             this%y(:) = 0.5*(this%fbnd(ydim, LO) + this%fbnd(ydim, HI))
          endif
@@ -350,7 +343,7 @@ contains
 !--- z-grids --------------------------------------------------------------
 
          if (has_dir(zdim)) then
-            this%z(:) = dom%zmin + this%dz * ([(i, i=1, this%nz)] - 0.5 - this%nb + this%off(zdim))
+            this%z(:) = dom%edge(zdim, LO) + this%dz * ([(i, i=1, this%nz)] - 0.5 - this%nb + this%off(zdim))
          else
             this%z(:) = 0.5*(this%fbnd(zdim, LO) + this%fbnd(zdim, HI))
          endif

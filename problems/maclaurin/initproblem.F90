@@ -141,7 +141,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: pi, GEO_XYZ, GEO_RPZ
+      use constants,   only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
       use dataio_pub,  only: msg, printinfo, warn, die
       use domain,      only: dom, geometry_type
       use grid,        only: cga
@@ -214,9 +214,9 @@ contains
       if (master) then
          write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
          call printinfo(msg, .true.)
-         if (x0-a1<dom%xmin .or. x0+a1>dom%xmax) call warn("[initproblem:init_prob] Part of the spheroid is outside the domain in the X-direction.")
-         if ( (geometry_type == GEO_XYZ .and. (y0-a1<dom%ymin .or. y0+a1>dom%ymax)) .or. &
-              (geometry_type == GEO_RPZ .and. (atan2(a1,x0) > minval([y0-dom%ymin, dom%ymax-y0]))) ) & ! will fail when some one adds 2*k*pi to y0
+         if (x0-a1<dom%edge(xdim, LO) .or. x0+a1>dom%edge(xdim, HI)) call warn("[initproblem:init_prob] Part of the spheroid is outside the domain in the X-direction.")
+         if ( (geometry_type == GEO_XYZ .and. (y0-a1<dom%edge(ydim, LO) .or. y0+a1>dom%edge(ydim, HI))) .or. &
+              (geometry_type == GEO_RPZ .and. (atan2(a1,x0) > minval([y0-dom%edge(ydim, LO), dom%edge(ydim, HI)-y0]))) ) & ! will fail when some one adds 2*k*pi to y0
               call warn("[initproblem:init_prob] Part of the spheroid is outside the domain")
          write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
          call printinfo(msg, .true.)

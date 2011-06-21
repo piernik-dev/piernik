@@ -241,7 +241,7 @@ contains
 !<
    subroutine rand_coords(pos)
 
-      use constants, only: xdim, ydim, zdim
+      use constants, only: xdim, ydim, zdim, LO
       use domain,    only: has_dir, dom
 #ifdef SHEAR
       use grid,      only: cga
@@ -261,8 +261,8 @@ contains
       real :: xsn,ysn,zsn,znorm
 
       call random_number(rand)
-      xsn = dom%xmin+ dom%L_(xdim)*rand(1)
-      ysn = dom%ymin+ dom%L_(ydim)*rand(2)
+      xsn = dom%edge(xdim, LO)+ dom%L_(xdim)*rand(1)
+      ysn = dom%edge(ydim, LO)+ dom%L_(ydim)*rand(2)
 
       if (has_dir(zdim)) then
          irand = irand+4
@@ -276,7 +276,7 @@ contains
       cg => cga%cg_all(1)
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[snsources:rand_coords] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
 
-      jsn  = js+int((ysn-dom%ymin)/cg%dy)
+      jsn  = js+int((ysn-dom%edge(ydim, LO))/cg%dy)
       dysn  = dmod(ysn, cg%dy)
 
       epsi   = eps*cg%dy
