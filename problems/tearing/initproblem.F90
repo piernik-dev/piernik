@@ -116,14 +116,9 @@ contains
       implicit none
 
       integer  :: i, j, k
-      real     :: xmid, ymid, zmid, vzab, b0
+      real     :: vzab, b0
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-
-      xmid = dom%x0
-      ymid = dom%y0
-      zmid = dom%z0
-
 
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
@@ -147,7 +142,7 @@ contains
                   vzab = v0*cos(2.*pi*cg%y(j)/dom%L_(ydim))
                   cg%u%arr(imxi,i,j,k) = cg%u%arr(idni,i,j,k)*vzab
 
-                  if (abs(cg%x(i)-xmid) <= 0.25*dom%L_(xdim)) then
+                  if (abs(cg%x(i)-dom%C_(xdim)) <= 0.25*dom%L_(xdim)) then
                      cg%b%arr(iby,i,j,k) = -b0
                   else
                      cg%b%arr(iby,i,j,k) =  b0

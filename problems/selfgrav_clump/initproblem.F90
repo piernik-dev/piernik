@@ -30,16 +30,18 @@
 
 module initproblem
 
+   use constants, only: ndims
+
    implicit none
 
    private
    public :: read_problem_par, init_prob, problem_pointers
 
-   real               :: clump_mass, clump_pos_x, clump_pos_y, clump_pos_z, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM
-   logical            :: crashNotConv, exp_speedup, verbose
-   integer            :: maxitC, maxitM
-
-   integer, parameter :: REL_CALC = 1, REL_SET = REL_CALC + 1
+   real                   :: clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM
+   real, dimension(ndims) :: clump_pos
+   logical                :: crashNotConv, exp_speedup, verbose
+   integer                :: maxitC, maxitM
+   integer, parameter     :: REL_CALC = 1, REL_SET = REL_CALC + 1
 
    namelist /PROBLEM_CONTROL/  clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose
 
@@ -133,9 +135,7 @@ contains
       call die("[initproblem:read_problem_par] Isothermal EOS not supported.")
 #endif /* ISO */
 
-      clump_pos_x = dom%x0
-      clump_pos_y = dom%y0
-      clump_pos_z = dom%z0
+      clump_pos(:) = dom%C_(:)
       clump_r = max(clump_r, maxval(dom%L_(:)/dom%n_d(:), mask=has_dir(:)))
 
    end subroutine read_problem_par
@@ -148,7 +148,7 @@ contains
 !
    subroutine init_prob
 
-      use constants,         only: pi
+      use constants,         only: pi, xdim, ydim, zdim
       use dataio_pub,        only: msg, die, warn, printinfo
       use domain,            only: dom
       use global,            only: smalld, smallei, t
@@ -199,7 +199,7 @@ contains
          il = cg%ie+1
          ih = cg%is-1
          do i = cg%is, cg%ie
-            if (abs(cg%x(i) - clump_pos_x) <= clump_r) then
+            if (abs(cg%x(i) - clump_pos(xdim)) <= clump_r) then
                il = min(i, il)
                ih = max(i, ih)
             endif
@@ -207,7 +207,7 @@ contains
          jl = cg%je+1
          jh = cg%js-1
          do j = cg%js, cg%je
-            if (abs(cg%y(j) - clump_pos_y) <= clump_r) then
+            if (abs(cg%y(j) - clump_pos(ydim)) <= clump_r) then
                jl = min(j, jl)
                jh = max(j, jh)
             endif
@@ -215,7 +215,7 @@ contains
          kl = cg%ke+1
          kh = cg%ks-1
          do k = cg%ks, cg%ke
-            if (abs(cg%z(k) - clump_pos_z) <= clump_r) then
+            if (abs(cg%z(k) - clump_pos(zdim)) <= clump_r) then
                kl = min(k, kl)
                kh = max(k, kh)
             endif
@@ -224,7 +224,7 @@ contains
          do k = kl, kh
             do j = jl, jh
                do i = il, ih
-                  if ((cg%x(i)-clump_pos_x)**2 + (cg%y(j)-clump_pos_y)**2 + (cg%z(k)-clump_pos_z)**2 < clump_r**2) then
+                  if (sum(([cg%x(i), cg%y(j), cg%z(k)] -clump_pos(:))**2) < clump_r**2) then
                      cg%u%arr(idni, i, j, k) = totME(1)
                      iC_cg = iC_cg + 1
                   endif

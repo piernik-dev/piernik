@@ -131,9 +131,7 @@ contains
 
       select case (geometry_type)
          case (GEO_XYZ)
-            CoM(xdim) = dom%x0
-            CoM(ydim) = dom%y0
-            CoM(zdim) = dom%z0
+            CoM(xdim:zdim) = dom%C_(xdim:zdim)
             zaxis_inside = .false.
          case (GEO_RPZ)
             if (dom%L_(ydim) >= (2.-small)*pi) then
@@ -142,11 +140,11 @@ contains
             else
 !!$               CoM(xdim) = 2./3. * (dom%xmax**3-dom%xmin**3)/(dom%xmax**2-dom%xmin**2)
 !!$               if (dom%L_(ydim) /= 0.) CoM(xdim) = CoM(xdim) * sin(dom%L_(ydim)/2.)/(dom%L_(ydim)/2.)
-!!$               CoM(ydim) = dom%y0
+!!$               CoM(ydim) = dom%C_(ydim)
                CoM(xdim) = 0.
                CoM(ydim) = 0.
             endif
-            CoM(zdim) = dom%z0
+            CoM(zdim) = dom%C_(zdim)
             zaxis_inside = dom%xmin <= dom%L_(xdim)/dom%n_d(xdim)
             if (master) then
                if (zaxis_inside) call warn("[multipole:init_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
@@ -203,7 +201,7 @@ contains
                !<
                rscale = ( minval(dom%L_(:)) + sqrt(sum(dom%L_(:)**2)) )/4.
             case (GEO_RPZ)
-               drq = min(lmpole%dx, dom%x0*lmpole%dy, lmpole%dz) / 2.
+               drq = min(lmpole%dx, dom%C_(xdim)*lmpole%dy, lmpole%dz) / 2.
                rqbin = int(sqrt((2.*dom%xmax)**2 + dom%L_(zdim)**2)/drq) + 1
                rscale = ( min(2.*dom%xmax, dom%L_(zdim)) + sqrt((2.*dom%xmax)**2 + dom%L_(zdim)**2) )/4.
             case default

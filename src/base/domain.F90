@@ -69,9 +69,7 @@ module domain
 
       ! derived parameters
       real, dimension(ndims) :: L_              !< span of the physical domain [ xmax-xmin, ymax-ymin, zmax-zmin ]
-      real    :: x0                             !< center of the physical domain in x-direction (xmax+xmin)/2.
-      real    :: y0                             !< center of the physical domain in y-direction (ymax+ymin)/2.
-      real    :: z0                             !< center of the physical domain in z-direction (zmax+zmin)/2.
+      real, dimension(ndims) :: C_              !< center of the physical domain [ (xmax+xmin)/2., (ymax+ymin)/2., (zmax+zmin)/2. ]
       real    :: Vol                            !< total volume of the physical domain
 
       logical, dimension(ndims) :: periodic     !< .true. for periodic and shearing boundary pairs
@@ -1223,9 +1221,7 @@ contains
 
       ! auxiliary lengths
       this%L_(:) = [ this%xmax - this%xmin, this%ymax - this%ymin, this%zmax - this%zmin ]
-      this%x0 = (this%xmax + this%xmin)/2.
-      this%y0 = (this%ymax + this%ymin)/2.
-      this%z0 = (this%zmax + this%zmin)/2.
+      this%C_(:) = [ (this%xmax + this%xmin)/2., (this%ymax + this%ymin)/2., (this%zmax + this%zmin)/2. ]
 
       !volume and total grid sizes
       this%Vol = product(this%L_(:), mask=has_dir(:))

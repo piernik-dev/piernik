@@ -30,15 +30,15 @@
 
 module initproblem
 
-   use constants, only: varlen
+   use constants, only: varlen, ndims, LO, HI
 
    implicit none
 
    private
    public :: read_problem_par, init_prob, problem_pointers
 
-   real :: pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp, &
-        &  pulse_x_min, pulse_x_max, pulse_y_min, pulse_y_max, pulse_z_min, pulse_z_max
+   real :: pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
+   real, dimension(ndims, LO:HI) :: pulse_edge
 
    namelist /PROBLEM_CONTROL/  pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
 
@@ -68,7 +68,6 @@ contains
 
    subroutine read_problem_par
 
-      use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub, only: warn
       use domain,     only: dom
@@ -121,12 +120,8 @@ contains
          endif
       endif
 
-      pulse_x_min = dom%x0 - dom%L_(xdim) * pulse_size/2.
-      pulse_x_max = dom%x0 + dom%L_(xdim) * pulse_size/2.
-      pulse_y_min = dom%y0 - dom%L_(ydim) * pulse_size/2.
-      pulse_y_max = dom%y0 + dom%L_(ydim) * pulse_size/2.
-      pulse_z_min = dom%z0 - dom%L_(zdim) * pulse_size/2.
-      pulse_z_max = dom%z0 + dom%L_(zdim) * pulse_size/2.
+      pulse_edge(:, LO) = dom%C_(:) - dom%L_(:) * pulse_size/2.
+      pulse_edge(:, HI) = dom%C_(:) + dom%L_(:) * pulse_size/2.
 
    end subroutine read_problem_par
 
@@ -134,6 +129,7 @@ contains
 
    subroutine init_prob
 
+      use constants,   only: xdim, ydim, zdim
       use diagnostics, only: my_allocate
       use fluidindex,  only: flind
       use global,      only: smalld, smallei
@@ -160,11 +156,11 @@ contains
 
       ! Initialize density with uniform sphere
       do k = cg%ks, cg%ke
-         if (cg%z(k) > pulse_z_min .and. cg%z(k) < pulse_z_max) then
+         if (cg%z(k) > pulse_edge(zdim, LO) .and. cg%z(k) < pulse_edge(zdim, HI)) then
             do j = cg%js, cg%je
-               if (cg%y(j) > pulse_y_min .and. cg%y(j) < pulse_y_max) then
+               if (cg%y(j) > pulse_edge(ydim, LO) .and. cg%y(j) < pulse_edge(ydim, HI)) then
                   do i = cg%is, cg%ie
-                     if (cg%x(i) > pulse_x_min .and. cg%x(i) < pulse_x_max) then
+                     if (cg%x(i) > pulse_edge(xdim, LO) .and. cg%x(i) < pulse_edge(xdim, HI)) then
                         cg%u%arr(flind%neu%idn, i, j, k) = pulse_low_density * pulse_amp
                      endif
                   enddo
