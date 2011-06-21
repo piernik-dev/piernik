@@ -71,7 +71,7 @@ module domain
 
       type(cuboids), dimension(:), allocatable :: pse  !< lists of grid chunks on each process (0:nproc-1); Use with care, because this is an antiparallel thing
 
-      ! Do not use n[xyz]t components in the Piernik source tree without a good reason
+      ! Do not use n_t(:) in the Piernik source tree without a good reason
       ! Avoid as a plague allocating buffers of that size because it negates benefits of parallelization
       ! \todo move them to another type, that extends domain_container?
       integer, dimension(ndims) :: n_t          !< total number of %grid cells in the whole domain in every direction (n_d(:) + 2* nb for existing directions)
@@ -98,7 +98,7 @@ module domain
 
    type(domain_container), protected :: dom !< complete description of base level domain
 
-   logical, protected :: is_uneven          !< .true. when n[xyz]b depend on process rank
+   logical, protected :: is_uneven          !< .true. when n_b(:) depend on process rank
    logical, protected :: is_mpi_noncart     !< .true. when there exist a process that has more than one neighbour in any direction
    logical, protected :: is_refined         !< .true. when AMR or static refinement is employed
 
@@ -114,7 +114,7 @@ module domain
 
    integer, dimension(ndims) :: psize !< desired number of MPI blocks in x, y and z-dimension
    logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
-   logical :: allow_uneven            !< allows different values of n[xyz]b on divverent processes
+   logical :: allow_uneven            !< allows different values of n_b(:) on different processes
    logical :: allow_noncart           !< allows more than one neighbour on a boundary
    logical :: allow_AMR               !< allows AMR
    real    :: dd_unif_quality         !< uniform domain decomposition may be rejected it its quality is below this threshold (e.g. very elongated local domains are found)
@@ -844,7 +844,7 @@ contains
 !! If the benchmarks show that some direction should be partitioned in more pieces than other directions, implement appropriate weighting in j1, j2 and j3 calculations.
 !!
 !! For some weird domains and PE counts this routine may find tiling that does not satisfy multigrid restrictions even if there exists an acceptable tiling.
-!! In such case the user must divide domain manually by providing p[xyz]size parameters through problem.par.
+!! In such case the user must divide domain manually by providing psize(:) parameters through problem.par.
 !!
 !! \attention Must be called by all procs to avoid communication and ensure that every proc has proper psize
 !<
@@ -1205,8 +1205,6 @@ contains
          endif
       enddo
       if (any(this%bnd(ydim:zdim, :) == BND_SHE)) call die("[types:set_derived] Shearing BC not allowed for y- and z-direction")
-
-      !> \todo convert L[xyz], [xyz]0 and n[xyz]t to (xdim:zdim)-sized arrays
 
       ! auxiliary lengths
       this%L_(:) = this%edge(:, HI) - this%edge(:, LO)

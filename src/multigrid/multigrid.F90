@@ -242,7 +242,7 @@ contains
 
          if (associated(curl, roof)) then
             curl%dom = dom       ! inherit roof from global domain
-            curl%dom%nb = mg_nb  ! the multigrid solver relies typically on 2 guardcells (roof%dom%n[xyz]t is wrong here, but it is not used in multigrid)
+            curl%dom%nb = mg_nb  ! the multigrid solver relies typically on 2 guardcells (roof%dom%n_t(:) is wrong here, but it is not used in multigrid)
          else
             ! set up decomposition of coarse levels
             curl%dom = curl%finer%dom

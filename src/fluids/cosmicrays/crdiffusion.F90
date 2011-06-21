@@ -138,7 +138,7 @@ contains
                               call MPI_Isend(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BLK), cdd%procn(d, lh), 2*d+(LO+HI-lh), cdd%comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
                               call MPI_Irecv(wcr(1,1,1,1), 1, cg%mbc(CR, d, lh, BND), cdd%procn(d, lh), 2*d+       lh,  cdd%comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
                            else
-                              call die("[crdiffiusion:all_wcr_boundaries] bnd_[xyz][lr] == 'mpi' && psize([xyz]dim) <= 1")
+                              call die("[crdiffiusion:all_wcr_boundaries] bnd_[xyz][lr] == 'mpi' && psize(:) <= 1")
                            endif
                         endif
                      case default ! Set gradient == 0 on the external boundaries

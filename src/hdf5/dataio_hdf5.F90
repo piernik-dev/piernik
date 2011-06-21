@@ -668,7 +668,7 @@ contains
                chnk(:)   = chnk(:)   + cg%nb
             endwhere
             loffs(:)  = cg%off(:)
-            where (loffs(:)>0) loffs(:) = loffs(:) + cg%nb ! the block adjacent to the left boundary are cg%nb cells wider than cg%n[xyz]b
+            where (loffs(:)>0) loffs(:) = loffs(:) + cg%nb ! the block adjacent to the left boundary are cg%nb cells wider than cg%n_b(:)
          case (AT_NO_B)                                    ! only physical domain without any boundaries
             area(:)   = dom%n_d(:)
             lleft(:)  = cg%ijkse(:, LO)
@@ -1009,7 +1009,6 @@ contains
 !!$
 !!$            ! Create the memory space for the dataset.
 !!$            call h5screate_simple_f(rank, chunk_dims, memspace, error)
-!!$            ! What a pity that cg%[xyz](:) cannot have a target attribute (at least in gfortran 4.5.1)
 !!$            select case (dir)
 !!$               case (xdim)
 !!$                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%x(cg%is:cg%ie), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
