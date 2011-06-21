@@ -655,7 +655,7 @@ contains
             lright(:) = chnk
             loffs(:)  = cg%off(:) + 2 * cg%nb * cdd%pcoords(:) !\todo invent something better
          case (AT_OUT_B)                                   ! physical domain with outer boundaries
-            area(:)   = [dom%nxt, dom%nyt, dom%nzt]
+            area(:)   = dom%n_t(:)
             lleft(:)  = cg%ijkse(:, LO)
             lright(:) = cg%ijkse(:, HI)
             chnk(:)   = cg%n_b(:)

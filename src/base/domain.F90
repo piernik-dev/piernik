@@ -74,9 +74,7 @@ module domain
       ! Do not use n[xyz]t components in the Piernik source tree without a good reason
       ! Avoid as a plague allocating buffers of that size because it negates benefits of parallelization
       ! \todo move them to another type, that extends domain_container?
-      integer :: nxt                            !< total number of %grid cells in the whole domain in x-direction
-      integer :: nyt                            !< total number of %grid cells in the whole domain in y-direction
-      integer :: nzt                            !< total number of %grid cells in the whole domain in z-direction
+      integer, dimension(ndims) :: n_t          !< total number of %grid cells in the whole domain in every direction (n_d(:) + 2* nb for existing directions)
 
     contains
 
@@ -1218,23 +1216,11 @@ contains
       this%Vol = product(this%L_(:), mask=has_dir(:))
       !> \deprecated BEWARE: Vol computed above is not true for non-cartesian geometry
 
-      if (has_dir(xdim)) then
-         this%nxt = this%n_d(xdim) + 2 * this%nb
-      else
-         this%nxt = 1
-      endif
-
-      if (has_dir(ydim)) then
-         this%nyt = this%n_d(ydim) + 2 * this%nb
-      else
-         this%nyt = 1
-      endif
-
-      if (has_dir(zdim)) then
-         this%nzt = this%n_d(zdim) + 2 * this%nb
-      else
-         this%nzt = 1
-      endif
+      where (has_dir(:))
+         this%n_t(:) = this%n_d(:) + 2 * this%nb
+      elsewhere
+         this%n_t(:) = 1
+      endwhere
 
    end subroutine set_derived
 
