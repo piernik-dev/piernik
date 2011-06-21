@@ -42,7 +42,7 @@ module domain
    implicit none
 
    private
-   public :: cleanup_domain, init_domain, translate_bnds_to_ints_dom, is_overlap, domain_container, user_divide_domain, allocate_pse, deallocate_pse, &
+   public :: cleanup_domain, init_domain, translate_bnds_to_ints_dom, is_overlap, domain_container, user_divide_domain, allocate_pse, deallocate_pse, set_pse_sel, &
         &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, cdd
 
 ! AMR: There will be at least one domain container for the base grid.
@@ -169,7 +169,7 @@ module domain
       end subroutine divide_domain_template
    end interface
 
-   procedure(divide_domain_template), pointer :: user_divide_domain => Null()
+   procedure(divide_domain_template), pointer :: user_divide_domain => Null() ! It should at least allocate and set up dom%pse(:)%sel(:,:,:)
 
 contains
 
@@ -228,7 +228,7 @@ contains
       implicit none
 
       real :: xmno, ymno, ymxo
-      integer :: p
+      integer :: p, i
       real :: maxcnt
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init_grid] MPI not initialized.")
@@ -441,10 +441,13 @@ contains
       if (.not. dom_divided) call divide_domain(dom_divided)
       if (.not. dom_divided) call die("[domain:init_domain] Domain dedomposition failed")
 
+      !\todo Analyze the decomposition and set up [ is_uneven, is_mpi_noncart, is_refined, ... ]
+
       if (is_refined) is_mpi_noncart = .true.
       if (is_mpi_noncart) is_uneven = .true.
 
       ! bnd_[xyz][lr] now become altered according to local topology of processes
+      if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call warn("[domain:init_domain] Multiple blocks per process not implemented yet") !die
 
       if ((dom%periodic(xdim) .and. dom%pse(proc)%sel(1, xdim, HI) /= dom%n_d(xdim) - 1) .or. dom%pse(proc)%sel(1, xdim, LO) /= 0)                 bnd_xl = 'mpi'
       if ((dom%periodic(xdim) .and. dom%pse(proc)%sel(1, xdim, LO) /= 0)                 .or. dom%pse(proc)%sel(1, xdim, HI) /= dom%n_d(xdim) - 1) bnd_xr = 'mpi'
@@ -495,9 +498,16 @@ contains
       if (master) then
          maxcnt = 0
          do p = 0, nproc - 1
-            write(msg,'(a,i4,a,2(3i6,a),i8,a)')"[domain:init_domain] segment @",p," : [",dom%pse(p)%sel(1, :, LO),"] : [",dom%pse(p)%sel(1, :, HI),"] #", &
-                 &                             product(dom%pse(p)%sel(1, :, HI)-dom%pse(p)%sel(1, :, LO)+1)," cells"
+            write(msg,'(a,i4,a,2(3i6,a),i8,a)') "[domain:init_domain] segment @",p," : [",dom%pse(p)%sel(1, :, LO),"] : [",dom%pse(p)%sel(1, :, HI),"] #", &
+                 &                              product(dom%pse(p)%sel(1, :, HI)-dom%pse(p)%sel(1, :, LO)+1)," cells"
             call printinfo(msg)
+            if (ubound(dom%pse(p)%sel(:, :, :), dim=1) > 1) then
+               do i= 2, ubound(dom%pse(p)%sel(:, :, :), dim=1)
+                  write(msg,'(a,2(3i6,a),i8,a)')"                                   : [",dom%pse(p)%sel(i, :, LO),"] : [",dom%pse(p)%sel(i, :, HI),"] #", &
+                       &                        product(dom%pse(p)%sel(i, :, HI)-dom%pse(p)%sel(i, :, LO)+1)," cells"
+                  call printinfo(msg)
+               enddo
+            endif
             maxcnt = max(maxcnt, product(real(dom%pse(p)%sel(1, :, HI)-dom%pse(p)%sel(1, :, LO)+1)))
          enddo
          write(msg,'(a,f8.5)')"[domain:init_domain] Load balance: ",product(real(dom%n_d(:)))/(nproc*maxcnt) !> \todo add calculation of total internal boundary surface in cells
@@ -614,7 +624,7 @@ contains
          endif
          where (has_dir(:))
             dom%pse(p)%sel(1, :, LO) = (dom%n_d(:) *  pc(:) ) / p_size(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
-            dom%pse(p)%sel(1, :, HI) = (dom%n_d(:) * (pc(:)+1))/p_size(:) - 1 ! offset of high boundaties of the local domain (n_d(:) - 1 at right external boundaries)
+            dom%pse(p)%sel(1, :, HI) = (dom%n_d(:) * (pc(:)+1))/p_size(:) - 1 ! offset of high boundaries of the local domain (n_d(:) - 1 at right external boundaries)
          endwhere
       enddo
 
@@ -666,6 +676,24 @@ contains
       if (allocated(pz_slab)) deallocate(pz_slab)
 
    end subroutine choppy_tiling
+
+!!-----------------------------------------------------------------------------
+!!
+!> \brief public routine for setting user decompositions
+!!
+   subroutine set_pse_sel(p, n, se)
+
+      use constants,  only: xdim, zdim, LO, HI
+
+      implicit none
+
+      integer, intent(in) :: p !< process
+      integer, intent(in) :: n !< block number
+      integer, dimension(xdim:zdim, LO:HI), intent(in) :: se !< segment
+
+      dom%pse(p)%sel(n,:,:) = se(:,:)
+
+   end subroutine set_pse_sel
 
 !!-----------------------------------------------------------------------------
 !!

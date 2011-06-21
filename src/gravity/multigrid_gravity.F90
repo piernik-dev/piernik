@@ -688,6 +688,8 @@ contains
       curl => base
       do while (associated(curl))
 
+         if (ubound(curl%dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid_gravity:mpi_multigrid_prep_grav] Multiple blocks per process not implemented yet")
+
          ijks(:) = curl%ijkse(:, LO) - curl%off(:)  ! add this to convert absolute cell coordinates to local indices. (+mg_nb - off(:))
          per(:) = 0
          where (curl%dom%periodic(:)) per(:) = curl%dom%n_d(:)

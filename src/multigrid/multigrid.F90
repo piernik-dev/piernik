@@ -276,6 +276,8 @@ contains
 
          call curl%init(curl%dom)
 
+         if (ubound(curl%dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid:init_multigrid] Multiple blocks per process not implemented yet")
+
          if (any(curl%n_b(:) < curl%nb .and. has_dir(:) .and. .not. curl%empty)) then
             write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
                  curl%nb, " > ", curl%n_b(:), " at level ", curl%level, ". You may try to set level_max <=", roof%level-curl%level+level_min-1

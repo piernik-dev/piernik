@@ -160,6 +160,7 @@ contains
       integer :: i
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init] MPI not initialized.")
+      if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid_container:init] Multiple blocks per process not implemented yet")
 
       this%nb = dom%nb
       this%dxmn = huge(1.0)

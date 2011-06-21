@@ -63,8 +63,9 @@ contains
 
       use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim
       use dataio_pub, only: printinfo, die, code_progress
-      use grid_cont,  only: cg_list_element
       use domain,     only: dom, has_dir
+      use grid_cont,  only: cg_list_element
+      use mpisetup,   only: proc
 
       implicit none
 
@@ -76,6 +77,8 @@ contains
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
+
+      if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid:init_grid] Multiple blocks per process not implemented yet")
 
       allocate(cga%cg_all(1)) !At the moment we use only one grid container per thread, but this will change in AMR
       allocate(cga%cg_base%cg_l(size(cga%cg_all)))  ! We have no refinement yet, so everything is on the base level
@@ -245,6 +248,7 @@ contains
       logical :: sharing
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
+      if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process not implemented yet")
 
       nc = [ numfluids, ndims, max(numcrs,1), 1 ]      !< number of fluids, magnetic field components, CRs, and 1 for rank-3 array
 
