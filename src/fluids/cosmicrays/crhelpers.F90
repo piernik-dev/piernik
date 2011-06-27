@@ -102,7 +102,7 @@ contains
          do k = 1, cg%nz
             do j = 1, cg%ny
                vx = cg%u%arr(imxf,:,j,k) / cg%u%arr(idnf,:,j,k)
-               divvel(2:cg%nx-1,j,k) = ( vx(3:cg%nx) - vx(1:cg%nx-2) )  / (2.*cg%dx)
+               divvel(2:cg%nx-1,j,k) = ( vx(3:cg%nx) - vx(1:cg%nx-2) )  * (0.5*cg%idx)
             enddo
          enddo
          divvel(1,:,:) = divvel(2,:,:); divvel(cg%nx,:,:) = divvel(cg%nx-1,:,:) ! for sanity
@@ -112,7 +112,7 @@ contains
          do k = 1, cg%nz
             do i = 1, cg%nx
                vy = cg%u%arr(imyf,i,:,k) / cg%u%arr(idnf,i,:,k)
-               divvel(i,2:cg%ny-1,k) = divvel(i,2:cg%ny-1,k)+( vy(3:cg%ny) - vy(1:cg%ny-2) )  / (2.*cg%dy)
+               divvel(i,2:cg%ny-1,k) = divvel(i,2:cg%ny-1,k)+( vy(3:cg%ny) - vy(1:cg%ny-2) )  * (0.5*cg%idy)
             enddo
          enddo
          divvel(:,1,:) = divvel(:,2,:); divvel(:, cg%ny,:) = divvel(:, cg%ny-1,:) ! for sanity
@@ -122,7 +122,7 @@ contains
          do j = 1, cg%ny
             do i = 1, cg%nx
                vz = cg%u%arr(imzf,i,j,:) / cg%u%arr(idnf,i,j,:)
-               divvel(i,j,2:cg%nz-1) = divvel(i,j,2:cg%nz-1)+( vz(3:cg%nz) - vz(1:cg%nz-2) )  / (2.*cg%dz)
+               divvel(i,j,2:cg%nz-1) = divvel(i,j,2:cg%nz-1)+( vz(3:cg%nz) - vz(1:cg%nz-2) )  * (0.5*cg%idz)
             enddo
          enddo
          divvel(:,:,1) = divvel(:,:,2); divvel(:,:, cg%nz) = divvel(:,:, cg%nz-1) ! for sanity
