@@ -41,7 +41,7 @@ module resistivity
    private
    public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, etamax,   &
         &     diffuseby_x, diffusebz_x, diffusebx_y, diffusebz_y, diffusebx_z, diffuseby_z, &
-        &     cu2max, deimin, eta1_active, wcu
+        &     cu2max, deimin, eta1_active, wcu, compute_resist
 
    real    :: cfl_resist                     !< CFL factor for resistivity effect
    real    :: eta_0                          !< uniform resistivity
@@ -155,7 +155,8 @@ contains
       if (.not.allocated(eta)) allocate(eta(cg%nx, cg%ny, cg%nz))
 #ifdef ISO
       if (eta_1 == 0.) then
-         eta = eta_0
+         eta         = eta_0
+         etamax%val  = eta_0
          eta1_active = .false.
       endif
 #endif /* ISO */

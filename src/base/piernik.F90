@@ -85,9 +85,6 @@ program piernik
 
       if (first_step) then
          dtm = 0.0
-#ifdef RESISTIVE
-         dt  = 0.0    !> \deprecated BEWARE: smells like some dirty trick
-#endif /* RESISTIVE */
       else
          if (.not.cfl_violated) dtm = dt
       endif
@@ -200,7 +197,7 @@ contains
 #ifdef MAGNETIC
       use magboundaries,         only: all_mag_boundaries
 #ifdef RESISTIVE
-      use resistivity,           only: init_resistivity
+      use resistivity,           only: init_resistivity, compute_resist
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 #ifdef SHEAR
@@ -352,6 +349,9 @@ contains
          call write_data(output='all') ! moved from dataio::init_dataio
       endif
 
+#ifdef RESISTIVE
+      call compute_resist  ! etamax%val is required by timestep_resist
+#endif /* RESISTIVE */
 #ifdef VERBOSE
       call diagnose_arrays ! may depend on everything
 #endif /* VERBOSE */
