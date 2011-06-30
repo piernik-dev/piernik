@@ -198,8 +198,8 @@ contains
       implicit none
 
       real, dimension(:,:,:), pointer :: p
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
       if (.not.eta1_active) return
 !> \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array - should change  with rev. 3893
@@ -370,11 +370,11 @@ contains
 
       implicit none
 
-      real, dimension(:), pointer :: eta1d
+      integer                         :: j, k
       real, dimension(:), allocatable :: wcu1d
-      integer                     :: j, k
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real, dimension(:),    pointer  :: eta1d
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       call compute_resist
 
@@ -415,11 +415,11 @@ contains
 
       implicit none
 
-      real, dimension(:), pointer :: eta1d
+      integer                         :: j, k
       real, dimension(:), allocatable :: wcu1d
-      integer                     :: j, k
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real, dimension(:),    pointer  :: eta1d
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       call compute_resist
 
@@ -460,11 +460,11 @@ contains
 
       implicit none
 
-      real, dimension(:), pointer :: eta1d
+      integer                         :: i, k
       real, dimension(:), allocatable :: wcu1d
-      integer                     :: i, k
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real, dimension(:),    pointer  :: eta1d
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       call compute_resist
 
@@ -505,11 +505,11 @@ contains
 
       implicit none
 
-      real, dimension(:), pointer :: eta1d
+      integer                         :: i, k
       real, dimension(:), allocatable :: wcu1d
-      integer                     :: i, k
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real, dimension(:),    pointer  :: eta1d
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       call compute_resist
 
@@ -550,11 +550,11 @@ contains
 
       implicit none
 
-      real, dimension(:), pointer :: eta1d
+      integer                         :: i, j
       real, dimension(:), allocatable :: wcu1d
-      integer                     :: i, j
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real, dimension(:),    pointer  :: eta1d
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       call compute_resist
 
@@ -595,11 +595,11 @@ contains
 
       implicit none
 
-      real, dimension(:), pointer :: eta1d
+      integer                         :: i, j
       real, dimension(:), allocatable :: wcu1d
-      integer                     :: i, j
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real, dimension(:),    pointer  :: eta1d
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       call compute_resist
 

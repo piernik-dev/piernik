@@ -124,7 +124,7 @@ contains
 !<
    subroutine hydrostatic_main(sd)
 
-      use constants,  only:  zdim, LO, HI
+      use constants,  only: zdim, LO, HI
       use dataio_pub, only: die
       use domain,     only: dom
       use gravity,    only: nsub
@@ -135,10 +135,10 @@ contains
 
       real, intent(out), optional     :: sd
       real, allocatable, dimension(:) :: dprofs
-      integer :: ksub, ksmid, k
-      real    :: factor
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      integer                         :: ksub, ksmid, k
+      real                            :: factor
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       allocate(dprofs(nstot))
 
@@ -171,7 +171,7 @@ contains
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
          cg => cgl%cg
-         cg%dprof(:) =0.0
+         cg%dprof(:) = 0.0
          do k=1, cg%nz
             do ksub=1, nstot
                if (zs(ksub) > cg%zl(k) .and. zs(ksub) < cg%zr(k)) then
@@ -185,9 +185,7 @@ contains
       if (present(sd)) then
          sd = 0.0
          do ksub=1, nstot
-            if (zs(ksub) > dom%edge(zdim, LO) .and. zs(ksub) < dom%edge(zdim, HI)) then
-               sd = sd + dprofs(ksub)*dzs
-            endif
+            if (zs(ksub) > dom%edge(zdim, LO) .and. zs(ksub) < dom%edge(zdim, HI)) sd = sd + dprofs(ksub)*dzs
          enddo
       endif
 

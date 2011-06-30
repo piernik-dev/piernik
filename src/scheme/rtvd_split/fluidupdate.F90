@@ -403,9 +403,9 @@ contains
 
       implicit none
 
-      integer             :: ib1,ib2,dim1,dim2
+      integer, intent(in)            :: ib1,ib2,dim1,dim2
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
 

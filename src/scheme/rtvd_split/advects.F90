@@ -54,11 +54,11 @@ contains
 
       implicit none
 
+      integer                         :: j, k, jm, j_s, j_e
       real, dimension(:), allocatable :: vx
       real, dimension(:), allocatable :: vx0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-      integer             :: j, k, jm, j_s, j_e
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
@@ -123,11 +123,11 @@ contains
 
       implicit none
 
+      integer                         :: j, k, km, k_s, k_e
       real, dimension(:), allocatable :: vx
       real, dimension(:), allocatable :: vx0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-      integer             :: j, k, km, k_s, k_e
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
@@ -192,11 +192,11 @@ contains
 
       implicit none
 
+      integer                         :: i, k, km, k_s, k_e
       real, dimension(:), allocatable :: vy
       real, dimension(:), allocatable :: vy0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-      integer             :: i, k, km, k_s, k_e
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
@@ -261,11 +261,11 @@ contains
 
       implicit none
 
+      integer                         :: k, i, im, i_s, i_e
       real, dimension(:), allocatable :: vy
       real, dimension(:), allocatable :: vy0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-      integer             :: k, i, im, i_s, i_e
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
@@ -330,11 +330,11 @@ contains
 
       implicit none
 
-      real, dimension(:), allocatable  :: vz
-      real, dimension(:), allocatable  :: vz0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-      integer              :: j, i, im, i_s, i_e
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      integer                         :: j, i, im, i_s, i_e
+      real, dimension(:), allocatable :: vz
+      real, dimension(:), allocatable :: vz0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
@@ -398,11 +398,11 @@ contains
 
       implicit none
 
+      integer                         :: i, j, jm, j_s, j_e
       real, dimension(:), allocatable :: vz
       real, dimension(:), allocatable :: vz0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-      integer             :: i, j, jm, j_s, j_e
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       cgl => cga%cg_leafs%cg_l(1)
       do while (associated(cgl))
