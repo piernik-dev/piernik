@@ -32,7 +32,7 @@ parser.add_option("-p", "--plane", dest="plane", default="xy",
       help="plane, possible values {xy,yz,xz}")
 parser.add_option("-c", "--cell", dest="cell", default=0, type="int",
       help="plane, possible values {xy,yz,xz}")
-parser.add_option("--log", dest="dolog", default=False,
+parser.add_option("--log", dest="dolog", default=False, action="store_true",
       help="use logarithmic scal")
 (options, args) = parser.parse_args(sys.argv[1:])
 
