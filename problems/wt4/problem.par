@@ -52,7 +52,6 @@
     vars(4) = 'vely'
     vars(5) = 'velz'
     vars(6) = 'mgso'
-    domain  = 'phys_domain'
  /
 
  $FLUID_IONIZED

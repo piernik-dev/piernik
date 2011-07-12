@@ -52,8 +52,6 @@
     vars(8) = 'flx3'
     vars(9) = 'flx4'
     vars(10) = 'flx5'
-    domain  = 'full_domain'
-    mag_center = 'no'
  /
 
  $FLUID_IONIZED

@@ -50,7 +50,6 @@
     vars(2) = 'gpot'
     vars(3) = 'apot'
     vars(4) = 'errp'
-    domain  = 'phys_domain'
  /
 
  $FLUID_IONIZED

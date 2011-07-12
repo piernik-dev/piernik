@@ -45,7 +45,6 @@
     vars(2) = 'velx'
     vars(3) = 'vely'
     vars(4) = 'velz'
-    domain  = 'full_domain'
  /
 
  $NUMERICAL_SETUP

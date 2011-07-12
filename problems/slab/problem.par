@@ -50,8 +50,6 @@
     vars(6) = 'magx'
     vars(7) = 'magy'
     vars(8) = 'magz'
-    domain  = 'phys_domain'
-    mag_center = 'no'
  /
 
  $FLUID_IONIZED

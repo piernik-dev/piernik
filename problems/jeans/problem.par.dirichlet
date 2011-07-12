@@ -53,7 +53,6 @@
     vars(4) = 'velz'
     vars(5) = 'ener'
     vars(6) = 'gpot'
-    domain  = 'phys_domain'
  /
 
  $FLUID_IONIZED

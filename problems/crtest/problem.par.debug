@@ -52,7 +52,6 @@
     vars(9) = 'encr'
     vars(10) = 'acr1'
     vars(11) = 'err1'
-    domain  = 'phys_domain'
  /
 
  $NUMERICAL_SETUP

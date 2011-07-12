@@ -50,7 +50,6 @@
     vars(7) = 'magy'
     vars(8) = 'magz'
     vars(9) = 'encr'
-    domain  = 'phys_domain'
  /
 
  $NUMERICAL_SETUP

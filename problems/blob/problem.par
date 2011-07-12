@@ -45,7 +45,6 @@
     vars(2) = 'velx'
     vars(3) = 'vely'
     vars(4) = 'ener'
-    domain  = 'phys_domain'
  /
 
  $FLUID_NEUTRAL
