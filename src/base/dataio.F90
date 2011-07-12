@@ -46,7 +46,7 @@
 
 module dataio
 
-   use dataio_pub,    only: domain, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id
+   use dataio_pub,    only: domain_dump, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id
    use constants,     only: cwdlen, fmt_len, cbuff_len, varlen, idlen
 
    implicit none
@@ -95,7 +95,7 @@ module dataio
    namelist /END_CONTROL/ nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
-                             domain, vars, mag_center, vizit, fmin, fmax, &
+                             domain_dump, vars, mag_center, vizit, fmin, fmax, &
                              min_disk_space_MB, sleep_minutes, sleep_seconds, &
                              user_message_file, system_message_file
 
@@ -178,7 +178,7 @@ contains
 !! <tr><td>ix                 </td><td>                   </td><td>integer   </td><td>\copydoc dataio::ix               </td></tr>
 !! <tr><td>iy                 </td><td>                   </td><td>integer   </td><td>\copydoc dataio::iy               </td></tr>
 !! <tr><td>iz                 </td><td>                   </td><td>integer   </td><td>\copydoc dataio::iz               </td></tr>
-!! <tr><td>domain             </td><td>'phys_domain'     </td><td>'phys_domain' or 'full_domain'                     </td><td>\copydoc dataio_pub::domain</td></tr>
+!! <tr><td>domain_dump        </td><td>'phys_domain'      </td><td>'phys_domain' or 'full_domain'                       </td><td>\copydoc dataio_pub::domain_dump</td></tr>
 !! <tr><td>vars               </td><td>''                 </td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more </td><td>\copydoc dataio::vars  </td></tr>
 !! <tr><td>mag_center         </td><td>'no'               </td><td>'yes'/'no'</td><td>\copydoc dataio::mag_center       </td></tr>
 !! <tr><td>vizit              </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::vizit        </td></tr>
@@ -234,7 +234,7 @@ contains
       dt_tsl = 0.0
       dt_log = 0.0
       dt_plt = 0.0
-      domain = 'phys_domain'
+      domain_dump = 'phys_domain'
       vars(:)   = ''
       mag_center= 'no'
       min_disk_space_MB = 100
@@ -290,7 +290,7 @@ contains
          ibuff(20) = nrestart
          ibuff(21) = resdel
 
-!  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, domain, vars, mag_center, &
+!  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, domain_dump, vars, mag_center, &
 !                            min_disk_space_MB, sleep_minutes, ix, iy, iz&
 !                            user_message_file, system_message_file
 
@@ -313,7 +313,7 @@ contains
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
-         cbuff(40) = domain
+         cbuff(40) = domain_dump
 
          do iv = 1, nvarsmx
             cbuff(40+iv) = vars(iv)
@@ -368,7 +368,7 @@ contains
 
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
-         domain              = trim(cbuff(40))
+         domain_dump         = trim(cbuff(40))
          do iv=1, nvarsmx
             vars(iv)         = trim(cbuff(40+iv))
          enddo

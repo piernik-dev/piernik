@@ -1359,7 +1359,7 @@ contains
          chdf%last_hdf_time = rbuf(1)
 
          call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name, error)
-         call h5ltget_attribute_string_f(file_id,"/","domain", chdf%domain, error)
+         call h5ltget_attribute_string_f(file_id,"/","domain", chdf%domain_dump, error)
          call h5ltget_attribute_string_f(file_id,"/","run_id", chdf%new_id, error)
 
          if (restart_hdf5_version > 1.11) then
@@ -1369,7 +1369,7 @@ contains
 
          problem_name = fix_string(problem_name)   !> \deprecated BEWARE: >=HDF5-1.8.4 has weird issues with strings
          chdf%new_id  = fix_string(chdf%new_id)    !> \deprecated   this bit hacks it around
-         chdf%domain  = fix_string(chdf%domain)
+         chdf%domain_dump  = fix_string(chdf%domain_dump)
 
          call h5fclose_f(file_id, error)
 
@@ -1394,7 +1394,7 @@ contains
       call MPI_Bcast(dt,                 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
       call MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, 0, comm, ierr)
-      call MPI_Bcast(chdf%domain,  domlen,    MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(chdf%domain_dump,domlen, MPI_CHARACTER, 0, comm, ierr)
       call MPI_Bcast(chdf%new_id,  idlen,     MPI_CHARACTER, 0, comm, ierr)
 
    end subroutine read_restart_hdf5
@@ -1611,8 +1611,8 @@ contains
 
       fe = len_trim(problem_name)
       call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
-      fe = len_trim(chdf%domain)
-      call h5ltset_attribute_string_f(file_id, "/", "domain", chdf%domain(1:fe), error) !rr2
+      fe = len_trim(chdf%domain_dump)
+      call h5ltset_attribute_string_f(file_id, "/", "domain", chdf%domain_dump(1:fe), error) !rr2
       fe = len_trim(run_id)
       call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
 

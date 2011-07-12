@@ -62,7 +62,7 @@ module dataio_pub
    real               :: next_t_tsl             !< when to produce the timeslice file
    integer            :: nrestart               !< number of restart file to be read while restart is not set to ''
    integer            :: step_hdf               !< number of simulation timestep corresponding to values dumped in hdf file
-   character(len=domlen) :: domain              !< string to choose if boundaries have to be dumped in hdf files
+   character(len=domlen) :: domain_dump         !< string to choose if boundaries have to be dumped in hdf files
 
    ! Buffers for global use
    character(len=cwdlen), save :: cwd = "."     !< path to the current working directory
@@ -77,7 +77,7 @@ module dataio_pub
    type :: hdf
       integer :: nhdf, nres, step_hdf, step_res, nstep, nrestart
       real    :: last_hdf_time, next_t_tsl,  next_t_log
-      character(len=domlen)  :: domain
+      character(len=domlen)  :: domain_dump
       character(len=idlen)   :: new_id
    end type hdf
    type(hdf)          :: chdf                   !< container for some vital simulation parameters
@@ -284,7 +284,7 @@ contains
       step_hdf      = chdf%step_hdf
       last_hdf_time = chdf%last_hdf_time
       nrestart      = chdf%nrestart
-      domain        = chdf%domain
+      domain_dump   = chdf%domain_dump
 
    end subroutine get_container
 !-----------------------------------------------------------------------------
@@ -302,7 +302,7 @@ contains
       chdf%step_hdf       = step_hdf
       chdf%last_hdf_time  = last_hdf_time
       chdf%nrestart       = nrestart
-      chdf%domain         = domain
+      chdf%domain_dump    = domain_dump
 
    end subroutine set_container_chdf
 !-----------------------------------------------------------------------------
