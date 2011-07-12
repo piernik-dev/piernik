@@ -1,0 +1,11 @@
+/* choosing fluids */
+#define DUST
+#define NEUTRAL
+
+/* adiabatic or isothermal */
+#undef GRAV
+#define ISO
+#define BALSARA
+
+/* choosing freezing speed */
+#define LOCAL_FR_SPEED

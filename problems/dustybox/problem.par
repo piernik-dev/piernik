@@ -1,0 +1,79 @@
+ $BASE_DOMAIN
+    nxd = 100
+    nyd = 1
+    nzd = 1
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = 0.0
+    xmax   = 10.0
+    ymin   = 0.0
+    ymax   = 10.0
+    zmin   = 0.0
+    zmax   = 10.0
+ /
+
+ $MPI_BLOCKS
+    psize = 1, 1, 1
+ /
+
+ $UNITS
+ !   units_set = "CGS"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 0.1
+    nend   = 100000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='dustbox'
+    run_id   =  'tst'
+    dt_hdf  = 0.0
+    dt_res  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    domain  = 'full_domain'
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.6
+    smalld = 1.e-8
+    smallei= 1.e-8
+    dt_initial = 1.e-8
+    integration_order = 2
+    limiter= 'vanleer'
+ /
+
+ $FLUID_DUST
+ /
+
+ $FLUID_NEUTRAL
+   cs_iso_neu = 100.0
+ /
+
+ $PROBLEM_CONTROL
+   vx0 = -1.0
+   vy0 = 0.0
+   vz0 = 0.0
+ /
+
+ $INTERACTIONS
+   grain_size = 1.0
+   grain_dens = 1.0
+   dragc_gas_dust = 1.0
+   collision_factor = 1.0
+ /
