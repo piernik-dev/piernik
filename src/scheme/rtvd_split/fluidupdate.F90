@@ -306,7 +306,7 @@ contains
       use fluidindex,  only: ibx, iby, ibz
       use constants,   only: xdim, ydim, zdim
 #ifdef RESISTIVE
-      use resistivity, only: diffuseby_x, diffusebz_x
+      use resistivity, only: diffuseb
 #endif /* RESISTIVE */
 
       implicit none
@@ -314,7 +314,7 @@ contains
       call advectby_x
 
 #ifdef RESISTIVE
-      call diffuseby_x
+      call diffuseb(iby,xdim,zdim,'emfz',ydim,zdim)
 #endif /* RESISTIVE */
 
       call mag_add(iby,xdim,ibx,ydim)
@@ -322,7 +322,7 @@ contains
       call advectbz_x
 
 #ifdef RESISTIVE
-      call diffusebz_x
+      call diffuseb(ibz,xdim,ydim,'emfy',ydim,zdim)
 #endif /* RESISTIVE */
 
       call mag_add(ibz,xdim,ibx,zdim)
@@ -337,7 +337,7 @@ contains
       use fluidindex,  only: ibx, iby, ibz
       use constants,   only: xdim, ydim, zdim
 #ifdef RESISTIVE
-      use resistivity, only: diffusebx_y, diffusebz_y
+      use resistivity, only: diffuseb
 #endif /* RESISTIVE */
 
       implicit none
@@ -345,7 +345,7 @@ contains
       call advectbz_y
 
 #ifdef RESISTIVE
-      call diffusebz_y
+      call diffuseb(ibz,ydim,xdim,'emfx',zdim,xdim)
 #endif /* RESISTIVE */
 
       call mag_add(ibz,ydim,iby,zdim)
@@ -353,7 +353,7 @@ contains
       call advectbx_y
 
 #ifdef RESISTIVE
-      call diffusebx_y
+      call diffuseb(ibx,ydim,zdim,'emfz',zdim,xdim)
 #endif /* RESISTIVE */
 
       call mag_add(ibx,ydim,iby,xdim)
@@ -368,20 +368,20 @@ contains
       use fluidindex,  only: ibx, iby, ibz
       use constants,   only: xdim, ydim, zdim
 #ifdef RESISTIVE
-      use resistivity, only: diffusebx_z, diffuseby_z
+      use resistivity, only: diffuseb
 #endif /* RESISTIVE */
 
       implicit none
 
       call advectbx_z
 #ifdef RESISTIVE
-      call diffusebx_z
+      call diffuseb(ibx,zdim,ydim,'emfy',xdim,ydim)
 #endif /* RESISTIVE */
       call mag_add(ibx,zdim,ibz,xdim)
 
       call advectby_z
 #ifdef RESISTIVE
-      call diffuseby_z
+      call diffuseb(iby,zdim,xdim,'emfx',xdim,ydim)
 #endif /* RESISTIVE */
 
       call mag_add(iby,zdim,ibz,ydim)
@@ -414,14 +414,14 @@ contains
          cg => cgl%cg
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
-         if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
-         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) - wcu*cg%idl(dim1)
-         wcu = pshift(wcu,dim1)
-         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) + wcu*cg%idl(dim1)
-         wcu = mshift(wcu,dim1)
-         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) + wcu*cg%idl(dim2)
-         wcu = pshift(wcu,dim2)
-         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - wcu*cg%idl(dim2)
+         if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu%arr)
+         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) - wcu%arr*cg%idl(dim1)
+         wcu%arr = pshift(wcu%arr,dim1)
+         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) + wcu%arr*cg%idl(dim1)
+         wcu%arr = mshift(wcu%arr,dim1)
+         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) + wcu%arr*cg%idl(dim2)
+         wcu%arr = pshift(wcu%arr,dim2)
+         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - wcu%arr*cg%idl(dim2)
 #endif /* RESISTIVE */
 ! ADVECTION FULL STEP
          if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa%arr)
