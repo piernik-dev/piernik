@@ -1,0 +1,106 @@
+ $BASE_DOMAIN
+    nxd = 200
+    nyd = 1
+    nzd = 200
+    nb  = 4
+    bnd_xl = 'ref'
+    bnd_xr = 'ref'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'outd'
+    bnd_zr = 'outd'
+    geometry = "cylindrical"
+    xmin   = 1.0
+    xmax   = 10.0
+    ymin   = 0.0
+    ymax   = 6.2831853071795862
+    zmin   =-3.0
+    zmax   = 3.0
+ /
+
+ $MPI_BLOCKS
+    psize = 1, 1, 1
+ /
+
+ $UNITS
+   units_set = "pln"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 100.0
+    nend   = 10000000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='kepler'
+    run_id  =  'ts2'
+    dt_hdf  = 0.5
+    dt_res  = 100.0
+    dt_log  = 1.0e-8
+    dt_tsl  = 1.0e-1
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    mag_center = 'no'
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu  = 1.0
+    cs_iso_neu = 0.25 ! 0.05507   ! 150K for PLN
+ /
+
+ $FLUID_DUST
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.4
+    use_smalld = .true.
+    smalld = 1.e-6
+    dt_initial = 1e-6
+    relax_time = 0.0
+    integration_order = 2
+    limiter= 'vanleer'
+    cfr_smooth = 0.01
+ /
+
+ $GRAVITY
+    external_gp = "GRAV_PTMASS"
+    ptmass  = 1047.7
+    ptm_x   = 0.0
+    ptm_y   = 0.0
+    ptm_z   = 0.0
+    r_smooth= 0.0
+    user_grav = .true.
+ /
+
+ $PROBLEM_CONTROL
+    rho0    = 1.0 
+    cs0     = 0.07
+    R0      = 1.0
+    r_in    = 2.0
+    r_out   = 9.0
+    f_out   = 100.0
+    f_in    = 10.0
+    mag_field_orient = 'none'
+    use_inner_orbital_period = .true.
+    eps      = 1.0
+    amp_noise = 1.e-6
+ /
+
+ $PIERNIK_DEBUG
+   constant_dt = 0.0
+ /
+
+ $INTERACTIONS
+   collision_factor  = 1.0
+   dragc_gas_dust    = 1.0
+   cfl_interact      = 0.8
+   grain_size        = 50.0
+ /
