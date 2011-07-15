@@ -42,12 +42,12 @@ contains
 
    subroutine advectby_x
 
-      use constants,     only: xdim, ydim, zdim
+      use constants,     only: xdim, zdim
       use dataio_pub,    only: die
       use domain,        only: has_dir
       use fluidindex,    only: iby, flind
       use global,        only: dt
-      use grid,          only: cga
+      use grid,          only: cga, D_y
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb
@@ -67,13 +67,8 @@ contains
          if (any([allocated(vx), allocated(vx0)])) call die("[advects:advectby_x] vx or vx0 already allocated")
          allocate(vx(cg%nx), vx0(cg%nx))
 
-         if (has_dir(ydim)) then ! This can be converted by use grid, only: Dy; j_s = 1 + D_y; j_e = 1 + D_y * (cg%ny - 1) . How will it impact performance?
-            j_s = 2
-            j_e = cg%ny
-         else
-            j_s = 1
-            j_e = 1
-         endif
+         j_s = 1 + D_y
+         j_e = cg%ny
 
          do k = cg%ks, cg%ke
             do j = j_s, j_e         ! cg%nyb cg%is /= 1 in by_x
@@ -116,7 +111,7 @@ contains
       use domain,        only: has_dir
       use fluidindex,    only: ibz, flind
       use global,        only: dt
-      use grid,          only: cga
+      use grid,          only: cga, D_z
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb
@@ -136,13 +131,8 @@ contains
          if (any([allocated(vx), allocated(vx0)])) call die("[advects:advectby_x] vx or vx0 already allocated")
          allocate(vx(cg%nx), vx0(cg%nx))
 
-         if (has_dir(zdim)) then
-            k_s = 2
-            k_e = cg%nz
-         else
-            k_s = 1
-            k_e = 1
-         endif
+         k_s = 1 + D_z
+         k_e = cg%nz
 
          do k=k_s,k_e
             km=k-1
@@ -185,7 +175,7 @@ contains
       use domain,        only: has_dir
       use fluidindex,    only: ibz, flind
       use global,        only: dt
-      use grid,          only: cga
+      use grid,          only: cga, D_z
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb
@@ -205,13 +195,8 @@ contains
          if (any([allocated(vy), allocated(vy0)])) call die("[advects:advectby_y] vy or vy0 already allocated")
          allocate(vy(cg%ny), vy0(cg%ny))
 
-         if (has_dir(zdim)) then
-            k_s = 2
-            k_e = cg%nz
-         else
-            k_s = 1
-            k_e = 1
-         endif
+         k_s = 1 + D_z
+         k_e = cg%nz
 
          do k=k_s,k_e
             km=k-1
@@ -254,7 +239,7 @@ contains
       use domain,        only: has_dir
       use fluidindex,    only: ibx, flind
       use global,        only: dt
-      use grid,          only: cga
+      use grid,          only: cga, D_x
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb
@@ -274,13 +259,8 @@ contains
          if (any([allocated(vy), allocated(vy0)])) call die("[advects:advectby_y] vy or vy0 already allocated")
          allocate(vy(cg%ny), vy0(cg%ny))
 
-         if (has_dir(xdim)) then
-            i_s = 2
-            i_e = cg%nx
-         else
-            i_s = 1
-            i_e = 1
-         endif
+         i_s = 1 + D_x
+         i_e = cg%nx
 
          do k=cg%ks, cg%ke
             do i=i_s,i_e
@@ -323,7 +303,7 @@ contains
       use domain,        only: has_dir
       use fluidindex,    only: ibx, flind
       use global,        only: dt
-      use grid,          only: cga
+      use grid,          only: cga, D_x
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb
@@ -343,13 +323,9 @@ contains
          if (any([allocated(vz), allocated(vz0)])) call die("[advects:advectby_z] vz or vz0 already allocated")
          allocate(vz(cg%nz), vz0(cg%nz))
 
-         if (has_dir(xdim)) then
-            i_s = 2
-            i_e = cg%nx
-         else
-            i_s = 1
-            i_e = 1
-         endif
+         i_s = 1 + D_x
+         i_e = cg%nx
+
          do j=cg%js, cg%je
             do i=i_s,i_e
                im=i-1
@@ -386,12 +362,12 @@ contains
 
    subroutine advectby_z
 
-      use constants,     only: xdim, ydim, zdim
+      use constants,     only: xdim, zdim
       use dataio_pub,    only: die
       use domain,        only: has_dir
       use fluidindex,    only: iby, flind
       use global,        only: dt
-      use grid,          only: cga
+      use grid,          only: cga, D_y
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb
@@ -411,13 +387,8 @@ contains
          if (any([allocated(vz), allocated(vz0)])) call die("[advects:advectby_z] vz or vz0 already allocated")
          allocate(vz(cg%nz), vz0(cg%nz))
 
-         if (has_dir(ydim)) then
-            j_s = 2
-            j_e = cg%ny
-         else
-            j_s = 1
-            j_e = 1
-         endif
+         j_s = 1 + D_y
+         j_e = cg%ny
 
          do j=j_s,j_e
             jm=j-1
