@@ -41,7 +41,7 @@ module interactions
 
    private
    public :: init_interactions, fluid_interactions, collfaq, cfl_interact, dragc_gas_dust, has_interactions, &
-      & interactions_grace_passed, epstein_factor, balsara_implicit_interactions
+      & interactions_grace_passed, epstein_factor, balsara_implicit_interactions, update_grain_size
 
    real, allocatable, dimension(:,:)      :: collfaq     !< flind%fluids x flind%fluids array of collision factors
    real :: collision_factor                              !< collision factor
@@ -50,7 +50,7 @@ module interactions
 !   real :: taus                                          !< stopping time
    real :: grain_size                                    !< size of dust grains in cm
    real :: grain_dens                                    !< density of dust grains in g/cm^3
-   real, dimension(:), allocatable :: epstein_factor     !< grain_size * grain_dens / c_s for iso case
+   real, dimension(:), allocatable, protected :: epstein_factor !< grain_size * grain_dens / c_s for iso case
    logical :: has_interactions
 
    interface
@@ -273,6 +273,26 @@ contains
       u1(iarr_all_mx,:) = u1(iarr_all_dn,:) * vprim(:,:)
       return
    end subroutine balsara_implicit_interactions
+
+   subroutine update_grain_size(new_size)
+      use fluidindex, only: flind
+      use units,      only: cm
+      use constants,  only: DST
+      implicit none
+      real, intent(in) :: new_size
+      integer :: i
+
+      grain_size = new_size * cm
+
+      do i = 1, flind%fluids
+         if (flind%all_fluids(i)%tag /= DST) then
+            epstein_factor(flind%all_fluids(i)%pos) = grain_size * grain_dens / flind%all_fluids(i)%cs !BEWARE iso assumed
+         else
+            epstein_factor(flind%all_fluids(i)%pos) = 0.0
+         endif
+      enddo
+
+   end subroutine update_grain_size
 
 #ifdef FLUID_INTERACTIONS_DW
 !>
