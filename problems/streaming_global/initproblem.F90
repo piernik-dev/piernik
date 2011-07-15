@@ -248,7 +248,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,    only: DST
+      use constants,    only: DST, GEO_RPZ
       use global,       only: smalld
       use dataio_pub,   only: msg, printinfo, die
       use domain,       only: geometry_type, cdd
@@ -273,7 +273,7 @@ contains
 
 !   Secondary parameters
       if (cdd%comm3d == MPI_COMM_NULL) call die("[initproblem:init_prob] comm3d == MPI_COMM_NULL not implemented") !pcoords
-      if (geometry_type /= "
+      if (geometry_type /= GEO_RPZ) call die("[initproblem:init_prob] only cylindrical geometry supported")
 
       sqr_gm = sqrt(newtong*ptmass)
 
