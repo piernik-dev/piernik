@@ -141,7 +141,7 @@ contains
       csim2 = flind%ion%cs2*(1.0+alpha)
 
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

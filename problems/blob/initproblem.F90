@@ -127,7 +127,7 @@ contains
       penv = 3.2*rblob*sqrt(chi)/tkh/(Mext*gamma_neu/denv)
 
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

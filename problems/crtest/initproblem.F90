@@ -140,7 +140,7 @@ contains
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:read_problem_par] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
       !> \todo provide mechanism for rank-3 user arrays in grid_container
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -206,7 +206,7 @@ contains
          K_crn_perp(icr)  = 0.
       endif
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -297,7 +297,7 @@ contains
 
       ampt     = amp_cr * r0**2 / sqrt(r0_par2 * r0_perp2)
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -362,7 +362,7 @@ contains
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
          do k = cg%ks, cg%ke

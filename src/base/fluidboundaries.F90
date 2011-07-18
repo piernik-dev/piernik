@@ -648,7 +648,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[fluidboundaries:all_fluid_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial communication
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
 
          if (cdd%comm3d == MPI_COMM_NULL) then

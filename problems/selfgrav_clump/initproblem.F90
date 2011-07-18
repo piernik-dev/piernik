@@ -186,7 +186,7 @@ contains
       totME(1) = clump_mass / (4./3. * pi * clump_r**3)
 
       Msph = 0.
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -462,7 +462,7 @@ contains
 
       TWP(:) = 0.
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -526,7 +526,7 @@ contains
 
       totME = 0.
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

@@ -366,7 +366,7 @@ contains
       call set_dirty(defect)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
       if (diff_theta /= 0.) then
-         cgl => cga%cg_leafs%cg_l(1)
+         call cga%get_root(cgl)
          do while (associated(cgl))
             cg => cgl%cg
             roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction) = (1. -1./diff_theta) * cg%u%arr(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
@@ -406,7 +406,7 @@ contains
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid_diffusion:init_solution] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       call set_dirty(solution)
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
          roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = cg%u%arr(iarr_crs(cr_id),  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
@@ -446,7 +446,7 @@ contains
 
       do ib = ibx, ibz
          call set_dirty(diff_bx+ib-ibx)
-         cgl => cga%cg_leafs%cg_l(1)
+         call cga%get_root(cgl)
          do while (associated(cgl))
             cg => cgl%cg
             roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = cg%b%arr(ib, cg%is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z)
@@ -576,7 +576,7 @@ contains
 !     Do we need to take care of boundaries here?
 !      call mpi_multigrid_bnd(roof%level, solution, 1, diff_extbnd)
 !      cg%u%arr(iarr_crs(cr_id), is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z) = roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, solution)
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
          cg%u%arr(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution)

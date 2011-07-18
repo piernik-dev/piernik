@@ -168,7 +168,7 @@ contains
          enddo
       endif
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
          cg%dprof(:) = 0.0
@@ -368,7 +368,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[hydrostatic:outh_bnd] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

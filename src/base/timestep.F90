@@ -119,7 +119,7 @@ contains
       c_all = 0.0
       dt = huge(1.0)
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

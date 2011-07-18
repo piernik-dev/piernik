@@ -145,7 +145,7 @@ contains
       imz=imzn
       idn=idnn
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -201,7 +201,7 @@ contains
       ien=ienn
 
 !clearing the compact star
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

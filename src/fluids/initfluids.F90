@@ -162,7 +162,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initfluids:init_fluids] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -232,7 +232,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initfluids:sanitize_smallx_checks] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval, minval
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

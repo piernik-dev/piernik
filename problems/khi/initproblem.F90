@@ -131,7 +131,7 @@ contains
       k0    = dpi/lambda
       vp    = (Mtop*sqrt(chi)+Mbot)*sqrt(gamma_neu*p0/dbot)/dpert
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

@@ -202,7 +202,7 @@ contains
       endif
 ! Uniform equilibrium state
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
          do k = cg%ks, cg%ke

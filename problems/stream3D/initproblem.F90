@@ -151,7 +151,7 @@ contains
       real :: vx, vy, vz
 #endif /* !ISO */
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

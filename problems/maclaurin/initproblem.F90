@@ -156,7 +156,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -279,7 +279,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:compute_maclaurin_potential] multiple grid pieces per procesor not implemented yet") !nontrivial apot
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
          call my_allocate(apot, [cg%nxb, cg%nyb, cg%nzb], "apot")
@@ -303,7 +303,7 @@ contains
       a12 = a1**2
       a32 = a3**2
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -402,7 +402,7 @@ contains
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

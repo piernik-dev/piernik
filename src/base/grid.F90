@@ -154,7 +154,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[arrays:init_arrays] grid or fluids not initialized.")
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
          call cg%u%init(flind%all, cg%nx, cg%ny, cg%nz)
@@ -252,7 +252,7 @@ contains
 
       nc = [ numfluids, ndims, max(numcrs,1), 1 ]      !< number of fluids, magnetic field components, CRs, and 1 for rank-3 array
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
          ! find neighbours and set up the MPI containers
@@ -441,7 +441,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[grid:arr3d_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

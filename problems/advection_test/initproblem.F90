@@ -147,7 +147,7 @@ contains
       pulse_low_density = smalld * 1e5
       pulse_pressure = smallei * flind%neu%gam_1 * 1e2
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -308,7 +308,7 @@ contains
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

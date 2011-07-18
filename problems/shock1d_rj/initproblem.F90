@@ -136,7 +136,7 @@ contains
 
 !   Secondary parameters
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

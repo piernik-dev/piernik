@@ -447,7 +447,7 @@ contains
          enddo
       endif
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cgl%cg%sgp%arr(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
          cgl => cgl%nxt
@@ -1162,7 +1162,7 @@ contains
       type(grid_container), pointer :: cg
 
       ts =  set_timer("multigrid", .true.)
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          if ( (has_dir(xdim) .and. cgl%cg%is-mg_nb <= 0) .or. &
               (has_dir(ydim) .and. cgl%cg%js-mg_nb <= 0) .or. &
@@ -1188,7 +1188,7 @@ contains
 
       call vcycle_hg(inner)
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -1231,7 +1231,7 @@ contains
 
          call vcycle_hg(outer)
 
-         cgl => cga%cg_leafs%cg_l(1)
+         call cga%get_root(cgl)
          do while (associated(cgl))
             cg => cgl%cg
 

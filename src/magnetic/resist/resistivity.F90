@@ -211,7 +211,7 @@ contains
 !> \deprecated BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
 !--- square current computing in cell corner step by step
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -391,7 +391,7 @@ contains
 
       call compute_resist
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

@@ -123,7 +123,7 @@ contains
       k_a = sqrt(k_x**2+k_y**2+k_z**2)
 
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

@@ -164,14 +164,14 @@ contains
       type(cg_list_element), pointer :: cgl
 
       if (frun) then
-      cgl => cga%cg_leafs%cg_l(1)
-      do while (associated(cgl))
-         call geo_coeffs_arrays(flind, cg)
-         cgl%cg%gc_xdim(:,:,:) = 1.0
-         cgl%cg%gc_ydim(:,:,:) = 1.0
-         cgl%cg%gc_zdim(:,:,:) = 1.0
-         cgl => cgl%nxt
-      enddo
+         call cga%get_root(cgl)
+         do while (associated(cgl))
+            call geo_coeffs_arrays(flind, cg)
+            cgl%cg%gc_xdim(:,:,:) = 1.0
+            cgl%cg%gc_ydim(:,:,:) = 1.0
+            cgl%cg%gc_zdim(:,:,:) = 1.0
+            cgl => cgl%nxt
+         enddo
          frun = .false.
       endif
 
@@ -212,7 +212,7 @@ contains
       type(cg_list_element), pointer :: cgl
 
       if (frun) then
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          call geo_coeffs_arrays(flind, cgl%cg)
 

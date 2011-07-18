@@ -58,7 +58,7 @@ contains
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:init_crdiffusion] multiple grid pieces per procesor not implemented yet") !nontrivial crsall
       !> \todo provide hooks for rank-4 user/physics arrays in grid container
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
          ma4d = [crsall, cg%nx, cg%ny, cg%nz]
@@ -98,7 +98,7 @@ contains
       type(grid_container), pointer :: cg
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:all_wcr_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -203,7 +203,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:cr_diff_x] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -283,7 +283,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:cr_diff_y] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -363,7 +363,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:cr_diff_z] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

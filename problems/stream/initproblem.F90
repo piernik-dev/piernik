@@ -207,7 +207,7 @@ contains
       write(msg,*) '\eta vk / \Omega = ', eta_gas * neu%cs / csvk / omega
       call printinfo(msg)
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 

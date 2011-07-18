@@ -215,7 +215,7 @@ contains
       kx = 15.*dpi/dom%L_(xdim)
       kz =  5.*dpi/dom%L_(zdim)
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -264,7 +264,7 @@ contains
       call random_seed(put=seed)
       deallocate(seed)
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -311,7 +311,7 @@ contains
 !   Secondary parameters
       if (cdd%comm3d == MPI_COMM_NULL) call die("[initproblem:init_prob] comm3d == MPI_COMM_NULL not implemented") !pcoords
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -672,7 +672,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -742,7 +742,7 @@ contains
       type(grid_container), pointer :: cg
 
       if (frun) then
-         cgl => cga%cg_leafs%cg_l(1)
+         call cga%get_root(cgl)
          do while (associated(cgl))
             cg => cgl%cg
 

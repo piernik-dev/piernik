@@ -273,7 +273,7 @@ contains
 #endif /* CORIOLIS */
       endif
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cgl%cg%gpot%arr(:,:,:) = 0.0
          cgl => cgl%nxt
@@ -312,7 +312,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[gravity:source_terms_grav] multiple grid pieces per procesor not implemented yet") !nontrivial all cg% must be solved at a time (nontrivial for multigrid, rarely possible dor FFT poisson solver)
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
          cg%sgpm%arr = cg%sgp%arr
@@ -337,7 +337,7 @@ contains
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
       call all_sgp_boundaries
       if (frun) then
-         cgl => cga%cg_leafs%cg_l(1)
+         call cga%get_root(cgl)
          do while (associated(cgl))
             cgl%cg%sgpm%arr = cgl%cg%sgp%arr
             cgl => cgl%nxt
@@ -369,7 +369,7 @@ contains
          h = 0.0
       endif
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
 #ifdef SELF_GRAV
@@ -400,7 +400,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[gravity:all_sgp_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          if (associated(cgl%cg%sgp%arr)) call arr3d_boundaries(cgl%cg%sgp%arr)
          cgl => cgl%nxt
@@ -678,7 +678,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
          if (.not.allocated(ax%x)) allocate(ax%x(size(cg%x)))

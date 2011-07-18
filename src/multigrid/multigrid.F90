@@ -163,7 +163,7 @@ contains
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial is_external
 
-      cgl => cga%cg_leafs%cg_l(1)
+      call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
       ! mark external faces
