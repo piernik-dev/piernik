@@ -372,7 +372,7 @@ contains
 
    subroutine diffuseb(ibdir, sdir, etadir, emf, n1, n2)
 
-      use constants,     only: xdim, zdim, ndims
+      use constants,     only: xdim, ydim, zdim, ndims
       use domain,        only: has_dir
       use global,        only: dt
       use grid,          only: cga
@@ -407,9 +407,8 @@ contains
 ! following solution seems to be a bit faster than former select case
          idmh = [cg%nx, cg%ny, cg%nz] - idm(:,etadir)
          idml = 1 + idm(:,etadir)
-         eta%arr(      1:idmh(1),     1:idmh(2),     1:idmh(3)) = 0.5*(   &
-     &   eta%arr(      1:idmh(1),     1:idmh(2),     1:idmh(3)) +         &
-     &   eta%arr(idml(1):cg%nx, idml(2):cg%ny, idml(3):cg%nz)       )
+         eta%arr(1:idmh(xdim), 1:idmh(ydim), 1:idmh(zdim)) = &
+     &      0.5*(eta%arr(1:idmh(xdim), 1:idmh(ydim), 1:idmh(zdim)) + eta%arr(idml(xdim):cg%nx, idml(ydim):cg%ny, idml(zdim):cg%nz) )
 
          do i1 = 1, ubound(wcu%arr,n1)
             do i2 = 1, ubound(wcu%arr,n2)
