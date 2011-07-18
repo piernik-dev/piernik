@@ -133,11 +133,7 @@ contains
                nhdf_vars = nhdf_vars + 1
 #endif /* MULTIGRID */
 #endif /* GRAV */
-            case ('magx')
-               nhdf_vars = nhdf_vars + 1
-            case ('magy')
-               nhdf_vars = nhdf_vars + 1
-            case ('magz')
+            case ('magx', 'magy', 'magz', 'pres')
                nhdf_vars = nhdf_vars + 1
 #ifdef COSM_RAYS
             case ('encr')
@@ -145,8 +141,6 @@ contains
                nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
 #endif /* !NEW_HDF5 */
 #endif /* COSM_RAYS */
-            case ('pres')
-               nhdf_vars = nhdf_vars + 1
             case default
                nhdf_vars = nhdf_vars + 1
          end select
@@ -173,12 +167,8 @@ contains
             case ('ener')
                if (has_neu) then ; hdf_vars(j) = 'enen' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'enei' ; j = j + 1 ; endif
-            case ('magx')
-               hdf_vars(j) = 'magx' ; j = j + 1
-            case ('magy')
-               hdf_vars(j) = 'magy' ; j = j + 1
-            case ('magz')
-               hdf_vars(j) = 'magz' ; j = j + 1
+            case ("magx", "magy", "magz")
+               hdf_vars(j) = vars(i) ; j = j + 1
 #ifdef COSM_RAYS
             case ('encr')
 #ifndef NEW_HDF5
@@ -382,6 +372,7 @@ contains
       call common_shortcuts(var, fl_dni, i_xyz)
 
       ierrh = 0
+      tab = 0.0
       select case (var)
 #ifdef COSM_RAYS
          case ("ecr1" : "ecr9")
@@ -402,9 +393,7 @@ contains
 #endif /* !ISO */
 #ifdef NEUTRAL
          case ("pren")
-#ifdef ISO
-            tab = 0.0
-#else /* !ISO */
+#ifndef ISO
             tab(:,:,:) = real( cg%u%arr(flind%neu%ien, RNG) - 0.5 * ( &
                  &             cg%u%arr(flind%neu%imx, RNG)**2 + &
                  &             cg%u%arr(flind%neu%imy, RNG)**2 + &
@@ -412,9 +401,7 @@ contains
 #endif /* !ISO */
 #endif /* NEUTRAL */
          case ("prei")
-#ifdef ISO
-            tab = 0.0
-#else /* !ISO */
+#ifndef ISO
             tab(:,:,:) = real( cg%u%arr(flind%ion%ien, RNG) - 0.5 *( &
                  &             cg%u%arr(flind%ion%imx, RNG)**2 + &
                  &             cg%u%arr(flind%ion%imy, RNG)**2 + &
@@ -424,17 +411,9 @@ contains
          case ("magx", "magy", "magz")
             tab(:,:,:) = real(cg%b%arr(ibx + i_xyz, RNG), kind=4)
          case ("gpot")
-            if (associated(cg%gpot%arr)) then
-               tab(:,:,:) = real(cg%gpot%arr(RNG), kind=4)
-            else
-               tab = 0.0
-            endif
+            if (associated(cg%gpot%arr)) tab(:,:,:) = real(cg%gpot%arr(RNG), kind=4)
          case ("mgso")
-            if (associated(cg%sgp%arr)) then
-               tab(:,:,:) = real(cg%sgp%arr(RNG), kind=4)
-            else
-               tab = 0.0
-            endif
+            if (associated(cg%sgp%arr))  tab(:,:,:) = real(cg%sgp%arr(RNG),  kind=4)
          case default
             ierrh = -1
       end select
