@@ -132,7 +132,7 @@ module grid_cont
    end type cg_list_element
 
    type cg_list
-      type(cg_list_element), dimension(:), allocatable :: cg_l
+      type(cg_list_element), dimension(:), pointer :: cg_l
    end type cg_list
 
    ! On an uniform, nowhere refined grid, cg_levels will have only one element, and all cg_all elements ill be members of cg_leafs, cg_base and cg_levels(1) lists
@@ -141,10 +141,25 @@ module grid_cont
       type(cg_list), dimension(:), allocatable        :: cg_levels !< grid containers grouped by level
       type(cg_list)                                   :: cg_leafs  !< grid containers that are not fully covered by finer grids
       type(cg_list)                                   :: cg_base   !< grid containers on the base level
+
+      contains
+         procedure :: get_root
    end type cg_set
 
 contains
+!-----------------------------------------------------------------------------
+!>
+!! \brief sets pointer to grid root
+!<
+   subroutine get_root(this, cgp)
+      implicit none
+      class(cg_set), intent(in)                   :: this
+      type(cg_list_element), pointer, intent(out) :: cgp
 
+      cgp => this%cg_leafs%cg_l(1)
+      return
+   end subroutine get_root
+!-----------------------------------------------------------------------------
    subroutine init(this, dom)
 
       use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, INVALID
