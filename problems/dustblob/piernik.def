@@ -14,3 +14,4 @@
 
 /* gravity type choosing */
 #undef GRAV
+#define RTVD

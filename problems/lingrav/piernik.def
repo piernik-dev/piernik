@@ -16,3 +16,4 @@
 
 /* numerical solutions and limitations */
 #undef SHEAR
+#define RTVD

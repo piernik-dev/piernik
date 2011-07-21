@@ -27,7 +27,7 @@
 !
 #include "piernik.h"
 module fluidupdate   ! SPLIT
-! pulled by ANY
+! pulled by RTVD
    implicit none
 
    private

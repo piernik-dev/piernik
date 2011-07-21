@@ -13,3 +13,4 @@
 /* gravity type choosing */
 #undef GRAV
 #undef POISSON_FFT
+#define RTVD

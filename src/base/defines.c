@@ -74,6 +74,31 @@
 #endif
 
 /*
+ * Hydro solvers
+ *
+ * Exclusive: RTVD, MH
+ * Default: RTVD
+ */
+
+#undef HYDRO_SOLVER
+
+#ifdef RTVD
+#define HYDRO_SOLVER
+#endif
+
+#ifdef HLLC
+#define HYDRO_SOLVER
+#endif
+
+#if defined(RTVD) && defined(HLLC)
+#error Choose only one of { RTVD, HLLC }.
+#endif
+
+#if !defined(HYDRO_SOLVER)
+#error no hydro solver defined, possible choices { RTVD, HLLC }
+#endif
+
+/*
   Gravity solvers
 
   Exclusive: MULTIGRID, POISSON_FFT

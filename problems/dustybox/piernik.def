@@ -9,3 +9,4 @@
 
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED
+#define RTVD

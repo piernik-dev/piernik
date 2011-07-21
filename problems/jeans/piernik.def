@@ -24,3 +24,4 @@
   The following declaration is used in multigrid.F90 to remove density bias for some test cases
 #endif
 #define JEANS_PROBLEM
+#define RTVD

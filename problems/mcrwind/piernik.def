@@ -37,3 +37,4 @@
 
 /* include multigrid for diffusion */
 #define MULTIGRID
+#define RTVD

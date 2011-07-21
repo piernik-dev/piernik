@@ -14,3 +14,4 @@
 #else
 #undef NEW_HDF5
 #endif
+#define RTVD

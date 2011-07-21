@@ -29,7 +29,7 @@
 
 module sweeps     ! split sweeps
 
-! pulled by ANY
+! pulled by RTVD
 
    implicit none
 

@@ -31,7 +31,7 @@
 !! \todo remove workaround for http://gcc.gnu.org/bugzilla/show_bug.cgi?id=48955
 !<
 module advects
-! pulled by MAGNETIC
+! pulled by MAGNETIC && RTVD
    implicit none
 
    private
