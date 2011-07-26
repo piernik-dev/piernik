@@ -177,7 +177,12 @@ contains
       flind%ion%cs    = cs_iso_ion
       flind%ion%cs2   = cs_iso_ion**2
       flind%ion%tag   = ION
-      flind%ion%is_selfgrav = selfgrav_ion
+
+      flind%ion%is_selfgrav   = selfgrav_ion
+      flind%ion%is_magnetized = .true.
+#ifndef ISO
+      flind%ion%has_energy    = .true.
+#endif /* !ISO */
 
    end subroutine ionized_index
 

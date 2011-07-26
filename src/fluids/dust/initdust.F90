@@ -131,7 +131,9 @@ contains
       flind%dst%cs  = 0.0
       flind%dst%cs2 = 0.0
       flind%dst%tag = DST
-      flind%dst%is_selfgrav = selfgrav_dst
+      flind%dst%is_selfgrav   = selfgrav_dst
+      flind%dst%is_magnetized = .false.
+      flind%dst%has_energy    = .false.
 
    end subroutine dust_index
 

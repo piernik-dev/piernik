@@ -172,7 +172,11 @@ contains
       flind%neu%cs    = cs_iso_neu
       flind%neu%cs2   = cs_iso_neu**2
       flind%neu%tag   = NEU
-      flind%neu%is_selfgrav = selfgrav_neu
+      flind%neu%is_selfgrav   = selfgrav_neu
+      flind%neu%is_magnetized = .false.
+#ifndef ISO
+      flind%neu%has_energy    = .true.
+#endif /* !ISO */
 
    end subroutine neutral_index
 
