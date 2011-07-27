@@ -85,9 +85,10 @@ contains
 !---------------------------------------------------------------------------
    subroutine sweepx(cg,dt)
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_swpx
+      use fluidindex,      only: iarr_all_swpx, ibx, ibz
       use grid_cont,       only: grid_container
       use constants,       only: xdim
+!     use grid,            only: D_y, D_z
 
       implicit none
 
@@ -96,11 +97,19 @@ contains
 
       integer :: j, k
       real, dimension(size(cg%u%arr,1),cg%nx) :: u1d
+      real, dimension(ibx:ibz,cg%nx)          :: b1d
 
       do k = 1, cg%nz
          do j = 1, cg%ny
             u1d(iarr_all_swpx,:) = cg%u%arr(:,:,j,k)
-            call sweep1d_mh(u1d,cg%cs_iso2%get_sweep(xdim,j,k),dt/cg%dx)
+
+!           b1d                = 0.5*cg%b%arr(:,:,j,k)
+!           b1d(ibx,1:cg%nx-1) = b1d(ibx,1:cg%nx-1)+b1d(ibx,2:cg%nx); b1d(ibx, cg%nx) = b1d(ibx, cg%nx-1)
+!           b1d(iby,:)=b1d(iby,:)+0.5*cg%b%arr(iby,:,j+D_y,k)
+!           b1d(ibz,:)=b1d(ibz,:)+0.5*cg%b%arr(ibz,:,j,k+D_z)
+            b1d = 0.0
+
+            call sweep1d_mh(u1d,b1d,cg%cs_iso2%get_sweep(xdim,j,k),dt/cg%dx)
             cg%u%arr(:,:,j,k) = u1d(iarr_all_swpx,:)
          enddo
       enddo
@@ -110,7 +119,7 @@ contains
 !---------------------------------------------------------------------------
    subroutine sweepy(cg,dt)
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_swpy
+      use fluidindex,      only: iarr_all_swpy, ibx, ibz
       use grid_cont,       only: grid_container
       use constants,       only: ydim
 
@@ -121,11 +130,13 @@ contains
 
       integer :: i, k
       real, dimension(size(cg%u%arr,1),cg%ny) :: u1d
+      real, dimension(ibx:ibz,cg%ny)          :: b1d
 
       do k = 1, cg%nz
          do i = 1, cg%nx
+            b1d = 0.0
             u1d(iarr_all_swpy,:) = cg%u%arr(:,i,:,k)
-            call sweep1d_mh(u1d, cg%cs_iso2%get_sweep(ydim,k,i), dt/cg%dy)
+            call sweep1d_mh(u1d, b1d, cg%cs_iso2%get_sweep(ydim,k,i), dt/cg%dy)
             cg%u%arr(:,i,:,k) = u1d(iarr_all_swpy,:)
          enddo
       enddo
@@ -135,7 +146,7 @@ contains
 !---------------------------------------------------------------------------
    subroutine sweepz(cg,dt)
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_swpz
+      use fluidindex,      only: iarr_all_swpz, ibx, ibz
       use grid_cont,       only: grid_container
       use constants,       only: zdim
 
@@ -146,11 +157,12 @@ contains
 
       integer :: i, j
       real, dimension(size(cg%u%arr,1),cg%nz) :: u1d
+      real, dimension(ibx:ibz,cg%nz)          :: b1d
 
       do j = 1, cg%ny
          do i = 1, cg%nx
             u1d(iarr_all_swpz,:) = cg%u%arr(:,i,j,:)
-            call sweep1d_mh(u1d,cg%cs_iso2%get_sweep(zdim,i,j),dt/cg%dz)
+            call sweep1d_mh(u1d,b1d,cg%cs_iso2%get_sweep(zdim,i,j),dt/cg%dz)
             cg%u%arr(:,i,j,:) = u1d(iarr_all_swpz,:)
          enddo
       enddo
@@ -204,16 +216,21 @@ contains
 
    end function calculate_slope_moncen
 !---------------------------------------------------------------------------
-   subroutine sweep1d_mh(u,cs2,dtodx)
-      use fluidindex, only: flind
+   subroutine sweep1d_mh(u,b,cs2,dtodx)
+      use fluidtypes,   only: component_fluid
+      use fluidindex,   only: flind
       implicit none
-      real, intent(in)                        :: dtodx
-      real, dimension(:), intent(in), pointer :: cs2
-      real, dimension(:,:), intent(inout)     :: u
+      real, intent(in)                           :: dtodx
+      real, dimension(:), intent(in), pointer    :: cs2
+      real, dimension(:,:), intent(in)           :: b
+      real, dimension(:,:), intent(inout)        :: u
 
-      real, dimension(size(u,1),size(u,2)) :: flux, ql, qr, qgdn
-      real, dimension(size(u,1),size(u,2)) :: du, ul, ur, u_l, u_r
-      integer :: nx
+      type(component_fluid), pointer             :: fl
+
+      real, dimension(size(u,1),size(u,2)), target :: flux, ql, qr, qgdn
+      real, dimension(size(u,1),size(u,2)), target :: du, ul, ur, u_l, u_r
+      real, dimension(:,:), pointer :: p_ql, p_qr, p_q, p_flux
+      integer :: nx, p
 
       nx = size(u,2)
 
@@ -221,62 +238,94 @@ contains
       ul = u - 0.5*du   ! (14.33)
       ur = u + 0.5*du
 
-      flux = compute_flux(ul,cs2) - compute_flux(ur,cs2)
+      flux = compute_flux(ul,b,cs2) - compute_flux(ur,b,cs2)    ! interpolate b?
 
       u_l = ur + 0.5*dtodx*flux   ! (14.34) + (14.35)
       u_r(:,1:nx-1) = ul(:,2:nx) + 0.5*dtodx*flux(:,2:nx); u_r(:,nx) = u_r(:,nx-1)
 
-      ql = utoq(u_l)
-      qr = utoq(u_r)
+      ql = utoq(u_l,b)
+      qr = utoq(u_r,b)
 
-      call riemann_hllc(ql, qr, qgdn, flux, nx, flind%neu%gam, cs2)
+      do p = 1, flind%fluids
+         fl     => flind%all_fluids(p)
+         p_ql   => ql(fl%beg:fl%end,:)
+         p_qr   => qr(fl%beg:fl%end,:)
+         p_q    => qgdn(fl%beg:fl%end,:)
+         p_flux => flux(fl%beg:fl%end,:)
+         call riemann_hllc(p_ql, p_qr, p_q, p_flux, nx, fl%gam, cs2)
+      enddo
 
       u(:,2:nx) = u(:,2:nx) + dtodx*(flux(:,1:nx-1) - flux(:,2:nx))
       u(:,1)  = u(:,2); u(:,nx) = u(:,nx-1)
 
    end subroutine sweep1d_mh
 !---------------------------------------------------------------------------
-   function utoq(u) result(q)
-      use fluidindex, only: idn, imx, imy, imz, ien, flind
+   function utoq(u,b) result(q)
+      use fluidtypes,   only: component_fluid
+!      use fluidindex,   only: flind, ibx, iby, ibz
       implicit none
-      real, dimension(:,:), intent(in)     :: u
-      real, dimension(size(u,1),size(u,2)) :: q
+      real, dimension(:,:), intent(in)           :: u, b
+      real, dimension(size(u,1),size(u,2))       :: q
 
-      q(idn,:) = u(idn,:)
-      q(imx,:) = u(imx,:)/u(idn,:)
-      q(imy,:) = u(imy,:)/u(idn,:)
-      q(imz,:) = u(imz,:)/u(idn,:)
-#ifndef ISO
-      q(ien,:) = (u(ien,:) - 0.5*( u(imx,:)**2 + u(imy,:)**2 + u(imz,:)**2) / u(idn,:)) * flind%neu%gam_1
-#endif /* !ISO */
+      integer :: p
+      type(component_fluid), pointer :: fl
+
+      do p = 1, flind%fluids
+         fl => flind%all_fluids(p)
+
+         q(fl%idn,:) = u(fl%idn,:)
+         q(fl%imx,:) = u(fl%imx,:)/u(fl%idn,:)
+         q(fl%imy,:) = u(fl%imy,:)/u(fl%idn,:)
+         q(fl%imz,:) = u(fl%imz,:)/u(fl%idn,:)
+
+         if (fl%has_energy) then
+            q(fl%ien,:) = (u(fl%ien,:) - 0.5*( u(fl%imx,:)**2 + u(fl%imy,:)**2 + u(fl%imz,:)**2) / u(fl%idn,:)) * fl%gam_1
+            if (fl%is_magnetized) q(fl%ien,:) = q(fl%ien,:) + (2.0-fl%gam)*0.5*sum(b(:,:)**2,dim=1)
+         endif
+      enddo
    end function utoq
 !---------------------------------------------------------------------------
-   function compute_flux(u,cs2) result(f)
-      use fluidindex, only: idn, imx, imy, imz, ien, flind
+   function compute_flux(u,b,cs2) result(f)
+      use fluidindex,   only: flind, ibx, iby, ibz
+      use fluidtypes,   only: component_fluid
       implicit none
-      real, dimension(:,:), intent(in)       :: u
+      real, dimension(:,:), intent(in)       :: u, b
       real, dimension(:),   intent(in)       :: cs2
       real, dimension(size(u,1), size(u,2))  :: f
       real, dimension(size(u,2))             :: vx, p
 
-      vx = u(imx,:) / u(idn,:)
-#ifdef ISO
-      p = cs2*u(idn,:)
-#else /* ISO */
-      p = (u(ien,:) - 0.5*( u(imx,:)**2 + u(imy,:)**2 + u(imz,:)**2) / u(idn,:)) * flind%neu%gam_1
-#endif /* !ISO */
+      integer :: ip
+      type(component_fluid), pointer :: fl
 
-      f(idn,:) = u(imx,:)
-      f(imx,:) = u(imx,:)*vx + p
-      f(imy,:) = u(imy,:)*vx
-      f(imz,:) = u(imz,:)*vx
-#ifndef ISO
-      f(ien,:) = (u(ien,:) + p(:))*vx(:)
-#endif /* ISO */
+      do ip = 1, flind%fluids
+         fl => flind%all_fluids(ip)
+
+         vx = u(fl%imx,:) / u(fl%idn,:)
+         if (fl%has_energy) then
+            p = (u(fl%ien,:) - 0.5*( u(fl%imx,:)**2 + u(fl%imy,:)**2 + u(fl%imz,:)**2) / u(fl%idn,:)) * flind%neu%gam_1
+            if (fl%is_magnetized) p = p + (2.0-fl%gam)*0.5*sum(b**2,dim=1)
+         else
+            p = cs2*u(fl%idn,:)
+         endif
+
+         f(fl%idn,:) = u(fl%imx,:)
+         f(fl%imx,:) = u(fl%imx,:)*vx + p
+         f(fl%imy,:) = u(fl%imy,:)*vx
+         f(fl%imz,:) = u(fl%imz,:)*vx
+         if (fl%is_magnetized) then
+            f(fl%imx,:) = f(fl%imx,:) - b(ibx,:)*b(ibx,:)
+            f(fl%imy,:) = f(fl%imy,:) - b(iby,:)*b(ibx,:)
+            f(fl%imz,:) = f(fl%imz,:) - b(ibz,:)*b(ibx,:)
+         endif
+
+         if (fl%has_energy) then
+            f(fl%ien,:) = (u(fl%ien,:) + p(:))*vx(:)
+            if (fl%is_magnetized) f(fl%ien,:) = f(fl%ien,:) - b(ibx,:)*(b(ibx,:)*u(fl%imx,:)+b(iby,:)*u(fl%imy,:)+b(ibz,:)*u(fl%imz,:))/u(fl%idn,:)
+         endif
+      enddo
+
       return
-#ifndef ISO
-      if (.false.) write(0,*) cs2
-#endif /* ISO */
+
    end function compute_flux
 !---------------------------------------------------------------------------
    subroutine riemann_hllc(qleft,qright,qgdnv,fgdnv, n, gamma, cs2)
@@ -291,9 +340,9 @@ contains
       ! HLLC Riemann solver (Toro)
       integer, intent(in) :: n
       real, intent(in)    :: gamma
-      real, dimension(:,:), intent(in)  :: qleft,qright
-      real, dimension(size(qleft,1),size(qleft,2)), intent(out) :: qgdnv,fgdnv
-      real, dimension(:), intent(in)                ::cs2
+      real, dimension(:,:), intent(in), pointer     :: qleft,qright
+      real, dimension(:,:), intent(inout), pointer  :: qgdnv,fgdnv
+      real, dimension(:), intent(in)                :: cs2
 
       real, dimension(n) :: SL,SR
       real, dimension(n) :: rl,Pl,ul,etotl,ptotl
