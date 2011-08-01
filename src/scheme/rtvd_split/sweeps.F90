@@ -121,7 +121,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       real, dimension(nmag, cg%nx)      :: b_x
       real, dimension(flind%all, cg%nx) :: u_x, u0_x
@@ -181,7 +181,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       real, dimension(nmag, cg%ny)      :: b_y
       real, dimension(flind%all, cg%ny) :: u_y, u0_y
@@ -243,7 +243,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       real, dimension(nmag, cg%nz)      :: b_z
       real, dimension(flind%all, cg%nz) :: u_z, u0_z

@@ -83,13 +83,13 @@ contains
 
       integer, intent(in)                        :: n           !< number of cells in the current sweep
 
-      real, dimension(:,:), intent(in),  pointer :: uui         !< part of u for ionized fluid
-      real, dimension(:,:), intent(out), pointer :: fluxi       !< flux of ionized fluid
-      real, dimension(:,:), intent(out), pointer :: cfri        !< freezing speed for ionized fluid
-      real, dimension(:,:), intent(in),  pointer :: bb          !< magnetic field x,y,z-components table
-      real, dimension(:),   intent(out), pointer :: vx          !< velocity of ionized fluid for current sweep
-      real, dimension(:),   intent(out), pointer :: ps          !< gas pressure of ionized fluid for current sweep
-      real, dimension(:),   intent(in),  pointer :: cs_iso2     !< local isothermal sound speed (optional)
+      real, dimension(:,:), intent(in),    pointer :: uui         !< part of u for ionized fluid
+      real, dimension(:,:), intent(inout), pointer :: fluxi       !< flux of ionized fluid
+      real, dimension(:,:), intent(inout), pointer :: cfri        !< freezing speed for ionized fluid
+      real, dimension(:,:), intent(in),    pointer :: bb          !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(inout), pointer :: vx          !< velocity of ionized fluid for current sweep
+      real, dimension(:),   intent(inout), pointer :: ps          !< gas pressure of ionized fluid for current sweep
+      real, dimension(:),   intent(in),    pointer :: cs_iso2     !< local isothermal sound speed (optional)
 
       real, dimension(n)               :: p           !< thermal pressure of ionized fluid
       real, dimension(n)               :: pmag        !< pressure of magnetic field

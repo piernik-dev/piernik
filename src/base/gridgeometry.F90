@@ -58,7 +58,7 @@ module gridgeometry
          type(var_numbers), intent(in) :: flind         !< \copydoc fluidindex::flind
          integer, intent(in)           :: i1            !< coordinate of sweep in the 1st remaining direction
          integer, intent(in)           :: i2            !< coordinate of sweep in the 2st remaining direction
-         type(grid_container), pointer, intent(in) :: cg            !< current grid container
+         type(grid_container), pointer :: cg            !< current grid container
 
       end subroutine set_gc
 
@@ -131,7 +131,7 @@ contains
       implicit none
 
       type(var_numbers), intent(in) :: flind
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer :: cg
 
       if ( any( [allocated(cg%gc_xdim), allocated(cg%gc_ydim), allocated(cg%gc_zdim)] ) ) then
          call die("[gridgeometry:geo_coeffs_arrays] double allocation")
@@ -158,7 +158,7 @@ contains
       integer, intent(in)           :: sweep
       type(var_numbers), intent(in) :: flind
       integer, intent(in)           :: i1, i2
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer :: cg
 
       logical, save                  :: frun = .true.
       type(cg_list_element), pointer :: cgl
@@ -205,7 +205,7 @@ contains
       integer, intent(in)           :: sweep
       type(var_numbers), intent(in) :: flind
       integer, intent(in)           :: i1, i2
-      type(grid_container), pointer, intent(in)  :: cg
+      type(grid_container), pointer :: cg
 
       integer                        :: i
       logical, save                  :: frun = .true.

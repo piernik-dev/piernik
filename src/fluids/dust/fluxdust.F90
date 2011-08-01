@@ -80,13 +80,13 @@ contains
 
       implicit none
       integer, intent(in)                         :: n       !< number of cells in the current sweep
-      real, dimension(:,:), intent(out), pointer  :: fluxd   !< flux for dust
-      real, dimension(:,:), intent(in),  pointer  :: uud     !< part of u for dust
-      real, dimension(:,:), intent(out), pointer  :: cfrd    !< freezing speed for dust
-      real, dimension(:,:), intent(in),  pointer  :: bb      !< magnetic field x,y,z-components table
-      real, dimension(:),   intent(out), pointer  :: vx      !< velocity of dust fluid for current sweep
-      real, dimension(:),   intent(out), pointer  :: ps      !< pressure of dust fluid for current sweep
-      real, dimension(:),   intent(in),  pointer  :: cs_iso2 !< local isothermal sound speed (optional)
+      real, dimension(:,:), intent(inout), pointer  :: fluxd   !< flux for dust
+      real, dimension(:,:), intent(in),    pointer  :: uud     !< part of u for dust
+      real, dimension(:,:), intent(inout), pointer  :: cfrd    !< freezing speed for dust
+      real, dimension(:,:), intent(in),    pointer  :: bb      !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(inout), pointer  :: vx      !< velocity of dust fluid for current sweep
+      real, dimension(:),   intent(inout), pointer  :: ps      !< pressure of dust fluid for current sweep
+      real, dimension(:),   intent(in),    pointer  :: cs_iso2 !< local isothermal sound speed (optional)
 
       ! locals
 !      real               :: minvx, maxvx, amp

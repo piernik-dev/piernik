@@ -43,7 +43,7 @@ module fluidboundaries_pub
 
          implicit none
 
-         type(grid_container), pointer, intent(in) :: cg
+         type(grid_container), pointer, intent(inout) :: cg
 
       end subroutine user_bnd
 
@@ -62,7 +62,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       call die("User boundaries are not defined")
 

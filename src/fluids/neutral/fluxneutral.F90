@@ -87,14 +87,14 @@ contains
 
       implicit none
 
-      integer, intent(in)                        :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(out), pointer :: fluxn     !< flux of neutral fluid
-      real, dimension(:,:), intent(in),  pointer :: uun       !< part of u for neutral fluid
-      real, dimension(:,:), intent(out), pointer :: cfrn      !< freezing speed for neutral fluid
-      real, dimension(:,:), intent(in),  pointer :: bb        !< magnetic field x,y,z-components table
-      real, dimension(:),   intent(out), pointer :: vx        !< velocity of neutral fluid for current sweep
-      real, dimension(:),   intent(out), pointer :: p         !< pressure of neutral fluid for current sweep
-      real, dimension(:),   intent(in),  pointer :: cs_iso2   !< isothermal sound speed squared
+      integer, intent(in)                          :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(inout), pointer :: fluxn     !< flux of neutral fluid
+      real, dimension(:,:), intent(in),    pointer :: uun       !< part of u for neutral fluid
+      real, dimension(:,:), intent(inout), pointer :: cfrn      !< freezing speed for neutral fluid
+      real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(inout), pointer :: vx        !< velocity of neutral fluid for current sweep
+      real, dimension(:),   intent(inout), pointer :: p         !< pressure of neutral fluid for current sweep
+      real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
       ! locals
       integer            :: nm
 #ifdef LOCAL_FR_SPEED

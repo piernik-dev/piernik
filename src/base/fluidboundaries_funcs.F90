@@ -43,7 +43,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       if (.true. .or. cg%empty) return ! suppress compiler warnings
 
@@ -55,7 +55,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       cg%u%arr(:,1:cg%nb,:,:) = cg%u%arr(:, cg%ieb:cg%ie,:,:)
 
@@ -74,7 +74,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       integer :: ib
 
@@ -101,7 +101,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       integer :: ib
 
@@ -128,7 +128,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       integer :: ib
 
@@ -151,7 +151,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       cg%u%arr(:, cg%ie+1:cg%nx,:,:) = cg%u%arr(:, cg%is:cg%isb,:,:)
 
@@ -170,7 +170,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       integer :: ib
 
@@ -197,7 +197,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       integer :: ib
 
@@ -224,7 +224,7 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       integer :: ib
 

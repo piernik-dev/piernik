@@ -113,7 +113,7 @@ contains
       integer, intent(in) :: n       !< array size
       real, intent(in)    :: dt      !< time step
       real, intent(in)    :: idi     !< cell length, depends on direction x, y or z
-      real, dimension(:), pointer, intent(out)    :: vibj    !< face-centered electromotive force components (b*vg)
+      real, dimension(:), pointer, intent(inout)    :: vibj    !< face-centered electromotive force components (b*vg)
       real, dimension(:), pointer, intent(in)     :: b       !< magnetic field
       real, dimension(n)  :: vg      !< velocity in the center of cell boundary
 ! locals

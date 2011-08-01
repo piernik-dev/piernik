@@ -131,7 +131,7 @@ contains
       implicit none
 
       integer, intent(in) :: dir
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       logical, save    :: frun = .true.
       integer :: i, j, ib, itag, jtag
