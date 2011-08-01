@@ -339,6 +339,9 @@ contains
          case (0)
          case default
             write(msg, *)'Unknown error (', ierrh,') in namelist ',trim(nm)
+            if (present(skip_eof)) then
+               if (skip_eof) return
+            endif
             call die(msg)
       endselect
 
