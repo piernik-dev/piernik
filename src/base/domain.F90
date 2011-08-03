@@ -634,8 +634,10 @@ contains
 
       if (master) call printinfo("[domain:choppy_tiling] Non-cartesian decomposition (no comm3d)")
       allocate(pz_slab(p_size(zdim) + 1))
-      do p = 0, p_size(zdim)
-         pz_slab(p+1) = (p * nproc) / p_size(zdim)
+      pz_slab(1) = 0
+      do p = 1, p_size(zdim)
+         pz_slab(p+1) = pz_slab(p) + nproc / p_size(zdim)
+         if (p <= mod(nproc, p_size(zdim))) pz_slab(p+1) = pz_slab(p+1) + 1 ! longer slabs go first
       enddo
       do p = 1, p_size(zdim)
          do px = pz_slab(p), pz_slab(p+1)-1
@@ -643,8 +645,10 @@ contains
             dom%pse(px)%sel(1, zdim, HI) = nint((dom%n_d(zdim) *  pz_slab(p+1) ) / real(nproc)) - 1
          enddo
          allocate(py_slab(p_size(ydim) + 1))
-         do py = 0, p_size(ydim)
-            py_slab(py+1) = (py * (pz_slab(p+1)-pz_slab(p))) / p_size(ydim) !> \todo try to sort lengths
+         py_slab(1) = 0
+         do py = 1, p_size(ydim)
+            py_slab(py+1) = py_slab(py) + (pz_slab(p+1)-pz_slab(p)) / p_size(ydim)
+            if (py <= mod((pz_slab(p+1)-pz_slab(p)), p_size(ydim))) py_slab(py+1) = py_slab(py+1) + 1 ! longer slabs go first
          enddo
          do py = 1, p_size(ydim)
             do px = pz_slab(p)+py_slab(py), pz_slab(p)+py_slab(py+1)-1
@@ -653,7 +657,7 @@ contains
             enddo
             do px = 0, py_slab(py+1)-py_slab(py) - 1
                dom%pse(pz_slab(p)+py_slab(py)+px)%sel(1, xdim, LO) = (dom%n_d(xdim) *  px    ) / (py_slab(py+1)-py_slab(py))
-               dom%pse(pz_slab(p)+py_slab(py)+px)%sel(1, xdim, HI) = (dom%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1
+               dom%pse(pz_slab(p)+py_slab(py)+px)%sel(1, xdim, HI) = (dom%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1 ! no need to sort lengths here
             enddo
          enddo
          if (allocated(py_slab)) deallocate(py_slab)
