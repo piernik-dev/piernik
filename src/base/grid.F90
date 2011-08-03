@@ -46,7 +46,7 @@ module grid
    public :: init_grid, init_arrays, grid_mpi_boundaries_prep, arr3d_boundaries, cleanup_grid
    public :: total_ncells, cga, D_x, D_y, D_z
 
-   integer, protected :: total_ncells !< total number of %grid cells
+   integer(kind=8), protected :: total_ncells !< total number of %grid cells
    integer, protected :: D_x          !< set to 1 when x-direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
    integer, protected :: D_y          !< set to 1 when y-direction exists, 0 otherwise.
    integer, protected :: D_z          !< set to 1 when z-direction exists, 0 otherwise.
@@ -125,7 +125,8 @@ contains
       if (has_dir(xdim)) D_x = 1
       if (has_dir(ydim)) D_y = 1
       if (has_dir(zdim)) D_z = 1
-      total_ncells = product(dom%n_d(:))
+      total_ncells = product(int(dom%n_d(:), kind=8))
+      if (any(total_ncells < dom%n_d(:))) call die("[grid:init_grid] Integer overflow: too many cells")
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: finished. \o/")

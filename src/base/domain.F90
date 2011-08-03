@@ -974,7 +974,7 @@ contains
             ldom(:) = ldom(:) * fac(n,1)**[i, j, k]
          enddo
 
-         bsize = int(sum(ldom(:)/dble(dom%n_d(:)) * product(dom%n_d(:)), MASK = dom%n_d(:) > 1)) !ldom(1)*dom%n_d(2)*dom%n_d(3) + ldom(2)*dom%n_d(1)*dom%n_d(3) + ldom(3)*dom%n_d(1)*dom%n_d(2)
+         bsize = int(sum(ldom(:)/dble(dom%n_d(:)) * product(int(dom%n_d(:), kind=8)), MASK = dom%n_d(:) > 1)) !ldom(1)*dom%n_d(2)*dom%n_d(3) + ldom(2)*dom%n_d(1)*dom%n_d(3) + ldom(3)*dom%n_d(1)*dom%n_d(2)
          load_balance = product(real(dom%n_d(:))) / ( real(nproc) * product( int((dom%n_d(:)-1)/ldom(:)) + 1 ) )
 
          quality = load_balance/ (1 + b_load_fac*(bsize/ideal_bsize - 1.))
@@ -1022,7 +1022,7 @@ contains
          if (is_uneven) then
             write(msg,'(2(a,3i5),a)')"                                    Sizes are from [", int(dom%n_d(:)/p_size(:))," ] to [",int((dom%n_d(:)-1)/p_size(:))+1," ] cells."
             call printinfo(msg)
-            write(msg,'(a,f8.5)')    "                                    Load balance is ",product(dom%n_d(:)) / ( dble(nproc) * product( int((dom%n_d(:)-1)/p_size(:)) + 1 ) )
+            write(msg,'(a,f8.5)')    "                                    Load balance is ",product(int(dom%n_d(:), kind=8)) / ( dble(nproc) * product( int((dom%n_d(:)-1)/p_size(:)) + 1 ) )
          else
             write(msg,'(a,3i5,a)')   "                                    Size is [", int(dom%n_d(:)/p_size(:))," ] cells."
          endif
@@ -1057,15 +1057,16 @@ contains
 
       if (all(p_size(ydim:zdim) == 1)) then
          if (has_dir(zdim)) then
-            optc = (product(dom%n_d(:))/real(nproc)) ** (1./eff_dim) ! number of cells for ideal cubes
+            optc = (product(int(dom%n_d(:), kind=8))/real(nproc)) ** (1./eff_dim) ! number of cells for ideal cubes
             if (dom%n_d(zdim) > minfac*optc) p_size(zdim) = ceiling(dom%n_d(zdim)/optc)
          endif
          if (has_dir(ydim)) then
-            optc = (product(dom%n_d(xdim:ydim))*p_size(zdim)/real(nproc)) ** (1./count(has_dir(xdim:ydim)))
+            optc = (product(int(dom%n_d(xdim:ydim), kind=8))*p_size(zdim)/real(nproc)) ** (1./count(has_dir(xdim:ydim)))
             if (dom%n_d(ydim) > minfac*optc) p_size(ydim) = ceiling(dom%n_d(ydim)/optc)
          endif
       endif
       if (has_dir(xdim)) p_size(xdim) = (nproc - 1)/(p_size(ydim)*p_size(zdim)) + 1 !sometimes it might be less by 1
+!p_size=(1, 0, -1) for n_d = 2048 and 1024 CPUs
 
       where (.not. has_dir(:)) p_size(:) = 1 ! just in case
       do while (product(p_size(:)) < nproc)
