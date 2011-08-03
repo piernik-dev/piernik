@@ -282,6 +282,11 @@ contains
             enddo
             smallp = smallp * safety_factor
             call MPI_Allreduce(MPI_IN_PLACE, smallp, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+            if (smallp < 0.) then
+               write(msg,'(A,ES11.4,A)') "[initfluids:sanitize_smallx_checks] Negative smallp detected! smallp=",smallp," may indicate nonphysical initial conditions."
+               call warn(msg)
+               smallp = tiny(1.)
+            endif
             if (master) then
                write(msg,'(A,ES11.4)') "[initfluids:sanitize_smallx_checks] adjusted smallp to ", smallp
                call warn(msg)
