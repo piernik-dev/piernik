@@ -1066,7 +1066,6 @@ contains
          endif
       endif
       if (has_dir(xdim)) p_size(xdim) = (nproc - 1)/(p_size(ydim)*p_size(zdim)) + 1 !sometimes it might be less by 1
-!p_size=(1, 0, -1) for n_d = 2048 and 1024 CPUs
 
       where (.not. has_dir(:)) p_size(:) = 1 ! just in case
       do while (product(p_size(:)) < nproc)
