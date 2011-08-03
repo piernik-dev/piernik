@@ -284,7 +284,7 @@ contains
             call MPI_Allreduce(MPI_IN_PLACE, smallp, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
             if (smallp < 0.) then
                write(msg,'(A,ES11.4,A)') "[initfluids:sanitize_smallx_checks] Negative smallp detected! smallp=",smallp," may indicate nonphysical initial conditions."
-               call warn(msg)
+               if (master) call warn(msg)
                smallp = tiny(1.)
             endif
             if (master) then
