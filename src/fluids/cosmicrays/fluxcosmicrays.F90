@@ -54,7 +54,7 @@ contains
       integer, intent(in) :: n
       real, dimension(n), intent(in)  :: vion
       real, dimension(:,:), intent(in), pointer  :: uuc
-      real, dimension(:,:), intent(out), pointer :: fluxc
+      real, dimension(:,:), intent(inout), pointer :: fluxc
 
       fluxc   = 0.0
 

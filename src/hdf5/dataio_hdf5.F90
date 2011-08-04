@@ -223,7 +223,7 @@ contains
       implicit none
 
       character(len=varlen), intent(in) :: var
-      type(component_fluid), pointer, intent(out) :: fl_dni
+      type(component_fluid), pointer, intent(inout) :: fl_dni
       integer, intent(out) :: i_xyz
 
       character(len=singlechar) :: dc

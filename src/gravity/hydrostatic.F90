@@ -79,7 +79,7 @@ contains
 
       integer, intent(in)   :: iia, jja
       real,    intent(in)   :: coldens, csim2
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(inout) :: cg
 
       real                  :: sdprof, sd
 
