@@ -28,7 +28,7 @@
 
 #include "piernik.h"
 
-!$ ============================================================================
+!!$ ============================================================================
 !>
 !! \brief This module contains variables and routines useful mostly for developing and debugging
 !<
@@ -56,7 +56,7 @@ contains
 
 !> \todo write also general set_dirty_array and check_dirty_array routines so there will be no need to use dirtyH and dirtyL outside multigridhelpers module.
 
-!$ ============================================================================
+!!$ ============================================================================
 !>
 !! \brief This routine pollutes selected multigrid variable with an insane value dirtyH.
 !! \details If anything in the multigrid works by accident, through compiler-dependent initialization or unintentional relying on outdated values,
@@ -277,7 +277,7 @@ contains
       character(len=*), intent(in) :: filename !< name to write the emergency dump
 
       integer, parameter :: fu=30
-      integer            :: l, i, j, k
+      integer            :: i, j, k
       type(plvl), pointer :: curl
 
       if (.not. do_ascii_dump) return
@@ -291,7 +291,7 @@ contains
             do j = curl%js, curl%je
                do k = curl%ks, curl%ke
                   write(fu, '(3i4,i6,10es20.11e3)')i-curl%is+curl%off(xdim), j-curl%js+curl%off(ydim), k-curl%ks+curl%off(zdim), &
-                       &                           l, curl%x(i), curl%y(j), curl%z(k), curl%mgvar(i, j, k, 1:ngridvars)
+                       &                           curl%level, curl%x(i), curl%y(j), curl%z(k), curl%mgvar(i, j, k, 1:ngridvars)
                enddo
                write(fu, '(/)')
             enddo
