@@ -50,11 +50,15 @@ contains
 !! The function was written in order to significantly improve
 !! the performance at the cost of the flexibility of original \p CSHIFT.
 !<
-   function pshift(tab,d)
+   function pshift(tab, d)
+
       use dataio_pub,    only: warn
+
       implicit none
-      real, dimension(:,:,:) :: tab
-      integer :: d
+
+      real, dimension(:,:,:), intent(inout) :: tab
+      integer(kind=4), intent(in) :: d
+
       integer :: ll
       real, dimension(size(tab,1),size(tab,2),size(tab,3)) :: pshift
 
@@ -88,10 +92,14 @@ contains
 !! the performance at the cost of the flexibility of original \p CSHIFT.
 !<
    function mshift(tab,d)
+
       use dataio_pub,    only: warn
+
       implicit none
-      real, dimension(:,:,:) :: tab
-      integer :: d
+
+      real, dimension(:,:,:), intent(inout) :: tab
+      integer(kind=4) :: d
+
       integer :: ll
       real, dimension(size(tab,1) , size(tab,2) , size(tab,3)) :: mshift
 
@@ -130,7 +138,7 @@ contains
       implicit none
 
       real, dimension(:,:,:), intent(in), pointer  :: tab
-      integer,                intent(in)  :: minmax
+      integer(kind=4),        intent(in)  :: minmax
       type(value),            intent(out) :: prop
       type(grid_container), pointer, intent(in) :: cg
 

@@ -67,31 +67,31 @@ module grid_cont
 
       real, allocatable, dimension(:) :: dprof  !< Array used for storing density during calculation of hydrostatic equilibrium
 
-      integer :: nx                             !< number of %grid cells in one block in x-direction
-      integer :: ny                             !< number of %grid cells in one block in y-direction
-      integer :: nz                             !< number of %grid cells in one block in z-direction
-      integer :: nxb                            !< number of %grid cells in one block (without boundary cells) in x-direction
-      integer :: nyb                            !< number of %grid cells in one block (without boundary cells) in y-direction
-      integer :: nzb                            !< number of %grid cells in one block (without boundary cells) in z-direction
-      integer :: is                             !< index of the first %grid cell of physical domain in x-direction
-      integer :: ie                             !< index of the last %grid cell of physical domain in x-direction
-      integer :: js                             !< index of the first %grid cell of physical domain in y-direction
-      integer :: je                             !< index of the last %grid cell of physical domain in y-direction
-      integer :: ks                             !< index of the first %grid cell of physical domain in z-direction
-      integer :: ke                             !< index of the last %grid cell of physical domain in z-direction
-      integer :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
-      integer :: maxxyz                         !< maximum number of %grid cells in any direction
-      integer :: isb, ieb, jsb, jeb, ksb, keb   !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
+      integer(kind=4) :: nx                             !< number of %grid cells in one block in x-direction
+      integer(kind=4) :: ny                             !< number of %grid cells in one block in y-direction
+      integer(kind=4) :: nz                             !< number of %grid cells in one block in z-direction
+      integer(kind=4) :: nxb                            !< number of %grid cells in one block (without boundary cells) in x-direction
+      integer(kind=4) :: nyb                            !< number of %grid cells in one block (without boundary cells) in y-direction
+      integer(kind=4) :: nzb                            !< number of %grid cells in one block (without boundary cells) in z-direction
+      integer(kind=4) :: is                             !< index of the first %grid cell of physical domain in x-direction
+      integer(kind=4) :: ie                             !< index of the last %grid cell of physical domain in x-direction
+      integer(kind=4) :: js                             !< index of the first %grid cell of physical domain in y-direction
+      integer(kind=4) :: je                             !< index of the last %grid cell of physical domain in y-direction
+      integer(kind=4) :: ks                             !< index of the first %grid cell of physical domain in z-direction
+      integer(kind=4) :: ke                             !< index of the last %grid cell of physical domain in z-direction
+      integer(kind=4) :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
+      integer(kind=4) :: maxxyz                         !< maximum number of %grid cells in any direction
+      integer(kind=4) :: isb, ieb, jsb, jeb, ksb, keb   !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
 
       logical :: empty                          !< .true. if there are no cells to process (e.g. some processes at base level in multigrid gravity)
 
       integer(kind=8), dimension(ndims) :: off  !< offset of the local domain within computational domain
-      integer, dimension(ndims)         :: n_b  !< [nxb, nyb, nzb]
+      integer(kind=4), dimension(ndims) :: n_b  !< [nxb, nyb, nzb]
 
-      integer, dimension(ndims, LO:HI)  :: ijkse !< [[is, js, ks], [ie, je, ke]]
+      integer(kind=4), dimension(ndims, LO:HI)  :: ijkse !< [[is, js, ks], [ie, je, ke]]
       integer, dimension(ndims, LO:HI)  :: bnd  !< type of boundary conditions coded in integers
 
-      integer, dimension(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK) :: mbc !< MPI Boundary conditions Container
+      integer(kind=4), dimension(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK) :: mbc !< MPI Boundary conditions Container
 
       !>
       !! description of incoming and outgoing boundary data,
@@ -162,7 +162,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init(this, dom)
 
-      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, INVALID
+      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, INVALID, INT4
       use dataio_pub, only: die, warn, code_progress
       use domain,     only: has_dir, translate_bnds_to_ints_dom, domain_container
       use mpisetup,   only: proc
@@ -202,21 +202,21 @@ contains
          this%fbnd(:,:) = dom%edge(:,:)
 
          this%nx    = 0
-         this%is    = this%nb + 1
+         this%is    = this%nb + 1_INT4
          this%ie    = this%nb
          this%isb   = 0 ! ???
          this%ieb   = 0 ! ???
          this%dx    = 1.0
 
          this%ny    = 0
-         this%js    = this%nb + 1
+         this%js    = this%nb + 1_INT4
          this%je    = this%nb
          this%jsb   = 0
          this%jeb   = 0
          this%dy    = 1.0
 
          this%nz    = 0
-         this%ks    = this%nb + 1
+         this%ks    = this%nb + 1_INT4
          this%ke    = this%nb
          this%ksb   = 0
          this%keb   = 0
@@ -243,11 +243,11 @@ contains
          enddo
 
          if (has_dir(xdim)) then
-            this%nx    = this%nxb + 2 * this%nb       ! Block total grid sizes
-            this%is    = this%nb + 1
+            this%nx    = this%nxb + 2_INT4 * this%nb       ! Block total grid sizes
+            this%is    = this%nb + 1_INT4
             this%ie    = this%nb + this%nxb
-            this%isb   = 2*this%nb
-            this%ieb   = this%nxb+1
+            this%isb   = 2_INT4*this%nb
+            this%ieb   = this%nxb+1_INT4
             this%dx    = dom%L_(xdim) / dom%n_d(xdim)
             this%dxmn  = min(this%dxmn, this%dx)
             this%fbnd(xdim, LO) = dom%edge(xdim, LO) + this%dx *  this%off(xdim)
@@ -263,11 +263,11 @@ contains
          endif
 
          if (has_dir(ydim)) then
-            this%ny    = this%nyb + 2 * this%nb
-            this%js    = this%nb + 1
+            this%ny    = this%nyb + 2_INT4 * this%nb
+            this%js    = this%nb + 1_INT4
             this%je    = this%nb + this%nyb
-            this%jsb   = 2*this%nb
-            this%jeb   = this%nyb+1
+            this%jsb   = 2_INT4*this%nb
+            this%jeb   = this%nyb+1_INT4
             this%dy    = dom%L_(ydim) / dom%n_d(ydim)
             this%dxmn  = min(this%dxmn, this%dy)
             this%fbnd(ydim, LO) = dom%edge(ydim, LO) + this%dy *  this%off(ydim)
@@ -283,11 +283,11 @@ contains
          endif
 
          if (has_dir(zdim)) then
-            this%nz    = this%nzb + 2 * this%nb
-            this%ks    = this%nb + 1
+            this%nz    = this%nzb + 2_INT4 * this%nb
+            this%ks    = this%nb + 1_INT4
             this%ke    = this%nb + this%nzb
-            this%ksb   = 2*this%nb
-            this%keb   = this%nzb+1
+            this%ksb   = 2_INT4*this%nb
+            this%keb   = this%nzb+1_INT4
             this%dz    = dom%L_(zdim) / dom%n_d(zdim)
             this%dxmn  = min(this%dxmn, this%dz)
             this%fbnd(zdim, LO) = dom%edge(zdim, LO) + this%dz *  this%off(zdim)
@@ -316,7 +316,7 @@ contains
          allocate(this%x(this%nx), this%xl(this%nx), this%xr(this%nx), this%inv_x(this%nx))
          allocate(this%y(this%ny), this%yl(this%ny), this%yr(this%ny), this%inv_y(this%ny))
          allocate(this%z(this%nz), this%zl(this%nz), this%zr(this%nz), this%inv_z(this%nz))
-         this%maxxyz = maxval([size(this%x), size(this%y), size(this%z)])
+         this%maxxyz = int(maxval([size(this%x), size(this%y), size(this%z)]), kind=4)
 
 !--- Assignments -----------------------------------------------------------
          ! left zone boundaries:  xl, yl, zl
@@ -408,7 +408,7 @@ contains
       implicit none
 
       class(grid_container) :: this
-      integer, intent(in)   :: ind   !< second index in [io]_bnd arrays
+      integer(kind=4), intent(in) :: ind   !< second index in [io]_bnd arrays
       real, optional, pointer, dimension(:,:,:)   :: pa3d
       real, optional, pointer, dimension(:,:,:,:) :: pa4d
 

@@ -51,17 +51,17 @@ module dataio_pub
    ! Simulation control
    character(len=cbuff_len) :: problem_name     !< The problem name
    character(len=idlen)     :: run_id           !< Auxiliary run identifier
-   real               :: tend                   !< simulation time to end
-   real               :: wend                   !< wall clock time to end (in hours)
+   real                  :: tend                   !< simulation time to end
+   real                  :: wend                   !< wall clock time to end (in hours)
 
-   integer            :: nend                   !< number of the step to end simulation
-   integer            :: nstep_start            !< number of start timestep
-   integer            :: nhdf                   !< current number of hdf file
-   integer            :: nres                   !< current number of restart file
-   real               :: next_t_log             !< when to print statistics to the log file
-   real               :: next_t_tsl             !< when to produce the timeslice file
-   integer            :: nrestart               !< number of restart file to be read while restart is not set to ''
-   integer            :: step_hdf               !< number of simulation timestep corresponding to values dumped in hdf file
+   integer               :: nend                   !< number of the step to end simulation
+   integer               :: nstep_start            !< number of start timestep
+   integer(kind=4)       :: nhdf                   !< current number of hdf file
+   integer(kind=4)       :: nres                   !< current number of restart file
+   real                  :: next_t_log             !< when to print statistics to the log file
+   real                  :: next_t_tsl             !< when to produce the timeslice file
+   integer(kind=4)       :: nrestart               !< number of restart file to be read while restart is not set to ''
+   integer (kind=4)      :: step_hdf               !< number of simulation timestep corresponding to values dumped in hdf file
    character(len=domlen) :: domain_dump         !< string to choose if boundaries have to be dumped in hdf files
 
    ! Buffers for global use
@@ -71,11 +71,11 @@ module dataio_pub
    character(len=cwdlen) :: tmp_log_file        !< path to the temporary log file
    character(len=cwdlen) :: par_file            !< path to the parameter file
    ! Handy variables
-   integer            :: ierrh                  !< variable for iostat
+   integer(kind=4)       :: ierrh                  !< variable for iostat
 
    ! the stuff related to type(hdf) has nothing in common with rest of this file. \todo move it to a separate file to prevent spurious cyclic dependencies
    type :: hdf
-      integer :: nhdf, nres, step_hdf, step_res, nstep, nrestart
+      integer(kind=4) :: nhdf, nres, step_hdf, step_res, nstep, nrestart
       real    :: last_hdf_time, next_t_tsl,  next_t_log
       character(len=domlen)  :: domain_dump
       character(len=idlen)   :: new_id
@@ -87,7 +87,7 @@ module dataio_pub
 
    logical, save      :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
    logical, save      :: log_file_initialized = .false. !< logical to mark initialization of logfile
-   integer, save      :: require_init_prob = 0          !< 1 will call initproblem::init_prob on restart
+   integer(kind=4), save :: require_init_prob = 0       !< 1 will call initproblem::init_prob on restart
 !>
 !! \todo
 !!  Currently to use PGPLOT you need to:
@@ -126,7 +126,7 @@ contains
       character(len=ansilen)        :: ansicolor
       integer, parameter            :: msg_type_len = 7       !< length of the "Warning" word.
       character(len=msg_type_len)   :: msg_type_str
-      integer                       :: proc
+      integer(kind=4)               :: proc
       integer                       :: outunit
       logical, save                 :: frun = .true.
       character(len=idlen)          :: adv
@@ -274,7 +274,7 @@ contains
 
       implicit none
 
-      integer, intent(out) :: nstep
+      integer(kind=4), intent(out) :: nstep
 
       nstep         = chdf%nstep
       nhdf          = chdf%nhdf
@@ -292,7 +292,7 @@ contains
 
       implicit none
 
-      integer, intent(in) ::  nstep
+      integer(kind=4), intent(in) ::  nstep
 
       chdf%nstep          = nstep
       chdf%nhdf           = nhdf
@@ -310,9 +310,9 @@ contains
 
       implicit none
 
-      integer, intent(in)           :: ierrh
-      character(len=*), intent(in)  :: nm
-      logical, intent(in), optional :: skip_eof
+      integer(kind=4),   intent(in) :: ierrh
+      character(len=*),  intent(in) :: nm
+      logical, optional, intent(in) :: skip_eof
 
       select case (ierrh)
          case (19)
@@ -358,7 +358,7 @@ contains
       integer                          :: io
       character(len=maxparfilelen)     :: sa, sb
       integer, parameter               :: lun_bef=501, lun_aft=502
-      integer                          :: proc
+      integer(kind=4)                  :: proc
 
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierrh)
       if (proc > 0) call die("[dataio_pub:compare_namelist] This routine must not be called by many threads at once. Make sure that diff_nml macro is called only from rank 0.")

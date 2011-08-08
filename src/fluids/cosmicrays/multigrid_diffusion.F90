@@ -65,14 +65,16 @@ module multigrid_diffusion
    character(len=cbuff_len) :: diff_bnd_str                           !< Type of diffusion boundary conditions. Can be "isolated", "reflecting" or "zero" (there are some aliases as well)
 
    ! mgvar entries for the B field
-   integer, parameter :: diff_bx = correction+1                       !< index of B_x in the cg%b%arr(:,:,:,:) array
-   integer, parameter :: diff_by = diff_bx + 1                        !< index of B_y in the cg%b%arr(:,:,:,:) array
-   integer, parameter :: diff_bz = diff_by + 1                        !< index of B_z in the cg%b%arr(:,:,:,:) array
+   enum, bind(C)
+      enumerator :: diff_bx = correction+1                            !< index of B_x in the cg%b%arr(:,:,:,:) array
+      enumerator :: diff_by                                           !< index of B_y in the cg%b%arr(:,:,:,:) array
+      enumerator :: diff_bz                                           !< index of B_z in the cg%b%arr(:,:,:,:) array
+   end enum
 
    ! miscellaneous
    logical, allocatable, dimension(:) :: norm_was_zero                !< Flag for suppressing repeated warnings on nonexistent CR components
    type(vcycle_stats) :: vstat                                        !< V-cycle statistics
-   integer :: diff_extbnd                                             !< external boundary type for relaxation and computation of residuum
+   integer(kind=4) :: diff_extbnd                                     !< external boundary type for relaxation and computation of residuum
 
 contains
 
@@ -436,7 +438,8 @@ contains
 
       implicit none
 
-      integer :: ib, il
+      integer(kind=4) :: ib
+      integer :: il
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
@@ -607,7 +610,7 @@ contains
       integer, intent(in) :: i            !< first cell index
       integer, intent(in) :: j            !< second cell index
       integer, intent(in) :: k            !< third cell index
-      integer, intent(in) :: soln         !< multigrid variable to differentiate
+      integer(kind=4), intent(in) :: soln         !< multigrid variable to differentiate
       integer, intent(in) :: lev          !< level on which differentiate
       integer, intent(in) :: cr_id        !< CR component index
       real, optional, intent(out) :: Keff !< effective diffusion coefficient for relaxation
@@ -681,7 +684,7 @@ contains
       integer, intent(in) :: i            !< first cell index
       integer, intent(in) :: j            !< second cell index
       integer, intent(in) :: k            !< third cell index
-      integer, intent(in) :: soln         !< multigrid variable to differentiate
+      integer(kind=4), intent(in) :: soln         !< multigrid variable to differentiate
       integer, intent(in) :: lev          !< level on which differentiate
       integer, intent(in) :: cr_id        !< CR component index
       real, optional, intent(out) :: Keff !< effective diffusion coefficient for relaxation
@@ -755,7 +758,7 @@ contains
       integer, intent(in) :: i            !< first cell index
       integer, intent(in) :: j            !< second cell index
       integer, intent(in) :: k            !< third cell index
-      integer, intent(in) :: soln         !< multigrid variable to differentiate
+      integer(kind=4), intent(in) :: soln         !< multigrid variable to differentiate
       integer, intent(in) :: lev          !< level on which differentiate
       integer, intent(in) :: cr_id        !< CR component index
       real, optional, intent(out) :: Keff !< effective diffusion coefficient for relaxation
@@ -829,9 +832,9 @@ contains
       implicit none
 
       integer, intent(in) :: lev   !< level for which approximate the solution
-      integer, intent(in) :: src   !< index of source in lvl()%mgvar
-      integer, intent(in) :: soln  !< index of solution in lvl()%mgvar
-      integer, intent(in) :: def   !< index of defect in lvl()%mgvar
+      integer(kind=4), intent(in) :: src   !< index of source in lvl()%mgvar
+      integer(kind=4), intent(in) :: soln  !< index of solution in lvl()%mgvar
+      integer(kind=4), intent(in) :: def   !< index of defect in lvl()%mgvar
       integer, intent(in) :: cr_id !< CR component index
 
       integer             :: i, j, k
@@ -919,8 +922,8 @@ contains
       implicit none
 
       integer, intent(in) :: lev   !< level for which approximate the solution
-      integer, intent(in) :: src   !< index of source in lvl()%mgvar
-      integer, intent(in) :: soln  !< index of solution in lvl()%mgvar
+      integer(kind=4), intent(in) :: src   !< index of source in lvl()%mgvar
+      integer(kind=4), intent(in) :: soln  !< index of solution in lvl()%mgvar
       integer, intent(in) :: cr_id !< CR component index
 
       integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps

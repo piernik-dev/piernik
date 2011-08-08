@@ -226,7 +226,7 @@ contains
 
    subroutine grid_mpi_boundaries_prep(numfluids, numcrs)
 
-      use constants,  only: PIERNIK_INIT_BASE, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID
+      use constants,  only: PIERNIK_INIT_BASE, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID, INT4
       use dataio_pub, only: die, code_progress
       use domain,     only: has_dir, dom, is_overlap, cdd
       use grid_cont,  only: cg_list_element, grid_container
@@ -235,13 +235,13 @@ contains
 
       implicit none
 
-      integer, intent(in) :: numfluids !< expect flind%all,     here, cannot grab it directly because of cyclic deps in CR-based setups
-      integer, intent(in) :: numcrs    !< expect flind%crs%all, here, cannot grab it directly because of cyclic deps in CR-based setups
+      integer(kind=4), intent(in) :: numfluids !< expect flind%all,     here, cannot grab it directly because of cyclic deps in CR-based setups
+      integer(kind=4), intent(in) :: numcrs    !< expect flind%crs%all, here, cannot grab it directly because of cyclic deps in CR-based setups
 
-      integer, dimension(:), allocatable :: sizes, subsizes, starts
+      integer(kind=4), dimension(:), allocatable :: sizes, subsizes, starts
       integer :: d, t, g, hl, lh, j
-      integer, dimension(FLUID:ARR) :: nc
-      integer, parameter, dimension(FLUID:ARR) :: dims = [ 1+ndims, 1+ndims, 1+ndims, ndims ] !< dimensionality of arrays
+      integer(kind=4), dimension(FLUID:ARR) :: nc
+      integer(kind=4), parameter, dimension(FLUID:ARR) :: dims = [ 1_INT4+ndims, 1_INT4+ndims, 1_INT4+ndims, ndims ] !< dimensionality of arrays
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
@@ -251,7 +251,7 @@ contains
       if (code_progress < PIERNIK_INIT_BASE) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
       if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process not implemented yet")
 
-      nc = [ numfluids, ndims, max(numcrs,1), 1 ]      !< number of fluids, magnetic field components, CRs, and 1 for rank-3 array
+      nc = [ numfluids, ndims, max(numcrs,1_INT4), 1_INT4 ]      !< number of fluids, magnetic field components, CRs, and 1 for rank-3 array
 
       call cga%get_root(cgl)
       do while (associated(cgl))
@@ -352,12 +352,12 @@ contains
                                  endif
                                  sizes   (dims(t)-zdim+xdim:dims(t)) = [ cg%nx, cg%ny, cg%nz ]
                                  subsizes(dims(t)-zdim+xdim:dims(t)) = int(cg%i_bnd(d, t)%seg(g)%se(:, HI) - cg%i_bnd(d, t)%seg(g)%se(:, LO) + 1, kind=4)
-                                 starts  (dims(t)-zdim+xdim:dims(t)) = int(cg%i_bnd(d, t)%seg(g)%se(:, LO), kind=4)-1
+                                 starts  (dims(t)-zdim+xdim:dims(t)) = int(cg%i_bnd(d, t)%seg(g)%se(:, LO) - 1, kind=4)
                                  call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts,  MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%i_bnd(d, t)%seg(g)%mbc, ierr)
                                  call MPI_Type_commit(cg%i_bnd(d, t)%seg(g)%mbc, ierr)
 
                                  subsizes(dims(t)-zdim+xdim:dims(t)) = int(cg%o_bnd(d, t)%seg(g)%se(:, HI) - cg%o_bnd(d, t)%seg(g)%se(:, LO) + 1, kind=4)
-                                 starts  (dims(t)-zdim+xdim:dims(t)) = int(cg%o_bnd(d, t)%seg(g)%se(:, LO), kind=4)-1
+                                 starts  (dims(t)-zdim+xdim:dims(t)) = int(cg%o_bnd(d, t)%seg(g)%se(:, LO) - 1, kind=4)
                                  call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts,  MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%o_bnd(d, t)%seg(g)%mbc, ierr)
                                  call MPI_Type_commit(cg%o_bnd(d, t)%seg(g)%mbc, ierr)
 
@@ -428,7 +428,7 @@ contains
       implicit none
 
       real, dimension(:,:,:), pointer, intent(inout) :: pa3d
-      integer, intent(in), optional                  :: area_type
+      integer(kind=4), intent(in), optional          :: area_type
       character(len=*), intent(in), optional         :: dname
 
       integer :: i, d, lh

@@ -342,7 +342,7 @@ contains
          restart             = trim(cbuff(20))
          new_id              = trim(cbuff(21))
 
-         nrestart            = ibuff(20)
+         nrestart            = int(ibuff(20), kind=4)
          resdel              = ibuff(21)
 
 !  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, domain, vars, mag_center, &
@@ -614,10 +614,11 @@ contains
       include "lib3f.h"
 #endif /* __PGI */
 
-      integer, intent(out) :: restart_number
+      integer(kind=4), intent(out) :: restart_number
 
       character(len=cwdlen) :: file_name
-      integer               :: nres, unlink_stat
+      integer(kind=4)       :: nres
+      integer               :: unlink_stat
       logical               :: exist
       character(len=cwdlen) :: file_name_base
 

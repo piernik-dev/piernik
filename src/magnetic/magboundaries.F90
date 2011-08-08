@@ -593,15 +593,15 @@ contains
 
       implicit none
 
-      integer, intent(in)  :: bndcase     !< 1 - v component compatible with direction; 2 - b component compatible with direction or emf component incompatible with direction; 3 - other cases
-      integer, intent(in)  :: ndirb       !< cg%{nxb,nyb,nzb} depanding on the current direction
-      integer, intent(out) :: ledge       !< index of the left edge of physical domain for emf
-      integer, intent(out) :: redge       !< index of the right edge of physical domain for emf
-      integer, intent(out) :: lnbcells    !< number of cells in a loop at left boundary
-      integer, intent(out) :: rnbcells    !< number of cells in a loop at right boundary
-      real,    intent(out) :: bndsign     !< 1. or -1. to change the sign or not
-      integer, intent(out) :: zndiff      !< COMMENT ME
-      integer, intent(out) :: rrbase      !< COMMENT ME
+      integer, intent(in)  :: bndcase      !< 1 - v component compatible with direction; 2 - b component compatible with direction or emf component incompatible with direction; 3 - other cases; BEWARE: magic integers
+      integer(kind=4), intent(in) :: ndirb !< cg%{nxb,nyb,nzb} depanding on the current direction
+      integer, intent(out) :: ledge        !< index of the left edge of physical domain for emf
+      integer, intent(out) :: redge        !< index of the right edge of physical domain for emf
+      integer, intent(out) :: lnbcells     !< number of cells in a loop at left boundary
+      integer, intent(out) :: rnbcells     !< number of cells in a loop at right boundary
+      real,    intent(out) :: bndsign      !< 1. or -1. to change the sign or not
+      integer, intent(out) :: zndiff       !< COMMENT ME
+      integer, intent(out) :: rrbase       !< COMMENT ME
       type(grid_container), pointer, intent(in) :: cg
 
       select case (bndcase)

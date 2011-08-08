@@ -54,43 +54,44 @@ module fluidindex
 
    type(var_numbers),save :: flind     !< COMMENT ME
 
-   integer, parameter  :: nmag = ndims     !< number of magnetic field components
-   integer, parameter  :: ibx = xdim       !< index of x-component of magnetic field
-   integer, parameter  :: iby = ydim       !< index of y-component of magnetic field
-   integer, parameter  :: ibz = zdim       !< index of z-component of magnetic field
-   integer, parameter  :: idn = 1          !< position of density in the vector of conserv. variables for single fluid
-   integer, parameter  :: imx = idn + xdim !< position of x-mom. in the vector of conserv. variables for single fluid
-   integer, parameter  :: imy = idn + ydim !< position of y-mom. in the vector of conserv. variables for single fluid
-   integer, parameter  :: imz = idn + zdim !< position of z-mom. in the vector of conserv. variables for single fluid
-   integer, parameter  :: ien = imz + 1    !< position of energy density in the vector of conserv. variables for single fluid (only for adiabatic fluids)
-   integer, parameter  :: icx = xdim       !< index of x-component of current density
-   integer, parameter  :: icy = ydim       !< index of y-component of current density
-   integer, parameter  :: icz = zdim       !< index of z-component of current density
+   integer(kind=4), parameter  :: nmag = ndims     !< number of magnetic field components
+   integer(kind=4), parameter  :: ibx = xdim       !< index of x-component of magnetic field
+   integer(kind=4), parameter  :: iby = ydim       !< index of y-component of magnetic field
+   integer(kind=4), parameter  :: ibz = zdim       !< index of z-component of magnetic field
+   integer(kind=4), parameter  :: idn = 1          !< position of density in the vector of conserv. variables for single fluid
+   integer(kind=4), parameter  :: imx = idn + xdim !< position of x-mom. in the vector of conserv. variables for single fluid
+   integer(kind=4), parameter  :: imy = idn + ydim !< position of y-mom. in the vector of conserv. variables for single fluid
+   integer(kind=4), parameter  :: imz = idn + zdim !< position of z-mom. in the vector of conserv. variables for single fluid
+   integer(kind=4), parameter  :: ien = imz + 1    !< position of energy density in the vector of conserv. variables for single fluid (only for adiabatic fluids)
+   integer(kind=4), parameter  :: icx = xdim       !< index of x-component of current density
+   integer(kind=4), parameter  :: icy = ydim       !< index of y-component of current density
+   integer(kind=4), parameter  :: icz = zdim       !< index of z-component of current density
 
-   integer, allocatable, dimension(:) :: iarr_all_dn   !< array of indexes pointing to mass densities of all fluids
-   integer, allocatable, dimension(:) :: iarr_all_sg   !< array of indexes pointing to mass densities of all selfgravitating fluids
-   integer, allocatable, dimension(:) :: iarr_all_mx   !< array of indexes pointing to mom. densities of all fluids
-   integer, allocatable, dimension(:) :: iarr_all_my   !< array of indexes pointing to mom. densities of all fluids
-   integer, allocatable, dimension(:) :: iarr_all_mz   !< array of indexes pointing to mom. densities of all fluids
-   integer, allocatable, dimension(:) :: iarr_all_en   !< array of indexes pointing to ener. densities of all fluids
-   integer, allocatable, dimension(:) :: iarr_all_crn   !< array of indexes pointing to ener. densities of all nuclear CR-components
-   integer, allocatable, dimension(:) :: iarr_all_cre   !< array of indexes pointing to ener. densities of all electron CR-components
-   integer, allocatable, dimension(:), target :: iarr_all_crs   !< array of indexes pointing to ener. densities of all CR-components
-   integer, allocatable, dimension(:) :: iarr_all_swpx !< array (size = flind) of all fluid indexes in the original order
-   integer, allocatable, dimension(:) :: iarr_all_swpy !< array (size = flind) of all fluid indexes with \a x and \a y components of mom. interchanged
-   integer, allocatable, dimension(:) :: iarr_all_swpz !< array (size = flind) of all fluid indexes with \a x and \a z components of mom. interchanged
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_dn   !< array of indexes pointing to mass densities of all fluids
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_sg   !< array of indexes pointing to mass densities of all selfgravitating fluids
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_mx   !< array of indexes pointing to mom. densities of all fluids
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_my   !< array of indexes pointing to mom. densities of all fluids
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_mz   !< array of indexes pointing to mom. densities of all fluids
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_en   !< array of indexes pointing to ener. densities of all fluids
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_crn   !< array of indexes pointing to ener. densities of all nuclear CR-components
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_cre   !< array of indexes pointing to ener. densities of all electron CR-components
+   integer(kind=4), allocatable, dimension(:), target :: iarr_all_crs   !< array of indexes pointing to ener. densities of all CR-components
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_swpx !< array (size = flind) of all fluid indexes in the original order
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_swpy !< array (size = flind) of all fluid indexes with \a x and \a y components of mom. interchanged
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_swpz !< array (size = flind) of all fluid indexes with \a x and \a z components of mom. interchanged
 
-   integer, allocatable, dimension(:) :: iarr_all_mag  !< array (size = nmag) of all magnetic field components
-   integer, allocatable, dimension(:) :: iarr_mag_swpx !< array (size = nmag) of all mag. field indexes in the original order (same as iarr_all_mag)
-   integer, allocatable, dimension(:) :: iarr_mag_swpy !< array (size = nmag) of all mag. field indexes \a x and \a z components interchanged
-   integer, allocatable, dimension(:) :: iarr_mag_swpz !< array (size = nmag) of all mag. field indexes \a x and \a z components interchanged
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_mag  !< array (size = nmag) of all magnetic field components
+   integer(kind=4), allocatable, dimension(:) :: iarr_mag_swpx !< array (size = nmag) of all mag. field indexes in the original order (same as iarr_all_mag)
+   integer(kind=4), allocatable, dimension(:) :: iarr_mag_swpy !< array (size = nmag) of all mag. field indexes \a x and \a z components interchanged
+   integer(kind=4), allocatable, dimension(:) :: iarr_mag_swpz !< array (size = nmag) of all mag. field indexes \a x and \a z components interchanged
 
-   integer :: i_sg                                     !< index denoting position of the selfgravitating fluid in the row of fluids - should be an iarr_sg !
+   integer(kind=4) :: i_sg                                     !< index denoting position of the selfgravitating fluid in the row of fluids - should be an iarr_sg !
 
 contains
 
    subroutine set_fluidindex_arrays(fl, have_ener)
 
+      use constants, only: INT4
       use fluidtypes, only: component_fluid
 
       implicit none
@@ -107,7 +108,7 @@ contains
       iarr_all_swpz(fl%beg:fl%end) = fl%iarr_swpz
 
       if (fl%is_selfgrav) then
-         i_sg = i_sg + 1
+         i_sg = i_sg + 1_INT4
          iarr_all_sg(i_sg) = fl%idn
       endif
 

@@ -78,7 +78,7 @@ module types
 
    !< segment type for boundary exchange
    type, extends(segment) :: bnd_segment
-      integer :: mbc                                      !< Multigrid MPI Boundary conditions Container
+      integer(kind=4) :: mbc                              !< Multigrid MPI Boundary conditions Container
       integer :: lh                                       !< low or high boundary; \todo store full tag here
    end type bnd_segment
 
@@ -146,7 +146,7 @@ contains
       use constants, only: big_float
       implicit none
       class(array3d), intent(inout) :: this
-      integer, intent(in)           :: nx,ny,nz
+      integer(kind=4), intent(in)           :: nx,ny,nz
 
       if (.not.associated(this%arr)) allocate(this%arr(nx,ny,nz))
       this%arr = big_float
@@ -184,7 +184,7 @@ contains
       use constants, only: big_float
       implicit none
       class(array4d), intent(inout) :: this
-      integer, intent(in)           :: nn,nx,ny,nz
+      integer(kind=4), intent(in)   :: nn, nx, ny, nz
 
       if (.not.associated(this%arr)) allocate(this%arr(nn,nx,ny,nz))
       this%arr = big_float
@@ -223,7 +223,8 @@ contains
       implicit none
       class(array3d), intent(inout) :: this
       real, dimension(:),  pointer  :: p1d
-      integer, intent(in)           :: ndim, i1, i2
+      integer(kind=4), intent(in)   :: ndim
+      integer, intent(in)           :: i1, i2
 
       if (.not.associated(this%arr)) then
          p1d => null()
@@ -243,7 +244,10 @@ contains
       use constants, only: xdim, ydim, zdim
       implicit none
       class(array4d), intent(inout)      :: this
-      integer, intent(in)                :: ndim, nn, i1, i2
+
+      integer(kind=4), intent(in)        :: ndim, nn
+      integer, intent(in)                :: i1, i2
+
       real, dimension(:),  pointer       :: p1d
 
       select case (ndim)
@@ -257,11 +261,16 @@ contains
    end function array4d_get_sweep_one_var
 
    function array4d_get_sweep(this,ndim,i1,i2) result(p1d)
+
       use constants, only: xdim, ydim, zdim
+
       implicit none
+
       class(array4d), intent(inout)      :: this
+      integer(kind=4), intent(in)        :: ndim
+      integer, intent(in)                :: i1, i2
+
       real, dimension(:,:),  pointer     :: p1d
-      integer, intent(in)                :: ndim, i1, i2
 
       select case (ndim)
          case (xdim)

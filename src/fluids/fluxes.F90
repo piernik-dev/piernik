@@ -64,7 +64,7 @@ module fluxes
    interface
       subroutine flux_interface(flux,cfr,uu,n,vx,ps,bb,cs_iso2)
          implicit none
-         integer, intent(in)                          :: n         !< number of cells in the current sweep
+         integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
          real, dimension(:,:), intent(inout), pointer :: flux      !< flux of fluid
          real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for fluid
          real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for fluid
@@ -141,7 +141,7 @@ contains
 
       implicit none
 
-      integer, intent(in)                                   :: n        !< size of input arrays
+      integer(kind=4), intent(in)                           :: n        !< size of input arrays
       real, dimension(flind%all,n),    intent(out), target  :: flux     !< array storing all fluxes
       real, dimension(flind%all,n),    intent(out), target  :: cfr      !< array storing all freezing speeds
       real, dimension(flind%all,n),    intent(out), target  :: uu       !< array with current fluid state

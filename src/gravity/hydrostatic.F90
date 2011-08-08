@@ -46,7 +46,7 @@ module hydrostatic
    real, allocatable, dimension(:), save :: zs        !< array of z-positions of subgrid cells centers
    real, allocatable, dimension(:), save :: gprofs    !< array of gravitational acceleration in a column of subgrid
    real,                            save :: dzs       !< length of the subgrid cell in z-direction
-   integer,                         save :: nstot     !< total number of subgrid cells in a column through all z-blocks
+   integer(kind=4),                 save :: nstot     !< total number of subgrid cells in a column through all z-blocks
    real,                            save :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
 
    interface
@@ -223,8 +223,8 @@ contains
 
       integer :: ia, ja
 
-      ia = min(cg%nx,max(1, iia))
-      ja = min(cg%ny,max(1, jja))
+      ia = min(cg%nx, int(max(1, iia), kind=4))
+      ja = min(cg%ny, int(max(1, jja), kind=4))
       call grav_accel(zdim, ia, ja, zs, nstot, gprofs)
       gprofs = tune_zeq*gprofs
 

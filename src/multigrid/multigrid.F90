@@ -75,8 +75,8 @@ contains
 !<
    subroutine init_multigrid
 
-      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI
-      use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI, INT4
+      use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven, cdd
       use grid,                only: D_x, D_y, D_z, cga
@@ -99,7 +99,7 @@ contains
       integer, parameter    :: level_min = 1          !< Base (coarsest) level number, chosen arbitrarily.
       integer               :: level_max              !< Levels of multigrid refinement
 
-      integer               :: ierrh, j, p
+      integer               :: j, p
       logical, save         :: frun = .true.          !< First run flag
       real                  :: mb_alloc, min_m, max_m !< Allocation counter
       integer, dimension(3) :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
@@ -246,7 +246,7 @@ contains
          else
             ! set up decomposition of coarse levels
             curl%dom = curl%finer%dom
-            where (has_dir(:)) curl%dom%n_d(:) = curl%dom%n_d(:) / 2
+            where (has_dir(:)) curl%dom%n_d(:) = curl%dom%n_d(:) / 2_INT4
             if (any(curl%dom%n_d(:)*2 /= curl%finer%dom%n_d(:) .and. has_dir(:))) then
                write(msg, '(a,3f10.1)')"[multigrid:init_multigrid] Fractional number of domain cells: ", 0.5*curl%finer%dom%n_d(:)
                call die(msg) ! handling this would require coarse grids bigger than base grid

@@ -37,7 +37,7 @@
 !!  \vec{F}{(\vec{u})} =
 !!  \left(\begin{array}{c}
 !!    \rho v_x \\
-!!    \rho v_x^2+p \\
+!!    \rho v_x^2 + p \\
 !!    \rho v_x v_y\\
 !!    \rho v_x v_z\\
 !!    (e + p)v_x
@@ -47,7 +47,7 @@
 !!  \left(\begin{array}{c}
 !!    \rho v_y \\
 !!    \rho v_y v_x\\
-!!    \rho v_y^2+p\\
+!!    \rho v_y^2 + p\\
 !!    \rho v_y v_z\\
 !!    (e + p)v_y
 !!  \end{array}\right),
@@ -57,7 +57,7 @@
 !!    \rho v_z \\
 !!    \rho v_z v_x\\
 !!    \rho v_z v_y \\
-!!    \rho v_z^2+p \\
+!!    \rho v_z^2 + p \\
 !!    (e + p)v_z
 !!  \end{array}\right),
 !!\f]
@@ -76,7 +76,7 @@ contains
 ! OPT: \todo Try an explicit loop over RNG to check if we're better than the compiler
 ! OPT: similar treatment may be helpful for fluxionized.F90, fluxdust.F90 and fluxcosmicrays.F90
 !
-   subroutine flux_neu(fluxn,cfrn,uun,n,vx,p,bb,cs_iso2)
+   subroutine flux_neu(fluxn, cfrn, uun, n, vx, p, bb, cs_iso2)
 
       use constants,  only: small
       use func,       only: ekin
@@ -88,21 +88,22 @@ contains
 
       implicit none
 
-      integer, intent(in)                          :: n         !< number of cells in the current sweep
+      integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
       real, dimension(:,:), intent(inout), pointer :: fluxn     !< flux of neutral fluid
-      real, dimension(:,:), intent(in),    pointer :: uun       !< part of u for neutral fluid
       real, dimension(:,:), intent(inout), pointer :: cfrn      !< freezing speed for neutral fluid
-      real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:,:), intent(in),    pointer :: uun       !< part of u for neutral fluid
       real, dimension(:),   intent(inout), pointer :: vx        !< velocity of neutral fluid for current sweep
       real, dimension(:),   intent(inout), pointer :: p         !< pressure of neutral fluid for current sweep
+      real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
       real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
+
       ! locals
       integer            :: nm
 #ifdef LOCAL_FR_SPEED
+      integer            :: i
       real               :: minvx     !<
       real               :: maxvx     !<
       real               :: amp       !<
-      integer            :: i
 #endif /* LOCAL_FR_SPEED */
 
       nm = n-1
@@ -125,9 +126,9 @@ contains
 
 #ifdef LOCAL_FR_SPEED
 
-      !       The freezing speed is now computed locally (in each cell)
-      !       as in Trac & Pen (2003). This ensures much sharper shocks,
-      !       but sometimes may lead to numerical instabilities
+      ! The freezing speed is now computed locally (in each cell)
+      !  as in Trac & Pen (2003). This ensures much sharper shocks,
+      !  but sometimes may lead to numerical instabilities
       minvx = minval(vx(RNG))
       maxvx = maxval(vx(RNG))
       amp   = 0.5*(maxvx-minvx)
@@ -153,14 +154,15 @@ contains
 #endif /* LOCAL_FR_SPEED */
 
 #ifdef GLOBAL_FR_SPEED
-      !       The freezing speed is now computed globally
-      !       (c=const for the whole domain) in subroutine 'timestep'
+      ! The freezing speed is now computed globally
+      !  (c=const for the whole domain) in subroutine 'timestep'
 
       !    cfrn(:,:) = flind%neu%snap%c   ! check which c_xxx is better
       cfrn(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
       return
       if (.false.) write(0,*) bb, cs_iso2
+
    end subroutine flux_neu
 
 end module fluxneutral

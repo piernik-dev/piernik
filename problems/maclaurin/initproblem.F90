@@ -240,15 +240,15 @@ contains
       integer(HID_T),intent(in)  :: file_id
 
       integer(SIZE_T) :: bufsize
-      integer         :: error
+      integer(kind=4) :: error
 
       bufsize = 1
-      call h5ltset_attribute_double_f(file_id, "/", "rho0", [d0],   bufsize,error)
-      call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize,error)
-      call h5ltset_attribute_double_f(file_id, "/", "a1",   [a1],   bufsize,error)
-      call h5ltset_attribute_double_f(file_id, "/", "x0",   [x0],   bufsize,error)
-      call h5ltset_attribute_double_f(file_id, "/", "y0",   [y0],   bufsize,error)
-      call h5ltset_attribute_double_f(file_id, "/", "z0",   [z0],   bufsize,error)
+      call h5ltset_attribute_double_f(file_id, "/", "rho0", [d0],   bufsize, error)
+      call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize, error)
+      call h5ltset_attribute_double_f(file_id, "/", "a1",   [a1],   bufsize, error)
+      call h5ltset_attribute_double_f(file_id, "/", "x0",   [x0],   bufsize, error)
+      call h5ltset_attribute_double_f(file_id, "/", "y0",   [y0],   bufsize, error)
+      call h5ltset_attribute_double_f(file_id, "/", "z0",   [z0],   bufsize, error)
 
    end subroutine init_prob_attrs
 

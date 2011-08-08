@@ -54,18 +54,18 @@ module fluidtypes
    end type phys_prop
 
    type :: component
-      integer :: all = 0   !< number of all variables in fluid/component
-      integer :: beg = 0   !< beginning number of variables in fluid/component
-      integer :: end = 0   !< end number of variables in fluid/component
-      integer :: pos = 0   !< index denoting position of the fluid in the row of fluids
+      integer(kind=4) :: all = 0   !< number of all variables in fluid/component
+      integer(kind=4) :: beg = 0   !< beginning number of variables in fluid/component
+      integer(kind=4) :: end = 0   !< end number of variables in fluid/component
+      integer(kind=4) :: pos = 0   !< index denoting position of the fluid in the row of fluids
    end type component
 
    type, extends(component) :: component_fluid
-      integer :: idn = -1      !< index denoting position of the fluid density in array arrays::u
-      integer :: imx = -1      !< index denoting position of the fluid x-momentum in array arrays::u
-      integer :: imy = -1      !< index denoting position of the fluid y-momentum in array arrays::u
-      integer :: imz = -1      !< index denoting position of the fluid z-momentum in array arrays::u
-      integer :: ien = -1      !< index denoting position of the fluid energy in array arrays::u
+      integer(kind=4) :: idn = -1      !< index denoting position of the fluid density in array arrays::u
+      integer(kind=4) :: imx = -1      !< index denoting position of the fluid x-momentum in array arrays::u
+      integer(kind=4) :: imy = -1      !< index denoting position of the fluid y-momentum in array arrays::u
+      integer(kind=4) :: imz = -1      !< index denoting position of the fluid z-momentum in array arrays::u
+      integer (kind=4):: ien = -1      !< index denoting position of the fluid energy in array arrays::u
 
       real    :: cs    = 0.0   !< fluid's isothermal sound speed
       real    :: cs2   = 0.0   !< fluid's isothermal sound speed squared
@@ -78,10 +78,10 @@ module fluidtypes
 
       integer :: tag = -1 !< Human readable tag describing fluid
 
-      integer, allocatable, dimension(:)  :: iarr
-      integer, allocatable, dimension(:)  :: iarr_swpx
-      integer, allocatable, dimension(:)  :: iarr_swpy
-      integer, allocatable, dimension(:)  :: iarr_swpz
+      integer(kind=4), allocatable, dimension(:)  :: iarr
+      integer(kind=4), allocatable, dimension(:)  :: iarr_swpx
+      integer(kind=4), allocatable, dimension(:)  :: iarr_swpy
+      integer(kind=4), allocatable, dimension(:)  :: iarr_swpz
 
       type(phys_prop) :: snap
 
@@ -93,11 +93,11 @@ module fluidtypes
    end type component_fluid
 
    type :: var_numbers
-      integer :: all         = 0      !< total number of fluid variables = the size of array \a u(:,:,:,:) in the first index
-      integer :: fluids      = 0      !< number of fluids (ionized gas, neutral gas, dust)
-      integer :: energ       = 0      !< number of non-isothermal fluids (indicating the presence of energy density in the vector of conservative variables)
-      integer :: components  = 0      !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
-      integer :: fluids_sg   = 0      !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
+      integer(kind=4) :: all         = 0      !< total number of fluid variables = the size of array \a u(:,:,:,:) in the first index
+      integer(kind=4) :: fluids      = 0      !< number of fluids (ionized gas, neutral gas, dust)
+      integer(kind=4) :: energ       = 0      !< number of non-isothermal fluids (indicating the presence of energy density in the vector of conservative variables)
+      integer(kind=4) :: components  = 0      !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
+      integer (kind=4):: fluids_sg   = 0      !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
 
       type(component_fluid), dimension(:), pointer :: all_fluids
 

@@ -44,8 +44,8 @@ module mpisetup
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, ierr, &
         &    master, slave, nproc, proc, procmask, comm, info, have_mpi
 
-   integer, protected :: nproc, proc, ierr, info
-   integer, protected :: comm
+   integer(kind=4), protected :: nproc, proc, ierr
+   integer(kind=4), protected :: comm, info
 
    logical, protected :: master, slave
    logical, protected :: have_mpi           !< .true. when run on more than one processor
@@ -69,7 +69,7 @@ contains
 
    subroutine init_mpi
 
-      use constants,  only: cwdlen
+      use constants,  only: cwdlen, INT4
       use mpi,        only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER
       use dataio_pub, only: die, printinfo, msg, cwd, ansi_white, ansi_black, tmp_log_file
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
@@ -79,10 +79,10 @@ contains
       integer, parameter :: hnlen = 32             !< hostname length limit
       character(len=cwdlen) :: cwd_proc
       character(len=hnlen)  :: host_proc
-      integer               :: pid_proc
+      integer(kind=4)       :: pid_proc
       character(len=cwdlen), allocatable, dimension(:) :: cwd_all
       character(len=hnlen) , allocatable, dimension(:) :: host_all
-      integer              , allocatable, dimension(:) :: pid_all
+      integer(kind=4)      , allocatable, dimension(:) :: pid_all
       integer(kind=1)       :: getcwd, hostnm
       integer(kind=4)       :: getpid
       integer :: cwd_status, host_status
@@ -128,9 +128,9 @@ contains
       call printinfo(msg)
 #endif /* DEBUG */
 
-      call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0, comm, ierr)
-      call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0, comm, ierr)
-      call MPI_Gather(pid_proc,  1,      MPI_INTEGER,   pid_all,  1,      MPI_INTEGER,   0, comm, ierr)
+      call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0_INT4, comm, ierr)
+      call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0_INT4, comm, ierr)
+      call MPI_Gather(pid_proc,  1_INT4, MPI_INTEGER,   pid_all,  1_INT4, MPI_INTEGER,   0_INT4, comm, ierr)
 
       if (master) then
          inquire(file=par_file, exist=par_file_exist)
@@ -221,7 +221,7 @@ contains
       implicit none
 
       type(value), intent(inout) :: var
-      integer, intent(in)       :: what
+      integer(kind=4), intent(in)       :: what
 
       real, dimension(2)  :: v_red
       integer, dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]

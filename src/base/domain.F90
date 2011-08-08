@@ -58,8 +58,8 @@ module domain
    type :: domain_container
       ! primary parameters, read from /DOMAIN_SIZES/, /BOUNDARIES/ and /DOMAIN_LIMITS/ namelists
       real, dimension(ndims, LO:HI) :: edge     !< physical domain boundary positions
-      integer, dimension(ndims) :: n_d          !< number of grid cells in physical domain in x-, y- and z-direction (where equal to 1, the dimension is reduced to a point with no boundary cells)
-      integer                   :: nb           !< number of boundary cells surrounding the physical domain, same for all directions
+      integer(kind=4), dimension(ndims) :: n_d  !< number of grid cells in physical domain in x-, y- and z-direction (where equal to 1, the dimension is reduced to a point with no boundary cells)
+      integer(kind=4)                  :: nb    !< number of boundary cells surrounding the physical domain, same for all directions
       integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
 
       ! derived parameters
@@ -74,7 +74,7 @@ module domain
       ! Do not use n_t(:) in the Piernik source tree without a good reason
       ! Avoid as a plague allocating buffers of that size because it negates benefits of parallelization
       ! \todo move them to another type, that extends domain_container?
-      integer, dimension(ndims) :: n_t          !< total number of %grid cells in the whole domain in every direction (n_d(:) + 2* nb for existing directions)
+      integer(kind=4), dimension(ndims) :: n_t          !< total number of %grid cells in the whole domain in every direction (n_d(:) + 2* nb for existing directions)
 
     contains
 
@@ -83,12 +83,12 @@ module domain
    end type domain_container
 
    type cart_decomposition
-      integer                          :: comm3d  !< cartesian communicator
-      integer, dimension(ndims)        :: psize   !< number of divisions in each direction
-      integer, dimension(ndims)        :: pcoords !< own process coordinates within psize(:)-shaped array of processes
-      integer, dimension(ndims, LO:HI) :: procn   !< array of neighbours proc numbers
-      integer                          :: procxyl !< neighbour in corner boundaries
-      integer                          :: procyxl !< neighbour in corner boundaries
+      integer(kind=4)                          :: comm3d  !< cartesian communicator
+      integer(kind=4), dimension(ndims)        :: psize   !< number of divisions in each direction
+      integer(kind=4), dimension(ndims)        :: pcoords !< own process coordinates within psize(:)-shaped array of processes
+      integer(kind=4), dimension(ndims, LO:HI) :: procn   !< array of neighbours proc numbers
+      integer(kind=4)                          :: procxyl !< neighbour in corner boundaries
+      integer(kind=4)                          :: procyxl !< neighbour in corner boundaries
    end type cart_decomposition
 
    type(cart_decomposition), protected :: cdd !< Cartesian Domain Decomposition stuff
@@ -107,12 +107,12 @@ module domain
    ! Private variables
 
    logical :: dom_divided  !< Flags that domain decomposition was succesfull and quality of solution meets the criteria
-   integer, allocatable, dimension(:) :: primes
+   integer(kind=4), allocatable, dimension(:) :: primes
    real :: ideal_bsize
 
    ! Namelist variables
 
-   integer, dimension(ndims) :: psize !< desired number of MPI blocks in x, y and z-dimension
+   integer(kind=4), dimension(ndims) :: psize !< desired number of MPI blocks in x, y and z-dimension
    logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
    logical :: allow_uneven            !< allows different values of n_b(:) on different processes
    logical :: allow_noncart           !< allows more than one neighbour on a boundary
@@ -123,10 +123,10 @@ module domain
 
    namelist /MPI_BLOCKS/ psize, reorder, allow_uneven, allow_noncart, allow_AMR, dd_unif_quality, dd_rect_quality, use_comm3d
 
-   integer, protected :: nxd            !< number of %grid cells in physical domain (without boundary cells) in x-direction (if == 1 then x-dimension is reduced to a point with no boundary cells)
-   integer, protected :: nyd            !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
-   integer, protected :: nzd            !< number of %grid cells in physical domain (without boundary cells) in z-direction (-- || --)
-   integer, protected :: nb             !< number of boundary cells surrounding the physical domain, same for all directions
+   integer(kind=4), protected :: nxd    !< number of %grid cells in physical domain (without boundary cells) in x-direction (if == 1 then x-dimension is reduced to a point with no boundary cells)
+   integer(kind=4), protected :: nyd    !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
+   integer(kind=4), protected :: nzd    !< number of %grid cells in physical domain (without boundary cells) in z-direction (-- || --)
+   integer(kind=4), protected :: nb     !< number of boundary cells surrounding the physical domain, same for all directions
    character(len=cbuff_len) :: bnd_xl   !< type of boundary conditions for the left  x-boundary
    character(len=cbuff_len) :: bnd_xr   !< type of boundary conditions for the right x-boundary
    character(len=cbuff_len) :: bnd_yl   !< type of boundary conditions for the left  y-boundary
@@ -208,7 +208,7 @@ contains
    subroutine init_domain
 
       use constants,  only: xdim, ydim, zdim, LO, HI, big_float, dpi, &
-           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF, BLK, BND, PIERNIK_INIT_MPI
+           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF, BLK, BND, PIERNIK_INIT_MPI, INT4
       use dataio_pub, only: die, printinfo, msg, warn, code_progress
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
@@ -224,7 +224,7 @@ contains
 
       ! Begin processing of namelist parameters
 
-      psize(:) = [1, 1, 1]
+      psize(:) = 1_INT4
 
       nxd    = 1
       nyd    = 1
@@ -256,7 +256,7 @@ contains
          diff_nml(BASE_DOMAIN)
 
          ! Sanitize input parameters, if possible
-         dom%n_d(:) = max(1, [nxd, nyd, nzd])
+         dom%n_d(:) = max(1_INT4, [nxd, nyd, nzd])
 
       endif
 
@@ -321,9 +321,9 @@ contains
          bnd_zr     = cbuff(6)
          geometry   = cbuff(7)
 
-         psize(:)   = ibuff(xdim:zdim)
-         dom%n_d(:) = ibuff(zdim+xdim:2*zdim)
-         nb         = ibuff(2*zdim+1)
+         psize(:)   = int(ibuff(xdim:zdim), kind=4)
+         dom%n_d(:) = int(ibuff(zdim+xdim:2*zdim), kind=4)
+         nb         = int(ibuff(2*zdim+1), kind=4)
 
       endif
 
@@ -411,12 +411,12 @@ contains
       is_mpi_noncart = .false.
       is_refined = .false.
 
-      where (.not. has_dir(:)) psize(:) = 1
+      where (.not. has_dir(:)) psize(:) = 1_INT4
 
       ! cdd% will contain valid values if and only if comm3d becomes valid communicator
       cdd%procn(:,:) = MPI_PROC_NULL
-      cdd%psize(:) = -1
-      cdd%pcoords(:) = -1
+      cdd%psize(:) = -1_INT4
+      cdd%pcoords(:) = -1_INT4
       cdd%procxyl = MPI_PROC_NULL
       cdd%procyxl = MPI_PROC_NULL
       cdd%comm3d = MPI_COMM_NULL
@@ -450,7 +450,7 @@ contains
          call die("[domain:init_domain] SHEAR_BND not implemented without comm3d")
 #endif /* SHEAR_BND */
       else
-         call inflate_req(max(size([LO, HI]) * size([BLK, BND]) * ndims, nproc)) ! just another way of defining '4 * 3' ;-)
+         call inflate_req(max(size([LO, HI]) * size([BLK, BND]) * ndims, int(nproc))) ! just another way of defining '4 * 3' ;-)
          ! write_plot_hdf5 requires nproc entries for the status array
 
          if (any(dom%bnd(xdim:ydim, :) == BND_COR) .and. (cdd%psize(xdim) /= cdd%psize(ydim) .or. dom%n_d(xdim) /= dom%n_d(ydim))) then
@@ -553,17 +553,17 @@ contains
 
    subroutine cartesian_tiling(p_size)
 
-      use constants,  only: xdim, ydim, zdim, ndims, LO, HI, BND_COR
+      use constants,  only: xdim, ydim, zdim, ndims, LO, HI, BND_COR, INT4
       use dataio_pub, only: printinfo, die
       use mpi,        only: MPI_COMM_NULL
       use mpisetup,   only: master, nproc, comm, proc, ierr
 
       implicit none
 
-      integer, dimension(ndims), intent(in) :: p_size
+      integer(kind=4), dimension(ndims), intent(in) :: p_size
 
-      integer :: p
-      integer, dimension(ndims) :: pc
+      integer(kind=4) :: p
+      integer(kind=4), dimension(ndims) :: pc
 
       if (is_mpi_noncart) call die("[domain:cartesian_tiling] inconsistent decomposition specs")
       if (product(p_size(:)) /= nproc) call die("[domain:cartesian_tiling] product(p_size(:)) /= nproc")
@@ -600,7 +600,7 @@ contains
          if (master) call printinfo("[domain:cartesian_tiling] Cartesian decomposition without comm3d")
       endif
 
-      do p = 0, nproc-1
+      do p = 0_INT4, nproc-1_INT4
          if (cdd%comm3d == MPI_COMM_NULL) then
             if (use_comm3d) call die("[domain:cartesian_tiling] MPI_Cart_create failed")
             pc(:) = [ mod(p, p_size(xdim)), mod(p/p_size(xdim), p_size(ydim)), p/product(p_size(xdim:ydim)) ]
@@ -619,43 +619,43 @@ contains
 
    subroutine choppy_tiling(p_size)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI
+      use constants,  only: xdim, ydim, zdim, LO, HI, INT4
       use dataio_pub, only: printinfo
       use mpisetup,   only: master, nproc
 
       implicit none
 
-      integer, dimension(ndims), intent(in) :: p_size
+      integer(kind=4), dimension(ndims), intent(in) :: p_size
 
-      integer :: p, px, py
-      integer, dimension(:), allocatable :: pz_slab, py_slab
+      integer(kind=4) :: p, px, py
+      integer(kind=4), dimension(:), allocatable :: pz_slab, py_slab
 
       call allocate_pse
 
       if (master) call printinfo("[domain:choppy_tiling] Non-cartesian decomposition (no comm3d)")
       allocate(pz_slab(p_size(zdim) + 1))
-      pz_slab(1) = 0
-      do p = 1, p_size(zdim)
+      pz_slab(1) = 0_INT4
+      do p = 1_INT4, p_size(zdim)
          pz_slab(p+1) = pz_slab(p) + nproc / p_size(zdim)
-         if (p <= mod(nproc, p_size(zdim))) pz_slab(p+1) = pz_slab(p+1) + 1 ! longer slabs go first
+         if (p <= mod(nproc, p_size(zdim))) pz_slab(p+1) = pz_slab(p+1) + 1_INT4 ! longer slabs go first
       enddo
-      do p = 1, p_size(zdim)
-         do px = pz_slab(p), pz_slab(p+1)-1
+      do p = 1_INT4, p_size(zdim)
+         do px = pz_slab(p), pz_slab(p+1)-1_INT4
             dom%pse(px)%sel(1, zdim, LO) = nint((dom%n_d(zdim) *  pz_slab(p)   ) / real(nproc))
             dom%pse(px)%sel(1, zdim, HI) = nint((dom%n_d(zdim) *  pz_slab(p+1) ) / real(nproc)) - 1
          enddo
          allocate(py_slab(p_size(ydim) + 1))
-         py_slab(1) = 0
-         do py = 1, p_size(ydim)
+         py_slab(1) = 0_INT4
+         do py = 1_INT4, p_size(ydim)
             py_slab(py+1) = py_slab(py) + (pz_slab(p+1)-pz_slab(p)) / p_size(ydim)
-            if (py <= mod((pz_slab(p+1)-pz_slab(p)), p_size(ydim))) py_slab(py+1) = py_slab(py+1) + 1 ! longer slabs go first
+            if (py <= mod((pz_slab(p+1)-pz_slab(p)), p_size(ydim))) py_slab(py+1) = py_slab(py+1) + 1_INT4 ! longer slabs go first
          enddo
-         do py = 1, p_size(ydim)
-            do px = pz_slab(p)+py_slab(py), pz_slab(p)+py_slab(py+1)-1
+         do py = 1_INT4, p_size(ydim)
+            do px = pz_slab(p)+py_slab(py), pz_slab(p)+py_slab(py+1) - 1_INT4
                dom%pse(px)%sel(1, ydim, LO) = nint((dom%n_d(ydim) *  py_slab(py)   ) / real(pz_slab(p+1)-pz_slab(p)))
-               dom%pse(px)%sel(1, ydim, HI) = nint((dom%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - 1
+               dom%pse(px)%sel(1, ydim, HI) = nint((dom%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - 1_INT4
             enddo
-            do px = 0, py_slab(py+1)-py_slab(py) - 1
+            do px = 0_INT4, py_slab(py+1)-py_slab(py) - 1_INT4
                dom%pse(pz_slab(p)+py_slab(py)+px)%sel(1, xdim, LO) = (dom%n_d(xdim) *  px    ) / (py_slab(py+1)-py_slab(py))
                dom%pse(pz_slab(p)+py_slab(py)+px)%sel(1, xdim, HI) = (dom%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1 ! no need to sort lengths here
             enddo
@@ -676,7 +676,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: p !< process
+      integer(kind=4), intent(in) :: p !< process
       integer, intent(in) :: n !< block number
       integer, dimension(xdim:zdim, LO:HI), intent(in) :: se !< segment
 
@@ -772,7 +772,7 @@ contains
       logical, intent(inout) :: dom_divided
 
       real :: quality
-      integer, dimension(ndims) :: p_size
+      integer(kind=4), dimension(ndims) :: p_size
 
       if (dom_divided) then
          call warn("[domain:divide_domain] Domain already decomposed")
@@ -860,10 +860,11 @@ contains
 
       implicit none
 
-      integer, dimension(ndims), intent(out) :: p_size
+      integer(kind=4), dimension(ndims), intent(out) :: p_size
 
-      integer :: j1, j2, j3, jj, n, p
-      integer, dimension(ndims) :: ldom, tmp
+      integer(kind=4) :: n
+      integer :: j1, j2, j3, jj, p
+      integer(kind=4), dimension(ndims) :: ldom, tmp
 
       ldom(xdim:zdim) = dom%n_d(zdim:xdim:-1) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX) gives better cache utilization.
       n = nproc
@@ -878,11 +879,11 @@ contains
             if (mod(ldom(j1), primes(p))==0) then
                jj = j1
             else
-               j2 = 1 + mod(j1 + 0, ndims)
-               j3 = 1 + mod(j1 + ndims -2, ndims)
+               j2 = 1 + mod(j1 + 0, int(ndims))
+               j3 = 1 + mod(j1 + ndims -2, int(ndims))
                if (ldom(j2) > ldom(j3)) then
-                  j2 = 1 + mod(j1 + ndims -2, ndims)
-                  j3 = 1 + mod(j1 + 0, ndims)
+                  j2 = 1 + mod(j1 + ndims -2, int(ndims))
+                  j3 = 1 + mod(j1 + 0, int(ndims))
                endif
                if (mod(ldom(j2), primes(p))==0) jj = j2 ! middle edge ...
                if (jj == 0 .and. mod(ldom(j3), primes(p))==0) jj = j3 ! try the shortest edge on last resort
@@ -924,21 +925,22 @@ contains
 !<
    subroutine divide_domain_rectlinear(p_size)
 
-      use constants,  only: xdim, ydim
+      use constants,  only: xdim, ydim, INT4
       use dataio_pub, only: printinfo, msg
       use mpisetup,   only: master, nproc
 
       implicit none
 
-      integer, dimension(ndims), intent(out) :: p_size
+      integer(kind=4), dimension(ndims), intent(out) :: p_size
 
       real, parameter :: b_load_fac = 0.25 ! estimated increase of execution time after doubling the total size of internal boundaries.
       ! \todo estimate this factor for massively parallel runs and for Intel processors
 
-      integer, allocatable, dimension(:) :: ppow
-      integer, allocatable, dimension(:,:) :: fac
-      integer, dimension(ndims) :: ldom
-      integer :: p, i, j, k, n, nf, ii, bsize
+      integer(kind=4), allocatable, dimension(:) :: ppow
+      integer(kind=4), allocatable, dimension(:,:) :: fac
+      integer(kind=4), dimension(ndims) :: ldom
+      integer(kind=4) :: p, i, j, k, nf
+      integer :: n, ii, bsize
       real :: load_balance, best, quality
 
       p_size(:) = 1
@@ -947,21 +949,21 @@ contains
       allocate(ppow(size(primes)))
 
       p = nproc
-      do i = 1, size(primes)
+      do i = 1_INT4, int(size(primes), kind=4)
          ppow(i) = 0
          do while (mod(p, primes(i)) == 0)
-            ppow(i) = ppow(i) + 1
+            ppow(i) = ppow(i) + 1_INT4
             p = p / primes(i)
          enddo
       enddo
 
-      nf = count(ppow(:) > 0)
+      nf = int(count(ppow(:) > 0), kind=4)
       allocate(fac(nf,3))
-      j = 1
-      do i = 1, size(primes)
+      j = 1_INT4
+      do i = 1_INT4, int(size(primes), kind=4)
          if (ppow(i)>0) then
-            fac(j,:) = [ primes(i), ppow(i), (ppow(i)+1)*(ppow(i)+2)/2 ] ! prime, its power and number of different decompositions in three dimensions for this prime
-            j = j + 1
+            fac(j,:) = [ primes(i), ppow(i), int((ppow(i)+1)*(ppow(i)+2)/2, kind=4) ] ! prime, its power and number of different decompositions in three dimensions for this prime
+            j = j + 1_INT4
          endif
       enddo
       deallocate(ppow)
@@ -971,8 +973,8 @@ contains
       do while (all(fac(:,3) > 0))
          ldom(:) = 1
          do n = 1, nf ! find an unique decomposition of fac(n,2) into [i,j,k], all([i,j,k] >= 0) && i+j+k = fac(n,2). The decompositions are enumerated with fac(n,3).
-            i = int(sqrt(1./4.+2.*(fac(n,3)-1)) - 1./2.) ! i and k enumerate a point in a triangle: (i>=0 && k>=0 && i+k<=fac(n,2))
-            k = fac(n,3) - 1 - i*(i+1)/2
+            i = int(sqrt(1./4.+2.*(fac(n,3)-1)) - 1./2., kind=4) ! i and k enumerate a point in a triangle: (i>=0 && k>=0 && i+k<=fac(n,2))
+            k = fac(n,3) - int(1 - i*(i+1)/2, kind=4)
             i = fac(n,2) - i
             j = fac(n,2) - (i + k)
             ldom(:) = ldom(:) * fac(n,1)**[i, j, k]
@@ -998,15 +1000,15 @@ contains
             best = quality
             p_size(:) = ldom(:)
          endif
-         do j = 1, nf ! search for next unique combination
+         do j = 1_INT4, nf ! search for next unique combination
             if (fac(j,3) > 1) then
-               fac(j,3) = fac(j,3) - 1
+               fac(j,3) = fac(j,3) - 1_INT4
                exit
             else
                if (j<nf) then
-                  fac(j,3) = (fac(j,2)+1)*(fac(j,2)+2)/2
+                  fac(j,3) = int((fac(j,2)+1)*(fac(j,2)+2)/2, kind=4)
                else
-                  fac(:,3) = 0 ! no more combinations to try
+                  fac(:,3) = 0_INT4 ! no more combinations to try
                endif
             endif
          enddo
@@ -1042,13 +1044,13 @@ contains
 !<
    subroutine divide_domain_slices(p_size)
 
-      use constants,  only: xdim, ydim, zdim
+      use constants,  only: xdim, ydim, zdim, INT4
       use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: master, nproc
 
       implicit none
 
-      integer, dimension(ndims), intent(inout) :: p_size
+      integer(kind=4), dimension(ndims), intent(inout) :: p_size
 
       real, parameter :: minfac = 1.3 ! prevent domain division to halves if cell count in a given direction is too low. (not verified for optimality)
       real :: optc
@@ -1062,25 +1064,25 @@ contains
       if (all(p_size(ydim:zdim) == 1)) then
          if (has_dir(zdim)) then
             optc = (product(int(dom%n_d(:), kind=8))/real(nproc)) ** (1./eff_dim) ! number of cells for ideal cubes
-            if (dom%n_d(zdim) > minfac*optc) p_size(zdim) = ceiling(dom%n_d(zdim)/optc)
+            if (dom%n_d(zdim) > minfac*optc) p_size(zdim) = int(ceiling(dom%n_d(zdim)/optc), kind=4)
          endif
          if (has_dir(ydim)) then
             optc = (product(int(dom%n_d(xdim:ydim), kind=8))*p_size(zdim)/real(nproc)) ** (1./count(has_dir(xdim:ydim)))
-            if (dom%n_d(ydim) > minfac*optc) p_size(ydim) = ceiling(dom%n_d(ydim)/optc)
+            if (dom%n_d(ydim) > minfac*optc) p_size(ydim) = int(ceiling(dom%n_d(ydim)/optc), kind=4)
          endif
       endif
-      if (has_dir(xdim)) p_size(xdim) = (nproc - 1)/(p_size(ydim)*p_size(zdim)) + 1 !sometimes it might be less by 1
+      if (has_dir(xdim)) p_size(xdim) = (nproc - 1_INT4)/(p_size(ydim)*p_size(zdim)) + 1_INT4 !sometimes it might be less by 1
 
       where (.not. has_dir(:)) p_size(:) = 1 ! just in case
       do while (product(p_size(:)) < nproc)
          write(msg,'(a,3i4,a)') "[domain:divide_domain_slices] imperfect noncartesian division to [",p_size(:)," ] pieces"
          if (master) call warn(msg)
          if (has_dir(xdim)) then
-            p_size(xdim) = p_size(xdim) + 1
+            p_size(xdim) = p_size(xdim) + 1_INT4
          else if (has_dir(ydim)) then
-            p_size(ydim) = p_size(ydim) + 1
+            p_size(ydim) = p_size(ydim) + 1_INT4
          else
-            p_size(zdim) = p_size(zdim) + 1
+            p_size(zdim) = p_size(zdim) + 1_INT4
          endif
       enddo
       write(msg,'(a,3i4,a)') "[domain:divide_domain_slices] performed noncartesian division to [",p_size(:)," ] pieces"
@@ -1090,8 +1092,9 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine Eratosthenes_sieve(tab,n)
+   subroutine Eratosthenes_sieve(tab, n)
 
+      use constants,  only: INT4
       use dataio_pub, only: die
 #ifdef DEBUG
       use dataio_pub, only: msg, printinfo
@@ -1100,15 +1103,16 @@ contains
 
       implicit none
 
-      integer, intent(inout), allocatable, dimension(:) :: tab
-      integer, intent(in)                               :: n
-      integer, dimension(n)                             :: numb
+      integer(kind=4), intent(inout), allocatable, dimension(:) :: tab
+      integer(kind=4), intent(in) :: n
 
-      integer :: i, no_primes
+      integer(kind=4), dimension(n) :: numb
+      integer(kind=4) :: i
+      integer :: no_primes
 
       if (allocated(tab)) call die("[domain:Eratosthenes_sieve] tab already allocated")
 
-      numb = [0, (i, i = 2, n)]
+      numb = [0_INT4, (i, i = 2_INT4, n)]
 
       do i = 2, n
          if (numb(i) /= 0) numb( 2*i : n : i ) = 0
@@ -1116,7 +1120,7 @@ contains
 
       no_primes = count(numb /= 0)
       allocate(tab(no_primes))
-      tab       = pack(numb, numb /= 0)
+      tab = pack(numb, numb /= 0)
 #ifdef DEBUG
       if (master) then
          write(msg,'(2(A,I5))') "There are ", no_primes, " prime numbers less than", n
@@ -1190,7 +1194,7 @@ contains
 
    subroutine set_derived(this)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE
+      use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE, INT4
       use dataio_pub, only: die
 
       implicit none
@@ -1219,7 +1223,7 @@ contains
       !> \deprecated BEWARE: Vol computed above is not true for non-cartesian geometry
 
       where (has_dir(:))
-         this%n_t(:) = this%n_d(:) + 2 * this%nb
+         this%n_t(:) = this%n_d(:) + 2_INT4 * this%nb
       elsewhere
          this%n_t(:) = 1
       endwhere

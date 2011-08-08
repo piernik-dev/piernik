@@ -125,7 +125,8 @@ contains
       implicit none
 
       real, dimension(:,:), intent(in)        :: u
-      integer, intent(in)                     :: sweep
+      integer(kind=4), intent(in)             :: sweep
+
       real, dimension(2)                      :: df                 !< \deprecated  additional acceleration term used in streaming problem
       real, dimension(flind%fluids,size(u,2)) :: vy0
       real, dimension(flind%fluids,size(u,2)) :: rotacc
@@ -181,7 +182,7 @@ contains
 
       ddly  = dts * qshear*omega*dom%L_(xdim)
       dely  = ts  * qshear*omega*dom%L_(xdim)
-      delj  = mod(int(dely/cg%dy), cg%nyb)
+      delj  = mod(int(dely/cg%dy), int(cg%nyb))
       eps   = mod(dely, cg%dy)/cg%dy
 #ifdef FFTW
       do i=lbound(cg%u%arr,1),ubound(cg%u%arr,1)
@@ -304,7 +305,7 @@ contains
 
       do i = 1, cg%nx
          dl  = fx * x(i)
-         ndl = mod(int(dl/cg%dy), cg%nyb)
+         ndl = mod(int(dl/cg%dy), int(cg%nyb))
          ddl = mod(dl, cg%dy)/cg%dy
 
          temp(         1:  cg%je,:)   = qty(i,   1:cg%je ,:)

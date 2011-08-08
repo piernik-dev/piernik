@@ -32,6 +32,7 @@
 !! \brief (MH/JD) [R] Computation of %fluxes for the ionized fluid
 !!
 !!The flux functions for ionized fluid are given by
+!!
 !!\f[
 !!  \vec{F}{(\vec{u})} =
 !!  \left(\begin{array}{c}
@@ -82,24 +83,24 @@ contains
 
       implicit none
 
-      integer, intent(in)                        :: n           !< number of cells in the current sweep
+      integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(inout), pointer :: fluxi     !< flux of ionized fluid
+      real, dimension(:,:), intent(inout), pointer :: cfri      !< freezing speed for ionized fluid
+      real, dimension(:,:), intent(in),    pointer :: uui       !< part of u for ionized fluid
+      real, dimension(:),   intent(inout), pointer :: vx        !< velocity of ionized fluid for current sweep
+      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of ionized fluid for current sweep
+      real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
 
-      real, dimension(:,:), intent(in),    pointer :: uui         !< part of u for ionized fluid
-      real, dimension(:,:), intent(inout), pointer :: fluxi       !< flux of ionized fluid
-      real, dimension(:,:), intent(inout), pointer :: cfri        !< freezing speed for ionized fluid
-      real, dimension(:,:), intent(in),    pointer :: bb          !< magnetic field x,y,z-components table
-      real, dimension(:),   intent(inout), pointer :: vx          !< velocity of ionized fluid for current sweep
-      real, dimension(:),   intent(inout), pointer :: ps          !< gas pressure of ionized fluid for current sweep
-      real, dimension(:),   intent(in),    pointer :: cs_iso2     !< local isothermal sound speed (optional)
-
-      real, dimension(n)               :: p           !< thermal pressure of ionized fluid
-      real, dimension(n)               :: pmag        !< pressure of magnetic field
-      integer                          :: nm
+      ! locals
+      real, dimension(n) :: p           !< thermal pressure of ionized fluid
+      real, dimension(n) :: pmag        !< pressure of magnetic field
+      integer            :: nm
 #ifdef LOCAL_FR_SPEED
-      integer                          :: i
-      real                             :: minvx       !<
-      real                             :: maxvx       !<
-      real                             :: amp         !<
+      integer            :: i
+      real               :: minvx     !<
+      real               :: maxvx     !<
+      real               :: amp       !<
 #endif /* LOCAL_FR_SPEED */
 
       nm = n-1
@@ -148,7 +149,7 @@ contains
 #endif /* !ISO */
       !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
       !>
-      !! \todo  find why is it so
+      !! \todo find why is it so
       !! if such a treatment is OK then should be applied also in both cases of neutral and ionized gas
       !!    do i = 2,nm
       !!       cfri(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
@@ -164,6 +165,7 @@ contains
 #ifdef GLOBAL_FR_SPEED
       ! The freezing speed is now computed globally
       !  (c=const for the whole domain) in subroutine 'timestep'
+
       cfri(:,:) = flind%ion%snap%c
 #endif /* GLOBAL_FR_SPEED */
 

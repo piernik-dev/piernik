@@ -53,7 +53,7 @@ module global
    real            :: t, dt, dt_old, dtm
    real, save      :: magic_mass = 0.0
    real, save      :: local_magic_mass = 0.0
-   integer         :: nstep
+   integer(kind=4) :: nstep
 
    ! Namelist variables
 

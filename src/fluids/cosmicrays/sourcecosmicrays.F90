@@ -45,7 +45,7 @@ contains
 
 !==========================================================================================
 
-   subroutine src_crn(uu,n, decrn)
+   subroutine src_crn(uu, n, decrn)
 
       use fluidindex,    only: flind
       use crcomposition, only: icr_Be10, icr_Be9, icr_C12, sigma_c12_be10, sigma_c12_be9, tau_Be10
@@ -53,11 +53,11 @@ contains
 
       implicit none
 
-      integer, intent(in) :: n
+      integer(kind=4), intent(in) :: n
+      real, dimension(flind%all,n), intent(in)     :: uu
+      real, dimension(flind%crn%all,n), intent(out) :: decrn
 
 ! locals
-      real, dimension(flind%all,n)     :: uu
-      real, dimension(flind%crn%all,n) :: decrn
       real, allocatable               :: dgas(:)
 
       real, parameter  :: gamma_lor = 10.

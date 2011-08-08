@@ -285,9 +285,9 @@ contains
 
       implicit none
 
-      integer, intent(in)            :: sweep
+      integer(kind=4), intent(in)    :: sweep
       integer, intent(in)            :: i1, i2
-      integer, intent(in)            :: n
+      integer(kind=4), intent(in)    :: n
       real, dimension(n),intent(in)  :: xsw
       real, dimension(n),intent(out) :: grav
 

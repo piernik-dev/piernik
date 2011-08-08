@@ -381,7 +381,7 @@ contains
 
       implicit none
 
-      integer,          intent(in)   :: ibdir, sdir, etadir, n1, n2
+      integer(kind=4),  intent(in)   :: ibdir, sdir, etadir, n1, n2
       character(len=*), intent(in)   :: emf
       integer                        :: i1, i2
       integer, dimension(ndims)      :: idml, idmh

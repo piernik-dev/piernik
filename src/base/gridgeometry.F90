@@ -54,7 +54,7 @@ module gridgeometry
 
          implicit none
 
-         integer, intent(in)  :: sweep                  !< direction (xdim, ydim or zdim) we are doing calculations for
+         integer(kind=4),  intent(in)  :: sweep         !< direction (xdim, ydim or zdim) we are doing calculations for
          type(var_numbers), intent(in) :: flind         !< \copydoc fluidindex::flind
          integer, intent(in)           :: i1            !< coordinate of sweep in the 1st remaining direction
          integer, intent(in)           :: i2            !< coordinate of sweep in the 2st remaining direction
@@ -73,7 +73,7 @@ module gridgeometry
 
          implicit none
 
-         integer, intent(in)              :: sweep !< direction (x, y or z) we are doing calculations for
+         integer(kind=4), intent(in)      :: sweep !< direction (x, y or z) we are doing calculations for
          real, dimension(:,:), intent(in) :: u     !< sweep of fluid conservative variables
          real, dimension(:,:), intent(in) :: p     !< sweep of pressure
          type(grid_container), intent(in) :: cg    !< current grid container
@@ -155,7 +155,7 @@ contains
 
       implicit none
 
-      integer, intent(in)           :: sweep
+      integer(kind=4),   intent(in) :: sweep
       type(var_numbers), intent(in) :: flind
       integer, intent(in)           :: i1, i2
       type(grid_container), pointer :: cg
@@ -202,7 +202,7 @@ contains
 
       implicit none
 
-      integer, intent(in)           :: sweep
+      integer(kind=4), intent(in)   :: sweep
       type(var_numbers), intent(in) :: flind
       integer, intent(in)           :: i1, i2
       type(grid_container), pointer :: cg
@@ -259,7 +259,7 @@ contains
 
       implicit none
 
-      integer, intent(in)              :: sweep
+      integer(kind=4), intent(in)      :: sweep
       real, dimension(:,:), intent(in) :: u, p
       type(grid_container), intent(in) :: cg
 
@@ -281,7 +281,7 @@ contains
 
       implicit none
 
-      integer, intent(in)              :: sweep
+      integer(kind=4), intent(in)      :: sweep
       real, dimension(:,:), intent(in) :: u, p
       type(grid_container), intent(in) :: cg
 

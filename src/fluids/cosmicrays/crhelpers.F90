@@ -45,10 +45,15 @@ contains
    end subroutine cleanup_crhelpers
 
    subroutine set_div_v1d(p, dir, i1, i2)
+
       use constants,   only: xdim, ydim, zdim
+
       implicit none
+
+      integer(kind=4), intent(in) :: dir
+      integer, intent(in) :: i1, i2
+
       real, dimension(:), pointer, intent(inout) :: p
-      integer, intent(in) :: dir, i1, i2
 
       select case (dir)
          case (xdim)
@@ -58,7 +63,7 @@ contains
          case (zdim)
             p => divvel(i1, i2, :)
       end select
-      return
+
    end subroutine set_div_v1d
 
    subroutine div_v(ifluid)
@@ -73,10 +78,12 @@ contains
 
       implicit none
 
+      integer(kind=4), intent(in) :: ifluid
+
       real, dimension(:), allocatable :: vx
       real, dimension(:), allocatable :: vy
       real, dimension(:), allocatable :: vz
-      integer                :: i, j, k, ifluid
+      integer                :: i, j, k
       integer                :: idnf, imxf, imyf, imzf
       type(grid_container), pointer :: cg
 

@@ -188,13 +188,13 @@ contains
       character(len=*) :: dsetname              !< Dataset name
       integer(HID_T) :: file_id                 !< File identifier
 
-      integer, parameter :: rank = ndims        !< Dataset rank = 3
+      integer(kind=4), parameter :: rank = ndims        !< Dataset rank = 3
       integer(HID_T) :: dset_id                 !< Dataset identifier
       integer(HID_T) :: plist_id                !< Property list identifier
       integer(HID_T) :: filespace               !< Dataspace identifier in file
       integer(HID_T) :: memspace                !< Dataspace identifier in memory
       integer(HSIZE_T), dimension(rank) :: count, offset, stride, block, dimsf, chunk_dims
-      integer :: error
+      integer(kind=4) :: error
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 

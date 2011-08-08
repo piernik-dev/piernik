@@ -43,13 +43,13 @@ module initneutral
 
    public ! QA_WARN no secrets are kept here
 
-   real                  :: gamma_neu             !< adiabatic index for the neutral gas
+   real                  :: gamma_neu             !< adiabatic index for the neutral gas component
    real                  :: cs_iso_neu            !< isothermal sound speed (p = cs_iso_neu<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
    real                  :: cs_iso_neu2
    logical               :: selfgrav_neu          !< true if neutral gas is selfgravitating
-   integer               :: idnn, imxn, imyn, imzn
+   integer(kind=4)       :: idnn, imxn, imyn, imzn
 #ifndef ISO
-   integer               :: ienn
+   integer(kind=4)       :: ienn
 #endif /* !ISO */
 
 contains
@@ -62,17 +62,17 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>gamma_neu     </td><td>1.66666666</td><td>real value</td><td>\copydoc initneutral::gamma_neu  </td></tr>
-!! <tr><td>cs_iso_neu    </td><td>1.0       </td><td>real value</td><td>\copydoc initneutral::cs_iso_neu </td></tr>
-!! <tr><td>selfgrav_neu  </td><td>.false.   </td><td>logical   </td><td>\copydoc initneutral::selfgrav_neu  </td></tr>
+!! <tr><td>gamma_neu     </td><td>5./3.   </td><td>real value </td><td>\copydoc initneutral::gamma_neu    </td></tr>
+!! <tr><td>cs_iso_neu    </td><td>1.0     </td><td>real value </td><td>\copydoc initneutral::cs_iso_neu   </td></tr>
+!! <tr><td>selfgrav_neu  </td><td>.false. </td><td>logical    </td><td>\copydoc initneutral::selfgrav_neu </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_neutral
 
-      use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use mpisetup,       only: master, slave, ierr, comm, rbuff, lbuff, buffer_dim
-      use mpi,            only: MPI_LOGICAL, MPI_DOUBLE_PRECISION
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml ! QA_WARN required for diff_nml
+      use mpisetup,      only: rbuff, lbuff, comm, ierr, buffer_dim, master, slave
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
 
       implicit none
 
@@ -110,7 +110,7 @@ contains
    end subroutine init_neutral
 
    subroutine neutral_index(flind)
-      use constants,    only: NEU
+      use constants,    only: NEU, INT4
       use diagnostics,  only: ma1d, my_allocate
       use fluidtypes,   only: var_numbers
 
@@ -118,12 +118,12 @@ contains
 
       type(var_numbers), intent(inout) :: flind
 
-      flind%neu%beg    = flind%all + 1
+      flind%neu%beg    = flind%all + 1_INT4
 
-      idnn = flind%all + 1
-      imxn = flind%all + 2
-      imyn = flind%all + 3
-      imzn = flind%all + 4
+      idnn = flind%all + 1_INT4
+      imxn = flind%all + 2_INT4
+      imyn = flind%all + 3_INT4
+      imzn = flind%all + 4_INT4
 
       flind%neu%idn = idnn
       flind%neu%imx = imxn
@@ -133,10 +133,10 @@ contains
       flind%neu%all  = 4
       flind%all      = imzn
 #ifndef ISO
-      ienn          = imzn + 1
+      ienn          = imzn + 1_INT4
+      flind%all      = flind%all + 1_INT4
+      flind%neu%all  = flind%neu%all +1_INT4
       flind%neu%ien  = ienn
-      flind%all      = flind%all + 1
-      flind%neu%all  = flind%neu%all +1
 #endif /* !ISO */
 
       ma1d = [flind%neu%all]
@@ -158,20 +158,21 @@ contains
       flind%neu%iarr_swpz(5) = ienn
       flind%neu%has_energy   = .true.
 
-      flind%energ = flind%energ + 1
-#endif /* ISO */
+      flind%energ = flind%energ + 1_INT4
+#endif /* !ISO */
 
       flind%neu%end    = flind%all
-      flind%components = flind%components + 1
-      flind%fluids     = flind%fluids + 1
+      flind%components = flind%components + 1_INT4
+      flind%fluids     = flind%fluids + 1_INT4
       flind%neu%pos    = flind%components
-      if (selfgrav_neu)  flind%fluids_sg = flind%fluids_sg + 1
+      if (selfgrav_neu)  flind%fluids_sg = flind%fluids_sg + 1_INT4
 
       flind%neu%gam   = gamma_neu
       flind%neu%gam_1 = gamma_neu-1.0
       flind%neu%cs    = cs_iso_neu
       flind%neu%cs2   = cs_iso_neu**2
       flind%neu%tag   = NEU
+
       flind%neu%is_selfgrav   = selfgrav_neu
       flind%neu%is_magnetized = .false.
 #ifndef ISO
@@ -179,5 +180,11 @@ contains
 #endif /* !ISO */
 
    end subroutine neutral_index
+
+   subroutine cleanup_neutral
+
+      implicit none
+
+   end subroutine cleanup_neutral
 
 end module initneutral

@@ -58,7 +58,7 @@ module gravity
    real    :: ptm_y                 !< point mass position y-component
    real    :: ptm_z                 !< point mass position z-component
    real    :: r_smooth              !< smoothing radius in point mass %types of %gravity
-   integer :: nsub                  !< number of subcells while additionally cell division in z-direction is present during establishment of hydrostatic equilibrium
+   integer(kind=4) :: nsub          !< number of subcells while additionally cell division in z-direction is present during establishment of hydrostatic equilibrium
    real    :: h_grav                !< altitude of acceleration cut used when n_gravh is set to non-zero
    real    :: r_grav                !< radius of gravitational potential cut used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
    integer :: n_gravh               !< index of hyperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
@@ -103,10 +103,10 @@ module gravity
 
       subroutine user_grav_accel(sweep, i1,i2, xsw, n, grav)
          implicit none
-         integer, intent(in)            :: sweep            !< COMMENT ME
+         integer(kind=4), intent(in)    :: sweep            !< COMMENT ME
          integer, intent(in)            :: i1               !< COMMENT ME
          integer, intent(in)            :: i2               !< COMMENT ME
-         integer, intent(in)            :: n                !< COMMENT ME
+         integer(kind=4), intent(in)    :: n                !< COMMENT ME
          real, dimension(n),intent(in)  :: xsw              !< COMMENT ME
          real, dimension(n),intent(out) :: grav             !< COMMENT ME
       end subroutine user_grav_accel
@@ -237,7 +237,7 @@ contains
 
       if (slave) then
 
-         nsub                = ibuff(1)
+         nsub                = int(ibuff(1), kind=4)
          n_gravr             = ibuff(2)
          n_gravh             = ibuff(3)
 
@@ -759,10 +759,10 @@ contains
 
       implicit none
 
-      integer, intent(in)            :: sweep      !< string of characters that points out the current sweep direction
+      integer(kind=4), intent(in)    :: sweep      !< string of characters that points out the current sweep direction
       integer, intent(in)            :: i1         !< number of column in the first direction after one pointed out by sweep
       integer, intent(in)            :: i2         !< number of column in the second direction after one pointed out by sweep
-      integer, intent(in)            :: n          !< number of elements of returned array grav
+      integer(kind=4), intent(in)    :: n          !< number of elements of returned array grav
       real, dimension(n),intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
       integer, intent(in)            :: istep      !< istep=1 for halfstep, istep=2 for fullstep
       type(grid_container), pointer, intent(in) :: cg

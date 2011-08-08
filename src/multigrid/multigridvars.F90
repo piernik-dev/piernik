@@ -68,7 +68,7 @@ module multigridvars
    logical            :: verbose_vcycle                               !< Print one line of log per V-cycle, summary otherwise
 
    ! dimensions
-   integer                                 :: ngridvars               !< number of variables required for implementation of multigrid
+   integer(kind=4) :: ngridvars                                       !< number of variables required for implementation of multigrid
 
    ! boundaries
    enum, bind(C)                                                      !< constants for enumerating multigrid boundary types
@@ -185,7 +185,7 @@ contains
       implicit none
 
       class(plvl), intent(inout), target  :: this
-      integer, intent(in)      :: iv
+      integer(kind=4), intent(in)      :: iv
 
       class(plvl), pointer :: coarse
       integer :: g, g1, d
@@ -311,7 +311,7 @@ contains
       implicit none
 
       class(plvl), intent(inout), target  :: this
-      integer, intent(in)      :: iv    !< variable to be prolonged
+      integer(kind=4), intent(in)         :: iv    !< variable to be prolonged
 
       class(plvl), pointer :: fine
       integer :: g, g1, d

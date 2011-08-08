@@ -43,17 +43,15 @@ module fluxcosmicrays
 
 contains
 
-!==========================================================================================
+   subroutine flux_crs(fluxc, vion, uuc, n)
 
-   subroutine flux_crs(fluxc,vion,uuc,n)
-
-      use fluidindex,      only: flind
+      use fluidindex, only: flind
 
       implicit none
 
-      integer, intent(in) :: n
-      real, dimension(n), intent(in)  :: vion
-      real, dimension(:,:), intent(in), pointer  :: uuc
+      integer(kind=4), intent(in)                  :: n
+      real, dimension(n),   intent(in)             :: vion
+      real, dimension(:,:), intent(in),    pointer :: uuc
       real, dimension(:,:), intent(inout), pointer :: fluxc
 
       fluxc   = 0.0

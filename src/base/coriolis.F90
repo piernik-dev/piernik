@@ -84,7 +84,7 @@ contains
 
       implicit none
 
-      integer, intent(in)                      :: sweep  !< string of characters that points out the current sweep direction
+      integer(kind=4), intent(in)              :: sweep  !< string of characters that points out the current sweep direction
       real, dimension(:,:), intent(in)         :: u      !< current fluid state vector
       real, dimension(flind%fluids, size(u,2)) :: rotacc !< an array for Coriolis accelerations
 

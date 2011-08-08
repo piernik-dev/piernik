@@ -130,7 +130,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: dir
+      integer(kind=4), intent(in) :: dir
       type(grid_container), pointer, intent(inout) :: cg
 
       logical, save    :: frun = .true.
@@ -644,7 +644,7 @@ contains
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      integer :: dir
+      integer(kind=4) :: dir
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[fluidboundaries:all_fluid_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial communication
 

@@ -70,7 +70,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: iv   !< index of variable in lvl()%mgvar which we want to pollute
+      integer(kind=4), intent(in) :: iv   !< index of variable in lvl()%mgvar which we want to pollute
 
       type(plvl), pointer :: curl
 
@@ -101,7 +101,7 @@ contains
 
       implicit none
 
-      integer,           intent(in) :: iv     !< index of variable in lvl()%mgvar which we want to pollute
+      integer(kind=4),   intent(in) :: iv     !< index of variable in lvl()%mgvar which we want to pollute
       integer,           intent(in) :: lev    !< level which we are checking. Invalid means all levels
       character(len=*),  intent(in) :: label  !< label to indicate the origin of call
       integer, optional, intent(in) :: expand !< also check guardcells

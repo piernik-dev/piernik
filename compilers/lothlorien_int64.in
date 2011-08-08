@@ -1,0 +1,30 @@
+###############################################################################
+#
+# Make definitions for lothlorien (Fedora 14, x86)
+#
+# System packages:
+#   gcc-4.6.0-0.11.fc15.i686, fftw-devel
+#
+# User-compiled packages:
+#   openmpi --enable-memchecker --with-valgrind --enable-branch-probabilities
+#   hdf5 --enable-fortran --enable-using-memchecker --enable-parallel
+#
+# ~/.bashrc:
+#   export HDF5_USE_SHLIB=yes
+#
+
+PROG     = piernik
+F90      = h5pfc
+F90FLAGS  = -fdefault-real-8 -fdefault-integer-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none 
+F90FLAGS += -O3 -funroll-loops
+F90FLAGS += -fno-realloc-lhs
+F90FLAGS += -Wall -Wextra -W -fbacktrace -ggdb
+F90FLAGS += -fbounds-check -frange-check -Wsurprising -Wcharacter-truncation -ffpe-trap=invalid,zero,overflow,denormal -pedantic
+LDFLAGS   = -Wl,--as-needed -Wl,-O1
+USE_GNUCPP = yes
+MAKEFLAGS += -j4
+
+# for the kepler problem
+F90FLAGS += -I/home/gawrysz/usr/include/gfortran
+LDFLAGS += -L/home/gawrysz/usr/lib/
+LIBS += -lfgsl_gfortran -lgsl

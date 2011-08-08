@@ -1442,9 +1442,9 @@ contains
       implicit none
 
       integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: src  !< index of source in lvl()%mgvar
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
-      integer, intent(in) :: def  !< index of defect in lvl()%mgvar
+      integer(kind=4), intent(in) :: src  !< index of source in lvl()%mgvar
+      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
+      integer(kind=4), intent(in) :: def  !< index of defect in lvl()%mgvar
 
       if (any( [ src, soln, def ] <= 0) .or. any( [ src, soln, def ] > ngridvars)) call die("[multigrid_gravity:residual] Invalid variable index")
       if (lev < base%level .or. lev > roof%level) call die("[multigrid_gravity:residual] Invalid level number")
@@ -1477,9 +1477,9 @@ contains
       implicit none
 
       integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: src  !< index of source in lvl()%mgvar
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
-      integer, intent(in) :: def  !< index of defect in lvl()%mgvar
+      integer(kind=4), intent(in) :: src  !< index of source in lvl()%mgvar
+      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
+      integer(kind=4), intent(in) :: def  !< index of defect in lvl()%mgvar
 
       real    :: L0, Lx, Ly, Lz, Lx1
       integer :: i, j, k
@@ -1592,9 +1592,9 @@ contains
       implicit none
 
       integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: src  !< index of source in lvl()%mgvar
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
-      integer, intent(in) :: def  !< index of defect in lvl()%mgvar
+      integer(kind=4), intent(in) :: src  !< index of source in lvl()%mgvar
+      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
+      integer(kind=4), intent(in) :: def  !< index of defect in lvl()%mgvar
 
       real, parameter     :: L4_scaling = 1./12. ! with L4_strength = 1. this gives an L4 approximation for finite differences approach
       integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
@@ -1689,8 +1689,8 @@ contains
       implicit none
 
       integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: src  !< index of source in lvl()%mgvar
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
+      integer(kind=4), intent(in) :: src  !< index of source in lvl()%mgvar
+      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
       type(plvl), pointer :: curl
 
       if (any( [ src, soln ] <= 0) .or. any( [ src, soln ] > ngridvars)) call die("[multigrid_gravity:approximate_solution] Invalid variable index.")
@@ -1735,8 +1735,8 @@ contains
       implicit none
 
       integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: src  !< index of source in lvl()%mgvar
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
+      integer(kind=4), intent(in) :: src  !< index of source in lvl()%mgvar
+      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
 
       integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
 
@@ -1893,8 +1893,8 @@ contains
       implicit none
 
       integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: src  !< index of source in lvl()%mgvar
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
+      integer(kind=4), intent(in) :: src  !< index of source in lvl()%mgvar
+      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
 
       integer :: nf, n, nsmoo
       type(plvl), pointer :: curl
@@ -2088,7 +2088,7 @@ contains
       implicit none
 
       integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar
+      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
 
       if (grav_bnd == bnd_periodic .and. (nproc == 1 .or. (lev == base%level .and. single_base) ) ) then
          call zero_boundaries(lev)

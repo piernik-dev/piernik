@@ -428,10 +428,10 @@ contains
 
       integer(HID_T),intent(in)  :: file_id
       integer(SIZE_T)            :: bufsize
-      integer                    :: error
+      integer(kind=4)            :: error
 
       bufsize = 1
-      call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize,error)
+      call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize, error)
 
    end subroutine init_prob_attrs
 

@@ -113,8 +113,8 @@ contains
 
       implicit none
 
-      integer, intent(in)      :: lev   !< level to prolong from
-      integer, intent(in)      :: iv    !< variable to be prolonged
+      integer, intent(in)         :: lev   !< level to prolong from
+      integer(kind=4), intent(in) :: iv    !< variable to be prolonged
 
       logical, save :: firstcall = .true.
 
@@ -157,8 +157,8 @@ contains
 
       implicit none
 
-      integer, intent(in)      :: lev   !< level to prolong from
-      integer, intent(in)      :: iv    !< variable to be prolonged
+      integer, intent(in)         :: lev   !< level to prolong from
+      integer(kind=4), intent(in) :: iv    !< variable to be prolonged
 
       type(plvl), pointer :: coarse, fine
 
@@ -211,8 +211,8 @@ contains
 
       implicit none
 
-      integer, intent(in)      :: lev   !< level to prolong from
-      integer, intent(in)      :: iv    !< variable to be prolonged
+      integer, intent(in)         :: lev   !< level to prolong from
+      integer(kind=4), intent(in) :: iv    !< variable to be prolonged
 
       type(plvl), pointer :: coarse, fine
       real, parameter :: P_1 = -3./32., P0 = 30./32., P1 = 5./32.
@@ -264,8 +264,8 @@ contains
 
       implicit none
 
-      integer, intent(in)      :: lev   !< level to prolong from
-      integer, intent(in)      :: iv    !< variable to be prolonged
+      integer, intent(in)         :: lev   !< level to prolong from
+      integer(kind=4), intent(in) :: iv    !< variable to be prolonged
 
       type(plvl), pointer :: coarse, fine
 
@@ -330,8 +330,8 @@ contains
 
       implicit none
 
-      integer, intent(in)      :: lev   !< level to prolong from
-      integer, intent(in)      :: iv    !< variable to be prolonged
+      integer, intent(in)         :: lev   !< level to prolong from
+      integer(kind=4), intent(in) :: iv    !< variable to be prolonged
 
       type(plvl), pointer :: coarse, fine
 

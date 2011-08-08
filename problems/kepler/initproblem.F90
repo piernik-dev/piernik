@@ -830,12 +830,16 @@ contains
       cg%u%arr(iarr_all_en, cg%ie+1:cg%nx,:,:) = ene0(:, cg%ie+1:cg%nx,:,:)
 #endif /* !ISO */
    end subroutine my_bnd_xr
+
 !-----------------------------------------------------------------------------
-   function get_lcutoff(width,dist,n,vmin,vmax) result(y)
+
+   function get_lcutoff(width, dist, n, vmin, vmax) result(y)
+
       implicit none
+
       integer, intent(in) :: width  !< width of tanh profile [cells]
       integer, intent(in) :: dist   !< distance between the expected position of the profile and the middle cell of the domain [cells]
-      integer, intent(in) :: n      !< length of the profile array
+      integer(kind=4), intent(in) :: n !< length of the profile array
       real, intent(in)    :: vmin   !< minimal value of the profile
       real, intent(in)    :: vmax   !< maximum value of the profile
       real, dimension(n)  :: y, x
@@ -914,8 +918,8 @@ contains
       character(kind=fgsl_char,len=fgsl_strmax) :: fname
       real, dimension(:), allocatable :: x,y
       real                            :: xi
-      integer                         :: n, nxd, i
-      integer(fgsl_size_t)            :: nmax
+      integer                         :: nxd, i
+      integer(fgsl_size_t)            :: n, nmax
 
       write(msg,*) "[initproblem:read_dens_profile] Reading ", trim(densfile)
       open(1,file=densfile, status="old", form='unformatted')

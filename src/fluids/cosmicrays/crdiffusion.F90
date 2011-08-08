@@ -51,7 +51,8 @@ contains
 
       implicit none
 
-      integer, intent(in) :: crsall
+      integer(kind=4), intent(in) :: crsall
+
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 

@@ -78,7 +78,7 @@ contains
       implicit none
 
       integer, intent(in)      :: lev   !< level to prolong from
-      integer, intent(in)      :: iv    !< variable to be prolonged
+      integer(kind=4), intent(in) :: iv    !< variable to be prolonged
 
       type(plvl), pointer :: coarse, fine
 
@@ -119,7 +119,7 @@ contains
 
       implicit none
 
-      integer, intent(in)      :: iv    !< variable to be restricted
+      integer(kind=4), intent(in)      :: iv    !< variable to be restricted
 
       type(plvl), pointer :: curl
 
@@ -153,7 +153,7 @@ contains
 
       implicit none
 
-      integer, intent(in)  :: iv   !< index of variable in lvl()%mgvar for which we want to find the norm
+      integer(kind=4), intent(in)  :: iv   !< index of variable in lvl()%mgvar for which we want to find the norm
       real,    intent(out) :: norm !< the calculated norm
 
       real                 :: lsum
@@ -194,7 +194,7 @@ contains
       implicit none
 
       integer, intent(in) :: lev  !< level for which we want to subtract its average from
-      integer, intent(in) :: iv   !< index of variable in lvl()%mgvar which we want to have zero average
+      integer(kind=4), intent(in) :: iv   !< index of variable in lvl()%mgvar which we want to have zero average
 
       real                :: lsum, avg, vol
       integer             :: i
@@ -253,7 +253,7 @@ contains
       implicit none
 
       integer, intent(in) :: lev  !< level for which approximate the solution
-      integer, intent(in) :: soln !< index of solution in lvl()%mgvar ! \todo change the name
+      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar ! \todo change the name
 
       integer                       :: i, j, k, d, lh, g, g1, gc, ib, jb, ibh, jbh, l
       type(plvl), pointer           :: coarse, fine

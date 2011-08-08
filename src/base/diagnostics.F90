@@ -31,9 +31,9 @@ module diagnostics
    implicit none
 
    interface my_allocate
-      module procedure allocate_array_1D_int
-      module procedure allocate_array_2D_int
-      module procedure allocate_array_3D_int
+      module procedure allocate_array_1D_int4
+      module procedure allocate_array_2D_int4
+      module procedure allocate_array_3D_int4
       module procedure allocate_array_1D_real
       module procedure allocate_array_2D_real
       module procedure allocate_array_3D_real
@@ -42,9 +42,9 @@ module diagnostics
    end interface my_allocate
 
    interface my_deallocate
-      module procedure deallocate_array_1D_int
-      module procedure deallocate_array_2D_int
-      module procedure deallocate_array_3D_int
+      module procedure deallocate_array_1D_int4
+      module procedure deallocate_array_2D_int4
+      module procedure deallocate_array_3D_int4
       module procedure deallocate_array_1D_real
       module procedure deallocate_array_2D_real
       module procedure deallocate_array_3D_real
@@ -71,11 +71,11 @@ module diagnostics
 
    real, dimension(:), allocatable                  :: array_sizes
    character(len=an_len), dimension(:), allocatable :: array_names
-   integer, dimension(1) :: ma1d
-   integer, dimension(2) :: ma2d
-   integer, dimension(3) :: ma3d
-   integer, dimension(4) :: ma4d
-   integer, dimension(5) :: ma5d
+   integer(kind=4), dimension(1) :: ma1d
+   integer(kind=4), dimension(2) :: ma2d
+   integer(kind=4), dimension(3) :: ma3d
+   integer(kind=4), dimension(4) :: ma4d
+   integer(kind=4), dimension(5) :: ma5d
 
 contains
 
@@ -225,32 +225,32 @@ contains
 
    ! GOD I NEED TEMPLATES IN FORTRAN!!!!
 
-   subroutine deallocate_array_1D_int(array)
+   subroutine deallocate_array_1D_int4(array)
       implicit none
-      integer, dimension(:), allocatable, intent(inout)  :: array
+      integer(kind=4), dimension(:), allocatable, intent(inout)  :: array
 
       used_memory = used_memory - size(array)*MiB*0.5
       if (allocated(array)) deallocate(array)
 
-   end subroutine deallocate_array_1D_int
+   end subroutine deallocate_array_1D_int4
 
-   subroutine deallocate_array_2D_int(array)
+   subroutine deallocate_array_2D_int4(array)
       implicit none
-      integer, dimension(:,:), allocatable, intent(inout)  :: array
+      integer(kind=4), dimension(:,:), allocatable, intent(inout)  :: array
 
       used_memory = used_memory - size(array)*MiB*0.5
       if (allocated(array)) deallocate(array)
 
-   end subroutine deallocate_array_2D_int
+   end subroutine deallocate_array_2D_int4
 
-   subroutine deallocate_array_3D_int(array)
+   subroutine deallocate_array_3D_int4(array)
       implicit none
-      integer, dimension(:,:,:), allocatable, intent(inout)  :: array
+      integer(kind=4), dimension(:,:,:), allocatable, intent(inout)  :: array
 
       used_memory = used_memory - size(array)*MiB*0.5
       if (allocated(array)) deallocate(array)
 
-   end subroutine deallocate_array_3D_int
+   end subroutine deallocate_array_3D_int4
 
    subroutine deallocate_array_1D_real(array)
       implicit none
@@ -297,14 +297,14 @@ contains
 
    end subroutine deallocate_array_5D_real
 
-   subroutine allocate_array_1D_int(array,as,aname)
+   subroutine allocate_array_1D_int4(array,as,aname)
 
       use constants, only: big_int
 
       implicit none
 
-      integer, dimension(:), allocatable, intent(inout)  :: array
-      integer, dimension(1), intent(in)                  :: as
+      integer(kind=4), dimension(:), allocatable, intent(inout)  :: array
+      integer(kind=4), dimension(1), intent(in)          :: as
       character(len=*), intent(in), optional             :: aname
 
       if (.not.allocated(array)) then
@@ -314,16 +314,16 @@ contains
       used_memory = used_memory + size(array)*MiB*0.5
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB*0.5,aname)
 
-   end subroutine allocate_array_1D_int
+   end subroutine allocate_array_1D_int4
 
-   subroutine allocate_array_2D_int(array,as,aname)
+   subroutine allocate_array_2D_int4(array,as,aname)
 
       use constants, only: big_int
 
       implicit none
 
-      integer, dimension(:,:), allocatable, intent(inout)  :: array
-      integer, dimension(2), intent(in)                    :: as
+      integer(kind=4), dimension(:,:), allocatable, intent(inout)  :: array
+      integer(kind=4), dimension(2), intent(in)            :: as
       character(len=*), intent(in), optional               :: aname
 
       if (.not.allocated(array)) then
@@ -333,16 +333,16 @@ contains
       used_memory = used_memory + size(array)*MiB*0.5
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB*0.5,aname)
 
-   end subroutine allocate_array_2D_int
+   end subroutine allocate_array_2D_int4
 
-   subroutine allocate_array_3D_int(array,as,aname)
+   subroutine allocate_array_3D_int4(array,as,aname)
 
       use constants, only: big_int
 
       implicit none
 
-      integer, dimension(:,:,:), allocatable, intent(inout)  :: array
-      integer, dimension(3), intent(in)                      :: as
+      integer(kind=4), dimension(:,:,:), allocatable, intent(inout)  :: array
+      integer(kind=4), dimension(3), intent(in)              :: as
       character(len=*), intent(in), optional                 :: aname
 
       if (.not.allocated(array)) then
@@ -352,7 +352,7 @@ contains
       used_memory = used_memory + size(array)*MiB*0.5
       if (present(aname)) call keep_track_of_arrays(size(array)*MiB*0.5,aname)
 
-   end subroutine allocate_array_3D_int
+   end subroutine allocate_array_3D_int4
 
    subroutine allocate_array_1D_real(array,as,aname)
 
@@ -361,7 +361,7 @@ contains
       implicit none
 
       real, dimension(:), allocatable, intent(inout)  :: array
-      integer, dimension(1), intent(in)               :: as
+      integer(kind=4), dimension(1), intent(in)       :: as
       character(len=*), intent(in), optional          :: aname
 
       if (.not.allocated(array)) then
@@ -380,7 +380,7 @@ contains
       implicit none
 
       real, dimension(:,:), allocatable, intent(inout)  :: array
-      integer, dimension(2), intent(in)                 :: as
+      integer(kind=4), dimension(2), intent(in)         :: as
       character(len=*), intent(in), optional            :: aname
 
       if (.not.allocated(array)) then
@@ -399,7 +399,7 @@ contains
       implicit none
 
       real, dimension(:,:,:), allocatable, intent(inout)  :: array
-      integer, dimension(3), intent(in)                   :: as
+      integer(kind=4), dimension(3), intent(in)           :: as
       character(len=*), intent(in), optional              :: aname
 
       if (.not.allocated(array)) then
@@ -418,7 +418,7 @@ contains
       implicit none
 
       real, dimension(:,:,:,:), allocatable, intent(inout)  :: array
-      integer, dimension(4), intent(in)                     :: as
+      integer(kind=4), dimension(4), intent(in)             :: as
       character(len=*), intent(in), optional                :: aname
 
       if (.not.allocated(array)) then
@@ -437,7 +437,7 @@ contains
       implicit none
 
       real, dimension(:,:,:,:,:), allocatable, intent(inout)  :: array
-      integer, dimension(5), intent(in)                       :: as
+      integer(kind=4), dimension(5), intent(in)               :: as
       character(len=*), intent(in), optional                  :: aname
 
       if (.not.allocated(array)) then

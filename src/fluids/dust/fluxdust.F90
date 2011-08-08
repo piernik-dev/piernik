@@ -31,30 +31,31 @@
 !>
 !! \brief (MH/JD) [R] Computation of %fluxes for the dust fluid
 !!
-!!The flux functions for dust are given by:
+!!The flux functions for dust are given by
+!!
 !!\f[
 !!  \vec{F}{(\vec{u})} =
 !!  \left(\begin{array}{c}
 !!    \rho v_x \\
-!!    (\rho v_x) v_x\\
-!!    (\rho v_y) v_x\\
-!!    (\rho v_z) v_x
+!!    \rho v_x^2 \\
+!!    \rho v_x v_y \\
+!!    \rho v_x v_z
 !!  \end{array}\right),
 !!  \qquad
 !!  \vec{G}{(\vec{u})} =
 !!  \left(\begin{array}{c}
 !!    \rho v_y \\
-!!    (\rho v_x) v_y \\
-!!    (\rho v_y) v_y \\
-!!    (\rho v_z) v_y
+!!    \rho v_y v_x \\
+!!    \rho v_y^2 \\
+!!    \rho v_y v_z
 !!  \end{array}\right),
 !!\qquad
 !!  \vec{H}{(\vec{u})} =
 !!  \left(\begin{array}{c}
 !!    \rho v_z \\
-!!    (\rho v_x) v_z\\
-!!    (\rho v_y) v_z \\
-!!    (\rho v_z) v_z
+!!    \rho v_z v_x\\
+!!    \rho v_z v_y \\
+!!    \rho v_z^2
 !!  \end{array}\right),
 !!\f]
 !!
@@ -67,26 +68,23 @@ module fluxdust
    public :: flux_dst
 
 contains
-!==========================================================================================
 
-   subroutine flux_dst(fluxd,cfrd,uud,n,vx,ps,bb,cs_iso2)
+   subroutine flux_dst(fluxd, cfrd, uud, n, vx, ps, bb, cs_iso2)
 
-      !use constants,  only: small
       use fluidindex, only: idn, imx, imy, imz
-      !use mpisetup,   only: cfr_smooth
 #ifdef GLOBAL_FR_SPEED
       use timestep,   only: c_all
 #endif /* GLOBAL_FR_SPEED */
 
       implicit none
-      integer, intent(in)                         :: n       !< number of cells in the current sweep
-      real, dimension(:,:), intent(inout), pointer  :: fluxd   !< flux for dust
-      real, dimension(:,:), intent(in),    pointer  :: uud     !< part of u for dust
-      real, dimension(:,:), intent(inout), pointer  :: cfrd    !< freezing speed for dust
-      real, dimension(:,:), intent(in),    pointer  :: bb      !< magnetic field x,y,z-components table
-      real, dimension(:),   intent(inout), pointer  :: vx      !< velocity of dust fluid for current sweep
-      real, dimension(:),   intent(inout), pointer  :: ps      !< pressure of dust fluid for current sweep
-      real, dimension(:),   intent(in),    pointer  :: cs_iso2 !< local isothermal sound speed (optional)
+      integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(inout), pointer :: fluxd     !< flux of dust
+      real, dimension(:,:), intent(inout), pointer :: cfrd      !< freezing speed for dust
+      real, dimension(:,:), intent(in),    pointer :: uud       !< part of u for dust
+      real, dimension(:),   intent(inout), pointer :: vx        !< velocity of dust fluid for current sweep
+      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of dust fluid for current sweep
+      real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
 
       ! locals
 !      real               :: minvx, maxvx, amp
@@ -106,10 +104,10 @@ contains
       fluxd(:,1) = fluxd(:,2); fluxd(:,n) = fluxd(:,nm)
 
 #ifdef LOCAL_FR_SPEED
+
       ! The freezing speed is now computed locally (in each cell)
       !  as in Trac & Pen (2003). This ensures much sharper shocks,
       !  but sometimes may lead to numerical instabilities
-
 !     minvx = minval(vx(RNG))
 !     maxvx = maxval(vx(RNG))
 !     amp   = (maxvx-minvx)*0.5
@@ -127,13 +125,14 @@ contains
 
 #ifdef GLOBAL_FR_SPEED
       ! The freezing speed is now computed globally
-      ! (c=const for the whole domain) in sobroutine 'timestep'
-      !
+      !  (c=const for the whole domain) in subroutine 'timestep'
+
       !  cfrd(:,:) = flind%dst%snap%c
       cfrd(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
       return
       if (.false.) write(0,*) bb, cs_iso2
+
    end subroutine flux_dst
 
 end module fluxdust

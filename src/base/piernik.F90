@@ -32,7 +32,7 @@
 program piernik
 ! pulled by ANY
 
-   use constants,   only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout
+   use constants,   only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, INT4
    use dataio,      only: write_data, user_msg_handler, check_log, check_tsl
    use dataio_pub,  only: nend, tend, msg, printinfo, warn, die, code_progress
    use fluidupdate, only: fluid_update
@@ -96,7 +96,7 @@ program piernik
 
       if (.not.cfl_violated) tlast = t
       call fluid_update
-      nstep=nstep+1
+      nstep = nstep + 1_INT4
       call print_progress(nstep)
 
       if (t == tlast .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
@@ -161,7 +161,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: nstep
+      integer(kind=4), intent(in) :: nstep
 
       character(len=cwdlen), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es23.16,'   t = ',es23.16,'   dWallClock = ',f10.2,' s')"
 

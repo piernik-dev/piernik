@@ -50,7 +50,7 @@ contains
 
    subroutine mpi_multigrid_prep
 
-      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ndims, INVALID
+      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ndims, INVALID, INT4
       use dataio_pub,    only: warn, die
       use domain,        only: is_overlap, has_dir, cdd
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_COMM_NULL
@@ -59,8 +59,9 @@ contains
 
       implicit none
 
-      integer :: ib, d, g, j, lh, hl
-      integer, dimension(ndims) :: sizes, subsizes, starts
+      integer(kind=4):: ib
+      integer :: d, g, j, lh, hl
+      integer(kind=4), dimension(ndims) :: sizes, subsizes, starts
       logical :: sharing
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened, b_layer, bp_layer, poff
@@ -225,12 +226,12 @@ contains
                                  ! set MPI type only for non-local transfers
                                  call MPI_Type_create_subarray(ndims, [ curl%nx, curl%ny, curl%nz ], &
                                       &                        int(curl%i_bnd(d, ib)%seg(g)%se(:, HI) - curl%i_bnd(d, ib)%seg(g)%se(:, LO) + 1, kind=4), &
-                                      &                        int(curl%i_bnd(d, ib)%seg(g)%se(:, LO), kind=4)-1, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
+                                      &                        int(curl%i_bnd(d, ib)%seg(g)%se(:, LO) - 1, kind=4), MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
                                       &                        curl%i_bnd(d, ib)%seg(g)%mbc, ierr)
                                  call MPI_Type_commit(curl%i_bnd(d, ib)%seg(g)%mbc, ierr)
                                  call MPI_Type_create_subarray(ndims, [ curl%nx, curl%ny, curl%nz ], &
                                       &                        int(curl%o_bnd(d, ib)%seg(g)%se(:, HI) - curl%o_bnd(d, ib)%seg(g)%se(:, LO) + 1, kind=4), &
-                                      &                        int(curl%o_bnd(d, ib)%seg(g)%se(:, LO), kind=4)-1, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
+                                      &                        int(curl%o_bnd(d, ib)%seg(g)%se(:, LO) - 1, kind=4), MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
                                       &                        curl%o_bnd(d, ib)%seg(g)%mbc, ierr)
                                  call MPI_Type_commit(curl%o_bnd(d, ib)%seg(g)%mbc, ierr)
                               enddo
@@ -250,7 +251,7 @@ contains
                   if (has_dir(d) .and. .not. curl%empty) then
                      subsizes(:) = sizes(:)
                      subsizes(d) = ib
-                     starts(:) = 0
+                     starts(:) = 0_INT4
 
                      starts(d) = curl%nb-ib
                      call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, curl%mmbc(d, LO, BND, ib), ierr)
@@ -298,9 +299,9 @@ contains
       implicit none
 
       integer, intent(in) :: lev               !< level which we are doing communication at
-      integer, intent(in) :: iv                !< variable which we want to communicate
+      integer(kind=4), intent(in) :: iv        !< variable which we want to communicate
       integer, intent(in) :: ng                !< number of guardcells to exchange
-      integer, intent(in) :: mode              !< what to do with external boundaries
+      integer(kind=4), intent(in) :: mode      !< what to do with external boundaries
       logical, intent(in), optional :: corners !< if .true. then don't forget aboutpay close attention to corners
 
       integer, parameter :: dreq = 4
@@ -433,9 +434,9 @@ contains
       implicit none
 
       integer, intent(in) :: lev             !< level which we are preparing the guardcells at
-      integer, intent(in) :: iv              !< variable which we want to set
+      integer(kind=4), intent(in) :: iv      !< variable which we want to set
       integer, intent(in) :: ng              !< number of guardcells to set
-      integer, intent(in) :: mode            !< what to do with external boundaries
+      integer(kind=4), intent(in) :: mode    !< what to do with external boundaries
       logical, intent(in) :: cor             !< if .true. then don't forget about corners \deprecated BEWARE: not implemented properly
 
       integer :: i

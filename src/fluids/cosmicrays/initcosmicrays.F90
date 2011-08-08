@@ -45,9 +45,9 @@ module initcosmicrays
    integer, parameter                  :: ncr_max = 9  !< maximum number of CR nuclear and electron components
 
    ! namelist parameters
-   integer                             :: ncrn         !< number of CR nuclear  components
-   integer                             :: ncre         !< number of CR electron components
-   integer                             :: ncrs         !< number of all CR components
+   integer(kind=4)                     :: ncrn         !< number of CR nuclear  components
+   integer(kind=4)                     :: ncre         !< number of CR electron components
+   integer(kind=4)                     :: ncrs         !< number of all CR components
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
@@ -61,9 +61,9 @@ module initcosmicrays
    real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components
 
    ! public component data
-   integer, allocatable, dimension(:)  :: iarr_crn     !< array of indexes pointing to all CR nuclear components
-   integer, allocatable, dimension(:)  :: iarr_cre     !< array of indexes pointing to all CR electron components
-   integer, allocatable, dimension(:)  :: iarr_crs     !< array of indexes pointing to all CR components
+   integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
+   integer(kind=4), allocatable, dimension(:) :: iarr_cre !< array of indexes pointing to all CR electron components
+   integer(kind=4), allocatable, dimension(:) :: iarr_crs !< array of indexes pointing to all CR components
 
    real,    allocatable, dimension(:)  :: gamma_crs    !< array containing adiabatic indexes of all CR components
    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
@@ -102,8 +102,8 @@ contains
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
-      use mpisetup,        only: master, slave, ibuff, rbuff, lbuff, comm, ierr, buffer_dim
-      use mpi,             only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
+      use mpisetup,        only: ibuff, rbuff, lbuff, comm, ierr, buffer_dim, master, slave
+      use mpi,             only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_INTEGER
 
       implicit none
 
@@ -132,12 +132,16 @@ contains
       K_cre_perp(:)  = 0.0
 
       if (master) then
+
          diff_nml(COSMIC_RAYS) ! Do not use one-line if here!
+
       endif
+
 #ifndef MULTIGRID
       if (.not. use_split) call warn("[initcosmicrays:init_cosmicrays] No multigrid solver compiled in: use_split reset to .true.")
       use_split  = .true.
 #endif /* !MULTIGRID */
+
       rbuff(:)   = huge(1.)                         ! mark unused entries to allow automatic determination of nn
 
       if (master) then
@@ -177,8 +181,8 @@ contains
 
       if (slave) then
 
-         ncrn       = ibuff(1)
-         ncre       = ibuff(2)
+         ncrn       = int(ibuff(1), kind=4)
+         ncre       = int(ibuff(2), kind=4)
 
          cfl_cr     = rbuff(1)
          smallecr   = rbuff(2)
@@ -234,18 +238,17 @@ contains
 
    end subroutine init_cosmicrays
 
-!
-
    subroutine cosmicray_index(flind)
 
-      use fluidtypes,      only: var_numbers
+      use constants,    only: INT4
+      use fluidtypes,   only: var_numbers
 
       implicit none
 
       type(var_numbers), intent(inout) :: flind
-      integer :: icr
+      integer(kind=4) :: icr
 
-      flind%crn%beg    = flind%all + 1
+      flind%crn%beg    = flind%all + 1_INT4
       flind%crs%beg    = flind%crn%beg
 
       flind%crn%all  = ncrn
@@ -253,30 +256,30 @@ contains
       flind%crs%all  = ncrs
 
       do icr = 1, ncrn
-         iarr_crn(icr)      =flind%all+icr
-         iarr_crs(icr)      =flind%all+icr
+         iarr_crn(icr)      = flind%all + icr
+         iarr_crs(icr)      = flind%all + icr
       enddo
       flind%all = flind%all + flind%crn%all
 
       do icr = 1, ncre
-         iarr_cre(icr)      =flind%all+icr
-         iarr_crs(ncrn+icr) =flind%all+icr
+         iarr_cre(icr)        = flind%all + icr
+         iarr_crs(ncrn + icr) = flind%all + icr
       enddo
       flind%all = flind%all + flind%cre%all
 
-      flind%crn%end    = flind%crn%beg + flind%crn%all - 1
-      flind%cre%beg    = flind%crn%end + 1
-      flind%cre%end    = flind%all
-      flind%crs%end    = flind%cre%end
-      if (flind%crn%all  /= 0) flind%components = flind%components + 1
+      flind%crn%end = flind%crn%beg + flind%crn%all - 1_INT4
+      flind%cre%beg = flind%crn%end + 1_INT4
+      flind%cre%end = flind%all
+      flind%crs%end = flind%cre%end
+      if (flind%crn%all  /= 0) flind%components = flind%components + 1_INT4
       flind%crn%pos = flind%components
-      if (flind%cre%all  /= 0) flind%components = flind%components + 1
+      if (flind%cre%all  /= 0) flind%components = flind%components + 1_INT4
       flind%cre%pos = flind%components
 
 #ifdef NEW_HDF5
-      call cr_add_hdf5(ncrs)
+      call cr_add_hdf5(int(ncrs))
 #else /* !NEW_HDF5 */
-      if (.false.) icr = 0 * flind%crn%beg !suppress compiler warnings on unused arguments
+      if (.false.) icr = 0_INT4 * flind%crn%beg !suppress compiler warnings on unused arguments
 #endif /* !NEW_HDF5 */
 
    end subroutine cosmicray_index
@@ -357,5 +360,11 @@ contains
    end subroutine get_cr
 
 #endif /* NEW_HDF5 */
+
+   subroutine cleanup_cosmirays
+
+      implicit none
+
+   end subroutine cleanup_cosmirays
 
 end module initcosmicrays

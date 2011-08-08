@@ -430,7 +430,8 @@ contains
 
       implicit none
 
-      integer, save     :: nimg = 0, error = 0
+      integer, save     :: nimg = 0
+      integer(kind=4)   :: error
       real, save        :: last_plt_time = 0.0
       character(len=cwdlen) :: fname
       integer           :: i, d
@@ -511,14 +512,14 @@ contains
 
       real, dimension(:,:), allocatable   :: send, img, recv
       integer                             :: ierrh, p
-      integer                             :: error
+      integer(kind=4)                     :: error
       integer(kind=8)                     :: xn, xn_r
       character(len=cwdlen)               :: fname
       integer, parameter                  :: vdn_len = 12
       character(len=vdn_len)              :: vdname
       integer(HID_T)                      :: file_id                       !> File identifier
       integer(HID_T)                      :: gr_id, gr2_id                  !> Group identifier
-      integer, parameter                  :: rank = 2
+      integer(kind=4), parameter                  :: rank = 2
       integer(HSIZE_T), dimension(rank)   :: dims
       integer, dimension(xdim:zdim), parameter :: d1 = [ ydim, xdim, xdim ] , d2 = [ zdim, zdim, ydim ] ! d1(d) and d2(2) are perpendicular to direction d
       integer(SIZE_T), parameter          :: bufsize = 1
@@ -618,7 +619,7 @@ contains
 
       implicit none
 
-      integer,                           intent(in)  :: area_type
+      integer(kind=4),                   intent(in)  :: area_type
       integer,         dimension(ndims), intent(out) :: area, lleft, lright, chnk
       integer(kind=8), dimension(ndims), intent(out) :: loffs
       type(grid_container), pointer,     intent(in)  :: cg
@@ -673,7 +674,7 @@ contains
 
    subroutine write_restart_hdf5(debug_res)
 
-      use constants,   only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B
+      use constants,   only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B, INT4
       use dataio_pub,  only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
       use global,      only: nstep
       use grid,        only: cga
@@ -693,8 +694,8 @@ contains
       character(len=cwdlen) :: filename  !> HDF File name
       integer(HID_T)        :: file_id       !> File identifier
       integer(HID_T)        :: plist_id      !> Property list identifier
-      integer               :: area_type
-      integer               :: error
+      integer(kind=4)       :: area_type
+      integer(kind=4)       :: error
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
@@ -761,7 +762,7 @@ contains
       ! Write some global variables
       call set_common_attributes(filename, chdf)
 
-      nres = nres + 1
+      nres = nres + 1_INT4
 
    end subroutine write_restart_hdf5
 
@@ -783,8 +784,9 @@ contains
       implicit none
 
       integer, parameter                             :: rank4 = 1 + ndims
-      integer, intent(in)                            :: rank, ir
-      integer, intent(in)                            :: area_type !> no boundaries, only outer boundaries or all boundaries
+      integer(kind=4), intent(in)                    :: rank
+      integer, intent(in)                            :: ir
+      integer(kind=4), intent(in)                    :: area_type !> no boundaries, only outer boundaries or all boundaries
       integer(HSIZE_T), dimension(rank4), intent(in) :: chunk_dims, dimsf
       integer(kind=8),  dimension(ndims), intent(in) :: loffs
       integer(HID_T), intent(in)                     :: file_id   !> File identifier
@@ -798,7 +800,7 @@ contains
       integer(HID_T), intent(out) :: dplist_id  !>
 
       integer(HSIZE_T), dimension(rank4) :: count, offset, stride, block
-      integer :: error
+      integer(kind=4) :: error
 
       ! Create the file space for the dataset and make it chunked if possible
       call h5screate_simple_f(rank, dimsf(ir:), dfilespace, error)
@@ -826,7 +828,7 @@ contains
       use hdf5,       only: HID_T, h5sclose_f, h5pclose_f, h5dclose_f
       implicit none
       integer(HID_T), intent(inout) :: memspace, plist_id, filespace, dset_id, dplist_id, dfilespace
-      integer :: error
+      integer(kind=4) :: error
 
       call h5sclose_f(memspace, error)
       call h5pclose_f(plist_id, error)
@@ -847,7 +849,7 @@ contains
 
       integer(HID_T), intent(in)                    :: file_id   !> File identifier
       real, pointer, dimension(:,:,:,:), intent(in) :: pa4d      !> 4-D array pointer
-      integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
+      integer(kind=4), intent(in)                   :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                  :: dname
       type(grid_container), pointer, intent(in)     :: cg
 
@@ -861,8 +863,8 @@ contains
       integer,         dimension(ndims) :: area, lleft, lright, chnk
       integer(kind=8), dimension(ndims) :: loffs
 
-      integer :: rank
-      integer :: error
+      integer(kind=4) :: rank
+      integer(kind=4) :: error
 
       call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs, cg)
 
@@ -892,7 +894,7 @@ contains
 
       integer(HID_T), intent(in)                    :: file_id   !> File identifier
       real, pointer, dimension(:,:,:), intent(in)   :: pa3d      !> 3-D array pointer, mutually exclusive with pa4d
-      integer, intent(in)                           :: area_type !> no boundaries, only outer boundaries or all boundaries
+      integer(kind=4), intent(in)                   :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                  :: dname
       type(grid_container), pointer, intent(in)     :: cg
 
@@ -906,8 +908,8 @@ contains
       integer,         dimension(ndims) :: area, lleft, lright, chnk
       integer(kind=8), dimension(ndims) :: loffs
 
-      integer :: rank
-      integer :: error
+      integer(kind=4) :: rank
+      integer(kind=4) :: error
 
       if (.not. associated(pa3d)) call die("[dataio_hdf5:write_3darr_to_restart] Null pointer given.")
 
@@ -1025,7 +1027,8 @@ contains
       implicit none
 
       integer, parameter                             :: rank4 = 1 + ndims
-      integer, intent(in)                            :: rank, ir
+      integer(kind=4), intent(in)                    :: rank
+      integer, intent(in)                            :: ir
       integer(HSIZE_T), dimension(rank4), intent(in) :: chunk_dims
       integer(kind=8),  dimension(ndims), intent(in) :: loffs
       integer(HID_T), intent(in)                     :: file_id   !> File identifier
@@ -1037,7 +1040,8 @@ contains
       integer(HID_T), intent(out) :: plist_id   !>
 
       integer(HSIZE_T), dimension(rank4) :: count, offset, stride, block
-      integer :: error, rankf
+      integer(kind=4) :: error
+      integer(kind=4) :: rankf
 
       ! Create dataset.and filespace
       call h5dopen_f(file_id, dname, dset_id, error)
@@ -1070,7 +1074,7 @@ contains
       use hdf5,       only: HID_T, h5sclose_f, h5pclose_f, h5dclose_f
       implicit none
       integer(HID_T), intent(inout) :: memspace, plist_id, filespace, dset_id
-      integer :: error
+      integer(kind=4) :: error
 
       call h5sclose_f(memspace, error)
       call h5pclose_f(plist_id, error)
@@ -1090,7 +1094,7 @@ contains
 
       integer(HID_T), intent(in)                       :: file_id   ! File identifier
       real, dimension(:,:,:,:), pointer, intent(inout) :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
-      integer, intent(in)                              :: area_type !> no boundaries, only outer boundaries or all boundaries
+      integer(kind=4), intent(in)                      :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                     :: dname
       type(grid_container), pointer, intent(in)        :: cg
 
@@ -1104,8 +1108,9 @@ contains
 
       integer,         dimension(ndims) :: area, lleft, lright, chnk
       integer(kind=8), dimension(ndims) :: loffs
-      integer :: ir, rank
-      integer :: error
+      integer :: ir
+      integer(kind=4) :: rank
+      integer(kind=4) :: error
 
       call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs, cg)
 
@@ -1142,7 +1147,7 @@ contains
 
       integer(HID_T), intent(in)                       :: file_id   ! File identifier
       real, dimension(:,:,:), pointer, intent(inout)   :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
-      integer, intent(in)                              :: area_type !> no boundaries, only outer boundaries or all boundaries
+      integer(kind=4), intent(in)                      :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                     :: dname
       type(grid_container), pointer, intent(in)        :: cg
 
@@ -1156,8 +1161,9 @@ contains
 
       integer,         dimension(ndims) :: area, lleft, lright, chnk
       integer(kind=8), dimension(ndims) :: loffs
-      integer :: ir, rank
-      integer :: error
+      integer :: ir
+      integer(kind=4) :: rank
+      integer(kind=4) :: error
 
       call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs, cg)
 
@@ -1212,11 +1218,11 @@ contains
       integer(HID_T)        :: plist_id      ! Property list identifier
       integer(SIZE_T)       :: bufsize
 
-      integer               :: error
+      integer(kind=4)       :: error
       logical               :: file_exist
 
       real, dimension(1)    :: rbuf
-      integer, dimension(1) :: ibuf
+      integer(kind=4), dimension(1) :: ibuf
 
       real                  :: restart_hdf5_version
       type(cg_list_element), pointer :: cgl
@@ -1382,7 +1388,7 @@ contains
 !
    subroutine write_hdf5(chdf)
 
-      use constants,   only: cwdlen
+      use constants,   only: cwdlen, INT4
       use dataio_pub,  only: printio, msg, die, nhdf, problem_name, run_id, hdf
       use dataio_user, only: user_vars_hdf5
       use grid,        only: cga
@@ -1401,7 +1407,8 @@ contains
       type(hdf), intent(in)   :: chdf
       integer(HID_T)          :: file_id       ! File identifier
       integer(HID_T)          :: plist_id      ! Property list identifier
-      integer                 :: ierrh, error, i
+      integer                 :: ierrh, i
+      integer(kind=4)         :: error
       logical                 :: ok_var
       character(len=cwdlen)   :: fname
       type(cg_list_element), pointer :: cgl
@@ -1462,7 +1469,7 @@ contains
 
       call set_common_attributes(fname, chdf)
 
-      nhdf = nhdf + 1
+      nhdf = nhdf + 1_INT4
 
    end subroutine write_hdf5
 
@@ -1472,7 +1479,7 @@ contains
 !<
    subroutine set_common_attributes(filename, chdf)
 
-      use constants,   only: cbuff_len, xdim, ydim, zdim
+      use constants,   only: cbuff_len, xdim, ydim, zdim, INT4
       use dataio_pub,  only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, hdf
       use dataio_user, only: additional_attrs
       use domain,      only: dom
@@ -1494,13 +1501,13 @@ contains
       integer(HID_T)                 :: file_id       !> File identifier
       integer(HID_T)                 :: type_id, dspace_id, dset_id, prp_id
       integer(HSIZE_T), dimension(1) :: dimstr
-      logical                        :: Z_avail
+      logical(kind=4)                :: Z_avail
       integer                        :: fe, i
       integer(SIZE_T)                :: bufsize, maxlen
-      integer                        :: error
+      integer(kind=4)                :: error
       real                           :: magic_mass0
       integer, parameter             :: buf_len = 50
-      integer, dimension(buf_len)    :: ibuffer
+      integer(kind=4), dimension(buf_len) :: ibuffer
       real,    dimension(buf_len)    :: rbuffer
       character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
       character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
@@ -1532,7 +1539,7 @@ contains
       rbuffer(13)  = chdf%next_t_log         ; rbuffer_name(13)  = "next_t_log" !rr2
 
       ibuffer(1)   = chdf%nstep              ; ibuffer_name(1)   = "nstep" !rr2
-      ibuffer(2)   = chdf%nres+1             ; ibuffer_name(2)   = "nres" !rr2
+      ibuffer(2)   = chdf%nres+1_INT4        ; ibuffer_name(2)   = "nres" !rr2
       ibuffer(3)   = chdf%nhdf               ; ibuffer_name(3)   = "nhdf" !rr2
       ibuffer(4)   = chdf%nstep              ; ibuffer_name(4)   = "step_res" !rr2
       ibuffer(5)   = chdf%step_hdf           ; ibuffer_name(5)   = "step_hdf" !rr2
@@ -1555,18 +1562,18 @@ contains
       enddo
 
       ! Store a compressed copy of the problem.par file.
-      maxlen = maxval(len_trim(parfile(:parfilelines)))
+      maxlen = int(maxval(len_trim(parfile(:parfilelines))), kind=4)
       dimstr = [parfilelines]
       call H5Zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
       ! call H5Zget_filter_info_f ! everything should be always fine for gzip
       call H5Pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
       if (Z_avail) then
-         call H5Pset_deflate_f(prp_id, 9, error)
-         call H5Pset_chunk_f(prp_id, 1, dimstr, error)
+         call H5Pset_deflate_f(prp_id, 9_INT4, error)
+         call H5Pset_chunk_f(prp_id, 1_INT4, dimstr, error)
       endif
       call H5Tcopy_f(H5T_NATIVE_CHARACTER, type_id, error)
       call H5Tset_size_f(type_id, maxlen, error)
-      call H5Screate_simple_f(1, dimstr, dspace_id, error)
+      call H5Screate_simple_f(1_INT4, dimstr, dspace_id, error)
       call H5Dcreate_f(file_id, "problem.par", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
       call H5Dwrite_f(dset_id, type_id, parfile(:)(:maxlen), dimstr, error)
       call H5Dclose_f(dset_id, error)
@@ -1574,11 +1581,11 @@ contains
 
       ! Store a compressed copy of the piernik.def file and Id lines from source files.
       ! We recycle type_id and prp_id, so we don't close them yet.
-      maxlen = maxval(len_trim(env(:nenv)))
+      maxlen = int(maxval(len_trim(env(:nenv))), kind=4)
       dimstr = [nenv]
-      if (Z_avail) call H5Pset_chunk_f(prp_id, 1, dimstr, error)
+      if (Z_avail) call H5Pset_chunk_f(prp_id, 1_INT4, dimstr, error)
       call H5Tset_size_f(type_id, maxlen, error)
-      call H5Screate_simple_f(1, dimstr, dspace_id, error)
+      call H5Screate_simple_f(1_INT4, dimstr, dspace_id, error)
       call H5Dcreate_f(file_id, "env", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
       call H5Dwrite_f(dset_id, type_id, env(:)(:maxlen), dimstr, error)
       call H5Dclose_f(dset_id, error)
@@ -1609,7 +1616,7 @@ contains
 
    subroutine write_grid_containter(cg, file_id, plist_id)
 
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI, INT4
       use grid_cont, only: grid_container
       use hdf5,      only: HID_T, SIZE_T, HSIZE_T, H5T_NATIVE_INTEGER, H5T_STD_I8LE, H5T_NATIVE_DOUBLE, H5T_COMPOUND_F, &
            &               h5screate_simple_f, h5tarray_create_f, h5tget_size_f, h5tcreate_f, h5tinsert_f, h5dwrite_f, h5sclose_f, h5tclose_f, h5dclose_f, h5dcreate_f
@@ -1620,10 +1627,10 @@ contains
       integer(HID_T), intent(in)                :: file_id, plist_id
 
       integer, parameter :: dsetnamelen = 10
-      integer, parameter :: n_int4 = 19, n_r8 = 14, n_nxarr_r8 = 4, n_nyarr_r8 = 4, n_nzarr_r8 = 4, &
+      integer(SIZE_T), parameter :: n_int4 = 19, n_r8 = 14, n_nxarr_r8 = 4, n_nyarr_r8 = 4, n_nzarr_r8 = 4, &
          & n_ndims_r8 = 2, n_ndims_i4 =1, n_ndims_i8 = 1, n_ndims_lohi_i4 = 2
 
-      integer :: n_arr3d_r8, n_ndims_arr4d_r8, n_u_arr4d_r8, total_no, n_stub
+      integer(SIZE_T) :: n_arr3d_r8, n_ndims_arr4d_r8, n_u_arr4d_r8, total_no, n_stub
 
       integer(SIZE_T) :: int4_ts, r8_ts, nxarr_r8_ts, nyarr_r8_ts, nzarr_r8_ts, arr3d_r8_ts, ndims_r8_ts, &
          & ndims_i4_ts, ndims_i8_ts, ndims_lohi_i4_ts, ndims_arr4d_r8_ts, u_arr4d_r8_ts, type_size, offset
@@ -1635,45 +1642,46 @@ contains
       character(len=dsetnamelen), dimension(:), allocatable :: types_names
       character(len=dsetnamelen) :: dset_name
 
-      integer :: error, i
+      integer(kind=4) :: error
+      integer :: i
 
       dims = 1
-      call h5screate_simple_f(1, dims, dspace_id, error)
+      call h5screate_simple_f(1_INT4, dims, dspace_id, error)
 
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1, [integer(HSIZE_T):: ndims],              ndims_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_INTEGER, 1, [integer(HSIZE_T):: ndims],              ndims_i4_t, error)
-      call h5tarray_create_f(H5T_NATIVE_INTEGER, 2, [integer(HSIZE_T):: ndims, HI-LO+1],     ndims_lohi_i4_t, error)
-      call h5tarray_create_f(H5T_STD_I8LE,       1, [integer(HSIZE_T):: ndims],              ndims_i8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1, [integer(HSIZE_T):: cg%nx],              nxarr_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1, [integer(HSIZE_T):: cg%ny],              nyarr_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1, [integer(HSIZE_T):: cg%nz],              nzarr_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  3, [integer(HSIZE_T):: cg%nx,cg%ny,cg%nz],  arr3d_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  4, [integer(HSIZE_T):: ndims,cg%nx,cg%ny,cg%nz],         ndims_arr4d_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  4, [integer(HSIZE_T):: size(cg%u%arr,1),cg%nx,cg%ny,cg%nz],  u_arr4d_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: ndims],              ndims_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_INTEGER, 1_INT4, [integer(HSIZE_T):: ndims],              ndims_i4_t, error)
+      call h5tarray_create_f(H5T_NATIVE_INTEGER, 2_INT4, [integer(HSIZE_T):: ndims, HI-LO+1],     ndims_lohi_i4_t, error)
+      call h5tarray_create_f(H5T_STD_I8LE,       1_INT4, [integer(HSIZE_T):: ndims],              ndims_i8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: cg%nx],              nxarr_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: cg%ny],              nyarr_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: cg%nz],              nzarr_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  3_INT4, [integer(HSIZE_T):: cg%nx,cg%ny,cg%nz],  arr3d_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  4_INT4, [integer(HSIZE_T):: ndims,cg%nx,cg%ny,cg%nz],         ndims_arr4d_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  4_INT4, [integer(HSIZE_T):: size(cg%u%arr,1),cg%nx,cg%ny,cg%nz],  u_arr4d_r8_t, error)
 
       n_arr3d_r8 = 10  ! gc_{x,y,z}dim
       n_stub     = 0
-      if (associated(cg%cs_iso2%arr))  n_stub = n_stub + 1
-      if (associated(cg%wa%arr))       n_stub = n_stub + 1
-      if (associated(cg%gpot%arr))     n_stub = n_stub + 1
-      if (associated(cg%hgpot%arr))    n_stub = n_stub + 1
-      if (associated(cg%gp%arr))       n_stub = n_stub + 1
-      if (associated(cg%sgp%arr))      n_stub = n_stub + 1
-      if (associated(cg%sgpm%arr))     n_stub = n_stub + 1
+      if (associated(cg%cs_iso2%arr))  n_stub = n_stub + 1_INT4
+      if (associated(cg%wa%arr))       n_stub = n_stub + 1_INT4
+      if (associated(cg%gpot%arr))     n_stub = n_stub + 1_INT4
+      if (associated(cg%hgpot%arr))    n_stub = n_stub + 1_INT4
+      if (associated(cg%gp%arr))       n_stub = n_stub + 1_INT4
+      if (associated(cg%sgp%arr))      n_stub = n_stub + 1_INT4
+      if (associated(cg%sgpm%arr))     n_stub = n_stub + 1_INT4
       n_arr3d_r8 = n_arr3d_r8 - n_stub
 
       n_ndims_arr4d_r8 = 1  ! b
       if (associated(cg%b0%arr)) then
-         n_ndims_arr4d_r8 = n_ndims_arr4d_r8 + 1
+         n_ndims_arr4d_r8 = n_ndims_arr4d_r8 + 1_INT4
       else
-         n_stub = n_stub + 1
+         n_stub = n_stub + 1_INT4
       endif
 
       n_u_arr4d_r8 = 2 ! u,uh
       if (associated(cg%u0%arr)) then
-         n_u_arr4d_r8 = n_u_arr4d_r8 + 1
+         n_u_arr4d_r8 = n_u_arr4d_r8 + 1_INT4
       else
-         n_stub = n_stub + 1
+         n_stub = n_stub + 1_INT4
       endif
 
       call h5tget_size_f(H5T_NATIVE_INTEGER, int4_ts,error)
@@ -1839,25 +1847,25 @@ contains
       enddo
 
       dims = 1
-      call h5dwrite_f(dset_id, dmem_id(1),  cg%nx,     dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(2),  cg%ny,     dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(3),  cg%nz,     dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(4),  cg%nxb,    dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(5),  cg%nyb,    dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(6),  cg%nzb,    dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(7),  cg%is,     dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(8),  cg%ie,     dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(9),  cg%js,     dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(10), cg%je,     dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(11), cg%ks,     dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(12), cg%ke,     dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(13), cg%maxxyz, dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(14), cg%isb,    dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(15), cg%ieb,    dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(16), cg%jsb,    dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(17), cg%jeb,    dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(18), cg%ksb,    dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(19), cg%keb,    dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(1),  int(cg%nx, kind=4),     dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(2),  int(cg%ny, kind=4),     dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(3),  int(cg%nz, kind=4),     dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(4),  int(cg%nxb, kind=4),    dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(5),  int(cg%nyb, kind=4),    dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(6),  int(cg%nzb, kind=4),    dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(7),  int(cg%is, kind=4),     dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(8),  int(cg%ie, kind=4),     dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(9),  int(cg%js, kind=4),     dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(10), int(cg%je, kind=4),     dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(11), int(cg%ks, kind=4),     dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(12), int(cg%ke, kind=4),     dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(13), int(cg%maxxyz, kind=4), dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(14), int(cg%isb, kind=4),    dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(15), int(cg%ieb, kind=4),    dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(16), int(cg%jsb, kind=4),    dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(17), int(cg%jeb, kind=4),    dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(18), int(cg%ksb, kind=4),    dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(19), int(cg%keb, kind=4),    dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(20), cg%dx,     dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(21), cg%dy,     dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(22), cg%dz,     dims, error, xfer_prp=plist_id)
@@ -1886,60 +1894,60 @@ contains
       call h5dwrite_f(dset_id, dmem_id(45), cg%zl,     dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(46), cg%zr,     dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(47), cg%inv_z,  dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(48), cg%n_b,    dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(49), cg%n_b,    dims, error, xfer_prp=plist_id) !!!
-      call h5dwrite_f(dset_id, dmem_id(50), cg%ijkse,  dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(51), cg%bnd,    dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(52), cg%gc_xdim,dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(53), cg%gc_ydim,dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(54), cg%gc_zdim,dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(48), int(cg%n_b, kind=4),    dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(49), int(cg%n_b, kind=4),    dims, error, xfer_prp=plist_id) !!!
+      call h5dwrite_f(dset_id, dmem_id(50), int(cg%ijkse, kind=4),  dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(51), int(cg%bnd, kind=4),    dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(52), int(cg%gc_xdim, kind=4),dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(53), int(cg%gc_ydim, kind=4),dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(54), int(cg%gc_zdim, kind=4),dims, error, xfer_prp=plist_id)
       if (associated(cg%wa%arr)) then
          call h5dwrite_f(dset_id, dmem_id(55), cg%wa%arr     ,dims, error, xfer_prp=plist_id)
       else
-         call h5dwrite_f(dset_id, dmem_id(55), -999      ,dims, error, xfer_prp=plist_id)
+         call h5dwrite_f(dset_id, dmem_id(55), -999_INT4      ,dims, error, xfer_prp=plist_id)
       endif
       if (associated(cg%gpot%arr)) then
          call h5dwrite_f(dset_id, dmem_id(56), cg%gpot%arr   ,dims, error, xfer_prp=plist_id)
       else
-         call h5dwrite_f(dset_id, dmem_id(56), -999      ,dims, error, xfer_prp=plist_id)
+         call h5dwrite_f(dset_id, dmem_id(56), -999_INT4      ,dims, error, xfer_prp=plist_id)
       endif
       if (associated(cg%hgpot%arr)) then
          call h5dwrite_f(dset_id, dmem_id(57), cg%hgpot%arr  ,dims, error, xfer_prp=plist_id)
       else
-         call h5dwrite_f(dset_id, dmem_id(57), -999      ,dims, error, xfer_prp=plist_id)
+         call h5dwrite_f(dset_id, dmem_id(57), -999_INT4      ,dims, error, xfer_prp=plist_id)
       endif
       if (associated(cg%gp%arr)) then
          call h5dwrite_f(dset_id, dmem_id(58), cg%gp%arr     ,dims, error, xfer_prp=plist_id)
       else
-         call h5dwrite_f(dset_id, dmem_id(58), -999      ,dims, error, xfer_prp=plist_id)
+         call h5dwrite_f(dset_id, dmem_id(58), -999_INT4      ,dims, error, xfer_prp=plist_id)
       endif
       if (associated(cg%sgp%arr)) then
          call h5dwrite_f(dset_id, dmem_id(59), cg%sgp%arr    ,dims, error, xfer_prp=plist_id)
       else
-         call h5dwrite_f(dset_id, dmem_id(59), -999      ,dims, error, xfer_prp=plist_id)
+         call h5dwrite_f(dset_id, dmem_id(59), -999_INT4      ,dims, error, xfer_prp=plist_id)
       endif
       if (associated(cg%sgpm%arr)) then
          call h5dwrite_f(dset_id, dmem_id(60), cg%sgpm%arr   ,dims, error, xfer_prp=plist_id)
       else
-         call h5dwrite_f(dset_id, dmem_id(60), -999      ,dims, error, xfer_prp=plist_id)
+         call h5dwrite_f(dset_id, dmem_id(60), -999_INT4      ,dims, error, xfer_prp=plist_id)
       endif
       if (associated(cg%cs_iso2%arr)) then
          call h5dwrite_f(dset_id, dmem_id(61), cg%cs_iso2%arr,dims, error, xfer_prp=plist_id)
       else
-         call h5dwrite_f(dset_id, dmem_id(61), -999      ,dims, error, xfer_prp=plist_id)
+         call h5dwrite_f(dset_id, dmem_id(61), -999_INT4      ,dims, error, xfer_prp=plist_id)
       endif
       call h5dwrite_f(dset_id, dmem_id(62), cg%b%arr,dims, error, xfer_prp=plist_id)
       if (associated(cg%b0%arr)) then
          call h5dwrite_f(dset_id, dmem_id(63), cg%b0%arr     ,dims, error, xfer_prp=plist_id)
       else
-         call h5dwrite_f(dset_id, dmem_id(63), -999      ,dims, error, xfer_prp=plist_id)
+         call h5dwrite_f(dset_id, dmem_id(63), -999_INT4      ,dims, error, xfer_prp=plist_id)
       endif
       call h5dwrite_f(dset_id, dmem_id(64), cg%u%arr,  dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(65), cg%uh%arr, dims, error, xfer_prp=plist_id)
       if (associated(cg%u0%arr)) then
          call h5dwrite_f(dset_id, dmem_id(66), cg%u0%arr     ,dims, error, xfer_prp=plist_id)
       else
-         call h5dwrite_f(dset_id, dmem_id(66), -999      ,dims, error, xfer_prp=plist_id)
+         call h5dwrite_f(dset_id, dmem_id(66), -999_INT4      ,dims, error, xfer_prp=plist_id)
       endif
 
       call h5dclose_f(dset_id, error)

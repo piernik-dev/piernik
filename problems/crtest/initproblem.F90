@@ -36,7 +36,7 @@ module initproblem
    private
    public :: read_problem_par, init_prob, problem_pointers
 
-   integer            :: norm_step
+   integer(kind=4)    :: norm_step
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
    real, dimension(:,:,:), allocatable :: aecr1
 
@@ -65,6 +65,7 @@ contains
 
    subroutine read_problem_par
 
+      use constants,   only: INT4
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,  only: die
       use diagnostics, only: my_allocate
@@ -92,7 +93,7 @@ contains
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
 
-      norm_step    = 10        !< how often to compute the norm (in steps)
+      norm_step    = 10_INT4   !< how often to compute the norm (in steps)
 
       if (master) then
 
@@ -131,7 +132,7 @@ contains
          beta_cr      = rbuff(10)
          amp_cr       = rbuff(11)
 
-         norm_step    = ibuff(1)
+         norm_step    = int(ibuff(1), kind=4)
 
       endif
 

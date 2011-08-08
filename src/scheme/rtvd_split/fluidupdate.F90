@@ -37,6 +37,7 @@ contains
 
    subroutine repeat_fluidstep
 
+      use constants,  only: INT4
       use dataio_pub, only: warn
       use global,     only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
       use grid,       only: cga
@@ -60,7 +61,7 @@ contains
             cg%u%arr = cg%u0%arr
             cg%b%arr = cg%b0%arr
             dt = dtm/dt_max_grow**2
-            nstep = nstep-1
+            nstep = nstep - 1_INT4
             if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
          else
             cg%u0%arr = cg%u%arr
@@ -389,7 +390,7 @@ contains
 
 !------------------------------------------------------------------------------------------
 
-   subroutine mag_add(ib1,dim1,ib2,dim2)
+   subroutine mag_add(ib1, dim1, ib2, dim2)
 
       use dataio_pub,    only: die
       use func,          only: pshift, mshift
@@ -403,7 +404,7 @@ contains
 
       implicit none
 
-      integer, intent(in)            :: ib1,ib2,dim1,dim2
+      integer(kind=4), intent(in)    :: ib1,ib2,dim1,dim2
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 

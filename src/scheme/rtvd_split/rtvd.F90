@@ -104,13 +104,13 @@ contains
 !!Analogous procedure applies to remaining EMF components.
 !<
 !*/
-   subroutine tvdb(vibj,b,vg,n,dt,idi)
+   subroutine tvdb(vibj, b, vg, n, dt, idi)
 
       use constants, only: big
 
       implicit none
 
-      integer, intent(in) :: n       !< array size
+      integer(kind=4), intent(in) :: n !< array size
       real, intent(in)    :: dt      !< time step
       real, intent(in)    :: idi     !< cell length, depends on direction x, y or z
       real, dimension(:), pointer, intent(inout)    :: vibj    !< face-centered electromotive force components (b*vg)
@@ -267,14 +267,14 @@ contains
 
       implicit none
 
-      integer,                     intent(in)     :: n                  !< array size
+      integer(kind=4),             intent(in)     :: n                  !< array size
       real, dimension(flind%all,n), intent(inout) :: u                  !< vector of conservative variables
       real, dimension(flind%all,n), intent(in)    :: u0                 !< vector of conservative variables
       real, dimension(nmag,n),     intent(in)     :: bb                 !< local copy of magnetic field
       real, dimension(:), pointer, intent(in)     :: divv
       real, dimension(:), pointer, intent(in)     :: cs_iso2            !< square of local isothermal sound speed
       integer,                     intent(in)     :: istep              !< step number in the time integration scheme
-      integer,                     intent(in)     :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer(kind=4),             intent(in)     :: sweep              !< direction (x, y or z) we are doing calculations for
       integer,                     intent(in)     :: i1                 !< coordinate of sweep in the 1st remaining direction
       integer,                     intent(in)     :: i2                 !< coordinate of sweep in the 2nd remaining direction
       real,                        intent(in)     :: dx                 !< cell length

@@ -46,41 +46,41 @@ module initionized
    real                  :: gamma_ion       !< adiabatic index for the ionized gas component
    real                  :: cs_iso_ion      !< isothermal sound speed (p = cs_iso_ion<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
    real                  :: cs_iso_ion2
-   real                  :: cs_ion
+   real                  :: cs_ion          !< COMMENT ME
    logical               :: selfgrav_ion    !< true if ionized gas is selfgravitating
-   integer               :: idni, imxi, imyi, imzi
+   integer(kind=4)       :: idni, imxi, imyi, imzi
 #ifndef ISO
-   integer               :: ieni
+   integer(kind=4)       :: ieni
 #endif /* !ISO */
 
 contains
 
 !>
-!! \brief Routine to set parameters values from namelist FLUID_IONIZED
+!! \brief Routine to set parameters from namelist FLUID_IONIZED
 !!
 !! \n \n
 !! @b FLUID_IONIZED
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>gamma_ion     </td><td>1.66666666</td><td>real value </td><td>\copydoc initionized::gamma_ion </td></tr>
-!! <tr><td>cs_iso_ion    </td><td>1.0        </td><td>real value</td><td>\copydoc initionized::cs_iso_ion</td></tr>
-!! <tr><td>cs_ion        </td><td>           </td><td>real value</td><td>\copydoc initionized::cs_ion    </td></tr>
-!! <tr><td>selfgrav_ion  </td><td>.false.    </td><td>logical   </td><td>\copydoc initionized::selfgrav_ion </td></tr>
+!! <tr><td>gamma_ion     </td><td>5./3.   </td><td>real value </td><td>\copydoc initionized::gamma_ion    </td></tr>
+!! <tr><td>cs_iso_ion    </td><td>1.0     </td><td>real value </td><td>\copydoc initionized::cs_iso_ion   </td></tr>
+!! <tr><td>cs_ion        </td><td>        </td><td>real value </td><td>\copydoc initionized::cs_ion       </td></tr>
+!! <tr><td>selfgrav_ion  </td><td>.false. </td><td>logical    </td><td>\copydoc initionized::selfgrav_ion </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_ionized
 
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, lbuff, comm, ierr, buffer_dim, master, slave
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
+      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml   ! QA_WARN required for diff_nml
+      use mpisetup,        only: rbuff, lbuff, comm, ierr, buffer_dim, master, slave
+      use mpi,             only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
 
       implicit none
 
       namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion
 
-      gamma_ion     = 1.66666666
+      gamma_ion     = 5./3.
       cs_iso_ion    = 1.0
       selfgrav_ion  = .false.
 
@@ -115,7 +115,7 @@ contains
 
    subroutine ionized_index(flind)
 
-      use constants,    only: ION
+      use constants,    only: ION, INT4
       use diagnostics,  only: ma1d, my_allocate
       use fluidtypes,   only: var_numbers
 
@@ -123,12 +123,12 @@ contains
 
       type(var_numbers), intent(inout) :: flind
 
-      flind%ion%beg  = flind%all + 1
+      flind%ion%beg  = flind%all + 1_INT4
 
-      idni = flind%all + 1
-      imxi = flind%all + 2
-      imyi = flind%all + 3
-      imzi = flind%all + 4
+      idni = flind%all + 1_INT4
+      imxi = flind%all + 2_INT4
+      imyi = flind%all + 3_INT4
+      imzi = flind%all + 4_INT4
 
       flind%ion%idn  = idni
       flind%ion%imx  = imxi
@@ -138,9 +138,9 @@ contains
       flind%ion%all  = 4
       flind%all      = imzi
 #ifndef ISO
-      ieni          = imzi + 1
-      flind%all      = flind%all + 1
-      flind%ion%all  = flind%ion%all + 1
+      ieni          = imzi + 1_INT4
+      flind%all      = flind%all + 1_INT4
+      flind%ion%all  = flind%ion%all + 1_INT4
       flind%ion%ien  = ieni
 #endif /* !ISO */
 
@@ -150,7 +150,7 @@ contains
       call my_allocate(flind%ion%iarr_swpy,  ma1d)
       call my_allocate(flind%ion%iarr_swpz,  ma1d)
 
-      !\deprecated repeated magic integers (multifile: initneutral)
+      !\deprecated repeated magic integers (multifile: initneutral, initdust)
       flind%ion%iarr(1:4)      = [idni,imxi,imyi,imzi]
       flind%ion%iarr_swpx(1:4) = [idni,imxi,imyi,imzi]
       flind%ion%iarr_swpy(1:4) = [idni,imyi,imxi,imzi]
@@ -163,14 +163,14 @@ contains
       flind%ion%iarr_swpz(5) = ieni
       flind%ion%has_energy   = .true.
 
-      flind%energ = flind%energ + 1
+      flind%energ = flind%energ + 1_INT4
 #endif /* !ISO */
 
       flind%ion%end    = flind%all
-      flind%components = flind%components + 1
-      flind%fluids     = flind%fluids + 1
+      flind%components = flind%components + 1_INT4
+      flind%fluids     = flind%fluids + 1_INT4
       flind%ion%pos    = flind%components
-      if (selfgrav_ion)  flind%fluids_sg = flind%fluids_sg + 1
+      if (selfgrav_ion)  flind%fluids_sg = flind%fluids_sg + 1_INT4
 
       flind%ion%gam   = gamma_ion
       flind%ion%gam_1 = gamma_ion-1.0

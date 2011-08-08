@@ -41,7 +41,8 @@ module constants
    public                                                ! QA_WARN no secrets are kept here
 
    ! precision
-   integer, parameter :: LONG = selected_int_kind(16)    ! it is much more clear to type 0_LONG than 0_8
+   integer, parameter :: LONG = selected_int_kind(16)    ! We need at least 8-byte integers to count to 10**16, it is much more clear to type 0_LONG than 0_8
+   integer, parameter :: INT4 = selected_int_kind(9)     ! Assume that all MPI and HDF5 calls expect 4-byte integers
    ! \todo define 1- and 2-byte integers and short (4-byte), long double (10-byte) or quad_precision (16-byte) reals if needed,
 
    ! integers and rationals
@@ -70,7 +71,7 @@ module constants
    enum, bind(C)
       enumerator :: xdim = 1, ydim, zdim                 !< parameters assigned to the x-, y- and z-direction
    end enum
-   integer, parameter :: ndims   = zdim - xdim + 1       !< We live in a 3-dimensional world
+   integer(kind=4), parameter :: ndims   = zdim - xdim + 1 !< We live in a 3-dimensional world
 
    enum, bind(C)
       enumerator :: LO = 1, HI                           !< indices for low (left) and high (right) boundaries
