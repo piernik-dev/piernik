@@ -76,6 +76,7 @@ contains
 
       use constants,  only: small
       use dataio_pub, only: die
+      use func,       only: ekin, emag
       use fluidindex, only: idn, imx, imy, imz, ien, flind, ibx, iby, ibz
       use global,     only: cfr_smooth
 
@@ -103,7 +104,7 @@ contains
 
       nm = n-1
 #ifdef MAGNETIC
-      pmag(RNG)=0.5*( bb(ibx,RNG)**2 + bb(iby,RNG)**2 +bb(ibz,RNG)**2 );  pmag(1) = pmag(2); pmag(n) = pmag(nm)
+      pmag(RNG)= emag(bb(ibx,RNG),bb(iby,RNG),bb(ibz,RNG));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
 #else /* !MAGNETIC */
       pmag(:) = 0.0
 #endif /* !MAGNETIC */
@@ -117,9 +118,8 @@ contains
       p(RNG) = cs_iso2(RNG) * uui(idn,RNG)
       ps(RNG)= p(RNG) + pmag(RNG)
 #else /* !ISO */
-      ps(RNG)=(uui(ien,RNG) - &
-           0.5*( uui(imx,RNG)**2 + uui(imy,RNG)**2 + uui(imz,RNG)**2 ) &
-           / uui(idn,RNG))*(flind%ion%gam_1) + (2.0-flind%ion%gam)*pmag(RNG)
+      ps(RNG)=(uui(ien,RNG) - ekin(uui(imx,RNG),uui(imy,RNG),uui(imz,RNG),uui(idn,RNG)) )*(flind%ion%gam_1) &
+           & + (2.0-flind%ion%gam)*pmag(RNG)
       p(RNG) = ps(RNG)- pmag(RNG);  p(1) = p(2); p(n) = p(nm)
 #endif /* !ISO */
       ps(1) = ps(2); ps(n) = ps(nm)

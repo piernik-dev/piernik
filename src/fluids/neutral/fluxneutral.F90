@@ -79,6 +79,7 @@ contains
    subroutine flux_neu(fluxn,cfrn,uun,n,vx,p,bb,cs_iso2)
 
       use constants,  only: small
+      use func,       only: ekin
       use fluidindex, only: idn, imx, imy, imz, ien, flind
       use global,     only: cfr_smooth, smallp
 #ifdef GLOBAL_FR_SPEED
@@ -109,9 +110,7 @@ contains
 #ifdef ISO
       p(RNG)  = cs_iso2(RNG)*uun(idn,RNG) ; p(1) = p(2); p(n) = p(nm)
 #else /* !ISO */
-      p(RNG)  = (uun(ien,RNG)  &
-           - 0.5*( uun(imx,RNG)**2 + uun(imy,RNG)**2 + uun(imz,RNG)**2 ) &
-           / uun(idn,RNG))*(flind%neu%gam_1)
+      p(RNG)  = (uun(ien,RNG) - ekin(uun(imx,RNG),uun(imy,RNG),uun(imz,RNG),uun(idn,RNG)) )*(flind%neu%gam_1)
       p(RNG)  = max(p(RNG),smallp)
 #endif /* !ISO */
 
@@ -134,7 +133,7 @@ contains
       amp   = 0.5*(maxvx-minvx)
       !    c_fr  = 0.0
 #ifdef ISO
-      cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(             p(RNG))/uun(idn,RNG)),small)
+      cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(              p(RNG))/uun(idn,RNG)),small)
 #else /* !ISO */
       cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(flind%neu%gam*p(RNG))/uun(idn,RNG)),small)
 #endif /* !ISO */
