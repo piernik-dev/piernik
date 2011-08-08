@@ -974,7 +974,7 @@ contains
          ldom(:) = 1
          do n = 1, nf ! find an unique decomposition of fac(n,2) into [i,j,k], all([i,j,k] >= 0) && i+j+k = fac(n,2). The decompositions are enumerated with fac(n,3).
             i = int(sqrt(1./4.+2.*(fac(n,3)-1)) - 1./2., kind=4) ! i and k enumerate a point in a triangle: (i>=0 && k>=0 && i+k<=fac(n,2))
-            k = fac(n,3) - int(1 - i*(i+1)/2, kind=4)
+            k = fac(n,3) - int(1 + i*(i+1)/2, kind=4)
             i = fac(n,2) - i
             j = fac(n,2) - (i + k)
             ldom(:) = ldom(:) * fac(n,1)**[i, j, k]
