@@ -109,6 +109,7 @@ contains
 
       use constants,           only: xdim, ydim, zdim
       use types,               only: problem_customize_solution
+      use global,              only: skip_sweep
 #ifdef SHEAR
       use dataio_pub,          only: die
       use domain,              only: has_dir
@@ -158,11 +159,11 @@ contains
 
       if (forward) then
          do s = xdim, zdim
-            call make_sweep(s, forward)
+            if (.not.skip_sweep(s)) call make_sweep(s, forward)
          enddo
       else
          do s = zdim, xdim, -1
-            call make_sweep(s, forward)
+            if (.not.skip_sweep(s)) call make_sweep(s, forward)
          enddo
       endif
       if (associated(problem_customize_solution)) call problem_customize_solution

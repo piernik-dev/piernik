@@ -37,7 +37,7 @@
 !<
 module global
 
-   use constants, only: cbuff_len
+   use constants, only: cbuff_len, xdim, zdim
 
    implicit none
 
@@ -46,7 +46,7 @@ module global
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
         &    integration_order, limiter, smalld, smallei, smallp, use_smalld, magic_mass, local_magic_mass, &
-        &    relax_time, grace_period_passed, cfr_smooth, repeat_step
+        &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
@@ -77,9 +77,10 @@ module global
    character(len=cbuff_len) :: cflcontrol  !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
    logical                  :: repeat_step !< repeat fluid step if cfl condition is violated (significantly increases mem usage)
    real    :: relax_time                   !< relaxation/grace time, additional physics will be turned off until global::t >= global::relax_time
+   logical, dimension(xdim:zdim) :: skip_sweep !< allows to skip sweep in chosen direction
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
-        &                     repeat_step, limiter, relax_time, integration_order, cfr_smooth
+        &                     repeat_step, limiter, relax_time, integration_order, cfr_smooth, skip_sweep
 
 contains
 
@@ -108,6 +109,7 @@ contains
 !!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
 !!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
 !!   <tr><td>relax_time       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::relax_time       </td></tr>
+!!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -176,8 +178,9 @@ contains
          rbuff(10) = cfl_max
          rbuff(11) = relax_time
 
-         lbuff(1) = use_smalld
-         lbuff(2) = repeat_step
+         lbuff(1)   = use_smalld
+         lbuff(2)   = repeat_step
+         lbuff(3:5) = skip_sweep
 
       endif
 
@@ -190,6 +193,7 @@ contains
 
          use_smalld    = lbuff(1)
          repeat_step   = lbuff(2)
+         skip_sweep    = lbuff(3:5)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)
