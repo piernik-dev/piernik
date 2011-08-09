@@ -66,7 +66,7 @@ if options.dolog:
 
 title_str = "T = %f" % attrs.time[0]
 
-imshow(arr,extent=extent)
+imshow(arr,extent=extent,interpolation='nearest')
 title(title_str)
 colorbar()
 draw()
