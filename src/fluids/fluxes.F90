@@ -48,7 +48,7 @@ module fluxes
 ! pulled by ANY
    implicit none
    private
-   public  :: all_fluxes, flimiter, set_limiter, init_fluxes
+   public  :: all_fluxes, flimiter, set_limiter, init_fluxes, cleanup_fluxes
 
    logical, save                              :: fluxes_initialized = .false.
 
@@ -121,6 +121,15 @@ contains
 
       fluxes_initialized = .true.
    end subroutine init_fluxes
+
+   subroutine cleanup_fluxes
+
+      implicit none
+
+      if (allocated(flist))  deallocate(flist)
+
+   end subroutine cleanup_fluxes
+
 !>
 !! \brief Subroutine which changes flux and cfr from mhdflux regarding specified fluids.
 !! \param flux flux

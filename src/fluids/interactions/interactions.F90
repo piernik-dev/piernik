@@ -40,7 +40,7 @@ module interactions
    implicit none
 
    private
-   public :: init_interactions, fluid_interactions, collfaq, cfl_interact, dragc_gas_dust, has_interactions, &
+   public :: init_interactions, cleanup_interactions, fluid_interactions, collfaq, cfl_interact, dragc_gas_dust, has_interactions, &
       & interactions_grace_passed, epstein_factor, balsara_implicit_interactions, update_grain_size
 
    real, allocatable, dimension(:,:)      :: collfaq     !< flind%fluids x flind%fluids array of collision factors
@@ -143,6 +143,14 @@ contains
 !      if (grace_period_passed()) call interactions_grace_passed
 
    end subroutine init_interactions
+
+   subroutine cleanup_interactions
+
+      implicit none
+
+      if (allocated(epstein_factor)) deallocate(epstein_factor)
+
+   end subroutine cleanup_interactions
 
    subroutine interactions_grace_passed
 

@@ -154,7 +154,7 @@ contains
 
 #ifdef IONIZED
 !  Compute indexes for the ionized fluid and update counters
-      allocate(flind%ion) !> \deprecated BEWARE: flind\%ion not deallocated
+      allocate(flind%ion)
       call ionized_index(flind)
 #endif /* IONIZED */
 
@@ -232,7 +232,7 @@ contains
       iarr_all_crs(1:flind%crs%all) = iarr_crs
 #endif /* COSM_RAYS */
 
-      allocate(flind%all_fluids(flind%fluids)) !> \deprecated BEWARE: flind\%fluids not deallocated
+      allocate(flind%all_fluids(flind%fluids))
       i = 1
 #ifdef IONIZED
       flind%all_fluids(i) = flind%ion ; i = i + 1
@@ -251,6 +251,8 @@ contains
 
       implicit none
 
+      integer :: i
+
       call my_deallocate(iarr_mag_swpx)
       call my_deallocate(iarr_mag_swpy)
       call my_deallocate(iarr_mag_swpz)
@@ -268,6 +270,23 @@ contains
       call my_deallocate(iarr_all_crn)
       call my_deallocate(iarr_all_cre)
       call my_deallocate(iarr_all_crs)
+
+      do i = 1, ubound(flind%all_fluids, dim=1)
+         deallocate(flind%all_fluids(i)%iarr)
+         deallocate(flind%all_fluids(i)%iarr_swpx)
+         deallocate(flind%all_fluids(i)%iarr_swpy)
+         deallocate(flind%all_fluids(i)%iarr_swpz)
+      enddo
+      deallocate(flind%all_fluids)
+#ifdef IONIZED
+      deallocate(flind%ion) ! cannot check if allocated, because it is not allocatable
+#endif /* IONIZED */
+#ifdef NEUTRAL
+      deallocate(flind%neu)
+#endif /* NEUTRAL */
+#ifdef DUST
+      deallocate(flind%dst)
+#endif /* DUST */
 
    end subroutine cleanup_fluidindex
 
