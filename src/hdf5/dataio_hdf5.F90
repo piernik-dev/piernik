@@ -1630,7 +1630,8 @@ contains
       integer(SIZE_T), parameter :: n_int4 = 19, n_r8 = 14, n_nxarr_r8 = 4, n_nyarr_r8 = 4, n_nzarr_r8 = 4, &
          & n_ndims_r8 = 2, n_ndims_i4 =1, n_ndims_i8 = 1, n_ndims_lohi_i4 = 2
 
-      integer(SIZE_T) :: n_arr3d_r8, n_ndims_arr4d_r8, n_u_arr4d_r8, total_no, n_stub
+      integer(SIZE_T) :: n_arr3d_r8, n_ndims_arr4d_r8, n_u_arr4d_r8, n_stub
+      integer :: total_no
 
       integer(SIZE_T) :: int4_ts, r8_ts, nxarr_r8_ts, nyarr_r8_ts, nzarr_r8_ts, arr3d_r8_ts, ndims_r8_ts, &
          & ndims_i4_ts, ndims_i8_ts, ndims_lohi_i4_ts, ndims_arr4d_r8_ts, u_arr4d_r8_ts, type_size, offset
@@ -1702,8 +1703,8 @@ contains
 
       call h5tcreate_f(H5T_COMPOUND_F, type_size, dtype_id, error)
 
-      total_no =  n_int4 + n_r8 + n_ndims_r8 + n_ndims_i4  + n_ndims_i8 + n_ndims_lohi_i4 + n_nxarr_r8 + n_nyarr_r8 + &
-         n_nzarr_r8 + n_arr3d_r8 + n_ndims_arr4d_r8 + n_u_arr4d_r8 + n_stub
+      total_no =  int(n_int4 + n_r8 + n_ndims_r8 + n_ndims_i4  + n_ndims_i8 + n_ndims_lohi_i4 + n_nxarr_r8 + n_nyarr_r8 + &
+         n_nzarr_r8 + n_arr3d_r8 + n_ndims_arr4d_r8 + n_u_arr4d_r8 + n_stub, kind(total_no))
 
       allocate(types(total_no), types_sizes(total_no), types_names(total_no), dmem_id(total_no))
 
