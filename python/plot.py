@@ -20,6 +20,34 @@ def read_hdf5(options,filename):
    h5f.close()
    return arr, attrs
 
+def get_frame(filename,options):
+   tab, attrs = read_hdf5(options,filename)
+   shape = list(tab.shape)
+
+   if options.plane == "xy":
+      p = 0
+      extent = [attrs.xmin[0], attrs.xmax[0], attrs.ymin[0], attrs.ymax[0]]
+      s = s_[:,:,options.cell]
+   elif options.plane == "xz":
+      p = 1
+      extent = [attrs.xmin[0], attrs.xmax[0], attrs.zmin[0], attrs.zmax[0]]
+      s = s_[:,options.cell,:]
+   else:
+      p = 2
+      extent = [attrs.ymin[0], attrs.ymax[0], attrs.zmin[0], attrs.zmax[0]]
+      s = s_[:,:,options.cell]
+
+   if options.cell >= shape[p] or options.cell < 0:
+      print("You gotta be kiddin' me... %d is _not_ in [0,%d]" % (options.cell, shape[p]-1))
+
+   arr = tab[s]
+   if options.dolog:
+      arr = np.log10(arr)
+
+   title_str = "T = %f" % attrs.time[0]
+
+   return arr, title_str, extent
+
 usage = "usage: %prog [options] FILE"
 try:
    parser = OptionParser(usage=usage, epilog="if you want some additional features, bug me.")
@@ -40,34 +68,22 @@ if not options.plane in ["xy","yz","xz"]:
    print '\033[91m' + "wrong plane: " + '\033[0m' + options.plane
    exit(-1)
 
-filename = args[0]
-tab, attrs = read_hdf5(options,filename)
-shape = list(tab.shape)
+if len(args) > 1:
+   ion()
 
-if options.plane == "xy":
-   p = 0
-   extent = [attrs.xmin[0], attrs.xmax[0], attrs.ymin[0], attrs.ymax[0]]
-   s = s_[:,:,options.cell]
-elif options.plane == "xz":
-   p = 1
-   extent = [attrs.xmin[0], attrs.xmax[0], attrs.zmin[0], attrs.zmax[0]]
-   s = s_[:,options.cell,:]
-else:
-   p = 2
-   extent = [attrs.ymin[0], attrs.ymax[0], attrs.zmin[0], attrs.zmax[0]]
-   s = s_[:,:,options.cell]
-
-if options.cell >= shape[p] or options.cell < 0:
-   print("You gotta be kiddin' me... %d is _not_ in [0,%d]" % (options.cell, shape[p]-1))
-
-arr = tab[s]
-if options.dolog:
-   arr = np.log10(arr)
-
-title_str = "T = %f" % attrs.time[0]
-
-imshow(arr,extent=extent,interpolation='nearest')
+arr, title_str, extent = get_frame(args[0], options)
+plt = imshow(arr,extent=extent,interpolation='nearest')
 title(title_str)
-colorbar()
+col=colorbar()
 draw()
 show()
+
+if len(args) > 1:
+   for arg in args[1:]:
+      arr, title_str, extent = get_frame(arg,options)
+      plt = imshow(arr,extent=extent,interpolation='nearest')
+      title(title_str)
+      col.update_bruteforce(plt)
+      draw()
+   print "Press ENTER to exit"
+   e = sys.stdin.readline()  # wait for ENTER due to ion()
