@@ -358,6 +358,7 @@ contains
       use constants,         only: xdim, ydim, zdim, LO, HI, BND_OUT, BND_OUTH
       use grid,              only: cga
       use grid_cont,         only: cg_list_element, grid_container
+      use mpisetup,          only: has_dir
       implicit none
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
@@ -367,40 +368,46 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (cg%bnd(xdim,LO) >= BND_OUT .and. cg%bnd(xdim,LO) <= BND_OUTH) then
-            do i = 1, cg%nb+1
-               cg%gp%arr(i,:,:)               = cg%gp%arr(cg%nb+2,:,:)
-            enddo
+         if (has_dir(xdim)) then
+            if (cg%bnd(xdim,LO) >= BND_OUT .and. cg%bnd(xdim,LO) <= BND_OUTH) then
+               do i = 1, cg%nb+1
+                  cg%gp%arr(i,:,:)               = cg%gp%arr(cg%nb+2,:,:)
+               enddo
+            endif
+
+            if (cg%bnd(xdim,HI) >= BND_OUT .and. cg%bnd(xdim,HI) <= BND_OUTH) then
+               do i = 1, cg%nb+1
+                  cg%gp%arr(cg%nx-cg%nb-1+i,:,:) = cg%gp%arr(cg%nx-cg%nb-1,:,:)
+               enddo
+            endif
          endif
 
-         if (cg%bnd(xdim,HI) >= BND_OUT .and. cg%bnd(xdim,HI) <= BND_OUTH) then
-            do i = 1, cg%nb+1
-               cg%gp%arr(cg%nx-cg%nb-1+i,:,:) = cg%gp%arr(cg%nx-cg%nb-1,:,:)
-            enddo
+         if (has_dir(ydim)) then
+            if (cg%bnd(ydim,LO) >= BND_OUT .and. cg%bnd(ydim,LO) <= BND_OUTH) then
+               do i = 1, cg%nb+1
+                  cg%gp%arr(:,i,:)               = cg%gp%arr(:,cg%nb+2,:)
+               enddo
+            endif
+
+            if (cg%bnd(ydim,HI) >= BND_OUT .and. cg%bnd(ydim,HI) <= BND_OUTH) then
+               do i = 1, cg%nb+1
+                  cg%gp%arr(:,cg%ny-cg%nb-1+i,:) = cg%gp%arr(:,cg%ny-cg%nb-1,:)
+               enddo
+            endif
          endif
 
-         if (cg%bnd(ydim,LO) >= BND_OUT .and. cg%bnd(ydim,LO) <= BND_OUTH) then
-            do i = 1, cg%nb+1
-               cg%gp%arr(:,i,:)               = cg%gp%arr(:,cg%nb+2,:)
-            enddo
-         endif
+         if (has_dir(zdir)) then
+            if (cg%bnd(zdim,LO) >= BND_OUT .and. cg%bnd(zdim,LO) <= BND_OUTH) then
+               do i = 1, cg%nb+1
+                  cg%gp%arr(:,:,i)               = cg%gp%arr(:,:,cg%nb+2)
+               enddo
+            endif
 
-         if (cg%bnd(ydim,HI) >= BND_OUT .and. cg%bnd(ydim,HI) <= BND_OUTH) then
-            do i = 1, cg%nb+1
-               cg%gp%arr(:,cg%ny-cg%nb-1+i,:) = cg%gp%arr(:,cg%ny-cg%nb-1,:)
-            enddo
-         endif
-
-         if (cg%bnd(zdim,LO) >= BND_OUT .and. cg%bnd(zdim,LO) <= BND_OUTH) then
-            do i = 1, cg%nb+1
-               cg%gp%arr(:,:,i)               = cg%gp%arr(:,:,cg%nb+2)
-            enddo
-         endif
-
-         if (cg%bnd(zdim,HI) >= BND_OUT .and. cg%bnd(zdim,HI) <= BND_OUTH) then
-            do i = 1, cg%nb+1
-               cg%gp%arr(:,:,cg%nz-cg%nb-1+i) = cg%gp%arr(:,:,cg%nz-cg%nb-1)
-            enddo
+            if (cg%bnd(zdim,HI) >= BND_OUT .and. cg%bnd(zdim,HI) <= BND_OUTH) then
+               do i = 1, cg%nb+1
+                  cg%gp%arr(:,:,cg%nz-cg%nb-1+i) = cg%gp%arr(:,:,cg%nz-cg%nb-1)
+               enddo
+            endif
          endif
 
          cgl => cgl%nxt
