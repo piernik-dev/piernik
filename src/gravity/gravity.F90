@@ -43,7 +43,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_pot_3d_called, grav_type, get_gprofs, grav_accel2pot, sum_potential
+   public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_pot_3d_called, grav_type, get_gprofs, grav_accel2pot, sum_potential, grav_pot_3d_bnd
    public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gp_status, gprofs_target, ptmass2, ptm2_x
 
    integer, parameter         :: gp_stat_len   = 9
@@ -345,11 +345,68 @@ contains
          frun = .false.
       endif
 #endif /* SELF_GRAV */
-      if (variable_gp) call grav_pot_3d
+      if (variable_gp) then
+         call grav_pot_3d
+         call grav_pot_3d_bnd
+      endif
 
       call sum_potential
 
    end subroutine source_terms_grav
+
+   subroutine grav_pot_3d_bnd
+      use constants,         only: xdim, ydim, zdim, LO, HI, BND_OUT, BND_OUTH
+      use grid,              only: cga
+      use grid_cont,         only: cg_list_element, grid_container
+      implicit none
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer  :: cg
+      integer :: i
+
+      call cga%get_root(cgl)
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         if (cg%bnd(xdim,LO) >= BND_OUT .and. cg%bnd(xdim,LO) <= BND_OUTH) then
+            do i = 1, cg%nb+1
+               cg%gp%arr(i,:,:)               = cg%gp%arr(cg%nb+2,:,:)
+            enddo
+         endif
+
+         if (cg%bnd(xdim,HI) >= BND_OUT .and. cg%bnd(xdim,HI) <= BND_OUTH) then
+            do i = 1, cg%nb+1
+               cg%gp%arr(cg%nx-cg%nb-1+i,:,:) = cg%gp%arr(cg%nx-cg%nb-1,:,:)
+            enddo
+         endif
+
+         if (cg%bnd(ydim,LO) >= BND_OUT .and. cg%bnd(ydim,LO) <= BND_OUTH) then
+            do i = 1, cg%nb+1
+               cg%gp%arr(:,i,:)               = cg%gp%arr(:,cg%nb+2,:)
+            enddo
+         endif
+
+         if (cg%bnd(ydim,HI) >= BND_OUT .and. cg%bnd(ydim,HI) <= BND_OUTH) then
+            do i = 1, cg%nb+1
+               cg%gp%arr(:,cg%ny-cg%nb-1+i,:) = cg%gp%arr(:,cg%ny-cg%nb-1,:)
+            enddo
+         endif
+
+         if (cg%bnd(zdim,LO) >= BND_OUT .and. cg%bnd(zdim,LO) <= BND_OUTH) then
+            do i = 1, cg%nb+1
+               cg%gp%arr(:,:,i)               = cg%gp%arr(:,:,cg%nb+2)
+            enddo
+         endif
+
+         if (cg%bnd(zdim,HI) >= BND_OUT .and. cg%bnd(zdim,HI) <= BND_OUTH) then
+            do i = 1, cg%nb+1
+               cg%gp%arr(:,:,cg%nz-cg%nb-1+i) = cg%gp%arr(:,:,cg%nz-cg%nb-1)
+            enddo
+         endif
+
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine grav_pot_3d_bnd
 
    subroutine sum_potential
 
