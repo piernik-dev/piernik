@@ -65,7 +65,7 @@ module fluidtypes
       integer(kind=4) :: imx = -1      !< index denoting position of the fluid x-momentum in array arrays::u
       integer(kind=4) :: imy = -1      !< index denoting position of the fluid y-momentum in array arrays::u
       integer(kind=4) :: imz = -1      !< index denoting position of the fluid z-momentum in array arrays::u
-      integer (kind=4):: ien = -1      !< index denoting position of the fluid energy in array arrays::u
+      integer(kind=4) :: ien = -1      !< index denoting position of the fluid energy in array arrays::u
 
       real    :: cs    = 0.0   !< fluid's isothermal sound speed
       real    :: cs2   = 0.0   !< fluid's isothermal sound speed squared
