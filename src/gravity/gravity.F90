@@ -358,7 +358,7 @@ contains
       use constants,         only: xdim, ydim, zdim, LO, HI, BND_OUT, BND_OUTH
       use grid,              only: cga
       use grid_cont,         only: cg_list_element, grid_container
-      use mpisetup,          only: has_dir
+      use domain,            only: has_dir
       implicit none
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
