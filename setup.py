@@ -146,7 +146,7 @@ clean-all:
 \t$(ECHO_FC)
 ifdef USE_GNUCPP
 \t@$(PRECOMP) $(CPPFLAGS) $< $(patsubst %.F90,%_.f90,$<) 2>&1 | sed -n "/!warning: missing terminating \' character/p"
-\tsed -i 's/; open/;\\n  open/g' $(patsubst %.F90,%_.f90,$<)
+\t@sed -i 's/; open/;\\n  open/g' $(patsubst %.F90,%_.f90,$<)
 \t$(F90) $(F90FLAGS) -c $(patsubst %.F90,%_.f90,$<) && ( $(RM) $(patsubst %.F90,%_.f90,$<); $(MV) $(patsubst %.F90,%_.o,$<) $(patsubst %.F90,%.o,$<) )
 else
 \t$(F90) $(CPPFLAGS) $(F90FLAGS) -c $<
