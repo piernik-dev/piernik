@@ -396,7 +396,7 @@ contains
             endif
          endif
 
-         if (has_dir(zdir)) then
+         if (has_dir(zdim)) then
             if (cg%bnd(zdim,LO) >= BND_OUT .and. cg%bnd(zdim,LO) <= BND_OUTH) then
                do i = 1, cg%nb+1
                   cg%gp%arr(:,:,i)               = cg%gp%arr(:,:,cg%nb+2)
