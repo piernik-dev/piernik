@@ -40,7 +40,7 @@ module multigridbasefuncs
 
    private
 
-   public :: prolong_level, restrict_all, norm_sq, substract_average, prolong_faces, zero_boundaries
+   public :: prolong_level, restrict_all, norm_sq, subtract_average, prolong_faces, zero_boundaries
 
 contains
 
@@ -180,7 +180,7 @@ contains
 !! \brief Compute the global average value and subtract it from the whole domain
 !<
 
-   subroutine substract_average(curl, iv)
+   subroutine subtract_average(curl, iv)
 
       use constants,     only: GEO_XYZ, GEO_RPZ
       use dataio_pub,    only: die
@@ -197,7 +197,7 @@ contains
       real                :: lsum, avg, vol
       integer             :: i
 
-      if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:substract_average] Invalid variable index.")
+      if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:subtract_average] Invalid variable index.")
 
       select case (geometry_type)
          case (GEO_XYZ)
@@ -208,7 +208,7 @@ contains
                lsum = lsum + sum(curl%mgvar(i, curl%js:curl%je, curl%ks:curl%ke, iv)) * curl%dvol * curl%x(i)
             enddo
          case default
-            call die("[multigridbasefuncs:substract_average] Unsupported geometry.")
+            call die("[multigridbasefuncs:subtract_average] Unsupported geometry.")
       end select
       call MPI_Allreduce(lsum, avg, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
       call MPI_Allreduce(curl%vol, vol, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr) ! This probably can be calculated in init_multigrid
@@ -216,7 +216,7 @@ contains
 
       curl%mgvar(:, :, :, iv) = curl%mgvar(:, :, :, iv) - avg
 
-   end subroutine substract_average
+   end subroutine subtract_average
 
 !!$ ============================================================================
 !>

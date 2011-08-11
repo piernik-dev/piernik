@@ -1003,7 +1003,7 @@ contains
       use domain,             only: geometry_type
       use grid,               only: cga
       use grid_cont,          only: grid_container
-      use multigridbasefuncs, only: substract_average
+      use multigridbasefuncs, only: subtract_average
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridvars,      only: roof, source, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval
       use units,              only: fpiG
@@ -1032,7 +1032,7 @@ contains
 
       select case (grav_bnd)
          case (bnd_periodic) ! probably also bnd_neumann
-            call substract_average(roof, source)
+            call subtract_average(roof, source)
          case (bnd_dirichlet)
 #ifdef JEANS_PROBLEM
             if (jeans_mode == 1) roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
@@ -1286,7 +1286,7 @@ contains
       use mpisetup,           only: master, nproc
       use timer,              only: set_timer
       use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
-      use multigridbasefuncs, only: norm_sq, restrict_all, substract_average
+      use multigridbasefuncs, only: norm_sq, restrict_all, subtract_average
       use dataio_pub,         only: msg, die, warn
       use multigridvars,      only: plvl, roof, base, source, solution, correction, defect, verbose_vcycle, bnd_periodic, stdout, tot_ts, ts
 
@@ -1345,7 +1345,7 @@ contains
 
          call set_dirty(defect)
          call residual(roof, source, solution, defect)
-         if (grav_bnd == bnd_periodic) call substract_average(roof, defect)
+         if (grav_bnd == bnd_periodic) call subtract_average(roof, defect)
          call check_dirty(roof%level, defect, "residual")
 
          call norm_sq(defect, norm_lhs)
