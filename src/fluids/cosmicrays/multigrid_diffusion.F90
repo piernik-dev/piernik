@@ -373,7 +373,7 @@ contains
             cg => cgl%cg
             roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction) = (1. -1./diff_theta) * cg%u%arr(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
             roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, defect)     =     -1./diff_theta  * cg%u%arr(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            call residual(roof%level, defect, correction, source, cr_id)
+            call residual(roof, defect, correction, source, cr_id)
             cgl => cgl%nxt
          enddo
       else
@@ -434,14 +434,14 @@ contains
       use multigridbasefuncs, only: restrict_all
       use multigridhelpers,   only: set_dirty, check_dirty, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: base, roof, extbnd_mirror, lvl
+      use multigridvars,      only: base, roof, extbnd_mirror, plvl
 
       implicit none
 
       integer(kind=4) :: ib
-      integer :: il
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+      type(plvl), pointer :: curl
 
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid_diffusion:init_b] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
@@ -456,14 +456,17 @@ contains
             cgl => cgl%nxt
          enddo
          call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines
-         do il = base%level, roof%coarser%level
-            call mpi_multigrid_bnd(lvl(il), diff_bx+ib-ibx, 1, extbnd_mirror, .true.) !> \todo use global boundary type for B
+
+         curl => base
+         do while (associated(curl%finer)) ! from base to one level below roof
+            call mpi_multigrid_bnd(curl, diff_bx+ib-ibx, 1, extbnd_mirror, .true.) !> \todo use global boundary type for B
             !>
             !! |deprecated BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             !! the problem is that the cg%b%arr(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
             !<
             write(dirty_label, '(a,i1)')"init b",ib
-            call check_dirty(il, diff_bx+ib-ibx, dirty_label)
+            call check_dirty(curl%level, diff_bx+ib-ibx, dirty_label)
+            curl => curl%finer
          enddo
       enddo
 
@@ -512,7 +515,7 @@ contains
 
          call set_dirty(defect)
 
-         call residual(roof%level, source, solution, defect, cr_id)
+         call residual(roof, source, solution, defect, cr_id)
          call norm_sq(defect, norm_lhs)
          ts = set_timer("multigrid_diffusion")
          tot_ts = tot_ts + ts
@@ -546,7 +549,7 @@ contains
 
          curl => base
          do while (associated(curl))
-            call approximate_solution(curl%level, defect, correction, cr_id)
+            call approximate_solution(curl, defect, correction, cr_id)
             call prolong_level(curl, correction)
             curl => curl%finer
          enddo
@@ -594,7 +597,7 @@ contains
 !<
 
    !> \deprecated BEWARE: almost replicated code (see crdiffusion.F90)
-   subroutine diff_flux_x(i, j, k, soln, lev, cr_id, Keff)
+   subroutine diff_flux_x(i, j, k, soln, curl, cr_id, Keff)
 
       use constants,      only: ydim, zdim
       use dataio_pub,     only: die
@@ -610,20 +613,18 @@ contains
       integer, intent(in) :: i            !< first cell index
       integer, intent(in) :: j            !< second cell index
       integer, intent(in) :: k            !< third cell index
-      integer(kind=4), intent(in) :: soln         !< multigrid variable to differentiate
-      integer, intent(in) :: lev          !< level on which differentiate
+      integer(kind=4), intent(in) :: soln !< multigrid variable to differentiate
+      type(plvl), pointer, intent(in) :: curl !< level on which differentiate
       integer, intent(in) :: cr_id        !< CR component index
       real, optional, intent(out) :: Keff !< effective diffusion coefficient for relaxation
 
       real                :: fcrdif, decr1, decr2, decr3
       real                :: b1b, b2b, b3b, magb
-      type(plvl), pointer :: curl
       type(grid_container), pointer :: cg
 
       cg => cga%cg_all(1)
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid_diffusion:diff_flux_x] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
-      curl => lvl(lev)
       ! Assumes has_dir(xdim)
       decr1 = (curl%mgvar(i, j, k, soln) - curl%mgvar(i-1, j, k, soln)) / curl%dx
       fcrdif = K_crs_perp(cr_id) * decr1
@@ -668,7 +669,7 @@ contains
 !! \brief Compute diffusive flux in the y-direction
 !<
 
-   subroutine diff_flux_y(i, j, k, soln, lev, cr_id, Keff)
+   subroutine diff_flux_y(i, j, k, soln, curl, cr_id, Keff)
 
       use constants,      only: xdim, zdim
       use dataio_pub,     only: die
@@ -684,20 +685,18 @@ contains
       integer, intent(in) :: i            !< first cell index
       integer, intent(in) :: j            !< second cell index
       integer, intent(in) :: k            !< third cell index
-      integer(kind=4), intent(in) :: soln         !< multigrid variable to differentiate
-      integer, intent(in) :: lev          !< level on which differentiate
+      integer(kind=4), intent(in) :: soln !< multigrid variable to differentiate
+      type(plvl), pointer, intent(in) :: curl !< level on which differentiate
       integer, intent(in) :: cr_id        !< CR component index
       real, optional, intent(out) :: Keff !< effective diffusion coefficient for relaxation
 
       real                :: fcrdif, decr1, decr2, decr3
       real                :: b1b, b2b, b3b, magb
-      type(plvl), pointer :: curl
       type(grid_container), pointer :: cg
 
       cg => cga%cg_all(1)
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid_diffusion:diff_flux_y] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
-      curl => lvl(lev)
       ! Assumes has_dir(ydim)
       decr2 = (curl%mgvar(i, j, k, soln) - curl%mgvar(i, j-1, k, soln)) / curl%dy
       fcrdif = K_crs_perp(cr_id) * decr2
@@ -742,7 +741,7 @@ contains
 !! \brief Compute diffusive flux in the z-direction
 !<
 
-   subroutine diff_flux_z(i, j, k, soln, lev, cr_id, Keff)
+   subroutine diff_flux_z(i, j, k, soln, curl, cr_id, Keff)
 
       use constants,      only: xdim, ydim
       use dataio_pub,     only: die
@@ -758,20 +757,18 @@ contains
       integer, intent(in) :: i            !< first cell index
       integer, intent(in) :: j            !< second cell index
       integer, intent(in) :: k            !< third cell index
-      integer(kind=4), intent(in) :: soln         !< multigrid variable to differentiate
-      integer, intent(in) :: lev          !< level on which differentiate
+      integer(kind=4), intent(in) :: soln !< multigrid variable to differentiate
+      type(plvl), pointer, intent(in) :: curl !< level on which differentiate
       integer, intent(in) :: cr_id        !< CR component index
       real, optional, intent(out) :: Keff !< effective diffusion coefficient for relaxation
 
       real                :: fcrdif, decr1, decr2, decr3
       real                :: b1b, b2b, b3b, magb
-      type(plvl), pointer :: curl
       type(grid_container), pointer :: cg
 
       cg => cga%cg_all(1)
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid_diffusion:diff_flux_z] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
-      curl => lvl(lev)
       ! Assumes has_dir(zdim)
       decr3 = (curl%mgvar(i, j, k, soln) - curl%mgvar(i, j, k-1, soln)) / curl%dz
       fcrdif = K_crs_perp(cr_id) * decr3
@@ -818,7 +815,7 @@ contains
 !! defect = solution - source - grad (c grad (solution))
 !<
 
-   subroutine residual(lev, src, soln, def, cr_id)
+   subroutine residual(curl, src, soln, def, cr_id)
 
       use constants,         only: xdim, ydim, zdim
       use dataio_pub,        only: die
@@ -831,20 +828,18 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev   !< level for which approximate the solution
+      type(plvl), pointer, intent(in) :: curl !< level for which approximate the solution
       integer(kind=4), intent(in) :: src   !< index of source in lvl()%mgvar
       integer(kind=4), intent(in) :: soln  !< index of solution in lvl()%mgvar
       integer(kind=4), intent(in) :: def   !< index of defect in lvl()%mgvar
       integer, intent(in) :: cr_id !< CR component index
 
       integer             :: i, j, k
-      type(plvl), pointer :: curl
       type(grid_container), pointer :: cg
 
       cg => cga%cg_all(1)
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid_diffusion:residual] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
-      curl => lvl(lev)
       call mpi_multigrid_bnd(curl, soln, 1, diff_extbnd, .true.) ! corners are required for fluxes
 
       do k = curl%ks, curl%ke
@@ -857,7 +852,7 @@ contains
          do k = curl%ks, curl%ke
             do j = curl%js, curl%je
                do i = curl%is, curl%ie+1
-                  call diff_flux_x(i, j, k, soln, lev, cr_id)
+                  call diff_flux_x(i, j, k, soln, curl, cr_id)
                enddo
             enddo
             curl%mgvar     (curl%is  :curl%ie,   curl%js:curl%je, k, def) = &
@@ -871,7 +866,7 @@ contains
          do k = curl%ks, curl%ke
             do j = curl%js, curl%je+1
                do i = curl%is, curl%ie
-                  call diff_flux_y(i, j, k, soln, lev, cr_id)
+                  call diff_flux_y(i, j, k, soln, curl, cr_id)
                enddo
             enddo
             curl%mgvar     (curl%is:curl%ie, curl%js  :curl%je,   k, def) = &
@@ -885,7 +880,7 @@ contains
          do k = curl%ks, curl%ke+1
             do j = curl%js, curl%je
                do i = curl%is, curl%ie
-                  call diff_flux_z(i, j, k, soln, lev, cr_id)
+                  call diff_flux_z(i, j, k, soln, curl, cr_id)
                enddo
             enddo
          enddo
@@ -895,7 +890,7 @@ contains
               &       cg%wa%arr(curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke  ) )
       endif
 
-      call check_dirty(lev, def, "res def")
+      call check_dirty(curl%level, def, "res def")
 
    end subroutine residual
 
@@ -908,7 +903,7 @@ contains
 !! This routine also depends a lot on communication so it  may limit scalability of the multigrid.
 !<
 
-   subroutine approximate_solution(lev, src, soln, cr_id)
+   subroutine approximate_solution(curl, src, soln, cr_id)
 
       use constants,         only: xdim, ydim, zdim
       use dataio_pub,        only: die
@@ -921,7 +916,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev   !< level for which approximate the solution
+      type(plvl), pointer, intent(in) :: curl !< level for which approximate the solution
       integer(kind=4), intent(in) :: src   !< index of source in lvl()%mgvar
       integer(kind=4), intent(in) :: soln  !< index of solution in lvl()%mgvar
       integer, intent(in) :: cr_id !< CR component index
@@ -931,13 +926,10 @@ contains
       integer :: n, i, j, k, i1, j1, k1, id, jd, kd
       integer :: nsmoo
       real    :: Keff1, Keff2, dLdu, temp
-      type(plvl), pointer :: curl
       type(grid_container), pointer :: cg
 
       cg => cga%cg_all(1)
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid_diffusion:approximate_solution] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
-
-      curl => lvl(lev)
 
       if (associated(curl, base)) then
          nsmoo = nsmoob
@@ -975,8 +967,8 @@ contains
 
                   if (has_dir(xdim)) then
 
-                     call diff_flux_x(i,   j, k, soln, lev, cr_id, Keff1)
-                     call diff_flux_x(i+1, j, k, soln, lev, cr_id, Keff2)
+                     call diff_flux_x(i,   j, k, soln, curl, cr_id, Keff1)
+                     call diff_flux_x(i+1, j, k, soln, curl, cr_id, Keff2)
 
                      temp = temp - (cg%wa%arr(i+1, j, k) - cg%wa%arr(i, j, k))
                      dLdu = dLdu - 2 * (Keff1 + Keff2) * curl%idx2
@@ -985,8 +977,8 @@ contains
 
                   if (has_dir(ydim)) then
 
-                     call diff_flux_y(i, j,   k, soln, lev, cr_id, Keff1)
-                     call diff_flux_y(i, j+1, k, soln, lev, cr_id, Keff2)
+                     call diff_flux_y(i, j,   k, soln, curl, cr_id, Keff1)
+                     call diff_flux_y(i, j+1, k, soln, curl, cr_id, Keff2)
 
                      temp = temp - (cg%wa%arr(i, j+1, k) - cg%wa%arr(i, j, k))
                      dLdu = dLdu - 2 * (Keff1 + Keff2) * curl%idy2
@@ -995,8 +987,8 @@ contains
 
                   if (has_dir(zdim)) then
 
-                     call diff_flux_z(i, j, k,   soln, lev, cr_id, Keff1)
-                     call diff_flux_z(i, j, k+1, soln, lev, cr_id, Keff2)
+                     call diff_flux_z(i, j, k,   soln, curl, cr_id, Keff1)
+                     call diff_flux_z(i, j, k+1, soln, curl, cr_id, Keff2)
 
                      temp = temp - (cg%wa%arr(i, j, k+1) - cg%wa%arr(i, j, k))
                      dLdu = dLdu - 2 * (Keff1 + Keff2) * curl%idz2

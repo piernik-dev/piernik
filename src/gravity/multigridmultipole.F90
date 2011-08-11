@@ -117,7 +117,7 @@ contains
       use dataio_pub,    only: die, warn
       use domain,        only: dom, eff_dim, geometry_type
       use mpisetup,      only: master
-      use multigridvars, only: lvl, roof, base
+      use multigridvars, only: roof
 
       implicit none
 
@@ -164,12 +164,15 @@ contains
       endif
       if (mmax < 0) mmax = lmax
 
-      if (coarsen_multipole < 0) coarsen_multipole = 0
-      if (roof%level - coarsen_multipole < base%level) then
-         if (master) call warn("[multipole:init_multipole] too deep multipole coarsening, setting base%level.")
-         coarsen_multipole = roof%level - base%level
-      endif
-      lmpole => lvl(roof%level - coarsen_multipole)
+      lmpole => roof
+      do l = 1, coarsen_multipole
+         if (associated(lmpole%coarser)) then
+            lmpole => lmpole%coarser
+         else
+            if (master) call warn("[multipole:init_multipole] too deep multipole coarsening.")
+         endif
+      enddo
+
       if (coarsen_multipole > 0) then
          if (interp_pt2mom) then
             call warn("[multipole:init_multipole] coarsen_multipole > 0 disables interp_pt2mom.")
@@ -306,7 +309,7 @@ contains
       if (.not. associated(lmpole, roof)) then
          curl => lmpole
          do while (associated(curl) .and. .not. associated(curl, roof)) ! do lev = lmpole%level, roof%level - 1
-            call prolong_ext_bnd(curl%level)
+            call prolong_ext_bnd(curl)
             curl => curl%finer
          enddo
       endif
@@ -503,21 +506,16 @@ contains
 !! \brief Prolong boundaries wrapper
 !<
 
-   subroutine prolong_ext_bnd(lev)
+   subroutine prolong_ext_bnd(coarse)
 
       use constants,     only: ndims
-      use dataio_pub,    only: die, warn
+      use dataio_pub,    only: die
       use domain,        only: eff_dim
-      use multigridvars, only: is_external, is_mg_uneven, base, roof
+      use multigridvars, only: is_external, is_mg_uneven, plvl
 
       implicit none
 
-      integer, intent(in) :: lev !< level to prolong from
-
-      if (lev >= roof%level .or. lev < base%level) then
-         call warn("[multigridmultipole:prolong_ext_bnd0] invalid level")
-         return
-      endif
+      type(plvl), pointer, intent(in) :: coarse !< level to prolong from
 
       if (is_mg_uneven) call die("[multigridmultipole:prolong_ext_bnd0] uneven decomposition not implemented yet")
       if (eff_dim<ndims) call die("[multigridmultipole:prolong_ext_bnd0] 1D and 2D not finished")
@@ -527,9 +525,9 @@ contains
       !> \deprecated BEWARE: do we need cylindrical factors for prolongation?
       if (any(is_external(:, :))) then
          if (ord_prolong_mpole == 0) then
-            call prolong_ext_bnd0(lev)
+            call prolong_ext_bnd0(coarse)
          else
-            call prolong_ext_bnd2(lev)
+            call prolong_ext_bnd2(coarse)
          endif
       endif
 
@@ -540,20 +538,19 @@ contains
 !! \brief Prolong boundaries by injection.
 !<
 
-   subroutine prolong_ext_bnd0(lev)
+   subroutine prolong_ext_bnd0(coarse)
 
-      use multigridvars,   only: lvl, is_external
+      use multigridvars,   only: plvl, is_external
       use constants,       only: HI, LO, xdim, ydim, zdim
       use dataio_pub,      only: die
 
       implicit none
 
-      integer, intent(in) :: lev !< level to prolong from
+      type(plvl), pointer, intent(in) :: coarse !< level to prolong from
 
-      type(plvl), pointer :: coarse, fine
+      type(plvl), pointer :: fine
       integer :: lh
 
-      coarse => lvl(lev)
       if (.not. associated(coarse)) call die("[multigridmultipole:prolong_ext_bnd0] coarse == null()")
       fine   => coarse%finer
       if (.not. associated(fine)) call die("[multigridmultipole:prolong_ext_bnd0] fine == null()")
@@ -586,17 +583,17 @@ contains
 !! \todo write something more general, a routine that takes arrays or pointers and does the 2D prolongation
 !<
 
-   subroutine prolong_ext_bnd2(lev)
+   subroutine prolong_ext_bnd2(coarse)
 
-      use multigridvars,   only: lvl, is_external
+      use multigridvars,   only: plvl, is_external
       use constants,       only: HI, LO, xdim, ydim, zdim
       use dataio_pub,      only: die
 
       implicit none
 
-      integer, intent(in) :: lev !< level to prolong from
+      type(plvl), pointer, intent(in) :: coarse !< level to prolong from
 
-      type(plvl), pointer :: coarse, fine
+      type(plvl), pointer :: fine
 
       integer                       :: i, j, k, lh
       real, parameter, dimension(3) :: p0  = [ 0.,       1.,     0.     ] ! injection
@@ -606,7 +603,6 @@ contains
       real, dimension(-1:1)         :: p
       real, dimension(-1:1,-1:1,2,2):: pp   ! 2D prolongation stencil
 
-      coarse => lvl(lev)
       if (.not. associated(coarse)) call die("[multigridmultipole:prolong_ext_bnd0] coarse == null()")
       fine   => coarse%finer
       if (.not. associated(fine)) call die("[multigridmultipole:prolong_ext_bnd0] fine == null()")
@@ -632,7 +628,7 @@ contains
       enddo
 
       !at edges and corners we can only inject
-      call prolong_ext_bnd0(lev) ! overkill: replace this
+      call prolong_ext_bnd0(coarse) ! overkill: replace this
 
       do lh = LO, HI
          if (is_external(xdim, lh)) then
