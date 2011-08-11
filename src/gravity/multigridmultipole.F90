@@ -281,7 +281,7 @@ contains
          lmpole%bnd_y(:, :, :) = dirtyH
          lmpole%bnd_z(:, :, :) = dirtyH
       else
-         call zero_boundaries(lmpole%level)
+         call zero_boundaries(lmpole)
       endif
 
       if (.not. associated(lmpole, roof)) then

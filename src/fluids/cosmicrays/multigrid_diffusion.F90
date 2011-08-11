@@ -434,7 +434,7 @@ contains
       use multigridbasefuncs, only: restrict_all
       use multigridhelpers,   only: set_dirty, check_dirty, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: base, roof, extbnd_mirror
+      use multigridvars,      only: base, roof, extbnd_mirror, lvl
 
       implicit none
 
@@ -457,7 +457,7 @@ contains
          enddo
          call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines
          do il = base%level, roof%coarser%level
-            call mpi_multigrid_bnd(il, diff_bx+ib-ibx, 1, extbnd_mirror, .true.) !> \todo use global boundary type for B
+            call mpi_multigrid_bnd(lvl(il), diff_bx+ib-ibx, 1, extbnd_mirror, .true.) !> \todo use global boundary type for B
             !>
             !! |deprecated BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             !! the problem is that the cg%b%arr(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
@@ -547,7 +547,7 @@ contains
          curl => base
          do while (associated(curl))
             call approximate_solution(curl%level, defect, correction, cr_id)
-            call prolong_level(curl%level, correction)
+            call prolong_level(curl, correction)
             curl => curl%finer
          enddo
 
@@ -577,7 +577,7 @@ contains
       call norm_sq(solution, norm_rhs)
       call norm_sq(defect, norm_lhs)
 !     Do we need to take care of boundaries here?
-!      call mpi_multigrid_bnd(roof%level, solution, 1, diff_extbnd)
+!      call mpi_multigrid_bnd(roof, solution, 1, diff_extbnd)
 !      cg%u%arr(iarr_crs(cr_id), is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z) = roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, solution)
       call cga%get_root(cgl)
       do while (associated(cgl))
@@ -845,7 +845,7 @@ contains
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid_diffusion:residual] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       curl => lvl(lev)
-      call mpi_multigrid_bnd(lev, soln, 1, diff_extbnd, .true.) ! corners are required for fluxes
+      call mpi_multigrid_bnd(curl, soln, 1, diff_extbnd, .true.) ! corners are required for fluxes
 
       do k = curl%ks, curl%ke
          curl%mgvar     (curl%is:curl%ie, curl%js:curl%je, k, def)  =   &
@@ -958,9 +958,9 @@ contains
 
       do n = 1, RED_BLACK*nsmoo
          if (mod(n,2) == 1) then
-            call mpi_multigrid_bnd(lev, soln, 1, diff_extbnd, .true.) ! corners are required for fluxes
+            call mpi_multigrid_bnd(curl, soln, 1, diff_extbnd, .true.) ! corners are required for fluxes
          else
-            call mpi_multigrid_bnd(lev, soln, 1, extbnd_donothing, .true.)
+            call mpi_multigrid_bnd(curl, soln, 1, extbnd_donothing, .true.)
          endif
 
          if (kd == RED_BLACK) k1 = curl%ks + mod(n, RED_BLACK)

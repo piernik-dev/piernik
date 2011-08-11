@@ -102,18 +102,18 @@ contains
 !> \brief high-order order prolongation interpolation
 !!
 
-   subroutine prolong_level_hord(lev, iv)
+   subroutine prolong_level_hord(coarse, iv)
 
       use constants,         only: ndims
       use dataio_pub,        only: die, warn, msg
       use domain,            only: eff_dim
       use mpisetup,          only: master
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: ord_prolong, extbnd_antimirror
+      use multigridvars,     only: ord_prolong, extbnd_antimirror, plvl
 
       implicit none
 
-      integer, intent(in)         :: lev   !< level to prolong from
+      type(plvl), pointer, intent(in) :: coarse   !< level to prolong from
       integer(kind=4), intent(in) :: iv    !< variable to be prolonged
 
       logical, save :: firstcall = .true.
@@ -126,19 +126,19 @@ contains
          firstcall = .false.
       endif
 
-      call mpi_multigrid_bnd(lev, iv, abs(ord_prolong/2), extbnd_antimirror) ! exchange guardcells with corners
+      call mpi_multigrid_bnd(coarse, iv, abs(ord_prolong/2), extbnd_antimirror) ! exchange guardcells with corners
 
       if (eff_dim<ndims) call die("[multigridexperimental:prolong_level_hord] 1D and 2D not finished")
 
       select case (ord_prolong)
       case (-4)
-         call prolong_level4D(lev, iv)
+         call prolong_level4D(coarse, iv)
       case (-2)
-         call prolong_level2D(lev, iv)
+         call prolong_level2D(coarse, iv)
       case (2)
-         call prolong_level2I(lev, iv)
+         call prolong_level2I(coarse, iv)
       case (4)
-         call prolong_level4I(lev, iv)
+         call prolong_level4I(coarse, iv)
       case default
          call die("[multigridexperimental:prolong_level_hord] Unsupported 'ord_prolong' value")
       end select
@@ -150,21 +150,20 @@ contains
 !! \brief 2nd order interpolation, integral version
 !<
 
-   subroutine prolong_level2I(lev, iv)
+   subroutine prolong_level2I(coarse, iv)
 
       use dataio_pub,    only: die
       use multigridvars, only: plvl, lvl
 
       implicit none
 
-      integer, intent(in)         :: lev   !< level to prolong from
+      type(plvl), pointer, intent(in) :: coarse  !< level to prolong from
       integer(kind=4), intent(in) :: iv    !< variable to be prolonged
 
-      type(plvl), pointer :: coarse, fine
+      type(plvl), pointer :: fine
 
       real, parameter :: P0 = 1., P1 = 1./8.
 
-      coarse => lvl(lev)
       if (.not. associated(coarse)) call die("[multigridexperimental:prolong_level2I] coarse == null()")
       fine   => coarse%finer
       if (.not. associated(fine)) call die("[multigridexperimental:prolong_level2I] fine == null()")
@@ -204,20 +203,19 @@ contains
 !! \brief 2nd order interpolation, direct version
 !<
 
-   subroutine prolong_level2D(lev, iv)
+   subroutine prolong_level2D(coarse, iv)
 
       use dataio_pub,    only: die
       use multigridvars, only: plvl, lvl
 
       implicit none
 
-      integer, intent(in)         :: lev   !< level to prolong from
+      type(plvl), pointer, intent(in) :: coarse  !< level to prolong from
       integer(kind=4), intent(in) :: iv    !< variable to be prolonged
 
-      type(plvl), pointer :: coarse, fine
+      type(plvl), pointer :: fine
       real, parameter :: P_1 = -3./32., P0 = 30./32., P1 = 5./32.
 
-      coarse => lvl(lev)
       if (.not. associated(coarse)) call die("[multigridexperimental:prolong_level2D] coarse == null()")
       fine   => coarse%finer
       if (.not. associated(fine)) call die("[multigridexperimental:prolong_level2D] fine == null()")
@@ -257,21 +255,20 @@ contains
 !! \brief 4th order interpolation, integral version
 !<
 
-   subroutine prolong_level4I(lev, iv)
+   subroutine prolong_level4I(coarse, iv)
 
       use dataio_pub,    only: die
       use multigridvars, only: plvl, lvl
 
       implicit none
 
-      integer, intent(in)         :: lev   !< level to prolong from
+      type(plvl), pointer, intent(in) :: coarse  !< level to prolong from
       integer(kind=4), intent(in) :: iv    !< variable to be prolonged
 
-      type(plvl), pointer :: coarse, fine
+      type(plvl), pointer :: fine
 
       real, parameter :: P0 = 1., P1 = 11./64., P2 = 3./128.
 
-      coarse => lvl(lev)
       if (.not. associated(coarse)) call die("[multigridexperimental:prolong_level4I] coarse == null()")
       fine   => coarse%finer
       if (.not. associated(fine)) call die("[multigridexperimental:prolong_level4I] fine == null()")
@@ -323,21 +320,20 @@ contains
 !! \brief 4th order interpolation, direct version
 !<
 
-   subroutine prolong_level4D(lev, iv)
+   subroutine prolong_level4D(coarse, iv)
 
       use dataio_pub,    only: die
       use multigridvars, only: plvl, lvl
 
       implicit none
 
-      integer, intent(in)         :: lev   !< level to prolong from
+      type(plvl), pointer, intent(in) :: coarse  !< level to prolong from
       integer(kind=4), intent(in) :: iv    !< variable to be prolonged
 
-      type(plvl), pointer :: coarse, fine
+      type(plvl), pointer :: fine
 
       real, parameter :: P_2 = 35./2048., P_1 = -252./2048., P0 = 1890./2048., P1 = 420./2048., P2 = -45./2048.
 
-      coarse => lvl(lev)
       if (.not. associated(coarse)) call die("[multigridexperimental:prolong_level4D] coarse == null()")
       fine   => coarse%finer
       if (.not. associated(fine)) call die("[multigridexperimental:prolong_level4D] fine == null()")

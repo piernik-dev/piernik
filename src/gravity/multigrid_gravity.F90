@@ -1032,7 +1032,7 @@ contains
 
       select case (grav_bnd)
          case (bnd_periodic) ! probably also bnd_neumann
-            call substract_average(roof%level, source)
+            call substract_average(roof, source)
          case (bnd_dirichlet)
 #ifdef JEANS_PROBLEM
             if (jeans_mode == 1) roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
@@ -1128,9 +1128,9 @@ contains
       ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
       ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
       if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
-         call mpi_multigrid_bnd(roof%level, solution, mg_nb, extbnd_extrapolate)
+         call mpi_multigrid_bnd(roof, solution, mg_nb, extbnd_extrapolate)
       else
-         call mpi_multigrid_bnd(roof%level, solution, mg_nb, extbnd_mirror)
+         call mpi_multigrid_bnd(roof, solution, mg_nb, extbnd_mirror)
       endif
 
    end subroutine store_solution
@@ -1336,7 +1336,7 @@ contains
          norm_was_zero = .false.
       endif
 
-!      if (.not. history%valid .and. prefer_rbgs_relaxation) call approximate_solution(roof%level, source, solution) ! not necessary when init_solution called FFT
+!      if (.not. history%valid .and. prefer_rbgs_relaxation) call approximate_solution(roof, source, solution) ! not necessary when init_solution called FFT
 ! difficult statement: for approximate_solution_fft it requires to pass a flag to use guardcells instead of prolonging faces.
 ! how much does it improve? (make a benchmark at some point)
 
@@ -1344,8 +1344,8 @@ contains
       do v = 0, max_cycles
 
          call set_dirty(defect)
-         call residual(roof%level, source, solution, defect)
-         if (grav_bnd == bnd_periodic) call substract_average(roof%level, defect)
+         call residual(roof, source, solution, defect)
+         if (grav_bnd == bnd_periodic) call substract_average(roof, defect)
          call check_dirty(roof%level, defect, "residual")
 
          call norm_sq(defect, norm_lhs)
@@ -1405,7 +1405,7 @@ contains
 
          curl => base
          do while (associated(curl))
-            call approximate_solution(curl%level, defect, correction)
+            call approximate_solution(curl, defect, correction)
             call check_dirty(curl%level, correction, "Vup relax+")
             curl => curl%finer
          enddo
@@ -1434,26 +1434,25 @@ contains
 !! \brief Calculate the residuum for the Poisson equation.
 !<
 
-   subroutine residual(lev, src, soln, def)
+   subroutine residual(curl, src, soln, def)
 
       use dataio_pub,            only: die
-      use multigridvars,         only: ngridvars, base, roof
+      use multigridvars,         only: ngridvars, plvl
 
       implicit none
 
-      integer, intent(in) :: lev  !< level for which approximate the solution
+      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer(kind=4), intent(in) :: src  !< index of source in lvl()%mgvar
       integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
       integer(kind=4), intent(in) :: def  !< index of defect in lvl()%mgvar
 
       if (any( [ src, soln, def ] <= 0) .or. any( [ src, soln, def ] > ngridvars)) call die("[multigrid_gravity:residual] Invalid variable index")
-      if (lev < base%level .or. lev > roof%level) call die("[multigrid_gravity:residual] Invalid level number")
 
       select case (ord_laplacian)
       case (2)
-         call residual2(lev, src, soln, def)
+         call residual2(curl, src, soln, def)
       case (4)
-         call residual4(lev, src, soln, def)
+         call residual4(curl, src, soln, def)
       case default
          call die("[multigrid_gravity:residual] The parameter 'ord_laplacian' must be 2 or 4")
       end select
@@ -1465,7 +1464,7 @@ contains
 !! \brief 2nd order Laplacian
 !<
 
-   subroutine residual2(lev, src, soln, def)
+   subroutine residual2(curl, src, soln, def)
 
       use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
       use dataio_pub,         only: die
@@ -1476,18 +1475,15 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev  !< level for which approximate the solution
+      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer(kind=4), intent(in) :: src  !< index of source in lvl()%mgvar
       integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
       integer(kind=4), intent(in) :: def  !< index of defect in lvl()%mgvar
 
       real    :: L0, Lx, Ly, Lz, Lx1
       integer :: i, j, k
-      type(plvl), pointer :: curl
 
-      curl => lvl(lev)
-
-      call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror) ! no corners required
+      call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror) ! no corners required
 
       ! Coefficients for a simplest 3-point Laplacian operator: [ 1, -2, 1 ]
       ! for 2D and 1D setups appropriate elements of [ Lx, Ly, Lz ] should be == 0.
@@ -1580,7 +1576,7 @@ contains
 !! There also exists more compact Mehrstellen scheme.
 !<
 
-   subroutine residual4(lev, src, soln, def)
+   subroutine residual4(curl, src, soln, def)
 
       use dataio_pub,        only: die, warn
       use domain,            only: eff_dim
@@ -1591,7 +1587,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev  !< level for which approximate the solution
+      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer(kind=4), intent(in) :: src  !< index of source in lvl()%mgvar
       integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
       integer(kind=4), intent(in) :: def  !< index of defect in lvl()%mgvar
@@ -1604,9 +1600,6 @@ contains
 
       logical, save       :: firstcall = .true.
       integer             :: i, j, k
-      type(plvl), pointer :: curl
-
-      curl => lvl(lev)
 
       if (eff_dim<ndims) call die("[multigrid_gravity:residual4] Only 3D is implemented")
 
@@ -1615,7 +1608,7 @@ contains
          firstcall = .false.
       endif
 
-      call mpi_multigrid_bnd(lev, soln, 2, extbnd_antimirror) ! no corners required
+      call mpi_multigrid_bnd(curl, soln, 2, extbnd_antimirror) ! no corners required
 
       c21 = 1.
       c42 = - L4_scaling * L4_strength
@@ -1679,7 +1672,7 @@ contains
 !! \brief This routine has to find an approximate solution for given source field and implemented differential operator
 !<
 
-   subroutine approximate_solution(lev, src, soln)
+   subroutine approximate_solution(curl, src, soln)
 
       use dataio_pub,         only: die
       use multigridhelpers,   only: check_dirty
@@ -1688,29 +1681,25 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev  !< level for which approximate the solution
+      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer(kind=4), intent(in) :: src  !< index of source in lvl()%mgvar
       integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
-      type(plvl), pointer :: curl
 
       if (any( [ src, soln ] <= 0) .or. any( [ src, soln ] > ngridvars)) call die("[multigrid_gravity:approximate_solution] Invalid variable index.")
-      if (lev < base%level .or. lev > roof%level) call die("[multigrid_gravity:approximate_solution] Invalid level number.")
 
-      curl => lvl(lev)
-
-      call check_dirty(lev, src, "approx_soln src-")
+      call check_dirty(curl%level, src, "approx_soln src-")
 
       if (curl%fft_type /= fft_none) then
-         call approximate_solution_fft(lev, src, soln)
+         call approximate_solution_fft(curl, src, soln)
       else
-         call check_dirty(lev, soln, "approx_soln soln-")
-         call approximate_solution_rbgs(lev, src, soln)
+         call check_dirty(curl%level, soln, "approx_soln soln-")
+         call approximate_solution_rbgs(curl, src, soln)
       endif
 
-      if (prefer_rbgs_relaxation .and. soln == correction .and. .not. associated(curl, roof)) call prolong_level(lev, correction)
+      if (prefer_rbgs_relaxation .and. soln == correction .and. .not. associated(curl, roof)) call prolong_level(curl, correction)
       !> \deprecated BEWARE other implementations of the multigrid algorithm may be incompatible with prolongation called from here
 
-      call check_dirty(lev, soln, "approx_soln soln+")
+      call check_dirty(curl%level, soln, "approx_soln soln+")
 
    end subroutine approximate_solution
 
@@ -1723,7 +1712,7 @@ contains
 !! \todo Implement convergence check on base level (not very important since we have a FFT solver for base level)
 !<
 
-   subroutine approximate_solution_rbgs(lev, src, soln)
+   subroutine approximate_solution_rbgs(curl, src, soln)
 
       use constants,         only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
       use dataio_pub,        only: die
@@ -1734,7 +1723,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev  !< level for which approximate the solution
+      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer(kind=4), intent(in) :: src  !< index of source in lvl()%mgvar
       integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
 
@@ -1743,9 +1732,6 @@ contains
       integer :: n, i, j, k, i1, j1, k1, id, jd, kd
       integer :: nsmoo
       real    :: crx, crx1, cry, crz, cr
-      type(plvl), pointer :: curl
-
-      curl => lvl(lev)
 
       if (curl%empty) return
 
@@ -1758,18 +1744,18 @@ contains
       if (geometry_type == GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
 
       do n = 1, RED_BLACK*nsmoo
-         call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror) ! no corners are required here
+         call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror) ! no corners are required here
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax soln- smoo=", n
-            call check_dirty(lev, soln, dirty_label)
+            call check_dirty(curl%level, soln, dirty_label)
          endif
 
          ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
          ! do n = 1, nsmoo
-         !    call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror)
+         !    call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror)
          !    relax single layer of red cells at all faces
-         !    call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror)
+         !    call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror)
          !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
          !    relax single layer of black cells at all faces
          ! enddo
@@ -1866,7 +1852,7 @@ contains
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax soln+ smoo=", n
-            call check_dirty(lev, soln, dirty_label)
+            call check_dirty(curl%level, soln, dirty_label)
          endif
 
       enddo
@@ -1880,7 +1866,7 @@ contains
 !! \todo test a configuration with wider area being subjected to FFT (sizes would no longer be 2**n) to avoid the need of relaxation
 !<
 
-   subroutine approximate_solution_fft(lev, src, soln)
+   subroutine approximate_solution_fft(curl, src, soln)
 
       use constants,         only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ
       use dataio_pub,        only: die, warn
@@ -1892,14 +1878,11 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev  !< level for which approximate the solution
+      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer(kind=4), intent(in) :: src  !< index of source in lvl()%mgvar
       integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
 
       integer :: nf, n, nsmoo
-      type(plvl), pointer :: curl
-
-      curl => lvl(lev)
 
       if (curl%empty) return
 
@@ -1912,9 +1895,9 @@ contains
 
          if (curl%fft_type == fft_dst) then !correct boundaries on non-periodic local domain
             if (nf == 1 .and. .not. associated(curl, base)) then
-               call make_face_boundaries(lev, soln)
+               call make_face_boundaries(curl, soln)
             else
-               call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror)
+               call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror)
                if (has_dir(xdim)) then
                   curl%bnd_x(:, :, LO) = 0.5* sum (curl%mgvar(curl%is-1:curl%is, curl%js:curl%je, curl%ks:curl%ke, soln), 1)
                   curl%bnd_x(:, :, HI) = 0.5* sum (curl%mgvar(curl%ie:curl%ie+1, curl%js:curl%je, curl%ks:curl%ke, soln), 1)
@@ -1949,11 +1932,11 @@ contains
             endif
          endif
 
-         call fft_convolve(lev)
+         call fft_convolve(curl)
 
          curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ks:curl%ke, soln) = curl%src(:, :, :)
 
-         call check_dirty(lev, soln, "approx_soln fft+")
+         call check_dirty(curl%level, soln, "approx_soln fft+")
 
          !> \deprecated BEWARE use has_dir() here in a way that does not degrade performance
 
@@ -1965,7 +1948,7 @@ contains
 
          !relax the boundaries
          do n = 1, nsmoo
-            call mpi_multigrid_bnd(lev, soln, 1, extbnd_antimirror)
+            call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror)
             ! Possible optimization: This is a quite costly part of the local FFT solver
             if (fft_full_relax) then
                if (eff_dim == ndims .and. .not. multidim_code_3D) then
@@ -2067,7 +2050,7 @@ contains
             endif
          enddo
 
-         call check_dirty(lev, soln, "approx_soln relax+")
+         call check_dirty(curl%level, soln, "approx_soln relax+")
 
       enddo
 
@@ -2078,25 +2061,25 @@ contains
 !! \brief This routine prepares boundary values for local-FFT solver
 !<
 
-   subroutine make_face_boundaries(lev, soln)
+   subroutine make_face_boundaries(curl, soln)
 
       use mpisetup,           only: nproc
       use multigridbasefuncs, only: zero_boundaries, prolong_faces
       use dataio_pub,         only: warn
-      use multigridvars,      only: bnd_givenval, bnd_periodic, base, single_base
+      use multigridvars,      only: bnd_givenval, bnd_periodic, base, single_base, plvl
 
       implicit none
 
-      integer, intent(in) :: lev  !< level for which approximate the solution
+      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar
 
-      if (grav_bnd == bnd_periodic .and. (nproc == 1 .or. (lev == base%level .and. single_base) ) ) then
-         call zero_boundaries(lev)
+      if (grav_bnd == bnd_periodic .and. (nproc == 1 .or. (associated(curl, base) .and. single_base) ) ) then
+         call zero_boundaries(curl)
       else
-         if (lev > base%level) then
-            call prolong_faces(lev, soln)
+         if (.not. associated(curl, base)) then
+            call prolong_faces(curl, soln)
          else
-            if (grav_bnd /= bnd_givenval) call zero_boundaries(lev)
+            if (grav_bnd /= bnd_givenval) call zero_boundaries(curl)
             call warn("m:mfb WTF?")
          endif
       endif
@@ -2117,7 +2100,7 @@ contains
       if (roof%fft_type == fft_none) return
 
       roof%src(:, :, :) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source)
-      call fft_convolve(roof%level)
+      call fft_convolve(roof)
       roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = roof%src(:, :, :)
 
    end subroutine fft_solve_roof
@@ -2127,18 +2110,14 @@ contains
 !! \brief Do the FFT convolution
 !<
 
-   subroutine fft_convolve(lev)
+   subroutine fft_convolve(curl)
 
       use dataio_pub,    only: die
       use multigridvars, only: lvl, plvl
 
       implicit none
 
-      integer, intent(in) :: lev !< level at which make the convolution
-
-      type(plvl), pointer :: curl
-
-      curl => lvl(lev)
+      type(plvl), pointer, intent(in) :: curl !< pointer to a level at which make the convolution
 
       ! do the convolution in Fourier space; curl%src(:,:,:) -> curl%fft{r}(:,:,:)
       call dfftw_execute(curl%planf)

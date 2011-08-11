@@ -49,17 +49,17 @@ contains
 !! \brief Clear boundary values
 !<
 
-   subroutine zero_boundaries(lev)
+   subroutine zero_boundaries(curl)
 
-      use multigridvars, only: lvl
+      use multigridvars, only: plvl
 
       implicit none
 
-      integer, intent(in) :: lev  !< level for which clear the boundary values
+      type(plvl), pointer, intent(in) :: curl  !< level for which clear the boundary values
 
-      lvl(lev)%bnd_x(:,:,:) = 0.
-      lvl(lev)%bnd_y(:,:,:) = 0.
-      lvl(lev)%bnd_z(:,:,:) = 0.
+      curl%bnd_x(:,:,:) = 0.
+      curl%bnd_y(:,:,:) = 0.
+      curl%bnd_z(:,:,:) = 0.
 
    end subroutine zero_boundaries
 
@@ -68,7 +68,7 @@ contains
 !! \brief Multigrid elementary operators: prolongation, restriction, norm etc.
 !<
 
-   subroutine prolong_level(lev, iv)
+   subroutine prolong_level(coarse, iv)
 
       use dataio_pub,            only: die
       use multigridhelpers,      only: dirty_debug, check_dirty, dirtyH
@@ -77,16 +77,14 @@ contains
 
       implicit none
 
-      integer, intent(in)      :: lev   !< level to prolong from
+      type(plvl), pointer, intent(in) :: coarse !< level to prolong from
       integer(kind=4), intent(in) :: iv    !< variable to be prolonged
 
-      type(plvl), pointer :: coarse, fine
+      type(plvl), pointer :: fine
 
-      if (lev >= roof%level) return ! can't prolong finest level
-      if (lev <  base%level) call die("[multigridbasefuncs:prolong_level] level < base%level.")
+      if (associated(coarse, roof)) return ! can't prolong finest level
       if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:prolong_level] Invalid variable index.")
 
-      coarse => lvl(lev)
       if (.not. associated(coarse)) call die("[multigridbasefuncs:prolong_level] coarse == null()")
       fine   => coarse%finer
       if (.not. associated(fine)) call die("[multigridbasefuncs:prolong_level] fine == null()")
@@ -98,7 +96,7 @@ contains
       if (ord_prolong == 0 .or. is_mg_uneven) then
          call coarse%prolong_level0(iv)
       else
-         call prolong_level_hord(lev, iv) ! experimental part
+         call prolong_level_hord(coarse, iv) ! experimental part
       endif
 
       call check_dirty(fine%level, iv, "prolong+")
@@ -182,28 +180,24 @@ contains
 !! \brief Compute the global average value and subtract it from the whole domain
 !<
 
-   subroutine substract_average(lev, iv)
+   subroutine substract_average(curl, iv)
 
       use constants,     only: GEO_XYZ, GEO_RPZ
       use dataio_pub,    only: die
       use domain,        only: geometry_type
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,      only: comm, ierr
-      use multigridvars, only: lvl, plvl, base, roof, ngridvars
+      use multigridvars, only: lvl, plvl, ngridvars
 
       implicit none
 
-      integer, intent(in) :: lev  !< level for which we want to subtract its average from
+      type(plvl), pointer, intent(in) :: curl !< level for which we want to subtract its average from
       integer(kind=4), intent(in) :: iv   !< index of variable in lvl()%mgvar which we want to have zero average
 
       real                :: lsum, avg, vol
       integer             :: i
-      type(plvl), pointer :: curl
 
-      if (lev < base%level .or. lev > roof%level) call die("[multigridbasefuncs:substract_average] Invalid level number.")
       if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:substract_average] Invalid variable index.")
-
-      curl => lvl(lev)
 
       select case (geometry_type)
          case (GEO_XYZ)
@@ -238,7 +232,7 @@ contains
 !! OPT: completely unoptimized
 !<
 
-   subroutine prolong_faces(lev, soln)
+   subroutine prolong_faces(fine, soln)
 
       use grid,               only: D_x, D_y, D_z
       use mpisetup,           only: proc, comm, ierr, req, status, master
@@ -248,15 +242,15 @@ contains
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: plvl, lvl, ord_prolong_face_norm, ord_prolong_face_par, base, roof, extbnd_antimirror, is_external, need_general_pf, pr_segment
+      use multigridvars,      only: plvl, lvl, ord_prolong_face_norm, ord_prolong_face_par, base, extbnd_antimirror, is_external, need_general_pf, pr_segment
 
       implicit none
 
-      integer, intent(in) :: lev  !< level for which approximate the solution
+      type(plvl), pointer, intent(in) :: fine !< level for which approximate the solution
       integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar ! \todo change the name
 
       integer                       :: i, j, k, d, lh, g, g1, gc, ib, jb, ibh, jbh, l
-      type(plvl), pointer           :: coarse, fine
+      type(plvl), pointer           :: coarse
       integer, parameter            :: s_wdth  = 3           ! interpolation stencil width
       integer, parameter            :: s_rng = (s_wdth-1)/2  ! stencil range around 0
       real, parameter, dimension(s_wdth) :: p0  = [ 0.,       1.,     0.     ] ! injection
@@ -296,14 +290,11 @@ contains
       ! for ord_prolong_face_par = -2 it is ~2.5 (convergence in 8 cycles instead of 10 cycles)
       ! for ord_prolong_face_par =  1 it is ~3.6 (worst convergence, 11 -> 9 cycles)
 
-      if (lev < base%level .or. lev > roof%level) call die("[multigridbasefuncs:prolong_faces] Invalid level")
-
-      if (lev == base%level) then
+      if (associated(fine, base)) then
          call warn("[multigridbasefuncs:prolong_faces] Cannot prolong anything to base level")
          return
       endif
 
-      fine => lvl(lev)
       if (.not. associated(fine)) call die("[multigridbasefuncs:prolong_faces] fine == null()")
       coarse => fine%coarser
       if (.not. associated(coarse)) call die("[multigridbasefuncs:prolong_faces] coarse == null()")
@@ -405,7 +396,7 @@ contains
 
          if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
 
-         ! Interpolate content of buffers to boundary face-layes lvl(lev)%bnd_[xyz](:, :, :)
+         ! Interpolate content of buffers to boundary face-layes fine%bnd_[xyz](:, :, :)
          do d = xdim, zdim
             if (has_dir(d)) then
                do lh = LO, HI
@@ -469,8 +460,8 @@ contains
          if (ord_prolong_face_norm > 1) ord_prolong_face_norm = 1
          b_rng = s_rng
          if (ord_prolong_face_norm > 0) b_rng = max(b_rng, ord_prolong_face_norm+1)
-         call mpi_multigrid_bnd(lev-1, soln, b_rng, extbnd_antimirror, corners=(ord_prolong_face_par/=0)) !> \deprecated BEWARE for higher prolongation order more guardcell are required
-         call check_dirty(lev-1, soln, "prolong_faces", s_rng)
+         call mpi_multigrid_bnd(coarse, soln, b_rng, extbnd_antimirror, corners=(ord_prolong_face_par/=0)) !> \deprecated BEWARE for higher prolongation order more guardcell are required
+         call check_dirty(coarse%level, soln, "prolong_faces", s_rng)
 
          if (ord_prolong_face_norm > 0) then
             if (has_dir(xdim)) then

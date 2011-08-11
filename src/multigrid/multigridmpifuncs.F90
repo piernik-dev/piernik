@@ -287,18 +287,18 @@ contains
 !> \details mpi_multigrid_bnd provides communication between local domains to couple solution on the global computational domain
 !!
 
-   subroutine mpi_multigrid_bnd(lev, iv, ng, mode, corners)
+   subroutine mpi_multigrid_bnd(curl, iv, ng, mode, corners)
 
       use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK
       use dataio_pub,    only: die
       use domain,        only: is_mpi_noncart, cdd, has_dir
       use mpi,           only: MPI_REQUEST_NULL, MPI_COMM_NULL
       use mpisetup,      only: proc, comm, ierr, have_mpi, req, status
-      use multigridvars, only: lvl, plvl, base, roof, is_external, ngridvars
+      use multigridvars, only: lvl, plvl, is_external, ngridvars
 
       implicit none
 
-      integer, intent(in) :: lev               !< level which we are doing communication at
+      type(plvl), pointer, intent(in) :: curl  !< level which we are doing communication at
       integer(kind=4), intent(in) :: iv        !< variable which we want to communicate
       integer, intent(in) :: ng                !< number of guardcells to exchange
       integer(kind=4), intent(in) :: mode      !< what to do with external boundaries
@@ -310,13 +310,9 @@ contains
       integer(kind=8), dimension(:,:), pointer :: ise
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: ose
       integer :: nr
-      type(plvl), pointer :: curl
 
+      if (.not. associated(curl)) call die("[multigridmpifuncs:mpi_multigrid_bnd] Invalid level")
       if (iv < 1 .or. iv > ngridvars) call die("[multigridmpifuncs:mpi_multigrid_bnd] Invalid variable index.")
-      if (lev < base%level .or. lev > roof%level) call die("[multigridmpifuncs:mpi_multigrid_bnd] Invalid level number.")
-
-      curl => lvl(lev)
-
       if (ng > curl%nb .or. ng <= 0) call die("[multigridmpifuncs:mpi_multigrid_bnd] Too many or <0 guardcells requested.")
 
       if (present(corners)) then
@@ -326,7 +322,7 @@ contains
       endif
 
       ! Set the external boundary, where appropriate
-      if (any(is_external(:, :))) call multigrid_ext_bnd(lev, iv, ng, mode, cor)
+      if (any(is_external(:, :))) call multigrid_ext_bnd(curl, iv, ng, mode, cor)
 
       if (cdd%comm3d == MPI_COMM_NULL) then
 
@@ -425,7 +421,7 @@ contains
 !! has_dir() is not checked here because is_external() should be set to .false. on non-existing directions in 1D and 2D setups
 !<
 
-   subroutine multigrid_ext_bnd(lev, iv, ng, mode, cor)
+   subroutine multigrid_ext_bnd(curl, iv, ng, mode, cor)
 
       use constants,       only: LO, HI, xdim, ydim, zdim
       use dataio_pub,      only: die, msg, warn
@@ -433,7 +429,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lev             !< level which we are preparing the guardcells at
+      type(plvl), pointer, intent(in) :: curl !< level which we are preparing the guardcells at
       integer(kind=4), intent(in) :: iv      !< variable which we want to set
       integer, intent(in) :: ng              !< number of guardcells to set
       integer(kind=4), intent(in) :: mode    !< what to do with external boundaries
@@ -441,9 +437,6 @@ contains
 
       integer :: i
       logical, save :: warned = .false.
-      type(plvl), pointer :: curl
-
-      curl => lvl(lev)
 
       if (curl%empty) return
 
