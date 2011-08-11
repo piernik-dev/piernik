@@ -153,7 +153,7 @@ contains
    subroutine prolong_level2I(coarse, iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: plvl, lvl
+      use multigridvars, only: plvl
 
       implicit none
 
@@ -206,7 +206,7 @@ contains
    subroutine prolong_level2D(coarse, iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: plvl, lvl
+      use multigridvars, only: plvl
 
       implicit none
 
@@ -258,7 +258,7 @@ contains
    subroutine prolong_level4I(coarse, iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: plvl, lvl
+      use multigridvars, only: plvl
 
       implicit none
 
@@ -323,7 +323,7 @@ contains
    subroutine prolong_level4D(coarse, iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: plvl, lvl
+      use multigridvars, only: plvl
 
       implicit none
 

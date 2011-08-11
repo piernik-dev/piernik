@@ -72,7 +72,7 @@ contains
 
       use dataio_pub,            only: die
       use multigridhelpers,      only: dirty_debug, check_dirty, dirtyH
-      use multigridvars,         only: plvl, lvl, base, roof, ord_prolong, ngridvars, is_mg_uneven
+      use multigridvars,         only: plvl, roof, ord_prolong, ngridvars, is_mg_uneven
       use multigridexperimental, only: prolong_level_hord
 
       implicit none
@@ -91,7 +91,7 @@ contains
 
       if (dirty_debug) fine%mgvar(:, :, :, iv) = dirtyH
 
-      call check_dirty(coarse%level, iv, "prolong-")
+      call check_dirty(coarse, iv, "prolong-")
 
       if (ord_prolong == 0 .or. is_mg_uneven) then
          call coarse%prolong_level0(iv)
@@ -99,7 +99,7 @@ contains
          call prolong_level_hord(coarse, iv) ! experimental part
       endif
 
-      call check_dirty(fine%level, iv, "prolong+")
+      call check_dirty(fine, iv, "prolong+")
 
    end subroutine prolong_level
 
@@ -113,7 +113,7 @@ contains
 
       use dataio_pub,         only: die
       use multigridhelpers,   only: check_dirty
-      use multigridvars,      only: roof, base, ngridvars, lvl, plvl
+      use multigridvars,      only: roof, base, ngridvars, plvl
 
       implicit none
 
@@ -123,7 +123,7 @@ contains
 
       if (iv < 1 .or. iv > ngridvars) call die("[multigridbasefuncs:restrict_all] Invalid variable index.")
 
-      call check_dirty(roof%level, iv, "restrict_all-")
+      call check_dirty(roof, iv, "restrict_all-")
 
       curl => roof
       do while (associated(curl) .and. .not. associated(curl, base))
@@ -131,7 +131,7 @@ contains
          curl => curl%coarser
       enddo
 
-      call check_dirty(base%level, iv, "restrict_all+")
+      call check_dirty(base, iv, "restrict_all+")
 
    end subroutine restrict_all
 
@@ -187,7 +187,7 @@ contains
       use domain,        only: geometry_type
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,      only: comm, ierr
-      use multigridvars, only: lvl, plvl, ngridvars
+      use multigridvars, only: plvl, ngridvars
 
       implicit none
 
@@ -242,7 +242,7 @@ contains
       use dataio_pub,         only: die, warn
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: plvl, lvl, ord_prolong_face_norm, ord_prolong_face_par, base, extbnd_antimirror, is_external, need_general_pf, pr_segment
+      use multigridvars,      only: plvl, ord_prolong_face_norm, ord_prolong_face_par, base, extbnd_antimirror, is_external, need_general_pf, pr_segment
 
       implicit none
 
@@ -461,7 +461,7 @@ contains
          b_rng = s_rng
          if (ord_prolong_face_norm > 0) b_rng = max(b_rng, ord_prolong_face_norm+1)
          call mpi_multigrid_bnd(coarse, soln, b_rng, extbnd_antimirror, corners=(ord_prolong_face_par/=0)) !> \deprecated BEWARE for higher prolongation order more guardcell are required
-         call check_dirty(coarse%level, soln, "prolong_faces", s_rng)
+         call check_dirty(coarse, soln, "prolong_faces", s_rng)
 
          if (ord_prolong_face_norm > 0) then
             if (has_dir(xdim)) then

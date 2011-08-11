@@ -634,7 +634,7 @@ contains
       use dataio_pub,    only: warn, die
       use domain,        only: has_dir, is_overlap
       use mpisetup,      only: proc, nproc, procmask, inflate_req, req
-      use multigridvars, only: base, lvl, plvl, pr_segment, ord_prolong_face_norm, is_external, need_general_pf
+      use multigridvars, only: base, plvl, pr_segment, ord_prolong_face_norm, is_external, need_general_pf
 #ifdef DEBUG
       use piernikdebug,  only: aux_R
 #endif /* DEBUG */
@@ -913,7 +913,7 @@ contains
       use global,           only: t
       use mpisetup,         only: master
       use multigridhelpers, only: set_dirty, check_dirty, mg_write_log
-      use multigridvars,    only: lvl, plvl, base, roof, stdout, solution
+      use multigridvars,    only: plvl, base, roof, stdout, solution
 
       implicit none
 
@@ -987,7 +987,7 @@ contains
             call die("[multigrid_gravity:init_solution] Extrapolation order not implemented")
       end select
 
-      call check_dirty(roof%level, solution, "init_soln")
+      call check_dirty(roof, solution, "init_soln")
 
    end subroutine init_solution
 
@@ -1094,7 +1094,7 @@ contains
             call die("[multigrid_gravity:init_source] Unknown boundary type")
       end select
 
-      call check_dirty(roof%level, source, "init_src")
+      call check_dirty(roof, source, "init_src")
 
    end subroutine init_source
 
@@ -1346,7 +1346,7 @@ contains
          call set_dirty(defect)
          call residual(roof, source, solution, defect)
          if (grav_bnd == bnd_periodic) call subtract_average(roof, defect)
-         call check_dirty(roof%level, defect, "residual")
+         call check_dirty(roof, defect, "residual")
 
          call norm_sq(defect, norm_lhs)
          ts = set_timer("multigrid")
@@ -1406,7 +1406,7 @@ contains
          curl => base
          do while (associated(curl))
             call approximate_solution(curl, defect, correction)
-            call check_dirty(curl%level, correction, "Vup relax+")
+            call check_dirty(curl, correction, "Vup relax+")
             curl => curl%finer
          enddo
          roof%mgvar     (roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = &
@@ -1423,7 +1423,7 @@ contains
       vstat%norm_final = norm_lhs/norm_rhs
       if (.not. verbose_vcycle) call brief_v_log(vstat)
 
-      call check_dirty(roof%level, solution, "final_solution")
+      call check_dirty(roof, solution, "final_solution")
 
       call store_solution(history)
 
@@ -1471,7 +1471,7 @@ contains
       use domain,             only: has_dir, eff_dim, geometry_type
       use multigridhelpers,   only: multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: lvl, plvl, extbnd_antimirror
+      use multigridvars,      only: plvl, extbnd_antimirror
 
       implicit none
 
@@ -1582,7 +1582,7 @@ contains
       use domain,            only: eff_dim
       use mpisetup,          only: master
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: lvl, plvl, bnd_givenval, extbnd_antimirror
+      use multigridvars,     only: plvl, bnd_givenval, extbnd_antimirror
       use constants,         only: ndims
 
       implicit none
@@ -1677,7 +1677,7 @@ contains
       use dataio_pub,         only: die
       use multigridhelpers,   only: check_dirty
       use multigridbasefuncs, only: prolong_level
-      use multigridvars,      only: lvl, plvl, base, roof, ngridvars, correction
+      use multigridvars,      only: plvl, base, roof, ngridvars, correction
 
       implicit none
 
@@ -1687,19 +1687,19 @@ contains
 
       if (any( [ src, soln ] <= 0) .or. any( [ src, soln ] > ngridvars)) call die("[multigrid_gravity:approximate_solution] Invalid variable index.")
 
-      call check_dirty(curl%level, src, "approx_soln src-")
+      call check_dirty(curl, src, "approx_soln src-")
 
       if (curl%fft_type /= fft_none) then
          call approximate_solution_fft(curl, src, soln)
       else
-         call check_dirty(curl%level, soln, "approx_soln soln-")
+         call check_dirty(curl, soln, "approx_soln soln-")
          call approximate_solution_rbgs(curl, src, soln)
       endif
 
       if (prefer_rbgs_relaxation .and. soln == correction .and. .not. associated(curl, roof)) call prolong_level(curl, correction)
       !> \deprecated BEWARE other implementations of the multigrid algorithm may be incompatible with prolongation called from here
 
-      call check_dirty(curl%level, soln, "approx_soln soln+")
+      call check_dirty(curl, soln, "approx_soln soln+")
 
    end subroutine approximate_solution
 
@@ -1719,7 +1719,7 @@ contains
       use domain,            only: has_dir, eff_dim, geometry_type
       use multigridhelpers,  only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: lvl, plvl, base, extbnd_antimirror
+      use multigridvars,     only: plvl, base, extbnd_antimirror
 
       implicit none
 
@@ -1748,7 +1748,7 @@ contains
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax soln- smoo=", n
-            call check_dirty(curl%level, soln, dirty_label)
+            call check_dirty(curl, soln, dirty_label)
          endif
 
          ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
@@ -1852,7 +1852,7 @@ contains
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax soln+ smoo=", n
-            call check_dirty(curl%level, soln, dirty_label)
+            call check_dirty(curl, soln, dirty_label)
          endif
 
       enddo
@@ -1874,7 +1874,7 @@ contains
       use grid,              only: D_x, D_y, D_z
       use multigridhelpers,  only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: lvl, plvl, base, extbnd_antimirror, single_base
+      use multigridvars,     only: plvl, base, extbnd_antimirror, single_base
 
       implicit none
 
@@ -1936,7 +1936,7 @@ contains
 
          curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ks:curl%ke, soln) = curl%src(:, :, :)
 
-         call check_dirty(curl%level, soln, "approx_soln fft+")
+         call check_dirty(curl, soln, "approx_soln fft+")
 
          !> \deprecated BEWARE use has_dir() here in a way that does not degrade performance
 
@@ -2050,7 +2050,7 @@ contains
             endif
          enddo
 
-         call check_dirty(curl%level, soln, "approx_soln relax+")
+         call check_dirty(curl, soln, "approx_soln relax+")
 
       enddo
 
@@ -2113,7 +2113,7 @@ contains
    subroutine fft_convolve(curl)
 
       use dataio_pub,    only: die
-      use multigridvars, only: lvl, plvl
+      use multigridvars, only: plvl
 
       implicit none
 

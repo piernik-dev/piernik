@@ -271,7 +271,7 @@ contains
 
    subroutine multipole_solver
 
-      use multigridvars,      only: roof, solution, lvl, plvl
+      use multigridvars,      only: roof, solution, plvl
       use multigridhelpers,   only: dirtyH, dirty_debug
       use multigridbasefuncs, only: zero_boundaries
 

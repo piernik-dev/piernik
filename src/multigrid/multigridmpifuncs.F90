@@ -55,7 +55,7 @@ contains
       use domain,        only: is_overlap, has_dir, cdd
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_COMM_NULL
       use mpisetup,      only: ierr, proc, nproc, procmask
-      use multigridvars, only: lvl, plvl, base, pr_segment
+      use multigridvars, only: plvl, base, pr_segment
 
       implicit none
 
@@ -294,7 +294,7 @@ contains
       use domain,        only: is_mpi_noncart, cdd, has_dir
       use mpi,           only: MPI_REQUEST_NULL, MPI_COMM_NULL
       use mpisetup,      only: proc, comm, ierr, have_mpi, req, status
-      use multigridvars, only: lvl, plvl, is_external, ngridvars
+      use multigridvars, only: plvl, is_external, ngridvars
 
       implicit none
 
@@ -425,7 +425,7 @@ contains
 
       use constants,       only: LO, HI, xdim, ydim, zdim
       use dataio_pub,      only: die, msg, warn
-      use multigridvars,   only: extbnd_donothing, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, lvl, plvl, is_external
+      use multigridvars,   only: extbnd_donothing, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, plvl, is_external
 
       implicit none
 

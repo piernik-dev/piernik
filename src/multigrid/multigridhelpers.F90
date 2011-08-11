@@ -66,7 +66,7 @@ contains
    subroutine set_dirty(iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: ngridvars, lvl, plvl, base
+      use multigridvars, only: ngridvars, plvl, base
 
       implicit none
 
@@ -91,28 +91,26 @@ contains
 !! \brief This routine checks for detectable traces of set_dirty calls.
 !<
 
-   subroutine check_dirty(lev, iv, label, expand)
+   subroutine check_dirty(curl, iv, label, expand)
 
       use dataio_pub,    only: die, warn, msg
       use domain,        only: eff_dim
       use mpisetup,      only: proc
-      use multigridvars, only: ngridvars, lvl, plvl, base, roof, mg_nb
+      use multigridvars, only: ngridvars, plvl, mg_nb
       use constants,     only: ndims
 
       implicit none
 
       integer(kind=4),   intent(in) :: iv     !< index of variable in lvl()%mgvar which we want to pollute
-      integer,           intent(in) :: lev    !< level which we are checking. Invalid means all levels
+      type(plvl), pointer, intent(in) :: curl !< level which we are checking
       character(len=*),  intent(in) :: label  !< label to indicate the origin of call
       integer, optional, intent(in) :: expand !< also check guardcells
 
       integer :: i, j, k, ng
-      type(plvl), pointer :: curl
-      logical :: all_levels
 
       if (.not. dirty_debug) return
-
       if (iv < 1 .or. iv > ngridvars) call die("[multigridhelpers:check_dirty] Invalid variable index.")
+      if (curl%empty) return
 
       if (present(expand) .and. eff_dim==ndims) then ! for 1D and 2D one should define ng_x,ng_y and ng_z
          if (expand > mg_nb) then
@@ -124,33 +122,18 @@ contains
          ng = 0
       endif
 
-      all_levels = (lev < base%level .or. lev > roof%level)
-      if (all_levels) then
-         curl => base
-      else
-         curl => lvl(lev)
-      endif
-      do while (associated(curl))
-         if (.not. curl%empty) then
-            do k = curl%ks-ng, curl%ke+ng
-               do j = curl%js-ng, curl%je+ng
-                  do i = curl%is-ng, curl%ie+ng
-                     if (abs(curl%mgvar(i, j, k, iv)) > dirtyL) then
+      do k = curl%ks-ng, curl%ke+ng
+         do j = curl%js-ng, curl%je+ng
+            do i = curl%is-ng, curl%ie+ng
+               if (abs(curl%mgvar(i, j, k, iv)) > dirtyL) then
 !                        if (count([i<curl%is .or. i>curl%ie, j<curl%js .or. j>curl%je, k<curl%ks .or. k>curl%ke]) <=1) then ! excludes corners
-                           write(msg, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &
-                                "[multigridhelpers:check_dirty] ", label, "@", proc, " lvl(", curl%level, ")%mgvar(", i, ",", j, ",", k, ",", iv, ") = ", curl%mgvar(i, j, k, iv)
-                           call warn(msg)
+                  write(msg, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &
+                          "[multigridhelpers:check_dirty] ", label, "@", proc, " lvl(", curl%level, ")%mgvar(", i, ",", j, ",", k, ",", iv, ") = ", curl%mgvar(i, j, k, iv)
+                  call warn(msg)
 !                        endif
-                     endif
-                  enddo
-               enddo
+               endif
             enddo
-         endif
-         if (all_levels) then
-            curl => curl%finer
-         else
-            curl => null()
-         endif
+         enddo
       enddo
 
    end subroutine check_dirty
@@ -270,7 +253,7 @@ contains
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: msg
       use mpisetup,      only: master
-      use multigridvars, only: base, lvl, plvl, ngridvars
+      use multigridvars, only: base, plvl, ngridvars
 
       implicit none
 

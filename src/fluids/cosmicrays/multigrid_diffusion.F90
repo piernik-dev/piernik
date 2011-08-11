@@ -379,7 +379,7 @@ contains
       else
          call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
       endif
-      call check_dirty(roof%level, source, "init source")
+      call check_dirty(roof, source, "init source")
 
       call norm_sq(source, vstat%norm_rhs)
 
@@ -414,7 +414,7 @@ contains
          roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = cg%u%arr(iarr_crs(cr_id),  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          cgl => cgl%nxt
       enddo
-      call check_dirty(roof%level, solution, "init solution")
+      call check_dirty(roof, solution, "init solution")
 
    end subroutine init_solution
 
@@ -465,7 +465,7 @@ contains
             !! the problem is that the cg%b%arr(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
             !<
             write(dirty_label, '(a,i1)')"init b",ib
-            call check_dirty(curl%level, diff_bx+ib-ibx, dirty_label)
+            call check_dirty(curl, diff_bx+ib-ibx, dirty_label)
             curl => curl%finer
          enddo
       enddo
@@ -554,8 +554,8 @@ contains
             curl => curl%finer
          enddo
 
-         call check_dirty(roof%level, correction, "c_residual")
-         call check_dirty(roof%level, defect, "d_residual")
+         call check_dirty(roof, correction, "c_residual")
+         call check_dirty(roof, defect, "d_residual")
          roof%mgvar     (roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = &
               roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) - &
               roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction)
@@ -564,7 +564,7 @@ contains
 
       if (dump_every_step) call numbered_ascii_dump(dirty_label)
 
-      call check_dirty(roof%level, solution, "v_soln")
+      call check_dirty(roof, solution, "v_soln")
 
       if (v > max_cycles) then
          if (master .and. norm_lhs/norm_rhs > norm_tol) then
@@ -606,7 +606,7 @@ contains
       use grid,           only: cga
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
-      use multigridvars,  only: lvl, plvl
+      use multigridvars,  only: plvl
 
       implicit none
 
@@ -678,7 +678,7 @@ contains
       use grid,           only: cga
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
-      use multigridvars,  only: lvl, plvl
+      use multigridvars,  only: plvl
 
       implicit none
 
@@ -750,7 +750,7 @@ contains
       use grid,           only: cga
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
-      use multigridvars,  only: lvl, plvl
+      use multigridvars,  only: plvl
 
       implicit none
 
@@ -824,7 +824,7 @@ contains
       use grid_cont,         only: grid_container
       use multigridhelpers,  only: check_dirty
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: lvl, plvl
+      use multigridvars,     only: plvl
 
       implicit none
 
@@ -890,7 +890,7 @@ contains
               &       cg%wa%arr(curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke  ) )
       endif
 
-      call check_dirty(curl%level, def, "res def")
+      call check_dirty(curl, def, "res def")
 
    end subroutine residual
 
@@ -912,7 +912,7 @@ contains
       use grid,              only: cga
       use grid_cont,         only: grid_container
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: lvl, plvl, base, extbnd_donothing
+      use multigridvars,     only: plvl, base, extbnd_donothing
 
       implicit none
 
