@@ -444,11 +444,15 @@ contains
                      var(lnbcells+1-ib,:,:) = bndsign * var(ledge+ib,:,:)
                   enddo
                case (BND_OUT, BND_OUTD, BND_OUTH)
+#ifdef ZERO_BND_EMF
+                  var(1:lnbcells,:,:) = 0.0
+#else /* !ZERO_BND_EMF */
                   ledge = ledge + 1 ; lnbcells = lnbcells + 1
                   dvarx = var(ledge+1,:,:)-var(ledge,:,:)
                   do ib=1,lnbcells
                      var(ib,:,:) = var(ledge,:,:) - real(ledge-ib)*dvarx
                   enddo
+#endif /* ZERO_BND_EMF */
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, LO)," not implemented for ",name, " in ", dir
                   if (master) call warn(msg)
@@ -463,11 +467,16 @@ contains
                      var(redge+ib,:,:) = bndsign * var(rrbase-ib,:,:)
                   enddo
                case (BND_OUT, BND_OUTD, BND_OUTH)
+#ifdef ZERO_BND_EMF
+                  var(redge+1:redge+rnbcells,:,:) = 0.0
+#else /* !ZERO_BND_EMF */
+                  redge = redge - 1 ; rnbcells = rnbcells + 1
 !                  dvarx = var(rrbase,:,:)-var(rrbase-1,:,:) original
                   dvarx = var(redge,:,:)-var(redge-1,:,:)
                   do ib=1,rnbcells
                      var(redge+ib,:,:) = var(redge,:,:) + real(ib)*dvarx
                   enddo
+#endif /* ZERO_BND_EMF */
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, HI)," not implemented for ",name, " in ", dir
                   if (master) call warn(msg)
@@ -496,11 +505,15 @@ contains
                      var(:,lnbcells+1-ib,:) = bndsign * var(:,ledge+ib,:)
                   enddo
                case (BND_OUT, BND_OUTD, BND_OUTH)
+#ifdef ZERO_BND_EMF
+                  var(:,1:lnbcells,:) = 0.0
+#else /* !ZERO_BND_EMF */
                   ledge = ledge + 1 ; lnbcells = lnbcells + 1
                   dvary = var(:,ledge+1,:)-var(:,ledge,:)
                   do ib=1,lnbcells
                      var(:,ib,:) = var(:,ledge,:) - real(ledge-ib)*dvary
                   enddo
+#endif /* ZERO_BND_EMF */
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, LO)," not implemented for ",name, " in ", dir
                   if (master) call warn(msg)
@@ -515,11 +528,16 @@ contains
                      var(:,redge+ib,:) = bndsign * var(:,rrbase-ib,:)
                   enddo
                case (BND_OUT, BND_OUTD, BND_OUTH)
+#ifdef ZERO_BND_EMF
+                  var(:,redge+1:redge+rnbcells,:) = 0.0
+#else /* !ZERO_BND_EMF */
+                  redge = redge - 1 ; rnbcells = rnbcells + 1
 !                  dvary = var(:,rrbase,:)-var(:,rrbase-1,:) original
                   dvary = var(:,redge,:)-var(:,redge-1,:)
                   do ib=1,rnbcells
                      var(:,redge+ib,:) = var(:,redge,:) + real(ib)*dvary
                   enddo
+#endif /* ZERO_BND_EMF */
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, HI)," not implemented for ",name, " in ", dir
                   if (master) call warn(msg)
@@ -548,11 +566,15 @@ contains
                      var(:,:,lnbcells+1-ib) = bndsign * var(:,:,ledge+ib)
                   enddo
                case (BND_OUT, BND_OUTD, BND_OUTH)
+#ifdef ZERO_BND_EMF
+                  var(:,:,1:lnbcells) = 0.0
+#else /* !ZERO_BND_EMF */
                   ledge = ledge + 1 ; lnbcells = lnbcells + 1
                   dvarz = var(:,:,ledge+1)-var(:,:,ledge)
                   do ib=1,lnbcells
                      var(:,:,ib) = var(:,:,ledge) - real(ledge-ib)*dvarz
                   enddo
+#endif /* ZERO_BND_EMF */
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, LO)," not implemented for ",name, " in ", dir
                   if (master) call warn(msg)
@@ -567,11 +589,16 @@ contains
                      var(:,:,redge+ib) = bndsign * var(:,:,rrbase-ib)
                   enddo
                case (BND_OUT, BND_OUTD, BND_OUTH)
+#ifdef ZERO_BND_EMF
+                  var(:,:,redge+1:redge+rnbcells) = 0.0
+#else /* !ZERO_BND_EMF */
+                  redge = redge - 1 ; rnbcells = rnbcells + 1
 !                  dvarz = var(:,:,rrbase)-var(:,:,rrbase-1) original
                   dvarz = var(:,:,redge)-var(:,:,redge-1)
                   do ib=1,rnbcells
                      var(:,:,redge+ib) = var(:,:,redge) + real(ib)*dvarz
                   enddo
+#endif /* ZERO_BND_EMF */
                case default
                   write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, HI)," not implemented for ",name, " in ", dir
                   if (master) call warn(msg)
@@ -620,7 +647,8 @@ contains
       end select  ! (name)
 
       zndiff   = ledge - lnbcells
-      rnbcells = cg%nb - zndiff
+!     rnbcells = cg%nb - zndiff
+      rnbcells = 2*cg%nb - ledge
       redge    = ndirb + ledge
       rrbase   = ndirb + lnbcells + 1  ! = redge + 1 - zndiff
 
