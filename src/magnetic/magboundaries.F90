@@ -470,7 +470,6 @@ contains
 #ifdef ZERO_BND_EMF
                   var(redge+1:redge+rnbcells,:,:) = 0.0
 #else /* !ZERO_BND_EMF */
-                  redge = redge - 1 ; rnbcells = rnbcells + 1
 !                  dvarx = var(rrbase,:,:)-var(rrbase-1,:,:) original
                   dvarx = var(redge,:,:)-var(redge-1,:,:)
                   do ib=1,rnbcells
@@ -531,7 +530,6 @@ contains
 #ifdef ZERO_BND_EMF
                   var(:,redge+1:redge+rnbcells,:) = 0.0
 #else /* !ZERO_BND_EMF */
-                  redge = redge - 1 ; rnbcells = rnbcells + 1
 !                  dvary = var(:,rrbase,:)-var(:,rrbase-1,:) original
                   dvary = var(:,redge,:)-var(:,redge-1,:)
                   do ib=1,rnbcells
@@ -592,7 +590,6 @@ contains
 #ifdef ZERO_BND_EMF
                   var(:,:,redge+1:redge+rnbcells) = 0.0
 #else /* !ZERO_BND_EMF */
-                  redge = redge - 1 ; rnbcells = rnbcells + 1
 !                  dvarz = var(:,:,rrbase)-var(:,:,rrbase-1) original
                   dvarz = var(:,:,redge)-var(:,:,redge-1)
                   do ib=1,rnbcells
