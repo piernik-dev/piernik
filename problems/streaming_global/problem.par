@@ -33,16 +33,16 @@
  /
 
  $END_CONTROL
-    tend   = 10.0
+    tend   = 100.0
     nend   = 10000000
  /
 
  $OUTPUT_CONTROL
     problem_name ='kepler'
-    run_id  =  'ts2'
+    run_id  =  'tst'
     dt_hdf  = 1.0
     dt_res  = 0.0
-    dt_log  = 1.0e-8
+    dt_log  = 1.0e-2
     dt_tsl  = 1.0e-1
     vars(1) = 'dens'
     vars(2) = 'velx'
@@ -64,7 +64,7 @@
     use_smalld = .true.
     smalld = 1.e-6
     dt_initial = 1e-6
-    relax_time = 10.0
+    relax_time = 0.0
     integration_order = 2
     limiter= 'vanleer'
     cfr_smooth = 0.01
@@ -90,12 +90,12 @@
     r_out   = 9.0
     f_in    = 10.0
     f_out   = 100.0
-    eps     = 1.0
+    eps     = 0.2
     amp_noise = 0.e-6
 
-    growth_time        = 100.0
+    growth_time        = 1.0
     initial_grain_size   = 1.e-6    ! cm
-    final_grain_size   = 50       ! cm
+    final_grain_size   = 1.e-6      ! cm
  /
 
  $PIERNIK_DEBUG
@@ -103,8 +103,6 @@
  /
 
  $INTERACTIONS
-   collision_factor  = 1.0
-   dragc_gas_dust    = 1.0
    cfl_interact      = 0.8
    grain_size        = 1.e-6
  /

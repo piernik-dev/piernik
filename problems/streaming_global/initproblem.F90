@@ -310,7 +310,7 @@ contains
                   call hydrostatic_zeq_densmid(i, j, rho, cs2, cg=cg)
                   do k = 1, cg%nz
                      zk = cg%z(k)
-                     cg%u%arr(fl%idn,i,j,k) = max(cg%dprof(k), smalld)
+                     cg%u%arr(fl%idn,i,j,k) = max(cg%dprof(k)/(1.0+eps), smalld)
                      if (fl%tag == DST) cg%u%arr(fl%idn,i,j,k) = eps * cg%u%arr(flind%neu%idn,i,j,k)
 
                      cg%u%arr(fl%imx,i,j,k) = vr   * cg%u%arr(fl%idn,i,j,k)
