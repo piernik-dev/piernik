@@ -1,18 +1,11 @@
 #define HDF5
-#define IONIZED
+#define NEUTRAL
 #undef  MAGNETIC
 
 #define ISO
-#define ISO_LOCAL
 
 #define LOCAL_FR_SPEED
 
 #define GRAV
 #define MULTIGRID
 
-#if __GNUC__ >=4 && __GNUC_MINOR__ >=5
-#define NEW_HDF5
-#else
-#undef NEW_HDF5
-#endif
-#define RTVD

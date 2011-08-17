@@ -60,12 +60,12 @@
  /
 
  $FLUID_NEUTRAL
-    gamma_neu = 1.67
-    selfgrav_neu = .false.
+    gamma_neu = 1.0
+    selfgrav_neu = .true.
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.4
+    cfl    = 0.5
     smalld = 1.e-7
     smallei= 1.e-10
     dt_initial = 5e-4
@@ -87,7 +87,7 @@
  /
 
  $PROBLEM_CONTROL
-    input_file   = 'test4-512.alt'
+    input_file   = '/raid_hum/old/wengen4/test4-512.alt'
     mincs2       = 8.725322e-4
     maxcs2       = 5.8168972e-3
     r_in         = 0.55

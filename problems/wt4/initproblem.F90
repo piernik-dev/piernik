@@ -302,7 +302,8 @@ contains
       use global,      only: smalld
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
-      use initionized, only: idni, imxi, imyi, imzi
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
       use mpisetup,    only: master
       use units,       only: kboltz, mH
 
@@ -312,7 +313,9 @@ contains
       integer :: i, j, k, iic, jic, kic
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+      type(component_fluid), pointer :: fl
 
+      fl => flind%neu
       call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
@@ -337,10 +340,10 @@ contains
          endif
 
          if (fake_ic) then
-            cg%u%arr(idni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1.
-            cg%u%arr(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
-            cg%u%arr(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
-            cg%u%arr(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
+            cg%u%arr(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1.
+            cg%u%arr(fl%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
+            cg%u%arr(fl%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
+            cg%u%arr(fl%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
             cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1e-2
          else
             call read_IC_file
@@ -351,17 +354,17 @@ contains
                   do i = cg%is, cg%ie
                      iic = nint((cg%x(i) + ic_xysize/2.)/ic_dx)
                      if (iic >= ic_is .and. iic <= ic_ie .and. jic >= ic_js .and. jic <= ic_je .and. kic >= ic_ks .and. kic <= ic_ke) then
-                        cg%u%arr(idni, i, j, k)     = ic_data(iic, jic, kic, 1) ! simple injection
-                        cg%u%arr(imxi, i, j, k)     = ic_data(iic, jic, kic, 2)
-                        cg%u%arr(imyi, i, j, k)     = ic_data(iic, jic, kic, 3)
-                        cg%u%arr(imzi, i, j, k)     = ic_data(iic, jic, kic, 4)
+                        cg%u%arr(fl%idn, i, j, k)     = ic_data(iic, jic, kic, 1) ! simple injection
+                        cg%u%arr(fl%imx, i, j, k)     = ic_data(iic, jic, kic, 2)
+                        cg%u%arr(fl%imy, i, j, k)     = ic_data(iic, jic, kic, 3)
+                        cg%u%arr(fl%imz, i, j, k)     = ic_data(iic, jic, kic, 4)
       !               cs_iso2_arr(i, j, k) = ic_data(iic, jic, kic, 5)
                         cg%cs_iso2%arr(i, j, k) = (gamma_loc) * kboltz * T_disk / mean_mol_weight / mH
                      else
-                        cg%u%arr(idni, i, j, k)     = smalld
-                        cg%u%arr(imxi, i, j, k)     = small
-                        cg%u%arr(imyi, i, j, k)     = small
-                        cg%u%arr(imzi, i, j, k)     = small
+                        cg%u%arr(fl%idn, i, j, k)     = smalld
+                        cg%u%arr(fl%imx, i, j, k)     = small
+                        cg%u%arr(fl%imy, i, j, k)     = small
+                        cg%u%arr(fl%imz, i, j, k)     = small
                         cg%cs_iso2%arr(i, j, k)     = mincs2
                      endif
                   enddo
@@ -387,7 +390,7 @@ contains
             cg%cs_iso2%arr(:,:,cg%ke+i) = cg%cs_iso2%arr(:,:, cg%ke)
          enddo
          if (master ) then
-            write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(dens)    = ', minval(cg%u%arr(idni,:,:,:)),      ' maxval(dens)    = ', maxval(cg%u%arr(idni,:,:,:))
+            write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(dens)    = ', minval(cg%u%arr(fl%idn,:,:,:)),      ' maxval(dens)    = ', maxval(cg%u%arr(fl%idn,:,:,:))
             call printinfo(msg, .true.)
             write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(cs_iso2) = ', minval(cg%cs_iso2%arr(:,:,:)), ' maxval(cs_iso2) = ', maxval(cg%cs_iso2%arr(:,:,:))
             call printinfo(msg, .true.)
@@ -400,9 +403,9 @@ contains
          if (.not.allocated(vlx0)) allocate(vlx0(cg%nx, cg%ny, cg%nz))
          if (.not.allocated(vly0)) allocate(vly0(cg%nx, cg%ny, cg%nz))
 
-         den0 = cg%u%arr(idni,:,:,:)
-         vlx0 = cg%u%arr(imxi,:,:,:) / den0
-         vly0 = cg%u%arr(imyi,:,:,:) / den0
+         den0 = cg%u%arr(fl%idn,:,:,:)
+         vlx0 = cg%u%arr(fl%imx,:,:,:) / den0
+         vly0 = cg%u%arr(fl%imy,:,:,:) / den0
 
          ! It would be cool to dump a restart file here but this would make a cyclic dependency
 
@@ -514,7 +517,8 @@ contains
       use dataio_pub,  only: warn
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
-      use initionized, only: idni, imxi, imyi, imzi
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
 
       implicit none
 
@@ -524,8 +528,10 @@ contains
       real, allocatable, dimension(:,:) :: alf
       real            :: rc, ambient_density_min
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container), pointer  :: cg
+      type(component_fluid), pointer :: fl
 
+      fl => flind%neu
       call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
@@ -534,10 +540,10 @@ contains
 
          select case (divine_intervention_type)
             case (1)                                                                                ! crude
-               where (cg%u%arr(idni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) < ambient_density)
-                  cg%u%arr(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(imxi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-                  cg%u%arr(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(imyi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-                  cg%u%arr(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+               where (cg%u%arr(fl%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) < ambient_density)
+                  cg%u%arr(fl%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(fl%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+                  cg%u%arr(fl%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(fl%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+                  cg%u%arr(fl%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(fl%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
                   cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = mincs2
                elsewhere
                   cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = maxcs2
@@ -546,25 +552,25 @@ contains
                ambient_density_min = ambient_density / max_ambient
                do k = cg%ks, cg%ke
                   do j = cg%js, cg%je
-                     mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density_min / (max(0., cg%u%arr(idni, cg%is:cg%ie, j, k)) + ambient_density_min) - 1./max_ambient)
+                     mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density_min / (max(0., cg%u%arr(fl%idn, cg%is:cg%ie, j, k)) + ambient_density_min) - 1./max_ambient)
                      ! ifort can have memory leaks on WHERE - let's provide explicit loop for this crappy compiler
                      ! The __IFORT__ macro has to be defined manually, e.g. in appropriate compiler.in file
 #ifdef __IFORT__
                      do i = cg%is, cg%ie
                         if (mod_str(i) > max_ambient**(-2)) then
-                           cg%u%arr(idni,     i, j, k) = cg%u%arr(idni, i, j, k) + ambient_density_min * mod_str(i)
-                           cg%u%arr(imxi,     i, j, k) = cg%u%arr(imxi, i, j, k) * (1. - damp_factor   * mod_str(i))
-                           cg%u%arr(imyi,     i, j, k) = cg%u%arr(imyi, i, j, k) * (1. - damp_factor   * mod_str(i))
-                           cg%u%arr(imzi,     i, j, k) = cg%u%arr(imzi, i, j, k) * (1. - damp_factor   * mod_str(i))
+                           cg%u%arr(fl%idn,     i, j, k) = cg%u%arr(fl%idn, i, j, k) + ambient_density_min * mod_str(i)
+                           cg%u%arr(fl%imx,     i, j, k) = cg%u%arr(fl%imx, i, j, k) * (1. - damp_factor   * mod_str(i))
+                           cg%u%arr(fl%imy,     i, j, k) = cg%u%arr(fl%imy, i, j, k) * (1. - damp_factor   * mod_str(i))
+                           cg%u%arr(fl%imz,     i, j, k) = cg%u%arr(fl%imz, i, j, k) * (1. - damp_factor   * mod_str(i))
                            cg%cs_iso2%arr(i, j, k) = maxcs2           -  (maxcs2-mincs2)    * mod_str(i)
                         endif
                      enddo
 #else /* !__IFORT__ */
                      where (mod_str(cg%is:cg%ie) > max_ambient**(-2))
-                        cg%u%arr(idni,     cg%is:cg%ie, j, k) = cg%u%arr(idni, cg%is:cg%ie, j, k) + ambient_density_min * mod_str(cg%is:cg%ie)
-                        cg%u%arr(imxi,     cg%is:cg%ie, j, k) = cg%u%arr(imxi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
-                        cg%u%arr(imyi,     cg%is:cg%ie, j, k) = cg%u%arr(imyi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
-                        cg%u%arr(imzi,     cg%is:cg%ie, j, k) = cg%u%arr(imzi, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
+                        cg%u%arr(fl%idn,     cg%is:cg%ie, j, k) = cg%u%arr(fl%idn, cg%is:cg%ie, j, k) + ambient_density_min * mod_str(cg%is:cg%ie)
+                        cg%u%arr(fl%imx,     cg%is:cg%ie, j, k) = cg%u%arr(fl%imx, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
+                        cg%u%arr(fl%imy,     cg%is:cg%ie, j, k) = cg%u%arr(fl%imy, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
+                        cg%u%arr(fl%imz,     cg%is:cg%ie, j, k) = cg%u%arr(fl%imz, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
                         cg%cs_iso2%arr(cg%is:cg%ie, j, k) = maxcs2               -  (maxcs2-mincs2)    * mod_str(cg%is:cg%ie)
                      endwhere
 #endif /* !__IFORT__ */
@@ -580,15 +586,15 @@ contains
                   enddo
                enddo
                do k = 1, cg%nz
-                  cg%u%arr(idni, :, :, k) = (1. - alf(:,:))*cg%u%arr(idni, :, :, k) + alf*den0(:, :, k)
-                  cg%u%arr(imxi, :, :, k) = (1. - alf(:,:))*cg%u%arr(imxi, :, :, k) + alf*den0(:, :, k) * vlx0(:, :, k)
-                  cg%u%arr(imyi, :, :, k) = (1. - alf(:,:))*cg%u%arr(imyi, :, :, k) + alf*den0(:, :, k) * vly0(:, :, k)
+                  cg%u%arr(fl%idn, :, :, k) = (1. - alf(:,:))*cg%u%arr(fl%idn, :, :, k) + alf*den0(:, :, k)
+                  cg%u%arr(fl%imx, :, :, k) = (1. - alf(:,:))*cg%u%arr(fl%imx, :, :, k) + alf*den0(:, :, k) * vlx0(:, :, k)
+                  cg%u%arr(fl%imy, :, :, k) = (1. - alf(:,:))*cg%u%arr(fl%imy, :, :, k) + alf*den0(:, :, k) * vly0(:, :, k)
                enddo
                do k = cg%ks, cg%ke
                   do j = cg%js, cg%je
-                     mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density / (max(0., cg%u%arr(idni, cg%is:cg%ie, j, k)) + ambient_density) - 1./max_ambient)
+                     mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density / (max(0., cg%u%arr(fl%idn, cg%is:cg%ie, j, k)) + ambient_density) - 1./max_ambient)
                      where (mod_str(cg%is:cg%ie) > max_ambient**(-2))
-                        cg%u%arr(imzi,     cg%is:cg%ie, j, k) = cg%u%arr(imzi, cg%is:cg%ie, j, k) * (1. - damp_factor * mod_str(cg%is:cg%ie))
+                        cg%u%arr(fl%imz,     cg%is:cg%ie, j, k) = cg%u%arr(fl%imz, cg%is:cg%ie, j, k) * (1. - damp_factor * mod_str(cg%is:cg%ie))
                      endwhere
                   enddo
                enddo
