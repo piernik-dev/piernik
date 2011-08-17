@@ -74,6 +74,10 @@ parser.add_option("-p", "--plane", dest="plane", default="xy",
       help="plane, possible values {xy,yz,xz}")
 parser.add_option("-c", "--cell", "--i1", dest="i1", default=0, type="int",
       help="")
+parser.add_option("--wp", "--width", dest="width", default=8, type="int",
+      help="picture width")
+parser.add_option("--hp", "--height", dest="height", default=6, type="int",
+      help="picture height")
 parser.add_option("--i2", dest="i2", default=0, type="int",
       help="")
 parser.add_option("--log", dest="dolog", default=False, action="store_true",
@@ -88,6 +92,7 @@ if len(args) > 1:
    ion()
 
 arr, title_str, extent = get_frame(args[0], options)
+figure(figsize=(options.width,options.height))
 if len(extent) == 2:
    plt = plot(linspace(extent[0],extent[1],num=len(arr)), arr)
 else:
