@@ -91,7 +91,7 @@ contains
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crhelpers:div_v] multiple grid pieces per procesor not implemented yet") !nontrivial divvel
 
       if (.not.allocated(divvel)) then
-         ma3d = [cg%nx, cg%ny, cg%nz]
+         ma3d = cg%n_
          call my_allocate(divvel, ma3d, "divvel")
       endif
 

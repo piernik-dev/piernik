@@ -112,12 +112,12 @@ contains
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[resistivity:init_resistivity] grid not initialized.")
 
-      cfl_resist  =  0.4
-      eta_0       =  0.0
-      eta_1       =  0.0
-      eta_scale   =  4
-      j_crit      =  1.0e6
-      deint_max   =  0.01
+      cfl_resist   = 0.4
+      eta_0        = 0.0
+      eta_1        = 0.0
+      eta_scale    = 4
+      j_crit       = 1.0e6
+      deint_max    = 0.01
 
       if (master) then
 
@@ -405,10 +405,10 @@ contains
 !         end select
 
 ! following solution seems to be a bit faster than former select case
-         idmh = [cg%nx, cg%ny, cg%nz] - idm(:,etadir)
+         idmh = cg%n_ - idm(:,etadir)
          idml = 1 + idm(:,etadir)
-         eta%arr(1:idmh(xdim), 1:idmh(ydim), 1:idmh(zdim)) = &
-     &      0.5*(eta%arr(1:idmh(xdim), 1:idmh(ydim), 1:idmh(zdim)) + eta%arr(idml(xdim):cg%nx, idml(ydim):cg%ny, idml(zdim):cg%nz) )
+         eta%arr(:idmh(xdim), :idmh(ydim), :idmh(zdim)) = &
+     &      0.5*(eta%arr(:idmh(xdim), :idmh(ydim), :idmh(zdim)) + eta%arr(idml(xdim):cg%n_(xdim), idml(ydim):cg%n_(ydim), idml(zdim):cg%n_(zdim)) )
 
          do i1 = 1, ubound(wcu%arr,n1)
             do i2 = 1, ubound(wcu%arr,n2)

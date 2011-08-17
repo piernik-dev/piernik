@@ -629,7 +629,7 @@ contains
             if (is_mpi_noncart) call die("[dataio_hdf5:set_dims_to_write] allbnd dump is too hard to implement with noncartesian domain division") !psize, pcoords
             if (cdd%comm3d == MPI_COMM_NULL) call die("[dataio_hdf5:set_dims_to_write] allbnd dump requires cdd%comm3d and cdd%")
             if (is_uneven) call warn("[dataio_hdf5:set_dims_to_write] allbnd dump with uneven domain division")
-            chnk(:)   = [cg%nx, cg%ny, cg%nz]
+            chnk(:)   = cg%n_
             area(:)   = dom%n_d(:) + 2 * cg%nb * cdd%psize(:) ! \todo invent something better
             lleft(:)  = 1
             lright(:) = chnk
