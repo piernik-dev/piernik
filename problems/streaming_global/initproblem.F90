@@ -41,32 +41,29 @@ module initproblem
    public :: read_problem_par, init_prob, problem_pointers
 
    real                     :: rho0, cs0, R0,  r_max, dout, alpha, r_in, r_out, f_in, f_out
-   real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
-   real                     :: dens_amb      !< density of ambient medium (used for inner cutoff)
-   real                     :: eps           !< dust to gas ratio
-   real                     :: x_cut         !< radius of inner disk cut-off
-   integer                  :: cutoff_ncells !< width of cut-off profile
-   real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary, \todo save it to restart as an attribute
+   real                     :: growth_time         !< time after which particles will reach initproblem::final_grain_size
+   real                     :: initial_grain_size   !< particle size after global::relax_time
+   real                     :: final_grain_size    !< particle size after initproblem::growth_time
+   real                     :: eps                 !< dust to gas ratio
    !>
    !! \f$\tau\f$ in \f$\frac{Du}{Dt} = - \frac{u-u_0}{\tau}f(R)
    !! when initproblem::problem_customize_solution is used
    !<
-   real                     :: dumping_coeff, drag_max, drag_min, amp_noise
+   real                     :: dumping_coeff, amp_noise
    logical                  :: use_inner_orbital_period  !< use 1./T_inner as dumping_coeff
-   character(len=cbuff_len) :: mag_field_orient
    character(len=cbuff_len) :: densfile
    real, target, allocatable, dimension(:,:,:,:) :: den0, mtx0, mty0, mtz0, ene0
    real, target, allocatable, dimension(:,:,:)   :: harr
    integer, parameter       :: dname_len = 10
 
-   namelist /PROBLEM_CONTROL/  rho0, cs0, R0, mag_field_orient, r_in, r_out, f_in, f_out, &
-      & eps, dumping_coeff, use_inner_orbital_period, amp_noise
+   namelist /PROBLEM_CONTROL/  rho0, cs0, R0, r_in, r_out, f_in, f_out, eps, dumping_coeff, &
+      &  use_inner_orbital_period, amp_noise, growth_time, initial_grain_size, final_grain_size
 
 contains
 !-----------------------------------------------------------------------------
    subroutine problem_pointers
       use dataio_user,         only: problem_write_restart, problem_read_restart, user_vars_hdf5
-      use gravity,             only: grav_pot_3d
+      use gravity,             only: grav_pot_3d, grav_type
 !     use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr
       use types,               only: problem_customize_solution, problem_grace_passed
       implicit none
@@ -78,24 +75,22 @@ contains
       grav_pot_3d => my_grav_pot_3d
       user_vars_hdf5 => prob_vars_hdf5
       problem_grace_passed => add_random_noise
+      grav_type => my_grav_ptmass_pure
 !     problem_grace_passed => add_sine
 
    end subroutine problem_pointers
-
 !-----------------------------------------------------------------------------
-
    subroutine read_problem_par
 
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
-      use mpisetup,            only: cbuff, rbuff, lbuff, buffer_dim, master, slave, comm, ierr
+      use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
+      use mpisetup,            only: rbuff, lbuff, buffer_dim, master, slave, comm, ierr
 
       implicit none
 
       rho0             = 1.0
       R0               = 1.0e-4
       cs0              = 1.0
-      mag_field_orient = 'none'
       amp_noise        = 1.e-6
 
       r_in             = 0.5
@@ -114,8 +109,6 @@ contains
 
          lbuff(1) = use_inner_orbital_period
 
-         cbuff(1) = mag_field_orient
-
          rbuff(1)  = rho0
          rbuff(2)  = R0
          rbuff(3)  = cs0
@@ -126,10 +119,12 @@ contains
          rbuff(8)  = eps
          rbuff(9)  = amp_noise
          rbuff(10) = dumping_coeff
+         rbuff(11) = growth_time
+         rbuff(12) = initial_grain_size
+         rbuff(13) = final_grain_size
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
       call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
       call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
 
@@ -137,18 +132,19 @@ contains
 
          use_inner_orbital_period = lbuff(1)
 
-         mag_field_orient = cbuff(1)
-
-         rho0             = rbuff(1)
-         R0               = rbuff(2)
-         cs0              = rbuff(3)
-         r_in             = rbuff(4)
-         r_out            = rbuff(5)
-         f_in             = rbuff(6)
-         f_out            = rbuff(7)
-         eps              = rbuff(8)
-         amp_noise        = rbuff(9)
-         dumping_coeff    = rbuff(10)
+         rho0               = rbuff(1)
+         R0                 = rbuff(2)
+         cs0                = rbuff(3)
+         r_in               = rbuff(4)
+         r_out              = rbuff(5)
+         f_in               = rbuff(6)
+         f_out              = rbuff(7)
+         eps                = rbuff(8)
+         amp_noise          = rbuff(9)
+         dumping_coeff      = rbuff(10)
+         growth_time        = rbuff(11)
+         initial_grain_size = rbuff(12)
+         final_grain_size   = rbuff(13)
 
       endif
 
@@ -260,12 +256,13 @@ contains
       use mpi,          only: MPI_COMM_NULL
       use mpisetup,     only: master, comm
       use units,        only: newtong
+      use hydrostatic,  only: hydrostatic_zeq_densmid
 
       implicit none
 
-      integer :: i, k, p
+      integer :: i, j, k, p
       real    :: zk, R, vz, sqr_gm, vr, vphi
-      real    :: Omega2, dH2
+      real    :: rho, cs2
 
       type(component_fluid), pointer  :: fl
       type(cg_list_element), pointer :: cgl
@@ -303,33 +300,30 @@ contains
             do i = 1, cg%nx
                R = cg%x(i)
 
-               cg%cs_iso2%arr(i,:,:) = cs0*sqrt(R0/R)
-               Omega2 = newtong*ptmass / R**3
+               rho = max(rho0*(R0/R)**(1.5),smalld)
+               cs2 = (cs0*sqrt(R0/R))**2
+
+               cg%cs_iso2%arr(i,:,:) = cs2
                vphi = sqrt( newtong*ptmass / R )
 
-               if (fl%tag /= DST) then
-                  dH2 = 2.0*cg%cs_iso2%arr(i,1,1)/Omega2
-               else
-                  dH2 = 1.0
-               endif
+               do j = 1, cg%ny
+                  call hydrostatic_zeq_densmid(i, j, rho, cs2, cg=cg)
+                  do k = 1, cg%nz
+                     zk = cg%z(k)
+                     cg%u%arr(fl%idn,i,j,k) = max(cg%dprof(k), smalld)
+                     if (fl%tag == DST) cg%u%arr(fl%idn,i,j,k) = eps * cg%u%arr(flind%neu%idn,i,j,k)
 
-               do k = 1, cg%nz
-                  zk = cg%z(k)
-                  cg%u%arr(fl%idn,i,:,k) = max(rho0 * (R0/R)**(1.5) * exp(-zk**2/dH2), smalld)
-!                  cg%u%arr(fl%idn,i,:,k) = max(rho0 * (R0/R)**(1.5), smalld)
-                  if (fl%tag == DST) cg%u%arr(fl%idn,i,:,k) = eps * cg%u%arr(flind%neu%idn,i,:,k)
-
-
-                  cg%u%arr(fl%imx,i,:,k) = vr   * cg%u%arr(fl%idn,i,:,k)
-                  cg%u%arr(fl%imy,i,:,k) = vphi * cg%u%arr(fl%idn,i,:,k)
-                  cg%u%arr(fl%imz,i,:,k) = vz   * cg%u%arr(fl%idn,i,:,k)
-                  if (fl%ien > 0) then
-                     cg%u%arr(fl%ien,i,:,k) = fl%cs2/(fl%gam_1)*cg%u%arr(fl%idn,i,:,k)
-                     cg%u%arr(fl%ien,i,:,k) = cg%u%arr(fl%ien,i,:,k) + 0.5*(vr**2+vphi**2+vz**2)*cg%u%arr(fl%idn,i,:,k)
-                     ene0(p,i,:,k)   = cg%u%arr(fl%ien,i,:,k)
-                  else
-                     ene0(p,i,:,k)   = 0.0
-                  endif
+                     cg%u%arr(fl%imx,i,j,k) = vr   * cg%u%arr(fl%idn,i,j,k)
+                     cg%u%arr(fl%imy,i,j,k) = vphi * cg%u%arr(fl%idn,i,j,k)
+                     cg%u%arr(fl%imz,i,j,k) = vz   * cg%u%arr(fl%idn,i,j,k)
+                     if (fl%has_energy) then
+                        cg%u%arr(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u%arr(fl%idn,i,j,k)
+                        cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*cg%u%arr(fl%idn,i,j,k)
+                        ene0(p,i,j,k)   = cg%u%arr(fl%ien,i,j,k)
+                     else
+                        ene0(p,i,j,k)   = 0.0
+                     endif
+                  enddo
                enddo
             enddo
 
@@ -465,7 +459,7 @@ contains
       use grid_cont,       only: cg_list_element, grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use global,          only: dt, t
+      use global,          only: dt, t, grace_period_passed, relax_time
       use constants,       only: dpi
       use units,           only: newtong
       use gravity,         only: ptmass
@@ -487,14 +481,6 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-!      if (grace_period_passed() .and. t <= x1) then
-!         dragc_gas_dust = a*t+b
-!#ifdef VERBOSE
-!         if (master) write(msg,'(A,F6.1)') 'dragc_gas_dust = ', dragc_gas_dust
-!         call printinfo(msg)
-!#endif /* VERBOSE */
-!      endif
-
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       call cga%get_root(cgl)
@@ -502,10 +488,10 @@ contains
          cg => cgl%cg
 
          if (frun) then
-            x0 = 0.0
-            x1 = x0 + 100.0
-            y0 = 1e-6
-            y1 = 10.0
+            x0 = relax_time
+            x1 = x0 + growth_time
+            y0 = initial_grain_size
+            y1 = final_grain_size
             a = (y0 - y1)/(x0 - x1)
             b = y0 - a*x0
 
@@ -532,8 +518,9 @@ contains
             frun = .false.
             funcR(:,:) = spread(funcR(1,:),1,size(iarr_all_dn))
          endif
+         funcR = 0.0
 
-         call update_grain_size(a*t+b)
+         if (grace_period_passed()) call update_grain_size(a*t+b)
          do j = 1, cg%ny
             do k = 1, cg%nz
                cg%u%arr(iarr_all_dn,:,j,k) = cg%u%arr(iarr_all_dn,:,j,k) - dt*(cg%u%arr(iarr_all_dn,:,j,k) - den0(:,:,j,k))*funcR(:,:)
@@ -559,39 +546,70 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
-      use units,     only: newtong
-      use gravity,   only: ptmass, sum_potential
+      use gravity,   only: sum_potential, grav_pot_3d_bnd
       use grid,      only: cga
       use grid_cont, only: cg_list_element, grid_container
+      use types,     only: axes
 
       implicit none
 
       logical, save :: frun = .true.
-      real          :: r2
-      integer       :: i, k
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container), pointer  :: cg
+      type(axes)                     :: ax
 
       if (frun) then
          call cga%get_root(cgl)
          do while (associated(cgl))
             cg => cgl%cg
+            if (.not.allocated(ax%x)) allocate(ax%x(size(cg%x)))
+            if (.not.allocated(ax%y)) allocate(ax%y(size(cg%y)))
+            if (.not.allocated(ax%z)) allocate(ax%z(size(cg%z)))
+            ax%x = cg%x
+            ax%y = cg%y
+            ax%z = cg%z
 
-            do i = 1, cg%nx
-               do k = 1, cg%nz
-                  r2 = cg%x(i)**2 + cg%z(k)**2
-                  cg%gp%arr(i,:,k) = -newtong*ptmass / sqrt(r2)
-               enddo
-            enddo
+            call my_grav_ptmass_pure(cg%gp%arr,ax,.false.)
+
+            if (allocated(ax%x)) deallocate(ax%x)
+            if (allocated(ax%y)) deallocate(ax%y)
+            if (allocated(ax%z)) deallocate(ax%z)
 
             cgl => cgl%nxt
          enddo
       endif
 
       frun = .false.
+      call grav_pot_3d_bnd
       call sum_potential
 
    end subroutine my_grav_pot_3d
+
+   subroutine my_grav_ptmass_pure(gp, ax, flatten)
+      use units,   only: newtong
+      use gravity, only: ptmass, ptm_x, ptm_z
+      use types,   only: axes
+
+      implicit none
+
+      real, dimension(:,:,:), pointer       :: gp
+      type(axes), intent(in)                :: ax
+      logical, intent(in), optional         :: flatten
+
+      integer             :: i, j
+      real                :: GM, R2
+
+      GM        = newtong*ptmass
+
+
+      do i = 1, ubound(gp,1)
+         R2 = (ax%x(i) - ptm_x)**2
+         do j = 1, ubound(gp,2)
+            gp(i,j,:) = -GM / sqrt( (ax%z(:) - ptm_z)**2 + R2 )
+         enddo
+      enddo
+      if (.false.) write(6,*) flatten
+   end subroutine my_grav_ptmass_pure
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xl(cg)
 

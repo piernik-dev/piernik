@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    nxd = 200
+    nxd = 100
     nyd = 1
     nzd = 200
     nb  = 4
@@ -14,8 +14,8 @@
     xmax   = 10.0
     ymin   = 0.0
     ymax   = 6.2831853071795862
-    zmin   =-3.0
-    zmax   = 3.0
+    zmin   =-0.5
+    zmax   = 0.5
  /
 
  $MPI_BLOCKS
@@ -33,15 +33,15 @@
  /
 
  $END_CONTROL
-    tend   = 100.0
+    tend   = 10.0
     nend   = 10000000
  /
 
  $OUTPUT_CONTROL
     problem_name ='kepler'
     run_id  =  'ts2'
-    dt_hdf  = 0.5
-    dt_res  = 100.0
+    dt_hdf  = 1.0
+    dt_res  = 0.0
     dt_log  = 1.0e-8
     dt_tsl  = 1.0e-1
     vars(1) = 'dens'
@@ -64,7 +64,7 @@
     use_smalld = .true.
     smalld = 1.e-6
     dt_initial = 1e-6
-    relax_time = 0.0
+    relax_time = 10.0
     integration_order = 2
     limiter= 'vanleer'
     cfr_smooth = 0.01
@@ -81,17 +81,21 @@
  /
 
  $PROBLEM_CONTROL
+    use_inner_orbital_period = .true.
+
     rho0    = 1.0 
-    cs0     = 0.07
     R0      = 1.0
+    cs0     = 0.07
     r_in    = 2.0
     r_out   = 9.0
-    f_out   = 100.0
     f_in    = 10.0
-    mag_field_orient = 'none'
-    use_inner_orbital_period = .true.
-    eps      = 1.0
-    amp_noise = 1.e-6
+    f_out   = 100.0
+    eps     = 1.0
+    amp_noise = 0.e-6
+
+    growth_time        = 100.0
+    initial_grain_size   = 1.e-6    ! cm
+    final_grain_size   = 50       ! cm
  /
 
  $PIERNIK_DEBUG
@@ -102,5 +106,5 @@
    collision_factor  = 1.0
    dragc_gas_dust    = 1.0
    cfl_interact      = 0.8
-   grain_size        = 50.0
+   grain_size        = 1.e-6
  /
