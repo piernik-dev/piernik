@@ -162,26 +162,9 @@ contains
       implicit none
 
       logical, save :: warned = .false.
+#ifdef BALSARA
       integer :: i
 
-#ifndef BALSARA
-      if (dragc_gas_dust > 0.0 .or. collision_factor > 0.0) then
-         if (associated(flind%dst)) then
-            if (master) call printinfo("[interactions:interactions_grace_passed] Initializing aerodynamical drag")
-            allocate(collfaq(flind%fluids,flind%fluids))
-            collfaq = collision_factor
-            collfaq(flind%dst%pos,:) = dragc_gas_dust
-            collfaq(:,flind%dst%pos) = dragc_gas_dust
-
-            fluid_interactions => fluid_interactions_aero_drag_ep
-            has_interactions = .true.    !> \deprecated BEWARE: temporary hack,  switches on timestep_interactions
-         else
-            if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
-            warned = .true.
-         endif
-      endif
-
-#else /* BALSARA */
       if (associated(flind%dst)) then
          do i = 1, flind%fluids
             if (flind%all_fluids(i)%tag /= DST) then
@@ -196,6 +179,23 @@ contains
       else
          if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
          warned = .true.
+      endif
+
+#else /* !BALSARA */
+      if (dragc_gas_dust > 0.0 .or. collision_factor > 0.0) then
+         if (associated(flind%dst)) then
+            if (master) call printinfo("[interactions:interactions_grace_passed] Initializing aerodynamical drag")
+            allocate(collfaq(flind%fluids,flind%fluids))
+            collfaq = collision_factor
+            collfaq(flind%dst%pos,:) = dragc_gas_dust
+            collfaq(:,flind%dst%pos) = dragc_gas_dust
+
+            fluid_interactions => fluid_interactions_aero_drag_ep
+            has_interactions = .true.    !> \deprecated BEWARE: temporary hack,  switches on timestep_interactions
+         else
+            if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
+            warned = .true.
+         endif
       endif
 #endif /* !BALSARA */
 
