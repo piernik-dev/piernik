@@ -87,6 +87,7 @@ module grid_cont
 
       integer(kind=8), dimension(ndims) :: off  !< offset of the local domain within computational domain
       integer(kind=4), dimension(ndims) :: n_b  !< [nxb, nyb, nzb]
+      integer(kind=4), dimension(ndims) :: n_   !< [nx,  ny,  nz ]
 
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkse !< [[is, js, ks], [ie, je, ke]]
       integer, dimension(ndims, LO:HI)  :: bnd  !< type of boundary conditions coded in integers
@@ -301,6 +302,8 @@ contains
             this%dz    = 1.0
             this%fbnd(zdim, :) = dom%edge(zdim, :)
          endif
+
+         this%n_(xdim:zdim) = [ this%nx, this%ny, this%nz ]
 
          this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=has_dir(:))
 
