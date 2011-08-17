@@ -164,6 +164,7 @@ contains
       logical, save :: warned = .false.
       integer :: i
 
+#ifndef BALSARA
       if (dragc_gas_dust > 0.0 .or. collision_factor > 0.0) then
          if (associated(flind%dst)) then
             if (master) call printinfo("[interactions:interactions_grace_passed] Initializing aerodynamical drag")
@@ -172,23 +173,31 @@ contains
             collfaq(flind%dst%pos,:) = dragc_gas_dust
             collfaq(:,flind%dst%pos) = dragc_gas_dust
 
-!            taus = 1. / dragc_gas_dust ! unused
-
             fluid_interactions => fluid_interactions_aero_drag_ep
-            has_interactions = .true.    !> \deprecated BEWARE: temporary hack
-            do i = 1, flind%fluids
-               if (flind%all_fluids(i)%tag /= DST) then
-                  epstein_factor(flind%all_fluids(i)%pos) = grain_size * grain_dens / flind%all_fluids(i)%cs !BEWARE iso assumed
-               else
-                  epstein_factor(flind%all_fluids(i)%pos) = 0.0
-               endif
-            enddo
-
+            has_interactions = .true.    !> \deprecated BEWARE: temporary hack,  switches on timestep_interactions
          else
             if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
             warned = .true.
          endif
       endif
+
+#else /* BALSARA */
+      if (associated(flind%dst)) then
+         do i = 1, flind%fluids
+            if (flind%all_fluids(i)%tag /= DST) then
+               epstein_factor(flind%all_fluids(i)%pos) = grain_size * grain_dens / flind%all_fluids(i)%cs !BEWARE iso assumed
+               if (epstein_factor(flind%all_fluids(i)%pos) <= 0.0) &
+                  call warn("[interactions:interactions_grace_passed] epstein_factor <= 0.0, that's not good :/")
+            else
+               epstein_factor(flind%all_fluids(i)%pos) = 0.0
+            endif
+         enddo
+         ! has_interactions = .true.    !> \deprecated BEWARE: temporary hack,  switches on timestep_interactions, don't needed in implicit solver??
+      else
+         if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
+         warned = .true.
+      endif
+#endif /* !BALSARA */
 
    end subroutine interactions_grace_passed
 
