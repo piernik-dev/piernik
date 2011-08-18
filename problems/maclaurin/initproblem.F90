@@ -282,7 +282,7 @@ contains
       call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
-         call my_allocate(apot, [cg%nxb, cg%nyb, cg%nzb], "apot")
+         call my_allocate(apot, cg%n_b(:), "apot")
          cgl => cgl%nxt
       enddo
 

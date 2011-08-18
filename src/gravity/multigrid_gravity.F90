@@ -391,7 +391,7 @@ contains
 
       use constants,        only: pi, dpi, GEO_XYZ, xdim, ydim, zdim
       use dataio_pub,       only: die, warn
-      use domain,           only: geometry_type, dom, cdd
+      use domain,           only: geometry_type, dom, cdd, has_dir
       use grid,             only: cga
       use grid_cont,        only: cg_list_element
       use mpi,              only: MPI_COMM_NULL
@@ -557,7 +557,7 @@ contains
                   if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: fft.")
                   mb_alloc  = mb_alloc + 2*size(curl%fft)
 
-                  curl%fft_norm = 1. / real( curl%nxb * curl%nyb * curl%nzb ) ! No 4 pi G factor here because the source was already multiplied by it
+                  curl%fft_norm = 1. / real( product(curl%n_b(:), mask=has_dir(:)) ) ! No 4 pi G factor here because the source was already multiplied by it
 
                   ! FFT local solver initialization for 2nd order (3-point) Laplacian
                   ! sin(k*x-d) - 2.*sin(k*x) + sin(k*x+d) = 2 * (cos(d)-1) * sin(k*x) = -4 * sin(d/2)**2 * sin(k*x)
@@ -580,7 +580,7 @@ contains
                   if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: fftr.")
                   mb_alloc  = mb_alloc + size(curl%fftr)
 
-                  curl%fft_norm = 1. / (8. * real( curl%nxb * curl%nyb * curl%nzb ))
+                  curl%fft_norm = 1. / (8. * real( product(curl%n_b(:), mask=has_dir(:)) ))
                   kx(:) = curl%idx2 * (cos(pi/curl%nxb*[( j, j=1, curl%nxc )]) - 1.)
                   ky(:) = curl%idy2 * (cos(pi/curl%nyb*[( j, j=1, curl%nyb )]) - 1.)
                   kz(:) = curl%idz2 * (cos(pi/curl%nzb*[( j, j=1, curl%nzb )]) - 1.)

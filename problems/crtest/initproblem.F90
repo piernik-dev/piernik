@@ -145,7 +145,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         call my_allocate(aecr1, [cg%nxb, cg%nyb, cg%nzb], "aecr1")
+         call my_allocate(aecr1, cg%n_b(:), "aecr1")
          aecr1(:,:,:) = 0.
          cgl => cgl%nxt
       enddo

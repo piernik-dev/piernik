@@ -115,7 +115,7 @@ contains
 
       use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI
       use dataio_pub,    only: die, warn
-      use domain,        only: dom, eff_dim, geometry_type
+      use domain,        only: dom, eff_dim, geometry_type, has_dir
       use mpisetup,      only: master
       use multigridvars, only: roof
 
@@ -195,7 +195,7 @@ contains
 
          select case (geometry_type)
             case (GEO_XYZ)
-               drq = min(lmpole%dx, lmpole%dy, lmpole%dz) / 2.
+               drq = minval(lmpole%dl(:), mask=has_dir(:)) / 2.
                rqbin = int(sqrt(sum(dom%L_(:)**2))/drq) + 1
                ! arithmetic average of the closest and farthest points of computational domain with respect to its center
                !>

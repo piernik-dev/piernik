@@ -299,6 +299,7 @@ contains
 
       use constants,   only: small, xdim, ydim, zdim
       use dataio_pub,  only: warn, printinfo, msg
+      use domain,      only: has_dir
       use global,      only: smalld
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
@@ -321,7 +322,7 @@ contains
          cg => cgl%cg
 
          if (master) then
-            if (max(cg%dx, cg%dy, cg%dz) > ic_dx) then
+            if (maxval(cg%dl(:), mask=has_dir(:)) > ic_dx) then
                write(msg,'(a)')     "[initproblem:init_prob] Too low resolution"
                call warn(msg)
             endif
