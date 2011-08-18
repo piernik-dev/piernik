@@ -115,8 +115,8 @@ contains
 
    subroutine ionized_index(flind)
 
-      use constants,    only: ION, INT4
-      use diagnostics,  only: ma1d, my_allocate
+      use constants,    only: ION, INT4, xdim, ydim, zdim, ndims
+      use diagnostics,  only: ma1d, ma2d, my_allocate
       use fluidtypes,   only: var_numbers
 
       implicit none
@@ -145,23 +145,20 @@ contains
 #endif /* !ISO */
 
       ma1d = [flind%ion%all]
-      call my_allocate(flind%ion%iarr,       ma1d)
-      call my_allocate(flind%ion%iarr_swpx,  ma1d)
-      call my_allocate(flind%ion%iarr_swpy,  ma1d)
-      call my_allocate(flind%ion%iarr_swpz,  ma1d)
+      call my_allocate(flind%ion%iarr,      ma1d)
+      ma2d = [ndims, flind%ion%all]
+      call my_allocate(flind%ion%iarr_swp,  ma2d)
 
       !\deprecated repeated magic integers (multifile: initneutral, initdust)
-      flind%ion%iarr(1:4)      = [idni,imxi,imyi,imzi]
-      flind%ion%iarr_swpx(1:4) = [idni,imxi,imyi,imzi]
-      flind%ion%iarr_swpy(1:4) = [idni,imyi,imxi,imzi]
-      flind%ion%iarr_swpz(1:4) = [idni,imzi,imyi,imxi]
+      flind%ion%iarr(1:4)          = [idni,imxi,imyi,imzi]
+      flind%ion%iarr_swp(xdim,1:4) = [idni,imxi,imyi,imzi]
+      flind%ion%iarr_swp(ydim,1:4) = [idni,imyi,imxi,imzi]
+      flind%ion%iarr_swp(zdim,1:4) = [idni,imzi,imyi,imxi]
 
 #ifndef ISO
-      flind%ion%iarr(5)      = ieni
-      flind%ion%iarr_swpx(5) = ieni
-      flind%ion%iarr_swpy(5) = ieni
-      flind%ion%iarr_swpz(5) = ieni
-      flind%ion%has_energy   = .true.
+      flind%ion%iarr(5)       = ieni
+      flind%ion%iarr_swp(:,5) = ieni
+      flind%ion%has_energy    = .true.
 
       flind%energ = flind%energ + 1_INT4
 #endif /* !ISO */

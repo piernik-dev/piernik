@@ -110,8 +110,8 @@ contains
    end subroutine init_neutral
 
    subroutine neutral_index(flind)
-      use constants,    only: NEU, INT4
-      use diagnostics,  only: ma1d, my_allocate
+      use constants,    only: NEU, INT4, xdim, ydim, zdim, ndims
+      use diagnostics,  only: ma1d, ma2d, my_allocate
       use fluidtypes,   only: var_numbers
 
       implicit none
@@ -141,22 +141,19 @@ contains
 
       ma1d = [flind%neu%all]
       call my_allocate(flind%neu%iarr,       ma1d)
-      call my_allocate(flind%neu%iarr_swpx,  ma1d)
-      call my_allocate(flind%neu%iarr_swpy,  ma1d)
-      call my_allocate(flind%neu%iarr_swpz,  ma1d)
+      ma2d = [ndims, flind%neu%all]
+      call my_allocate(flind%neu%iarr_swp,   ma2d)
 
       !\deprecated repeated magic integers
-      flind%neu%iarr(1:4)      = [idnn,imxn,imyn,imzn]
-      flind%neu%iarr_swpx(1:4) = [idnn,imxn,imyn,imzn]
-      flind%neu%iarr_swpy(1:4) = [idnn,imyn,imxn,imzn]
-      flind%neu%iarr_swpz(1:4) = [idnn,imzn,imyn,imxn]
+      flind%neu%iarr(1:4)           = [idnn,imxn,imyn,imzn]
+      flind%neu%iarr_swp(xdim, 1:4) = [idnn,imxn,imyn,imzn]
+      flind%neu%iarr_swp(ydim, 1:4) = [idnn,imyn,imxn,imzn]
+      flind%neu%iarr_swp(zdim, 1:4) = [idnn,imzn,imyn,imxn]
 
 #ifndef ISO
-      flind%neu%iarr(5)      = ienn
-      flind%neu%iarr_swpx(5) = ienn
-      flind%neu%iarr_swpy(5) = ienn
-      flind%neu%iarr_swpz(5) = ienn
-      flind%neu%has_energy   = .true.
+      flind%neu%iarr(5)       = ienn
+      flind%neu%iarr_swp(:,5) = ienn
+      flind%neu%has_energy    = .true.
 
       flind%energ = flind%energ + 1_INT4
 #endif /* !ISO */

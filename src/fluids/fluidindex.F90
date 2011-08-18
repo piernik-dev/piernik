@@ -76,9 +76,7 @@ module fluidindex
    integer(kind=4), allocatable, dimension(:) :: iarr_all_crn   !< array of indexes pointing to ener. densities of all nuclear CR-components
    integer(kind=4), allocatable, dimension(:) :: iarr_all_cre   !< array of indexes pointing to ener. densities of all electron CR-components
    integer(kind=4), allocatable, dimension(:), target :: iarr_all_crs   !< array of indexes pointing to ener. densities of all CR-components
-   integer(kind=4), allocatable, dimension(:) :: iarr_all_swpx !< array (size = flind) of all fluid indexes in the original order
-   integer(kind=4), allocatable, dimension(:) :: iarr_all_swpy !< array (size = flind) of all fluid indexes with \a x and \a y components of mom. interchanged
-   integer(kind=4), allocatable, dimension(:) :: iarr_all_swpz !< array (size = flind) of all fluid indexes with \a x and \a z components of mom. interchanged
+   integer(kind=4), allocatable, dimension(:,:) :: iarr_all_swp !< array (size = flind) of all fluid indexes in the order depending on sweeps direction
 
    integer(kind=4), allocatable, dimension(:) :: iarr_all_mag  !< array (size = nmag) of all magnetic field components
    integer(kind=4), allocatable, dimension(:) :: iarr_mag_swpx !< array (size = nmag) of all mag. field indexes in the original order (same as iarr_all_mag)
@@ -103,9 +101,7 @@ contains
       logical :: fnord
 #endif /* ISO */
 
-      iarr_all_swpx(fl%beg:fl%end) = fl%iarr_swpx
-      iarr_all_swpy(fl%beg:fl%end) = fl%iarr_swpy
-      iarr_all_swpz(fl%beg:fl%end) = fl%iarr_swpz
+      iarr_all_swp(:,fl%beg:fl%end) = fl%iarr_swp(:,:)
 
       if (fl%is_selfgrav) then
          i_sg = i_sg + 1_INT4
@@ -132,6 +128,7 @@ contains
    subroutine fluid_index
 
 !      use diagnostics,    only: my_allocate
+      use constants,      only: xdim, zdim
 #ifdef IONIZED
       use initionized,    only: ionized_index
 #endif /* IONIZED */
@@ -179,7 +176,7 @@ contains
 #ifdef IONIZED
       allocate(iarr_mag_swpx(nmag),iarr_mag_swpy(nmag),iarr_mag_swpz(nmag),iarr_all_mag(nmag))
 #endif /* IONIZED */
-      allocate(iarr_all_swpx(flind%all),iarr_all_swpy(flind%all),iarr_all_swpz(flind%all))
+      allocate(iarr_all_swp(xdim:zdim, flind%all))
       allocate(iarr_all_dn(flind%fluids),iarr_all_mx(flind%fluids),iarr_all_my(flind%fluids),iarr_all_mz(flind%fluids))
       allocate(iarr_all_sg(flind%fluids_sg))
 #ifdef ISO
@@ -223,9 +220,9 @@ contains
 
 #ifdef COSM_RAYS
 ! Compute index arrays for the CR components
-      iarr_all_swpx(flind%crs%beg:flind%crs%end) = iarr_crs
-      iarr_all_swpy(flind%crs%beg:flind%crs%end) = iarr_crs
-      iarr_all_swpz(flind%crs%beg:flind%crs%end) = iarr_crs
+      iarr_all_swp(xdim,flind%crs%beg:flind%crs%end) = iarr_crs
+      iarr_all_swp(ydim,flind%crs%beg:flind%crs%end) = iarr_crs
+      iarr_all_swp(zdim,flind%crs%beg:flind%crs%end) = iarr_crs
 
       iarr_all_crn(1:flind%crn%all) = iarr_crn
       iarr_all_cre(1:flind%cre%all) = iarr_cre
@@ -256,9 +253,7 @@ contains
       call my_deallocate(iarr_mag_swpx)
       call my_deallocate(iarr_mag_swpy)
       call my_deallocate(iarr_mag_swpz)
-      call my_deallocate(iarr_all_swpx)
-      call my_deallocate(iarr_all_swpy)
-      call my_deallocate(iarr_all_swpz)
+      call my_deallocate(iarr_all_swp)
       call my_deallocate(iarr_all_mag)
       call my_deallocate(iarr_all_dn)
       call my_deallocate(iarr_all_mx)
@@ -273,9 +268,7 @@ contains
 
       do i = 1, ubound(flind%all_fluids, dim=1)
          deallocate(flind%all_fluids(i)%iarr)
-         deallocate(flind%all_fluids(i)%iarr_swpx)
-         deallocate(flind%all_fluids(i)%iarr_swpy)
-         deallocate(flind%all_fluids(i)%iarr_swpz)
+         deallocate(flind%all_fluids(i)%iarr_swp)
       enddo
       deallocate(flind%all_fluids)
 #ifdef IONIZED

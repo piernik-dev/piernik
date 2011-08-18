@@ -87,7 +87,7 @@ contains
    subroutine sweepx(cg,dt)
 
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_swpx, ibx, ibz
+      use fluidindex,      only: iarr_all_swp, ibx, ibz
       use grid_cont,       only: grid_container
       use constants,       only: xdim, ydim, zdim
 !     use grid,            only: D_y, D_z
@@ -103,7 +103,7 @@ contains
 
       do k = 1, cg%n_(zdim)
          do j = 1, cg%n_(ydim)
-            u1d(iarr_all_swpx,:) = cg%u%arr(:,:,j,k)
+            u1d(iarr_all_swp(xdim,:),:) = cg%u%arr(:,:,j,k)
 
 !           b1d                = 0.5*cg%b%arr(:,:,j,k)
 !           b1d(ibx,1:cg%n_(xdim)-1) = b1d(ibx,1:cg%n_(xdim)-1)+b1d(ibx,2:cg%n_(xdim)); b1d(ibx, cg%n_(xdim)) = b1d(ibx, cg%n_(xdim)-1)
@@ -112,7 +112,7 @@ contains
             b1d = 0.0
 
             call sweep1d_mh(u1d,b1d,cg%cs_iso2%get_sweep(xdim,j,k),dt/cg%dx)
-            cg%u%arr(:,:,j,k) = u1d(iarr_all_swpx,:)
+            cg%u%arr(:,:,j,k) = u1d(iarr_all_swp(xdim,:),:)
          enddo
       enddo
       call all_fluid_boundaries
@@ -121,7 +121,7 @@ contains
 !---------------------------------------------------------------------------
    subroutine sweepy(cg,dt)
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_swpy, ibx, ibz
+      use fluidindex,      only: iarr_all_swp, ibx, ibz
       use grid_cont,       only: grid_container
       use constants,       only: xdim, ydim, zdim
 
@@ -137,9 +137,9 @@ contains
       do k = 1, cg%n_(zdim)
          do i = 1, cg%n_(xdim)
             b1d = 0.0
-            u1d(iarr_all_swpy,:) = cg%u%arr(:,i,:,k)
+            u1d(iarr_all_swp(ydim,:),:) = cg%u%arr(:,i,:,k)
             call sweep1d_mh(u1d, b1d, cg%cs_iso2%get_sweep(ydim,k,i), dt/cg%dy)
-            cg%u%arr(:,i,:,k) = u1d(iarr_all_swpy,:)
+            cg%u%arr(:,i,:,k) = u1d(iarr_all_swp(ydim,:),:)
          enddo
       enddo
       call all_fluid_boundaries
@@ -148,7 +148,7 @@ contains
 !---------------------------------------------------------------------------
    subroutine sweepz(cg,dt)
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_swpz, ibx, ibz
+      use fluidindex,      only: iarr_all_swp, ibx, ibz
       use grid_cont,       only: grid_container
       use constants,       only: xdim, ydim, zdim
 
@@ -163,9 +163,9 @@ contains
 
       do j = 1, cg%n_(ydim)
          do i = 1, cg%n_(xdim)
-            u1d(iarr_all_swpz,:) = cg%u%arr(:,i,j,:)
+            u1d(iarr_all_swp(zdim),:) = cg%u%arr(:,i,j,:)
             call sweep1d_mh(u1d,b1d,cg%cs_iso2%get_sweep(zdim,i,j),dt/cg%dz)
-            cg%u%arr(:,i,j,:) = u1d(iarr_all_swpz,:)
+            cg%u%arr(:,i,j,:) = u1d(iarr_all_swp(zdim,:),:)
          enddo
       enddo
       call all_fluid_boundaries

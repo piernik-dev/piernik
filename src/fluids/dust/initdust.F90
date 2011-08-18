@@ -92,8 +92,8 @@ contains
 
    subroutine dust_index(flind)
 
-      use constants,     only: DST, INT4
-      use diagnostics,   only: ma1d, my_allocate
+      use constants,     only: DST, INT4, xdim, ydim, zdim, ndims
+      use diagnostics,   only: ma1d, ma2d, my_allocate
       use fluidtypes,    only: var_numbers
 
       implicit none
@@ -116,15 +116,14 @@ contains
       flind%all      = imzd
 
       ma1d = [flind%dst%all]
-      call my_allocate(flind%dst%iarr,      ma1d)
-      call my_allocate(flind%dst%iarr_swpx, ma1d)
-      call my_allocate(flind%dst%iarr_swpy, ma1d)
-      call my_allocate(flind%dst%iarr_swpz, ma1d)
+      call my_allocate(flind%dst%iarr,     ma1d)
+      ma2d = [ndims, flind%dst%all]
+      call my_allocate(flind%dst%iarr_swp, ma2d)
 
-      flind%dst%iarr      = [idnd,imxd,imyd,imzd]
-      flind%dst%iarr_swpx = [idnd,imxd,imyd,imzd]
-      flind%dst%iarr_swpy = [idnd,imyd,imxd,imzd]
-      flind%dst%iarr_swpz = [idnd,imzd,imyd,imxd]
+      flind%dst%iarr             = [idnd,imxd,imyd,imzd]
+      flind%dst%iarr_swp(xdim,:) = [idnd,imxd,imyd,imzd]
+      flind%dst%iarr_swp(ydim,:) = [idnd,imyd,imxd,imzd]
+      flind%dst%iarr_swp(zdim,:) = [idnd,imzd,imyd,imxd]
 
       flind%dst%end    = flind%all
       flind%components = flind%components + 1_INT4

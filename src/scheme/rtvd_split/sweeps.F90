@@ -111,7 +111,7 @@ contains
 
       use constants,       only: xdim
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: flind, iarr_all_swpx, ibx, iby, ibz, nmag
+      use fluidindex,      only: flind, iarr_all_swp, ibx, iby, ibz, nmag
       use global,          only: dt, integration_order
       use grid,            only: D_y, D_z
       use grid_cont,       only: grid_container
@@ -155,11 +155,11 @@ contains
                call set_div_v1d(div_v1d,xdim,j,k)
 #endif /* COSM_RAYS */
 
-               u_x (iarr_all_swpx,:) = cg%u%arr(:,:,j,k)
-               u0_x(iarr_all_swpx,:) = cg%uh%arr(:,:,j,k)
+               u_x (iarr_all_swp(xdim,:),:) = cg%u%arr(:,:,j,k)
+               u0_x(iarr_all_swp(xdim,:),:) = cg%uh%arr(:,:,j,k)
 
                call relaxing_tvd(cg%n_(xdim), u_x, u0_x, b_x, div_v1d, cg%cs_iso2%get_sweep(xdim,j,k), istep, xdim, j, k, cg%dx, dt, cg)
-               cg%u%arr(:,:,j,k)=u_x(iarr_all_swpx,:)
+               cg%u%arr(:,:,j,k)=u_x(iarr_all_swp(xdim,:),:)
             enddo
          enddo
          call all_fluid_boundaries    ! \todo : call only x for istep=1, call all for istep=2
@@ -171,7 +171,7 @@ contains
 
       use constants,       only: ydim
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: flind, iarr_all_swpy, ibx, iby, ibz, nmag
+      use fluidindex,      only: flind, iarr_all_swp, ibx, iby, ibz, nmag
       use global,          only: dt, integration_order
       use grid,            only: D_x, D_z
       use grid_cont,       only: grid_container
@@ -215,11 +215,11 @@ contains
                call set_div_v1d(div_v1d,ydim,k,i)
 #endif /* COSM_RAYS */
 
-               u_y (iarr_all_swpy,:) = cg%u%arr(:,i,:,k)
-               u0_y(iarr_all_swpy,:) = cg%uh%arr(:,i,:,k)
+               u_y (iarr_all_swp(ydim,:),:) = cg%u%arr(:,i,:,k)
+               u0_y(iarr_all_swp(ydim,:),:) = cg%uh%arr(:,i,:,k)
 
                call relaxing_tvd(cg%n_(ydim), u_y, u0_y, b_y, div_v1d, cg%cs_iso2%get_sweep(ydim,k,i), istep, ydim, k, i, cg%dy, dt, cg)
-               cg%u%arr(:,i,:,k)=u_y(iarr_all_swpy,:)
+               cg%u%arr(:,i,:,k)=u_y(iarr_all_swp(ydim,:),:)
 
             enddo
          enddo
@@ -233,7 +233,7 @@ contains
 
       use constants,       only: zdim
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: flind, iarr_all_swpz, ibx, iby, ibz, nmag
+      use fluidindex,      only: flind, iarr_all_swp, ibx, iby, ibz, nmag
       use global,          only: dt, integration_order
       use grid,            only: D_x, D_y
       use grid_cont,       only: grid_container
@@ -281,11 +281,11 @@ contains
                !OPT: It looks that u_z gets re-assigned to something inside relaxing_tvd. \todo try to merge these assignments
                !OPT: 3% D1mr, 3% D2mr, 20% D1mw, Ir:Dr:Dw ~ 10:4:1
                !OPT: The same applies to sweepy and sweepz
-               u_z (iarr_all_swpz,:) = cg%u%arr(:,i,j,:)
-               u0_z(iarr_all_swpz,:) = cg%uh%arr(:,i,j,:)
+               u_z (iarr_all_swp(zdim,:),:) = cg%u%arr(:,i,j,:)
+               u0_z(iarr_all_swp(zdim,:),:) = cg%uh%arr(:,i,j,:)
 
                call relaxing_tvd(cg%n_(zdim), u_z, u0_z, b_z, div_v1d, cg%cs_iso2%get_sweep(zdim,i,j), istep, zdim, i, j, cg%dz, dt, cg)
-               cg%u%arr(:,i,j,:)=u_z(iarr_all_swpz,:)
+               cg%u%arr(:,i,j,:)=u_z(iarr_all_swp(zdim,:),:)
             enddo
          enddo
 

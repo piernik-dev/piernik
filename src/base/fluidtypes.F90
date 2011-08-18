@@ -78,10 +78,8 @@ module fluidtypes
 
       integer :: tag = -1 !< Human readable tag describing fluid
 
-      integer(kind=4), allocatable, dimension(:)  :: iarr
-      integer(kind=4), allocatable, dimension(:)  :: iarr_swpx
-      integer(kind=4), allocatable, dimension(:)  :: iarr_swpy
-      integer(kind=4), allocatable, dimension(:)  :: iarr_swpz
+      integer(kind=4), allocatable, dimension(:)   :: iarr
+      integer(kind=4), allocatable, dimension(:,:) :: iarr_swp
 
       type(phys_prop) :: snap
 
