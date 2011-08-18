@@ -29,7 +29,7 @@ def get_frame(filename,options):
    if options.plane == "xy":
       p = 0
       extent = [attrs.xmin[0], attrs.xmax[0], attrs.ymin[0], attrs.ymax[0]]
-      s = s_[:,:,i1]
+      s = s_[i1,:,:]
    elif options.plane == "xz":
       p = 1
       extent = [attrs.xmin[0], attrs.xmax[0], attrs.zmin[0], attrs.zmax[0]]
