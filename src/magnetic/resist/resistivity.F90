@@ -153,8 +153,8 @@ contains
       cg => cga%cg_all(1)
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[resistivity:init_resistivity] multiple grid pieces per procesor not implemented yet") !nontrivial eta, ...
 
-      call eta%init(cg%nx, cg%ny, cg%nz)
-      call wcu%init(cg%nx, cg%ny, cg%nz)
+      call eta%init(cg%n_(:))
+      call wcu%init(cg%n_(:))
 #ifdef ISO
       if (eta_1 == 0.) then
          eta%arr     = eta_0

@@ -158,14 +158,14 @@ contains
       call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
-         call cg%u%init(flind%all, cg%nx, cg%ny, cg%nz)
-         call cg%uh%init(flind%all, cg%nx, cg%ny, cg%nz)
-         if (repeat_step) call cg%u0%init(flind%all, cg%nx, cg%ny, cg%nz)
+         call cg%u%init( [ flind%all, cg%n_(:) ] )
+         call cg%uh%init( [ flind%all, cg%n_(:) ] )
+         if (repeat_step) call cg%u0%init( [ flind%all, cg%n_(:) ] )
 
-         call cg%b%init(ndims, cg%nx, cg%ny, cg%nz)
-         if (repeat_step) call cg%b0%init(ndims, cg%nx, cg%ny, cg%nz)
+         call cg%b%init( [ ndims, cg%n_(:) ] )
+         if (repeat_step) call cg%b0%init( [ ndims, cg%n_(:) ] )
 
-         call cg%wa%init(cg%nx, cg%ny, cg%nz)
+         call cg%wa%init(cg%n_(:))
 
 #ifdef GRAV
          call my_allocate(cg%dprof, [cg%nz], "dprof")
@@ -350,7 +350,7 @@ contains
                                     sizes(1) = nc(t)
                                     subsizes(1) = sizes(1)
                                  endif
-                                 sizes   (dims(t)-zdim+xdim:dims(t)) = [ cg%nx, cg%ny, cg%nz ]
+                                 sizes   (dims(t)-zdim+xdim:dims(t)) = cg%n_(:)
                                  subsizes(dims(t)-zdim+xdim:dims(t)) = int(cg%i_bnd(d, t)%seg(g)%se(:, HI) - cg%i_bnd(d, t)%seg(g)%se(:, LO) + 1, kind=4)
                                  starts  (dims(t)-zdim+xdim:dims(t)) = int(cg%i_bnd(d, t)%seg(g)%se(:, LO) - 1, kind=4)
                                  call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts,  MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%i_bnd(d, t)%seg(g)%mbc, ierr)
@@ -379,7 +379,7 @@ contains
                      allocate(sizes(dims(t)), subsizes(dims(t)), starts(dims(t)))
 
                      if (dims(t) == 1+ndims) sizes(1) = nc(t)
-                     sizes(dims(t)-zdim+xdim:dims(t)) = [ cg%nx, cg%ny, cg%nz ]
+                     sizes(dims(t)-zdim+xdim:dims(t)) = cg%n_(:)
                      subsizes(:) = sizes(:)
                      subsizes(dims(t)-zdim+d) = cg%nb
 

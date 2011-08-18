@@ -380,15 +380,15 @@ contains
       this%ijkse(:, HI) = [ this%ie, this%je, this%ke ]
 
 #ifdef ISO
-      call this%cs_iso2%init(this%nx,this%ny,this%nz)
+      call this%cs_iso2%init(this%n_(:))
 #endif /* ISO */
 #ifdef GRAV
-      call this%gpot%init(this%nx,this%ny,this%nz)
-      call this%hgpot%init(this%nx,this%ny,this%nz)
-      call this%gp%init(this%nx,this%ny,this%nz)
+      call this%gpot%init(this%n_(:))
+      call this%hgpot%init(this%n_(:))
+      call this%gp%init(this%n_(:))
 #ifdef SELF_GRAV
-      call this%sgp%init(this%nx,this%ny,this%nz)
-      call this%sgpm%init(this%nx,this%ny,this%nz)
+      call this%sgp%init(this%n_(:))
+      call this%sgpm%init(this%n_(:))
 #endif /* SELF_GRAV */
 #endif /* GRAV */
 

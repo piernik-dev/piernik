@@ -142,16 +142,19 @@ module types
 
 contains
 
-   subroutine array3d_init(this,nx,ny,nz)
-      use constants, only: big_float
-      implicit none
-      class(array3d), intent(inout) :: this
-      integer(kind=4), intent(in)           :: nx,ny,nz
+   subroutine array3d_init(this, n3)
 
-      if (.not.associated(this%arr)) allocate(this%arr(nx,ny,nz))
+      use constants, only: big_float
+
+      implicit none
+
+      class(array3d), intent(inout) :: this
+      integer(kind=4), dimension(3), intent(in) :: n3
+
+      if (.not.associated(this%arr)) allocate(this%arr(n3(1), n3(2), n3(3)))
       this%arr = big_float
-!     if (.not.associated(this%arr)) this%arr = reshape( [(big_float,i=1,nx*ny*nz)], [nx,ny,nz] )   ! lhs realloc
-      return
+!     if (.not.associated(this%arr)) this%arr = reshape( [ ( big_float, i=1, product(n3(:)) ) ], [ n3(1), n3(2), n3(3) ] ) ! lhs realloc
+
    end subroutine array3d_init
 
    subroutine array3d_clean(this)
@@ -177,19 +180,22 @@ contains
       real, allocatable, dimension(:,:,:), target :: other
 
       if (.not.associated(this%arr)) this%arr => other
-      return
+
    end subroutine array3d_associate
 
-   subroutine array4d_init(this,nn,nx,ny,nz)
-      use constants, only: big_float
-      implicit none
-      class(array4d), intent(inout) :: this
-      integer(kind=4), intent(in)   :: nn, nx, ny, nz
+   subroutine array4d_init(this, n4)
 
-      if (.not.associated(this%arr)) allocate(this%arr(nn,nx,ny,nz))
+      use constants, only: big_float
+
+      implicit none
+
+      class(array4d), intent(inout) :: this
+      integer(kind=4), dimension(4), intent(in) :: n4
+
+      if (.not.associated(this%arr)) allocate(this%arr(n4(1), n4(2), n4(3), n4(4)))
       this%arr = big_float
-!     if (.not.associated(this%arr)) this%arr = reshape( [(big_float,i=1,nn*nx*ny*nz)], [nn,nx,ny,nz] )   ! lhs realloc
-      return
+!     if (.not.associated(this%arr)) this%arr = reshape( [ ( big_float, i=1, product(n4(:)) ) ], [ n4(1), n4(2), n4(3), n4(4) ] ) ! lhs realloc
+
    end subroutine array4d_init
 
    subroutine array4d_associate(this,other)
@@ -198,7 +204,7 @@ contains
       real, allocatable, dimension(:,:,:,:), target :: other
 
       if (.not.associated(this%arr)) this%arr => other
-      return
+
    end subroutine array4d_associate
 
    subroutine array4d_clean(this)
@@ -206,7 +212,7 @@ contains
       class(array4d), intent(inout) :: this                  !! Unlimited polymorphism at (1) not yet supported
 
       if (associated(this%arr)) deallocate(this%arr)
-      return
+
    end subroutine array4d_clean
 
    logical function array4d_check_if_dirty(this)
