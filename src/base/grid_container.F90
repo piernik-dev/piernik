@@ -167,10 +167,11 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout) :: this ! intent(out) would silently clear everything, that was already set (also the fields in types derived from grid_container)
+      class(grid_container), intent(inout), target :: this ! intent(out) would silently clear everything, that was already set (also the fields in types derived from grid_container)
       type(domain_container), intent(in) :: dom
 
       integer :: i
+      real, dimension(:), pointer :: a0, al, ar, ia
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init] MPI not initialized.")
       if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid_container:init] Multiple blocks per process not implemented yet")
@@ -262,9 +263,6 @@ contains
          this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=has_dir(:))
          this%dvol = product(this%dl(:), mask=has_dir(:))
 
-         allocate(this%x(this%n_(xdim)), this%xl(this%n_(xdim)), this%xr(this%n_(xdim)), this%inv_x(this%n_(xdim)))
-         allocate(this%y(this%n_(ydim)), this%yl(this%n_(ydim)), this%yr(this%n_(ydim)), this%inv_y(this%n_(ydim)))
-         allocate(this%z(this%n_(zdim)), this%zl(this%n_(zdim)), this%zr(this%n_(zdim)), this%inv_z(this%n_(zdim)))
          this%maxxyz = maxval(this%n_(:), mask=has_dir(:))
 
 !--- Assignments -----------------------------------------------------------
@@ -272,53 +270,17 @@ contains
          ! zone centers:          x,  y,  z
          ! right zone boundaries: xr, yr, zr
 
-!--- x-grids --------------------------------------------------------------
+         allocate(this%x(this%n_(xdim)), this%xl(this%n_(xdim)), this%xr(this%n_(xdim)), this%inv_x(this%n_(xdim)))
+         a0 => this%x; al => this%xl; ar => this%xr; ia => this%inv_x
+         call set_axis(xdim, a0, al, ar, ia, this, dom)
 
-         if (has_dir(xdim)) then
-            this%x(:) = dom%edge(xdim, LO) + this%dl(xdim) * ([(i, i=1, this%n_(xdim))] - 0.5 - this%nb + this%off(xdim))
-         else
-            this%x(:) = 0.5*(this%fbnd(xdim, LO) + this%fbnd(xdim, HI))
-         endif
-         this%xl(:) = this%x(:) - 0.5*this%dl(xdim)
-         this%xr(:) = this%x(:) + 0.5*this%dl(xdim)
+         allocate(this%y(this%n_(ydim)), this%yl(this%n_(ydim)), this%yr(this%n_(ydim)), this%inv_y(this%n_(ydim)))
+         a0 => this%y; al => this%yl; ar => this%yr; ia => this%inv_y
+         call set_axis(ydim, a0, al, ar, ia, this, dom)
 
-         where ( this%x /= 0.0 )
-            this%inv_x(:) = 1./this%x(:)
-         elsewhere
-            this%inv_x(:) = 0.
-         endwhere
-
-!--- y-grids --------------------------------------------------------------
-
-         if (has_dir(ydim)) then
-            this%y(:) = dom%edge(ydim, LO) + this%dl(ydim) * ([(i, i=1, this%n_(ydim))] - 0.5 - this%nb + this%off(ydim))
-         else
-            this%y(:) = 0.5*(this%fbnd(ydim, LO) + this%fbnd(ydim, HI))
-         endif
-         this%yl(:) = this%y(:) - 0.5*this%dl(ydim)
-         this%yr(:) = this%y(:) + 0.5*this%dl(ydim)
-
-         where ( this%y /= 0.0 )
-            this%inv_y(:) = 1./this%y(:)
-         elsewhere
-            this%inv_y(:) = 0.
-         endwhere
-
-!--- z-grids --------------------------------------------------------------
-
-         if (has_dir(zdim)) then
-            this%z(:) = dom%edge(zdim, LO) + this%dl(zdim) * ([(i, i=1, this%n_(zdim))] - 0.5 - this%nb + this%off(zdim))
-         else
-            this%z(:) = 0.5*(this%fbnd(zdim, LO) + this%fbnd(zdim, HI))
-         endif
-         this%zl(:) = this%z(:) - 0.5*this%dl(zdim)
-         this%zr(:) = this%z(:) + 0.5*this%dl(zdim)
-
-         where ( this%z /= 0.0 )
-            this%inv_z(:) = 1./this%z(:)
-         elsewhere
-            this%inv_z(:) = 0.
-         endwhere
+         allocate(this%z(this%n_(zdim)), this%zl(this%n_(zdim)), this%zr(this%n_(zdim)), this%inv_z(this%n_(zdim)))
+         a0 => this%z; al => this%zl; ar => this%zr; ia => this%inv_z
+         call set_axis(zdim, a0, al, ar, ia, this, dom)
 
       endif
 
@@ -360,6 +322,37 @@ contains
 #endif /* GRAV */
 
    end subroutine init
+
+   subroutine set_axis(d, a0, al, ar, ia, cg, dom)
+
+      use constants, only: LO, HI
+      use domain,    only: has_dir, domain_container
+
+      implicit none
+
+      integer, intent(in) :: d                      !< direction
+      real, dimension(:), pointer, intent(inout) :: a0, al, ar, ia !< arrays with coordinates
+      class(grid_container), intent(in) :: cg
+      type(domain_container), intent(in) :: dom
+
+      integer :: i
+
+      if (has_dir(d)) then
+         a0(:) = dom%edge(d, LO) + cg%dl(d) * ([(i, i=1, cg%n_(d))] - 0.5 - cg%nb + cg%off(d))
+      else
+         a0(:) = 0.5*(cg%fbnd(d, LO) + cg%fbnd(d, HI))
+      endif
+
+      al(:) = a0(:) - 0.5*cg%dl(d)
+      ar(:) = a0(:) + 0.5*cg%dl(d)
+
+      where ( a0(:) /= 0.0 )
+         ia(:) = 1./a0(:)
+      elsewhere
+         ia(:) = 0.
+      endwhere
+
+   end subroutine set_axis
 
 !-----------------------------------------------------------------------------
 !
