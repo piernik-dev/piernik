@@ -166,12 +166,12 @@ contains
 !
       ky(1) = 0.0
       do p = 2, np
-         ky(p) = dpi * (p-1) / n !      kx(p) = dpi * (p - 1) / cg%nx
+         ky(p) = dpi * (p-1) / n !      kx(p) = dpi * (p - 1) / cg%n_(xdim)
       enddo
 
       kx(1) = 0.0
       do q = 2, np
-         kx(q) = dpi * (q-1) / n !      ky(q) = dpi * (q - 1) / cg%ny
+         kx(q) = dpi * (q-1) / n !      ky(q) = dpi * (q - 1) / cg%n_(ydim)
          kx(n+2-q) = kx(q)
       enddo
 

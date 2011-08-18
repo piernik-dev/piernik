@@ -995,7 +995,7 @@ contains
 !
    subroutine  write_log(tsl)
 
-      use constants,          only: small, MINL, MAXL
+      use constants,          only: small, MINL, MAXL, xdim, ydim, zdim
       use dataio_pub,         only: msg, printinfo, die
       use domain,             only: has_dir
       use fluids_pub,         only: has_dst, has_ion, has_neu
@@ -1050,9 +1050,9 @@ contains
       nxl = 1 + D_x
       nyl = 1 + D_y
       nzl = 1 + D_z
-      nxu = cg%nx - D_x
-      nyu = cg%ny - D_y
-      nzu = cg%nz - D_z
+      nxu = cg%n_(xdim) - D_x
+      nyu = cg%n_(ydim) - D_y
+      nzu = cg%n_(zdim) - D_z
 #endif /* VARIABLE_GP || MAGNETIC */
       p => cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       id = '' ! suppress compiler warnings if noe of the modules requiring the id variable are swithed on.
@@ -1099,19 +1099,19 @@ contains
       if (has_dst) call get_common_vars(flind%dst)
 
 #ifdef VARIABLE_GP
-      cg%wa%arr(1:nxu,:,:) = abs((cg%gpot%arr(nxl:cg%nx,:,:)-cg%gpot%arr(1:nxu,:,:))*cg%idx) ; cg%wa%arr(cg%nx,:,:) = cg%wa%arr(nxu,:,:)
+      cg%wa%arr(1:nxu,:,:) = abs((cg%gpot%arr(nxl:cg%n_(xdim),:,:)-cg%gpot%arr(1:nxu,:,:))*cg%idx) ; cg%wa%arr(cg%n_(xdim),:,:) = cg%wa%arr(nxu,:,:)
       call get_extremum(p, MAXL, gpxmax, cg)
-      cg%wa%arr(:,1:nyu,:) = abs((cg%gpot%arr(:,nyl:cg%ny,:)-cg%gpot%arr(:,1:nyu,:))*cg%idy) ; cg%wa%arr(:,cg%ny,:) = cg%wa%arr(:,nyu,:)
+      cg%wa%arr(:,1:nyu,:) = abs((cg%gpot%arr(:,nyl:cg%n_(ydim),:)-cg%gpot%arr(:,1:nyu,:))*cg%idy) ; cg%wa%arr(:,cg%n_(ydim),:) = cg%wa%arr(:,nyu,:)
       call get_extremum(p, MAXL, gpymax, cg)
-      cg%wa%arr(:,:,1:nzu) = abs((cg%gpot%arr(:,:,nzl:cg%nz)-cg%gpot%arr(:,:,1:nzu))*cg%idz) ; cg%wa%arr(:,:,cg%nz) = cg%wa%arr(:,:,nzu)
+      cg%wa%arr(:,:,1:nzu) = abs((cg%gpot%arr(:,:,nzl:cg%n_(zdim))-cg%gpot%arr(:,:,1:nzu))*cg%idz) ; cg%wa%arr(:,:,cg%n_(zdim)) = cg%wa%arr(:,:,nzu)
       call get_extremum(p, MAXL, gpzmax, cg)
 #endif /* VARIABLE_GP */
 
 #ifdef MAGNETIC
       cg%wa%arr(1:nxu,1:nyu,1:nzu) = &
-                 (cg%b%arr(ibx,nxl:cg%nx,  1:nyu  ,  1:nzu  ) - cg%b%arr(ibx,1:nxu,1:nyu,1:nzu))*cg%dy*cg%dz &
-               + (cg%b%arr(iby,  1:nxu  ,nyl:cg%ny,  1:nzu  ) - cg%b%arr(iby,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dz &
-               + (cg%b%arr(ibz,  1:nxu  ,  1:nyu  ,nzl:cg%nz) - cg%b%arr(ibz,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dy
+                 (cg%b%arr(ibx,nxl:cg%n_(xdim),  1:nyu  ,  1:nzu  ) - cg%b%arr(ibx,1:nxu,1:nyu,1:nzu))*cg%dy*cg%dz &
+               + (cg%b%arr(iby,  1:nxu  ,nyl:cg%n_(ydim),  1:nzu  ) - cg%b%arr(iby,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dz &
+               + (cg%b%arr(ibz,  1:nxu  ,  1:nyu  ,nzl:cg%n_(zdim)) - cg%b%arr(ibz,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dy
       cg%wa%arr = abs(cg%wa%arr)
 
       cg%wa%arr(cg%ie,:,:) = cg%wa%arr(cg%ie-D_x,:,:)

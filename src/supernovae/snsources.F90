@@ -161,7 +161,7 @@ contains
 !<
    subroutine cr_sn(pos)
 
-      use constants,      only: xdim, ydim
+      use constants,      only: xdim, ydim, zdim
       use domain,         only: dom
       use fluidindex,     only: flind
       use grid,           only: cga
@@ -190,9 +190,9 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do k=1, cg%nz
-            do j=1, cg%ny
-               do i=1, cg%nx
+         do k=1, cg%n_(zdim)
+            do j=1, cg%n_(ydim)
+               do i=1, cg%n_(xdim)
 
                   do ipm=-1,1
 

@@ -86,7 +86,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: pi, dpi, fpi
+      use constants,   only: pi, dpi, fpi, xdim, ydim, zdim
       use global,      only: smallei
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
@@ -110,7 +110,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (.not.allocated(A)) allocate(A(cg%nx, cg%ny,1))
+         if (.not.allocated(A)) allocate(A(cg%n_(xdim), cg%n_(ydim),1))
 
          rho = 25.0/(36.0*pi)
          pre =  5.0/(12.0*pi)
@@ -118,17 +118,17 @@ contains
          vz = 0.0
          bz0 = 0.0
 
-         do j=1, cg%ny
-            do i = 1, cg%nx
+         do j=1, cg%n_(ydim)
+            do i = 1, cg%n_(xdim)
                A(i,j,1) = b0*(cos(fpi*cg%xl(i))/fpi + cos(dpi*cg%yl(j))/dpi)
             enddo
          enddo
 
-         do j = 1, cg%ny
+         do j = 1, cg%n_(ydim)
             yj = cg%y(j)
-            do i = 1, cg%nx
+            do i = 1, cg%n_(xdim)
                xi = cg%x(i)
-               do k = 1, cg%nz
+               do k = 1, cg%n_(zdim)
                   zk = cg%z(k)
 
                   vx  = -sin(dpi*yj)

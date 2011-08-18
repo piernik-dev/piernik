@@ -147,13 +147,14 @@ contains
 
    subroutine bnd_xr_per(cg)
 
+      use constants, only: xdim
       use grid_cont, only: grid_container
 
       implicit none
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      cg%u%arr(:, cg%ie+1:cg%nx,:,:) = cg%u%arr(:, cg%is:cg%isb,:,:)
+      cg%u%arr(:, cg%ie+1:cg%n_(xdim),:,:) = cg%u%arr(:, cg%is:cg%isb,:,:)
 
    end subroutine bnd_xr_per
 

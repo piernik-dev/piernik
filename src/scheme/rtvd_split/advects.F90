@@ -42,7 +42,7 @@ contains
 
    subroutine advectby_x
 
-      use constants,     only: xdim, zdim
+      use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
       use domain,        only: has_dir
       use fluidindex,    only: iby, flind
@@ -65,13 +65,13 @@ contains
          cg => cgl%cg
 
          if (any([allocated(vx), allocated(vx0)])) call die("[advects:advectby_x] vx or vx0 already allocated")
-         allocate(vx(cg%nx), vx0(cg%nx))
+         allocate(vx(cg%n_(xdim)), vx0(cg%n_(xdim)))
 
          j_s = 1 + D_y
-         j_e = cg%ny
+         j_e = cg%n_(ydim)
 
          do k = cg%ks, cg%ke
-            do j = j_s, j_e         ! cg%nyb cg%is /= 1 in by_x
+            do j = j_s, j_e         ! cg%n_(ydim)b cg%is /= 1 in by_x
                jm=j-1
                vx=0.0
                if (jm == 0) then
@@ -81,13 +81,13 @@ contains
                   !vx =(cg%u%arr(flind%ion%imx,:,jm,k)+cg%u%arr(flind%ion%imx,:,j,k))/(cg%u%arr(flind%ion%idn,:,jm,k)+cg%u%arr(flind%ion%idn,:,j,k))
                   vx0 =(cg%u%arr(flind%ion%imx,:,jm,k)+cg%u%arr(flind%ion%imx,:,j,k))/(cg%u%arr(flind%ion%idn,:,jm,k)+cg%u%arr(flind%ion%idn,:,j,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
                endif
-               !vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
-               vx(2:cg%nx-1)=(vx0(1:cg%nx-2) + vx0(3:cg%nx) + 2.0*vx0(2:cg%nx-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vx(2:cg%n_(xdim)-1)=(vx(1:cg%n_(xdim)-2) + vx(3:cg%n_(xdim)) + 2.0*vx(2:cg%n_(xdim)-1))*0.25
+               vx(2:cg%n_(xdim)-1)=(vx0(1:cg%n_(xdim)-2) + vx0(3:cg%n_(xdim)) + 2.0*vx0(2:cg%n_(xdim)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
                vx(1)  = vx(2)
-               vx(cg%nx) = vx(cg%nx-1)
+               vx(cg%n_(xdim)) = vx(cg%n_(xdim)-1)
 
                vibj => cg%wa%get_sweep(xdim,j,k)
-               call tvdb(vibj, cg%b%get_sweep(xdim,iby,j,k), vx, cg%nx,dt, cg%idx)
+               call tvdb(vibj, cg%b%get_sweep(xdim,iby,j,k), vx, cg%n_(xdim),dt, cg%idx)
 
             enddo
          enddo
@@ -129,10 +129,10 @@ contains
          cg => cgl%cg
 
          if (any([allocated(vx), allocated(vx0)])) call die("[advects:advectby_x] vx or vx0 already allocated")
-         allocate(vx(cg%nx), vx0(cg%nx))
+         allocate(vx(cg%n_(xdim)), vx0(cg%n_(xdim)))
 
          k_s = 1 + D_z
-         k_e = cg%nz
+         k_e = cg%n_(zdim)
 
          do k=k_s,k_e
             km=k-1
@@ -145,13 +145,13 @@ contains
                   !vx = (cg%u%arr(flind%ion%imx,:,j,km)+cg%u%arr(flind%ion%imx,:,j,k))/(cg%u%arr(flind%ion%idn,:,j,km)+cg%u%arr(flind%ion%idn,:,j,k))
                   vx0 = (cg%u%arr(flind%ion%imx,:,j,km)+cg%u%arr(flind%ion%imx,:,j,k))/(cg%u%arr(flind%ion%idn,:,j,km)+cg%u%arr(flind%ion%idn,:,j,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
                endif
-               !vx(2:cg%nx-1)=(vx(1:cg%nx-2) + vx(3:cg%nx) + 2.0*vx(2:cg%nx-1))*0.25
-               vx(2:cg%nx-1)=(vx0(1:cg%nx-2) + vx0(3:cg%nx) + 2.0*vx0(2:cg%nx-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vx(2:cg%n_(xdim)-1)=(vx(1:cg%n_(xdim)-2) + vx(3:cg%n_(xdim)) + 2.0*vx(2:cg%n_(xdim)-1))*0.25
+               vx(2:cg%n_(xdim)-1)=(vx0(1:cg%n_(xdim)-2) + vx0(3:cg%n_(xdim)) + 2.0*vx0(2:cg%n_(xdim)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
                vx(1)  = vx(2)
-               vx(cg%nx) = vx(cg%nx-1)
+               vx(cg%n_(xdim)) = vx(cg%n_(xdim)-1)
 
                vibj => cg%wa%get_sweep(xdim,j,k)
-               call tvdb(vibj, cg%b%get_sweep(xdim,ibz,j,k), vx, cg%nx,dt, cg%idx)
+               call tvdb(vibj, cg%b%get_sweep(xdim,ibz,j,k), vx, cg%n_(xdim),dt, cg%idx)
 
             enddo
          enddo
@@ -193,10 +193,10 @@ contains
          cg => cgl%cg
 
          if (any([allocated(vy), allocated(vy0)])) call die("[advects:advectby_y] vy or vy0 already allocated")
-         allocate(vy(cg%ny), vy0(cg%ny))
+         allocate(vy(cg%n_(ydim)), vy0(cg%n_(ydim)))
 
          k_s = 1 + D_z
-         k_e = cg%nz
+         k_e = cg%n_(zdim)
 
          do k=k_s,k_e
             km=k-1
@@ -209,13 +209,13 @@ contains
                   !vy=(cg%u%arr(flind%ion%imy,i,:,km)+cg%u%arr(flind%ion%imy,i,:,k))/(cg%u%arr(flind%ion%idn,i,:,km)+cg%u%arr(flind%ion%idn,i,:,k))
                   vy0=(cg%u%arr(flind%ion%imy,i,:,km)+cg%u%arr(flind%ion%imy,i,:,k))/(cg%u%arr(flind%ion%idn,i,:,km)+cg%u%arr(flind%ion%idn,i,:,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
                endif
-               !vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
-               vy(2:cg%ny-1)=(vy0(1:cg%ny-2) + vy0(3:cg%ny) + 2.0*vy0(2:cg%ny-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vy(2:cg%n_(ydim)-1)=(vy(1:cg%n_(ydim)-2) + vy(3:cg%n_(ydim)) + 2.0*vy(2:cg%n_(ydim)-1))*0.25
+               vy(2:cg%n_(ydim)-1)=(vy0(1:cg%n_(ydim)-2) + vy0(3:cg%n_(ydim)) + 2.0*vy0(2:cg%n_(ydim)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
                vy(1)  = vy(2)
-               vy(cg%ny) = vy(cg%ny-1)
+               vy(cg%n_(ydim)) = vy(cg%n_(ydim)-1)
 
                vibj => cg%wa%get_sweep(ydim,k,i)
-               call tvdb(vibj, cg%b%get_sweep(ydim,ibz,k,i), vy, cg%ny,dt, cg%idy)
+               call tvdb(vibj, cg%b%get_sweep(ydim,ibz,k,i), vy, cg%n_(ydim),dt, cg%idy)
 
             enddo
          enddo
@@ -257,10 +257,10 @@ contains
          cg => cgl%cg
 
          if (any([allocated(vy), allocated(vy0)])) call die("[advects:advectby_y] vy or vy0 already allocated")
-         allocate(vy(cg%ny), vy0(cg%ny))
+         allocate(vy(cg%n_(ydim)), vy0(cg%n_(ydim)))
 
          i_s = 1 + D_x
-         i_e = cg%nx
+         i_e = cg%n_(xdim)
 
          do k=cg%ks, cg%ke
             do i=i_s,i_e
@@ -273,13 +273,13 @@ contains
                   !vy=(cg%u%arr(flind%ion%imy,im,:,k)+cg%u%arr(flind%ion%imy,i,:,k))/(cg%u%arr(flind%ion%idn,im,:,k)+cg%u%arr(flind%ion%idn,i,:,k))
                   vy0=(cg%u%arr(flind%ion%imy,im,:,k)+cg%u%arr(flind%ion%imy,i,:,k))/(cg%u%arr(flind%ion%idn,im,:,k)+cg%u%arr(flind%ion%idn,i,:,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
                endif
-               !vy(2:cg%ny-1)=(vy(1:cg%ny-2) + vy(3:cg%ny) + 2.0*vy(2:cg%ny-1))*0.25
-               vy(2:cg%ny-1)=(vy0(1:cg%ny-2) + vy0(3:cg%ny) + 2.0*vy0(2:cg%ny-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vy(2:cg%n_(ydim)-1)=(vy(1:cg%n_(ydim)-2) + vy(3:cg%n_(ydim)) + 2.0*vy(2:cg%n_(ydim)-1))*0.25
+               vy(2:cg%n_(ydim)-1)=(vy0(1:cg%n_(ydim)-2) + vy0(3:cg%n_(ydim)) + 2.0*vy0(2:cg%n_(ydim)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
                vy(1)  = vy(2)
-               vy(cg%ny) = vy(cg%ny-1)
+               vy(cg%n_(ydim)) = vy(cg%n_(ydim)-1)
 
                vibj => cg%wa%get_sweep(ydim,k,i)
-               call tvdb(vibj, cg%b%get_sweep(ydim,ibx,k,i), vy, cg%ny,dt, cg%idy)
+               call tvdb(vibj, cg%b%get_sweep(ydim,ibx,k,i), vy, cg%n_(ydim),dt, cg%idy)
 
             enddo
          enddo
@@ -321,10 +321,10 @@ contains
          cg => cgl%cg
 
          if (any([allocated(vz), allocated(vz0)])) call die("[advects:advectby_z] vz or vz0 already allocated")
-         allocate(vz(cg%nz), vz0(cg%nz))
+         allocate(vz(cg%n_(zdim)), vz0(cg%n_(zdim)))
 
          i_s = 1 + D_x
-         i_e = cg%nx
+         i_e = cg%n_(xdim)
 
          do j=cg%js, cg%je
             do i=i_s,i_e
@@ -337,13 +337,13 @@ contains
                   !vz = (cg%u%arr(flind%ion%imz,im,j,:)+cg%u%arr(flind%ion%imz,i,j,:))/(cg%u%arr(flind%ion%idn,im,j,:)+cg%u%arr(flind%ion%idn,i,j,:))
                   vz0 = (cg%u%arr(flind%ion%imz,im,j,:)+cg%u%arr(flind%ion%imz,i,j,:))/(cg%u%arr(flind%ion%idn,im,j,:)+cg%u%arr(flind%ion%idn,i,j,:)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
                endif
-               !vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
-               vz(2:cg%nz-1)=(vz0(1:cg%nz-2) + vz0(3:cg%nz) + 2.0*vz0(2:cg%nz-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vz(2:cg%n_(zdim)-1)=(vz(1:cg%n_(zdim)-2) + vz(3:cg%n_(zdim)) + 2.0*vz(2:cg%n_(zdim)-1))*0.25
+               vz(2:cg%n_(zdim)-1)=(vz0(1:cg%n_(zdim)-2) + vz0(3:cg%n_(zdim)) + 2.0*vz0(2:cg%n_(zdim)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
                vz(1)  = vz(2)
-               vz(cg%nz) = vz(cg%nz-1)
+               vz(cg%n_(zdim)) = vz(cg%n_(zdim)-1)
 
                vibj => cg%wa%get_sweep(zdim,i,j)
-               call tvdb(vibj, cg%b%get_sweep(zdim,ibx,i,j), vz, cg%nz,dt, cg%idz)
+               call tvdb(vibj, cg%b%get_sweep(zdim,ibx,i,j), vz, cg%n_(zdim),dt, cg%idz)
 
             enddo
          enddo
@@ -362,7 +362,7 @@ contains
 
    subroutine advectby_z
 
-      use constants,     only: xdim, zdim
+      use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
       use domain,        only: has_dir
       use fluidindex,    only: iby, flind
@@ -385,10 +385,10 @@ contains
          cg => cgl%cg
 
          if (any([allocated(vz), allocated(vz0)])) call die("[advects:advectby_z] vz or vz0 already allocated")
-         allocate(vz(cg%nz), vz0(cg%nz))
+         allocate(vz(cg%n_(zdim)), vz0(cg%n_(zdim)))
 
          j_s = 1 + D_y
-         j_e = cg%ny
+         j_e = cg%n_(ydim)
 
          do j=j_s,j_e
             jm=j-1
@@ -401,13 +401,13 @@ contains
                   !vz=(cg%u%arr(flind%ion%imz,i,jm,:)+cg%u%arr(flind%ion%imz,i,j,:))/(cg%u%arr(flind%ion%idn,i,jm,:)+cg%u%arr(flind%ion%idn,i,j,:))
                   vz0=(cg%u%arr(flind%ion%imz,i,jm,:)+cg%u%arr(flind%ion%imz,i,j,:))/(cg%u%arr(flind%ion%idn,i,jm,:)+cg%u%arr(flind%ion%idn,i,j,:)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
                endif
-               !vz(2:cg%nz-1)=(vz(1:cg%nz-2) + vz(3:cg%nz) + 2.0*vz(2:cg%nz-1))*0.25
-               vz(2:cg%nz-1)=(vz0(1:cg%nz-2) + vz0(3:cg%nz) + 2.0*vz0(2:cg%nz-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vz(2:cg%n_(zdim)-1)=(vz(1:cg%n_(zdim)-2) + vz(3:cg%n_(zdim)) + 2.0*vz(2:cg%n_(zdim)-1))*0.25
+               vz(2:cg%n_(zdim)-1)=(vz0(1:cg%n_(zdim)-2) + vz0(3:cg%n_(zdim)) + 2.0*vz0(2:cg%n_(zdim)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
                vz(1)  = vz(2)
-               vz(cg%nz) = vz(cg%nz-1)
+               vz(cg%n_(zdim)) = vz(cg%n_(zdim)-1)
 
                vibj => cg%wa%get_sweep(zdim,i,j)
-               call tvdb(vibj, cg%b%get_sweep(zdim,iby,i,j), vz, cg%nz,dt, cg%idz)
+               call tvdb(vibj, cg%b%get_sweep(zdim,iby,i,j), vz, cg%n_(zdim),dt, cg%idz)
 
             enddo
          enddo

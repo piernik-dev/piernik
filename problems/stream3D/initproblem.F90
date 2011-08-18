@@ -123,7 +123,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: pi, dpi, xdim, LO
+      use constants,   only: pi, dpi, xdim, ydim, zdim, LO
       use domain,      only: dom
       use global,      only: smalld
       use gravity,     only: ptmass
@@ -155,7 +155,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         allocate(omega(cg%nx),omegad(cg%nx), noise(3, cg%nz))
+         allocate(omega(cg%n_(xdim)),omegad(cg%n_(xdim)), noise(3, cg%n_(zdim)))
 !   Secondary parameters
 
          sqr_gm = sqrt(newtong*ptmass)
@@ -173,11 +173,11 @@ contains
 
          norm = 1. / dens_Rdistr(R0,Rin,n)
 
-         do k = 1, cg%nz
+         do k = 1, cg%n_(zdim)
             zk = cg%z(k)
-            do j = 1, cg%ny
+            do j = 1, cg%n_(ydim)
                yj = cg%y(j)
-               do i = 1, cg%nx
+               do i = 1, cg%n_(xdim)
                   xi = cg%x(i)
                   rc = sqrt(xi**2+yj**2)
                   H = HtoR * rc
@@ -187,21 +187,21 @@ contains
             enddo
          enddo
 
-         do i = 2, cg%nx-1   ! 2d
+         do i = 2, cg%n_(xdim)-1   ! 2d
             rc= cg%x(i)*sqrt(2.0)
-            gradgp=  0.5*(cg%gp%arr(i+1,i+1,max(cg%nz/2,1))-cg%gp%arr(i-1,i-1,max(cg%nz/2,1)))/cg%dx/sqrt(2.)
-            gradp = -0.5*(cg%u%arr(idnn,i+1,i+1,max(cg%nz/2,1))-cg%u%arr(idnn,i-1,i-1,max(cg%nz/2,1)))/cg%dx /sqrt(2.)*cs_iso_neu2
+            gradgp=  0.5*(cg%gp%arr(i+1,i+1,max(cg%n_(zdim)/2,1))-cg%gp%arr(i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx/sqrt(2.)
+            gradp = -0.5*(cg%u%arr(idnn,i+1,i+1,max(cg%n_(zdim)/2,1))-cg%u%arr(idnn,i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx /sqrt(2.)*cs_iso_neu2
             omega(i)  = sqrt( abs( (gradgp-gradp)/rc ) )
             omegad(i) = sqrt( abs(    gradgp/rc      ) )
          enddo
-         omega(1)  = omega(2);  omega(cg%nx)  = omega(cg%nx-1)
-         omegad(1) = omegad(2); omegad(cg%nx) = omegad(cg%nx-1)
+         omega(1)  = omega(2);  omega(cg%n_(xdim))  = omega(cg%n_(xdim)-1)
+         omegad(1) = omegad(2); omegad(cg%n_(xdim)) = omegad(cg%n_(xdim)-1)
 
          call random_seed()
 
-         do j = 1, cg%ny
+         do j = 1, cg%n_(ydim)
             yj = cg%y(j)
-            do i = 1, cg%nx
+            do i = 1, cg%n_(xdim)
                xi = cg%x(i)
                rc = sqrt(xi**2+yj**2)
                call random_number(noise)

@@ -172,7 +172,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
          cg%dprof(:) = 0.0
-         do k=1, cg%nz
+         do k=1, cg%n_(zdim)
             do ksub=1, nstot
                if (zs(ksub) > cg%zl(k) .and. zs(ksub) < cg%zr(k)) then
                   cg%dprof(k) = cg%dprof(k) + dprofs(ksub)/real(nsub)
@@ -212,7 +212,7 @@ contains
 
    subroutine get_gprofs_accel(iia, jja, cg)
 
-      use constants, only: zdim
+      use constants, only: xdim, ydim, zdim
       use gravity,   only: tune_zeq, grav_accel
       use grid_cont, only: grid_container
 
@@ -223,8 +223,8 @@ contains
 
       integer :: ia, ja
 
-      ia = min(cg%nx, int(max(1, iia), kind=4))
-      ja = min(cg%ny, int(max(1, jja), kind=4))
+      ia = min(cg%n_(xdim), int(max(1, iia), kind=4))
+      ja = min(cg%n_(ydim), int(max(1, jja), kind=4))
       call grav_accel(zdim, ia, ja, zs, nstot, gprofs)
       gprofs = tune_zeq*gprofs
 
@@ -330,7 +330,7 @@ contains
 
    subroutine outh_bnd(kb, kk, minmax)
 
-      use constants,      only: zdim
+      use constants,      only: xdim, ydim, zdim
       use dataio_pub,     only: die
       use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use global,         only: smalld
@@ -373,10 +373,10 @@ contains
          cg => cgl%cg
 
          if (any([allocated(db), allocated(csi2b)])) call die("[hydrostatic:outh_bnd] db or csi2b already allocated")
-         allocate(db(flind%fluids, cg%nx, cg%ny), csi2b(flind%fluids, cg%nx, cg%ny))
+         allocate(db(flind%fluids, cg%n_(xdim), cg%n_(ydim)), csi2b(flind%fluids, cg%n_(xdim), cg%n_(ydim)))
 #ifndef ISO
          if (any([allocated(ekb), allocated(eib)])) call die("[hydrostatic:outh_bnd] ekb or eib already allocated")
-         allocate(ekb(flind%fluids, cg%nx, cg%ny), eib(flind%fluids, cg%nx, cg%ny))
+         allocate(ekb(flind%fluids, cg%n_(xdim), cg%n_(ydim)), eib(flind%fluids, cg%n_(xdim), cg%n_(ydim)))
 #endif /* !ISO */
 
          db = cg%u%arr(iarr_all_dn,:,:,kb)
@@ -399,8 +399,8 @@ contains
             zs(ksub) = z1 + dzs/2 + (ksub-1)*dzs
          enddo
 
-         do j=1, cg%ny
-            do i=1, cg%nx
+         do j=1, cg%n_(ydim)
+            do i=1, cg%n_(xdim)
 
                call grav_accel(zdim, i, j, zs, nsub, gprofs)
                gprofs=tune_zeq_bnd * gprofs

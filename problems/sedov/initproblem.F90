@@ -130,7 +130,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,  only: ION, DST
+      use constants,  only: ION, DST, xdim, ydim, zdim
       use dataio_pub, only: msg, die, printinfo
       use fluidindex, only: flind, ibx, iby, ibz
       use fluidtypes, only: component_fluid
@@ -163,9 +163,9 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            do k = 1, cg%nz
-               do j = 1, cg%ny
-                  do i = 1, cg%nx
+            do k = 1, cg%n_(zdim)
+               do j = 1, cg%n_(ydim)
+                  do i = 1, cg%n_(xdim)
                      cg%u%arr(fl%idn,i,j,k) = d0
                      cg%u%arr(fl%imx,i,j,k) = 0.0
                      cg%u%arr(fl%imy,i,j,k) = 0.0
@@ -178,9 +178,9 @@ contains
 
 ! Explosion
 
-            do k = 1, cg%nz
-               do j = 1, cg%ny
-                  do i = 1, cg%nx
+            do k = 1, cg%n_(zdim)
+               do j = 1, cg%n_(ydim)
+                  do i = 1, cg%n_(xdim)
                      r = sqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
                      if ( r**2 < r0**2) cg%u%arr(fl%ien,i,j,k)   = cg%u%arr(fl%ien,i,j,k) + Eexpl
                   enddo
@@ -188,9 +188,9 @@ contains
             enddo
 
             if (fl%tag == ION) then
-               do k = 1, cg%nz
-                  do j = 1, cg%ny
-                     do i = 1, cg%nx
+               do k = 1, cg%n_(zdim)
+                  do j = 1, cg%n_(ydim)
+                     do i = 1, cg%n_(xdim)
                         cg%b%arr(ibx,i,j,k) = bx0
                         cg%b%arr(iby,i,j,k) = by0
                         cg%b%arr(ibz,i,j,k) = bz0

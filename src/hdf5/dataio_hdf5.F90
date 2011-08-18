@@ -1093,7 +1093,7 @@ contains
       implicit none
 
       integer(HID_T), intent(in)                       :: file_id   ! File identifier
-      real, dimension(:,:,:,:), pointer, intent(inout) :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      real, dimension(:,:,:,:), pointer, intent(inout) :: pa4d      ! pointer to (:, 1:cg%nx, 1:cg%ny, 1:cg%nz)-sized array
       integer(kind=4), intent(in)                      :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                     :: dname
       type(grid_container), pointer, intent(in)        :: cg
@@ -1146,7 +1146,7 @@ contains
       implicit none
 
       integer(HID_T), intent(in)                       :: file_id   ! File identifier
-      real, dimension(:,:,:), pointer, intent(inout)   :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%ns)-sized array
+      real, dimension(:,:,:), pointer, intent(inout)   :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%nz)-sized array
       integer(kind=4), intent(in)                      :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                     :: dname
       type(grid_container), pointer, intent(in)        :: cg
@@ -1653,12 +1653,12 @@ contains
       call h5tarray_create_f(H5T_NATIVE_INTEGER, 1_INT4, [integer(HSIZE_T):: ndims],              ndims_i4_t, error)
       call h5tarray_create_f(H5T_NATIVE_INTEGER, 2_INT4, [integer(HSIZE_T):: ndims, HI-LO+1],     ndims_lohi_i4_t, error)
       call h5tarray_create_f(H5T_STD_I8LE,       1_INT4, [integer(HSIZE_T):: ndims],              ndims_i8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: cg%nx],              nxarr_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: cg%ny],              nyarr_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: cg%nz],              nzarr_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  3_INT4, [integer(HSIZE_T):: cg%nx,cg%ny,cg%nz],  arr3d_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  4_INT4, [integer(HSIZE_T):: ndims,cg%nx,cg%ny,cg%nz],         ndims_arr4d_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  4_INT4, [integer(HSIZE_T):: size(cg%u%arr,1),cg%nx,cg%ny,cg%nz],  u_arr4d_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: cg%n_(xdim)],        nxarr_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: cg%n_(ydim)],        nyarr_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: cg%n_(zdim)],        nzarr_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  3_INT4, [integer(HSIZE_T):: cg%n_(:)   ],        arr3d_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  4_INT4, [integer(HSIZE_T):: ndims, cg%n_(:)],    ndims_arr4d_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  4_INT4, [integer(HSIZE_T):: size(cg%u%arr,1), cg%n_(:)], u_arr4d_r8_t, error)
 
       n_arr3d_r8 = 10  ! gc_{x,y,z}dim
       n_stub     = 0
@@ -1848,9 +1848,9 @@ contains
       enddo
 
       dims = 1
-      call h5dwrite_f(dset_id, dmem_id(1),  int(cg%nx, kind=4),     dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(2),  int(cg%ny, kind=4),     dims, error, xfer_prp=plist_id)
-      call h5dwrite_f(dset_id, dmem_id(3),  int(cg%nz, kind=4),     dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(1),  int(cg%n_(xdim), kind=4), dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(2),  int(cg%n_(ydim), kind=4), dims, error, xfer_prp=plist_id)
+      call h5dwrite_f(dset_id, dmem_id(3),  int(cg%n_(zdim), kind=4), dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(4),  int(cg%nxb, kind=4),    dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(5),  int(cg%nyb, kind=4),    dims, error, xfer_prp=plist_id)
       call h5dwrite_f(dset_id, dmem_id(6),  int(cg%nzb, kind=4),    dims, error, xfer_prp=plist_id)

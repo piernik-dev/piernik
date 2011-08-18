@@ -62,7 +62,7 @@ contains
       call cga%get_root(cgl)
       do while (associated(cgl))
          cg => cgl%cg
-         ma4d = [crsall, cg%nx, cg%ny, cg%nz]
+         ma4d = [crsall, cg%n_(:) ]
          call my_allocate(wcr, ma4d, "wcr")
          cgl => cgl%nxt
       enddo
@@ -125,11 +125,11 @@ contains
                                  case (2*zdim+LO)
                                     wcr(:,:, :, 1:cg%nb) = wcr(:,:, :, cg%keb:cg%ke)
                                  case (2*xdim+HI)
-                                    wcr(:,cg%ie+1:cg%nx, :, :) = wcr(:,cg%is:cg%isb, :, :)
+                                    wcr(:,cg%ie+1:cg%n_(xdim), :, :) = wcr(:,cg%is:cg%isb, :, :)
                                  case (2*ydim+HI)
-                                    wcr(:,:, cg%je+1:cg%ny, :) = wcr(:,:, cg%js:cg%jsb, :)
+                                    wcr(:,:, cg%je+1:cg%n_(ydim), :) = wcr(:,:, cg%js:cg%jsb, :)
                                  case (2*zdim+HI)
-                                    wcr(:,:, :, cg%ke+1:cg%nz) = wcr(:,:, :, cg%ks:cg%ksb)
+                                    wcr(:,:, :, cg%ke+1:cg%n_(zdim)) = wcr(:,:, :, cg%ks:cg%ksb)
                               end select
                            enddo
                         endif
@@ -210,7 +210,7 @@ contains
 
          do k=cg%ks, cg%ke
             do j=cg%js, cg%je
-               do i=2, cg%nx     ! if we are here this implies nxb /= 1
+               do i=2, cg%n_(xdim)     ! if we are here this implies nxb /= 1
 
                   decr1 =  (cg%u%arr(iarr_crs,i,  j,  k) - cg%u%arr(iarr_crs,i-1,j,  k)) * cg%idx
                   fcrdif1 = K_crs_perp * decr1
@@ -247,8 +247,8 @@ contains
          enddo
 
          call all_wcr_boundaries
-         cg%u%arr(iarr_crs,1:cg%nx-1,:,:) = cg%u%arr(iarr_crs,1:cg%nx-1,:,:) - ( wcr(:,2:cg%nx,:,:) - wcr(:,1:cg%nx-1,:,:) )
-         cg%u%arr(iarr_crs, cg%nx,:,:) = cg%u%arr(iarr_crs, cg%nx-1,:,:) ! for sanity
+         cg%u%arr(iarr_crs,1:cg%n_(xdim)-1,:,:) = cg%u%arr(iarr_crs,1:cg%n_(xdim)-1,:,:) - ( wcr(:,2:cg%n_(xdim),:,:) - wcr(:,1:cg%n_(xdim)-1,:,:) )
+         cg%u%arr(iarr_crs, cg%n_(xdim),:,:) = cg%u%arr(iarr_crs, cg%n_(xdim)-1,:,:) ! for sanity
 
          cgl => cgl%nxt
       enddo
@@ -289,7 +289,7 @@ contains
          cg => cgl%cg
 
          do k=cg%ks, cg%ke
-            do j=2, cg%ny ! if we are here nyb /= 1
+            do j=2, cg%n_(ydim) ! if we are here nyb /= 1
                do i=cg%is, cg%ie
 
                   decr2 = (cg%u%arr(iarr_crs,i,j,k) - cg%u%arr(iarr_crs,i,j-1,k)) * cg%idy
@@ -327,8 +327,8 @@ contains
          enddo
 
          call all_wcr_boundaries
-         cg%u%arr(iarr_crs,:,1:cg%ny-1,:) = cg%u%arr(iarr_crs,:,1:cg%ny-1,:) - ( wcr(:,:,2:cg%ny,:) - wcr(:,:,1:cg%ny-1,:) )
-         cg%u%arr(iarr_crs,:, cg%ny,:) = cg%u%arr(iarr_crs,:, cg%ny-1,:) ! for sanity
+         cg%u%arr(iarr_crs,:,1:cg%n_(ydim)-1,:) = cg%u%arr(iarr_crs,:,1:cg%n_(ydim)-1,:) - ( wcr(:,:,2:cg%n_(ydim),:) - wcr(:,:,1:cg%n_(ydim)-1,:) )
+         cg%u%arr(iarr_crs,:, cg%n_(ydim),:) = cg%u%arr(iarr_crs,:, cg%n_(ydim)-1,:) ! for sanity
 
          cgl => cgl%nxt
       enddo
@@ -368,7 +368,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do k=2, cg%nz      ! nzb /= 1
+         do k=2, cg%n_(zdim)      ! nzb /= 1
             do j=cg%js, cg%je
                do i=cg%is, cg%ie
 
@@ -407,8 +407,8 @@ contains
          enddo
 
          call all_wcr_boundaries
-         cg%u%arr(iarr_crs,:,:,1:cg%nz-1) = cg%u%arr(iarr_crs,:,:,1:cg%nz-1) - ( wcr(:,:,:,2:cg%nz) - wcr(:,:,:,1:cg%nz-1) )
-         cg%u%arr(iarr_crs,:,:, cg%nz) = cg%u%arr(iarr_crs,:,:, cg%nz-1) ! for sanity
+         cg%u%arr(iarr_crs,:,:,1:cg%n_(zdim)-1) = cg%u%arr(iarr_crs,:,:,1:cg%n_(zdim)-1) - ( wcr(:,:,:,2:cg%n_(zdim)) - wcr(:,:,:,1:cg%n_(zdim)-1) )
+         cg%u%arr(iarr_crs,:,:, cg%n_(zdim)) = cg%u%arr(iarr_crs,:,:, cg%n_(zdim)-1) ! for sanity
 
          cgl => cgl%nxt
       enddo

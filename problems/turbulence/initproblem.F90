@@ -69,6 +69,7 @@ contains
 
    subroutine init_prob
 
+      use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: msg, printinfo
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
@@ -95,11 +96,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         allocate(dv(3, cg%nx, cg%ny, cg%nz))
+         allocate(dv(3, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
-         do k = 1, cg%nz
-            do j = 1, cg%ny
-               do i = 1, cg%nx
+         do k = 1, cg%n_(zdim)
+            do j = 1, cg%n_(ydim)
+               do i = 1, cg%n_(xdim)
                   deltav(:) = 0.0
                   do m=-kp,kp
                      do n = -kp,kp
@@ -119,7 +120,7 @@ contains
                enddo
             enddo
          enddo
-         vol = cg%nx*cg%ny*cg%nz
+         vol = cg%n_(xdim)*cg%n_(ydim)*cg%n_(zdim)
          rms = sqrt( sum(dv**2) / vol )
 
          cma = 1.0
@@ -137,9 +138,9 @@ contains
          call printinfo(msg, .true.)
          write(msg,'(2(a,g12.5),a,i4)')   "[initproblem:init_prob] c_si = ", c_si, " l = ", l, " on ", proc
          call printinfo(msg, .true.)
-         do k = 1, cg%nz
-            do j = 1, cg%ny
-               do i = 1, cg%nx
+         do k = 1, cg%n_(zdim)
+            do j = 1, cg%n_(ydim)
+               do i = 1, cg%n_(xdim)
                   cg%u%arr(idnn,i,j,k) = d0
                   cg%u%arr(imxn,i,j,k) = cg%u%arr(idnn,i,j,k) * dv(1,i,j,k) * cma
                   cg%u%arr(imyn,i,j,k) = cg%u%arr(idnn,i,j,k) * dv(2,i,j,k) * cma

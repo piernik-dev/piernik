@@ -128,6 +128,7 @@ contains
 
    subroutine init_prob
 
+      use constants,   only: xdim, ydim, zdim
       use global,      only: smalld
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
@@ -149,11 +150,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do j = 1,cg%ny
+         do j = 1,cg%n_(ydim)
             yj = cg%y(j)
-            do i = 1,cg%nx
+            do i = 1,cg%n_(xdim)
                xi = cg%x(i)
-               do k = 1,cg%nz
+               do k = 1,cg%n_(zdim)
                   zk = cg%z(k)
 !blob
                   cg%u%arr(idn,i,j,k) = dnamb + dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
@@ -180,6 +181,7 @@ contains
 
    subroutine impose_inflow
 
+      use constants,   only: xdim, ydim, zdim
       use global,      only: smalld, smallei, t, dt
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
@@ -205,11 +207,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do k = 1,cg%nz
+         do k = 1,cg%n_(zdim)
             zk = cg%z(k)
-            do j = 1,cg%ny
+            do j = 1,cg%n_(ydim)
                yj = cg%y(j)
-               do i = 1,cg%nx
+               do i = 1,cg%n_(xdim)
                   xi = cg%x(i)
 
 
@@ -244,11 +246,11 @@ contains
          enddo
 
 !imposing inflow
-         do k = 1,cg%nz
+         do k = 1,cg%n_(zdim)
             zk = cg%z(k)
-            do j = 1,cg%ny
+            do j = 1,cg%n_(ydim)
                yj = cg%y(j)
-               do i = 1,cg%nx
+               do i = 1,cg%n_(xdim)
                   xi = cg%x(i)
 !blob
                   dnold = cg%u%arr(idn,i,j,k)

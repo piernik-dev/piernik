@@ -140,7 +140,7 @@ contains
 
    subroutine init_arrays(flind)
 
-      use constants,   only: PIERNIK_INIT_BASE, ndims
+      use constants,   only: PIERNIK_INIT_BASE, ndims, zdim
       use diagnostics, only: my_allocate
       use dataio_pub,  only: die, code_progress
       use global,      only: repeat_step
@@ -168,7 +168,7 @@ contains
          call cg%wa%init(cg%n_(:))
 
 #ifdef GRAV
-         call my_allocate(cg%dprof, [cg%nz], "dprof")
+         call my_allocate(cg%dprof, [cg%n_(zdim)], "dprof")
 #endif /* GRAV */
          cgl => cgl%nxt
       enddo
@@ -478,11 +478,11 @@ contains
                                  case (2*zdim+LO)
                                     pa3d(:, :, 1:cg%nb) = pa3d(:, :, cg%keb:cg%ke)
                                  case (2*xdim+HI)
-                                    pa3d(cg%ie+1:cg%nx, :, :) = pa3d(cg%is:cg%isb, :, :)
+                                    pa3d(cg%ie+1:cg%n_(xdim), :, :) = pa3d(cg%is:cg%isb, :, :)
                                  case (2*ydim+HI)
-                                    pa3d(:, cg%je+1:cg%ny, :) = pa3d(:, cg%js:cg%jsb, :)
+                                    pa3d(:, cg%je+1:cg%n_(ydim), :) = pa3d(:, cg%js:cg%jsb, :)
                                  case (2*zdim+HI)
-                                    pa3d(:, :, cg%ke+1:cg%nz) = pa3d(:, :, cg%ks:cg%ksb)
+                                    pa3d(:, :, cg%ke+1:cg%n_(zdim)) = pa3d(:, :, cg%ks:cg%ksb)
                               end select
                            enddo
                         endif

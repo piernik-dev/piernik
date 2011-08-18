@@ -164,11 +164,11 @@ contains
 #endif /* ISO */
 
       if (eta1_active) then
-         if (.not.allocated(wb) ) allocate( wb(cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(eh) ) allocate( eh(cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(dbx)) allocate(dbx(cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(dby)) allocate(dby(cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(dbz)) allocate(dbz(cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(wb) ) allocate( wb(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         if (.not.allocated(eh) ) allocate( eh(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         if (.not.allocated(dbx)) allocate(dbx(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         if (.not.allocated(dby)) allocate(dby(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         if (.not.allocated(dbz)) allocate(dbz(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
          if (.not.has_dir(xdim)) dbx = 0.0
          if (.not.has_dir(ydim)) dby = 0.0
@@ -216,33 +216,33 @@ contains
          cg => cgl%cg
 
          if (has_dir(xdim)) then
-            dbx(2:cg%nx,:,:) = (cg%b%arr(iby,2:cg%nx,:,:)-cg%b%arr(iby,1:cg%nx-1,:,:))*cg%idl(xdim) ;      dbx(1,:,:) = dbx(2,:,:)
+            dbx(2:cg%n_(xdim),:,:) = (cg%b%arr(iby,2:cg%n_(xdim),:,:)-cg%b%arr(iby,1:cg%n_(xdim)-1,:,:))*cg%idl(xdim) ; dbx(1,:,:) = dbx(2,:,:)
          endif
          if (has_dir(ydim)) then
-            dby(:,2:cg%ny,:) = (cg%b%arr(ibx,:,2:cg%ny,:)-cg%b%arr(ibx,:,1:cg%ny-1,:))*cg%idl(ydim) ;      dby(:,1,:) = dby(:,2,:)
+            dby(:,2:cg%n_(ydim),:) = (cg%b%arr(ibx,:,2:cg%n_(ydim),:)-cg%b%arr(ibx,:,1:cg%n_(ydim)-1,:))*cg%idl(ydim) ; dby(:,1,:) = dby(:,2,:)
          endif
          if (has_dir(zdim)) then
-            dbz(:,:,2:cg%nz) = (cg%b%arr(iby,:,:,2:cg%nz)-cg%b%arr(iby,:,:,1:cg%nz-1))*cg%idl(zdim) ;      dbz(:,:,1) = dbz(:,:,2)
+            dbz(:,:,2:cg%n_(zdim)) = (cg%b%arr(iby,:,:,2:cg%n_(zdim))-cg%b%arr(iby,:,:,1:cg%n_(zdim)-1))*cg%idl(zdim) ; dbz(:,:,1) = dbz(:,:,2)
          endif
 
 !--- current_z **2
          eh = dbx - dby
          if (has_dir(zdim)) then
-            wb(:,:,2:cg%nz) =                   0.25*(eh(:,:,2:cg%nz) + eh(:,:,1:cg%nz-1))**2 ; wb(:,:,1) = wb(:,:,2)
+            wb(:,:,2:cg%n_(zdim)) =                         0.25*(eh(:,:,2:cg%n_(zdim)) + eh(:,:,1:cg%n_(zdim)-1))**2 ; wb(:,:,1) = wb(:,:,2)
          else
             wb = eh**2
          endif
 !--- current_x **2
          eh = dby - dbz
          if (has_dir(xdim)) then
-            wb(2:cg%nx,:,:) = wb(2:cg%nx,:,:) + 0.25*(eh(2:cg%nx,:,:) + eh(1:cg%nx-1,:,:))**2 ; wb(1,:,:) = wb(2,:,:)
+            wb(2:cg%n_(xdim),:,:) = wb(2:cg%n_(xdim),:,:) + 0.25*(eh(2:cg%n_(xdim),:,:) + eh(1:cg%n_(xdim)-1,:,:))**2 ; wb(1,:,:) = wb(2,:,:)
          else
             wb = wb + eh**2
          endif
 !--- current_y **2
          eh = dbz - dbx
          if (has_dir(ydim)) then
-            wb(:,2:cg%ny,:) = wb(:,2:cg%ny,:) + 0.25*(eh(:,2:cg%ny,:) + eh(:,1:cg%ny-1,:))**2 ; wb(:,1,:) = wb(:,2,:)
+            wb(:,2:cg%n_(ydim),:) = wb(:,2:cg%n_(ydim),:) + 0.25*(eh(:,2:cg%n_(ydim),:) + eh(:,1:cg%n_(ydim)-1,:))**2 ; wb(:,1,:) = wb(:,2,:)
          else
             wb = wb + eh**2
          endif
@@ -251,13 +251,16 @@ contains
 
          eh = 0.0
          if (has_dir(xdim)) then
-            eh(2:cg%nx-1,:,:) = eh(2:cg%nx-1,:,:) + eta%arr(1:cg%nx-2,:,:) + eta%arr(3:cg%nx,:,:) ;  eh(1,:,:) = eh(2,:,:) ; eh(cg%nx,:,:) = eh(cg%nx-1,:,:)
+            eh(2:cg%n_(xdim)-1,:,:) = eh(2:cg%n_(xdim)-1,:,:) + eta%arr(1:cg%n_(xdim)-2,:,:) + eta%arr(3:cg%n_(xdim),:,:)
+            eh(1,:,:) = eh(2,:,:) ; eh(cg%n_(xdim),:,:) = eh(cg%n_(xdim)-1,:,:)
          endif
          if (has_dir(ydim)) then
-            eh(:,2:cg%ny-1,:) = eh(:,2:cg%ny-1,:) + eta%arr(:,1:cg%ny-2,:) + eta%arr(:,3:cg%ny,:) ;  eh(:,1,:) = eh(:,2,:) ; eh(:,cg%ny,:) = eh(:,cg%ny-1,:)
+            eh(:,2:cg%n_(ydim)-1,:) = eh(:,2:cg%n_(ydim)-1,:) + eta%arr(:,1:cg%n_(ydim)-2,:) + eta%arr(:,3:cg%n_(ydim),:)
+            eh(:,1,:) = eh(:,2,:) ; eh(:,cg%n_(ydim),:) = eh(:,cg%n_(ydim)-1,:)
          endif
          if (has_dir(zdim)) then
-            eh(:,:,2:cg%nz-1) = eh(:,:,2:cg%nz-1) + eta%arr(:,:,1:cg%nz-2) + eta%arr(:,:,3:cg%nz) ;  eh(:,:,1) = eh(:,:,2) ; eh(:,:,cg%nz) = eh(:,:,cg%nz-1)
+            eh(:,:,2:cg%n_(zdim)-1) = eh(:,:,2:cg%n_(zdim)-1) + eta%arr(:,:,1:cg%n_(zdim)-2) + eta%arr(:,:,3:cg%n_(zdim))
+            eh(:,:,1) = eh(:,:,2) ; eh(:,:,cg%n_(zdim)) = eh(:,:,cg%n_(zdim)-1)
          endif
          eh = real((eh + eta_scale*eta%arr)*d_eta_factor)
 
@@ -397,11 +400,11 @@ contains
 
 !         select case (etadir)
 !            case (xdim)
-!               eta%arr(1:cg%nx-1,:,:) = 0.5*(eta%arr(1:cg%nx-1,:,:)+eta%arr(2:cg%nx,:,:))
+!               eta%arr(1:cg%n_(xdim)-1,:,:) = 0.5*(eta%arr(1:cg%n_(xdim)-1,:,:)+eta%arr(2:cg%n_(xdim),:,:))
 !            case (ydim)
-!               eta%arr(:,1:cg%ny-1,:) = 0.5*(eta%arr(:,1:cg%ny-1,:)+eta%arr(:,2:cg%ny,:))
+!               eta%arr(:,1:cg%n_(ydim)-1,:) = 0.5*(eta%arr(:,1:cg%n_(ydim)-1,:)+eta%arr(:,2:cg%n_(ydim),:))
 !            case (zdim)
-!               eta%arr(:,:,1:cg%nz-1) = 0.5*(eta%arr(:,:,1:cg%nz-1)+eta%arr(:,:,2:cg%nz))
+!               eta%arr(:,:,1:cg%n_(zdim)-1) = 0.5*(eta%arr(:,:,1:cg%n_(zdim)-1)+eta%arr(:,:,2:cg%n_(zdim)))
 !         end select
 
 ! following solution seems to be a bit faster than former select case

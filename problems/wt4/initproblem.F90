@@ -297,7 +297,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: small
+      use constants,   only: small, xdim, ydim, zdim
       use dataio_pub,  only: warn, printinfo, msg
       use global,      only: smalld
       use grid,        only: cga
@@ -396,12 +396,12 @@ contains
             call printinfo(msg, .true.)
          endif
 
-         cg%b%arr(:, 1:cg%nx, 1:cg%ny, 1:cg%nz) = 0.0
+         cg%b%arr(:, 1:cg%n_(xdim), 1:cg%n_(ydim), 1:cg%n_(zdim)) = 0.0
 
          ! BEWARE: den0, vlx0 and vly0 are used only with divine_intervention_type = 3
-         if (.not.allocated(den0)) allocate(den0(cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(vlx0)) allocate(vlx0(cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(vly0)) allocate(vly0(cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(den0)) allocate(den0(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         if (.not.allocated(vlx0)) allocate(vlx0(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         if (.not.allocated(vly0)) allocate(vly0(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
          den0 = cg%u%arr(fl%idn,:,:,:)
          vlx0 = cg%u%arr(fl%imx,:,:,:) / den0
@@ -479,7 +479,7 @@ contains
 
    subroutine read_initial_fld_from_restart(file_id, cg)
 
-      use constants,   only: AT_NO_B
+      use constants,   only: AT_NO_B, xdim, ydim, zdim
       use dataio_hdf5, only: read_arr_from_restart
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
@@ -493,9 +493,9 @@ contains
 
       ! /todo First query for existence of den0, vlx0 and vly0, then allocate
       if (divine_intervention_type == 3) then
-         if (.not.allocated(den0)) allocate(den0(cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(vlx0)) allocate(vlx0(cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(vly0)) allocate(vly0(cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(den0)) allocate(den0(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         if (.not.allocated(vlx0)) allocate(vlx0(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         if (.not.allocated(vly0)) allocate(vly0(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
          if (.not.associated(p3d)) p3d => den0(:,:,:)
          call read_arr_from_restart(file_id, p3d, AT_NO_B, "den0", cg)
@@ -514,6 +514,7 @@ contains
 
    subroutine problem_customize_solution_wt4
 
+      use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: warn
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
@@ -577,15 +578,15 @@ contains
                   enddo
                enddo
             case (3)
-               allocate(alf(cg%nx, cg%ny))
-               do i = 1, cg%nx
-                  do j = 1, cg%ny
+               allocate(alf(cg%n_(xdim), cg%n_(ydim)))
+               do i = 1, cg%n_(xdim)
+                  do j = 1, cg%n_(ydim)
                      rc = sqrt(cg%x(i)**2 + cg%y(j)**2)
                      alf(i,j) = -alfasupp*0.5*(tanh((rc-r_in)/r_in*f_in)-1.)
                      alf(i,j) = alf(i,j) + alfasupp*0.5*(tanh((rc-r_out)/r_out*f_out) + 1.)
                   enddo
                enddo
-               do k = 1, cg%nz
+               do k = 1, cg%n_(zdim)
                   cg%u%arr(fl%idn, :, :, k) = (1. - alf(:,:))*cg%u%arr(fl%idn, :, :, k) + alf*den0(:, :, k)
                   cg%u%arr(fl%imx, :, :, k) = (1. - alf(:,:))*cg%u%arr(fl%imx, :, :, k) + alf*den0(:, :, k) * vlx0(:, :, k)
                   cg%u%arr(fl%imy, :, :, k) = (1. - alf(:,:))*cg%u%arr(fl%imy, :, :, k) + alf*den0(:, :, k) * vly0(:, :, k)

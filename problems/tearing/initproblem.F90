@@ -103,7 +103,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: pi, xdim, ydim
+      use constants,   only: pi, xdim, ydim, zdim
       use domain,      only: dom
       use fluidindex,  only: ibx, iby, ibz, flind
       use grid,        only: cga
@@ -135,9 +135,9 @@ contains
 
          b0 = sqrt(2.*alpha*d0*flind%ion%cs2)
 
-         do k = 1, cg%nz
-            do j = 1, cg%ny
-               do i = 1, cg%nx
+         do k = 1, cg%n_(zdim)
+            do j = 1, cg%n_(ydim)
+               do i = 1, cg%n_(xdim)
 
                   vzab = v0*cos(2.*pi*cg%y(j)/dom%L_(ydim))
                   cg%u%arr(imxi,i,j,k) = cg%u%arr(idni,i,j,k)*vzab

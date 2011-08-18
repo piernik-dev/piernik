@@ -112,7 +112,7 @@ contains
 
    subroutine init_prob
 
-      use constants,    only: pi, dpi, xdim, zdim
+      use constants,    only: pi, dpi, xdim, ydim, zdim
       use dataio_pub,   only: msg, printinfo, run_id
       use domain,       only: dom
       use fluidindex,   only: flind
@@ -211,13 +211,13 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         allocate(noise(3, cg%nx, cg%ny, cg%nz))
+         allocate(noise(3, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
-         do i = 1, cg%nx
+         do i = 1, cg%n_(xdim)
             rcx = cg%x(i)
-            do j = 1, cg%ny
+            do j = 1, cg%n_(ydim)
                rcy = cg%y(j)
-               do k = 1, cg%nz
+               do k = 1, cg%n_(zdim)
 #ifdef NEUTRAL
                   cg%u%arr(neu%idn,i,j,k) = rhog
                   cg%u%arr(neu%imx,i,j,k) = ux * rhog

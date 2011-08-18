@@ -91,6 +91,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
+      use constants,   only: xdim, ydim, zdim
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use initionized, only: idni,imxi,imyi,imzi
@@ -116,11 +117,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do j = 1, cg%ny
+         do j = 1, cg%n_(ydim)
             yj = cg%y(j)
-            do i = 1, cg%nx
+            do i = 1, cg%n_(xdim)
                xi = cg%x(i)
-               do k = 1, cg%nz
+               do k = 1, cg%n_(zdim)
                   zk = cg%z(k)
                   vx = 0.0
 #ifdef FFTW

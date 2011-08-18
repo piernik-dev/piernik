@@ -162,7 +162,7 @@ contains
 
    subroutine yshift(ts,dts)
 
-      use constants,  only: xdim
+      use constants,  only: xdim, ydim
       use dataio_pub, only: die
       use domain,     only: dom
       use grid,       only: cga
@@ -188,8 +188,8 @@ contains
       do i=lbound(cg%u%arr,1),ubound(cg%u%arr,1)
          cg%u%arr(i,:, cg%js:cg%je,:) = unshear_fft( cg%u%arr(i,:, cg%js:cg%je,:), cg%x(:),ddly)
       enddo
-      cg%u%arr(:,:,1:cg%nb,:)        = cg%u%arr(:,:, cg%ny-2*cg%js:cg%je,:)
-      cg%u%arr(:,:, cg%je+1:cg%ny,:) = cg%u%arr(:,:, cg%js:cg%jsb,:)
+      cg%u%arr(:,:,1:cg%nb,:)        = cg%u%arr(:,:, cg%n_(ydim)-2*cg%js:cg%je,:)
+      cg%u%arr(:,:, cg%je+1:cg%n_(ydim),:) = cg%u%arr(:,:, cg%js:cg%jsb,:)
 #endif /* FFTW */
    end subroutine yshift
 !--------------------------------------------------------------------------------------------------
@@ -303,7 +303,7 @@ contains
 
       if (present(inv)) fx = - fx
 
-      do i = 1, cg%nx
+      do i = 1, cg%n_(xdim)
          dl  = fx * x(i)
          ndl = mod(int(dl/cg%dy), int(cg%nyb))
          ddl = mod(dl, cg%dy)/cg%dy

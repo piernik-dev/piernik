@@ -224,12 +224,12 @@ contains
                                        curl%o_bnd(d, ib)%seg(g)%se(d, LO) = curl%o_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)
                                  end select
                                  ! set MPI type only for non-local transfers
-                                 call MPI_Type_create_subarray(ndims, [ curl%nx, curl%ny, curl%nz ], &
+                                 call MPI_Type_create_subarray(ndims, curl%n_(:), &
                                       &                        int(curl%i_bnd(d, ib)%seg(g)%se(:, HI) - curl%i_bnd(d, ib)%seg(g)%se(:, LO) + 1, kind=4), &
                                       &                        int(curl%i_bnd(d, ib)%seg(g)%se(:, LO) - 1, kind=4), MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
                                       &                        curl%i_bnd(d, ib)%seg(g)%mbc, ierr)
                                  call MPI_Type_commit(curl%i_bnd(d, ib)%seg(g)%mbc, ierr)
-                                 call MPI_Type_create_subarray(ndims, [ curl%nx, curl%ny, curl%nz ], &
+                                 call MPI_Type_create_subarray(ndims, curl%n_(:), &
                                       &                        int(curl%o_bnd(d, ib)%seg(g)%se(:, HI) - curl%o_bnd(d, ib)%seg(g)%se(:, LO) + 1, kind=4), &
                                       &                        int(curl%o_bnd(d, ib)%seg(g)%se(:, LO) - 1, kind=4), MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
                                       &                        curl%o_bnd(d, ib)%seg(g)%mbc, ierr)
@@ -246,7 +246,7 @@ contains
 
             ! cartesian decomposition
             do ib = 1, curl%nb
-               sizes(:) = [ curl%nx, curl%ny, curl%nz ]
+               sizes(:) = curl%n_(:)
                do d = xdim, zdim
                   if (has_dir(d) .and. .not. curl%empty) then
                      subsizes(:) = sizes(:)

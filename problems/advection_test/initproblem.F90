@@ -171,7 +171,7 @@ contains
 
       where (cg%u%arr(flind%neu%idn, :, :, :) < smalld) cg%u%arr(flind%neu%idn, :, :, :) = smalld
 
-      call my_allocate(inid, [cg%nx, cg%ny, cg%nz], inid_n)
+      call my_allocate(inid, cg%n_(:), inid_n)
       inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
       cg%u%arr(flind%neu%imx, :, :, :) = pulse_vel_x * cg%u%arr(flind%neu%idn, :, :, :)
@@ -266,7 +266,7 @@ contains
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:read_IC_from_restart] multiple grid pieces per procesor not implemented yet") !nontrivial inid
 
       if (associated(p3d)) nullify(p3d)
-      if (.not.allocated(inid)) call my_allocate(inid, [cg%nx, cg%ny, cg%nz], inid_n)
+      if (.not.allocated(inid)) call my_allocate(inid, cg%n_(:), inid_n)
       p3d => inid(:,:,:)
 
       if (allocated(inid) .and. associated(p3d)) then

@@ -320,9 +320,9 @@ contains
          ! data storage
          !> \deprecated BEWARE prolong_x and %prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
          if ( allocated(curl%prolong_x) .or. allocated(curl%prolong_xy) .or. allocated(curl%mgvar) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
-         allocate( curl%mgvar     (curl%nx, curl%ny,              curl%nz,              ngridvars), stat=aerr(1) )
-         allocate( curl%prolong_xy(curl%nx, curl%ny,              curl%nzb/2+2*curl%nb),            stat=aerr(2) )
-         allocate( curl%prolong_x (curl%nx, curl%nyb/2+2*curl%nb, curl%nzb/2+2*curl%nb),            stat=aerr(3) )
+         allocate( curl%mgvar     (curl%n_(xdim), curl%n_(ydim),        curl%n_(zdim),        ngridvars), stat=aerr(1) )
+         allocate( curl%prolong_xy(curl%n_(xdim), curl%n_(ydim),        curl%nzb/2+2*curl%nb),            stat=aerr(2) )
+         allocate( curl%prolong_x (curl%n_(xdim), curl%nyb/2+2*curl%nb, curl%nzb/2+2*curl%nb),            stat=aerr(3) )
          if (any(aerr(1:3) /= 0)) call die("[multigrid:init_multigrid] Allocation error: curl%*")
          if ( .not. allocated(curl%prolong_x) .or. .not. allocated(curl%prolong_xy) .or. .not. allocated(curl%mgvar) ) &
               call die("[multigrid:init_multigrid] some multigrid arrays not allocated")

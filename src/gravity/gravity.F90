@@ -377,7 +377,7 @@ contains
 
             if (cg%bnd(xdim,HI) >= BND_OUT .and. cg%bnd(xdim,HI) <= BND_OUTH) then
                do i = 1, cg%nb+1
-                  cg%gp%arr(cg%nx-cg%nb-1+i,:,:) = cg%gp%arr(cg%nx-cg%nb-1,:,:)
+                  cg%gp%arr(cg%n_(xdim)-cg%nb-1+i,:,:) = cg%gp%arr(cg%n_(xdim)-cg%nb-1,:,:)
                enddo
             endif
          endif
@@ -391,7 +391,7 @@ contains
 
             if (cg%bnd(ydim,HI) >= BND_OUT .and. cg%bnd(ydim,HI) <= BND_OUTH) then
                do i = 1, cg%nb+1
-                  cg%gp%arr(:,cg%ny-cg%nb-1+i,:) = cg%gp%arr(:,cg%ny-cg%nb-1,:)
+                  cg%gp%arr(:,cg%n_(ydim)-cg%nb-1+i,:) = cg%gp%arr(:,cg%n_(ydim)-cg%nb-1,:)
                enddo
             endif
          endif
@@ -405,7 +405,7 @@ contains
 
             if (cg%bnd(zdim,HI) >= BND_OUT .and. cg%bnd(zdim,HI) <= BND_OUTH) then
                do i = 1, cg%nb+1
-                  cg%gp%arr(:,:,cg%nz-cg%nb-1+i) = cg%gp%arr(:,:,cg%nz-cg%nb-1)
+                  cg%gp%arr(:,:,cg%n_(zdim)-cg%nb-1+i) = cg%gp%arr(:,:,cg%n_(zdim)-cg%nb-1)
                enddo
             endif
          endif
@@ -918,30 +918,30 @@ contains
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[gravity:grav_accel2pot] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       if (any([allocated(gravrx), allocated(gravry), allocated(gravrz)])) call die("[gravity:grav_accel2pot] gravr[xyz] already allocated")
-      allocate(gravrx(cg%nx), gravry(cg%ny), gravrz(cg%nz))
+      allocate(gravrx(cg%n_(xdim)), gravry(cg%n_(ydim)), gravrz(cg%n_(zdim)))
 
       if (have_mpi .and. is_mpi_noncart) call die("[gravity:grav_accel2pot] is_mpi_noncart is not implemented") ! MPI_Cart_coords, psize, pcoords
       if (cdd%comm3d == MPI_COMM_NULL) call die("[gravity:grav_accel2pot] cdd%comm3d == MPI_COMM_NULL")
 
-      allocate(gpwork(cg%nx, cg%ny, cg%nz))
+      allocate(gpwork(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
       gpwork(1,1,1) = 0.0
 
-      call grav_accel(xdim, 1, 1, cg%xr(:), cg%nx, gravrx)
-      do i = 1, cg%nx-1
+      call grav_accel(xdim, 1, 1, cg%xr(:), cg%n_(xdim), gravrx)
+      do i = 1, cg%n_(xdim)-1
          gpwork(i+1,1,1) = gpwork(i,1,1) - gravrx(i)*cg%dl(xdim)
       enddo
 
-      do i=1, cg%nx
-         call grav_accel(ydim, 1, i, cg%yr(:), cg%ny, gravry)
-         do j = 1, cg%ny-1
+      do i=1, cg%n_(xdim)
+         call grav_accel(ydim, 1, i, cg%yr(:), cg%n_(ydim), gravry)
+         do j = 1, cg%n_(ydim)-1
             gpwork(i,j+1,1) = gpwork(i,j,1) - gravry(j)*cg%dl(ydim)
          enddo
       enddo
 
-      do i=1, cg%nx
-         do j=1, cg%ny
-            call grav_accel(zdim, i, j, cg%zr(:), cg%nz, gravrz)
-            do k = 1, cg%nz-1
+      do i=1, cg%n_(xdim)
+         do j=1, cg%n_(ydim)
+            call grav_accel(zdim, i, j, cg%zr(:), cg%n_(zdim), gravrz)
+            do k = 1, cg%n_(zdim)-1
                gpwork(i,j,k+1) = gpwork(i,j,k) - gravrz(k)*cg%dl(zdim)
             enddo
          enddo

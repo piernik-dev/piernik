@@ -67,9 +67,6 @@ module grid_cont
 
       real, allocatable, dimension(:) :: dprof  !< Array used for storing density during calculation of hydrostatic equilibrium
 
-      integer(kind=4) :: nx                             !< number of %grid cells in one block in x-direction
-      integer(kind=4) :: ny                             !< number of %grid cells in one block in y-direction
-      integer(kind=4) :: nz                             !< number of %grid cells in one block in z-direction
       integer(kind=4) :: nxb                            !< number of %grid cells in one block (without boundary cells) in x-direction
       integer(kind=4) :: nyb                            !< number of %grid cells in one block (without boundary cells) in y-direction
       integer(kind=4) :: nzb                            !< number of %grid cells in one block (without boundary cells) in z-direction
@@ -87,7 +84,7 @@ module grid_cont
 
       integer(kind=8), dimension(ndims) :: off  !< offset of the local domain within computational domain
       integer(kind=4), dimension(ndims) :: n_b  !< [nxb, nyb, nzb]
-      integer(kind=4), dimension(ndims) :: n_   !< [nx,  ny,  nz ]
+      integer(kind=4), dimension(ndims) :: n_   !< number of %grid cells in one block in x-, y- and z-directions
 
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkse !< [[is, js, ks], [ie, je, ke]]
       integer, dimension(ndims, LO:HI)  :: bnd  !< type of boundary conditions coded in integers
@@ -192,33 +189,23 @@ contains
          this%empty = .false.
       endif
 
-      this%nxb = this%n_b(xdim)
-      this%nyb = this%n_b(ydim)
-      this%nzb = this%n_b(zdim)
-
       this%bnd(:,:) = translate_bnds_to_ints_dom()
       this%mbc(:, :, :, :) = INVALID
 
       if (this%empty) then
-         this%fbnd(:,:) = dom%edge(:,:)
 
-         this%nx    = 0
-         this%is    = this%nb + 1_INT4
-         this%ie    = this%nb
+         this%fbnd(:,:) = dom%edge(:,:)
+         this%n_(:) = 0
+         this%ijkse(:, LO) = this%nb + 1_INT4
+         this%ijkse(:, HI) = this%nb
          this%isb   = 0 ! ???
          this%ieb   = 0 ! ???
          this%dx    = 1.0
 
-         this%ny    = 0
-         this%js    = this%nb + 1_INT4
-         this%je    = this%nb
          this%jsb   = 0
          this%jeb   = 0
          this%dy    = 1.0
 
-         this%nz    = 0
-         this%ks    = this%nb + 1_INT4
-         this%ke    = this%nb
          this%ksb   = 0
          this%keb   = 0
          this%dz    = 1.0
@@ -243,20 +230,24 @@ contains
             endif
          enddo
 
+         where (has_dir(:))
+            this%n_(:) = this%n_b(:) + 2_INT4 * this%nb       ! Block total grid sizes
+            this%ijkse(:, LO) = this%nb + 1_INT4
+            this%ijkse(:, HI) = this%nb + this%n_b(:)
+         elsewhere
+            this%n_(:) = 1
+            this%ijkse(:, LO) = 1
+            this%ijkse(:, HI) = 1
+         endwhere
+
          if (has_dir(xdim)) then
-            this%nx    = this%nxb + 2_INT4 * this%nb       ! Block total grid sizes
-            this%is    = this%nb + 1_INT4
-            this%ie    = this%nb + this%nxb
             this%isb   = 2_INT4*this%nb
-            this%ieb   = this%nxb+1_INT4
+            this%ieb   = this%n_b(xdim)+1_INT4
             this%dx    = dom%L_(xdim) / dom%n_d(xdim)
             this%dxmn  = min(this%dxmn, this%dx)
             this%fbnd(xdim, LO) = dom%edge(xdim, LO) + this%dx *  this%off(xdim)
-            this%fbnd(xdim, HI) = dom%edge(xdim, LO) + this%dx * (this%off(xdim) + this%nxb)
+            this%fbnd(xdim, HI) = dom%edge(xdim, LO) + this%dx * (this%off(xdim) + this%n_b(xdim))
          else
-            this%nx    = 1
-            this%is    = 1
-            this%ie    = 1
             this%isb   = 1
             this%ieb   = 1
             this%dx    = 1.0
@@ -264,19 +255,13 @@ contains
          endif
 
          if (has_dir(ydim)) then
-            this%ny    = this%nyb + 2_INT4 * this%nb
-            this%js    = this%nb + 1_INT4
-            this%je    = this%nb + this%nyb
             this%jsb   = 2_INT4*this%nb
-            this%jeb   = this%nyb+1_INT4
+            this%jeb   = this%n_b(ydim)+1_INT4
             this%dy    = dom%L_(ydim) / dom%n_d(ydim)
             this%dxmn  = min(this%dxmn, this%dy)
             this%fbnd(ydim, LO) = dom%edge(ydim, LO) + this%dy *  this%off(ydim)
-            this%fbnd(ydim, HI) = dom%edge(ydim, LO) + this%dy * (this%off(ydim) + this%nyb)
+            this%fbnd(ydim, HI) = dom%edge(ydim, LO) + this%dy * (this%off(ydim) + this%n_b(ydim))
          else
-            this%ny    = 1
-            this%js    = 1
-            this%je    = 1
             this%jsb   = 1
             this%jeb   = 1
             this%dy    = 1.0
@@ -284,26 +269,18 @@ contains
          endif
 
          if (has_dir(zdim)) then
-            this%nz    = this%nzb + 2_INT4 * this%nb
-            this%ks    = this%nb + 1_INT4
-            this%ke    = this%nb + this%nzb
             this%ksb   = 2_INT4*this%nb
-            this%keb   = this%nzb+1_INT4
+            this%keb   = this%n_b(zdim)+1_INT4
             this%dz    = dom%L_(zdim) / dom%n_d(zdim)
             this%dxmn  = min(this%dxmn, this%dz)
             this%fbnd(zdim, LO) = dom%edge(zdim, LO) + this%dz *  this%off(zdim)
-            this%fbnd(zdim, HI) = dom%edge(zdim, LO) + this%dz * (this%off(zdim) + this%nzb)
+            this%fbnd(zdim, HI) = dom%edge(zdim, LO) + this%dz * (this%off(zdim) + this%n_b(zdim))
          else
-            this%nz    = 1
-            this%ks    = 1
-            this%ke    = 1
             this%ksb   = 1
             this%keb   = 1
             this%dz    = 1.0
             this%fbnd(zdim, :) = dom%edge(zdim, :)
          endif
-
-         this%n_(xdim:zdim) = [ this%nx, this%ny, this%nz ]
 
          this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=has_dir(:))
 
@@ -316,9 +293,9 @@ contains
 
          this%dvol = product(this%dl(:))
 
-         allocate(this%x(this%nx), this%xl(this%nx), this%xr(this%nx), this%inv_x(this%nx))
-         allocate(this%y(this%ny), this%yl(this%ny), this%yr(this%ny), this%inv_y(this%ny))
-         allocate(this%z(this%nz), this%zl(this%nz), this%zr(this%nz), this%inv_z(this%nz))
+         allocate(this%x(this%n_(xdim)), this%xl(this%n_(xdim)), this%xr(this%n_(xdim)), this%inv_x(this%n_(xdim)))
+         allocate(this%y(this%n_(ydim)), this%yl(this%n_(ydim)), this%yr(this%n_(ydim)), this%inv_y(this%n_(ydim)))
+         allocate(this%z(this%n_(zdim)), this%zl(this%n_(zdim)), this%zr(this%n_(zdim)), this%inv_z(this%n_(zdim)))
          this%maxxyz = int(maxval([size(this%x), size(this%y), size(this%z)]), kind=4)
 
 !--- Assignments -----------------------------------------------------------
@@ -329,7 +306,7 @@ contains
 !--- x-grids --------------------------------------------------------------
 
          if (has_dir(xdim)) then
-            this%x(:) = dom%edge(xdim, LO) + this%dx * ([(i, i=1, this%nx)] - 0.5 - this%nb + this%off(xdim))
+            this%x(:) = dom%edge(xdim, LO) + this%dx * ([(i, i=1, this%n_(xdim))] - 0.5 - this%nb + this%off(xdim))
          else
             this%x(:) = 0.5*(this%fbnd(xdim, LO) + this%fbnd(xdim, HI))
          endif
@@ -345,7 +322,7 @@ contains
 !--- y-grids --------------------------------------------------------------
 
          if (has_dir(ydim)) then
-            this%y(:) = dom%edge(ydim, LO) + this%dy * ([(i, i=1, this%ny)] - 0.5 - this%nb + this%off(ydim))
+            this%y(:) = dom%edge(ydim, LO) + this%dy * ([(i, i=1, this%n_(ydim))] - 0.5 - this%nb + this%off(ydim))
          else
             this%y(:) = 0.5*(this%fbnd(ydim, LO) + this%fbnd(ydim, HI))
          endif
@@ -361,7 +338,7 @@ contains
 !--- z-grids --------------------------------------------------------------
 
          if (has_dir(zdim)) then
-            this%z(:) = dom%edge(zdim, LO) + this%dz * ([(i, i=1, this%nz)] - 0.5 - this%nb + this%off(zdim))
+            this%z(:) = dom%edge(zdim, LO) + this%dz * ([(i, i=1, this%n_(zdim))] - 0.5 - this%nb + this%off(zdim))
          else
             this%z(:) = 0.5*(this%fbnd(zdim, LO) + this%fbnd(zdim, HI))
          endif
@@ -376,8 +353,17 @@ contains
 
       endif
 
-      this%ijkse(:, LO) = [ this%is, this%js, this%ks ]
-      this%ijkse(:, HI) = [ this%ie, this%je, this%ke ]
+      ! some shortcuts for convenience
+      this%nxb = this%n_b(xdim)
+      this%nyb = this%n_b(ydim)
+      this%nzb = this%n_b(zdim)
+
+      this%is = this%ijkse(xdim, LO)
+      this%js = this%ijkse(ydim, LO)
+      this%ks = this%ijkse(zdim, LO)
+      this%ie = this%ijkse(xdim, HI)
+      this%je = this%ijkse(ydim, HI)
+      this%ke = this%ijkse(zdim, HI)
 
 #ifdef ISO
       call this%cs_iso2%init(this%n_(:))

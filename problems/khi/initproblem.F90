@@ -108,7 +108,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: dpi, ydim, zdim
+      use constants,   only: dpi, xdim, ydim, zdim
       use domain,      only: has_dir, dom
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
@@ -135,9 +135,9 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do i = 1, cg%nx
+         do i = 1, cg%n_(xdim)
             rcx = cg%x(i)
-            do j = 1, cg%ny
+            do j = 1, cg%n_(ydim)
                rcy = cg%y(j)
                rc=rcy-0.5*dom%L_(ydim)
                if (rc > 0.0) then

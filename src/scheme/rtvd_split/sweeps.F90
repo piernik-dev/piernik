@@ -44,6 +44,7 @@ contains
 #if defined SHEAR && defined FLUID_INTERACTIONS
    subroutine source_terms_y
 
+      use constants,       only: xdim, zdim
       use dataio_pub,      only: die
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind
@@ -54,6 +55,7 @@ contains
       use shear,           only: omega, qshear
 
       implicit none
+
       real, dimension(:,:,:), allocatable :: vxr, v_r, rotaccr
       real, dimension(:,:), allocatable   :: epsa
       real, dimension(:,:,:), allocatable :: u1
@@ -64,9 +66,9 @@ contains
       cg => cga%cg_all(1)
       if (ubound(cga%cg_all(:), dim=1) > 1) call die("[sweeps:source_terms_y] multiple grid pieces per procesor not implemented yet") !nontrivial u1
 
-      allocate(vxr(size(iarr_all_my), cg%nx, cg%nz), v_r(size(iarr_all_my), cg%nx, cg%nz), rotaccr(size(iarr_all_my), cg%nx, cg%nz))
-      allocate(epsa(cg%nx, cg%nz))
-      allocate(u1(flind%all, cg%nx, cg%nz))
+      allocate(vxr(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)), v_r(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)), rotaccr(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)))
+      allocate(epsa(cg%n_(xdim), cg%n_(zdim)))
+      allocate(u1(flind%all, cg%n_(xdim), cg%n_(zdim)))
 
       u1(:,:,:) = cg%u%arr(:,:,1,:)
 
@@ -123,8 +125,8 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      real, dimension(nmag, cg%nx)      :: b_x
-      real, dimension(flind%all, cg%nx) :: u_x, u0_x
+      real, dimension(nmag, cg%n_(xdim))      :: b_x
+      real, dimension(flind%all, cg%n_(xdim)) :: u_x, u0_x
       real, dimension(:), pointer       :: div_v1d => null()
       integer                           :: j, k, jp, kp, istep
 
@@ -143,7 +145,7 @@ contains
 
 #ifdef MAGNETIC
                b_x=0.5*cg%b%arr(:,:,j,k)
-               b_x(ibx,1:cg%nx-1) = b_x(ibx,1:cg%nx-1)+b_x(ibx,2:cg%nx);       b_x(ibx, cg%nx) = b_x(ibx, cg%nx-1)
+               b_x(ibx,1:cg%n_(xdim)-1) = b_x(ibx,1:cg%n_(xdim)-1)+b_x(ibx,2:cg%n_(xdim));       b_x(ibx, cg%n_(xdim)) = b_x(ibx, cg%n_(xdim)-1)
                b_x(iby,:)=b_x(iby,:)+0.5*cg%b%arr(iby,:,jp,k)
                b_x(ibz,:)=b_x(ibz,:)+0.5*cg%b%arr(ibz,:,j,kp)
 #endif /* MAGNETIC */
@@ -156,7 +158,7 @@ contains
                u_x (iarr_all_swpx,:) = cg%u%arr(:,:,j,k)
                u0_x(iarr_all_swpx,:) = cg%uh%arr(:,:,j,k)
 
-               call relaxing_tvd(cg%nx, u_x, u0_x, b_x, div_v1d, cg%cs_iso2%get_sweep(xdim,j,k), istep, xdim, j, k, cg%dx, dt, cg)
+               call relaxing_tvd(cg%n_(xdim), u_x, u0_x, b_x, div_v1d, cg%cs_iso2%get_sweep(xdim,j,k), istep, xdim, j, k, cg%dx, dt, cg)
                cg%u%arr(:,:,j,k)=u_x(iarr_all_swpx,:)
             enddo
          enddo
@@ -183,8 +185,8 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      real, dimension(nmag, cg%ny)      :: b_y
-      real, dimension(flind%all, cg%ny) :: u_y, u0_y
+      real, dimension(nmag, cg%n_(ydim))      :: b_y
+      real, dimension(flind%all, cg%n_(ydim)) :: u_y, u0_y
       real, dimension(:), pointer       :: div_v1d => null()
       integer                           :: i, k, ip, kp, istep
       b_y = 0.0
@@ -202,7 +204,7 @@ contains
 
 #ifdef MAGNETIC
                b_y(:,:) = 0.5*cg%b%arr(:,i,:,k)
-               b_y(iby,1:cg%ny-1)=b_y(iby,1:cg%ny-1)+b_y(iby,2:cg%ny);       b_y(iby, cg%ny) = b_y(iby, cg%ny-1)
+               b_y(iby,1:cg%n_(ydim)-1)=b_y(iby,1:cg%n_(ydim)-1)+b_y(iby,2:cg%n_(ydim));       b_y(iby, cg%n_(ydim)) = b_y(iby, cg%n_(ydim)-1)
                b_y(ibx,:)=b_y(ibx,:)+0.5*cg%b%arr(ibx,ip,:,k)
                b_y(ibz,:)=b_y(ibz,:)+0.5*cg%b%arr(ibz,i,:,kp)
                b_y( [ iby, ibx, ibz ],:)=b_y(:,:)
@@ -216,7 +218,7 @@ contains
                u_y (iarr_all_swpy,:) = cg%u%arr(:,i,:,k)
                u0_y(iarr_all_swpy,:) = cg%uh%arr(:,i,:,k)
 
-               call relaxing_tvd(cg%ny, u_y, u0_y, b_y, div_v1d, cg%cs_iso2%get_sweep(ydim,k,i), istep, ydim, k, i, cg%dy, dt, cg)
+               call relaxing_tvd(cg%n_(ydim), u_y, u0_y, b_y, div_v1d, cg%cs_iso2%get_sweep(ydim,k,i), istep, ydim, k, i, cg%dy, dt, cg)
                cg%u%arr(:,i,:,k)=u_y(iarr_all_swpy,:)
 
             enddo
@@ -245,8 +247,8 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      real, dimension(nmag, cg%nz)      :: b_z
-      real, dimension(flind%all, cg%nz) :: u_z, u0_z
+      real, dimension(nmag, cg%n_(zdim))      :: b_z
+      real, dimension(flind%all, cg%n_(zdim)) :: u_z, u0_z
       real, dimension(:), pointer       :: div_v1d => null()
       integer                           :: i, j, ip, jp, istep
 
@@ -265,7 +267,7 @@ contains
 
 #ifdef MAGNETIC
                b_z(:,:) = 0.5*cg%b%arr(:,i,j,:)
-               b_z(ibz,1:cg%nz-1) = b_z(ibz,1:cg%nz-1) + b_z(ibz,2:cg%nz);   b_z(ibz, cg%nz) = b_z(ibz, cg%nz-1)
+               b_z(ibz,1:cg%n_(zdim)-1) = b_z(ibz,1:cg%n_(zdim)-1) + b_z(ibz,2:cg%n_(zdim));   b_z(ibz, cg%n_(zdim)) = b_z(ibz, cg%n_(zdim)-1)
                b_z(ibx,:) = b_z(ibx,:) + 0.5*cg%b%arr(ibx,ip,j,:)
                b_z(iby,:) = b_z(iby,:) + 0.5*cg%b%arr(iby,i,jp,:)
                b_z( [ ibz, iby, ibx ],:)=b_z(:,:)
@@ -282,7 +284,7 @@ contains
                u_z (iarr_all_swpz,:) = cg%u%arr(:,i,j,:)
                u0_z(iarr_all_swpz,:) = cg%uh%arr(:,i,j,:)
 
-               call relaxing_tvd(cg%nz, u_z, u0_z, b_z, div_v1d, cg%cs_iso2%get_sweep(zdim,i,j), istep, zdim, i, j, cg%dz, dt, cg)
+               call relaxing_tvd(cg%n_(zdim), u_z, u0_z, b_z, div_v1d, cg%cs_iso2%get_sweep(zdim,i,j), istep, zdim, i, j, cg%dz, dt, cg)
                cg%u%arr(:,i,j,:)=u_z(iarr_all_swpz,:)
             enddo
          enddo

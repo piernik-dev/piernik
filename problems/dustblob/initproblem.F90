@@ -108,7 +108,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: zdim
+      use constants,   only: xdim, ydim, zdim
       use domain,      only: has_dir
       use fluidindex,  only: flind
       use global,      only: smalld
@@ -133,11 +133,11 @@ contains
 
          if (associated(cg%cs_iso2%arr)) cg%cs_iso2%arr(:,:,:) = flind%neu%cs2
 
-         do i = 1, cg%nx
+         do i = 1, cg%n_(xdim)
             xi = cg%x(i)
-            do j = 1, cg%ny
+            do j = 1, cg%n_(ydim)
                yj = cg%y(j)
-               do k = 1, cg%nz
+               do k = 1, cg%n_(zdim)
                   if (has_dir(zdim)) then
                      zk = cg%z(k)
                      rc = sqrt((xi-x0)**2+(yj-y0)**2+(zk-z0)**2)

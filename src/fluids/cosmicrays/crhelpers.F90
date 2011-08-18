@@ -96,7 +96,7 @@ contains
       endif
 
       if (any([allocated(vx), allocated(vy), allocated(vz)])) call die("[crhelpers:div_v] v[xyz] already allocated")
-      allocate(vx(cg%nx), vy(cg%ny), vz(cg%nz))
+      allocate(vx(cg%n_(xdim)), vy(cg%n_(ydim)), vz(cg%n_(zdim)))
 
       idnf = iarr_all_dn(ifluid)
       imxf = iarr_all_mx(ifluid)
@@ -106,33 +106,33 @@ contains
       divvel(:,:,:) = 0.0
 
       if (has_dir(xdim)) then
-         do k = 1, cg%nz
-            do j = 1, cg%ny
+         do k = 1, cg%n_(zdim)
+            do j = 1, cg%n_(ydim)
                vx = cg%u%arr(imxf,:,j,k) / cg%u%arr(idnf,:,j,k)
-               divvel(2:cg%nx-1,j,k) = ( vx(3:cg%nx) - vx(1:cg%nx-2) )  * (0.5*cg%idx)
+               divvel(2:cg%n_(xdim)-1,j,k) = ( vx(3:cg%n_(xdim)) - vx(1:cg%n_(xdim)-2) )  * (0.5*cg%idx)
             enddo
          enddo
-         divvel(1,:,:) = divvel(2,:,:); divvel(cg%nx,:,:) = divvel(cg%nx-1,:,:) ! for sanity
+         divvel(1,:,:) = divvel(2,:,:); divvel(cg%n_(xdim),:,:) = divvel(cg%n_(xdim)-1,:,:) ! for sanity
       endif
 
       if (has_dir(ydim)) then
-         do k = 1, cg%nz
-            do i = 1, cg%nx
+         do k = 1, cg%n_(zdim)
+            do i = 1, cg%n_(xdim)
                vy = cg%u%arr(imyf,i,:,k) / cg%u%arr(idnf,i,:,k)
-               divvel(i,2:cg%ny-1,k) = divvel(i,2:cg%ny-1,k)+( vy(3:cg%ny) - vy(1:cg%ny-2) )  * (0.5*cg%idy)
+               divvel(i,2:cg%n_(ydim)-1,k) = divvel(i,2:cg%n_(ydim)-1,k)+( vy(3:cg%n_(ydim)) - vy(1:cg%n_(ydim)-2) )  * (0.5*cg%idy)
             enddo
          enddo
-         divvel(:,1,:) = divvel(:,2,:); divvel(:, cg%ny,:) = divvel(:, cg%ny-1,:) ! for sanity
+         divvel(:,1,:) = divvel(:,2,:); divvel(:, cg%n_(ydim),:) = divvel(:, cg%n_(ydim)-1,:) ! for sanity
       endif
 
       if (has_dir(zdim)) then
-         do j = 1, cg%ny
-            do i = 1, cg%nx
+         do j = 1, cg%n_(ydim)
+            do i = 1, cg%n_(xdim)
                vz = cg%u%arr(imzf,i,j,:) / cg%u%arr(idnf,i,j,:)
-               divvel(i,j,2:cg%nz-1) = divvel(i,j,2:cg%nz-1)+( vz(3:cg%nz) - vz(1:cg%nz-2) )  * (0.5*cg%idz)
+               divvel(i,j,2:cg%n_(zdim)-1) = divvel(i,j,2:cg%n_(zdim)-1)+( vz(3:cg%n_(zdim)) - vz(1:cg%n_(zdim)-2) )  * (0.5*cg%idz)
             enddo
          enddo
-         divvel(:,:,1) = divvel(:,:,2); divvel(:,:, cg%nz) = divvel(:,:, cg%nz-1) ! for sanity
+         divvel(:,:,1) = divvel(:,:,2); divvel(:,:, cg%n_(zdim)) = divvel(:,:, cg%n_(zdim)-1) ! for sanity
       endif
 
       deallocate(vx)

@@ -389,7 +389,7 @@ contains
 
    subroutine init_multigrid_grav_post(mb_alloc)
 
-      use constants,        only: pi, dpi, GEO_XYZ
+      use constants,        only: pi, dpi, GEO_XYZ, xdim, ydim, zdim
       use dataio_pub,       only: die, warn
       use domain,           only: geometry_type, dom, cdd
       use grid,             only: cga
@@ -435,7 +435,7 @@ contains
             if (associated(os)) then
                do i = 1, nold
                   if ( allocated(os%old(i)%soln) ) call die("[multigrid_gravity:init_multigrid_grav_post] os%old(:)%soln arrays already allocated")
-                  allocate( os%old(i)%soln( roof%nx, roof%ny, roof%nz), stat=aerr(i) )
+                  allocate( os%old(i)%soln( roof%n_(xdim), roof%n_(ydim), roof%n_(zdim)), stat=aerr(i) )
                   mb_alloc = mb_alloc + size(os%old(i)%soln)
                   os%old(i)%time= -huge(1.0)
                   if (dirty_debug) os%old(i)%soln(:, :, :) = dirtyH

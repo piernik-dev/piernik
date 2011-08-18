@@ -98,6 +98,7 @@ contains
 
    subroutine init_prob
 
+      use constants,   only: xdim, ydim, zdim
       use fluidindex,  only: ibx, iby, ibz, flind
       use global,      only: smalld
       use grid,        only: cga
@@ -129,9 +130,9 @@ contains
 
          call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg=cg)
 
-         do k = 1, cg%nz
-            do j = 1, cg%ny
-               do i = 1, cg%nx
+         do k = 1, cg%n_(zdim)
+            do j = 1, cg%n_(ydim)
+               do i = 1, cg%n_(xdim)
                   cg%u%arr(idni,i,j,k)   = max(smalld, cg%dprof(k))
 
                   cg%u%arr(imxi,i,j,k) = 0.0
@@ -151,9 +152,9 @@ contains
             enddo
          enddo
 
-         do k = 1, cg%nz
-            do j = 1, cg%ny
-               do i = 1, cg%nx
+         do k = 1, cg%n_(zdim)
+            do j = 1, cg%n_(ydim)
+               do i = 1, cg%n_(xdim)
                   cg%b%arr(ibx,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
                   cg%b%arr(iby,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
                   cg%b%arr(ibz,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)

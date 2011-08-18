@@ -218,9 +218,9 @@ contains
          cg%u%arr(imxi:imzi, :, :, :) = 0.0
 
 #ifndef ISO
-         do k = 1, cg%nz
-            do j = 1, cg%ny
-               do i = 1, cg%nx
+         do k = 1, cg%n_(zdim)
+            do j = 1, cg%n_(ydim)
+               do i = 1, cg%n_(xdim)
                   cg%u%arr(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
                        &                 0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1)/cg%u%arr(idni,i,j,k) + &
                        &                 0.5*sum(cg%b%arr(:,i,j,k)**2,1)

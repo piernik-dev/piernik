@@ -111,7 +111,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: zdim
+      use constants,   only: xdim, ydim, zdim
       use domain,      only: has_dir
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
@@ -134,11 +134,11 @@ contains
          cg%u%arr(imzn, :, :, :) = 0.0
          cg%u%arr(ienn, :, :, :) = penv/(gamma_neu-1.0)
 
-         do i = 1, cg%nx
+         do i = 1, cg%n_(xdim)
             rcx = (cg%x(i)-blobxc)**2
-            do j = 1, cg%ny
+            do j = 1, cg%n_(ydim)
                rcy = (cg%y(j)-blobyc)**2
-               do k = 1, cg%nz
+               do k = 1, cg%n_(zdim)
                   if (has_dir(zdim)) then
                      rrel = sqrt(rcx + rcy + (cg%z(k)-blobzc)**2)
                   else

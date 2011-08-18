@@ -241,6 +241,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_random_noise
 
+      use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: printinfo
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
@@ -268,7 +269,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         allocate(noise(3,cg%nx,cg%ny,cg%nz))
+         allocate(noise(3,cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
          call random_number(noise)
          cg%u%arr(flind%dst%imx,:,:,:) = cg%u%arr(flind%dst%imx,:,:,:) +amp_noise -2.0*amp_noise*noise(1,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
          cg%u%arr(flind%dst%imy,:,:,:) = cg%u%arr(flind%dst%imy,:,:,:) +amp_noise -2.0*amp_noise*noise(2,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
@@ -282,7 +283,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,    only: dpi, xdim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
+      use constants,    only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
       use dataio_pub,   only: msg, printinfo, die
       use domain,       only: geometry_type, cdd, dom, has_dir
       use fluidindex,   only: ibx, iby, ibz, flind
@@ -318,7 +319,7 @@ contains
          if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
          sqr_gm = sqrt(newtong*ptmass)
-         do k = 1, cg%nz
+         do k = 1, cg%n_(zdim)
             if (cg%z(k) < 0.0) kmid = k       ! the midplane is in between ksmid and ksmid+1
          enddo
 
@@ -327,15 +328,15 @@ contains
             csim2 = fl%cs2*(1.0+alpha)
             b0    = sqrt(2.*alpha*d0*fl%cs2)
 
-            do j = 1, cg%ny
+            do j = 1, cg%n_(ydim)
                yj = cg%y(j)
-               do i = 1, cg%nx
+               do i = 1, cg%n_(xdim)
                   xi = cg%x(i)
                   rc = sqrt(xi**2+yj**2)
 
                   if (has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2, cg=cg)
 
-                  do k = 1, cg%nz
+                  do k = 1, cg%n_(zdim)
 
                      vx = sqr_gm * (-yj)/(rc**2+r_smooth**2)**0.75
                      vy = sqr_gm * ( xi)/(rc**2+r_smooth**2)**0.75
@@ -395,42 +396,42 @@ contains
             endif
             call grav_pot_3d
 
-            if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%nx, cg%ny, cg%nz))
-            if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%nx, cg%ny, cg%nz))
-            if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%nx, cg%ny, cg%nz))
-            if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%nx, cg%ny, cg%nz))
-            if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%nx, cg%ny, cg%nz))
+            if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+            if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+            if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+            if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+            if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
-            if (.not.allocated(grav)) allocate(grav(cg%nx))
-            if (.not.allocated(ln_dens_der)) allocate(ln_dens_der(cg%nx))
-            if (.not.allocated(dens_prof)) allocate(dens_prof(cg%nx))
-            if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(cg%nx))
-            if (.not.allocated(tauf)) allocate(tauf(cg%nx))
-            if (.not.allocated(taus)) allocate(taus(cg%nx)) ! not deallocated
+            if (.not.allocated(grav)) allocate(grav(cg%n_(xdim)))
+            if (.not.allocated(ln_dens_der)) allocate(ln_dens_der(cg%n_(xdim)))
+            if (.not.allocated(dens_prof)) allocate(dens_prof(cg%n_(xdim)))
+            if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(cg%n_(xdim)))
+            if (.not.allocated(tauf)) allocate(tauf(cg%n_(xdim)))
+            if (.not.allocated(taus)) allocate(taus(cg%n_(xdim))) ! not deallocated
 
             call source_terms_grav
-            call grav_pot2accel(xdim,1,1, cg%nx, grav, 1, cg)
+            call grav_pot2accel(xdim,1,1, cg%n_(xdim), grav, 1, cg)
 
             dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
 
             tauf(:) = epstein_factor(flind%neu%pos)/dens_prof(:)
 
-            middle_of_nx = cg%nx/2 + 1
+            middle_of_nx = cg%n_(xdim)/2 + 1
             n_x_cut      = maxloc(cg%x, mask=cg%x<=x_cut)
             if (densfile /= "") then
                allocate(gdens(dom%n_d(xdim)+cg%nb*2))
                if (master) call read_dens_profile(densfile,gdens)
                call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, 0, comm, ierr)
 
-               dens_prof(:)    = gdens(1+cdd%pcoords(xdim)*cg%nxb:cg%nx+cdd%pcoords(xdim)*cg%nxb)
+               dens_prof(:)    = gdens(1+cdd%pcoords(xdim)*cg%nxb:cg%n_(xdim)+cdd%pcoords(xdim)*cg%nxb)
                deallocate(gdens)
             else
-               dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%nx, 0.0, 1.0) + dens_amb
+               dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%n_(xdim), 0.0, 1.0) + dens_amb
             endif
 
             !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
             ln_dens_der  = log(dens_prof)
-            ln_dens_der(2:cg%nx)  = ( ln_dens_der(2:cg%nx) - ln_dens_der(1:cg%nx-1) ) / cg%dx
+            ln_dens_der(2:cg%n_(xdim))  = ( ln_dens_der(2:cg%n_(xdim)) - ln_dens_der(1:cg%n_(xdim)-1) ) / cg%dx
             ln_dens_der(1)        = ln_dens_der(2)
             T_inner               = dpi*cg%x(cg%is) / sqrt( abs(grav(cg%is)) * cg%x(cg%is) )
             write(msg,*) "T_inner = ", T_inner
@@ -439,7 +440,7 @@ contains
             if (master) call printinfo(msg)
 #ifdef DEBUG
             open(143,file="dens_prof.dat",status="unknown")
-            do p = 1, cg%nx
+            do p = 1, cg%n_(xdim)
                write(143,'(4(ES14.4,1X))') cg%x(p), dens_prof(p), sqrt( max(cg%x(p)*(flind%neu%cs2*ln_dens_der(p) + abs(grav(p))),0.0) ), &
                     sqrt( max(abs(grav(p)) * cg%x(p) - flind%neu%cs2*dens_exp,0.0))
             enddo
@@ -453,9 +454,9 @@ contains
                   call printinfo(msg)
                endif
 
-               do j = 1, cg%ny
+               do j = 1, cg%n_(ydim)
                   yj = cg%y(j)
-                  do i = 1, cg%nx
+                  do i = 1, cg%n_(xdim)
                      xi = cg%x(i)
                      rc = xi + r_smooth
 
@@ -467,7 +468,7 @@ contains
                      endif
 
                      vphi = 0.
-                     do k = 1, cg%nz
+                     do k = 1, cg%n_(zdim)
                         zk = cg%z(k)
 !                     cg%u%arr(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),1.e-10))
                         cg%u%arr(fl%idn,i,j,k) = dens_prof(i)
@@ -508,7 +509,7 @@ contains
             if (allocated(dens_prof)) deallocate(dens_prof)
 #ifdef DEBUG
             open(123,file="tau.dat",status="unknown")
-            do i = 1, cg%nx
+            do i = 1, cg%n_(xdim)
                write(123,*) cg%x(i), tauf(i), taus(i)
             enddo
             close(123)
@@ -586,7 +587,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_initial_fld_from_restart(file_id, cg)
 
-      use constants,   only: AT_NO_B
+      use constants,   only: AT_NO_B, xdim, ydim, zdim
       use hdf5,        only: HID_T
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind
@@ -602,12 +603,12 @@ contains
       integer :: i
 
       ! /todo First query for existence of den0, vlx0 and vly0, then allocate
-      if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(harr)) allocate(harr(cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+      if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+      if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+      if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+      if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+      if (.not.allocated(harr)) allocate(harr(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
       if (.not.associated(p3d)) p3d => harr(:,:,:)
       do i=1, flind%fluids
@@ -638,6 +639,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
 
+      use constants,       only: xdim, ydim, zdim
       use dataio_pub,      only: die
       use grid,            only: cga
       use grid_cont,       only: cg_list_element, grid_container
@@ -683,7 +685,7 @@ contains
             y1 = drag_min
             a = (y0 - y1)/(x0 - x1)
             b = y0 - a*x0
-            allocate(funcR(size(iarr_all_dn), cg%nx) )
+            allocate(funcR(size(iarr_all_dn), cg%n_(xdim)) )
 
             funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0 + max( tanh((cg%x(:)-r_out+1.0)**f_out), 0.0)
 
@@ -694,7 +696,7 @@ contains
             endif
 #ifdef DEBUG
             open(212,file="funcR.dat",status="unknown")
-            do j = 1, cg%nx
+            do j = 1, cg%n_(xdim)
                write(212,*) cg%x(j),funcR(1,j)
             enddo
             close(212)
@@ -703,8 +705,8 @@ contains
             funcR(:,:) = spread(funcR(1,:),1,size(iarr_all_dn))
          endif
 
-         do j = 1, cg%ny
-            do k = 1, cg%nz
+         do j = 1, cg%n_(ydim)
+            do k = 1, cg%n_(zdim)
                cg%u%arr(iarr_all_dn,:,j,k) = cg%u%arr(iarr_all_dn,:,j,k) - dt*(cg%u%arr(iarr_all_dn,:,j,k) - den0(:,:,j,k))*funcR(:,:)
                cg%u%arr(iarr_all_mx,:,j,k) = cg%u%arr(iarr_all_mx,:,j,k) - dt*(cg%u%arr(iarr_all_mx,:,j,k) - mtx0(:,:,j,k))*funcR(:,:)
                cg%u%arr(iarr_all_my,:,j,k) = cg%u%arr(iarr_all_my,:,j,k) - dt*(cg%u%arr(iarr_all_my,:,j,k) - mty0(:,:,j,k))*funcR(:,:)
@@ -728,6 +730,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
+      use constants, only: xdim, zdim
       use units,     only: newtong
       use gravity,   only: ptmass, sum_potential
       use grid,      only: cga
@@ -746,8 +749,8 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            do i = 1, cg%nx
-               do k = 1, cg%nz
+            do i = 1, cg%n_(xdim)
+               do k = 1, cg%n_(zdim)
                   r2 = cg%x(i)**2! + cg%z(k)**2
                   cg%gp%arr(i,:,k) = -newtong*ptmass / sqrt(r2)
                enddo
@@ -764,21 +767,21 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xl(cg)
 
+      use constants,  only: xdim, ydim, zdim
       use grid_cont,  only: grid_container
       use gravity,    only: grav_pot2accel
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
 #ifndef ISO
       use fluidindex, only: iarr_all_en
 #endif /* ISO */
-      use constants,  only: xdim
 
       implicit none
 
       type(grid_container), pointer, intent(inout) :: cg
 
       integer :: i
-      real, dimension(cg%nx) :: grav
-      real, dimension(size(iarr_all_my), cg%ny, cg%nz) :: vy,vym
+      real, dimension(cg%n_(xdim)) :: grav
+      real, dimension(size(iarr_all_my), cg%n_(ydim), cg%n_(zdim)) :: vy,vym
       real, dimension(size(flind%all_fluids))    :: cs2_arr
       integer, dimension(size(flind%all_fluids)) :: ind_cs2
 
@@ -787,7 +790,7 @@ contains
          cs2_arr(i) = flind%all_fluids(i)%cs2
       enddo
 
-      call grav_pot2accel(xdim,1,1, cg%nx, grav, 1, cg)
+      call grav_pot2accel(xdim,1,1, cg%n_(xdim), grav, 1, cg)
 
       do i = 1, cg%nb
          cg%u%arr(iarr_all_dn,i,:,:) = cg%u%arr(iarr_all_dn, cg%is,:,:)
@@ -812,6 +815,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xr(cg)
 
+      use constants,  only: xdim
       use grid_cont,  only: grid_container
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
@@ -822,12 +826,12 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      cg%u%arr(iarr_all_dn, cg%ie+1:cg%nx,:,:) = den0(:, cg%ie+1:cg%nx,:,:)
-      cg%u%arr(iarr_all_mx, cg%ie+1:cg%nx,:,:) = mtx0(:, cg%ie+1:cg%nx,:,:)
-      cg%u%arr(iarr_all_my, cg%ie+1:cg%nx,:,:) = mty0(:, cg%ie+1:cg%nx,:,:)
-      cg%u%arr(iarr_all_mz, cg%ie+1:cg%nx,:,:) = mtz0(:, cg%ie+1:cg%nx,:,:)
+      cg%u%arr(iarr_all_dn, cg%ie+1:cg%n_(xdim),:,:) = den0(:, cg%ie+1:cg%n_(xdim),:,:)
+      cg%u%arr(iarr_all_mx, cg%ie+1:cg%n_(xdim),:,:) = mtx0(:, cg%ie+1:cg%n_(xdim),:,:)
+      cg%u%arr(iarr_all_my, cg%ie+1:cg%n_(xdim),:,:) = mty0(:, cg%ie+1:cg%n_(xdim),:,:)
+      cg%u%arr(iarr_all_mz, cg%ie+1:cg%n_(xdim),:,:) = mtz0(:, cg%ie+1:cg%n_(xdim),:,:)
 #ifndef ISO
-      cg%u%arr(iarr_all_en, cg%ie+1:cg%nx,:,:) = ene0(:, cg%ie+1:cg%nx,:,:)
+      cg%u%arr(iarr_all_en, cg%ie+1:cg%n_(xdim),:,:) = ene0(:, cg%ie+1:cg%n_(xdim),:,:)
 #endif /* !ISO */
    end subroutine my_bnd_xr
 

@@ -124,6 +124,7 @@ contains
 !<
    subroutine geo_coeffs_arrays(flind, cg)
 
+      use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: die
       use fluidtypes, only: var_numbers
       use grid_cont,  only: grid_container
@@ -136,9 +137,9 @@ contains
       if ( any( [allocated(cg%gc_xdim), allocated(cg%gc_ydim), allocated(cg%gc_zdim)] ) ) then
          call die("[gridgeometry:geo_coeffs_arrays] double allocation")
       else
-         allocate(cg%gc_xdim(ngc,flind%all, cg%nx))
-         allocate(cg%gc_ydim(ngc,flind%all, cg%ny))
-         allocate(cg%gc_zdim(ngc,flind%all, cg%nz))
+         allocate(cg%gc_xdim(ngc,flind%all, cg%n_(xdim)))
+         allocate(cg%gc_ydim(ngc,flind%all, cg%n_(ydim)))
+         allocate(cg%gc_zdim(ngc,flind%all, cg%n_(zdim)))
       endif
 
    end subroutine geo_coeffs_arrays

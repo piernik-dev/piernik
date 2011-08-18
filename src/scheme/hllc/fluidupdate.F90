@@ -84,10 +84,11 @@ contains
    end subroutine fluid_update
 !---------------------------------------------------------------------------
    subroutine sweepx(cg,dt)
+
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_swpx, ibx, ibz
       use grid_cont,       only: grid_container
-      use constants,       only: xdim
+      use constants,       only: xdim, ydim, zdim
 !     use grid,            only: D_y, D_z
 
       implicit none
@@ -96,15 +97,15 @@ contains
       real, intent(in)                          :: dt
 
       integer :: j, k
-      real, dimension(size(cg%u%arr,1),cg%nx) :: u1d
-      real, dimension(ibx:ibz,cg%nx)          :: b1d
+      real, dimension(size(cg%u%arr,1),cg%n_(xdim)) :: u1d
+      real, dimension(ibx:ibz,cg%n_(xdim))          :: b1d
 
-      do k = 1, cg%nz
-         do j = 1, cg%ny
+      do k = 1, cg%n_(zdim)
+         do j = 1, cg%n_(ydim)
             u1d(iarr_all_swpx,:) = cg%u%arr(:,:,j,k)
 
 !           b1d                = 0.5*cg%b%arr(:,:,j,k)
-!           b1d(ibx,1:cg%nx-1) = b1d(ibx,1:cg%nx-1)+b1d(ibx,2:cg%nx); b1d(ibx, cg%nx) = b1d(ibx, cg%nx-1)
+!           b1d(ibx,1:cg%n_(xdim)-1) = b1d(ibx,1:cg%n_(xdim)-1)+b1d(ibx,2:cg%n_(xdim)); b1d(ibx, cg%n_(xdim)) = b1d(ibx, cg%n_(xdim)-1)
 !           b1d(iby,:)=b1d(iby,:)+0.5*cg%b%arr(iby,:,j+D_y,k)
 !           b1d(ibz,:)=b1d(ibz,:)+0.5*cg%b%arr(ibz,:,j,k+D_z)
             b1d = 0.0
@@ -121,7 +122,7 @@ contains
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_swpy, ibx, ibz
       use grid_cont,       only: grid_container
-      use constants,       only: ydim
+      use constants,       only: xdim, ydim, zdim
 
       implicit none
 
@@ -129,11 +130,11 @@ contains
       real, intent(in)                          :: dt
 
       integer :: i, k
-      real, dimension(size(cg%u%arr,1),cg%ny) :: u1d
-      real, dimension(ibx:ibz,cg%ny)          :: b1d
+      real, dimension(size(cg%u%arr,1),cg%n_(ydim)) :: u1d
+      real, dimension(ibx:ibz,cg%n_(ydim))          :: b1d
 
-      do k = 1, cg%nz
-         do i = 1, cg%nx
+      do k = 1, cg%n_(zdim)
+         do i = 1, cg%n_(xdim)
             b1d = 0.0
             u1d(iarr_all_swpy,:) = cg%u%arr(:,i,:,k)
             call sweep1d_mh(u1d, b1d, cg%cs_iso2%get_sweep(ydim,k,i), dt/cg%dy)
@@ -148,7 +149,7 @@ contains
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_swpz, ibx, ibz
       use grid_cont,       only: grid_container
-      use constants,       only: zdim
+      use constants,       only: xdim, ydim, zdim
 
       implicit none
 
@@ -156,11 +157,11 @@ contains
       real, intent(in)                          :: dt
 
       integer :: i, j
-      real, dimension(size(cg%u%arr,1),cg%nz) :: u1d
-      real, dimension(ibx:ibz,cg%nz)          :: b1d
+      real, dimension(size(cg%u%arr,1),cg%n_(zdim)) :: u1d
+      real, dimension(ibx:ibz,cg%n_(zdim))          :: b1d
 
-      do j = 1, cg%ny
-         do i = 1, cg%nx
+      do j = 1, cg%n_(ydim)
+         do i = 1, cg%n_(xdim)
             u1d(iarr_all_swpz,:) = cg%u%arr(:,i,j,:)
             call sweep1d_mh(u1d,b1d,cg%cs_iso2%get_sweep(zdim,i,j),dt/cg%dz)
             cg%u%arr(:,i,j,:) = u1d(iarr_all_swpz,:)
@@ -261,9 +262,12 @@ contains
    end subroutine sweep1d_mh
 !---------------------------------------------------------------------------
    function utoq(u,b) result(q)
+
       use fluidtypes,   only: component_fluid
-      use fluidindex,   only: flind!, ibx, iby, ibz
+      use fluidindex,   only: flind
+
       implicit none
+
       real, dimension(:,:), intent(in)           :: u, b
       real, dimension(size(u,1),size(u,2))       :: q
 

@@ -297,7 +297,7 @@ contains
             endif
 
 
-            do i = 1, cg%nx
+            do i = 1, cg%n_(xdim)
                R = cg%x(i)
 
                rho = max(rho0*(R0/R)**(1.5),smalld)
@@ -305,9 +305,9 @@ contains
 
                cg%cs_iso2%arr(i,:,:) = cs2
 
-               do j = 1, cg%ny
+               do j = 1, cg%n_(ydim)
                   call hydrostatic_zeq_densmid(i, j, rho, cs2, cg=cg)
-                  do k = 1, cg%nz
+                  do k = 1, cg%n_(zdim)
                      zk = cg%z(k)
                      cg%u%arr(fl%idn,i,j,k) = max(cg%dprof(k)/(1.0+eps), smalld)
                      if (fl%tag == DST) cg%u%arr(fl%idn,i,j,k) = eps * cg%u%arr(flind%neu%idn,i,j,k)
@@ -318,8 +318,8 @@ contains
 
             allocate(ln_dens_der(cg%nx), grav(cg%nx), vphi(cg%nx))
 
-            do j = 1, cg%ny
-               do k = 1, cg%nz
+            do j = 1, cg%n_(ydim)
+               do k = 1, cg%n_(zdim)
 
                   call grav_pot2accel(xdim, j, k, cg%nx, grav, 1, cg)
 
@@ -364,7 +364,7 @@ contains
       enddo
 #ifdef DEBUG
       open(12,file="vel_profile.dat",status="unknown")
-         do i = 1, cg%nx
+         do i = 1, cg%n_(xdim)
             write(12,'(3(E12.5,1X))') cg%x(i), cg%u%arr(flind%all_fluids(1:2)%imy,i,max(cg%ny/2,1),max(cg%nz/2,1)) / &
                 &  cg%u%arr(flind%all_fluids(1:2)%idn,i,max(cg%ny/2,1),max(cg%nz/2,1))
          enddo
@@ -536,7 +536,7 @@ contains
             endif
 #ifdef DEBUG
             open(212,file="funcR.dat",status="unknown")
-            do j = 1, cg%nx
+            do j = 1, cg%n_(xdim)
                write(212,*) cg%x(j),funcR(1,j)
             enddo
             close(212)
@@ -547,8 +547,8 @@ contains
          funcR = 0.0
 
          if (grace_period_passed()) call update_grain_size(a*t+b)
-         do j = 1, cg%ny
-            do k = 1, cg%nz
+         do j = 1, cg%n_(ydim)
+            do k = 1, cg%n_(zdim)
                cg%u%arr(iarr_all_dn,:,j,k) = cg%u%arr(iarr_all_dn,:,j,k) - dt*(cg%u%arr(iarr_all_dn,:,j,k) - den0(:,:,j,k))*funcR(:,:)
                cg%u%arr(iarr_all_mx,:,j,k) = cg%u%arr(iarr_all_mx,:,j,k) - dt*(cg%u%arr(iarr_all_mx,:,j,k) - mtx0(:,:,j,k))*funcR(:,:)
                cg%u%arr(iarr_all_my,:,j,k) = cg%u%arr(iarr_all_my,:,j,k) - dt*(cg%u%arr(iarr_all_my,:,j,k) - mty0(:,:,j,k))*funcR(:,:)
