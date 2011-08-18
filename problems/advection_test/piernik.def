@@ -13,4 +13,7 @@
 #else
 #undef NEW_HDF5
 #endif
+
+#if !(defined(HLLC))
 #define RTVD
+#endif
