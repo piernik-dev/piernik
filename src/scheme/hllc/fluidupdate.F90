@@ -262,7 +262,7 @@ contains
 !---------------------------------------------------------------------------
    function utoq(u,b) result(q)
       use fluidtypes,   only: component_fluid
-!      use fluidindex,   only: flind, ibx, iby, ibz
+      use fluidindex,   only: flind!, ibx, iby, ibz
       implicit none
       real, dimension(:,:), intent(in)           :: u, b
       real, dimension(size(u,1),size(u,2))       :: q
