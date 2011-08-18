@@ -71,6 +71,7 @@ contains
       dtm = dt
       halfstep = .true.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      call cga%get_root(cgl)
       do while (associated(cgl))
          if (has_dir(zdim)) call sweepz(cgl%cg,dt)
          if (has_dir(ydim)) call sweepy(cgl%cg,dt)
