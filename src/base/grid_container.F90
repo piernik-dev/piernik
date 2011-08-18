@@ -330,7 +330,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: d                      !< direction
+      integer(kind=4), intent(in) :: d                      !< direction
       real, dimension(:), pointer, intent(inout) :: a0, al, ar, ia !< arrays with coordinates
       class(grid_container), intent(in) :: cg
       type(domain_container), intent(in) :: dom
