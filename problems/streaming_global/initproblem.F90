@@ -244,25 +244,27 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,    only: DST, GEO_RPZ
+      use constants,    only: DST, GEO_RPZ, xdim
       use global,       only: smalld
       use dataio_pub,   only: msg, printinfo, die
       use domain,       only: geometry_type, cdd
       use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
-      use gravity,      only: ptmass
+      use gravity,      only: ptmass, grav_pot2accel
       use grid,         only: cga
       use grid_cont,    only: cg_list_element, grid_container
       use mpi,          only: MPI_COMM_NULL
       use mpisetup,     only: master, comm
       use units,        only: newtong
       use hydrostatic,  only: hydrostatic_zeq_densmid
+      use func,         only: ekin
 
       implicit none
 
       integer :: i, j, k, p
-      real    :: zk, R, vz, sqr_gm, vr, vphi
+      real    :: zk, R, vz, sqr_gm, vr
       real    :: rho, cs2
+      real, dimension(:), allocatable :: vphi, grav, ln_dens_der
 
       type(component_fluid), pointer  :: fl
       type(cg_list_element), pointer :: cgl
@@ -294,8 +296,6 @@ contains
                call printinfo(msg)
             endif
 
-            vr = 0.0
-            vz = 0.0
 
             do i = 1, cg%nx
                R = cg%x(i)
@@ -304,7 +304,6 @@ contains
                cs2 = (cs0*sqrt(R0/R))**2
 
                cg%cs_iso2%arr(i,:,:) = cs2
-               vphi = sqrt( newtong*ptmass / R )
 
                do j = 1, cg%ny
                   call hydrostatic_zeq_densmid(i, j, rho, cs2, cg=cg)
@@ -313,19 +312,47 @@ contains
                      cg%u%arr(fl%idn,i,j,k) = max(cg%dprof(k)/(1.0+eps), smalld)
                      if (fl%tag == DST) cg%u%arr(fl%idn,i,j,k) = eps * cg%u%arr(flind%neu%idn,i,j,k)
 
-                     cg%u%arr(fl%imx,i,j,k) = vr   * cg%u%arr(fl%idn,i,j,k)
-                     cg%u%arr(fl%imy,i,j,k) = vphi * cg%u%arr(fl%idn,i,j,k)
-                     cg%u%arr(fl%imz,i,j,k) = vz   * cg%u%arr(fl%idn,i,j,k)
-                     if (fl%has_energy) then
-                        cg%u%arr(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u%arr(fl%idn,i,j,k)
-                        cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*cg%u%arr(fl%idn,i,j,k)
-                        ene0(p,i,j,k)   = cg%u%arr(fl%ien,i,j,k)
-                     else
-                        ene0(p,i,j,k)   = 0.0
-                     endif
                   enddo
                enddo
             enddo
+
+            allocate(ln_dens_der(cg%nx), grav(cg%nx), vphi(cg%nx))
+
+            do j = 1, cg%ny
+               do k = 1, cg%nz
+
+                  call grav_pot2accel(xdim, j, k, cg%nx, grav, 1, cg)
+
+                  ln_dens_der  = log(cg%u%arr(fl%idn,:,j,k))
+                  ln_dens_der(2:cg%nx)  = ( ln_dens_der(2:cg%nx) - ln_dens_der(1:cg%nx-1) ) / cg%dx
+                  ln_dens_der(1)        = ln_dens_der(2)
+
+                  vr = 0.0
+                  !vphi = sqrt( newtong*ptmass / R )
+                  vz = 0.0
+
+                  if (fl%tag /= DST) then
+                     vphi = sqrt( max(cg%x(:)*(cg%cs_iso2%arr(:,j,k)*ln_dens_der(:) + abs(grav(:))),0.0) )
+                  else
+                     vphi = sqrt( max(abs(grav(:)) * cg%x(:), 0.0))
+                  endif
+
+
+                  cg%u%arr(fl%imx,:,j,k) = vr     *cg%u%arr(fl%idn,:,j,k)
+                  cg%u%arr(fl%imy,:,j,k) = vphi(:)*cg%u%arr(fl%idn,:,j,k)
+                  cg%u%arr(fl%imz,:,j,k) = vz     *cg%u%arr(fl%idn,:,j,k)
+
+               enddo
+            enddo
+            deallocate(ln_dens_der, grav, vphi)
+            if (fl%has_energy) then
+               cg%u%arr(fl%ien,:,:,:) = fl%cs2/(fl%gam_1)*cg%u%arr(fl%idn,:,:,:)
+               cg%u%arr(fl%ien,:,:,:) = cg%u%arr(fl%ien,:,:,:) + ekin( cg%u%arr(fl%imx,:,:,:), cg%u%arr(fl%imy,:,:,:), &
+                  & cg%u%arr(fl%imz,:,:,:), cg%u%arr(fl%idn,:,:,:))
+               ene0(p,:,:,:)   = cg%u%arr(fl%ien,:,:,:)
+            else
+               ene0(p,:,:,:)   = 0.0
+            endif
 
             den0(p,:,:,:) = cg%u%arr(fl%idn,:,:,:)
             mtx0(p,:,:,:) = cg%u%arr(fl%imx,:,:,:)
@@ -335,17 +362,16 @@ contains
          cg%b%arr(:,:,:,:) = 0.0
          cgl => cgl%nxt
       enddo
+#ifdef DEBUG
+      open(12,file="vel_profile.dat",status="unknown")
+         do i = 1, cg%nx
+            write(12,'(3(E12.5,1X))') cg%x(i), cg%u%arr(flind%all_fluids(1:2)%imy,i,max(cg%ny/2,1),max(cg%nz/2,1)) / &
+                &  cg%u%arr(flind%all_fluids(1:2)%idn,i,max(cg%ny/2,1),max(cg%nz/2,1))
+         enddo
+      close(12)
+#endif /* DEBUG */
 
    end subroutine init_prob
-!-----------------------------------------------------------------------------
-   real function mmsn_T(r)
-      implicit none
-      real, intent(in) :: r         ! [AU]
-      real, parameter  :: T_0 = 150 ! [K]
-      real, parameter  :: k   = 0.429
-
-      mmsn_T = T_0 * r**(-k)
-   end function mmsn_T
 !-----------------------------------------------------------------------------
    subroutine write_initial_fld_to_restart(file_id, cg)
 
