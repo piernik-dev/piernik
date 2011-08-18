@@ -27,7 +27,6 @@
 !
 #include "piernik.h"
 #include "macros.h"
-
 module initproblem
 
 ! Initial condition for Keplerian disk
@@ -203,6 +202,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_random_noise
 
+      use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: printinfo
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
@@ -230,7 +230,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         allocate(noise(3,cg%nx,cg%ny,cg%nz))
+         allocate(noise(3,cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
          call random_number(noise)
          cg%u%arr(flind%dst%imx,:,:,:) = cg%u%arr(flind%dst%imx,:,:,:) +amp_noise -2.0*amp_noise*noise(1,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
          cg%u%arr(flind%dst%imy,:,:,:) = cg%u%arr(flind%dst%imy,:,:,:) +amp_noise -2.0*amp_noise*noise(2,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
@@ -244,10 +244,10 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,    only: DST, GEO_RPZ, xdim
+      use constants,    only: DST, GEO_RPZ, xdim, ydim, zdim
       use global,       only: smalld
       use dataio_pub,   only: msg, printinfo, die
-      use domain,       only: geometry_type, cdd
+      use domain,       only: geometry_type, cdd, has_dir
       use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
       use gravity,      only: ptmass, grav_pot2accel
@@ -283,11 +283,11 @@ contains
 
          if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
-         if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%nx, cg%ny, cg%nz))
-         if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%nx, cg%ny, cg%nz))
+         if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
          do p = 1, flind%fluids
             fl => flind%all_fluids(p)
@@ -316,27 +316,28 @@ contains
                enddo
             enddo
 
-            allocate(ln_dens_der(cg%nx), grav(cg%nx), vphi(cg%nx))
+            allocate(ln_dens_der(cg%n_(xdim)), grav(cg%n_(xdim)), vphi(cg%n_(xdim)))
 
             do j = 1, cg%n_(ydim)
                do k = 1, cg%n_(zdim)
 
-                  call grav_pot2accel(xdim, j, k, cg%nx, grav, 1, cg)
 
                   ln_dens_der  = log(cg%u%arr(fl%idn,:,j,k))
-                  ln_dens_der(2:cg%nx)  = ( ln_dens_der(2:cg%nx) - ln_dens_der(1:cg%nx-1) ) / cg%dx
-                  ln_dens_der(1)        = ln_dens_der(2)
-
-                  vr = 0.0
-                  !vphi = sqrt( newtong*ptmass / R )
-                  vz = 0.0
-
-                  if (fl%tag /= DST) then
-                     vphi = sqrt( max(cg%x(:)*(cg%cs_iso2%arr(:,j,k)*ln_dens_der(:) + abs(grav(:))),0.0) )
+                  if (has_dir(xdim)) then
+                     call grav_pot2accel(xdim, j, k, cg%n_(xdim), grav, 1, cg)
+                     ln_dens_der(2:cg%n_(xdim))  = ( ln_dens_der(2:cg%n_(xdim)) - ln_dens_der(1:cg%n_(xdim)-1) ) / cg%dx
+                     ln_dens_der(1)        = ln_dens_der(2)
+                     if (fl%tag /= DST) then
+                        vphi = sqrt( max(cg%x(:)*(cg%cs_iso2%arr(:,j,k)*ln_dens_der(:) + abs(grav(:))),0.0) )
+                     else
+                        vphi = sqrt( max(abs(grav(:)) * cg%x(:), 0.0))
+                     endif
                   else
-                     vphi = sqrt( max(abs(grav(:)) * cg%x(:), 0.0))
+                     vphi(:) = sqrt( newtong*ptmass / cg%x(:) )
                   endif
 
+                  vr = 0.0
+                  vz = 0.0
 
                   cg%u%arr(fl%imx,:,j,k) = vr     *cg%u%arr(fl%idn,:,j,k)
                   cg%u%arr(fl%imy,:,j,k) = vphi(:)*cg%u%arr(fl%idn,:,j,k)
@@ -365,8 +366,8 @@ contains
 #ifdef DEBUG
       open(12,file="vel_profile.dat",status="unknown")
          do i = 1, cg%n_(xdim)
-            write(12,'(3(E12.5,1X))') cg%x(i), cg%u%arr(flind%all_fluids(1:2)%imy,i,max(cg%ny/2,1),max(cg%nz/2,1)) / &
-                &  cg%u%arr(flind%all_fluids(1:2)%idn,i,max(cg%ny/2,1),max(cg%nz/2,1))
+            write(12,'(3(E12.5,1X))') cg%x(i), cg%u%arr(flind%all_fluids(1:2)%imy,i,max(cg%n_(ydim)/2,1),max(cg%n_(zdim)/2,1)) / &
+                &  cg%u%arr(flind%all_fluids(1:2)%idn,i,max(cg%n_(ydim)/2,1),max(cg%n_(zdim)/2,1))
          enddo
       close(12)
 #endif /* DEBUG */
@@ -428,7 +429,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_initial_fld_from_restart(file_id, cg)
 
-      use constants,   only: AT_NO_B
+      use constants,   only: AT_NO_B, xdim, ydim, zdim
       use hdf5,        only: HID_T
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind
@@ -444,12 +445,12 @@ contains
       integer :: i
 
       ! /todo First query for existence of den0, vlx0 and vly0, then allocate
-      if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%nx, cg%ny, cg%nz))
-      if (.not.allocated(harr)) allocate(harr(cg%nx, cg%ny, cg%nz))
+      if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+      if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+      if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+      if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+      if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+      if (.not.allocated(harr)) allocate(harr(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
       if (.not.associated(p3d)) p3d => harr(:,:,:)
       do i=1, flind%fluids
@@ -486,7 +487,7 @@ contains
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use global,          only: dt, t, grace_period_passed, relax_time
-      use constants,       only: dpi
+      use constants,       only: dpi, xdim, ydim, zdim
       use units,           only: newtong
       use gravity,         only: ptmass
 #ifndef ISO
@@ -521,7 +522,7 @@ contains
             a = (y0 - y1)/(x0 - x1)
             b = y0 - a*x0
 
-            allocate(funcR(size(iarr_all_dn), cg%nx) )
+            allocate(funcR(size(iarr_all_dn), cg%n_(xdim)) )
 
             funcR(1,:) = 0.0
             funcR(1,:) = funcR(1,:) - tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0
@@ -645,15 +646,15 @@ contains
 #ifndef ISO
       use fluidindex, only: iarr_all_en
 #endif /* ISO */
-      use constants,  only: xdim
+      use constants,  only: xdim, ydim, zdim
 
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
 
       integer :: i
-      real, dimension(cg%nx) :: grav
-      real, dimension(size(iarr_all_my), cg%ny, cg%nz) :: vy,vym
+      real, dimension(cg%n_(xdim)) :: grav
+      real, dimension(size(iarr_all_my), cg%n_(ydim), cg%n_(zdim)) :: vy,vym
       real, dimension(size(flind%all_fluids))    :: cs2_arr
       integer, dimension(size(flind%all_fluids)) :: ind_cs2
 
@@ -662,7 +663,7 @@ contains
          cs2_arr(i) = flind%all_fluids(i)%cs2
       enddo
 
-      call grav_pot2accel(xdim,1,1, cg%nx, grav, 1, cg)
+      call grav_pot2accel(xdim,1,1, cg%n_(xdim), grav, 1, cg)
 
       do i = 1, cg%nb
          cg%u%arr(iarr_all_dn,i,:,:) = cg%u%arr(iarr_all_dn, cg%is,:,:)
@@ -687,6 +688,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xr(cg)
 
+      use constants,  only: xdim
       use grid_cont,  only: grid_container
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
@@ -697,12 +699,12 @@ contains
 
       type(grid_container), pointer, intent(in) :: cg
 
-      cg%u%arr(iarr_all_dn, cg%ie+1:cg%nx,:,:) = den0(:, cg%ie+1:cg%nx,:,:)
-      cg%u%arr(iarr_all_mx, cg%ie+1:cg%nx,:,:) = mtx0(:, cg%ie+1:cg%nx,:,:)
-      cg%u%arr(iarr_all_my, cg%ie+1:cg%nx,:,:) = mty0(:, cg%ie+1:cg%nx,:,:)
-      cg%u%arr(iarr_all_mz, cg%ie+1:cg%nx,:,:) = mtz0(:, cg%ie+1:cg%nx,:,:)
+      cg%u%arr(iarr_all_dn, cg%ie+1:cg%n_(xdim),:,:) = den0(:, cg%ie+1:cg%n_(xdim),:,:)
+      cg%u%arr(iarr_all_mx, cg%ie+1:cg%n_(xdim),:,:) = mtx0(:, cg%ie+1:cg%n_(xdim),:,:)
+      cg%u%arr(iarr_all_my, cg%ie+1:cg%n_(xdim),:,:) = mty0(:, cg%ie+1:cg%n_(xdim),:,:)
+      cg%u%arr(iarr_all_mz, cg%ie+1:cg%n_(xdim),:,:) = mtz0(:, cg%ie+1:cg%n_(xdim),:,:)
 #ifndef ISO
-      cg%u%arr(iarr_all_en, cg%ie+1:cg%nx,:,:) = ene0(:, cg%ie+1:cg%nx,:,:)
+      cg%u%arr(iarr_all_en, cg%ie+1:cg%n_(xdim),:,:) = ene0(:, cg%ie+1:cg%n_(xdim),:,:)
 #endif /* !ISO */
    end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------

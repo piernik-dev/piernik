@@ -1,6 +1,6 @@
  $BASE_DOMAIN
-    nxd = 100
-    nyd = 1
+    nxd = 1
+    nyd = 200
     nzd = 200
     nb  = 4
     bnd_xl = 'ref'
@@ -10,8 +10,8 @@
     bnd_zl = 'outd'
     bnd_zr = 'outd'
     geometry = "cylindrical"
-    xmin   = 1.0
-    xmax   = 10.0
+    xmin   = 6.0
+    xmax   = 6.0
     ymin   = 0.0
     ymax   = 6.2831853071795862
     zmin   =-0.5
@@ -33,17 +33,17 @@
  /
 
  $END_CONTROL
-    tend   = 100.0
+    tend   = 1000.0
     nend   = 10000000
  /
 
  $OUTPUT_CONTROL
     problem_name ='kepler'
-    run_id  =  'tst'
-    dt_hdf  = 1.0
+    run_id  =  'ts2'
+    dt_hdf  = 10.0
     dt_res  = 0.0
-    dt_log  = 1.0e-2
-    dt_tsl  = 1.0e-1
+    dt_log  = 1.0
+    dt_tsl  = 1.0
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
@@ -91,11 +91,11 @@
     f_in    = 10.0
     f_out   = 100.0
     eps     = 0.2
-    amp_noise = 0.e-6
+    amp_noise = 1.e-7
 
-    growth_time        = 1.0
-    initial_grain_size   = 1.e-6    ! cm
-    final_grain_size   = 1.e-6      ! cm
+    growth_time        = 100.0
+    initial_grain_size = 1.e-6    ! cm
+    final_grain_size   = 50.0     ! cm
  /
 
  $PIERNIK_DEBUG
