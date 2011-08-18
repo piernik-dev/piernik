@@ -163,7 +163,7 @@ contains
 
       do j = 1, cg%n_(ydim)
          do i = 1, cg%n_(xdim)
-            u1d(iarr_all_swp(zdim),:) = cg%u%arr(:,i,j,:)
+            u1d(iarr_all_swp(zdim,:),:) = cg%u%arr(:,i,j,:)
             call sweep1d_mh(u1d,b1d,cg%cs_iso2%get_sweep(zdim,i,j),dt/cg%dz)
             cg%u%arr(:,i,j,:) = u1d(iarr_all_swp(zdim,:),:)
          enddo
