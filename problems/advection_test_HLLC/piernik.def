@@ -1,0 +1,17 @@
+#define HDF5
+#undef IONIZED
+#undef MAGNETIC
+#define NEUTRAL
+#define LOCAL_FR_SPEED
+
+#undef ISO
+
+#undef GRAV
+
+#if __GNUC__ >=4 && __GNUC_MINOR__ >=5
+#define NEW_HDF5
+#else
+#undef NEW_HDF5
+#endif
+
+#define HLLC

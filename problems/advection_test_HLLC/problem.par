@@ -1,0 +1,83 @@
+ $BASE_DOMAIN
+    nxd = 64
+    nyd = 64
+    nzd = 1
+    ! set nyd and nzd to 64 if you want to have iy or iz /=0,
+    ! when prefer_rbgs_relaxation is .true.
+    ! or when parallel execution leads to nonconvergence
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = -1.
+    xmax   =  1.
+    ymin   = -1.
+    ymax   =  1.
+    zmin   = -1.
+    zmax   =  1.
+ /
+
+ $MPI_BLOCKS
+    psize = 1, 1, 1
+    allow_uneven = .true.
+    allow_noncart = .true.
+    dd_unif_quality = 1.1
+    dd_rect_quality = 1.1
+    use_comm3d  = .false.
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1.0
+    nend   = 1000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='moving_pulse'
+    run_id =  'ts1'
+    ix      = 10
+    iy      = 10
+    iz      = 10
+    dt_hdf  = 1.0
+    dt_res  = 0.0
+    dt_plt  = 0.2
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu = 1.67
+    selfgrav_neu = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-5
+    smallei= 1.e-5
+    limiter= 'vanleer'
+ /
+
+ $PROBLEM_CONTROL
+    pulse_vel_x = 2.
+    pulse_vel_y = -2.
+    pulse_vel_z = 2.
+ /
+
+ $INTERACTIONS
+ /
