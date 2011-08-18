@@ -52,8 +52,8 @@ module grid_cont
       real    :: vol                            !< volume of the grid; BEWARE: for cylindrical geometry it need to be multiplied by appropriate x(:) to get real volume
       real, dimension(ndims, LO:HI) :: fbnd     !< current block boundary positions
 
-      real, dimension(ndims)          :: dl     !< array of %grid cell sizes in all directions
-      real, dimension(ndims)          :: idl    !< array of inverted %grid cell sizes in all directions
+      real, dimension(ndims)          :: dl     !< array of %grid cell sizes in all directions, [ dx, dy, dz ]
+      real, dimension(ndims)          :: idl    !< array of inverted %grid cell sizes in all directions, 1./dl(:)
 
       real, allocatable, dimension(:) :: inv_x  !< array of invert x-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_y  !< array of invert y-positions of %grid cells centers
@@ -176,14 +176,13 @@ contains
       if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid_container:init] Multiple blocks per process not implemented yet")
 
       this%nb = dom%nb
-      this%dxmn = huge(1.0)
 
       this%off(:) = dom%pse(proc)%sel(1, :, LO)  ! Block offset on the dom% should be between 0 and nxd-nxb
       this%n_b(:) = int(dom%pse(proc)%sel(1, :, HI) - dom%pse(proc)%sel(1, :, LO) + 1, 4) ! Block 'physical' grid sizes
 
       if (all(this%n_b(:) == 0)) then
          this%empty = .true.
-      else if (any(this%n_b(:) == 0)) then
+      else if (any(this%n_b(:) <= 0)) then
          call die("[grid_init] Mixed positive and non-positive grid sizes")
       else
          this%empty = .false.
@@ -198,24 +197,14 @@ contains
          this%n_(:) = 0
          this%ijkse(:, LO) = this%nb + 1_INT4
          this%ijkse(:, HI) = this%nb
-         this%isb   = 0 ! ???
-         this%ieb   = 0 ! ???
-         this%dx    = 1.0
+         this%dl(:) = 1.0
 
+         this%isb   = 0 ! ???
+         this%ieb   = 0
          this%jsb   = 0
          this%jeb   = 0
-         this%dy    = 1.0
-
          this%ksb   = 0
          this%keb   = 0
-         this%dz    = 1.0
-
-         this%idx = 1./this%dx
-         this%idy = 1./this%dy
-         this%idz = 1./this%dz
-
-         this%dl(xdim:zdim) = [ this%dx, this%dy, this%dz ]
-         this%idl(:) = 1./this%dl(:)
 
          this%vol = 0.
          this%dvol = 0.
@@ -225,78 +214,58 @@ contains
 
          do i = xdim, zdim
             if (has_dir(i)) then
-               if (this%n_b(i) < 1) call die("[grid_init] Too many CPUs for a small grid.")
+               if (this%n_b(i) < 1) call die("[grid_init] Too many CPUs for such a small grid.")
                if (this%n_b(i) < this%nb) call warn("[grid_init] domain size in some directions is < nb, which may result in incomplete boundary cell update")
             endif
          enddo
 
          where (has_dir(:))
-            this%n_(:) = this%n_b(:) + 2_INT4 * this%nb       ! Block total grid sizes
+            this%n_(:) = this%n_b(:) + 2_INT4 * this%nb       ! Block total grid size with guardcells
             this%ijkse(:, LO) = this%nb + 1_INT4
             this%ijkse(:, HI) = this%nb + this%n_b(:)
+            this%dl(:) = dom%L_(:) / dom%n_d(:)
+            this%fbnd(:, LO) = dom%edge(:, LO) + this%dl(:) *  this%off(:)
+            this%fbnd(:, HI) = dom%edge(:, LO) + this%dl(:) * (this%off(:) + this%n_b(:))
          elsewhere
             this%n_(:) = 1
             this%ijkse(:, LO) = 1
             this%ijkse(:, HI) = 1
+            this%dl(:) = 1.0
+            this%fbnd(:, LO) = dom%edge(:, LO)
+            this%fbnd(:, HI) = dom%edge(:, HI)
          endwhere
 
          if (has_dir(xdim)) then
             this%isb   = 2_INT4*this%nb
             this%ieb   = this%n_b(xdim)+1_INT4
-            this%dx    = dom%L_(xdim) / dom%n_d(xdim)
-            this%dxmn  = min(this%dxmn, this%dx)
-            this%fbnd(xdim, LO) = dom%edge(xdim, LO) + this%dx *  this%off(xdim)
-            this%fbnd(xdim, HI) = dom%edge(xdim, LO) + this%dx * (this%off(xdim) + this%n_b(xdim))
          else
             this%isb   = 1
             this%ieb   = 1
-            this%dx    = 1.0
-            this%fbnd(xdim, :) = dom%edge(xdim, :)
          endif
 
          if (has_dir(ydim)) then
             this%jsb   = 2_INT4*this%nb
             this%jeb   = this%n_b(ydim)+1_INT4
-            this%dy    = dom%L_(ydim) / dom%n_d(ydim)
-            this%dxmn  = min(this%dxmn, this%dy)
-            this%fbnd(ydim, LO) = dom%edge(ydim, LO) + this%dy *  this%off(ydim)
-            this%fbnd(ydim, HI) = dom%edge(ydim, LO) + this%dy * (this%off(ydim) + this%n_b(ydim))
          else
             this%jsb   = 1
             this%jeb   = 1
-            this%dy    = 1.0
-            this%fbnd(ydim, :) = dom%edge(ydim, :)
          endif
 
          if (has_dir(zdim)) then
             this%ksb   = 2_INT4*this%nb
             this%keb   = this%n_b(zdim)+1_INT4
-            this%dz    = dom%L_(zdim) / dom%n_d(zdim)
-            this%dxmn  = min(this%dxmn, this%dz)
-            this%fbnd(zdim, LO) = dom%edge(zdim, LO) + this%dz *  this%off(zdim)
-            this%fbnd(zdim, HI) = dom%edge(zdim, LO) + this%dz * (this%off(zdim) + this%n_b(zdim))
          else
             this%ksb   = 1
             this%keb   = 1
-            this%dz    = 1.0
-            this%fbnd(zdim, :) = dom%edge(zdim, :)
          endif
 
          this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=has_dir(:))
-
-         this%idx = 1./this%dx
-         this%idy = 1./this%dy
-         this%idz = 1./this%dz
-
-         this%dl(xdim:zdim) = [ this%dx, this%dy, this%dz ]
-         this%idl(:) = 1./this%dl(:)
-
-         this%dvol = product(this%dl(:))
+         this%dvol = product(this%dl(:), mask=has_dir(:))
 
          allocate(this%x(this%n_(xdim)), this%xl(this%n_(xdim)), this%xr(this%n_(xdim)), this%inv_x(this%n_(xdim)))
          allocate(this%y(this%n_(ydim)), this%yl(this%n_(ydim)), this%yr(this%n_(ydim)), this%inv_y(this%n_(ydim)))
          allocate(this%z(this%n_(zdim)), this%zl(this%n_(zdim)), this%zr(this%n_(zdim)), this%inv_z(this%n_(zdim)))
-         this%maxxyz = int(maxval([size(this%x), size(this%y), size(this%z)]), kind=4)
+         this%maxxyz = maxval(this%n_(:), mask=has_dir(:))
 
 !--- Assignments -----------------------------------------------------------
          ! left zone boundaries:  xl, yl, zl
@@ -306,12 +275,12 @@ contains
 !--- x-grids --------------------------------------------------------------
 
          if (has_dir(xdim)) then
-            this%x(:) = dom%edge(xdim, LO) + this%dx * ([(i, i=1, this%n_(xdim))] - 0.5 - this%nb + this%off(xdim))
+            this%x(:) = dom%edge(xdim, LO) + this%dl(xdim) * ([(i, i=1, this%n_(xdim))] - 0.5 - this%nb + this%off(xdim))
          else
             this%x(:) = 0.5*(this%fbnd(xdim, LO) + this%fbnd(xdim, HI))
          endif
-         this%xl(:) = this%x(:) - 0.5*this%dx
-         this%xr(:) = this%x(:) + 0.5*this%dx
+         this%xl(:) = this%x(:) - 0.5*this%dl(xdim)
+         this%xr(:) = this%x(:) + 0.5*this%dl(xdim)
 
          where ( this%x /= 0.0 )
             this%inv_x(:) = 1./this%x(:)
@@ -322,12 +291,12 @@ contains
 !--- y-grids --------------------------------------------------------------
 
          if (has_dir(ydim)) then
-            this%y(:) = dom%edge(ydim, LO) + this%dy * ([(i, i=1, this%n_(ydim))] - 0.5 - this%nb + this%off(ydim))
+            this%y(:) = dom%edge(ydim, LO) + this%dl(ydim) * ([(i, i=1, this%n_(ydim))] - 0.5 - this%nb + this%off(ydim))
          else
             this%y(:) = 0.5*(this%fbnd(ydim, LO) + this%fbnd(ydim, HI))
          endif
-         this%yl(:) = this%y(:) - 0.5*this%dy
-         this%yr(:) = this%y(:) + 0.5*this%dy
+         this%yl(:) = this%y(:) - 0.5*this%dl(ydim)
+         this%yr(:) = this%y(:) + 0.5*this%dl(ydim)
 
          where ( this%y /= 0.0 )
             this%inv_y(:) = 1./this%y(:)
@@ -338,12 +307,12 @@ contains
 !--- z-grids --------------------------------------------------------------
 
          if (has_dir(zdim)) then
-            this%z(:) = dom%edge(zdim, LO) + this%dz * ([(i, i=1, this%n_(zdim))] - 0.5 - this%nb + this%off(zdim))
+            this%z(:) = dom%edge(zdim, LO) + this%dl(zdim) * ([(i, i=1, this%n_(zdim))] - 0.5 - this%nb + this%off(zdim))
          else
             this%z(:) = 0.5*(this%fbnd(zdim, LO) + this%fbnd(zdim, HI))
          endif
-         this%zl(:) = this%z(:) - 0.5*this%dz
-         this%zr(:) = this%z(:) + 0.5*this%dz
+         this%zl(:) = this%z(:) - 0.5*this%dl(zdim)
+         this%zr(:) = this%z(:) + 0.5*this%dl(zdim)
 
          where ( this%z /= 0.0 )
             this%inv_z(:) = 1./this%z(:)
@@ -353,7 +322,19 @@ contains
 
       endif
 
+      this%dxmn = minval(this%dl(:), mask=has_dir(:))
+
       ! some shortcuts for convenience
+      this%idl(:) = 1./this%dl(:)
+
+      this%dx = this%dl(xdim)
+      this%dy = this%dl(ydim)
+      this%dz = this%dl(zdim)
+
+      this%idx = 1./this%dx
+      this%idy = 1./this%dy
+      this%idz = 1./this%dz
+
       this%nxb = this%n_b(xdim)
       this%nyb = this%n_b(ydim)
       this%nzb = this%n_b(zdim)
