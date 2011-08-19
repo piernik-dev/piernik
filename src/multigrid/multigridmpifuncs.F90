@@ -54,7 +54,7 @@ contains
       use dataio_pub,    only: warn, die
       use domain,        only: is_overlap, has_dir, cdd
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_COMM_NULL
-      use mpisetup,      only: ierr, proc, nproc, procmask
+      use mpisetup,      only: ierr, proc, FIRST, LAST, procmask
       use multigridvars, only: plvl, base, pr_segment
 
       implicit none
@@ -77,7 +77,7 @@ contains
          ! find fine target for receiving restricted data or sending data to be prolonged
          if (associated(curl%finer)) then
             procmask(:) = 0
-            do j = 0, nproc-1
+            do j = FIRST, LAST
                coarsened(:,:) = curl%finer%dom%pse(j)%sel(1, :, :)/2
                call is_overlap(curl%dom%pse(proc)%sel(1, :, :), coarsened(:,:), sharing)
                if (sharing) procmask(j) = 1 ! we can store also neigh(:,:), face and corner as a bitmask, if necessary
@@ -85,7 +85,7 @@ contains
             allocate(curl%f_tgt%seg(count(procmask(:) /= 0)))
 
             g = 0
-            do j = 0, nproc-1
+            do j = FIRST, LAST
                if (procmask(j) /= 0) then
                   g = g + 1
                   if (.not. allocated(curl%f_tgt%seg) .or. g>ubound(curl%f_tgt%seg, dim=1)) call die("m:im f_tgt g>")
@@ -109,14 +109,14 @@ contains
          if (associated(curl%coarser)) then
             procmask(:) = 0
             coarsened(:,:) = curl%dom%pse(proc)%sel(1, :, :)/2
-            do j = 0, nproc-1
+            do j = FIRST, LAST
                call is_overlap(coarsened(:,:), curl%coarser%dom%pse(j)%sel(1, :, :), sharing)
                if (sharing) procmask(j) = 1
             enddo
             allocate(curl%c_tgt%seg(count(procmask(:) /= 0)))
 
             g = 0
-            do j = 0, nproc-1
+            do j = FIRST, LAST
                if (procmask(j) /= 0) then
                   g = g + 1
                   if (.not. allocated(curl%c_tgt%seg) .or. g>ubound(curl%c_tgt%seg, dim=1)) call die("m:im c_tgt g>")
@@ -163,7 +163,7 @@ contains
                      b_layer(:,:) = curl%dom%pse(proc)%sel(1, :, :)
                      b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
                      b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
-                     do j = 0, nproc-1
+                     do j = FIRST, LAST
                         call is_overlap(b_layer(:,:), curl%dom%pse(j)%sel(1, :, :), sharing, per(:))
                         if (sharing) procmask(j) = procmask(j) + 1
                      enddo
@@ -175,7 +175,7 @@ contains
 
                   ! set up segments to be sent or received
                   g = 0
-                  do j = 0, nproc-1
+                  do j = FIRST, LAST
                      if (procmask(j) /= 0) then
                         do lh = LO, HI
                            hl = LO+HI-lh

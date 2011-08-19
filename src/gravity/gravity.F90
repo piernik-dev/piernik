@@ -899,7 +899,7 @@ contains
       use grid,       only: cga, D_x, D_y, D_z
       use grid_cont,  only: grid_container !, cg_list_element
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: master, nproc, comm, ierr, have_mpi
+      use mpisetup,   only: master, nproc, FIRST, LAST, comm, ierr, have_mpi
 
       implicit none
 
@@ -909,7 +909,7 @@ contains
       real, dimension(:,:,:), pointer                                  :: p
       real, dimension(:), allocatable                                  :: gravrx, gravry, gravrz
       real                                                             :: dgpx_proc, dgpy_proc, dgpz_proc, ddgph
-      real, dimension(0:nproc-1)                                       :: dgpx_all,  dgpy_all,  dgpz_all
+      real, dimension(FIRST:LAST)                                      :: dgpx_all,  dgpy_all,  dgpz_all
       real, dimension(0:cdd%psize(xdim)-1,0:cdd%psize(ydim)-1,0:cdd%psize(zdim)-1) :: dgpx,      dgpy,      dgpz,     ddgp
       type(value)                                                      :: gp_max
       type(grid_container), pointer :: cg
@@ -957,7 +957,7 @@ contains
 
       if (master) then
 
-         do ip = 0, nproc-1
+         do ip = FIRST, LAST
             call MPI_Cart_coords(cdd%comm3d, ip, ndims, pc, ierr)
 
             px = pc(1)

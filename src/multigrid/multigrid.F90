@@ -82,7 +82,7 @@ contains
       use grid,                only: D_x, D_y, D_z, cga
       use grid_cont,           only: cg_list_element, grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_LOR, MPI_MIN, MPI_MAX, MPI_COMM_NULL
-      use mpisetup,            only: comm, ierr, proc, master, slave, nproc, buffer_dim, ibuff, lbuff
+      use mpisetup,            only: comm, ierr, proc, master, slave, nproc, FIRST, LAST, buffer_dim, ibuff, lbuff
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
       use multigridmpifuncs,   only: mpi_multigrid_prep
       use multigridvars,       only: lvl, plvl, roof, base, mg_nb, ngridvars, correction, single_base, &
@@ -253,20 +253,20 @@ contains
             endif
             if (.not. allocated(curl%dom%pse)) then
                if (master) call warn("[multigrid:init_multigrid] curl%dom%se not allocated implicitly")! this should detect changes in compiler behavior
-               allocate(curl%dom%pse(0:nproc-1))
-               do p = 0, nproc-1
+               allocate(curl%dom%pse(FIRST:LAST))
+               do p = FIRST, LAST
                   allocate(curl%dom%pse(p)%sel(1, xdim:zdim, LO:HI))
                enddo
                !else curl%dom%se was implicitly allocated during assignment
             endif
             if (associated(curl, base) .and. single_base) then ! Use curl%dom%pse(nproc)%sel(1, :, :) with care, because this is an antiparallel thing
-               do p = 0, nproc-1
+               do p = FIRST, LAST
                   curl%dom%pse(p)%sel(1,  :, LO) = 0
                   curl%dom%pse(p)%sel(1,  :, HI) = -1
                enddo
                curl%dom%pse(0)%sel(1,  :, HI) = curl%dom%n_d(:)-1 ! put the whole base level on the master CPU (\todo try a random or the last one)
             else
-               do p = 0, nproc-1
+               do p = FIRST, LAST
                   curl%dom%pse(p)%sel(1, :, LO) = (curl%finer%dom%pse(p)%sel(1, :, LO) + 1) / 2
                   curl%dom%pse(p)%sel(1, :, HI) =  curl%finer%dom%pse(p)%sel(1, :, HI)      / 2
                enddo
@@ -350,7 +350,7 @@ contains
          curl => curl%coarser ! descend until null() is encountered
       enddo
 
-      do p = 0, nproc-1
+      do p = FIRST, LAST
          if (any(dom%pse(p)%sel(1,:,:) /= roof%dom%pse(p)%sel(1,:,:))) call die("[multigrid:init_multigrid] dom%se or roof%dom%se corrupted")
          ! this should detect changes in compiler behavior
       enddo
@@ -395,7 +395,7 @@ contains
       use dataio_pub,          only: msg
       use domain,              only: has_dir
       use mpi,                 only: MPI_DOUBLE_PRECISION
-      use mpisetup,            only: master, nproc, comm, ierr
+      use mpisetup,            only: master, nproc, FIRST, LAST, comm, ierr
       use multigridhelpers,    only: mg_write_log
       use multigridvars,       only: lvl, plvl, base, tot_ts, tgt_list
 #ifdef GRAV
@@ -430,7 +430,7 @@ contains
             if (allocated(curl%bnd_y))      deallocate(curl%bnd_y)
             if (allocated(curl%bnd_z))      deallocate(curl%bnd_z)
             if (allocated(curl%dom%pse)) then
-               do g = 0, nproc-1
+               do g = FIRST, LAST
                   deallocate(curl%dom%pse(g)%sel)
                enddo
                deallocate(curl%dom%pse)
@@ -461,7 +461,7 @@ contains
       endif
 
       if (allocated(all_ts)) deallocate(all_ts)
-      allocate(all_ts(0:nproc-1))
+      allocate(all_ts(FIRST:LAST))
 
       call MPI_Gather(tot_ts, 1, MPI_DOUBLE_PRECISION, all_ts, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
 

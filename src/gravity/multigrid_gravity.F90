@@ -633,7 +633,7 @@ contains
       use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG
       use dataio_pub,    only: warn, die
       use domain,        only: has_dir, is_overlap
-      use mpisetup,      only: proc, nproc, procmask, inflate_req, req
+      use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req, req
       use multigridvars, only: base, plvl, pr_segment, ord_prolong_face_norm, is_external, need_general_pf
 #ifdef DEBUG
       use piernikdebug,  only: aux_R
@@ -715,14 +715,14 @@ contains
                            if (mod(curl%off(d) + curl%n_b(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
                      end select
 
-                     do j = 0, nproc-1
+                     do j = FIRST, LAST
                         call is_overlap(coarsened(:,:), curl%coarser%dom%pse(j)%sel(1, :, :), sharing, per)
                         if (sharing) procmask(j) = 1
                      enddo
                      allocate(curl%pfc_tgt(d, lh)%seg(count(procmask(:) /= 0)))
 
                      g = 0
-                     do j = 0, nproc-1
+                     do j = FIRST, LAST
                         if (procmask(j) /= 0) then
                            g = g + 1
                            if (.not. allocated(curl%pfc_tgt(d, lh)%seg) .or. g>ubound(curl%pfc_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pfc_tgt g>")
@@ -758,7 +758,7 @@ contains
                   ! find fine target(s) for sending the data to be prolonged
                   if (associated(curl%finer)) then
                      procmask(:) = 0
-                     do j = 0, nproc-1
+                     do j = FIRST, LAST
                         is_internal_fine = curl%finer%dom%periodic(d)
                         coarsened(:, :) = curl%finer%dom%pse(j)%sel(1, :, :)/2
                         coarsened(d, hl) = coarsened(d, lh)
@@ -778,7 +778,7 @@ contains
                      allocate(curl%pff_tgt(d, lh)%seg(count(procmask(:) /= 0)))
 
                      g = 0
-                     do j = 0, nproc-1
+                     do j = FIRST, LAST
                         if (procmask(j) /= 0) then
                            g = g + 1
                            if (.not. allocated(curl%pff_tgt(d, lh)%seg) .or. g>ubound(curl%pff_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pff_tgt g>")

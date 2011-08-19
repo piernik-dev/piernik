@@ -35,24 +35,25 @@
 !<
 module mpisetup
 
-   use constants, only: cbuff_len
+   use constants, only: cbuff_len, INT4
 
    implicit none
 
    private
    public :: cleanup_mpi, init_mpi, mpifind, inflate_req, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, ierr, &
-        &    master, slave, nproc, proc, procmask, comm, info, have_mpi
+        &    master, slave, nproc, proc, FIRST, LAST, procmask, comm, info, have_mpi
 
-   integer(kind=4), protected :: nproc, proc, ierr
+   integer(kind=4), protected :: nproc, proc, LAST, ierr
    integer(kind=4), protected :: comm, info
+   integer(kind=INT4), parameter :: FIRST = 0
 
    logical, protected :: master, slave
    logical, protected :: have_mpi           !< .true. when run on more than one processor
 
    integer, allocatable, dimension(:)   :: req
    integer, allocatable, dimension(:,:) :: status
-   integer, dimension(:), allocatable :: procmask !< (0:nproc-1)-sized auxiliary array for searching overlaps, neighbours etc. BEWARE: antiparallel
+   integer, dimension(:), allocatable :: procmask !< (FIRST:LAST)-sized auxiliary array for searching overlaps, neighbours etc. BEWARE: antiparallel
 
    integer, parameter :: buffer_dim = 200                !< size of [cilr]buff arrays used to exchange namelist parameters
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff
@@ -97,9 +98,11 @@ contains
       call MPI_Comm_rank(comm, proc, ierr)
       call MPI_Comm_size(comm, nproc, ierr)
 
-      master = (proc == 0)
+      LAST = nproc-1_INT4
+
+      master = (proc == FIRST)
       slave  = .not. master
-      have_mpi = (nproc > 1)
+      have_mpi = (LAST /= FIRST)
 
       !Assume that any tmp_log_file existed before Piernik was started and contains invalid/outdated/... data.
       !Delete it now and keep in mind that any warn, die, printinfo or printio messages issued before this point will be lost as well.
@@ -128,9 +131,9 @@ contains
       call printinfo(msg)
 #endif /* DEBUG */
 
-      call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, 0_INT4, comm, ierr)
-      call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, 0_INT4, comm, ierr)
-      call MPI_Gather(pid_proc,  1_INT4, MPI_INTEGER,   pid_all,  1_INT4, MPI_INTEGER,   0_INT4, comm, ierr)
+      call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
+      call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, FIRST, comm, ierr)
+      call MPI_Gather(pid_proc,  1_INT4, MPI_INTEGER,   pid_all,  1_INT4, MPI_INTEGER,   FIRST, comm, ierr)
 
       if (master) then
          inquire(file=par_file, exist=par_file_exist)
@@ -140,7 +143,7 @@ contains
          call printinfo("###############     Environment     ###############", .false.)
          call printinfo("", .false.)
          call printinfo("PROCESSES:", .false.)
-         do iproc = 0, nproc-1
+         do iproc = FIRST, LAST
             write(msg,"(a,i4,a,i6,4a)") " proc=", iproc, ", pid= ",pid_all(iproc), " @",trim(host_all(iproc)), " cwd=",trim(cwd_all(iproc))
             call printinfo(msg, .false.)
          enddo
@@ -154,7 +157,7 @@ contains
       deallocate(host_all, pid_all, cwd_all)
 
       if (allocated(procmask)) call die("[mpisetup:init_mpi] procmask already allocated")
-      allocate(procmask(0:nproc-1))
+      allocate(procmask(FIRST:LAST))
 
    end subroutine init_mpi
 

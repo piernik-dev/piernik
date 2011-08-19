@@ -69,7 +69,7 @@ module domain
 
       logical, dimension(ndims) :: periodic     !< .true. for periodic and shearing boundary pairs
 
-      type(cuboids), dimension(:), allocatable :: pse  !< lists of grid chunks on each process (0:nproc-1); Use with care, because this is an antiparallel thing
+      type(cuboids), dimension(:), allocatable :: pse  !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
 
       ! Do not use n_t(:) in the Piernik source tree without a good reason
       ! Avoid as a plague allocating buffers of that size because it negates benefits of parallelization
@@ -212,7 +212,7 @@ contains
       use dataio_pub, only: die, printinfo, msg, warn, code_progress
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
-      use mpisetup,   only: buffer_dim, cbuff, ibuff, lbuff, rbuff, master, slave, proc, nproc, comm, ierr, have_mpi, inflate_req
+      use mpisetup,   only: buffer_dim, cbuff, ibuff, lbuff, rbuff, master, slave, proc, FIRST, LAST, nproc, comm, ierr, have_mpi, inflate_req
 
       implicit none
 
@@ -482,7 +482,7 @@ contains
 !#ifdef VERBOSE
       if (master) then
          maxcnt = 0
-         do p = 0, nproc - 1
+         do p = FIRST, LAST
             write(msg,'(a,i4,a,2(3i6,a),i8,a)') "[domain:init_domain] segment @",p," : [",dom%pse(p)%sel(1, :, LO),"] : [",dom%pse(p)%sel(1, :, HI),"] #", &
                  &                              product(dom%pse(p)%sel(1, :, HI)-dom%pse(p)%sel(1, :, LO)+1)," cells"
             call printinfo(msg)
@@ -510,7 +510,7 @@ contains
 
       use constants,  only: xdim, zdim, LO, HI
       use dataio_pub, only: die
-      use mpisetup,   only: nproc
+      use mpisetup,   only: FIRST, LAST, nproc
 
       implicit none
 
@@ -518,8 +518,8 @@ contains
       integer :: p
 
       if (allocated(dom%pse)) call die("[domain:allocate_pse] dom%pse already allocated")
-      allocate(dom%pse(0:nproc-1))
-      do p = 0, nproc-1
+      allocate(dom%pse(FIRST:LAST))
+      do p = FIRST, LAST
          if (present(n_cg)) then
             allocate(dom%pse(p)%sel(n_cg(p+1), xdim:zdim, LO:HI))
          else
@@ -534,14 +534,14 @@ contains
 
    subroutine deallocate_pse
 
-      use mpisetup, only: nproc
+      use mpisetup, only: FIRST, LAST
 
       implicit none
 
       integer :: p
 
       if (allocated(dom%pse)) then
-         do p = 0, nproc - 1
+         do p = FIRST, LAST
             deallocate(dom%pse(p)%sel)
          enddo
          deallocate(dom%pse)
@@ -553,10 +553,10 @@ contains
 
    subroutine cartesian_tiling(p_size)
 
-      use constants,  only: xdim, ydim, zdim, ndims, LO, HI, BND_COR, INT4
+      use constants,  only: xdim, ydim, zdim, ndims, LO, HI, BND_COR
       use dataio_pub, only: printinfo, die
       use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: master, nproc, comm, proc, ierr
+      use mpisetup,   only: master, FIRST, LAST, nproc, comm, proc, ierr
 
       implicit none
 
@@ -600,7 +600,7 @@ contains
          if (master) call printinfo("[domain:cartesian_tiling] Cartesian decomposition without comm3d")
       endif
 
-      do p = 0_INT4, nproc-1_INT4
+      do p = FIRST, LAST
          if (cdd%comm3d == MPI_COMM_NULL) then
             if (use_comm3d) call die("[domain:cartesian_tiling] MPI_Cart_create failed")
             pc(:) = [ mod(p, p_size(xdim)), mod(p/p_size(xdim), p_size(ydim)), p/product(p_size(xdim:ydim)) ]

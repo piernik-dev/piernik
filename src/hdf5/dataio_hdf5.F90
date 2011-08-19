@@ -499,7 +499,7 @@ contains
       use hdf5,        only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,        only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
       use mpi,         only: MPI_DOUBLE_PRECISION
-      use mpisetup,    only: comm, ierr, proc, nproc, status, master
+      use mpisetup,    only: comm, ierr, proc, FIRST, LAST, status, master
 #ifdef PGPLOT
       use viz,         only: draw_me
 #endif /* PGPLOT */
@@ -550,7 +550,7 @@ contains
          dims(:) = [ dom%n_d(d1(plane)), dom%n_d(d2(plane)) ] ! Dataset dimensions
          allocate(img(dims(1), dims(2)))
 
-         do p = 0, nproc-1
+         do p = FIRST, LAST
             xn_r = 1
             if (has_dir(plane)) xn_r = pl_i(plane) + cg%nb - dom%pse(p)%sel(1, plane, LO)
             if ((xn_r > cg%nb .and. xn_r <= int(dom%pse(p)%sel(1, plane, HI) - dom%pse(p)%sel(1, plane, LO) + 1, 4) + cg%nb) .or. (xn_r == 1 .and. .not. has_dir(plane))) then
@@ -1593,7 +1593,7 @@ contains
       call H5Tclose_f(type_id, error)
       call H5Pclose_f(prp_id, error)
 
-      !> \todo store full domain decomposition for all procs here [cg%n_b(:), cg%off(:)] @(0:nproc-1) ! MPI_Gather them?
+      !> \todo store full domain decomposition for all procs here [cg%n_b(:), cg%off(:)] @(FIRST:LAST) ! MPI_Gather them?
 
       fe = len_trim(problem_name)
       call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2

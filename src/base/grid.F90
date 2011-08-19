@@ -231,7 +231,7 @@ contains
       use domain,     only: has_dir, dom, is_overlap, cdd
       use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: ierr, proc, nproc, procmask
+      use mpisetup,   only: ierr, proc, FIRST, LAST, procmask
 
       implicit none
 
@@ -278,7 +278,7 @@ contains
                      b_layer(:,:) = dom%pse(proc)%sel(1, :, :)
                      b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
                      b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
-                     do j = 0, nproc-1
+                     do j = FIRST, LAST
                         call is_overlap(b_layer(:,:), dom%pse(j)%sel(1, :, :), sharing, per(:))
                         if (sharing) procmask(j) = procmask(j) + 1
                      enddo
@@ -290,7 +290,7 @@ contains
 
                   ! set up segments to be sent or received
                   g = 0
-                  do j = 0, nproc-1
+                  do j = FIRST, LAST
                      if (procmask(j) /= 0) then
                         do lh = LO, HI
                            hl = LO+HI-lh
