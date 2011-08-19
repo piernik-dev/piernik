@@ -89,7 +89,7 @@ contains
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_swp, ibx, ibz
       use grid_cont,       only: grid_container
-      use constants,       only: xdim, zdim, LO, HI
+      use constants,       only: ndims, LO, HI, pdims
 
       implicit none
 
@@ -98,14 +98,14 @@ contains
       integer, intent(in)                       :: ddim
 
       integer :: i1, i2
-      integer, dimension(xdim:zdim,LO:HI)       :: i
+      integer, dimension(ndims,LO:HI)       :: i
 
       real, dimension(size(cg%u%arr,1),cg%n_(ddim)) :: u1d
       real, dimension(:,:), pointer                 :: pu
       real, dimension(ibx:ibz,         cg%n_(ddim)) :: b1d
 
-      do i2 = 1, cg%n_(pos_permut(ddim,2))
-         do i1 = 1, cg%n_(pos_permut(ddim,1))
+      do i2 = 1, cg%n_(pdims(ddim,3))
+         do i1 = 1, cg%n_(pdims(ddim,2))
             pu => cg%u%get_sweep(ddim,i1,i2)
             u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
             call sweep1d_mh(u1d,b1d,cg%cs_iso2%get_sweep(ddim,i1,i2),dt/cg%dl(ddim))
@@ -114,15 +114,6 @@ contains
       enddo
       call all_fluid_boundaries
    end subroutine sweep
-!---------------------------------------------------------------------------
-   integer function pos_permut(d,n) result (odim)
-      use constants,  only: ndims
-      implicit none
-      integer, intent(in) :: d, n
-
-      odim = mod(ndims + mod(d+n-1,ndims),ndims) + 1
-
-   end function pos_permut
 !---------------------------------------------------------------------------
    function calculate_slope_vanleer(u) result(dq)
       implicit none
