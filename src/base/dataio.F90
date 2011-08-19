@@ -203,7 +203,7 @@ contains
       use fluidboundaries, only: all_fluid_boundaries
       use global,          only: t, nstep
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim
+      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, FIRST
       use timer,           only: time_left
       use version,         only: nenv,env, init_version
 !      use grid,            only: cg
@@ -325,10 +325,10 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       if (slave) then
 
@@ -391,7 +391,7 @@ contains
 
       if (master .and. restart == 'last') call find_last_restart(nrestart)
       call MPI_Barrier(comm,ierr)
-      call MPI_Bcast(nrestart, 1, MPI_INTEGER, 0, comm, ierr)
+      call MPI_Bcast(nrestart, 1, MPI_INTEGER, FIRST, comm, ierr)
 
       call init_version
       if (master) then
@@ -411,8 +411,8 @@ contains
             log_file_initialized = .true.
          endif
       endif
-      call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, 0, comm, ierr)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
-      call MPI_Bcast(log_file_initialized, 1, MPI_LOGICAL, 0, comm, ierr)
+      call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
+      call MPI_Bcast(log_file_initialized, 1, MPI_LOGICAL, FIRST, comm, ierr)
 
       call set_container_chdf(nstep); chdf%nres = nrestart
 
@@ -448,7 +448,7 @@ contains
 
       use dataio_hdf5, only: write_hdf5, write_restart_hdf5
       use dataio_pub,  only: chdf, step_hdf, msg, printinfo, warn, set_container_chdf
-      use mpisetup,    only: comm, ierr, master
+      use mpisetup,    only: comm, ierr, master, FIRST
       use global,      only: nstep
       use mpi,         only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
 
@@ -461,8 +461,8 @@ contains
 
       if (master) call read_file_msg
 
-      call MPI_Bcast(umsg,       umsg_len, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(umsg_param, 1,        MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(umsg,       umsg_len, MPI_CHARACTER,        FIRST, comm, ierr)
+      call MPI_Bcast(umsg_param, 1,        MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
 !---  if a user message is received then:
       if (len_trim(umsg) /= 0) then

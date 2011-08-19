@@ -259,7 +259,7 @@ contains
       use global,     only: nstep
       use grid,       only: total_ncells
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,   only: comm, ierr, master
+      use mpisetup,   only: comm, ierr, master, FIRST
 
       implicit none
 
@@ -287,7 +287,7 @@ contains
       cpusecs  =  int ( cputot + 0.5    ) - 3600 * cpuhours &
                                         - 60   * cpumins
 
-      call MPI_Reduce(cputot, cpuallp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr)
+      call MPI_Reduce(cputot, cpuallp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, ierr)
 
       if (master) then
 

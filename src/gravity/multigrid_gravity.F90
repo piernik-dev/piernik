@@ -161,7 +161,7 @@ contains
       use dataio_pub,    only: msg, die, warn
       use domain,        only: dom, has_dir, eff_dim, geometry_type, is_uneven, cdd
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
-      use mpisetup,      only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff
+      use mpisetup,      only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST
       use multigridvars, only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, single_base
       use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
 
@@ -268,10 +268,10 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
 
       if (slave) then
 

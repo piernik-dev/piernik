@@ -85,7 +85,7 @@ contains
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, code_progress
       use constants,     only: PIERNIK_INIT_MPI
-      use mpisetup,      only: master, slave, lbuff, rbuff, buffer_dim, ierr, comm!, grace_period_passed
+      use mpisetup,      only: master, slave, lbuff, rbuff, buffer_dim, ierr, comm, FIRST!, grace_period_passed
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
       use units,         only: cm, gram
       use fluidindex,    only: flind
@@ -118,8 +118,8 @@ contains
 
       endif
 
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
 
       if (slave) then
 

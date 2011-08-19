@@ -79,7 +79,7 @@ contains
       use global,     only: cfl
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
-      use mpisetup,   only: comm, ierr
+      use mpisetup,   only: comm, ierr, FIRST
 
       implicit none
 
@@ -114,11 +114,11 @@ contains
 
       dt_proc   = min(dt_proc_x, dt_proc_y, dt_proc_z)
 
-      call MPI_Reduce(c_max, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
-      call MPI_Bcast(c_max_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Reduce(c_max, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, FIRST, comm, ierr)
+      call MPI_Bcast(c_max_all, 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
-      call MPI_Reduce(dt_proc, dt_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-      call MPI_Bcast(dt_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Reduce(dt_proc, dt_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, FIRST, comm, ierr)
+      call MPI_Bcast(dt_all, 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       c_out  = c_max_all
       dt_out = cfl*dt_all

@@ -98,7 +98,7 @@ contains
 
       use constants,   only: pi
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use mpisetup,    only: ierr, rbuff, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm
+      use mpisetup,    only: ierr, rbuff, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm, FIRST
       use mpi,         only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
 
       implicit none
@@ -157,10 +157,10 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
 
       if (slave) then
 
@@ -264,10 +264,10 @@ contains
                     &         MPI_DOUBLE_PRECISION, pe, pe, comm, ierr)
             enddo
          else
-            call MPI_Send( [ ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke ], 2*NDIM, MPI_INTEGER, 0, proc, comm, ierr)
+            call MPI_Send( [ ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke ], 2*NDIM, MPI_INTEGER, FIRST, proc, comm, ierr)
             call MPI_Recv(      ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v), &
                  &         size(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v)), &
-                 &         MPI_DOUBLE_PRECISION, 0, proc, comm, status, ierr)
+                 &         MPI_DOUBLE_PRECISION, FIRST, proc, comm, status, ierr)
          endif
       enddo
 

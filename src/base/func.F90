@@ -132,7 +132,7 @@ contains
       use grid,       only: cga
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE
-      use mpisetup,   only: mpifind, comm, ierr, master, proc
+      use mpisetup,   only: mpifind, comm, ierr, master, proc, FIRST
       use types,      only: value
 
       implicit none
@@ -170,8 +170,8 @@ contains
 
       if (prop%proc /= 0) then
          if (proc == prop%proc) then ! slave
-            call MPI_Send (prop%loc,    ndims, MPI_INTEGER,          0, tag1, comm, ierr)
-            call MPI_Send (prop%coords, ndims, MPI_DOUBLE_PRECISION, 0, tag2, comm, ierr)
+            call MPI_Send (prop%loc,    ndims, MPI_INTEGER,          FIRST, tag1, comm, ierr)
+            call MPI_Send (prop%coords, ndims, MPI_DOUBLE_PRECISION, FIRST, tag2, comm, ierr)
          endif
          if (master) then
             call MPI_Recv (prop%loc,    ndims, MPI_INTEGER,          prop%proc, tag1, comm, MPI_STATUS_IGNORE, ierr)

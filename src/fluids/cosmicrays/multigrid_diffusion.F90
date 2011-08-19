@@ -111,7 +111,7 @@ contains
       use dataio_pub,    only: die, warn, msg
       use domain,        only: geometry_type
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
-      use mpisetup,      only: comm, ierr, master, slave, nproc, ibuff, rbuff, lbuff, cbuff, buffer_dim
+      use mpisetup,      only: comm, ierr, master, slave, nproc, ibuff, rbuff, lbuff, cbuff, buffer_dim, FIRST
       use multigridvars, only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, single_base
 
       implicit none
@@ -159,10 +159,10 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
 
       if (slave) then
 

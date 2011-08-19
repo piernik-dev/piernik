@@ -83,7 +83,7 @@ contains
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr
       use gravity,             only: grav_pot_3d
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr
+      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, FIRST
       use types,               only: problem_customize_solution, problem_grace_passed
 
       implicit none
@@ -141,10 +141,10 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
 
       if (slave) then
 
@@ -294,7 +294,7 @@ contains
       use hydrostatic,  only: hydrostatic_zeq_densmid
       use interactions, only: epstein_factor
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,     only: master, comm, ierr
+      use mpisetup,     only: master, comm, ierr, FIRST
       use units,        only: newtong, gram, cm, kboltz, mH
 
       implicit none
@@ -421,7 +421,7 @@ contains
             if (densfile /= "") then
                allocate(gdens(dom%n_d(xdim)+cg%nb*2))
                if (master) call read_dens_profile(densfile,gdens)
-               call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, 0, comm, ierr)
+               call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
                dens_prof(:)    = gdens(1+cdd%pcoords(xdim)*cg%nxb:cg%n_(xdim)+cdd%pcoords(xdim)*cg%nxb)
                deallocate(gdens)

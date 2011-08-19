@@ -60,7 +60,7 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, cbuff, lbuff, buffer_dim, master, slave, comm, ierr
+      use mpisetup,      only: rbuff, cbuff, lbuff, buffer_dim, master, slave, comm, ierr, FIRST
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
 
       implicit none
@@ -88,9 +88,9 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
 
       if (slave) then
 

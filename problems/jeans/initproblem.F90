@@ -60,7 +60,7 @@ contains
       use dataio_pub,    only: msg, die, warn
       use domain,        only: has_dir, dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm
+      use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, FIRST
       use problem_pub,   only: jeans_d0, jeans_mode
 
       implicit none
@@ -89,8 +89,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       if (slave) then
 

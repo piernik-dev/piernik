@@ -154,7 +154,7 @@ contains
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml    ! QA_WARN required for diff_nml
       use dataio_pub,    only: warn, die, code_progress
       use constants,     only: PIERNIK_INIT_ARRAYS
-      use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim
+      use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,         only: newtong
       use grid,          only: cga
@@ -230,10 +230,10 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          0, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
 
       if (slave) then
 
@@ -951,9 +951,9 @@ contains
       dgpy_proc = gpwork(cg%is,     cg%je+D_y, cg%ks    )-gpwork(cg%is,cg%js,cg%ks)
       dgpz_proc = gpwork(cg%is,     cg%js,     cg%ke+D_z)-gpwork(cg%is,cg%js,cg%ks)
 
-      call MPI_Gather ( dgpx_proc, 1, MPI_DOUBLE_PRECISION, dgpx_all, 1, MPI_DOUBLE_PRECISION, 0, cdd%comm3d, ierr )
-      call MPI_Gather ( dgpy_proc, 1, MPI_DOUBLE_PRECISION, dgpy_all, 1, MPI_DOUBLE_PRECISION, 0, cdd%comm3d, ierr )
-      call MPI_Gather ( dgpz_proc, 1, MPI_DOUBLE_PRECISION, dgpz_all, 1, MPI_DOUBLE_PRECISION, 0, cdd%comm3d, ierr )
+      call MPI_Gather ( dgpx_proc, 1, MPI_DOUBLE_PRECISION, dgpx_all, 1, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
+      call MPI_Gather ( dgpy_proc, 1, MPI_DOUBLE_PRECISION, dgpy_all, 1, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
+      call MPI_Gather ( dgpz_proc, 1, MPI_DOUBLE_PRECISION, dgpz_all, 1, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
 
       if (master) then
 
@@ -991,7 +991,7 @@ contains
 
       endif
 
-      call MPI_Bcast(ddgp, nproc, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(ddgp, nproc, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       px = cdd%pcoords(xdim)
       py = cdd%pcoords(ydim)

@@ -71,7 +71,7 @@ contains
       use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub, only: warn
       use domain,     only: dom
-      use mpisetup,   only: ierr, rbuff, master, slave, buffer_dim, comm, proc, have_mpi, LAST
+      use mpisetup,   only: ierr, rbuff, master, slave, buffer_dim, comm, proc, have_mpi, LAST, FIRST
       use mpi,        only: MPI_DOUBLE_PRECISION
 
       implicit none
@@ -95,7 +95,7 @@ contains
 
       endif
 
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       if (slave) then
 

@@ -587,7 +587,7 @@ contains
          if (allocated(img))  deallocate(img)
       else
          if ((xn > cg%nb .and. xn <= cg%n_b(plane)+cg%nb) .or. (xn == 1 .and. .not. has_dir(plane))) &
-              call MPI_Send(send, size(send), MPI_DOUBLE_PRECISION, 0, tag, comm, ierr)
+              call MPI_Send(send, size(send), MPI_DOUBLE_PRECISION, FIRST, tag, comm, ierr)
       endif
 
       call MPI_Barrier(comm, ierr) ! We must synchronize everyone before we reuse buffers and variables
@@ -683,7 +683,7 @@ contains
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use dataio_user, only: problem_write_restart
       use mpi,         only: MPI_CHARACTER
-      use mpisetup,    only: comm, info, ierr, master
+      use mpisetup,    only: comm, info, ierr, master, FIRST
 
       implicit none
 
@@ -711,7 +711,7 @@ contains
          write(msg,'(3a)') 'Writing restart ', trim(filename), " ... "
          call printio(msg, .true.)
       endif
-      call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
       call set_container_chdf(nstep)
 
       ! Set up a new HDF5 file for parallel write
@@ -1206,7 +1206,7 @@ contains
            &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mpi,         only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,    only: comm, ierr, info, comm, master
+      use mpisetup,    only: comm, ierr, info, comm, master, FIRST
 
       implicit none
 
@@ -1235,7 +1235,7 @@ contains
          write(msg, '(2a)') 'Reading restart file: ', trim(filename)
          call printio(msg)
       endif
-      call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
 
       inquire(file = filename, exist = file_exist)
       if (.not. file_exist) then
@@ -1363,24 +1363,24 @@ contains
       endif
       call h5close_f(error)
 
-      call MPI_Bcast(restart_hdf5_version,    1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(restart_hdf5_version,    1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
-      call MPI_Bcast(chdf%nstep,    1, MPI_INTEGER, 0, comm, ierr)
-      call MPI_Bcast(chdf%nres,     1, MPI_INTEGER, 0, comm, ierr)
-      call MPI_Bcast(chdf%nhdf,     1, MPI_INTEGER, 0, comm, ierr)
-      call MPI_Bcast(chdf%step_res, 1, MPI_INTEGER, 0, comm, ierr)
-      call MPI_Bcast(chdf%step_hdf, 1, MPI_INTEGER, 0, comm, ierr)
-      if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, 1, MPI_INTEGER, 0, comm, ierr)
+      call MPI_Bcast(chdf%nstep,    1, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%nres,     1, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%nhdf,     1, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%step_res, 1, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%step_hdf, 1, MPI_INTEGER, FIRST, comm, ierr)
+      if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, 1, MPI_INTEGER, FIRST, comm, ierr)
 
-      call MPI_Bcast(chdf%next_t_tsl,    1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(chdf%next_t_log,    1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(chdf%last_hdf_time, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(t,                  1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(dt,                 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(chdf%next_t_tsl,    1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%next_t_log,    1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%last_hdf_time, 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(t,                  1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(dt,                 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
-      call MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, 0, comm, ierr)
-      call MPI_Bcast(chdf%domain_dump,domlen, MPI_CHARACTER, 0, comm, ierr)
-      call MPI_Bcast(chdf%new_id,  idlen,     MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%domain_dump,domlen, MPI_CHARACTER, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%new_id,  idlen,     MPI_CHARACTER, FIRST, comm, ierr)
 
    end subroutine read_restart_hdf5
 !
@@ -1395,7 +1395,7 @@ contains
       use grid_cont,   only: cg_list_element, grid_container
       use hdf5,        only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                 h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
-      use mpisetup,    only: comm, ierr, info, master
+      use mpisetup,    only: comm, ierr, info, master, FIRST
       use mpi,         only: MPI_CHARACTER
 #ifdef NEW_HDF5
       use list_hdf5,   only: iterate_lhdf5
@@ -1422,7 +1422,7 @@ contains
          write(msg,'(3a)') 'Writing datafile ', trim(fname), " ... "
          call printio(msg, .true.)
       endif
-      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, 0, comm, ierr)
+      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
 
       call h5open_f(error)
       !
@@ -1490,7 +1490,7 @@ contains
            &                 h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
       use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,    only: slave, comm, ierr
+      use mpisetup,    only: slave, comm, ierr, FIRST
       use version,     only: env, nenv
 
       implicit none
@@ -1512,7 +1512,7 @@ contains
       character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
       character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
 
-      call MPI_Reduce(local_magic_mass, magic_mass0, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, comm, ierr)
+      call MPI_Reduce(local_magic_mass, magic_mass0, 1, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, ierr)
       magic_mass       = magic_mass + magic_mass0
       local_magic_mass = 0.0
 

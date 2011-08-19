@@ -166,7 +166,7 @@ contains
    subroutine init_units
 
       use constants,  only: one, pi, fpi, small, PIERNIK_INIT_MPI
-      use mpisetup,   only: cbuff, rbuff, buffer_dim, comm, ierr, master, slave
+      use mpisetup,   only: cbuff, rbuff, buffer_dim, comm, ierr, master, slave, FIRST
       use mpi,        only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use dataio_pub, only: warn, printinfo, msg, die, code_progress
@@ -202,8 +202,8 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        0, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       if (slave) then
 

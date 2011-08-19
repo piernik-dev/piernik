@@ -143,8 +143,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER, 0, comm, ierr)
-      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL, 0, comm, ierr)
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL, FIRST, comm, ierr)
 
       if (slave) then
 
@@ -463,7 +463,7 @@ contains
       if (allocated(all_ts)) deallocate(all_ts)
       allocate(all_ts(FIRST:LAST))
 
-      call MPI_Gather(tot_ts, 1, MPI_DOUBLE_PRECISION, all_ts, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Gather(tot_ts, 1, MPI_DOUBLE_PRECISION, all_ts, 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       if (master) then
          write(msg, '(a,3(g11.4,a))')"[multigrid] Spent ", sum(all_ts)/nproc, " seconds in multigrid_solve_* (min= ",minval(all_ts)," max= ",maxval(all_ts),")."

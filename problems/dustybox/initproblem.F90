@@ -54,7 +54,7 @@ contains
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml     ! QA_WARN required for diff_nml
       use mpi,           only: MPI_DOUBLE_PRECISION
-      use mpisetup,      only: rbuff, comm, ierr, buffer_dim, master, slave
+      use mpisetup,      only: rbuff, comm, ierr, buffer_dim, master, slave, FIRST
 
       implicit none
 
@@ -82,7 +82,7 @@ contains
 
       endif
 
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       if (slave) then
 

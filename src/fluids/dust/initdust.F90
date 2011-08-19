@@ -63,7 +63,7 @@ contains
    subroutine init_dust
 
       use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
-      use mpisetup,       only: lbuff, comm, ierr, buffer_dim, master, slave
+      use mpisetup,       only: lbuff, comm, ierr, buffer_dim, master, slave, FIRST
       use mpi,            only: MPI_LOGICAL
 
       implicit none
@@ -80,7 +80,7 @@ contains
 
       endif
 
-      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
 
       if (slave) then
 

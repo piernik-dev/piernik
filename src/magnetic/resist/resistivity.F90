@@ -101,7 +101,7 @@ contains
       use grid,       only: cga
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,   only: rbuff, ibuff, ierr, comm, master, slave, buffer_dim
+      use mpisetup,   only: rbuff, ibuff, ierr, comm, master, slave, buffer_dim, FIRST
 
       implicit none
 
@@ -133,8 +133,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       if (slave) then
 
@@ -195,7 +195,7 @@ contains
       use grid,       only: cga
       use grid_cont,  only: cg_list_element, grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION
-      use mpisetup,   only: comm, ierr
+      use mpisetup,   only: comm, ierr, FIRST
 #ifndef ISO
       use fluidindex, only: flind
 #endif /* !ISO */
@@ -276,7 +276,7 @@ contains
 
       p => eta%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, etamax, cg) ; NULLIFY(p)
-      call MPI_Bcast(etamax%val, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(etamax%val, 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
       p => wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, cu2max, cg)
 

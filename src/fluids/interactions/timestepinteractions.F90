@@ -48,7 +48,7 @@ contains
       use constants,    only: small
       use fluidindex,   only: flind
       use interactions, only: collfaq, cfl_interact, has_interactions
-      use mpisetup,     only: comm, ierr
+      use mpisetup,     only: comm, ierr, FIRST
       use mpi,          only: MPI_MIN, MPI_DOUBLE_PRECISION
 
       implicit none
@@ -70,8 +70,8 @@ contains
                             &  cg%u%arr(flind%neu%imx,:,:,:),cg%u%arr(flind%neu%imy,:,:,:),cg%u%arr(flind%neu%imz,:,:,:) ) * cg%u%arr(flind%dst%idn,:,:,:) )
          dt_interact_proc = flind%neu%cs / (maxval(collfaq) * val + small)
 
-         call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, 0, comm, ierr)
-         call MPI_Bcast(dt_interact_all, 1, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+         call MPI_Reduce(dt_interact_proc, dt_interact_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, FIRST, comm, ierr)
+         call MPI_Bcast(dt_interact_all, 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
          dt = cfl_interact*dt_interact_all
       else
          dt = huge(real(1.0,4))

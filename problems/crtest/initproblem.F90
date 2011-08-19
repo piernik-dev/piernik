@@ -73,7 +73,7 @@ contains
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use mpi,         only: MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,    only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave
+      use mpisetup,    only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave, FIRST
 
       implicit none
 
@@ -115,8 +115,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       if (slave) then
 

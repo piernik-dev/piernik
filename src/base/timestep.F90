@@ -195,7 +195,7 @@ contains
       use dataio_pub, only: msg, warn
       use global,     only: cfl, cfl_max, cfl_violated
       use mpi,        only: MPI_LOGICAL
-      use mpisetup,   only: comm, ierr, master
+      use mpisetup,   only: comm, ierr, master, FIRST
 
       implicit none
 
@@ -216,7 +216,7 @@ contains
          if (len_trim(msg) > 0) call warn(msg)
       endif
 
-      call MPI_Bcast(cfl_violated, 1, MPI_LOGICAL, 0, comm, ierr)
+      call MPI_Bcast(cfl_violated, 1, MPI_LOGICAL, FIRST, comm, ierr)
 
    end subroutine cfl_warn
 

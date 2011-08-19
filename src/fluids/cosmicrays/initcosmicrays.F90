@@ -102,7 +102,7 @@ contains
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
-      use mpisetup,        only: ibuff, rbuff, lbuff, comm, ierr, buffer_dim, master, slave
+      use mpisetup,        only: ibuff, rbuff, lbuff, comm, ierr, buffer_dim, master, slave, FIRST
       use mpi,             only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_INTEGER
 
       implicit none
@@ -175,9 +175,9 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, 0, comm, ierr)
-      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          0, comm, ierr)
+      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
 
       if (slave) then
 
