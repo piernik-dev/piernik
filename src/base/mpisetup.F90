@@ -70,7 +70,7 @@ contains
 
    subroutine init_mpi
 
-      use constants,  only: cwdlen, INT4
+      use constants,  only: cwdlen, I_ONE
       use mpi,        only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER
       use dataio_pub, only: die, printinfo, msg, cwd, ansi_white, ansi_black, tmp_log_file
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
@@ -98,7 +98,7 @@ contains
       call MPI_Comm_rank(comm, proc, ierr)
       call MPI_Comm_size(comm, nproc, ierr)
 
-      LAST = nproc-1_INT4
+      LAST = nproc-I_ONE
       master = (proc == FIRST)
       slave  = .not. master
       have_mpi = (LAST /= FIRST)
@@ -132,7 +132,7 @@ contains
 
       call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
       call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, FIRST, comm, ierr)
-      call MPI_Gather(pid_proc,  1_INT4, MPI_INTEGER,   pid_all,  1_INT4, MPI_INTEGER,   FIRST, comm, ierr)
+      call MPI_Gather(pid_proc,  I_ONE, MPI_INTEGER,   pid_all,  I_ONE, MPI_INTEGER,   FIRST, comm, ierr)
 
       if (master) then
          inquire(file=par_file, exist=par_file_exist)
@@ -216,7 +216,7 @@ contains
    subroutine mpifind(var, what)
 
       use types,         only: value
-      use constants,     only: MINL, MAXL
+      use constants,     only: MINL, MAXL, I_ONE
       use dataio_pub,    only: die
       use mpi,           only: MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
 
@@ -231,7 +231,7 @@ contains
       v_red(:) = [ var%val, real(proc) ]
 
       if (any([MINL, MAXL] == what)) then
-         call MPI_Allreduce(MPI_IN_PLACE, v_red, 1, MPI_2DOUBLE_PRECISION, op(what), comm, ierr)
+         call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, op(what), comm, ierr)
       else
          call die("[mpisetup:mpifind] invalid extremum type")
       endif

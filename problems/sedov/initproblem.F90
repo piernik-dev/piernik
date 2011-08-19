@@ -258,6 +258,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_tsl(user_vars, tsl_names)
 
+      use constants,   only: I_ONE
       use diagnostics, only: pop_vector
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,    only: proc, master, comm, ierr
@@ -272,7 +273,7 @@ contains
          call pop_vector(tsl_names, len(tsl_names(1)), ["foobar_sedov"])    !   add to header
       else
          ! do mpi stuff here...
-         call MPI_Allreduce(real(proc,8), output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+         call MPI_Allreduce(real(proc,8), output, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
          if (master) call pop_vector(user_vars,[output])                 !   pop value
       endif
 

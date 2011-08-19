@@ -160,7 +160,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init(this, dom)
 
-      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, INVALID, INT4
+      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, INVALID, I_ONE, I_TWO
       use dataio_pub, only: die, warn, code_progress
       use domain,     only: has_dir, translate_bnds_to_ints_dom, domain_container
       use mpisetup,   only: proc
@@ -196,7 +196,7 @@ contains
 
          this%fbnd(:,:) = dom%edge(:,:)
          this%n_(:) = 0
-         this%ijkse(:, LO) = this%nb + 1_INT4
+         this%ijkse(:, LO) = this%nb + I_ONE
          this%ijkse(:, HI) = this%nb
          this%dl(:) = 1.0
 
@@ -221,8 +221,8 @@ contains
          enddo
 
          where (has_dir(:))
-            this%n_(:) = this%n_b(:) + 2_INT4 * this%nb       ! Block total grid size with guardcells
-            this%ijkse(:, LO) = this%nb + 1_INT4
+            this%n_(:) = this%n_b(:) + I_TWO * this%nb       ! Block total grid size with guardcells
+            this%ijkse(:, LO) = this%nb + I_ONE
             this%ijkse(:, HI) = this%nb + this%n_b(:)
             this%dl(:) = dom%L_(:) / dom%n_d(:)
             this%fbnd(:, LO) = dom%edge(:, LO) + this%dl(:) *  this%off(:)
@@ -237,24 +237,24 @@ contains
          endwhere
 
          if (has_dir(xdim)) then
-            this%isb   = 2_INT4*this%nb
-            this%ieb   = this%n_b(xdim)+1_INT4
+            this%isb   = I_TWO*this%nb
+            this%ieb   = this%n_b(xdim)+I_ONE
          else
             this%isb   = 1
             this%ieb   = 1
          endif
 
          if (has_dir(ydim)) then
-            this%jsb   = 2_INT4*this%nb
-            this%jeb   = this%n_b(ydim)+1_INT4
+            this%jsb   = I_TWO*this%nb
+            this%jeb   = this%n_b(ydim)+I_ONE
          else
             this%jsb   = 1
             this%jeb   = 1
          endif
 
          if (has_dir(zdim)) then
-            this%ksb   = 2_INT4*this%nb
-            this%keb   = this%n_b(zdim)+1_INT4
+            this%ksb   = I_TWO*this%nb
+            this%keb   = this%n_b(zdim)+I_ONE
          else
             this%ksb   = 1
             this%keb   = 1
@@ -363,7 +363,7 @@ contains
 
    subroutine internal_boundaries(this, ind, pa3d, pa4d)
 
-      use constants,  only: FLUID, MAG, CR, ARR, LO, HI, xdim, ydim, zdim
+      use constants,  only: FLUID, MAG, CR, ARR, LO, HI, xdim, ydim, zdim, I_ONE
       use dataio_pub, only: die
       use domain,     only: has_dir
       use mpisetup,   only: comm, ierr, proc, req, status
@@ -375,7 +375,8 @@ contains
       real, optional, pointer, dimension(:,:,:)   :: pa3d
       real, optional, pointer, dimension(:,:,:,:) :: pa4d
 
-      integer :: g, tag, d, nr
+      integer :: g, d, nr
+      integer(kind=4) :: tag
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: ise, ose
 
 !BEWARE: MPI_Waitall should be called after all grid containers post Isends and Irecvs
@@ -421,12 +422,12 @@ contains
                   else
                      ! BEWARE: Here we assume, that we have at most one chunk to communicate with a given process on a single side od the domain.
                      ! This will not be true when we allow many blocks per process and tag will need to be modified to include g or seg(g)%lh should become seg(g)%tag
-                     tag = this%i_bnd(d, ind)%seg(g)%lh + HI*d
+                     tag = int(this%i_bnd(d, ind)%seg(g)%lh + HI*d, kind=4)
                      nr = nr + 1
                      if (ind == ARR) then
-                        call MPI_Irecv(pa3d(1, 1, 1), 1, this%i_bnd(d, ind)%seg(g)%mbc, this%i_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
+                        call MPI_Irecv(pa3d(1, 1, 1), I_ONE, this%i_bnd(d, ind)%seg(g)%mbc, this%i_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
                      else
-                        call MPI_Irecv(pa4d(1, 1, 1, 1), 1, this%i_bnd(d, ind)%seg(g)%mbc, this%i_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
+                        call MPI_Irecv(pa4d(1, 1, 1, 1), I_ONE, this%i_bnd(d, ind)%seg(g)%mbc, this%i_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
                      endif
                   endif
                enddo
@@ -434,13 +435,13 @@ contains
             if (allocated(this%o_bnd(d, ind)%seg)) then
                do g = 1, ubound(this%o_bnd(d, ind)%seg(:), dim=1)
                   if (proc /= this%o_bnd(d, ind)%seg(g)%proc) then
-                     tag = this%o_bnd(d, ind)%seg(g)%lh + HI*d
+                     tag = int(this%o_bnd(d, ind)%seg(g)%lh + HI*d, kind=4)
                      nr = nr + 1
                      ! for noncartesian division some y-boundary corner cells are independent from x-boundary face cells, (similarly for z-direction).
                      if (ind == ARR) then
-                        call MPI_Isend(pa3d(1, 1, 1), 1, this%o_bnd(d, ind)%seg(g)%mbc, this%o_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
+                        call MPI_Isend(pa3d(1, 1, 1), I_ONE, this%o_bnd(d, ind)%seg(g)%mbc, this%o_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
                      else
-                        call MPI_Isend(pa4d(1, 1, 1, 1), 1, this%o_bnd(d, ind)%seg(g)%mbc, this%o_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
+                        call MPI_Isend(pa4d(1, 1, 1, 1), I_ONE, this%o_bnd(d, ind)%seg(g)%mbc, this%o_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
                      endif
                   endif
                enddo

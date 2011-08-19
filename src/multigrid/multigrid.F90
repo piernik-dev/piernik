@@ -75,7 +75,7 @@ contains
 !<
    subroutine init_multigrid
 
-      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI, INT4
+      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI, I_TWO, I_ONE
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven, cdd
@@ -246,7 +246,7 @@ contains
          else
             ! set up decomposition of coarse levels
             curl%dom = curl%finer%dom
-            where (has_dir(:)) curl%dom%n_d(:) = curl%dom%n_d(:) / 2_INT4
+            where (has_dir(:)) curl%dom%n_d(:) = curl%dom%n_d(:) / I_TWO
             if (any(curl%dom%n_d(:)*2 /= curl%finer%dom%n_d(:) .and. has_dir(:))) then
                write(msg, '(a,3f10.1)')"[multigrid:init_multigrid] Fractional number of domain cells: ", 0.5*curl%finer%dom%n_d(:)
                call die(msg) ! handling this would require coarse grids bigger than base grid
@@ -355,7 +355,7 @@ contains
          ! this should detect changes in compiler behavior
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, 1, MPI_LOGICAL, MPI_LOR, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, I_ONE, MPI_LOGICAL, MPI_LOR, comm, ierr)
       if ((is_mg_uneven .or. is_uneven .or. cdd%comm3d == MPI_COMM_NULL) .and. ord_prolong /= 0) then
          ord_prolong = 0
          if (master) call warn("[multigrid:init_multigrid] prolongation order /= injection not implemented on uneven or noncartesian domains yet.")
@@ -374,8 +374,8 @@ contains
 
       ! summary
       mb_alloc = mb_alloc / 2.**17 ! sizeof(double)/2.**20
-      call MPI_Allreduce(mb_alloc, min_m, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-      call MPI_Allreduce(mb_alloc, max_m, 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+      call MPI_Allreduce(mb_alloc, min_m, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+      call MPI_Allreduce(mb_alloc, max_m, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
       if (master) then
          write(msg, '(a,i2,a,3i4,a,2(f6.1,a))')"[multigrid:init_multigrid] Initialized ", roof%level, " levels, coarse level resolution [ ", &
             base%dom%n_d(:)," ], allocated", min_m, " ..", max_m, "MiB"
@@ -391,7 +391,7 @@ contains
 
    subroutine cleanup_multigrid
 
-      use constants,           only: xdim, zdim, LO, HI, BND, BLK, INVALID
+      use constants,           only: xdim, zdim, LO, HI, BND, BLK, INVALID, I_ONE
       use dataio_pub,          only: msg
       use domain,              only: has_dir
       use mpi,                 only: MPI_DOUBLE_PRECISION
@@ -463,7 +463,7 @@ contains
       if (allocated(all_ts)) deallocate(all_ts)
       allocate(all_ts(FIRST:LAST))
 
-      call MPI_Gather(tot_ts, 1, MPI_DOUBLE_PRECISION, all_ts, 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Gather(tot_ts, I_ONE, MPI_DOUBLE_PRECISION, all_ts, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       if (master) then
          write(msg, '(a,3(g11.4,a))')"[multigrid] Spent ", sum(all_ts)/nproc, " seconds in multigrid_solve_* (min= ",minval(all_ts)," max= ",maxval(all_ts),")."

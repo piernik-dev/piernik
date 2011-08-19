@@ -208,7 +208,7 @@ contains
    subroutine init_domain
 
       use constants,  only: xdim, ydim, zdim, LO, HI, big_float, dpi, &
-           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF, BLK, BND, PIERNIK_INIT_MPI, INT4
+           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF, BLK, BND, PIERNIK_INIT_MPI, I_ONE
       use dataio_pub, only: die, printinfo, msg, warn, code_progress
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
@@ -224,7 +224,7 @@ contains
 
       ! Begin processing of namelist parameters
 
-      psize(:) = 1_INT4
+      psize(:) = I_ONE
 
       nxd    = 1
       nyd    = 1
@@ -256,7 +256,7 @@ contains
          diff_nml(BASE_DOMAIN)
 
          ! Sanitize input parameters, if possible
-         dom%n_d(:) = max(1_INT4, [nxd, nyd, nzd])
+         dom%n_d(:) = max(I_ONE, [nxd, nyd, nzd])
 
       endif
 
@@ -411,12 +411,12 @@ contains
       is_mpi_noncart = .false.
       is_refined = .false.
 
-      where (.not. has_dir(:)) psize(:) = 1_INT4
+      where (.not. has_dir(:)) psize(:) = I_ONE
 
       ! cdd% will contain valid values if and only if comm3d becomes valid communicator
       cdd%procn(:,:) = MPI_PROC_NULL
-      cdd%psize(:) = -1_INT4
-      cdd%pcoords(:) = -1_INT4
+      cdd%psize(:) = -I_ONE
+      cdd%pcoords(:) = -I_ONE
       cdd%procxyl = MPI_PROC_NULL
       cdd%procyxl = MPI_PROC_NULL
       cdd%comm3d = MPI_COMM_NULL
@@ -553,7 +553,7 @@ contains
 
    subroutine cartesian_tiling(p_size)
 
-      use constants,  only: xdim, ydim, zdim, ndims, LO, HI, BND_COR
+      use constants,  only: xdim, ydim, zdim, ndims, LO, HI, BND_COR, I_ONE
       use dataio_pub, only: printinfo, die
       use mpi,        only: MPI_COMM_NULL
       use mpisetup,   only: master, FIRST, LAST, nproc, comm, proc, ierr
@@ -579,7 +579,7 @@ contains
 
          ! Compute neighbors
          do p = xdim, zdim
-            call MPI_Cart_shift(cdd%comm3d, p-xdim, 1, cdd%procn(p, LO), cdd%procn(p, HI), ierr)
+            call MPI_Cart_shift(cdd%comm3d, p-xdim, I_ONE, cdd%procn(p, LO), cdd%procn(p, HI), ierr)
          enddo
 
          if (any(dom%bnd(xdim:ydim, LO) == BND_COR)) then
@@ -619,7 +619,7 @@ contains
 
    subroutine choppy_tiling(p_size)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, INT4
+      use constants,  only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE
       use dataio_pub, only: printinfo
       use mpisetup,   only: master, nproc
 
@@ -634,28 +634,28 @@ contains
 
       if (master) call printinfo("[domain:choppy_tiling] Non-cartesian decomposition (no comm3d)")
       allocate(pz_slab(p_size(zdim) + 1))
-      pz_slab(1) = 0_INT4
-      do p = 1_INT4, p_size(zdim)
+      pz_slab(1) = I_ZERO
+      do p = I_ONE, p_size(zdim)
          pz_slab(p+1) = pz_slab(p) + nproc / p_size(zdim)
-         if (p <= mod(nproc, p_size(zdim))) pz_slab(p+1) = pz_slab(p+1) + 1_INT4 ! longer slabs go first
+         if (p <= mod(nproc, p_size(zdim))) pz_slab(p+1) = pz_slab(p+1) + I_ONE ! longer slabs go first
       enddo
-      do p = 1_INT4, p_size(zdim)
-         do px = pz_slab(p), pz_slab(p+1)-1_INT4
+      do p = I_ONE, p_size(zdim)
+         do px = pz_slab(p), pz_slab(p+1)-I_ONE
             dom%pse(px)%sel(1, zdim, LO) = nint((dom%n_d(zdim) *  pz_slab(p)   ) / real(nproc))
             dom%pse(px)%sel(1, zdim, HI) = nint((dom%n_d(zdim) *  pz_slab(p+1) ) / real(nproc)) - 1
          enddo
          allocate(py_slab(p_size(ydim) + 1))
-         py_slab(1) = 0_INT4
-         do py = 1_INT4, p_size(ydim)
+         py_slab(1) = I_ZERO
+         do py = I_ONE, p_size(ydim)
             py_slab(py+1) = py_slab(py) + (pz_slab(p+1)-pz_slab(p)) / p_size(ydim)
-            if (py <= mod((pz_slab(p+1)-pz_slab(p)), p_size(ydim))) py_slab(py+1) = py_slab(py+1) + 1_INT4 ! longer slabs go first
+            if (py <= mod((pz_slab(p+1)-pz_slab(p)), p_size(ydim))) py_slab(py+1) = py_slab(py+1) + I_ONE ! longer slabs go first
          enddo
-         do py = 1_INT4, p_size(ydim)
-            do px = pz_slab(p)+py_slab(py), pz_slab(p)+py_slab(py+1) - 1_INT4
+         do py = I_ONE, p_size(ydim)
+            do px = pz_slab(p)+py_slab(py), pz_slab(p)+py_slab(py+1) - I_ONE
                dom%pse(px)%sel(1, ydim, LO) = nint((dom%n_d(ydim) *  py_slab(py)   ) / real(pz_slab(p+1)-pz_slab(p)))
-               dom%pse(px)%sel(1, ydim, HI) = nint((dom%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - 1_INT4
+               dom%pse(px)%sel(1, ydim, HI) = nint((dom%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - I_ONE
             enddo
-            do px = 0_INT4, py_slab(py+1)-py_slab(py) - 1_INT4
+            do px = I_ZERO, py_slab(py+1)-py_slab(py) - I_ONE
                dom%pse(pz_slab(p)+py_slab(py)+px)%sel(1, xdim, LO) = (dom%n_d(xdim) *  px    ) / (py_slab(py+1)-py_slab(py))
                dom%pse(pz_slab(p)+py_slab(py)+px)%sel(1, xdim, HI) = (dom%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1 ! no need to sort lengths here
             enddo
@@ -925,7 +925,7 @@ contains
 !<
    subroutine divide_domain_rectlinear(p_size)
 
-      use constants,  only: xdim, ydim, INT4
+      use constants,  only: xdim, ydim, I_ZERO, I_ONE
       use dataio_pub, only: printinfo, msg
       use mpisetup,   only: master, nproc
 
@@ -949,21 +949,21 @@ contains
       allocate(ppow(size(primes)))
 
       p = nproc
-      do i = 1_INT4, int(size(primes), kind=4)
+      do i = I_ONE, int(size(primes), kind=4)
          ppow(i) = 0
          do while (mod(p, primes(i)) == 0)
-            ppow(i) = ppow(i) + 1_INT4
+            ppow(i) = ppow(i) + I_ONE
             p = p / primes(i)
          enddo
       enddo
 
       nf = int(count(ppow(:) > 0), kind=4)
       allocate(fac(nf,3))
-      j = 1_INT4
-      do i = 1_INT4, int(size(primes), kind=4)
+      j = I_ONE
+      do i = I_ONE, int(size(primes), kind=4)
          if (ppow(i)>0) then
             fac(j,:) = [ primes(i), ppow(i), int((ppow(i)+1)*(ppow(i)+2)/2, kind=4) ] ! prime, its power and number of different decompositions in three dimensions for this prime
-            j = j + 1_INT4
+            j = j + I_ONE
          endif
       enddo
       deallocate(ppow)
@@ -1000,15 +1000,15 @@ contains
             best = quality
             p_size(:) = ldom(:)
          endif
-         do j = 1_INT4, nf ! search for next unique combination
+         do j = I_ONE, nf ! search for next unique combination
             if (fac(j,3) > 1) then
-               fac(j,3) = fac(j,3) - 1_INT4
+               fac(j,3) = fac(j,3) - I_ONE
                exit
             else
                if (j<nf) then
                   fac(j,3) = int((fac(j,2)+1)*(fac(j,2)+2)/2, kind=4)
                else
-                  fac(:,3) = 0_INT4 ! no more combinations to try
+                  fac(:,3) = I_ZERO ! no more combinations to try
                endif
             endif
          enddo
@@ -1044,7 +1044,7 @@ contains
 !<
    subroutine divide_domain_slices(p_size)
 
-      use constants,  only: xdim, ydim, zdim, INT4
+      use constants,  only: xdim, ydim, zdim, I_ONE
       use dataio_pub, only: msg, printinfo, warn
       use mpisetup,   only: master, nproc
 
@@ -1071,18 +1071,18 @@ contains
             if (dom%n_d(ydim) > minfac*optc) p_size(ydim) = int(ceiling(dom%n_d(ydim)/optc), kind=4)
          endif
       endif
-      if (has_dir(xdim)) p_size(xdim) = (nproc - 1_INT4)/(p_size(ydim)*p_size(zdim)) + 1_INT4 !sometimes it might be less by 1
+      if (has_dir(xdim)) p_size(xdim) = (nproc - I_ONE)/(p_size(ydim)*p_size(zdim)) + I_ONE !sometimes it might be less by 1
 
       where (.not. has_dir(:)) p_size(:) = 1 ! just in case
       do while (product(p_size(:)) < nproc)
          write(msg,'(a,3i4,a)') "[domain:divide_domain_slices] imperfect noncartesian division to [",p_size(:)," ] pieces"
          if (master) call warn(msg)
          if (has_dir(xdim)) then
-            p_size(xdim) = p_size(xdim) + 1_INT4
+            p_size(xdim) = p_size(xdim) + I_ONE
          else if (has_dir(ydim)) then
-            p_size(ydim) = p_size(ydim) + 1_INT4
+            p_size(ydim) = p_size(ydim) + I_ONE
          else
-            p_size(zdim) = p_size(zdim) + 1_INT4
+            p_size(zdim) = p_size(zdim) + I_ONE
          endif
       enddo
       write(msg,'(a,3i4,a)') "[domain:divide_domain_slices] performed noncartesian division to [",p_size(:)," ] pieces"
@@ -1094,7 +1094,7 @@ contains
 
    subroutine Eratosthenes_sieve(tab, n)
 
-      use constants,  only: INT4
+      use constants,  only: I_ZERO, I_TWO
       use dataio_pub, only: die
 #ifdef DEBUG
       use dataio_pub, only: msg, printinfo
@@ -1112,7 +1112,7 @@ contains
 
       if (allocated(tab)) call die("[domain:Eratosthenes_sieve] tab already allocated")
 
-      numb = [0_INT4, (i, i = 2_INT4, n)]
+      numb = [I_ZERO, (i, i = I_TWO, n)]
 
       do i = 2, n
          if (numb(i) /= 0) numb( 2*i : n : i ) = 0
@@ -1194,7 +1194,7 @@ contains
 
    subroutine set_derived(this)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE, INT4
+      use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE, I_TWO
       use dataio_pub, only: die
 
       implicit none
@@ -1223,7 +1223,7 @@ contains
       !> \deprecated BEWARE: Vol computed above is not true for non-cartesian geometry
 
       where (has_dir(:))
-         this%n_t(:) = this%n_d(:) + 2_INT4 * this%nb
+         this%n_t(:) = this%n_d(:) + I_TWO * this%nb
       elsewhere
          this%n_t(:) = 1
       endwhere

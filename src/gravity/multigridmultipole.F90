@@ -376,7 +376,7 @@ contains
 
    subroutine find_img_CoM
 
-      use constants,     only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
+      use constants,     only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, I_ONE !, GEO_RPZ
       use dataio_pub,    only: die
       use domain,        only: geometry_type
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
@@ -416,7 +416,7 @@ contains
          endif
       enddo
 
-      call MPI_Allreduce(lsum(0:ndims), CoM(0:ndims), 4, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(lsum(0:ndims), CoM(0:ndims), ndims+I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
       if (CoM(0) /= 0.) then
          CoM(xdim:zdim) = CoM(xdim:zdim) / CoM(0)
@@ -675,7 +675,7 @@ contains
 
    subroutine img_mass2moments
 
-      use constants,     only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI
+      use constants,     only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
       use dataio_pub,    only: die
       use domain,        only: geometry_type
       use multigridvars, only: is_external
@@ -728,8 +728,8 @@ contains
          enddo
       endif
 
-      call MPI_Allreduce(MPI_IN_PLACE, irmin, 1, MPI_INTEGER, MPI_MIN, comm, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, irmax, 1, MPI_INTEGER, MPI_MAX, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, irmin, I_ONE, MPI_INTEGER, MPI_MIN, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, irmax, I_ONE, MPI_INTEGER, MPI_MAX, comm, ierr)
 
       ! integrate radially and apply normalization factor (the (4 \pi)/(2 l  + 1) terms cancel out)
       rr = max(1, irmin)

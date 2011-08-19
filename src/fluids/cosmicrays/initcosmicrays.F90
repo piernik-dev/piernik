@@ -240,7 +240,7 @@ contains
 
    subroutine cosmicray_index(flind)
 
-      use constants,    only: INT4
+      use constants,    only: I_ZERO, I_ONE
       use fluidtypes,   only: var_numbers
 
       implicit none
@@ -248,7 +248,7 @@ contains
       type(var_numbers), intent(inout) :: flind
       integer(kind=4) :: icr
 
-      flind%crn%beg    = flind%all + 1_INT4
+      flind%crn%beg    = flind%all + I_ONE
       flind%crs%beg    = flind%crn%beg
 
       flind%crn%all  = ncrn
@@ -267,19 +267,19 @@ contains
       enddo
       flind%all = flind%all + flind%cre%all
 
-      flind%crn%end = flind%crn%beg + flind%crn%all - 1_INT4
-      flind%cre%beg = flind%crn%end + 1_INT4
+      flind%crn%end = flind%crn%beg + flind%crn%all - I_ONE
+      flind%cre%beg = flind%crn%end + I_ONE
       flind%cre%end = flind%all
       flind%crs%end = flind%cre%end
-      if (flind%crn%all  /= 0) flind%components = flind%components + 1_INT4
+      if (flind%crn%all  /= 0) flind%components = flind%components + I_ONE
       flind%crn%pos = flind%components
-      if (flind%cre%all  /= 0) flind%components = flind%components + 1_INT4
+      if (flind%cre%all  /= 0) flind%components = flind%components + I_ONE
       flind%cre%pos = flind%components
 
 #ifdef NEW_HDF5
       call cr_add_hdf5(int(ncrs))
 #else /* !NEW_HDF5 */
-      if (.false.) icr = 0_INT4 * flind%crn%beg !suppress compiler warnings on unused arguments
+      if (.false.) icr = I_ZERO * flind%crn%beg !suppress compiler warnings on unused arguments
 #endif /* !NEW_HDF5 */
 
    end subroutine cosmicray_index

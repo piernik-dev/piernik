@@ -110,7 +110,7 @@ contains
    end subroutine init_neutral
 
    subroutine neutral_index(flind)
-      use constants,    only: NEU, INT4, xdim, ydim, zdim, ndims
+      use constants,    only: NEU, xdim, ydim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR
       use diagnostics,  only: ma1d, ma2d, my_allocate
       use fluidtypes,   only: var_numbers
 
@@ -118,12 +118,12 @@ contains
 
       type(var_numbers), intent(inout) :: flind
 
-      flind%neu%beg    = flind%all + 1_INT4
+      flind%neu%beg    = flind%all + I_ONE
 
-      idnn = flind%all + 1_INT4
-      imxn = flind%all + 2_INT4
-      imyn = flind%all + 3_INT4
-      imzn = flind%all + 4_INT4
+      idnn = flind%all + I_ONE
+      imxn = flind%all + I_TWO
+      imyn = flind%all + I_THREE
+      imzn = flind%all + I_FOUR
 
       flind%neu%idn = idnn
       flind%neu%imx = imxn
@@ -133,9 +133,9 @@ contains
       flind%neu%all  = 4
       flind%all      = imzn
 #ifndef ISO
-      ienn          = imzn + 1_INT4
-      flind%all      = flind%all + 1_INT4
-      flind%neu%all  = flind%neu%all +1_INT4
+      ienn          = imzn + I_ONE
+      flind%all      = flind%all + I_ONE
+      flind%neu%all  = flind%neu%all +I_ONE
       flind%neu%ien  = ienn
 #endif /* !ISO */
 
@@ -155,14 +155,14 @@ contains
       flind%neu%iarr_swp(:,5) = ienn
       flind%neu%has_energy    = .true.
 
-      flind%energ = flind%energ + 1_INT4
+      flind%energ = flind%energ + I_ONE
 #endif /* !ISO */
 
       flind%neu%end    = flind%all
-      flind%components = flind%components + 1_INT4
-      flind%fluids     = flind%fluids + 1_INT4
+      flind%components = flind%components + I_ONE
+      flind%fluids     = flind%fluids + I_ONE
       flind%neu%pos    = flind%components
-      if (selfgrav_neu)  flind%fluids_sg = flind%fluids_sg + 1_INT4
+      if (selfgrav_neu)  flind%fluids_sg = flind%fluids_sg + I_ONE
 
       flind%neu%gam   = gamma_neu
       flind%neu%gam_1 = gamma_neu-1.0

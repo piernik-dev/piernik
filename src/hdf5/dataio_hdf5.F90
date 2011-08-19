@@ -674,7 +674,7 @@ contains
 
    subroutine write_restart_hdf5(debug_res)
 
-      use constants,   only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B, INT4
+      use constants,   only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B, I_ONE
       use dataio_pub,  only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
       use global,      only: nstep
       use grid,        only: cga
@@ -762,7 +762,7 @@ contains
       ! Write some global variables
       call set_common_attributes(filename, chdf)
 
-      nres = nres + 1_INT4
+      nres = nres + I_ONE
 
    end subroutine write_restart_hdf5
 
@@ -1193,7 +1193,7 @@ contains
 
    subroutine read_restart_hdf5(chdf)
 
-      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B, LO, HI
+      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B, LO, HI, I_ONE
       use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, hdf
       use dataio_user, only: problem_read_restart
       use domain,      only: dom, has_dir
@@ -1363,20 +1363,20 @@ contains
       endif
       call h5close_f(error)
 
-      call MPI_Bcast(restart_hdf5_version,    1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(restart_hdf5_version,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
-      call MPI_Bcast(chdf%nstep,    1, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%nres,     1, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%nhdf,     1, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%step_res, 1, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%step_hdf, 1, MPI_INTEGER, FIRST, comm, ierr)
-      if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, 1, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%nstep,    I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%nres,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%nhdf,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%step_res, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%step_hdf, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
 
-      call MPI_Bcast(chdf%next_t_tsl,    1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%next_t_log,    1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%last_hdf_time, 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(t,                  1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(dt,                 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%next_t_tsl,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%next_t_log,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(chdf%last_hdf_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(t,                  I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(dt,                 I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       call MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, FIRST, comm, ierr)
       call MPI_Bcast(chdf%domain_dump,domlen, MPI_CHARACTER, FIRST, comm, ierr)
@@ -1388,7 +1388,7 @@ contains
 !
    subroutine write_hdf5(chdf)
 
-      use constants,   only: cwdlen, INT4
+      use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: printio, msg, die, nhdf, problem_name, run_id, hdf
       use dataio_user, only: user_vars_hdf5
       use grid,        only: cga
@@ -1469,7 +1469,7 @@ contains
 
       call set_common_attributes(fname, chdf)
 
-      nhdf = nhdf + 1_INT4
+      nhdf = nhdf + I_ONE
 
    end subroutine write_hdf5
 
@@ -1479,7 +1479,7 @@ contains
 !<
    subroutine set_common_attributes(filename, chdf)
 
-      use constants,   only: cbuff_len, xdim, ydim, zdim, INT4
+      use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE, I_NINE
       use dataio_pub,  only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, hdf
       use dataio_user, only: additional_attrs
       use domain,      only: dom
@@ -1512,7 +1512,7 @@ contains
       character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
       character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
 
-      call MPI_Reduce(local_magic_mass, magic_mass0, 1, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, ierr)
+      call MPI_Reduce(local_magic_mass, magic_mass0, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, ierr)
       magic_mass       = magic_mass + magic_mass0
       local_magic_mass = 0.0
 
@@ -1539,7 +1539,7 @@ contains
       rbuffer(13)  = chdf%next_t_log         ; rbuffer_name(13)  = "next_t_log" !rr2
 
       ibuffer(1)   = chdf%nstep              ; ibuffer_name(1)   = "nstep" !rr2
-      ibuffer(2)   = chdf%nres+1_INT4        ; ibuffer_name(2)   = "nres" !rr2
+      ibuffer(2)   = chdf%nres+I_ONE        ; ibuffer_name(2)   = "nres" !rr2
       ibuffer(3)   = chdf%nhdf               ; ibuffer_name(3)   = "nhdf" !rr2
       ibuffer(4)   = chdf%nstep              ; ibuffer_name(4)   = "step_res" !rr2
       ibuffer(5)   = chdf%step_hdf           ; ibuffer_name(5)   = "step_hdf" !rr2
@@ -1568,12 +1568,12 @@ contains
       ! call H5Zget_filter_info_f ! everything should be always fine for gzip
       call H5Pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
       if (Z_avail) then
-         call H5Pset_deflate_f(prp_id, 9_INT4, error)
-         call H5Pset_chunk_f(prp_id, 1_INT4, dimstr, error)
+         call H5Pset_deflate_f(prp_id, I_NINE, error)
+         call H5Pset_chunk_f(prp_id, I_ONE, dimstr, error)
       endif
       call H5Tcopy_f(H5T_NATIVE_CHARACTER, type_id, error)
       call H5Tset_size_f(type_id, maxlen, error)
-      call H5Screate_simple_f(1_INT4, dimstr, dspace_id, error)
+      call H5Screate_simple_f(I_ONE, dimstr, dspace_id, error)
       call H5Dcreate_f(file_id, "problem.par", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
       call H5Dwrite_f(dset_id, type_id, parfile(:)(:maxlen), dimstr, error)
       call H5Dclose_f(dset_id, error)
@@ -1583,9 +1583,9 @@ contains
       ! We recycle type_id and prp_id, so we don't close them yet.
       maxlen = int(maxval(len_trim(env(:nenv))), kind=4)
       dimstr = [nenv]
-      if (Z_avail) call H5Pset_chunk_f(prp_id, 1_INT4, dimstr, error)
+      if (Z_avail) call H5Pset_chunk_f(prp_id, I_ONE, dimstr, error)
       call H5Tset_size_f(type_id, maxlen, error)
-      call H5Screate_simple_f(1_INT4, dimstr, dspace_id, error)
+      call H5Screate_simple_f(I_ONE, dimstr, dspace_id, error)
       call H5Dcreate_f(file_id, "env", type_id,  dspace_id, dset_id, error, dcpl_id = prp_id)
       call H5Dwrite_f(dset_id, type_id, env(:)(:maxlen), dimstr, error)
       call H5Dclose_f(dset_id, error)
@@ -1616,7 +1616,7 @@ contains
 
    subroutine write_grid_containter(cg, file_id, plist_id)
 
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI, INT4
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR, INT4
       use grid_cont, only: grid_container
       use hdf5,      only: HID_T, SIZE_T, HSIZE_T, H5T_NATIVE_INTEGER, H5T_STD_I8LE, H5T_NATIVE_DOUBLE, H5T_COMPOUND_F, &
            &               h5screate_simple_f, h5tarray_create_f, h5tget_size_f, h5tcreate_f, h5tinsert_f, h5dwrite_f, h5sclose_f, h5tclose_f, h5dclose_f, h5dcreate_f
@@ -1647,42 +1647,42 @@ contains
       integer :: i
 
       dims = 1
-      call h5screate_simple_f(1_INT4, dims, dspace_id, error)
+      call h5screate_simple_f(I_ONE, dims, dspace_id, error)
 
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: ndims],              ndims_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_INTEGER, 1_INT4, [integer(HSIZE_T):: ndims],              ndims_i4_t, error)
-      call h5tarray_create_f(H5T_NATIVE_INTEGER, 2_INT4, [integer(HSIZE_T):: ndims, HI-LO+1],     ndims_lohi_i4_t, error)
-      call h5tarray_create_f(H5T_STD_I8LE,       1_INT4, [integer(HSIZE_T):: ndims],              ndims_i8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: cg%n_(xdim)],        nxarr_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: cg%n_(ydim)],        nyarr_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  1_INT4, [integer(HSIZE_T):: cg%n_(zdim)],        nzarr_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  3_INT4, [integer(HSIZE_T):: cg%n_(:)   ],        arr3d_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  4_INT4, [integer(HSIZE_T):: ndims, cg%n_(:)],    ndims_arr4d_r8_t, error)
-      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  4_INT4, [integer(HSIZE_T):: size(cg%u%arr,1), cg%n_(:)], u_arr4d_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_ONE, [integer(HSIZE_T):: ndims],              ndims_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_INTEGER, I_ONE, [integer(HSIZE_T):: ndims],              ndims_i4_t, error)
+      call h5tarray_create_f(H5T_NATIVE_INTEGER, I_TWO, [integer(HSIZE_T):: ndims, HI-LO+1],     ndims_lohi_i4_t, error)
+      call h5tarray_create_f(H5T_STD_I8LE,       I_ONE, [integer(HSIZE_T):: ndims],              ndims_i8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_ONE, [integer(HSIZE_T):: cg%n_(xdim)],        nxarr_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_ONE, [integer(HSIZE_T):: cg%n_(ydim)],        nyarr_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_ONE, [integer(HSIZE_T):: cg%n_(zdim)],        nzarr_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_THREE, [integer(HSIZE_T):: cg%n_(:)   ],        arr3d_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_FOUR, [integer(HSIZE_T):: ndims, cg%n_(:)],    ndims_arr4d_r8_t, error)
+      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_FOUR, [integer(HSIZE_T):: size(cg%u%arr,1), cg%n_(:)], u_arr4d_r8_t, error)
 
       n_arr3d_r8 = 10  ! gc_{x,y,z}dim
       n_stub     = 0
-      if (associated(cg%cs_iso2%arr))  n_stub = n_stub + 1_INT4
-      if (associated(cg%wa%arr))       n_stub = n_stub + 1_INT4
-      if (associated(cg%gpot%arr))     n_stub = n_stub + 1_INT4
-      if (associated(cg%hgpot%arr))    n_stub = n_stub + 1_INT4
-      if (associated(cg%gp%arr))       n_stub = n_stub + 1_INT4
-      if (associated(cg%sgp%arr))      n_stub = n_stub + 1_INT4
-      if (associated(cg%sgpm%arr))     n_stub = n_stub + 1_INT4
+      if (associated(cg%cs_iso2%arr))  n_stub = n_stub + I_ONE
+      if (associated(cg%wa%arr))       n_stub = n_stub + I_ONE
+      if (associated(cg%gpot%arr))     n_stub = n_stub + I_ONE
+      if (associated(cg%hgpot%arr))    n_stub = n_stub + I_ONE
+      if (associated(cg%gp%arr))       n_stub = n_stub + I_ONE
+      if (associated(cg%sgp%arr))      n_stub = n_stub + I_ONE
+      if (associated(cg%sgpm%arr))     n_stub = n_stub + I_ONE
       n_arr3d_r8 = n_arr3d_r8 - n_stub
 
       n_ndims_arr4d_r8 = 1  ! b
       if (associated(cg%b0%arr)) then
-         n_ndims_arr4d_r8 = n_ndims_arr4d_r8 + 1_INT4
+         n_ndims_arr4d_r8 = n_ndims_arr4d_r8 + I_ONE
       else
-         n_stub = n_stub + 1_INT4
+         n_stub = n_stub + I_ONE
       endif
 
       n_u_arr4d_r8 = 2 ! u,uh
       if (associated(cg%u0%arr)) then
-         n_u_arr4d_r8 = n_u_arr4d_r8 + 1_INT4
+         n_u_arr4d_r8 = n_u_arr4d_r8 + I_ONE
       else
-         n_stub = n_stub + 1_INT4
+         n_stub = n_stub + I_ONE
       endif
 
       call h5tget_size_f(H5T_NATIVE_INTEGER, int4_ts,error)

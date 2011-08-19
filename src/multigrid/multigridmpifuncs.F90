@@ -50,7 +50,7 @@ contains
 
    subroutine mpi_multigrid_prep
 
-      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ndims, INVALID, INT4
+      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ndims, INVALID, I_ZERO
       use dataio_pub,    only: warn, die
       use domain,        only: is_overlap, has_dir, cdd
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_COMM_NULL
@@ -59,8 +59,8 @@ contains
 
       implicit none
 
-      integer(kind=4):: ib
-      integer :: d, g, j, lh, hl
+      integer(kind=4):: ib, lh, hl
+      integer :: d, g, j
       integer(kind=4), dimension(ndims) :: sizes, subsizes, starts
       logical :: sharing
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
@@ -251,7 +251,7 @@ contains
                   if (has_dir(d) .and. .not. curl%empty) then
                      subsizes(:) = sizes(:)
                      subsizes(d) = ib
-                     starts(:) = 0_INT4
+                     starts(:) = I_ZERO
 
                      starts(d) = curl%nb-ib
                      call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, curl%mmbc(d, LO, BND, ib), ierr)
@@ -289,7 +289,7 @@ contains
 
    subroutine mpi_multigrid_bnd(curl, iv, ng, mode, corners)
 
-      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK
+      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, INT4, I_ONE, I_FOUR
       use dataio_pub,    only: die
       use domain,        only: is_mpi_noncart, cdd, has_dir
       use mpi,           only: MPI_REQUEST_NULL, MPI_COMM_NULL
@@ -304,9 +304,10 @@ contains
       integer(kind=4), intent(in) :: mode      !< what to do with external boundaries
       logical, intent(in), optional :: corners !< if .true. then don't forget aboutpay close attention to corners
 
-      integer, parameter :: dreq = 4
+      integer(kind=4), parameter :: dreq = I_FOUR
       logical :: cor
-      integer :: d, g, tag, doff
+      integer :: g
+      integer(kind=4) :: d, tag, doff
       integer(kind=8), dimension(:,:), pointer :: ise
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: ose
       integer :: nr
@@ -350,7 +351,7 @@ contains
                         ! This will not be true when we allow many blocks per process and tag will need to be modified to include g or seg(g)%lh should become seg(g)%tag
                         tag = curl%i_bnd(d, ng)%seg(g)%lh + HI*d
                         nr = nr + 1
-                        call MPI_Irecv(curl%mgvar(1, 1, 1, iv), 1, curl%i_bnd(d, ng)%seg(g)%mbc, curl%i_bnd(d, ng)%seg(g)%proc, tag, comm, req(nr), ierr)
+                        call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%i_bnd(d, ng)%seg(g)%mbc, curl%i_bnd(d, ng)%seg(g)%proc, tag, comm, req(nr), ierr)
                      endif
                   enddo
                endif
@@ -361,7 +362,7 @@ contains
                         nr = nr + 1
                         ! if (cor) there should be MPI_Waitall for each d
                         ! for noncartesian division some y-boundary corner cells are independent from x-boundary face cells, (similarly for z-direction).
-                        call MPI_Isend(curl%mgvar(1, 1, 1, iv), 1, curl%o_bnd(d, ng)%seg(g)%mbc, curl%o_bnd(d, ng)%seg(g)%proc, tag, comm, req(nr), ierr)
+                        call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%o_bnd(d, ng)%seg(g)%mbc, curl%o_bnd(d, ng)%seg(g)%proc, tag, comm, req(nr), ierr)
                      endif
                   enddo
                endif
@@ -379,10 +380,10 @@ contains
             if (has_dir(d)) then
                doff = dreq*(d-xdim)
                if (cdd%psize(d) > 1) then ! \todo remove psize(:), try to rely on offsets or boundary types
-                  if (.not. is_external(d, LO)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, LO, BLK, ng), cdd%procn(d, LO), 17+doff, cdd%comm3d, req(1+doff), ierr)
-                  if (.not. is_external(d, HI)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, HI, BLK, ng), cdd%procn(d, HI), 19+doff, cdd%comm3d, req(2+doff), ierr)
-                  if (.not. is_external(d, LO)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, LO, BND, ng), cdd%procn(d, LO), 19+doff, cdd%comm3d, req(3+doff), ierr)
-                  if (.not. is_external(d, HI)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), 1, curl%mmbc(d, HI, BND, ng), cdd%procn(d, HI), 17+doff, cdd%comm3d, req(4+doff), ierr)
+                  if (.not. is_external(d, LO)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mmbc(d, LO, BLK, ng), cdd%procn(d, LO), 17_INT4+doff, cdd%comm3d, req(1+doff), ierr)
+                  if (.not. is_external(d, HI)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mmbc(d, HI, BLK, ng), cdd%procn(d, HI), 19_INT4+doff, cdd%comm3d, req(2+doff), ierr)
+                  if (.not. is_external(d, LO)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mmbc(d, LO, BND, ng), cdd%procn(d, LO), 19_INT4+doff, cdd%comm3d, req(3+doff), ierr)
+                  if (.not. is_external(d, HI)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mmbc(d, HI, BND, ng), cdd%procn(d, HI), 17_INT4+doff, cdd%comm3d, req(4+doff), ierr)
                else
                   if (is_external(d, LO) .neqv. is_external(d, HI)) call die("[multigridmpifuncs:mpi_multigrid_bnd] inconsiztency in is_external(:)")
                   if (.not. is_external(d, LO)) then

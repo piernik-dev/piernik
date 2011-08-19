@@ -134,7 +134,7 @@ contains
 
    subroutine init_prob
 
-      use constants,      only: xdim, ydim, zdim
+      use constants,      only: xdim, ydim, zdim, I_ONE
       use dataio_pub,     only: msg, warn, printinfo, die
       use domain,         only: has_dir, dom
       use fluidindex,     only: ibx, iby, ibz, flind
@@ -244,7 +244,7 @@ contains
 
       do icr = 1, flind%crs%all
          maxv = maxval(cg%u%arr(iarr_crs(icr),:,:,:))
-         call MPI_Allreduce(MPI_IN_PLACE, maxv, 1, MPI_INTEGER, MPI_MAX, comm, ierr)
+         call MPI_Allreduce(MPI_IN_PLACE, maxv, I_ONE, MPI_INTEGER, MPI_MAX, comm, ierr)
          if (master) then
             write(msg,*) '[initproblem:init_prob] icr=',icr,' maxecr =',maxv
             call printinfo(msg)

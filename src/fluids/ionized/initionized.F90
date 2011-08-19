@@ -115,7 +115,7 @@ contains
 
    subroutine ionized_index(flind)
 
-      use constants,    only: ION, INT4, xdim, ydim, zdim, ndims
+      use constants,    only: ION, xdim, ydim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR
       use diagnostics,  only: ma1d, ma2d, my_allocate
       use fluidtypes,   only: var_numbers
 
@@ -123,12 +123,12 @@ contains
 
       type(var_numbers), intent(inout) :: flind
 
-      flind%ion%beg  = flind%all + 1_INT4
+      flind%ion%beg  = flind%all + I_ONE
 
-      idni = flind%all + 1_INT4
-      imxi = flind%all + 2_INT4
-      imyi = flind%all + 3_INT4
-      imzi = flind%all + 4_INT4
+      idni = flind%all + I_ONE
+      imxi = flind%all + I_TWO
+      imyi = flind%all + I_THREE
+      imzi = flind%all + I_FOUR
 
       flind%ion%idn  = idni
       flind%ion%imx  = imxi
@@ -138,9 +138,9 @@ contains
       flind%ion%all  = 4
       flind%all      = imzi
 #ifndef ISO
-      ieni          = imzi + 1_INT4
-      flind%all      = flind%all + 1_INT4
-      flind%ion%all  = flind%ion%all + 1_INT4
+      ieni          = imzi + I_ONE
+      flind%all      = flind%all + I_ONE
+      flind%ion%all  = flind%ion%all + I_ONE
       flind%ion%ien  = ieni
 #endif /* !ISO */
 
@@ -160,14 +160,14 @@ contains
       flind%ion%iarr_swp(:,5) = ieni
       flind%ion%has_energy    = .true.
 
-      flind%energ = flind%energ + 1_INT4
+      flind%energ = flind%energ + I_ONE
 #endif /* !ISO */
 
       flind%ion%end    = flind%all
-      flind%components = flind%components + 1_INT4
-      flind%fluids     = flind%fluids + 1_INT4
+      flind%components = flind%components + I_ONE
+      flind%fluids     = flind%fluids + I_ONE
       flind%ion%pos    = flind%components
-      if (selfgrav_ion)  flind%fluids_sg = flind%fluids_sg + 1_INT4
+      if (selfgrav_ion)  flind%fluids_sg = flind%fluids_sg + I_ONE
 
       flind%ion%gam   = gamma_ion
       flind%ion%gam_1 = gamma_ion-1.0

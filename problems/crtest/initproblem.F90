@@ -65,7 +65,7 @@ contains
 
    subroutine read_problem_par
 
-      use constants,   only: INT4
+      use constants,   only: I_TEN
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,  only: die
       use diagnostics, only: my_allocate
@@ -93,7 +93,7 @@ contains
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
 
-      norm_step    = 10_INT4   !< how often to compute the norm (in steps)
+      norm_step    = I_TEN   !< how often to compute the norm (in steps)
 
       if (master) then
 
@@ -327,7 +327,7 @@ contains
    subroutine check_norm
 
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
-      use constants,      only: PIERNIK_FINISHED
+      use constants,      only: PIERNIK_FINISHED, I_ONE, I_TWO
       use global,         only: t, nstep
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
@@ -380,9 +380,9 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, norm,   2, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, dev(1), 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, dev(2), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, norm,   I_TWO, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dev(1), I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dev(2), I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
 
       if (master) then
          if (norm(2) /= 0) then

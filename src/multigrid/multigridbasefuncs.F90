@@ -142,7 +142,7 @@ contains
 
    subroutine norm_sq(iv, norm)
 
-      use constants,     only: GEO_XYZ, GEO_RPZ
+      use constants,     only: GEO_XYZ, GEO_RPZ, I_ONE
       use dataio_pub,    only: die
       use domain,        only: geometry_type
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
@@ -170,7 +170,7 @@ contains
          case default
             call die("[multigridbasefuncs:norm_sq] Unsupported geometry.")
       end select
-      call MPI_Allreduce(lsum, norm, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(lsum, norm, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
       norm = sqrt(norm)
 
    end subroutine norm_sq
@@ -182,7 +182,7 @@ contains
 
    subroutine subtract_average(curl, iv)
 
-      use constants,     only: GEO_XYZ, GEO_RPZ
+      use constants,     only: GEO_XYZ, GEO_RPZ, I_ONE
       use dataio_pub,    only: die
       use domain,        only: geometry_type
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
@@ -210,8 +210,8 @@ contains
          case default
             call die("[multigridbasefuncs:subtract_average] Unsupported geometry.")
       end select
-      call MPI_Allreduce(lsum, avg, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
-      call MPI_Allreduce(curl%vol, vol, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr) ! This probably can be calculated in init_multigrid
+      call MPI_Allreduce(lsum, avg, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(curl%vol, vol, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr) ! This probably can be calculated in init_multigrid
       avg = avg / vol
 
       curl%mgvar(:, :, :, iv) = curl%mgvar(:, :, :, iv) - avg

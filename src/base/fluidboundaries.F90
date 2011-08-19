@@ -104,7 +104,8 @@ contains
 
    subroutine bnd_u(dir, cg)
 
-      use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
+      use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, &
+           &                         BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
       use dataio_pub,          only: msg, warn, die
       use domain,              only: cdd, has_dir
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
@@ -133,16 +134,17 @@ contains
       integer(kind=4), intent(in) :: dir
       type(grid_container), pointer, intent(inout) :: cg
 
+      integer(kind=4), parameter :: tag1 = 10, tag2 = 20
       integer(kind=4), parameter :: tag7 = 70, tag8 = 80
       logical, save    :: frun = .true.
-      integer :: i, j, ib, itag, jtag
+      integer :: i, j, ib
+      integer(kind=4) :: itag, jtag
       real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
 #ifdef GRAV
       integer          :: kb
 #endif /* GRAV */
 #ifdef SHEAR_BND
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
-      integer(kind=4), parameter :: tag1 = 10, tag2 = 20
 #endif /* SHEAR_BND */
 
       if (.not. any([xdim, ydim, zdim] == dir)) call die("[fluidboundaries:bnd_u] Invalid direction.")
@@ -301,12 +303,12 @@ contains
 #endif /* SHEAR_BND */
             if (cdd%psize(dir) > 1) then
 
-               jtag = 20*dir
-               itag = jtag - 10
-               call MPI_Isend(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BLK), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
-               call MPI_Isend(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BLK), cdd%procn(dir,HI), jtag, cdd%comm3d, req(2), ierr)
-               call MPI_Irecv(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, LO, BND), cdd%procn(dir,LO), jtag, cdd%comm3d, req(3), ierr)
-               call MPI_Irecv(cg%u%arr(1,1,1,1), 1, cg%mbc(FLUID, dir, HI, BND), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
+               jtag = tag2 * dir
+               itag = jtag - tag1
+               call MPI_Isend(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BLK), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
+               call MPI_Isend(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BLK), cdd%procn(dir,HI), jtag, cdd%comm3d, req(2), ierr)
+               call MPI_Irecv(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BND), cdd%procn(dir,LO), jtag, cdd%comm3d, req(3), ierr)
+               call MPI_Irecv(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BND), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif

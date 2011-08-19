@@ -892,7 +892,7 @@ contains
    subroutine grav_accel2pot
 
       use types,      only: value
-      use constants,  only: xdim, ydim, zdim, ndims, MAXL
+      use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE
       use dataio_pub, only: die
       use domain,     only: is_mpi_noncart, cdd
       use func,       only: get_extremum
@@ -951,9 +951,9 @@ contains
       dgpy_proc = gpwork(cg%is,     cg%je+D_y, cg%ks    )-gpwork(cg%is,cg%js,cg%ks)
       dgpz_proc = gpwork(cg%is,     cg%js,     cg%ke+D_z)-gpwork(cg%is,cg%js,cg%ks)
 
-      call MPI_Gather ( dgpx_proc, 1, MPI_DOUBLE_PRECISION, dgpx_all, 1, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
-      call MPI_Gather ( dgpy_proc, 1, MPI_DOUBLE_PRECISION, dgpy_all, 1, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
-      call MPI_Gather ( dgpz_proc, 1, MPI_DOUBLE_PRECISION, dgpz_all, 1, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
+      call MPI_Gather ( dgpx_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpx_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
+      call MPI_Gather ( dgpy_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpy_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
+      call MPI_Gather ( dgpz_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpz_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
 
       if (master) then
 
@@ -1002,7 +1002,7 @@ contains
       p => gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, gp_max, cg)
 
-      call MPI_Bcast(gp_max%val, 1, MPI_DOUBLE_PRECISION, gp_max%proc, comm, ierr)
+      call MPI_Bcast(gp_max%val, I_ONE, MPI_DOUBLE_PRECISION, gp_max%proc, comm, ierr)
       gpwork = gpwork - gp_max%val
 
       cg%gp%arr = gpwork

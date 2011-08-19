@@ -32,7 +32,7 @@
 program piernik
 ! pulled by ANY
 
-   use constants,   only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, INT4
+   use constants,   only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE
    use dataio,      only: write_data, user_msg_handler, check_log, check_tsl
    use dataio_pub,  only: nend, tend, msg, printinfo, warn, die, code_progress
    use fluidupdate, only: fluid_update
@@ -96,7 +96,7 @@ program piernik
 
       if (.not.cfl_violated) tlast = t
       call fluid_update
-      nstep = nstep + 1_INT4
+      nstep = nstep + I_ONE
       call print_progress(nstep)
 
       if (t == tlast .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")

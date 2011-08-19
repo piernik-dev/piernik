@@ -206,7 +206,7 @@ contains
 
    subroutine sanitize_smallx_checks
 
-      use constants,  only: big_float, DST
+      use constants,  only: big_float, DST, I_ONE
       use dataio_pub, only: warn, msg, die
       use fluidindex, only: flind, ibx, iby, ibz
       use fluidtypes, only: component_fluid
@@ -250,7 +250,7 @@ contains
             enddo
             span   = log10(maxdens) - log10(smalld)
             smalld = smalld * safety_factor
-            call MPI_Allreduce(MPI_IN_PLACE, smalld, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+            call MPI_Allreduce(MPI_IN_PLACE, smalld, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
             if (master) then
                write(msg,'(A,ES11.4)') "[initfluids:sanitize_smallx_checks] adjusted smalld to ", smalld
                call warn(msg)
@@ -281,7 +281,7 @@ contains
                endif
             enddo
             smallp = smallp * safety_factor
-            call MPI_Allreduce(MPI_IN_PLACE, smallp, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+            call MPI_Allreduce(MPI_IN_PLACE, smallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
             if (smallp < 0.) then
                write(msg,'(A,ES11.4,A)') "[initfluids:sanitize_smallx_checks] Negative smallp detected! smallp=",smallp," may indicate nonphysical initial conditions."
                if (master) call warn(msg)

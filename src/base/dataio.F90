@@ -194,7 +194,7 @@ contains
 !<
    subroutine init_dataio
 
-      use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC !, BND_USER
+      use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
            &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress
@@ -391,7 +391,7 @@ contains
 
       if (master .and. restart == 'last') call find_last_restart(nrestart)
       call MPI_Barrier(comm,ierr)
-      call MPI_Bcast(nrestart, 1, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(nrestart, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
 
       call init_version
       if (master) then
@@ -412,7 +412,7 @@ contains
          endif
       endif
       call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
-      call MPI_Bcast(log_file_initialized, 1, MPI_LOGICAL, FIRST, comm, ierr)
+      call MPI_Bcast(log_file_initialized, I_ONE, MPI_LOGICAL, FIRST, comm, ierr)
 
       call set_container_chdf(nstep); chdf%nres = nrestart
 
@@ -446,6 +446,7 @@ contains
 
    subroutine user_msg_handler(end_sim)
 
+      use constants,   only: I_ONE
       use dataio_hdf5, only: write_hdf5, write_restart_hdf5
       use dataio_pub,  only: chdf, step_hdf, msg, printinfo, warn, set_container_chdf
       use mpisetup,    only: comm, ierr, master, FIRST
@@ -462,7 +463,7 @@ contains
       if (master) call read_file_msg
 
       call MPI_Bcast(umsg,       umsg_len, MPI_CHARACTER,        FIRST, comm, ierr)
-      call MPI_Bcast(umsg_param, 1,        MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(umsg_param, I_ONE,        MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
 !---  if a user message is received then:
       if (len_trim(umsg) /= 0) then
@@ -642,8 +643,9 @@ contains
 
    function mpi_sum4d_and_multiply(tab,factor) result(output)
 
-      use mpi,      only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup, only: comm, ierr
+      use constants, only: I_ONE
+      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,  only: comm, ierr
 
       implicit none
 
@@ -653,14 +655,15 @@ contains
 
       local = sum(tab(:,:,:,:)) * factor
 
-      call MPI_Allreduce(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(local, output, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
    end function mpi_sum4d_and_multiply
 
    function mpi_sum3d_and_multiply(tab,factor) result(output)
 
-      use mpi,      only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup, only: comm, ierr
+      use constants, only: I_ONE
+      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,  only: comm, ierr
 
       implicit none
 
@@ -670,7 +673,7 @@ contains
 
       local = sum(tab(:,:,:)) * factor
 
-      call MPI_Allreduce(local, output, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(local, output, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
    end function mpi_sum3d_and_multiply
 !---------------------------------------------------------------------

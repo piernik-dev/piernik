@@ -89,7 +89,7 @@ contains
 
    subroutine set_fluidindex_arrays(fl, have_ener)
 
-      use constants, only: INT4
+      use constants, only: I_ONE
       use fluidtypes, only: component_fluid
 
       implicit none
@@ -104,7 +104,7 @@ contains
       iarr_all_swp(:,fl%beg:fl%end) = fl%iarr_swp(:,:)
 
       if (fl%is_selfgrav) then
-         i_sg = i_sg + 1_INT4
+         i_sg = i_sg + I_ONE
          iarr_all_sg(i_sg) = fl%idn
       endif
 

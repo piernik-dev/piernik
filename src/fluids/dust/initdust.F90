@@ -92,7 +92,7 @@ contains
 
    subroutine dust_index(flind)
 
-      use constants,     only: DST, INT4, xdim, ydim, zdim, ndims
+      use constants,     only: DST, xdim, ydim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR
       use diagnostics,   only: ma1d, ma2d, my_allocate
       use fluidtypes,    only: var_numbers
 
@@ -100,12 +100,12 @@ contains
 
       type(var_numbers), intent(inout) :: flind
 
-      flind%dst%beg  = flind%all + 1_INT4
+      flind%dst%beg  = flind%all + I_ONE
 
-      idnd = flind%all + 1_INT4
-      imxd = flind%all + 2_INT4
-      imyd = flind%all + 3_INT4
-      imzd = flind%all + 4_INT4
+      idnd = flind%all + I_ONE
+      imxd = flind%all + I_TWO
+      imyd = flind%all + I_THREE
+      imzd = flind%all + I_FOUR
 
       flind%dst%idn  = idnd
       flind%dst%imx  = imxd
@@ -126,10 +126,10 @@ contains
       flind%dst%iarr_swp(zdim,:) = [idnd,imzd,imyd,imxd]
 
       flind%dst%end    = flind%all
-      flind%components = flind%components + 1_INT4
-      flind%fluids     = flind%fluids + 1_INT4
+      flind%components = flind%components + I_ONE
+      flind%fluids     = flind%fluids + I_ONE
       flind%dst%pos    = flind%components
-      if (selfgrav_dst)  flind%fluids_sg = flind%fluids_sg + 1_INT4
+      if (selfgrav_dst)  flind%fluids_sg = flind%fluids_sg + I_ONE
 
       flind%dst%gam = -1.
       flind%dst%cs  = 0.0

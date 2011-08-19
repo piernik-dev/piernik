@@ -255,6 +255,7 @@ contains
 !<
    subroutine timer_stop
 
+      use constants,  only: I_ONE
       use dataio_pub, only: msg, printinfo
       use global,     only: nstep
       use grid,       only: total_ncells
@@ -287,7 +288,7 @@ contains
       cpusecs  =  int ( cputot + 0.5    ) - 3600 * cpuhours &
                                         - 60   * cpumins
 
-      call MPI_Reduce(cputot, cpuallp, 1, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, ierr)
+      call MPI_Reduce(cputot, cpuallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, ierr)
 
       if (master) then
 

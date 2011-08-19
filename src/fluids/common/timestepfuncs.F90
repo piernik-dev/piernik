@@ -73,7 +73,7 @@ contains
 
    subroutine compute_dt(fl, cx, cy, cz, c_max, c_out, dt_out, cg)
 
-      use constants,  only: big, xdim, ydim, zdim, GEO_RPZ, LO
+      use constants,  only: big, xdim, ydim, zdim, GEO_RPZ, LO, I_ONE
       use domain,     only: dom, geometry_type, has_dir
       use fluidtypes, only: component_fluid
       use global,     only: cfl
@@ -114,11 +114,11 @@ contains
 
       dt_proc   = min(dt_proc_x, dt_proc_y, dt_proc_z)
 
-      call MPI_Reduce(c_max, c_max_all, 1, MPI_DOUBLE_PRECISION, MPI_MAX, FIRST, comm, ierr)
-      call MPI_Bcast(c_max_all, 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Reduce(c_max, c_max_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, FIRST, comm, ierr)
+      call MPI_Bcast(c_max_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
-      call MPI_Reduce(dt_proc, dt_all, 1, MPI_DOUBLE_PRECISION, MPI_MIN, FIRST, comm, ierr)
-      call MPI_Bcast(dt_all, 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Reduce(dt_proc, dt_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, FIRST, comm, ierr)
+      call MPI_Bcast(dt_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       c_out  = c_max_all
       dt_out = cfl*dt_all

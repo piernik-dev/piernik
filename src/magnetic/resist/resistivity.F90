@@ -187,7 +187,7 @@ contains
 
    subroutine compute_resist
 
-      use constants,  only: small, xdim, ydim, zdim, MINL, MAXL
+      use constants,  only: small, xdim, ydim, zdim, MINL, MAXL, I_ONE
       use dataio_pub, only: die
       use domain,     only: has_dir
       use fluidindex, only: ibx, iby, ibz
@@ -276,7 +276,7 @@ contains
 
       p => eta%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, etamax, cg) ; NULLIFY(p)
-      call MPI_Bcast(etamax%val, 1, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(etamax%val, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
       p => wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, cu2max, cg)
 
@@ -295,7 +295,7 @@ contains
 
    subroutine timestep_resist(cg)
 
-      use constants, only: big
+      use constants, only: big, I_ONE
       use grid_cont, only: grid_container
       use mpisetup,  only: comm, ierr
       use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_IN_PLACE
@@ -313,7 +313,7 @@ contains
          dt_resist = big
       endif
 
-      call MPI_Allreduce(MPI_IN_PLACE, dt_resist, 1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dt_resist, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
 
    end subroutine timestep_resist
 

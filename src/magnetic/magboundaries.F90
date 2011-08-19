@@ -38,7 +38,7 @@ contains
 
    subroutine bnd_a(A)
 
-      use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK
+      use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FIVE, I_TEN
       use dataio_pub, only: die
       use domain,     only: cdd, is_mpi_noncart
       use grid,       only: cga
@@ -49,8 +49,7 @@ contains
       implicit none
 
       real, dimension(:,:,:,:) :: A
-      integer                  :: i
-      integer(kind=4)          :: itag, jtag
+      integer(kind=4)          :: i, itag, jtag
       type(grid_container), pointer :: cg
 
       cg => cga%cg_all(1)
@@ -62,12 +61,12 @@ contains
       do i = xdim, zdim
          if (cdd%psize(i) > 1) then
 
-            jtag = 20*i
-            itag = jtag - 10
-            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BLK), cdd%procn(i,LO), itag, cdd%comm3d, req(1), ierr)
-            call MPI_Isend(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BLK), cdd%procn(i,HI), jtag, cdd%comm3d, req(3), ierr)
-            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, LO, BND), cdd%procn(i,LO), jtag, cdd%comm3d, req(2), ierr)
-            call MPI_Irecv(A(1,1,1,1), 1, cg%mbc(MAG, i, HI, BND), cdd%procn(i,HI), itag, cdd%comm3d, req(4), ierr)
+            jtag = I_TEN*i
+            itag = jtag - I_FIVE
+            call MPI_Isend(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BLK), cdd%procn(i,LO), itag, cdd%comm3d, req(1), ierr)
+            call MPI_Isend(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BLK), cdd%procn(i,HI), jtag, cdd%comm3d, req(3), ierr)
+            call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BND), cdd%procn(i,LO), jtag, cdd%comm3d, req(2), ierr)
+            call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BND), cdd%procn(i,HI), itag, cdd%comm3d, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
          endif
@@ -77,7 +76,8 @@ contains
 
    subroutine bnd_b(dir)
 
-      use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
+      use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, &
+           &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub, only: msg, warn, die
       use domain,     only: cdd, is_mpi_noncart
       use fluidindex, only: ibx, iby, ibz
@@ -91,14 +91,14 @@ contains
 
       implicit none
 
-      integer, intent(in) :: dir
+      integer(kind=4), intent(in) :: dir
 
-      integer(kind=4), parameter ::  tag7 = 70, tag8 = 80
+      integer(kind=4), parameter :: tag1 = 10, tag2 = 20
+      integer(kind=4), parameter :: tag7 = 70, tag8 = 80
       integer           :: i, j
       integer(kind=4) :: itag, jtag
       real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
 #ifdef SHEAR
-      integer(kind=4), parameter :: tag1 = 10, tag2 = 20
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
 #endif /* SHEAR */
       logical, save                         :: frun = .true.
@@ -178,12 +178,12 @@ contains
 
             if (cdd%psize(dir) > 1) then
 
-               jtag = 20*dir
-               itag = jtag - 10
-               call MPI_Isend(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BLK), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
-               call MPI_Isend(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BLK), cdd%procn(dir,HI), jtag, cdd%comm3d, req(3), ierr)
-               call MPI_Irecv(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, LO, BND), cdd%procn(dir,LO), jtag, cdd%comm3d, req(2), ierr)
-               call MPI_Irecv(cg%b%arr(1,1,1,1), 1, cg%mbc(MAG, dir, HI, BND), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
+               jtag = tag2*dir
+               itag = jtag - tag1
+               call MPI_Isend(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BLK), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
+               call MPI_Isend(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BLK), cdd%procn(dir,HI), jtag, cdd%comm3d, req(3), ierr)
+               call MPI_Irecv(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BND), cdd%procn(dir,LO), jtag, cdd%comm3d, req(2), ierr)
+               call MPI_Irecv(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BND), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
 
                call MPI_Waitall(4,req(:),status(:,:),ierr)
             endif
@@ -667,7 +667,7 @@ contains
 
       implicit none
 
-      integer :: dir
+      integer(kind=4) :: dir
       type(grid_container), pointer :: cg
 
       cg => cga%cg_all(1)

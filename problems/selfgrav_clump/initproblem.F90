@@ -148,7 +148,7 @@ contains
 !
    subroutine init_prob
 
-      use constants,         only: pi, xdim, ydim, zdim
+      use constants,         only: pi, xdim, ydim, zdim, I_ONE
       use dataio_pub,        only: msg, die, warn, printinfo
       use domain,            only: dom
       use global,            only: smalld, smallei, t
@@ -238,8 +238,8 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce (MPI_IN_PLACE, iC,   1, MPI_INTEGER,          MPI_SUM, comm, ierr)
-      call MPI_Allreduce (MPI_IN_PLACE, Msph, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce (MPI_IN_PLACE, iC,   I_ONE, MPI_INTEGER,          MPI_SUM, comm, ierr)
+      call MPI_Allreduce (MPI_IN_PLACE, Msph, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
       if (master .and. verbose) then
          write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
          call printinfo(msg, .true.)
@@ -273,8 +273,8 @@ contains
 
          Cint = [ minval(cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), maxval(cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) ] ! rotation will modify this
 
-         call MPI_Allreduce (MPI_IN_PLACE, Cint(LOW),  1, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-         call MPI_Allreduce (MPI_IN_PLACE, Cint(HIGH), 1, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+         call MPI_Allreduce (MPI_IN_PLACE, Cint(LOW),  I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+         call MPI_Allreduce (MPI_IN_PLACE, Cint(HIGH), I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
 
          call totalMEnthalpic(Cint(LOW),  totME(LOW),  REL_CALC)
          call totalMEnthalpic(Cint(HIGH), totME(HIGH), REL_CALC)
@@ -507,6 +507,7 @@ contains
 
    subroutine totalMEnthalpic(C, totME, mode)
 
+      use constants,   only: I_ONE
       use grid,        only: cga
       use grid_cont,   only: cg_list_element, grid_container
       use initionized, only: idni
@@ -551,7 +552,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce (MPI_IN_PLACE, totME, 1, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce (MPI_IN_PLACE, totME, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
    end subroutine totalMEnthalpic
 

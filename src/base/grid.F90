@@ -226,7 +226,7 @@ contains
 
    subroutine grid_mpi_boundaries_prep(numfluids, numcrs)
 
-      use constants,  only: PIERNIK_INIT_BASE, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID, INT4
+      use constants,  only: PIERNIK_INIT_BASE, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID, I_ONE
       use dataio_pub, only: die, code_progress
       use domain,     only: has_dir, dom, is_overlap, cdd
       use grid_cont,  only: cg_list_element, grid_container
@@ -239,9 +239,10 @@ contains
       integer(kind=4), intent(in) :: numcrs    !< expect flind%crs%all, here, cannot grab it directly because of cyclic deps in CR-based setups
 
       integer(kind=4), dimension(:), allocatable :: sizes, subsizes, starts
-      integer :: d, t, g, hl, lh, j
+      integer :: d, t, g, j
+      integer(kind=4) :: hl, lh
       integer(kind=4), dimension(FLUID:ARR) :: nc
-      integer(kind=4), parameter, dimension(FLUID:ARR) :: dims = [ 1_INT4+ndims, 1_INT4+ndims, 1_INT4+ndims, ndims ] !< dimensionality of arrays
+      integer(kind=4), parameter, dimension(FLUID:ARR) :: dims = [ I_ONE+ndims, I_ONE+ndims, I_ONE+ndims, ndims ] !< dimensionality of arrays
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
@@ -251,7 +252,7 @@ contains
       if (code_progress < PIERNIK_INIT_BASE) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
       if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process not implemented yet")
 
-      nc = [ numfluids, ndims, max(numcrs,1_INT4), 1_INT4 ]      !< number of fluids, magnetic field components, CRs, and 1 for rank-3 array
+      nc = [ numfluids, ndims, max(numcrs,I_ONE), I_ONE ]      !< number of fluids, magnetic field components, CRs, and 1 for rank-3 array
 
       call cga%get_root(cgl)
       do while (associated(cgl))
@@ -418,7 +419,7 @@ contains
 
    subroutine arr3d_boundaries(pa3d, area_type, dname)
 
-      use constants,  only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B
+      use constants,  only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B, I_ONE
       use dataio_pub, only: die, msg
       use domain,     only: has_dir, cdd
       use grid_cont,  only: cg_list_element, grid_container
@@ -431,7 +432,8 @@ contains
       integer(kind=4), intent(in), optional          :: area_type
       character(len=*), intent(in), optional         :: dname
 
-      integer :: i, d, lh
+      integer :: i, d
+      integer(kind=4) :: lh
       logical :: dodie, do_permpi
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
@@ -489,8 +491,8 @@ contains
                      case (BND_MPI)
                         if (cdd%comm3d /= MPI_COMM_NULL) then
                            if (cdd%psize(d) > 1) then
-                              call MPI_Isend(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BLK), cdd%procn(d, lh), 2*d+(LO+HI-lh), cdd%comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
-                              call MPI_Irecv(pa3d(1, 1, 1), 1, cg%mbc(ARR, d, lh, BND), cdd%procn(d, lh), 2*d+       lh,  cdd%comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                              call MPI_Isend(pa3d(1, 1, 1), I_ONE, cg%mbc(ARR, d, lh, BLK), cdd%procn(d, lh), int(2*d+(LO+HI-lh), kind=4), cdd%comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                              call MPI_Irecv(pa3d(1, 1, 1), I_ONE, cg%mbc(ARR, d, lh, BND), cdd%procn(d, lh), int(2*d+       lh,  kind=4), cdd%comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
                            else
                               call die("[grid:arr3d_boundaries] bnd_[xyz][lr] == 'mpi' && cdd%psize([xyz]dim) <= 1")
                            endif
@@ -535,7 +537,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, dodie, 1, MPI_LOGICAL, MPI_LOR, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dodie, I_ONE, MPI_LOGICAL, MPI_LOR, comm, ierr)
       if (dodie) call die(msg)
 
    end subroutine arr3d_boundaries

@@ -192,6 +192,7 @@ contains
 
    subroutine cfl_warn
 
+      use constants,  only: I_ONE
       use dataio_pub, only: msg, warn
       use global,     only: cfl, cfl_max, cfl_violated
       use mpi,        only: MPI_LOGICAL
@@ -216,7 +217,7 @@ contains
          if (len_trim(msg) > 0) call warn(msg)
       endif
 
-      call MPI_Bcast(cfl_violated, 1, MPI_LOGICAL, FIRST, comm, ierr)
+      call MPI_Bcast(cfl_violated, I_ONE, MPI_LOGICAL, FIRST, comm, ierr)
 
    end subroutine cfl_warn
 

@@ -37,7 +37,7 @@ contains
 
    subroutine repeat_fluidstep
 
-      use constants,  only: INT4
+      use constants,  only: I_ONE
       use dataio_pub, only: warn
       use global,     only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
       use grid,       only: cga
@@ -61,7 +61,7 @@ contains
             cg%u%arr = cg%u0%arr
             cg%b%arr = cg%b0%arr
             dt = dtm/dt_max_grow**2
-            nstep = nstep - 1_INT4
+            nstep = nstep - I_ONE
             if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
          else
             cg%u0%arr = cg%u%arr
