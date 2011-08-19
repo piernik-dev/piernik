@@ -104,7 +104,7 @@ contains
 
    subroutine bnd_u(dir, cg)
 
-      use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, &
+      use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
            &                         BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
       use dataio_pub,          only: msg, warn, die
       use domain,              only: cdd, has_dir
@@ -223,7 +223,7 @@ contains
             call MPI_Irecv(recv_left , flind%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), ierr)
             call MPI_Irecv(recv_right, flind%all*ny*nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), ierr)
 
-            call MPI_Waitall(4,req(:),status(:,:),ierr)
+            call MPI_Waitall(I_FOUR,req(:),status(:,:),ierr)
 
 !
 ! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
@@ -285,7 +285,7 @@ contains
                call MPI_Irecv(recv_left , flind%all*cg%nyb*cg%n_(zdim)*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), ierr)
                call MPI_Irecv(recv_right, flind%all*cg%nyb*cg%n_(zdim)*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), ierr)
 
-               call MPI_Waitall(4,req(:),status(:,:),ierr)
+               call MPI_Waitall(I_FOUR, req(:),status(:,:),ierr)
 
                do i = lbound(cg%u%arr,1), ubound(cg%u%arr,1)
                   cg%u%arr(i,1:cg%nb,        cg%js:cg%je,:) = unshear_fft(recv_left (i,1:cg%nb,:,:), cg%x(1:cg%nb),dely)
@@ -310,7 +310,7 @@ contains
                call MPI_Irecv(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BND), cdd%procn(dir,LO), jtag, cdd%comm3d, req(3), ierr)
                call MPI_Irecv(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BND), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
 
-               call MPI_Waitall(4,req(:),status(:,:),ierr)
+               call MPI_Waitall(I_FOUR, req(:),status(:,:),ierr)
             endif
 #ifdef SHEAR_BND
          endif
@@ -345,7 +345,7 @@ contains
                call MPI_Isend(send_left, flind%all*cg%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag7, comm, req(1), ierr)
                call MPI_Irecv(recv_left, flind%all*cg%n_(xdim)*cg%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag8, comm, req(2), ierr)
 
-               call MPI_Waitall(2,req(:),status(:,:),ierr)
+               call MPI_Waitall(I_TWO,req(:),status(:,:),ierr)
 
                do i=1, cg%nb
                   do j=1, cg%n_(ydim)
@@ -409,7 +409,7 @@ contains
                call MPI_Isend(send_left, flind%all*cg%n_(xdim)*cg%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag8, comm, req(1), ierr)
                call MPI_Irecv(recv_left, flind%all*cg%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag7, comm, req(2), ierr)
 
-               call MPI_Waitall(2,req(:),status(:,:),ierr)
+               call MPI_Waitall(I_TWO, req(:),status(:,:),ierr)
 
                do j=1, cg%nb
                   do i=1, cg%n_(xdim)

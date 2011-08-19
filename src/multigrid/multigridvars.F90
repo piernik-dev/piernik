@@ -175,7 +175,7 @@ contains
 
    subroutine restrict_level(this, iv)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, LONG
+      use constants,  only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
       use dataio_pub, only: msg, warn, die
       use domain,     only: has_dir
       use grid,       only: D_x, D_y, D_z
@@ -194,7 +194,7 @@ contains
       integer(kind=8) :: i, j, k, ic, jc, kc
       integer(kind=8), dimension(xdim:zdim) :: off1
       real :: norm
-      integer :: nr
+      integer(kind=4) :: nr
 
       if (iv < lbound(this%mgvar(:,:,:,:), dim=4) .or. iv > ubound(this%mgvar(:,:,:,:), dim=4)) call die("[multigridvars:restrict_level] Invalid variable index.")
 
@@ -211,7 +211,7 @@ contains
       if (allocated(coarse%f_tgt%seg)) then
          do g = 1, ubound(coarse%f_tgt%seg(:), dim=1)
             if (coarse%f_tgt%seg(g)%proc /= proc) then
-               nr = nr + 1
+               nr = nr + I_ONE
                call MPI_Irecv(coarse%f_tgt%seg(g)%buf(1, 1, 1), size(coarse%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, coarse%f_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
             endif
          enddo
@@ -277,7 +277,7 @@ contains
                   enddo
                enddo
             enddo
-            nr = nr + 1
+            nr = nr + I_ONE
             call MPI_Isend(this%c_tgt%seg(g)%buf(1, 1, 1), size(this%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, this%c_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
          endif
       enddo
@@ -303,7 +303,7 @@ contains
 
    subroutine prolong_level0(this, iv)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, LONG
+      use constants,  only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
       use dataio_pub, only: msg, warn, die
       use domain,     only: has_dir
       use mpisetup,   only: proc, comm, ierr, req, status
@@ -320,7 +320,7 @@ contains
       integer(kind=8), dimension(:,:), pointer :: fse, cse ! shortcuts for fine segment and coarse segment
       integer(kind=8) :: i, j, k, ic, jc, kc
       integer(kind=8), dimension(xdim:zdim) :: off1
-      integer :: nr
+      integer(kind=4) :: nr
 
       if (iv < lbound(this%mgvar(:,:,:,:), dim=4) .or. iv > ubound(this%mgvar(:,:,:,:), dim=4)) call die("[multigridvars:prolong_level0] Invalid variable index.")
 
@@ -337,7 +337,7 @@ contains
       if (allocated(fine%c_tgt%seg)) then
          do g = 1, ubound(fine%c_tgt%seg(:), dim=1)
             if (fine%c_tgt%seg(g)%proc /= proc) then
-               nr = nr + 1
+               nr = nr + I_ONE
                call MPI_Irecv(fine%c_tgt%seg(g)%buf(1, 1, 1), size(fine%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, fine%c_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
             endif
          enddo
@@ -385,7 +385,7 @@ contains
                enddo
             enddo
          else
-            nr = nr + 1
+            nr = nr + I_ONE
             this%f_tgt%seg(g)%buf(:, :, :) = this%mgvar(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI), iv)
             call MPI_Isend(this%f_tgt%seg(g)%buf(1, 1, 1), size(this%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, this%f_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
          endif

@@ -375,8 +375,8 @@ contains
       real, optional, pointer, dimension(:,:,:)   :: pa3d
       real, optional, pointer, dimension(:,:,:,:) :: pa4d
 
-      integer :: g, d, nr
-      integer(kind=4) :: tag
+      integer :: g, d
+      integer(kind=4) :: tag, nr
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: ise, ose
 
 !BEWARE: MPI_Waitall should be called after all grid containers post Isends and Irecvs
@@ -423,7 +423,7 @@ contains
                      ! BEWARE: Here we assume, that we have at most one chunk to communicate with a given process on a single side od the domain.
                      ! This will not be true when we allow many blocks per process and tag will need to be modified to include g or seg(g)%lh should become seg(g)%tag
                      tag = int(this%i_bnd(d, ind)%seg(g)%lh + HI*d, kind=4)
-                     nr = nr + 1
+                     nr = nr + I_ONE
                      if (ind == ARR) then
                         call MPI_Irecv(pa3d(1, 1, 1), I_ONE, this%i_bnd(d, ind)%seg(g)%mbc, this%i_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
                      else
@@ -436,7 +436,7 @@ contains
                do g = 1, ubound(this%o_bnd(d, ind)%seg(:), dim=1)
                   if (proc /= this%o_bnd(d, ind)%seg(g)%proc) then
                      tag = int(this%o_bnd(d, ind)%seg(g)%lh + HI*d, kind=4)
-                     nr = nr + 1
+                     nr = nr + I_ONE
                      ! for noncartesian division some y-boundary corner cells are independent from x-boundary face cells, (similarly for z-direction).
                      if (ind == ARR) then
                         call MPI_Isend(pa3d(1, 1, 1), I_ONE, this%o_bnd(d, ind)%seg(g)%mbc, this%o_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)

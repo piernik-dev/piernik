@@ -234,12 +234,12 @@ contains
 
    subroutine prolong_faces(fine, soln)
 
-      use grid,               only: D_x, D_y, D_z
-      use mpisetup,           only: proc, comm, ierr, req, status, master
-      use domain,             only: has_dir
-      use mpi,                only: MPI_DOUBLE_PRECISION
-      use constants,          only: xdim, ydim, zdim, LO, HI, LONG
+      use constants,          only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
       use dataio_pub,         only: die, warn
+      use domain,             only: has_dir
+      use grid,               only: D_x, D_y, D_z
+      use mpi,                only: MPI_DOUBLE_PRECISION
+      use mpisetup,           only: proc, comm, ierr, req, status, master
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: plvl, ord_prolong_face_norm, ord_prolong_face_par, base, extbnd_antimirror, is_external, need_general_pf, pr_segment
@@ -263,7 +263,7 @@ contains
 
       integer, dimension(xdim:zdim) :: ii
       integer, dimension(xdim:zdim) :: off1
-      integer :: nr
+      integer(kind=4) :: nr
       integer(kind=8), dimension(:,:), pointer :: cse ! shortcut for coarse segment
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
       type c_bnd
@@ -325,7 +325,7 @@ contains
                if (allocated(fine%pfc_tgt(d, lh)%seg)) then
                   do g = 1, ubound(fine%pfc_tgt(d, lh)%seg(:), dim=1)
                      if (fine%pfc_tgt(d, lh)%seg(g)%proc /= proc) then
-                        nr = nr + 1
+                        nr = nr + I_ONE
                         call MPI_Irecv(fine%pfc_tgt(d, lh)%seg(g)%buf(1, 1, 1), size(fine%pfc_tgt(d, lh)%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, &
                              &         fine%pfc_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), ierr)
                      endif
@@ -345,7 +345,7 @@ contains
                      cse => pseg%se
 
                      if (pseg%proc /= proc) then
-                        nr = nr + 1
+                        nr = nr + I_ONE
                         se(:,:) = cse(:,:)
                         pseg%buf(:, :, :) = 0. ! this can be avoided by extracting first assignment from the loop
                         do l = 1, ubound(pseg%f_lay(:), dim=1)

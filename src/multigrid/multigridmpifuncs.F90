@@ -310,7 +310,7 @@ contains
       integer(kind=4) :: d, tag, doff
       integer(kind=8), dimension(:,:), pointer :: ise
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: ose
-      integer :: nr
+      integer(kind=4) :: nr
 
       if (.not. associated(curl)) call die("[multigridmpifuncs:mpi_multigrid_bnd] Invalid level")
       if (iv < 1 .or. iv > ngridvars) call die("[multigridmpifuncs:mpi_multigrid_bnd] Invalid variable index.")
@@ -350,7 +350,7 @@ contains
                         ! BEWARE: Here we assume, that we have at most one chunk to communicate with a given process on a single side od the domain.
                         ! This will not be true when we allow many blocks per process and tag will need to be modified to include g or seg(g)%lh should become seg(g)%tag
                         tag = curl%i_bnd(d, ng)%seg(g)%lh + HI*d
-                        nr = nr + 1
+                        nr = nr + I_ONE
                         call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%i_bnd(d, ng)%seg(g)%mbc, curl%i_bnd(d, ng)%seg(g)%proc, tag, comm, req(nr), ierr)
                      endif
                   enddo
@@ -359,7 +359,7 @@ contains
                   do g = 1, ubound(curl%o_bnd(d, ng)%seg(:), dim=1)
                      if (proc /= curl%o_bnd(d, ng)%seg(g)%proc) then
                         tag = curl%o_bnd(d, ng)%seg(g)%lh + HI*d
-                        nr = nr + 1
+                        nr = nr + I_ONE
                         ! if (cor) there should be MPI_Waitall for each d
                         ! for noncartesian division some y-boundary corner cells are independent from x-boundary face cells, (similarly for z-direction).
                         call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%o_bnd(d, ng)%seg(g)%mbc, curl%o_bnd(d, ng)%seg(g)%proc, tag, comm, req(nr), ierr)

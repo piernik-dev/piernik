@@ -38,7 +38,7 @@ contains
 
    subroutine bnd_a(A)
 
-      use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FIVE, I_TEN
+      use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, I_FIVE, I_TEN
       use dataio_pub, only: die
       use domain,     only: cdd, is_mpi_noncart
       use grid,       only: cga
@@ -68,7 +68,7 @@ contains
             call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BND), cdd%procn(i,LO), jtag, cdd%comm3d, req(2), ierr)
             call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BND), cdd%procn(i,HI), itag, cdd%comm3d, req(4), ierr)
 
-            call MPI_Waitall(4,req(:),status(:,:),ierr)
+            call MPI_Waitall(I_FOUR,req(:),status(:,:),ierr)
          endif
       enddo
 
@@ -76,7 +76,7 @@ contains
 
    subroutine bnd_b(dir)
 
-      use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, &
+      use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
            &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub, only: msg, warn, die
       use domain,     only: cdd, is_mpi_noncart
@@ -162,7 +162,7 @@ contains
             call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), ierr)
             call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), ierr)
 
-            call MPI_Waitall(4,req(:),status(:,:),ierr)
+            call MPI_Waitall(I_FOUR,req(:),status(:,:),ierr)
 
             cg%b%arr(:,        1:cg%nb-1,:,:) = recv_left (:,  1:cg%nb-1,:,:)
             cg%b%arr(:,cg%ie+1+1:cg%n_(xdim),  :,:) = recv_right(:,1+1:cg%nb,  :,:)
@@ -185,7 +185,7 @@ contains
                call MPI_Irecv(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BND), cdd%procn(dir,LO), jtag, cdd%comm3d, req(2), ierr)
                call MPI_Irecv(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BND), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
 
-               call MPI_Waitall(4,req(:),status(:,:),ierr)
+               call MPI_Waitall(I_FOUR,req(:),status(:,:),ierr)
             endif
 
 #ifdef SHEAR
@@ -214,7 +214,7 @@ contains
                call MPI_Isend(send_left, 3*cg%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag7, comm, req(1), ierr)
                call MPI_Irecv(recv_left, 3*cg%n_(xdim)*cg%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag8, comm, req(2), ierr)
 
-               call MPI_Waitall(2,req(:),status(:,:),ierr)
+               call MPI_Waitall(I_TWO,req(:),status(:,:),ierr)
 
                do i=1, cg%nb
                   do j=1, cg%n_(ydim)
@@ -257,7 +257,7 @@ contains
                call MPI_Isend   (send_left , 3*cg%n_(xdim)*cg%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag8, comm, req(1), ierr)
                call MPI_Irecv   (recv_left , 3*cg%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag7, comm, req(2), ierr)
 
-               call MPI_Waitall(2,req(:),status(:,:),ierr)
+               call MPI_Waitall(I_TWO,req(:),status(:,:),ierr)
 
                do j=1, cg%nb
                   do i=1, cg%n_(xdim)
