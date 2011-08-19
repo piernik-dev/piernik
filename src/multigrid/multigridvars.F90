@@ -187,6 +187,7 @@ contains
       class(plvl), intent(inout), target  :: this
       integer(kind=4), intent(in)      :: iv
 
+      integer(kind=4), parameter :: tag1 = 1
       class(plvl), pointer :: coarse
       integer :: g, g1, d
       integer(kind=8), dimension(:,:), pointer :: fse, cse ! shortcuts for fine segment and coarse segment
@@ -211,7 +212,7 @@ contains
          do g = 1, ubound(coarse%f_tgt%seg(:), dim=1)
             if (coarse%f_tgt%seg(g)%proc /= proc) then
                nr = nr + 1
-               call MPI_Irecv(coarse%f_tgt%seg(g)%buf(1, 1, 1), size(coarse%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, coarse%f_tgt%seg(g)%proc, 1, comm, req(nr), ierr)
+               call MPI_Irecv(coarse%f_tgt%seg(g)%buf(1, 1, 1), size(coarse%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, coarse%f_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
             endif
          enddo
       endif
@@ -277,7 +278,7 @@ contains
                enddo
             enddo
             nr = nr + 1
-            call MPI_Isend(this%c_tgt%seg(g)%buf(1, 1, 1), size(this%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, this%c_tgt%seg(g)%proc, 1, comm, req(nr), ierr)
+            call MPI_Isend(this%c_tgt%seg(g)%buf(1, 1, 1), size(this%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, this%c_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
          endif
       enddo
 
@@ -313,6 +314,7 @@ contains
       class(plvl), intent(inout), target  :: this
       integer(kind=4), intent(in)         :: iv    !< variable to be prolonged
 
+      integer(kind=4), parameter :: tag1 = 1
       class(plvl), pointer :: fine
       integer :: g, g1, d
       integer(kind=8), dimension(:,:), pointer :: fse, cse ! shortcuts for fine segment and coarse segment
@@ -336,7 +338,7 @@ contains
          do g = 1, ubound(fine%c_tgt%seg(:), dim=1)
             if (fine%c_tgt%seg(g)%proc /= proc) then
                nr = nr + 1
-               call MPI_Irecv(fine%c_tgt%seg(g)%buf(1, 1, 1), size(fine%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, fine%c_tgt%seg(g)%proc, 1, comm, req(nr), ierr)
+               call MPI_Irecv(fine%c_tgt%seg(g)%buf(1, 1, 1), size(fine%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, fine%c_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
             endif
          enddo
       endif
@@ -385,7 +387,7 @@ contains
          else
             nr = nr + 1
             this%f_tgt%seg(g)%buf(:, :, :) = this%mgvar(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI), iv)
-            call MPI_Isend(this%f_tgt%seg(g)%buf(1, 1, 1), size(this%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, this%f_tgt%seg(g)%proc, 1, comm, req(nr), ierr)
+            call MPI_Isend(this%f_tgt%seg(g)%buf(1, 1, 1), size(this%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, this%f_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
          endif
 
       enddo

@@ -49,7 +49,8 @@ contains
       implicit none
 
       real, dimension(:,:,:,:) :: A
-      integer                  :: i, itag, jtag
+      integer                  :: i
+      integer(kind=4)          :: itag, jtag
       type(grid_container), pointer :: cg
 
       cg => cga%cg_all(1)
@@ -91,9 +92,13 @@ contains
       implicit none
 
       integer, intent(in) :: dir
-      integer           :: i, j, itag, jtag
+
+      integer(kind=4), parameter ::  tag7 = 70, tag8 = 80
+      integer           :: i, j
+      integer(kind=4) :: itag, jtag
       real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
 #ifdef SHEAR
+      integer(kind=4), parameter :: tag1 = 10, tag2 = 20
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
 #endif /* SHEAR */
       logical, save                         :: frun = .true.
@@ -152,10 +157,10 @@ contains
 !
 ! wysylamy na drugi brzeg
 !
-            call MPI_Isend(send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), 10, comm, req(1), ierr)
-            call MPI_Isend(send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), 20, comm, req(3), ierr)
-            call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), 20, comm, req(2), ierr)
-            call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), 10, comm, req(4), ierr)
+            call MPI_Isend(send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag1, comm, req(1), ierr)
+            call MPI_Isend(send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag2, comm, req(3), ierr)
+            call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), ierr)
+            call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), ierr)
 
             call MPI_Waitall(4,req(:),status(:,:),ierr)
 
@@ -206,8 +211,8 @@ contains
 
                send_left(:,:,:,:) = cg%b%arr(:, cg%is:cg%isb,:,:)
 
-               call MPI_Isend(send_left, 3*cg%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, 70, comm, req(1), ierr)
-               call MPI_Irecv(recv_left, 3*cg%n_(xdim)*cg%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, 80, comm, req(2), ierr)
+               call MPI_Isend(send_left, 3*cg%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag7, comm, req(1), ierr)
+               call MPI_Irecv(recv_left, 3*cg%n_(xdim)*cg%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag8, comm, req(2), ierr)
 
                call MPI_Waitall(2,req(:),status(:,:),ierr)
 
@@ -249,8 +254,8 @@ contains
 
                send_left(:,:,:,:) = cg%b%arr(:,:, cg%js:cg%jsb,:)
 
-               call MPI_Isend   (send_left , 3*cg%n_(xdim)*cg%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, 80, comm, req(1), ierr)
-               call MPI_Irecv   (recv_left , 3*cg%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, 70, comm, req(2), ierr)
+               call MPI_Isend   (send_left , 3*cg%n_(xdim)*cg%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag8, comm, req(1), ierr)
+               call MPI_Irecv   (recv_left , 3*cg%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag7, comm, req(2), ierr)
 
                call MPI_Waitall(2,req(:),status(:,:),ierr)
 
