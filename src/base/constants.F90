@@ -72,6 +72,11 @@ module constants
       enumerator :: xdim = 1, ydim, zdim                 !< parameters assigned to the x-, y- and z-direction
    end enum
    integer(kind=4), parameter :: ndims   = zdim - xdim + 1 !< We live in a 3-dimensional world
+   !>
+   !! array of all positive permutaions of xyzdim
+   !<
+   integer(kind=4), dimension(ndims, ndims) :: pdims = &
+      reshape([xdim, ydim, zdim, ydim, zdim, xdim, zdim, xdim, ydim], [ndims, ndims])
 
    enum, bind(C)
       enumerator :: LO = 1, HI                           !< indices for low (left) and high (right) boundaries
