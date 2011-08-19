@@ -41,13 +41,14 @@ contains
       use types,          only: problem_customize_solution
       use grid,           only: cga
       use grid_cont,      only: cg_list_element
-      use constants,      only: xdim, ydim, zdim
+      use constants,      only: xdim, zdim
       use domain,         only: has_dir
 
       implicit none
 
-      logical, save :: first_run = .true.
+      logical, save                  :: first_run = .true.
       type(cg_list_element), pointer :: cgl
+      integer                        :: ddim
 
       halfstep = .false.
       if (first_run) then
@@ -60,9 +61,9 @@ contains
 
       call cga%get_root(cgl)
       do while (associated(cgl))
-         if (has_dir(xdim)) call sweepx(cgl%cg,dt)
-         if (has_dir(ydim)) call sweepy(cgl%cg,dt)
-         if (has_dir(zdim)) call sweepz(cgl%cg,dt)
+         do ddim = xdim, zdim, 1
+            if (has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
+         enddo
          if (associated(problem_customize_solution)) call problem_customize_solution
          cgl => cgl%nxt
       enddo
@@ -73,9 +74,9 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       call cga%get_root(cgl)
       do while (associated(cgl))
-         if (has_dir(zdim)) call sweepz(cgl%cg,dt)
-         if (has_dir(ydim)) call sweepy(cgl%cg,dt)
-         if (has_dir(xdim)) call sweepx(cgl%cg,dt)
+         do ddim = zdim, xdim, -1
+            if (has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
+         enddo
          if (associated(problem_customize_solution)) call problem_customize_solution
          cgl => cgl%nxt
       enddo
@@ -84,92 +85,44 @@ contains
 
    end subroutine fluid_update
 !---------------------------------------------------------------------------
-   subroutine sweepx(cg,dt)
-
+   subroutine sweep(cg,dt,ddim)
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_swp, ibx, ibz
       use grid_cont,       only: grid_container
-      use constants,       only: xdim, ydim, zdim
-!     use grid,            only: D_y, D_z
+      use constants,       only: xdim, zdim, LO, HI
 
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
-      real, intent(in)                          :: dt
+      real,    intent(in)                       :: dt
+      integer, intent(in)                       :: ddim
 
-      integer :: j, k
-      real, dimension(size(cg%u%arr,1),cg%n_(xdim)) :: u1d
-      real, dimension(ibx:ibz,cg%n_(xdim))          :: b1d
+      integer :: i1, i2
+      integer, dimension(xdim:zdim,LO:HI)       :: i
 
-      do k = 1, cg%n_(zdim)
-         do j = 1, cg%n_(ydim)
-            u1d(iarr_all_swp(xdim,:),:) = cg%u%arr(:,:,j,k)
+      real, dimension(size(cg%u%arr,1),cg%n_(ddim)) :: u1d
+      real, dimension(:,:), pointer                 :: pu
+      real, dimension(ibx:ibz,         cg%n_(ddim)) :: b1d
 
-!           b1d                = 0.5*cg%b%arr(:,:,j,k)
-!           b1d(ibx,1:cg%n_(xdim)-1) = b1d(ibx,1:cg%n_(xdim)-1)+b1d(ibx,2:cg%n_(xdim)); b1d(ibx, cg%n_(xdim)) = b1d(ibx, cg%n_(xdim)-1)
-!           b1d(iby,:)=b1d(iby,:)+0.5*cg%b%arr(iby,:,j+D_y,k)
-!           b1d(ibz,:)=b1d(ibz,:)+0.5*cg%b%arr(ibz,:,j,k+D_z)
-            b1d = 0.0
-
-            call sweep1d_mh(u1d,b1d,cg%cs_iso2%get_sweep(xdim,j,k),dt/cg%dx)
-            cg%u%arr(:,:,j,k) = u1d(iarr_all_swp(xdim,:),:)
+      do i2 = 1, cg%n_(pos_permut(ddim,2))
+         do i1 = 1, cg%n_(pos_permut(ddim,1))
+            pu => cg%u%get_sweep(ddim,i1,i2)
+            u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
+            call sweep1d_mh(u1d,b1d,cg%cs_iso2%get_sweep(ddim,i1,i2),dt/cg%dl(ddim))
+            pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
          enddo
       enddo
       call all_fluid_boundaries
-
-   end subroutine sweepx
+   end subroutine sweep
 !---------------------------------------------------------------------------
-   subroutine sweepy(cg,dt)
-      use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_swp, ibx, ibz
-      use grid_cont,       only: grid_container
-      use constants,       only: xdim, ydim, zdim
-
+   integer function pos_permut(d,n) result (odim)
+      use constants,  only: ndims
       implicit none
+      integer, intent(in) :: d, n
 
-      type(grid_container), pointer, intent(in) :: cg
-      real, intent(in)                          :: dt
+      odim = mod(ndims + mod(d+n-1,ndims),ndims) + 1
 
-      integer :: i, k
-      real, dimension(size(cg%u%arr,1),cg%n_(ydim)) :: u1d
-      real, dimension(ibx:ibz,cg%n_(ydim))          :: b1d
-
-      do k = 1, cg%n_(zdim)
-         do i = 1, cg%n_(xdim)
-            b1d = 0.0
-            u1d(iarr_all_swp(ydim,:),:) = cg%u%arr(:,i,:,k)
-            call sweep1d_mh(u1d, b1d, cg%cs_iso2%get_sweep(ydim,k,i), dt/cg%dy)
-            cg%u%arr(:,i,:,k) = u1d(iarr_all_swp(ydim,:),:)
-         enddo
-      enddo
-      call all_fluid_boundaries
-
-   end subroutine sweepy
-!---------------------------------------------------------------------------
-   subroutine sweepz(cg,dt)
-      use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_swp, ibx, ibz
-      use grid_cont,       only: grid_container
-      use constants,       only: xdim, ydim, zdim
-
-      implicit none
-
-      type(grid_container), pointer, intent(in) :: cg
-      real, intent(in)                          :: dt
-
-      integer :: i, j
-      real, dimension(size(cg%u%arr,1),cg%n_(zdim)) :: u1d
-      real, dimension(ibx:ibz,cg%n_(zdim))          :: b1d
-
-      do j = 1, cg%n_(ydim)
-         do i = 1, cg%n_(xdim)
-            u1d(iarr_all_swp(zdim,:),:) = cg%u%arr(:,i,j,:)
-            call sweep1d_mh(u1d,b1d,cg%cs_iso2%get_sweep(zdim,i,j),dt/cg%dz)
-            cg%u%arr(:,i,j,:) = u1d(iarr_all_swp(zdim,:),:)
-         enddo
-      enddo
-      call all_fluid_boundaries
-   end subroutine sweepz
+   end function pos_permut
 !---------------------------------------------------------------------------
    function calculate_slope_vanleer(u) result(dq)
       implicit none
