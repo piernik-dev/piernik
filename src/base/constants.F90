@@ -54,6 +54,9 @@ module constants
    real, parameter :: twot       = 2./3.                 !< two thirds
    real, parameter :: oneq       = 1./4.                 !< one fourth
    real, parameter :: thrq       = 3./4.                 !< three fourths
+   enum, bind(C)
+      enumerator :: I_ZERO = 0, I_ONE, I_TWO, I_THREE, I_FOUR, I_FIVE, I_SIX, I_SEVEN, I_EIGHT, I_NINE, I_TEN
+   end enum
 
    ! irrational number approximations
    real, parameter :: pi         = 3.141592653589793238  !< Pi (Archimedes' constant)
