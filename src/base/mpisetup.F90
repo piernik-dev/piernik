@@ -99,7 +99,6 @@ contains
       call MPI_Comm_size(comm, nproc, ierr)
 
       LAST = nproc-1_INT4
-
       master = (proc == FIRST)
       slave  = .not. master
       have_mpi = (LAST /= FIRST)
@@ -119,7 +118,7 @@ contains
 
       if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
       !> \deprecated BEWARE on slave it is probably enough to allocate only one element or none at all (may depend on MPI implementation)
-      allocate(cwd_all(0:nproc), host_all(0:nproc), pid_all(0:nproc))
+      allocate(cwd_all(FIRST:LAST), host_all(FIRST:LAST), pid_all(FIRST:LAST))
 
       pid_proc    = getpid()
       host_status = hostnm(host_proc)
@@ -207,7 +206,7 @@ contains
 
       if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
       call MPI_Barrier(comm,ierr)
-      if (nproc > 1) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
+      if (have_mpi) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
       call MPI_Finalize(ierr)
 
    end subroutine cleanup_mpi
