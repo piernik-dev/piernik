@@ -20,9 +20,6 @@
 # specified --nocompile either in your .setuprc* files or it was stored in 
 # .setup.call file.
 #
-# ToDo: drop support for reading setup call from obj*/env.dat as soon as 
-#       everyone adopts .setup.call-aware setup script.
-#
 ################################################################################
 
 MAKEFLAGS += -s -l8
@@ -39,8 +36,6 @@ all: $(ALLOBJ)
 ifeq ("$(RS)","1")
 	@if [ -e $@/.setup.call ] ; then \
 		eval `grep -v "^#" $@/.setup.call`; \
-	elif [ -e $@/env.dat ] ; then \
-		eval `head -n 1 $@/env.dat`; \
 	else \
 		$(ECHO) -e "\033[31;1mDon't know how to resetup '"$@"'\033[0m"; \
 	fi
@@ -62,13 +57,13 @@ clean:
 	@CL=1 $(MAKE) -k all
 
 allsetup:
-	for i in problems/* ../problems/* ; do \
+	for i in {,../}problems/* ; do \
 		if [ ! -e $$i/OBSOLETE ] ; then \
 			if [ $$( dirname $$( dirname $$i ) ) == "." ] ; then \
 				nm=$$( basename $$i ); \
 			else \
 				nm="../"$$i; \
 			fi; \
-			./setup $$nm -o "_"$$( basename $$i )"_" --nocompile && sed -i 's/ --nocompile//' "obj__"$$( basename $$i )"_/"{.setup.call,Makefile,env.dat,version.F90} & \
+			./setup $$nm -o "A_"$$( basename $$i ) --nocompile && sed -i 's/ --nocompile//' "obj_A_"$$( basename $$i )"/"{.setup.call,Makefile,env.dat,version.F90} & \
 		fi; \
 	done
