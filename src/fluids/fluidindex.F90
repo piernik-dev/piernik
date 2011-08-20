@@ -79,9 +79,7 @@ module fluidindex
    integer(kind=4), allocatable, dimension(:,:) :: iarr_all_swp !< array (size = flind) of all fluid indexes in the order depending on sweeps direction
 
    integer(kind=4), allocatable, dimension(:) :: iarr_all_mag  !< array (size = nmag) of all magnetic field components
-   integer(kind=4), allocatable, dimension(:) :: iarr_mag_swpx !< array (size = nmag) of all mag. field indexes in the original order (same as iarr_all_mag)
-   integer(kind=4), allocatable, dimension(:) :: iarr_mag_swpy !< array (size = nmag) of all mag. field indexes \a x and \a z components interchanged
-   integer(kind=4), allocatable, dimension(:) :: iarr_mag_swpz !< array (size = nmag) of all mag. field indexes \a x and \a z components interchanged
+   integer(kind=4), allocatable, dimension(:,:) :: iarr_mag_swp !< array (size = nmag) of all mag. field indexes in the order depending on sweeps direction
 
    integer(kind=4) :: i_sg                                     !< index denoting position of the selfgravitating fluid in the row of fluids - should be an iarr_sg !
 
@@ -128,7 +126,7 @@ contains
    subroutine fluid_index
 
 !      use diagnostics,    only: my_allocate
-      use constants,      only: xdim, zdim
+      use constants,      only: xdim, ydim, zdim, ndims
 #ifdef IONIZED
       use initionized,    only: ionized_index
 #endif /* IONIZED */
@@ -174,7 +172,7 @@ contains
 
 ! Allocate index arrays
 #ifdef IONIZED
-      allocate(iarr_mag_swpx(nmag),iarr_mag_swpy(nmag),iarr_mag_swpz(nmag),iarr_all_mag(nmag))
+      allocate(iarr_mag_swp(ndims,nmag),iarr_all_mag(nmag))
 #endif /* IONIZED */
       allocate(iarr_all_swp(xdim:zdim, flind%all))
       allocate(iarr_all_dn(flind%fluids),iarr_all_mx(flind%fluids),iarr_all_my(flind%fluids),iarr_all_mz(flind%fluids))
@@ -197,10 +195,10 @@ contains
 
 #ifdef IONIZED
 ! Compute index arrays for magnetic field
-      iarr_mag_swpx = [ibx,iby,ibz]
-      iarr_mag_swpy = [iby,ibx,ibz]
-      iarr_mag_swpz = [ibz,iby,ibx]
-      iarr_all_mag  = [ibx,iby,ibz]
+      iarr_mag_swp(xdim,:) = [ibx,iby,ibz]
+      iarr_mag_swp(ydim,:) = [iby,ibx,ibz]
+      iarr_mag_swp(zdim,:) = [ibz,iby,ibx]
+      iarr_all_mag         = [ibx,iby,ibz]
 #endif /* IONIZED */
 
 #ifdef IONIZED
@@ -250,9 +248,7 @@ contains
 
       integer :: i
 
-      call my_deallocate(iarr_mag_swpx)
-      call my_deallocate(iarr_mag_swpy)
-      call my_deallocate(iarr_mag_swpz)
+      call my_deallocate(iarr_mag_swp)
       call my_deallocate(iarr_all_swp)
       call my_deallocate(iarr_all_mag)
       call my_deallocate(iarr_all_dn)
