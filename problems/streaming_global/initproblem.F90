@@ -232,9 +232,9 @@ contains
 
          allocate(noise(3,cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
          call random_number(noise)
-         cg%u%arr(flind%dst%imx,:,:,:) = cg%u%arr(flind%dst%imx,:,:,:) +amp_noise -2.0*amp_noise*noise(1,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
-         cg%u%arr(flind%dst%imy,:,:,:) = cg%u%arr(flind%dst%imy,:,:,:) +amp_noise -2.0*amp_noise*noise(2,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
-         cg%u%arr(flind%dst%imz,:,:,:) = cg%u%arr(flind%dst%imz,:,:,:) +amp_noise -2.0*amp_noise*noise(3,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
+         cg%u%arr(flind%dst%imx,:,:,:) = cg%u%arr(flind%dst%imx,:,:,:) +amp_noise*noise(1,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
+         cg%u%arr(flind%dst%imy,:,:,:) = cg%u%arr(flind%dst%imy,:,:,:) +amp_noise*noise(2,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
+         cg%u%arr(flind%dst%imz,:,:,:) = cg%u%arr(flind%dst%imz,:,:,:) +amp_noise*noise(3,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
          deallocate(noise)
 
          cgl => cgl%nxt
@@ -300,7 +300,7 @@ contains
             do i = 1, cg%n_(xdim)
                R = cg%x(i)
 
-               rho = max(rho0*(R0/R)**(1.5),smalld)
+               rho = max(rho0*(R0/R)**(1.75),smalld)   ! bylo 1.5
                cs2 = (cs0*sqrt(R0/R))**2
 
                cg%cs_iso2%arr(i,:,:) = cs2
@@ -310,7 +310,7 @@ contains
                   do k = 1, cg%n_(zdim)
                      zk = cg%z(k)
                      cg%u%arr(fl%idn,i,j,k) = max(cg%dprof(k)/(1.0+eps), smalld)
-                     if (fl%tag == DST) cg%u%arr(fl%idn,i,j,k) = eps * cg%u%arr(flind%neu%idn,i,j,k)
+                     if (fl%tag == DST) cg%u%arr(fl%idn,i,j,k) = max(eps * cg%u%arr(flind%neu%idn,i,j,k), smalld)
 
                   enddo
                enddo
@@ -531,17 +531,16 @@ contains
             endwhere
 
             if (use_inner_orbital_period) then
-               funcR(1,:) = funcR(1,:) * sqrt( newtong*ptmass/cg%x(:)**3 ) / dpi
+               funcR(1,:) = funcR(1,:) * sqrt( newtong*ptmass/cg%x(cg%nb+1)**3 ) / dpi
             else
                funcR(1,:) = funcR(1,:) * dumping_coeff
             endif
-#ifdef DEBUG
             open(212,file="funcR.dat",status="unknown")
+            write(212,*) "# ",sqrt( newtong*ptmass/cg%x(cg%nb+1)**3 ) / dpi
             do j = 1, cg%n_(xdim)
                write(212,*) cg%x(j),funcR(1,j)
             enddo
             close(212)
-#endif /* DEBUG */
             frun = .false.
             funcR(:,:) = spread(funcR(1,:),1,size(iarr_all_dn))
          endif

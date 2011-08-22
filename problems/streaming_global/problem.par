@@ -1,6 +1,6 @@
  $BASE_DOMAIN
-    nxd = 1
-    nyd = 200
+    nxd = 100
+    nyd = 1
     nzd = 200
     nb  = 4
     bnd_xl = 'ref'
@@ -10,12 +10,12 @@
     bnd_zl = 'outd'
     bnd_zr = 'outd'
     geometry = "cylindrical"
-    xmin   = 6.0
-    xmax   = 6.0
+    xmin   = 0.16
+    xmax   = 1.6
     ymin   = 0.0
     ymax   = 6.2831853071795862
-    zmin   =-0.5
-    zmax   = 0.5
+    zmin   =-0.24      ! 1.5 AU
+    zmax   = 0.24      ! 1.5 AU
  /
 
  $MPI_BLOCKS
@@ -23,7 +23,7 @@
  /
 
  $UNITS
-   units_set = "pln"
+   units_set = "wt4"
  /
 
  $RESTART_CONTROL
@@ -33,14 +33,14 @@
  /
 
  $END_CONTROL
-    tend   = 1000.0
+    tend   = 10.0
     nend   = 10000000
  /
 
  $OUTPUT_CONTROL
     problem_name ='kepler'
     run_id  =  'ts2'
-    dt_hdf  = 10.0
+    dt_hdf  = 0.01
     dt_res  = 0.0
     dt_log  = 1.0
     dt_tsl  = 1.0
@@ -53,7 +53,7 @@
 
  $FLUID_NEUTRAL
     gamma_neu  = 1.0
-    cs_iso_neu = 0.25 ! 0.05507   ! 150K for PLN
+    cs_iso_neu = 0.3 ! ~ 307K ~ 1.13 km/s
  /
 
  $FLUID_DUST
@@ -72,7 +72,7 @@
 
  $GRAVITY
     external_gp = "GRAV_PTMASS"
-    ptmass  = 1047.7
+    ptmass  = 10.0    ! 1 Msun
     ptm_x   = 0.0
     ptm_y   = 0.0
     ptm_z   = 0.0
@@ -81,21 +81,22 @@
  /
 
  $PROBLEM_CONTROL
-    use_inner_orbital_period = .true.
+    use_inner_orbital_period = .false.
+    dumping_coeff = 50.0
 
-    rho0    = 1.0 
-    R0      = 1.0
-    cs0     = 0.07
-    r_in    = 2.0
-    r_out   = 9.0
+    rho0    = 0.12    ! 2.92e-8 kg/m^3 @ 1AU
+    R0      = 0.16    ! 1 AU
+    cs0     = 0.3     ! ~ 307K ~ 1.13 km/s
+    r_in    = 0.32    ! 2 AU
+    r_out   = 1.44    ! 9 AU
     f_in    = 10.0
     f_out   = 100.0
-    eps     = 0.2
+    eps     = 0.01
     amp_noise = 1.e-7
 
-    growth_time        = 100.0
-    initial_grain_size = 1.e-6    ! cm
-    final_grain_size   = 50.0     ! cm
+    growth_time        = 1.0e-5     ! 7.86394 yr  
+    initial_grain_size = 1.0e-1      ! cm
+    final_grain_size   = 1.0e-1      ! cm
  /
 
  $PIERNIK_DEBUG
@@ -104,5 +105,5 @@
 
  $INTERACTIONS
    cfl_interact      = 0.8
-   grain_size        = 1.e-6
+   grain_size        = 1.0e-1
  /
