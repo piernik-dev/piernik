@@ -177,8 +177,7 @@ contains
 
       use constants,  only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
       use dataio_pub, only: msg, warn, die
-      use domain,     only: has_dir
-      use grid,       only: D_x, D_y, D_z
+      use domain,     only: has_dir, eff_dim
       use mpisetup,   only: proc, comm, ierr, req, status
       use mpi,        only: MPI_DOUBLE_PRECISION
 
@@ -222,7 +221,7 @@ contains
          fse => this%c_tgt%seg(g)%se
 
          off1(:) = mod(this%off(:), 2_LONG)
-         norm = 1./((1.+D_x)*(1.+D_y)*(1.+D_z))
+         norm = 1./2**eff_dim
          if (this%c_tgt%seg(g)%proc == proc) then
 
             nullify(cse)
