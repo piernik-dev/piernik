@@ -48,10 +48,10 @@ module grid
    public :: total_ncells, cga, D_x, D_y, D_z, D_
 
    integer(kind=8), protected :: total_ncells !< total number of %grid cells
-   integer, protected :: D_x          !< set to 1 when x-direction exists, 0 otherwise. Use to construct dimensionally-safe indices for arrays
+   integer, dimension(ndims), protected :: D_!< set to 1 for existing directions, 0 otherwise. Useful for dimensionally-safe indices for difference operators on arrays,
+   integer, protected :: D_x          !< set to 1 when x-direction exists, 0 otherwise
    integer, protected :: D_y          !< set to 1 when y-direction exists, 0 otherwise.
    integer, protected :: D_z          !< set to 1 when z-direction exists, 0 otherwise.
-   integer, dimension(ndims), protected :: D_
    type(cg_set), target :: cga        !< A container for all grids.
 
 contains
@@ -123,11 +123,17 @@ contains
          cgl => cgl%nxt
       enddo
 
-      D_x = 0; D_y = 0; D_z = 0
-      if (has_dir(xdim)) D_x = 1
-      if (has_dir(ydim)) D_y = 1
-      if (has_dir(zdim)) D_z = 1
-      D_ = [D_x,D_y,D_z]
+      where (has_dir(:))
+         D_(:) = 1
+      elsewhere
+         D_(:) = 0
+      endwhere
+
+      ! shortcuts
+      D_x = D_(xdim)
+      D_y = D_(ydim)
+      D_z = D_(zdim)
+
       total_ncells = product(int(dom%n_d(:), kind=8))
       if (any(total_ncells < dom%n_d(:))) call die("[grid:init_grid] Integer overflow: too many cells")
 
