@@ -47,6 +47,7 @@ contains
 !<
    subroutine timestep_crs(cg)
 
+      use constants,           only: one, half
       use grid_cont,           only: grid_container
       use initcosmicrays,      only: cfl_cr, K_crs_paral, K_crs_perp, use_split
 #ifdef MULTIGRID
@@ -62,17 +63,17 @@ contains
       if (.not.frun) return
 
       if (maxval(K_crs_paral+K_crs_perp) <= 0) then
-         dt_crs = huge(1.0)
+         dt_crs = huge(one)
       else
-         dt_crs = cfl_cr * 0.5/maxval(K_crs_paral+K_crs_perp)
-         if (cg%dxmn < sqrt(huge(1.0))/dt_crs) then
+         dt_crs = cfl_cr * half/maxval(K_crs_paral+K_crs_perp)
+         if (cg%dxmn < sqrt(huge(one))/dt_crs) then
             dt_crs = dt_crs * cg%dxmn**2
 #ifdef MULTIGRID
             diff_dt_crs_orig = dt_crs
             if (.not. (use_split .or. diff_explicit)) dt_crs = dt_crs * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
 #endif /* MULTIGRID */
          else
-            dt_crs = huge(1.0)
+            dt_crs = huge(one)
          endif
       endif
 

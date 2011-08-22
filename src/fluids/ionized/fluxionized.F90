@@ -75,7 +75,7 @@ contains
 
    subroutine flux_ion(fluxi, cfri, uui, n, vx, ps, bb, cs_iso2)
 
-      use constants,  only: small
+      use constants,  only: small, half
       use dataio_pub, only: die
       use func,       only: ekin, emag
       use fluidindex, only: idn, imx, imy, imz, ien, flind, ibx, iby, ibz
@@ -141,7 +141,7 @@ contains
       !  but sometimes may lead to numerical instabilities
       minvx = minval(vx(RNG))
       maxvx = maxval(vx(RNG))
-      amp   = 0.5*(maxvx-minvx)
+      amp   = half*(maxvx-minvx)
 #ifdef ISO
       cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +               p(RNG))/uui(idn,RNG)),small)
 #else /* !ISO */

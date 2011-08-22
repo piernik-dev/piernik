@@ -44,7 +44,7 @@ contains
 #if defined SHEAR && defined FLUID_INTERACTIONS
    subroutine source_terms_y
 
-      use constants,       only: xdim, zdim
+      use constants,       only: xdim, zdim, half, one
       use dataio_pub,      only: die
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind
@@ -60,7 +60,7 @@ contains
       real, dimension(:,:), allocatable   :: epsa
       real, dimension(:,:,:), allocatable :: u1
       integer :: ind,i
-      real, parameter, dimension(2) :: fac = [0.5, 1.0]
+      real, parameter, dimension(2) :: fac = [half, one]
       type(grid_container), pointer :: cg
 
       cg => cga%cg_all(1)

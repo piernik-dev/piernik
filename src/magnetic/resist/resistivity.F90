@@ -187,7 +187,7 @@ contains
 
    subroutine compute_resist
 
-      use constants,  only: small, xdim, ydim, zdim, MINL, MAXL, I_ONE
+      use constants,  only: small, xdim, ydim, zdim, MINL, MAXL, I_ONE, half, oneq
       use dataio_pub, only: die
       use domain,     only: has_dir
       use fluidindex, only: ibx, iby, ibz
@@ -228,21 +228,21 @@ contains
 !--- current_z **2
          eh = dbx - dby
          if (has_dir(zdim)) then
-            wb(:,:,2:cg%n_(zdim)) =                         0.25*(eh(:,:,2:cg%n_(zdim)) + eh(:,:,1:cg%n_(zdim)-1))**2 ; wb(:,:,1) = wb(:,:,2)
+            wb(:,:,2:cg%n_(zdim)) =                         oneq*(eh(:,:,2:cg%n_(zdim)) + eh(:,:,1:cg%n_(zdim)-1))**2 ; wb(:,:,1) = wb(:,:,2)
          else
             wb = eh**2
          endif
 !--- current_x **2
          eh = dby - dbz
          if (has_dir(xdim)) then
-            wb(2:cg%n_(xdim),:,:) = wb(2:cg%n_(xdim),:,:) + 0.25*(eh(2:cg%n_(xdim),:,:) + eh(1:cg%n_(xdim)-1,:,:))**2 ; wb(1,:,:) = wb(2,:,:)
+            wb(2:cg%n_(xdim),:,:) = wb(2:cg%n_(xdim),:,:) + oneq*(eh(2:cg%n_(xdim),:,:) + eh(1:cg%n_(xdim)-1,:,:))**2 ; wb(1,:,:) = wb(2,:,:)
          else
             wb = wb + eh**2
          endif
 !--- current_y **2
          eh = dbz - dbx
          if (has_dir(ydim)) then
-            wb(:,2:cg%n_(ydim),:) = wb(:,2:cg%n_(ydim),:) + 0.25*(eh(:,2:cg%n_(ydim),:) + eh(:,1:cg%n_(ydim)-1,:))**2 ; wb(:,1,:) = wb(:,2,:)
+            wb(:,2:cg%n_(ydim),:) = wb(:,2:cg%n_(ydim),:) + oneq*(eh(:,2:cg%n_(ydim),:) + eh(:,1:cg%n_(ydim)-1,:))**2 ; wb(:,1,:) = wb(:,2,:)
          else
             wb = wb + eh**2
          endif
@@ -281,8 +281,8 @@ contains
       call get_extremum(p, MAXL, cu2max, cg)
 
 #ifndef ISO
-      wb = ( cg%u%arr(flind%ion%ien,:,:,:) - 0.5*( cg%u%arr(flind%ion%imx,:,:,:)**2  + cg%u%arr(flind%ion%imy,:,:,:)**2  + cg%u%arr(flind%ion%imz,:,:,:)**2 ) &
-           / cg%u%arr(flind%ion%idn,:,:,:) - 0.5 * ( cg%b%arr(ibx,:,:,:)**2  +   cg%b%arr(iby,:,:,:)**2  +   cg%b%arr(ibz,:,:,:)**2))/ ( eta%arr * wb+small)
+      wb = ( cg%u%arr(flind%ion%ien,:,:,:) - half*( cg%u%arr(flind%ion%imx,:,:,:)**2  + cg%u%arr(flind%ion%imy,:,:,:)**2  + cg%u%arr(flind%ion%imz,:,:,:)**2 ) &
+           / cg%u%arr(flind%ion%idn,:,:,:) - half*( cg%b%arr(ibx,:,:,:)**2  +   cg%b%arr(iby,:,:,:)**2  +   cg%b%arr(ibz,:,:,:)**2))/ ( eta%arr * wb+small)
       dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
 
       call get_extremum(p, MINL, deimin, cg)
@@ -341,6 +341,7 @@ contains
 
    subroutine tvdd_1d(b1d,eta1d,idi,dt,wcu1d)
 
+      use constants,     only: half
       implicit none
 
       real, dimension(:), pointer, intent(in)    :: eta1d, b1d
@@ -352,10 +353,10 @@ contains
 
       n = size(b1d)
       w(2:n)    = eta1d(2:n) * ( b1d(2:n) - b1d(1:n-1) )*idi ; w(1)  = w(2)
-      b1(1:n-1) = b1d(1:n-1) + 0.5*(w(2:n) - w(1:n-1))*dt*idi; b1(n) = b1(n-1)
+      b1(1:n-1) = b1d(1:n-1) + half*(w(2:n) - w(1:n-1))*dt*idi; b1(n) = b1(n-1)
 
       w(2:n)    = eta1d(2:n) * ( b1(2:n) - b1(1:n-1) )*idi   ; w(1)  = w(2)
-      wp(1:n-1) = 0.5*(w(2:n) - w(1:n-1))                    ; wp(n) = wp(n-1)
+      wp(1:n-1) = half*(w(2:n) - w(1:n-1))                    ; wp(n) = wp(n-1)
       wm(2:n)   = wp(1:n-1)                                  ; wm(1) = wm(2)
 
       call vanleer_limiter(w,wm,wp)
@@ -375,7 +376,7 @@ contains
 
    subroutine diffuseb(ibdir, sdir, etadir, emf, n1, n2)
 
-      use constants,     only: xdim, ydim, zdim, ndims
+      use constants,     only: xdim, ydim, zdim, ndims, half
       use domain,        only: has_dir
       use global,        only: dt
       use grid,          only: cga
@@ -400,18 +401,18 @@ contains
 
 !         select case (etadir)
 !            case (xdim)
-!               eta%arr(1:cg%n_(xdim)-1,:,:) = 0.5*(eta%arr(1:cg%n_(xdim)-1,:,:)+eta%arr(2:cg%n_(xdim),:,:))
+!               eta%arr(1:cg%n_(xdim)-1,:,:) = half*(eta%arr(1:cg%n_(xdim)-1,:,:)+eta%arr(2:cg%n_(xdim),:,:))
 !            case (ydim)
-!               eta%arr(:,1:cg%n_(ydim)-1,:) = 0.5*(eta%arr(:,1:cg%n_(ydim)-1,:)+eta%arr(:,2:cg%n_(ydim),:))
+!               eta%arr(:,1:cg%n_(ydim)-1,:) = half*(eta%arr(:,1:cg%n_(ydim)-1,:)+eta%arr(:,2:cg%n_(ydim),:))
 !            case (zdim)
-!               eta%arr(:,:,1:cg%n_(zdim)-1) = 0.5*(eta%arr(:,:,1:cg%n_(zdim)-1)+eta%arr(:,:,2:cg%n_(zdim)))
+!               eta%arr(:,:,1:cg%n_(zdim)-1) = half*(eta%arr(:,:,1:cg%n_(zdim)-1)+eta%arr(:,:,2:cg%n_(zdim)))
 !         end select
 
 ! following solution seems to be a bit faster than former select case
          idmh = cg%n_ - idm(:,etadir)
          idml = 1 + idm(:,etadir)
          eta%arr(:idmh(xdim), :idmh(ydim), :idmh(zdim)) = &
-     &      0.5*(eta%arr(:idmh(xdim), :idmh(ydim), :idmh(zdim)) + eta%arr(idml(xdim):cg%n_(xdim), idml(ydim):cg%n_(ydim), idml(zdim):cg%n_(zdim)) )
+     &      half*(eta%arr(:idmh(xdim), :idmh(ydim), :idmh(zdim)) + eta%arr(idml(xdim):cg%n_(xdim), idml(ydim):cg%n_(ydim), idml(zdim):cg%n_(zdim)) )
 
          do i1 = 1, ubound(wcu%arr,n1)
             do i2 = 1, ubound(wcu%arr,n2)

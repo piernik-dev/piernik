@@ -526,7 +526,7 @@ contains
 !<
    subroutine poisson_xyzp(den, pot, cg)
 
-      use constants, only: dpi
+      use constants, only: dpi, one, zero, half
       use units,     only: fpiG
       use grid_cont, only: grid_container
 
@@ -567,7 +567,7 @@ contains
       allocate(ky(ny))
       allocate(kz(nz))
 
-      norm = 1.0 / real( nx * ny * nz )
+      norm = one / real( nx * ny * nz )
 
 !> \deprecated BEWARE: the plans can probably be reused and it might be more efficient to create them with FFTW_MEASURE
 ! create plan for the forward FFT
@@ -590,8 +590,8 @@ contains
 !    kx(:) = kx(:) * (7.-cos(dpi/nx*[( j,j=0,np-1 )]))/6.
 !    ky(:) = ky(:) * (7.-cos(dpi/ny*[( j,j=0,ny-1 )]))/6.
 !    kz(:) = kz(:) * (7.-cos(dpi/nz*[( j,j=0,nz-1 )]))/6.
-      forall (i=1:np,j=1:ny,k=1:nz, (kx(i)+ky(j)+kz(k) - 3.0) /= 0.0)
-         fft(i,j,k) = 0.5 * ctmp(i,j,k) / (kx(i)+ky(j)+kz(k) - 3.0)
+      forall (i=1:np,j=1:ny,k=1:nz, (kx(i)+ky(j)+kz(k) - 3.0) /= zero)
+         fft(i,j,k) = half * ctmp(i,j,k) / (kx(i)+ky(j)+kz(k) - 3.0)
       endforall
 
 ! create plan for the inverse FFT3D

@@ -78,7 +78,7 @@ contains
 !
    subroutine flux_neu(fluxn, cfrn, uun, n, vx, p, bb, cs_iso2)
 
-      use constants,  only: small
+      use constants,  only: small, half
       use func,       only: ekin
       use fluidindex, only: idn, imx, imy, imz, ien, flind
       use global,     only: cfr_smooth, smallp
@@ -131,7 +131,7 @@ contains
       !  but sometimes may lead to numerical instabilities
       minvx = minval(vx(RNG))
       maxvx = maxval(vx(RNG))
-      amp   = 0.5*(maxvx-minvx)
+      amp   = half*(maxvx-minvx)
       !    c_fr  = 0.0
 #ifdef ISO
       cfrn(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(              p(RNG))/uun(idn,RNG)),small)

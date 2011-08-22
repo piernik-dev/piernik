@@ -62,10 +62,11 @@ contains
 
    real function timestep_ion(cg) result(dt)
 
+      use constants,     only: zero, two, half
+      use fluidindex,    only: flind, ibx, iby, ibz
       use fluidtypes,    only: component_fluid
       use grid,          only: D_x, D_y, D_z
       use grid_cont,     only: grid_container
-      use fluidindex,    only: flind, ibx, iby, ibz
       use timestepfuncs, only: compute_c_max, compute_dt
 
       implicit none
@@ -95,21 +96,21 @@ contains
                by = (cg%b%arr(iby,i,j,k) + cg%b%arr(iby, i,     j+D_y, k    ))/(1.+D_y)
                bz = (cg%b%arr(ibz,i,j,k) + cg%b%arr(ibz, i,     j,     k+D_z))/(1.+D_z)
 
-               pmag = 0.5*(bx*bx + by*by + bz*bz)
+               pmag = half*(bx*bx + by*by + bz*bz)
 #else /* !MAGNETIC */
                ! all_mag_boundaries has not been called so we cannot trust cg%b%arr(ibx, cg%ie+D_x:), cg%b%arr(iby,:cg%je+D_y and cg%b%arr(ibz,:,:, cg%ke+D_z
-               pmag = 0.
+               pmag = zero
 #endif /* !MAGNETIC */
 
 #ifdef ISO
                p  = cg%cs_iso2%arr(i,j,k)*cg%u%arr(fl%idn,i,j,k)
                ps = p + pmag
-               cs = sqrt(abs(  (2.*pmag+p)/cg%u%arr(fl%idn,i,j,k)) )
+               cs = sqrt(abs(  (two*pmag+p)/cg%u%arr(fl%idn,i,j,k)) )
 #else /* !ISO */
                ps = (cg%u%arr(fl%ien,i,j,k)-sum(cg%u%arr(fl%imx:fl%imz,i,j,k)**2,1) &
-                     /cg%u%arr(fl%idn,i,j,k)*0.5)*(fl%gam_1)+(2.-fl%gam)*pmag
+                     /cg%u%arr(fl%idn,i,j,k)*half)*(fl%gam_1)+(two-fl%gam)*pmag
                p  = ps - pmag
-               cs = sqrt(abs(  (2.*pmag+fl%gam*p)/cg%u%arr(fl%idn,i,j,k)) )
+               cs = sqrt(abs(  (two*pmag+fl%gam*p)/cg%u%arr(fl%idn,i,j,k)) )
 #endif /* !ISO */
                call compute_c_max(fl, cs, i, j, k, cx, cy, cz, c_max, cg)
             enddo

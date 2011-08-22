@@ -137,6 +137,7 @@ contains
    end function calculate_slope_vanleer
 !---------------------------------------------------------------------------
    function calculate_slope_moncen(u) result(dq)
+      use constants,     only: half, one
       implicit none
       real, dimension(:,:), intent(in)     :: u
       real, dimension(size(u,1),size(u,2)) :: dlft,drgt,dcen,dlim, dq
@@ -144,14 +145,14 @@ contains
 
       real :: sl
 
-      sl = 1.0
+      sl = one
 
       n = size(u,2)
 
       dlft(:,2:n)   = sl*(u(:,2:n)   - u(:,1:n-1)) ; dlft(:,1) = dlft(:,2)
       drgt(:,1:n-1) = dlft(:,2:n) ;                   drgt(:,n) = drgt(:,n-1)
 
-      dcen = 0.5*(dlft+drgt)/sl
+      dcen = half*(dlft+drgt)/sl
 
       where (dlft*drgt<=0.0)
          dlim = 0.0
@@ -163,6 +164,7 @@ contains
    end function calculate_slope_moncen
 !---------------------------------------------------------------------------
    subroutine sweep1d_mh(u,b,cs2,dtodx)
+      use constants,    only: half
       use fluidtypes,   only: component_fluid
       use fluidindex,   only: flind
       implicit none
@@ -181,13 +183,13 @@ contains
       nx = size(u,2)
 
       du = calculate_slope_vanleer(u)
-      ul = u - 0.5*du   ! (14.33)
-      ur = u + 0.5*du
+      ul = u - half*du   ! (14.33)
+      ur = u + half*du
 
       flux = compute_flux(ul,b,cs2) - compute_flux(ur,b,cs2)    ! interpolate b?
 
-      u_l = ur + 0.5*dtodx*flux   ! (14.34) + (14.35)
-      u_r(:,1:nx-1) = ul(:,2:nx) + 0.5*dtodx*flux(:,2:nx); u_r(:,nx) = u_r(:,nx-1)
+      u_l = ur + half*dtodx*flux   ! (14.34) + (14.35)
+      u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flux(:,2:nx); u_r(:,nx) = u_r(:,nx-1)
 
       ql = utoq(u_l,b)
       qr = utoq(u_r,b)
@@ -207,7 +209,7 @@ contains
    end subroutine sweep1d_mh
 !---------------------------------------------------------------------------
    function utoq(u,b) result(q)
-
+      use constants,    only: half, two
       use fluidtypes,   only: component_fluid
       use fluidindex,   only: flind
 
@@ -228,13 +230,14 @@ contains
          q(fl%imz,:) = u(fl%imz,:)/u(fl%idn,:)
 
          if (fl%has_energy) then
-            q(fl%ien,:) = (u(fl%ien,:) - 0.5*( u(fl%imx,:)**2 + u(fl%imy,:)**2 + u(fl%imz,:)**2) / u(fl%idn,:)) * fl%gam_1
-            if (fl%is_magnetized) q(fl%ien,:) = q(fl%ien,:) + (2.0-fl%gam)*0.5*sum(b(:,:)**2,dim=1)
+            q(fl%ien,:) = (u(fl%ien,:) - half*( u(fl%imx,:)**2 + u(fl%imy,:)**2 + u(fl%imz,:)**2) / u(fl%idn,:)) * fl%gam_1
+            if (fl%is_magnetized) q(fl%ien,:) = q(fl%ien,:) + (two-fl%gam)*half*sum(b(:,:)**2,dim=1)
          endif
       enddo
    end function utoq
 !---------------------------------------------------------------------------
    function compute_flux(u,b,cs2) result(f)
+      use constants,    only: half, two
       use fluidindex,   only: flind, ibx, iby, ibz
       use fluidtypes,   only: component_fluid
       implicit none
@@ -251,8 +254,8 @@ contains
 
          vx = u(fl%imx,:) / u(fl%idn,:)
          if (fl%has_energy) then
-            p = (u(fl%ien,:) - 0.5*( u(fl%imx,:)**2 + u(fl%imy,:)**2 + u(fl%imz,:)**2) / u(fl%idn,:)) * flind%neu%gam_1
-            if (fl%is_magnetized) p = p + (2.0-fl%gam)*0.5*sum(b**2,dim=1)
+            p = (u(fl%ien,:) - half*( u(fl%imx,:)**2 + u(fl%imy,:)**2 + u(fl%imz,:)**2) / u(fl%idn,:)) * flind%neu%gam_1
+            if (fl%is_magnetized) p = p + (two-fl%gam)*half*sum(b**2,dim=1)
          else
             p = cs2*u(fl%idn,:)
          endif
@@ -279,6 +282,7 @@ contains
 !---------------------------------------------------------------------------
    subroutine riemann_hllc(qleft,qright,qgdnv,fgdnv, n, gamma, cs2)
 
+      use constants,  only: zero, one, half
       use global,     only: smalld
       use fluidindex, only: idn, imx, imy, imz, ien
 
@@ -315,7 +319,7 @@ contains
       smallp = 1.e-7   ! BEWARE
 
 #ifndef ISO
-      entho = 1.0/(gamma-1.0)
+      entho = one/(gamma-one)
 #else
       entho = 1.e25
 #endif
@@ -325,11 +329,11 @@ contains
 #ifndef ISO
       Pl = max(qleft (ien,:),rl(:)*smallp)
 
-      ekinl = 0.5 * rl * ( ul*ul + qleft(imy,:)**2 + qleft(imz,:)**2 )
+      ekinl = half * rl * ( ul*ul + qleft(imy,:)**2 + qleft(imz,:)**2 )
       etotl = Pl*entho + ekinl
 #else
       Pl = cs2 * rl
-      etotl = 0d0
+      etotl = zero
 #endif
       Ptotl = Pl
 
@@ -339,16 +343,16 @@ contains
 #ifndef ISO
       Pr = max(qright(ien,:), rr*smallp)
 
-      ekinr = 0.5 * rr * ( ur*ur + qright(imy,:)**2 + qright(imz,:)**2 )
+      ekinr = half * rr * ( ur*ur + qright(imy,:)**2 + qright(imz,:)**2 )
       etotr = Pr*entho + ekinr
 #else
       PR = cs2 * rr
-      etotr = 0d0
+      etotr = zero
 #endif
       Ptotr = Pr
 
       ! Compute average velocity
-      qgdnv(imx,:) = 0.5*( qleft(imx,:) + qright(imx,:) )
+      qgdnv(imx,:) = half*( qleft(imx,:) + qright(imx,:) )
 
       ! Find the largest eigenvalues in the normal direction to the interface
       cfastl=sqrt(max(gamma*Pl/rl,smallc**2))
@@ -371,28 +375,28 @@ contains
 #ifndef ISO
       etotstarl=((SL-ul)*etotl-Ptotl*ul+Ptotstar*ustar)/(SL-ustar)
 #else
-      etotstarl=0d0
+      etotstarl=zero
 #endif
       ! Right star region variables
       rstarr=rr*(SR-ur)/(SR-ustar)
 #ifndef ISO
       etotstarr=((SR-ur)*etotr-Ptotr*ur+Ptotstar*ustar)/(SR-ustar)
 #else
-      etotstarr=0d0
+      etotstarr=zero
 #endif
 
       ! Sample the solution at x/t=0
-      where (SL>0d0)
+      where (SL>zero)
         ro=rl
         uo=ul
         Ptoto=Ptotl
         etoto=etotl
-      elsewhere (ustar>0d0)
+      elsewhere (ustar>zero)
         ro=rstarl
         uo=ustar
         Ptoto=Ptotstar
         etoto=etotstarl
-      elsewhere (SR>0d0)
+      elsewhere (SR>zero)
         ro=rstarr
         uo=ustar
         Ptoto=Ptotstar
@@ -416,14 +420,14 @@ contains
       ! BEWARE the version with WHERE had huge, unexplained memory leaks when compiled with some Intel compilers
       ! The __IFORT__ macro has to be defined manually, e.g. in appropriate compiler.in file
 #ifndef __IFORT__
-          where (fgdnv(idn,:)>0.0)
+          where (fgdnv(idn,:)>zero)
              fgdnv(ivar,:) = fgdnv(idn,:)*qleft (ivar,:)
           elsewhere
              fgdnv(ivar,:) = fgdnv(idn,:)*qright(ivar,:)
           endwhere
 #else
           do i = lbound(fgdnv(:,:),2), ubound(fgdnv(:,:),2)
-             if (fgdnv(idn,i)>0.0) then
+             if (fgdnv(idn,i)>zero) then
                 fgdnv(ivar,i) = fgdnv(idn,i)*qleft (ivar,i)
              else
                 fgdnv(ivar,i) = fgdnv(idn,i)*qright(ivar,i)

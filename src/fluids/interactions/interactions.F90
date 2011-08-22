@@ -250,6 +250,7 @@ contains
       ! Balsara Dinshaw S., Tilley David A., Rettig Terrence, Brittain Sean D. MNRAS (2009) 397: 24.
       ! Tilley, David A., Balsara, Dinshaw S. MNRAS (2008) 389: 1058.
 
+      use constants,  only: half, one, zero
       use fluidindex, only: iarr_all_dn, iarr_all_mx, flind
       use global,     only: dt
 
@@ -270,11 +271,11 @@ contains
       !  3) what if not isothermal?
       !  4) remove hardcoded integers
 
-      if (epstein_factor(flind%neu%pos) <= 0.0) return
-      drag(:) = dt*0.5 / (grain_size * grain_dens) * sqrt( cs_iso2(:) + abs( vx(1,:) - vx(2,:) )**2)
+      if (epstein_factor(flind%neu%pos) <= zero) return
+      drag(:) = dt*half / (grain_size * grain_dens) * sqrt( cs_iso2(:) + abs( vx(1,:) - vx(2,:) )**2)
 
-      delta(:) = 1.0 + drag(:) * (u1(iarr_all_dn(1),:) + u1(iarr_all_dn(2),:))
-      delta(:) = 1./delta(:)
+      delta(:) = one + drag(:) * (u1(iarr_all_dn(1),:) + u1(iarr_all_dn(2),:))
+      delta(:) = one/delta(:)
 
       if (istep == 1) then
          vprim(1,:) =  delta(:)*( (1./u1(iarr_all_dn(1),:) + drag(:))*u1(iarr_all_mx(1),:) + drag(:)*u1(iarr_all_mx(2),:) )

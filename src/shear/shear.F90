@@ -268,7 +268,7 @@ contains
 !--------------------------------------------------------------------------------------------------
    function unshear(qty,x,inv)
 
-      use constants,  only: xdim
+      use constants,  only: xdim, half
       use dataio_pub, only: die
       use domain,     only: dom
       use grid,       only: cga
@@ -318,8 +318,8 @@ contains
          !      temp(nb+nyb+1:nyb+2*nb,:) = temp(nb+1:2*nb,:)
 
          temp(:,:) = (1.0+ddl)*(1.0-ddl) * temp(:,:) &
-              - 0.5*(ddl)*(1.0-ddl) * cshift(temp(:,:),shift= sg,dim=1) &
-              + 0.5*(ddl)*(1.0+ddl) * cshift(temp(:,:),shift=-sg,dim=1)
+              - half*(ddl)*(1.0-ddl) * cshift(temp(:,:),shift= sg,dim=1) &
+              + half*(ddl)*(1.0+ddl) * cshift(temp(:,:),shift=-sg,dim=1)
 
          unshear(i, cg%js:cg%je,:) = temp(cg%je+1:cg%nb+2*cg%nyb,:)
 

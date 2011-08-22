@@ -417,6 +417,7 @@ contains
 
    subroutine sum_potential
 
+      use constants, only: one, half
       use global,    only: dt, dtm
       use grid,      only: cga
       use grid_cont, only: cg_list_element, grid_container
@@ -437,8 +438,8 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 #ifdef SELF_GRAV
-         cg%gpot%arr  = cg%gp%arr + (1.+h)    *cg%sgp%arr -     h*cg%sgpm%arr
-         cg%hgpot%arr = cg%gp%arr + (1.+0.5*h)*cg%sgp%arr - 0.5*h*cg%sgpm%arr
+         cg%gpot%arr  = cg%gp%arr + (one+h)     *cg%sgp%arr -      h*cg%sgpm%arr
+         cg%hgpot%arr = cg%gp%arr + (one+half*h)*cg%sgp%arr - half*h*cg%sgpm%arr
 #else /* !SELF_GRAV */
          !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
          cg%gpot%arr  = cg%gp%arr
@@ -515,7 +516,8 @@ contains
 
    subroutine grav_linear(gp, ax, flatten)
 
-      use types, only: axes
+      use constants, only: half
+      use types,     only: axes
 
       implicit none
 
@@ -527,7 +529,7 @@ contains
       do i = 1, ubound(gp,1)
          do j = 1, ubound(gp,2)
             do k = 1, ubound(gp,3)
-               gp(i,j,k) = -0.5*(g_dir(1)*ax%x(i)**2 + g_dir(2)*ax%y(j)**2 + g_dir(3)*ax%z(k)**2)
+               gp(i,j,k) = -half*(g_dir(1)*ax%x(i)**2 + g_dir(2)*ax%y(j)**2 + g_dir(3)*ax%z(k)**2)
             enddo
          enddo
       enddo
@@ -631,9 +633,9 @@ contains
 
    subroutine grav_roche(gp, ax, flatten)
 
-      use units,     only: newtong
+      use constants, only: ydim, zdim, half
       use types,     only: axes
-      use constants, only: ydim, zdim
+      use units,     only: newtong
 
       implicit none
 
@@ -655,7 +657,7 @@ contains
             yz2 = ax%y(j)**2 + z2
             gp(:,j,k) =  - GM1 / sqrt((ax%x(:) - ptm_x)**2  + yz2 + r_smooth2) &
                  &       - GM2 / sqrt((ax%x(:) - ptm2_x)**2 + yz2 + r_smooth2) &
-                 &       - 0.5 * Omega**2 * ((ax%x(:) - cmass_x)**2 + yz2)
+                 &       - half * Omega**2 * ((ax%x(:) - cmass_x)**2 + yz2)
          enddo
       enddo
 
@@ -665,8 +667,9 @@ contains
 
    subroutine grav_ptmass_stiff(gp, ax, flatten)
 
-      use units,  only: newtong
-      use types,      only: axes
+      use constants, only: half
+      use types,     only: axes
+      use units,     only: newtong
 
       implicit none
 
@@ -680,7 +683,7 @@ contains
 
       r_smooth2 = r_smooth**2
       gm =  - newtong * ptmass
-      gmr = 0.5 * gm / r_smooth
+      gmr = half * gm / r_smooth
 
       do k = 1, ubound(gp,3)
          z2 = (ax%z(k) - ptm_z)**2
@@ -818,8 +821,8 @@ contains
 !<
    subroutine grav_pot2accel(sweep, i1, i2, n, grav, istep, cg)
 
+      use constants, only: xdim, ydim, zdim, half
       use grid_cont, only: grid_container
-      use constants, only: xdim, ydim, zdim
 
       implicit none
 
@@ -860,21 +863,21 @@ contains
       if (istep==1) then
          select case (sweep)
             case (xdim)
-               grav(2:n-1) = 0.5*(cg%hgpot%arr(1:n-2,i1,i2) - cg%hgpot%arr(3:n,i1,i2))/cg%dl(xdim)
+               grav(2:n-1) = half*(cg%hgpot%arr(1:n-2,i1,i2) - cg%hgpot%arr(3:n,i1,i2))/cg%dl(xdim)
             case (ydim)
-               grav(2:n-1) = 0.5*(cg%hgpot%arr(i2,1:n-2,i1) - cg%hgpot%arr(i2,3:n,i1))/cg%dl(ydim)
+               grav(2:n-1) = half*(cg%hgpot%arr(i2,1:n-2,i1) - cg%hgpot%arr(i2,3:n,i1))/cg%dl(ydim)
             case (zdim)
-               grav(2:n-1) = 0.5*(cg%hgpot%arr(i1,i2,1:n-2) - cg%hgpot%arr(i1,i2,3:n))/cg%dl(zdim)
+               grav(2:n-1) = half*(cg%hgpot%arr(i1,i2,1:n-2) - cg%hgpot%arr(i1,i2,3:n))/cg%dl(zdim)
          end select
 
       else
          select case (sweep)
             case (xdim)
-               grav(2:n-1) = 0.5*(cg%gpot%arr(1:n-2,i1,i2) - cg%gpot%arr(3:n,i1,i2))/cg%dl(xdim)
+               grav(2:n-1) = half*(cg%gpot%arr(1:n-2,i1,i2) - cg%gpot%arr(3:n,i1,i2))/cg%dl(xdim)
             case (ydim)
-               grav(2:n-1) = 0.5*(cg%gpot%arr(i2,1:n-2,i1) - cg%gpot%arr(i2,3:n,i1))/cg%dl(ydim)
+               grav(2:n-1) = half*(cg%gpot%arr(i2,1:n-2,i1) - cg%gpot%arr(i2,3:n,i1))/cg%dl(ydim)
             case (zdim)
-               grav(2:n-1) = 0.5*(cg%gpot%arr(i1,i2,1:n-2) - cg%gpot%arr(i1,i2,3:n))/cg%dl(zdim)
+               grav(2:n-1) = half*(cg%gpot%arr(i1,i2,1:n-2) - cg%gpot%arr(i1,i2,3:n))/cg%dl(zdim)
          end select
       endif
 

@@ -241,10 +241,11 @@ contains
    end function L2norm
 
    elemental real function emag(bx,by,bz)
+      use constants,  only: half
       implicit none
       real, intent(in) :: bx, by, bz
 
-      emag = 0.5*(bx**2 + by**2 + bz**2)
+      emag = half*(bx**2 + by**2 + bz**2)
 
    end function emag
 

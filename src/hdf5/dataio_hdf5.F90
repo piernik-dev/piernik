@@ -257,7 +257,7 @@ contains
 !<
    subroutine common_plt_hdf5(var, ij, xn, tab, ierrh, cg)
 
-      use constants,  only: varlen, xdim, ydim, zdim
+      use constants,  only: varlen, xdim, ydim, zdim, half
       use grid_cont,  only: grid_container
       use fluidindex, only: flind, ibx
       use fluidtypes, only: component_fluid
@@ -306,7 +306,7 @@ contains
             tab(:,:) = reshape(cg%u%arr(fl_dni%imx + i_xyz, is:ie, js:je, ks:ke) / cg%u%arr(fl_dni%idn, is:ie, js:je, ks:ke), shape(tab))
          case ("enen", "enei")
 #ifdef ISO
-            tab(:,:) = reshape(0.5 * ( cg%u%arr(fl_dni%imx, is:ie, js:je, ks:ke)**2 + &
+            tab(:,:) = reshape(half * ( cg%u%arr(fl_dni%imx, is:ie, js:je, ks:ke)**2 + &
                  &                     cg%u%arr(fl_dni%imy, is:ie, js:je, ks:ke)**2 + &
                  &                     cg%u%arr(fl_dni%imz, is:ie, js:je, ks:ke)**2 ) / &
                  &                     cg%u%arr(fl_dni%idn, is:ie, js:je, ks:ke), shape(tab))
@@ -322,7 +322,7 @@ contains
             ! BEWARE: Why there is only one case here?
             if (ij==zdim) then
                tab(:,:) = real( cg%u%arr(flind%neu%ien, is:ie, js:je, xn) - &
-                    0.5 *( cg%u%arr(flind%neu%imx, is:ie, js:je, xn)**2 + &
+                    half *( cg%u%arr(flind%neu%imx, is:ie, js:je, xn)**2 + &
                     &      cg%u%arr(flind%neu%imy, is:ie, js:je, xn)**2 + &
                     &      cg%u%arr(flind%neu%imz, is:ie, js:je, xn)**2 ) / cg%u%arr(flind%neu%idn, is:ie, js:je, xn), kind=4)*(flind%neu%gam_1)
             endif
@@ -349,7 +349,7 @@ contains
 !<
    subroutine common_vars_hdf5(var, tab, ierrh, cg)
 
-      use constants,  only: varlen
+      use constants,  only: varlen, half
       use fluidindex, only: flind, ibx, iby, ibz
       use fluidtypes, only: component_fluid
       use grid_cont,  only: grid_container
@@ -385,7 +385,7 @@ contains
             tab(:,:,:) = real(cg%u%arr(fl_dni%imx + i_xyz, RNG) / cg%u%arr(fl_dni%idn, RNG), kind=4)
          case ("enen", "enei")
 #ifdef ISO
-            tab(:,:,:) = real(0.5 *( cg%u%arr(fl_dni%imx, RNG)**2 + &
+            tab(:,:,:) = real(half *( cg%u%arr(fl_dni%imx, RNG)**2 + &
                  &                   cg%u%arr(fl_dni%imy, RNG)**2 + &
                  &                   cg%u%arr(fl_dni%imz, RNG)**2 ) / cg%u%arr(fl_dni%idn, RNG), kind=4)
 #else /* !ISO */
@@ -394,7 +394,7 @@ contains
 #ifdef NEUTRAL
          case ("pren")
 #ifndef ISO
-            tab(:,:,:) = real( cg%u%arr(flind%neu%ien, RNG) - 0.5 * ( &
+            tab(:,:,:) = real( cg%u%arr(flind%neu%ien, RNG) - half * ( &
                  &             cg%u%arr(flind%neu%imx, RNG)**2 + &
                  &             cg%u%arr(flind%neu%imy, RNG)**2 + &
                  &             cg%u%arr(flind%neu%imz, RNG)**2 ) / cg%u%arr(flind%neu%idn, RNG), kind=4) * real(flind%neu%gam_1, kind=4)
@@ -402,11 +402,11 @@ contains
 #endif /* NEUTRAL */
          case ("prei")
 #ifndef ISO
-            tab(:,:,:) = real( cg%u%arr(flind%ion%ien, RNG) - 0.5 *( &
+            tab(:,:,:) = real( cg%u%arr(flind%ion%ien, RNG) - half *( &
                  &             cg%u%arr(flind%ion%imx, RNG)**2 + &
                  &             cg%u%arr(flind%ion%imy, RNG)**2 + &
                  &             cg%u%arr(flind%ion%imz, RNG)**2 ) / cg%u%arr(flind%ion%idn, RNG), kind=4) * real(flind%ion%gam_1, kind=4) - &
-                 &       real( 0.5*(flind%ion%gam_1)*(cg%b%arr(ibx, RNG)**2 + cg%b%arr(iby, RNG)**2 + cg%b%arr(ibz, RNG)**2), kind=4)
+                 &       real( half*(flind%ion%gam_1)*(cg%b%arr(ibx, RNG)**2 + cg%b%arr(iby, RNG)**2 + cg%b%arr(ibz, RNG)**2), kind=4)
 #endif /* !ISO */
          case ("magx", "magy", "magz")
             tab(:,:,:) = real(cg%b%arr(ibx + i_xyz, RNG), kind=4)

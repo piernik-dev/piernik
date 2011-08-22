@@ -68,7 +68,7 @@ contains
 
    subroutine div_v(ifluid)
 
-      use constants,   only: xdim, ydim, zdim
+      use constants,   only: xdim, ydim, zdim, half
       use dataio_pub,  only: die
       use diagnostics, only: ma3d, my_allocate
       use domain,      only: has_dir
@@ -109,7 +109,7 @@ contains
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                vx = cg%u%arr(imxf,:,j,k) / cg%u%arr(idnf,:,j,k)
-               divvel(2:cg%n_(xdim)-1,j,k) = ( vx(3:cg%n_(xdim)) - vx(1:cg%n_(xdim)-2) )  * (0.5*cg%idx)
+               divvel(2:cg%n_(xdim)-1,j,k) = ( vx(3:cg%n_(xdim)) - vx(1:cg%n_(xdim)-2) )  * (half*cg%idx)
             enddo
          enddo
          divvel(1,:,:) = divvel(2,:,:); divvel(cg%n_(xdim),:,:) = divvel(cg%n_(xdim)-1,:,:) ! for sanity
@@ -119,7 +119,7 @@ contains
          do k = 1, cg%n_(zdim)
             do i = 1, cg%n_(xdim)
                vy = cg%u%arr(imyf,i,:,k) / cg%u%arr(idnf,i,:,k)
-               divvel(i,2:cg%n_(ydim)-1,k) = divvel(i,2:cg%n_(ydim)-1,k)+( vy(3:cg%n_(ydim)) - vy(1:cg%n_(ydim)-2) )  * (0.5*cg%idy)
+               divvel(i,2:cg%n_(ydim)-1,k) = divvel(i,2:cg%n_(ydim)-1,k)+( vy(3:cg%n_(ydim)) - vy(1:cg%n_(ydim)-2) )  * (half*cg%idy)
             enddo
          enddo
          divvel(:,1,:) = divvel(:,2,:); divvel(:, cg%n_(ydim),:) = divvel(:, cg%n_(ydim)-1,:) ! for sanity
@@ -129,7 +129,7 @@ contains
          do j = 1, cg%n_(ydim)
             do i = 1, cg%n_(xdim)
                vz = cg%u%arr(imzf,i,j,:) / cg%u%arr(idnf,i,j,:)
-               divvel(i,j,2:cg%n_(zdim)-1) = divvel(i,j,2:cg%n_(zdim)-1)+( vz(3:cg%n_(zdim)) - vz(1:cg%n_(zdim)-2) )  * (0.5*cg%idz)
+               divvel(i,j,2:cg%n_(zdim)-1) = divvel(i,j,2:cg%n_(zdim)-1)+( vz(3:cg%n_(zdim)) - vz(1:cg%n_(zdim)-2) )  * (half*cg%idz)
             enddo
          enddo
          divvel(:,:,1) = divvel(:,:,2); divvel(:,:, cg%n_(zdim)) = divvel(:,:, cg%n_(zdim)-1) ! for sanity

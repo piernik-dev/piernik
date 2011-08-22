@@ -76,7 +76,7 @@ contains
 
    subroutine bnd_b(dir)
 
-      use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
+      use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, half, one, &
            &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub, only: msg, warn, die
       use domain,     only: cdd, is_mpi_noncart
@@ -135,9 +135,9 @@ contains
 !
 ! remapujemy  - interpolacja kwadratowa
 !
-               send_left (:,:,:,:)  = (1.+eps)*(1.-eps) * send_left (:,:,:,:) &
-                    &                 -0.5*eps*(1.-eps) * cshift(send_left (:,:,:,:),shift=-1,dim=3) &
-                    &                 +0.5*eps*(1.+eps) * cshift(send_left (:,:,:,:),shift= 1,dim=3)
+               send_left (:,:,:,:)  = (one+eps)*(one-eps) * send_left (:,:,:,:) &
+                    &                 -half*eps*(one-eps) * cshift(send_left (:,:,:,:),shift=-1,dim=3) &
+                    &                 +half*eps*(one+eps) * cshift(send_left (:,:,:,:),shift= 1,dim=3)
             endif ! (cg%bnd(xdim, LO) == BND_SHE)
 
             if (cg%bnd(xdim, HI) == BND_SHE) then
@@ -150,9 +150,9 @@ contains
 !
 ! remapujemy - interpolacja kwadratowa
 !
-               send_right (:,:,:,:) = (1.+eps)*(1.-eps) * send_right (:,:,:,:) &
-                    &                 -0.5*eps*(1.-eps) * cshift(send_right (:,:,:,:),shift= 1,dim=3) &
-                    &                 +0.5*eps*(1.+eps) * cshift(send_right (:,:,:,:),shift=-1,dim=3)
+               send_right (:,:,:,:) = (one+eps)*(one-eps) * send_right (:,:,:,:) &
+                    &                 -half*eps*(one-eps) * cshift(send_right (:,:,:,:),shift= 1,dim=3) &
+                    &                 +half*eps*(one+eps) * cshift(send_right (:,:,:,:),shift=-1,dim=3)
             endif ! (cg%bnd(xdim, HI) == BND_SHE)
 !
 ! wysylamy na drugi brzeg

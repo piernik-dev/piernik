@@ -325,7 +325,7 @@ contains
 
    subroutine set_axis(d, a0, al, ar, ia, cg, dom)
 
-      use constants, only: LO, HI
+      use constants, only: LO, HI, half, one, zero
       use domain,    only: has_dir, domain_container
 
       implicit none
@@ -338,18 +338,18 @@ contains
       integer :: i
 
       if (has_dir(d)) then
-         a0(:) = dom%edge(d, LO) + cg%dl(d) * ([(i, i=1, cg%n_(d))] - 0.5 - cg%nb + cg%off(d))
+         a0(:) = dom%edge(d, LO) + cg%dl(d) * ([(i, i=1, cg%n_(d))] - half - cg%nb + cg%off(d))
       else
-         a0(:) = 0.5*(cg%fbnd(d, LO) + cg%fbnd(d, HI))
+         a0(:) = half*(cg%fbnd(d, LO) + cg%fbnd(d, HI))
       endif
 
-      al(:) = a0(:) - 0.5*cg%dl(d)
-      ar(:) = a0(:) + 0.5*cg%dl(d)
+      al(:) = a0(:) - half*cg%dl(d)
+      ar(:) = a0(:) + half*cg%dl(d)
 
-      where ( a0(:) /= 0.0 )
-         ia(:) = 1./a0(:)
+      where ( a0(:) /= zero )
+         ia(:) = one/a0(:)
       elsewhere
-         ia(:) = 0.
+         ia(:) = zero
       endwhere
 
    end subroutine set_axis

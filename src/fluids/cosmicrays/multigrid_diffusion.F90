@@ -106,7 +106,7 @@ contains
 !<
    subroutine init_multigrid_diff
 
-      use constants,     only: GEO_XYZ
+      use constants,     only: GEO_XYZ, half, zero, one
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, warn, msg
       use domain,        only: geometry_type
@@ -201,8 +201,8 @@ contains
 
       !diffusion
       if (.not. diff_explicit) then
-         if (diff_theta < 0. .or. diff_theta > 1.) call die("[multigrid_diffusion:init_multigrid] diff_theta must lie in the range [0. .. 1.]")
-         if (diff_theta < 0.5 .and. diff_tstep_fac>1. .and. master) call warn("[multigrid_diffusion:init_multigrid] diff_tstep_fac > 1. for diff_theta < 0.5 might be unstable")
+         if (diff_theta < zero .or. diff_theta > one) call die("[multigrid_diffusion:init_multigrid] diff_theta must lie in the range [0. .. 1.]")
+         if (diff_theta < half .and. diff_tstep_fac > one .and. master) call warn("[multigrid_diffusion:init_multigrid] diff_tstep_fac > 1. for diff_theta < 0.5 might be unstable")
          ! calculate exact limit formula
          ! for diff_theta=0. stable diff_tstep_fac is 0.5 in 2D (guess: 0.333 in 3D)
          ! for diff_theta<0.5 stable diff_tstep_fac rises by 1./(1.-2.*diff_theta)
@@ -905,7 +905,7 @@ contains
 
    subroutine approximate_solution(curl, src, soln, cr_id)
 
-      use constants,         only: xdim, ydim, zdim
+      use constants,         only: xdim, ydim, zdim, one, half
       use dataio_pub,        only: die
       use domain,            only: has_dir
       use global,            only: dt
@@ -996,7 +996,7 @@ contains
                   endif
 
                   ! ToDo add an option to automagically fine-tune overrelax
-                  curl%mgvar(i, j, k, soln) = curl%mgvar(i, j, k, soln) - overrelax * temp/(1.e0 - 0.5e0 * diff_theta * dt * dLdu)
+                  curl%mgvar(i, j, k, soln) = curl%mgvar(i, j, k, soln) - overrelax * temp/(one - half * diff_theta * dt * dLdu)
 
                enddo
             enddo

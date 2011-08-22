@@ -389,7 +389,7 @@ contains
 
    subroutine init_multigrid_grav_post(mb_alloc)
 
-      use constants,        only: pi, dpi, GEO_XYZ, xdim, ydim, zdim
+      use constants,        only: pi, dpi, GEO_XYZ, xdim, ydim, zdim, one, zero, half
       use dataio_pub,       only: die, warn
       use domain,           only: geometry_type, dom, cdd, has_dir
       use grid,             only: cga
@@ -557,7 +557,7 @@ contains
                   if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: fft.")
                   mb_alloc  = mb_alloc + 2*size(curl%fft)
 
-                  curl%fft_norm = 1. / real( product(curl%n_b(:), mask=has_dir(:)) ) ! No 4 pi G factor here because the source was already multiplied by it
+                  curl%fft_norm = one / real( product(curl%n_b(:), mask=has_dir(:)) ) ! No 4 pi G factor here because the source was already multiplied by it
 
                   ! FFT local solver initialization for 2nd order (3-point) Laplacian
                   ! sin(k*x-d) - 2.*sin(k*x) + sin(k*x+d) = 2 * (cos(d)-1) * sin(k*x) = -4 * sin(d/2)**2 * sin(k*x)
@@ -567,9 +567,9 @@ contains
                   ! 2*(3*a+4*b+2*c+4*(a+2*b+c)*cos(d)+2*(a+2*(b+c))*cos(2*d)) * sin(d/2)**2 * sin(k*x)
                   ! asymptotically: -d**2/2 for d<pi
 
-                  kx(:) = curl%idx2 * (cos(dpi/curl%nxb*[( j, j=0, curl%nxc-1 )]) - 1.)
-                  ky(:) = curl%idy2 * (cos(dpi/curl%nyb*[( j, j=0, curl%nyb-1 )]) - 1.)
-                  kz(:) = curl%idz2 * (cos(dpi/curl%nzb*[( j, j=0, curl%nzb-1 )]) - 1.)
+                  kx(:) = curl%idx2 * (cos(dpi/curl%nxb*[( j, j=0, curl%nxc-1 )]) - one)
+                  ky(:) = curl%idy2 * (cos(dpi/curl%nyb*[( j, j=0, curl%nyb-1 )]) - one)
+                  kz(:) = curl%idz2 * (cos(dpi/curl%nzb*[( j, j=0, curl%nzb-1 )]) - one)
                   call dfftw_plan_dft_r2c_3d(curl%planf, curl%nxb, curl%nyb, curl%nzb, curl%src, curl%fft, fftw_flags)
                   call dfftw_plan_dft_c2r_3d(curl%plani, curl%nxb, curl%nyb, curl%nzb, curl%fft, curl%src, fftw_flags)
 
@@ -580,10 +580,10 @@ contains
                   if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: fftr.")
                   mb_alloc  = mb_alloc + size(curl%fftr)
 
-                  curl%fft_norm = 1. / (8. * real( product(curl%n_b(:), mask=has_dir(:)) ))
-                  kx(:) = curl%idx2 * (cos(pi/curl%nxb*[( j, j=1, curl%nxc )]) - 1.)
-                  ky(:) = curl%idy2 * (cos(pi/curl%nyb*[( j, j=1, curl%nyb )]) - 1.)
-                  kz(:) = curl%idz2 * (cos(pi/curl%nzb*[( j, j=1, curl%nzb )]) - 1.)
+                  curl%fft_norm = one / (8. * real( product(curl%n_b(:), mask=has_dir(:)) ))
+                  kx(:) = curl%idx2 * (cos(pi/curl%nxb*[( j, j=1, curl%nxc )]) - one)
+                  ky(:) = curl%idy2 * (cos(pi/curl%nyb*[( j, j=1, curl%nyb )]) - one)
+                  kz(:) = curl%idz2 * (cos(pi/curl%nzb*[( j, j=1, curl%nzb )]) - one)
                   call dfftw_plan_r2r_3d(curl%planf, curl%nxb, curl%nyb, curl%nzb, curl%src,  curl%fftr, FFTW_RODFT10, FFTW_RODFT10, FFTW_RODFT10, fftw_flags)
                   call dfftw_plan_r2r_3d(curl%plani, curl%nxb, curl%nyb, curl%nzb, curl%fftr, curl%src,  FFTW_RODFT01, FFTW_RODFT01, FFTW_RODFT01, fftw_flags)
 
@@ -595,9 +595,9 @@ contains
             do i = 1, curl%nxc
                do j = 1, curl%nyb
                   where ( (kx(i) + ky(j) + kz(:)) /= 0 )
-                     curl%Green3D(i,j,:) = 0.5 * curl%fft_norm / (kx(i) + ky(j) + kz(:))
+                     curl%Green3D(i,j,:) = half * curl%fft_norm / (kx(i) + ky(j) + kz(:))
                   elsewhere
-                     curl%Green3D(i,j,:) = 0.0
+                     curl%Green3D(i,j,:) = zero
                   endwhere
                enddo
             enddo
@@ -630,7 +630,7 @@ contains
 
    subroutine mpi_multigrid_prep_grav
 
-      use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG
+      use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG, zero, one, half
       use dataio_pub,    only: warn, die
       use domain,        only: has_dir, is_overlap
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req, req
@@ -659,27 +659,27 @@ contains
       if (ord_prolong_face_norm > max_opfn) ord_prolong_face_norm = max_opfn
       select case (ord_prolong_face_norm)
          case (0)
-            opfn_c_ff(:) = [ 0.5, 0., 0. ]
-            opfn_c_cf(:) = [ 1.0, 0., 0. ]
+            opfn_c_ff(:) = [ half, zero, zero ]
+            opfn_c_cf(:) = [ one,  zero, zero ]
          case (1)
 #ifdef DEBUG
             ! the maximum convergence is at aux_R(1) = 0.25 +/- 0.05
-            opfn_c_ff(:) = 0.5 * [ 1+aux_R(1), -aux_R(1), 0. ]
+            opfn_c_ff(:) = half * [ one + aux_R(1), -aux_R(1), zero ]
             ! the maximum convergence is at aux_R(2) = -0.05 +/- 0.05 and 0
-            opfn_c_cf(:) = [ 1.0 + 2*aux_R(2), -aux_R(2), 0. ]
+            opfn_c_cf(:) = [ one + two*aux_R(2), -aux_R(2), zero ]
 #else /* !DEBUG */
-            opfn_c_ff(:) = [  5., -1., 0. ] / 8.  ! adjusted experimentally
-            opfn_c_cf(:) = [ 18.,  1., 0. ] / 20. ! adjusted experimentally
+            opfn_c_ff(:) = [  5., -one, zero ] / 8.  ! adjusted experimentally
+            opfn_c_cf(:) = [ 18.,  one, zero ] / 20. ! adjusted experimentally
 #endif /* !DEBUG */
          case (2)
 #ifdef DEBUG
             ! the maximum convergence is at aux_R(1) = 0.35 +/- 0.1 and aux_R(3) = 0.20 +- 0.05
-            opfn_c_ff(:) = 0.5 * [ 1+aux_R(1), -2.*aux_R(1)+aux_R(3), aux_R(1)-aux_R(3) ]
+            opfn_c_ff(:) = half * [ one+aux_R(1), -two*aux_R(1)+aux_R(3), aux_R(1)-aux_R(3) ]
             ! the maximum convergence is at aux_R(2) = -0.01 +/- 0.02 and aux_R(4) = -0.125 +- 0.025
-            opfn_c_cf(:) = [ 1.0 + 2*aux_R(2), -2.*aux_R(2)+aux_R(4), aux_R(2)-aux_R(4) ]
+            opfn_c_cf(:) = [ one + two*aux_R(2), -two*aux_R(2)+aux_R(4), aux_R(2)-aux_R(4) ]
 #else /* !DEBUG */
-            opfn_c_ff(:) = [ 27., -10., 3. ] / 40. ! adjusted experimentally
-            opfn_c_cf(:) = [  8.,  -1., 1. ] / 8.
+            opfn_c_ff(:) = [ 27., -10., 3.  ] / 40. ! adjusted experimentally
+            opfn_c_cf(:) = [  8., -one, one ] / 8.
 #endif /* !DEBUG */
          case default
             call die("mg:mmpg opfn_c_[cf]f(:)")
@@ -1466,7 +1466,7 @@ contains
 
    subroutine residual2(curl, src, soln, def)
 
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half
       use dataio_pub,         only: die
       use domain,             only: has_dir, eff_dim, geometry_type
       use multigridhelpers,   only: multidim_code_3D
@@ -1538,12 +1538,12 @@ contains
             do k = curl%ks, curl%ke
                do j = curl%js, curl%je
                   do i = curl%is, curl%ie
-                     if (curl%x(i) /= 0.) then !> \todo convert Ly, Lx1 and L0 into precomputed arrays
+                     if (curl%x(i) /= zero) then !> \todo convert Ly, Lx1 and L0 into precomputed arrays
                         Ly = curl%idy2 / curl%x(i)**2 ! cylindrical factor
-                        Lx1 = 0.5 / (curl%dx * curl%x(i))
+                        Lx1 = half / (curl%dx * curl%x(i))
                      else
-                        Ly = 0.
-                        Lx1 = 0.
+                        Ly = zero
+                        Lx1 = zero
                      endif
                      L0 = -2. * (Lx + Ly + Lz)
                      curl%mgvar(i, j, k, def) = curl%mgvar(i, j, k, src) - curl%mgvar(i, j, k, soln) * L0
@@ -1868,7 +1868,7 @@ contains
 
    subroutine approximate_solution_fft(curl, src, soln)
 
-      use constants,         only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ
+      use constants,         only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half
       use dataio_pub,        only: die, warn
       use domain,            only: has_dir, eff_dim, geometry_type
       use grid,              only: D_x, D_y, D_z
@@ -1899,16 +1899,16 @@ contains
             else
                call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror)
                if (has_dir(xdim)) then
-                  curl%bnd_x(:, :, LO) = 0.5* sum (curl%mgvar(curl%is-1:curl%is, curl%js:curl%je, curl%ks:curl%ke, soln), 1)
-                  curl%bnd_x(:, :, HI) = 0.5* sum (curl%mgvar(curl%ie:curl%ie+1, curl%js:curl%je, curl%ks:curl%ke, soln), 1)
+                  curl%bnd_x(:, :, LO) = half* sum (curl%mgvar(curl%is-1:curl%is, curl%js:curl%je, curl%ks:curl%ke, soln), 1)
+                  curl%bnd_x(:, :, HI) = half* sum (curl%mgvar(curl%ie:curl%ie+1, curl%js:curl%je, curl%ks:curl%ke, soln), 1)
                endif
                if (has_dir(ydim)) then
-                  curl%bnd_y(:, :, LO) = 0.5* sum (curl%mgvar(curl%is:curl%ie, curl%js-1:curl%js, curl%ks:curl%ke, soln), 2)
-                  curl%bnd_y(:, :, HI) = 0.5* sum (curl%mgvar(curl%is:curl%ie, curl%je:curl%je+1, curl%ks:curl%ke, soln), 2)
+                  curl%bnd_y(:, :, LO) = half* sum (curl%mgvar(curl%is:curl%ie, curl%js-1:curl%js, curl%ks:curl%ke, soln), 2)
+                  curl%bnd_y(:, :, HI) = half* sum (curl%mgvar(curl%is:curl%ie, curl%je:curl%je+1, curl%ks:curl%ke, soln), 2)
                endif
                if (has_dir(zdim)) then
-                  curl%bnd_z(:, :, LO) = 0.5* sum (curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ks-1:curl%ks, soln), 3)
-                  curl%bnd_z(:, :, HI) = 0.5* sum (curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ke:curl%ke+1, soln), 3)
+                  curl%bnd_z(:, :, LO) = half* sum (curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ks-1:curl%ks, soln), 3)
+                  curl%bnd_z(:, :, HI) = half* sum (curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ke:curl%ke+1, soln), 3)
                endif
             endif
 

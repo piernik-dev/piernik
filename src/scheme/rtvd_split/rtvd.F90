@@ -106,7 +106,7 @@ contains
 !*/
    subroutine tvdb(vibj, b, vg, n, dt, idi)
 
-      use constants, only: big
+      use constants, only: big, half
 
       implicit none
 
@@ -136,7 +136,7 @@ contains
 
 ! velocity interpolation to the cell boundaries
 
-      vh(1:n-1) =(vg(1:n-1)+ vg(2:n))*0.5;     vh(n) = vh(n-1)
+      vh(1:n-1) =(vg(1:n-1)+ vg(2:n))*half;     vh(n) = vh(n-1)
 
       dti = dt*idi
 
@@ -150,7 +150,7 @@ contains
 
 ! values of magnetic field computation in Runge-Kutta half step
 
-      b1(2:n) = b(2:n) -(vibj1(2:n)-vibj1(1:n-1))*dti*0.5;    b1(1) = b(2)
+      b1(2:n) = b(2:n) -(vibj1(2:n)-vibj1(1:n-1))*dti*half;    b1(1) = b(2)
 
       do i = 3, n-3
          ip  = i  + 1
@@ -162,12 +162,12 @@ contains
 
          if (v > 0.0) then
             w=vg(i)*b1(i)
-            dwp=(vg(ip)*b1(ip)-w)*0.5
-            dwm=(w-vg(im)*b1(im))*0.5
+            dwp=(vg(ip)*b1(ip)-w)*half
+            dwm=(w-vg(im)*b1(im))*half
          else
             w=vg(ip)*b1(ip)
-            dwp=(w-vg(ipp)*b1(ipp))*0.5
-            dwm=(vg(i)*b1(i)-w)*0.5
+            dwp=(w-vg(ipp)*b1(ipp))*half
+            dwm=(vg(i)*b1(i)-w)*half
          endif
 
 ! the second-order corrections to the EMF components computation with the aid of the van Leer monotonic interpolation and 2nd order EMF computation
@@ -231,6 +231,7 @@ contains
 
    subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg)
 
+      use constants,        only: one, zero, half
       use dataio_pub,       only: msg, die
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
@@ -326,7 +327,7 @@ contains
       real, dimension(flind%all,n)    :: dintr
 #endif /* FLUID_INTERACTIONS_DW */
 
-      real, dimension(2,2), parameter:: rk2coef = reshape( [ 1.0, 0.5, 0.0, 1.0 ], [ 2, 2 ] )
+      real, dimension(2,2), parameter:: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
 #if !defined(GRAV) || !(defined COSM_RAYS && defined IONIZED)
       integer                        :: dummy
@@ -349,8 +350,8 @@ contains
       call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2)
 ! Right and left fluxes decoupling
 
-      fl = (u1*cfr-w)*0.5
-!     fr = (u1*cfr+w)*0.5
+      fl = (u1*cfr-w)*half
+!     fr = (u1*cfr+w)*half
       fr = fl + w
 
       fl(:,1:n-1) = fl(:,2:n)                         ; fl(:,n)   = fl(:,n-1)
@@ -359,14 +360,14 @@ contains
 
 ! Second order flux corrections
 
-         dfrp(:,1:n-1) = 0.5*(fr(:,2:n) - fr(:,1:n-1)); dfrp(:,n) = dfrp(:,n-1)
+         dfrp(:,1:n-1) = half*(fr(:,2:n) - fr(:,1:n-1)); dfrp(:,n) = dfrp(:,n-1)
          dfrm(:,2:n)   = dfrp(:,1:n-1);                 dfrm(:,1) = dfrm(:,2)
 
 ! Flux limiter application
 
          call flimiter(fr,dfrm,dfrp)
 
-         dflp(:,1:n-1) = 0.5*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
+         dflp(:,1:n-1) = half*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
          dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
          call flimiter(fl,dflm,dflp)
 !OPT 60% of D1mr and 40% D1mw occured in few above lines (D1mr = 0.1% Dr, D1mw = 0.5% Dw)
@@ -462,10 +463,10 @@ contains
 
 #if defined IONIZED || defined NEUTRAL
 #ifndef ISO
-      ekin = 0.5*( u1(iarr_all_mx,:)**2 + u1(iarr_all_my,:)**2 + u1(iarr_all_mz,:)**2 ) /u1(iarr_all_dn,:)
+      ekin = half*( u1(iarr_all_mx,:)**2 + u1(iarr_all_my,:)**2 + u1(iarr_all_mz,:)**2 ) /u1(iarr_all_dn,:)
       eint = u1(iarr_all_en,:) - ekin
 #if defined IONIZED && defined MAGNETIC
-      emag = 0.5*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:))
+      emag = half*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:))
       eint(flind%ion%pos,:) = eint(flind%ion%pos,:) - emag
 #endif /* IONIZED && MAGNETIC */
 

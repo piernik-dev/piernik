@@ -110,7 +110,7 @@ contains
       !  but sometimes may lead to numerical instabilities
 !     minvx = minval(vx(RNG))
 !     maxvx = maxval(vx(RNG))
-!     amp   = (maxvx-minvx)*0.5
+!     amp   = (maxvx-minvx)*half
 !      cfrd(1,RNG) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small)
       absvx = abs(vx)
       cfrd(idn,RNG) = max( absvx(1:n-2), absvx(2:nm), absvx(3:n) )

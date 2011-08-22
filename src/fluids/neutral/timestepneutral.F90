@@ -62,9 +62,10 @@ contains
 
    real function timestep_neu(cg) result(dt)
 
+      use constants,     only: half
+      use fluidindex,    only: flind
       use fluidtypes,    only: component_fluid
       use grid_cont,     only: grid_container
-      use fluidindex,    only: flind
       use timestepfuncs, only: compute_c_max, compute_dt
 
       implicit none
@@ -94,7 +95,7 @@ contains
                p  = cg%cs_iso2%arr(i,j,k)*cg%u%arr(fl%idn,i,j,k)
                cs = sqrt(cg%cs_iso2%arr(i,j,k))
 #else /* !ISO */
-               p  = (cg%u%arr(fl%ien,i,j,k)-0.5*sum(cg%u%arr(fl%imx:fl%imz,i,j,k)**2,1)/cg%u%arr(fl%idn,i,j,k))*(fl%gam_1)
+               p  = (cg%u%arr(fl%ien,i,j,k)-half*sum(cg%u%arr(fl%imx:fl%imz,i,j,k)**2,1)/cg%u%arr(fl%idn,i,j,k))*(fl%gam_1)
 
                cs = sqrt(abs(  (fl%gam*p)/cg%u%arr(fl%idn,i,j,k)) )
 #endif /* !ISO */

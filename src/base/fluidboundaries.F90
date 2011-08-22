@@ -104,7 +104,7 @@ contains
 
    subroutine bnd_u(dir, cg)
 
-      use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
+      use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, half, &
            &                         BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
       use dataio_pub,          only: msg, warn, die
       use domain,              only: cdd, has_dir
@@ -172,7 +172,7 @@ contains
                do i=1, cg%nb
                   send_left (iarr_all_my,i,:,:) = send_left(iarr_all_my,i,:,:) + qshear*omega * cg%x(cg%nb+i) * send_left(iarr_all_dn,i,:,:)
 #ifndef ISO
-                  send_left (iarr_all_en,i,:,:) = send_left(iarr_all_en,i,:,:) - 0.5*(qshear*omega * cg%x(cg%nb+i))**2 * send_left(iarr_all_dn,i,:,:)
+                  send_left (iarr_all_en,i,:,:) = send_left(iarr_all_en,i,:,:) - half*(qshear*omega * cg%x(cg%nb+i))**2 * send_left(iarr_all_dn,i,:,:)
 #endif /* !ISO */
                enddo
 !
@@ -187,8 +187,8 @@ contains
 ! remapujemy  - interpolacja kwadratowa
 !
                send_left (:,:,:,:)  = (1.+eps)*(1.-eps) * send_left (:,:,:,:) &
-                    &                 -0.5*eps*(1.-eps) * cshift(send_left(:,:,:,:),shift=-1,dim=3) &
-                    &                 +0.5*eps*(1.+eps) * cshift(send_left(:,:,:,:),shift=1 ,dim=3)
+                    &                 -half*eps*(1.-eps) * cshift(send_left(:,:,:,:),shift=-1,dim=3) &
+                    &                 +half*eps*(1.+eps) * cshift(send_left(:,:,:,:),shift=1 ,dim=3)
             endif !(cg%bnd(xdim, LO) == BND_SHE)
 !
 ! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
@@ -197,7 +197,7 @@ contains
                do i=1, cg%nb
                   send_right(iarr_all_my,i,:,:) = send_right(iarr_all_my,i,:,:) +qshear*omega * cg%x(cg%nxb+i) * send_right(iarr_all_dn,i,:,:)
 #ifndef ISO
-                  send_right(iarr_all_en,i,:,:) = send_right(iarr_all_en,i,:,:) -0.5*(qshear*omega * cg%x(cg%nxb+i))**2 * send_right(iarr_all_dn,i,:,:)
+                  send_right(iarr_all_en,i,:,:) = send_right(iarr_all_en,i,:,:) -half*(qshear*omega * cg%x(cg%nxb+i))**2 * send_right(iarr_all_dn,i,:,:)
 #endif /* !ISO */
                enddo
 !
@@ -212,8 +212,8 @@ contains
 ! remapujemy  - interpolacja kwadratowa
 !
                send_right (:,:,:,:) = (1.+eps)*(1.-eps) * send_right (:,:,:,:) &
-                    &                 -0.5*eps*(1.-eps) * cshift(send_right(:,:,:,:),shift=1 ,dim=3) &
-                    &                 +0.5*eps*(1.+eps) * cshift(send_right(:,:,:,:),shift=-1,dim=3)
+                    &                 -half*eps*(1.-eps) * cshift(send_right(:,:,:,:),shift=1 ,dim=3) &
+                    &                 +half*eps*(1.+eps) * cshift(send_right(:,:,:,:),shift=-1,dim=3)
             endif !(cg%bnd(xdim, HI) == BND_SHE)
 !
 ! wysylamy na drugi brzeg
@@ -231,7 +231,7 @@ contains
             if (cg%bnd(xdim, HI) == BND_SHE) then
                do i=1, cg%nb
 #ifndef ISO
-                  recv_right (iarr_all_en,i,:,:) = recv_right (iarr_all_en,i,:,:) +0.5*(qshear*omega * cg%x(cg%ie+i))**2 * recv_right(iarr_all_dn,i,:,:)
+                  recv_right (iarr_all_en,i,:,:) = recv_right (iarr_all_en,i,:,:) +half*(qshear*omega * cg%x(cg%ie+i))**2 * recv_right(iarr_all_dn,i,:,:)
 #endif /* !ISO */
                   recv_right (iarr_all_my,i,:,:) = recv_right (iarr_all_my,i,:,:) -qshear*omega * cg%x(cg%ie+i)     * recv_right(iarr_all_dn,i,:,:)
                enddo
@@ -242,7 +242,7 @@ contains
             if (cg%bnd(xdim, LO) == BND_SHE) then
                do i=1, cg%nb
 #ifndef ISO
-                  recv_left(iarr_all_en,i,:,:) = recv_left(iarr_all_en,i,:,:) +0.5*(qshear*omega * cg%x(i))**2 * recv_left(iarr_all_dn,i,:,:)
+                  recv_left(iarr_all_en,i,:,:) = recv_left(iarr_all_en,i,:,:) +half*(qshear*omega * cg%x(i))**2 * recv_left(iarr_all_dn,i,:,:)
 #endif /* !ISO */
                   recv_left(iarr_all_my,i,:,:) = recv_left(iarr_all_my,i,:,:) -qshear*omega * cg%x(i)     * recv_left(iarr_all_dn,i,:,:)
                enddo

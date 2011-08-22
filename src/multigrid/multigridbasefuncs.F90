@@ -234,7 +234,7 @@ contains
 
    subroutine prolong_faces(fine, soln)
 
-      use constants,          only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
+      use constants,          only: xdim, ydim, zdim, LO, HI, LONG, I_ONE, half
       use dataio_pub,         only: die, warn
       use domain,             only: has_dir
       use grid,               only: D_x, D_y, D_z
@@ -451,10 +451,10 @@ contains
          end select
 
          do i = -s_rng, s_rng
-            pp(i,:,1,1) = 0.5*p( i)*p(:)       ! 0.5 because of face averaging
-            pp(i,:,1,2) = 0.5*p( i)*p(1:-1:-1) ! or use matmul()
-            pp(i,:,2,1) = 0.5*p(-i)*p(:)
-            pp(i,:,2,2) = 0.5*p(-i)*p(1:-1:-1)
+            pp(i,:,1,1) = half*p( i)*p(:)       ! half because of face averaging
+            pp(i,:,1,2) = half*p( i)*p(1:-1:-1) ! or use matmul()
+            pp(i,:,2,1) = half*p(-i)*p(:)
+            pp(i,:,2,2) = half*p(-i)*p(1:-1:-1)
          enddo
 
          if (ord_prolong_face_norm > 1) ord_prolong_face_norm = 1

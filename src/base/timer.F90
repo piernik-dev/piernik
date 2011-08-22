@@ -255,7 +255,7 @@ contains
 !<
    subroutine timer_stop
 
-      use constants,  only: I_ONE
+      use constants,  only: I_ONE, half
       use dataio_pub, only: msg, printinfo
       use global,     only: nstep
       use grid,       only: total_ncells
@@ -274,7 +274,7 @@ contains
       wctot  = iarray(1) * 3600. + iarray(2) * 60. + iarray(3) - wctot
       wchours  =  int ( wctot / 3600.0 )
       wcmins   =  int ( wctot / 60.0   ) - 60   * wchours
-      wcsecs   =  int ( wctot + 0.5    ) - 3600 * wchours &
+      wcsecs   =  int ( wctot + half   ) - 3600 * wchours &
                                          - 60   * wcmins
 !
 !      cpu usage, expressed in hours, minutes, and seconds.
@@ -285,7 +285,7 @@ contains
 
       cpuhours =  int ( cputot / 3600.0 )
       cpumins  =  int ( cputot / 60.0   ) - 60   * cpuhours
-      cpusecs  =  int ( cputot + 0.5    ) - 3600 * cpuhours &
+      cpusecs  =  int ( cputot + half   ) - 3600 * cpuhours &
                                         - 60   * cpumins
 
       call MPI_Reduce(cputot, cpuallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, ierr)

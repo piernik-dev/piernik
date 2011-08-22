@@ -237,6 +237,7 @@ contains
 !<
    subroutine get_gprofs_gparray(iia, jja, cg)
 
+      use constants, only: half
       use gravity,   only: tune_zeq, grav_type
       use grid_cont, only: grid_container
       use types,     only: axes
@@ -257,7 +258,7 @@ contains
       if (.not.allocated(ax%z)) allocate(ax%z(nstot1))
       ax%x          = cg%x(iia)
       ax%y          = cg%y(jja)
-      ax%z(1:nstot) = zs - 0.5*dzs
+      ax%z(1:nstot) = zs - half*dzs
       ax%z(nstot1)  = ax%z(nstot) + dzs
       call grav_type(gpots,ax)
       gprofs(1:nstot) = (gpots(1,1,1:nstot) - gpots(1,1,2:nstot1))/dzs
@@ -279,7 +280,7 @@ contains
 !<
    subroutine start_hydrostatic(iia, jja, csim2, sd, cg)
 
-      use constants,  only: zdim, LO, HI
+      use constants,  only: zdim, LO, HI, half
       use dataio_pub, only: die
       use domain,     only: dom
       use gravity,    only: get_gprofs, gprofs_target, nsub
@@ -307,7 +308,7 @@ contains
       dzs = (dom%edge(zdim, HI)-dom%edge(zdim, LO))/real(nstot-2*cg%nb*nsub)
       allocate(zs(nstot), gprofs(nstot))
       do ksub=1, nstot
-         zs(ksub) = dom%edge(zdim, LO)-cg%nb*cg%dl(zdim) + (real(ksub)-0.5)*dzs
+         zs(ksub) = dom%edge(zdim, LO)-cg%nb*cg%dl(zdim) + (real(ksub)-half)*dzs
       enddo
       call get_gprofs(iia, jja, cg)
       gprofs = gprofs / csim2 *dzs
@@ -330,7 +331,7 @@ contains
 
    subroutine outh_bnd(kb, kk, minmax)
 
-      use constants,      only: xdim, ydim, zdim
+      use constants,      only: xdim, ydim, zdim, half, one
       use dataio_pub,     only: die
       use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use global,         only: smalld
@@ -384,7 +385,7 @@ contains
 #ifdef ISO
          csi2b = maxval(flind%all_fluids(:)%cs2)   !> \deprecated BEWARE should be fluid dependent
 #else /* !ISO */
-         ekb = 0.5*(cg%u%arr(iarr_all_mx,:,:,kb)**2+cg%u%arr(iarr_all_my,:,:,kb)**2+cg%u%arr(iarr_all_mz,:,:,kb)**2)/db
+         ekb = half*(cg%u%arr(iarr_all_mx,:,:,kb)**2+cg%u%arr(iarr_all_my,:,:,kb)**2+cg%u%arr(iarr_all_mz,:,:,kb)**2)/db
          eib = cg%u%arr(iarr_all_en,:,:,kb) - ekb
          eib = max(eib,smallei)
          do ifluid=1,flind%fluids
@@ -407,8 +408,8 @@ contains
 
                dprofs(:,1) = db(:,i,j)
                do ksub=1, nsub
-                  factor = (1.0 + 0.5*dzs*gprofs(ksub)/csi2b(:,i,j)) / &
-                       &   (1.0 - 0.5*dzs*gprofs(ksub)/csi2b(:,i,j))
+                  factor = (one + half*dzs*gprofs(ksub)/csi2b(:,i,j)) / &
+                       &   (one - half*dzs*gprofs(ksub)/csi2b(:,i,j))
                   dprofs(:,ksub+1) = factor * dprofs(:,ksub)
                enddo
 

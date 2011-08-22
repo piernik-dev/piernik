@@ -75,7 +75,7 @@ contains
 !<
    subroutine init_multigrid
 
-      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI, I_TWO, I_ONE
+      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI, I_TWO, I_ONE, half
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven, cdd
@@ -248,7 +248,7 @@ contains
             curl%dom = curl%finer%dom
             where (has_dir(:)) curl%dom%n_d(:) = curl%dom%n_d(:) / I_TWO
             if (any(curl%dom%n_d(:)*2 /= curl%finer%dom%n_d(:) .and. has_dir(:))) then
-               write(msg, '(a,3f10.1)')"[multigrid:init_multigrid] Fractional number of domain cells: ", 0.5*curl%finer%dom%n_d(:)
+               write(msg, '(a,3f10.1)')"[multigrid:init_multigrid] Fractional number of domain cells: ", half*curl%finer%dom%n_d(:)
                call die(msg) ! handling this would require coarse grids bigger than base grid
             endif
             if (.not. allocated(curl%dom%pse)) then

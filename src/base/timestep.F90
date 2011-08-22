@@ -83,6 +83,7 @@ contains
 !<
    subroutine time_step(dt)
 
+      use constants,            only: one, two, zero, half
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
       use fluids_pub,           only: has_ion, has_dst, has_neu
@@ -116,8 +117,8 @@ contains
 
       dt_old = dt
 
-      c_all = 0.0
-      dt = huge(1.0)
+      c_all = zero
+      dt = huge(one)
 
       call cga%get_root(cgl)
       do while (associated(cgl))
@@ -157,9 +158,9 @@ contains
 
      ! finally apply some sanity factors
       if (nstep <=1) then
-         if (dt_initial > 0.) dt = min(dt, dt_initial)
+         if (dt_initial > zero) dt = min(dt, dt_initial)
       else
-         if (dt_old > 0.) dt = min(dt, dt_old*dt_max_grow)
+         if (dt_old > zero) dt = min(dt, dt_old*dt_max_grow)
       endif
 
       if (associated(cfl_manager)) call cfl_manager
@@ -173,7 +174,7 @@ contains
          call write_crashed("[timestep:time_step] dt < dt_min")
       endif
 
-      dt  = min(dt, (0.5*(tend-t)) + (2.*epsilon(1.)*((tend-t))))
+      dt  = min(dt, (half*(tend-t)) + (two*epsilon(one)*((tend-t))))
 #ifdef DEBUG
       ! We still need all above for c_all
       if (has_const_dt) then
@@ -229,28 +230,29 @@ contains
 
    subroutine cfl_auto
 
+      use constants,  only: one, half, zero
       use dataio_pub, only: msg, warn
       use global,     only: cfl, cfl_max, dt, dt_old
       use mpisetup,   only: master
 
       implicit none
 
-      real, save :: stepcfl=0., cfl_c = 1.
+      real, save :: stepcfl=zero, cfl_c=one
       real       :: stepcfl_old
 
       stepcfl_old = stepcfl
       stepcfl = cfl
-      if (c_all_old > 0.) then
+      if (c_all_old > zero) then
          stepcfl = c_all/c_all_old*cfl
       else
          stepcfl_old = cfl
       endif
 
-      if (stepcfl > 0. .and. dt_old > 0.) then
-         cfl_c = min(1., 0.5 * (cfl_c + min(1., stepcfl_old/stepcfl *dt/dt_old)))
+      if (stepcfl > zero .and. dt_old > zero) then
+         cfl_c = min(one, half * (cfl_c + min(one, stepcfl_old/stepcfl *dt/dt_old)))
          dt = dt * cfl_c
       else
-         cfl_c = 1.
+         cfl_c = one
       endif
 
       if (master) then

@@ -279,35 +279,38 @@ contains
    end subroutine vanleer_limiter
 
    subroutine moncen_limiter(f,a,b)
+      use constants, only: one, two, half
       implicit none
       real, dimension(:,:), intent(in)      :: a
       real, dimension(:,:), intent(in)      :: b
       real, dimension(:,:), intent(inout)   :: f
 
-      f = f+(sign(1.0,a)+sign(1.0,b))*min(2.*abs(a),2.*abs(b),0.5*abs(a+b))*0.5  !> \todo OPTIMIZE ME
+      f = f+(sign(one,a)+sign(one,b))*min(two*abs(a),two*abs(b),half*abs(a+b))*half  !> \todo OPTIMIZE ME
       return
    end subroutine moncen_limiter
 
    subroutine minmod_limiter(f,a,b)
+      use constants, only: one, half
       implicit none
       real, dimension(:,:), intent(in)      :: a
       real, dimension(:,:), intent(in)      :: b
       real, dimension(:,:), intent(inout)   :: f
 
-      f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a),abs(b))*0.5                     !> \todo OPTIMIZE ME
+      f = f+(sign(one,a)+sign(one,b))*min(abs(a),abs(b))*half                    !> \todo OPTIMIZE ME
       return
    end subroutine minmod_limiter
 
    subroutine superbee_limiter(f,a,b)
+      use constants, only: one, two, half
       implicit none
       real, dimension(:,:), intent(in)      :: a
       real, dimension(:,:), intent(in)      :: b
       real, dimension(:,:), intent(inout)   :: f
 
       where (abs(a) > abs(b))                                                    !> \todo OPTIMIZE ME
-         f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(a), abs(2.0*b))*0.5
+         f = f+(sign(one,a)+sign(one,b))*min(abs(a), abs(two*b))*half
       elsewhere
-         f = f+(sign(1.0,a)+sign(1.0,b))*min(abs(2.0*a), abs(b))*0.5
+         f = f+(sign(one,a)+sign(one,b))*min(abs(two*a), abs(b))*half
       endwhere
       return
    end subroutine superbee_limiter

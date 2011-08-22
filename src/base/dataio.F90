@@ -684,7 +684,7 @@ contains
 !
    subroutine write_timeslice
 
-      use constants,   only: cwdlen, xdim, ydim, zdim
+      use constants,   only: cwdlen, xdim, ydim, zdim, half
       use dataio_pub,  only: cwd, die
       use dataio_user, only: user_tsl
       use diagnostics, only: pop_vector
@@ -785,14 +785,14 @@ contains
 #endif /* GRAV */
 
       cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-           & 0.5 * (cg%u%arr(iarr_all_mx(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
+           & half * (cg%u%arr(iarr_all_mx(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
            &      + cg%u%arr(iarr_all_my(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
            &      + cg%u%arr(iarr_all_mz(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)/ &
            & max(cg%u%arr(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke),smalld)
       tot_ekin = mpi_addmul(cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 
       cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-           & 0.5 * (cg%b%arr(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
+           & half * (cg%b%arr(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
            &        cg%b%arr(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
            &        cg%b%arr(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
       tot_emag = mpi_addmul(cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
@@ -918,7 +918,7 @@ contains
 
    subroutine get_common_vars(fl)
 
-      use constants,  only: ION, DST, MINL, MAXL
+      use constants,  only: ION, DST, MINL, MAXL, half
       use dataio_pub, only: die
       use fluidtypes, only: phys_prop, component_fluid
       use func,       only: get_extremum
@@ -969,8 +969,8 @@ contains
 #else /* !ISO */
       if (fl%tag /= DST) then
          cg%wa%arr(:,:,:) = (cg%u%arr(fl%ien,:,:,:) &                ! eint
-                   - 0.5*((cg%u%arr(fl%imx,:,:,:)**2 +cg%u%arr(fl%imy,:,:,:)**2 + cg%u%arr(fl%imz,:,:,:)**2)/cg%u%arr(fl%idn,:,:,:)))
-         if (fl%tag == ION) cg%wa%arr(:,:,:) = cg%wa%arr(:,:,:) - 0.5*(sum(cg%b%arr(:,:,:,:)**2,dim=1))
+                   - half*((cg%u%arr(fl%imx,:,:,:)**2 +cg%u%arr(fl%imy,:,:,:)**2 + cg%u%arr(fl%imz,:,:,:)**2)/cg%u%arr(fl%idn,:,:,:)))
+         if (fl%tag == ION) cg%wa%arr(:,:,:) = cg%wa%arr(:,:,:) - half*(sum(cg%b%arr(:,:,:,:)**2,dim=1))
 
          cg%wa%arr(:,:,:) = max(fl%gam_1*cg%wa%arr(:,:,:),smallp)  ! pres
 
@@ -1092,9 +1092,9 @@ contains
 !        call get_extremum(p, MAXL, temi_max, cg)
 #else /* !ISO */
 !        cg%wa%arr(:,:,:) = (cg%u%arr(ieni,:,:,:) &                ! eint
-!                    - 0.5*((cg%u%arr(imxi,:,:,:)**2 +cg%u%arr(imyi,:,:,:)**2 + cg%u%arr(imzi,:,:,:)**2)/cg%u%arr(idni,:,:,:)))
+!                    - half*((cg%u%arr(imxi,:,:,:)**2 +cg%u%arr(imyi,:,:,:)**2 + cg%u%arr(imzi,:,:,:)**2)/cg%u%arr(idni,:,:,:)))
 #ifdef MAGNETIC
-!        cg%wa%arr(:,:,:) = cg%wa%arr(:,:,:) - 0.5*(cg%b%arr(ibx,:,:,:)**2 + cg%b%arr(iby,:,:,:)**2 + cg%b%arr(ibz,:,:,:)**2)
+!        cg%wa%arr(:,:,:) = cg%wa%arr(:,:,:) - half*(cg%b%arr(ibx,:,:,:)**2 + cg%b%arr(iby,:,:,:)**2 + cg%b%arr(ibz,:,:,:)**2)
 #endif /* MAGNETIC */
 #endif /* !ISO */
       endif

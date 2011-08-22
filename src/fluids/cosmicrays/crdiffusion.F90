@@ -180,7 +180,7 @@ contains
 !<
    subroutine cr_diff_x
 
-      use constants,      only: xdim, ydim, zdim
+      use constants,      only: xdim, ydim, zdim, half
       use dataio_pub,     only: die
       use domain,         only: has_dir
       use fluidindex,     only: ibx, iby, ibz, flind
@@ -218,8 +218,8 @@ contains
                   b1b =  cg%b%arr(ibx,i,  j,  k)
 
                   if (has_dir(ydim)) then
-                     dqm = 0.5*((cg%u%arr(iarr_crs,i-1,j  ,k ) + cg%u%arr(iarr_crs,i ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j-1,k ) + cg%u%arr(iarr_crs,i ,j-1,k ))) * cg%idy
-                     dqp = 0.5*((cg%u%arr(iarr_crs,i-1,j+1,k ) + cg%u%arr(iarr_crs,i ,j+1,k )) - (cg%u%arr(iarr_crs,i-1,j  ,k ) + cg%u%arr(iarr_crs,i ,j  ,k ))) * cg%idy
+                     dqm = half*((cg%u%arr(iarr_crs,i-1,j  ,k ) + cg%u%arr(iarr_crs,i ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j-1,k ) + cg%u%arr(iarr_crs,i ,j-1,k ))) * cg%idy
+                     dqp = half*((cg%u%arr(iarr_crs,i-1,j+1,k ) + cg%u%arr(iarr_crs,i ,j+1,k )) - (cg%u%arr(iarr_crs,i-1,j  ,k ) + cg%u%arr(iarr_crs,i ,j  ,k ))) * cg%idy
                      decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
                      b2b = sum(cg%b%arr(iby,i-1:i, j:j+1, k    ))*0.25
                   else
@@ -228,8 +228,8 @@ contains
                   endif
 
                   if (has_dir(zdim)) then
-                     dqm = 0.5*((cg%u%arr(iarr_crs,i-1,j ,k  ) + cg%u%arr(iarr_crs,i ,j ,k  )) - (cg%u%arr(iarr_crs,i-1,j ,k-1) + cg%u%arr(iarr_crs,i ,j ,k-1))) * cg%idz
-                     dqp = 0.5*((cg%u%arr(iarr_crs,i-1,j ,k+1) + cg%u%arr(iarr_crs,i ,j ,k+1)) - (cg%u%arr(iarr_crs,i-1,j ,k  ) + cg%u%arr(iarr_crs,i ,j ,k  ))) * cg%idz
+                     dqm = half*((cg%u%arr(iarr_crs,i-1,j ,k  ) + cg%u%arr(iarr_crs,i ,j ,k  )) - (cg%u%arr(iarr_crs,i-1,j ,k-1) + cg%u%arr(iarr_crs,i ,j ,k-1))) * cg%idz
+                     dqp = half*((cg%u%arr(iarr_crs,i-1,j ,k+1) + cg%u%arr(iarr_crs,i ,j ,k+1)) - (cg%u%arr(iarr_crs,i-1,j ,k  ) + cg%u%arr(iarr_crs,i ,j ,k  ))) * cg%idz
                      decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
                      b3b = sum(cg%b%arr(ibz,i-1:i, j,     k:k+1))*0.25
                   else
@@ -260,7 +260,7 @@ contains
 !<
    subroutine cr_diff_y
 
-      use constants,      only: xdim, ydim, zdim
+      use constants,      only: xdim, ydim, zdim, half
       use dataio_pub,     only: die
       use domain,         only: has_dir
       use fluidindex,     only: ibx, iby, ibz, flind
@@ -298,8 +298,8 @@ contains
                   b2b =  cg%b%arr(iby,i,j,k)
 
                   if (has_dir(xdim)) then
-                     dqm = 0.5*((cg%u%arr(iarr_crs,i  ,j-1,k ) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j-1,k ) + cg%u%arr(iarr_crs,i-1,j  ,k ))) * cg%idx
-                     dqp = 0.5*((cg%u%arr(iarr_crs,i+1,j-1,k ) + cg%u%arr(iarr_crs,i+1,j  ,k )) - (cg%u%arr(iarr_crs,i  ,j-1,k ) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idx
+                     dqm = half*((cg%u%arr(iarr_crs,i  ,j-1,k ) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j-1,k ) + cg%u%arr(iarr_crs,i-1,j  ,k ))) * cg%idx
+                     dqp = half*((cg%u%arr(iarr_crs,i+1,j-1,k ) + cg%u%arr(iarr_crs,i+1,j  ,k )) - (cg%u%arr(iarr_crs,i  ,j-1,k ) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idx
                      decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
                      b1b = sum(cg%b%arr(ibx,i:i+1, j-1:j, k))*0.25
                   else
@@ -308,8 +308,8 @@ contains
                   endif
 
                   if (has_dir(zdim)) then
-                     dqm = 0.5*((cg%u%arr(iarr_crs,i ,j-1,k  ) + cg%u%arr(iarr_crs,i ,j  ,k  )) - (cg%u%arr(iarr_crs,i ,j-1,k-1) + cg%u%arr(iarr_crs,i ,j  ,k-1))) * cg%idz
-                     dqp = 0.5*((cg%u%arr(iarr_crs,i ,j-1,k+1) + cg%u%arr(iarr_crs,i ,j  ,k+1)) - (cg%u%arr(iarr_crs,i ,j-1,k  ) + cg%u%arr(iarr_crs,i ,j  ,k  ))) * cg%idz
+                     dqm = half*((cg%u%arr(iarr_crs,i ,j-1,k  ) + cg%u%arr(iarr_crs,i ,j  ,k  )) - (cg%u%arr(iarr_crs,i ,j-1,k-1) + cg%u%arr(iarr_crs,i ,j  ,k-1))) * cg%idz
+                     dqp = half*((cg%u%arr(iarr_crs,i ,j-1,k+1) + cg%u%arr(iarr_crs,i ,j  ,k+1)) - (cg%u%arr(iarr_crs,i ,j-1,k  ) + cg%u%arr(iarr_crs,i ,j  ,k  ))) * cg%idz
                      decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
                      b3b = sum(cg%b%arr(ibz,i, j-1:j, k:k+1))*0.25
                   else
@@ -340,7 +340,7 @@ contains
 !<
    subroutine cr_diff_z
 
-      use constants,      only: xdim, ydim, zdim
+      use constants,      only: xdim, ydim, zdim, half
       use dataio_pub,     only: die
       use domain,         only: has_dir
       use fluidindex,     only: ibx, iby, ibz, flind
@@ -378,8 +378,8 @@ contains
                   b3b =  cg%b%arr(ibz,i,j,k)
 
                   if (has_dir(xdim)) then
-                     dqm = 0.5*((cg%u%arr(iarr_crs,i  ,j ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j ,k-1) + cg%u%arr(iarr_crs,i-1,j  ,k ))) * cg%idx
-                     dqp = 0.5*((cg%u%arr(iarr_crs,i+1,j ,k-1) + cg%u%arr(iarr_crs,i+1,j  ,k )) - (cg%u%arr(iarr_crs,i  ,j ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idx
+                     dqm = half*((cg%u%arr(iarr_crs,i  ,j ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j ,k-1) + cg%u%arr(iarr_crs,i-1,j  ,k ))) * cg%idx
+                     dqp = half*((cg%u%arr(iarr_crs,i+1,j ,k-1) + cg%u%arr(iarr_crs,i+1,j  ,k )) - (cg%u%arr(iarr_crs,i  ,j ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idx
                      decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
                      b1b = sum(cg%b%arr(ibx,i:i+1, j,     k-1:k))*0.25
                   else
@@ -388,8 +388,8 @@ contains
                   endif
 
                   if (has_dir(ydim)) then
-                     dqm = 0.5*((cg%u%arr(iarr_crs,i ,j  ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i ,j-1,k-1) + cg%u%arr(iarr_crs,i  ,j-1,k ))) * cg%idy
-                     dqp = 0.5*((cg%u%arr(iarr_crs,i ,j+1,k-1) + cg%u%arr(iarr_crs,i  ,j+1,k )) - (cg%u%arr(iarr_crs,i ,j  ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idy
+                     dqm = half*((cg%u%arr(iarr_crs,i ,j  ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i ,j-1,k-1) + cg%u%arr(iarr_crs,i  ,j-1,k ))) * cg%idy
+                     dqp = half*((cg%u%arr(iarr_crs,i ,j+1,k-1) + cg%u%arr(iarr_crs,i  ,j+1,k )) - (cg%u%arr(iarr_crs,i ,j  ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idy
                      decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
                      b2b = sum(cg%b%arr(iby,i,     j:j+1, k-1:k))*0.25
                   else
