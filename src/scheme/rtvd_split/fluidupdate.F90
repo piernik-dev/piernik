@@ -180,7 +180,7 @@ contains
       use domain,         only: has_dir
       use grid,           only: cga
       use grid_cont,      only: cg_list_element, grid_container
-      use sweeps,         only: sweepx, sweepy, sweepz
+      use sweeps,         only: sweep
 #if defined SHEAR && defined FLUID_INTERACTIONS
       use sweeps,         only: source_terms_y
 #endif /* SHEAR && FLUID_INTERACTIONS */
@@ -221,7 +221,7 @@ contains
 #endif /* MAGNETIC */
                   endif
 
-                  call sweepx(cg)
+                  call sweep(xdim,cg)
 
                   if (forward) then
 #ifdef MAGNETIC
@@ -243,7 +243,7 @@ contains
                      call magfieldbzxy
 #endif /* MAGNETIC */
                   endif
-                  call sweepy(cg)
+                  call sweep(ydim,cg)
 
                   if (forward) then
 #ifdef MAGNETIC
@@ -270,7 +270,7 @@ contains
 #endif /* MAGNETIC */
                   endif
 
-                  call sweepz(cg)
+                  call sweep(zdim,cg)
 
                   if (forward) then
 #ifdef MAGNETIC

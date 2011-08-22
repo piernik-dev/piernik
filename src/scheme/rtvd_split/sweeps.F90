@@ -34,7 +34,7 @@ module sweeps     ! split sweeps
    implicit none
 
    private
-   public  :: sweepx, sweepy, sweepz
+   public  :: sweep
 #if defined SHEAR && defined FLUID_INTERACTIONS
    public  :: source_terms_y
 #endif /* SHEAR && FLUID_INTERACTIONS */
@@ -107,13 +107,61 @@ contains
    end subroutine source_terms_y
 #endif /* SHEAR && FLUID_INTERACTIONS */
 !------------------------------------------------------------------------------------------
-   subroutine sweepx(cg)
+   function interpolate_mag_field(cdim, cg, i1, i2) result (b)
+      use constants,       only: pdims, xdim, ydim, zdim, half
+      use fluidindex,      only: iarr_mag_swp, nmag
+      use grid,            only: D_
+      use grid_cont,       only: grid_container
+      implicit none
+      integer(kind=4), intent(in)                  :: cdim
+      type(grid_container), pointer, intent(inout) :: cg
+      integer, intent(in)                          :: i1, i2
+      real, dimension(nmag, cg%n_(cdim))           :: b
 
-      use constants,       only: xdim
+      real, dimension(:), pointer :: pb, pb1
+      integer(kind=4)                         :: ibx, iby, ibz
+      integer                                 :: i1p, i2p
+
+      !> OPTIMIZE ME
+
+      ibx = iarr_mag_swp(cdim,xdim)
+      iby = iarr_mag_swp(cdim,ydim)
+      ibz = iarr_mag_swp(cdim,zdim)
+
+      i1p = i1+D_(pdims(cdim,ydim))
+      i2p = i2+D_(pdims(cdim,zdim))
+
+      pb => cg%b%get_sweep(cdim,ibx,i1,i2)
+      b(ibx,1:cg%n_(cdim)-1) = half*( pb(1:cg%n_(cdim)-1)+pb(2:cg%n_(cdim)) )
+      b(ibx,  cg%n_(cdim)  ) = b(ibx,  cg%n_(cdim)-1)
+
+      pb  => cg%b%get_sweep(cdim,iby,i1,i2)
+      if (cdim == xdim) then
+         pb1 => cg%b%get_sweep(cdim,iby,i1p,i2)
+      else
+         pb1 => cg%b%get_sweep(cdim,iby,i1,i2p)
+      endif
+      b(iby,:) = half*(pb + pb1)
+
+      pb  => cg%b%get_sweep(cdim,ibz,i1,i2)
+      if (cdim == xdim) then
+         pb1 => cg%b%get_sweep(cdim,ibz,i1,i2p)
+      else
+         pb1 => cg%b%get_sweep(cdim,ibz,i1p,i2)
+      endif
+      b(ibz,:) = half*(pb + pb1)
+
+      b( iarr_mag_swp(cdim,:),:) = b(:,:)
+      nullify(pb,pb1)
+
+   end function interpolate_mag_field
+!------------------------------------------------------------------------------------------
+   subroutine sweep(cdim,cg)
+
+      use constants,       only: pdims, LO, HI, ydim, zdim
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: flind, iarr_all_swp, ibx, iby, ibz, nmag
+      use fluidindex,      only: flind, iarr_all_swp, nmag
       use global,          only: dt, integration_order
-      use grid,            only: D_y, D_z
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
       use rtvd,            only: relaxing_tvd
@@ -123,175 +171,51 @@ contains
 
       implicit none
 
+      integer(kind=4), intent(in)                  :: cdim
       type(grid_container), pointer, intent(inout) :: cg
 
-      real, dimension(nmag, cg%n_(xdim))      :: b_x
-      real, dimension(flind%all, cg%n_(xdim)) :: u_x, u0_x
+      real, dimension(nmag, cg%n_(cdim))      :: b
+      real, dimension(flind%all, cg%n_(cdim)) :: u, u0
+      real, dimension(:,:), pointer           :: pu, pu0
       real, dimension(:), pointer       :: div_v1d => null()
-      integer                           :: j, k, jp, kp, istep
+      integer                           :: i1, i2
+      integer                           :: istep
 
-      b_x = 0.0
-      u_x = 0.0
+      b = 0.0
+      u = 0.0
+
 
 #ifdef COSM_RAYS
       call div_v(flind%ion%pos)
 #endif /* COSM_RAYS */
       cg%uh%arr = cg%u%arr
       do istep = 1, integration_order
-         do k=cg%ks, cg%ke
-            kp=k+D_z
-            do j=cg%js, cg%je
-               jp=j+D_y
+         do i2 = cg%ijkse(pdims(cdim,zdim),LO), cg%ijkse(pdims(cdim,zdim),HI)
+            do i1 = cg%ijkse(pdims(cdim,ydim),LO), cg%ijkse(pdims(cdim,ydim),HI)
 
 #ifdef MAGNETIC
-               b_x=0.5*cg%b%arr(:,:,j,k)
-               b_x(ibx,1:cg%n_(xdim)-1) = b_x(ibx,1:cg%n_(xdim)-1)+b_x(ibx,2:cg%n_(xdim));       b_x(ibx, cg%n_(xdim)) = b_x(ibx, cg%n_(xdim)-1)
-               b_x(iby,:)=b_x(iby,:)+0.5*cg%b%arr(iby,:,jp,k)
-               b_x(ibz,:)=b_x(ibz,:)+0.5*cg%b%arr(ibz,:,j,kp)
+               b = interpolate_mag_field(cdim, cg, i1, i2)
 #endif /* MAGNETIC */
 
-               call set_geo_coeffs(xdim, flind, j, k, cg)
+               call set_geo_coeffs(cdim, flind, i1, i2, cg)
 #ifdef COSM_RAYS
-               call set_div_v1d(div_v1d,xdim,j,k)
+               call set_div_v1d(div_v1d, cdim, i1, i2)
 #endif /* COSM_RAYS */
 
-               u_x (iarr_all_swp(xdim,:),:) = cg%u%arr(:,:,j,k)
-               u0_x(iarr_all_swp(xdim,:),:) = cg%uh%arr(:,:,j,k)
+               pu => cg%u%get_sweep(cdim,i1,i2)
+               pu0 => cg%uh%get_sweep(cdim,i1,i2)
 
-               call relaxing_tvd(cg%n_(xdim), u_x, u0_x, b_x, div_v1d, cg%cs_iso2%get_sweep(xdim,j,k), istep, xdim, j, k, cg%dx, dt, cg)
-               cg%u%arr(:,:,j,k)=u_x(iarr_all_swp(xdim,:),:)
+               u (iarr_all_swp(cdim,:),:) = pu(:,:)
+               u0(iarr_all_swp(cdim,:),:) = pu0(:,:)
+
+               call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cg%cs_iso2%get_sweep(cdim,i1,i2), istep, cdim, i1, i2, cg%dl(cdim), dt, cg)
+               pu(:,:) = u(iarr_all_swp(cdim,:),:)
+               nullify(pu,pu0)
             enddo
          enddo
          call all_fluid_boundaries    ! \todo : call only x for istep=1, call all for istep=2
       enddo
 
-   end subroutine sweepx
-!------------------------------------------------------------------------------------------
-   subroutine sweepy(cg)
-
-      use constants,       only: ydim
-      use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: flind, iarr_all_swp, ibx, iby, ibz, nmag
-      use global,          only: dt, integration_order
-      use grid,            only: D_x, D_z
-      use grid_cont,       only: grid_container
-      use gridgeometry,    only: set_geo_coeffs
-      use rtvd,            only: relaxing_tvd
-#ifdef COSM_RAYS
-      use crhelpers,       only: div_v, set_div_v1d
-#endif /* COSM_RAYS */
-
-      implicit none
-
-      type(grid_container), pointer, intent(inout) :: cg
-
-      real, dimension(nmag, cg%n_(ydim))      :: b_y
-      real, dimension(flind%all, cg%n_(ydim)) :: u_y, u0_y
-      real, dimension(:), pointer       :: div_v1d => null()
-      integer                           :: i, k, ip, kp, istep
-      b_y = 0.0
-      u_y = 0.0
-
-#ifdef COSM_RAYS
-      call div_v(flind%ion%pos)
-#endif /* COSM_RAYS */
-      cg%uh%arr = cg%u%arr
-      do istep = 1, integration_order
-         do k=cg%ks, cg%ke
-            kp=k+D_z
-            do i=cg%is, cg%ie
-               ip=i+D_x
-
-#ifdef MAGNETIC
-               b_y(:,:) = 0.5*cg%b%arr(:,i,:,k)
-               b_y(iby,1:cg%n_(ydim)-1)=b_y(iby,1:cg%n_(ydim)-1)+b_y(iby,2:cg%n_(ydim));       b_y(iby, cg%n_(ydim)) = b_y(iby, cg%n_(ydim)-1)
-               b_y(ibx,:)=b_y(ibx,:)+0.5*cg%b%arr(ibx,ip,:,k)
-               b_y(ibz,:)=b_y(ibz,:)+0.5*cg%b%arr(ibz,i,:,kp)
-               b_y( [ iby, ibx, ibz ],:)=b_y(:,:)
-#endif /* MAGNETIC */
-
-               call set_geo_coeffs(ydim, flind, k, i, cg)
-#ifdef COSM_RAYS
-               call set_div_v1d(div_v1d,ydim,k,i)
-#endif /* COSM_RAYS */
-
-               u_y (iarr_all_swp(ydim,:),:) = cg%u%arr(:,i,:,k)
-               u0_y(iarr_all_swp(ydim,:),:) = cg%uh%arr(:,i,:,k)
-
-               call relaxing_tvd(cg%n_(ydim), u_y, u0_y, b_y, div_v1d, cg%cs_iso2%get_sweep(ydim,k,i), istep, ydim, k, i, cg%dy, dt, cg)
-               cg%u%arr(:,i,:,k)=u_y(iarr_all_swp(ydim,:),:)
-
-            enddo
-         enddo
-
-         call all_fluid_boundaries
-      enddo
-
-   end subroutine sweepy
-!------------------------------------------------------------------------------------------
-   subroutine sweepz(cg)
-
-      use constants,       only: zdim
-      use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: flind, iarr_all_swp, ibx, iby, ibz, nmag
-      use global,          only: dt, integration_order
-      use grid,            only: D_x, D_y
-      use grid_cont,       only: grid_container
-      use gridgeometry,    only: set_geo_coeffs
-      use rtvd,            only: relaxing_tvd
-#ifdef COSM_RAYS
-      use crhelpers,       only: div_v, set_div_v1d
-#endif /* COSM_RAYS */
-
-      implicit none
-
-      type(grid_container), pointer, intent(inout) :: cg
-
-      real, dimension(nmag, cg%n_(zdim))      :: b_z
-      real, dimension(flind%all, cg%n_(zdim)) :: u_z, u0_z
-      real, dimension(:), pointer       :: div_v1d => null()
-      integer                           :: i, j, ip, jp, istep
-
-      b_z = 0.0
-      u_z = 0.0
-
-#ifdef COSM_RAYS
-      call div_v(flind%ion%pos)
-#endif /* COSM_RAYS */
-      cg%uh%arr = cg%u%arr
-      do istep = 1, integration_order
-         do j=cg%js, cg%je
-            jp=j+D_y
-            do i=cg%is, cg%ie
-               ip=i+D_x
-
-#ifdef MAGNETIC
-               b_z(:,:) = 0.5*cg%b%arr(:,i,j,:)
-               b_z(ibz,1:cg%n_(zdim)-1) = b_z(ibz,1:cg%n_(zdim)-1) + b_z(ibz,2:cg%n_(zdim));   b_z(ibz, cg%n_(zdim)) = b_z(ibz, cg%n_(zdim)-1)
-               b_z(ibx,:) = b_z(ibx,:) + 0.5*cg%b%arr(ibx,ip,j,:)
-               b_z(iby,:) = b_z(iby,:) + 0.5*cg%b%arr(iby,i,jp,:)
-               b_z( [ ibz, iby, ibx ],:)=b_z(:,:)
-#endif /* MAGNETIC */
-
-               call set_geo_coeffs(zdim, flind, i, j, cg)
-#ifdef COSM_RAYS
-               call set_div_v1d(div_v1d,zdim,i,j)
-#endif /* COSM_RAYS */
-
-               !OPT: It looks that u_z gets re-assigned to something inside relaxing_tvd. \todo try to merge these assignments
-               !OPT: 3% D1mr, 3% D2mr, 20% D1mw, Ir:Dr:Dw ~ 10:4:1
-               !OPT: The same applies to sweepy and sweepz
-               u_z (iarr_all_swp(zdim,:),:) = cg%u%arr(:,i,j,:)
-               u0_z(iarr_all_swp(zdim,:),:) = cg%uh%arr(:,i,j,:)
-
-               call relaxing_tvd(cg%n_(zdim), u_z, u0_z, b_z, div_v1d, cg%cs_iso2%get_sweep(zdim,i,j), istep, zdim, i, j, cg%dz, dt, cg)
-               cg%u%arr(:,i,j,:)=u_z(iarr_all_swp(zdim,:),:)
-            enddo
-         enddo
-
-         call all_fluid_boundaries
-      enddo
-
-   end subroutine sweepz
+   end subroutine sweep
 !------------------------------------------------------------------------------------------
 end module sweeps
