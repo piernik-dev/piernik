@@ -43,7 +43,7 @@ module domain
 
    private
    public :: cleanup_domain, init_domain, translate_bnds_to_ints_dom, is_overlap, domain_container, user_divide_domain, allocate_pse, deallocate_pse, set_pse_sel, &
-        &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, cdd
+        &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, cdd, total_ncells
 
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
@@ -103,6 +103,8 @@ module domain
    logical, protected :: is_refined         !< .true. when AMR or static refinement is employed
 
    integer, protected :: geometry_type  !< the type of geometry: cartesian: GEO_XYZ, cylindrical: GEO_RPZ, other: GEO_INVALID
+
+   integer(kind=8), protected :: total_ncells !< total number of %grid cells
 
    ! Private variables
 
@@ -329,6 +331,9 @@ contains
 
       has_dir(:) = dom%n_d(:) > 1
       eff_dim = count(has_dir(:))
+
+      total_ncells = product(int(dom%n_d(:), kind=8))
+      if (any(total_ncells < dom%n_d(:))) call die("[domain:init_domain] Integer overflow: too many cells")
 
       select case (geometry)
          case ("cartesian", "cart", "xyz", "XYZ")

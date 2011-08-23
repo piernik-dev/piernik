@@ -257,8 +257,8 @@ contains
 
       use constants,  only: I_ONE, half
       use dataio_pub, only: msg, printinfo
+      use domain,     only: total_ncells
       use global,     only: nstep
-      use grid,       only: total_ncells
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,   only: comm, ierr, master, FIRST
 
