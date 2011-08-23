@@ -897,9 +897,9 @@ contains
       use types,      only: value
       use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE
       use dataio_pub, only: die
-      use domain,     only: is_mpi_noncart, cdd
+      use domain,     only: is_mpi_noncart, cdd, D_x, D_y, D_z
       use func,       only: get_extremum
-      use grid,       only: cga, D_x, D_y, D_z
+      use grid,       only: cga
       use grid_cont,  only: grid_container !, cg_list_element
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: master, nproc, FIRST, LAST, comm, ierr, have_mpi

@@ -1021,7 +1021,7 @@ contains
 #endif /* !ISO */
 #endif /* RESISTIVE */
 #if defined VARIABLE_GP || defined MAGNETIC
-      use grid,               only: D_x, D_y, D_z
+      use domain,             only: D_x, D_y, D_z
 #endif /* VARIABLE_GP || MAGNETIC */
 
       implicit none

@@ -236,8 +236,7 @@ contains
 
       use constants,          only: xdim, ydim, zdim, LO, HI, LONG, I_ONE, half
       use dataio_pub,         only: die, warn
-      use domain,             only: has_dir
-      use grid,               only: D_x, D_y, D_z
+      use domain,             only: has_dir, D_x, D_y, D_z
       use mpi,                only: MPI_DOUBLE_PRECISION
       use mpisetup,           only: proc, comm, ierr, req, status, master
       use multigridhelpers,   only: check_dirty

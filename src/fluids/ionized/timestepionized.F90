@@ -63,9 +63,9 @@ contains
    real function timestep_ion(cg) result(dt)
 
       use constants,     only: zero, two, half
+      use domain,        only: D_x, D_y, D_z
       use fluidindex,    only: flind, ibx, iby, ibz
       use fluidtypes,    only: component_fluid
-      use grid,          only: D_x, D_y, D_z
       use grid_cont,     only: grid_container
       use timestepfuncs, only: compute_c_max, compute_dt
 

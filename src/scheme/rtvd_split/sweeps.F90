@@ -108,11 +108,14 @@ contains
 #endif /* SHEAR && FLUID_INTERACTIONS */
 !------------------------------------------------------------------------------------------
    function interpolate_mag_field(cdim, cg, i1, i2) result (b)
+
       use constants,       only: pdims, xdim, ydim, zdim, half
       use fluidindex,      only: iarr_mag_swp, nmag
-      use grid,            only: D_
+      use domain,          only: D_
       use grid_cont,       only: grid_container
+
       implicit none
+
       integer(kind=4), intent(in)                  :: cdim
       type(grid_container), pointer, intent(inout) :: cg
       integer, intent(in)                          :: i1, i2

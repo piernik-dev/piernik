@@ -38,19 +38,14 @@
 !<
 module grid
 
-   use constants, only: ndims
    use grid_cont, only: cg_set
 
    implicit none
 
    private
    public :: init_grid, init_arrays, grid_mpi_boundaries_prep, arr3d_boundaries, cleanup_grid
-   public :: cga, D_x, D_y, D_z, D_
+   public :: cga
 
-   integer, dimension(ndims), protected :: D_!< set to 1 for existing directions, 0 otherwise. Useful for dimensionally-safe indices for difference operators on arrays,
-   integer, protected :: D_x          !< set to 1 when x-direction exists, 0 otherwise
-   integer, protected :: D_y          !< set to 1 when y-direction exists, 0 otherwise.
-   integer, protected :: D_z          !< set to 1 when z-direction exists, 0 otherwise.
    type(cg_set), target :: cga        !< A container for all grids.
 
 contains
@@ -62,9 +57,9 @@ contains
 !<
    subroutine init_grid
 
-      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim
+      use constants,  only: PIERNIK_INIT_DOMAIN
       use dataio_pub, only: printinfo, die, code_progress
-      use domain,     only: dom, has_dir
+      use domain,     only: dom
       use grid_cont,  only: cg_list_element
       use mpisetup,   only: proc
 
@@ -121,17 +116,6 @@ contains
          call cgl%cg%init(dom)
          cgl => cgl%nxt
       enddo
-
-      where (has_dir(:))
-         D_(:) = 1
-      elsewhere
-         D_(:) = 0
-      endwhere
-
-      ! shortcuts
-      D_x = D_(xdim)
-      D_y = D_(ydim)
-      D_z = D_(zdim)
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: finished. \o/")

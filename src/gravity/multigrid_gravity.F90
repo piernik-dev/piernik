@@ -1870,8 +1870,7 @@ contains
 
       use constants,         only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half
       use dataio_pub,        only: die, warn
-      use domain,            only: has_dir, eff_dim, geometry_type
-      use grid,              only: D_x, D_y, D_z
+      use domain,            only: has_dir, eff_dim, geometry_type, D_x, D_y, D_z
       use multigridhelpers,  only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: plvl, base, extbnd_antimirror, single_base

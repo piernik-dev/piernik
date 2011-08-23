@@ -428,8 +428,9 @@ contains
    subroutine init_b
 
       use dataio_pub,         only: die
+      use domain,             only: D_x, D_y, D_z
       use fluidindex,         only: ibx, iby, ibz
-      use grid,               only: D_x, D_y, D_z, cga
+      use grid,               only: cga
       use grid_cont,          only: cg_list_element, grid_container
       use multigridbasefuncs, only: restrict_all
       use multigridhelpers,   only: set_dirty, check_dirty, dirty_label
@@ -452,7 +453,8 @@ contains
          call cga%get_root(cgl)
          do while (associated(cgl))
             cg => cgl%cg
-            roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = cg%b%arr(ib, cg%is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z)
+            roof%mgvar(       roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = &
+                 cg%b%arr(ib,   cg%is-D_x:  cg%ie+D_x,   cg%js-D_y:  cg%je+D_y,   cg%ks-D_z:  cg%ke+D_z)
             cgl => cgl%nxt
          enddo
          call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines

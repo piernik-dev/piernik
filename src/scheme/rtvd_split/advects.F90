@@ -44,10 +44,10 @@ contains
 
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
-      use domain,        only: has_dir
+      use domain,        only: has_dir, D_y
       use fluidindex,    only: iby, flind
       use global,        only: dt
-      use grid,          only: cga, D_y
+      use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb
@@ -108,10 +108,10 @@ contains
 
       use constants,     only: xdim, zdim
       use dataio_pub,    only: die
-      use domain,        only: has_dir
+      use domain,        only: has_dir, D_z
       use fluidindex,    only: ibz, flind
       use global,        only: dt
-      use grid,          only: cga, D_z
+      use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb
@@ -172,10 +172,10 @@ contains
 
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
-      use domain,        only: has_dir
+      use domain,        only: has_dir, D_z
       use fluidindex,    only: ibz, flind
       use global,        only: dt
-      use grid,          only: cga, D_z
+      use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb
@@ -236,10 +236,10 @@ contains
 
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
-      use domain,        only: has_dir
+      use domain,        only: has_dir, D_x
       use fluidindex,    only: ibx, flind
       use global,        only: dt
-      use grid,          only: cga, D_x
+      use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb
@@ -300,10 +300,10 @@ contains
 
       use constants,     only: xdim, zdim
       use dataio_pub,    only: die
-      use domain,        only: has_dir
+      use domain,        only: has_dir, D_x
       use fluidindex,    only: ibx, flind
       use global,        only: dt
-      use grid,          only: cga, D_x
+      use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb
@@ -364,10 +364,10 @@ contains
 
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
-      use domain,        only: has_dir
+      use domain,        only: has_dir, D_y
       use fluidindex,    only: iby, flind
       use global,        only: dt
-      use grid,          only: cga, D_y
+      use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb

@@ -43,7 +43,7 @@ module domain
 
    private
    public :: cleanup_domain, init_domain, translate_bnds_to_ints_dom, is_overlap, domain_container, user_divide_domain, allocate_pse, deallocate_pse, set_pse_sel, &
-        &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, cdd, total_ncells
+        &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, cdd, total_ncells, D_x, D_y, D_z, D_
 
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
@@ -95,6 +95,11 @@ module domain
 
    logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
    integer, protected    :: eff_dim                  !< effective dimensionality of the simulation
+
+   integer, dimension(ndims), protected :: D_ !< set to 1 for existing directions, 0 otherwise. Useful for dimensionally-safe indices for difference operators on arrays,
+   integer, protected :: D_x                  !< set to 1 when x-direction exists, 0 otherwise
+   integer, protected :: D_y                  !< set to 1 when y-direction exists, 0 otherwise.
+   integer, protected :: D_z                  !< set to 1 when z-direction exists, 0 otherwise.
 
    type(domain_container), protected :: dom !< complete description of base level domain
 
@@ -331,6 +336,16 @@ contains
 
       has_dir(:) = dom%n_d(:) > 1
       eff_dim = count(has_dir(:))
+      where (has_dir(:))
+         D_(:) = 1
+      elsewhere
+         D_(:) = 0
+      endwhere
+
+      ! shortcuts
+      D_x = D_(xdim)
+      D_y = D_(ydim)
+      D_z = D_(zdim)
 
       total_ncells = product(int(dom%n_d(:), kind=8))
       if (any(total_ncells < dom%n_d(:))) call die("[domain:init_domain] Integer overflow: too many cells")

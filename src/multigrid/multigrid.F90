@@ -79,7 +79,7 @@ contains
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven, cdd
-      use grid,                only: D_x, D_y, D_z, cga
+      use grid,                only: cga
       use grid_cont,           only: cg_list_element, grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_LOR, MPI_MIN, MPI_MAX, MPI_COMM_NULL
       use mpisetup,            only: comm, ierr, proc, master, slave, nproc, FIRST, LAST, buffer_dim, ibuff, lbuff
