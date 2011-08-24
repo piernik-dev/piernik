@@ -42,7 +42,7 @@ module domain
    implicit none
 
    private
-   public :: cleanup_domain, init_domain, translate_bnds_to_ints_dom, is_overlap, domain_container, user_divide_domain, allocate_pse, deallocate_pse, set_pse_sel, &
+   public :: cleanup_domain, init_domain, is_overlap, domain_container, user_divide_domain, allocate_pse, deallocate_pse, set_pse_sel, &
         &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, cdd, total_ncells, D_x, D_y, D_z, D_
 
 ! AMR: There will be at least one domain container for the base grid.
@@ -215,11 +215,11 @@ contains
    subroutine init_domain
 
       use constants,  only: xdim, ydim, zdim, LO, HI, big_float, dpi, &
-           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_COR, BND_REF, BLK, BND, PIERNIK_INIT_MPI, I_ONE
+           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND, PIERNIK_INIT_MPI, I_ONE
       use dataio_pub, only: die, printinfo, msg, warn, code_progress
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
-      use mpisetup,   only: buffer_dim, cbuff, ibuff, lbuff, rbuff, master, slave, proc, FIRST, LAST, nproc, comm, ierr, have_mpi, inflate_req
+      use mpisetup,   only: buffer_dim, cbuff, ibuff, lbuff, rbuff, master, slave, proc, FIRST, LAST, nproc, comm, ierr, have_mpi
 
       implicit none
 
@@ -359,7 +359,7 @@ contains
             geometry_type = GEO_INVALID
       end select
 
-      dom%bnd(:,:) = translate_bnds_to_ints_dom()
+      dom%bnd(:,:) = translate_bnds_to_ints([bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr])
 
       ! sanitize domain
       xmno = xmin
@@ -453,51 +453,6 @@ contains
 
       ! bnd_[xyz][lr] now become altered according to local topology of processes
       if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call warn("[domain:init_domain] Multiple blocks per process not implemented yet") !die
-
-      if ((dom%periodic(xdim) .and. dom%pse(proc)%sel(1, xdim, HI) /= dom%n_d(xdim) - 1) .or. dom%pse(proc)%sel(1, xdim, LO) /= 0)                 bnd_xl = 'mpi'
-      if ((dom%periodic(xdim) .and. dom%pse(proc)%sel(1, xdim, LO) /= 0)                 .or. dom%pse(proc)%sel(1, xdim, HI) /= dom%n_d(xdim) - 1) bnd_xr = 'mpi'
-      if ((dom%periodic(ydim) .and. dom%pse(proc)%sel(1, ydim, HI) /= dom%n_d(ydim) - 1) .or. dom%pse(proc)%sel(1, ydim, LO) /= 0)                 bnd_yl = 'mpi'
-      if ((dom%periodic(ydim) .and. dom%pse(proc)%sel(1, ydim, LO) /= 0)                 .or. dom%pse(proc)%sel(1, ydim, HI) /= dom%n_d(ydim) - 1) bnd_yr = 'mpi'
-      if ((dom%periodic(zdim) .and. dom%pse(proc)%sel(1, zdim, HI) /= dom%n_d(zdim) - 1) .or. dom%pse(proc)%sel(1, zdim, LO) /= 0)                 bnd_zl = 'mpi'
-      if ((dom%periodic(zdim) .and. dom%pse(proc)%sel(1, zdim, LO) /= 0)                 .or. dom%pse(proc)%sel(1, zdim, HI) /= dom%n_d(zdim) - 1) bnd_zr = 'mpi'
-
-      ! For shear boundaries and some domain decompositions it is possible that a boundary can be mixed 'per' with 'mpi'
-
-      if (cdd%comm3d == MPI_COMM_NULL) then
-         call inflate_req(size([LO, HI]) * 2 * nproc) ! 2 = count([i_bnd, o_bnd])
-         if (any(dom%bnd(:, :) == BND_COR)) call die("[domain:init_domain] Corner BC not implemented without comm3d")
-#ifdef SHEAR_BND
-         call die("[domain:init_domain] SHEAR_BND not implemented without comm3d")
-#endif /* SHEAR_BND */
-      else
-         call inflate_req(max(size([LO, HI]) * size([BLK, BND]) * ndims, int(nproc))) ! just another way of defining '4 * 3' ;-)
-         ! write_plot_hdf5 requires nproc entries for the status array
-
-         if (any(dom%bnd(xdim:ydim, :) == BND_COR) .and. (cdd%psize(xdim) /= cdd%psize(ydim) .or. dom%n_d(xdim) /= dom%n_d(ydim))) then
-            write(msg, '(a,4(i4,a))')"[domain:init_domain] Corner BC require psize(xdim) equal to psize(ydim) and nxd equal to nyd. Detected: [", &
-                 &                   cdd%psize(xdim),",",cdd%psize(ydim), "] and [",dom%n_d(xdim),",",dom%n_d(ydim),"]"
-            call die(msg)
-         endif
-         if (any(dom%bnd(zdim, :) == BND_COR)) call die("[domain:init_domain] Corner BC not allowed for z-direction")
-
-#ifdef SHEAR_BND
-         if (cdd%psize(ydim) > 1) call die("[domain:initmpi] Shear-pediodic boundary conditions do not permit psize(ydim) > 1")
-         ! This will be possible when is_mpi_noncart will be fully implemented
-
-#ifndef FFTW
-         bnd_xl = 'mpi'
-         bnd_xr = 'mpi'
-         if (cdd%pcoords(xdim) == 0)             bnd_xl = 'she'
-         if (cdd%pcoords(xdim) == psize(xdim)-1) bnd_xr = 'she'
-#endif /* !FFTW */
-#endif /* SHEAR_BND */
-#ifdef DEBUG
-         do p = xdim, zdim
-            write(msg,*) 'dir',p,': ',cdd%procn(p, LO), proc, cdd%procn(p, HI)
-            call printinfo(msg)
-         enddo
-#endif /* DEBUG */
-      endif
 
 !#ifdef VERBOSE
       if (master) then
@@ -1152,21 +1107,8 @@ contains
 
 !-----------------------------------------------------------------------------
 !
-!  public wrapper
+! An interpreter of string-defined boundary types
 !
-   function translate_bnds_to_ints_dom() result(tab)
-
-      use constants, only: ndims, LO, HI
-
-      implicit none
-
-      integer, dimension(ndims, LO:HI) :: tab
-
-      tab(:,:) = translate_bnds_to_ints([bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr])
-
-   end function translate_bnds_to_ints_dom
-
-!-----------------------------------------------------------------------------
 
    function translate_bnds_to_ints(bnds) result(tab)
 

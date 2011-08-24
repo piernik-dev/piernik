@@ -160,10 +160,11 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init(this, dom)
 
-      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, INVALID, I_ONE, I_TWO
-      use dataio_pub, only: die, warn, code_progress
-      use domain,     only: has_dir, translate_bnds_to_ints_dom, domain_container
-      use mpisetup,   only: proc
+      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, INVALID, I_ONE, I_TWO, BND_MPI, BND_SHE, BND_COR
+      use dataio_pub, only: die, warn, printinfo, msg, code_progress
+      use domain,     only: has_dir, domain_container, cdd
+      use mpi,        only: MPI_COMM_NULL
+      use mpisetup,   only: proc, nproc, inflate_req
 
       implicit none
 
@@ -173,7 +174,7 @@ contains
       integer :: i
       real, dimension(:), pointer :: a0, al, ar, ia
 
-      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init] MPI not initialized.")
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init] MPI not initialized.")
       if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid_container:init] Multiple blocks per process not implemented yet")
 
       this%nb = dom%nb
@@ -184,12 +185,56 @@ contains
       if (all(this%n_b(:) == 0)) then
          this%empty = .true.
       else if (any(this%n_b(:) <= 0)) then
-         call die("[grid_init] Mixed positive and non-positive grid sizes")
+         call die("[grid_container:init] Mixed positive and non-positive grid sizes")
       else
          this%empty = .false.
       endif
 
-      this%bnd(:,:) = translate_bnds_to_ints_dom()
+      ! Inherit the boundaries from the domain, then set MPI or SHEAR boundaries where applicable
+      this%bnd(:,:) = dom%bnd(:,:)
+      where (dom%pse(proc)%sel(1, :, LO) /= 0)              this%bnd(:, LO) = BND_MPI
+      where (dom%pse(proc)%sel(1, :, HI) /= dom%n_d(:) - 1) this%bnd(:, HI) = BND_MPI
+      ! For periodic boundaries do not set BND_MPI when local domain spans through the whole computational domain in given direction.
+      where (dom%periodic(:) .and. dom%pse(proc)%sel(1, :, HI) /= dom%n_d(:) - 1) this%bnd(:, LO) = BND_MPI
+      where (dom%periodic(:) .and. dom%pse(proc)%sel(1, :, LO) /= 0)              this%bnd(:, HI) = BND_MPI
+
+      ! For shear boundaries and some domain decompositions it is possible that a boundary can be mixed 'per' with 'mpi'
+
+      if (cdd%comm3d == MPI_COMM_NULL) then
+         call inflate_req(size([LO, HI]) * 2 * nproc) ! 2 = count([i_bnd, o_bnd])
+         if (any(dom%bnd(:, :) == BND_COR)) call die("[grid_container:init] Corner BC not implemented without comm3d")
+#ifdef SHEAR_BND
+         call die("[grid_container:init] SHEAR_BND not implemented without comm3d")
+#endif /* SHEAR_BND */
+      else
+         call inflate_req(max(size([LO, HI]) * size([BLK, BND]) * ndims, int(nproc))) ! just another way of defining '4 * 3' ;-)
+         ! write_plot_hdf5 requires nproc entries for the status array
+
+         if (any(dom%bnd(xdim:ydim, :) == BND_COR) .and. (cdd%psize(xdim) /= cdd%psize(ydim) .or. dom%n_d(xdim) /= dom%n_d(ydim))) then
+            write(msg, '(a,4(i4,a))')"[grid_container:init] Corner BC require psize(xdim) equal to psize(ydim) and nxd equal to nyd. Detected: [", &
+                 &                   cdd%psize(xdim),",",cdd%psize(ydim), "] and [",dom%n_d(xdim),",",dom%n_d(ydim),"]"
+            call die(msg)
+         endif
+         if (any(dom%bnd(zdim, :) == BND_COR)) call die("[grid_container:init] Corner BC not allowed for z-direction")
+
+#ifdef SHEAR_BND
+         if (cdd%psize(ydim) > 1) call die("[domain:initmpi] Shear-pediodic boundary conditions do not permit psize(ydim) > 1")
+         ! This is possible to be implemented with mpi_noncart
+
+#ifndef FFTW
+         this%bnd(xdim, :) = BND_MPI
+         if (cdd%pcoords(xdim) == 0)             this%bnd(xdim, LO) = BND_SHE
+         if (cdd%pcoords(xdim) == psize(xdim)-1) this%bnd(xdim, HI) = BND_SHE
+#endif /* !FFTW */
+#endif /* SHEAR_BND */
+#ifdef DEBUG
+         do i = xdim, zdim
+            write(msg,*) 'dir',i,': ',cdd%procn(i, LO), proc, cdd%procn(i, HI)
+            call printinfo(msg)
+         enddo
+#endif /* DEBUG */
+      endif
+
       this%mbc(:, :, :, :) = INVALID
 
       if (this%empty) then
