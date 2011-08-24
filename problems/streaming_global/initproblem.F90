@@ -363,14 +363,12 @@ contains
          cg%b%arr(:,:,:,:) = 0.0
          cgl => cgl%nxt
       enddo
-#ifdef DEBUG
       open(12,file="vel_profile.dat",status="unknown")
          do i = 1, cg%n_(xdim)
             write(12,'(3(E12.5,1X))') cg%x(i), cg%u%arr(flind%all_fluids(1:2)%imy,i,max(cg%n_(ydim)/2,1),max(cg%n_(zdim)/2,1)) / &
                 &  cg%u%arr(flind%all_fluids(1:2)%idn,i,max(cg%n_(ydim)/2,1),max(cg%n_(zdim)/2,1))
          enddo
       close(12)
-#endif /* DEBUG */
 
    end subroutine init_prob
 !-----------------------------------------------------------------------------
@@ -486,7 +484,7 @@ contains
       use grid_cont,       only: cg_list_element, grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use global,          only: dt, t, grace_period_passed, relax_time
+      use global,          only: dt, t, grace_period_passed, relax_time, smalld
       use constants,       only: dpi, xdim, ydim, zdim
       use units,           only: newtong
       use gravity,         only: ptmass
@@ -531,12 +529,12 @@ contains
             endwhere
 
             if (use_inner_orbital_period) then
-               funcR(1,:) = funcR(1,:) * sqrt( newtong*ptmass/cg%x(cg%nb+1)**3 ) / dpi
+               funcR(1,:) = funcR(1,:) * sqrt( newtong*ptmass/cg%x(cg%nb)**3 ) / dpi
             else
                funcR(1,:) = funcR(1,:) * dumping_coeff
             endif
             open(212,file="funcR.dat",status="unknown")
-            write(212,*) "# ",sqrt( newtong*ptmass/cg%x(cg%nb+1)**3 ) / dpi
+            write(212,*) "# ",sqrt( newtong*ptmass/cg%x(cg%nb)**3 ) / dpi
             do j = 1, cg%n_(xdim)
                write(212,*) cg%x(j),funcR(1,j)
             enddo
@@ -544,24 +542,34 @@ contains
             frun = .false.
             funcR(:,:) = spread(funcR(1,:),1,size(iarr_all_dn))
          endif
-         funcR = 0.0
 
          if (grace_period_passed()) call update_grain_size(a*t+b)
+!         do j = 1, cg%n_(ydim)
+!            do k = 1, cg%n_(zdim)
+!               cg%u%arr(iarr_all_dn,:,j,k) = cg%u%arr(iarr_all_dn,:,j,k) - dt*(cg%u%arr(iarr_all_dn,:,j,k) - den0(:,:,j,k))*funcR(:,:)
+!               cg%u%arr(iarr_all_mx,:,j,k) = cg%u%arr(iarr_all_mx,:,j,k) - dt*(cg%u%arr(iarr_all_mx,:,j,k) - mtx0(:,:,j,k))*funcR(:,:)
+!               cg%u%arr(iarr_all_my,:,j,k) = cg%u%arr(iarr_all_my,:,j,k) - dt*(cg%u%arr(iarr_all_my,:,j,k) - mty0(:,:,j,k))*funcR(:,:)
+!               cg%u%arr(iarr_all_mz,:,j,k) = cg%u%arr(iarr_all_mz,:,j,k) - dt*(cg%u%arr(iarr_all_mz,:,j,k) - mtz0(:,:,j,k))*funcR(:,:)
+!#ifndef ISO
+!               cg%u%arr(iarr_all_en,:,j,k) = cg%u%arr(iarr_all_en,:,j,k) - dt*(cg%u%arr(iarr_all_en,:,j,k) - ene0(:,:,j,k)*funcR(:,:)
+!#endif /* !ISO */
+!            enddo
+!         enddo
          do j = 1, cg%n_(ydim)
             do k = 1, cg%n_(zdim)
-               cg%u%arr(iarr_all_dn,:,j,k) = cg%u%arr(iarr_all_dn,:,j,k) - dt*(cg%u%arr(iarr_all_dn,:,j,k) - den0(:,:,j,k))*funcR(:,:)
-               cg%u%arr(iarr_all_mx,:,j,k) = cg%u%arr(iarr_all_mx,:,j,k) - dt*(cg%u%arr(iarr_all_mx,:,j,k) - mtx0(:,:,j,k))*funcR(:,:)
-               cg%u%arr(iarr_all_my,:,j,k) = cg%u%arr(iarr_all_my,:,j,k) - dt*(cg%u%arr(iarr_all_my,:,j,k) - mty0(:,:,j,k))*funcR(:,:)
-               cg%u%arr(iarr_all_mz,:,j,k) = cg%u%arr(iarr_all_mz,:,j,k) - dt*(cg%u%arr(iarr_all_mz,:,j,k) - mtz0(:,:,j,k))*funcR(:,:)
+               cg%u%arr(iarr_all_dn,:,j,k) = (1.-funcR(:,:))*cg%u%arr(iarr_all_dn,:,j,k) + den0(:,:,j,k)*funcR(:,:)
+               cg%u%arr(iarr_all_mx,:,j,k) = (1.-funcR(:,:))*cg%u%arr(iarr_all_mx,:,j,k) + mtx0(:,:,j,k)*funcR(:,:)
+               cg%u%arr(iarr_all_my,:,j,k) = (1.-funcR(:,:))*cg%u%arr(iarr_all_my,:,j,k) + mty0(:,:,j,k)*funcR(:,:)
+               cg%u%arr(iarr_all_mz,:,j,k) = (1.-funcR(:,:))*cg%u%arr(iarr_all_mz,:,j,k) + mtz0(:,:,j,k)*funcR(:,:)
 #ifndef ISO
-               cg%u%arr(iarr_all_en,:,j,k) = cg%u%arr(iarr_all_en,:,j,k) - dt*(cg%u%arr(iarr_all_en,:,j,k) - ene0(:,:,j,k)*funcR(:,:)
+               cg%u%arr(iarr_all_en,:,j,k) = (1.-funcR(:,:))*cg%u%arr(iarr_all_en,:,j,k) + ene0(:,:,j,k)*funcR(:,:)
 #endif /* !ISO */
             enddo
          enddo
-!         where ( cg%u%arr(iarr_all_dn,:,:,:) < 2.*smalld )
-!            cg%u%arr(iarr_all_mx,:,:,:) = cg%u%arr(iarr_all_mx,:,:,:)*0.1
-!            cg%u%arr(iarr_all_mz,:,:,:) = cg%u%arr(iarr_all_mz,:,:,:)*0.1
-!         endwhere
+
+         where ( cg%u%arr(iarr_all_dn,:,:,:) < 1.05*smalld )
+            cg%u%arr(iarr_all_mz,:,:,:) = cg%u%arr(iarr_all_mz,:,:,:)*0.1
+         endwhere
 
          cgl => cgl%nxt
       enddo

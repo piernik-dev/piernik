@@ -1,7 +1,7 @@
  $BASE_DOMAIN
     nxd = 100
     nyd = 1
-    nzd = 200
+    nzd = 100
     nb  = 4
     bnd_xl = 'ref'
     bnd_xr = 'ref'
@@ -19,7 +19,7 @@
  /
 
  $MPI_BLOCKS
-    psize = 1, 1, 1
+    psize = 4, 2, 4
  /
 
  $UNITS
@@ -33,22 +33,21 @@
  /
 
  $END_CONTROL
-    tend   = 10.0
+    tend   = 650.0
     nend   = 10000000
  /
 
  $OUTPUT_CONTROL
-    problem_name ='kepler'
-    run_id  =  'ts2'
-    dt_hdf  = 0.01
-    dt_res  = 0.0
-    dt_log  = 1.0
-    dt_tsl  = 1.0
+    problem_name ='streaming'
+    run_id  =  'gbl'
+    dt_hdf  = 0.3
+    dt_res  = 10.0
+    dt_log  = 0.1
+    dt_tsl  = 0.1
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
     vars(4) = 'velz'
-    mag_center = 'no'
  /
 
  $FLUID_NEUTRAL
@@ -60,10 +59,10 @@
  /
 
  $NUMERICAL_SETUP
-    cfl    = 0.4
+    cfl    = 0.5
     use_smalld = .true.
     smalld = 1.e-6
-    dt_initial = 1e-6
+    dt_initial = 1.e-6
     relax_time = 0.0
     integration_order = 2
     limiter= 'vanleer'
@@ -82,21 +81,21 @@
 
  $PROBLEM_CONTROL
     use_inner_orbital_period = .false.
-    dumping_coeff = 50.0
+    dumping_coeff = 1.0
 
     rho0    = 0.12    ! 2.92e-8 kg/m^3 @ 1AU
     R0      = 0.16    ! 1 AU
     cs0     = 0.3     ! ~ 307K ~ 1.13 km/s
     r_in    = 0.32    ! 2 AU
     r_out   = 1.44    ! 9 AU
-    f_in    = 10.0
-    f_out   = 100.0
+    f_in    = 30.0
+    f_out   = 30.0
     eps     = 0.01
     amp_noise = 1.e-7
 
-    growth_time        = 1.0e-5     ! 7.86394 yr  
-    initial_grain_size = 1.0e-1      ! cm
-    final_grain_size   = 1.0e-1      ! cm
+    growth_time        = 1.0        ! 7.86394 yr  
+    initial_grain_size = 0.1         ! cm
+    final_grain_size   = 0.1        ! cm
  /
 
  $PIERNIK_DEBUG
@@ -105,5 +104,5 @@
 
  $INTERACTIONS
    cfl_interact      = 0.8
-   grain_size        = 1.0e-1
+   grain_size        = 0.1
  /
