@@ -265,7 +265,7 @@ contains
                   procmask(:) = 0
                   do lh = LO, HI
                      hl = LO+HI-lh ! HI for LO, LO for HI
-                     b_layer(:,:) = dom%pse(proc)%sel(1, :, :)
+                     b_layer(:,:) = cg%my_se(:, :)
                      b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
                      b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
                      do j = FIRST, LAST
@@ -284,7 +284,7 @@ contains
                      if (procmask(j) /= 0) then
                         do lh = LO, HI
                            hl = LO+HI-lh
-                           b_layer(:,:) = dom%pse(proc)%sel(1, :, :)
+                           b_layer(:,:) = cg%my_se(:, :)
                            b_layer(d, lh) = b_layer(d, lh) + lh-hl
                            b_layer(d, hl) = b_layer(d, lh)
 

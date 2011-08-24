@@ -706,7 +706,7 @@ contains
                      procmask(:) = 0
                      ! two layers of cells are required for even locations (+ two layers per each interpolation order)
                      ! one layer of cells is required for odd locations (the local domain face is exactly at the centers of coarse cells)
-                     coarsened(:, :) = curl%dom%pse(proc)%sel(1, :, :)/2
+                     coarsened(:, :) = curl%my_se(:, :)/2
                      coarsened(d, hl) = coarsened(d, lh)
                      select case (lh)
                         case (LO)
@@ -733,7 +733,7 @@ contains
                            endif
                            seg%proc = j
                            ! find cross-section of own face segment with refined coarse segment
-                           b_layer(:, :) = curl%dom%pse(proc)%sel(1, :, :)
+                           b_layer(:, :) = curl%my_se(:, :)
                            b_layer(d, hl) = b_layer(d, lh)
                            !b_layer(d, lh) = b_layer(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
 
@@ -771,7 +771,7 @@ contains
                               is_internal_fine = is_internal_fine .or. (curl%finer%dom%pse(j)%sel(1, d, lh) + 1 < curl%finer%dom%n_d(d))
                         end select
                         if (is_internal_fine) then
-                           call is_overlap(coarsened(:, :), curl%dom%pse(proc)%sel(1, :, :), sharing, per)
+                           call is_overlap(coarsened(:, :), curl%my_se(:, :), sharing, per)
                            if (sharing) procmask(j) = 1
                         endif
                      enddo
@@ -794,8 +794,8 @@ contains
                            coarsened(d, hl) = coarsened(d, lh)
                            coarsened(:, :) = coarsened(:, :)/2
                            where (.not. dmask(:))
-                              seg%se(:, LO) = max(curl%dom%pse(proc)%sel(1, :, LO), coarsened(:, LO))
-                              seg%se(:, HI) = min(curl%dom%pse(proc)%sel(1, :, HI), coarsened(:, HI))
+                              seg%se(:, LO) = max(curl%my_se(:, LO), coarsened(:, LO))
+                              seg%se(:, HI) = min(curl%my_se(:, HI), coarsened(:, HI))
                            endwhere
                            seg%se(d, :) = coarsened(d, :)
                            !if (j /= proc)
@@ -809,8 +809,8 @@ contains
                            coarsened(:, :) = coarsened(:, :)/2
                            coarsened(d, :) = coarsened(d, :) + [ -ord_prolong_face_norm, ord_prolong_face_norm ]
 
-                           seg%se(:, LO) = max(curl%dom%pse(proc)%sel(1, :, LO), coarsened(:, LO)) + ijks(:)
-                           seg%se(:, HI) = min(curl%dom%pse(proc)%sel(1, :, HI), coarsened(:, HI)) + ijks(:)
+                           seg%se(:, LO) = max(curl%my_se(:, LO), coarsened(:, LO)) + ijks(:)
+                           seg%se(:, HI) = min(curl%my_se(:, HI), coarsened(:, HI)) + ijks(:)
 
                            coarsened(d, :) = coarsened(d, :) - [ -ord_prolong_face_norm, ord_prolong_face_norm ] ! revert broadening
                            allocate(seg%f_lay(seg%se(d, HI) - seg%se(d, LO) + 1))

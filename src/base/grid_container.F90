@@ -84,9 +84,9 @@ module grid_cont
 
       integer(kind=8), dimension(ndims) :: off    !< offset of the local domain within computational domain
       integer(kind=4), dimension(ndims) :: n_b    !< [nxb, nyb, nzb]
-      integer(kind=8), dimension(ndims) :: h_cor  !< offsets of the corner opposite to the one defined by off(:)
-      integer(kind=8), dimension(ndims) :: h_cor1 !< h_cor(:) + 1, a shortcut to be compared with dom%n_d(:)
+      integer(kind=8), dimension(ndims) :: h_cor1 !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:)
       integer(kind=4), dimension(ndims) :: n_     !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
+      integer(kind=8), dimension(ndims, LO:HI) :: my_se !< own segment
 
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkse !< [[is, js, ks], [ie, je, ke]]
       integer, dimension(ndims, LO:HI)  :: bnd  !< type of boundary conditions coded in integers
@@ -181,10 +181,10 @@ contains
 
       this%nb = dom%nb
 
-      this%off(:)    = dom%pse(proc)%sel(1, :, LO) ! Block offset on the dom% should be between 0 and nxd-nxb
-      this%h_cor(:)  = dom%pse(proc)%sel(1, :, HI)
-      this%h_cor1(:) = this%h_cor(:) + I_ONE
-      this%n_b(:) = int(this%h_cor1(:) - this%off(:), 4) ! Block 'physical' grid sizes
+      this%my_se(:,:) = dom%pse(proc)%sel(1, :, :)
+      this%off(:)     = this%my_se(:, LO)
+      this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
+      this%n_b(:)     = int(this%h_cor1(:) - this%off(:), 4) ! Block 'physical' grid sizes
 
       if (all(this%n_b(:) == 0)) then
          this%empty = .true.

@@ -79,7 +79,7 @@ contains
             procmask(:) = 0
             do j = FIRST, LAST
                coarsened(:,:) = curl%finer%dom%pse(j)%sel(1, :, :)/2
-               call is_overlap(curl%dom%pse(proc)%sel(1, :, :), coarsened(:,:), sharing)
+               call is_overlap(curl%my_se(:, :), coarsened(:,:), sharing)
                if (sharing) procmask(j) = 1 ! we can store also neigh(:,:), face and corner as a bitmask, if necessary
             enddo
             allocate(curl%f_tgt%seg(count(procmask(:) /= 0)))
@@ -96,8 +96,8 @@ contains
                   endif
                   seg%proc = j
                   ! find cross-section of own segment with coarsened fine segment
-                  seg%se(:, LO) = max(curl%dom%pse(proc)%sel(1, :, LO), curl%finer%dom%pse(j)%sel(1, :, LO)/2) + ijks(:)
-                  seg%se(:, HI) = min(curl%dom%pse(proc)%sel(1, :, HI), curl%finer%dom%pse(j)%sel(1, :, HI)/2) + ijks(:)
+                  seg%se(:, LO) = max(curl%my_se(:, LO), curl%finer%dom%pse(j)%sel(1, :, LO)/2) + ijks(:)
+                  seg%se(:, HI) = min(curl%my_se(:, HI), curl%finer%dom%pse(j)%sel(1, :, HI)/2) + ijks(:)
                   if (j /= proc) allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, seg%se(ydim, HI)-seg%se(ydim, LO) + 1, seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                   ! not counted in mb_alloc
                endif
@@ -108,7 +108,7 @@ contains
          !> \deprecated almost duplicated code
          if (associated(curl%coarser)) then
             procmask(:) = 0
-            coarsened(:,:) = curl%dom%pse(proc)%sel(1, :, :)/2
+            coarsened(:,:) = curl%my_se(:, :)/2
             do j = FIRST, LAST
                call is_overlap(coarsened(:,:), curl%coarser%dom%pse(j)%sel(1, :, :), sharing)
                if (sharing) procmask(j) = 1
@@ -127,8 +127,8 @@ contains
                   endif
                   seg%proc = j
                   ! find cross-section of own segment with refined coarse segment
-                  seg%se(:, LO) = max(curl%dom%pse(proc)%sel(1, :, LO), curl%coarser%dom%pse(j)%sel(1, :, LO)*2  )
-                  seg%se(:, HI) = min(curl%dom%pse(proc)%sel(1, :, HI), curl%coarser%dom%pse(j)%sel(1, :, HI)*2+1)
+                  seg%se(:, LO) = max(curl%my_se(:, LO), curl%coarser%dom%pse(j)%sel(1, :, LO)*2  )
+                  seg%se(:, HI) = min(curl%my_se(:, HI), curl%coarser%dom%pse(j)%sel(1, :, HI)*2+1)
                   if (j /= proc) allocate(seg%buf(seg%se(xdim, HI)/2-seg%se(xdim, LO)/2 + 1, &
                        &                          seg%se(ydim, HI)/2-seg%se(ydim, LO)/2 + 1, &
                        &                          seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
@@ -160,7 +160,7 @@ contains
                   procmask(:) = 0
                   do lh = LO, HI
                      hl = LO+HI-lh ! HI for LO, LO for HI
-                     b_layer(:,:) = curl%dom%pse(proc)%sel(1, :, :)
+                     b_layer(:,:) = curl%my_se(:, :)
                      b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
                      b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
                      do j = FIRST, LAST
@@ -179,7 +179,7 @@ contains
                      if (procmask(j) /= 0) then
                         do lh = LO, HI
                            hl = LO+HI-lh
-                           b_layer(:,:) = curl%dom%pse(proc)%sel(1, :, :)
+                           b_layer(:,:) = curl%my_se(:, :)
                            b_layer(d, lh) = b_layer(d, lh) + lh-hl
                            b_layer(d, hl) = b_layer(d, lh)
                            bp_layer(:, :) = b_layer(:, :)
