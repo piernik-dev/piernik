@@ -710,9 +710,9 @@ contains
                      coarsened(d, hl) = coarsened(d, lh)
                      select case (lh)
                         case (LO)
-                           if (mod(curl%off(d),               2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
+                           if (mod(curl%off(d),    2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
                         case (HI)
-                           if (mod(curl%off(d) + curl%n_b(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
+                           if (mod(curl%h_cor1(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
                      end select
 
                      do j = FIRST, LAST

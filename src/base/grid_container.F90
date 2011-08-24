@@ -82,9 +82,11 @@ module grid_cont
 
       logical :: empty                          !< .true. if there are no cells to process (e.g. some processes at base level in multigrid gravity)
 
-      integer(kind=8), dimension(ndims) :: off  !< offset of the local domain within computational domain
-      integer(kind=4), dimension(ndims) :: n_b  !< [nxb, nyb, nzb]
-      integer(kind=4), dimension(ndims) :: n_   !< number of %grid cells in one block in x-, y- and z-directions
+      integer(kind=8), dimension(ndims) :: off    !< offset of the local domain within computational domain
+      integer(kind=4), dimension(ndims) :: n_b    !< [nxb, nyb, nzb]
+      integer(kind=8), dimension(ndims) :: h_cor  !< offsets of the corner opposite to the one defined by off(:)
+      integer(kind=8), dimension(ndims) :: h_cor1 !< h_cor(:) + 1, a shortcut to be compared with dom%n_d(:)
+      integer(kind=4), dimension(ndims) :: n_     !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
 
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkse !< [[is, js, ks], [ie, je, ke]]
       integer, dimension(ndims, LO:HI)  :: bnd  !< type of boundary conditions coded in integers
@@ -179,8 +181,10 @@ contains
 
       this%nb = dom%nb
 
-      this%off(:) = dom%pse(proc)%sel(1, :, LO)  ! Block offset on the dom% should be between 0 and nxd-nxb
-      this%n_b(:) = int(dom%pse(proc)%sel(1, :, HI) - dom%pse(proc)%sel(1, :, LO) + 1, 4) ! Block 'physical' grid sizes
+      this%off(:)    = dom%pse(proc)%sel(1, :, LO) ! Block offset on the dom% should be between 0 and nxd-nxb
+      this%h_cor(:)  = dom%pse(proc)%sel(1, :, HI)
+      this%h_cor1(:) = this%h_cor(:) + I_ONE
+      this%n_b(:) = int(this%h_cor1(:) - this%off(:), 4) ! Block 'physical' grid sizes
 
       if (all(this%n_b(:) == 0)) then
          this%empty = .true.
@@ -192,11 +196,11 @@ contains
 
       ! Inherit the boundaries from the domain, then set MPI or SHEAR boundaries where applicable
       this%bnd(:,:) = dom%bnd(:,:)
-      where (dom%pse(proc)%sel(1, :, LO) /= 0)              this%bnd(:, LO) = BND_MPI
-      where (dom%pse(proc)%sel(1, :, HI) /= dom%n_d(:) - 1) this%bnd(:, HI) = BND_MPI
+      where (this%off(:)    /= 0)          this%bnd(:, LO) = BND_MPI
+      where (this%h_cor1(:) /= dom%n_d(:)) this%bnd(:, HI) = BND_MPI
       ! For periodic boundaries do not set BND_MPI when local domain spans through the whole computational domain in given direction.
-      where (dom%periodic(:) .and. dom%pse(proc)%sel(1, :, HI) /= dom%n_d(:) - 1) this%bnd(:, LO) = BND_MPI
-      where (dom%periodic(:) .and. dom%pse(proc)%sel(1, :, LO) /= 0)              this%bnd(:, HI) = BND_MPI
+      where (dom%periodic(:) .and. this%h_cor1(:) /= dom%n_d(:)) this%bnd(:, LO) = BND_MPI
+      where (dom%periodic(:) .and. this%off(:)    /= 0)              this%bnd(:, HI) = BND_MPI
 
       ! For shear boundaries and some domain decompositions it is possible that a boundary can be mixed 'per' with 'mpi'
 
@@ -270,8 +274,8 @@ contains
             this%ijkse(:, LO) = this%nb + I_ONE
             this%ijkse(:, HI) = this%nb + this%n_b(:)
             this%dl(:) = dom%L_(:) / dom%n_d(:)
-            this%fbnd(:, LO) = dom%edge(:, LO) + this%dl(:) *  this%off(:)
-            this%fbnd(:, HI) = dom%edge(:, LO) + this%dl(:) * (this%off(:) + this%n_b(:))
+            this%fbnd(:, LO) = dom%edge(:, LO) + this%dl(:) * this%off(:)
+            this%fbnd(:, HI) = dom%edge(:, LO) + this%dl(:) * this%h_cor1(:)
          elsewhere
             this%n_(:) = 1
             this%ijkse(:, LO) = 1

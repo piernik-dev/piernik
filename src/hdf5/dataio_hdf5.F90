@@ -643,7 +643,7 @@ contains
                lleft(:)  = lleft(:)  - cg%nb
                chnk(:)   = chnk(:)   + cg%nb
             endwhere
-            where (cg%off(:) + cg%n_b(:) == dom%n_d(:) .and. has_dir(:))
+            where (cg%h_cor1(:) == dom%n_d(:) .and. has_dir(:))
                lright(:) = lright(:) + cg%nb
                chnk(:)   = chnk(:)   + cg%nb
             endwhere

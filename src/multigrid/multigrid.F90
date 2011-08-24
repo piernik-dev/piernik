@@ -170,8 +170,8 @@ contains
          is_external(:, :) = .false.
          do j=xdim, zdim
             if (has_dir(j) .and. .not. dom%periodic(j)) then
-               is_external(j, LO) = (cg%off(j) == 0)
-               is_external(j, HI) = (cg%off(j)+cg%n_b(j) == dom%n_d(j))
+               is_external(j, LO) = (cg%off(j)    == 0)
+               is_external(j, HI) = (cg%h_cor1(j) == dom%n_d(j))
             endif
          enddo
          cgl => cgl%nxt
