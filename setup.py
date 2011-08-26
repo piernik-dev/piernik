@@ -388,6 +388,11 @@ uses  = [[]]
 incl  = ['']
 module = dict()
 
+for f in f90files: # exclude links that symbolise file locks
+   if (not os.access(f, os.F_OK)):
+      print '\033[93m' + "Warning: Cannot access file:" + '\033[0m', f
+      f90files.remove(f)
+
 for f in f90files:
    keys_logic1 = False
    keys_logic2 = False
