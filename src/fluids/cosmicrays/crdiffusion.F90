@@ -46,8 +46,9 @@ contains
 
       use dataio_pub,  only: die
       use diagnostics, only: ma4d, my_allocate
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
 
       implicit none
 
@@ -56,10 +57,10 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:init_crdiffusion] multiple grid pieces per procesor not implemented yet") !nontrivial crsall
+      if (all_cg%cnt > 1) call die("[crdiffusion:init_crdiffusion] multiple grid pieces per procesor not implemented yet") !nontrivial crsall
       !> \todo provide hooks for rank-4 user/physics arrays in grid container
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
          ma4d = [crsall, cg%n_(:) ]
@@ -86,8 +87,9 @@ contains
       use constants,  only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE
       use dataio_pub, only: die
       use domain,     only: has_dir, cdd
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use mpi,        only: MPI_REQUEST_NULL, MPI_COMM_NULL
       use mpisetup,   only: comm, ierr, req, status
 
@@ -98,8 +100,8 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:all_wcr_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop
-      call cga%get_root(cgl)
+      if (all_cg%cnt > 1) call die("[crdiffusion:all_wcr_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -185,8 +187,9 @@ contains
       use domain,         only: has_dir
       use fluidindex,     only: ibx, iby, ibz, flind
       use global,         only: dt
-      use grid,           only: cga
-      use grid_cont,      only: cg_list_element, grid_container
+      use grid,           only: all_cg
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
 
       implicit none
@@ -202,9 +205,9 @@ contains
 
       if (.not.has_dir(xdim)) return
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:cr_diff_x] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
+      if (all_cg%cnt > 1) call die("[crdiffusion:cr_diff_x] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -265,8 +268,9 @@ contains
       use domain,         only: has_dir
       use fluidindex,     only: ibx, iby, ibz, flind
       use global,         only: dt
-      use grid,           only: cga
-      use grid_cont,      only: cg_list_element, grid_container
+      use grid,           only: all_cg
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
 
       implicit none
@@ -282,9 +286,9 @@ contains
 
       if (.not.has_dir(ydim)) return
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:cr_diff_y] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
+      if (all_cg%cnt > 1) call die("[crdiffusion:cr_diff_y] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -345,8 +349,9 @@ contains
       use domain,         only: has_dir
       use fluidindex,     only: ibx, iby, ibz, flind
       use global,         only: dt
-      use grid,           only: cga
-      use grid_cont,      only: cg_list_element, grid_container
+      use grid,           only: all_cg
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
 
       implicit none
@@ -362,9 +367,9 @@ contains
 
       if (.not.has_dir(zdim)) return
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crdiffusion:cr_diff_z] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
+      if (all_cg%cnt > 1) call die("[crdiffusion:cr_diff_z] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

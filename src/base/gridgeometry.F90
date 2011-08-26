@@ -151,8 +151,9 @@ contains
       use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: die, msg
       use fluidtypes, only: var_numbers
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -165,7 +166,7 @@ contains
       type(cg_list_element), pointer :: cgl
 
       if (frun) then
-         call cga%get_root(cgl)
+         cgl => all_cg%first
          do while (associated(cgl))
             call geo_coeffs_arrays(flind, cg)
             cgl%cg%gc_xdim(:,:,:) = 1.0
@@ -198,8 +199,9 @@ contains
       use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: die, msg
       use fluidtypes, only: var_numbers
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -213,7 +215,7 @@ contains
       type(cg_list_element), pointer :: cgl
 
       if (frun) then
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          call geo_coeffs_arrays(flind, cgl%cg)
 

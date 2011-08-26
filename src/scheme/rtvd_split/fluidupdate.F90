@@ -40,8 +40,9 @@ contains
       use constants,  only: I_ONE
       use dataio_pub, only: warn
       use global,     only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
 
@@ -52,7 +53,7 @@ contains
 
       if (.not.repeat_step) return
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -115,7 +116,7 @@ contains
       use domain,              only: has_dir
       use fluidboundaries,     only: bnd_u
       use global,              only: t, dt
-      use grid,                only: cga
+      use grid,                only: all_cg
       use grid_cont,           only: grid_container
       use shear,               only: yshift
 #endif /* SHEAR */
@@ -138,8 +139,8 @@ contains
 #ifdef SHEAR
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[fluidupdate:make_3sweeps] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[fluidupdate:make_3sweeps] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
 
       if (has_dir(ydim)) call yshift(t, dt)
       if (has_dir(xdim)) call bnd_u(xdim, cg)
@@ -178,8 +179,9 @@ contains
       use constants,      only: xdim, ydim, zdim
       use dataio_pub,     only: msg, die
       use domain,         only: has_dir
-      use grid,           only: cga
-      use grid_cont,      only: cg_list_element, grid_container
+      use grid,           only: all_cg
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
       use sweeps,         only: sweep
 #if defined SHEAR && defined FLUID_INTERACTIONS
       use sweeps,         only: source_terms_y
@@ -204,7 +206,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -395,8 +397,9 @@ contains
 
       use dataio_pub,    only: die
       use func,          only: pshift, mshift
-      use grid,          only: cga
-      use grid_cont,     only: cg_list_element, grid_container
+      use grid,          only: all_cg
+      use gc_list,       only: cg_list_element
+      use grid_cont,     only: grid_container
       use magboundaries, only: all_mag_boundaries
       use user_hooks,    only: custom_emf_bnd
 #ifdef RESISTIVE
@@ -409,9 +412,9 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
+      if (all_cg%cnt > 1) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 #ifdef RESISTIVE

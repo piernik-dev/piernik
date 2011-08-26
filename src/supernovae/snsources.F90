@@ -164,8 +164,9 @@ contains
       use constants,      only: xdim, ydim, zdim
       use domain,         only: dom
       use fluidindex,     only: flind
-      use grid,           only: cga
-      use grid_cont,      only: cg_list_element, grid_container
+      use grid,           only: all_cg
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn
 #ifdef COSM_RAYS_SOURCES
       use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
@@ -186,7 +187,7 @@ contains
       ysn = pos(2)
       zsn = pos(3)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -244,7 +245,7 @@ contains
       use constants, only: xdim, ydim, zdim, LO
       use domain,    only: has_dir, dom
 #ifdef SHEAR
-      use grid,      only: cga
+      use grid,      only: all_cg
       use grid_cont, only: grid_container
       use shear,     only: delj, eps
 #endif /* SHEAR */
@@ -273,8 +274,8 @@ contains
       endif
 
 #ifdef SHEAR
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[snsources:rand_coords] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[snsources:rand_coords] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
 
       jsn  = js+int((ysn-dom%edge(ydim, LO))/cg%dy)
       dysn  = dmod(ysn, cg%dy)

@@ -128,8 +128,9 @@ contains
       use dataio_pub, only: die
       use domain,     only: dom
       use gravity,    only: nsub
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -168,7 +169,7 @@ contains
          enddo
       endif
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
          cg%dprof(:) = 0.0
@@ -336,8 +337,9 @@ contains
       use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use global,         only: smalld
       use gravity,        only: grav_accel, nsub, tune_zeq_bnd
-      use grid,           only: cga
-      use grid_cont,      only: cg_list_element, grid_container
+      use grid,           only: all_cg
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
 #ifndef ISO
       use fluidindex,     only: iarr_all_en
       use global,         only: smallei
@@ -367,9 +369,9 @@ contains
 
       if (.not.associated(grav_accel)) call die("[hydrostatic:outh_bnd] grav_accel not associated")
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[hydrostatic:outh_bnd] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
+      if (all_cg%cnt > 1) call die("[hydrostatic:outh_bnd] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

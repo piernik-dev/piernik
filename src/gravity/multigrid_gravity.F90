@@ -392,8 +392,8 @@ contains
       use constants,        only: pi, dpi, GEO_XYZ, xdim, ydim, zdim, one, zero, half
       use dataio_pub,       only: die, warn
       use domain,           only: geometry_type, dom, cdd, has_dir
-      use grid,             only: cga
-      use grid_cont,        only: cg_list_element
+      use grid,             only: all_cg
+      use gc_list,          only: cg_list_element
       use mpi,              only: MPI_COMM_NULL
       use mpisetup,         only: master, nproc, proc
       use multigridhelpers, only: vcycle_stats_init, dirty_debug, dirtyH
@@ -447,7 +447,7 @@ contains
          enddo
       endif
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cgl%cg%sgp%arr(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
          cgl => cgl%nxt
@@ -1001,7 +1001,7 @@ contains
       use constants,          only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,         only: die
       use domain,             only: geometry_type
-      use grid,               only: cga
+      use grid,               only: all_cg
       use grid_cont,          only: grid_container
       use multigridbasefuncs, only: subtract_average
       use multigridhelpers,   only: set_dirty, check_dirty
@@ -1018,8 +1018,8 @@ contains
       integer :: i
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid_gravity:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[multigrid_gravity:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       call set_dirty(source)
 
@@ -1146,8 +1146,9 @@ contains
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
       use domain,        only: has_dir
-      use grid,          only: cga
-      use grid_cont,     only: cg_list_element, grid_container
+      use grid,          only: all_cg
+      use gc_list,       only: cg_list_element
+      use grid_cont,     only: grid_container
       use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, mg_nb, tot_ts, ts
       use multipole,     only: multipole_solver
       use timer,         only: set_timer
@@ -1162,7 +1163,7 @@ contains
       type(grid_container), pointer :: cg
 
       ts =  set_timer("multigrid", .true.)
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          if ( (has_dir(xdim) .and. cgl%cg%is-mg_nb <= 0) .or. &
               (has_dir(ydim) .and. cgl%cg%js-mg_nb <= 0) .or. &
@@ -1188,7 +1189,7 @@ contains
 
       call vcycle_hg(inner)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -1231,7 +1232,7 @@ contains
 
          call vcycle_hg(outer)
 
-         call cga%get_root(cgl)
+         cgl => all_cg%first
          do while (associated(cgl))
             cg => cgl%cg
 

@@ -458,8 +458,9 @@ contains
       if (master) then
          maxcnt = 0
          do p = FIRST, LAST
-            write(msg,'(a,i4,a,2(3i6,a),i8,a)') "[domain:init_domain] segment @",p," : [",dom%pse(p)%sel(1, :, LO),"] : [",dom%pse(p)%sel(1, :, HI),"] #", &
-                 &                              product(dom%pse(p)%sel(1, :, HI)-dom%pse(p)%sel(1, :, LO)+1)," cells"
+            i = 1
+            write(msg,'(a,i4,a,2(3i6,a),i8,a)') "[domain:init_domain] segment @",p," : [",dom%pse(p)%sel(i, :, LO),"] : [",dom%pse(p)%sel(i, :, HI),"] #", &
+                 &                              product(dom%pse(p)%sel(i, :, HI)-dom%pse(p)%sel(i, :, LO)+1)," cells"
             call printinfo(msg)
             if (ubound(dom%pse(p)%sel(:, :, :), dim=1) > 1) then
                do i= 2, ubound(dom%pse(p)%sel(:, :, :), dim=1)
@@ -483,7 +484,7 @@ contains
 
    subroutine allocate_pse(n_cg)
 
-      use constants,  only: xdim, zdim, LO, HI
+      use constants,  only: xdim, zdim, LO, HI, I_ONE
       use dataio_pub, only: die
       use mpisetup,   only: FIRST, LAST, nproc
 
@@ -498,7 +499,7 @@ contains
          if (present(n_cg)) then
             allocate(dom%pse(p)%sel(n_cg(p+1), xdim:zdim, LO:HI))
          else
-            allocate(dom%pse(p)%sel(1, xdim:zdim, LO:HI))
+            allocate(dom%pse(p)%sel(I_ONE, xdim:zdim, LO:HI))
          endif
          dom%pse(p)%sel(:, :, :) = 0
       enddo
@@ -583,10 +584,12 @@ contains
             call MPI_Cart_coords(cdd%comm3d, p, ndims, pc, ierr)
          endif
          where (has_dir(:))
-            dom%pse(p)%sel(1, :, LO) = (dom%n_d(:) *  pc(:) ) / p_size(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
-            dom%pse(p)%sel(1, :, HI) = (dom%n_d(:) * (pc(:)+1))/p_size(:) - 1 ! offset of high boundaries of the local domain (n_d(:) - 1 at right external boundaries)
+            dom%pse(p)%sel(I_ONE, :, LO) = (dom%n_d(:) *  pc(:) ) / p_size(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
+            dom%pse(p)%sel(I_ONE, :, HI) = (dom%n_d(:) * (pc(:)+1))/p_size(:) - 1 ! offset of high boundaries of the local domain (n_d(:) - 1 at right external boundaries)
          endwhere
       enddo
+
+      if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[domain:cartesian_tiling] No multiblock support.")
 
    end subroutine cartesian_tiling
 
@@ -595,8 +598,8 @@ contains
    subroutine choppy_tiling(p_size)
 
       use constants,  only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE
-      use dataio_pub, only: printinfo
-      use mpisetup,   only: master, nproc
+      use dataio_pub, only: printinfo, die
+      use mpisetup,   only: master, nproc, proc
 
       implicit none
 
@@ -616,8 +619,8 @@ contains
       enddo
       do p = I_ONE, p_size(zdim)
          do px = pz_slab(p), pz_slab(p+1)-I_ONE
-            dom%pse(px)%sel(1, zdim, LO) = nint((dom%n_d(zdim) *  pz_slab(p)   ) / real(nproc))
-            dom%pse(px)%sel(1, zdim, HI) = nint((dom%n_d(zdim) *  pz_slab(p+1) ) / real(nproc)) - 1
+            dom%pse(px)%sel(I_ONE, zdim, LO) = nint((dom%n_d(zdim) *  pz_slab(p)   ) / real(nproc))
+            dom%pse(px)%sel(I_ONE, zdim, HI) = nint((dom%n_d(zdim) *  pz_slab(p+1) ) / real(nproc)) - 1
          enddo
          allocate(py_slab(p_size(ydim) + 1))
          py_slab(1) = I_ZERO
@@ -627,17 +630,19 @@ contains
          enddo
          do py = I_ONE, p_size(ydim)
             do px = pz_slab(p)+py_slab(py), pz_slab(p)+py_slab(py+1) - I_ONE
-               dom%pse(px)%sel(1, ydim, LO) = nint((dom%n_d(ydim) *  py_slab(py)   ) / real(pz_slab(p+1)-pz_slab(p)))
-               dom%pse(px)%sel(1, ydim, HI) = nint((dom%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - I_ONE
+               dom%pse(px)%sel(I_ONE, ydim, LO) = nint((dom%n_d(ydim) *  py_slab(py)   ) / real(pz_slab(p+1)-pz_slab(p)))
+               dom%pse(px)%sel(I_ONE, ydim, HI) = nint((dom%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - I_ONE
             enddo
             do px = I_ZERO, py_slab(py+1)-py_slab(py) - I_ONE
-               dom%pse(pz_slab(p)+py_slab(py)+px)%sel(1, xdim, LO) = (dom%n_d(xdim) *  px    ) / (py_slab(py+1)-py_slab(py))
-               dom%pse(pz_slab(p)+py_slab(py)+px)%sel(1, xdim, HI) = (dom%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1 ! no need to sort lengths here
+               dom%pse(pz_slab(p)+py_slab(py)+px)%sel(I_ONE, xdim, LO) = (dom%n_d(xdim) *  px    ) / (py_slab(py+1)-py_slab(py))
+               dom%pse(pz_slab(p)+py_slab(py)+px)%sel(I_ONE, xdim, HI) = (dom%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1 ! no need to sort lengths here
             enddo
          enddo
          if (allocated(py_slab)) deallocate(py_slab)
       enddo
       if (allocated(pz_slab)) deallocate(pz_slab)
+
+      if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[domain:choppy_tiling] No multiblock support.")
 
    end subroutine choppy_tiling
 

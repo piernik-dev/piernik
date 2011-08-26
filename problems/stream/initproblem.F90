@@ -117,8 +117,9 @@ contains
       use domain,       only: dom
       use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
-      use grid,         only: cga
-      use grid_cont,    only: cg_list_element, grid_container
+      use grid,         only: all_cg
+      use gc_list,      only: cg_list_element
+      use grid_cont,    only: grid_container
       use interactions, only: dragc_gas_dust
       use mpisetup,     only: proc
       use shear,        only: omega
@@ -207,7 +208,7 @@ contains
       write(msg,*) '\eta vk / \Omega = ', eta_gas * neu%cs / csvk / omega
       call printinfo(msg)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

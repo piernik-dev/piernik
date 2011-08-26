@@ -112,8 +112,9 @@ contains
       use domain,      only: has_dir
       use fluidindex,  only: flind
       use global,      only: smalld
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use initdust,    only: idnd, imxd, imyd, imzd
       use initneutral, only: idnn, imxn, imyn, imzn, gamma_neu
 #ifndef ISO
@@ -127,7 +128,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

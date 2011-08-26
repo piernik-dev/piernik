@@ -70,8 +70,9 @@ contains
       use dataio_pub,  only: die
       use diagnostics, only: my_allocate
       use domain,      only: dom
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use mpi,         only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,    only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave, FIRST
 
@@ -138,10 +139,10 @@ contains
 
       if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:read_problem_par] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
+      if (all_cg%cnt > 1) call die("[initproblem:read_problem_par] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
       !> \todo provide mechanism for rank-3 user arrays in grid_container
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -172,8 +173,9 @@ contains
       use dataio_pub,     only: die, warn
       use domain,         only: has_dir, dom
       use fluidindex,     only: ibx, iby, ibz
-      use grid,           only: cga
-      use grid_cont,      only: cg_list_element, grid_container
+      use grid,           only: all_cg
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
 
@@ -207,7 +209,7 @@ contains
          K_crn_perp(icr)  = 0.
       endif
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -256,8 +258,9 @@ contains
    subroutine compute_analytic_ecr1
 
       use dataio_pub,     only: die
-      use grid,           only: cga
-      use grid_cont,      only: cg_list_element, grid_container
+      use grid,           only: all_cg
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use global,         only: t
 
@@ -270,7 +273,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:compute_analytic_ecr1] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
+      if (all_cg%cnt > 1) call die("[initproblem:compute_analytic_ecr1] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
 
       iecr = -1
 
@@ -298,7 +301,7 @@ contains
 
       ampt     = amp_cr * r0**2 / sqrt(r0_par2 * r0_perp2)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -329,8 +332,9 @@ contains
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
       use constants,      only: PIERNIK_FINISHED, I_ONE, I_TWO
       use global,         only: t, nstep
-      use grid,           only: cga
-      use grid_cont,      only: cg_list_element, grid_container
+      use grid,           only: all_cg
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre
       use mpisetup,       only: master, comm, ierr
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
@@ -345,7 +349,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
+      if (all_cg%cnt > 1) call die("[] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
 
       iecr = -1
 
@@ -363,7 +367,7 @@ contains
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
          do k = cg%ks, cg%ke

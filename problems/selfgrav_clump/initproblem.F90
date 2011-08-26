@@ -152,8 +152,9 @@ contains
       use dataio_pub,        only: msg, die, warn, printinfo
       use domain,            only: dom
       use global,            only: smalld, smallei, t
-      use grid,              only: cga
-      use grid_cont,         only: cg_list_element, grid_container
+      use grid,              only: all_cg
+      use gc_list,           only: cg_list_element
+      use grid_cont,         only: grid_container
       use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
       use mpisetup,          only: master, comm, ierr
@@ -186,7 +187,7 @@ contains
       totME(1) = clump_mass / (4./3. * pi * clump_r**3)
 
       Msph = 0.
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -245,8 +246,8 @@ contains
          call printinfo(msg, .true.)
       endif
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial
-      cg => cga%cg_all(1)
+      if (all_cg%cnt > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial
+      cg => all_cg%first%cg
 
       ! Find C - the level of enthalpy at which density vanishes
       iC = 1
@@ -441,8 +442,9 @@ contains
    subroutine virialCheck(tol)
 
       use dataio_pub,        only: msg, die, warn, printinfo
-      use grid,              only: cga
-      use grid_cont,         only: cg_list_element, grid_container
+      use grid,              only: all_cg
+      use gc_list,           only: cg_list_element
+      use grid_cont,         only: grid_container
       use initionized,       only: idni
       use mpisetup,          only: master, comm, ierr
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
@@ -462,7 +464,7 @@ contains
 
       TWP(:) = 0.
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -508,8 +510,9 @@ contains
    subroutine totalMEnthalpic(C, totME, mode)
 
       use constants,   only: I_ONE
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use initionized, only: idni
       use mpisetup,    only: comm, ierr
       use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
@@ -527,7 +530,7 @@ contains
 
       totME = 0.
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

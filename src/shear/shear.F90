@@ -165,7 +165,7 @@ contains
       use constants,  only: xdim, ydim
       use dataio_pub, only: die
       use domain,     only: dom
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
 
       implicit none
@@ -177,8 +177,8 @@ contains
       integer :: i
 #endif /* FFTW */
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[shear:yshift] multiple grid pieces per procesor not implemented yet") !nontrivial
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[shear:yshift] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       ddly  = dts * qshear*omega*dom%L_(xdim)
       dely  = ts  * qshear*omega*dom%L_(xdim)
@@ -199,7 +199,7 @@ contains
       use constants,  only: dpi, xdim
       use dataio_pub, only: die
       use domain,     only: dom
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
 
       implicit none
@@ -221,8 +221,8 @@ contains
       real(kind=8)    , dimension(:)     , allocatable :: ky
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[shear:unshear_fft] multiple grid pieces per procesor not implemented yet") !nontrivial
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[shear:unshear_fft] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       St = - ddy / cg%dy / dom%L_(xdim)
       if (.not.present(inv)) St = -St
@@ -271,7 +271,7 @@ contains
       use constants,  only: xdim, half
       use dataio_pub, only: die
       use domain,     only: dom
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
 
       implicit none
@@ -289,8 +289,8 @@ contains
       ny = size(qty,2)
       nz = size(qty,3)
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[shear:unshear] multiple grid pieces per procesor not implemented yet") !nontrivial
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[shear:unshear] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       my = 3*cg%nyb+2*cg%nb
 

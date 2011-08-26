@@ -138,8 +138,9 @@ contains
       use dataio_pub,     only: msg, warn, printinfo, die
       use domain,         only: has_dir, dom
       use fluidindex,     only: ibx, iby, ibz, flind
-      use grid,           only: cga
-      use grid_cont,      only: cg_list_element, grid_container
+      use grid,           only: all_cg
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
       use mpi,            only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX
@@ -182,7 +183,7 @@ contains
       endif
 
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -239,8 +240,8 @@ contains
          cgl => cgl%nxt
       enddo
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
 
       do icr = 1, flind%crs%all
          maxv = maxval(cg%u%arr(iarr_crs(icr),:,:,:))

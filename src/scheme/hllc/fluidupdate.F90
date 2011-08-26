@@ -39,8 +39,8 @@ contains
       use dataio_pub,     only: halfstep
       use global,         only: dt, dtm, t
       use user_hooks,     only: problem_customize_solution
-      use grid,           only: cga
-      use grid_cont,      only: cg_list_element
+      use grid,           only: all_cg
+      use gc_list,        only: cg_list_element
       use constants,      only: xdim, zdim
       use domain,         only: has_dir
 
@@ -59,7 +59,7 @@ contains
 
       t=t+dt
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          do ddim = xdim, zdim, 1
             if (has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
@@ -72,7 +72,7 @@ contains
       dtm = dt
       halfstep = .true.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          do ddim = zdim, xdim, -1
             if (has_dir(ddim)) call sweep(cgl%cg,dt,ddim)

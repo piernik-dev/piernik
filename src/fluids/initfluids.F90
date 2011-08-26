@@ -108,8 +108,8 @@ contains
 
    subroutine init_fluids
 
-      use grid,            only: cga
-      use grid_cont,       only: cg_list_element, grid_container
+      use grid,            only: all_cg
+      use gc_list,         only: cg_list_element
       use fluidindex,      only: fluid_index, flind
       use fluxes,          only: set_limiter, init_fluxes
       use global,          only: limiter
@@ -137,7 +137,6 @@ contains
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[initfluids:init_fluids] MPI not initialized.") ! limiter, init_ionized, init_neutral, init_dust, init_cosmicrays
 
@@ -160,14 +159,11 @@ contains
 
       call fluid_index    ! flind has valid values afterwards
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initfluids:init_fluids] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
+      if (all_cg%cnt > 1) call die("[initfluids:init_fluids] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
-         cg => cgl%cg
-
-         if (associated(cg%cs_iso2%arr)) cg%cs_iso2%arr(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
-
+         if (associated(cgl%cg%cs_iso2%arr)) cgl%cg%cs_iso2%arr(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
          cgl => cgl%nxt
       enddo
 
@@ -212,8 +208,9 @@ contains
       use fluidtypes, only: component_fluid
       use func,       only: emag, ekin
       use global,     only: smalld, smallp
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
       use mpisetup,   only: master, comm, ierr
 
@@ -230,9 +227,9 @@ contains
 
       maxdens = 0.0
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initfluids:sanitize_smallx_checks] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval, minval
+      if (all_cg%cnt > 1) call die("[initfluids:sanitize_smallx_checks] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval, minval
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

@@ -305,7 +305,7 @@ contains
    subroutine cr_add_hdf5(flind_crs)
 
       use dataio_pub, only: die
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use list_hdf5,  only: add_lhdf5, lhdf5_info
 
@@ -316,8 +316,8 @@ contains
       integer          :: i
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initcosmicrays:cr_add_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial add_lhdf5(item)
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[initcosmicrays:cr_add_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial add_lhdf5(item)
 
       item%p    => get_cr
       if (.not.allocated(item%ivec)) allocate(item%ivec(10))
@@ -335,7 +335,7 @@ contains
    subroutine get_cr(ivec,rvec,outtab)
 
       use dataio_pub, only: die
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use dataio_pub, only: die
 
@@ -346,8 +346,8 @@ contains
       real, dimension(:,:,:), allocatable, intent(out) :: outtab
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initcosmicrays:cr_add_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[initcosmicrays:cr_add_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       if (allocated(outtab)) call die("[initcosmicrays:get_cr]: outtab already allocated")
       allocate(outtab(ivec(1),ivec(2),ivec(3)))

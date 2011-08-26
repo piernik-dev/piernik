@@ -127,8 +127,9 @@ contains
       use domain,      only: dom
       use global,      only: smalld
       use gravity,     only: ptmass
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use initneutral, only: idnn, imxn, imyn, imzn, cs_iso_neu, cs_iso_neu2
       use initdust,    only: idnd, imxd, imyd, imzd
       use units,       only: newtong
@@ -151,7 +152,7 @@ contains
       real :: vx, vy, vz
 #endif /* !ISO */
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

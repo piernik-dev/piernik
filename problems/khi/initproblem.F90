@@ -110,8 +110,9 @@ contains
 
       use constants,   only: dpi, xdim, ydim, zdim
       use domain,      only: has_dir, dom
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
 
       implicit none
@@ -131,7 +132,7 @@ contains
       k0    = dpi/lambda
       vp    = (Mtop*sqrt(chi)+Mbot)*sqrt(gamma_neu*p0/dbot)/dpert
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

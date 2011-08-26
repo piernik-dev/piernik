@@ -47,7 +47,7 @@ contains
       use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE
       use dataio_pub, only: die
       use domain,     only: has_dir
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
 
       implicit none
@@ -58,8 +58,8 @@ contains
       real, dimension(:,:,:), allocatable :: temp
 #endif /* SHEAR */
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[poissonsolver:poisson_solve] multiple grid pieces per procesor not implemented yet") !nontrivial (impossible?)
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[poissonsolver:poisson_solve] multiple grid pieces per procesor not implemented yet") !nontrivial (impossible?)
 
       if (.not. all(has_dir(:))) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !> \deprecated BEWARE 2D and 1D probably need small fixes
 

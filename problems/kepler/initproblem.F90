@@ -194,8 +194,9 @@ contains
       use dataio_pub, only: printinfo, warn
       use domain,     only: dom
       use fluidindex, only: flind
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
       implicit none
@@ -215,7 +216,7 @@ contains
       kx = 15.*dpi/dom%L_(xdim)
       kz =  5.*dpi/dom%L_(zdim)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -243,8 +244,9 @@ contains
 
       use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: printinfo
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use fluidindex, only: flind
       use mpisetup,   only: proc, master
 
@@ -265,7 +267,7 @@ contains
       call random_seed(put=seed)
       deallocate(seed)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -289,8 +291,9 @@ contains
       use fluidindex,   only: ibx, iby, ibz, flind
       use fluidtypes,   only: component_fluid
       use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
-      use grid,         only: cga
-      use grid_cont,    only: cg_list_element, grid_container
+      use grid,         only: all_cg
+      use gc_list,      only: cg_list_element
+      use grid_cont,    only: grid_container
       use hydrostatic,  only: hydrostatic_zeq_densmid
       use interactions, only: epstein_factor
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
@@ -312,11 +315,11 @@ contains
 !   Secondary parameters
       if (cdd%comm3d == MPI_COMM_NULL) call die("[initproblem:init_prob] comm3d == MPI_COMM_NULL not implemented") !pcoords
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
+         if (all_cg%cnt > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
          sqr_gm = sqrt(newtong*ptmass)
          do k = 1, cg%n_(zdim)
@@ -641,8 +644,9 @@ contains
 
       use constants,       only: xdim, ydim, zdim
       use dataio_pub,      only: die
-      use grid,            only: cga
-      use grid_cont,       only: cg_list_element, grid_container
+      use grid,            only: all_cg
+      use gc_list,         only: cg_list_element
+      use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use global,          only: dt, t, relax_time, smalld !, grace_period_passed
@@ -672,9 +676,9 @@ contains
 !#endif /* VERBOSE */
 !      endif
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (all_cg%cnt > 1) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -733,8 +737,9 @@ contains
       use constants, only: xdim, zdim
       use units,     only: newtong
       use gravity,   only: ptmass, sum_potential
-      use grid,      only: cga
-      use grid_cont, only: cg_list_element, grid_container
+      use grid,      only: all_cg
+      use gc_list,   only: cg_list_element
+      use grid_cont, only: grid_container
 
       implicit none
 
@@ -745,7 +750,7 @@ contains
       type(grid_container), pointer :: cg
 
       if (frun) then
-         call cga%get_root(cgl)
+         cgl => all_cg%first
          do while (associated(cgl))
             cg => cgl%cg
 

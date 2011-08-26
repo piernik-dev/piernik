@@ -133,8 +133,9 @@ contains
       use diagnostics, only: my_allocate
       use fluidindex,  only: flind
       use global,      only: smalld, smallei
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
 
       implicit none
 
@@ -147,7 +148,7 @@ contains
       pulse_low_density = smalld * 1e5
       pulse_pressure = smallei * flind%neu%gam_1 * 1e2
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -221,7 +222,7 @@ contains
       use constants,   only: AT_NO_B
       use dataio_pub,  only: warn, die
       use dataio_hdf5, only: write_arr_to_restart
-      use grid,        only: cga
+      use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
 
@@ -232,7 +233,7 @@ contains
 
       real, dimension(:,:,:), pointer :: p3d
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:write_IC_to_restart] multiple grid pieces per procesor not implemented yet") !nontrivial inid
+      if (all_cg%cnt > 1) call die("[initproblem:write_IC_to_restart] multiple grid pieces per procesor not implemented yet") !nontrivial inid
 
       if (allocated(inid)) then
          if (associated(p3d)) nullify(p3d)
@@ -252,7 +253,7 @@ contains
       use dataio_pub,  only: warn, die
       use dataio_hdf5, only: read_arr_from_restart
       use diagnostics, only: my_allocate
-      use grid,        only: cga
+      use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
 
@@ -263,7 +264,7 @@ contains
 
       real, dimension(:,:,:), pointer :: p3d
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:read_IC_from_restart] multiple grid pieces per procesor not implemented yet") !nontrivial inid
+      if (all_cg%cnt > 1) call die("[initproblem:read_IC_from_restart] multiple grid pieces per procesor not implemented yet") !nontrivial inid
 
       if (associated(p3d)) nullify(p3d)
       if (.not.allocated(inid)) call my_allocate(inid, cg%n_(:), inid_n)
@@ -285,8 +286,9 @@ contains
       use constants,  only: I_ONE, I_TWO
       use dataio_pub, only: msg, printinfo, warn, die
       use fluidindex, only: flind
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,   only: master, comm, ierr
 
@@ -298,7 +300,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:finalize_problem_adv] multiple grid pieces per procesor not implemented yet") !nontrivial inid
+      if (all_cg%cnt > 1) call die("[initproblem:finalize_problem_adv] multiple grid pieces per procesor not implemented yet") !nontrivial inid
 
       if (.not. allocated(inid)) then
          if (master) call warn("[initproblem:finalize_problem_adv] Cannot compare results with the initial conditions. Perhaps there is no 'inid' array in the restart file?")
@@ -309,7 +311,7 @@ contains
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

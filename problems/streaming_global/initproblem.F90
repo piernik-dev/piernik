@@ -158,8 +158,9 @@ contains
       use dataio_pub, only: printinfo, warn
       use domain,     only: dom
       use fluidindex, only: flind
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
       implicit none
@@ -179,7 +180,7 @@ contains
       kx = 15.*dpi/dom%L_(xdim)
       kz =  5.*dpi/dom%L_(zdim)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -207,8 +208,9 @@ contains
 
       use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: printinfo
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use fluidindex, only: flind
       use mpisetup,   only: proc, master
 
@@ -229,7 +231,7 @@ contains
       call random_seed(put=seed)
       deallocate(seed)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -254,8 +256,9 @@ contains
       use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
       use gravity,      only: ptmass, grav_pot2accel
-      use grid,         only: cga
-      use grid_cont,    only: cg_list_element, grid_container
+      use grid,         only: all_cg
+      use gc_list,      only: cg_list_element
+      use grid_cont,    only: grid_container
       use mpi,          only: MPI_COMM_NULL
       use mpisetup,     only: master, comm
       use units,        only: newtong
@@ -279,12 +282,12 @@ contains
 
       sqr_gm = sqrt(newtong*ptmass)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
 
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
+         if (all_cg%cnt > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
          if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
          if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
@@ -483,11 +486,12 @@ contains
    subroutine problem_customize_solution_kepler
 
       use dataio_pub,      only: die
-      use grid,            only: cga
-      use grid_cont,       only: cg_list_element, grid_container
+      use grid,            only: all_cg
+      use gc_list,         only: cg_list_element
+      use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use global,          only: dt, t, grace_period_passed, relax_time, smalld
+      use global,          only: t, grace_period_passed, relax_time, smalld !, dt
       use constants,       only: dpi, xdim, ydim, zdim
       use units,           only: newtong
       use gravity,         only: ptmass
@@ -509,9 +513,9 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (all_cg%cnt > 1) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -584,8 +588,9 @@ contains
    subroutine my_grav_pot_3d
 
       use gravity,   only: sum_potential, grav_pot_3d_bnd
-      use grid,      only: cga
-      use grid_cont, only: cg_list_element, grid_container
+      use grid,      only: all_cg
+      use gc_list,   only: cg_list_element
+      use grid_cont, only: grid_container
       use types,     only: axes
 
       implicit none
@@ -596,7 +601,7 @@ contains
       type(axes)                     :: ax
 
       if (frun) then
-         call cga%get_root(cgl)
+         cgl => all_cg%first
          do while (associated(cgl))
             cg => cgl%cg
             if (.not.allocated(ax%x)) allocate(ax%x(size(cg%x)))

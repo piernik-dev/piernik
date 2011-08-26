@@ -73,7 +73,7 @@ contains
       use diagnostics, only: ma3d, my_allocate
       use domain,      only: has_dir
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid,        only: cga
+      use grid,        only: all_cg
       use grid_cont,   only: grid_container
 
       implicit none
@@ -87,8 +87,8 @@ contains
       integer                :: idnf, imxf, imyf, imzf
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[crhelpers:div_v] multiple grid pieces per procesor not implemented yet") !nontrivial divvel
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[crhelpers:div_v] multiple grid pieces per procesor not implemented yet") !nontrivial divvel
 
       if (.not.allocated(divvel)) then
          ma3d = cg%n_

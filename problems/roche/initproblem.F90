@@ -130,8 +130,9 @@ contains
 
       use constants,   only: xdim, ydim, zdim
       use global,      only: smalld
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
 
       implicit none
@@ -146,7 +147,7 @@ contains
       imz=imzn
       idn=idnn
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -183,8 +184,9 @@ contains
 
       use constants,   only: xdim, ydim, zdim
       use global,      only: smalld, smallei, t, dt
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use gravity,     only: ptm_x,ptm2_x
       use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
 
@@ -203,7 +205,7 @@ contains
       ien=ienn
 
 !clearing the compact star
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

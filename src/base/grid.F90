@@ -38,15 +38,18 @@
 !<
 module grid
 
-   use grid_cont, only: cg_set
+   use gc_list,   only: cgl
 
    implicit none
 
    private
    public :: init_grid, init_arrays, grid_mpi_boundaries_prep, arr3d_boundaries, cleanup_grid
-   public :: cga
+   public :: all_cg !, base, leafs, levels
 
-   type(cg_set), target :: cga        !< A container for all grids.
+   type(cgl), protected :: all_cg    !< all grid containers
+!!$   type(cgl), protected  :: base   !< base level grid containers
+!!$   type(cgl), protected  :: leafs  !< grid containers not covered by other grid containers
+!!$   type(cgl), dimension(:), allocatable, protected  :: levels !< grid containers grouped by levels
 
 contains
 
@@ -60,12 +63,10 @@ contains
       use constants,  only: PIERNIK_INIT_DOMAIN
       use dataio_pub, only: printinfo, die, code_progress
       use domain,     only: dom
-      use grid_cont,  only: cg_list_element
       use mpisetup,   only: proc
 
       implicit none
 
-      type(cg_list_element), pointer :: cgl
       integer :: g
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] MPI not initialized.")
@@ -74,47 +75,15 @@ contains
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
 
-      if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid:init_grid] Multiple blocks per process not implemented yet")
+      call all_cg%init
+!!$      call base%init
+!!$      call leafs%init
+!!$      allocate(levels(1))
+!!$      call levels(1)%init
 
-      allocate(cga%cg_all(1)) !At the moment we use only one grid container per thread, but this will change in AMR
-      allocate(cga%cg_base%cg_l(size(cga%cg_all)))  ! We have no refinement yet, so everything is on the base level
-      allocate(cga%cg_leafs%cg_l(size(cga%cg_all))) ! We have no refinement yet, so everything is the finest grid as well
-      allocate(cga%cg_levels(1))                   ! We have no refinement yet, so there is only one level
-      do g = lbound(cga%cg_levels(:), dim=1), ubound(cga%cg_levels(:), dim=1)
-         allocate(cga%cg_levels(g)%cg_l(size(cga%cg_all)))
-      enddo
-
-      !for an uniform grid set up trivial lists of grid containers
-      do g = lbound(cga%cg_all(:), dim=1), ubound(cga%cg_all(:), dim=1)
-         cga%cg_base%cg_l(g)%cg      => cga%cg_all(g)
-         cga%cg_leafs%cg_l(g)%cg     => cga%cg_all(g)
-         cga%cg_levels(1)%cg_l(g)%cg => cga%cg_all(g)
-
-         if (g /= lbound(cga%cg_all(:), dim=1)) then
-            cga%cg_base%cg_l(g)%prv      => cga%cg_base%cg_l(g-1)
-            cga%cg_leafs%cg_l(g)%prv     => cga%cg_leafs%cg_l(g-1)
-            cga%cg_levels(1)%cg_l(g)%prv => cga%cg_levels(1)%cg_l(g-1)
-         else
-            cga%cg_base%cg_l(g)%prv      => null()
-            cga%cg_leafs%cg_l(g)%prv     => null()
-            cga%cg_levels(1)%cg_l(g)%prv => null()
-         endif
-
-         if (g /= ubound(cga%cg_all(:), dim=1)) then
-            cga%cg_base%cg_l(g)%nxt      => cga%cg_base%cg_l(g+1)
-            cga%cg_leafs%cg_l(g)%nxt     => cga%cg_leafs%cg_l(g+1)
-            cga%cg_levels(1)%cg_l(g)%nxt => cga%cg_levels(1)%cg_l(g+1)
-         else
-            cga%cg_base%cg_l(g)%nxt      => null()
-            cga%cg_leafs%cg_l(g)%nxt     => null()
-            cga%cg_levels(1)%cg_l(g)%nxt => null()
-         endif
-      enddo
-
-      cgl => cga%cg_base%cg_l(1)
-      do while (associated(cgl))
-         call cgl%cg%init(dom)
-         cgl => cgl%nxt
+      do g = 1, ubound(dom%pse(proc)%sel(:,:,:), dim=1)
+         call all_cg%add
+         call all_cg%last%cg%init(dom, g)
       enddo
 
 #ifdef VERBOSE
@@ -134,7 +103,8 @@ contains
       use dataio_pub,  only: die, code_progress
       use global,      only: repeat_step
       use fluidtypes,  only: var_numbers
-      use grid_cont,   only: cg_list_element, grid_container
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
 
       implicit none
 
@@ -144,7 +114,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[arrays:init_arrays] grid or fluids not initialized.")
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
          call cg%u%init( [ flind%all, cg%n_(:) ] )
@@ -170,14 +140,13 @@ contains
 
    subroutine cleanup_grid
 
-      use grid_cont,  only: cg_list_element
+      use gc_list, only: cg_list_element
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      integer :: g
 
-      cgl => cga%cg_base%cg_l(1)
+      cgl => all_cg%first
       do while (associated(cgl))
 
          call cgl%cg%u%clean()
@@ -194,16 +163,14 @@ contains
 #endif /* GRAV */
 
          call cgl%cg%cleanup
+         deallocate(cgl%cg)
          cgl => cgl%nxt
-      enddo
 
-      do g = lbound(cga%cg_levels(:), dim=1), ubound(cga%cg_levels(:), dim=1)
-         deallocate(cga%cg_levels(g)%cg_l)
+         if (associated(cgl)) call all_cg%del(cgl%prv)
       enddo
-      deallocate(cga%cg_levels)
-      deallocate(cga%cg_leafs%cg_l)
-      deallocate(cga%cg_base%cg_l)
-      deallocate(cga%cg_all)
+      deallocate(all_cg%last)
+
+!!$      deallocate(levels)
 
    end subroutine cleanup_grid
 
@@ -218,7 +185,8 @@ contains
       use constants,  only: PIERNIK_INIT_BASE, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID, I_ONE
       use dataio_pub, only: die, code_progress
       use domain,     only: has_dir, dom, is_overlap, cdd
-      use grid_cont,  only: cg_list_element, grid_container
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: ierr, proc, FIRST, LAST, procmask
 
@@ -239,11 +207,11 @@ contains
       logical :: sharing
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
-      if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process not implemented yet")
+      if (all_cg%cnt > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process not implemented yet")
 
       nc = [ numfluids, ndims, max(numcrs,I_ONE), I_ONE ]      !< number of fluids, magnetic field components, CRs, and 1 for rank-3 array
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
          ! find neighbours and set up the MPI containers
@@ -361,7 +329,7 @@ contains
             enddo
 
          else
-
+            if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process is not compatible with comm3d")
             do d = xdim, zdim
                if (has_dir(d)) then
                   do t = FLUID, ARR  ! fluid, Bfield, wcr, grav
@@ -411,7 +379,8 @@ contains
       use constants,  only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B, I_ONE
       use dataio_pub, only: die, msg
       use domain,     only: has_dir, cdd
-      use grid_cont,  only: cg_list_element, grid_container
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use mpi,        only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
       use mpisetup,   only: ierr, comm, proc, req, status
 
@@ -431,9 +400,9 @@ contains
 
       !> \todo fill corners with big_float ?
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[grid:arr3d_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop
+      if (all_cg%cnt > 1) call die("[grid:arr3d_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

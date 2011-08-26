@@ -157,8 +157,8 @@ contains
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,         only: newtong
-      use grid,          only: cga
-      use grid_cont,     only: cg_list_element
+      use grid,          only: all_cg
+      use gc_list,       only: cg_list_element
 #ifdef CORIOLIS
       use coriolis,      only: set_omega
 #endif /* CORIOLIS */
@@ -273,7 +273,7 @@ contains
 #endif /* CORIOLIS */
       endif
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cgl%cg%gpot%arr(:,:,:) = 0.0
          cgl => cgl%nxt
@@ -292,8 +292,9 @@ contains
 
 #ifdef SELF_GRAV
       use dataio_pub,        only: die
-      use grid,              only: cga
-      use grid_cont,         only: cg_list_element, grid_container
+      use grid,              only: all_cg
+      use gc_list,           only: cg_list_element
+      use grid_cont,         only: grid_container
       use fluidindex,        only: iarr_all_sg
 #ifdef POISSON_FFT
       use poissonsolver,     only: poisson_solve
@@ -310,9 +311,9 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[gravity:source_terms_grav] multiple grid pieces per procesor not implemented yet") !nontrivial all cg% must be solved at a time (nontrivial for multigrid, rarely possible dor FFT poisson solver)
+      if (all_cg%cnt > 1) call die("[gravity:source_terms_grav] multiple grid pieces per procesor not implemented yet") !nontrivial all cg% must be solved at a time (nontrivial for multigrid, rarely possible dor FFT poisson solver)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
          cg%sgpm%arr = cg%sgp%arr
@@ -337,7 +338,7 @@ contains
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
       call all_sgp_boundaries
       if (frun) then
-         call cga%get_root(cgl)
+         cgl => all_cg%first
          do while (associated(cgl))
             cgl%cg%sgpm%arr = cgl%cg%sgp%arr
             cgl => cgl%nxt
@@ -356,15 +357,16 @@ contains
 
    subroutine grav_pot_3d_bnd
       use constants,         only: xdim, ydim, zdim, LO, HI, BND_OUT, BND_OUTH
-      use grid,              only: cga
-      use grid_cont,         only: cg_list_element, grid_container
+      use grid,              only: all_cg
+      use gc_list,           only: cg_list_element
+      use grid_cont,         only: grid_container
       use domain,            only: has_dir
       implicit none
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
       integer :: i
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -419,8 +421,9 @@ contains
 
       use constants, only: one, half
       use global,    only: dt, dtm
-      use grid,      only: cga
-      use grid_cont, only: cg_list_element, grid_container
+      use grid,      only: all_cg
+      use gc_list,   only: cg_list_element
+      use grid_cont, only: grid_container
 
       implicit none
 
@@ -434,7 +437,7 @@ contains
          h = 0.0
       endif
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 #ifdef SELF_GRAV
@@ -457,15 +460,15 @@ contains
    subroutine all_sgp_boundaries
 
       use dataio_pub, only: die
-      use grid,       only: arr3d_boundaries, cga
-      use grid_cont,  only: cg_list_element
+      use grid,       only: arr3d_boundaries, all_cg
+      use gc_list,    only: cg_list_element
 
       implicit none
       type(cg_list_element), pointer :: cgl
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[gravity:all_sgp_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (all_cg%cnt > 1) call die("[gravity:all_sgp_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          if (associated(cgl%cg%sgp%arr)) call arr3d_boundaries(cgl%cg%sgp%arr)
          cgl => cgl%nxt
@@ -734,8 +737,9 @@ contains
       use constants,  only: GEO_XYZ
       use dataio_pub, only: die, warn
       use domain,     only: geometry_type
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use mpisetup,   only: master
       use types,      only: axes
 
@@ -745,7 +749,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
          if (.not.allocated(ax%x)) allocate(ax%x(size(cg%x)))
@@ -899,7 +903,7 @@ contains
       use dataio_pub, only: die
       use domain,     only: is_mpi_noncart, cdd, D_x, D_y, D_z
       use func,       only: get_extremum
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container !, cg_list_element
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: master, nproc, FIRST, LAST, comm, ierr, have_mpi
@@ -917,8 +921,8 @@ contains
       type(value)                                                      :: gp_max
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[gravity:grav_accel2pot] multiple grid pieces per procesor not implemented yet") !nontrivial
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[gravity:grav_accel2pot] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       if (any([allocated(gravrx), allocated(gravry), allocated(gravrz)])) call die("[gravity:grav_accel2pot] gravr[xyz] already allocated")
       allocate(gravrx(cg%n_(xdim)), gravry(cg%n_(ydim)), gravrz(cg%n_(zdim)))

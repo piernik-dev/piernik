@@ -693,7 +693,7 @@ contains
       use fluidindex,  only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
       use fluidtypes,  only: phys_prop
       use global,      only: t, dt, smalld, nstep
-      use grid,        only: cga
+      use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
       use types,       only: tsl_container
@@ -727,8 +727,8 @@ contains
       real     :: cs_iso2
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet") !nontrivial mpi_addmul
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet") !nontrivial mpi_addmul
 
       if (has_ion) then
          cs_iso2 = flind%ion%cs2
@@ -865,7 +865,7 @@ contains
       use dataio_pub,  only: msg, printinfo, die
       use domain,      only: has_dir
       use global,      only: cfl
-      use grid,        only: cga
+      use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use fluidtypes,  only: phys_prop
 
@@ -878,8 +878,8 @@ contains
       real :: dxmn_safe
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet") !nontrivial  cfl*cg%d[xyz]
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet") !nontrivial  cfl*cg%d[xyz]
 
       if (cg%dxmn >= sqrt(huge(1.0))) then
          dxmn_safe = sqrt(huge(1.0))
@@ -923,7 +923,7 @@ contains
       use fluidtypes, only: phys_prop, component_fluid
       use func,       only: get_extremum
       use global,     only: smallp
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use units,      only: mH, kboltz
 
@@ -934,8 +934,8 @@ contains
       real, dimension(:,:,:), pointer              :: p
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[dataio:get_common_vars] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[dataio:get_common_vars] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
 
       pr => fl%snap
       cg%wa%arr = cg%u%arr(fl%idn,:,:,:)
@@ -1005,7 +1005,7 @@ contains
       use fluidindex,         only: ibx, iby, ibz, flind
       use func,               only: get_extremum, L2norm
       use global,             only: cfl, t, dt
-      use grid,               only: cga
+      use grid,               only: all_cg
       use grid_cont,          only: grid_container
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master
@@ -1046,8 +1046,8 @@ contains
 #endif /* VARIABLE_GP || MAGNETIC */
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[dataio:write_log] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[dataio:write_log] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
 
 #if defined VARIABLE_GP || defined MAGNETIC
       nxl = 1 + D_x

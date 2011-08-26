@@ -33,12 +33,29 @@
 module grid_cont
 
    use constants, only: xdim, zdim, ndims, LO, HI, BND, BLK, FLUID, ARR
-   use types,     only: axes, bnd_list, array4d, array3d
+   use types,     only: axes, array4d, array3d
 
    implicit none
 
    private
-   public :: grid_container, cg_list_element, cg_list, cg_set
+   public :: grid_container, segment, bnd_list
+
+   ! specify segment of data for boundary exchange, prolongation and restriction.
+   type :: segment
+      integer :: proc                                     !< target process
+      integer :: ngc                                      !< number of grid container on the target process
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
+   end type segment
+
+   !< segment type for boundary exchange
+   type, extends(segment) :: bnd_segment
+      integer(kind=4) :: mbc                              !< Multigrid MPI Boundary conditions Container
+      integer(kind=4) :: lh                               !< low or high boundary; \todo store full tag here
+   end type bnd_segment
+
+   type :: bnd_list
+      type(bnd_segment), dimension(:), allocatable :: seg !< list of boundary segments to exchange
+   end type bnd_list
 
    type, extends(axes) :: grid_container
       real    :: dx                             !< length of the %grid cell in x-direction
@@ -125,42 +142,10 @@ module grid_cont
 
    end type grid_container
 
-   ! the prv and nxt pointers are not elements of the grid_container type to allow membership in several lists simultaneously
-   type cg_list_element
-      type(grid_container), pointer :: cg        !< the current grid container
-      type(cg_list_element), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
-   end type cg_list_element
-
-   type cg_list
-      type(cg_list_element), dimension(:), pointer :: cg_l
-   end type cg_list
-
-   ! On an uniform, nowhere refined grid, cg_levels will have only one element, and all cg_all elements ill be members of cg_leafs, cg_base and cg_levels(1) lists
-   type cg_set
-      type(grid_container), dimension(:), allocatable :: cg_all    !< all grid containers
-      type(cg_list), dimension(:), allocatable        :: cg_levels !< grid containers grouped by level
-      type(cg_list)                                   :: cg_leafs  !< grid containers that are not fully covered by finer grids
-      type(cg_list)                                   :: cg_base   !< grid containers on the base level
-
-      contains
-         procedure :: get_root
-   end type cg_set
-
 contains
-!-----------------------------------------------------------------------------
-!>
-!! \brief sets pointer to grid root
-!<
-   subroutine get_root(this, cgp)
-      implicit none
-      class(cg_set), intent(in)                   :: this
-      type(cg_list_element), pointer, intent(out) :: cgp
 
-      cgp => this%cg_leafs%cg_l(1)
-      return
-   end subroutine get_root
 !-----------------------------------------------------------------------------
-   subroutine init(this, dom)
+   subroutine init(this, dom, grid_n)
 
       use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, INVALID, I_ONE, I_TWO, BND_MPI, BND_SHE, BND_COR
       use dataio_pub, only: die, warn, printinfo, msg, code_progress
@@ -172,6 +157,7 @@ contains
 
       class(grid_container), intent(inout), target :: this ! intent(out) would silently clear everything, that was already set (also the fields in types derived from grid_container)
       type(domain_container), intent(in) :: dom
+      integer, intent(in) :: grid_n
 
       integer :: i
       real, dimension(:), pointer :: a0, al, ar, ia
@@ -181,7 +167,7 @@ contains
 
       this%nb = dom%nb
 
-      this%my_se(:,:) = dom%pse(proc)%sel(1, :, :)
+      this%my_se(:,:) = dom%pse(proc)%sel(grid_n, :, :)
       this%off(:)     = this%my_se(:, LO)
       this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
       this%n_b(:)     = int(this%h_cor1(:) - this%off(:), 4) ! Block 'physical' grid sizes
@@ -200,7 +186,7 @@ contains
       where (this%h_cor1(:) /= dom%n_d(:)) this%bnd(:, HI) = BND_MPI
       ! For periodic boundaries do not set BND_MPI when local domain spans through the whole computational domain in given direction.
       where (dom%periodic(:) .and. this%h_cor1(:) /= dom%n_d(:)) this%bnd(:, LO) = BND_MPI
-      where (dom%periodic(:) .and. this%off(:)    /= 0)              this%bnd(:, HI) = BND_MPI
+      where (dom%periodic(:) .and. this%off(:)    /= 0)          this%bnd(:, HI) = BND_MPI
 
       ! For shear boundaries and some domain decompositions it is possible that a boundary can be mixed 'per' with 'mpi'
 

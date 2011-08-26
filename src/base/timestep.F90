@@ -88,8 +88,9 @@ contains
       use dataio_pub,           only: tend, msg, warn
       use fluids_pub,           only: has_ion, has_dst, has_neu
       use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, cflcontrol
-      use grid,                 only: cga
-      use grid_cont,            only: cg_list_element, grid_container
+      use grid,                 only: all_cg
+      use gc_list,              only: cg_list_element
+      use grid_cont,            only: grid_container
       use mpisetup,             only: master
       use timestepdust,         only: timestep_dst, c_dst
       use timestepinteractions, only: timestep_interactions
@@ -120,7 +121,7 @@ contains
       c_all = zero
       dt = huge(one)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

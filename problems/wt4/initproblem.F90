@@ -209,7 +209,7 @@ contains
 
       use constants,  only: xdim, ydim, zdim , LO, HI
       use dataio_pub, only: msg, die
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpisetup,   only: proc, master, FIRST, LAST, comm, status, ierr
       use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
@@ -223,8 +223,8 @@ contains
       integer, dimension(2*NDIM)          :: ic_rng
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:read_IC_file] multiple grid pieces per procesor not implemented yet") !nontrivial ic_[ijk[se], allocate
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[initproblem:read_IC_file] multiple grid pieces per procesor not implemented yet") !nontrivial ic_[ijk[se], allocate
 
       ! calculate index ranges for the subset of IC file covering local domain with a safety margin for interpolation
       ic_is = min(ic_nx, max(1,     1+floor((cg%fbnd(xdim, LO) + ic_xysize/2.)/ic_dx) - margin) )
@@ -301,8 +301,9 @@ contains
       use dataio_pub,  only: warn, printinfo, msg
       use domain,      only: has_dir
       use global,      only: smalld
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use mpisetup,    only: master
@@ -317,7 +318,7 @@ contains
       type(component_fluid), pointer :: fl
 
       fl => flind%neu
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -517,8 +518,9 @@ contains
 
       use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: warn
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
 
@@ -534,7 +536,7 @@ contains
       type(component_fluid), pointer :: fl
 
       fl => flind%neu
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

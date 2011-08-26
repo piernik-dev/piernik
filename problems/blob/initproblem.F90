@@ -113,8 +113,9 @@ contains
 
       use constants,   only: xdim, ydim, zdim
       use domain,      only: has_dir
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use initneutral, only: gamma_neu, idnn, imxn, imyn, imzn, ienn
 
       implicit none
@@ -127,7 +128,7 @@ contains
       penv = 3.2*rblob*sqrt(chi)/tkh/(Mext*gamma_neu/denv)
 
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

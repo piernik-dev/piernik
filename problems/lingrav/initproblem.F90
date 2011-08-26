@@ -101,8 +101,9 @@ contains
       use constants,   only: xdim, ydim, zdim
       use fluidindex,  only: ibx, iby, ibz, flind
       use global,      only: smalld
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use hydrostatic, only: hydrostatic_zeq_densmid
       use initionized, only: idni, imxi, imyi, imzi
 #ifdef SHEAR
@@ -122,7 +123,7 @@ contains
 
       csim2 = flind%ion%cs2*(1.0+alpha)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

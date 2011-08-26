@@ -49,7 +49,7 @@ contains
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind
       use global,          only: dt
-      use grid,            only: cga
+      use grid,            only: all_cg
       use grid_cont,       only: grid_container
       use interactions,    only: dragc_gas_dust
       use shear,           only: omega, qshear
@@ -63,8 +63,8 @@ contains
       real, parameter, dimension(2) :: fac = [half, one]
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[sweeps:source_terms_y] multiple grid pieces per procesor not implemented yet") !nontrivial u1
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[sweeps:source_terms_y] multiple grid pieces per procesor not implemented yet") !nontrivial u1
 
       allocate(vxr(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)), v_r(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)), rotaccr(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)))
       allocate(epsa(cg%n_(xdim), cg%n_(zdim)))

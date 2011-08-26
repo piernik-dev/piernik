@@ -129,7 +129,7 @@ contains
       use constants,  only: MINL, MAXL, ndims, xdim, ydim, zdim
       use dataio_pub, only: msg, warn, die
       use domain,     only: has_dir
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE
       use mpisetup,   only: mpifind, comm, ierr, master, proc, FIRST
@@ -145,7 +145,7 @@ contains
       integer, parameter :: tag1 = 11
       integer, parameter :: tag2 = 12
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[func:get_extremum] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (all_cg%cnt > 1) call die("[func:get_extremum] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       select case (minmax)
          case (MINL)

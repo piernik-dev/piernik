@@ -79,8 +79,9 @@ contains
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven, cdd
-      use grid,                only: cga
-      use grid_cont,           only: cg_list_element, grid_container
+      use grid,                only: all_cg
+      use gc_list,             only: cg_list_element
+      use grid_cont,           only: grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_LOR, MPI_MIN, MPI_MAX, MPI_COMM_NULL
       use mpisetup,            only: comm, ierr, proc, master, slave, nproc, FIRST, LAST, buffer_dim, ibuff, lbuff
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
@@ -161,9 +162,9 @@ contains
 
       endif
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial is_external
+      if (all_cg%cnt > 1) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial is_external
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
       ! mark external faces
@@ -207,7 +208,7 @@ contains
          level_max = 1
       endif
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial lvl
+      if (all_cg%cnt > 1) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial lvl
 
       allocate(lvl(level_min:level_min+level_max-1), stat=aerr(1))
       if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: lvl")
@@ -274,7 +275,7 @@ contains
             call curl%dom%set_derived ! fix what was inherited from finer level or dom and should be recalculated
          endif
 
-         call curl%init(curl%dom)
+         call curl%init(curl%dom, 1)
 
          if (ubound(curl%dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid:init_multigrid] Multiple blocks per process not implemented yet")
 

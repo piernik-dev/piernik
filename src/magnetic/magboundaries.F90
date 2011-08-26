@@ -41,7 +41,7 @@ contains
       use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, I_FIVE, I_TEN
       use dataio_pub, only: die
       use domain,     only: cdd, is_mpi_noncart
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
       use mpisetup,   only: ierr, req, status, have_mpi
@@ -52,8 +52,8 @@ contains
       integer(kind=4)          :: i, itag, jtag
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[magboundaries:bnd_a] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[magboundaries:bnd_a] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
 
       if (have_mpi .and. is_mpi_noncart) call die("[magboundaries:bnd_a] is_mpi_noncart is not implemented") !procn, psize
       if (cdd%comm3d == MPI_COMM_NULL) call die("[magboundaries:bnd_a] cdd%comm3d == MPI_COMM_NULL")
@@ -81,7 +81,7 @@ contains
       use dataio_pub, only: msg, warn, die
       use domain,     only: cdd, is_mpi_noncart
       use fluidindex, only: ibx, iby, ibz
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: ierr, req, proc, status, comm, master, have_mpi
@@ -110,8 +110,8 @@ contains
       logical, save                         :: bnd_zr_not_provided = .false.
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[magboundaries:bnd_b] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[magboundaries:bnd_b] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
 
 ! MPI block comunication
       if (cdd%comm3d /= MPI_COMM_NULL) then
@@ -378,7 +378,7 @@ contains
 
       use constants,  only: xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub, only: msg, warn, die
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
@@ -402,8 +402,8 @@ contains
       real                                  :: bndsign
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[magboundaries:bnd_emf] multiple grid pieces per procesor not implemented yet") !nontrivial
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[magboundaries:bnd_emf] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       if (any([allocated(dvarx), allocated(dvary), allocated(dvarz)])) call die("[magboundaries:bnd_emf] dvar[xyz] already allocated")
       allocate(dvarx(cg%n_(ydim), cg%n_(zdim)), dvary(cg%n_(xdim), cg%n_(zdim)), dvarz(cg%n_(xdim), cg%n_(ydim)))
@@ -661,7 +661,7 @@ contains
       use constants,  only: xdim, zdim, MAG
       use dataio_pub, only: die
       use domain,     only: has_dir, cdd
-      use grid,       only: cga
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
 
@@ -670,8 +670,8 @@ contains
       integer(kind=4) :: dir
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[magboundaries:all_mag_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[magboundaries:all_mag_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          call cg%internal_boundaries(MAG, pa4d=cg%b%arr)

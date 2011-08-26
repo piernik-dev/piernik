@@ -144,8 +144,9 @@ contains
       use constants,   only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
       use dataio_pub,  only: msg, printinfo, warn, die
       use domain,      only: dom, geometry_type
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use initionized, only: gamma_ion, idni, imxi, imzi, ieni
       use mpisetup,    only: master
 
@@ -156,7 +157,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -263,8 +264,9 @@ contains
       use dataio_pub,  only: warn, die
       use diagnostics, only: my_allocate
       use domain,      only: geometry_type
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use mpisetup,    only: master
       use units,       only: newtong
 
@@ -277,9 +279,9 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:compute_maclaurin_potential] multiple grid pieces per procesor not implemented yet") !nontrivial apot
+      if (all_cg%cnt > 1) call die("[initproblem:compute_maclaurin_potential] multiple grid pieces per procesor not implemented yet") !nontrivial apot
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
          call my_allocate(apot, cg%n_b(:), "apot")
@@ -303,7 +305,7 @@ contains
       a12 = a1**2
       a32 = a3**2
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -382,8 +384,9 @@ contains
       use constants,  only: GEO_RPZ, I_ONE, I_TWO
       use dataio_pub, only: msg, printinfo, die
       use domain,     only: geometry_type
-      use grid,       only: cga
-      use grid_cont,  only: cg_list_element, grid_container
+      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,   only: master, comm, ierr
 
@@ -395,14 +398,14 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[initproblem:finalize_problem_maclaurin] multiple grid pieces per procesor not implemented yet") !nontrivial apot
+      if (all_cg%cnt > 1) call die("[initproblem:finalize_problem_maclaurin] multiple grid pieces per procesor not implemented yet") !nontrivial apot
 
       fac = 1.
       norm(:) = 0.
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 

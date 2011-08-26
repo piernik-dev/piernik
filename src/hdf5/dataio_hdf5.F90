@@ -494,7 +494,7 @@ contains
       use dataio_user, only: user_plt_hdf5
       use domain,      only: dom, has_dir
       use global,      only: t
-      use grid,        only: cga
+      use grid,        only: all_cg
       use grid_cont,   only: grid_container!, cg_list_element
       use hdf5,        only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,        only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
@@ -527,8 +527,8 @@ contains
       integer, parameter                  :: tag = 101
       type(grid_container), pointer :: cg
 
-      cg => cga%cg_all(1)
-      if (ubound(cga%cg_all(:), dim=1) > 1) call die("[dataio_hdf5:write_plot_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial message tagging
+      cg => all_cg%first%cg
+      if (all_cg%cnt > 1) call die("[dataio_hdf5:write_plot_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial message tagging
 
       xn = 1
       if (has_dir(plane)) xn = pl_i(plane) + cg%nb - cg%off(plane)
@@ -677,8 +677,9 @@ contains
       use constants,   only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B, I_ONE
       use dataio_pub,  only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
       use global,      only: nstep
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use dataio_user, only: problem_write_restart
@@ -721,7 +722,7 @@ contains
       call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error, access_prp = plist_id)
 
       ! Write all data in parallel
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -1200,8 +1201,9 @@ contains
       use fluidindex,  only: flind
       use func,        only: fix_string
       use global,      only: magic_mass, t, dt
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
            &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
@@ -1296,7 +1298,7 @@ contains
       call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error, access_prp = plist_id)
       call h5pclose_f(plist_id, error)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -1391,8 +1393,9 @@ contains
       use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: printio, msg, die, nhdf, problem_name, run_id, hdf
       use dataio_user, only: user_vars_hdf5
-      use grid,        only: cga
-      use grid_cont,   only: cg_list_element, grid_container
+      use grid,        only: all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                 h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use mpisetup,    only: comm, ierr, info, master, FIRST
@@ -1436,7 +1439,7 @@ contains
       call h5fcreate_f(trim(fname), H5F_ACC_TRUNC_F, file_id, error, creation_prp = H5P_DEFAULT_F, access_prp = plist_id)
       call h5pclose_f(plist_id, error)
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -1484,7 +1487,6 @@ contains
       use dataio_user, only: additional_attrs
       use domain,      only: dom
       use global,      only: magic_mass, t, dt, local_magic_mass
-      use grid,        only: cga
       use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_RDWR_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
            &                 h5open_f, h5fopen_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
            &                 h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
@@ -1539,12 +1541,12 @@ contains
       rbuffer(13)  = chdf%next_t_log         ; rbuffer_name(13)  = "next_t_log" !rr2
 
       ibuffer(1)   = chdf%nstep              ; ibuffer_name(1)   = "nstep" !rr2
-      ibuffer(2)   = chdf%nres+I_ONE        ; ibuffer_name(2)   = "nres" !rr2
+      ibuffer(2)   = chdf%nres+I_ONE         ; ibuffer_name(2)   = "nres" !rr2
       ibuffer(3)   = chdf%nhdf               ; ibuffer_name(3)   = "nhdf" !rr2
       ibuffer(4)   = chdf%nstep              ; ibuffer_name(4)   = "step_res" !rr2
       ibuffer(5)   = chdf%step_hdf           ; ibuffer_name(5)   = "step_hdf" !rr2
       ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
-      ibuffer(9)   = cga%cg_all(1)%nb        ; ibuffer_name(9)   = "nb"                             ! BEWARE: assuming cga%cg_all(:)%nb equal everywhere
+      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb"                             ! BEWARE: assuming cga%cg_all(:)%nb equal everywhere
       ibuffer(10)  = require_init_prob       ; ibuffer_name(10)  = "require_init_prob" !rr2
 
       bufsize = 1

@@ -106,8 +106,9 @@ contains
 
       use constants, only: pi, xdim, ydim, zdim
       use domain,    only: dom
-      use grid,      only: cga
-      use grid_cont, only: cg_list_element, grid_container
+      use grid,      only: all_cg
+      use gc_list,   only: cg_list_element
+      use grid_cont, only: grid_container
       use initdust,  only: idnd, imxd, imyd, imzd
 
       implicit none
@@ -123,7 +124,7 @@ contains
       k_a = sqrt(k_x**2+k_y**2+k_z**2)
 
 
-      call cga%get_root(cgl)
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
