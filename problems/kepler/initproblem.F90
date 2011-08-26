@@ -84,7 +84,7 @@ contains
       use gravity,             only: grav_pot_3d
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, FIRST
-      use types,               only: problem_customize_solution, problem_grace_passed
+      use user_hooks,          only: problem_customize_solution, problem_grace_passed
 
       implicit none
 

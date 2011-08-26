@@ -46,7 +46,7 @@ contains
 
    subroutine problem_pointers
 
-      use types, only: problem_customize_solution
+      use user_hooks, only: problem_customize_solution
 
       implicit none
 

@@ -61,11 +61,14 @@ module initproblem
 contains
 !-----------------------------------------------------------------------------
    subroutine problem_pointers
+
       use dataio_user,         only: problem_write_restart, problem_read_restart, user_vars_hdf5
       use gravity,             only: grav_pot_3d, grav_type
 !     use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr
-      use types,               only: problem_customize_solution, problem_grace_passed
+      use user_hooks,          only: problem_customize_solution, problem_grace_passed
+
       implicit none
+
       problem_write_restart => write_initial_fld_to_restart
       problem_read_restart  => read_initial_fld_from_restart
       problem_customize_solution => problem_customize_solution_kepler
@@ -620,6 +623,7 @@ contains
    end subroutine my_grav_pot_3d
 
    subroutine my_grav_ptmass_pure(gp, ax, flatten)
+
       use units,   only: newtong
       use gravity, only: ptmass, ptm_x, ptm_z
       use types,   only: axes
@@ -643,6 +647,7 @@ contains
          enddo
       enddo
       if (.false.) write(6,*) flatten
+
    end subroutine my_grav_ptmass_pure
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xl(cg)

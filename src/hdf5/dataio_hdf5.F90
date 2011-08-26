@@ -615,7 +615,7 @@ contains
       use domain,     only: dom, has_dir, cdd, is_uneven, is_mpi_noncart
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
-      use types,      only: at_user_settings
+      use user_hooks, only: at_user_settings
 
       implicit none
 

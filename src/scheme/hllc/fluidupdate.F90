@@ -38,7 +38,7 @@ contains
    subroutine fluid_update
       use dataio_pub,     only: halfstep
       use global,         only: dt, dtm, t
-      use types,          only: problem_customize_solution
+      use user_hooks,     only: problem_customize_solution
       use grid,           only: cga
       use grid_cont,      only: cg_list_element
       use constants,      only: xdim, zdim

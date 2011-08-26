@@ -52,7 +52,7 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_vars_hdf5, problem_write_restart, problem_read_restart
-      use types,       only: finalize_problem, cleanup_problem
+      use user_hooks,  only: finalize_problem, cleanup_problem
 
       implicit none
 

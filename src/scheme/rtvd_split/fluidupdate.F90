@@ -108,7 +108,7 @@ contains
    subroutine make_3sweeps(forward)
 
       use constants,           only: xdim, ydim, zdim
-      use types,               only: problem_customize_solution
+      use user_hooks,          only: problem_customize_solution
       use global,              only: skip_sweep
 #ifdef SHEAR
       use dataio_pub,          only: die
@@ -398,7 +398,7 @@ contains
       use grid,          only: cga
       use grid_cont,     only: cg_list_element, grid_container
       use magboundaries, only: all_mag_boundaries
-      use types,         only: custom_emf_bnd
+      use user_hooks,    only: custom_emf_bnd
 #ifdef RESISTIVE
       use resistivity,   only: wcu
 #endif /* RESISTIVE */

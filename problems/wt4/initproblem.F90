@@ -80,7 +80,7 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: additional_attrs, problem_write_restart, problem_read_restart
-      use types,       only: problem_customize_solution, finalize_problem
+      use user_hooks,  only: problem_customize_solution, finalize_problem
 
       implicit none
 

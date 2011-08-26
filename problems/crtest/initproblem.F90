@@ -50,7 +50,7 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_vars_hdf5
-      use types,       only: problem_customize_solution, finalize_problem, cleanup_problem
+      use user_hooks,  only: problem_customize_solution, finalize_problem, cleanup_problem
 
       implicit none
 

@@ -48,7 +48,7 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_vars_hdf5, additional_attrs
-      use types,       only: finalize_problem, cleanup_problem
+      use user_hooks,  only: finalize_problem, cleanup_problem
 
       implicit none
 

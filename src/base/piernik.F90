@@ -40,7 +40,7 @@ program piernik
    use mpisetup,    only: comm, ierr, master
    use timer,       only: time_left, set_timer
    use timestep,    only: time_step
-   use types,       only: finalize_problem
+   use user_hooks,  only: finalize_problem
 #ifdef PERFMON
    use timer,       only: timer_start, timer_stop
 #endif /* PERFMON */
@@ -367,7 +367,7 @@ contains
 !<
    subroutine cleanup_piernik
 
-      use types,        only: cleanup_problem
+      use user_hooks,   only: cleanup_problem
       use dataio,       only: cleanup_dataio
       use diagnostics,  only: cleanup_diagnostics
       use domain,       only: cleanup_domain
@@ -426,7 +426,7 @@ contains
       use global,       only: grace_period_passed, relax_time
       use interactions, only: interactions_grace_passed
       use mpisetup,     only: master
-      use types,        only: problem_grace_passed
+      use user_hooks,   only: problem_grace_passed
 
       implicit none
 

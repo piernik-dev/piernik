@@ -36,8 +36,7 @@ module types
    implicit none
 
    private
-   public :: axes, segment, bnd_list, tsl_container, value, array4d, array3d, &
-        &    problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd, at_user_settings
+   public :: axes, segment, bnd_list, tsl_container, value, array4d, array3d
 
    type :: array4d
       real, dimension(:,:,:,:), pointer :: arr => null()
@@ -115,30 +114,6 @@ module types
 #endif /* VARIABLE_GP */
 
    end type tsl_container
-
-   ! User hooks
-
-   interface
-      subroutine no_args
-         implicit none
-      end subroutine no_args
-      subroutine tab_args(tab)
-         implicit none
-         real, dimension(:,:,:), intent(inout) :: tab
-      end subroutine tab_args
-      subroutine indx_args(ar,ll,lr,ch,lo)
-         implicit none
-         integer,         dimension(:), intent(out) :: ar, ll, lr, ch
-         integer(kind=8), dimension(:), intent(out) :: lo
-      end subroutine indx_args
-   end interface
-
-   procedure(no_args),  pointer :: problem_customize_solution => NULL()
-   procedure(no_args),  pointer :: problem_grace_passed       => NULL()
-   procedure(no_args),  pointer :: finalize_problem           => NULL()
-   procedure(no_args),  pointer :: cleanup_problem            => NULL()
-   procedure(tab_args), pointer :: custom_emf_bnd             => NULL()
-   procedure(indx_args),pointer :: at_user_settings           => NULL()
 
 contains
 
