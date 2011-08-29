@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+import pysvn
 import re, sys
 import subprocess as sp
 import numpy as np
@@ -135,6 +135,21 @@ def parse_f90file(lines,fname,store):
       store.append(give_warn("QA:  ") +"[%s] => module body not found!" % fname)
    return subs_array
 
+def qa_check_id(store,fname):
+   client = pysvn.Client()
+   entry  = client.info('.')
+
+   for f in client.proplist(fname):
+      pname, props = f
+      fail = False
+      if 'svn:keywords' in props:
+         if 'Id' not in props['svn:keywords']:
+            fail = True
+      else:
+         fail = True
+      if fail:
+         store.append(give_err("QA:  ") + "%s lacks svn:keywords Id" % (pname))
+
 def qa_checks(files,options):
    print b.OKBLUE + '"I am the purifier, the light that clears all shadows." - seal of cleansing inscription' + b.ENDC
    runpath = sys.argv[0].split("qa.py")[0]
@@ -144,6 +159,7 @@ def qa_checks(files,options):
    warns  = []
    errors = []
    for f in f90files:
+      qa_check_id(errors,f)
       pfile = []
       lines = open(f,'r').readlines()
       fp    = open(f,'w')
