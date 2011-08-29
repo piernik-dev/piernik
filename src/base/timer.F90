@@ -215,6 +215,10 @@ contains
 
    function time_left(wend) result (tf)
 
+      use mpi,       only: MPI_LOGICAL
+      use mpisetup,  only: comm, ierr, master, FIRST
+      use constants, only: I_ONE
+
       implicit none
 
       real, intent(in), optional :: wend
@@ -240,11 +244,14 @@ contains
 !! \deprecated BEWARE: gfortran gives 1ms resolution, but ifort can offer 0.1ms, which will result in an integer overflow in less than 5 days
 !! Probably it is better to call date_and_time(VALUES) here
 !<
-      call system_clock(clock, cnt_rate, cnt_max)
-      tf = .true.
-      if (clock_end /= -cnt_max) then
-         if ( clock_end - clock < 0 ) tf = .false.
+      if (master) then
+         call system_clock(clock, cnt_rate, cnt_max)
+         tf = .true.
+         if (clock_end /= -cnt_max) then
+            if ( clock_end - clock < 0 ) tf = .false.
+         endif
       endif
+      call MPI_Bcast(tf, I_ONE, MPI_LOGICAL, FIRST, comm, ierr)
 
    end function time_left
 
