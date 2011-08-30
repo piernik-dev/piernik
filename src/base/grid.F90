@@ -38,7 +38,7 @@
 !<
 module grid
 
-   use gc_list,   only: cgl
+   use gc_list,   only: cg_list
 
    implicit none
 
@@ -46,10 +46,10 @@ module grid
    public :: init_grid, init_arrays, grid_mpi_boundaries_prep, arr3d_boundaries, cleanup_grid
    public :: all_cg !, base, leafs, levels
 
-   type(cgl), protected :: all_cg    !< all grid containers
-!!$   type(cgl), protected  :: base   !< base level grid containers
-!!$   type(cgl), protected  :: leafs  !< grid containers not covered by other grid containers
-!!$   type(cgl), dimension(:), allocatable, protected  :: levels !< grid containers grouped by levels
+   type(cg_list), protected :: all_cg    !< all grid containers
+!!$   type(cg_list), protected  :: base   !< base level grid containers
+!!$   type(cg_list), protected  :: leafs  !< grid containers not covered by other grid containers
+!!$   type(cg_list), dimension(:), allocatable, protected  :: levels !< grid containers grouped by levels
 
 contains
 

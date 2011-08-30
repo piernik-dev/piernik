@@ -38,7 +38,7 @@ module gc_list
    implicit none
 
    private
-   public :: cgl, cg_list_element
+   public :: cg_list, cg_list_element
 
    ! the prv and nxt pointers are not elements of the grid_container type to allow membership in several lists simultaneously
    type cg_list_element
@@ -46,7 +46,7 @@ module gc_list
       type(cg_list_element), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
    end type cg_list_element
 
-   type cgl
+   type cg_list
 
       type(cg_list_element), pointer :: first !< first element of the chain of grid containers, the most important one
       type(cg_list_element), pointer :: last  !< last element of the chain - useful for expanding and merging lists
@@ -64,7 +64,7 @@ module gc_list
 
       procedure :: del
 
-   end type cgl
+   end type cg_list
 
 contains
 !>
@@ -77,7 +77,7 @@ contains
 
       implicit none
 
-      class(cgl), intent(inout) :: this
+      class(cg_list), intent(inout) :: this
       type(cg_list_element), pointer, intent(inout) :: cgle
 
       type(cg_list_element), pointer :: cur, prv
@@ -120,7 +120,7 @@ contains
 
       implicit none
 
-      class(cgl), intent(out) :: this
+      class(cg_list), intent(out) :: this
 
       this%first => null()
       this%last => null()
@@ -138,7 +138,7 @@ contains
 
       implicit none
 
-      class(cgl), intent(out) :: this
+      class(cg_list), intent(out) :: this
 
       type(cg_list_element), pointer :: new
 
@@ -167,7 +167,7 @@ contains
 
       implicit none
 
-      class(cgl), intent(out) :: this
+      class(cg_list), intent(out) :: this
       type(cg_list_element), pointer, intent(inout) :: cgle
 
       if (.not. associated(cgle)) then
@@ -194,7 +194,7 @@ contains
 
       implicit none
 
-      class(cgl), intent(out) :: this
+      class(cg_list), intent(out) :: this
       type(cg_list_element), pointer, intent(inout) :: cgle
 
       type(cg_list_element), pointer :: cur
