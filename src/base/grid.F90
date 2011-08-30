@@ -108,26 +108,38 @@ contains
 
       implicit none
 
-      type(var_numbers), intent(in) :: flind !< fluid database; cannot use fluidindex::flind here due to circular dependencies in some setups
+      type(var_numbers), intent(in)  :: flind !< fluid database; cannot use fluidindex::flind here due to circular dependencies in some setups
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container), pointer  :: cg
+      integer, dimension(:), allocatable :: ind_arr
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[arrays:init_arrays] grid or fluids not initialized.")
+
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
-         call cg%u%init( [ flind%all, cg%n_(:) ] )
-         call cg%uh%init( [ flind%all, cg%n_(:) ] )
-         if (repeat_step) call cg%u0%init( [ flind%all, cg%n_(:) ] )
 
-         call cg%b%init( [ ndims, cg%n_(:) ] )
-         if (repeat_step) call cg%b0%init( [ ndims, cg%n_(:) ] )
+         allocate(ind_arr(ndims+1))
+
+         ind_arr = [ flind%all, cg%n_(:) ]
+         call cg%u%init(ind_arr)
+         call cg%uh%init(ind_arr)
+         if (repeat_step) call cg%u0%init(ind_arr)
+
+         ind_arr = [ ndims, cg%n_(:) ]
+         call cg%b%init(ind_arr)
+         if (repeat_step) call cg%b0%init(ind_arr)
+
+         deallocate(ind_arr)
 
          call cg%wa%init(cg%n_(:))
 
 #ifdef GRAV
-         call my_allocate(cg%dprof, [cg%n_(zdim)], "dprof")
+         allocate(ind_arr(1))
+         ind_arr = [cg%n_(zdim)]
+         call my_allocate(cg%dprof, ind_arr, "dprof")
+         deallocate(ind_arr)
 #endif /* GRAV */
          cgl => cgl%nxt
       enddo

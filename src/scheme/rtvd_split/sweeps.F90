@@ -180,7 +180,7 @@ contains
       real, dimension(nmag, cg%n_(cdim))      :: b
       real, dimension(flind%all, cg%n_(cdim)) :: u, u0
       real, dimension(:,:), pointer           :: pu, pu0
-      real, dimension(:), pointer       :: div_v1d => null()
+      real, dimension(:), pointer       :: div_v1d => null(), cs2
       integer                           :: i1, i2
       integer                           :: istep
 
@@ -207,13 +207,15 @@ contains
 
                pu => cg%u%get_sweep(cdim,i1,i2)
                pu0 => cg%uh%get_sweep(cdim,i1,i2)
+               cs2 => cg%cs_iso2%get_sweep(cdim,i1,i2)
 
                u (iarr_all_swp(cdim,:),:) = pu(:,:)
                u0(iarr_all_swp(cdim,:),:) = pu0(:,:)
 
-               call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cg%cs_iso2%get_sweep(cdim,i1,i2), istep, cdim, i1, i2, cg%dl(cdim), dt, cg)
+
+               call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg)
                pu(:,:) = u(iarr_all_swp(cdim,:),:)
-               nullify(pu,pu0)
+               nullify(pu,pu0,cs2)
             enddo
          enddo
          call all_fluid_boundaries    ! \todo : call only x for istep=1, call all for istep=2
