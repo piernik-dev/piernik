@@ -111,7 +111,7 @@ contains
       type(var_numbers), intent(in)  :: flind !< fluid database; cannot use fluidindex::flind here due to circular dependencies in some setups
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
-      integer, dimension(:), allocatable :: ind_arr
+      integer(kind=4), dimension(:), allocatable :: ind_arr
 
       if (code_progress < PIERNIK_INIT_BASE) call die("[arrays:init_arrays] grid or fluids not initialized.")
 
