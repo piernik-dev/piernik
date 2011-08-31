@@ -50,7 +50,7 @@ module grid_cont
    !< segment type for boundary exchange
    type, extends(segment) :: bnd_segment
       integer(kind=4) :: mbc                              !< Multigrid MPI Boundary conditions Container
-      integer(kind=4) :: lh                               !< low or high boundary; \todo store full tag here
+      integer(kind=4) :: tag                              !< unique tag for data exchange
    end type bnd_segment
 
    type :: bnd_list

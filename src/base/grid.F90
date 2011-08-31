@@ -299,8 +299,8 @@ contains
                                     cg%i_bnd(d, t)%seg(g)%se(:d-1, HI) = cg%i_bnd(d, t)%seg(g)%se(:d-1, HI) + cg%nb
                                  endwhere
                                  cg%o_bnd(d, t)%seg(g) = cg%i_bnd(d, t)%seg(g)
-                                 cg%i_bnd(d, t)%seg(g)%lh = lh
-                                 cg%o_bnd(d, t)%seg(g)%lh = hl
+                                 cg%i_bnd(d, t)%seg(g)%tag = HI*d+lh-LO
+                                 cg%o_bnd(d, t)%seg(g)%tag = HI*d+hl-LO
                                  select case (lh)
                                     case (LO)
                                        cg%i_bnd(d, t)%seg(g)%se(d, LO) = cg%i_bnd(d, t)%seg(g)%se(d, HI) - (cg%nb - 1)

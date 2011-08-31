@@ -138,7 +138,7 @@ contains
 
       implicit none
 
-      class(cg_list), intent(out) :: this
+      class(cg_list), intent(inout) :: this
 
       type(cg_list_element), pointer :: new
 
@@ -167,7 +167,7 @@ contains
 
       implicit none
 
-      class(cg_list), intent(out) :: this
+      class(cg_list), intent(inout) :: this
       type(cg_list_element), pointer, intent(inout) :: cgle
 
       if (.not. associated(cgle)) then
@@ -194,7 +194,7 @@ contains
 
       implicit none
 
-      class(cg_list), intent(out) :: this
+      class(cg_list), intent(inout) :: this
       type(cg_list_element), pointer, intent(inout) :: cgle
 
       type(cg_list_element), pointer :: cur

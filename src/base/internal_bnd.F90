@@ -64,7 +64,7 @@ contains
       real, optional, pointer, dimension(:,:,:,:) :: pa4d
 
       integer :: g, d
-      integer(kind=4) :: tag, nr
+      integer(kind=4) :: nr
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: ise, ose
 
 !BEWARE: MPI_Waitall should be called after all grid containers post Isends and Irecvs
@@ -119,12 +119,11 @@ contains
                      else
                         ! BEWARE: Here we assume, that we have at most one chunk to communicate with a given process on a single side od the domain.
                         ! This will not be true when we allow many blocks per process and tag will need to be modified to include g or seg(g)%lh should become seg(g)%tag
-                        tag = int(cg%i_bnd(d, ind)%seg(g)%lh + HI*d, kind=4)
                         nr = nr + I_ONE
                         if (ind == ARR) then
-                           call MPI_Irecv(pa3d(1, 1, 1), I_ONE, cg%i_bnd(d, ind)%seg(g)%mbc, cg%i_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
+                           call MPI_Irecv(pa3d(1, 1, 1), I_ONE, cg%i_bnd(d, ind)%seg(g)%mbc, cg%i_bnd(d, ind)%seg(g)%proc, cg%i_bnd(d, ind)%seg(g)%tag, comm, req(nr), ierr)
                         else
-                           call MPI_Irecv(pa4d(1, 1, 1, 1), I_ONE, cg%i_bnd(d, ind)%seg(g)%mbc, cg%i_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
+                           call MPI_Irecv(pa4d(1, 1, 1, 1), I_ONE, cg%i_bnd(d, ind)%seg(g)%mbc, cg%i_bnd(d, ind)%seg(g)%proc, cg%i_bnd(d, ind)%seg(g)%tag, comm, req(nr), ierr)
                         endif
                      endif
                   enddo
@@ -132,13 +131,12 @@ contains
                if (allocated(cg%o_bnd(d, ind)%seg)) then
                   do g = 1, ubound(cg%o_bnd(d, ind)%seg(:), dim=1)
                      if (proc /= cg%o_bnd(d, ind)%seg(g)%proc) then
-                        tag = int(cg%o_bnd(d, ind)%seg(g)%lh + HI*d, kind=4)
                         nr = nr + I_ONE
                         ! for noncartesian division some y-boundary corner cells are independent from x-boundary face cells, (similarly for z-direction).
                         if (ind == ARR) then
-                           call MPI_Isend(pa3d(1, 1, 1), I_ONE, cg%o_bnd(d, ind)%seg(g)%mbc, cg%o_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
+                           call MPI_Isend(pa3d(1, 1, 1), I_ONE, cg%o_bnd(d, ind)%seg(g)%mbc, cg%o_bnd(d, ind)%seg(g)%proc, cg%o_bnd(d, ind)%seg(g)%tag, comm, req(nr), ierr)
                         else
-                           call MPI_Isend(pa4d(1, 1, 1, 1), I_ONE, cg%o_bnd(d, ind)%seg(g)%mbc, cg%o_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
+                           call MPI_Isend(pa4d(1, 1, 1, 1), I_ONE, cg%o_bnd(d, ind)%seg(g)%mbc, cg%o_bnd(d, ind)%seg(g)%proc, cg%o_bnd(d, ind)%seg(g)%tag, comm, req(nr), ierr)
                         endif
                      endif
                   enddo

@@ -211,8 +211,8 @@ contains
                                     curl%i_bnd(d, ib)%seg(g)%se(:d-1, HI) = curl%i_bnd(d, ib)%seg(g)%se(:d-1, HI) + ib
                                  endwhere
                                  curl%o_bnd(d, ib)%seg(g) = curl%i_bnd(d, ib)%seg(g)
-                                 curl%i_bnd(d, ib)%seg(g)%lh = lh
-                                 curl%o_bnd(d, ib)%seg(g)%lh = hl
+                                 curl%i_bnd(d, ib)%seg(g)%tag = 1 + 1 * (HI*d+lh-LO) !> \todo Replace '1' by id and number of local gc
+                                 curl%o_bnd(d, ib)%seg(g)%tag = 1 + 1 * (HI*d+hl-LO)
                                  select case (lh)
                                     case (LO)
                                        curl%i_bnd(d, ib)%seg(g)%se(d, LO) = curl%i_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)
@@ -307,7 +307,7 @@ contains
       integer(kind=4), parameter :: dreq = I_FOUR
       logical :: cor
       integer :: g
-      integer(kind=4) :: d, tag, doff
+      integer(kind=4) :: d, doff
       integer(kind=8), dimension(:,:), pointer :: ise
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: ose
       integer(kind=4) :: nr
@@ -349,20 +349,18 @@ contains
                      else
                         ! BEWARE: Here we assume, that we have at most one chunk to communicate with a given process on a single side od the domain.
                         ! This will not be true when we allow many blocks per process and tag will need to be modified to include g or seg(g)%lh should become seg(g)%tag
-                        tag = curl%i_bnd(d, ng)%seg(g)%lh + HI*d
                         nr = nr + I_ONE
-                        call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%i_bnd(d, ng)%seg(g)%mbc, curl%i_bnd(d, ng)%seg(g)%proc, tag, comm, req(nr), ierr)
+                        call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%i_bnd(d, ng)%seg(g)%mbc, curl%i_bnd(d, ng)%seg(g)%proc, curl%i_bnd(d, ng)%seg(g)%tag, comm, req(nr), ierr)
                      endif
                   enddo
                endif
                if (allocated(curl%o_bnd(d, ng)%seg)) then
                   do g = 1, ubound(curl%o_bnd(d, ng)%seg(:), dim=1)
                      if (proc /= curl%o_bnd(d, ng)%seg(g)%proc) then
-                        tag = curl%o_bnd(d, ng)%seg(g)%lh + HI*d
                         nr = nr + I_ONE
                         ! if (cor) there should be MPI_Waitall for each d
                         ! for noncartesian division some y-boundary corner cells are independent from x-boundary face cells, (similarly for z-direction).
-                        call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%o_bnd(d, ng)%seg(g)%mbc, curl%o_bnd(d, ng)%seg(g)%proc, tag, comm, req(nr), ierr)
+                        call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%o_bnd(d, ng)%seg(g)%mbc, curl%o_bnd(d, ng)%seg(g)%proc, curl%o_bnd(d, ng)%seg(g)%tag, comm, req(nr), ierr)
                      endif
                   enddo
                endif
