@@ -74,7 +74,10 @@ def main():
       print "Just kiddin', you used pretend option!"
       print comment
    else:
-      client.checkin(args,comment)
+      try:
+         client.checkin(args,comment)
+      except pysvn.ClientError, err:
+         print '\033[91m' + str(err) + '\033[0m'
 
 if __name__ == "__main__":
    main()
