@@ -59,8 +59,8 @@ contains
 
       implicit none
 
-      integer(kind=4):: ib, lh, hl
-      integer :: d, g, j
+      integer(kind=4):: d, ib, lh, hl
+      integer :: g, j
       integer(kind=4), dimension(ndims) :: sizes, subsizes, starts
       logical :: sharing
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
@@ -211,8 +211,8 @@ contains
                                     curl%i_bnd(d, ib)%seg(g)%se(:d-1, HI) = curl%i_bnd(d, ib)%seg(g)%se(:d-1, HI) + ib
                                  endwhere
                                  curl%o_bnd(d, ib)%seg(g) = curl%i_bnd(d, ib)%seg(g)
-                                 curl%i_bnd(d, ib)%seg(g)%tag = 1 + 1 * (HI*d+lh-LO) !> \todo Replace '1' by id and number of local gc
-                                 curl%o_bnd(d, ib)%seg(g)%tag = 1 + 1 * (HI*d+hl-LO)
+                                 curl%i_bnd(d, ib)%seg(g)%tag = HI*d+lh-LO !> \todo add an id and number of local gc
+                                 curl%o_bnd(d, ib)%seg(g)%tag = HI*d+hl-LO
                                  select case (lh)
                                     case (LO)
                                        curl%i_bnd(d, ib)%seg(g)%se(d, LO) = curl%i_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)

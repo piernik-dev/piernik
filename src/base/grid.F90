@@ -208,8 +208,8 @@ contains
       integer(kind=4), intent(in) :: numcrs    !< expect flind%crs%all, here, cannot grab it directly because of cyclic deps in CR-based setups
 
       integer(kind=4), dimension(:), allocatable :: sizes, subsizes, starts
-      integer :: d, t, g, j
-      integer(kind=4) :: hl, lh
+      integer :: t, g, j
+      integer(kind=4) :: d, hl, lh
       integer(kind=4), dimension(FLUID:ARR) :: nc
       integer(kind=4), parameter, dimension(FLUID:ARR) :: dims = [ I_ONE+ndims, I_ONE+ndims, I_ONE+ndims, ndims ] !< dimensionality of arrays
       type(cg_list_element), pointer :: cgl
