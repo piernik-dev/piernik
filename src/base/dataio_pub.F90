@@ -385,20 +385,25 @@ contains
    end subroutine compare_namelist
 !-----------------------------------------------------------------------------
    integer function move_file(a,b) result (stat)
+
       use iso_fortran_env, only: iostat_end
+
       implicit none
-      character(len=*), intent(in) :: a,b
+
+      character(len=*), intent(in) :: a, b
+
+      integer, parameter           :: old_u = 15, new_u = 16
       integer                      :: io_stat
 
-      open(15, file=a, status="old")
-      open(16, file=b, status="unknown")
+      open(old_u, file=a, status="old")
+      open(new_u, file=b, status="unknown")
       do
-         read(15, '(a)', iostat=io_stat) msg
+         read(old_u, '(a)', iostat=io_stat) msg
          if (io_stat == iostat_end) exit
-         write(16,'(a)') trim(msg)
+         write(new_u,'(a)') trim(msg)
       enddo
-      close(16)
-      close(15, status="delete")
+      close(new_u)
+      close(old_u, status="delete")
 
       stat = 0
    end function move_file
