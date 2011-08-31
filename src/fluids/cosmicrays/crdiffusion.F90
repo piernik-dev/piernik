@@ -84,14 +84,15 @@ contains
 !<
    subroutine all_wcr_boundaries
 
-      use constants,  only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE
-      use dataio_pub, only: die
-      use domain,     only: has_dir, cdd
-      use grid,       only: all_cg
-      use gc_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_REQUEST_NULL, MPI_COMM_NULL
-      use mpisetup,   only: comm, ierr, req, status
+      use constants,    only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE
+      use dataio_pub,   only: die
+      use domain,       only: has_dir, cdd
+      use internal_bnd, only: internal_boundaries
+      use grid,         only: all_cg
+      use gc_list,      only: cg_list_element
+      use grid_cont,    only: grid_container
+      use mpi,          only: MPI_REQUEST_NULL, MPI_COMM_NULL
+      use mpisetup,     only: comm, ierr, req, status
 
       implicit none
 
@@ -101,14 +102,15 @@ contains
       type(grid_container), pointer :: cg
 
       if (all_cg%cnt > 1) call die("[crdiffusion:all_wcr_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop
+
+      if (cdd%comm3d == MPI_COMM_NULL) then
+         pwcr => wcr
+         call internal_boundaries(CR, pa4d=pwcr)
+      endif
+
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
-
-         if (cdd%comm3d == MPI_COMM_NULL) then
-            pwcr => wcr
-            call cg%internal_boundaries(CR, pa4d=pwcr)
-         endif
 
          req(:) = MPI_REQUEST_NULL
 

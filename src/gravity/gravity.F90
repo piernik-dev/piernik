@@ -459,9 +459,10 @@ contains
 
    subroutine all_sgp_boundaries
 
-      use dataio_pub, only: die
-      use grid,       only: arr3d_boundaries, all_cg
-      use gc_list,    only: cg_list_element
+      use dataio_pub,   only: die
+      use internal_bnd, only: arr3d_boundaries
+      use grid,         only: all_cg
+      use gc_list,      only: cg_list_element
 
       implicit none
       type(cg_list_element), pointer :: cgl

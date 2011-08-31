@@ -1138,11 +1138,11 @@ contains
 
    subroutine read_3darr_from_restart(file_id, pa3d, area_type, dname, cg)
 
-      use constants,  only: xdim, ydim, zdim, ndims
-      use dataio_pub, only: msg, die
-      use grid,       only: arr3d_boundaries
-      use grid_cont,  only: grid_container
-      use hdf5,       only: HID_T, HSIZE_T, SIZE_T, h5dread_f, H5T_NATIVE_DOUBLE
+      use constants,    only: xdim, ydim, zdim, ndims
+      use dataio_pub,   only: msg, die
+      use internal_bnd, only: arr3d_boundaries
+      use grid_cont,    only: grid_container
+      use hdf5,         only: HID_T, HSIZE_T, SIZE_T, h5dread_f, H5T_NATIVE_DOUBLE
 
       implicit none
 

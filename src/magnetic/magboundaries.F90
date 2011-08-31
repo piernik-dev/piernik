@@ -658,12 +658,13 @@ contains
 
    subroutine all_mag_boundaries
 
-      use constants,  only: xdim, zdim, MAG
-      use dataio_pub, only: die
-      use domain,     only: has_dir, cdd
-      use grid,       only: all_cg
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_COMM_NULL
+      use constants,    only: xdim, zdim, MAG
+      use dataio_pub,   only: die
+      use domain,       only: has_dir, cdd
+      use internal_bnd, only: internal_boundaries
+      use grid,         only: all_cg
+      use grid_cont,    only: grid_container
+      use mpi,          only: MPI_COMM_NULL
 
       implicit none
 
@@ -673,9 +674,7 @@ contains
       cg => all_cg%first%cg
       if (all_cg%cnt > 1) call die("[magboundaries:all_mag_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
-      if (cdd%comm3d == MPI_COMM_NULL) then
-         call cg%internal_boundaries(MAG, pa4d=cg%b%arr)
-      endif
+      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries(MAG, pa4d=cg%b%arr)
 
       do dir = xdim, zdim
          if (has_dir(dir)) call bnd_b(dir)

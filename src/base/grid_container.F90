@@ -138,7 +138,6 @@ module grid_cont
 
       procedure :: init
       procedure :: cleanup
-      procedure :: internal_boundaries
 
    end type grid_container
 
@@ -388,105 +387,6 @@ contains
       endwhere
 
    end subroutine set_axis
-
-!-----------------------------------------------------------------------------
-!
-! This routine exchanges guardcells for BND_MPI and BND_PER boundaries.in u(:,:,:,:), b(:,:,:,:) and rank-3 arrays passed through argument list
-! (preferably only pointers to the actual arrays are passed).
-! The corners should be properly updated if this%[io]_bnd(:, ind) was set up appropriately (MPI_Waitall is called separately for each dimension).
-!
-
-   subroutine internal_boundaries(this, ind, pa3d, pa4d)
-
-      use constants,  only: FLUID, MAG, CR, ARR, LO, HI, xdim, ydim, zdim, I_ONE
-      use dataio_pub, only: die
-      use domain,     only: has_dir
-      use mpisetup,   only: comm, ierr, proc, req, status
-
-      implicit none
-
-      class(grid_container) :: this
-      integer(kind=4), intent(in) :: ind   !< second index in [io]_bnd arrays
-      real, optional, pointer, dimension(:,:,:)   :: pa3d
-      real, optional, pointer, dimension(:,:,:,:) :: pa4d
-
-      integer :: g, d
-      integer(kind=4) :: tag, nr
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: ise, ose
-
-!BEWARE: MPI_Waitall should be called after all grid containers post Isends and Irecvs
-! This routine thus cannot be a metod of the grid_container type
-
-      if (ind < minval([FLUID, MAG, CR, ARR]) .or. ind > maxval([FLUID, MAG, CR, ARR])) call die("[grid:internal_boundaries] wrong index")
-
-      select case (ind)
-         case (FLUID, MAG, CR)
-            if (.not. present(pa4d)) call die("[grid:internal_boundaries] pa4d not provided")
-            if (.not. associated(pa4d)) call die("[grid:internal_boundaries] pa4d == null()")
-         case (ARR)
-            if (.not. present(pa3d)) call die("[grid:internal_boundaries] pa3d not provided")
-            if (.not. associated(pa3d)) call die("[grid:internal_boundaries] pa3d == null()")
-         case default
-            call die("[grid:internal_boundaries] not implemented yet")
-            return
-      end select
-      if (present(pa3d) .and. present(pa4d)) call die("[grid:internal_boundaries] Both pa3d and pa4d are present")
-
-      do d = xdim, zdim
-         nr = 0
-         if (has_dir(d)) then
-
-            if (allocated(this%i_bnd(d, ind)%seg)) then
-               do g = 1, ubound(this%i_bnd(d, ind)%seg(:), dim=1)
-                  if (proc == this%i_bnd(d, ind)%seg(g)%proc) then
-                     ise = this%i_bnd(d, ind)%seg(g)%se
-                     ose(:,:) = ise(:,:)
-                     if (ise(d, LO) < this%n_b(d)) then
-                        ose(d, :) = ise(d, :) + this%n_b(d)
-                     else
-                        ose(d, :) = ise(d, :) - this%n_b(d)
-                     endif
-                     ! boundaries are always paired
-                     if (ind == ARR) then
-                        pa3d     (ise(xdim, LO):ise(xdim,HI), ise(ydim, LO):ise(ydim, HI), ise(zdim, LO):ise(zdim, HI)) = &
-                             pa3d(ose(xdim, LO):ose(xdim,HI), ose(ydim, LO):ose(ydim, HI), ose(zdim, LO):ose(zdim, HI))
-                     else
-                        pa4d     (:, ise(xdim, LO):ise(xdim,HI), ise(ydim, LO):ise(ydim, HI), ise(zdim, LO):ise(zdim, HI)) = &
-                             pa4d(:, ose(xdim, LO):ose(xdim,HI), ose(ydim, LO):ose(ydim, HI), ose(zdim, LO):ose(zdim, HI))
-                     endif
-                  else
-                     ! BEWARE: Here we assume, that we have at most one chunk to communicate with a given process on a single side od the domain.
-                     ! This will not be true when we allow many blocks per process and tag will need to be modified to include g or seg(g)%lh should become seg(g)%tag
-                     tag = int(this%i_bnd(d, ind)%seg(g)%lh + HI*d, kind=4)
-                     nr = nr + I_ONE
-                     if (ind == ARR) then
-                        call MPI_Irecv(pa3d(1, 1, 1), I_ONE, this%i_bnd(d, ind)%seg(g)%mbc, this%i_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
-                     else
-                        call MPI_Irecv(pa4d(1, 1, 1, 1), I_ONE, this%i_bnd(d, ind)%seg(g)%mbc, this%i_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
-                     endif
-                  endif
-               enddo
-            endif
-            if (allocated(this%o_bnd(d, ind)%seg)) then
-               do g = 1, ubound(this%o_bnd(d, ind)%seg(:), dim=1)
-                  if (proc /= this%o_bnd(d, ind)%seg(g)%proc) then
-                     tag = int(this%o_bnd(d, ind)%seg(g)%lh + HI*d, kind=4)
-                     nr = nr + I_ONE
-                     ! for noncartesian division some y-boundary corner cells are independent from x-boundary face cells, (similarly for z-direction).
-                     if (ind == ARR) then
-                        call MPI_Isend(pa3d(1, 1, 1), I_ONE, this%o_bnd(d, ind)%seg(g)%mbc, this%o_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
-                     else
-                        call MPI_Isend(pa4d(1, 1, 1, 1), I_ONE, this%o_bnd(d, ind)%seg(g)%mbc, this%o_bnd(d, ind)%seg(g)%proc, tag, comm, req(nr), ierr)
-                     endif
-                  endif
-               enddo
-            endif
-            if (ubound(this%i_bnd(d, ind)%seg(:), dim=1) /= ubound(this%o_bnd(d, ind)%seg(:), dim=1)) call die("g:ib u/=u")
-            if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
-         endif
-      enddo
-
-   end subroutine internal_boundaries
 
 !>
 !! \brief Routines that deallocates directional meshes.
