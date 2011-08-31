@@ -385,7 +385,6 @@ contains
    end subroutine compare_namelist
 !-----------------------------------------------------------------------------
    integer function move_file(a,b) result (stat)
-      use dataio_pub,      only: msg
       use iso_fortran_env, only: iostat_end
       implicit none
       character(len=*), intent(in) :: a,b
