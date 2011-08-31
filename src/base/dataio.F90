@@ -197,7 +197,7 @@ contains
       use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
-           &                     tmp_log_file, msglen, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress
+           &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress, move_file
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
       use domain,          only: eff_dim
       use fluidboundaries, only: all_fluid_boundaries
@@ -214,9 +214,7 @@ contains
       implicit none
 
       logical              :: tn
-      integer(kind=1)      :: system
       integer              :: system_status, i
-      character(len=msglen):: system_command
 
       if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initialized.")
 
@@ -401,8 +399,7 @@ contains
          enddo
          write(log_file,'(6a,i3.3,a)') trim(cwd),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
 !> \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
-         write(system_command, '("mv ",a," ",a)') trim(tmp_log_file), trim(log_file)
-         system_status = system(system_command)
+         system_status = move_file(trim(tmp_log_file), trim(log_file))
          if (system_status /= 0) then
             write(msg,'(2a)')"[dataio:init_dataio] The log must be stored in ",tmp_log_file
             call warn(msg)
