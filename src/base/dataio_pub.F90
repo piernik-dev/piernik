@@ -392,10 +392,12 @@ contains
 
       character(len=*), intent(in) :: a, b
 
-      integer, parameter           :: old_u = 15, new_u = 16
+      integer                      :: old_u, new_u
       integer                      :: io_stat
 
+      old_u = getlun()
       open(old_u, file=a, status="old")
+      new_u = getlun()
       open(new_u, file=b, status="unknown")
       do
          read(old_u, '(a)', iostat=io_stat) msg
@@ -407,5 +409,23 @@ contains
 
       stat = 0
    end function move_file
+!-----------------------------------------------------------------------------
+   integer function getlun()
+      implicit none
+      logical :: exists, opend
+      integer :: i
+
+      getlun = -1
+
+      do i = 10, 999
+         inquire(unit=i, exist=exists, opened=opend)
+         if (exists .and. .not.opend) then
+            getlun = i
+            return
+         endif
+      enddo
+      call warn("[dataio_pub:getlun]: There are no free luns available.")   ! prolly should just die
+      return
+   end function getlun
 !-----------------------------------------------------------------------------
 end module dataio_pub
