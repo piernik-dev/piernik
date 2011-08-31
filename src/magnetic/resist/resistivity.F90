@@ -95,7 +95,7 @@ contains
    subroutine init_resistivity
 
       use constants,  only: PIERNIK_INIT_BASE, zdim, xdim, ydim
-      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress
       use domain,     only: eff_dim, has_dir
       use grid,       only: all_cg

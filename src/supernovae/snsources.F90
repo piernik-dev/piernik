@@ -72,7 +72,7 @@ contains
    subroutine init_snsources
 
       use constants,      only: PIERNIK_INIT_BASE, xdim, ydim
-      use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml                  ! QA_WARN required for diff_nml
+      use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
       use domain,         only: has_dir, dom
       use initcosmicrays, only: cr_eff

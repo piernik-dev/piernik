@@ -82,7 +82,7 @@ contains
 !<
    subroutine init_interactions
 
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, code_progress
       use constants,     only: PIERNIK_INIT_MPI
       use mpisetup,      only: master, slave, lbuff, rbuff, buffer_dim, ierr, comm, FIRST!, grace_period_passed

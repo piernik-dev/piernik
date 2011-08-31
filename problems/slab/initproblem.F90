@@ -54,7 +54,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use mpisetup,      only: rbuff, buffer_dim, master, slave, comm, ierr, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION
 

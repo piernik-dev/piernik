@@ -63,7 +63,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use domain,      only: dom, has_dir
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use mpisetup,    only: ibuff, rbuff, buffer_dim, master, slave, comm, ierr, FIRST

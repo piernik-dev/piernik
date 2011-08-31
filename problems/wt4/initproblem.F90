@@ -97,7 +97,7 @@ contains
    subroutine read_problem_par
 
       use constants,   only: pi
-      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use mpisetup,    only: ierr, rbuff, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm, FIRST
       use mpi,         only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
 

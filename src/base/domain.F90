@@ -217,7 +217,7 @@ contains
       use constants,  only: xdim, ydim, zdim, LO, HI, big_float, dpi, &
            &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND, PIERNIK_INIT_MPI, I_ONE
       use dataio_pub, only: die, printinfo, msg, warn, code_progress
-      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
       use mpisetup,   only: buffer_dim, cbuff, ibuff, lbuff, rbuff, master, slave, proc, FIRST, LAST, nproc, comm, ierr, have_mpi
 

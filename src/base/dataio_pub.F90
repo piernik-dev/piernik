@@ -54,6 +54,7 @@ module dataio_pub
    real                  :: tend                   !< simulation time to end
    real                  :: wend                   !< wall clock time to end (in hours)
 
+   integer               :: lun                    !< current free logical unit
    integer               :: nend                   !< number of the step to end simulation
    integer               :: nstep_start            !< number of start timestep
    integer(kind=4)       :: nhdf                   !< current number of hdf file
@@ -122,7 +123,7 @@ contains
       character(len=*),  intent(in) :: nm
       integer,           intent(in) :: mode
 
-      integer, parameter            :: log_lun = 3            !< luncher for log file
+      integer                       :: log_lun                !< luncher for log file
       character(len=ansilen)        :: ansicolor
       integer, parameter            :: msg_type_len = 7       !< length of the "Warning" word.
       character(len=msg_type_len)   :: msg_type_str
@@ -183,6 +184,7 @@ contains
          endif
       endif
 
+      log_lun = getlun()
       if (log_file_initialized) then
          open(log_lun, file=log_file, position='append')
       else
@@ -357,7 +359,7 @@ contains
       character(len=*), intent(in)     :: nml_bef, nml_aft
       integer                          :: io
       character(len=maxparfilelen)     :: sa, sb
-      integer, parameter               :: lun_bef=501, lun_aft=502
+      integer                          :: lun_bef, lun_aft
       integer(kind=4)                  :: proc
 
       call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierrh)
@@ -365,7 +367,9 @@ contains
 
       if (code_progress > PIERNIK_INIT_IO_IC) call warn("[dataio_pub:compare_namelist] Late namelist")
 
+      lun_bef = getlun()
       open(lun_bef, file=nml_bef, status='old')
+      lun_aft = getlun()
       open(lun_aft, file=nml_aft, status='old')
       io = 0
       do

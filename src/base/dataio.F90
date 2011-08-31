@@ -77,7 +77,7 @@ module dataio
    integer               :: iv                     !< work index to count successive variables to dump in hdf files
    character(len=varlen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
 
-   integer, parameter    :: tsl_lun = 2            !< luncher for timeslice file
+   integer               :: tsl_lun                !< luncher for timeslice file
    integer               :: step_res               !< number of simulation timestep corresponding to values dumped in restart file
    integer               :: nhdf_start             !< number of hdf file for the first hdf dump in simulation run
    integer               :: nres_start             !< number of restart file for the first restart dump in simulation run
@@ -197,8 +197,9 @@ contains
       use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
-           &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress, move_file
-      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+           &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress, &
+           &                     move_file, getlun
+      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use domain,          only: eff_dim
       use fluidboundaries, only: all_fluid_boundaries
       use global,          only: t, nstep
@@ -214,7 +215,7 @@ contains
       implicit none
 
       logical              :: tn
-      integer              :: system_status, i
+      integer              :: system_status, i, par_lun
 
 #ifdef VERBOSE
       call printinfo("[dataio:init_dataio] Commencing dataio module initialization")
@@ -261,17 +262,18 @@ contains
 
       if (master) then
 
-         open(1,file=par_file)
+         par_lun = getlun()
+         open(par_lun,file=par_file)
          ierrh = 0
          do while (ierrh == 0 .and. parfilelines<maxparfilelines)
-            read(unit=1, fmt='(a)', iostat=ierrh) parfile(parfilelines+1)
+            read(unit=par_lun, fmt='(a)', iostat=ierrh) parfile(parfilelines+1)
             if (ierrh == 0) then
                parfilelines = parfilelines + 1
                i = len_trim(parfile(parfilelines))
                if (i >= len(parfile(parfilelines))) call warn("[dataio:init_dataio] problem.par contains very long lines. The copy in the logfile and HDF dumps can be truncated.")
             endif
          enddo
-         close(1)
+         close(par_lun)
          if (parfilelines == maxparfilelines) call warn("[dataio:init_dataio] problem.par has too many lines. The copy in the logfile and HDF dumps can be truncated.")
 
          diff_nml(OUTPUT_CONTROL)
@@ -690,7 +692,7 @@ contains
    subroutine write_timeslice
 
       use constants,   only: cwdlen, xdim, ydim, zdim, half
-      use dataio_pub,  only: cwd, die
+      use dataio_pub,  only: cwd, die, getlun
       use dataio_user, only: user_tsl
       use diagnostics, only: pop_vector
       use domain,      only: dom
@@ -771,12 +773,14 @@ contains
             if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
             write(head_fmt,'(A,I2,A)') "(a1,a8,",size(tsl_names)-1,"a16)"
 
+            tsl_lun = getlun()
             open(tsl_lun, file=tsl_file)
             write(tsl_lun,fmt=head_fmt) "#",tsl_names
             write(tsl_lun, '(a1)') '#'
             deallocate(tsl_names)
             tsl_firstcall = .false.
          else
+            tsl_lun = getlun()
             open(tsl_lun, file=tsl_file, position='append')
          endif
       endif
@@ -1238,7 +1242,7 @@ contains
 
 !> \todo process multiple commands at once
       use constants,     only: cwdlen
-      use dataio_pub,    only: msg, printinfo, warn
+      use dataio_pub,    only: msg, printinfo, warn, getlun
       use mpisetup,      only: master
 #if defined(__INTEL_COMPILER)
       use ifport,        only: unlink, stat
@@ -1250,7 +1254,8 @@ contains
       include "lib3f.h"
 #endif /* __PGI */
 
-      integer, parameter :: n_msg_origin = 2, msg_lun=91
+      integer, parameter :: n_msg_origin = 2
+      integer            :: msg_lun
       character(len=*), parameter, dimension(n_msg_origin) :: msg_origin = [ "user  ", "system" ]
 
       character(len=cwdlen), dimension(n_msg_origin), save :: fname
@@ -1273,6 +1278,7 @@ contains
             if (last_msg_stamp(i) == stat_buff(10)) exit
             last_msg_stamp(i) = stat_buff(10)
 
+            msg_lun = getlun()
             open(msg_lun, file=fname(i), status='old')
             read(msg_lun, *, iostat=io) umsg, umsg_param
             if (io/=0) then

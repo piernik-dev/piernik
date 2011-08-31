@@ -157,7 +157,7 @@ contains
    subroutine init_multigrid_grav
 
       use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
       use domain,        only: dom, has_dir, eff_dim, geometry_type, is_uneven, cdd
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL

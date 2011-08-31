@@ -62,7 +62,7 @@ contains
 
       use mpisetup,              only: master, slave, comm, ierr, rbuff, lbuff, cbuff, ibuff, buffer_dim, FIRST
       use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_CHARACTER, MPI_INTEGER
-      use dataio_pub,            only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use dataio_pub,            only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use dataio_pub,            only: code_progress, die
       use constants,             only: PIERNIK_INIT_MPI
 

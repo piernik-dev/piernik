@@ -68,7 +68,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml      ! QA_WARN required for diff_nml
+      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_pub, only: warn
       use domain,     only: dom
       use mpisetup,   only: ierr, rbuff, master, slave, buffer_dim, comm, proc, have_mpi, LAST, FIRST

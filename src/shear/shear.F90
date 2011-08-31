@@ -66,7 +66,7 @@ contains
 !<
    subroutine init_shear
 
-      use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml  ! QA_WARN required for diff_nml
+      use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use dataio_pub,     only: printinfo, die, code_progress
       use constants,      only: PIERNIK_INIT_BASE
       use mpisetup,       only: ierr, master, slave, rbuff, buffer_dim, comm, FIRST

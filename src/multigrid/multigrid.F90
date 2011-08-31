@@ -76,7 +76,7 @@ contains
    subroutine init_multigrid
 
       use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI, I_TWO, I_ONE, half
-      use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, ierrh  ! QA_WARN required for diff_nml
+      use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven, cdd
       use grid,                only: all_cg
