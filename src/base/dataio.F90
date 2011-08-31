@@ -216,6 +216,10 @@ contains
       logical              :: tn
       integer              :: system_status, i
 
+#ifdef VERBOSE
+      call printinfo("[dataio:init_dataio] Commencing dataio module initialization")
+#endif /* VERBOSE */
+
       if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initialized.")
 
       problem_name = "nameless"
@@ -431,6 +435,10 @@ contains
 !         endif
       endif
       call set_container_chdf(nstep)
+
+#ifdef VERBOSE
+      call printinfo("[dataio:init_dataio] finished. \o/")
+#endif /* VERBOSE */
 
    end subroutine init_dataio
 
