@@ -152,7 +152,7 @@ contains
    subroutine init_grav
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml    ! QA_WARN required for diff_nml
-      use dataio_pub,    only: warn, die, code_progress
+      use dataio_pub,    only: printinfo, warn, die, code_progress
       use constants,     only: PIERNIK_INIT_ARRAYS
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
@@ -173,7 +173,7 @@ contains
       if (code_progress < PIERNIK_INIT_ARRAYS) call die("[gravity:init_grav] units or arrays not initialized.")
 
 #ifdef VERBOSE
-      if (master) call warn("[gravity:init_grav] Commencing gravity module initialization")
+      if (master) call printinfo("[gravity:init_grav] Commencing gravity module initialization")
 #endif /* VERBOSE */
 
       g_dir   = 0.0
