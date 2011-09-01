@@ -200,7 +200,7 @@ contains
 
       implicit none
 
-      integer, intent(in)                  :: crdim, ibdir
+      integer(kind=4), intent(in)          :: crdim, ibdir
       integer                              :: i, j, k, il, ih, jl, jh, kl, kh, ild, jld, kld
       integer, dimension(ndims)            :: idm, ndm, hdm, ldm
       real                                 :: bb
