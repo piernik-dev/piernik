@@ -36,7 +36,7 @@ module crdiffusion
    implicit none
 
    private
-   public :: cr_diff_x, cr_diff_y, cr_diff_z, init_crdiffusion, cleanup_crdiffusion
+   public :: cr_diff, init_crdiffusion, cleanup_crdiffusion
 
    real, allocatable, dimension(:,:,:,:), target :: wcr      !< Temporary array used in crdiffusion module
 
@@ -180,11 +180,15 @@ contains
    end subroutine all_wcr_boundaries
 
 !>
-!! \brief Diffusive transport of ecr in 1-direction
+!! \brief Diffusive transport of ecr in crdim/ibdir-direction
+!!
+!! cr_diff_x --> cr_diff(xdim,ibx)
+!! cr_diff_y --> cr_diff(ydim,iby)
+!! cr_diff_z --> cr_diff(zdim,ibz)
 !<
-   subroutine cr_diff_x
+   subroutine cr_diff(crdim, ibdir)
 
-      use constants,      only: xdim, ydim, zdim, half
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half
       use dataio_pub,     only: die
       use domain,         only: has_dir
       use fluidindex,     only: ibx, iby, ibz, flind
@@ -196,230 +200,86 @@ contains
 
       implicit none
 
-      integer :: i, j, k
-      real    :: b1b, b2b, b3b, bb
-      real, dimension(flind%crs%all)  :: decr1, decr2, decr3, fcrdif1
-      real, dimension(flind%crs%all)  :: dqp, dqm
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-
-      !=======================================================================
-
-      if (.not.has_dir(xdim)) return
-
-      if (all_cg%cnt > 1) call die("[crdiffusion:cr_diff_x] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         do k=cg%ks, cg%ke
-            do j=cg%js, cg%je
-               do i=2, cg%n_(xdim)     ! if we are here this implies nxb /= 1
-
-                  decr1 =  (cg%u%arr(iarr_crs,i,  j,  k) - cg%u%arr(iarr_crs,i-1,j,  k)) * cg%idx
-                  fcrdif1 = K_crs_perp * decr1
-
-                  b1b =  cg%b%arr(ibx,i,  j,  k)
-
-                  if (has_dir(ydim)) then
-                     dqm = half*((cg%u%arr(iarr_crs,i-1,j  ,k ) + cg%u%arr(iarr_crs,i ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j-1,k ) + cg%u%arr(iarr_crs,i ,j-1,k ))) * cg%idy
-                     dqp = half*((cg%u%arr(iarr_crs,i-1,j+1,k ) + cg%u%arr(iarr_crs,i ,j+1,k )) - (cg%u%arr(iarr_crs,i-1,j  ,k ) + cg%u%arr(iarr_crs,i ,j  ,k ))) * cg%idy
-                     decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                     b2b = sum(cg%b%arr(iby,i-1:i, j:j+1, k    ))*0.25
-                  else
-                     decr2 = 0.
-                     b2b = 0.
-                  endif
-
-                  if (has_dir(zdim)) then
-                     dqm = half*((cg%u%arr(iarr_crs,i-1,j ,k  ) + cg%u%arr(iarr_crs,i ,j ,k  )) - (cg%u%arr(iarr_crs,i-1,j ,k-1) + cg%u%arr(iarr_crs,i ,j ,k-1))) * cg%idz
-                     dqp = half*((cg%u%arr(iarr_crs,i-1,j ,k+1) + cg%u%arr(iarr_crs,i ,j ,k+1)) - (cg%u%arr(iarr_crs,i-1,j ,k  ) + cg%u%arr(iarr_crs,i ,j ,k  ))) * cg%idz
-                     decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                     b3b = sum(cg%b%arr(ibz,i-1:i, j,     k:k+1))*0.25
-                  else
-                     decr3 = 0.
-                     b3b = 0.
-                  endif
-
-                  bb = b1b**2 + b2b**2 + b3b**2
-                  if (bb /= 0.) fcrdif1 = fcrdif1 + K_crs_paral * b1b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
-
-                  wcr(:,i,j,k) = - fcrdif1 * dt * cg%idx
-
-               enddo
-            enddo
-         enddo
-
-         call all_wcr_boundaries
-         cg%u%arr(iarr_crs,1:cg%n_(xdim)-1,:,:) = cg%u%arr(iarr_crs,1:cg%n_(xdim)-1,:,:) - ( wcr(:,2:cg%n_(xdim),:,:) - wcr(:,1:cg%n_(xdim)-1,:,:) )
-         cg%u%arr(iarr_crs, cg%n_(xdim),:,:) = cg%u%arr(iarr_crs, cg%n_(xdim)-1,:,:) ! for sanity
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine cr_diff_x
-
-!>
-!! \brief Diffusive transport of ecr in 2-direction
-!<
-   subroutine cr_diff_y
-
-      use constants,      only: xdim, ydim, zdim, half
-      use dataio_pub,     only: die
-      use domain,         only: has_dir
-      use fluidindex,     only: ibx, iby, ibz, flind
-      use global,         only: dt
-      use grid,           only: all_cg
-      use gc_list,        only: cg_list_element
-      use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-
-      implicit none
-
-      integer :: i, j, k
-      real    :: b1b, b2b, b3b, bb
-      real, dimension(flind%crs%all)  :: decr1, decr2, decr3, fcrdif2
-      real, dimension(flind%crs%all)  :: dqp, dqm
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      integer, intent(in)                  :: crdim, ibdir
+      integer                              :: i, j, k, il, ih, jl, jh, kl, kh, ild, jld, kld
+      integer, dimension(ndims)            :: idm, ndm, hdm, ldm
+      real                                 :: bb
+      real, dimension(ndims)               :: bcomp
+      real, dimension(flind%crs%all)       :: fcrdif
+      real, dimension(ndims,flind%crs%all) :: decr
+      real, dimension(flind%crs%all)       :: dqp, dqm
+      type(cg_list_element), pointer       :: cgl
+      type(grid_container),  pointer       :: cg
+      logical, dimension(ndims)            :: present_not_crdim
 
 !=======================================================================
 
-      if (.not.has_dir(ydim)) return
+      if (.not.has_dir(crdim)) return
 
-      if (all_cg%cnt > 1) call die("[crdiffusion:cr_diff_y] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
+      if (all_cg%cnt > 1) call die("[crdiffusion:cr_diff] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
+
+      idm        = 0              ;      idm(crdim) = 1
+      decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.has_dir(dim) .and. (dim /= crdim) )
+      present_not_crdim = has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+                                                                         ! in case of integration with boundaries:
+         ldm        = cg%ijkse(:,LO) ;      ldm(crdim) = 2               ! ldm =           1 + D_
+         hdm        = cg%ijkse(:,HI) ;      hdm(crdim) = cg%n_(crdim)    ! hdm = cg%n_ + idm - D_
 
-         do k=cg%ks, cg%ke
-            do j=2, cg%n_(ydim) ! if we are here nyb /= 1
-               do i=cg%is, cg%ie
+         do k = ldm(zdim), hdm(zdim)       ; kl = k-1 ; kh = k+1 ; kld = k-idm(zdim)
+            do j = ldm(ydim), hdm(ydim)    ; jl = j-1 ; jh = j+1 ; jld = j-idm(ydim)
+               do i = ldm(xdim), hdm(xdim) ; il = i-1 ; ih = i+1 ; ild = i-idm(xdim)
 
-                  decr2 = (cg%u%arr(iarr_crs,i,j,k) - cg%u%arr(iarr_crs,i,j-1,k)) * cg%idy
-                  fcrdif2 = K_crs_perp * decr2
+                  decr(crdim,:) = (cg%u%arr(iarr_crs,i,j,k) - cg%u%arr(iarr_crs,ild,jld,kld)) * cg%idl(crdim)
+                  fcrdif = K_crs_perp * decr(crdim,:)
 
-                  b2b =  cg%b%arr(iby,i,j,k)
+                  bcomp(ibdir) =  cg%b%arr(ibdir,i,j,k)
 
-                  if (has_dir(xdim)) then
-                     dqm = half*((cg%u%arr(iarr_crs,i  ,j-1,k ) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j-1,k ) + cg%u%arr(iarr_crs,i-1,j  ,k ))) * cg%idx
-                     dqp = half*((cg%u%arr(iarr_crs,i+1,j-1,k ) + cg%u%arr(iarr_crs,i+1,j  ,k )) - (cg%u%arr(iarr_crs,i  ,j-1,k ) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idx
-                     decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                     b1b = sum(cg%b%arr(ibx,i:i+1, j-1:j, k))*0.25
-                  else
-                     decr1 = 0.
-                     b1b = 0.
+                  if (present_not_crdim(xdim)) then
+                     dqm = half*((cg%u%arr(iarr_crs,i ,jld,kld) + cg%u%arr(iarr_crs,i ,j,k)) - (cg%u%arr(iarr_crs,il,jld,kld) + cg%u%arr(iarr_crs,il,j,k))) * cg%idx
+                     dqp = half*((cg%u%arr(iarr_crs,ih,jld,kld) + cg%u%arr(iarr_crs,ih,j,k)) - (cg%u%arr(iarr_crs,i ,jld,kld) + cg%u%arr(iarr_crs,i ,j,k))) * cg%idx
+                     decr(xdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                     bcomp(ibx)   = sum(cg%b%arr(ibx,i:ih, jld:j, kld:k))*0.25
                   endif
 
-                  if (has_dir(zdim)) then
-                     dqm = half*((cg%u%arr(iarr_crs,i ,j-1,k  ) + cg%u%arr(iarr_crs,i ,j  ,k  )) - (cg%u%arr(iarr_crs,i ,j-1,k-1) + cg%u%arr(iarr_crs,i ,j  ,k-1))) * cg%idz
-                     dqp = half*((cg%u%arr(iarr_crs,i ,j-1,k+1) + cg%u%arr(iarr_crs,i ,j  ,k+1)) - (cg%u%arr(iarr_crs,i ,j-1,k  ) + cg%u%arr(iarr_crs,i ,j  ,k  ))) * cg%idz
-                     decr3 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                     b3b = sum(cg%b%arr(ibz,i, j-1:j, k:k+1))*0.25
-                  else
-                     decr3 = 0.
-                     b3b = 0.
+                  if (present_not_crdim(ydim)) then
+                     dqm = half*((cg%u%arr(iarr_crs,ild,j ,kld) + cg%u%arr(iarr_crs,i,j ,k)) - (cg%u%arr(iarr_crs,ild,jl,kld) + cg%u%arr(iarr_crs,i,jl,k))) * cg%idy
+                     dqp = half*((cg%u%arr(iarr_crs,ild,jh,kld) + cg%u%arr(iarr_crs,i,jh,k)) - (cg%u%arr(iarr_crs,ild,j ,kld) + cg%u%arr(iarr_crs,i,j ,k))) * cg%idy
+                     decr(ydim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                     bcomp(iby)   = sum(cg%b%arr(iby,ild:i, j:jh, kld:k))*0.25
                   endif
 
-                  bb = b1b**2 + b2b**2 + b3b**2
-                  if (bb /= 0.) fcrdif2 = fcrdif2 + K_crs_paral * b2b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
+                  if (present_not_crdim(zdim)) then
+                     dqm = half*((cg%u%arr(iarr_crs,ild,jld,k ) + cg%u%arr(iarr_crs,i,j,k )) - (cg%u%arr(iarr_crs,ild,jld,kl) + cg%u%arr(iarr_crs,i,j,kl))) * cg%idz
+                     dqp = half*((cg%u%arr(iarr_crs,ild,jld,kh) + cg%u%arr(iarr_crs,i,j,kh)) - (cg%u%arr(iarr_crs,ild,jld,k ) + cg%u%arr(iarr_crs,i,j,k ))) * cg%idz
+                     decr(zdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
+                     bcomp(ibz)   = sum(cg%b%arr(ibz,ild:i, jld:j, k:kh))*0.25
+                  endif
 
-                  wcr(:,i,j,k) = - fcrdif2 * dt * cg%idy
+                  bb = bcomp(ibx)**2 + bcomp(iby)**2 + bcomp(ibz)**2
+                  if (bb /= 0.) fcrdif = fcrdif + K_crs_paral * bcomp(ibdir) * (bcomp(ibx)*decr(xdim,:) + bcomp(iby)*decr(ydim,:) + bcomp(ibz)*decr(zdim,:)) / bb
+
+                  wcr(:,i,j,k) = - fcrdif * dt * cg%idl(crdim)
 
                enddo
             enddo
          enddo
 
          call all_wcr_boundaries
-         cg%u%arr(iarr_crs,:,1:cg%n_(ydim)-1,:) = cg%u%arr(iarr_crs,:,1:cg%n_(ydim)-1,:) - ( wcr(:,:,2:cg%n_(ydim),:) - wcr(:,:,1:cg%n_(ydim)-1,:) )
-         cg%u%arr(iarr_crs,:, cg%n_(ydim),:) = cg%u%arr(iarr_crs,:, cg%n_(ydim)-1,:) ! for sanity
+
+         ndm = cg%n_ - idm
+         hdm = 1 + idm*ndm
+         ldm = hdm - idm
+         cg%u%arr(iarr_crs,:ndm(xdim), :ndm(ydim), :ndm(zdim)) =                         cg%u%arr(iarr_crs,:ndm(xdim),:ndm(ydim),:ndm(zdim)) &
+           &    - ( wcr(:,1+idm(xdim):cg%n_(xdim),1+idm(ydim):cg%n_(ydim),1+idm(zdim):cg%n_(zdim)) - wcr(:,:ndm(xdim),:ndm(ydim),:ndm(zdim)) )
+         cg%u%arr(iarr_crs,hdm(xdim):cg%n_(xdim),hdm(ydim):cg%n_(ydim),hdm(zdim):cg%n_(zdim)) = cg%u%arr(iarr_crs,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
 
          cgl => cgl%nxt
       enddo
 
-   end subroutine cr_diff_y
-
-!>
-!! \brief Diffusive transport of ecr in 3-direction
-!<
-   subroutine cr_diff_z
-
-      use constants,      only: xdim, ydim, zdim, half
-      use dataio_pub,     only: die
-      use domain,         only: has_dir
-      use fluidindex,     only: ibx, iby, ibz, flind
-      use global,         only: dt
-      use grid,           only: all_cg
-      use gc_list,        only: cg_list_element
-      use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-
-      implicit none
-
-      integer :: i, j, k
-      real    :: b1b, b2b, b3b, bb
-      real, dimension(flind%crs%all) :: decr1, decr2, decr3, fcrdif3
-      real, dimension(flind%crs%all) :: dqp, dqm
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-
-!=======================================================================
-
-      if (.not.has_dir(zdim)) return
-
-      if (all_cg%cnt > 1) call die("[crdiffusion:cr_diff_z] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         do k=2, cg%n_(zdim)      ! nzb /= 1
-            do j=cg%js, cg%je
-               do i=cg%is, cg%ie
-
-                  decr3 =  (cg%u%arr(iarr_crs,i,j,k    ) - cg%u%arr(iarr_crs,i,j,  k-1)) * cg%idz
-                  fcrdif3 = K_crs_perp * decr3
-
-                  b3b =  cg%b%arr(ibz,i,j,k)
-
-                  if (has_dir(xdim)) then
-                     dqm = half*((cg%u%arr(iarr_crs,i  ,j ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i-1,j ,k-1) + cg%u%arr(iarr_crs,i-1,j  ,k ))) * cg%idx
-                     dqp = half*((cg%u%arr(iarr_crs,i+1,j ,k-1) + cg%u%arr(iarr_crs,i+1,j  ,k )) - (cg%u%arr(iarr_crs,i  ,j ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idx
-                     decr1 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                     b1b = sum(cg%b%arr(ibx,i:i+1, j,     k-1:k))*0.25
-                  else
-                     decr1 = 0.
-                     b1b = 0.
-                  endif
-
-                  if (has_dir(ydim)) then
-                     dqm = half*((cg%u%arr(iarr_crs,i ,j  ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k )) - (cg%u%arr(iarr_crs,i ,j-1,k-1) + cg%u%arr(iarr_crs,i  ,j-1,k ))) * cg%idy
-                     dqp = half*((cg%u%arr(iarr_crs,i ,j+1,k-1) + cg%u%arr(iarr_crs,i  ,j+1,k )) - (cg%u%arr(iarr_crs,i ,j  ,k-1) + cg%u%arr(iarr_crs,i  ,j  ,k ))) * cg%idy
-                     decr2 = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                     b2b = sum(cg%b%arr(iby,i,     j:j+1, k-1:k))*0.25
-                  else
-                     decr2 = 0.
-                     b2b = 0.
-                  endif
-
-                  bb = b1b**2 + b2b**2 + b3b**2
-                  if (bb /= 0.) fcrdif3 = fcrdif3 + K_crs_paral * b3b * (b1b*decr1 + b2b*decr2 + b3b*decr3) / bb
-
-                  wcr(:,i,j,k) = - fcrdif3 * dt * cg%idz
-
-               enddo
-            enddo
-         enddo
-
-         call all_wcr_boundaries
-         cg%u%arr(iarr_crs,:,:,1:cg%n_(zdim)-1) = cg%u%arr(iarr_crs,:,:,1:cg%n_(zdim)-1) - ( wcr(:,:,:,2:cg%n_(zdim)) - wcr(:,:,:,1:cg%n_(zdim)-1) )
-         cg%u%arr(iarr_crs,:,:, cg%n_(zdim)) = cg%u%arr(iarr_crs,:,:, cg%n_(zdim)-1) ! for sanity
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine cr_diff_z
+   end subroutine cr_diff
 
 end module crdiffusion

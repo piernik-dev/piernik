@@ -271,13 +271,14 @@ contains
 
    subroutine multigrid_solve_diff
 
+      use constants,     only: xdim, ydim, zdim
+      use crdiffusion,   only: cr_diff
       use dataio_pub,    only: halfstep, warn, printinfo, msg
-      use crdiffusion,   only: cr_diff_x, cr_diff_y, cr_diff_z
-      use timer,         only: set_timer
-      use multigridvars, only: ts, tot_ts, stdout
-      use fluidindex,    only: flind
-      use mpisetup,      only: master
+      use fluidindex,    only: flind, ibx, iby, ibz
       use global,        only: dt
+      use mpisetup,      only: master
+      use multigridvars, only: ts, tot_ts, stdout
+      use timer,         only: set_timer
 
       implicit none
 
@@ -293,13 +294,13 @@ contains
             frun = .false.
          endif
          if (halfstep) then
-            call cr_diff_z
-            call cr_diff_y
-            call cr_diff_x
+            call cr_diff(zdim,ibz)
+            call cr_diff(ydim,iby)
+            call cr_diff(xdim,ibx)
          else
-            call cr_diff_x
-            call cr_diff_y
-            call cr_diff_z
+            call cr_diff(xdim,ibx)
+            call cr_diff(ydim,iby)
+            call cr_diff(zdim,ibz)
          endif
 
       else

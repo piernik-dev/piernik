@@ -187,7 +187,8 @@ contains
       use sweeps,         only: source_terms_y
 #endif /* SHEAR && FLUID_INTERACTIONS */
 #ifdef COSM_RAYS
-      use crdiffusion,    only: cr_diff_x, cr_diff_y, cr_diff_z
+      use crdiffusion,    only: cr_diff
+      use fluidindex,     only: ibx, iby, ibz
       use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
 #ifdef DEBUG
@@ -216,7 +217,7 @@ contains
                if (has_dir(xdim)) then
                   if (.not. forward) then
 #ifdef COSM_RAYS
-                     if (use_split) call cr_diff_x
+                     if (use_split) call cr_diff(xdim,ibx)
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
                      call magfieldbyzx
@@ -230,7 +231,7 @@ contains
                      call magfieldbyzx
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-                     if (use_split) call cr_diff_x
+                     if (use_split) call cr_diff(xdim,ibx)
 #endif /* COSM_RAYS */
                   endif
                endif
@@ -239,7 +240,7 @@ contains
                if (has_dir(ydim)) then
                   if (.not. forward) then
 #ifdef COSM_RAYS
-                     if (use_split) call cr_diff_y
+                     if (use_split) call cr_diff(ydim,iby)
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
                      call magfieldbzxy
@@ -252,7 +253,7 @@ contains
                      call magfieldbzxy
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-                     if (use_split) call cr_diff_y
+                     if (use_split) call cr_diff(ydim,iby)
 #endif /* COSM_RAYS */
                   endif
                else
@@ -265,7 +266,7 @@ contains
                if (has_dir(zdim)) then
                   if (.not. forward) then
 #ifdef COSM_RAYS
-                     if (use_split) call cr_diff_z
+                     if (use_split) call cr_diff(zdim,ibz)
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
                      call magfieldbxyz
@@ -279,7 +280,7 @@ contains
                      call magfieldbxyz
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-                     if (use_split) call cr_diff_z
+                     if (use_split) call cr_diff(zdim,ibz)
 #endif /* COSM_RAYS */
                   endif
                endif

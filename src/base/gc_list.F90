@@ -42,7 +42,7 @@ module gc_list
 
    ! the prv and nxt pointers are not elements of the grid_container type to allow membership in several lists simultaneously
    type cg_list_element
-      type(grid_container), pointer :: cg        !< the current grid container
+      type(grid_container),  pointer :: cg       !< the current grid container
       type(cg_list_element), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
    end type cg_list_element
 
