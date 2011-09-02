@@ -31,47 +31,48 @@
 module initproblem
 
 
-   use constants,    only: cbuff_len
+   use constants,    only: dsetnamelen, cbuff_len, ndims
 
    implicit none
 
    private
    public :: read_problem_par, init_prob, problem_pointers
 
+   !namelist parameters
+   character(len=cbuff_len) :: input_file                     !< File with initial conditions
+   real                     :: gamma_loc                      !< gamma used for calculating initial T distribution
+   real                     :: mass_mul                       !< density scaling factor, default 1.0, try also 1.02
+   real                     :: ambient_density                !< modify velocities below this density
+   real                     :: cs_mul                         !< temperature scaling factor, implemented for debugging only
+   real                     :: damp_factor                    !< Set 1. to clear velocities in the ambient medium, 0. does nothing
+   integer                  :: divine_intervention_type       !< select type of every-step solution alteration
+   real                     :: mincs2, maxcs2                 !< extreme soundspeed values found in the IC file
+   real                     :: r_in                           !< inner radius of d_i_t = 3, for r < r_in we enforce den0, vlx0, vly0
+   real                     :: r_out                          !< outer radius of d_i_t = 3, for r > r_out we enforce den0, vlx0, vly0
+   ! BEWARE: small value of f_{in,out{ (<10.) may smear d_i_t over many cells around r_{in,out}, large value (~100) is equal to imposing step function at r_{in,out}
+   real                     :: f_in                           !< smoothing factor for cutoff at r_in
+   real                     :: f_out                          !< smoothing factor for cutoff at r_out
+   real                     :: alfasupp                       !< scaling factor for d_i_t = 3, in most cases should be = 1
+   logical                  :: fake_ic                        !< Skip reading the IC file (useful only for debugging, or running under valgrind)
+   real                     :: T_disk                         !< temperature of the disk
+   real                     :: mean_mol_weight                !< mean molecular weight
+
+   namelist /PROBLEM_CONTROL/  input_file, gamma_loc, mass_mul, ambient_density, cs_mul, damp_factor, divine_intervention_type, mincs2, maxcs2, &
+      &                        r_in, r_out, f_in, f_out, alfasupp, fake_ic, T_disk, mean_mol_weight
+
+   ! private data
    integer, parameter :: ic_nx = 512, ic_ny = 512, ic_nz = 52 !< initial conditions size
    integer, parameter :: ic_vars = 5                          !< number of quantities in the IC
    real, parameter    :: ic_xysize = 8.                       !< X- and Y- size of the domain covered by the IC
    real, parameter    :: ic_zsize = (ic_xysize*ic_nz)/ic_nx   !< Z-size of the domain covered by the IC
    real, parameter    :: ic_dx = ic_xysize/ic_nx              !< dx=dy=dz in the IC
-   real               :: mass_mul                             !< density scaling factor, default 1.0, try also 1.02
-   real               :: cs_mul                               !< temperature scaling factor, implemented for debugging only
-   real               :: gamma_loc                            !< gamma used for calculating initial T distribution
-   real, dimension(3) :: starpos, starvel                     !< the primary star initial position and velocity
-   real               :: mincs2, maxcs2                       !< extreme soundspeed values found in the IC file
-   real               :: ambient_density                      !< modify velocities below this density
-   real               :: damp_factor                          !< Set 1. to clear velocities in the ambient medium, 0. does nothing
-   integer            :: divine_intervention_type             !< select type of every-step solution alteration
-   logical            :: fake_ic                              !< Skip reading the IC file (useful only for debugging, or running under valgrind)
-   character(len=cbuff_len) :: input_file                     !< File with initial conditions
-
+   real, dimension(ndims) :: starpos, starvel                 !< the primary star initial position and velocity
    real, allocatable, dimension(:, :, :, :) :: ic_data        !< Storage for local part of the IC file
    integer :: ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke        !< range  of IC file covering local domain
-   ! BEWARE: following arrays can be allocated in various places, yet deallocated nowhere
-   !  they are used only for divine_intervention_type = 3
-   real, allocatable, dimension(:, :, :), target  :: den0     !< Density distribution at t = 0
-   real, allocatable, dimension(:, :, :), target  :: vlx0     !< Distribution of X component of velocity at t = 0
-   real, allocatable, dimension(:, :, :), target  :: vly0     !< Distribution of Y component of velocity at t = 0
-   real                 :: r_in                               !< inner radius of d_i_t = 3, for r < r_in we enforce den0, vlx0, vly0
-   real                 :: r_out                              !< outer radius of d_i_t = 3, for r > r_out we enforce den0, vlx0, vly0
-   ! BEWARE: small value of f_{in,out{ (<10.) may smear d_i_t over many cells around r_{in,out}, large value (~100) is equal to imposing step function at r_{in,out}
-   real                 :: f_in                               !< smoothing factor for cutoff at r_in
-   real                 :: f_out                              !< smoothing factor for cutoff at r_out
-   real                 :: alfasupp                           !< scaling factor for d_i_t = 3, in most cases should be = 1
-   real                 :: T_disk                             !< temperature of the disk
-   real                 :: mean_mol_weight                    !< mean molecular weight
-
-   namelist /PROBLEM_CONTROL/  input_file, gamma_loc, mass_mul, ambient_density, cs_mul, damp_factor, divine_intervention_type, mincs2, maxcs2, &
-      &                        r_in, r_out, f_in, f_out, alfasupp, fake_ic, T_disk, mean_mol_weight
+   enum, bind(C)
+      enumerator :: D0, VX0, VY0
+   end enum
+   character(len=dsetnamelen), dimension(D0:VY0), parameter :: q_n = [ "den0", "vlx0", "vly0" ] !< Names of initial condition (t=0.) arrays used for divine_intervention_type = 3
 
 contains
 
@@ -80,7 +81,7 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: additional_attrs, problem_write_restart, problem_read_restart
-      use user_hooks,  only: problem_customize_solution, finalize_problem
+      use user_hooks,  only: problem_customize_solution
 
       implicit none
 
@@ -88,7 +89,6 @@ contains
       additional_attrs           => init_prob_attrs
       problem_write_restart      => write_initial_fld_to_restart
       problem_read_restart       => read_initial_fld_from_restart
-      finalize_problem           => cleanup_wt4
 
    end subroutine problem_pointers
 
@@ -190,18 +190,6 @@ contains
       if (mass_mul < 0.) mass_mul = 1.
 
    end subroutine read_problem_par
-
-!-----------------------------------------------------------------------------
-
-   subroutine cleanup_wt4
-
-      implicit none
-
-      if (allocated(den0)) deallocate(den0)
-      if (allocated(vlx0)) deallocate(vlx0)
-      if (allocated(vly0)) deallocate(vly0)
-
-   end subroutine cleanup_wt4
 
 !-----------------------------------------------------------------------------
 
@@ -316,6 +304,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       type(component_fluid), pointer :: fl
+      real, dimension(:,:,:), pointer :: q0
 
       fl => flind%neu
       cgl => all_cg%first
@@ -400,17 +389,21 @@ contains
 
          cg%b%arr(:, 1:cg%n_(xdim), 1:cg%n_(ydim), 1:cg%n_(zdim)) = 0.0
 
-         ! BEWARE: den0, vlx0 and vly0 are used only with divine_intervention_type = 3
-         if (.not.allocated(den0)) allocate(den0(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-         if (.not.allocated(vlx0)) allocate(vlx0(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-         if (.not.allocated(vly0)) allocate(vly0(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-
-         den0 = cg%u%arr(fl%idn,:,:,:)
-         vlx0 = cg%u%arr(fl%imx,:,:,:) / den0
-         vly0 = cg%u%arr(fl%imy,:,:,:) / den0
-
+         do i = D0, VY0
+            call cg%add_na(q_n(i))
+            q0 => cg%get_na_ptr(q_n(i))
+            select case (i)
+               case (D0)
+                  q0 = cg%u%arr(fl%idn,:,:,:)
+               case (VX0)
+                  q0 = cg%u%arr(fl%imx,:,:,:) / cg%u%arr(fl%idn,:,:,:)
+               case (VY0)
+                  q0 = cg%u%arr(fl%imy,:,:,:) / cg%u%arr(fl%idn,:,:,:)
+               case default
+                  call die("[initproblem:init_problem] Illegal quantity")
+            end select
+         enddo
          ! It would be cool to dump a restart file here but this would make a cyclic dependency
-
 
          cgl => cgl%nxt
       enddo
@@ -454,25 +447,14 @@ contains
       integer(HID_T),intent(in)  :: file_id
       type(grid_container), pointer, intent(in) :: cg
 
-      real, dimension(:,:,:), pointer :: p3d
+      real, dimension(:,:,:), pointer :: q0
+      integer :: i
 
-      if (associated(p3d)) nullify(p3d)
       if ( divine_intervention_type == 3) then
-         if (allocated(den0)) then
-            p3d => den0(:, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, "den0", cg)
-            nullify(p3d)
-         endif
-         if (allocated(vlx0)) then
-            p3d => vlx0(:, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, "vlx0", cg)
-            nullify(p3d)
-         endif
-         if (allocated(vly0)) then
-            p3d => vly0(:, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, "vly0", cg)
-            nullify(p3d)
-         endif
+         do i = D0, VY0
+            q0 => cg%get_na_ptr(q_n(i))
+            if (associated(q0)) call write_arr_to_restart(file_id, q0, AT_NO_B, q_n(i), cg)
+         enddo
       endif
 
    end subroutine write_initial_fld_to_restart
@@ -481,7 +463,7 @@ contains
 
    subroutine read_initial_fld_from_restart(file_id, cg)
 
-      use constants,   only: AT_NO_B, xdim, ydim, zdim
+      use constants,   only: AT_NO_B
       use dataio_hdf5, only: read_arr_from_restart
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
@@ -491,23 +473,16 @@ contains
       integer(HID_T),intent(in) :: file_id
       type(grid_container), pointer, intent(in) :: cg
 
-      real, dimension(:,:,:), pointer :: p3d
+      real, dimension(:,:,:), pointer :: q0
+      integer :: i
 
       ! /todo First query for existence of den0, vlx0 and vly0, then allocate
       if (divine_intervention_type == 3) then
-         if (.not.allocated(den0)) allocate(den0(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-         if (.not.allocated(vlx0)) allocate(vlx0(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-         if (.not.allocated(vly0)) allocate(vly0(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-
-         if (.not.associated(p3d)) p3d => den0(:,:,:)
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, "den0", cg)
-         if (associated(p3d)) nullify(p3d)
-         if (.not.associated(p3d)) p3d => vlx0(:,:,:)
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, "vlx0", cg)
-         if (associated(p3d)) nullify(p3d)
-         if (.not.associated(p3d)) p3d => vly0(:,:,:)
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, "vly0", cg)
-         if (associated(p3d)) nullify(p3d)
+         do i = D0, VY0
+            call cg%add_na(q_n(i))
+            q0 => cg%get_na_ptr(q_n(i))
+            if (associated(q0)) call read_arr_from_restart(file_id, q0, AT_NO_B, q_n(i), cg)
+         enddo
       endif
 
    end subroutine read_initial_fld_from_restart
@@ -534,6 +509,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
       type(component_fluid), pointer :: fl
+      real, dimension(:,:,:), pointer :: den0, vlx0, vly0
 
       fl => flind%neu
       cgl => all_cg%first
@@ -581,6 +557,9 @@ contains
                   enddo
                enddo
             case (3)
+               den0 => cg%get_na_ptr(q_n(D0))
+               vlx0 => cg%get_na_ptr(q_n(VX0))
+               vly0 => cg%get_na_ptr(q_n(VY0))
                allocate(alf(cg%n_(xdim), cg%n_(ydim)))
                do i = 1, cg%n_(xdim)
                   do j = 1, cg%n_(ydim)
