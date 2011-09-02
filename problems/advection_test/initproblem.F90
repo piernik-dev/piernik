@@ -42,7 +42,6 @@ module initproblem
 
    namelist /PROBLEM_CONTROL/  pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
 
-   real, dimension(:,:,:), allocatable, target :: inid
    character(len=varlen), parameter :: inid_n = "inid"
 
 contains
@@ -52,12 +51,11 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_vars_hdf5, problem_write_restart, problem_read_restart
-      use user_hooks,  only: finalize_problem, cleanup_problem
+      use user_hooks,  only: finalize_problem
 
       implicit none
 
       finalize_problem      => finalize_problem_adv
-      cleanup_problem       => cleanup_adv
       user_vars_hdf5        => inid_var_hdf5
       problem_write_restart => write_IC_to_restart
       problem_read_restart  => read_IC_from_restart
@@ -130,7 +128,6 @@ contains
    subroutine init_prob
 
       use constants,   only: xdim, ydim, zdim
-      use diagnostics, only: my_allocate
       use fluidindex,  only: flind
       use global,      only: smalld, smallei
       use grid,        only: all_cg
@@ -152,41 +149,46 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-      cg%b%arr(:, :, :, :) = 0.
-      cg%u%arr(flind%neu%idn, :, :, :) = pulse_low_density
+         cg%b%arr(:, :, :, :) = 0.
+         cg%u%arr(flind%neu%idn, :, :, :) = pulse_low_density
 
-      ! Initialize density with uniform sphere
-      do k = cg%ks, cg%ke
-         if (cg%z(k) > pulse_edge(zdim, LO) .and. cg%z(k) < pulse_edge(zdim, HI)) then
+         ! Initialize density with uniform box
+         do k = cg%ks, cg%ke
+            if (cg%z(k) > pulse_edge(zdim, LO) .and. cg%z(k) < pulse_edge(zdim, HI)) then
+               do j = cg%js, cg%je
+                  if (cg%y(j) > pulse_edge(ydim, LO) .and. cg%y(j) < pulse_edge(ydim, HI)) then
+                     do i = cg%is, cg%ie
+                        if (cg%x(i) > pulse_edge(xdim, LO) .and. cg%x(i) < pulse_edge(xdim, HI)) then
+                           cg%u%arr(flind%neu%idn, i, j, k) = pulse_low_density * pulse_amp
+                        endif
+                     enddo
+                  endif
+               enddo
+            endif
+         enddo
+         where (cg%u%arr(flind%neu%idn, :, :, :) < smalld) cg%u%arr(flind%neu%idn, :, :, :) = smalld
+
+         ! Make uniform, completely boring flow
+         cg%u%arr(flind%neu%imx, :, :, :) = pulse_vel_x * cg%u%arr(flind%neu%idn, :, :, :)
+         cg%u%arr(flind%neu%imy, :, :, :) = pulse_vel_y * cg%u%arr(flind%neu%idn, :, :, :)
+         cg%u%arr(flind%neu%imz, :, :, :) = pulse_vel_z * cg%u%arr(flind%neu%idn, :, :, :)
+
+         ! Set up the internal energy
+         do k = cg%ks, cg%ke
             do j = cg%js, cg%je
-               if (cg%y(j) > pulse_edge(ydim, LO) .and. cg%y(j) < pulse_edge(ydim, HI)) then
-                  do i = cg%is, cg%ie
-                     if (cg%x(i) > pulse_edge(xdim, LO) .and. cg%x(i) < pulse_edge(xdim, HI)) then
-                        cg%u%arr(flind%neu%idn, i, j, k) = pulse_low_density * pulse_amp
-                     endif
-                  enddo
-               endif
-            enddo
-         endif
-      enddo
-
-      where (cg%u%arr(flind%neu%idn, :, :, :) < smalld) cg%u%arr(flind%neu%idn, :, :, :) = smalld
-
-      call my_allocate(inid, cg%n_(:), inid_n)
-      inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-
-      cg%u%arr(flind%neu%imx, :, :, :) = pulse_vel_x * cg%u%arr(flind%neu%idn, :, :, :)
-      cg%u%arr(flind%neu%imy, :, :, :) = pulse_vel_y * cg%u%arr(flind%neu%idn, :, :, :)
-      cg%u%arr(flind%neu%imz, :, :, :) = pulse_vel_z * cg%u%arr(flind%neu%idn, :, :, :)
-      do k = cg%ks, cg%ke
-         do j = cg%js, cg%je
-            do i = cg%is, cg%ie
-               cg%u%arr(flind%neu%ien,i,j,k) = max(smallei,                                             &
-                    &              pulse_pressure / flind%neu%gam_1        + &
-                    &              0.5 * sum(cg%u%arr(flind%neu%imx:flind%neu%imz,i,j,k)**2,1) / cg%u%arr(flind%neu%idn,i,j,k))
+               do i = cg%is, cg%ie
+                  cg%u%arr(flind%neu%ien,i,j,k) = max(smallei,                                             &
+                       &              pulse_pressure / flind%neu%gam_1        + &
+                       &              0.5 * sum(cg%u%arr(flind%neu%imx:flind%neu%imz,i,j,k)**2,1) / cg%u%arr(flind%neu%idn,i,j,k))
+               enddo
             enddo
          enddo
-      enddo
+
+         ! Save the initial density
+         call cg%add_na(inid_n)
+         i = cg%get_na_ind(inid_n)
+         cg%q(i)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+
          cgl => cgl%nxt
       enddo
 
@@ -203,15 +205,17 @@ contains
       character(len=*), intent(in)                    :: var
       real(kind=4), dimension(:,:,:), intent(inout)   :: tab
       integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(in)       :: cg
+
+      real, dimension(:,:,:), pointer :: inid
 
       ierrh = 0
-      select case (trim(var))
-         case (inid_n)
-            tab(:,:,:) = real(inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
-            case default
-            ierrh = -1
-      end select
+      inid => cg%get_na_ptr(var)
+      if (associated(inid)) then
+         tab(:,:,:) = real(inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+      else
+         ierrh = -1
+      endif
 
    end subroutine inid_var_hdf5
 
@@ -220,9 +224,8 @@ contains
    subroutine write_IC_to_restart(file_id, cg)
 
       use constants,   only: AT_NO_B
-      use dataio_pub,  only: warn, die
+      use dataio_pub,  only: warn
       use dataio_hdf5, only: write_arr_to_restart
-      use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
 
@@ -231,16 +234,14 @@ contains
       integer(HID_T), intent(in) :: file_id
       type(grid_container), pointer, intent(in) :: cg
 
-      real, dimension(:,:,:), pointer :: p3d
+      real, dimension(:,:,:), pointer :: inid
 
-      if (all_cg%cnt > 1) call die("[initproblem:write_IC_to_restart] multiple grid pieces per procesor not implemented yet") !nontrivial inid
+      inid => cg%get_na_ptr(inid_n)
 
-      if (allocated(inid)) then
-         if (associated(p3d)) nullify(p3d)
-         p3d => inid
-         call write_arr_to_restart(file_id, p3d, AT_NO_B, inid_n, cg)
+      if (associated(inid)) then
+         call write_arr_to_restart(file_id, inid, AT_NO_B, inid_n, cg)
       else
-         call warn("[initproblem:write_IC_to_restart] Cannot store inid(:,:,:) in the restart file because it mysteriously deallocated.")
+         call warn("[initproblem:write_IC_to_restart] Cannot find inid(:,:,:).")
       endif
 
    end subroutine write_IC_to_restart
@@ -250,10 +251,8 @@ contains
    subroutine read_IC_from_restart(file_id, cg)
 
       use constants,   only: AT_NO_B
-      use dataio_pub,  only: warn, die
+      use dataio_pub,  only: warn,
       use dataio_hdf5, only: read_arr_from_restart
-      use diagnostics, only: my_allocate
-      use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
 
@@ -262,17 +261,13 @@ contains
       integer(HID_T), intent(in) :: file_id
       type(grid_container), pointer, intent(in) :: cg
 
-      real, dimension(:,:,:), pointer :: p3d
+      real, dimension(:,:,:), pointer :: inid
 
-      if (all_cg%cnt > 1) call die("[initproblem:read_IC_from_restart] multiple grid pieces per procesor not implemented yet") !nontrivial inid
+      call cg%add_na(inid_n)
+      inid => cg%get_na_ptr(inid_n)
 
-      if (associated(p3d)) nullify(p3d)
-      if (.not.allocated(inid)) call my_allocate(inid, cg%n_(:), inid_n)
-      p3d => inid(:,:,:)
-
-      if (allocated(inid) .and. associated(p3d)) then
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, inid_n, cg)
-         nullify(p3d)
+      if (associated(inid)) then
+         call read_arr_from_restart(file_id, inid, AT_NO_B, inid_n, cg)
       else
          call warn("[initproblem:read_IC_from_restart] Cannot read inid(:,:,:). It's really weird...")
       endif
@@ -284,7 +279,7 @@ contains
    subroutine finalize_problem_adv
 
       use constants,  only: I_ONE, I_TWO
-      use dataio_pub, only: msg, printinfo, warn, die
+      use dataio_pub, only: msg, printinfo, warn
       use fluidindex, only: flind
       use grid,       only: all_cg
       use gc_list,    only: cg_list_element
@@ -299,13 +294,7 @@ contains
       real               :: dini
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-
-      if (all_cg%cnt > 1) call die("[initproblem:finalize_problem_adv] multiple grid pieces per procesor not implemented yet") !nontrivial inid
-
-      if (.not. allocated(inid)) then
-         if (master) call warn("[initproblem:finalize_problem_adv] Cannot compare results with the initial conditions. Perhaps there is no 'inid' array in the restart file?")
-         return
-      endif
+      real, dimension(:,:,:), pointer :: inid
 
       norm(:) = 0.
       dev(1) = huge(1.0)
@@ -315,17 +304,23 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-      do k = cg%ks, cg%ke
-         do j = cg%js, cg%je
-            do i = cg%is, cg%ie
-               dini =  inid(i, j, k)
-               norm(1) = norm(1) + (dini - cg%u%arr(flind%neu%idn, i, j, k))**2
-               norm(2) = norm(2) + dini**2
-               dev(1) = min(dev(1), (dini - cg%u%arr(flind%neu%idn, i, j, k))/dini)
-               dev(2) = max(dev(2), (dini - cg%u%arr(flind%neu%idn, i, j, k))/dini)
+         inid => cg%get_na_ptr(inid_n)
+         if (.not. associated(inid))then
+            if (master) call warn("[initproblem:finalize_problem_adv] Cannot compare results with the initial conditions.")
+            return
+         endif
+
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+                  dini =  inid(i, j, k)
+                  norm(1) = norm(1) + (dini - cg%u%arr(flind%neu%idn, i, j, k))**2
+                  norm(2) = norm(2) + dini**2
+                  dev(1) = min(dev(1), (dini - cg%u%arr(flind%neu%idn, i, j, k))/dini)
+                  dev(2) = max(dev(2), (dini - cg%u%arr(flind%neu%idn, i, j, k))/dini)
+               enddo
             enddo
          enddo
-      enddo
          cgl => cgl%nxt
       enddo
 
@@ -339,17 +334,5 @@ contains
       endif
 
    end subroutine finalize_problem_adv
-
-!-----------------------------------------------------------------------------
-
-   subroutine cleanup_adv
-
-      use diagnostics, only: my_deallocate
-
-      implicit none
-
-      if (allocated(inid)) call my_deallocate(inid)
-
-   end subroutine cleanup_adv
 
 end module initproblem
