@@ -30,16 +30,21 @@
 
 module initproblem
 
+   use constants, only: dsetnamelen
+
    implicit none
 
    private
    public :: read_problem_par, init_prob, problem_pointers
 
-   real              :: x0, y0, z0, d0, a1, e, d1, p0, a3
-   integer           :: nsub
-   real, dimension(:,:,:), allocatable :: apot
-
+   ! namelist parameters
+   real    :: x0, y0, z0, d0, a1, e
+   integer :: nsub
    namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, nsub
+
+   ! pivate data
+   real :: d1, p0, a3
+   character(len=dsetnamelen), parameter :: apot_n = "apot"
 
 contains
 
@@ -48,14 +53,13 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_vars_hdf5, additional_attrs
-      use user_hooks,  only: finalize_problem, cleanup_problem
+      use user_hooks,  only: finalize_problem
 
       implicit none
 
       additional_attrs => init_prob_attrs
       finalize_problem => finalize_problem_maclaurin
       user_vars_hdf5   => maclaurin_error_vars
-      cleanup_problem  => cleanup_maclaurin
 
    end subroutine problem_pointers
 
@@ -262,7 +266,6 @@ contains
 
       use constants,   only: pi, GEO_XYZ, GEO_RPZ
       use dataio_pub,  only: warn, die
-      use diagnostics, only: my_allocate
       use domain,      only: geometry_type
       use grid,        only: all_cg
       use gc_list,     only: cg_list_element
@@ -278,15 +281,7 @@ contains
       real, parameter    :: small_e = 1e-3
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-
-      if (all_cg%cnt > 1) call die("[initproblem:compute_maclaurin_potential] multiple grid pieces per procesor not implemented yet") !nontrivial apot
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         call my_allocate(apot, cg%n_b(:), "apot")
-         cgl => cgl%nxt
-      enddo
+      real, dimension(:,:,:), pointer :: apot
 
       AA1 = 2./3. ; AA3 = 2./3.
       if (e < 0. .and. master) call warn("[initproblem:compute_maclaurin_potential] e<0. not fully implemented yet!")
@@ -308,6 +303,9 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+
+         call cg%add_na(apot_n)
+         apot => cg%get_na_ptr(apot_n)
 
          do k = cg%ks, cg%ke
             z02 = (cg%z(k)-z0)**2
@@ -352,7 +350,7 @@ contains
                         potential = - 2./3. * (3*a12 - rr)
                      endif
                   endif
-                  apot(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = potential * pi * newtong * d0
+                  apot(i, j, k) = potential * pi * newtong * d0
                enddo
             enddo
          enddo
@@ -363,18 +361,6 @@ contains
    end subroutine compute_maclaurin_potential
 
 !-----------------------------------------------------------------------------
-
-   subroutine cleanup_maclaurin
-
-      use diagnostics, only: my_deallocate
-
-      implicit none
-
-      call my_deallocate(apot)
-
-   end subroutine cleanup_maclaurin
-
-!-----------------------------------------------------------------------------
 !
 ! Here we compute the L2 error norm of the error of computed potential with respect to the analytical solution
 !
@@ -382,7 +368,7 @@ contains
    subroutine finalize_problem_maclaurin
 
       use constants,  only: GEO_RPZ, I_ONE, I_TWO
-      use dataio_pub, only: msg, printinfo, die
+      use dataio_pub, only: msg, printinfo, warn
       use domain,     only: geometry_type
       use grid,       only: all_cg
       use gc_list,    only: cg_list_element
@@ -397,8 +383,7 @@ contains
       real               :: potential, fac
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-
-      if (all_cg%cnt > 1) call die("[initproblem:finalize_problem_maclaurin] multiple grid pieces per procesor not implemented yet") !nontrivial apot
+      real, dimension(:,:,:), pointer :: apot
 
       fac = 1.
       norm(:) = 0.
@@ -409,10 +394,16 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
+         apot => cg%get_na_ptr(apot_n)
+         if (.not. associated(apot))then
+            if (master) call warn("[initproblem:finalize_problem_maclaurin] Cannot compare results with the analytical potential.")
+            return
+         endif
+
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  potential =  apot(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
+                  potential =  apot(i, j, k)
                   if (geometry_type == GEO_RPZ) fac = cg%x(i)
                   norm(1) = norm(1) + (potential - cg%sgp%arr(i, j, k))**2 * fac
                   norm(2) = norm(2) + potential**2 * fac
@@ -452,13 +443,15 @@ contains
       real(kind=4), dimension(:,:,:), intent(inout)   :: tab
       integer, intent(inout)                          :: ierrh
       type(grid_container), pointer, intent(in)       :: cg
+      real, dimension(:,:,:), pointer :: apot
 
       ierrh = 0
+      apot => cg%get_na_ptr(apot_n)
       select case (trim(var))
          case ("apot")
-            tab(:,:,:) = real(apot(:,:,:), 4)
+            tab(:,:,:) = real(apot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case ("errp")
-            tab(:,:,:) = real(apot(:,:,:) - cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(apot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

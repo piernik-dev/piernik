@@ -30,19 +30,20 @@
 
 module initproblem
 
-   use constants, only: varlen, ndims, LO, HI
+   use constants, only: dsetnamelen, ndims, LO, HI
 
    implicit none
 
    private
    public :: read_problem_par, init_prob, problem_pointers
 
+   ! namelist parameters
    real :: pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
-   real, dimension(ndims, LO:HI) :: pulse_edge
-
    namelist /PROBLEM_CONTROL/  pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
 
-   character(len=varlen), parameter :: inid_n = "inid"
+   ! other private data
+   real, dimension(ndims, LO:HI) :: pulse_edge
+   character(len=dsetnamelen), parameter :: inid_n = "init_dens"
 
 contains
 
@@ -251,7 +252,7 @@ contains
    subroutine read_IC_from_restart(file_id, cg)
 
       use constants,   only: AT_NO_B
-      use dataio_pub,  only: warn,
+      use dataio_pub,  only: warn
       use dataio_hdf5, only: read_arr_from_restart
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
