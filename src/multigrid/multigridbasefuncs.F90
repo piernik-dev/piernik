@@ -251,7 +251,7 @@ contains
       integer                       :: i, j, k, d, lh, g, g1, gc, ib, jb, ibh, jbh, l
       type(plvl), pointer           :: coarse
       integer, parameter            :: s_wdth  = 3           ! interpolation stencil width
-      integer, parameter            :: s_rng = (s_wdth-1)/2  ! stencil range around 0
+      integer(kind=4), parameter    :: s_rng = (s_wdth-1)/2  ! stencil range around 0
       real, parameter, dimension(s_wdth) :: p0  = [ 0.,       1.,     0.     ] ! injection
       real, parameter, dimension(s_wdth) :: p1  = [ 0.,       3./4.,  1./4.  ] ! 1D linear prolongation stencil
       real, parameter, dimension(s_wdth) :: p2i = [ -1./8.,   1.,     1./8.  ] ! 1D integral cubic prolongation stencil
@@ -270,7 +270,7 @@ contains
       end type c_bnd
       type(c_bnd), dimension(xdim:zdim, LO:HI) :: p_bnd
       real :: opfn1, opfn3
-      integer :: b_rng
+      integer(kind=4) :: b_rng
       integer, dimension(xdim:zdim), parameter :: d1 = [ ydim, xdim, xdim ] , d2 = [ zdim, zdim, ydim ]
       type(pr_segment), pointer :: pseg
 
@@ -458,7 +458,7 @@ contains
 
          if (ord_prolong_face_norm > 1) ord_prolong_face_norm = 1
          b_rng = s_rng
-         if (ord_prolong_face_norm > 0) b_rng = max(b_rng, ord_prolong_face_norm+1)
+         if (ord_prolong_face_norm > 0) b_rng = max(b_rng, int(ord_prolong_face_norm+1, kind=4))
          call mpi_multigrid_bnd(coarse, soln, b_rng, extbnd_antimirror, corners=(ord_prolong_face_par/=0)) !> \deprecated BEWARE for higher prolongation order more guardcell are required
          call check_dirty(coarse, soln, "prolong_faces", s_rng)
 

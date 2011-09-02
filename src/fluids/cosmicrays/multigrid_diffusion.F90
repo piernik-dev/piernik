@@ -430,6 +430,7 @@ contains
 
    subroutine init_b
 
+      use constants,          only: I_ONE
       use dataio_pub,         only: die
       use domain,             only: D_x, D_y, D_z
       use fluidindex,         only: ibx, iby, ibz
@@ -465,7 +466,7 @@ contains
 
          curl => base
          do while (associated(curl%finer)) ! from base to one level below roof
-            call mpi_multigrid_bnd(curl, diff_bx+ib-ibx, 1, extbnd_mirror, .true.) !> \todo use global boundary type for B
+            call mpi_multigrid_bnd(curl, diff_bx+ib-ibx, I_ONE, extbnd_mirror, .true.) !> \todo use global boundary type for B
             !>
             !! |deprecated BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             !! the problem is that the cg%b%arr(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
@@ -587,7 +588,7 @@ contains
       call norm_sq(solution, norm_rhs)
       call norm_sq(defect, norm_lhs)
 !     Do we need to take care of boundaries here?
-!      call mpi_multigrid_bnd(roof, solution, 1, diff_extbnd)
+!      call mpi_multigrid_bnd(roof, solution, I_ONE, diff_extbnd)
 !      cg%u%arr(iarr_crs(cr_id), is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z) = roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, solution)
       cgl => all_cg%first
       do while (associated(cgl))
@@ -824,7 +825,7 @@ contains
 
    subroutine residual(curl, src, soln, def, cr_id)
 
-      use constants,         only: xdim, ydim, zdim
+      use constants,         only: xdim, ydim, zdim, I_ONE
       use dataio_pub,        only: die
       use domain,            only: has_dir
       use grid,              only: all_cg
@@ -847,7 +848,7 @@ contains
       cg => all_cg%first%cg
       if (all_cg%cnt > 1) call die("[multigrid_diffusion:residual] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
-      call mpi_multigrid_bnd(curl, soln, 1, diff_extbnd, .true.) ! corners are required for fluxes
+      call mpi_multigrid_bnd(curl, soln, I_ONE, diff_extbnd, .true.) ! corners are required for fluxes
 
       do k = curl%ks, curl%ke
          curl%mgvar     (curl%is:curl%ie, curl%js:curl%je, k, def)  =   &
@@ -912,7 +913,7 @@ contains
 
    subroutine approximate_solution(curl, src, soln, cr_id)
 
-      use constants,         only: xdim, ydim, zdim, one, half
+      use constants,         only: xdim, ydim, zdim, one, half, I_ONE
       use dataio_pub,        only: die
       use domain,            only: has_dir
       use global,            only: dt
@@ -957,9 +958,9 @@ contains
 
       do n = 1, RED_BLACK*nsmoo
          if (mod(n,2) == 1) then
-            call mpi_multigrid_bnd(curl, soln, 1, diff_extbnd, .true.) ! corners are required for fluxes
+            call mpi_multigrid_bnd(curl, soln, I_ONE, diff_extbnd, .true.) ! corners are required for fluxes
          else
-            call mpi_multigrid_bnd(curl, soln, 1, extbnd_donothing, .true.)
+            call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_donothing, .true.)
          endif
 
          if (kd == RED_BLACK) k1 = curl%ks + mod(n, RED_BLACK)

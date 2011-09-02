@@ -1394,7 +1394,7 @@ contains
 
    subroutine residual2(curl, src, soln, def)
 
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half, I_ONE
       use dataio_pub,         only: die
       use domain,             only: has_dir, eff_dim, geometry_type
       use multigridhelpers,   only: multidim_code_3D
@@ -1411,7 +1411,7 @@ contains
       real    :: L0, Lx, Ly, Lz, Lx1
       integer :: i, j, k
 
-      call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror) ! no corners required
+      call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror) ! no corners required
 
       ! Coefficients for a simplest 3-point Laplacian operator: [ 1, -2, 1 ]
       ! for 2D and 1D setups appropriate elements of [ Lx, Ly, Lz ] should be == 0.
@@ -1506,6 +1506,7 @@ contains
 
    subroutine residual4(curl, src, soln, def)
 
+      use constants,         only: I_TWO
       use dataio_pub,        only: die, warn
       use domain,            only: eff_dim
       use mpisetup,          only: master
@@ -1536,7 +1537,7 @@ contains
          firstcall = .false.
       endif
 
-      call mpi_multigrid_bnd(curl, soln, 2, extbnd_antimirror) ! no corners required
+      call mpi_multigrid_bnd(curl, soln, I_TWO, extbnd_antimirror) ! no corners required
 
       c21 = 1.
       c42 = - L4_scaling * L4_strength
@@ -1642,7 +1643,7 @@ contains
 
    subroutine approximate_solution_rbgs(curl, src, soln)
 
-      use constants,         only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ
+      use constants,         only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE
       use dataio_pub,        only: die
       use domain,            only: has_dir, eff_dim, geometry_type
       use multigridhelpers,  only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
@@ -1672,7 +1673,7 @@ contains
       if (geometry_type == GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
 
       do n = 1, RED_BLACK*nsmoo
-         call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror) ! no corners are required here
+         call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror) ! no corners are required here
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax soln- smoo=", n
@@ -1681,9 +1682,9 @@ contains
 
          ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
          ! do n = 1, nsmoo
-         !    call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror)
+         !    call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
          !    relax single layer of red cells at all faces
-         !    call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror)
+         !    call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
          !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
          !    relax single layer of black cells at all faces
          ! enddo
@@ -1796,7 +1797,7 @@ contains
 
    subroutine approximate_solution_fft(curl, src, soln)
 
-      use constants,         only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half
+      use constants,         only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE
       use dataio_pub,        only: die, warn
       use domain,            only: has_dir, eff_dim, geometry_type, D_x, D_y, D_z
       use multigridhelpers,  only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
@@ -1824,7 +1825,7 @@ contains
             if (nf == 1 .and. .not. associated(curl, base)) then
                call make_face_boundaries(curl, soln)
             else
-               call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror)
+               call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
                if (has_dir(xdim)) then
                   curl%bnd_x(:, :, LO) = half* sum (curl%mgvar(curl%is-1:curl%is, curl%js:curl%je, curl%ks:curl%ke, soln), 1)
                   curl%bnd_x(:, :, HI) = half* sum (curl%mgvar(curl%ie:curl%ie+1, curl%js:curl%je, curl%ks:curl%ke, soln), 1)
@@ -1875,7 +1876,7 @@ contains
 
          !relax the boundaries
          do n = 1, nsmoo
-            call mpi_multigrid_bnd(curl, soln, 1, extbnd_antimirror)
+            call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
             ! Possible optimization: This is a quite costly part of the local FFT solver
             if (fft_full_relax) then
                if (eff_dim == ndims .and. .not. multidim_code_3D) then

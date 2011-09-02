@@ -300,7 +300,7 @@ contains
 
       type(plvl), pointer, intent(in) :: curl  !< level which we are doing communication at
       integer(kind=4), intent(in) :: iv        !< variable which we want to communicate
-      integer, intent(in) :: ng                !< number of guardcells to exchange
+      integer(kind=4), intent(in) :: ng        !< number of guardcells to exchange
       integer(kind=4), intent(in) :: mode      !< what to do with external boundaries
       logical, intent(in), optional :: corners !< if .true. then don't forget aboutpay close attention to corners
 
@@ -430,7 +430,7 @@ contains
 
       type(plvl), pointer, intent(in) :: curl !< level which we are preparing the guardcells at
       integer(kind=4), intent(in) :: iv      !< variable which we want to set
-      integer, intent(in) :: ng              !< number of guardcells to set
+      integer(kind=4), intent(in) :: ng      !< number of guardcells to set
       integer(kind=4), intent(in) :: mode    !< what to do with external boundaries
       logical, intent(in) :: cor             !< if .true. then don't forget about corners \deprecated BEWARE: not implemented properly
 

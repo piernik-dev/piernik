@@ -104,7 +104,7 @@ contains
       integer(kind=4),   intent(in) :: iv     !< index of variable in lvl()%mgvar which we want to pollute
       type(plvl), pointer, intent(in) :: curl !< level which we are checking
       character(len=*),  intent(in) :: label  !< label to indicate the origin of call
-      integer, optional, intent(in) :: expand !< also check guardcells
+      integer(kind=4), optional, intent(in) :: expand !< also check guardcells
 
       integer :: i, j, k, ng
 
