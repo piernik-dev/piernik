@@ -128,7 +128,7 @@ contains
                if (abs(curl%mgvar(i, j, k, iv)) > dirtyL) then
 !                        if (count([i<curl%is .or. i>curl%ie, j<curl%js .or. j>curl%je, k<curl%ks .or. k>curl%ke]) <=1) then ! excludes corners
                   write(msg, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &
-                          "[multigridhelpers:check_dirty] ", label, "@", proc, " lvl(", curl%level, ")%mgvar(", i, ",", j, ",", k, ",", iv, ") = ", curl%mgvar(i, j, k, iv)
+                          "[multigridhelpers:check_dirty] ", trim(label), "@", proc, " lvl(", curl%level, ")%mgvar(", i, ",", j, ",", k, ",", iv, ") = ", curl%mgvar(i, j, k, iv)
                   call warn(msg)
 !                        endif
                endif
