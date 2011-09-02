@@ -225,7 +225,6 @@ contains
    subroutine write_IC_to_restart(file_id, cg)
 
       use constants,   only: AT_NO_B
-      use dataio_pub,  only: warn
       use dataio_hdf5, only: write_arr_to_restart
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
@@ -235,15 +234,9 @@ contains
       integer(HID_T), intent(in) :: file_id
       type(grid_container), pointer, intent(in) :: cg
 
-      real, dimension(:,:,:), pointer :: inid
+      real, dimension(:,:,:), pointer :: pa3d => null()
 
-      inid => cg%get_na_ptr(inid_n)
-
-      if (associated(inid)) then
-         call write_arr_to_restart(file_id, inid, AT_NO_B, inid_n, cg)
-      else
-         call warn("[initproblem:write_IC_to_restart] Cannot find inid(:,:,:).")
-      endif
+      call write_arr_to_restart(file_id, pa3d, AT_NO_B, inid_n, cg)
 
    end subroutine write_IC_to_restart
 
@@ -252,7 +245,6 @@ contains
    subroutine read_IC_from_restart(file_id, cg)
 
       use constants,   only: AT_NO_B
-      use dataio_pub,  only: warn
       use dataio_hdf5, only: read_arr_from_restart
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
@@ -261,17 +253,9 @@ contains
 
       integer(HID_T), intent(in) :: file_id
       type(grid_container), pointer, intent(in) :: cg
+      real, dimension(:,:,:), pointer :: pa3d => null()
 
-      real, dimension(:,:,:), pointer :: inid
-
-      call cg%add_na(inid_n)
-      inid => cg%get_na_ptr(inid_n)
-
-      if (associated(inid)) then
-         call read_arr_from_restart(file_id, inid, AT_NO_B, inid_n, cg)
-      else
-         call warn("[initproblem:read_IC_from_restart] Cannot read inid(:,:,:). It's really weird...")
-      endif
+      call read_arr_from_restart(file_id, pa3d, AT_NO_B, inid_n, cg)
 
    end subroutine read_IC_from_restart
 

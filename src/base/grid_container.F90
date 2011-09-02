@@ -59,7 +59,8 @@ module grid_cont
 
    !< A named array for user-defined variables, scalar fields and similar
    type, extends(array3d):: named_array3d
-      character(len=dsetnamelen) :: name
+      character(len=dsetnamelen) :: name !< a user-provided id for the array
+!      logical :: restart !< \todo implement it. Should be .true. by default. If not .true. then don't store the quantity in the restart file, only::name and ::restart
    end type named_array3d
 
    type, extends(axes) :: grid_container
@@ -149,6 +150,7 @@ module grid_cont
       procedure :: add_na
       procedure :: get_na_ptr
       procedure :: get_na_ind
+      procedure :: exists
 
    end type grid_container
 
@@ -499,6 +501,8 @@ contains
 
    subroutine add_na(this, name)
 
+      use dataio_pub, only: msg, die
+
       implicit none
 
       class(grid_container), intent(inout) :: this
@@ -506,6 +510,11 @@ contains
 
       type(named_array3d), allocatable, dimension(:) :: tmp
       integer :: i
+
+      if (this%exists(name)) then
+         write(msg, '(3a)')"[grid_container:add_na] Array '",trim(name),"' was already registered."
+         call die(msg)
+      endif
 
       if (.not. allocated(this%q)) then
          allocate(this%q(1))
@@ -545,7 +554,6 @@ contains
          if (trim(name) ==  this%q(i)%name) then
             if (associated(ptr)) call die("[grid_container:get_na_ptr] multiple entries with the same name")
             ptr => this%q(i)%arr
-            exit
          endif
       enddo
 
@@ -576,12 +584,38 @@ contains
          if (trim(name) ==  this%q(i)%name) then
             if (ind /= 0) call die("[grid_container:get_na_ind] multiple entries with the same name")
             ind = i
-            exit
          endif
       enddo
 
       if (ind == 0) call warn("[grid_container:get_na_ind] requested entry not found")
 
    end function get_na_ind
+
+!>
+!! \brief Check if an array of given name is already registered
+!<
+
+   function exists(this, name)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+      character(len=*), intent(in) :: name
+
+      logical :: exists
+      integer :: i
+
+      exists = .false.
+
+      do i = 1, ubound(this%q, dim=1)
+         if (trim(name) ==  this%q(i)%name) then
+            if (exists) call die("[grid_container:exists] multiple entries with the same name")
+            exists = .true.
+         endif
+      enddo
+
+   end function exists
 
 end module grid_cont

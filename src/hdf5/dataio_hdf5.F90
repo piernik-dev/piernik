@@ -731,6 +731,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
+         !> \todo where (cg%q(:)%restart), write cg%q(:)%arr automatically, elsewhere write just names
          if (associated(problem_write_restart)) call problem_write_restart(file_id, cg)
 
          if (associated(cg%cs_iso2%arr)) call write_arr_to_restart(file_id, cg%cs_iso2%arr, AT_NO_B, dname(CS_ISO2), cg)
@@ -899,7 +900,7 @@ contains
       implicit none
 
       integer(HID_T), intent(in)                    :: file_id   !> File identifier
-      real, pointer, dimension(:,:,:), intent(in)   :: pa3d      !> 3-D array pointer, mutually exclusive with pa4d
+      real, pointer, dimension(:,:,:), intent(inout):: pa3d      !> \deprecated 3-D array pointer; not required for cg%q(:) arrays
       integer(kind=4), intent(in)                   :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                  :: dname
       type(grid_container), pointer, intent(in)     :: cg
@@ -917,7 +918,10 @@ contains
       integer(kind=4) :: rank
       integer(kind=4) :: error
 
-      if (.not. associated(pa3d)) call die("[dataio_hdf5:write_3darr_to_restart] Null pointer given.")
+      if (.not. associated(pa3d)) then
+         pa3d => cg%get_na_ptr(dname)
+         if (.not. associated(pa3d)) call die("[dataio_hdf5:write_3darr_to_restart] Null pointer given.")
+      endif
 
       call set_dims_to_write(area_type, area, chnk, lleft, lright, loffs, cg)
 
@@ -1152,7 +1156,7 @@ contains
       implicit none
 
       integer(HID_T), intent(in)                       :: file_id   ! File identifier
-      real, dimension(:,:,:), pointer, intent(inout)   :: pa3d      ! pointer to (1:cg%nx, 1:cg%ny, 1:cg%nz)-sized array
+      real, dimension(:,:,:), pointer, intent(inout)   :: pa3d      ! \deprecated pointer to (1:cg%nx, 1:cg%ny, 1:cg%nz)-sized array; not required for cg%q(:) arrays
       integer(kind=4), intent(in)                      :: area_type !> no boundaries, only outer boundaries or all boundaries
       character(len=*), intent(in)                     :: dname
       type(grid_container), pointer, intent(in)        :: cg
@@ -1175,7 +1179,12 @@ contains
 
       dimsf = [1, area(:)]      ! Dataset dimensions
       chunk_dims = [1, chnk(:)] ! Chunks dimensions
-      if (.not. associated(pa3d)) call die("[dataio_hdf5:read_3darr_from_restart] Null pointer given.")
+      if (.not. associated(pa3d)) then
+         if (cg%exists(dname)) call die("[dataio_hdf5:read_3darr_from_restart] Already read.")
+         call cg%add_na(dname)
+         pa3d => cg%get_na_ptr(dname)
+         if (.not. associated(pa3d)) call die("[dataio_hdf5:read_3darr_from_restart] Null pointer given.")
+      endif
       rank = ndims
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
@@ -1307,6 +1316,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
+         !> \todo read existing cg%q(:)%arr automatically, create fresh cg%q(:)%arr where (.not. cg%q(:)%restart)
          if (associated(problem_read_restart)) call problem_read_restart(file_id, cg)
 
          if (associated(cg%cs_iso2%arr)) call read_arr_from_restart(file_id, cg%cs_iso2%arr, AT_NO_B, dname(CS_ISO2), cg)

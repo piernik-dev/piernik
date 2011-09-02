@@ -447,13 +447,12 @@ contains
       integer(HID_T),intent(in)  :: file_id
       type(grid_container), pointer, intent(in) :: cg
 
-      real, dimension(:,:,:), pointer :: q0
+      real, dimension(:,:,:), pointer :: pa3d => null()
       integer :: i
 
       if ( divine_intervention_type == 3) then
          do i = D0, VY0
-            q0 => cg%get_na_ptr(q_n(i))
-            if (associated(q0)) call write_arr_to_restart(file_id, q0, AT_NO_B, q_n(i), cg)
+            call write_arr_to_restart(file_id, pa3d, AT_NO_B, q_n(i), cg)
          enddo
       endif
 
@@ -473,15 +472,13 @@ contains
       integer(HID_T),intent(in) :: file_id
       type(grid_container), pointer, intent(in) :: cg
 
-      real, dimension(:,:,:), pointer :: q0
+      real, dimension(:,:,:), pointer :: pa3d => null()
       integer :: i
 
       ! /todo First query for existence of den0, vlx0 and vly0, then allocate
       if (divine_intervention_type == 3) then
          do i = D0, VY0
-            call cg%add_na(q_n(i))
-            q0 => cg%get_na_ptr(q_n(i))
-            if (associated(q0)) call read_arr_from_restart(file_id, q0, AT_NO_B, q_n(i), cg)
+            call read_arr_from_restart(file_id, pa3d, AT_NO_B, q_n(i), cg)
          enddo
       endif
 
