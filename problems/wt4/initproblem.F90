@@ -335,7 +335,7 @@ contains
             cg%u%arr(fl%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
             cg%u%arr(fl%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
             cg%u%arr(fl%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.
-            cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1e-2
+            cg%cs_iso2(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 1e-2
          else
             call read_IC_file
             do k = cg%ks, cg%ke
@@ -350,13 +350,13 @@ contains
                         cg%u%arr(fl%imy, i, j, k)     = ic_data(iic, jic, kic, 3)
                         cg%u%arr(fl%imz, i, j, k)     = ic_data(iic, jic, kic, 4)
       !               cs_iso2_arr(i, j, k) = ic_data(iic, jic, kic, 5)
-                        cg%cs_iso2%arr(i, j, k) = (gamma_loc) * kboltz * T_disk / mean_mol_weight / mH
+                        cg%cs_iso2(i, j, k) = (gamma_loc) * kboltz * T_disk / mean_mol_weight / mH
                      else
                         cg%u%arr(fl%idn, i, j, k)     = smalld
                         cg%u%arr(fl%imx, i, j, k)     = small
                         cg%u%arr(fl%imy, i, j, k)     = small
                         cg%u%arr(fl%imz, i, j, k)     = small
-                        cg%cs_iso2%arr(i, j, k)     = mincs2
+                        cg%cs_iso2(i, j, k)     = mincs2
                      endif
                   enddo
                enddo
@@ -367,23 +367,23 @@ contains
          do i = 1, cg%nb
             cg%u%arr(:,i,:,:)           = cg%u%arr(:, cg%is,:,:)
             cg%u%arr(:, cg%ie+i,:,:)    = cg%u%arr(:, cg%ie,:,:)
-            cg%cs_iso2%arr(i,:,:)       = cg%cs_iso2%arr(cg%is,:,:)
-            cg%cs_iso2%arr(cg%ie+i,:,:) = cg%cs_iso2%arr(cg%ie,:,:)
+            cg%cs_iso2(i,:,:)       = cg%cs_iso2(cg%is,:,:)
+            cg%cs_iso2(cg%ie+i,:,:) = cg%cs_iso2(cg%ie,:,:)
 
             cg%u%arr(:,:,i,:)           = cg%u%arr(:,:, cg%js,:)
             cg%u%arr(:,:,cg%je+i,:)     = cg%u%arr(:,:, cg%je,:)
-            cg%cs_iso2%arr(:,i,:)       = cg%cs_iso2%arr(:, cg%js,:)
-            cg%cs_iso2%arr(:,cg%je+i,:) = cg%cs_iso2%arr(:, cg%je,:)
+            cg%cs_iso2(:,i,:)       = cg%cs_iso2(:, cg%js,:)
+            cg%cs_iso2(:,cg%je+i,:) = cg%cs_iso2(:, cg%je,:)
 
             cg%u%arr(:,:,:,i)           = cg%u%arr(:,:,:, cg%ks)
             cg%u%arr(:,:,:, cg%ke+i)    = cg%u%arr(:,:,:, cg%ke)
-            cg%cs_iso2%arr(:,:,i)       = cg%cs_iso2%arr(:,:, cg%ks)
-            cg%cs_iso2%arr(:,:,cg%ke+i) = cg%cs_iso2%arr(:,:, cg%ke)
+            cg%cs_iso2(:,:,i)       = cg%cs_iso2(:,:, cg%ks)
+            cg%cs_iso2(:,:,cg%ke+i) = cg%cs_iso2(:,:, cg%ke)
          enddo
          if (master ) then
             write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(dens)    = ', minval(cg%u%arr(fl%idn,:,:,:)),      ' maxval(dens)    = ', maxval(cg%u%arr(fl%idn,:,:,:))
             call printinfo(msg, .true.)
-            write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(cs_iso2) = ', minval(cg%cs_iso2%arr(:,:,:)), ' maxval(cs_iso2) = ', maxval(cg%cs_iso2%arr(:,:,:))
+            write(msg,'(2(a,g15.7))') '[initproblem:init_problem]: minval(cs_iso2) = ', minval(cg%cs_iso2(:,:,:)), ' maxval(cs_iso2) = ', maxval(cg%cs_iso2(:,:,:))
             call printinfo(msg, .true.)
          endif
 
@@ -521,9 +521,9 @@ contains
                   cg%u%arr(fl%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(fl%imx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
                   cg%u%arr(fl%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(fl%imy, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
                   cg%u%arr(fl%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. - damp_factor) * cg%u%arr(fl%imz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-                  cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = mincs2
+                  cg%cs_iso2(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = mincs2
                elsewhere
-                  cg%cs_iso2%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = maxcs2
+                  cg%cs_iso2(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = maxcs2
                endwhere
             case (2)                                                                                ! smooth
                ambient_density_min = ambient_density / max_ambient
@@ -539,7 +539,7 @@ contains
                            cg%u%arr(fl%imx,     i, j, k) = cg%u%arr(fl%imx, i, j, k) * (1. - damp_factor   * mod_str(i))
                            cg%u%arr(fl%imy,     i, j, k) = cg%u%arr(fl%imy, i, j, k) * (1. - damp_factor   * mod_str(i))
                            cg%u%arr(fl%imz,     i, j, k) = cg%u%arr(fl%imz, i, j, k) * (1. - damp_factor   * mod_str(i))
-                           cg%cs_iso2%arr(i, j, k) = maxcs2           -  (maxcs2-mincs2)    * mod_str(i)
+                           cg%cs_iso2(i, j, k) = maxcs2           -  (maxcs2-mincs2)    * mod_str(i)
                         endif
                      enddo
 #else /* !__IFORT__ */
@@ -548,7 +548,7 @@ contains
                         cg%u%arr(fl%imx,     cg%is:cg%ie, j, k) = cg%u%arr(fl%imx, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
                         cg%u%arr(fl%imy,     cg%is:cg%ie, j, k) = cg%u%arr(fl%imy, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
                         cg%u%arr(fl%imz,     cg%is:cg%ie, j, k) = cg%u%arr(fl%imz, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
-                        cg%cs_iso2%arr(cg%is:cg%ie, j, k) = maxcs2               -  (maxcs2-mincs2)    * mod_str(cg%is:cg%ie)
+                        cg%cs_iso2(cg%is:cg%ie, j, k) = maxcs2               -  (maxcs2-mincs2)    * mod_str(cg%is:cg%ie)
                      endwhere
 #endif /* !__IFORT__ */
                   enddo

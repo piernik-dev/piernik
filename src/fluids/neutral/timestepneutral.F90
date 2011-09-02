@@ -92,8 +92,8 @@ contains
             do i = cg%is, cg%ie
 
 #ifdef ISO
-               p  = cg%cs_iso2%arr(i,j,k)*cg%u%arr(fl%idn,i,j,k)
-               cs = sqrt(cg%cs_iso2%arr(i,j,k))
+               p  = cg%cs_iso2(i,j,k)*cg%u%arr(fl%idn,i,j,k)
+               cs = sqrt(cg%cs_iso2(i,j,k))
 #else /* !ISO */
                p  = (cg%u%arr(fl%ien,i,j,k)-half*sum(cg%u%arr(fl%imx:fl%imz,i,j,k)**2,1)/cg%u%arr(fl%idn,i,j,k))*(fl%gam_1)
 

@@ -183,6 +183,7 @@ contains
       real, dimension(:), pointer       :: div_v1d => null(), cs2
       integer                           :: i1, i2
       integer                           :: istep
+      integer :: i_cs_iso2
 
       b = 0.0
       u = 0.0
@@ -192,6 +193,13 @@ contains
       call div_v(flind%ion%pos)
 #endif /* COSM_RAYS */
       cg%uh%arr = cg%u%arr
+      cs2 => null()
+      if (cg%exists("cs_iso2")) then
+         i_cs_iso2 = cg%get_na_ind("cs_iso2") ! BEWARE: magic strings across multiple files
+      else
+         i_cs_iso2 = -1
+      endif
+
       do istep = 1, integration_order
          do i2 = cg%ijkse(pdims(cdim,zdim),LO), cg%ijkse(pdims(cdim,zdim),HI)
             do i1 = cg%ijkse(pdims(cdim,ydim),LO), cg%ijkse(pdims(cdim,ydim),HI)
@@ -207,7 +215,7 @@ contains
 
                pu => cg%u%get_sweep(cdim,i1,i2)
                pu0 => cg%uh%get_sweep(cdim,i1,i2)
-               cs2 => cg%cs_iso2%get_sweep(cdim,i1,i2)
+               if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
 
                u (iarr_all_swp(cdim,:),:) = pu(:,:)
                u0(iarr_all_swp(cdim,:),:) = pu0(:,:)

@@ -103,7 +103,7 @@ contains
 #endif /* !MAGNETIC */
 
 #ifdef ISO
-               p  = cg%cs_iso2%arr(i,j,k)*cg%u%arr(fl%idn,i,j,k)
+               p  = cg%cs_iso2(i,j,k)*cg%u%arr(fl%idn,i,j,k)
                ps = p + pmag
                cs = sqrt(abs(  (two*pmag+p)/cg%u%arr(fl%idn,i,j,k)) )
 #else /* !ISO */

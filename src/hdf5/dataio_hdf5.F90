@@ -733,7 +733,7 @@ contains
          !> \todo where (cg%q(:)%restart), write cg%q(:)%arr automatically, elsewhere write just names
          if (associated(problem_write_restart)) call problem_write_restart(file_id, cg)
 
-         if (associated(cg%cs_iso2%arr)) call write_arr_to_restart(file_id, cg%cs_iso2%arr, AT_NO_B, dname(CS_ISO2), cg)
+         if (associated(cg%cs_iso2)) call write_arr_to_restart(file_id, cg%cs_iso2, AT_NO_B, dname(CS_ISO2), cg)
          if (associated(cg%gp))      call write_arr_to_restart(file_id, cg%gp, AT_OUT_B, dname(GP), cg)
 
          ! Write fluids
@@ -1318,7 +1318,7 @@ contains
          !> \todo read existing cg%q(:)%arr automatically, create fresh cg%q(:)%arr where (.not. cg%q(:)%restart)
          if (associated(problem_read_restart)) call problem_read_restart(file_id, cg)
 
-         if (associated(cg%cs_iso2%arr)) call read_arr_from_restart(file_id, cg%cs_iso2%arr, AT_NO_B, dname(CS_ISO2), cg)
+         if (associated(cg%cs_iso2)) call read_arr_from_restart(file_id, cg%cs_iso2, AT_NO_B, dname(CS_ISO2), cg)
          if (associated(cg%gp))      call read_arr_from_restart(file_id, cg%gp, AT_OUT_B, dname(GP), cg)
 
          !  READ FLUID VARIABLES
@@ -1679,13 +1679,13 @@ contains
 !!$
 !!$      n_arr3d_r8 = 10  ! gc_{x,y,z}dim
 !!$      n_stub     = 0
-!!$      if (associated(cg%cs_iso2%arr))  n_stub = n_stub + I_ONE
-!!$      if (associated(cg%wa%arr))       n_stub = n_stub + I_ONE
-!!$      if (associated(cg%gpot%arr))     n_stub = n_stub + I_ONE
-!!$      if (associated(cg%hgpot%arr))    n_stub = n_stub + I_ONE
-!!$      if (associated(cg%gp%arr))       n_stub = n_stub + I_ONE
-!!$      if (associated(cg%sgp%arr))      n_stub = n_stub + I_ONE
-!!$      if (associated(cg%sgpm%arr))     n_stub = n_stub + I_ONE
+!!$      if (associated(cg%cs_iso2))  n_stub = n_stub + I_ONE
+!!$      if (associated(cg%wa))       n_stub = n_stub + I_ONE
+!!$      if (associated(cg%gpot))     n_stub = n_stub + I_ONE
+!!$      if (associated(cg%hgpot))    n_stub = n_stub + I_ONE
+!!$      if (associated(cg%gp))       n_stub = n_stub + I_ONE
+!!$      if (associated(cg%sgp))      n_stub = n_stub + I_ONE
+!!$      if (associated(cg%sgpm))     n_stub = n_stub + I_ONE
 !!$      n_arr3d_r8 = n_arr3d_r8 - n_stub
 !!$
 !!$      n_ndims_arr4d_r8 = 1  ! b
@@ -1790,43 +1790,43 @@ contains
 !!$      types(54) = arr3d_r8_t;          types_sizes(54) = arr3d_r8_ts;    types_names(54) = "gc_zdim"
 !!$
 !!$      types_names(55) = dname(WA)
-!!$      if (associated(cg%wa%arr)) then
+!!$      if (associated(cg%wa)) then
 !!$         types(55) = arr3d_r8_t;          types_sizes(55) = arr3d_r8_ts
 !!$      else
 !!$         types(55) = H5T_NATIVE_INTEGER;  types_sizes(55) = int4_ts
 !!$      endif
 !!$      types_names(56) = dname(GPOT)
-!!$      if (associated(cg%gpot%arr)) then
+!!$      if (associated(cg%gpot)) then
 !!$         types(56) = arr3d_r8_t;          types_sizes(56) = arr3d_r8_ts
 !!$      else
 !!$         types(56) = H5T_NATIVE_INTEGER;  types_sizes(56) = int4_ts
 !!$      endif
 !!$      types_names(57) = dname(HGPOT)
-!!$      if (associated(cg%hgpot%arr)) then
+!!$      if (associated(cg%hgpot)) then
 !!$         types(57) = arr3d_r8_t;          types_sizes(57) = arr3d_r8_ts
 !!$      else
 !!$         types(57) = H5T_NATIVE_INTEGER;  types_sizes(57) = int4_ts
 !!$      endif
 !!$      types_names(58) = dname(GP)
-!!$      if (associated(cg%gp%arr)) then
+!!$      if (associated(cg%gp)) then
 !!$         types(58) = arr3d_r8_t;          types_sizes(58) = arr3d_r8_ts
 !!$      else
 !!$         types(58) = H5T_NATIVE_INTEGER;  types_sizes(58) = int4_ts
 !!$      endif
 !!$      types_names(59) = dname(SGP)
-!!$      if (associated(cg%sgp%arr)) then
+!!$      if (associated(cg%sgp)) then
 !!$         types(59) = arr3d_r8_t;          types_sizes(59) = arr3d_r8_ts
 !!$      else
 !!$         types(59) = H5T_NATIVE_INTEGER;  types_sizes(59) = int4_ts
 !!$      endif
 !!$      types_names(60) = dname(SGPM)
-!!$      if (associated(cg%sgpm%arr)) then
+!!$      if (associated(cg%sgpm)) then
 !!$         types(60) = arr3d_r8_t;          types_sizes(60) = arr3d_r8_ts
 !!$      else
 !!$         types(60) = H5T_NATIVE_INTEGER;  types_sizes(60) = int4_ts
 !!$      endif
 !!$      types_names(61) = dname(CS_ISO2)
-!!$      if (associated(cg%cs_iso2%arr)) then
+!!$      if (associated(cg%cs_iso2)) then
 !!$         types(61) = arr3d_r8_t;          types_sizes(61) = arr3d_r8_ts
 !!$      else
 !!$         types(61) = H5T_NATIVE_INTEGER;  types_sizes(61) = int4_ts
@@ -1919,38 +1919,38 @@ contains
 !!$      call h5dwrite_f(dset_id, dmem_id(52), int(cg%gc_xdim, kind=4),dims, error, xfer_prp=plist_id)
 !!$      call h5dwrite_f(dset_id, dmem_id(53), int(cg%gc_ydim, kind=4),dims, error, xfer_prp=plist_id)
 !!$      call h5dwrite_f(dset_id, dmem_id(54), int(cg%gc_zdim, kind=4),dims, error, xfer_prp=plist_id)
-!!$      if (associated(cg%wa%arr)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(55), cg%wa%arr     ,dims, error, xfer_prp=plist_id)
+!!$      if (associated(cg%wa)) then
+!!$         call h5dwrite_f(dset_id, dmem_id(55), cg%wa     ,dims, error, xfer_prp=plist_id)
 !!$      else
 !!$         call h5dwrite_f(dset_id, dmem_id(55), -999_INT4      ,dims, error, xfer_prp=plist_id)
 !!$      endif
-!!$      if (associated(cg%gpot%arr)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(56), cg%gpot%arr   ,dims, error, xfer_prp=plist_id)
+!!$      if (associated(cg%gpot)) then
+!!$         call h5dwrite_f(dset_id, dmem_id(56), cg%gpot   ,dims, error, xfer_prp=plist_id)
 !!$      else
 !!$         call h5dwrite_f(dset_id, dmem_id(56), -999_INT4      ,dims, error, xfer_prp=plist_id)
 !!$      endif
-!!$      if (associated(cg%hgpot%arr)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(57), cg%hgpot%arr  ,dims, error, xfer_prp=plist_id)
+!!$      if (associated(cg%hgpot)) then
+!!$         call h5dwrite_f(dset_id, dmem_id(57), cg%hgpot  ,dims, error, xfer_prp=plist_id)
 !!$      else
 !!$         call h5dwrite_f(dset_id, dmem_id(57), -999_INT4      ,dims, error, xfer_prp=plist_id)
 !!$      endif
-!!$      if (associated(cg%gp%arr)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(58), cg%gp%arr     ,dims, error, xfer_prp=plist_id)
+!!$      if (associated(cg%gp)) then
+!!$         call h5dwrite_f(dset_id, dmem_id(58), cg%gp     ,dims, error, xfer_prp=plist_id)
 !!$      else
 !!$         call h5dwrite_f(dset_id, dmem_id(58), -999_INT4      ,dims, error, xfer_prp=plist_id)
 !!$      endif
-!!$      if (associated(cg%sgp%arr)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(59), cg%sgp%arr    ,dims, error, xfer_prp=plist_id)
+!!$      if (associated(cg%sgp)) then
+!!$         call h5dwrite_f(dset_id, dmem_id(59), cg%sgp    ,dims, error, xfer_prp=plist_id)
 !!$      else
 !!$         call h5dwrite_f(dset_id, dmem_id(59), -999_INT4      ,dims, error, xfer_prp=plist_id)
 !!$      endif
-!!$      if (associated(cg%sgpm%arr)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(60), cg%sgpm%arr   ,dims, error, xfer_prp=plist_id)
+!!$      if (associated(cg%sgpm)) then
+!!$         call h5dwrite_f(dset_id, dmem_id(60), cg%sgpm   ,dims, error, xfer_prp=plist_id)
 !!$      else
 !!$         call h5dwrite_f(dset_id, dmem_id(60), -999_INT4      ,dims, error, xfer_prp=plist_id)
 !!$      endif
-!!$      if (associated(cg%cs_iso2%arr)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(61), cg%cs_iso2%arr,dims, error, xfer_prp=plist_id)
+!!$      if (associated(cg%cs_iso2)) then
+!!$         call h5dwrite_f(dset_id, dmem_id(61), cg%cs_iso2,dims, error, xfer_prp=plist_id)
 !!$      else
 !!$         call h5dwrite_f(dset_id, dmem_id(61), -999_INT4      ,dims, error, xfer_prp=plist_id)
 !!$      endif

@@ -309,7 +309,7 @@ contains
                rho = max(rho0*(R0/R)**(1.75),smalld)   ! bylo 1.5
                cs2 = (cs0*sqrt(R0/R))**2
 
-               cg%cs_iso2%arr(i,:,:) = cs2
+               cg%cs_iso2(i,:,:) = cs2
 
                do j = 1, cg%n_(ydim)
                   call hydrostatic_zeq_densmid(i, j, rho, cs2, cg=cg)
@@ -334,7 +334,7 @@ contains
                      ln_dens_der(2:cg%n_(xdim))  = ( ln_dens_der(2:cg%n_(xdim)) - ln_dens_der(1:cg%n_(xdim)-1) ) / cg%dx
                      ln_dens_der(1)        = ln_dens_der(2)
                      if (fl%tag /= DST) then
-                        vphi = sqrt( max(cg%x(:)*(cg%cs_iso2%arr(:,j,k)*ln_dens_der(:) + abs(grav(:))),0.0) )
+                        vphi = sqrt( max(cg%x(:)*(cg%cs_iso2(:,j,k)*ln_dens_der(:) + abs(grav(:))),0.0) )
                      else
                         vphi = sqrt( max(abs(grav(:)) * cg%x(:), 0.0))
                      endif

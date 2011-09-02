@@ -430,13 +430,13 @@ contains
          cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - wcu%arr*cg%idl(dim2)
 #endif /* RESISTIVE */
 ! ADVECTION FULL STEP
-         if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa%arr)
-         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) - cg%wa%arr*cg%idl(dim1)
-         cg%wa%arr = mshift(cg%wa%arr,dim1)
-         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) + cg%wa%arr*cg%idl(dim1)
-         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - cg%wa%arr*cg%idl(dim2)
-         cg%wa%arr = pshift(cg%wa%arr,dim2)
-         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) + cg%wa%arr*cg%idl(dim2)
+         if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa)
+         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) - cg%wa*cg%idl(dim1)
+         cg%wa = mshift(cg%wa,dim1)
+         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) + cg%wa*cg%idl(dim1)
+         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - cg%wa*cg%idl(dim2)
+         cg%wa = pshift(cg%wa,dim2)
+         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) + cg%wa*cg%idl(dim2)
          cgl => cgl%nxt
       enddo
 

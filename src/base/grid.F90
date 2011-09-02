@@ -133,8 +133,8 @@ contains
 
          deallocate(ind_arr)
 
-         call cg%wa%init(cg%n_(:))
-
+         call cgl%cg%add_na("wa") ! BEWARE: magic string across multiple files
+         cgl%cg%wa => cgl%cg%get_na_ptr("wa")
 #ifdef GRAV
          allocate(ind_arr(1))
          ind_arr = [cg%n_(zdim)]
@@ -167,8 +167,6 @@ contains
 
          call cgl%cg%b%clean()
          call cgl%cg%b0%clean()
-
-         call cgl%cg%wa%clean()
 
 #ifdef GRAV
          if (allocated(cgl%cg%dprof)) deallocate(cgl%cg%dprof)

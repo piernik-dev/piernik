@@ -60,10 +60,12 @@ contains
       real, dimension(:), allocatable :: vx0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       type(cg_list_element), pointer  :: cgl
       type(grid_container),  pointer  :: cg
+      integer :: i_wa
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+         i_wa = cg%get_na_ind("wa") ! BEWARE: magic strings across multiple files
 
          if (any([allocated(vx), allocated(vx0)])) call die("[advects:advectby_x] vx or vx0 already allocated")
          allocate(vx(cg%n_(xdim)), vx0(cg%n_(xdim)))
@@ -87,14 +89,14 @@ contains
                vx(1)  = vx(2)
                vx(cg%n_(xdim)) = vx(cg%n_(xdim)-1)
 
-               vibj => cg%wa%get_sweep(xdim,j,k)
+               vibj => cg%q(i_wa)%get_sweep(xdim,j,k)
                call tvdb(vibj, cg%b%get_sweep(xdim,iby,j,k), vx, cg%n_(xdim),dt, cg%idx)
 
             enddo
          enddo
 
          do j = xdim, zdim
-            if (has_dir(j)) call bnd_emf(cg%wa%arr,'vxby',j)
+            if (has_dir(j)) call bnd_emf(cg%wa,'vxby',j)
          enddo
 
          deallocate(vx)
@@ -125,10 +127,12 @@ contains
       real, dimension(:), allocatable :: vx0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       type(cg_list_element), pointer  :: cgl
       type(grid_container),  pointer  :: cg
+      integer :: i_wa
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+         i_wa = cg%get_na_ind("wa")
 
          if (any([allocated(vx), allocated(vx0)])) call die("[advects:advectby_x] vx or vx0 already allocated")
          allocate(vx(cg%n_(xdim)), vx0(cg%n_(xdim)))
@@ -152,14 +156,14 @@ contains
                vx(1)  = vx(2)
                vx(cg%n_(xdim)) = vx(cg%n_(xdim)-1)
 
-               vibj => cg%wa%get_sweep(xdim,j,k)
+               vibj => cg%q(i_wa)%get_sweep(xdim,j,k)
                call tvdb(vibj, cg%b%get_sweep(xdim,ibz,j,k), vx, cg%n_(xdim),dt, cg%idx)
 
             enddo
          enddo
 
          do j = xdim, zdim
-            if (has_dir(j)) call bnd_emf(cg%wa%arr,'vxbz',j)
+            if (has_dir(j)) call bnd_emf(cg%wa,'vxbz',j)
          enddo
 
          deallocate(vx)
@@ -190,10 +194,12 @@ contains
       real, dimension(:), allocatable :: vy0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       type(cg_list_element), pointer  :: cgl
       type(grid_container),  pointer  :: cg
+      integer :: i_wa
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+         i_wa = cg%get_na_ind("wa")
 
          if (any([allocated(vy), allocated(vy0)])) call die("[advects:advectby_y] vy or vy0 already allocated")
          allocate(vy(cg%n_(ydim)), vy0(cg%n_(ydim)))
@@ -217,14 +223,14 @@ contains
                vy(1)  = vy(2)
                vy(cg%n_(ydim)) = vy(cg%n_(ydim)-1)
 
-               vibj => cg%wa%get_sweep(ydim,k,i)
+               vibj => cg%q(i_wa)%get_sweep(ydim,k,i)
                call tvdb(vibj, cg%b%get_sweep(ydim,ibz,k,i), vy, cg%n_(ydim),dt, cg%idy)
 
             enddo
          enddo
 
          do i = xdim, zdim
-            if (has_dir(i)) call bnd_emf(cg%wa%arr,'vybz',i)
+            if (has_dir(i)) call bnd_emf(cg%wa,'vybz',i)
          enddo
 
          deallocate(vy)
@@ -255,10 +261,12 @@ contains
       real, dimension(:), allocatable :: vy0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       type(cg_list_element), pointer  :: cgl
       type(grid_container),  pointer  :: cg
+      integer :: i_wa
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+         i_wa = cg%get_na_ind("wa")
 
          if (any([allocated(vy), allocated(vy0)])) call die("[advects:advectby_y] vy or vy0 already allocated")
          allocate(vy(cg%n_(ydim)), vy0(cg%n_(ydim)))
@@ -282,14 +290,14 @@ contains
                vy(1)  = vy(2)
                vy(cg%n_(ydim)) = vy(cg%n_(ydim)-1)
 
-               vibj => cg%wa%get_sweep(ydim,k,i)
+               vibj => cg%q(i_wa)%get_sweep(ydim,k,i)
                call tvdb(vibj, cg%b%get_sweep(ydim,ibx,k,i), vy, cg%n_(ydim),dt, cg%idy)
 
             enddo
          enddo
 
          do i = xdim, zdim
-            if (has_dir(i)) call bnd_emf(cg%wa%arr,'vybx',i)
+            if (has_dir(i)) call bnd_emf(cg%wa,'vybx',i)
          enddo
 
          deallocate(vy)
@@ -320,10 +328,12 @@ contains
       real, dimension(:), allocatable :: vz0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       type(cg_list_element), pointer  :: cgl
       type(grid_container),  pointer  :: cg
+      integer :: i_wa
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+         i_wa = cg%get_na_ind("wa")
 
          if (any([allocated(vz), allocated(vz0)])) call die("[advects:advectby_z] vz or vz0 already allocated")
          allocate(vz(cg%n_(zdim)), vz0(cg%n_(zdim)))
@@ -347,14 +357,14 @@ contains
                vz(1)  = vz(2)
                vz(cg%n_(zdim)) = vz(cg%n_(zdim)-1)
 
-               vibj => cg%wa%get_sweep(zdim,i,j)
+               vibj => cg%q(i_wa)%get_sweep(zdim,i,j)
                call tvdb(vibj, cg%b%get_sweep(zdim,ibx,i,j), vz, cg%n_(zdim),dt, cg%idz)
 
             enddo
          enddo
 
          do i = xdim, zdim
-            if (has_dir(i)) call bnd_emf(cg%wa%arr,'vzbx',i)
+            if (has_dir(i)) call bnd_emf(cg%wa,'vzbx',i)
          enddo
 
          deallocate(vz)
@@ -385,10 +395,12 @@ contains
       real, dimension(:), allocatable :: vz0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       type(cg_list_element), pointer  :: cgl
       type(grid_container),  pointer  :: cg
+      integer :: i_wa
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+         i_wa = cg%get_na_ind("wa")
 
          if (any([allocated(vz), allocated(vz0)])) call die("[advects:advectby_z] vz or vz0 already allocated")
          allocate(vz(cg%n_(zdim)), vz0(cg%n_(zdim)))
@@ -412,14 +424,14 @@ contains
                vz(1)  = vz(2)
                vz(cg%n_(zdim)) = vz(cg%n_(zdim)-1)
 
-               vibj => cg%wa%get_sweep(zdim,i,j)
+               vibj => cg%q(i_wa)%get_sweep(zdim,i,j)
                call tvdb(vibj, cg%b%get_sweep(zdim,iby,i,j), vz, cg%n_(zdim),dt, cg%idz)
 
             enddo
          enddo
 
          do i = xdim, zdim
-            if (has_dir(i)) call bnd_emf(cg%wa%arr,'vzby',i)
+            if (has_dir(i)) call bnd_emf(cg%wa,'vzby',i)
          enddo
 
          deallocate(vz)

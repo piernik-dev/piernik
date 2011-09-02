@@ -132,7 +132,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (associated(cg%cs_iso2%arr)) cg%cs_iso2%arr(:,:,:) = flind%neu%cs2
+         if (associated(cg%cs_iso2)) cg%cs_iso2(:,:,:) = flind%neu%cs2
 
          do i = 1, cg%n_(xdim)
             xi = cg%x(i)

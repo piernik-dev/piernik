@@ -136,7 +136,9 @@ contains
 
       implicit none
 
+#ifdef ISO
       type(cg_list_element), pointer :: cgl
+#endif /* ISO */
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[initfluids:init_fluids] MPI not initialized.") ! limiter, init_ionized, init_neutral, init_dust, init_cosmicrays
 
@@ -161,11 +163,15 @@ contains
 
       if (all_cg%cnt > 1) call die("[initfluids:init_fluids] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
 
+#ifdef ISO
       cgl => all_cg%first
       do while (associated(cgl))
-         if (associated(cgl%cg%cs_iso2%arr)) cgl%cg%cs_iso2%arr(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
+         call cgl%cg%add_na("cs_iso2") ! BEWARE: magic string across multiple files
+         cgl%cg%cs_iso2 => cgl%cg%get_na_ptr("cs_iso2")
+         cgl%cg%cs_iso2(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
          cgl => cgl%nxt
       enddo
+#endif /* ISO */
 
       call init_fluxes
 
@@ -274,7 +280,7 @@ contains
                      smallp = min( minval( en - ekin(mx,my,mz,dn))/fl%gam_1, smallp )
                   endif
                else
-                  smallp = min( minval( cg%cs_iso2%arr*dn ), smallp )
+                  smallp = min( minval( cg%cs_iso2*dn ), smallp )
                endif
             enddo
             smallp = smallp * safety_factor

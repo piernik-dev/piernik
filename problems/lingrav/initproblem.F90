@@ -127,7 +127,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%cs_iso2%arr(:,:,:) = flind%ion%cs2
+         cg%cs_iso2(:,:,:) = flind%ion%cs2
 
          call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg=cg)
 

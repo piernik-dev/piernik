@@ -667,7 +667,7 @@ contains
 
       endif
 
-      cg%wa%arr(i, j, k) = fcrdif * diff_theta * dt / curl%dx
+      cg%wa(i, j, k) = fcrdif * diff_theta * dt / curl%dx
 
    end subroutine diff_flux_x
 
@@ -739,7 +739,7 @@ contains
 
       endif
 
-      cg%wa%arr(i, j, k) = fcrdif * diff_theta * dt / curl%dy
+      cg%wa(i, j, k) = fcrdif * diff_theta * dt / curl%dy
 
    end subroutine diff_flux_y
 
@@ -811,7 +811,7 @@ contains
 
       endif
 
-      cg%wa%arr(i, j, k) = fcrdif * diff_theta * dt / curl%dz
+      cg%wa(i, j, k) = fcrdif * diff_theta * dt / curl%dz
 
    end subroutine diff_flux_z
 
@@ -864,8 +864,8 @@ contains
             enddo
             curl%mgvar     (curl%is  :curl%ie,   curl%js:curl%je, k, def) = &
                  curl%mgvar(curl%is  :curl%ie,   curl%js:curl%je, k, def) - &
-                 (       cg%wa%arr(curl%is+1:curl%ie+1, curl%js:curl%je, k)      - &
-                 &       cg%wa%arr(curl%is  :curl%ie,   curl%js:curl%je, k) )
+                 (       cg%wa(curl%is+1:curl%ie+1, curl%js:curl%je, k)      - &
+                 &       cg%wa(curl%is  :curl%ie,   curl%js:curl%je, k) )
          enddo
       endif
 
@@ -878,8 +878,8 @@ contains
             enddo
             curl%mgvar     (curl%is:curl%ie, curl%js  :curl%je,   k, def) = &
                  curl%mgvar(curl%is:curl%ie, curl%js  :curl%je,   k, def) - &
-                 (       cg%wa%arr(curl%is:curl%ie, curl%js+1:curl%je+1, k)      - &
-                 &       cg%wa%arr(curl%is:curl%ie, curl%js  :curl%je,   k) )
+                 (       cg%wa(curl%is:curl%ie, curl%js+1:curl%je+1, k)      - &
+                 &       cg%wa(curl%is:curl%ie, curl%js  :curl%je,   k) )
          enddo
       endif
 
@@ -893,8 +893,8 @@ contains
          enddo
          curl%mgvar     (curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke, def) = &
               curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke, def) - &
-              (       cg%wa%arr(curl%is:curl%ie, curl%js:curl%je, curl%ks+1:curl%ke+1)    - &
-              &       cg%wa%arr(curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke  ) )
+              (       cg%wa(curl%is:curl%ie, curl%js:curl%je, curl%ks+1:curl%ke+1)    - &
+              &       cg%wa(curl%is:curl%ie, curl%js:curl%je, curl%ks  :curl%ke  ) )
       endif
 
       call check_dirty(curl, def, "res def")
@@ -977,7 +977,7 @@ contains
                      call diff_flux_x(i,   j, k, soln, curl, cr_id, Keff1)
                      call diff_flux_x(i+1, j, k, soln, curl, cr_id, Keff2)
 
-                     temp = temp - (cg%wa%arr(i+1, j, k) - cg%wa%arr(i, j, k))
+                     temp = temp - (cg%wa(i+1, j, k) - cg%wa(i, j, k))
                      dLdu = dLdu - 2 * (Keff1 + Keff2) * curl%idx2
 
                   endif
@@ -987,7 +987,7 @@ contains
                      call diff_flux_y(i, j,   k, soln, curl, cr_id, Keff1)
                      call diff_flux_y(i, j+1, k, soln, curl, cr_id, Keff2)
 
-                     temp = temp - (cg%wa%arr(i, j+1, k) - cg%wa%arr(i, j, k))
+                     temp = temp - (cg%wa(i, j+1, k) - cg%wa(i, j, k))
                      dLdu = dLdu - 2 * (Keff1 + Keff2) * curl%idy2
 
                   endif
@@ -997,7 +997,7 @@ contains
                      call diff_flux_z(i, j, k,   soln, curl, cr_id, Keff1)
                      call diff_flux_z(i, j, k+1, soln, curl, cr_id, Keff2)
 
-                     temp = temp - (cg%wa%arr(i, j, k+1) - cg%wa%arr(i, j, k))
+                     temp = temp - (cg%wa(i, j, k+1) - cg%wa(i, j, k))
                      dLdu = dLdu - 2 * (Keff1 + Keff2) * curl%idz2
 
                   endif

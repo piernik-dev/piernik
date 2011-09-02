@@ -126,9 +126,6 @@ module grid_cont
       real, allocatable, dimension(:,:,:) :: gc_ydim !< array of geometrical coefficients in y-direction
       real, allocatable, dimension(:,:,:) :: gc_zdim !< array of geometrical coefficients in z-direction
 
-      type(array3d) :: cs_iso2
-      type(array3d) :: wa                       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
-
       type(array4d) :: u                        !< Main array of all fluids' components
       type(array4d) :: uh                       !< Main array of all fluids' components (for t += dt/2)
       type(array4d) :: u0                       !< Copy of main array of all fluids' components
@@ -137,13 +134,14 @@ module grid_cont
 
       !< Other 3D arrays (such as user-defined quantities or gravitational potential). The fourth index selects variable so it cannot be merged with u or b.
       type(named_array3d), allocatable, dimension(:) :: q
-
-      ! handy shortcuts
-      real, dimension(:,:,:), pointer :: gpot   !< Array for sum of gravitational potential at t += dt
-      real, dimension(:,:,:), pointer :: hgpot  !< Array for sum of gravitational potential at t += 0.5*dt
-      real, dimension(:,:,:), pointer :: gp     !< Array for gravitational potential from external fields
-      real, dimension(:,:,:), pointer :: sgp    !< Array for gravitational potential from multigrid or FFT solver
-      real, dimension(:,:,:), pointer :: sgpm   !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
+      ! handy shortcuts to some entries in q(:)
+      real, dimension(:,:,:), pointer :: gpot    !< Array for sum of gravitational potential at t += dt
+      real, dimension(:,:,:), pointer :: hgpot   !< Array for sum of gravitational potential at t += 0.5*dt
+      real, dimension(:,:,:), pointer :: gp      !< Array for gravitational potential from external fields
+      real, dimension(:,:,:), pointer :: sgp     !< Array for gravitational potential from multigrid or FFT solver
+      real, dimension(:,:,:), pointer :: sgpm    !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
+      real, dimension(:,:,:), pointer :: cs_iso2
+      real, dimension(:,:,:), pointer :: wa      !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 
    contains
 
@@ -363,10 +361,6 @@ contains
       this%je = this%ijkse(ydim, HI)
       this%ke = this%ijkse(zdim, HI)
 
-#ifdef ISO
-      call this%cs_iso2%init(this%n_(:))
-#endif /* ISO */
-
    end subroutine init
 
    subroutine set_axis(d, a0, al, ar, ia, cg, dom)
@@ -469,8 +463,6 @@ contains
          enddo
          deallocate(this%o_bnd)
       endif
-
-      call this%cs_iso2%clean
 
       if (allocated(this%q)) then
          do g = 1, ubound(this%q(:), dim=1)
