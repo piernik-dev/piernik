@@ -118,7 +118,7 @@ module grid_cont
 
       !>
       !! description of incoming and outgoing boundary data,
-      !! the shape is (xdim:zdim, FLUID:ARR) for cg (base grid container)) and (xdim:zdim, mg_nb) for plvl (multigrid level container)
+      !! the shape is (xdim:zdim, FLUID:ARR) for cg (base grid container)) and (xdim:zdim, nb) for plvl (multigrid level container)
       !<
       type(bnd_list), dimension(:, :), allocatable :: i_bnd, o_bnd
 

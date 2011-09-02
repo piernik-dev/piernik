@@ -75,7 +75,7 @@ contains
 !<
    subroutine init_multigrid
 
-      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, LO, HI, I_TWO, I_ONE, half
+      use constants,           only: PIERNIK_INIT_ARRAYS, xdim, ydim, zdim, GEO_RPZ, BND, BLK, LO, HI, I_TWO, I_ONE, half
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven, cdd
@@ -86,7 +86,7 @@ contains
       use mpisetup,            only: comm, ierr, proc, master, slave, nproc, FIRST, LAST, buffer_dim, ibuff, lbuff
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
       use multigridmpifuncs,   only: mpi_multigrid_prep
-      use multigridvars,       only: lvl, plvl, roof, base, mg_nb, ngridvars, correction, single_base, &
+      use multigridvars,       only: lvl, plvl, roof, base, ngridvars, correction, single_base, &
            &                         is_external, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
@@ -196,7 +196,6 @@ contains
 #endif /* COSM_RAYS */
 
       !! Sanity checks
-      if (abs(ord_prolong) > 2*mg_nb) call die("[multigrid:init_multigrid] not enough guardcells for given prolongation operator order")
       if (ord_prolong_face_norm < 0) then
          if (master) call warn("[multigrid:init_multigrid] ord_prolong_face_norm < 0 is not defined, defaulting to 0")
          ord_prolong_face_norm = 0
@@ -243,7 +242,7 @@ contains
 
          if (associated(curl, roof)) then
             curl%dom = dom       ! inherit roof from global domain
-            curl%dom%nb = mg_nb  ! the multigrid solver relies typically on 2 guardcells (roof%dom%n_t(:) is wrong here, but it is not used in multigrid)
+            ! curl%dom%nb = 2  ! the multigrid solver relies typically at most on 2 guardcells, but the impact on performance is not big so we've decided to have it uniform with the rest of Piernik
          else
             ! set up decomposition of coarse levels
             curl%dom = curl%finer%dom
@@ -335,6 +334,11 @@ contains
          allocate( curl%bnd_z(curl%is:curl%ie, curl%js:curl%je, LO:HI), stat=aerr(3) )
          if (any(aerr(1:3) /= 0)) call die("[multigrid:init_multigrid] Allocation error: curl%bnd_?")
          mb_alloc  = mb_alloc + size(curl%bnd_x) + size(curl%bnd_y) + size(curl%bnd_z)
+
+         if (allocated(curl%mmbc)) call die("[multigrid:init_multigrid] multigrid mmbc already allocated")
+         allocate( curl%mmbc(xdim:zdim, LO:HI, BND:BLK, curl%nb), stat=aerr(1) )
+         if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: curl%mmbc")
+         mb_alloc  = mb_alloc + size(curl%mmbc)/2
 
          ! array initialization
          if (dirty_debug) then

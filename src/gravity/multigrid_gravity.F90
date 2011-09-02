@@ -162,7 +162,7 @@ contains
       use domain,        only: dom, has_dir, eff_dim, geometry_type, is_uneven, cdd
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
       use mpisetup,      only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST
-      use multigridvars, only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, mg_nb, ngridvars, single_base
+      use multigridvars, only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, ngridvars, single_base
       use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
 
       implicit none
@@ -376,9 +376,6 @@ contains
       endif
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
-
-      !! Sanity checks
-      if (abs(ord_laplacian) > 2*mg_nb) call die("[multigrid_gravity:init_multigrid_grav] not enough guardcells for given laplacian operator order")
 
    end subroutine init_multigrid_grav
 
@@ -690,7 +687,7 @@ contains
 
          if (ubound(curl%dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid_gravity:mpi_multigrid_prep_grav] Multiple blocks per process not implemented yet")
 
-         ijks(:) = curl%ijkse(:, LO) - curl%off(:)  ! add this to convert absolute cell coordinates to local indices. (+mg_nb - off(:))
+         ijks(:) = curl%ijkse(:, LO) - curl%off(:)  ! add this to convert absolute cell coordinates to local indices. (+nb - off(:))
          per(:) = 0
          where (curl%dom%periodic(:)) per(:) = curl%dom%n_d(:)
 
@@ -1107,7 +1104,7 @@ contains
 
       use global,            only: t
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: roof, bnd_isolated, bnd_givenval, solution, mg_nb, extbnd_extrapolate, extbnd_mirror
+      use multigridvars,     only: roof, bnd_isolated, bnd_givenval, solution, extbnd_extrapolate, extbnd_mirror
 
       implicit none
 
@@ -1128,9 +1125,9 @@ contains
       ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
       ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
       if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
-         call mpi_multigrid_bnd(roof, solution, mg_nb, extbnd_extrapolate)
+         call mpi_multigrid_bnd(roof, solution, roof%nb, extbnd_extrapolate)
       else
-         call mpi_multigrid_bnd(roof, solution, mg_nb, extbnd_mirror)
+         call mpi_multigrid_bnd(roof, solution, roof%nb, extbnd_mirror)
       endif
 
    end subroutine store_solution
@@ -1143,13 +1140,9 @@ contains
 
    subroutine multigrid_solve_grav(dens)
 
-      use constants,     only: xdim, ydim, zdim
-      use dataio_pub,    only: die
-      use domain,        only: has_dir
       use grid,          only: all_cg
       use gc_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, mg_nb, tot_ts, ts
+      use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, tot_ts, ts
       use multipole,     only: multipole_solver
       use timer,         only: set_timer
 
@@ -1158,19 +1151,9 @@ contains
       real, dimension(:,:,:), intent(in) :: dens !< input source field
 
       logical :: isolated
-      integer :: isb, ieb, jsb, jeb, ksb, keb
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
 
       ts =  set_timer("multigrid", .true.)
-      cgl => all_cg%first
-      do while (associated(cgl))
-         if ( (has_dir(xdim) .and. cgl%cg%is-mg_nb <= 0) .or. &
-              (has_dir(ydim) .and. cgl%cg%js-mg_nb <= 0) .or. &
-              (has_dir(zdim) .and. cgl%cg%ks-mg_nb <= 0) )    &
-              call die("[multigrid_gravity:multigrid_solve_grav] Current implementation requires at least 2 guardcells in the hydro part")
-         cgl => cgl%nxt
-      enddo
 
       isolated = (grav_bnd == bnd_isolated) !> \deprecated BEWARE: not elegant; probably there should be two global grav_bnd variables
 
@@ -1191,35 +1174,7 @@ contains
 
       cgl => all_cg%first
       do while (associated(cgl))
-         cg => cgl%cg
-
-         !> \todo move to multigridvars and init_multigrid
-         if (has_dir(xdim)) then
-            isb = cg%is-mg_nb
-            ieb = cg%ie+mg_nb
-         else
-            isb = 1
-            ieb = 1
-         endif
-
-         if (has_dir(ydim)) then
-            jsb = cg%js-mg_nb
-            jeb = cg%je+mg_nb
-         else
-            jsb = 1
-            jeb = 1
-         endif
-
-         if (has_dir(zdim)) then
-            ksb = cg%ks-mg_nb
-            keb = cg%ke+mg_nb
-         else
-            ksb = 1
-            keb = 1
-         endif
-
-         cg%sgp(isb:ieb, jsb:jeb, ksb:keb) = roof%mgvar(:, :, :, solution)
-
+         cgl%cg%sgp(:,:,:) = roof%mgvar(:,:,:, solution)
          cgl => cgl%nxt
       enddo
 
@@ -1234,35 +1189,7 @@ contains
 
          cgl => all_cg%first
          do while (associated(cgl))
-            cg => cgl%cg
-
-            !> \todo move to multigridvars and init_multigrid
-            if (has_dir(xdim)) then
-               isb = cg%is-mg_nb
-               ieb = cg%ie+mg_nb
-            else
-               isb = 1
-               ieb = 1
-            endif
-
-            if (has_dir(ydim)) then
-               jsb = cg%js-mg_nb
-               jeb = cg%je+mg_nb
-            else
-               jsb = 1
-               jeb = 1
-            endif
-
-            if (has_dir(zdim)) then
-               ksb = cg%ks-mg_nb
-               keb = cg%ke+mg_nb
-            else
-               ksb = 1
-               keb = 1
-            endif
-
-            cg%sgp(isb:ieb, jsb:jeb, ksb:keb) = cg%sgp(isb:ieb, jsb:jeb, ksb:keb) + roof%mgvar(:, :, :, solution)
-
+            cgl%cg%sgp(:,:,:) = cgl%cg%sgp(:,:,:) + roof%mgvar(:, :, :, solution)
             cgl => cgl%nxt
          enddo
 

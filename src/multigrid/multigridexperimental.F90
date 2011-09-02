@@ -125,6 +125,7 @@ contains
          endif
          firstcall = .false.
       endif
+      if (abs(ord_prolong) > 2*coarse%nb) call die("[multigridexperimental:prolong_level_hord] not enough guardcells for given prolongation operator order")
 
       call mpi_multigrid_bnd(coarse, iv, abs(ord_prolong/2), extbnd_antimirror) ! exchange guardcells with corners
 

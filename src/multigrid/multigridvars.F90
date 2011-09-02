@@ -38,14 +38,14 @@
 module multigridvars
 ! pulled by MULTIGRID
 
-   use constants, only: xdim, zdim, LO, HI, BND, BLK
+   use constants, only: xdim, zdim, LO, HI
    use domain,    only: domain_container
    use grid_cont, only: grid_container, segment
 
    implicit none
 
    public ! QA_WARN no secrets are kept here
-   private :: xdim, zdim, LO, HI, BND, BLK, grid_container, domain_container, segment ! QA_WARN prevent re-exporting
+   private :: xdim, zdim, LO, HI, grid_container, domain_container, segment ! QA_WARN prevent re-exporting
 
    ! multigrid constants
    enum, bind(C)
@@ -54,8 +54,6 @@ module multigridvars
       enumerator :: defect                                            !< Index of the defect field (effectively the density not accounted in current solution)
       enumerator :: correction                                        !< Index of the correction to the potential to be applied at the end of V-cycle
    end enum
-
-   integer, parameter :: mg_nb = 2                                    !< Number of guardcells in multigrid (simplest laplacian and relaxation require only 1)
 
    ! these constants should be moved to constants module
 
@@ -134,7 +132,7 @@ module multigridvars
       real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
 
       ! MPI datatype shortcut, similar to grid_container%mbc(ARR, :, :, :)
-      integer, dimension(xdim:zdim, LO:HI, BND:BLK, mg_nb) :: mmbc    !< Multigrid MPI Boundary conditions Container for block boundary exchanges with 1 .. mg_nb layers
+      integer, dimension(:,:,:,:), allocatable :: mmbc                !< Multigrid MPI Boundary conditions Container for block boundary exchanges with 1 .. nb layers
 
       type(tgt_list) :: f_tgt                                         !< description of incoming restriction and outgoing prolongation data (this should be a linked list)
       type(tgt_list) :: c_tgt                                         !< description of outgoing restriction and incoming prolongation data
