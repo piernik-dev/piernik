@@ -611,7 +611,7 @@ contains
             ax%y = cg%y
             ax%z = cg%z
 
-            call my_grav_ptmass_pure(cg%gp%arr,ax,.false.)
+            call my_grav_ptmass_pure(cg%gp,ax,.false.)
 
             if (allocated(ax%x)) deallocate(ax%x)
             if (allocated(ax%y)) deallocate(ax%y)

@@ -405,10 +405,10 @@ contains
                do i = cg%is, cg%ie
                   potential =  apot(i, j, k)
                   if (geometry_type == GEO_RPZ) fac = cg%x(i)
-                  norm(1) = norm(1) + (potential - cg%sgp%arr(i, j, k))**2 * fac
+                  norm(1) = norm(1) + (potential - cg%sgp(i, j, k))**2 * fac
                   norm(2) = norm(2) + potential**2 * fac
-                  dev(1) = min(dev(1), (potential - cg%sgp%arr(i, j, k))/potential)
-                  dev(2) = max(dev(2), (potential - cg%sgp%arr(i, j, k))/potential)
+                  dev(1) = min(dev(1), (potential - cg%sgp(i, j, k))/potential)
+                  dev(2) = max(dev(2), (potential - cg%sgp(i, j, k))/potential)
                enddo
             enddo
          enddo
@@ -451,7 +451,7 @@ contains
          case ("apot")
             tab(:,:,:) = real(apot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case ("errp")
-            tab(:,:,:) = real(apot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(apot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

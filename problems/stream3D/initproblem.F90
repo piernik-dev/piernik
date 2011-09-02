@@ -190,7 +190,7 @@ contains
 
          do i = 2, cg%n_(xdim)-1   ! 2d
             rc= cg%x(i)*sqrt(2.0)
-            gradgp=  0.5*(cg%gp%arr(i+1,i+1,max(cg%n_(zdim)/2,1))-cg%gp%arr(i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx/sqrt(2.)
+            gradgp=  0.5*(cg%gp(i+1,i+1,max(cg%n_(zdim)/2,1))-cg%gp(i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx/sqrt(2.)
             gradp = -0.5*(cg%u%arr(idnn,i+1,i+1,max(cg%n_(zdim)/2,1))-cg%u%arr(idnn,i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx /sqrt(2.)*cs_iso_neu2
             omega(i)  = sqrt( abs( (gradgp-gradp)/rc ) )
             omegad(i) = sqrt( abs(    gradgp/rc      ) )
