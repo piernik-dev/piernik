@@ -757,7 +757,7 @@ contains
             do i = 1, cg%n_(xdim)
                do k = 1, cg%n_(zdim)
                   r2 = cg%x(i)**2! + cg%z(k)**2
-                  cg%gp%arr(i,:,k) = -newtong*ptmass / sqrt(r2)
+                  cg%gp(i,:,k) = -newtong*ptmass / sqrt(r2)
                enddo
             enddo
 
