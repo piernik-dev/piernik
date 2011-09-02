@@ -276,6 +276,12 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cgl%cg%gpot%arr(:,:,:) = 0.0
+#ifdef SELF_GRAV
+         call cgl%cg%add_na("sgp") ! BEWARE: magic strings across multiple files
+         cgl%cg%sgp => cgl%cg%get_na_ptr("sgp")
+         call cgl%cg%add_na("sgpm")
+         cgl%cg%sgpm => cgl%cg%get_na_ptr("sgpm")
+#endif /* SELF_GRAV */
          cgl => cgl%nxt
       enddo
 
@@ -316,7 +322,7 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
-         cg%sgpm%arr = cg%sgp%arr
+         cg%sgpm = cg%sgp
 
 #ifdef POISSON_FFT
          call poisson_solve( sum(cg%u%arr(iarr_all_sg,:,:,:),1) )
@@ -340,7 +346,7 @@ contains
       if (frun) then
          cgl => all_cg%first
          do while (associated(cgl))
-            cgl%cg%sgpm%arr = cgl%cg%sgp%arr
+            cgl%cg%sgpm = cgl%cg%sgp
             cgl => cgl%nxt
          enddo
          frun = .false.
@@ -441,8 +447,8 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 #ifdef SELF_GRAV
-         cg%gpot%arr  = cg%gp%arr + (one+h)     *cg%sgp%arr -      h*cg%sgpm%arr
-         cg%hgpot%arr = cg%gp%arr + (one+half*h)*cg%sgp%arr - half*h*cg%sgpm%arr
+         cg%gpot%arr  = cg%gp%arr + (one+h)     *cg%sgp -      h*cg%sgpm
+         cg%hgpot%arr = cg%gp%arr + (one+half*h)*cg%sgp - half*h*cg%sgpm
 #else /* !SELF_GRAV */
          !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
          cg%gpot%arr  = cg%gp%arr
@@ -471,7 +477,7 @@ contains
 
       cgl => all_cg%first
       do while (associated(cgl))
-         if (associated(cgl%cg%sgp%arr)) call arr3d_boundaries(cgl%cg%sgp%arr)
+         if (associated(cgl%cg%sgp)) call arr3d_boundaries(cgl%cg%sgp)
          cgl => cgl%nxt
       enddo
 

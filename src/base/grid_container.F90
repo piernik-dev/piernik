@@ -131,8 +131,8 @@ module grid_cont
       type(array3d) :: gpot                     !< Array for sum of gravitational potential at t += dt
       type(array3d) :: hgpot                    !< Array for sum of gravitational potential at t += 0.5*dt
       type(array3d) :: gp                       !< Array for gravitational potential from external fields
-      type(array3d) :: sgp                      !< Array for gravitational potential from multigrid or FFT solver
-      type(array3d) :: sgpm                     !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
+!      type(array3d) :: sgp                      !< Array for gravitational potential from multigrid or FFT solver
+!      type(array3d) :: sgpm                     !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
 
       type(array4d) :: u                        !< Main array of all fluids' components
       type(array4d) :: uh                       !< Main array of all fluids' components (for t += dt/2)
@@ -142,6 +142,9 @@ module grid_cont
 
       !< Other 3D arrays (such as user-defined quantities or gravitational potential). The fourth index selects variable so it cannot be merged with u or b.
       type(named_array3d), allocatable, dimension(:) :: q
+
+      ! handy shortcuts
+      real, dimension(:,:,:), pointer :: sgp, sgpm
 
    contains
 
@@ -368,10 +371,6 @@ contains
       call this%gpot%init(this%n_(:))
       call this%hgpot%init(this%n_(:))
       call this%gp%init(this%n_(:))
-#ifdef SELF_GRAV
-      call this%sgp%init(this%n_(:))
-      call this%sgpm%init(this%n_(:))
-#endif /* SELF_GRAV */
 #endif /* GRAV */
 
    end subroutine init
@@ -481,8 +480,6 @@ contains
       call this%gpot%clean
       call this%hgpot%clean
       call this%gp%clean
-      call this%sgp%clean
-      call this%sgpm%clean
 
       if (allocated(this%q)) then
          do g = 1, ubound(this%q(:), dim=1)
@@ -511,14 +508,13 @@ contains
       type(named_array3d), allocatable, dimension(:) :: tmp
       integer :: i
 
-      if (this%exists(name)) then
-         write(msg, '(3a)')"[grid_container:add_na] Array '",trim(name),"' was already registered."
-         call die(msg)
-      endif
-
       if (.not. allocated(this%q)) then
          allocate(this%q(1))
       else
+         if (this%exists(name)) then
+            write(msg, '(3a)')"[grid_container:add_na] Array '",trim(name),"' was already registered."
+            call die(msg)
+         endif
          allocate(tmp(ubound(this%q(:), dim=1) + 1))
          tmp(:ubound(this%q(:), dim=1)) = this%q(:)
          call move_alloc(from=tmp, to=this%q)

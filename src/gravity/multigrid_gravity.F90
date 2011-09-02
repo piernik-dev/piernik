@@ -449,7 +449,7 @@ contains
 
       cgl => all_cg%first
       do while (associated(cgl))
-         cgl%cg%sgp%arr(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
+         cgl%cg%sgp(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
          cgl => cgl%nxt
       enddo
 
@@ -1218,7 +1218,7 @@ contains
             keb = 1
          endif
 
-         cg%sgp%arr(isb:ieb, jsb:jeb, ksb:keb) = roof%mgvar(:, :, :, solution)
+         cg%sgp(isb:ieb, jsb:jeb, ksb:keb) = roof%mgvar(:, :, :, solution)
 
          cgl => cgl%nxt
       enddo
@@ -1261,7 +1261,7 @@ contains
                keb = 1
             endif
 
-            cg%sgp%arr(isb:ieb, jsb:jeb, ksb:keb) = cg%sgp%arr(isb:ieb, jsb:jeb, ksb:keb) + roof%mgvar(:, :, :, solution)
+            cg%sgp(isb:ieb, jsb:jeb, ksb:keb) = cg%sgp(isb:ieb, jsb:jeb, ksb:keb) + roof%mgvar(:, :, :, solution)
 
             cgl => cgl%nxt
          enddo

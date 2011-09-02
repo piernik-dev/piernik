@@ -365,9 +365,9 @@ contains
       real(kind=4), dimension(:,:,:)    :: tab
       integer, intent(out)              :: ierrh
       type(grid_container), pointer, intent(in) :: cg
-
       type(component_fluid), pointer :: fl_dni
       integer :: i_xyz
+      real, dimension(:,:,:), pointer :: arr
 #ifdef COSM_RAYS
       integer :: i
       integer, parameter    :: auxlen = varlen - 1
@@ -418,7 +418,8 @@ contains
          case ("gpot")
             if (associated(cg%gpot%arr)) tab(:,:,:) = real(cg%gpot%arr(RNG), kind=4)
          case ("mgso")
-            if (associated(cg%sgp%arr))  tab(:,:,:) = real(cg%sgp%arr(RNG),  kind=4)
+            arr => cg%get_na_ptr(dname(SGP))
+            if (associated(arr))  tab(:,:,:) = real(arr(RNG),  kind=4)
          case default
             ierrh = -1
       end select
