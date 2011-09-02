@@ -65,12 +65,12 @@ contains
 
       if ( all(cg%bnd(xdim:ydim,LO:HI) == BND_PER) .and. all(cg%bnd(zdim,LO:HI) /= BND_PER) )  then ! Periodic in X and Y, nonperiodic in Z
 
-         call poisson_xyp(dens(cg%is:cg%ie, cg%js:cg%je,:), cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je,:), cg%dz)
+         call poisson_xyp(dens(cg%is:cg%ie, cg%js:cg%je,:), cg%sgp(cg%is:cg%ie, cg%js:cg%je,:), cg%dz)
 
          call die("[poissonsolver:poisson_solve] poisson_xyp called")
 
       elseif ( all(cg%bnd(xdim:zdim,LO:HI) == BND_PER) ) then ! Fully 3D periodic
-         call poisson_xyzp(dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg) !> \deprecated BEWARE: something may not be fully initialized here
+         call poisson_xyzp(dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg) !> \deprecated BEWARE: something may not be fully initialized here
 
 #ifdef SHEAR
       elseif ( all(cg%bnd(xdim,LO:HI) == BND_SHE) .and. all(cg%bnd(ydim,LO:HI) == BND_PER) ) then ! 2D shearing box
@@ -78,21 +78,21 @@ contains
          if (dimensions=='3d') then
             if (.not.allocated(temp)) allocate(temp(cg%nxb, cg%nyb, cg%nzb))
             temp = dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            call poisson_xyzp(temp(:,:,:), cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+            call poisson_xyzp(temp(:,:,:), cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 
-            cg%sgp%arr(:,:,1:cg%nb)        = cg%sgp%arr(:,:, cg%keb:cg%ke)
-            cg%sgp%arr(:,:, cg%ke+1:cg%nz) = cg%sgp%arr(:,:, cg%ks:cg%ksb)
+            cg%sgp(:,:,1:cg%nb)        = cg%sgp(:,:, cg%keb:cg%ke)
+            cg%sgp(:,:, cg%ke+1:cg%nz) = cg%sgp(:,:, cg%ks:cg%ksb)
 
          else
             call poisson_xy2d(dens(cg%is:cg%ie,   cg%js:cg%je,1), &
-                 &     cg%sgp%arr (cg%is:cg%ie,   cg%js:cg%je,1), &
-                 &     cg%sgp%arr (1:cg%nb,       cg%js:cg%je,1), &
-                 &     cg%sgp%arr (cg%is+1:cg%nx, cg%js:cg%je,1), &
+                 &     cg%sgp (cg%is:cg%ie,   cg%js:cg%je,1), &
+                 &     cg%sgp (1:cg%nb,       cg%js:cg%je,1), &
+                 &     cg%sgp (cg%is+1:cg%nx, cg%js:cg%je,1), &
                  &            cg%dx)
 
          endif
-         cg%sgp%arr(:,1:cg%nb,:)        = cg%sgp%arr(:, cg%jeb:cg%je,:)
-         cg%sgp%arr(:, cg%je+1:cg%ny,:) = cg%sgp%arr(:, cg%js:cg%jsb,:)
+         cg%sgp(:,1:cg%nb,:)        = cg%sgp(:, cg%jeb:cg%je,:)
+         cg%sgp(:, cg%je+1:cg%ny,:) = cg%sgp(:, cg%js:cg%jsb,:)
 
          if (allocated(temp)) deallocate(temp)
 #endif /* SHEAR */

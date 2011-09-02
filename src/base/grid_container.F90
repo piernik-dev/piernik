@@ -128,11 +128,6 @@ module grid_cont
 
       type(array3d) :: cs_iso2
       type(array3d) :: wa                       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
-      type(array3d) :: gpot                     !< Array for sum of gravitational potential at t += dt
-      type(array3d) :: hgpot                    !< Array for sum of gravitational potential at t += 0.5*dt
-      type(array3d) :: gp                       !< Array for gravitational potential from external fields
-!      type(array3d) :: sgp                      !< Array for gravitational potential from multigrid or FFT solver
-!      type(array3d) :: sgpm                     !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
 
       type(array4d) :: u                        !< Main array of all fluids' components
       type(array4d) :: uh                       !< Main array of all fluids' components (for t += dt/2)
@@ -144,7 +139,11 @@ module grid_cont
       type(named_array3d), allocatable, dimension(:) :: q
 
       ! handy shortcuts
-      real, dimension(:,:,:), pointer :: sgp, sgpm
+      real, dimension(:,:,:), pointer :: gpot   !< Array for sum of gravitational potential at t += dt
+      real, dimension(:,:,:), pointer :: hgpot  !< Array for sum of gravitational potential at t += 0.5*dt
+      real, dimension(:,:,:), pointer :: gp     !< Array for gravitational potential from external fields
+      real, dimension(:,:,:), pointer :: sgp    !< Array for gravitational potential from multigrid or FFT solver
+      real, dimension(:,:,:), pointer :: sgpm   !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
 
    contains
 
@@ -367,11 +366,6 @@ contains
 #ifdef ISO
       call this%cs_iso2%init(this%n_(:))
 #endif /* ISO */
-#ifdef GRAV
-      call this%gpot%init(this%n_(:))
-      call this%hgpot%init(this%n_(:))
-      call this%gp%init(this%n_(:))
-#endif /* GRAV */
 
    end subroutine init
 
@@ -477,9 +471,6 @@ contains
       endif
 
       call this%cs_iso2%clean
-      call this%gpot%clean
-      call this%hgpot%clean
-      call this%gp%clean
 
       if (allocated(this%q)) then
          do g = 1, ubound(this%q(:), dim=1)

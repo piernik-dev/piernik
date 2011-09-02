@@ -262,17 +262,17 @@ contains
          call multigrid_solve_grav(cg%u%arr(idni,:,:,:))
          if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence (extremely risky)
             if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
-               cg%sgp%arr = (cg%sgp%arr*cg%hgpot%arr - cg%gpot%arr**2)/(cg%sgp%arr + cg%hgpot%arr - 2.*cg%gpot%arr)
+               cg%sgp = (cg%sgp*cg%hgpot - cg%gpot**2)/(cg%sgp + cg%hgpot - 2.*cg%gpot)
                Ccomment = ' Exp warp'
                Clast(:) = 0. ; Clim = 0.
             else
                Ccomment = ''
             endif
          endif
-         cg%hgpot%arr = cg%gpot%arr
-         cg%gpot%arr  = cg%sgp%arr
+         cg%hgpot = cg%gpot
+         cg%gpot  = cg%sgp
 
-         Cint = [ minval(cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), maxval(cg%sgp%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) ] ! rotation will modify this
+         Cint = [ minval(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), maxval(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) ] ! rotation will modify this
 
          call MPI_Allreduce (MPI_IN_PLACE, Cint(LOW),  I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
          call MPI_Allreduce (MPI_IN_PLACE, Cint(HIGH), I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
@@ -412,7 +412,7 @@ contains
       ! final touch
       t = t_save ! restore initial time
       call multigrid_solve_grav(cg%u%arr(idni,:,:,:))
-      cg%gpot%arr = cg%sgp%arr
+      cg%gpot = cg%sgp
 
       where (cg%u%arr(idni, :, :, :) < smalld) cg%u%arr(idni, :, :, :) = smalld
       cg%u%arr(imxi, :, :, :) = clump_vel_x * cg%u%arr(idni,:,:,:)
@@ -473,7 +473,7 @@ contains
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
 !               TWPcg(1) = TWPcg(1) + cg%u%arr(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
-                  TWPcg(2) = TWPcg(2) + cg%u%arr(idni, i, j, k) * cg%sgp%arr(i, j, k) * 0.5 !W
+                  TWPcg(2) = TWPcg(2) + cg%u%arr(idni, i, j, k) * cg%sgp(i, j, k) * 0.5 !W
                   TWPcg(3) = TWPcg(3) + presrho(cg%u%arr(idni, i, j, k))             !P
                enddo
             enddo
@@ -540,9 +540,9 @@ contains
                do i = cg%is, cg%ie
                   select case (mode)
                      case (REL_CALC)
-                        totMEcg = totMEcg + rhoH(h(C, cg%sgp%arr(i,j,k)))
+                        totMEcg = totMEcg + rhoH(h(C, cg%sgp(i,j,k)))
                      case (REL_SET)
-                        rho = rhoH(h(C, cg%sgp%arr(i,j,k)))
+                        rho = rhoH(h(C, cg%sgp(i,j,k)))
                         cg%u%arr(idni, i, j, k) = rho
                         totMEcg = totME + rho
                   end select

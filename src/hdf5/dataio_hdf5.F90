@@ -336,7 +336,7 @@ contains
             tab(:,:) = reshape(cg%b%arr(ibx + i_xyz, is:ie, js:je, ks:ke), shape(tab))
 #ifdef GRAV
          case ("gpot")
-            tab(:,:) = reshape(cg%gpot%arr(is:ie, js:je, ks:ke), shape(tab))
+            tab(:,:) = reshape(cg%gpot(is:ie, js:je, ks:ke), shape(tab))
 #endif /* GRAV */
 #ifdef COSM_RAYS
          case ("ecr*")
@@ -367,7 +367,6 @@ contains
       type(grid_container), pointer, intent(in) :: cg
       type(component_fluid), pointer :: fl_dni
       integer :: i_xyz
-      real, dimension(:,:,:), pointer :: arr
 #ifdef COSM_RAYS
       integer :: i
       integer, parameter    :: auxlen = varlen - 1
@@ -416,10 +415,9 @@ contains
          case ("magx", "magy", "magz")
             tab(:,:,:) = real(cg%b%arr(ibx + i_xyz, RNG), kind=4)
          case ("gpot")
-            if (associated(cg%gpot%arr)) tab(:,:,:) = real(cg%gpot%arr(RNG), kind=4)
+            if (associated(cg%gpot)) tab(:,:,:) = real(cg%gpot(RNG), kind=4)
          case ("mgso")
-            arr => cg%get_na_ptr(dname(SGP))
-            if (associated(arr))  tab(:,:,:) = real(arr(RNG),  kind=4)
+            if (associated(cg%sgp))  tab(:,:,:) = real(cg%sgp(RNG),  kind=4)
          case default
             ierrh = -1
       end select
@@ -736,7 +734,7 @@ contains
          if (associated(problem_write_restart)) call problem_write_restart(file_id, cg)
 
          if (associated(cg%cs_iso2%arr)) call write_arr_to_restart(file_id, cg%cs_iso2%arr, AT_NO_B, dname(CS_ISO2), cg)
-         if (associated(cg%gp%arr))      call write_arr_to_restart(file_id, cg%gp%arr, AT_OUT_B, dname(GP), cg)
+         if (associated(cg%gp))      call write_arr_to_restart(file_id, cg%gp, AT_OUT_B, dname(GP), cg)
 
          ! Write fluids
          area_type = AT_NO_B
@@ -1321,7 +1319,7 @@ contains
          if (associated(problem_read_restart)) call problem_read_restart(file_id, cg)
 
          if (associated(cg%cs_iso2%arr)) call read_arr_from_restart(file_id, cg%cs_iso2%arr, AT_NO_B, dname(CS_ISO2), cg)
-         if (associated(cg%gp%arr))      call read_arr_from_restart(file_id, cg%gp%arr, AT_OUT_B, dname(GP), cg)
+         if (associated(cg%gp))      call read_arr_from_restart(file_id, cg%gp, AT_OUT_B, dname(GP), cg)
 
          !  READ FLUID VARIABLES
          if (associated(cg%u%arr)) call read_arr_from_restart(file_id, cg%u%arr, AT_NO_B, dname(FLUID), cg)

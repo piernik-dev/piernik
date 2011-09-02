@@ -273,11 +273,18 @@ contains
 #endif /* CORIOLIS */
       endif
 
+      ! Declare arrays for potential and make shortcuts
       cgl => all_cg%first
       do while (associated(cgl))
-         cgl%cg%gpot%arr(:,:,:) = 0.0
+         call cgl%cg%add_na("gpot") ! BEWARE: magic strings across multiple files
+         cgl%cg%gpot => cgl%cg%get_na_ptr("gpot")
+         cgl%cg%gpot(:,:,:) = 0.0
+         call cgl%cg%add_na("hgpot")
+         cgl%cg%hgpot => cgl%cg%get_na_ptr("hgpot")
+         call cgl%cg%add_na("gp")
+         cgl%cg%gp => cgl%cg%get_na_ptr("gp")
 #ifdef SELF_GRAV
-         call cgl%cg%add_na("sgp") ! BEWARE: magic strings across multiple files
+         call cgl%cg%add_na("sgp")
          cgl%cg%sgp => cgl%cg%get_na_ptr("sgp")
          call cgl%cg%add_na("sgpm")
          cgl%cg%sgpm => cgl%cg%get_na_ptr("sgpm")
@@ -379,13 +386,13 @@ contains
          if (has_dir(xdim)) then
             if (cg%bnd(xdim,LO) >= BND_OUT .and. cg%bnd(xdim,LO) <= BND_OUTH) then
                do i = 1, cg%nb+1
-                  cg%gp%arr(i,:,:)               = cg%gp%arr(cg%nb+2,:,:)
+                  cg%gp(i,:,:)               = cg%gp(cg%nb+2,:,:)
                enddo
             endif
 
             if (cg%bnd(xdim,HI) >= BND_OUT .and. cg%bnd(xdim,HI) <= BND_OUTH) then
                do i = 1, cg%nb+1
-                  cg%gp%arr(cg%n_(xdim)-cg%nb-1+i,:,:) = cg%gp%arr(cg%n_(xdim)-cg%nb-1,:,:)
+                  cg%gp(cg%n_(xdim)-cg%nb-1+i,:,:) = cg%gp(cg%n_(xdim)-cg%nb-1,:,:)
                enddo
             endif
          endif
@@ -393,13 +400,13 @@ contains
          if (has_dir(ydim)) then
             if (cg%bnd(ydim,LO) >= BND_OUT .and. cg%bnd(ydim,LO) <= BND_OUTH) then
                do i = 1, cg%nb+1
-                  cg%gp%arr(:,i,:)               = cg%gp%arr(:,cg%nb+2,:)
+                  cg%gp(:,i,:)               = cg%gp(:,cg%nb+2,:)
                enddo
             endif
 
             if (cg%bnd(ydim,HI) >= BND_OUT .and. cg%bnd(ydim,HI) <= BND_OUTH) then
                do i = 1, cg%nb+1
-                  cg%gp%arr(:,cg%n_(ydim)-cg%nb-1+i,:) = cg%gp%arr(:,cg%n_(ydim)-cg%nb-1,:)
+                  cg%gp(:,cg%n_(ydim)-cg%nb-1+i,:) = cg%gp(:,cg%n_(ydim)-cg%nb-1,:)
                enddo
             endif
          endif
@@ -407,13 +414,13 @@ contains
          if (has_dir(zdim)) then
             if (cg%bnd(zdim,LO) >= BND_OUT .and. cg%bnd(zdim,LO) <= BND_OUTH) then
                do i = 1, cg%nb+1
-                  cg%gp%arr(:,:,i)               = cg%gp%arr(:,:,cg%nb+2)
+                  cg%gp(:,:,i)               = cg%gp(:,:,cg%nb+2)
                enddo
             endif
 
             if (cg%bnd(zdim,HI) >= BND_OUT .and. cg%bnd(zdim,HI) <= BND_OUTH) then
                do i = 1, cg%nb+1
-                  cg%gp%arr(:,:,cg%n_(zdim)-cg%nb-1+i) = cg%gp%arr(:,:,cg%n_(zdim)-cg%nb-1)
+                  cg%gp(:,:,cg%n_(zdim)-cg%nb-1+i) = cg%gp(:,:,cg%n_(zdim)-cg%nb-1)
                enddo
             endif
          endif
@@ -447,12 +454,12 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 #ifdef SELF_GRAV
-         cg%gpot%arr  = cg%gp%arr + (one+h)     *cg%sgp -      h*cg%sgpm
-         cg%hgpot%arr = cg%gp%arr + (one+half*h)*cg%sgp - half*h*cg%sgpm
+         cg%gpot  = cg%gp + (one+h)     *cg%sgp -      h*cg%sgpm
+         cg%hgpot = cg%gp + (one+half*h)*cg%sgp - half*h*cg%sgpm
 #else /* !SELF_GRAV */
          !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
-         cg%gpot%arr  = cg%gp%arr
-         cg%hgpot%arr = cg%gp%arr
+         cg%gpot  = cg%gp
+         cg%hgpot = cg%gp
 #endif /* !SELF_GRAV */
          cgl => cgl%nxt
       enddo
@@ -781,26 +788,26 @@ contains
 
          select case (external_gp)
             case ("null", "grav_null", "GRAV_NULL")
-               call grav_null(cg%gp%arr,ax)                    ; grav_type => grav_null
+               call grav_null(cg%gp,ax)                    ; grav_type => grav_null
             case ("linear", "grav_lin", "GRAV_LINEAR")
-               call grav_linear(cg%gp%arr,ax)                  ; grav_type => grav_linear
+               call grav_linear(cg%gp,ax)                  ; grav_type => grav_linear
             case ("uniform", "grav_unif", "GRAV_UNIFORM")
-               call grav_uniform(cg%gp%arr,ax)                 ; grav_type => grav_uniform
+               call grav_uniform(cg%gp,ax)                 ; grav_type => grav_uniform
             case ("softened ptmass", "ptmass_soft", "GRAV_PTMASS")
-               call grav_ptmass_softened(cg%gp%arr,ax,.false.) ; grav_type => grav_ptmass_softened
+               call grav_ptmass_softened(cg%gp,ax,.false.) ; grav_type => grav_ptmass_softened
             case ("stiff ptmass", "ptmass_stiff", "GRAV_PTMASSSTIFF")
-               call grav_ptmass_stiff(cg%gp%arr,ax)            ; grav_type => grav_ptmass_stiff
+               call grav_ptmass_stiff(cg%gp,ax)            ; grav_type => grav_ptmass_stiff
             case ("ptmass", "ptmass_pure", "GRAV_PTMASSPURE")
-               call grav_ptmass_pure(cg%gp%arr,ax,.false.)     ; grav_type => grav_ptmass_pure
+               call grav_ptmass_pure(cg%gp,ax,.false.)     ; grav_type => grav_ptmass_pure
             case ("flat softened ptmass", "flat_ptmass_soft", "GRAV_PTFLAT")
-               call grav_ptmass_softened(cg%gp%arr,ax,.true.)  ; grav_type => grav_ptmass_softened
+               call grav_ptmass_softened(cg%gp,ax,.true.)  ; grav_type => grav_ptmass_softened
             case ("flat ptmass", "flat_ptmass")
-               call grav_ptmass_pure(cg%gp%arr,ax,.true.)      ; grav_type => grav_ptmass_pure
+               call grav_ptmass_pure(cg%gp,ax,.true.)      ; grav_type => grav_ptmass_pure
             case ("roche", "grav_roche", "GRAV_ROCHE")
 #ifndef CORIOLIS
                call die("[gravity:default_grav_pot_3d] define CORIOLIS in piernik.def for Roche potential")
 #endif /* !CORIOLIS */
-               call grav_roche(cg%gp%arr,ax)                   ; grav_type => grav_roche
+               call grav_roche(cg%gp,ax)                   ; grav_type => grav_roche
             case ("user", "grav_user", "GRAV_USER")
                call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
             case default
@@ -853,20 +860,20 @@ contains
 !      if (istep==1) then
 !         select case (sweep)
 !            case (xdim)
-!               grav(3:n-2) = onetw*(cg%hgpot%arr(5:n,i1,i2) - 8.*cg%hgpot%arr(4:n-1,i1,i2) + 8.*cg%hgpot%arr(2:n-3,i1,i2) - cg%hgpot%arr(1:n-4,i1,i2) )/dl(xdim)
+!               grav(3:n-2) = onetw*(cg%hgpot(5:n,i1,i2) - 8.*cg%hgpot(4:n-1,i1,i2) + 8.*cg%hgpot(2:n-3,i1,i2) - cg%hgpot(1:n-4,i1,i2) )/dl(xdim)
 !            case (ydim)
-!               grav(3:n-2) = onetw*(cg%hgpot%arr(i2,5:n,i1) - 8.*cg%hgpot%arr(i2,4:n-1,i1) + 8.*cg%hgpot%arr(i2,2:n-3,i1) - cg%hgpot%arr(i2,1:n-4,i1) )/dl(xdim)
+!               grav(3:n-2) = onetw*(cg%hgpot(i2,5:n,i1) - 8.*cg%hgpot(i2,4:n-1,i1) + 8.*cg%hgpot(i2,2:n-3,i1) - cg%hgpot(i2,1:n-4,i1) )/dl(xdim)
 !            case (zdim)
-!               grav(3:n-2) = onetw*(cg%hgpot%arr(i1,i2,5:n) - 8.*cg%hgpot%arr(i1,i2,4:n-1) + 8.*cg%hgpot%arr(i1,i2,2:n-3) - cg%hgpot%arr(i1,i2,1:n-4) )/dl(xdim)
+!               grav(3:n-2) = onetw*(cg%hgpot(i1,i2,5:n) - 8.*cg%hgpot(i1,i2,4:n-1) + 8.*cg%hgpot(i1,i2,2:n-3) - cg%hgpot(i1,i2,1:n-4) )/dl(xdim)
 !         end select
 !      else
 !         select case (sweep)
 !            case (xdim)
-!               grav(3:n-2) = onetw*(cg%gpot%arr(5:n,i1,i2) - 8.*cg%gpot%arr(4:n-1,i1,i2) + 8.*cg%gpot%arr(2:n-3,i1,i2) - cg%gpot%arr(1:n-4,i1,i2) )/dl(xdim)
+!               grav(3:n-2) = onetw*(cg%gpot(5:n,i1,i2) - 8.*cg%gpot(4:n-1,i1,i2) + 8.*cg%gpot(2:n-3,i1,i2) - cg%gpot(1:n-4,i1,i2) )/dl(xdim)
 !            case (ydim)
-!               grav(3:n-2) = onetw*(cg%gpot%arr(i2,5:n,i1) - 8.*cg%gpot%arr(i2,4:n-1,i1) + 8.*cg%gpot%arr(i2,2:n-3,i1) - cg%gpot%arr(i2,1:n-4,i1) )/dl(xdim)
+!               grav(3:n-2) = onetw*(cg%gpot(i2,5:n,i1) - 8.*cg%gpot(i2,4:n-1,i1) + 8.*cg%gpot(i2,2:n-3,i1) - cg%gpot(i2,1:n-4,i1) )/dl(xdim)
 !            case (zdim)
-!               grav(3:n-2) = onetw*(cg%gpot%arr(i1,i2,5:n) - 8.*cg%gpot%arr(i1,i2,4:n-1) + 8.*cg%gpot%arr(i1,i2,2:n-3) - cg%gpot%arr(i1,i2,1:n-4) )/dl(xdim)
+!               grav(3:n-2) = onetw*(cg%gpot(i1,i2,5:n) - 8.*cg%gpot(i1,i2,4:n-1) + 8.*cg%gpot(i1,i2,2:n-3) - cg%gpot(i1,i2,1:n-4) )/dl(xdim)
 !         end select
 !      endif
 !      grav(2) = grav(3); grav(n-1) = grav(n-2)
@@ -874,21 +881,21 @@ contains
       if (istep==1) then
          select case (sweep)
             case (xdim)
-               grav(2:n-1) = half*(cg%hgpot%arr(1:n-2,i1,i2) - cg%hgpot%arr(3:n,i1,i2))/cg%dl(xdim)
+               grav(2:n-1) = half*(cg%hgpot(1:n-2,i1,i2) - cg%hgpot(3:n,i1,i2))/cg%dl(xdim)
             case (ydim)
-               grav(2:n-1) = half*(cg%hgpot%arr(i2,1:n-2,i1) - cg%hgpot%arr(i2,3:n,i1))/cg%dl(ydim)
+               grav(2:n-1) = half*(cg%hgpot(i2,1:n-2,i1) - cg%hgpot(i2,3:n,i1))/cg%dl(ydim)
             case (zdim)
-               grav(2:n-1) = half*(cg%hgpot%arr(i1,i2,1:n-2) - cg%hgpot%arr(i1,i2,3:n))/cg%dl(zdim)
+               grav(2:n-1) = half*(cg%hgpot(i1,i2,1:n-2) - cg%hgpot(i1,i2,3:n))/cg%dl(zdim)
          end select
 
       else
          select case (sweep)
             case (xdim)
-               grav(2:n-1) = half*(cg%gpot%arr(1:n-2,i1,i2) - cg%gpot%arr(3:n,i1,i2))/cg%dl(xdim)
+               grav(2:n-1) = half*(cg%gpot(1:n-2,i1,i2) - cg%gpot(3:n,i1,i2))/cg%dl(xdim)
             case (ydim)
-               grav(2:n-1) = half*(cg%gpot%arr(i2,1:n-2,i1) - cg%gpot%arr(i2,3:n,i1))/cg%dl(ydim)
+               grav(2:n-1) = half*(cg%gpot(i2,1:n-2,i1) - cg%gpot(i2,3:n,i1))/cg%dl(ydim)
             case (zdim)
-               grav(2:n-1) = half*(cg%gpot%arr(i1,i2,1:n-2) - cg%gpot%arr(i1,i2,3:n))/cg%dl(zdim)
+               grav(2:n-1) = half*(cg%gpot(i1,i2,1:n-2) - cg%gpot(i1,i2,3:n))/cg%dl(zdim)
          end select
       endif
 
@@ -1019,7 +1026,7 @@ contains
       call MPI_Bcast(gp_max%val, I_ONE, MPI_DOUBLE_PRECISION, gp_max%proc, comm, ierr)
       gpwork = gpwork - gp_max%val
 
-      cg%gp%arr = gpwork
+      cg%gp = gpwork
       if (allocated(gpwork)) deallocate(gpwork)
 
       deallocate(gravrx)

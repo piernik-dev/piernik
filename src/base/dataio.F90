@@ -790,7 +790,7 @@ contains
       tot_momy = mpi_addmul(cg%u%arr(iarr_all_my, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
       tot_momz = mpi_addmul(cg%u%arr(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 #ifdef GRAV
-      tot_epot = mpi_addmul(cg%u%arr(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) * cg%gpot%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_epot = mpi_addmul(cg%u%arr(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) * cg%gpot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 #endif /* GRAV */
 
       cg%wa%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
@@ -1111,11 +1111,11 @@ contains
       if (has_dst) call get_common_vars(flind%dst)
 
 #ifdef VARIABLE_GP
-      cg%wa%arr(1:nxu,:,:) = abs((cg%gpot%arr(nxl:cg%n_(xdim),:,:)-cg%gpot%arr(1:nxu,:,:))*cg%idx) ; cg%wa%arr(cg%n_(xdim),:,:) = cg%wa%arr(nxu,:,:)
+      cg%wa%arr(1:nxu,:,:) = abs((cg%gpot(nxl:cg%n_(xdim),:,:)-cg%gpot(1:nxu,:,:))*cg%idx) ; cg%wa%arr(cg%n_(xdim),:,:) = cg%wa%arr(nxu,:,:)
       call get_extremum(p, MAXL, gpxmax, cg)
-      cg%wa%arr(:,1:nyu,:) = abs((cg%gpot%arr(:,nyl:cg%n_(ydim),:)-cg%gpot%arr(:,1:nyu,:))*cg%idy) ; cg%wa%arr(:,cg%n_(ydim),:) = cg%wa%arr(:,nyu,:)
+      cg%wa%arr(:,1:nyu,:) = abs((cg%gpot(:,nyl:cg%n_(ydim),:)-cg%gpot(:,1:nyu,:))*cg%idy) ; cg%wa%arr(:,cg%n_(ydim),:) = cg%wa%arr(:,nyu,:)
       call get_extremum(p, MAXL, gpymax, cg)
-      cg%wa%arr(:,:,1:nzu) = abs((cg%gpot%arr(:,:,nzl:cg%n_(zdim))-cg%gpot%arr(:,:,1:nzu))*cg%idz) ; cg%wa%arr(:,:,cg%n_(zdim)) = cg%wa%arr(:,:,nzu)
+      cg%wa%arr(:,:,1:nzu) = abs((cg%gpot(:,:,nzl:cg%n_(zdim))-cg%gpot(:,:,1:nzu))*cg%idz) ; cg%wa%arr(:,:,cg%n_(zdim)) = cg%wa%arr(:,:,nzu)
       call get_extremum(p, MAXL, gpzmax, cg)
 #endif /* VARIABLE_GP */
 
