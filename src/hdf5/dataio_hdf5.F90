@@ -40,7 +40,7 @@ module dataio_hdf5
 
 ! pulled by ANY
 
-   use constants,     only: FLUID, MAG, xdim, zdim
+   use constants,     only: FLUID, MAG, xdim, zdim, dsetnamelen
    use dataio_pub,    only: maxparfilelen, maxparfilelines
    use list_hdf5,     only: S_LEN
 
@@ -50,10 +50,15 @@ module dataio_hdf5
    public :: init_hdf5, read_restart_hdf5, cleanup_hdf5, write_hdf5, write_restart_hdf5, write_plot, write_arr_to_restart, read_arr_from_restart
    public :: parfile, parfilelines
 
-   integer, parameter :: dnamelen=5
    integer, parameter :: planelen = 2           !< length of plane names e.g. "xy", "yz", "rp" etc.
    character(len=planelen), dimension(xdim:zdim), parameter :: pl_id = [ "yz", "xz", "xy" ]
-   character(len=dnamelen), dimension(FLUID:MAG) :: dname = [ "fluid", "mag  " ]  !< dataset names for restart files
+
+   !< dataset names for restart files
+   enum, bind(C)
+      enumerator :: WA=MAG+1, GPOT, HGPOT, GP, SGP, SGPM, CS_ISO2, B0, U0
+   end enum
+   character(len=dsetnamelen), dimension(FLUID:U0), parameter :: dname = [ "fluid  ", "mag    ", "wa     ", "gpot   ", "hgpot  ", "gp     ", "sgp    ", &
+        &                                                                  "sgpm   ", "cs_iso2", "b0     ", "u0     "  ]
 
    character(len=S_LEN), allocatable, dimension(:) :: hdf_vars  !< dataset names for hdf files
    integer :: nhdf_vars !< number of quantities plotted to hdf files
@@ -728,8 +733,8 @@ contains
 
          if (associated(problem_write_restart)) call problem_write_restart(file_id, cg)
 
-         if (associated(cg%cs_iso2%arr)) call write_arr_to_restart(file_id, cg%cs_iso2%arr, AT_NO_B, "cs_iso2", cg)
-         if (associated(cg%gp%arr))      call write_arr_to_restart(file_id, cg%gp%arr, AT_OUT_B, "gp", cg)
+         if (associated(cg%cs_iso2%arr)) call write_arr_to_restart(file_id, cg%cs_iso2%arr, AT_NO_B, dname(CS_ISO2), cg)
+         if (associated(cg%gp%arr))      call write_arr_to_restart(file_id, cg%gp%arr, AT_OUT_B, dname(GP), cg)
 
          ! Write fluids
          area_type = AT_NO_B
@@ -1304,8 +1309,8 @@ contains
 
          if (associated(problem_read_restart)) call problem_read_restart(file_id, cg)
 
-         if (associated(cg%cs_iso2%arr)) call read_arr_from_restart(file_id, cg%cs_iso2%arr, AT_NO_B, "cs_iso2", cg)
-         if (associated(cg%gp%arr))      call read_arr_from_restart(file_id, cg%gp%arr, AT_OUT_B, "gp", cg)
+         if (associated(cg%cs_iso2%arr)) call read_arr_from_restart(file_id, cg%cs_iso2%arr, AT_NO_B, dname(CS_ISO2), cg)
+         if (associated(cg%gp%arr))      call read_arr_from_restart(file_id, cg%gp%arr, AT_OUT_B, dname(GP), cg)
 
          !  READ FLUID VARIABLES
          if (associated(cg%u%arr)) call read_arr_from_restart(file_id, cg%u%arr, AT_NO_B, dname(FLUID), cg)
@@ -1618,7 +1623,7 @@ contains
 
    subroutine write_grid_containter(cg, file_id, plist_id)
 
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR, INT4
+      use constants, only: xdim, ydim, zdim, ndims, dsetnamelen, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR, INT4
       use grid_cont, only: grid_container
       use hdf5,      only: HID_T, SIZE_T, HSIZE_T, H5T_NATIVE_INTEGER, H5T_STD_I8LE, H5T_NATIVE_DOUBLE, H5T_COMPOUND_F, &
            &               h5screate_simple_f, h5tarray_create_f, h5tget_size_f, h5tcreate_f, h5tinsert_f, h5dwrite_f, h5sclose_f, h5tclose_f, h5dclose_f, h5dcreate_f
@@ -1628,7 +1633,6 @@ contains
       type(grid_container), pointer, intent(in) :: cg
       integer(HID_T), intent(in)                :: file_id, plist_id
 
-      integer, parameter :: dsetnamelen = 10
       integer(SIZE_T), parameter :: n_int4 = 19, n_r8 = 14, n_nxarr_r8 = 4, n_nyarr_r8 = 4, n_nzarr_r8 = 4, &
          & n_ndims_r8 = 2, n_ndims_i4 =1, n_ndims_i8 = 1, n_ndims_lohi_i4 = 2
 
@@ -1774,43 +1778,43 @@ contains
       types(53) = arr3d_r8_t;          types_sizes(53) = arr3d_r8_ts;    types_names(53) = "gc_ydim"
       types(54) = arr3d_r8_t;          types_sizes(54) = arr3d_r8_ts;    types_names(54) = "gc_zdim"
 
-      types_names(55) = "wa"
+      types_names(55) = dname(WA)
       if (associated(cg%wa%arr)) then
          types(55) = arr3d_r8_t;          types_sizes(55) = arr3d_r8_ts
       else
          types(55) = H5T_NATIVE_INTEGER;  types_sizes(55) = int4_ts
       endif
-      types_names(56) = "gpot"
+      types_names(56) = dname(GPOT)
       if (associated(cg%gpot%arr)) then
          types(56) = arr3d_r8_t;          types_sizes(56) = arr3d_r8_ts
       else
          types(56) = H5T_NATIVE_INTEGER;  types_sizes(56) = int4_ts
       endif
-      types_names(57) = "hgpot"
+      types_names(57) = dname(HGPOT)
       if (associated(cg%hgpot%arr)) then
          types(57) = arr3d_r8_t;          types_sizes(57) = arr3d_r8_ts
       else
          types(57) = H5T_NATIVE_INTEGER;  types_sizes(57) = int4_ts
       endif
-      types_names(58) = "gp"
+      types_names(58) = dname(GP)
       if (associated(cg%gp%arr)) then
          types(58) = arr3d_r8_t;          types_sizes(58) = arr3d_r8_ts
       else
          types(58) = H5T_NATIVE_INTEGER;  types_sizes(58) = int4_ts
       endif
-      types_names(59) = "sgp"
+      types_names(59) = dname(SGP)
       if (associated(cg%sgp%arr)) then
          types(59) = arr3d_r8_t;          types_sizes(59) = arr3d_r8_ts
       else
          types(59) = H5T_NATIVE_INTEGER;  types_sizes(59) = int4_ts
       endif
-      types_names(60) = "sgpm"
+      types_names(60) = dname(SGPM)
       if (associated(cg%sgpm%arr)) then
          types(60) = arr3d_r8_t;          types_sizes(60) = arr3d_r8_ts
       else
          types(60) = H5T_NATIVE_INTEGER;  types_sizes(60) = int4_ts
       endif
-      types_names(61) = "cs_iso2"
+      types_names(61) = dname(CS_ISO2)
       if (associated(cg%cs_iso2%arr)) then
          types(61) = arr3d_r8_t;          types_sizes(61) = arr3d_r8_ts
       else
@@ -1818,7 +1822,7 @@ contains
       endif
 
       types(62) = ndims_arr4d_r8_t;    types_sizes(62) = ndims_arr4d_r8_ts;    types_names(62) = "b"
-      types_names(63) = "b0"
+      types_names(63) = dname(B0)
       if (associated(cg%b0%arr)) then
          types(63) = ndims_arr4d_r8_t;    types_sizes(63) = ndims_arr4d_r8_ts
       else
@@ -1827,7 +1831,7 @@ contains
 
       types(64) = u_arr4d_r8_t;        types_sizes(64) = u_arr4d_r8_ts;        types_names(64) = "u"
       types(65) = u_arr4d_r8_t;        types_sizes(65) = u_arr4d_r8_ts;        types_names(65) = "uh"
-      types_names(66) = "u0"
+      types_names(66) = dname(U0)
       if (associated(cg%u0%arr)) then
          types(66) = u_arr4d_r8_t;        types_sizes(66) = u_arr4d_r8_ts
       else
