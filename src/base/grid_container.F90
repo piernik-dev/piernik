@@ -32,7 +32,7 @@
 !<
 module grid_cont
 
-   use constants, only: xdim, zdim, ndims, LO, HI, BND, BLK, FLUID, ARR
+   use constants, only: dsetnamelen, xdim, zdim, ndims, LO, HI, BND, BLK, FLUID, ARR
    use types,     only: axes, array4d, array3d
 
    implicit none
@@ -56,6 +56,11 @@ module grid_cont
    type :: bnd_list
       type(bnd_segment), dimension(:), allocatable :: seg !< list of boundary segments to exchange
    end type bnd_list
+
+   !< A named array for user-defined variables, scalar fields and similar
+   type, extends(array3d):: named_array3d
+      character(len=dsetnamelen) :: name
+   end type named_array3d
 
    type, extends(axes) :: grid_container
       real    :: dx                             !< length of the %grid cell in x-direction
@@ -134,16 +139,28 @@ module grid_cont
       type(array4d) :: b0                       !< Copy of main array of magnetic field's components
       type(array4d) :: b                        !< Main array of magnetic field's components
 
+      !< Other 3D arrays (such as user-defined quantities or gravitational potential). The fourth index selects variable so it cannot be merged with u or b.
+      type(named_array3d), allocatable, dimension(:) :: q
+
    contains
 
       procedure :: init
       procedure :: cleanup
+      procedure :: add_na
+      procedure :: get_na_ptr
+      procedure :: get_na_ind
 
    end type grid_container
 
 contains
 
 !-----------------------------------------------------------------------------
+!>
+!! \brief Initialization of the grid container
+!!
+!! \details This method sets up the grid container variables, coordinates and allocates basic arrays
+!<
+
    subroutine init(this, dom, grid_n)
 
       use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, INVALID, I_ONE, I_TWO, BND_MPI, BND_SHE, BND_COR
@@ -389,7 +406,7 @@ contains
    end subroutine set_axis
 
 !>
-!! \brief Routines that deallocates directional meshes.
+!! \brief Routines that deallocates all internals of the grid container
 !<
 
    subroutine cleanup(this)
@@ -465,6 +482,106 @@ contains
       call this%sgp%clean
       call this%sgpm%clean
 
+      if (allocated(this%q)) then
+         do g = 1, ubound(this%q(:), dim=1)
+            call this%q(g)%clean
+         enddo
+         deallocate(this%q)
+      endif
+
    end subroutine cleanup
+
+!>
+!! \brief Register a new entry in current cg with given name.
+!!
+!! \warning You should call it for every grid_container so each of them has the same list of named arrays.
+!<
+
+   subroutine add_na(this, name)
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+      character(len=*), intent(in) :: name
+
+      type(named_array3d), allocatable, dimension(:) :: tmp
+      integer :: i
+
+      if (.not. allocated(this%q)) then
+         allocate(this%q(1))
+      else
+         allocate(tmp(ubound(this%q(:), dim=1) + 1))
+         tmp(:ubound(this%q(:), dim=1)) = this%q(:)
+         call move_alloc(from=tmp, to=this%q)
+      endif
+
+      i = ubound(this%q(:), dim=1)
+      this%q(i)%name = name
+      call this%q(i)%init(this%n_(:))
+
+   end subroutine add_na
+
+!>
+!! \brief Get the pointer to a named array of given name.
+!!
+!! \details This is the preferred method to access the registered array
+!<
+
+   function get_na_ptr(this, name) result(ptr)
+
+      use dataio_pub, only: die, warn
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+      character(len=*), intent(in) :: name
+
+      real, dimension(:,:,:), pointer :: ptr
+      integer :: i
+
+      ptr => null()
+
+      do i = 1, ubound(this%q, dim=1)
+         if (trim(name) ==  this%q(i)%name) then
+            if (associated(ptr)) call die("[grid_container:get_na_ptr] multiple entries with the same name")
+            ptr => this%q(i)%arr
+            exit
+         endif
+      enddo
+
+      if (.not. associated(ptr)) call warn("[grid_container:get_na_ptr] requested entry not found")
+
+   end function get_na_ptr
+
+!>
+!! \brief Get the index of a named array of given name.
+!!
+!! \details This method is provided for convenience only. Use get_na_ptr whenever possible.
+!<
+
+   function get_na_ind(this, name) result(ind)
+
+      use dataio_pub, only: die, warn
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+      character(len=*), intent(in) :: name
+
+      integer :: ind, i
+
+      ind = 0
+
+      do i = 1, ubound(this%q, dim=1)
+         if (trim(name) ==  this%q(i)%name) then
+            if (ind /= 0) call die("[grid_container:get_na_ind] multiple entries with the same name")
+            ind = i
+            exit
+         endif
+      enddo
+
+      if (ind == 0) call warn("[grid_container:get_na_ind] requested entry not found")
+
+   end function get_na_ind
 
 end module grid_cont
