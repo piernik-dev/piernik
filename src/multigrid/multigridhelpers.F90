@@ -141,7 +141,7 @@ contains
 
    subroutine vcycle_stats_init(vs, size)
 
-      use dataio_pub,    only: die, ierrh
+      use dataio_pub,    only: die
       use multigridvars, only: vcycle_stats
 
       implicit none
@@ -151,10 +151,7 @@ contains
 
       if (size > 0) then
          if (allocated(vs%factor) .or. allocated(vs%time)) call die("[multigridhelpers:vcycle_stats_init] vcycle_stats already allocated.")
-         allocate(vs%factor(0:size), stat=ierrh)
-         if (ierrh /= 0) call die("[multigridhelpers:vcycle_stats_init] Allocation error: vs%factor.")
-         allocate(vs%time(0:size), stat=ierrh)
-         if (ierrh /= 0) call die("[multigridhelpers:vcycle_stats_init] Allocation error: vs%time.")
+         allocate(vs%factor(0:size), vs%time(0:size))
       endif
 
       vs%factor(:)  = 0.

@@ -403,7 +403,6 @@ contains
 
       type(soln_history), pointer      :: os
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
-      integer, dimension(6)            :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
       integer :: i, j
       type(plvl), pointer :: curl
       type(cg_list_element), pointer :: cgl
@@ -432,12 +431,11 @@ contains
             if (associated(os)) then
                do i = 1, nold
                   if ( allocated(os%old(i)%soln) ) call die("[multigrid_gravity:init_multigrid_grav_post] os%old(:)%soln arrays already allocated")
-                  allocate( os%old(i)%soln( roof%n_(xdim), roof%n_(ydim), roof%n_(zdim)), stat=aerr(i) )
+                  allocate( os%old(i)%soln( roof%n_(xdim), roof%n_(ydim), roof%n_(zdim)))
                   mb_alloc = mb_alloc + size(os%old(i)%soln)
                   os%old(i)%time= -huge(1.0)
                   if (dirty_debug) os%old(i)%soln(:, :, :) = dirtyH
                enddo
-               if (any(aerr(1:nold) /= 0)) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: os%old(:)%soln")
                os%valid = .false.
                os%last  = 1
             endif
@@ -530,18 +528,14 @@ contains
             end select
 
             if (allocated(curl%Green3D) .or. allocated(curl%src)) call die("[multigrid_gravity:init_multigrid_grav_post] Green3D or src arrays already allocated")
-            allocate(curl%Green3D(curl%nxc, curl%nyb, curl%nzb), stat=aerr(1))
-            allocate(curl%src    (curl%nxb, curl%nyb, curl%nzb), stat=aerr(2))
-            if (any(aerr(1:2) /= 0)) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: curl%Green3D or curl%src.")
+            allocate(curl%Green3D(curl%nxc, curl%nyb, curl%nzb))
+            allocate(curl%src    (curl%nxb, curl%nyb, curl%nzb))
             mb_alloc = mb_alloc + size(curl%Green3D) + size(curl%src)
 
             if (allocated(kx)) deallocate(kx)
             if (allocated(ky)) deallocate(ky)
             if (allocated(kz)) deallocate(kz)
-            allocate(kx(curl%nxc), stat=aerr(1))
-            allocate(ky(curl%nyb), stat=aerr(2))
-            allocate(kz(curl%nzb), stat=aerr(3))
-            if (any(aerr(1:3) /= 0)) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: k[xyz]")
+            allocate(kx(curl%nxc), ky(curl%nyb), kz(curl%nzb))
 
             select case (curl%fft_type)
 
@@ -550,9 +544,8 @@ contains
 
                case (fft_rcr)
                   if (allocated(curl%fft)) call die("[multigrid_gravity:init_multigrid_grav_post] fft or Green3D array already allocated")
-                  allocate(curl%fft(curl%nxc, curl%nyb, curl%nzb), stat=aerr(1))
-                  if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: fft.")
-                  mb_alloc  = mb_alloc + 2*size(curl%fft)
+                  allocate(curl%fft(curl%nxc, curl%nyb, curl%nzb))
+                  mb_alloc = mb_alloc + 2*size(curl%fft)
 
                   curl%fft_norm = one / real( product(curl%n_b(:), mask=has_dir(:)) ) ! No 4 pi G factor here because the source was already multiplied by it
 
@@ -573,9 +566,8 @@ contains
                case (fft_dst)
 
                   if (allocated(curl%fftr)) call die("[multigrid_gravity:init_multigrid_grav_post] fftr array already allocated")
-                  allocate(curl%fftr(curl%nxc, curl%nyb, curl%nzb), stat=aerr(1))
-                  if (aerr(1) /= 0) call die("[multigrid_gravity:init_multigrid_grav_post] Allocation error: fftr.")
-                  mb_alloc  = mb_alloc + size(curl%fftr)
+                  allocate(curl%fftr(curl%nxc, curl%nyb, curl%nzb))
+                  mb_alloc = mb_alloc + size(curl%fftr)
 
                   curl%fft_norm = one / (8. * real( product(curl%n_b(:), mask=has_dir(:)) ))
                   kx(:) = curl%idx2 * (cos(pi/curl%nxb*[( j, j=1, curl%nxc )]) - one)

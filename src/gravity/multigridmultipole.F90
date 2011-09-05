@@ -123,7 +123,6 @@ contains
 
       real,                 intent(inout) :: mb_alloc               !< multigrid allocation counter
 
-      integer, dimension(4) :: aerr
       integer               :: l,m
 
       ! assume that Center of Mass is approximately in the center of computational domain by default
@@ -185,12 +184,9 @@ contains
       endif
 
       if (.not. use_point_monopole) then
+
          if (allocated(rn) .or. allocated(irn) .or. allocated(sfac) .or. allocated(cfac)) call die("[multipole:init_multipole] rn, irn, sfac or cfac already allocated")
-         allocate(  rn(0:lmax), stat=aerr(1))
-         allocate( irn(0:lmax), stat=aerr(2))
-         allocate(sfac(0:mmax), stat=aerr(3))
-         allocate(cfac(0:mmax), stat=aerr(4))
-         if (any(aerr(1:4) /= 0)) call die("[multipole:init_multipole] Allocation error: rn, irn sfac or cfac")
+         allocate(rn(0:lmax), irn(0:lmax), sfac(0:mmax), cfac(0:mmax))
          mb_alloc = mb_alloc + size(rn) + size(irn) + size(sfac) + size(cfac)
 
          select case (geometry_type)
@@ -210,11 +206,9 @@ contains
             case default
                call die("[multipole:init_multipole] Unsupported geometry.")
          end select
+
          if (allocated(k12) .or. allocated(ofact) .or. allocated(Q)) call die("[multipole:init_multipole] k12, ofact or Q already allocated")
-         allocate(   k12(2, 1:lmax, 0:mmax), stat=aerr(1))
-         allocate(ofact(0:lm(lmax, 2*mmax)), stat=aerr(2))
-         allocate(    Q(0:lm(lmax, 2*mmax), INSIDE:OUTSIDE, 0:rqbin), stat=aerr(3))
-         if (any(aerr(1:3) /= 0)) call die("[multipole:init_multipole] Allocation error: k12, ofact or Q")
+         allocate(k12(2, 1:lmax, 0:mmax), ofact(0:lm(lmax, 2*mmax)), Q(0:lm(lmax, 2*mmax), INSIDE:OUTSIDE, 0:rqbin))
          mb_alloc = mb_alloc + size(k12) + size(ofact) + size(Q)
 
          ofact(:) = 0. ! prevent FPE spurious exceptions in multipole:img_mass2moments

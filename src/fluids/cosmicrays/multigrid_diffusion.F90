@@ -235,11 +235,9 @@ contains
       implicit none
 
       real, intent(inout)              :: mb_alloc               !< Allocation counter
-      integer                          :: ierr
 
       if (allocated(norm_was_zero)) call die("[multigrid_diffusion:init_multigrid] norm_was_zero already allocated")
-      allocate(norm_was_zero(flind%crs%all), stat=ierr)
-      if (ierr /= 0) call die("[multigrid_diffusion:init_multigrid] Allocation error: norm_was_zero")
+      allocate(norm_was_zero(flind%crs%all))
       mb_alloc = mb_alloc + size(norm_was_zero)/2
       norm_was_zero(:) = .false.
 

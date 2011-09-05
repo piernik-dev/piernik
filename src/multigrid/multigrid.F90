@@ -103,7 +103,6 @@ contains
       integer               :: j, p
       logical, save         :: frun = .true.          !< First run flag
       real                  :: mb_alloc, min_m, max_m !< Allocation counter
-      integer, dimension(3) :: aerr                   !> \deprecated BEWARE: hardcoded magic integer. Update when you change number of simultaneous error checks
       type(plvl), pointer   :: curl                   !> current level (a pointer sliding along the linked list)
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
@@ -209,8 +208,7 @@ contains
 
       if (all_cg%cnt > 1) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial lvl
 
-      allocate(lvl(level_min:level_min+level_max-1), stat=aerr(1))
-      if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: lvl")
+      allocate(lvl(level_min:level_min+level_max-1))
       mb_alloc = mb_alloc + size(lvl)
 
       ! handy shortcuts
@@ -319,25 +317,20 @@ contains
 
          ! data storage
          !> \deprecated BEWARE prolong_x and %prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
-         if ( allocated(curl%prolong_x) .or. allocated(curl%prolong_xy) .or. allocated(curl%mgvar) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
-         allocate( curl%mgvar     (curl%n_(xdim), curl%n_(ydim),        curl%n_(zdim),        ngridvars), stat=aerr(1) )
-         allocate( curl%prolong_xy(curl%n_(xdim), curl%n_(ydim),        curl%nzb/2+2*curl%nb),            stat=aerr(2) )
-         allocate( curl%prolong_x (curl%n_(xdim), curl%nyb/2+2*curl%nb, curl%nzb/2+2*curl%nb),            stat=aerr(3) )
-         if (any(aerr(1:3) /= 0)) call die("[multigrid:init_multigrid] Allocation error: curl%*")
-         if ( .not. allocated(curl%prolong_x) .or. .not. allocated(curl%prolong_xy) .or. .not. allocated(curl%mgvar) ) &
-              call die("[multigrid:init_multigrid] some multigrid arrays not allocated")
+         if (allocated(curl%prolong_x) .or. allocated(curl%prolong_xy) .or. allocated(curl%mgvar) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
+         allocate(curl%mgvar     (curl%n_(xdim), curl%n_(ydim),        curl%n_(zdim),        ngridvars))
+         allocate(curl%prolong_xy(curl%n_(xdim), curl%n_(ydim),        curl%nzb/2+2*curl%nb))
+         allocate(curl%prolong_x (curl%n_(xdim), curl%nyb/2+2*curl%nb, curl%nzb/2+2*curl%nb))
          mb_alloc  = mb_alloc + size(curl%prolong_x) + size(curl%prolong_xy) + size(curl%mgvar)
 
          if ( allocated(curl%bnd_x) .or. allocated(curl%bnd_y) .or. allocated(curl%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
-         allocate( curl%bnd_x(curl%js:curl%je, curl%ks:curl%ke, LO:HI), stat=aerr(1) )
-         allocate( curl%bnd_y(curl%is:curl%ie, curl%ks:curl%ke, LO:HI), stat=aerr(2) )
-         allocate( curl%bnd_z(curl%is:curl%ie, curl%js:curl%je, LO:HI), stat=aerr(3) )
-         if (any(aerr(1:3) /= 0)) call die("[multigrid:init_multigrid] Allocation error: curl%bnd_?")
+         allocate(curl%bnd_x(curl%js:curl%je, curl%ks:curl%ke, LO:HI))
+         allocate(curl%bnd_y(curl%is:curl%ie, curl%ks:curl%ke, LO:HI))
+         allocate(curl%bnd_z(curl%is:curl%ie, curl%js:curl%je, LO:HI))
          mb_alloc  = mb_alloc + size(curl%bnd_x) + size(curl%bnd_y) + size(curl%bnd_z)
 
          if (allocated(curl%mmbc)) call die("[multigrid:init_multigrid] multigrid mmbc already allocated")
-         allocate( curl%mmbc(xdim:zdim, LO:HI, BND:BLK, curl%nb), stat=aerr(1) )
-         if (aerr(1) /= 0) call die("[multigrid:init_multigrid] Allocation error: curl%mmbc")
+         allocate(curl%mmbc(xdim:zdim, LO:HI, BND:BLK, curl%nb))
          mb_alloc  = mb_alloc + size(curl%mmbc)/2
 
          ! array initialization
