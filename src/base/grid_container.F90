@@ -135,13 +135,13 @@ module grid_cont
       !< Other 3D arrays (such as user-defined quantities or gravitational potential). The fourth index selects variable so it cannot be merged with u or b.
       type(named_array3d), allocatable, dimension(:) :: q
       ! handy shortcuts to some entries in q(:)
-      real, dimension(:,:,:), pointer :: gpot    !< Array for sum of gravitational potential at t += dt
-      real, dimension(:,:,:), pointer :: hgpot   !< Array for sum of gravitational potential at t += 0.5*dt
-      real, dimension(:,:,:), pointer :: gp      !< Array for gravitational potential from external fields
-      real, dimension(:,:,:), pointer :: sgp     !< Array for gravitational potential from multigrid or FFT solver
-      real, dimension(:,:,:), pointer :: sgpm    !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
-      real, dimension(:,:,:), pointer :: cs_iso2
-      real, dimension(:,:,:), pointer :: wa      !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+      real, dimension(:,:,:), pointer :: gpot    => null() !< Array for sum of gravitational potential at t += dt
+      real, dimension(:,:,:), pointer :: hgpot   => null() !< Array for sum of gravitational potential at t += 0.5*dt
+      real, dimension(:,:,:), pointer :: gp      => null() !< Array for gravitational potential from external fields
+      real, dimension(:,:,:), pointer :: sgp     => null() !< Array for gravitational potential from multigrid or FFT solver
+      real, dimension(:,:,:), pointer :: sgpm    => null() !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
+      real, dimension(:,:,:), pointer :: cs_iso2 => null()
+      real, dimension(:,:,:), pointer :: wa      => null() !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 
    contains
 
