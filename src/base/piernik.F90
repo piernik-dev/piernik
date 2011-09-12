@@ -178,22 +178,24 @@ contains
 !<
    subroutine init_piernik
 
-      use units,                 only: init_units
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC
       use dataio,                only: init_dataio, write_data
       use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, code_progress
       use domain,                only: init_domain
-      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_BASE, PIERNIK_INIT_ARRAYS, PIERNIK_INIT_IO_IC
       use diagnostics,           only: diagnose_arrays, check_environment
       use fluidboundaries,       only: all_fluid_boundaries
-      use fluidboundaries_pub,   only: init_fluidboundaries
+      use fluidboundaries_pub,   only: init_default_fluidboundaries
       use fluidindex,            only: flind
+      use func,                  only: sanitize_smallx_checks
       use global,                only: init_global
-      use grid,                  only: init_grid, init_arrays, grid_mpi_boundaries_prep
-      use initfluids,            only: init_fluids, sanitize_smallx_checks
+      use grid,                  only: init_grid, grid_mpi_boundaries_prep
       use gridgeometry,          only: init_geometry
+      use initfluids,            only: init_fluids
+      use interactions,          only: init_interactions
       use initproblem,           only: init_prob, read_problem_par, problem_pointers
       use mpisetup,              only: init_mpi
       use timestep,              only: init_time_step
+      use units,                 only: init_units
 #ifdef MAGNETIC
       use magboundaries,         only: all_mag_boundaries
 #ifdef RESISTIVE
@@ -206,7 +208,6 @@ contains
 #ifdef GRAV
       use gravity,               only: init_grav, grav_pot_3d, grav_pot_3d_called, source_terms_grav, grav_pot_3d_bnd
 #endif /* GRAV */
-      use interactions,          only: init_interactions
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid
 #endif /* MULTIGRID */
@@ -222,6 +223,7 @@ contains
 #ifdef COSM_RAYS
       use crdiffusion,           only: init_crdiffusion
 #endif /* COSM_RAYS */
+
       implicit none
 
       call parse_cmdline
@@ -230,43 +232,38 @@ contains
 
       ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
       call init_mpi
-
+      code_progress = PIERNIK_INIT_MPI ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_GRID can be reshuffled when necessary
       call check_environment
 
-      code_progress = PIERNIK_INIT_MPI ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_BASE can be reshuffled when necessary
 #ifdef DEBUG
       call init_piernikdebug ! Make it available as early as possible - right after init_mpi
 #endif /* DEBUG */
 
       call problem_pointers ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
 
+      call init_units
+
+      call init_default_fluidboundaries
+
       call init_global
-
-      call init_domain
-
-      code_progress = PIERNIK_INIT_DOMAIN ! Base domain is known and initial domain decomposition is known
-
-      call init_grid         ! Most of the cg's vars are now initialized, only arrays left
+      code_progress = PIERNIK_INIT_GLOBAL ! Global parameters are set up
 
       call init_time_step
 
-      call init_units
-
-      call init_fluidboundaries
-
       call init_fluids
+      code_progress = PIERNIK_INIT_FLUIDS ! Fluid properties are set up
 
-      call init_interactions
+      call init_interactions ! requires flind and units
 
-      code_progress = PIERNIK_INIT_BASE      ! Now we can initialize things that depend on all the above fundamental calls
+      call init_domain
+      code_progress = PIERNIK_INIT_DOMAIN ! Base domain is known and initial domain decomposition is known
 
-      call init_arrays(flind) ! depends on grid and fluids
+      call init_grid         ! Most of the cg's vars are now initialized, only arrays left
+      code_progress = PIERNIK_INIT_GRID      ! Now we can initialize things that depend on all the above fundamental calls
 
 #ifdef COSM_RAYS
       call init_crdiffusion(flind%crs%all) ! depends on grid and fluids
 #endif /* COSM_RAYS */
-
-      code_progress = PIERNIK_INIT_ARRAYS    ! It looks that init_arrays can be delayed if necessary
 
       call init_geometry ! depends on grid
 

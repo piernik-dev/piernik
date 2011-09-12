@@ -96,12 +96,12 @@ contains
    subroutine init_geometry
 
       use dataio_pub, only: msg, die, code_progress
-      use constants,  only: PIERNIK_INIT_BASE, GEO_XYZ, GEO_RPZ
+      use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ, GEO_RPZ
       use domain,     only: geometry_type
 
       implicit none
 
-      if (code_progress < PIERNIK_INIT_BASE) call die("[gridgeometry:init_geometry] grid not initialized")
+      if (code_progress < PIERNIK_INIT_GRID) call die("[gridgeometry:init_geometry] grid not initialized")
 
       select case (geometry_type)
          case (GEO_XYZ)

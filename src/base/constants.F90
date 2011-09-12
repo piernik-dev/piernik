@@ -101,9 +101,10 @@ module constants
    enum, bind(C)
       enumerator :: PIERNIK_START                        ! before initialization
       enumerator :: PIERNIK_INIT_MPI                     ! initialized MPI
+      enumerator :: PIERNIK_INIT_GLOBAL                  ! initialized global parameters
+      enumerator :: PIERNIK_INIT_FLUIDS                  ! initialized fluid properties
       enumerator :: PIERNIK_INIT_DOMAIN                  ! initialized domain
-      enumerator :: PIERNIK_INIT_BASE                    ! initialized most fundamental modules that depend only on MPI: constants, grid, fluids, etc.
-      enumerator :: PIERNIK_INIT_ARRAYS                  ! initialized arrays
+      enumerator :: PIERNIK_INIT_GRID                    ! initialized grids
       enumerator :: PIERNIK_INIT_IO_IC                   ! initialized all physics
       enumerator :: PIERNIK_INITIALIZED                  ! initialized I/O and IC, running
       enumerator :: PIERNIK_FINISHED                     ! finished simulation

@@ -153,7 +153,7 @@ contains
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun    ! QA_WARN required for diff_nml
       use dataio_pub,    only: printinfo, warn, die, code_progress
-      use constants,     only: PIERNIK_INIT_ARRAYS
+      use constants,     only: PIERNIK_INIT_GRID
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,         only: newtong
@@ -170,7 +170,7 @@ contains
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target, variable_gp
 
-      if (code_progress < PIERNIK_INIT_ARRAYS) call die("[gravity:init_grav] units or arrays not initialized.")
+      if (code_progress < PIERNIK_INIT_GRID) call die("[gravity:init_grav] units or arrays not initialized.")
 
 #ifdef VERBOSE
       if (master) call printinfo("[gravity:init_grav] Commencing gravity module initialization")

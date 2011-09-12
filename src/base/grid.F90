@@ -43,7 +43,7 @@ module grid
    implicit none
 
    private
-   public :: init_grid, init_arrays, grid_mpi_boundaries_prep, cleanup_grid
+   public :: init_grid, grid_mpi_boundaries_prep, cleanup_grid
    public :: all_cg !, base, leafs, levels
 
    type(cg_list), protected :: all_cg    !< all grid containers
@@ -54,22 +54,28 @@ module grid
 contains
 
 !>
-!! \brief Routine which sets numbers of cells for the domain, MPI blocks and initializes direction meshes (x,y,z).
-!! Also compute domain maximum and minimum of coordinates, lengths of cells and coordinates of zone centers and left/right zone boundaries.
-!!
+!! \brief Routine that allocates all grid containers and most important field arrays inside gc's
 !<
    subroutine init_grid
 
-      use constants,  only: PIERNIK_INIT_DOMAIN
-      use dataio_pub, only: printinfo, die, code_progress
-      use domain,     only: dom
-      use mpisetup,   only: proc
+      use constants,   only: PIERNIK_INIT_DOMAIN, ndims, zdim
+      use dataio_pub,  only: printinfo, die, code_progress
+      use diagnostics, only: my_allocate
+      use domain,      only: dom
+      use fluidindex,  only: flind
+      use gc_list,     only: cg_list_element
+      use global,      only: repeat_step
+      use grid_cont,   only: grid_container
+      use mpisetup,    only: proc
 
       implicit none
 
       integer :: g
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
+      integer(kind=4), dimension(:), allocatable :: ind_arr
 
-      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] MPI not initialized.")
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: commencing...")
@@ -87,34 +93,8 @@ contains
       enddo
 
 #ifdef VERBOSE
-      call printinfo("[grid:init_grid]: finished. \o/")
+      call printinfo("[grid:init_grid]: all_cg finished. \o/")
 #endif /* VERBOSE */
-
-   end subroutine init_grid
-
-!>
-!! Routine that allocates all arrays
-!<
-
-   subroutine init_arrays(flind)
-
-      use constants,   only: PIERNIK_INIT_BASE, ndims, zdim
-      use diagnostics, only: my_allocate
-      use dataio_pub,  only: die, code_progress
-      use global,      only: repeat_step
-      use fluidtypes,  only: var_numbers
-      use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-
-      implicit none
-
-      type(var_numbers), intent(in)  :: flind !< fluid database; cannot use fluidindex::flind here due to circular dependencies in some setups
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-      integer(kind=4), dimension(:), allocatable :: ind_arr
-
-      if (code_progress < PIERNIK_INIT_BASE) call die("[arrays:init_arrays] grid or fluids not initialized.")
-
 
       cgl => all_cg%first
       do while (associated(cgl))
@@ -144,7 +124,23 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine init_arrays
+#ifdef ISO
+      if (all_cg%cnt > 1) call die("[grid:init_cs_iso2] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         call cgl%cg%add_na("cs_iso2") ! BEWARE: magic string across multiple files
+         cgl%cg%cs_iso2 => cgl%cg%get_na_ptr("cs_iso2")
+         cgl%cg%cs_iso2(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
+         cgl => cgl%nxt
+      enddo
+#endif /* ISO */
+
+#ifdef VERBOSE
+      call printinfo("[grid:init_grid]: cg finished. \o/")
+#endif /* VERBOSE */
+
+   end subroutine init_grid
 
 !>
 !! \brief deallocate everything
@@ -192,7 +188,7 @@ contains
 
    subroutine grid_mpi_boundaries_prep(numfluids, numcrs)
 
-      use constants,  only: PIERNIK_INIT_BASE, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID, I_ONE
+      use constants,  only: PIERNIK_INIT_GRID, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID, I_ONE
       use dataio_pub, only: die, code_progress
       use domain,     only: has_dir, dom, is_overlap, cdd
       use gc_list,    only: cg_list_element
@@ -216,7 +212,7 @@ contains
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer, bp_layer, poff
       logical :: sharing
 
-      if (code_progress < PIERNIK_INIT_BASE) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
+      if (code_progress < PIERNIK_INIT_GRID) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
       if (all_cg%cnt > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process not implemented yet")
 
       nc = [ numfluids, ndims, max(numcrs,I_ONE), I_ONE ]      !< number of fluids, magnetic field components, CRs, and 1 for rank-3 array

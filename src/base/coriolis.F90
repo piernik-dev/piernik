@@ -51,13 +51,13 @@ contains
 
    subroutine init_coriolis
 
-      use constants,  only: PIERNIK_INIT_BASE, GEO_XYZ
+      use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ
       use dataio_pub, only: die, code_progress
       use domain,     only: geometry_type
 
       implicit none
 
-      if (code_progress < PIERNIK_INIT_BASE) call die("[coriolis:init_coriolis] grid not initialized.") ! this is a weak check, the real dependency is init_geometry at the moment
+      if (code_progress < PIERNIK_INIT_GRID) call die("[coriolis:init_coriolis] grid not initialized.") ! this is a weak check, the real dependency is init_geometry at the moment
 
       if (omega_uninitialized) coriolis_omega = 0.
 

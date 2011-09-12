@@ -68,7 +68,7 @@ contains
 
       use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use dataio_pub,     only: printinfo, die, code_progress
-      use constants,      only: PIERNIK_INIT_BASE
+      use constants,      only: PIERNIK_INIT_GRID
       use mpisetup,       only: ierr, master, slave, rbuff, buffer_dim, comm, FIRST
       use mpi,            only: MPI_DOUBLE_PRECISION
       use fluidindex,     only: flind
@@ -78,7 +78,7 @@ contains
 
       namelist /SHEARING/ omega, qshear, eta_gas, csvk
 
-      if (code_progress < PIERNIK_INIT_BASE) call die("[shear:init_shear] fluids not initialized.")
+      if (code_progress < PIERNIK_INIT_GRID) call die("[shear:init_shear] fluids not initialized.")
 
 #ifdef VERBOSE
       call printinfo("[shear:init_shear]: commencing...")

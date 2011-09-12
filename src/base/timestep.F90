@@ -51,13 +51,13 @@ contains
 
    subroutine init_time_step
 
-      use constants,  only: PIERNIK_INIT_DOMAIN
+      use constants,  only: PIERNIK_INIT_GLOBAL
       use dataio_pub, only: msg, die, warn, code_progress
       use global,     only: cflcontrol
 
       implicit none
 
-      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] MPI not initialized.") ! cflcontrol
+      if (code_progress < PIERNIK_INIT_GLOBAL) call die("[grid:init_grid] globals not initialized.")
 
       if (associated(cfl_manager)) call die("[timestep:init_time_step] cfl_manager already associated.")
       select case (cflcontrol)

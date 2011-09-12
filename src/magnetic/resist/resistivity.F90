@@ -94,7 +94,7 @@ contains
 !<
    subroutine init_resistivity
 
-      use constants,  only: PIERNIK_INIT_BASE, zdim, xdim, ydim
+      use constants,  only: PIERNIK_INIT_GRID, zdim, xdim, ydim
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress
       use domain,     only: eff_dim, has_dir
@@ -110,7 +110,7 @@ contains
 
       namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
 
-      if (code_progress < PIERNIK_INIT_BASE) call die("[resistivity:init_resistivity] grid not initialized.")
+      if (code_progress < PIERNIK_INIT_GRID) call die("[resistivity:init_resistivity] grid not initialized.")
 
       cfl_resist   = 0.4
       eta_0        = 0.0

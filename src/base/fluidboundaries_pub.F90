@@ -32,7 +32,7 @@ module fluidboundaries_pub
    implicit none
 
    private
-   public :: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, init_fluidboundaries, &
+   public :: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, init_default_fluidboundaries, &
       & func_bnd_xl, func_bnd_xr
 
    interface
@@ -70,23 +70,33 @@ contains
 
    end subroutine default_bnd
 !--------------------------------------------------------------------------------------------------
-   subroutine init_fluidboundaries
+   subroutine init_default_fluidboundaries
+
+      use constants,  only: PIERNIK_INIT_MPI
+      use dataio_pub, only: code_progress, die
 #ifdef VERBOSE
-      use dataio_pub,    only: printinfo
+      use dataio_pub, only: printinfo
 #endif /* VERBOSE */
+
       implicit none
+
+      if (code_progress < PIERNIK_INIT_MPI) call die("[fluidboundaries_pub:init_default_fluidboundaries] MPI not initialized.")
+
 #ifdef VERBOSE
-      call printinfo("[fluidboundaries_pub:init_fluidboundaries]: commencing...")
+      call printinfo("[fluidboundaries_pub:init_default_fluidboundaries]: commencing...")
 #endif /* VERBOSE */
+
       user_bnd_xl => default_bnd
       user_bnd_xr => default_bnd
       user_bnd_yl => default_bnd
       user_bnd_yr => default_bnd
       user_bnd_zl => default_bnd
       user_bnd_zr => default_bnd
+
 #ifdef VERBOSE
-      call printinfo("[fluidboundaries_pub:init_fluidboundaries]: finished. \o/")
+      call printinfo("[fluidboundaries_pub:init_default_fluidboundaries]: finished. \o/")
 #endif /* VERBOSE */
-   end subroutine init_fluidboundaries
+
+   end subroutine init_default_fluidboundaries
 
 end module fluidboundaries_pub

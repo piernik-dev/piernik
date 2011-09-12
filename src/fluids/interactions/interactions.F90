@@ -84,7 +84,7 @@ contains
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, code_progress
-      use constants,     only: PIERNIK_INIT_MPI
+      use constants,     only: PIERNIK_INIT_FLUIDS
       use mpisetup,      only: master, slave, lbuff, rbuff, buffer_dim, ierr, comm, FIRST!, grace_period_passed
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
       use units,         only: cm, gram
@@ -94,7 +94,7 @@ contains
 
       namelist /INTERACTIONS/ collision_factor, cfl_interact, dragc_gas_dust, has_interactions, grain_size, grain_dens
 
-      if (code_progress < PIERNIK_INIT_MPI) call die("[interactions:init_interactions] MPI not initialized.")
+      if (code_progress < PIERNIK_INIT_FLUIDS) call die("[interactions:init_interactions] fluids not initialized.")
 
       collision_factor  = 0.0
       cfl_interact      = 0.8

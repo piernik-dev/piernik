@@ -71,7 +71,7 @@ contains
 !<
    subroutine init_snsources
 
-      use constants,      only: PIERNIK_INIT_BASE, xdim, ydim
+      use constants,      only: PIERNIK_INIT_GRID, xdim, ydim
       use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
       use domain,         only: has_dir, dom
@@ -81,7 +81,7 @@ contains
 
       implicit none
 
-      if (code_progress < PIERNIK_INIT_BASE) call die("[snsources:init_snsources] grid or fluids/cosmicrays not initialized.")
+      if (code_progress < PIERNIK_INIT_GRID) call die("[snsources:init_snsources] grid or fluids/cosmicrays not initialized.")
 
 !      amp_ecr_sn = 0.0    !> \todo set sane default values
       f_sn       = 0.0    !
