@@ -1,4 +1,4 @@
-#define _MACROS_H_VERSION_STR "$Id$"
+#define _MACROS_H_VERSION_STR '$Id$'
 /*
 
   The diff_nml macro is a workaround (DIRTY HACK)

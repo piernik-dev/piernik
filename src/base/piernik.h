@@ -1,4 +1,4 @@
-#define _PIERNIK_H_VERSION_STR "$Id$"
+#define _PIERNIK_H_VERSION_STR '$Id'
 #include "piernik.def"
 
 #if ( defined(MULTIGRID) || defined(POISSON_FFT) ) && defined(GRAV)
