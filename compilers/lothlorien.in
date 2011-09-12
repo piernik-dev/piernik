@@ -19,7 +19,7 @@ F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-le
 F90FLAGS += -O3 -funroll-loops
 F90FLAGS += -fno-realloc-lhs
 F90FLAGS += -Wall -Wextra -W -fbacktrace -ggdb
-#F90FLAGS += -fbounds-check -Wsurprising -Wcharacter-truncation -ffpe-trap=invalid,zero,overflow,denormal -pedantic
+F90FLAGS += -fbounds-check -frange-check -Wsurprising -Wcharacter-truncation -ffpe-trap=invalid,zero,overflow,denormal -pedantic
 LDFLAGS   = -Wl,--as-needed -Wl,-O1
 USE_GNUCPP = yes
 MAKEFLAGS += -j4
