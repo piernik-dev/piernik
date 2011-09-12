@@ -119,7 +119,7 @@ env.dat: piernik.def *.h $(SRCS_V)
 '''
 
 head_block2='''
-\tsed -n '/Id:/p' *.h $(SRCS_V) | column -t; \\
+\tawk -F"$$" '/Id:/ {print $$2}' *.h $(SRCS_V) | column -t; \\
 \tawk '{print}' piernik.def | sed -e '/^$$/ d' -e "/^\// d" ) > env.dat
 
 version.F90: env.dat
