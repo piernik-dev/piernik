@@ -139,7 +139,11 @@ module constants
 
    ! Handling boundary cells in the output
    enum, bind(C)
-      enumerator :: AT_NO_B, AT_OUT_B, AT_ALL_B, AT_USER !< No boundary cells, external boundary cells and all boundary cells in the output, and user defined area type
+      enumerator :: AT_IGNORE       !< no output
+      enumerator :: AT_NO_B         !< no boundary cells
+      enumerator :: AT_OUT_B        !< external boundary cells
+      enumerator :: AT_ALL_B        !< all boundary cells
+      enumerator :: AT_USER         !< user defined area type
    end enum
 
    ! Fluid type index, used in flind%tag

@@ -153,7 +153,7 @@ contains
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun    ! QA_WARN required for diff_nml
       use dataio_pub,    only: printinfo, warn, die, code_progress
-      use constants,     only: PIERNIK_INIT_GRID
+      use constants,     only: PIERNIK_INIT_GRID, AT_OUT_B
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,         only: newtong
@@ -281,7 +281,7 @@ contains
          cgl%cg%gpot(:,:,:) = 0.0
          call cgl%cg%add_na("hgpot")
          cgl%cg%hgpot => cgl%cg%get_na_ptr("hgpot")
-         call cgl%cg%add_na("gp")
+         call cgl%cg%add_na("gp", AT_OUT_B)
          cgl%cg%gp => cgl%cg%get_na_ptr("gp")
 #ifdef SELF_GRAV
          call cgl%cg%add_na("sgp")

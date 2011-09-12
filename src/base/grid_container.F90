@@ -60,7 +60,7 @@ module grid_cont
    !< A named array for user-defined variables, scalar fields and similar
    type, extends(array3d):: named_array3d
       character(len=dsetnamelen) :: name !< a user-provided id for the array
-!      logical :: restart !< \todo implement it. Should be .true. by default. If not .true. then don't store the quantity in the restart file, only::name and ::restart
+      integer(kind=4) :: restart_mode !< \todo If not .true. then write names to the restart file
    end type named_array3d
 
    type, extends(axes) :: grid_container
@@ -479,14 +479,16 @@ contains
 !! \warning You should call it for every grid_container so each of them has the same list of named arrays.
 !<
 
-   subroutine add_na(this, name)
+   subroutine add_na(this, name, res_m)
 
+      use constants,  only: AT_IGNORE
       use dataio_pub, only: msg, die
 
       implicit none
 
       class(grid_container), intent(inout) :: this
       character(len=*), intent(in) :: name
+      integer, optional, intent(in) :: res_m
 
       type(named_array3d), allocatable, dimension(:) :: tmp
       integer :: i
@@ -506,6 +508,9 @@ contains
       i = ubound(this%q(:), dim=1)
       this%q(i)%name = name
       call this%q(i)%init(this%n_(:))
+
+      this%q(i)%restart_mode = AT_IGNORE
+      if (present(res_m)) this%q(i)%restart_mode = res_m
 
    end subroutine add_na
 

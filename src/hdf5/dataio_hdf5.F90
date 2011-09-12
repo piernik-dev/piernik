@@ -678,7 +678,7 @@ contains
 
    subroutine write_restart_hdf5(debug_res)
 
-      use constants,   only: cwdlen, AT_ALL_B, AT_OUT_B, AT_NO_B, I_ONE
+      use constants,   only: cwdlen, AT_IGNORE, AT_ALL_B, AT_OUT_B, AT_NO_B, I_ONE
       use dataio_pub,  only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
       use global,      only: nstep
       use grid,        only: all_cg
@@ -694,6 +694,7 @@ contains
 
       logical, optional, intent(in) :: debug_res
 
+      integer               :: i
       integer, parameter    :: extlen = 4
       character(len=extlen) :: file_extension
       character(len=cwdlen) :: filename  !> HDF File name
@@ -733,8 +734,9 @@ contains
          !> \todo where (cg%q(:)%restart), write cg%q(:)%arr automatically, elsewhere write just names
          if (associated(problem_write_restart)) call problem_write_restart(file_id, cg)
 
-         if (associated(cg%cs_iso2)) call write_arr_to_restart(file_id, cg%cs_iso2, AT_NO_B, dname(CS_ISO2), cg)
-         if (associated(cg%gp))      call write_arr_to_restart(file_id, cg%gp, AT_OUT_B, dname(GP), cg)
+         do i = lbound(cg%q(:), dim=1), ubound(cg%q(:), dim=1)
+            if (cg%q(i)%restart_mode /= AT_IGNORE) call write_arr_to_restart(file_id, cg%q(i)%arr, cg%q(i)%restart_mode, cg%q(i)%name, cg)
+         enddo
 
          ! Write fluids
          area_type = AT_NO_B
@@ -1224,7 +1226,7 @@ contains
 
    subroutine read_restart_hdf5(chdf)
 
-      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_NO_B, AT_OUT_B, LO, HI, I_ONE
+      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_IGNORE, AT_NO_B, AT_OUT_B, LO, HI, I_ONE
       use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, hdf
       use dataio_user, only: problem_read_restart
       use domain,      only: dom, has_dir
@@ -1243,7 +1245,7 @@ contains
       implicit none
 
       type(hdf)             :: chdf
-      integer               :: nu
+      integer               :: nu, i
       character(len=cwdlen) :: filename  ! File name
 
       integer(HID_T)        :: file_id       ! File identifier
@@ -1335,8 +1337,9 @@ contains
          !> \todo read existing cg%q(:)%arr automatically, create fresh cg%q(:)%arr where (.not. cg%q(:)%restart)
          if (associated(problem_read_restart)) call problem_read_restart(file_id, cg)
 
-         if (associated(cg%cs_iso2)) call read_arr_from_restart(file_id, cg%cs_iso2, AT_NO_B, dname(CS_ISO2), cg)
-         if (associated(cg%gp))      call read_arr_from_restart(file_id, cg%gp, AT_OUT_B, dname(GP), cg)
+         do i = lbound(cg%q(:), dim=1), ubound(cg%q(:), dim=1)
+            if (cg%q(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, cg%q(i)%arr, cg%q(i)%restart_mode, cg%q(i)%name, cg)
+         enddo
 
          !  READ FLUID VARIABLES
          if (associated(cg%u%arr)) call read_arr_from_restart(file_id, cg%u%arr, AT_NO_B, dname(FLUID), cg)

@@ -58,7 +58,7 @@ contains
 !<
    subroutine init_grid
 
-      use constants,   only: PIERNIK_INIT_DOMAIN, ndims, zdim
+      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, ndims, zdim
       use dataio_pub,  only: printinfo, die, code_progress
       use diagnostics, only: my_allocate
       use domain,      only: dom
@@ -129,7 +129,7 @@ contains
 
       cgl => all_cg%first
       do while (associated(cgl))
-         call cgl%cg%add_na("cs_iso2") ! BEWARE: magic string across multiple files
+         call cgl%cg%add_na("cs_iso2", AT_NO_B) ! BEWARE: magic string across multiple files
          cgl%cg%cs_iso2 => cgl%cg%get_na_ptr("cs_iso2")
          cgl%cg%cs_iso2(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
          cgl => cgl%nxt
