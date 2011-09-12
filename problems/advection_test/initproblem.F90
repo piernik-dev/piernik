@@ -127,7 +127,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: xdim, ydim, zdim
+      use constants,   only: xdim, ydim, zdim, INT4
       use fluidindex,  only: flind
       use global,      only: smalld, smallei
       use grid,        only: all_cg
@@ -185,7 +185,7 @@ contains
          enddo
 
          ! Save the initial density
-         call register_user_var(0, cg)
+         call register_user_var(0_INT4, cg)
          i = cg%get_na_ind(inid_n)
          cg%q(i)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 

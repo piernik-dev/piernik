@@ -488,7 +488,7 @@ contains
 
       class(grid_container), intent(inout) :: this
       character(len=*), intent(in) :: name
-      integer, optional, intent(in) :: res_m
+      integer(kind=4), optional, intent(in) :: res_m
 
       type(named_array3d), allocatable, dimension(:) :: tmp
       integer :: i
