@@ -51,15 +51,14 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_vars_hdf5, problem_write_restart, problem_read_restart
+      use dataio_user, only: user_vars_hdf5, problem_read_restart
       use user_hooks,  only: finalize_problem
 
       implicit none
 
       finalize_problem      => finalize_problem_adv
       user_vars_hdf5        => inid_var_hdf5
-      problem_write_restart => write_IC_to_restart
-      problem_read_restart  => read_IC_from_restart
+      problem_read_restart  => register_user_var
 
    end subroutine problem_pointers
 
@@ -186,7 +185,7 @@ contains
          enddo
 
          ! Save the initial density
-         call cg%add_na(inid_n)
+         call register_user_var(0, cg)
          i = cg%get_na_ind(inid_n)
          cg%q(i)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
@@ -222,10 +221,9 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine write_IC_to_restart(file_id, cg)
+   subroutine register_user_var(file_id, cg)
 
       use constants,   only: AT_NO_B
-      use dataio_hdf5, only: write_arr_to_restart
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
 
@@ -234,30 +232,11 @@ contains
       integer(HID_T), intent(in) :: file_id
       type(grid_container), pointer, intent(in) :: cg
 
-      real, dimension(:,:,:), pointer :: pa3d => null()
+      call cg%add_na(inid_n, AT_NO_B)
 
-      call write_arr_to_restart(file_id, pa3d, AT_NO_B, inid_n, cg)
+      if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused files
 
-   end subroutine write_IC_to_restart
-
-!-----------------------------------------------------------------------------
-
-   subroutine read_IC_from_restart(file_id, cg)
-
-      use constants,   only: AT_NO_B
-      use dataio_hdf5, only: read_arr_from_restart
-      use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T
-
-      implicit none
-
-      integer(HID_T), intent(in) :: file_id
-      type(grid_container), pointer, intent(in) :: cg
-      real, dimension(:,:,:), pointer :: pa3d => null()
-
-      call read_arr_from_restart(file_id, pa3d, AT_NO_B, inid_n, cg)
-
-   end subroutine read_IC_from_restart
+   end subroutine register_user_var
 
 !-----------------------------------------------------------------------------
 

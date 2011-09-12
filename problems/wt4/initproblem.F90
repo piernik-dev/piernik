@@ -30,7 +30,6 @@
 
 module initproblem
 
-
    use constants,    only: dsetnamelen, cbuff_len, ndims
 
    implicit none
@@ -80,15 +79,14 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: additional_attrs, problem_write_restart, problem_read_restart
+      use dataio_user, only: additional_attrs, problem_read_restart
       use user_hooks,  only: problem_customize_solution
 
       implicit none
 
       problem_customize_solution => problem_customize_solution_wt4
       additional_attrs           => init_prob_attrs
-      problem_write_restart      => write_initial_fld_to_restart
-      problem_read_restart       => read_initial_fld_from_restart
+      problem_read_restart       => register_initial_fld
 
    end subroutine problem_pointers
 
@@ -285,7 +283,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: small, xdim, ydim, zdim
+      use constants,   only: small, xdim, ydim, zdim, AT_NO_B
       use dataio_pub,  only: warn, printinfo, msg
       use domain,      only: has_dir
       use global,      only: smalld
@@ -390,7 +388,7 @@ contains
          cg%b%arr(:, 1:cg%n_(xdim), 1:cg%n_(ydim), 1:cg%n_(zdim)) = 0.0
 
          do i = D0, VY0
-            call cg%add_na(q_n(i))
+            call cg%add_na(q_n(i), AT_NO_B)
             q0 => cg%get_na_ptr(q_n(i))
             select case (i)
                case (D0)
@@ -435,35 +433,9 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine write_initial_fld_to_restart(file_id, cg)
+   subroutine register_initial_fld(file_id, cg)
 
       use constants,   only: AT_NO_B
-      use dataio_hdf5, only: write_arr_to_restart
-      use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T
-
-      implicit none
-
-      integer(HID_T),intent(in)  :: file_id
-      type(grid_container), pointer, intent(in) :: cg
-
-      real, dimension(:,:,:), pointer :: pa3d => null()
-      integer :: i
-
-      if ( divine_intervention_type == 3) then
-         do i = D0, VY0
-            call write_arr_to_restart(file_id, pa3d, AT_NO_B, q_n(i), cg)
-         enddo
-      endif
-
-   end subroutine write_initial_fld_to_restart
-
-!-----------------------------------------------------------------------------
-
-   subroutine read_initial_fld_from_restart(file_id, cg)
-
-      use constants,   only: AT_NO_B
-      use dataio_hdf5, only: read_arr_from_restart
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T
 
@@ -472,17 +444,17 @@ contains
       integer(HID_T),intent(in) :: file_id
       type(grid_container), pointer, intent(in) :: cg
 
-      real, dimension(:,:,:), pointer :: pa3d => null()
       integer :: i
 
-      ! /todo First query for existence of den0, vlx0 and vly0, then allocate
       if (divine_intervention_type == 3) then
          do i = D0, VY0
-            call read_arr_from_restart(file_id, pa3d, AT_NO_B, q_n(i), cg)
+            call cg%add_na(q_n(i), AT_NO_B)
          enddo
       endif
 
-   end subroutine read_initial_fld_from_restart
+      if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused files
+
+   end subroutine register_initial_fld
 
 !-----------------------------------------------------------------------------
 
