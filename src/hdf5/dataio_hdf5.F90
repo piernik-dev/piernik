@@ -102,10 +102,10 @@ contains
       real, intent(in)    :: tdt_plt !< local copy of dataio::dt_plt
 
       integer :: nvars, i, j
-#if defined COSM_RAYS && !defined NEW_HDF5
+#if defined COSM_RAYS
       integer :: k
       character(len=varlen) :: aux
-#endif /* COSM_RAYS && !NEW_HDF5 */
+#endif /* COSM_RAYS */
 
       pl_i(:) = [ tix, tiy, tiz ]
       dt_plt = tdt_plt
@@ -142,9 +142,7 @@ contains
                nhdf_vars = nhdf_vars + 1
 #ifdef COSM_RAYS
             case ('encr')
-#ifndef NEW_HDF5
                nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
-#endif /* !NEW_HDF5 */
 #endif /* COSM_RAYS */
             case default
                nhdf_vars = nhdf_vars + 1
@@ -176,7 +174,6 @@ contains
                hdf_vars(j) = vars(i) ; j = j + 1
 #ifdef COSM_RAYS
             case ('encr')
-#ifndef NEW_HDF5
                do k = 1, size(iarr_all_crs,1)
                   if (k<=9) then
                      write(aux,'(A2,I1)') 'cr', k
@@ -186,7 +183,6 @@ contains
                      call warn(msg)
                   endif
                enddo
-#endif /* !NEW_HDF5 */
 #endif /* COSM_RAYS */
 #ifdef GRAV
             case ('gpot')
@@ -1434,9 +1430,6 @@ contains
            &                 h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       use mpisetup,    only: comm, ierr, info, master, FIRST
       use mpi,         only: MPI_CHARACTER
-#ifdef NEW_HDF5
-      use list_hdf5,   only: iterate_lhdf5
-#endif /* NEW_HDF5 */
       use list_hdf5,   only: write_arr
 
       implicit none
@@ -1493,10 +1486,6 @@ contains
 
          cgl => cgl%nxt
       enddo
-
-#ifdef NEW_HDF5
-      call iterate_lhdf5(file_id)
-#endif /* NEW_HDF5 */
 
       !
       ! Close the property list.
