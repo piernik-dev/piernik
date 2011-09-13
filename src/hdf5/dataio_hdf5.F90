@@ -179,7 +179,7 @@ contains
 #ifndef NEW_HDF5
                do k = 1, size(iarr_all_crs,1)
                   if (k<=9) then
-                     write(aux,'(A3,I1)') 'ecr', k
+                     write(aux,'(A2,I1)') 'cr', k
                      hdf_vars(j) = aux ; j = j + 1
                   else
                      write(msg, '(a,i3)')"[dataio_hdf5:init_hdf5] Cannot create name for CR energy component #", k
@@ -339,8 +339,8 @@ contains
             tab(:,:) = reshape(cg%gpot(is:ie, js:je, ks:ke), shape(tab))
 #endif /* GRAV */
 #ifdef COSM_RAYS
-         case ("ecr*")
-            i = iarr_all_crs(ichar(var(4:4))-ichar('0'))
+         case ("cr*")
+            i = iarr_all_crs(ichar(var(3:3))-ichar('0'))
             tab(:,:) = reshape(cg%u%arr(i, is:ie, js:je, ks:ke), shape(tab))
 #endif /* COSM_RAYS */
          case default
@@ -379,8 +379,8 @@ contains
       tab = 0.0
       select case (var)
 #ifdef COSM_RAYS
-         case ("ecr1" : "ecr9")
-            read(var,'(A3,I1)') aux, i !> \deprecated BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
+         case ("cr1" : "cr9")
+            read(var,'(A2,I1)') aux, i !> \deprecated BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
             tab(:,:,:) = real(cg%u%arr(flind%crs%beg+i-1, RNG), kind=4)
 #endif /* COSM_RAYS */
          case ("dend", "deni", "denn")
