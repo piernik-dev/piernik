@@ -600,6 +600,10 @@ contains
 !!$ ============================================================================
 !>
 !! \brief Compute diffusive flux in the x-direction
+!!
+!! OPT: these three routines (diff_flux_[xyz]) can consume as much as half of the CPU time of the whole simulation
+!! OPT: moving the loops over i, j and k inside them can speed them up by more than 20%
+!! OPT: b[123]b and magb are invariants of the solution and can be precomputed in init_b (requires additional 4*ndim temporary arrays)
 !<
 
    !> \deprecated BEWARE: almost replicated code (see crdiffusion.F90)
