@@ -46,7 +46,8 @@
 
 module dataio
 
-   use dataio_pub,    only: domain_dump, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id
+   use dataio_pub,    only: domain_dump, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, &
+      & multiple_h5files
    use constants,     only: cwdlen, fmt_len, cbuff_len, varlen, idlen
 
    implicit none
@@ -97,7 +98,7 @@ module dataio
    namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
                              domain_dump, vars, mag_center, vizit, fmin, fmax, &
                              min_disk_space_MB, sleep_minutes, sleep_seconds, &
-                             user_message_file, system_message_file
+                             user_message_file, system_message_file, multiple_h5files
 
    interface mpi_addmul
       module procedure mpi_sum4d_and_multiply
@@ -198,7 +199,7 @@ contains
       use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
            &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress, &
-           &                     move_file, getlun
+           &                     move_file, getlun, multiple_h5files
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use domain,          only: eff_dim
       use fluidboundaries, only: all_fluid_boundaries
@@ -314,6 +315,7 @@ contains
          rbuff(46) = fmax
 
          lbuff(1)  = vizit
+         lbuff(2)  = multiple_h5files
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
@@ -369,6 +371,7 @@ contains
          fmax                = rbuff(46)
 
          vizit               = lbuff(1)
+         multiple_h5files    = lbuff(2)
 
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)

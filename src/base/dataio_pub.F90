@@ -96,6 +96,7 @@ module dataio_pub
 !!   2. use only one-element vars array in problem.par
 !<
    logical            :: vizit = .false.        !< perform "live" visualization using pgplot (\deprecated BEWARE: highly experimental)
+   logical            :: multiple_h5files = .false. !< write one HDF5 file per proc
    real               :: fmin                   !< minimum on pgplot scale
    real               :: fmax                   !< maximum on pgplot scale
 

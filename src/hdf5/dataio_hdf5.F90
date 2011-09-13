@@ -73,9 +73,19 @@ module dataio_hdf5
       module procedure write_4darr_to_restart, write_3darr_to_restart
    end interface
 
+   interface
+      subroutine h5_write(chdf)
+         use dataio_pub, only: hdf
+         implicit none
+         type(hdf), intent(in) :: chdf
+      end subroutine h5_write
+   end interface
+
    interface read_arr_from_restart
       module procedure read_4darr_from_restart, read_3darr_from_restart
    end interface
+
+   procedure(h5_write), pointer :: write_hdf5 => h5_write_to_single_file
 
 contains
 
@@ -88,6 +98,7 @@ contains
       use constants,   only: varlen
       use fluids_pub,  only: has_ion, has_dst, has_neu
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use dataio_pub,  only: multiple_h5files
 #ifdef COSM_RAYS
       use dataio_pub,  only: warn, msg
       use fluidindex,  only: iarr_all_crs
@@ -200,6 +211,7 @@ contains
          end select
       enddo
 
+      if (multiple_h5files) write_hdf5 => h5_write_to_multiple_files
    end subroutine init_hdf5
 
 !>
@@ -1418,7 +1430,7 @@ contains
 !
 ! ------------------------------------------------------------------------------------
 !
-   subroutine write_hdf5(chdf)
+   subroutine h5_write_to_single_file(chdf)
 
       use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: printio, msg, die, nhdf, problem_name, run_id, hdf
@@ -1477,7 +1489,7 @@ contains
             if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
             if (ierrh>=0) ok_var = .true.
             if (.not.ok_var) then
-               write(msg,'(3a)') "[dataio_hdf5:write_hdf5]: ", hdf_vars(i)," is not defined in common_vars_hdf5, neither in user_vars_hdf5."
+               write(msg,'(3a)') "[dataio_hdf5:h5_write_to_single_file]: ", hdf_vars(i)," is not defined in common_vars_hdf5, neither in user_vars_hdf5."
                call die(msg)
             endif
             call write_arr(data, hdf_vars(i), file_id)
@@ -1497,7 +1509,7 @@ contains
 
       nhdf = nhdf + I_ONE
 
-   end subroutine write_hdf5
+   end subroutine h5_write_to_single_file
 
 !>
 !! \brief This routine writes all attributes that are common to restart and output files.
@@ -1997,5 +2009,83 @@ contains
 !!$      deallocate(types,types_sizes,types_names,dmem_id)
 !!$
 !!$   end subroutine write_grid_containter
+
+   function h5_filename() result(f)
+      use constants,  only: fnamelen
+      use dataio_pub, only: problem_name, run_id, nhdf
+      use mpisetup,   only: proc
+      implicit none
+      character(len=fnamelen) :: f
+      write(f, '(a,"_",a3,i4.4,".cpu",i5.5,".h5")') trim(problem_name), trim(run_id), nhdf, proc
+   end function h5_filename
+
+   subroutine h5_write_to_multiple_files(chdf)
+      use constants,       only: dsetnamelen, fnamelen, xdim, ydim, zdim
+      use dataio_pub,      only: die, hdf, msg, printio
+      use dataio_user,     only: user_vars_hdf5
+      use gc_list,         only: cg_list_element
+      use grid,            only: all_cg
+      use grid_cont,       only: grid_container
+      use h5lt,            only: h5ltmake_dataset_float_f
+      use hdf5,            only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, &
+         &  h5gclose_f, HSIZE_T
+      use mpisetup,        only: master
+      implicit none
+      type(hdf), intent(in) :: chdf
+      integer(kind=4), parameter :: rank = 3
+      integer(HSIZE_T), dimension(rank) :: dims
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+      character(len=fnamelen) :: fname
+      integer(HID_T) :: file_id, grp_id
+      integer(kind=4) :: error
+      integer(kind=8) :: ngc           !> current grid index
+      character(len=dsetnamelen) :: gname
+      logical :: ok_var
+      integer(kind=4) :: ierrh, i
+      real(kind=4), allocatable :: data (:,:,:)  ! Data to write
+
+      fname = h5_filename()
+      if (master) then
+         write(msg,'(3a)') 'Writing datafile ', trim(fname), " ... "
+         call printio(msg, .true.)
+      endif
+
+      call h5open_f(error)
+      call h5fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
+      cgl => all_cg%first
+      ngc = 0
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         write(gname,'("grid",i8.8)') ngc
+         call h5gcreate_f(file_id, gname, grp_id, error)
+
+         if (.not.allocated(data)) allocate(data(cg%n_b(xdim),cg%n_b(ydim),cg%n_b(zdim)))
+         dims = cg%n_b(:)
+         do i = 1, nhdf_vars
+            ierrh = 0; ok_var = .false.
+            call common_vars_hdf5(hdf_vars(i), data, ierrh, cg)
+            if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
+            if (ierrh>=0) ok_var = .true.
+            if (.not.ok_var) then
+               write(msg,'(3a)') "[dataio_hdf5:h5_write_to_multiple_files]: ", hdf_vars(i)," is not defined in common_vars_hdf5, neither in user_vars_hdf5."
+               call die(msg)
+            endif
+            call h5ltmake_dataset_float_f(grp_id, hdf_vars(i), rank, dims, data(:,:,:), error)
+         enddo
+         if (allocated(data)) deallocate(data)
+         call h5gclose_f(grp_id, error)
+         ngc = ngc + 1
+         cgl => cgl%nxt
+      enddo
+      call h5fclose_f(file_id, error)
+      call h5close_f(error)
+
+      if (master) then
+         write(msg,'(a)') 'done'
+         call printio(msg)
+      endif
+   end subroutine h5_write_to_multiple_files
 
 end module dataio_hdf5
