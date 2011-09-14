@@ -158,10 +158,7 @@ endif
 
 %.o : %.mod
 
-piernik.h: piernik.def
-	touch piernik.h
 '''
-#BEWARE: dirty hack above: enforce rebuilding everything that depends on piernik.h when piernik.def changes
 
 def striplist(l):
    return([x.strip() for x in l])
@@ -405,6 +402,9 @@ for f in f90files:
          keys = striplist(line.split(" ")[3:])
       if have_inc(line):
          linc.append(line.split('"')[1])
+   if ("piernik.h" in linc):  # We don't check for recurrsive includes, se we add this one manually
+      linc.append("piernik.def")
+
 
    keys_logic1 = len(keys) == 0  or (len(keys) == 1 and keys[0] in our_defs)
    if(len(keys) == 3):
@@ -448,7 +448,7 @@ stripped_files.append("version.F90")   # adding version
 incl.append('')
 uses.append([])
 module.setdefault('version', 'version')
-known_external_modules = ( "hdf5", "h5lt", "mpi", "iso_c_binding", "iso_fortran_env" )
+known_external_modules = ( "hdf5", "h5lt", "mpi", "iso_c_binding", "iso_fortran_env", "fgsl" )
 
 files_to_build = remove_suf(stripped_files)
 
