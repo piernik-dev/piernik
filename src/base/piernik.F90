@@ -267,7 +267,7 @@ contains
 
       call init_geometry ! depends on grid
 
-      call grid_mpi_boundaries_prep(flind%all, flind%crs%all) ! depends on grid and fluids
+      call grid_mpi_boundaries_prep ! depends on grid and fluids (requires flind%all, flind%crs%all)
 
 #ifdef SHEAR
       call init_shear ! depends on fluids

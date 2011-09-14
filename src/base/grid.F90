@@ -25,6 +25,7 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
+
 #include "piernik.h"
 #include "macros.h"
 
@@ -36,6 +37,7 @@
 !! In this module a following namelist of parameters is specified:
 !! \copydetails grid::init_grid
 !<
+
 module grid
 
    use gc_list,   only: cg_list
@@ -43,8 +45,7 @@ module grid
    implicit none
 
    private
-   public :: init_grid, grid_mpi_boundaries_prep, cleanup_grid
-   public :: all_cg !, base, leafs, levels
+   public :: init_grid, grid_mpi_boundaries_prep, cleanup_grid, all_cg !, base, leafs, levels
 
    type(cg_list), protected :: all_cg    !< all grid containers
 !!$   type(cg_list), protected  :: base   !< base level grid containers
@@ -186,36 +187,27 @@ contains
 !! \todo this should be called from cg%init only
 !<
 
-   subroutine grid_mpi_boundaries_prep(numfluids, numcrs)
+   subroutine grid_mpi_boundaries_prep
 
-      use constants,  only: PIERNIK_INIT_GRID, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID, I_ONE
+      use constants,  only: PIERNIK_INIT_GRID, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE
       use dataio_pub, only: die, code_progress
-      use domain,     only: has_dir, dom, is_overlap, cdd
+      use domain,     only: has_dir, dom, cdd
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: ierr, proc, FIRST, LAST, procmask
+      use mpisetup,   only: ierr, proc
 
       implicit none
 
-      integer(kind=4), intent(in) :: numfluids !< expect flind%all,     here, cannot grab it directly because of cyclic deps in CR-based setups
-      integer(kind=4), intent(in) :: numcrs    !< expect flind%crs%all, here, cannot grab it directly because of cyclic deps in CR-based setups
-
       integer(kind=4), dimension(:), allocatable :: sizes, subsizes, starts
-      integer :: t, g, j, ib
-      integer(kind=4) :: d, hl, lh
+      integer(kind=4) :: d, t
       integer(kind=4), dimension(FLUID:ARR) :: nc
       integer(kind=4), parameter, dimension(FLUID:ARR) :: dims = [ I_ONE+ndims, I_ONE+ndims, I_ONE+ndims, ndims ] !< dimensionality of arrays
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-      integer(kind=8), dimension(xdim:zdim) :: ijks, per
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer, bp_layer, poff
-      logical :: sharing
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
       if (all_cg%cnt > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process not implemented yet")
-
-      nc = [ numfluids, ndims, max(numcrs,I_ONE), I_ONE ]      !< number of fluids, magnetic field components, CRs, and 1 for rank-3 array
 
       cgl => all_cg%first
       do while (associated(cgl))
@@ -223,118 +215,7 @@ contains
          ! find neighbours and set up the MPI containers
          if (cdd%comm3d == MPI_COMM_NULL) then
 
-            if (allocated(cg%i_bnd) .or. allocated(cg%o_bnd)) call die("[grid:grid_mpi_boundaries_prep] cg%i_bnd or cg%o_bnd already allocated")
-            allocate(cg%i_bnd(xdim:zdim, FLUID:ARR, cg%nb), cg%o_bnd(xdim:zdim, FLUID:ARR, cg%nb))
-
-            ! assume that cuboids fill the domain and don't collide
-
-            ijks(:) = cg%ijkse(:, LO) - cg%off(:)
-            per(:) = 0
-            where (cg%dom%periodic(:)) per(:) = cg%dom%n_d(:)
-
-            do d = xdim, zdim
-               if (has_dir(d) .and. .not. cg%empty) then
-
-                  ! identify processes with interesting neighbour data
-                  procmask(:) = 0
-                  do lh = LO, HI
-                     hl = LO+HI-lh ! HI for LO, LO for HI
-                     b_layer(:,:) = cg%my_se(:, :)
-                     b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
-                     b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
-                     do j = FIRST, LAST
-                        call is_overlap(b_layer(:,:), cg%dom%pse(j)%sel(1, :, :), sharing, per(:))
-                        if (sharing) procmask(j) = procmask(j) + 1
-                     enddo
-                  enddo
-                  do j = FLUID, ARR
-                     do ib = 1, cg%nb
-                        allocate(cg%i_bnd(d, j, ib)%seg(sum(procmask(:))))
-                        allocate(cg%o_bnd(d, j, ib)%seg(sum(procmask(:))))
-                     enddo
-                  enddo
-
-                  ! set up segments to be sent or received
-                  g = 0
-                  do j = FIRST, LAST
-                     if (procmask(j) /= 0) then
-                        do lh = LO, HI
-                           hl = LO+HI-lh
-                           b_layer(:,:) = cg%my_se(:, :)
-                           b_layer(d, lh) = b_layer(d, lh) + lh-hl
-                           b_layer(d, hl) = b_layer(d, lh)
-                           bp_layer(:, :) = b_layer(:, :)
-                           where (per(:) > 0)
-                              bp_layer(:, LO) = mod(b_layer(:, LO) + per(:), per(:))
-                              bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:))
-                           endwhere
-                           call is_overlap(bp_layer(:,:), cg%dom%pse(j)%sel(1, :, :), sharing)
-
-                           if (sharing) then
-                              poff(:,:) = bp_layer(:,:) - b_layer(:,:) ! displacement due to periodicity
-                              bp_layer(:, LO) = max(bp_layer(:, LO), cg%dom%pse(j)%sel(1, :, LO))
-                              bp_layer(:, HI) = min(bp_layer(:, HI), cg%dom%pse(j)%sel(1, :, HI))
-                              b_layer(:,:) = bp_layer(:,:) - poff(:,:)
-                              g = g + 1
-                              do t = FLUID, ARR
-                                 do ib = 1, cg%nb
-                                    cg%i_bnd(d, t, ib)%seg(g)%mbc = INVALID
-                                    cg%i_bnd(d, t, ib)%seg(g)%proc = j
-                                    cg%i_bnd(d, t, ib)%seg(g)%se(:,LO) = b_layer(:, LO) + ijks(:)
-                                    cg%i_bnd(d, t, ib)%seg(g)%se(:,HI) = b_layer(:, HI) + ijks(:)
-                                    if (any(cg%i_bnd(d, t, ib)%seg(g)%se(d, :) < 0)) &
-                                         cg%i_bnd(d, t, ib)%seg(g)%se(d, :) = cg%i_bnd(d, t, ib)%seg(g)%se(d, :) + cg%dom%n_d(d)
-                                    if (any(cg%i_bnd(d, t, ib)%seg(g)%se(d, :) > cg%n_b(d) + 2*cg%nb)) &
-                                         cg%i_bnd(d, t, ib)%seg(g)%se(d, :) = cg%i_bnd(d, t, ib)%seg(g)%se(d, :) - cg%dom%n_d(d)
-
-                                    ! expand to cover corners (requires separate MPI_Waitall for each direction)
-                                    ! \todo create separate %mbc for corner-less exchange with one MPI_Waitall (can scale better)
-                                    where (has_dir(:d-1))
-                                       cg%i_bnd(d, t, ib)%seg(g)%se(:d-1, LO) = cg%i_bnd(d, t, ib)%seg(g)%se(:d-1, LO) - ib
-                                       cg%i_bnd(d, t, ib)%seg(g)%se(:d-1, HI) = cg%i_bnd(d, t, ib)%seg(g)%se(:d-1, HI) + ib
-                                    endwhere
-                                    cg%o_bnd(d, t, ib)%seg(g) = cg%i_bnd(d, t, ib)%seg(g)
-                                    cg%i_bnd(d, t, ib)%seg(g)%tag = HI*d+lh-LO
-                                    cg%o_bnd(d, t, ib)%seg(g)%tag = HI*d+hl-LO
-                                    select case (lh)
-                                       case (LO)
-                                          cg%i_bnd(d, t, ib)%seg(g)%se(d, LO) = cg%i_bnd(d, t, ib)%seg(g)%se(d, HI) - (ib - 1)
-                                          cg%o_bnd(d, t, ib)%seg(g)%se(d, LO) = cg%i_bnd(d, t, ib)%seg(g)%se(d, HI) + 1
-                                          cg%o_bnd(d, t, ib)%seg(g)%se(d, HI) = cg%o_bnd(d, t, ib)%seg(g)%se(d, LO) + (ib - 1)
-                                       case (HI)
-                                          cg%i_bnd(d, t, ib)%seg(g)%se(d, HI) = cg%i_bnd(d, t, ib)%seg(g)%se(d, LO) + (ib - 1)
-                                          cg%o_bnd(d, t, ib)%seg(g)%se(d, HI) = cg%i_bnd(d, t, ib)%seg(g)%se(d, LO) - 1
-                                          cg%o_bnd(d, t, ib)%seg(g)%se(d, LO) = cg%o_bnd(d, t, ib)%seg(g)%se(d, HI) - (ib - 1)
-                                    end select
-                                    ! set MPI type only for non-local transfers
-
-                                    allocate(sizes(dims(t)), subsizes(dims(t)), starts(dims(t)))
-
-                                    starts(:) = 0
-                                    if (dims(t) == 1+ndims) then
-                                       sizes(1) = nc(t)
-                                       subsizes(1) = sizes(1)
-                                    endif
-                                    sizes   (dims(t)-zdim+xdim:dims(t)) = cg%n_(:)
-                                    subsizes(dims(t)-zdim+xdim:dims(t)) = int(cg%i_bnd(d, t, ib)%seg(g)%se(:, HI) - cg%i_bnd(d, t, ib)%seg(g)%se(:, LO) + 1, kind=4)
-                                    starts  (dims(t)-zdim+xdim:dims(t)) = int(cg%i_bnd(d, t, ib)%seg(g)%se(:, LO) - 1, kind=4)
-                                    call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts,  MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%i_bnd(d, t, ib)%seg(g)%mbc, ierr)
-                                    call MPI_Type_commit(cg%i_bnd(d, t, ib)%seg(g)%mbc, ierr)
-
-                                    subsizes(dims(t)-zdim+xdim:dims(t)) = int(cg%o_bnd(d, t, ib)%seg(g)%se(:, HI) - cg%o_bnd(d, t, ib)%seg(g)%se(:, LO) + 1, kind=4)
-                                    starts  (dims(t)-zdim+xdim:dims(t)) = int(cg%o_bnd(d, t, ib)%seg(g)%se(:, LO) - 1, kind=4)
-                                    call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts,  MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%o_bnd(d, t, ib)%seg(g)%mbc, ierr)
-                                    call MPI_Type_commit(cg%o_bnd(d, t, ib)%seg(g)%mbc, ierr)
-
-                                    deallocate(sizes, subsizes, starts)
-                                 enddo
-                              enddo
-                           endif
-                        enddo
-                     endif
-                  enddo
-               endif
-            enddo
+            call cg%mpi_bnd_types
 
          else
             if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process is not compatible with comm3d")
