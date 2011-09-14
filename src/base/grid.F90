@@ -192,6 +192,7 @@ contains
       use constants,  only: PIERNIK_INIT_GRID, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE
       use dataio_pub, only: die, code_progress
       use domain,     only: has_dir, dom, cdd
+      use fluidindex, only: flind
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
@@ -219,6 +220,9 @@ contains
 
          else
             if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process is not compatible with comm3d")
+
+            nc = [ flind%all, ndims, max(flind%crs%all,I_ONE), I_ONE ]      !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
+
             do d = xdim, zdim
                if (has_dir(d)) then
                   do t = FLUID, ARR  ! fluid, Bfield, wcr, grav
