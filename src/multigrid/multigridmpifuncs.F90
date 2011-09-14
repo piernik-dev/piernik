@@ -5,8 +5,7 @@
 !    This file is part of PIERNIK code.
 !
 !    PIERNIK is free software: you can redistribute it and/or modify
-!    it under the terms of the GNU General Public License as published
-!    by
+!    it under the terms of the GNU General Public License as published by
 !    the Free Software Foundation, either version 3 of the License, or
 !    (at your option) any later version.
 !
@@ -18,8 +17,7 @@
 !    You should have received a copy of the GNU General Public License
 !    along with PIERNIK.  If not, see <http://www.gnu.org/licenses/>.
 !
-!    Initial implementation of PIERNIK code was based on TVD split MHD
-!    code by
+!    Initial implementation of PIERNIK code was based on TVD split MHD code by
 !    Ue-Li Pen
 !        see: Pen, Arras & Wong (2003) for algorithm and
 !             http://www.cita.utoronto.ca/~pen/MHD
@@ -30,17 +28,16 @@
 
 #include "piernik.h"
 
-!!$ ============================================================================
 !>
 !! \brief This module is responsible for setting boundaries, either by MPI communication or by estimating external boundaries.
 !<
 
 module multigridmpifuncs
 ! pulled by MULTIGRID
+
    implicit none
 
    private
-
    public :: mpi_multigrid_prep, mpi_multigrid_bnd
 
 contains
@@ -59,12 +56,12 @@ contains
 
       implicit none
 
-      integer(kind=4):: d, ib, lh, hl
+      integer(kind=4):: d, ib
       integer :: g, j
       integer(kind=4), dimension(ndims) :: sizes, subsizes, starts
       logical :: sharing
-      integer(kind=8), dimension(xdim:zdim) :: ijks, per
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened, b_layer, bp_layer, poff
+      integer(kind=8), dimension(xdim:zdim) :: ijks
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
       type(pr_segment), pointer :: seg
       type(plvl), pointer :: curl
 
@@ -143,104 +140,8 @@ contains
          ! find neighbours and set up the MPI containers
          if (cdd%comm3d == MPI_COMM_NULL) then
 
-            ! assume that cuboids fill the domain and don't collide
-
             curl%mmbc(:, :, :, :) = INVALID
-
-            per(:) = 0
-            where (curl%dom%periodic(:)) per(:) = curl%dom%n_d(:)
-
-            if (allocated(curl%i_bnd) .or. allocated(curl%o_bnd)) call die("[multigrid:mpi_multigrid_prep] curl%i_bnd or curl%o_bnd already allocated")
-            allocate(curl%i_bnd(xdim:zdim, ARR:ARR, curl%nb), curl%o_bnd(xdim:zdim, ARR:ARR, curl%nb))
-
-            do d = xdim, zdim
-               if (has_dir(d) .and. .not. curl%empty) then
-
-                  ! identify processes with interesting neighbour data
-                  procmask(:) = 0
-                  do lh = LO, HI
-                     hl = LO+HI-lh ! HI for LO, LO for HI
-                     b_layer(:,:) = curl%my_se(:, :)
-                     b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
-                     b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
-                     do j = FIRST, LAST
-                        call is_overlap(b_layer(:,:), curl%dom%pse(j)%sel(1, :, :), sharing, per(:))
-                        if (sharing) procmask(j) = procmask(j) + 1
-                     enddo
-                  enddo
-                  do j = 1, curl%nb
-                     allocate(curl%i_bnd(d, ARR, j)%seg(sum(procmask(:))))
-                     allocate(curl%o_bnd(d, ARR, j)%seg(sum(procmask(:))))
-                  enddo
-
-                  ! set up segments to be sent or received
-                  g = 0
-                  do j = FIRST, LAST
-                     if (procmask(j) /= 0) then
-                        do lh = LO, HI
-                           hl = LO+HI-lh
-                           b_layer(:,:) = curl%my_se(:, :)
-                           b_layer(d, lh) = b_layer(d, lh) + lh-hl
-                           b_layer(d, hl) = b_layer(d, lh)
-                           bp_layer(:, :) = b_layer(:, :)
-                           where (per(:) > 0)
-                              bp_layer(:, LO) = mod(b_layer(:, LO) + per(:), per(:))
-                              bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:))
-                           endwhere
-                           call is_overlap(bp_layer(:,:), curl%dom%pse(j)%sel(1, :, :), sharing)
-
-                           if (sharing) then
-                              poff(:,:) = bp_layer(:,:) - b_layer(:,:) ! displacement due to periodicity
-                              bp_layer(:, LO) = max(bp_layer(:, LO), curl%dom%pse(j)%sel(1, :, LO))
-                              bp_layer(:, HI) = min(bp_layer(:, HI), curl%dom%pse(j)%sel(1, :, HI))
-                              b_layer(:,:) = bp_layer(:,:) - poff(:,:)
-                              g = g + 1
-                              do ib = 1, curl%nb
-                                 curl%i_bnd(d, ARR, ib)%seg(g)%mbc = INVALID
-                                 curl%i_bnd(d, ARR, ib)%seg(g)%proc = j
-                                 curl%i_bnd(d, ARR, ib)%seg(g)%se(:,LO) = b_layer(:, LO) + ijks(:)
-                                 curl%i_bnd(d, ARR, ib)%seg(g)%se(:,HI) = b_layer(:, HI) + ijks(:)
-                                 if (any(curl%i_bnd(d, ARR, ib)%seg(g)%se(d, :) < 0)) &
-                                      curl%i_bnd(d, ARR, ib)%seg(g)%se(d, :) = curl%i_bnd(d, ARR, ib)%seg(g)%se(d, :) + curl%dom%n_d(d)
-                                 if (any(curl%i_bnd(d, ARR, ib)%seg(g)%se(d, :) > curl%n_b(d) + 2*curl%nb)) &
-                                      curl%i_bnd(d, ARR, ib)%seg(g)%se(d, :) = curl%i_bnd(d, ARR, ib)%seg(g)%se(d, :) - curl%dom%n_d(d)
-                                 ! expand to cover corners (requires separate MPI_Waitall for each direction)
-                                 ! \todo create separate %mbc for corner-less exchange with one MPI_Waitall (can scale better)
-                                 where (has_dir(:d-1))
-                                    curl%i_bnd(d, ARR, ib)%seg(g)%se(:d-1, LO) = curl%i_bnd(d, ARR, ib)%seg(g)%se(:d-1, LO) - ib
-                                    curl%i_bnd(d, ARR, ib)%seg(g)%se(:d-1, HI) = curl%i_bnd(d, ARR, ib)%seg(g)%se(:d-1, HI) + ib
-                                 endwhere
-                                 curl%o_bnd(d, ARR, ib)%seg(g) = curl%i_bnd(d, ARR, ib)%seg(g)
-                                 curl%i_bnd(d, ARR, ib)%seg(g)%tag = HI*d+lh-LO !> \todo add an id and number of local gc
-                                 curl%o_bnd(d, ARR, ib)%seg(g)%tag = HI*d+hl-LO
-                                 select case (lh)
-                                    case (LO)
-                                       curl%i_bnd(d, ARR, ib)%seg(g)%se(d, LO) = curl%i_bnd(d, ARR, ib)%seg(g)%se(d, HI) - (ib - 1)
-                                       curl%o_bnd(d, ARR, ib)%seg(g)%se(d, LO) = curl%i_bnd(d, ARR, ib)%seg(g)%se(d, HI) + 1
-                                       curl%o_bnd(d, ARR, ib)%seg(g)%se(d, HI) = curl%o_bnd(d, ARR, ib)%seg(g)%se(d, LO) + (ib - 1)
-                                    case (HI)
-                                       curl%i_bnd(d, ARR, ib)%seg(g)%se(d, HI) = curl%i_bnd(d, ARR, ib)%seg(g)%se(d, LO) + (ib - 1)
-                                       curl%o_bnd(d, ARR, ib)%seg(g)%se(d, HI) = curl%i_bnd(d, ARR, ib)%seg(g)%se(d, LO) - 1
-                                       curl%o_bnd(d, ARR, ib)%seg(g)%se(d, LO) = curl%o_bnd(d, ARR, ib)%seg(g)%se(d, HI) - (ib - 1)
-                                 end select
-                                 ! set MPI type only for non-local transfers
-                                 call MPI_Type_create_subarray(ndims, curl%n_(:), &
-                                      &                        int(curl%i_bnd(d, ARR, ib)%seg(g)%se(:, HI) - curl%i_bnd(d, ARR, ib)%seg(g)%se(:, LO) + 1, kind=4), &
-                                      &                        int(curl%i_bnd(d, ARR, ib)%seg(g)%se(:, LO) - 1, kind=4), MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
-                                      &                        curl%i_bnd(d, ARR, ib)%seg(g)%mbc, ierr)
-                                 call MPI_Type_commit(curl%i_bnd(d, ARR, ib)%seg(g)%mbc, ierr)
-                                 call MPI_Type_create_subarray(ndims, curl%n_(:), &
-                                      &                        int(curl%o_bnd(d, ARR, ib)%seg(g)%se(:, HI) - curl%o_bnd(d, ARR, ib)%seg(g)%se(:, LO) + 1, kind=4), &
-                                      &                        int(curl%o_bnd(d, ARR, ib)%seg(g)%se(:, LO) - 1, kind=4), MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
-                                      &                        curl%o_bnd(d, ARR, ib)%seg(g)%mbc, ierr)
-                                 call MPI_Type_commit(curl%o_bnd(d, ARR, ib)%seg(g)%mbc, ierr)
-                              enddo
-                           endif
-                        enddo
-                     endif
-                  enddo
-               endif
-            enddo
+            call curl%mpi_bnd_types
 
          else
 
