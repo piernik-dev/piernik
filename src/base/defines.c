@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
-   Here we check for consistency of the piernik.def file.
+   This file is not meant to be included anywhere. We just check if all declarations in the piernik.def file are consistent.
 
    This is a .c file to make sure that #error directive stops the make process.
 */
