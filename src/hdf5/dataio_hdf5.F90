@@ -2020,6 +2020,7 @@ contains
    end function h5_filename
 
    subroutine h5_write_to_multiple_files(chdf)
+
       use constants,       only: dsetnamelen, fnamelen, xdim, ydim, zdim
       use dataio_pub,      only: die, hdf, msg, printio
       use dataio_user,     only: user_vars_hdf5
@@ -2028,9 +2029,11 @@ contains
       use grid_cont,       only: grid_container
       use h5lt,            only: h5ltmake_dataset_float_f
       use hdf5,            only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, &
-         &  h5gclose_f, HSIZE_T
+           &                     h5gclose_f, HSIZE_T
       use mpisetup,        only: master
+
       implicit none
+
       type(hdf), intent(in) :: chdf
       integer(kind=4), parameter :: rank = 3
       integer(HSIZE_T), dimension(rank) :: dims
@@ -2086,6 +2089,11 @@ contains
          write(msg,'(a)') 'done'
          call printio(msg)
       endif
+
+      return
+      if (.false. .and. chdf%nhdf == -1) i=0 ! suppress compiler warnings.
+      ! BTW Do we need the chdf structure or maybe we prefer to rely on variables accesible from dataio_pub?
+
    end subroutine h5_write_to_multiple_files
 
 end module dataio_hdf5
