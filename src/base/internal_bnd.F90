@@ -44,7 +44,7 @@ contains
 ! The corners should be properly updated if this%[io]_bnd(:, ind) was set up appropriately (MPI_Waitall is called separately for each dimension).
 !
 
-   subroutine internal_boundaries(ind, pa3d, pa4d)
+   subroutine internal_boundaries(ind, nb, pa3d, pa4d)
 
       use constants,  only: FLUID, MAG, CR, ARR, LO, HI, xdim, ydim, zdim, I_ONE
       use dataio_pub, only: die, warn
@@ -57,15 +57,16 @@ contains
 
       implicit none
 
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
       integer(kind=4), intent(in) :: ind   !< second index in [io]_bnd arrays
+      integer, optional, intent(in) :: nb !< number of grid cells to exchange (not implemented for comm3d)
       real, optional, pointer, dimension(:,:,:)   :: pa3d
       real, optional, pointer, dimension(:,:,:,:) :: pa4d
 
-      integer :: g, d
+      integer :: g, d, n
       integer(kind=4) :: nr
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: ise, ose
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
 !BEWARE: MPI_Waitall should be called after all grid containers post Isends and Irecvs
 ! This routine thus cannot be a metod of the grid_container type
@@ -94,14 +95,20 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
+         n = cg%nb
+         if (present(nb)) then
+            n = nb
+            if (n<=0 .or. n>cg%nb) call die("[internal_bnd:internal_boundaries] wrong number of guardcell layers")
+         endif
+
          do d = xdim, zdim
             nr = 0
             if (has_dir(d)) then
 
-               if (allocated(cg%i_bnd(d, ind)%seg)) then
-                  do g = 1, ubound(cg%i_bnd(d, ind)%seg(:), dim=1)
-                     if (proc == cg%i_bnd(d, ind)%seg(g)%proc) then
-                        ise = cg%i_bnd(d, ind)%seg(g)%se
+               if (allocated(cg%i_bnd(d, ind, n)%seg)) then
+                  do g = 1, ubound(cg%i_bnd(d, ind, n)%seg(:), dim=1)
+                     if (proc == cg%i_bnd(d, ind, n)%seg(g)%proc) then
+                        ise = cg%i_bnd(d, ind, n)%seg(g)%se
                         ose(:,:) = ise(:,:)
                         if (ise(d, LO) < cg%n_b(d)) then
                            ose(d, :) = ise(d, :) + cg%n_b(d)
@@ -121,27 +128,27 @@ contains
                         ! This will not be true when we allow many blocks per process and tag will need to be modified to include g or seg(g)%lh should become seg(g)%tag
                         nr = nr + I_ONE
                         if (ind == ARR) then
-                           call MPI_Irecv(pa3d(1, 1, 1), I_ONE, cg%i_bnd(d, ind)%seg(g)%mbc, cg%i_bnd(d, ind)%seg(g)%proc, cg%i_bnd(d, ind)%seg(g)%tag, comm, req(nr), ierr)
+                           call MPI_Irecv(pa3d(1, 1, 1), I_ONE, cg%i_bnd(d, ind, n)%seg(g)%mbc, cg%i_bnd(d, ind, n)%seg(g)%proc, cg%i_bnd(d, ind, n)%seg(g)%tag, comm, req(nr), ierr)
                         else
-                           call MPI_Irecv(pa4d(1, 1, 1, 1), I_ONE, cg%i_bnd(d, ind)%seg(g)%mbc, cg%i_bnd(d, ind)%seg(g)%proc, cg%i_bnd(d, ind)%seg(g)%tag, comm, req(nr), ierr)
+                           call MPI_Irecv(pa4d(1, 1, 1, 1), I_ONE, cg%i_bnd(d, ind, n)%seg(g)%mbc, cg%i_bnd(d, ind, n)%seg(g)%proc, cg%i_bnd(d, ind, n)%seg(g)%tag, comm, req(nr), ierr)
                         endif
                      endif
                   enddo
                endif
-               if (allocated(cg%o_bnd(d, ind)%seg)) then
-                  do g = 1, ubound(cg%o_bnd(d, ind)%seg(:), dim=1)
-                     if (proc /= cg%o_bnd(d, ind)%seg(g)%proc) then
+               if (allocated(cg%o_bnd(d, ind, n)%seg)) then
+                  do g = 1, ubound(cg%o_bnd(d, ind, n)%seg(:), dim=1)
+                     if (proc /= cg%o_bnd(d, ind, n)%seg(g)%proc) then
                         nr = nr + I_ONE
                         ! for noncartesian division some y-boundary corner cells are independent from x-boundary face cells, (similarly for z-direction).
                         if (ind == ARR) then
-                           call MPI_Isend(pa3d(1, 1, 1), I_ONE, cg%o_bnd(d, ind)%seg(g)%mbc, cg%o_bnd(d, ind)%seg(g)%proc, cg%o_bnd(d, ind)%seg(g)%tag, comm, req(nr), ierr)
+                           call MPI_Isend(pa3d(1, 1, 1), I_ONE, cg%o_bnd(d, ind, n)%seg(g)%mbc, cg%o_bnd(d, ind, n)%seg(g)%proc, cg%o_bnd(d, ind, n)%seg(g)%tag, comm, req(nr), ierr)
                         else
-                           call MPI_Isend(pa4d(1, 1, 1, 1), I_ONE, cg%o_bnd(d, ind)%seg(g)%mbc, cg%o_bnd(d, ind)%seg(g)%proc, cg%o_bnd(d, ind)%seg(g)%tag, comm, req(nr), ierr)
+                           call MPI_Isend(pa4d(1, 1, 1, 1), I_ONE, cg%o_bnd(d, ind, n)%seg(g)%mbc, cg%o_bnd(d, ind, n)%seg(g)%proc, cg%o_bnd(d, ind, n)%seg(g)%tag, comm, req(nr), ierr)
                         endif
                      endif
                   enddo
                endif
-               if (ubound(cg%i_bnd(d, ind)%seg(:), dim=1) /= ubound(cg%o_bnd(d, ind)%seg(:), dim=1)) call die("g:ib u/=u")
+               if (ubound(cg%i_bnd(d, ind, n)%seg(:), dim=1) /= ubound(cg%o_bnd(d, ind, n)%seg(:), dim=1)) call die("g:ib u/=u")
                if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
             endif
          enddo

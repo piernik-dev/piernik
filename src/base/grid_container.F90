@@ -33,6 +33,7 @@
 module grid_cont
 
    use constants, only: dsetnamelen, xdim, zdim, ndims, LO, HI, BND, BLK, FLUID, ARR
+   use domain,    only: domain_container
    use types,     only: axes, array4d, array3d
 
    implicit none
@@ -116,11 +117,13 @@ module grid_cont
 
       integer(kind=4), dimension(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK) :: mbc !< MPI Boundary conditions Container
 
+      type(domain_container) :: dom                  !< contains domain decomposition of a domain this cg belongs to (BEWARE: antiparallel)
+
       !>
       !! description of incoming and outgoing boundary data,
       !! the shape is (xdim:zdim, FLUID:ARR) for cg (base grid container)) and (xdim:zdim, nb) for plvl (multigrid level container)
       !<
-      type(bnd_list), dimension(:, :), allocatable :: i_bnd, o_bnd
+      type(bnd_list), dimension(:, :, :), allocatable :: i_bnd, o_bnd
 
       real, allocatable, dimension(:,:,:) :: gc_xdim !< array of geometrical coefficients in x-direction
       real, allocatable, dimension(:,:,:) :: gc_ydim !< array of geometrical coefficients in y-direction
@@ -183,7 +186,8 @@ contains
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init] MPI not initialized.")
       if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid_container:init] Multiple blocks per process not implemented yet")
 
-      this%nb = dom%nb
+      this%dom = dom
+      this%nb = dom%nb !> \todo make this one global constant back
 
       this%my_se(:,:) = dom%pse(proc)%sel(grid_n, :, :)
       this%off(:)     = this%my_se(:, LO)
@@ -407,7 +411,7 @@ contains
       implicit none
 
       class(grid_container) :: this
-      integer :: d, t, g
+      integer :: d, t, g, b
 
       if (allocated(this%x))     deallocate(this%x)
       if (allocated(this%xl))    deallocate(this%xl)
@@ -439,26 +443,30 @@ contains
 
       if (allocated(this%i_bnd)) then
          do d = xdim, zdim
-            do t = 1, ubound(this%i_bnd, dim=2)
-               if (allocated(this%i_bnd(d, t)%seg)) then
-                  do g = 1, ubound(this%i_bnd(d, t)%seg(:), dim=1)
-                     if (this%i_bnd(d, t)%seg(g)%mbc /= INVALID) call MPI_Type_free(this%i_bnd(d, t)%seg(g)%mbc, ierr)
-                  enddo
-                  deallocate(this%i_bnd(d, t)%seg)
-               endif
+            do t = lbound(this%i_bnd, dim=2), ubound(this%i_bnd, dim=2)
+               do b = 1, ubound(this%i_bnd, dim=3)
+                  if (allocated(this%i_bnd(d, t, b)%seg)) then
+                     do g = 1, ubound(this%i_bnd(d, t, b)%seg(:), dim=1)
+                        if (this%i_bnd(d, t, b)%seg(g)%mbc /= INVALID) call MPI_Type_free(this%i_bnd(d, t, b)%seg(g)%mbc, ierr)
+                     enddo
+                     deallocate(this%i_bnd(d, t, b)%seg)
+                  endif
+               enddo
             enddo
          enddo
          deallocate(this%i_bnd)
       endif
       if (allocated(this%o_bnd)) then
          do d = xdim, zdim
-            do t = 1, ubound(this%o_bnd, dim=2)
-               if (allocated(this%o_bnd(d, t)%seg)) then
-                  do g = 1, ubound(this%o_bnd(d, t)%seg(:), dim=1)
-                     if (this%o_bnd(d, t)%seg(g)%mbc /= INVALID) call MPI_Type_free(this%o_bnd(d, t)%seg(g)%mbc, ierr)
-                  enddo
-                  deallocate(this%o_bnd(d, t)%seg)
-               endif
+            do t = lbound(this%i_bnd, dim=2), ubound(this%o_bnd, dim=2)
+                do b = 1, ubound(this%o_bnd, dim=3)
+                   if (allocated(this%o_bnd(d, t, b)%seg)) then
+                      do g = 1, ubound(this%o_bnd(d, t, b)%seg(:), dim=1)
+                         if (this%o_bnd(d, t, b)%seg(g)%mbc /= INVALID) call MPI_Type_free(this%o_bnd(d, t, b)%seg(g)%mbc, ierr)
+                      enddo
+                      deallocate(this%o_bnd(d, t, b)%seg)
+                   endif
+                enddo
             enddo
          enddo
          deallocate(this%o_bnd)

@@ -39,13 +39,12 @@ module multigridvars
 ! pulled by MULTIGRID
 
    use constants, only: xdim, zdim, LO, HI
-   use domain,    only: domain_container
    use grid_cont, only: grid_container, segment
 
    implicit none
 
    public ! QA_WARN no secrets are kept here
-   private :: xdim, zdim, LO, HI, grid_container, domain_container, segment ! QA_WARN prevent re-exporting
+   private :: xdim, zdim, LO, HI, grid_container, segment ! QA_WARN prevent re-exporting
 
    ! multigrid constants
    enum, bind(C)
@@ -149,7 +148,6 @@ module multigridvars
       real                                   :: fft_norm              !< normalization factor
 
       type(plvl), pointer :: finer, coarser                           !< pointers to level+1 and level-1 (null() if such level does not eist)
-      type(domain_container) :: dom                                   !< contains domain decomposition on a given level (BEWARE: antiparallel)
 
     contains
 

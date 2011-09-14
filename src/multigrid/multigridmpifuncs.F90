@@ -50,7 +50,7 @@ contains
 
    subroutine mpi_multigrid_prep
 
-      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ndims, INVALID, I_ZERO
+      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ndims, ARR, INVALID, I_ZERO
       use dataio_pub,    only: warn, die
       use domain,        only: is_overlap, has_dir, cdd
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_COMM_NULL
@@ -151,7 +151,7 @@ contains
             where (curl%dom%periodic(:)) per(:) = curl%dom%n_d(:)
 
             if (allocated(curl%i_bnd) .or. allocated(curl%o_bnd)) call die("[multigrid:mpi_multigrid_prep] curl%i_bnd or curl%o_bnd already allocated")
-            allocate(curl%i_bnd(xdim:zdim, curl%nb), curl%o_bnd(xdim:zdim, curl%nb))
+            allocate(curl%i_bnd(xdim:zdim, ARR:ARR, curl%nb), curl%o_bnd(xdim:zdim, ARR:ARR, curl%nb))
 
             do d = xdim, zdim
                if (has_dir(d) .and. .not. curl%empty) then
@@ -169,8 +169,8 @@ contains
                      enddo
                   enddo
                   do j = 1, curl%nb
-                     allocate(curl%i_bnd(d, j)%seg(sum(procmask(:))))
-                     allocate(curl%o_bnd(d, j)%seg(sum(procmask(:))))
+                     allocate(curl%i_bnd(d, ARR, j)%seg(sum(procmask(:))))
+                     allocate(curl%o_bnd(d, ARR, j)%seg(sum(procmask(:))))
                   enddo
 
                   ! set up segments to be sent or received
@@ -196,44 +196,44 @@ contains
                               b_layer(:,:) = bp_layer(:,:) - poff(:,:)
                               g = g + 1
                               do ib = 1, curl%nb
-                                 curl%i_bnd(d, ib)%seg(g)%mbc = INVALID
-                                 curl%i_bnd(d, ib)%seg(g)%proc = j
-                                 curl%i_bnd(d, ib)%seg(g)%se(:,LO) = b_layer(:, LO) + ijks(:)
-                                 curl%i_bnd(d, ib)%seg(g)%se(:,HI) = b_layer(:, HI) + ijks(:)
-                                 if (any(curl%i_bnd(d, ib)%seg(g)%se(d, :) < 0)) &
-                                      curl%i_bnd(d, ib)%seg(g)%se(d, :) = curl%i_bnd(d, ib)%seg(g)%se(d, :) + curl%dom%n_d(d)
-                                 if (any(curl%i_bnd(d, ib)%seg(g)%se(d, :) > curl%n_b(d) + 2*curl%nb)) &
-                                      curl%i_bnd(d, ib)%seg(g)%se(d, :) = curl%i_bnd(d, ib)%seg(g)%se(d, :) - curl%dom%n_d(d)
+                                 curl%i_bnd(d, ARR, ib)%seg(g)%mbc = INVALID
+                                 curl%i_bnd(d, ARR, ib)%seg(g)%proc = j
+                                 curl%i_bnd(d, ARR, ib)%seg(g)%se(:,LO) = b_layer(:, LO) + ijks(:)
+                                 curl%i_bnd(d, ARR, ib)%seg(g)%se(:,HI) = b_layer(:, HI) + ijks(:)
+                                 if (any(curl%i_bnd(d, ARR, ib)%seg(g)%se(d, :) < 0)) &
+                                      curl%i_bnd(d, ARR, ib)%seg(g)%se(d, :) = curl%i_bnd(d, ARR, ib)%seg(g)%se(d, :) + curl%dom%n_d(d)
+                                 if (any(curl%i_bnd(d, ARR, ib)%seg(g)%se(d, :) > curl%n_b(d) + 2*curl%nb)) &
+                                      curl%i_bnd(d, ARR, ib)%seg(g)%se(d, :) = curl%i_bnd(d, ARR, ib)%seg(g)%se(d, :) - curl%dom%n_d(d)
                                  ! expand to cover corners (requires separate MPI_Waitall for each direction)
                                  ! \todo create separate %mbc for corner-less exchange with one MPI_Waitall (can scale better)
                                  where (has_dir(:d-1))
-                                    curl%i_bnd(d, ib)%seg(g)%se(:d-1, LO) = curl%i_bnd(d, ib)%seg(g)%se(:d-1, LO) - ib
-                                    curl%i_bnd(d, ib)%seg(g)%se(:d-1, HI) = curl%i_bnd(d, ib)%seg(g)%se(:d-1, HI) + ib
+                                    curl%i_bnd(d, ARR, ib)%seg(g)%se(:d-1, LO) = curl%i_bnd(d, ARR, ib)%seg(g)%se(:d-1, LO) - ib
+                                    curl%i_bnd(d, ARR, ib)%seg(g)%se(:d-1, HI) = curl%i_bnd(d, ARR, ib)%seg(g)%se(:d-1, HI) + ib
                                  endwhere
-                                 curl%o_bnd(d, ib)%seg(g) = curl%i_bnd(d, ib)%seg(g)
-                                 curl%i_bnd(d, ib)%seg(g)%tag = HI*d+lh-LO !> \todo add an id and number of local gc
-                                 curl%o_bnd(d, ib)%seg(g)%tag = HI*d+hl-LO
+                                 curl%o_bnd(d, ARR, ib)%seg(g) = curl%i_bnd(d, ARR, ib)%seg(g)
+                                 curl%i_bnd(d, ARR, ib)%seg(g)%tag = HI*d+lh-LO !> \todo add an id and number of local gc
+                                 curl%o_bnd(d, ARR, ib)%seg(g)%tag = HI*d+hl-LO
                                  select case (lh)
                                     case (LO)
-                                       curl%i_bnd(d, ib)%seg(g)%se(d, LO) = curl%i_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)
-                                       curl%o_bnd(d, ib)%seg(g)%se(d, LO) = curl%i_bnd(d, ib)%seg(g)%se(d, HI) + 1
-                                       curl%o_bnd(d, ib)%seg(g)%se(d, HI) = curl%o_bnd(d, ib)%seg(g)%se(d, LO) + (ib - 1)
+                                       curl%i_bnd(d, ARR, ib)%seg(g)%se(d, LO) = curl%i_bnd(d, ARR, ib)%seg(g)%se(d, HI) - (ib - 1)
+                                       curl%o_bnd(d, ARR, ib)%seg(g)%se(d, LO) = curl%i_bnd(d, ARR, ib)%seg(g)%se(d, HI) + 1
+                                       curl%o_bnd(d, ARR, ib)%seg(g)%se(d, HI) = curl%o_bnd(d, ARR, ib)%seg(g)%se(d, LO) + (ib - 1)
                                     case (HI)
-                                       curl%i_bnd(d, ib)%seg(g)%se(d, HI) = curl%i_bnd(d, ib)%seg(g)%se(d, LO) + (ib - 1)
-                                       curl%o_bnd(d, ib)%seg(g)%se(d, HI) = curl%i_bnd(d, ib)%seg(g)%se(d, LO) - 1
-                                       curl%o_bnd(d, ib)%seg(g)%se(d, LO) = curl%o_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)
+                                       curl%i_bnd(d, ARR, ib)%seg(g)%se(d, HI) = curl%i_bnd(d, ARR, ib)%seg(g)%se(d, LO) + (ib - 1)
+                                       curl%o_bnd(d, ARR, ib)%seg(g)%se(d, HI) = curl%i_bnd(d, ARR, ib)%seg(g)%se(d, LO) - 1
+                                       curl%o_bnd(d, ARR, ib)%seg(g)%se(d, LO) = curl%o_bnd(d, ARR, ib)%seg(g)%se(d, HI) - (ib - 1)
                                  end select
                                  ! set MPI type only for non-local transfers
                                  call MPI_Type_create_subarray(ndims, curl%n_(:), &
-                                      &                        int(curl%i_bnd(d, ib)%seg(g)%se(:, HI) - curl%i_bnd(d, ib)%seg(g)%se(:, LO) + 1, kind=4), &
-                                      &                        int(curl%i_bnd(d, ib)%seg(g)%se(:, LO) - 1, kind=4), MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
-                                      &                        curl%i_bnd(d, ib)%seg(g)%mbc, ierr)
-                                 call MPI_Type_commit(curl%i_bnd(d, ib)%seg(g)%mbc, ierr)
+                                      &                        int(curl%i_bnd(d, ARR, ib)%seg(g)%se(:, HI) - curl%i_bnd(d, ARR, ib)%seg(g)%se(:, LO) + 1, kind=4), &
+                                      &                        int(curl%i_bnd(d, ARR, ib)%seg(g)%se(:, LO) - 1, kind=4), MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
+                                      &                        curl%i_bnd(d, ARR, ib)%seg(g)%mbc, ierr)
+                                 call MPI_Type_commit(curl%i_bnd(d, ARR, ib)%seg(g)%mbc, ierr)
                                  call MPI_Type_create_subarray(ndims, curl%n_(:), &
-                                      &                        int(curl%o_bnd(d, ib)%seg(g)%se(:, HI) - curl%o_bnd(d, ib)%seg(g)%se(:, LO) + 1, kind=4), &
-                                      &                        int(curl%o_bnd(d, ib)%seg(g)%se(:, LO) - 1, kind=4), MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
-                                      &                        curl%o_bnd(d, ib)%seg(g)%mbc, ierr)
-                                 call MPI_Type_commit(curl%o_bnd(d, ib)%seg(g)%mbc, ierr)
+                                      &                        int(curl%o_bnd(d, ARR, ib)%seg(g)%se(:, HI) - curl%o_bnd(d, ARR, ib)%seg(g)%se(:, LO) + 1, kind=4), &
+                                      &                        int(curl%o_bnd(d, ARR, ib)%seg(g)%se(:, LO) - 1, kind=4), MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, &
+                                      &                        curl%o_bnd(d, ARR, ib)%seg(g)%mbc, ierr)
+                                 call MPI_Type_commit(curl%o_bnd(d, ARR, ib)%seg(g)%mbc, ierr)
                               enddo
                            endif
                         enddo
@@ -289,7 +289,7 @@ contains
 
    subroutine mpi_multigrid_bnd(curl, iv, ng, mode, corners)
 
-      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, INT4, I_ONE, I_FOUR
+      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ARR, INT4, I_ONE, I_FOUR
       use dataio_pub,    only: die
       use domain,        only: is_mpi_noncart, cdd, has_dir
       use mpi,           only: MPI_REQUEST_NULL, MPI_COMM_NULL
@@ -333,10 +333,10 @@ contains
          do d = xdim, zdim
             nr = 0
             if (has_dir(d)) then
-               if (allocated(curl%i_bnd(d, ng)%seg)) then
-                  do g = 1, ubound(curl%i_bnd(d, ng)%seg(:), dim=1)
-                     if (proc == curl%i_bnd(d, ng)%seg(g)%proc) then
-                        ise => curl%i_bnd(d, ng)%seg(g)%se
+               if (allocated(curl%i_bnd(d, ARR, ng)%seg)) then
+                  do g = 1, ubound(curl%i_bnd(d, ARR, ng)%seg(:), dim=1)
+                     if (proc == curl%i_bnd(d, ARR, ng)%seg(g)%proc) then
+                        ise => curl%i_bnd(d, ARR, ng)%seg(g)%se
                         ose(:,:) = ise(:,:)
                         if (ise(d, LO) < curl%n_b(d)) then
                            ose(d, :) = ise(d, :) + curl%n_b(d)
@@ -350,21 +350,21 @@ contains
                         ! BEWARE: Here we assume, that we have at most one chunk to communicate with a given process on a single side od the domain.
                         ! This will not be true when we allow many blocks per process and tag will need to be modified to include g or seg(g)%lh should become seg(g)%tag
                         nr = nr + I_ONE
-                        call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%i_bnd(d, ng)%seg(g)%mbc, curl%i_bnd(d, ng)%seg(g)%proc, curl%i_bnd(d, ng)%seg(g)%tag, comm, req(nr), ierr)
+                        call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%i_bnd(d, ARR, ng)%seg(g)%mbc, curl%i_bnd(d, ARR, ng)%seg(g)%proc, curl%i_bnd(d, ARR, ng)%seg(g)%tag, comm, req(nr), ierr)
                      endif
                   enddo
                endif
-               if (allocated(curl%o_bnd(d, ng)%seg)) then
-                  do g = 1, ubound(curl%o_bnd(d, ng)%seg(:), dim=1)
-                     if (proc /= curl%o_bnd(d, ng)%seg(g)%proc) then
+               if (allocated(curl%o_bnd(d, ARR, ng)%seg)) then
+                  do g = 1, ubound(curl%o_bnd(d, ARR, ng)%seg(:), dim=1)
+                     if (proc /= curl%o_bnd(d, ARR, ng)%seg(g)%proc) then
                         nr = nr + I_ONE
                         ! if (cor) there should be MPI_Waitall for each d
                         ! for noncartesian division some y-boundary corner cells are independent from x-boundary face cells, (similarly for z-direction).
-                        call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%o_bnd(d, ng)%seg(g)%mbc, curl%o_bnd(d, ng)%seg(g)%proc, curl%o_bnd(d, ng)%seg(g)%tag, comm, req(nr), ierr)
+                        call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%o_bnd(d, ARR, ng)%seg(g)%mbc, curl%o_bnd(d, ARR, ng)%seg(g)%proc, curl%o_bnd(d, ARR, ng)%seg(g)%tag, comm, req(nr), ierr)
                      endif
                   enddo
                endif
-               if (ubound(curl%i_bnd(d, ng)%seg(:), dim=1) /= ubound(curl%o_bnd(d, ng)%seg(:), dim=1)) call die("mmf u/=u")
+               if (ubound(curl%i_bnd(d, ARR, ng)%seg(:), dim=1) /= ubound(curl%o_bnd(d, ARR, ng)%seg(:), dim=1)) call die("mmf u/=u")
                if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
             endif
          enddo
