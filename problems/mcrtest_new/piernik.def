@@ -1,7 +1,5 @@
 #define HDF5
 
-#undef NEW_HDF5
-
 /* choosing fluids */
 #define IONIZED
 #define COSM_RAYS

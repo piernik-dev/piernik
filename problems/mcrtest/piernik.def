@@ -1,11 +1,5 @@
 #define HDF5
 
-#if __GNUC__ >=4 && __GNUC_MINOR__ >=5
-#define NEW_HDF5
-#else
-#undef NEW_HDF5
-#endif
-
 /* choosing fluids */
 #define IONIZED
 #define COSM_RAYS

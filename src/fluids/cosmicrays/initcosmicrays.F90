@@ -276,15 +276,6 @@ contains
       if (flind%cre%all  /= 0) flind%components = flind%components + I_ONE
       flind%cre%pos = flind%components
 
-!> \deprecated The call to cr_add_hdf5 should be made from somewhere else. Here it causes cyclic dependencies with grid, but no fluid initialization should depend on it.
-!! The cr_add_hdf5 routine was temporarily moved to io_cosmicrays.F90
-
-!!$#ifdef NEW_HDF5
-!!$      call cr_add_hdf5(int(ncrs))
-!!$#else /* !NEW_HDF5 */
-!!$      if (.false.) icr = I_ZERO * flind%crn%beg !suppress compiler warnings on unused arguments
-!!$#endif /* !NEW_HDF5 */
-
    end subroutine cosmicray_index
 
    subroutine cleanup_cosmicrays
