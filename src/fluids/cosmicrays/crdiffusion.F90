@@ -259,7 +259,7 @@ contains
                      bcomp(ibz)   = sum(cg%b%arr(ibz,ild:i, jld:j, k:kh))*0.25
                   endif
 
-                  bb = bcomp(ibx)**2 + bcomp(iby)**2 + bcomp(ibz)**2
+                  bb = sum(bcomp**2)
                   if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(ibdir) * (bcomp(ibx)*decr(xdim,:) + bcomp(iby)*decr(ydim,:) + bcomp(ibz)*decr(zdim,:)) / bb
 
                   wcr(:,i,j,k) = - fcrdif * dt * cg%idl(crdim)
