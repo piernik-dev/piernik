@@ -134,10 +134,6 @@ contains
             enddo
          endif
 
-         ! find neighbours and set up the MPI containers
-
-         call curl%mpi_bnd_types
-
          curl => curl%finer
       enddo
 

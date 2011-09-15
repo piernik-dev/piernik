@@ -369,6 +369,8 @@ contains
       this%je = this%ijkse(ydim, HI)
       this%ke = this%ijkse(zdim, HI)
 
+      call this%mpi_bnd_types
+
    end subroutine init
 
    subroutine set_axis(d, a0, al, ar, ia, cg, dom)

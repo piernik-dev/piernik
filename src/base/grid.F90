@@ -45,7 +45,7 @@ module grid
    implicit none
 
    private
-   public :: init_grid, grid_mpi_boundaries_prep, cleanup_grid, all_cg !, base, leafs, levels
+   public :: init_grid, cleanup_grid, all_cg !, base, leafs, levels
 
    type(cg_list), protected :: all_cg    !< all grid containers
 !!$   type(cg_list), protected  :: base   !< base level grid containers
@@ -180,36 +180,5 @@ contains
 !!$      deallocate(levels)
 
    end subroutine cleanup_grid
-
-!>
-!! \brief Set up subsets of u,b and sgp arrays for MPI communication
-!!
-!! \todo this should be called from cg%init only
-!<
-
-   subroutine grid_mpi_boundaries_prep
-
-      use constants,  only: PIERNIK_INIT_GRID, FLUID, LO, HI
-      use dataio_pub, only: die, code_progress
-      use gc_list,    only: cg_list_element
-      use mpisetup,   only: proc
-
-      implicit none
-
-      type(cg_list_element), pointer :: cgl
-
-      if (code_progress < PIERNIK_INIT_GRID) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
-      if (all_cg%cnt > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process not implemented yet")
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         ! find neighbours and set up the MPI containers
-
-         call cgl%cg%mpi_bnd_types
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine grid_mpi_boundaries_prep
 
 end module grid

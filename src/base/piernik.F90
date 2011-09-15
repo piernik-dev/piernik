@@ -188,7 +188,7 @@ contains
       use fluidindex,            only: flind
       use func,                  only: sanitize_smallx_checks
       use global,                only: init_global
-      use grid,                  only: init_grid, grid_mpi_boundaries_prep
+      use grid,                  only: init_grid
       use gridgeometry,          only: init_geometry
       use initfluids,            only: init_fluids
       use interactions,          only: init_interactions
@@ -260,8 +260,6 @@ contains
 
       call init_grid         ! Most of the cg's vars are now initialized, only arrays left
       code_progress = PIERNIK_INIT_GRID      ! Now we can initialize things that depend on all the above fundamental calls
-
-      call grid_mpi_boundaries_prep ! depends on grid and fluids (requires flind%all, flind%crs%all)
 
 #ifdef COSM_RAYS
       call init_crdiffusion(flind%crs%all) ! depends on grid and fluids
