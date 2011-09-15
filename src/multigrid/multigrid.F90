@@ -75,7 +75,7 @@ contains
 !<
    subroutine init_multigrid
 
-      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, zdim, GEO_RPZ, BND, BLK, LO, HI, I_TWO, I_ONE, half
+      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, zdim, GEO_RPZ, LO, HI, I_TWO, I_ONE, half
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven, cdd
@@ -85,7 +85,7 @@ contains
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_LOR, MPI_MIN, MPI_MAX, MPI_COMM_NULL
       use mpisetup,            only: comm, ierr, proc, master, slave, nproc, FIRST, LAST, buffer_dim, ibuff, lbuff
       use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
-      use multigridmpifuncs,   only: mpi_multigrid_prep
+      use multigridmpifuncs,   only: vertical_prep
       use multigridvars,       only: lvl, plvl, roof, base, ngridvars, correction, single_base, &
            &                         is_external, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
 #ifdef GRAV
@@ -329,10 +329,6 @@ contains
          allocate(curl%bnd_z(curl%is:curl%ie, curl%js:curl%je, LO:HI))
          mb_alloc  = mb_alloc + size(curl%bnd_x) + size(curl%bnd_y) + size(curl%bnd_z)
 
-         if (allocated(curl%mmbc)) call die("[multigrid:init_multigrid] multigrid mmbc already allocated")
-         allocate(curl%mmbc(xdim:zdim, LO:HI, BND:BLK, curl%nb))
-         mb_alloc  = mb_alloc + size(curl%mmbc)/2
-
          ! array initialization
          if (dirty_debug) then
             curl%mgvar     (:, :, :, :) = dirtyH
@@ -359,7 +355,7 @@ contains
          if (master) call warn("[multigrid:init_multigrid] prolongation order /= injection not implemented on uneven or noncartesian domains yet.")
       endif
 
-      call mpi_multigrid_prep
+      call vertical_prep
 
       tot_ts = 0.
 
@@ -389,9 +385,8 @@ contains
 
    subroutine cleanup_multigrid
 
-      use constants,           only: xdim, zdim, LO, HI, BND, BLK, INVALID, I_ONE
+      use constants,           only: LO, HI, I_ONE
       use dataio_pub,          only: msg
-      use domain,              only: has_dir
       use mpi,                 only: MPI_DOUBLE_PRECISION
       use mpisetup,            only: master, nproc, FIRST, LAST, comm, ierr
       use multigridhelpers,    only: mg_write_log
@@ -405,7 +400,7 @@ contains
 
       implicit none
 
-      integer :: ib, d, g
+      integer :: ib, g
       real, allocatable, dimension(:) :: all_ts
       integer, parameter :: nseg = 2
       type(tgt_list), dimension(nseg) :: io_tgt
@@ -441,16 +436,6 @@ contains
                   enddo
                   deallocate(io_tgt(ib)%seg)
                endif
-            enddo
-            do ib = 1, curl%nb
-               do d = xdim, zdim
-                  if (has_dir(d)) then
-                     if (curl%mmbc(d, LO, BND, ib) /= INVALID) call MPI_Type_free(curl%mmbc(d, LO, BND, ib), ierr)
-                     if (curl%mmbc(d, LO, BLK, ib) /= INVALID) call MPI_Type_free(curl%mmbc(d, LO, BLK, ib), ierr)
-                     if (curl%mmbc(d, HI, BLK, ib) /= INVALID) call MPI_Type_free(curl%mmbc(d, HI, BLK, ib), ierr)
-                     if (curl%mmbc(d, HI, BND, ib) /= INVALID) call MPI_Type_free(curl%mmbc(d, HI, BND, ib), ierr)
-                  endif
-               enddo
             enddo
             call curl%cleanup
             curl => curl%finer

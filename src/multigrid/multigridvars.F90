@@ -130,9 +130,6 @@ module multigridvars
       real    :: dvol2                                                !< square of cell volume
       real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
 
-      ! MPI datatype shortcut, similar to grid_container%mbc(ARR, :, :, :)
-      integer, dimension(:,:,:,:), allocatable :: mmbc                !< Multigrid MPI Boundary conditions Container for block boundary exchanges with 1 .. nb layers
-
       type(tgt_list) :: f_tgt                                         !< description of incoming restriction and outgoing prolongation data (this should be a linked list)
       type(tgt_list) :: c_tgt                                         !< description of outgoing restriction and incoming prolongation data
       type(tgt_list), dimension(xdim:zdim, LO:HI) :: pff_tgt, pfc_tgt !< description outgoing and incoming face prolongation data

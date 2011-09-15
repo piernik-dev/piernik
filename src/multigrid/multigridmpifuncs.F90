@@ -38,27 +38,25 @@ module multigridmpifuncs
    implicit none
 
    private
-   public :: mpi_multigrid_prep, mpi_multigrid_bnd
+   public :: vertical_prep, mpi_multigrid_bnd
 
 contains
 
 !!$ ============================================================================
-!> \brief Initialize MPI shortcuts for communication. Called from init_multigrid.
+!> \brief Initialize prolongation and restriction targets. Called from init_multigrid.
+!> \todo Move it somewhere else ?
 
-   subroutine mpi_multigrid_prep
+   subroutine vertical_prep
 
-      use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ndims, ARR, INVALID, I_ZERO
+      use constants,     only: xdim, ydim, zdim, LO, HI
       use dataio_pub,    only: warn, die
-      use domain,        only: is_overlap, has_dir, cdd
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_ORDER_FORTRAN, MPI_COMM_NULL
-      use mpisetup,      only: ierr, proc, FIRST, LAST, procmask
+      use domain,        only: is_overlap
+      use mpisetup,      only: proc, FIRST, LAST, procmask
       use multigridvars, only: plvl, base, pr_segment
 
       implicit none
 
-      integer(kind=4):: d, ib
       integer :: g, j
-      integer(kind=4), dimension(ndims) :: sizes, subsizes, starts
       logical :: sharing
       integer(kind=8), dimension(xdim:zdim) :: ijks
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
@@ -136,49 +134,14 @@ contains
             enddo
          endif
 
-         !BEWARE: almost replicated code (grid:grid_mpi_boundaries_prep)
          ! find neighbours and set up the MPI containers
-         if (cdd%comm3d == MPI_COMM_NULL) then
 
-            curl%mmbc(:, :, :, :) = INVALID
-            call curl%mpi_bnd_types
-
-         else
-
-            ! cartesian decomposition
-            do ib = 1, curl%nb
-               sizes(:) = curl%n_(:)
-               do d = xdim, zdim
-                  if (has_dir(d) .and. .not. curl%empty) then
-                     subsizes(:) = sizes(:)
-                     subsizes(d) = ib
-                     starts(:) = I_ZERO
-
-                     starts(d) = curl%nb-ib
-                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, curl%mmbc(d, LO, BND, ib), ierr)
-                     call MPI_Type_commit(curl%mmbc(d, LO, BND, ib), ierr)
-
-                     starts(d) = curl%nb
-                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, curl%mmbc(d, LO, BLK, ib), ierr)
-                     call MPI_Type_commit(curl%mmbc(d, LO, BLK, ib), ierr)
-
-                     starts(d) = curl%n_b(d) + curl%nb - ib
-                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, curl%mmbc(d, HI, BLK, ib), ierr)
-                     call MPI_Type_commit(curl%mmbc(d, HI, BLK, ib), ierr)
-
-                     starts(d) = curl%n_b(d) + curl%nb
-                     call MPI_Type_create_subarray(ndims, sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, curl%mmbc(d, HI, BND, ib), ierr)
-                     call MPI_Type_commit(curl%mmbc(d, HI, BND, ib), ierr)
-                  endif
-               enddo
-            enddo
-
-         endif
+         call curl%mpi_bnd_types
 
          curl => curl%finer
       enddo
 
-   end subroutine mpi_multigrid_prep
+   end subroutine vertical_prep
 
 !!$ ============================================================================
 !!
@@ -279,10 +242,10 @@ contains
             if (has_dir(d)) then
                doff = dreq*(d-xdim)
                if (cdd%psize(d) > 1) then ! \todo remove psize(:), try to rely on offsets or boundary types
-                  if (.not. is_external(d, LO)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mmbc(d, LO, BLK, ng), cdd%procn(d, LO), 17_INT4+doff, cdd%comm3d, req(1+doff), ierr)
-                  if (.not. is_external(d, HI)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mmbc(d, HI, BLK, ng), cdd%procn(d, HI), 19_INT4+doff, cdd%comm3d, req(2+doff), ierr)
-                  if (.not. is_external(d, LO)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mmbc(d, LO, BND, ng), cdd%procn(d, LO), 19_INT4+doff, cdd%comm3d, req(3+doff), ierr)
-                  if (.not. is_external(d, HI)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mmbc(d, HI, BND, ng), cdd%procn(d, HI), 17_INT4+doff, cdd%comm3d, req(4+doff), ierr)
+                  if (.not. is_external(d, LO)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, LO, BLK, ng), cdd%procn(d, LO), 17_INT4+doff, cdd%comm3d, req(1+doff), ierr)
+                  if (.not. is_external(d, HI)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, HI, BLK, ng), cdd%procn(d, HI), 19_INT4+doff, cdd%comm3d, req(2+doff), ierr)
+                  if (.not. is_external(d, LO)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, LO, BND, ng), cdd%procn(d, LO), 19_INT4+doff, cdd%comm3d, req(3+doff), ierr)
+                  if (.not. is_external(d, HI)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, HI, BND, ng), cdd%procn(d, HI), 17_INT4+doff, cdd%comm3d, req(4+doff), ierr)
                else
                   if (is_external(d, LO) .neqv. is_external(d, HI)) call die("[multigridmpifuncs:mpi_multigrid_bnd] inconsiztency in is_external(:)")
                   if (.not. is_external(d, LO)) then
