@@ -506,8 +506,8 @@ contains
       class(grid_container), intent(inout) :: this
 
       integer(kind=4), dimension(:), allocatable :: sizes, subsizes, starts
-      integer :: t, g, j, ib
-      integer(kind=4) :: d, hl, lh
+      integer :: t, g, j
+      integer(kind=4) :: d, hl, lh, ib
       integer(kind=4), parameter, dimension(FLUID:ARR) :: dims = [ I_ONE+ndims, I_ONE+ndims, I_ONE+ndims, ndims ] !< dimensionality of arrays
       integer(kind=4), dimension(FLUID:ARR) :: nc
       integer(kind=8), dimension(xdim:zdim) :: ijks, per

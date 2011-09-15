@@ -2045,7 +2045,7 @@ contains
       integer(kind=8) :: ngc           !> current grid index
       character(len=dsetnamelen) :: gname
       logical :: ok_var
-      integer(kind=4) :: ierrh, i
+      integer :: ierrh, i
       real(kind=4), allocatable :: data (:,:,:)  ! Data to write
 
       fname = h5_filename()
