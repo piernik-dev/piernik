@@ -189,73 +189,23 @@ contains
 
    subroutine grid_mpi_boundaries_prep
 
-      use constants,  only: PIERNIK_INIT_GRID, FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE
+      use constants,  only: PIERNIK_INIT_GRID, FLUID, LO, HI
       use dataio_pub, only: die, code_progress
-      use domain,     only: has_dir, dom, cdd
-      use fluidindex, only: flind
       use gc_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: ierr, proc
+      use mpisetup,   only: proc
 
       implicit none
 
-      integer(kind=4), dimension(:), allocatable :: sizes, subsizes, starts
-      integer(kind=4) :: d, t
-      integer(kind=4), dimension(FLUID:ARR) :: nc
-      integer(kind=4), parameter, dimension(FLUID:ARR) :: dims = [ I_ONE+ndims, I_ONE+ndims, I_ONE+ndims, ndims ] !< dimensionality of arrays
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[grid:grid_mpi_boundaries_prep] grid or fluids not initialized.")
       if (all_cg%cnt > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process not implemented yet")
 
       cgl => all_cg%first
       do while (associated(cgl))
-         cg => cgl%cg
          ! find neighbours and set up the MPI containers
-         if (cdd%comm3d == MPI_COMM_NULL) then
 
-            call cg%mpi_bnd_types
-
-         else
-            if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[grid:grid_mpi_boundaries_prep] Multiple blocks per process is not compatible with comm3d")
-
-            nc = [ flind%all, ndims, max(flind%crs%all,I_ONE), I_ONE ]      !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
-
-            do d = xdim, zdim
-               if (has_dir(d)) then
-                  do t = FLUID, ARR  ! fluid, Bfield, wcr, grav
-
-                     allocate(sizes(dims(t)), subsizes(dims(t)), starts(dims(t)))
-
-                     if (dims(t) == 1+ndims) sizes(1) = nc(t)
-                     sizes(dims(t)-zdim+xdim:dims(t)) = cg%n_(:)
-                     subsizes(:) = sizes(:)
-                     subsizes(dims(t)-zdim+d) = cg%nb
-
-                     starts(:) = 0
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BND), ierr)
-                     call MPI_Type_commit(cg%mbc(t, d, LO, BND), ierr)
-
-                     starts(dims(t)-zdim+d) = cg%nb
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BLK), ierr)
-                     call MPI_Type_commit(cg%mbc(t, d, LO, BLK), ierr)
-
-                     starts(dims(t)-zdim+d) = cg%n_b(d)
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BLK), ierr)
-                     call MPI_Type_commit(cg%mbc(t, d, HI, BLK), ierr)
-
-                     starts(dims(t)-zdim+d) = cg%ijkse(d, HI)
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BND), ierr)
-                     call MPI_Type_commit(cg%mbc(t, d, HI, BND), ierr)
-
-                     deallocate(sizes, subsizes, starts)
-
-                  enddo
-               endif
-            enddo
-         endif
+         call cgl%cg%mpi_bnd_types
 
          cgl => cgl%nxt
       enddo
