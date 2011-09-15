@@ -1581,7 +1581,7 @@ contains
       ibuffer(4)   = chdf%nstep              ; ibuffer_name(4)   = "step_res" !rr2
       ibuffer(5)   = chdf%step_hdf           ; ibuffer_name(5)   = "step_hdf" !rr2
       ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
-      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb"                             ! BEWARE: assuming cga%cg_all(:)%nb equal everywhere
+      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb" ! BEWARE: assuming cga%cg_all(:)%nb equal everywhere
       ibuffer(10)  = require_init_prob       ; ibuffer_name(10)  = "require_init_prob" !rr2
 
       bufsize = 1
@@ -2027,7 +2027,7 @@ contains
       use gc_list,         only: cg_list_element
       use grid,            only: all_cg
       use grid_cont,       only: grid_container
-      use h5lt,            only: h5ltmake_dataset_float_f
+      use h5lt,            only: h5ltmake_dataset_float_f, h5ltmake_dataset_double_f
       use hdf5,            only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, &
            &                     h5gclose_f, HSIZE_T
       use mpisetup,        only: master
@@ -2035,17 +2035,16 @@ contains
       implicit none
 
       type(hdf), intent(in) :: chdf
-      integer(kind=4), parameter :: rank = 3
-      integer(HSIZE_T), dimension(rank) :: dims
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-      character(len=fnamelen) :: fname
+      integer(kind=4), parameter :: rank = 3
+      integer(kind=4) :: error, i
       integer(HID_T) :: file_id, grp_id
-      integer(kind=4) :: error
       integer(kind=8) :: ngc           !> current grid index
+      integer(HSIZE_T), dimension(rank) :: dims
       character(len=dsetnamelen) :: gname
+      character(len=fnamelen) :: fname
       logical :: ok_var
-      integer :: ierrh, i
       real(kind=4), allocatable :: data (:,:,:)  ! Data to write
 
       fname = h5_filename()
@@ -2064,15 +2063,20 @@ contains
          write(gname,'("grid",i8.8)') ngc
          call h5gcreate_f(file_id, gname, grp_id, error)
 
+         ! set attributes here
+         call h5ltmake_dataset_double_f(grp_id, "fbnd", int(2,kind=4), [integer(kind=HSIZE_T):: shape(cg%fbnd)], &
+                                      & cg%fbnd, error)
+
          if (.not.allocated(data)) allocate(data(cg%n_b(xdim),cg%n_b(ydim),cg%n_b(zdim)))
          dims = cg%n_b(:)
          do i = 1, nhdf_vars
-            ierrh = 0; ok_var = .false.
-            call common_vars_hdf5(hdf_vars(i), data, ierrh, cg)
-            if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
-            if (ierrh>=0) ok_var = .true.
+            error = 0; ok_var = .false.
+            call common_vars_hdf5(hdf_vars(i), data, error, cg)
+            if (associated(user_vars_hdf5) .and. error /= 0) call user_vars_hdf5(hdf_vars(i), data, error, cg)
+            if (error>=0) ok_var = .true.
             if (.not.ok_var) then
-               write(msg,'(3a)') "[dataio_hdf5:h5_write_to_multiple_files]: ", hdf_vars(i)," is not defined in common_vars_hdf5, neither in user_vars_hdf5."
+               write(msg,'(3a)') "[dataio_hdf5:h5_write_to_multiple_files]: Neither common_vars_hdf5", &
+                               & " nor user_vars_hdf5 defines ", hdf_vars(i)
                call die(msg)
             endif
             call h5ltmake_dataset_float_f(grp_id, hdf_vars(i), rank, dims, data(:,:,:), error)
