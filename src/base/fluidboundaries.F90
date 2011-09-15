@@ -305,10 +305,10 @@ contains
 
                jtag = tag2 * dir
                itag = jtag - tag1
-               call MPI_Isend(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BLK), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
-               call MPI_Isend(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BLK), cdd%procn(dir,HI), jtag, cdd%comm3d, req(2), ierr)
-               call MPI_Irecv(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BND), cdd%procn(dir,LO), jtag, cdd%comm3d, req(3), ierr)
-               call MPI_Irecv(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BND), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
+               call MPI_Isend(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BLK, cg%nb), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
+               call MPI_Isend(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BLK, cg%nb), cdd%procn(dir,HI), jtag, cdd%comm3d, req(2), ierr)
+               call MPI_Irecv(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BND, cg%nb), cdd%procn(dir,LO), jtag, cdd%comm3d, req(3), ierr)
+               call MPI_Irecv(cg%u%arr(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BND, cg%nb), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
 
                call MPI_Waitall(I_FOUR, req(:),status(:,:),ierr)
             endif

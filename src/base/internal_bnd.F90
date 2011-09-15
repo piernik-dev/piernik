@@ -163,7 +163,7 @@ contains
 ! This routine sets up all guardcells (internal and external) for given rank-3 arrays.
 !
 
-   subroutine arr3d_boundaries(pa3d, area_type, dname)
+   subroutine arr3d_boundaries(pa3d, nb, area_type, dname)
 
       use constants,  only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B, I_ONE
       use dataio_pub, only: die, msg
@@ -177,10 +177,11 @@ contains
       implicit none
 
       real, dimension(:,:,:), pointer, intent(inout) :: pa3d
+      integer, optional, intent(in) :: nb !< number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), intent(in), optional          :: area_type
       character(len=*), intent(in), optional         :: dname
 
-      integer :: i, d
+      integer :: i, d, n
       integer(kind=4) :: lh
       logical :: dodie, do_permpi
       type(cg_list_element), pointer :: cgl
@@ -199,13 +200,19 @@ contains
             if (area_type /= AT_NO_B) do_permpi = .false.
          endif
 
-         if (do_permpi) call internal_boundaries(ARR, pa3d=pa3d)
+         if (do_permpi) call internal_boundaries(ARR, nb=nb, pa3d=pa3d)
 
       endif
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+
+         n = cg%nb
+         if (present(nb)) then
+            n = nb
+            if (n<=0 .or. n>cg%nb) call die("[internal_bnd:arr3d_boundaries] wrong number of guardcell layers")
+         endif
 
          req(:) = MPI_REQUEST_NULL
 
@@ -219,10 +226,10 @@ contains
                            if (present(area_type)) then
                               if (area_type /= AT_NO_B) cycle
                            endif
-                           do i = 1, ceiling(cg%nb/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
+                           do i = 1, ceiling(n/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
                               select case (2*d+lh)
                                  case (2*xdim+LO)
-                                    pa3d(1:cg%nb, :, :) = pa3d(cg%ieb:cg%ie, :, :)
+                                    pa3d(1:cg%nb, :, :) = pa3d(cg%ieb:cg%ie, :, :) ! local copy is cheap (and don't occur so often in large uns) so don't boyher with the value of n
                                  case (2*ydim+LO)
                                     pa3d(:, 1:cg%nb, :) = pa3d(:, cg%jeb:cg%je, :)
                                  case (2*zdim+LO)
@@ -239,8 +246,8 @@ contains
                      case (BND_MPI)
                         if (cdd%comm3d /= MPI_COMM_NULL) then
                            if (cdd%psize(d) > 1) then
-                              call MPI_Isend(pa3d(1, 1, 1), I_ONE, cg%mbc(ARR, d, lh, BLK), cdd%procn(d, lh), int(2*d+(LO+HI-lh), kind=4), cdd%comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
-                              call MPI_Irecv(pa3d(1, 1, 1), I_ONE, cg%mbc(ARR, d, lh, BND), cdd%procn(d, lh), int(2*d+       lh,  kind=4), cdd%comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
+                              call MPI_Isend(pa3d(1, 1, 1), I_ONE, cg%mbc(ARR, d, lh, BLK, n), cdd%procn(d, lh), int(2*d+(LO+HI-lh), kind=4), cdd%comm3d, req(4*(d-xdim)+1+2*(lh-LO)), ierr)
+                              call MPI_Irecv(pa3d(1, 1, 1), I_ONE, cg%mbc(ARR, d, lh, BND, n), cdd%procn(d, lh), int(2*d+       lh,  kind=4), cdd%comm3d, req(4*(d-xdim)+2+2*(lh-LO)), ierr)
                            else
                               call die("[grid:arr3d_boundaries] bnd_[xyz][lr] == 'mpi' && cdd%psize([xyz]dim) <= 1")
                            endif

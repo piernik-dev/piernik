@@ -32,7 +32,7 @@
 !<
 module grid_cont
 
-   use constants, only: dsetnamelen, xdim, zdim, ndims, LO, HI, BND, BLK, FLUID, ARR
+   use constants, only: dsetnamelen, xdim, zdim, ndims, LO, HI
    use domain,    only: domain_container
    use types,     only: axes, array4d, array3d
 
@@ -50,7 +50,7 @@ module grid_cont
 
    !< segment type for boundary exchange
    type, extends(segment) :: bnd_segment
-      integer(kind=4) :: mbc                              !< Multigrid MPI Boundary conditions Container
+      integer(kind=4) :: mbc                              !< MPI Boundary conditions Container
       integer(kind=4) :: tag                              !< unique tag for data exchange
    end type bnd_segment
 
@@ -115,7 +115,7 @@ module grid_cont
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkse !< [[is, js, ks], [ie, je, ke]]
       integer, dimension(ndims, LO:HI)  :: bnd  !< type of boundary conditions coded in integers
 
-      integer(kind=4), dimension(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK) :: mbc !< MPI Boundary conditions Container
+      integer(kind=4), allocatable, dimension(:,:,:,:,:) :: mbc !< MPI Boundary conditions Container
 
       type(domain_container) :: dom                  !< contains domain decomposition of a domain this cg belongs to (BEWARE: antiparallel)
 
@@ -169,7 +169,7 @@ contains
 
    subroutine init(this, dom, grid_n)
 
-      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, INVALID, I_ONE, I_TWO, BND_MPI, BND_SHE, BND_COR
+      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_SHE, BND_COR
       use dataio_pub, only: die, warn, printinfo, msg, code_progress
       use domain,     only: has_dir, domain_container, cdd
       use mpi,        only: MPI_COMM_NULL
@@ -248,7 +248,10 @@ contains
 #endif /* DEBUG */
       endif
 
-      this%mbc(:, :, :, :) = INVALID
+      !> \todo allocate this contitionally, only when comm3d is in use
+      if (allocated(this%mbc)) call die("[grid_container:init] this%mbc already allocated")
+      allocate(this%mbc(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK, 1:this%nb))
+      this%mbc(:, :, :, :, :) = INVALID
 
       if (this%empty) then
 
@@ -431,16 +434,21 @@ contains
       if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)
       if (allocated(this%gc_zdim)) deallocate(this%gc_zdim)
 
-      do d = xdim, zdim
-         if (has_dir(d)) then
-            do t = FLUID, ARR
-               if (this%mbc(t, d, LO, BLK) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BLK), ierr)
-               if (this%mbc(t, d, LO, BND) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BND), ierr)
-               if (this%mbc(t, d, HI, BLK) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BLK), ierr)
-               if (this%mbc(t, d, HI, BND) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BND), ierr)
-            enddo
-         endif
-      enddo
+      if (allocated(this%mbc)) then
+         do d = xdim, zdim
+            if (has_dir(d)) then
+               do t = FLUID, ARR
+                  do b = 1, this%nb
+                     if (this%mbc(t, d, LO, BLK, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BLK, b), ierr)
+                     if (this%mbc(t, d, LO, BND, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BND, b), ierr)
+                     if (this%mbc(t, d, HI, BLK, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BLK, b), ierr)
+                     if (this%mbc(t, d, HI, BND, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BND, b), ierr)
+                  enddo
+               enddo
+            endif
+         enddo
+         deallocate(this%mbc)
+      endif
 
       if (allocated(this%i_bnd)) then
          do d = xdim, zdim
@@ -484,7 +492,7 @@ contains
 
    subroutine mpi_bnd_types(this)
 
-      use constants,  only: FLUID, ARR, xdim, zdim, ndims, LO, HI, INVALID, I_ONE
+      use constants,  only: FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID, I_ONE
       use dataio_pub, only: die
       use domain,     only: has_dir, dom, is_overlap, cdd
       use fluidindex, only: flind
@@ -628,27 +636,32 @@ contains
                do t = FLUID, ARR  ! fluid, Bfield, wcr, grav
 
                   allocate(sizes(dims(t)), subsizes(dims(t)), starts(dims(t)))
-
                   if (dims(t) == 1+ndims) sizes(1) = nc(t)
                   sizes(dims(t)-zdim+xdim:dims(t)) = this%n_(:)
-                  subsizes(:) = sizes(:)
-                  subsizes(dims(t)-zdim+d) = this%nb
 
-                  starts(:) = 0
-                  call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, this%mbc(t, d, LO, BND), ierr)
-                  call MPI_Type_commit(this%mbc(t, d, LO, BND), ierr)
+                  do ib = 1, this%nb
 
-                  starts(dims(t)-zdim+d) = this%nb
-                  call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, this%mbc(t, d, LO, BLK), ierr)
-                  call MPI_Type_commit(this%mbc(t, d, LO, BLK), ierr)
+                     subsizes(:) = sizes(:)
+                     subsizes(dims(t)-zdim+d) = ib
+                     starts(:) = 0
 
-                  starts(dims(t)-zdim+d) = this%n_b(d)
-                  call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, this%mbc(t, d, HI, BLK), ierr)
-                  call MPI_Type_commit(this%mbc(t, d, HI, BLK), ierr)
+                     starts(dims(t)-zdim+d) = this%nb-ib
+                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, this%mbc(t, d, LO, BND, ib), ierr)
+                     call MPI_Type_commit(this%mbc(t, d, LO, BND, ib), ierr)
 
-                  starts(dims(t)-zdim+d) = this%ijkse(d, HI)
-                  call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, this%mbc(t, d, HI, BND), ierr)
-                  call MPI_Type_commit(this%mbc(t, d, HI, BND), ierr)
+                     starts(dims(t)-zdim+d) = this%nb
+                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, this%mbc(t, d, LO, BLK, ib), ierr)
+                     call MPI_Type_commit(this%mbc(t, d, LO, BLK, ib), ierr)
+
+                     starts(dims(t)-zdim+d) = this%n_b(d) + this%nb - ib
+                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, this%mbc(t, d, HI, BLK, ib), ierr)
+                     call MPI_Type_commit(this%mbc(t, d, HI, BLK, ib), ierr)
+
+                     starts(dims(t)-zdim+d) = this%ijkse(d, HI)
+                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, this%mbc(t, d, HI, BND, ib), ierr)
+                     call MPI_Type_commit(this%mbc(t, d, HI, BND, ib), ierr)
+
+                  enddo
 
                   deallocate(sizes, subsizes, starts)
 

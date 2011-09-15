@@ -63,10 +63,10 @@ contains
 
             jtag = I_TEN*i
             itag = jtag - I_FIVE
-            call MPI_Isend(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BLK), cdd%procn(i,LO), itag, cdd%comm3d, req(1), ierr)
-            call MPI_Isend(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BLK), cdd%procn(i,HI), jtag, cdd%comm3d, req(3), ierr)
-            call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BND), cdd%procn(i,LO), jtag, cdd%comm3d, req(2), ierr)
-            call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BND), cdd%procn(i,HI), itag, cdd%comm3d, req(4), ierr)
+            call MPI_Isend(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BLK, cg%nb), cdd%procn(i,LO), itag, cdd%comm3d, req(1), ierr)
+            call MPI_Isend(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BLK, cg%nb), cdd%procn(i,HI), jtag, cdd%comm3d, req(3), ierr)
+            call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BND, cg%nb), cdd%procn(i,LO), jtag, cdd%comm3d, req(2), ierr)
+            call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BND, cg%nb), cdd%procn(i,HI), itag, cdd%comm3d, req(4), ierr)
 
             call MPI_Waitall(I_FOUR,req(:),status(:,:),ierr)
          endif
@@ -180,10 +180,10 @@ contains
 
                jtag = tag2*dir
                itag = jtag - tag1
-               call MPI_Isend(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BLK), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
-               call MPI_Isend(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BLK), cdd%procn(dir,HI), jtag, cdd%comm3d, req(3), ierr)
-               call MPI_Irecv(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BND), cdd%procn(dir,LO), jtag, cdd%comm3d, req(2), ierr)
-               call MPI_Irecv(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BND), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
+               call MPI_Isend(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BLK, cg%nb), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
+               call MPI_Isend(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BLK, cg%nb), cdd%procn(dir,HI), jtag, cdd%comm3d, req(3), ierr)
+               call MPI_Irecv(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BND, cg%nb), cdd%procn(dir,LO), jtag, cdd%comm3d, req(2), ierr)
+               call MPI_Irecv(cg%b%arr(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BND, cg%nb), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
 
                call MPI_Waitall(I_FOUR,req(:),status(:,:),ierr)
             endif
