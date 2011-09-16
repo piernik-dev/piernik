@@ -604,7 +604,8 @@ contains
 !!
 !! OPT: this routine can consume as much as half of the CPU time of the whole simulation
 !! OPT: moving the loops over i, j and k inside it can speed them up by more than 20% (or much more after merging directional variants)
-!! OPT: bcomp and magb are invariants of the solution and can be precomputed in init_b (requires additional 4*ndim temporary arrays)
+!! OPT: b_par/perp and magb are invariants of the solution and can be precomputed in init_b (requires additional 4*ndim temporary arrays)
+!! OPT: *curl%idl(idir) is a measurably faster than /curl%dl(idir) but will require update of the "gold" template due to roundoff differences
 !<
 
    subroutine diff_flux(crdim, im, soln, curl, cr_id, Keff)
@@ -612,6 +613,7 @@ contains
       use constants,      only: xdim, ydim, zdim, ndims
       use dataio_pub,     only: die
       use domain,         only: has_dir
+      use global,         only: dt
       use grid,           only: all_cg
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
@@ -626,8 +628,8 @@ contains
       integer,                   intent(in)  :: cr_id        !< CR component index
       real, optional,            intent(out) :: Keff         !< effective diffusion coefficient for relaxation
 
-      real                                   :: magb, fcrdif, kbm
-      real                                   :: b_par, b_perp, d_par, db_perp
+      real                                   :: magb, fcrdif
+      real                                   :: b_par, b_perp, d_par, db, decr
       integer, dimension(ndims)              :: ilm, imp, imm, ilmp, ilmm
       integer(kind=4)                        :: idir
       logical, dimension(ndims)              :: present_not_crdim
@@ -641,15 +643,15 @@ contains
 
       ! Assumes has_dir(crdim)
       !> \warning *curl%idl(crdim) makes a difference
-      d_par = (curl%mgvar(im(xdim), im(ydim), im(zdim), soln) - curl%mgvar(ilm(xdim), ilm(ydim), ilm(zdim), soln)) * curl%idl(crdim)
+      d_par = (curl%mgvar(im(xdim), im(ydim), im(zdim), soln) - curl%mgvar(ilm(xdim), ilm(ydim), ilm(zdim), soln)) / curl%dl(crdim)
       fcrdif = K_crs_perp(cr_id) * d_par
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
       if (K_crs_paral(cr_id) /= 0.) then
 
          b_perp = 0.
-         db_perp = 0.
          b_par = curl%mgvar(im(xdim), im(ydim), im(zdim), idiffb(crdim))
+         db = d_par * b_par
          magb = b_par**2
 
          do idir = xdim, zdim
@@ -659,20 +661,20 @@ contains
                b_perp = sum(curl%mgvar(ilm(xdim):imp(xdim), ilm(ydim):imp(ydim), ilm(zdim):imp(zdim), idiffb(idir)))*0.25
                magb = magb + b_perp**2
                !> \warning *curl%idl(crdim) makes a difference
-               db_perp = db_perp + b_perp*((curl%mgvar(ilmp(xdim), ilmp(ydim), ilmp(zdim), soln) + curl%mgvar(imp(xdim), imp(ydim), imp(zdim), soln)) - &
-                  &                        (curl%mgvar(ilmm(xdim), ilmm(ydim), ilmm(zdim), soln) + curl%mgvar(imm(xdim), imm(ydim), imm(zdim), soln))) * 0.25 * curl%idl(idir)
+               decr  = ((curl%mgvar(ilmp(xdim), ilmp(ydim), ilmp(zdim), soln) + curl%mgvar(imp(xdim), imp(ydim), imp(zdim), soln)) - &
+                  &           (curl%mgvar(ilmm(xdim), ilmm(ydim), ilmm(zdim), soln) + curl%mgvar(imm(xdim), imm(ydim), imm(zdim), soln))) * 0.25 / curl%dl(idir)
+               db = db + decr*b_perp
             endif
          enddo
 
          if (magb /= 0.) then
-            kbm = K_crs_paral(cr_id) * b_par / magb
-            fcrdif = fcrdif + kbm * (b_par*d_par + db_perp)
-            if (present(Keff)) Keff = Keff + kbm * b_par
+            fcrdif = fcrdif + K_crs_paral(cr_id) * b_par * db / magb
+            if (present(Keff)) Keff = Keff + K_crs_paral(cr_id) * b_par**2/magb
          endif
 
       endif
 
-      cg%wa(im(xdim), im(ydim), im(zdim)) = fcrdif ! * diff_theta * dt / curl%dl(crdim) !> \warning *curl%idl(crdim) makes a difference
+      cg%wa(im(xdim), im(ydim), im(zdim)) = fcrdif * diff_theta * dt / curl%dl(crdim) !> \warning *curl%idl(crdim) makes a difference
 
    end subroutine diff_flux
 
@@ -688,7 +690,6 @@ contains
       use constants,         only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
       use dataio_pub,        only: die
       use domain,            only: has_dir
-      use global,            only: dt
       use grid,              only: all_cg
       use grid_cont,         only: grid_container
       use multigridhelpers,  only: check_dirty
@@ -733,7 +734,7 @@ contains
             curl%mgvar     (curl%is  :curl%ie,   curl%js:curl%je, curl%ks:curl%ke, def)    = &
                  curl%mgvar(curl%is  :curl%ie,   curl%js:curl%je, curl%ks:curl%ke, def)    - &
               (       cg%wa(iml(xdim):imh(xdim), iml(ydim):imh(ydim), iml(zdim):imh(zdim)) - &
-                      cg%wa(curl%is  :curl%ie,   curl%js:curl%je, curl%ks:curl%ke) ) * diff_theta * dt * curl%idl(idir)
+                      cg%wa(curl%is  :curl%ie,   curl%js:curl%je, curl%ks:curl%ke) )
          endif
       enddo
 
@@ -824,7 +825,7 @@ contains
                         call diff_flux(idir, im, soln, curl, cr_id, Keff1)
                         call diff_flux(idir, ih, soln, curl, cr_id, Keff2)
 
-                        temp = temp - (cg%wa(ih(xdim), ih(ydim), ih(zdim)) - cg%wa(i, j, k)) * diff_theta * dt * curl%idl(idir)
+                        temp = temp - (cg%wa(ih(xdim), ih(ydim), ih(zdim)) - cg%wa(i, j, k))
                         dLdu = dLdu - 2 * (Keff1 + Keff2) * idl2(idir)
 
                      endif
