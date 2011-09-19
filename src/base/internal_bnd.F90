@@ -229,7 +229,7 @@ contains
                            do i = 1, ceiling(n/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
                               select case (2*d+lh)
                                  case (2*xdim+LO)
-                                    pa3d(1:cg%nb, :, :) = pa3d(cg%ieb:cg%ie, :, :) ! local copy is cheap (and don't occur so often in large uns) so don't boyher with the value of n
+                                    pa3d(1:cg%nb, :, :) = pa3d(cg%ieb:cg%ie, :, :) ! local copy is cheap (and don't occur so often in large runs) so don't boyher with the value of n
                                  case (2*ydim+LO)
                                     pa3d(:, 1:cg%nb, :) = pa3d(:, cg%jeb:cg%je, :)
                                  case (2*zdim+LO)

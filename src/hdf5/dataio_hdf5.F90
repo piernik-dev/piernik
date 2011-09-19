@@ -548,10 +548,13 @@ contains
       if ((xn > cg%nb .and. xn <= cg%n_b(plane)+cg%nb) .or. (xn == 1 .and. .not. has_dir(plane))) then
          allocate(send(cg%n_b(d1(plane)), cg%n_b(d2(plane))))
          call common_plt_hdf5(var, plane, xn, send, ierrh, cg)
-         if (associated(user_plt_hdf5) .and. ierrh /= 0) call user_plt_hdf5(var, plane, xn, send, ierrh, cg)
+         if (associated(user_plt_hdf5) .and. ierrh /= 0) then
+            ierrh = 0
+            call user_plt_hdf5(var, plane, xn, send, ierrh, cg)
+         endif
          if (ierrh /= 0) then
-            write(msg,'(2a)') var, " is not defined in common_plt_hdf5, neither in user_plt_hdf5 !!!"
-            call die(msg)
+            write(msg,'(3a)')"[dataio_hdf5:write_plot_hdf5]", var, " is not defined in common_plt_hdf5, neither in user_plt_hdf5 !!!"
+            call warn(msg)
          endif
       endif
 
