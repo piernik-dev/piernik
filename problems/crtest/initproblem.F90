@@ -65,7 +65,7 @@ contains
 
    subroutine read_problem_par
 
-      use constants,   only: I_TEN
+      use constants,   only: I_ONE, I_TEN
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_pub,  only: die
       use diagnostics, only: my_allocate
@@ -151,7 +151,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (norm_step <= 0) norm_step = huge(1)
+      if (norm_step <= 0) norm_step = huge(I_ONE)
 
    end subroutine read_problem_par
 

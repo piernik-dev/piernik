@@ -71,6 +71,7 @@ contains
 
    subroutine read_problem_par
 
+      use constants,  only: I_ONE
       use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_pub, only: warn
       use domain,     only: dom, has_dir
@@ -108,7 +109,7 @@ contains
          pulse_amp  = rbuff(2)
          pulse_vel  = rbuff(3:5)
 
-         norm_step  = ibuff(1)
+         norm_step  = int(ibuff(1), kind=4)
 
       endif
 
@@ -137,7 +138,7 @@ contains
       pulse_low_density = smalld * 1e5
       pulse_pressure = smallei * flind%neu%gam_1 * 1e2
 
-      if (norm_step <= 0) norm_step = huge(1)
+      if (norm_step <= 0) norm_step = huge(I_ONE)
 
    end subroutine read_problem_par
 

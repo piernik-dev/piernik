@@ -2024,7 +2024,7 @@ contains
 
    subroutine h5_write_to_multiple_files(chdf)
 
-      use constants,       only: dsetnamelen, fnamelen, xdim, ydim, zdim
+      use constants,       only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
       use dataio_pub,      only: die, hdf, msg, printio
       use dataio_user,     only: user_vars_hdf5
       use gc_list,         only: cg_list_element
@@ -2042,6 +2042,7 @@ contains
       type(grid_container), pointer :: cg
       integer(kind=4), parameter :: rank = 3
       integer(kind=4) :: error, i
+      integer :: error8
       integer(HID_T) :: file_id, grp_id
       integer(kind=8) :: ngc           !> current grid index
       integer(HSIZE_T), dimension(rank) :: dims
@@ -2072,11 +2073,11 @@ contains
 
          if (.not.allocated(data)) allocate(data(cg%n_b(xdim),cg%n_b(ydim),cg%n_b(zdim)))
          dims = cg%n_b(:)
-         do i = 1, nhdf_vars
+         do i = I_ONE, int(nhdf_vars, kind=4)
             error = 0; ok_var = .false.
-            call common_vars_hdf5(hdf_vars(i), data, error, cg)
-            if (associated(user_vars_hdf5) .and. error /= 0) call user_vars_hdf5(hdf_vars(i), data, error, cg)
-            if (error>=0) ok_var = .true.
+            call common_vars_hdf5(hdf_vars(i), data, error8, cg)
+            if (associated(user_vars_hdf5) .and. error8 /= 0) call user_vars_hdf5(hdf_vars(i), data, error8, cg)
+            if (error8>=0) ok_var = .true.
             if (.not.ok_var) then
                write(msg,'(3a)') "[dataio_hdf5:h5_write_to_multiple_files]: Neither common_vars_hdf5", &
                                & " nor user_vars_hdf5 defines ", hdf_vars(i)
