@@ -71,9 +71,7 @@
  /
 
  $PROBLEM_CONTROL
-    pulse_vel_x = 40.
-    pulse_vel_y = -36.
-    pulse_vel_z = 28.
+    pulse_vel = 40., -36., 28.
  /
 
  $INTERACTIONS

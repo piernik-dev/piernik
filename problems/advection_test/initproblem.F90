@@ -38,12 +38,16 @@ module initproblem
    public :: read_problem_par, init_prob, problem_pointers
 
    ! namelist parameters
-   real :: pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
-   namelist /PROBLEM_CONTROL/  pulse_size, pulse_vel_x, pulse_vel_y, pulse_vel_z, pulse_amp
+   real                   :: pulse_size  !< size of the density pulse as a fraction of the domain
+   real                   :: pulse_amp   !< amplitude of the density pulse compared to the ambient level
+   real, dimension(ndims) :: pulse_vel   !< uniform velocity components
+   integer(kind=4)        :: norm_step   !< how often to calculate the L2-norm
+   namelist /PROBLEM_CONTROL/  pulse_size, pulse_vel, pulse_amp, norm_step
 
    ! other private data
    real, dimension(ndims, LO:HI) :: pulse_edge
-   character(len=dsetnamelen), parameter :: inid_n = "init_dens"
+   real :: pulse_low_density, pulse_pressure
+   character(len=dsetnamelen), parameter :: inid_n = "inid"
 
 contains
 
@@ -52,13 +56,14 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_vars_hdf5, problem_read_restart
-      use user_hooks,  only: finalize_problem
+      use user_hooks,  only: finalize_problem, problem_customize_solution
 
       implicit none
 
-      finalize_problem      => finalize_problem_adv
-      user_vars_hdf5        => inid_var_hdf5
-      problem_read_restart  => register_user_var
+      finalize_problem           => finalize_problem_adv
+      user_vars_hdf5             => inid_var_hdf5
+      problem_read_restart       => register_user_var
+      problem_customize_solution => finalize_problem_adv
 
    end subroutine problem_pointers
 
@@ -68,40 +73,42 @@ contains
 
       use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_pub, only: warn
-      use domain,     only: dom
-      use mpisetup,   only: ierr, rbuff, master, slave, buffer_dim, comm, proc, have_mpi, LAST, FIRST
-      use mpi,        only: MPI_DOUBLE_PRECISION
+      use domain,     only: dom, has_dir
+      use fluidindex, only: flind
+      use global,     only: smalld, smallei
+      use mpisetup,   only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, proc, have_mpi, LAST, FIRST
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER
 
       implicit none
 
       ! namelist default parameter values
       pulse_size   = 0.5                   !< "fill factor" in each direction
-      pulse_vel_x  = 0.0                   !< pulse velocity in x-direction
-      pulse_vel_y  = 0.0                   !< pulse velocity in y-direction
-      pulse_vel_z  = 0.0                   !< pulse velocity in z-direction
+      pulse_vel(:) = 0.0                   !< pulse velocity
       pulse_amp    = 2.0                   !< pulse relative amplitude
+      norm_step    = 5
 
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
-         rbuff(1) = pulse_size
-         rbuff(2) = pulse_vel_x
-         rbuff(3) = pulse_vel_y
-         rbuff(4) = pulse_vel_z
-         rbuff(5) = pulse_amp
+         rbuff(1)   = pulse_size
+         rbuff(2)   = pulse_amp
+         rbuff(3:5) = pulse_vel(:)
+
+         ibuff(1)   = norm_step
 
       endif
 
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
       call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       if (slave) then
 
-         pulse_size  = rbuff(1)
-         pulse_vel_x = rbuff(2)
-         pulse_vel_y = rbuff(3)
-         pulse_vel_z = rbuff(4)
-         pulse_amp   = rbuff(5)
+         pulse_size = rbuff(1)
+         pulse_amp  = rbuff(2)
+         pulse_vel  = rbuff(3:5)
+
+         norm_step  = ibuff(1)
 
       endif
 
@@ -118,8 +125,19 @@ contains
          endif
       endif
 
-      pulse_edge(:, LO) = dom%C_(:) - dom%L_(:) * pulse_size/2.
-      pulse_edge(:, HI) = dom%C_(:) + dom%L_(:) * pulse_size/2.
+      where (has_dir(:))
+         pulse_edge(:, LO) = dom%C_(:) - dom%L_(:) * pulse_size/2.
+         pulse_edge(:, HI) = dom%C_(:) + dom%L_(:) * pulse_size/2.
+      elsewhere
+         pulse_edge(:, LO) = -huge(1.)
+         pulse_edge(:, HI) =  huge(1.)
+      endwhere
+
+      !BEWARE: hardcoded magic numbers
+      pulse_low_density = smalld * 1e5
+      pulse_pressure = smallei * flind%neu%gam_1 * 1e2
+
+      if (norm_step <= 0) norm_step = huge(1)
 
    end subroutine read_problem_par
 
@@ -129,49 +147,39 @@ contains
 
       use constants,   only: xdim, ydim, zdim, INT4
       use fluidindex,  only: flind
-      use global,      only: smalld, smallei
-      use grid,        only: all_cg
       use gc_list,     only: cg_list_element
+      use global,      only: smallei, t
+      use grid,        only: all_cg
       use grid_cont,   only: grid_container
 
       implicit none
 
       integer :: i, j, k
-      real    :: pulse_low_density, pulse_pressure
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      !BEWARE: hardcoded magic numbers
-      pulse_low_density = smalld * 1e5
-      pulse_pressure = smallei * flind%neu%gam_1 * 1e2
+      ! Create the initial density arrays
+      cgl => all_cg%first
+      do while (associated(cgl))
+         call register_user_var(0_INT4, cgl%cg)
+         cgl => cgl%nxt
+      enddo
+
+      ! Initialize the initial density arrays
+      call analytic_solution(t)
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
          cg%b%arr(:, :, :, :) = 0.
-         cg%u%arr(flind%neu%idn, :, :, :) = pulse_low_density
 
-         ! Initialize density with uniform box
-         do k = cg%ks, cg%ke
-            if (cg%z(k) > pulse_edge(zdim, LO) .and. cg%z(k) < pulse_edge(zdim, HI)) then
-               do j = cg%js, cg%je
-                  if (cg%y(j) > pulse_edge(ydim, LO) .and. cg%y(j) < pulse_edge(ydim, HI)) then
-                     do i = cg%is, cg%ie
-                        if (cg%x(i) > pulse_edge(xdim, LO) .and. cg%x(i) < pulse_edge(xdim, HI)) then
-                           cg%u%arr(flind%neu%idn, i, j, k) = pulse_low_density * pulse_amp
-                        endif
-                     enddo
-                  endif
-               enddo
-            endif
-         enddo
-         where (cg%u%arr(flind%neu%idn, :, :, :) < smalld) cg%u%arr(flind%neu%idn, :, :, :) = smalld
+         cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(cg%get_na_ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
          ! Make uniform, completely boring flow
-         cg%u%arr(flind%neu%imx, :, :, :) = pulse_vel_x * cg%u%arr(flind%neu%idn, :, :, :)
-         cg%u%arr(flind%neu%imy, :, :, :) = pulse_vel_y * cg%u%arr(flind%neu%idn, :, :, :)
-         cg%u%arr(flind%neu%imz, :, :, :) = pulse_vel_z * cg%u%arr(flind%neu%idn, :, :, :)
+         cg%u%arr(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u%arr(flind%neu%idn, :, :, :)
+         cg%u%arr(flind%neu%imy, :, :, :) = pulse_vel(ydim) * cg%u%arr(flind%neu%idn, :, :, :)
+         cg%u%arr(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u%arr(flind%neu%idn, :, :, :)
 
          ! Set up the internal energy
          do k = cg%ks, cg%ke
@@ -184,11 +192,6 @@ contains
             enddo
          enddo
 
-         ! Save the initial density
-         call register_user_var(0_INT4, cg)
-         i = cg%get_na_ind(inid_n)
-         cg%q(i)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-
          cgl => cgl%nxt
       enddo
 
@@ -198,6 +201,7 @@ contains
 
    subroutine inid_var_hdf5(var, tab, ierrh, cg)
 
+      use global,    only: t
       use grid_cont, only: grid_container
 
       implicit none
@@ -208,6 +212,8 @@ contains
       type(grid_container), pointer, intent(in)       :: cg
 
       real, dimension(:,:,:), pointer :: inid
+
+      call analytic_solution(t)
 
       ierrh = 0
       inid => cg%get_na_ptr(var)
@@ -242,11 +248,12 @@ contains
 
    subroutine finalize_problem_adv
 
-      use constants,  only: I_ONE, I_TWO
-      use dataio_pub, only: msg, printinfo, warn
+      use constants,  only: I_ONE, I_TWO, PIERNIK_FINISHED
+      use dataio_pub, only: code_progress, halfstep, msg, printinfo, warn
       use fluidindex, only: flind
-      use grid,       only: all_cg
       use gc_list,    only: cg_list_element
+      use global,     only: t, nstep
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,   only: master, comm, ierr
@@ -255,14 +262,17 @@ contains
 
       integer            :: i, j, k
       real, dimension(2) :: norm, dev
-      real               :: dini
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       real, dimension(:,:,:), pointer :: inid
 
+      if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /=0 .or. halfstep)) return
+
       norm(:) = 0.
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
+
+      call analytic_solution(t)
 
       cgl => all_cg%first
       do while (associated(cgl))
@@ -277,11 +287,10 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  dini =  inid(i, j, k)
-                  norm(1) = norm(1) + (dini - cg%u%arr(flind%neu%idn, i, j, k))**2
-                  norm(2) = norm(2) + dini**2
-                  dev(1) = min(dev(1), (dini - cg%u%arr(flind%neu%idn, i, j, k))/dini)
-                  dev(2) = max(dev(2), (dini - cg%u%arr(flind%neu%idn, i, j, k))/dini)
+                  norm(1) = norm(1) + (inid(i, j, k) - cg%u%arr(flind%neu%idn, i, j, k))**2
+                  norm(2) = norm(2) + inid(i, j, k)**2
+                  dev(1) = min(dev(1), (inid(i, j, k) - cg%u%arr(flind%neu%idn, i, j, k)))
+                  dev(2) = max(dev(2), (inid(i, j, k) - cg%u%arr(flind%neu%idn, i, j, k)))
                enddo
             enddo
          enddo
@@ -293,10 +302,86 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, dev(2), I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
 
       if (master) then
-         write(msg,'(a,f12.6,a,2f12.6)')"[initproblem:finalize_problem_adv] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
+         write(msg,'(a,f12.6,a,2f15.6)')"[initproblem:finalize_problem_adv] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
          call printinfo(msg)
       endif
 
    end subroutine finalize_problem_adv
+
+   !>
+   !! \brief Put analytic solution in the inid arrays
+   !!
+   !! \details Density is shaped as an uniform box and translated according to initial velocity and given time
+   !<
+
+   subroutine analytic_solution(t)
+
+      use constants,  only: xdim, zdim, ndims
+      use dataio_pub, only: warn
+      use domain,     only: dom, has_dir
+      use gc_list,    only: cg_list_element
+      use global,     only: smalld
+      use grid,       only: all_cg
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: master
+
+      implicit none
+
+      real, intent(in) :: t !< time of the solution
+
+      real :: dini
+      integer :: i, j, k, d
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
+      real, dimension(:,:,:), pointer :: inid
+      real, dimension(ndims) :: pos
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         inid => cg%get_na_ptr(inid_n)
+         if (.not. associated(inid))then
+            if (master) call warn("[initproblem:analytic_solution] Cannot store the initial conditions.")
+            return
+         endif
+
+         do k = cg%ks, cg%ke
+            do j = cg%js, cg%je
+               do i = cg%is, cg%ie
+
+                  pos = [cg%x(i), cg%y(j), cg%z(k)] - t * pulse_vel(:)
+                  do d = xdim, zdim
+                     if (dom%periodic(d)) then
+                        if (pos(d) < dom%edge(d, LO)) then
+                           pos(d) = pos(d) + dom%L_(d) * ceiling((dom%edge(d, LO) - pos(d))/dom%L_(d))
+                        else if (pos(d) > dom%edge(d, HI)) then
+                           pos(d) = pos(d) + dom%L_(d) * floor  ((dom%edge(d, HI) - pos(d))/dom%L_(d))
+                        endif
+                     endif
+                  enddo
+                  dini = 0.
+                  if (all(pos(:) > pulse_edge(:, LO) - cg%dl(:)/2.).and. all(pos(:) < pulse_edge(:, HI) + cg%dl(:)/2.)) then
+                     dini = pulse_low_density * (pulse_amp - 1.)
+                     do d = xdim, zdim
+                        if (has_dir(d)) then
+                           if (abs(pos(d) - pulse_edge(d, LO)) < cg%dl(d)/2.) dini = dini * (0.5 + (pos(d) - pulse_edge(d, LO))/cg%dl(d))
+                           if (abs(pos(d) - pulse_edge(d, HI)) < cg%dl(d)/2.) dini = dini * (0.5 - (pos(d) - pulse_edge(d, HI))/cg%dl(d))
+                        endif
+                     enddo
+                  endif
+
+                  dini = dini + pulse_low_density
+                  if (dini < smalld) dini = smalld
+                  inid(i, j, k) = dini
+
+               enddo
+            enddo
+         enddo
+
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine analytic_solution
 
 end module initproblem

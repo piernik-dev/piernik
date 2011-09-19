@@ -151,6 +151,8 @@ contains
          cgl => cgl%nxt
       enddo
 
+      if (norm_step <= 0) norm_step = huge(1)
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------

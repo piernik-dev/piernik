@@ -46,9 +46,9 @@
  $OUTPUT_CONTROL
     problem_name ='moving_pulse'
     run_id =  'ts1'
-    ix      = 10
-    iy      = 10
-    iz      = 10
+    ix      = 0
+    iy      = 0
+    iz      = 0
     dt_hdf  = 1.0
     dt_res  = 0.0
     dt_plt  = 0.2
@@ -74,9 +74,7 @@
  /
 
  $PROBLEM_CONTROL
-    pulse_vel_x = 2.
-    pulse_vel_y = -2.
-    pulse_vel_z = 2.
+    pulse_vel = 2., -2., 2.
  /
 
  $INTERACTIONS
