@@ -26,15 +26,10 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 
-#define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 #include "piernik.h"
 
 !>
-!! \brief (KK) Module that contains I/O routines using HDF5 library
-!!
-!! Modules contains routines for creating HDF5 output such as
-!! plots, snapshots, restart files.
-!!
+!! \brief Module that contains HDF5 I/O routines for reading and writing restart files.
 !<
 module restart_hdf5
 

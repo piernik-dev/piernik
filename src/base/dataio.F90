@@ -207,6 +207,7 @@ contains
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, FIRST
       use restart_hdf5,    only: read_restart_hdf5
+      use slice_hdf5,      only: init_plot
       use timer,           only: time_left
       use version,         only: nenv,env, init_version
 !      use grid,            only: cg
@@ -395,7 +396,8 @@ contains
 
       last_hdf_time = -dt_hdf
 
-      call init_hdf5(vars,ix,iy,iz,dt_plt)
+      call init_hdf5(vars)
+      call init_plot( [ ix, iy, iz ], dt_plt)
 
       if (master .and. restart == 'last') call find_last_restart(nrestart)
       call MPI_Barrier(comm,ierr)
@@ -568,10 +570,11 @@ contains
 !
    subroutine write_data(output)
 
-      use dataio_hdf5,  only: write_hdf5, write_plot
+      use dataio_hdf5,  only: write_hdf5
       use dataio_pub,   only: chdf, nres, last_hdf_time, step_hdf, set_container_chdf
       use global,       only: t, nstep
       use restart_hdf5, only: write_restart_hdf5
+      use slice_hdf5,   only: write_plot
 
       implicit none
 
