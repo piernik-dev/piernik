@@ -137,9 +137,9 @@ contains
 
    subroutine write_restart_hdf5(debug_res)
 
+      use common_hdf5, only: set_common_attributes, chdf, set_container_chdf, hdf
       use constants,   only: cwdlen, AT_IGNORE, AT_ALL_B, AT_OUT_B, AT_NO_B, I_ONE, FLUID, MAG
-      use common_hdf5, only: set_common_attributes
-      use dataio_pub,  only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
+      use dataio_pub,  only: nres, problem_name, run_id, msg, printio
       use global,      only: nstep
       use grid,        only: all_cg
       use gc_list,     only: cg_list_element
@@ -686,8 +686,9 @@ contains
 
    subroutine read_restart_hdf5(chdf)
 
+      use common_hdf5, only: hdf
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_IGNORE, AT_NO_B, AT_OUT_B, LO, HI, I_ONE, FLUID, MAG
-      use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, hdf
+      use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version
       use dataio_user, only: problem_read_restart
       use domain,      only: dom, has_dir
       use fluidindex,  only: flind

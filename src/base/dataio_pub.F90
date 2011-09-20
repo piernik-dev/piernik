@@ -72,15 +72,6 @@ module dataio_pub
    ! Handy variables
    integer(kind=4)       :: ierrh                  !< variable for iostat
 
-   ! the stuff related to type(hdf) has nothing in common with rest of this file. \todo move it to a separate file to prevent spurious cyclic dependencies
-   type :: hdf
-      integer(kind=4) :: nhdf, nres, step_hdf, step_res, nstep, nrestart
-      real    :: last_hdf_time, next_t_tsl,  next_t_log
-      character(len=domlen)  :: domain_dump
-      character(len=idlen)   :: new_id
-   end type hdf
-   type(hdf)          :: chdf                   !< container for some vital simulation parameters
-
    real               :: last_hdf_time                  !< time in simulation of the last resent hdf file dump
    integer            :: code_progress                  !< rough estimate of code execution progress
 
@@ -276,42 +267,6 @@ contains
       call exit(-1)
 
    end subroutine die
-!-----------------------------------------------------------------------------
-   subroutine get_container(nstep)
-
-      implicit none
-
-      integer(kind=4), intent(out) :: nstep
-
-      nstep         = chdf%nstep
-      nhdf          = chdf%nhdf
-      next_t_tsl    = chdf%next_t_tsl
-      nres          = chdf%nres
-      next_t_log    = chdf%next_t_log
-      step_hdf      = chdf%step_hdf
-      last_hdf_time = chdf%last_hdf_time
-      nrestart      = chdf%nrestart
-      domain_dump   = chdf%domain_dump
-
-   end subroutine get_container
-!-----------------------------------------------------------------------------
-   subroutine set_container_chdf(nstep)
-
-      implicit none
-
-      integer(kind=4), intent(in) ::  nstep
-
-      chdf%nstep          = nstep
-      chdf%nhdf           = nhdf
-      chdf%next_t_tsl     = next_t_tsl
-      chdf%nres           = nres
-      chdf%next_t_log     = next_t_log
-      chdf%step_hdf       = step_hdf
-      chdf%last_hdf_time  = last_hdf_time
-      chdf%nrestart       = nrestart
-      chdf%domain_dump    = domain_dump
-
-   end subroutine set_container_chdf
 !-----------------------------------------------------------------------------
    subroutine namelist_errh(ierrh,nm,skip_eof)
 

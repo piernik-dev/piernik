@@ -42,7 +42,7 @@ module data_hdf5
 
    interface
       subroutine h5_write(chdf)
-         use dataio_pub, only: hdf
+         use common_hdf5, only: hdf
          implicit none
          type(hdf), intent(in) :: chdf
       end subroutine h5_write
@@ -67,8 +67,8 @@ contains
 !<
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
-      use constants,   only: varlen, half
       use common_hdf5, only: common_shortcuts
+      use constants,   only: varlen, half
       use fluidindex,  only: flind, ibx, iby, ibz
       use fluidtypes,  only: component_fluid
       use grid_cont,   only: grid_container
@@ -147,9 +147,9 @@ contains
 !
    subroutine h5_write_to_single_file(chdf)
 
+      use common_hdf5, only: nhdf_vars, hdf_vars, set_common_attributes, hdf
       use constants,   only: ndims, cwdlen, I_ONE
-      use common_hdf5, only: nhdf_vars, hdf_vars, set_common_attributes
-      use dataio_pub,  only: printio, msg, die, nhdf, problem_name, run_id, hdf
+      use dataio_pub,  only: printio, msg, die, nhdf, problem_name, run_id
       use dataio_user, only: user_vars_hdf5
       use domain,      only: dom !, is_uneven
       use grid,        only: all_cg
@@ -290,8 +290,8 @@ contains
    subroutine h5_write_to_multiple_files(chdf)
 
       use constants,       only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
-      use common_hdf5,     only: nhdf_vars, hdf_vars
-      use dataio_pub,      only: die, hdf, msg, printio
+      use common_hdf5,     only: nhdf_vars, hdf_vars, hdf
+      use dataio_pub,      only: die, msg, printio
       use dataio_user,     only: user_vars_hdf5
       use gc_list,         only: cg_list_element
       use grid,            only: all_cg

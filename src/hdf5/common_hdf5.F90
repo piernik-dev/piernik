@@ -35,16 +35,26 @@ module common_hdf5
 
 ! pulled by ANY
 
+   use constants, only: domlen, idlen
+
    implicit none
 
    private
-   public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts
-   public :: nhdf_vars, hdf_vars
+   public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, set_container_chdf, get_container
+   public :: nhdf_vars, hdf_vars, hdf, chdf
 
    integer, parameter :: S_LEN = 30
 
    character(len=S_LEN), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    integer, protected :: nhdf_vars !< number of quantities plotted to hdf files
+
+   type :: hdf
+      integer(kind=4) :: nhdf, nres, step_hdf, step_res, nstep, nrestart
+      real :: last_hdf_time, next_t_tsl,  next_t_log
+      character(len=domlen) :: domain_dump
+      character(len=idlen) :: new_id
+   end type hdf
+   type(hdf) :: chdf                   !< container for some vital simulation parameters
 
 contains
 
@@ -174,6 +184,46 @@ contains
 
    end subroutine cleanup_hdf5
 
+!-----------------------------------------------------------------------------
+   subroutine get_container(nstep)
+
+      use dataio_pub, only: nhdf, next_t_tsl, nres, next_t_log, step_hdf, last_hdf_time, nrestart, domain_dump
+
+      implicit none
+
+      integer(kind=4), intent(out) :: nstep
+
+      nstep         = chdf%nstep
+      nhdf          = chdf%nhdf
+      next_t_tsl    = chdf%next_t_tsl
+      nres          = chdf%nres
+      next_t_log    = chdf%next_t_log
+      step_hdf      = chdf%step_hdf
+      last_hdf_time = chdf%last_hdf_time
+      nrestart      = chdf%nrestart
+      domain_dump   = chdf%domain_dump
+
+   end subroutine get_container
+!-----------------------------------------------------------------------------
+   subroutine set_container_chdf(nstep)
+
+      use dataio_pub, only: nhdf, next_t_tsl, nres, next_t_log, step_hdf, last_hdf_time, nrestart, domain_dump
+
+      implicit none
+
+      integer(kind=4), intent(in) ::  nstep
+
+      chdf%nstep          = nstep
+      chdf%nhdf           = nhdf
+      chdf%next_t_tsl     = next_t_tsl
+      chdf%nres           = nres
+      chdf%next_t_log     = next_t_log
+      chdf%step_hdf       = step_hdf
+      chdf%last_hdf_time  = last_hdf_time
+      chdf%nrestart       = nrestart
+      chdf%domain_dump    = domain_dump
+
+   end subroutine set_container_chdf
 !>
 !! \brief decode some useful indices from variable name, if possible
 !<
@@ -222,7 +272,7 @@ contains
    subroutine set_common_attributes(filename, chdf)
 
       use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE, I_NINE
-      use dataio_pub,  only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, hdf, parfile, parfilelines
+      use dataio_pub,  only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, parfile, parfilelines
       use dataio_user, only: additional_attrs
       use domain,      only: dom
       use global,      only: magic_mass, t, dt, local_magic_mass
