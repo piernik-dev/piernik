@@ -193,10 +193,11 @@ contains
 #endif /* COSM_RAYS */
 #ifdef DEBUG
       use dataio,         only: write_data
-      use dataio_hdf5,    only: write_hdf5, write_restart_hdf5
+      use dataio_hdf5,    only: write_hdf5
       use dataio_pub,     only: chdf, set_container_chdf
       use global,         only: nstep
       use piernikdebug,   only: force_hdf5_dump, force_log_dump, force_res_dump, force_allbnd_dump
+      use restart_hdf5,   only: write_restart_hdf5
 #endif /* DEBUG */
 
       implicit none

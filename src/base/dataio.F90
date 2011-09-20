@@ -196,7 +196,7 @@ contains
    subroutine init_dataio
 
       use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
-      use dataio_hdf5,     only: init_hdf5, read_restart_hdf5, parfile, parfilelines
+      use dataio_hdf5,     only: init_hdf5, parfile, parfilelines
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
            &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress, &
            &                     move_file, getlun, multiple_h5files
@@ -206,6 +206,7 @@ contains
       use global,          only: t, nstep
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, FIRST
+      use restart_hdf5,    only: read_restart_hdf5
       use timer,           only: time_left
       use version,         only: nenv,env, init_version
 !      use grid,            only: cg
@@ -456,12 +457,13 @@ contains
 
    subroutine user_msg_handler(end_sim)
 
-      use constants,   only: I_ONE
-      use dataio_hdf5, only: write_hdf5, write_restart_hdf5
-      use dataio_pub,  only: chdf, step_hdf, msg, printinfo, warn, set_container_chdf
-      use mpisetup,    only: comm, ierr, master, FIRST
-      use global,      only: nstep
-      use mpi,         only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use constants,    only: I_ONE
+      use dataio_hdf5,  only: write_hdf5
+      use dataio_pub,   only: chdf, step_hdf, msg, printinfo, warn, set_container_chdf
+      use mpisetup,     only: comm, ierr, master, FIRST
+      use global,       only: nstep
+      use mpi,          only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use restart_hdf5, only: write_restart_hdf5
 
       implicit none
 
@@ -566,9 +568,10 @@ contains
 !
    subroutine write_data(output)
 
-      use dataio_hdf5, only: write_hdf5, write_restart_hdf5, write_plot
-      use dataio_pub,  only: chdf, nres, last_hdf_time, step_hdf, set_container_chdf
-      use global,      only: t, nstep
+      use dataio_hdf5,  only: write_hdf5, write_plot
+      use dataio_pub,   only: chdf, nres, last_hdf_time, step_hdf, set_container_chdf
+      use global,       only: t, nstep
+      use restart_hdf5, only: write_restart_hdf5
 
       implicit none
 
