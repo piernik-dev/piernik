@@ -59,7 +59,7 @@ contains
 !<
    subroutine init_grid
 
-      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, ndims, zdim
+      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, ndims, xdim, zdim, ARR, INVALID
       use dataio_pub,  only: printinfo, die, code_progress
       use diagnostics, only: my_allocate
       use domain,      only: dom
@@ -67,11 +67,11 @@ contains
       use gc_list,     only: cg_list_element
       use global,      only: repeat_step
       use grid_cont,   only: grid_container
-      use mpisetup,    only: proc
+      use mpisetup,    only: proc, inflate_req
 
       implicit none
 
-      integer :: g
+      integer :: g, nrq, d
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       integer(kind=4), dimension(:), allocatable :: ind_arr
@@ -88,10 +88,20 @@ contains
 !!$      allocate(levels(1))
 !!$      call levels(1)%init
 
+      nrq = 0
       do g = 1, ubound(dom%pse(proc)%sel(:,:,:), dim=1)
          call all_cg%add
-         call all_cg%last%cg%init(dom, g)
+         cg => all_cg%last%cg
+
+         call cg%init(dom, g)
+
+         if (allocated(cg%i_bnd)) then
+            do d = xdim, zdim
+               if (allocated(cg%i_bnd(d, ARR, cg%nb)%seg)) nrq = nrq + 2 * count(cg%i_bnd(d, ARR, cg%nb)%seg(:)%mbc /= INVALID)
+            enddo
+         endif
       enddo
+      call inflate_req(nrq)
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: all_cg finished. \o/")

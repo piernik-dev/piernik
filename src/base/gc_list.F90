@@ -211,10 +211,10 @@ contains
       do while (associated(cur%nxt))
 
          if (associated(cur, cgle)) then
-            cur%prv%nxt => cur%nxt
-            cur%nxt%prv => cur%prv
+            if (associated(cur%prv)) cur%prv%nxt => cur%nxt
+            if (associated(cur%nxt)) cur%nxt%prv => cur%prv
             this%cnt = this%cnt - 1
-            deallocate(cgle)
+            deallocate(cur)
             exit
          endif
 

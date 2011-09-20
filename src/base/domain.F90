@@ -225,7 +225,7 @@ contains
 
       real :: xmno, ymno, ymxo
       integer :: p, i
-      real :: maxcnt
+      real, allocatable, dimension(:) :: maxcnt
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init_grid] MPI not initialized.")
 
@@ -452,11 +452,12 @@ contains
       if (is_mpi_noncart) is_uneven = .true.
 
       ! bnd_[xyz][lr] now become altered according to local topology of processes
-      if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call warn("[domain:init_domain] Multiple blocks per process not implemented yet") !die
+      if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call warn("[domain:init_domain] Multiple blocks per process not fully implemented yet")
 
 !#ifdef VERBOSE
       if (master) then
-         maxcnt = 0
+         allocate(maxcnt(FIRST:LAST))
+         maxcnt(:) = 0
          do p = FIRST, LAST
             i = 1
             write(msg,'(a,i4,a,2(3i6,a),i8,a)') "[domain:init_domain] segment @",p," : [",dom%pse(p)%sel(i, :, LO),"] : [",dom%pse(p)%sel(i, :, HI),"] #", &
@@ -469,10 +470,13 @@ contains
                   call printinfo(msg)
                enddo
             endif
-            maxcnt = max(maxcnt, product(real(dom%pse(p)%sel(1, :, HI)-dom%pse(p)%sel(1, :, LO)+1)))
+            do i= 1, ubound(dom%pse(p)%sel(:, :, :), dim=1)
+               maxcnt(p) = maxcnt(p) + product(real(dom%pse(p)%sel(i, :, HI)-dom%pse(p)%sel(i, :, LO)+1))
+            enddo
          enddo
-         write(msg,'(a,f8.5)')"[domain:init_domain] Load balance: ",product(real(dom%n_d(:)))/(nproc*maxcnt) !> \todo add calculation of total internal boundary surface in cells
+         write(msg,'(a,f8.5)')"[domain:init_domain] Load balance: ",product(real(dom%n_d(:)))/(nproc*maxval(maxcnt(:))) !> \todo add calculation of total internal boundary surface in cells
          call printinfo(msg)
+         deallocate(maxcnt)
       endif
 !#endif /* VERBOSE */
 

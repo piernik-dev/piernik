@@ -42,7 +42,6 @@ module dataio_hdf5
 
    use constants,     only: FLUID, MAG, xdim, zdim, dsetnamelen
    use dataio_pub,    only: maxparfilelen, maxparfilelines
-   use list_hdf5,     only: S_LEN
 
    implicit none
 
@@ -51,6 +50,7 @@ module dataio_hdf5
    public :: parfile, parfilelines
 
    integer, parameter :: planelen = 2           !< length of plane names e.g. "xy", "yz", "rp" etc.
+   integer, parameter :: S_LEN = 30
    character(len=planelen), dimension(xdim:zdim), parameter :: pl_id = [ "yz", "xz", "xy" ]
 
    !< dataset names for restart files
@@ -1435,23 +1435,25 @@ contains
 !
    subroutine h5_write_to_single_file(chdf)
 
-      use constants,   only: cwdlen, I_ONE
+      use constants,   only: ndims, cwdlen, I_ONE
       use dataio_pub,  only: printio, msg, die, nhdf, problem_name, run_id, hdf
       use dataio_user, only: user_vars_hdf5
+      use domain,      only: dom !, is_uneven
       use grid,        only: all_cg
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
-           &                 h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
+      use hdf5,        only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, &
+           &                 H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
+           &                 h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
+           &                 h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
       use mpisetup,    only: comm, ierr, info, master, FIRST
       use mpi,         only: MPI_CHARACTER
-      use list_hdf5,   only: write_arr
 
       implicit none
 
       type(hdf), intent(in)   :: chdf
       integer(HID_T)          :: file_id       ! File identifier
-      integer(HID_T)          :: plist_id      ! Property list identifier
+      integer(HID_T)          :: plist_id, plist_idf ! Property list identifier
       integer                 :: ierrh, i
       integer(kind=4)         :: error
       logical                 :: ok_var
@@ -1459,6 +1461,11 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       real(kind=4), allocatable :: data (:,:,:)  ! Data to write
+      integer(kind=4), parameter :: rank = ndims        !< Dataset rank = 3
+      integer(HID_T) :: dset_id                 !< Dataset identifier
+      integer(HID_T) :: filespace               !< Dataspace identifier in file
+      integer(HID_T) :: memspace                !< Dataspace identifier in memory
+      integer(HSIZE_T), dimension(rank) :: count, offset, stride, block, dimsf, chunk_dims
 
       ! Initialize HDF5 library and Fortran interfaces.
       !
@@ -1473,20 +1480,42 @@ contains
       !
       ! Setup file access property list with parallel I/O access.
       !
-      call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
-      call h5pset_fapl_mpio_f(plist_id, comm, info, error)
+      call h5pcreate_f(H5P_FILE_ACCESS_F, plist_idf, error)
+      call h5pset_fapl_mpio_f(plist_idf, comm, info, error)
       !
       ! Create the file collectively.
       !
-      call h5fcreate_f(trim(fname), H5F_ACC_TRUNC_F, file_id, error, creation_prp = H5P_DEFAULT_F, access_prp = plist_id)
-      call h5pclose_f(plist_id, error)
+      call h5fcreate_f(trim(fname), H5F_ACC_TRUNC_F, file_id, error, creation_prp = H5P_DEFAULT_F, access_prp = plist_idf)
+      call h5pclose_f(plist_idf, error)
 
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
+      dimsf  = dom%n_d(:)    ! Dataset dimensions
+      !
+      ! Create the data space for the  dataset.
+      !
+      call h5screate_simple_f(rank, dimsf, filespace, error)
 
-         if (.not.allocated(data)) allocate(data(cg%nxb, cg%nyb, cg%nzb))
-         do i = 1, nhdf_vars
+      do i = 1, nhdf_vars
+
+         ! Create chunked dataset.
+         call h5pcreate_f(H5P_DATASET_CREATE_F, plist_id, error)
+
+         ! Cannot use in multiblock
+         ! if (.not. is_uneven) call h5pset_chunk_f(plist_id, rank, chunk_dims, error) !> \todo check how much performance it gives (massively parallel I/O is required)
+
+         call h5dcreate_f(file_id, hdf_vars(i), H5T_NATIVE_REAL, filespace, dset_id, error, plist_id)
+         call h5sclose_f(filespace, error)
+
+         call h5dget_space_f(dset_id, filespace, error)
+
+         ! Create property list for collective dataset write
+         call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+         call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+
+         cgl => all_cg%first
+         do while (associated(cgl))
+            cg => cgl%cg
+
+            if (.not.allocated(data)) allocate(data(cg%nxb, cg%nyb, cg%nzb))
             ierrh = 0; ok_var = .false.
             call common_vars_hdf5(hdf_vars(i), data, ierrh, cg)
             if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
@@ -1495,16 +1524,38 @@ contains
                write(msg,'(3a)') "[dataio_hdf5:h5_write_to_single_file]: ", hdf_vars(i)," is not defined in common_vars_hdf5, neither in user_vars_hdf5."
                call die(msg)
             endif
-            call write_arr(data, hdf_vars(i), file_id)
-         enddo
-         if (allocated(data)) deallocate(data)
 
-         cgl => cgl%nxt
+            chunk_dims = cg%n_b(:) ! Chunks dimensions
+            call h5screate_simple_f(rank, chunk_dims, memspace, error)
+
+            ! Each process defines dataset in memory and writes it to the hyperslab in the file.
+            stride(:) = 1
+            count(:) =  1
+            block(:) = chunk_dims(:)
+            offset(:) = cg%off(:)
+
+            ! Select hyperslab in the file.
+            call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
+
+            ! Write the dataset collectively.
+            call h5dwrite_f(dset_id, H5T_NATIVE_REAL, data, dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+
+            ! Close dataspaces.
+            call h5sclose_f(memspace, error)
+
+            if (allocated(data)) deallocate(data)
+
+            cgl => cgl%nxt
+         enddo
+
+         ! Close the dataset.
+         call h5dclose_f(dset_id, error)
+
       enddo
 
-      !
+      call h5sclose_f(filespace, error)
+
       ! Close the property list.
-      !
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 

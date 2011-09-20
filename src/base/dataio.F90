@@ -695,7 +695,7 @@ contains
    subroutine write_timeslice
 
       use constants,   only: cwdlen, xdim, ydim, zdim, half
-      use dataio_pub,  only: cwd, die, getlun
+      use dataio_pub,  only: cwd, warn, getlun
       use dataio_user, only: user_tsl
       use diagnostics, only: pop_vector
       use domain,      only: dom
@@ -738,7 +738,10 @@ contains
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet") !nontrivial mpi_addmul
+      if (all_cg%cnt > 1) then
+         call warn("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet in mpi_addmul. Bailing out.")
+         return
+      endif
 
       if (has_ion) then
          cs_iso2 = flind%ion%cs2
@@ -1011,7 +1014,7 @@ contains
    subroutine  write_log(tsl)
 
       use constants,          only: small, MINL, MAXL, xdim, ydim, zdim
-      use dataio_pub,         only: msg, printinfo, die
+      use dataio_pub,         only: msg, printinfo, warn
       use domain,             only: has_dir
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: ibx, iby, ibz, flind
@@ -1059,7 +1062,10 @@ contains
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[dataio:write_log] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
+      if (all_cg%cnt > 1) then
+         call warn("[dataio:write_log] multiple grid pieces per procesor not implemented yet in get_extremum routine. Bailing out.")
+         return
+      endif
 
 #if defined VARIABLE_GP || defined MAGNETIC
       nxl = 1 + D_x

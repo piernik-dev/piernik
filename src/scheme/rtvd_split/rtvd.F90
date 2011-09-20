@@ -231,13 +231,14 @@ contains
 
    subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg)
 
-      use constants,        only: one, zero, half
+      use constants,        only: one, zero, half, GEO_XYZ
       use dataio_pub,       only: msg, die
+      use domain,           only: geometry_type
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
       use global,           only: smalld, integration_order, use_smalld, local_magic_mass
       use grid_cont,        only: grid_container
-      use gridgeometry,     only: gc, geometry_source_terms
+      use gridgeometry,     only: gc, GC1, GC2, GC3, geometry_source_terms
 #ifdef BALSARA
       use interactions,     only: balsara_implicit_interactions
 #else /* !BALSARA */
@@ -376,7 +377,11 @@ contains
 ! u update
 
       fu = fr - fl
-      u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) * gc(1,:,2:n) * dtx * ( gc(2,:,2:n)*fu(:,2:n) - gc(3,:,2:n)*fu(:,1:n-1) )
+      if (geometry_type == GEO_XYZ) then
+         u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) *                 dtx * (               fu(:,2:n) -               fu(:,1:n-1) )
+      else
+         u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) * gc(GC1,:,2:n) * dtx * ( gc(GC2,:,2:n)*fu(:,2:n) - gc(GC3,:,2:n)*fu(:,1:n-1) )
+      endif
       u1(:,1)   = u1(:,2)
 
       if (use_smalld) then

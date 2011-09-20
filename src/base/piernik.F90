@@ -261,11 +261,11 @@ contains
       call init_grid         ! Most of the cg's vars are now initialized, only arrays left
       code_progress = PIERNIK_INIT_GRID      ! Now we can initialize things that depend on all the above fundamental calls
 
+      call init_geometry ! depends on domain; \todo move this call to init_domain or init_grid
+
 #ifdef COSM_RAYS
       call init_crdiffusion(flind%crs%all) ! depends on grid and fluids
 #endif /* COSM_RAYS */
-
-      call init_geometry ! depends on grid
 
 #ifdef SHEAR
       call init_shear ! depends on fluids

@@ -154,10 +154,9 @@ contains
          frun = .false.
       endif
 
-      if (all_cg%cnt > 1) call die("[fluidboundaries:bnd_u] multiple grid pieces per procesor not implemented yet") !nontrivial communication
-
 ! MPI block communication
       if (cdd%comm3d /= MPI_COMM_NULL) then
+         if (all_cg%cnt > 1) call die("[fluidboundaries:bnd_u] multiple grid pieces per procesor not implemented for comm3d")
 #ifdef SHEAR_BND
          if (dir == xdim) then
 #ifndef FFTW

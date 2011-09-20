@@ -207,8 +207,6 @@ contains
                         curl%mgvar(ise(xdim, LO):ise(xdim,HI), ise(ydim, LO):ise(ydim, HI), ise(zdim, LO):ise(zdim, HI), iv) = &
                              curl%mgvar(ose(xdim, LO):ose(xdim,HI), ose(ydim, LO):ose(ydim, HI), ose(zdim, LO):ose(zdim, HI), iv)
                      else
-                        ! BEWARE: Here we assume, that we have at most one chunk to communicate with a given process on a single side od the domain.
-                        ! This will not be true when we allow many blocks per process and tag will need to be modified to include g or seg(g)%lh should become seg(g)%tag
                         nr = nr + I_ONE
                         call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%i_bnd(d, ARR, ng)%seg(g)%mbc, curl%i_bnd(d, ARR, ng)%seg(g)%proc, curl%i_bnd(d, ARR, ng)%seg(g)%tag, comm, req(nr), ierr)
                      endif

@@ -191,14 +191,14 @@ contains
    subroutine sanitize_smallx_checks
 
       use constants,  only: big_float, DST, I_ONE
-      use dataio_pub, only: warn, msg, die
+      use dataio_pub, only: warn, msg
       use fluidindex, only: flind, ibx, iby, ibz
       use fluidtypes, only: component_fluid
-      use global,     only: smalld, smallp
       use gc_list,    only: cg_list_element
+      use global,     only: smalld, smallp
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
-      use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
+      use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
       use mpisetup,   only: master, comm, ierr
 
       implicit none
@@ -211,11 +211,13 @@ contains
       real, parameter                  :: safety_factor = 1.e-4
       real, parameter                  :: max_dens_span = 5.0
       real                             :: maxdens, span
+      real                             :: mindens, minpres
 
       maxdens = 0.0
+      mindens = smalld
+      minpres = smallp
 
-      if (all_cg%cnt > 1) call die("[func:sanitize_smallx_checks] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval, minval
-
+      ! collect the extrema
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -226,23 +228,10 @@ contains
 
          if (smalld >= big_float) then
             do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-               fl => flind%all_fluids(i)
-               dn => cg%u%arr(fl%idn,:,:,:)
-
-               maxdens = max(maxval(dn), maxdens)
-               smalld  = min(minval(dn), smalld)
+               dn => cg%u%arr(flind%all_fluids(i)%idn,:,:,:)
+               maxdens = max( maxval(dn), maxdens )
+               mindens = min( minval(dn), mindens )
             enddo
-            span   = log10(maxdens) - log10(smalld)
-            smalld = smalld * safety_factor
-            call MPI_Allreduce(MPI_IN_PLACE, smalld, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-            if (master) then
-               write(msg,'(A,ES11.4)') "[func:sanitize_smallx_checks] adjusted smalld to ", smalld
-               call warn(msg)
-               if (span > max_dens_span) then
-                  write(msg,'(A,I3,A)') "[func:sanitize_smallx_checks] density spans over ", int(span), " orders of magnitude!"
-                  call warn(msg)
-               endif
-            endif
          endif
 
          if (smallp >= big_float) then
@@ -256,29 +245,47 @@ contains
                if (fl%has_energy) then
                   en => cg%u%arr(fl%ien,:,:,:)
                   if (fl%is_magnetized) then
-                     smallp = min( minval( en - ekin(mx,my,mz,dn) - emag(bx,by,bz))/fl%gam_1, smallp)
+                     minpres = min( minval( en - ekin(mx,my,mz,dn) - emag(bx,by,bz))/fl%gam_1, minpres )
                   else
-                     smallp = min( minval( en - ekin(mx,my,mz,dn))/fl%gam_1, smallp )
+                     minpres = min( minval( en - ekin(mx,my,mz,dn))/fl%gam_1, minpres )
                   endif
                else
-                  smallp = min( minval( cg%cs_iso2*dn ), smallp )
+                  minpres = min( minval( cg%cs_iso2*dn ), minpres )
                endif
             enddo
-            smallp = smallp * safety_factor
-            call MPI_Allreduce(MPI_IN_PLACE, smallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-            if (smallp < 0.) then
-               write(msg,'(A,ES11.4,A)') "[func:sanitize_smallx_checks] Negative smallp detected! smallp=",smallp," may indicate nonphysical initial conditions."
-               if (master) call warn(msg)
-               smallp = tiny(1.)
-            endif
-            if (master) then
-               write(msg,'(A,ES11.4)') "[func:sanitize_smallx_checks] adjusted smallp to ", smallp
+         endif
+         cgl => cgl%nxt
+      enddo
+
+      ! reduce across processes
+      if (smalld >= big_float) then
+         call MPI_Allreduce(mindens, smalld, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+         call MPI_Allreduce(MPI_IN_PLACE, maxdens, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+         span = log10(maxdens/mindens)
+         mindens = mindens * safety_factor
+         if (master) then
+            write(msg,'(A,ES11.4)') "[func:sanitize_smallx_checks] adjusted smalld to ", smalld
+            call warn(msg)
+            if (span > max_dens_span) then
+               write(msg,'(A,I3,A)') "[func:sanitize_smallx_checks] density spans over ", int(span), " orders of magnitude!"
                call warn(msg)
             endif
          endif
+      endif
 
-         cgl => cgl%nxt
-      enddo
+      if (smallp >= big_float) then
+         minpres = minpres * safety_factor
+         call MPI_Allreduce(minpres, smallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+         if (smallp < 0.) then
+            write(msg,'(A,ES11.4,A)') "[func:sanitize_smallx_checks] Negative smallp detected! smallp=",smallp," may indicate nonphysical initial conditions."
+            if (master) call warn(msg)
+            smallp = tiny(1.)
+         endif
+         if (master) then
+            write(msg,'(A,ES11.4)') "[func:sanitize_smallx_checks] adjusted smallp to ", smallp
+            call warn(msg)
+         endif
+      endif
 
       if (associated(dn)) nullify(dn)
       if (associated(mx)) nullify(mx)

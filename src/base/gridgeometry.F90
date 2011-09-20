@@ -38,10 +38,12 @@ module gridgeometry
    implicit none
 
    private
-   public   :: gc, init_geometry, set_geo_coeffs, geometry_source_terms
+   public   :: gc, GC1, GC2, GC3, init_geometry, set_geo_coeffs, geometry_source_terms
 
-   real, dimension(:,:,:), pointer :: gc            !< array of geometrical coefficients
-   integer, parameter              :: ngc = 3       !< number of geometrical coefficients
+   real, dimension(:,:,:), pointer :: gc            !< array of geometrical coefficients, \todo move it to the grid container
+   enum, bind(C)
+      enumerator :: GC1, GC2, GC3                   !< \todo change to a some meaningful names
+   end enum
 
    interface
       !>
@@ -96,12 +98,12 @@ contains
    subroutine init_geometry
 
       use dataio_pub, only: msg, die, code_progress
-      use constants,  only: PIERNIK_INIT_GRID, GEO_XYZ, GEO_RPZ
+      use constants,  only: PIERNIK_INIT_DOMAIN, GEO_XYZ, GEO_RPZ
       use domain,     only: geometry_type
 
       implicit none
 
-      if (code_progress < PIERNIK_INIT_GRID) call die("[gridgeometry:init_geometry] grid not initialized")
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[gridgeometry:init_geometry] domain not initialized")
 
       select case (geometry_type)
          case (GEO_XYZ)
@@ -137,22 +139,18 @@ contains
       if ( any( [allocated(cg%gc_xdim), allocated(cg%gc_ydim), allocated(cg%gc_zdim)] ) ) then
          call die("[gridgeometry:geo_coeffs_arrays] double allocation")
       else
-         allocate(cg%gc_xdim(ngc,flind%all, cg%n_(xdim)))
-         allocate(cg%gc_ydim(ngc,flind%all, cg%n_(ydim)))
-         allocate(cg%gc_zdim(ngc,flind%all, cg%n_(zdim)))
+         allocate(cg%gc_xdim(GC1:GC3, flind%all, cg%n_(xdim)))
+         allocate(cg%gc_ydim(GC1:GC3, flind%all, cg%n_(ydim)))
+         allocate(cg%gc_zdim(GC1:GC3, flind%all, cg%n_(zdim)))
       endif
 
    end subroutine geo_coeffs_arrays
 !>
-!! \brief routine setting geometrical coefficients for cartesian grid
+!! \brief A dummy routine. There is no need to set any cartesian coefficients, because all of them are equal to 1. so we don't use them in rtvd
 !<
    subroutine set_cart_coeffs(sweep, flind, i1, i2, cg)
 
-      use constants,  only: xdim, ydim, zdim
-      use dataio_pub, only: die, msg
       use fluidtypes, only: var_numbers
-      use grid,       only: all_cg
-      use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
 
       implicit none
@@ -162,34 +160,9 @@ contains
       integer, intent(in)           :: i1, i2
       type(grid_container), pointer :: cg
 
-      logical, save                  :: frun = .true.
-      type(cg_list_element), pointer :: cgl
+      return
+      if (.false.) write(0,*) cg%u%arr(flind%all, sweep, i1, i2) ! suppress compiler warnings
 
-      if (frun) then
-         cgl => all_cg%first
-         do while (associated(cgl))
-            call geo_coeffs_arrays(flind, cg)
-            cgl%cg%gc_xdim(:,:,:) = 1.0
-            cgl%cg%gc_ydim(:,:,:) = 1.0
-            cgl%cg%gc_zdim(:,:,:) = 1.0
-            cgl => cgl%nxt
-         enddo
-         frun = .false.
-      endif
-
-      select case (sweep)
-         case (xdim)
-            gc => cg%gc_xdim
-         case (ydim)
-            gc => cg%gc_ydim
-         case (zdim)
-            gc => cg%gc_zdim
-         case default
-            write(msg,'(a,i2)') "[gridgeometry:set_cart_coeffs] Unknown sweep : ",sweep
-            call die(msg)
-            write(6,*) i1,i2   ! fool the compiler    QA_WARN
-      end select
-      frun = .false.
    end subroutine set_cart_coeffs
 !>
 !! \brief routine setting geometrical coefficients for cylindrical grid
@@ -200,7 +173,6 @@ contains
       use dataio_pub, only: die, msg
       use fluidtypes, only: var_numbers
       use grid,       only: all_cg
-      use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
 
       implicit none
@@ -212,27 +184,25 @@ contains
 
       integer                        :: i
       logical, save                  :: frun = .true.
-      type(cg_list_element), pointer :: cgl
 
+      if (all_cg%cnt > 1) call die("[gridgeometry:set_cyl_coeffs] multiple grid pieces per procesor not implemented yet") ! move gc to grid_container%, fix initialization
+
+      !> \todo This should be probably called from cg%init (beware of cyclic dependencies) or init_grid
       if (frun) then
-      cgl => all_cg%first
-      do while (associated(cgl))
-         call geo_coeffs_arrays(flind, cgl%cg)
+         call geo_coeffs_arrays(flind, cg)
 
-         cgl%cg%gc_xdim(1,:,:) = spread( cgl%cg%inv_x(:), 1, flind%all)
-         cgl%cg%gc_xdim(2,:,:) = spread( cgl%cg%xr(:),    1, flind%all)
-         cgl%cg%gc_xdim(3,:,:) = spread( cgl%cg%xl(:),    1, flind%all)
+         cg%gc_xdim(GC1,:,:) = spread( cg%inv_x(:), 1, flind%all)
+         cg%gc_xdim(GC2,:,:) = spread( cg%xr(:),    1, flind%all)
+         cg%gc_xdim(GC3,:,:) = spread( cg%xl(:),    1, flind%all)
 
          do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-            cgl%cg%gc_xdim(1, flind%all_fluids(i)%imy, :) = cgl%cg%gc_xdim(1, flind%all_fluids(i)%imy, :) * cgl%cg%inv_x(:)
-            cgl%cg%gc_xdim(2, flind%all_fluids(i)%imy, :) = cgl%cg%gc_xdim(2, flind%all_fluids(i)%imy, :) * cgl%cg%xr(:)
-            cgl%cg%gc_xdim(3, flind%all_fluids(i)%imy, :) = cgl%cg%gc_xdim(3, flind%all_fluids(i)%imy, :) * cgl%cg%xl(:)
+            cg%gc_xdim(GC1, flind%all_fluids(i)%imy, :) = cg%gc_xdim(GC1, flind%all_fluids(i)%imy, :) * cg%inv_x(:)
+            cg%gc_xdim(GC2, flind%all_fluids(i)%imy, :) = cg%gc_xdim(GC2, flind%all_fluids(i)%imy, :) * cg%xr(:)
+            cg%gc_xdim(GC3, flind%all_fluids(i)%imy, :) = cg%gc_xdim(GC3, flind%all_fluids(i)%imy, :) * cg%xl(:)
          enddo
-         cgl%cg%gc_ydim(2:3,:,:) = 1.0     ! [ 1/r , 1 , 1]
+         cg%gc_ydim(GC2:GC3,:,:) = 1.0     ! [ 1/r , 1 , 1]
 
-         cgl%cg%gc_zdim(:,:,:) = 1.0              ! [ 1, 1, 1]
-         cgl => cgl%nxt
-      enddo
+         cg%gc_zdim(:,:,:) = 1.0           ! [ 1, 1, 1]
 
          frun = .false.
       endif
@@ -241,14 +211,14 @@ contains
          case (xdim)
             gc => cg%gc_xdim
          case (ydim)
-            cg%gc_ydim(1,:,:)   = cg%inv_x(i2)
+            cg%gc_ydim(GC1,:,:)   = cg%inv_x(i2)
             gc => cg%gc_ydim
          case (zdim)
             gc => cg%gc_zdim
          case default
             write(msg,'(a,i2)') "[gridgeometry:set_cyl_coeffs] Unknown sweep : ",sweep
             call die(msg)
-            write(6,*) i1,i2   ! fool the compiler    QA_WARN
+            if (.false.) frun = (i1==i2) ! suppress compiler warnings
       end select
       frun = .false.
 
