@@ -71,7 +71,7 @@ contains
 
    subroutine read_problem_par
 
-      use constants,  only: I_ONE
+      use constants,  only: I_ONE, xdim, zdim
       use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_pub, only: warn
       use domain,     only: dom, has_dir
@@ -94,7 +94,7 @@ contains
 
          rbuff(1)   = pulse_size
          rbuff(2)   = pulse_amp
-         rbuff(3:5) = pulse_vel(:)
+         rbuff(2+xdim:2+zdim) = pulse_vel(:)
 
          ibuff(1)   = norm_step
 
@@ -107,7 +107,7 @@ contains
 
          pulse_size = rbuff(1)
          pulse_amp  = rbuff(2)
-         pulse_vel  = rbuff(3:5)
+         pulse_vel  = rbuff(2+xdim:2+zdim)
 
          norm_step  = int(ibuff(1), kind=4)
 
@@ -121,6 +121,7 @@ contains
          if (have_mpi) then
             pulse_amp = 1. + proc/real(LAST)
             pulse_size = 1.
+            if (master) call warn("[initproblem:read_problem_par] The analytical solution will not be correctly advected (not implemented yet)")
          else
             pulse_amp = 2.
          endif
@@ -155,7 +156,6 @@ contains
 
       implicit none
 
-      integer :: i, j, k
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
@@ -183,15 +183,7 @@ contains
          cg%u%arr(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u%arr(flind%neu%idn, :, :, :)
 
          ! Set up the internal energy
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  cg%u%arr(flind%neu%ien,i,j,k) = max(smallei,                                             &
-                       &              pulse_pressure / flind%neu%gam_1        + &
-                       &              0.5 * sum(cg%u%arr(flind%neu%imx:flind%neu%imz,i,j,k)**2,1) / cg%u%arr(flind%neu%idn,i,j,k))
-               enddo
-            enddo
-         enddo
+         cg%u%arr(flind%neu%ien,:,:,:) = max(smallei, pulse_pressure / flind%neu%gam_1 + 0.5 * sum(cg%u%arr(flind%neu%imx:flind%neu%imz,:,:,:)**2,1) / cg%u%arr(flind%neu%idn,:,:,:))
 
          cgl => cgl%nxt
       enddo
@@ -261,17 +253,20 @@ contains
 
       implicit none
 
-      integer            :: i, j, k
-      real, dimension(2) :: norm, dev
+      enum, bind(C)
+         enumerator :: N_D, N_2
+      end enum
+      real, dimension(N_D:N_2) :: norm
+      real :: neg_err, pos_err
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       real, dimension(:,:,:), pointer :: inid
 
-      if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /=0 .or. halfstep)) return
+      if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /= 0 .or. halfstep)) return
 
       norm(:) = 0.
-      dev(1) = huge(1.0)
-      dev(2) = -dev(1)
+      neg_err = huge(1.0)
+      pos_err = -neg_err
 
       call analytic_solution(t)
 
@@ -285,25 +280,22 @@ contains
             return
          endif
 
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
-                  norm(1) = norm(1) + (inid(i, j, k) - cg%u%arr(flind%neu%idn, i, j, k))**2
-                  norm(2) = norm(2) + inid(i, j, k)**2
-                  dev(1) = min(dev(1), (inid(i, j, k) - cg%u%arr(flind%neu%idn, i, j, k)))
-                  dev(2) = max(dev(2), (inid(i, j, k) - cg%u%arr(flind%neu%idn, i, j, k)))
-               enddo
-            enddo
-         enddo
+         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+
+         norm(N_D) = norm(N_D) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
+         norm(N_2) = norm(N_2) + sum(inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
+         neg_err = min(neg_err, minval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
+         pos_err = max(pos_err, maxval(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
+
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, norm,   I_TWO, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, dev(1), I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, dev(2), I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, norm,    I_TWO, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, neg_err, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, pos_err, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
 
       if (master) then
-         write(msg,'(a,f12.6,a,2f15.6)')"[initproblem:finalize_problem_adv] L2 error norm = ", sqrt(norm(1)/norm(2)), ", min and max error = ", dev(1:2)
+         write(msg,'(a,f12.6,a,2f15.6)')"[initproblem:finalize_problem_adv] L2 error norm = ", sqrt(norm(N_D)/norm(N_2)), ", min and max error = ", neg_err, pos_err
          call printinfo(msg)
       endif
 
@@ -321,7 +313,6 @@ contains
       use dataio_pub, only: warn
       use domain,     only: dom, has_dir
       use gc_list,    only: cg_list_element
-      use global,     only: smalld
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
@@ -361,6 +352,7 @@ contains
                         endif
                      endif
                   enddo
+
                   dini = 0.
                   if (all(pos(:) > pulse_edge(:, LO) - cg%dl(:)/2.).and. all(pos(:) < pulse_edge(:, HI) + cg%dl(:)/2.)) then
                      dini = pulse_low_density * (pulse_amp - 1.)
@@ -372,9 +364,7 @@ contains
                      enddo
                   endif
 
-                  dini = dini + pulse_low_density
-                  if (dini < smalld) dini = smalld
-                  inid(i, j, k) = dini
+                  inid(i, j, k) = dini + pulse_low_density
 
                enddo
             enddo
