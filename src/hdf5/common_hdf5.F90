@@ -29,28 +29,22 @@
 #include "piernik.h"
 
 !>
-!! \brief Module that contains common I/O routines using HDF5 library
+!! \brief Module that contains common I/O routines for HDF5 outputs (restart, data dumps and slices)
 !<
-module dataio_hdf5
+module common_hdf5
 
 ! pulled by ANY
-
-   use dataio_pub, only: maxparfilelen, maxparfilelines
 
    implicit none
 
    private
    public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts
-   public :: parfile, parfilelines, nhdf_vars, hdf_vars
+   public :: nhdf_vars, hdf_vars
 
    integer, parameter :: S_LEN = 30
 
    character(len=S_LEN), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    integer, protected :: nhdf_vars !< number of quantities plotted to hdf files
-
-   ! storage for the problem.par
-   character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
-   integer, save                             :: parfilelines = 0       !< number of lines in the parameter file
 
 contains
 
@@ -147,7 +141,7 @@ contains
                      write(aux,'(A2,I1)') 'cr', k
                      hdf_vars(j) = aux ; j = j + 1
                   else
-                     write(msg, '(a,i3)')"[dataio_hdf5:init_hdf5] Cannot create name for CR energy component #", k
+                     write(msg, '(a,i3)')"[common_hdf5:init_hdf5] Cannot create name for CR energy component #", k
                      call warn(msg)
                   endif
                enddo
@@ -228,7 +222,7 @@ contains
    subroutine set_common_attributes(filename, chdf)
 
       use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE, I_NINE
-      use dataio_pub,  only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, hdf
+      use dataio_pub,  only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, hdf, parfile, parfilelines
       use dataio_user, only: additional_attrs
       use domain,      only: dom
       use global,      only: magic_mass, t, dt, local_magic_mass
@@ -720,4 +714,4 @@ contains
 !!$
 !!$   end subroutine write_grid_containter
 
-end module dataio_hdf5
+end module common_hdf5

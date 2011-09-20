@@ -197,10 +197,10 @@ contains
 
       use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
       use data_hdf5,       only: init_data
-      use dataio_hdf5,     only: init_hdf5, parfile, parfilelines
+      use common_hdf5,     only: init_hdf5
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
            &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress, &
-           &                     move_file, getlun, multiple_h5files
+           &                     move_file, getlun, multiple_h5files, parfile, parfilelines
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use domain,          only: eff_dim
       use fluidboundaries, only: all_fluid_boundaries
@@ -453,7 +453,7 @@ contains
    end subroutine init_dataio
 
    subroutine cleanup_dataio
-      use dataio_hdf5,     only: cleanup_hdf5
+      use common_hdf5,     only: cleanup_hdf5
       implicit none
 
       call cleanup_hdf5

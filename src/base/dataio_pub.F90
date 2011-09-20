@@ -45,8 +45,6 @@ module dataio_pub
    ! Buffer lengths used only in I/O routines
    integer, parameter :: msglen = 1024          !< 1kB for a message ought to be enough for anybody ;-)
    integer, parameter :: ansilen = 7, ansirst=4 !< length of our ANSI color-strings
-   integer, parameter :: maxparfilelen   = 128  !< max length of line in problem.par file
-   integer, parameter :: maxparfilelines = 256  !< max number of lines in problem.par
 
    ! Simulation control
    character(len=cbuff_len) :: problem_name     !< The problem name
@@ -85,6 +83,12 @@ module dataio_pub
 
    real               :: last_hdf_time                  !< time in simulation of the last resent hdf file dump
    integer            :: code_progress                  !< rough estimate of code execution progress
+
+   ! storage for the problem.par
+   integer, parameter :: maxparfilelen   = 128                         !< max length of line in problem.par file
+   integer, parameter :: maxparfilelines = 256                         !< max number of lines in problem.par
+   character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
+   integer, save :: parfilelines = 0                                   !< number of lines in the parameter file
 
    logical, save      :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
    logical, save      :: log_file_initialized = .false. !< logical to mark initialization of logfile

@@ -69,7 +69,7 @@ contains
    subroutine common_plt_hdf5(var, ij, xn, tab, ierrh, cg)
 
       use constants,   only: varlen, xdim, ydim, zdim, half
-      use dataio_hdf5, only: common_shortcuts
+      use common_hdf5, only: common_shortcuts
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind, ibx
       use fluidtypes,  only: component_fluid
@@ -159,7 +159,7 @@ contains
    subroutine write_plot
 
       use constants,   only: cwdlen, xdim, zdim
-      use dataio_hdf5, only: nhdf_vars, hdf_vars
+      use common_hdf5, only: nhdf_vars, hdf_vars
       use dataio_pub,  only: log_file
       use global,      only: t
       use hdf5,        only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f

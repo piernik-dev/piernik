@@ -138,7 +138,7 @@ contains
    subroutine write_restart_hdf5(debug_res)
 
       use constants,   only: cwdlen, AT_IGNORE, AT_ALL_B, AT_OUT_B, AT_NO_B, I_ONE, FLUID, MAG
-      use dataio_hdf5, only: set_common_attributes
+      use common_hdf5, only: set_common_attributes
       use dataio_pub,  only: chdf, nres, set_container_chdf, problem_name, run_id, msg, printio, hdf
       use global,      only: nstep
       use grid,        only: all_cg
