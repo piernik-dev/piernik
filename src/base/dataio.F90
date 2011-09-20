@@ -196,6 +196,7 @@ contains
    subroutine init_dataio
 
       use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
+      use data_hdf5,       only: init_data
       use dataio_hdf5,     only: init_hdf5, parfile, parfilelines
       use dataio_pub,      only: chdf, nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
            &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, set_container_chdf, get_container, die, code_progress, &
@@ -397,6 +398,7 @@ contains
       last_hdf_time = -dt_hdf
 
       call init_hdf5(vars)
+      call init_data
       call init_plot( [ ix, iy, iz ], dt_plt)
 
       if (master .and. restart == 'last') call find_last_restart(nrestart)
@@ -460,7 +462,7 @@ contains
    subroutine user_msg_handler(end_sim)
 
       use constants,    only: I_ONE
-      use dataio_hdf5,  only: write_hdf5
+      use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: chdf, step_hdf, msg, printinfo, warn, set_container_chdf
       use mpisetup,     only: comm, ierr, master, FIRST
       use global,       only: nstep
@@ -570,7 +572,7 @@ contains
 !
    subroutine write_data(output)
 
-      use dataio_hdf5,  only: write_hdf5
+      use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: chdf, nres, last_hdf_time, step_hdf, set_container_chdf
       use global,       only: t, nstep
       use restart_hdf5, only: write_restart_hdf5

@@ -265,7 +265,7 @@ contains
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[dataio_hdf5:write_plot_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial message tagging
+      if (all_cg%cnt > 1) call die("[slice_hdf5:write_plot_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial message tagging
 
       xn = 1
       if (has_dir(plane)) xn = pl_i(plane) + cg%nb - cg%off(plane)
@@ -278,7 +278,7 @@ contains
             call user_plt_hdf5(var, plane, xn, send, ierrh, cg)
          endif
          if (ierrh /= 0) then
-            write(msg,'(3a)')"[dataio_hdf5:write_plot_hdf5]", var, " is not defined in common_plt_hdf5, neither in user_plt_hdf5 !!!"
+            write(msg,'(3a)')"[slice_hdf5:write_plot_hdf5]", var, " is not defined in common_plt_hdf5, neither in user_plt_hdf5 !!!"
             call warn(msg)
          endif
       endif
@@ -309,7 +309,7 @@ contains
 #ifdef PGPLOT
             call draw_me(real(img, kind=4), real(fmin, kind=4), real(fmax, kind=4))
 #else /* !PGPLOT */
-            call warn("[dataio_hdf5:write_plot_hdf5] vizit used without PGPLOT")
+            call warn("[slice_hdf5:write_plot_hdf5] vizit used without PGPLOT")
 #endif /* !PGPLOT */
          else
             call H5Fopen_f(fname, H5F_ACC_RDWR_F, file_id, error)
