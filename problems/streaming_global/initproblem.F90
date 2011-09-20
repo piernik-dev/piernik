@@ -380,11 +380,11 @@ contains
 !-----------------------------------------------------------------------------
    subroutine write_initial_fld_to_restart(file_id, cg)
 
-      use constants,   only: AT_NO_B
-      use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T
-      use dataio_hdf5, only: write_arr_to_restart
-      use fluidindex,  only: flind
+      use constants,    only: AT_NO_B
+      use grid_cont,    only: grid_container
+      use hdf5,         only: HID_T
+      use restart_hdf5, only: write_arr_to_restart
+      use fluidindex,   only: flind
 
       implicit none
 
@@ -433,11 +433,11 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_initial_fld_from_restart(file_id, cg)
 
-      use constants,   only: AT_NO_B, xdim, ydim, zdim
-      use hdf5,        only: HID_T
-      use grid_cont,   only: grid_container
-      use fluidindex,  only: flind
-      use dataio_hdf5, only: read_arr_from_restart
+      use constants,    only: AT_NO_B, xdim, ydim, zdim
+      use hdf5,         only: HID_T
+      use grid_cont,    only: grid_container
+      use fluidindex,   only: flind
+      use restart_hdf5, only: read_arr_from_restart
 
       implicit none
 
