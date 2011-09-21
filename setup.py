@@ -140,6 +140,9 @@ clean-run:
 clean-all:
 \t$(RM) $(PROG) $(OBJS) *.mod *.bck *~ *.h5 *.res *.log *.tsl *.out *.tmp core* *.f *.dbg
 
+dep.png: dep.dot
+\tdot dep.dot -T png -o dep.png -Gnodesep=0.05 -Granksep=0.3 -Gnslimit=10 -Nshape=box -Nfontsize=10 -Nheight=0 -Nwidth=0
+
 .SUFFIXES: $(SUFFIXES) .F90
 
 .F90.o:
@@ -483,8 +486,39 @@ for i in range(0,len(files_to_build)):
          if j not in known_external_modules:
             print "Warning: module",j," from file ",stripped_files[i],"not found!"
    m.write( pretty_format(deps, d.split(), columns) )
-
 m.close()
+
+# The following code generates simplified module dependency graph data.
+# The simplification is done by removing dependencies of a given element that are common with dependencies of its parent.
+# This is the minimum set of dependencies that are necessary for the make process.
+# This implementation probably may fail on circular dependencies.
+# The code should be much more clear if written to operate on sets, not on lists/arrays
+dd = open(objdir+'/dep.dot', "w")
+dd.write("digraph piernik {\n")
+d = [[]]
+for i in range(0,len(files_to_build)):
+   d.append([])
+   for j in uses[i]:
+      if j in module:
+         if module[j]+'.F90' in stripped_files:
+            d[i].append(module[j])
+while True:
+   cnt = 0
+   for i in range(0,len(files_to_build)):
+      for mod in d[i]:
+         for t in range(0,len(files_to_build)):
+            if (mod == files_to_build[t]):
+               for m1 in d[i]:
+                  if (m1 in d[t]):
+                     d[i].remove(m1)
+                     cnt = cnt + 1
+   if (cnt == 0):
+      break
+for i in range(0,len(files_to_build)):
+   for mod in d[i]:
+      dd.write('\t "' + mod + '" -> "' + files_to_build[i] +'"\n')
+dd.write("}\n")
+dd.close()
 
 fatal_problem = False
 
