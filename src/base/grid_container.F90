@@ -110,7 +110,7 @@ module grid_cont
       integer(kind=8), dimension(ndims) :: h_cor1 !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:)
       integer(kind=4), dimension(ndims) :: n_     !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
       integer(kind=8), dimension(ndims, LO:HI) :: my_se !< own segment
-      integer(kind=4)                          :: grid_n !< number of own segment: my_se(:,:) = dom%pse(proc)%sel(grid_n, :, :)
+      integer :: grid_n                           !< number of own segment: my_se(:,:) = dom%pse(proc)%sel(grid_n, :, :)
 
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkse !< [[is, js, ks], [ie, je, ke]]
       integer, dimension(ndims, LO:HI)  :: bnd  !< type of boundary conditions coded in integers
@@ -596,8 +596,8 @@ contains
                                        this%i_bnd(d, t, ib)%seg(g)%se(:d-1, HI) = this%i_bnd(d, t, ib)%seg(g)%se(:d-1, HI) + ib
                                     endwhere
                                     this%o_bnd(d, t, ib)%seg(g) = this%i_bnd(d, t, ib)%seg(g)
-                                    this%i_bnd(d, t, ib)%seg(g)%tag = b           + ubound(dom%pse(   j)%sel(:, :, :), dim=1) * (HI*d+lh-LO)
-                                    this%o_bnd(d, t, ib)%seg(g)%tag = this%grid_n + ubound(dom%pse(proc)%sel(:, :, :), dim=1) * (HI*d+hl-LO)
+                                    this%i_bnd(d, t, ib)%seg(g)%tag = int(b           + ubound(dom%pse(   j)%sel(:, :, :), dim=1) * (HI*d+lh-LO), kind=4)
+                                    this%o_bnd(d, t, ib)%seg(g)%tag = int(this%grid_n + ubound(dom%pse(proc)%sel(:, :, :), dim=1) * (HI*d+hl-LO), kind=4)
                                     select case (lh)
                                        case (LO)
                                           this%i_bnd(d, t, ib)%seg(g)%se(d, LO) = this%i_bnd(d, t, ib)%seg(g)%se(d, HI) - (ib - 1)
