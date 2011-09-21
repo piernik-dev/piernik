@@ -492,31 +492,50 @@ m.close()
 # The simplification is done by removing dependencies of a given element that are common with dependencies of its parent.
 # This is the minimum set of dependencies that are necessary for the make process.
 # This implementation probably may fail on circular dependencies.
-# The code should be much more clear if written to operate on sets, not on lists/arrays
-dd = open(objdir+'/dep.dot', "w")
-dd.write("digraph piernik {\n")
-d = [[]]
+
+# Collect the data in dictionary of dependence sets
+dep = dict()
 for i in range(0,len(files_to_build)):
-   d.append([])
-   for j in uses[i]:
-      if j in module:
-         if module[j]+'.F90' in stripped_files:
-            d[i].append(module[j])
+   dep[files_to_build[i]] = set()
+   for u in uses[i]:
+      if u in module:
+         if module[u]+'.F90' in stripped_files:
+            dep[files_to_build[i]].add(module[u])
+
+# save a copy
+dep_s = dict()
+for m in dep:
+   dep_s[m] = set(dep[m])
+
+# construct set of parent dependences
+for m in dep_s:
+   dep[m] = set()
+   for d in dep_s[m]:
+      dep[m] = dep[m].union(dep_s[d])
+
+# iterate, until all parent dependences are propagated
+# note that cheaper algorithms should exist. We will look for them when we reach few hundreds of modules :-P
+dep_i = dict()
 while True:
    cnt = 0
-   for i in range(0,len(files_to_build)):
-      for mod in d[i]:
-         for t in range(0,len(files_to_build)):
-            if (mod == files_to_build[t]):
-               for m1 in d[i]:
-                  if (m1 in d[t]):
-                     d[i].remove(m1)
-                     cnt = cnt + 1
-   if (cnt == 0):
-      break
-for i in range(0,len(files_to_build)):
-   for mod in d[i]:
-      dd.write('\t "' + mod + '" -> "' + files_to_build[i] +'"\n')
+   for m in dep:
+      dep_i[m] = set(dep[m])
+   for m in dep:
+      for d in dep[m].union(dep_s[m]):
+         for pd in dep[m].union(dep_s[d]):
+            if pd not in dep_i[m]:
+               dep_i[m].add(pd)
+               cnt = cnt + 1
+   for m in dep_i:
+      dep[m] = dep[m].union(dep_i[m])
+   if (cnt == 0): break
+
+# write the connectivity file
+dd = open(objdir+'/dep.dot', "w")
+dd.write("digraph piernik {\n")
+for m in dep:
+   for mod in dep_s[m].difference(dep[m]):
+      dd.write('\t "' + mod + '" -> "' + m +'"\n')
 dd.write("}\n")
 dd.close()
 
