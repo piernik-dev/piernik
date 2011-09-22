@@ -943,6 +943,7 @@ contains
 
    subroutine get_common_vars(fl)
 
+      use types,      only: value                          !QA_WARN: used by get_extremum (intel compiler)
       use constants,  only: ION, DST, MINL, MAXL, half
       use dataio_pub, only: die
       use fluidtypes, only: phys_prop, component_fluid
@@ -1023,6 +1024,7 @@ contains
 !
    subroutine  write_log(tsl)
 
+      use types,              only: tsl_container, value
       use constants,          only: small, MINL, MAXL, xdim, ydim, zdim
       use dataio_pub,         only: msg, printinfo, warn
       use domain,             only: has_dir
@@ -1034,7 +1036,6 @@ contains
       use grid_cont,          only: grid_container
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master
-      use types,              only: tsl_container, value
 #ifdef COSM_RAYS
       use fluidindex,         only: iarr_all_crs
       use timestepcosmicrays, only: dt_crs
