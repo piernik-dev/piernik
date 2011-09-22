@@ -58,7 +58,12 @@ contains
 
       implicit none
 
-      if (multiple_h5files) write_hdf5 => h5_write_to_multiple_files
+      if (multiple_h5files) then
+         write_hdf5 => h5_write_to_multiple_files
+      else
+         write_hdf5 => h5_write_to_single_file
+      endif
+
 
    end subroutine init_data
 
