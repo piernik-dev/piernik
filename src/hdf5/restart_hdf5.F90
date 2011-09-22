@@ -363,7 +363,7 @@ contains
 
       ! write data
       pa4dd => pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
-      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dimsf(:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4dd, dimsf(:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
       nullify(pa4dd)
       call clean_arr_write(memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
 
