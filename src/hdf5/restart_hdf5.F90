@@ -338,6 +338,7 @@ contains
       character(len=*), intent(in)                  :: dname
       type(grid_container), pointer, intent(in)     :: cg
 
+      real, pointer, dimension(:,:,:,:)             :: pa4dd     !> pointer to specified scope of pa4d (used only to avoid some claiming in logs)
       integer, parameter :: rank4 = 1 + ndims
       integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
       integer(HID_T) :: dset_id               !> Dataset identifier
@@ -361,9 +362,9 @@ contains
       call prep_arr_write(rank, 1, area_type, loffs, chunk_dims, dimsf, file_id, dname, memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
 
       ! write data
-      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
-           &          dimsf(:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-
+      pa4dd => pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dimsf(:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      nullify(pa4dd)
       call clean_arr_write(memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
 
    end subroutine write_4darr_to_restart
@@ -383,6 +384,7 @@ contains
       character(len=*), intent(in)                  :: dname
       type(grid_container), pointer, intent(in)     :: cg
 
+      real, pointer, dimension(:,:,:)               :: pa3dd     !> pointer to specified scope of pa3d (used only to avoid some claiming in logs)
       integer, parameter :: rank4 = 1 + ndims
       integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
       integer(HID_T) :: dset_id               !> Dataset identifier
@@ -411,9 +413,9 @@ contains
       call prep_arr_write(rank, 2, area_type, loffs, chunk_dims, dimsf, file_id, dname, memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
 
       ! write data
-      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
-           &          dimsf(2:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-
+      pa3dd => pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3dd, dimsf(2:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+      nullify(pa3dd)
       call clean_arr_write(memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
 
    end subroutine write_3darr_to_restart
