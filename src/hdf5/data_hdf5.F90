@@ -48,7 +48,7 @@ module data_hdf5
       end subroutine h5_write
    end interface
 
-   procedure(h5_write), pointer :: write_hdf5 => h5_write_to_single_file
+   procedure(h5_write), pointer :: write_hdf5 => NULL() !h5_write_to_single_file
 
 contains
 
