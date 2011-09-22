@@ -101,7 +101,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (all_cg%cnt > 1) call die("[crdiffusion:all_wcr_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop
+      if (all_cg%cnt > 1) call die("[crdiffusion:all_wcr_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop (wcr?)
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          pwcr => wcr
@@ -180,13 +180,13 @@ contains
    end subroutine all_wcr_boundaries
 
 !>
-!! \brief Diffusive transport of ecr in crdim/ibdir-direction
+!! \brief Diffusive transport of ecr in crdim/ibdir-direction. Note that according to fluidinsex: [ibx, iby, ibz] == [xdim, ydim, zdim]
 !!
-!! cr_diff_x --> cr_diff(xdim,ibx)
-!! cr_diff_y --> cr_diff(ydim,iby)
-!! cr_diff_z --> cr_diff(zdim,ibz)
+!! cr_diff_x --> cr_diff(xdim,ibx) --> cr_diff(xdim)
+!! cr_diff_y --> cr_diff(ydim,iby) --> cr_diff(ydim)
+!! cr_diff_z --> cr_diff(zdim,ibz) --> cr_diff(zdim)
 !<
-   subroutine cr_diff(crdim, ibdir)
+   subroutine cr_diff(crdim)
 
       use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half
       use dataio_pub,     only: die
@@ -200,7 +200,7 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)          :: crdim, ibdir
+      integer(kind=4), intent(in)          :: crdim
       integer                              :: i, j, k, il, ih, jl, jh, kl, kh, ild, jld, kld
       integer, dimension(ndims)            :: idm, ndm, hdm, ldm
       real                                 :: bb
@@ -236,7 +236,7 @@ contains
                   decr(crdim,:) = (cg%u%arr(iarr_crs,i,j,k) - cg%u%arr(iarr_crs,ild,jld,kld)) * cg%idl(crdim)
                   fcrdif = K_crs_perp * decr(crdim,:)
 
-                  bcomp(ibdir) =  cg%b%arr(ibdir,i,j,k)
+                  bcomp(crdim) =  cg%b%arr(crdim,i,j,k)
 
                   if (present_not_crdim(xdim)) then
                      dqm = half*((cg%u%arr(iarr_crs,i ,jld,kld) + cg%u%arr(iarr_crs,i ,j,k)) - (cg%u%arr(iarr_crs,il,jld,kld) + cg%u%arr(iarr_crs,il,j,k))) * cg%idx
@@ -260,7 +260,7 @@ contains
                   endif
 
                   bb = sum(bcomp**2)
-                  if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(ibdir) * (bcomp(ibx)*decr(xdim,:) + bcomp(iby)*decr(ydim,:) + bcomp(ibz)*decr(zdim,:)) / bb
+                  if (bb > epsilon(0.d0)) fcrdif = fcrdif + K_crs_paral * bcomp(crdim) * (bcomp(ibx)*decr(xdim,:) + bcomp(iby)*decr(ydim,:) + bcomp(ibz)*decr(zdim,:)) / bb
 
                   wcr(:,i,j,k) = - fcrdif * dt * cg%idl(crdim)
 

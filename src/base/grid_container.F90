@@ -596,8 +596,8 @@ contains
                                        this%i_bnd(d, t, ib)%seg(g)%se(:d-1, HI) = this%i_bnd(d, t, ib)%seg(g)%se(:d-1, HI) + ib
                                     endwhere
                                     this%o_bnd(d, t, ib)%seg(g) = this%i_bnd(d, t, ib)%seg(g)
-                                    this%i_bnd(d, t, ib)%seg(g)%tag = int(b           + ubound(dom%pse(   j)%sel(:, :, :), dim=1) * (HI*d+lh-LO), kind=4)
-                                    this%o_bnd(d, t, ib)%seg(g)%tag = int(this%grid_n + ubound(dom%pse(proc)%sel(:, :, :), dim=1) * (HI*d+hl-LO), kind=4)
+                                    this%i_bnd(d, t, ib)%seg(g)%tag = int(HI*ndims*b           + (HI*d+lh-LO), kind=4) ! Assume that we won't mix communication with different ib
+                                    this%o_bnd(d, t, ib)%seg(g)%tag = int(HI*ndims*this%grid_n + (HI*d+hl-LO), kind=4)
                                     select case (lh)
                                        case (LO)
                                           this%i_bnd(d, t, ib)%seg(g)%se(d, LO) = this%i_bnd(d, t, ib)%seg(g)%se(d, HI) - (ib - 1)

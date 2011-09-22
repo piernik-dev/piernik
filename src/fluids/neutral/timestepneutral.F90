@@ -54,15 +54,13 @@ module timestepneutral
    implicit none
 
    private
-   public :: c_neu, timestep_neu
-
-   real   :: c_neu                !< maximum speed at which information travels in the neutral fluid
+   public :: timestep_neu
 
 contains
 
-   real function timestep_neu(cg) result(dt)
+   subroutine timestep_neu(cg, dt, c_neu)
 
-      use constants,     only: half
+      use constants,     only: half, ndims
       use fluidindex,    only: flind
       use fluidtypes,    only: component_fluid
       use grid_cont,     only: grid_container
@@ -71,19 +69,19 @@ contains
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
+      real, intent(out)                         :: dt
+      real, intent(out)                         :: c_neu !< maximum speed at which information travels in the neutral fluid
 
-      real :: cx                  !< maximum velocity for X direction
-      real :: cy                  !< maximum velocity for Y direction
-      real :: cz                  !< maximum velocity for Z direction
+      real, dimension(ndims) :: c !< maximum velocity for all directions
       real :: cs                  !< speed of sound
 
 ! locals
 
-      real                           :: p, c_max
+      real                           :: p
       integer                        :: i, j, k
       type(component_fluid), pointer :: fl
 
-      cx = 0.0; cy = 0.0; cz = 0.0; cs = 0.0; p = 0.0; c_max = 0.0
+      c(:) = 0.0; cs = 0.0; p = 0.0; c_neu = 0.0
 
       fl => flind%neu
 
@@ -99,12 +97,13 @@ contains
 
                cs = sqrt(abs(  (fl%gam*p)/cg%u%arr(fl%idn,i,j,k)) )
 #endif /* !ISO */
-               call compute_c_max(fl, cs, i, j, k, cx, cy, cz, c_max, cg)
+               call compute_c_max(fl, cs, i, j, k, c(:), c_neu, cg)
             enddo
          enddo
       enddo
-      call compute_dt(fl, cx, cy, cz, c_max, c_neu, dt, cg)
+      call compute_dt(c(:), dt, cg)
+      fl%c  = c_neu
 
-   end function timestep_neu
+   end subroutine timestep_neu
 
 end module timestepneutral

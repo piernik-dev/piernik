@@ -127,7 +127,7 @@ contains
       ! The freezing speed is now computed globally
       !  (c=const for the whole domain) in subroutine 'timestep'
 
-      !  cfrd(:,:) = flind%dst%snap%c
+      !  cfrd(:,:) = flind%dst%c
       cfrd(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
       return

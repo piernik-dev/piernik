@@ -166,7 +166,7 @@ contains
       ! The freezing speed is now computed globally
       !  (c=const for the whole domain) in subroutine 'timestep'
 
-      cfri(:,:) = flind%ion%snap%c
+      cfri(:,:) = flind%ion%c
 #endif /* GLOBAL_FR_SPEED */
 
    end subroutine flux_ion

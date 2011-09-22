@@ -49,8 +49,6 @@ module fluidtypes
       type(value) :: temp_max
       type(value) :: temp_min
       type(value) :: cs_max
-      real        :: c
-      real        :: dt
    end type phys_prop
 
    type :: component
@@ -82,6 +80,8 @@ module fluidtypes
       integer(kind=4), allocatable, dimension(:,:) :: iarr_swp
 
       type(phys_prop) :: snap
+
+      real :: c !< COMMENT ME (this quantity was previously a member of phys_prop, but is used in completely different way than other phys_prop% members
 
       contains
          procedure :: set_cs  => update_sound_speed

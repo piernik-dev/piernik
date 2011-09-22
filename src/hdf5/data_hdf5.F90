@@ -227,7 +227,7 @@ contains
 
          ! Create property list for collective dataset write
          call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-         call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+         if (all_cg%cnt == 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
 
          cgl => all_cg%first
          do while (associated(cgl))

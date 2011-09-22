@@ -28,26 +28,29 @@
 #include "piernik.h"
 !>
 !! \brief (MH) Computation of %timestep for diffusive Cosmic Ray transport
-!!
 !<
 
 module timestepcosmicrays
+
 ! pulled by COSM_RAYS
+
    implicit none
+
    private
    public :: dt_crs, timestep_crs
 
-   real   :: dt_crs
+   real, save :: dt_crs = huge(1.)
 
 contains
 
 !>
-!! \brief Following subroutine evaluates some constants, there is no need to run it
-!! more than once, apart from wasting CPU cycles...
+!! \details On a static grid with simple domain decompositions the fFollowing subroutine evaluates some constants, there is no need to run it
+!! more than once, apart from wasting CPU cycles.
 !<
    subroutine timestep_crs(cg)
 
       use constants,           only: one, half
+      use grid,                only: all_cg
       use grid_cont,           only: grid_container
       use initcosmicrays,      only: cfl_cr, K_crs_paral, K_crs_perp, use_split
 #ifdef MULTIGRID
@@ -59,25 +62,28 @@ contains
       type(grid_container), pointer, intent(in) :: cg
 
       logical, save :: frun = .true.
+      real :: dt
 
-      if (.not.frun) return
+      if (all_cg%cnt == 1 .and. .not. frun) return
+      ! with multiple cg% there are few cg%dxmn to be checked
+      ! with AMR minval(cg%dxmn) may change with time
 
       if (maxval(K_crs_paral+K_crs_perp) <= 0) then
          dt_crs = huge(one)
       else
-         dt_crs = cfl_cr * half/maxval(K_crs_paral+K_crs_perp)
-         if (cg%dxmn < sqrt(huge(one))/dt_crs) then
-            dt_crs = dt_crs * cg%dxmn**2
+         dt = cfl_cr * half/maxval(K_crs_paral+K_crs_perp)
+         if (cg%dxmn < sqrt(huge(one))/dt) then
+            dt = dt * cg%dxmn**2
 #ifdef MULTIGRID
-            diff_dt_crs_orig = dt_crs
-            if (.not. (use_split .or. diff_explicit)) dt_crs = dt_crs * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
+            diff_dt_crs_orig = min(dt_crs, dt)
+            if (.not. (use_split .or. diff_explicit)) dt = dt * diff_tstep_fac ! enlarge timestep for non-explicit diffusion
 #endif /* MULTIGRID */
-         else
-            dt_crs = huge(one)
+            dt_crs = min(dt_crs, dt)
          endif
       endif
 
       frun = .false.
+
    end subroutine timestep_crs
 
 end module timestepcosmicrays

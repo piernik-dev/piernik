@@ -41,8 +41,9 @@ module timestepfuncs
 
 contains
 
-   subroutine compute_c_max(fl, cs, i, j, k, cx, cy, cz, c_max, cg)
+   subroutine compute_c_max(fl, cs, i, j, k, c, c_max, cg)
 
+      use constants,  only: ndims
       use fluidtypes, only: component_fluid
       use grid_cont,  only: grid_container
 
@@ -51,80 +52,49 @@ contains
       type(component_fluid), pointer, intent(in) :: fl
       real, intent(in)                           :: cs
       integer, intent(in)                        :: i, j, k
-      real, intent(inout)                        :: cx, cy, cz, c_max
+      real, dimension(ndims), intent(inout)      :: c
+      real, intent(inout)                        :: c_max
       type(grid_container), pointer, intent(in)  :: cg
 
-      real                                       :: vx, vy, vz
+      real, dimension(ndims)                     :: v
 
       if ( cg%u%arr(fl%idn,i,j,k) > 0.0) then
-         vx = abs(cg%u%arr(fl%imx,i,j,k)/cg%u%arr(fl%idn,i,j,k))
-         vy = abs(cg%u%arr(fl%imy,i,j,k)/cg%u%arr(fl%idn,i,j,k))
-         vz = abs(cg%u%arr(fl%imz,i,j,k)/cg%u%arr(fl%idn,i,j,k))
+         v(:) = abs(cg%u%arr(fl%imx:fl%imz, i, j, k)/cg%u%arr(fl%idn, i, j, k))
       else
-         vx = 0.0; vy = 0.0; vz = 0.0
+         v(:) = 0.0
       endif
 
-      cx    = max(cx,vx+cs)
-      cy    = max(cy,vy+cs)
-      cz    = max(cz,vz+cs)
-      c_max = max(c_max,cx,cy,cz)
+      c(:) = max( c(:), v(:) + cs )
+      c_max = max(c_max, maxval(c(:)))
 
    end subroutine compute_c_max
 
-   subroutine compute_dt(fl, cx, cy, cz, c_max, c_out, dt_out, cg)
+   subroutine compute_dt(c, dt_out, cg)
 
-      use constants,  only: big, xdim, ydim, zdim, GEO_RPZ, LO, I_ONE
+      use constants,  only: big, xdim, ydim, zdim, ndims, GEO_RPZ, LO
       use domain,     only: dom, geometry_type, has_dir
-      use fluidtypes, only: component_fluid
       use global,     only: cfl
       use grid_cont,  only: grid_container
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
-      use mpisetup,   only: comm, ierr, FIRST
 
       implicit none
 
-      type(component_fluid), pointer, intent(inout) :: fl
-      real, intent(in)  :: cx, cy, cz, c_max
-      real, intent(out) :: c_out, dt_out
+      real, dimension(ndims), intent(in)  :: c
+      real, intent(out) :: dt_out
       type(grid_container), pointer, intent(in) :: cg
 
-      real :: dt_proc             !< minimum timestep for the current processor
-      real :: dt_all              !< minimum timestep for all the processors
-      real :: c_max_all           !< maximum speed for the fluid for all the processors
-      real :: dt_proc_x           !< timestep computed for X direction for the current processor
-      real :: dt_proc_y           !< timestep computed for Y direction for the current processor
-      real :: dt_proc_z           !< timestep computed for Z direction for the current processor
+      real, dimension(ndims) :: dt_proc !< timestep for the current cg
+      integer :: d
 
-      if (has_dir(xdim) .and. cx /= 0) then
-         dt_proc_x = cg%dx/cx
-      else
-         dt_proc_x = big
-      endif
-      if (has_dir(ydim) .and. cy /= 0) then
-         dt_proc_y = cg%dy/cy
-         if (geometry_type == GEO_RPZ) dt_proc_y = dt_proc_y * dom%edge(xdim, LO)
-      else
-         dt_proc_y = big
-      endif
-      if (has_dir(zdim) .and. cz /= 0) then
-         dt_proc_z = cg%dz/cz
-      else
-         dt_proc_z = big
-      endif
+      do d = xdim, zdim
+         if (has_dir(d) .and. c(d) /= 0.) then
+            dt_proc(d) = cg%dl(d)/c(d)
+            if (geometry_type == GEO_RPZ .and. d == ydim) dt_proc(d) = dt_proc(d) * dom%edge(xdim, LO)
+         else
+            dt_proc(d) = big
+         endif
+      enddo
 
-      dt_proc   = min(dt_proc_x, dt_proc_y, dt_proc_z)
-
-      call MPI_Reduce(c_max, c_max_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, FIRST, comm, ierr)
-      call MPI_Bcast(c_max_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-
-      call MPI_Reduce(dt_proc, dt_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, FIRST, comm, ierr)
-      call MPI_Bcast(dt_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-
-      c_out  = c_max_all
-      dt_out = cfl*dt_all
-
-      fl%snap%c  = c_max_all
-      fl%snap%dt = dt_out
+      dt_out = cfl * minval(dt_proc)
 
    end subroutine compute_dt
 

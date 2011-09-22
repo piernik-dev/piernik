@@ -176,8 +176,7 @@ contains
 !<
    subroutine make_sweep(dir, forward)
 
-      use constants,      only: xdim, ydim, zdim
-      use dataio_pub,     only: msg, die
+      use constants,      only: ydim
       use domain,         only: has_dir
       use grid,           only: all_cg
       use gc_list,        only: cg_list_element
@@ -188,7 +187,6 @@ contains
 #endif /* SHEAR && FLUID_INTERACTIONS */
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
-      use fluidindex,     only: ibx, iby, ibz
       use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
 #ifdef DEBUG
@@ -212,85 +210,31 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         select case (dir)
-
-            case (xdim)
-               if (has_dir(xdim)) then
-                  if (.not. forward) then
+         if (has_dir(dir)) then
+            if (.not. forward) then
 #ifdef COSM_RAYS
-                     if (use_split) call cr_diff(xdim,ibx)
+               if (use_split) call cr_diff(dir)
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-                     call magfieldbyzx
+               call magfield(dir)
 #endif /* MAGNETIC */
-                  endif
+            endif
 
-                  call sweep(xdim,cg)
+            call sweep(dir,cg)
 
-                  if (forward) then
+            if (forward) then
 #ifdef MAGNETIC
-                     call magfieldbyzx
+               call magfield(dir)
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-                     if (use_split) call cr_diff(xdim,ibx)
+               if (use_split) call cr_diff(dir)
 #endif /* COSM_RAYS */
-                  endif
-               endif
-
-            case (ydim)
-               if (has_dir(ydim)) then
-                  if (.not. forward) then
-#ifdef COSM_RAYS
-                     if (use_split) call cr_diff(ydim,iby)
-#endif /* COSM_RAYS */
-#ifdef MAGNETIC
-                     call magfieldbzxy
-#endif /* MAGNETIC */
-                  endif
-                  call sweep(ydim,cg)
-
-                  if (forward) then
-#ifdef MAGNETIC
-                     call magfieldbzxy
-#endif /* MAGNETIC */
-#ifdef COSM_RAYS
-                     if (use_split) call cr_diff(ydim,iby)
-#endif /* COSM_RAYS */
-                  endif
-               else
+            endif
+         else
 #if defined SHEAR && defined FLUID_INTERACTIONS
-                  call source_terms_y
+            if (dir == ydim) call source_terms_y
 #endif /* SHEAR && FLUID_INTERACTIONS */
-               endif
-
-            case (zdim)
-               if (has_dir(zdim)) then
-                  if (.not. forward) then
-#ifdef COSM_RAYS
-                     if (use_split) call cr_diff(zdim,ibz)
-#endif /* COSM_RAYS */
-#ifdef MAGNETIC
-                     call magfieldbxyz
-#endif /* MAGNETIC */
-                  endif
-
-                  call sweep(zdim,cg)
-
-                  if (forward) then
-#ifdef MAGNETIC
-                     call magfieldbxyz
-#endif /* MAGNETIC */
-#ifdef COSM_RAYS
-                     if (use_split) call cr_diff(zdim,ibz)
-#endif /* COSM_RAYS */
-                  endif
-               endif
-
-            case default
-               write(msg,'(a,i10)')"[fluidupdate:make_sweep] Illegal direction ",dir
-               call die(msg)
-
-         end select
+         endif
 
          cgl => cgl%nxt
       enddo
@@ -306,9 +250,9 @@ contains
    end subroutine make_sweep
 
 #ifdef MAGNETIC
-   subroutine magfieldbyzx
+   subroutine magfield(dir)
 
-      use advects,     only: advectby_x, advectbz_x
+      use advects,     only: advectby_x, advectbz_x, advectbx_y, advectbz_y, advectbx_z, advectby_z
       use fluidindex,  only: ibx, iby, ibz
       use constants,   only: xdim, ydim, zdim
 #ifdef RESISTIVE
@@ -317,85 +261,52 @@ contains
 
       implicit none
 
-      call advectby_x
+      integer, intent(in) :: dir
 
+      select case (dir)
+         case (xdim)
+            call advectby_x
 #ifdef RESISTIVE
-      call diffuseb(iby,xdim,zdim,'emfz',ydim,zdim)
+            call diffuseb(iby,xdim,zdim,'emfz',ydim,zdim)
 #endif /* RESISTIVE */
-
-      call mag_add(iby,xdim,ibx,ydim)
-
-      call advectbz_x
-
+            call mag_add(xdim, ydim)
+            call advectbz_x
 #ifdef RESISTIVE
-      call diffuseb(ibz,xdim,ydim,'emfy',ydim,zdim)
+            call diffuseb(ibz,xdim,ydim,'emfy',ydim,zdim)
 #endif /* RESISTIVE */
+            call mag_add(xdim, zdim)
 
-      call mag_add(ibz,xdim,ibx,zdim)
+         case (ydim)
+            call advectbz_y
+#ifdef RESISTIVE
+            call diffuseb(ibz,ydim,xdim,'emfx',zdim,xdim)
+#endif /* RESISTIVE */
+            call mag_add(ydim, zdim)
+            call advectbx_y
+#ifdef RESISTIVE
+            call diffuseb(ibx,ydim,zdim,'emfz',zdim,xdim)
+#endif /* RESISTIVE */
+            call mag_add(ydim, xdim)
 
-   end subroutine magfieldbyzx
+         case (zdim)
+            call advectbx_z
+#ifdef RESISTIVE
+            call diffuseb(ibx,zdim,ydim,'emfy',xdim,ydim)
+#endif /* RESISTIVE */
+            call mag_add(zdim, xdim)
+            call advectby_z
+#ifdef RESISTIVE
+            call diffuseb(iby,zdim,xdim,'emfx',xdim,ydim)
+#endif /* RESISTIVE */
+            call mag_add(zdim, ydim)
+
+      end select
+
+   end subroutine magfield
 
 !------------------------------------------------------------------------------------------
 
-   subroutine magfieldbzxy
-
-      use advects,     only: advectbx_y, advectbz_y
-      use fluidindex,  only: ibx, iby, ibz
-      use constants,   only: xdim, ydim, zdim
-#ifdef RESISTIVE
-      use resistivity, only: diffuseb
-#endif /* RESISTIVE */
-
-      implicit none
-
-      call advectbz_y
-
-#ifdef RESISTIVE
-      call diffuseb(ibz,ydim,xdim,'emfx',zdim,xdim)
-#endif /* RESISTIVE */
-
-      call mag_add(ibz,ydim,iby,zdim)
-
-      call advectbx_y
-
-#ifdef RESISTIVE
-      call diffuseb(ibx,ydim,zdim,'emfz',zdim,xdim)
-#endif /* RESISTIVE */
-
-      call mag_add(ibx,ydim,iby,xdim)
-
-   end subroutine magfieldbzxy
-
-!------------------------------------------------------------------------------------------
-
-   subroutine magfieldbxyz
-
-      use advects,     only: advectbx_z, advectby_z
-      use fluidindex,  only: ibx, iby, ibz
-      use constants,   only: xdim, ydim, zdim
-#ifdef RESISTIVE
-      use resistivity, only: diffuseb
-#endif /* RESISTIVE */
-
-      implicit none
-
-      call advectbx_z
-#ifdef RESISTIVE
-      call diffuseb(ibx,zdim,ydim,'emfy',xdim,ydim)
-#endif /* RESISTIVE */
-      call mag_add(ibx,zdim,ibz,xdim)
-
-      call advectby_z
-#ifdef RESISTIVE
-      call diffuseb(iby,zdim,xdim,'emfx',xdim,ydim)
-#endif /* RESISTIVE */
-
-      call mag_add(iby,zdim,ibz,ydim)
-   end subroutine magfieldbxyz
-
-!------------------------------------------------------------------------------------------
-
-   subroutine mag_add(ib1, dim1, ib2, dim2)
+   subroutine mag_add(dim1, dim2)
 
       use dataio_pub,    only: die
       use func,          only: pshift, mshift
@@ -410,7 +321,7 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)    :: ib1,ib2,dim1,dim2
+      integer(kind=4), intent(in)    :: dim1, dim2
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
@@ -422,22 +333,22 @@ contains
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
          if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu%arr)
-         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) - wcu%arr*cg%idl(dim1)
+         cg%b%arr(dim2,:,:,:) = cg%b%arr(dim2,:,:,:) - wcu%arr*cg%idl(dim1)
          wcu%arr = pshift(wcu%arr,dim1)
-         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) + wcu%arr*cg%idl(dim1)
+         cg%b%arr(dim2,:,:,:) = cg%b%arr(dim2,:,:,:) + wcu%arr*cg%idl(dim1)
          wcu%arr = mshift(wcu%arr,dim1)
-         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) + wcu%arr*cg%idl(dim2)
+         cg%b%arr(dim1,:,:,:) = cg%b%arr(dim1,:,:,:) + wcu%arr*cg%idl(dim2)
          wcu%arr = pshift(wcu%arr,dim2)
-         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - wcu%arr*cg%idl(dim2)
+         cg%b%arr(dim1,:,:,:) = cg%b%arr(dim1,:,:,:) - wcu%arr*cg%idl(dim2)
 #endif /* RESISTIVE */
 ! ADVECTION FULL STEP
          if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa)
-         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) - cg%wa*cg%idl(dim1)
+         cg%b%arr(dim2,:,:,:) = cg%b%arr(dim2,:,:,:) - cg%wa*cg%idl(dim1)
          cg%wa = mshift(cg%wa,dim1)
-         cg%b%arr(ib1,:,:,:) = cg%b%arr(ib1,:,:,:) + cg%wa*cg%idl(dim1)
-         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) - cg%wa*cg%idl(dim2)
+         cg%b%arr(dim2,:,:,:) = cg%b%arr(dim2,:,:,:) + cg%wa*cg%idl(dim1)
+         cg%b%arr(dim1,:,:,:) = cg%b%arr(dim1,:,:,:) - cg%wa*cg%idl(dim2)
          cg%wa = pshift(cg%wa,dim2)
-         cg%b%arr(ib2,:,:,:) = cg%b%arr(ib2,:,:,:) + cg%wa*cg%idl(dim2)
+         cg%b%arr(dim1,:,:,:) = cg%b%arr(dim1,:,:,:) + cg%wa*cg%idl(dim2)
          cgl => cgl%nxt
       enddo
 

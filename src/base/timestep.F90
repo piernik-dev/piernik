@@ -83,7 +83,7 @@ contains
 !<
    subroutine time_step(dt)
 
-      use constants,            only: one, two, zero, half
+      use constants,            only: one, two, zero, half, I_ONE
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
       use fluids_pub,           only: has_ion, has_dst, has_neu
@@ -91,11 +91,12 @@ contains
       use grid,                 only: all_cg
       use gc_list,              only: cg_list_element
       use grid_cont,            only: grid_container
-      use mpisetup,             only: master
-      use timestepdust,         only: timestep_dst, c_dst
+      use mpi,                  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,             only: comm, ierr, FIRST, master
+      use timestepdust,         only: timestep_dst
       use timestepinteractions, only: timestep_interactions
-      use timestepionized,      only: timestep_ion, c_ion
-      use timestepneutral,      only: timestep_neu, c_neu
+      use timestepionized,      only: timestep_ion
+      use timestepneutral,      only: timestep_neu
 #ifdef COSM_RAYS
       use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
@@ -113,6 +114,7 @@ contains
 
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      real :: c_, dt_
 
 ! Timestep computation
 
@@ -125,19 +127,23 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
+         !> \todo make the timestep_* routines members of fluidtypes::component_fluid
          if (has_ion) then
-            dt    = min(dt, timestep_ion(cg))
-            c_all = max(c_all,c_ion)
+            call timestep_ion(cg, dt_, c_)
+            dt    = min(dt, dt_)
+            c_all = max(c_all, c_)
          endif
 
          if (has_neu) then
-            dt    = min(dt, timestep_neu(cg))
-            c_all = max(c_all,c_neu)
+            call timestep_neu(cg, dt_, c_)
+            dt    = min(dt, dt_)
+            c_all = max(c_all, c_)
          endif
 
          if (has_dst) then
-            dt    = min(dt, timestep_dst(cg))
-            c_all = max(c_all,c_dst)
+            call timestep_dst(cg, dt_, c_)
+            dt    = min(dt, dt_)
+            c_all = max(c_all, c_)
          endif
 
 #ifdef COSM_RAYS
@@ -157,7 +163,10 @@ contains
          cgl => cgl%nxt
       enddo
 
-     ! finally apply some sanity factors
+      call MPI_Allreduce(MPI_IN_PLACE, dt,    I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, c_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+
+      ! finally apply some sanity factors
       if (nstep <=1) then
          if (dt_initial > zero) dt = min(dt, dt_initial)
       else

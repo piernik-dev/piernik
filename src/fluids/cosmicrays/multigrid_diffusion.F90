@@ -273,7 +273,7 @@ contains
       use constants,     only: xdim, ydim, zdim
       use crdiffusion,   only: cr_diff
       use dataio_pub,    only: halfstep, warn, printinfo, msg
-      use fluidindex,    only: flind, ibx, iby, ibz
+      use fluidindex,    only: flind
       use global,        only: dt
       use mpisetup,      only: master
       use multigridvars, only: ts, tot_ts, stdout
@@ -293,13 +293,13 @@ contains
             frun = .false.
          endif
          if (halfstep) then
-            call cr_diff(zdim,ibz)
-            call cr_diff(ydim,iby)
-            call cr_diff(xdim,ibx)
+            call cr_diff(zdim)
+            call cr_diff(ydim)
+            call cr_diff(xdim)
          else
-            call cr_diff(xdim,ibx)
-            call cr_diff(ydim,iby)
-            call cr_diff(zdim,ibz)
+            call cr_diff(xdim)
+            call cr_diff(ydim)
+            call cr_diff(zdim)
          endif
 
       else

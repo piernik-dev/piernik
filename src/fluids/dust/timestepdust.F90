@@ -29,20 +29,19 @@
 
 !>
 !! \brief (MH) Timestep computation for the dust fluid
-!!
-!!
 !<
 module timestepdust
 ! pulled by ANY
    implicit none
+
    private
-   public :: c_dst, timestep_dst
-   real   :: c_dst                 !< maximum speed at which information travels in dust
+   public :: timestep_dst
 
 contains
 
-   real function timestep_dst(cg) result(dt)
+   subroutine timestep_dst(cg, dt, c_dst)
 
+      use constants,     only: ndims
       use fluidtypes,    only: component_fluid
       use grid_cont,     only: grid_container
       use fluidindex,    only: flind
@@ -51,29 +50,29 @@ contains
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
+      real, intent(out)                         :: dt
+      real, intent(out)                         :: c_dst !< maximum speed at which information travels in dust
 
-      real :: cx                  !< maximum velocity for X direction
-      real :: cy                  !< maximum velocity for Y direction
-      real :: cz                  !< maximum velocity for Z direction
+      real, dimension(ndims) :: c !< maximum velocity for all directions
 
 ! locals
 
-      real                           :: c_max
       integer                        :: i, j, k
       type(component_fluid), pointer :: fl
 
-      c_max = 0.0; cx = 0.0; cy = 0.0; cz = 0.0
+      c_dst = 0.0; c(:) = 0.0
       fl => flind%dst
 
       do k= cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-               call compute_c_max(fl, 0.0, i, j, k, cx, cy, cz, c_max, cg)
+               call compute_c_max(fl, 0.0, i, j, k, c(:), c_dst, cg)
             enddo
          enddo
       enddo
-      call compute_dt(fl, cx, cy, cz, c_max, c_dst, dt, cg)
+      call compute_dt(c(:), dt, cg)
+      fl%c  = c_dst
 
-   end function timestep_dst
+   end subroutine timestep_dst
 
 end module timestepdust

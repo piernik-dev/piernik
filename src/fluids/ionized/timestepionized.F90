@@ -54,15 +54,13 @@ module timestepionized
    implicit none
 
    private
-   public :: c_ion, timestep_ion
-
-   real   :: c_ion              !< maximum speed at which information travels in the ionized fluid
+   public :: timestep_ion
 
 contains
 
-   real function timestep_ion(cg) result(dt)
+   subroutine timestep_ion(cg, dt, c_ion)
 
-      use constants,     only: zero, two, half
+      use constants,     only: zero, two, half, ndims
       use domain,        only: D_x, D_y, D_z
       use fluidindex,    only: flind, ibx, iby, ibz
       use fluidtypes,    only: component_fluid
@@ -72,19 +70,19 @@ contains
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
+      real, intent(out)                         :: dt
+      real, intent(out)                         :: c_ion !< maximum speed at which information travels in the ionized fluid
 
-      real :: cx                  !< maximum velocity for X direction
-      real :: cy                  !< maximum velocity for Y direction
-      real :: cz                  !< maximum velocity for Z direction
+      real, dimension(ndims) :: c !< maximum velocity for all directions
       real :: cs                  !< speed of sound
 
 ! locals
-      real                           :: pmag, bx, by, bz, ps, p, c_max
+      real                           :: pmag, bx, by, bz, ps, p
       integer                        :: i, j, k
       type(component_fluid), pointer :: fl
 
-      cx = 0.0; cy = 0.0; cz = 0.0; cs = 0.0;
-      pmag = 0.0; bx = 0.0; by = 0.0; bz = 0.0; ps = 0.0; p = 0.0; c_max = 0.0
+      c(:) = 0.0; cs = 0.0;
+      pmag = 0.0; bx = 0.0; by = 0.0; bz = 0.0; ps = 0.0; p = 0.0; c_ion = 0.0
       fl => flind%ion
 
       do k = cg%ks, cg%ke
@@ -112,12 +110,13 @@ contains
                p  = ps - pmag
                cs = sqrt(abs(  (two*pmag+fl%gam*p)/cg%u%arr(fl%idn,i,j,k)) )
 #endif /* !ISO */
-               call compute_c_max(fl, cs, i, j, k, cx, cy, cz, c_max, cg)
+               call compute_c_max(fl, cs, i, j, k, c(:), c_ion, cg)
             enddo
          enddo
       enddo
-      call compute_dt(fl, cx, cy, cz, c_max, c_ion, dt, cg)
+      call compute_dt(c(:), dt, cg)
+      fl%c  = c_ion
 
-   end function timestep_ion
+   end subroutine timestep_ion
 
 end module timestepionized
