@@ -398,8 +398,8 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
-      n1  = mod(sdir+1,ndims) ; if (n1 == 0) n1 = 3
-      n2  = mod(sdir+2,ndims) ; if (n2 == 0) n2 = 3
+      n1 = 1 + mod(sdir,   ndims)
+      n2 = 1 + mod(sdir+1, ndims)
       etadir = sum([xdim,ydim,zdim]) - ibdir - sdir
       emf = emfd(etadir)
 
