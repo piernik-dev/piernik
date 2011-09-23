@@ -35,7 +35,7 @@
 !<
 module resistivity
 ! pulled by RESISTIVE
-   use constants, only: ndims
+   use constants, only: ndims, varlen
    use types,     only: array3d, value
    implicit none
 
@@ -58,6 +58,7 @@ module resistivity
    real, dimension(:,:,:), allocatable         :: dbx, dby, dbz
    logical, save :: eta1_active = .true.       !< resistivity off-switcher while eta_1 == 0.0
    integer, dimension(ndims,ndims)                     :: idm   !< identity matrix 3x3
+   character(len=varlen), dimension(ndims) :: emfd
 
 contains
 
@@ -182,6 +183,7 @@ contains
       idm(1,:) = [1,0,0]
       idm(2,:) = [0,1,0]
       idm(3,:) = [0,0,1]
+      emfd     = [ 'emfx', 'emfy', 'emfz' ]
 
    end subroutine init_resistivity
 
@@ -375,9 +377,9 @@ contains
 !   diffusebx_z  --> diffuseb(ibdir = ibx, sdir = zdim, etadir = ydim, emf = 'emfy', n1 = xdim, n2 = ydim)
 !   diffuseby_z  --> diffuseb(ibdir = iby, sdir = zdim, etadir = xdim, emf = 'emfx', n1 = xdim, n2 = ydim)
 
-   subroutine diffuseb(ibdir, sdir, etadir, emf, n1, n2)
+   subroutine diffuseb(ibdir, sdir)
 
-      use constants,     only: xdim, ydim, zdim, ndims, half
+      use constants,     only: xdim, ydim, zdim, ndims, half, varlen
       use domain,        only: has_dir
       use global,        only: dt
       use grid,          only: all_cg
@@ -387,13 +389,20 @@ contains
 
       implicit none
 
-      integer(kind=4),  intent(in)   :: ibdir, sdir, etadir, n1, n2
-      character(len=*), intent(in)   :: emf
+      integer(kind=4),  intent(in)   :: ibdir, sdir
+      character(len=varlen)          :: emf
       integer                        :: i1, i2
+      integer(kind=4)                :: n1, n2, etadir
       integer, dimension(ndims)      :: idml, idmh
       real, dimension(:),    pointer :: b1d, eta1d, wcu1d
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+
+      n1  = mod(sdir+1,ndims)
+      n2  = mod(sdir+2,ndims)
+      etadir = sum([xdim,ydim,zdim]) - ibdir - sdir
+      emf = emfd(etadir)
+
 
       call compute_resist
 

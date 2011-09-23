@@ -267,36 +267,36 @@ contains
          case (xdim)
             call advectby_x
 #ifdef RESISTIVE
-            call diffuseb(iby,xdim,zdim,'emfz',ydim,zdim)
+            call diffuseb(iby,xdim)
 #endif /* RESISTIVE */
             call mag_add(xdim, ydim)
             call advectbz_x
 #ifdef RESISTIVE
-            call diffuseb(ibz,xdim,ydim,'emfy',ydim,zdim)
+            call diffuseb(ibz,xdim)
 #endif /* RESISTIVE */
             call mag_add(xdim, zdim)
 
          case (ydim)
             call advectbz_y
 #ifdef RESISTIVE
-            call diffuseb(ibz,ydim,xdim,'emfx',zdim,xdim)
+            call diffuseb(ibz,ydim)
 #endif /* RESISTIVE */
             call mag_add(ydim, zdim)
             call advectbx_y
 #ifdef RESISTIVE
-            call diffuseb(ibx,ydim,zdim,'emfz',zdim,xdim)
+            call diffuseb(ibx,ydim)
 #endif /* RESISTIVE */
             call mag_add(ydim, xdim)
 
          case (zdim)
             call advectbx_z
 #ifdef RESISTIVE
-            call diffuseb(ibx,zdim,ydim,'emfy',xdim,ydim)
+            call diffuseb(ibx,zdim)
 #endif /* RESISTIVE */
             call mag_add(zdim, xdim)
             call advectby_z
 #ifdef RESISTIVE
-            call diffuseb(iby,zdim,xdim,'emfx',xdim,ydim)
+            call diffuseb(iby,zdim)
 #endif /* RESISTIVE */
             call mag_add(zdim, ydim)
 
