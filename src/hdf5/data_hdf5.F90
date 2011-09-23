@@ -73,8 +73,8 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5, only: common_shortcuts
-      use constants,   only: varlen, half
-      use fluidindex,  only: flind, ibx, iby, ibz
+      use constants,   only: varlen, half, xdim, ydim, zdim
+      use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use grid_cont,   only: grid_container
 
@@ -131,10 +131,10 @@ contains
                  &             cg%u%arr(flind%ion%imx, RNG)**2 + &
                  &             cg%u%arr(flind%ion%imy, RNG)**2 + &
                  &             cg%u%arr(flind%ion%imz, RNG)**2 ) / cg%u%arr(flind%ion%idn, RNG), kind=4) * real(flind%ion%gam_1, kind=4) - &
-                 &       real( half*(flind%ion%gam_1)*(cg%b%arr(ibx, RNG)**2 + cg%b%arr(iby, RNG)**2 + cg%b%arr(ibz, RNG)**2), kind=4)
+                 &       real( half*(flind%ion%gam_1)*(cg%b%arr(xdim, RNG)**2 + cg%b%arr(ydim, RNG)**2 + cg%b%arr(zdim, RNG)**2), kind=4)
 #endif /* !ISO */
          case ("magx", "magy", "magz")
-            tab(:,:,:) = real(cg%b%arr(ibx + i_xyz, RNG), kind=4)
+            tab(:,:,:) = real(cg%b%arr(xdim + i_xyz, RNG), kind=4)
          case ("gpot")
             if (associated(cg%gpot)) tab(:,:,:) = real(cg%gpot(RNG), kind=4)
          case ("mgso")

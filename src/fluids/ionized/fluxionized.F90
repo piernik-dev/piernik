@@ -75,10 +75,10 @@ contains
 
    subroutine flux_ion(fluxi, cfri, uui, n, vx, ps, bb, cs_iso2)
 
-      use constants,  only: small, half
+      use constants,  only: small, half, xdim, ydim, zdim
       use dataio_pub, only: die
       use func,       only: ekin, emag
-      use fluidindex, only: idn, imx, imy, imz, ien, flind, ibx, iby, ibz
+      use fluidindex, only: idn, imx, imy, imz, ien, flind
       use global,     only: cfr_smooth
 
       implicit none
@@ -105,7 +105,7 @@ contains
 
       nm = n-1
 #ifdef MAGNETIC
-      pmag(RNG)= emag(bb(ibx,RNG),bb(iby,RNG),bb(ibz,RNG));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
+      pmag(RNG)= emag(bb(xdim,RNG),bb(ydim,RNG),bb(zdim,RNG));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
 #else /* !MAGNETIC */
       pmag(:) = 0.0
 #endif /* !MAGNETIC */
@@ -126,12 +126,12 @@ contains
       ps(1) = ps(2); ps(n) = ps(nm)
 
       fluxi(idn,RNG)=uui(imx,RNG)
-      fluxi(imx,RNG)=uui(imx,RNG)*vx(RNG)+ps(RNG) - bb(ibx,RNG)**2
-      fluxi(imy,RNG)=uui(imy,RNG)*vx(RNG)-bb(iby,RNG)*bb(ibx,RNG)
-      fluxi(imz,RNG)=uui(imz,RNG)*vx(RNG)-bb(ibz,RNG)*bb(ibx,RNG)
+      fluxi(imx,RNG)=uui(imx,RNG)*vx(RNG)+ps(RNG) - bb(xdim,RNG)**2
+      fluxi(imy,RNG)=uui(imy,RNG)*vx(RNG)-bb(ydim,RNG)*bb(xdim,RNG)
+      fluxi(imz,RNG)=uui(imz,RNG)*vx(RNG)-bb(zdim,RNG)*bb(xdim,RNG)
 #ifndef ISO
-      fluxi(ien,RNG)=(uui(ien,RNG)+ps(RNG))*vx(RNG)-bb(ibx,RNG)*(bb(ibx,RNG)*uui(imx,RNG) &
-                +bb(iby,RNG)*uui(imy,RNG)+bb(ibz,RNG)*uui(imz,RNG))/uui(idn,RNG)
+      fluxi(ien,RNG)=(uui(ien,RNG)+ps(RNG))*vx(RNG)-bb(xdim,RNG)*(bb(xdim,RNG)*uui(imx,RNG) &
+                +bb(ydim,RNG)*uui(imy,RNG)+bb(zdim,RNG)*uui(imz,RNG))/uui(idn,RNG)
 #endif /* !ISO */
       fluxi(:,1) = fluxi(:,2); fluxi(:,n) = fluxi(:,nm)
 #ifdef LOCAL_FR_SPEED

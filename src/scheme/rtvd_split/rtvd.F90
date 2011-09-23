@@ -231,10 +231,10 @@ contains
 
    subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg)
 
-      use constants,        only: one, zero, half, GEO_XYZ
+      use constants,        only: one, zero, half, GEO_XYZ, xdim, ydim, zdim
       use dataio_pub,       only: msg, die
       use domain,           only: geometry_type
-      use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz, flind, nmag
+      use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
       use global,           only: smalld, integration_order, use_smalld, local_magic_mass
       use grid_cont,        only: grid_container
@@ -471,7 +471,7 @@ contains
       ekin = half*( u1(iarr_all_mx,:)**2 + u1(iarr_all_my,:)**2 + u1(iarr_all_mz,:)**2 ) /u1(iarr_all_dn,:)
       eint = u1(iarr_all_en,:) - ekin
 #if defined IONIZED && defined MAGNETIC
-      emag = half*(bb(ibx,:)*bb(ibx,:) + bb(iby,:)*bb(iby,:) + bb(ibz,:)*bb(ibz,:))
+      emag = half*(bb(xdim,:)*bb(xdim,:) + bb(ydim,:)*bb(ydim,:) + bb(zdim,:)*bb(zdim,:))
       eint(flind%ion%pos,:) = eint(flind%ion%pos,:) - emag
 #endif /* IONIZED && MAGNETIC */
 

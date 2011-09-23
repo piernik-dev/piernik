@@ -710,7 +710,7 @@ contains
       use diagnostics, only: pop_vector
       use domain,      only: dom
       use fluids_pub,  only: has_ion, has_dst, has_neu
-      use fluidindex,  only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, ibx, iby, ibz
+      use fluidindex,  only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluidtypes,  only: phys_prop
       use global,      only: t, dt, smalld, nstep
       use grid,        only: all_cg
@@ -817,14 +817,14 @@ contains
       tot_ekin = mpi_addmul(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 
       cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-           & half * (cg%b%arr(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
-           &        cg%b%arr(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
-           &        cg%b%arr(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
+           & half * (cg%b%arr(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
+           &        cg%b%arr(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
+           &        cg%b%arr(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
       tot_emag = mpi_addmul(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 
-      tot_mflx = mpi_addmul(cg%b%arr(ibx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dy*cg%dz/dom%n_d(xdim))
-      tot_mfly = mpi_addmul(cg%b%arr(iby, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dz/dom%n_d(ydim))
-      tot_mflz = mpi_addmul(cg%b%arr(ibz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dy/dom%n_d(zdim))
+      tot_mflx = mpi_addmul(cg%b%arr(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dy*cg%dz/dom%n_d(xdim))
+      tot_mfly = mpi_addmul(cg%b%arr(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dz/dom%n_d(ydim))
+      tot_mflz = mpi_addmul(cg%b%arr(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dy/dom%n_d(zdim))
 #ifdef ISO
       tot_eint = cs_iso2*tot_mass
       tot_ener = tot_eint+tot_ekin+tot_emag
@@ -1029,7 +1029,7 @@ contains
       use dataio_pub,         only: msg, printinfo, warn
       use domain,             only: has_dir
       use fluids_pub,         only: has_dst, has_ion, has_neu
-      use fluidindex,         only: ibx, iby, ibz, flind
+      use fluidindex,         only: flind
       use func,               only: get_extremum, L2norm
       use global,             only: cfl, t, dt
       use grid,               only: all_cg
@@ -1123,7 +1123,7 @@ contains
 !        cg%wa(:,:,:) = (cg%u%arr(ieni,:,:,:) &                ! eint
 !                    - half*((cg%u%arr(imxi,:,:,:)**2 +cg%u%arr(imyi,:,:,:)**2 + cg%u%arr(imzi,:,:,:)**2)/cg%u%arr(idni,:,:,:)))
 #ifdef MAGNETIC
-!        cg%wa(:,:,:) = cg%wa(:,:,:) - half*(cg%b%arr(ibx,:,:,:)**2 + cg%b%arr(iby,:,:,:)**2 + cg%b%arr(ibz,:,:,:)**2)
+!        cg%wa(:,:,:) = cg%wa(:,:,:) - half*(cg%b%arr(xdim,:,:,:)**2 + cg%b%arr(ydim,:,:,:)**2 + cg%b%arr(zdim,:,:,:)**2)
 #endif /* MAGNETIC */
 #endif /* !ISO */
       endif
@@ -1141,9 +1141,9 @@ contains
 
 #ifdef MAGNETIC
       cg%wa(1:nxu,1:nyu,1:nzu) = &
-                 (cg%b%arr(ibx,nxl:cg%n_(xdim),  1:nyu  ,  1:nzu  ) - cg%b%arr(ibx,1:nxu,1:nyu,1:nzu))*cg%dy*cg%dz &
-               + (cg%b%arr(iby,  1:nxu  ,nyl:cg%n_(ydim),  1:nzu  ) - cg%b%arr(iby,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dz &
-               + (cg%b%arr(ibz,  1:nxu  ,  1:nyu  ,nzl:cg%n_(zdim)) - cg%b%arr(ibz,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dy
+                 (cg%b%arr(xdim,nxl:cg%n_(xdim),  1:nyu  ,  1:nzu  ) - cg%b%arr(xdim,1:nxu,1:nyu,1:nzu))*cg%dy*cg%dz &
+               + (cg%b%arr(ydim,  1:nxu  ,nyl:cg%n_(ydim),  1:nzu  ) - cg%b%arr(ydim,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dz &
+               + (cg%b%arr(zdim,  1:nxu  ,  1:nyu  ,nzl:cg%n_(zdim)) - cg%b%arr(zdim,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dy
       cg%wa = abs(cg%wa)
 
       cg%wa(cg%ie,:,:) = cg%wa(cg%ie-D_x,:,:)

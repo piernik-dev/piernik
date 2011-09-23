@@ -272,7 +272,6 @@ contains
          call mag_add(dir, bdir)
       enddo
 
-
    end subroutine magfield
 
 !------------------------------------------------------------------------------------------

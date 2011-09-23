@@ -115,7 +115,7 @@ contains
 
       use constants,      only: xdim, ydim, zdim
       use domain,         only: dom
-      use fluidindex,     only: ibx, iby, ibz, flind
+      use fluidindex,     only: flind
       use global,         only: smalld
       use grid,           only: all_cg
       use gc_list,        only: cg_list_element
@@ -185,9 +185,9 @@ contains
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%b%arr(ibx,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
-                  cg%b%arr(iby,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
-                  cg%b%arr(ibz,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b%arr(xdim,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b%arr(ydim,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b%arr(zdim,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
                   cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
 #endif /* !ISO */

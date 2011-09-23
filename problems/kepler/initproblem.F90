@@ -288,7 +288,7 @@ contains
       use constants,    only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
       use dataio_pub,   only: msg, printinfo, die
       use domain,       only: geometry_type, cdd, dom, has_dir
-      use fluidindex,   only: ibx, iby, ibz, flind
+      use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
       use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid,         only: all_cg
@@ -363,13 +363,13 @@ contains
                         cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(fl%idn,i,j,k)
                      endif
                      if (trim(mag_field_orient) == 'toroidal') then
-                        cg%b%arr(ibx,i,j,k)   = -b0*sqrt(cg%u%arr(fl%idn,i,j,k)/d0)*yj/rc
-                        cg%b%arr(iby,i,j,k)   =  b0*sqrt(cg%u%arr(fl%idn,i,j,k)/d0)*xi/rc
-                        cg%b%arr(ibz,i,j,k)   =  0.0
+                        cg%b%arr(xdim,i,j,k)   = -b0*sqrt(cg%u%arr(fl%idn,i,j,k)/d0)*yj/rc
+                        cg%b%arr(ydim,i,j,k)   =  b0*sqrt(cg%u%arr(fl%idn,i,j,k)/d0)*xi/rc
+                        cg%b%arr(zdim,i,j,k)   =  0.0
                      else if (trim(mag_field_orient) == 'vertical') then
-                        cg%b%arr(ibx,i,j,k)   =  0.0
-                        cg%b%arr(iby,i,j,k)   =  0.0
-                        cg%b%arr(ibz,i,j,k)   =  b0
+                        cg%b%arr(xdim,i,j,k)   =  0.0
+                        cg%b%arr(ydim,i,j,k)   =  0.0
+                        cg%b%arr(zdim,i,j,k)   =  b0
                      else if (trim(mag_field_orient) == 'none') then
                         cg%b%arr(:,i,j,k)     =  0.0
                      endif

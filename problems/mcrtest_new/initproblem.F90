@@ -137,7 +137,7 @@ contains
       use constants,      only: xdim, ydim, zdim, I_ONE
       use dataio_pub,     only: msg, warn, printinfo, die
       use domain,         only: has_dir, dom
-      use fluidindex,     only: ibx, iby, ibz, flind
+      use fluidindex,     only: flind
       use grid,           only: all_cg
       use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
@@ -187,9 +187,9 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b%arr(ibx, :, :, :) = bx0
-         cg%b%arr(iby, :, :, :) = by0
-         cg%b%arr(ibz, :, :, :) = bz0
+         cg%b%arr(xdim, :, :, :) = bx0
+         cg%b%arr(ydim, :, :, :) = by0
+         cg%b%arr(zdim, :, :, :) = bz0
          cg%u%arr(idni, :, :, :) = d0
          cg%u%arr(imxi:imzi, :, :, :) = 0.0
 

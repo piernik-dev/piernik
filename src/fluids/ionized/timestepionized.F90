@@ -60,9 +60,9 @@ contains
 
    subroutine timestep_ion(cg, dt, c_ion)
 
-      use constants,     only: zero, two, half, ndims
+      use constants,     only: zero, two, half, ndims, xdim, ydim, zdim
       use domain,        only: D_x, D_y, D_z
-      use fluidindex,    only: flind, ibx, iby, ibz
+      use fluidindex,    only: flind
       use fluidtypes,    only: component_fluid
       use grid_cont,     only: grid_container
       use timestepfuncs, only: compute_c_max, compute_dt
@@ -90,13 +90,13 @@ contains
             do i = cg%is, cg%ie
 
 #ifdef MAGNETIC
-               bx = (cg%b%arr(ibx,i,j,k) + cg%b%arr(ibx, i+D_x, j,     k    ))/(1.+D_x)
-               by = (cg%b%arr(iby,i,j,k) + cg%b%arr(iby, i,     j+D_y, k    ))/(1.+D_y)
-               bz = (cg%b%arr(ibz,i,j,k) + cg%b%arr(ibz, i,     j,     k+D_z))/(1.+D_z)
+               bx = (cg%b%arr(xdim,i,j,k) + cg%b%arr(xdim, i+D_x, j,     k    ))/(1.+D_x)
+               by = (cg%b%arr(ydim,i,j,k) + cg%b%arr(ydim, i,     j+D_y, k    ))/(1.+D_y)
+               bz = (cg%b%arr(zdim,i,j,k) + cg%b%arr(zdim, i,     j,     k+D_z))/(1.+D_z)
 
                pmag = half*(bx*bx + by*by + bz*bz)
 #else /* !MAGNETIC */
-               ! all_mag_boundaries has not been called so we cannot trust cg%b%arr(ibx, cg%ie+D_x:), cg%b%arr(iby,:cg%je+D_y and cg%b%arr(ibz,:,:, cg%ke+D_z
+               ! all_mag_boundaries has not been called so we cannot trust cg%b%arr(xdim, cg%ie+D_x:), cg%b%arr(ydim,:cg%je+D_y and cg%b%arr(zdim,:,:, cg%ke+D_z
                pmag = zero
 #endif /* !MAGNETIC */
 

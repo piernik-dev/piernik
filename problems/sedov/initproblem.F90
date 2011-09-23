@@ -132,7 +132,7 @@ contains
 
       use constants,  only: ION, DST, xdim, ydim, zdim
       use dataio_pub, only: msg, die, printinfo
-      use fluidindex, only: flind, ibx, iby, ibz
+      use fluidindex, only: flind
       use fluidtypes, only: component_fluid
       use grid,       only: all_cg
       use gc_list,    only: cg_list_element
@@ -192,10 +192,10 @@ contains
                do k = 1, cg%n_(zdim)
                   do j = 1, cg%n_(ydim)
                      do i = 1, cg%n_(xdim)
-                        cg%b%arr(ibx,i,j,k) = bx0
-                        cg%b%arr(iby,i,j,k) = by0
-                        cg%b%arr(ibz,i,j,k) = bz0
-                        cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(cg%b%arr(ibx,i,j,k)**2 + cg%b%arr(iby,i,j,k)**2 + cg%b%arr(ibz,i,j,k)**2)
+                        cg%b%arr(xdim,i,j,k) = bx0
+                        cg%b%arr(ydim,i,j,k) = by0
+                        cg%b%arr(zdim,i,j,k) = bz0
+                        cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(cg%b%arr(xdim,i,j,k)**2 + cg%b%arr(ydim,i,j,k)**2 + cg%b%arr(zdim,i,j,k)**2)
                      enddo
                   enddo
                enddo

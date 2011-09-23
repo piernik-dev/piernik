@@ -190,9 +190,9 @@ contains
 
    subroutine sanitize_smallx_checks
 
-      use constants,  only: big_float, DST, I_ONE
+      use constants,  only: big_float, DST, I_ONE, xdim, ydim, zdim
       use dataio_pub, only: warn, msg
-      use fluidindex, only: flind, ibx, iby, ibz
+      use fluidindex, only: flind
       use fluidtypes, only: component_fluid
       use gc_list,    only: cg_list_element
       use global,     only: smalld, smallp
@@ -222,9 +222,9 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         bx => cg%b%arr(ibx,:,:,:)
-         by => cg%b%arr(iby,:,:,:)
-         bz => cg%b%arr(ibz,:,:,:)
+         bx => cg%b%arr(xdim,:,:,:)
+         by => cg%b%arr(ydim,:,:,:)
+         bz => cg%b%arr(zdim,:,:,:)
 
          if (smalld >= big_float) then
             do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)

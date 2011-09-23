@@ -105,7 +105,7 @@ contains
 
       use constants,   only: pi, xdim, ydim, zdim
       use domain,      only: dom
-      use fluidindex,  only: ibx, iby, ibz, flind
+      use fluidindex,  only: flind
       use grid,        only: all_cg
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
@@ -129,8 +129,8 @@ contains
          cg%u%arr(imyi,:,:,:) = 0.0
          cg%u%arr(imzi,:,:,:) = 0.0
 
-         cg%b%arr(ibx,:,:,:)  = 0.0
-         cg%b%arr(ibz,:,:,:)  = 0.0
+         cg%b%arr(xdim,:,:,:)  = 0.0
+         cg%b%arr(zdim,:,:,:)  = 0.0
 
          call read_problem_par
 
@@ -144,9 +144,9 @@ contains
                   cg%u%arr(imxi,i,j,k) = cg%u%arr(idni,i,j,k)*vzab
 
                   if (abs(cg%x(i)-dom%C_(xdim)) <= 0.25*dom%L_(xdim)) then
-                     cg%b%arr(iby,i,j,k) = -b0
+                     cg%b%arr(ydim,i,j,k) = -b0
                   else
-                     cg%b%arr(iby,i,j,k) =  b0
+                     cg%b%arr(ydim,i,j,k) =  b0
                   endif
                enddo
             enddo

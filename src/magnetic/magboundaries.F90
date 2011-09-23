@@ -80,7 +80,6 @@ contains
            &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub, only: msg, warn, die
       use domain,     only: cdd, is_mpi_noncart
-      use fluidindex, only: ibx, iby, ibz
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
@@ -199,9 +198,9 @@ contains
             if (cdd%pcoords(xdim) == 0 .and. cdd%pcoords(ydim) == 0) then
                do i=1, cg%nb
                   do j=cg%js, cg%n_(ydim)
-                     cg%b%arr(ibx,i,j,:) = -cg%b%arr(iby,j,cg%isb+1-i,:)
-                     cg%b%arr(iby,i,j,:) =  cg%b%arr(ibx,j,cg%isb+1-i,:)
-                     cg%b%arr(ibz,i,j,:) =  cg%b%arr(ibz,j,cg%isb+1-i,:)
+                     cg%b%arr(xdim,i,j,:) = -cg%b%arr(ydim,j,cg%isb+1-i,:)
+                     cg%b%arr(ydim,i,j,:) =  cg%b%arr(xdim,j,cg%isb+1-i,:)
+                     cg%b%arr(zdim,i,j,:) =  cg%b%arr(zdim,j,cg%isb+1-i,:)
                   enddo
                enddo
             endif
@@ -218,9 +217,9 @@ contains
 
                do i=1, cg%nb
                   do j=1, cg%n_(ydim)
-                     cg%b%arr(ibx,i,j,:) = -recv_left(iby,j, cg%is-i,:)
-                     cg%b%arr(iby,i,j,:) =  recv_left(ibx,j, cg%is-i,:)
-                     cg%b%arr(ibz,i,j,:) =  recv_left(ibz,j, cg%is-i,:)
+                     cg%b%arr(xdim,i,j,:) = -recv_left(ydim,j, cg%is-i,:)
+                     cg%b%arr(ydim,i,j,:) =  recv_left(xdim,j, cg%is-i,:)
+                     cg%b%arr(zdim,i,j,:) =  recv_left(zdim,j, cg%is-i,:)
                   enddo
                enddo
 
@@ -234,17 +233,17 @@ contains
             if (cdd%pcoords(ydim) == 0 .and. cdd%pcoords(xdim) == 0 ) then
                do j=1, cg%nb
                   do i=cg%is, cg%n_(xdim)
-                     cg%b%arr(ibx,i,j,:) =  cg%b%arr(iby,cg%isb+1-j,i,:)
-                     cg%b%arr(iby,i,j,:) = -cg%b%arr(ibx,cg%isb+1-j,i,:)
-                     cg%b%arr(ibz,i,j,:) =  cg%b%arr(ibz,cg%isb+1-j,i,:)
+                     cg%b%arr(xdim,i,j,:) =  cg%b%arr(ydim,cg%isb+1-j,i,:)
+                     cg%b%arr(ydim,i,j,:) = -cg%b%arr(xdim,cg%isb+1-j,i,:)
+                     cg%b%arr(zdim,i,j,:) =  cg%b%arr(zdim,cg%isb+1-j,i,:)
                   enddo
                enddo
 !   - interior to corner
                do j=1, cg%nb
                   do i=1, cg%nb
-                     cg%b%arr(ibx,i,j,:) =  -cg%b%arr(ibx,cg%isb+1-i,cg%jsb+1-j,:)
-                     cg%b%arr(iby,i,j,:) =  -cg%b%arr(iby,cg%isb+1-i,cg%jsb+1-j,:)
-                     cg%b%arr(ibz,i,j,:) =   cg%b%arr(ibz,cg%isb+1-i,cg%jsb+1-j,:)
+                     cg%b%arr(xdim,i,j,:) =  -cg%b%arr(xdim,cg%isb+1-i,cg%jsb+1-j,:)
+                     cg%b%arr(ydim,i,j,:) =  -cg%b%arr(ydim,cg%isb+1-i,cg%jsb+1-j,:)
+                     cg%b%arr(zdim,i,j,:) =   cg%b%arr(zdim,cg%isb+1-i,cg%jsb+1-j,:)
                   enddo
                enddo
             endif
@@ -261,9 +260,9 @@ contains
 
                do j=1, cg%nb
                   do i=1, cg%n_(xdim)
-                     cg%b%arr(ibx,i,j,:) =  recv_left(iby, cg%js-j,i,:)
-                     cg%b%arr(iby,i,j,:) = -recv_left(ibx, cg%js-j,i,:)
-                     cg%b%arr(ibz,i,j,:) =  recv_left(ibz, cg%js-j,i,:)
+                     cg%b%arr(xdim,i,j,:) =  recv_left(ydim, cg%js-j,i,:)
+                     cg%b%arr(ydim,i,j,:) = -recv_left(xdim, cg%js-j,i,:)
+                     cg%b%arr(zdim,i,j,:) =  recv_left(zdim, cg%js-j,i,:)
                   enddo
                enddo
 

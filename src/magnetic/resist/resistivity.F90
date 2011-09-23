@@ -192,7 +192,6 @@ contains
       use constants,  only: small, xdim, ydim, zdim, MINL, MAXL, I_ONE, half, oneq
       use dataio_pub, only: die
       use domain,     only: has_dir
-      use fluidindex, only: ibx, iby, ibz
       use func,       only: get_extremum
       use grid,       only: all_cg
       use gc_list,    only: cg_list_element
@@ -219,13 +218,13 @@ contains
          cg => cgl%cg
 
          if (has_dir(xdim)) then
-            dbx(2:cg%n_(xdim),:,:) = (cg%b%arr(iby,2:cg%n_(xdim),:,:)-cg%b%arr(iby,1:cg%n_(xdim)-1,:,:))*cg%idl(xdim) ; dbx(1,:,:) = dbx(2,:,:)
+            dbx(2:cg%n_(xdim),:,:) = (cg%b%arr(ydim,2:cg%n_(xdim),:,:)-cg%b%arr(ydim,1:cg%n_(xdim)-1,:,:))*cg%idl(xdim) ; dbx(1,:,:) = dbx(2,:,:)
          endif
          if (has_dir(ydim)) then
-            dby(:,2:cg%n_(ydim),:) = (cg%b%arr(ibx,:,2:cg%n_(ydim),:)-cg%b%arr(ibx,:,1:cg%n_(ydim)-1,:))*cg%idl(ydim) ; dby(:,1,:) = dby(:,2,:)
+            dby(:,2:cg%n_(ydim),:) = (cg%b%arr(xdim,:,2:cg%n_(ydim),:)-cg%b%arr(xdim,:,1:cg%n_(ydim)-1,:))*cg%idl(ydim) ; dby(:,1,:) = dby(:,2,:)
          endif
          if (has_dir(zdim)) then
-            dbz(:,:,2:cg%n_(zdim)) = (cg%b%arr(iby,:,:,2:cg%n_(zdim))-cg%b%arr(iby,:,:,1:cg%n_(zdim)-1))*cg%idl(zdim) ; dbz(:,:,1) = dbz(:,:,2)
+            dbz(:,:,2:cg%n_(zdim)) = (cg%b%arr(ydim,:,:,2:cg%n_(zdim))-cg%b%arr(ydim,:,:,1:cg%n_(zdim)-1))*cg%idl(zdim) ; dbz(:,:,1) = dbz(:,:,2)
          endif
 
 !--- current_z **2
@@ -285,7 +284,7 @@ contains
 
 #ifndef ISO
       wb = ( cg%u%arr(flind%ion%ien,:,:,:) - half*( cg%u%arr(flind%ion%imx,:,:,:)**2  + cg%u%arr(flind%ion%imy,:,:,:)**2  + cg%u%arr(flind%ion%imz,:,:,:)**2 ) &
-           / cg%u%arr(flind%ion%idn,:,:,:) - half*( cg%b%arr(ibx,:,:,:)**2  +   cg%b%arr(iby,:,:,:)**2  +   cg%b%arr(ibz,:,:,:)**2))/ ( eta%arr * wb+small)
+           / cg%u%arr(flind%ion%idn,:,:,:) - half*( cg%b%arr(xdim,:,:,:)**2  +   cg%b%arr(ydim,:,:,:)**2  +   cg%b%arr(zdim,:,:,:)**2))/ ( eta%arr * wb+small)
       dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
 
       call get_extremum(p, MINL, deimin, cg)
@@ -370,12 +369,12 @@ contains
 !-------------------------------------------------------------------------------
 !
 ! 6 routines have been substituted by one with parameters:
-!   diffuseby_x  --> diffuseb(ibdir = iby, sdir = xdim, etadir = zdim, emf = 'emfz', n1 = ydim, n2 = zdim)
-!   diffusebz_x  --> diffuseb(ibdir = ibz, sdir = xdim, etadir = ydim, emf = 'emfy', n1 = ydim, n2 = zdim)
-!   diffusebz_y  --> diffuseb(ibdir = ibz, sdir = ydim, etadir = xdim, emf = 'emfx', n1 = zdim, n2 = xdim)
-!   diffusebx_y  --> diffuseb(ibdir = ibx, sdir = ydim, etadir = zdim, emf = 'emfz', n1 = zdim, n2 = xdim)
-!   diffusebx_z  --> diffuseb(ibdir = ibx, sdir = zdim, etadir = ydim, emf = 'emfy', n1 = xdim, n2 = ydim)
-!   diffuseby_z  --> diffuseb(ibdir = iby, sdir = zdim, etadir = xdim, emf = 'emfx', n1 = xdim, n2 = ydim)
+!   diffuseby_x  --> diffuseb(ibdir = ydim, sdir = xdim, etadir = zdim, emf = 'emfz', n1 = ydim, n2 = zdim)
+!   diffusebz_x  --> diffuseb(ibdir = zdim, sdir = xdim, etadir = ydim, emf = 'emfy', n1 = ydim, n2 = zdim)
+!   diffusebz_y  --> diffuseb(ibdir = zdim, sdir = ydim, etadir = xdim, emf = 'emfx', n1 = zdim, n2 = xdim)
+!   diffusebx_y  --> diffuseb(ibdir = xdim, sdir = ydim, etadir = zdim, emf = 'emfz', n1 = zdim, n2 = xdim)
+!   diffusebx_z  --> diffuseb(ibdir = xdim, sdir = zdim, etadir = ydim, emf = 'emfy', n1 = xdim, n2 = ydim)
+!   diffuseby_z  --> diffuseb(ibdir = ydim, sdir = zdim, etadir = xdim, emf = 'emfx', n1 = xdim, n2 = ydim)
 
    subroutine diffuseb(ibdir, sdir)
 

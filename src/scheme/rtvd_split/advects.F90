@@ -76,7 +76,7 @@ contains
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
       use domain,        only: has_dir, D_y
-      use fluidindex,    only: iby, flind
+      use fluidindex,    only: flind
       use global,        only: dt
       use grid,          only: all_cg
       use gc_list,       only: cg_list_element
@@ -121,7 +121,7 @@ contains
                vx(cg%n_(xdim)) = vx(cg%n_(xdim)-1)
 
                vibj => cg%q(i_wa)%get_sweep(xdim,j,k)
-               call tvdb(vibj, cg%b%get_sweep(xdim,iby,j,k), vx, cg%n_(xdim),dt, cg%idx)
+               call tvdb(vibj, cg%b%get_sweep(xdim,ydim,j,k), vx, cg%n_(xdim),dt, cg%idx)
 
             enddo
          enddo
@@ -143,7 +143,7 @@ contains
       use constants,     only: xdim, zdim
       use dataio_pub,    only: die
       use domain,        only: has_dir, D_z
-      use fluidindex,    only: ibz, flind
+      use fluidindex,    only: flind
       use global,        only: dt
       use grid,          only: all_cg
       use gc_list,       only: cg_list_element
@@ -188,7 +188,7 @@ contains
                vx(cg%n_(xdim)) = vx(cg%n_(xdim)-1)
 
                vibj => cg%q(i_wa)%get_sweep(xdim,j,k)
-               call tvdb(vibj, cg%b%get_sweep(xdim,ibz,j,k), vx, cg%n_(xdim),dt, cg%idx)
+               call tvdb(vibj, cg%b%get_sweep(xdim,zdim,j,k), vx, cg%n_(xdim),dt, cg%idx)
 
             enddo
          enddo
@@ -210,7 +210,7 @@ contains
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
       use domain,        only: has_dir, D_z
-      use fluidindex,    only: ibz, flind
+      use fluidindex,    only: flind
       use global,        only: dt
       use grid,          only: all_cg
       use gc_list,       only: cg_list_element
@@ -255,7 +255,7 @@ contains
                vy(cg%n_(ydim)) = vy(cg%n_(ydim)-1)
 
                vibj => cg%q(i_wa)%get_sweep(ydim,k,i)
-               call tvdb(vibj, cg%b%get_sweep(ydim,ibz,k,i), vy, cg%n_(ydim),dt, cg%idy)
+               call tvdb(vibj, cg%b%get_sweep(ydim,zdim,k,i), vy, cg%n_(ydim),dt, cg%idy)
 
             enddo
          enddo
@@ -277,7 +277,7 @@ contains
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
       use domain,        only: has_dir, D_x
-      use fluidindex,    only: ibx, flind
+      use fluidindex,    only: flind
       use global,        only: dt
       use grid,          only: all_cg
       use gc_list,       only: cg_list_element
@@ -322,7 +322,7 @@ contains
                vy(cg%n_(ydim)) = vy(cg%n_(ydim)-1)
 
                vibj => cg%q(i_wa)%get_sweep(ydim,k,i)
-               call tvdb(vibj, cg%b%get_sweep(ydim,ibx,k,i), vy, cg%n_(ydim),dt, cg%idy)
+               call tvdb(vibj, cg%b%get_sweep(ydim,xdim,k,i), vy, cg%n_(ydim),dt, cg%idy)
 
             enddo
          enddo
@@ -344,7 +344,7 @@ contains
       use constants,     only: xdim, zdim
       use dataio_pub,    only: die
       use domain,        only: has_dir, D_x
-      use fluidindex,    only: ibx, flind
+      use fluidindex,    only: flind
       use global,        only: dt
       use grid,          only: all_cg
       use gc_list,       only: cg_list_element
@@ -389,7 +389,7 @@ contains
                vz(cg%n_(zdim)) = vz(cg%n_(zdim)-1)
 
                vibj => cg%q(i_wa)%get_sweep(zdim,i,j)
-               call tvdb(vibj, cg%b%get_sweep(zdim,ibx,i,j), vz, cg%n_(zdim),dt, cg%idz)
+               call tvdb(vibj, cg%b%get_sweep(zdim,xdim,i,j), vz, cg%n_(zdim),dt, cg%idz)
 
             enddo
          enddo
@@ -411,7 +411,7 @@ contains
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: die
       use domain,        only: has_dir, D_y
-      use fluidindex,    only: iby, flind
+      use fluidindex,    only: flind
       use global,        only: dt
       use grid,          only: all_cg
       use gc_list,       only: cg_list_element
@@ -456,7 +456,7 @@ contains
                vz(cg%n_(zdim)) = vz(cg%n_(zdim)-1)
 
                vibj => cg%q(i_wa)%get_sweep(zdim,i,j)
-               call tvdb(vibj, cg%b%get_sweep(zdim,iby,i,j), vz, cg%n_(zdim),dt, cg%idz)
+               call tvdb(vibj, cg%b%get_sweep(zdim,ydim,i,j), vz, cg%n_(zdim),dt, cg%idz)
 
             enddo
          enddo

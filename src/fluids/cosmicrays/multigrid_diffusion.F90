@@ -429,10 +429,9 @@ contains
 
    subroutine init_b
 
-      use constants,          only: I_ONE
+      use constants,          only: I_ONE, xdim, ydim, zdim
       use dataio_pub,         only: die
       use domain,             only: D_x, D_y, D_z
-      use fluidindex,         only: ibx, iby, ibz
       use grid,               only: all_cg
       use gc_list,            only: cg_list_element
       use grid_cont,          only: grid_container
@@ -450,28 +449,28 @@ contains
 
       if (all_cg%cnt > 1) call die("[multigrid_diffusion:init_b] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
-      if (diff_bx+iby-ibx /= diff_by .or. diff_bx+ibz-ibx /= diff_bz) call die("[multigrid_diffusion:init_b] Something is wrong with diff_by or diff_bz indices.")
+      if (diff_bx+ydim-xdim /= diff_by .or. diff_bx+zdim-xdim /= diff_bz) call die("[multigrid_diffusion:init_b] Something is wrong with diff_by or diff_bz indices.")
 
-      do ib = ibx, ibz
-         call set_dirty(diff_bx+ib-ibx)
+      do ib = xdim, zdim
+         call set_dirty(diff_bx+ib-xdim)
          cgl => all_cg%first
          do while (associated(cgl))
             cg => cgl%cg
-            roof%mgvar(       roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-ibx) = &
+            roof%mgvar(       roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-xdim) = &
                  cg%b%arr(ib,   cg%is-D_x:  cg%ie+D_x,   cg%js-D_y:  cg%je+D_y,   cg%ks-D_z:  cg%ke+D_z)
             cgl => cgl%nxt
          enddo
-         call restrict_all(diff_bx+ib-ibx)             ! Implement correct restriction (and probably also separate inter-process communication) routines
+         call restrict_all(diff_bx+ib-xdim)             ! Implement correct restriction (and probably also separate inter-process communication) routines
 
          curl => base
          do while (associated(curl%finer)) ! from base to one level below roof
-            call mpi_multigrid_bnd(curl, diff_bx+ib-ibx, I_ONE, extbnd_mirror, .true.) !> \todo use global boundary type for B
+            call mpi_multigrid_bnd(curl, diff_bx+ib-xdim, I_ONE, extbnd_mirror, .true.) !> \todo use global boundary type for B
             !>
             !! |deprecated BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             !! the problem is that the cg%b%arr(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
             !<
             write(dirty_label, '(a,i1)')"init b",ib
-            call check_dirty(curl, diff_bx+ib-ibx, dirty_label)
+            call check_dirty(curl, diff_bx+ib-xdim, dirty_label)
             curl => curl%finer
          enddo
       enddo

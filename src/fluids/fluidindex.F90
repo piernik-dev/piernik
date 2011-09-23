@@ -50,14 +50,12 @@ module fluidindex
 
    implicit none
 
+   private :: ndims, xdim, ydim, zdim, var_numbers ! QA_WARN: prevent reexporting
    public ! QA_WARN no secrets are kept here
 
    type(var_numbers),save :: flind     !< COMMENT ME
 
    integer(kind=4), parameter  :: nmag = ndims     !< number of magnetic field components
-   integer(kind=4), parameter  :: ibx = xdim       !< index of x-component of magnetic field
-   integer(kind=4), parameter  :: iby = ydim       !< index of y-component of magnetic field
-   integer(kind=4), parameter  :: ibz = zdim       !< index of z-component of magnetic field
    integer(kind=4), parameter  :: idn = 1          !< position of density in the vector of conserv. variables for single fluid
    integer(kind=4), parameter  :: imx = idn + xdim !< position of x-mom. in the vector of conserv. variables for single fluid
    integer(kind=4), parameter  :: imy = idn + ydim !< position of y-mom. in the vector of conserv. variables for single fluid
@@ -195,10 +193,10 @@ contains
 
 #ifdef IONIZED
 ! Compute index arrays for magnetic field
-      iarr_mag_swp(xdim,:) = [ibx,iby,ibz]
-      iarr_mag_swp(ydim,:) = [iby,ibx,ibz]
-      iarr_mag_swp(zdim,:) = [ibz,iby,ibx]
-      iarr_all_mag         = [ibx,iby,ibz]
+      iarr_mag_swp(xdim,:) = [xdim,ydim,zdim]
+      iarr_mag_swp(ydim,:) = [ydim,xdim,zdim]
+      iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
+      iarr_all_mag         = [xdim,ydim,zdim]
 #endif /* IONIZED */
 
 #ifdef IONIZED

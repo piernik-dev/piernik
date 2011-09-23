@@ -87,7 +87,7 @@ contains
 !---------------------------------------------------------------------------
    subroutine sweep(cg,dt,ddim)
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_swp, ibx, ibz
+      use fluidindex,      only: iarr_all_swp, xdim, zdim
       use grid_cont,       only: grid_container
       use constants,       only: ndims, LO, HI, pdims
 
@@ -102,7 +102,7 @@ contains
 
       real, dimension(size(cg%u%arr,1),cg%n_(ddim)) :: u1d
       real, dimension(:,:), pointer                 :: pu
-      real, dimension(ibx:ibz,         cg%n_(ddim)) :: b1d
+      real, dimension(xdim:zdim,         cg%n_(ddim)) :: b1d
 
       do i2 = 1, cg%n_(pdims(ddim,3))
          do i1 = 1, cg%n_(pdims(ddim,2))
@@ -238,7 +238,7 @@ contains
 !---------------------------------------------------------------------------
    function compute_flux(u,b,cs2) result(f)
       use constants,    only: half, two
-      use fluidindex,   only: flind, ibx, iby, ibz
+      use fluidindex,   only: flind, xdim, ydim, zdim
       use fluidtypes,   only: component_fluid
       implicit none
       real, dimension(:,:), intent(in)       :: u, b
@@ -265,14 +265,14 @@ contains
          f(fl%imy,:) = u(fl%imy,:)*vx
          f(fl%imz,:) = u(fl%imz,:)*vx
          if (fl%is_magnetized) then
-            f(fl%imx,:) = f(fl%imx,:) - b(ibx,:)*b(ibx,:)
-            f(fl%imy,:) = f(fl%imy,:) - b(iby,:)*b(ibx,:)
-            f(fl%imz,:) = f(fl%imz,:) - b(ibz,:)*b(ibx,:)
+            f(fl%imx,:) = f(fl%imx,:) - b(xdim,:)*b(xdim,:)
+            f(fl%imy,:) = f(fl%imy,:) - b(ydim,:)*b(xdim,:)
+            f(fl%imz,:) = f(fl%imz,:) - b(zdim,:)*b(xdim,:)
          endif
 
          if (fl%has_energy) then
             f(fl%ien,:) = (u(fl%ien,:) + p(:))*vx(:)
-            if (fl%is_magnetized) f(fl%ien,:) = f(fl%ien,:) - b(ibx,:)*(b(ibx,:)*u(fl%imx,:)+b(iby,:)*u(fl%imy,:)+b(ibz,:)*u(fl%imz,:))/u(fl%idn,:)
+            if (fl%is_magnetized) f(fl%ien,:) = f(fl%ien,:) - b(xdim,:)*(b(xdim,:)*u(fl%imx,:)+b(ydim,:)*u(fl%imy,:)+b(zdim,:)*u(fl%imz,:))/u(fl%idn,:)
          endif
       enddo
 

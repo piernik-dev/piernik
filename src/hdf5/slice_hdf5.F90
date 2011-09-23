@@ -71,7 +71,7 @@ contains
       use constants,   only: varlen, xdim, ydim, zdim, half
       use common_hdf5, only: common_shortcuts
       use grid_cont,   only: grid_container
-      use fluidindex,  only: flind, ibx
+      use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
 #ifdef COSM_RAYS
       use fluidindex, only: iarr_all_crs
@@ -140,7 +140,7 @@ contains
             endif
 #endif /* !ISO */
          case ("magx", "magy", "magz")
-            tab(:,:) = reshape(cg%b%arr(ibx + i_xyz, is:ie, js:je, ks:ke), shape(tab))
+            tab(:,:) = reshape(cg%b%arr(xdim + i_xyz, is:ie, js:je, ks:ke), shape(tab))
 #ifdef GRAV
          case ("gpot")
             tab(:,:) = reshape(cg%gpot(is:ie, js:je, ks:ke), shape(tab))
