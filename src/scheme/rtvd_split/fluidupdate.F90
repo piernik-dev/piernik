@@ -204,7 +204,7 @@ contains
       logical, intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       cgl => all_cg%first
       do while (associated(cgl))
@@ -252,9 +252,8 @@ contains
 #ifdef MAGNETIC
    subroutine magfield(dir)
 
-      use advects,     only: advectby_x, advectbz_x, advectbx_y, advectbz_y, advectbx_z, advectby_z
-      use fluidindex,  only: ibx, iby, ibz
-      use constants,   only: xdim, ydim, zdim
+      use advects,     only: advectb
+      use constants,   only: ndims
 #ifdef RESISTIVE
       use resistivity, only: diffuseb
 #endif /* RESISTIVE */
@@ -262,45 +261,17 @@ contains
       implicit none
 
       integer, intent(in) :: dir
+      integer             :: bdir, dstep
 
-      select case (dir)
-         case (xdim)
-            call advectby_x
+      do dstep = 0, 1
+         bdir  = 1 + mod(dir+dstep,ndims)
+         call advectb(bdir, dir)
 #ifdef RESISTIVE
-            call diffuseb(iby,xdim)
+         call diffuseb(bdir,dir)
 #endif /* RESISTIVE */
-            call mag_add(xdim, ydim)
-            call advectbz_x
-#ifdef RESISTIVE
-            call diffuseb(ibz,xdim)
-#endif /* RESISTIVE */
-            call mag_add(xdim, zdim)
+         call mag_add(dir, bdir)
+      enddo
 
-         case (ydim)
-            call advectbz_y
-#ifdef RESISTIVE
-            call diffuseb(ibz,ydim)
-#endif /* RESISTIVE */
-            call mag_add(ydim, zdim)
-            call advectbx_y
-#ifdef RESISTIVE
-            call diffuseb(ibx,ydim)
-#endif /* RESISTIVE */
-            call mag_add(ydim, xdim)
-
-         case (zdim)
-            call advectbx_z
-#ifdef RESISTIVE
-            call diffuseb(ibx,zdim)
-#endif /* RESISTIVE */
-            call mag_add(zdim, xdim)
-            call advectby_z
-#ifdef RESISTIVE
-            call diffuseb(iby,zdim)
-#endif /* RESISTIVE */
-            call mag_add(zdim, ydim)
-
-      end select
 
    end subroutine magfield
 

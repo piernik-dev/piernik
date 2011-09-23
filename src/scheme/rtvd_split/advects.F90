@@ -35,10 +35,41 @@ module advects
    implicit none
 
    private
-   public  :: advectby_x, advectbz_x, advectbz_y, advectbx_y, advectbx_z, advectby_z
+   public  :: advectb
    real, dimension(:), pointer :: vibj => null()
 
 contains
+
+!>
+!!   advectby_x --> advectb(bdir=ydim, vdir=xdim, emf='vxby')
+!!   advectbz_x --> advectb(bdir=zdim, vdir=xdim, emf='vxbz')
+!!   advectbx_y --> advectb(bdir=xdim, vdir=ydim, emf='vybx')
+!!   advectbz_y --> advectb(bdir=zdim, vdir=ydim, emf='vybz')
+!!   advectbx_z --> advectb(bdir=xdim, vdir=zdim, emf='vzbx')
+!!   advectby_z --> advectb(bdir=ydim, vdir=zdim, emf='vzby')
+
+!<
+   subroutine advectb(bdir, vdir)
+
+      use constants, only: xdim, ydim, zdim
+
+      implicit none
+
+      integer, intent(in) :: bdir, vdir
+
+      select case ( bdir)
+         case (xdim)
+            if (vdir == ydim) call advectbx_y
+            if (vdir == zdim) call advectbx_z
+         case (ydim)
+            if (vdir == xdim) call advectby_x
+            if (vdir == zdim) call advectby_z
+         case (zdim)
+            if (vdir == xdim) call advectbz_x
+            if (vdir == ydim) call advectbz_y
+      end select
+
+   end subroutine advectb
 
    subroutine advectby_x
 
