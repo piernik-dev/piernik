@@ -55,7 +55,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: bdir, vdir
+      integer(kind=4), intent(in) :: bdir, vdir
 
       select case ( bdir)
          case (xdim)

@@ -108,7 +108,7 @@ contains
 !<
    subroutine make_3sweeps(forward)
 
-      use constants,           only: xdim, ydim, zdim
+      use constants,           only: xdim, ydim, zdim, I_ONE
       use user_hooks,          only: problem_customize_solution
       use global,              only: skip_sweep
 #ifdef SHEAR
@@ -135,7 +135,7 @@ contains
 
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
-      integer :: s
+      integer(kind=4) :: s
 #ifdef SHEAR
       type(grid_container), pointer :: cg
 
@@ -163,7 +163,7 @@ contains
             if (.not.skip_sweep(s)) call make_sweep(s, forward)
          enddo
       else
-         do s = zdim, xdim, -1
+         do s = zdim, xdim, -I_ONE
             if (.not.skip_sweep(s)) call make_sweep(s, forward)
          enddo
       endif
@@ -200,7 +200,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: dir      !< direction, one of xdim, ydim, zdim
+      integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical, intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
       type(cg_list_element), pointer :: cgl
@@ -253,21 +253,22 @@ contains
    subroutine magfield(dir)
 
       use advects,     only: advectb
-      use constants,   only: ndims
+      use constants,   only: ndims, I_ONE
 #ifdef RESISTIVE
       use resistivity, only: diffuseb
 #endif /* RESISTIVE */
 
       implicit none
 
-      integer, intent(in) :: dir
-      integer             :: bdir, dstep
+      integer(kind=4), intent(in) :: dir
+
+      integer(kind=4)             :: bdir, dstep
 
       do dstep = 0, 1
-         bdir  = 1 + mod(dir+dstep,ndims)
+         bdir  = I_ONE + mod(dir+dstep,ndims)
          call advectb(bdir, dir)
 #ifdef RESISTIVE
-         call diffuseb(bdir,dir)
+         call diffuseb(bdir, dir)
 #endif /* RESISTIVE */
          call mag_add(dir, bdir)
       enddo

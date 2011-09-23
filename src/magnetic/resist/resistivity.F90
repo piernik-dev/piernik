@@ -378,7 +378,7 @@ contains
 
    subroutine diffuseb(ibdir, sdir)
 
-      use constants,     only: xdim, ydim, zdim, ndims, half, varlen
+      use constants,     only: xdim, ydim, zdim, ndims, half, varlen, I_ONE
       use domain,        only: has_dir
       use global,        only: dt
       use grid,          only: all_cg
@@ -397,8 +397,8 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
-      n1 = 1 + mod(sdir,   ndims)
-      n2 = 1 + mod(sdir+1, ndims)
+      n1 = I_ONE + mod(sdir    ,   ndims)
+      n2 = I_ONE + mod(sdir+I_ONE, ndims)
       etadir = sum([xdim,ydim,zdim]) - ibdir - sdir
       emf = emfd(etadir)
 
