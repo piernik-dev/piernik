@@ -51,426 +51,90 @@ contains
 !<
    subroutine advectb(bdir, vdir)
 
-      use constants, only: xdim, ydim, zdim
+      use constants,     only: xdim, ydim, zdim, LO, HI, ndims, varlen
+      use dataio_pub,    only: die
+      use domain,        only: has_dir, D_
+      use fluidindex,    only: flind
+      use global,        only: dt
+      use grid,          only: all_cg
+      use gc_list,       only: cg_list_element
+      use grid_cont,     only: grid_container
+      use magboundaries, only: bnd_emf
+      use rtvd,          only: tvdb
 
       implicit none
 
-      integer(kind=4), intent(in) :: bdir, vdir
+      integer,               intent(in) :: bdir, vdir
+      integer, pointer                  :: i1, i2, i1m, i2m
+      integer, dimension(ndims), target :: ii, im
+      integer                           :: rdir, i, j, i_wa
+      integer                           :: imom                   !< index of vdir momentum
+      real, dimension(:), allocatable   :: vv, vv0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
+      real, dimension(:),    pointer    :: pm1, pm2, pd1, pd2
+      type(cg_list_element), pointer    :: cgl
+      type(grid_container),  pointer    :: cg
+      character(len=varlen)             :: emf
+      character(len=varlen), dimension(ndims,ndims) :: v_b_          !< \deprecated v_b_ should be moved to a init routine
 
-      select case ( bdir)
-         case (xdim)
-            if (vdir == ydim) call advectbx_y
-            if (vdir == zdim) call advectbx_z
-         case (ydim)
-            if (vdir == xdim) call advectby_x
-            if (vdir == zdim) call advectby_z
-         case (zdim)
-            if (vdir == xdim) call advectbz_x
-            if (vdir == ydim) call advectbz_y
-      end select
+      v_b_(xdim,:) = [ 'vxbx', 'vxby', 'vxbz' ]
+      v_b_(ydim,:) = [ 'vybx', 'vyby', 'vybz' ]
+      v_b_(zdim,:) = [ 'vzbx', 'vzby', 'vzbz' ]
+
+      emf = v_b_(vdir, bdir)
+
+      imom = flind%ion%idn + int(vdir, kind=4)
+      rdir = sum([xdim,ydim,zdim]) - bdir - vdir
+      if (mod(3+vdir-bdir,3) == 1) then     ! even permutation
+         i1 => ii(rdir) ; i1m => ii(rdir) ; i2 => ii(bdir) ; i2m => im(bdir)
+      elseif (mod(3+vdir-bdir,3) == 2) then !  odd permutation
+         i1 => ii(bdir) ; i1m => im(bdir) ; i2 => ii(rdir) ; i2m => ii(rdir)
+      else
+         call die('[advects:advectb] neither even nor odd permutation.')
+      endif
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         i_wa = cg%get_na_ind("wa")
+
+         if (any([allocated(vv), allocated(vv0)])) call die("[advects:advectb] vv or vv0 already allocated")
+         allocate(vv(cg%n_(vdir)), vv0(cg%n_(vdir)))
+
+         im(bdir) = 1
+         do i = 1 + D_(bdir), cg%n_(bdir)
+            ii(bdir) = i
+            do j = cg%ijkse(rdir,LO), cg%ijkse(rdir,HI)
+               ii(rdir) = j
+               im(rdir) = ii(rdir)
+               vv=0.0
+               pm1 => cg%u%get_sweep(vdir,imom,i1m,i2m)
+               pm2 => cg%u%get_sweep(vdir,imom,i1 ,i2 )
+               pd1 => cg%u%get_sweep(vdir,flind%ion%idn,i1m,i2m)
+               pd2 => cg%u%get_sweep(vdir,flind%ion%idn,i1 ,i2 )
+               vv0 = (pm1+pm2)/(pd1+pd2) !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               !vv(2:cg%n_(vdir)-1)=(vv(1:cg%n_(vdir)-2) + vv(3:cg%n_(vdir)) + 2.0*vv(2:cg%n_(vdir)-1))*0.25
+               vv(2:cg%n_(vdir)-1)=(vv0(1:cg%n_(vdir)-2) + vv0(3:cg%n_(vdir)) + 2.0*vv0(2:cg%n_(vdir)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
+               vv(1)  = vv(2)
+               vv(cg%n_(vdir)) = vv(cg%n_(vdir)-1)
+
+               vibj => cg%q(i_wa)%get_sweep(vdir,i1,i2)
+               call tvdb(vibj, cg%b%get_sweep(vdir,bdir,i1,i2), vv, cg%n_(vdir),dt, cg%idl(vdir))
+               NULLIFY(pm1, pm2, pd1, pd2)
+
+            enddo
+            im(bdir) = ii(bdir)
+         enddo
+
+         do i = xdim, zdim
+            if (has_dir(i)) call bnd_emf(cg%wa,emf,i)
+         enddo
+
+         deallocate(vv, vv0)
+
+         cgl => cgl%nxt
+      enddo
+      NULLIFY(i1, i1m, i2, i2m)
 
    end subroutine advectb
-
-   subroutine advectby_x
-
-      use constants,     only: xdim, ydim, zdim
-      use dataio_pub,    only: die
-      use domain,        only: has_dir, D_y
-      use fluidindex,    only: flind
-      use global,        only: dt
-      use grid,          only: all_cg
-      use gc_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use magboundaries, only: bnd_emf
-      use rtvd,          only: tvdb
-
-      implicit none
-
-      integer                         :: j, k, jm, j_s, j_e
-      real, dimension(:), allocatable :: vx
-      real, dimension(:), allocatable :: vx0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-      type(cg_list_element), pointer  :: cgl
-      type(grid_container),  pointer  :: cg
-      integer :: i_wa
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         i_wa = cg%get_na_ind("wa") ! BEWARE: magic strings across multiple files
-
-         if (any([allocated(vx), allocated(vx0)])) call die("[advects:advectby_x] vx or vx0 already allocated")
-         allocate(vx(cg%n_(xdim)), vx0(cg%n_(xdim)))
-
-         j_s = 1 + D_y
-         j_e = cg%n_(ydim)
-
-         do k = cg%ks, cg%ke
-            do j = j_s, j_e         ! cg%n_(ydim)b cg%is /= 1 in by_x
-               jm=j-1
-               vx=0.0
-               if (jm == 0) then
-                  !vx = cg%u%arr(flind%ion%imx,:,1,k) / cg%u%arr(flind%ion%idn,:,1,k)
-                  vx0 = cg%u%arr(flind%ion%imx,:,1,k) / cg%u%arr(flind%ion%idn,:,1,k) !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               else
-                  !vx =(cg%u%arr(flind%ion%imx,:,jm,k)+cg%u%arr(flind%ion%imx,:,j,k))/(cg%u%arr(flind%ion%idn,:,jm,k)+cg%u%arr(flind%ion%idn,:,j,k))
-                  vx0 =(cg%u%arr(flind%ion%imx,:,jm,k)+cg%u%arr(flind%ion%imx,:,j,k))/(cg%u%arr(flind%ion%idn,:,jm,k)+cg%u%arr(flind%ion%idn,:,j,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               endif
-               !vx(2:cg%n_(xdim)-1)=(vx(1:cg%n_(xdim)-2) + vx(3:cg%n_(xdim)) + 2.0*vx(2:cg%n_(xdim)-1))*0.25
-               vx(2:cg%n_(xdim)-1)=(vx0(1:cg%n_(xdim)-2) + vx0(3:cg%n_(xdim)) + 2.0*vx0(2:cg%n_(xdim)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               vx(1)  = vx(2)
-               vx(cg%n_(xdim)) = vx(cg%n_(xdim)-1)
-
-               vibj => cg%q(i_wa)%get_sweep(xdim,j,k)
-               call tvdb(vibj, cg%b%get_sweep(xdim,ydim,j,k), vx, cg%n_(xdim),dt, cg%idx)
-
-            enddo
-         enddo
-
-         do j = xdim, zdim
-            if (has_dir(j)) call bnd_emf(cg%wa,'vxby',j)
-         enddo
-
-         deallocate(vx)
-         deallocate(vx0)
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine advectby_x
-
-   subroutine advectbz_x
-
-      use constants,     only: xdim, zdim
-      use dataio_pub,    only: die
-      use domain,        only: has_dir, D_z
-      use fluidindex,    only: flind
-      use global,        only: dt
-      use grid,          only: all_cg
-      use gc_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use magboundaries, only: bnd_emf
-      use rtvd,          only: tvdb
-
-      implicit none
-
-      integer                         :: j, k, km, k_s, k_e
-      real, dimension(:), allocatable :: vx
-      real, dimension(:), allocatable :: vx0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-      type(cg_list_element), pointer  :: cgl
-      type(grid_container),  pointer  :: cg
-      integer :: i_wa
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         i_wa = cg%get_na_ind("wa")
-
-         if (any([allocated(vx), allocated(vx0)])) call die("[advects:advectby_x] vx or vx0 already allocated")
-         allocate(vx(cg%n_(xdim)), vx0(cg%n_(xdim)))
-
-         k_s = 1 + D_z
-         k_e = cg%n_(zdim)
-
-         do k=k_s,k_e
-            km=k-1
-            do j=cg%js, cg%je
-               vx=0.0
-               if (km == 0) then
-                  !vx = cg%u%arr(flind%ion%imx,:,j,1) / cg%u%arr(flind%ion%idn,:,j,1)
-                  vx0 = cg%u%arr(flind%ion%imx,:,j,1) / cg%u%arr(flind%ion%idn,:,j,1) !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               else
-                  !vx = (cg%u%arr(flind%ion%imx,:,j,km)+cg%u%arr(flind%ion%imx,:,j,k))/(cg%u%arr(flind%ion%idn,:,j,km)+cg%u%arr(flind%ion%idn,:,j,k))
-                  vx0 = (cg%u%arr(flind%ion%imx,:,j,km)+cg%u%arr(flind%ion%imx,:,j,k))/(cg%u%arr(flind%ion%idn,:,j,km)+cg%u%arr(flind%ion%idn,:,j,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               endif
-               !vx(2:cg%n_(xdim)-1)=(vx(1:cg%n_(xdim)-2) + vx(3:cg%n_(xdim)) + 2.0*vx(2:cg%n_(xdim)-1))*0.25
-               vx(2:cg%n_(xdim)-1)=(vx0(1:cg%n_(xdim)-2) + vx0(3:cg%n_(xdim)) + 2.0*vx0(2:cg%n_(xdim)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               vx(1)  = vx(2)
-               vx(cg%n_(xdim)) = vx(cg%n_(xdim)-1)
-
-               vibj => cg%q(i_wa)%get_sweep(xdim,j,k)
-               call tvdb(vibj, cg%b%get_sweep(xdim,zdim,j,k), vx, cg%n_(xdim),dt, cg%idx)
-
-            enddo
-         enddo
-
-         do j = xdim, zdim
-            if (has_dir(j)) call bnd_emf(cg%wa,'vxbz',j)
-         enddo
-
-         deallocate(vx)
-         deallocate(vx0)
-
-        cgl => cgl%nxt
-      enddo
-
-   end subroutine advectbz_x
-
-   subroutine advectbz_y
-
-      use constants,     only: xdim, ydim, zdim
-      use dataio_pub,    only: die
-      use domain,        only: has_dir, D_z
-      use fluidindex,    only: flind
-      use global,        only: dt
-      use grid,          only: all_cg
-      use gc_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use magboundaries, only: bnd_emf
-      use rtvd,          only: tvdb
-
-      implicit none
-
-      integer                         :: i, k, km, k_s, k_e
-      real, dimension(:), allocatable :: vy
-      real, dimension(:), allocatable :: vy0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-      type(cg_list_element), pointer  :: cgl
-      type(grid_container),  pointer  :: cg
-      integer :: i_wa
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         i_wa = cg%get_na_ind("wa")
-
-         if (any([allocated(vy), allocated(vy0)])) call die("[advects:advectby_y] vy or vy0 already allocated")
-         allocate(vy(cg%n_(ydim)), vy0(cg%n_(ydim)))
-
-         k_s = 1 + D_z
-         k_e = cg%n_(zdim)
-
-         do k=k_s,k_e
-            km=k-1
-            do i=cg%is, cg%ie
-               vy=0.0
-               if (km == 0) then
-                  !vy = cg%u%arr(flind%ion%imy,i,:,1) / cg%u%arr(flind%ion%idn,i,:,1)
-                  vy0 = cg%u%arr(flind%ion%imy,i,:,1) / cg%u%arr(flind%ion%idn,i,:,1) !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               else
-                  !vy=(cg%u%arr(flind%ion%imy,i,:,km)+cg%u%arr(flind%ion%imy,i,:,k))/(cg%u%arr(flind%ion%idn,i,:,km)+cg%u%arr(flind%ion%idn,i,:,k))
-                  vy0=(cg%u%arr(flind%ion%imy,i,:,km)+cg%u%arr(flind%ion%imy,i,:,k))/(cg%u%arr(flind%ion%idn,i,:,km)+cg%u%arr(flind%ion%idn,i,:,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               endif
-               !vy(2:cg%n_(ydim)-1)=(vy(1:cg%n_(ydim)-2) + vy(3:cg%n_(ydim)) + 2.0*vy(2:cg%n_(ydim)-1))*0.25
-               vy(2:cg%n_(ydim)-1)=(vy0(1:cg%n_(ydim)-2) + vy0(3:cg%n_(ydim)) + 2.0*vy0(2:cg%n_(ydim)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               vy(1)  = vy(2)
-               vy(cg%n_(ydim)) = vy(cg%n_(ydim)-1)
-
-               vibj => cg%q(i_wa)%get_sweep(ydim,k,i)
-               call tvdb(vibj, cg%b%get_sweep(ydim,zdim,k,i), vy, cg%n_(ydim),dt, cg%idy)
-
-            enddo
-         enddo
-
-         do i = xdim, zdim
-            if (has_dir(i)) call bnd_emf(cg%wa,'vybz',i)
-         enddo
-
-         deallocate(vy)
-         deallocate(vy0)
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine advectbz_y
-
-   subroutine advectbx_y
-
-      use constants,     only: xdim, ydim, zdim
-      use dataio_pub,    only: die
-      use domain,        only: has_dir, D_x
-      use fluidindex,    only: flind
-      use global,        only: dt
-      use grid,          only: all_cg
-      use gc_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use magboundaries, only: bnd_emf
-      use rtvd,          only: tvdb
-
-      implicit none
-
-      integer                         :: k, i, im, i_s, i_e
-      real, dimension(:), allocatable :: vy
-      real, dimension(:), allocatable :: vy0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-      type(cg_list_element), pointer  :: cgl
-      type(grid_container),  pointer  :: cg
-      integer :: i_wa
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         i_wa = cg%get_na_ind("wa")
-
-         if (any([allocated(vy), allocated(vy0)])) call die("[advects:advectby_y] vy or vy0 already allocated")
-         allocate(vy(cg%n_(ydim)), vy0(cg%n_(ydim)))
-
-         i_s = 1 + D_x
-         i_e = cg%n_(xdim)
-
-         do k=cg%ks, cg%ke
-            do i=i_s,i_e
-               im=i-1
-               vy=0.0
-               if (im == 0) then
-                  !vy = cg%u%arr(flind%ion%imy,1,:,k) / cg%u%arr(flind%ion%idn,1,:,k)
-                  vy0 = cg%u%arr(flind%ion%imy,1,:,k) / cg%u%arr(flind%ion%idn,1,:,k) !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               else
-                  !vy=(cg%u%arr(flind%ion%imy,im,:,k)+cg%u%arr(flind%ion%imy,i,:,k))/(cg%u%arr(flind%ion%idn,im,:,k)+cg%u%arr(flind%ion%idn,i,:,k))
-                  vy0=(cg%u%arr(flind%ion%imy,im,:,k)+cg%u%arr(flind%ion%imy,i,:,k))/(cg%u%arr(flind%ion%idn,im,:,k)+cg%u%arr(flind%ion%idn,i,:,k)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               endif
-               !vy(2:cg%n_(ydim)-1)=(vy(1:cg%n_(ydim)-2) + vy(3:cg%n_(ydim)) + 2.0*vy(2:cg%n_(ydim)-1))*0.25
-               vy(2:cg%n_(ydim)-1)=(vy0(1:cg%n_(ydim)-2) + vy0(3:cg%n_(ydim)) + 2.0*vy0(2:cg%n_(ydim)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               vy(1)  = vy(2)
-               vy(cg%n_(ydim)) = vy(cg%n_(ydim)-1)
-
-               vibj => cg%q(i_wa)%get_sweep(ydim,k,i)
-               call tvdb(vibj, cg%b%get_sweep(ydim,xdim,k,i), vy, cg%n_(ydim),dt, cg%idy)
-
-            enddo
-         enddo
-
-         do i = xdim, zdim
-            if (has_dir(i)) call bnd_emf(cg%wa,'vybx',i)
-         enddo
-
-         deallocate(vy)
-         deallocate(vy0)
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine advectbx_y
-
-   subroutine advectbx_z
-
-      use constants,     only: xdim, zdim
-      use dataio_pub,    only: die
-      use domain,        only: has_dir, D_x
-      use fluidindex,    only: flind
-      use global,        only: dt
-      use grid,          only: all_cg
-      use gc_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use magboundaries, only: bnd_emf
-      use rtvd,          only: tvdb
-
-      implicit none
-
-      integer                         :: j, i, im, i_s, i_e
-      real, dimension(:), allocatable :: vz
-      real, dimension(:), allocatable :: vz0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-      type(cg_list_element), pointer  :: cgl
-      type(grid_container),  pointer  :: cg
-      integer :: i_wa
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         i_wa = cg%get_na_ind("wa")
-
-         if (any([allocated(vz), allocated(vz0)])) call die("[advects:advectby_z] vz or vz0 already allocated")
-         allocate(vz(cg%n_(zdim)), vz0(cg%n_(zdim)))
-
-         i_s = 1 + D_x
-         i_e = cg%n_(xdim)
-
-         do j=cg%js, cg%je
-            do i=i_s,i_e
-               im=i-1
-               vz=0.0
-               if (im == 0) then
-                  !vz = cg%u%arr(flind%ion%imz,1,j,:) / cg%u%arr(flind%ion%idn,1,j,:)
-                  vz0 = cg%u%arr(flind%ion%imz,1,j,:) / cg%u%arr(flind%ion%idn,1,j,:) !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               else
-                  !vz = (cg%u%arr(flind%ion%imz,im,j,:)+cg%u%arr(flind%ion%imz,i,j,:))/(cg%u%arr(flind%ion%idn,im,j,:)+cg%u%arr(flind%ion%idn,i,j,:))
-                  vz0 = (cg%u%arr(flind%ion%imz,im,j,:)+cg%u%arr(flind%ion%imz,i,j,:))/(cg%u%arr(flind%ion%idn,im,j,:)+cg%u%arr(flind%ion%idn,i,j,:)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               endif
-               !vz(2:cg%n_(zdim)-1)=(vz(1:cg%n_(zdim)-2) + vz(3:cg%n_(zdim)) + 2.0*vz(2:cg%n_(zdim)-1))*0.25
-               vz(2:cg%n_(zdim)-1)=(vz0(1:cg%n_(zdim)-2) + vz0(3:cg%n_(zdim)) + 2.0*vz0(2:cg%n_(zdim)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               vz(1)  = vz(2)
-               vz(cg%n_(zdim)) = vz(cg%n_(zdim)-1)
-
-               vibj => cg%q(i_wa)%get_sweep(zdim,i,j)
-               call tvdb(vibj, cg%b%get_sweep(zdim,xdim,i,j), vz, cg%n_(zdim),dt, cg%idz)
-
-            enddo
-         enddo
-
-         do i = xdim, zdim
-            if (has_dir(i)) call bnd_emf(cg%wa,'vzbx',i)
-         enddo
-
-         deallocate(vz)
-         deallocate(vz0)
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine advectbx_z
-
-   subroutine advectby_z
-
-      use constants,     only: xdim, ydim, zdim
-      use dataio_pub,    only: die
-      use domain,        only: has_dir, D_y
-      use fluidindex,    only: flind
-      use global,        only: dt
-      use grid,          only: all_cg
-      use gc_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use magboundaries, only: bnd_emf
-      use rtvd,          only: tvdb
-
-      implicit none
-
-      integer                         :: i, j, jm, j_s, j_e
-      real, dimension(:), allocatable :: vz
-      real, dimension(:), allocatable :: vz0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-      type(cg_list_element), pointer  :: cgl
-      type(grid_container),  pointer  :: cg
-      integer :: i_wa
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         i_wa = cg%get_na_ind("wa")
-
-         if (any([allocated(vz), allocated(vz0)])) call die("[advects:advectby_z] vz or vz0 already allocated")
-         allocate(vz(cg%n_(zdim)), vz0(cg%n_(zdim)))
-
-         j_s = 1 + D_y
-         j_e = cg%n_(ydim)
-
-         do j=j_s,j_e
-            jm=j-1
-            do i=cg%is, cg%ie
-               vz=0.0
-               if (jm == 0) then
-                  !vz = cg%u%arr(flind%ion%imz,i,1,:) / cg%u%arr(flind%ion%idn,i,1,:)
-                  vz0 = cg%u%arr(flind%ion%imz,i,1,:) / cg%u%arr(flind%ion%idn,i,1,:) !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               else
-                  !vz=(cg%u%arr(flind%ion%imz,i,jm,:)+cg%u%arr(flind%ion%imz,i,j,:))/(cg%u%arr(flind%ion%idn,i,jm,:)+cg%u%arr(flind%ion%idn,i,j,:))
-                  vz0=(cg%u%arr(flind%ion%imz,i,jm,:)+cg%u%arr(flind%ion%imz,i,j,:))/(cg%u%arr(flind%ion%idn,i,jm,:)+cg%u%arr(flind%ion%idn,i,j,:)) !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               endif
-               !vz(2:cg%n_(zdim)-1)=(vz(1:cg%n_(zdim)-2) + vz(3:cg%n_(zdim)) + 2.0*vz(2:cg%n_(zdim)-1))*0.25
-               vz(2:cg%n_(zdim)-1)=(vz0(1:cg%n_(zdim)-2) + vz0(3:cg%n_(zdim)) + 2.0*vz0(2:cg%n_(zdim)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
-               vz(1)  = vz(2)
-               vz(cg%n_(zdim)) = vz(cg%n_(zdim)-1)
-
-               vibj => cg%q(i_wa)%get_sweep(zdim,i,j)
-               call tvdb(vibj, cg%b%get_sweep(zdim,ydim,i,j), vz, cg%n_(zdim),dt, cg%idz)
-
-            enddo
-         enddo
-
-         do i = xdim, zdim
-            if (has_dir(i)) call bnd_emf(cg%wa,'vzby',i)
-         enddo
-
-         deallocate(vz)
-         deallocate(vz0)
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine advectby_z
 
 end module advects
