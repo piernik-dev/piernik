@@ -78,7 +78,7 @@ contains
       use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, zdim, GEO_RPZ, LO, HI, I_TWO, I_ONE, half
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
-      use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven, cdd
+      use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven, is_multicg, cdd
       use grid,                only: all_cg
       use gc_list,             only: cg_list_element
       use grid_cont,           only: grid_container
@@ -161,7 +161,7 @@ contains
 
       endif
 
-      if (all_cg%cnt > 1) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial is_external
+      if (is_multicg) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial is_external
 
       cgl => all_cg%first
       do while (associated(cgl))
@@ -206,7 +206,7 @@ contains
          level_max = 1
       endif
 
-      if (all_cg%cnt > 1) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial lvl
+      if (is_multicg) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial lvl
 
       allocate(lvl(level_min:level_min+level_max-1))
       mb_alloc = mb_alloc + size(lvl)

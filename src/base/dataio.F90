@@ -708,7 +708,7 @@ contains
       use dataio_pub,  only: cwd, warn, getlun
       use dataio_user, only: user_tsl
       use diagnostics, only: pop_vector
-      use domain,      only: dom
+      use domain,      only: dom, is_multicg
       use fluids_pub,  only: has_ion, has_dst, has_neu
       use fluidindex,  only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluidtypes,  only: phys_prop
@@ -748,7 +748,7 @@ contains
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) then
+      if (is_multicg) then
          call warn("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet in mpi_addmul. Bailing out.")
          return
       endif
@@ -888,7 +888,7 @@ contains
 
       use constants,   only: small
       use dataio_pub,  only: msg, printinfo, die
-      use domain,      only: has_dir
+      use domain,      only: has_dir, is_multicg
       use global,      only: cfl
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
@@ -904,7 +904,7 @@ contains
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet") !nontrivial  cfl*cg%d[xyz]
+      if (is_multicg) call die("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet") !nontrivial  cfl*cg%d[xyz]
 
       if (cg%dxmn >= sqrt(huge(1.0))) then
          dxmn_safe = sqrt(huge(1.0))
@@ -946,6 +946,7 @@ contains
       use types,      only: value                          !QA_WARN: used by get_extremum (intel compiler)
       use constants,  only: ION, DST, MINL, MAXL, half
       use dataio_pub, only: die
+      use domain,     only: is_multicg
       use fluidtypes, only: phys_prop, component_fluid
       use func,       only: get_extremum
       use global,     only: smallp
@@ -961,7 +962,7 @@ contains
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[dataio:get_common_vars] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
+      if (is_multicg) call die("[dataio:get_common_vars] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
 
       pr => fl%snap
       cg%wa = cg%u%arr(fl%idn,:,:,:)
@@ -1027,7 +1028,7 @@ contains
       use types,              only: tsl_container, value
       use constants,          only: small, MINL, MAXL, xdim, ydim, zdim
       use dataio_pub,         only: msg, printinfo, warn
-      use domain,             only: has_dir
+      use domain,             only: has_dir, is_multicg
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: flind
       use func,               only: get_extremum, L2norm
@@ -1073,7 +1074,7 @@ contains
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) then
+      if (is_multicg) then
          call warn("[dataio:write_log] multiple grid pieces per procesor not implemented yet in get_extremum routine. Bailing out.")
          return
       endif

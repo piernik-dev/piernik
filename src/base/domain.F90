@@ -43,7 +43,7 @@ module domain
 
    private
    public :: cleanup_domain, init_domain, is_overlap, domain_container, user_divide_domain, allocate_pse, deallocate_pse, set_pse_sel, &
-        &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, cdd, total_ncells, D_x, D_y, D_z, D_
+        &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, is_multicg, cdd, total_ncells, D_x, D_y, D_z, D_
 
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
@@ -106,6 +106,7 @@ module domain
    logical, protected :: is_uneven          !< .true. when n_b(:) depend on process rank
    logical, protected :: is_mpi_noncart     !< .true. when there exist a process that has more than one neighbour in any direction
    logical, protected :: is_refined         !< .true. when AMR or static refinement is employed
+   logical, protected :: is_multicg         !< .true. when at leas one process has more than one grid container
 
    integer, protected :: geometry_type  !< the type of geometry: cartesian: GEO_XYZ, cylindrical: GEO_RPZ, other: GEO_INVALID
 
@@ -218,7 +219,7 @@ contains
            &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND, PIERNIK_INIT_MPI, I_ONE
       use dataio_pub, only: die, printinfo, msg, warn, code_progress
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
-      use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
+      use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR
       use mpisetup,   only: buffer_dim, cbuff, ibuff, lbuff, rbuff, master, slave, proc, FIRST, LAST, nproc, comm, ierr, have_mpi
 
       implicit none
@@ -430,6 +431,7 @@ contains
       is_uneven = .false.
       is_mpi_noncart = .false.
       is_refined = .false.
+      is_multicg = .false.
 
       where (.not. has_dir(:)) psize(:) = I_ONE
 
@@ -447,12 +449,17 @@ contains
       if (.not. dom_divided) call die("[domain:init_domain] Domain dedomposition failed")
 
       !\todo Analyze the decomposition and set up [ is_uneven, is_mpi_noncart, is_refined, ... ]
-
-      if (is_refined) is_mpi_noncart = .true.
+      is_multicg = (ubound(dom%pse(proc)%sel(:, :, :), dim=1) > 1)
+      call MPI_Allreduce(MPI_IN_PLACE, is_multicg, I_ONE, MPI_LOGICAL, MPI_LOR, comm, ierr)
+      if (is_multicg .and. cdd%comm3d /= MPI_COMM_NULL) call die("[domain:init_domain] is_multicg cannot be used with comm3d")
+      if (is_refined) then
+         is_mpi_noncart = .true.
+         is_multicg = .true.
+      endif
       if (is_mpi_noncart) is_uneven = .true.
 
       ! bnd_[xyz][lr] now become altered according to local topology of processes
-      if (ubound(dom%pse(proc)%sel(:,:,:), dim=1) > 1) call warn("[domain:init_domain] Multiple blocks per process not fully implemented yet")
+      if (is_multicg .and. master) call warn("[domain:init_domain] Multiple blocks per process not fully implemented yet")
 
 !#ifdef VERBOSE
       if (master) then

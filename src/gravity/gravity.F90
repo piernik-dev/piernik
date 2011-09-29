@@ -305,10 +305,11 @@ contains
 
 #ifdef SELF_GRAV
       use dataio_pub,        only: die
-      use grid,              only: all_cg
-      use gc_list,           only: cg_list_element
-      use grid_cont,         only: grid_container
+      use domain,            only: is_multicg
       use fluidindex,        only: iarr_all_sg
+      use gc_list,           only: cg_list_element
+      use grid,              only: all_cg
+      use grid_cont,         only: grid_container
 #ifdef POISSON_FFT
       use poissonsolver,     only: poisson_solve
 #endif /* POISSON_FFT */
@@ -324,7 +325,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (all_cg%cnt > 1) call die("[gravity:source_terms_grav] multiple grid pieces per procesor not implemented yet") !nontrivial all cg% must be solved at a time (nontrivial for multigrid, rarely possible dor FFT poisson solver)
+      if (is_multicg) call die("[gravity:source_terms_grav] multiple grid pieces per procesor not implemented yet") !nontrivial all cg% must be solved at a time (nontrivial for multigrid, rarely possible dor FFT poisson solver)
 
       cgl => all_cg%first
       do while (associated(cgl))
@@ -915,7 +916,7 @@ contains
       use types,      only: value
       use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE
       use dataio_pub, only: die
-      use domain,     only: is_mpi_noncart, cdd, D_x, D_y, D_z
+      use domain,     only: is_mpi_noncart, is_multicg, cdd, D_x, D_y, D_z
       use func,       only: get_extremum
       use grid,       only: all_cg
       use grid_cont,  only: grid_container !, cg_list_element
@@ -936,7 +937,7 @@ contains
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[gravity:grav_accel2pot] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (is_multicg) call die("[gravity:grav_accel2pot] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       if (any([allocated(gravrx), allocated(gravry), allocated(gravrz)])) call die("[gravity:grav_accel2pot] gravr[xyz] already allocated")
       allocate(gravrx(cg%n_(xdim)), gravry(cg%n_(ydim)), gravrz(cg%n_(zdim)))

@@ -347,14 +347,15 @@ contains
 
    subroutine init_source(cr_id)
 
-      use multigridvars,      only: roof, source, defect, correction
-      use initcosmicrays,     only: iarr_crs
+      use dataio_pub,         only: die
+      use domain,             only: is_multicg
       use grid,               only: all_cg
       use gc_list,            only: cg_list_element
       use grid_cont,          only: grid_container
+      use initcosmicrays,     only: iarr_crs
       use multigridbasefuncs, only: norm_sq
-      use dataio_pub,         only: die
       use multigridhelpers,   only: set_dirty, check_dirty
+      use multigridvars,      only: roof, source, defect, correction
 
       implicit none
 
@@ -362,7 +363,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (all_cg%cnt > 1) call die("[multigrid_diffusion:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
+      if (is_multicg) call die("[multigrid_diffusion:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       call set_dirty(source)
       call set_dirty(correction)
@@ -394,6 +395,7 @@ contains
    subroutine init_solution(cr_id)
 
       use dataio_pub,       only: die
+      use domain,           only: is_multicg
       use grid,             only: all_cg
       use gc_list,          only: cg_list_element
       use grid_cont,        only: grid_container
@@ -407,7 +409,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (all_cg%cnt > 1) call die("[multigrid_diffusion:init_solution] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
+      if (is_multicg) call die("[multigrid_diffusion:init_solution] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       call set_dirty(solution)
       cgl => all_cg%first
@@ -431,7 +433,7 @@ contains
 
       use constants,          only: I_ONE, xdim, ydim, zdim
       use dataio_pub,         only: die
-      use domain,             only: D_x, D_y, D_z
+      use domain,             only: D_x, D_y, D_z, is_multicg
       use grid,               only: all_cg
       use gc_list,            only: cg_list_element
       use grid_cont,          only: grid_container
@@ -447,7 +449,7 @@ contains
       type(grid_container), pointer :: cg
       type(plvl), pointer :: curl
 
-      if (all_cg%cnt > 1) call die("[multigrid_diffusion:init_b] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
+      if (is_multicg) call die("[multigrid_diffusion:init_b] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       if (diff_bx+ydim-xdim /= diff_by .or. diff_bx+zdim-xdim /= diff_bz) call die("[multigrid_diffusion:init_b] Something is wrong with diff_by or diff_bz indices.")
 
@@ -610,7 +612,7 @@ contains
 
       use constants,      only: xdim, ydim, zdim, ndims
       use dataio_pub,     only: die
-      use domain,         only: has_dir
+      use domain,         only: has_dir, is_multicg
       use grid,           only: all_cg
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
@@ -636,7 +638,7 @@ contains
       present_not_crdim(:) = has_dir(:) .and. ( [ xdim,ydim,zdim ] /= crdim )
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[multigrid_diffusion:diff_flux] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
+      if (is_multicg) call die("[multigrid_diffusion:diff_flux] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       ! Assumes has_dir(crdim)
       !> \warning *curl%idl(crdim) makes a difference
@@ -686,7 +688,7 @@ contains
 
       use constants,         only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
       use dataio_pub,        only: die
-      use domain,            only: has_dir
+      use domain,            only: has_dir, is_multicg
       use global,            only: dt
       use grid,              only: all_cg
       use grid_cont,         only: grid_container
@@ -708,7 +710,7 @@ contains
       type(grid_container), pointer   :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[multigrid_diffusion:residual] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
+      if (is_multicg) call die("[multigrid_diffusion:residual] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       call mpi_multigrid_bnd(curl, soln, I_ONE, diff_extbnd, .true.) ! corners are required for fluxes
 
@@ -753,7 +755,7 @@ contains
 
       use constants,         only: xdim, ydim, zdim, one, half, I_ONE, ndims
       use dataio_pub,        only: die
-      use domain,            only: has_dir
+      use domain,            only: has_dir, is_multicg
       use global,            only: dt
       use grid,              only: all_cg
       use grid_cont,         only: grid_container
@@ -778,7 +780,7 @@ contains
 
       idl2 = [curl%idx2, curl%idy2, curl%idz2]
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[multigrid_diffusion:approximate_solution] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
+      if (is_multicg) call die("[multigrid_diffusion:approximate_solution] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       if (associated(curl, base)) then
          nsmoo = nsmoob

@@ -287,12 +287,12 @@ contains
 
       use constants,    only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
       use dataio_pub,   only: msg, printinfo, die
-      use domain,       only: geometry_type, cdd, dom, has_dir
+      use domain,       only: geometry_type, cdd, dom, has_dir, is_multicg
       use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
       use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
-      use grid,         only: all_cg
       use gc_list,      only: cg_list_element
+      use grid,         only: all_cg
       use grid_cont,    only: grid_container
       use hydrostatic,  only: hydrostatic_zeq_densmid
       use interactions, only: epstein_factor
@@ -319,7 +319,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (all_cg%cnt > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
+         if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
          sqr_gm = sqrt(newtong*ptmass)
          do k = 1, cg%n_(zdim)
@@ -644,12 +644,13 @@ contains
 
       use constants,       only: xdim, ydim, zdim
       use dataio_pub,      only: die
-      use grid,            only: all_cg
+      use domain,          only: is_multicg
       use gc_list,         only: cg_list_element
+      use global,          only: dt, t, relax_time, smalld !, grace_period_passed
+      use grid,            only: all_cg
       use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use global,          only: dt, t, relax_time, smalld !, grace_period_passed
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
 #endif /* ISO */
@@ -676,7 +677,7 @@ contains
 !#endif /* VERBOSE */
 !      endif
 
-      if (all_cg%cnt > 1) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (is_multicg) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       cgl => all_cg%first
       do while (associated(cgl))

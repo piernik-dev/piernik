@@ -334,11 +334,12 @@ contains
 
       use constants,      only: xdim, ydim, zdim, half, one
       use dataio_pub,     only: die
+      use domain,         only: is_multicg
       use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use gc_list,        only: cg_list_element
       use global,         only: smalld
       use gravity,        only: grav_accel, nsub, tune_zeq_bnd
       use grid,           only: all_cg
-      use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
 #ifndef ISO
       use fluidindex,     only: iarr_all_en
@@ -369,7 +370,7 @@ contains
 
       if (.not.associated(grav_accel)) call die("[hydrostatic:outh_bnd] grav_accel not associated")
 
-      if (all_cg%cnt > 1) call die("[hydrostatic:outh_bnd] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
+      if (is_multicg) call die("[hydrostatic:outh_bnd] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
 
       cgl => all_cg%first
       do while (associated(cgl))

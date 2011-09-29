@@ -98,7 +98,7 @@ contains
       use constants,  only: PIERNIK_INIT_GRID, zdim, xdim, ydim
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress
-      use domain,     only: eff_dim, has_dir
+      use domain,     only: eff_dim, has_dir, is_multicg
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
@@ -152,7 +152,7 @@ contains
       if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[resistivity:init_resistivity] multiple grid pieces per procesor not implemented yet") !nontrivial eta, ...
+      if (is_multicg) call die("[resistivity:init_resistivity] multiple grid pieces per procesor not implemented yet") !nontrivial eta, ...
 
       call eta%init(cg%n_(:))
       call wcu%init(cg%n_(:))
@@ -191,7 +191,7 @@ contains
 
       use constants,  only: small, xdim, ydim, zdim, MINL, MAXL, I_ONE, half, oneq
       use dataio_pub, only: die
-      use domain,     only: has_dir
+      use domain,     only: has_dir, is_multicg
       use func,       only: get_extremum
       use grid,       only: all_cg
       use gc_list,    only: cg_list_element
@@ -274,7 +274,7 @@ contains
       enddo
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
+      if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
 
       p => eta%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, etamax, cg) ; NULLIFY(p)

@@ -46,6 +46,7 @@ contains
 
       use dataio_pub,  only: die
       use diagnostics, only: ma4d, my_allocate
+      use domain,      only: is_multicg
       use grid,        only: all_cg
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
@@ -57,7 +58,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (all_cg%cnt > 1) call die("[crdiffusion:init_crdiffusion] multiple grid pieces per procesor not implemented yet") !nontrivial crsall
+      if (is_multicg) call die("[crdiffusion:init_crdiffusion] multiple grid pieces per procesor not implemented yet") !nontrivial crsall
       !> \todo provide hooks for rank-4 user/physics arrays in grid container
 
       cgl => all_cg%first
@@ -86,7 +87,7 @@ contains
 
       use constants,    only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE
       use dataio_pub,   only: die
-      use domain,       only: has_dir, cdd
+      use domain,       only: has_dir, cdd, is_multicg
       use internal_bnd, only: internal_boundaries
       use grid,         only: all_cg
       use gc_list,      only: cg_list_element
@@ -101,7 +102,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (all_cg%cnt > 1) call die("[crdiffusion:all_wcr_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop (wcr?)
+      if (is_multicg) call die("[crdiffusion:all_wcr_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop (wcr?)
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          pwcr => wcr
@@ -180,17 +181,17 @@ contains
    end subroutine all_wcr_boundaries
 
 !>
-!! \brief Diffusive transport of ecr in crdim/ibdir-direction. Note that according to fluidinsex: [xdim, ydim, zdim] == [xdim, ydim, zdim]
+!! \brief Diffusive transport of ecr in crdim/ibdir-direction
 !!
-!! cr_diff_x --> cr_diff(xdim,xdim) --> cr_diff(xdim)
-!! cr_diff_y --> cr_diff(ydim,ydim) --> cr_diff(ydim)
-!! cr_diff_z --> cr_diff(zdim,zdim) --> cr_diff(zdim)
+!! cr_diff_x --> cr_diff(xdim)
+!! cr_diff_y --> cr_diff(ydim)
+!! cr_diff_z --> cr_diff(zdim)
 !<
    subroutine cr_diff(crdim)
 
       use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half
       use dataio_pub,     only: die
-      use domain,         only: has_dir
+      use domain,         only: has_dir, is_multicg
       use fluidindex,     only: flind
       use global,         only: dt
       use grid,           only: all_cg
@@ -216,7 +217,7 @@ contains
 
       if (.not.has_dir(crdim)) return
 
-      if (all_cg%cnt > 1) call die("[crdiffusion:cr_diff] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
+      if (is_multicg) call die("[crdiffusion:cr_diff] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
 
       idm        = 0              ;      idm(crdim) = 1
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.has_dir(dim) .and. (dim /= crdim) )

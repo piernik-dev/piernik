@@ -171,8 +171,8 @@ contains
 
       use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: die, msg
+      use domain,     only: is_multicg
       use fluidtypes, only: var_numbers
-      use grid,       only: all_cg
       use grid_cont,  only: grid_container
 
       implicit none
@@ -185,7 +185,7 @@ contains
       integer                        :: i
       logical, save                  :: frun = .true.
 
-      if (all_cg%cnt > 1) call die("[gridgeometry:set_cyl_coeffs] multiple grid pieces per procesor not implemented yet") ! move gc to grid_container%, fix initialization
+      if (is_multicg) call die("[gridgeometry:set_cyl_coeffs] multiple grid pieces per procesor not implemented yet") ! move gc to grid_container%, fix initialization
 
       !> \todo This should be probably called from cg%init (beware of cyclic dependencies) or init_grid
       if (frun) then

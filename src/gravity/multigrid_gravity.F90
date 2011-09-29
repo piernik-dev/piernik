@@ -989,7 +989,7 @@ contains
 
       use constants,          only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,         only: die
-      use domain,             only: geometry_type
+      use domain,             only: geometry_type, is_multicg
       use grid,               only: all_cg
       use grid_cont,          only: grid_container
       use multigridbasefuncs, only: subtract_average
@@ -1008,7 +1008,7 @@ contains
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[multigrid_gravity:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
+      if (is_multicg) call die("[multigrid_gravity:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       call set_dirty(source)
 

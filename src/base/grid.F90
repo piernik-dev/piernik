@@ -62,7 +62,7 @@ contains
       use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, ndims, xdim, zdim, ARR, INVALID
       use dataio_pub,  only: printinfo, die, code_progress
       use diagnostics, only: my_allocate
-      use domain,      only: dom
+      use domain,      only: dom, is_multicg
       use fluidindex,  only: flind
       use gc_list,     only: cg_list_element
       use global,      only: repeat_step
@@ -136,7 +136,7 @@ contains
       enddo
 
 #ifdef ISO
-      if (all_cg%cnt > 1) call die("[grid:init_cs_iso2] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
+      if (is_multicg) call die("[grid:init_cs_iso2] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
 
       cgl => all_cg%first
       do while (associated(cgl))
@@ -163,7 +163,7 @@ contains
 
       implicit none
 
-      type(cg_list_element), pointer :: cgl
+      type(cg_list_element), pointer :: cgl, erase
 
       cgl => all_cg%first
       do while (associated(cgl))
@@ -180,12 +180,13 @@ contains
 #endif /* GRAV */
 
          call cgl%cg%cleanup
-         deallocate(cgl%cg)
+         erase => cgl
          cgl => cgl%nxt
 
-         if (associated(cgl)) call all_cg%del(cgl%prv)
+         call all_cg%un_link(erase)
+         deallocate(erase%cg)
+         deallocate(erase)
       enddo
-      deallocate(all_cg%last)
 
 !!$      deallocate(levels)
 

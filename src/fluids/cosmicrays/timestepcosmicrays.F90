@@ -50,7 +50,7 @@ contains
    subroutine timestep_crs(cg)
 
       use constants,           only: one, half
-      use grid,                only: all_cg
+      use domain,              only: is_multicg
       use grid_cont,           only: grid_container
       use initcosmicrays,      only: cfl_cr, K_crs_paral, K_crs_perp, use_split
 #ifdef MULTIGRID
@@ -64,7 +64,7 @@ contains
       logical, save :: frun = .true.
       real :: dt
 
-      if (all_cg%cnt == 1 .and. .not. frun) return
+      if (.not. (is_multicg .or. frun)) return
       ! with multiple cg% there are few cg%dxmn to be checked
       ! with AMR minval(cg%dxmn) may change with time
 

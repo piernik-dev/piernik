@@ -229,7 +229,7 @@ contains
       use constants,   only: xdim, ydim, zdim, varlen, cwdlen, LO, HI
       use dataio_pub,  only: vizit, fmin, fmax, log_file, msg, die, warn
       use dataio_user, only: user_plt_hdf5
-      use domain,      only: dom, has_dir
+      use domain,      only: dom, has_dir, is_multicg
       use global,      only: t
       use grid,        only: all_cg
       use grid_cont,   only: grid_container!, cg_list_element
@@ -265,7 +265,7 @@ contains
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[slice_hdf5:write_plot_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial message tagging
+      if (is_multicg) call die("[slice_hdf5:write_plot_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial message tagging
 
       xn = 1
       if (has_dir(plane)) xn = pl_i(plane) + cg%nb - cg%off(plane)

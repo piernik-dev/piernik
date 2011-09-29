@@ -74,8 +74,9 @@ contains
       if (ind < minval([FLUID, MAG, CR, ARR]) .or. ind > maxval([FLUID, MAG, CR, ARR])) call die("[grid_container:internal_boundaries] wrong index")
 
       if (cdd%comm3d /= MPI_COMM_NULL) then
-         call warn("[grid_container:internal_boundaries] comm3d is implemented somewhere else.")
+         call warn("[internal_bnd:internal_boundaries] comm3d is implemented somewhere else.")
          return
+         ! ToDo: move comm3d variants here
       endif
 
       select case (ind)
@@ -86,7 +87,7 @@ contains
             if (.not. present(pa3d)) call die("[grid_container:internal_boundaries] pa3d not provided")
             if (.not. associated(pa3d)) call die("[grid_container:internal_boundaries] pa3d == null()")
          case default
-            call die("[grid_container:internal_boundaries] not implemented yet")
+            call die("[internal_bnd:internal_boundaries] wrong array")
             return
       end select
       if (present(pa3d) .and. present(pa4d)) call die("[grid_container:internal_boundaries] Both pa3d and pa4d are present")
@@ -167,7 +168,7 @@ contains
 
       use constants,  only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B, I_ONE
       use dataio_pub, only: die, msg
-      use domain,     only: has_dir, cdd
+      use domain,     only: has_dir, cdd, is_multicg
       use gc_list,    only: cg_list_element
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
@@ -191,7 +192,7 @@ contains
 
       !> \todo fill corners with big_float ?
 
-      if (all_cg%cnt > 1) call die("[grid:arr3d_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop
+      if (is_multicg) call die("[grid:arr3d_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop
 
       if (cdd%comm3d == MPI_COMM_NULL) then
 

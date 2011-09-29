@@ -113,7 +113,7 @@ contains
       use global,              only: skip_sweep
 #ifdef SHEAR
       use dataio_pub,          only: die
-      use domain,              only: has_dir
+      use domain,              only: has_dir, is_multicg
       use fluidboundaries,     only: bnd_u
       use global,              only: t, dt
       use grid,                only: all_cg
@@ -140,7 +140,7 @@ contains
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[fluidupdate:make_3sweeps] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
+      if (is_multicg) call die("[fluidupdate:make_3sweeps] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
 
       if (has_dir(ydim)) call yshift(t, dt)
       if (has_dir(xdim)) call bnd_u(xdim, cg)
@@ -280,6 +280,7 @@ contains
    subroutine mag_add(dim1, dim2)
 
       use dataio_pub,    only: die
+      use domain,        only: is_multicg
       use func,          only: pshift, mshift
       use grid,          only: all_cg
       use gc_list,       only: cg_list_element
@@ -296,7 +297,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
-      if (all_cg%cnt > 1) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
+      if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
 
       cgl => all_cg%first
       do while (associated(cgl))

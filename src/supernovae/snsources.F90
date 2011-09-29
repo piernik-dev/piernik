@@ -275,7 +275,7 @@ contains
 
 #ifdef SHEAR
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[snsources:rand_coords] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
+      if (is_multicg) call die("[snsources:rand_coords] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
 
       jsn  = js+int((ysn-dom%edge(ydim, LO))/cg%dy)
       dysn  = dmod(ysn, cg%dy)

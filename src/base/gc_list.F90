@@ -62,7 +62,7 @@ module gc_list
       procedure :: add_el
       generic, public :: add => add_new, add_el
 
-      procedure :: del
+      procedure :: un_link
 
    end type cg_list
 
@@ -188,9 +188,9 @@ contains
 !! \brief destroy the element
 !<
 
-   subroutine del(this, cgle)
+   subroutine un_link(this, cgle)
 
-      use dataio_pub, only: warn
+      use dataio_pub, only: warn, die
 
       implicit none
 
@@ -201,30 +201,33 @@ contains
       integer :: cnt
 
       if (.not. associated(cgle)) then
-         call warn("[gc_list:del] tried to remove null() element")
+         call warn("[gc_list:un_link] tried to remove null() element")
          return
       endif
 
       cur => this%first
       cnt = this%cnt
 
-      do while (associated(cur%nxt))
+      if (.not. associated(this%first)) call die("[gc_list:un_link] Cannot remove anything from an empty list")
+      if (cnt <= 0) call die("[gc_list:un_link] this%cnt <=0 .and. associated(this%first)")
 
+      do while (associated(cur))
          if (associated(cur, cgle)) then
+            if (associated(this%first, cgle)) this%first => this%first%nxt
+            if (associated(this%last,  cgle)) this%last  => this%last%prv
             if (associated(cur%prv)) cur%prv%nxt => cur%nxt
             if (associated(cur%nxt)) cur%nxt%prv => cur%prv
+            nullify(cur%nxt, cur%prv)
             this%cnt = this%cnt - 1
-            deallocate(cur)
             exit
          endif
 
          cur => cur%nxt
-
       enddo
 
-      if (this%cnt == cnt) call warn("[gc_list:del] element not found on the list")
+      if (this%cnt == cnt) call warn("[gc_list:un_link] element not found on the list")
 
-   end subroutine del
+   end subroutine un_link
 
 !> \todo merge lists
 

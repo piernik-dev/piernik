@@ -243,8 +243,7 @@ contains
    subroutine prep_arr_write(rank, ir, area_type, loffs, chunk_dims, dimsf, file_id, dname, memspace, plist_id, filespace, dset_id, dplist_id, dfilespace)
 
       use constants,  only: ndims, AT_OUT_B, LONG
-      use domain,     only: is_uneven
-      use grid,       only: all_cg
+      use domain,     only: is_uneven, is_multicg
       use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, &
            &                H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5FD_MPIO_COLLECTIVE_F, &
            &                h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, &
@@ -301,7 +300,7 @@ contains
          call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
       else
 #endif /* INDEPENDENT_ATOUTB */
-         if (all_cg%cnt == 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+         if (.not. is_multicg) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
 #ifdef INDEPENDENT_ATOUTB
       endif
 #endif /* INDEPENDENT_ATOUTB */
@@ -477,7 +476,7 @@ contains
 !!$            call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
 !!$
 !!$            call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-!!$            if (all_cg%cnt == 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+!!$            if (.not. is_multicg) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
 !!$
 !!$            ! Create the memory space for the dataset.
 !!$            call h5screate_simple_f(rank, chunk_dims, memspace, error)
@@ -511,7 +510,7 @@ contains
 
       use constants,  only: ndims, LONG
       use dataio_pub, only: msg, die
-      use grid,       only: all_cg
+      use domain,     only: is_multicg
       use hdf5,       only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
            &                h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
            &                h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
@@ -557,7 +556,7 @@ contains
       call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset(ir:), count(ir:), error, stride(ir:), block(ir:))
 
       call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      if (all_cg%cnt == 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+      if (.not. is_multicg) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
       call h5screate_simple_f(rank, chunk_dims(ir:), memspace, error)
 
    end subroutine prep_arr_read

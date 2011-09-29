@@ -195,6 +195,7 @@ contains
 
       use constants,  only: xdim, ydim, zdim , LO, HI
       use dataio_pub, only: msg, die
+      use domain,     only: is_multicg
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpisetup,   only: proc, master, FIRST, LAST, comm, status, ierr
@@ -210,7 +211,7 @@ contains
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[initproblem:read_IC_file] multiple grid pieces per procesor not implemented yet") !nontrivial ic_[ijk[se], allocate
+      if (is_multicg) call die("[initproblem:read_IC_file] multiple grid pieces per procesor not implemented yet") !nontrivial ic_[ijk[se], allocate
 
       ! calculate index ranges for the subset of IC file covering local domain with a safety margin for interpolation
       ic_is = min(ic_nx, max(1,     1+floor((cg%fbnd(xdim, LO) + ic_xysize/2.)/ic_dx) - margin) )

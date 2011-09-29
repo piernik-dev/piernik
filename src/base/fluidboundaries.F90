@@ -107,11 +107,10 @@ contains
       use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, half, &
            &                         BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
       use dataio_pub,          only: msg, warn, die
-      use domain,              only: cdd, has_dir
+      use domain,              only: cdd, has_dir, is_multicg
       use fluidboundaries_pub, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use global,              only: smalld
-      use grid,                only: all_cg
       use grid_cont,           only: grid_container
       use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,            only: ierr, req, status, comm, proc
@@ -156,7 +155,7 @@ contains
 
 ! MPI block communication
       if (cdd%comm3d /= MPI_COMM_NULL) then
-         if (all_cg%cnt > 1) call die("[fluidboundaries:bnd_u] multiple grid pieces per procesor not implemented for comm3d")
+         if (is_multicg) call die("[fluidboundaries:bnd_u] multiple grid pieces per procesor not implemented for comm3d")
 #ifdef SHEAR_BND
          if (dir == xdim) then
 #ifndef FFTW
@@ -639,7 +638,7 @@ contains
 
       use constants,    only: xdim, zdim, FLUID
       use dataio_pub,   only: die
-      use domain,       only: has_dir, cdd
+      use domain,       only: has_dir, cdd, is_multicg
       use gc_list,      only: cg_list_element
       use grid,         only: all_cg
       use internal_bnd, only: internal_boundaries
@@ -650,7 +649,7 @@ contains
       type(cg_list_element), pointer :: cgl
       integer(kind=4) :: dir
 
-      if (all_cg%cnt > 1) call die("[fluidboundaries:all_fluid_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial communication
+      if (is_multicg) call die("[fluidboundaries:all_fluid_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial communication
 
       cgl => all_cg%first
 

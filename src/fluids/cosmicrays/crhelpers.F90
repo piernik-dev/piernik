@@ -71,7 +71,7 @@ contains
       use constants,   only: xdim, ydim, zdim, half
       use dataio_pub,  only: die
       use diagnostics, only: ma3d, my_allocate
-      use domain,      only: has_dir
+      use domain,      only: has_dir, is_multicg
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
@@ -88,7 +88,7 @@ contains
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[crhelpers:div_v] multiple grid pieces per procesor not implemented yet") !nontrivial divvel
+      if (is_multicg) call die("[crhelpers:div_v] multiple grid pieces per procesor not implemented yet") !nontrivial divvel
 
       if (.not.allocated(divvel)) then
          ma3d = cg%n_

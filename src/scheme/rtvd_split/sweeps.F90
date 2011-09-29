@@ -46,6 +46,7 @@ contains
 
       use constants,       only: xdim, zdim, half, one
       use dataio_pub,      only: die
+      use domain,          only: is_multicg
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind
       use global,          only: dt
@@ -64,7 +65,7 @@ contains
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[sweeps:source_terms_y] multiple grid pieces per procesor not implemented yet") !nontrivial u1
+      if (is_multicg) call die("[sweeps:source_terms_y] multiple grid pieces per procesor not implemented yet") !nontrivial u1
 
       allocate(vxr(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)), v_r(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)), rotaccr(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)))
       allocate(epsa(cg%n_(xdim), cg%n_(zdim)))

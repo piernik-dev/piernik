@@ -252,7 +252,7 @@ contains
       use constants,    only: DST, GEO_RPZ, xdim, ydim, zdim
       use global,       only: smalld
       use dataio_pub,   only: msg, printinfo, die
-      use domain,       only: geometry_type, cdd, has_dir
+      use domain,       only: geometry_type, cdd, has_dir, is_multicg
       use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
       use gravity,      only: ptmass, grav_pot2accel
@@ -287,7 +287,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (all_cg%cnt > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
+         if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
          if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
          if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
@@ -485,16 +485,17 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
 
+      use constants,       only: dpi, xdim, ydim, zdim
       use dataio_pub,      only: die
-      use grid,            only: all_cg
+      use domain,          only: is_multicg
+      use global,          only: t, grace_period_passed, relax_time, smalld !, dt
+      use gravity,         only: ptmass
       use gc_list,         only: cg_list_element
+      use grid,            only: all_cg
       use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use global,          only: t, grace_period_passed, relax_time, smalld !, dt
-      use constants,       only: dpi, xdim, ydim, zdim
       use units,           only: newtong
-      use gravity,         only: ptmass
 #ifndef ISO
       use fluidindex,      only: iarr_all_en
 #endif /* ISO */
@@ -513,7 +514,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (all_cg%cnt > 1) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (is_multicg) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       cgl => all_cg%first
       do while (associated(cgl))

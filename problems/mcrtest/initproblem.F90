@@ -136,7 +136,7 @@ contains
 
       use constants,      only: xdim, ydim, zdim, I_ONE
       use dataio_pub,     only: msg, warn, printinfo, die
-      use domain,         only: has_dir, dom
+      use domain,         only: has_dir, dom, is_multicg
       use fluidindex,     only: flind
       use grid,           only: all_cg
       use gc_list,        only: cg_list_element
@@ -241,7 +241,7 @@ contains
       enddo
 
       cg => all_cg%first%cg
-      if (all_cg%cnt > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
+      if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
 
       do icr = 1, flind%crs%all
          maxv = maxval(cg%u%arr(iarr_crs(icr),:,:,:))

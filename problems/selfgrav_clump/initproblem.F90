@@ -150,7 +150,7 @@ contains
 
       use constants,         only: pi, xdim, ydim, zdim, I_ONE
       use dataio_pub,        only: msg, die, warn, printinfo
-      use domain,            only: dom
+      use domain,            only: dom, is_multicg
       use global,            only: smalld, smallei, t
       use grid,              only: all_cg
       use gc_list,           only: cg_list_element
@@ -246,7 +246,7 @@ contains
          call printinfo(msg, .true.)
       endif
 
-      if (all_cg%cnt > 1) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial
+      if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial
       cg => all_cg%first%cg
 
       ! Find C - the level of enthalpy at which density vanishes

@@ -69,7 +69,7 @@ contains
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_pub,  only: die
       use diagnostics, only: my_allocate
-      use domain,      only: dom
+      use domain,      only: dom, is_multicg
       use grid,        only: all_cg
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
@@ -139,7 +139,7 @@ contains
 
       if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
-      if (all_cg%cnt > 1) call die("[initproblem:read_problem_par] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
+      if (is_multicg) call die("[initproblem:read_problem_par] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
       !> \todo provide mechanism for rank-3 user arrays in grid_container
 
       cgl => all_cg%first
@@ -259,11 +259,12 @@ contains
    subroutine compute_analytic_ecr1
 
       use dataio_pub,     only: die
-      use grid,           only: all_cg
+      use domain,         only: is_multicg
       use gc_list,        only: cg_list_element
+      use global,         only: t
+      use grid,           only: all_cg
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
-      use global,         only: t
 
       implicit none
 
@@ -274,7 +275,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (all_cg%cnt > 1) call die("[initproblem:compute_analytic_ecr1] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
+      if (is_multicg) call die("[initproblem:compute_analytic_ecr1] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
 
       iecr = -1
 
@@ -330,15 +331,16 @@ contains
 
    subroutine check_norm
 
-      use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
       use constants,      only: PIERNIK_FINISHED, I_ONE, I_TWO
+      use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
+      use domain,         only: is_multicg
       use global,         only: t, nstep
-      use grid,           only: all_cg
       use gc_list,        only: cg_list_element
+      use grid,           only: all_cg
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre
-      use mpisetup,       only: master, comm, ierr
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,       only: master, comm, ierr
 
       implicit none
 
@@ -350,7 +352,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (all_cg%cnt > 1) call die("[] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
+      if (is_multicg) call die("[] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
 
       iecr = -1
 
