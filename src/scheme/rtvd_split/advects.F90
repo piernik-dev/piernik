@@ -64,11 +64,11 @@ contains
 
       implicit none
 
-      integer,               intent(in) :: bdir, vdir
+      integer(kind=4),       intent(in) :: bdir, vdir
       integer, pointer                  :: i1, i2, i1m, i2m
       integer, dimension(ndims), target :: ii, im
       integer                           :: rdir, i, j, i_wa
-      integer                           :: imom                   !< index of vdir momentum
+      integer(kind=4)                   :: imom                   !< index of vdir momentum
       real, dimension(:), allocatable   :: vv, vv0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       real, dimension(:),    pointer    :: pm1, pm2, pd1, pd2
       type(cg_list_element), pointer    :: cgl
@@ -90,6 +90,7 @@ contains
          i1 => ii(bdir) ; i1m => im(bdir) ; i2 => ii(rdir) ; i2m => ii(rdir)
       else
          call die('[advects:advectb] neither even nor odd permutation.')
+         i1 => ii(rdir) ; i1m => ii(rdir) ; i2 => ii(rdir) ; i2m => ii(rdir) ! suppress compiler warnings
       endif
 
       cgl => all_cg%first
