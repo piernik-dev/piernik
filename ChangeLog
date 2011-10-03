@@ -1,569 +1,4803 @@
-2010-01-16  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2011-09-29  Artur Gawryszczak <gawrysz@gmail.com>
 
-	* [source:public/trunk public]: Cleaning AUTHORS. Utf8 still is not
-	  the best idea...
-	* [source:public/trunk public]: Adding stub files (GNU standard)
-	* [source:public/trunk public]: Adjusting files to GNU standard.
-	  Updating authors list.
-	* [source:public/trunk public]: doxy comments
+	* trunk: [advects] corrected integer kind
+	* trunk: selectively absorbed from branches/AMR
 
-2010-01-15  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+2011-09-26  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: doxy comments in
-	  timestepneutral.F90
+	* trunk: [advects] one routine advectb instead of 6
 
-2010-01-08  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+2011-09-23  Artur Gawryszczak <gawrysz@gmail.com>
 
-	* [source:public/trunk public]: doxy comments in
-	  timestepionized.f90
-	* [source:public/trunk public]: doxy comments in
-	  timestepionized.f90
-	* [source:public/trunk public]: doxy comments in
-	  timestepionized.f90
+	* trunk: corrected integer kind
+	* trunk: fluidindex::ib[xyz] replaced by constants::[xyz]dim
 
-2009-12-17  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2011-09-23  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: correction in calling
-	  hydrostatic_zeq in
-	  [source:pubclic/trunk/problems/lingrav/initproblem.F90 lingrav]
+	* trunk: [advects,fluidupdate] shortened magfield routine,
+	  preparing for shortened advects
+
+2011-09-23  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: replacement for r4878
+
+2011-09-23  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [resistivity] ugly & temporary fix for [4877]
+	* trunk: [resistivity] reduce numer of superfluous parameters for
+	  diffuseb routine
+
+2011-09-22  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: selectively absorbech from branches/AMR
+	* trunk: Fix for r4864
+
+2011-09-22  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [restart_hdf5] use additional pointer to avoid complaining
+	  in logs
+	* trunk: [data_hdf5] fixed fix [4860]
+	* trunk: [dataio] fix for intel compiler: value type used by
+	  get_extremum
+	* trunk: [data_hdf5] fixed for intel: lack of
+	  h5_write_to_single_file interface
+
+2011-09-21  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] improved simplification of dependency graph
+	* trunk: galdisk fixes for r4852, corrected integer kind
+	* trunk: [setup] automagically generate a file for drawing
+	  simplified graph of module dependences
+	* trunk: fix for r4854 and DEBUG option
+
+2011-09-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [I/O] chdf moved from dataio_pub to common_hdf5
+	* trunk: [I/O] renamed dataio_hdf5 to common_hdf5, moved parameter
+	  file array to dataio_pub
+	* trunk: [I/O] routines for datafiles (.h5 dumps) are moved to a
+	  separate file
+	* trunk: [I/O] routines for plotfiles (slices) are moved to a
+	  separate file
+
+2011-09-20  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [streaming_global] fix use references
+	* trunk: [kepler] fix use references
+
+2011-09-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [I/O] restart routines moved to a separate file
+	* trunk: selectively absorbed from AMR
+	* trunk: [advection_test] cosmetics
+
+2011-09-19  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: corrected integer kind
+	* trunk: [advection_test] the L2-norm is computed against an
+	  advected initial conditions
+	* trunk: [dataio_hdf5] nonexistent user variable in plot files is
+	  no longer fatal
+
+2011-09-16  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [multigrid_diffusion] gather updates that require change
+	  of the mcrtest gold (see [4815-4816])
+	* trunk: [multigrid_diffusion] removing only that recent updates
+	  that cause difference with respect to the mcrtest gold
+
+2011-09-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [dataio_hdf5] cosmetics
+
+2011-09-15  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: corrected integer kind
+	* trunk: MPI types are created automatically from cg%init
+	* trunk: [multigrid] Use MPI types created for cg% also witch
+	  comm3d (no more multigrid-specific MPI types)
+	* trunk: Partial support for exchanging less than ''nb'' guardcell
+	  layers for comm3d (MPI types)
+	* trunk: MPI types for comm3d (cg%mbc(:,:,:,:)) are now created in
+	  cg%mpi_bnd_types like cg%[io_bnd(:,:,:)
+
+2011-09-14  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] MPI types for guardcell exchange are now
+	  created by ''call cg%mpi_bnd_types'' (removed a lot of duplicated
+	  code)
+	* trunk: [multigrid_diffusion] Division by cell length seems to be
+	  clearly slower than multiplication by the inverse. Will require
+	  update of ''gold'' sample
+	* trunk: [multigrid_diffusion] Manual optimization, related to
+	  r4810. May require update of ''gold'' results
+	* trunk: BUGFIX fixed use of uninitialized value
+	* trunk: MPI types for boundary exchange are now created by a cg%
+	  member routine
+
+2011-09-14  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [multigrid_diffusion] fixed [4807]
+
+2011-09-14  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Provided MPI types for exchanging any mumber of guardcell
+	  layers from 1 to nb
+
+2011-09-14  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [multigrid_diffusion] revert [4807]
+	* trunk: [multigrid_diffusion] swallow some duplicated code by
+	  turning it into direction loops
+
+2011-09-14  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [dataio_hdf5] suppressed compiler warning on unused
+	  argument
+	* trunk: Improved descriptions in piernik.h and defines.c
+	* trunk: [setup] corrected handling the dependency on piernik.def
+	* trunk: Removed remaining pieces of NEW_HDF5 conditional code
+
+2011-09-13  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [hdf5] ''multiple_h5files'' allows to write all grid
+	  containers per proc to independent files
+	* trunk: [dataio_hdf5] remove obsolete NEW_HDF5
+
+2011-09-13  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid_diffusion] comments on possible optimization
+	* trunk: [mcrtest_new] NEW_HDF5 switched off
+
+2011-09-12  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: corrected integer kind
+
+2011-09-12  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup] simplify tag printed to version module
+	* trunk: fix quotes
+	* trunk: making code more eclipse friendly
+
+2011-09-12  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [advection_test,wt4] simplified user restart routines
+	  (consequence of r4793)
+	* trunk: [I/O] automagically writes selected cg%g(:) fields and
+	  also reads them
+	* trunk: [grid_container] fixed missing initialization
+	* trunk: [lothlorien] runtime diagnostics switched on by default
+	* trunk: Changes of initialization order: fluids independent of
+	  grid, grid initialization merged into one routine, call to
+	  cr_add_hdf5 commented out, because it caused cyclic dependencies
+
+2011-09-08  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio_hdf5] workaround for unsuccesfull collective
+	  dataset write (used when INDEPENDENT_ATOUTB is defined)
+
+2011-09-05  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] removed elaborate error messages on allocation
+	  errors. System messages should be sufficient.
+
+2011-09-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] corrected integer kinds (supplement to r4777)
+	* trunk: [multigrid] Use the same number of guardcells as in the
+	  rest of the code (increase memory usage, allows for simplifying
+	  bounary guardcell exchange, almost no impact on performance)
+	* trunk: converted ''wa'' and ''cs_iso2'' to ''cg%q(:)''
+	* trunk: BUGFIX for r4771
+	* trunk: [kepler] BUGFIX for r4771
+	* trunk: Continuation of r4770: converted remaining gravity arrays,
+	  fixed omissions
+	* trunk: cg%sgp{,m}%arr registered in cg%q(:) and provided also as
+	  cg%sgp{,m}
+	* trunk: [I/O] simplified reading and writing of registered 3D
+	  arrays cg%q(:)
+	* trunk: [wt4] use named 3D array for apot (see r4765)
+	* trunk: [maclaurin] use named 3D array for apot (see r4765),
+	  corrected thing messed up in r4766
+	* trunk: [advection_test] inid converted to a grid container array
+	  (see r4765)
+	* trunk: [grid_container] added a new class for 3D scalar arrays
+	  with a name
+	* trunk: [I/O] commented out an unused routine until it will become
+	  useful
+	* trunk: [I/O] all names of restart datasets put into dname(:)
+	* trunk: [multigridhelpers] cosmetics
+
+2011-09-01  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [crdiffusion] corrected integer kind
+
+2011-09-01  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [crdiffusion] fix possible buffer overflow
+
+2011-09-01  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [crdiffusion] one cr_diff routine instead of three
+	  dimension-related
+
+2011-08-31  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: added some kind=4 for integers
+	* trunk: selectively absorbed from branches/AMR
+	* trunk: moved internal boundary exchange to a new file
+	* trunk: [svnci.py] Improved exception handling
+
+2011-08-31  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: use getlun() instead of hardcoded integers for logical
+	  units
+	* trunk: [dataio_pub] use first free lun instead of hardcoded
+	  integer
+
+2011-08-31  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio] VERBOSE info in init_dataio
+
+2011-08-31  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [dataio_pub] replaced unit numbers with integer constants
+
+2011-08-31  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [dataio_pub] fix previous commit
+	* trunk: [dataio] remove ''system'' call
+
+2011-08-31  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [gravity] no need to warn about initialization - just
+	  printinfo
+
+2011-08-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fixed integer kind (related to r4737)
+
+2011-08-30  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: make intel slightly less grumpy
+
+2011-08-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: renamed type cgl to cg_list to prevent conflicts with
+	  variable cgl
+
+2011-08-30  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [timer] reverting [4724]
+
+2011-08-29  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [timer] only use master for wend calculation
+	* trunk: [qa:qa_check_id] skip files that are outside of repo
+	* trunk: [qa] check for svn:keywords Id
+
+2011-08-26  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] exclude file locks from the list
+	* trunk: selectively absorbed from branches/AMR
+	* trunk: Moved user hooks from types to a new file/module
+	  user_hooks
+
+2011-08-24  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [grid_container] introduced my_se which should be always
+	  used instead of dom%pse(proc)%sel(1, :, :)
+	* trunk: [grid_container] added h_cor and h_cor1 as a shortcuts for
+	  operations with the corner opposite to the one at off(:)
+	* trunk: local boundary checks and tweaks moved from domain to
+	  grid_container
+
+2011-08-24  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [streaming] update problem.par, use ''hard'' overlap,
+	  don't accidentally reset funcR, dispose of z-momentum in
+	  uninteresting areas
+
+2011-08-23  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: ''D_(:)'', ''D_[xyz]'' moved from grid to domain
+	* trunk: ''total_ncells'' moved from grid to domain
+
+2011-08-22  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [streaming] update units to wt4, fix initial dust profile
+	  for smalld, make random noise actually randomly oriented
+	* trunk: use constant instead of 0.5 to ensure same precision
+
+2011-08-22  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] cosmetic simplification
+	* trunk: [grid] cosmetics (related to r4688)
+
+2011-08-22  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [rtvd] unify sweeps, '''warning''' performance drop
+	* trunk: [grid] introduce D_=[D_x,D_y,D_z]
+
+2011-08-20  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: removed iarr_mag_swp[xyz] in favour of iarr_mag_swp array
+
+2011-08-19  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: forced 32-bit integers in first argument of MPI_Waitall
+	* trunk: replaced many 32-bit numeric integers with named constants
+	* trunk: [constants] added named integer constants
+	* trunk: converted numeric mpi tags into named constants
+	* trunk: [Makefile] remover obsolete feature, cosmetics
+	* trunk: r4678 continued
+	* trunk: replaced 0 (the master process number) with FIRST
+	  everywhere
+
+2011-08-19  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [constants] add array with +permutations of xyz
+
+2011-08-19  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: provided convenient names for master process and for the
+	  last process
+
+2011-08-19  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [hllc] unify sweeps
+
+2011-08-18  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [64-bit integer] correction
+	* trunk: cosmetics
+	* trunk: duplicated code moved to a subroutine
+
+2011-08-18  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [hllc] fix typo
+	* trunk: removed iarr_{,all_}swp[xyz] in favour of iarr_{,all_}swp
+	  arrays
+
+2011-08-18  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [grid_container] reduced code duplication due to variables
+	  named after dimensions
+
+2011-08-18  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [streaming] removed cg%n[xyz] in favour of cg%n_(:) array
+
+2011-08-18  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: HLLC for advection test should be chosen by -d option of
+	  the setup script, reverting r4659
+
+2011-08-18  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [hllc] reset cgl before 2nd step
+	* trunk: [plot.py] fix indices for xy-plane
+
+2011-08-18  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: removed cg%n[xyz] in favour of cg%n_(:) array
+
+2011-08-18  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [hllc] fix r4585
+
+2011-08-18  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: added a HLLC variant of the advection test problem
+	* trunk: array3d%init and array4d%init take arrays of sizes, not
+	  lists
+
+2011-08-18  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [streaming] compute vphi rather than use analytical
+	  formula
+
+2011-08-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: restored a line mistakenly removed in r4640
+
+2011-08-17  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: using cg%n_ & cosmetics
+	* trunk: [interactions] cosmetics
+	* trunk: [grid_converter] add n_ array to collect nx, ny, nz
+
+2011-08-17  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [plot.py] add commandline options for setting figure size
+	* trunk: [streaming] include dust density in hydrostatic equil.
+	  calculation
+	* trunk: [interactions] seperate balsara implicit scheme
+	  initialization
+	* trunk: [plot.py] plot 1d data
+	* trunk: [streaming] udpate
+	* trunk: [wt4] update
+
+2011-08-12  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [magboundaries] fix [4626] - remove involuntarily pasted
+	  lines
+	* trunk: [magboundaries] add ZERO_BND_EMF flag for outflow boundary
+	  types & fix rnbcells
+
+2011-08-11  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] prefer to pass pointer to levels, not level
+	  numbers (last part, see r4620, r4622)
+	* trunk: [multigrid] prefer to pass pointer to levels, not level
+	  numbers (continued, see r4620)
+	* trunk: [multigrid] spelling correction
+	* trunk: [multigrid] prefer to pass pointer to levels, not level
+	  numbers
+
+2011-08-10  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [gravity] typo
+	* trunk: [gravity] fix typo
+	* trunk: [gravity] call boundary condition only if has_dir
+	* trunk: [gravity] add outflow* boundary conditions for gp
+	* trunk: [setup.py] silence sed invocation introduced in r4587
+
+2011-08-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: cosmetics
+
+2011-08-09  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: deallocated some small amounts of memory on cleanup
+	* trunk: [func:get_extremum] fixed broken logic that might have
+	  lead to use of uninitialized values
+
+2011-08-09  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [plot.py] Plot multiple files as animation
+	* trunk: [dataio_hdf5] fix warnings
+	* trunk: Don't interpolate data in imshow
+	* trunk: Introduce hack for switching on/off chosen sweeps
+
+2011-08-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* [domain] BUGFIX for r4602
+	* trunk: Supported compilation with 64-bit integers as the default.
+	  Compiles, but requires additional type corrections for MPI calls
+
+2011-08-08  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: use ''ekin'',''emag'' helpers
+
+2011-08-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* changed some intents to make the crayftn a bit happier
+	* Configuration of the cray compiler for Franklin@NERSC
+	* [multigridhelpers] minor bugfix
+
+2011-08-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: only master prints warnings about smallp (related to
+	  r4591)
+	* trunk: [domain] minimize neighbour count where possible
+	* trunk: removed some garbage
+	* trunk: Prevent setting smallp to negative values
+	* trunk: Fixed possible integer overflows on domains largerthan
+	  2**31 cells
+
+2011-08-01  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: changed some intents to make the crayftn a bit happier
+	* [dataio_pub] Ignore namelist errors when ''skip_eof'' is present
+	  and true
+	* trunk: [setup.py] split long lines produced with macros.h
+
+2011-07-27  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [hllc] works for more than one fluid
+
+2011-07-26  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: properly initialize fluid logical checks
+
+2011-07-21  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Add simple HLLC solver with TVD version of MUSCL-Hancock
+	  Method (see Toro #14.4)
+	* trunk: Add new precompiler directive for choosing hydro solver.
+	  Use RTVD by default
+
+2011-07-18  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: use cga%get_root() instead of explicit assignement
+	* trunk: [grid_container:cg_set] add routine initializing pointer
+	  to root of the grid
+	* trunk: [resistivity] remove hardcoded integers
+	* trunk: [dataio_hdf5] remove redundant bits of code
+
+2011-07-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [streaming_global] fix geometry check
+	* trunk: new setup for global streaming instability
+	* trunk: [interactions] protect ''epstein_factor'', add helper
+	  routine to update ''grain_size''
+
+2011-07-15  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [advects] superfluous if condition easily displaced
+
+2011-07-14  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [resistivity] simplify diffuseb routines
+
+2011-07-12  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dustybox] remove unused parameter domain (renamed as
+	  domain_dump in [4562])
+	* trunk: [problems] remove unused parameters: mag_center and domain
+	  (renamed as domain_dump in [4562])
+	* trunk: [dataio] change domain variable into domain_dump due to
+	  collision with the same name of domain module (complained by
+	  intel compiler)
+
+2011-07-12  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: New test problem for gas<->dust interaction
+
+2011-07-07  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [plot.py] Fix log option
+	* trunk: add simple, but general script for visualization
+
+2011-06-30  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: carping cosmetics
+	* trunk: [resistivity] BEWARE: first dt=0 unnecessary, only
+	  etamax%val is required by timestep_resist, then compute_resist is
+	  called at the end of init_piernik
+
+2011-06-27  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [crhelpers] multiplication instead of division
+
+2011-06-21  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: updated comments
+	* trunk: ''dom%n[xyz]t'' are now an array ''dom%n_t(:)'', dom% is
+	  now free of direction-specific variables
+	* trunk: ''dom%[xyz]{min,max}'' are now an array ''dom%edge(:,:)''
+	* trunk: ''dom%[xyz]0'' are now an array ''dom%C_(:)''
+	* trunk: ''dom%L[xyz]'' are now an array ''dom%L_(:)''
+	* trunk: absorbed from branches/AMR
+
+2011-06-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [domain] ''allocate_pse'' can take list of blocks per
+	  processor, added public ''deallocate_pse''
+	* trunk: [cosmetics] Uniform in-place array notation: changed (/
+	  ... /) to [ ... ]
+
+2011-06-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fixed omissionin r4533
+	* trunk: moved ''mpisetup::comm3d'' to ''domain::cdd%comm3d''
+	* trunk: [domain] init_domain split into few subroutines
+	* trunk: [mpisetup] cosmetics
+	* trunk: [global] cosmetics
+	* trunk: [domain] cleanups
+	* trunk: absorbed from branches/AMR
+
+2011-06-16  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: variables that are valid only for cartesian decomposition
+	  with comm3d /= MPI_COMM_NULL are gathered in domain::cdd%
+	  structure
+	* trunk: transformed ''dom%se(:, :, :)'' into ''dom%pse(:)%sel(:,
+	  :, :)'' to allow keeping info on multiple grid chunks
+	* trunk: [grid] ''cg'' is no longer available as a variable. Use
+	  lists instead
+
+2011-06-16  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [doc/initproblem] warning & annotation related to pointers
+	  assignment
+
+2011-06-15  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: BUGFIX for potential out-of-bounds referencein
+	  ''get_extremum''
+	* trunk: BUGFIX corrected ''req(:)'' and ''status(:,:)'' sizes for
+	  use in ''write_plot_hdf5''
+
+2011-06-15  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [debug] possibility to force res and dmp dumps during
+	  DEBUG run
+	* trunk: [sweeps] bugfix for 2D magnetic field perpendicular to the
+	  plane
+
+2011-06-13  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: moved procedure pointer assignments to problem_pointers
+	  (finalization of r4507)
+	* trunk: tried to add a doxy for initproblem.F90
+	* trunk: module initproblem now offers subroutine problem_pointers
+	  to set up user pointers much earlier than read_problem_par is
+	  executed
+
+2011-06-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: moved ''domain_container'' from types to domain
+	* trunk: split ''mpisetup'' module to ''mpisetup'', ''domain'' and
+	  ''global'', renamed ''DOMAIN'' namelist to ''BASE_DOMAIN''
+
+2011-06-09  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: small fixes to suppress compiler warnings
+	* trunk: continuation of r4477 and r4486
+
+2011-06-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: cosmetics
+	* trunk: moved ''additional_attrs'', ''problem_write_restart'',
+	  ''problem_read_restart'' to dataio_user
+
+2011-06-08  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [magboundaries] bugfix for bnd_emf of BND_OUT/OUTD/OUTH
+	  type !!!BEWARE: critical change!!!
+	* trunk: [rtvd] correction of math syntax in doxy comment
+
+2011-06-06  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio] cosmetics in write_log
+	* trunk: [func] bugfix for [4338]: send/recv indices of the
+	  extremum
+
+2011-06-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: BUGFIX for r4486: added missing imports for die
+	* trunk: continuation of r4477
+
+2011-06-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: moved %vol from plvl to cg, gathered cg%[xyz]{min,max}b
+	  into cg%fbnd(:,:)
+
+2011-06-03  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Fix weird typo from r4481
+	* trunk: add routine for dumping cg (work in progress)
+	* trunk: [grid_cont] sort variables
+
+2011-06-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: BUGFIX for r4477
+	* trunk: suppress unimportant compiler warnings
+	* trunk: implemented compatibility with the concept of multiple
+	  grid containers per processor (partial, not really used yet)
+
+2011-06-02  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [fluids] no need to mention about really small array sizes
+
+2011-05-31  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: missed in r4472
+	* trunk: arrays.F90 moved into grid.F90
+	* trunk: migrated ''uh'' to ''cg%''
+
+2011-05-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: moved ''gc_[xyz]dim(:,:,:)'' to ''cg%''
+	* trunk: current grid container passed as an argument to
+	  geometry_source_terms routine
+	* trunk: removed unused features from ''is_neigh'' and renamed to
+	  ''is_overlap''
+	* trunk: [list_hdf5] cosmetics (magic integers)
+	* trunk: some new compound types for organizing grid_container
+	  objects into various lists
+
+2011-05-28  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Absorbed from AMR (r4455 - r4459)
+
+2011-05-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [I/O] cosmetics
+	* trunk: [I/O] write_plot_hdf5 now works with any domain
+	  decomposition
+	* trunk: [I/O] simplified write_plot_hdf5, cosmetics (spaces)
+
+2011-05-25  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [doc] some corrections
+
+2011-05-24  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Use ''cg%cs_iso2'' in flux calculation, set ''cg%cs_iso2''
+	  to maxval(cs_{neu,ion}_iso2)
+
+2011-05-24  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: simplified common_vars_hdf5
+
+2011-05-23  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: simplified ''common_plt_hdf5'' even more
+	* trunk: simplified ''common_plt_hdf5''
+	* trunk: moved ''planelen'' from dataio_pub to dataio_hdf5
+	* trunk: cosmetics around write_plot_hdf5
+
+2011-05-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] 'prolong_faces' (used by FFT local solver) is
+	  now compatible with noncartesian decompositions
+	* trunk: absorbed from AMR
+
+2011-05-19  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: moved ''parse_cmdline'' from dataio_pub.F90 to piernik.F90
+	  to avoid complete recompilations of every object each commit or
+	  update
+	* trunk: ''u'' and ''b'' are available only in ''cg%'', not from
+	  the arrays module
+	* trunk: converted some references to u, b and gp arrays to their
+	  cg% representations
+	* trunk: [grid_container] simplified calculation of coordinates
+	  even more
+	* trunk: [grid_container] simplified calculation of coordinates
+
+2011-05-19  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [grid_container] use integers alap while filling in x/y/z
+	  vectors
+
+2011-05-19  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: fix for r4412
+	* trunk: Move gravity arrays to ''cg''
+	* trunk: [poissonsolver] migrate to ''cg'' arrays
+	* trunk: [shear] migrate to ''cg'' arrays
+	* trunk: [hydrostatic] migrate to ''cg'' arrays
+	* trunk: [gravity] migrate to ''cg'' arrays
+	* trunk: [snsource] migrate to ''cg'' arrays
+	* trunk: [dataio_hdf5,timestepinteractions] migrate to ''cg''
+	  arrays
+
+2011-05-19  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [rtvd] better calculation of magic_mass
+
+2011-05-19  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [fluidboundaries] migrate to ''cg'' arrays
+	* trunk: [dataio] migrate to ''cg'' arrays
+	* trunk: [initfluids] migrate to ''cg'' arrays
+	* trunk: [fluidboundaries_funcs] migrate to ''cg'' arrays
+	* trunk: [cosmicrays] migrate to ''cg'' arrays
+
+2011-05-18  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: BUGFIX for r4397
+	* trunk: the ''grid_container'' type moved from grid.F90 to
+	  grid_container.F90, ''req'' and ''status'' arrays for MPI_Waitall
+	  now served by mpisetup
+
+2011-05-18  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [fluidupdate] migrate to ''cg'' arrays
+	* trunk: migrate to ''cg'' arrays
+	* trunk: [advects] migrate to ''cg'' arrays
+	* trunk: Add ''wa'' to ''cg'', fix deallocation of ''cg%b'',
+	  overload ''array3d%init'' with association
+	* trunk: [resistivity] migrate to ''cg'' arrays
+	* trunk: [problems:tearing] migrate to ''cg'' arrays, add
+	  problem.par for bitten
+	* trunk: Removing ''cs_iso2_arr'' from arrays. Sound speed square
+	  is always present for ISO runs. Adjust scheme to always pass
+	  cs_iso2 vector.
+	  
+	  '''BEWARE''' user is now responsible for setting sane values to
+	  cg%cs_iso2, although it's still unused if ISO_LOCAL is not set.
+	  Currenly cg%cs_iso2%arr is set with constants:big_float. In the
+	  end, it will be set with maxval(flind%all_fluids(:)%cs_iso) and
+	  all differences between ISO and ISO_LOCAL will be removed.
+	  In the transition phase (right now) your mileage may vary, though
+	  I hope for your understanding :-)
+	* trunk: [problems:dustblob] migrate to ''cg'' arrays
+	* trunk: [problems:crwind] migrate to ''cg'' arrays
+	* trunk: [dataio] remove unused preprocessor flag
+	* trunk: [problems:wt4] migrate to ''cg'' arrays
+	* trunk: [dataio_hdf5] migrate to ''cg'' arrays
+	* trunk: [problems:lingrav] migrate to ''cg'' arrays
+	* trunk: [grid] add ''cs_iso2'' to ''cg''
+	* trunk: [types] add ''array3d'' type
+
+2011-05-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] Removed last assumptions that ''level_min'' =
+	  1, ''level_max'' now is interpreted as a number of levels
+
+2011-05-17  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio_pub] output version from cmdline
+
+2011-05-17  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [sweeps] revert r4368
+
+2011-05-17  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio_pub] cosmetics to [4369]
+	* trunk: [dataio_pub] source configuration from cmdline
+
+2011-05-17  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [types] add get_sweep for one variable out of 4d array,
+	  [sweeps] migrate to cg%{u,b}
+
+2011-05-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: absorbed r4363 from AMR
+
+2011-05-16  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [arrays] fix double free of ''b'' array
+	* trunk: partial migration arrays->cg, '''BEWARE''' ''cg'' ceased
+	  to be protected until some things are sorted out
+	* trunk: [compilers] don't enforce fgsl in default.in
+	* trunk: [types] introduce new type for 4d arrays, [grid] add
+	  ''u'',''b'' stubs to ''cg''
+
+2011-05-13  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: suppress compiler complains on unused arguments
+	* trunk: [multigrid] BUGFIX force RBGS relaxation and ord_prolong =
+	  0 when comm3d == MPI_COMM_NULL
+
+2011-05-12  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: move ''wcu'' array to ''resistivity''
+	* trunk: [otvortex] update build problem.par
+	* trunk: move ''divvel'' from ''arrays'' to ''crhelpers'', remove
+	  obsolete functions
+	* trunk: move ''wcr'' from ''arrays'' to ''crdiffusion''
+
+2011-05-12  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [gravity] bugfix for parallel simulations in
+	  grav_accel2pot
+
+2011-05-12  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] a comment
+	* trunk: minor cleanups
+
+2011-05-12  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: problems info update
+
+2011-05-12  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: marked ruotines that depend on comm3d with call die(),
+	  converted pcoords([123]) to pcoords([xyz]dim)
+
+2011-05-12  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: comments to precompalier directives
+
+2011-05-11  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: absorbed from branches/AMR: non-cartesian domain
+	  desomposition, ability to run without comm3d and most changes
+	  made in April.
+
+2011-05-11  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [sedov] make outflow test more stressful
+
+2011-05-11  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fixed typo
+	* trunk: mpifind now uses MPI_Allreduce, fixes weird SIGSEGV on
+	  lothlorien
+	* trunk: replaced all proc[xyz][lr] by appropriate procn(:,:),
+	  removed procxyr and procyxr
+
+2011-05-11  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [gravity] correction to [4311]
+	* trunk: use procn with LO & HI
+	* trunk: unduplicate the code around boundaries
+
+2011-05-11  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Workaround for PR 48955
+
+2011-05-11  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Fixed printing time (see r4310, r4326), cosmetics
+
+2011-05-11  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [grid:grid_mpi_boundaries_prep] sanitize numcrs
+	* trunk: '''BUGFIX''' properly call boundary conditions for ''wcr''
+	  to avoid differences between serial and parallel runs.
+	* trunk: add new MPI type for ''wcr'' boundary conditions. Avoid
+	  intrinsic and variable name clash (dim -> dims)
+	* trunk: add ''target'' keywords to ''wcr'' and ''divvel''
+
+2011-05-09  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Make step repetition optional (via /NUMERICAL_SETUP/
+	  logical :: repeat_step)
+
+2011-05-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: s/count(has_dir(:))/eff_dim/g
+
+2011-05-08  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* add ctags target to main Makefile
+
+2011-05-07  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* ignore ctags temporary files
+
+2011-05-06  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: bugfix - use a pointer with get_extremum routine and
+	  corretcion of fmts of logs
+
+2011-05-05  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio,func,types] write extema coordinates in log
+	* trunk: [gravity],[resistivity] use get_extremum
+	* trunk: move get_extremum routine from dataio module to func
+	  module
+	* trunk: use value type by mpifind routine
+
+2011-05-05  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: improved printing of Walltime per timestep
+
+2011-05-04  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: correction: use at_user_settings from types module
+	* trunk: enable AT_USER case in set_dims_to_write routine
+	* trunk: routine to set writing to restart an array of any
+	  dimensions
+	* trunk: include AT_USER while enumerating area types
+
+2011-05-03  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: New version of mcrtest for multi-energy cr propagation
+
+2011-04-26  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] tested higher order of face-perpendicular
+	  prolongation (local FFT approximation solver)
+
+2011-04-16  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [kepler] suppressed some warnings
+	* trunk: absorbed from AMR
+
+2011-04-14  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [hdf5] Take advantage of COLLECTIVE i/o. Obsolete
+	  write_axes.
+
+2011-04-12  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [lothlorien] set up fgsl for the kepler problem
+
+2011-04-11  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [hydrostatic] scheme_v2 correction and cosmetics
+
+2011-04-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: absorbed something from AMR
+
+2011-04-03  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [mcrtest] complete problem.par with hydrostatic_zeq
+	  routine related parameter
+
+2011-03-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: absorbed from AMR
+
+2011-03-27  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [compilers] >=gcc-4.6 omits frame pointer by default, not
+	  the best idea for debugging...
+
+2011-03-23  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [mpisetup] and always remember that external constants may
+	  change...
+
+2011-03-23  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [grid] separate bound procedures contained by
+	  grid_container
+	* trunk: [dataio] typo
+
+2011-03-23  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [kepler] stupid workaround for (:,:,:) => (i,:,:,:) issues
+
+2011-03-23  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [grid] move MPI_Waitall into dims loop and condition for
+	  cor bnd
+
+2011-03-22  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: absorbed from branches/AMR
+
+2011-03-22  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [kepler] fix density profile interpolation
+
+2011-03-21  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Reverting [4172-4173]
+	* trunk: [qa] revert previous commit
+	* trunk: [qa] upgrade nasty_spaces for type:: errors
+
+2011-03-21  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [grid,dataio_hdf5] if die then die for all (and why)
+
+2011-03-21  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [list_hdf5] add_lhdf5 now exits upon successfully adding
+	  new element
+
+2011-03-18  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [grid] correct die messages
+
+2011-03-18  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: offsets within the domain promoted to integer(kind=8)
+
+2011-03-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: absorbed changes from AMR
+	* trunk: mpifind uses integers MINL and MAXL, not strings
+	* trunk: removed some unnecessary spaces
+
+2011-03-16  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [mpisetup] fixed typo in SHEAR_BND
+	* trunk: absorbed something from branches/AMR
+	* trunk: [lothlorien] compiler update
+
+2011-03-16  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Check if piernik is build with lhs_realloc
+	* trunk: [compilers] update
+
+2011-03-16  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: boundaries in domain_container converted from string to
+	  integer
+
+2011-03-16  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [compilers] update
+
+2011-03-16  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [fluids_pub] adapt comments to the rules ([4133]
+	  correction)
+
+2011-03-14  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [interactions:balsara_implicit_interactions] add proper
+	  formula for drag coefficient
+	* trunk: Add proper comments to precompiler directives
+	* trunk: '''BUGFIX''' [timestep] fix precompiler directive, ''kudos
+	  to Asia for spotting''
+	* trunk: [grid:arr3d_boundaries] fill external boundaries only if
+	  area_type == AT_NO_B
+	* trunk: [dataio_hdf5] write boundaries for gp array, call
+	  arr3d_boundaries only when arrays was written without bnds
+
+2011-03-14  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [multigridhelpers] change into recommended relationship
+	  between field width W and the number of fractional digits D
+
+2011-03-13  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [kepler] fix restarts
+	* trunk: [interactions] always print info about drag initialization
+	* trunk: Add ''get_tag'' helper for integer to string convertion
+	* trunk: Convert fluid type indices to enumerator
+
+2011-03-12  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] converted ''is_external(XLO:ZHI)'' to
+	  ''is_external(xdim:zdim, LO:HI)''
+
+2011-03-11  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [Makefile] added -k to "make resetup" and "make clean"
+	  targets
+	* trunk: [Makefile] prefix short messages beginning with FC or CC
+	  with object directory name
+	* trunk: [Makefile] bugfix - symlinks are no longer converted to
+	  files in allsetup
+
+2011-03-11  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [problems] move out unused namelists
+
+2011-03-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: absoerbed changest from AMR (r4096)
+
+2011-03-10  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [tearing] repairing the problem
+
+2011-03-10  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [initcosmicrays] fix spurious array reallocation
+	* trunk: Fix modules skipped in r4104
+	* trunk: Fix problems for r4104
+	* trunk: '''BEWARE''' Split types, introduce type-bound procedures.
+	  Breaking compilation with <gcc-4.6 and <intel-12.0
+
+2011-03-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: absorbed some changes from AMR
+
+2011-03-09  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: explicit type conversion to silence warnings from gcc
+	  4.6.0
+
+2011-03-09  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Use overloaded instead of type dependent math functions
+	* trunk: [rtvd] cosmetics and comments
+
+2011-03-09  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [constants] use '''enum''' construct for interger
+	  enumerators
+
+2011-03-09  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [fluidindex] add routine for cs update
+	* trunk: Convert fluid tag to integer
+	* trunk: [rtvd] fix indentation
+	* trunk: [rtvd,interactions] move implict scheme for dust<->gas
+	  drag to interactions module
+	* trunk: [rtvd] implicit scheme cleanup
+	* trunk: [timestep] calculate dt_interactions only for explicit
+	  scheme
+
+2011-03-08  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [magboundaries] bugfix: BND_OUTD and BND_OUTH have the
+	  same rules for magnetic field and emf as BND_OUT
+	* trunk: [magboundaries] suppress warnings from slaves
+
+2011-03-07  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: make sedov output default in show.pro
+	* trunk: update of idl routines to recent changes of hdf5 data
+	  structure
+
+2011-03-07  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [rtvd] add implicit solver for dust-gas drag, HIGHLY
+	  EXPERIMENTAL
+
+2011-03-07  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: magic integer 3 replaced by ''ndims''
+
+2011-03-07  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [rtvd] update boundaries during halfstep, store
+	  intermediate solution in ''uh''
+
+2011-03-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [bnd_emf] direction string turned into an integer
+	* trunk: [magboundaries] direction string turned into an integer
+
+2011-03-04  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [rtvd] fix CR source terms. Use previous state for RK.
+	* trunk: [problems] Use overloaded read_arr_from_restart
+	* trunk: [dataio_hdf5] Overload read_arr_from_restart
+	* trunk: Fix intent attribute, standard forbids modifying
+	  intent(in) vars
+
+2011-03-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] moved some constants from multigridvars to
+	  constants
+
+2011-03-03  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [rtvd,coriolis] convert coriolis_force to function
+
+2011-03-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: local domain boundary conditions (cg%bnd(xdim:zdim,
+	  LO:HI)) are enumerated only by integers, not strings
+
+2011-03-03  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [kepler] update
+	* trunk: [rtvd,interactions] Convert fluid_interactions to
+	  function.
+	* trunk: [qa] chekc for false refs before removal of types in
+	  module body
+
+2011-03-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] fixed OoB problem when piernik.def has no newline
+	  at the end
+	* trunk: ''gravacc'' moved inside #ifdef GRAV
+
+2011-03-03  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [gravity] fix OoB in grav_roche
+	* trunk: [rtvd] typo
+	* trunk: [rtvd] cleanup source terms, move rotational source terms
+	  to shearing module, acc is always present
+
+2011-03-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] minor fix
+
+2011-03-03  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [dataio_hdf5] Overload write_arr_to_restart
+	* trunk: [dataio_hdf5] Preparation for overloading
+	  write_arr_to_restart
+	* trunk: [dataio] Depreciate fluid precompiler flags.
+	* trunk: [kepler] fix OoB in prob_vars_hdf5
+
+2011-03-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [Makefile] added a ''allsetup' target for creating object
+	  directories for all valid problems
+
+2011-03-03  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [timestep] Depreciate fluid precompiler flags. This will
+	  break old Makefile deps. Rerunning setup for existing obj* is
+	  required.
+	* trunk: Add warning for invalid? calculation of cosmic ray sources
+	* trunk: Depreciate fluid precompiler flags
+
+2011-03-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [Makefile] added clean target to clean all obj*
+	  directories at once
+
+2011-03-03  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Obsolete FLUID_INTERACTIONS flag
+
+2011-03-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fixed warnings on unused variables
+
+2011-03-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [fluxdust] set dust pressure to 0.0
+	* trunk: [rtvd] removing unnecessary initialization of w and cfr as
+	  flux and freezing speed should get sane values in fluxFLUID
+	* trunk: [fluxes] optimization (~8% speedup)
+
+2011-03-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: comments and a minor correction
+	* trunk: [I/O] removed redundant copy of ''write_arr''
+	* trunk: [I/O] read_arr_from_restart can now read both rank-4 and
+	  rank-4 arrays
+
+2011-03-02  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio_hdf5] stop writing info about writing slicefile
+	  (i.e. over a dozen times)
+
+2011-03-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: don't write to tsl and log if cfl is violated
+
+2011-03-02  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio] reorder of data in tsl files
+
+2011-03-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [timestepneutral] cosmetics
+
+2011-03-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [kepler] suppressed QA warnings
+	* trunk: [I/O] preparatios for writing all big restart arrays by a
+	  single subroutine
+	* trunk: [I/O] merged ''write_3darr_to_restart'' and
+	  ''write_flmag_to_restart'' to a more universal
+	  ''write_arr_to_restart''
+
+2011-03-01  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [resistivity/dataio] correction & change eta1_inactive
+	  into eta1_active
+	* trunk: [resistivity] change the role of inactive: true for eta_1
+	  = 0
+
+2011-03-01  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Absorbed uneven domain decomposition from AMR (does not
+	  work with multigrid and plotfiles yet). Set allow_uneven = .true.
+	  in MPI_BLOCKS namelist to enable dividing 128x128x128 domain
+	  into, say 20 pieces or something like that
+
+2011-03-01  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [resistivity,dataio] bring through resistivity logs
+
+2011-02-28  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: cosmetics:uniformization: .eq. -> ==, .ne. -> /=
+	* trunk: '''BUGFIX''' removed cyclic dependency from r4001
+	* trunk: [I/O] absorbed from AMR: r3989, r3992, r3999
+	* trunk: [I/O] modified messages to mark start and successful end
+	  of writing process
+
+2011-02-27  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [fluidupdate] only master warns about redoing step
+	* trunk: '''BUGFIX''' [timestep] broadcast ''cfl_violated'' to all
+	  procs
+
+2011-02-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [wt4] deallocate memory
+
+2011-02-26  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [I/O] more detailed message on reading a restart file with
+	  different piernik_hdf5_version
+
+2011-02-26  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [mpisetup] cosmetics
+	* trunk: [kepler] move amp_noise to problem.par, ''slow down'' dust
+	  when density is very low
+
+2011-02-25  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [gravity] compactified ''all_sgp_boundaries()''
+	* trunk: [grid] cg%mbc(:,:,:,:) elements are now created in loops
+	* trunk: [setup] compatibility with an ancient version of Python
+	* trunk: combined myriads od variables into one array of MPI types
+	  for communication
+
+2011-02-24  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [piernik] initialized tlast
+
+2011-02-24  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [fluidupdate] use dt_max_grow instead of magic number for
+	  redoing step under cfl violation
+	* trunk: Fix ''fluid_update'' timer
+	* trunk: Redo hydro step if cfl was violated
+
+2011-02-24  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Introduced integer constants for boundary conditions,
+	  ToDo: replace existing strings everywhere
+
+2011-02-23  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] self-gravity in cylindrical coordinates with
+	  isolated BC - alpha version
+
+2011-02-23  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: typo
+
+2011-02-23  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: geometry type checked agains integer, not string
+
+2011-02-23  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [problems] use sqrt on single precision data instead of
+	  dsqrt
+
+2011-02-23  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [constants] removed reexporting of some constants by
+	  mpisetup, grid, etc.
+	* trunk: '''bugfix''': typo in r3968
+	* trunk: [constants] many constant parameter definitions moved to
+	  constants
+	* trunk: included ''fftw3.f'' instead of cherrypicking FFTW_*
+	  constants
+	* trunk: [dataio] removed unused code
+
+2011-02-22  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Constants split into constants (parameters, enums, ...)
+	  and units (physical constants). Use bin/fix_problem.par_r3965.sh
+	  to fix any unversioned problem.par files
+	* trunk: [multigrid] '''bugfix''' typo
+
+2011-02-22  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [dataio] Marked mpi i/o race condition.
+	* trunk: [dataio_pub] Marked mpi i/o race condition.
+
+2011-02-22  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] self-gravity in cylindrical coordinates
+	  (non-isolated BC only)
+	* trunk: [mpisetup] expanded sanitizing for DOMAIN parameters
+
+2011-02-21  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: cbuff_len is no longer re-exported by mpisetup
+
+2011-02-21  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [kepler] cosmetics
+	* trunk: [gnudbg] add fgsl
+	* [kepler] add initial density profile
+
+2011-02-21  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fixed cyclic dependency from r3953
+	* trunk: [cylindrical] ymin, ymax defaults to 0, 2*pi
+	* trunk: [interactions] supress spurious compiler warnings
+
+2011-02-21  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [kepler] move debug bits to where they belong
+	* trunk: [kepler] update
+	* trunk: [interactions] add epstein drag
+	* trunk: [plot_tsl.py] Workaround cairo limits
+
+2011-02-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Replaced string names of sweeps with integer equalt to one
+	  of mpisetup::[xyz]dim
+
+2011-02-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [timestep] '''bugfix:''' fixed very rare cases, where last
+	  timestep is to short to reach tend due to roundoffs on least
+	  significant bits
+	* trunk: do not die when periodic BC do not match in an
+	  non-existent direction
+	* trunk: [fluidboundaries] enumerate directions with integers, not
+	  text labels
+
+2011-02-17  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio] reverting part of [3918] due to nasty values of
+	  divB in the last columns of physical domain
+
+2011-02-16  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [I/O] axis coordinates are written by a single routine,
+	  their names changed from [XYZ]
+	* trunk: [I/O] comments, cosmetics
+	* trunk: [advection_test] store initial conditions in the restart
+	  file
+
+2011-02-16  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio_hdf5] distinguish between standard restart file
+	  and a diagnostic dump by file extension
+	* trunk: [constants] global constants_set and a few doxy comments
+	* trunk: [dataio] use D_[x,y,z] instead of max/min intrinsics
+	* trunk: [hydrostatic] tunning of hydrostatic_zeq_coldens
+
+2011-02-15  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: dom%n[xyz]d replaced by dom%n_d(:)
+	* trunk: [advection__test] added a test for restarts
+	* trunk: [debug] call init_piernikdebug as early as possible
+	* trunk: [debug] aux_par_[IR][[1-3] expanded and moved from
+	  multigridhelpers to debug
+
+2011-02-15  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio] gradients computed in any case of 3d or 2d
+
+2011-02-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: init_dataio needs to be split
+
+2011-02-14  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Prepared valid gravitational potential '''before''' first
+	  hdf dump; removed dataio_pub::skip_advection
+
+2011-02-13  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: merged DOMAIN_LIMITS DOMAIN_SIZES and BOUNDARIES into a
+	  DOMAIN namelist. Use bin/fix_problem.par_r3912.sh to fix any
+	  unversioned problem.par files
+	* trunk: cosmetics: indentation
+	* trunk: [gravity] do not accept cylindrical geometry for any
+	  standard kind of gravity
+
+2011-02-12  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: '''piernik_hdf5_version bump''' Write/read ''gp'' array
+	  to/from restart.
+	* trunk: Add target property to few arrays
+	* trunk: move init_interactions to before PIERNIK_INIT_BASE
+
+2011-02-11  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [coriolis] fixed missing import
+	* trunk: [coriolis] a ToDo comment
+	* trunk: [coriolis] fixed bug (typo) from r3680
+	* trunk: [setup] minor help message improvement
+	* trunk: absorbed from AMR: introduced cg%off(xdim:zdim), an offset
+	  of cg% within dom%
+
+2011-02-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: cosmetics, mostly changes to lowercase
+	* trunk: [advection_test] interchanged loops
+	* trunk: [f90sed] the evil twin has been cut off ...
+	* trunk: partial merge from r3873
+
+2011-02-10  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [resistivity] bugfix
+
+2011-02-09  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [resistivity] cleaning and adopting to any dims: 3d and
+	  all 2d
+	* trunk: [dataio_hdf5] switch off chunks for outbnd - supplementary
+	  to [3888] and [3889]
+
+2011-02-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: cg%n_b(1:3) contains n[xyz]b, dom%n_d(1:3) contains
+	  n[xyz]d; cosmetics
+
+2011-02-08  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio_hdf5] new piernik_hdf5_version 1.15, possibility
+	  to dump whole domain with all boundaries
+	* trunk: [dataio_hdf5] '''bugfix:''' it is hard to refill boundary
+	  cells with proper magnetic data after restart, then we need whole
+	  domain of mag data in restart file
+
+2011-02-08  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: The qa is dead. Long live the qa.
+	* trunk: Remove old qa script
+
+2011-02-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Improved diagnostics in read_restart_hdf5, cosmetics
+	* trunk: [wt4] bugfix
+	* trunk: [kepler] eliminated some more possible SIGSEGVs (related
+	  to r3878)
+	* trunk: added a script to extract problem.par file from HDF5
+	  outputs
+	* trunk: [kepler] eliminated possible SIGSEGV
+	* trunk: comments on possible optimization of the RTVD solver
+	* trunk: fixed 64-bit (or fort) problem with integer size
+	* trunk: store problem.par and env(:) arrays as compressed arrays
+	  of strings in the HDF5 files
+
+2011-02-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [HDF5] check if file version, n[xyz]d and [xyz]{min,max}
+	  read from problem.par match the restart file
+	* trunk: changed p[xyz]size to psize, added
+	  bin/fix_problem.par_r3871.sh for conversion of old problem.par
+	  that are not versioned
+	* trunk: [advection_test] do not compute the norm in a restarted
+	  simulation when IC was not written to the restart file
+
+2011-02-03  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [kepler] update
+
+2011-02-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] cosmetics (missing space)
+	* trunk: [Makefile] bugfix
+	* trunk: merged changes related to setup and main Makefile (r3854,
+	  r3859-r3861)
+
+2011-02-01  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: revert r3849
+	* trunk: Add dt_interactions to log
+
+2011-01-31  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: BEWARE
+
+2011-01-30  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: doxy update
+	* trunk: fix r3846 that erroneously removed cg
+	* trunk: Fix modules looking for mpisetup::geometry in grid
+	* trunk: Fix invalid export of mpisetup::geometry
+	* trunk: revert previous commit
+	* trunk: BEWARE: introduce weird error for testing
+	* trunk: Rename idl_h5 to idl
+	* trunk: Remove idl routines for h4.
+
+2011-01-29  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: use pointer to avoide temporary array creation
+	* trunk: update AUTHORS
+
+2011-01-28  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [plot_tsl] add axis labels, exit when only 1 arg given.
+	* trunk: [python] add script to plot tsl files
+
+2011-01-27  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [kepler] bugfix
+	* trunk: [kepler] temporary hack for increasing tau_s
+	* trunk: [interactions] silence printinfo on parallel run
+
+2011-01-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: partial sync with AMR branch
+	* trunk: cosmetics
+
+2011-01-27  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: remove p[x,y,z]size from core
+	* trunk: [fluxdust] use simpler smoothing
+	* trunk: [kepler] revert previous commit
+	* trunk: [kepler] fix r3634
+	* trunk: [kepler] fix typo
+
+2011-01-27  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [hydrostatic] cosmetic supplementary to [3816]
+	* trunk: [hydrostatic] assure midplane symmetry while midplane is
+	  on a cell border
+
+2011-01-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: omitted in r3812
+
+2011-01-27  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: cosmetics
+
+2011-01-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Removed mpi_magic, renamed divide_domain_voodoo to
+	  divide_domain_uniform, added Eratosthenes_sieve (partial merge
+	  from AMR)
+
+2011-01-27  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [kepler] suppress output in parallel runs, add sine
+	  perturbation
+
+2011-01-27  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [kepler] prevent zero densties in 3D
+	* trunk: [hydrostatic] bugfix, cleaning and doxy comments
+
+2011-01-26  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: comments
+	* trunk: cosmetics: indentation
+	* trunk: cosmetics
+	* trunk: old tmp.log deleted from mpisetup (related to r3796)
+
+2011-01-25  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [piernik] skip removal of 'tmp.log' since it creates race
+	  condition
+	* trunk: [debug] add missing die reference
+	* trunk: [kepler] add random noise after relax_time
+
+2011-01-25  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: moved domain-related parameters from cg% to dom%
+
+2011-01-25  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: grav_pot_3d_called logical moved to gravity module
+
+2011-01-25  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: merged r3783 (domain_container type) from AMR
+
+2011-01-25  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [hydrostatic] cleaning
+
+2011-01-25  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [gravity] 'gp' array can be time dependent
+	* trunk: [hydrostatic] correct comments, add todo
+
+2011-01-25  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [hydrostatic] cleaning
+
+2011-01-24  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [hydrostatic] changes using loops into max/min_loc
+	  functions
+	* trunk: [hydrostatic] change the scheme for NEW_HYDROSTATIC
+	  defined and add doxy comments
+
+2011-01-21  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [sedov] cosmetics
+	* trunk: cosmetics
+	* trunk: [problem_pub] correction of doxy syntax
+	* trunk: [coriolis] correction of doxy syntax
+	* trunk: [hydrostatic] extend the warning
+	* trunk: NVAR changes to FLIND which better reveals its importance
+
+2011-01-21  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: crude dependency tests in init_piernik, comments
+	* trunk: [qa] allowed QA_WARN to suppress warning on magic integers
+
+2011-01-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [gravity] prevented use of nonexistent optional argument,
+	  suppressed compiler warnings on unused arguments
+
+2011-01-20  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [hydrostatic] get_gprofs_gparray reorganized
+	* trunk: [hydrostatic] bring back previous version as a workaround
+	* trunk: [hydrostatic] cosmetics
+	* trunk: [hydrostatic] changing get_gprofs_gparray providing for
+	  high pzsize
+	* trunk: [gravity] publishing grav_type pointer
+	* trunk: [gravity] grav_type pointer to relevant procedure
+	* trunk: [gravity] grav_(type) routines became argument depandant
+	* trunk: [types] publishing the axes type - supplementary to [3745]
+
+2011-01-20  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Temporary hack for #93
+
+2011-01-20  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [types] x,y,z gathered by axes type
+	* trunk: [gravity] bugfix - supplement to [3741]
+	* trunk: [gravity] bugfix for grav_uniform and grav_linear
+	* trunk: [hydrostatic] total sum of dprofs as optional in
+	  hydrostatic_main
+
+2011-01-19  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Add bits omitted in r3733
+	* trunk: Add command line parser, fixes #90.
+	* trunk: [kepler] update
+	* trunk: [sedov] drop restart during bitten tests
+
+2011-01-18  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: cosmetics
+
+2011-01-18  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [QA] remove trailing whitespaces
+
+2011-01-18  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: svn:ignore for .lastsetup, cosmetics
+	* trunk: imposed restrictions for cor boundaries, removed some
+	  magic integers
+
+2011-01-18  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [gravity] use real values and real sqrt; dsqrt and double
+	  precision is use in fact while compiling with -r8 (or similar)
+	  flag
+
+2011-01-18  Aleksander Sadowski <olek.sadowski@gmail.com>
+
+	* [roche] initproblem.f90 cleaned up
+	* [roche] tuned condition for calculating the Omega
+	* [roche] updated problem.par
+
+2011-01-18  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup] --last: call setup with last used options and
+	  arguments (require Pickles)
+	* trunk: [kepler] fix r3712 after a cup of coffee...
+	* trunk: [kepler] cosmetics
+
+2011-01-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: merged r3692 et al. from the AMR branch
+
+2011-01-17  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio] todo fixed: logical wait is redundant even in a
+	  case of sleep message
+
+2011-01-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: bugfix: a quite funny syntax-typo involving preprocessor
+	  and rarely used symbol :)
+	* trunk: minor fixes
+
+2011-01-17  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [gravity] todo fixed: g_y disappeared long ago, n_gravr2
+	  cancelled, tune_zeq_bnd brought to live recently
+
+2011-01-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fixed initialization of coriolis_omega
+
+2011-01-17  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [mpisetup] todo fixed long time ago ([3225])
+	* trunk: [dataio_pub] log_file_initialized commented
+	* trunk: change name of nvar%adiab to nvar%energ according to todo
+	  in initfluids. The new name might be more consistent with
+	  possible non-adiabatic fluids in presence of heating and cooling
+	* trunk: [initfluids] correct names of old nfluid and nadiab in
+	  doxy comments
+	* trunk: [src] cosmetics, mostly related to doxy syntax
+
+2011-01-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [gravity] fix for r3697
+
+2011-01-17  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [gravity] cosmetics, mostly with comments converted to
+	  doxy syntax
+	* trunk: [fluxdust] use c_all only if GLOBAL_FR_SPEED defined
+	* trunk: [fluidupdate] convert comments to doxy format
+	* trunk: [dataio_hdf5] convert comments to doxy format
+	* trunk: [interactions] doxy cosmetics
+
+2011-01-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: suppressed spurious compiler warning
+
+2011-01-17  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio] convert comments to doxy format
+	* trunk: [crdiffusion] convert comment to doxy format
+
+2011-01-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] do not link hdf5* libraries explicitly when using
+	  h5pfc wrapper because it may mix up system libraries with
+	  (possibly incompatible) user-build ones
+
+2011-01-17  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [hydrostatic] add deprecation to outh_bnd routine
+	* trunk: [hydrostatic] use mpi_in_place option
+	* trunk: tidy up things related to precompiler directives and doxy
+	  comments
+
+2011-01-15  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] some additional configuration may be stored also
+	  in .setuprc.
+
+2011-01-14  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] fixed issue with temporary files not removed
+	  properly
+	* trunk: [coriolis] using working u(:,:) stencil instead of
+	  array::u(:,:,:,:)
+	* trunk: grav_roche moved back to gravity
+	* trunk: introduced coriolis module
+	* trunk: expanded comment
+
+2011-01-14  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [rtvd] add todo
+	* trunk: [gridgeometry] comment lack of additional source term in
+	  ang. mom. eq. of motion in cylindrical coords
+
+2011-01-13  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Removed setup.pl - obsolete and unmaintained
+
+2011-01-13  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup.py] make it compatible with python2.4
+	* trunk: [kepler] cleanup, use relax_time
+	* trunk: [stream] add problem.par for linear case
+	* trunk: Introduce grace period before additional physics is
+	  swithed on
+	* trunk: [roche] add problem gravity, '''BEWARE''' Coriolis force
+	  is still missing
+	* trunk: Reverting r3657. Move problem gravity to problem module.
+
+2011-01-13  Aleksander Sadowski <olek.sadowski@gmail.com>
+
+	* added Roche potential plus Coriolis force
+	* added #ifdef GLOBAL_FR_SPEED around use timestep to prevent
+	  cyclic deps
+	* configuration update for psk2
+	* Roche lobe overflow
+	* configuration for myszaki
+
+2011-01-12  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [interactions] bugfix: watch the signsvn up
+	* trunk: rework FLUID_INTERACTIONS, always pull modules, use sane
+	  defaults
+	* trunk: [problems] add empty INTERACTIONS namelist
+	* trunk: [rtvd] export vx from fluxes
+	* trunk: move dust/gas interactions to proper module
+	* trunk: [dust] remove unused parameter ''dalpha''
+	* trunk: [kepler] using T_inner as dumping coefficient is now
+	  optional
+
+2011-01-11  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [interactions] convert timestep_interactions to function
+	* trunk: [rtvd] add some comments about SHEAR code
+	* trunk: [dust] remove unused ''dalpha'' variable, default
+	  ''dragc_gas_dust'' to 0.0
+	* trunk: [rtvd] shuffle some ancient bits of code
+	* trunk: [setup] provide problem.par in objdir
+	* trunk: [kepler] compute v_phi for any given density profile, add
+	  inner cutoff
+
+2011-01-10  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [timestep] correction for doxy comment
+	* trunk: [hydrostatic] correction for sdprof value
+
+2011-01-10  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [kepler] update
+	* trunk: [sanitize_smallx_checks] add maximum density span check
+
+2011-01-10  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: use doxygen deprecated command for beware comments
+
+2011-01-07  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [hydrostatic] cancelling redundant MPI_Barrier
+	* trunk: [hydrostatic] bugfix in hydrostatic_zeq_coldens for
+	  parallel blocks in z direction
+
+2011-01-07  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [interactions] remove obsolete COLLISIONS flag
+	* trunk: [kepler] update problem, add plotting routine
+
+2011-01-07  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [mpisetup] big parallel runs are '''really''' available
+
+2011-01-05  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [mpisetup] add comments
+	* trunk: update piernik.doxy
+
+2011-01-05  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [initfluids] Recommended relationship between field width
+	  W and the number of fractional digits D in this edit descriptor
+	  is W>=D+7
+	* trunk: try to interpret todos by doxy
+
+2011-01-05  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: updated doxy comments
+
+2011-01-05  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: update doxy comments
+	* trunk: [constants] update doxy comments
+
+2011-01-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] updated doxy comments
+	* trunk: [precompiler.F90] removed obsolete GRAV_* references
+	* trunk: [multigrid] updated doxy comments
+
+2011-01-04  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [doxygen] add doxyfile used to generate docs on ladon
+
+2011-01-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] updated doxy comments
+	* trunk: [multigrid] fixed syntax glitches from r3601
+	* trunk: [multigrid] updated doxy comments
+
+2011-01-04  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [multigridexperimental] doxygen cosmetics
+
+2011-01-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] updated comments
+	* trunk: cleaned some references to obsolete GRAV_* preprocessor
+	  symbols
+
+2011-01-04  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: doxygen comments corrections
+	* trunk: bring back doxygen descriptions functionality
+
+2011-01-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [sanitize_smallx_checks] does an MPI_Allreduce before
+	  assigning small[dp]
+	* trunk: [dataio_hdf5] reduction of arithmetics on grid::cg%
+	  variables
+	* trunk: further reduction of arithmetics on grid::cg% variables
+	* trunk: replaced some 2*cg.nb by cg%[ijk]sb
+	* trunk: introduced auxiliary indices for exchanging boundary data
+	  in grid::cg%
+	* trunk: fix for cyclic deps in r3582
+	* trunk: use cg%{i,j,k}{s,e} instead of arithmetics on
+	  cg%n{x,y,z,}b
+	* trunk: [gravity] cg%{i,j,k}{s,e} instead of arithmetics on
+	  cg%n{x,y,z,}b
+	* trunk: there is no need to pass grid::cg through parameter list
+	* trunk: [advection_test] compute norm of deviation from initial
+	  conditions, add the IC to hdf output
+
+2010-12-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: all grid-related properties are available '''only'''
+	  through cg structure (ported from AMR branch)
+
+2010-12-30  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [constants] use tiny instead of 1./huge
+	* trunk: [gnudbg] add -Wextra
+
+2010-12-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [initfluids] removed spurious warnings
+	* trunk: cosmetics
+
+2010-12-30  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: add sanity check for ''small{d,p}''
+	* trunk: [mpisetup] add big number as a default value for
+	  ''smalld'' and ''smallp''
+	* trunk: [func] add elemental functions calculating ekin and emag
+	* trunk: [constants] use huge for ''big'' and ''small''
+
+2010-12-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: merged some fixes from the AMR branch that are not related
+	  to cgrid structure
+
+2010-12-29  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: fix typo in r3556
+	* trunk: [nvar] add logical ''has_energy'', rename ''sg'' and
+	  ''mg'' to something more descriptive
+	* trunk: add missing implicit none
+	* trunk: [types] clean docs
+	* trunk: [qa2] fix module body offset
+	* trunk: [qa2] add 'type' detection
+	* trunk: add bit missing in r3547
+	* trunk: ''timer_'' -> ''set_timer'', add missing :: after type
+	  defs
+
+2010-12-29  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: marked not deallocated small arrays
+
+2010-12-28  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: continuation of r3537
+
+2010-12-28  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: use dataio_pub::stdout as unit descriptor
+
+2010-12-28  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [selfgrav_clump] optimization of initial conditions
+	  generation
+	* trunk: [multigrid] only forward extrapolation in time allowed
+
+2010-12-21  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio] inducing to dump log and tsl at t=0.0
+
+2010-12-21  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: stdout fixes
+	* trunk: [maclaurin] some exceptions handled in maclaurin.py,
+	  cosmetics of initproblem
+
+2010-12-20  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [maclaurin.py] optimize, use pre-calculated potential
+
+2010-12-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [crtest] store the analytical solution in the .h5 files
+
+2010-12-20  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [initfluids] remove dummy
+	* trunk: [initfluids] remove ''gamma'',''cs_iso'',''cs_iso2''
+	  obsoleted by ''nvar''
+	* trunk: remove obsolete gamma and cs_iso2 variables
+
+2010-12-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [maclaurin] a comment and secondary ./par files updates
+	  related to r3522
+	* trunk: [maclaurin] store the analytical potential in the HDF5
+	  output
+
+2010-12-20  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [gravity] sqrt instead of dsqrt in grav_ptmass_stiff
+
+2010-12-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] improved diagnostics for missing/mistyped problems
+
+2010-12-20  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: add pointer for initproblem's cleanup routine
+
+2010-12-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: removed unnecesary exchanges of cbuff from initproblem.F90
+	  (related to r3506)
+
+2010-12-20  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [piernik.F90] calling init_dataio after read_problem_par
+	  due to proper pointing problem_read_restart
+
+2010-12-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: double and triple empty lines (mostly a side-effect of
+	  r3506) reduced to a single empty line
+	* trunk: [selfgrav_clump] cosmetisc (stdout diagnostics]
+	* trunk: [crtest] problem.par update
+
+2010-12-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fix declarations removed by mistake in r3506
+	* : Moved problem_name and run_id from /PROBLEM_CONTROL/ to
+	  /OUTPUT_CONTROL/; added a script to custom problem.par files
+	  residing outside repository
+	* trunk: resistivity switches off in setups without X or Y
+	  directions
+	* trunk: [multigrid_diffusion] allow explicit method when timestep
+	  is limited somewhere else
+	* trunk: delaying call read_problem_par as much as possible
+	* trunk: initfluids is required by dodges
+	* trunk: suppress compiler warnings
+
+2010-12-17  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [resistivity] cleanup
+	* trunk: [resistivity] bugfix: assigning wb with non existing w
+	  array, resistivity now work on sweeps wrf #77
+	* trunk: [resistivity] proof-of-concept for #77
+	* trunk: [resistivity] remove most of shift functions from
+	  ''compute_resist''
+
+2010-12-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: simplified global reduction operations, added comments on
+	  use of uninitialized values
+
+2010-12-16  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* problems: [galdisk] fixed use of uninitialized value
+
+2010-12-16  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [magboundaries] renaming rlbase, zerocell and nbcells
+	* trunk: [magboundaries] doxy comments for edge indexes
+	* trunk: [magboundaries] rlbase widly used and some comments
+	* trunk: [magboundaries] correction to [3475]
+	* trunk: [magboundaries] rrefnbcells changed into rnbcells
+	* trunk: [magboundaries] correction of bndsign declaration and some
+	  comments
+
+2010-12-16  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [magboundaries] add comment stubs
+
+2010-12-16  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [magboundaries] fixing #73 (probably workaround)
+	  correction for right outflow boundary
+	* trunk: [magboundaries] rewriting bnd_emf routine in a shorter
+	  form
+
+2010-12-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: remove svn:externals
+	* trunk: test svn:externals
+	* trunk: [dataio_pub] return -1 upon ''die''
+
+2010-12-15  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] rundir will always be created in runs directory
+
+2010-12-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [fluidboundaries] split cases from bnd_u into seperate
+	  functions (xdim only)
+
+2010-12-15  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio] mark unused mag_center variable
+
+2010-12-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [magboundaries] optimize
+
+2010-12-15  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [fluidboundaries] listing boundaries types with nothing to
+	  do in one case line
+	* trunk: [magboundaries] listing boundaries types with nothing to
+	  do in one case line
+
+2010-12-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [sedov] add problem.par for #73
+
+2010-12-14  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [gridgeometry] '''BUGFIX''': initialize ''gc_xdim'' in
+	  ''set_cyl_coeffs'' correctly for multiple fluids
+
+2010-12-14  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [mpisetup] adopting master and slave from r3442
+	* trunk: adopting master and slave from r3442
+	* trunk: [problems/*/initproblem.F90] adopting master and slave
+	  from r3442
+	* trunk: [multigrid] adopting master and slave from r3442
+
+2010-12-14  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [kepler] debug update
+	* trunk: [debug] add new module, allow to set constant timestep,
+	  control output
+	* trunk: [mpisetup] add alias for commonly used logical expressions
+
+2010-12-13  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [dataio] revert r3439. Remove deadlock if mpi calculation
+	  are done in user_tsl. See sedov problem for an example usage.
+
+2010-12-13  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [jeans] gnuplot syntax update
+
+2010-12-13  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: bugfix: two deadlocks in write_timeslice
+
+2010-12-13  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [hdf5] add ''require_init_prob'' for problems that may
+	  need it, *don't* use it without good reason. Bump
+	  ''piernik_hdf5_version'' to 1.12
+	* trunk: [problems/kepler] update for cylindrical case
+
+2010-12-13  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: related to r3433
+	* trunk: BUGFIX: moved subroutine pointer assignments from
+	  init_prob to read_problem_par, because only the latter one is
+	  read on restart
+	* trunk: fixed possible integer overflow for very small values of
+	  dt_log and dt_tsl
+
+2010-12-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] fixed removing tempfiles
+	* trunk: [setup] fixed name clash on foo.f90 for multiple setups
+	  run at once
+	* trunk: [selfgrav_clump] use mpi module instead of F77 include
+	  file
+	* trunk: lothlorien configuration update
+
+2010-12-10  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [base] accepting recommended relationship between field
+	  width W and the number of fractional digits D
+
+2010-12-10  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup] update known external modules
+	* trunk: [diagnostics] Do *not* initialize arrays with sane values,
+	  as it may hide bugs
+
+2010-12-10  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: initialize my_allocate'd arrays or struggle with NaNs
+
+2010-12-10  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: use mpi module instead of F77 include file, silence
+	  warnings
+	* trunk: [setup] add known external modules
+
+2010-12-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Protected everything in grid.F90
+	* trunk: Introduced integers D_x, D_y and D_z, related to
+	  has_dir(:)
+	* trunk: compiler configuration update
+
+2010-12-09  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: bugfixes in timestepionized: resolving timestep dependence
+	  on MPI block structure
+
+2010-12-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [timestep] automatic CFL manager (EXPERIMENTAL)
+
+2010-12-08  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: bugfix in domain sizes exported to hdf5 files
+
+2010-12-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: cfl_manager is set in init_time_step
+	* trunk: cosmetics: indentation
+	* trunk: cfl_control -> cfl_warn, active by default
+	* trunk: format sync
+
+2010-12-07  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [gridgeometry] doxy comments
+	* trunk: [qa2] ignore commented routines
+
+2010-12-07  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fixed extreme temperature calculation for the logfile
+
+2010-12-07  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [timestep] cosmetics for print in cfl_control
+
+2010-12-06  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] removed unused module multigridio. use
+	  multigridhelpers::ascii_dump for debugging
+	* trunk: [mcrwind] use overrelaxation in the automatic test
+	* trunk: [multigrid_diffusion] implemented manual overrelaxation
+	* trunk: [multigrid] fixed names of the ASCII dumps
+	* trunk: [multigrid] fixed missing initialization of solution
+	  history for empty domains
+	* trunk: [multigrid] Marked places that are incompatible with
+	  cylindrical geometry
+
+2010-12-06  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [multipole] add missing reference for ''geometry''
+	* trunk: rpz merged with trunk. Notable changes:
+	  * coordinate system maybe set via ''geometry'' from
+	  DOMAIN_LIMITS, currently available: ''cartesian'',''cylindrical''
+	  * ''smalld'' is controlled via ''use_smalld'' from
+	  NUMERICAL_SETUP
+	  * track of mass added via ''smalld'' is kept in hdf5 files as
+	  ''magic_mass''
+	  * fluxes now export pressure array
+	  * grid module exports array of inverted coordinates ''inv_x'',
+	  ''inv_y'', ''inv_z''
+
+2010-12-04  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: remove ''SHEAR'' from ''initneutral''
+
+2010-12-03  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [timestep] print extension in cflcontrol
+
+2010-12-03  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [scripts] add example to generate_public.py
+
+2010-12-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [grid] cosmetics
+
+2010-12-03  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [grid] [x,y,z][min,max]b also necessary outside the module
+	* trunk: [grid] nxt used by problems
+
+2010-12-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: abort simulation when t + dt + dt does not change t
+	* trunk: removed occurences of (unused) cgrid%n[xyz]d
+
+2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: ''nyd''==''nyb'' if SHEAR
+	* trunk: removed last occurences of ''n[xyz]d'' outside of ''grid''
+	  and ''mpisetup''
+	* trunk: [grid] calculate total number of cells in physical domain,
+	  [timer] use ''total_ncells'' instead of ''n[x,y,z]d''
+	* trunk: use ''has_dir'' instead of depreciated ''n[xyz]d''
+
+2010-12-02  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [multigrid] doxygen comments
+
+2010-12-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: workaround for crash when COSM_RAYS and nvar%crn%all ==0
+
+2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [grid] add missing public symbols
+	* trunk: use ''has_dir'' instead of depreciated ''n[xyz]d''
+	* trunk: fix invalid use of ''nyd''
+	* trunk: use ''has_dir'' instead of depreciated ''n[xyz]d''
+
+2010-12-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] use has_dir and [xyz]dim from grid module
+
+2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: use ''has_dir'' instead of depreciated ''n[xyz]d''
+
+2010-12-02  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [snsources] doxygen description
+	* trunk: [gravity] docs update
+
+2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [doc] update
+	* trunk: [docs] update
+
+2010-12-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [grid] introduced has_dir(:), use of n[xyz]d is deprecated
+
+2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [docs] update
+
+2010-12-02  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [docs] update
+
+2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [docs] update
+	* trunk: fix invalid use of ''nxd'',''nyd'',''nzd''
+
+2010-12-02  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [doc/namelists] listing lacking namelists descriptions
+	* trunk: [timestep] avoiding division by 0 in cfl_control
+
+2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [doxygen] add CONSTANTS namelist's description
+
+2010-12-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [gravity] bugfix: nxb and nxd were messed up
+
+2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [compilers] revert r3315. ''gnufast'' should not be used
+	  for debug
+	* trunk: [compilers] CFLAGS are not used, add host optimization to
+	  ''ifortfast'', drop ipo from ''ifortnorm'' to speed up
+	  compilation
+
+2010-12-02  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: gnufast compiler settings updated
+	* trunk: ifort compiler settings updated
+
+2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: regenerate public
+
+2010-12-02  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: logfile oputput format corrections because of intel
+	  complains
+
+2010-12-02  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: cfl_control routine before each sweep (first response to
+	  #53)
+
+2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [timestep] make ''dt'' formal argument for ''time_step''
+
+2010-12-02  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: problem.par.singlesn_test and problem.par.multisn_wind
+	  added to mcrwind test problem
+
+2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [dataio] use stderr for die messages
+
+2010-12-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [mcrwind] problem.par.build updated for compatibility with
+	  r3305
+
+2010-12-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [mcrwind] fix tests
+
+2010-12-01  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: changing to default multigrid diffusion in mcrwind
+
+2010-12-01  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [new_hdf5] clean up the code
+	* trunk: [multigridhelpers] fix overflow in single precision if
+	  ''dirty_debug'' and ''hdf5levels''
+
+2010-12-01  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [lothlorien] updated compiler configuration
+
+2010-11-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] removed prefer_modified_norm parameter,
+	  cosmetics
+	* trunk: reverting r3285
+	* trunk: notify test 3
+
+2010-11-30  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup.py] return non zero value on make failure
+
+2010-11-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: reverting r3280 and r3281 tests
+
+2010-11-30  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup.py] return non zero value on make failure
+
+2010-11-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: notify test2
+	* trunk: notify test
+	* trunk: [multigrid] removed unused references
+	* trunk: [multigrid] fixed logic for external boundaries in
+	  multigrid_gravity
+	* trunk: removed unused reference
+
+2010-11-30  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [qa2] append false refs to warnings
+	* trunk: [fluxionized] remove unnecessary use reference
+	* trunk: [fluxes] preparation for FLUID flags removal
+	* trunk: [fluxes] unify interfaces
+
+2010-11-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: eliminated use of uninitialized value
+	* trunk: [multigrid] Warn on possibly improperly filled corners
+	  only once
+	* trunk: [mcrwind] suppressed compiler complains
+	* trunk: suppressed compiler warnings on unused things
+
+2010-11-30  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [fluxion] unify interface
+	* trunk: [types] ''component_fluid'' extends ''component''
+	* trunk: [rtvd] minor optimization
+	* trunk: [rtvd] use pointers to speed up computation of fluxes
+	* trunk: [stream] update
+	* trunk: [types] add ToDo
+	* trunk: [gravity] remove dependency on initfluids, that led to
+	  circular deps
+	* trunk: [hydrostatic] remove dependency on initfluids, that led to
+	  circular deps
+	* trunk: [shear] unshear_fft only exists if FFTW
+
+2010-11-29  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: bug in get_common_vars corrected
+
+2010-11-29  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: add missing declaration, fixes r3251
+	* trunk: [constants] add Avogadro constant
+
+2010-11-26  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [rtvd] major optimization
+	* trunk: [rtvd] document changes that will be applied in next
+	  revision
+	* trunk: [defines] remove obsolete check for GRAV_ definitions
+
+2010-11-26  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid_diffusion] requests properly filled domain
+	  corners for correct flux calculations
+	* trunk: [multigrid] added option for updating domain corners
+	* trunk: [multigrid] more dirty checks
+
+2010-11-26  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [gravity] sum_potential procedure became public
+	* trunk: [fluidupdate] add write_log calling while DEBUG defined
+	* trunk: [constants] names of actual main units useful to write
+	  down and control specific values
+
+2010-11-24  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [mpisetup,defines.c] end of flux limiter precompiler
+	  directives
+	* trunk: [defines.c] cancelling the rules of flux limiters
+	  precompiler directives
+	* trunk: [problems] using limiter from NUMERICAL_SETUP namelist
+	  instead of precompiler directives
+
+2010-11-24  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: remove exec attr
+
+2010-11-23  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup.py] dependence on piernik.def taken into account in
+	  Makefile
+	* trunk: [setup.py] do not regenerate version.F90 when nothing
+	  changes
+	* trunk: suppress cpp warning on missing terminating ' character in
+	  Fortran comments
+	* trunk: die when BC == 'cor' and pxsize /= pysize.
+	* trunk: removed trailing space from problem.par files (qa2,py does
+	  this only in .F90 files)
+	* trunk: [multigrid] protected some variables
+
+2010-11-23  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [constants] add 'user' set
+	* trunk: [constants] add comment regarding scaled constants
+
+2010-11-23  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [constants] improved consistency
+	* trunk: Unit system is no longer set through PGM, SSY, SI, CGS,
+	  WT4, PSM, PLN, KSG or KSM defines.
+	* trunk: [constants] consolidated semi-duplicated code
+	* trunk: [constants] removed duplicated constant
+
+2010-11-23  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio] output=tsl for calling write_tsl
+	* trunk: [dataio] HDFSWEEP directive seems to be obsolete
+	* trunk: [fluidupdate] correction in nhdf value for DEBUG defined
+	* trunk: [constants] correction for KSM and Gs
+
+2010-11-23  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [constants] allow to change units via CONSTANT namelist,
+	  retain backward compatibility
+	* trunk: [problems] add CONSTANTS namelist to problem.par
+	* trunk: [constants] remove parameters from SCALED that overlap
+	  with PSM
+	* trunk: [mcrwind] define constants set
+	* trunk: [constants] remove duplicate code
+	* trunk: [constants] use constants in favour of macros, since the
+	  former can be optimized away
+	* trunk: [constants] remove duplicated code
+
+2010-11-22  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [constants] cosmetics in doxy comments
+
+2010-11-22  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: use ''gpot'' arrays for logs ifdef VARIABLE_GP
+	* trunk: [setup] Discard stderr in get_stdout, preprocess f90 files
+	  before scouring for modules
+
+2010-11-18  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: only proc == 0 prints warnings
+	* trunk: [multigrid_gravity] annoy user about empty space (thus
+	  zero-potential) only once
+	* trunk: [mcrwind] problem.par is now compatible wit multigrid
+	* trunk: [multigrid] format fix
+
+2010-11-18  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: QA
+	* trunk: [svnci.py] switch to qa2
+	* trunk: [multigrid] ''mode''->''jeans_mode'' and
+	  ''d0''->''jeans_d0'' wrt r3144
+	* trunk: [piernik] fix timer check
+	* trunk: Remove precompiler directives for choosing flux limiter.
+	  See #71
+
+2010-11-17  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: Little but nasty bug fixed in sweeps.F90
+
+2010-11-17  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Get rid of GRAV_foo flags
+	* trunk: [gravity] prepare for GRAV_FOO removal
+	* trunk: [piernik] fix ''ts'' being used before initialized
+
+2010-11-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: colormessage(msg, T_IO) and some color-relates symbols are
+	  no longer public. Introduced printio(msg)
+
+2010-11-16  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: moved code unrelated to hydro scheme from fluidupdate to
+	  main loop of piernik
+	* trunk: more careful logfile handling
+
+2010-11-16  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [gravity] prepare for GRAV_FOO removal
+	* trunk: [f90grep] remove duplicated code
+
+2010-11-16  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: semi-reverted r3151 to fix restarting
+	* trunk: [advection_test] changed magic number to cool down the
+	  pulse
+	* trunk: [advection_test] bugfix
+	* trunk: [advection_test] use nvar structure
+
+2010-11-16  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [mcrwind] update
+	* trunk: Move galactic grav_accel to problems
+	* trunk: [dataio] don't call boundaries in ''init_dataio''
+	* trunk: [hydrostatic] correct statement suppressing compiler
+	  warnings
+
+2010-11-16  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [fluidboundaries] bugfix for undefined GRAV
+
+2010-11-16  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: move ''outh_bnd'' to hydrostatic module
+
+2010-11-16  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fixed type inconsistency
+	* trunk: corrected printed number of first step on stdout after
+	  restart
+
+2010-11-16  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [fluidboundaries] remove duplicate code
+
+2010-11-16  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: removed potentially circular dependence (setup.py was
+	  fooled to generate mutual dependence between multigrid_gravity
+	  and initproblem)
+	* trunk: [constants] comment on inconsistent declarations
+
+2010-11-16  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [timestep] cleaning unused directive SIMPLE_COOL
+
+2010-11-15  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup.py] use /bin/echo in Makefile to make sure that
+	  'echo -e' will be executed properly also on Ubuntu
+
+2010-11-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [compilers] update
+
+2010-11-14  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup.py] refined exception handling
+	* trunk: [setup.py] fix for r3133
+	* trunk: [setup.py] can work without multiprocessing module (python
+	  < 2.6)
+	* trunk: [compilers] Configuration for Intel compiler on PSK
+	* trunk: [piernik.h] Added newline at end of file
+
+2010-11-10  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [diagnostics] no temporary arrays in my_allocate calls
+
+2010-11-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup.py] --nocompile checks for circular dependencies.
+	  Some colors added
+	* trunk: [setup.py] nocompile option works
+	* trunk: fix for r3120
+	* trunk: [setup.py] processing .setuprc
+
+2010-11-10  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [arrays],[hydrostatics] cleaning
+
+2010-11-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup.py] calculate dependencies also for modules with
+	  names that differ from filename
+
+2010-11-09  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup.py] fixed cppflags for cpp
+	* trunk: [setup.py] fixed include paths for cpp
+
+2010-11-09  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [setup.py] rules from piernik.h
+
+2010-11-09  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [resistivity] fix pull request
+
+2010-11-09  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [setup.py] add executable bit
+
+2010-11-09  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: add symbolic link for setup
+	* trunk: 'setup' -> 'setup.pl'
+	* trunk: [setup.py] remove dependecy on numpy
+	* trunk: [setup.py] enters beta phase, testing appreciated
+
+2010-11-08  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup.py] update
+
+2010-11-08  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [hydrostatic] correction
+
+2010-11-06  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* [setup.py] work in progress
+	* trunk: [rtvd] cosmetics
+
+2010-11-05  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Adding keywords for new ''setup'' script
+
+2010-11-05  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: version.F90 is 100% Makefile-generated
+
+2010-11-05  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup] remove version.F90 from srcs
+
+2010-11-05  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fixed r3089, second try
+
+2010-11-05  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Revert r3089 as it renders trunk unusable
+
+2010-11-05  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [mcrwind] corrections
+
+2010-11-05  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fixed issues with parallel creation and compilation of
+	  version.F90
+
+2010-11-05  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [piernik.h] withdrawn rule
+	* trunk: [dataio] correction for fmt771
+
+2010-11-05  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid_diffusion] messages printed only from Master PE
+	* trunk: [mcrtest] print messages only from Master PE, updated
+	  problem.par, some comments
+
+2010-11-05  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio],[types] merging from piernik-vine branch
+	* trunk: [grid],[mpisetup] nyt, coords necessary as public
+
+2010-11-05  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: merge r3067
+
+2010-11-05  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [arrays],[gravity] using rules from piernik.h
+	* trunk: [piernik.h] further dependencies between precompiler
+	  directives
+
+2010-11-05  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: add ''piernik.h'' as wrapper around ''piernik.def'' and
+	  other header files
+
+2010-11-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: hardware update :-)
+
+2010-11-04  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: Small change in show_init.pro
+	* trunk: Multigrid diffusion solver probably needs additional call
+	  of fluid boundaries for cosmic rays.
+	* trunk: Test problem 'mcrtest' improved, parameters modified
+
+2010-11-04  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [hydrostatic] correction
+	* trunk: [hydrostatic] simplification
+	* trunk: [hydrostatic] correction for NEW_HYDROSTATIC
+	* trunk: [hydrostatic] correction
+
+2010-11-04  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: generate_private.py -> generate_public.py
+
+2010-11-04  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [hydrostatic] nstot, zs, dzs may also be used by user
+	  target get_gprofs routine
+
+2010-11-04  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [generate_private.py] make output suitable for
+	  copy'n'paste
+
+2010-11-04  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [hydrostatic] gprofs needed as public
+	* trunk: [hydrostatic] reorganizing the module
+	* trunk: [hydrostatic] cosmetics
+	* trunk: [gravity] preparing cases of gp columns gaining
+	* trunk: [hydrostatic],[problems] changing name: hydrostatic_zeq ->
+	  hydrostatic_zeq_densmid
+	* trunk: [hydrostatic] correction
+	* trunk: [hydrostatic],[problems] using dprof from arrays module
+
+2010-11-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [initcosmicrays] bugfix
+
+2010-11-03  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [fluidupdate] correction
+	* trunk: [fluidupdate],[types] reducing numer of custom_emf_bnd
+	  pointers
+	* trunk: [grid] nxt needed as public
+	* trunk: [otvortex] correction
+	* trunk: [hydrostatic] cosmetics
+
+2010-11-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] improved handling mixed periodic/external
+	  boundaries
+	* trunk: bugfix
+
+2010-11-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [mcrwind] parameter file for multigrid solver
+	* trunk: [crwind] fixed missing variables, cosmetics
+
+2010-11-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [problems] QA
+
+2010-11-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: QA2
+
+2010-11-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [qa2] distinguish module from program
+	* trunk: [mcrwind] update for bitten
+	* trunk: [crwind] update
+	* trunk: [mcrwind] update problem.par for bitten
+	* trunk: Move parts of code responsible for SN treatment to
+	  ''snsources''
+	* trunk: [shear] QA
+	* trunk: [multigrid] QA
+	* trunk: [base] QA
+	* trunk: [grid] QA
+	* trunk: [mpisetup] QA
+	* trunk: add tool to generate private keyword for modules
+	* trunk: [dataio] QA
+
+2010-11-02  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: show.pro default version adopted to display mcrwind
+	* trunk: Galactic gravity model temporary restored in gravity.F90
+	* trunk: Reducing the number and changing order of nuclear CR
+	  components
+
+2010-11-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [func] QA
+	* trunk: [gravity] QA
+	* trunk: [hdf5] QA, [timestep] make ''c_all'' public, as it's used
+	  by neutral and dust fluid
+	* trunk: [gravity] QA
+	* trunk: cosmetics
+
+2010-11-02  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: Minor corrections to mcrtest/initproblem.F90
+
+2010-11-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [interactions] QA
+
+2010-11-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: QA2: cleaning
+
+2010-11-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [resistivity] QA
+	* trunk: [qa2] fix ''wtf'' for 32bit arches
+	* trunk: [qa2] fix comment removal in qa_false_refs
+
+2010-11-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: QA2: cleaning
+
+2010-11-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [qa2] add remove_warn for implicit saves check, add
+	  QA_WARN and documentation for ''types'', remove obsolete
+	  ''types::indx''
+
+2010-11-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: QA2: cleaning
+	* trunk: QA2: QA_WARN has explanations; use dataio_pub, only:
+	  par_file, ierrh, namelist_errh, compare_namelist has QA_WARN
+	* trunk: [qa2] require some explanation after QA_WARN
+	* trunk: [setup] updated help (related to r2969)
+	* trunk: Circular deps detection should work with any locales
+	  (supplement to r2969)
+
+2010-11-02  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup] Check for circular dependencies with --nocompile.
+	  Fixes #70
+
+2010-11-01  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: supplement to r2967
+	* trunk: suppress compiler warnings on unused argument
+
+2010-10-30  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [QA] add missing ''implicit none'', add private/public
+	  keywords
+	* trunk: [QA] add missing ''implicit none'', add private/public
+	  keywords
+	* trunk: [QA] add missing ''implicit none'', add private/public
+	  keywords
+	* trunk: [QA] add missing ''implicit none'', move ''uses'' where
+	  they belong, add private/public keywords, correct indentation
+	* trunk: [QA] adding missing ''implicit none''
+
+2010-10-29  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [mcrtest] typo
+	* trunk: [problems] pass qa2.
+	* trunk: [macros] update comments
+	* trunk: [problems] add QA_WARN where needed
+	* trunk: [qa2] allow to supress warning for unnecessary uses,
+	  needed for ''diff_nml''
+	* trunk: [qa2] allow to supress warning for unnecessary uses,
+	  needed for ''diff_nml''
+
+2010-10-29  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] QA2: removed unnecesary imports
+	* trunk: [multigrid] QA2: removed unnecesarily imports
+
+2010-10-29  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [QA] fix for lines starting with &
+	* trunk: [QA] add check for unnecessary uses
+
+2010-10-29  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: improved QA2 conformance
+	* trunk: [QA2] whole paths are more useful
+	* trunk: [multigrid] added some control on boundaries in multigrid
+	  diffusion solver
+
+2010-10-29  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [QA] remove unnecessary whitespaces
+	* trunk: [QA] new more fancy qa script written in pure python (work
+	  in progress)
+
+2010-10-29  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] comments
+
+2010-10-29  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [fluidupdate],[types] two custom emf bnd routine pointers
+
+2010-10-28  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [setup] cancelling redundant linking
+
+2010-10-28  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] cosmetics
+
+2010-10-28  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [snsources] cleaning redundant routine
+	* trunk: [dataio] cleaning redundant routine
+
+2010-10-28  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] V-cycle statistics put into a structure
+
+2010-10-28  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [problems] preparing build checks
+	* trunk: [setup] including all F90 files from problem directory
+	* trunk: cleaning redundant precompiler directives
+
+2010-10-28  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] moved three variables from multigridvars to
+	  multigrid solvers
+	* trunk: [crtest] fixed typo in r2905
+
+2010-10-28  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [QA] remove implicit saves
+
+2010-10-28  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] private scope set by default
+
+2010-10-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [QA] fixed path to implicit_save.sh
+	* trunk: another false variable turned into constant
+	* trunk: [crcomposition] turned variables into constants
+	* trunk: removed some implicit saves
+	* trunk: [multigrid_diffusion] leave information on the effective
+	  enlargement of dt_crs (after calculating other dt limits)
+
+2010-10-27  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [QA] add check for implict saves
+
+2010-10-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid_diffusion] inform about CR fluids that appeared
+	  recently
+	* trunk: [mcrtest] less verbose, multigrid_diffusion will not
+	  repeat warnings about non-existent fluids
+	* trunk: [msctest] fixed FP Overflow, bug is still somewhere in the
+	  code
+
+2010-10-27  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio] cleaning
+	* trunk: cosmetics as a supplement to rev.[2886]&[2888]
+	* trunk: cosmetics as a supplement to rev.[2886]
+	* trunk: rename dataio_public to dataio_pub
+	* trunk: nhdf itaration moved into write_hdf5
+	* trunk: [fluidupdate] write_hdf correction for DEBUG defined
+	* trunk: [snsources] cosmetics
+
+2010-10-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fix for r2870
+	* trunk: [mcrtest] initialize CR blob also without
+	  COSM_RAYS_SOURCES
+
+2010-10-27  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: cosmetics relative to the rules
+
+2010-10-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] fixed division by zero
+
+2010-10-27  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio_hdf5] cosmetics
+
+2010-10-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: merged multigrid_diffusion
+
+2010-10-27  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: cosmetics relative to the rules
+
+2010-10-26  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: cosmetics
+
+2010-10-26  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: cosmetics
+	* trunk: [dataio] Fix log for pres/temp/cs
+	* trunk: Add ''user_tsl''. See ''sedov'' problem for example of
+	  usage.
+	* trunk: [dataio] Fix GCC failure with different character length
+	  in array construct
+	* trunk: [dataio] make tsl header more automatic
+	* trunk: [dataio] remove redundant code
+
+2010-10-25  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [dataio_hdf5] pass on 'encr' ifdef NEW_HDF5
+	* trunk: [dataio_hdf5] Fix logic for ecrX
+	* trunk: Revive ''user_vars_hdf5''. See ''sedov'' problem for
+	  example of usage.
+	* trunk: Revive ''user_plt_hdf5''. See ''sedov'' problem for
+	  example of usage.
+
+2010-10-25  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio_hdf5] dinit seems to be unused
+	* trunk: [src] some cleanings
+
+2010-10-25  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [QA] whitespaces
+
+2010-10-25  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [QA] minor corrections
+
+2010-10-25  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [stream] update
+	* trunk: [sedov] Make an example how to use new ''nvar'' struct
+
+2010-10-25  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Restored ability to dump ecr[1-9] components to hdf5 files
+
+2010-10-25  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [types] add ''gam_1'' to ''nvar'' for \gamma - 1.0
+	* trunk: [dataiohdf5] simplify deps
+	* trunk: [fluxdst] cosmetics
+
+2010-10-25  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fix for r2808
+
+2010-10-25  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [dataio] ''fmt777'' is used for MAGNETIC and COSM_RAYS
+	* trunk: [fluxneutral] cosmetics, simplify dependencies.
+	* trunk: [mpisetup] add ''smallp''
+
+2010-10-25  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: removed unused variabled
+
+2010-10-25  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [fluxion] cosmetics, simplify dependencies. Contain
+	  current ''c_max'' and ''dt'' in ''nvar''
+
+2010-10-23  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [fluidindex] remove redundant code
+	* trunk: [timestepCR] cosmetics, run ''timestep_crs'' only once
+	* trunk: Remove redundant code
+	* trunk: Reduce differences between ''timestepFLUID''
+	* trunk: Remove redundant variables from ''timestepionized'' and
+	  ''dataio''. Make nvar's fluid components pointers.
+
+2010-10-22  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: cosmetics
+	* trunk: merge ''fluidtypes'' with ''types''
+	* trunk: [types] cleanup in tsl_container
+	* trunk: Removing redundant code from ''dataio''
+	* trunk: '''BEWARE:''' some logging function may not work properly.
+	  Removing redundant code from ''dataio''
+	* trunk: [interactions] simplify deps
+	* trunk: Put more vars to fluid container
+	* trunk: Rearrange ''component_fluid'' a bit
+	* trunk: Remove redundant vars
+
+2010-10-21  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Remove obsolete ''ind''
+	* trunk: [advects] fix r2777
+	* trunk: cleanup index initialization for ionized fluid
+	* trunk: cleanup index initialization for neutral fluid
+	* trunk: cleanup index initialization for dust
+	* trunk: making ''nvar'' more self-contained
+	* trunk: cleanup index initialization for neutral fluid
+	* trunk: cleanup index initialization for dust
+	* trunk: [stream] fix typo
+	* trunk: cleanup index initialization for cosmicrays
+
+2010-10-21  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* trunk: gnudbg compiler settings for mac MH laptop mach
+
+2010-10-21  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: cleanup index initialization for ionized fluid
+	* trunk: '''bugfix''' fix wrong assignement of cgrid%ke
+	* trunk: Pass ''cgrid'' to ''init_fluids'' and ''init_cosmicrays''.
+	  Cleanup arrays. Add ''ncrs'' variable for total number of CR
+	  components
+	* trunk: [fluidindex] Remove unnecessary precompiler directives,
+	  handle deallocation via ''my_deallocate''
+	* trunk: add wrapper for deallocate
+	* trunk: [fluidindex] ''cleanup_fluid_index'' ->
+	  ''cleanup_fluidindex''
+	* trunk: Move fluids cleanups where they belong
+	* trunk: [setup] allow to chose GNU cpp
+	* trunk: Remove last label/goto. Add QA check to make sure they
+	  ain't coming back
+	* trunk: Remove labels
+
+2010-10-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] workaround for filthy filesystems with impaired
+	  case-sensitivity
+
+2010-10-19  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Remove unnecessary writes
+
+2010-10-19  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [idl] cleaning tab characters
+	* trunk: [problems] cosmetics
+
+2010-10-19  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Remove crude writes
+
+2010-10-19  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [shear],[magnetic] merging (no changes)
+
+2010-10-19  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [crtest] selectively merged from
+	  branches/multigrid_diffusion
+
+2010-10-19  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [idl_h5] substituting tab characters with spaces
+	* trunk: [rtvd_split] merging rev.[2026]
+	* trunk: [snsources] cosmetics
+	* trunk: [resistivity] merging rev.[2025]
+
+2010-10-18  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [interactions] merging rev.[2340] :)
+	* trunk: [crdiffusion] merging rev.[2023]
+	* trunk: [piernik] merging rev.[2454]
+	* trunk: [grid] correction of doxy comment
+	* trunk: [grid] merging rev.[2022]
+	* trunk: [func] merging rev.[2024]
+	* trunk: [dataio] merging rev.[2438]
+	* trunk: [sweeps] cosmetics
+	* trunk: cosmetics in src
+
+2010-10-14  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: some spelling corrections
+
+2010-10-13  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [Id:] cosmetics
+	* trunk: length of run_id is types::idlen
+	* trunk: fixed missing svn:keywords Id
+	* trunk: cosmetics for the Id keyword handling
+
+2010-10-12  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: move ''compare_namelist'' to ''dataio_pub''.
+	* trunk: [macros] update comments.
+	* trunk: move ''namelist_errh'' to ''dataio_public''. Remove
+	  ''errh'' module.
+	* trunk: move colorful messages to ''dataio_public''
+
+2010-10-12  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [snsources] cosmetics
+	* trunk: [hydrostatic] cosmetics
+	* trunk: [stream] cosmetics
+	* trunk: discerning between trunk, documentation and others
+	* trunk: relevant to rev.[2600]
+	* trunk: cosmetics in turbulence problem
+
+2010-10-12  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: I/O messages have separate label and are marked with blue
+	  color on stdout
+
+2010-10-11  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] improved safety
+
+2010-10-11  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup] silence boring cpp line
+
+2010-10-11  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fix for r2665
+	* trunk: [arrays] cleaning
+	* trunk: cosmetics
+
+2010-10-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [macros.h] updated comment
+
+2010-10-08  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [diagnostics] add support for integer arrays upto 3D
+
+2010-10-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: QA cleaned lot of spaces
+	* trunk: QA: removes more nasty spaces from F90 files
+	* trunk: QA cleaned lot of spaces
+	* trunk: QA: remove more nasty spaces from F90 files
+	* trunk: QA cleaned lot of spaces
+	* trunk: QA: remove nasty spaces only from F90 files
+	* trunk: QA cleaned lot of spaces
+	* trunk: QA removes more spaces
+
+2010-10-08  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: cosmetics in problems
+
+2010-10-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: cosmetics: MPI_* names follow C case convention (easier to
+	  find in man or in .h file)
+	* trunk: cosmetics: MPI_* names follow C case convention (easier to
+	  find in man or in .h file)
+
+2010-10-08  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: add ''diagnostics'' module
+
+2010-10-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: QA hunting ...
+	* trunk: hunting for magic numbers
+	* trunk: Ignore case in some QA checks
+	* trunk: hunting for magic numbers
+	* trunk: 'problem.par' became just constant string
+	* trunk: fool cpp to not complain about non-matched apostrophes
+
+2010-10-08  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [initfluids] cleanup, add VERBOSE messages
+	* trunk: Add VERBOSE messages
+
+2010-10-07  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: remove preprocessed .f90 after successful compilation
+	* trunk: fool gcc to not complain about non-matched apostrophes
+
+2010-10-07  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Add VERBOSE messages
+	* trunk: [timer] grab missing ''warn''
+
+2010-10-07  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: use dataio_public::msg
+	* trunk: cosmetics
+
+2010-10-07  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [multigridhelpers] add missing endif
+	* trunk: [qa] add check for hardcoded integers in strings
+	  definitions (at least 2 digits)
+	* trunk: [dataio] Fix log_file name
+	* trunk: Remove string concatenation operator
+	* trunk: [setup] use cpp to preprocess ''macros.h'' for GCC, bring
+	  back compatibility with Intel compilers
+	* trunk: [compilers] add USE_GNUCPP for gfortran sets
+	* trunk: Remove string concatenation operator
+	* trunk: Remove string concatenation operator, add pressure to
+	  plots
+	* trunk: Remove string concatenation operator
+	* trunk: [rtvd] fool cpp
+
+2010-10-07  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: replaced some magic numeric string lengths by symbolic
+	  constants
+	* trunk: log_file removed from chdf
+
+2010-10-07  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [gravity] correction for GRAV_UNIFORM
+
+2010-10-07  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: deleting tmp.log at startup
+
+2010-10-07  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [interactions] supplementary to revs.[2570]&[2571]
+
+2010-10-07  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: replaced write(* by warn and printinfo
+
+2010-10-07  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: '''bugfix''' [initneutral]: fixing wrong if statement
+
+2010-10-07  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: minor beautifying
+	* trunk: log file written only by colormessage
+	* trunk: use cbuff_len constant where applicable
+	* trunk: use warn and printinfo in some initproblem.F90
+
+2010-10-07  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [mpisetup] reduce sleep time before calling finalize, add
+	  comment
+
+2010-10-07  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: removed svn:executable
+
+2010-10-07  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: testing piernik-commits@googlegroup.com
+
+2010-10-07  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: Don't sleep when alone
+
+2010-10-06  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: removed nonconforming tab from nonconforming tab finder
+	  :-)
+	* trunk: ierrh moved to dataio_public
+	* trunk: removed some mpisetup::cwd
+	* trunk: trying to update problems/*/initproblem.F90
+
+2010-10-06  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Fix circular deps
+	* trunk: ''cwd'' moved to dataio_pub
+	* trunk: seperate macros.h from defines.c
+
+2010-10-06  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: supplement to r2570
+	* trunk: trying to fix modules affected by r2569 (NOT TESTED)
+	* trunk: cwd and par_file moved to dataio_pub, par_file is now set
+	  ONLY in init_piernik. This is BIG change and WILL break all
+	  problems and physics modules that are not updated
+	* trunk: all namelists handled through a macro that reads them,
+	  compares to defaults and writes info to tmp.log
+	* trunk: suppress compiler warning on possible use of uninitialized
+	  value
+	* trunk: compare_namelist: simplified code, removed magic numbers
+	* trunk: removed some character buffers in favor of
+	  dataio_public::msg
+	* trunk: dataio_pub provises message buffer; removed some local
+	  buffers of that type
+
+2010-10-05  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: moved colormessage to dataio_public, removed log_lun from
+	  public vars.
+
+2010-10-05  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: logical grav_pot_3d_called only for GRAV defined
+
+2010-10-05  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Add ''live'' vizualization for PCSS
+
+2010-10-05  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: reverted last change in src/base/types.F90
+	* trunk: log_lun no longer needed in timer.F90
+	* trunk: cosmetics
+	* trunk: more stdout messages printed with printinfo
+
+2010-10-05  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Rename ''mpistop'' to ''cleanup_mpi''
+	* trunk: [hdf5] Remove use of ''mpistop''
+	* trunk: Rename ''mpistart'' to ''init_mpi''
+
+2010-10-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: print multigrid convergence info without colors
+
+2010-10-04  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: use ''printinfo'' instead of crude write
+	* trunk: use ''warn'' and ''printinfo'' instead of crude write
+	* trunk: Remove unnecessary writes to stdout
+	* trunk: use ''warn'' instead of crude write
+	* trunk: [errh] don't trim msg_type_str
+	* trunk: add missing warns, printinfos and QA_WARNs
+	* trunk: add missing dies and QA_WARN
+
+2010-10-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: removed duplicated code from errh.F90, added QA_WARN
+
+2010-10-04  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: use ''warn'' instead of crude write
+
+2010-10-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: use bright color, use green color for informational
+	  messages
+
+2010-10-04  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: cosmetics
+	* trunk: [qa] add check for crude write to stdout (forced commit)
+
+2010-10-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: use warn instead of crude write
+	* trunk: fixed format fiels widths
+
+2010-10-04  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: merge r2521-r2525, r2527
+	* trunk: Make 2nd call to grav_pot_3d only if init_prob was called
+	* trunk: merge r2467, r2513, r2516
+
+2010-10-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: bugfix
+
+2010-09-28  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio_hdf5] corrections for MASS_COMPENS and ecr plots
+	* trunk: cleanings
+	* trunk: [rtvd] correction for FLUID_INTERACTIONS_DW
+	* trunk: [fluxionized],[fluxneutral] commented out unused variables
+	* trunk: cleaning in problems
+
+2010-09-28  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [tearing] removed tab character
+	* trunk: [tearing] use only, cosmetics
+	* trunk: [khi] use only, cosmetics
+	* trunk: [blob] use only, cosmetics
+	* trunk: commented out unused variable
+
+2010-09-28  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: merging revs.[2423],[2440],[2476]
+
+2010-09-24  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Undelete blob, khi and tearing problems
+	* trunk: [hdf5] Simplify attribute setting
+
+2010-09-24  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: merging rev.[2487] - changes in cfri computing
+	* trunk: merging rev.[2485]
+	* trunk: merging rev.[2476],[2477],[2483]
+
+2010-09-24  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup] update mergeinfo
+	* trunk: [setup] merging r2470
+
+2010-09-23  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [setup] merged from r2465
+
+2010-09-20  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: cleaning in problems
+
+2010-09-15  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: cleaning in crwinds
+
+2010-09-15  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: suppressed compiler warnings on unused arguments, added
+	  some intent(), reshuffled some argument lists
+
+2010-09-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [compilers] update for ifort-11.1
+
+2010-09-15  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio_hdf5] easy to reach more than 99 lines in the file
+	  env.dat
+	* trunk: [initcosmicrays] '''BUG FIX''' badly collected CR
+	  diffusion coefficients
+
+2010-09-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [docs] fix wrong symbol
+	* trunk: [idl] update read_attr_h5
+
+2010-09-15  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: [dataio_hdf5] removing redundant (doubled) condition
+
+2010-09-14  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup] fix modules automagic with --define flag
+	* trunk: [mpisetup] Correct 'cwd'
+	* trunk: [otvortex] update
+	* trunk: [timestep]: fix sanity check for resistivity
+
+2010-09-14  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* trunk: merging rev.[2371] from galdisk
+	* trunk: [dataio_hdf5] cancelling redundant precompiler directive
+
+2010-09-14  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [hdf5] Add missing directives for cosmic rays output
+	* trunk: [initcosmicrays] cr_add_hdf5 was called before iarr_crs
+	  was allocated
+	* trunk: [dataio_hdf5] Add missing directive.
+	* trunk: [mpisetup] correct order of statements for cwd
+	  initialization.
+	* trunk: Update compiler flags for debug with gcc-4.5
+
+2010-09-13  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [gravity] moved periodic BC for sgp to all_sgp_boundaries,
+	  cosmetics, cleaning
+
+2010-09-13  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [gravity] communicate boundary values for sgp array
+	* trunk: Add dummy mpi type for 3d array. Fix uninitialized
+	  variables in grid container.
+
+2010-09-13  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [gravity] sgpm is touched only by
+	  gravity::source_terms_grav
+	* trunk: [selfgrav_clump] if (proc == 0) write
+	* trunk: [selfgrav_clump] setup for 1D test
+	* trunk: [selfgrav_clump] setup for 2D test
+
+2010-09-09  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fgp and mgp arrays unified to sgp array, fgpm and mgpm
+	  became sgpm
+	* trunk: added checks for gravity-related defines
+
+2010-09-09  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Not chosing unit systems is not fatal, update ISO_LOCAL
+	  check
+	* trunk: Adding basing checks for isothermal and fluid types.
+	  Remove internal compiler flags from ToDo
+
+2010-09-09  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: cosmetics (removed svn:executable form .F90 and .par
+	  files)
+	* trunk: defines.c checks also units and freezing speed
+	* trunk: moved checks introduced in r2354 to a new file, defines.c.
+	  See ticket #67
+
+2010-09-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [advection_test] using neutral fluid
+	* trunk: added missing preprocessor symbols
+	* trunk: fixed an FPE when wend=huge(1.0)
+	* trunk: cosmetics
+	* trunk: added dependencies on piernik.def to Makefile
+	* trunk: Produce an error when there is no flux limiter or more
+	  than two flux limiters are defined
+
+2010-09-07  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [problems] Implemented square pulse advection
+
+2010-09-01  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: backports from multigrid_diffusion (cosmetics)
+
+2010-08-16  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Remove unused vars, add nb as a valid member of
+	  DOMAIN_SIZES
+
+2010-08-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [compilers] add free-line-length-none for gnudbg
+
+2010-08-12  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [bug fix] correct sign in source_terms_y
+	* trunk: Add ''nb'' as valid member of DOMAIN_SIZES in mpisetup
+	* trunk: Update streaming instability problem
+	* trunk: Call all_fluid_boundaries in source_terms_y
+	* trunk: Fix harmless typo
+
+2010-08-11  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [selfgrav_clump] cosmetics
+	* trunk: call all_fluid_boundaries after init_prob
+	* trunk: [multigrid] some messages are printed only when stdout is
+	  .true.
+
+2010-08-11  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Updating streaming instability problem
+	* trunk: Cleaning in shearing box
+
+2010-08-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [selfgrav_clump] use exponential extrapolation to speed up
+	  searching for static configuration
+	* trunk: [selfgrav_clump] fixed deprecated syntax
+	* trunk: [selfgrav_clump] print estimate of limit of C
+
+2010-08-09  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [selfgrav_clump] moving clump
+
+2010-08-06  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [jeans] modified defaults
+
+2010-08-05  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [selfgrav_clump] bugfix
+	* trunk: [selfgrav_clump] initialize with sphere of given radius
+
+2010-08-04  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [selfgrav_clump] bug fixes
+	* trunk: using cpp to calculate more accurate dependencies
+	* trunk: [selfgrav_clump] more safe inner iteration (searching for
+	  M)
+
+2010-08-03  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [selfgrav_clump] improvements
+
+2010-08-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: new problem: selfgravitatig clump
+
+2010-07-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [maclaurin] external potential for prolate ellipsoid
+
+2010-07-29  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [maclaurin] Implemented potential of flattened spheroids
+
+2010-07-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fixed warnings about unused variables
+	* trunk: removed -lsz from default LIBS list. I suggest to add it
+	  through compilers/*.in if necessary
+
+2010-07-25  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Correct interpolation of B in timestepionized, smooth
+	  local cfr over 3 cells, add pressure to hdf5 output
+
+2010-07-24  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Merge r2290
+
+2010-07-22  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] [maclaurin] Improved L4
+	* trunk: [multigrid] cosmetics
+
+2010-07-21  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] implemented radial interpolation for multipole
+	  moments
+
+2010-07-21  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Update wt4
+
+2010-07-15  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [jeans] cosmetic simplification through arithmetic
+	  identities
+	* trunk: [jeans] minor correction
+
+2010-07-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* Adding compilers setup for sc2010
+
+2010-07-13  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: changed stdout to improve dWallClock presentation
+	* trunk: converted nsmoob from constant to namelist parameter
+
+2010-07-11  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: fixed r2271
+	* trunk: enforce nxd, nyd and nzd to be at least 1
+	* trunk: [multigrid] Added Jacobi damping factor - useful in 1D
+
+2010-06-30  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [poissonsolver] eliminated possible use of uninitialized
+	  values for e.g. nxd=2
+	* trunk: [multigrid] removed possible FPE overflow in 2D and 1D
+	* trunk: [jeans] slightly improved stdout and gnuplot script
+	* trunk: [jeans] improved gnuplot script
+
+2010-06-23  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [bugfix] fixed possible use of uninitialized values
+
+2010-06-21  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] private and public in multigridmultipole
+
+2010-06-17  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: cleaning timer stack
+	* trunk: using mpisetup:domsize to avoid circular deps with grid
+
+2010-06-16  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: correcting r2246 :->
+	* trunk: correcting r2245
+	* trunk: removed cyclic dependency (dirty)
+	* trunk: memory cleanups
+	* trunk: [phoenix] improved Makefile
+
+2010-06-16  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: don't stop, just die
+
+2010-06-14  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [bugfix] .h5 filename is not truncated for long problem
+	  names
+
+2010-06-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] D1, D2 and D3 renamed to D_x, D_y and D_z and
+	  moved to multigridvars.F90
+	* trunk: cosmetics
+	* trunk: [multigrid] 1D and 2D setups implemented for FFT local
+	  solver
+	* trunk: [multigrid][debug] implemented swith to enforce use of
+	  multi-D code even in 3D
+
+2010-06-09  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] Optimized code introduced in r2216 and r2218
+	* trunk: cosmetics: some magic integers replaced by named constants
+
+2010-06-09  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: update python scripts
+	* trunk: Adding missing python files
+
+2010-06-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [multigrid] added a warning
+	* trunk: [multigrid] RBGS relaxation works in 1D and 2D
+
+2010-06-08  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: cosmetics in setup usage
+
+2010-06-08  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: 1D and 2D multigrid should work correctly with FFT on
+	  single level and single CPU or die otherwise, 3D should not be
+	  affected
+	* trunk: [jeans] 1D and 2D fix for normalization
+	* trunk: bugfix: copy and paste typo in r2212
+	* trunk: [multigrid] don not update boundaries in nonexisting
+	  directions
+	* trunk: bugfix: fixed broken logic that prevented restart file to
+	  be written
+
+2010-06-02  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: a step towards 1D and 2D multigrid ...
+
+2010-06-01  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: imported part of r2196
+	* trunk: Prevent some FPEs (overflows)
+	* trunk: [jeans] minor update of verify.gpl
+	* trunk: [crdiffusion] fixed use of uninitialized values
+
+2010-05-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: turned big magic numbers into huge(1.0)
+
+2010-05-25  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: [crtest] fixes for 1D and 2D XZ and YZ orientations
+	* trunk: bugfix: eliminated possible OOB array access
+
+2010-05-21  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: removed last tab characters
+	* trunk: replaced __NO_FLUID_STEP with dataio_public :
+	  skip_advection
+	* trunk: moved replicated code from fluid_update into new
+	  make_3sweeps and make_sweep subroutines
+	* trunk: [crtest] L2 error norm copmputed only once per selected
+	  step
+	* trunk: cosmetics, missed in r2171
+	* trunk: bugfix
+
+2010-05-20  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: comments, cosmetics
+	* trunk: [crtest] periodically check L2 error norm
+	* trunk: implemeter rough code progress indicator (start, run,
+	  finish, cleanup stages)
+	* trunk: [setup] removed unused option 'dumpenv', some stdout
+	  adjustments
+
+2010-05-19  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: QA, partial synchronization between crtest and mcrtest
+	* trunk: [crtest] updated COSMIC_RAYS namelist
+	* trunk: updated crtest to multicomponent variant of initcosmicrays
+	* trunk: fixed use of uninitialized value in initcosmicrays
+	* trunk: QA
+
+2010-05-18  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: cosmetics (sync from hydroschemes)
+	* trunk: moved large PDFs (papers and presentations) outside trunk
+	* trunk: [setup] added --laconic for less elaborate make output
+
+2010-05-17  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: problem_name and run_id moved from initproblem to
+	  problem_pub, moved WT4-related parts of dataio_hdf5 to
+	  problems/wt4/initproblem
+	* trunk: hydro_mass -> mH
+	* trunk: removed cyclic dependency from r2156
+	* trunk: filename for restart dump now is generated exclusively in
+	  write_restart_hdf5
+	* trunk: improved user message handling
+
+2010-05-15  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: [setup] using cpp instead of gfortran for precompilation
+
+2010-05-14  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: declared FFTW_ESTIMATE
+	* trunk: removed unused statement
+	* trunk: Added missing svn Id keywords + some QA
+	* trunk: preprocessor corrections
+	* trunk: deactivated UMUSCL in the setup, added a warning in WT4
 	  problem
-	* [source:public/trunk public]: correction in calling
-	  hydrostatic_zeq in
-	  [source:public/trunk/problems/crwind/initproblem.F90 crwind]
-	  problem
+	* trunk: [setup] die on link to nonexistent file
 
-2009-12-15  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2010-05-13  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: doxygen comment correction in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity] module
+	* trunk: Removed ancient bits of code from dataio. PIERNIK no
+	  longer uses goto
+	* trunk: Removing legacy rm_file in favour of unlink
 
-2009-12-11  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+2010-05-13  Artur Gawryszczak <gawrysz@gmail.com>
 
-	* [source:public/trunk public]: doxy comments in
-	  timestepionized.f90
+	* trunk: cosmetics
 
-2009-12-11  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2010-05-12  Artur Gawryszczak <gawrysz@gmail.com>
 
-	* [source:public/trunk public]: adding special page
-	  [source:public/trunk/doc/general/precompiler.F90 precompiler.F90]
-	  for precompiler directives descriptions
-	* [source:public/trunk public]: doxygen comments for namelists in
-	  [source:public/trunk/src/fluids/neutral/initneutral.F90
-	  initneutral]
-	* [source:public/trunk public]: doxygen comments for namelists in
-	  [source:public/trunk/src/fluids/ionized/initionized.F90
-	  initionized]
+	* trunk: removed obsolete svnci.sh script
+	* [source:piernik/trunk trunk]: . -m user and system messages are
+	  reported on stdout, implementeded help message
+	* trunk: cosmetics of stdout
 
-2009-12-04  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+2010-05-12  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: doxy comments
+	* trunk: Removing ancient bits for setup script
 
-2009-11-23  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2010-05-12  Artur Gawryszczak <gawrysz@gmail.com>
 
-	* [source:public/trunk public]: html superscript in
-	  [source:public/trunk/doc/general/main.F90 main] module
+	* trunk: [setup] Added --nocompile, implemented --copy
+	* trunk: added --verbose option to setup
+	* trunk: Jeans fallbascks to multigrid by default
+	* trunk: added warnings whne multigrid or poissonsolver are
+	  included by mistake
 
-2009-11-19  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2010-05-12  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: cleaning dataio_hdf5
+	* trunk: Removing debug from r2132
+	* trunk: Fixing #61, also reverting r2129. Tab 'd' in setup now
+	  contains all defined directives
 
-2009-11-17  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2010-05-12  Artur Gawryszczak <gawrysz@gmail.com>
 
-	* [source:public/trunk public]: doxy cosmetics in
-	  [source:public/trunk/src/base/dataio.F90 dataio] module
-	* [source:public/trunk public]: doxy cosmetics in
-	  [source:public/trunk/src/base/mpisetup.F90 mpisetup] module
-	* [source:public/trunk public]: doxy cosmetics in
-	  [source:public/trunk/src/base/grid.F90 grid] module
-	* [source:public/trunk public]: doxy cosmetics in
-	  [source:public/trunk/src/supernovae/snsources.F90 snsources]
+	* trunk: description update
+	* trunk: updated compiler information for lothlorien
+	* trunk: keywords should be #defined to trigger inclusion of files
+	  by the setup
+
+2010-05-12  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Cleaning dataio
+	* trunk: Adding 'forced' tag in svnci.py
+	* trunk: changing SELF_GRAV to POISSON_FFT
+
+2010-05-11  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: compiler config update
+	* trunk: bugfix: corrected the Green function in poissonsolver and
+	  updated sanity checks in Jeans problem
+	* trunk: updated usage info
+
+2010-05-11  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: added sanity check for FFT solver
+	* trunk: adding default libs
+
+2010-05-10  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* trunk: added obj* to svn:ignore
+	* trunk: minor updates to the Jeans problem
+	* trunk: compiler update
+	* trunk: cosmetics (whitespaces)
+
+2010-05-08  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* Cleaning tree
+
+2010-04-29  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* trunk: Changing comment syntax in svnci.py
+	* trunk: adding -lfftw by default when using shearing box, QA fixes
+	  in stream problem
+
+2010-04-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* public: svn:ignore for qa.pyc
+	* public: syntax fix
+	* public: cosmetics: whitespaces
+	* public: cosmetics
+	* public: print a warning when UMUSCL is not #defined
+	* public: modified message
+	* public: removed tabs
+	* public: merged with multigrid (WT4 and more symbolic constants)
+
+2010-04-27  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: Punting gslwr.c
+	* public: [QA] fixes. Since now 99% of source passes all QA tests.
+	  It would be nice to keep it that way
+
+2010-04-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* public: spelling correction
+	* public: merged Wengen Test 4 problem with multigrid
+	* public: merged Jeans problem with multigrid
+
+2010-04-27  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: [QA] fixes
+	* public: [QA] removing false positives
+	* public: [QA] fixes
+	* public: [QA] partial fixes in snsources
+	* public: [QA] fixes
+
+2010-04-27  Artur Gawryszczak <gawrysz@gmail.com>
+
+	* public: merged maclaurin problem with multigrid, updated jeans
+	* public: merged some compilers with multigrid
+	* public: Usage helpstring correction
+	* public: Added .setuprc to svn:ignore
+
+2010-04-27  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: Merging with multigrid
+
+2010-04-26  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: Allow to pass multiple files to svnci.py. Use -m option
+	  to pass message. Fixes #59
+
+2010-04-23  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: very basic corrections in initproblem of turbulence test
+	  case (just for being compiled succesfully)
+	* public: corrections for point mass gravity types in gravity
 	  module
-	* [source:public/trunk public]: doxy cosmetics in
-	  [source:public/trunk/src/magnetic/resist/resistivity.F90
-	  resistivity] module
-	* [source:public/trunk public]: doxy cosmetics in
-	  [source:public/trunk/src/fluids/cosmicrays/initcosmicrays.F90
-	  initcosmicrays] module
-	* [source:public/trunk public]: doxy cosmetics in
-	  [source:public/trunk/src/fluids/interactions/interactions.F90
-	  interactions] module
-	* [source:public/trunk public]: doxy cosmetics in
-	  [source:public/trunk/src/fluids/ionized/initionized.F90
-	  initionized] module
-	* [source:public/trunk public]: doxy cosmetics in
-	  [source:public/trunk/src/gravity/hydrostatic.F90 hydrostatic]
+	* public: cosmetics in gravity module
+	* public: corrections in gravity module
+	* public: minor changes in precompiler doxy module
+	* public: KSM units system which was omitted during recent merging
+	* public: corrections in names of problems mcrtest and mcrwind in
+	  info files
+
+2010-04-23  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: merging mcrtest problem to trunk
+	* public: merging mcrwind problem to trunk
+
+2010-04-23  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: Correction in precompiler directive
+
+2010-04-23  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: Merging multicr back to trunk
+
+2010-04-23  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: minor changes in doxy comments in gravity module
+	* public: doxy comments corrections in constants module
+
+2010-04-22  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: precompiler directives descriptions changed in
+	  doc/general/precompiler.F90
+	* public: changing the way of computing temperature in timeslices
+	  in dataio module
+	* public: cleaning in constants module
+
+2010-04-21  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: Adding idl_h5
+
+2010-04-09  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: Removing HDF support. Fixing #56
+	* public: QA + syntax cleaning
+	* public: Updating qa.py
+
+2010-04-09  Joanna Drazkowska <drazkowska@astri.umk.pl>
+
+	* public: doxy comments cosmetics
+
+2010-04-09  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: Setting svn:ignore for compilers/default.in
+
+2010-04-09  Michał Hanasz <mhanasz@astri.umk.pl>
+
+	* public: setting ignore for default.in
+
+2010-03-29  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: Merging bin/ with multigrid
+
+2010-03-29  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: removing trailing spaces
+
+2010-03-27  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: Merging bin/ with multigrid
+
+2010-03-26  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: [QA] Removing trailing spaces
+
+2010-03-26  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: getting rid of white spaces in base modules
+
+2010-03-24  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: correction of the rev.[661] enhancement in div_v routine
+	  from func moduele
+
+2010-03-10  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* Temporary clean
+
+2010-03-04  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: possibility to change dt_plt parameter during the
+	  simulation
+
+2010-03-03  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: changing default
+
+2010-03-02  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: throwing out support_bnd_rotation subroutine from
+	  interactions module as well as BND_MOTION_SUPPORT precompiler
+	  directive from the code
+
+2010-02-08  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: doxy cosmetics in fluidindex.F90, fluxes.F90 and
+	  initfluids.F90
+	* public: doxy cosmetics in fluxdust.F90
+	* public: doxy cosmetics in fluxneutral.F90
+	* public: doxy cosmetics in fluxionized.F90
+	* public: doxy cosmetics in fluxcosmicrays.F90 and
+	  timestepcosmicrays.F90
+	* public: doxy cosmetics in rtvd.F90
+
+2010-01-17  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: Updating ChangeLog, NEWS, README
+
+2010-01-16  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: Cleaning AUTHORS. Utf8 still is not the best idea...
+	* public: Adding stub files (GNU standard)
+	* public: Adjusting files to GNU standard. Updating authors list.
+	* public: doxy comments
+
+2010-01-15  Joanna Drazkowska <drazkowska@astri.umk.pl>
+
+	* public: doxy comments in timestepneutral.F90
+
+2010-01-08  Joanna Drazkowska <drazkowska@astri.umk.pl>
+
+	* public: doxy comments in timestepionized.f90
+
+2009-12-17  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: correction in calling hydrostatic_zeq in lingrav problem
+	* public: correction in calling hydrostatic_zeq in crwind problem
+
+2009-12-15  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: doxygen comment correction in gravity module
+
+2009-12-11  Joanna Drazkowska <drazkowska@astri.umk.pl>
+
+	* public: doxy comments in timestepionized.f90
+
+2009-12-11  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: adding special page precompiler.F90 for precompiler
+	  directives descriptions
+	* public: doxygen comments for namelists in initneutral
+	* public: doxygen comments for namelists in initionized
+
+2009-12-04  Joanna Drazkowska <drazkowska@astri.umk.pl>
+
+	* public: doxy comments
+
+2009-11-23  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: html superscript in main module
+
+2009-11-19  Kacper Kowalik <xarthisius.kk@gmail.com>
+
+	* public: cleaning dataio_hdf5
+
+2009-11-17  Dominik Woltanski <minikwolt@astri.umk.pl>
+
+	* public: doxy cosmetics in dataio module
+	* public: doxy cosmetics in mpisetup module
+	* public: doxy cosmetics in grid module
+	* public: doxy cosmetics in snsources module
+	* public: doxy cosmetics in resistivity module
+	* public: doxy cosmetics in initcosmicrays module
+	* public: doxy cosmetics in interactions module
+	* public: doxy cosmetics in initionized module
+	* public: doxy cosmetics in hydrostatic module
+	* public: doxy cosmetics in gravity module
+	* public: doxy cosmetics in shear module
+	* public: correction in doxy link in namelists module
+	* public: throwing out unknown doxy command \url from main module
+	* public: doxy comment correction in initneutral module
+	* public: doxy comment correction in initdust module
+	* public: adding new doxy page with all namelists parameters
+	  description
+	* public: neglecting a doxy link to itself in arrays module
+	* public: neglecting a doxy link to itself in constants module
+	* public: neglecting worthless doxy links in timestepinteractions
 	  module
-	* [source:public/trunk public]: doxy cosmetics in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity] module
-	* [source:public/trunk public]: doxy cosmetics in
-	  [source:public/trunk/src/shear/shear.F90 shear] module
-	* [source:public/trunk public]: correction in doxy link in
-	  [source:public/trunk/doc/general/namelists.F90 namelists] module
-	* [source:public/trunk public]: throwing out unknown doxy command
-	  \url from [source:public/trunk/doc/general/main.F90 main] module
-	* [source:public/trunk public]: doxy comment correction in
-	  [source:public/trunk/src/fluids/dust/initneutral.F90 initneutral]
-	  module
-	* [source:public/trunk public]: doxy comment correction in
-	  [source:public/trunk/src/fluids/dust/initdust.F90 initdust]
-	  module
-	* [source:public/trunk public]: adding new doxy page with all
-	  namelists parameters description
-	* [source:public/trunk public]: neglecting a doxy link to itself in
-	  [source:public/trunk/src/base/arrays.F90 arrays] module
-	* [source:public/trunk public]: neglecting a doxy link to itself in
-	  [source:public/trunk/src/base/constatns.F90 constants] module
-	* [source:public/trunk public]: neglecting worthless doxy links in
-	  [source:public/trunk/src/fluids/interactions/timestepinteractions.F90
-	  timestepinteractions] module
-	* [source:public/trunk public]: neglecting doxy links to itself in
-	  [source:public/trunk/src/gravity/hydrostatic.F90 hydrostatic]
-	  module
-	* [source:public/trunk public]: doxy html tables in
-	  [source:public/trunk/src/base/dataio.F90 dataio] module.
-	* [source:public/trunk public]: doxy html tables in
-	  [source:public/trunk/src/base/mpisetup.F90 mpisetup] module.
-	* [source:public/trunk public]: doxy html table in
-	  [source:public/trunk/src/base/grid.F90 grid] module.
-	* [source:public/trunk public]: doxy html table in
-	  [source:public/trunk/src/magnetic/resistivity/resistivity.F90
-	  resistivity] module.
-	* [source:public/trunk public]: doxy html table in
-	  [source:public/trunk/src/fluids/cosmicrays/initcosmicrays.F90
-	  initcosmicrays] module.
-	* [source:public/trunk public]: doxy html table in
-	  [source:public/trunk/src/fluids/neutral/initneutral.F90
-	  initneutral] module.
-	* [source:public/trunk public]: doxy html table in
-	  [source:public/trunk/src/fluids/interactions/interactions.F90
-	  interactions] module.
-	* [source:public/trunk public]: doxy html table in
-	  [source:public/trunk/src/fluids/ionized/initionized.F90
-	  initionized] module.
-	* [source:public/trunk public]: doxy html table in
-	  [source:public/trunk/src/fluids/dust/initdust.F90 initdust]
-	  module.
-	* [source:public/trunk public]: doxy html table in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity] module.
-	* [source:public/trunk public]: doxy html table in
-	  [source:public/trunk/src/shear/shear.F90 shear] module.
+	* public: neglecting doxy links to itself in hydrostatic module
+	* public: doxy html tables in dataio module.
+	* public: doxy html tables in mpisetup module.
+	* public: doxy html table in grid module.
+	* public: doxy html table in resistivity module.
+	* public: doxy html table in initcosmicrays module.
+	* public: doxy html table in initneutral module.
+	* public: doxy html table in interactions module.
+	* public: doxy html table in initionized module.
+	* public: doxy html table in initdust module.
+	* public: doxy html table in gravity module.
+	* public: doxy html table in shear module.
 
-2009-11-17  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-11-17  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: adding svnci.py
-	* [source:public/trunk public]: adding new compiler set
+	* public: adding svnci.py
+	* public: adding new compiler set
 
-2009-11-16  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-11-16  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: Merging r1300 from
-	  [source:public/branches/multicr mutlicr]
-	* [source:public/trunk public]: Doxygen corrections in fluxdust.F90
+	* public: Merging r1300 from mutlicr
+	* public: Doxygen corrections in fluxdust.F90
 
-2009-11-16  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+2009-11-16  Joanna Drazkowska <drazkowska@astri.umk.pl>
 
-	* [source:public/trunk public]: doxy comments corrections
-	* [source:public/trunk public]: doxy comments corrections
+	* public: doxy comments corrections
 
-2009-11-16  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-11-16  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: There is no energy flux for dust
+	* public: There is no energy flux for dust
 
-2009-11-16  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+2009-11-16  Joanna Drazkowska <drazkowska@astri.umk.pl>
 
-	* [source:public/trunk public]: doxy comments corrections
+	* public: doxy comments corrections
 
-2009-11-13  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+2009-11-13  Joanna Drazkowska <drazkowska@astri.umk.pl>
 
-	* [source:public/trunk public]: doxy comments
+	* public: doxy comments
 
-2009-11-13  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2009-11-13  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/base/grid.F90 grid] module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity] module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/base/dataio.F90 dataio] module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/base/dataio.F90 dataio] module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/base/mpisetup.F90 mpisetup] module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/base/grid.F90 grid] module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/magnetic/resist/resistivity.F90
-	  resistivity] module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/fluids/cosmicrays/initcosmicrays.F90
-	  initcosmicrays] module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/fluids/neutral/initneutral.F90
-	  initneutral] module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/fluids/interactions/interactions.F90
-	  interactions] module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/fluids/ionized/initionized.F90
-	  initionized] module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/fluids/dust/initdust.F90 initdust]
-	  module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity] module
-	* [source:public/trunk public]: doxy table in
-	  [source:public/trunk/src/shear/shear.F90 shear] module
+	* public: doxy table in grid module
+	* public: doxy table in gravity module
+	* public: doxy table in dataio module
+	* public: doxy table in mpisetup module
+	* public: doxy table in grid module
+	* public: doxy table in resistivity module
+	* public: doxy table in initcosmicrays module
+	* public: doxy table in initneutral module
+	* public: doxy table in interactions module
+	* public: doxy table in initionized module
+	* public: doxy table in initdust module
+	* public: doxy table in gravity module
+	* public: doxy table in shear module
 
-2009-11-13  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+2009-11-13  Joanna Drazkowska <drazkowska@astri.umk.pl>
 
-	* [source:public/trunk public]: doxy comments
-	* [source:public/trunk public]: doxy comments
-	* [source:public/trunk public]: doxy comments
+	* public: doxy comments
 
-2009-11-08  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+2009-11-08  Michał Hanasz <mhanasz@astri.umk.pl>
 
-	* [source:public/trunk/src/fluids public]: 3-rd order comments
-	  correction
-	* [source:public/trunk/src/fluids public]: 2-nd order doxy comments
-	  correction
-	* [source:public/trunk/src/fluids public]: Doxy comments update
+	* public: 3-rd order comments correction
+	* public: 2-nd order doxy comments correction
+	* public: Doxy comments update
 
-2009-11-07  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-11-07  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: doxygen - both forms: ionised and
-	  ionized
+	* public: doxygen - both forms: ionised and ionized
 	  are valid. See
 	  http://dictionary.cambridge.org/define.asp?key=41927&dict=CALD
 	  for reference.
 
-2009-11-07  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+2009-11-07  Michał Hanasz <mhanasz@astri.umk.pl>
 
-	* [source:public/trunk/src/fluids public]: Doxy comments
+	* public: Doxy comments
 
-2009-11-06  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2009-11-06  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: doxygen syntax in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90] and
-	  [source:public/trunk/source/base/dataio.F90 dataio.F90]
+	* public: doxygen syntax in gravity.F90 and dataio.F90
 
-2009-11-05  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-11-05  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: doxygen comments
+	* public: doxygen comments
 
-2009-11-05  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2009-11-05  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: doxygen syntax with html tables of
-	  namelists parameters in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90]
-	* [source:public/trunk public]: doxygen syntax with html tables of
-	  namelists parameters in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90],
-	  [source:public/trunk/src/base/grid.F90 grid.F90],
-	  [source:public/trunk/src/fluids/interactions/interactions.F90
-	  interactions.F90]
-	* [source:public/trunk public]: doxygen syntax with html tables of
-	  namelists parameters in [source:public/trunk/src/base/dataio.F90
-	  dataio.F90]
-	* [source:public/trunk public]: doxygen syntax with html tables of
-	  namelists parameters in [source:public/trunk/src/base/dataio.F90
-	  dataio.F90]
-	* [source:public/trunk public]: doxygen syntax with html tables of
-	  namelists parameters in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90],
-	  [source:public/trunk/src/base/grid.F90 grid.F90],
-	  [source:public/trunk/src/fluids/interactions/interactions.F90
-	  interactions.F90]
+	* public: doxygen syntax with html tables of namelists parameters
+	  in gravity.F90
+	* public: doxygen syntax with html tables of namelists parameters
+	  in gravity.F90, grid.F90, interactions.F90
+	* public: doxygen syntax with html tables of namelists parameters
+	  in dataio.F90
+	* public: doxygen syntax with html tables of namelists parameters
+	  in dataio.F90
+	* public: doxygen syntax with html tables of namelists parameters
+	  in gravity.F90, grid.F90, interactions.F90
 
-2009-11-04  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2009-11-04  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: doxygen syntax in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90],
-	  [source:public/trunk/src/fluids/interactions/interactions.F90
-	  interactions.F90],
-	  [source:public/trunk/src/fluids/interactions/timestepinteractions.F90
-	  timestepinteractions.F90], [source:public/trunk/src/base/grid.F90
-	  grid.F90]
+	* public: doxygen syntax in gravity.F90, interactions.F90,
+	  timestepinteractions.F90, grid.F90
 
-2009-10-31  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+2009-10-31  Joanna Drazkowska <drazkowska@astri.umk.pl>
 
-	* [source:public/trunk public]: doxy comments
-	* [source:public/trunk public]: doxy comments
-	* [source:public/trunk public]: doxy comments
+	* public: doxy comments
 
-2009-10-29  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-10-29  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: fixing svnci.sh
-	*
-	*
-	* [source:public/trunk public]: adding tool for automated commit
-	  taging
+	* public: fixing svnci.sh
+	* 
+	* public: adding tool for automated commit taging
 
-2009-10-29  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+2009-10-29  Michał Hanasz <mhanasz@astri.umk.pl>
 
-	* [source:public/trunk public]: Doxy "main" page updated
-	* [source:public/trunk public]: doc/evora slides renamed and
-	  Springer Lecture Notes added
+	* public: Doxy "main" page updated
+	* public: doc/evora slides renamed and Springer Lecture Notes added
 
-2009-10-29  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-10-29  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: dt_plt in dataio.F90 was not
-	  broadcasted leading to MPI lockdown. Fixing #31
+	* public: dt_plt in dataio.F90 was not broadcasted leading to MPI
+	  lockdown. Fixing #31
 
-2009-10-29  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+2009-10-29  Michał Hanasz <mhanasz@astri.umk.pl>
 
-	* [source:public/trunk public]:Doxy comment correction
+	* public:Doxy comment correction
 
-2009-10-23  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-10-23  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: fixing r1169 - please use ASCII...
+	* public: fixing r1169 - please use ASCII...
 
-2009-10-23  Joanna Drazkowska <drazkowska@astri.uni.torun.pl>
+2009-10-23  Joanna Drazkowska <drazkowska@astri.umk.pl>
 
-	* [source:public/trunk public]
+	* public
 
-2009-10-23  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+2009-10-23  Michał Hanasz <mhanasz@astri.umk.pl>
 
-	* [source:public/trunk public]: Doxy comment
+	* public: Doxy comment
 
-2009-10-23  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-10-23  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: claiming modules for doxygen docs
+	* public: claiming modules for doxygen docs
 
-2009-10-23  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2009-10-23  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: start of doxygen syntax in
-	  [source:public/trunk/src/fluids/interactions/timestepinteractions.F90
-	  timestepinteractions.F90]
+	* public: start of doxygen syntax in timestepinteractions.F90
 
-2009-10-23  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+2009-10-23  Michał Hanasz <mhanasz@astri.umk.pl>
 
-	* [source:public/trunk public]: Doxy comments
+	* public: Doxy comments
 
-2009-10-23  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-10-23  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: fixing typo
+	* public: fixing typo
 
-2009-10-23  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2009-10-23  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: doxygen syntax in
-	  [source:public/trunk/src/fluids/interactions/interactions.F90
-	  interactions.F90]
-	* [source:public/trunk public]: doxygen syntax
+	* public: doxygen syntax in interactions.F90
+	* public: doxygen syntax
 
-2009-10-23  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+2009-10-23  Michał Hanasz <mhanasz@astri.umk.pl>
 
-	* [source:public/trunk public]: Doxy comments update
+	* public: Doxy comments update
 
-2009-10-23  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2009-10-23  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: small correction in doxygen syntax
-	  in [source:public/trunk/src/fluids/fluidindex.F90 fluidindex.F90]
+	* public: small correction in doxygen syntax in fluidindex.F90
 
-2009-10-22  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+2009-10-22  Michał Hanasz <mhanasz@astri.umk.pl>
 
-	* [source:public/trunk public]: Doxygen
+	* public: Doxygen
 
-2009-10-22  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-10-22  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* MERGE [source:public/branches/multigrid multigrid] rev r1152 -
-	  r1154 to [source:public/trunk public]
-	* [source:public/trunk public]: fixing typo in r1148
+	* MERGE multigrid rev r1152 - r1154 to public
+	* public: fixing typo in r1148
 
-2009-10-22  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+2009-10-22  Michał Hanasz <mhanasz@astri.umk.pl>
 
-	* [source:public/trunk public]: Doxygen comments added
-	* [source:public/trunk public]: Doxygen comments added
+	* public: Doxygen comments added
 
-2009-10-16  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-10-16  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: doxygen
-	* [source:public/trunk public]: doxygen example main page
+	* public: doxygen
+	* public: doxygen example main page
 
-2009-10-16  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2009-10-16  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: doxygen syntax formulas in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90]
+	* public: doxygen syntax formulas in gravity.F90
 
-2009-10-16  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-10-16  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: doxygen
-	* [source:public/trunk public]: doxygen
+	* public: doxygen
 
-2009-10-16  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2009-10-16  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: doxygen syntax formulas in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90]
+	* public: doxygen syntax formulas in gravity.F90
 
-2009-10-15  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2009-10-15  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: more description in
-	  [source:public/trunk/src/base/constants.F90 constants.F90]
-	* [source:public/trunk public]: reverting bad changes in
-	  [source:public/trunk/src/base/dataio.F90 dataio.F90]
-	* [source:public/trunk public]: doxygen syntax in
-	  [source:public/trunk/src/base/constants.F90 constants.F90]
+	* public: more description in constants.F90
+	* public: reverting bad changes in dataio.F90
+	* public: doxygen syntax in constants.F90
 
-2009-10-09  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2009-10-09  Dominik Woltanski <minikwolt@astri.umk.pl>
 
-	* [source:public/trunk public]: base doxygen type description in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity] module
-	* [source:public/trunk public]:base doxygen type description in
-	  [source:public/trunk/src/supernovae/snsources.F90 snsources]
-	  module
-	* [source:public/trunk public]: base doxygen type description in
-	  [source:public/trunk/src/gravity/gravity.F90 gravity] and
-	  [source:public/trunk/src/gravity/hydrostatic.F90 hydrostatic]
+	* public: base doxygen type description in gravity module
+	* public:base doxygen type description in snsources module
+	* public: base doxygen type description in gravity and hydrostatic
 	  modules
-	* [source:public/trunk public]: some corrections of problems infos
+	* public: some corrections of problems infos
 
-2009-10-09  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+2009-10-09  Michał Hanasz <mhanasz@astri.umk.pl>
 
-	* [source:public/trunk public]: Typo corrected
+	* public: Typo corrected
 
-2009-09-29  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-09-29  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: Removing strict debug flags from
-	  default
+	* public: Removing strict debug flags from default
 
-2009-09-25  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-09-25  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: Fixing annoying SegFault in
-	  mpi_finalize
-	* [source:public/trunk public]: Cleaning
+	* public: Fixing annoying SegFault in mpi_finalize
+	* public: Cleaning
 
-2009-09-24  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-09-24  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: seting svn:ignore for obj, runs,
-	  idl_h5
-	* [source:public/trunk public]: Problem update
-	* [source:public/trunk public]: Problem update
-	* [source:public/trunk public]: Introducing fast shearing box
-	  (FFTW)
+	* public: seting svn:ignore for obj, runs, idl_h5
+	* public: Problem update
+	* public: Introducing fast shearing box (FFTW)
 
-2009-08-04  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-08-04  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: adding write_plot
+	* public: adding write_plot
 
-2009-07-09  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-07-09  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: hdf5 support for setup
-	* [source:public/trunk public]: planetary units & PTMASS fix
-	* [source:public/trunk public]: stream3D
+	* public: hdf5 support for setup
+	* public: planetary units & PTMASS fix
+	* public: stream3D
 
-2009-07-07  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-07-07  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: copying problem stream to trunk
+	* public: copying problem stream to trunk
 
-2009-06-29  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-06-29  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: fftw shear boundaries
+	* public: fftw shear boundaries
 
-2009-06-23  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-06-23  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: fixing error in
-	  [source:public/trunk/src/shear/shear.F90 shear.F90]
-	* [source:public/trunk public]: Masset's shearing box
+	* public: fixing error in shear.F90
+	* public: Masset's shearing box
 
-2009-06-10  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-06-10  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: HDF5 cleaning
+	* public: HDF5 cleaning
 
-2009-06-09  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-06-09  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: initial HDF5 support. Tested on:
-	  dustblob (2D,xy,multifluid), sedov (3D,MPI-IO, restarts)
+	* public: initial HDF5 support. Tested on: dustblob
+	  (2D,xy,multifluid), sedov (3D,MPI-IO, restarts)
 
-2009-06-05  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-06-05  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: Documentation
-	* [source:public/trunk public]: Cleaning & Documenting
+	* public: Documentation
+	* public: Cleaning & Documenting
 
-2009-06-04  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-06-04  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: cleaning
-	* [source:public/trunk public]: ''grav_pot'' was removed. Gravity
-	  potential is now calculated for whole 3D array gp at once in
-	  ''grav_pot_3d''. Hydrostatic eq is calculated via linear
-	  interpolation of gp
+	* public: cleaning
+	* public: ''grav_pot'' was removed. Gravity potential is now
+	  calculated for whole 3D array gp at once in ''grav_pot_3d''.
+	  Hydrostatic eq is calculated via linear interpolation of gp
 
-2009-06-03  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-06-03  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: '''BEWARE''' Merging branch
-	  [source:public/branches/stream stream]. Various regressions were
-	  introduced. Use: ''grep -i -r beware'' in
-	  [source:public/trunk/src src] to get list of potential problems.
+	* public: '''BEWARE''' Merging branch stream. Various regressions
+	  were introduced. Use: ''grep -i -r beware'' in src to get list of
+	  potential problems.
 
-2009-05-27  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+2009-05-27  Michał Hanasz <mhanasz@astri.umk.pl>
 
-	* [source:public/trunk public]: cleaning problem
-	  [source:public/trunk/problems/kepler kepler]
-	* [source:public/trunk public]: cleaning problem
-	  [public/trunk/problems/kepler kepler]
-	* [source:public/trunk public]: adjusting
-	  [source:public/trunk/src/gravity/gravity.F90 gravity.F90] for
-	  problem [source:public/trunk/problems/lingrav lingrav]
+	* public: cleaning problem kepler
+	* public: cleaning problem [public/trunk/problems/kepler kepler]
+	* public: adjusting gravity.F90 for problem lingrav
 
-2009-05-27  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-05-27  Kacper Kowalik <xarthisius.kk@gmail.com>
 
-	* [source:public/trunk public]: reverting changes to
-	  [source:public/trunk/problems/crwind crwind] problem
+	* public: reverting changes to crwind problem
 
-2009-05-27  Michał Hanasz <mhanasz@astri.uni.torun.pl>
+2009-05-27  Michał Hanasz <mhanasz@astri.umk.pl>
 
-	* [source:public/trunk public]: New problem
-	  [source:public/trunk/problems/lingrav lingrav]
-	*
+	* public: New problem lingrav
 
-2009-05-13  Dominik Woltanski <minikwolt@astri.uni.torun.pl>
+2009-05-13  Dominik Woltanski <minikwolt@astri.umk.pl>
 
 	* removing compiler settings from Makefile-prep
 
-2009-04-01  Kacper Kowalik <kowalik@astri.uni.torun.pl>
-
-	*
-
-2009-03-12  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-03-12  Kacper Kowalik <xarthisius.kk@gmail.com>
 
 	* Small adjustments
 	* Resolving #26 in crwind
 	* Resolving #26
 
-2009-03-11  Kacper Kowalik <kowalik@astri.uni.torun.pl>
-
-	*
-	*
-
-2009-03-11  Michał Hanasz <mhanasz@astri.uni.torun.pl>
-
-	*
-	*
-
-2009-03-06  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-03-06  Kacper Kowalik <xarthisius.kk@gmail.com>
 
 	* removing segfault after cleanup
-	*
-	*
-	* ::
-	*
 	* Fixing dependencies bugs, gamma was allocated before nvars was
 	  initialized
-	*
-	*
-	*
 
-2009-02-27  Kacper Kowalik <kowalik@astri.uni.torun.pl>
-
-	*
-
-2009-02-26  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-02-26  Kacper Kowalik <xarthisius.kk@gmail.com>
 
 	* Merging r917 - r922
 
-2009-02-25  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-02-25  Kacper Kowalik <xarthisius.kk@gmail.com>
 
 	* Fixing computation of divB in dataio
 	* Changing default compilers flags
 
-2009-02-23  Kacper Kowalik <kowalik@astri.uni.torun.pl>
+2009-02-23  Kacper Kowalik <xarthisius.kk@gmail.com>
 
 	* minor fixes
 	* Major bug fix
