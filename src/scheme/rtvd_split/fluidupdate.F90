@@ -190,12 +190,7 @@ contains
       use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
 #ifdef DEBUG
-      use common_hdf5,    only: chdf, set_container_chdf
-      use dataio,         only: write_data
-      use data_hdf5,      only: write_hdf5
-      use global,         only: nstep
-      use piernikdebug,   only: force_hdf5_dump, force_log_dump, force_res_dump, force_allbnd_dump
-      use restart_hdf5,   only: write_restart_hdf5
+      use piernikdebug,   only: force_dumps
 #endif /* DEBUG */
 
       implicit none
@@ -240,11 +235,7 @@ contains
       enddo
 
 #ifdef DEBUG
-      call set_container_chdf(nstep)
-      if (force_hdf5_dump)   call write_hdf5(chdf)
-      if (force_res_dump)    call write_restart_hdf5
-      if (force_allbnd_dump) call write_restart_hdf5(debug_res=.true.)
-      if (force_log_dump)    call write_data(output='log')
+      call force_dumps
 #endif /* DEBUG */
 
    end subroutine make_sweep

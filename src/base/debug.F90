@@ -36,7 +36,7 @@ module piernikdebug
    implicit none
 
    private
-   public :: init_piernikdebug, has_const_dt, constant_dt, force_hdf5_dump, force_res_dump, force_allbnd_dump, force_log_dump, aux_R, aux_I, aux_L, aux_S
+   public :: init_piernikdebug, has_const_dt, constant_dt, force_dumps, aux_R, aux_I, aux_L, aux_S
 
    ! Auxiliary input parameters for debugging, quick tweaks and tests of new features.
    ! Their purpose is to avoid messing up existing namelists until it becomes clear that certain parameter is really useful.
@@ -47,7 +47,7 @@ module piernikdebug
    logical, dimension(naux)                  :: aux_L    !< boolean auxiliary parameter
    character(len=cbuff_len), dimension(naux) :: aux_S    !< string auxiliary parameter
 
-   real, protected    :: constant_dt               !< value of timestep regardless of fluid state
+   real,    protected :: constant_dt               !< value of timestep regardless of fluid state
    logical, protected :: has_const_dt              !< true if piernikdebug::constant_dt > 0
    logical, protected :: force_hdf5_dump           !< dump hdf5 every sweep regardless of dataio_pub::dt_hdf
    logical, protected :: force_res_dump            !< dump restart every sweep regardless of dataio_pub::dt_res
@@ -60,11 +60,11 @@ contains
 
    subroutine init_piernikdebug
 
-      use mpisetup,              only: master, slave, comm, ierr, rbuff, lbuff, cbuff, ibuff, buffer_dim, FIRST
-      use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_CHARACTER, MPI_INTEGER
+      use constants,             only: PIERNIK_INIT_MPI
       use dataio_pub,            only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use dataio_pub,            only: code_progress, die
-      use constants,             only: PIERNIK_INIT_MPI
+      use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_CHARACTER, MPI_INTEGER
+      use mpisetup,              only: master, slave, comm, ierr, rbuff, lbuff, cbuff, ibuff, buffer_dim, FIRST
 
       implicit none
 
@@ -99,7 +99,7 @@ contains
       call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
 
       if (slave) then
-         constant_dt = rbuff(1)
+         constant_dt       = rbuff(1)
 
          force_hdf5_dump   = lbuff(1)
          force_log_dump    = lbuff(2)
@@ -116,5 +116,23 @@ contains
       has_const_dt = (constant_dt > 0.0)
 
    end subroutine init_piernikdebug
+
+   subroutine force_dumps
+
+      use common_hdf5,    only: chdf, set_container_chdf
+      use dataio,         only: write_data
+      use data_hdf5,      only: write_hdf5
+      use global,         only: nstep
+      use restart_hdf5,   only: write_restart_hdf5
+
+      implicit none
+
+      call set_container_chdf(nstep)
+      if (force_hdf5_dump)   call write_hdf5(chdf)
+      if (force_res_dump)    call write_restart_hdf5
+      if (force_allbnd_dump) call write_restart_hdf5(debug_res=.true.)
+      if (force_log_dump)    call write_data(output='log')
+
+   end subroutine force_dumps
 
 end module piernikdebug
