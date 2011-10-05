@@ -79,6 +79,8 @@ module domain
     contains
 
       procedure :: set_derived
+      procedure :: translate_bnds_to_ints
+      procedure :: print_me
 
    end type domain_container
 
@@ -360,7 +362,7 @@ contains
             geometry_type = GEO_INVALID
       end select
 
-      dom%bnd(:,:) = translate_bnds_to_ints([bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr])
+      call dom%translate_bnds_to_ints([bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr])
 
       ! sanitize domain
       xmno = xmin
@@ -1126,15 +1128,15 @@ contains
 ! An interpreter of string-defined boundary types
 !
 
-   function translate_bnds_to_ints(bnds) result(tab)
+   subroutine translate_bnds_to_ints(this, bnds)
 
       use constants, only: xdim, zdim, ndims, LO, HI, &
          &                 BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_USER, BND_INF, BND_INVALID
 
       implicit none
 
-      character(len=*), dimension(HI*ndims) :: bnds ! expect exactly 6 descriptions
-      integer, dimension(ndims, LO:HI) :: tab
+      class(domain_container), intent(inout) :: this
+      character(len=*), dimension(HI*ndims), intent(in) :: bnds ! expect exactly 6 descriptions
 
       integer :: d, lh
 
@@ -1142,31 +1144,31 @@ contains
          do lh = LO, HI
             select case (bnds(HI*(d-xdim)+lh))
                case ('per', 'periodic')
-                  tab(d, lh) = BND_PER
+                  this%bnd(d, lh) = BND_PER
                case ('ref', 'refl', 'reflecting')
-                  tab(d, lh) = BND_REF
+                  this%bnd(d, lh) = BND_REF
                case ('out', 'free')
-                  tab(d, lh) = BND_OUT
+                  this%bnd(d, lh) = BND_OUT
                case ('outd', 'diode')
-                  tab(d, lh) = BND_OUTD
+                  this%bnd(d, lh) = BND_OUTD
                case ('outh')
-                  tab(d, lh) = BND_OUTH
+                  this%bnd(d, lh) = BND_OUTH
                case ('she', 'shear', 'shearing')
-                  tab(d, lh) = BND_SHE
+                  this%bnd(d, lh) = BND_SHE
                case ('cor', 'corner')
-                  tab(d, lh) = BND_COR
+                  this%bnd(d, lh) = BND_COR
                case ('mpi')
-                  tab(d, lh) = BND_MPI
+                  this%bnd(d, lh) = BND_MPI
                case ('user')
-                  tab(d, lh) = BND_USER
+                  this%bnd(d, lh) = BND_USER
                case ('inf') ! what is this?
-                  tab(d, lh) = BND_INF
+                  this%bnd(d, lh) = BND_INF
                case default
-                  tab(d, lh) = BND_INVALID
+                  this%bnd(d, lh) = BND_INVALID
             end select
          enddo
       enddo
-   end function translate_bnds_to_ints
+   end subroutine translate_bnds_to_ints
 
 !-----------------------------------------------------------------------------
 
@@ -1207,5 +1209,42 @@ contains
       endwhere
 
    end subroutine set_derived
+
+!-----------------------------------------------------------------------------
+
+   subroutine print_me(this)
+      use constants,  only: LO, HI
+      use dataio_pub, only: printinfo, msg
+
+      implicit none
+
+      class(domain_container), intent(inout) :: this
+      integer :: i, j
+
+      write(msg,'(a,3(F5.1,1X))') "LO edge: ", this%edge(:,LO); call printinfo(msg)
+      write(msg,'(a,3(F5.1,1X))') "HI edge: ", this%edge(:,HI); call printinfo(msg)
+      write(msg,'(a,3(I4,1X))')   "n_d    : ", this%n_d(:); call printinfo(msg)
+      write(msg,'(a,3(I4,1X))')   "n_t    : ", this%n_t(:); call printinfo(msg)
+      write(msg,'(a,1(I4,1X))')   "nb     : ", this%nb; call printinfo(msg)
+      write(msg,'(a,3(I4,1X))')   "LO bnd : ", this%bnd(:,LO); call printinfo(msg)
+      write(msg,'(a,3(I4,1X))')   "HI bnd : ", this%bnd(:,HI); call printinfo(msg)
+      write(msg,'(a,3(F5.1,1X))') "L_     : ", this%L_(:); call printinfo(msg)
+      write(msg,'(a,3(F5.1,1X))') "C_     : ", this%C_(:); call printinfo(msg)
+      write(msg,'(a,1(F5.1,1X))') "Vol    : ", this%Vol; call printinfo(msg)
+      write(msg,'(a,3(L,1X))')    "period : ", this%periodic(:); call printinfo(msg)
+      write(msg,'(a,I4)')         "size(pse) = ", size(this%pse)
+
+      if (allocated(this%pse)) then
+         do i = lbound(this%pse,1), ubound(this%pse,1)
+            if (allocated(this%pse(i)%sel)) then
+               write(msg,'(a,I4)')         "size(pse%sel,1) = ", size(this%pse(i)%sel,dim=1)
+               do j = lbound(this%pse(i)%sel,dim=1), ubound(this%pse(i)%sel,dim=1)
+                  write(msg, '(a,3(I6,1X))')   "LO sel : ", this%pse(i)%sel(j,:,LO)
+                  write(msg, '(a,3(I6,1X))')   "HI sel : ", this%pse(i)%sel(j,:,HI)
+               enddo
+            endif
+         enddo
+      endif
+   end subroutine print_me
 
 end module domain
