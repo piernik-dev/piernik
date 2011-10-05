@@ -467,9 +467,9 @@ contains
       if (allocated(this%i_bnd)) then
          do d = xdim, zdim
             do t = lbound(this%i_bnd, dim=2), ubound(this%i_bnd, dim=2)
-               do b = 1, ubound(this%i_bnd, dim=3)
+               do b = lbound(this%i_bnd, dim=3), ubound(this%i_bnd, dim=3)
                   if (allocated(this%i_bnd(d, t, b)%seg)) then
-                     do g = 1, ubound(this%i_bnd(d, t, b)%seg(:), dim=1)
+                     do g = lbound(this%i_bnd(d, t, b)%seg(:), dim=1), ubound(this%i_bnd(d, t, b)%seg(:), dim=1)
                         if (this%i_bnd(d, t, b)%seg(g)%mbc /= INVALID) call MPI_Type_free(this%i_bnd(d, t, b)%seg(g)%mbc, ierr)
                      enddo
                      deallocate(this%i_bnd(d, t, b)%seg)
@@ -482,9 +482,9 @@ contains
       if (allocated(this%o_bnd)) then
          do d = xdim, zdim
             do t = lbound(this%i_bnd, dim=2), ubound(this%o_bnd, dim=2)
-                do b = 1, ubound(this%o_bnd, dim=3)
+                do b = lbound(this%o_bnd, dim=3), ubound(this%o_bnd, dim=3)
                    if (allocated(this%o_bnd(d, t, b)%seg)) then
-                      do g = 1, ubound(this%o_bnd(d, t, b)%seg(:), dim=1)
+                      do g = lbound(this%o_bnd(d, t, b)%seg(:), dim=1), ubound(this%o_bnd(d, t, b)%seg(:), dim=1)
                          if (this%o_bnd(d, t, b)%seg(g)%mbc /= INVALID) call MPI_Type_free(this%o_bnd(d, t, b)%seg(g)%mbc, ierr)
                       enddo
                       deallocate(this%o_bnd(d, t, b)%seg)
@@ -496,14 +496,14 @@ contains
       endif
 
       if (allocated(this%q)) then
-         do g = 1, ubound(this%q(:), dim=1)
+         do g = lbound(this%q(:), dim=1), ubound(this%q(:), dim=1)
             call this%q(g)%clean
          enddo
          deallocate(this%q)
       endif
 
       if (allocated(this%w)) then
-         do g = 1, ubound(this%w(:), dim=1)
+         do g = lbound(this%w(:), dim=1), ubound(this%w(:), dim=1)
             call this%w(g)%clean
          enddo
          deallocate(this%w)
@@ -559,7 +559,7 @@ contains
                   b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
                   b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
                   do j = FIRST, LAST
-                     do b = 1, ubound(this%dom%pse(j)%sel(:, :, :), dim=1)
+                     do b = lbound(this%dom%pse(j)%sel(:, :, :), dim=1), ubound(this%dom%pse(j)%sel(:, :, :), dim=1)
                         call is_overlap(b_layer(:,:), this%dom%pse(j)%sel(b, :, :), sharing, per(:))
                         if (sharing) procmask(j) = procmask(j) + 1
                      enddo
@@ -578,7 +578,7 @@ contains
                   if (procmask(j) /= 0) then
                      do lh = LO, HI
                         hl = LO+HI-lh
-                        do b = 1, ubound(dom%pse(j)%sel(:, :, :), dim=1)
+                        do b = lbound(dom%pse(j)%sel(:, :, :), dim=1), ubound(dom%pse(j)%sel(:, :, :), dim=1)
                            b_layer(:,:) = this%my_se(:, :)
                            b_layer(d, lh) = b_layer(d, lh) + lh-hl
                            b_layer(d, hl) = b_layer(d, lh)
@@ -803,7 +803,7 @@ contains
 
       ptr => null()
 
-      do i = 1, ubound(this%q, dim=1)
+      do i = lbound(this%q, dim=1), ubound(this%q, dim=1)
          if (trim(name) ==  this%q(i)%name) then
             if (associated(ptr)) call die("[grid_container:get_na_ptr] multiple entries with the same name")
             ptr => this%q(i)%arr
@@ -833,7 +833,7 @@ contains
 
       ptr => null()
 
-      do i = 1, ubound(this%w, dim=1)
+      do i = lbound(this%w, dim=1), ubound(this%w, dim=1)
          if (trim(name) ==  this%w(i)%name) then
             if (associated(ptr)) call die("[grid_container:get_na_ptr_4d] multiple entries with the same name")
             ptr => this%w(i)%arr
@@ -862,7 +862,7 @@ contains
 
       ind = 0
 
-      do i = 1, ubound(this%q, dim=1)
+      do i = lbound(this%q, dim=1), ubound(this%q, dim=1)
          if (trim(name) ==  this%q(i)%name) then
             if (ind /= 0) call die("[grid_container:get_na_ind] multiple entries with the same name")
             ind = i
@@ -891,7 +891,7 @@ contains
 
       ind = 0
 
-      do i = 1, ubound(this%w, dim=1)
+      do i = lbound(this%w, dim=1), ubound(this%w, dim=1)
          if (trim(name) ==  this%w(i)%name) then
             if (ind /= 0) call die("[grid_container:get_na_ind_4d] multiple entries with the same name")
             ind = i
