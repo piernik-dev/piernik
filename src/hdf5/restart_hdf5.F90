@@ -171,13 +171,17 @@ contains
          ! Write magnetic field. Unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
          if (associated(cg%b%arr)) call write_arr_to_restart(file_id, cg%b%arr, AT_OUT_B, dname(MAG), cg)
 
-         do i = lbound(cg%q(:), dim=1), ubound(cg%q(:), dim=1)
-            if (cg%q(i)%restart_mode /= AT_IGNORE) call write_arr_to_restart(file_id, cg%q(i)%arr, cg%q(i)%restart_mode, cg%q(i)%name, cg)
-         enddo
+         if (allocated(cg%q)) then
+            do i = lbound(cg%q(:), dim=1), ubound(cg%q(:), dim=1)
+               if (cg%q(i)%restart_mode /= AT_IGNORE) call write_arr_to_restart(file_id, cg%q(i)%arr, cg%q(i)%restart_mode, cg%q(i)%name, cg)
+            enddo
+         endif
 
-         do i = lbound(cg%w(:), dim=1), ubound(cg%w(:), dim=1)
-            if (cg%w(i)%restart_mode /= AT_IGNORE) call write_arr_to_restart(file_id, cg%w(i)%arr, cg%w(i)%restart_mode, cg%w(i)%name, cg)
-         enddo
+         if (allocated(cg%w)) then
+            do i = lbound(cg%w(:), dim=1), ubound(cg%w(:), dim=1)
+               if (cg%w(i)%restart_mode /= AT_IGNORE) call write_arr_to_restart(file_id, cg%w(i)%arr, cg%w(i)%restart_mode, cg%w(i)%name, cg)
+            enddo
+         endif
 
          !> \todo where (cg%q(:)%restart), write cg%q(:)%arr automatically, elsewhere write just names
          if (associated(problem_write_restart)) call problem_write_restart(file_id, cg)
@@ -776,13 +780,17 @@ contains
          !> \todo read existing cg%q(:)%arr automatically, create fresh cg%q(:)%arr where (.not. cg%q(:)%restart)
          if (associated(problem_read_restart)) call problem_read_restart(file_id, cg)
 
-         do i = lbound(cg%q(:), dim=1), ubound(cg%q(:), dim=1)
-            if (cg%q(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, cg%q(i)%arr, cg%q(i)%restart_mode, cg%q(i)%name, cg)
-         enddo
+         if (allocated(cg%q)) then
+            do i = lbound(cg%q(:), dim=1), ubound(cg%q(:), dim=1)
+               if (cg%q(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, cg%q(i)%arr, cg%q(i)%restart_mode, cg%q(i)%name, cg)
+            enddo
+         endif
 
-         do i = lbound(cg%w(:), dim=1), ubound(cg%w(:), dim=1)
-            if (cg%w(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, cg%w(i)%arr, cg%w(i)%restart_mode, cg%w(i)%name, cg)
-         enddo
+         if (allocated(cg%w)) then
+            do i = lbound(cg%w(:), dim=1), ubound(cg%w(:), dim=1)
+               if (cg%w(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, cg%w(i)%arr, cg%w(i)%restart_mode, cg%w(i)%name, cg)
+            enddo
+         endif
 
          !  READ FLUID VARIABLES
          if (associated(cg%u%arr)) call read_arr_from_restart(file_id, cg%u%arr, AT_NO_B, dname(FLUID), cg)
