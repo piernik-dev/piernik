@@ -63,6 +63,12 @@ module grid_cont
       integer(kind=4) :: restart_mode !< \todo If not .true. then write names to the restart file
    end type named_array3d
 
+   !< A named array for user-defined vector fields and similar
+   type, extends(array4d):: named_array4d
+      character(len=dsetnamelen) :: name !< a user-provided id for the array
+      integer(kind=4) :: restart_mode !< \todo If not .true. then write names to the restart file
+   end type named_array4d
+
    type, extends(axes) :: grid_container
       real    :: dx                             !< length of the %grid cell in x-direction
       real    :: dy                             !< length of the %grid cell in y-direction
@@ -137,6 +143,8 @@ module grid_cont
 
       !< Other 3D arrays (such as user-defined quantities or gravitational potential). The fourth index selects variable so it cannot be merged with u or b.
       type(named_array3d), allocatable, dimension(:) :: q
+      !< Other 4D arrays (such as user-defined quantities or vector fields).
+      type(named_array4d), allocatable, dimension(:) :: w  !\todo put other array4d here?
       ! handy shortcuts to some entries in q(:)
       real, dimension(:,:,:), pointer :: gpot    => null() !< Array for sum of gravitational potential at t += dt
       real, dimension(:,:,:), pointer :: hgpot   => null() !< Array for sum of gravitational potential at t += 0.5*dt
@@ -152,9 +160,13 @@ module grid_cont
       procedure :: cleanup
       procedure :: mpi_bnd_types
       procedure :: add_na
+      procedure :: add_na_4d
       procedure :: get_na_ptr
+      procedure :: get_na_ptr_4d
       procedure :: get_na_ind
+      procedure :: get_na_ind_4d
       procedure :: exists
+      procedure :: exists_4d
 
    end type grid_container
 
@@ -490,6 +502,13 @@ contains
          deallocate(this%q)
       endif
 
+      if (allocated(this%w)) then
+         do g = 1, ubound(this%w(:), dim=1)
+            call this%w(g)%clean
+         enddo
+         deallocate(this%w)
+      endif
+
       if (allocated(this%dom%pse)) deallocate(this%dom%pse) ! this is a side effect of keeping a copy of dom instead of pointing it
 
    end subroutine cleanup
@@ -687,7 +706,6 @@ contains
 !!
 !! \warning You should call it for every grid_container so each of them has the same list of named arrays.
 !<
-
    subroutine add_na(this, name, res_m)
 
       use constants,  only: AT_IGNORE
@@ -709,7 +727,7 @@ contains
             write(msg, '(3a)')"[grid_container:add_na] Array '",trim(name),"' was already registered."
             call die(msg)
          endif
-         allocate(tmp(ubound(this%q(:), dim=1) + 1))
+         allocate(tmp(lbound(this%q(:),dim=1):ubound(this%q(:), dim=1) + 1))
          tmp(:ubound(this%q(:), dim=1)) = this%q(:)
          call move_alloc(from=tmp, to=this%q)
       endif
@@ -724,11 +742,53 @@ contains
    end subroutine add_na
 
 !>
-!! \brief Get the pointer to a named array of given name.
+!! \brief Register a new entry in current cg with given name.
+!!
+!! \warning You should call it for every grid_container so each of them has the same list of named arrays.
+!<
+   subroutine add_na_4d(this, name, n, res_m)
+
+      use constants,  only: AT_IGNORE, ndims
+      use dataio_pub, only: msg, die
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+      character(len=*), intent(in) :: name
+      integer(kind=4), intent(in) :: n
+      integer(kind=4), optional, intent(in) :: res_m
+
+      type(named_array4d), allocatable, dimension(:) :: tmp
+      integer(kind=4), dimension(ndims+1) :: ind
+      integer :: i
+
+      if (.not. allocated(this%w)) then
+         allocate(this%w(1))
+      else
+         if (this%exists_4d(name)) then
+            write(msg, '(3a)')"[grid_container:add_na_4d] Array '",trim(name),"' was already registered."
+            call die(msg)
+         endif
+         allocate(tmp(lbound(this%w(:),dim=1):ubound(this%w(:), dim=1) + 1))
+         tmp(:ubound(this%w(:), dim=1)) = this%w(:)
+         call move_alloc(from=tmp, to=this%w)
+      endif
+
+      i = ubound(this%w(:), dim=1)
+      this%w(i)%name = name
+      ind = [n, this%n_(:)]
+      call this%w(i)%init(ind)
+
+      this%w(i)%restart_mode = AT_IGNORE
+      if (present(res_m)) this%w(i)%restart_mode = res_m
+
+   end subroutine add_na_4d
+
+!>
+!! \brief Get the pointer to a named 3d array of given name.
 !!
 !! \details This is the preferred method to access the registered array
 !<
-
    function get_na_ptr(this, name) result(ptr)
 
       use dataio_pub, only: die, warn
@@ -755,11 +815,40 @@ contains
    end function get_na_ptr
 
 !>
-!! \brief Get the index of a named array of given name.
+!! \brief Get the pointer to a named 4d array of given name.
+!!
+!! \details This is the preferred method to access the registered array
+!<
+   function get_na_ptr_4d(this, name) result(ptr)
+
+      use dataio_pub, only: die, warn
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+      character(len=*), intent(in) :: name
+
+      real, dimension(:,:,:,:), pointer :: ptr
+      integer :: i
+
+      ptr => null()
+
+      do i = 1, ubound(this%w, dim=1)
+         if (trim(name) ==  this%w(i)%name) then
+            if (associated(ptr)) call die("[grid_container:get_na_ptr_4d] multiple entries with the same name")
+            ptr => this%w(i)%arr
+         endif
+      enddo
+
+      if (.not. associated(ptr)) call warn("[grid_container:get_na_ptr_4d] requested entry not found")
+
+   end function get_na_ptr_4d
+
+!>
+!! \brief Get the index of a named 3d array of given name.
 !!
 !! \details This method is provided for convenience only. Use get_na_ptr whenever possible.
 !<
-
    function get_na_ind(this, name) result(ind)
 
       use dataio_pub, only: die, warn
@@ -785,9 +874,36 @@ contains
    end function get_na_ind
 
 !>
+!! \brief Get the index of a named 4d array of given name.
+!!
+!! \details This method is provided for convenience only. Use get_na_ptr whenever possible.
+!<
+   function get_na_ind_4d(this, name) result(ind)
+
+      use dataio_pub, only: die, warn
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+      character(len=*), intent(in) :: name
+
+      integer :: ind, i
+
+      ind = 0
+
+      do i = 1, ubound(this%w, dim=1)
+         if (trim(name) ==  this%w(i)%name) then
+            if (ind /= 0) call die("[grid_container:get_na_ind_4d] multiple entries with the same name")
+            ind = i
+         endif
+      enddo
+
+      if (ind == 0) call warn("[grid_container:get_na_ind_4d] requested entry not found")
+
+   end function get_na_ind_4d
+!>
 !! \brief Check if an array of given name is already registered
 !<
-
    function exists(this, name)
 
       use dataio_pub, only: die
@@ -802,7 +918,7 @@ contains
 
       exists = .false.
 
-      do i = 1, ubound(this%q, dim=1)
+      do i = lbound(this%q, dim=1), ubound(this%q, dim=1)
          if (trim(name) ==  this%q(i)%name) then
             if (exists) call die("[grid_container:exists] multiple entries with the same name")
             exists = .true.
@@ -810,5 +926,31 @@ contains
       enddo
 
    end function exists
+
+!>
+!! \brief Check if an array of given name is already registered
+!<
+   function exists_4d(this, name) result(exists)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+      character(len=*), intent(in) :: name
+
+      logical :: exists
+      integer :: i
+
+      exists = .false.
+
+      do i = lbound(this%w, dim=1), ubound(this%w, dim=1)
+         if (trim(name) ==  this%w(i)%name) then
+            if (exists) call die("[grid_container:exists] multiple entries with the same name")
+            exists = .true.
+         endif
+      enddo
+
+   end function exists_4d
 
 end module grid_cont

@@ -175,6 +175,10 @@ contains
             if (cg%q(i)%restart_mode /= AT_IGNORE) call write_arr_to_restart(file_id, cg%q(i)%arr, cg%q(i)%restart_mode, cg%q(i)%name, cg)
          enddo
 
+         do i = lbound(cg%w(:), dim=1), ubound(cg%w(:), dim=1)
+            if (cg%w(i)%restart_mode /= AT_IGNORE) call write_arr_to_restart(file_id, cg%w(i)%arr, cg%w(i)%restart_mode, cg%w(i)%name, cg)
+         enddo
+
          !> \todo where (cg%q(:)%restart), write cg%q(:)%arr automatically, elsewhere write just names
          if (associated(problem_write_restart)) call problem_write_restart(file_id, cg)
 
@@ -774,6 +778,10 @@ contains
 
          do i = lbound(cg%q(:), dim=1), ubound(cg%q(:), dim=1)
             if (cg%q(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, cg%q(i)%arr, cg%q(i)%restart_mode, cg%q(i)%name, cg)
+         enddo
+
+         do i = lbound(cg%w(:), dim=1), ubound(cg%w(:), dim=1)
+            if (cg%w(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, cg%w(i)%arr, cg%w(i)%restart_mode, cg%w(i)%name, cg)
          enddo
 
          !  READ FLUID VARIABLES
