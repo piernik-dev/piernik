@@ -143,8 +143,6 @@ module constants
       enumerator :: AT_IGNORE       !< no output
       enumerator :: AT_NO_B         !< no boundary cells
       enumerator :: AT_OUT_B        !< external boundary cells
-      enumerator :: AT_ALL_B        !< all boundary cells
-      enumerator :: AT_USER         !< user defined area type
    end enum
 
    ! Fluid type index, used in flind%tag

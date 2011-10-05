@@ -490,7 +490,7 @@ contains
          deallocate(this%q)
       endif
 
-      if (allocated(this%dom%pse)) deallocate(this%dom%pse) ! this is a side effect of keepina a copy of dom instead of pointing it
+      if (allocated(this%dom%pse)) deallocate(this%dom%pse) ! this is a side effect of keeping a copy of dom instead of pointing it
 
    end subroutine cleanup
 

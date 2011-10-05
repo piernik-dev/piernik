@@ -485,10 +485,8 @@ contains
 !---  if a user message is received then:
       if (len_trim(umsg) /= 0) then
          select case (trim(umsg))
-            case ('res')
+            case ('res', 'dump')
                call write_restart_hdf5
-            case ('dump')
-               call write_restart_hdf5(.true.)
             case ('hdf')
                call set_container_chdf(nstep)
                call write_hdf5(chdf)

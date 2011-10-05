@@ -266,9 +266,10 @@ contains
             cgl => cgl%nxt
          enddo
 
+         !call h5pclose_f(plist_id, error) ! does it matter?
+
          ! Close the dataset.
          call h5dclose_f(dset_id, error)
-
       enddo
 
       call h5sclose_f(filespace, error)

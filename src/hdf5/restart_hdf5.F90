@@ -62,7 +62,6 @@ contains
 !>
 !! \brief Routine to set parameters and dimensions of arrays in restart file
 !! \param area_type case name; possibilities:
-!!   AT_ALL_B - whole domain with mpi boundaries,
 !!   AT_OUT_B - physical domain with outer boundaries,
 !    AT_NO_B  - only physical domain without any boundaries
 !! \param area grid dimensions in the file
@@ -73,12 +72,10 @@ contains
 !<
    subroutine set_dims_to_write(area_type, area, chnk, lleft, lright, loffs, cg)
 
-      use constants,  only: ndims, AT_ALL_B, AT_OUT_B, AT_NO_B, AT_USER, LO, HI
-      use dataio_pub, only: die, warn
-      use domain,     only: dom, has_dir, cdd, is_uneven, is_mpi_noncart
+      use constants,  only: ndims, AT_OUT_B, AT_NO_B, LO, HI
+      use dataio_pub, only: die
+      use domain,     only: dom, has_dir
       use grid_cont,  only: grid_container
-      use mpi,        only: MPI_COMM_NULL
-      use user_hooks, only: at_user_settings
 
       implicit none
 
@@ -88,15 +85,6 @@ contains
       type(grid_container), pointer,     intent(in)  :: cg
 
       select case (area_type)
-         case (AT_ALL_B)                           ! whole domain with mpi boundaries
-            if (is_mpi_noncart) call die("[restart_hdf5:set_dims_to_write] allbnd dump is too hard to implement with noncartesian domain division") !psize, pcoords
-            if (cdd%comm3d == MPI_COMM_NULL) call die("[restart_hdf5:set_dims_to_write] allbnd dump requires cdd%comm3d and cdd%")
-            if (is_uneven) call warn("[restart_hdf5:set_dims_to_write] allbnd dump with uneven domain division")
-            chnk(:)   = cg%n_
-            area(:)   = dom%n_d(:) + 2 * cg%nb * cdd%psize(:) ! \todo invent something better
-            lleft(:)  = 1
-            lright(:) = chnk
-            loffs(:)  = cg%off(:) + 2 * cg%nb * cdd%pcoords(:) !\todo invent something better
          case (AT_OUT_B)                                   ! physical domain with outer boundaries
             area(:)   = dom%n_t(:)
             lleft(:)  = cg%ijkse(:, LO)
@@ -118,12 +106,6 @@ contains
             lright(:) = cg%ijkse(:, HI)
             chnk(:)   = cg%n_b(:)
             loffs(:)  = cg%off(:)
-         case (AT_USER)                                    ! user defined domain (with no reference to simulations domain)
-            if (associated(at_user_settings)) then
-               call at_user_settings(area, lleft, lright, chnk, loffs)
-            else
-               call die("[restart_hdf5:set_dims_to_write] Routine at_user_settings not associated")
-            endif
          case default
             call die("[restart_hdf5:set_dims_to_write] Non-recognized area_type.")
             area(:) = 0 ! suppres compiler warnings
@@ -135,10 +117,10 @@ contains
 !! \brief This routine writes restart dump and updates restart counter
 !<
 
-   subroutine write_restart_hdf5(debug_res)
+   subroutine write_restart_hdf5
 
       use common_hdf5, only: set_common_attributes, chdf, set_container_chdf, hdf
-      use constants,   only: cwdlen, AT_IGNORE, AT_ALL_B, AT_OUT_B, AT_NO_B, I_ONE, FLUID, MAG
+      use constants,   only: cwdlen, AT_OUT_B, AT_NO_B, AT_IGNORE, I_ONE, FLUID, MAG
       use dataio_pub,  only: nres, problem_name, run_id, msg, printio
       use global,      only: nstep
       use grid,        only: all_cg
@@ -152,25 +134,17 @@ contains
 
       implicit none
 
-      logical, optional, intent(in) :: debug_res
-
       integer               :: i
       integer, parameter    :: extlen = 4
-      character(len=extlen) :: file_extension
+      character(len=extlen), parameter :: file_extension = '.res'
       character(len=cwdlen) :: filename  !> HDF File name
       integer(HID_T)        :: file_id       !> File identifier
       integer(HID_T)        :: plist_id      !> Property list identifier
-      integer(kind=4)       :: area_type
       integer(kind=4)       :: error
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
       ! Construct the filename
-      if (present(debug_res)) then
-         file_extension = '.dmp'
-      else
-         file_extension = '.res'
-      endif
 
       if (master) then
          write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, file_extension
@@ -191,22 +165,19 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         !> \todo where (cg%q(:)%restart), write cg%q(:)%arr automatically, elsewhere write just names
-         if (associated(problem_write_restart)) call problem_write_restart(file_id, cg)
+         ! Write fluids
+         if (associated(cg%u%arr)) call write_arr_to_restart(file_id, cg%u%arr, AT_NO_B, dname(FLUID), cg)
+
+         ! Write magnetic field. Unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
+         if (associated(cg%b%arr)) call write_arr_to_restart(file_id, cg%b%arr, AT_OUT_B, dname(MAG), cg)
 
          do i = lbound(cg%q(:), dim=1), ubound(cg%q(:), dim=1)
             if (cg%q(i)%restart_mode /= AT_IGNORE) call write_arr_to_restart(file_id, cg%q(i)%arr, cg%q(i)%restart_mode, cg%q(i)%name, cg)
          enddo
 
-         ! Write fluids
-         area_type = AT_NO_B
-         if (present(debug_res)) area_type = AT_ALL_B
-         if (associated(cg%u%arr)) call write_arr_to_restart(file_id, cg%u%arr, area_type, dname(FLUID), cg)
+         !> \todo where (cg%q(:)%restart), write cg%q(:)%arr automatically, elsewhere write just names
+         if (associated(problem_write_restart)) call problem_write_restart(file_id, cg)
 
-         ! Write magnetic field
-         area_type = AT_OUT_B ! unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
-         if (present(debug_res)) area_type = AT_ALL_B
-         if (associated(cg%b%arr)) call write_arr_to_restart(file_id, cg%b%arr, area_type, dname(MAG), cg)
          cgl => cgl%nxt
       enddo
 
@@ -503,7 +474,7 @@ contains
 !!$   end subroutine write_axes_to_restart
 
 ! This routine reads only interior cells of a pointed array from the restart file.
-! Boundary cells are exchanged with the neughbours. Corner boundary cells are not guaranteed to be correct (area_type = AT_ALL_B not implemented yet).
+! Boundary cells are exchanged with the neughbours. Corner boundary cells are not guaranteed to be correct.
 ! External boundary cells are not stored in the restart file and thus all of them are lost (area_type = AT_OUT_B not implemented yet).
 
    subroutine prep_arr_read(rank, ir, loffs, chunk_dims, file_id, dname, memspace, plist_id, filespace, dset_id)

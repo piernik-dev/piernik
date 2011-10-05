@@ -107,6 +107,8 @@ contains
             if (has_dir(d)) then
 
                if (allocated(cg%i_bnd(d, ind, n)%seg)) then
+                  if (.not. allocated(cg%o_bnd(d, ind, n)%seg)) call die("[internal_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")
+                  if (ubound(cg%i_bnd(d, ind, n)%seg(:), dim=1) /= ubound(cg%o_bnd(d, ind, n)%seg(:), dim=1)) call die("[internal_bnd:internal_boundaries] cg%i_bnd differs in number of entries from cg%o_bnd")
                   do g = 1, ubound(cg%i_bnd(d, ind, n)%seg(:), dim=1)
                      if (proc == cg%i_bnd(d, ind, n)%seg(g)%proc) then
                         ise = cg%i_bnd(d, ind, n)%seg(g)%se
@@ -135,6 +137,8 @@ contains
                         endif
                      endif
                   enddo
+               else
+                  if (allocated(cg%o_bnd(d, ind, n)%seg)) call die("[grid_container:internal_boundaries] cg%o_bnd without cg%i_bnd")
                endif
                if (allocated(cg%o_bnd(d, ind, n)%seg)) then
                   do g = 1, ubound(cg%o_bnd(d, ind, n)%seg(:), dim=1)

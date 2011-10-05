@@ -160,12 +160,14 @@ contains
 
    end function interpolate_mag_field
 !------------------------------------------------------------------------------------------
-   subroutine sweep(cdim,cg)
+   subroutine sweep(cdim)
 
       use constants,       only: pdims, LO, HI, ydim, zdim
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swp, nmag
+      use gc_list,         only: cg_list_element
       use global,          only: dt, integration_order
+      use grid,            only: all_cg
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
       use rtvd,            only: relaxing_tvd
@@ -176,59 +178,76 @@ contains
       implicit none
 
       integer(kind=4), intent(in)                  :: cdim
-      type(grid_container), pointer, intent(inout) :: cg
 
-      real, dimension(nmag, cg%n_(cdim))      :: b
-      real, dimension(flind%all, cg%n_(cdim)) :: u, u0
-      real, dimension(:,:), pointer           :: pu, pu0
+      real, dimension(:,:), allocatable :: b
+      real, dimension(:,:), allocatable :: u, u0
+      real, dimension(:,:), pointer     :: pu, pu0
       real, dimension(:), pointer       :: div_v1d => null(), cs2
       integer                           :: i1, i2
       integer                           :: istep
-      integer :: i_cs_iso2
-
-      b = 0.0
-      u = 0.0
-
-
-#ifdef COSM_RAYS
-      call div_v(flind%ion%pos)
-#endif /* COSM_RAYS */
-      cg%uh%arr = cg%u%arr
-      cs2 => null()
-      if (cg%exists("cs_iso2")) then
-         i_cs_iso2 = cg%get_na_ind("cs_iso2") ! BEWARE: magic strings across multiple files
-      else
-         i_cs_iso2 = -1
-      endif
+      integer                           :: i_cs_iso2
+      type(cg_list_element), pointer    :: cgl
+      type(grid_container), pointer     :: cg
 
       do istep = 1, integration_order
-         do i2 = cg%ijkse(pdims(cdim,zdim),LO), cg%ijkse(pdims(cdim,zdim),HI)
-            do i1 = cg%ijkse(pdims(cdim,ydim),LO), cg%ijkse(pdims(cdim,ydim),HI)
+         cgl => all_cg%first
+         do while (associated(cgl))
+            cg => cgl%cg
+
+            if (allocated(b)) deallocate(b)
+            if (allocated(u)) deallocate(u)
+            if (allocated(u0)) deallocate(u0)
+
+            allocate(b(nmag, cg%n_(cdim)), u(flind%all, cg%n_(cdim)), u0(flind%all, cg%n_(cdim)))
+
+            b(:,:) = 0.0
+            u(:,:) = 0.0
+
+#ifdef COSM_RAYS
+            call div_v(flind%ion%pos, cg)
+#endif /* COSM_RAYS */
+            if (istep == 1) cg%uh%arr = cg%u%arr
+            cs2 => null()
+            if (cg%exists("cs_iso2")) then
+               i_cs_iso2 = cg%get_na_ind("cs_iso2") ! BEWARE: magic strings across multiple files
+            else
+               i_cs_iso2 = -1
+            endif
+
+            do i2 = cg%ijkse(pdims(cdim,zdim),LO), cg%ijkse(pdims(cdim,zdim),HI)
+               do i1 = cg%ijkse(pdims(cdim,ydim),LO), cg%ijkse(pdims(cdim,ydim),HI)
 
 #ifdef MAGNETIC
-               b = interpolate_mag_field(cdim, cg, i1, i2)
+                  b = interpolate_mag_field(cdim, cg, i1, i2)
 #endif /* MAGNETIC */
 
-               call set_geo_coeffs(cdim, flind, i1, i2, cg)
+                  call set_geo_coeffs(cdim, flind, i1, i2, cg)
 #ifdef COSM_RAYS
-               call set_div_v1d(div_v1d, cdim, i1, i2)
+                  call set_div_v1d(div_v1d, cdim, i1, i2)
 #endif /* COSM_RAYS */
 
-               pu => cg%u%get_sweep(cdim,i1,i2)
-               pu0 => cg%uh%get_sweep(cdim,i1,i2)
-               if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
+                  pu => cg%u%get_sweep(cdim,i1,i2)
+                  pu0 => cg%uh%get_sweep(cdim,i1,i2)
+                  if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
 
-               u (iarr_all_swp(cdim,:),:) = pu(:,:)
-               u0(iarr_all_swp(cdim,:),:) = pu0(:,:)
+                  u (iarr_all_swp(cdim,:),:) = pu(:,:)
+                  u0(iarr_all_swp(cdim,:),:) = pu0(:,:)
 
-
-               call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg)
-               pu(:,:) = u(iarr_all_swp(cdim,:),:)
-               nullify(pu,pu0,cs2)
+                  call relaxing_tvd(cg%n_(cdim), u, u0, b, div_v1d, cs2, istep, cdim, i1, i2, cg%dl(cdim), dt, cg)
+                  pu(:,:) = u(iarr_all_swp(cdim,:),:)
+                  nullify(pu,pu0,cs2)
+               enddo
             enddo
+
+            cgl => cgl%nxt
          enddo
+
          call all_fluid_boundaries    ! \todo : call only x for istep=1, call all for istep=2
       enddo
+
+      if (allocated(b)) deallocate(b)
+      if (allocated(u)) deallocate(u)
+      if (allocated(u0)) deallocate(u0)
 
    end subroutine sweep
 !------------------------------------------------------------------------------------------

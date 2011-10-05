@@ -121,6 +121,7 @@ contains
 
       use common_hdf5,    only: chdf, set_container_chdf
       use dataio,         only: write_data
+      use dataio_pub,     only: warn
       use data_hdf5,      only: write_hdf5
       use global,         only: nstep
       use restart_hdf5,   only: write_restart_hdf5
@@ -130,7 +131,7 @@ contains
       call set_container_chdf(nstep)
       if (force_hdf5_dump)   call write_hdf5(chdf)
       if (force_res_dump)    call write_restart_hdf5
-      if (force_allbnd_dump) call write_restart_hdf5(debug_res=.true.)
+      if (force_allbnd_dump) call warn("[fluidupdate:make_sweep] force_allbnd_dump has no effect for single-file HDF5 restart files")
       if (force_log_dump)    call write_data(output='log')
 
    end subroutine force_dumps

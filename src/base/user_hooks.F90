@@ -34,7 +34,7 @@ module user_hooks
    implicit none
 
    private
-   public :: problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd, at_user_settings
+   public :: problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd
 
    interface
 
@@ -60,6 +60,5 @@ module user_hooks
    procedure(no_args),  pointer :: finalize_problem           => NULL()
    procedure(no_args),  pointer :: cleanup_problem            => NULL()
    procedure(tab_args), pointer :: custom_emf_bnd             => NULL()
-   procedure(indx_args),pointer :: at_user_settings           => NULL()
 
 end module user_hooks

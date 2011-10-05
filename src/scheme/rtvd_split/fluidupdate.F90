@@ -39,12 +39,11 @@ contains
 
       use constants,  only: I_ONE
       use dataio_pub, only: warn
+      use gc_list,    only: cg_list_element
       use global,     only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
       use grid,       only: all_cg
-      use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
-
 
       implicit none
 
@@ -178,9 +177,6 @@ contains
 
       use constants,      only: ydim
       use domain,         only: has_dir
-      use grid,           only: all_cg
-      use gc_list,        only: cg_list_element
-      use grid_cont,      only: grid_container
       use sweeps,         only: sweep
 #if defined SHEAR && defined FLUID_INTERACTIONS
       use sweeps,         only: source_terms_y
@@ -198,41 +194,31 @@ contains
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical, intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         if (has_dir(dir)) then
-            if (.not. forward) then
+      if (has_dir(dir)) then
+         if (.not. forward) then
 #ifdef COSM_RAYS
-               if (use_split) call cr_diff(dir)
+            if (use_split) call cr_diff(dir)
 #endif /* COSM_RAYS */
 #ifdef MAGNETIC
-               call magfield(dir)
+            call magfield(dir)
 #endif /* MAGNETIC */
-            endif
-
-            call sweep(dir,cg)
-
-            if (forward) then
-#ifdef MAGNETIC
-               call magfield(dir)
-#endif /* MAGNETIC */
-#ifdef COSM_RAYS
-               if (use_split) call cr_diff(dir)
-#endif /* COSM_RAYS */
-            endif
-         else
-#if defined SHEAR && defined FLUID_INTERACTIONS
-            if (dir == ydim) call source_terms_y
-#endif /* SHEAR && FLUID_INTERACTIONS */
          endif
 
-         cgl => cgl%nxt
-      enddo
+         call sweep(dir)
+
+         if (forward) then
+#ifdef MAGNETIC
+            call magfield(dir)
+#endif /* MAGNETIC */
+#ifdef COSM_RAYS
+            if (use_split) call cr_diff(dir)
+#endif /* COSM_RAYS */
+         endif
+      else
+#if defined SHEAR && defined FLUID_INTERACTIONS
+         if (dir == ydim) call source_terms_y
+#endif /* SHEAR && FLUID_INTERACTIONS */
+      endif
 
 #ifdef DEBUG
       call force_dumps

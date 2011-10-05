@@ -34,7 +34,7 @@ module crhelpers
    private
    public :: div_v, set_div_v1d, cleanup_crhelpers
 
-   real, dimension(:,:,:), allocatable, target :: divvel
+   real, dimension(:,:,:), allocatable, target :: divvel !> \todo Merge into cg
 
 contains
 
@@ -66,28 +66,30 @@ contains
 
    end subroutine set_div_v1d
 
-   subroutine div_v(ifluid)
+!>
+!! \brief Compute divergence of velocity
+!!
+!! \details This routine requires a single layer of valid guardcells uin cg%u%arr arrays
+!<
+
+   subroutine div_v(ifluid, cg)
 
       use constants,   only: xdim, ydim, zdim, half
       use dataio_pub,  only: die
       use diagnostics, only: ma3d, my_allocate
       use domain,      only: has_dir, is_multicg
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid,        only: all_cg
       use grid_cont,   only: grid_container
 
       implicit none
 
       integer(kind=4), intent(in) :: ifluid
+      type(grid_container), pointer, intent(inout) :: cg
 
-      real, dimension(:), allocatable :: vx
-      real, dimension(:), allocatable :: vy
-      real, dimension(:), allocatable :: vz
+      real, dimension(:), allocatable :: vx, vy, vz
       integer                :: i, j, k
       integer                :: idnf, imxf, imyf, imzf
-      type(grid_container), pointer :: cg
 
-      cg => all_cg%first%cg
       if (is_multicg) call die("[crhelpers:div_v] multiple grid pieces per procesor not implemented yet") !nontrivial divvel
 
       if (.not.allocated(divvel)) then
@@ -135,9 +137,7 @@ contains
          divvel(:,:,1) = divvel(:,:,2); divvel(:,:, cg%n_(zdim)) = divvel(:,:, cg%n_(zdim)-1) ! for sanity
       endif
 
-      deallocate(vx)
-      deallocate(vy)
-      deallocate(vz)
+      deallocate(vx, vy, vz)
 
    end subroutine div_v
 
