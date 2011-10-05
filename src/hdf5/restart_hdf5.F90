@@ -63,7 +63,8 @@ contains
 !! \brief Routine to set parameters and dimensions of arrays in restart file
 !! \param area_type case name; possibilities:
 !!   AT_OUT_B - physical domain with outer boundaries,
-!    AT_NO_B  - only physical domain without any boundaries
+!!   AT_NO_B  - only physical domain without any boundaries
+!!   AT_USER  - user defined domain
 !! \param area grid dimensions in the file
 !! \param chnk dimensions of data array dumped by this process
 !! \param lleft left limits of data from array to be dumped
@@ -72,10 +73,11 @@ contains
 !<
    subroutine set_dims_to_write(area_type, area, chnk, lleft, lright, loffs, cg)
 
-      use constants,  only: ndims, AT_OUT_B, AT_NO_B, LO, HI
+      use constants,  only: ndims, AT_OUT_B, AT_NO_B, AT_USER, LO, HI
       use dataio_pub, only: die
       use domain,     only: dom, has_dir
       use grid_cont,  only: grid_container
+      use user_hooks, only: at_user_settings
 
       implicit none
 
@@ -106,6 +108,12 @@ contains
             lright(:) = cg%ijkse(:, HI)
             chnk(:)   = cg%n_b(:)
             loffs(:)  = cg%off(:)
+         case (AT_USER)                                    ! user defined domain (with no reference to simulations domain)
+            if (associated(at_user_settings)) then
+               call at_user_settings(area, lleft, lright, chnk, loffs)
+            else
+               call die("[restart_hdf5:set_dims_to_write] Routine at_user_settings not associated")
+            endif
          case default
             call die("[restart_hdf5:set_dims_to_write] Non-recognized area_type.")
             area(:) = 0 ! suppres compiler warnings
@@ -497,11 +505,11 @@ contains
       implicit none
 
       integer, parameter                             :: rank4 = 1 + ndims
-      integer(kind=4), intent(in)                    :: rank
+      integer(kind=4),  intent(in)                   :: rank
       integer, intent(in)                            :: ir
       integer(HSIZE_T), dimension(rank4), intent(in) :: chunk_dims
       integer(kind=8),  dimension(ndims), intent(in) :: loffs
-      integer(HID_T), intent(in)                     :: file_id   !> File identifier
+      integer(HID_T),   intent(in)                   :: file_id   !> File identifier
       character(len=*), intent(in)                   :: dname
 
       integer(HID_T), intent(out) :: dset_id    !> Dataset identifier
