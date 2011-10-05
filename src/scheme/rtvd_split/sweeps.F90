@@ -203,10 +203,13 @@ contains
             b(:,:) = 0.0
             u(:,:) = 0.0
 
+            if (istep == 1) then
 #ifdef COSM_RAYS
-            call div_v(flind%ion%pos, cg)
+               call div_v(flind%ion%pos, cg)
 #endif /* COSM_RAYS */
-            if (istep == 1) cg%uh%arr = cg%u%arr
+               cg%uh%arr = cg%u%arr
+            endif
+
             cs2 => null()
             if (cg%exists("cs_iso2")) then
                i_cs_iso2 = cg%get_na_ind("cs_iso2") ! BEWARE: magic strings across multiple files
