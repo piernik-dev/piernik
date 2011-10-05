@@ -33,7 +33,7 @@ module initproblem
 ! Initial condition for Keplerian disk
 ! Written by: M. Hanasz, March 2006
 
-   use constants,    only: cbuff_len
+   use constants,    only: cbuff_len, dsetnamelen
 
    implicit none
 
@@ -55,10 +55,8 @@ module initproblem
    logical                  :: use_inner_orbital_period  !< use 1./T_inner as dumping_coeff
    character(len=cbuff_len) :: mag_field_orient
    character(len=cbuff_len) :: densfile
-   real, target, allocatable, dimension(:,:,:,:) :: den0, mtx0, mty0, mtz0, ene0
-   real, target, allocatable, dimension(:,:,:)   :: harr
-   integer, parameter       :: dname_len = 10
    real, dimension(:), allocatable :: taus, tauf
+   character(len=dsetnamelen), parameter :: inid_n = "u0"
 
    namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, &
       & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
@@ -68,17 +66,37 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_pointers
 
+      !use dataio_user, only: user_vars_hdf5, problem_read_restart
+      !use user_hooks,  only: finalize_problem, problem_customize_solution
+
       implicit none
 
+      !problem_read_restart       => register_user_var
+
    end subroutine problem_pointers
-
 !-----------------------------------------------------------------------------
+   subroutine register_user_var(file_id, cg)
 
+      use constants,   only: AT_NO_B
+      use grid_cont,   only: grid_container
+      use hdf5,        only: HID_T
+
+      implicit none
+
+      integer(HID_T), intent(in) :: file_id
+      type(grid_container), pointer, intent(in) :: cg
+
+      call cg%add_na_4d(inid_n, size(cg%u%arr,1), AT_NO_B)
+
+      if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused files
+
+   end subroutine register_user_var
+!-----------------------------------------------------------------------------
    subroutine read_problem_par
 
       use constants,           only: GEO_RPZ
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
-      use dataio_user,         only: user_vars_hdf5, problem_write_restart, problem_read_restart
+      use dataio_user,         only: user_vars_hdf5, problem_read_restart
       use domain,              only: geometry_type
       use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr
       use gravity,             only: grav_pot_3d
@@ -175,8 +193,7 @@ contains
       endif
 
       if (geometry_type == GEO_RPZ) then ! BEWARE: cannot move this to problem_pointers because geometry_type is set up in init_domain
-         problem_write_restart => write_initial_fld_to_restart
-         problem_read_restart  => read_initial_fld_from_restart
+         problem_read_restart       => register_user_var
          problem_customize_solution => problem_customize_solution_kepler
          user_bnd_xl => my_bnd_xl
          user_bnd_xr => my_bnd_xr
@@ -285,7 +302,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,    only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
+      use constants,    only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI, INT4
       use dataio_pub,   only: msg, printinfo, die
       use domain,       only: geometry_type, cdd, dom, has_dir, is_multicg
       use fluidindex,   only: flind
@@ -318,6 +335,8 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+
+         call register_user_var(0_INT4,cg)
 
          if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
@@ -398,12 +417,6 @@ contains
                call printinfo("------------------------------------------------------------------")
             endif
             call grav_pot_3d
-
-            if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-            if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-            if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-            if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-            if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
             if (.not.allocated(grav)) allocate(grav(cg%n_(xdim)))
             if (.not.allocated(ln_dens_der)) allocate(ln_dens_der(cg%n_(xdim)))
@@ -493,20 +506,14 @@ contains
                         if (fl%ien > 0) then
                            cg%u%arr(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u%arr(fl%idn,i,j,k)
                            cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*cg%u%arr(fl%idn,i,j,k)
-                           ene0(p,i,j,k)   = cg%u%arr(fl%ien,i,j,k)
-                        else
-                           ene0(p,i,j,k)   = 0.0
                         endif
                      enddo
                      taus(i) = vphi/cg%x(i)*tauf(i) ! compiler complains that vphi may be used uninitialized here
                   enddo
                enddo
 
-               den0(p,:,:,:) = cg%u%arr(fl%idn,:,:,:)
-               mtx0(p,:,:,:) = cg%u%arr(fl%imx,:,:,:)
-               mty0(p,:,:,:) = cg%u%arr(fl%imy,:,:,:)
-               mtz0(p,:,:,:) = cg%u%arr(fl%imz,:,:,:)
             enddo
+            cg%w(cg%get_na_ind_4d(inid_n))%arr(:,:,:,:) = cg%u%arr(:,:,:,:)
             cg%b%arr(:,:,:,:) = 0.0
             if (allocated(grav)) deallocate(grav)
             if (allocated(dens_prof)) deallocate(dens_prof)
@@ -535,111 +542,6 @@ contains
       mmsn_T = T_0 * r**(-k)
    end function mmsn_T
 !-----------------------------------------------------------------------------
-   subroutine write_initial_fld_to_restart(file_id, cg)
-
-      use constants,    only: AT_NO_B
-      use fluidindex,   only: flind
-      use grid_cont,    only: grid_container
-      use hdf5,         only: HID_T
-      use restart_hdf5, only: write_arr_to_restart
-
-      implicit none
-
-      integer(HID_T),intent(in)  :: file_id
-      type(grid_container), pointer, intent(in) :: cg
-
-      integer :: i
-      character(len=dname_len) :: dname
-      real, dimension(:,:,:), pointer :: p3d
-
-      if (associated(p3d)) nullify(p3d)
-      do i = lbound(den0,1), ubound(den0,1)
-         if (allocated(den0)) then
-            write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_den0'
-            p3d => den0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname, cg)
-            nullify(p3d)
-         endif
-         if (allocated(mtx0)) then
-            write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtx0'
-            p3d => mtx0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname, cg)
-            nullify(p3d)
-         endif
-         if (allocated(mty0)) then
-            write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mty0'
-            p3d => mty0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname, cg)
-            nullify(p3d)
-         endif
-         if (allocated(mtz0)) then
-            write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtz0'
-            p3d => mtz0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname, cg)
-            nullify(p3d)
-         endif
-         if (allocated(ene0)) then
-            write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_ene0'
-            p3d => ene0(i, :, :, :)
-            call write_arr_to_restart(file_id, p3d, AT_NO_B, dname, cg)
-            nullify(p3d)
-         endif
-      enddo
-
-   end subroutine write_initial_fld_to_restart
-!-----------------------------------------------------------------------------
-   subroutine read_initial_fld_from_restart(file_id, cg)
-
-      use constants,    only: AT_NO_B, xdim, ydim, zdim
-      use fluidindex,   only: flind
-      use grid_cont,    only: grid_container
-      use hdf5,         only: HID_T
-      use restart_hdf5, only: read_arr_from_restart
-
-      implicit none
-
-      integer(HID_T),intent(in) :: file_id
-      type(grid_container), pointer, intent(in) :: cg
-
-      character(len=dname_len) :: dname
-      real, dimension(:,:,:), pointer :: p3d
-      integer :: i
-
-      ! /todo First query for existence of den0, vlx0 and vly0, then allocate
-      if (.not.allocated(den0)) allocate(den0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-      if (.not.allocated(mtx0)) allocate(mtx0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-      if (.not.allocated(mty0)) allocate(mty0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-      if (.not.allocated(mtz0)) allocate(mtz0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-      if (.not.allocated(ene0)) allocate(ene0(flind%fluids, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-      if (.not.allocated(harr)) allocate(harr(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-
-      if (.not.associated(p3d)) p3d => harr(:,:,:)
-      do i=1, flind%fluids
-         write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_den0'
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname, cg)
-         den0(i,:,:,:) = harr(:,:,:)
-
-         write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtx0'
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname, cg)
-         mtx0(i,:,:,:) = harr(:,:,:)
-
-         write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mty0'
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname, cg)
-         mty0(i,:,:,:) = harr(:,:,:)
-
-         write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_mtz0'
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname, cg)
-         mtz0(i,:,:,:) = harr(:,:,:)
-
-         write(dname,'(2a)') flind%all_fluids(i)%get_tag(), '_ene0'
-         call read_arr_from_restart(file_id, p3d, AT_NO_B, dname, cg)
-         ene0(i,:,:,:) = harr(:,:,:)
-      enddo
-      if (associated(p3d)) nullify(p3d)
-      if (allocated(harr)) deallocate(harr)
-
-   end subroutine read_initial_fld_from_restart
-!-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
 
       use constants,       only: xdim, ydim, zdim
@@ -650,10 +552,7 @@ contains
       use grid,            only: all_cg
       use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-#ifndef ISO
-      use fluidindex,      only: iarr_all_en
-#endif /* ISO */
+      use fluidindex,      only: iarr_all_mx, iarr_all_mz, iarr_all_dn
       ! use interactions,    only: dragc_gas_dust
 #ifdef VERBOSE
 !      use dataio_pub,      only: msg, printinfo
@@ -690,7 +589,7 @@ contains
             y1 = drag_min
             a = (y0 - y1)/(x0 - x1)
             b = y0 - a*x0
-            allocate(funcR(size(iarr_all_dn), cg%n_(xdim)) )
+            allocate(funcR(size(cg%u%arr,dim=1), cg%n_(xdim)) )
 
             funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0 + max( tanh((cg%x(:)-r_out+1.0)**f_out), 0.0)
 
@@ -707,18 +606,12 @@ contains
             close(212)
 #endif /* DEBUG */
             frun = .false.
-            funcR(:,:) = spread(funcR(1,:),1,size(iarr_all_dn))
+            funcR(:,:) = spread(funcR(1,:),1,size(cg%u%arr,dim=1))
          endif
 
          do j = 1, cg%n_(ydim)
             do k = 1, cg%n_(zdim)
-               cg%u%arr(iarr_all_dn,:,j,k) = cg%u%arr(iarr_all_dn,:,j,k) - dt*(cg%u%arr(iarr_all_dn,:,j,k) - den0(:,:,j,k))*funcR(:,:)
-               cg%u%arr(iarr_all_mx,:,j,k) = cg%u%arr(iarr_all_mx,:,j,k) - dt*(cg%u%arr(iarr_all_mx,:,j,k) - mtx0(:,:,j,k))*funcR(:,:)
-               cg%u%arr(iarr_all_my,:,j,k) = cg%u%arr(iarr_all_my,:,j,k) - dt*(cg%u%arr(iarr_all_my,:,j,k) - mty0(:,:,j,k))*funcR(:,:)
-               cg%u%arr(iarr_all_mz,:,j,k) = cg%u%arr(iarr_all_mz,:,j,k) - dt*(cg%u%arr(iarr_all_mz,:,j,k) - mtz0(:,:,j,k))*funcR(:,:)
-#ifndef ISO
-               cg%u%arr(iarr_all_en,:,j,k) = cg%u%arr(iarr_all_en,:,j,k) - dt*(cg%u%arr(iarr_all_en,:,j,k) - ene0(:,:,j,k)*funcR(:,:)
-#endif /* !ISO */
+               cg%u%arr(:,:,j,k) = cg%u%arr(:,:,j,k) - dt*(cg%u%arr(:,:,j,k) - cg%w(cg%get_na_ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
             enddo
          enddo
          where ( cg%u%arr(iarr_all_dn,:,:,:) < 2.*smalld )
@@ -823,26 +716,14 @@ contains
 
       use constants,  only: xdim
       use grid_cont,  only: grid_container
-      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-#ifndef ISO
-      use fluidindex, only: iarr_all_en
-#endif /* ISO */
 
       implicit none
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      cg%u%arr(iarr_all_dn, cg%ie+1:cg%n_(xdim),:,:) = den0(:, cg%ie+1:cg%n_(xdim),:,:)
-      cg%u%arr(iarr_all_mx, cg%ie+1:cg%n_(xdim),:,:) = mtx0(:, cg%ie+1:cg%n_(xdim),:,:)
-      cg%u%arr(iarr_all_my, cg%ie+1:cg%n_(xdim),:,:) = mty0(:, cg%ie+1:cg%n_(xdim),:,:)
-      cg%u%arr(iarr_all_mz, cg%ie+1:cg%n_(xdim),:,:) = mtz0(:, cg%ie+1:cg%n_(xdim),:,:)
-#ifndef ISO
-      cg%u%arr(iarr_all_en, cg%ie+1:cg%n_(xdim),:,:) = ene0(:, cg%ie+1:cg%n_(xdim),:,:)
-#endif /* !ISO */
+      cg%u%arr(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(cg%get_na_ind_4d(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
    end subroutine my_bnd_xr
-
 !-----------------------------------------------------------------------------
-
    function get_lcutoff(width, dist, n, vmin, vmax) result(y)
 
       implicit none
@@ -971,3 +852,4 @@ contains
    end subroutine read_dens_profile
 !-----------------------------------------------------------------------------
 end module initproblem
+! vim: set tw=120:
