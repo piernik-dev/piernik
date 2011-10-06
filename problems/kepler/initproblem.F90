@@ -86,7 +86,7 @@ contains
       integer(HID_T), intent(in) :: file_id
       type(grid_container), pointer, intent(in) :: cg
 
-      call cg%add_na_4d(inid_n, size(cg%u%arr,1), AT_NO_B)
+      call cg%add_na_4d(inid_n, int(size(cg%u%arr,1), kind=4), AT_NO_B)
 
       if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused files
 
