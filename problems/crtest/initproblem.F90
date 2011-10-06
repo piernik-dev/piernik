@@ -31,6 +31,8 @@
 
 module initproblem
 
+   use constants, only: dsetnamelen
+
    implicit none
 
    private
@@ -38,10 +40,9 @@ module initproblem
 
    integer(kind=4)    :: norm_step
    real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
-   real, dimension(:,:,:), allocatable :: aecr1
+   character(len=dsetnamelen), parameter :: aecr1_n = "aecr"
 
-   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, &
-        &                     beta_cr, amp_cr, norm_step
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, norm_step
 
 contains
 
@@ -50,13 +51,12 @@ contains
    subroutine problem_pointers
 
       use dataio_user, only: user_vars_hdf5
-      use user_hooks,  only: problem_customize_solution, finalize_problem, cleanup_problem
+      use user_hooks,  only: problem_customize_solution, finalize_problem
 
       implicit none
 
       problem_customize_solution => check_norm
       finalize_problem           => check_norm
-      cleanup_problem            => cleanup_crtest
       user_vars_hdf5             => crtest_analytic_ecr1
 
    end subroutine problem_pointers
@@ -65,21 +65,18 @@ contains
 
    subroutine read_problem_par
 
-      use constants,   only: I_ONE, I_TEN
+      use constants,   only: I_ONE, I_TEN, AT_NO_B
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_pub,  only: die
-      use diagnostics, only: my_allocate
-      use domain,      only: dom, is_multicg
+      use domain,      only: dom
       use grid,        only: all_cg
       use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
       use mpi,         only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,    only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave, FIRST
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
 
       d0           = 1.0e5     !< density
       p0           = 1.0       !< pressure
@@ -139,33 +136,15 @@ contains
 
       if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
-      if (is_multicg) call die("[initproblem:read_problem_par] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
-      !> \todo provide mechanism for rank-3 user arrays in grid_container
-
       cgl => all_cg%first
       do while (associated(cgl))
-         cg => cgl%cg
-
-         call my_allocate(aecr1, cg%n_b(:), "aecr1")
-         aecr1(:,:,:) = 0.
+         call cgl%cg%add_na(aecr1_n, AT_NO_B)
          cgl => cgl%nxt
       enddo
 
       if (norm_step <= 0) norm_step = huge(I_ONE)
 
    end subroutine read_problem_par
-
-!-----------------------------------------------------------------------------
-
-   subroutine cleanup_crtest
-
-      use diagnostics, only: my_deallocate
-
-      implicit none
-
-      call my_deallocate(aecr1)
-
-   end subroutine cleanup_crtest
 
 !-----------------------------------------------------------------------------
 
@@ -259,7 +238,6 @@ contains
    subroutine compute_analytic_ecr1
 
       use dataio_pub,     only: die
-      use domain,         only: is_multicg
       use gc_list,        only: cg_list_element
       use global,         only: t
       use grid,           only: all_cg
@@ -274,8 +252,7 @@ contains
       integer, parameter :: icr = 1 !< Only first CR component
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-
-      if (is_multicg) call die("[initproblem:compute_analytic_ecr1] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
+      real, dimension(:,:,:), pointer :: aecr1
 
       iecr = -1
 
@@ -307,6 +284,9 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
+         aecr1 => cg%get_na_ptr(aecr1_n)
+         if (.not. associated(aecr1)) call die("[initproblem:compute_analytic_ecr1] cannot find aecr1")
+
          do k = cg%ks, cg%ke
             delz = cg%z(k) - z0
             do j = cg%js, cg%je
@@ -333,7 +313,6 @@ contains
 
       use constants,      only: PIERNIK_FINISHED, I_ONE, I_TWO
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
-      use domain,         only: is_multicg
       use global,         only: t, nstep
       use gc_list,        only: cg_list_element
       use grid,           only: all_cg
@@ -351,8 +330,7 @@ contains
       integer, parameter :: icr = 1 !< Only first CR component
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-
-      if (is_multicg) call die("[] multiple grid pieces per procesor not implemented yet") !nontrivial aecr1
+      real, dimension(:,:,:), pointer :: aecr1
 
       iecr = -1
 
@@ -373,6 +351,8 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+         aecr1 => cg%get_na_ptr(aecr1_n)
+         if (.not. associated(aecr1)) call die("[initproblem:check_norm] cannot find aecr1")
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
@@ -406,6 +386,7 @@ contains
 
    subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
 
+      use dataio_pub,     only: die
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs
 
@@ -415,15 +396,19 @@ contains
       real(kind=4), dimension(:,:,:), intent(inout)   :: tab
       integer, intent(inout)                          :: ierrh
       type(grid_container), pointer, intent(in)       :: cg
+      real, dimension(:,:,:), pointer :: aecr1
 
       call compute_analytic_ecr1
+
+      aecr1 => cg%get_na_ptr(aecr1_n)
+      if (.not. associated(aecr1)) call die("[initproblem:crtest_analytic_ecr1] cannot find aecr1")
 
       ierrh = 0
       select case (trim(var))
          case ("acr1")
-            tab(:,:,:) = real(aecr1(:,:,:), 4)
+            tab(:,:,:) = real(aecr1(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case ("err1")
-            tab(:,:,:) = real(aecr1(:,:,:) - cg%u%arr(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(aecr1(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u%arr(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

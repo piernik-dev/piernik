@@ -256,8 +256,6 @@ contains
 
    subroutine mag_add(dim1, dim2)
 
-      use dataio_pub,    only: die
-      use domain,        only: is_multicg
       use func,          only: pshift, mshift
       use grid,          only: all_cg
       use gc_list,       only: cg_list_element
@@ -265,6 +263,8 @@ contains
       use magboundaries, only: all_mag_boundaries
       use user_hooks,    only: custom_emf_bnd
 #ifdef RESISTIVE
+      use dataio_pub,    only: die
+      use domain,        only: is_multicg
       use resistivity,   only: wcu
 #endif /* RESISTIVE */
 
@@ -274,13 +274,12 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
-      if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
-
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
+         if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") ! move wcu into cg
          if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu%arr)
          cg%b%arr(dim2,:,:,:) = cg%b%arr(dim2,:,:,:) - wcu%arr*cg%idl(dim1)
          wcu%arr = pshift(wcu%arr,dim1)

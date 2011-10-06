@@ -32,50 +32,37 @@
 !<
 
 module crdiffusion
+
 ! pulled by COSM_RAYS
+
    implicit none
 
    private
-   public :: cr_diff, init_crdiffusion, cleanup_crdiffusion
-
-   real, allocatable, dimension(:,:,:,:), target :: wcr      !< Temporary array used in crdiffusion module
+   public :: cr_diff, init_crdiffusion
 
 contains
 
    subroutine init_crdiffusion(crsall)
 
-      use dataio_pub,  only: die
-      use diagnostics, only: ma4d, my_allocate
-      use domain,      only: is_multicg
-      use grid,        only: all_cg
-      use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
+      use constants, only: AT_IGNORE
+      use cr_data,   only: wcr_n, divv_n
+      use grid,      only: all_cg
+      use gc_list,   only: cg_list_element
 
       implicit none
 
       integer(kind=4), intent(in) :: crsall
 
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-
-      if (is_multicg) call die("[crdiffusion:init_crdiffusion] multiple grid pieces per procesor not implemented yet") !nontrivial crsall
-      !> \todo provide hooks for rank-4 user/physics arrays in grid container
 
       cgl => all_cg%first
       do while (associated(cgl))
-         cg => cgl%cg
-         ma4d = [crsall, cg%n_(:) ]
-         call my_allocate(wcr, ma4d, "wcr")
+         call cgl%cg%add_na_4d(wcr_n, crsall, AT_IGNORE)
+         call cgl%cg%add_na(divv_n, AT_IGNORE)
          cgl => cgl%nxt
       enddo
 
    end subroutine init_crdiffusion
-
-   subroutine cleanup_crdiffusion
-      use diagnostics, only: my_deallocate
-      implicit none
-      call my_deallocate(wcr)
-   end subroutine cleanup_crdiffusion
 
 !>
 !! \brief boundaries for wcr
@@ -86,6 +73,7 @@ contains
    subroutine all_wcr_boundaries
 
       use constants,    only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE
+      use cr_data,      only: wcr_n
       use dataio_pub,   only: die
       use domain,       only: has_dir, cdd, is_multicg
       use internal_bnd, only: internal_boundaries
@@ -98,20 +86,21 @@ contains
       implicit none
 
       integer :: i, d, lh
-      real, dimension(:,:,:,:), pointer :: pwcr
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-
-      if (is_multicg) call die("[crdiffusion:all_wcr_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall should be outside do while (associated(cgl)) loop (wcr?)
+      real, dimension(:,:,:,:), pointer :: wcr
 
       if (cdd%comm3d == MPI_COMM_NULL) then
-         pwcr => wcr
-         call internal_boundaries(CR, pa4d=pwcr)
+         if (is_multicg) call die("[crdiffusion:all_wcr_boundaries] multiple grid pieces per procesor not implemented yet") ! internal_boundaries
+         wcr => all_cg%first%cg%get_na_ptr_4d(wcr_n)
+         call internal_boundaries(CR, pa4d=wcr)
       endif
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+         wcr => cg%get_na_ptr_4d(wcr_n)
+         if (.not. associated(wcr)) call die("[crdiffusion:all_wcr_boundaries] cannot get wcr")
 
          req(:) = MPI_REQUEST_NULL
 
@@ -190,8 +179,9 @@ contains
    subroutine cr_diff(crdim)
 
       use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half
+      use cr_data,        only: wcr_n
       use dataio_pub,     only: die
-      use domain,         only: has_dir, is_multicg
+      use domain,         only: has_dir
       use fluidindex,     only: flind
       use global,         only: dt
       use grid,           only: all_cg
@@ -212,12 +202,11 @@ contains
       type(cg_list_element), pointer       :: cgl
       type(grid_container),  pointer       :: cg
       logical, dimension(ndims)            :: present_not_crdim
+      real, dimension(:,:,:,:), pointer    :: wcr
 
 !=======================================================================
 
       if (.not.has_dir(crdim)) return
-
-      if (is_multicg) call die("[crdiffusion:cr_diff] multiple grid pieces per procesor not implemented yet") !nontrivial wcr
 
       idm        = 0              ;      idm(crdim) = 1
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.has_dir(dim) .and. (dim /= crdim) )
@@ -226,6 +215,9 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+
+         wcr => cg%get_na_ptr_4d(wcr_n)
+         if (.not. associated(wcr)) call die("[crdiffusion:cr_diff] cannot get wcr")
                                                                          ! in case of integration with boundaries:
          ldm        = cg%ijkse(:,LO) ;      ldm(crdim) = 2               ! ldm =           1 + D_
          hdm        = cg%ijkse(:,HI) ;      hdm(crdim) = cg%n_(crdim)    ! hdm = cg%n_ + idm - D_

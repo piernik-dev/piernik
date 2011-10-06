@@ -123,6 +123,7 @@ module domain
    ! Namelist variables
 
    integer(kind=4), dimension(ndims) :: psize !< desired number of MPI blocks in x, y and z-dimension
+   integer(kind=4), dimension(ndims) :: bsize !< the size of cg for multiblock decomposition
    logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
    logical :: allow_uneven            !< allows different values of n_b(:) on different processes
    logical :: allow_noncart           !< allows more than one neighbour on a boundary
@@ -131,7 +132,7 @@ module domain
    real    :: dd_rect_quality         !< rectilinear domain decomposition may be rejected it its quality is below this threshold (not used yet)
    logical :: use_comm3d              !< If .false. then do not call any MPI_Cart_* functions
 
-   namelist /MPI_BLOCKS/ psize, reorder, allow_uneven, allow_noncart, allow_AMR, dd_unif_quality, dd_rect_quality, use_comm3d
+   namelist /MPI_BLOCKS/ psize, bsize, reorder, allow_uneven, allow_noncart, allow_AMR, dd_unif_quality, dd_rect_quality, use_comm3d
 
    integer(kind=4), protected :: nxd    !< number of %grid cells in physical domain (without boundary cells) in x-direction (if == 1 then x-dimension is reduced to a point with no boundary cells)
    integer(kind=4), protected :: nyd    !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
@@ -182,6 +183,7 @@ contains
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !!   <tr><td>psize(3)       </td><td>1      </td><td>integer</td><td>\copydoc domain::psize          </td></tr>
+!!   <tr><td>bsize(3)       </td><td>0      </td><td>integer</td><td>\copydoc domain::bsize          </td></tr>
 !!   <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc domain::reorder        </td></tr>
 !!   <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_uneven   </td></tr>
 !!   <tr><td>allow_noncart  </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_noncart  </td></tr>
@@ -218,7 +220,7 @@ contains
    subroutine init_domain
 
       use constants,  only: xdim, ydim, zdim, LO, HI, big_float, dpi, &
-           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND, PIERNIK_INIT_MPI, I_ONE
+           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND, PIERNIK_INIT_MPI, I_ONE, I_ZERO
       use dataio_pub, only: die, printinfo, msg, warn, code_progress
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR
@@ -230,11 +232,12 @@ contains
       integer :: p, i
       real, allocatable, dimension(:) :: maxcnt
 
-      if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init_grid] MPI not initialized.")
+      if (code_progress < PIERNIK_INIT_MPI) call die("[domain:init_domain] MPI not initialized.")
 
       ! Begin processing of namelist parameters
 
       psize(:) = I_ONE
+      bsize(:) = I_ZERO
 
       nxd    = 1
       nyd    = 1
@@ -268,9 +271,7 @@ contains
          ! Sanitize input parameters, if possible
          dom%n_d(:) = max(I_ONE, [nxd, nyd, nzd])
 
-      endif
-
-      if (master) then
+         if (any(bsize(:) > 0 .and. bsize(:) < nb .and. dom%n_d(:) > 1)) call die("[domain:init_domain] bsize(:) is too small.") ! has_dir(:) is not available yet
 
          cbuff(1) = bnd_xl
          cbuff(2) = bnd_xr
@@ -280,9 +281,10 @@ contains
          cbuff(6) = bnd_zr
          cbuff(7) = geometry
 
-         ibuff(xdim:zdim)        = psize(:)
-         ibuff(zdim+xdim:2*zdim) = dom%n_d(:)
-         ibuff(2*zdim+1)         = nb
+         ibuff(         xdim:zdim) = psize(:)
+         ibuff(  zdim+xdim:2*zdim) = dom%n_d(:)
+         ibuff(2*zdim+xdim:3*zdim) = bsize(:)
+         ibuff(3*zdim+1)           = nb
 
          rbuff(1) = xmin
          rbuff(2) = xmax
@@ -331,9 +333,10 @@ contains
          bnd_zr     = cbuff(6)
          geometry   = cbuff(7)
 
-         psize(:)   = int(ibuff(xdim:zdim), kind=4)
-         dom%n_d(:) = int(ibuff(zdim+xdim:2*zdim), kind=4)
-         nb         = int(ibuff(2*zdim+1), kind=4)
+         psize(:)   = int(ibuff(         xdim:zdim), kind=4)
+         dom%n_d(:) = int(ibuff(  zdim+xdim:2*zdim), kind=4)
+         bsize(:)   = int(ibuff(2*zdim+xdim:3*zdim), kind=4)
+         nb         = int(ibuff(3*zdim+1),           kind=4)
 
       endif
 
@@ -465,6 +468,7 @@ contains
 
 !#ifdef VERBOSE
       if (master) then
+         !call dom%print_me
          allocate(maxcnt(FIRST:LAST))
          maxcnt(:) = 0
          do p = FIRST, LAST
@@ -771,6 +775,9 @@ contains
          call warn("[domain:divide_domain] Domain already decomposed")
          return
       endif
+
+      if (all(bsize(:) > 0 .or. .not. has_dir(:))) call stamp_cg(dom_divided)
+      if (dom_divided) return
 
       if (product(psize(:)) == nproc) then
          if (all(mod(dom%n_d(:), psize(:)) == 0)) then
@@ -1084,7 +1091,115 @@ contains
    end subroutine divide_domain_slices
 
 !-----------------------------------------------------------------------------
+!>
+!! \brief Divide the domain into lots of identical blocks
+!<
+   subroutine stamp_cg(dom_divided)
 
+      use constants,    only: xdim, zdim, LO, HI
+      use dataio_pub,   only: warn, msg, die
+      use mpisetup,     only: master, proc, nproc
+
+      implicit none
+
+      logical, intent(inout) :: dom_divided
+      integer, dimension(xdim:zdim) :: n_bl, b_loc
+      integer, dimension(xdim:zdim, LO:HI) :: se
+      integer :: tot_bl, loc_bl, bl_s, bl_e
+      integer, dimension(nproc) :: n_cg ! BEWARE: antiparallel
+      integer, allocatable, dimension(:) :: pb ! BEWARE: antiparallel
+      integer :: p, b
+
+      dom_divided = .false.
+
+      if (any(bsize(xdim:zdim) <=0)) then
+         if (master) call warn("[initproblem:stamp_cg] some(bsize(1:3)) <=0")
+         return
+      endif
+
+      if (any(mod(dom%n_d(:), bsize(xdim:zdim)) /= 0 .and. has_dir(:))) then
+         write(msg,'(a,3f10.3,a)')"[initproblem:stamp_cg] Fractional number of blocks: dom%n_d(:)/bsize(1:3) = [",dom%n_d(:)/real(bsize(xdim:zdim)),"]"
+         if (master) call warn(msg)
+         return
+      endif
+
+      where (has_dir(:))
+         n_bl(:) = dom%n_d(:) / bsize(xdim:zdim)
+      elsewhere
+         n_bl(:) = 1
+      endwhere
+      tot_bl = product(n_bl(:), mask=has_dir(:))
+      if (allocated(pb)) call die("[initproblem:stamp_cg] pb already allocated")
+      allocate(pb(tot_bl))
+
+      if (tot_bl < nproc) then
+         if (master) call warn("[initproblem:stamp_cg] tot_bl < nproc")
+         return
+      endif
+
+      do p = 0, nproc-1
+         n_cg(p+1) = (((p + 1) * tot_bl)/nproc) - ((p * tot_bl)/nproc) ! number of blocks on process p
+      enddo
+      call allocate_pse(n_cg(:))
+
+      bl_s = (proc * tot_bl)/nproc + 1
+      bl_e = ((proc + 1) * tot_bl)/nproc
+      loc_bl = bl_e - bl_s + 1
+      if (loc_bl /= n_cg(proc + 1)) call die("[initproblem:stamp_cg] loc_bl /= n_cg(proc + 1)")
+
+      do p = 0, nproc-1
+         n_cg(p+1) = (p * tot_bl)/nproc + 1 ! first block on process p
+         if (p>0) pb(n_cg(p):n_cg(p+1)-1) = p-1
+      enddo
+      pb(n_cg(nproc):) = nproc-1
+
+      do p = 0, nproc-1
+         if (size(dom%pse(p)%sel(:,:,:), dim=1) /= count(pb(:) == p)) call die("[initproblem:stamp_cg] size(dom%pse(p)%sel(:,:,:), dim=1) /= count(pb(:) == p)")
+      enddo
+
+      se(:,:) = 0
+      do b = 1, tot_bl
+         ! pb(b) = min((b*nproc)/tot_bl, nproc-1)
+         call simple_ordering(b, n_bl(:), b_loc(:)) !> \todo implement Morton and Hilbert ordering
+
+         where (has_dir(:))
+            se(:, LO) = b_loc(:) * bsize(xdim:zdim)
+            se(:, HI) = se(:, LO) + bsize(xdim:zdim) - 1
+         endwhere
+         dom%pse(pb(b))%sel(b-n_cg(pb(b)+1)+1,:,:) = se(:,:) ! equivalent to call set_pse_sel(pb(b), b-n_cg(pb(b)+1)+1, se)
+      enddo
+      dom_divided = .true.
+      !> \todo implement merging to larger cuboids
+
+      if (master) call warn("[initproblem:stamp_cg] Experimental implementation")
+      if (.not. dom_divided) call deallocate_pse
+      deallocate(pb)
+
+   end subroutine stamp_cg
+
+!-----------------------------------------------------------------------------
+!>
+!! \brief Simple block ordering
+!<
+
+   subroutine simple_ordering(b, n_bl, b_loc)
+
+      use constants, only: xdim, ydim, zdim
+
+      implicit none
+
+      integer, intent(in) :: b                            !< block number
+      integer, dimension(xdim:zdim), intent(in)  :: n_bl  !< extents of block array
+      integer, dimension(xdim:zdim), intent(out) :: b_loc !< location of block b
+
+      b_loc(:) = [ mod(b-1, n_bl(xdim)), mod((b-1)/n_bl(xdim), n_bl(ydim)), (b-1)/product(n_bl(xdim:ydim)) ]
+
+   end subroutine simple_ordering
+
+!-----------------------------------------------------------------------------
+!>
+!! \brief Create an array of prime numbers smaller than given integer
+!<
    subroutine Eratosthenes_sieve(tab, n)
 
       use constants,  only: I_ZERO, I_TWO
@@ -1096,8 +1211,8 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(inout), allocatable, dimension(:) :: tab
-      integer(kind=4), intent(in) :: n
+      integer(kind=4), intent(inout), allocatable, dimension(:) :: tab !< array of found prime numbers
+      integer(kind=4), intent(in) :: n                                 !< max value of prime number
 
       integer(kind=4), dimension(n) :: numb
       integer(kind=4) :: i
@@ -1124,9 +1239,9 @@ contains
    end subroutine Eratosthenes_sieve
 
 !-----------------------------------------------------------------------------
-!
-! An interpreter of string-defined boundary types
-!
+!>
+!! An interpreter of string-defined boundary types
+!<
 
    subroutine translate_bnds_to_ints(this, bnds)
 
@@ -1136,7 +1251,7 @@ contains
       implicit none
 
       class(domain_container), intent(inout) :: this
-      character(len=*), dimension(HI*ndims), intent(in) :: bnds ! expect exactly 6 descriptions
+      character(len=*), dimension(HI*ndims), intent(in) :: bnds  !< Six strings, describing bounsary conditions
 
       integer :: d, lh
 
@@ -1231,7 +1346,7 @@ contains
       write(msg,'(a,3(F5.1,1X))') "L_     : ", this%L_(:); call printinfo(msg)
       write(msg,'(a,3(F5.1,1X))') "C_     : ", this%C_(:); call printinfo(msg)
       write(msg,'(a,1(F5.1,1X))') "Vol    : ", this%Vol; call printinfo(msg)
-      write(msg,'(a,3(L,1X))')    "period : ", this%periodic(:); call printinfo(msg)
+      write(msg,'(a,3(L1,1X))')   "period : ", this%periodic(:); call printinfo(msg)
       write(msg,'(a,I4)')         "size(pse) = ", size(this%pse)
 
       if (allocated(this%pse)) then

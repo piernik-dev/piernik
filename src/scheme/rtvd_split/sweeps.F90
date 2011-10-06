@@ -226,7 +226,7 @@ contains
 
                   call set_geo_coeffs(cdim, flind, i1, i2, cg)
 #ifdef COSM_RAYS
-                  call set_div_v1d(div_v1d, cdim, i1, i2)
+                  call set_div_v1d(div_v1d, cdim, i1, i2, cg)
 #endif /* COSM_RAYS */
 
                   pu => cg%u%get_sweep(cdim,i1,i2)

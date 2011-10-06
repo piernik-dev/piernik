@@ -320,7 +320,7 @@ contains
    subroutine cr_sn_beware(pos)
 
       use constants,      only: xdim, ydim, zdim, ndims
-      use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
+      use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
       use domain,         only: dom
       use fluidindex,     only: flind
       use grid,           only: all_cg

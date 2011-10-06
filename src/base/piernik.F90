@@ -380,10 +380,6 @@ contains
 #ifdef MULTIGRID
       use multigrid,    only: cleanup_multigrid
 #endif /* MULTIGRID */
-#ifdef COSM_RAYS
-      use crdiffusion,  only: cleanup_crdiffusion
-      use crhelpers,    only: cleanup_crhelpers
-#endif /* COSM_RAYS */
       implicit none
 
       if (associated(cleanup_problem)) call cleanup_problem;        call  nextdot(.false.)
@@ -396,10 +392,6 @@ contains
 #ifdef MULTIGRID
       call cleanup_multigrid;   call nextdot(.false.)
 #endif /* MULTIGRID */
-#ifdef COSM_RAYS
-      call cleanup_crdiffusion; call nextdot(.false.)
-      call cleanup_crhelpers;   call nextdot(.false.)
-#endif /* COSM_RAYS */
       call cleanup_grid;        call nextdot(.false.)
       call cleanup_fluids;      call nextdot(.false.)
       call cleanup_global;      call nextdot(.false.)

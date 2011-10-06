@@ -74,13 +74,12 @@ contains
 
    end subroutine bnd_a
 
-   subroutine bnd_b(dir)
+   subroutine bnd_b(dir, cg)
 
       use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, half, one, &
            &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub, only: msg, warn, die
       use domain,     only: cdd, is_mpi_noncart, is_multicg
-      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: ierr, req, proc, status, comm, master, have_mpi
@@ -91,6 +90,7 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: dir
+      type(grid_container), pointer, intent(inout) :: cg
 
       integer(kind=4), parameter :: tag1 = 10, tag2 = 20
       integer(kind=4), parameter :: tag7 = 70, tag8 = 80
@@ -107,13 +107,10 @@ contains
       logical, save                         :: bnd_yr_not_provided = .false.
       logical, save                         :: bnd_zl_not_provided = .false.
       logical, save                         :: bnd_zr_not_provided = .false.
-      type(grid_container), pointer :: cg
-
-      cg => all_cg%first%cg
-      if (is_multicg) call die("[magboundaries:bnd_b] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
 
 ! MPI block comunication
       if (cdd%comm3d /= MPI_COMM_NULL) then
+         if (is_multicg) call die("[magboundaries:bnd_b] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
 
          if (have_mpi .and. is_mpi_noncart) call die("[magboundaries:bnd_b] is_mpi_noncart is not implemented") !procn, procxyl, procyxl, psize, pcoords
 #ifdef SHEAR
@@ -373,12 +370,10 @@ contains
 
 !=====================================================================================================
 
-   subroutine bnd_emf(var, name, dir)
+   subroutine bnd_emf(var, name, dir, cg)
 
       use constants,  only: xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub, only: msg, warn, die
-      use domain,     only: is_multicg
-      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
@@ -387,6 +382,8 @@ contains
       real, dimension(:,:,:), intent(inout) :: var
       character(len=*), intent(in)          :: name
       integer, intent(in)                   :: dir
+      type(grid_container), pointer, intent(inout) :: cg
+
       real, dimension(:,:), allocatable     :: dvarx
       real, dimension(:,:), allocatable     :: dvary
       real, dimension(:,:), allocatable     :: dvarz
@@ -400,10 +397,6 @@ contains
       logical, save                         :: bnd_zr_not_provided = .false.
       integer                               :: ledge, redge, lnbcells, rnbcells, zndiff, rrbase
       real                                  :: bndsign
-      type(grid_container), pointer :: cg
-
-      cg => all_cg%first%cg
-      if (is_multicg) call die("[magboundaries:bnd_emf] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       if (any([allocated(dvarx), allocated(dvary), allocated(dvarz)])) call die("[magboundaries:bnd_emf] dvar[xyz] already allocated")
       allocate(dvarx(cg%n_(ydim), cg%n_(zdim)), dvary(cg%n_(xdim), cg%n_(zdim)), dvarz(cg%n_(xdim), cg%n_(ydim)))
@@ -661,6 +654,7 @@ contains
       use constants,    only: xdim, zdim, MAG
       use dataio_pub,   only: die
       use domain,       only: has_dir, cdd, is_multicg
+      use gc_list,      only: cg_list_element
       use grid,         only: all_cg
       use grid_cont,    only: grid_container
       use internal_bnd, only: internal_boundaries
@@ -668,6 +662,7 @@ contains
 
       implicit none
 
+      type(cg_list_element), pointer :: cgl
       integer(kind=4) :: dir
       type(grid_container), pointer :: cg
 
@@ -676,8 +671,12 @@ contains
 
       if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries(MAG, pa4d=cg%b%arr)
 
-      do dir = xdim, zdim
-         if (has_dir(dir)) call bnd_b(dir)
+      cgl => all_cg%first
+      do while (associated(cgl))
+         do dir = xdim, zdim
+            if (has_dir(dir)) call bnd_b(dir, cgl%cg)
+         enddo
+         cgl => cgl%nxt
       enddo
 
    end subroutine all_mag_boundaries

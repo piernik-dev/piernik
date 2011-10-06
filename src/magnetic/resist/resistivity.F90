@@ -402,7 +402,6 @@ contains
       etadir = sum([xdim,ydim,zdim]) - ibdir - sdir
       emf = emfd(etadir)
 
-
       call compute_resist
 
       cgl => all_cg%first
@@ -436,11 +435,14 @@ contains
          cgl => cgl%nxt
       enddo
 
-      do i1 = xdim, zdim
-         if (has_dir(i1)) call bnd_emf(wcu%arr,emf,i1)
+      cgl => all_cg%first
+      do while (associated(cgl))
+         do i1 = xdim, zdim
+            if (has_dir(i1)) call bnd_emf(wcu%arr,emf,i1, cgl%cg)
+         enddo
+         cgl => cgl%nxt
       enddo
 
    end subroutine diffuseb
-
 
 end module resistivity

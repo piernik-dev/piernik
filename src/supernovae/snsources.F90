@@ -169,7 +169,7 @@ contains
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn
 #ifdef COSM_RAYS_SOURCES
-      use crcomposition,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
+      use cr_data,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
 #endif /* COSM_RAYS_SOURCES */
 
       implicit none

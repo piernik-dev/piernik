@@ -27,32 +27,38 @@
 !
 #include "piernik.h"
 !>
-!! \brief (MH)
+!! \brief A place for global constants related to cosmic rays
 !<
-module crcomposition
-! pulled by COSM_RAYS_SOURCES
+module cr_data
+
+! pulled by COSM_RAYS
+
+   use constants, only: dsetnamelen
+
    implicit none
 
    public               ! QA_WARN no secrets are kept here
 
-! this type looks useful but is unused.
-!!$   integer, parameter :: isoname_len = 8
-!!$   type :: cr_component
-!!$      character(len=isoname_len) :: isotope     !< isotope name, eg. Be10
-!!$      integer          :: index=      !< relative index (with respect to crn_beg)
-!!$      real             :: abund=      !< initial abundance relative to H
-!!$   end type cr_component
+   ! names of auxiliary arrays
+   character(len=dsetnamelen), parameter :: wcr_n = "wcr"     !< auxiliary array for diffuion
+   character(len=dsetnamelen), parameter :: divv_n = "divvel" !< divergence of velocity
 
-   integer, parameter :: icr_H1   = 1
-   integer, parameter :: icr_C12  = 2
-   integer, parameter :: icr_Be9  = 3
-   integer, parameter :: icr_Be10 = 4
-   integer, parameter :: icr_N14  = 5         !< from decay of Be7 with tau of 0.3 years
-   integer, parameter :: icr_O16  = 6
-   integer, parameter :: icr_Li7  = 7    !< \deprecated BEWARE: ncrn should be set up gerater than maximum isotope numeber, which should be smaller than ncr_max (<10 currently)
+   !! Composition
+
+   ! Isotope list
+   enum, bind(C)
+      enumerator :: icr_H1 = 1
+      enumerator :: icr_C12
+      enumerator :: icr_Be9
+      enumerator :: icr_Be10
+      enumerator :: icr_N14      !< from decay of Be7 with tau of 0.3 years
+      enumerator :: icr_O16
+      enumerator :: icr_Li7      !< \deprecated BEWARE: ncrn should be set up gerater than maximum isotope numeber, which should be smaller than ncr_max (<10 currently)
+   end enum
 
 !<====Cross sections for spallation from Garcia-Munoz 1987 (see also Longair)====>
 
+   real,parameter :: Myear=1d6*365*24*60*60 !> s \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
    real, parameter :: mbarn=1e-27 !> cm2   \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
 
    real, parameter :: sigma_C12_Li7  = 10   * mbarn
@@ -67,9 +73,7 @@ module crcomposition
 
 !<====Decay half live times from Garcia-Munoz 1987====>
 
-   real,parameter :: Myear=1d6*365*24*60*60 !> s \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
-
-   real, parameter   :: tau_Be10 = 1.6 !> Myr \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
+   real, parameter :: tau_Be10 = 1.6 !> Myr \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
 
 !<Initial source abundances (in numer density) relative to hydrogen (compare e.g. Longair)>
 
@@ -77,4 +81,12 @@ module crcomposition
    real, parameter :: primary_N14  =  1.0e-3
    real, parameter :: primary_O16  =  4.0e-3
 
-end module crcomposition
+end module cr_data
+
+! this type looks useful but is unused.
+!!$   integer, parameter :: isoname_len = 8
+!!$   type :: cr_component
+!!$      character(len=isoname_len) :: isotope     !< isotope name, eg. Be10
+!!$      integer          :: index=      !< relative index (with respect to crn_beg)
+!!$      real             :: abund=      !< initial abundance relative to H
+!!$   end type cr_component

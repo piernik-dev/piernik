@@ -146,7 +146,7 @@ contains
       use mpi,            only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX
       use mpisetup,       only: comm, ierr, master
 #ifdef COSM_RAYS_SOURCES
-      use crcomposition,  only: icr_H1, icr_C12
+      use cr_data,        only: icr_H1, icr_C12
 #endif /* COSM_RAYS_SOURCES */
 
       implicit none

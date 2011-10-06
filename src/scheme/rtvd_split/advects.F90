@@ -127,7 +127,7 @@ contains
          enddo
 
          do i = xdim, zdim
-            if (has_dir(i)) call bnd_emf(cg%wa,emf,i)
+            if (has_dir(i)) call bnd_emf(cg%wa,emf,i, cg)
          enddo
 
          deallocate(vv, vv0)

@@ -747,7 +747,7 @@ contains
 !
       cg => all_cg%first%cg
       if (is_multicg) then
-         call warn("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet in mpi_addmul. Bailing out.")
+         if (master) call warn("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet in mpi_addmul. Bailing out.")
          return
       endif
 
@@ -1073,7 +1073,7 @@ contains
 
       cg => all_cg%first%cg
       if (is_multicg) then
-         call warn("[dataio:write_log] multiple grid pieces per procesor not implemented yet in get_extremum routine. Bailing out.")
+         if (master) call warn("[dataio:write_log] multiple grid pieces per procesor not implemented yet in get_extremum routine. Bailing out.")
          return
       endif
 

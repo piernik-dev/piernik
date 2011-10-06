@@ -32,28 +32,28 @@ module crhelpers
    implicit none
 
    private
-   public :: div_v, set_div_v1d, cleanup_crhelpers
-
-   real, dimension(:,:,:), allocatable, target :: divvel !> \todo Merge into cg
+   public :: div_v, set_div_v1d
 
 contains
 
-   subroutine cleanup_crhelpers
-      use diagnostics, only: my_deallocate
-      implicit none
-      call my_deallocate(divvel)
-   end subroutine cleanup_crhelpers
-
-   subroutine set_div_v1d(p, dir, i1, i2)
+   subroutine set_div_v1d(p, dir, i1, i2, cg)
 
       use constants,   only: xdim, ydim, zdim
+      use cr_data,     only: divv_n
+      use dataio_pub,  only: die
+      use grid_cont,   only: grid_container
 
       implicit none
 
       integer(kind=4), intent(in) :: dir
       integer, intent(in) :: i1, i2
-
       real, dimension(:), pointer, intent(inout) :: p
+      type(grid_container), pointer, intent(in) :: cg
+
+      real, dimension(:,:,:), pointer :: divvel
+
+      divvel => cg%get_na_ptr(divv_n)
+      if (.not. associated(divvel)) call die("[crhelpers:set_div_v1d] cannot get divvel")
 
       select case (dir)
          case (xdim)
@@ -75,8 +75,8 @@ contains
    subroutine div_v(ifluid, cg)
 
       use constants,   only: xdim, ydim, zdim, half
+      use cr_data,     only: divv_n
       use dataio_pub,  only: die
-      use diagnostics, only: ma3d, my_allocate
       use domain,      only: has_dir, is_multicg
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid_cont,   only: grid_container
@@ -87,15 +87,12 @@ contains
       type(grid_container), pointer, intent(inout) :: cg
 
       real, dimension(:), allocatable :: vx, vy, vz
-      integer                :: i, j, k
-      integer                :: idnf, imxf, imyf, imzf
+      integer                         :: i, j, k
+      integer                         :: idnf, imxf, imyf, imzf
+      real, dimension(:,:,:), pointer :: divvel
 
-      if (is_multicg) call die("[crhelpers:div_v] multiple grid pieces per procesor not implemented yet") !nontrivial divvel
-
-      if (.not.allocated(divvel)) then
-         ma3d = cg%n_
-         call my_allocate(divvel, ma3d, "divvel")
-      endif
+      divvel => cg%get_na_ptr(divv_n)
+      if (.not. associated(divvel)) call die("[crhelpers:div_v] cannot get divvel")
 
       if (any([allocated(vx), allocated(vy), allocated(vz)])) call die("[crhelpers:div_v] v[xyz] already allocated")
       allocate(vx(cg%n_(xdim)), vy(cg%n_(ydim)), vz(cg%n_(zdim)))
