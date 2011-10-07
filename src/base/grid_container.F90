@@ -791,7 +791,7 @@ contains
 !<
    function get_na_ptr(this, name) result(ptr)
 
-      use dataio_pub, only: die, warn
+      use dataio_pub, only: die, msg, warn
 
       implicit none
 
@@ -805,12 +805,18 @@ contains
 
       do i = lbound(this%q, dim=1), ubound(this%q, dim=1)
          if (trim(name) ==  this%q(i)%name) then
-            if (associated(ptr)) call die("[grid_container:get_na_ptr] multiple entries with the same name")
+            if (associated(ptr)) then
+               write(msg, '(2a)') "[grid_container:get_na_ptr] multiple entries with the same name ",trim(name)
+               call die(msg)
+            endif
             ptr => this%q(i)%arr
          endif
       enddo
 
-      if (.not. associated(ptr)) call warn("[grid_container:get_na_ptr] requested entry not found")
+      if (.not. associated(ptr)) then
+         write(msg, '(2a)') "[grid_container:get_na_ptr] requested entry not found: ", trim(name)
+         call warn(msg)
+      endif
 
    end function get_na_ptr
 
@@ -821,7 +827,7 @@ contains
 !<
    function get_na_ptr_4d(this, name) result(ptr)
 
-      use dataio_pub, only: die, warn
+      use dataio_pub, only: die, msg, warn
 
       implicit none
 
@@ -835,12 +841,18 @@ contains
 
       do i = lbound(this%w, dim=1), ubound(this%w, dim=1)
          if (trim(name) ==  this%w(i)%name) then
-            if (associated(ptr)) call die("[grid_container:get_na_ptr_4d] multiple entries with the same name")
+            if (associated(ptr)) then
+               write(msg, '(2a)') "[grid_container:get_na_ptr_4d] multiple entries with the same name: ", trim(name)
+               call die(msg)
+            endif
             ptr => this%w(i)%arr
          endif
       enddo
 
-      if (.not. associated(ptr)) call warn("[grid_container:get_na_ptr_4d] requested entry not found")
+      if (.not. associated(ptr)) then
+         write(msg, '(2a)') "[grid_container:get_na_ptr_4d] requested entry not found: ", trim(name)
+         call warn(msg)
+      endif
 
    end function get_na_ptr_4d
 
@@ -851,7 +863,7 @@ contains
 !<
    function get_na_ind(this, name) result(ind)
 
-      use dataio_pub, only: die, warn
+      use dataio_pub, only: die, msg, warn
 
       implicit none
 
@@ -864,12 +876,18 @@ contains
 
       do i = lbound(this%q, dim=1), ubound(this%q, dim=1)
          if (trim(name) ==  this%q(i)%name) then
-            if (ind /= 0) call die("[grid_container:get_na_ind] multiple entries with the same name")
+            if (ind /= 0) then
+               write(msg, '(2a)') "[grid_container:get_na_ind] multiple entries with the same name: ", trim(name)
+               call die(msg)
+            endif
             ind = i
          endif
       enddo
 
-      if (ind == 0) call warn("[grid_container:get_na_ind] requested entry not found")
+      if (ind == 0) then
+         write(msg, '(2a)') "[grid_container:get_na_ind] requested entry not found: ", trim(name)
+         call warn(msg)
+      endif
 
    end function get_na_ind
 
@@ -880,7 +898,7 @@ contains
 !<
    function get_na_ind_4d(this, name) result(ind)
 
-      use dataio_pub, only: die, warn
+      use dataio_pub, only: die, msg, warn
 
       implicit none
 
@@ -893,12 +911,18 @@ contains
 
       do i = lbound(this%w, dim=1), ubound(this%w, dim=1)
          if (trim(name) ==  this%w(i)%name) then
-            if (ind /= 0) call die("[grid_container:get_na_ind_4d] multiple entries with the same name")
+            if (ind /= 0) then
+               write(msg, '(2a)') "[grid_container:get_na_ind_4d] multiple entries with the same name: ", trim(name)
+               call die(msg)
+            endif
             ind = i
          endif
       enddo
 
-      if (ind == 0) call warn("[grid_container:get_na_ind_4d] requested entry not found")
+      if (ind == 0) then
+         write(msg, '(2a)') "[grid_container:get_na_ind_4d] requested entry not found: ", trim(name)
+         call warn(msg)
+      endif
 
    end function get_na_ind_4d
 !>
@@ -906,7 +930,7 @@ contains
 !<
    function exists(this, name)
 
-      use dataio_pub, only: die
+      use dataio_pub, only: die, msg
 
       implicit none
 
@@ -920,7 +944,10 @@ contains
 
       do i = lbound(this%q, dim=1), ubound(this%q, dim=1)
          if (trim(name) ==  this%q(i)%name) then
-            if (exists) call die("[grid_container:exists] multiple entries with the same name")
+            if (exists) then
+               write(msg, '(2a)') "[grid_container:exists] multiple entries with the same name: ", trim(name)
+               call die(msg)
+            endif
             exists = .true.
          endif
       enddo
@@ -932,7 +959,7 @@ contains
 !<
    function exists_4d(this, name) result(exists)
 
-      use dataio_pub, only: die
+      use dataio_pub, only: die, msg
 
       implicit none
 
@@ -946,7 +973,10 @@ contains
 
       do i = lbound(this%w, dim=1), ubound(this%w, dim=1)
          if (trim(name) ==  this%w(i)%name) then
-            if (exists) call die("[grid_container:exists] multiple entries with the same name")
+            if (exists) then
+               write(msg, '(2a)') "[grid_container:exists] multiple entries with the same name: ", trim(name)
+               call die(msg)
+            endif
             exists = .true.
          endif
       enddo
