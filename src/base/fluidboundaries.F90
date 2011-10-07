@@ -637,8 +637,7 @@ contains
    subroutine all_fluid_boundaries
 
       use constants,    only: xdim, zdim, FLUID
-      use dataio_pub,   only: die
-      use domain,       only: has_dir, cdd, is_multicg
+      use domain,       only: has_dir, cdd
       use gc_list,      only: cg_list_element
       use grid,         only: all_cg
       use internal_bnd, only: internal_boundaries
@@ -649,12 +648,13 @@ contains
       type(cg_list_element), pointer :: cgl
       integer(kind=4) :: dir
 
-      if (is_multicg) call die("[fluidboundaries:all_fluid_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial communication
+      if (cdd%comm3d == MPI_COMM_NULL) then
+         do dir = xdim, zdim
+            if (has_dir(dir)) call internal_boundaries(FLUID, dim=dir)
+         enddo
+      endif
 
       cgl => all_cg%first
-
-      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries(FLUID, pa4d=cgl%cg%u%arr)
-
       do while (associated(cgl))
          do dir = xdim, zdim
             if (has_dir(dir)) call bnd_u(dir, cgl%cg)

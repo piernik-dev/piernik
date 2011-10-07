@@ -47,9 +47,9 @@ module user_hooks
          real, dimension(:,:,:), intent(inout) :: tab
       end subroutine tab_args
 
-      subroutine indx_args(ar,ll,lr,ch,lo)
+      subroutine indx_args(ll,lr,ch,lo)
          implicit none
-         integer,         dimension(:), intent(out) :: ar, ll, lr, ch
+         integer,         dimension(:), intent(out) :: ll, lr, ch
          integer(kind=8), dimension(:), intent(out) :: lo
       end subroutine indx_args
 

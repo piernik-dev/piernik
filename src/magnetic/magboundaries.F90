@@ -652,11 +652,9 @@ contains
    subroutine all_mag_boundaries
 
       use constants,    only: xdim, zdim, MAG
-      use dataio_pub,   only: die
-      use domain,       only: has_dir, cdd, is_multicg
+      use domain,       only: has_dir, cdd
       use gc_list,      only: cg_list_element
       use grid,         only: all_cg
-      use grid_cont,    only: grid_container
       use internal_bnd, only: internal_boundaries
       use mpi,          only: MPI_COMM_NULL
 
@@ -664,12 +662,12 @@ contains
 
       type(cg_list_element), pointer :: cgl
       integer(kind=4) :: dir
-      type(grid_container), pointer :: cg
 
-      cg => all_cg%first%cg
-      if (is_multicg) call die("[magboundaries:all_mag_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
-
-      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries(MAG, pa4d=cg%b%arr)
+      if (cdd%comm3d == MPI_COMM_NULL) then
+         do dir = xdim, zdim
+            if (has_dir(dir)) call internal_boundaries(MAG, dim=dir)
+         enddo
+      endif
 
       cgl => all_cg%first
       do while (associated(cgl))

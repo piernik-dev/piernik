@@ -75,7 +75,7 @@ contains
       use constants,    only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE
       use cr_data,      only: wcr_n
       use dataio_pub,   only: die
-      use domain,       only: has_dir, cdd, is_multicg
+      use domain,       only: has_dir, cdd
       use internal_bnd, only: internal_boundaries
       use grid,         only: all_cg
       use gc_list,      only: cg_list_element
@@ -90,11 +90,7 @@ contains
       type(grid_container), pointer :: cg
       real, dimension(:,:,:,:), pointer :: wcr
 
-      if (cdd%comm3d == MPI_COMM_NULL) then
-         if (is_multicg) call die("[crdiffusion:all_wcr_boundaries] multiple grid pieces per procesor not implemented yet") ! internal_boundaries
-         wcr => all_cg%first%cg%get_na_ptr_4d(wcr_n)
-         call internal_boundaries(CR, pa4d=wcr)
-      endif
+      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries(CR)
 
       cgl => all_cg%first
       do while (associated(cgl))

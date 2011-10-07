@@ -310,6 +310,7 @@ contains
       use gc_list,           only: cg_list_element
       use grid,              only: all_cg
       use grid_cont,         only: grid_container
+      use internal_bnd,      only: arr3d_boundaries
 #ifdef POISSON_FFT
       use poissonsolver,     only: poisson_solve
 #endif /* POISSON_FFT */
@@ -350,7 +351,10 @@ contains
       enddo
 
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
-      call all_sgp_boundaries
+
+!> \warning An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
+      call arr3d_boundaries(-all_cg%first%cg%get_na_ind("sgp")) !> \deprecated: Magic string
+
       if (frun) then
          cgl => all_cg%first
          do while (associated(cgl))
@@ -466,32 +470,6 @@ contains
       enddo
 
    end subroutine sum_potential
-
-#ifdef SELF_GRAV
-
-!> \warning An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
-
-   subroutine all_sgp_boundaries
-
-      use dataio_pub,   only: die
-      use internal_bnd, only: arr3d_boundaries
-      use grid,         only: all_cg
-      use gc_list,      only: cg_list_element
-
-      implicit none
-      type(cg_list_element), pointer :: cgl
-
-      if (all_cg%cnt > 1) call die("[gravity:all_sgp_boundaries] multiple grid pieces per procesor not implemented yet") !nontrivial
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         if (associated(cgl%cg%sgp)) call arr3d_boundaries(cgl%cg%sgp)
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine all_sgp_boundaries
-
-#endif /* SELF_GRAV */
 
    subroutine grav_null(gp, ax, flatten)
 
