@@ -1,7 +1,5 @@
  $BASE_DOMAIN
-    nxd = 64
-    nyd = 1
-    nzd = 1
+    n_d = 64, 1, 1
     ! set nyd and nzd to 64 if you want to have iy or iz /=0,
     ! when prefer_rbgs_relaxation is .true.
     ! or when parallel execution leads to nonconvergence

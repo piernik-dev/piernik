@@ -1,7 +1,5 @@
  $BASE_DOMAIN
-    nxd = 256
-    nyd = 256
-    nzd = 1
+    n_d = 256, 256, 1
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'ref'

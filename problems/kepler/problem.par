@@ -1,7 +1,5 @@
  $BASE_DOMAIN
-    nxd = 75
-    nyd = 75
-    nzd = 1
+    n_d = 75, 75, 1
     nb=4
     bnd_xl = 'cor'
     bnd_xr = 'out'

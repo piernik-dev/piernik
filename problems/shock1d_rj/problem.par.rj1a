@@ -1,7 +1,5 @@
  $BASE_DOMAIN
-    nxd = 512
-    nyd = 1
-    nzd = 1
+    n_d = 512, 1, 1
     nb  = 4
     bnd_xl = 'out'
     bnd_xr = 'out'

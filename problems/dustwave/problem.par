@@ -1,7 +1,5 @@
  $BASE_DOMAIN
-    nxd = 100
-    nyd = 1
-    nzd = 100
+    n_d = 100, 1, 100
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'

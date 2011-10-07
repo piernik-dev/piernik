@@ -134,6 +134,8 @@ module domain
 
    namelist /MPI_BLOCKS/ psize, bsize, reorder, allow_uneven, allow_noncart, allow_AMR, dd_unif_quality, dd_rect_quality, use_comm3d
 
+   integer(kind=4), dimension(ndims) :: n_d !< number of %grid cells in physical domain without boundary cells (where  == 1 then that dimension is reduced to a point with no boundary cells)
+   !< \deprecated nxd, nyd and nzd are obsoleted by the above definition. Will be removed soon
    integer(kind=4), protected :: nxd    !< number of %grid cells in physical domain (without boundary cells) in x-direction (if == 1 then x-dimension is reduced to a point with no boundary cells)
    integer(kind=4), protected :: nyd    !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
    integer(kind=4), protected :: nzd    !< number of %grid cells in physical domain (without boundary cells) in z-direction (-- || --)
@@ -152,7 +154,7 @@ module domain
    real :: zmax                         !< physical domain right z-boundary position
    character(len=cbuff_len) :: geometry !< define system of coordinates: "cartesian" or "cylindrical"
 
-   namelist /BASE_DOMAIN/ nxd, nyd, nzd, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry
+   namelist /BASE_DOMAIN/ n_d, nxd, nyd, nzd, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry
    !namelist /BASE_DOMAIN/ dom, geometry, nb
 
    interface is_overlap
@@ -200,6 +202,7 @@ contains
 !!   <tr><td>nxd     </td><td>1          </td><td>positive integer                          </td><td>\copydoc domain::nxd     </td></tr>
 !!   <tr><td>nyd     </td><td>1          </td><td>positive integer                          </td><td>\copydoc domain::nyd     </td></tr>
 !!   <tr><td>nzd     </td><td>1          </td><td>positive integer                          </td><td>\copydoc domain::nzd     </td></tr>
+!!   <tr><td>n_d(3)  </td><td>1          </td><td>positive integer                          </td><td>\copydoc domain::n_d     </td></tr>
 !!   <tr><td>nb      </td><td>4          </td><td>positive integer                          </td><td>\copydoc domain::nb      </td></tr>
 !!   <tr><td>bnd_xl  </td><td>'per'      </td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc domain::bnd_xl  </td></tr>
 !!   <tr><td>bnd_xr  </td><td>'per'      </td><td>'per', 'ref', 'out', 'outd', 'outh'       </td><td>\copydoc domain::bnd_xr  </td></tr>
@@ -242,6 +245,7 @@ contains
       nxd    = 1
       nyd    = 1
       nzd    = 1
+      n_d(:) = 1
       nb     = 4
       xmin = 0.; xmax = 1.
       ymin = -big_float; ymax = big_float
@@ -268,8 +272,10 @@ contains
          diff_nml(MPI_BLOCKS)
          diff_nml(BASE_DOMAIN)
 
+         if (any([nxd, nyd, nzd] > 1)) call warn("[domain:init_domain] Use n_d instead of nxd, nyd and nzd")
+         n_d(:) = max(n_d(:), [nxd, nyd, nzd])
          ! Sanitize input parameters, if possible
-         dom%n_d(:) = max(I_ONE, [nxd, nyd, nzd])
+         dom%n_d(:) = max(I_ONE, n_d(:))
 
          if (any(bsize(:) > 0 .and. bsize(:) < nb .and. dom%n_d(:) > 1)) call die("[domain:init_domain] bsize(:) is too small.") ! has_dir(:) is not available yet
 
