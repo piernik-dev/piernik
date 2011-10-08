@@ -35,7 +35,7 @@ module restart_hdf5
 
 ! pulled by ANY
 
-   use constants, only: FLUID, MAG, ARR, dsetnamelen
+   use constants, only: FLUID, MAG, ARR, dsetnamelen, INT4
 
    implicit none
 
@@ -49,7 +49,7 @@ module restart_hdf5
    character(len=dsetnamelen), dimension(FLUID:U0), parameter :: dname = [ "fluid  ", "mag    ", "wa     ", "gpot   ", "hgpot  ", "gp     ", "sgp    ", &
         &                                                                  "sgpm   ", "cs_iso2", "b0     ", "u0     "  ]
 
-   integer, parameter :: w_off = 2 * ARR
+   integer(kind=4), parameter :: w_off = 2_INT4 * ARR
 
 contains
 
@@ -205,13 +205,13 @@ contains
       fcg  => all_cg%first%cg
       if (allocated(fcg%q)) then
          do i = lbound(fcg%q(:), dim=1), ubound(fcg%q(:), dim=1)
-            call write_arr_to_restart(file_id, -i, fcg%q(i)%restart_mode, fcg%q(i)%name) !> \deprecated this is not particularly elegant
+            call write_arr_to_restart(file_id, int(-i, kind=4), fcg%q(i)%restart_mode, fcg%q(i)%name) !> \deprecated this is not particularly elegant
          enddo
       endif
 
       if (allocated(fcg%w)) then
          do i = lbound(fcg%w(:), dim=1), ubound(fcg%w(:), dim=1)
-            call write_arr_to_restart(file_id, w_off+i, fcg%w(i)%restart_mode, fcg%w(i)%name) !> \deprecated this is not particularly elegant
+            call write_arr_to_restart(file_id, int(w_off+i, kind=4), fcg%w(i)%restart_mode, fcg%w(i)%name) !> \deprecated this is not particularly elegant
          enddo
       endif
 
@@ -751,13 +751,13 @@ contains
       fcg => all_cg%first%cg
       if (allocated(fcg%q)) then
          do i = lbound(fcg%q(:), dim=1), ubound(fcg%q(:), dim=1)
-            if (fcg%q(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, -i, fcg%q(i)%restart_mode, fcg%q(i)%name)
+            if (fcg%q(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, int(-i, kind=4), fcg%q(i)%restart_mode, fcg%q(i)%name)
          enddo
       endif
 
       if (allocated(fcg%w)) then
          do i = lbound(fcg%w(:), dim=1), ubound(fcg%w(:), dim=1)
-            if (fcg%w(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, w_off+i, fcg%w(i)%restart_mode, fcg%w(i)%name)
+            if (fcg%w(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, int(w_off+i, kind=4), fcg%w(i)%restart_mode, fcg%w(i)%name)
          enddo
       endif
 

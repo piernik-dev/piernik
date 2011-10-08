@@ -870,11 +870,11 @@ contains
       class(grid_container), intent(inout) :: this
       character(len=*), intent(in) :: name
 
-      integer :: ind, i
+      integer(kind=4) :: ind, i
 
       ind = 0
 
-      do i = lbound(this%q, dim=1), ubound(this%q, dim=1)
+      do i = lbound(this%q, dim=1, kind=4), ubound(this%q, dim=1, kind=4)
          if (trim(name) ==  this%q(i)%name) then
             if (ind /= 0) then
                write(msg, '(2a)') "[grid_container:get_na_ind] multiple entries with the same name: ", trim(name)
@@ -905,11 +905,11 @@ contains
       class(grid_container), intent(inout) :: this
       character(len=*), intent(in) :: name
 
-      integer :: ind, i
+      integer(kind=4) :: ind, i
 
       ind = 0
 
-      do i = lbound(this%w, dim=1), ubound(this%w, dim=1)
+      do i = lbound(this%w, dim=1, kind=4), ubound(this%w, dim=1, kind=4)
          if (trim(name) ==  this%w(i)%name) then
             if (ind /= 0) then
                write(msg, '(2a)') "[grid_container:get_na_ind_4d] multiple entries with the same name: ", trim(name)
