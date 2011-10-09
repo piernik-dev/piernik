@@ -25,6 +25,6 @@ USE_GNUCPP = yes
 MAKEFLAGS += -j4
 
 # for the kepler problem
-F90FLAGS += -I/home/gawrysz/usr/include/gfortran
+F90FLAGS += -I/home/gawrysz/usr/include/gfortran  -I/usr/include/
 LDFLAGS += -L/home/gawrysz/usr/lib/
-LIBS += -lfgsl_gfortran -lgsl
+#LIBS += -lfgsl_gfortran -lgsl

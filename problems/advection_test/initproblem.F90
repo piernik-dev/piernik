@@ -160,11 +160,7 @@ contains
       type(grid_container), pointer :: cg
 
       ! Create the initial density arrays
-      cgl => all_cg%first
-      do while (associated(cgl))
-         call register_user_var(0_INT4, cgl%cg)
-         cgl => cgl%nxt
-      enddo
+      call register_user_var(0_INT4)
 
       ! Initialize the initial density arrays
       call analytic_solution(t)
@@ -220,18 +216,24 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine register_user_var(file_id, cg)
+   subroutine register_user_var(file_id)
 
-      use constants,   only: AT_NO_B
-      use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T
+      use constants, only: AT_NO_B
+      use gc_list,   only: cg_list_element
+      use grid,      only: all_cg
+      use hdf5,      only: HID_T
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id
-      type(grid_container), pointer, intent(in) :: cg
 
-      call cg%add_na(inid_n, AT_NO_B)
+      type(cg_list_element), pointer :: cgl
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         call cgl%cg%add_na(inid_n, AT_NO_B)
+         cgl => cgl%nxt
+      enddo
 
       if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused files
 

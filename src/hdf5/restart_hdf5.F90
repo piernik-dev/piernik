@@ -159,7 +159,6 @@ contains
       use dataio_pub,  only: nres, problem_name, run_id, msg, printio
       use global,      only: nstep
       use grid,        only: all_cg
-      use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
@@ -176,7 +175,6 @@ contains
       integer(HID_T)        :: file_id       !> File identifier
       integer(HID_T)        :: plist_id      !> Property list identifier
       integer(kind=4)       :: error
-      type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: fcg
 
       ! Construct the filename
@@ -216,14 +214,8 @@ contains
       endif
 
 
-      if (associated(problem_write_restart)) then
-         cgl => all_cg%first
-         do while (associated(cgl))
-            !> problem-specific restart writes. Everything that was not written by the above write_arr_to_restart calls
-            call problem_write_restart(file_id, cgl%cg)
-            cgl => cgl%nxt
-         enddo
-      endif
+      !> problem-specific restart writes. Everything that was not written by the above write_arr_to_restart calls
+      if (associated(problem_write_restart)) call problem_write_restart(file_id)
 
 !     \todo writing axes using collective I/O takes order of magnitude more than
 !        dumping U and B arrays alltogether, since XYZ-axis is not even read
@@ -642,7 +634,6 @@ contains
       use func,        only: fix_string
       use global,      only: magic_mass, t, dt
       use grid,        only: all_cg
-      use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
            &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
@@ -667,7 +658,6 @@ contains
       integer(kind=4), dimension(1) :: ibuf
 
       real                  :: restart_hdf5_version
-      type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: fcg
 
       nu = flind%all
@@ -739,13 +729,7 @@ contains
       call h5pclose_f(plist_id, error)
 
       ! set up things such as register user rank-3 arrays to be read by read_arr_from_restart or read anything taht is not read by all read_arr_from_restart calls
-      if (associated(problem_read_restart)) then
-         cgl => all_cg%first
-         do while (associated(cgl))
-            call problem_read_restart(file_id, cgl%cg)
-            cgl => cgl%nxt
-         enddo
-      endif
+      if (associated(problem_read_restart)) call problem_read_restart(file_id)
 
       ! read auxiliary variables
       fcg => all_cg%first%cg

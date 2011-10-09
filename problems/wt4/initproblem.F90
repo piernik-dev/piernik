@@ -434,22 +434,27 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine register_initial_fld(file_id, cg)
+   subroutine register_initial_fld(file_id)
 
-      use constants,   only: AT_NO_B
-      use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T
+      use constants, only: AT_NO_B
+      use gc_list,   only: cg_list_element
+      use grid,      only: all_cg
+      use hdf5,      only: HID_T
 
       implicit none
 
       integer(HID_T),intent(in) :: file_id
-      type(grid_container), pointer, intent(in) :: cg
 
       integer :: i
+      type(cg_list_element), pointer :: cgl
 
       if (divine_intervention_type == 3) then
-         do i = D0, VY0
-            call cg%add_na(q_n(i), AT_NO_B)
+         cgl => all_cg%first
+         do while (associated(cgl))
+            do i = D0, VY0
+               call cgl%cg%add_na(q_n(i), AT_NO_B)
+            enddo
+            cgl => cgl%nxt
          enddo
       endif
 

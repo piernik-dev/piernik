@@ -91,15 +91,13 @@ module dataio_user
    end interface
 
    interface
-      subroutine add_data(file_id, cg)
+      subroutine add_data(file_id)
 
-         use grid_cont, only: grid_container
          use hdf5,      only: HID_T
 
          implicit none
 
          integer(HID_T), intent(in) :: file_id
-         type(grid_container), pointer, intent(in) :: cg
 
       end subroutine add_data
    end interface
