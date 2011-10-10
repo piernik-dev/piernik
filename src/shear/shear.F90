@@ -216,9 +216,9 @@ contains
 
       integer(kind=8) :: planf,planb
 
-      complex*16      , dimension(:)   , allocatable :: ctmp
-      real(kind=8)    , dimension(:)   , allocatable :: rtmp
-      real(kind=8)    , dimension(:)     , allocatable :: ky
+      complex(kind=8), dimension(:), allocatable :: ctmp
+      real(kind=8),    dimension(:), allocatable :: rtmp
+      real(kind=8),    dimension(:), allocatable :: ky
       type(grid_container), pointer :: cg
 
       cg => all_cg%first%cg
