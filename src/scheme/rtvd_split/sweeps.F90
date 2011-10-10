@@ -183,7 +183,7 @@ contains
       real, dimension(:,:), allocatable :: u, u0
       real, dimension(:,:), pointer     :: pu, pu0
       real, dimension(:), pointer       :: div_v1d => null(), cs2
-      integer                           :: i1, i2
+      integer                           :: i1, i2, uhi
       integer                           :: istep
       integer                           :: i_cs_iso2
       type(cg_list_element), pointer    :: cgl
@@ -193,6 +193,8 @@ contains
          cgl => all_cg%first
          do while (associated(cgl))
             cg => cgl%cg
+
+            uhi = cg%get_na_ind_4d("uh")
 
             if (allocated(b)) deallocate(b)
             if (allocated(u)) deallocate(u)
@@ -207,7 +209,7 @@ contains
 #ifdef COSM_RAYS
                call div_v(flind%ion%pos, cg)
 #endif /* COSM_RAYS */
-               cg%uh%arr = cg%u%arr
+               cg%w(uhi)%arr = cg%u%arr
             endif
 
             cs2 => null()
@@ -230,7 +232,7 @@ contains
 #endif /* COSM_RAYS */
 
                   pu => cg%u%get_sweep(cdim,i1,i2)
-                  pu0 => cg%uh%get_sweep(cdim,i1,i2)
+                  pu0 => cg%w(uhi)%get_sweep(cdim,i1,i2)
                   if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
 
                   u (iarr_all_swp(cdim,:),:) = pu(:,:)

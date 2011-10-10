@@ -136,7 +136,6 @@ module grid_cont
       real, allocatable, dimension(:,:,:) :: gc_zdim !< array of geometrical coefficients in z-direction
 
       type(array4d) :: u                        !< Main array of all fluids' components
-      type(array4d) :: uh                       !< Main array of all fluids' components (for t += dt/2)
       type(array4d) :: u0                       !< Copy of main array of all fluids' components
       type(array4d) :: b0                       !< Copy of main array of magnetic field's components
       type(array4d) :: b                        !< Main array of magnetic field's components
@@ -145,6 +144,7 @@ module grid_cont
       type(named_array3d), allocatable, dimension(:) :: q
       !< Other 4D arrays (such as user-defined quantities or vector fields).
       type(named_array4d), allocatable, dimension(:) :: w  !\todo put other array4d here?
+
       ! handy shortcuts to some entries in q(:)
       real, dimension(:,:,:), pointer :: gpot    => null() !< Array for sum of gravitational potential at t += dt
       real, dimension(:,:,:), pointer :: hgpot   => null() !< Array for sum of gravitational potential at t += 0.5*dt
@@ -153,6 +153,9 @@ module grid_cont
       real, dimension(:,:,:), pointer :: sgpm    => null() !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
       real, dimension(:,:,:), pointer :: cs_iso2 => null()
       real, dimension(:,:,:), pointer :: wa      => null() !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+
+      ! handy shortcuts to some entries in w(:)
+!      real, dimension(:,:,:,:), pointer :: uh    => null() !< Main array of all fluids' components (for t += dt/2)
 
    contains
 

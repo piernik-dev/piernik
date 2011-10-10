@@ -108,6 +108,7 @@ contains
 #endif /* VERBOSE */
 
       call all_cg%reg_var("wa", AT_IGNORE) ! BEWARE: magic string across multiple files
+      call all_cg%reg_var("uh", AT_IGNORE, flind%all)
 
       cgl => all_cg%first
       do while (associated(cgl))
@@ -117,8 +118,8 @@ contains
 
          ind_arr = [ flind%all, cg%n_(:) ]
          call cg%u%init(ind_arr)
-         call cg%uh%init(ind_arr)
          if (repeat_step) call cg%u0%init(ind_arr)
+!         cg%uh => cg%get_na_ptr_4d("uh")
 
          ind_arr = [ ndims, cg%n_(:) ]
          call cg%b%init(ind_arr)
@@ -126,7 +127,7 @@ contains
 
          deallocate(ind_arr)
 
-         cgl%cg%wa => cgl%cg%get_na_ptr("wa")
+         cg%wa => cg%get_na_ptr("wa")
 #ifdef GRAV
          allocate(ind_arr(1))
          ind_arr = [cg%n_(zdim)]
@@ -172,7 +173,6 @@ contains
 
          call cgl%cg%u%clean()
          call cgl%cg%u0%clean()
-         call cgl%cg%uh%clean()
 
          call cgl%cg%b%clean()
          call cgl%cg%b0%clean()
