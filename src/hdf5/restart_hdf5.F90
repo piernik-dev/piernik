@@ -619,7 +619,7 @@ contains
       ! rank-4 arrays (cg%u%arr(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
       if (tgt3d) then
          ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
-         call arr3d_boundaries(-cg%get_na_ind(dname), area_type=area_type, dname=dname)
+         call arr3d_boundaries(cg%get_na_ind(dname), area_type=area_type, dname=dname)
       endif
       !> \todo consider also callingfluid and magnetic boundaries
 

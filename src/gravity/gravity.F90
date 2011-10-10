@@ -356,7 +356,7 @@ contains
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
 
 !> \warning An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
-      call arr3d_boundaries(-all_cg%first%cg%get_na_ind("sgp")) !> \deprecated: Magic string
+      call arr3d_boundaries(all_cg%first%cg%get_na_ind("sgp")) !> \deprecated: Magic string
 
       if (frun) then
          cgl => all_cg%first

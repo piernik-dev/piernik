@@ -655,7 +655,7 @@ contains
       use domain,       only: has_dir, cdd
       use gc_list,      only: cg_list_element
       use grid,         only: all_cg
-      use internal_bnd, only: internal_boundaries
+      use internal_bnd, only: internal_boundaries_4d
       use mpi,          only: MPI_COMM_NULL
 
       implicit none
@@ -665,7 +665,7 @@ contains
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          do dir = xdim, zdim
-            if (has_dir(dir)) call internal_boundaries(MAG, dim=dir)
+            if (has_dir(dir)) call internal_boundaries_4d(MAG, dim=dir)
          enddo
       endif
 

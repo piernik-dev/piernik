@@ -69,7 +69,7 @@ contains
       use cr_data,      only: wcr_n
       use dataio_pub,   only: die
       use domain,       only: has_dir, cdd
-      use internal_bnd, only: internal_boundaries
+      use internal_bnd, only: internal_boundaries_4d
       use grid,         only: all_cg
       use gc_list,      only: cg_list_element
       use grid_cont,    only: grid_container
@@ -83,7 +83,7 @@ contains
       type(grid_container), pointer :: cg
       real, dimension(:,:,:,:), pointer :: wcr
 
-      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries(CR)
+      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(CR)
 
       cgl => all_cg%first
       do while (associated(cgl))

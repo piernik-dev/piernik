@@ -33,20 +33,51 @@ module internal_bnd
    implicit none
 
    private
-   public :: arr3d_boundaries, internal_boundaries
+   public :: arr3d_boundaries, internal_boundaries_3d, internal_boundaries_4d
 
 contains
 
-!-----------------------------------------------------------------------------
-!
-! This routine exchanges guardcells for BND_MPI and BND_PER boundaries.in u(:,:,:,:), b(:,:,:,:) and rank-3 arrays passed through argument list
-! (preferably only pointers to the actual arrays are passed).
-! The corners should be properly updated if this%[io]_bnd(:, ind) was set up appropriately and MPI_Waitall is called separately for each dimension.
-!
-! ToDo: Convert local MPI calls to direct memory copies.
-!
+!> \brief A wrapper that calls internal_boundaries for 3D arrays (cg%q(:))
 
-   subroutine internal_boundaries(what, nb, dim)
+   subroutine internal_boundaries_3d(ind, nb, dim)
+
+      use constants,  only: ARR
+
+      implicit none
+
+      integer(kind=4), intent(in) :: ind  !> index of cg%q(:) 3d array
+      integer, optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
+
+      call internal_boundaries(ind, .true., ARR, nb, dim)
+
+   end subroutine internal_boundaries_3d
+
+!> \brief A wrapper that calls internal_boundaries for 4D arrays (cg%u, cg%b, cg%w(:))
+
+   subroutine internal_boundaries_4d(type, nb, dim)
+
+      use constants,  only: INT4
+
+      implicit none
+
+      integer(kind=4), intent(in) :: type !> FLUID, MAG, CR \todo put all of them into cg%w(:)
+      integer, optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
+
+      call internal_boundaries(0_INT4, .false., type, nb, dim)
+
+   end subroutine internal_boundaries_4d
+
+!>
+!! \brief This routine exchanges guardcells for BND_MPI and BND_PER boundaries on rank-3 and rank-4 arrays
+!! \details This routine should not be called directly. Appropriate wrappers for rank-3 and rank-4 arrays are provided.
+!! The corners should be properly updated if this%[io]_bnd(:, ind) was set up appropriately and MPI_Waitall is called separately for each dimension.
+!!
+!! \todo Convert local MPI calls to direct memory copies.
+!<
+
+   subroutine internal_boundaries(ind, tgt3d, type, nb, dim)
 
       use constants,  only: FLUID, MAG, CR, ARR, xdim, zdim, I_ONE, I_TWO
 #ifdef COSM_RAYS
@@ -62,14 +93,14 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: what  !> Negative value: index of cg%q(:) 3d array, Positive value: 4d arrays
+      integer(kind=4), intent(in) :: ind  !> index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical, intent(in)         :: tgt3d !> .true. for ARR
+      integer(kind=4), intent(in) :: type !> FLUID, MAG, CR, ARR, second index in [io]_bnd arrays
       integer, optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
 
       integer :: g, d, n
-      integer(kind=4) :: ind   !> second index in [io]_bnd arrays
       integer(kind=4) :: nr    !> index of first free slot in req and status arrays
-      logical :: tgt3d
       logical, dimension(xdim:zdim) :: dmask
       type(grid_container), pointer :: cg
       type(cg_list_element), pointer :: cgl
@@ -82,17 +113,7 @@ contains
          ! ToDo: move comm3d variants here
       endif
 
-      select case (what)
-         case (FLUID, MAG, CR)
-            tgt3d = .false.
-            ind = what
-         case (:-1)
-            tgt3d = .true.
-            ind = ARR
-         case default
-            call die("[internal_bnd:internal_boundaries] wrong array")
-            return
-      end select
+      if (tgt3d .and. type /= ARR) call die("[internal_bnd:internal_boundaries] tgt3d .and. type /= ARR")
 
       dmask(:) = has_dir(:)
       if (present(dim)) then
@@ -109,27 +130,27 @@ contains
       nr = 0
       cgl => all_cg%first
       if (tgt3d) then
-         if (-what > ubound(cgl%cg%q(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 3d index")
+         if (ind > ubound(cgl%cg%q(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 3d index")
       endif
       do while (associated(cgl))
          cg => cgl%cg
 
          if (tgt3d) then
-            if (cg%q(-what)%name /= all_cg%first%cg%q(-what)%name) call die("[internal_bnd:internal_boundaries] array name mismatch")
+            if (cg%q(ind)%name /= all_cg%first%cg%q(ind)%name) call die("[internal_bnd:internal_boundaries] array name mismatch")
          endif
 
          do d = xdim, zdim
             if (dmask(d)) then
-               if (allocated(cg%i_bnd(d, ind, n)%seg)) then
-                  if (.not. allocated(cg%o_bnd(d, ind, n)%seg)) call die("[internal_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")
-                  if (ubound(cg%i_bnd(d, ind, n)%seg(:), dim=1) /= ubound(cg%o_bnd(d, ind, n)%seg(:), dim=1)) call die("[internal_bnd:internal_boundaries] cg%i_bnd differs in number of entries from cg%o_bnd")
-                  do g = 1, ubound(cg%i_bnd(d, ind, n)%seg(:), dim=1)
+               if (allocated(cg%i_bnd(d, type, n)%seg)) then
+                  if (.not. allocated(cg%o_bnd(d, type, n)%seg)) call die("[internal_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")
+                  if (ubound(cg%i_bnd(d, type, n)%seg(:), dim=1) /= ubound(cg%o_bnd(d, type, n)%seg(:), dim=1)) call die("[internal_bnd:internal_boundaries] cg%i_bnd differs in number of entries from cg%o_bnd")
+                  do g = 1, ubound(cg%i_bnd(d, type, n)%seg(:), dim=1)
                      if (tgt3d) then
-                        pa3d =>cg%q(-what)%arr
-                        call MPI_Irecv(pa3d(1, 1, 1),    I_ONE, cg%i_bnd(d, ind, n)%seg(g)%mbc, cg%i_bnd(d, ind, n)%seg(g)%proc, cg%i_bnd(d, ind, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
-                        call MPI_Isend(pa3d(1, 1, 1),    I_ONE, cg%o_bnd(d, ind, n)%seg(g)%mbc, cg%o_bnd(d, ind, n)%seg(g)%proc, cg%o_bnd(d, ind, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
+                        pa3d =>cg%q(ind)%arr
+                        call MPI_Irecv(pa3d(1, 1, 1),    I_ONE, cg%i_bnd(d, type, n)%seg(g)%mbc, cg%i_bnd(d, type, n)%seg(g)%proc, cg%i_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
+                        call MPI_Isend(pa3d(1, 1, 1),    I_ONE, cg%o_bnd(d, type, n)%seg(g)%mbc, cg%o_bnd(d, type, n)%seg(g)%proc, cg%o_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
                      else
-                        select case (what)
+                        select case (type)
                            case (FLUID)
                               pa4d => cg%u%arr
                            case (MAG)
@@ -142,13 +163,13 @@ contains
                               call die("[internal_bnd:internal_boundaries] What?")
                               pa4d => cg%u%arr ! suppress compiler warnings
                         end select
-                        call MPI_Irecv(pa4d(1, 1, 1, 1), I_ONE, cg%i_bnd(d, ind, n)%seg(g)%mbc, cg%i_bnd(d, ind, n)%seg(g)%proc, cg%i_bnd(d, ind, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
-                        call MPI_Isend(pa4d(1, 1, 1, 1), I_ONE, cg%o_bnd(d, ind, n)%seg(g)%mbc, cg%o_bnd(d, ind, n)%seg(g)%proc, cg%o_bnd(d, ind, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
+                        call MPI_Irecv(pa4d(1, 1, 1, 1), I_ONE, cg%i_bnd(d, type, n)%seg(g)%mbc, cg%i_bnd(d, type, n)%seg(g)%proc, cg%i_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
+                        call MPI_Isend(pa4d(1, 1, 1, 1), I_ONE, cg%o_bnd(d, type, n)%seg(g)%mbc, cg%o_bnd(d, type, n)%seg(g)%proc, cg%o_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
                      endif
                      nr = nr + I_TWO
                   enddo
                else
-                  if (allocated(cg%o_bnd(d, ind, n)%seg)) call die("[grid_container:internal_boundaries] cg%o_bnd without cg%i_bnd")
+                  if (allocated(cg%o_bnd(d, type, n)%seg)) call die("[grid_container:internal_boundaries] cg%o_bnd without cg%i_bnd")
                endif
             endif
          enddo
@@ -165,7 +186,7 @@ contains
 ! This routine sets up all guardcells (internal and external) for given rank-3 arrays.
 !
 
-   subroutine arr3d_boundaries(what, nb, area_type, dname)
+   subroutine arr3d_boundaries(ind, nb, area_type, dname)
 
       use constants,  only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B, I_ONE
       use dataio_pub, only: die, msg
@@ -178,7 +199,7 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: what  !> Negative value: index of cg%q(:) 3d array
+      integer(kind=4), intent(in) :: ind  !> Negative value: index of cg%q(:) 3d array
       integer, optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), intent(in), optional          :: area_type
       character(len=*), intent(in), optional         :: dname
@@ -201,7 +222,7 @@ contains
             if (area_type /= AT_NO_B) do_permpi = .false.
          endif
 
-         if (do_permpi) call internal_boundaries(what, nb=nb)
+         if (do_permpi) call internal_boundaries_3d(ind, nb=nb)
 
       endif
 
@@ -217,8 +238,8 @@ contains
 
          req(:) = MPI_REQUEST_NULL
 
-         if (-what > ubound(cgl%cg%q(:), dim=1) .or. what>=0) call die("[internal_bnd:arr3d_boundaries] wrong 3d index")
-         pa3d =>cg%q(-what)%arr
+         if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[internal_bnd:arr3d_boundaries] wrong 3d index")
+         pa3d =>cg%q(ind)%arr
 
          do d = xdim, zdim
             if (has_dir(d)) then
