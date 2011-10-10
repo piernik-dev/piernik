@@ -58,14 +58,14 @@ contains
 
          if (cfl_violated) then
             t = t-2.0*dtm
-            cg%u%arr = cg%u0%arr
-            cg%b%arr = cg%b0%arr
+            cg%u%arr = cg%w(cg%get_na_ind_4d("u0"))%arr
+            cg%b%arr = cg%w(cg%get_na_ind_4d("b0"))%arr
             dt = dtm/dt_max_grow**2
             nstep = nstep - I_ONE
             if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
          else
-            cg%u0%arr = cg%u%arr
-            cg%b0%arr = cg%b%arr
+            cg%w(cg%get_na_ind_4d("u0"))%arr = cg%u%arr
+            cg%w(cg%get_na_ind_4d("b0"))%arr = cg%b%arr
          endif
 
          cgl => cgl%nxt

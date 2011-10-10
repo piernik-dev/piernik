@@ -136,8 +136,6 @@ module grid_cont
       real, allocatable, dimension(:,:,:) :: gc_zdim !< array of geometrical coefficients in z-direction
 
       type(array4d) :: u                        !< Main array of all fluids' components
-      type(array4d) :: u0                       !< Copy of main array of all fluids' components
-      type(array4d) :: b0                       !< Copy of main array of magnetic field's components
       type(array4d) :: b                        !< Main array of magnetic field's components
 
       !< Other 3D arrays (such as user-defined quantities or gravitational potential). The fourth index selects variable so it cannot be merged with u or b.

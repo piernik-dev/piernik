@@ -107,8 +107,12 @@ contains
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
 #endif /* VERBOSE */
 
-      call all_cg%reg_var("wa", AT_IGNORE) ! BEWARE: magic string across multiple files
-      call all_cg%reg_var("uh", AT_IGNORE, flind%all)
+      call all_cg%reg_var("wa", AT_IGNORE)                 ! BEWARE: magic string across multiple files
+      call all_cg%reg_var("uh", AT_IGNORE, flind%all)      !< Main array of all fluids' components (for t += dt/2)
+      if (repeat_step) then
+         call all_cg%reg_var("u0", AT_IGNORE, flind%all)   !< Copy of main array of all fluids' components
+         call all_cg%reg_var("b0", AT_IGNORE, ndims)       !< Copy of main array of magnetic field's components
+      endif
 
       cgl => all_cg%first
       do while (associated(cgl))
@@ -118,12 +122,10 @@ contains
 
          ind_arr = [ flind%all, cg%n_(:) ]
          call cg%u%init(ind_arr)
-         if (repeat_step) call cg%u0%init(ind_arr)
 !         cg%uh => cg%get_na_ptr_4d("uh")
 
          ind_arr = [ ndims, cg%n_(:) ]
          call cg%b%init(ind_arr)
-         if (repeat_step) call cg%b0%init(ind_arr)
 
          deallocate(ind_arr)
 
@@ -172,10 +174,7 @@ contains
       do while (associated(cgl))
 
          call cgl%cg%u%clean()
-         call cgl%cg%u0%clean()
-
          call cgl%cg%b%clean()
-         call cgl%cg%b0%clean()
 
 #ifdef GRAV
          if (allocated(cgl%cg%dprof)) deallocate(cgl%cg%dprof)
