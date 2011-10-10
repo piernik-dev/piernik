@@ -149,18 +149,24 @@ contains
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
-   subroutine register_user_var(file_id, cg)
+   subroutine register_user_var(file_id)
 
-      use constants,   only: AT_NO_B
-      use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T
+      use constants, only: AT_NO_B
+      use gc_list,   only: cg_list_element
+      use grid,      only: all_cg
+      use hdf5,      only: HID_T
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id
-      type(grid_container), pointer, intent(in) :: cg
 
-      call cg%add_na_4d(inid_n, int(size(cg%u%arr,1), kind=4), AT_NO_B)
+       type(cg_list_element), pointer :: cgl
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         call cgl%cg%add_na_4d(inid_n, int(size(cgl%cg%u%arr,1), kind=4), AT_NO_B)
+         cgl => cgl%nxt
+      enddo
 
       if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused files
 
@@ -296,12 +302,11 @@ contains
 
       sqr_gm = sqrt(newtong*ptmass)
 
-      cgl => all_cg%first
+      call register_user_var(0_INT4)
 
+      cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
-
-         call register_user_var(0_INT4, cg)
 
          if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
