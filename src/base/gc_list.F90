@@ -64,6 +64,8 @@ module gc_list
 
       procedure :: un_link
 
+      procedure :: reg_var
+
    end type cg_list
 
 contains
@@ -230,5 +232,38 @@ contains
    end subroutine un_link
 
 !> \todo merge lists
+
+!>
+!! \brief Use this routine to add a variable (cg%q or cg%w) to all grid containers.
+!!
+!! \details Register a rank-3 array of given name in each grid container (in cg%q) and decide what to do with it on restart.
+!! When dim4 is present then create a rank-4 array instead.(in cg%w)
+!<
+
+   subroutine reg_var(this, name, restart_mode, dim4)
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(cg_list), intent(in)    :: this
+      character(len=*), intent(in)  :: name
+      integer(kind=4), intent(in)   :: restart_mode
+      integer, optional, intent(in) :: dim4
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         if (present(dim4)) then
+            if (dim4<=0) call die("[gc_list:reg_var] dim4<=0")
+            call cgl%cg%add_na_4d(name, restart_mode, dim4)
+         else
+            call cgl%cg%add_na(name, restart_mode)
+         endif
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine reg_var
 
 end module gc_list

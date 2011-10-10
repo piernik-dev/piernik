@@ -219,7 +219,6 @@ contains
    subroutine register_user_var(file_id)
 
       use constants, only: AT_NO_B
-      use gc_list,   only: cg_list_element
       use grid,      only: all_cg
       use hdf5,      only: HID_T
 
@@ -227,15 +226,9 @@ contains
 
       integer(HID_T), intent(in) :: file_id
 
-      type(cg_list_element), pointer :: cgl
+      call all_cg%reg_var(inid_n, AT_NO_B)
 
-      cgl => all_cg%first
-      do while (associated(cgl))
-         call cgl%cg%add_na(inid_n, AT_NO_B)
-         cgl => cgl%nxt
-      enddo
-
-      if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused files
+      if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused variables
 
    end subroutine register_user_var
 

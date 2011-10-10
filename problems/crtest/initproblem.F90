@@ -70,13 +70,10 @@ contains
       use dataio_pub,  only: die
       use domain,      only: dom
       use grid,        only: all_cg
-      use gc_list,     only: cg_list_element
       use mpi,         only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,    only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave, FIRST
 
       implicit none
-
-      type(cg_list_element), pointer :: cgl
 
       d0           = 1.0e5     !< density
       p0           = 1.0       !< pressure
@@ -136,11 +133,7 @@ contains
 
       if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
-      cgl => all_cg%first
-      do while (associated(cgl))
-         call cgl%cg%add_na(aecr1_n, AT_NO_B)
-         cgl => cgl%nxt
-      enddo
+      call all_cg%reg_var(aecr1_n, AT_NO_B)
 
       if (norm_step <= 0) norm_step = huge(I_ONE)
 

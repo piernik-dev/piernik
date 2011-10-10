@@ -47,20 +47,13 @@ contains
       use constants, only: AT_IGNORE
       use cr_data,   only: wcr_n, divv_n
       use grid,      only: all_cg
-      use gc_list,   only: cg_list_element
 
       implicit none
 
       integer(kind=4), intent(in) :: crsall
 
-      type(cg_list_element), pointer :: cgl
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         call cgl%cg%add_na_4d(wcr_n, crsall, AT_IGNORE)
-         call cgl%cg%add_na(divv_n, AT_IGNORE)
-         cgl => cgl%nxt
-      enddo
+      call all_cg%reg_var(wcr_n, AT_IGNORE, crsall)
+      call all_cg%reg_var(divv_n, AT_IGNORE)
 
    end subroutine init_crdiffusion
 

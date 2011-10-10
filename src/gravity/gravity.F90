@@ -153,7 +153,7 @@ contains
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun    ! QA_WARN required for diff_nml
       use dataio_pub,    only: printinfo, warn, die, code_progress
-      use constants,     only: PIERNIK_INIT_GRID, AT_OUT_B
+      use constants,     only: PIERNIK_INIT_GRID, AT_OUT_B, AT_IGNORE
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,         only: newtong
@@ -274,19 +274,22 @@ contains
       endif
 
       ! Declare arrays for potential and make shortcuts
+      call all_cg%reg_var("gpot", AT_IGNORE) ! BEWARE: magic strings across multiple files
+      call all_cg%reg_var("hgpot", AT_IGNORE)
+      call all_cg%reg_var("gp", AT_OUT_B)
+#ifdef SELF_GRAV
+      call all_cg%reg_var("sgp", AT_IGNORE)
+      call all_cg%reg_var("sgpm", AT_IGNORE)
+#endif /* SELF_GRAV */
+
       cgl => all_cg%first
       do while (associated(cgl))
-         call cgl%cg%add_na("gpot") ! BEWARE: magic strings across multiple files
          cgl%cg%gpot => cgl%cg%get_na_ptr("gpot")
          cgl%cg%gpot(:,:,:) = 0.0
-         call cgl%cg%add_na("hgpot")
          cgl%cg%hgpot => cgl%cg%get_na_ptr("hgpot")
-         call cgl%cg%add_na("gp", AT_OUT_B)
          cgl%cg%gp => cgl%cg%get_na_ptr("gp")
 #ifdef SELF_GRAV
-         call cgl%cg%add_na("sgp")
          cgl%cg%sgp => cgl%cg%get_na_ptr("sgp")
-         call cgl%cg%add_na("sgpm")
          cgl%cg%sgpm => cgl%cg%get_na_ptr("sgpm")
 #endif /* SELF_GRAV */
          cgl => cgl%nxt

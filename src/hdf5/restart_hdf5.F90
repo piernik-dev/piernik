@@ -574,9 +574,11 @@ contains
 
          ! Read the array
          if (tgt3d) then
-            if (.not. cg%exists(dname)) call cg%add_na(dname)
             pa3d => cg%get_na_ptr(dname)
-            if (.not. associated(pa3d)) call die("[restart_hdf5:read_arr_from_restart] Null pointer given.")
+            if (.not. associated(pa3d)) then
+               write(msg,'(3a)')"Cannot find '",trim(dname),"' array in the restart file"
+               call die(msg)
+            endif
             call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
                  &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
          else

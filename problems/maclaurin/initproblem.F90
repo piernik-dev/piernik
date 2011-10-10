@@ -264,7 +264,7 @@ contains
 !
    subroutine compute_maclaurin_potential
 
-      use constants,   only: pi, GEO_XYZ, GEO_RPZ
+      use constants,   only: pi, GEO_XYZ, GEO_RPZ, AT_IGNORE
       use dataio_pub,  only: warn, die
       use domain,      only: geometry_type
       use grid,        only: all_cg
@@ -300,11 +300,12 @@ contains
       a12 = a1**2
       a32 = a3**2
 
+      call all_cg%reg_var(apot_n, AT_IGNORE)
+
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         call cg%add_na(apot_n)
          apot => cg%get_na_ptr(apot_n)
 
          do k = cg%ks, cg%ke

@@ -305,6 +305,10 @@ contains
       type(component_fluid), pointer :: fl
       real, dimension(:,:,:), pointer :: q0
 
+      do i = D0, VY0
+         call all_cg%reg_var(q_n(i), AT_NO_B)
+      enddo
+
       fl => flind%neu
       cgl => all_cg%first
       do while (associated(cgl))
@@ -389,7 +393,6 @@ contains
          cg%b%arr(:, 1:cg%n_(xdim), 1:cg%n_(ydim), 1:cg%n_(zdim)) = 0.0
 
          do i = D0, VY0
-            call cg%add_na(q_n(i), AT_NO_B)
             q0 => cg%get_na_ptr(q_n(i))
             select case (i)
                case (D0)
@@ -437,7 +440,6 @@ contains
    subroutine register_initial_fld(file_id)
 
       use constants, only: AT_NO_B
-      use gc_list,   only: cg_list_element
       use grid,      only: all_cg
       use hdf5,      only: HID_T
 
@@ -446,19 +448,14 @@ contains
       integer(HID_T),intent(in) :: file_id
 
       integer :: i
-      type(cg_list_element), pointer :: cgl
 
       if (divine_intervention_type == 3) then
-         cgl => all_cg%first
-         do while (associated(cgl))
-            do i = D0, VY0
-               call cgl%cg%add_na(q_n(i), AT_NO_B)
-            enddo
-            cgl => cgl%nxt
+         do i = D0, VY0
+            call all_cg%reg_var(q_n(i), AT_NO_B)
          enddo
       endif
 
-      if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused files
+      if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused variables
 
    end subroutine register_initial_fld
 

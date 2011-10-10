@@ -702,9 +702,9 @@ contains
    end subroutine mpi_bnd_types
 
 !>
-!! \brief Register a new entry in current cg with given name.
+!! \brief Register a new entry in current cg with given name. Called from cg_list::reg_var
 !!
-!! \warning You should call it for every grid_container so each of them has the same list of named arrays.
+!! \warning This routine should not be called directly from user routines
 !<
    subroutine add_na(this, name, res_m)
 
@@ -742,11 +742,11 @@ contains
    end subroutine add_na
 
 !>
-!! \brief Register a new entry in current cg with given name.
+!! \brief Register a new entry in current cg with given name. Called from cg_list::reg_var
 !!
-!! \warning You should call it for every grid_container so each of them has the same list of named arrays.
+!! \warning This routine should not be called directly from user routines
 !<
-   subroutine add_na_4d(this, name, n, res_m)
+   subroutine add_na_4d(this, name, res_m, n)
 
       use constants,  only: AT_IGNORE, ndims
       use dataio_pub, only: msg, die
@@ -755,8 +755,8 @@ contains
 
       class(grid_container), intent(inout) :: this
       character(len=*), intent(in) :: name
-      integer(kind=4), intent(in) :: n
       integer(kind=4), optional, intent(in) :: res_m
+      integer(kind=4), intent(in) :: n
 
       type(named_array4d), allocatable, dimension(:) :: tmp
       integer(kind=4), dimension(ndims+1) :: ind

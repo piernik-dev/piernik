@@ -59,7 +59,7 @@ contains
 !<
    subroutine init_grid
 
-      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, ndims, xdim, zdim, ARR, INVALID
+      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_IGNORE, ndims, xdim, zdim, ARR, INVALID
       use dataio_pub,  only: printinfo, die, code_progress
       use diagnostics, only: my_allocate
       use domain,      only: dom, is_multicg
@@ -107,6 +107,8 @@ contains
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
 #endif /* VERBOSE */
 
+      call all_cg%reg_var("wa", AT_IGNORE) ! BEWARE: magic string across multiple files
+
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -124,7 +126,6 @@ contains
 
          deallocate(ind_arr)
 
-         call cgl%cg%add_na("wa") ! BEWARE: magic string across multiple files
          cgl%cg%wa => cgl%cg%get_na_ptr("wa")
 #ifdef GRAV
          allocate(ind_arr(1))
@@ -138,9 +139,10 @@ contains
 #ifdef ISO
       if (is_multicg) call die("[grid:init_cs_iso2] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
 
+      call all_cg%reg_var("cs_iso2", AT_NO_B) ! BEWARE: magic string across multiple files
+
       cgl => all_cg%first
       do while (associated(cgl))
-         call cgl%cg%add_na("cs_iso2", AT_NO_B) ! BEWARE: magic string across multiple files
          cgl%cg%cs_iso2 => cgl%cg%get_na_ptr("cs_iso2")
          cgl%cg%cs_iso2(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
          cgl => cgl%nxt
