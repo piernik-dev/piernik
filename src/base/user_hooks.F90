@@ -34,7 +34,8 @@ module user_hooks
    implicit none
 
    private
-   public :: problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd, at_user_settings
+   public :: problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd, &
+     &       at_user_dims_settings, at_user_area_settings
 
    interface
 
@@ -53,6 +54,11 @@ module user_hooks
          integer(kind=8), dimension(:), intent(out) :: lo
       end subroutine indx_args
 
+      subroutine user_area(area)
+         implicit none
+      integer, dimension(:), intent(out) :: area
+      end subroutine user_area
+
    end interface
 
    procedure(no_args),  pointer :: problem_customize_solution => NULL()
@@ -60,6 +66,7 @@ module user_hooks
    procedure(no_args),  pointer :: finalize_problem           => NULL()
    procedure(no_args),  pointer :: cleanup_problem            => NULL()
    procedure(tab_args), pointer :: custom_emf_bnd             => NULL()
-   procedure(indx_args),pointer :: at_user_settings           => NULL()
+   procedure(indx_args),pointer :: at_user_dims_settings      => NULL()
+   procedure(user_area),pointer :: at_user_area_settings      => NULL()
 
 end module user_hooks

@@ -70,7 +70,7 @@ contains
       use dataio_pub, only: die
       use domain,     only: dom, has_dir
       use grid_cont,  only: grid_container
-      use user_hooks, only: at_user_settings
+      use user_hooks, only: at_user_dims_settings
 
       implicit none
 
@@ -99,10 +99,10 @@ contains
          case (AT_NO_B)                                    ! only physical domain without any boundaries
             ! Nothing special
          case (AT_USER)                                    ! user defined domain (with no reference to simulations domain)
-            if (associated(at_user_settings)) then
-               call at_user_settings(lleft, lright, chnk, loffs)
+            if (associated(at_user_dims_settings)) then
+               call at_user_dims_settings(lleft, lright, chnk, loffs)
             else
-               call die("[restart_hdf5:set_dims_to_write] Routine at_user_settings not associated")
+               call die("[restart_hdf5:set_dims_to_write] Routine at_user_dims_settings not associated")
             endif
          case default
             call die("[restart_hdf5:set_dims_for_restart] Non-recognized area_type.")
@@ -123,7 +123,7 @@ contains
       use constants,  only: ndims, AT_OUT_B, AT_NO_B, AT_USER
       use dataio_pub, only: die
       use domain,     only: dom
-!      use user_hooks, only: ???
+      use user_hooks, only: at_user_area_settings
 
       implicit none
 
@@ -136,11 +136,11 @@ contains
          case (AT_NO_B)                                    ! only physical domain without any boundaries
             area(:) = dom%n_d(:)
          case (AT_USER)                                    ! user defined domain (with no reference to simulations domain)
-!            if (associated(???)) then
-               call die("[restart_hdf5:set_area_for_restart] Not implemented")
-!            else
-!               call die("[restart_hdf5:set_area_for_restart] Routine at_user_settings not associated")
-!            endif
+            if (associated(at_user_area_settings)) then
+               call at_user_area_settings(area)
+            else
+               call die("[restart_hdf5:set_area_for_restart] Routine at_user_area_settings not associated")
+            endif
          case default
             call die("[restart_hdf5:set_area_for_restart] Non-recognized area_type.")
             area(:) = 0 ! suppress compiler warnings
