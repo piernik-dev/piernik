@@ -221,13 +221,13 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         bx => cg%b%arr(xdim,:,:,:)
-         by => cg%b%arr(ydim,:,:,:)
-         bz => cg%b%arr(zdim,:,:,:)
+         bx => cg%b(xdim,:,:,:)
+         by => cg%b(ydim,:,:,:)
+         bz => cg%b(zdim,:,:,:)
 
          if (smalld >= big_float) then
             do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-               dn => cg%u%arr(flind%all_fluids(i)%idn,:,:,:)
+               dn => cg%u(flind%all_fluids(i)%idn,:,:,:)
                maxdens = max( maxval(dn), maxdens )
                mindens = min( minval(dn), mindens )
             enddo
@@ -237,12 +237,12 @@ contains
             do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
                fl => flind%all_fluids(i)
                if (fl%tag == DST) cycle
-               dn => cg%u%arr(fl%idn,:,:,:)
-               mx => cg%u%arr(fl%imx,:,:,:)
-               my => cg%u%arr(fl%imy,:,:,:)
-               mz => cg%u%arr(fl%imz,:,:,:)
+               dn => cg%u(fl%idn,:,:,:)
+               mx => cg%u(fl%imx,:,:,:)
+               my => cg%u(fl%imy,:,:,:)
+               mz => cg%u(fl%imz,:,:,:)
                if (fl%has_energy) then
-                  en => cg%u%arr(fl%ien,:,:,:)
+                  en => cg%u(fl%ien,:,:,:)
                   if (fl%is_magnetized) then
                      minpres = min( minval( en - ekin(mx,my,mz,dn) - emag(bx,by,bz))/fl%gam_1, minpres )
                   else

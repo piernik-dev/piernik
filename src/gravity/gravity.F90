@@ -337,13 +337,13 @@ contains
          cg%sgpm = cg%sgp
 
 #ifdef POISSON_FFT
-         call poisson_solve( sum(cg%u%arr(iarr_all_sg,:,:,:),1) )
+         call poisson_solve( sum(cg%u(iarr_all_sg,:,:,:),1) )
 #endif /* POISSON_FFT */
 #ifdef MULTIGRID
          if (size(iarr_all_sg) == 1) then
-            call multigrid_solve_grav(cg%u%arr(iarr_all_sg(1),:,:,:))
+            call multigrid_solve_grav(cg%u(iarr_all_sg(1),:,:,:))
          else
-            call multigrid_solve_grav( sum(cg%u%arr(iarr_all_sg,:,:,:),1) )
+            call multigrid_solve_grav( sum(cg%u(iarr_all_sg,:,:,:),1) )
             !>
          !! \deprecated BEWARE Here a lot of heap space is required and some compilers may generate code that do segfaults for big enough domains.
             !! It is the weakest point of this type in Maclaurin test. Next one (in fluidboundaries.F90) is 8 times less sensitive.

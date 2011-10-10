@@ -59,15 +59,15 @@ contains
 
       type(grid_container), pointer, intent(in) :: cg
 
-      !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(cg%u%arr(iarr_all_dn,:,:,:))
+      !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(cg%u(iarr_all_dn,:,:,:))
 
       !> \deprecated BEWARE: works only with neu+dust!!!!
 
       if (has_interactions) then
-         !       val = maxval (  sqrt( (cg%u%arr(flind%dst%imx,:,:,:)-cg%u%arr(flind%neu%imx,:,:,:))**2 + (cg%u%arr(flind%dst%imy,:,:,:)-cg%u%arr(flind%neu%imy,:,:,:))**2 + &
-         !                             (cg%u%arr(flind%dst%imz,:,:,:)-cg%u%arr(flind%neu%imz,:,:,:))**2   ) * cg%u%arr(flind%dst%idn,:,:,:) )
-         val = maxval ( L2norm(cg%u%arr(flind%dst%imx,:,:,:),cg%u%arr(flind%dst%imy,:,:,:),cg%u%arr(flind%dst%imz,:,:,:), &
-                            &  cg%u%arr(flind%neu%imx,:,:,:),cg%u%arr(flind%neu%imy,:,:,:),cg%u%arr(flind%neu%imz,:,:,:) ) * cg%u%arr(flind%dst%idn,:,:,:) )
+         !       val = maxval (  sqrt( (cg%u(flind%dst%imx,:,:,:)-cg%u(flind%neu%imx,:,:,:))**2 + (cg%u(flind%dst%imy,:,:,:)-cg%u(flind%neu%imy,:,:,:))**2 + &
+         !                             (cg%u(flind%dst%imz,:,:,:)-cg%u(flind%neu%imz,:,:,:))**2   ) * cg%u(flind%dst%idn,:,:,:) )
+         val = maxval ( L2norm(cg%u(flind%dst%imx,:,:,:),cg%u(flind%dst%imy,:,:,:),cg%u(flind%dst%imz,:,:,:), &
+                            &  cg%u(flind%neu%imx,:,:,:),cg%u(flind%neu%imy,:,:,:),cg%u(flind%neu%imz,:,:,:) ) * cg%u(flind%dst%idn,:,:,:) )
          dt_interact_proc = flind%neu%cs / (maxval(collfaq) * val + small)
 
          call MPI_Reduce(dt_interact_proc, dt_interact_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, FIRST, comm, ierr)

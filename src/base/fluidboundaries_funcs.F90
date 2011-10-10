@@ -57,7 +57,7 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      cg%u%arr(:,1:cg%nb,:,:) = cg%u%arr(:, cg%ieb:cg%ie,:,:)
+      cg%u(:,1:cg%nb,:,:) = cg%u(:, cg%ieb:cg%ie,:,:)
 
    end subroutine bnd_xl_per
 
@@ -79,13 +79,13 @@ contains
       integer :: ib
 
       do ib=1, cg%nb
-         cg%u%arr([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%is-ib,:,:)  = cg%u%arr([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%nb+ib,:,:)
-         cg%u%arr(iarr_all_mx, cg%is-ib,:,:)  = -cg%u%arr(iarr_all_mx, cg%nb+ib,:,:)
+         cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%is-ib,:,:)  = cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%nb+ib,:,:)
+         cg%u(iarr_all_mx, cg%is-ib,:,:)  = -cg%u(iarr_all_mx, cg%nb+ib,:,:)
 #ifndef ISO
-         cg%u%arr(iarr_all_en, cg%is-ib,:,:)  =  cg%u%arr(iarr_all_en, cg%nb+ib,:,:)
+         cg%u(iarr_all_en, cg%is-ib,:,:)  =  cg%u(iarr_all_en, cg%nb+ib,:,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-         cg%u%arr(iarr_all_crs, cg%is-ib,:,:) =  cg%u%arr(iarr_all_crs, cg%nb+ib,:,:)
+         cg%u(iarr_all_crs, cg%is-ib,:,:) =  cg%u(iarr_all_crs, cg%nb+ib,:,:)
 #endif /* COSM_RAYS */
       enddo
 
@@ -106,9 +106,9 @@ contains
       integer :: ib
 
       do ib = 1, cg%nb
-         cg%u%arr(:,ib,:,:)            = cg%u%arr(:, cg%is,:,:)
+         cg%u(:,ib,:,:)            = cg%u(:, cg%is,:,:)
 #ifdef COSM_RAYS
-         cg%u%arr(iarr_all_crs,ib,:,:) = smallecr
+         cg%u(iarr_all_crs,ib,:,:) = smallecr
 #endif /* COSM_RAYS */
       enddo
 
@@ -133,13 +133,13 @@ contains
       integer :: ib
 
       do ib = 1, cg%nb
-         cg%u%arr([iarr_all_dn,iarr_all_my,iarr_all_mz],ib,:,:)  = cg%u%arr([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%is,:,:)
-         cg%u%arr(iarr_all_mx,ib,:,:)  = min(cg%u%arr(iarr_all_mx, cg%is,:,:),0.0)
+         cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz],ib,:,:)  = cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%is,:,:)
+         cg%u(iarr_all_mx,ib,:,:)  = min(cg%u(iarr_all_mx, cg%is,:,:),0.0)
 #ifndef ISO
-         cg%u%arr(iarr_all_en,ib,:,:)  = cg%u%arr(iarr_all_en, cg%is,:,:)
+         cg%u(iarr_all_en,ib,:,:)  = cg%u(iarr_all_en, cg%is,:,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-         cg%u%arr(iarr_all_crs,ib,:,:) = smallecr
+         cg%u(iarr_all_crs,ib,:,:) = smallecr
 #endif /* COSM_RAYS */
       enddo
 
@@ -154,7 +154,7 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      cg%u%arr(:, cg%ie+1:cg%n_(xdim),:,:) = cg%u%arr(:, cg%is:cg%isb,:,:)
+      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%u(:, cg%is:cg%isb,:,:)
 
    end subroutine bnd_xr_per
 
@@ -176,13 +176,13 @@ contains
       integer :: ib
 
       do ib=1, cg%nb
-         cg%u%arr([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie+ib,:,:) = cg%u%arr([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie+1-ib,:,:)
-         cg%u%arr(iarr_all_mx, cg%ie+ib,:,:)  = -cg%u%arr(iarr_all_mx, cg%ie+1-ib,:,:)
+         cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie+ib,:,:) = cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie+1-ib,:,:)
+         cg%u(iarr_all_mx, cg%ie+ib,:,:)  = -cg%u(iarr_all_mx, cg%ie+1-ib,:,:)
 #ifndef ISO
-         cg%u%arr(iarr_all_en, cg%ie+ib,:,:)  =  cg%u%arr(iarr_all_en, cg%ie+1-ib,:,:)
+         cg%u(iarr_all_en, cg%ie+ib,:,:)  =  cg%u(iarr_all_en, cg%ie+1-ib,:,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-         cg%u%arr(iarr_all_crs, cg%ie+ib,:,:) =  cg%u%arr(iarr_all_crs, cg%ie+1-ib,:,:)
+         cg%u(iarr_all_crs, cg%ie+ib,:,:) =  cg%u(iarr_all_crs, cg%ie+1-ib,:,:)
 #endif /* COSM_RAYS */
       enddo
 
@@ -203,9 +203,9 @@ contains
       integer :: ib
 
       do ib = 1, cg%nb
-         cg%u%arr(:, cg%ie+ib,:,:)            = cg%u%arr(:, cg%ie,:,:)
+         cg%u(:, cg%ie+ib,:,:)            = cg%u(:, cg%ie,:,:)
 #ifdef COSM_RAYS
-         cg%u%arr(iarr_all_crs, cg%ie+ib,:,:) = smallecr
+         cg%u(iarr_all_crs, cg%ie+ib,:,:) = smallecr
 #endif /* COSM_RAYS */
       enddo
 
@@ -230,13 +230,13 @@ contains
       integer :: ib
 
       do ib = 1, cg%nb
-         cg%u%arr([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie+ib,:,:) = cg%u%arr([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie,:,:)
-         cg%u%arr(iarr_all_mx, cg%ie+ib,:,:)  = max(cg%u%arr(iarr_all_mx, cg%ie,:,:),0.0)
+         cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie+ib,:,:) = cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie,:,:)
+         cg%u(iarr_all_mx, cg%ie+ib,:,:)  = max(cg%u(iarr_all_mx, cg%ie,:,:),0.0)
 #ifndef ISO
-         cg%u%arr(iarr_all_en, cg%ie+ib,:,:)  = cg%u%arr(iarr_all_en, cg%ie,:,:)
+         cg%u(iarr_all_en, cg%ie+ib,:,:)  = cg%u(iarr_all_en, cg%ie,:,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-         cg%u%arr(iarr_all_crs, cg%ie+ib,:,:) = smallecr
+         cg%u(iarr_all_crs, cg%ie+ib,:,:) = smallecr
 #endif /* COSM_RAYS */
       enddo
 

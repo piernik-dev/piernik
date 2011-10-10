@@ -90,25 +90,25 @@ contains
             do i = cg%is, cg%ie
 
 #ifdef MAGNETIC
-               bx = (cg%b%arr(xdim,i,j,k) + cg%b%arr(xdim, i+D_x, j,     k    ))/(1.+D_x)
-               by = (cg%b%arr(ydim,i,j,k) + cg%b%arr(ydim, i,     j+D_y, k    ))/(1.+D_y)
-               bz = (cg%b%arr(zdim,i,j,k) + cg%b%arr(zdim, i,     j,     k+D_z))/(1.+D_z)
+               bx = (cg%b(xdim,i,j,k) + cg%b(xdim, i+D_x, j,     k    ))/(1.+D_x)
+               by = (cg%b(ydim,i,j,k) + cg%b(ydim, i,     j+D_y, k    ))/(1.+D_y)
+               bz = (cg%b(zdim,i,j,k) + cg%b(zdim, i,     j,     k+D_z))/(1.+D_z)
 
                pmag = half*(bx*bx + by*by + bz*bz)
 #else /* !MAGNETIC */
-               ! all_mag_boundaries has not been called so we cannot trust cg%b%arr(xdim, cg%ie+D_x:), cg%b%arr(ydim,:cg%je+D_y and cg%b%arr(zdim,:,:, cg%ke+D_z
+               ! all_mag_boundaries has not been called so we cannot trust cg%b(xdim, cg%ie+D_x:), cg%b(ydim,:cg%je+D_y and cg%b(zdim,:,:, cg%ke+D_z
                pmag = zero
 #endif /* !MAGNETIC */
 
 #ifdef ISO
-               p  = cg%cs_iso2(i,j,k)*cg%u%arr(fl%idn,i,j,k)
+               p  = cg%cs_iso2(i,j,k)*cg%u(fl%idn,i,j,k)
                ps = p + pmag
-               cs = sqrt(abs(  (two*pmag+p)/cg%u%arr(fl%idn,i,j,k)) )
+               cs = sqrt(abs(  (two*pmag+p)/cg%u(fl%idn,i,j,k)) )
 #else /* !ISO */
-               ps = (cg%u%arr(fl%ien,i,j,k)-sum(cg%u%arr(fl%imx:fl%imz,i,j,k)**2,1) &
-                     /cg%u%arr(fl%idn,i,j,k)*half)*(fl%gam_1)+(two-fl%gam)*pmag
+               ps = (cg%u(fl%ien,i,j,k)-sum(cg%u(fl%imx:fl%imz,i,j,k)**2,1) &
+                     /cg%u(fl%idn,i,j,k)*half)*(fl%gam_1)+(two-fl%gam)*pmag
                p  = ps - pmag
-               cs = sqrt(abs(  (two*pmag+fl%gam*p)/cg%u%arr(fl%idn,i,j,k)) )
+               cs = sqrt(abs(  (two*pmag+fl%gam*p)/cg%u(fl%idn,i,j,k)) )
 #endif /* !ISO */
                call compute_c_max(fl, cs, i, j, k, c(:), c_ion, cg)
             enddo

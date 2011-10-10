@@ -142,15 +142,15 @@ contains
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%u%arr(idnn,i,j,k) = d0
-                  cg%u%arr(imxn,i,j,k) = cg%u%arr(idnn,i,j,k) * dv(1,i,j,k) * cma
-                  cg%u%arr(imyn,i,j,k) = cg%u%arr(idnn,i,j,k) * dv(2,i,j,k) * cma
-                  cg%u%arr(imzn,i,j,k) = cg%u%arr(idnn,i,j,k) * dv(3,i,j,k) * cma
-                  cg%u%arr(ienn,i,j,k) = c_si**2*d0/(gamma_neu*(gamma_neu-1.0))
-                  cg%u%arr(ienn,i,j,k) = cg%u%arr(ienn,i,j,k) + 0.5*(cg%u%arr(imxn,i,j,k)**2 + &
-                       &                 cg%u%arr(imyn,i,j,k)**2 + cg%u%arr(imzn,i,j,k) )/cg%u%arr(idnn,i,j,k)
-                  cg%b%arr(:,i,j,k)    = 0.0
-                  cg%u%arr(ienn,i,j,k) = cg%u%arr(ienn,i,j,k) + 0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+                  cg%u(idnn,i,j,k) = d0
+                  cg%u(imxn,i,j,k) = cg%u(idnn,i,j,k) * dv(1,i,j,k) * cma
+                  cg%u(imyn,i,j,k) = cg%u(idnn,i,j,k) * dv(2,i,j,k) * cma
+                  cg%u(imzn,i,j,k) = cg%u(idnn,i,j,k) * dv(3,i,j,k) * cma
+                  cg%u(ienn,i,j,k) = c_si**2*d0/(gamma_neu*(gamma_neu-1.0))
+                  cg%u(ienn,i,j,k) = cg%u(ienn,i,j,k) + 0.5*(cg%u(imxn,i,j,k)**2 + &
+                       &                 cg%u(imyn,i,j,k)**2 + cg%u(imzn,i,j,k) )/cg%u(idnn,i,j,k)
+                  cg%b(:,i,j,k)    = 0.0
+                  cg%u(ienn,i,j,k) = cg%u(ienn,i,j,k) + 0.5*sum(cg%b(:,i,j,k)**2,1)
                enddo
             enddo
          enddo

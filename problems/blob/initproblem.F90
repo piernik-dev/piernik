@@ -132,8 +132,8 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%u%arr(imzn, :, :, :) = 0.0
-         cg%u%arr(ienn, :, :, :) = penv/(gamma_neu-1.0)
+         cg%u(imzn, :, :, :) = 0.0
+         cg%u(ienn, :, :, :) = penv/(gamma_neu-1.0)
 
          do i = 1, cg%n_(xdim)
             rcx = (cg%x(i)-blobxc)**2
@@ -147,13 +147,13 @@ contains
                   endif
 
                   if (rblob >= rrel) then
-                     cg%u%arr(idnn,i,j,k) = chi*denv
-                     cg%u%arr(imxn,i,j,k) = chi*denv*vgal
-                     cg%u%arr(imyn,i,j,k) = 0.0
+                     cg%u(idnn,i,j,k) = chi*denv
+                     cg%u(imxn,i,j,k) = chi*denv*vgal
+                     cg%u(imyn,i,j,k) = 0.0
                   else
-                     cg%u%arr(idnn,i,j,k) = denv
-                     cg%u%arr(imxn,i,j,k) = denv*vgal
-                     cg%u%arr(imyn,i,j,k) = Mext*gamma_neu*penv
+                     cg%u(idnn,i,j,k) = denv
+                     cg%u(imxn,i,j,k) = denv*vgal
+                     cg%u(imyn,i,j,k) = Mext*gamma_neu*penv
                   endif
                enddo
             enddo

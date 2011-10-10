@@ -142,22 +142,22 @@ contains
                rcy = cg%y(j)
                rc=rcy-0.5*dom%L_(ydim)
                if (rc > 0.0) then
-                  cg%u%arr(idnn,i,j,:) = dtop
-                  cg%u%arr(imxn,i,j,:) = vtop*dtop
+                  cg%u(idnn,i,j,:) = dtop
+                  cg%u(imxn,i,j,:) = vtop*dtop
                endif
                if (rc <= 0.0) then
-                  cg%u%arr(idnn,i,j,:) = dbot
-                  cg%u%arr(imxn,i,j,:) = vbot*dbot
+                  cg%u(idnn,i,j,:) = dbot
+                  cg%u(imxn,i,j,:) = vbot*dbot
                endif
                if (abs(rc) < lpert) then
-                  cg%u%arr(imyn,i,j,:) = vp*sin(k0*rcx)*cg%u%arr(idnn,i,j,:)
+                  cg%u(imyn,i,j,:) = vp*sin(k0*rcx)*cg%u(idnn,i,j,:)
                endif
                if (has_dir(zdim)) then
-                  cg%u%arr(imzn,i,j,:) = vtransf*cg%u%arr(1,i,j,:)
+                  cg%u(imzn,i,j,:) = vtransf*cg%u(1,i,j,:)
                else
-                  cg%u%arr(imzn,i,j,:) = 0.0
+                  cg%u(imzn,i,j,:) = 0.0
                endif
-               cg%u%arr(ienn,i,j,:) = p0/(gamma_neu-1.0)
+               cg%u(ienn,i,j,:) = p0/(gamma_neu-1.0)
             enddo
          enddo
 

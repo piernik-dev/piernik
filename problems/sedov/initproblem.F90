@@ -167,12 +167,12 @@ contains
             do k = 1, cg%n_(zdim)
                do j = 1, cg%n_(ydim)
                   do i = 1, cg%n_(xdim)
-                     cg%u%arr(fl%idn,i,j,k) = d0
-                     cg%u%arr(fl%imx,i,j,k) = 0.0
-                     cg%u%arr(fl%imy,i,j,k) = 0.0
-                     cg%u%arr(fl%imz,i,j,k) = 0.0
-                     cg%u%arr(fl%ien,i,j,k) = p0/(fl%gam_1)
-                     cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(cg%u%arr(fl%imx,i,j,k)**2 +cg%u%arr(fl%imy,i,j,k)**2 + cg%u%arr(fl%imz,i,j,k)**2)/cg%u%arr(fl%idn,i,j,k)
+                     cg%u(fl%idn,i,j,k) = d0
+                     cg%u(fl%imx,i,j,k) = 0.0
+                     cg%u(fl%imy,i,j,k) = 0.0
+                     cg%u(fl%imz,i,j,k) = 0.0
+                     cg%u(fl%ien,i,j,k) = p0/(fl%gam_1)
+                     cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%u(fl%imx,i,j,k)**2 +cg%u(fl%imy,i,j,k)**2 + cg%u(fl%imz,i,j,k)**2)/cg%u(fl%idn,i,j,k)
                   enddo
                enddo
             enddo
@@ -183,7 +183,7 @@ contains
                do j = 1, cg%n_(ydim)
                   do i = 1, cg%n_(xdim)
                      r = sqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
-                     if ( r**2 < r0**2) cg%u%arr(fl%ien,i,j,k)   = cg%u%arr(fl%ien,i,j,k) + Eexpl
+                     if ( r**2 < r0**2) cg%u(fl%ien,i,j,k)   = cg%u(fl%ien,i,j,k) + Eexpl
                   enddo
                enddo
             enddo
@@ -192,10 +192,10 @@ contains
                do k = 1, cg%n_(zdim)
                   do j = 1, cg%n_(ydim)
                      do i = 1, cg%n_(xdim)
-                        cg%b%arr(xdim,i,j,k) = bx0
-                        cg%b%arr(ydim,i,j,k) = by0
-                        cg%b%arr(zdim,i,j,k) = bz0
-                        cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(cg%b%arr(xdim,i,j,k)**2 + cg%b%arr(ydim,i,j,k)**2 + cg%b%arr(zdim,i,j,k)**2)
+                        cg%b(xdim,i,j,k) = bx0
+                        cg%b(ydim,i,j,k) = by0
+                        cg%b(zdim,i,j,k) = bz0
+                        cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(cg%b(xdim,i,j,k)**2 + cg%b(ydim,i,j,k)**2 + cg%b(zdim,i,j,k)**2)
                      enddo
                   enddo
                enddo
@@ -225,9 +225,9 @@ contains
       ierrh = 0
       select case (var)
          case ("fooo")   ! Totally bogus quantity, just to check user_plt_hdf5 works
-            if (ij==xdim) tab(:,:) = cg%u%arr(2, xn, cg%js:cg%je, cg%ks:cg%ke)*cg%u%arr(3, xn, cg%js:cg%je, cg%ks:cg%ke)* .123456789
-            if (ij==ydim) tab(:,:) = cg%u%arr(2, cg%is:cg%ie, xn, cg%ks:cg%ke)*cg%u%arr(3, cg%is:cg%ie, xn, cg%ks:cg%ke)* .123456789
-            if (ij==zdim) tab(:,:) = cg%u%arr(2, cg%is:cg%ie, cg%js:cg%je, xn)*cg%u%arr(3, cg%is:cg%ie, cg%js:cg%je, xn)* .123456789
+            if (ij==xdim) tab(:,:) = cg%u(2, xn, cg%js:cg%je, cg%ks:cg%ke)*cg%u(3, xn, cg%js:cg%je, cg%ks:cg%ke)* .123456789
+            if (ij==ydim) tab(:,:) = cg%u(2, cg%is:cg%ie, xn, cg%ks:cg%ke)*cg%u(3, cg%is:cg%ie, xn, cg%ks:cg%ke)* .123456789
+            if (ij==zdim) tab(:,:) = cg%u(2, cg%is:cg%ie, cg%js:cg%je, xn)*cg%u(3, cg%is:cg%ie, cg%js:cg%je, xn)* .123456789
          case default
             ierrh = -1
       end select

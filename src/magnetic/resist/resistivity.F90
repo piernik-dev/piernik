@@ -218,13 +218,13 @@ contains
          cg => cgl%cg
 
          if (has_dir(xdim)) then
-            dbx(2:cg%n_(xdim),:,:) = (cg%b%arr(ydim,2:cg%n_(xdim),:,:)-cg%b%arr(ydim,1:cg%n_(xdim)-1,:,:))*cg%idl(xdim) ; dbx(1,:,:) = dbx(2,:,:)
+            dbx(2:cg%n_(xdim),:,:) = (cg%b(ydim,2:cg%n_(xdim),:,:)-cg%b(ydim,1:cg%n_(xdim)-1,:,:))*cg%idl(xdim) ; dbx(1,:,:) = dbx(2,:,:)
          endif
          if (has_dir(ydim)) then
-            dby(:,2:cg%n_(ydim),:) = (cg%b%arr(xdim,:,2:cg%n_(ydim),:)-cg%b%arr(xdim,:,1:cg%n_(ydim)-1,:))*cg%idl(ydim) ; dby(:,1,:) = dby(:,2,:)
+            dby(:,2:cg%n_(ydim),:) = (cg%b(xdim,:,2:cg%n_(ydim),:)-cg%b(xdim,:,1:cg%n_(ydim)-1,:))*cg%idl(ydim) ; dby(:,1,:) = dby(:,2,:)
          endif
          if (has_dir(zdim)) then
-            dbz(:,:,2:cg%n_(zdim)) = (cg%b%arr(ydim,:,:,2:cg%n_(zdim))-cg%b%arr(ydim,:,:,1:cg%n_(zdim)-1))*cg%idl(zdim) ; dbz(:,:,1) = dbz(:,:,2)
+            dbz(:,:,2:cg%n_(zdim)) = (cg%b(ydim,:,:,2:cg%n_(zdim))-cg%b(ydim,:,:,1:cg%n_(zdim)-1))*cg%idl(zdim) ; dbz(:,:,1) = dbz(:,:,2)
          endif
 
 !--- current_z **2
@@ -283,8 +283,8 @@ contains
       call get_extremum(p, MAXL, cu2max, cg)
 
 #ifndef ISO
-      wb = ( cg%u%arr(flind%ion%ien,:,:,:) - half*( cg%u%arr(flind%ion%imx,:,:,:)**2  + cg%u%arr(flind%ion%imy,:,:,:)**2  + cg%u%arr(flind%ion%imz,:,:,:)**2 ) &
-           / cg%u%arr(flind%ion%idn,:,:,:) - half*( cg%b%arr(xdim,:,:,:)**2  +   cg%b%arr(ydim,:,:,:)**2  +   cg%b%arr(zdim,:,:,:)**2))/ ( eta%arr * wb+small)
+      wb = ( cg%u(flind%ion%ien,:,:,:) - half*( cg%u(flind%ion%imx,:,:,:)**2  + cg%u(flind%ion%imy,:,:,:)**2  + cg%u(flind%ion%imz,:,:,:)**2 ) &
+           / cg%u(flind%ion%idn,:,:,:) - half*( cg%b(xdim,:,:,:)**2  +   cg%b(ydim,:,:,:)**2  +   cg%b(zdim,:,:,:)**2))/ ( eta%arr * wb+small)
       dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
 
       call get_extremum(p, MINL, deimin, cg)
@@ -390,7 +390,7 @@ contains
 
       integer(kind=4),  intent(in)   :: ibdir, sdir
       character(len=varlen)          :: emf
-      integer                        :: i1, i2
+      integer                        :: i1, i2, bi
       integer(kind=4)                :: n1, n2, etadir
       integer, dimension(ndims)      :: idml, idmh
       real, dimension(:),    pointer :: b1d, eta1d, wcu1d
@@ -407,6 +407,7 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+         bi   = cg%get_na_ind_4d("mag")
 
 !         select case (etadir)
 !            case (xdim)
@@ -425,7 +426,7 @@ contains
 
          do i1 = 1, ubound(wcu%arr,n1)
             do i2 = 1, ubound(wcu%arr,n2)
-               b1d    => cg%b%get_sweep(sdir,ibdir,i1,i2)
+               b1d    => cg%w(bi)%get_sweep(sdir,ibdir,i1,i2)
                eta1d  =>  eta%get_sweep(sdir,      i1,i2)
                wcu1d  =>  wcu%get_sweep(sdir,      i1,i2)
                call tvdd_1d(b1d, eta1d, cg%idl(sdir), dt, wcu1d)

@@ -102,39 +102,39 @@ contains
 #ifdef COSM_RAYS
          case ("cr1" : "cr9")
             read(var,'(A2,I1)') aux, i !> \deprecated BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
-            tab(:,:,:) = real(cg%u%arr(flind%crs%beg+i-1, RNG), kind=4)
+            tab(:,:,:) = real(cg%u(flind%crs%beg+i-1, RNG), kind=4)
 #endif /* COSM_RAYS */
          case ("dend", "deni", "denn")
-            tab(:,:,:) = real(cg%u%arr(fl_dni%idn, RNG), kind=4)
+            tab(:,:,:) = real(cg%u(fl_dni%idn, RNG), kind=4)
          case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
-            tab(:,:,:) = real(cg%u%arr(fl_dni%imx + i_xyz, RNG) / cg%u%arr(fl_dni%idn, RNG), kind=4)
+            tab(:,:,:) = real(cg%u(fl_dni%imx + i_xyz, RNG) / cg%u(fl_dni%idn, RNG), kind=4)
          case ("enen", "enei")
 #ifdef ISO
-            tab(:,:,:) = real(half *( cg%u%arr(fl_dni%imx, RNG)**2 + &
-                 &                   cg%u%arr(fl_dni%imy, RNG)**2 + &
-                 &                   cg%u%arr(fl_dni%imz, RNG)**2 ) / cg%u%arr(fl_dni%idn, RNG), kind=4)
+            tab(:,:,:) = real(half *( cg%u(fl_dni%imx, RNG)**2 + &
+                 &                   cg%u(fl_dni%imy, RNG)**2 + &
+                 &                   cg%u(fl_dni%imz, RNG)**2 ) / cg%u(fl_dni%idn, RNG), kind=4)
 #else /* !ISO */
-            tab(:,:,:) = real(cg%u%arr(fl_dni%ien, RNG), kind=4)
+            tab(:,:,:) = real(cg%u(fl_dni%ien, RNG), kind=4)
 #endif /* !ISO */
 #ifdef NEUTRAL
          case ("pren")
 #ifndef ISO
-            tab(:,:,:) = real( cg%u%arr(flind%neu%ien, RNG) - half * ( &
-                 &             cg%u%arr(flind%neu%imx, RNG)**2 + &
-                 &             cg%u%arr(flind%neu%imy, RNG)**2 + &
-                 &             cg%u%arr(flind%neu%imz, RNG)**2 ) / cg%u%arr(flind%neu%idn, RNG), kind=4) * real(flind%neu%gam_1, kind=4)
+            tab(:,:,:) = real( cg%u(flind%neu%ien, RNG) - half * ( &
+                 &             cg%u(flind%neu%imx, RNG)**2 + &
+                 &             cg%u(flind%neu%imy, RNG)**2 + &
+                 &             cg%u(flind%neu%imz, RNG)**2 ) / cg%u(flind%neu%idn, RNG), kind=4) * real(flind%neu%gam_1, kind=4)
 #endif /* !ISO */
 #endif /* NEUTRAL */
          case ("prei")
 #ifndef ISO
-            tab(:,:,:) = real( cg%u%arr(flind%ion%ien, RNG) - half *( &
-                 &             cg%u%arr(flind%ion%imx, RNG)**2 + &
-                 &             cg%u%arr(flind%ion%imy, RNG)**2 + &
-                 &             cg%u%arr(flind%ion%imz, RNG)**2 ) / cg%u%arr(flind%ion%idn, RNG), kind=4) * real(flind%ion%gam_1, kind=4) - &
-                 &       real( half*(flind%ion%gam_1)*(cg%b%arr(xdim, RNG)**2 + cg%b%arr(ydim, RNG)**2 + cg%b%arr(zdim, RNG)**2), kind=4)
+            tab(:,:,:) = real( cg%u(flind%ion%ien, RNG) - half *( &
+                 &             cg%u(flind%ion%imx, RNG)**2 + &
+                 &             cg%u(flind%ion%imy, RNG)**2 + &
+                 &             cg%u(flind%ion%imz, RNG)**2 ) / cg%u(flind%ion%idn, RNG), kind=4) * real(flind%ion%gam_1, kind=4) - &
+                 &       real( half*(flind%ion%gam_1)*(cg%b(xdim, RNG)**2 + cg%b(ydim, RNG)**2 + cg%b(zdim, RNG)**2), kind=4)
 #endif /* !ISO */
          case ("magx", "magy", "magz")
-            tab(:,:,:) = real(cg%b%arr(xdim + i_xyz, RNG), kind=4)
+            tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
          case ("gpot")
             if (associated(cg%gpot)) tab(:,:,:) = real(cg%gpot(RNG), kind=4)
          case ("mgso")

@@ -59,7 +59,7 @@ contains
 !<
    subroutine init_grid
 
-      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_IGNORE, ndims, xdim, zdim, ARR, INVALID
+      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, ndims, xdim, zdim, ARR, INVALID
       use dataio_pub,  only: printinfo, die, code_progress
       use diagnostics, only: my_allocate
       use domain,      only: dom, is_multicg
@@ -74,7 +74,6 @@ contains
       integer :: g, nrq, d
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      integer(kind=4), dimension(:), allocatable :: ind_arr
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
@@ -108,7 +107,9 @@ contains
 #endif /* VERBOSE */
 
       call all_cg%reg_var("wa", AT_IGNORE)                 ! BEWARE: magic string across multiple files
+      call all_cg%reg_var("fluid", AT_NO_B, flind%all)     !< Main array of all fluids' components, "u"
       call all_cg%reg_var("uh", AT_IGNORE, flind%all)      !< Main array of all fluids' components (for t += dt/2)
+      call all_cg%reg_var("mag", AT_OUT_B, ndims)          !< Main array of magnetic field's components, "b"
       if (repeat_step) then
          call all_cg%reg_var("u0", AT_IGNORE, flind%all)   !< Copy of main array of all fluids' components
          call all_cg%reg_var("b0", AT_IGNORE, ndims)       !< Copy of main array of magnetic field's components
@@ -118,23 +119,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         allocate(ind_arr(ndims+1))
-
-         ind_arr = [ flind%all, cg%n_(:) ]
-         call cg%u%init(ind_arr)
-!         cg%uh => cg%get_na_ptr_4d("uh")
-
-         ind_arr = [ ndims, cg%n_(:) ]
-         call cg%b%init(ind_arr)
-
-         deallocate(ind_arr)
-
+         cg%u  => cg%get_na_ptr_4d("fluid")
+         cg%b  => cg%get_na_ptr_4d("mag")
          cg%wa => cg%get_na_ptr("wa")
 #ifdef GRAV
-         allocate(ind_arr(1))
-         ind_arr = [cg%n_(zdim)]
-         call my_allocate(cg%dprof, ind_arr, "dprof")
-         deallocate(ind_arr)
+         call my_allocate(cg%dprof, [cg%n_(zdim)], "dprof")
 #endif /* GRAV */
          cgl => cgl%nxt
       enddo
@@ -172,9 +161,6 @@ contains
 
       cgl => all_cg%first
       do while (associated(cgl))
-
-         call cgl%cg%u%clean()
-         call cgl%cg%b%clean()
 
 #ifdef GRAV
          if (allocated(cgl%cg%dprof)) deallocate(cgl%cg%dprof)

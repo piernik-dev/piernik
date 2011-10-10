@@ -58,14 +58,14 @@ contains
 
          if (cfl_violated) then
             t = t-2.0*dtm
-            cg%u%arr = cg%w(cg%get_na_ind_4d("u0"))%arr
-            cg%b%arr = cg%w(cg%get_na_ind_4d("b0"))%arr
+            cg%u = cg%w(cg%get_na_ind_4d("u0"))%arr
+            cg%b = cg%w(cg%get_na_ind_4d("b0"))%arr
             dt = dtm/dt_max_grow**2
             nstep = nstep - I_ONE
             if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
          else
-            cg%w(cg%get_na_ind_4d("u0"))%arr = cg%u%arr
-            cg%w(cg%get_na_ind_4d("b0"))%arr = cg%b%arr
+            cg%w(cg%get_na_ind_4d("u0"))%arr = cg%u
+            cg%w(cg%get_na_ind_4d("b0"))%arr = cg%b
          endif
 
          cgl => cgl%nxt
@@ -281,22 +281,22 @@ contains
 ! DIFFUSION FULL STEP
          if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") ! move wcu into cg
          if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu%arr)
-         cg%b%arr(dim2,:,:,:) = cg%b%arr(dim2,:,:,:) - wcu%arr*cg%idl(dim1)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - wcu%arr*cg%idl(dim1)
          wcu%arr = pshift(wcu%arr,dim1)
-         cg%b%arr(dim2,:,:,:) = cg%b%arr(dim2,:,:,:) + wcu%arr*cg%idl(dim1)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + wcu%arr*cg%idl(dim1)
          wcu%arr = mshift(wcu%arr,dim1)
-         cg%b%arr(dim1,:,:,:) = cg%b%arr(dim1,:,:,:) + wcu%arr*cg%idl(dim2)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) + wcu%arr*cg%idl(dim2)
          wcu%arr = pshift(wcu%arr,dim2)
-         cg%b%arr(dim1,:,:,:) = cg%b%arr(dim1,:,:,:) - wcu%arr*cg%idl(dim2)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - wcu%arr*cg%idl(dim2)
 #endif /* RESISTIVE */
 ! ADVECTION FULL STEP
          if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa)
-         cg%b%arr(dim2,:,:,:) = cg%b%arr(dim2,:,:,:) - cg%wa*cg%idl(dim1)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - cg%wa*cg%idl(dim1)
          cg%wa = mshift(cg%wa,dim1)
-         cg%b%arr(dim2,:,:,:) = cg%b%arr(dim2,:,:,:) + cg%wa*cg%idl(dim1)
-         cg%b%arr(dim1,:,:,:) = cg%b%arr(dim1,:,:,:) - cg%wa*cg%idl(dim2)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + cg%wa*cg%idl(dim1)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - cg%wa*cg%idl(dim2)
          cg%wa = pshift(cg%wa,dim2)
-         cg%b%arr(dim1,:,:,:) = cg%b%arr(dim1,:,:,:) + cg%wa*cg%idl(dim2)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) + cg%wa*cg%idl(dim2)
          cgl => cgl%nxt
       enddo
 

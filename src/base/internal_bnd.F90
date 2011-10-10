@@ -152,16 +152,16 @@ contains
                      else
                         select case (type)
                            case (FLUID)
-                              pa4d => cg%u%arr
+                              pa4d => cg%u
                            case (MAG)
-                              pa4d => cg%b%arr
+                              pa4d => cg%b
 #ifdef COSM_RAYS
                            case (CR)
                               pa4d => cg%get_na_ptr_4d(wcr_n)
 #endif
                            case default
                               call die("[internal_bnd:internal_boundaries] What?")
-                              pa4d => cg%u%arr ! suppress compiler warnings
+                              pa4d => cg%u ! suppress compiler warnings
                         end select
                         call MPI_Irecv(pa4d(1, 1, 1, 1), I_ONE, cg%i_bnd(d, type, n)%seg(g)%mbc, cg%i_bnd(d, type, n)%seg(g)%proc, cg%i_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
                         call MPI_Isend(pa4d(1, 1, 1, 1), I_ONE, cg%o_bnd(d, type, n)%seg(g)%mbc, cg%o_bnd(d, type, n)%seg(g)%proc, cg%o_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)

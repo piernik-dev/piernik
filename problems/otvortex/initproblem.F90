@@ -138,21 +138,21 @@ contains
                   by  = b0*sin(fpi*xi)
                   bz  = 0.0
 
-                  cg%u%arr(idni,i,j,k) = rho
-                  cg%u%arr(imxi,i,j,k) = vx*cg%u%arr(idni,i,j,k)
-                  cg%u%arr(imyi,i,j,k) = vy*cg%u%arr(idni,i,j,k)
-                  cg%u%arr(imzi,i,j,k) = vz*cg%u%arr(idni,i,j,k)
+                  cg%u(idni,i,j,k) = rho
+                  cg%u(imxi,i,j,k) = vx*cg%u(idni,i,j,k)
+                  cg%u(imyi,i,j,k) = vy*cg%u(idni,i,j,k)
+                  cg%u(imzi,i,j,k) = vz*cg%u(idni,i,j,k)
 #ifndef ISO
-                  cg%u%arr(ieni,i,j,k) = pre/(gamma_ion-1.0)
-                  cg%u%arr(ieni,i,j,k) = max(cg%u%arr(ieni,i,j,k), smallei)
-                  cg%u%arr(ieni,i,j,k) = cg%u%arr(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(idni,i,j,k)
+                  cg%u(ieni,i,j,k) = pre/(gamma_ion-1.0)
+                  cg%u(ieni,i,j,k) = max(cg%u(ieni,i,j,k), smallei)
+                  cg%u(ieni,i,j,k) = cg%u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u(idni,i,j,k)
 #endif /* !ISO */
-                  cg%b%arr(1,i,j,k)  = bx
-                  cg%b%arr(2,i,j,k)  = by
-                  cg%b%arr(3,i,j,k)  = bz
+                  cg%b(1,i,j,k)  = bx
+                  cg%b(2,i,j,k)  = by
+                  cg%b(3,i,j,k)  = bz
 
 #ifndef ISO
-                  cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+                  cg%u(ieni,i,j,k)   = cg%u(ieni,i,j,k) +0.5*sum(cg%b(:,i,j,k)**2,1)
 #endif /* !ISO */
                enddo
             enddo

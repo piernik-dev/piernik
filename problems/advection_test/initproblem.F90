@@ -169,17 +169,17 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b%arr(:, :, :, :) = 0.
+         cg%b(:, :, :, :) = 0.
 
-         cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(cg%get_na_ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(cg%get_na_ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
          ! Make uniform, completely boring flow
-         cg%u%arr(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u%arr(flind%neu%idn, :, :, :)
-         cg%u%arr(flind%neu%imy, :, :, :) = pulse_vel(ydim) * cg%u%arr(flind%neu%idn, :, :, :)
-         cg%u%arr(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u%arr(flind%neu%idn, :, :, :)
+         cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
+         cg%u(flind%neu%imy, :, :, :) = pulse_vel(ydim) * cg%u(flind%neu%idn, :, :, :)
+         cg%u(flind%neu%imz, :, :, :) = pulse_vel(zdim) * cg%u(flind%neu%idn, :, :, :)
 
          ! Set up the internal energy
-         cg%u%arr(flind%neu%ien,:,:,:) = max(smallei, pulse_pressure / flind%neu%gam_1 + 0.5 * sum(cg%u%arr(flind%neu%imx:flind%neu%imz,:,:,:)**2,1) / cg%u%arr(flind%neu%idn,:,:,:))
+         cg%u(flind%neu%ien,:,:,:) = max(smallei, pulse_pressure / flind%neu%gam_1 + 0.5 * sum(cg%u(flind%neu%imx:flind%neu%imz,:,:,:)**2,1) / cg%u(flind%neu%idn,:,:,:))
 
          cgl => cgl%nxt
       enddo
@@ -275,7 +275,7 @@ contains
             return
          endif
 
-         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u%arr(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
          norm(N_D) = norm(N_D) + sum(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
          norm(N_2) = norm(N_2) + sum(inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)

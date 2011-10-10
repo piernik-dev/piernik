@@ -215,30 +215,30 @@ contains
             do j = ldm(ydim), hdm(ydim)    ; jl = j-1 ; jh = j+1 ; jld = j-idm(ydim)
                do i = ldm(xdim), hdm(xdim) ; il = i-1 ; ih = i+1 ; ild = i-idm(xdim)
 
-                  decr(crdim,:) = (cg%u%arr(iarr_crs,i,j,k) - cg%u%arr(iarr_crs,ild,jld,kld)) * cg%idl(crdim)
+                  decr(crdim,:) = (cg%u(iarr_crs,i,j,k) - cg%u(iarr_crs,ild,jld,kld)) * cg%idl(crdim)
                   fcrdif = K_crs_perp * decr(crdim,:)
 
-                  bcomp(crdim) =  cg%b%arr(crdim,i,j,k)
+                  bcomp(crdim) =  cg%b(crdim,i,j,k)
 
                   if (present_not_crdim(xdim)) then
-                     dqm = half*((cg%u%arr(iarr_crs,i ,jld,kld) + cg%u%arr(iarr_crs,i ,j,k)) - (cg%u%arr(iarr_crs,il,jld,kld) + cg%u%arr(iarr_crs,il,j,k))) * cg%idx
-                     dqp = half*((cg%u%arr(iarr_crs,ih,jld,kld) + cg%u%arr(iarr_crs,ih,j,k)) - (cg%u%arr(iarr_crs,i ,jld,kld) + cg%u%arr(iarr_crs,i ,j,k))) * cg%idx
+                     dqm = half*((cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k)) - (cg%u(iarr_crs,il,jld,kld) + cg%u(iarr_crs,il,j,k))) * cg%idx
+                     dqp = half*((cg%u(iarr_crs,ih,jld,kld) + cg%u(iarr_crs,ih,j,k)) - (cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k))) * cg%idx
                      decr(xdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                     bcomp(xdim)   = sum(cg%b%arr(xdim,i:ih, jld:j, kld:k))*0.25
+                     bcomp(xdim)   = sum(cg%b(xdim,i:ih, jld:j, kld:k))*0.25
                   endif
 
                   if (present_not_crdim(ydim)) then
-                     dqm = half*((cg%u%arr(iarr_crs,ild,j ,kld) + cg%u%arr(iarr_crs,i,j ,k)) - (cg%u%arr(iarr_crs,ild,jl,kld) + cg%u%arr(iarr_crs,i,jl,k))) * cg%idy
-                     dqp = half*((cg%u%arr(iarr_crs,ild,jh,kld) + cg%u%arr(iarr_crs,i,jh,k)) - (cg%u%arr(iarr_crs,ild,j ,kld) + cg%u%arr(iarr_crs,i,j ,k))) * cg%idy
+                     dqm = half*((cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k)) - (cg%u(iarr_crs,ild,jl,kld) + cg%u(iarr_crs,i,jl,k))) * cg%idy
+                     dqp = half*((cg%u(iarr_crs,ild,jh,kld) + cg%u(iarr_crs,i,jh,k)) - (cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k))) * cg%idy
                      decr(ydim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                     bcomp(ydim)   = sum(cg%b%arr(ydim,ild:i, j:jh, kld:k))*0.25
+                     bcomp(ydim)   = sum(cg%b(ydim,ild:i, j:jh, kld:k))*0.25
                   endif
 
                   if (present_not_crdim(zdim)) then
-                     dqm = half*((cg%u%arr(iarr_crs,ild,jld,k ) + cg%u%arr(iarr_crs,i,j,k )) - (cg%u%arr(iarr_crs,ild,jld,kl) + cg%u%arr(iarr_crs,i,j,kl))) * cg%idz
-                     dqp = half*((cg%u%arr(iarr_crs,ild,jld,kh) + cg%u%arr(iarr_crs,i,j,kh)) - (cg%u%arr(iarr_crs,ild,jld,k ) + cg%u%arr(iarr_crs,i,j,k ))) * cg%idz
+                     dqm = half*((cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k )) - (cg%u(iarr_crs,ild,jld,kl) + cg%u(iarr_crs,i,j,kl))) * cg%idz
+                     dqp = half*((cg%u(iarr_crs,ild,jld,kh) + cg%u(iarr_crs,i,j,kh)) - (cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k ))) * cg%idz
                      decr(zdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                     bcomp(zdim)   = sum(cg%b%arr(zdim,ild:i, jld:j, k:kh))*0.25
+                     bcomp(zdim)   = sum(cg%b(zdim,ild:i, jld:j, k:kh))*0.25
                   endif
 
                   bb = sum(bcomp**2)
@@ -255,9 +255,9 @@ contains
          ndm = cg%n_ - idm
          hdm = 1 + idm*ndm
          ldm = hdm - idm
-         cg%u%arr(iarr_crs,:ndm(xdim), :ndm(ydim), :ndm(zdim)) =                         cg%u%arr(iarr_crs,:ndm(xdim),:ndm(ydim),:ndm(zdim)) &
+         cg%u(iarr_crs,:ndm(xdim), :ndm(ydim), :ndm(zdim)) =                         cg%u(iarr_crs,:ndm(xdim),:ndm(ydim),:ndm(zdim)) &
            &    - ( wcr(:,1+idm(xdim):cg%n_(xdim),1+idm(ydim):cg%n_(ydim),1+idm(zdim):cg%n_(zdim)) - wcr(:,:ndm(xdim),:ndm(ydim),:ndm(zdim)) )
-         cg%u%arr(iarr_crs,hdm(xdim):cg%n_(xdim),hdm(ydim):cg%n_(ydim),hdm(zdim):cg%n_(zdim)) = cg%u%arr(iarr_crs,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
+         cg%u(iarr_crs,hdm(xdim):cg%n_(xdim),hdm(ydim):cg%n_(ydim),hdm(zdim):cg%n_(zdim)) = cg%u(iarr_crs,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
 
          cgl => cgl%nxt
       enddo

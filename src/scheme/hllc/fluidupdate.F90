@@ -100,7 +100,7 @@ contains
       integer :: i1, i2
       integer, dimension(ndims,LO:HI)       :: i
 
-      real, dimension(size(cg%u%arr,1),cg%n_(ddim)) :: u1d
+      real, dimension(size(cg%u,1),cg%n_(ddim)) :: u1d
       real, dimension(:,:), pointer                 :: pu
       real, dimension(xdim:zdim,         cg%n_(ddim)) :: b1d
 

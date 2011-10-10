@@ -58,8 +58,8 @@ contains
 
       real, dimension(ndims)                     :: v
 
-      if ( cg%u%arr(fl%idn,i,j,k) > 0.0) then
-         v(:) = abs(cg%u%arr(fl%imx:fl%imz, i, j, k)/cg%u%arr(fl%idn, i, j, k))
+      if ( cg%u(fl%idn,i,j,k) > 0.0) then
+         v(:) = abs(cg%u(fl%imx:fl%imz, i, j, k)/cg%u(fl%idn, i, j, k))
       else
          v(:) = 0.0
       endif

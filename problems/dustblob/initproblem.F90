@@ -146,22 +146,22 @@ contains
                      rc = sqrt((xi-x0)**2+(yj-y0)**2)
                   endif
 
-                  cg%u%arr(idnn,i,j,k) = d_gas
-                  cg%u%arr(imxn,i,j,k) = 0.0
-                  cg%u%arr(imyn,i,j,k) = d_gas*v_gas
-                  cg%u%arr(imzn,i,j,k) = 0.0
+                  cg%u(idnn,i,j,k) = d_gas
+                  cg%u(imxn,i,j,k) = 0.0
+                  cg%u(imyn,i,j,k) = d_gas*v_gas
+                  cg%u(imzn,i,j,k) = 0.0
                   if (rc <= r0) then
-                     cg%u%arr(idnd,i,j,k) = d_dust
-                     cg%u%arr(imyd,i,j,k) = d_dust*v_dust
+                     cg%u(idnd,i,j,k) = d_dust
+                     cg%u(imyd,i,j,k) = d_dust*v_dust
                   else
-                     cg%u%arr(idnd,i,j,k) = smalld
-                     cg%u%arr(imyd,i,j,k) = 0.0
+                     cg%u(idnd,i,j,k) = smalld
+                     cg%u(imyd,i,j,k) = 0.0
                   endif
-                  cg%u%arr(imxd,i,j,k) = 0.0
-                  cg%u%arr(imzd,i,j,k) = 0.0
+                  cg%u(imxd,i,j,k) = 0.0
+                  cg%u(imzd,i,j,k) = 0.0
 #ifndef ISO
-                  cg%u%arr(ienn,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(cg%u%arr(imxn,i,j,k)**2 + &
-                       &                 cg%u%arr(imyn,i,j,k)**2+cg%u%arr(imzn,i,j,k)**2)/cg%u%arr(idnn,i,j,k)
+                  cg%u(ienn,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(cg%u(imxn,i,j,k)**2 + &
+                       &                 cg%u(imyn,i,j,k)**2+cg%u(imzn,i,j,k)**2)/cg%u(idnn,i,j,k)
 #endif /* !ISO */
                enddo
             enddo

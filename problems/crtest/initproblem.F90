@@ -186,26 +186,26 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b%arr(xdim, :, :, :) = bx0
-         cg%b%arr(ydim, :, :, :) = by0
-         cg%b%arr(zdim, :, :, :) = bz0
-         cg%u%arr(idni, :, :, :) = d0
-         cg%u%arr(imxi:imzi, :, :, :) = 0.0
+         cg%b(xdim, :, :, :) = bx0
+         cg%b(ydim, :, :, :) = by0
+         cg%b(zdim, :, :, :) = bz0
+         cg%u(idni, :, :, :) = d0
+         cg%u(imxi:imzi, :, :, :) = 0.0
 
 #ifndef ISO
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%u%arr(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
-                       &                 0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1)/cg%u%arr(idni,i,j,k) + &
-                       &                 0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+                  cg%u(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
+                       &                 0.5*sum(cg%u(imxi:imzi,i,j,k)**2,1)/cg%u(idni,i,j,k) + &
+                       &                 0.5*sum(cg%b(:,i,j,k)**2,1)
                enddo
             enddo
          enddo
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-         cg%u%arr(iecr, :, :, :)      =  beta_cr*cs_iso**2 * cg%u%arr(idni, :, :, :)/(gamma_crs(icr)-1.0)
+         cg%u(iecr, :, :, :)      =  beta_cr*cs_iso**2 * cg%u(idni, :, :, :)/(gamma_crs(icr)-1.0)
 
 ! Explosions
          do k = cg%ks, cg%ke
@@ -213,7 +213,7 @@ contains
                do i = cg%is, cg%ie
                   r2 = (cg%x(i)-x0)**2+(cg%y(j)-y0)**2+(cg%z(k)-z0)**2
                   if (cg%x(i)> 2*x0-dom%edge(xdim, HI) .and. cg%y(j) > 2*y0-dom%edge(ydim, HI)) &
-                       cg%u%arr(iecr, i, j, k)= cg%u%arr(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
+                       cg%u(iecr, i, j, k)= cg%u(iecr, i, j, k) + amp_cr*exp(-r2/r0**2)
                enddo
             enddo
          enddo
@@ -350,10 +350,10 @@ contains
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
                   crt = aecr1(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
-                  norm(1) = norm(1) + (crt - cg%u%arr(iecr, i, j, k))**2
+                  norm(1) = norm(1) + (crt - cg%u(iecr, i, j, k))**2
                   norm(2) = norm(2) + crt**2
-                  dev(1) = min(dev(1), (crt - cg%u%arr(iecr, i, j, k)))
-                  dev(2) = max(dev(2), (crt - cg%u%arr(iecr, i, j, k)))
+                  dev(1) = min(dev(1), (crt - cg%u(iecr, i, j, k)))
+                  dev(2) = max(dev(2), (crt - cg%u(iecr, i, j, k)))
                enddo
             enddo
          enddo
@@ -401,7 +401,7 @@ contains
          case ("acr1")
             tab(:,:,:) = real(aecr1(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case ("err1")
-            tab(:,:,:) = real(aecr1(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u%arr(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(aecr1(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

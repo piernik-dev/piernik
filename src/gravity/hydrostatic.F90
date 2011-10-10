@@ -383,13 +383,13 @@ contains
          allocate(ekb(flind%fluids, cg%n_(xdim), cg%n_(ydim)), eib(flind%fluids, cg%n_(xdim), cg%n_(ydim)))
 #endif /* !ISO */
 
-         db = cg%u%arr(iarr_all_dn,:,:,kb)
+         db = cg%u(iarr_all_dn,:,:,kb)
          db = max(db,smalld)
 #ifdef ISO
          csi2b = maxval(flind%all_fluids(:)%cs2)   !> \deprecated BEWARE should be fluid dependent
 #else /* !ISO */
-         ekb = half*(cg%u%arr(iarr_all_mx,:,:,kb)**2+cg%u%arr(iarr_all_my,:,:,kb)**2+cg%u%arr(iarr_all_mz,:,:,kb)**2)/db
-         eib = cg%u%arr(iarr_all_en,:,:,kb) - ekb
+         ekb = half*(cg%u(iarr_all_mx,:,:,kb)**2+cg%u(iarr_all_my,:,:,kb)**2+cg%u(iarr_all_mz,:,:,kb)**2)/db
+         eib = cg%u(iarr_all_en,:,:,kb) - ekb
          eib = max(eib,smallei)
          do ifluid=1,flind%fluids
             csi2b(ifluid,:,:) = (flind%all_fluids(ifluid)%gam_1)*eib(ifluid,:,:)/db(ifluid,:,:)
@@ -419,25 +419,25 @@ contains
                db(:,i,j)  = dprofs(:,nsub+1)
                db(:,i,j)  = max(db(:,i,j), smalld)
 
-               cg%u%arr(iarr_all_dn,i,j,kk)      =     db(:,i,j)
-               cg%u%arr(iarr_all_mx,i,j,kk)      =     cg%u%arr(iarr_all_mx,i,j,kb)
-               cg%u%arr(iarr_all_my,i,j,kk)      =     cg%u%arr(iarr_all_my,i,j,kb)
-               cg%u%arr(iarr_all_mz,i,j,kk)      =     cg%u%arr(iarr_all_mz,i,j,kb)
+               cg%u(iarr_all_dn,i,j,kk)      =     db(:,i,j)
+               cg%u(iarr_all_mx,i,j,kk)      =     cg%u(iarr_all_mx,i,j,kb)
+               cg%u(iarr_all_my,i,j,kk)      =     cg%u(iarr_all_my,i,j,kb)
+               cg%u(iarr_all_mz,i,j,kk)      =     cg%u(iarr_all_mz,i,j,kb)
                !> \deprecated to use outh together with outd user should manually interfere in the code of outh_bnd routine
 ! zakomentowac nastepna linie jesli warunek diodowy nie ma byc stosowany razem z hydrostatycznym
 !           if (minmax == 'max') then
-!              cg%u%arr(iarr_all_mz,i,j,kk)          =     max(cg%u%arr(iarr_all_mz,i,j,kk),0.0)
+!              cg%u(iarr_all_mz,i,j,kk)          =     max(cg%u(iarr_all_mz,i,j,kk),0.0)
 !           else
-!              cg%u%arr(iarr_all_mz,i,j,kk)          =     min(cg%u%arr(iarr_all_mz,i,j,kk),0.0)
+!              cg%u(iarr_all_mz,i,j,kk)          =     min(cg%u(iarr_all_mz,i,j,kk),0.0)
 !           endif
                if (.false.) print *, minmax
 #ifndef ISO
                eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(flind%all_fluids(:)%gam_1)
                eib(:,i,j) = max(eib(:,i,j), smallei)
-               cg%u%arr(iarr_all_en,i,j,kk)      =     ekb(:,i,j) + eib(:,i,j)
+               cg%u(iarr_all_en,i,j,kk)      =     ekb(:,i,j) + eib(:,i,j)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               cg%u%arr(iarr_all_crs,i,j,kk)     =     smallecr
+               cg%u(iarr_all_crs,i,j,kk)     =     smallecr
 #endif /* COSM_RAYS */
             enddo ! i
          enddo ! j

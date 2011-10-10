@@ -161,7 +161,7 @@ contains
       type(grid_container), pointer :: cg
 
       return
-      if (.false.) write(0,*) cg%u%arr(flind%all, sweep, i1, i2) ! suppress compiler warnings
+      if (.false.) write(0,*) cg%u(flind%all, sweep, i1, i2) ! suppress compiler warnings
 
    end subroutine set_cart_coeffs
 !>

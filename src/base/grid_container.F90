@@ -135,9 +135,6 @@ module grid_cont
       real, allocatable, dimension(:,:,:) :: gc_ydim !< array of geometrical coefficients in y-direction
       real, allocatable, dimension(:,:,:) :: gc_zdim !< array of geometrical coefficients in z-direction
 
-      type(array4d) :: u                        !< Main array of all fluids' components
-      type(array4d) :: b                        !< Main array of magnetic field's components
-
       !< Other 3D arrays (such as user-defined quantities or gravitational potential). The fourth index selects variable so it cannot be merged with u or b.
       type(named_array3d), allocatable, dimension(:) :: q
       !< Other 4D arrays (such as user-defined quantities or vector fields).
@@ -153,7 +150,8 @@ module grid_cont
       real, dimension(:,:,:), pointer :: wa      => null() !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 
       ! handy shortcuts to some entries in w(:)
-!      real, dimension(:,:,:,:), pointer :: uh    => null() !< Main array of all fluids' components (for t += dt/2)
+      real, dimension(:,:,:,:), pointer :: u     => null() !< Main array of all fluids' components
+      real, dimension(:,:,:,:), pointer :: b     => null() !< Main array of magnetic field's components
 
    contains
 

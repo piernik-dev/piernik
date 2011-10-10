@@ -220,50 +220,50 @@ contains
                rcy = cg%y(j)
                do k = 1, cg%n_(zdim)
 #ifdef NEUTRAL
-                  cg%u%arr(neu%idn,i,j,k) = rhog
-                  cg%u%arr(neu%imx,i,j,k) = ux * rhog
-                  cg%u%arr(neu%imy,i,j,k) = uy * rhog
-                  cg%u%arr(neu%imz,i,j,k) = 0.0
+                  cg%u(neu%idn,i,j,k) = rhog
+                  cg%u(neu%imx,i,j,k) = ux * rhog
+                  cg%u(neu%imy,i,j,k) = uy * rhog
+                  cg%u(neu%imz,i,j,k) = 0.0
 #ifndef ISO
-                  cg%u%arr(neu%ien,i,j,:) = 1.0/(gamma_neu-1.0)
+                  cg%u(neu%ien,i,j,:) = 1.0/(gamma_neu-1.0)
 #endif /* !ISO */
 #endif /* NEUTRAL */
 #ifdef DUST
-                  cg%u%arr(dst%idn,i,j,k) = eps*rhog
-                  cg%u%arr(dst%imx,i,j,k) = wx * eps*rhog
-                  cg%u%arr(dst%imy,i,j,k) = wy * eps*rhog
-                  cg%u%arr(dst%imz,i,j,k) = 0.0
+                  cg%u(dst%idn,i,j,k) = eps*rhog
+                  cg%u(dst%imx,i,j,k) = wx * eps*rhog
+                  cg%u(dst%imy,i,j,k) = wy * eps*rhog
+                  cg%u(dst%imz,i,j,k) = 0.0
 
 ! Linear test
                   if (linear) then
-!               cg%u%arr(dst%idn,i,j,k) =  cg%u%arr(dst%idn,i,j,k) + amp*eps*sin(kz*cg%z(k))*cos(kx*cg%x(i))
-                     cg%u%arr(dst%idn,i,j,k) =  cg%u%arr(dst%idn,i,j,k) + amp*eps*cos(kz*cg%z(k))*cos(kx*cg%x(i))
-! ...                cg%u%arr(dst%idn,i,j,k) =  cg%u%arr(dst%idn,i,j,k) + amp*eps*cos(kx*x(i))*cos(kz*cg%z(k))
-! B              cg%u%arr(dst%idn,i,j,k) =  cg%u%arr(dst%idn,i,j,k) + amp * eps *&
+!               cg%u(dst%idn,i,j,k) =  cg%u(dst%idn,i,j,k) + amp*eps*sin(kz*cg%z(k))*cos(kx*cg%x(i))
+                     cg%u(dst%idn,i,j,k) =  cg%u(dst%idn,i,j,k) + amp*eps*cos(kz*cg%z(k))*cos(kx*cg%x(i))
+! ...                cg%u(dst%idn,i,j,k) =  cg%u(dst%idn,i,j,k) + amp*eps*cos(kx*x(i))*cos(kz*cg%z(k))
+! B              cg%u(dst%idn,i,j,k) =  cg%u(dst%idn,i,j,k) + amp * eps *&
 ! B                 ( real(coeff(7))*cos(kx*cg%x(i)) - &
 ! B                  aimag(coeff(7))*sin(kx*cg%x(i))) * cos(kz*z(k))
-                     cg%u%arr(dst%imx,i,j,k) =  cg%u%arr(dst%imx,i,j,k) + eta*vk*amp * &
+                     cg%u(dst%imx,i,j,k) =  cg%u(dst%imx,i,j,k) + eta*vk*amp * &
                           ( real(coeff(1))*cos(kx*cg%x(i)) - &
                           aimag(coeff(1))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
-                     cg%u%arr(dst%imy,i,j,k) =  cg%u%arr(dst%imy,i,j,k) + eta*vk*amp * &
+                     cg%u(dst%imy,i,j,k) =  cg%u(dst%imy,i,j,k) + eta*vk*amp * &
                           ( real(coeff(2))*cos(kx*cg%x(i)) - &
                           aimag(coeff(2))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
-                     cg%u%arr(dst%imz,i,j,k) =  cg%u%arr(dst%imz,i,j,k) + eta*vk*(-amp) * &
+                     cg%u(dst%imz,i,j,k) =  cg%u(dst%imz,i,j,k) + eta*vk*(-amp) * &
                           (aimag(coeff(3))*cos(kx*cg%x(i)) + &
                           real(coeff(3))*sin(kx*cg%x(i))) * sin(kz*cg%z(k))
-                     cg%u%arr(neu%imx,i,j,k) =  cg%u%arr(neu%imx,i,j,k) + eta*vk*amp * &
+                     cg%u(neu%imx,i,j,k) =  cg%u(neu%imx,i,j,k) + eta*vk*amp * &
                           ( real(coeff(4))*cos(kx*cg%x(i)) - &
                           aimag(coeff(4))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
-                     cg%u%arr(neu%imy,i,j,k) =  cg%u%arr(neu%imy,i,j,k) + eta*vk*amp * &
+                     cg%u(neu%imy,i,j,k) =  cg%u(neu%imy,i,j,k) + eta*vk*amp * &
                           ( real(coeff(5))*cos(kx*cg%x(i)) - &
                           aimag(coeff(5))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
-                     cg%u%arr(neu%imz,i,j,k) =  cg%u%arr(neu%imz,i,j,k) + eta*vk*(-amp) * &
+                     cg%u(neu%imz,i,j,k) =  cg%u(neu%imz,i,j,k) + eta*vk*(-amp) * &
                           (aimag(coeff(6))*cos(kx*cg%x(i)) + &
                           real(coeff(6))*sin(kx*cg%x(i))) * sin(kz*cg%z(k))
-!               cg%u%arr(neu%idn,i,j,k) =  cg%u%arr(neu%idn,i,j,k) + amp * &
+!               cg%u(neu%idn,i,j,k) =  cg%u(neu%idn,i,j,k) + amp * &
 !                  ( real(coeff(7))*cos(kx*cg%x(i)) - &
 !                   aimag(coeff(7))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
-                     cg%u%arr(neu%idn,i,j,k) =  cg%u%arr(neu%idn,i,j,k) + (eta*vk)**2 * amp * &
+                     cg%u(neu%idn,i,j,k) =  cg%u(neu%idn,i,j,k) + (eta*vk)**2 * amp * &
                           ( real(coeff(7))*cos(kx*cg%x(i)) - &
                           aimag(coeff(7))*sin(kx*cg%x(i))) * cos(kz*cg%z(k))
                   endif
@@ -275,9 +275,9 @@ contains
          enddo
          if (.not.linear) then
             call random_number(noise)
-            cg%u%arr(dst%imx,:,:,:) = cg%u%arr(dst%imx,:,:,:) +amp -2.0*amp*noise(1,:,:,:) * cg%u%arr(dst%idn,:,:,:)
-            cg%u%arr(dst%imy,:,:,:) = cg%u%arr(dst%imy,:,:,:) +amp -2.0*amp*noise(2,:,:,:) * cg%u%arr(dst%idn,:,:,:)
-            cg%u%arr(dst%imz,:,:,:) = cg%u%arr(dst%imz,:,:,:) +amp -2.0*amp*noise(3,:,:,:) * cg%u%arr(dst%idn,:,:,:)
+            cg%u(dst%imx,:,:,:) = cg%u(dst%imx,:,:,:) +amp -2.0*amp*noise(1,:,:,:) * cg%u(dst%idn,:,:,:)
+            cg%u(dst%imy,:,:,:) = cg%u(dst%imy,:,:,:) +amp -2.0*amp*noise(2,:,:,:) * cg%u(dst%idn,:,:,:)
+            cg%u(dst%imz,:,:,:) = cg%u(dst%imz,:,:,:) +amp -2.0*amp*noise(3,:,:,:) * cg%u(dst%idn,:,:,:)
          endif
 
          deallocate(noise)

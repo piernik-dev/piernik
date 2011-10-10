@@ -799,35 +799,35 @@ contains
          endif
       endif
 
-      tot_mass = mpi_addmul(cg%u%arr(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
-      tot_momx = mpi_addmul(cg%u%arr(iarr_all_mx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
-      tot_momy = mpi_addmul(cg%u%arr(iarr_all_my, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
-      tot_momz = mpi_addmul(cg%u%arr(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_mass = mpi_addmul(cg%u(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_momx = mpi_addmul(cg%u(iarr_all_mx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_momy = mpi_addmul(cg%u(iarr_all_my, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_momz = mpi_addmul(cg%u(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 #ifdef GRAV
-      tot_epot = mpi_addmul(cg%u%arr(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) * cg%gpot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_epot = mpi_addmul(cg%u(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) * cg%gpot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 #endif /* GRAV */
 
       cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-           & half * (cg%u%arr(iarr_all_mx(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
-           &      + cg%u%arr(iarr_all_my(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
-           &      + cg%u%arr(iarr_all_mz(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)/ &
-           & max(cg%u%arr(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke),smalld)
+           & half * (cg%u(iarr_all_mx(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
+           &      + cg%u(iarr_all_my(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
+           &      + cg%u(iarr_all_mz(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)/ &
+           & max(cg%u(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke),smalld)
       tot_ekin = mpi_addmul(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 
       cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-           & half * (cg%b%arr(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
-           &        cg%b%arr(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
-           &        cg%b%arr(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
+           & half * (cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
+           &        cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
+           &        cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
       tot_emag = mpi_addmul(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 
-      tot_mflx = mpi_addmul(cg%b%arr(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dy*cg%dz/dom%n_d(xdim))
-      tot_mfly = mpi_addmul(cg%b%arr(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dz/dom%n_d(ydim))
-      tot_mflz = mpi_addmul(cg%b%arr(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dy/dom%n_d(zdim))
+      tot_mflx = mpi_addmul(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dy*cg%dz/dom%n_d(xdim))
+      tot_mfly = mpi_addmul(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dz/dom%n_d(ydim))
+      tot_mflz = mpi_addmul(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dy/dom%n_d(zdim))
 #ifdef ISO
       tot_eint = cs_iso2*tot_mass
       tot_ener = tot_eint+tot_ekin+tot_emag
 #else /* !ISO */
-      tot_ener = mpi_addmul(cg%u%arr(iarr_all_en, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_ener = mpi_addmul(cg%u(iarr_all_en, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
       tot_eint = tot_ener - tot_ekin - tot_emag
 #endif /* !ISO */
 #ifdef GRAV
@@ -835,7 +835,7 @@ contains
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-      tot_encr = mpi_addmul(cg%u%arr(iarr_all_crs, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_encr = mpi_addmul(cg%u(iarr_all_crs, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
 #endif /* COSM_RAYS */
 
       call write_log(tsl)
@@ -963,18 +963,18 @@ contains
       if (is_multicg) call die("[dataio:get_common_vars] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
 
       pr => fl%snap
-      cg%wa = cg%u%arr(fl%idn,:,:,:)
+      cg%wa = cg%u(fl%idn,:,:,:)
       p => cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, pr%dens_max, cg)
       call get_extremum(p, MINL, pr%dens_min, cg)
 
-      p = abs(cg%u%arr(fl%imx,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u%arr(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      p = abs(cg%u(fl%imx,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       call get_extremum(p, MAXL, pr%velx_max, cg)
 
-      p = abs(cg%u%arr(fl%imy,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u%arr(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      p = abs(cg%u(fl%imy,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       call get_extremum(p, MAXL, pr%vely_max, cg)
 
-      p = abs(cg%u%arr(fl%imz,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u%arr(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
+      p = abs(cg%u(fl%imz,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
       call get_extremum(p, MAXL, pr%velz_max, cg)
 
 #ifdef ISO
@@ -993,16 +993,16 @@ contains
       pr%temp_max        = pr%temp_min
 #else /* !ISO */
       if (fl%tag /= DST) then
-         cg%wa(:,:,:) = (cg%u%arr(fl%ien,:,:,:) &                ! eint
-                   - half*((cg%u%arr(fl%imx,:,:,:)**2 +cg%u%arr(fl%imy,:,:,:)**2 + cg%u%arr(fl%imz,:,:,:)**2)/cg%u%arr(fl%idn,:,:,:)))
-         if (fl%tag == ION) cg%wa(:,:,:) = cg%wa(:,:,:) - half*(sum(cg%b%arr(:,:,:,:)**2,dim=1))
+         cg%wa(:,:,:) = (cg%u(fl%ien,:,:,:) &                ! eint
+                   - half*((cg%u(fl%imx,:,:,:)**2 +cg%u(fl%imy,:,:,:)**2 + cg%u(fl%imz,:,:,:)**2)/cg%u(fl%idn,:,:,:)))
+         if (fl%tag == ION) cg%wa(:,:,:) = cg%wa(:,:,:) - half*(sum(cg%b(:,:,:,:)**2,dim=1))
 
          cg%wa(:,:,:) = max(fl%gam_1*cg%wa(:,:,:),smallp)  ! pres
 
          call get_extremum(p, MAXL, pr%pres_max, cg)
          call get_extremum(p, MINL, pr%pres_min, cg)
 
-         cg%wa(:,:,:) = fl%gam*cg%wa(:,:,:)/cg%u%arr(fl%idn,:,:,:) ! sound speed squared
+         cg%wa(:,:,:) = fl%gam*cg%wa(:,:,:)/cg%u(fl%idn,:,:,:) ! sound speed squared
          call get_extremum(p, MAXL, pr%cs_max, cg)
          pr%cs_max%val = sqrt(pr%cs_max%val)
 
@@ -1100,16 +1100,16 @@ contains
          call get_common_vars(flind%ion)
 
 #ifdef MAGNETIC
-         cg%wa(:,:,:)  = sqrt(cg%b%arr(1,:,:,:)*cg%b%arr(1,:,:,:) + cg%b%arr(2,:,:,:)*cg%b%arr(2,:,:,:) + cg%b%arr(3,:,:,:)*cg%b%arr(3,:,:,:))
+         cg%wa(:,:,:)  = sqrt(cg%b(1,:,:,:)*cg%b(1,:,:,:) + cg%b(2,:,:,:)*cg%b(2,:,:,:) + cg%b(3,:,:,:)*cg%b(3,:,:,:))
          call get_extremum(p, MAXL, b_max, cg)
          call get_extremum(p, MINL, b_min, cg)
 
-         cg%wa(:,:,:)  = cg%wa(:,:,:) / sqrt(cg%u%arr(flind%ion%idn,:,:,:))
+         cg%wa(:,:,:)  = cg%wa(:,:,:) / sqrt(cg%u(flind%ion%idn,:,:,:))
          call get_extremum(p, MAXL, vai_max, cg)
 #endif /* MAGNETIC */
 
 #ifdef ISO
-!        cg%wa        = cg%cs_iso2(:,:,:)*cg%u%arr(idni,:,:,:)
+!        cg%wa        = cg%cs_iso2(:,:,:)*cg%u(idni,:,:,:)
 !        call get_extremum(p, MINL, prei_min, cg)
 !        call get_extremum(p, MAXL, prei_max, cg) ; NULLIFY(p)
 !        p => cg%cs_iso2(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
@@ -1119,10 +1119,10 @@ contains
 !        call get_extremum(p, MINL, temi_min, cg)
 !        call get_extremum(p, MAXL, temi_max, cg)
 #else /* !ISO */
-!        cg%wa(:,:,:) = (cg%u%arr(ieni,:,:,:) &                ! eint
-!                    - half*((cg%u%arr(imxi,:,:,:)**2 +cg%u%arr(imyi,:,:,:)**2 + cg%u%arr(imzi,:,:,:)**2)/cg%u%arr(idni,:,:,:)))
+!        cg%wa(:,:,:) = (cg%u(ieni,:,:,:) &                ! eint
+!                    - half*((cg%u(imxi,:,:,:)**2 +cg%u(imyi,:,:,:)**2 + cg%u(imzi,:,:,:)**2)/cg%u(idni,:,:,:)))
 #ifdef MAGNETIC
-!        cg%wa(:,:,:) = cg%wa(:,:,:) - half*(cg%b%arr(xdim,:,:,:)**2 + cg%b%arr(ydim,:,:,:)**2 + cg%b%arr(zdim,:,:,:)**2)
+!        cg%wa(:,:,:) = cg%wa(:,:,:) - half*(cg%b(xdim,:,:,:)**2 + cg%b(ydim,:,:,:)**2 + cg%b(zdim,:,:,:)**2)
 #endif /* MAGNETIC */
 #endif /* !ISO */
       endif
@@ -1140,9 +1140,9 @@ contains
 
 #ifdef MAGNETIC
       cg%wa(1:nxu,1:nyu,1:nzu) = &
-                 (cg%b%arr(xdim,nxl:cg%n_(xdim),  1:nyu  ,  1:nzu  ) - cg%b%arr(xdim,1:nxu,1:nyu,1:nzu))*cg%dy*cg%dz &
-               + (cg%b%arr(ydim,  1:nxu  ,nyl:cg%n_(ydim),  1:nzu  ) - cg%b%arr(ydim,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dz &
-               + (cg%b%arr(zdim,  1:nxu  ,  1:nyu  ,nzl:cg%n_(zdim)) - cg%b%arr(zdim,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dy
+                 (cg%b(xdim,nxl:cg%n_(xdim),  1:nyu  ,  1:nzu  ) - cg%b(xdim,1:nxu,1:nyu,1:nzu))*cg%dy*cg%dz &
+               + (cg%b(ydim,  1:nxu  ,nyl:cg%n_(ydim),  1:nzu  ) - cg%b(ydim,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dz &
+               + (cg%b(zdim,  1:nxu  ,  1:nyu  ,nzl:cg%n_(zdim)) - cg%b(zdim,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dy
       cg%wa = abs(cg%wa)
 
       cg%wa(cg%ie,:,:) = cg%wa(cg%ie-D_x,:,:)
@@ -1153,13 +1153,13 @@ contains
 #endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
-      cg%wa        = sum(cg%u%arr(iarr_all_crs,:,:,:),1)
+      cg%wa        = sum(cg%u(iarr_all_crs,:,:,:),1)
       call get_extremum(p, MAXL, encr_max, cg)
       call get_extremum(p, MINL, encr_min, cg)
 #endif /* COSM_RAYS */
 
       if (has_interactions) then
-         cg%wa = L2norm(cg%u%arr(flind%dst%imx,:,:,:),cg%u%arr(flind%dst%imy,:,:,:),cg%u%arr(flind%dst%imz,:,:,:),cg%u%arr(flind%neu%imx,:,:,:),cg%u%arr(flind%neu%imy,:,:,:),cg%u%arr(flind%neu%imz,:,:,:) ) * cg%u%arr(flind%dst%idn,:,:,:)
+         cg%wa = L2norm(cg%u(flind%dst%imx,:,:,:),cg%u(flind%dst%imy,:,:,:),cg%u(flind%dst%imz,:,:,:),cg%u(flind%neu%imx,:,:,:),cg%u(flind%neu%imy,:,:,:),cg%u(flind%neu%imz,:,:,:) ) * cg%u(flind%dst%idn,:,:,:)
          call get_extremum(p, MAXL, drag, cg)
       endif
       NULLIFY(p)

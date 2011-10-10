@@ -155,7 +155,7 @@ contains
    subroutine write_restart_hdf5
 
       use common_hdf5, only: set_common_attributes, chdf, set_container_chdf, hdf
-      use constants,   only: cwdlen, AT_OUT_B, AT_NO_B, I_ONE, FLUID, MAG
+      use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: nres, problem_name, run_id, msg, printio
       use global,      only: nstep
       use grid,        only: all_cg
@@ -192,12 +192,6 @@ contains
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
       call h5pset_fapl_mpio_f(plist_id, comm, info, error)
       call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error, access_prp = plist_id)
-
-      ! Write fluids
-      call write_arr_to_restart(file_id, FLUID, AT_NO_B, dname(FLUID))
-
-      ! Write magnetic field. Unlike fluids, we need magnetic field boundaries values. Then chunks might be non-uniform
-      call write_arr_to_restart(file_id, MAG, AT_OUT_B, dname(MAG))
 
       ! Write scalar fields that were declared to be required on restart
       fcg  => all_cg%first%cg
@@ -292,9 +286,9 @@ contains
 
       select case (what)
          case (FLUID)
-            dim1 = size(all_cg%first%cg%u%arr, dim=1) !> \deprecated this is not particularly elegant
+            dim1 = size(all_cg%first%cg%u, dim=1) !> \deprecated this is not particularly elegant
          case (MAG)
-            dim1 = size(all_cg%first%cg%b%arr, dim=1)
+            dim1 = size(all_cg%first%cg%b, dim=1)
          case (w_off:)
             dim1 = size(all_cg%first%cg%w(what-w_off)%arr, dim=1)
          case (:-1)
@@ -358,17 +352,17 @@ contains
             nullify(pa4d)
             select case (what)
                case (FLUID)
-                  if (associated(cg%u%arr)) &
-                       pa4d => cg%u%arr(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+                  if (associated(cg%u)) &
+                       pa4d => cg%u(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
                case (MAG)
-                  if (associated(cg%b%arr)) &
-                       pa4d => cg%b%arr(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+                  if (associated(cg%b)) &
+                       pa4d => cg%b(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
                case (w_off:)
                   if (what-w_off >= lbound(cg%w, dim=1) .and. what-w_off <= ubound(cg%w, dim=1)) &
                        pa4d => cg%w(what-w_off)%arr(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
                case default
                   call die("[restart_hdf5:write_arr_to_restart] CR not implemented")
-                  pa4d => cg%u%arr ! suppress compiler warnings
+                  pa4d => cg%u ! suppress compiler warnings
             end select
             if (associated(pa4d)) then
                call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dimsf(:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
@@ -525,9 +519,9 @@ contains
 
       select case (what)
          case (FLUID)
-            dim1 = size(all_cg%first%cg%u%arr, dim=1) !> \deprecated this is not particularly elegant
+            dim1 = size(all_cg%first%cg%u, dim=1) !> \deprecated this is not particularly elegant
          case (MAG)
-            dim1 = size(all_cg%first%cg%b%arr, dim=1)
+            dim1 = size(all_cg%first%cg%b, dim=1)
          case (:-1)
             dim1 = 1
          case (w_off:)
@@ -585,14 +579,14 @@ contains
             nullify(pa4d)
             select case (what)
                case (FLUID)
-                  if (associated(cg%u%arr)) pa4d => cg%u%arr
+                  if (associated(cg%u)) pa4d => cg%u
                case (MAG)
-                  if (associated(cg%b%arr)) pa4d => cg%b%arr
+                  if (associated(cg%b)) pa4d => cg%b
                case (w_off:)
                   if (what-w_off >= lbound(cg%w, dim=1) .and. what-w_off <= ubound(cg%w, dim=1)) pa4d => cg%w(what-w_off)%arr
                case default
                   call die("[restart_hdf5:read_arr_from_restart] CR not implemented")
-                  pa4d => cg%u%arr ! suppress compiler warnings
+                  pa4d => cg%u ! suppress compiler warnings
             end select
             if (associated(pa4d)) then
                call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
@@ -616,7 +610,7 @@ contains
       call h5sclose_f(filespace, error)
       call h5dclose_f(dset_id, error)
 
-      ! rank-4 arrays (cg%u%arr(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
+      ! rank-4 arrays (cg%u(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
       if (tgt3d) then
          ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
          call arr3d_boundaries(cg%get_na_ind(dname), area_type=area_type, dname=dname)
@@ -628,7 +622,7 @@ contains
    subroutine read_restart_hdf5(chdf)
 
       use common_hdf5, only: hdf
-      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_IGNORE, AT_NO_B, AT_OUT_B, LO, HI, I_ONE, FLUID, MAG
+      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_IGNORE, LO, HI, I_ONE
       use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version
       use dataio_user, only: problem_read_restart
       use domain,      only: dom, has_dir
@@ -746,12 +740,6 @@ contains
             if (fcg%w(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, int(w_off+i, kind=4), fcg%w(i)%restart_mode, fcg%w(i)%name)
          enddo
       endif
-
-      ! read fluid data
-      call read_arr_from_restart(file_id, FLUID, AT_NO_B, dname(FLUID))
-
-      ! read magnetic field
-      call read_arr_from_restart(file_id, MAG, AT_OUT_B, dname(MAG))
 
       call h5fclose_f(file_id, error)
 

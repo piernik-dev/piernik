@@ -71,7 +71,7 @@ contains
       allocate(epsa(cg%n_(xdim), cg%n_(zdim)))
       allocate(u1(flind%all, cg%n_(xdim), cg%n_(zdim)))
 
-      u1(:,:,:) = cg%u%arr(:,:,1,:)
+      u1(:,:,:) = cg%u(:,:,1,:)
 
       do i = 1,2
          where (u1(iarr_all_dn,:,:) > 0.0)
@@ -94,9 +94,9 @@ contains
          enddo
 
          where (u1(iarr_all_dn,:,:) > 0.0)
-            u1(iarr_all_my,:,:) = u1(iarr_all_my,:,:) + fac(i)*dt*rotaccr(:,:,:)*cg%u%arr(iarr_all_dn,:,1,:)
+            u1(iarr_all_my,:,:) = u1(iarr_all_my,:,:) + fac(i)*dt*rotaccr(:,:,:)*cg%u(iarr_all_dn,:,1,:)
          endwhere
-         cg%u%arr(iarr_all_my,:,1,:) = u1(iarr_all_my,:,:)
+         cg%u(iarr_all_my,:,1,:) = u1(iarr_all_my,:,:)
       enddo
 
       deallocate(vxr, v_r, rotaccr)
@@ -124,9 +124,11 @@ contains
 
       real, dimension(:), pointer :: pb, pb1
       integer(kind=4)                         :: ibx, iby, ibz
-      integer                                 :: i1p, i2p
+      integer                                 :: i1p, i2p, magi
 
       !> OPTIMIZE ME
+
+      magi = cg%get_na_ind_4d("mag")
 
       ibx = iarr_mag_swp(cdim,xdim)
       iby = iarr_mag_swp(cdim,ydim)
@@ -135,23 +137,23 @@ contains
       i1p = i1+D_(pdims(cdim,ydim))
       i2p = i2+D_(pdims(cdim,zdim))
 
-      pb => cg%b%get_sweep(cdim,ibx,i1,i2)
+      pb => cg%w(magi)%get_sweep(cdim,ibx,i1,i2)
       b(ibx,1:cg%n_(cdim)-1) = half*( pb(1:cg%n_(cdim)-1)+pb(2:cg%n_(cdim)) )
       b(ibx,  cg%n_(cdim)  ) = b(ibx,  cg%n_(cdim)-1)
 
-      pb  => cg%b%get_sweep(cdim,iby,i1,i2)
+      pb  => cg%w(magi)%get_sweep(cdim,iby,i1,i2)
       if (cdim == xdim) then
-         pb1 => cg%b%get_sweep(cdim,iby,i1p,i2)
+         pb1 => cg%w(magi)%get_sweep(cdim,iby,i1p,i2)
       else
-         pb1 => cg%b%get_sweep(cdim,iby,i1,i2p)
+         pb1 => cg%w(magi)%get_sweep(cdim,iby,i1,i2p)
       endif
       b(iby,:) = half*(pb + pb1)
 
-      pb  => cg%b%get_sweep(cdim,ibz,i1,i2)
+      pb  => cg%w(magi)%get_sweep(cdim,ibz,i1,i2)
       if (cdim == xdim) then
-         pb1 => cg%b%get_sweep(cdim,ibz,i1,i2p)
+         pb1 => cg%w(magi)%get_sweep(cdim,ibz,i1,i2p)
       else
-         pb1 => cg%b%get_sweep(cdim,ibz,i1p,i2)
+         pb1 => cg%w(magi)%get_sweep(cdim,ibz,i1p,i2)
       endif
       b(ibz,:) = half*(pb + pb1)
 
@@ -183,7 +185,7 @@ contains
       real, dimension(:,:), allocatable :: u, u0
       real, dimension(:,:), pointer     :: pu, pu0
       real, dimension(:), pointer       :: div_v1d => null(), cs2
-      integer                           :: i1, i2, uhi
+      integer                           :: i1, i2, uhi, ui
       integer                           :: istep
       integer                           :: i_cs_iso2
       type(cg_list_element), pointer    :: cgl
@@ -195,6 +197,7 @@ contains
             cg => cgl%cg
 
             uhi = cg%get_na_ind_4d("uh")
+            ui  = cg%get_na_ind_4d("fluid")
 
             if (allocated(b)) deallocate(b)
             if (allocated(u)) deallocate(u)
@@ -209,7 +212,7 @@ contains
 #ifdef COSM_RAYS
                call div_v(flind%ion%pos, cg)
 #endif /* COSM_RAYS */
-               cg%w(uhi)%arr = cg%u%arr
+               cg%w(uhi)%arr = cg%u
             endif
 
             cs2 => null()
@@ -231,7 +234,7 @@ contains
                   call set_div_v1d(div_v1d, cdim, i1, i2, cg)
 #endif /* COSM_RAYS */
 
-                  pu => cg%u%get_sweep(cdim,i1,i2)
+                  pu  => cg%w( ui)%get_sweep(cdim,i1,i2)
                   pu0 => cg%w(uhi)%get_sweep(cdim,i1,i2)
                   if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
 

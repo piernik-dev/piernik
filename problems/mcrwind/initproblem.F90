@@ -166,34 +166,34 @@ contains
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%u%arr(idni,i,j,k)   = max(smalld, cg%dprof(k))
+                  cg%u(idni,i,j,k)   = max(smalld, cg%dprof(k))
 
-                  cg%u%arr(imxi,i,j,k) = 0.0
-                  cg%u%arr(imyi,i,j,k) = 0.0
-                  cg%u%arr(imzi,i,j,k) = 0.0
+                  cg%u(imxi,i,j,k) = 0.0
+                  cg%u(imyi,i,j,k) = 0.0
+                  cg%u(imzi,i,j,k) = 0.0
 #ifdef SHEAR
-                  cg%u%arr(imyi,i,j,k) = -qshear*omega*cg%x(i)*cg%u%arr(idni,i,j,k)
+                  cg%u(imyi,i,j,k) = -qshear*omega*cg%x(i)*cg%u(idni,i,j,k)
 #endif /* SHEAR */
 
 #ifndef ISO
-                  cg%u%arr(ieni,i,j,k) = flind%ion%cs2/(flind%ion%gam_1) * cg%u%arr(idni,i,j,k) + &
-                       &                 0.5*(cg%u%arr(imxi,i,j,k)**2 + cg%u%arr(imyi,i,j,k)**2 + &
-                       &                 cg%u%arr(imzi,i,j,k)**2 ) / cg%u%arr(idni,i,j,k)
+                  cg%u(ieni,i,j,k) = flind%ion%cs2/(flind%ion%gam_1) * cg%u(idni,i,j,k) + &
+                       &                 0.5*(cg%u(imxi,i,j,k)**2 + cg%u(imyi,i,j,k)**2 + &
+                       &                 cg%u(imzi,i,j,k)**2 ) / cg%u(idni,i,j,k)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  cg%u%arr(iarr_crn,i,j,k)  = 0.0
-                  cg%u%arr(iarr_crn(1),i,j,k) = beta_cr*flind%ion%cs2 * cg%u%arr(idni,i,j,k)/( gamma_crn(1) - 1.0 )
+                  cg%u(iarr_crn,i,j,k)  = 0.0
+                  cg%u(iarr_crn(1),i,j,k) = beta_cr*flind%ion%cs2 * cg%u(idni,i,j,k)/( gamma_crn(1) - 1.0 )
 !#ifdef GALAXY
 !! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
 !
 !
-!               cg%u%arr(iarr_crn(icr_H1),i,j,k)= cg%u%arr(iarr_crn(icr_H1),i,j,k) &
+!               cg%u(iarr_crn(icr_H1),i,j,k)= cg%u(iarr_crn(icr_H1),i,j,k) &
 !                     + amp_cr*exp(-((x(i)- x0    )**2 + (y(j)- y0    )**2 + (z(k)-z0)**2)/r_sn**2) &
 !                     + amp_cr*exp(-((x(i)-(x0+Lx))**2 + (y(j)- y0    )**2 + (z(k)-z0)**2)/r_sn**2) &
 !                     + amp_cr*exp(-((x(i)- x0    )**2 + (y(j)-(y0+Ly))**2 + (z(k)-z0)**2)/r_sn**2) &
 !                     + amp_cr*exp(-((x(i)-(x0+Lx))**2 + (y(j)-(y0+Ly))**2 + (z(k)-z0)**2)/r_sn**2)
 !
-!               cg%u%arr(iarr_crn(icr_C12),i,j,k)= cg%u%arr(iarr_crn(icr_C12),i,j,k) &
+!               cg%u(iarr_crn(icr_C12),i,j,k)= cg%u(iarr_crn(icr_C12),i,j,k) &
 !                     + 0.1*amp_cr*exp(-((x(i)- x0    )**2 + (y(j)- y0    )**2 + (z(k)-z0)**2)/r_sn**2) &
 !                     + 0.1*amp_cr*exp(-((x(i)-(x0+Lx))**2 + (y(j)- y0    )**2 + (z(k)-z0)**2)/r_sn**2) &
 !                     + 0.1*amp_cr*exp(-((x(i)- x0    )**2 + (y(j)-(y0+Ly))**2 + (z(k)-z0)**2)/r_sn**2) &
@@ -223,11 +223,11 @@ contains
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%b%arr(xdim,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
-                  cg%b%arr(ydim,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
-                  cg%b%arr(zdim,i,j,k)   = b0*sqrt(cg%u%arr(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(xdim,i,j,k)   = b0*sqrt(cg%u(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(ydim,i,j,k)   = b0*sqrt(cg%u(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(zdim,i,j,k)   = b0*sqrt(cg%u(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
-                  cg%u%arr(ieni,i,j,k)   = cg%u%arr(ieni,i,j,k) +0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+                  cg%u(ieni,i,j,k)   = cg%u(ieni,i,j,k) +0.5*sum(cg%b(:,i,j,k)**2,1)
 #endif /* !ISO */
                enddo
             enddo
@@ -366,17 +366,17 @@ contains
                              * exp(-((cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2  &
                              + (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2  &
                              + (cg%z(k)-zsn)**2)/r_sn**2)
-!                     cg%u%arr(iarr_crn,i,j,k) = cg%u%arr(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
+!                     cg%u(iarr_crn,i,j,k) = cg%u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
                         do icr = 1, flind%crn%all
                            select case (icr)
                               case (icr_H1)
-                                 cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + decr
+                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + decr
                               case (icr_C12)
-                                 cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_C12*12*decr
+                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + primary_C12*12*decr
                               case (icr_N14)
-                                 cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_N14*14*decr
+                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + primary_N14*14*decr
                               case (icr_O16)
-                                 cg%u%arr(iarr_crn(icr),i,j,k) = cg%u%arr(iarr_crn(icr),i,j,k) + primary_O16*16*decr
+                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + primary_O16*16*decr
                            end select
                         enddo
 

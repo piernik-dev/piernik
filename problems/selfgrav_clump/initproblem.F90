@@ -192,9 +192,9 @@ contains
          cg => cgl%cg
 
          iC_cg = 0
-         cg%b%arr(:,    :, :, :) = 0.
-         cg%u%arr(idni, :, :, :) = smalld
-         cg%u%arr(ieni, :, :, :) = smallei
+         cg%b(:,    :, :, :) = 0.
+         cg%u(idni, :, :, :) = smalld
+         cg%u(ieni, :, :, :) = smallei
 
          ! Initialize density with uniform sphere
          il = cg%ie+1
@@ -226,7 +226,7 @@ contains
             do j = jl, jh
                do i = il, ih
                   if (sum(([cg%x(i), cg%y(j), cg%z(k)] -clump_pos(:))**2) < clump_r**2) then
-                     cg%u%arr(idni, i, j, k) = totME(1)
+                     cg%u(idni, i, j, k) = totME(1)
                      iC_cg = iC_cg + 1
                   endif
                enddo
@@ -259,7 +259,7 @@ contains
 
          t = iC * sqrt(tiny(1.0)) ! trick to allow solution extrapolation in multigrid_solve_grav
 
-         call multigrid_solve_grav(cg%u%arr(idni,:,:,:))
+         call multigrid_solve_grav(cg%u(idni,:,:,:))
          if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence (extremely risky)
             if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
                cg%sgp = (cg%sgp*cg%hgpot - cg%gpot**2)/(cg%sgp + cg%hgpot - 2.*cg%gpot)
@@ -411,20 +411,20 @@ contains
 
       ! final touch
       t = t_save ! restore initial time
-      call multigrid_solve_grav(cg%u%arr(idni,:,:,:))
+      call multigrid_solve_grav(cg%u(idni,:,:,:))
       cg%gpot = cg%sgp
 
-      where (cg%u%arr(idni, :, :, :) < smalld) cg%u%arr(idni, :, :, :) = smalld
-      cg%u%arr(imxi, :, :, :) = clump_vel_x * cg%u%arr(idni,:,:,:)
-      cg%u%arr(imyi, :, :, :) = clump_vel_y * cg%u%arr(idni,:,:,:)
-      cg%u%arr(imzi, :, :, :) = clump_vel_z * cg%u%arr(idni,:,:,:)
+      where (cg%u(idni, :, :, :) < smalld) cg%u(idni, :, :, :) = smalld
+      cg%u(imxi, :, :, :) = clump_vel_x * cg%u(idni,:,:,:)
+      cg%u(imyi, :, :, :) = clump_vel_y * cg%u(idni,:,:,:)
+      cg%u(imzi, :, :, :) = clump_vel_z * cg%u(idni,:,:,:)
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-               cg%u%arr(ieni,i,j,k) = max(smallei,                                             &
-                    &              presrho(cg%u%arr(idni, i, j, k)) / (gamma_ion-1.0)        + &
-                    &              0.5 * sum(cg%u%arr(imxi:imzi,i,j,k)**2,1) / cg%u%arr(idni,i,j,k) + &
-                    &              0.5 * sum(cg%b%arr(:,i,j,k)**2,1))
+               cg%u(ieni,i,j,k) = max(smallei,                                             &
+                    &              presrho(cg%u(idni, i, j, k)) / (gamma_ion-1.0)        + &
+                    &              0.5 * sum(cg%u(imxi:imzi,i,j,k)**2,1) / cg%u(idni,i,j,k) + &
+                    &              0.5 * sum(cg%b(:,i,j,k)**2,1))
             enddo
          enddo
       enddo
@@ -472,9 +472,9 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-!               TWPcg(1) = TWPcg(1) + cg%u%arr(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
-                  TWPcg(2) = TWPcg(2) + cg%u%arr(idni, i, j, k) * cg%sgp(i, j, k) * 0.5 !W
-                  TWPcg(3) = TWPcg(3) + presrho(cg%u%arr(idni, i, j, k))             !P
+!               TWPcg(1) = TWPcg(1) + cg%u(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
+                  TWPcg(2) = TWPcg(2) + cg%u(idni, i, j, k) * cg%sgp(i, j, k) * 0.5 !W
+                  TWPcg(3) = TWPcg(3) + presrho(cg%u(idni, i, j, k))             !P
                enddo
             enddo
          enddo
@@ -543,7 +543,7 @@ contains
                         totMEcg = totMEcg + rhoH(h(C, cg%sgp(i,j,k)))
                      case (REL_SET)
                         rho = rhoH(h(C, cg%sgp(i,j,k)))
-                        cg%u%arr(idni, i, j, k) = rho
+                        cg%u(idni, i, j, k) = rho
                         totMEcg = totME + rho
                   end select
                enddo

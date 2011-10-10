@@ -199,19 +199,19 @@ contains
                         enddo
                      enddo
                   enddo
-                  cg%u%arr(idni, i, j, k) = dm / nsub**3
+                  cg%u(idni, i, j, k) = dm / nsub**3
 
                enddo
             enddo
          enddo
 
-         cg%u%arr(imxi:imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         cg%u(imxi:imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 
 #ifndef ISO
 #ifdef MAGNETIC
-         cg%b%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         cg%b(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 #endif /* MAGNETIC */
-         cg%u%arr(ieni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = p0/(gamma_ion - 1.0)
+         cg%u(ieni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = p0/(gamma_ion - 1.0)
 #endif /* !ISO */
          cgl => cgl%nxt
       enddo

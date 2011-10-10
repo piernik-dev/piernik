@@ -66,9 +66,9 @@ module multigrid_diffusion
 
    ! mgvar entries for the B field
    enum, bind(C)
-      enumerator :: diff_bx = correction+1                            !< index of B_x in the cg%b%arr(:,:,:,:) array
-      enumerator :: diff_by                                           !< index of B_y in the cg%b%arr(:,:,:,:) array
-      enumerator :: diff_bz                                           !< index of B_z in the cg%b%arr(:,:,:,:) array
+      enumerator :: diff_bx = correction+1                            !< index of B_x in the cg%b(:,:,:,:) array
+      enumerator :: diff_by                                           !< index of B_y in the cg%b(:,:,:,:) array
+      enumerator :: diff_bz                                           !< index of B_z in the cg%b(:,:,:,:) array
    end enum
    integer, parameter, dimension(ndims) :: idiffb = [diff_bx, diff_by, diff_bz]
 
@@ -373,8 +373,8 @@ contains
          cgl => all_cg%first
          do while (associated(cgl))
             cg => cgl%cg
-            roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction) = (1. -1./diff_theta) * cg%u%arr(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, defect)     =     -1./diff_theta  * cg%u%arr(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction) = (1. -1./diff_theta) * cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, defect)     =     -1./diff_theta  * cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
             call residual(roof, defect, correction, source, cr_id)
             cgl => cgl%nxt
          enddo
@@ -415,7 +415,7 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
-         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = cg%u%arr(iarr_crs(cr_id),  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = cg%u(iarr_crs(cr_id),  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          cgl => cgl%nxt
       enddo
       call check_dirty(roof, solution, "init solution")
@@ -459,7 +459,7 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
             roof%mgvar(       roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-xdim) = &
-                 cg%b%arr(ib,   cg%is-D_x:  cg%ie+D_x,   cg%js-D_y:  cg%je+D_y,   cg%ks-D_z:  cg%ke+D_z)
+                 cg%b(ib,   cg%is-D_x:  cg%ie+D_x,   cg%js-D_y:  cg%je+D_y,   cg%ks-D_z:  cg%ke+D_z)
             cgl => cgl%nxt
          enddo
          call restrict_all(diff_bx+ib-xdim)             ! Implement correct restriction (and probably also separate inter-process communication) routines
@@ -469,7 +469,7 @@ contains
             call mpi_multigrid_bnd(curl, diff_bx+ib-xdim, I_ONE, extbnd_mirror, .true.) !> \todo use global boundary type for B
             !>
             !! |deprecated BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
-            !! the problem is that the cg%b%arr(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
+            !! the problem is that the cg%b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
             !<
             write(dirty_label, '(a,i1)')"init b",ib
             call check_dirty(curl, diff_bx+ib-xdim, dirty_label)
@@ -589,11 +589,11 @@ contains
       call norm_sq(defect, norm_lhs)
 !     Do we need to take care of boundaries here?
 !      call mpi_multigrid_bnd(roof, solution, I_ONE, diff_extbnd)
-!      cg%u%arr(iarr_crs(cr_id), is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z) = roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, solution)
+!      cg%u(iarr_crs(cr_id), is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z) = roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, solution)
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
-         cg%u%arr(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution)
+         cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution)
          cgl => cgl%nxt
       enddo
 

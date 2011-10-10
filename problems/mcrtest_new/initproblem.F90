@@ -187,19 +187,19 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%b%arr(xdim, :, :, :) = bx0
-         cg%b%arr(ydim, :, :, :) = by0
-         cg%b%arr(zdim, :, :, :) = bz0
-         cg%u%arr(idni, :, :, :) = d0
-         cg%u%arr(imxi:imzi, :, :, :) = 0.0
+         cg%b(xdim, :, :, :) = bx0
+         cg%b(ydim, :, :, :) = by0
+         cg%b(zdim, :, :, :) = bz0
+         cg%u(idni, :, :, :) = d0
+         cg%u(imxi:imzi, :, :, :) = 0.0
 
 #ifndef ISO
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%u%arr(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
-                       &                0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1)/cg%u%arr(idni,i,j,k) + &
-                       &                0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+                  cg%u(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
+                       &                0.5*sum(cg%u(imxi:imzi,i,j,k)**2,1)/cg%u(idni,i,j,k) + &
+                       &                0.5*sum(cg%b(:,i,j,k)**2,1)
                enddo
             enddo
          enddo
@@ -207,7 +207,7 @@ contains
 
 #ifdef COSM_RAYS
          do icr = 1, flind%crs%all
-            cg%u%arr(iarr_crs(icr), :, :, :) =  beta_cr*cs_iso**2 * cg%u%arr(idni, :, :, :)/(gamma_crn(icr)-1.0)
+            cg%u(iarr_crs(icr), :, :, :) =  beta_cr*cs_iso**2 * cg%u(idni, :, :, :)/(gamma_crn(icr)-1.0)
          enddo
 
 ! Explosions
@@ -222,11 +222,11 @@ contains
 
                               r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
                               if (icr == icr_H1) then
-                                 cg%u%arr(iarr_crn(icr), i, j, k) = cg%u%arr(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
+                                 cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
                               elseif (icr == icr_C12) then
-                                 cg%u%arr(iarr_crn(icr), i, j, k) = cg%u%arr(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
+                                 cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
                               else
-                                 cg%u%arr(iarr_crn(icr), i, j, k) = 0.0
+                                 cg%u(iarr_crn(icr), i, j, k) = 0.0
                               endif
 
                            enddo
@@ -244,7 +244,7 @@ contains
       if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
 
       do icr = 1, flind%crs%all
-         maxv = maxval(cg%u%arr(iarr_crs(icr),:,:,:))
+         maxv = maxval(cg%u(iarr_crs(icr),:,:,:))
          call MPI_Allreduce(MPI_IN_PLACE, maxv, I_ONE, MPI_INTEGER, MPI_MAX, comm, ierr)
          if (master) then
             write(msg,*) '[initproblem:init_prob] icr=',icr,' maxecr =',maxv

@@ -69,7 +69,7 @@ contains
 !>
 !! \brief Compute divergence of velocity
 !!
-!! \details This routine requires a single layer of valid guardcells uin cg%u%arr arrays
+!! \details This routine requires a single layer of valid guardcells uin cg%u arrays
 !<
 
    subroutine div_v(ifluid, cg)
@@ -107,7 +107,7 @@ contains
       if (has_dir(xdim)) then
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
-               vx = cg%u%arr(imxf,:,j,k) / cg%u%arr(idnf,:,j,k)
+               vx = cg%u(imxf,:,j,k) / cg%u(idnf,:,j,k)
                divvel(2:cg%n_(xdim)-1,j,k) = ( vx(3:cg%n_(xdim)) - vx(1:cg%n_(xdim)-2) )  * (half*cg%idx)
             enddo
          enddo
@@ -117,7 +117,7 @@ contains
       if (has_dir(ydim)) then
          do k = 1, cg%n_(zdim)
             do i = 1, cg%n_(xdim)
-               vy = cg%u%arr(imyf,i,:,k) / cg%u%arr(idnf,i,:,k)
+               vy = cg%u(imyf,i,:,k) / cg%u(idnf,i,:,k)
                divvel(i,2:cg%n_(ydim)-1,k) = divvel(i,2:cg%n_(ydim)-1,k)+( vy(3:cg%n_(ydim)) - vy(1:cg%n_(ydim)-2) )  * (half*cg%idy)
             enddo
          enddo
@@ -127,7 +127,7 @@ contains
       if (has_dir(zdim)) then
          do j = 1, cg%n_(ydim)
             do i = 1, cg%n_(xdim)
-               vz = cg%u%arr(imzf,i,j,:) / cg%u%arr(idnf,i,j,:)
+               vz = cg%u(imzf,i,j,:) / cg%u(idnf,i,j,:)
                divvel(i,j,2:cg%n_(zdim)-1) = divvel(i,j,2:cg%n_(zdim)-1)+( vz(3:cg%n_(zdim)) - vz(1:cg%n_(zdim)-2) )  * (half*cg%idz)
             enddo
          enddo

@@ -214,23 +214,23 @@ contains
                   xi = cg%x(i)-dom%edge(xdim, LO)
                   select case (mode)
                      case (0)
-                        cg%u%arr(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi + ky*yj + kz*zk))
+                        cg%u(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi + ky*yj + kz*zk))
                         pres            = p0 * (1. + gamma_ion * amp * sin(kx*xi + ky*yj + kz*zk))
                      case (1)
-                        cg%u%arr(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
+                        cg%u(idni,i,j,k)   = d0 * (1. +             amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
                         pres            = p0 * (1. + gamma_ion * amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
                      case default ! should not happen
-                        cg%u%arr(idni,i,j,k)   = d0
+                        cg%u(idni,i,j,k)   = d0
                         pres            = p0
                   end select
 
-                  cg%u%arr(imxi:imzi,i,j,k) = 0.0
+                  cg%u(imxi:imzi,i,j,k) = 0.0
 #ifndef ISO
-                  cg%u%arr(ieni,i,j,k)      = pres/(gamma_ion-1.0) + 0.5*sum(cg%u%arr(imxi:imzi,i,j,k)**2,1) / cg%u%arr(idni,i,j,k)
+                  cg%u(ieni,i,j,k)      = pres/(gamma_ion-1.0) + 0.5*sum(cg%u(imxi:imzi,i,j,k)**2,1) / cg%u(idni,i,j,k)
 
 #ifdef MAGNETIC
-                  cg%b%arr(:,i,j,k)         = 0.0
-                  cg%u%arr(ieni,i,j,k)      = cg%u%arr(ieni,i,j,k) + 0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+                  cg%b(:,i,j,k)         = 0.0
+                  cg%u(ieni,i,j,k)      = cg%u(ieni,i,j,k) + 0.5*sum(cg%b(:,i,j,k)**2,1)
 #endif /* MAGNETIC */
 #endif /* !ISO */
                enddo

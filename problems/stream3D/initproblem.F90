@@ -182,8 +182,8 @@ contains
                   xi = cg%x(i)
                   rc = sqrt(xi**2+yj**2)
                   H = HtoR * rc
-                  cg%u%arr(idnn,i,j,k) = max(rho0 * norm * dens_RdistR(rc,Rin,n) * exp(- 0.25 * zk**2 / H**2 ), smalld)
-                  cg%u%arr(idnd,i,j,k) = eps*cg%u%arr(idnn,i,j,k)
+                  cg%u(idnn,i,j,k) = max(rho0 * norm * dens_RdistR(rc,Rin,n) * exp(- 0.25 * zk**2 / H**2 ), smalld)
+                  cg%u(idnd,i,j,k) = eps*cg%u(idnn,i,j,k)
                enddo
             enddo
          enddo
@@ -191,7 +191,7 @@ contains
          do i = 2, cg%n_(xdim)-1   ! 2d
             rc= cg%x(i)*sqrt(2.0)
             gradgp=  0.5*(cg%gp(i+1,i+1,max(cg%n_(zdim)/2,1))-cg%gp(i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx/sqrt(2.)
-            gradp = -0.5*(cg%u%arr(idnn,i+1,i+1,max(cg%n_(zdim)/2,1))-cg%u%arr(idnn,i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx /sqrt(2.)*cs_iso_neu2
+            gradp = -0.5*(cg%u(idnn,i+1,i+1,max(cg%n_(zdim)/2,1))-cg%u(idnn,i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx /sqrt(2.)*cs_iso_neu2
             omega(i)  = sqrt( abs( (gradgp-gradp)/rc ) )
             omegad(i) = sqrt( abs(    gradgp/rc      ) )
          enddo
@@ -212,20 +212,20 @@ contains
                     &   / (cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
 !
 !
-               cg%u%arr(imxn,i,j,:) = -yj*iOmega*cg%u%arr(idnn,i,j,:)
-               cg%u%arr(imyn,i,j,:) =  xi*iOmega*cg%u%arr(idnn,i,j,:)
-               cg%u%arr(imzn,i,j,:) = 0.0
+               cg%u(imxn,i,j,:) = -yj*iOmega*cg%u(idnn,i,j,:)
+               cg%u(imyn,i,j,:) =  xi*iOmega*cg%u(idnn,i,j,:)
+               cg%u(imzn,i,j,:) = 0.0
 #ifndef ISO
-               cg%u%arr(ienn,i,j,:) = cs_iso_neu2/(gamma_neu-1.0)*cg%u%arr(idnn,i,j,:)
-               cg%u%arr(ienn,i,j,:) = max(cg%u%arr(ienn,i,j,:), smallei)
-               cg%u%arr(ienn,i,j,:) = cg%u%arr(ienn,i,j,:) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(idnn,i,j,:)
+               cg%u(ienn,i,j,:) = cs_iso_neu2/(gamma_neu-1.0)*cg%u(idnn,i,j,:)
+               cg%u(ienn,i,j,:) = max(cg%u(ienn,i,j,:), smallei)
+               cg%u(ienn,i,j,:) = cg%u(ienn,i,j,:) +0.5*(vx**2+vy**2+vz**2)*cg%u(idnn,i,j,:)
 #endif /* !ISO */
 
                iOmega = omegad(int(ilook))+(rc-cg%x(int(ilook))*sqrt(2.))*(omegad(int(ilook)+1)-omegad(int(ilook))) &
                     &   /(cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
-               cg%u%arr(imxd,i,j,:) = -yj*iOmega*cg%u%arr(idnd,i,j,:) + amp*(noise(1,:)-0.5)
-               cg%u%arr(imyd,i,j,:) =  xi*iOmega*cg%u%arr(idnd,i,j,:) + amp*(noise(2,:)-0.5)
-               cg%u%arr(imzd,i,j,:) = 0.0 + amp*(noise(3,:)-0.5)
+               cg%u(imxd,i,j,:) = -yj*iOmega*cg%u(idnd,i,j,:) + amp*(noise(1,:)-0.5)
+               cg%u(imyd,i,j,:) =  xi*iOmega*cg%u(idnd,i,j,:) + amp*(noise(2,:)-0.5)
+               cg%u(imzd,i,j,:) = 0.0 + amp*(noise(3,:)-0.5)
 
             enddo
          enddo

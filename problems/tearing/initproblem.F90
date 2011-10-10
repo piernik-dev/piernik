@@ -125,12 +125,12 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%u%arr(idni,:,:,:) = d0
-         cg%u%arr(imyi,:,:,:) = 0.0
-         cg%u%arr(imzi,:,:,:) = 0.0
+         cg%u(idni,:,:,:) = d0
+         cg%u(imyi,:,:,:) = 0.0
+         cg%u(imzi,:,:,:) = 0.0
 
-         cg%b%arr(xdim,:,:,:)  = 0.0
-         cg%b%arr(zdim,:,:,:)  = 0.0
+         cg%b(xdim,:,:,:)  = 0.0
+         cg%b(zdim,:,:,:)  = 0.0
 
          call read_problem_par
 
@@ -141,23 +141,23 @@ contains
                do i = 1, cg%n_(xdim)
 
                   vzab = v0*cos(2.*pi*cg%y(j)/dom%L_(ydim))
-                  cg%u%arr(imxi,i,j,k) = cg%u%arr(idni,i,j,k)*vzab
+                  cg%u(imxi,i,j,k) = cg%u(idni,i,j,k)*vzab
 
                   if (abs(cg%x(i)-dom%C_(xdim)) <= 0.25*dom%L_(xdim)) then
-                     cg%b%arr(ydim,i,j,k) = -b0
+                     cg%b(ydim,i,j,k) = -b0
                   else
-                     cg%b%arr(ydim,i,j,k) =  b0
+                     cg%b(ydim,i,j,k) =  b0
                   endif
                enddo
             enddo
          enddo
 
 #ifndef ISO
-         cg%u%arr(ieni,:,:,:) = 0.5*beta + &
-              &               0.5*(cg%u%arr(imxi,:,:,:)**2  + cg%u%arr(imyi,:,:,:)**2 + &
-              &               cg%u%arr(imzi,:,:,:)**2) / cg%u%arr(idni,:,:,:)
+         cg%u(ieni,:,:,:) = 0.5*beta + &
+              &               0.5*(cg%u(imxi,:,:,:)**2  + cg%u(imyi,:,:,:)**2 + &
+              &               cg%u(imzi,:,:,:)**2) / cg%u(idni,:,:,:)
 
-         cg%u%arr(ieni,:,:,:)   = cg%u%arr(ieni,:,:,:) + 0.5*sum(cg%b%arr(:,:,:,:)**2,1)
+         cg%u(ieni,:,:,:)   = cg%u(ieni,:,:,:) + 0.5*sum(cg%b(:,:,:,:)**2,1)
 #endif /* !ISO */
 
          cgl => cgl%nxt

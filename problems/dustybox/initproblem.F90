@@ -115,15 +115,15 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%u%arr(flind%neu%idn,:,:,:) = rhog
-         cg%u%arr(flind%neu%imx,:,:,:) = rhog*vxg0
-         cg%u%arr(flind%neu%imy,:,:,:) = rhog*vyg0
-         cg%u%arr(flind%neu%imz,:,:,:) = rhog*vzg0
+         cg%u(flind%neu%idn,:,:,:) = rhog
+         cg%u(flind%neu%imx,:,:,:) = rhog*vxg0
+         cg%u(flind%neu%imy,:,:,:) = rhog*vyg0
+         cg%u(flind%neu%imz,:,:,:) = rhog*vzg0
 
-         cg%u%arr(flind%dst%idn,:,:,:) =  rhod
-         cg%u%arr(flind%dst%imx,:,:,:) = -rhod*vxd0
-         cg%u%arr(flind%dst%imy,:,:,:) = -rhod*vyd0
-         cg%u%arr(flind%dst%imz,:,:,:) = -rhod*vzd0
+         cg%u(flind%dst%idn,:,:,:) =  rhod
+         cg%u(flind%dst%imx,:,:,:) = -rhod*vxd0
+         cg%u(flind%dst%imy,:,:,:) = -rhod*vyd0
+         cg%u(flind%dst%imz,:,:,:) = -rhod*vzd0
 
          cgl => cgl%nxt
       enddo

@@ -56,7 +56,7 @@ module initproblem
    character(len=cbuff_len) :: mag_field_orient
    character(len=cbuff_len) :: densfile
    real, dimension(:), allocatable :: taus, tauf
-   character(len=dsetnamelen), parameter :: inid_n = "u0"
+   character(len=dsetnamelen), parameter :: inid_n = "u_0"
 
    namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, &
       & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
@@ -85,7 +85,7 @@ contains
 
       integer(HID_T), intent(in) :: file_id
 
-      call all_cg%reg_var(inid_n, AT_NO_B, int(size(all_cg%first%cg%u%arr,1), kind=4))
+      call all_cg%reg_var(inid_n, AT_NO_B, int(size(all_cg%first%cg%u,1), kind=4))
 
       if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused files
 
@@ -238,9 +238,9 @@ contains
 
          do i = cg%is, cg%ie
             do k = cg%ks, cg%ke
-               cg%u%arr(flind%dst%imx,i,:,k) = cg%u%arr(flind%dst%imx,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u%arr(flind%dst%idn,i,:,k)
-               cg%u%arr(flind%dst%imy,i,:,k) = cg%u%arr(flind%dst%imy,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u%arr(flind%dst%idn,i,:,k)
-               cg%u%arr(flind%dst%imz,i,:,k) = cg%u%arr(flind%dst%imz,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u%arr(flind%dst%idn,i,:,k)
+               cg%u(flind%dst%imx,i,:,k) = cg%u(flind%dst%imx,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u(flind%dst%idn,i,:,k)
+               cg%u(flind%dst%imy,i,:,k) = cg%u(flind%dst%imy,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u(flind%dst%idn,i,:,k)
+               cg%u(flind%dst%imz,i,:,k) = cg%u(flind%dst%imz,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u(flind%dst%idn,i,:,k)
             enddo
          enddo
 #ifdef DEBUG
@@ -289,9 +289,9 @@ contains
 
          allocate(noise(3,cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
          call random_number(noise)
-         cg%u%arr(flind%dst%imx,:,:,:) = cg%u%arr(flind%dst%imx,:,:,:) +amp_noise -2.0*amp_noise*noise(1,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
-         cg%u%arr(flind%dst%imy,:,:,:) = cg%u%arr(flind%dst%imy,:,:,:) +amp_noise -2.0*amp_noise*noise(2,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
-         cg%u%arr(flind%dst%imz,:,:,:) = cg%u%arr(flind%dst%imz,:,:,:) +amp_noise -2.0*amp_noise*noise(3,:,:,:) * cg%u%arr(flind%dst%idn,:,:,:)
+         cg%u(flind%dst%imx,:,:,:) = cg%u(flind%dst%imx,:,:,:) +amp_noise -2.0*amp_noise*noise(1,:,:,:) * cg%u(flind%dst%idn,:,:,:)
+         cg%u(flind%dst%imy,:,:,:) = cg%u(flind%dst%imy,:,:,:) +amp_noise -2.0*amp_noise*noise(2,:,:,:) * cg%u(flind%dst%idn,:,:,:)
+         cg%u(flind%dst%imz,:,:,:) = cg%u(flind%dst%imz,:,:,:) +amp_noise -2.0*amp_noise*noise(3,:,:,:) * cg%u(flind%dst%idn,:,:,:)
          deallocate(noise)
 
          cgl => cgl%nxt
@@ -363,36 +363,36 @@ contains
                      vy = sqr_gm * ( xi)/(rc**2+r_smooth**2)**0.75
                      vz = 0.0
 
-                     cg%u%arr(fl%idn,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
+                     cg%u(fl%idn,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
 
                      if (has_dir(zdim)) then
-                        cg%u%arr(fl%idn,i,j,k) = cg%dprof(k)/cosh(cg%u%arr(fl%idn,i,j,k))
-                        cg%u%arr(fl%idn,i,j,k) = max(cg%u%arr(fl%idn,i,j,k), dout)
+                        cg%u(fl%idn,i,j,k) = cg%dprof(k)/cosh(cg%u(fl%idn,i,j,k))
+                        cg%u(fl%idn,i,j,k) = max(cg%u(fl%idn,i,j,k), dout)
                      else
-                        cg%u%arr(fl%idn,i,j,k) = dout + (d0 - dout)/cosh(cg%u%arr(fl%idn,i,j,k))
+                        cg%u(fl%idn,i,j,k) = dout + (d0 - dout)/cosh(cg%u(fl%idn,i,j,k))
                      endif
-                     cg%u%arr(fl%idn,i,j,k) = cg%u%arr(fl%idn,i,j,k)
-                     cg%u%arr(fl%imx,i,j,k) = vx*cg%u%arr(fl%idn,i,j,k)
-                     cg%u%arr(fl%imy,i,j,k) = vy*cg%u%arr(fl%idn,i,j,k)
-                     cg%u%arr(fl%imz,i,j,k) = vz*cg%u%arr(fl%idn,i,j,k)
+                     cg%u(fl%idn,i,j,k) = cg%u(fl%idn,i,j,k)
+                     cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+                     cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
+                     cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
                      if (fl%ien > 0) then
-                        cg%u%arr(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u%arr(fl%idn,i,j,k)
-!                     cg%u%arr(fl%ien,i,j,k) = max(cg%u%arr(fl%ien,i,j,k), smallei)
-                        cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u%arr(fl%idn,i,j,k)
+                        cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
+!                     cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k), smallei)
+                        cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u(fl%idn,i,j,k)
                      endif
                      if (trim(mag_field_orient) == 'toroidal') then
-                        cg%b%arr(xdim,i,j,k)   = -b0*sqrt(cg%u%arr(fl%idn,i,j,k)/d0)*yj/rc
-                        cg%b%arr(ydim,i,j,k)   =  b0*sqrt(cg%u%arr(fl%idn,i,j,k)/d0)*xi/rc
-                        cg%b%arr(zdim,i,j,k)   =  0.0
+                        cg%b(xdim,i,j,k)   = -b0*sqrt(cg%u(fl%idn,i,j,k)/d0)*yj/rc
+                        cg%b(ydim,i,j,k)   =  b0*sqrt(cg%u(fl%idn,i,j,k)/d0)*xi/rc
+                        cg%b(zdim,i,j,k)   =  0.0
                      else if (trim(mag_field_orient) == 'vertical') then
-                        cg%b%arr(xdim,i,j,k)   =  0.0
-                        cg%b%arr(ydim,i,j,k)   =  0.0
-                        cg%b%arr(zdim,i,j,k)   =  b0
+                        cg%b(xdim,i,j,k)   =  0.0
+                        cg%b(ydim,i,j,k)   =  0.0
+                        cg%b(zdim,i,j,k)   =  b0
                      else if (trim(mag_field_orient) == 'none') then
-                        cg%b%arr(:,i,j,k)     =  0.0
+                        cg%b(:,i,j,k)     =  0.0
                      endif
 
-                     if (fl%ien > 0) cg%u%arr(fl%ien,i,j,k)   = cg%u%arr(fl%ien,i,j,k) + 0.5*sum(cg%b%arr(:,i,j,k)**2,1)
+                     if (fl%ien > 0) cg%u(fl%ien,i,j,k)   = cg%u(fl%ien,i,j,k) + 0.5*sum(cg%b(:,i,j,k)**2,1)
                   enddo
                enddo
             enddo
@@ -485,9 +485,9 @@ contains
                      vphi = 0.
                      do k = 1, cg%n_(zdim)
                         zk = cg%z(k)
-!                     cg%u%arr(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),1.e-10))
-                        cg%u%arr(fl%idn,i,j,k) = dens_prof(i)
-                        if (fl%tag == DST) cg%u%arr(fl%idn,i,j,k) = eps * cg%u%arr(fl%idn,i,j,k)
+!                     cg%u(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),1.e-10))
+                        cg%u(fl%idn,i,j,k) = dens_prof(i)
+                        if (fl%tag == DST) cg%u(fl%idn,i,j,k) = eps * cg%u(fl%idn,i,j,k)
 
                         vr   = 0.0
                      ! that condition is not necessary since cs2 == 0.0 for dust
@@ -499,12 +499,12 @@ contains
                         endif
                         vz   = 0.0
 
-                        cg%u%arr(fl%imx,i,j,k) = vr   * cg%u%arr(fl%idn,i,j,k)
-                        cg%u%arr(fl%imy,i,j,k) = vphi * cg%u%arr(fl%idn,i,j,k)
-                        cg%u%arr(fl%imz,i,j,k) = vz   * cg%u%arr(fl%idn,i,j,k)
+                        cg%u(fl%imx,i,j,k) = vr   * cg%u(fl%idn,i,j,k)
+                        cg%u(fl%imy,i,j,k) = vphi * cg%u(fl%idn,i,j,k)
+                        cg%u(fl%imz,i,j,k) = vz   * cg%u(fl%idn,i,j,k)
                         if (fl%ien > 0) then
-                           cg%u%arr(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u%arr(fl%idn,i,j,k)
-                           cg%u%arr(fl%ien,i,j,k) = cg%u%arr(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*cg%u%arr(fl%idn,i,j,k)
+                           cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1)*cg%u(fl%idn,i,j,k)
+                           cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + 0.5*(vr**2+vphi**2+vz**2)*cg%u(fl%idn,i,j,k)
                         endif
                      enddo
                      taus(i) = vphi/cg%x(i)*tauf(i) ! compiler complains that vphi may be used uninitialized here
@@ -512,8 +512,8 @@ contains
                enddo
 
             enddo
-            cg%w(cg%get_na_ind_4d(inid_n))%arr(:,:,:,:) = cg%u%arr(:,:,:,:)
-            cg%b%arr(:,:,:,:) = 0.0
+            cg%w(cg%get_na_ind_4d(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
+            cg%b(:,:,:,:) = 0.0
             if (allocated(grav)) deallocate(grav)
             if (allocated(dens_prof)) deallocate(dens_prof)
 #ifdef DEBUG
@@ -588,7 +588,7 @@ contains
             y1 = drag_min
             a = (y0 - y1)/(x0 - x1)
             b = y0 - a*x0
-            allocate(funcR(size(cg%u%arr,dim=1), cg%n_(xdim)) )
+            allocate(funcR(size(cg%u,dim=1), cg%n_(xdim)) )
 
             funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0 + max( tanh((cg%x(:)-r_out+1.0)**f_out), 0.0)
 
@@ -605,17 +605,17 @@ contains
             close(212)
 #endif /* DEBUG */
             frun = .false.
-            funcR(:,:) = spread(funcR(1,:),1,size(cg%u%arr,dim=1))
+            funcR(:,:) = spread(funcR(1,:),1,size(cg%u,dim=1))
          endif
 
          do j = 1, cg%n_(ydim)
             do k = 1, cg%n_(zdim)
-               cg%u%arr(:,:,j,k) = cg%u%arr(:,:,j,k) - dt*(cg%u%arr(:,:,j,k) - cg%w(cg%get_na_ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
+               cg%u(:,:,j,k) = cg%u(:,:,j,k) - dt*(cg%u(:,:,j,k) - cg%w(cg%get_na_ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
             enddo
          enddo
-         where ( cg%u%arr(iarr_all_dn,:,:,:) < 2.*smalld )
-            cg%u%arr(iarr_all_mx,:,:,:) = cg%u%arr(iarr_all_mx,:,:,:)*0.1
-            cg%u%arr(iarr_all_mz,:,:,:) = cg%u%arr(iarr_all_mz,:,:,:)*0.1
+         where ( cg%u(iarr_all_dn,:,:,:) < 2.*smalld )
+            cg%u(iarr_all_mx,:,:,:) = cg%u(iarr_all_mx,:,:,:)*0.1
+            cg%u(iarr_all_mz,:,:,:) = cg%u(iarr_all_mz,:,:,:)*0.1
          endwhere
 
          cgl => cgl%nxt
@@ -691,22 +691,22 @@ contains
       call grav_pot2accel(xdim,1,1, cg%n_(xdim), grav, 1, cg)
 
       do i = 1, cg%nb
-         cg%u%arr(iarr_all_dn,i,:,:) = cg%u%arr(iarr_all_dn, cg%is,:,:)
-         cg%u%arr(iarr_all_mx,i,:,:) = min(0.0,cg%u%arr(iarr_all_mx, cg%is,:,:))
+         cg%u(iarr_all_dn,i,:,:) = cg%u(iarr_all_dn, cg%is,:,:)
+         cg%u(iarr_all_mx,i,:,:) = min(0.0,cg%u(iarr_all_mx, cg%is,:,:))
 !         do p = 1, size(flind%all_fluids)
-!            cg%u%arr(iarr_all_my(p),i,:,:) = sqrt( abs(grav(i)) * cg%x(i) - cs2_arr(p)*dens_exp) *  cg%u%arr(iarr_all_dn(p),i,:,:)
+!            cg%u(iarr_all_my(p),i,:,:) = sqrt( abs(grav(i)) * cg%x(i) - cs2_arr(p)*dens_exp) *  cg%u(iarr_all_dn(p),i,:,:)
 !         enddo
-         cg%u%arr(iarr_all_my,i,:,:) = cg%u%arr(iarr_all_my, cg%is,:,:)
-         cg%u%arr(iarr_all_mz,i,:,:) = cg%u%arr(iarr_all_mz, cg%is,:,:)
+         cg%u(iarr_all_my,i,:,:) = cg%u(iarr_all_my, cg%is,:,:)
+         cg%u(iarr_all_mz,i,:,:) = cg%u(iarr_all_mz, cg%is,:,:)
 #ifndef ISO
-         cg%u%arr(iarr_all_en,i,:,:) = cg%u%arr(iarr_all_en, cg%is,:,:)
+         cg%u(iarr_all_en,i,:,:) = cg%u(iarr_all_en, cg%is,:,:)
 #endif /* !ISO */
       enddo
 
       do i = cg%nb,1,-1
-         vym(:,:,:) = cg%u%arr(iarr_all_my,i+2,:,:)/cg%u%arr(iarr_all_dn,i+1,:,:)
-         vy(:,:,:)  = cg%u%arr(iarr_all_my,i+1,:,:)/cg%u%arr(iarr_all_dn,i+1,:,:)
-!         cg%u%arr(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*cg%u%arr(iarr_all_dn,i,:,:)
+         vym(:,:,:) = cg%u(iarr_all_my,i+2,:,:)/cg%u(iarr_all_dn,i+1,:,:)
+         vy(:,:,:)  = cg%u(iarr_all_my,i+1,:,:)/cg%u(iarr_all_dn,i+1,:,:)
+!         cg%u(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*cg%u(iarr_all_dn,i,:,:)
       enddo
 
    end subroutine my_bnd_xl
@@ -720,7 +720,7 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      cg%u%arr(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(cg%get_na_ind_4d(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
+      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(cg%get_na_ind_4d(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
    end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------
    function get_lcutoff(width, dist, n, vmin, vmax) result(y)
@@ -782,7 +782,7 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("tauf")
-            tab(:,:,:) = real(epstein_factor(flind%neu%pos) / cg%u%arr(flind%neu%idn,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(epstein_factor(flind%neu%pos) / cg%u(flind%neu%idn,cg%is:cg%ie,cg%js:cg%je,cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

@@ -450,7 +450,7 @@ contains
 !!$      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_ONE, [integer(HSIZE_T):: cg%n_(zdim)],        nzarr_r8_t, error)
 !!$      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_THREE, [integer(HSIZE_T):: cg%n_(:)   ],        arr3d_r8_t, error)
 !!$      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_FOUR, [integer(HSIZE_T):: ndims, cg%n_(:)],    ndims_arr4d_r8_t, error)
-!!$      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_FOUR, [integer(HSIZE_T):: size(cg%u%arr,1), cg%n_(:)], u_arr4d_r8_t, error)
+!!$      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_FOUR, [integer(HSIZE_T):: size(cg%u,1), cg%n_(:)], u_arr4d_r8_t, error)
 !!$
 !!$      n_arr3d_r8 = 10  ! gc_{x,y,z}dim
 !!$      n_stub     = 0
@@ -729,13 +729,13 @@ contains
 !!$      else
 !!$         call h5dwrite_f(dset_id, dmem_id(61), -999_INT4      ,dims, error, xfer_prp=plist_id)
 !!$      endif
-!!$      call h5dwrite_f(dset_id, dmem_id(62), cg%b%arr,dims, error, xfer_prp=plist_id)
+!!$      call h5dwrite_f(dset_id, dmem_id(62), cg%b,dims, error, xfer_prp=plist_id)
 !!$      if (associated(cg%b0%arr)) then
 !!$         call h5dwrite_f(dset_id, dmem_id(63), cg%b0%arr     ,dims, error, xfer_prp=plist_id)
 !!$      else
 !!$         call h5dwrite_f(dset_id, dmem_id(63), -999_INT4      ,dims, error, xfer_prp=plist_id)
 !!$      endif
-!!$      call h5dwrite_f(dset_id, dmem_id(64), cg%u%arr,  dims, error, xfer_prp=plist_id)
+!!$      call h5dwrite_f(dset_id, dmem_id(64), cg%u,  dims, error, xfer_prp=plist_id)
 !!$      call h5dwrite_f(dset_id, dmem_id(65), cg%uh%arr, dims, error, xfer_prp=plist_id)
 !!$      if (associated(cg%u0%arr)) then
 !!$         call h5dwrite_f(dset_id, dmem_id(66), cg%u0%arr     ,dims, error, xfer_prp=plist_id)
