@@ -51,7 +51,7 @@ contains
 !<
    subroutine advectb(bdir, vdir)
 
-      use constants,     only: xdim, ydim, zdim, LO, HI, ndims, varlen
+      use constants,     only: xdim, ydim, zdim, LO, HI, ndims, varlen, fluid_n, mag_n, wa_n
       use dataio_pub,    only: die
       use domain,        only: has_dir, D_
       use fluidindex,    only: flind
@@ -96,9 +96,9 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
-         i_wa = cg%get_na_ind("wa")
-         ui   = cg%get_na_ind_4d("fluid")
-         bi   = cg%get_na_ind_4d("mag")
+         i_wa = cg%get_na_ind(wa_n)
+         ui   = cg%get_na_ind_4d(fluid_n)
+         bi   = cg%get_na_ind_4d(mag_n)
 
          if (any([allocated(vv), allocated(vv0)])) call die("[advects:advectb] vv or vv0 already allocated")
          allocate(vv(cg%n_(vdir)), vv0(cg%n_(vdir)))

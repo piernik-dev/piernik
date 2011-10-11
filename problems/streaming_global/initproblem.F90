@@ -51,7 +51,7 @@ module initproblem
    real                     :: dumping_coeff, amp_noise
    logical                  :: use_inner_orbital_period  !< use 1./T_inner as dumping_coeff
    character(len=cbuff_len) :: densfile
-   character(len=dsetnamelen), parameter :: inid_n = "u0"
+   character(len=dsetnamelen), parameter :: inid_n = "u_0"
 
    namelist /PROBLEM_CONTROL/  rho0, cs0, R0, r_in, r_out, f_in, f_out, eps, dumping_coeff, &
       &  use_inner_orbital_period, amp_noise, growth_time, initial_grain_size, final_grain_size

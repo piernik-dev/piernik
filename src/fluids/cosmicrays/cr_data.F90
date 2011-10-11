@@ -40,7 +40,6 @@ module cr_data
    public               ! QA_WARN no secrets are kept here
 
    ! names of auxiliary arrays
-   character(len=dsetnamelen), parameter :: wcr_n = "wcr"     !< auxiliary array for diffuion
    character(len=dsetnamelen), parameter :: divv_n = "divvel" !< divergence of velocity
 
    !! Composition

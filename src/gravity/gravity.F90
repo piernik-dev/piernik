@@ -153,12 +153,15 @@ contains
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun    ! QA_WARN required for diff_nml
       use dataio_pub,    only: printinfo, warn, die, code_progress
-      use constants,     only: PIERNIK_INIT_GRID, AT_OUT_B, AT_IGNORE
+      use constants,     only: PIERNIK_INIT_GRID, AT_OUT_B, AT_IGNORE, gp_n, gpot_n, hgpot_n
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,         only: newtong
       use grid,          only: all_cg
       use gc_list,       only: cg_list_element
+#ifdef SELF_GRAV
+      use constants,     only: sgp_n, sgpm_n
+#endif /* SELF_GRAV */
 #ifdef CORIOLIS
       use coriolis,      only: set_omega
 #endif /* CORIOLIS */
@@ -274,23 +277,23 @@ contains
       endif
 
       ! Declare arrays for potential and make shortcuts
-      call all_cg%reg_var("gpot", AT_IGNORE) ! BEWARE: magic strings across multiple files
-      call all_cg%reg_var("hgpot", AT_IGNORE)
-      call all_cg%reg_var("gp", AT_OUT_B)
+      call all_cg%reg_var(gpot_n, AT_IGNORE)
+      call all_cg%reg_var(hgpot_n, AT_IGNORE)
+      call all_cg%reg_var(gp_n, AT_OUT_B)
 #ifdef SELF_GRAV
-      call all_cg%reg_var("sgp", AT_IGNORE)
-      call all_cg%reg_var("sgpm", AT_IGNORE)
+      call all_cg%reg_var(sgp_n, AT_IGNORE)
+      call all_cg%reg_var(sgpm_n, AT_IGNORE)
 #endif /* SELF_GRAV */
 
       cgl => all_cg%first
       do while (associated(cgl))
-         cgl%cg%gpot => cgl%cg%get_na_ptr("gpot")
+         cgl%cg%gpot => cgl%cg%get_na_ptr(gpot_n)
          cgl%cg%gpot(:,:,:) = 0.0
-         cgl%cg%hgpot => cgl%cg%get_na_ptr("hgpot")
-         cgl%cg%gp => cgl%cg%get_na_ptr("gp")
+         cgl%cg%hgpot => cgl%cg%get_na_ptr(hgpot_n)
+         cgl%cg%gp => cgl%cg%get_na_ptr(gp_n)
 #ifdef SELF_GRAV
-         cgl%cg%sgp => cgl%cg%get_na_ptr("sgp")
-         cgl%cg%sgpm => cgl%cg%get_na_ptr("sgpm")
+         cgl%cg%sgp => cgl%cg%get_na_ptr(sgp_n)
+         cgl%cg%sgpm => cgl%cg%get_na_ptr(sgpm_n)
 #endif /* SELF_GRAV */
          cgl => cgl%nxt
       enddo
@@ -307,6 +310,7 @@ contains
    subroutine source_terms_grav
 
 #ifdef SELF_GRAV
+      use constants,         only: sgp_n
       use dataio_pub,        only: die
       use domain,            only: is_multicg
       use fluidindex,        only: iarr_all_sg
@@ -356,7 +360,7 @@ contains
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
 
 !> \warning An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
-      call arr3d_boundaries(all_cg%first%cg%get_na_ind("sgp")) !> \deprecated: Magic string
+      call arr3d_boundaries(all_cg%first%cg%get_na_ind(sgp_n))
 
       if (frun) then
          cgl => all_cg%first

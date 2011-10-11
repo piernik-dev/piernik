@@ -378,7 +378,7 @@ contains
 
    subroutine diffuseb(ibdir, sdir)
 
-      use constants,     only: xdim, ydim, zdim, ndims, half, varlen, I_ONE
+      use constants,     only: xdim, ydim, zdim, ndims, half, varlen, I_ONE, mag_n
       use domain,        only: has_dir
       use global,        only: dt
       use grid,          only: all_cg
@@ -407,7 +407,7 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
-         bi   = cg%get_na_ind_4d("mag")
+         bi   = cg%get_na_ind_4d(mag_n)
 
 !         select case (etadir)
 !            case (xdim)

@@ -44,8 +44,8 @@ contains
 
    subroutine init_crdiffusion(crsall)
 
-      use constants, only: AT_IGNORE
-      use cr_data,   only: wcr_n, divv_n
+      use constants, only: wcr_n, AT_IGNORE
+      use cr_data,   only: divv_n
       use grid,      only: all_cg
 
       implicit none
@@ -65,8 +65,7 @@ contains
 !<
    subroutine all_wcr_boundaries
 
-      use constants,    only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE
-      use cr_data,      only: wcr_n
+      use constants,    only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE, wcr_n
       use dataio_pub,   only: die
       use domain,       only: has_dir, cdd
       use internal_bnd, only: internal_boundaries_4d
@@ -167,8 +166,7 @@ contains
 !<
    subroutine cr_diff(crdim)
 
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half
-      use cr_data,        only: wcr_n
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n
       use dataio_pub,     only: die
       use domain,         only: has_dir
       use fluidindex,     only: flind

@@ -35,19 +35,12 @@ module restart_hdf5
 
 ! pulled by ANY
 
-   use constants, only: FLUID, MAG, ARR, dsetnamelen, INT4
+   use constants, only: ARR, INT4
 
    implicit none
 
    private
    public :: read_restart_hdf5, write_restart_hdf5, write_arr_to_restart, read_arr_from_restart
-
-   !< dataset names for restart files
-   enum, bind(C)
-      enumerator :: WA=MAG+1, GPOT, HGPOT, GP, SGP, SGPM, CS_ISO2, B0, U0
-   end enum
-   character(len=dsetnamelen), dimension(FLUID:U0), parameter :: dname = [ "fluid  ", "mag    ", "wa     ", "gpot   ", "hgpot  ", "gp     ", "sgp    ", &
-        &                                                                  "sgpm   ", "cs_iso2", "b0     ", "u0     "  ]
 
    integer(kind=4), parameter :: w_off = 2_INT4 * ARR
 
@@ -240,7 +233,7 @@ contains
 
    subroutine write_arr_to_restart(file_id, what, area_type, dname)
 
-      use constants,  only: xdim, ydim, zdim, ndims, AT_OUT_B, AT_IGNORE, LONG
+      use constants,  only: xdim, ydim, zdim, ndims, AT_OUT_B, AT_IGNORE, LONG, FLUID, MAG
       use dataio_pub, only: die
       use domain,     only: is_multicg
       use gc_list,    only: cg_list_element
@@ -472,7 +465,7 @@ contains
 
    subroutine read_arr_from_restart(file_id, what, area_type, dname)
 
-      use constants,    only: xdim, ydim, zdim, ndims, LONG, AT_IGNORE
+      use constants,    only: xdim, ydim, zdim, ndims, LONG, AT_IGNORE, FLUID, MAG
       use dataio_pub,   only: msg, die
       use domain,       only: is_multicg
       use grid,         only: all_cg

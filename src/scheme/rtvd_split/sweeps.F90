@@ -110,7 +110,7 @@ contains
 !------------------------------------------------------------------------------------------
    function interpolate_mag_field(cdim, cg, i1, i2) result (b)
 
-      use constants,       only: pdims, xdim, ydim, zdim, half
+      use constants,       only: pdims, xdim, ydim, zdim, half, mag_n
       use fluidindex,      only: iarr_mag_swp, nmag
       use domain,          only: D_
       use grid_cont,       only: grid_container
@@ -128,7 +128,7 @@ contains
 
       !> OPTIMIZE ME
 
-      magi = cg%get_na_ind_4d("mag")
+      magi = cg%get_na_ind_4d(mag_n)
 
       ibx = iarr_mag_swp(cdim,xdim)
       iby = iarr_mag_swp(cdim,ydim)
@@ -164,7 +164,7 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweep(cdim)
 
-      use constants,       only: pdims, LO, HI, ydim, zdim
+      use constants,       only: pdims, LO, HI, ydim, zdim, fluid_n, uh_n, cs_i2_n
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swp, nmag
       use gc_list,         only: cg_list_element
@@ -196,8 +196,8 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            uhi = cg%get_na_ind_4d("uh")
-            ui  = cg%get_na_ind_4d("fluid")
+            uhi = cg%get_na_ind_4d(uh_n)
+            ui  = cg%get_na_ind_4d(fluid_n)
 
             if (allocated(b)) deallocate(b)
             if (allocated(u)) deallocate(u)
@@ -216,8 +216,8 @@ contains
             endif
 
             cs2 => null()
-            if (cg%exists("cs_iso2")) then
-               i_cs_iso2 = cg%get_na_ind("cs_iso2") ! BEWARE: magic strings across multiple files
+            if (cg%exists(cs_i2_n)) then
+               i_cs_iso2 = cg%get_na_ind(cs_i2_n) ! BEWARE: magic strings across multiple files
             else
                i_cs_iso2 = -1
             endif

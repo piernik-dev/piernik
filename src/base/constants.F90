@@ -129,6 +129,25 @@ module constants
       enumerator :: BND_INVALID = BND_MPI  - 1           !< non-recognized boundary
    end enum
 
+   ! 3D and 4D array names
+   ! fluids
+   character(len=dsetnamelen), parameter :: fluid_n = "fluid"   !< main array
+   character(len=dsetnamelen), parameter :: uh_n    = "uh"      !< auxiliary array for half-step values
+   character(len=dsetnamelen), parameter :: u0_n    = "u0"      !< backup copy for timestep retrying
+   ! magnetic field
+   character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main array
+   character(len=dsetnamelen), parameter :: b0_n    = "b0"      !< backup copy for timestep retrying
+   ! gravitational potential
+   character(len=dsetnamelen), parameter :: gp_n    = "gp"      !< static, external field
+   character(len=dsetnamelen), parameter :: sgp_n   = "sgp"     !< current field from self-gravity
+   character(len=dsetnamelen), parameter :: sgpm_n  = "sgpm"    !< previous field from self-gravity
+   character(len=dsetnamelen), parameter :: gpot_n  = "gpot"    !< current sum of fields
+   character(len=dsetnamelen), parameter :: hgpot_n = "hgpot"   !< sum of fields for half-step values
+   ! misc
+   character(len=dsetnamelen), parameter :: cs_i2_n = "cs_iso2" !< map of imposed isothermal sound speed
+   character(len=dsetnamelen), parameter :: wcr_n   = "wcr"     !< auxiliary array for diffuion
+   character(len=dsetnamelen), parameter :: wa_n    = "wa"      !< general-purpose auxiliary 3D array
+
    ! first index of cg%mbc(:,:,:) array
    enum, bind(C)
       enumerator :: FLUID = 1, MAG, CR, ARR              !< MPI container type for exchanging u(:,:,:,:),  b(ndims,:,:,:), wcr(flind%crs%all,:,:,:) and a rank-3 arrays
@@ -158,7 +177,5 @@ module constants
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit
    integer, parameter :: INVALID = -1
-
-   ! \todo: add enums for boundary condition types
 
 end module constants

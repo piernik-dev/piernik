@@ -59,7 +59,8 @@ contains
 !<
    subroutine init_grid
 
-      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, ndims, xdim, zdim, ARR, INVALID
+      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, ndims, xdim, zdim, ARR, INVALID, &
+           &                 fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n,cs_i2_n
       use dataio_pub,  only: printinfo, die, code_progress
       use diagnostics, only: my_allocate
       use domain,      only: dom, is_multicg
@@ -106,22 +107,22 @@ contains
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
 #endif /* VERBOSE */
 
-      call all_cg%reg_var("wa", AT_IGNORE)                 ! BEWARE: magic string across multiple files
-      call all_cg%reg_var("fluid", AT_NO_B, flind%all)     !< Main array of all fluids' components, "u"
-      call all_cg%reg_var("uh", AT_IGNORE, flind%all)      !< Main array of all fluids' components (for t += dt/2)
-      call all_cg%reg_var("mag", AT_OUT_B, ndims)          !< Main array of magnetic field's components, "b"
+      call all_cg%reg_var(wa_n, AT_IGNORE)                 ! BEWARE: magic string across multiple files
+      call all_cg%reg_var(fluid_n, AT_NO_B, flind%all)     !< Main array of all fluids' components, "u"
+      call all_cg%reg_var(uh_n, AT_IGNORE, flind%all)      !< Main array of all fluids' components (for t += dt/2)
+      call all_cg%reg_var(mag_n, AT_OUT_B, ndims)          !< Main array of magnetic field's components, "b"
       if (repeat_step) then
-         call all_cg%reg_var("u0", AT_IGNORE, flind%all)   !< Copy of main array of all fluids' components
-         call all_cg%reg_var("b0", AT_IGNORE, ndims)       !< Copy of main array of magnetic field's components
+         call all_cg%reg_var(u0_n, AT_IGNORE, flind%all)   !< Copy of main array of all fluids' components
+         call all_cg%reg_var(b0_n, AT_IGNORE, ndims)       !< Copy of main array of magnetic field's components
       endif
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%u  => cg%get_na_ptr_4d("fluid")
-         cg%b  => cg%get_na_ptr_4d("mag")
-         cg%wa => cg%get_na_ptr("wa")
+         cg%u  => cg%get_na_ptr_4d(fluid_n)
+         cg%b  => cg%get_na_ptr_4d(mag_n)
+         cg%wa => cg%get_na_ptr(wa_n)
 #ifdef GRAV
          call my_allocate(cg%dprof, [cg%n_(zdim)], "dprof")
 #endif /* GRAV */
@@ -131,11 +132,11 @@ contains
 #ifdef ISO
       if (is_multicg) call die("[grid:init_cs_iso2] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
 
-      call all_cg%reg_var("cs_iso2", AT_NO_B) ! BEWARE: magic string across multiple files
+      call all_cg%reg_var(cs_i2_n, AT_NO_B) ! BEWARE: magic string across multiple files
 
       cgl => all_cg%first
       do while (associated(cgl))
-         cgl%cg%cs_iso2 => cgl%cg%get_na_ptr("cs_iso2")
+         cgl%cg%cs_iso2 => cgl%cg%get_na_ptr(cs_i2_n)
          cgl%cg%cs_iso2(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
          cgl => cgl%nxt
       enddo

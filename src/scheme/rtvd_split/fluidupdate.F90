@@ -37,7 +37,7 @@ contains
 
    subroutine repeat_fluidstep
 
-      use constants,  only: I_ONE
+      use constants,  only: I_ONE, u0_n, b0_n
       use dataio_pub, only: warn
       use gc_list,    only: cg_list_element
       use global,     only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
@@ -58,14 +58,14 @@ contains
 
          if (cfl_violated) then
             t = t-2.0*dtm
-            cg%u = cg%w(cg%get_na_ind_4d("u0"))%arr
-            cg%b = cg%w(cg%get_na_ind_4d("b0"))%arr
+            cg%u = cg%w(cg%get_na_ind_4d(u0_n))%arr
+            cg%b = cg%w(cg%get_na_ind_4d(b0_n))%arr
             dt = dtm/dt_max_grow**2
             nstep = nstep - I_ONE
             if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
          else
-            cg%w(cg%get_na_ind_4d("u0"))%arr = cg%u
-            cg%w(cg%get_na_ind_4d("b0"))%arr = cg%b
+            cg%w(cg%get_na_ind_4d(u0_n))%arr = cg%u
+            cg%w(cg%get_na_ind_4d(b0_n))%arr = cg%b
          endif
 
          cgl => cgl%nxt

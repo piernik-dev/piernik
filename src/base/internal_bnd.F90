@@ -57,12 +57,9 @@ contains
 
    subroutine internal_boundaries_4d(type, nb, dim)
 
-      use constants,  only: FLUID, MAG, CR, INT4
+      use constants,  only: FLUID, MAG, CR, INT4, fluid_n, mag_n, wcr_n
       use dataio_pub, only: die
       use grid,       only: all_cg
-#ifdef COSM_RAYS
-      use cr_data,    only: wcr_n
-#endif
 
       implicit none
 
@@ -74,13 +71,11 @@ contains
 
       select case (type)
          case (FLUID)
-            ind = all_cg%first%cg%get_na_ind_4d("fluid")
+            ind = all_cg%first%cg%get_na_ind_4d(fluid_n)
          case (MAG)
-            ind = all_cg%first%cg%get_na_ind_4d("mag")
-#ifdef COSM_RAYS
+            ind = all_cg%first%cg%get_na_ind_4d(mag_n)
          case (CR)
             ind = all_cg%first%cg%get_na_ind_4d(wcr_n)
-#endif
          case default
             call die("[internal_bnd:internal_boundaries_4d] What?")
             ind = 0_INT4 ! suppress compiler warnings
