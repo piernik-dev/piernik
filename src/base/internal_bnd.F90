@@ -57,7 +57,12 @@ contains
 
    subroutine internal_boundaries_4d(type, nb, dim)
 
-      use constants,  only: INT4
+      use constants,  only: FLUID, MAG, CR, INT4
+      use dataio_pub, only: die
+      use grid,       only: all_cg
+#ifdef COSM_RAYS
+      use cr_data,    only: wcr_n
+#endif
 
       implicit none
 
@@ -65,24 +70,37 @@ contains
       integer, optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
 
-      call internal_boundaries(0_INT4, .false., type, nb, dim)
+      integer :: ind
+
+      select case (type)
+         case (FLUID)
+            ind = all_cg%first%cg%get_na_ind_4d("fluid")
+         case (MAG)
+            ind = all_cg%first%cg%get_na_ind_4d("mag")
+#ifdef COSM_RAYS
+         case (CR)
+            ind = all_cg%first%cg%get_na_ind_4d(wcr_n)
+#endif
+         case default
+            call die("[internal_bnd:internal_boundaries_4d] What?")
+            ind = 0_INT4 ! suppress compiler warnings
+      end select
+
+      call internal_boundaries(ind, .false., type, nb, dim)
 
    end subroutine internal_boundaries_4d
 
 !>
 !! \brief This routine exchanges guardcells for BND_MPI and BND_PER boundaries on rank-3 and rank-4 arrays
-!! \details This routine should not be called directly. Appropriate wrappers for rank-3 and rank-4 arrays are provided.
-!! The corners should be properly updated if this%[io]_bnd(:, ind) was set up appropriately and MPI_Waitall is called separately for each dimension.
+!! \details This routine should not be called directly. Appropriate wrappers for rank-3 and rank-4 arrays are provided above.
+!! The corners should be properly updated if this%[io]_bnd(:, ind) was set up appropriately and this routine is called separately for each dimension.
 !!
-!! \todo Convert local MPI calls to direct memory copies.
+!! \todo Check how much performance is lost due to using MPI calls even for local copies. Decide whether it is worth to convert local MPI calls to direct memory copies.
 !<
 
    subroutine internal_boundaries(ind, tgt3d, type, nb, dim)
 
       use constants,  only: FLUID, MAG, CR, ARR, xdim, zdim, I_ONE, I_TWO
-#ifdef COSM_RAYS
-      use cr_data,    only: wcr_n
-#endif
       use dataio_pub, only: die, warn
       use domain,     only: has_dir, cdd, dom
       use gc_list,    only: cg_list_element
@@ -130,41 +148,34 @@ contains
       nr = 0
       cgl => all_cg%first
       if (tgt3d) then
-         if (ind > ubound(cgl%cg%q(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 3d index")
+         if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 3d index")
+      else
+         if (ind > ubound(cgl%cg%w(:), dim=1) .or. ind < lbound(cgl%cg%w(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 4d index")
       endif
       do while (associated(cgl))
          cg => cgl%cg
 
          if (tgt3d) then
-            if (cg%q(ind)%name /= all_cg%first%cg%q(ind)%name) call die("[internal_bnd:internal_boundaries] array name mismatch")
+            if (cg%q(ind)%name /= all_cg%first%cg%q(ind)%name) call die("[internal_bnd:internal_boundaries] 3d array name mismatch")
+         else
+            if (cg%w(ind)%name /= all_cg%first%cg%w(ind)%name) call die("[internal_bnd:internal_boundaries] 4d array name mismatch")
          endif
 
          do d = xdim, zdim
             if (dmask(d)) then
                if (allocated(cg%i_bnd(d, type, n)%seg)) then
                   if (.not. allocated(cg%o_bnd(d, type, n)%seg)) call die("[internal_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")
-                  if (ubound(cg%i_bnd(d, type, n)%seg(:), dim=1) /= ubound(cg%o_bnd(d, type, n)%seg(:), dim=1)) call die("[internal_bnd:internal_boundaries] cg%i_bnd differs in number of entries from cg%o_bnd")
+                  if (ubound(cg%i_bnd(d, type, n)%seg(:), dim=1) /= ubound(cg%o_bnd(d, type, n)%seg(:), dim=1)) &
+                       call die("[internal_bnd:internal_boundaries] cg%i_bnd differs in number of entries from cg%o_bnd")
                   do g = 1, ubound(cg%i_bnd(d, type, n)%seg(:), dim=1)
                      if (tgt3d) then
-                        pa3d =>cg%q(ind)%arr
-                        call MPI_Irecv(pa3d(1, 1, 1),    I_ONE, cg%i_bnd(d, type, n)%seg(g)%mbc, cg%i_bnd(d, type, n)%seg(g)%proc, cg%i_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
-                        call MPI_Isend(pa3d(1, 1, 1),    I_ONE, cg%o_bnd(d, type, n)%seg(g)%mbc, cg%o_bnd(d, type, n)%seg(g)%proc, cg%o_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
+                        pa3d => cg%q(ind)%arr
+                        call MPI_Irecv(pa3d, I_ONE, cg%i_bnd(d, type, n)%seg(g)%mbc, cg%i_bnd(d, type, n)%seg(g)%proc, cg%i_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
+                        call MPI_Isend(pa3d, I_ONE, cg%o_bnd(d, type, n)%seg(g)%mbc, cg%o_bnd(d, type, n)%seg(g)%proc, cg%o_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
                      else
-                        select case (type)
-                           case (FLUID)
-                              pa4d => cg%u
-                           case (MAG)
-                              pa4d => cg%b
-#ifdef COSM_RAYS
-                           case (CR)
-                              pa4d => cg%get_na_ptr_4d(wcr_n)
-#endif
-                           case default
-                              call die("[internal_bnd:internal_boundaries] What?")
-                              pa4d => cg%u ! suppress compiler warnings
-                        end select
-                        call MPI_Irecv(pa4d(1, 1, 1, 1), I_ONE, cg%i_bnd(d, type, n)%seg(g)%mbc, cg%i_bnd(d, type, n)%seg(g)%proc, cg%i_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
-                        call MPI_Isend(pa4d(1, 1, 1, 1), I_ONE, cg%o_bnd(d, type, n)%seg(g)%mbc, cg%o_bnd(d, type, n)%seg(g)%proc, cg%o_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
+                        pa4d => cg%w(ind)%arr
+                        call MPI_Irecv(pa4d, I_ONE, cg%i_bnd(d, type, n)%seg(g)%mbc, cg%i_bnd(d, type, n)%seg(g)%proc, cg%i_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
+                        call MPI_Isend(pa4d, I_ONE, cg%o_bnd(d, type, n)%seg(g)%mbc, cg%o_bnd(d, type, n)%seg(g)%proc, cg%o_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
                      endif
                      nr = nr + I_TWO
                   enddo
