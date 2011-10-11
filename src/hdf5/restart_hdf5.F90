@@ -185,13 +185,13 @@ contains
       ! Write scalar fields that were declared to be required on restart
       fcg  => all_cg%first%cg
       if (allocated(fcg%q)) then
-         do i = lbound(fcg%q(:), dim=1), ubound(fcg%q(:), dim=1)
+         do i = lbound(fcg%q(:), dim=1, kind=4), ubound(fcg%q(:), dim=1, kind=4)
             call write_arr_to_restart(file_id, i, .true.)
          enddo
       endif
 
       if (allocated(fcg%w)) then
-         do i = lbound(fcg%w(:), dim=1), ubound(fcg%w(:), dim=1)
+         do i = lbound(fcg%w(:), dim=1, kind=4), ubound(fcg%w(:), dim=1, kind=4)
             call write_arr_to_restart(file_id, i, .false.)
          enddo
       endif
@@ -461,7 +461,7 @@ contains
       integer(HID_T), intent(in)        :: file_id   !> File identifier
       integer(kind=4), intent(in)       :: ind       !> index of cg%q(:) or cg%w(:) arrays
       logical, intent(in)               :: tgt3d     !> .true. for 3D arrays, .false. otherwise
-      integer, optional, intent(in)          :: alt_area_type
+      integer(kind=4), optional, intent(in)          :: alt_area_type
       character(len=*), optional, intent(in) :: alt_name !> used only in galdisk* setups
 
       real, pointer, dimension(:,:,:)   :: pa3d     !> pointer to specified scope of pa3d
@@ -601,7 +601,8 @@ contains
       implicit none
 
       type(hdf)             :: chdf
-      integer               :: nu, i
+      integer               :: nu
+      integer(kind=4)       :: i
       character(len=cwdlen) :: filename  ! File name
 
       integer(HID_T)        :: file_id       ! File identifier
@@ -691,13 +692,13 @@ contains
       ! read auxiliary variables
       fcg => all_cg%first%cg
       if (allocated(fcg%q)) then
-         do i = lbound(fcg%q(:), dim=1), ubound(fcg%q(:), dim=1)
+         do i = lbound(fcg%q(:), dim=1, kind=4), ubound(fcg%q(:), dim=1, kind=4)
             call read_arr_from_restart(file_id, i, .true.)
          enddo
       endif
 
       if (allocated(fcg%w)) then
-         do i = lbound(fcg%w(:), dim=1), ubound(fcg%w(:), dim=1)
+         do i = lbound(fcg%w(:), dim=1, kind=4), ubound(fcg%w(:), dim=1, kind=4)
             call read_arr_from_restart(file_id, i, .false.)
          enddo
       endif
