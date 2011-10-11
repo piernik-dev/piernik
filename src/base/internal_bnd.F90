@@ -67,7 +67,7 @@ contains
       integer, optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
 
-      integer :: ind
+      integer(kind=4) :: ind
 
       select case (type)
          case (FLUID)

@@ -249,7 +249,7 @@ contains
       class(cg_list), intent(in)    :: this
       character(len=*), intent(in)  :: name
       integer(kind=4), intent(in)   :: restart_mode
-      integer, optional, intent(in) :: dim4
+      integer(kind=4), optional, intent(in) :: dim4
 
       type(cg_list_element), pointer :: cgl
 
