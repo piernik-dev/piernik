@@ -35,14 +35,10 @@ module restart_hdf5
 
 ! pulled by ANY
 
-   use constants, only: ARR, INT4
-
    implicit none
 
    private
-   public :: read_restart_hdf5, write_restart_hdf5, write_arr_to_restart, read_arr_from_restart
-
-   integer(kind=4), parameter :: w_off = 2_INT4 * ARR
+   public :: read_restart_hdf5, write_restart_hdf5, read_arr_from_restart
 
 contains
 
@@ -161,7 +157,7 @@ contains
 
       implicit none
 
-      integer               :: i
+      integer(kind=4)       :: i
       integer, parameter    :: extlen = 4
       character(len=extlen), parameter :: file_extension = '.res'
       character(len=cwdlen) :: filename  !> HDF File name
@@ -190,16 +186,15 @@ contains
       fcg  => all_cg%first%cg
       if (allocated(fcg%q)) then
          do i = lbound(fcg%q(:), dim=1), ubound(fcg%q(:), dim=1)
-            call write_arr_to_restart(file_id, int(-i, kind=4), fcg%q(i)%restart_mode, fcg%q(i)%name) !> \deprecated this is not particularly elegant
+            call write_arr_to_restart(file_id, i, .true.)
          enddo
       endif
 
       if (allocated(fcg%w)) then
          do i = lbound(fcg%w(:), dim=1), ubound(fcg%w(:), dim=1)
-            call write_arr_to_restart(file_id, int(w_off+i, kind=4), fcg%w(i)%restart_mode, fcg%w(i)%name) !> \deprecated this is not particularly elegant
+            call write_arr_to_restart(file_id, i, .false.)
          enddo
       endif
-
 
       !> problem-specific restart writes. Everything that was not written by the above write_arr_to_restart calls
       if (associated(problem_write_restart)) call problem_write_restart(file_id)
@@ -231,9 +226,9 @@ contains
    !----------------------------------------------------------------------------------
    ! Write fluid, mag or other variables (4-D and 3-D arrays)
 
-   subroutine write_arr_to_restart(file_id, what, area_type, dname)
+   subroutine write_arr_to_restart(file_id, ind, tgt3d)
 
-      use constants,  only: xdim, ydim, zdim, ndims, AT_OUT_B, AT_IGNORE, LONG, FLUID, MAG
+      use constants,  only: xdim, ydim, zdim, ndims, AT_OUT_B, AT_IGNORE, LONG, dsetnamelen
       use dataio_pub, only: die
       use domain,     only: is_multicg
       use gc_list,    only: cg_list_element
@@ -246,9 +241,8 @@ contains
       implicit none
 
       integer(HID_T), intent(in)                    :: file_id   !> File identifier
-      integer(kind=4), intent(in)                   :: what      !> Negative value: index of cg%q(:) 3d array, Positive value: 4d arrays
-      integer(kind=4), intent(in)                   :: area_type !> no boundaries, only outer boundaries or all boundaries
-      character(len=*), intent(in)                  :: dname
+      integer(kind=4), intent(in)                   :: ind       !> index of cg%q(:) or cg%w(:) array
+      logical, intent(in)                           :: tgt3d     !> .true. for 3D array, .false. otherwise
 
       real, pointer, dimension(:,:,:)               :: pa3d     !> pointer to specified scope of pa3d
       real, pointer, dimension(:,:,:,:)             :: pa4d     !> pointer to specified scope of pa4d
@@ -262,34 +256,29 @@ contains
       integer,         dimension(ndims) :: area, lleft, lright, chnk
       integer(kind=8), dimension(ndims) :: loffs
       integer(HSIZE_T), dimension(rank4) :: cnt, offset, stride
-      integer(kind=4) :: rank, error
+      integer(kind=4) :: rank, error, area_type
       integer :: ir, dim1
-      logical :: tgt3d
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+      character(len=dsetnamelen) ::dname
 
-      if (area_type == AT_IGNORE) return !> \todo write a list of unsaved arrays?
-
-      tgt3d = (what < 0) ! what == 0 is invalid anyways
-      rank = rank4
-      if (tgt3d) rank = ndims
+      if (tgt3d) then
+         if (ind < lbound(all_cg%first%cg%q(:), dim=1) .or. ind > ubound(all_cg%first%cg%q(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 3D array")
+         dim1 = 1
+         rank = ndims
+         dname = all_cg%first%cg%q(ind)%name
+         area_type = all_cg%first%cg%q(ind)%restart_mode
+      else
+         if (ind < lbound(all_cg%first%cg%w(:), dim=1) .or. ind > ubound(all_cg%first%cg%w(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 4D array")
+         dim1 = size(all_cg%first%cg%w(ind)%arr, dim=1)
+         rank = rank4
+         dname = all_cg%first%cg%w(ind)%name
+         area_type = all_cg%first%cg%w(ind)%restart_mode
+      endif
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
+      if (area_type == AT_IGNORE) return !> \todo write a list of unsaved arrays?
       call set_area_for_restart(area_type, area)
-
-      select case (what)
-         case (FLUID)
-            dim1 = size(all_cg%first%cg%u, dim=1) !> \deprecated this is not particularly elegant
-         case (MAG)
-            dim1 = size(all_cg%first%cg%b, dim=1)
-         case (w_off:)
-            dim1 = size(all_cg%first%cg%w(what-w_off)%arr, dim=1)
-         case (:-1)
-            dim1 = 1
-         case default
-            call die("[restart_hdf5:write_arr_to_restart] wrong array")
-            return
-      end select
 
       dimsf      = [dim1, area(:)] ! Dataset dimensions
       ! Create the file space for the dataset and make it chunked if possible
@@ -339,24 +328,14 @@ contains
 
          ! write data
          if (tgt3d) then
-            pa3d => cg%q(-what)%arr(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
-            call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+            pa3d => cg%q(ind)%arr(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+            if (associated(pa3d)) then
+               call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+            else
+               call die("[restart_hdf5:write_arr_to_restart] unassociated 3D array pointer")
+            endif
          else
-            nullify(pa4d)
-            select case (what)
-               case (FLUID)
-                  if (associated(cg%u)) &
-                       pa4d => cg%u(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
-               case (MAG)
-                  if (associated(cg%b)) &
-                       pa4d => cg%b(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
-               case (w_off:)
-                  if (what-w_off >= lbound(cg%w, dim=1) .and. what-w_off <= ubound(cg%w, dim=1)) &
-                       pa4d => cg%w(what-w_off)%arr(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
-               case default
-                  call die("[restart_hdf5:write_arr_to_restart] CR not implemented")
-                  pa4d => cg%u ! suppress compiler warnings
-            end select
+            pa4d => cg%w(ind)%arr(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
             if (associated(pa4d)) then
                call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dimsf(:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
@@ -463,9 +442,9 @@ contains
 ! Boundary cells are exchanged with the neughbours. Corner boundary cells are not guaranteed to be correct.
 ! External boundary cells are not stored in the restart file and thus all of them are lost (area_type = AT_OUT_B not implemented yet).
 
-   subroutine read_arr_from_restart(file_id, what, area_type, dname)
+   subroutine read_arr_from_restart(file_id, ind, tgt3d, alt_area_type, alt_name)
 
-      use constants,    only: xdim, ydim, zdim, ndims, LONG, AT_IGNORE, FLUID, MAG
+      use constants,    only: xdim, ydim, zdim, ndims, LONG, AT_IGNORE, dsetnamelen
       use dataio_pub,   only: msg, die
       use domain,       only: is_multicg
       use grid,         only: all_cg
@@ -479,13 +458,14 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)                       :: file_id   ! File identifier
-      integer(kind=4), intent(in)                      :: what      !> Negative value: index of cg%q(:) 3d array, Positive value: 4d arrays
-      integer(kind=4), intent(in)                      :: area_type !> no boundaries, only outer boundaries or all boundaries
-      character(len=*), intent(in)                     :: dname
+      integer(HID_T), intent(in)        :: file_id   !> File identifier
+      integer(kind=4), intent(in)       :: ind       !> index of cg%q(:) or cg%w(:) arrays
+      logical, intent(in)               :: tgt3d     !> .true. for 3D arrays, .false. otherwise
+      integer, optional, intent(in)          :: alt_area_type
+      character(len=*), optional, intent(in) :: alt_name !> used only in galdisk* setups
 
-      real, pointer, dimension(:,:,:)               :: pa3d     !> pointer to specified scope of pa3d
-      real, pointer, dimension(:,:,:,:)             :: pa4d     !> pointer to specified scope of pa4d
+      real, pointer, dimension(:,:,:)   :: pa3d     !> pointer to specified scope of pa3d
+      real, pointer, dimension(:,:,:,:) :: pa4d     !> pointer to specified scope of pa4d
       integer, parameter :: rank4 = 1 + ndims
       integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
       integer(HID_T)        :: dset_id       ! Dataset identifier
@@ -495,38 +475,36 @@ contains
       integer(HSIZE_T), dimension(rank4) :: cnt, offset, stride
       integer,         dimension(ndims) :: area, lleft, lright, chnk
       integer(kind=8), dimension(ndims) :: loffs
-      integer(kind=4) :: rank, rankf, error
+      integer(kind=4) :: rank, rankf, error, area_type
       integer :: ir, dim1
-      logical :: tgt3d
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+      character(len=dsetnamelen) :: dname
 
-      if (area_type == AT_IGNORE) return !> \todo read a list of unsaved arrays?
-
-      tgt3d = (what < 0) ! what == 0 is invalid anyways
-      rank = rank4
-      if (tgt3d) rank = ndims
+      !> \deprecated Duplicated code
+      if (tgt3d) then
+         if (ind < lbound(all_cg%first%cg%q(:), dim=1) .or. ind > ubound(all_cg%first%cg%q(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 3D array")
+         dim1 = 1
+         rank = ndims
+         dname = all_cg%first%cg%q(ind)%name
+         area_type = all_cg%first%cg%q(ind)%restart_mode
+      else
+         if (ind < lbound(all_cg%first%cg%w(:), dim=1) .or. ind > ubound(all_cg%first%cg%w(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 4D array")
+         dim1 = size(all_cg%first%cg%w(ind)%arr, dim=1)
+         rank = rank4
+         dname = all_cg%first%cg%w(ind)%name
+         area_type = all_cg%first%cg%w(ind)%restart_mode
+      endif
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
+      if (present(alt_area_type)) area_type = alt_area_type
+      if (area_type == AT_IGNORE) return !> \todo write a list of unsaved arrays?
       call set_area_for_restart(area_type, area)
-
-      select case (what)
-         case (FLUID)
-            dim1 = size(all_cg%first%cg%u, dim=1) !> \deprecated this is not particularly elegant
-         case (MAG)
-            dim1 = size(all_cg%first%cg%b, dim=1)
-         case (:-1)
-            dim1 = 1
-         case (w_off:)
-            dim1 = size(all_cg%first%cg%w(what-w_off)%arr, dim=1)
-         case default
-            call die("[restart_hdf5:write_arr_to_restart] wrong array")
-            return
-      end select
 
       dimsf = [dim1, area(:)]      ! Dataset dimensions
 
       ! Create dataset.and filespace
+      if (present(alt_name)) dname = alt_name
       call h5dopen_f(file_id, dname, dset_id, error)
       if (error /= 0) then
          write(msg, '(3a)') "[restart_hdf5:read_arr_from_restart] Opening dataset '", dname,"' failed."
@@ -562,30 +540,21 @@ contains
          ! Read the array
          if (tgt3d) then
             pa3d => cg%get_na_ptr(dname)
-            if (.not. associated(pa3d)) then
-               write(msg,'(3a)')"Cannot find '",trim(dname),"' array in the restart file"
+            if (associated(pa3d)) then
+               call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
+                    &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+            else
+               write(msg,'(3a)')"Cannot find '",trim(dname),"' 3D array in the restart file"
                call die(msg)
             endif
-            call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
-                 &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
          else
-            nullify(pa4d)
-            select case (what)
-               case (FLUID)
-                  if (associated(cg%u)) pa4d => cg%u
-               case (MAG)
-                  if (associated(cg%b)) pa4d => cg%b
-               case (w_off:)
-                  if (what-w_off >= lbound(cg%w, dim=1) .and. what-w_off <= ubound(cg%w, dim=1)) pa4d => cg%w(what-w_off)%arr
-               case default
-                  call die("[restart_hdf5:read_arr_from_restart] CR not implemented")
-                  pa4d => cg%u ! suppress compiler warnings
-            end select
+            pa4d => cg%get_na_ptr_4d(dname)
             if (associated(pa4d)) then
                call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
                     &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
-               call die("[restart_hdf5:read_arr_from_restart] unassociated 4D array pointer")
+               write(msg,'(3a)')"Cannot find '",trim(dname),"' 4D array in the restart file"
+               call die(msg)
             endif
          endif
 
@@ -603,19 +572,18 @@ contains
       call h5sclose_f(filespace, error)
       call h5dclose_f(dset_id, error)
 
-      ! rank-4 arrays (cg%u(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
-      if (tgt3d) then
+      if (tgt3d) call arr3d_boundaries(cg%get_na_ind(dname), area_type=area_type, dname=dname)
          ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
-         call arr3d_boundaries(cg%get_na_ind(dname), area_type=area_type, dname=dname)
-      endif
-      !> \todo consider also callingfluid and magnetic boundaries
+
+      ! rank-4 arrays (cg%u(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
+      !> \todo consider also calling 4D boundaries
 
    end subroutine read_arr_from_restart
 
    subroutine read_restart_hdf5(chdf)
 
       use common_hdf5, only: hdf
-      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, AT_IGNORE, LO, HI, I_ONE
+      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE
       use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version
       use dataio_user, only: problem_read_restart
       use domain,      only: dom, has_dir
@@ -717,20 +685,20 @@ contains
       call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error, access_prp = plist_id)
       call h5pclose_f(plist_id, error)
 
-      ! set up things such as register user rank-3 arrays to be read by read_arr_from_restart or read anything taht is not read by all read_arr_from_restart calls
+      ! set up things such as register user rank-3 and rank-4 arrays to be read by read_arr_from_restart. Read also anything that is not read by all read_arr_from_restart calls
       if (associated(problem_read_restart)) call problem_read_restart(file_id)
 
       ! read auxiliary variables
       fcg => all_cg%first%cg
       if (allocated(fcg%q)) then
          do i = lbound(fcg%q(:), dim=1), ubound(fcg%q(:), dim=1)
-            if (fcg%q(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, int(-i, kind=4), fcg%q(i)%restart_mode, fcg%q(i)%name)
+            call read_arr_from_restart(file_id, i, .true.)
          enddo
       endif
 
       if (allocated(fcg%w)) then
          do i = lbound(fcg%w(:), dim=1), ubound(fcg%w(:), dim=1)
-            if (fcg%w(i)%restart_mode /= AT_IGNORE) call read_arr_from_restart(file_id, int(w_off+i, kind=4), fcg%w(i)%restart_mode, fcg%w(i)%name)
+            call read_arr_from_restart(file_id, i, .false.)
          enddo
       endif
 
