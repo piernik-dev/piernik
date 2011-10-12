@@ -92,6 +92,7 @@ module domain
       procedure :: set_derived
       procedure :: translate_bnds_to_ints
       procedure :: print_me
+      procedure :: init => init_domain_container
 
    end type domain_container
 
@@ -146,6 +147,8 @@ module domain
    character(len=cbuff_len) :: bnd_yr   !< type of boundary conditions for the right y-boundary
    character(len=cbuff_len) :: bnd_zl   !< type of boundary conditions for the left  z-boundary
    character(len=cbuff_len) :: bnd_zr   !< type of boundary conditions for the right z-boundary
+   character(len=cbuff_len), dimension(HI*ndims) :: bnds  !< Six strings, describing boundary conditions
+   real, dimension(ndims, LO:HI) :: edges
    real :: xmin                         !< physical domain left x-boundary position
    real :: xmax                         !< physical domain right x-boundary position
    real :: ymin                         !< physical domain left y-boundary position
@@ -222,8 +225,7 @@ contains
 !<
    subroutine init_domain
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, big_float, dpi, &
-           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND, PIERNIK_INIT_MPI, I_ONE, I_ZERO
+      use constants,  only: xdim, zdim, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, big_float
       use dataio_pub, only: die, printinfo, msg, warn, code_progress
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR
@@ -231,7 +233,6 @@ contains
 
       implicit none
 
-      real :: xmno, ymno, ymxo
       integer :: p, i
       real, allocatable, dimension(:) :: maxcnt
 
@@ -245,7 +246,7 @@ contains
       nxd    = 1
       nyd    = 1
       nzd    = 1
-      n_d(:) = 1
+      n_d(:) = I_ONE
       nb     = 4
       xmin = 0.; xmax = 1.
       ymin = -big_float; ymax = big_float
@@ -274,10 +275,8 @@ contains
 
          if (any([nxd, nyd, nzd] > 1)) call warn("[domain:init_domain] Use n_d instead of nxd, nyd and nzd")
          n_d(:) = max(n_d(:), [nxd, nyd, nzd])
-         ! Sanitize input parameters, if possible
-         dom%n_d(:) = max(I_ONE, n_d(:))
 
-         if (any(bsize(:) > 0 .and. bsize(:) < nb .and. dom%n_d(:) > 1)) call die("[domain:init_domain] bsize(:) is too small.") ! has_dir(:) is not available yet
+         if (any(bsize(:) > 0 .and. bsize(:) < nb .and. n_d(:) > 1)) call die("[domain:init_domain] bsize(:) is too small.")
 
          cbuff(1) = bnd_xl
          cbuff(2) = bnd_xr
@@ -288,7 +287,7 @@ contains
          cbuff(7) = geometry
 
          ibuff(         xdim:zdim) = psize(:)
-         ibuff(  zdim+xdim:2*zdim) = dom%n_d(:)
+         ibuff(  zdim+xdim:2*zdim) = n_d(:)
          ibuff(2*zdim+xdim:3*zdim) = bsize(:)
          ibuff(3*zdim+1)           = nb
 
@@ -340,95 +339,18 @@ contains
          geometry   = cbuff(7)
 
          psize(:)   = int(ibuff(         xdim:zdim), kind=4)
-         dom%n_d(:) = int(ibuff(  zdim+xdim:2*zdim), kind=4)
+         n_d(:)     = int(ibuff(  zdim+xdim:2*zdim), kind=4)
          bsize(:)   = int(ibuff(2*zdim+xdim:3*zdim), kind=4)
          nb         = int(ibuff(3*zdim+1),           kind=4)
 
       endif
 
+      bnds = [bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr]
+      edges = reshape( [xmin, ymin, zmin, xmax, ymax, zmax], shape=[ndims,HI-LO+1] )
+
       pdom => dom
 
-      dom%has_dir(:) = dom%n_d(:) > 1
-      dom%eff_dim = count(dom%has_dir(:))
-      where (dom%has_dir(:))
-         dom%D_(:) = 1
-      elsewhere
-         dom%D_(:) = 0
-      endwhere
-
-      ! shortcuts
-      dom%D_x = dom%D_(xdim)
-      dom%D_y = dom%D_(ydim)
-      dom%D_z = dom%D_(zdim)
-
-      dom%total_ncells = product(int(dom%n_d(:), kind=8))
-      if (any(dom%total_ncells < dom%n_d(:))) call die("[domain:init_domain] Integer overflow: too many cells")
-
-      select case (geometry)
-         case ("cartesian", "cart", "xyz", "XYZ")
-            dom%geometry_type = GEO_XYZ
-         case ("cylindrical", "cyl", "rpz", "RPZ")
-            dom%geometry_type = GEO_RPZ
-         case default
-            dom%geometry_type = GEO_INVALID
-      end select
-
-      call dom%translate_bnds_to_ints([bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr])
-
-      ! sanitize domain
-      xmno = xmin
-      ymno = ymin
-      ymxo = ymax
-      select case (dom%geometry_type)
-         case (GEO_XYZ)
-            if (ymin <= -big_float .or. ymax >= big_float) call warn("[domain:init_domain] y range not specified. Defaulting to [0..1]")
-            if (ymin <= -big_float) ymin = 0.
-            if (ymax >= big_float) ymax = 1.
-         case (GEO_RPZ)
-            if (ymin <= -big_float) ymin = 0.
-            if (ymax >= big_float) ymax = dpi
-            if (ymax-ymin > dpi) then
-               call warn("[domain:init_domain] Hyperbolic spaces are not implemented. Setting azimuthal span to 2pi.")
-               if (abs(ymin) < 1./epsilon(1.)) then
-                  ymax = ymin + dpi
-               else
-                  ymin = ymax - dpi
-               endif
-               if (abs(ymax-ymin - dpi) > 100*epsilon(1.)) call die("[domain:init_domain] absolute values for both ymax and ymin too high.") ! magic number
-            endif
-            if (xmin <= 0.) then
-               xmin = 0.
-               if (dom%bnd(xdim, LO) /= BND_REF) call warn("[domain:init_domain] Enforcing dom%bnd(xdim, LO) = 'ref'.")
-               dom%bnd(xdim, LO) = BND_REF
-            endif
-            if (dom%bnd(xdim, HI) == BND_PER) call die("[domain:init_domain] Periodicity in radial direction is not allowed in cylindrical coordinates")
-         case default
-            call die("[domain:init_domain] Invalid geometry type.")
-      end select
-      if (xmno /= xmin) then
-         write(msg,'(2(a,g20.12))')"[domain:init_domain] Sanitized xmin: ",xmno," -> ",xmin
-         call warn(msg)
-      endif
-      if (ymno /= ymin .and. ymno /= -big_float) then
-         write(msg,'(2(a,g20.12))')"[domain:init_domain] Sanitized ymin: ",ymno," -> ",ymin
-         call warn(msg)
-      endif
-      if (ymxo /= ymax .and. ymxo /= big_float) then
-         write(msg,'(2(a,g20.12))')"[domain:init_domain] Sanitized ymax: ",ymno," -> ",ymax
-         call warn(msg)
-      endif
-      if (xmin > xmax) call die("[[domain:init_domain] Negative span in X-direction")
-      if (ymin > ymax) call die("[[domain:init_domain] Negative span in Y-direction")
-      if (zmin > zmax) call die("[[domain:init_domain] Negative span in Z-direction")
-      if (nb < 1) call die("[[domain:init_domain] no guardcells")
-
-      ! set up the global domain
-      dom%nb = nb
-
-      dom%edge(:, LO) = [ xmin, ymin, zmin ]
-      dom%edge(:, HI) = [ xmax, ymax, zmax ]
-
-      call dom%set_derived ! finish up with the rest of domain_container members
+      call dom%init(nb, n_d, bnds, edges, geometry)
 
 #ifdef MULTIGRID
       if (allow_AMR .and. master) call warn("[domain:init_domain] Multigrid solver is not yet capable of using AMR domains.")
@@ -1259,7 +1181,7 @@ contains
       implicit none
 
       class(domain_container), intent(inout) :: this
-      character(len=*), dimension(HI*ndims), intent(in) :: bnds  !< Six strings, describing bounsary conditions
+      character(len=*), dimension(HI*ndims), intent(in) :: bnds  !< Six strings, describing boundary conditions
 
       integer :: d, lh
 
@@ -1368,5 +1290,106 @@ contains
          enddo
       endif
    end subroutine print_me
+
+   subroutine init_domain_container(this, nb, n_d, bnds, edges, geometry)
+      use constants,    only: ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, &
+           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND, I_ONE
+      use dataio_pub,   only: die, warn, msg
+
+      implicit none
+
+      class(domain_container), intent(inout) :: this
+      integer(kind=4), intent(in) :: nb    !< number of boundary cells surrounding the physical domain, same for all directions
+      integer(kind=4), dimension(ndims) :: n_d !< number of %grid cells in physical domain without boundary cells (where  == 1 then that dimension is reduced to a point with no boundary cells)
+      character(len=*), dimension(HI*ndims), intent(in) :: bnds  !< Six strings, describing boundary conditions
+      real, dimension(ndims, LO:HI), intent(inout)      :: edges  !< physical domain boundaries position
+      character(len=*), intent(in) :: geometry !< define system of coordinates: "cartesian" or "cylindrical"
+
+      real :: xmno, ymno, ymxo
+
+      ! Sanitize input parameters, if possible
+      this%n_d(:) = max(I_ONE, n_d(:))
+      this%has_dir(:) = this%n_d(:) > 1
+      this%eff_dim = count(this%has_dir(:))
+      where (this%has_dir(:))
+         this%D_(:) = 1
+      elsewhere
+         this%D_(:) = 0
+      endwhere
+
+      ! shortcuts
+      this%D_x = this%D_(xdim)
+      this%D_y = this%D_(ydim)
+      this%D_z = this%D_(zdim)
+
+      this%total_ncells = product(int(this%n_d(:), kind=8))
+      if (any(this%total_ncells < this%n_d(:))) call die("[domain:init_domain] Integer overflow: too many cells")
+
+      select case (geometry)
+         case ("cartesian", "cart", "xyz", "XYZ")
+            this%geometry_type = GEO_XYZ
+         case ("cylindrical", "cyl", "rpz", "RPZ")
+            this%geometry_type = GEO_RPZ
+         case default
+            this%geometry_type = GEO_INVALID
+      end select
+
+      call this%translate_bnds_to_ints(bnds)
+
+      ! sanitize domain
+      xmno = edges(xdim,LO)
+      ymno = edges(ydim,LO)
+      ymxo = edges(ydim,HI)
+      select case (this%geometry_type)
+         case (GEO_XYZ)
+            if (edges(ydim,LO) <= -big_float .or. edges(ydim,HI) >= big_float) call warn("[domain:init_domain] y range not specified. Defaulting to [0..1]")
+            if (edges(ydim,LO) <= -big_float) edges(ydim,LO) = 0.
+            if (edges(ydim,HI) >= big_float) edges(ydim,HI) = 1.
+         case (GEO_RPZ)
+            if (edges(ydim,LO) <= -big_float) edges(ydim,LO) = 0.
+            if (edges(ydim,HI) >= big_float) edges(ydim,HI) = dpi
+            if (edges(ydim,HI)-edges(ydim,LO) > dpi) then
+               call warn("[domain:init_domain] Hyperbolic spaces are not implemented. Setting azimuthal span to 2pi.")
+               if (abs(edges(ydim,LO)) < 1./epsilon(1.)) then
+                  edges(ydim,HI) = edges(ydim,LO) + dpi
+               else
+                  edges(ydim,LO) = edges(ydim,HI) - dpi
+               endif
+               if (abs(edges(ydim,HI)-edges(ydim,LO) - dpi) > 100*epsilon(1.)) call die("[domain:init_domain] absolute values for both edges(ydim,HI) and edges(ydim,LO) too high.") ! magic number
+            endif
+            if (edges(xdim,LO) <= 0.) then
+               edges(xdim,LO) = 0.
+               if (this%bnd(xdim, LO) /= BND_REF) call warn("[domain:init_domain] Enforcing this%bnd(xdim, LO) = 'ref'.")
+               this%bnd(xdim, LO) = BND_REF
+            endif
+            if (this%bnd(xdim, HI) == BND_PER) call die("[domain:init_domain] Periodicity in radial direction is not allowed in cylindrical coordinates")
+         case default
+            call die("[domain:init_domain] Invalid geometry type.")
+      end select
+      if (xmno /= edges(xdim,LO)) then
+         write(msg,'(2(a,g20.12))')"[domain:init_domain] Sanitized edges(xdim,LO): ",xmno," -> ",edges(xdim,LO)
+         call warn(msg)
+      endif
+      if (ymno /= edges(ydim,LO) .and. ymno /= -big_float) then
+         write(msg,'(2(a,g20.12))')"[domain:init_domain] Sanitized edges(ydim,LO): ",ymno," -> ",edges(ydim,LO)
+         call warn(msg)
+      endif
+      if (ymxo /= edges(ydim,HI) .and. ymxo /= big_float) then
+         write(msg,'(2(a,g20.12))')"[domain:init_domain] Sanitized edges(ydim,HI): ",ymno," -> ",edges(ydim,HI)
+         call warn(msg)
+      endif
+      if (edges(xdim,LO) > edges(xdim,HI)) call die("[[domain:init_domain] Negative span in X-direction")
+      if (edges(ydim,LO) > edges(ydim,HI)) call die("[[domain:init_domain] Negative span in Y-direction")
+      if (edges(zdim,LO) > edges(zdim,HI)) call die("[[domain:init_domain] Negative span in Z-direction")
+      if (nb < 1) call die("[[domain:init_domain] no guardcells")
+
+      ! set up the global domain
+      this%nb = nb
+
+      this%edge(:,:) = edges(:,:)
+
+      call this%set_derived ! finish up with the rest of domain_container members
+
+   end subroutine init_domain_container
 
 end module domain
