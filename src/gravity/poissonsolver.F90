@@ -46,7 +46,7 @@ contains
 
       use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE
       use dataio_pub, only: die
-      use domain,     only: has_dir, is_multicg
+      use domain,     only: dom, is_multicg
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
 
@@ -61,7 +61,7 @@ contains
       cg => all_cg%first%cg
       if (is_multicg) call die("[poissonsolver:poisson_solve] multiple grid pieces per procesor not implemented yet") !nontrivial (impossible?)
 
-      if (.not. all(has_dir(:))) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !> \deprecated BEWARE 2D and 1D probably need small fixes
+      if (.not. all(dom%has_dir(:))) call die("[poissonsolver:poisson_solve] Only 3D setups are supported") !> \deprecated BEWARE 2D and 1D probably need small fixes
 
       if ( all(cg%bnd(xdim:ydim,LO:HI) == BND_PER) .and. all(cg%bnd(zdim,LO:HI) /= BND_PER) )  then ! Periodic in X and Y, nonperiodic in Z
 

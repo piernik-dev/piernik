@@ -77,7 +77,7 @@ contains
       use constants,   only: xdim, ydim, zdim, half
       use cr_data,     only: divv_n
       use dataio_pub,  only: die
-      use domain,      only: has_dir, is_multicg
+      use domain,      only: dom, is_multicg
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid_cont,   only: grid_container
 
@@ -104,7 +104,7 @@ contains
 
       divvel(:,:,:) = 0.0
 
-      if (has_dir(xdim)) then
+      if (dom%has_dir(xdim)) then
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                vx = cg%u(imxf,:,j,k) / cg%u(idnf,:,j,k)
@@ -114,7 +114,7 @@ contains
          divvel(1,:,:) = divvel(2,:,:); divvel(cg%n_(xdim),:,:) = divvel(cg%n_(xdim)-1,:,:) ! for sanity
       endif
 
-      if (has_dir(ydim)) then
+      if (dom%has_dir(ydim)) then
          do k = 1, cg%n_(zdim)
             do i = 1, cg%n_(xdim)
                vy = cg%u(imyf,i,:,k) / cg%u(idnf,i,:,k)
@@ -124,7 +124,7 @@ contains
          divvel(:,1,:) = divvel(:,2,:); divvel(:, cg%n_(ydim),:) = divvel(:, cg%n_(ydim)-1,:) ! for sanity
       endif
 
-      if (has_dir(zdim)) then
+      if (dom%has_dir(zdim)) then
          do j = 1, cg%n_(ydim)
             do i = 1, cg%n_(xdim)
                vz = cg%u(imzf,i,j,:) / cg%u(idnf,i,j,:)

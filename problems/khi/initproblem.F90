@@ -109,7 +109,7 @@ contains
    subroutine init_prob
 
       use constants,   only: dpi, xdim, ydim, zdim
-      use domain,      only: has_dir, dom
+      use domain,      only: dom
       use grid,        only: all_cg
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
@@ -152,7 +152,7 @@ contains
                if (abs(rc) < lpert) then
                   cg%u(imyn,i,j,:) = vp*sin(k0*rcx)*cg%u(idnn,i,j,:)
                endif
-               if (has_dir(zdim)) then
+               if (dom%has_dir(zdim)) then
                   cg%u(imzn,i,j,:) = vtransf*cg%u(1,i,j,:)
                else
                   cg%u(imzn,i,j,:) = 0.0

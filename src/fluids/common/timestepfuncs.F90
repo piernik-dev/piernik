@@ -72,7 +72,7 @@ contains
    subroutine compute_dt(c, dt_out, cg)
 
       use constants,  only: big, xdim, ydim, zdim, ndims, GEO_RPZ, LO
-      use domain,     only: dom, geometry_type, has_dir
+      use domain,     only: dom
       use global,     only: cfl
       use grid_cont,  only: grid_container
 
@@ -86,9 +86,9 @@ contains
       integer :: d
 
       do d = xdim, zdim
-         if (has_dir(d) .and. c(d) /= 0.) then
+         if (dom%has_dir(d) .and. c(d) /= 0.) then
             dt_proc(d) = cg%dl(d)/c(d)
-            if (geometry_type == GEO_RPZ .and. d == ydim) dt_proc(d) = dt_proc(d) * dom%edge(xdim, LO)
+            if (dom%geometry_type == GEO_RPZ .and. d == ydim) dt_proc(d) = dt_proc(d) * dom%edge(xdim, LO)
          else
             dt_proc(d) = big
          endif

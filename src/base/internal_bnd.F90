@@ -108,7 +108,7 @@ contains
 
       use constants,  only: FLUID, MAG, CR, ARR, xdim, zdim, I_ONE, I_TWO
       use dataio_pub, only: die, warn
-      use domain,     only: has_dir, cdd, dom
+      use domain,     only: cdd, dom
       use gc_list,    only: cg_list_element
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
@@ -139,10 +139,10 @@ contains
 
       if (tgt3d .and. type /= ARR) call die("[internal_bnd:internal_boundaries] tgt3d .and. type /= ARR")
 
-      dmask(:) = has_dir(:)
+      dmask(:) = dom%has_dir(:)
       if (present(dim)) then
          dmask(:) = .false.
-         dmask(dim) = has_dir(dim)
+         dmask(dim) = dom%has_dir(dim)
       endif
 
       n = dom%nb

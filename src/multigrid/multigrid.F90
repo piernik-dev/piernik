@@ -78,7 +78,7 @@ contains
       use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, zdim, GEO_RPZ, LO, HI, I_TWO, I_ONE, half
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
-      use domain,              only: has_dir, dom, eff_dim, geometry_type, is_uneven, is_multicg, cdd
+      use domain,              only: dom, is_uneven, is_multicg, cdd
       use grid,                only: all_cg
       use gc_list,             only: cg_list_element
       use grid_cont,           only: grid_container
@@ -169,7 +169,7 @@ contains
       ! mark external faces
          is_external(:, :) = .false.
          do j=xdim, zdim
-            if (has_dir(j) .and. .not. dom%periodic(j)) then
+            if (dom%has_dir(j) .and. .not. dom%periodic(j)) then
                is_external(j, LO) = (cg%off(j)    == 0)
                is_external(j, HI) = (cg%h_cor1(j) == dom%n_d(j))
             endif
@@ -182,9 +182,9 @@ contains
       single_base = (nproc == 1)
 
       ngridvars = correction  !< 4 variables are required for basic use of the multigrid solver
-      if (eff_dim < 1 .or. eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
+      if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
 
-      if (geometry_type == GEO_RPZ) multidim_code_3D = .true. ! temporarily
+      if (dom%geometry_type == GEO_RPZ) multidim_code_3D = .true. ! temporarily
 
 !> \todo Make an array of subroutine pointers
 #ifdef GRAV
@@ -245,8 +245,8 @@ contains
          else
             ! set up decomposition of coarse levels
             curl%dom = curl%finer%dom
-            where (has_dir(:)) curl%dom%n_d(:) = curl%dom%n_d(:) / I_TWO
-            if (any(curl%dom%n_d(:)*2 /= curl%finer%dom%n_d(:) .and. has_dir(:))) then
+            where (dom%has_dir(:)) curl%dom%n_d(:) = curl%dom%n_d(:) / I_TWO
+            if (any(curl%dom%n_d(:)*2 /= curl%finer%dom%n_d(:) .and. dom%has_dir(:))) then
                write(msg, '(a,3f10.1)')"[multigrid:init_multigrid] Fractional number of domain cells: ", half*curl%finer%dom%n_d(:)
                call die(msg) ! handling this would require coarse grids bigger than base grid
             endif
@@ -277,20 +277,20 @@ contains
 
          if (ubound(curl%dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid:init_multigrid] Multiple blocks per process not implemented yet")
 
-         if (any(curl%n_b(:) < curl%nb .and. has_dir(:) .and. .not. curl%empty)) then
+         if (any(curl%n_b(:) < curl%nb .and. dom%has_dir(:) .and. .not. curl%empty)) then
             write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
                  curl%nb, " > ", curl%n_b(:), " at level ", curl%level, ". You may try to set level_max <=", roof%level-curl%level+level_min-1
             call die(msg)
          endif
 
-         if (any(curl%n_b(:) * 2**(roof%level - curl%level) /= roof%n_b(:) .and. has_dir(:)) .and. .not. curl%empty .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
+         if (any(curl%n_b(:) * 2**(roof%level - curl%level) /= roof%n_b(:) .and. dom%has_dir(:)) .and. .not. curl%empty .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
 
          !> \todo check if these are correctly defined for multipole solver
          curl%dxy = 1.
          curl%dxz = 1.
          curl%dyz = 1.
 
-         if (has_dir(xdim)) then
+         if (dom%has_dir(xdim)) then
             curl%idx2  = 1. / curl%dx**2                      ! auxiliary invariants
             curl%dxy   = curl%dxy * curl%dx
             curl%dxz   = curl%dxz * curl%dx
@@ -298,7 +298,7 @@ contains
             curl%idx2  = 0.
          endif
 
-         if (has_dir(ydim)) then
+         if (dom%has_dir(ydim)) then
             curl%idy2  = 1. / curl%dy**2
             curl%dxy   = curl%dxy * curl%dy
             curl%dyz   = curl%dyz * curl%dy
@@ -306,7 +306,7 @@ contains
             curl%idy2  = 0.
          endif
 
-         if (has_dir(zdim)) then
+         if (dom%has_dir(zdim)) then
             curl%idz2  = 1. / curl%dz**2
             curl%dxz   = curl%dxz * curl%dz
             curl%dyz   = curl%dyz * curl%dz

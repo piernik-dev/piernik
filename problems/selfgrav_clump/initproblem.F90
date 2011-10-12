@@ -61,7 +61,7 @@ contains
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun   ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
-      use domain,        only: dom, has_dir
+      use domain,        only: dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use mpisetup,      only: ierr, rbuff, ibuff, lbuff, master, slave, buffer_dim, comm, FIRST
 
@@ -136,7 +136,7 @@ contains
 #endif /* ISO */
 
       clump_pos(:) = dom%C_(:)
-      clump_r = max(clump_r, maxval(dom%L_(:)/dom%n_d(:), mask=has_dir(:)))
+      clump_r = max(clump_r, maxval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:)))
 
    end subroutine read_problem_par
 

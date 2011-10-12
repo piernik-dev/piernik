@@ -53,7 +53,7 @@ contains
 
       use constants,     only: xdim, ydim, zdim, LO, HI, ndims, varlen, fluid_n, mag_n, wa_n
       use dataio_pub,    only: die
-      use domain,        only: has_dir, D_
+      use domain,        only: dom
       use fluidindex,    only: flind
       use global,        only: dt
       use grid,          only: all_cg
@@ -104,7 +104,7 @@ contains
          allocate(vv(cg%n_(vdir)), vv0(cg%n_(vdir)))
 
          im(bdir) = 1
-         do i = 1 + D_(bdir), cg%n_(bdir)
+         do i = 1 + dom%D_(bdir), cg%n_(bdir)
             ii(bdir) = i
             do j = cg%ijkse(rdir,LO), cg%ijkse(rdir,HI)
                ii(rdir) = j
@@ -129,7 +129,7 @@ contains
          enddo
 
          do i = xdim, zdim
-            if (has_dir(i)) call bnd_emf(cg%wa,emf,i, cg)
+            if (dom%has_dir(i)) call bnd_emf(cg%wa,emf,i, cg)
          enddo
 
          deallocate(vv, vv0)

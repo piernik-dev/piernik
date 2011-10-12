@@ -94,7 +94,7 @@ contains
    subroutine check_dirty(curl, iv, label, expand)
 
       use dataio_pub,    only: die, warn, msg
-      use domain,        only: eff_dim, D_x, D_y, D_z
+      use domain,        only: dom
       use mpisetup,      only: proc
       use multigridvars, only: ngridvars, plvl
       use constants,     only: ndims
@@ -112,15 +112,15 @@ contains
       if (iv < 1 .or. iv > ngridvars) call die("[multigridhelpers:check_dirty] Invalid variable index.")
       if (curl%empty) return
 
-      if (present(expand) .and. eff_dim==ndims) then ! for 1D and 2D one should define ng_x,ng_y and ng_z
+      if (present(expand) .and. dom%eff_dim==ndims) then ! for 1D and 2D one should define ng_x,ng_y and ng_z
          ng = min(curl%nb, expand)
       else
          ng = 0
       endif
 
-      do k = curl%ks-ng*D_z, curl%ke+ng*D_z
-         do j = curl%js-ng*D_y, curl%je+ng*D_y
-            do i = curl%is-ng*D_x, curl%ie+ng*D_x
+      do k = curl%ks-ng*dom%D_z, curl%ke+ng*dom%D_z
+         do j = curl%js-ng*dom%D_y, curl%je+ng*dom%D_y
+            do i = curl%is-ng*dom%D_x, curl%ie+ng*dom%D_x
                if (abs(curl%mgvar(i, j, k, iv)) > dirtyL) then
 !                        if (count([i<curl%is .or. i>curl%ie, j<curl%js .or. j>curl%je, k<curl%ks .or. k>curl%ke]) <=1) then ! excludes corners
                   write(msg, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &

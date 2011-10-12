@@ -128,7 +128,7 @@ contains
 
       use constants,  only: MINL, MAXL, ndims, xdim, ydim, zdim
       use dataio_pub, only: msg, warn, die
-      use domain,     only: has_dir, is_multicg
+      use domain,     only: dom, is_multicg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE
       use mpisetup,   only: mpifind, comm, ierr, master, proc, FIRST
@@ -161,10 +161,10 @@ contains
       call mpifind(prop, minmax)
 
       if (proc == prop%proc) then
-         where (.not. has_dir(:)) prop%coords(:) = 0.
-         if (has_dir(xdim)) prop%coords(xdim) = cg%x(prop%loc(xdim))
-         if (has_dir(ydim)) prop%coords(ydim) = cg%y(prop%loc(ydim))
-         if (has_dir(zdim)) prop%coords(zdim) = cg%z(prop%loc(zdim))
+         where (.not. dom%has_dir(:)) prop%coords(:) = 0.
+         if (dom%has_dir(xdim)) prop%coords(xdim) = cg%x(prop%loc(xdim))
+         if (dom%has_dir(ydim)) prop%coords(ydim) = cg%y(prop%loc(ydim))
+         if (dom%has_dir(zdim)) prop%coords(zdim) = cg%z(prop%loc(zdim))
       endif
 
       if (prop%proc /= 0) then

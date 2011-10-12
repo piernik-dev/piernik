@@ -62,7 +62,7 @@ contains
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
-      use domain,        only: dom, has_dir
+      use domain,        only: dom
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave, FIRST
 
@@ -78,7 +78,7 @@ contains
       x0           = 0.0       !< x-position of the blob
       y0           = 0.0       !< y-position of the blob
       z0           = 0.0       !< z-position of the blob
-      r0           = 5.* minval(dom%L_(:)/dom%n_d(:), mask=has_dir(:))  !< radius of the blob
+      r0           = 5.* minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))  !< radius of the blob
 
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
@@ -136,7 +136,7 @@ contains
 
       use constants,      only: xdim, ydim, zdim, I_ONE
       use dataio_pub,     only: msg, warn, printinfo, die
-      use domain,         only: has_dir, dom, is_multicg
+      use domain,         only: dom, is_multicg
       use fluidindex,     only: flind
       use gc_list,        only: cg_list_element
       use grid,           only: all_cg
@@ -172,9 +172,9 @@ contains
 
       cs_iso = sqrt(p0/d0)
 
-      if (.not.has_dir(xdim)) bx0 = 0. ! ignore B field in nonexistent direction
-      if (.not.has_dir(ydim)) by0 = 0.
-      if (.not.has_dir(zdim)) bz0 = 0.
+      if (.not.dom%has_dir(xdim)) bx0 = 0. ! ignore B field in nonexistent direction
+      if (.not.dom%has_dir(ydim)) by0 = 0.
+      if (.not.dom%has_dir(zdim)) bz0 = 0.
 
       if ((bx0**2 + by0**2 + bz0**2 == 0.) .and. (any(K_crn_paral(:) /= 0.) .or. any(K_crn_perp(:) /= 0.))) then
          call warn("[initproblem:init_prob] No magnetic field is set, K_crn_* also have to be 0.")

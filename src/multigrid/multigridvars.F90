@@ -169,7 +169,7 @@ contains
 
       use constants,  only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
       use dataio_pub, only: msg, warn, die
-      use domain,     only: has_dir, eff_dim
+      use domain,     only: dom
       use mpisetup,   only: proc, comm, ierr, req, status
       use mpi,        only: MPI_DOUBLE_PRECISION
 
@@ -213,7 +213,7 @@ contains
          fse => this%c_tgt%seg(g)%se
 
          off1(:) = mod(this%off(:), 2_LONG)
-         norm = 1./2**eff_dim
+         norm = 1./2**dom%eff_dim
          if (this%c_tgt%seg(g)%proc == proc) then
 
             nullify(cse)
@@ -229,7 +229,7 @@ contains
             if (.not. associated(cse)) call die("[multigridvars:restrict_level] cannot find local coarse grid")
 
             do d = xdim, zdim ! debug
-               if (has_dir(d)) then
+               if (dom%has_dir(d)) then
                   if ((fse(d, LO)-off1(d)-this%nb-1)/2+cse(d, LO) < cse(d, LO)) call die("mv:rl <cse")
                   if ((fse(d, HI)-off1(d)-this%nb-1)/2+cse(d, LO) > cse(d, HI)) call die("mv:rl >cse")
                endif
@@ -296,7 +296,7 @@ contains
 
       use constants,  only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
       use dataio_pub, only: msg, warn, die
-      use domain,     only: has_dir
+      use domain,     only: dom
       use mpisetup,   only: proc, comm, ierr, req, status
       use mpi,        only: MPI_DOUBLE_PRECISION
 
@@ -357,7 +357,7 @@ contains
 
             ! Possible optimization candidate: reduce L1 and L2 cache misses on both read and write (RBGS only, secondary importance)
             do d = xdim, zdim ! debug
-               if (has_dir(d)) then
+               if (dom%has_dir(d)) then
                   if ((fse(d, LO)-off1(d)-this%nb-1)/2+cse(d, LO) < cse(d, LO)) call die("mv:rl <cse")
                   if ((fse(d, HI)-off1(d)-this%nb-1)/2+cse(d, LO) > cse(d, HI)) call die("mv:rl >cse")
                endif

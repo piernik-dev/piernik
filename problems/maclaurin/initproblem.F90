@@ -147,7 +147,7 @@ contains
 
       use constants,   only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
       use dataio_pub,  only: msg, printinfo, warn, die
-      use domain,      only: dom, geometry_type
+      use domain,      only: dom
       use grid,        only: all_cg
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
@@ -176,7 +176,7 @@ contains
                      do jj = -nsub+1, nsub-1, 2
                         do ii = -nsub+1, nsub-1, 2
 
-                           select case (geometry_type)
+                           select case (dom%geometry_type)
                               case (GEO_XYZ)
                                  yy = ((cg%y(j) + jj*cg%dy/(2.*nsub) - y0)/a1)**2
                                  xx = ((cg%x(i) + ii*cg%dx/(2.*nsub) - x0)/a1)**2
@@ -186,7 +186,7 @@ contains
                                  xx = cg%x(i) + ii*cg%dx/(2.*nsub)
                                  rr = (xx**2 + x0**2 - 2. * xx * x0 * cos(yy))/a1**2 + zz
                               case default
-                                 call die("[initproblem:init_prob] Unsupported geometry_type")
+                                 call die("[initproblem:init_prob] Unsupported dom%geometry_type")
                                  rr = 0.
                            end select
 
@@ -220,8 +220,8 @@ contains
          write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
          call printinfo(msg, .true.)
          if (x0-a1<dom%edge(xdim, LO) .or. x0+a1>dom%edge(xdim, HI)) call warn("[initproblem:init_prob] Part of the spheroid is outside the domain in the X-direction.")
-         if ( (geometry_type == GEO_XYZ .and. (y0-a1<dom%edge(ydim, LO) .or. y0+a1>dom%edge(ydim, HI))) .or. &
-              (geometry_type == GEO_RPZ .and. (atan2(a1,x0) > minval([y0-dom%edge(ydim, LO), dom%edge(ydim, HI)-y0]))) ) & ! will fail when some one adds 2*k*pi to y0
+         if ( (dom%geometry_type == GEO_XYZ .and. (y0-a1<dom%edge(ydim, LO) .or. y0+a1>dom%edge(ydim, HI))) .or. &
+              (dom%geometry_type == GEO_RPZ .and. (atan2(a1,x0) > minval([y0-dom%edge(ydim, LO), dom%edge(ydim, HI)-y0]))) ) & ! will fail when some one adds 2*k*pi to y0
               call warn("[initproblem:init_prob] Part of the spheroid is outside the domain")
          write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
          call printinfo(msg, .true.)
@@ -266,7 +266,7 @@ contains
 
       use constants,   only: pi, GEO_XYZ, GEO_RPZ, AT_IGNORE
       use dataio_pub,  only: warn, die
-      use domain,      only: geometry_type
+      use domain,      only: dom
       use grid,        only: all_cg
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
@@ -312,7 +312,7 @@ contains
             z02 = (cg%z(k)-z0)**2
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  select case (geometry_type)
+                  select case (dom%geometry_type)
                      case (GEO_XYZ)
                         y02 = (cg%y(j)-y0)**2
                         x02 = (cg%x(i)-x0)**2
@@ -323,7 +323,7 @@ contains
                         x02 = r2 * cdphi**2
                         y02 = r2 - x02
                      case default
-                        call die("[initproblem:compute_maclaurin_potential] Invalid geometry_type.")
+                        call die("[initproblem:compute_maclaurin_potential] Invalid dom%geometry_type.")
                         r2 = 0 ; x02 = 0 ; y02 = 0 ! suppress compiler warnings
                   end select
                   rr = r2 * a12
@@ -370,7 +370,7 @@ contains
 
       use constants,  only: GEO_RPZ, I_ONE, I_TWO
       use dataio_pub, only: msg, printinfo, warn
-      use domain,     only: geometry_type
+      use domain,     only: dom
       use grid,       only: all_cg
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
@@ -405,7 +405,7 @@ contains
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
                   potential =  apot(i, j, k)
-                  if (geometry_type == GEO_RPZ) fac = cg%x(i)
+                  if (dom%geometry_type == GEO_RPZ) fac = cg%x(i)
                   norm(1) = norm(1) + (potential - cg%sgp(i, j, k))**2 * fac
                   norm(2) = norm(2) + potential**2 * fac
                   dev(1) = min(dev(1), (potential - cg%sgp(i, j, k))/potential)

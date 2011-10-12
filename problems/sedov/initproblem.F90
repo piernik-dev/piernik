@@ -64,7 +64,7 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
-      use domain,      only: dom, has_dir
+      use domain,      only: dom
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use mpisetup,    only: ibuff, rbuff, buffer_dim, master, slave, comm, ierr, FIRST
 
@@ -81,7 +81,7 @@ contains
       x0      = 0.0
       y0      = 0.0
       z0      = 0.0
-      r0      = minval(dom%L_(:)/dom%n_d(:), mask=has_dir(:))/2.
+      r0      = minval(dom%L_(:)/dom%n_d(:), mask=dom%has_dir(:))/2.
       n_sn    = 1
       dt_sn   = 0.0
 

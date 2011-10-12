@@ -58,7 +58,7 @@ contains
       use constants,     only: xdim, ydim, zdim, pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun    ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
-      use domain,        only: has_dir, dom
+      use domain,        only: dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
       use mpisetup,      only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, FIRST
       use problem_pub,   only: jeans_d0, jeans_mode
@@ -119,9 +119,9 @@ contains
       endif
 
       ! suppress waves in nonexistent directions
-      if (.not. has_dir(xdim)) ix = 0
-      if (.not. has_dir(ydim)) iy = 0
-      if (.not. has_dir(zdim)) iz = 0
+      if (.not. dom%has_dir(xdim)) ix = 0
+      if (.not. dom%has_dir(ydim)) iy = 0
+      if (.not. dom%has_dir(zdim)) iz = 0
 
       kx = 2. * pi * ix / dom%L_(xdim)
       ky = 2. * pi * iy / dom%L_(ydim)

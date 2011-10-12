@@ -110,7 +110,7 @@ contains
       use constants,     only: GEO_XYZ, half, zero, one
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, warn, msg
-      use domain,        only: geometry_type
+      use domain,        only: dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use mpisetup,      only: comm, ierr, master, slave, nproc, ibuff, rbuff, lbuff, cbuff, buffer_dim, FIRST
       use multigridvars, only: ngridvars, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, single_base
@@ -124,7 +124,7 @@ contains
 
       if (.not.frun) call die("[multigrid_diffusion:init_multigrid_diff] Called more than once.")
       frun = .false.
-      if (geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_gravdiffusion:init_multigrid_diff] non-cartesian geometry not implemented yet.")
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_gravdiffusion:init_multigrid_diff] non-cartesian geometry not implemented yet.")
 
       ! Default values for namelist variables
       norm_tol       = 1.e-2
@@ -433,7 +433,7 @@ contains
 
       use constants,          only: I_ONE, xdim, ydim, zdim
       use dataio_pub,         only: die
-      use domain,             only: D_x, D_y, D_z, is_multicg
+      use domain,             only: dom, is_multicg
       use grid,               only: all_cg
       use gc_list,            only: cg_list_element
       use grid_cont,          only: grid_container
@@ -458,8 +458,8 @@ contains
          cgl => all_cg%first
          do while (associated(cgl))
             cg => cgl%cg
-            roof%mgvar(       roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, diff_bx+ib-xdim) = &
-                 cg%b(ib,   cg%is-D_x:  cg%ie+D_x,   cg%js-D_y:  cg%je+D_y,   cg%ks-D_z:  cg%ke+D_z)
+            roof%mgvar(       roof%is-dom%D_x:roof%ie+dom%D_x, roof%js-dom%D_y:roof%je+dom%D_y, roof%ks-dom%D_z:roof%ke+dom%D_z, diff_bx+ib-xdim) = &
+                 cg%b(ib,   cg%is-dom%D_x:  cg%ie+dom%D_x,   cg%js-dom%D_y:  cg%je+dom%D_y,   cg%ks-dom%D_z:  cg%ke+dom%D_z)
             cgl => cgl%nxt
          enddo
          call restrict_all(diff_bx+ib-xdim)             ! Implement correct restriction (and probably also separate inter-process communication) routines
@@ -589,7 +589,7 @@ contains
       call norm_sq(defect, norm_lhs)
 !     Do we need to take care of boundaries here?
 !      call mpi_multigrid_bnd(roof, solution, I_ONE, diff_extbnd)
-!      cg%u(iarr_crs(cr_id), is-D_x:cg%ie+D_x, cg%js-D_y:cg%je+D_y, cg%ks-D_z:cg%ke+D_z) = roof%mgvar(roof%is-D_x:roof%ie+D_x, roof%js-D_y:roof%je+D_y, roof%ks-D_z:roof%ke+D_z, solution)
+!      cg%u(iarr_crs(cr_id), is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z) = roof%mgvar(roof%is-dom%D_x:roof%ie+dom%D_x, roof%js-dom%D_y:roof%je+dom%D_y, roof%ks-dom%D_z:roof%ke+dom%D_z, solution)
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -612,7 +612,7 @@ contains
 
       use constants,      only: xdim, ydim, zdim, ndims
       use dataio_pub,     only: die
-      use domain,         only: has_dir, is_multicg
+      use domain,         only: dom, is_multicg
       use grid,           only: all_cg
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
@@ -635,12 +635,12 @@ contains
       type(grid_container), pointer          :: cg
 
       ilm(:) = im(:) ; ilm(crdim) = ilm(crdim) - 1
-      present_not_crdim(:) = has_dir(:) .and. ( [ xdim,ydim,zdim ] /= crdim )
+      present_not_crdim(:) = dom%has_dir(:) .and. ( [ xdim,ydim,zdim ] /= crdim )
 
       cg => all_cg%first%cg
       if (is_multicg) call die("[multigrid_diffusion:diff_flux] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
-      ! Assumes has_dir(crdim)
+      ! Assumes dom%has_dir(crdim)
       !> \warning *curl%idl(crdim) makes a difference
       d_par = (curl%mgvar(im(xdim), im(ydim), im(zdim), soln) - curl%mgvar(ilm(xdim), ilm(ydim), ilm(zdim), soln)) * curl%idl(crdim)
       fcrdif = K_crs_perp(cr_id) * d_par
@@ -688,7 +688,7 @@ contains
 
       use constants,         only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
       use dataio_pub,        only: die
-      use domain,            only: has_dir, is_multicg
+      use domain,            only: dom, is_multicg
       use global,            only: dt
       use grid,              only: all_cg
       use grid_cont,         only: grid_container
@@ -721,7 +721,7 @@ contains
       enddo
 
       do idir = xdim, zdim
-         if (has_dir(idir)) then
+         if (dom%has_dir(idir)) then
             imh = curl%ijkse(:,HI) ; imh(idir) = imh(idir) + 1
             iml = curl%ijkse(:,LO) ; iml(idir) = iml(idir) + 1
             do k = curl%ks, imh(zdim)
@@ -755,7 +755,7 @@ contains
 
       use constants,         only: xdim, ydim, zdim, one, half, I_ONE, ndims
       use dataio_pub,        only: die
-      use domain,            only: has_dir, is_multicg
+      use domain,            only: dom, is_multicg
       use global,            only: dt
       use grid,              only: all_cg
       use grid_cont,         only: grid_container
@@ -791,11 +791,11 @@ contains
       i1 = curl%is; id = 1 ! mv to multigridvars, init_multigrid
       j1 = curl%js; jd = 1
       k1 = curl%ks; kd = 1
-      if (has_dir(xdim)) then
+      if (dom%has_dir(xdim)) then
          id = RED_BLACK
-      else if (has_dir(ydim)) then
+      else if (dom%has_dir(ydim)) then
          jd = RED_BLACK
-      else if (has_dir(zdim)) then
+      else if (dom%has_dir(zdim)) then
          kd = RED_BLACK
       endif
 
@@ -819,7 +819,7 @@ contains
                   im = [i, j, k]
 
                   do idir = xdim, zdim
-                     if (has_dir(idir)) then
+                     if (dom%has_dir(idir)) then
 
                         ih = im ; ih(idir) = ih(idir) + 1
                         call diff_flux(idir, im, soln, curl, cr_id, Keff1)

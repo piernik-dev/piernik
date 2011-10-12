@@ -286,7 +286,7 @@ contains
 
       use constants,   only: small, xdim, ydim, zdim, AT_NO_B
       use dataio_pub,  only: warn, printinfo, msg, die
-      use domain,      only: has_dir
+      use domain,      only: dom
       use global,      only: smalld
       use grid,        only: all_cg
       use gc_list,     only: cg_list_element
@@ -315,7 +315,7 @@ contains
          cg => cgl%cg
 
          if (master) then
-            if (maxval(cg%dl(:), mask=has_dir(:)) > ic_dx) then
+            if (maxval(cg%dl(:), mask=dom%has_dir(:)) > ic_dx) then
                write(msg,'(a)')     "[initproblem:init_prob] Too low resolution"
                call warn(msg)
             endif

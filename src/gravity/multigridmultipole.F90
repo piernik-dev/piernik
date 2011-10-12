@@ -115,7 +115,7 @@ contains
 
       use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI
       use dataio_pub,    only: die, warn
-      use domain,        only: dom, eff_dim, geometry_type, has_dir
+      use domain,        only: dom
       use mpisetup,      only: master
       use multigridvars, only: roof
 
@@ -128,7 +128,7 @@ contains
       ! assume that Center of Mass is approximately in the center of computational domain by default
       CoM(0) = 1.
 
-      select case (geometry_type)
+      select case (dom%geometry_type)
          case (GEO_XYZ)
             CoM(xdim:zdim) = dom%C_(xdim:zdim)
             zaxis_inside = .false.
@@ -154,7 +154,7 @@ contains
             call die("[multipole:init_multipole] Unsupported geometry.")
       end select
 
-      if (eff_dim /= ndims) call die("[multipole:init_multipole] Only 3D is supported") !> \todo add support for 2D RZ
+      if (dom%eff_dim /= ndims) call die("[multipole:init_multipole] Only 3D is supported") !> \todo add support for 2D RZ
 
       !multipole moments
       if (mmax > lmax) then
@@ -189,9 +189,9 @@ contains
          allocate(rn(0:lmax), irn(0:lmax), sfac(0:mmax), cfac(0:mmax))
          mb_alloc = mb_alloc + size(rn) + size(irn) + size(sfac) + size(cfac)
 
-         select case (geometry_type)
+         select case (dom%geometry_type)
             case (GEO_XYZ)
-               drq = minval(lmpole%dl(:), mask=has_dir(:)) / 2.
+               drq = minval(lmpole%dl(:), mask=dom%has_dir(:)) / 2.
                rqbin = int(sqrt(sum(dom%L_(:)**2))/drq) + 1
                ! arithmetic average of the closest and farthest points of computational domain with respect to its center
                !>
@@ -323,7 +323,7 @@ contains
       use dataio_pub,    only: die
       use constants,     only: xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
       use multigridvars, only: is_external
-      use domain,        only: geometry_type
+      use domain,        only: dom
       use units,         only: newtong
 
       implicit none
@@ -331,7 +331,7 @@ contains
       integer :: i, j, k, lh
       real    :: r2
 
-      if (geometry_type /= GEO_XYZ) call die("[multigridmultipole:isolated_monopole] non-cartesian geometry not implemented yet")
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:isolated_monopole] non-cartesian geometry not implemented yet")
 
       do lh = LO, HI
          if (is_external(xdim, lh)) then
@@ -372,7 +372,7 @@ contains
 
       use constants,     only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, I_ONE !, GEO_RPZ
       use dataio_pub,    only: die
-      use domain,        only: geometry_type
+      use domain,        only: dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,      only: comm, ierr
       use multigridvars, only: is_external
@@ -382,7 +382,7 @@ contains
       real, dimension(0:ndims) :: lsum, dsum
       integer :: lh
 
-      if (geometry_type /= GEO_XYZ) call die("[multigridmultipole:find_img_CoM] non-cartesian geometry not implemented yet")
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:find_img_CoM] non-cartesian geometry not implemented yet")
 
       lsum(:) = 0.
 
@@ -429,7 +429,7 @@ contains
    subroutine potential2img_mass
 
       use constants,     only: GEO_RPZ, LO, HI, xdim, ydim, zdim
-      use domain,        only: geometry_type
+      use domain,        only: dom
       use multigridvars, only: is_external, solution
 
       implicit none
@@ -442,7 +442,7 @@ contains
 
       !> \deprecated BEWARE: some cylindrical factors may be helpful
       if (is_external(xdim, LO)) then
-         if (zaxis_inside .and. geometry_type == GEO_RPZ) then
+         if (zaxis_inside .and. dom%geometry_type == GEO_RPZ) then
             lmpole%bnd_x(                         lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LO) = 0. ! treat as internal
          else
             lmpole%bnd_x(                         lmpole%js:lmpole%je, lmpole%ks:lmpole%ke, LO) =   ( &
@@ -459,7 +459,7 @@ contains
          lmpole%bnd_y(            lmpole%is:lmpole%ie,              lmpole%ks:lmpole%ke, LO) =    ( &
               & a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js,   lmpole%ks:lmpole%ke, solution) + &
               & a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%js+1, lmpole%ks:lmpole%ke, solution) ) / lmpole%dy
-         if (geometry_type == GEO_RPZ) then
+         if (dom%geometry_type == GEO_RPZ) then
             do i = lmpole%is, lmpole%ie
                if (lmpole%x(i) /= 0.) then ! cylindrical factor in the gradient operator
                   lmpole%bnd_y(i, lmpole%ks:lmpole%ke, LO) = lmpole%bnd_y(i, lmpole%ks:lmpole%ke, LO) / lmpole%x(i) !> \todo precompute sanitized 1/x(:) (convert plvl% into cg%)
@@ -474,7 +474,7 @@ contains
          lmpole%bnd_y(            lmpole%is:lmpole%ie,              lmpole%ks:lmpole%ke, HI) =   ( &
               & a1 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%je,   lmpole%ks:lmpole%ke, solution) + &
               & a2 * lmpole%mgvar(lmpole%is:lmpole%ie, lmpole%je-1, lmpole%ks:lmpole%ke, solution) ) / lmpole%dy
-         if (geometry_type == GEO_RPZ) then
+         if (dom%geometry_type == GEO_RPZ) then
             do i = lmpole%is, lmpole%ie
                if (lmpole%x(i) /= 0.) then
                   lmpole%bnd_y(i, lmpole%ks:lmpole%ke, HI) = lmpole%bnd_y(i, lmpole%ks:lmpole%ke, HI) / lmpole%x(i)
@@ -504,7 +504,7 @@ contains
 
       use constants,     only: ndims
       use dataio_pub,    only: die
-      use domain,        only: eff_dim
+      use domain,        only: dom
       use multigridvars, only: is_external, is_mg_uneven, plvl
 
       implicit none
@@ -512,7 +512,7 @@ contains
       type(plvl), pointer, intent(in) :: coarse !< level to prolong from
 
       if (is_mg_uneven) call die("[multigridmultipole:prolong_ext_bnd0] uneven decomposition not implemented yet")
-      if (eff_dim<ndims) call die("[multigridmultipole:prolong_ext_bnd0] 1D and 2D not finished")
+      if (dom%eff_dim<ndims) call die("[multigridmultipole:prolong_ext_bnd0] 1D and 2D not finished")
 
       if (abs(ord_prolong_mpole) > 2) call die("[multipole:prolong_ext_bnd] interpolation order too high")
 
@@ -671,7 +671,7 @@ contains
 
       use constants,     only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
       use dataio_pub,    only: die
-      use domain,        only: geometry_type
+      use domain,        only: dom
       use multigridvars, only: is_external
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,      only: comm, ierr
@@ -681,7 +681,7 @@ contains
       integer :: i, j, k, r, rr
       real, dimension(LO:HI) :: geofac
 
-      if (geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
 
       ! reset the multipole data
       Q(:, :, :) = 0.
@@ -693,10 +693,10 @@ contains
       !OPT: try to exchange loops i < j < k -> k < j < i
       ! scan
       if (any(is_external(xdim, :))) then
-         if (geometry_type == GEO_RPZ) geofac(:) = [ lmpole%fbnd(xdim, LO), lmpole%fbnd(xdim, HI) ]
+         if (dom%geometry_type == GEO_RPZ) geofac(:) = [ lmpole%fbnd(xdim, LO), lmpole%fbnd(xdim, HI) ]
          do j = lmpole%js, lmpole%je
             do k = lmpole%ks, lmpole%ke
-               if (is_external(xdim, LO) .and. (geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
+               if (is_external(xdim, LO) .and. (dom%geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
                     &                     call point2moments(lmpole%bnd_x(j, k, LO)*lmpole%dyz*geofac(LO), lmpole%fbnd(xdim, LO)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
                if (is_external(xdim, HI)) call point2moments(lmpole%bnd_x(j, k, HI)*lmpole%dyz*geofac(HI), lmpole%fbnd(xdim, HI)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
             enddo
@@ -714,7 +714,7 @@ contains
 
       if (any(is_external(zdim, :))) then
          do i = lmpole%is, lmpole%ie
-            if (geometry_type == GEO_RPZ) geofac(LO) = lmpole%x(i)
+            if (dom%geometry_type == GEO_RPZ) geofac(LO) = lmpole%x(i)
             do j = lmpole%js, lmpole%je
                if (is_external(zdim, LO)) call point2moments(lmpole%bnd_z(i, j, LO)*lmpole%dxy*geofac(LO), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%fbnd(zdim, LO)-CoM(zdim))
                if (is_external(zdim, HI)) call point2moments(lmpole%bnd_z(i, j, HI)*lmpole%dxy*geofac(LO), lmpole%x(i)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%fbnd(zdim, HI)-CoM(zdim))
@@ -848,18 +848,18 @@ contains
       use dataio_pub,      only: die
       use constants,       only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI
       use multigridvars,   only: is_external
-      use domain,          only: geometry_type
+      use domain,          only: dom
 
       implicit none
 
       integer :: i, j, k
 
-      if (geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
 
       if (any(is_external(xdim, :))) then
          do j = lmpole%js, lmpole%je
             do k = lmpole%ks, lmpole%ke
-               if (is_external(xdim, LO) .and. (geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
+               if (is_external(xdim, LO) .and. (dom%geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
                     &                     call moments2pot(lmpole%bnd_x(j, k, LO), lmpole%fbnd(xdim, LO)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
                if (is_external(xdim, HI)) call moments2pot(lmpole%bnd_x(j, k, HI), lmpole%fbnd(xdim, HI)-CoM(xdim), lmpole%y(j)-CoM(ydim), lmpole%z(k)-CoM(zdim))
             enddo
@@ -985,7 +985,7 @@ contains
 
       use constants,  only: GEO_XYZ, GEO_RPZ
       use dataio_pub, only: die, msg
-      use domain,     only: geometry_type
+      use domain,     only: dom
 
       implicit none
 
@@ -1003,7 +1003,7 @@ contains
       integer :: l, m
 
       ! radius and its projection onto XY plane
-      select case (geometry_type)
+      select case (dom%geometry_type)
          case (GEO_XYZ)
             rxy = x**2 + y**2
          case (GEO_RPZ)
@@ -1038,7 +1038,7 @@ contains
       ! ph = atan2(y, x); cfac(m) = cos(m * ph); sfac(m) = sin(m * ph)
       ! cfac(0) and sfac(0) are set in init_multigrid
       if (rxy /= 0.) then
-         select case (geometry_type)
+         select case (dom%geometry_type)
             case (GEO_XYZ)
                cos_ph = x / rxy
                sin_ph = y / rxy

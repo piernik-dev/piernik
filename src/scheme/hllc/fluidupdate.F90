@@ -42,7 +42,7 @@ contains
       use grid,           only: all_cg
       use gc_list,        only: cg_list_element
       use constants,      only: xdim, zdim
-      use domain,         only: has_dir
+      use domain,         only: dom
 
       implicit none
 
@@ -62,7 +62,7 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          do ddim = xdim, zdim, 1
-            if (has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
+            if (dom%has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
          enddo
          if (associated(problem_customize_solution)) call problem_customize_solution
          cgl => cgl%nxt
@@ -75,7 +75,7 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          do ddim = zdim, xdim, -1
-            if (has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
+            if (dom%has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
          enddo
          if (associated(problem_customize_solution)) call problem_customize_solution
          cgl => cgl%nxt

@@ -145,7 +145,7 @@ contains
 
       use constants,      only: xdim, ydim, zdim, HI
       use dataio_pub,     only: die, warn
-      use domain,         only: has_dir, dom
+      use domain,         only: dom
       use grid,           only: all_cg
       use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
@@ -172,9 +172,9 @@ contains
 
       cs_iso = sqrt(p0/d0)
 
-      if (.not.has_dir(xdim)) bx0 = 0. ! ignore B field in nonexistent direction to match the analytical solution
-      if (.not.has_dir(ydim)) by0 = 0.
-      if (.not.has_dir(zdim)) bz0 = 0.
+      if (.not.dom%has_dir(xdim)) bx0 = 0. ! ignore B field in nonexistent direction to match the analytical solution
+      if (.not.dom%has_dir(ydim)) by0 = 0.
+      if (.not.dom%has_dir(zdim)) bz0 = 0.
 
       if ((bx0**2 + by0**2 + bz0**2 == 0.) .and. (K_crn_paral(icr) /= 0. .or. K_crn_perp(icr) /= 0.)) then
          call warn("[initproblem:init_prob] No magnetic field is set, K_crn_* also have to be 0.")

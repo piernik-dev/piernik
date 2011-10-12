@@ -107,7 +107,7 @@ contains
       use constants,           only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, half, &
            &                         BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
       use dataio_pub,          only: msg, warn, die
-      use domain,              only: cdd, has_dir, is_multicg
+      use domain,              only: cdd, dom, is_multicg
       use fluidboundaries_funcs, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,          only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use global,              only: smalld
@@ -176,7 +176,7 @@ contains
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-               if (has_dir(ydim)) then
+               if (dom%has_dir(ydim)) then
                   send_left (:,:, cg%js:cg%je,  :) = cshift(send_left (:,:, cg%js:cg%je,:),dim=3,shift= delj)
                   send_left (:,:, 1:cg%nb,      :) = send_left (:,:, cg%jeb:cg%je,:)
                   send_left (:,:, cg%je+1:cg%n_(ydim),:) = send_left (:,:, cg%js:cg%jsb,:)
@@ -201,7 +201,7 @@ contains
 !
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
-               if (has_dir(ydim)) then
+               if (dom%has_dir(ydim)) then
                   send_right (:,:, cg%js:cg%je,  :) = cshift(send_right(:,:, cg%js:cg%je,:),dim=3,shift=-delj)
                   send_right (:,:, 1:cg%nb,      :) = send_right(:,:, cg%jeb:cg%je,:)
                   send_right (:,:, cg%je+1:cg%n_(ydim),:) = send_right(:,:, cg%js:cg%jsb,:)
@@ -637,7 +637,7 @@ contains
    subroutine all_fluid_boundaries
 
       use constants,    only: xdim, zdim, FLUID
-      use domain,       only: has_dir, cdd
+      use domain,       only: dom, cdd
       use gc_list,      only: cg_list_element
       use grid,         only: all_cg
       use internal_bnd, only: internal_boundaries_4d
@@ -650,14 +650,14 @@ contains
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          do dir = xdim, zdim
-            if (has_dir(dir)) call internal_boundaries_4d(FLUID, dim=dir)
+            if (dom%has_dir(dir)) call internal_boundaries_4d(FLUID, dim=dir)
          enddo
       endif
 
       cgl => all_cg%first
       do while (associated(cgl))
          do dir = xdim, zdim
-            if (has_dir(dir)) call bnd_u(dir, cgl%cg)
+            if (dom%has_dir(dir)) call bnd_u(dir, cgl%cg)
          enddo
          cgl => cgl%nxt
       enddo

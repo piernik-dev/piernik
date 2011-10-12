@@ -151,7 +151,7 @@ contains
 
       use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ARR, INT4, I_ONE, I_FOUR
       use dataio_pub,    only: die
-      use domain,        only: is_mpi_noncart, cdd, has_dir
+      use domain,        only: is_mpi_noncart, cdd, dom
       use mpi,           only: MPI_REQUEST_NULL, MPI_COMM_NULL
       use mpisetup,      only: proc, comm, ierr, have_mpi, req, status
       use multigridvars, only: plvl, is_external, ngridvars
@@ -192,7 +192,7 @@ contains
 
          do d = xdim, zdim
             nr = 0
-            if (has_dir(d)) then
+            if (dom%has_dir(d)) then
                if (allocated(curl%i_bnd(d, ARR, ng)%seg)) then
                   do g = 1, ubound(curl%i_bnd(d, ARR, ng)%seg(:), dim=1)
                      if (proc == curl%i_bnd(d, ARR, ng)%seg(g)%proc) then
@@ -233,7 +233,7 @@ contains
          req(:) = MPI_REQUEST_NULL
 
          do d = xdim, zdim
-            if (has_dir(d)) then
+            if (dom%has_dir(d)) then
                doff = dreq*(d-xdim)
                if (cdd%psize(d) > 1) then ! \todo remove psize(:), try to rely on offsets or boundary types
                   if (.not. is_external(d, LO)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, LO, BLK, ng), cdd%procn(d, LO), 17_INT4+doff, cdd%comm3d, req(1+doff), ierr)
@@ -275,7 +275,7 @@ contains
 !> \brief Set external boundary (not required for periodic box) on domain faces.
 !! \details In multigrid typically mirror boundaries are in use. Extrapolate isolated boundaries at exit.
 !!
-!! has_dir() is not checked here because is_external() should be set to .false. on non-existing directions in 1D and 2D setups
+!! dom%has_dir() is not checked here because is_external() should be set to .false. on non-existing directions in 1D and 2D setups
 !<
 
    subroutine multigrid_ext_bnd(curl, iv, ng, mode, cor)

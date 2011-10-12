@@ -112,7 +112,7 @@ contains
    subroutine init_prob
 
       use constants,   only: xdim, ydim, zdim
-      use domain,      only: has_dir
+      use domain,      only: dom
       use grid,        only: all_cg
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
@@ -140,7 +140,7 @@ contains
             do j = 1, cg%n_(ydim)
                rcy = (cg%y(j)-blobyc)**2
                do k = 1, cg%n_(zdim)
-                  if (has_dir(zdim)) then
+                  if (dom%has_dir(zdim)) then
                      rrel = sqrt(rcx + rcy + (cg%z(k)-blobzc)**2)
                   else
                      rrel = sqrt(rcx + rcy)

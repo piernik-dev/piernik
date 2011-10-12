@@ -61,7 +61,7 @@ contains
    subroutine timestep_ion(cg, dt, c_ion)
 
       use constants,     only: zero, two, half, ndims, xdim, ydim, zdim
-      use domain,        only: D_x, D_y, D_z
+      use domain,        only: dom
       use fluidindex,    only: flind
       use fluidtypes,    only: component_fluid
       use grid_cont,     only: grid_container
@@ -90,13 +90,13 @@ contains
             do i = cg%is, cg%ie
 
 #ifdef MAGNETIC
-               bx = (cg%b(xdim,i,j,k) + cg%b(xdim, i+D_x, j,     k    ))/(1.+D_x)
-               by = (cg%b(ydim,i,j,k) + cg%b(ydim, i,     j+D_y, k    ))/(1.+D_y)
-               bz = (cg%b(zdim,i,j,k) + cg%b(zdim, i,     j,     k+D_z))/(1.+D_z)
+               bx = (cg%b(xdim,i,j,k) + cg%b(xdim, i+dom%D_x, j,         k        ))/(1.+dom%D_x)
+               by = (cg%b(ydim,i,j,k) + cg%b(ydim, i,         j+dom%D_y, k        ))/(1.+dom%D_y)
+               bz = (cg%b(zdim,i,j,k) + cg%b(zdim, i,         j,         k+dom%D_z))/(1.+dom%D_z)
 
                pmag = half*(bx*bx + by*by + bz*bz)
 #else /* !MAGNETIC */
-               ! all_mag_boundaries has not been called so we cannot trust cg%b(xdim, cg%ie+D_x:), cg%b(ydim,:cg%je+D_y and cg%b(zdim,:,:, cg%ke+D_z
+               ! all_mag_boundaries has not been called so we cannot trust cg%b(xdim, cg%ie+dom%D_x:), cg%b(ydim,:cg%je+dom%D_y and cg%b(zdim,:,:, cg%ke+dom%D_z
                pmag = zero
 #endif /* !MAGNETIC */
 

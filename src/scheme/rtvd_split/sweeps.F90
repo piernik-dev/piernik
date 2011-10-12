@@ -112,7 +112,7 @@ contains
 
       use constants,       only: pdims, xdim, ydim, zdim, half, mag_n
       use fluidindex,      only: iarr_mag_swp, nmag
-      use domain,          only: D_
+      use domain,          only: dom
       use grid_cont,       only: grid_container
 
       implicit none
@@ -134,8 +134,8 @@ contains
       iby = iarr_mag_swp(cdim,ydim)
       ibz = iarr_mag_swp(cdim,zdim)
 
-      i1p = i1+D_(pdims(cdim,ydim))
-      i2p = i2+D_(pdims(cdim,zdim))
+      i1p = i1+dom%D_(pdims(cdim,ydim))
+      i2p = i2+dom%D_(pdims(cdim,zdim))
 
       pb => cg%w(magi)%get_sweep(cdim,ibx,i1,i2)
       b(ibx,1:cg%n_(cdim)-1) = half*( pb(1:cg%n_(cdim)-1)+pb(2:cg%n_(cdim)) )

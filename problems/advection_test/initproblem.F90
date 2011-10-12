@@ -74,7 +74,7 @@ contains
       use constants,  only: I_ONE, xdim, zdim
       use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_pub, only: warn
-      use domain,     only: dom, has_dir
+      use domain,     only: dom
       use fluidindex, only: flind
       use global,     only: smalld, smallei
       use mpisetup,   only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, proc, have_mpi, LAST, FIRST
@@ -127,7 +127,7 @@ contains
          endif
       endif
 
-      where (has_dir(:))
+      where (dom%has_dir(:))
          pulse_edge(:, LO) = dom%C_(:) - dom%L_(:) * pulse_size/2.
          pulse_edge(:, HI) = dom%C_(:) + dom%L_(:) * pulse_size/2.
       elsewhere
@@ -306,7 +306,7 @@ contains
 
       use constants,  only: xdim, zdim, ndims
       use dataio_pub, only: warn
-      use domain,     only: dom, has_dir
+      use domain,     only: dom
       use gc_list,    only: cg_list_element
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
@@ -352,7 +352,7 @@ contains
                   if (all(pos(:) > pulse_edge(:, LO) - cg%dl(:)/2.).and. all(pos(:) < pulse_edge(:, HI) + cg%dl(:)/2.)) then
                      dini = pulse_low_density * (pulse_amp - 1.)
                      do d = xdim, zdim
-                        if (has_dir(d)) then
+                        if (dom%has_dir(d)) then
                            if (abs(pos(d) - pulse_edge(d, LO)) < cg%dl(d)/2.) dini = dini * (0.5 + (pos(d) - pulse_edge(d, LO))/cg%dl(d))
                            if (abs(pos(d) - pulse_edge(d, HI)) < cg%dl(d)/2.) dini = dini * (0.5 - (pos(d) - pulse_edge(d, HI))/cg%dl(d))
                         endif

@@ -385,7 +385,7 @@ contains
       use grid,              only: all_cg
       use gc_list,           only: cg_list_element
       use grid_cont,         only: grid_container
-      use domain,            only: has_dir
+      use domain,            only: dom
       implicit none
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
@@ -395,7 +395,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (has_dir(xdim)) then
+         if (dom%has_dir(xdim)) then
             if (cg%bnd(xdim,LO) >= BND_OUT .and. cg%bnd(xdim,LO) <= BND_OUTH) then
                do i = 1, cg%nb+1
                   cg%gp(i,:,:)               = cg%gp(cg%nb+2,:,:)
@@ -409,7 +409,7 @@ contains
             endif
          endif
 
-         if (has_dir(ydim)) then
+         if (dom%has_dir(ydim)) then
             if (cg%bnd(ydim,LO) >= BND_OUT .and. cg%bnd(ydim,LO) <= BND_OUTH) then
                do i = 1, cg%nb+1
                   cg%gp(:,i,:)               = cg%gp(:,cg%nb+2,:)
@@ -423,7 +423,7 @@ contains
             endif
          endif
 
-         if (has_dir(zdim)) then
+         if (dom%has_dir(zdim)) then
             if (cg%bnd(zdim,LO) >= BND_OUT .and. cg%bnd(zdim,LO) <= BND_OUTH) then
                do i = 1, cg%nb+1
                   cg%gp(:,:,i)               = cg%gp(:,:,cg%nb+2)
@@ -736,7 +736,7 @@ contains
 
       use constants,  only: GEO_XYZ
       use dataio_pub, only: die, warn
-      use domain,     only: geometry_type
+      use domain,     only: dom
       use grid,       only: all_cg
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
@@ -761,7 +761,7 @@ contains
 
          gp_status = ''
 
-         if (geometry_type /= GEO_XYZ) then
+         if (dom%geometry_type /= GEO_XYZ) then
             select case (external_gp)
                case ("null", "grav_null", "GRAV_NULL")
                   ! No gravity - no problem, selfgravity has to check the geometry during initialization
@@ -901,7 +901,7 @@ contains
       use types,      only: value
       use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE
       use dataio_pub, only: die
-      use domain,     only: is_mpi_noncart, is_multicg, cdd, D_x, D_y, D_z
+      use domain,     only: is_mpi_noncart, is_multicg, cdd, dom
       use func,       only: get_extremum
       use grid,       only: all_cg
       use grid_cont,  only: grid_container !, cg_list_element
@@ -954,9 +954,9 @@ contains
          enddo
       enddo
 
-      dgpx_proc = gpwork(cg%ie+D_x, cg%js,     cg%ks    )-gpwork(cg%is,cg%js,cg%ks)
-      dgpy_proc = gpwork(cg%is,     cg%je+D_y, cg%ks    )-gpwork(cg%is,cg%js,cg%ks)
-      dgpz_proc = gpwork(cg%is,     cg%js,     cg%ke+D_z)-gpwork(cg%is,cg%js,cg%ks)
+      dgpx_proc = gpwork(cg%ie+dom%D_x, cg%js,         cg%ks        )-gpwork(cg%is,cg%js,cg%ks)
+      dgpy_proc = gpwork(cg%is,         cg%je+dom%D_y, cg%ks        )-gpwork(cg%is,cg%js,cg%ks)
+      dgpz_proc = gpwork(cg%is,         cg%js,         cg%ke+dom%D_z)-gpwork(cg%is,cg%js,cg%ks)
 
       call MPI_Gather ( dgpx_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpx_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
       call MPI_Gather ( dgpy_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpy_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )

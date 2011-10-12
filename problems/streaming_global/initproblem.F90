@@ -265,7 +265,7 @@ contains
       use constants,    only: DST, GEO_RPZ, xdim, ydim, zdim, INT4
       use global,       only: smalld
       use dataio_pub,   only: msg, printinfo, die
-      use domain,       only: geometry_type, cdd, has_dir, is_multicg
+      use domain,       only: dom, cdd, is_multicg
       use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
       use gravity,      only: ptmass, grav_pot2accel
@@ -291,7 +291,7 @@ contains
 
 !   Secondary parameters
       if (cdd%comm3d == MPI_COMM_NULL) call die("[initproblem:init_prob] comm3d == MPI_COMM_NULL not implemented") !pcoords
-      if (geometry_type /= GEO_RPZ) call die("[initproblem:init_prob] only cylindrical geometry supported")
+      if (dom%geometry_type /= GEO_RPZ) call die("[initproblem:init_prob] only cylindrical geometry supported")
 
       sqr_gm = sqrt(newtong*ptmass)
 
@@ -337,7 +337,7 @@ contains
 
 
                   ln_dens_der  = log(cg%u(fl%idn,:,j,k))
-                  if (has_dir(xdim)) then
+                  if (dom%has_dir(xdim)) then
                      call grav_pot2accel(xdim, j, k, cg%n_(xdim), grav, 1, cg)
                      ln_dens_der(2:cg%n_(xdim))  = ( ln_dens_der(2:cg%n_(xdim)) - ln_dens_der(1:cg%n_(xdim)-1) ) / cg%dx
                      ln_dens_der(1)        = ln_dens_der(2)

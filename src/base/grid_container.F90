@@ -182,7 +182,7 @@ contains
 
       use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_SHE, BND_COR
       use dataio_pub, only: die, warn, printinfo, msg, code_progress
-      use domain,     only: has_dir, domain_container, cdd
+      use domain,     only: domain_container, cdd
       use mpi,        only: MPI_COMM_NULL
       use mpisetup,   only: proc, nproc, inflate_req
 
@@ -286,13 +286,13 @@ contains
       else
 
          do i = xdim, zdim
-            if (has_dir(i)) then
+            if (dom%has_dir(i)) then
                if (this%n_b(i) < 1) call die("[grid_init] Too many CPUs for such a small grid.")
                if (this%n_b(i) < this%nb) call warn("[grid_init] domain size in some directions is < nb, which may result in incomplete boundary cell update")
             endif
          enddo
 
-         where (has_dir(:))
+         where (dom%has_dir(:))
             this%n_(:) = this%n_b(:) + I_TWO * this%nb       ! Block total grid size with guardcells
             this%ijkse(:, LO) = this%nb + I_ONE
             this%ijkse(:, HI) = this%nb + this%n_b(:)
@@ -308,7 +308,7 @@ contains
             this%fbnd(:, HI) = dom%edge(:, HI)
          endwhere
 
-         if (has_dir(xdim)) then
+         if (dom%has_dir(xdim)) then
             this%isb   = I_TWO*this%nb
             this%ieb   = this%n_b(xdim)+I_ONE
          else
@@ -316,7 +316,7 @@ contains
             this%ieb   = 1
          endif
 
-         if (has_dir(ydim)) then
+         if (dom%has_dir(ydim)) then
             this%jsb   = I_TWO*this%nb
             this%jeb   = this%n_b(ydim)+I_ONE
          else
@@ -324,7 +324,7 @@ contains
             this%jeb   = 1
          endif
 
-         if (has_dir(zdim)) then
+         if (dom%has_dir(zdim)) then
             this%ksb   = I_TWO*this%nb
             this%keb   = this%n_b(zdim)+I_ONE
          else
@@ -332,10 +332,10 @@ contains
             this%keb   = 1
          endif
 
-         this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=has_dir(:))
-         this%dvol = product(this%dl(:), mask=has_dir(:))
+         this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:))
+         this%dvol = product(this%dl(:), mask=dom%has_dir(:))
 
-         this%maxxyz = maxval(this%n_(:), mask=has_dir(:))
+         this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
 
 !--- Assignments -----------------------------------------------------------
          ! left zone boundaries:  xl, yl, zl
@@ -356,7 +356,7 @@ contains
 
       endif
 
-      this%dxmn = minval(this%dl(:), mask=has_dir(:))
+      this%dxmn = minval(this%dl(:), mask=dom%has_dir(:))
 
       ! some shortcuts for convenience
       this%idl(:) = 1./this%dl(:)
@@ -387,7 +387,7 @@ contains
    subroutine set_axis(d, a0, al, ar, ia, cg, dom)
 
       use constants, only: LO, HI, half, one, zero
-      use domain,    only: has_dir, domain_container
+      use domain,    only: domain_container
 
       implicit none
 
@@ -398,7 +398,7 @@ contains
 
       integer :: i
 
-      if (has_dir(d)) then
+      if (dom%has_dir(d)) then
          a0(:) = dom%edge(d, LO) + cg%dl(d) * ([(i, i=1, cg%n_(d))] - half - cg%nb + cg%off(d))
       else
          a0(:) = half*(cg%fbnd(d, LO) + cg%fbnd(d, HI))
@@ -421,7 +421,7 @@ contains
 
    subroutine cleanup(this)
 
-      use domain,    only: has_dir
+      use domain,    only: dom
       use mpisetup,  only: ierr
       use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, BLK, INVALID
 
@@ -449,7 +449,7 @@ contains
 
       if (allocated(this%mbc)) then
          do d = xdim, zdim
-            if (has_dir(d)) then
+            if (dom%has_dir(d)) then
                do t = FLUID, ARR
                   do b = 1, this%nb
                      if (this%mbc(t, d, LO, BLK, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BLK, b), ierr)
@@ -516,7 +516,7 @@ contains
 
       use constants,  only: FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID, I_ONE
       use dataio_pub, only: die
-      use domain,     only: has_dir, dom, is_overlap, cdd
+      use domain,     only: dom, is_overlap, cdd
       use fluidindex, only: flind
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: ierr, proc, FIRST, LAST, procmask
@@ -548,7 +548,7 @@ contains
       if (cdd%comm3d == MPI_COMM_NULL) then
 
          do d = xdim, zdim
-            if (has_dir(d) .and. .not. this%empty) then
+            if (dom%has_dir(d) .and. .not. this%empty) then
 
                ! identify processes with interesting neighbour data
                procmask(:) = 0
@@ -609,7 +609,7 @@ contains
 
                                     ! expand to cover corners (requires separate MPI_Waitall for each direction)
                                     ! \todo create separate %mbc for corner-less exchange with one MPI_Waitall (can scale better)
-                                    where (has_dir(:d-1))
+                                    where (dom%has_dir(:d-1))
                                        this%i_bnd(d, t, ib)%seg(g)%se(:d-1, LO) = this%i_bnd(d, t, ib)%seg(g)%se(:d-1, LO) - ib
                                        this%i_bnd(d, t, ib)%seg(g)%se(:d-1, HI) = this%i_bnd(d, t, ib)%seg(g)%se(:d-1, HI) + ib
                                     endwhere
@@ -659,7 +659,7 @@ contains
       else
 
          do d = xdim, zdim
-            if (has_dir(d)) then
+            if (dom%has_dir(d)) then
                do t = FLUID, ARR  ! fluid, Bfield, wcr, grav
 
                   allocate(sizes(dims(t)), subsizes(dims(t)), starts(dims(t)))

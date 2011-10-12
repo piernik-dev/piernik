@@ -67,7 +67,7 @@ contains
 
       use constants,    only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE, wcr_n
       use dataio_pub,   only: die
-      use domain,       only: has_dir, cdd
+      use domain,       only: dom, cdd
       use internal_bnd, only: internal_boundaries_4d
       use grid,         only: all_cg
       use gc_list,      only: cg_list_element
@@ -93,7 +93,7 @@ contains
          req(:) = MPI_REQUEST_NULL
 
          do d = xdim, zdim
-            if (has_dir(d)) then
+            if (dom%has_dir(d)) then
                do lh = LO, HI
                   select case (cg%bnd(d, lh))
                      case (BND_PER)
@@ -168,7 +168,7 @@ contains
 
       use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n
       use dataio_pub,     only: die
-      use domain,         only: has_dir
+      use domain,         only: dom
       use fluidindex,     only: flind
       use global,         only: dt
       use grid,           only: all_cg
@@ -193,11 +193,11 @@ contains
 
 !=======================================================================
 
-      if (.not.has_dir(crdim)) return
+      if (.not.dom%has_dir(crdim)) return
 
       idm        = 0              ;      idm(crdim) = 1
-      decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.has_dir(dim) .and. (dim /= crdim) )
-      present_not_crdim = has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
+      decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
+      present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
 
       cgl => all_cg%first
       do while (associated(cgl))

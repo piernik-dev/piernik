@@ -257,7 +257,7 @@ contains
 
       use constants,  only: I_ONE, half
       use dataio_pub, only: msg, printinfo
-      use domain,     only: total_ncells
+      use domain,     only: dom
       use global,     only: nstep
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,   only: comm, ierr, master, FIRST
@@ -292,7 +292,7 @@ contains
 
       if (master) then
 
-         zcps  = real(nstep) * real(total_ncells) / cpuallp
+         zcps  = real(nstep) * real(dom%total_ncells) / cpuallp
 
          call printinfo("", .true.)
          write(msg, "('CPU time        = ', f12.2,' s')") cpuallp

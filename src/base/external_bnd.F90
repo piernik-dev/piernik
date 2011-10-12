@@ -55,7 +55,7 @@ contains
 
       use constants,    only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B, I_ONE
       use dataio_pub,   only: die, msg
-      use domain,       only: has_dir, cdd
+      use domain,       only: dom, cdd
       use gc_list,      only: cg_list_element
       use grid,         only: all_cg
       use grid_cont,    only: grid_container
@@ -108,7 +108,7 @@ contains
          pa3d =>cg%q(ind)%arr
 
          do d = xdim, zdim
-            if (has_dir(d)) then
+            if (dom%has_dir(d)) then
                do lh = LO, HI
 
                   select case (cg%bnd(d, lh))

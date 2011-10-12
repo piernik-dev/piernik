@@ -98,7 +98,7 @@ contains
       use constants,  only: PIERNIK_INIT_GRID, zdim, xdim, ydim
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress
-      use domain,     only: eff_dim, has_dir, is_multicg
+      use domain,     only: dom, is_multicg
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
@@ -171,12 +171,12 @@ contains
          if (.not.allocated(dby)) allocate(dby(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
          if (.not.allocated(dbz)) allocate(dbz(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
-         if (.not.has_dir(xdim)) dbx = 0.0
-         if (.not.has_dir(ydim)) dby = 0.0
-         if (.not.has_dir(zdim)) dbz = 0.0
+         if (.not.dom%has_dir(xdim)) dbx = 0.0
+         if (.not.dom%has_dir(ydim)) dby = 0.0
+         if (.not.dom%has_dir(zdim)) dbz = 0.0
 
          jc2 = j_crit**2
-         dims_twice = 2. * eff_dim
+         dims_twice = 2. * dom%eff_dim
          d_eta_factor = 1./(dims_twice+dble(eta_scale))
       endif
 
@@ -191,7 +191,7 @@ contains
 
       use constants,  only: small, xdim, ydim, zdim, MINL, MAXL, I_ONE, half, oneq
       use dataio_pub, only: die
-      use domain,     only: has_dir, is_multicg
+      use domain,     only: dom, is_multicg
       use func,       only: get_extremum
       use grid,       only: all_cg
       use gc_list,    only: cg_list_element
@@ -217,33 +217,33 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (has_dir(xdim)) then
+         if (dom%has_dir(xdim)) then
             dbx(2:cg%n_(xdim),:,:) = (cg%b(ydim,2:cg%n_(xdim),:,:)-cg%b(ydim,1:cg%n_(xdim)-1,:,:))*cg%idl(xdim) ; dbx(1,:,:) = dbx(2,:,:)
          endif
-         if (has_dir(ydim)) then
+         if (dom%has_dir(ydim)) then
             dby(:,2:cg%n_(ydim),:) = (cg%b(xdim,:,2:cg%n_(ydim),:)-cg%b(xdim,:,1:cg%n_(ydim)-1,:))*cg%idl(ydim) ; dby(:,1,:) = dby(:,2,:)
          endif
-         if (has_dir(zdim)) then
+         if (dom%has_dir(zdim)) then
             dbz(:,:,2:cg%n_(zdim)) = (cg%b(ydim,:,:,2:cg%n_(zdim))-cg%b(ydim,:,:,1:cg%n_(zdim)-1))*cg%idl(zdim) ; dbz(:,:,1) = dbz(:,:,2)
          endif
 
 !--- current_z **2
          eh = dbx - dby
-         if (has_dir(zdim)) then
+         if (dom%has_dir(zdim)) then
             wb(:,:,2:cg%n_(zdim)) =                         oneq*(eh(:,:,2:cg%n_(zdim)) + eh(:,:,1:cg%n_(zdim)-1))**2 ; wb(:,:,1) = wb(:,:,2)
          else
             wb = eh**2
          endif
 !--- current_x **2
          eh = dby - dbz
-         if (has_dir(xdim)) then
+         if (dom%has_dir(xdim)) then
             wb(2:cg%n_(xdim),:,:) = wb(2:cg%n_(xdim),:,:) + oneq*(eh(2:cg%n_(xdim),:,:) + eh(1:cg%n_(xdim)-1,:,:))**2 ; wb(1,:,:) = wb(2,:,:)
          else
             wb = wb + eh**2
          endif
 !--- current_y **2
          eh = dbz - dbx
-         if (has_dir(ydim)) then
+         if (dom%has_dir(ydim)) then
             wb(:,2:cg%n_(ydim),:) = wb(:,2:cg%n_(ydim),:) + oneq*(eh(:,2:cg%n_(ydim),:) + eh(:,1:cg%n_(ydim)-1,:))**2 ; wb(:,1,:) = wb(:,2,:)
          else
             wb = wb + eh**2
@@ -252,15 +252,15 @@ contains
          eta%arr(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
 
          eh = 0.0
-         if (has_dir(xdim)) then
+         if (dom%has_dir(xdim)) then
             eh(2:cg%n_(xdim)-1,:,:) = eh(2:cg%n_(xdim)-1,:,:) + eta%arr(1:cg%n_(xdim)-2,:,:) + eta%arr(3:cg%n_(xdim),:,:)
             eh(1,:,:) = eh(2,:,:) ; eh(cg%n_(xdim),:,:) = eh(cg%n_(xdim)-1,:,:)
          endif
-         if (has_dir(ydim)) then
+         if (dom%has_dir(ydim)) then
             eh(:,2:cg%n_(ydim)-1,:) = eh(:,2:cg%n_(ydim)-1,:) + eta%arr(:,1:cg%n_(ydim)-2,:) + eta%arr(:,3:cg%n_(ydim),:)
             eh(:,1,:) = eh(:,2,:) ; eh(:,cg%n_(ydim),:) = eh(:,cg%n_(ydim)-1,:)
          endif
-         if (has_dir(zdim)) then
+         if (dom%has_dir(zdim)) then
             eh(:,:,2:cg%n_(zdim)-1) = eh(:,:,2:cg%n_(zdim)-1) + eta%arr(:,:,1:cg%n_(zdim)-2) + eta%arr(:,:,3:cg%n_(zdim))
             eh(:,:,1) = eh(:,:,2) ; eh(:,:,cg%n_(zdim)) = eh(:,:,cg%n_(zdim)-1)
          endif
@@ -379,7 +379,7 @@ contains
    subroutine diffuseb(ibdir, sdir)
 
       use constants,     only: xdim, ydim, zdim, ndims, half, varlen, I_ONE, mag_n
-      use domain,        only: has_dir
+      use domain,        only: dom
       use global,        only: dt
       use grid,          only: all_cg
       use gc_list,       only: cg_list_element
@@ -439,7 +439,7 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          do i1 = xdim, zdim
-            if (has_dir(i1)) call bnd_emf(wcu%arr,emf,i1, cgl%cg)
+            if (dom%has_dir(i1)) call bnd_emf(wcu%arr,emf,i1, cgl%cg)
          enddo
          cgl => cgl%nxt
       enddo

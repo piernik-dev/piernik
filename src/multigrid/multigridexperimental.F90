@@ -106,7 +106,7 @@ contains
 
       use constants,         only: ndims
       use dataio_pub,        only: die, warn, msg
-      use domain,            only: eff_dim
+      use domain,            only: dom
       use mpisetup,          only: master
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: ord_prolong, extbnd_antimirror, plvl
@@ -129,7 +129,7 @@ contains
 
       call mpi_multigrid_bnd(coarse, iv, int(abs(ord_prolong/2), kind=4), extbnd_antimirror) ! exchange guardcells with corners
 
-      if (eff_dim<ndims) call die("[multigridexperimental:prolong_level_hord] 1D and 2D not finished")
+      if (dom%eff_dim<ndims) call die("[multigridexperimental:prolong_level_hord] 1D and 2D not finished")
 
       select case (ord_prolong)
       case (-4)

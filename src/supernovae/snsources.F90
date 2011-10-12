@@ -74,7 +74,7 @@ contains
       use constants,      only: PIERNIK_INIT_GRID, xdim, ydim
       use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun                  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
-      use domain,         only: has_dir, dom
+      use domain,         only: dom
       use initcosmicrays, only: cr_eff
       use mpi,            only: MPI_DOUBLE_PRECISION
       use mpisetup,       only: rbuff, buffer_dim, comm, ierr, master, slave, FIRST
@@ -109,13 +109,13 @@ contains
 
       amp_ecr_sn = 4.96e6*cr_eff/r_sn**3
 
-      if (has_dir(xdim)) then
+      if (dom%has_dir(xdim)) then
          f_sn = f_sn_kpc2 * dom%L_(xdim)/1000.0 !\deprecated magic numbers
       else
          f_sn = f_sn_kpc2 * 2.0*r_sn/1000.0
       endif
 
-      if (has_dir(ydim)) then
+      if (dom%has_dir(ydim)) then
          f_sn = f_sn * dom%L_(ydim)/1000.0
       else
          f_sn = f_sn * 2.0*r_sn/1000.0
@@ -243,7 +243,7 @@ contains
    subroutine rand_coords(pos)
 
       use constants, only: xdim, ydim, zdim, LO
-      use domain,    only: has_dir, dom
+      use domain,    only: dom
 #ifdef SHEAR
       use grid,      only: all_cg
       use grid_cont, only: grid_container
@@ -265,7 +265,7 @@ contains
       xsn = dom%edge(xdim, LO)+ dom%L_(xdim)*rand(1)
       ysn = dom%edge(ydim, LO)+ dom%L_(ydim)*rand(2)
 
-      if (has_dir(zdim)) then
+      if (dom%has_dir(zdim)) then
          irand = irand+4
          znorm = gasdev(rand(3),rand(4))
          zsn = h_sn*znorm

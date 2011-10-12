@@ -112,7 +112,7 @@ contains
       use global,              only: skip_sweep
 #ifdef SHEAR
       use dataio_pub,          only: die
-      use domain,              only: has_dir, is_multicg
+      use domain,              only: dom, is_multicg
       use fluidboundaries,     only: bnd_u
       use global,              only: t, dt
       use grid,                only: all_cg
@@ -141,9 +141,9 @@ contains
       cg => all_cg%first%cg
       if (is_multicg) call die("[fluidupdate:make_3sweeps] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
 
-      if (has_dir(ydim)) call yshift(t, dt)
-      if (has_dir(xdim)) call bnd_u(xdim, cg)
-      if (has_dir(ydim)) call bnd_u(ydim, cg)
+      if (dom%has_dir(ydim)) call yshift(t, dt)
+      if (dom%has_dir(xdim)) call bnd_u(xdim, cg)
+      if (dom%has_dir(ydim)) call bnd_u(ydim, cg)
 #endif /* SHEAR */
 
 #ifdef GRAV
@@ -176,7 +176,7 @@ contains
    subroutine make_sweep(dir, forward)
 
       use constants,      only: ydim
-      use domain,         only: has_dir
+      use domain,         only: dom
       use sweeps,         only: sweep
 #if defined SHEAR && defined FLUID_INTERACTIONS
       use sweeps,         only: source_terms_y
@@ -194,7 +194,7 @@ contains
       integer(kind=4), intent(in) :: dir      !< direction, one of xdim, ydim, zdim
       logical, intent(in) :: forward  !< if .false. then reverse operation order in the sweep
 
-      if (has_dir(dir)) then
+      if (dom%has_dir(dir)) then
          if (.not. forward) then
 #ifdef COSM_RAYS
             if (use_split) call cr_diff(dir)

@@ -159,7 +159,7 @@ contains
       use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
-      use domain,        only: dom, has_dir, eff_dim, geometry_type, is_uneven, cdd
+      use domain,        only: dom, is_uneven, cdd
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
       use mpisetup,      only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST
       use multigridvars, only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, ngridvars, single_base
@@ -210,9 +210,9 @@ contains
       interp_pt2mom          = .false.
       interp_mom2pot         = .false.
 
-      periodic_bnd_cnt = count(dom%periodic(:) .and. has_dir(:))
+      periodic_bnd_cnt = count(dom%periodic(:) .and. dom%has_dir(:))
 
-      if (periodic_bnd_cnt == eff_dim) then
+      if (periodic_bnd_cnt == dom%eff_dim) then
          grav_bnd_str = "periodic"
       else
          grav_bnd_str = "dirichlet"
@@ -223,7 +223,7 @@ contains
          diff_nml(MULTIGRID_GRAVITY)
 
          ! FIXME when ready
-         if (geometry_type == GEO_RPZ) then
+         if (dom%geometry_type == GEO_RPZ) then
             call warn("[multigrid_gravity:init_multigrid_grav] cylindrical geometry support is under development.")
             ! switch off FFT-related bits
             base_no_fft = .true.
@@ -231,7 +231,7 @@ contains
             ord_laplacian = 2
             L4_strength = 0.
             ! ord_prolong_mpole = 0
-         else if (geometry_type /= GEO_XYZ) then
+         else if (dom%geometry_type /= GEO_XYZ) then
             call die("[multigrid_gravity:init_multigrid_grav] non-cartesian geometry not implemented yet.")
          endif
 
@@ -325,10 +325,10 @@ contains
             call die("[multigrid_gravity:init_multigrid_grav] Non-recognized boundary description.")
       end select
 
-      if (periodic_bnd_cnt == eff_dim) then ! fully periodic domain
+      if (periodic_bnd_cnt == dom%eff_dim) then ! fully periodic domain
          if (grav_bnd /= bnd_periodic .and. master) call warn("[multigrid_gravity:init_multigrid_grav] Ignoring non-periodic boundary conditions for gravity on a fully periodic domain.")
          grav_bnd = bnd_periodic
-      else if (periodic_bnd_cnt > 0 .and. periodic_bnd_cnt < eff_dim) then
+      else if (periodic_bnd_cnt > 0 .and. periodic_bnd_cnt < dom%eff_dim) then
          if (master) call warn("[multigrid_gravity:init_multigrid_grav] Mixing periodic and non-periodic boundary conditions for gravity is experimental.")
          prefer_rbgs_relaxation = .true.
          base_no_fft = .true.
@@ -388,7 +388,7 @@ contains
 
       use constants,        only: pi, dpi, GEO_XYZ, xdim, ydim, zdim, one, zero, half
       use dataio_pub,       only: die, warn
-      use domain,           only: geometry_type, dom, cdd, has_dir
+      use domain,           only: dom, cdd
       use grid,             only: all_cg
       use gc_list,          only: cg_list_element
       use mpi,              only: MPI_COMM_NULL
@@ -450,7 +450,7 @@ contains
 
       curl => base
       do while (associated(curl))
-         ! this should work correctly also when eff_dim < 3
+         ! this should work correctly also when dom%eff_dim < 3
          if (curl%empty) then
             curl%fft_type = fft_none
             curl%r  = 0.
@@ -504,7 +504,7 @@ contains
       endif
 
       !special initialization of global base-level FFT-related data
-      if (any(lvl(:)%fft_type /= fft_none) .and. geometry_type /= GEO_XYZ) &
+      if (any(lvl(:)%fft_type /= fft_none) .and. dom%geometry_type /= GEO_XYZ) &
            call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
 
       ! FFT solver storage and data
@@ -516,7 +516,7 @@ contains
 
          if (curl%fft_type /= fft_none .and. .not. curl%empty) then
 
-            if (geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
+            if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
 
             select case (curl%fft_type)
                case (fft_rcr)
@@ -547,7 +547,7 @@ contains
                   allocate(curl%fft(curl%nxc, curl%nyb, curl%nzb))
                   mb_alloc = mb_alloc + 2*size(curl%fft)
 
-                  curl%fft_norm = one / real( product(curl%n_b(:), mask=has_dir(:)) ) ! No 4 pi G factor here because the source was already multiplied by it
+                  curl%fft_norm = one / real( product(curl%n_b(:), mask=dom%has_dir(:)) ) ! No 4 pi G factor here because the source was already multiplied by it
 
                   ! FFT local solver initialization for 2nd order (3-point) Laplacian
                   ! sin(k*x-d) - 2.*sin(k*x) + sin(k*x+d) = 2 * (cos(d)-1) * sin(k*x) = -4 * sin(d/2)**2 * sin(k*x)
@@ -569,7 +569,7 @@ contains
                   allocate(curl%fftr(curl%nxc, curl%nyb, curl%nzb))
                   mb_alloc = mb_alloc + size(curl%fftr)
 
-                  curl%fft_norm = one / (8. * real( product(curl%n_b(:), mask=has_dir(:)) ))
+                  curl%fft_norm = one / (8. * real( product(curl%n_b(:), mask=dom%has_dir(:)) ))
                   kx(:) = curl%idx2 * (cos(pi/curl%nxb*[( j, j=1, curl%nxc )]) - one)
                   ky(:) = curl%idy2 * (cos(pi/curl%nyb*[( j, j=1, curl%nyb )]) - one)
                   kz(:) = curl%idz2 * (cos(pi/curl%nzb*[( j, j=1, curl%nzb )]) - one)
@@ -621,7 +621,7 @@ contains
 
       use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG, zero, one, half
       use dataio_pub,    only: warn, die
-      use domain,        only: has_dir, is_overlap
+      use domain,        only: dom, is_overlap
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req, req
       use multigridvars, only: base, plvl, pr_segment, ord_prolong_face_norm, is_external, need_general_pf
 #ifdef DEBUG
@@ -687,7 +687,7 @@ contains
             dmask(:) = .false.
             dmask(d) = .true.
             do lh = LO, HI
-               if (has_dir(d) .and. .not. curl%empty) then
+               if (dom%has_dir(d) .and. .not. curl%empty) then
                   hl = LO+HI-lh
 
                   ! find coarse target for receiving data to be prolonged
@@ -989,7 +989,7 @@ contains
 
       use constants,          only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,         only: die
-      use domain,             only: geometry_type, is_multicg
+      use domain,             only: dom, is_multicg
       use grid,               only: all_cg
       use grid_cont,          only: grid_container
       use multigridbasefuncs, only: subtract_average
@@ -1030,20 +1030,20 @@ contains
          case (bnd_givenval) ! convert potential into a layer of imaginary mass (subtract second derivative normal to computational domain boundary)
             if (is_external(xdim, LO)) then
                fac = 2. * roof%idx2 / fpiG
-               if (geometry_type == GEO_RPZ .and. roof%x(roof%is) /= 0.) fac = fac - 1./(roof%dx * roof%x(roof%is) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
+               if (dom%geometry_type == GEO_RPZ .and. roof%x(roof%is) /= 0.) fac = fac - 1./(roof%dx * roof%x(roof%is) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
                roof%mgvar       (roof%is, roof%js:roof%je, roof%ks:roof%ke, source) = &
                     & roof%mgvar(roof%is, roof%js:roof%je, roof%ks:roof%ke, source) - &
                     & roof%bnd_x(         roof%js:roof%je, roof%ks:roof%ke, LO) * fac
             endif
             if (is_external(xdim, HI)) then
                fac = 2. * roof%idx2 / fpiG
-               if (geometry_type == GEO_RPZ .and. roof%x(roof%ie) /= 0.) fac = fac - 1./(roof%dx * roof%x(roof%ie) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
+               if (dom%geometry_type == GEO_RPZ .and. roof%x(roof%ie) /= 0.) fac = fac - 1./(roof%dx * roof%x(roof%ie) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
                roof%mgvar       (roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
                     & roof%mgvar(roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - &
                     & roof%bnd_x(         roof%js:roof%je, roof%ks:roof%ke, HI) * fac
             endif
             if (is_external(ydim, LO)) then
-               if (geometry_type == GEO_RPZ) then
+               if (dom%geometry_type == GEO_RPZ) then
                   do i = roof%is, roof%ie
                      if (roof%x(i) /= 0.) then
                         roof%mgvar       (i, roof%js, roof%ks:roof%ke, source) = &
@@ -1058,7 +1058,7 @@ contains
                endif
             endif
             if (is_external(ydim, HI)) then
-               if (geometry_type == GEO_RPZ) then
+               if (dom%geometry_type == GEO_RPZ) then
                   do i = roof%is, roof%ie
                      if (roof%x(i) /= 0.) then
                         roof%mgvar       (i, roof%je, roof%ks:roof%ke, source) = &
@@ -1388,7 +1388,7 @@ contains
 
       use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half, I_ONE
       use dataio_pub,         only: die
-      use domain,             only: has_dir, eff_dim, geometry_type
+      use domain,             only: dom
       use multigridhelpers,   only: multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: plvl, extbnd_antimirror
@@ -1415,9 +1415,9 @@ contains
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
       ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
 
-      select case (geometry_type)
+      select case (dom%geometry_type)
          case (GEO_XYZ)
-            if (eff_dim == ndims .and. .not. multidim_code_3D) then
+            if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
                do k = curl%ks, curl%ke
                   curl%mgvar       (curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)        = &
                        & curl%mgvar(curl%is  :curl%ie,   curl%js  :curl%je,   k,   src)        - &
@@ -1435,17 +1435,17 @@ contains
                   curl%mgvar       (curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   = &
                        & curl%mgvar(curl%is  :curl%ie,   curl%js  :curl%je,   k,   src)   - &
                        & curl%mgvar(curl%is  :curl%ie,   curl%js  :curl%je,   k,   soln)  * L0
-                  if (has_dir(xdim)) &
+                  if (dom%has_dir(xdim)) &
                        & curl%mgvar(curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   = &
                        & curl%mgvar(curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   - &
                        ( curl%mgvar(curl%is-1:curl%ie-1, curl%js  :curl%je,   k,   soln)  + &
                        & curl%mgvar(curl%is+1:curl%ie+1, curl%js  :curl%je,   k,   soln)) * Lx
-                  if (has_dir(ydim)) &
+                  if (dom%has_dir(ydim)) &
                        & curl%mgvar(curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   = &
                        & curl%mgvar(curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   - &
                        ( curl%mgvar(curl%is  :curl%ie,   curl%js-1:curl%je-1, k,   soln)  + &
                        & curl%mgvar(curl%is  :curl%ie,   curl%js+1:curl%je+1, k,   soln)) * Ly
-                  if (has_dir(zdim)) &
+                  if (dom%has_dir(zdim)) &
                        & curl%mgvar(curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   = &
                        & curl%mgvar(curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   - &
                        ( curl%mgvar(curl%is  :curl%ie,   curl%js  :curl%je,   k-1, soln)  + &
@@ -1467,12 +1467,12 @@ contains
                      endif
                      L0 = -2. * (Lx + Ly + Lz)
                      curl%mgvar(i, j, k, def) = curl%mgvar(i, j, k, src) - curl%mgvar(i, j, k, soln) * L0
-                     if (has_dir(xdim)) curl%mgvar(i,   j,   k,   def)  = curl%mgvar(i,   j,   k,   def)        - &
+                     if (dom%has_dir(xdim)) curl%mgvar(i,   j,   k,   def)  = curl%mgvar(i,   j,   k,   def)        - &
                           &            (curl%mgvar(i+1, j,   k,   soln) + curl%mgvar(i-1, j,   k,   soln)) * Lx - &
                           &            (curl%mgvar(i+1, j,   k,   soln) - curl%mgvar(i-1, j,   k,   soln)) * Lx1    ! cylindrical term
-                     if (has_dir(ydim)) curl%mgvar(i,   j,   k,   def)  = curl%mgvar(i,   j,   k,   def)        - &
+                     if (dom%has_dir(ydim)) curl%mgvar(i,   j,   k,   def)  = curl%mgvar(i,   j,   k,   def)        - &
                           &            (curl%mgvar(i,   j+1, k,   soln) + curl%mgvar(i,   j-1, k,   soln)) * Ly
-                     if (has_dir(zdim)) curl%mgvar(i,   j,   k,   def)  = curl%mgvar(i,   j,   k,   def)        - &
+                     if (dom%has_dir(zdim)) curl%mgvar(i,   j,   k,   def)  = curl%mgvar(i,   j,   k,   def)        - &
                           &            (curl%mgvar(i,   j,   k+1, soln) + curl%mgvar(i,   j,   k-1, soln)) * Lz
                   enddo
                enddo
@@ -1500,7 +1500,7 @@ contains
 
       use constants,         only: I_TWO
       use dataio_pub,        only: die, warn
-      use domain,            only: eff_dim
+      use domain,            only: dom
       use mpisetup,          only: master
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: plvl, bnd_givenval, extbnd_antimirror
@@ -1522,7 +1522,7 @@ contains
       logical, save       :: firstcall = .true.
       integer             :: i, j, k
 
-      if (eff_dim<ndims) call die("[multigrid_gravity:residual4] Only 3D is implemented")
+      if (dom%eff_dim<ndims) call die("[multigrid_gravity:residual4] Only 3D is implemented")
 
       if (firstcall) then
          if (master) call warn("[multigrid_gravity:residual4] residual order 4 is experimental.")
@@ -1637,7 +1637,7 @@ contains
 
       use constants,         only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE
       use dataio_pub,        only: die
-      use domain,            only: has_dir, eff_dim, geometry_type
+      use domain,            only: dom
       use multigridhelpers,  only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: plvl, base, extbnd_antimirror
@@ -1662,7 +1662,7 @@ contains
          nsmoo = nsmool
       endif
 
-      if (geometry_type == GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
+      if (dom%geometry_type == GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
 
       do n = 1, RED_BLACK*nsmoo
          call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror) ! no corners are required here
@@ -1683,11 +1683,11 @@ contains
 
          ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
 
-         if (eff_dim==ndims .and. .not. multidim_code_3D) then
+         if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
             do k = curl%ks, curl%ke
                do j = curl%js, curl%je
                   i1 = curl%is + mod(n+j+k, RED_BLACK)
-                  if (geometry_type == GEO_RPZ) then
+                  if (dom%geometry_type == GEO_RPZ) then
 !!$                     curl%mgvar(i1  :curl%ie  :2, j,   k,   soln) = &
 !!$                          curl%rx * (curl%mgvar(i1-1:curl%ie-1:2, j,   k,   soln) + curl%mgvar(i1+1:curl%ie+1:2, j,   k,   soln)) + &
 !!$                          curl%ry * (curl%mgvar(i1  :curl%ie  :2, j-1, k,   soln) + curl%mgvar(i1:  curl%ie:  2, j+1, k,   soln)) + &
@@ -1709,16 +1709,16 @@ contains
             i1 = curl%is; id = 1 ! mv to multigridvars, init_multigrid
             j1 = curl%js; jd = 1
             k1 = curl%ks; kd = 1
-            if (has_dir(xdim)) then
+            if (dom%has_dir(xdim)) then
                id = RED_BLACK
-            else if (has_dir(ydim)) then
+            else if (dom%has_dir(ydim)) then
                jd = RED_BLACK
-            else if (has_dir(zdim)) then
+            else if (dom%has_dir(zdim)) then
                kd = RED_BLACK
             endif
 
             if (kd == RED_BLACK) k1 = curl%ks + mod(n, RED_BLACK)
-            select case (geometry_type)
+            select case (dom%geometry_type)
                case (GEO_XYZ)
                   do k = k1, curl%ke, kd
                      if (jd == RED_BLACK) j1 = curl%js + mod(n+k, RED_BLACK)
@@ -1727,11 +1727,11 @@ contains
                         curl%mgvar                           (i1:  curl%ie  :id, j,   k,   soln) = &
                              & (1. - Jacobi_damp)* curl%mgvar(i1  :curl%ie  :id, j,   k,   soln) - &
                              &       Jacobi_damp * curl%mgvar(i1  :curl%ie  :id, j,   k,   src)  * curl%r
-                        if (has_dir(xdim))         curl%mgvar(i1  :curl%ie  :id, j,   k,   soln) = curl%mgvar(i1:  curl%ie:  id, j,   k,   soln)  + &
+                        if (dom%has_dir(xdim))         curl%mgvar(i1  :curl%ie  :id, j,   k,   soln) = curl%mgvar(i1:  curl%ie:  id, j,   k,   soln)  + &
                              &       Jacobi_damp *(curl%mgvar(i1-1:curl%ie-1:id, j,   k,   soln) + curl%mgvar(i1+1:curl%ie+1:id, j,   k,   soln)) * curl%rx
-                        if (has_dir(ydim))         curl%mgvar(i1  :curl%ie  :id, j,   k,   soln) = curl%mgvar(i1:  curl%ie:  id, j,   k,   soln)  + &
+                        if (dom%has_dir(ydim))         curl%mgvar(i1  :curl%ie  :id, j,   k,   soln) = curl%mgvar(i1:  curl%ie:  id, j,   k,   soln)  + &
                              &       Jacobi_damp *(curl%mgvar(i1  :curl%ie  :id, j-1, k,   soln) + curl%mgvar(i1:  curl%ie:  id, j+1, k,   soln)) * curl%ry
-                        if (has_dir(zdim))         curl%mgvar(i1  :curl%ie  :id, j,   k,   soln) = curl%mgvar(i1:  curl%ie:  id, j,   k,   soln)  + &
+                        if (dom%has_dir(zdim))         curl%mgvar(i1  :curl%ie  :id, j,   k,   soln) = curl%mgvar(i1:  curl%ie:  id, j,   k,   soln)  + &
                              &       Jacobi_damp *(curl%mgvar(i1  :curl%ie  :id, j,   k-1, soln) + curl%mgvar(i1:  curl%ie:  id, j,   k+1, soln)) * curl%rz
                      enddo
                   enddo
@@ -1756,12 +1756,12 @@ contains
                            curl%mgvar                           (i,   j,   k,   soln) = &
                                 & (1. - Jacobi_damp)* curl%mgvar(i,   j,   k,   soln) - &
                                 &       Jacobi_damp * curl%mgvar(i,   j,   k,   src)  * cr
-                           if (has_dir(xdim))         curl%mgvar(i,   j,   k,   soln) = curl%mgvar(i,   j,   k,   soln)  + &
+                           if (dom%has_dir(xdim))         curl%mgvar(i,   j,   k,   soln) = curl%mgvar(i,   j,   k,   soln)  + &
                                 &       Jacobi_damp *(curl%mgvar(i-1, j,   k,   soln) + curl%mgvar(i+1, j,   k,   soln)) * crx + &
                                 &       Jacobi_damp *(curl%mgvar(i+1, j,   k,   soln) - curl%mgvar(i-1, j,   k,   soln)) * crx * crx1
-                           if (has_dir(ydim))         curl%mgvar(i,   j,   k,   soln) = curl%mgvar(i,   j,   k,   soln)  + &
+                           if (dom%has_dir(ydim))         curl%mgvar(i,   j,   k,   soln) = curl%mgvar(i,   j,   k,   soln)  + &
                                 &       Jacobi_damp *(curl%mgvar(i,   j-1, k,   soln) + curl%mgvar(i,   j+1, k,   soln)) * cry
-                           if (has_dir(zdim))         curl%mgvar(i,   j,   k,   soln) = curl%mgvar(i,   j,   k,   soln)  + &
+                           if (dom%has_dir(zdim))         curl%mgvar(i,   j,   k,   soln) = curl%mgvar(i,   j,   k,   soln)  + &
                                 &       Jacobi_damp *(curl%mgvar(i,   j,   k-1, soln) + curl%mgvar(i,   j,   k+1, soln)) * crz
                         enddo
                      enddo
@@ -1791,7 +1791,7 @@ contains
 
       use constants,         only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE
       use dataio_pub,        only: die, warn
-      use domain,            only: has_dir, eff_dim, geometry_type, D_x, D_y, D_z
+      use domain,            only: dom
       use multigridhelpers,  only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: plvl, base, extbnd_antimirror, single_base
@@ -1808,7 +1808,7 @@ contains
 
       if (curl%fft_type == fft_none) call die("[multigrid_gravity:approximate_solution_fft] unknown FFT type")
 
-      if (geometry_type /= GEO_XYZ) call die("[multigrid_gravity:approximate_solution_fft] FFT is not allowed in non-cartesian coordinates.")
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:approximate_solution_fft] FFT is not allowed in non-cartesian coordinates.")
 
       do nf = 1, nsmoof
          curl%src(:, :, :) = curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ks:curl%ke, src)
@@ -1818,35 +1818,35 @@ contains
                call make_face_boundaries(curl, soln)
             else
                call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
-               if (has_dir(xdim)) then
+               if (dom%has_dir(xdim)) then
                   curl%bnd_x(:, :, LO) = half* sum (curl%mgvar(curl%is-1:curl%is, curl%js:curl%je, curl%ks:curl%ke, soln), 1)
                   curl%bnd_x(:, :, HI) = half* sum (curl%mgvar(curl%ie:curl%ie+1, curl%js:curl%je, curl%ks:curl%ke, soln), 1)
                endif
-               if (has_dir(ydim)) then
+               if (dom%has_dir(ydim)) then
                   curl%bnd_y(:, :, LO) = half* sum (curl%mgvar(curl%is:curl%ie, curl%js-1:curl%js, curl%ks:curl%ke, soln), 2)
                   curl%bnd_y(:, :, HI) = half* sum (curl%mgvar(curl%is:curl%ie, curl%je:curl%je+1, curl%ks:curl%ke, soln), 2)
                endif
-               if (has_dir(zdim)) then
+               if (dom%has_dir(zdim)) then
                   curl%bnd_z(:, :, LO) = half* sum (curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ks-1:curl%ks, soln), 3)
                   curl%bnd_z(:, :, HI) = half* sum (curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ke:curl%ke+1, soln), 3)
                endif
             endif
 
             if (dirty_debug) then
-               if (has_dir(xdim) .and. any(abs(curl%bnd_x(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_x")
-               if (has_dir(ydim) .and. any(abs(curl%bnd_y(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_y")
-               if (has_dir(zdim) .and. any(abs(curl%bnd_z(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_z")
+               if (dom%has_dir(xdim) .and. any(abs(curl%bnd_x(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_x")
+               if (dom%has_dir(ydim) .and. any(abs(curl%bnd_y(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_y")
+               if (dom%has_dir(zdim) .and. any(abs(curl%bnd_z(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_z")
             endif
 
-            if (has_dir(xdim)) then
+            if (dom%has_dir(xdim)) then
                curl%src(1,        :, :) = curl%src(1,        :, :) - curl%bnd_x(:, :, LO) * 2. * curl%idx2
                curl%src(curl%nxb, :, :) = curl%src(curl%nxb, :, :) - curl%bnd_x(:, :, HI) * 2. * curl%idx2
             endif
-            if (has_dir(ydim)) then
+            if (dom%has_dir(ydim)) then
                curl%src(:, 1,        :) = curl%src(:, 1,        :) - curl%bnd_y(:, :, LO) * 2. * curl%idy2
                curl%src(:, curl%nyb, :) = curl%src(:, curl%nyb, :) - curl%bnd_y(:, :, HI) * 2. * curl%idy2
             endif
-            if (has_dir(zdim)) then
+            if (dom%has_dir(zdim)) then
                curl%src(:, :, 1       ) = curl%src(:, :, 1       ) - curl%bnd_z(:, :, LO) * 2. * curl%idz2
                curl%src(:, :, curl%nzb) = curl%src(:, :, curl%nzb) - curl%bnd_z(:, :, HI) * 2. * curl%idz2
             endif
@@ -1858,7 +1858,7 @@ contains
 
          call check_dirty(curl, soln, "approx_soln fft+")
 
-         !> \deprecated BEWARE use has_dir() here in a way that does not degrade performance
+         !> \deprecated BEWARE use dom%has_dir() here in a way that does not degrade performance
 
          if (associated(curl, base) .and. single_base) then !> do not relax if it is a whole domain (BEWARE: simplified check)
             nsmoo = 0
@@ -1871,7 +1871,7 @@ contains
             call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
             ! Possible optimization: This is a quite costly part of the local FFT solver
             if (fft_full_relax) then
-               if (eff_dim == ndims .and. .not. multidim_code_3D) then
+               if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
                   curl%mgvar                (curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  = &
                        curl%rx * (curl%mgvar(curl%is-1:curl%ie-1, curl%js:curl%je,     curl%ks:curl%ke,     soln)  + &
                        &          curl%mgvar(curl%is+1:curl%ie+1, curl%js:curl%je,     curl%ks:curl%ke,     soln)) + &
@@ -1887,17 +1887,17 @@ contains
                   ! An additional array (curl%src would be good enough) is required here to assemble partial results or use red-black passes
                   curl%mgvar                (curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  = &
                        - curl%r * curl%mgvar(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     src)
-                  if (has_dir(xdim)) &
+                  if (dom%has_dir(xdim)) &
                        &          curl%mgvar(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  = &
                        &          curl%mgvar(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  + &
                        curl%rx * (curl%mgvar(curl%is-1:curl%ie-1, curl%js:curl%je,     curl%ks:curl%ke,     soln)  + &
                        &          curl%mgvar(curl%is+1:curl%ie+1, curl%js:curl%je,     curl%ks:curl%ke,     soln))
-                  if (has_dir(ydim)) &
+                  if (dom%has_dir(ydim)) &
                        &          curl%mgvar(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  = &
                        &          curl%mgvar(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  + &
                        curl%ry * (curl%mgvar(curl%is:curl%ie,     curl%js-1:curl%je-1, curl%ks:curl%ke,     soln)  + &
                        &          curl%mgvar(curl%is:curl%ie,     curl%js+1:curl%je+1, curl%ks:curl%ke,     soln))
-                  if (has_dir(zdim)) &
+                  if (dom%has_dir(zdim)) &
                        &          curl%mgvar(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  = &
                        &          curl%mgvar(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  + &
                        curl%rz * (curl%mgvar(curl%is:curl%ie,     curl%js:curl%je,     curl%ks-1:curl%ke-1, soln)  + &
@@ -1907,64 +1907,64 @@ contains
                ! relax only two layers of cells (1 is  significantly worse, 3 does not improve much)
                ! edges are relaxed twice, corners are relaxed three times which seems to be good
 
-               if (has_dir(xdim)) then
-                  curl%mgvar                (curl%is    :curl%is+D_x,   curl%js    :curl%je,     curl%ks    :curl%ke,     soln)  = & ! -X
-                       curl%rx * (curl%mgvar(curl%is-D_x:curl%is,       curl%js    :curl%je,     curl%ks    :curl%ke,     soln)  + &
-                       &          curl%mgvar(curl%is+D_x:curl%is+2*D_x, curl%js    :curl%je,     curl%ks    :curl%ke,     soln)) + &
-                       curl%ry * (curl%mgvar(curl%is    :curl%is+D_x,   curl%js-D_y:curl%je-D_y, curl%ks    :curl%ke,     soln)  + &
-                       &          curl%mgvar(curl%is    :curl%is+D_x,   curl%js+D_y:curl%je+D_y, curl%ks    :curl%ke,     soln)) + &
-                       curl%rz * (curl%mgvar(curl%is    :curl%is+D_x,   curl%js    :curl%je,     curl%ks-D_z:curl%ke-D_z, soln)  + &
-                       &          curl%mgvar(curl%is    :curl%is+D_x,   curl%js    :curl%je,     curl%ks+D_z:curl%ke+D_z, soln)) - &
-                       curl%r  *  curl%mgvar(curl%is    :curl%is+D_x,   curl%js    :curl%je,     curl%ks    :curl%ke,     src)
+               if (dom%has_dir(xdim)) then
+                  curl%mgvar                (curl%is        :curl%is+dom%D_x,   curl%js        :curl%je,         curl%ks        :curl%ke,         soln)  = & ! -X
+                       curl%rx * (curl%mgvar(curl%is-dom%D_x:curl%is,           curl%js        :curl%je,         curl%ks        :curl%ke,         soln)  + &
+                       &          curl%mgvar(curl%is+dom%D_x:curl%is+2*dom%D_x, curl%js        :curl%je,         curl%ks        :curl%ke,         soln)) + &
+                       curl%ry * (curl%mgvar(curl%is        :curl%is+dom%D_x,   curl%js-dom%D_y:curl%je-dom%D_y, curl%ks        :curl%ke,         soln)  + &
+                       &          curl%mgvar(curl%is        :curl%is+dom%D_x,   curl%js+dom%D_y:curl%je+dom%D_y, curl%ks        :curl%ke,         soln)) + &
+                       curl%rz * (curl%mgvar(curl%is        :curl%is+dom%D_x,   curl%js        :curl%je,         curl%ks-dom%D_z:curl%ke-dom%D_z, soln)  + &
+                       &          curl%mgvar(curl%is        :curl%is+dom%D_x,   curl%js        :curl%je,         curl%ks+dom%D_z:curl%ke+dom%D_z, soln)) - &
+                       curl%r  *  curl%mgvar(curl%is        :curl%is+dom%D_x,   curl%js        :curl%je,         curl%ks        :curl%ke,         src)
 
-                  curl%mgvar                (curl%ie-D_x  :curl%ie,     curl%js    :curl%je,     curl%ks    :curl%ke,     soln)  = & ! +X
-                       curl%rx * (curl%mgvar(curl%ie-2*D_x:curl%ie-D_x, curl%js    :curl%je,     curl%ks    :curl%ke,     soln)  + &
-                       &          curl%mgvar(curl%ie      :curl%ie+D_x, curl%js    :curl%je,     curl%ks    :curl%ke,     soln)) + &
-                       curl%ry * (curl%mgvar(curl%ie-D_x  :curl%ie,     curl%js-D_y:curl%je-D_y, curl%ks    :curl%ke,     soln)  + &
-                       &          curl%mgvar(curl%ie-D_x  :curl%ie,     curl%js+D_y:curl%je+D_y, curl%ks    :curl%ke,     soln)) + &
-                       curl%rz * (curl%mgvar(curl%ie-D_x  :curl%ie,     curl%js    :curl%je,     curl%ks-D_z:curl%ke-D_z, soln)  + &
-                       &          curl%mgvar(curl%ie-D_x  :curl%ie,     curl%js    :curl%je,     curl%ks+D_z:curl%ke+D_z, soln)) - &
-                       curl%r  *  curl%mgvar(curl%ie-D_x  :curl%ie,     curl%js    :curl%je,     curl%ks    :curl%ke,     src)
+                  curl%mgvar                (curl%ie-dom%D_x  :curl%ie,         curl%js        :curl%je,         curl%ks        :curl%ke,         soln)  = & ! +X
+                       curl%rx * (curl%mgvar(curl%ie-2*dom%D_x:curl%ie-dom%D_x, curl%js        :curl%je,         curl%ks        :curl%ke,         soln)  + &
+                       &          curl%mgvar(curl%ie          :curl%ie+dom%D_x, curl%js        :curl%je,         curl%ks        :curl%ke,         soln)) + &
+                       curl%ry * (curl%mgvar(curl%ie-dom%D_x  :curl%ie,         curl%js-dom%D_y:curl%je-dom%D_y, curl%ks        :curl%ke,         soln)  + &
+                       &          curl%mgvar(curl%ie-dom%D_x  :curl%ie,         curl%js+dom%D_y:curl%je+dom%D_y, curl%ks        :curl%ke,         soln)) + &
+                       curl%rz * (curl%mgvar(curl%ie-dom%D_x  :curl%ie,         curl%js        :curl%je,         curl%ks-dom%D_z:curl%ke-dom%D_z, soln)  + &
+                       &          curl%mgvar(curl%ie-dom%D_x  :curl%ie,         curl%js        :curl%je,         curl%ks+dom%D_z:curl%ke+dom%D_z, soln)) - &
+                       curl%r  *  curl%mgvar(curl%ie-dom%D_x  :curl%ie,         curl%js        :curl%je,         curl%ks        :curl%ke,         src)
                endif
 
-               if (has_dir(ydim)) then
-                  curl%mgvar                (curl%is    :curl%ie,     curl%js    :curl%js+D_y,   curl%ks    :curl%ke,     soln)  = & ! -Y
-                       curl%rx * (curl%mgvar(curl%is-D_x:curl%ie-D_x, curl%js    :curl%js+D_y,   curl%ks    :curl%ke,     soln)  + &
-                       &          curl%mgvar(curl%is+D_x:curl%ie+D_x, curl%js    :curl%js+D_y,   curl%ks    :curl%ke,     soln)) + &
-                       curl%ry * (curl%mgvar(curl%is    :curl%ie,     curl%js-D_y:curl%js,       curl%ks    :curl%ke,     soln)  + &
-                       &          curl%mgvar(curl%is    :curl%ie,     curl%js+D_y:curl%js+2*D_y, curl%ks    :curl%ke,     soln)) + &
-                       curl%rz * (curl%mgvar(curl%is    :curl%ie,     curl%js    :curl%js+D_y,   curl%ks-D_z:curl%ke-D_z, soln)  + &
-                       &          curl%mgvar(curl%is    :curl%ie,     curl%js    :curl%js+D_y,   curl%ks+D_z:curl%ke+D_z, soln)) - &
-                       curl%r  *  curl%mgvar(curl%is    :curl%ie,     curl%js    :curl%js+D_y,   curl%ks    :curl%ke,     src)
+               if (dom%has_dir(ydim)) then
+                  curl%mgvar                (curl%is        :curl%ie,         curl%js        :curl%js+dom%D_y,   curl%ks        :curl%ke,         soln)  = & ! -Y
+                       curl%rx * (curl%mgvar(curl%is-dom%D_x:curl%ie-dom%D_x, curl%js        :curl%js+dom%D_y,   curl%ks        :curl%ke,         soln)  + &
+                       &          curl%mgvar(curl%is+dom%D_x:curl%ie+dom%D_x, curl%js        :curl%js+dom%D_y,   curl%ks        :curl%ke,         soln)) + &
+                       curl%ry * (curl%mgvar(curl%is        :curl%ie,         curl%js-dom%D_y:curl%js,           curl%ks        :curl%ke,         soln)  + &
+                       &          curl%mgvar(curl%is        :curl%ie,         curl%js+dom%D_y:curl%js+2*dom%D_y, curl%ks        :curl%ke,         soln)) + &
+                       curl%rz * (curl%mgvar(curl%is        :curl%ie,         curl%js        :curl%js+dom%D_y,   curl%ks-dom%D_z:curl%ke-dom%D_z, soln)  + &
+                       &          curl%mgvar(curl%is        :curl%ie,         curl%js        :curl%js+dom%D_y,   curl%ks+dom%D_z:curl%ke+dom%D_z, soln)) - &
+                       curl%r  *  curl%mgvar(curl%is        :curl%ie,         curl%js        :curl%js+dom%D_y,   curl%ks        :curl%ke,         src)
 
-                  curl%mgvar                (curl%is    :curl%ie,     curl%je-D_y  :curl%je,     curl%ks    :curl%ke,     soln)  = & ! +Y
-                       curl%rx * (curl%mgvar(curl%is-D_x:curl%ie-D_x, curl%je-D_y  :curl%je,     curl%ks    :curl%ke,     soln)  + &
-                       &          curl%mgvar(curl%is+D_x:curl%ie+D_x, curl%je-D_y  :curl%je,     curl%ks    :curl%ke,     soln)) + &
-                       curl%ry * (curl%mgvar(curl%is    :curl%ie,     curl%je-2*D_y:curl%je-D_y, curl%ks    :curl%ke,     soln)  + &
-                       &          curl%mgvar(curl%is    :curl%ie,     curl%je      :curl%je+D_y, curl%ks    :curl%ke,     soln)) + &
-                       curl%rz * (curl%mgvar(curl%is    :curl%ie,     curl%je-D_y  :curl%je,     curl%ks-D_z:curl%ke-D_z, soln)  + &
-                       &          curl%mgvar(curl%is    :curl%ie,     curl%je-D_y  :curl%je,     curl%ks+D_z:curl%ke+D_z, soln)) - &
-                       curl%r  *  curl%mgvar(curl%is    :curl%ie,     curl%je-D_y  :curl%je,     curl%ks    :curl%ke,     src)
+                  curl%mgvar                (curl%is        :curl%ie,         curl%je-dom%D_y  :curl%je,         curl%ks        :curl%ke,         soln)  = & ! +Y
+                       curl%rx * (curl%mgvar(curl%is-dom%D_x:curl%ie-dom%D_x, curl%je-dom%D_y  :curl%je,         curl%ks        :curl%ke,         soln)  + &
+                       &          curl%mgvar(curl%is+dom%D_x:curl%ie+dom%D_x, curl%je-dom%D_y  :curl%je,         curl%ks        :curl%ke,         soln)) + &
+                       curl%ry * (curl%mgvar(curl%is        :curl%ie,         curl%je-2*dom%D_y:curl%je-dom%D_y, curl%ks        :curl%ke,         soln)  + &
+                       &          curl%mgvar(curl%is        :curl%ie,         curl%je          :curl%je+dom%D_y, curl%ks        :curl%ke,         soln)) + &
+                       curl%rz * (curl%mgvar(curl%is        :curl%ie,         curl%je-dom%D_y  :curl%je,         curl%ks-dom%D_z:curl%ke-dom%D_z, soln)  + &
+                       &          curl%mgvar(curl%is        :curl%ie,         curl%je-dom%D_y  :curl%je,         curl%ks+dom%D_z:curl%ke+dom%D_z, soln)) - &
+                       curl%r  *  curl%mgvar(curl%is        :curl%ie,         curl%je-dom%D_y  :curl%je,         curl%ks        :curl%ke,         src)
                endif
 
-               if (has_dir(zdim)) then
-                  curl%mgvar                (curl%is    :curl%ie,     curl%js    :curl%je,     curl%ks    :curl%ks+D_z,   soln)  = & ! -Z
-                       curl%rx * (curl%mgvar(curl%is-D_x:curl%ie-D_x, curl%js    :curl%je,     curl%ks    :curl%ks+D_z,   soln)  + &
-                       &          curl%mgvar(curl%is+D_x:curl%ie+D_x, curl%js    :curl%je,     curl%ks    :curl%ks+D_z,   soln)) + &
-                       curl%ry * (curl%mgvar(curl%is    :curl%ie,     curl%js-D_y:curl%je-D_y, curl%ks    :curl%ks+D_z,   soln)  + &
-                       &          curl%mgvar(curl%is    :curl%ie,     curl%js+D_y:curl%je+D_y, curl%ks    :curl%ks+D_z,   soln)) + &
-                       curl%rz * (curl%mgvar(curl%is    :curl%ie,     curl%js    :curl%je,     curl%ks-D_z:curl%ks,       soln)  + &
-                       &          curl%mgvar(curl%is    :curl%ie,     curl%js    :curl%je,     curl%ks+D_z:curl%ks+2*D_z, soln)) - &
-                       curl%r  *  curl%mgvar(curl%is    :curl%ie,     curl%js    :curl%je,     curl%ks    :curl%ks+D_z,   src)
+               if (dom%has_dir(zdim)) then
+                  curl%mgvar                (curl%is        :curl%ie,         curl%js        :curl%je,         curl%ks        :curl%ks+dom%D_z,   soln)  = & ! -Z
+                       curl%rx * (curl%mgvar(curl%is-dom%D_x:curl%ie-dom%D_x, curl%js        :curl%je,         curl%ks        :curl%ks+dom%D_z,   soln)  + &
+                       &          curl%mgvar(curl%is+dom%D_x:curl%ie+dom%D_x, curl%js        :curl%je,         curl%ks        :curl%ks+dom%D_z,   soln)) + &
+                       curl%ry * (curl%mgvar(curl%is        :curl%ie,         curl%js-dom%D_y:curl%je-dom%D_y, curl%ks        :curl%ks+dom%D_z,   soln)  + &
+                       &          curl%mgvar(curl%is        :curl%ie,         curl%js+dom%D_y:curl%je+dom%D_y, curl%ks        :curl%ks+dom%D_z,   soln)) + &
+                       curl%rz * (curl%mgvar(curl%is        :curl%ie,         curl%js        :curl%je,         curl%ks-dom%D_z:curl%ks,           soln)  + &
+                       &          curl%mgvar(curl%is        :curl%ie,         curl%js        :curl%je,         curl%ks+dom%D_z:curl%ks+2*dom%D_z, soln)) - &
+                       curl%r  *  curl%mgvar(curl%is        :curl%ie,         curl%js        :curl%je,         curl%ks        :curl%ks+dom%D_z,   src)
 
-                  curl%mgvar                (curl%is    :curl%ie,     curl%js    :curl%je,     curl%ke-D_z  :curl%ke ,    soln)  = & ! +Z
-                       curl%rx * (curl%mgvar(curl%is-D_x:curl%ie-D_x, curl%js    :curl%je,     curl%ke-D_z  :curl%ke,     soln)  + &
-                       &          curl%mgvar(curl%is+D_x:curl%ie+D_x, curl%js    :curl%je,     curl%ke-D_z  :curl%ke,     soln)) + &
-                       curl%ry * (curl%mgvar(curl%is    :curl%ie,     curl%js-D_y:curl%je-D_y, curl%ke-D_z  :curl%ke,     soln)  + &
-                       &          curl%mgvar(curl%is    :curl%ie,     curl%js+D_y:curl%je+D_y, curl%ke-D_z  :curl%ke,     soln)) + &
-                       curl%rz * (curl%mgvar(curl%is    :curl%ie,     curl%js    :curl%je,     curl%ke-2*D_z:curl%ke-D_z, soln)  + &
-                       &          curl%mgvar(curl%is    :curl%ie,     curl%js    :curl%je,     curl%ke      :curl%ke+D_z, soln)) - &
-                       curl%r  *  curl%mgvar(curl%is    :curl%ie,     curl%js    :curl%je,     curl%ke-D_z  :curl%ke,     src)
+                  curl%mgvar                (curl%is        :curl%ie,         curl%js        :curl%je,         curl%ke-dom%D_z  :curl%ke ,        soln)  = & ! +Z
+                       curl%rx * (curl%mgvar(curl%is-dom%D_x:curl%ie-dom%D_x, curl%js        :curl%je,         curl%ke-dom%D_z  :curl%ke,         soln)  + &
+                       &          curl%mgvar(curl%is+dom%D_x:curl%ie+dom%D_x, curl%js        :curl%je,         curl%ke-dom%D_z  :curl%ke,         soln)) + &
+                       curl%ry * (curl%mgvar(curl%is        :curl%ie,         curl%js-dom%D_y:curl%je-dom%D_y, curl%ke-dom%D_z  :curl%ke,         soln)  + &
+                       &          curl%mgvar(curl%is        :curl%ie,         curl%js+dom%D_y:curl%je+dom%D_y, curl%ke-dom%D_z  :curl%ke,         soln)) + &
+                       curl%rz * (curl%mgvar(curl%is        :curl%ie,         curl%js        :curl%je,         curl%ke-2*dom%D_z:curl%ke-dom%D_z, soln)  + &
+                       &          curl%mgvar(curl%is        :curl%ie,         curl%js        :curl%je,         curl%ke          :curl%ke+dom%D_z, soln)) - &
+                       curl%r  *  curl%mgvar(curl%is        :curl%ie,         curl%js        :curl%je,         curl%ke-dom%D_z  :curl%ke,         src)
                endif
 
             endif

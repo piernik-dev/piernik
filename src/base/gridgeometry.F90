@@ -99,13 +99,13 @@ contains
 
       use dataio_pub, only: msg, die, code_progress
       use constants,  only: PIERNIK_INIT_DOMAIN, GEO_XYZ, GEO_RPZ
-      use domain,     only: geometry_type
+      use domain,     only: dom
 
       implicit none
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[gridgeometry:init_geometry] domain not initialized")
 
-      select case (geometry_type)
+      select case (dom%geometry_type)
          case (GEO_XYZ)
             set_geo_coeffs          => set_cart_coeffs
             geometry_source_terms   => cart_geometry_source_terms
@@ -113,7 +113,7 @@ contains
             set_geo_coeffs          => set_cyl_coeffs
             geometry_source_terms   => cyl_geometry_source_terms
          case default
-            write(msg,'(a,i3)') "[gridgeometry:init_geometry] Unknown system of coordinates ", geometry_type
+            write(msg,'(a,i3)') "[gridgeometry:init_geometry] Unknown system of coordinates ", dom%geometry_type
             call die(msg)
       end select
 

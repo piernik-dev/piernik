@@ -96,7 +96,7 @@ contains
       use constants,           only: GEO_RPZ
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_user,         only: user_vars_hdf5, problem_read_restart
-      use domain,              only: geometry_type
+      use domain,              only: dom
       use fluidboundaries_funcs, only: user_bnd_xl, user_bnd_xr
       use gravity,             only: grav_pot_3d
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
@@ -191,7 +191,7 @@ contains
 
       endif
 
-      if (geometry_type == GEO_RPZ) then ! BEWARE: cannot move this to problem_pointers because geometry_type is set up in init_domain
+      if (dom%geometry_type == GEO_RPZ) then ! BEWARE: cannot move this to problem_pointers because dom%geometry_type is set up in init_domain
          problem_read_restart       => register_user_var
          problem_customize_solution => problem_customize_solution_kepler
          user_bnd_xl => my_bnd_xl
@@ -303,7 +303,7 @@ contains
 
       use constants,    only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI, INT4
       use dataio_pub,   only: msg, printinfo, die
-      use domain,       only: geometry_type, cdd, dom, has_dir, is_multicg
+      use domain,       only: cdd, dom, is_multicg
       use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
       use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
@@ -344,7 +344,7 @@ contains
             if (cg%z(k) < 0.0) kmid = k       ! the midplane is in between ksmid and ksmid+1
          enddo
 
-         if (associated(flind%ion) .and. geometry_type == GEO_XYZ) then
+         if (associated(flind%ion) .and. dom%geometry_type == GEO_XYZ) then
             fl => flind%ion
             csim2 = fl%cs2*(1.0+alpha)
             b0    = sqrt(2.*alpha*d0*fl%cs2)
@@ -355,7 +355,7 @@ contains
                   xi = cg%x(i)
                   rc = sqrt(xi**2+yj**2)
 
-                  if (has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2, cg=cg)
+                  if (dom%has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2, cg=cg)
 
                   do k = 1, cg%n_(zdim)
 
@@ -365,7 +365,7 @@ contains
 
                      cg%u(fl%idn,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
 
-                     if (has_dir(zdim)) then
+                     if (dom%has_dir(zdim)) then
                         cg%u(fl%idn,i,j,k) = cg%dprof(k)/cosh(cg%u(fl%idn,i,j,k))
                         cg%u(fl%idn,i,j,k) = max(cg%u(fl%idn,i,j,k), dout)
                      else
@@ -396,7 +396,7 @@ contains
                   enddo
                enddo
             enddo
-         else if (geometry_type == GEO_RPZ) then
+         else if (dom%geometry_type == GEO_RPZ) then
             if (master) then
                call printinfo("------------------------------------------------------------------")
                call printinfo(" Assuming temperature profile for MMSN ")

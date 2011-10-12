@@ -43,7 +43,7 @@ module domain
 
    private
    public :: cleanup_domain, init_domain, is_overlap, domain_container, user_divide_domain, allocate_pse, deallocate_pse, set_pse_sel, &
-        &    pdom, dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, is_multicg, cdd, total_ncells, D_x, D_y, D_z, D_
+        &    pdom, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, cdd
 
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
@@ -76,6 +76,17 @@ module domain
       ! \todo move them to another type, that extends domain_container?
       integer(kind=4), dimension(ndims) :: n_t          !< total number of %grid cells in the whole domain in every direction (n_d(:) + 2* nb for existing directions)
 
+      integer(kind=8) :: total_ncells !< total number of %grid cells
+      integer :: geometry_type  !< the type of geometry: cartesian: GEO_XYZ, cylindrical: GEO_RPZ, other: GEO_INVALID
+      integer :: D_x                  !< set to 1 when x-direction exists, 0 otherwise
+      integer :: D_y                  !< set to 1 when y-direction exists, 0 otherwise.
+      integer :: D_z                  !< set to 1 when z-direction exists, 0 otherwise.
+
+      integer, dimension(ndims) :: D_ !< set to 1 for existing directions, 0 otherwise. Useful for dimensionally-safe indices for difference operators on arrays,
+
+      logical, dimension(ndims) :: has_dir   !< .true. for existing directions
+      integer :: eff_dim                     !< effective dimensionality of the simulation
+
     contains
 
       procedure :: set_derived
@@ -95,14 +106,6 @@ module domain
 
    type(cart_decomposition), protected :: cdd !< Cartesian Domain Decomposition stuff
 
-   logical, protected, dimension(ndims) :: has_dir   !< .true. for existing directions
-   integer, protected    :: eff_dim                  !< effective dimensionality of the simulation
-
-   integer, dimension(ndims), protected :: D_ !< set to 1 for existing directions, 0 otherwise. Useful for dimensionally-safe indices for difference operators on arrays,
-   integer, protected :: D_x                  !< set to 1 when x-direction exists, 0 otherwise
-   integer, protected :: D_y                  !< set to 1 when y-direction exists, 0 otherwise.
-   integer, protected :: D_z                  !< set to 1 when z-direction exists, 0 otherwise.
-
    type(domain_container), protected, target :: dom !< complete description of base level domain
    type(domain_container), pointer :: pdom
 
@@ -110,10 +113,6 @@ module domain
    logical, protected :: is_mpi_noncart     !< .true. when there exist a process that has more than one neighbour in any direction
    logical, protected :: is_refined         !< .true. when AMR or static refinement is employed
    logical, protected :: is_multicg         !< .true. when at leas one process has more than one grid container
-
-   integer, protected :: geometry_type  !< the type of geometry: cartesian: GEO_XYZ, cylindrical: GEO_RPZ, other: GEO_INVALID
-
-   integer(kind=8), protected :: total_ncells !< total number of %grid cells
 
    ! Private variables
 
@@ -349,29 +348,29 @@ contains
 
       pdom => dom
 
-      has_dir(:) = dom%n_d(:) > 1
-      eff_dim = count(has_dir(:))
-      where (has_dir(:))
-         D_(:) = 1
+      dom%has_dir(:) = dom%n_d(:) > 1
+      dom%eff_dim = count(dom%has_dir(:))
+      where (dom%has_dir(:))
+         dom%D_(:) = 1
       elsewhere
-         D_(:) = 0
+         dom%D_(:) = 0
       endwhere
 
       ! shortcuts
-      D_x = D_(xdim)
-      D_y = D_(ydim)
-      D_z = D_(zdim)
+      dom%D_x = dom%D_(xdim)
+      dom%D_y = dom%D_(ydim)
+      dom%D_z = dom%D_(zdim)
 
-      total_ncells = product(int(dom%n_d(:), kind=8))
-      if (any(total_ncells < dom%n_d(:))) call die("[domain:init_domain] Integer overflow: too many cells")
+      dom%total_ncells = product(int(dom%n_d(:), kind=8))
+      if (any(dom%total_ncells < dom%n_d(:))) call die("[domain:init_domain] Integer overflow: too many cells")
 
       select case (geometry)
          case ("cartesian", "cart", "xyz", "XYZ")
-            geometry_type = GEO_XYZ
+            dom%geometry_type = GEO_XYZ
          case ("cylindrical", "cyl", "rpz", "RPZ")
-            geometry_type = GEO_RPZ
+            dom%geometry_type = GEO_RPZ
          case default
-            geometry_type = GEO_INVALID
+            dom%geometry_type = GEO_INVALID
       end select
 
       call dom%translate_bnds_to_ints([bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr])
@@ -380,7 +379,7 @@ contains
       xmno = xmin
       ymno = ymin
       ymxo = ymax
-      select case (geometry_type)
+      select case (dom%geometry_type)
          case (GEO_XYZ)
             if (ymin <= -big_float .or. ymax >= big_float) call warn("[domain:init_domain] y range not specified. Defaulting to [0..1]")
             if (ymin <= -big_float) ymin = 0.
@@ -447,7 +446,7 @@ contains
       is_refined = .false.
       is_multicg = .false.
 
-      where (.not. has_dir(:)) psize(:) = I_ONE
+      where (.not. dom%has_dir(:)) psize(:) = I_ONE
 
       ! cdd% will contain valid values if and only if comm3d becomes valid communicator
       cdd%procn(:,:) = MPI_PROC_NULL
@@ -609,7 +608,7 @@ contains
          else
             call MPI_Cart_coords(cdd%comm3d, p, ndims, pc, ierr)
          endif
-         where (has_dir(:))
+         where (dom%has_dir(:))
             dom%pse(p)%sel(I_ONE, :, LO) = (dom%n_d(:) *  pc(:) ) / p_size(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
             dom%pse(p)%sel(I_ONE, :, HI) = (dom%n_d(:) * (pc(:)+1))/p_size(:) - 1 ! offset of high boundaries of the local domain (n_d(:) - 1 at right external boundaries)
          endwhere
@@ -711,11 +710,11 @@ contains
 
       share = .false.
       do i = -1, 1
-         if ((has_dir(xdim) .or. periods(xdim)>0) .or. i==0) then
+         if ((dom%has_dir(xdim) .or. periods(xdim)>0) .or. i==0) then
             do j = -1, 1
-               if ((has_dir(ydim) .or. periods(ydim)>0) .or. j==0) then
+               if ((dom%has_dir(ydim) .or. periods(ydim)>0) .or. j==0) then
                   do k = -1, 1
-                     if ((has_dir(zdim) .or. periods(zdim)>0) .or. k==0) then
+                     if ((dom%has_dir(zdim) .or. periods(zdim)>0) .or. k==0) then
                         oth(:,:) = other(:,:) + reshape([i*periods(xdim), j*periods(ydim), k*periods(zdim), i*periods(xdim), j*periods(ydim), k*periods(zdim)], [3,2])
                         call is_overlap_simple(this, oth, sha)
                         share = share .or. sha
@@ -742,7 +741,7 @@ contains
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this, other !< two boxes
       logical, intent(out)                                     :: share       !< is there overlap between this and the other?
 
-      share = all(((other(:, LO) <= this(:, HI)) .and. (other(:, HI) >= this(:, LO))) .or. (.not. has_dir(:)))
+      share = all(((other(:, LO) <= this(:, HI)) .and. (other(:, HI) >= this(:, LO))) .or. (.not. dom%has_dir(:)))
 
    end subroutine is_overlap_simple
 
@@ -785,7 +784,7 @@ contains
          return
       endif
 
-      if (all(bsize(:) > 0 .or. .not. has_dir(:))) call stamp_cg(dom_divided)
+      if (all(bsize(:) > 0 .or. .not. dom%has_dir(:))) call stamp_cg(dom_divided)
       if (dom_divided) return
 
       if (product(psize(:)) == nproc) then
@@ -806,7 +805,7 @@ contains
       call Eratosthenes_sieve(primes, nproc) ! it is possible to use primes only to sqrt(nproc), but it is easier to have the full table. Cheap for any reasonable nproc.
 
       ! this is the minimal total area of internal boundaries (periodic case), achievable for some perfect domain divisions
-      ideal_bsize = eff_dim * (nproc * product(real(dom%n_d(:)))**(eff_dim-1))**(1./eff_dim)
+      ideal_bsize = dom%eff_dim * (nproc * product(real(dom%n_d(:)))**(dom%eff_dim-1))**(1./dom%eff_dim)
 
       call divide_domain_uniform(p_size(:))
       if (product(p_size(:)) == nproc) then
@@ -1029,7 +1028,7 @@ contains
 
       if (master) then
 #ifdef DEBUG
-         write(msg,'(a,3f10.2,a,i10)')"m:ddr id p_size = [",(nproc/product(dble(dom%n_d(:))))**(1./eff_dim)*dom%n_d(:),"], bcells= ", int(ideal_bsize)
+         write(msg,'(a,3f10.2,a,i10)')"m:ddr id p_size = [",(nproc/product(dble(dom%n_d(:))))**(1./dom%eff_dim)*dom%n_d(:),"], bcells= ", int(ideal_bsize)
          call printinfo(msg)
 #endif /* DEBUG */
          write(msg,'(a,3i4,a)')      "[domain:divide_domain_rectlinear] Domain divided to [",p_size(:)," ] pieces"
@@ -1065,30 +1064,30 @@ contains
       real :: optc
 
       !> \todo Try to make an intelligent guess for slicing, then go down to the local minimum and explore neighbourhood. Exploring all possibilities is an O(nproc)**2 task
-      ! The best solution is probably near (nproc/product(dble(dom%n_d(:))))**(1./eff_dim)*dom%n_d(:)
+      ! The best solution is probably near (nproc/product(dble(dom%n_d(:))))**(1./dom%eff_dim)*dom%n_d(:)
 
       is_mpi_noncart = .true.
       is_uneven = .true.
 
       if (all(p_size(ydim:zdim) == 1)) then
-         if (has_dir(zdim)) then
-            optc = (product(int(dom%n_d(:), kind=8))/real(nproc)) ** (1./eff_dim) ! number of cells for ideal cubes
+         if (dom%has_dir(zdim)) then
+            optc = (product(int(dom%n_d(:), kind=8))/real(nproc)) ** (1./dom%eff_dim) ! number of cells for ideal cubes
             if (dom%n_d(zdim) > minfac*optc) p_size(zdim) = int(ceiling(dom%n_d(zdim)/optc), kind=4)
          endif
-         if (has_dir(ydim)) then
-            optc = (product(int(dom%n_d(xdim:ydim), kind=8))*p_size(zdim)/real(nproc)) ** (1./count(has_dir(xdim:ydim)))
+         if (dom%has_dir(ydim)) then
+            optc = (product(int(dom%n_d(xdim:ydim), kind=8))*p_size(zdim)/real(nproc)) ** (1./count(dom%has_dir(xdim:ydim)))
             if (dom%n_d(ydim) > minfac*optc) p_size(ydim) = int(ceiling(dom%n_d(ydim)/optc), kind=4)
          endif
       endif
-      if (has_dir(xdim)) p_size(xdim) = (nproc - I_ONE)/(p_size(ydim)*p_size(zdim)) + I_ONE !sometimes it might be less by 1
+      if (dom%has_dir(xdim)) p_size(xdim) = (nproc - I_ONE)/(p_size(ydim)*p_size(zdim)) + I_ONE !sometimes it might be less by 1
 
-      where (.not. has_dir(:)) p_size(:) = 1 ! just in case
+      where (.not. dom%has_dir(:)) p_size(:) = 1 ! just in case
       do while (product(p_size(:)) < nproc)
          write(msg,'(a,3i4,a)') "[domain:divide_domain_slices] imperfect noncartesian division to [",p_size(:)," ] pieces"
          if (master) call warn(msg)
-         if (has_dir(xdim)) then
+         if (dom%has_dir(xdim)) then
             p_size(xdim) = p_size(xdim) + I_ONE
-         else if (has_dir(ydim)) then
+         else if (dom%has_dir(ydim)) then
             p_size(ydim) = p_size(ydim) + I_ONE
          else
             p_size(zdim) = p_size(zdim) + I_ONE
@@ -1126,18 +1125,18 @@ contains
          return
       endif
 
-      if (any(mod(dom%n_d(:), bsize(xdim:zdim)) /= 0 .and. has_dir(:))) then
+      if (any(mod(dom%n_d(:), bsize(xdim:zdim)) /= 0 .and. dom%has_dir(:))) then
          write(msg,'(a,3f10.3,a)')"[initproblem:stamp_cg] Fractional number of blocks: dom%n_d(:)/bsize(1:3) = [",dom%n_d(:)/real(bsize(xdim:zdim)),"]"
          if (master) call warn(msg)
          return
       endif
 
-      where (has_dir(:))
+      where (dom%has_dir(:))
          n_bl(:) = dom%n_d(:) / bsize(xdim:zdim)
       elsewhere
          n_bl(:) = 1
       endwhere
-      tot_bl = product(n_bl(:), mask=has_dir(:))
+      tot_bl = product(n_bl(:), mask=dom%has_dir(:))
       if (allocated(pb)) call die("[initproblem:stamp_cg] pb already allocated")
       allocate(pb(tot_bl))
 
@@ -1171,7 +1170,7 @@ contains
          ! pb(b) = min((b*nproc)/tot_bl, nproc-1)
          call simple_ordering(b, n_bl(:), b_loc(:)) !> \todo implement Morton and Hilbert ordering
 
-         where (has_dir(:))
+         where (dom%has_dir(:))
             se(:, LO) = b_loc(:) * bsize(xdim:zdim)
             se(:, HI) = se(:, LO) + bsize(xdim:zdim) - 1
          endwhere
@@ -1304,14 +1303,13 @@ contains
       implicit none
 
       class(domain_container), intent(inout) :: this
-      logical, dimension(xdim:zdim) :: has_dir
       integer :: d
 
-      has_dir(:) = this%n_d(:) > 1
+      this%has_dir(:) = this%n_d(:) > 1  ! redundant
 
       this%periodic(:) = .false.
       do d = xdim, zdim
-         if ((any(this%bnd(d, :) == BND_PER) .or. (d==xdim .and. any(this%bnd(d, :) == BND_SHE))) .and. has_dir(d)) then
+         if ((any(this%bnd(d, :) == BND_PER) .or. (d==xdim .and. any(this%bnd(d, :) == BND_SHE))) .and. this%has_dir(d)) then
             this%periodic(d) = .true.
             if (this%bnd(d, LO) /= this%bnd(d, HI)) call die("[types:set_derived] Periodic BC do not match")
          endif
@@ -1323,10 +1321,10 @@ contains
       this%C_(:) = (this%edge(:, HI) + this%edge(:, LO))/2
 
       !volume and total grid sizes
-      this%Vol = product(this%L_(:), mask=has_dir(:))
+      this%Vol = product(this%L_(:), mask=this%has_dir(:))
       !> \deprecated BEWARE: Vol computed above is not true for non-cartesian geometry
 
-      where (has_dir(:))
+      where (this%has_dir(:))
          this%n_t(:) = this%n_d(:) + I_TWO * this%nb
       elsewhere
          this%n_t(:) = 1

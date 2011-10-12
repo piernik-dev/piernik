@@ -57,7 +57,7 @@ contains
 
       use constants,  only: ndims, AT_OUT_B, AT_NO_B, AT_USER, LO, HI
       use dataio_pub, only: die
-      use domain,     only: dom, has_dir
+      use domain,     only: dom
       use grid_cont,  only: grid_container
       use user_hooks, only: at_user_dims_settings
 
@@ -76,11 +76,11 @@ contains
 
       select case (area_type)
          case (AT_OUT_B)                                   ! physical domain with outer boundaries
-            where (cg%off(:) == 0 .and. has_dir(:))
+            where (cg%off(:) == 0 .and. dom%has_dir(:))
                lleft(:)  = lleft(:)  - cg%nb
                chnk(:)   = chnk(:)   + cg%nb
             endwhere
-            where (cg%h_cor1(:) == dom%n_d(:) .and. has_dir(:))
+            where (cg%h_cor1(:) == dom%n_d(:) .and. dom%has_dir(:))
                lright(:) = lright(:) + cg%nb
                chnk(:)   = chnk(:)   + cg%nb
             endwhere
@@ -586,7 +586,7 @@ contains
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE
       use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version
       use dataio_user, only: problem_read_restart
-      use domain,      only: dom, has_dir
+      use domain,      only: dom
       use fluidindex,  only: flind
       use func,        only: fix_string
       use global,      only: magic_mass, t, dt
@@ -652,7 +652,7 @@ contains
 
          call h5ltget_attribute_int_f(file_id,"/","nxd", ibuf, error)
          if (ibuf(1) /= dom%n_d(xdim) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] nxd does not match")
-         if (has_dir(xdim)) then
+         if (dom%has_dir(xdim)) then
             call h5ltget_attribute_double_f(file_id,"/","xmin", rbuf, error)
             if (rbuf(1) /= dom%edge(xdim, LO) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] xmin does not match")
             call h5ltget_attribute_double_f(file_id,"/","xmax", rbuf, error)
@@ -661,7 +661,7 @@ contains
 
          call h5ltget_attribute_int_f(file_id,"/","nyd", ibuf, error)
          if (ibuf(1) /= dom%n_d(ydim) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] nyd does not match")
-         if (has_dir(ydim)) then
+         if (dom%has_dir(ydim)) then
             call h5ltget_attribute_double_f(file_id,"/","ymin", rbuf, error)
             if (rbuf(1) /= dom%edge(ydim, LO) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] ymin does not match")
             call h5ltget_attribute_double_f(file_id,"/","ymax", rbuf, error)
@@ -670,7 +670,7 @@ contains
 
          call h5ltget_attribute_int_f(file_id,"/","nzd", ibuf, error)
          if (ibuf(1) /= dom%n_d(zdim) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] nzd does not match")
-         if (has_dir(zdim)) then
+         if (dom%has_dir(zdim)) then
             call h5ltget_attribute_double_f(file_id,"/","zmin", rbuf, error)
             if (rbuf(1) /= dom%edge(zdim, LO) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] zmin does not match")
             call h5ltget_attribute_double_f(file_id,"/","zmax", rbuf, error)

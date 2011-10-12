@@ -109,7 +109,7 @@ contains
    subroutine init_prob
 
       use constants,   only: xdim, ydim, zdim
-      use domain,      only: has_dir
+      use domain,      only: dom
       use fluidindex,  only: flind
       use global,      only: smalld
       use grid,        only: all_cg
@@ -139,7 +139,7 @@ contains
             do j = 1, cg%n_(ydim)
                yj = cg%y(j)
                do k = 1, cg%n_(zdim)
-                  if (has_dir(zdim)) then
+                  if (dom%has_dir(zdim)) then
                      zk = cg%z(k)
                      rc = sqrt((xi-x0)**2+(yj-y0)**2+(zk-z0)**2)
                   else

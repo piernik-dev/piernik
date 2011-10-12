@@ -233,7 +233,7 @@ contains
 
       use constants,        only: one, zero, half, GEO_XYZ, xdim, ydim, zdim
       use dataio_pub,       only: msg, die
-      use domain,           only: geometry_type
+      use domain,           only: dom
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
       use global,           only: smalld, integration_order, use_smalld, local_magic_mass
@@ -377,7 +377,7 @@ contains
 ! u update
 
       fu = fr - fl
-      if (geometry_type == GEO_XYZ) then
+      if (dom%geometry_type == GEO_XYZ) then
          u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) *                 dtx * (               fu(:,2:n) -               fu(:,1:n-1) )
       else
          u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) * gc(GC1,:,2:n) * dtx * ( gc(GC2,:,2:n)*fu(:,2:n) - gc(GC3,:,2:n)*fu(:,1:n-1) )
