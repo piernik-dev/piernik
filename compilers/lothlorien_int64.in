@@ -27,4 +27,3 @@ MAKEFLAGS += -j4
 # for the kepler problem
 F90FLAGS += -I/home/gawrysz/usr/include/gfortran
 LDFLAGS += -L/home/gawrysz/usr/lib/
-LIBS += -lfgsl_gfortran -lgsl

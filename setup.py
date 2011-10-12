@@ -442,6 +442,8 @@ for f in allfiles:
 if(options.param != 'problem.par'): os.symlink(options.param,objdir+'/'+'problem.par')
 
 makefile_head = open('compilers/'+compiler,'r').readlines()
+try: makefile_problem = open(probdir+"Makefile.in", 'r').readlines()
+except (IOError): makefile_problem =""
 m = open(objdir+'/Makefile', 'w')
 
 stripped_files  = strip_leading_path(files)
@@ -456,6 +458,7 @@ known_external_modules = ( "hdf5", "h5lt", "mpi", "iso_c_binding", "iso_fortran_
 files_to_build = remove_suf(stripped_files)
 
 for f in makefile_head: m.write(f)
+for f in makefile_problem: m.write(f)
 m.write( pretty_format_suf("SRCS_V = \\", stripped_files_v, '', columns) )
 m.write( "SRCS = $(SRCS_V) version.F90\n" )
 m.write( pretty_format_suf("OBJS = \\", files_to_build, '.o', columns) )
