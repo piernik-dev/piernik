@@ -317,7 +317,7 @@ contains
       use gc_list,           only: cg_list_element
       use grid,              only: all_cg
       use grid_cont,         only: grid_container
-      use internal_bnd,      only: arr3d_boundaries
+      use external_bnd,      only: arr3d_boundaries
 #ifdef POISSON_FFT
       use poissonsolver,     only: poisson_solve
 #endif /* POISSON_FFT */

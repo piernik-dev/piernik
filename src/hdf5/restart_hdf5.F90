@@ -454,7 +454,7 @@ contains
            &                  H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
            &                  h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
            &                  h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
-      use internal_bnd, only: arr3d_boundaries
+      use external_bnd, only: arr3d_boundaries
 
       implicit none
 
