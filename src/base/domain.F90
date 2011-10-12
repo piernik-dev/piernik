@@ -43,7 +43,7 @@ module domain
 
    private
    public :: cleanup_domain, init_domain, is_overlap, domain_container, user_divide_domain, allocate_pse, deallocate_pse, set_pse_sel, &
-        &    dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, is_multicg, cdd, total_ncells, D_x, D_y, D_z, D_
+        &    pdom, dom, geometry_type, has_dir, eff_dim, is_uneven, is_mpi_noncart, is_refined, is_multicg, cdd, total_ncells, D_x, D_y, D_z, D_
 
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
@@ -103,7 +103,8 @@ module domain
    integer, protected :: D_y                  !< set to 1 when y-direction exists, 0 otherwise.
    integer, protected :: D_z                  !< set to 1 when z-direction exists, 0 otherwise.
 
-   type(domain_container), protected :: dom !< complete description of base level domain
+   type(domain_container), protected, target :: dom !< complete description of base level domain
+   type(domain_container), pointer :: pdom
 
    logical, protected :: is_uneven          !< .true. when n_b(:) depend on process rank
    logical, protected :: is_mpi_noncart     !< .true. when there exist a process that has more than one neighbour in any direction
@@ -345,6 +346,8 @@ contains
          nb         = int(ibuff(3*zdim+1),           kind=4)
 
       endif
+
+      pdom => dom
 
       has_dir(:) = dom%n_d(:) > 1
       eff_dim = count(has_dir(:))

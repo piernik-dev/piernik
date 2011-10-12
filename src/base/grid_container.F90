@@ -123,7 +123,7 @@ module grid_cont
 
       integer(kind=4), allocatable, dimension(:,:,:,:,:) :: mbc !< MPI Boundary conditions Container
 
-      type(domain_container) :: dom                  !< contains domain decomposition of a domain this cg belongs to (BEWARE: antiparallel)
+      type(domain_container), pointer :: dom                  !< Parent domain, contains domain decomposition of a domain this cg belongs to (BEWARE: antiparallel)
 
       !>
       !! description of incoming and outgoing boundary data,
@@ -189,7 +189,7 @@ contains
       implicit none
 
       class(grid_container), intent(inout), target :: this ! intent(out) would silently clear everything, that was already set (also the fields in types derived from grid_container)
-      type(domain_container), intent(in) :: dom
+      type(domain_container), intent(in), pointer :: dom
       integer, intent(in) :: grid_n
 
       integer :: i
@@ -197,7 +197,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init] MPI not initialized.")
 
-      this%dom = dom
+      this%dom => dom
       this%nb = dom%nb !> \todo make this one global constant back
 
       this%grid_n     = grid_n

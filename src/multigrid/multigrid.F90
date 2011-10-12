@@ -238,6 +238,7 @@ contains
       curl => roof
       do while (associated(curl))
 
+         allocate(curl%dom)
          if (associated(curl, roof)) then
             curl%dom = dom       ! inherit roof from global domain
             ! curl%dom%nb = 2  ! the multigrid solver relies typically at most on 2 guardcells, but the impact on performance is not big so we've decided to have it uniform with the rest of Piernik
@@ -438,6 +439,7 @@ contains
                endif
             enddo
             call curl%cleanup
+            deallocate(curl%dom)
             curl => curl%finer
          enddo
          deallocate(lvl)

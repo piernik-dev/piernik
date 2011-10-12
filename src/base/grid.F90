@@ -63,7 +63,7 @@ contains
            &                 fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n,cs_i2_n
       use dataio_pub,  only: printinfo, die, code_progress
       use diagnostics, only: my_allocate
-      use domain,      only: dom, is_multicg
+      use domain,      only: pdom, is_multicg
       use fluidindex,  only: flind
       use gc_list,     only: cg_list_element
       use global,      only: repeat_step
@@ -89,11 +89,11 @@ contains
 !!$      call levels(1)%init
 
       nrq = 0
-      do g = 1, ubound(dom%pse(proc)%sel(:,:,:), dim=1)
+      do g = lbound(pdom%pse(proc)%sel(:,:,:), dim=1), ubound(pdom%pse(proc)%sel(:,:,:), dim=1)
          call all_cg%add
          cg => all_cg%last%cg
 
-         call cg%init(dom, g)
+         call cg%init(pdom, g)
 
          if (allocated(cg%i_bnd)) then
             do d = xdim, zdim
