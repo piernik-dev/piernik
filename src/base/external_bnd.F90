@@ -51,7 +51,7 @@ contains
 ! This routine sets up all guardcells (internal and external) for given rank-3 arrays.
 !
 
-   subroutine arr3d_boundaries(ind, nb, area_type, dname)
+   subroutine arr3d_boundaries(ind, nb, area_type)
 
       use constants,    only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B, I_ONE
       use dataio_pub,   only: die, msg
@@ -68,7 +68,6 @@ contains
       integer(kind=4), intent(in) :: ind  !> Negative value: index of cg%q(:) 3d array
       integer, optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), intent(in), optional          :: area_type
-      character(len=*), intent(in), optional         :: dname
 
       integer :: i, d, n
       integer(kind=4) :: lh
@@ -144,13 +143,13 @@ contains
                            endif
                         endif
                      case (BND_SHE) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
-                        write(msg,*) "[grid:arr3d_boundaries] 'she' not implemented for ",dname
+                        write(msg,*) "[grid:arr3d_boundaries] 'she' not implemented for ",cg%q(ind)%name
                         dodie = .true.
                      case (BND_COR)
                         if (present(area_type)) then
                            if (area_type /= AT_NO_B) cycle
                         endif
-                        write(msg,*) "[grid:arr3d_boundaries] 'cor' not implemented for ", dname
+                        write(msg,*) "[grid:arr3d_boundaries] 'cor' not implemented for ", cg%q(ind)%name
                         dodie = .true.
                      case default ! Set gradient == 0 on the external boundaries
                         if (present(area_type)) then

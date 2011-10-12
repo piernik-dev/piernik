@@ -572,7 +572,7 @@ contains
       call h5sclose_f(filespace, error)
       call h5dclose_f(dset_id, error)
 
-      if (tgt3d) call arr3d_boundaries(cg%get_na_ind(dname), area_type=area_type, dname=dname)
+      if (tgt3d) call arr3d_boundaries(cg%get_na_ind(dname), area_type=area_type)
          ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
 
       ! rank-4 arrays (cg%u(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
