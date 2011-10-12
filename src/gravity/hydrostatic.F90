@@ -40,7 +40,7 @@ module hydrostatic
 
    private
 #ifdef GRAV
-   public :: hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, gprofs, nstot, zs, dzs, outh_bnd
+   public :: hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, gprofs, nstot, zs, dzs, hsmin, hsbn, hstn, hsl, sdlim, outh_bnd
 #endif /* GRAV */
 
    real, allocatable, dimension(:), save :: zs        !< array of z-positions of subgrid cells centers
@@ -48,6 +48,11 @@ module hydrostatic
    real,                            save :: dzs       !< length of the subgrid cell in z-direction
    integer(kind=4),                 save :: nstot     !< total number of subgrid cells in a column through all z-blocks
    real,                            save :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
+   real,                            save :: hsmin     !< lower position limit
+   integer,                         save :: hsbn      !< number of cells in proceeded block
+   integer,                         save :: hstn      !< number of cells in proceeded domain
+   real, allocatable, dimension(:), save :: hsl       !< lower borders of cells of proceeded block
+   real, dimension(2),              save :: sdlim     !< edges for sd sum
 
    interface
       subroutine hzeqscheme(ksub, up, factor)
@@ -71,20 +76,20 @@ contains
 !! \param coldens column density value for given x and y coordinates
 !! \param csim2 sqare of sound velocity
 !<
-   subroutine hydrostatic_zeq_coldens(iia, jja, coldens, csim2, cg)
+   subroutine hydrostatic_zeq_coldens(iia, jja, coldens, csim2, cg) !, ug)
 
       use grid_cont, only: grid_container
 
       implicit none
 
-      integer, intent(in)   :: iia, jja
-      real,    intent(in)   :: coldens, csim2
+      integer,                       intent(in)    :: iia, jja
+      real,                          intent(in)    :: coldens, csim2
       type(grid_container), pointer, intent(inout) :: cg
-
-      real                  :: sdprof, sd
+!      logical,                       intent(in)    :: ug
+      real                                         :: sdprof, sd
 
       sdprof = 1.0
-      call hydrostatic_zeq_densmid(iia, jja, sdprof, csim2, sd, cg)
+      call hydrostatic_zeq_densmid(iia, jja, sdprof, csim2, sd, cg) !, ug)
       cg%dprof = cg%dprof * coldens / sd
 
    end subroutine hydrostatic_zeq_coldens
@@ -98,7 +103,7 @@ contains
 !! \param csim2 sqare of sound velocity
 !! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
 !<
-   subroutine hydrostatic_zeq_densmid(iia, jja, d0, csim2, sd, cg)
+   subroutine hydrostatic_zeq_densmid(iia, jja, d0, csim2, sd, cg) !, ug)
 
       use constants,  only: small
       use dataio_pub, only: die
@@ -106,40 +111,65 @@ contains
 
       implicit none
 
-      integer, intent(in) :: iia, jja
-      real,    intent(in) :: d0, csim2
-      real,    intent(inout), optional :: sd
-      type(grid_container), pointer, intent(in) :: cg
+      integer,                       intent(in)    :: iia, jja
+      real,                          intent(in)    :: d0, csim2
+      type(grid_container), pointer, intent(in)    :: cg
+      real,                optional, intent(inout) :: sd
+!      logical,                       intent(in)    :: ug
 
       if (d0 <= small) call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
       dmid = d0
 
+!      if (ug) call set_default_hsparams(cg)
+      call set_default_hsparams(cg)
       call start_hydrostatic(iia, jja, csim2, sd, cg)
       call finish_hydrostatic
 
    end subroutine hydrostatic_zeq_densmid
 
-!>
-!! \brief Routine that arranges %hydrostatic equilibrium in the vertical (z) direction
-!<
-   subroutine hydrostatic_main(sd)
+   subroutine set_default_hsparams(cg)
 
       use constants,  only: zdim, LO, HI
-      use dataio_pub, only: die
       use domain,     only: dom
       use gravity,    only: nsub
-      use grid,       only: all_cg
-      use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
 
       implicit none
 
-      real, intent(out), optional     :: sd
-      real, allocatable, dimension(:) :: dprofs
-      integer                         :: ksub, ksmid, k
-      real                            :: factor
-      type(cg_list_element), pointer  :: cgl
-      type(grid_container),  pointer  :: cg
+      integer                                   :: k
+      type(grid_container), pointer, intent(in) :: cg
+
+      nstot = nsub * dom%n_t(zdim)
+      dzs   = (dom%edge(zdim, HI)-dom%edge(zdim, LO))/real(nstot-2*dom%nb*nsub)
+      hsmin = dom%edge(zdim, LO)-cg%nb*cg%dl(zdim)
+      hsbn  = cg%n_(zdim)
+      hstn  = dom%n_t(zdim)
+      sdlim = dom%edge(zdim,:)
+      allocate(hsl(hsbn+1))
+      do k = 1, hsbn
+         hsl(k) = cg%zl(k)
+      enddo
+      hsl(hsbn+1) = cg%zr(hsbn)
+
+   end subroutine set_default_hsparams
+
+!>
+!! \brief Routine that arranges %hydrostatic equilibrium in the vertical (z) direction
+!<
+   subroutine hydrostatic_main(cg, sd)
+
+      use constants,  only: LO, HI
+      use dataio_pub, only: die
+      use gravity,    only: nsub
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      type(grid_container), pointer, intent(in)  :: cg
+      real,                optional, intent(out) :: sd
+      real, allocatable, dimension(:)            :: dprofs
+      integer                                    :: ksub, ksmid, k
+      real                                       :: factor
 
       allocate(dprofs(nstot))
 
@@ -169,24 +199,19 @@ contains
          enddo
       endif
 
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         cg%dprof(:) = 0.0
-         do k=1, cg%n_(zdim)
-            do ksub=1, nstot
-               if (zs(ksub) > cg%zl(k) .and. zs(ksub) < cg%zr(k)) then
-                  cg%dprof(k) = cg%dprof(k) + dprofs(ksub)/real(nsub)
-               endif
-            enddo
+      cg%dprof(:) = 0.0
+      do k=1, hsbn
+         do ksub=1, nstot
+            if (zs(ksub) > hsl(k) .and. zs(ksub) < hsl(k+1)) then
+               cg%dprof(k) = cg%dprof(k) + dprofs(ksub)/real(nsub)
+            endif
          enddo
-         cgl => cgl%nxt
       enddo
 
       if (present(sd)) then
          sd = 0.0
          do ksub=1, nstot
-            if (zs(ksub) > dom%edge(zdim, LO) .and. zs(ksub) < dom%edge(zdim, HI)) sd = sd + dprofs(ksub)*dzs
+            if (zs(ksub) > sdlim(LO) .and. zs(ksub) < sdlim(HI)) sd = sd + dprofs(ksub)*dzs
          enddo
       endif
 
@@ -281,10 +306,9 @@ contains
 !<
    subroutine start_hydrostatic(iia, jja, csim2, sd, cg)
 
-      use constants,  only: zdim, LO, HI, half
+      use constants,  only: half
       use dataio_pub, only: die
-      use domain,     only: dom
-      use gravity,    only: get_gprofs, gprofs_target, nsub
+      use gravity,    only: get_gprofs, gprofs_target
       use grid_cont,  only: grid_container
 
       implicit none
@@ -305,15 +329,13 @@ contains
                call die("[hydrostatic:start_hydrostatic] get_gprofs'' target has not been specified")
          end select
       endif
-      nstot = nsub * dom%n_t(zdim)
-      dzs = (dom%edge(zdim, HI)-dom%edge(zdim, LO))/real(nstot-2*cg%nb*nsub)
       allocate(zs(nstot), gprofs(nstot))
       do ksub=1, nstot
-         zs(ksub) = dom%edge(zdim, LO)-cg%nb*cg%dl(zdim) + (real(ksub)-half)*dzs
+         zs(ksub) = hsmin + (real(ksub)-half)*dzs
       enddo
       call get_gprofs(iia, jja, cg)
       gprofs = gprofs / csim2 *dzs
-      call hydrostatic_main(sd)
+      call hydrostatic_main(cg, sd)
 
    end subroutine start_hydrostatic
 
