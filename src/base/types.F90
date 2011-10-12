@@ -47,6 +47,8 @@ module types
          procedure :: array4d_get_sweep
          procedure :: array4d_get_sweep_one_var
          procedure :: check => array4d_check_if_dirty
+         procedure :: lb => array4d_lbound
+         procedure :: ub => array4d_ubound
          generic, public :: init => array4d_init, array4d_associate
          generic, public :: get_sweep => array4d_get_sweep_one_var, array4d_get_sweep
    end type array4d
@@ -59,6 +61,8 @@ module types
          procedure :: clean => array3d_clean
          procedure :: check => array3d_check_if_dirty
          procedure :: get_sweep => array3d_get_sweep
+         procedure :: lb => array3d_lbound
+         procedure :: ub => array3d_ubound
          generic, public :: init => array3d_init, array3d_associate
    end type array3d
 
@@ -246,5 +250,43 @@ contains
             p1d => this%arr(:,i1,i2,:)
       end select
    end function array4d_get_sweep
+
+   function array4d_ubound(this,dim_) result(n)
+      implicit none
+      class(array4d), intent(in) :: this
+      integer(kind=4), intent(in) :: dim_
+      integer(kind=8) :: n
+
+      n = ubound(this%arr, dim=dim_, kind=8)
+   end function array4d_ubound
+
+   function array4d_lbound(this,dim_) result(n)
+
+      implicit none
+      class(array4d), intent(in) :: this
+      integer(kind=4), intent(in) :: dim_
+      integer(kind=8) :: n
+
+      n = lbound(this%arr,dim=dim_,kind=8)
+   end function array4d_lbound
+
+   function array3d_ubound(this,dim_) result(n)
+      implicit none
+      class(array3d), intent(in) :: this
+      integer(kind=4), intent(in) :: dim_
+      integer(kind=8) :: n
+
+      n = ubound(this%arr, dim=dim_, kind=8)
+   end function array3d_ubound
+
+   function array3d_lbound(this,dim_) result(n)
+
+      implicit none
+      class(array3d), intent(in) :: this
+      integer(kind=4), intent(in) :: dim_
+      integer(kind=8) :: n
+
+      n = lbound(this%arr,dim=dim_,kind=8)
+   end function array3d_lbound
 
 end module types
