@@ -285,7 +285,7 @@ contains
    subroutine init_prob
 
       use constants,   only: small, xdim, ydim, zdim, AT_NO_B
-      use dataio_pub,  only: warn, printinfo, msg
+      use dataio_pub,  only: warn, printinfo, msg, die
       use domain,      only: has_dir
       use global,      only: smalld
       use grid,        only: all_cg
