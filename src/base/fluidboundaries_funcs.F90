@@ -33,9 +33,73 @@ module fluidboundaries_funcs
    implicit none
 
    private
-   public :: bnd_null, bnd_xl_per, bnd_xr_per, bnd_xl_ref, bnd_xr_ref, bnd_xl_out, bnd_xr_out, bnd_xl_outd, bnd_xr_outd
+   public :: bnd_null, bnd_xl_per, bnd_xr_per, bnd_xl_ref, bnd_xr_ref, bnd_xl_out, bnd_xr_out, bnd_xl_outd, bnd_xr_outd, &
+        &    user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr, &
+        &    init_default_fluidboundaries
+
+   interface
+
+      subroutine user_bnd(cg)
+
+         use grid_cont, only: grid_container
+
+         implicit none
+
+         type(grid_container), pointer, intent(inout) :: cg
+
+      end subroutine user_bnd
+
+   end interface
+
+   procedure(user_bnd), pointer :: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
+   procedure(user_bnd), pointer :: func_bnd_xl, func_bnd_xr
 
 contains
+
+!--------------------------------------------------------------------------------------------------
+   subroutine default_bnd(cg)
+
+      use grid_cont,  only: grid_container
+      use dataio_pub, only: die
+
+      implicit none
+
+      type(grid_container), pointer, intent(inout) :: cg
+
+      call die("User boundaries are not defined")
+
+      if (.true. .or. cg%empty) return ! suppress compiler warnings
+
+   end subroutine default_bnd
+!--------------------------------------------------------------------------------------------------
+   subroutine init_default_fluidboundaries
+
+      use constants,  only: PIERNIK_INIT_MPI
+      use dataio_pub, only: code_progress, die
+#ifdef VERBOSE
+      use dataio_pub, only: printinfo
+#endif /* VERBOSE */
+
+      implicit none
+
+      if (code_progress < PIERNIK_INIT_MPI) call die("[fluidboundaries_funcs:init_default_fluidboundaries] MPI not initialized.")
+
+#ifdef VERBOSE
+      call printinfo("[fluidboundaries_funcs:init_default_fluidboundaries]: commencing...")
+#endif /* VERBOSE */
+
+      user_bnd_xl => default_bnd
+      user_bnd_xr => default_bnd
+      user_bnd_yl => default_bnd
+      user_bnd_yr => default_bnd
+      user_bnd_zl => default_bnd
+      user_bnd_zr => default_bnd
+
+#ifdef VERBOSE
+      call printinfo("[fluidboundaries_funcs:init_default_fluidboundaries]: finished. \o/")
+#endif /* VERBOSE */
+
+   end subroutine init_default_fluidboundaries
 
    subroutine bnd_null(cg)
 

@@ -184,7 +184,7 @@ contains
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
       use fluidboundaries,       only: all_fluid_boundaries
-      use fluidboundaries_pub,   only: init_default_fluidboundaries
+      use fluidboundaries_funcs, only: init_default_fluidboundaries
       use fluidindex,            only: flind
       use func,                  only: sanitize_smallx_checks
       use global,                only: init_global

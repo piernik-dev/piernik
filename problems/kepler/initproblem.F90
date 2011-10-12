@@ -97,7 +97,7 @@ contains
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
       use dataio_user,         only: user_vars_hdf5, problem_read_restart
       use domain,              only: geometry_type
-      use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr
+      use fluidboundaries_funcs, only: user_bnd_xl, user_bnd_xr
       use gravity,             only: grav_pot_3d
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, FIRST

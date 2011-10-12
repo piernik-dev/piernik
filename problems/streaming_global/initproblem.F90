@@ -62,7 +62,7 @@ contains
 
       use dataio_user,         only: problem_read_restart, user_vars_hdf5
       use gravity,             only: grav_pot_3d, grav_type
-!     use fluidboundaries_pub, only: user_bnd_xl, user_bnd_xr
+!     use fluidboundaries_funcs, only: user_bnd_xl, user_bnd_xr
       use user_hooks,          only: problem_customize_solution, problem_grace_passed
 
       implicit none
