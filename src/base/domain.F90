@@ -379,6 +379,8 @@ contains
       cdd%comm3d = MPI_COMM_NULL
 
       dom_divided = .false.
+      ! \todo domain division should be converted to type-bound procedure or
+      ! at least operate on pdom
       if (associated(user_divide_domain)) call user_divide_domain(dom_divided)
       if (.not. dom_divided) call divide_domain(dom_divided)
       if (.not. dom_divided) call die("[domain:init_domain] Domain dedomposition failed")
