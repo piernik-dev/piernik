@@ -148,7 +148,7 @@ contains
 
          if (associated(cg%cs_iso2)) cg%cs_iso2(:,:,:) = flind%ion%cs2
 
-         call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg=cg)
+         call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg, .true.)
 
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)

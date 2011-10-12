@@ -320,7 +320,7 @@ contains
                cg%cs_iso2(i,:,:) = cs2
 
                do j = 1, cg%n_(ydim)
-                  call hydrostatic_zeq_densmid(i, j, rho, cs2, cg=cg)
+                  call hydrostatic_zeq_densmid(i, j, rho, cs2, cg, .true.)
                   do k = 1, cg%n_(zdim)
                      zk = cg%z(k)
                      cg%u(fl%idn,i,j,k) = max(cg%dprof(k)/(1.0+eps), smalld)

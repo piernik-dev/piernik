@@ -76,7 +76,7 @@ contains
 !! \param coldens column density value for given x and y coordinates
 !! \param csim2 sqare of sound velocity
 !<
-   subroutine hydrostatic_zeq_coldens(iia, jja, coldens, csim2, cg) !, ug)
+   subroutine hydrostatic_zeq_coldens(iia, jja, coldens, csim2, cg, ug)
 
       use grid_cont, only: grid_container
 
@@ -85,11 +85,11 @@ contains
       integer,                       intent(in)    :: iia, jja
       real,                          intent(in)    :: coldens, csim2
       type(grid_container), pointer, intent(inout) :: cg
-!      logical,                       intent(in)    :: ug
+      logical,                       intent(in)    :: ug
       real                                         :: sdprof, sd
 
       sdprof = 1.0
-      call hydrostatic_zeq_densmid(iia, jja, sdprof, csim2, sd, cg) !, ug)
+      call hydrostatic_zeq_densmid(iia, jja, sdprof, csim2, cg, ug, sd)
       cg%dprof = cg%dprof * coldens / sd
 
    end subroutine hydrostatic_zeq_coldens
@@ -103,7 +103,7 @@ contains
 !! \param csim2 sqare of sound velocity
 !! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
 !<
-   subroutine hydrostatic_zeq_densmid(iia, jja, d0, csim2, sd, cg) !, ug)
+   subroutine hydrostatic_zeq_densmid(iia, jja, d0, csim2, cg, ug, sd)
 
       use constants,  only: small
       use dataio_pub, only: die
@@ -114,15 +114,14 @@ contains
       integer,                       intent(in)    :: iia, jja
       real,                          intent(in)    :: d0, csim2
       type(grid_container), pointer, intent(in)    :: cg
+      logical,                       intent(in)    :: ug
       real,                optional, intent(inout) :: sd
-!      logical,                       intent(in)    :: ug
 
       if (d0 <= small) call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
       dmid = d0
 
-!      if (ug) call set_default_hsparams(cg)
-      call set_default_hsparams(cg)
-      call start_hydrostatic(iia, jja, csim2, sd, cg)
+      if (ug) call set_default_hsparams(cg)
+      call start_hydrostatic(iia, jja, csim2, cg, sd)
       call finish_hydrostatic
 
    end subroutine hydrostatic_zeq_densmid
@@ -244,10 +243,9 @@ contains
 
       implicit none
 
-      integer, intent(in) :: iia, jja
+      integer,                       intent(in) :: iia, jja
       type(grid_container), pointer, intent(in) :: cg
-
-      integer :: ia, ja
+      integer                                   :: ia, ja
 
       ia = min(cg%n_(xdim), int(max(1, iia), kind=4))
       ja = min(cg%n_(ydim), int(max(1, jja), kind=4))
@@ -270,12 +268,11 @@ contains
 
       implicit none
 
-      integer, intent(in)                  :: iia, jja
+      integer,                       intent(in) :: iia, jja
       type(grid_container), pointer, intent(in) :: cg
-
-      real, pointer, dimension(:,:,:)      :: gpots
-      type(axes)                           :: ax
-      integer                              :: nstot1
+      real, pointer, dimension(:,:,:)           :: gpots
+      type(axes)                                :: ax
+      integer                                   :: nstot1
 
       nstot1 = nstot + 1
       allocate(gpots(1,1,nstot1))
@@ -304,7 +301,7 @@ contains
 !! \param csim2 sqare of sound velocity
 !! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
 !<
-   subroutine start_hydrostatic(iia, jja, csim2, sd, cg)
+   subroutine start_hydrostatic(iia, jja, csim2, cg, sd)
 
       use constants,  only: half
       use dataio_pub, only: die
@@ -313,11 +310,11 @@ contains
 
       implicit none
 
-      integer, intent(in) :: iia, jja
-      real,    intent(in) :: csim2
-      real,    intent(inout), optional :: sd
-      type(grid_container), pointer, intent(in) :: cg
-      integer :: ksub
+      integer,                       intent(in)    :: iia, jja
+      real,                          intent(in)    :: csim2
+      real,                optional, intent(inout) :: sd
+      type(grid_container), pointer, intent(in)    :: cg
+      integer                                      :: ksub
 
       if (.not.associated(get_gprofs)) then
          select case (gprofs_target)

@@ -355,7 +355,7 @@ contains
                   xi = cg%x(i)
                   rc = sqrt(xi**2+yj**2)
 
-                  if (dom%has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2, cg=cg)
+                  if (dom%has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2, cg, .true.)
 
                   do k = 1, cg%n_(zdim)
 

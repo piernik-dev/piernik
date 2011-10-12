@@ -161,7 +161,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg=cg)
+         call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg, .true.)
 
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
