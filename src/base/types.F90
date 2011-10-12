@@ -255,9 +255,9 @@ contains
       implicit none
       class(array4d), intent(in) :: this
       integer(kind=4), intent(in) :: dim_
-      integer(kind=8) :: n
+      integer(kind=4) :: n
 
-      n = ubound(this%arr, dim=dim_, kind=8)
+      n = ubound(this%arr, dim=dim_, kind=4)
    end function array4d_ubound
 
    function array4d_lbound(this,dim_) result(n)
@@ -265,18 +265,18 @@ contains
       implicit none
       class(array4d), intent(in) :: this
       integer(kind=4), intent(in) :: dim_
-      integer(kind=8) :: n
+      integer(kind=4) :: n
 
-      n = lbound(this%arr,dim=dim_,kind=8)
+      n = lbound(this%arr,dim=dim_,kind=4)
    end function array4d_lbound
 
    function array3d_ubound(this,dim_) result(n)
       implicit none
       class(array3d), intent(in) :: this
       integer(kind=4), intent(in) :: dim_
-      integer(kind=8) :: n
+      integer(kind=4) :: n
 
-      n = ubound(this%arr, dim=dim_, kind=8)
+      n = ubound(this%arr, dim=dim_, kind=4)
    end function array3d_ubound
 
    function array3d_lbound(this,dim_) result(n)
@@ -284,9 +284,9 @@ contains
       implicit none
       class(array3d), intent(in) :: this
       integer(kind=4), intent(in) :: dim_
-      integer(kind=8) :: n
+      integer(kind=4) :: n
 
-      n = lbound(this%arr,dim=dim_,kind=8)
+      n = lbound(this%arr,dim=dim_,kind=4)
    end function array3d_lbound
 
 end module types
