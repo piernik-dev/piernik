@@ -35,13 +35,14 @@
 !<
 module resistivity
 ! pulled by RESISTIVE
-   use constants, only: ndims, varlen
-   use types,     only: array3d, value
+   use constants, only: ndims, varlen, dsetnamelen
+   use types,     only: value
+
    implicit none
 
    private
    public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, etamax,   &
-        &     diffuseb,cu2max, deimin, eta1_active, wcu, compute_resist
+        &     diffuseb,cu2max, deimin, eta1_active, compute_resist
 
    real    :: cfl_resist                     !< CFL factor for resistivity effect
    real    :: eta_0                          !< uniform resistivity
@@ -53,12 +54,12 @@ module resistivity
    real    :: dt_resist, dt_eint
    double precision :: d_eta_factor
    type(value)      :: etamax, cu2max, deimin
-   type(array3d)    :: wcu, eta
    real, dimension(:,:,:), allocatable, target :: wb, eh
    real, dimension(:,:,:), allocatable         :: dbx, dby, dbz
    logical, save :: eta1_active = .true.       !< resistivity off-switcher while eta_1 == 0.0
    integer, dimension(ndims,ndims)                     :: idm   !< identity matrix 3x3
    character(len=varlen), dimension(ndims) :: emfd
+   character(len=dsetnamelen), parameter :: eta_n = "eta"
 
 contains
 
@@ -66,8 +67,6 @@ contains
 
       implicit none
 
-      call eta%clean()
-      call wcu%clean()
       if (allocated(wb) ) deallocate(wb)
       if (allocated(eh) ) deallocate(eh)
       if (allocated(dbx)) deallocate(dbx)
@@ -95,7 +94,7 @@ contains
 !<
    subroutine init_resistivity
 
-      use constants,  only: PIERNIK_INIT_GRID, zdim, xdim, ydim
+      use constants,  only: PIERNIK_INIT_GRID, zdim, xdim, ydim, AT_IGNORE, wcu_n
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress
       use domain,     only: dom, is_multicg
@@ -154,11 +153,11 @@ contains
       cg => all_cg%first%cg
       if (is_multicg) call die("[resistivity:init_resistivity] multiple grid pieces per procesor not implemented yet") !nontrivial eta, ...
 
-      call eta%init(cg%n_(:))
-      call wcu%init(cg%n_(:))
+      call all_cg%reg_var(wcu_n, AT_IGNORE)
+      call all_cg%reg_var(eta_n, AT_IGNORE)
 #ifdef ISO
       if (eta_1 == 0.) then
-         eta%arr     = eta_0
+         cg%q(cg%get_na_ind(eta_n))%arr = eta_0
          etamax%val  = eta_0
          eta1_active = .false.
       endif
@@ -207,6 +206,7 @@ contains
       real, dimension(:,:,:), pointer :: p
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+      real, dimension(:,:,:), pointer :: eta
 
       if (.not.eta1_active) return
 !> \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array - should change  with rev. 3893
@@ -216,6 +216,7 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
+         eta => cg%get_na_ptr(eta_n)
 
          if (dom%has_dir(xdim)) then
             dbx(2:cg%n_(xdim),:,:) = (cg%b(ydim,2:cg%n_(xdim),:,:)-cg%b(ydim,1:cg%n_(xdim)-1,:,:))*cg%idl(xdim) ; dbx(1,:,:) = dbx(2,:,:)
@@ -249,34 +250,35 @@ contains
             wb = wb + eh**2
          endif
 
-         eta%arr(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
+         eta(:,:,:) = eta_0 + eta_1 * sqrt( max(0.0,wb(:,:,:)- jc2 ))
 
          eh = 0.0
          if (dom%has_dir(xdim)) then
-            eh(2:cg%n_(xdim)-1,:,:) = eh(2:cg%n_(xdim)-1,:,:) + eta%arr(1:cg%n_(xdim)-2,:,:) + eta%arr(3:cg%n_(xdim),:,:)
+            eh(2:cg%n_(xdim)-1,:,:) = eh(2:cg%n_(xdim)-1,:,:) + eta(1:cg%n_(xdim)-2,:,:) + eta(3:cg%n_(xdim),:,:)
             eh(1,:,:) = eh(2,:,:) ; eh(cg%n_(xdim),:,:) = eh(cg%n_(xdim)-1,:,:)
          endif
          if (dom%has_dir(ydim)) then
-            eh(:,2:cg%n_(ydim)-1,:) = eh(:,2:cg%n_(ydim)-1,:) + eta%arr(:,1:cg%n_(ydim)-2,:) + eta%arr(:,3:cg%n_(ydim),:)
+            eh(:,2:cg%n_(ydim)-1,:) = eh(:,2:cg%n_(ydim)-1,:) + eta(:,1:cg%n_(ydim)-2,:) + eta(:,3:cg%n_(ydim),:)
             eh(:,1,:) = eh(:,2,:) ; eh(:,cg%n_(ydim),:) = eh(:,cg%n_(ydim)-1,:)
          endif
          if (dom%has_dir(zdim)) then
-            eh(:,:,2:cg%n_(zdim)-1) = eh(:,:,2:cg%n_(zdim)-1) + eta%arr(:,:,1:cg%n_(zdim)-2) + eta%arr(:,:,3:cg%n_(zdim))
+            eh(:,:,2:cg%n_(zdim)-1) = eh(:,:,2:cg%n_(zdim)-1) + eta(:,:,1:cg%n_(zdim)-2) + eta(:,:,3:cg%n_(zdim))
             eh(:,:,1) = eh(:,:,2) ; eh(:,:,cg%n_(zdim)) = eh(:,:,cg%n_(zdim)-1)
          endif
-         eh = real((eh + eta_scale*eta%arr)*d_eta_factor)
+         eh = real((eh + eta_scale*eta)*d_eta_factor)
 
-         where (eta%arr > eta_0)
-            eta%arr = eh
+         where (eta > eta_0)
+            eta = eh
          endwhere
 
          cgl => cgl%nxt
       enddo
 
       cg => all_cg%first%cg
-      if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
+      if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum, wb, eta
+      nullify(eta)
 
-      p => eta%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+      p => cg%q(cg%get_na_ind(eta_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, etamax, cg) ; NULLIFY(p)
       call MPI_Bcast(etamax%val, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
       p => wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
@@ -284,7 +286,7 @@ contains
 
 #ifndef ISO
       wb = ( cg%u(flind%ion%ien,:,:,:) - half*( cg%u(flind%ion%imx,:,:,:)**2  + cg%u(flind%ion%imy,:,:,:)**2  + cg%u(flind%ion%imz,:,:,:)**2 ) &
-           / cg%u(flind%ion%idn,:,:,:) - half*( cg%b(xdim,:,:,:)**2  +   cg%b(ydim,:,:,:)**2  +   cg%b(zdim,:,:,:)**2))/ ( eta%arr * wb+small)
+           / cg%u(flind%ion%idn,:,:,:) - half*( cg%b(xdim,:,:,:)**2  +   cg%b(ydim,:,:,:)**2  +   cg%b(zdim,:,:,:)**2))/ ( eta(:,:,:) * wb+small)
       dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
 
       call get_extremum(p, MINL, deimin, cg)
@@ -378,7 +380,7 @@ contains
 
    subroutine diffuseb(ibdir, sdir)
 
-      use constants,     only: xdim, ydim, zdim, ndims, half, varlen, I_ONE, mag_n
+      use constants,     only: xdim, ydim, zdim, ndims, half, varlen, I_ONE, mag_n, wcu_n
       use domain,        only: dom
       use global,        only: dt
       use grid,          only: all_cg
@@ -390,7 +392,7 @@ contains
 
       integer(kind=4),  intent(in)   :: ibdir, sdir
       character(len=varlen)          :: emf
-      integer                        :: i1, i2, bi
+      integer                        :: i1, i2, b_i, wcu_i, eta_i
       integer(kind=4)                :: n1, n2, etadir
       integer, dimension(ndims)      :: idml, idmh
       real, dimension(:),    pointer :: b1d, eta1d, wcu1d
@@ -407,28 +409,31 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
-         bi   = cg%get_na_ind_4d(mag_n)
+         b_i   = cg%get_na_ind_4d(mag_n)
+         wcu_i = cg%get_na_ind(wcu_n)
+         eta_i = cg%get_na_ind(eta_n)
 
 !         select case (etadir)
 !            case (xdim)
-!               eta%arr(1:cg%n_(xdim)-1,:,:) = half*(eta%arr(1:cg%n_(xdim)-1,:,:)+eta%arr(2:cg%n_(xdim),:,:))
+!               cg%q(eta_i)%arr(1:cg%n_(xdim)-1,:,:) = half*(cg%q(eta_i)%arr(1:cg%n_(xdim)-1,:,:)+cg%q(eta_i)%arr(2:cg%n_(xdim),:,:))
 !            case (ydim)
-!               eta%arr(:,1:cg%n_(ydim)-1,:) = half*(eta%arr(:,1:cg%n_(ydim)-1,:)+eta%arr(:,2:cg%n_(ydim),:))
+!               cg%q(eta_i)%arr(:,1:cg%n_(ydim)-1,:) = half*(cg%q(eta_i)%arr(:,1:cg%n_(ydim)-1,:)+cg%q(eta_i)%arr(:,2:cg%n_(ydim),:))
 !            case (zdim)
-!               eta%arr(:,:,1:cg%n_(zdim)-1) = half*(eta%arr(:,:,1:cg%n_(zdim)-1)+eta%arr(:,:,2:cg%n_(zdim)))
+!               cg%q(eta_i)%arr(:,:,1:cg%n_(zdim)-1) = half*(cg%q(eta_i)%arr(:,:,1:cg%n_(zdim)-1)+cg%q(eta_i)%arr(:,:,2:cg%n_(zdim)))
 !         end select
 
 ! following solution seems to be a bit faster than former select case
-         idmh = cg%n_ - idm(:,etadir)
-         idml = 1 + idm(:,etadir)
-         eta%arr(:idmh(xdim), :idmh(ydim), :idmh(zdim)) = &
-     &      half*(eta%arr(:idmh(xdim), :idmh(ydim), :idmh(zdim)) + eta%arr(idml(xdim):cg%n_(xdim), idml(ydim):cg%n_(ydim), idml(zdim):cg%n_(zdim)) )
+         idmh(:) = cg%n_(:) - idm(:,etadir)
+         idml(:) = 1 + idm(:,etadir)
+         cg%q(eta_i)%arr                  (          :idmh(xdim),            :idmh(ydim),            :idmh(zdim)) = &
+              &      half*(cg%q(eta_i)%arr(          :idmh(xdim),            :idmh(ydim),            :idmh(zdim)) + &
+              &            cg%q(eta_i)%arr(idml(xdim):cg%n_(xdim), idml(ydim):cg%n_(ydim), idml(zdim):cg%n_(zdim)) )
 
-         do i1 = 1, ubound(wcu%arr,n1)
-            do i2 = 1, ubound(wcu%arr,n2)
-               b1d    => cg%w(bi)%get_sweep(sdir,ibdir,i1,i2)
-               eta1d  =>  eta%get_sweep(sdir,      i1,i2)
-               wcu1d  =>  wcu%get_sweep(sdir,      i1,i2)
+         do i1 = 1, ubound(cg%q(wcu_i)%arr,n1)
+            do i2 = 1, ubound(cg%q(wcu_i)%arr,n2)
+               b1d   => cg%w(b_i  )%get_sweep(sdir,ibdir,i1,i2)
+               eta1d => cg%q(eta_i)%get_sweep(sdir,      i1,i2)
+               wcu1d => cg%q(wcu_i)%get_sweep(sdir,      i1,i2)
                call tvdd_1d(b1d, eta1d, cg%idl(sdir), dt, wcu1d)
             enddo
          enddo
@@ -439,7 +444,7 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          do i1 = xdim, zdim
-            if (dom%has_dir(i1)) call bnd_emf(wcu%arr,emf,i1, cgl%cg)
+            if (dom%has_dir(i1)) call bnd_emf(cg%q(wcu_i)%arr,emf,i1, cgl%cg)
          enddo
          cgl => cgl%nxt
       enddo

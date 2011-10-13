@@ -263,9 +263,9 @@ contains
       use magboundaries, only: all_mag_boundaries
       use user_hooks,    only: custom_emf_bnd
 #ifdef RESISTIVE
+      use constants,     only: wcu_n
       use dataio_pub,    only: die
       use domain,        only: is_multicg
-      use resistivity,   only: wcu
 #endif /* RESISTIVE */
 
       implicit none
@@ -273,21 +273,25 @@ contains
       integer(kind=4), intent(in)    :: dim1, dim2
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+#ifdef RESISTIVE
+      real, dimension(:,:,:), pointer :: wcu
+#endif /* RESISTIVE */
 
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
-         if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") ! move wcu into cg
-         if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu%arr)
-         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - wcu%arr*cg%idl(dim1)
-         wcu%arr = pshift(wcu%arr,dim1)
-         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + wcu%arr*cg%idl(dim1)
-         wcu%arr = mshift(wcu%arr,dim1)
-         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) + wcu%arr*cg%idl(dim2)
-         wcu%arr = pshift(wcu%arr,dim2)
-         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - wcu%arr*cg%idl(dim2)
+         wcu => cg%get_na_ptr(wcu_n)
+         if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") ! not tested custom_emf_bnd
+         if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - wcu*cg%idl(dim1)
+         wcu = pshift(wcu,dim1)
+         cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) + wcu*cg%idl(dim1)
+         wcu = mshift(wcu,dim1)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) + wcu*cg%idl(dim2)
+         wcu = pshift(wcu,dim2)
+         cg%b(dim1,:,:,:) = cg%b(dim1,:,:,:) - wcu*cg%idl(dim2)
 #endif /* RESISTIVE */
 ! ADVECTION FULL STEP
          if (associated(custom_emf_bnd)) call custom_emf_bnd(cg%wa)
