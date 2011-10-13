@@ -40,7 +40,7 @@ module mpisetup
    implicit none
 
    private
-   public :: cleanup_mpi, init_mpi, mpifind, inflate_req, &
+   public :: cleanup_mpi, init_mpi, inflate_req, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, ierr, &
         &    master, slave, nproc, proc, FIRST, LAST, procmask, comm, info, have_mpi
 
@@ -211,37 +211,5 @@ contains
       call MPI_Finalize(ierr)
 
    end subroutine cleanup_mpi
-
-!-----------------------------------------------------------------------------
-
-   subroutine mpifind(var, what)
-
-      use types,         only: value
-      use constants,     only: MINL, MAXL, I_ONE
-      use dataio_pub,    only: die
-      use mpi,           only: MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
-
-      implicit none
-
-      type(value), intent(inout) :: var
-      integer(kind=4), intent(in)       :: what
-
-      real, dimension(2)  :: v_red
-      integer, dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
-
-      v_red(:) = [ var%val, real(proc) ]
-
-      if (any([MINL, MAXL] == what)) then
-         call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, op(what), comm, ierr)
-      else
-         call die("[mpisetup:mpifind] invalid extremum type")
-      endif
-
-      var%val = v_red(1)
-      var%proc = int(v_red(2))
-
-   end subroutine mpifind
-
-!-----------------------------------------------------------------------------
 
 end module mpisetup

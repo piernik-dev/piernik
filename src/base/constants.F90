@@ -173,7 +173,7 @@ module constants
 
    ! misc
    enum, bind(C)
-      enumerator :: MINL, MAXL                           !< constants for mpifind
+      enumerator :: MINL, MAXL                           !< constants for func::get_extremum
    end enum
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit

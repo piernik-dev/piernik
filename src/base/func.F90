@@ -126,12 +126,12 @@ contains
 !> \todo move to a better place (possibly dataio_pub since stop types module stops using die routine)
    subroutine get_extremum(tab, minmax, prop, cg)
 
-      use constants,  only: MINL, MAXL, ndims, xdim, ydim, zdim
+      use constants,  only: MINL, MAXL, I_ONE, ndims, xdim, ydim, zdim
       use dataio_pub, only: msg, warn, die
       use domain,     only: dom, is_multicg
       use grid_cont,  only: grid_container
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE
-      use mpisetup,   only: mpifind, comm, ierr, master, proc, FIRST
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
+      use mpisetup,   only: comm, ierr, master, proc, FIRST
       use types,      only: value
 
       implicit none
@@ -143,6 +143,8 @@ contains
 
       integer, parameter :: tag1 = 11
       integer, parameter :: tag2 = 12
+      real, dimension(2)  :: v_red
+      integer, dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
 
       if (is_multicg) call die("[func:get_extremum] multiple grid pieces per procesor not implemented yet") !nontrivial
 
@@ -158,7 +160,12 @@ contains
             call warn(msg)
       end select
 
-      call mpifind(prop, minmax)
+      v_red(:) = [ prop%val, real(proc) ]
+
+      call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, op(minmax), comm, ierr)
+
+      prop%val = v_red(1)
+      prop%proc = int(v_red(2))
 
       if (proc == prop%proc) then
          where (.not. dom%has_dir(:)) prop%coords(:) = 0.
