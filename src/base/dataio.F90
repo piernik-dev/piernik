@@ -94,6 +94,27 @@ module dataio
    character(len=fmt_len), protected, target :: fmt_loc, fmt_dtloc
 
    namelist /END_CONTROL/ nend, tend, wend
+
+   type :: tsl_container
+      logical :: dummy
+#ifdef COSM_RAYS
+      real :: encr_min, encr_max
+#endif /* COSM_RAYS */
+#ifdef RESISTIVE
+      real :: etamax
+#endif /* RESISTIVE */
+#ifdef MAGNETIC
+      real :: b_min, b_max, divb_max
+#endif /* MAGNETIC */
+#ifdef IONIZED
+      real :: vai_max
+#endif /* IONIZED */
+#ifdef VARIABLE_GP
+      real :: gpxmax, gpymax, gpzmax
+#endif /* VARIABLE_GP */
+   end type tsl_container
+
+
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
                              domain_dump, vars, mag_center, vizit, fmin, fmax, &
@@ -714,7 +735,6 @@ contains
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
-      use types,       only: tsl_container
 #ifndef ISO
       use fluidindex,  only: iarr_all_en
 #endif /* !ISO */
@@ -1023,7 +1043,7 @@ contains
 !
    subroutine  write_log(tsl)
 
-      use types,              only: tsl_container, value
+      use types,              only: value
       use constants,          only: small, MINL, MAXL, xdim, ydim, zdim
       use dataio_pub,         only: msg, printinfo, warn
       use domain,             only: dom, is_multicg

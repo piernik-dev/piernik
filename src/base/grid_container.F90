@@ -32,9 +32,10 @@
 !<
 module grid_cont
 
-   use constants, only: xdim, zdim, ndims, LO, HI
-   use domain,    only: domain_container
-   use types,     only: axes, named_array4d, named_array3d
+   use constants,   only: xdim, zdim, ndims, LO, HI
+   use domain,      only: domain_container
+   use types,       only: axes
+   use named_array, only: named_array4d, named_array3d
 
    implicit none
 
