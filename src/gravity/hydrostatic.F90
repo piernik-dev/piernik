@@ -144,7 +144,7 @@ contains
       hstn  = dom%n_t(zdim)
       sdlim = dom%edge(zdim,:)
       allocate(hsl(hsbn+1))
-      hsl(:) = cg%zl(:)
+      hsl(1:hsbn) = cg%zl(1:hsbn)
       hsl(hsbn+1) = cg%zr(hsbn)
 
    end subroutine set_default_hsparams
