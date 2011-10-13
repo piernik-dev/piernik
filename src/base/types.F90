@@ -31,15 +31,18 @@
 !<
 module types
 
-   use constants, only: ndims
+   use constants, only: ndims, dsetnamelen
 
    implicit none
 
    private
-   public :: axes, tsl_container, value, array4d, array3d
+   public :: axes, tsl_container, value, named_array4d, named_array3d
 
-   type :: array4d
+!< A named array for user-defined vector fields and similar
+   type :: named_array4d
       real, dimension(:,:,:,:), pointer :: arr => null()
+      character(len=dsetnamelen) :: name                 !< a user-provided id for the array
+      integer(kind=4) :: restart_mode                    !< \todo If not .true. then write names to the restart file
       contains
          procedure :: array4d_init           ! \todo check why private here does not  work as expected
          procedure :: array4d_associate
@@ -51,10 +54,13 @@ module types
          procedure :: ub => array4d_ubound
          generic, public :: init => array4d_init, array4d_associate
          generic, public :: get_sweep => array4d_get_sweep_one_var, array4d_get_sweep
-   end type array4d
+   end type named_array4d
 
-   type :: array3d
+!< A named array for user-defined variables, scalar fields and similar
+   type :: named_array3d
       real, dimension(:,:,:), pointer :: arr => null()
+      character(len=dsetnamelen) :: name                !< a user-provided id for the array
+      integer(kind=4) :: restart_mode                   !< \todo If not .true. then write names to the restart file
       contains
          procedure :: array3d_init
          procedure :: array3d_associate
@@ -64,7 +70,7 @@ module types
          procedure :: lb => array3d_lbound
          procedure :: ub => array3d_ubound
          generic, public :: init => array3d_init, array3d_associate
-   end type array3d
+   end type named_array3d
 
    type :: value
       real                      :: val
@@ -111,7 +117,7 @@ contains
 
       implicit none
 
-      class(array3d), intent(inout) :: this
+      class(named_array3d), intent(inout) :: this
       integer(kind=4), dimension(3), intent(in) :: n3
 
       if (.not.associated(this%arr)) allocate(this%arr(n3(1), n3(2), n3(3)))
@@ -122,7 +128,7 @@ contains
 
    subroutine array3d_clean(this)
       implicit none
-      class(array3d), intent(inout) :: this
+      class(named_array3d), intent(inout) :: this
 
       if (associated(this%arr)) deallocate(this%arr)
       return
@@ -131,7 +137,7 @@ contains
    logical function array3d_check_if_dirty(this)
       use constants, only: big_float
       implicit none
-      class(array3d), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) :/
+      class(named_array3d), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) :/
 
       array3d_check_if_dirty = any( this%arr >= big_float )
 
@@ -139,7 +145,7 @@ contains
 
    subroutine array3d_associate(this,other)
       implicit none
-      class(array3d), intent(inout) :: this
+      class(named_array3d), intent(inout) :: this
       real, allocatable, dimension(:,:,:), target :: other
 
       if (.not.associated(this%arr)) this%arr => other
@@ -152,7 +158,7 @@ contains
 
       implicit none
 
-      class(array4d), intent(inout) :: this
+      class(named_array4d), intent(inout) :: this
       integer(kind=4), dimension(4), intent(in) :: n4
 
       if (.not.associated(this%arr)) allocate(this%arr(n4(1), n4(2), n4(3), n4(4)))
@@ -163,7 +169,7 @@ contains
 
    subroutine array4d_associate(this,other)
       implicit none
-      class(array4d), intent(inout) :: this
+      class(named_array4d), intent(inout) :: this
       real, allocatable, dimension(:,:,:,:), target :: other
 
       if (.not.associated(this%arr)) this%arr => other
@@ -172,7 +178,7 @@ contains
 
    subroutine array4d_clean(this)
       implicit none
-      class(array4d), intent(inout) :: this                  !! Unlimited polymorphism at (1) not yet supported
+      class(named_array4d), intent(inout) :: this                  !! Unlimited polymorphism at (1) not yet supported
 
       if (associated(this%arr)) deallocate(this%arr)
 
@@ -181,7 +187,7 @@ contains
    logical function array4d_check_if_dirty(this)
       use constants, only: big_float
       implicit none
-      class(array4d), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) when I grow older
+      class(named_array4d), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) when I grow older
 
       array4d_check_if_dirty = any( this%arr >= big_float )
 
@@ -190,7 +196,7 @@ contains
    function array3d_get_sweep(this,ndim,i1,i2) result(p1d)
       use constants, only: xdim, ydim, zdim
       implicit none
-      class(array3d), intent(inout) :: this
+      class(named_array3d), intent(inout) :: this
       real, dimension(:),  pointer  :: p1d
       integer(kind=4), intent(in)   :: ndim
       integer, intent(in)           :: i1, i2
@@ -212,7 +218,7 @@ contains
    function array4d_get_sweep_one_var(this,ndim,nn,i1,i2) result(p1d)
       use constants, only: xdim, ydim, zdim
       implicit none
-      class(array4d), intent(inout)      :: this
+      class(named_array4d), intent(inout)      :: this
 
       integer(kind=4), intent(in)        :: ndim, nn
       integer, intent(in)                :: i1, i2
@@ -235,7 +241,7 @@ contains
 
       implicit none
 
-      class(array4d), intent(inout)      :: this
+      class(named_array4d), intent(inout)      :: this
       integer(kind=4), intent(in)        :: ndim
       integer, intent(in)                :: i1, i2
 
@@ -253,7 +259,7 @@ contains
 
    function array4d_ubound(this,dim_) result(n)
       implicit none
-      class(array4d), intent(in) :: this
+      class(named_array4d), intent(in) :: this
       integer(kind=4), intent(in) :: dim_
       integer(kind=4) :: n
 
@@ -263,7 +269,7 @@ contains
    function array4d_lbound(this,dim_) result(n)
 
       implicit none
-      class(array4d), intent(in) :: this
+      class(named_array4d), intent(in) :: this
       integer(kind=4), intent(in) :: dim_
       integer(kind=4) :: n
 
@@ -272,7 +278,7 @@ contains
 
    function array3d_ubound(this,dim_) result(n)
       implicit none
-      class(array3d), intent(in) :: this
+      class(named_array3d), intent(in) :: this
       integer(kind=4), intent(in) :: dim_
       integer(kind=4) :: n
 
@@ -282,7 +288,7 @@ contains
    function array3d_lbound(this,dim_) result(n)
 
       implicit none
-      class(array3d), intent(in) :: this
+      class(named_array3d), intent(in) :: this
       integer(kind=4), intent(in) :: dim_
       integer(kind=4) :: n
 

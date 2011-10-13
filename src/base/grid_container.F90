@@ -32,9 +32,9 @@
 !<
 module grid_cont
 
-   use constants, only: dsetnamelen, xdim, zdim, ndims, LO, HI
+   use constants, only: xdim, zdim, ndims, LO, HI
    use domain,    only: domain_container
-   use types,     only: axes, array4d, array3d
+   use types,     only: axes, named_array4d, named_array3d
 
    implicit none
 
@@ -56,18 +56,6 @@ module grid_cont
    type :: bnd_list
       type(bnd_segment), dimension(:), allocatable :: seg !< list of boundary segments to exchange
    end type bnd_list
-
-   !< A named array for user-defined variables, scalar fields and similar
-   type, extends(array3d):: named_array3d
-      character(len=dsetnamelen) :: name !< a user-provided id for the array
-      integer(kind=4) :: restart_mode !< \todo If not .true. then write names to the restart file
-   end type named_array3d
-
-   !< A named array for user-defined vector fields and similar
-   type, extends(array4d):: named_array4d
-      character(len=dsetnamelen) :: name !< a user-provided id for the array
-      integer(kind=4) :: restart_mode !< \todo If not .true. then write names to the restart file
-   end type named_array4d
 
    type, extends(axes) :: grid_container
       real    :: dx                             !< length of the %grid cell in x-direction
