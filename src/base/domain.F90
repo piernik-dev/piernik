@@ -228,7 +228,7 @@ contains
       use constants,  only: xdim, zdim, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, big_float
       use dataio_pub, only: die, printinfo, msg, warn, code_progress
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
-      use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR
+      use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_LAND
       use mpisetup,   only: buffer_dim, cbuff, ibuff, lbuff, rbuff, master, slave, proc, FIRST, LAST, nproc, comm, ierr, have_mpi
 
       implicit none
@@ -382,8 +382,11 @@ contains
       ! \todo domain division should be converted to type-bound procedure or
       ! at least operate on pdom
       if (associated(user_divide_domain)) call user_divide_domain(dom_divided)
+      call is_too_small(dom_divided, "user_divide_domain")
       if (.not. dom_divided) call divide_domain(dom_divided)
-      if (.not. dom_divided) call die("[domain:init_domain] Domain dedomposition failed")
+      call is_too_small(dom_divided, "divide_domain")
+      call MPI_Allreduce(MPI_IN_PLACE, dom_divided, I_ONE, MPI_LOGICAL, MPI_LAND, comm, ierr)
+      if (.not. dom_divided .and. master) call die("[domain:init_domain] Domain decomposition failed")
 
       !\todo Analyze the decomposition and set up [ is_uneven, is_mpi_noncart, is_refined, ... ]
       is_multicg = (ubound(dom%pse(proc)%sel(:, :, :), dim=1) > 1)
@@ -428,6 +431,57 @@ contains
       if (is_refined) call die("[domain:init_domain] Refinements are not implemented")
 
    end subroutine init_domain
+
+!>
+!! \brief Prevent domain decompositions into pieces that are narrower than number of guardcells
+!!
+!! \details When a piece of grid is narrower than number of guardcells we may expect the following problems:
+!!  * Complicated boundary exchange routines because a single neighbour cannot provide valid boundary data in one step.
+!!  * Huge memory overhead because number of guardcells is much larger than number of active cells.
+!!  * Huge pergormance penalty because everything becomes dominated by guardcell operations.
+!! If this routine prevents you runnina a simulation then probably you either try to use too many processors or you use wrong domain decomposition scheme.
+!<
+
+   subroutine is_too_small(dom_divided, label)
+
+      use constants,  only: I_ONE
+      use dataio_pub, only: warn, msg
+      use mpi,        only: MPI_IN_PLACE, MPI_LOGICAL, MPI_LAND
+      use mpisetup,   only: proc, comm, ierr
+
+      implicit none
+
+      logical, intent(inout) :: dom_divided
+      character(len=*), intent(in) :: label
+
+      integer :: p
+
+      if (.not. dom_divided) return
+
+      if (allocated(dom%pse)) then
+         if (allocated(dom%pse(proc)%sel)) then
+            do p = lbound(dom%pse(proc)%sel(:, :, :), dim=1), ubound(dom%pse(proc)%sel(:, :, :), dim=1)
+               dom_divided = dom_divided .and. all(dom%pse(proc)%sel(p, :, HI) - dom%pse(proc)%sel(p, :, LO) >= dom%nb - 1 .or. .not. dom%has_dir(:))
+               if (.not. all(dom%pse(proc)%sel(p, :, HI) - dom%pse(proc)%sel(p, :, LO) >= dom%nb - 1 .or. .not. dom%has_dir(:))) then
+                  write(msg,'(3a,2(3i6,a),i4,a,3l2)')"[domain:is_too_small] ",label," [",dom%pse(proc)%sel(p, :, LO),"]:[",dom%pse(proc)%sel(p, :, HI), "] nb",dom%nb," h_d",dom%has_dir(:)
+                  call warn(msg)
+               endif
+            enddo
+         else
+            dom_divided = .false.
+            write(msg,'(3a)')"[domain:is_too_small] ",label," no dom%pse(proc)%sel"
+            call warn(msg)
+         endif
+      else
+         dom_divided = .false.
+         write(msg,'(3a)')"[domain:is_too_small] ",label," no dom%pse"
+         call warn(msg)
+      endif
+      call MPI_Allreduce(MPI_IN_PLACE, dom_divided, I_ONE, MPI_LOGICAL, MPI_LAND, comm, ierr)
+
+      if (allocated(dom%pse) .and. .not. dom_divided) call deallocate_pse
+
+   end subroutine is_too_small
 
 !!-----------------------------------------------------------------------------
 
@@ -708,7 +762,10 @@ contains
          return
       endif
 
-      if (all(bsize(:) > 0 .or. .not. dom%has_dir(:))) call stamp_cg(dom_divided)
+      if (all(bsize(:) > 0 .or. .not. dom%has_dir(:))) then
+         call stamp_cg(dom_divided)
+         call is_too_small(dom_divided, "stamp_cg")
+      endif
       if (dom_divided) return
 
       if (product(psize(:)) == nproc) then
@@ -719,7 +776,8 @@ contains
                call printinfo(msg)
             endif
             call cartesian_tiling(psize(:))
-            return
+            call is_too_small(dom_divided, "cartesian_tiling")
+            if (dom_divided) return
          else
             write(msg,'(a,3i6,a,3i4,a)')"[domain:divide_domain] Cannot divide domain with [",dom%n_d(:)," ] cells to [",psize(:)," ] piecess. "
             if (master) call warn(msg)
@@ -737,10 +795,12 @@ contains
          if (quality >= dd_unif_quality .or. .not. (allow_uneven .or. allow_noncart)) then
             call cartesian_tiling(p_size(:))
             dom_divided = .true.
-            return
+            call is_too_small(dom_divided, "divide_domain_uniform")
+            if (dom_divided) return
+         else
+            write(msg,'(2(a,f6.3),a)')"[domain:divide_domain] Quality of uniform division = ",quality," is below threshold ",dd_unif_quality, ", trying harder ..."
+            if (master) call warn(msg)
          endif
-         write(msg,'(2(a,f6.3),a)')"[domain:divide_domain] Quality of uniform division = ",quality," is below threshold ",dd_unif_quality, ", trying harder ..."
-         if (master) call warn(msg)
       endif
 
       if (allow_uneven) then
@@ -750,9 +810,11 @@ contains
             if (quality > dd_rect_quality .or. .not. allow_noncart) then
                call cartesian_tiling(p_size(:))
                dom_divided = .true.
-               return
+               call is_too_small(dom_divided, "divide_domain_rectlinear")
+               if (dom_divided) return
             endif
          endif
+         if (master) call warn("[domain:divide_domain] divide_domain_rectlinear failed")
       else
          if (master) call warn("[domain:divide_domain] Did not try uneven domain division")
       endif
@@ -763,13 +825,15 @@ contains
          ! if good_enough then return
          call choppy_tiling(p_size(:))
          dom_divided = .true.
-         return
+         call is_too_small(dom_divided, "divide_domain_slices")
+         if (dom_divided) return
+         if (master) call warn("[domain:divide_domain] divide_domain_slices failed")
       else
          if (master) call warn("[domain:divide_domain] Did not try non-cartesian domain division")
       endif
 
       write(msg,'(a,3i6,a,i4,a)') "[domain:divide_domain] Cannot divide domain with [",dom%n_d(:)," ] cells to ",nproc," piecess. "
-      call die(msg)
+      if (master) call die(msg)
 
    end subroutine divide_domain
 
@@ -834,7 +898,7 @@ contains
          enddo
       enddo
 
-      if (n /= 1) then
+      if (any(ldom(:) < dom%nb .and. dom%has_dir(:)) .or. n /= 1) then
          if (master) call warn("[domain:divide_domain_uniform]: I am not that intelligent") ! nproc has too big prime factors
          p_size(:) = 1
          return
@@ -919,7 +983,8 @@ contains
          ! \todo add a factor that estimates lower cost when x-direction is not chopped too much
          quality = quality * (1. - (0.001 * ldom(xdim) + 0.0001 * ldom(ydim))/nproc) ! \deprecated estimate these magic numbers
 
-         if (any(ldom(:) > dom%n_d)) quality = 0
+         if (any(ldom(:) > dom%n_d(:))) quality = 0
+         if (any(dom%n_d(:)/ldom(:) < dom%nb .and. dom%has_dir(:))) quality = 0
 
 #ifdef DEBUG
          if (quality > 0 .and. master) then
@@ -995,11 +1060,11 @@ contains
 
       if (all(p_size(ydim:zdim) == 1)) then
          if (dom%has_dir(zdim)) then
-            optc = (product(int(dom%n_d(:), kind=8))/real(nproc)) ** (1./dom%eff_dim) ! number of cells for ideal cubes
+            optc = max(real(dom%nb), (product(int(dom%n_d(:), kind=8))/real(nproc)) ** (1./dom%eff_dim)) ! number of cells for ideal cubes
             if (dom%n_d(zdim) > minfac*optc) p_size(zdim) = int(ceiling(dom%n_d(zdim)/optc), kind=4)
          endif
          if (dom%has_dir(ydim)) then
-            optc = (product(int(dom%n_d(xdim:ydim), kind=8))*p_size(zdim)/real(nproc)) ** (1./count(dom%has_dir(xdim:ydim)))
+            optc = max(real(dom%nb), (product(int(dom%n_d(xdim:ydim), kind=8))*p_size(zdim)/real(nproc)) ** (1./count(dom%has_dir(xdim:ydim))))
             if (dom%n_d(ydim) > minfac*optc) p_size(ydim) = int(ceiling(dom%n_d(ydim)/optc), kind=4)
          endif
       endif
