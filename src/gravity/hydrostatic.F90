@@ -135,7 +135,6 @@ contains
 
       implicit none
 
-      integer                                   :: k
       type(grid_container), pointer, intent(in) :: cg
 
       nstot = nsub * dom%n_t(zdim)
@@ -145,9 +144,7 @@ contains
       hstn  = dom%n_t(zdim)
       sdlim = dom%edge(zdim,:)
       allocate(hsl(hsbn+1))
-      do k = 1, hsbn
-         hsl(k) = cg%zl(k)
-      enddo
+      hsl(:) = cg%zl(:)
       hsl(hsbn+1) = cg%zr(hsbn)
 
    end subroutine set_default_hsparams
