@@ -706,7 +706,7 @@ contains
       integer(kind=4), optional, intent(in) :: res_m
 
       type(named_array3d), allocatable, dimension(:) :: tmp
-      integer :: i
+      integer(kind=4) :: restart_mode
 
       if (.not. allocated(this%q)) then
          allocate(this%q(1))
@@ -720,12 +720,10 @@ contains
          call move_alloc(from=tmp, to=this%q)
       endif
 
-      i = ubound(this%q(:), dim=1)
-      this%q(i)%name = name
-      call this%q(i)%init(this%n_(:))
+      restart_mode = AT_IGNORE
+      if (present(res_m)) restart_mode = res_m
 
-      this%q(i)%restart_mode = AT_IGNORE
-      if (present(res_m)) this%q(i)%restart_mode = res_m
+      call this%q(ubound(this%q(:), dim=1))%init(this%n_(:), name, restart_mode)
 
    end subroutine add_na
 
@@ -733,10 +731,11 @@ contains
 !! \brief Register a new entry in current cg with given name. Called from cg_list::reg_var
 !!
 !! \warning This routine should not be called directly from user routines
+!! \deprecated Almost duplicated code with add_na
 !<
    subroutine add_na_4d(this, name, res_m, n)
 
-      use constants,  only: AT_IGNORE, ndims
+      use constants,  only: AT_IGNORE
       use dataio_pub, only: msg, die
 
       implicit none
@@ -747,8 +746,7 @@ contains
       integer(kind=4), intent(in) :: n
 
       type(named_array4d), allocatable, dimension(:) :: tmp
-      integer(kind=4), dimension(ndims+1) :: ind
-      integer :: i
+      integer(kind=4) :: restart_mode
 
       if (.not. allocated(this%w)) then
          allocate(this%w(1))
@@ -762,13 +760,10 @@ contains
          call move_alloc(from=tmp, to=this%w)
       endif
 
-      i = ubound(this%w(:), dim=1)
-      this%w(i)%name = name
-      ind = [n, this%n_(:)]
-      call this%w(i)%init(ind)
+      restart_mode = AT_IGNORE
+      if (present(res_m)) restart_mode = res_m
 
-      this%w(i)%restart_mode = AT_IGNORE
-      if (present(res_m)) this%w(i)%restart_mode = res_m
+      call this%w(ubound(this%w(:), dim=1))%init( [n, this%n_(:)], name, restart_mode)
 
    end subroutine add_na_4d
 

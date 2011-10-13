@@ -106,17 +106,21 @@ module named_array
 
 contains
 
-   subroutine array3d_init(this, n3)
+   subroutine array3d_init(this, n3, name, restart_mode)
 
-      use constants, only: big_float
+      use constants, only: big_float, ndims, xdim, ydim, zdim
 
       implicit none
 
       class(named_array3d), intent(inout) :: this
-      integer(kind=4), dimension(3), intent(in) :: n3
+      integer(kind=4), dimension(ndims), intent(in) :: n3
+      character(len=*), intent(in) :: name
+      integer(kind=4), intent(in) :: restart_mode
 
-      if (.not.associated(this%arr)) allocate(this%arr(n3(1), n3(2), n3(3)))
+      if (.not.associated(this%arr)) allocate(this%arr(n3(xdim), n3(ydim), n3(zdim)))
       this%arr = big_float
+      this%name = name
+      this%restart_mode = restart_mode
 !     if (.not.associated(this%arr)) this%arr = reshape( [ ( big_float, i=1, product(n3(:)) ) ], [ n3(1), n3(2), n3(3) ] ) ! lhs realloc
 
    end subroutine array3d_init
@@ -147,17 +151,22 @@ contains
 
    end subroutine array3d_associate
 
-   subroutine array4d_init(this, n4)
+   subroutine array4d_init(this, n4, name, restart_mode)
 
-      use constants, only: big_float
+      use constants, only: big_float, ndims, xdim, ydim, zdim
 
       implicit none
 
       class(named_array4d), intent(inout) :: this
-      integer(kind=4), dimension(4), intent(in) :: n4
+      integer(kind=4), parameter :: ONE_MORE = 1
+      integer(kind=4), dimension(ndims+ONE_MORE), intent(in) :: n4
+      character(len=*), intent(in) :: name
+      integer(kind=4), intent(in) :: restart_mode
 
-      if (.not.associated(this%arr)) allocate(this%arr(n4(1), n4(2), n4(3), n4(4)))
+      if (.not.associated(this%arr)) allocate(this%arr(n4(ONE_MORE), n4(ONE_MORE+xdim), n4(ONE_MORE+ydim), n4(ONE_MORE+zdim)))
       this%arr = big_float
+      this%name = name
+      this%restart_mode = restart_mode
 !     if (.not.associated(this%arr)) this%arr = reshape( [ ( big_float, i=1, product(n4(:)) ) ], [ n4(1), n4(2), n4(3), n4(4) ] ) ! lhs realloc
 
    end subroutine array4d_init
@@ -182,7 +191,7 @@ contains
    logical function array4d_check_if_dirty(this)
       use constants, only: big_float
       implicit none
-      class(named_array4d), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) when I grow older
+      class(named_array4d), intent(inout) :: this                  !> \todo i want to become polymorphic class(*) when I grow older
 
       array4d_check_if_dirty = any( this%arr >= big_float )
 
