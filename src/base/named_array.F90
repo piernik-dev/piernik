@@ -42,11 +42,41 @@ module named_array
    private
    public :: named_array4d, named_array3d
 
-!< A named array for user-defined vector fields and similar
-   type :: named_array4d
-      real, dimension(:,:,:,:), pointer :: arr => null()
+   type, abstract :: generic_na
       character(len=dsetnamelen) :: name                 !< a user-provided id for the array
       integer(kind=4) :: restart_mode                    !< \todo If not .true. then write names to the restart file
+   contains
+      procedure(g_na_clean), deferred, pass(this) :: clean
+      procedure(g_na_check), deferred, pass(this) :: check
+      procedure(g_na_b), deferred, pass(this) :: lb, ub
+      !> \todo add also init and get_sweep
+   end type generic_na
+
+   interface
+      subroutine g_na_clean(this)
+         import generic_na
+         implicit none
+         class(generic_na), intent(inout) :: this
+      end subroutine g_na_clean
+
+      logical function g_na_check(this)
+         import generic_na
+         implicit none
+         class(generic_na), intent(inout) :: this
+      end function g_na_check
+
+      function g_na_b(this,dim_) result(n)
+         import generic_na
+         implicit none
+         class(generic_na), intent(in) :: this
+         integer(kind=4), intent(in) :: dim_
+         integer(kind=4) :: n
+      end function g_na_b
+   end interface
+
+!< A named array for user-defined vector fields and similar
+   type, extends(generic_na) :: named_array4d
+      real, dimension(:,:,:,:), pointer :: arr => null()
       contains
          procedure :: array4d_init           ! \todo check why private here does not  work as expected
          procedure :: array4d_associate
@@ -61,10 +91,8 @@ module named_array
    end type named_array4d
 
 !< A named array for user-defined variables, scalar fields and similar
-   type :: named_array3d
+   type, extends(generic_na) :: named_array3d
       real, dimension(:,:,:), pointer :: arr => null()
-      character(len=dsetnamelen) :: name                !< a user-provided id for the array
-      integer(kind=4) :: restart_mode                   !< \todo If not .true. then write names to the restart file
       contains
          procedure :: array3d_init
          procedure :: array3d_associate
