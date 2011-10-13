@@ -98,22 +98,20 @@ contains
                   select case (cg%bnd(d, lh))
                      case (BND_PER)
                         if (cdd%comm3d /= MPI_COMM_NULL) then
-                           do i = 1, ceiling(cg%nb/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
-                              select case (2*d+lh)
-                                 case (2*xdim+LO)
-                                    wcr(:,1:cg%nb, :, :) = wcr(:,cg%ieb:cg%ie, :, :)
-                                 case (2*ydim+LO)
-                                    wcr(:,:, 1:cg%nb, :) = wcr(:,:, cg%jeb:cg%je, :)
-                                 case (2*zdim+LO)
-                                    wcr(:,:, :, 1:cg%nb) = wcr(:,:, :, cg%keb:cg%ke)
-                                 case (2*xdim+HI)
-                                    wcr(:,cg%ie+1:cg%n_(xdim), :, :) = wcr(:,cg%is:cg%isb, :, :)
-                                 case (2*ydim+HI)
-                                    wcr(:,:, cg%je+1:cg%n_(ydim), :) = wcr(:,:, cg%js:cg%jsb, :)
-                                 case (2*zdim+HI)
-                                    wcr(:,:, :, cg%ke+1:cg%n_(zdim)) = wcr(:,:, :, cg%ks:cg%ksb)
-                              end select
-                           enddo
+                           select case (2*d+lh)
+                              case (2*xdim+LO)
+                                 wcr(:,1:cg%nb, :, :) = wcr(:,cg%ieb:cg%ie, :, :)
+                              case (2*ydim+LO)
+                                 wcr(:,:, 1:cg%nb, :) = wcr(:,:, cg%jeb:cg%je, :)
+                              case (2*zdim+LO)
+                                 wcr(:,:, :, 1:cg%nb) = wcr(:,:, :, cg%keb:cg%ke)
+                              case (2*xdim+HI)
+                                 wcr(:,cg%ie+1:cg%n_(xdim), :, :) = wcr(:,cg%is:cg%isb, :, :)
+                              case (2*ydim+HI)
+                                 wcr(:,:, cg%je+1:cg%n_(ydim), :) = wcr(:,:, cg%js:cg%jsb, :)
+                              case (2*zdim+HI)
+                                 wcr(:,:, :, cg%ke+1:cg%n_(zdim)) = wcr(:,:, :, cg%ks:cg%ksb)
+                           end select
                         endif
                      case (BND_MPI)
                         if (cdd%comm3d /= MPI_COMM_NULL) then

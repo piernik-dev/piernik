@@ -33,6 +33,9 @@
 !! \detailed This module contains subroutines that are responsible for preparing external boundary cells for all simple boundary types for cg%q(:) and cg%w(:) arrays.
 !! (i.e. no communication, dedicated arrays etc). Fancy, specialized boundary conditions should be defined somewhere else, in appropriate modules.
 !!
+!! Note that this routine may not properly update some layers of guardcells when number of guardcell layers exceedes number of active cells.
+!! Appropriate checks should be made in divide_domain routine.
+!!
 !! \todo integrate here as much stuff from fluidboundaries, magboundaries, etc. as possible.
 !<
 
@@ -116,22 +119,20 @@ contains
                            if (present(area_type)) then
                               if (area_type /= AT_NO_B) cycle
                            endif
-                           do i = 1, ceiling(n/real(cg%n_b(d))) ! Repeating is important for domains that are narrower than their guardcells (e.g. cg%n_b(d) = 2)
-                              select case (2*d+lh)
-                                 case (2*xdim+LO)
-                                    pa3d(1:cg%nb, :, :) = pa3d(cg%ieb:cg%ie, :, :) ! local copy is cheap (and don't occur so often in large runs) so don't boyher with the value of n
-                                 case (2*ydim+LO)
-                                    pa3d(:, 1:cg%nb, :) = pa3d(:, cg%jeb:cg%je, :)
-                                 case (2*zdim+LO)
-                                    pa3d(:, :, 1:cg%nb) = pa3d(:, :, cg%keb:cg%ke)
-                                 case (2*xdim+HI)
-                                    pa3d(cg%ie+1:cg%n_(xdim), :, :) = pa3d(cg%is:cg%isb, :, :)
-                                 case (2*ydim+HI)
-                                    pa3d(:, cg%je+1:cg%n_(ydim), :) = pa3d(:, cg%js:cg%jsb, :)
-                                 case (2*zdim+HI)
-                                    pa3d(:, :, cg%ke+1:cg%n_(zdim)) = pa3d(:, :, cg%ks:cg%ksb)
-                              end select
-                           enddo
+                           select case (2*d+lh)
+                              case (2*xdim+LO)
+                                 pa3d(1:cg%nb, :, :) = pa3d(cg%ieb:cg%ie, :, :) ! local copy is cheap (and don't occur so often in large runs) so don't boyher with the value of n
+                              case (2*ydim+LO)
+                                 pa3d(:, 1:cg%nb, :) = pa3d(:, cg%jeb:cg%je, :)
+                              case (2*zdim+LO)
+                                 pa3d(:, :, 1:cg%nb) = pa3d(:, :, cg%keb:cg%ke)
+                              case (2*xdim+HI)
+                                 pa3d(cg%ie+1:cg%n_(xdim), :, :) = pa3d(cg%is:cg%isb, :, :)
+                              case (2*ydim+HI)
+                                 pa3d(:, cg%je+1:cg%n_(ydim), :) = pa3d(:, cg%js:cg%jsb, :)
+                              case (2*zdim+HI)
+                                 pa3d(:, :, cg%ke+1:cg%n_(zdim)) = pa3d(:, :, cg%ks:cg%ksb)
+                           end select
                         endif
                      case (BND_MPI)
                         if (cdd%comm3d /= MPI_COMM_NULL) then

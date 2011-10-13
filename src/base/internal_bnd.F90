@@ -34,6 +34,9 @@
 !! For simplicity, let's assume, that all boundaries, that rely on MPI communication are internal.
 !! This implies that periodic, corner shear and fine-coarse boundaries are also "internal"
 !!
+!! Note that this routine may not properly update some layers of guardcells when number of guardcell layers exceedes number of active cells.
+!! Appropriate checks should be made in divide_domain routine.
+!!
 !! \todo integrate here as much stuff from fluidboundaries, magboundaries, etc.  as possible.
 !!
 !<
