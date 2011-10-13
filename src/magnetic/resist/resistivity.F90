@@ -276,7 +276,6 @@ contains
 
       cg => all_cg%first%cg
       if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum, wb, eta
-      nullify(eta)
 
       p => cg%q(cg%get_na_ind(eta_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call get_extremum(p, MAXL, etamax, cg) ; NULLIFY(p)
@@ -285,6 +284,7 @@ contains
       call get_extremum(p, MAXL, cu2max, cg)
 
 #ifndef ISO
+      eta => all_cg%first%cg%get_na_ptr(eta_n)
       wb = ( cg%u(flind%ion%ien,:,:,:) - half*( cg%u(flind%ion%imx,:,:,:)**2  + cg%u(flind%ion%imy,:,:,:)**2  + cg%u(flind%ion%imz,:,:,:)**2 ) &
            / cg%u(flind%ion%idn,:,:,:) - half*( cg%b(xdim,:,:,:)**2  +   cg%b(ydim,:,:,:)**2  +   cg%b(zdim,:,:,:)**2))/ ( eta(:,:,:) * wb+small)
       dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
