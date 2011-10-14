@@ -966,7 +966,7 @@ contains
       use dataio_pub, only: die
       use domain,     only: is_multicg
       use fluidtypes, only: phys_prop, component_fluid
-      use func,       only: get_extremum
+      use gc_list,    only: get_extremum
       use global,     only: smallp
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
@@ -1049,7 +1049,8 @@ contains
       use domain,             only: dom, is_multicg
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: flind
-      use func,               only: get_extremum, L2norm
+      use func,               only: L2norm
+      use gc_list,            only: get_extremum
       use global,             only: cfl, t, dt
       use grid,               only: all_cg
       use grid_cont,          only: grid_container

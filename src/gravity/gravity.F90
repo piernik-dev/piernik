@@ -898,15 +898,15 @@ contains
 !<
    subroutine grav_accel2pot
 
-      use types,      only: value
       use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE
       use dataio_pub, only: die
       use domain,     only: is_mpi_noncart, is_multicg, cdd, dom
-      use func,       only: get_extremum
+      use gc_list,    only: get_extremum
       use grid,       only: all_cg
       use grid_cont,  only: grid_container !, cg_list_element
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: master, nproc, FIRST, LAST, comm, ierr, have_mpi
+      use types,      only: value
 
       implicit none
 

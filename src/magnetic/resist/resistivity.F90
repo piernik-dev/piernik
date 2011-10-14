@@ -191,9 +191,8 @@ contains
       use constants,  only: small, xdim, ydim, zdim, MINL, MAXL, I_ONE, half, oneq
       use dataio_pub, only: die
       use domain,     only: dom, is_multicg
-      use func,       only: get_extremum
+      use gc_list,    only: cg_list_element, get_extremum
       use grid,       only: all_cg
-      use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION
       use mpisetup,   only: comm, ierr, FIRST
@@ -267,9 +266,7 @@ contains
          endif
          eh = real((eh + eta_scale*eta)*d_eta_factor)
 
-         where (eta > eta_0)
-            eta = eh
-         endwhere
+         where (eta > eta_0) eta = eh
 
          cgl => cgl%nxt
       enddo
