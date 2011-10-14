@@ -27,44 +27,52 @@
 !
 #include "piernik.h"
 !>
-!! \brief (KK) Module that contains unclassified functions
+!! \brief Some useful, generic functions. Hard to classify, because can be used in completely unrelated modules.
 !!
-!! This module should be empty. Every function or subroutine placed here belong
-!! elsewhere. We are yet unsure where to put them.
-!! \todo Move all structures elsewhere
-!! \warning Procedures \a dipole and \a rn_angles were moved to sn_sources.F90
+!! \details Note that the functions here are elemental, so one can use them also on arrays to get an array of results.
 !<
 module func
 
    implicit none
 
    private
-   public :: ekin, emag, L2norm
+   public :: ekin, emag, L2norm, sq_sum3
 
 contains
 
-   elemental real function L2norm(x1,x2,x3,y1,y2,y3)
+!> \brief Sum of squares of three arguments. Useful for calculating distance, energy, etc.
+   elemental real function sq_sum3(x1, x2, x3)
       implicit none
       real, intent(in) :: x1, x2, x3
-      real, intent(in) :: y1, y2, y3
 
-      L2norm = sqrt( (x1 - y1)**2 + (x2 - y2)**2 + (x3 - y3)**2 )
+      sq_sum3 = x1**2 + x2**2 + x3**2
+
+   end function sq_sum3
+
+!> \brief Calculate L2-norm or cartesian distance
+   elemental real function L2norm(x1, x2, x3, y1, y2, y3)
+      implicit none
+      real, intent(in) :: x1, x2, x3, y1, y2, y3
+
+      L2norm = sqrt(sq_sum3(x1-y1, x2-y2, x3-y3))
    end function L2norm
 
-   elemental real function emag(bx,by,bz)
+!> \brief Calculate magnetic energy from magnetic field components
+   elemental real function emag(bx, by, bz)
       use constants,  only: half
       implicit none
       real, intent(in) :: bx, by, bz
 
-      emag = half*(bx**2 + by**2 + bz**2)
+      emag = half*sq_sum3(bx, by, bz)
 
    end function emag
 
-   elemental real function ekin(mx,my,mz,dn)
+!> \brief Calculate kinetic energy from momenta and density
+   elemental real function ekin(mx, my, mz, dn)
       implicit none
       real, intent(in) :: mx, my, mz, dn
 
-      ekin = emag(mx,my,mz)/dn
+      ekin = emag(mx, my, mz)/dn
 
    end function ekin
 
