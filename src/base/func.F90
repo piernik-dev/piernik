@@ -37,91 +37,9 @@
 module func
    implicit none
    private
-   public :: pshift, mshift, fix_string, ekin, emag, L2norm, get_extremum, sanitize_smallx_checks
+   public :: fix_string, ekin, emag, L2norm, get_extremum, sanitize_smallx_checks
    integer, parameter :: one = 1
 contains
-
-!>
-!! \brief Function pshift makes one-cell, forward circular shift of 3D array in any direction
-!! \param tab input array
-!! \param d direction of the shift, where 1,2,3 corresponds to \a x,\a y,\a z respectively
-!! \return real, dimension(size(tab,1),size(tab,2),size(tab,3))
-!!
-!! The function was written in order to significantly improve
-!! the performance at the cost of the flexibility of original \p CSHIFT.
-!<
-   function pshift(tab, d)
-
-      use dataio_pub,    only: warn
-
-      implicit none
-
-      real, dimension(:,:,:), intent(inout) :: tab
-      integer(kind=4), intent(in) :: d
-
-      integer :: ll
-      real, dimension(size(tab,1),size(tab,2),size(tab,3)) :: pshift
-
-      ll = size(tab,d)
-
-      if (ll==1) then
-         pshift = tab
-         return
-      endif
-
-      if (d==1) then
-         pshift(1:ll-1,:,:) = tab(2:ll,:,:); pshift(ll,:,:) = tab(1,:,:)
-      else if (d==2) then
-         pshift(:,1:ll-1,:) = tab(:,2:ll,:); pshift(:,ll,:) = tab(:,1,:)
-      else if (d==3) then
-         pshift(:,:,1:ll-1) = tab(:,:,2:ll); pshift(:,:,ll) = tab(:,:,1)
-      else
-         call warn('[func:pshift]: Dim ill defined in pshift!')
-      endif
-
-      return
-   end function pshift
-
-!>
-!! \brief Function mshift makes one-cell, backward circular shift of 3D array in any direction
-!! \param tab input array
-!! \param d direction of the shift, where 1,2,3 corresponds to \a x,\a y,\a z respectively
-!! \return real, dimension(size(tab,1),size(tab,2),size(tab,3))
-!!
-!! The function was written in order to significantly improve
-!! the performance at the cost of the flexibility of original \p CSHIFT.
-!<
-   function mshift(tab,d)
-
-      use dataio_pub,    only: warn
-
-      implicit none
-
-      real, dimension(:,:,:), intent(inout) :: tab
-      integer(kind=4) :: d
-
-      integer :: ll
-      real, dimension(size(tab,1) , size(tab,2) , size(tab,3)) :: mshift
-
-      ll = size(tab,d)
-
-      if (ll==1) then
-         mshift = tab
-         return
-      endif
-
-      if (d==1) then
-         mshift(2:ll,:,:) = tab(1:ll-1,:,:); mshift(1,:,:) = tab(ll,:,:)
-      else if (d==2) then
-         mshift(:,2:ll,:) = tab(:,1:ll-1,:); mshift(:,1,:) = tab(:,ll,:)
-      else if (d==3) then
-         mshift(:,:,2:ll) = tab(:,:,1:ll-1); mshift(:,:,1) = tab(:,:,ll)
-      else
-         call warn('[func:mshift]: Dim ill defined in mshift!')
-      endif
-
-      return
-   end function mshift
 
 !> \todo move to a better place (possibly dataio_pub since stop types module stops using die routine)
    subroutine get_extremum(tab, minmax, prop, cg)
