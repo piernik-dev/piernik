@@ -164,8 +164,8 @@ contains
            &                 H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
            &                 h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
            &                 h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
-      use mpisetup,    only: comm, ierr, info, master, FIRST
-      use mpi,         only: MPI_CHARACTER
+      use mpisetup,    only: comm, ierr, master, FIRST
+      use mpi,         only: MPI_CHARACTER, MPI_INFO_NULL
 
       implicit none
 
@@ -199,7 +199,7 @@ contains
       ! Setup file access property list with parallel I/O access.
       !
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_idf, error)
-      call h5pset_fapl_mpio_f(plist_idf, comm, info, error)
+      call h5pset_fapl_mpio_f(plist_idf, comm, MPI_INFO_NULL, error)
       !
       ! Create the file collectively.
       !

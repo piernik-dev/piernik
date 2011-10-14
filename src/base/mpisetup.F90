@@ -41,25 +41,29 @@ module mpisetup
 
    private
    public :: cleanup_mpi, init_mpi, inflate_req, &
-        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, ierr, &
-        &    master, slave, nproc, proc, FIRST, LAST, procmask, comm, info, have_mpi
+        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, ierr, procmask, &
+        &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi
 
-   integer(kind=4), protected :: nproc, proc, LAST, ierr
-   integer(kind=4), protected :: comm, info
-   integer(kind=INT4), parameter :: FIRST = 0
+   integer(kind=4), protected :: nproc, proc, LAST          !< number of processes, rank of my process, rank of last process
+   integer(kind=4), protected :: comm, ierr                 !< global communicator, error status
+   integer(kind=INT4), parameter :: FIRST = 0               !< the rank of the master process
 
-   logical, protected :: master, slave
+   logical, protected :: master, slave      !< shortcuts for testing proc == FIRST
    logical, protected :: have_mpi           !< .true. when run on more than one processor
 
-   integer, allocatable, dimension(:)   :: req
-   integer, allocatable, dimension(:,:) :: status
+   integer, allocatable, dimension(:)   :: req    !< request array for MPI_Waitall
+   integer, allocatable, dimension(:,:) :: status !< status array for MPI_Waitall
+   !> \warning Because we use one centralized req(:) and status(:,:) arrays, the routines that are using them should not call each other to avoid any interference.
+   !! If you want nested non-blocking communication, only one set of MPI transactions may use these arrays.
+   !< All other sets of communication should define their own req(:) and status(:,:) arrays
+
    integer, dimension(:), allocatable :: procmask !< (FIRST:LAST)-sized auxiliary array for searching overlaps, neighbours etc. BEWARE: antiparallel
 
-   integer, parameter :: buffer_dim = 200                !< size of [cilr]buff arrays used to exchange namelist parameters
-   character(len=cbuff_len), dimension(buffer_dim) :: cbuff
-   integer,                  dimension(buffer_dim) :: ibuff
-   real,                     dimension(buffer_dim) :: rbuff
-   logical,                  dimension(buffer_dim) :: lbuff
+   integer, parameter :: buffer_dim = 200                   !< size of [cilr]buff arrays used to exchange namelist parameters
+   character(len=cbuff_len), dimension(buffer_dim) :: cbuff !< buffer for character parameters
+   integer,                  dimension(buffer_dim) :: ibuff !< buffer for integer parameters
+   real,                     dimension(buffer_dim) :: rbuff !< buffer for real parameters
+   logical,                  dimension(buffer_dim) :: lbuff !< buffer for logical parameters
 
 contains
 
@@ -71,7 +75,7 @@ contains
    subroutine init_mpi
 
       use constants,  only: cwdlen, I_ONE
-      use mpi,        only: MPI_COMM_WORLD, MPI_INFO_NULL, MPI_CHARACTER, MPI_INTEGER
+      use mpi,        only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER
       use dataio_pub, only: die, printinfo, msg, cwd, ansi_white, ansi_black, tmp_log_file
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
 
@@ -93,7 +97,6 @@ contains
 
       call MPI_Init( ierr )
       comm = MPI_COMM_WORLD
-      info = MPI_INFO_NULL
 
       call MPI_Comm_rank(comm, proc, ierr)
       call MPI_Comm_size(comm, nproc, ierr)
@@ -162,7 +165,9 @@ contains
    end subroutine init_mpi
 
 !-----------------------------------------------------------------------------
-
+!>
+!! Increase size of req(:) and status(:,:) arrays for non-blocking communication on request.
+!<
    subroutine inflate_req(nreq)
 
       use dataio_pub, only: warn, msg
@@ -194,7 +199,9 @@ contains
    end subroutine inflate_req
 
 !-----------------------------------------------------------------------------
-
+!>
+!! \brief Prepare to clean exit from the code
+!<
    subroutine cleanup_mpi
 
       use dataio_pub, only: printinfo

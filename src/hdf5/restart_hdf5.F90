@@ -152,8 +152,8 @@ contains
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use dataio_user, only: problem_write_restart
-      use mpi,         only: MPI_CHARACTER
-      use mpisetup,    only: comm, info, ierr, master, FIRST
+      use mpi,         only: MPI_CHARACTER, MPI_INFO_NULL
+      use mpisetup,    only: comm, ierr, master, FIRST
 
       implicit none
 
@@ -179,7 +179,7 @@ contains
       ! Set up a new HDF5 file for parallel write
       call h5open_f(error)
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
-      call h5pset_fapl_mpio_f(plist_id, comm, info, error)
+      call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
       call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error, access_prp = plist_id)
 
       ! Write scalar fields that were declared to be required on restart
@@ -595,8 +595,8 @@ contains
       use hdf5,        only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
            &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
-      use mpi,         only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,    only: comm, ierr, info, comm, master, FIRST
+      use mpi,         only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_INFO_NULL
+      use mpisetup,    only: comm, ierr, comm, master, FIRST
 
       implicit none
 
@@ -681,7 +681,7 @@ contains
       endif
 
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
-      call h5pset_fapl_mpio_f(plist_id, comm, info, error)
+      call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
 
       call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error, access_prp = plist_id)
       call h5pclose_f(plist_id, error)
