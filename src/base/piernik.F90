@@ -186,11 +186,10 @@ contains
       use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_funcs, only: init_default_fluidboundaries
       use fluidindex,            only: flind
-      use func,                  only: sanitize_smallx_checks
       use global,                only: init_global
       use grid,                  only: init_grid
       use gridgeometry,          only: init_geometry
-      use initfluids,            only: init_fluids
+      use initfluids,            only: init_fluids, sanitize_smallx_checks
       use interactions,          only: init_interactions
       use initproblem,           only: init_prob, read_problem_par, problem_pointers
       use mpisetup,              only: init_mpi

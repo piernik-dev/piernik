@@ -30,12 +30,7 @@
 #include "macros.h"
 
 !>
-!! \brief (DW) Module containing routines to specify required computational mesh.
-!! \date January/February 2006
-!!
-!!
-!! In this module a following namelist of parameters is specified:
-!! \copydetails grid::init_grid
+!! \brief (DW) Module containing lists of grid containers for computational mesh and initialization and cleanup routines
 !<
 
 module grid

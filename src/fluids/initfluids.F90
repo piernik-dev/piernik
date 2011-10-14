@@ -102,7 +102,7 @@ module initfluids
 ! pulled by ANY
    implicit none
    private
-   public :: init_fluids, cleanup_fluids
+   public :: init_fluids, cleanup_fluids, sanitize_smallx_checks
 
 contains
 
@@ -187,5 +187,120 @@ contains
 #endif /* COSM_RAYS */
 
    end subroutine cleanup_fluids
+
+!>
+!! \brief Find sane values for smalld and smallp
+!<
+
+   subroutine sanitize_smallx_checks
+
+      use constants,  only: big_float, DST, I_ONE, xdim, ydim, zdim
+      use dataio_pub, only: warn, msg
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use func,       only: ekin, emag
+      use gc_list,    only: cg_list_element
+      use global,     only: smalld, smallp
+      use grid,       only: all_cg
+      use grid_cont,  only: grid_container
+      use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
+      use mpisetup,   only: master, comm, ierr
+
+      implicit none
+
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container), pointer   :: cg
+      type(component_fluid), pointer  :: fl
+      integer                         :: i
+      real, pointer, dimension(:,:,:) :: dn, mx, my, mz, en, bx, by, bz
+      real, parameter                 :: safety_factor = 1.e-4
+      real, parameter                 :: max_dens_span = 5.0
+      real                            :: maxdens, span, mindens, minpres
+
+      maxdens = 0.0
+      mindens = smalld
+      minpres = smallp
+
+      ! collect the extrema
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         bx => cg%b(xdim,:,:,:)
+         by => cg%b(ydim,:,:,:)
+         bz => cg%b(zdim,:,:,:)
+
+         if (smalld >= big_float) then
+            do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
+               dn => cg%u(flind%all_fluids(i)%idn,:,:,:)
+               maxdens = max( maxval(dn), maxdens )
+               mindens = min( minval(dn), mindens )
+            enddo
+         endif
+
+         if (smallp >= big_float) then
+            do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
+               fl => flind%all_fluids(i)
+               if (fl%tag == DST) cycle
+               dn => cg%u(fl%idn,:,:,:)
+               mx => cg%u(fl%imx,:,:,:)
+               my => cg%u(fl%imy,:,:,:)
+               mz => cg%u(fl%imz,:,:,:)
+               if (fl%has_energy) then
+                  en => cg%u(fl%ien,:,:,:)
+                  if (fl%is_magnetized) then
+                     minpres = min( minval( en - ekin(mx,my,mz,dn) - emag(bx,by,bz))/fl%gam_1, minpres )
+                  else
+                     minpres = min( minval( en - ekin(mx,my,mz,dn))/fl%gam_1, minpres )
+                  endif
+               else
+                  minpres = min( minval( cg%cs_iso2*dn ), minpres )
+               endif
+            enddo
+         endif
+         cgl => cgl%nxt
+      enddo
+
+      ! reduce across processes
+      if (smalld >= big_float) then
+         call MPI_Allreduce(mindens, smalld, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+         call MPI_Allreduce(MPI_IN_PLACE, maxdens, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+         span = log10(maxdens/mindens)
+         mindens = mindens * safety_factor
+         if (master) then
+            write(msg,'(A,ES11.4)') "[func:sanitize_smallx_checks] adjusted smalld to ", smalld
+            call warn(msg)
+            if (span > max_dens_span) then
+               write(msg,'(A,I3,A)') "[func:sanitize_smallx_checks] density spans over ", int(span), " orders of magnitude!"
+               call warn(msg)
+            endif
+         endif
+      endif
+
+      if (smallp >= big_float) then
+         minpres = minpres * safety_factor
+         call MPI_Allreduce(minpres, smallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+         if (smallp < 0.) then
+            write(msg,'(A,ES11.4,A)') "[func:sanitize_smallx_checks] Negative smallp detected! smallp=",smallp," may indicate nonphysical initial conditions."
+            if (master) call warn(msg)
+            smallp = tiny(1.)
+         endif
+         if (master) then
+            write(msg,'(A,ES11.4)') "[func:sanitize_smallx_checks] adjusted smallp to ", smallp
+            call warn(msg)
+         endif
+      endif
+
+      if (associated(dn)) nullify(dn)
+      if (associated(mx)) nullify(mx)
+      if (associated(my)) nullify(my)
+      if (associated(mz)) nullify(mz)
+      if (associated(en)) nullify(en)
+      if (associated(bx)) nullify(bx)
+      if (associated(by)) nullify(by)
+      if (associated(bz)) nullify(bz)
+      if (associated(fl)) nullify(fl)
+
+   end subroutine sanitize_smallx_checks
 
 end module initfluids
