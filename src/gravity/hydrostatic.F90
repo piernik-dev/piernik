@@ -42,7 +42,8 @@ module hydrostatic
 
    private
 #ifdef GRAV
-   public :: set_default_hsparams, hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hstn, hsl, sdlim, hscg, outh_bnd
+   public :: set_default_hsparams, hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, cleanup_hydrostatic, outh_bnd
+   public :: dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hstn, hsl, sdlim, hscg
 #endif /* GRAV */
 
    real, allocatable, dimension(:), save :: zs        !< array of z-positions of subgrid cells centers
@@ -84,9 +85,9 @@ contains
 
       implicit none
 
-      integer,                       intent(in)    :: iia, jja
-      real,                          intent(in)    :: coldens, csim2
-      real                                         :: sdprof, sd
+      integer, intent(in)    :: iia, jja
+      real,    intent(in)    :: coldens, csim2
+      real                   :: sdprof, sd
 
       sdprof = 1.0
       call hydrostatic_zeq_densmid(iia, jja, sdprof, csim2, sd)
@@ -110,9 +111,9 @@ contains
 
       implicit none
 
-      integer,                       intent(in)    :: iia, jja
-      real,                          intent(in)    :: d0, csim2
-      real,                optional, intent(inout) :: sd
+      integer,        intent(in)    :: iia, jja
+      real,           intent(in)    :: d0, csim2
+      real, optional, intent(inout) :: sd
 
       if (d0 <= small) call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
       dmid = d0
@@ -154,6 +155,21 @@ contains
       hsl(hsbn+1) = cg%zr(hsbn)
 
    end subroutine set_default_hsparams
+
+!>
+!! \brief Routine to clean up after the last usage of hydrostatic routines
+!<
+   subroutine cleanup_hydrostatic
+
+      use diagnostics, only: my_deallocate
+
+      implicit none
+
+      if (allocated(dprof)) call my_deallocate(dprof)
+      if (allocated(hsl))   call my_deallocate(hsl)
+      if (associated(hscg)) nullify(hscg)
+
+   end subroutine cleanup_hydrostatic
 
 !>
 !! \brief Routine that arranges %hydrostatic equilibrium in the vertical (z) direction
@@ -243,8 +259,8 @@ contains
 
       implicit none
 
-      integer,                       intent(in) :: iia, jja
-      integer                                   :: ia, ja
+      integer, intent(in) :: iia, jja
+      integer             :: ia, ja
 
       ia = min(hscg%n_(xdim), int(max(1, iia), kind=4))
       ja = min(hscg%n_(ydim), int(max(1, jja), kind=4))
@@ -266,10 +282,10 @@ contains
 
       implicit none
 
-      integer,                       intent(in) :: iia, jja
-      real, dimension(:,:,:), pointer           :: gpots
-      type(axes)                                :: ax
-      integer                                   :: nstot1
+      integer, intent(in)             :: iia, jja
+      real, dimension(:,:,:), pointer :: gpots
+      type(axes)                      :: ax
+      integer                         :: nstot1
 
       nstot1 = nstot + 1
       allocate(gpots(1,1,nstot1))
@@ -306,10 +322,10 @@ contains
 
       implicit none
 
-      integer,                       intent(in)    :: iia, jja
-      real,                          intent(in)    :: csim2
-      real,                optional, intent(inout) :: sd
-      integer                                      :: ksub
+      integer,        intent(in)    :: iia, jja
+      real,           intent(in)    :: csim2
+      real, optional, intent(inout) :: sd
+      integer                       :: ksub
 
       if (.not.associated(get_gprofs)) then
          select case (gprofs_target)

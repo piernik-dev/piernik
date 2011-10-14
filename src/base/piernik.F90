@@ -206,6 +206,7 @@ contains
 #endif /* SHEAR */
 #ifdef GRAV
       use gravity,               only: init_grav, grav_pot_3d, grav_pot_3d_called, source_terms_grav, grav_pot_3d_bnd
+      use hydrostatic,           only: cleanup_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
       use multigrid,             only: init_multigrid
@@ -341,6 +342,7 @@ contains
          endif
          call source_terms_grav ! make sure that all contributions to the gravitational potential are computed before first dump
          ! Possible side-effects: if variable_gp then grav_pot_3d may be called twice (second call from source_terms_grav)
+         call cleanup_hydrostatic
 #endif /* GRAV */
          call write_data(output='all') ! moved from dataio::init_dataio
       endif
