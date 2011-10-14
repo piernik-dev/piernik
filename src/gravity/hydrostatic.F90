@@ -158,20 +158,18 @@ contains
 !>
 !! \brief Routine that arranges %hydrostatic equilibrium in the vertical (z) direction
 !<
-   subroutine hydrostatic_main(cg, sd)
+   subroutine hydrostatic_main(sd)
 
       use constants,  only: LO, HI
       use dataio_pub, only: die
       use gravity,    only: nsub
-      use grid_cont,  only: grid_container
 
       implicit none
 
-      type(grid_container), pointer, intent(in)  :: cg
-      real,                optional, intent(out) :: sd
-      real, allocatable, dimension(:)            :: dprofs
-      integer                                    :: ksub, ksmid, k
-      real                                       :: factor
+      real, optional, intent(out)     :: sd
+      real, allocatable, dimension(:) :: dprofs
+      integer                         :: ksub, ksmid, k
+      real                            :: factor
 
       allocate(dprofs(nstot))
 
@@ -335,7 +333,7 @@ contains
       enddo
       call get_gprofs(iia, jja, cg)
       gprofs = gprofs / csim2 *dzs
-      call hydrostatic_main(cg, sd)
+      call hydrostatic_main(sd)
 
    end subroutine start_hydrostatic
 
