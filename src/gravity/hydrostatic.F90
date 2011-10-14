@@ -53,7 +53,7 @@ module hydrostatic
    integer(kind=4),                 save :: nstot     !< total number of subgrid cells in a column through all z-blocks
    real,                            save :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
    real,                            save :: hsmin     !< lower position limit
-   integer,                         save :: hsbn      !< number of cells in proceeded block
+   integer(kind=4),                 save :: hsbn      !< number of cells in proceeded block
    integer,                         save :: hstn      !< number of cells in proceeded domain
    real, allocatable, dimension(:), save :: hsl       !< lower borders of cells of proceeded block
    real, dimension(2),              save :: sdlim     !< edges for sd sum
@@ -129,7 +129,7 @@ contains
 !<
    subroutine set_default_hsparams(cg)
 
-      use constants,   only: zdim, LO, HI
+      use constants,   only: zdim, LO, HI, I_ONE
       use diagnostics, only: my_allocate, my_deallocate
       use domain,      only: dom
       use gravity,     only: nsub
@@ -150,7 +150,7 @@ contains
       if (allocated(dprof)) call my_deallocate(dprof)
       call my_allocate(dprof, [cg%n_(zdim)], "dprof")
       if (allocated(hsl)) call my_deallocate(hsl)
-      call my_allocate(hsl, [hsbn+1], "hsl")
+      call my_allocate(hsl, [hsbn+I_ONE], "hsl")
       hsl(1:hsbn) = cg%zl(1:hsbn)
       hsl(hsbn+1) = cg%zr(hsbn)
 
