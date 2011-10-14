@@ -30,6 +30,9 @@
 !! \brief Some useful, generic functions. Hard to classify, because can be used in completely unrelated modules.
 !!
 !! \details Note that the functions here are elemental, so one can use them also on arrays to get an array of results.
+!! Run:
+!!   grep -r "\*\*2[^\*]*\*\*2[^\*]*\*\*2" src {,../}problems/
+!! in the trunk to see a list of potential places, where use of these function may simplify the code.
 !<
 module func
 
