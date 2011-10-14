@@ -392,4 +392,35 @@ contains
       return
    end function getlun
 !-----------------------------------------------------------------------------
+
+!>
+!! \brief Sanitize a file name
+!!
+!! \warning This routine is used only after reading the restart file.
+!! This may result in inconsistent file naming, when problem_name or run_id contains characters such as '+'.
+!<
+
+   function fix_string(str) result (outstr)
+
+      implicit none
+
+      character(len=*), intent(in)  :: str
+      character(len=len(str)) :: outstr
+
+      integer            :: i
+
+      outstr = repeat(" ", len(str))
+
+      do i=1, len(str)
+         outstr(i:i) = ''
+         select case (str(i:i))
+            case ('a':'z', 'A':'Z', '0':'9', '_', '-') ! restrict file names to a very safe character set
+               outstr(i:i) = str(i:i)
+            case default
+               exit
+         end select
+      enddo
+
+   end function fix_string
+
 end module dataio_pub

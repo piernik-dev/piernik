@@ -35,10 +35,12 @@
 !! \warning Procedures \a dipole and \a rn_angles were moved to sn_sources.F90
 !<
 module func
+
    implicit none
+
    private
-   public :: fix_string, ekin, emag, L2norm, get_extremum, sanitize_smallx_checks
-   integer, parameter :: one = 1
+   public :: ekin, emag, L2norm, get_extremum, sanitize_smallx_checks
+
 contains
 
 !> \todo move to a better place (possibly dataio_pub since stop types module stops using die routine)
@@ -222,57 +224,6 @@ contains
       if (associated(fl)) nullify(fl)
 
    end subroutine sanitize_smallx_checks
-
-   function fix_string(str) result (outstr)
-      implicit none
-      character(len=*), intent(in)  :: str
-      character(len=len(str)) :: outstr
-
-      integer            :: i
-      character(len=one) :: c
-
-      do i=1, len(str)
-         outstr(i:i) = " "
-      enddo
-
-      do i=1, len(str)
-         c = str(i:i)
-         outstr(i:i) = ''
-         if ( is_lowercase(c) .or. is_uppercase(c) .or. is_digit(c) .or. c=='_' .or. c=='-' ) then
-            outstr(i:i) = c
-         else
-            return
-         endif
-      enddo
-      return
-   end function fix_string
-
-   logical function is_lowercase(c)
-      implicit none
-      character(len=one),  intent(in) :: c
-
-      is_lowercase = .false.
-
-      if (ichar(c) >= 97 .and. ichar(c) <= 122) is_lowercase=.true.
-   end function is_lowercase
-
-   logical function is_uppercase(c)
-      implicit none
-      character(len=one), intent(in) :: c
-
-      is_uppercase = .false.
-
-      if (ichar(c) >= 65 .and. ichar(c) <= 90) is_uppercase=.true.
-   end function is_uppercase
-
-   logical function is_digit(c)
-      implicit none
-      character(len=one), intent(in) :: c
-
-      is_digit = .false.
-
-      if (ichar(c) >= 48 .and. ichar(c) <= 57) is_digit=.true.
-   end function is_digit
 
    elemental real function L2norm(x1,x2,x3,y1,y2,y3)
       implicit none

@@ -584,11 +584,10 @@ contains
 
       use common_hdf5, only: hdf
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE
-      use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version
+      use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, fix_string
       use dataio_user, only: problem_read_restart
       use domain,      only: dom
       use fluidindex,  only: flind
-      use func,        only: fix_string
       use global,      only: magic_mass, t, dt
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
