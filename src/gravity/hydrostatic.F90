@@ -36,11 +36,13 @@
 !<
 module hydrostatic
 ! pulled by GRAV
+   use grid_cont, only: grid_container
+
    implicit none
 
    private
 #ifdef GRAV
-   public :: set_default_hsparams, hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hstn, hsl, sdlim, outh_bnd
+   public :: set_default_hsparams, hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hstn, hsl, sdlim, hscg, outh_bnd
 #endif /* GRAV */
 
    real, allocatable, dimension(:), save :: zs        !< array of z-positions of subgrid cells centers
@@ -54,6 +56,7 @@ module hydrostatic
    integer,                         save :: hstn      !< number of cells in proceeded domain
    real, allocatable, dimension(:), save :: hsl       !< lower borders of cells of proceeded block
    real, dimension(2),              save :: sdlim     !< edges for sd sum
+   type(grid_container), pointer,   save :: hscg
 
    interface
       subroutine hzeqscheme(ksub, up, factor)
@@ -77,19 +80,16 @@ contains
 !! \param coldens column density value for given x and y coordinates
 !! \param csim2 sqare of sound velocity
 !<
-   subroutine hydrostatic_zeq_coldens(iia, jja, coldens, csim2, cg)
-
-      use grid_cont, only: grid_container
+   subroutine hydrostatic_zeq_coldens(iia, jja, coldens, csim2)
 
       implicit none
 
       integer,                       intent(in)    :: iia, jja
       real,                          intent(in)    :: coldens, csim2
-      type(grid_container), pointer, intent(inout) :: cg
       real                                         :: sdprof, sd
 
       sdprof = 1.0
-      call hydrostatic_zeq_densmid(iia, jja, sdprof, csim2, cg, sd)
+      call hydrostatic_zeq_densmid(iia, jja, sdprof, csim2, sd)
       dprof = dprof * coldens / sd
 
    end subroutine hydrostatic_zeq_coldens
@@ -103,23 +103,21 @@ contains
 !! \param csim2 sqare of sound velocity
 !! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
 !<
-   subroutine hydrostatic_zeq_densmid(iia, jja, d0, csim2, cg, sd)
+   subroutine hydrostatic_zeq_densmid(iia, jja, d0, csim2, sd)
 
       use constants,  only: small
       use dataio_pub, only: die
-      use grid_cont,  only: grid_container
 
       implicit none
 
       integer,                       intent(in)    :: iia, jja
       real,                          intent(in)    :: d0, csim2
-      type(grid_container), pointer, intent(in)    :: cg
       real,                optional, intent(inout) :: sd
 
       if (d0 <= small) call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
       dmid = d0
 
-      call start_hydrostatic(iia, jja, csim2, cg, sd)
+      call start_hydrostatic(iia, jja, csim2, sd)
       call finish_hydrostatic
 
    end subroutine hydrostatic_zeq_densmid
@@ -139,6 +137,8 @@ contains
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
+
+      hscg => cg
 
       nstot = nsub * dom%n_t(zdim)
       dzs   = (dom%edge(zdim, HI)-dom%edge(zdim, LO))/real(nstot-2*dom%nb*nsub)
@@ -236,20 +236,18 @@ contains
       factor = (4.0 + up*factor)/(4.0 - up*factor)
    end subroutine hzeq_scheme_v2
 
-   subroutine get_gprofs_accel(iia, jja, cg)
+   subroutine get_gprofs_accel(iia, jja)
 
       use constants, only: xdim, ydim, zdim
       use gravity,   only: tune_zeq, grav_accel
-      use grid_cont, only: grid_container
 
       implicit none
 
       integer,                       intent(in) :: iia, jja
-      type(grid_container), pointer, intent(in) :: cg
       integer                                   :: ia, ja
 
-      ia = min(cg%n_(xdim), int(max(1, iia), kind=4))
-      ja = min(cg%n_(ydim), int(max(1, jja), kind=4))
+      ia = min(hscg%n_(xdim), int(max(1, iia), kind=4))
+      ja = min(hscg%n_(ydim), int(max(1, jja), kind=4))
       call grav_accel(zdim, ia, ja, zs, nstot, gprofs)
       gprofs = tune_zeq*gprofs
 
@@ -260,17 +258,15 @@ contains
 !! \deprecated probably now the routine should have different name than gparray which got from the commented part of code
 !! \warning in case of moving 'use types, only: axes'' behind use gravity there could be gcc(4.5) internal compiler error: in fold_convert_loc, at fold-const.c:2792 (solved in >=gcc-4.6)
 !<
-   subroutine get_gprofs_gparray(iia, jja, cg)
+   subroutine get_gprofs_gparray(iia, jja)
 
       use constants, only: half
       use gravity,   only: tune_zeq, grav_type
-      use grid_cont, only: grid_container
       use types,     only: axes
 
       implicit none
 
       integer,                       intent(in) :: iia, jja
-      type(grid_container), pointer, intent(in) :: cg
       real, dimension(:,:,:), pointer           :: gpots
       type(axes)                                :: ax
       integer                                   :: nstot1
@@ -280,8 +276,8 @@ contains
       if (.not.allocated(ax%x)) allocate(ax%x(1))
       if (.not.allocated(ax%y)) allocate(ax%y(1))
       if (.not.allocated(ax%z)) allocate(ax%z(nstot1))
-      ax%x          = cg%x(iia)
-      ax%y          = cg%y(jja)
+      ax%x          = hscg%x(iia)
+      ax%y          = hscg%y(jja)
       ax%z(1:nstot) = zs - half*dzs
       ax%z(nstot1)  = ax%z(nstot) + dzs
       call grav_type(gpots,ax)
@@ -302,19 +298,17 @@ contains
 !! \param csim2 sqare of sound velocity
 !! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
 !<
-   subroutine start_hydrostatic(iia, jja, csim2, cg, sd)
+   subroutine start_hydrostatic(iia, jja, csim2, sd)
 
       use constants,  only: half
       use dataio_pub, only: die
       use gravity,    only: get_gprofs, gprofs_target
-      use grid_cont,  only: grid_container
 
       implicit none
 
       integer,                       intent(in)    :: iia, jja
       real,                          intent(in)    :: csim2
       real,                optional, intent(inout) :: sd
-      type(grid_container), pointer, intent(in)    :: cg
       integer                                      :: ksub
 
       if (.not.associated(get_gprofs)) then
@@ -331,7 +325,7 @@ contains
       do ksub=1, nstot
          zs(ksub) = hsmin + (real(ksub)-half)*dzs
       enddo
-      call get_gprofs(iia, jja, cg)
+      call get_gprofs(iia, jja)
       gprofs = gprofs / csim2 *dzs
       call hydrostatic_main(sd)
 

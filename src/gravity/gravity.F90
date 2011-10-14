@@ -81,16 +81,10 @@ module gravity
          implicit none
       end subroutine user_grav_pot_3d
 
-      subroutine gprofs_default(iia, jja, cg)
-
-         use grid_cont, only: grid_container
-
+      subroutine gprofs_default(iia, jja)
          implicit none
-
          integer, intent(in) :: iia                    !< COMMENT ME
          integer, intent(in) :: jja                    !< COMMENT ME
-         type(grid_container), pointer, intent(in) :: cg    !< COMMENT ME
-
       end subroutine gprofs_default
 
       subroutine grav_types(gp,ax,flatten)

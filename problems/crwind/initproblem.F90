@@ -149,7 +149,7 @@ contains
          if (associated(cg%cs_iso2)) cg%cs_iso2(:,:,:) = flind%ion%cs2
 
          call set_default_hsparams(cg)
-         call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg)
+         call hydrostatic_zeq_densmid(1, 1, d0, csim2)
 
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
