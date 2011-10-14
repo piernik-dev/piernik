@@ -310,7 +310,7 @@ contains
       use gc_list,      only: cg_list_element
       use grid,         only: all_cg
       use grid_cont,    only: grid_container
-      use hydrostatic,  only: hydrostatic_zeq_densmid
+      use hydrostatic,  only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
       use interactions, only: epstein_factor
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,     only: master, comm, ierr, FIRST
@@ -349,13 +349,15 @@ contains
             csim2 = fl%cs2*(1.0+alpha)
             b0    = sqrt(2.*alpha*d0*fl%cs2)
 
+            if (dom%has_dir(zdim)) call set_default_hsparams(cg)
+
             do j = 1, cg%n_(ydim)
                yj = cg%y(j)
                do i = 1, cg%n_(xdim)
                   xi = cg%x(i)
                   rc = sqrt(xi**2+yj**2)
 
-                  if (dom%has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2, cg, .true.)
+                  if (dom%has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2, cg)
 
                   do k = 1, cg%n_(zdim)
 
@@ -366,7 +368,7 @@ contains
                      cg%u(fl%idn,i,j,k) = min((rc/r_grav)**n_gravr,100.0)
 
                      if (dom%has_dir(zdim)) then
-                        cg%u(fl%idn,i,j,k) = cg%dprof(k)/cosh(cg%u(fl%idn,i,j,k))
+                        cg%u(fl%idn,i,j,k) = dprof(k)/cosh(cg%u(fl%idn,i,j,k))
                         cg%u(fl%idn,i,j,k) = max(cg%u(fl%idn,i,j,k), dout)
                      else
                         cg%u(fl%idn,i,j,k) = dout + (d0 - dout)/cosh(cg%u(fl%idn,i,j,k))

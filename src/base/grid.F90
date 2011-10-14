@@ -57,7 +57,6 @@ contains
       use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, ndims, xdim, zdim, ARR, INVALID, &
            &                 fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n,cs_i2_n
       use dataio_pub,  only: printinfo, die, code_progress
-      use diagnostics, only: my_allocate
       use domain,      only: pdom, is_multicg
       use fluidindex,  only: flind
       use gc_list,     only: cg_list_element
@@ -118,9 +117,6 @@ contains
          cg%u  => cg%get_na_ptr_4d(fluid_n)
          cg%b  => cg%get_na_ptr_4d(mag_n)
          cg%wa => cg%get_na_ptr(wa_n)
-#ifdef GRAV
-         call my_allocate(cg%dprof, [cg%n_(zdim)], "dprof")
-#endif /* GRAV */
          cgl => cgl%nxt
       enddo
 
@@ -157,10 +153,6 @@ contains
 
       cgl => all_cg%first
       do while (associated(cgl))
-
-#ifdef GRAV
-         if (allocated(cgl%cg%dprof)) deallocate(cgl%cg%dprof)
-#endif /* GRAV */
 
          call cgl%cg%cleanup
          erase => cgl

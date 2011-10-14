@@ -40,11 +40,12 @@ module hydrostatic
 
    private
 #ifdef GRAV
-   public :: hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, gprofs, nstot, zs, dzs, hsmin, hsbn, hstn, hsl, sdlim, outh_bnd
+   public :: set_default_hsparams, hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hstn, hsl, sdlim, outh_bnd
 #endif /* GRAV */
 
    real, allocatable, dimension(:), save :: zs        !< array of z-positions of subgrid cells centers
    real, allocatable, dimension(:), save :: gprofs    !< array of gravitational acceleration in a column of subgrid
+   real, allocatable, dimension(:), save :: dprof     !< Array used for storing density during calculation of hydrostatic equilibrium
    real,                            save :: dzs       !< length of the subgrid cell in z-direction
    integer(kind=4),                 save :: nstot     !< total number of subgrid cells in a column through all z-blocks
    real,                            save :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
@@ -76,7 +77,7 @@ contains
 !! \param coldens column density value for given x and y coordinates
 !! \param csim2 sqare of sound velocity
 !<
-   subroutine hydrostatic_zeq_coldens(iia, jja, coldens, csim2, cg, ug)
+   subroutine hydrostatic_zeq_coldens(iia, jja, coldens, csim2, cg)
 
       use grid_cont, only: grid_container
 
@@ -85,17 +86,16 @@ contains
       integer,                       intent(in)    :: iia, jja
       real,                          intent(in)    :: coldens, csim2
       type(grid_container), pointer, intent(inout) :: cg
-      logical,                       intent(in)    :: ug
       real                                         :: sdprof, sd
 
       sdprof = 1.0
-      call hydrostatic_zeq_densmid(iia, jja, sdprof, csim2, cg, ug, sd)
-      cg%dprof = cg%dprof * coldens / sd
+      call hydrostatic_zeq_densmid(iia, jja, sdprof, csim2, cg, sd)
+      dprof = dprof * coldens / sd
 
    end subroutine hydrostatic_zeq_coldens
 
 !>
-!! \brief Routne that establishes hydrostatic equilibrium for fixed plane density value
+!! \brief Routine that establishes hydrostatic equilibrium for fixed plane density value
 !! \details To properly use this routine it is important to make sure that get_gprofs pointer has been associated. See details of start_hydrostatic routine.
 !! \param iia x-coordinate of z-column
 !! \param jja y-coordinate of z-column
@@ -103,7 +103,7 @@ contains
 !! \param csim2 sqare of sound velocity
 !! \param sd optional variable to give a sum of dprofs array from hydrostatic_main routine
 !<
-   subroutine hydrostatic_zeq_densmid(iia, jja, d0, csim2, cg, ug, sd)
+   subroutine hydrostatic_zeq_densmid(iia, jja, d0, csim2, cg, sd)
 
       use constants,  only: small
       use dataio_pub, only: die
@@ -114,24 +114,27 @@ contains
       integer,                       intent(in)    :: iia, jja
       real,                          intent(in)    :: d0, csim2
       type(grid_container), pointer, intent(in)    :: cg
-      logical,                       intent(in)    :: ug
       real,                optional, intent(inout) :: sd
 
       if (d0 <= small) call die("[hydrostatic:hydrostatic_zeq_densmid] d0 must be /= 0")
       dmid = d0
 
-      if (ug) call set_default_hsparams(cg)
       call start_hydrostatic(iia, jja, csim2, cg, sd)
       call finish_hydrostatic
 
    end subroutine hydrostatic_zeq_densmid
 
+!>
+!! \brief Routine to set up sizes of arrays used in hydrostatic module. Settings depend on cg structure.
+!! \details Routine has to be called before the firs usage of hydrostatic_zeq_coldens/densmid if there is no other equivalent user settings.
+!<
    subroutine set_default_hsparams(cg)
 
-      use constants,  only: zdim, LO, HI
-      use domain,     only: dom
-      use gravity,    only: nsub
-      use grid_cont,  only: grid_container
+      use constants,   only: zdim, LO, HI
+      use diagnostics, only: my_allocate, my_deallocate
+      use domain,      only: dom
+      use gravity,     only: nsub
+      use grid_cont,   only: grid_container
 
       implicit none
 
@@ -143,7 +146,10 @@ contains
       hsbn  = cg%n_(zdim)
       hstn  = dom%n_t(zdim)
       sdlim = dom%edge(zdim,:)
-      allocate(hsl(hsbn+1))
+      if (allocated(dprof)) call my_deallocate(dprof)
+      call my_allocate(dprof, [cg%n_(zdim)], "dprof")
+      if (allocated(hsl)) call my_deallocate(hsl)
+      call my_allocate(hsl, [hsbn+1], "hsl")
       hsl(1:hsbn) = cg%zl(1:hsbn)
       hsl(hsbn+1) = cg%zr(hsbn)
 
@@ -195,11 +201,11 @@ contains
          enddo
       endif
 
-      cg%dprof(:) = 0.0
+      dprof(:) = 0.0
       do k=1, hsbn
          do ksub=1, nstot
             if (zs(ksub) > hsl(k) .and. zs(ksub) < hsl(k+1)) then
-               cg%dprof(k) = cg%dprof(k) + dprofs(ksub)/real(nsub)
+               dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
             endif
          enddo
       enddo
@@ -267,7 +273,7 @@ contains
 
       integer,                       intent(in) :: iia, jja
       type(grid_container), pointer, intent(in) :: cg
-      real, pointer, dimension(:,:,:)           :: gpots
+      real, dimension(:,:,:), pointer           :: gpots
       type(axes)                                :: ax
       integer                                   :: nstot1
 
@@ -284,9 +290,9 @@ contains
       gprofs(1:nstot) = (gpots(1,1,1:nstot) - gpots(1,1,2:nstot1))/dzs
       gprofs = tune_zeq*gprofs
       if (associated(gpots)) deallocate(gpots)
-      if (allocated(ax%x))  deallocate(ax%x)
-      if (allocated(ax%y))  deallocate(ax%y)
-      if (allocated(ax%z))  deallocate(ax%z)
+      if (allocated(ax%x))   deallocate(ax%x)
+      if (allocated(ax%y))   deallocate(ax%y)
+      if (allocated(ax%z))   deallocate(ax%z)
    end subroutine get_gprofs_gparray
 
 !>

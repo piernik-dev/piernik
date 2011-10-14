@@ -275,7 +275,7 @@ contains
       use mpi,          only: MPI_COMM_NULL
       use mpisetup,     only: master, comm
       use units,        only: newtong
-      use hydrostatic,  only: hydrostatic_zeq_densmid
+      use hydrostatic,  only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
       use func,         only: ekin
 
       implicit none
@@ -310,6 +310,7 @@ contains
                call printinfo(msg)
             endif
 
+            call set_default_hsparams(cg)
 
             do i = 1, cg%n_(xdim)
                R = cg%x(i)
@@ -320,10 +321,10 @@ contains
                cg%cs_iso2(i,:,:) = cs2
 
                do j = 1, cg%n_(ydim)
-                  call hydrostatic_zeq_densmid(i, j, rho, cs2, cg, .true.)
+                  call hydrostatic_zeq_densmid(i, j, rho, cs2, cg)
                   do k = 1, cg%n_(zdim)
                      zk = cg%z(k)
-                     cg%u(fl%idn,i,j,k) = max(cg%dprof(k)/(1.0+eps), smalld)
+                     cg%u(fl%idn,i,j,k) = max(dprof(k)/(1.0+eps), smalld)
                      if (fl%tag == DST) cg%u(fl%idn,i,j,k) = max(eps * cg%u(flind%neu%idn,i,j,k), smalld)
 
                   enddo

@@ -128,7 +128,7 @@ contains
       use grid,           only: all_cg
       use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
-      use hydrostatic,    only: hydrostatic_zeq_densmid
+      use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
       use initionized,    only: idni, imxi, imyi, imzi
 #ifdef SHEAR
       use shear,          only: qshear, omega
@@ -161,12 +161,13 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg, .true.)
+         call set_default_hsparams(cg)
+         call hydrostatic_zeq_densmid(1, 1, d0, csim2, cg)
 
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%u(idni,i,j,k)   = max(smalld, cg%dprof(k))
+                  cg%u(idni,i,j,k)   = max(smalld, dprof(k))
 
                   cg%u(imxi,i,j,k) = 0.0
                   cg%u(imyi,i,j,k) = 0.0

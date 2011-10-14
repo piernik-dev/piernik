@@ -83,8 +83,6 @@ module grid_cont
       real, allocatable, dimension(:) :: yr     !< array of y-positions of %grid cells right borders
       real, allocatable, dimension(:) :: zr     !< array of z-positions of %grid cells right borders
 
-      real, allocatable, dimension(:) :: dprof  !< Array used for storing density during calculation of hydrostatic equilibrium
-
       integer(kind=4) :: nxb                            !< number of %grid cells in one block (without boundary cells) in x-direction
       integer(kind=4) :: nyb                            !< number of %grid cells in one block (without boundary cells) in y-direction
       integer(kind=4) :: nzb                            !< number of %grid cells in one block (without boundary cells) in z-direction
