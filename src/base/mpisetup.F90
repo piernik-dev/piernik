@@ -77,7 +77,7 @@ contains
       use constants,  only: cwdlen, I_ONE
       use mpi,        only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER
       use dataio_pub, only: die, printinfo, msg, cwd, ansi_white, ansi_black, tmp_log_file
-      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
 
       implicit none
 
@@ -111,8 +111,7 @@ contains
       if (master) then
          inquire(file = tmp_log_file, exist = tmp_log_exist)
          if (tmp_log_exist) then
-            lun = getlun()
-            open(lun, file=tmp_log_file)
+            open(newunit=lun, file=tmp_log_file)
             close(lun, status="delete")
          endif
 #ifdef VERBOSE

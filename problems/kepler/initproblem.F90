@@ -94,7 +94,7 @@ contains
    subroutine read_problem_par
 
       use constants,           only: GEO_RPZ
-      use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun      ! QA_WARN required for diff_nml
+      use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use dataio_user,         only: user_vars_hdf5, problem_read_restart
       use domain,              only: dom
       use fluidboundaries_funcs, only: user_bnd_xl, user_bnd_xr

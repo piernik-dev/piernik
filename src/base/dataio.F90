@@ -221,8 +221,8 @@ contains
       use data_hdf5,       only: init_data
       use dataio_pub,      only: nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
            &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, die, code_progress, &
-           &                     move_file, getlun, multiple_h5files, parfile, parfilelines
-      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
+           &                     move_file, multiple_h5files, parfile, parfilelines
+      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use domain,          only: dom
       use fluidboundaries, only: all_fluid_boundaries
       use global,          only: t, nstep
@@ -287,8 +287,7 @@ contains
 
       if (master) then
 
-         par_lun = getlun()
-         open(par_lun,file=par_file)
+         open(newunit=par_lun,file=par_file)
          ierrh = 0
          do while (ierrh == 0 .and. parfilelines<maxparfilelines)
             read(unit=par_lun, fmt='(a)', iostat=ierrh) parfile(parfilelines+1)
@@ -724,7 +723,7 @@ contains
    subroutine write_timeslice
 
       use constants,   only: cwdlen, xdim, ydim, zdim, half
-      use dataio_pub,  only: cwd, warn, getlun
+      use dataio_pub,  only: cwd, warn
       use dataio_user, only: user_tsl
       use diagnostics, only: pop_vector
       use domain,      only: dom, is_multicg
@@ -807,15 +806,13 @@ contains
             if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
             write(head_fmt,'(A,I2,A)') "(a1,a8,",size(tsl_names)-1,"a16)"
 
-            tsl_lun = getlun()
-            open(tsl_lun, file=tsl_file)
+            open(newunit=tsl_lun, file=tsl_file)
             write(tsl_lun,fmt=head_fmt) "#",tsl_names
             write(tsl_lun, '(a1)') '#'
             deallocate(tsl_names)
             tsl_firstcall = .false.
          else
-            tsl_lun = getlun()
-            open(tsl_lun, file=tsl_file, position='append')
+            open(newunit=tsl_lun, file=tsl_file, position='append')
          endif
       endif
 
@@ -1282,7 +1279,7 @@ contains
 
 !> \todo process multiple commands at once
       use constants,     only: cwdlen
-      use dataio_pub,    only: msg, printinfo, warn, getlun
+      use dataio_pub,    only: msg, printinfo, warn
       use mpisetup,      only: master
 #if defined(__INTEL_COMPILER)
       use ifport,        only: unlink, stat
@@ -1318,8 +1315,7 @@ contains
             if (last_msg_stamp(i) == stat_buff(10)) exit
             last_msg_stamp(i) = stat_buff(10)
 
-            msg_lun = getlun()
-            open(msg_lun, file=fname(i), status='old')
+            open(newunit=msg_lun, file=fname(i), status='old')
             read(msg_lun, *, iostat=io) umsg, umsg_param
             if (io/=0) then
                rewind(msg_lun)

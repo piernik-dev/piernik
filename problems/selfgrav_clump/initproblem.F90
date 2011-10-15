@@ -59,7 +59,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun   ! QA_WARN required for diff_nml
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
       use dataio_pub,    only: die
       use domain,        only: dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL

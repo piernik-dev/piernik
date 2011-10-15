@@ -100,7 +100,7 @@ contains
    subroutine init_cosmicrays
 
       use diagnostics,     only: ma1d, my_allocate
-      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun   ! QA_WARN required for diff_nml
+      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
       use mpisetup,        only: ibuff, rbuff, lbuff, comm, ierr, buffer_dim, master, slave, FIRST
       use mpi,             only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_INTEGER

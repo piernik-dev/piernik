@@ -13,19 +13,16 @@
 
  */
 #define diff_nml(namelist)\
-  lun = getlun();\
-  open(lun, file="temp1.dat", status="unknown");\
+  open(newunit=lun, file="temp1.dat", status="unknown");\
   write(lun,nml=namelist);\
   close(lun);\
-  lun = getlun();\
-  open(lun, file=par_file);\
+  open(newunit=lun, file=par_file);\
   read(unit=lun, nml=namelist, iostat=ierrh);\
   close(lun);\
   call namelist_errh(ierrh, #namelist);\
   read(cmdl_nml,nml=namelist, iostat=ierrh);\
   call namelist_errh(ierrh, #namelist, .true.);\
-  lun = getlun();\
-  open(lun, file="temp2.dat", status="unknown");\
+  open(newunit=lun, file="temp2.dat", status="unknown");\
   write(lun,nml=namelist);\
   close(lun);\
   call compare_namelist("temp1.dat", "temp2.dat")

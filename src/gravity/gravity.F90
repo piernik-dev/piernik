@@ -145,7 +145,7 @@ contains
 !<
    subroutine init_grav
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, getlun    ! QA_WARN required for diff_nml
+      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
       use dataio_pub,    only: printinfo, warn, die, code_progress
       use constants,     only: PIERNIK_INIT_GRID, AT_OUT_B, AT_IGNORE, gp_n, gpot_n, hgpot_n
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST

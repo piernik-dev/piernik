@@ -180,11 +180,10 @@ contains
          endif
       endif
 
-      log_lun = getlun()
       if (log_file_initialized) then
-         open(log_lun, file=log_file, position='append')
+         open(newunit=log_lun, file=log_file, position='append')
       else
-         open(log_lun, file=tmp_log_file, status='unknown', position='append')   ! BEWARE: possible race condition
+         open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append')   ! BEWARE: possible race condition
       endif
       if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
       write(log_lun,'(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
@@ -327,10 +326,8 @@ contains
 
       if (code_progress > PIERNIK_INIT_IO_IC) call warn("[dataio_pub:compare_namelist] Late namelist")
 
-      lun_bef = getlun()
-      open(lun_bef, file=nml_bef, status='old')
-      lun_aft = getlun()
-      open(lun_aft, file=nml_aft, status='old')
+      open(newunit=lun_bef, file=nml_bef, status='old')
+      open(newunit=lun_aft, file=nml_aft, status='old')
       io = 0
       do
          read(lun_bef,'(a)', iostat=io) sa
@@ -359,10 +356,8 @@ contains
       integer                      :: old_u, new_u
       integer                      :: io_stat
 
-      old_u = getlun()
-      open(old_u, file=a, status="old")
-      new_u = getlun()
-      open(new_u, file=b, status="unknown")
+      open(newunit=old_u, file=a, status="old")
+      open(newunit=new_u, file=b, status="unknown")
       do
          read(old_u, '(a)', iostat=io_stat) msg
          if (io_stat == iostat_end) exit
@@ -373,24 +368,6 @@ contains
 
       stat = 0
    end function move_file
-!-----------------------------------------------------------------------------
-   integer function getlun()
-      implicit none
-      logical :: exists, opend
-      integer :: i
-
-      getlun = -1
-
-      do i = 10, 999
-         inquire(unit=i, exist=exists, opened=opend)
-         if (exists .and. .not.opend) then
-            getlun = i
-            return
-         endif
-      enddo
-      call warn("[dataio_pub:getlun]: There are no free luns available.")   ! prolly should just die
-      return
-   end function getlun
 !-----------------------------------------------------------------------------
 
 !>

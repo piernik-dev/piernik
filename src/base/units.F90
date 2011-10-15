@@ -168,7 +168,7 @@ contains
       use constants,  only: one, pi, fpi, small, PIERNIK_INIT_MPI
       use mpisetup,   only: cbuff, rbuff, buffer_dim, comm, ierr, master, slave, FIRST
       use mpi,        only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
-      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun, getlun  ! QA_WARN required for diff_nml
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub, only: warn, printinfo, msg, die, code_progress
 
       implicit none
