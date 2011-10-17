@@ -87,9 +87,9 @@ contains
 !---------------------------------------------------------------------------
    subroutine sweep(cg,dt,ddim)
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_swp, xdim, zdim
+      use fluidindex,      only: iarr_all_swp
       use grid_cont,       only: grid_container
-      use constants,       only: ndims, LO, HI, pdims
+      use constants,       only: ndims, LO, HI, pdims, xdim, zdim, cs_i2_n, fluid_n
 
       implicit none
 
@@ -97,18 +97,31 @@ contains
       real,    intent(in)                       :: dt
       integer, intent(in)                       :: ddim
 
-      integer :: i1, i2
+      integer :: i1, i2, ui, i_cs_iso2
       integer, dimension(ndims,LO:HI)       :: i
 
       real, dimension(size(cg%u,1),cg%n_(ddim)) :: u1d
-      real, dimension(:,:), pointer                 :: pu
-      real, dimension(xdim:zdim,         cg%n_(ddim)) :: b1d
+      real, dimension(:,:), pointer :: pu
+      real, dimension(xdim:zdim, cg%n_(ddim)) :: b1d
+      real, dimension(:), pointer :: cs2
+
+      ui = cg%get_na_ind_4d(fluid_n)
+      cs2 => null()
+      if (cg%exists(cs_i2_n)) then
+         i_cs_iso2 = cg%get_na_ind(cs_i2_n) ! BEWARE: magic strings across multiple files
+      else
+         i_cs_iso2 = -1
+      endif
 
       do i2 = 1, cg%n_(pdims(ddim,3))
          do i1 = 1, cg%n_(pdims(ddim,2))
-            pu => cg%u%get_sweep(ddim,i1,i2)
+            pu => cg%w(ui)%get_sweep(ddim,i1,i2)
+            if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
+
             u1d(iarr_all_swp(ddim,:),:) = pu(:,:)
-            call sweep1d_mh(u1d,b1d,cg%cs_iso2%get_sweep(ddim,i1,i2),dt/cg%dl(ddim))
+
+            call sweep1d_mh(u1d,b1d,cs2,dt/cg%dl(ddim))
+
             pu(:,:) = u1d(iarr_all_swp(ddim,:),:)
          enddo
       enddo
@@ -237,8 +250,8 @@ contains
    end function utoq
 !---------------------------------------------------------------------------
    function compute_flux(u,b,cs2) result(f)
-      use constants,    only: half, two
-      use fluidindex,   only: flind, xdim, ydim, zdim
+      use constants,    only: half, two, xdim, ydim, zdim
+      use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
       implicit none
       real, dimension(:,:), intent(in)       :: u, b
