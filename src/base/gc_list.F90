@@ -66,6 +66,8 @@ module gc_list
 
       procedure :: reg_var
 
+      procedure :: get_extremum
+
    end type cg_list
 
 contains
@@ -267,15 +269,15 @@ contains
    end subroutine reg_var
 
 !>
-!! \brief Find munimum or maximum value over a specified grid
+!! \brief Find munimum or maximum value over a specified list of grid containers
 !!
-!! \todo Bind it to the cg_list type so it will be possible to find an extremum over a given level or leavf blocks or something
+!! \details It should be possible to find an extremum over a given level or leavf blocks or something
 !<
-   subroutine get_extremum(tab, minmax, prop, cg)
+   subroutine get_extremum(this, ind, minmax, prop)
 
       use constants,  only: MINL, MAXL, I_ONE, ndims, xdim, ydim, zdim
       use dataio_pub, only: msg, warn, die
-      use domain,     only: dom, is_multicg
+      use domain,     only: dom
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
       use mpisetup,   only: comm, ierr, master, proc, FIRST
@@ -283,36 +285,60 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), intent(in), pointer  :: tab
+      class(cg_list), intent(in)    :: this
+      integer, intent(in)           :: ind  !< Index in cg%q(:)
       integer(kind=4),        intent(in)  :: minmax
       type(value),            intent(out) :: prop
-      type(grid_container), pointer, intent(in) :: cg
 
-      integer, parameter :: tag1 = 11
-      integer, parameter :: tag2 = 12
-      real, dimension(2)  :: v_red
+
+      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer :: cgl
+      integer, parameter :: tag1 = 11, tag2 = tag1 + 1
       integer, dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
+      real, dimension(:,:,:), pointer :: tab
+      enum, bind(C)
+         enumerator :: I_V, I_P
+      end enum
+      real, dimension(I_V:I_P)  :: v_red
 
-      if (is_multicg) call die("[func:get_extremum] multiple grid pieces per procesor not implemented yet") !nontrivial
-
+      prop%loc(:) = 0
       select case (minmax)
          case (MINL)
-            prop%val = minval(tab)
-            prop%loc = minloc(tab) + [cg%nb, cg%nb, cg%nb]
+            prop%val = huge(1.)
          case (MAXL)
-            prop%val = maxval(tab)
-            prop%loc = maxloc(tab) + [cg%nb, cg%nb, cg%nb]
+            prop%val = -huge(1.)
          case default
-            write(msg,*) "[func:get_extremum]: I don't know what to do with minmax = ", minmax
+            write(msg,*) "[gc_list:get_extremum]: I don't know what to do with minmax = ", minmax
             call warn(msg)
       end select
 
-      v_red(:) = [ prop%val, real(proc) ]
+      cgl => this%first
+      if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[gc_list:get_extremum] Wrong index")
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         tab => cg%q(ind)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         select case (minmax)
+            case (MINL)
+               if (minval(tab) < prop%val) then
+                  prop%val = minval(tab)
+                  prop%loc = minloc(tab) + cg%nb
+               endif
+            case (MAXL)
+               if (maxval(tab) > prop%val) then
+                  prop%val = maxval(tab)
+                  prop%loc = maxloc(tab) + cg%nb
+               endif
+         end select
+         cgl => cgl%nxt
+      enddo
+
+      v_red(I_V) = prop%val; v_red(I_P) = real(proc)
 
       call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, op(minmax), comm, ierr)
 
-      prop%val = v_red(1)
-      prop%proc = int(v_red(2))
+      prop%val = v_red(I_V)
+      prop%proc = int(v_red(I_P))
 
       if (proc == prop%proc) then
          where (.not. dom%has_dir(:)) prop%coords(:) = 0.

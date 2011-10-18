@@ -54,25 +54,15 @@ module resistivity
    real    :: dt_resist, dt_eint
    double precision :: d_eta_factor
    type(value)      :: etamax, cu2max, deimin
-   real, dimension(:,:,:), allocatable, target :: wb, eh
-   real, dimension(:,:,:), allocatable         :: dbx, dby, dbz
    logical, save :: eta1_active = .true.       !< resistivity off-switcher while eta_1 == 0.0
    integer, dimension(ndims,ndims)                     :: idm   !< identity matrix 3x3
    character(len=varlen), dimension(ndims) :: emfd
-   character(len=dsetnamelen), parameter :: eta_n = "eta"
+   character(len=dsetnamelen), parameter :: eta_n = "eta", wb_n = "wb", eh_n = "eh", dbx_n = "dbx", dby_n = "dby", dbz_n = "dbz"
 
 contains
 
    subroutine cleanup_resistivity
-
       implicit none
-
-      if (allocated(wb) ) deallocate(wb)
-      if (allocated(eh) ) deallocate(eh)
-      if (allocated(dbx)) deallocate(dbx)
-      if (allocated(dby)) deallocate(dby)
-      if (allocated(dbz)) deallocate(dbz)
-
    end subroutine cleanup_resistivity
 
 !>
@@ -97,16 +87,16 @@ contains
       use constants,  only: PIERNIK_INIT_GRID, zdim, xdim, ydim, AT_IGNORE, wcu_n
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress
-      use domain,     only: dom, is_multicg
+      use domain,     only: dom
+      use gc_list,    only: cg_list_element
       use grid,       only: all_cg
-      use grid_cont,  only: grid_container
       use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,   only: rbuff, ibuff, ierr, comm, master, slave, buffer_dim, FIRST
 
       implicit none
 
       real :: dims_twice
-      type(grid_container), pointer :: cg
+      type(cg_list_element),  pointer :: cgl
 
       namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
 
@@ -150,29 +140,34 @@ contains
 
       if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
-      cg => all_cg%first%cg
-      if (is_multicg) call die("[resistivity:init_resistivity] multiple grid pieces per procesor not implemented yet") !nontrivial eta, ...
-
       call all_cg%reg_var(wcu_n, AT_IGNORE)
       call all_cg%reg_var(eta_n, AT_IGNORE)
+      call all_cg%reg_var(wb_n, AT_IGNORE)
+      call all_cg%reg_var(eh_n, AT_IGNORE)
+      call all_cg%reg_var(dbx_n, AT_IGNORE)
+      call all_cg%reg_var(dby_n, AT_IGNORE)
+      call all_cg%reg_var(dbz_n, AT_IGNORE)
 #ifdef ISO
       if (eta_1 == 0.) then
-         cg%q(cg%get_na_ind(eta_n))%arr = eta_0
+         cgl => all_cg%first
+         do while (associated(cgl))
+            cgl%cg%q(cgl%cg%get_na_ind(eta_n))%arr = eta_0
+            cgl => cgl%nxt
+         enddo
          etamax%val  = eta_0
          eta1_active = .false.
       endif
 #endif /* ISO */
 
       if (eta1_active) then
-         if (.not.allocated(wb) ) allocate( wb(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-         if (.not.allocated(eh) ) allocate( eh(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-         if (.not.allocated(dbx)) allocate(dbx(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-         if (.not.allocated(dby)) allocate(dby(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-         if (.not.allocated(dbz)) allocate(dbz(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
-         if (.not.dom%has_dir(xdim)) dbx = 0.0
-         if (.not.dom%has_dir(ydim)) dby = 0.0
-         if (.not.dom%has_dir(zdim)) dbz = 0.0
+         cgl => all_cg%first
+         do while (associated(cgl))
+            if (.not. dom%has_dir(xdim)) cgl%cg%q(cgl%cg%get_na_ind(dbx_n))%arr = 0.0
+            if (.not. dom%has_dir(ydim)) cgl%cg%q(cgl%cg%get_na_ind(dby_n))%arr = 0.0
+            if (.not. dom%has_dir(zdim)) cgl%cg%q(cgl%cg%get_na_ind(dbz_n))%arr = 0.0
+            cgl => cgl%nxt
+         enddo
 
          jc2 = j_crit**2
          dims_twice = 2. * dom%eff_dim
@@ -205,7 +200,7 @@ contains
       real, dimension(:,:,:), pointer :: p
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
-      real, dimension(:,:,:), pointer :: eta
+      real, dimension(:,:,:), pointer :: eta, dbx, dby, dbz, wb, eh
 
       if (.not.eta1_active) return
 !> \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array - should change  with rev. 3893
@@ -216,6 +211,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
          eta => cg%get_na_ptr(eta_n)
+         dbx => cg%get_na_ptr(dbx_n)
+         dby => cg%get_na_ptr(dby_n)
+         dbz => cg%get_na_ptr(dbz_n)
+         wb => cg%get_na_ptr(wb_n)
+         eh => cg%get_na_ptr(eh_n)
 
          if (dom%has_dir(xdim)) then
             dbx(2:cg%n_(xdim),:,:) = (cg%b(ydim,2:cg%n_(xdim),:,:)-cg%b(ydim,1:cg%n_(xdim)-1,:,:))*cg%idl(xdim) ; dbx(1,:,:) = dbx(2,:,:)
@@ -274,19 +274,23 @@ contains
       cg => all_cg%first%cg
       if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum, wb, eta
 
-      p => cg%q(cg%get_na_ind(eta_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-      call get_extremum(p, MAXL, etamax, cg) ; NULLIFY(p)
+      call all_cg%get_extremum(cg%get_na_ind(eta_n), MAXL, etamax)
       call MPI_Bcast(etamax%val, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      p => wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-      call get_extremum(p, MAXL, cu2max, cg)
+      call all_cg%get_extremum(cg%get_na_ind(wb_n), MAXL, cu2max)
 
 #ifndef ISO
-      eta => all_cg%first%cg%get_na_ptr(eta_n)
-      wb = ( cg%u(flind%ion%ien,:,:,:) - half*( cg%u(flind%ion%imx,:,:,:)**2  + cg%u(flind%ion%imy,:,:,:)**2  + cg%u(flind%ion%imz,:,:,:)**2 ) &
-           / cg%u(flind%ion%idn,:,:,:) - half*( cg%b(xdim,:,:,:)**2  +   cg%b(ydim,:,:,:)**2  +   cg%b(zdim,:,:,:)**2))/ ( eta(:,:,:) * wb+small)
-      dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         eta => cg%get_na_ptr(eta_n)
+         wb => cg%get_na_ptr(wb_n)
+         wb = ( cg%u(flind%ion%ien,:,:,:) - half*( cg%u(flind%ion%imx,:,:,:)**2  + cg%u(flind%ion%imy,:,:,:)**2  + cg%u(flind%ion%imz,:,:,:)**2 ) &
+              / cg%u(flind%ion%idn,:,:,:) - half*( cg%b(xdim,:,:,:)**2  +   cg%b(ydim,:,:,:)**2  +   cg%b(zdim,:,:,:)**2))/ ( eta(:,:,:) * wb+small)
+         dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
+         cgl => cgl%nxt
+      enddo
 
-      call get_extremum(p, MINL, deimin, cg)
+      call all_cg%get_extremum(cg%get_na_ind(wb_n), MINL, deimin)
 #endif /* !ISO */
       NULLIFY(p)
 

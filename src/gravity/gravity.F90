@@ -892,12 +892,12 @@ contains
 !<
    subroutine grav_accel2pot
 
-      use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE
+      use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE, wa_n
       use dataio_pub, only: die
       use domain,     only: is_mpi_noncart, is_multicg, cdd, dom
       use gc_list,    only: get_extremum
       use grid,       only: all_cg
-      use grid_cont,  only: grid_container !, cg_list_element
+      use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: master, nproc, FIRST, LAST, comm, ierr, have_mpi
       use types,      only: value
@@ -907,13 +907,13 @@ contains
       integer                                                          :: i, j, k, ip, px, py, pz
       integer, dimension(3)                                            :: pc
       real, allocatable, dimension(:,:,:), target                      :: gpwork
-      real, dimension(:,:,:), pointer                                  :: p
       real, dimension(:), allocatable                                  :: gravrx, gravry, gravrz
       real                                                             :: dgpx_proc, dgpy_proc, dgpz_proc, ddgph
       real, dimension(FIRST:LAST)                                      :: dgpx_all,  dgpy_all,  dgpz_all
       real, dimension(0:cdd%psize(xdim)-1,0:cdd%psize(ydim)-1,0:cdd%psize(zdim)-1) :: dgpx,      dgpy,      dgpz,     ddgp
       type(value)                                                      :: gp_max
       type(grid_container), pointer :: cg
+      integer :: wa_i
 
       cg => all_cg%first%cg
       if (is_multicg) call die("[gravity:grav_accel2pot] multiple grid pieces per procesor not implemented yet") !nontrivial
@@ -1000,8 +1000,9 @@ contains
 
       ddgph  = gpwork(1,1,1)-gpwork(cg%is,cg%js,cg%ks)
       gpwork = gpwork + ddgp(px,py,pz) + ddgph
-      p => gpwork(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-      call get_extremum(p, MAXL, gp_max, cg)
+      wa_i = all_cg%first%cg%get_na_ind(wa_n)
+      all_cg%first%cg%wa(:,:,:) = gpwork(:,:,:)
+      call all_cg%get_extremum(wa_i, MAXL, gp_max)
 
       call MPI_Bcast(gp_max%val, I_ONE, MPI_DOUBLE_PRECISION, gp_max%proc, comm, ierr)
       gpwork = gpwork - gp_max%val

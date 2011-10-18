@@ -902,7 +902,7 @@ contains
    subroutine common_shout(pr, fluid, pres_tn, temp_tn, cs_tn)
 
       use constants,   only: small
-      use dataio_pub,  only: msg, printinfo, die
+      use dataio_pub,  only: msg, printinfo, warn
       use domain,      only: dom, is_multicg
       use global,      only: cfl
       use grid,        only: all_cg
@@ -917,15 +917,6 @@ contains
 
       real :: dxmn_safe
       type(grid_container), pointer :: cg
-
-      cg => all_cg%first%cg
-      if (is_multicg) call die("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet") !nontrivial  cfl*cg%d[xyz]
-
-      if (cg%dxmn >= sqrt(huge(1.0))) then
-         dxmn_safe = sqrt(huge(1.0))
-      else
-         dxmn_safe = cg%dxmn
-      endif
 
       write(msg, fmt_loc)     'min(dens)   ',fluid, pr%dens_min%val, pr%dens_min%proc, pack(pr%dens_min%loc,dom%has_dir), pack(pr%dens_min%coords,dom%has_dir)
       call printinfo(msg, .false.)
@@ -944,55 +935,78 @@ contains
          call printinfo(msg, .false.)
       endif
 
-      write(msg, fmt_dtloc)   'max(|vx|)   ',fluid, pr%velx_max%val, cfl*cg%dx/(pr%velx_max%val+small), pr%velx_max%proc, pack(pr%velx_max%loc,dom%has_dir), pack(pr%velx_max%coords,dom%has_dir)
-      call printinfo(msg, .false.)
-      write(msg, fmt_dtloc)   'max(|vy|)   ',fluid, pr%vely_max%val, cfl*cg%dy/(pr%vely_max%val+small), pr%vely_max%proc, pack(pr%vely_max%loc,dom%has_dir), pack(pr%vely_max%coords,dom%has_dir)
-      call printinfo(msg, .false.)
-      write(msg, fmt_dtloc)   'max(|vz|)   ',fluid, pr%velz_max%val, cfl*cg%dz/(pr%velz_max%val+small), pr%velz_max%proc, pack(pr%velz_max%loc,dom%has_dir), pack(pr%velz_max%coords,dom%has_dir)
-      call printinfo(msg, .false.)
-      if (cs_tn) then
-         write(msg, fmt_dtloc)'max(c_s )   ',fluid, pr%cs_max%val, cfl*dxmn_safe/(pr%cs_max%val+small), pr%cs_max%proc, pack(pr%cs_max%loc,dom%has_dir), pack(pr%cs_max%coords,dom%has_dir)
+      if (is_multicg) then
+         call warn("[dataio:common_shout] multiple grid pieces per procesor not implemented yet") !nontrivial  cfl*cg%d[xyz], dxmn_safe
+      else
+         cg => all_cg%first%cg
+
+         if (cg%dxmn >= sqrt(huge(1.0))) then
+            dxmn_safe = sqrt(huge(1.0))
+         else
+            dxmn_safe = cg%dxmn
+         endif
+
+         write(msg, fmt_dtloc)   'max(|vx|)   ',fluid, pr%velx_max%val, cfl*cg%dx/(pr%velx_max%val+small), pr%velx_max%proc, pack(pr%velx_max%loc,dom%has_dir), pack(pr%velx_max%coords,dom%has_dir)
          call printinfo(msg, .false.)
+         write(msg, fmt_dtloc)   'max(|vy|)   ',fluid, pr%vely_max%val, cfl*cg%dy/(pr%vely_max%val+small), pr%vely_max%proc, pack(pr%vely_max%loc,dom%has_dir), pack(pr%vely_max%coords,dom%has_dir)
+         call printinfo(msg, .false.)
+         write(msg, fmt_dtloc)   'max(|vz|)   ',fluid, pr%velz_max%val, cfl*cg%dz/(pr%velz_max%val+small), pr%velz_max%proc, pack(pr%velz_max%loc,dom%has_dir), pack(pr%velz_max%coords,dom%has_dir)
+         call printinfo(msg, .false.)
+         if (cs_tn) then
+            write(msg, fmt_dtloc)'max(c_s )   ',fluid, pr%cs_max%val, cfl*dxmn_safe/(pr%cs_max%val+small), pr%cs_max%proc, pack(pr%cs_max%loc,dom%has_dir), pack(pr%cs_max%coords,dom%has_dir)
+            call printinfo(msg, .false.)
+         endif
       endif
    end subroutine common_shout
 
    subroutine get_common_vars(fl)
 
       use types,      only: value                          !QA_WARN: used by get_extremum (intel compiler)
-      use constants,  only: ION, DST, MINL, MAXL, half
-      use dataio_pub, only: die
-      use domain,     only: is_multicg
+      use constants,  only: ION, DST, MINL, MAXL, half, wa_n
       use fluidtypes, only: phys_prop, component_fluid
-      use gc_list,    only: get_extremum
+      use gc_list,    only: get_extremum, cg_list_element
       use global,     only: smallp
       use grid,       only: all_cg
-      use grid_cont,  only: grid_container
       use units,      only: mH, kboltz
 
       implicit none
 
       type(component_fluid), intent(inout), target :: fl
       type(phys_prop), pointer                     :: pr
-      real, dimension(:,:,:), pointer              :: p
-      type(grid_container), pointer :: cg
+      integer :: wa_i
+      type(cg_list_element), pointer :: cgl
 
-      cg => all_cg%first%cg
-      if (is_multicg) call die("[dataio:get_common_vars] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum
+      wa_i = all_cg%first%cg%get_na_ind(wa_n)
 
       pr => fl%snap
-      cg%wa = cg%u(fl%idn,:,:,:)
-      p => cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-      call get_extremum(p, MAXL, pr%dens_max, cg)
-      call get_extremum(p, MINL, pr%dens_min, cg)
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cgl%cg%wa = cgl%cg%u(fl%idn,:,:,:)
+         cgl => cgl%nxt
+      enddo
+      call all_cg%get_extremum(wa_i, MAXL, pr%dens_max)
+      call all_cg%get_extremum(wa_i, MINL, pr%dens_min)
 
-      p = abs(cg%u(fl%imx,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      call get_extremum(p, MAXL, pr%velx_max, cg)
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cgl%cg%wa = abs(cgl%cg%u(fl%imx,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
+         cgl => cgl%nxt
+      enddo
+      call all_cg%get_extremum(wa_i, MAXL, pr%velx_max)
 
-      p = abs(cg%u(fl%imy,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      call get_extremum(p, MAXL, pr%vely_max, cg)
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cgl%cg%wa = abs(cgl%cg%u(fl%imy,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
+         cgl => cgl%nxt
+      enddo
+      call all_cg%get_extremum(wa_i, MAXL, pr%vely_max)
 
-      p = abs(cg%u(fl%imz,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%u(fl%idn,cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
-      call get_extremum(p, MAXL, pr%velz_max, cg)
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cgl%cg%wa = abs(cgl%cg%u(fl%imz,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
+         cgl => cgl%nxt
+      enddo
+      call all_cg%get_extremum(wa_i, MAXL, pr%velz_max)
 
 #ifdef ISO
       pr%pres_min        = pr%dens_min
@@ -1010,25 +1024,35 @@ contains
       pr%temp_max        = pr%temp_min
 #else /* !ISO */
       if (fl%tag /= DST) then
-         cg%wa(:,:,:) = (cg%u(fl%ien,:,:,:) &                ! eint
-                   - half*((cg%u(fl%imx,:,:,:)**2 +cg%u(fl%imy,:,:,:)**2 + cg%u(fl%imz,:,:,:)**2)/cg%u(fl%idn,:,:,:)))
-         if (fl%tag == ION) cg%wa(:,:,:) = cg%wa(:,:,:) - half*(sum(cg%b(:,:,:,:)**2,dim=1))
+         cgl => all_cg%first
+         do while (associated(cgl))
+            cgl%cg%wa(:,:,:) = (cgl%cg%u(fl%ien,:,:,:) - half*((cgl%cg%u(fl%imx,:,:,:)**2 +cgl%cg%u(fl%imy,:,:,:)**2 + cgl%cg%u(fl%imz,:,:,:)**2)/cgl%cg%u(fl%idn,:,:,:))) ! eint
+            if (fl%tag == ION) cgl%cg%wa(:,:,:) = cgl%cg%wa(:,:,:) - half*(sum(cgl%cg%b(:,:,:,:)**2,dim=1))
+            cgl%cg%wa(:,:,:) = max(fl%gam_1*cgl%cg%wa(:,:,:),smallp)  ! pres
+            cgl => cgl%nxt
+         enddo
+         call all_cg%get_extremum(wa_i, MAXL, pr%pres_max)
+         call all_cg%get_extremum(wa_i, MINL, pr%pres_min)
 
-         cg%wa(:,:,:) = max(fl%gam_1*cg%wa(:,:,:),smallp)  ! pres
-
-         call get_extremum(p, MAXL, pr%pres_max, cg)
-         call get_extremum(p, MINL, pr%pres_min, cg)
-
-         cg%wa(:,:,:) = fl%gam*cg%wa(:,:,:)/cg%u(fl%idn,:,:,:) ! sound speed squared
-         call get_extremum(p, MAXL, pr%cs_max, cg)
+         cgl => all_cg%first
+         do while (associated(cgl))
+            cgl%cg%wa(:,:,:) = fl%gam*cgl%cg%wa(:,:,:)/cgl%cg%u(fl%idn,:,:,:) ! sound speed squared
+            cgl => cgl%nxt
+         enddo
+         call all_cg%get_extremum(wa_i, MAXL, pr%cs_max)
          pr%cs_max%val = sqrt(pr%cs_max%val)
 
-         cg%wa(:,:,:) = (mH * cg%wa(:,:,:))/ (kboltz * fl%gam) ! temperature
-         call get_extremum(p, MAXL, pr%temp_max, cg)
-         call get_extremum(p, MINL, pr%temp_min, cg)
+         cgl => all_cg%first
+         do while (associated(cgl))
+            cgl%cg%wa(:,:,:) = (mH * cgl%cg%wa(:,:,:))/ (kboltz * fl%gam) ! temperature
+            cgl => cgl%nxt
+         enddo
+         call all_cg%get_extremum(wa_i, MAXL, pr%temp_max)
+         call all_cg%get_extremum(wa_i, MINL, pr%temp_min)
+
       endif
 #endif /* !ISO */
-      NULLIFY(p)
+
    end subroutine get_common_vars
 !---------------------------------------------------------------------
 !>
@@ -1040,19 +1064,18 @@ contains
 !
    subroutine  write_log(tsl)
 
-      use types,              only: value
-      use constants,          only: small, MINL, MAXL, xdim, ydim, zdim
-      use dataio_pub,         only: msg, printinfo, warn
-      use domain,             only: dom, is_multicg
+      use constants,          only: small, MINL, MAXL, xdim, ydim, zdim, wa_n
+      use dataio_pub,         only: msg, printinfo
+      use domain,             only: dom
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: flind
-      use func,               only: L2norm
-      use gc_list,            only: get_extremum
+      use func,               only: L2norm, sq_sum3
+      use gc_list,            only: get_extremum, cg_list_element
       use global,             only: cfl, t, dt
       use grid,               only: all_cg
-      use grid_cont,          only: grid_container
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master
+      use types,              only: value
 #ifdef COSM_RAYS
       use fluidindex,         only: iarr_all_crs
       use timestepcosmicrays, only: dt_crs
@@ -1069,10 +1092,11 @@ contains
 
       implicit none
 
-      type(tsl_container), optional   :: tsl
-      real                            :: dxmn_safe
-      real, dimension(:,:,:), pointer :: p
+      type(tsl_container), optional :: tsl
 
+      real :: dxmn_safe
+      type(cg_list_element), pointer :: cgl
+      integer :: wa_i
       type(value) :: drag
 #ifdef MAGNETIC
       type(value) :: b_min, b_max, divb_max, vai_max
@@ -1084,32 +1108,15 @@ contains
       type(value) :: gpxmax, gpymax, gpzmax
 #endif /* VARIABLE_GP */
       character(len=idlen) :: id
-#if defined VARIABLE_GP || defined MAGNETIC
-      integer :: nxl, nyl, nzl, nxu, nyu, nzu !< shortcuts for indices to compute all gradients regardless of dimensionality of the simulation
-#endif /* VARIABLE_GP || MAGNETIC */
-      type(grid_container), pointer :: cg
 
-      cg => all_cg%first%cg
-      if (is_multicg) then
-         if (master) call warn("[dataio:write_log] multiple grid pieces per procesor not implemented yet in get_extremum routine. Bailing out.")
-         return
-      endif
-
-#if defined VARIABLE_GP || defined MAGNETIC
-      nxl = 1 + dom%D_x
-      nyl = 1 + dom%D_y
-      nzl = 1 + dom%D_z
-      nxu = cg%n_(xdim) - dom%D_x
-      nyu = cg%n_(ydim) - dom%D_y
-      nzu = cg%n_(zdim) - dom%D_z
-#endif /* VARIABLE_GP || MAGNETIC */
-      p => cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-      id = '' ! suppress compiler warnings if noe of the modules requiring the id variable are swithed on.
-      if (cg%dxmn >= sqrt(huge(1.0))) then
-         dxmn_safe = sqrt(huge(1.0))
-      else
-         dxmn_safe = cg%dxmn
-      endif
+      wa_i = all_cg%first%cg%get_na_ind(wa_n)
+      id = '' ! suppress compiler warnings if none of the modules requiring the id variable are swithed on.
+      dxmn_safe = sqrt(huge(1.0))
+      cgl => all_cg%first
+      do while (associated(cgl))
+         dxmn_safe = min(dxmn_safe, cgl%cg%dxmn)
+         cgl => cgl%nxt
+      enddo
 
    ! Timestep diagnostics
       if (has_neu) call get_common_vars(flind%neu)
@@ -1118,12 +1125,20 @@ contains
          call get_common_vars(flind%ion)
 
 #ifdef MAGNETIC
-         cg%wa(:,:,:)  = sqrt(cg%b(1,:,:,:)*cg%b(1,:,:,:) + cg%b(2,:,:,:)*cg%b(2,:,:,:) + cg%b(3,:,:,:)*cg%b(3,:,:,:))
-         call get_extremum(p, MAXL, b_max, cg)
-         call get_extremum(p, MINL, b_min, cg)
+         cgl => all_cg%first
+         do while (associated(cgl))
+            cgl%cg%wa(:,:,:) = sqrt(sq_sum3(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)))
+            cgl => cgl%nxt
+         enddo
+         call all_cg%get_extremum(wa_i, MAXL, b_max)
+         call all_cg%get_extremum(wa_i, MINL, b_min)
 
-         cg%wa(:,:,:)  = cg%wa(:,:,:) / sqrt(cg%u(flind%ion%idn,:,:,:))
-         call get_extremum(p, MAXL, vai_max, cg)
+         cgl => all_cg%first
+         do while (associated(cgl))
+            cgl%cg%wa(:,:,:)  = cgl%cg%wa(:,:,:) / sqrt(cgl%cg%u(flind%ion%idn,:,:,:))
+            cgl => cgl%nxt
+         enddo
+         call all_cg%get_extremum(wa_i, MAXL, vai_max)
 #endif /* MAGNETIC */
 
 #ifdef ISO
@@ -1147,40 +1162,83 @@ contains
 
       if (has_dst) call get_common_vars(flind%dst)
 
+!!$#if defined VARIABLE_GP || defined MAGNETIC
+!!$      nxl = 1 + dom%D_x
+!!$      nyl = 1 + dom%D_y
+!!$      nzl = 1 + dom%D_z
+!!$      nxu = cg%n_(xdim) - dom%D_x
+!!$      nyu = cg%n_(ydim) - dom%D_y
+!!$      nzu = cg%n_(zdim) - dom%D_z
+!!$#endif /* VARIABLE_GP || MAGNETIC */
+
 #ifdef VARIABLE_GP
-      cg%wa(1:nxu,:,:) = abs((cg%gpot(nxl:cg%n_(xdim),:,:)-cg%gpot(1:nxu,:,:))*cg%idx) ; cg%wa(cg%n_(xdim),:,:) = cg%wa(nxu,:,:)
-      call get_extremum(p, MAXL, gpxmax, cg)
-      cg%wa(:,1:nyu,:) = abs((cg%gpot(:,nyl:cg%n_(ydim),:)-cg%gpot(:,1:nyu,:))*cg%idy) ; cg%wa(:,cg%n_(ydim),:) = cg%wa(:,nyu,:)
-      call get_extremum(p, MAXL, gpymax, cg)
-      cg%wa(:,:,1:nzu) = abs((cg%gpot(:,:,nzl:cg%n_(zdim))-cg%gpot(:,:,1:nzu))*cg%idz) ; cg%wa(:,:,cg%n_(zdim)) = cg%wa(:,:,nzu)
-      call get_extremum(p, MAXL, gpzmax, cg)
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cgl%cg%wa            (cgl%cg%is         :cgl%cg%ie,        cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = &
+              abs((cgl%cg%gpot(cgl%cg%is+dom%D_x:cgl%cg%ie+dom%D_x, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) - &
+                   cgl%cg%gpot(cgl%cg%is        :cgl%cg%ie,         cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke))*cgl%cg%idx)
+         cgl => cgl%nxt
+      enddo
+      call all_cg%get_extremum(wa_i, MAXL, gpxmax)
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cgl%cg%wa            (cgl%cg%is:cgl%cg%ie, cgl%cg%js        :cgl%cg%je,         cgl%cg%ks:cgl%cg%ke) = &
+              abs((cgl%cg%gpot(cgl%cg%is:cgl%cg%ie, cgl%cg%js+dom%D_y:cgl%cg%je+dom%D_y, cgl%cg%ks:cgl%cg%ke) - &
+                   cgl%cg%gpot(cgl%cg%is:cgl%cg%ie, cgl%cg%js        :cgl%cg%je,         cgl%cg%ks:cgl%cg%ke))*cgl%cg%idy)
+         cgl => cgl%nxt
+      enddo
+      call all_cg%get_extremum(wa_i, MAXL, gpymax)
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cgl%cg%wa            (cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks        :cgl%cg%ke        ) = &
+              abs((cgl%cg%gpot(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks+dom%D_z:cgl%cg%ke+dom%D_z) - &
+                   cgl%cg%gpot(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%idz)
+         cgl => cgl%nxt
+      enddo
+      call all_cg%get_extremum(wa_i, MAXL, gpzmax)
 #endif /* VARIABLE_GP */
 
 #ifdef MAGNETIC
-      cg%wa(1:nxu,1:nyu,1:nzu) = &
-                 (cg%b(xdim,nxl:cg%n_(xdim),  1:nyu  ,  1:nzu  ) - cg%b(xdim,1:nxu,1:nyu,1:nzu))*cg%dy*cg%dz &
-               + (cg%b(ydim,  1:nxu  ,nyl:cg%n_(ydim),  1:nzu  ) - cg%b(ydim,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dz &
-               + (cg%b(zdim,  1:nxu  ,  1:nyu  ,nzl:cg%n_(zdim)) - cg%b(zdim,1:nxu,1:nyu,1:nzu))*cg%dx*cg%dy
-      cg%wa = abs(cg%wa)
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cgl%cg%wa(            cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ) = &
+              &(cgl%cg%b(xdim, cgl%cg%is+dom%D_x:cgl%cg%ie+dom%D_x, cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ) - &
+              & cgl%cg%b(xdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dy*cgl%cg%dz &
+              +(cgl%cg%b(ydim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js+dom%D_y:cgl%cg%je+dom%D_y, cgl%cg%ks        :cgl%cg%ke        ) - &
+              & cgl%cg%b(ydim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dx*cgl%cg%dz &
+              +(cgl%cg%b(zdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks+dom%D_z:cgl%cg%ke+dom%D_z) - &
+              & cgl%cg%b(zdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dx*cgl%cg%dy
+         cgl%cg%wa = abs(cgl%cg%wa)
 
-      cg%wa(cg%ie,:,:) = cg%wa(cg%ie-dom%D_x,:,:)
-      cg%wa(:,cg%je,:) = cg%wa(:,cg%je-dom%D_y,:)
-      cg%wa(:,:,cg%ke) = cg%wa(:,:,cg%ke-dom%D_z)
+         cgl%cg%wa(cgl%cg%ie,:,:) = cgl%cg%wa(cgl%cg%ie-dom%D_x,:,:)
+         cgl%cg%wa(:,cgl%cg%je,:) = cgl%cg%wa(:,cgl%cg%je-dom%D_y,:)
+         cgl%cg%wa(:,:,cgl%cg%ke) = cgl%cg%wa(:,:,cgl%cg%ke-dom%D_z)
 
-      call get_extremum(p, MAXL, divb_max, cg)
+         cgl => cgl%nxt
+      enddo
+      call all_cg%get_extremum(wa_i, MAXL, divb_max)
 #endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
-      cg%wa        = sum(cg%u(iarr_all_crs,:,:,:),1)
-      call get_extremum(p, MAXL, encr_max, cg)
-      call get_extremum(p, MINL, encr_min, cg)
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
+         cgl => cgl%nxt
+      enddo
+      call all_cg%get_extremum(wa_i, MAXL, encr_max)
+      call all_cg%get_extremum(wa_i, MINL, encr_min)
 #endif /* COSM_RAYS */
 
       if (has_interactions) then
-         cg%wa = L2norm(cg%u(flind%dst%imx,:,:,:),cg%u(flind%dst%imy,:,:,:),cg%u(flind%dst%imz,:,:,:),cg%u(flind%neu%imx,:,:,:),cg%u(flind%neu%imy,:,:,:),cg%u(flind%neu%imz,:,:,:) ) * cg%u(flind%dst%idn,:,:,:)
-         call get_extremum(p, MAXL, drag, cg)
+         cgl => all_cg%first
+         do while (associated(cgl))
+            cgl%cg%wa = L2norm(cgl%cg%u(flind%dst%imx,:,:,:),cgl%cg%u(flind%dst%imy,:,:,:),cgl%cg%u(flind%dst%imz,:,:,:),cgl%cg%u(flind%neu%imx,:,:,:),cgl%cg%u(flind%neu%imy,:,:,:),cgl%cg%u(flind%neu%imz,:,:,:) ) * cgl%cg%u(flind%dst%idn,:,:,:)
+            cgl => cgl%nxt
+         enddo
+         call all_cg%get_extremum(wa_i, MAXL, drag)
       endif
-      NULLIFY(p)
 
       if (master)  then
          if (.not.present(tsl)) then
