@@ -285,10 +285,10 @@ contains
 
       implicit none
 
-      class(cg_list), intent(in)    :: this
-      integer, intent(in)           :: ind  !< Index in cg%q(:)
-      integer(kind=4),        intent(in)  :: minmax
-      type(value),            intent(out) :: prop
+      class(cg_list),  intent(in)  :: this
+      integer(kind=4), intent(in)  :: ind  !< Index in cg%q(:)
+      integer(kind=4), intent(in)  :: minmax
+      type(value),     intent(out) :: prop
 
 
       type(grid_container), pointer :: cg

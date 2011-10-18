@@ -973,7 +973,7 @@ contains
 
       type(component_fluid), intent(inout), target :: fl
       type(phys_prop), pointer                     :: pr
-      integer :: wa_i
+      integer(kind=4) :: wa_i
       type(cg_list_element), pointer :: cgl
 
       wa_i = all_cg%first%cg%get_na_ind(wa_n)
@@ -1096,7 +1096,7 @@ contains
 
       real :: dxmn_safe
       type(cg_list_element), pointer :: cgl
-      integer :: wa_i
+      integer(kind=4) :: wa_i
       type(value) :: drag
 #ifdef MAGNETIC
       type(value) :: b_min, b_max, divb_max, vai_max
