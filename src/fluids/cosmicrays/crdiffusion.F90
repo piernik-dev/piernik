@@ -245,8 +245,15 @@ contains
                enddo
             enddo
          enddo
+         cgl => cgl%nxt
+      enddo
 
-         call all_wcr_boundaries
+      call all_wcr_boundaries
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         wcr => cg%get_na_ptr_4d(wcr_n)
 
          ndm = cg%n_ - idm
          hdm = 1 + idm*ndm

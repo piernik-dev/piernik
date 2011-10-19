@@ -144,13 +144,14 @@ contains
    subroutine init_prob
 
       use constants,      only: xdim, ydim, zdim, HI
-      use dataio_pub,     only: die, warn
+      use dataio_pub,     only: die
       use domain,         only: dom
-      use grid,           only: all_cg
+      use func,           only: ekin, emag
       use gc_list,        only: cg_list_element
+      use grid,           only: all_cg
       use grid_cont,      only: grid_container
-      use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
-      use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
+      use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre
+      use initionized,    only: idni, imxi, imyi, imzi, ieni, gamma_ion
 
       implicit none
 
@@ -176,12 +177,6 @@ contains
       if (.not.dom%has_dir(ydim)) by0 = 0.
       if (.not.dom%has_dir(zdim)) bz0 = 0.
 
-      if ((bx0**2 + by0**2 + bz0**2 == 0.) .and. (K_crn_paral(icr) /= 0. .or. K_crn_perp(icr) /= 0.)) then
-         call warn("[initproblem:init_prob] No magnetic field is set, K_crn_* also have to be 0.")
-         K_crn_paral(icr) = 0.
-         K_crn_perp(icr)  = 0.
-      endif
-
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -193,19 +188,12 @@ contains
          cg%u(imxi:imzi, :, :, :) = 0.0
 
 #ifndef ISO
-         do k = 1, cg%n_(zdim)
-            do j = 1, cg%n_(ydim)
-               do i = 1, cg%n_(xdim)
-                  cg%u(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
-                       &                 0.5*sum(cg%u(imxi:imzi,i,j,k)**2,1)/cg%u(idni,i,j,k) + &
-                       &                 0.5*sum(cg%b(:,i,j,k)**2,1)
-               enddo
-            enddo
-         enddo
+         cg%u(ieni,:,:,:) = p0/(gamma_ion-1.0) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)) + &
+              &             ekin(cg%u(imxi,:,:,:), cg%u(imyi,:,:,:), cg%u(imzi,:,:,:), cg%u(idni,:,:,:))
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-         cg%u(iecr, :, :, :)      =  beta_cr*cs_iso**2 * cg%u(idni, :, :, :)/(gamma_crs(icr)-1.0)
+         cg%u(iecr,:,:,:) = beta_cr*cs_iso**2 * cg%u(idni,:,:,:)/(gamma_crs(icr)-1.0)
 
 ! Explosions
          do k = cg%ks, cg%ke
@@ -289,7 +277,7 @@ contains
 
                   r_par2 = (bxn*delx + byn*dely + bzn*delz)**2 ! square of the distance form the center of the bump in direction parallel to the magnetic field
                   r_perp2 = delx**2 + dely**2 + delz**2 - r_par2
-                  aecr1(i-cg%is+1, j-cg%js+1, k-cg%ks+1) = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
+                  aecr1(i, j, k) = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
 
                enddo
             enddo
@@ -349,7 +337,7 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  crt = aecr1(i-cg%is+1, j-cg%js+1, k-cg%ks+1)
+                  crt = aecr1(i, j, k)
                   norm(1) = norm(1) + (crt - cg%u(iecr, i, j, k))**2
                   norm(2) = norm(2) + crt**2
                   dev(1) = min(dev(1), (crt - cg%u(iecr, i, j, k)))
