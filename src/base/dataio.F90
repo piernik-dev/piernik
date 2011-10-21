@@ -46,9 +46,8 @@
 
 module dataio
 
-   use dataio_pub,    only: domain_dump, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, &
-      & multiple_h5files
-   use constants,     only: cwdlen, fmt_len, cbuff_len, varlen, idlen
+   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, multiple_h5files, use_v2_io
+   use constants,  only: cwdlen, fmt_len, cbuff_len, varlen, idlen
 
    implicit none
 
@@ -119,7 +118,7 @@ module dataio
    namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
                              domain_dump, vars, mag_center, vizit, fmin, fmax, &
                              min_disk_space_MB, sleep_minutes, sleep_seconds, &
-                             user_message_file, system_message_file, multiple_h5files
+                             user_message_file, system_message_file, multiple_h5files, use_v2_io
 
    interface mpi_addmul
       module procedure mpi_sum4d_and_multiply
@@ -210,7 +209,8 @@ contains
 !! <tr><td>sleep_minutes      </td><td>0                  </td><td>integer   </td><td>\copydoc dataio::sleep_minutes    </td></tr>
 !! <tr><td>sleep_seconds      </td><td>0                  </td><td>integer   </td><td>\copydoc dataio::sleep_seconds    </td></tr>
 !! <tr><td>user_message_file  </td><td>trim(cwd)//'/msg'  </td><td>string similar to default value              </td><td>\copydoc dataio::user_message_file  </td></tr>
-!! <tr><td>system_message_file</td><td>'/tmp/piernik_msg'</td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
+!! <tr><td>system_message_file</td><td>'/tmp/piernik_msg' </td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
+!! <tr><td>use_v2_io          </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::use_v2_io    </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -272,6 +272,7 @@ contains
       system_message_file = "/tmp/piernik_msg"
 
       tsl_firstcall = .true.
+      use_v2_io = .false.
 
       nhdf  = 0
       nres  = 0
@@ -339,6 +340,7 @@ contains
 
          lbuff(1)  = vizit
          lbuff(2)  = multiple_h5files
+         lbuff(3)  = use_v2_io
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
@@ -395,6 +397,7 @@ contains
 
          vizit               = lbuff(1)
          multiple_h5files    = lbuff(2)
+         use_v2_io           = lbuff(3)
 
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)

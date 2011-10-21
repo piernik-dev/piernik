@@ -40,7 +40,46 @@ module restart_hdf5
    private
    public :: read_restart_hdf5, write_restart_hdf5, read_arr_from_restart
 
+   integer, parameter :: STAT_OK = 0
+
 contains
+
+!>
+!! \brief Wrapper routine that writes a version 2.x or version 1.x restart file, depending on use_v2_io switch
+!<
+
+   subroutine write_restart_hdf5
+
+      use dataio_pub, only: use_v2_io
+
+      implicit none
+
+      if (use_v2_io) then
+         call write_restart_hdf5_v2
+      else
+         call write_restart_hdf5_v1
+      endif
+
+   end subroutine write_restart_hdf5
+
+!>
+!! \brief Wrapper routine that reads a version 2.x or version 1.x restart file, depending on use_v2_io switch. On v2 failure it falls back to v1.
+!<
+
+   subroutine read_restart_hdf5(chdf)
+
+      use common_hdf5, only: hdf
+      use dataio_pub, only: use_v2_io
+
+      implicit none
+
+      type(hdf), intent(inout) :: chdf
+      integer :: status_v2
+
+      if (use_v2_io) call read_restart_hdf5_v2(status_v2)
+      if (status_v2 /= STAT_OK .or. .not. use_v2_io) call read_restart_hdf5_v1(chdf)
+
+   end subroutine read_restart_hdf5
 
 !>
 !! \brief Routine to set dimensions of arrays related to grid containers in restart file
@@ -141,7 +180,7 @@ contains
 !! \brief This routine writes restart dump and updates restart counter
 !<
 
-   subroutine write_restart_hdf5
+   subroutine write_restart_hdf5_v1
 
       use common_hdf5, only: set_common_attributes, chdf, set_container_chdf, hdf
       use constants,   only: cwdlen, I_ONE
@@ -221,7 +260,7 @@ contains
 
       nres = nres + I_ONE
 
-   end subroutine write_restart_hdf5
+   end subroutine write_restart_hdf5_v1
 
    !----------------------------------------------------------------------------------
    ! Write fluid, mag or other variables (4-D and 3-D arrays)
@@ -581,7 +620,7 @@ contains
 
    end subroutine read_arr_from_restart
 
-   subroutine read_restart_hdf5(chdf)
+   subroutine read_restart_hdf5_v1(chdf)
 
       use common_hdf5, only: hdf
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE
@@ -600,7 +639,8 @@ contains
 
       implicit none
 
-      type(hdf)             :: chdf
+      type(hdf), intent(inout) :: chdf
+
       integer               :: nu
       integer(kind=4)       :: i
       character(len=cwdlen) :: filename  ! File name
@@ -638,43 +678,43 @@ contains
          call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
 
          call h5ltget_attribute_double_f(file_id,"/","piernik", rbuf, error)
-         if (error /= 0) call die("[restart_hdf5:read_restart_hdf5] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
+         if (error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
          if (rbuf(1) > piernik_hdf5_version) then
-            write(msg,'(2(a,f5.2))')"[restart_hdf5:read_restart_hdf5] Cannot read future versions of the restart file: ", rbuf(1)," > ", piernik_hdf5_version
+            write(msg,'(2(a,f5.2))')"[restart_hdf5:read_restart_hdf5_v1] Cannot read future versions of the restart file: ", rbuf(1)," > ", piernik_hdf5_version
             call die(msg)
          else if (int(rbuf(1)) < int(piernik_hdf5_version)) then
-            write(msg,'(2(a,f5.2))')"[restart_hdf5:read_restart_hdf5] The restart file is too ancient. It is unlikely that it could work correctly: ", rbuf(1)," << ", piernik_hdf5_version
+            write(msg,'(2(a,f5.2))')"[restart_hdf5:read_restart_hdf5_v1] The restart file is too ancient. It is unlikely that it could work correctly: ", rbuf(1)," << ", piernik_hdf5_version
             call die(msg)
          else if (rbuf(1) < piernik_hdf5_version) then
-            write(msg,'(2(a,f5.2))')"[restart_hdf5:read_restart_hdf5] Old versions of the restart file may not always work fully correctly: ", rbuf(1)," < ", piernik_hdf5_version
+            write(msg,'(2(a,f5.2))')"[restart_hdf5:read_restart_hdf5_v1] Old versions of the restart file may not always work fully correctly: ", rbuf(1)," < ", piernik_hdf5_version
             call warn(msg)
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nxd", ibuf, error)
-         if (ibuf(1) /= dom%n_d(xdim) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] nxd does not match")
+         if (ibuf(1) /= dom%n_d(xdim) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] nxd does not match")
          if (dom%has_dir(xdim)) then
             call h5ltget_attribute_double_f(file_id,"/","xmin", rbuf, error)
-            if (rbuf(1) /= dom%edge(xdim, LO) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] xmin does not match")
+            if (rbuf(1) /= dom%edge(xdim, LO) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] xmin does not match")
             call h5ltget_attribute_double_f(file_id,"/","xmax", rbuf, error)
-            if (rbuf(1) /= dom%edge(xdim, HI) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] xmax does not match")
+            if (rbuf(1) /= dom%edge(xdim, HI) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] xmax does not match")
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nyd", ibuf, error)
-         if (ibuf(1) /= dom%n_d(ydim) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] nyd does not match")
+         if (ibuf(1) /= dom%n_d(ydim) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] nyd does not match")
          if (dom%has_dir(ydim)) then
             call h5ltget_attribute_double_f(file_id,"/","ymin", rbuf, error)
-            if (rbuf(1) /= dom%edge(ydim, LO) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] ymin does not match")
+            if (rbuf(1) /= dom%edge(ydim, LO) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] ymin does not match")
             call h5ltget_attribute_double_f(file_id,"/","ymax", rbuf, error)
-            if (rbuf(1) /= dom%edge(ydim, HI) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] ymax does not match")
+            if (rbuf(1) /= dom%edge(ydim, HI) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] ymax does not match")
          endif
 
          call h5ltget_attribute_int_f(file_id,"/","nzd", ibuf, error)
-         if (ibuf(1) /= dom%n_d(zdim) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] nzd does not match")
+         if (ibuf(1) /= dom%n_d(zdim) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] nzd does not match")
          if (dom%has_dir(zdim)) then
             call h5ltget_attribute_double_f(file_id,"/","zmin", rbuf, error)
-            if (rbuf(1) /= dom%edge(zdim, LO) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] zmin does not match")
+            if (rbuf(1) /= dom%edge(zdim, LO) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] zmin does not match")
             call h5ltget_attribute_double_f(file_id,"/","zmax", rbuf, error)
-            if (rbuf(1) /= dom%edge(zdim, HI) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5] zmax does not match")
+            if (rbuf(1) /= dom%edge(zdim, HI) .or. error /= 0) call die("[restart_hdf5:read_restart_hdf5_v1] zmax does not match")
          endif
 
          call h5fclose_f(file_id, error)
@@ -772,6 +812,46 @@ contains
       call MPI_Bcast(chdf%domain_dump,domlen, MPI_CHARACTER, FIRST, comm, ierr)
       call MPI_Bcast(chdf%new_id,  idlen,     MPI_CHARACTER, FIRST, comm, ierr)
 
-   end subroutine read_restart_hdf5
+   end subroutine read_restart_hdf5_v1
+
+!-------------------------------------------------------------------------------
+! Routines for multi-file, multi-domain restarts
+
+!>
+!! \brief Write a multi-file, multi-domain restart file
+!!
+!! \warning Not implemented yet
+!<
+
+   subroutine write_restart_hdf5_v2
+
+      use dataio_pub, only: die
+
+      implicit none
+
+      call die("[restart_hdf5:write_restart_hdf5_v2] Not implemented yet")
+
+   end subroutine write_restart_hdf5_v2
+
+!>
+!! \brief Read a multi-file, multi-domain restart file
+!!
+!! \warning Not implemented yet
+!<
+
+   subroutine read_restart_hdf5_v2(status_v2)
+
+      use constants,  only: INVALID
+      use dataio_pub, only: warn
+
+      implicit none
+
+      integer, intent(out) :: status_v2
+
+      call warn("[restart_hdf5:read_restart_hdf5_v2] Not implemented yet")
+
+      status_v2 = INVALID
+
+   end subroutine read_restart_hdf5_v2
 
 end module restart_hdf5
