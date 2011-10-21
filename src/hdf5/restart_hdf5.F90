@@ -458,43 +458,44 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)        :: file_id   !> File identifier
-      integer(kind=4), intent(in)       :: ind       !> index of cg%q(:) or cg%w(:) arrays
-      logical, intent(in)               :: tgt3d     !> .true. for 3D arrays, .false. otherwise
-      integer(kind=4), optional, intent(in)          :: alt_area_type
-      character(len=*), optional, intent(in) :: alt_name !> used only in galdisk* setups
+      integer(HID_T),             intent(in) :: file_id            !> File identifier
+      integer(kind=4),            intent(in) :: ind                !> index of cg%q(:) or cg%w(:) arrays
+      logical,                    intent(in) :: tgt3d              !> .true. for 3D arrays, .false. otherwise
+      integer(kind=4),  optional, intent(in) :: alt_area_type
+      character(len=*), optional, intent(in) :: alt_name           !> used only in galdisk* setups
 
-      real, pointer, dimension(:,:,:)   :: pa3d     !> pointer to specified scope of pa3d
-      real, pointer, dimension(:,:,:,:) :: pa4d     !> pointer to specified scope of pa4d
-      integer, parameter :: rank4 = 1 + ndims
-      integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
-      integer(HID_T)        :: dset_id       ! Dataset identifier
-      integer(HID_T)        :: plist_id      ! Property list identifier
-      integer(HID_T)        :: filespace     ! Dataspace identifier in file
-      integer(HID_T)        :: memspace      ! Dataspace identifier in memory
-      integer(HSIZE_T), dimension(rank4) :: cnt, offset, stride
-      integer,         dimension(ndims) :: area, lleft, lright, chnk
-      integer(kind=8), dimension(ndims) :: loffs
-      integer(kind=4) :: rank, rankf, error, area_type
-      integer :: ir, dim1
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-      character(len=dsetnamelen) :: dname
+      real, pointer, dimension(:,:,:)        :: pa3d               !> pointer to specified scope of pa3d
+      real, pointer, dimension(:,:,:,:)      :: pa4d               !> pointer to specified scope of pa4d
+      integer, parameter                     :: rank4 = 1 + ndims
+      integer(HSIZE_T), dimension(rank4)     :: dimsf, chunk_dims
+      integer(HID_T)                         :: dset_id            !> Dataset identifier
+      integer(HID_T)                         :: plist_id           !> Property list identifier
+      integer(HID_T)                         :: filespace          !> Dataspace identifier in file
+      integer(HID_T)                         :: memspace           !> Dataspace identifier in memory
+      integer(HSIZE_T), dimension(rank4)     :: cnt, offset, stride
+      integer,          dimension(ndims)     :: area, lleft, lright, chnk
+      integer(kind=8),  dimension(ndims)     :: loffs
+      integer(kind=4)                        :: rank, rankf, error, area_type
+      integer                                :: ir, dim1
+      type(cg_list_element), pointer         :: cgl
+      type(grid_container),  pointer         :: cg
+      character(len=dsetnamelen)             :: dname, cgname
 
       !> \deprecated Duplicated code
       if (tgt3d) then
          if (ind < lbound(all_cg%first%cg%q(:), dim=1) .or. ind > ubound(all_cg%first%cg%q(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 3D array")
          dim1 = 1
          rank = ndims
-         dname = all_cg%first%cg%q(ind)%name
+         cgname = all_cg%first%cg%q(ind)%name
          area_type = all_cg%first%cg%q(ind)%restart_mode
       else
          if (ind < lbound(all_cg%first%cg%w(:), dim=1) .or. ind > ubound(all_cg%first%cg%w(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 4D array")
          dim1 = size(all_cg%first%cg%w(ind)%arr, dim=1)
          rank = rank4
-         dname = all_cg%first%cg%w(ind)%name
+         cgname = all_cg%first%cg%w(ind)%name
          area_type = all_cg%first%cg%w(ind)%restart_mode
       endif
+      dname = cgname
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
       if (present(alt_area_type)) area_type = alt_area_type
@@ -539,21 +540,21 @@ contains
 
          ! Read the array
          if (tgt3d) then
-            pa3d => cg%get_na_ptr(dname)
+            pa3d => cg%get_na_ptr(cgname)
             if (associated(pa3d)) then
                call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
                     &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
-               write(msg,'(3a)')"Cannot find '",trim(dname),"' 3D array in the restart file"
+               write(msg,'(5a)')"Unassociated '",trim(cgname),"' 3D array while reading dataset '",trim(dname),"' from the restart file"
                call die(msg)
             endif
          else
-            pa4d => cg%get_na_ptr_4d(dname)
+            pa4d => cg%get_na_ptr_4d(cgname)
             if (associated(pa4d)) then
                call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
                     &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
-               write(msg,'(3a)')"Cannot find '",trim(dname),"' 4D array in the restart file"
+               write(msg,'(5a)')"Unassociated '",trim(cgname),"' 4D array while reading dataset '",trim(dname),"' from the restart file"
                call die(msg)
             endif
          endif
