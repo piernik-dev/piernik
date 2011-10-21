@@ -119,9 +119,9 @@ contains
          case ("enen", "enei")
 #ifdef ISO
             tab(:,:) = reshape(half * ( cg%u(fl_dni%imx, is:ie, js:je, ks:ke)**2 + &
-                 &                     cg%u(fl_dni%imy, is:ie, js:je, ks:ke)**2 + &
-                 &                     cg%u(fl_dni%imz, is:ie, js:je, ks:ke)**2 ) / &
-                 &                     cg%u(fl_dni%idn, is:ie, js:je, ks:ke), shape(tab))
+                 &                      cg%u(fl_dni%imy, is:ie, js:je, ks:ke)**2 + &
+                 &                      cg%u(fl_dni%imz, is:ie, js:je, ks:ke)**2 ) / &
+                 &                      cg%u(fl_dni%idn, is:ie, js:je, ks:ke), shape(tab))
 #else /* !ISO */
             tab(:,:) = reshape(cg%u(fl_dni%ien, is:ie, js:je, ks:ke), shape(tab))
 #endif /* !ISO */
@@ -133,10 +133,10 @@ contains
 #else /* !ISO */
             ! BEWARE: Why there is only one case here?
             if (ij==zdim) then
-               tab(:,:) = real( cg%u(flind%neu%ien, is:ie, js:je, xn) - &
-                    half *( cg%u(flind%neu%imx, is:ie, js:je, xn)**2 + &
-                    &      cg%u(flind%neu%imy, is:ie, js:je, xn)**2 + &
-                    &      cg%u(flind%neu%imz, is:ie, js:je, xn)**2 ) / cg%u(flind%neu%idn, is:ie, js:je, xn), kind=4)*(flind%neu%gam_1)
+               tab(:,:) = real( cg%u(flind%neu%ien, is:ie, js:je, xn) -    &
+                        half *( cg%u(flind%neu%imx, is:ie, js:je, xn)**2 + &
+                    &           cg%u(flind%neu%imy, is:ie, js:je, xn)**2 + &
+                    &           cg%u(flind%neu%imz, is:ie, js:je, xn)**2 ) / cg%u(flind%neu%idn, is:ie, js:je, xn), kind=4)*(flind%neu%gam_1)
             endif
 #endif /* !ISO */
          case ("magx", "magy", "magz")
@@ -146,7 +146,7 @@ contains
             tab(:,:) = reshape(cg%gpot(is:ie, js:je, ks:ke), shape(tab))
 #endif /* GRAV */
 #ifdef COSM_RAYS
-         case ("cr*")
+         case ("cr1" : "cr9")
             i = iarr_all_crs(ichar(var(3:3))-ichar('0'))
             tab(:,:) = reshape(cg%u(i, is:ie, js:je, ks:ke), shape(tab))
 #endif /* COSM_RAYS */
