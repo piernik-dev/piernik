@@ -267,19 +267,19 @@ contains
 
 !>
 !! \brief This routine writes all attributes that are common to restart and output files.
-!! \details Other common elements may also be moved here.
+!!
+!! \details Write real, integer and character attributes. Store contents of problem.par and env files.
+!! Other common elements may also be moved here.
 !<
    subroutine set_common_attributes(filename, chdf)
 
-      use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE, I_NINE
-      use dataio_pub,  only: msg, printio, require_init_prob, piernik_hdf5_version, problem_name, run_id, parfile, parfilelines
+      use constants,   only: I_ONE, I_NINE
+      use dataio_pub,  only: msg, printio, use_v2_io, parfile, parfilelines
       use dataio_user, only: additional_attrs
-      use domain,      only: dom
-      use global,      only: magic_mass, t, dt, local_magic_mass
+      use global,      only: magic_mass, local_magic_mass
       use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_RDWR_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
            &                 h5open_f, h5fopen_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
            &                 h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,    only: slave, comm, ierr, FIRST
       use version,     only: env, nenv
@@ -293,15 +293,9 @@ contains
       integer(HID_T)                 :: type_id, dspace_id, dset_id, prp_id
       integer(HSIZE_T), dimension(1) :: dimstr
       logical(kind=4)                :: Z_avail
-      integer                        :: fe, i
-      integer(SIZE_T)                :: bufsize, maxlen
+      integer(SIZE_T)                :: maxlen
       integer(kind=4)                :: error
       real                           :: magic_mass0
-      integer, parameter             :: buf_len = 50
-      integer(kind=4), dimension(buf_len) :: ibuffer
-      real,    dimension(buf_len)    :: rbuffer
-      character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
-      character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
 
       call MPI_Reduce(local_magic_mass, magic_mass0, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, ierr)
       magic_mass       = magic_mass + magic_mass0
@@ -309,48 +303,14 @@ contains
 
       if (slave) return ! This data need not be written in parallel.
 
-      !! The rr1 marks critical attributes that are read by read_restart_hdf5 and compared against value read from the problem.par file.
-      !! The rr2 marks runtime values that are read by read_restart_hdf5 and assigned to something in the code.
-      !> \todo Set up an universal table(s) of attribute names for use by both set_common_attributes and read_restart_hdf5.
-      !! Provide indices for critical attributes (rr1) and for runtime attributes (rr2).
-      !<
-
       call h5open_f(error)
       call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error)
 
-      rbuffer(1)   = t                       ; rbuffer_name(1)   = "time" !rr2
-      rbuffer(2)   = dt                      ; rbuffer_name(2)   = "timestep" !rr2
-      rbuffer(3)   = chdf%last_hdf_time      ; rbuffer_name(3)   = "last_hdf_time" !rr2
-      rbuffer(4:5) = dom%edge(xdim, :)       ; rbuffer_name(4:5) = [ "xmin", "xmax" ] !rr1
-      rbuffer(6:7) = dom%edge(ydim, :)       ; rbuffer_name(6:7) = [ "ymin", "ymax" ] !rr1
-      rbuffer(8:9) = dom%edge(zdim, :)       ; rbuffer_name(8:9) = [ "zmin", "zmax" ] !rr1
-      rbuffer(10)  = piernik_hdf5_version    ; rbuffer_name(10)  = "piernik" !rr1, rr2
-      rbuffer(11)  = magic_mass              ; rbuffer_name(11)  = "magic_mass" !rr2
-      rbuffer(12)  = chdf%next_t_tsl         ; rbuffer_name(12)  = "next_t_tsl" !rr2
-      rbuffer(13)  = chdf%next_t_log         ; rbuffer_name(13)  = "next_t_log" !rr2
-
-      ibuffer(1)   = chdf%nstep              ; ibuffer_name(1)   = "nstep" !rr2
-      ibuffer(2)   = chdf%nres+I_ONE         ; ibuffer_name(2)   = "nres" !rr2
-      ibuffer(3)   = chdf%nhdf               ; ibuffer_name(3)   = "nhdf" !rr2
-      ibuffer(4)   = chdf%nstep              ; ibuffer_name(4)   = "step_res" !rr2
-      ibuffer(5)   = chdf%step_hdf           ; ibuffer_name(5)   = "step_hdf" !rr2
-      ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
-      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb" ! BEWARE: assuming cga%cg_all(:)%nb equal everywhere
-      ibuffer(10)  = require_init_prob       ; ibuffer_name(10)  = "require_init_prob" !rr2
-
-      bufsize = 1
-
-      i = 1
-      do while (rbuffer_name(i) /= "")
-         call h5ltset_attribute_double_f(file_id, "/", rbuffer_name(i), rbuffer(i), bufsize, error)
-         i = i+1
-      enddo
-
-      i = 1
-      do while (ibuffer_name(i) /= "")
-         call h5ltset_attribute_int_f(file_id, "/", ibuffer_name(i), ibuffer(i), bufsize, error)
-         i = i+1
-      enddo
+      if (use_v2_io) then
+         call set_common_attributes_v2(file_id, chdf)
+      else
+         call set_common_attributes_v1(file_id, chdf)
+      endif
 
       ! Store a compressed copy of the problem.par file.
       maxlen = int(maxval(len_trim(parfile(:parfilelines))), kind=4)
@@ -384,15 +344,6 @@ contains
       call H5Tclose_f(type_id, error)
       call H5Pclose_f(prp_id, error)
 
-      !> \todo store full domain decomposition for all procs here [cg%n_b(:), cg%off(:)] @(FIRST:LAST) ! MPI_Gather them?
-
-      fe = len_trim(problem_name)
-      call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
-      fe = len_trim(chdf%domain_dump)
-      call h5ltset_attribute_string_f(file_id, "/", "domain", chdf%domain_dump(1:fe), error) !rr2
-      fe = len_trim(run_id)
-      call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
-
       if (associated(additional_attrs)) call additional_attrs(file_id)
 
       call h5fclose_f(file_id, error)
@@ -404,6 +355,150 @@ contains
       ! only master process exits here
 
    end subroutine set_common_attributes
+
+!>
+!! \brief Common attributes for v2 files
+!!
+!! The rr1 marks critical attributes that are read by read_restart_hdf5 and compared against value read from the problem.par file.
+!! The rr2 marks runtime values that are read by read_restart_hdf5 and assigned to something in the code.
+!> \todo Set up an universal table(s) of attribute names for use by both set_common_attributes and read_restart_hdf5.
+!! Provide indices for critical attributes (rr1) and for runtime attributes (rr2).
+!!
+!<
+
+   subroutine set_common_attributes_v1(file_id, chdf)
+
+      use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE
+      use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id
+      use domain,      only: dom
+      use global,      only: magic_mass, t, dt
+      use hdf5,        only: HID_T, SIZE_T
+      use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
+
+      implicit none
+
+      integer(HID_T), intent(in)     :: file_id       !> File identifier
+      type(hdf), intent(in)          :: chdf
+
+      integer                        :: fe, i
+      integer(SIZE_T), parameter     :: bufsize = I_ONE
+      integer(kind=4)                :: error
+      integer, parameter             :: buf_len = 50
+      integer(kind=4), dimension(buf_len) :: ibuffer
+      real,    dimension(buf_len)    :: rbuffer
+      character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
+      character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
+
+      rbuffer(1)   = t                       ; rbuffer_name(1)   = "time" !rr2
+      rbuffer(2)   = dt                      ; rbuffer_name(2)   = "timestep" !rr2
+      rbuffer(3)   = chdf%last_hdf_time      ; rbuffer_name(3)   = "last_hdf_time" !rr2
+      rbuffer(4:5) = dom%edge(xdim, :)       ; rbuffer_name(4:5) = [ "xmin", "xmax" ] !rr1
+      rbuffer(6:7) = dom%edge(ydim, :)       ; rbuffer_name(6:7) = [ "ymin", "ymax" ] !rr1
+      rbuffer(8:9) = dom%edge(zdim, :)       ; rbuffer_name(8:9) = [ "zmin", "zmax" ] !rr1
+      rbuffer(10)  = piernik_hdf5_version    ; rbuffer_name(10)  = "piernik" !rr1, rr2
+      rbuffer(11)  = magic_mass              ; rbuffer_name(11)  = "magic_mass" !rr2
+      rbuffer(12)  = chdf%next_t_tsl         ; rbuffer_name(12)  = "next_t_tsl" !rr2
+      rbuffer(13)  = chdf%next_t_log         ; rbuffer_name(13)  = "next_t_log" !rr2
+
+      ibuffer(1)   = chdf%nstep              ; ibuffer_name(1)   = "nstep" !rr2
+      ibuffer(2)   = chdf%nres + I_ONE       ; ibuffer_name(2)   = "nres" !rr2
+      ibuffer(3)   = chdf%nhdf               ; ibuffer_name(3)   = "nhdf" !rr2
+      ibuffer(4)   = chdf%nstep              ; ibuffer_name(4)   = "step_res" !rr2
+      ibuffer(5)   = chdf%step_hdf           ; ibuffer_name(5)   = "step_hdf" !rr2
+      ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
+      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb" ! BEWARE: assuming cga%cg_all(:)%nb equal everywhere
+      ibuffer(10)  = require_init_prob       ; ibuffer_name(10)  = "require_init_prob" !rr2
+
+      i = 1
+      do while (rbuffer_name(i) /= "")
+         call h5ltset_attribute_double_f(file_id, "/", rbuffer_name(i), rbuffer(i), bufsize, error)
+         i = i + bufsize
+      enddo
+
+      i = 1
+      do while (ibuffer_name(i) /= "")
+         call h5ltset_attribute_int_f(file_id, "/", ibuffer_name(i), ibuffer(i), bufsize, error)
+         i = i + bufsize
+      enddo
+
+      fe = len_trim(problem_name)
+      call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
+      fe = len_trim(chdf%domain_dump)
+      call h5ltset_attribute_string_f(file_id, "/", "domain", chdf%domain_dump(1:fe), error) !rr2
+      fe = len_trim(run_id)
+      call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
+
+   end subroutine set_common_attributes_v1
+
+!>
+!! \brief Common attributes for v2 files
+!<
+
+   subroutine set_common_attributes_v2(file_id, chdf)
+
+      use constants,   only: cbuff_len, I_ONE
+      use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id
+      use global,      only: magic_mass, t, dt
+      use hdf5,        only: HID_T, SIZE_T
+      use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
+
+      implicit none
+
+      integer(HID_T), intent(in)     :: file_id       !> File identifier
+      type(hdf), intent(in)          :: chdf
+
+      integer                        :: fe, i
+      integer(SIZE_T), parameter     :: bufsize = I_ONE
+      integer(kind=4)                :: error
+      integer, parameter             :: buf_len = 50
+      integer(kind=4), dimension(buf_len) :: ibuffer
+      real,    dimension(buf_len)    :: rbuffer
+      character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
+      character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
+
+      rbuffer(1) = t                     ; rbuffer_name(1) = "time" !rr2
+      rbuffer(2) = dt                    ; rbuffer_name(2) = "timestep" !rr2
+      rbuffer(3) = chdf%last_hdf_time    ; rbuffer_name(3) = "last_hdf_time" !rr2
+      rbuffer(4) = piernik_hdf5_version2 ; rbuffer_name(4) = "piernik" !rr1, rr2
+      rbuffer(5) = magic_mass            ; rbuffer_name(5) = "magic_mass" !rr2
+      rbuffer(6) = chdf%next_t_tsl       ; rbuffer_name(6) = "next_t_tsl" !rr2
+      rbuffer(7) = chdf%next_t_log       ; rbuffer_name(7) = "next_t_log" !rr2
+
+      ibuffer(1) = chdf%nstep            ; ibuffer_name(1) = "nstep" !rr2
+      ibuffer(2) = chdf%nres + I_ONE     ; ibuffer_name(2) = "nres" !rr2
+      ibuffer(3) = chdf%nhdf             ; ibuffer_name(3) = "nhdf" !rr2
+      ibuffer(4) = chdf%nstep            ; ibuffer_name(4) = "step_res" !rr2
+      ibuffer(5) = chdf%step_hdf         ; ibuffer_name(5) = "step_hdf" !rr2
+      ibuffer(6) = require_init_prob     ; ibuffer_name(6) = "require_init_prob" !rr2
+
+      i = 1
+      do while (rbuffer_name(i) /= "")
+         call h5ltset_attribute_double_f(file_id, "/", rbuffer_name(i), rbuffer(i), bufsize, error)
+         i = i + bufsize
+      enddo
+
+      i = 1
+      do while (ibuffer_name(i) /= "")
+         call h5ltset_attribute_int_f(file_id, "/", ibuffer_name(i), ibuffer(i), bufsize, error)
+         i = i + bufsize
+      enddo
+
+      fe = len_trim(problem_name)
+      call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
+      fe = len_trim(chdf%domain_dump)
+      call h5ltset_attribute_string_f(file_id, "/", "domain", chdf%domain_dump(1:fe), error) !rr2
+      fe = len_trim(run_id)
+      call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
+
+      ! these values will go do  base domain description
+!!$      rbuffer(4:5) = dom%edge(xdim, :)       ; rbuffer_name(4:5) = [ "xmin", "xmax" ] !rr1
+!!$      rbuffer(6:7) = dom%edge(ydim, :)       ; rbuffer_name(6:7) = [ "ymin", "ymax" ] !rr1
+!!$      rbuffer(8:9) = dom%edge(zdim, :)       ; rbuffer_name(8:9) = [ "zmin", "zmax" ] !rr1
+!!$      ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
+!!$      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb" ! BEWARE: assuming cga%cg_all(:)%nb equal everywhere
+!!$      external boundary types
+
+   end subroutine set_common_attributes_v2
 
 ! This routine will become useful when we begin to use multiple domain containers (AMR or non-rectangular compound domains)
 
