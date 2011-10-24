@@ -445,7 +445,7 @@ contains
       implicit none
 
       integer(HID_T), intent(in)     :: file_id       !> File identifier
-      type(hdf), intent(in)          :: chdf
+      type(hdf), intent(in)          :: chdf          !> \deprecated do we need it?
 
       integer                        :: fe, i
       integer(SIZE_T), parameter     :: bufsize = I_ONE

@@ -820,39 +820,44 @@ contains
 !>
 !! \description The format of Piernik v2 restart and data files
 !!
-!! * A restart point or a data dump may consist of one or a multiple files
+!! A restart point or a data dump may consist of one or a multiple files
 !!
 !! The following data should be present in all files in identical copies:
-!! * file version
-!! * physical time
-!! * number of timestep
-!! * problem.par
-!! * env
-!! * base domain description
-!!   * grid size
-!!   * physical size
-!!   * boundary condition types
-!! * refinement topology description:
-!!   * a list of all patches (boxes)
-!!     * size
-!!     * offset
-!!     * refinement level
-!! * some other attributes that are present in v1 restart files
+!! - file version
+!! - physical time
+!! - number of timestep
+!! - problem.par
+!! - env
+!! - base domain description
+!!   - grid size
+!!   - physical size
+!!   - boundary condition types
+!! - refinement topology description:
+!!   - a list of all patches (boxes)
+!!     - size
+!!     - offset
+!!     - refinement level
+!! - some other attributes that are present in v1 restart files
+!! - user attributes
 !!
 !! The following data should be unique for each file:
-!! * list of grid containers
+!! - list of grid containers
 !!
 !! A grid container contains only essential, non-redundant data and consists of:
-!! * size
-!! * offset
-!! * refinement level
-!! * rank-4 arrays (restart only)
-!!   * "fluid"
-!!   * "mag"
-!!   * other cg%w arrays marked for restart
-!! * rank-3 arrays
-!!   * cg%q arrays marked for restart (restart only)
-!!   * named quantities for data dumps
+!! - size
+!! - offset
+!! - refinement level
+!! - rank-4 arrays (restart only)
+!!   - "fluid"
+!!   - "mag"
+!!   - other cg%w arrays marked for restart
+!! - rank-3 arrays
+!!   - cg%q arrays marked for restart (restart only)
+!!   - named quantities for data dumps
+!!
+!! At the moment we assume that all problem-specific data is either registeres in cg%q and cg%w arrays or can be written to global attributes.
+!!
+!! It will be possible to provide support for problem-specific data that should be appended to grid containers when anyone will need it
 !!
 !! \todo Check if it is possible to filter the data through shuffle and gzip -9  during write
 !<
@@ -871,7 +876,41 @@ contains
 
       call die("[restart_hdf5:write_restart_hdf5_v2] Not implemented yet")
 
+!!$      ! compute the name(s) and communicate
+!!$      ! open file(s)
+!!$      call set_common_attributes
+!!$      call describe_domains
+!!$      cgl => all_cg%first
+!!$      do while (associated(cgl))
+!!$         call write_cg_to_restart(cgl%cg)
+!!$         cgl => cgl%nxt
+!!$      enddo
+!!$      if (associated(problem_write_restart)) call problem_write_restart(file_id)
+!!$      ! close file(s)
+
    end subroutine write_restart_hdf5_v2
+
+!>
+!! \brief append a single grid container to the output file
+!!
+!! \warning Not implemented yet
+!<
+
+   subroutine write_cg_to_restart(cg)
+
+      use grid_cont,   only: grid_container
+
+      implicit none
+
+      type(grid_container), pointer, intent(in) :: cg
+
+      ! create group
+      ! write size, offset and refinement level
+      ! write selected cg%q
+      ! write selected cg%w
+      ! close group
+
+   end subroutine write_cg_to_restart
 
 !>
 !! \brief Read a multi-file, multi-domain restart file
@@ -879,23 +918,23 @@ contains
 !! \warning Not implemented yet
 !!
 !! \details Reading a v2 restart file should proceed as follows
-!! * Identify the restart point file(s) on master
-!! * Send the identification to the slaves
-!! * On each processor check what files are present if any
-!! * Check consistency of the data that should be present in all files in identical copies
-!! * Prepare list of available grid containers
-!! * If the list does not fill completely the boxes listed in refinement topology description on any process, communicate lists to the master
-!! * If the compiled list does not fill completely the boxes listed in refinement topology description then call die()
-!! * Compute domain decomposition for current refinement topology description (different number of processors and different decomposition method is allowed)
-!! * Calculate on master which parts (if any) cannot be read directly and should be communicated, send the lists to the involved slaves
-!! * Read the data (own and requested by others) from the file(s)
-!! * Receive anything that had to be read on onther processes
-!! * Check for local completness
+!! - Identify the restart point file(s) on master
+!! - Send the identification to the slaves
+!! - On each processor check what files are present if any
+!! - Check consistency of the data that should be present in all files in identical copies
+!! - Prepare list of available grid containers
+!! - If the list does not fill completely the boxes listed in refinement topology description on any process, communicate lists to the master
+!! - If the compiled list does not fill completely the boxes listed in refinement topology description then call die()
+!! - Compute domain decomposition for current refinement topology description (different number of processors and different decomposition method is allowed)
+!! - Calculate on master which parts (if any) cannot be read directly and should be communicated, send the lists to the involved slaves
+!! - Read the data (own and requested by others) from the file(s)
+!! - Receive anything that had to be read on onther processes
+!! - Check for local completness
 !!
 !! Optionally:
-!! * When a single file is visible by multiple processes and the fileststem does not tolerate massively concurrent I/O load,
+!! - When a single file is visible by multiple processes and the fileststem does not tolerate massively concurrent I/O load,
 !!   choose one or few process to do the I/O and make the others to wait for the data.
-!! * It should be possible to read runtime parameters from data stored in restart point rather than from actual problem.par file(s).
+!! - It should be possible to read runtime parameters from data stored in restart point rather than from actual problem.par file(s).
 !!   A way to override some of them (in most cases  END_CONTROL::tend and nend) should be provided.
 !<
 
