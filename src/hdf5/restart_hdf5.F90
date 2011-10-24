@@ -818,6 +818,46 @@ contains
 ! Routines for multi-file, multi-domain restarts
 
 !>
+!! \description The format of Piernik v2 restart and data files
+!!
+!! * A restart point or a data dump may consist of one or a multiple files
+!!
+!! The following data should be present in all files in identical copies:
+!! * file version
+!! * physical time
+!! * number of timestep
+!! * problem.par
+!! * env
+!! * base domain description
+!!   * grid size
+!!   * physical size
+!!   * boundary condition types
+!! * refinement topology description:
+!!   * a list of all patches (boxes)
+!!     * size
+!!     * offset
+!!     * refinement level
+!! * some other attributes that are present in v1 restart files
+!!
+!! The following data should be unique for each file:
+!! * list of grid containers
+!!
+!! A grid container contains only essential, non-redundant data and consists of:
+!! * size
+!! * offset
+!! * refinement level
+!! * rank-4 arrays (restart only)
+!!   * "fluid"
+!!   * "mag"
+!!   * other cg%w arrays marked for restart
+!! * rank-3 arrays
+!!   * cg%q arrays marked for restart (restart only)
+!!   * named quantities for data dumps
+!!
+!! \todo Check if it is possible to filter the data through shuffle and gzip -9  during write
+!<
+
+!>
 !! \brief Write a multi-file, multi-domain restart file
 !!
 !! \warning Not implemented yet
@@ -837,6 +877,26 @@ contains
 !! \brief Read a multi-file, multi-domain restart file
 !!
 !! \warning Not implemented yet
+!!
+!! \details Reading a v2 restart file should proceed as follows
+!! * Identify the restart point file(s) on master
+!! * Send the identification to the slaves
+!! * On each processor check what files are present if any
+!! * Check consistency of the data that should be present in all files in identical copies
+!! * Prepare list of available grid containers
+!! * If the list does not fill completely the boxes listed in refinement topology description on any process, communicate lists to the master
+!! * If the compiled list does not fill completely the boxes listed in refinement topology description then call die()
+!! * Compute domain decomposition for current refinement topology description (different number of processors and different decomposition method is allowed)
+!! * Calculate on master which parts (if any) cannot be read directly and should be communicated, send the lists to the involved slaves
+!! * Read the data (own and requested by others) from the file(s)
+!! * Receive anything that had to be read on onther processes
+!! * Check for local completness
+!!
+!! Optionally:
+!! * When a single file is visible by multiple processes and the fileststem does not tolerate massively concurrent I/O load,
+!!   choose one or few process to do the I/O and make the others to wait for the data.
+!! * It should be possible to read runtime parameters from data stored in restart point rather than from actual problem.par file(s).
+!!   A way to override some of them (in most cases  END_CONTROL::tend and nend) should be provided.
 !<
 
    subroutine read_restart_hdf5_v2(status_v2)
