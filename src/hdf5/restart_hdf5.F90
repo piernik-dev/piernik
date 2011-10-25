@@ -66,18 +66,16 @@ contains
 !! \brief Wrapper routine that reads a version 2.x or version 1.x restart file, depending on use_v2_io switch. On v2 failure it falls back to v1.
 !<
 
-   subroutine read_restart_hdf5(chdf)
+   subroutine read_restart_hdf5
 
-      use common_hdf5, only: hdf
       use dataio_pub, only: use_v2_io
 
       implicit none
 
-      type(hdf), intent(inout) :: chdf
       integer :: status_v2
 
       if (use_v2_io) call read_restart_hdf5_v2(status_v2)
-      if (status_v2 /= STAT_OK .or. .not. use_v2_io) call read_restart_hdf5_v1(chdf)
+      if (status_v2 /= STAT_OK .or. .not. use_v2_io) call read_restart_hdf5_v1
 
    end subroutine read_restart_hdf5
 
@@ -182,7 +180,7 @@ contains
 
    subroutine write_restart_hdf5_v1
 
-      use common_hdf5, only: set_common_attributes, chdf, set_container_chdf, hdf
+      use common_hdf5, only: set_common_attributes, chdf, set_container_chdf
       use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: nres, problem_name, run_id, msg, printio
       use global,      only: nstep
@@ -256,7 +254,7 @@ contains
       call h5close_f(error)
 
       ! Write some global variables
-      call set_common_attributes(filename, chdf)
+      call set_common_attributes(filename)
 
       nres = nres + I_ONE
 
@@ -620,9 +618,9 @@ contains
 
    end subroutine read_arr_from_restart
 
-   subroutine read_restart_hdf5_v1(chdf)
+   subroutine read_restart_hdf5_v1
 
-      use common_hdf5, only: hdf
+      use common_hdf5, only: chdf
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE
       use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, fix_string
       use dataio_user, only: problem_read_restart
@@ -638,8 +636,6 @@ contains
       use mpisetup,    only: comm, ierr, comm, master, FIRST
 
       implicit none
-
-      type(hdf), intent(inout) :: chdf
 
       integer               :: nu
       integer(kind=4)       :: i

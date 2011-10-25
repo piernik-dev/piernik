@@ -41,7 +41,7 @@ module common_hdf5
 
    private
    public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, set_container_chdf, get_container
-   public :: nhdf_vars, hdf_vars, hdf, chdf
+   public :: nhdf_vars, hdf_vars, chdf
 
    integer, parameter :: S_LEN = 30
 
@@ -271,7 +271,7 @@ contains
 !! \details Write real, integer and character attributes. Store contents of problem.par and env files.
 !! Other common elements may also be moved here.
 !<
-   subroutine set_common_attributes(filename, chdf)
+   subroutine set_common_attributes(filename)
 
       use constants,   only: I_ONE, I_NINE
       use dataio_pub,  only: msg, printio, use_v2_io, parfile, parfilelines
@@ -287,7 +287,6 @@ contains
       implicit none
 
       character(len=*), intent(in) :: filename  !> HDF File name
-      type(hdf), intent(in)        :: chdf
 
       integer(HID_T)                 :: file_id       !> File identifier
       integer(HID_T)                 :: type_id, dspace_id, dset_id, prp_id
@@ -307,9 +306,9 @@ contains
       call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error)
 
       if (use_v2_io) then
-         call set_common_attributes_v2(file_id, chdf)
+         call set_common_attributes_v2(file_id)
       else
-         call set_common_attributes_v1(file_id, chdf)
+         call set_common_attributes_v1(file_id)
       endif
 
       ! Store a compressed copy of the problem.par file.
@@ -366,7 +365,7 @@ contains
 !!
 !<
 
-   subroutine set_common_attributes_v1(file_id, chdf)
+   subroutine set_common_attributes_v1(file_id)
 
       use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE
       use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id
@@ -378,7 +377,6 @@ contains
       implicit none
 
       integer(HID_T), intent(in)     :: file_id       !> File identifier
-      type(hdf), intent(in)          :: chdf
 
       integer                        :: fe, i
       integer(SIZE_T), parameter     :: bufsize = I_ONE
@@ -434,7 +432,7 @@ contains
 !! \brief Common attributes for v2 files
 !<
 
-   subroutine set_common_attributes_v2(file_id, chdf)
+   subroutine set_common_attributes_v2(file_id)
 
       use constants,   only: cbuff_len, I_ONE
       use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id
@@ -445,7 +443,6 @@ contains
       implicit none
 
       integer(HID_T), intent(in)     :: file_id       !> File identifier
-      type(hdf), intent(in)          :: chdf          !> \deprecated do we need it?
 
       integer                        :: fe, i
       integer(SIZE_T), parameter     :: bufsize = I_ONE

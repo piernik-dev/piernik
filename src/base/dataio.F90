@@ -452,7 +452,7 @@ contains
 
       if (nrestart /= 0) then
          if (master) call printinfo("###############     Reading restart     ###############", .false.)
-         call read_restart_hdf5(chdf)
+         call read_restart_hdf5
          call get_container(nstep)
          nstep_start = nstep
          t_start     = t
@@ -484,7 +484,7 @@ contains
 
    subroutine user_msg_handler(end_sim)
 
-      use common_hdf5,  only: chdf, set_container_chdf
+      use common_hdf5,  only: set_container_chdf
       use constants,    only: I_ONE
       use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: step_hdf, msg, printinfo, warn
@@ -512,7 +512,7 @@ contains
                call write_restart_hdf5
             case ('hdf')
                call set_container_chdf(nstep)
-               call write_hdf5(chdf)
+               call write_hdf5
                step_hdf = nstep
             case ('log')
                call write_log
@@ -594,7 +594,7 @@ contains
 !
    subroutine write_data(output)
 
-      use common_hdf5,  only: chdf, set_container_chdf
+      use common_hdf5,  only: set_container_chdf
       use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: nres, last_hdf_time, step_hdf
       use global,       only: t, nstep
@@ -615,7 +615,7 @@ contains
       if (dt_hdf > 0.0 .and. nstep > step_hdf .and. output /= 'gpt') then
          if ((t-last_hdf_time) >= dt_hdf .or. output == 'hdf' .or. output == 'end') then
             call set_container_chdf(nstep)
-            call write_hdf5(chdf)
+            call write_hdf5
 
             if ((t-last_hdf_time) >= dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
             if ((t-last_hdf_time) >= dt_hdf) last_hdf_time = t ! additional control

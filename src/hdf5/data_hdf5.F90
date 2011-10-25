@@ -41,10 +41,8 @@ module data_hdf5
    public :: init_data, write_hdf5
 
    interface
-      subroutine h5_write(chdf)
-         use common_hdf5, only: hdf
+      subroutine h5_write
          implicit none
-         type(hdf), intent(in) :: chdf
       end subroutine h5_write
    end interface
 
@@ -150,9 +148,9 @@ contains
 !
 ! ------------------------------------------------------------------------------------
 !
-   subroutine h5_write_to_single_file(chdf)
+   subroutine h5_write_to_single_file
 
-      use common_hdf5, only: nhdf_vars, hdf_vars, set_common_attributes, hdf
+      use common_hdf5, only: nhdf_vars, hdf_vars, set_common_attributes, chdf
       use constants,   only: ndims, cwdlen, I_ONE
       use dataio_pub,  only: printio, msg, die, nhdf, problem_name, run_id
       use dataio_user, only: user_vars_hdf5
@@ -169,7 +167,6 @@ contains
 
       implicit none
 
-      type(hdf), intent(in)   :: chdf
       integer(HID_T)          :: file_id       ! File identifier
       integer(HID_T)          :: plist_id, plist_idf ! Property list identifier
       integer                 :: ierrh, i
@@ -278,7 +275,7 @@ contains
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
-      call set_common_attributes(fname, chdf)
+      call set_common_attributes(fname)
 
       nhdf = nhdf + I_ONE
 
@@ -293,10 +290,10 @@ contains
       write(f, '(a,"_",a3,i4.4,".cpu",i5.5,".h5")') trim(problem_name), trim(run_id), nhdf, proc
    end function h5_filename
 
-   subroutine h5_write_to_multiple_files(chdf)
+   subroutine h5_write_to_multiple_files
 
       use constants,       only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
-      use common_hdf5,     only: nhdf_vars, hdf_vars, hdf
+      use common_hdf5,     only: nhdf_vars, hdf_vars, chdf
       use dataio_pub,      only: die, msg, printio
       use dataio_user,     only: user_vars_hdf5
       use gc_list,         only: cg_list_element
@@ -309,7 +306,6 @@ contains
 
       implicit none
 
-      type(hdf), intent(in) :: chdf
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       integer(kind=4), parameter :: rank = 3
