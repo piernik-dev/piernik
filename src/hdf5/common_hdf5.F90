@@ -35,26 +35,16 @@ module common_hdf5
 
 ! pulled by ANY
 
-   use constants, only: domlen, idlen
-
    implicit none
 
    private
-   public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, set_container_chdf, get_container
-   public :: nhdf_vars, hdf_vars, chdf
+   public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts
+   public :: nhdf_vars, hdf_vars
 
    integer, parameter :: S_LEN = 30
 
    character(len=S_LEN), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    integer, protected :: nhdf_vars !< number of quantities plotted to hdf files
-
-   type :: hdf
-      integer(kind=4) :: nhdf, nres, step_hdf, step_res, nstep, nrestart
-      real :: last_hdf_time, next_t_tsl,  next_t_log
-      character(len=domlen) :: domain_dump
-      character(len=idlen) :: new_id
-   end type hdf
-   type(hdf) :: chdf                   !< container for some vital simulation parameters
 
 contains
 
@@ -185,45 +175,6 @@ contains
    end subroutine cleanup_hdf5
 
 !-----------------------------------------------------------------------------
-   subroutine get_container(nstep)
-
-      use dataio_pub, only: nhdf, next_t_tsl, nres, next_t_log, step_hdf, last_hdf_time, nrestart, domain_dump
-
-      implicit none
-
-      integer(kind=4), intent(out) :: nstep
-
-      nstep         = chdf%nstep
-      nhdf          = chdf%nhdf
-      next_t_tsl    = chdf%next_t_tsl
-      nres          = chdf%nres
-      next_t_log    = chdf%next_t_log
-      step_hdf      = chdf%step_hdf
-      last_hdf_time = chdf%last_hdf_time
-      nrestart      = chdf%nrestart
-      domain_dump   = chdf%domain_dump
-
-   end subroutine get_container
-!-----------------------------------------------------------------------------
-   subroutine set_container_chdf(nstep)
-
-      use dataio_pub, only: nhdf, next_t_tsl, nres, next_t_log, step_hdf, last_hdf_time, nrestart, domain_dump
-
-      implicit none
-
-      integer(kind=4), intent(in) ::  nstep
-
-      chdf%nstep          = nstep
-      chdf%nhdf           = nhdf
-      chdf%next_t_tsl     = next_t_tsl
-      chdf%nres           = nres
-      chdf%next_t_log     = next_t_log
-      chdf%step_hdf       = step_hdf
-      chdf%last_hdf_time  = last_hdf_time
-      chdf%nrestart       = nrestart
-      chdf%domain_dump    = domain_dump
-
-   end subroutine set_container_chdf
 !>
 !! \brief decode some useful indices from variable name, if possible
 !<
@@ -368,9 +319,9 @@ contains
    subroutine set_common_attributes_v1(file_id)
 
       use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE
-      use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id
+      use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, next_t_tsl, next_t_log, nres, nhdf, domain_dump, step_hdf
       use domain,      only: dom
-      use global,      only: magic_mass, t, dt
+      use global,      only: magic_mass, t, dt, nstep
       use hdf5,        only: HID_T, SIZE_T
       use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
 
@@ -389,20 +340,20 @@ contains
 
       rbuffer(1)   = t                       ; rbuffer_name(1)   = "time" !rr2
       rbuffer(2)   = dt                      ; rbuffer_name(2)   = "timestep" !rr2
-      rbuffer(3)   = chdf%last_hdf_time      ; rbuffer_name(3)   = "last_hdf_time" !rr2
+      rbuffer(3)   = last_hdf_time           ; rbuffer_name(3)   = "last_hdf_time" !rr2
       rbuffer(4:5) = dom%edge(xdim, :)       ; rbuffer_name(4:5) = [ "xmin", "xmax" ] !rr1
       rbuffer(6:7) = dom%edge(ydim, :)       ; rbuffer_name(6:7) = [ "ymin", "ymax" ] !rr1
       rbuffer(8:9) = dom%edge(zdim, :)       ; rbuffer_name(8:9) = [ "zmin", "zmax" ] !rr1
       rbuffer(10)  = piernik_hdf5_version    ; rbuffer_name(10)  = "piernik" !rr1, rr2
       rbuffer(11)  = magic_mass              ; rbuffer_name(11)  = "magic_mass" !rr2
-      rbuffer(12)  = chdf%next_t_tsl         ; rbuffer_name(12)  = "next_t_tsl" !rr2
-      rbuffer(13)  = chdf%next_t_log         ; rbuffer_name(13)  = "next_t_log" !rr2
+      rbuffer(12)  = next_t_tsl              ; rbuffer_name(12)  = "next_t_tsl" !rr2
+      rbuffer(13)  = next_t_log              ; rbuffer_name(13)  = "next_t_log" !rr2
 
-      ibuffer(1)   = chdf%nstep              ; ibuffer_name(1)   = "nstep" !rr2
-      ibuffer(2)   = chdf%nres + I_ONE       ; ibuffer_name(2)   = "nres" !rr2
-      ibuffer(3)   = chdf%nhdf               ; ibuffer_name(3)   = "nhdf" !rr2
-      ibuffer(4)   = chdf%nstep              ; ibuffer_name(4)   = "step_res" !rr2
-      ibuffer(5)   = chdf%step_hdf           ; ibuffer_name(5)   = "step_hdf" !rr2
+      ibuffer(1)   = nstep                   ; ibuffer_name(1)   = "nstep" !rr2
+      ibuffer(2)   = nres + I_ONE            ; ibuffer_name(2)   = "nres" !rr2
+      ibuffer(3)   = nhdf                    ; ibuffer_name(3)   = "nhdf" !rr2
+      ibuffer(4)   = nstep                   ; ibuffer_name(4)   = "step_res" !rr2
+      ibuffer(5)   = step_hdf                ; ibuffer_name(5)   = "step_hdf" !rr2
       ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
       ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb" ! BEWARE: assuming cga%cg_all(:)%nb equal everywhere
       ibuffer(10)  = require_init_prob       ; ibuffer_name(10)  = "require_init_prob" !rr2
@@ -421,8 +372,8 @@ contains
 
       fe = len_trim(problem_name)
       call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
-      fe = len_trim(chdf%domain_dump)
-      call h5ltset_attribute_string_f(file_id, "/", "domain", chdf%domain_dump(1:fe), error) !rr2
+      fe = len_trim(domain_dump)
+      call h5ltset_attribute_string_f(file_id, "/", "domain", domain_dump(1:fe), error) !rr2
       fe = len_trim(run_id)
       call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
 
@@ -435,8 +386,8 @@ contains
    subroutine set_common_attributes_v2(file_id)
 
       use constants,   only: cbuff_len, I_ONE
-      use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id
-      use global,      only: magic_mass, t, dt
+      use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, next_t_tsl, next_t_log, nres, nhdf, domain_dump, step_hdf
+      use global,      only: magic_mass, t, dt, nstep
       use hdf5,        only: HID_T, SIZE_T
       use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
 
@@ -455,17 +406,17 @@ contains
 
       rbuffer(1) = t                     ; rbuffer_name(1) = "time" !rr2
       rbuffer(2) = dt                    ; rbuffer_name(2) = "timestep" !rr2
-      rbuffer(3) = chdf%last_hdf_time    ; rbuffer_name(3) = "last_hdf_time" !rr2
+      rbuffer(3) = last_hdf_time         ; rbuffer_name(3) = "last_hdf_time" !rr2
       rbuffer(4) = piernik_hdf5_version2 ; rbuffer_name(4) = "piernik" !rr1, rr2
       rbuffer(5) = magic_mass            ; rbuffer_name(5) = "magic_mass" !rr2
-      rbuffer(6) = chdf%next_t_tsl       ; rbuffer_name(6) = "next_t_tsl" !rr2
-      rbuffer(7) = chdf%next_t_log       ; rbuffer_name(7) = "next_t_log" !rr2
+      rbuffer(6) = next_t_tsl            ; rbuffer_name(6) = "next_t_tsl" !rr2
+      rbuffer(7) = next_t_log            ; rbuffer_name(7) = "next_t_log" !rr2
 
-      ibuffer(1) = chdf%nstep            ; ibuffer_name(1) = "nstep" !rr2
-      ibuffer(2) = chdf%nres + I_ONE     ; ibuffer_name(2) = "nres" !rr2
-      ibuffer(3) = chdf%nhdf             ; ibuffer_name(3) = "nhdf" !rr2
-      ibuffer(4) = chdf%nstep            ; ibuffer_name(4) = "step_res" !rr2
-      ibuffer(5) = chdf%step_hdf         ; ibuffer_name(5) = "step_hdf" !rr2
+      ibuffer(1) = nstep                 ; ibuffer_name(1) = "nstep" !rr2
+      ibuffer(2) = nres + I_ONE          ; ibuffer_name(2) = "nres" !rr2
+      ibuffer(3) = nhdf                  ; ibuffer_name(3) = "nhdf" !rr2
+      ibuffer(4) = nstep                 ; ibuffer_name(4) = "step_res" !rr2
+      ibuffer(5) = step_hdf              ; ibuffer_name(5) = "step_hdf" !rr2
       ibuffer(6) = require_init_prob     ; ibuffer_name(6) = "require_init_prob" !rr2
 
       i = 1
@@ -482,8 +433,8 @@ contains
 
       fe = len_trim(problem_name)
       call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
-      fe = len_trim(chdf%domain_dump)
-      call h5ltset_attribute_string_f(file_id, "/", "domain", chdf%domain_dump(1:fe), error) !rr2
+      fe = len_trim(domain_dump)
+      call h5ltset_attribute_string_f(file_id, "/", "domain", domain_dump(1:fe), error) !rr2
       fe = len_trim(run_id)
       call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
 

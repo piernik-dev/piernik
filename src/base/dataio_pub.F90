@@ -51,6 +51,7 @@ module dataio_pub
    ! Simulation control
    character(len=cbuff_len) :: problem_name     !< The problem name
    character(len=idlen)     :: run_id           !< Auxiliary run identifier
+   character(len=idlen)     :: new_id           !< COMMENT ME
    real                  :: tend                   !< simulation time to end
    real                  :: wend                   !< wall clock time to end (in hours)
 
@@ -63,6 +64,7 @@ module dataio_pub
    real                  :: next_t_tsl             !< when to produce the timeslice file
    integer(kind=4)       :: nrestart               !< number of restart file to be read while restart is not set to ''
    integer (kind=4)      :: step_hdf               !< number of simulation timestep corresponding to values dumped in hdf file
+   integer(kind=4)       :: step_res               !< COMMENT ME
    character(len=domlen) :: domain_dump         !< string to choose if boundaries have to be dumped in hdf files
 
    ! Buffers for global use

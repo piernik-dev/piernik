@@ -216,10 +216,10 @@ contains
 !<
    subroutine init_dataio
 
-      use common_hdf5,     only: init_hdf5, set_container_chdf, get_container, chdf
+      use common_hdf5,     only: init_hdf5
       use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
       use data_hdf5,       only: init_data
-      use dataio_pub,      only: nres, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
+      use dataio_pub,      only: nres, nrestart, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
            &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, die, code_progress, &
            &                     move_file, multiple_h5files, parfile, parfilelines
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
@@ -448,12 +448,11 @@ contains
       call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
       call MPI_Bcast(log_file_initialized, I_ONE, MPI_LOGICAL, FIRST, comm, ierr)
 
-      call set_container_chdf(nstep); chdf%nres = nrestart
+      nres = nrestart
 
       if (nrestart /= 0) then
          if (master) call printinfo("###############     Reading restart     ###############", .false.)
          call read_restart_hdf5
-         call get_container(nstep)
          nstep_start = nstep
          t_start     = t
          nres_start  = nrestart
@@ -467,7 +466,6 @@ contains
 #endif /* MAGNETIC */
 !         endif
       endif
-      call set_container_chdf(nstep)
 
 #ifdef VERBOSE
       call printinfo("[dataio:init_dataio] finished. \o/")
@@ -484,7 +482,6 @@ contains
 
    subroutine user_msg_handler(end_sim)
 
-      use common_hdf5,  only: set_container_chdf
       use constants,    only: I_ONE
       use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: step_hdf, msg, printinfo, warn
@@ -511,7 +508,6 @@ contains
             case ('res', 'dump')
                call write_restart_hdf5
             case ('hdf')
-               call set_container_chdf(nstep)
                call write_hdf5
                step_hdf = nstep
             case ('log')
@@ -594,7 +590,6 @@ contains
 !
    subroutine write_data(output)
 
-      use common_hdf5,  only: set_container_chdf
       use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: nres, last_hdf_time, step_hdf
       use global,       only: t, nstep
@@ -614,7 +609,6 @@ contains
 
       if (dt_hdf > 0.0 .and. nstep > step_hdf .and. output /= 'gpt') then
          if ((t-last_hdf_time) >= dt_hdf .or. output == 'hdf' .or. output == 'end') then
-            call set_container_chdf(nstep)
             call write_hdf5
 
             if ((t-last_hdf_time) >= dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
@@ -635,7 +629,6 @@ contains
             step_res = nstep
          endif
       endif
-      call set_container_chdf(nstep)
       call write_plot
 
    end subroutine write_data

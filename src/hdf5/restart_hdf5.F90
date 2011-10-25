@@ -180,10 +180,9 @@ contains
 
    subroutine write_restart_hdf5_v1
 
-      use common_hdf5, only: set_common_attributes, chdf, set_container_chdf
+      use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: nres, problem_name, run_id, msg, printio
-      use global,      only: nstep
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
@@ -211,7 +210,6 @@ contains
          call printio(msg, .true.)
       endif
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
-      call set_container_chdf(nstep)
 
       ! Set up a new HDF5 file for parallel write
       call h5open_f(error)
@@ -620,13 +618,13 @@ contains
 
    subroutine read_restart_hdf5_v1
 
-      use common_hdf5, only: chdf
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE
-      use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, fix_string
+      use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, fix_string, &
+           &                 domain_dump, last_hdf_time, next_t_log, next_t_tsl, nhdf, nres, step_hdf, new_id, step_res
       use dataio_user, only: problem_read_restart
       use domain,      only: dom
       use fluidindex,  only: flind
-      use global,      only: magic_mass, t, dt
+      use global,      only: magic_mass, t, dt, nstep
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
@@ -657,7 +655,7 @@ contains
       nu = flind%all
 
       if (master) then
-         write(filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_', chdf%nres,'.res'
+         write(filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_', nres,'.res'
          write(msg, '(2a)') 'Reading restart file: ', trim(filename)
          call printio(msg)
       endif
@@ -753,25 +751,25 @@ contains
          call h5ltget_attribute_double_f(file_id,"/","magic_mass", rbuf, error)
          magic_mass = rbuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nstep", ibuf, error)
-         chdf%nstep = ibuf(1)
+         nstep = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nres", ibuf, error)
-         chdf%nres = ibuf(1)
+         nres = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nhdf", ibuf, error)
-         chdf%nhdf = ibuf(1)
+         nhdf = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","step_res", ibuf, error)
-         chdf%step_res = ibuf(1)
+         step_res = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","step_hdf", ibuf, error)
-         chdf%step_hdf = ibuf(1)
+         step_hdf = ibuf(1)
          call h5ltget_attribute_double_f(file_id,"/","next_t_tsl", rbuf, error)
-         chdf%next_t_tsl = rbuf(1)
+         next_t_tsl = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","next_t_log", rbuf, error)
-         chdf%next_t_log = rbuf(1)
+         next_t_log = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","last_hdf_time", rbuf, error)
-         chdf%last_hdf_time = rbuf(1)
+         last_hdf_time = rbuf(1)
 
          call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name, error)
-         call h5ltget_attribute_string_f(file_id,"/","domain", chdf%domain_dump, error)
-         call h5ltget_attribute_string_f(file_id,"/","run_id", chdf%new_id, error)
+         call h5ltget_attribute_string_f(file_id,"/","domain", domain_dump, error)
+         call h5ltget_attribute_string_f(file_id,"/","run_id", new_id, error)
 
          if (restart_hdf5_version > 1.11) then
             call h5ltget_attribute_int_f(file_id,"/","require_init_prob", ibuf, error)
@@ -779,8 +777,8 @@ contains
          endif
 
          problem_name = fix_string(problem_name)   !> \deprecated BEWARE: >=HDF5-1.8.4 has weird issues with strings
-         chdf%new_id  = fix_string(chdf%new_id)    !> \deprecated   this bit hacks it around
-         chdf%domain_dump  = fix_string(chdf%domain_dump)
+         new_id  = fix_string(new_id)    !> \deprecated   this bit hacks it around
+         domain_dump  = fix_string(domain_dump)
 
          call h5fclose_f(file_id, error)
 
@@ -791,22 +789,22 @@ contains
 
       call MPI_Bcast(restart_hdf5_version,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
-      call MPI_Bcast(chdf%nstep,    I_ONE, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%nres,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%nhdf,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%step_res, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%step_hdf, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(nstep,    I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(nres,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(nhdf,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(step_res, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(step_hdf, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
       if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
 
-      call MPI_Bcast(chdf%next_t_tsl,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%next_t_log,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%last_hdf_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(t,                  I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(dt,                 I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(next_t_tsl,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(next_t_log,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(last_hdf_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(t,             I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(dt,            I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
       call MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%domain_dump,domlen, MPI_CHARACTER, FIRST, comm, ierr)
-      call MPI_Bcast(chdf%new_id,  idlen,     MPI_CHARACTER, FIRST, comm, ierr)
+      call MPI_Bcast(domain_dump,  domlen,    MPI_CHARACTER, FIRST, comm, ierr)
+      call MPI_Bcast(new_id,       idlen,     MPI_CHARACTER, FIRST, comm, ierr)
 
    end subroutine read_restart_hdf5_v1
 

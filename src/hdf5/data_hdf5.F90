@@ -150,9 +150,9 @@ contains
 !
    subroutine h5_write_to_single_file
 
-      use common_hdf5, only: nhdf_vars, hdf_vars, set_common_attributes, chdf
+      use common_hdf5, only: nhdf_vars, hdf_vars, set_common_attributes
       use constants,   only: ndims, cwdlen, I_ONE
-      use dataio_pub,  only: printio, msg, die, nhdf, problem_name, run_id
+      use dataio_pub,  only: printio, msg, die, nhdf, problem_name, run_id, nhdf
       use dataio_user, only: user_vars_hdf5
       use domain,      only: dom, is_multicg !, is_uneven
       use grid,        only: all_cg
@@ -185,7 +185,7 @@ contains
       ! Initialize HDF5 library and Fortran interfaces.
       !
       if (master) then
-         write(fname, '(a,a1,a3,a1,i4.4,a3)') trim(problem_name),"_", trim(run_id),"_", chdf%nhdf,".h5"
+         write(fname, '(a,a1,a3,a1,i4.4,a3)') trim(problem_name),"_", trim(run_id),"_", nhdf,".h5"
          write(msg,'(3a)') 'Writing datafile ', trim(fname), " ... "
          call printio(msg, .true.)
       endif
@@ -293,7 +293,7 @@ contains
    subroutine h5_write_to_multiple_files
 
       use constants,       only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
-      use common_hdf5,     only: nhdf_vars, hdf_vars, chdf
+      use common_hdf5,     only: nhdf_vars, hdf_vars
       use dataio_pub,      only: die, msg, printio
       use dataio_user,     only: user_vars_hdf5
       use gc_list,         only: cg_list_element
@@ -365,10 +365,6 @@ contains
          write(msg,'(a)') 'done'
          call printio(msg)
       endif
-
-      return
-      if (.false. .and. chdf%nhdf == -1) i=0 ! suppress compiler warnings.
-      ! BTW Do we need the chdf structure or maybe we prefer to rely on variables accesible from dataio_pub?
 
    end subroutine h5_write_to_multiple_files
 
