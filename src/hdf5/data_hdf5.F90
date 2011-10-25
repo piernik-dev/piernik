@@ -159,9 +159,9 @@ contains
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, &
-           &                 H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_TRUNC_F, H5P_FILE_ACCESS_F, H5P_DEFAULT_F, &
+           &                 H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, &
            &                 h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
-           &                 h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
+           &                 h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
       use mpisetup,    only: comm, ierr, master, FIRST
       use mpi,         only: MPI_CHARACTER, MPI_INFO_NULL
 
@@ -185,11 +185,13 @@ contains
       ! Initialize HDF5 library and Fortran interfaces.
       !
       if (master) then
-         write(fname, '(a,a1,a3,a1,i4.4,a3)') trim(problem_name),"_", trim(run_id),"_", nhdf,".h5"
+         write(fname, '(a,a1,a3,a1,i4.4,a3)') trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
          write(msg,'(3a)') 'Writing datafile ', trim(fname), " ... "
          call printio(msg, .true.)
       endif
       call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
+
+      call set_common_attributes(fname)
 
       call h5open_f(error)
       !
@@ -200,7 +202,7 @@ contains
       !
       ! Create the file collectively.
       !
-      call h5fcreate_f(trim(fname), H5F_ACC_TRUNC_F, file_id, error, creation_prp = H5P_DEFAULT_F, access_prp = plist_idf)
+      call h5fopen_f(trim(fname), H5F_ACC_RDWR_F, file_id, error, access_prp = plist_idf)
       call h5pclose_f(plist_idf, error)
 
       dimsf  = dom%n_d(:)    ! Dataset dimensions
@@ -274,8 +276,6 @@ contains
       ! Close the property list.
       call h5fclose_f(file_id, error)
       call h5close_f(error)
-
-      call set_common_attributes(fname)
 
       nhdf = nhdf + I_ONE
 

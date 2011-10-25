@@ -208,7 +208,7 @@ contains
       use dataio_pub,  only: nres, msg, printio
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
+      use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use dataio_user, only: problem_write_restart
       use mpi,         only: MPI_INFO_NULL
@@ -230,11 +230,14 @@ contains
          call printio(msg, .true.)
       endif
 
+      ! Write some global variables
+      call set_common_attributes(filename)
+
       ! Set up a new HDF5 file for parallel write
       call h5open_f(error)
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
       call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
-      call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error, access_prp = plist_id)
+      call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
 
       ! Write scalar fields that were declared to be required on restart
       fcg  => all_cg%first%cg
@@ -269,9 +272,6 @@ contains
       !
       call h5fclose_f(file_id, error)
       call h5close_f(error)
-
-      ! Write some global variables
-      call set_common_attributes(filename)
 
       nres = nres + I_ONE
 
@@ -883,17 +883,32 @@ contains
 
    subroutine write_restart_hdf5_v2
 
-      use constants,  only: cwdlen
-      use dataio_pub, only: die
+      use common_hdf5, only: set_common_attributes
+      use constants,   only: cwdlen
+      use dataio_pub,  only: die
+      use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, &
+           &                 h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
+      use mpi,         only: MPI_INFO_NULL
+      use mpisetup,    only: comm
 
       implicit none
 
       character(len=cwdlen) :: filename
+      integer(HID_T)        :: file_id       !> File identifier
+      integer(HID_T)        :: plist_id      !> Property list identifier
+      integer(kind=4)       :: error
 
       filename = restart_fname()
 
-!!$      ! open file(s)
-!!$      call set_common_attributes
+      ! Create a new file and initialize it
+      call set_common_attributes(filename)
+
+      ! Set up a new HDF5 file for parallel write
+      call h5open_f(error)
+      call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
+      call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
+      call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
+
 !!$      call describe_domains
 !!$      cgl => all_cg%first
 !!$      do while (associated(cgl))
@@ -901,7 +916,11 @@ contains
 !!$         cgl => cgl%nxt
 !!$      enddo
 !!$      if (associated(problem_write_restart)) call problem_write_restart(file_id)
-!!$      ! close file(s)
+
+
+      call h5fclose_f(file_id, error)  ! Close the file
+      call h5pclose_f(plist_id, error) ! End of parallel writing
+      call h5close_f(error)            ! Close HDF5 stuff
 
       call die("[restart_hdf5:write_restart_hdf5_v2] Not implemented yet")
 

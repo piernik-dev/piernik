@@ -228,8 +228,8 @@ contains
       use dataio_pub,  only: msg, printio, use_v2_io, parfile, parfilelines
       use dataio_user, only: additional_attrs
       use global,      only: magic_mass, local_magic_mass
-      use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_RDWR_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
-           &                 h5open_f, h5fopen_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
+      use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
+           &                 h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
            &                 h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,    only: slave, comm, ierr, FIRST
@@ -254,7 +254,7 @@ contains
       if (slave) return ! This data need not be written in parallel.
 
       call h5open_f(error)
-      call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error)
+      call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
 
       if (use_v2_io) then
          call set_common_attributes_v2(file_id)
