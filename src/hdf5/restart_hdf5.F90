@@ -175,41 +175,60 @@ contains
    end subroutine set_area_for_restart
 
 !>
-!! \brief This routine writes restart dump and updates restart counter
+!! \brief Construct a filename for the restart file
+!!
+!! \todo add a part number for multifile restarts
+!! \todo sanitize problem_name and run_id
 !<
 
+   function restart_fname() result(filename)
+
+      use constants,   only: cwdlen
+      use dataio_pub,  only: problem_name, run_id, nres
+      use mpi,         only: MPI_CHARACTER
+      use mpisetup,    only: comm, ierr, master, FIRST
+
+      implicit none
+
+      character(len=cwdlen) :: filename  ! File name
+
+      if (master) write(filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_', nres,'.res'
+
+      call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
+
+   end function restart_fname
+
+!>
+!! \brief This routine writes restart dump and updates restart counter
+!<
    subroutine write_restart_hdf5_v1
 
       use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen, I_ONE
-      use dataio_pub,  only: nres, problem_name, run_id, msg, printio
+      use dataio_pub,  only: nres, msg, printio
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, h5open_f, h5close_f, h5fcreate_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use dataio_user, only: problem_write_restart
-      use mpi,         only: MPI_CHARACTER, MPI_INFO_NULL
-      use mpisetup,    only: comm, ierr, master, FIRST
+      use mpi,         only: MPI_INFO_NULL
+      use mpisetup,    only: comm, master, FIRST
 
       implicit none
 
       integer(kind=4)       :: i
-      integer, parameter    :: extlen = 4
-      character(len=extlen), parameter :: file_extension = '.res'
       character(len=cwdlen) :: filename  !> HDF File name
       integer(HID_T)        :: file_id       !> File identifier
       integer(HID_T)        :: plist_id      !> Property list identifier
       integer(kind=4)       :: error
       type(grid_container), pointer :: fcg
 
-      ! Construct the filename
+      filename = restart_fname()
 
       if (master) then
-         write(filename, '(a,a1,a3,a1,i4.4,a4)') trim(problem_name), '_', run_id, '_', nres, file_extension
          write(msg,'(3a)') 'Writing restart ', trim(filename), " ... "
          call printio(msg, .true.)
       endif
-      call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
 
       ! Set up a new HDF5 file for parallel write
       call h5open_f(error)
@@ -631,7 +650,7 @@ contains
            &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mpi,         only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_INFO_NULL
-      use mpisetup,    only: comm, ierr, comm, master, FIRST
+      use mpisetup,    only: comm, ierr, master, FIRST
 
       implicit none
 
@@ -654,12 +673,12 @@ contains
 
       nu = flind%all
 
+      filename = restart_fname()
+
       if (master) then
-         write(filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_', nres,'.res'
          write(msg, '(2a)') 'Reading restart file: ', trim(filename)
          call printio(msg)
       endif
-      call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
 
       inquire(file = filename, exist = file_exist)
       if (.not. file_exist) then
@@ -864,13 +883,15 @@ contains
 
    subroutine write_restart_hdf5_v2
 
+      use constants,  only: cwdlen
       use dataio_pub, only: die
 
       implicit none
 
-      call die("[restart_hdf5:write_restart_hdf5_v2] Not implemented yet")
+      character(len=cwdlen) :: filename
 
-!!$      ! compute the name(s) and communicate
+      filename = restart_fname()
+
 !!$      ! open file(s)
 !!$      call set_common_attributes
 !!$      call describe_domains
@@ -881,6 +902,8 @@ contains
 !!$      enddo
 !!$      if (associated(problem_write_restart)) call problem_write_restart(file_id)
 !!$      ! close file(s)
+
+      call die("[restart_hdf5:write_restart_hdf5_v2] Not implemented yet")
 
    end subroutine write_restart_hdf5_v2
 
@@ -934,14 +957,18 @@ contains
 
    subroutine read_restart_hdf5_v2(status_v2)
 
-      use constants,  only: INVALID
+      use constants,  only: cwdlen, INVALID
       use dataio_pub, only: warn
 
       implicit none
 
       integer, intent(out) :: status_v2
 
+      character(len=cwdlen) :: filename
+
       call warn("[restart_hdf5:read_restart_hdf5_v2] Not implemented yet")
+
+      filename = restart_fname()
 
       status_v2 = INVALID
 

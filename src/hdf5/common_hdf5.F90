@@ -419,6 +419,8 @@ contains
       ibuffer(5) = step_hdf              ; ibuffer_name(5) = "step_hdf" !rr2
       ibuffer(6) = require_init_prob     ; ibuffer_name(6) = "require_init_prob" !rr2
 
+      !> \todo  add number of pieces in the restart point/data dump
+
       i = 1
       do while (rbuffer_name(i) /= "")
          call h5ltset_attribute_double_f(file_id, "/", rbuffer_name(i), rbuffer(i), bufsize, error)
