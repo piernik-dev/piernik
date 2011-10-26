@@ -48,7 +48,8 @@ module named_array
    contains
       procedure(g_na_clean), deferred, pass(this) :: clean
       procedure(g_na_check), deferred, pass(this) :: check
-      procedure(g_na_b), deferred, pass(this) :: lb, ub
+      procedure(g_na_b),     deferred, pass(this) :: lb
+      procedure(g_na_b),     deferred, pass(this) :: ub
       !> \todo add also init and get_sweep
    end type generic_na
 
