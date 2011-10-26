@@ -47,7 +47,7 @@ module internal_bnd
    implicit none
 
    private
-   public :: internal_boundaries_3d, internal_boundaries_4d
+   public :: internal_boundaries_3d, internal_boundaries_4d, internal_boundaries
 
 contains
 
@@ -59,8 +59,8 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: ind  !> index of cg%q(:) 3d array
-      integer, optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4),           intent(in) :: ind  !> index of cg%q(:) 3d array
+      integer,         optional, intent(in) :: nb   !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
 
       call internal_boundaries(ind, .true., ARR, nb, dim)
@@ -77,8 +77,8 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: type !> FLUID, MAG, CR \todo put all of them into cg%w(:)
-      integer, optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4),           intent(in) :: type !> FLUID, MAG, CR \todo put all of them into cg%w(:)
+      integer,         optional, intent(in) :: nb   !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
 
       integer(kind=4) :: ind
@@ -120,19 +120,19 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: ind  !> index of cg%q(:) 3d array or cg%w(:) 4d array
-      logical, intent(in)         :: tgt3d !> .true. for ARR
-      integer(kind=4), intent(in) :: type !> FLUID, MAG, CR, ARR, second index in [io]_bnd arrays
-      integer, optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
-      integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
+      integer(kind=4),           intent(in) :: ind    !> index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                   intent(in) :: tgt3d  !> .true. for ARR
+      integer(kind=4),           intent(in) :: type   !> FLUID, MAG, CR, ARR, second index in [io]_bnd arrays
+      integer,         optional, intent(in) :: nb     !> number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: dim    !> do the internal boundaries only in the specified dimension
 
-      integer :: g, d, n
-      integer(kind=4) :: nr    !> index of first free slot in req and status arrays
-      logical, dimension(xdim:zdim) :: dmask
-      type(grid_container), pointer :: cg
-      type(cg_list_element), pointer :: cgl
-      real, pointer, dimension(:,:,:)   :: pa3d
-      real, pointer, dimension(:,:,:,:) :: pa4d
+      integer                               :: g, d, n
+      integer(kind=4)                       :: nr     !> index of first free slot in req and status arrays
+      logical, dimension(xdim:zdim)         :: dmask
+      type(grid_container),     pointer     :: cg
+      type(cg_list_element),    pointer     :: cgl
+      real, dimension(:,:,:),   pointer     :: pa3d
+      real, dimension(:,:,:,:), pointer     :: pa4d
 
       if (cdd%comm3d /= MPI_COMM_NULL) then
          call warn("[internal_bnd:internal_boundaries] comm3d is implemented somewhere else.")

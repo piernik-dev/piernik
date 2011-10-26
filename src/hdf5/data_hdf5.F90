@@ -78,16 +78,16 @@ contains
 
       implicit none
 
-      character(len=varlen), intent(in) :: var
-      real(kind=4), dimension(:,:,:)    :: tab
-      integer, intent(out)              :: ierrh
-      type(grid_container), pointer, intent(in) :: cg
-      type(component_fluid), pointer :: fl_dni
-      integer :: i_xyz
+      character(len=varlen),          intent(in)  :: var
+      real(kind=4), dimension(:,:,:)              :: tab
+      integer,                        intent(out) :: ierrh
+      type(grid_container),  pointer, intent(in)  :: cg
+      type(component_fluid), pointer              :: fl_dni
+      integer                                     :: i_xyz
 #ifdef COSM_RAYS
-      integer :: i
-      integer, parameter    :: auxlen = varlen - 1
-      character(len=auxlen) :: aux
+      integer                                     :: i
+      integer, parameter                          :: auxlen = varlen - 1
+      character(len=auxlen)                       :: aux
 #endif /* COSM_RAYS */
 #define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
 
@@ -167,19 +167,19 @@ contains
 
       implicit none
 
-      integer(HID_T)          :: file_id       ! File identifier
-      integer(HID_T)          :: plist_id, plist_idf ! Property list identifier
-      integer                 :: ierrh, i
-      integer(kind=4)         :: error
-      logical                 :: ok_var
-      character(len=cwdlen)   :: fname
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-      real(kind=4), allocatable :: data (:,:,:)  ! Data to write
-      integer(kind=4), parameter :: rank = ndims        !< Dataset rank = 3
-      integer(HID_T) :: dset_id                 !< Dataset identifier
-      integer(HID_T) :: filespace               !< Dataspace identifier in file
-      integer(HID_T) :: memspace                !< Dataspace identifier in memory
+      integer(HID_T)                    :: file_id                 !< File identifier
+      integer(HID_T)                    :: plist_id, plist_idf     !< Property list identifier
+      integer                           :: ierrh, i
+      integer(kind=4)                   :: error
+      logical                           :: ok_var
+      character(len=cwdlen)             :: fname
+      type(cg_list_element), pointer    :: cgl
+      type(grid_container),  pointer    :: cg
+      real(kind=4), allocatable         :: data (:,:,:)            !< Data to write
+      integer(kind=4), parameter        :: rank = ndims            !< Dataset rank = 3
+      integer(HID_T)                    :: dset_id                 !< Dataset identifier
+      integer(HID_T)                    :: filespace               !< Dataspace identifier in file
+      integer(HID_T)                    :: memspace                !< Dataspace identifier in memory
       integer(HSIZE_T), dimension(rank) :: count, offset, stride, block, dimsf, chunk_dims
 
       ! Initialize HDF5 library and Fortran interfaces.
@@ -306,18 +306,18 @@ contains
 
       implicit none
 
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-      integer(kind=4), parameter :: rank = 3
-      integer(kind=4) :: error, i
-      integer :: error8
-      integer(HID_T) :: file_id, grp_id
-      integer(kind=8) :: ngc           !> current grid index
+      type(cg_list_element), pointer    :: cgl
+      type(grid_container),  pointer    :: cg
+      integer(kind=4), parameter        :: rank = 3
+      integer(kind=4)                   :: error, i
+      integer                           :: error8
+      integer(HID_T)                    :: file_id, grp_id
+      integer(kind=8)                   :: ngc              !> current grid index
       integer(HSIZE_T), dimension(rank) :: dims
-      character(len=dsetnamelen) :: gname
-      character(len=fnamelen) :: fname
-      logical :: ok_var
-      real(kind=4), allocatable :: data (:,:,:)  ! Data to write
+      character(len=dsetnamelen)        :: gname
+      character(len=fnamelen)           :: fname
+      logical                           :: ok_var
+      real(kind=4), allocatable         :: data (:,:,:)     !> Data to write
 
       fname = h5_filename()
       if (master) then

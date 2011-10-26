@@ -54,42 +54,42 @@ module dataio
    private
    public :: check_log, check_tsl, write_data, write_crashed, cleanup_dataio, init_dataio, user_msg_handler
 
-   integer               :: istep                  !< current number of substep (related to integration order)
+   integer                  :: istep                 !< current number of substep (related to integration order)
 
-   integer, parameter    :: nvarsmx = 16           !< maximum number of variables to dump in hdf files
-   character(len=idlen)  :: new_id                 !< three character string to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
-   character(len=cbuff_len) :: restart             !< choice of restart file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
-   character(len=cbuff_len) :: mag_center          !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders, unused)
-   integer               :: resdel                 !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
-   real                  :: dt_hdf                 !< time between successive hdf dumps
-   real                  :: dt_res                 !< time between successive restart file dumps
-   real                  :: dt_tsl                 !< time between successive timeslice dumps
-   real                  :: dt_log                 !< time between successive log dumps
-   real                  :: dt_plt                 !< time between successive domain slices files dumps
-   integer               :: min_disk_space_MB      !< minimum disk space in MB to continue simulation <b>(currently not used)</b>
-   integer               :: sleep_minutes          !< minutes of sleeping time before continue simulation
-   integer               :: sleep_seconds          !< seconds of sleeping time before continue simulation
-   character(len=cwdlen) :: user_message_file      !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
-   character(len=cwdlen) :: system_message_file    !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
-   integer               :: ix                     !< index in x-direction of slice to dump in plt files
-   integer               :: iy                     !< index in y-direction of slice to dump in plt files
-   integer               :: iz                     !< index in z-direction of slice to dump in plt files
-   integer               :: iv                     !< work index to count successive variables to dump in hdf files
+   integer, parameter       :: nvarsmx = 16          !< maximum number of variables to dump in hdf files
+   character(len=idlen)     :: new_id                !< three character string to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
+   character(len=cbuff_len) :: restart               !< choice of restart file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
+   character(len=cbuff_len) :: mag_center            !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders, unused)
+   integer                  :: resdel                !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
+   real                     :: dt_hdf                !< time between successive hdf dumps
+   real                     :: dt_res                !< time between successive restart file dumps
+   real                     :: dt_tsl                !< time between successive timeslice dumps
+   real                     :: dt_log                !< time between successive log dumps
+   real                     :: dt_plt                !< time between successive domain slices files dumps
+   integer                  :: min_disk_space_MB     !< minimum disk space in MB to continue simulation <b>(currently not used)</b>
+   integer                  :: sleep_minutes         !< minutes of sleeping time before continue simulation
+   integer                  :: sleep_seconds         !< seconds of sleeping time before continue simulation
+   character(len=cwdlen)    :: user_message_file     !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
+   character(len=cwdlen)    :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
+   integer                  :: ix                    !< index in x-direction of slice to dump in plt files
+   integer                  :: iy                    !< index in y-direction of slice to dump in plt files
+   integer                  :: iz                    !< index in z-direction of slice to dump in plt files
+   integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=varlen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
 
-   integer               :: tsl_lun                !< luncher for timeslice file
-   integer               :: step_res               !< number of simulation timestep corresponding to values dumped in restart file
-   integer               :: nhdf_start             !< number of hdf file for the first hdf dump in simulation run
-   integer               :: nres_start             !< number of restart file for the first restart dump in simulation run
-   real                  :: t_start                !< time in simulation of start simulation run
-   logical               :: tsl_firstcall          !< logical value to start a new timeslice file
+   integer                  :: tsl_lun               !< luncher for timeslice file
+   integer                  :: step_res              !< number of simulation timestep corresponding to values dumped in restart file
+   integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
+   integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
+   real                     :: t_start               !< time in simulation of start simulation run
+   logical                  :: tsl_firstcall         !< logical value to start a new timeslice file
 
-   integer               :: nchar                  !< number of characters in a user/system message
-   integer, parameter    :: umsg_len = 16
-   character(len=umsg_len) :: umsg                    !< string of characters - content of a user/system message
-   real                  :: umsg_param              !< parameter changed by a user/system message
+   integer                  :: nchar                 !< number of characters in a user/system message
+   integer, parameter       :: umsg_len = 16
+   character(len=umsg_len)  :: umsg                  !< string of characters - content of a user/system message
+   real                     :: umsg_param            !< parameter changed by a user/system message
 
-   character(len=cwdlen) :: filename               !< string of characters indicating currently used file
+   character(len=cwdlen)    :: filename              !< string of characters indicating currently used file
    character(len=fmt_len), protected, target :: fmt_loc, fmt_dtloc
 
    namelist /END_CONTROL/ nend, tend, wend
@@ -493,7 +493,7 @@ contains
       implicit none
 
       logical, intent(inout) :: end_sim
-      integer :: tsleep
+      integer                :: tsleep
 
 !--- process 0 checks for messages
 
@@ -651,11 +651,11 @@ contains
 
       integer(kind=4), intent(out) :: restart_number
 
-      character(len=cwdlen) :: file_name
-      integer(kind=4)       :: nres
-      integer               :: unlink_stat
-      logical               :: exist
-      character(len=cwdlen) :: file_name_base
+      character(len=cwdlen)        :: file_name
+      integer(kind=4)              :: nres
+      integer                      :: unlink_stat
+      logical                      :: exist
+      character(len=cwdlen)        :: file_name_base
 
       restart_number = 0
 
@@ -685,7 +685,7 @@ contains
 
       real, dimension(:,:,:,:), intent(in) :: tab
       real, intent(in)                     :: factor
-      real :: local, output
+      real                                 :: local, output
 
       local = sum(tab(:,:,:,:)) * factor
 
@@ -703,7 +703,7 @@ contains
 
       real, dimension(:,:,:), intent(in) :: tab
       real, intent(in)                   :: factor
-      real :: local, output
+      real                               :: local, output
 
       local = sum(tab(:,:,:)) * factor
 
@@ -742,22 +742,22 @@ contains
 
       implicit none
 
-      character(len=cwdlen)                           :: tsl_file, head_fmt
+      character(len=cwdlen)                               :: tsl_file, head_fmt
       character(len=cbuff_len), dimension(:), allocatable :: tsl_names
-      real, allocatable, dimension(:)                 :: tsl_vars
-      type(phys_prop), pointer                        :: sn
+      real, allocatable, dimension(:)                     :: tsl_vars
+      type(phys_prop), pointer                            :: sn
 
       real, save :: tot_mass = 0.0, tot_momx = 0.0, tot_momy = 0.0, tot_momz = 0.0, &
                     tot_ener = 0.0, tot_eint = 0.0, tot_ekin = 0.0, tot_emag = 0.0, &
                     tot_epot = 0.0, tot_mflx = 0.0, tot_mfly = 0.0, tot_mflz = 0.0
 
-      type(tsl_container) :: tsl
+      type(tsl_container)           :: tsl
       type(grid_container), pointer :: cg
 
 #ifdef COSM_RAYS
-      real, save :: tot_encr = 0.0
+      real, save                    :: tot_encr = 0.0
 #endif /* COSM_RAYS */
-      real     :: cs_iso2
+      real                          :: cs_iso2
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !
       cg => all_cg%first%cg
@@ -907,11 +907,11 @@ contains
 
       implicit none
 
-      type(phys_prop), intent(in)  :: pr
-      character(len=*), intent(in) :: fluid
-      logical, intent(in)          :: pres_tn, temp_tn, cs_tn
+      type(phys_prop),  intent(in)  :: pr
+      character(len=*), intent(in)  :: fluid
+      logical,          intent(in)  :: pres_tn, temp_tn, cs_tn
 
-      real :: dxmn_safe
+      real                          :: dxmn_safe
       type(grid_container), pointer :: cg
 
       write(msg, fmt_loc)     'min(dens)   ',fluid, pr%dens_min%val, pr%dens_min%proc, pack(pr%dens_min%loc,dom%has_dir), pack(pr%dens_min%coords,dom%has_dir)
@@ -969,8 +969,8 @@ contains
 
       type(component_fluid), intent(inout), target :: fl
       type(phys_prop), pointer                     :: pr
-      integer(kind=4) :: wa_i
-      type(cg_list_element), pointer :: cgl
+      integer(kind=4)                              :: wa_i
+      type(cg_list_element), pointer               :: cgl
 
       wa_i = all_cg%first%cg%get_na_ind(wa_n)
 
@@ -1088,22 +1088,22 @@ contains
 
       implicit none
 
-      type(tsl_container), optional :: tsl
+      type(tsl_container), optional  :: tsl
 
-      real :: dxmn_safe
+      real                           :: dxmn_safe
       type(cg_list_element), pointer :: cgl
-      integer(kind=4) :: wa_i
-      type(value) :: drag
+      integer(kind=4)                :: wa_i
+      type(value)                    :: drag
 #ifdef MAGNETIC
-      type(value) :: b_min, b_max, divb_max, vai_max
+      type(value)                    :: b_min, b_max, divb_max, vai_max
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-      type(value) :: encr_min, encr_max
+      type(value)                    :: encr_min, encr_max
 #endif /* COSM_RAYS */
 #ifdef VARIABLE_GP
-      type(value) :: gpxmax, gpymax, gpzmax
+      type(value)                    :: gpxmax, gpymax, gpzmax
 #endif /* VARIABLE_GP */
-      character(len=idlen) :: id
+      character(len=idlen)           :: id
 
       wa_i = all_cg%first%cg%get_na_ind(wa_n)
       id = '' ! suppress compiler warnings if none of the modules requiring the id variable are swithed on.
@@ -1170,7 +1170,7 @@ contains
 #ifdef VARIABLE_GP
       cgl => all_cg%first
       do while (associated(cgl))
-         cgl%cg%wa            (cgl%cg%is         :cgl%cg%ie,        cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = &
+         cgl%cg%wa            (cgl%cg%is        :cgl%cg%ie,         cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = &
               abs((cgl%cg%gpot(cgl%cg%is+dom%D_x:cgl%cg%ie+dom%D_x, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) - &
                    cgl%cg%gpot(cgl%cg%is        :cgl%cg%ie,         cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke))*cgl%cg%idx)
          cgl => cgl%nxt
@@ -1345,15 +1345,15 @@ contains
       include "lib3f.h"
 #endif /* __PGI */
 
-      integer, parameter :: n_msg_origin = 2
-      integer            :: msg_lun
+      integer, parameter                                   :: n_msg_origin = 2
+      integer                                              :: msg_lun
       character(len=*), parameter, dimension(n_msg_origin) :: msg_origin = [ "user  ", "system" ]
 
       character(len=cwdlen), dimension(n_msg_origin), save :: fname
-      integer ::  unlink_stat, io, sz, sts, i
-      integer, dimension(13) :: stat_buff
-      logical :: msg_param_read = .false., ex
-      integer, dimension(n_msg_origin), save :: last_msg_stamp
+      integer                                              :: unlink_stat, io, sz, sts, i
+      integer, dimension(13)                               :: stat_buff
+      logical                                              :: msg_param_read = .false., ex
+      integer, dimension(n_msg_origin), save               :: last_msg_stamp
 
       umsg=''
       umsg_param = 0.0

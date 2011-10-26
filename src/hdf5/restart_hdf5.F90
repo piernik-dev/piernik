@@ -216,11 +216,11 @@ contains
 
       implicit none
 
-      integer(kind=4)       :: i
-      character(len=cwdlen) :: filename  !> HDF File name
-      integer(HID_T)        :: file_id       !> File identifier
-      integer(HID_T)        :: plist_id      !> Property list identifier
-      integer(kind=4)       :: error
+      integer(kind=4)               :: i
+      character(len=cwdlen)         :: filename      !> HDF File name
+      integer(HID_T)                :: file_id       !> File identifier
+      integer(HID_T)                :: plist_id      !> Property list identifier
+      integer(kind=4)               :: error
       type(grid_container), pointer :: fcg
 
       filename = restart_fname()
@@ -294,27 +294,27 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)                    :: file_id   !> File identifier
-      integer(kind=4), intent(in)                   :: ind       !> index of cg%q(:) or cg%w(:) array
-      logical, intent(in)                           :: tgt3d     !> .true. for 3D array, .false. otherwise
+      integer(HID_T),  intent(in)        :: file_id                   !> File identifier
+      integer(kind=4), intent(in)        :: ind                       !> index of cg%q(:) or cg%w(:) array
+      logical,         intent(in)        :: tgt3d                     !> .true. for 3D array, .false. otherwise
 
-      real, pointer, dimension(:,:,:)               :: pa3d     !> pointer to specified scope of pa3d
-      real, pointer, dimension(:,:,:,:)             :: pa4d     !> pointer to specified scope of pa4d
-      integer, parameter :: rank4 = 1 + ndims
+      real, pointer, dimension(:,:,:)    :: pa3d                      !> pointer to specified scope of pa3d
+      real, pointer, dimension(:,:,:,:)  :: pa4d                      !> pointer to specified scope of pa4d
+      integer, parameter                 :: rank4 = 1 + ndims
       integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
-      integer(HID_T) :: dset_id               !> Dataset identifier
-      integer(HID_T) :: dplist_id, plist_id   !> Property list identifiers
-      integer(HID_T) :: dfilespace, filespace !> Dataspace identifiers in file
-      integer(HID_T) :: memspace              !> Dataspace identifier in memory
+      integer(HID_T)                     :: dset_id                   !> Dataset identifier
+      integer(HID_T)                     :: dplist_id, plist_id       !> Property list identifiers
+      integer(HID_T)                     :: dfilespace, filespace     !> Dataspace identifiers in file
+      integer(HID_T)                     :: memspace                  !> Dataspace identifier in memory
 
-      integer,         dimension(ndims) :: area, lleft, lright, chnk
-      integer(kind=8), dimension(ndims) :: loffs
+      integer,         dimension(ndims)  :: area, lleft, lright, chnk
+      integer(kind=8), dimension(ndims)  :: loffs
       integer(HSIZE_T), dimension(rank4) :: cnt, offset, stride
-      integer(kind=4) :: rank, error, area_type
-      integer :: ir, dim1
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-      character(len=dsetnamelen) ::dname
+      integer(kind=4)                    :: rank, error, area_type
+      integer                            :: ir, dim1
+      type(cg_list_element), pointer     :: cgl
+      type(grid_container),  pointer     :: cg
+      character(len=dsetnamelen)         :: dname
 
       if (tgt3d) then
          if (ind < lbound(all_cg%first%cg%q(:), dim=1) .or. ind > ubound(all_cg%first%cg%q(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 3D array")
@@ -426,19 +426,19 @@ contains
 !!$
 !!$      implicit none
 !!$
-!!$      integer(HID_T), intent(in) :: file_id !> File identifier
+!!$      integer(HID_T), intent(in)        :: file_id !> File identifier
 !!$
-!!$      integer :: dir
-!!$      integer :: error
-!!$      integer, parameter :: rank=1
+!!$      integer                           :: dir
+!!$      integer                           :: error
+!!$      integer, parameter                :: rank=1
 !!$      integer(HSIZE_T), dimension(rank) :: offset, count, stride, block, dimsf, chunk_dims
-!!$      integer(HID_T) :: dset_id                !> Dataset identifier
-!!$      integer(HID_T) :: dplist_id, plist_id    !> Property list identifiers
-!!$      integer(HID_T) :: dfilespace, filespace  !> Dataspace identifiers in file
-!!$      integer(HID_T) :: memspace               !> Dataspace identifier in memory
-!!$      integer, parameter :: asis_n_len = 6
-!!$      character(len=asis_n_len) :: dset_axis_n !> Dataspace name
-!!$      character(len=ndims), parameter :: axis_n = "XYZ"
+!!$      integer(HID_T)                    :: dset_id                !> Dataset identifier
+!!$      integer(HID_T)                    :: dplist_id, plist_id    !> Property list identifiers
+!!$      integer(HID_T)                    :: dfilespace, filespace  !> Dataspace identifiers in file
+!!$      integer(HID_T)                    :: memspace               !> Dataspace identifier in memory
+!!$      integer, parameter                :: asis_n_len = 6
+!!$      character(len=asis_n_len)         :: dset_axis_n            !> Dataspace name
+!!$      character(len=ndims), parameter   :: axis_n = "XYZ"
 !!$
 !!$      do dir = xdim, zdim
 !!$
@@ -594,19 +594,17 @@ contains
 
          ! Read the array
          if (tgt3d) then
-            pa3d => cg%get_na_ptr(cgname)
+            pa3d => cg%q(cg%get_na_ind(cgname))%arr(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
             if (associated(pa3d)) then
-               call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
-                    &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+               call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
                write(msg,'(5a)')"Unassociated '",trim(cgname),"' 3D array while reading dataset '",trim(dname),"' from the restart file"
                call die(msg)
             endif
          else
-            pa4d => cg%get_na_ptr_4d(cgname)
+            pa4d => cg%w(cg%get_na_ind_4d(cgname))%arr(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
             if (associated(pa4d)) then
-               call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa4d(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim)), &
-                    &         dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
+               call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
                write(msg,'(5a)')"Unassociated '",trim(cgname),"' 4D array while reading dataset '",trim(dname),"' from the restart file"
                call die(msg)
@@ -654,21 +652,21 @@ contains
 
       implicit none
 
-      integer               :: nu
-      integer(kind=4)       :: i
-      character(len=cwdlen) :: filename  ! File name
+      integer                       :: nu
+      integer(kind=4)               :: i
+      character(len=cwdlen)         :: filename      !> File name
 
-      integer(HID_T)        :: file_id       ! File identifier
-      integer(HID_T)        :: plist_id      ! Property list identifier
-      integer(SIZE_T)       :: bufsize
+      integer(HID_T)                :: file_id       !> File identifier
+      integer(HID_T)                :: plist_id      !> Property list identifier
+      integer(SIZE_T)               :: bufsize
 
-      integer(kind=4)       :: error
-      logical               :: file_exist
+      integer(kind=4)               :: error
+      logical                       :: file_exist
 
-      real, dimension(1)    :: rbuf
+      real,            dimension(1) :: rbuf
       integer(kind=4), dimension(1) :: ibuf
 
-      real                  :: restart_hdf5_version
+      real                          :: restart_hdf5_version
       type(grid_container), pointer :: fcg
 
       nu = flind%all
@@ -981,7 +979,7 @@ contains
 
       implicit none
 
-      integer, intent(out) :: status_v2
+      integer, intent(out)  :: status_v2
 
       character(len=cwdlen) :: filename
 

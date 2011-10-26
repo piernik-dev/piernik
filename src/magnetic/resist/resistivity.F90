@@ -52,12 +52,12 @@ module resistivity
    real    :: deint_max                      !< COMMENT ME
    integer :: eta_scale                      !< COMMENT ME
    real    :: dt_resist, dt_eint
-   double precision :: d_eta_factor
-   type(value)      :: etamax, cu2max, deimin
-   logical, save :: eta1_active = .true.       !< resistivity off-switcher while eta_1 == 0.0
-   integer, dimension(ndims,ndims)                     :: idm   !< identity matrix 3x3
+   double precision                        :: d_eta_factor
+   type(value)                             :: etamax, cu2max, deimin
+   logical, save                           :: eta1_active = .true.       !< resistivity off-switcher while eta_1 == 0.0
+   integer, dimension(ndims,ndims)         :: idm                        !< identity matrix 3x3
    character(len=varlen), dimension(ndims) :: emfd
-   character(len=dsetnamelen), parameter :: eta_n = "eta", wb_n = "wb", eh_n = "eh", dbx_n = "dbx", dby_n = "dby", dbz_n = "dbz"
+   character(len=dsetnamelen), parameter   :: eta_n = "eta", wb_n = "wb", eh_n = "eh", dbx_n = "dbx", dby_n = "dby", dbz_n = "dbz"
 
 contains
 
@@ -142,8 +142,8 @@ contains
 
       call all_cg%reg_var(wcu_n, AT_IGNORE)
       call all_cg%reg_var(eta_n, AT_IGNORE)
-      call all_cg%reg_var(wb_n, AT_IGNORE)
-      call all_cg%reg_var(eh_n, AT_IGNORE)
+      call all_cg%reg_var(wb_n,  AT_IGNORE)
+      call all_cg%reg_var(eh_n,  AT_IGNORE)
       call all_cg%reg_var(dbx_n, AT_IGNORE)
       call all_cg%reg_var(dby_n, AT_IGNORE)
       call all_cg%reg_var(dbz_n, AT_IGNORE)
