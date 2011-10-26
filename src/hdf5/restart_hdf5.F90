@@ -34,6 +34,7 @@
 module restart_hdf5
 
 ! pulled by ANY
+   use constants,   only: dsetnamelen
 
    implicit none
 
@@ -41,6 +42,7 @@ module restart_hdf5
    public :: read_restart_hdf5, write_restart_hdf5, read_arr_from_restart
 
    integer, parameter :: STAT_OK = 0
+   character(len=dsetnamelen/2), parameter :: cg_gname = "cg" ! leave the other half of dsetnamelen for id number
 
 contains
 
@@ -206,11 +208,11 @@ contains
       use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: nres, msg, printio
+      use dataio_user, only: problem_write_restart
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
-      use dataio_user, only: problem_write_restart
       use mpi,         only: MPI_INFO_NULL
       use mpisetup,    only: comm, master, FIRST
 
@@ -873,28 +875,44 @@ contains
 !! \todo Check if it is possible to filter the data through shuffle and gzip -9  during write
 !<
 
+!> \brief Generate numbered cg group name
+   function n_cg_name(g)
+      implicit none
+      integer, intent(in) :: g !< group number
+      character(len=dsetnamelen) :: n_cg_name
+      write(n_cg_name,'(2a,i8.8)')trim(cg_gname), "_", g
+   end function n_cg_name
+
 !>
 !! \brief Write a multi-file, multi-domain restart file
 !!
-!! \warning Not implemented yet
+!! \warning Partial implementation only
 !<
 
    subroutine write_restart_hdf5_v2
 
       use common_hdf5, only: set_common_attributes
-      use constants,   only: cwdlen
+      use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: die
+      use dataio_user, only: problem_write_restart
+      use gc_list,     only: cg_list_element
+      use grid,        only: all_cg
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, &
-           &                 h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
-      use mpi,         only: MPI_INFO_NULL
-      use mpisetup,    only: comm
+           &                 h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
+      use mpi,         only: MPI_INFO_NULL, MPI_INTEGER
+      use mpisetup,    only: comm, proc, FIRST, LAST
 
       implicit none
 
       character(len=cwdlen) :: filename
       integer(HID_T)        :: file_id       !> File identifier
       integer(HID_T)        :: plist_id      !> Property list identifier
+      integer(HID_T)        :: cgl_g_id,  cg_g_id  !> cg list and cg group identifiers
       integer(kind=4)       :: error
+      type(cg_list_element), pointer :: cgl
+      integer(kind=4), allocatable, dimension(:) :: cg_n_off      !> offset for cg group numbering
+      integer(kind=4)       :: cg_cnt
+      integer :: g
 
       filename = restart_fname()
 
@@ -906,18 +924,33 @@ contains
       call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
       call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
       call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
+      call h5pclose_f(plist_id, error)
 
 !!$      call describe_domains
-!!$      cgl => all_cg%first
-!!$      do while (associated(cgl))
-!!$         call write_cg_to_restart(cgl%cg)
-!!$         cgl => cgl%nxt
-!!$      enddo
-!!$      if (associated(problem_write_restart)) call problem_write_restart(file_id)
 
+      allocate(cg_n_off(FIRST:LAST))
+      call MPI_Allgather(all_cg%cnt, I_ONE, MPI_INTEGER, cg_n_off, I_ONE, MPI_INTEGER, comm, error)
+      cg_cnt = sum(cg_n_off)
+
+      call h5gcreate_f(file_id, cg_gname, cgl_g_id, error)
+
+      ! all the individual groups for cg have to be created collectively
+      do g = 1, sum(cg_n_off)
+         call h5gcreate_f(cgl_g_id, n_cg_name(g), cg_g_id, error)
+         call h5gclose_f(cg_g_id, error)
+      enddo
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         call write_cg_to_restart(cgl%cg, cgl_g_id, cg_n_off(proc))
+         cgl => cgl%nxt
+      enddo
+      !> \todo store cg count
+      call h5gclose_f(cgl_g_id, error)
+
+      if (associated(problem_write_restart)) call problem_write_restart(file_id)
 
       call h5fclose_f(file_id, error)  ! Close the file
-      call h5pclose_f(plist_id, error) ! End of parallel writing
       call h5close_f(error)            ! Close HDF5 stuff
 
       call die("[restart_hdf5:write_restart_hdf5_v2] Not implemented yet")
@@ -930,19 +963,25 @@ contains
 !! \warning Not implemented yet
 !<
 
-   subroutine write_cg_to_restart(cg)
+   subroutine write_cg_to_restart(cg, cgl_g_id, cg_n_off)
 
       use grid_cont,   only: grid_container
+      use hdf5,        only: HID_T, h5gopen_f, h5gclose_f
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(in) :: cg        !> cg pointer
+      integer(HID_T), intent(in)                :: cgl_g_id  !> cg group identifier
+      integer(kind=4), intent(in)               :: cg_n_off  !> offset for cg group numbering
 
-      ! create group
-      ! write size, offset and refinement level
+      integer(HID_T)             :: cg_g_id       !> cg group identifier
+      integer(kind=4)            :: error
+
+      call h5gopen_f(cgl_g_id, n_cg_name(cg_n_off + cg%grid_n), cg_g_id, error)
+      ! write attributes: size, offset and refinement level
       ! write selected cg%q
       ! write selected cg%w
-      ! close group
+      call h5gclose_f(cg_g_id, error)
 
    end subroutine write_cg_to_restart
 
