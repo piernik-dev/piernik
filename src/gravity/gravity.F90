@@ -1000,8 +1000,8 @@ contains
 
       ddgph  = gpwork(1,1,1)-gpwork(cg%is,cg%js,cg%ks)
       gpwork = gpwork + ddgp(px,py,pz) + ddgph
-      wa_i = all_cg%first%cg%get_na_ind(wa_n)
-      all_cg%first%cg%wa(:,:,:) = gpwork(:,:,:)
+      wa_i = cg%get_na_ind(wa_n)
+      cg%wa(:,:,:) = gpwork(:,:,:)
       call all_cg%get_extremum(wa_i, MAXL, gp_max)
 
       call MPI_Bcast(gp_max%val, I_ONE, MPI_DOUBLE_PRECISION, gp_max%proc, comm, ierr)
