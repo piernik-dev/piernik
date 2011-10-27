@@ -42,10 +42,10 @@ module slice_hdf5
    private
    public :: init_plot, write_plot
 
-   integer, parameter :: planelen = 2           !< length of plane names e.g. "xy", "yz", "rp" etc.
+   integer,                                       parameter :: planelen = 2                 !< length of plane names e.g. "xy", "yz", "rp" etc.
    character(len=planelen), dimension(xdim:zdim), parameter :: pl_id = [ "yz", "xz", "xy" ]
-   integer, dimension(xdim:zdim) :: pl_i !< no. of cell ( 1 <= pl_i(:) < dom%n_d(:) ) for YZ, XZ and XY slices in plt files
-   real :: dt_plt !< frequency of plt output
+   integer,                 dimension(xdim:zdim)            :: pl_i                         !< no. of cell ( 1 <= pl_i(:) < dom%n_d(:) ) for YZ, XZ and XY slices in plt files
+   real                                                     :: dt_plt                       !< frequency of plt output
 
 contains
 
@@ -55,8 +55,8 @@ contains
 
       implicit none
 
-      integer, dimension(ndims), intent(in) :: ti  !< local copy of [ dataio::ix, dataio::iy, dataio::iz ]
-      real, intent(in)    :: tdt_plt !< local copy of dataio::dt_plt
+      integer, dimension(ndims), intent(in) :: ti      !< local copy of [ dataio::ix, dataio::iy, dataio::iz ]
+      real,                      intent(in) :: tdt_plt !< local copy of dataio::dt_plt
 
       pl_i(:) = ti(:)
       dt_plt = tdt_plt
@@ -79,17 +79,17 @@ contains
 
       implicit none
 
-      character(len=varlen), intent(in) :: var !< quantity to be plotted
-      integer, intent(in)               :: ij  !< direction perpendicular to the plane of plot, xdim means "yz" plane
-      integer(kind=8), intent(in)       :: xn  !< no. of cell at which we are slicing the local block
-      integer, intent(out)              :: ierrh !< error handling
-      real, dimension(:,:), intent(out) :: tab !< array containing given quantity
-      type(grid_container), pointer, intent(in) :: cg
+      character(len=varlen),         intent(in)  :: var   !< quantity to be plotted
+      integer,                       intent(in)  :: ij    !< direction perpendicular to the plane of plot, xdim means "yz" plane
+      integer(kind=8),               intent(in)  :: xn    !< no. of cell at which we are slicing the local block
+      integer,                       intent(out) :: ierrh !< error handling
+      real, dimension(:,:),          intent(out) :: tab   !< array containing given quantity
+      type(grid_container), pointer, intent(in)  :: cg
 
-      integer :: is, ie, js, je, ks, ke, i_xyz
-      type(component_fluid), pointer :: fl_dni
+      integer                                    :: is, ie, js, je, ks, ke, i_xyz
+      type(component_fluid), pointer             :: fl_dni
 #ifdef COSM_RAYS
-      integer :: i
+      integer                                    :: i
 #endif /* COSM_RAYS */
 
       ierrh = 0
@@ -160,25 +160,34 @@ contains
 
       use constants,   only: cwdlen, xdim, zdim
       use common_hdf5, only: nhdf_vars, hdf_vars
-      use dataio_pub,  only: log_file
+      use dataio_pub,  only: log_file, tmr_hdf, thdf, printio, printinfo, msg
       use global,      only: t
       use hdf5,        only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
       use mpisetup,    only: comm, ierr, master
+      use timer,       only: set_timer
 
       implicit none
 
-      integer, save     :: nimg = 0
-      integer(kind=4)   :: error
-      real, save        :: last_plt_time = 0.0
+      integer, save         :: nimg = 0
+      integer(kind=4)       :: error
+      real, save            :: last_plt_time = 0.0
       character(len=cwdlen) :: fname
-      integer           :: i, d
-      logical, save     :: first_entry = .true.
-      integer(HID_T)    :: file_id                 !> File identifier
-      integer(HID_T)    :: gr_id, gr2_id           !> Groups identifier
+      integer               :: i, d
+      logical, save         :: first_entry = .true.
+      integer(HID_T)        :: file_id                 !> File identifier
+      integer(HID_T)        :: gr_id, gr2_id           !> Groups identifier
 
       if ( ((t-last_plt_time > dt_plt) .or. first_entry ) .and. dt_plt > 0.0 ) then
 
+         thdf = set_timer(tmr_hdf,.true.)
+
          write(fname,'(2a)') trim(log_file(1:len_trim(log_file)-3)),"plt"
+
+         if (master) then
+            write(msg,'(3a)') 'Writing plot     ', trim(fname(3:)), " ... "
+            call printio(msg, .true.)
+         endif
+
          call H5open_f(error)
 
          if (master .and. first_entry) then
@@ -212,6 +221,12 @@ contains
 
          last_plt_time = t
 
+         thdf = set_timer(tmr_hdf)
+         if (master) then
+            write(msg,'(a5,f10.2,a2)') 'done ', thdf, ' s'
+            call printinfo(msg, .true.)
+         endif
+
       endif
 
    end subroutine write_plot
@@ -243,26 +258,26 @@ contains
 
       implicit none
 
-      integer, intent(in)                 :: plane  ! xdim means "yz" and so on
-      character(len=varlen), intent(in)   :: var                           !> not yet implemented
-      integer, intent(in)                 :: nimg
+      integer,               intent(in)        :: plane                         !> xdim means "yz" and so on
+      character(len=varlen), intent(in)        :: var                           !> not yet implemented
+      integer,               intent(in)        :: nimg
 
-      real, dimension(:,:), allocatable   :: send, img, recv
-      integer                             :: ierrh, p
-      integer(kind=4)                     :: error
-      integer(kind=8)                     :: xn, xn_r
-      character(len=cwdlen)               :: fname
-      integer, parameter                  :: vdn_len = 12
-      character(len=vdn_len)              :: vdname
-      integer(HID_T)                      :: file_id                       !> File identifier
-      integer(HID_T)                      :: gr_id, gr2_id                  !> Group identifier
-      integer(kind=4), parameter                  :: rank = 2
-      integer(HSIZE_T), dimension(rank)   :: dims
+      real, dimension(:,:), allocatable        :: send, img, recv
+      integer                                  :: ierrh, p
+      integer(kind=4)                          :: error
+      integer(kind=8)                          :: xn, xn_r
+      integer,                       parameter :: vdn_len = 12
+      integer,                       parameter :: tag = 101
+      integer(kind=4),               parameter :: rank = 2
+      integer(HID_T)                           :: file_id                       !> File identifier
+      integer(HID_T)                           :: gr_id, gr2_id                 !> Group identifier
+      integer(HSIZE_T), dimension(rank)        :: dims
       integer, dimension(xdim:zdim), parameter :: d1 = [ ydim, xdim, xdim ] , d2 = [ zdim, zdim, ydim ] ! d1(d) and d2(2) are perpendicular to direction d
-      integer(SIZE_T), parameter          :: bufsize = 1
-      real, dimension(bufsize)            :: timebuffer
-      integer, parameter                  :: tag = 101
-      type(grid_container), pointer :: cg
+      integer(SIZE_T),               parameter :: bufsize = 1
+      real, dimension(bufsize)                 :: timebuffer
+      character(len=cwdlen)                    :: fname
+      character(len=vdn_len)                   :: vdname
+      type(grid_container), pointer            :: cg
 
       cg => all_cg%first%cg
       if (is_multicg) call die("[slice_hdf5:write_plot_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial message tagging
