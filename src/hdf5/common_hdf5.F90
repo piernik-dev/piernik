@@ -66,9 +66,9 @@ contains
 
       character(len=varlen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
 
-      integer :: nvars, i, j
+      integer               :: nvars, i, j
 #if defined COSM_RAYS
-      integer :: k
+      integer               :: k
       character(len=varlen) :: aux
 #endif /* COSM_RAYS */
 
@@ -186,9 +186,9 @@ contains
 
       implicit none
 
-      character(len=varlen), intent(in) :: var
+      character(len=varlen),          intent(in)    :: var
       type(component_fluid), pointer, intent(inout) :: fl_dni
-      integer, intent(out) :: i_xyz
+      integer,                        intent(out)   :: i_xyz
 
       character(len=singlechar) :: dc
 
@@ -225,7 +225,7 @@ contains
    subroutine set_common_attributes(filename)
 
       use constants,   only: I_ONE, I_NINE
-      use dataio_pub,  only: msg, printio, use_v2_io, parfile, parfilelines
+      use dataio_pub,  only: use_v2_io, parfile, parfilelines
       use dataio_user, only: additional_attrs
       use global,      only: magic_mass, local_magic_mass
       use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
@@ -237,9 +237,9 @@ contains
 
       implicit none
 
-      character(len=*), intent(in) :: filename  !> HDF File name
+      character(len=*), intent(in)   :: filename        !> HDF File name
 
-      integer(HID_T)                 :: file_id       !> File identifier
+      integer(HID_T)                 :: file_id         !> File identifier
       integer(HID_T)                 :: type_id, dspace_id, dset_id, prp_id
       integer(HSIZE_T), dimension(1) :: dimstr
       logical(kind=4)                :: Z_avail
@@ -299,9 +299,6 @@ contains
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
-      write(msg,'(a)') 'done'
-      call printio(msg)
-
       ! only master process exits here
 
    end subroutine set_common_attributes
@@ -327,14 +324,14 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)     :: file_id       !> File identifier
+      integer(HID_T), intent(in)                   :: file_id       !> File identifier
 
-      integer                        :: fe, i
-      integer(SIZE_T), parameter     :: bufsize = I_ONE
-      integer(kind=4)                :: error
-      integer, parameter             :: buf_len = 50
-      integer(kind=4), dimension(buf_len) :: ibuffer
-      real,    dimension(buf_len)    :: rbuffer
+      integer                                      :: fe, i
+      integer(SIZE_T), parameter                   :: bufsize = I_ONE
+      integer(kind=4)                              :: error
+      integer, parameter                           :: buf_len = 50
+      integer(kind=4),          dimension(buf_len) :: ibuffer
+      real,                     dimension(buf_len) :: rbuffer
       character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
       character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
 
@@ -393,14 +390,14 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)     :: file_id       !> File identifier
+      integer(HID_T), intent(in)                   :: file_id       !> File identifier
 
-      integer                        :: fe, i
-      integer(SIZE_T), parameter     :: bufsize = I_ONE
-      integer(kind=4)                :: error
-      integer, parameter             :: buf_len = 50
-      integer(kind=4), dimension(buf_len) :: ibuffer
-      real,    dimension(buf_len)    :: rbuffer
+      integer                                      :: fe, i
+      integer(SIZE_T), parameter                   :: bufsize = I_ONE
+      integer(kind=4)                              :: error
+      integer, parameter                           :: buf_len = 50
+      integer(kind=4),          dimension(buf_len) :: ibuffer
+      real,                     dimension(buf_len) :: rbuffer
       character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
       character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
 

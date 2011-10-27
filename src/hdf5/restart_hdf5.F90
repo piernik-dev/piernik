@@ -41,7 +41,7 @@ module restart_hdf5
    private
    public :: read_restart_hdf5, write_restart_hdf5, read_arr_from_restart
 
-   integer, parameter :: STAT_OK = 0
+   integer,                      parameter :: STAT_OK = 0
    character(len=dsetnamelen/2), parameter :: cg_gname = "cg" ! leave the other half of dsetnamelen for id number
 
 contains
@@ -207,7 +207,7 @@ contains
 
       use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen, I_ONE
-      use dataio_pub,  only: nres, msg, printio
+      use dataio_pub,  only: nres, msg, printio, printinfo, tmr_hdf, thdf
       use dataio_user, only: problem_write_restart
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
@@ -215,6 +215,7 @@ contains
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use mpi,         only: MPI_INFO_NULL
       use mpisetup,    only: comm, master, FIRST
+      use timer,       only: set_timer
 
       implicit none
 
@@ -224,6 +225,8 @@ contains
       integer(HID_T)                :: plist_id      !> Property list identifier
       integer(kind=4)               :: error
       type(grid_container), pointer :: fcg
+
+      thdf = set_timer(tmr_hdf,.true.)
 
       filename = restart_fname()
 
@@ -274,6 +277,12 @@ contains
       !
       call h5fclose_f(file_id, error)
       call h5close_f(error)
+
+      thdf = set_timer(tmr_hdf)
+      if (master) then
+         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
+         call printinfo(msg, .true.)
+      endif
 
       nres = nres + I_ONE
 
@@ -878,7 +887,7 @@ contains
 !> \brief Generate numbered cg group name
    function n_cg_name(g)
       implicit none
-      integer, intent(in) :: g !< group number
+      integer, intent(in)        :: g !< group number
       character(len=dsetnamelen) :: n_cg_name
       write(n_cg_name,'(2a,i8.8)')trim(cg_gname), "_", g
    end function n_cg_name
@@ -893,7 +902,7 @@ contains
 
       use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen, ndims, I_ONE, I_TWO, AT_IGNORE
-      use dataio_pub,  only: die
+      use dataio_pub,  only: die, tmr_hdf, thdf, printinfo, msg
       use dataio_user, only: problem_write_restart
       use gc_list,     only: cg_list_element
       use grid,        only: all_cg
@@ -903,28 +912,29 @@ contains
            &                 h5gcreate_f, h5gopen_f, h5gclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5screate_simple_f, h5sclose_f, h5tcopy_f
       use mpi,         only: MPI_INFO_NULL, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
       use mpisetup,    only: comm, proc, FIRST, LAST, master
+      use timer,       only: set_timer
 
       implicit none
 
-      character(len=cwdlen) :: filename
-      integer(HID_T)        :: file_id       !> File identifier
-      integer(HID_T)        :: plist_id      !> Property list identifier
-      integer(HID_T)        :: cgl_g_id,  cg_g_id  !> cg list and cg group identifiers
-      integer(kind=4)       :: error
-      type(cg_list_element), pointer :: cgl
-      integer(kind=4), allocatable, dimension(:) :: cg_n      !> offset for cg group numbering
-      integer(kind=4)       :: cg_cnt
-      integer :: g, p, i
-      integer, parameter :: arank = I_ONE
-      integer(HSIZE_T), dimension(arank) :: dims
-      integer(HID_T) :: aspace_id, attr_id, atype_id, filespace, dset_id
-      integer, parameter :: tag = I_ONE
-      integer(kind=4), dimension(:), allocatable :: cg_rl
-      integer(kind=4), dimension(:,:), allocatable :: cg_n_b
-      integer(kind=8), dimension(:,:), allocatable :: cg_off
-      type(grid_container), pointer :: fcg
-      integer :: drank
-      integer(HSIZE_T), dimension(:), allocatable :: ddims
+      character(len=cwdlen)                         :: filename
+      integer(HID_T)                                :: file_id                                  !> File identifier
+      integer(HID_T)                                :: plist_id                                 !> Property list identifier
+      integer(HID_T)                                :: cgl_g_id,  cg_g_id                       !> cg list and cg group identifiers
+      integer(HID_T)                                :: aspace_id, attr_id, atype_id, filespace, dset_id
+      integer(kind=4)                               :: error, cg_cnt
+      integer                                       :: g, p, i, drank
+      integer, parameter                            :: arank = I_ONE
+      integer, parameter                            :: tag = I_ONE
+      integer(HSIZE_T), dimension(arank)            :: dims
+      integer(HSIZE_T), dimension(:),   allocatable :: ddims
+      integer(kind=4),  dimension(:),   allocatable :: cg_n                                     !> offset for cg group numbering
+      integer(kind=4),  dimension(:),   allocatable :: cg_rl
+      integer(kind=4),  dimension(:,:), allocatable :: cg_n_b
+      integer(kind=8),  dimension(:,:), allocatable :: cg_off
+      type(cg_list_element), pointer                :: cgl
+      type(grid_container),  pointer                :: fcg
+
+      thdf = set_timer(tmr_hdf,.true.)
 
       filename = restart_fname()
 
@@ -1072,6 +1082,12 @@ contains
       call h5fclose_f(file_id, error)  ! Close the file
       call h5close_f(error)            ! Close HDF5 stuff
 
+      thdf = set_timer(tmr_hdf)
+      if (master) then
+         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
+         call printinfo(msg, .true.)
+      endif
+
       call die("[restart_hdf5:write_restart_hdf5_v2] Not implemented yet")
 
    end subroutine write_restart_hdf5_v2
@@ -1091,16 +1107,16 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg        !> cg pointer
-      integer(HID_T), intent(in)                :: cgl_g_id  !> cg group identifier
-      integer(kind=4), intent(in)               :: cg_n_off  !> offset for cg group numbering
+      type(grid_container), pointer, intent(in) :: cg                 !> cg pointer
+      integer(HID_T),                intent(in) :: cgl_g_id           !> cg group identifier
+      integer(kind=4),               intent(in) :: cg_n_off           !> offset for cg group numbering
 
-      integer(HID_T)             :: cg_g_id       !> cg group identifier
-      integer(HID_T)             :: dset_id, plist_id
-      integer(kind=4)            :: error
-      integer(HSIZE_T), dimension(ndims) :: dims
-      real, pointer, dimension(:,:,:)    :: pa3d
-      integer :: i
+      integer(HID_T)                            :: cg_g_id            !> cg group identifier
+      integer(HID_T)                            :: dset_id, plist_id
+      integer(kind=4)                           :: error
+      integer(HSIZE_T), dimension(ndims)        :: dims
+      real, pointer,    dimension(:,:,:)        :: pa3d
+      integer                                   :: i
 
       call h5gopen_f(cgl_g_id, n_cg_name(cg_n_off + cg%grid_n), cg_g_id, error)
 

@@ -110,6 +110,8 @@ module dataio_pub
    character(len=msglen)  :: msg                !< buffer for messages
    character(len=ansirst) :: ansi_black
    character(len=ansilen) :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
+   character(len=*),parameter :: tmr_hdf = "hdf_dump"
+   real                       :: thdf !< hdf dump wallclock
 
 contains
 !-----------------------------------------------------------------------------

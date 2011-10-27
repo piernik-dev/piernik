@@ -152,7 +152,7 @@ contains
 
       use common_hdf5, only: nhdf_vars, hdf_vars, set_common_attributes
       use constants,   only: ndims, cwdlen, I_ONE
-      use dataio_pub,  only: printio, msg, die, nhdf, problem_name, run_id, nhdf
+      use dataio_pub,  only: printio, printinfo, msg, die, nhdf, problem_name, run_id, nhdf, tmr_hdf, thdf
       use dataio_user, only: user_vars_hdf5
       use domain,      only: dom, is_multicg !, is_uneven
       use grid,        only: all_cg
@@ -164,6 +164,7 @@ contains
            &                 h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
       use mpisetup,    only: comm, ierr, master, FIRST
       use mpi,         only: MPI_CHARACTER, MPI_INFO_NULL
+      use timer,       only: set_timer
 
       implicit none
 
@@ -182,6 +183,7 @@ contains
       integer(HID_T)                    :: memspace                !< Dataspace identifier in memory
       integer(HSIZE_T), dimension(rank) :: count, offset, stride, block, dimsf, chunk_dims
 
+      thdf = set_timer(tmr_hdf,.true.)
       ! Initialize HDF5 library and Fortran interfaces.
       !
       if (master) then
@@ -277,6 +279,12 @@ contains
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
+      thdf = set_timer(tmr_hdf)
+      if (master) then
+         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
+         call printinfo(msg, .true.)
+      endif
+
       nhdf = nhdf + I_ONE
 
    end subroutine h5_write_to_single_file
@@ -294,7 +302,7 @@ contains
 
       use constants,       only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
       use common_hdf5,     only: nhdf_vars, hdf_vars
-      use dataio_pub,      only: die, msg, printio
+      use dataio_pub,      only: die, msg, printio, printinfo, tmr_hdf, thdf
       use dataio_user,     only: user_vars_hdf5
       use gc_list,         only: cg_list_element
       use grid,            only: all_cg
@@ -303,6 +311,7 @@ contains
       use hdf5,            only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, &
            &                     h5gclose_f, HSIZE_T
       use mpisetup,        only: master
+      use timer,           only: set_timer
 
       implicit none
 
@@ -319,6 +328,7 @@ contains
       logical                           :: ok_var
       real(kind=4), allocatable         :: data (:,:,:)     !> Data to write
 
+      thdf = set_timer(tmr_hdf,.true.)
       fname = h5_filename()
       if (master) then
          write(msg,'(3a)') 'Writing datafile ', trim(fname), " ... "
@@ -361,9 +371,10 @@ contains
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
+      thdf = set_timer(tmr_hdf)
       if (master) then
-         write(msg,'(a)') 'done'
-         call printio(msg)
+         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
+         call printinfo(msg, .true.)
       endif
 
    end subroutine h5_write_to_multiple_files
