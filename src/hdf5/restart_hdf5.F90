@@ -902,7 +902,7 @@ contains
 
       use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen, ndims, I_ONE, I_TWO, AT_IGNORE
-      use dataio_pub,  only: die, tmr_hdf, thdf, printinfo, msg
+      use dataio_pub,  only: die, tmr_hdf, thdf, printinfo, msg, die
       use dataio_user, only: problem_write_restart
       use gc_list,     only: cg_list_element
       use grid,        only: all_cg
@@ -922,8 +922,9 @@ contains
       integer(HID_T)                                :: cgl_g_id,  cg_g_id                       !> cg list and cg group identifiers
       integer(HID_T)                                :: aspace_id, attr_id, atype_id, filespace, dset_id
       integer(kind=4)                               :: error, cg_cnt
-      integer                                       :: g, p, i, drank
-      integer, parameter                            :: arank = I_ONE
+      integer                                       :: g, p, i
+      integer(kind=4)                               :: drank
+      integer(kind=4), parameter                    :: arank = I_ONE
       integer, parameter                            :: tag = I_ONE
       integer(HSIZE_T), dimension(arank)            :: dims
       integer(HSIZE_T), dimension(:),   allocatable :: ddims
@@ -991,7 +992,8 @@ contains
                call h5aclose_f(attr_id, error)
 
                call h5acreate_f (cg_g_id, "off", atype_id, aspace_id, attr_id, error)
-               call h5awrite_f(attr_id, atype_id, int(cg_off(g, :)), dims, error)                !> \todo determine which type is most suitable for kind=8 integers
+               if (any(cg_off(g, :) > 2.**31)) call die("[restart_hdf5:write_restart_hdf5_v2] large offsets require better treatment")
+               call h5awrite_f(attr_id, atype_id, int(cg_off(g, :), kind=4), dims, error) !> \todo Wait for HDF 1.8.8 and use the improved Fortran interfaces
                call h5aclose_f(attr_id, error)
 
                call h5sclose_f(aspace_id, error)
@@ -1017,7 +1019,7 @@ contains
                if (allocated(fcg%w)) then
                   do i = lbound(fcg%w(:), dim=1, kind=4), ubound(fcg%w(:), dim=1, kind=4)
                      if (fcg%w(i)%restart_mode /= AT_IGNORE) then
-                        ddims(:) = [ size(fcg%w(i)%arr, dim=1), cg_n_b(g, :) ]
+                        ddims(:) = [ size(fcg%w(i)%arr, dim=1, kind=4), cg_n_b(g, :) ]
                         call h5screate_simple_f(drank, ddims, filespace, error)
                         call h5dcreate_f(cg_g_id, fcg%w(i)%name, H5T_NATIVE_DOUBLE, filespace, dset_id, error)
                         call h5dclose_f(dset_id, error)
