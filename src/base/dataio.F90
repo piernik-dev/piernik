@@ -46,7 +46,7 @@
 
 module dataio
 
-   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, multiple_h5files, use_v2_io
+   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io
    use constants,  only: cwdlen, fmt_len, cbuff_len, varlen, idlen
 
    implicit none
@@ -118,7 +118,7 @@ module dataio
    namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
                              domain_dump, vars, mag_center, vizit, fmin, fmax, &
                              min_disk_space_MB, sleep_minutes, sleep_seconds, &
-                             user_message_file, system_message_file, multiple_h5files, use_v2_io
+                             user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io
 
    interface mpi_addmul
       module procedure mpi_sum4d_and_multiply
@@ -211,6 +211,7 @@ contains
 !! <tr><td>user_message_file  </td><td>trim(cwd)//'/msg'  </td><td>string similar to default value              </td><td>\copydoc dataio::user_message_file  </td></tr>
 !! <tr><td>system_message_file</td><td>'/tmp/piernik_msg' </td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
 !! <tr><td>use_v2_io          </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::use_v2_io    </td></tr>
+!! <tr><td>nproc_io           </td><td>1                  </td><td>integer   </td><td>\copydoc dataio_pub::nproc_io     </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -221,13 +222,13 @@ contains
       use data_hdf5,       only: init_data
       use dataio_pub,      only: nres, nrestart, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
            &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, die, code_progress, &
-           &                     move_file, multiple_h5files, parfile, parfilelines
+           &                     move_file, multiple_h5files, parfile, parfilelines, can_i_write
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use domain,          only: dom
       use fluidboundaries, only: all_fluid_boundaries
       use global,          only: t, nstep
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, FIRST
+      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, FIRST, nproc, proc
       use restart_hdf5,    only: read_restart_hdf5
       use slice_hdf5,      only: init_plot
       use timer,           only: time_left
@@ -273,6 +274,7 @@ contains
 
       tsl_firstcall = .true.
       use_v2_io = .false.
+      nproc_io = 1
 
       nhdf  = 0
       nres  = 0
@@ -305,6 +307,15 @@ contains
          diff_nml(RESTART_CONTROL)
          diff_nml(END_CONTROL)
 
+         if (use_v2_io) then
+            if (nproc_io <= 0 .or. nproc_io > nproc) nproc_io = nproc ! fully parallel v2 I/O
+
+            if (nproc_io /= 1) then
+               call warn("[dataio:init_dataio] Parallel v2 I/O is not implemented yet")
+               nproc_io = 1
+            endif
+         endif
+
 !  namelist /END_CONTROL/ nend, tend, wend
          ibuff(1)  = nend
 
@@ -319,9 +330,10 @@ contains
          ibuff(20) = nrestart
          ibuff(21) = resdel
 
-!  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, domain_dump, vars, mag_center, &
-!                            min_disk_space_MB, sleep_minutes, ix, iy, iz&
-!                            user_message_file, system_message_file
+!   namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
+!                             domain_dump, vars, mag_center, vizit, fmin, fmax, &
+!                             min_disk_space_MB, sleep_minutes, sleep_seconds, &
+!                             user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io
 
          ibuff(40) = min_disk_space_MB
          ibuff(41) = sleep_minutes
@@ -329,6 +341,7 @@ contains
          ibuff(43) = ix
          ibuff(44) = iy
          ibuff(45) = iz
+         ibuff(46) = nproc_io
 
          rbuff(40) = dt_hdf
          rbuff(41) = dt_res
@@ -386,6 +399,7 @@ contains
          ix                  = ibuff(43)
          iy                  = ibuff(44)
          iz                  = ibuff(45)
+         nproc_io            = ibuff(46)
 
          dt_hdf              = rbuff(40)
          dt_res              = rbuff(41)
@@ -411,6 +425,12 @@ contains
          user_message_file   = trim(cbuff(91))
          system_message_file = trim(cbuff(92))
 
+      endif
+
+      can_i_write = mod( proc*nproc_io, nproc) < nproc_io
+      if (can_i_write) then
+         write(msg,'(a,i6,a)')"Process ",proc," can write"
+         call printinfo(msg)
       endif
 
       write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"

@@ -902,14 +902,15 @@ contains
 
       use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen, ndims, I_ONE, I_TWO, AT_IGNORE
-      use dataio_pub,  only: die, tmr_hdf, thdf, printinfo, msg, die
+      use dataio_pub,  only: die, tmr_hdf, thdf, printinfo, msg, die, nproc_io, can_i_write
       use dataio_user, only: problem_write_restart
       use gc_list,     only: cg_list_element
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T, HSIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, H5T_NATIVE_DOUBLE, H5T_NATIVE_INTEGER, &
-           &                 h5open_f, h5close_f, h5acreate_f, h5awrite_f, h5aclose_f, h5dcreate_f, h5dclose_f, h5fopen_f, h5fclose_f, &
-           &                 h5gcreate_f, h5gopen_f, h5gclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5screate_simple_f, h5sclose_f, h5tcopy_f
+      use hdf5,        only: HID_T, HSIZE_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5T_NATIVE_INTEGER, H5Z_FILTER_DEFLATE_F, &
+           &                 h5open_f, h5close_f, h5acreate_f, h5awrite_f, h5aclose_f, h5fopen_f, h5fclose_f, &
+           &                 h5gcreate_f, h5gopen_f, h5gclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, &
+           &                 h5screate_simple_f, h5sclose_f, h5tcopy_f, h5zfilter_avail_f
       use mpi,         only: MPI_INFO_NULL, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
       use mpisetup,    only: comm, proc, FIRST, LAST, master
       use timer,       only: set_timer
@@ -920,7 +921,8 @@ contains
       integer(HID_T)                                :: file_id                                  !> File identifier
       integer(HID_T)                                :: plist_id                                 !> Property list identifier
       integer(HID_T)                                :: cgl_g_id,  cg_g_id                       !> cg list and cg group identifiers
-      integer(HID_T)                                :: aspace_id, attr_id, atype_id, filespace, dset_id
+      integer(HID_T)                                :: aspace_id, attr_id, atype_id             !> attribute hooks for dataspace, id and datatype
+      integer(HID_T)                                :: doml_g_id, dom_g_id                      !> domain list and domain group identifiers
       integer(kind=4)                               :: error, cg_cnt
       integer                                       :: g, p, i
       integer(kind=4)                               :: drank
@@ -934,6 +936,7 @@ contains
       integer(kind=8),  dimension(:,:), allocatable :: cg_off
       type(cg_list_element), pointer                :: cgl
       type(grid_container),  pointer                :: fcg
+      logical(kind=4)                               :: Z_avail
 
       thdf = set_timer(tmr_hdf,.true.)
 
@@ -945,12 +948,28 @@ contains
       ! Prepare groups and datasets for grid containers on the master
       allocate(cg_n(FIRST:LAST))
       call MPI_Allgather(all_cg%cnt, I_ONE, MPI_INTEGER, cg_n, I_ONE, MPI_INTEGER, comm, error)
+      cg_cnt = sum(cg_n)
+
       if (master) then
 
-         ! Open the HDF5 file only in master process
+         ! Open the HDF5 file only in master process and create all groups required for cg storage.
+         ! Create also all related datasets and attributes. Do not write big datasets yet.
+
          call h5open_f(error)
          call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error)
+
          call h5gcreate_f(file_id, cg_gname, cgl_g_id, error)
+
+         call h5screate_simple_f(arank, [ 1_HSIZE_T ], aspace_id, error)
+         call h5acreate_f (cgl_g_id, "cg_count", H5T_NATIVE_INTEGER, aspace_id, attr_id, error)
+         call h5awrite_f(attr_id, H5T_NATIVE_INTEGER, [ cg_cnt ], [ 1_HSIZE_T ], error)
+         call h5aclose_f(attr_id, error)
+
+         call h5sclose_f(aspace_id, error)
+
+         Z_avail = .false.
+         if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error) !> \todo add shuffle
+         !> \todo test it thoroughly before enabling for > 1
 
          ! Do not assume that the master knows all the lists
          do p = FIRST, LAST
@@ -973,18 +992,18 @@ contains
 
             do g = 1, cg_n(p)
                call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error)
-
-               dims(:) = I_ONE
-               call h5screate_simple_f(arank, dims, aspace_id, error)
                call h5tcopy_f(H5T_NATIVE_INTEGER, atype_id, error)
 
+               dims(:) = I_ONE
+
+               call h5screate_simple_f(arank, dims, aspace_id, error)
                call h5acreate_f (cg_g_id, "level", atype_id, aspace_id, attr_id, error)
                call h5awrite_f(attr_id, atype_id, cg_rl(g), dims, error)
                call h5aclose_f(attr_id, error)
-
                call h5sclose_f(aspace_id, error)
 
                dims(:) = ndims
+
                call h5screate_simple_f(arank, dims, aspace_id, error)
 
                call h5acreate_f (cg_g_id, "n_b", atype_id, aspace_id, attr_id, error)
@@ -998,18 +1017,14 @@ contains
 
                call h5sclose_f(aspace_id, error)
 
+               fcg  => all_cg%first%cg
+
                drank = ndims
                allocate(ddims(drank))
-               fcg  => all_cg%first%cg
                if (allocated(fcg%q)) then
                   do i = lbound(fcg%q(:), dim=1, kind=4), ubound(fcg%q(:), dim=1, kind=4)
-                     if (fcg%q(i)%restart_mode /= AT_IGNORE) then
-                        ddims(:) = cg_n_b(g, :)
-                        call h5screate_simple_f(drank, ddims, filespace, error)
-                        call h5dcreate_f(cg_g_id, fcg%q(i)%name, H5T_NATIVE_DOUBLE, filespace, dset_id, error)
-                        call h5dclose_f(dset_id, error)
-                        call h5sclose_f(filespace, error)
-                     endif
+                     if (fcg%q(i)%restart_mode /= AT_IGNORE) &
+                          call create_empty_cg_dataset(cg_g_id, fcg%q(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
                   enddo
                endif
                deallocate(ddims)
@@ -1018,13 +1033,8 @@ contains
                allocate(ddims(drank))
                if (allocated(fcg%w)) then
                   do i = lbound(fcg%w(:), dim=1, kind=4), ubound(fcg%w(:), dim=1, kind=4)
-                     if (fcg%w(i)%restart_mode /= AT_IGNORE) then
-                        ddims(:) = [ size(fcg%w(i)%arr, dim=1, kind=4), cg_n_b(g, :) ]
-                        call h5screate_simple_f(drank, ddims, filespace, error)
-                        call h5dcreate_f(cg_g_id, fcg%w(i)%name, H5T_NATIVE_DOUBLE, filespace, dset_id, error)
-                        call h5dclose_f(dset_id, error)
-                        call h5sclose_f(filespace, error)
-                     endif
+                     if (fcg%w(i)%restart_mode /= AT_IGNORE) &
+                          call create_empty_cg_dataset(cg_g_id, fcg%w(i)%name, int([ size(fcg%w(i)%arr, dim=1), cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
                   enddo
                endif
                deallocate(ddims)
@@ -1037,6 +1047,27 @@ contains
          enddo
 
          call h5gclose_f(cgl_g_id, error)
+
+         ! describe_domains
+
+         call h5gcreate_f(file_id, "domains", doml_g_id, error)
+         call h5gcreate_f(doml_g_id, "base", dom_g_id, error)
+         ! base domain: n_d(:), [xyz]{min,max}, bnd_[xyz]lr]
+         dims(:) = ndims
+
+         call h5gclose_f(dom_g_id, error)
+
+         call h5screate_simple_f(arank, [ 1_HSIZE_T ], aspace_id, error)
+         call h5acreate_f (cgl_g_id, "fine_count", H5T_NATIVE_INTEGER, aspace_id, attr_id, error)
+         call h5awrite_f(attr_id, H5T_NATIVE_INTEGER, [ 0 ], [ 1_HSIZE_T ], error) ! we have only base domain at the moment
+         call h5aclose_f(attr_id, error)
+
+         !> \todo add here all fine domains
+         ! name "fine_00000001"
+         ! attributes: n_d(:), off(:), refinement
+
+         call h5gclose_f(doml_g_id, error)
+
          call h5fclose_f(file_id, error)
          call h5close_f(error)
 
@@ -1060,28 +1091,31 @@ contains
       call MPI_Barrier(comm, error)
       ! Reopen the HDF5 file for parallel write
       call h5open_f(error)
-      call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
-      call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
-      call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
-      call h5pclose_f(plist_id, error)
-
-!!$      call describe_domains
-
-      cg_cnt = sum(cg_n)
-
-      call h5gopen_f(file_id, cg_gname, cgl_g_id, error)
+      if (can_i_write) then
+         if (nproc_io > 1) then
+            call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
+            ! when nproc_io < nproc we'll probably need another communicator for subset of processes that have can_i_write flag set
+            call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
+            call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
+            call h5pclose_f(plist_id, error)
+         else
+            call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error)
+         endif
+         call h5gopen_f(file_id, cg_gname, cgl_g_id, error)
+      endif
 
       cgl => all_cg%first
       do while (associated(cgl))
          call write_cg_to_restart(cgl%cg, cgl_g_id, sum(cg_n(:proc))-cg_n(proc))
          cgl => cgl%nxt
       enddo
-      !> \todo store cg count
-      call h5gclose_f(cgl_g_id, error)
 
-      if (associated(problem_write_restart)) call problem_write_restart(file_id)
+      if (can_i_write) then
+         call h5gclose_f(cgl_g_id, error)
+         if (associated(problem_write_restart)) call problem_write_restart(file_id) ! may be called by not all processes
+         call h5fclose_f(file_id, error)  ! Close the file
+      endif
 
-      call h5fclose_f(file_id, error)  ! Close the file
       call h5close_f(error)            ! Close HDF5 stuff
 
       thdf = set_timer(tmr_hdf)
@@ -1089,10 +1123,40 @@ contains
          write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
          call printinfo(msg, .true.)
       endif
-
+      call MPI_Barrier(comm, error)
       call die("[restart_hdf5:write_restart_hdf5_v2] Not implemented yet")
 
    end subroutine write_restart_hdf5_v2
+
+   subroutine create_empty_cg_dataset(cg_g_id, name, ddims, Z_avail)
+
+     use constants, only: I_NINE
+     use hdf5,      only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_DOUBLE, &
+          &               h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, h5pset_chunk_f
+
+     implicit none
+
+     integer(HID_T), intent(in)                 :: cg_g_id !< group id where to create the dataset
+     character(len=*), intent(in)               :: name    !< name
+     integer(HSIZE_T), dimension(:), intent(in) :: ddims   !< dimensionality
+     logical, intent(in)                        :: Z_avail !< can use compression?
+
+     integer(HID_T) :: prp_id, filespace, dset_id
+     integer(kind=4) :: error
+
+     call h5pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
+     if (Z_avail) then
+        call h5pset_deflate_f(prp_id, I_NINE, error) !> \todo add shuffle
+        call h5pset_chunk_f(prp_id, size(ddims), ddims, error)
+     endif
+
+     call h5screate_simple_f(size(ddims), ddims, filespace, error)
+     call h5dcreate_f(cg_g_id, name, H5T_NATIVE_DOUBLE, filespace, dset_id, error, dcpl_id = prp_id)
+     call h5dclose_f(dset_id, error)
+     call h5sclose_f(filespace, error)
+     call h5pclose_f(prp_id, error)
+
+   end subroutine create_empty_cg_dataset
 
 !>
 !! \brief append a single grid container to the output file
@@ -1102,48 +1166,89 @@ contains
 
    subroutine write_cg_to_restart(cg, cgl_g_id, cg_n_off)
 
-      use constants, only: I_ONE, ndims, AT_IGNORE
-      use grid_cont, only: grid_container
-      use hdf5,      only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, &
-           &               h5gopen_f, h5gclose_f, h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
+      use constants,  only: ndims, AT_IGNORE
+      use dataio_pub, only: die, nproc_io, can_i_write
+      use grid_cont,  only: grid_container
+      use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
+           &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
+           &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
+      use mpisetup,   only: master
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg                 !> cg pointer
-      integer(HID_T),                intent(in) :: cgl_g_id           !> cg group identifier
-      integer(kind=4),               intent(in) :: cg_n_off           !> offset for cg group numbering
+      type(grid_container), pointer, intent(in)   :: cg                 !> cg pointer
+      integer(HID_T),                intent(in)   :: cgl_g_id           !> cg group identifier
+      integer(kind=4),               intent(in)   :: cg_n_off           !> offset for cg group numbering
 
-      integer(HID_T)                            :: cg_g_id            !> cg group identifier
-      integer(HID_T)                            :: dset_id, plist_id
-      integer(kind=4)                           :: error
-      integer(HSIZE_T), dimension(ndims)        :: dims
-      real, pointer,    dimension(:,:,:)        :: pa3d
-      integer                                   :: i
+      integer(HID_T)                              :: cg_g_id            !> cg group identifier
+      integer(HID_T)                              :: dset_id, plist_id
+      integer(kind=4)                             :: error
+      integer(HSIZE_T), dimension(:), allocatable :: dims
+      real, pointer,    dimension(:,:,:)          :: pa3d
+      real, pointer,    dimension(:,:,:,:)        :: pa4d
+      integer                                     :: i
 
-      call h5gopen_f(cgl_g_id, n_cg_name(cg_n_off + cg%grid_n), cg_g_id, error)
+      if (can_i_write) then
+         call h5gopen_f(cgl_g_id, n_cg_name(cg_n_off + cg%grid_n), cg_g_id, error)
+         call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+      endif
 
-      call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
 
-!      allocate(dims(drank))
-! BUGGY
-!!$      if (allocated(cg%q)) then
-!!$         do i = lbound(cg%q(:), dim=1, kind=4), ubound(cg%q(:), dim=1, kind=4)
-!!$            if (cg%q(i)%restart_mode /= AT_IGNORE) then
-!!$               call h5dopen_f(cg_g_id, cg%q(i)%name, dset_id, error)
-!!$               pa3d => cg%q(i)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
-!!$               dims = cg%n_b
-!!$               call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
-!!$               call h5dclose_f(dset_id, error)
-!!$            endif
-!!$         enddo
-!!$      endif
-!      deallocate(dims)
+      if (nproc_io == 1) then
+         if (master) then
+            if (.not. can_i_write) call die("[restart_hdf5:write_cg_to_restart] Master can't write")
 
-      ! write selected cg%q
-      ! write selected cg%w
-      call h5pclose_f(plist_id, error)
-      call h5gclose_f(cg_g_id, error)
+            allocate(dims(ndims))
+            if (allocated(cg%q)) then
+               do i = lbound(cg%q(:), dim=1, kind=4), ubound(cg%q(:), dim=1, kind=4)
+                  if (cg%q(i)%restart_mode /= AT_IGNORE) then
+                     call h5dopen_f(cg_g_id, cg%q(i)%name, dset_id, error)
+                     pa3d => cg%q(i)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
+                     dims = cg%n_b
+                     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
+                     call h5dclose_f(dset_id, error)
+                  endif
+               enddo
+            endif
+            ! receive all cg%q
+            deallocate(dims)
+
+            allocate(dims(ndims+1))
+            if (allocated(cg%w)) then
+               do i = lbound(cg%w(:), dim=1, kind=4), ubound(cg%w(:), dim=1, kind=4)
+                  if (cg%w(i)%restart_mode /= AT_IGNORE) then
+                     call h5dopen_f(cg_g_id, cg%w(i)%name, dset_id, error)
+                     pa4d => cg%w(i)%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
+                     dims = [ size(pa4d, dim=1, kind=4), cg%n_b ]
+                     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
+                     call h5dclose_f(dset_id, error)
+                  endif
+               enddo
+            endif
+            ! receive all cg%w
+            deallocate(dims)
+
+         else
+            if (can_i_write) call die("[restart_hdf5:write_cg_to_restart] Slave can write")
+            ! send all selected cg%q
+            ! send all selected cg%w
+         endif
+      else
+         ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
+         if (can_i_write) then
+            ! write own
+            ! receive (from whom?)
+         else
+            ! send (where?)
+         endif
+         call die("[restart_hdf5:write_cg_to_restart] Parallel v2 I/O not implemented yet")
+      endif
+
+      if (can_i_write) then
+         call h5pclose_f(plist_id, error)
+         call h5gclose_f(cg_g_id, error)
+      endif
 
    end subroutine write_cg_to_restart
 
