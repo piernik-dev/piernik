@@ -1117,7 +1117,7 @@ contains
 
      use constants, only: I_NINE
      use hdf5,      only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_DOUBLE, &
-          &               h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, h5pset_chunk_f
+          &               h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, h5pset_shuffle_f, h5pset_chunk_f
 
      implicit none
 
@@ -1131,7 +1131,8 @@ contains
 
      call h5pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
      if (Z_avail) then
-        call h5pset_deflate_f(prp_id, I_NINE, error) !> \todo add shuffle
+        call h5pset_shuffle_f(prp_id, error)
+        call h5pset_deflate_f(prp_id, I_NINE, error)
         call h5pset_chunk_f(prp_id, size(ddims), ddims, error)
      endif
 
