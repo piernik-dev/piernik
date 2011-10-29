@@ -895,22 +895,30 @@ contains
 !>
 !! \brief Write a multi-file, multi-domain restart file
 !!
+!! \details There are three approaches to be implemented:
+!! - Single-file, serial I/O. The easiest way. Master writes everything, slaves send their data to the master. Does not take advantage of parallel filesystems.
+!! - Multi-file, serial I/O. An extension of the above approach. Selected processes (can be all) write to their files, other processes send them their data.
+!!   Can take advantage of parallel filesystems. Can use local scratch filesystems. Requires additional work on reading.
+!! - Single-file, parallel I/O. The most ambitious approach. Selected processes (can be all) write to the files, other processes send them their data.
+!!   Can take advantage of parallel filesystems. Currently does not allow for compression during write.
+!!   Requires a lot of pseudo-collective operations. The "flexible PHDF5" would simplify the code, but it needs to be implemented.first.
+!!
 !! \warning Partial implementation only
 !<
 
    subroutine write_restart_hdf5_v2
 
       use common_hdf5, only: set_common_attributes
-      use constants,   only: cwdlen, ndims, I_ONE, I_TWO, AT_IGNORE
+      use constants,   only: cwdlen, dsetnamelen, singlechar, xdim, zdim, ndims, I_ONE, I_TWO, AT_IGNORE
       use dataio_pub,  only: die, tmr_hdf, thdf, printinfo, msg, die, nproc_io, can_i_write
       use dataio_user, only: problem_write_restart
+      use domain,      only: dom
       use gc_list,     only: cg_list_element
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T, HSIZE_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5T_NATIVE_INTEGER, H5Z_FILTER_DEFLATE_F, &
-           &                 h5open_f, h5close_f, h5acreate_f, h5awrite_f, h5aclose_f, h5fopen_f, h5fclose_f, &
-           &                 h5gcreate_f, h5gopen_f, h5gclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, &
-           &                 h5screate_simple_f, h5sclose_f, h5tcopy_f, h5zfilter_avail_f
+      use hdf5,        only: HID_T, HSIZE_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
+           &                 h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
+           &                 h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5zfilter_avail_f
       use mpi,         only: MPI_INFO_NULL, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
       use mpisetup,    only: comm, proc, FIRST, LAST, master
       use timer,       only: set_timer
@@ -921,14 +929,11 @@ contains
       integer(HID_T)                                :: file_id                                  !> File identifier
       integer(HID_T)                                :: plist_id                                 !> Property list identifier
       integer(HID_T)                                :: cgl_g_id,  cg_g_id                       !> cg list and cg group identifiers
-      integer(HID_T)                                :: aspace_id, attr_id, atype_id             !> attribute hooks for dataspace, id and datatype
       integer(HID_T)                                :: doml_g_id, dom_g_id                      !> domain list and domain group identifiers
       integer(kind=4)                               :: error, cg_cnt
       integer                                       :: g, p, i
       integer(kind=4)                               :: drank
-      integer(kind=4), parameter                    :: arank = I_ONE
       integer, parameter                            :: tag = I_ONE
-      integer(HSIZE_T), dimension(arank)            :: dims
       integer(HSIZE_T), dimension(:),   allocatable :: ddims
       integer(kind=4),  dimension(:),   allocatable :: cg_n                                     !> offset for cg group numbering
       integer(kind=4),  dimension(:),   allocatable :: cg_rl
@@ -937,12 +942,13 @@ contains
       type(cg_list_element), pointer                :: cgl
       type(grid_container),  pointer                :: fcg
       logical(kind=4)                               :: Z_avail
+      character(len=singlechar), dimension(ndims), parameter :: d_pref = [ "x", "y", "z" ]
+      character(len=dsetnamelen)                    :: d_label
 
-      thdf = set_timer(tmr_hdf,.true.)
-
-      filename = restart_fname()
+      thdf = set_timer(tmr_hdf, .true.)
 
       ! Create a new file and initialize it
+      filename = restart_fname()
       call set_common_attributes(filename)
 
       ! Prepare groups and datasets for grid containers on the master
@@ -960,12 +966,7 @@ contains
 
          call h5gcreate_f(file_id, cg_gname, cgl_g_id, error)
 
-         call h5screate_simple_f(arank, [ 1_HSIZE_T ], aspace_id, error)
-         call h5acreate_f (cgl_g_id, "cg_count", H5T_NATIVE_INTEGER, aspace_id, attr_id, error)
-         call h5awrite_f(attr_id, H5T_NATIVE_INTEGER, [ cg_cnt ], [ 1_HSIZE_T ], error)
-         call h5aclose_f(attr_id, error)
-
-         call h5sclose_f(aspace_id, error)
+         call create_int_attribute(cgl_g_id, "cg_count", [ cg_cnt ])
 
          Z_avail = .false.
          if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error) !> \todo add shuffle
@@ -992,30 +993,12 @@ contains
 
             do g = 1, cg_n(p)
                call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error)
-               call h5tcopy_f(H5T_NATIVE_INTEGER, atype_id, error)
 
-               dims(:) = I_ONE
+               call create_int_attribute(cg_g_id, "level", [ cg_rl(g) ] )
+               call create_int_attribute(cg_g_id, "n_b", cg_n_b(g, :))
+               call create_int_attribute(cg_g_id, "off", int(cg_off(g, :), kind=4))
 
-               call h5screate_simple_f(arank, dims, aspace_id, error)
-               call h5acreate_f (cg_g_id, "level", atype_id, aspace_id, attr_id, error)
-               call h5awrite_f(attr_id, atype_id, cg_rl(g), dims, error)
-               call h5aclose_f(attr_id, error)
-               call h5sclose_f(aspace_id, error)
-
-               dims(:) = ndims
-
-               call h5screate_simple_f(arank, dims, aspace_id, error)
-
-               call h5acreate_f (cg_g_id, "n_b", atype_id, aspace_id, attr_id, error)
-               call h5awrite_f(attr_id, atype_id, cg_n_b(g, :), dims, error)
-               call h5aclose_f(attr_id, error)
-
-               call h5acreate_f (cg_g_id, "off", atype_id, aspace_id, attr_id, error)
                if (any(cg_off(g, :) > 2.**31)) call die("[restart_hdf5:write_restart_hdf5_v2] large offsets require better treatment")
-               call h5awrite_f(attr_id, atype_id, int(cg_off(g, :), kind=4), dims, error) !> \todo Wait for HDF 1.8.8 and use the improved Fortran interfaces
-               call h5aclose_f(attr_id, error)
-
-               call h5sclose_f(aspace_id, error)
 
                fcg  => all_cg%first%cg
 
@@ -1040,7 +1023,6 @@ contains
                deallocate(ddims)
 
                call h5gclose_f(cg_g_id, error)
-
             enddo
 
             deallocate(cg_rl, cg_n_b, cg_off)
@@ -1049,23 +1031,24 @@ contains
          call h5gclose_f(cgl_g_id, error)
 
          ! describe_domains
-
          call h5gcreate_f(file_id, "domains", doml_g_id, error)
+
          call h5gcreate_f(doml_g_id, "base", dom_g_id, error)
-         ! base domain: n_d(:), [xyz]{min,max}, bnd_[xyz]lr]
-         dims(:) = ndims
+         call create_int_attribute(dom_g_id, "n_d", dom%n_d(:))
+         do i = xdim, zdim
+            write(d_label, '(2a)') d_pref(i), "-edge_position"
+            call create_real_attribute(dom_g_id, d_label, dom%edge(i, :))
+            write(d_label, '(2a)') d_pref(i), "-boundary_type"
+            call create_int_attribute(dom_g_id, d_label, dom%bnd(i, :))
+         enddo
 
          call h5gclose_f(dom_g_id, error)
 
-         call h5screate_simple_f(arank, [ 1_HSIZE_T ], aspace_id, error)
-         call h5acreate_f (cgl_g_id, "fine_count", H5T_NATIVE_INTEGER, aspace_id, attr_id, error)
-         call h5awrite_f(attr_id, H5T_NATIVE_INTEGER, [ 0 ], [ 1_HSIZE_T ], error) ! we have only base domain at the moment
-         call h5aclose_f(attr_id, error)
+         call create_int_attribute(cgl_g_id, "fine_count", [ 0 ]) ! we have only base domain at the moment
 
          !> \todo add here all fine domains
          ! name "fine_00000001"
          ! attributes: n_d(:), off(:), refinement
-
          call h5gclose_f(doml_g_id, error)
 
          call h5fclose_f(file_id, error)
@@ -1128,6 +1111,8 @@ contains
 
    end subroutine write_restart_hdf5_v2
 
+!> \brief Create an empty double precision dataset of given dimensions. Use compression if available.
+
    subroutine create_empty_cg_dataset(cg_g_id, name, ddims, Z_avail)
 
      use constants, only: I_NINE
@@ -1141,7 +1126,7 @@ contains
      integer(HSIZE_T), dimension(:), intent(in) :: ddims   !< dimensionality
      logical, intent(in)                        :: Z_avail !< can use compression?
 
-     integer(HID_T) :: prp_id, filespace, dset_id
+     integer(HID_T)  :: prp_id, filespace, dset_id
      integer(kind=4) :: error
 
      call h5pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
@@ -1157,6 +1142,56 @@ contains
      call h5pclose_f(prp_id, error)
 
    end subroutine create_empty_cg_dataset
+
+!> \brief Attach an 32-bit integer attribute (scalar or rank-1 small array) to the given group.
+
+   subroutine create_int_attribute(g_id, name, int_array)
+
+     use constants, only: I_ONE
+     use hdf5,      only: H5T_NATIVE_INTEGER, HID_T, HSIZE_T, &
+          &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
+
+     implicit none
+
+     integer(HID_T), intent(in)                :: g_id      !< group id where to create the attribute
+     character(len=*), intent(in)              :: name      !< name
+     integer(kind=4), dimension(:), intent(in) :: int_array !< the data
+
+     integer(HID_T)  :: aspace_id, attr_id
+     integer(kind=4) :: error
+
+     call h5screate_simple_f(I_ONE, [ size(int_array, kind=HSIZE_T) ], aspace_id, error)
+     call h5acreate_f(g_id, name, H5T_NATIVE_INTEGER, aspace_id, attr_id, error)
+     call h5awrite_f(attr_id, H5T_NATIVE_INTEGER, int_array, [ size(int_array, kind=HSIZE_T) ], error)
+     call h5aclose_f(attr_id, error)
+     call h5sclose_f(aspace_id, error)
+
+   end subroutine create_int_attribute
+
+!> \brief Attach an 64-bit real attribute (scalar or rank-1 small array) to the given group.
+
+   subroutine create_real_attribute(g_id, name, real_array)
+
+     use constants, only: I_ONE
+     use hdf5,      only: H5T_NATIVE_DOUBLE, HID_T, HSIZE_T, &
+          &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
+
+     implicit none
+
+     integer(HID_T), intent(in)     :: g_id       !< group id where to create the attribute
+     character(len=*), intent(in)   :: name       !< name
+     real, dimension(:), intent(in) :: real_array !< the data
+
+     integer(HID_T)  :: aspace_id, attr_id
+     integer(kind=4) :: error
+
+     call h5screate_simple_f(I_ONE, [ size(real_array, kind=HSIZE_T) ], aspace_id, error)
+     call h5acreate_f(g_id, name, H5T_NATIVE_DOUBLE, aspace_id, attr_id, error)
+     call h5awrite_f(attr_id, H5T_NATIVE_DOUBLE, real_array, [ size(real_array, kind=HSIZE_T) ], error)
+     call h5aclose_f(attr_id, error)
+     call h5sclose_f(aspace_id, error)
+
+   end subroutine create_real_attribute
 
 !>
 !! \brief append a single grid container to the output file
