@@ -909,7 +909,7 @@ contains
    subroutine write_restart_hdf5_v2
 
       use common_hdf5, only: set_common_attributes
-      use constants,   only: cwdlen, dsetnamelen, singlechar, xdim, zdim, ndims, I_ONE, I_TWO, AT_IGNORE
+      use constants,   only: cwdlen, dsetnamelen, singlechar, xdim, zdim, ndims, I_ONE, I_TWO, AT_IGNORE, INT4
       use dataio_pub,  only: die, tmr_hdf, thdf, printinfo, msg, die, nproc_io, can_i_write
       use dataio_user, only: problem_write_restart
       use domain,      only: dom
@@ -1017,7 +1017,7 @@ contains
                if (allocated(fcg%w)) then
                   do i = lbound(fcg%w(:), dim=1, kind=4), ubound(fcg%w(:), dim=1, kind=4)
                      if (fcg%w(i)%restart_mode /= AT_IGNORE) &
-                          call create_empty_cg_dataset(cg_g_id, fcg%w(i)%name, int([ size(fcg%w(i)%arr, dim=1), cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
+                          call create_empty_cg_dataset(cg_g_id, fcg%w(i)%name, int([ size(fcg%w(i)%arr, dim=1, kind=4), cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
                   enddo
                endif
                deallocate(ddims)
@@ -1039,12 +1039,12 @@ contains
             write(d_label, '(2a)') d_pref(i), "-edge_position"
             call create_real_attribute(dom_g_id, d_label, dom%edge(i, :))
             write(d_label, '(2a)') d_pref(i), "-boundary_type"
-            call create_int_attribute(dom_g_id, d_label, dom%bnd(i, :))
+            call create_int_attribute(dom_g_id, d_label, int(dom%bnd(i, :), kind=4))
          enddo
 
          call h5gclose_f(dom_g_id, error)
 
-         call create_int_attribute(cgl_g_id, "fine_count", [ 0 ]) ! we have only base domain at the moment
+         call create_int_attribute(cgl_g_id, "fine_count", [ 0_INT4 ]) ! we have only base domain at the moment
 
          !> \todo add here all fine domains
          ! name "fine_00000001"
@@ -1124,7 +1124,7 @@ contains
      integer(HID_T), intent(in)                 :: cg_g_id !< group id where to create the dataset
      character(len=*), intent(in)               :: name    !< name
      integer(HSIZE_T), dimension(:), intent(in) :: ddims   !< dimensionality
-     logical, intent(in)                        :: Z_avail !< can use compression?
+     logical(kind=4), intent(in)                        :: Z_avail !< can use compression?
 
      integer(HID_T)  :: prp_id, filespace, dset_id
      integer(kind=4) :: error
@@ -1133,10 +1133,10 @@ contains
      if (Z_avail) then
         call h5pset_shuffle_f(prp_id, error)
         call h5pset_deflate_f(prp_id, I_NINE, error)
-        call h5pset_chunk_f(prp_id, size(ddims), ddims, error)
+        call h5pset_chunk_f(prp_id, size(ddims, kind=4), ddims, error)
      endif
 
-     call h5screate_simple_f(size(ddims), ddims, filespace, error)
+     call h5screate_simple_f(size(ddims, kind=4), ddims, filespace, error)
      call h5dcreate_f(cg_g_id, name, H5T_NATIVE_DOUBLE, filespace, dset_id, error, dcpl_id = prp_id)
      call h5dclose_f(dset_id, error)
      call h5sclose_f(filespace, error)

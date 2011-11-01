@@ -399,7 +399,7 @@ contains
          ix                  = ibuff(43)
          iy                  = ibuff(44)
          iz                  = ibuff(45)
-         nproc_io            = ibuff(46)
+         nproc_io            = int(ibuff(46), kind=4)
 
          dt_hdf              = rbuff(40)
          dt_res              = rbuff(41)
