@@ -326,7 +326,8 @@ contains
 
       integer(HID_T), intent(in)                   :: file_id       !> File identifier
 
-      integer                                      :: fe, i
+      integer(kind=4)                              :: fe
+      integer(SIZE_T)                              :: i
       integer(SIZE_T), parameter                   :: bufsize = I_ONE
       integer(kind=4)                              :: error
       integer, parameter                           :: buf_len = 50
@@ -392,7 +393,8 @@ contains
 
       integer(HID_T), intent(in)                   :: file_id       !> File identifier
 
-      integer                                      :: fe, i
+      integer(kind=4)                              :: fe
+      integer(SIZE_T)                              :: i
       integer(SIZE_T), parameter                   :: bufsize = I_ONE
       integer(kind=4)                              :: error
       integer, parameter                           :: buf_len = 50
