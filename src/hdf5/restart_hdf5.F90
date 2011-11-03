@@ -910,7 +910,7 @@ contains
 
       use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen, dsetnamelen, singlechar, xdim, zdim, ndims, I_ONE, I_TWO, AT_IGNORE, INT4
-      use dataio_pub,  only: die, tmr_hdf, thdf, printinfo, msg, die, nproc_io, can_i_write
+      use dataio_pub,  only: die, tmr_hdf, thdf, printinfo, msg, die, printio, nproc_io, can_i_write
       use dataio_user, only: problem_write_restart
       use domain,      only: dom
       use gc_list,     only: cg_list_element
@@ -936,6 +936,7 @@ contains
       integer, parameter                            :: tag = I_ONE
       integer(HSIZE_T), dimension(:),   allocatable :: ddims
       integer(kind=4),  dimension(:),   pointer     :: cg_n                                     !> offset for cg group numbering
+      integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b                               !> sizes of all cg
       integer(kind=4),  dimension(:),   allocatable :: cg_rl
       integer(kind=4),  dimension(:,:), allocatable :: cg_n_b
       integer(kind=8),  dimension(:,:), allocatable :: cg_off
@@ -949,12 +950,17 @@ contains
 
       ! Create a new file and initialize it
       filename = restart_fname()
+      if (master) then
+         write(msg,'(3a)') 'Writing restart ', trim(filename), " ... "
+         call printio(msg, .true.)
+      endif
       call set_common_attributes(filename)
 
       ! Prepare groups and datasets for grid containers on the master
       allocate(cg_n(FIRST:LAST))
       call MPI_Allgather(all_cg%cnt, I_ONE, MPI_INTEGER, cg_n, I_ONE, MPI_INTEGER, comm, error)
-      cg_cnt = sum(cg_n)
+      cg_cnt = sum(cg_n(:))
+      allocate(cg_all_n_b(cg_cnt, ndims))
 
       if (master) then
 
@@ -997,6 +1003,8 @@ contains
                call create_int_attribute(cg_g_id, "level", [ cg_rl(g) ] )
                call create_int_attribute(cg_g_id, "n_b", cg_n_b(g, :))
                call create_int_attribute(cg_g_id, "off", int(cg_off(g, :), kind=4))
+
+               cg_all_n_b(sum(cg_n(:p))-cg_n(p)+g, :) = cg_n_b(g, :)
 
                if (any(cg_off(g, :) > 2.**31)) call die("[restart_hdf5:write_restart_hdf5_v2] large offsets require better treatment")
 
@@ -1071,6 +1079,8 @@ contains
          deallocate(cg_rl, cg_n_b, cg_off)
       endif
 
+      call MPI_Bcast(cg_all_n_b, size(cg_all_n_b), MPI_INTEGER, FIRST, comm, error)
+
       call MPI_Barrier(comm, error)
       ! Reopen the HDF5 file for parallel write
       call h5open_f(error)
@@ -1087,7 +1097,7 @@ contains
          call h5gopen_f(file_id, cg_gname, cgl_g_id, error)
       endif
 
-      call write_cg_to_restart(cgl_g_id, cg_n(:))
+      call write_cg_to_restart(cgl_g_id, cg_n(:), cg_all_n_b(:,:))
 
       if (can_i_write) then
          call h5gclose_f(cgl_g_id, error)
@@ -1097,13 +1107,14 @@ contains
 
       call h5close_f(error)            ! Close HDF5 stuff
 
+      deallocate(cg_all_n_b)
+
       thdf = set_timer(tmr_hdf)
       if (master) then
          write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
          call printinfo(msg, .true.)
       endif
       call MPI_Barrier(comm, error)
-      call die("[restart_hdf5:write_restart_hdf5_v2] Not implemented yet")
 
    end subroutine write_restart_hdf5_v2
 
@@ -1196,7 +1207,7 @@ contains
 !! \warning Not implemented yet
 !<
 
-   subroutine write_cg_to_restart(cgl_g_id, cg_n)
+   subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b)
 
       use constants,  only: xdim, ydim, zdim, ndims, AT_IGNORE
       use dataio_pub, only: die, nproc_io, can_i_write
@@ -1205,13 +1216,14 @@ contains
       use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
            &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
            &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
-      use mpi,        only: MPI_DOUBLE_PRECISION
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
       use mpisetup,   only: master, nproc, FIRST, LAST, proc, comm
 
       implicit none
 
-      integer(HID_T),                         intent(in) :: cgl_g_id    !> cg group identifier
-      integer(kind=4), dimension(:), pointer, intent(in) :: cg_n        !> offset for cg group numbering
+      integer(HID_T),                           intent(in) :: cgl_g_id    !> cg group identifier
+      integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !> offset for cg group numbering
+      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !> all cg sizes
 
       integer(HID_T)                              :: cg_g_id            !> cg group identifier
       integer(HID_T)                              :: dset_id, plist_id
@@ -1263,49 +1275,59 @@ contains
                if (.not. can_i_write) call die("[restart_hdf5:write_cg_to_restart] Master can't write")
 
                allocate(dims(ndims))
-               if (cg_src_p(ncg) == proc) then
-                  cg => get_nth_cg(cg_src_n(ncg))
-                  do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
-                     call h5dopen_f(cg_g_id, cg%q(q_lst(i))%name, dset_id, error)
+               do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+                  call h5dopen_f(cg_g_id, all_cg%first%cg%q(q_lst(i))%name, dset_id, error)
+                  if (cg_src_p(ncg) == proc) then
+                     cg => get_nth_cg(cg_src_n(ncg))
                      pa3d => cg%q(q_lst(i))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
-                     dims = cg%n_b
-                     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
-                     call h5dclose_f(dset_id, error)
-                  enddo
-               else
-!                  allocate(pa3d())
-                  ! receive all cg%q
-
-!                  deallocate(pa3d)
-               endif
+                     dims(:) = cg%n_b
+                  else
+                     allocate(pa3d(cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
+                     call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, error)
+                     dims(:) = shape(pa3d)
+                  endif
+                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
+                  call h5dclose_f(dset_id, error)
+                  if (cg_src_p(ncg) /= proc) deallocate(pa3d)
+               enddo
                deallocate(dims)
 
                allocate(dims(ndims+1))
-               if (cg_src_p(ncg) == proc) then
-                  cg => get_nth_cg(cg_src_n(ncg))
-                  do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
-                     call h5dopen_f(cg_g_id, cg%w(w_lst(i))%name, dset_id, error)
+               do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+                  call h5dopen_f(cg_g_id, all_cg%first%cg%w(w_lst(i))%name, dset_id, error)
+                  if (cg_src_p(ncg) == proc) then
+                     cg => get_nth_cg(cg_src_n(ncg))
                      pa4d => cg%w(w_lst(i))%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
-                     dims = [ size(pa4d, dim=1, kind=4), cg%n_b ]
-                     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
-                     call h5dclose_f(dset_id, error)
-                  enddo
-               else
-                  ! receive all cg%w
-               endif
+                     dims(:) = [ size(pa4d, dim=1, kind=4), cg%n_b ]
+                  else
+                     allocate(pa4d(size(all_cg%first%cg%w(w_lst(i))%arr(:,:,:,:), dim=1), cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
+                     call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, error)
+                     dims(:) = shape(pa4d)
+                  endif
+                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
+                  call h5dclose_f(dset_id, error)
+               enddo
                deallocate(dims)
 
             else
                if (can_i_write) call die("[restart_hdf5:write_cg_to_restart] Slave can write")
                if (cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_src_n(ncg))
+
                   do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
                      allocate(pa3d(cg%n_b(xdim), cg%n_b(ydim), cg%n_b(zdim)))
                      pa3d(:,:,:) = cg%q(q_lst(i))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-!                     call MPI_Send(pa3d, size(pa3d), MPI_DOUBLE_PRECISION, FIRST, tag, comm, error)
+                     call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*i, comm, error)
                      deallocate(pa3d)
                   enddo
-                  ! send all selected cg%w
+
+                  do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+                     allocate(pa4d(size(cg%w(w_lst(i))%arr(:,:,:,:), dim=1), cg%n_b(xdim), cg%n_b(ydim), cg%n_b(zdim)))
+                     pa4d(:,:,:,:) = cg%w(w_lst(i))%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+                     call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*(size(q_lst)+i), comm, error)
+                     deallocate(pa4d)
+                  enddo
+
                endif
             endif
          else ! perform parallell write
