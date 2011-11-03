@@ -41,10 +41,13 @@ module dataio_pub
    !mpisetup uses: ansi_white and ansi_black
 
    real, parameter :: piernik_hdf5_version = 1.17   !< output version
+
+   ! v2 specific
    real, parameter :: piernik_hdf5_version2 = 2.0   !< output version for multi-file, multi-domain I/O
    logical         :: use_v2_io                     !< prefer the new I/O format
    integer(kind=4) :: nproc_io                      !< how many processes do the I/O (v2 only)
    logical         :: can_i_write                   !< .true. for processes allowed to write
+   logical         :: enable_compression            !< set to .false. if you want to disable automatic compression and try to sped up the I/O operations
 
    ! Buffer lengths used only in I/O routines
    integer, parameter :: msglen = 1024          !< 1kB for a message ought to be enough for anybody ;-)

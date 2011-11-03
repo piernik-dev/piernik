@@ -46,7 +46,7 @@
 
 module dataio
 
-   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io
+   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression
    use constants,  only: cwdlen, fmt_len, cbuff_len, varlen, idlen
 
    implicit none
@@ -118,7 +118,7 @@ module dataio
    namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
                              domain_dump, vars, mag_center, vizit, fmin, fmax, &
                              min_disk_space_MB, sleep_minutes, sleep_seconds, &
-                             user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io
+                             user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io, enable_compression
 
    interface mpi_addmul
       module procedure mpi_sum4d_and_multiply
@@ -212,6 +212,7 @@ contains
 !! <tr><td>system_message_file</td><td>'/tmp/piernik_msg' </td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
 !! <tr><td>use_v2_io          </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::use_v2_io    </td></tr>
 !! <tr><td>nproc_io           </td><td>1                  </td><td>integer   </td><td>\copydoc dataio_pub::nproc_io     </td></tr>
+!! <tr><td>enable_compression </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio_pub::enable_compression</td></tr>
 !! </table>
 !! \n \n
 !<
@@ -275,6 +276,7 @@ contains
       tsl_firstcall = .true.
       use_v2_io = .false.
       nproc_io = 1
+      enable_compression = .true.
 
       nhdf  = 0
       nres  = 0

@@ -896,7 +896,7 @@ contains
 !! \brief Write a multi-file, multi-domain restart file
 !!
 !! \details There are three approaches to be implemented:
-!! - Single-file, serial I/O. The easiest way. Master writes everything, slaves send their data to the master. Does not take advantage of parallel filesystems.
+!! - Single-file, serial I/O. The easiest way. Master writes everything, slaves send their data to the master. Does not take advantage of parallel filesystems. Best choice for non-parallel filesystems.
 !! - Multi-file, serial I/O. An extension of the above approach. Selected processes (can be all) write to their files, other processes send them their data.
 !!   Can take advantage of parallel filesystems. Can use local scratch filesystems. Requires additional work on reading.
 !! - Single-file, parallel I/O. The most ambitious approach. Selected processes (can be all) write to the files, other processes send them their data.
@@ -1122,9 +1122,10 @@ contains
 
    subroutine create_empty_cg_dataset(cg_g_id, name, ddims, Z_avail)
 
-     use constants, only: I_NINE
-     use hdf5,      only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_DOUBLE, &
-          &               h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, h5pset_shuffle_f, h5pset_chunk_f
+     use constants,  only: I_NINE
+     use dataio_pub, only: enable_compression
+     use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_DOUBLE, &
+          &                h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, h5pset_shuffle_f, h5pset_chunk_f
 
      implicit none
 
@@ -1137,7 +1138,7 @@ contains
      integer(kind=4) :: error
 
      call h5pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
-     if (Z_avail) then
+     if (enable_compression .and. Z_avail) then
         call h5pset_shuffle_f(prp_id, error)
         call h5pset_deflate_f(prp_id, I_NINE, error)
         call h5pset_chunk_f(prp_id, size(ddims, kind=4), ddims, error)
