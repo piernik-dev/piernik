@@ -1198,18 +1198,20 @@ contains
 
    subroutine write_cg_to_restart(cgl_g_id, cg_n)
 
-      use constants,  only: ndims, AT_IGNORE
+      use constants,  only: xdim, ydim, zdim, ndims, AT_IGNORE
       use dataio_pub, only: die, nproc_io, can_i_write
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
            &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
            &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
-      use mpisetup,   only: master, nproc, FIRST, LAST, proc
+      use mpi,        only: MPI_DOUBLE_PRECISION
+      use mpisetup,   only: master, nproc, FIRST, LAST, proc, comm
 
       implicit none
 
-      integer(HID_T),                         intent(in) :: cgl_g_id  !> cg group identifier
-      integer(kind=4), dimension(:), pointer, intent(in) :: cg_n      !> offset for cg group numbering
+      integer(HID_T),                         intent(in) :: cgl_g_id    !> cg group identifier
+      integer(kind=4), dimension(:), pointer, intent(in) :: cg_n        !> offset for cg group numbering
 
       integer(HID_T)                              :: cg_g_id            !> cg group identifier
       integer(HID_T)                              :: dset_id, plist_id
@@ -1220,7 +1222,9 @@ contains
       integer                                     :: i, ncg
       type(grid_container), pointer               :: cg
       integer, allocatable, dimension(:)          :: cg_src_p, cg_src_n
+      integer, allocatable, dimension(:)          :: q_lst, w_lst
 
+      ! construct source addresses of the cg to be written
       allocate(cg_src_p(1:sum(cg_n(:))), cg_src_n(1:sum(cg_n(:))))
       do i = FIRST, LAST
          cg_src_p(sum(cg_n(:i))-cg_n(i)+1:sum(cg_n(:i))) = i
@@ -1229,6 +1233,22 @@ contains
          enddo
       enddo
 
+      !> \todo Do a consistency check
+
+      ! find out which fields need to be written
+      if (allocated(all_cg%first%cg%q)) then
+         do i = lbound(all_cg%first%cg%q(:), dim=1, kind=4), ubound(all_cg%first%cg%q(:), dim=1, kind=4)
+            if (all_cg%first%cg%q(i)%restart_mode /= AT_IGNORE) call append_int_to_array(q_lst, i)
+         enddo
+      endif
+
+      if (allocated(all_cg%first%cg%w)) then
+         do i = lbound(all_cg%first%cg%w(:), dim=1, kind=4), ubound(all_cg%first%cg%w(:), dim=1, kind=4)
+            if (all_cg%first%cg%w(i)%restart_mode /= AT_IGNORE) call append_int_to_array(w_lst, i)
+         enddo
+      endif
+
+      ! write all cg, one by one
       do ncg = 1, sum(cg_n(:))
 
          if (can_i_write) then
@@ -1238,43 +1258,38 @@ contains
 
          if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
 
-         if (nproc_io == 1) then
+         if (nproc_io == 1) then ! perform serial write
             if (master) then
                if (.not. can_i_write) call die("[restart_hdf5:write_cg_to_restart] Master can't write")
 
                allocate(dims(ndims))
                if (cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_src_n(ncg))
-                  if (allocated(cg%q)) then
-                     do i = lbound(cg%q(:), dim=1, kind=4), ubound(cg%q(:), dim=1, kind=4)
-                        if (cg%q(i)%restart_mode /= AT_IGNORE) then
-                           call h5dopen_f(cg_g_id, cg%q(i)%name, dset_id, error)
-                           pa3d => cg%q(i)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
-                           dims = cg%n_b
-                           call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
-                           call h5dclose_f(dset_id, error)
-                        endif
-                     enddo
-                  endif
+                  do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+                     call h5dopen_f(cg_g_id, cg%q(q_lst(i))%name, dset_id, error)
+                     pa3d => cg%q(q_lst(i))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
+                     dims = cg%n_b
+                     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
+                     call h5dclose_f(dset_id, error)
+                  enddo
                else
+!                  allocate(pa3d())
                   ! receive all cg%q
+
+!                  deallocate(pa3d)
                endif
                deallocate(dims)
 
                allocate(dims(ndims+1))
                if (cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_src_n(ncg))
-                  if (allocated(cg%w)) then
-                     do i = lbound(cg%w(:), dim=1, kind=4), ubound(cg%w(:), dim=1, kind=4)
-                        if (cg%w(i)%restart_mode /= AT_IGNORE) then
-                           call h5dopen_f(cg_g_id, cg%w(i)%name, dset_id, error)
-                           pa4d => cg%w(i)%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
-                           dims = [ size(pa4d, dim=1, kind=4), cg%n_b ]
-                           call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
-                           call h5dclose_f(dset_id, error)
-                        endif
-                     enddo
-                  endif
+                  do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+                     call h5dopen_f(cg_g_id, cg%w(w_lst(i))%name, dset_id, error)
+                     pa4d => cg%w(w_lst(i))%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
+                     dims = [ size(pa4d, dim=1, kind=4), cg%n_b ]
+                     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
+                     call h5dclose_f(dset_id, error)
+                  enddo
                else
                   ! receive all cg%w
                endif
@@ -1283,11 +1298,17 @@ contains
             else
                if (can_i_write) call die("[restart_hdf5:write_cg_to_restart] Slave can write")
                if (cg_src_p(ncg) == proc) then
-                  ! send all selected cg%q
+                  cg => get_nth_cg(cg_src_n(ncg))
+                  do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+                     allocate(pa3d(cg%n_b(xdim), cg%n_b(ydim), cg%n_b(zdim)))
+                     pa3d(:,:,:) = cg%q(q_lst(i))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+!                     call MPI_Send(pa3d, size(pa3d), MPI_DOUBLE_PRECISION, FIRST, tag, comm, error)
+                     deallocate(pa3d)
+                  enddo
                   ! send all selected cg%w
                endif
             endif
-         else
+         else ! perform parallell write
             ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
             if (can_i_write) then
                ! write own
@@ -1305,9 +1326,34 @@ contains
 
       enddo
 
+      ! clean up
       deallocate(cg_src_p, cg_src_n)
+      if (allocated(q_lst)) deallocate(q_lst)
+      if (allocated(w_lst)) deallocate(w_lst)
 
    end subroutine write_cg_to_restart
+
+!> \brief Expand given integer array by one and store the value i ni the last cell
+
+   subroutine append_int_to_array(arr, i)
+
+      implicit none
+
+      integer, dimension(:), allocatable, intent(inout) :: arr
+      integer, intent(in) :: i
+
+      integer, allocatable, dimension(:) :: tmp
+
+      if (allocated(arr)) then
+         allocate(tmp(lbound(arr(:), dim=1):ubound(arr(:), dim=1) + 1))
+         tmp(:ubound(arr(:), dim=1)) = arr(:)
+         call move_alloc(from=tmp, to=arr)
+      else
+         allocate(arr(1))
+      endif
+      arr(ubound(arr(:))) = i
+
+   end subroutine append_int_to_array
 
 !> \brief find a n-th grid container on the cg_all list
 
