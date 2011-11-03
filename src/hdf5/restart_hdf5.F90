@@ -935,7 +935,7 @@ contains
       integer(kind=4)                               :: drank
       integer, parameter                            :: tag = I_ONE
       integer(HSIZE_T), dimension(:),   allocatable :: ddims
-      integer(kind=4),  dimension(:),   allocatable :: cg_n                                     !> offset for cg group numbering
+      integer(kind=4),  dimension(:),   pointer     :: cg_n                                     !> offset for cg group numbering
       integer(kind=4),  dimension(:),   allocatable :: cg_rl
       integer(kind=4),  dimension(:,:), allocatable :: cg_n_b
       integer(kind=8),  dimension(:,:), allocatable :: cg_off
@@ -1087,11 +1087,7 @@ contains
          call h5gopen_f(file_id, cg_gname, cgl_g_id, error)
       endif
 
-      cgl => all_cg%first
-      do while (associated(cgl))
-         call write_cg_to_restart(cgl%cg, cgl_g_id, sum(cg_n(:proc))-cg_n(proc))
-         cgl => cgl%nxt
-      enddo
+      call write_cg_to_restart(cgl_g_id, cg_n(:))
 
       if (can_i_write) then
          call h5gclose_f(cgl_g_id, error)
@@ -1200,7 +1196,7 @@ contains
 !! \warning Not implemented yet
 !<
 
-   subroutine write_cg_to_restart(cg, cgl_g_id, cg_n_off)
+   subroutine write_cg_to_restart(cgl_g_id, cg_n)
 
       use constants,  only: ndims, AT_IGNORE
       use dataio_pub, only: die, nproc_io, can_i_write
@@ -1208,13 +1204,12 @@ contains
       use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
            &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
            &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
-      use mpisetup,   only: master
+      use mpisetup,   only: master, nproc, FIRST, LAST, proc
 
       implicit none
 
-      type(grid_container), pointer, intent(in)   :: cg                 !> cg pointer
-      integer(HID_T),                intent(in)   :: cgl_g_id           !> cg group identifier
-      integer(kind=4),               intent(in)   :: cg_n_off           !> offset for cg group numbering
+      integer(HID_T),                         intent(in) :: cgl_g_id  !> cg group identifier
+      integer(kind=4), dimension(:), pointer, intent(in) :: cg_n      !> offset for cg group numbering
 
       integer(HID_T)                              :: cg_g_id            !> cg group identifier
       integer(HID_T)                              :: dset_id, plist_id
@@ -1222,71 +1217,131 @@ contains
       integer(HSIZE_T), dimension(:), allocatable :: dims
       real, pointer,    dimension(:,:,:)          :: pa3d
       real, pointer,    dimension(:,:,:,:)        :: pa4d
-      integer                                     :: i
+      integer                                     :: i, ncg
+      type(grid_container), pointer               :: cg
+      integer, allocatable, dimension(:)          :: cg_src_p, cg_src_n
 
-      if (can_i_write) then
-         call h5gopen_f(cgl_g_id, n_cg_name(cg_n_off + cg%grid_n), cg_g_id, error)
-         call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-      endif
+      allocate(cg_src_p(1:sum(cg_n(:))), cg_src_n(1:sum(cg_n(:))))
+      do i = FIRST, LAST
+         cg_src_p(sum(cg_n(:i))-cg_n(i)+1:sum(cg_n(:i))) = i
+         do ncg = 1, cg_n(i)
+            cg_src_n(sum(cg_n(:i))-cg_n(i)+ncg) = ncg
+         enddo
+      enddo
 
-      if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      do ncg = 1, sum(cg_n(:))
 
-      if (nproc_io == 1) then
-         if (master) then
-            if (.not. can_i_write) call die("[restart_hdf5:write_cg_to_restart] Master can't write")
-
-            allocate(dims(ndims))
-            if (allocated(cg%q)) then
-               do i = lbound(cg%q(:), dim=1, kind=4), ubound(cg%q(:), dim=1, kind=4)
-                  if (cg%q(i)%restart_mode /= AT_IGNORE) then
-                     call h5dopen_f(cg_g_id, cg%q(i)%name, dset_id, error)
-                     pa3d => cg%q(i)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
-                     dims = cg%n_b
-                     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
-                     call h5dclose_f(dset_id, error)
-                  endif
-               enddo
-            endif
-            ! receive all cg%q
-            deallocate(dims)
-
-            allocate(dims(ndims+1))
-            if (allocated(cg%w)) then
-               do i = lbound(cg%w(:), dim=1, kind=4), ubound(cg%w(:), dim=1, kind=4)
-                  if (cg%w(i)%restart_mode /= AT_IGNORE) then
-                     call h5dopen_f(cg_g_id, cg%w(i)%name, dset_id, error)
-                     pa4d => cg%w(i)%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
-                     dims = [ size(pa4d, dim=1, kind=4), cg%n_b ]
-                     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
-                     call h5dclose_f(dset_id, error)
-                  endif
-               enddo
-            endif
-            ! receive all cg%w
-            deallocate(dims)
-
-         else
-            if (can_i_write) call die("[restart_hdf5:write_cg_to_restart] Slave can write")
-            ! send all selected cg%q
-            ! send all selected cg%w
-         endif
-      else
-         ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
          if (can_i_write) then
-            ! write own
-            ! receive (from whom?)
-         else
-            ! send (where?)
+            call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error)
+            call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
          endif
-         call die("[restart_hdf5:write_cg_to_restart] Parallel v2 I/O not implemented yet")
-      endif
 
-      if (can_i_write) then
-         call h5pclose_f(plist_id, error)
-         call h5gclose_f(cg_g_id, error)
-      endif
+         if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+
+         if (nproc_io == 1) then
+            if (master) then
+               if (.not. can_i_write) call die("[restart_hdf5:write_cg_to_restart] Master can't write")
+
+               allocate(dims(ndims))
+               if (cg_src_p(ncg) == proc) then
+                  cg => get_nth_cg(cg_src_n(ncg))
+                  if (allocated(cg%q)) then
+                     do i = lbound(cg%q(:), dim=1, kind=4), ubound(cg%q(:), dim=1, kind=4)
+                        if (cg%q(i)%restart_mode /= AT_IGNORE) then
+                           call h5dopen_f(cg_g_id, cg%q(i)%name, dset_id, error)
+                           pa3d => cg%q(i)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
+                           dims = cg%n_b
+                           call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
+                           call h5dclose_f(dset_id, error)
+                        endif
+                     enddo
+                  endif
+               else
+                  ! receive all cg%q
+               endif
+               deallocate(dims)
+
+               allocate(dims(ndims+1))
+               if (cg_src_p(ncg) == proc) then
+                  cg => get_nth_cg(cg_src_n(ncg))
+                  if (allocated(cg%w)) then
+                     do i = lbound(cg%w(:), dim=1, kind=4), ubound(cg%w(:), dim=1, kind=4)
+                        if (cg%w(i)%restart_mode /= AT_IGNORE) then
+                           call h5dopen_f(cg_g_id, cg%w(i)%name, dset_id, error)
+                           pa4d => cg%w(i)%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
+                           dims = [ size(pa4d, dim=1, kind=4), cg%n_b ]
+                           call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
+                           call h5dclose_f(dset_id, error)
+                        endif
+                     enddo
+                  endif
+               else
+                  ! receive all cg%w
+               endif
+               deallocate(dims)
+
+            else
+               if (can_i_write) call die("[restart_hdf5:write_cg_to_restart] Slave can write")
+               if (cg_src_p(ncg) == proc) then
+                  ! send all selected cg%q
+                  ! send all selected cg%w
+               endif
+            endif
+         else
+            ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
+            if (can_i_write) then
+               ! write own
+               ! receive (from whom?)
+            else
+               ! send (where?)
+            endif
+            call die("[restart_hdf5:write_cg_to_restart] Parallel v2 I/O not implemented yet")
+         endif
+
+         if (can_i_write) then
+            call h5pclose_f(plist_id, error)
+            call h5gclose_f(cg_g_id, error)
+         endif
+
+      enddo
+
+      deallocate(cg_src_p, cg_src_n)
 
    end subroutine write_cg_to_restart
+
+!> \brief find a n-th grid container on the cg_all list
+
+   function get_nth_cg(n) result(cg)
+
+      use dataio_pub, only: die
+      use gc_list,    only: cg_list_element
+      use grid,       only: all_cg
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      integer, intent(in) :: n
+
+      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer :: cgl
+
+      integer :: i
+
+      nullify(cg)
+      i = 1
+      cgl => all_cg%first
+      do while (associated(cgl))
+         if (i == n) then
+            cg => cgl%cg
+            exit
+         endif
+         i = i + 1
+         cgl => cgl%nxt
+      enddo
+
+      if (.not. associated(cg)) call die("[restart_hdf5:get_nth_cg] cannot find n-th cg")
+
+   end function get_nth_cg
 
 !>
 !! \brief Read a multi-file, multi-domain restart file
