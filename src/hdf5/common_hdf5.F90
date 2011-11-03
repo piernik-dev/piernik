@@ -368,17 +368,19 @@ contains
          i = i + bufsize
       enddo
 
-      fe = len_trim(problem_name)
+      fe = len_trim(problem_name, kind=4)
       call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
-      fe = len_trim(domain_dump)
+      fe = len_trim(domain_dump, kind=4)
       call h5ltset_attribute_string_f(file_id, "/", "domain", domain_dump(1:fe), error) !rr2
-      fe = len_trim(run_id)
+      fe = len_trim(run_id, kind=4)
       call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
 
    end subroutine set_common_attributes_v1
 
 !>
 !! \brief Common attributes for v2 files
+!!
+!! \warning Do not remove redundancy between set_common_attributes_v1 and set_common_attributes_v2 until we get mature state of the v2 outputs
 !<
 
    subroutine set_common_attributes_v2(file_id)
@@ -432,11 +434,11 @@ contains
          i = i + bufsize
       enddo
 
-      fe = len_trim(problem_name)
+      fe = len_trim(problem_name, kind=4)
       call h5ltset_attribute_string_f(file_id, "/", "problem_name", problem_name(1:fe), error) !rr2
-      fe = len_trim(domain_dump)
+      fe = len_trim(domain_dump, kind=4)
       call h5ltset_attribute_string_f(file_id, "/", "domain", domain_dump(1:fe), error) !rr2
-      fe = len_trim(run_id)
+      fe = len_trim(run_id, kind=4)
       call h5ltset_attribute_string_f(file_id, "/", "run_id", run_id(1:fe), error) !rr2
 
       ! these values will go do  base domain description
