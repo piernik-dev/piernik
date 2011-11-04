@@ -52,7 +52,8 @@ contains
 
    subroutine write_restart_hdf5
 
-      use dataio_pub, only: use_v2_io
+      use constants,  only: I_ONE
+      use dataio_pub, only: use_v2_io, nres
 
       implicit none
 
@@ -61,6 +62,8 @@ contains
       else
          call write_restart_hdf5_v1
       endif
+
+      nres = nres + I_ONE
 
    end subroutine write_restart_hdf5
 
@@ -206,8 +209,8 @@ contains
    subroutine write_restart_hdf5_v1
 
       use common_hdf5, only: set_common_attributes
-      use constants,   only: cwdlen, I_ONE
-      use dataio_pub,  only: nres, msg, printio, printinfo, tmr_hdf, thdf
+      use constants,   only: cwdlen
+      use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf
       use dataio_user, only: problem_write_restart
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
@@ -283,8 +286,6 @@ contains
          write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
          call printinfo(msg, .true.)
       endif
-
-      nres = nres + I_ONE
 
    end subroutine write_restart_hdf5_v1
 
