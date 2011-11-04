@@ -1254,12 +1254,14 @@ contains
             if (all_cg%first%cg%q(i)%restart_mode /= AT_IGNORE) call append_int_to_array(q_lst, i)
          enddo
       endif
+      if (.not.allocated(q_lst)) allocate(q_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
 
       if (allocated(all_cg%first%cg%w)) then
          do i = lbound(all_cg%first%cg%w(:), dim=1, kind=4), ubound(all_cg%first%cg%w(:), dim=1, kind=4)
             if (all_cg%first%cg%w(i)%restart_mode /= AT_IGNORE) call append_int_to_array(w_lst, i)
          enddo
       endif
+      if (.not.allocated(w_lst)) allocate(w_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
 
       ! write all cg, one by one
       do ncg = 1, sum(cg_n(:))
@@ -1269,66 +1271,70 @@ contains
             call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
          endif
 
-         if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+         if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)    ! \todo move property to problem.par
 
          if (nproc_io == 1) then ! perform serial write
             if (master) then
                if (.not. can_i_write) call die("[restart_hdf5:write_cg_to_restart] Master can't write")
 
-               allocate(dims(ndims))
-               do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
-                  call h5dopen_f(cg_g_id, all_cg%first%cg%q(q_lst(i))%name, dset_id, error)
-                  if (cg_src_p(ncg) == proc) then
-                     cg => get_nth_cg(cg_src_n(ncg))
-                     pa3d => cg%q(q_lst(i))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
-                     dims(:) = cg%n_b
-                  else
-                     allocate(pa3d(cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
-                     call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, error)
-                     dims(:) = shape(pa3d)
-                  endif
-                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
-                  call h5dclose_f(dset_id, error)
-                  if (cg_src_p(ncg) /= proc) deallocate(pa3d)
-               enddo
-               deallocate(dims)
+               if (size(q_lst) > 0) then
+                  allocate(dims(ndims))
+                  do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+                     call h5dopen_f(cg_g_id, all_cg%first%cg%q(q_lst(i))%name, dset_id, error)
+                     if (cg_src_p(ncg) == proc) then
+                        cg => get_nth_cg(cg_src_n(ncg))
+                        pa3d => cg%q(q_lst(i))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
+                        dims(:) = cg%n_b
+                     else
+                        allocate(pa3d(cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
+                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, error)
+                        dims(:) = shape(pa3d)
+                     endif
+                     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
+                     call h5dclose_f(dset_id, error)
+                     if (cg_src_p(ncg) /= proc) deallocate(pa3d)
+                  enddo
+                  deallocate(dims)
+               endif
 
-               allocate(dims(ndims+1))
-               do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
-                  call h5dopen_f(cg_g_id, all_cg%first%cg%w(w_lst(i))%name, dset_id, error)
-                  if (cg_src_p(ncg) == proc) then
-                     cg => get_nth_cg(cg_src_n(ncg))
-                     pa4d => cg%w(w_lst(i))%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
-                     dims(:) = [ size(pa4d, dim=1, kind=4), cg%n_b ]
-                  else
-                     allocate(pa4d(size(all_cg%first%cg%w(w_lst(i))%arr(:,:,:,:), dim=1), cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
-                     call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, error)
-                     dims(:) = shape(pa4d)
-                  endif
-                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
-                  call h5dclose_f(dset_id, error)
-               enddo
-               deallocate(dims)
-
+               if (size(w_lst) > 0) then
+                  allocate(dims(ndims+1))
+                  do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+                     call h5dopen_f(cg_g_id, all_cg%first%cg%w(w_lst(i))%name, dset_id, error)
+                     if (cg_src_p(ncg) == proc) then
+                        cg => get_nth_cg(cg_src_n(ncg))
+                        pa4d => cg%w(w_lst(i))%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
+                        dims(:) = [ size(pa4d, dim=1, kind=4), cg%n_b ]
+                     else
+                        allocate(pa4d(size(all_cg%first%cg%w(w_lst(i))%arr(:,:,:,:), dim=1), cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
+                        call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, error)
+                        dims(:) = shape(pa4d)
+                     endif
+                     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
+                     call h5dclose_f(dset_id, error)
+                  enddo
+                  deallocate(dims)
+               endif
             else
                if (can_i_write) call die("[restart_hdf5:write_cg_to_restart] Slave can write")
                if (cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_src_n(ncg))
-
-                  do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
-                     allocate(pa3d(cg%n_b(xdim), cg%n_b(ydim), cg%n_b(zdim)))
-                     pa3d(:,:,:) = cg%q(q_lst(i))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-                     call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*i, comm, error)
-                     deallocate(pa3d)
-                  enddo
-
-                  do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
-                     allocate(pa4d(size(cg%w(w_lst(i))%arr(:,:,:,:), dim=1), cg%n_b(xdim), cg%n_b(ydim), cg%n_b(zdim)))
-                     pa4d(:,:,:,:) = cg%w(w_lst(i))%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-                     call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*(size(q_lst)+i), comm, error)
-                     deallocate(pa4d)
-                  enddo
-
+                  if (size(q_lst) > 0) then
+                     do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+                        allocate(pa3d(cg%n_b(xdim), cg%n_b(ydim), cg%n_b(zdim)))
+                        pa3d(:,:,:) = cg%q(q_lst(i))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*i, comm, error)
+                        deallocate(pa3d)
+                     enddo
+                  endif
+                  if (size(w_lst) > 0) then
+                     do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+                        allocate(pa4d(size(cg%w(w_lst(i))%arr(:,:,:,:), dim=1), cg%n_b(xdim), cg%n_b(ydim), cg%n_b(zdim)))
+                        pa4d(:,:,:,:) = cg%w(w_lst(i))%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*(size(q_lst)+i), comm, error)
+                        deallocate(pa4d)
+                     enddo
+                  endif
                endif
             endif
          else ! perform parallell write
