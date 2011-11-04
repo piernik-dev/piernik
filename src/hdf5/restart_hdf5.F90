@@ -1035,7 +1035,7 @@ contains
 
       call h5close_f(error)            ! Close HDF5 stuff
 
-      deallocate(cg_all_n_b)
+      deallocate(cg_n, cg_all_n_b)
 
    end subroutine write_restart_hdf5_v2
 
@@ -1229,6 +1229,7 @@ contains
                      endif
                      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
                      call h5dclose_f(dset_id, error)
+                     if (cg_src_p(ncg) /= proc) deallocate(pa4d)
                   enddo
                   deallocate(dims)
                endif
