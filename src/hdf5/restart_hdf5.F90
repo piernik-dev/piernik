@@ -52,15 +52,35 @@ contains
 
    subroutine write_restart_hdf5
 
-      use constants,  only: I_ONE
-      use dataio_pub, only: use_v2_io, nres
+      use constants,   only: I_ONE, cwdlen
+      use common_hdf5, only: set_common_attributes
+      use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, use_v2_io, nres
+      use mpisetup,    only: comm, ierr, master
+      use timer,       only: set_timer
 
       implicit none
+      character(len=cwdlen)         :: filename  ! File name
+
+      thdf = set_timer(tmr_hdf,.true.)
+
+      filename = restart_fname()
+      if (master) then
+         write(msg,'(3a)') 'Writing restart ', trim(filename), " ... "
+         call printio(msg, .true.)
+      endif
+      call set_common_attributes(filename)
 
       if (use_v2_io) then
-         call write_restart_hdf5_v2
+         call write_restart_hdf5_v2(filename)
       else
-         call write_restart_hdf5_v1
+         call write_restart_hdf5_v1(filename)
+      endif
+      call MPI_Barrier(comm, ierr)
+
+      thdf = set_timer(tmr_hdf)
+      if (master) then
+         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
+         call printinfo(msg, .true.)
       endif
 
       nres = nres + I_ONE
@@ -206,40 +226,25 @@ contains
 !>
 !! \brief This routine writes restart dump and updates restart counter
 !<
-   subroutine write_restart_hdf5_v1
+   subroutine write_restart_hdf5_v1(filename)
 
-      use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen
-      use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf
       use dataio_user, only: problem_write_restart
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use mpi,         only: MPI_INFO_NULL
-      use mpisetup,    only: comm, master, FIRST
-      use timer,       only: set_timer
+      use mpisetup,    only: comm, FIRST
 
       implicit none
+      character(len=cwdlen), intent(in) :: filename      !> HDF File name
 
       integer(kind=4)               :: i
-      character(len=cwdlen)         :: filename      !> HDF File name
       integer(HID_T)                :: file_id       !> File identifier
       integer(HID_T)                :: plist_id      !> Property list identifier
       integer(kind=4)               :: error
       type(grid_container), pointer :: fcg
-
-      thdf = set_timer(tmr_hdf,.true.)
-
-      filename = restart_fname()
-
-      if (master) then
-         write(msg,'(3a)') 'Writing restart ', trim(filename), " ... "
-         call printio(msg, .true.)
-      endif
-
-      ! Write some global variables
-      call set_common_attributes(filename)
 
       ! Set up a new HDF5 file for parallel write
       call h5open_f(error)
@@ -280,12 +285,6 @@ contains
       !
       call h5fclose_f(file_id, error)
       call h5close_f(error)
-
-      thdf = set_timer(tmr_hdf)
-      if (master) then
-         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
-         call printinfo(msg, .true.)
-      endif
 
    end subroutine write_restart_hdf5_v1
 
@@ -648,7 +647,7 @@ contains
    subroutine read_restart_hdf5_v1
 
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE
-      use dataio_pub,  only: msg, printio, warn, die, require_init_prob, problem_name, run_id, piernik_hdf5_version, fix_string, &
+      use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, run_id, piernik_hdf5_version, fix_string, &
            &                 domain_dump, last_hdf_time, next_t_log, next_t_tsl, nhdf, nres, step_hdf, new_id, step_res
       use dataio_user, only: problem_read_restart
       use domain,      only: dom
@@ -907,11 +906,10 @@ contains
 !! \warning Partial implementation only
 !<
 
-   subroutine write_restart_hdf5_v2
+   subroutine write_restart_hdf5_v2(filename)
 
-      use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen, dsetnamelen, singlechar, xdim, zdim, ndims, I_ONE, I_TWO, AT_IGNORE, INT4
-      use dataio_pub,  only: die, tmr_hdf, thdf, printinfo, msg, die, printio, nproc_io, can_i_write
+      use dataio_pub,  only: die, nproc_io, can_i_write
       use dataio_user, only: problem_write_restart
       use domain,      only: dom
       use gc_list,     only: cg_list_element
@@ -922,11 +920,10 @@ contains
            &                 h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5zfilter_avail_f
       use mpi,         only: MPI_INFO_NULL, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
       use mpisetup,    only: comm, proc, FIRST, LAST, master
-      use timer,       only: set_timer
 
       implicit none
 
-      character(len=cwdlen)                         :: filename
+      character(len=cwdlen), intent(in)             :: filename
       integer(HID_T)                                :: file_id                                  !> File identifier
       integer(HID_T)                                :: plist_id                                 !> Property list identifier
       integer(HID_T)                                :: cgl_g_id,  cg_g_id                       !> cg list and cg group identifiers
@@ -947,15 +944,7 @@ contains
       character(len=singlechar), dimension(ndims), parameter :: d_pref = [ "x", "y", "z" ]
       character(len=dsetnamelen)                    :: d_label
 
-      thdf = set_timer(tmr_hdf, .true.)
-
       ! Create a new file and initialize it
-      filename = restart_fname()
-      if (master) then
-         write(msg,'(3a)') 'Writing restart ', trim(filename), " ... "
-         call printio(msg, .true.)
-      endif
-      call set_common_attributes(filename)
 
       ! Prepare groups and datasets for grid containers on the master
       allocate(cg_n(FIRST:LAST))
@@ -1109,13 +1098,6 @@ contains
       call h5close_f(error)            ! Close HDF5 stuff
 
       deallocate(cg_all_n_b)
-
-      thdf = set_timer(tmr_hdf)
-      if (master) then
-         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
-         call printinfo(msg, .true.)
-      endif
-      call MPI_Barrier(comm, error)
 
    end subroutine write_restart_hdf5_v2
 
