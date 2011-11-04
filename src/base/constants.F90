@@ -174,6 +174,7 @@ module constants
    ! misc
    enum, bind(C)
       enumerator :: MINL, MAXL                           !< constants for func::get_extremum
+      enumerator :: RD, WR                               !< constants for wd_{rd,wr} selection
    end enum
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit

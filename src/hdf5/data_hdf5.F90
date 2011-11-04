@@ -152,7 +152,7 @@ contains
 
       use common_hdf5, only: nhdf_vars, hdf_vars, set_common_attributes
       use constants,   only: ndims, cwdlen, I_ONE
-      use dataio_pub,  only: printio, printinfo, msg, die, nhdf, problem_name, run_id, nhdf, tmr_hdf, thdf
+      use dataio_pub,  only: printio, printinfo, msg, die, nhdf, problem_name, run_id, nhdf, tmr_hdf, thdf, wd_wr
       use dataio_user, only: user_vars_hdf5
       use domain,      only: dom, is_multicg !, is_uneven
       use grid,        only: all_cg
@@ -187,7 +187,7 @@ contains
       ! Initialize HDF5 library and Fortran interfaces.
       !
       if (master) then
-         write(fname, '(a,a1,a3,a1,i4.4,a3)') trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
+         write(fname, '(2a,a1,a3,a1,i4.4,a3)') wd_wr, trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
          write(msg,'(3a)') 'Writing datafile ', trim(fname), " ... "
          call printio(msg, .true.)
       endif
@@ -291,11 +291,11 @@ contains
 
    function h5_filename() result(f)
       use constants,  only: fnamelen
-      use dataio_pub, only: problem_name, run_id, nhdf
+      use dataio_pub, only: problem_name, run_id, nhdf, wd_wr
       use mpisetup,   only: proc
       implicit none
       character(len=fnamelen) :: f
-      write(f, '(a,"_",a3,i4.4,".cpu",i5.5,".h5")') trim(problem_name), trim(run_id), nhdf, proc
+      write(f, '(2a,"_",a3,i4.4,".cpu",i5.5,".h5")') wd_wr, trim(problem_name), trim(run_id), nhdf, proc
    end function h5_filename
 
    subroutine h5_write_to_multiple_files

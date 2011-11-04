@@ -208,7 +208,7 @@ contains
 !! <tr><td>min_disk_space_MB  </td><td>100                </td><td>integer   </td><td>\copydoc dataio::min_disk_space_MB</td></tr>
 !! <tr><td>sleep_minutes      </td><td>0                  </td><td>integer   </td><td>\copydoc dataio::sleep_minutes    </td></tr>
 !! <tr><td>sleep_seconds      </td><td>0                  </td><td>integer   </td><td>\copydoc dataio::sleep_seconds    </td></tr>
-!! <tr><td>user_message_file  </td><td>trim(cwd)//'/msg'  </td><td>string similar to default value              </td><td>\copydoc dataio::user_message_file  </td></tr>
+!! <tr><td>user_message_file  </td><td>trim(wd_rd)//'/msg'</td><td>string similar to default value              </td><td>\copydoc dataio::user_message_file  </td></tr>
 !! <tr><td>system_message_file</td><td>'/tmp/piernik_msg' </td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
 !! <tr><td>use_v2_io          </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::use_v2_io    </td></tr>
 !! <tr><td>nproc_io           </td><td>1                  </td><td>integer   </td><td>\copydoc dataio_pub::nproc_io     </td></tr>
@@ -221,8 +221,8 @@ contains
       use common_hdf5,     only: init_hdf5
       use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
       use data_hdf5,       only: init_data
-      use dataio_pub,      only: nres, nrestart, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, cwd, &
-           &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, die, code_progress, &
+      use dataio_pub,      only: nres, nrestart, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, wd_rd, &
+           &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, die, code_progress, wd_wr, &
            &                     move_file, multiple_h5files, parfile, parfilelines, can_i_write
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use domain,          only: dom
@@ -270,7 +270,7 @@ contains
       min_disk_space_MB = 100
       sleep_minutes   = 0
       sleep_seconds   = 0
-      write(user_message_file,'(a,"/msg")') trim(cwd)
+      write(user_message_file,'(a,"/msg")') trim(wd_rd)
       system_message_file = "/tmp/piernik_msg"
 
       tsl_firstcall = .true.
@@ -456,7 +456,7 @@ contains
          do i=1,nenv
             call printinfo(env(i), .false.)
          enddo
-         write(log_file,'(6a,i3.3,a)') trim(cwd),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
+         write(log_file,'(6a,i3.3,a)') trim(wd_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
 !> \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          system_status = move_file(trim(tmp_log_file), trim(log_file))
          if (system_status /= 0) then
@@ -659,7 +659,7 @@ contains
 
    subroutine find_last_restart(restart_number)
 
-      use dataio_pub,    only: cwd
+      use dataio_pub,    only: wd_rd
       use constants,     only: cwdlen
 #if defined(__INTEL_COMPILER)
       use ifport,        only: unlink
@@ -687,7 +687,7 @@ contains
 
       do nres =999,0,-1
          write(file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') &
-               trim(cwd),'/',trim(problem_name),'_', run_id,'_',nres,'.res'
+               trim(wd_rd),'/',trim(problem_name),'_', run_id,'_',nres,'.res'
          inquire(file = file_name, exist = exist)
          if (exist) then
             restart_number = nres
@@ -741,7 +741,7 @@ contains
    subroutine write_timeslice
 
       use constants,   only: cwdlen, xdim, ydim, zdim, half
-      use dataio_pub,  only: cwd, warn
+      use dataio_pub,  only: wd_wr, warn
       use dataio_user, only: user_tsl
       use diagnostics, only: pop_vector
       use domain,      only: dom, is_multicg
@@ -798,7 +798,7 @@ contains
 
       if (master) then
          write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
-              trim(cwd),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
+              trim(wd_wr),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
          if (tsl_firstcall) then
             call pop_vector(tsl_names, cbuff_len, ["nstep   ", "time    ", "timestep"])

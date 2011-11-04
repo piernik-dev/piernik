@@ -180,7 +180,7 @@ contains
 
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC
       use dataio,                only: init_dataio, write_data
-      use dataio_pub,            only: nrestart, cwd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, code_progress
+      use dataio_pub,            only: nrestart, wd_wr, wd_rd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, code_progress
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
       use fluidboundaries,       only: all_fluid_boundaries
@@ -227,8 +227,8 @@ contains
       implicit none
 
       call parse_cmdline
-      write(par_file,'(2a)') trim(cwd),'/problem.par'
-      write(tmp_log_file,'(2a)') trim(cwd),'/tmp.log'
+      write(par_file,'(2a)') trim(wd_rd),'problem.par'
+      write(tmp_log_file,'(2a)') trim(wd_wr),'tmp.log'
 
       ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
       call init_mpi
@@ -466,7 +466,7 @@ contains
    subroutine parse_cmdline
 
       use constants,  only: stdout, cwdlen
-      use dataio_pub, only: cmdl_nml, cwd, piernik_hdf5_version
+      use dataio_pub, only: cmdl_nml, wd_rd, wd_wr, piernik_hdf5_version
       use version,    only: nenv,env, init_version
 
       implicit none
@@ -501,7 +501,11 @@ contains
             stop
          case ('-p', '--param')
             call get_command_argument(i+1,arg)
-            write(cwd,'(a)') arg
+            write(wd_rd,'(a)') arg
+            skip_next = .true.
+         case ('-w', '--write')
+            call get_command_argument(i+1,arg)
+            write(wd_wr,'(a)') arg
             skip_next = .true.
          case ('-n', '--namelist')
             call get_command_argument(i+1,arg)
@@ -518,6 +522,9 @@ contains
             stop
          end select
       enddo
+
+      if (wd_wr(len_trim(wd_wr):len_trim(wd_wr)) /= '/' ) write(wd_wr,'(a,a1)') trim(wd_wr),'/'
+      if (wd_rd(len_trim(wd_rd):len_trim(wd_rd)) /= '/' ) write(wd_rd,'(a,a1)') trim(wd_rd),'/'
 
       ! Print the date and, optionally, the time
       call date_and_time(DATE=date, TIME=time, ZONE=zone)
@@ -540,7 +547,8 @@ contains
       print '(a)', ''
       print '(a)', '  -v, --version     print version information and exit'
       print '(a)', '  -n, --namelist    read namelist from command line'
-      print '(a)', '  -p, --param       path to the current working directory'
+      print '(a)', '  -p, --param       path to the directory with problem.par and/or restart (default: ".")'
+      print '(a)', '  -w, --write       path to the directory where output will written (default: ".")'
       print '(a)', '  -h, --help        print usage information and exit'
       print '(a)', '  -t, --time        print time and exit'
 

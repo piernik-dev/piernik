@@ -57,7 +57,7 @@ contains
 
    subroutine write_restart_hdf5
 
-      use constants,   only: I_ONE, cwdlen
+      use constants,   only: I_ONE, cwdlen, WR
       use common_hdf5, only: set_common_attributes
       use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, use_v2_io, nres
       use mpisetup,    only: comm, ierr, master
@@ -68,7 +68,7 @@ contains
 
       thdf = set_timer(tmr_hdf,.true.)
 
-      filename = restart_fname()
+      filename = restart_fname(WR)
       if (master) then
          write(msg,'(3a)') 'Writing restart ', trim(filename), " ... "
          call printio(msg, .true.)
@@ -211,18 +211,29 @@ contains
 !! \todo sanitize problem_name and run_id
 !<
 
-   function restart_fname() result(filename)
+   function restart_fname(wr_rd) result(filename)
 
-      use constants,   only: cwdlen
-      use dataio_pub,  only: problem_name, run_id, nres
+      use constants,   only: cwdlen, RD, WR
+      use dataio_pub,  only: problem_name, run_id, nres, wd_wr, wd_rd
       use mpi,         only: MPI_CHARACTER
       use mpisetup,    only: comm, ierr, master, FIRST
 
       implicit none
 
-      character(len=cwdlen) :: filename  ! File name
+      character(len=cwdlen) :: filename, temp  ! File name
+      integer(kind=4), intent(in)   :: wr_rd
 
-      if (master) write(filename,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_', nres,'.res'
+      if (master) then
+         write(temp,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_', nres,'.res'
+         select case (wr_rd)
+            case (RD)
+               write(filename,'(2a)') trim(wd_rd),trim(temp)
+            case (WR)
+               write(filename,'(2a)') trim(wd_wr),trim(temp)
+            case default
+               write(filename,'(2a)') './',trim(temp)
+         end select
+      endif
 
       call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
 
@@ -571,7 +582,7 @@ contains
 
    subroutine read_restart_hdf5_v1
 
-      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE
+      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE, RD
       use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, run_id, piernik_hdf5_version, fix_string, &
            &                 domain_dump, last_hdf_time, next_t_log, next_t_tsl, nhdf, nres, step_hdf, new_id, step_res
       use dataio_user, only: problem_read_restart
@@ -607,7 +618,7 @@ contains
 
       nu = flind%all
 
-      filename = restart_fname()
+      filename = restart_fname(RD)
 
       if (master) then
          write(msg, '(2a)') 'Reading restart file: ', trim(filename)
@@ -860,12 +871,12 @@ contains
       integer(HSIZE_T), dimension(:),   allocatable :: ddims
       integer(kind=4),  dimension(:),   pointer     :: cg_n                                     !> offset for cg group numbering
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b                               !> sizes of all cg
-      integer(kind=4),  dimension(:),   allocatable :: cg_rl
-      integer(kind=4),  dimension(:,:), allocatable :: cg_n_b
-      integer(kind=8),  dimension(:,:), allocatable :: cg_off
+      integer(kind=4),  dimension(:),   allocatable :: cg_rl                                    !> list of refinement levels from all cgs/procs
+      integer(kind=4),  dimension(:,:), allocatable :: cg_n_b                                   !> list of n_b from all cgs/procs
+      integer(kind=8),  dimension(:,:), allocatable :: cg_off                                   !> list of offsets from all cgs/procs
       type(cg_list_element), pointer                :: cgl
       type(grid_container),  pointer                :: fcg
-      logical(kind=4)                               :: Z_avail
+      logical(kind=4)                               :: Z_avail                                  !> .true. if HDF5 was compiled with zlib support
       character(len=singlechar), dimension(ndims), parameter :: d_pref = [ "x", "y", "z" ]
       character(len=dsetnamelen)                    :: d_label
 
@@ -1350,7 +1361,7 @@ contains
 
    subroutine read_restart_hdf5_v2(status_v2)
 
-      use constants,  only: cwdlen, INVALID
+      use constants,  only: cwdlen, INVALID, RD
       use dataio_pub, only: warn
 
       implicit none
@@ -1361,7 +1372,7 @@ contains
 
       call warn("[restart_hdf5:read_restart_hdf5_v2] Not implemented yet")
 
-      filename = restart_fname()
+      filename = restart_fname(RD)
 
       status_v2 = INVALID
 

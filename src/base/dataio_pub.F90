@@ -73,7 +73,8 @@ module dataio_pub
    character(len=domlen) :: domain_dump         !< string to choose if boundaries have to be dumped in hdf files
 
    ! Buffers for global use
-   character(len=cwdlen), save :: cwd = "."     !< path to the current working directory
+   character(len=cwdlen), save :: wd_rd = "./"   !< path to problem.par and/or restarts
+   character(len=cwdlen), save :: wd_wr = "./"   !< path where output is written
    character(len=msglen), save :: cmdl_nml =" " !< buffer for namelist supplied via commandline
    character(len=cwdlen) :: log_file            !< path to the current log file
    character(len=cwdlen) :: tmp_log_file        !< path to the temporary log file
