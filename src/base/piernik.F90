@@ -547,8 +547,8 @@ contains
       print '(a)', ''
       print '(a)', '  -v, --version     print version information and exit'
       print '(a)', '  -n, --namelist    read namelist from command line'
-      print '(a)', '  -p, --param       path to the directory with problem.par and/or restart (default: ".")'
-      print '(a)', '  -w, --write       path to the directory where output will written (default: ".")'
+      print '(a)', '  -p, --param       path to the directory with problem.par and/or restarts (default: ".")'
+      print '(a)', '  -w, --write       path to the directory where output will be written (default: ".")'
       print '(a)', '  -h, --help        print usage information and exit'
       print '(a)', '  -t, --time        print time and exit'
 
