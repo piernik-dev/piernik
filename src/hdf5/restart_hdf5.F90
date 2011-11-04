@@ -45,10 +45,15 @@ module restart_hdf5
    character(len=dsetnamelen/2), parameter :: cg_gname = "cg" ! leave the other half of dsetnamelen for id number
 
 !> \brief Add an attribute to the given group and initialize its value
-
    interface create_attribute
       module procedure create_int_attribute
       module procedure create_real_attribute
+   end interface
+
+!> \brief Compare a 1D array across all processed. Die if any difference is found
+   interface compare_array1D
+      module procedure compare_int_array1D
+      module procedure compare_real_array1D
    end interface
 
 contains
@@ -1364,21 +1369,148 @@ contains
 
    subroutine read_restart_hdf5_v2(status_v2)
 
-      use constants,  only: cwdlen, INVALID, RD
-      use dataio_pub, only: warn
+      use constants,  only: cwdlen, cbuff_len, INVALID, RD
+      use dataio_pub, only: die, warn, printio, msg, piernik_hdf5_version2
+      use hdf5,       only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f
+      use h5lt,       only: h5ltget_attribute_double_f, h5ltget_attribute_int_f
+      use mpisetup,   only: master
 
       implicit none
 
       integer, intent(out)  :: status_v2
 
+      integer(HID_T) :: file_id       !> File identifier
       character(len=cwdlen) :: filename
+      logical :: file_exist
+      integer(kind=4) :: error
+      real, dimension(:), allocatable :: rbuf
+      integer(kind=4), dimension(:), allocatable :: ibuf
+      character(len=cbuff_len), dimension(*), parameter :: real_attrs = [ "time         ", "timestep     ", "last_hdf_time",  &
+           &                                                              "magic_mass   ", "next_t_tsl   ", "next_t_log   " ]
+      character(len=cbuff_len), dimension(*), parameter :: int_attrs = [ "nstep            ", "nres             ", "nhdf             ", &
+           &                                                             "step_res         ", "step_hdf         ", "require_init_prob" ]
+      !> \deprecated same strings are used independently in set_common_attributes*
+      integer :: ia
 
       call warn("[restart_hdf5:read_restart_hdf5_v2] Not implemented yet")
 
       filename = restart_fname(RD)
+      if (master) then
+         write(msg, '(2a)') 'Reading restart file: ', trim(filename)
+         call printio(msg)
+      endif
+
+      inquire(file = filename, exist = file_exist)
+      if (.not. file_exist) then
+         write(msg,'(3a)') '[restart_hdf5:read_restart_hdf5_v2]: Restart file: ', trim(filename),' does not exist'
+         call die(msg)
+      endif
 
       status_v2 = INVALID
 
+      call h5open_f(error)
+
+      call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
+
+      ! Check file format version and compare attributes in the root of the restart point file"
+      allocate(rbuf(1))
+
+      call h5ltget_attribute_double_f(file_id, "/", "piernik", rbuf, error) !> \deprecated: magic string across multiple files
+      if (error /= 0) call die("[restart_hdf5:read_restart_hdf5_v2] Cannot read 'piernik' attribute from the restart file. The file may be either damaged or incompatible")
+      if (rbuf(1) > piernik_hdf5_version2) then
+         write(msg,'(2(a,f5.2))')"[restart_hdf5:read_restart_hdf5_v2] Cannot read future versions of the restart file: ", rbuf(1)," > ", piernik_hdf5_version2
+         call die(msg)
+      else if (int(rbuf(1)) < int(piernik_hdf5_version2)) then
+         write(msg,'(2(a,f5.2))')"[restart_hdf5:read_restart_hdf5_v2] The restart file is too ancient. It is unlikely that it could work correctly: ", rbuf(1)," << ", piernik_hdf5_version2
+         call warn(msg)
+         call h5fclose_f(file_id, error)
+         call h5close_f(error)
+         return
+      else if (rbuf(1) < piernik_hdf5_version2) then
+         write(msg,'(2(a,f5.2))')"[restart_hdf5:read_restart_hdf5_v2] Old versions of the restart file may not always work fully correctly: ", rbuf(1)," < ", piernik_hdf5_version2
+         call warn(msg)
+      endif
+      call compare_real_array1D(rbuf(:))
+
+      do ia = lbound(real_attrs, dim=1), ubound(real_attrs, dim=1)
+         call h5ltget_attribute_double_f(file_id, "/", trim(real_attrs(ia)), rbuf, error)
+         call compare_array1D(rbuf(:))
+      enddo
+
+      deallocate(rbuf)
+
+      allocate(ibuf(1))
+      do ia = lbound(int_attrs, dim=1), ubound(int_attrs, dim=1)
+         call h5ltget_attribute_int_f(file_id, "/", trim(int_attrs(ia)), ibuf, error)
+         call compare_array1D(ibuf(:))
+      enddo
+      deallocate(ibuf)
+
+      call h5fclose_f(file_id, error)
+      call h5close_f(error)
+
    end subroutine read_restart_hdf5_v2
+
+!>
+!! \brief Compare a 1D real array across all processed. Die if any difference is found
+!!
+!! \todo Add an optional parameter (string), which would identify, which comparison failed
+!<
+
+   subroutine compare_real_array1D(arr)
+
+      use constants,  only: I_ONE
+      use dataio_pub, only: die
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
+      use mpisetup,   only: slave, LAST, comm, proc
+
+      implicit none
+
+      real, dimension(:), intent(in) :: arr
+
+      real, dimension(:), allocatable :: aux
+      integer(kind=4), parameter :: tag = 10
+      integer(kind=4) :: error
+
+      allocate(aux(size(arr(:))))
+
+      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_DOUBLE_PRECISION, proc+I_ONE, tag, comm, error)
+      if (slave) then
+         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_DOUBLE_PRECISION, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, error)
+         if (any(aux(:) /= arr(:))) call die("[restart_hdf5:compare_real_array1D] Inconsistency found.")
+      endif
+
+      deallocate(aux)
+
+   end subroutine compare_real_array1D
+
+!> \brief Compare a 1D integer array across all processed. Die if any difference is found
+
+   subroutine compare_int_array1D(arr)
+
+      use constants,  only: I_ONE
+      use dataio_pub, only: die
+      use mpi,        only: MPI_INTEGER, MPI_STATUS_IGNORE
+      use mpisetup,   only: slave, LAST, comm, proc
+
+      implicit none
+
+      integer(kind=4), dimension(:), intent(in) :: arr
+
+      integer(kind=4), dimension(:), allocatable :: aux
+      integer(kind=4), parameter :: tag = 10
+      integer(kind=4) :: error
+
+      allocate(aux(size(arr(:))))
+
+      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_INTEGER, proc+I_ONE, tag, comm, error)
+      if (slave) then
+         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_INTEGER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, error)
+         if (any(aux(:) /= arr(:))) call die("[restart_hdf5:compare_int_array1D] Inconsistency found.")
+      endif
+
+      deallocate(aux)
+
+   end subroutine compare_int_array1D
 
 end module restart_hdf5
