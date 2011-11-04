@@ -228,9 +228,8 @@ contains
 
    end function restart_fname
 
-!>
-!! \brief This routine writes restart dump and updates restart counter
-!<
+!> \brief Write restart dump v1.x
+
    subroutine write_restart_hdf5_v1(filename)
 
       use constants,   only: cwdlen
@@ -271,7 +270,7 @@ contains
          enddo
       endif
 
-      !> problem-specific restart writes. Everything that was not written by the above write_arr_to_restart calls
+      ! problem-specific restart writes. Everything that was not written by the above write_arr_to_restart calls
       if (associated(problem_write_restart)) call problem_write_restart(file_id)
 
 !     \todo writing axes using collective I/O takes order of magnitude more than
@@ -293,8 +292,7 @@ contains
 
    end subroutine write_restart_hdf5_v1
 
-   !----------------------------------------------------------------------------------
-   ! Write fluid, mag or other variables (4-D and 3-D arrays)
+!> \brief Write fluid, mag or other variables (4-D and 3-D arrays) to v1 restart dump
 
    subroutine write_arr_to_restart(file_id, ind, tgt3d)
 
@@ -426,91 +424,11 @@ contains
 
    end subroutine write_arr_to_restart
 
-!!$   !----------------------------------------------------------------------------------
-!!$   !
-!!$   !  WRITE Axes
-!!$   !
-!!$   ! AMR: the axes should be associated with fluid and datasets
-!!$   subroutine write_axes_to_restart(file_id)
-!!$
-!!$      use constants,  only: xdim, ydim, zdim, ndims
-!!$      use hdf5,       only: HSIZE_T, HID_T, H5T_NATIVE_DOUBLE, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, H5S_SELECT_SET_F, &
-!!$           &                h5screate_simple_f, h5pcreate_f, h5pset_chunk_f, h5pset_dxpl_mpio_f, h5dcreate_f, h5dget_space_f, h5dwrite_f, &
-!!$           &                h5sclose_f, h5pclose_f, h5dclose_f, h5sselect_hyperslab_f
-!!$      use domain,     only: dom, is_uneven
-!!$      use grid,       only: cg
-!!$
-!!$      implicit none
-!!$
-!!$      integer(HID_T), intent(in)        :: file_id !> File identifier
-!!$
-!!$      integer                           :: dir
-!!$      integer                           :: error
-!!$      integer, parameter                :: rank=1
-!!$      integer(HSIZE_T), dimension(rank) :: offset, count, stride, block, dimsf, chunk_dims
-!!$      integer(HID_T)                    :: dset_id                !> Dataset identifier
-!!$      integer(HID_T)                    :: dplist_id, plist_id    !> Property list identifiers
-!!$      integer(HID_T)                    :: dfilespace, filespace  !> Dataspace identifiers in file
-!!$      integer(HID_T)                    :: memspace               !> Dataspace identifier in memory
-!!$      integer, parameter                :: asis_n_len = 6
-!!$      character(len=asis_n_len)         :: dset_axis_n            !> Dataspace name
-!!$      character(len=ndims), parameter   :: axis_n = "XYZ"
-!!$
-!!$      do dir = xdim, zdim
-!!$
-!!$         write(dset_axis_n,'(a,"-axis")')axis_n(dir:dir)
-!!$         dimsf      = [dom%n_d(dir)] ! Dataset dimensions
-!!$         chunk_dims = [cg%n_b(dir)]  ! Chunk dimensions
-!!$
-!!$         ! Create the file space for the dataset and make it chunked if possible
-!!$         call h5screate_simple_f(rank, dimsf, dfilespace, error)
-!!$         call h5pcreate_f(H5P_DATASET_CREATE_F, dplist_id, error)
-!!$         if (.not. is_uneven) call h5pset_chunk_f(dplist_id, rank, chunk_dims, error)
-!!$         call h5dcreate_f(file_id, dset_axis_n, H5T_NATIVE_DOUBLE, dfilespace, dset_id, error, dplist_id)
-!!$
-!!$         ! It is sufficient that only one CPU writes each piece of axis data.
-!!$         ! The other CPUs also need to call at least everything up to h5dcreate_f, and then just close the stuff.
-!!$         if (cg%off(mod(dir, ndims)+1) == 0 .and. cg%off(mod(dir+ndims-2, ndims)+1) == 0) then
-!!$
-!!$            call h5dget_space_f(dset_id, filespace, error)
-!!$
-!!$            ! Each contributing process defines dataset in memory and writes it to the hyperslab in the file.
-!!$            stride(:) = 1
-!!$            count(:)  = 1
-!!$            block(:)  = chunk_dims(:)
-!!$            offset(:) = [ cg%off(dir) ]
-!!$            call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
-!!$
-!!$            call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-!!$            if (.not. is_multicg) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
-!!$
-!!$            ! Create the memory space for the dataset.
-!!$            call h5screate_simple_f(rank, chunk_dims, memspace, error)
-!!$            select case (dir)
-!!$               case (xdim)
-!!$                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%x(cg%is:cg%ie), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-!!$               case (ydim)
-!!$                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%y(cg%js:cg%je), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-!!$               case (zdim)
-!!$                  call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, cg%z(cg%ks:cg%ke), dimsf, error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
-!!$            end select
-!!$            call h5sclose_f(memspace, error)
-!!$            call h5pclose_f(plist_id, error)
-!!$            call h5sclose_f(filespace, error)
-!!$
-!!$         endif
-!!$
-!!$         call h5dclose_f(dset_id, error)
-!!$         call h5pclose_f(dplist_id, error)
-!!$         call h5sclose_f(dfilespace, error)
-!!$
-!!$      enddo
-!!$
-!!$   end subroutine write_axes_to_restart
-
-! This routine reads only interior cells of a pointed array from the restart file.
-! Boundary cells are exchanged with the neughbours. Corner boundary cells are not guaranteed to be correct.
-! External boundary cells are not stored in the restart file and thus all of them are lost (area_type = AT_OUT_B not implemented yet).
+!>
+!! \brief Read interior cells of a specified array from the restart file.
+!!
+!! \details  Boundary cells are exchanged with the neughbours. Corner boundary cells are not guaranteed to be correct.
+!<
 
    subroutine read_arr_from_restart(file_id, ind, tgt3d, alt_area_type, alt_name)
 
@@ -648,6 +566,8 @@ contains
       !> \todo consider also calling 4D boundaries
 
    end subroutine read_arr_from_restart
+
+!> \brief Read a v1 restart point.
 
    subroutine read_restart_hdf5_v1
 
@@ -845,7 +765,7 @@ contains
 ! Routines for multi-file, multi-domain restarts
 
 !>
-!! \description The format of Piernik v2 restart and data files
+!! \note The format of Piernik v2 restart and data files
 !!
 !! A restart point or a data dump may consist of one or a multiple files
 !!
@@ -908,7 +828,7 @@ contains
 !!   Can take advantage of parallel filesystems. Currently does not allow for compression during write.
 !!   Requires a lot of pseudo-collective operations. The "flexible PHDF5" would simplify the code, but it needs to be implemented.first.
 !!
-!! \warning Partial implementation only
+!! \warning Partial implementation: Single-file, serial I/O works for non-AMR setups.
 !<
 
    subroutine write_restart_hdf5_v2(filename)
@@ -970,7 +890,7 @@ contains
          call create_attribute(cgl_g_id, "cg_count", [ cg_cnt ])
 
          Z_avail = .false.
-         if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error) !> \todo add shuffle
+         if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
          !> \todo test it thoroughly before enabling for > 1
 
          ! Do not assume that the master knows all the lists
@@ -1190,11 +1110,7 @@ contains
 
    end subroutine create_real_attribute
 
-!>
-!! \brief append a single grid container to the output file
-!!
-!! \warning Not implemented yet
-!<
+!> \brief Write all grid containers to the file
 
    subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b)
 
