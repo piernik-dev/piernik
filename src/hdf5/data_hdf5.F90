@@ -187,7 +187,7 @@ contains
       ! Initialize HDF5 library and Fortran interfaces.
       !
       if (master) then
-         write(fname, '(2a,a1,a3,a1,i4.4,a3)') wd_wr, trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
+         write(fname, '(2a,a1,a3,a1,i4.4,a3)') trim(wd_wr), trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
          write(msg,'(3a)') 'Writing datafile ', trim(fname), " ... "
          call printio(msg, .true.)
       endif
@@ -295,7 +295,7 @@ contains
       use mpisetup,   only: proc
       implicit none
       character(len=fnamelen) :: f
-      write(f, '(2a,"_",a3,i4.4,".cpu",i5.5,".h5")') wd_wr, trim(problem_name), trim(run_id), nhdf, proc
+      write(f, '(2a,"_",a3,i4.4,".cpu",i5.5,".h5")') trim(wd_wr), trim(problem_name), trim(run_id), nhdf, proc
    end function h5_filename
 
    subroutine h5_write_to_multiple_files
