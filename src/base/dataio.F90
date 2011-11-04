@@ -655,7 +655,12 @@ contains
 
    end subroutine write_data
 
-!------------------------------------------------------------------------
+!>
+!! \brief Find the restart point with highest number
+!!
+!! \todo use restart_fname() function
+!! \todo scan the 9999 .. 0 range somewhat smarter (get directory listing?)
+!<
 
    subroutine find_last_restart(restart_number)
 
@@ -685,13 +690,12 @@ contains
 
       unlink_stat = unlink('restart_list.tmp')
 
-      do nres =999,0,-1
-         write(file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') &
-               trim(wd_rd),'/',trim(problem_name),'_', run_id,'_',nres,'.res'
+      do nres = 999, 0, -1
+         write(file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') trim(wd_rd),'/',trim(problem_name),'_', run_id,'_',nres,'.res'
          inquire(file = file_name, exist = exist)
          if (exist) then
             restart_number = nres
-         return
+            return
          endif
       enddo
 

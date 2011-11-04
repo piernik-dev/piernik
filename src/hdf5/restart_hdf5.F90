@@ -44,6 +44,8 @@ module restart_hdf5
    integer,                      parameter :: STAT_OK = 0
    character(len=dsetnamelen/2), parameter :: cg_gname = "cg" ! leave the other half of dsetnamelen for id number
 
+!> \brief Add an attribute to the given group and initialize its value
+
    interface create_attribute
       module procedure create_int_attribute
       module procedure create_real_attribute
