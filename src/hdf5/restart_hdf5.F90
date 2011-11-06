@@ -941,27 +941,29 @@ contains
 
                if (any(cg_off(g, :) > 2.**31)) call die("[restart_hdf5:write_restart_hdf5_v2] large offsets require better treatment")
 
+               !! -- this bit is restart specific
                fcg  => all_cg%first%cg
 
-               drank = ndims
-               allocate(ddims(drank))
                if (allocated(fcg%q)) then
+                  drank = ndims
+                  allocate(ddims(drank))
                   do i = lbound(fcg%q(:), dim=1, kind=4), ubound(fcg%q(:), dim=1, kind=4)
                      if (fcg%q(i)%restart_mode /= AT_IGNORE) &
                           call create_empty_cg_dataset(cg_g_id, fcg%q(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
                   enddo
+                  deallocate(ddims)
                endif
-               deallocate(ddims)
 
-               drank = ndims + I_ONE
-               allocate(ddims(drank))
                if (allocated(fcg%w)) then
+                  drank = ndims + I_ONE
+                  allocate(ddims(drank))
                   do i = lbound(fcg%w(:), dim=1, kind=4), ubound(fcg%w(:), dim=1, kind=4)
                      if (fcg%w(i)%restart_mode /= AT_IGNORE) &
                           call create_empty_cg_dataset(cg_g_id, fcg%w(i)%name, int([ size(fcg%w(i)%arr, dim=1, kind=4), cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
                   enddo
+                  deallocate(ddims)
                endif
-               deallocate(ddims)
+               !! -------------------------------
 
                call h5gclose_f(cg_g_id, error)
             enddo
@@ -1030,7 +1032,9 @@ contains
          call h5gopen_f(file_id, cg_gname, cgl_g_id, error)
       endif
 
+      !! -- this bit is restart specific
       call write_cg_to_restart(cgl_g_id, cg_n(:), cg_all_n_b(:,:))
+      !! -------------------------------
 
       if (can_i_write) then
          call h5gclose_f(cgl_g_id, error)
