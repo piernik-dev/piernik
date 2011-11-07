@@ -50,10 +50,11 @@ module restart_hdf5
       module procedure create_real_attribute
    end interface
 
-!> \brief Compare a 1D array across all processed. Die if any difference is found
+!> \brief Compare a 1D array or string across all processed. Die if any difference is found
    interface compare_array1D
       module procedure compare_int_array1D
       module procedure compare_real_array1D
+      module procedure compare_string
    end interface
 
 contains
@@ -1374,9 +1375,11 @@ contains
    subroutine read_restart_hdf5_v2(status_v2)
 
       use constants,  only: cwdlen, cbuff_len, INVALID, RD
-      use dataio_pub, only: die, warn, printio, msg, piernik_hdf5_version2
+      use dataio_pub, only: die, warn, printio, msg, last_hdf_time, next_t_tsl, next_t_log, problem_name, new_id, domain_dump, &
+           &                require_init_prob, piernik_hdf5_version2, step_hdf, step_res, nres, nhdf
+      use global,     only: magic_mass, t, dt, nstep
       use hdf5,       only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f
-      use h5lt,       only: h5ltget_attribute_double_f, h5ltget_attribute_int_f
+      use h5lt,       only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mpisetup,   only: master
 
       implicit none
@@ -1389,12 +1392,15 @@ contains
       integer(kind=4) :: error
       real, dimension(:), allocatable :: rbuf
       integer(kind=4), dimension(:), allocatable :: ibuf
+      character(len=cbuff_len) :: cbuf
       character(len=cbuff_len), dimension(*), parameter :: real_attrs = [ "time         ", "timestep     ", "last_hdf_time",  &
            &                                                              "magic_mass   ", "next_t_tsl   ", "next_t_log   " ]
       character(len=cbuff_len), dimension(*), parameter :: int_attrs = [ "nstep            ", "nres             ", "nhdf             ", &
            &                                                             "step_res         ", "step_hdf         ", "require_init_prob" ]
+      character(len=cbuff_len), dimension(*), parameter :: str_attrs = [ "problem_name", "domain      ", "run_id      " ]
       !> \deprecated same strings are used independently in set_common_attributes*
       integer :: ia
+      integer :: nres_old
 
       call warn("[restart_hdf5:read_restart_hdf5_v2] Not implemented yet")
 
@@ -1436,29 +1442,83 @@ contains
       endif
       call compare_real_array1D(rbuf(:))
 
+      !> \todo merge this code somehow with set_common_attributes_v2
       do ia = lbound(real_attrs, dim=1), ubound(real_attrs, dim=1)
          call h5ltget_attribute_double_f(file_id, "/", trim(real_attrs(ia)), rbuf, error)
          call compare_array1D(rbuf(:))
+         select case (real_attrs(ia))
+            case ("time")
+               t = rbuf(1)
+            case ("timestep")
+               dt = rbuf(1)
+            case ("last_hdf_time")
+               last_hdf_time = rbuf(1)
+            case ("magic_mass")
+               magic_mass = rbuf(1)
+            case ("next_t_tsl")
+               next_t_tsl = rbuf(1)
+            case ("next_t_log")
+               next_t_log = rbuf(1)
+            case default
+               write(msg,'(3a,g15.5,a)')"[restart_hdf5:read_restart_hdf5_v2] Real attribute '",trim(real_attrs(ia)),"' with value = ",rbuf(1)," was ignored"
+               call warn(msg)
+         end select
       enddo
-
       deallocate(rbuf)
 
+      nres_old = nres
       allocate(ibuf(1))
       do ia = lbound(int_attrs, dim=1), ubound(int_attrs, dim=1)
          call h5ltget_attribute_int_f(file_id, "/", trim(int_attrs(ia)), ibuf, error)
          call compare_array1D(ibuf(:))
+         select case (int_attrs(ia))
+            case ("nstep")
+               nstep = ibuf(1)
+            case ("nres")
+               nres = ibuf(1)
+            case ("nhdf")
+               nhdf = ibuf(1)
+            case ("step_res")
+               step_res = ibuf(1)
+            case ("step_hdf")
+               step_hdf = ibuf(1)
+            case ("require_init_prob")
+               require_init_prob = ibuf(1)
+            case default
+               write(msg,'(3a,i14,a)')"[restart_hdf5:read_restart_hdf5_v2] Integer attribute '",trim(real_attrs(ia)),"' with value = ",ibuf(1)," was ignored"
+               call warn(msg)
+            end select
       enddo
       deallocate(ibuf)
+
+      do ia = lbound(str_attrs, dim=1), ubound(str_attrs, dim=1)
+         cbuf=''
+         call h5ltget_attribute_string_f(file_id, "/", trim(str_attrs(ia)), cbuf, error)
+         call compare_array1D(str_attrs(ia))
+         select case (str_attrs(ia))
+            case ("problem_name")
+               problem_name = trim(cbuf)
+            case ("domain")
+               domain_dump = trim(cbuf(:len(domain_dump)))
+            case ("run_id")
+               new_id = trim(cbuf(:len(new_id)))
+            case default
+               write(msg,'(3a,i14,a)')"[restart_hdf5:read_restart_hdf5_v2] String attribute '",trim(real_attrs(ia)),"' with value = ",cbuf," was ignored"
+               call warn(msg)
+         end select
+      enddo
 
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
+      if (status_v2 /= STAT_OK) nres = nres_old ! let's hope read_restart_hdf5_v1 will fix what could possibly bot broken here
+
    end subroutine read_restart_hdf5_v2
 
 !>
-!! \brief Compare a 1D real array across all processed. Die if any difference is found
+!! \brief Compare a 1D real array across all processes. Die if any difference is found
 !!
-!! \todo Add an optional parameter (string), which would identify, which comparison failed
+!! \todo Add an optional parameter (string), which would identify which comparison failed
 !<
 
    subroutine compare_real_array1D(arr)
@@ -1488,7 +1548,7 @@ contains
 
    end subroutine compare_real_array1D
 
-!> \brief Compare a 1D integer array across all processed. Die if any difference is found
+!> \brief Compare a 1D integer array across all processes. Die if any difference is found
 
    subroutine compare_int_array1D(arr)
 
@@ -1516,5 +1576,31 @@ contains
       deallocate(aux)
 
    end subroutine compare_int_array1D
+
+!> \brief Compare a 1D integer array across all processes. Die if any difference is found
+
+   subroutine compare_string(str)
+
+      use constants,  only: I_ONE
+      use dataio_pub, only: die
+      use mpi,        only: MPI_CHARACTER, MPI_STATUS_IGNORE
+      use mpisetup,   only: slave, LAST, comm, proc
+
+      implicit none
+
+      character(len=*), intent(in) :: str
+
+      character(len=len(str)) :: aux
+      integer(kind=4), parameter :: tag = 10
+      integer(kind=4) :: error
+
+
+      if (proc /= LAST) call MPI_Send(str, len(str, kind=4), MPI_CHARACTER, proc+I_ONE, tag, comm, error)
+      if (slave) then
+         call MPI_Recv(aux, len(aux, kind=4), MPI_CHARACTER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, error)
+         if (aux /= str) call die("[restart_hdf5:compare_string] Inconsistency found.")
+      endif
+
+   end subroutine compare_string
 
 end module restart_hdf5
