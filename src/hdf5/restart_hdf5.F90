@@ -32,17 +32,18 @@
 !! \brief Module that contains HDF5 I/O routines for reading and writing restart files.
 !<
 module restart_hdf5
-
 ! pulled by ANY
-   use constants,   only: dsetnamelen
 
    implicit none
 
    private
    public :: read_restart_hdf5, write_restart_hdf5, read_arr_from_restart
 
-   integer,                      parameter :: STAT_OK = 0
-   character(len=dsetnamelen/2), parameter :: cg_gname = "cg" ! leave the other half of dsetnamelen for id number
+   integer,          parameter :: STAT_OK = 0
+   character(len=*), parameter :: d_gname = "domains", base_d_gname = "base", d_fc_aname = "fine_count", &
+        &                         d_size_aname = "n_d", d_edge_apname = "-edge_position", d_bnd_apname = "-boundary_type", &
+        &                         cg_gname = "cg", cg_cnt_aname = "cg_count", cg_lev_aname = "level", cg_size_aname = "n_b", cg_offset_aname = "off"
+
 
 !> \brief Add an attribute to the given group and initialize its value
    interface create_attribute
@@ -906,7 +907,7 @@ contains
 
          call h5gcreate_f(file_id, cg_gname, cgl_g_id, error)
 
-         call create_attribute(cgl_g_id, "cg_count", [ cg_cnt ])
+         call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])
 
          Z_avail = .false.
          if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
@@ -934,9 +935,9 @@ contains
             do g = 1, cg_n(p)
                call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error)
 
-               call create_attribute(cg_g_id, "level", [ cg_rl(g) ] )
-               call create_attribute(cg_g_id, "n_b", cg_n_b(g, :))
-               call create_attribute(cg_g_id, "off", int(cg_off(g, :), kind=4))
+               call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )
+               call create_attribute(cg_g_id, cg_size_aname, cg_n_b(g, :))
+               call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4))
 
                cg_all_n_b(sum(cg_n(:p))-cg_n(p)+g, :) = cg_n_b(g, :)
 
@@ -975,20 +976,20 @@ contains
          call h5gclose_f(cgl_g_id, error)
 
          ! describe_domains
-         call h5gcreate_f(file_id, "domains", doml_g_id, error)
+         call h5gcreate_f(file_id, d_gname, doml_g_id, error)
 
-         call h5gcreate_f(doml_g_id, "base", dom_g_id, error)
-         call create_attribute(dom_g_id, "n_d", dom%n_d(:))
+         call h5gcreate_f(doml_g_id, base_d_gname, dom_g_id, error)
+         call create_attribute(dom_g_id, d_size_aname, dom%n_d(:))
          do i = xdim, zdim
-            write(d_label, '(2a)') d_pref(i), "-edge_position"
+            write(d_label, '(2a)') d_pref(i), d_edge_apname
             call create_attribute(dom_g_id, d_label, dom%edge(i, :))
-            write(d_label, '(2a)') d_pref(i), "-boundary_type"
+            write(d_label, '(2a)') d_pref(i), d_bnd_apname
             call create_attribute(dom_g_id, d_label, int(dom%bnd(i, :), kind=4))
          enddo
 
          call h5gclose_f(dom_g_id, error)
 
-         call create_attribute(cgl_g_id, "fine_count", [ 0_INT4 ]) ! we have only base domain at the moment
+         call create_attribute(cgl_g_id, d_fc_aname, [ 0_INT4 ]) ! we have only base domain at the moment
 
          !> \todo add here all fine domains
          ! name "fine_00000001"
