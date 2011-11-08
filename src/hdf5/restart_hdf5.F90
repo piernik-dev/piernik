@@ -831,6 +831,7 @@ contains
 
 !> \brief Generate numbered cg group name
    function n_cg_name(g)
+      use constants, only: dsetnamelen
       implicit none
       integer, intent(in)        :: g !< group number
       character(len=dsetnamelen) :: n_cg_name
