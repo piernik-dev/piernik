@@ -34,6 +34,8 @@
 module restart_hdf5
 ! pulled by ANY
 
+   use constants, only: singlechar, ndims
+
    implicit none
 
    private
@@ -43,12 +45,19 @@ module restart_hdf5
    character(len=*), parameter :: d_gname = "domains", base_d_gname = "base", d_fc_aname = "fine_count", &
         &                         d_size_aname = "n_d", d_edge_apname = "-edge_position", d_bnd_apname = "-boundary_type", &
         &                         cg_gname = "cg", cg_cnt_aname = "cg_count", cg_lev_aname = "level", cg_size_aname = "n_b", cg_offset_aname = "off"
+   character(len=singlechar), dimension(ndims), parameter :: dir_pref = [ "x", "y", "z" ]
 
 
-!> \brief Add an attribute to the given group and initialize its value
+!> \brief Add an attribute (1D array) to the given group and initialize its value
    interface create_attribute
       module procedure create_int_attribute
       module procedure create_real_attribute
+   end interface
+
+!> \brief Read an attribute (1D array) from the given group
+   interface read_attribute
+      module procedure read_int_attribute
+      module procedure read_real_attribute
    end interface
 
 !> \brief Compare a 1D array or string across all processed. Die if any difference is found
@@ -854,7 +863,7 @@ contains
 
    subroutine write_restart_hdf5_v2(filename)
 
-      use constants,   only: cwdlen, dsetnamelen, singlechar, xdim, zdim, ndims, I_ONE, I_TWO, AT_IGNORE, INT4
+      use constants,   only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, AT_IGNORE, INT4
       use dataio_pub,  only: die, nproc_io, can_i_write
       use dataio_user, only: problem_write_restart
       use domain,      only: dom
@@ -887,7 +896,6 @@ contains
       type(cg_list_element), pointer                :: cgl
       type(grid_container),  pointer                :: fcg
       logical(kind=4)                               :: Z_avail                                  !> .true. if HDF5 was compiled with zlib support
-      character(len=singlechar), dimension(ndims), parameter :: d_pref = [ "x", "y", "z" ]
       character(len=dsetnamelen)                    :: d_label
 
       ! Create a new file and initialize it
@@ -906,9 +914,9 @@ contains
          call h5open_f(error)
          call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error)
 
-         call h5gcreate_f(file_id, cg_gname, cgl_g_id, error)
+         call h5gcreate_f(file_id, cg_gname, cgl_g_id, error)                                 ! create "/cg"
 
-         call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])
+         call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])                            ! create "/cg/cg_count"
 
          Z_avail = .false.
          if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
@@ -934,11 +942,11 @@ contains
             endif
 
             do g = 1, cg_n(p)
-               call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error)
+               call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/cg/cg_%08d"
 
-               call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )
-               call create_attribute(cg_g_id, cg_size_aname, cg_n_b(g, :))
-               call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4))
+               call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                    ! create "/cg/cg_%08d/level"
+               call create_attribute(cg_g_id, cg_size_aname, cg_n_b(g, :))                    ! create "/cg/cg_%08d/n_b"
+               call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4))     ! create "/cg/cg_%08d/off"
 
                cg_all_n_b(sum(cg_n(:p))-cg_n(p)+g, :) = cg_n_b(g, :)
 
@@ -951,7 +959,7 @@ contains
                   drank = ndims
                   allocate(ddims(drank))
                   do i = lbound(fcg%q(:), dim=1, kind=4), ubound(fcg%q(:), dim=1, kind=4)
-                     if (fcg%q(i)%restart_mode /= AT_IGNORE) &
+                     if (fcg%q(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/fcg.q(i).name"
                           call create_empty_cg_dataset(cg_g_id, fcg%q(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
                   enddo
                   deallocate(ddims)
@@ -961,7 +969,7 @@ contains
                   drank = ndims + I_ONE
                   allocate(ddims(drank))
                   do i = lbound(fcg%w(:), dim=1, kind=4), ubound(fcg%w(:), dim=1, kind=4)
-                     if (fcg%w(i)%restart_mode /= AT_IGNORE) &
+                     if (fcg%w(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/fcg.w(i).name"
                           call create_empty_cg_dataset(cg_g_id, fcg%w(i)%name, int([ size(fcg%w(i)%arr, dim=1, kind=4), cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
                   enddo
                   deallocate(ddims)
@@ -977,20 +985,20 @@ contains
          call h5gclose_f(cgl_g_id, error)
 
          ! describe_domains
-         call h5gcreate_f(file_id, d_gname, doml_g_id, error)
+         call h5gcreate_f(file_id, d_gname, doml_g_id, error)                    ! create "/domains"
 
-         call h5gcreate_f(doml_g_id, base_d_gname, dom_g_id, error)
-         call create_attribute(dom_g_id, d_size_aname, dom%n_d(:))
+         call h5gcreate_f(doml_g_id, base_d_gname, dom_g_id, error)              ! create "/domains/base"
+         call create_attribute(dom_g_id, d_size_aname, dom%n_d(:))               ! create "/domains/base/n_d"
          do i = xdim, zdim
-            write(d_label, '(2a)') d_pref(i), d_edge_apname
-            call create_attribute(dom_g_id, d_label, dom%edge(i, :))
-            write(d_label, '(2a)') d_pref(i), d_bnd_apname
-            call create_attribute(dom_g_id, d_label, int(dom%bnd(i, :), kind=4))
+            write(d_label, '(2a)') dir_pref(i), d_edge_apname
+            call create_attribute(dom_g_id, d_label, dom%edge(i, :))             ! create "/domains/base/[xyz]-edge_position"
+            write(d_label, '(2a)') dir_pref(i), d_bnd_apname
+            call create_attribute(dom_g_id, d_label, int(dom%bnd(i, :), kind=4)) ! create "/domains/base/[xyz]-boundary_type"
          enddo
 
          call h5gclose_f(dom_g_id, error)
 
-         call create_attribute(cgl_g_id, d_fc_aname, [ 0_INT4 ]) ! we have only base domain at the moment
+         call create_attribute(doml_g_id, d_fc_aname, [ 0_INT4 ] )               ! create "/domains/fine_count"  ! we have only base domain at the moment
 
          !> \todo add here all fine domains
          ! name "fine_00000001"
@@ -1376,11 +1384,12 @@ contains
 
    subroutine read_restart_hdf5_v2(status_v2)
 
-      use constants,  only: cwdlen, cbuff_len, INVALID, RD
+      use constants,  only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, INVALID, RD, LO, HI
       use dataio_pub, only: die, warn, printio, msg, last_hdf_time, next_t_tsl, next_t_log, problem_name, new_id, domain_dump, &
            &                require_init_prob, piernik_hdf5_version2, step_hdf, step_res, nres, nhdf
+      use domain,     only: dom
       use global,     only: magic_mass, t, dt, nstep
-      use hdf5,       only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f
+      use hdf5,       only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use h5lt,       only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mpisetup,   only: master
 
@@ -1388,7 +1397,8 @@ contains
 
       integer, intent(out)  :: status_v2
 
-      integer(HID_T) :: file_id       !> File identifier
+      integer(HID_T) :: file_id              !> File identifier
+      integer(HID_T) :: doml_g_id, dom_g_id  !> domain list and domain group identifiers
       character(len=cwdlen) :: filename
       logical :: file_exist
       integer(kind=4) :: error
@@ -1403,6 +1413,7 @@ contains
       !> \deprecated same strings are used independently in set_common_attributes*
       integer :: ia
       integer :: nres_old
+      character(len=dsetnamelen) :: d_label
 
       call warn("[restart_hdf5:read_restart_hdf5_v2] Not implemented yet")
 
@@ -1510,10 +1521,48 @@ contains
          end select
       enddo
 
+      ! Read domain description
+      call h5gopen_f(file_id, d_gname, doml_g_id, error)       ! open "/domains"
+
+      ! Read base domain
+      call h5gopen_f(doml_g_id, base_d_gname, dom_g_id, error) ! open "/domains/base"
+
+      allocate(ibuf(ndims))
+      call read_attribute(dom_g_id, d_size_aname, ibuf)        ! read "/domains/base/n_d"
+      if (any(ibuf(:) /= dom%n_d(:))) call die("[restart_hdf5:read_restart_hdf5_v2] n_d doesn't match")
+      deallocate(ibuf)
+
+      allocate(ibuf(LO:HI), rbuf(LO:HI))
+      do ia = xdim, zdim
+         write(d_label, '(2a)') dir_pref(ia), d_edge_apname
+         call read_attribute(dom_g_id, d_label, rbuf)          ! read "/domains/base/[xyz]-edge_position"
+         if (any(rbuf(:) /= dom%edge(ia, :))) call die("[restart_hdf5:read_restart_hdf5_v2] edge position doesn't match")
+         write(d_label, '(2a)') dir_pref(ia), d_bnd_apname
+         call read_attribute(dom_g_id, d_label, ibuf)          ! read "/domains/base/[xyz]-boundary_type"
+         if (any(ibuf(:) /= dom%bnd(ia, :))) then
+            write(msg,'(2a,2(a,2i3))')"[restart_hdf5:read_restart_hdf5_v2] Boundary conditions in the ",dir_pref(ia),"-direction have changed. Saved type: ",ibuf(:), &
+                 &                    ", new type:",dom%bnd(ia, :)
+            call warn(msg)
+         endif
+      enddo
+      deallocate(ibuf, rbuf)
+
+      call h5gclose_f(dom_g_id, error)
+
+      ! Read refined patches
+      allocate(ibuf(1))
+      call read_attribute(doml_g_id, d_fc_aname, ibuf)         ! read "/domains/fine_count"
+      if (ibuf(1) > 0) call die("[restart_hdf5:read_restart_hdf5_v2] Refinement reading not implemented yet")
+      deallocate(ibuf)
+
+      call h5gclose_f(doml_g_id, error)
+
+      ! Read available cg pieces
+
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
-      if (status_v2 /= STAT_OK) nres = nres_old ! let's hope read_restart_hdf5_v1 will fix what could possibly bot broken here
+      if (status_v2 /= STAT_OK) nres = nres_old ! let's hope read_restart_hdf5_v1 will fix what could possibly got broken here
 
    end subroutine read_restart_hdf5_v2
 
@@ -1604,5 +1653,49 @@ contains
       endif
 
    end subroutine compare_string
+
+!> \brief Read an integer attribute (1D array) from the given group
+
+   subroutine read_int_attribute(g_id, name, int_array)
+
+     use hdf5,      only: HID_T, HSIZE_T, H5T_NATIVE_INTEGER, h5aopen_f, h5aclose_f, h5aread_f
+
+     implicit none
+
+     integer(HID_T), intent(in)     :: g_id          !< group id where to create the attribute
+     character(len=*), intent(in)   :: name          !< name
+     integer, dimension(:), intent(out) :: int_array !< the data
+
+     integer(HID_T)  :: attr_id
+     integer(kind=4) :: error
+
+     !> \todo Implement size checks
+     call h5aopen_f(g_id, name, attr_id, error)
+     call h5aread_f(attr_id, H5T_NATIVE_INTEGER, int_array, [ size(int_array, kind=HSIZE_T) ], error)
+     call h5aclose_f(attr_id, error)
+
+   end subroutine read_int_attribute
+
+!> \brief Read a real attribute (1D array) from the given group
+
+   subroutine read_real_attribute(g_id, name, real_array)
+
+     use hdf5,      only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5aopen_f, h5aclose_f, h5aread_f
+
+     implicit none
+
+     integer(HID_T), intent(in)     :: g_id        !< group id where to create the attribute
+     character(len=*), intent(in)   :: name        !< name
+     real, dimension(:), intent(out) :: real_array !< the data
+
+     integer(HID_T)  :: attr_id
+     integer(kind=4) :: error
+
+     !> \todo Implement size checks
+     call h5aopen_f(g_id, name, attr_id, error)
+     call h5aread_f(attr_id, H5T_NATIVE_DOUBLE, real_array, [ size(real_array, kind=HSIZE_T) ], error)
+     call h5aclose_f(attr_id, error)
+
+   end subroutine read_real_attribute
 
 end module restart_hdf5

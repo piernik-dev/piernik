@@ -1237,7 +1237,9 @@ contains
 
 !-----------------------------------------------------------------------------
 !>
-!! An interpreter of string-defined boundary types
+!! \brief An interpreter of string-defined boundary types
+!!
+!! \todo Write a routine that does the reverse transformation - can be useful for easy-to-interpret messages
 !<
 
    subroutine translate_bnds_to_ints(this, bnds)
