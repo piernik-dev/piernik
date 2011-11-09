@@ -205,8 +205,8 @@ contains
 
       implicit none
 
-      real, dimension(:,:), intent(in)           :: dens
-      real, dimension(:,:), intent(in)           :: velx
+      real, dimension(:,:), pointer, intent(in)  :: dens
+      real, dimension(:,:), pointer, intent(in)  :: velx
       real, dimension(size(dens,1),size(dens,2)) :: acc
 
       acc = 0.0
