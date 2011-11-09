@@ -1399,6 +1399,7 @@ contains
 
       integer(HID_T) :: file_id              !> File identifier
       integer(HID_T) :: doml_g_id, dom_g_id  !> domain list and domain group identifiers
+      integer(HID_T) :: cgl_g_id,  cg_g_id   !> cg list and cg group identifiers
       character(len=cwdlen) :: filename
       logical :: file_exist
       integer(kind=4) :: error
@@ -1414,6 +1415,13 @@ contains
       integer :: ia
       integer :: nres_old
       character(len=dsetnamelen) :: d_label
+
+      type cg_essentials                            !> All vital attributes of a cg in one place
+         integer(kind=4), dimension(ndims) :: n_b
+         integer(kind=8), dimension(ndims) :: off
+         integer(kind=4)                   :: level
+      end type cg_essentials
+      type(cg_essentials), dimension(:), allocatable :: cg_res
 
       call warn("[restart_hdf5:read_restart_hdf5_v2] Not implemented yet")
 
@@ -1435,7 +1443,7 @@ contains
 
       call h5fopen_f(trim(filename), H5F_ACC_RDONLY_F, file_id, error)
 
-      ! Check file format version and compare attributes in the root of the restart point file"
+      ! Check file format version first
       allocate(rbuf(1))
 
       call h5ltget_attribute_double_f(file_id, "/", "piernik", rbuf, error) !> \deprecated: magic string across multiple files
@@ -1455,6 +1463,7 @@ contains
       endif
       call compare_real_array1D(rbuf(:))
 
+      ! Compare attributes in the root of the restart point file with values read from problem.par
       !> \todo merge this code somehow with set_common_attributes_v2
       do ia = lbound(real_attrs, dim=1), ubound(real_attrs, dim=1)
          call h5ltget_attribute_double_f(file_id, "/", trim(real_attrs(ia)), rbuf, error)
@@ -1558,6 +1567,41 @@ contains
       call h5gclose_f(doml_g_id, error)
 
       ! Read available cg pieces
+      call h5gopen_f(file_id, cg_gname, cgl_g_id, error)         ! open "/cg"
+
+      allocate(ibuf(1))
+      call read_attribute(cgl_g_id, cg_cnt_aname, ibuf)          ! open "/cg/cg_count"
+      if (ibuf(1) <= 0) call die("[restart_hdf5:read_restart_hdf5_v2] Empty cg list")
+
+      allocate(cg_res(ibuf(1)))
+      deallocate(ibuf)
+
+      do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
+         call h5gopen_f(cgl_g_id, n_cg_name(ia), cg_g_id, error) ! open "/cg/cg_%08d"
+
+         allocate(ibuf(1))
+         call read_attribute(cg_g_id, cg_lev_aname, ibuf)        ! open "/cg/cg_%08d/level"
+         if (ibuf(1) /= 1) call die("[restart_hdf5:read_restart_hdf5_v2] Only base level is supported")
+         cg_res(ia)%level=ibuf(1)
+         deallocate(ibuf)
+
+         allocate(ibuf(ndims))
+         call read_attribute(cg_g_id, cg_size_aname, ibuf)       ! open "/cg/cg_%08d/n_b"
+         if (any(ibuf(:)<=0)) call die("[restart_hdf5:read_restart_hdf5_v2] Non-positive cg size detected")
+         cg_res(ia)%n_b(:) = ibuf(:)
+         call read_attribute(cg_g_id, cg_offset_aname, ibuf)     ! open "/cg/cg_%08d/off"
+         cg_res(ia)%off(:) = ibuf(:)
+         deallocate(ibuf)
+
+         call h5gclose_f(cg_g_id, error)
+      enddo
+
+      ! Check if all read cg cover entire base level (and only it) without any overlaps
+      ! For AMR this will be more complicated: check if all restart cg cover leaf patches, do an additional domain decomposition
+      ! On each process determine which parts of the restart cg have to be read and where
+
+      deallocate(cg_res)
+      call h5gclose_f(cgl_g_id, error)
 
       call h5fclose_f(file_id, error)
       call h5close_f(error)
