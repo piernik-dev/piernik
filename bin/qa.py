@@ -4,14 +4,16 @@ import re, sys
 import subprocess as sp
 import numpy as np
 
-debug = False
-
 typ1 = np.dtype([('name','a50'),('beg','i'),('end','i'),('type','a4')])
 
 test_for_routines  = re.compile('''
       ^\s{0,12}(|end|pure|elemental)\s           # starts with spaces or spaces and one of { 'end', 'pure', ... }
       (|real|logical|integer)(|\s)               # if function it can have a type
       (subroutine|function|type(,|\s))           # next goes subroutine or function or type
+   ''',re.VERBOSE)
+test_for_interfaces = re.compile('''
+      ^\s{0,12}(|end)\s           # starts with spaces or spaces and one of { 'end', 'pure', ... }
+      interface                   # next goes subroutine or function or type
    ''',re.VERBOSE)
 #test_for_routines  = re.compile('''^(?!\s{0,9}!).*(subroutine|function|type(,|\s::))''',re.VERBOSE)
 module_body        = re.compile('''^\s{0,3}(module|contains|program)''', re.VERBOSE)
@@ -105,9 +107,7 @@ def parse_f90file(lines,fname,store):
    if (debug): print fname
    subs_array = np.zeros((0,), dtype=typ1)
 
-   test = np.array(lines)
-
-   subs = filter(test_for_routines.search, test)
+   subs = filter(test_for_routines.search, lines)
    subs_names = []
    subs_types = []
    for f in subs:
@@ -117,19 +117,19 @@ def parse_f90file(lines,fname,store):
          subs_names.append(word[2])
    for f in subs_names:
        cur_sub = filter(re.compile(f).search, subs)
-       obj= (f, line_num(test,cur_sub[0]), line_num(test,cur_sub[1]), subs_types.pop())
+       obj= (f, line_num(lines,cur_sub[0]), line_num(lines,cur_sub[1]), subs_types.pop())
        subs_array = np.append(subs_array, np.array([obj],dtype=typ1))
    
    if (debug):
       print subs
       print subs_names
 
-   mod = filter(module_body.match, test)
+   mod = filter(module_body.match, lines)
    if (len(mod) > 1):
-      obj = (mod[0].strip().split(" ")[1],  line_num(test, mod[0]), line_num(test,mod[1]), mod[0].strip().split(" ")[0][0:3])
+      obj = (mod[0].strip().split(" ")[1],  line_num(lines, mod[0]), line_num(lines,mod[1]), mod[0].strip().split(" ")[0][0:3])
       subs_array = np.append(subs_array, np.array([obj],dtype=typ1))
    elif (len(mod) == 1):
-      obj = (mod[0].strip().split(" ")[1],  line_num(test, mod[0]), len(lines), 'mod')
+      obj = (mod[0].strip().split(" ")[1],  line_num(lines, mod[0]), len(lines), 'mod')
       subs_array = np.append(subs_array, np.array([obj],dtype=typ1))
    else:
       store.append(give_warn("QA:  ") +"[%s] => module body not found!" % fname)
@@ -182,10 +182,20 @@ def qa_checks(files,options):
       qa_crude_write(np.array(pfile),'',warns,f)
       qa_magic_integers(np.array(pfile),'',warns,f)
       # checks that require parsing f90 files
-      clean_ind = [] 
+      clean_ind = []
+      pfile = np.array(pfile)
+      # remove interfaces as we currently don't handle them well
+      interfaces = [line_num(pfile,f) for f in filter(test_for_interfaces.search, pfile)]
+      while len(interfaces) > 0:
+         if (debug): print "Removed interface"
+         pfile = np.delete(pfile, np.s_[interfaces[0]:interfaces[1]+1],0)
+         interfaces = [line_num(pfile,f) for f in filter(test_for_interfaces.search, pfile)]
+
       for obj in parse_f90file(pfile,f,warns):
          if (debug): print obj
-         part = np.array(pfile[obj['beg']:obj['end']])
+         part = pfile[obj['beg']:obj['end']]
+         if (debug): 
+            for f in part: print f
          # False refs need to be done before removal of types in module body
          qa_false_refs(part,obj['name'],warns,f)
          if(obj['type'] == 'mod'):
@@ -312,15 +322,16 @@ if __name__ == "__main__":
    usage = "usage: %prog [options] FILES"
    parser = OptionParser(usage=usage)
    parser.add_option("-v", "--verbose",
-                  action="store_true", dest="verbose", default=False,
+                  action="store_true", dest="debug", default=False,
                   help="make lots of noise [default]")
    parser.add_option("-q", "--quiet",
-                  action="store_false", dest="verbose",
+                  action="store_false", dest="debug",
                   help="be vewwy quiet (I'm hunting wabbits)")
    parser.add_option("-f", "--force",
                   action="store_true", dest="force",
                   help="commit despite errors (It will be logged)")
    (options, args) = parser.parse_args()
+   debug = options.debug
    if len(args) < 1:
       parser.error("incorrect number of arguments")
    qa_checks(args,options)
