@@ -674,7 +674,7 @@ contains
 !<
    logical function is_overlap_per(this, other, periods) result(share)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI
+      use constants,  only: xdim, ydim, zdim, ndims, LO, HI
 
       implicit none
 
@@ -691,7 +691,7 @@ contains
                if ((dom%has_dir(ydim) .or. periods(ydim)>0) .or. j==0) then
                   do k = -1, 1
                      if ((dom%has_dir(zdim) .or. periods(zdim)>0) .or. k==0) then
-                        oth(:,:) = other(:,:) + reshape([i*periods(xdim), j*periods(ydim), k*periods(zdim), i*periods(xdim), j*periods(ydim), k*periods(zdim)], [3,2])
+                        oth(:,:) = other(:,:) + reshape([i*periods(xdim), j*periods(ydim), k*periods(zdim), i*periods(xdim), j*periods(ydim), k*periods(zdim)], [ndims, HI])
                         share = share .or. is_overlap_simple(this, oth)
                      endif
                   enddo
@@ -711,11 +711,18 @@ contains
 
       use constants,  only: xdim, zdim, LO, HI
 
+      use constants, only: xdim, zdim
+
       implicit none
 
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this, other !< two boxes
 
-      share = all(((other(:, LO) <= this(:, HI)) .and. (other(:, HI) >= this(:, LO))) .or. (.not. dom%has_dir(:)))
+      integer :: d
+
+      share = .true.
+      do d = xdim, zdim
+         if (dom%has_dir(d)) share = share .and. (other(d, LO) <= this(d, HI)) .and. (other(d, HI) >= this(d, LO))
+      enddo
 
    end function is_overlap_simple
 
