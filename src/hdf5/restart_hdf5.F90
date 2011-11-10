@@ -1178,7 +1178,7 @@ contains
            &                 cg_size_aname, cg_offset_aname, cg_lev_aname, cg_gname, base_d_gname, cg_cnt_aname
       use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, next_t_tsl, next_t_log, problem_name, new_id, domain_dump, &
            &                require_init_prob, piernik_hdf5_version2, step_hdf, step_res, nres, nhdf
-      use domain,      only: dom
+      use domain,      only: dom, is_overlap
       use global,      only: magic_mass, t, dt, nstep
       use hdf5,        only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
@@ -1192,7 +1192,7 @@ contains
       integer(HID_T) :: doml_g_id, dom_g_id  !> domain list and domain group identifiers
       integer(HID_T) :: cgl_g_id,  cg_g_id   !> cg list and cg group identifiers
       character(len=cwdlen) :: filename
-      logical :: file_exist
+      logical :: file_exist, outside, overlapped
       integer(kind=4) :: error
       real, dimension(:), allocatable :: rbuf
       integer(kind=4), dimension(:), allocatable :: ibuf
@@ -1203,16 +1203,17 @@ contains
            &                                                             "step_res         ", "step_hdf         ", "require_init_prob" ]
       character(len=cbuff_len), dimension(*), parameter :: str_attrs = [ "problem_name", "domain      ", "run_id      " ]
       !> \deprecated same strings are used independently in set_common_attributes*
-      integer :: ia
+      integer :: ia, j
       integer :: nres_old
       character(len=dsetnamelen) :: d_label
-
+      integer(kind=8) :: tot_cells
       type cg_essentials                            !> All vital attributes of a cg in one place
          integer(kind=4), dimension(ndims) :: n_b
          integer(kind=8), dimension(ndims) :: off
          integer(kind=4)                   :: level
       end type cg_essentials
       type(cg_essentials), dimension(:), allocatable :: cg_res
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: my_box, other_box
 
       call warn("[restart_hdf5:read_restart_hdf5_v2] Partial implementation only")
 
@@ -1388,6 +1389,23 @@ contains
       enddo
 
       ! Check if all read cg cover entire base level (and only it) without any overlaps
+      tot_cells = 0
+      outside = .false.
+      overlapped = .false.
+      do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
+         tot_cells = tot_cells + product(cg_res(ia)%n_b(:))
+         my_box(:,LO) = cg_res(ia)%off(:)
+         my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
+         outside = outside .or. any(my_box(:,LO) < 0) .or. any(my_box(:,HI) >= dom%n_d(:) .and. dom%has_dir(:))
+         do j = ia+1, ubound(cg_res, dim=1)
+            other_box(:,LO) = cg_res(j)%off(:)
+            other_box(:,HI) = cg_res(j)%off(:) + cg_res(j)%n_b(:) - 1
+            overlapped = overlapped .or. is_overlap(my_box, other_box)
+         enddo
+      enddo
+
+      if (tot_cells /= product(dom%n_d(:)) .or. outside .or. overlapped) call die("[restart_hdf5:read_restart_hdf5_v2] Improper coverage of base domain by available cg")
+
       ! For AMR this will be more complicated: check if all restart cg cover leaf patches, do an additional domain decomposition
       ! On each process determine which parts of the restart cg have to be read and where
 
