@@ -452,7 +452,7 @@ contains
    end subroutine set_common_attributes_v2
 
 ! This routine will become useful when we begin to use multiple domain containers (AMR or non-rectangular compound domains)
-
+! This routine will become obsolete or will need serious rework with HDF5-1.8.8 ~xarth
 !!$   subroutine write_grid_containter(cg, file_id, plist_id)
 !!$
 !!$      use constants, only: xdim, ydim, zdim, ndims, dsetnamelen, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR, INT4
