@@ -77,18 +77,22 @@ contains
 
       use constants,   only: I_ONE, cwdlen, WR
       use common_hdf5, only: set_common_attributes
-      use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, use_v2_io, nres
+      use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, use_v2_io, nres, piernik_hdf5_version, piernik_hdf5_version2
       use mpisetup,    only: comm, ierr, master
       use timer,       only: set_timer
 
       implicit none
+
       character(len=cwdlen)         :: filename  ! File name
+      real :: phv
 
       thdf = set_timer(tmr_hdf,.true.)
 
+      phv = piernik_hdf5_version ; if (use_v2_io) phv = piernik_hdf5_version2
+
       filename = restart_fname(WR)
       if (master) then
-         write(msg,'(3a)') 'Writing restart ', trim(filename), " ... "
+         write(msg,'(a,f4.2,2a)') 'Writing restart v', phv, trim(filename), " ... "
          call printio(msg, .true.)
       endif
       call set_common_attributes(filename)
@@ -639,13 +643,13 @@ contains
       filename = restart_fname(RD)
 
       if (master) then
-         write(msg, '(2a)') 'Reading restart file: ', trim(filename)
+         write(msg, '(2a)') 'Reading restart file v1: ', trim(filename)
          call printio(msg)
       endif
 
-      inquire(file = filename, exist = file_exist)
+      inquire(file = trim(filename), exist = file_exist)
       if (.not. file_exist) then
-         write(msg,'(3a)') '[restart_hdf5:read_restart_hdf5]: Restart file: ', trim(filename),' does not exist'
+         write(msg,'(3a)') '[restart_hdf5:read_restart_hdf5_v1]: Restart file: ', trim(filename),' does not exist'
          call die(msg)
       endif
 
@@ -764,7 +768,7 @@ contains
 
          call h5fclose_f(file_id, error)
 
-         write(msg,'(2a)') 'Done reading restart file: ', trim(filename)
+         write(msg,'(2a)') 'Done reading restart file v1: ', trim(filename)
          call printio(msg)
       endif
       call h5close_f(error)
@@ -1423,11 +1427,11 @@ contains
       end type cg_essentials
       type(cg_essentials), dimension(:), allocatable :: cg_res
 
-      call warn("[restart_hdf5:read_restart_hdf5_v2] Not implemented yet")
+      call warn("[restart_hdf5:read_restart_hdf5_v2] Partial implementation only")
 
       filename = restart_fname(RD)
       if (master) then
-         write(msg, '(2a)') 'Reading restart file: ', trim(filename)
+         write(msg, '(2a)') 'Reading restart file v2: ', trim(filename)
          call printio(msg)
       endif
 
