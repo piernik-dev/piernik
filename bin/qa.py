@@ -4,6 +4,8 @@ import re, sys
 import subprocess as sp
 import numpy as np
 
+debug = False
+
 typ1 = np.dtype([('name','a50'),('beg','i'),('end','i'),('type','a4')])
 
 test_for_routines  = re.compile('''
@@ -324,13 +326,11 @@ if __name__ == "__main__":
    parser.add_option("-v", "--verbose",
                   action="store_true", dest="debug", default=False,
                   help="make lots of noise [default]")
-   parser.add_option("-q", "--quiet",
-                  action="store_false", dest="debug",
-                  help="be vewwy quiet (I'm hunting wabbits)")
    parser.add_option("-f", "--force",
                   action="store_true", dest="force",
                   help="commit despite errors (It will be logged)")
    (options, args) = parser.parse_args()
+
    debug = options.debug
    if len(args) < 1:
       parser.error("incorrect number of arguments")
