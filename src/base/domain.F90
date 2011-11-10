@@ -711,8 +711,6 @@ contains
 
       use constants,  only: xdim, zdim, LO, HI
 
-      use constants, only: xdim, zdim
-
       implicit none
 
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this, other !< two boxes
