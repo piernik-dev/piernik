@@ -631,7 +631,6 @@ contains
       implicit none
 
       integer :: d, g, j, lh, hl, l, nl
-      logical :: sharing
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
       logical, dimension(xdim:zdim) :: dmask
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened, b_layer
@@ -705,8 +704,7 @@ contains
                      end select
 
                      do j = FIRST, LAST
-                        call is_overlap(coarsened(:,:), curl%coarser%dom%pse(j)%sel(1, :, :), sharing, per)
-                        if (sharing) procmask(j) = 1
+                        if (is_overlap(coarsened(:,:), curl%coarser%dom%pse(j)%sel(1, :, :), per)) procmask(j) = 1
                      enddo
                      allocate(curl%pfc_tgt(d, lh)%seg(count(procmask(:) /= 0)))
 
@@ -760,8 +758,7 @@ contains
                               is_internal_fine = is_internal_fine .or. (curl%finer%dom%pse(j)%sel(1, d, lh) + 1 < curl%finer%dom%n_d(d))
                         end select
                         if (is_internal_fine) then
-                           call is_overlap(coarsened(:, :), curl%my_se(:, :), sharing, per)
-                           if (sharing) procmask(j) = 1
+                           if (is_overlap(coarsened(:, :), curl%my_se(:, :), per)) procmask(j) = 1
                         endif
                      enddo
                      allocate(curl%pff_tgt(d, lh)%seg(count(procmask(:) /= 0)))

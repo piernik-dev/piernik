@@ -519,7 +519,6 @@ contains
       integer(kind=4), dimension(FLUID:ARR) :: nc
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer, bp_layer, poff
-      logical :: sharing
 
       nc = [ flind%all, ndims, max(flind%crs%all,I_ONE), I_ONE ]      !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
 
@@ -546,8 +545,7 @@ contains
                   b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
                   do j = FIRST, LAST
                      do b = lbound(this%dom%pse(j)%sel(:, :, :), dim=1), ubound(this%dom%pse(j)%sel(:, :, :), dim=1)
-                        call is_overlap(b_layer(:,:), this%dom%pse(j)%sel(b, :, :), sharing, per(:))
-                        if (sharing) procmask(j) = procmask(j) + 1
+                        if (is_overlap(b_layer(:,:), this%dom%pse(j)%sel(b, :, :), per(:))) procmask(j) = procmask(j) + 1
                      enddo
                   enddo
                enddo
@@ -575,9 +573,7 @@ contains
                            endwhere
                            !> \todo save b_layer(:,:) and bp_layer(:,:) and move above calculations outside the b loop
 
-                           call is_overlap(bp_layer(:,:), this%dom%pse(j)%sel(b, :, :), sharing)
-
-                           if (sharing) then
+                           if (is_overlap(bp_layer(:,:), this%dom%pse(j)%sel(b, :, :))) then
                               poff(:,:) = bp_layer(:,:) - b_layer(:,:) ! displacement due to periodicity
                               bp_layer(:, LO) = max(bp_layer(:, LO), this%dom%pse(j)%sel(b, :, LO))
                               bp_layer(:, HI) = min(bp_layer(:, HI), this%dom%pse(j)%sel(b, :, HI))

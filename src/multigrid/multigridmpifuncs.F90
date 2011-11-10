@@ -57,7 +57,6 @@ contains
       implicit none
 
       integer :: g, j
-      logical :: sharing
       integer(kind=8), dimension(xdim:zdim) :: ijks
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
       type(pr_segment), pointer :: seg
@@ -74,8 +73,7 @@ contains
             procmask(:) = 0
             do j = FIRST, LAST
                coarsened(:,:) = curl%finer%dom%pse(j)%sel(1, :, :)/2
-               call is_overlap(curl%my_se(:, :), coarsened(:,:), sharing)
-               if (sharing) procmask(j) = 1 ! we can store also neigh(:,:), face and corner as a bitmask, if necessary
+               if (is_overlap(curl%my_se(:, :), coarsened(:,:))) procmask(j) = 1 ! we can store also neigh(:,:), face and corner as a bitmask, if necessary
             enddo
             allocate(curl%f_tgt%seg(count(procmask(:) /= 0)))
 
@@ -105,8 +103,7 @@ contains
             procmask(:) = 0
             coarsened(:,:) = curl%my_se(:, :)/2
             do j = FIRST, LAST
-               call is_overlap(coarsened(:,:), curl%coarser%dom%pse(j)%sel(1, :, :), sharing)
-               if (sharing) procmask(j) = 1
+               if (is_overlap(coarsened(:,:), curl%coarser%dom%pse(j)%sel(1, :, :))) procmask(j) = 1
             enddo
             allocate(curl%c_tgt%seg(count(procmask(:) /= 0)))
 

@@ -672,19 +672,17 @@ contains
 !> \brief is_overlap_per checks if two given blocks placed within a periodic domain are overlapping.
 !! \details to handle shearing box which is divided in y-direction at the edges, one has to provide another subroutine (is_overlap_per_shear) and add it to interface is_overlap
 !<
-   subroutine is_overlap_per(this, other, share, periods)
+   logical function is_overlap_per(this, other, periods) result(share)
 
       use constants,  only: xdim, ydim, zdim, LO, HI
 
       implicit none
 
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this, other !< two boxes
-      logical, intent(out)                                     :: share       !< is there overlap between this and the other?
       integer(kind=8), dimension(xdim:zdim), intent(in)        :: periods     !< where >0 then the direction is periodic with the given number of cells
 
       integer :: i, j, k
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: oth
-      logical :: sha
 
       share = .false.
       do i = -1, 1
@@ -694,8 +692,7 @@ contains
                   do k = -1, 1
                      if ((dom%has_dir(zdim) .or. periods(zdim)>0) .or. k==0) then
                         oth(:,:) = other(:,:) + reshape([i*periods(xdim), j*periods(ydim), k*periods(zdim), i*periods(xdim), j*periods(ydim), k*periods(zdim)], [3,2])
-                        call is_overlap_simple(this, oth, sha)
-                        share = share .or. sha
+                        share = share .or. is_overlap_simple(this, oth)
                      endif
                   enddo
                endif
@@ -703,25 +700,24 @@ contains
          endif
       enddo
 
-   end subroutine is_overlap_per
+   end function is_overlap_per
 
 !!-----------------------------------------------------------------------------
 !!
 !> \brief is_overlap_simple checks if two given blocks placed within a nonperiodic domain are overlapping.
 !! This routine is not supposed to take care of periodic domain - use is_overlap_per when you check overlap for boxes that cross the periodic domain boundary
 !<
-   subroutine is_overlap_simple(this, other, share)
+   logical function is_overlap_simple(this, other) result(share)
 
       use constants,  only: xdim, zdim, LO, HI
 
       implicit none
 
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this, other !< two boxes
-      logical, intent(out)                                     :: share       !< is there overlap between this and the other?
 
       share = all(((other(:, LO) <= this(:, HI)) .and. (other(:, HI) >= this(:, LO))) .or. (.not. dom%has_dir(:)))
 
-   end subroutine is_overlap_simple
+   end function is_overlap_simple
 
 !-----------------------------------------------------------------------------
 
