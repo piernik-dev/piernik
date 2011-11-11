@@ -1236,7 +1236,7 @@ contains
       character(len=cbuff_len), dimension(*), parameter :: str_attrs = [ "problem_name", "domain      ", "run_id      " ]
       !> \deprecated same strings are used independently in set_common_attributes*
       integer :: ia, j
-      integer :: nres_old
+      integer(kind=4) :: nres_old
       character(len=dsetnamelen) :: d_label
       integer(kind=8) :: tot_cells
       type(cg_essentials), dimension(:), allocatable :: cg_res
@@ -1531,7 +1531,7 @@ contains
             off(:) = restart_off(:)
             cnt(:) = 1
             call h5sselect_hyperslab_f(filespace, H5S_SELECT_SET_F, off(:), cnt(:), error, block=dims(:))
-            call h5screate_simple_f(size(dims), dims(:), memspace, error)
+            call h5screate_simple_f(size(dims, kind=4), dims(:), memspace, error)
             allocate(a3d(dims(xdim), dims(ydim), dims(zdim)))
             call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, a3d, dims(:), error, file_space_id = filespace, mem_space_id = memspace)
             cg%q(q_lst(i))%arr(cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
@@ -1552,7 +1552,7 @@ contains
             off(:) = [ 0_HSIZE_T, restart_off(:) ]
             cnt(:) = 1
             call h5sselect_hyperslab_f(filespace, H5S_SELECT_SET_F, off(:), cnt(:), error, block=dims(:))
-            call h5screate_simple_f(size(dims), dims(:), memspace, error)
+            call h5screate_simple_f(size(dims, kind=4), dims(:), memspace, error)
             allocate(a4d(dims(1), dims(1+xdim), dims(1+ydim), dims(1+zdim)))
             call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, a4d, dims(:), error, file_space_id = filespace, mem_space_id = memspace)
             cg%w(w_lst(i))%arr(:, cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
@@ -1667,7 +1667,7 @@ contains
 
      integer(HID_T), intent(in)     :: g_id          !< group id where to create the attribute
      character(len=*), intent(in)   :: name          !< name
-     integer, dimension(:), intent(out) :: int_array !< the data
+     integer(kind=4), dimension(:), intent(out) :: int_array !< the data
 
      integer(HID_T)  :: attr_id
      integer(kind=4) :: error
