@@ -34,12 +34,20 @@
 module restart_hdf5
 ! pulled by ANY
 
+   use constants, only: ndims
+
    implicit none
 
    private
    public :: read_restart_hdf5, write_restart_hdf5, read_arr_from_restart
 
    integer,          parameter :: STAT_OK = 0
+
+   type cg_essentials                            !> All vital attributes of a cg in one place
+      integer(kind=4), dimension(ndims) :: n_b
+      integer(kind=8), dimension(ndims) :: off
+      integer(kind=4)                   :: level
+   end type cg_essentials
 
 !> \brief Read an attribute (1D array) from the given group
    interface read_attribute
@@ -859,11 +867,14 @@ contains
 !> \brief create empty datasets for each cg to store restart data
 
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, Z_avail, g)
+
       use constants, only: ndims, I_ONE, AT_IGNORE
       use grid_cont, only: grid_container
       use grid,      only: all_cg
       use hdf5,      only: HID_T, HSIZE_T
+
       implicit none
+
       integer(HID_T), intent(in)                           :: cg_g_id
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
       logical(kind=4), intent(in)                          :: Z_avail
@@ -931,11 +942,44 @@ contains
 
    end subroutine create_empty_cg_dataset
 
+!>
+!! \brief Find out which fields (cg%q and cg%w arrays) are stored in the restart file
+!!
+!! \details The result arrays q_lst, w_lst need to be deallocated separately
+!<
+
+   subroutine qw_lst(q_lst, w_lst)
+
+      use constants, only: AT_IGNORE
+      use grid,      only: all_cg
+
+      implicit none
+
+      integer, dimension(:), allocatable, intent(out) :: q_lst, w_lst
+
+      integer :: i
+
+      if (allocated(all_cg%first%cg%q)) then
+         do i = lbound(all_cg%first%cg%q(:), dim=1, kind=4), ubound(all_cg%first%cg%q(:), dim=1, kind=4)
+            if (all_cg%first%cg%q(i)%restart_mode /= AT_IGNORE) call append_int_to_array(q_lst, i)
+         enddo
+      endif
+      if (.not.allocated(q_lst)) allocate(q_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
+
+      if (allocated(all_cg%first%cg%w)) then
+         do i = lbound(all_cg%first%cg%w(:), dim=1, kind=4), ubound(all_cg%first%cg%w(:), dim=1, kind=4)
+            if (all_cg%first%cg%w(i)%restart_mode /= AT_IGNORE) call append_int_to_array(w_lst, i)
+         enddo
+      endif
+      if (.not.allocated(w_lst)) allocate(w_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
+
+   end subroutine qw_lst
+
 !> \brief Write all grid containers to the file
 
    subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b)
 
-      use constants,   only: xdim, ydim, zdim, ndims, AT_IGNORE
+      use constants,   only: xdim, ydim, zdim, ndims
       use common_hdf5, only: n_cg_name
       use dataio_pub,  only: die, nproc_io, can_i_write
       use grid,        only: all_cg
@@ -974,20 +1018,7 @@ contains
 
       !> \todo Do a consistency check
 
-      ! find out which fields need to be written
-      if (allocated(all_cg%first%cg%q)) then
-         do i = lbound(all_cg%first%cg%q(:), dim=1, kind=4), ubound(all_cg%first%cg%q(:), dim=1, kind=4)
-            if (all_cg%first%cg%q(i)%restart_mode /= AT_IGNORE) call append_int_to_array(q_lst, i)
-         enddo
-      endif
-      if (.not.allocated(q_lst)) allocate(q_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
-
-      if (allocated(all_cg%first%cg%w)) then
-         do i = lbound(all_cg%first%cg%w(:), dim=1, kind=4), ubound(all_cg%first%cg%w(:), dim=1, kind=4)
-            if (all_cg%first%cg%w(i)%restart_mode /= AT_IGNORE) call append_int_to_array(w_lst, i)
-         enddo
-      endif
-      if (.not.allocated(w_lst)) allocate(w_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
+      call qw_lst(q_lst, w_lst)
 
       ! write all cg, one by one
       do ncg = 1, sum(cg_n(:))
@@ -1083,9 +1114,7 @@ contains
       enddo
 
       ! clean up
-      deallocate(cg_src_p, cg_src_n)
-      if (allocated(q_lst)) deallocate(q_lst)
-      if (allocated(w_lst)) deallocate(w_lst)
+      deallocate(cg_src_p, cg_src_n, q_lst, w_lst)
 
    end subroutine write_cg_to_restart
 
@@ -1177,12 +1206,15 @@ contains
       use common_hdf5, only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
            &                 cg_size_aname, cg_offset_aname, cg_lev_aname, cg_gname, base_d_gname, cg_cnt_aname
       use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, next_t_tsl, next_t_log, problem_name, new_id, domain_dump, &
-           &                require_init_prob, piernik_hdf5_version2, step_hdf, step_res, nres, nhdf
+           &                 require_init_prob, piernik_hdf5_version2, step_hdf, step_res, nres, nhdf
+      use dataio_user, only: problem_read_restart
       use domain,      only: dom, is_overlap
+      use gc_list,     only: cg_list_element
       use global,      only: magic_mass, t, dt, nstep
+      use grid,        only: all_cg
       use hdf5,        only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
-      use mpisetup,    only: master
+      use mpisetup,    only: master, comm
 
       implicit none
 
@@ -1207,15 +1239,11 @@ contains
       integer :: nres_old
       character(len=dsetnamelen) :: d_label
       integer(kind=8) :: tot_cells
-      type cg_essentials                            !> All vital attributes of a cg in one place
-         integer(kind=4), dimension(ndims) :: n_b
-         integer(kind=8), dimension(ndims) :: off
-         integer(kind=4)                   :: level
-      end type cg_essentials
       type(cg_essentials), dimension(:), allocatable :: cg_res
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: my_box, other_box
+      type(cg_list_element), pointer :: cgl
 
-      call warn("[restart_hdf5:read_restart_hdf5_v2] Partial implementation only")
+      if (master) call warn("[restart_hdf5:read_restart_hdf5_v2] Experimental implementation")
 
       filename = restart_fname(RD)
       if (master) then
@@ -1369,7 +1397,7 @@ contains
       deallocate(ibuf)
 
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
-         call h5gopen_f(cgl_g_id, n_cg_name(ia), cg_g_id, error) ! open "/cg/cg_%08d"
+         call h5gopen_f(cgl_g_id, n_cg_name(ia), cg_g_id, error) ! open "/cg/cg_%08d, ia"
 
          allocate(ibuf(1))
          call read_attribute(cg_g_id, cg_lev_aname, ibuf)        ! open "/cg/cg_%08d/level"
@@ -1407,7 +1435,25 @@ contains
       if (tot_cells /= product(dom%n_d(:)) .or. outside .or. overlapped) call die("[restart_hdf5:read_restart_hdf5_v2] Improper coverage of base domain by available cg")
 
       ! For AMR this will be more complicated: check if all restart cg cover leaf patches, do an additional domain decomposition
+
+      ! set up things such as register user rank-3 and rank-4 arrays to be read by read_arr_from_restart. Read also anything that is not read by all read_cg_from_restart calls
+      if (associated(problem_read_restart)) call problem_read_restart(file_id)
+
       ! On each process determine which parts of the restart cg have to be read and where
+      do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
+         my_box(:,LO) = cg_res(ia)%off(:)
+         my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
+         cgl => all_cg%first
+         do while (associated(cgl))
+            other_box(:,LO) = cgl%cg%off(:)
+            other_box(:,HI) = cgl%cg%off(:) + cgl%cg%n_b(:) - 1
+            if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia))
+            cgl => cgl%nxt
+         enddo
+      enddo
+
+      !> \todo update boundaries
+      status_v2 = STAT_OK
 
       deallocate(cg_res)
       call h5gclose_f(cgl_g_id, error)
@@ -1416,8 +1462,112 @@ contains
       call h5close_f(error)
 
       if (status_v2 /= STAT_OK) nres = nres_old ! let's hope read_restart_hdf5_v1 will fix what could possibly got broken here
+      call MPI_Barrier(comm, error)
 
    end subroutine read_restart_hdf5_v2
+
+!> \brief Read as much as possible from stored cg to own cg
+   subroutine read_cg_from_restart(cg, cgl_g_id, ncg, cg_r)
+
+      use common_hdf5, only: n_cg_name
+      use constants,   only: xdim, ydim, zdim, LO, HI, LONG
+      use dataio_pub,  only: die
+      use domain,      only: is_overlap, dom
+      use grid_cont,   only: grid_container
+      use hdf5,        only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
+           &                 h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
+
+      implicit none
+
+      type(grid_container), pointer, intent(inout) :: cg        !> Own grid container
+      integer(HID_T),                intent(in)    :: cgl_g_id  !> cg group identifier in the restart file
+      integer,                       intent(in)    :: ncg       !> number of cg in the restart file
+      type(cg_essentials),           intent(in)    :: cg_r      !> cg attributes that do not need to be reread
+
+      integer(HID_T) :: cg_g_id !> cg group identifier
+      integer(HID_T) :: dset_id
+      integer(HID_T) :: filespace, memspace
+      integer(HSIZE_T), dimension(:), allocatable :: dims, off, cnt
+      integer(kind=4) :: error
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box, restart_box
+      integer(kind=8), dimension(xdim:zdim) :: own_off, restart_off, o_size   ! the position and size of the overlapped region
+      integer, allocatable, dimension(:) :: q_lst, w_lst
+      integer :: d, i
+      real, dimension(:,:,:), allocatable :: a3d
+      real, dimension(:,:,:,:), allocatable :: a4d
+
+      ! Find overlap between own cg and restart cg
+      own_box(:, LO) = cg%off(:)
+      own_box(:, HI) = cg%off(:) + cg%n_b(:) - 1
+      restart_box(:, LO) = cg_r%off(:)
+      restart_box(:, HI) = cg_r%off(:) + cg_r%n_b(:) - 1
+      if (.not. is_overlap(own_box, restart_box)) call die("[restart_hdf5:read_cg_from_restart] No overlap found") ! this condition should never happen
+
+      own_off(:) = 0
+      restart_off(:) = 0
+      o_size(:) = 1
+      do d = xdim, zdim
+         if (dom%has_dir(d)) then
+            own_off(d) = max(restart_box(d, LO) - own_box(d, LO), 0_LONG)
+            restart_off(d) = max(own_box(d, LO) - restart_box(d, LO), 0_LONG)
+            o_size(d) = min(restart_box(d, HI), own_box(d, HI)) - max(restart_box(d, LO), own_box(d, LO)) + 1
+         endif
+      enddo
+
+      ! these conditions should never happen
+      if (any(own_off(:) > cg%n_b(:))) call die("[restart_hdf5:read_cg_from_restart] own_off(:) > cg%n_b(:)")
+      if (any(restart_off(:) > cg_r%n_b(:)))call die("[restart_hdf5:read_cg_from_restart] restart_off(:) > cg_r%n_b(:)")
+      if (any(o_size(:) > cg%n_b(:)) .or. any(o_size(:) > cg_r%n_b(:)))call die("[restart_hdf5:read_cg_from_restart] o_size(:) > cg%n_b(:) or o_size(:) > cg_r%n_b(:)")
+
+      call qw_lst(q_lst, w_lst)
+      call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error) ! open "/cg/cg_%08d, ncg"
+
+      if (size(q_lst) > 0) then
+         allocate(dims(ndims), off(ndims), cnt(ndims))
+         dims(:) = o_size(:)
+         do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+            call h5dopen_f(cg_g_id, cg%q(q_lst(i))%name, dset_id, error) ! open "/cg/cg_%08d/cg.q(q_lst(i)).name"
+            call h5dget_space_f(dset_id, filespace, error)
+            off(:) = restart_off(:)
+            cnt(:) = 1
+            call h5sselect_hyperslab_f(filespace, H5S_SELECT_SET_F, off(:), cnt(:), error, block=dims(:))
+            call h5screate_simple_f(size(dims), dims(:), memspace, error)
+            allocate(a3d(dims(xdim), dims(ydim), dims(zdim)))
+            call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, a3d, dims(:), error, file_space_id = filespace, mem_space_id = memspace)
+            cg%q(q_lst(i))%arr(cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
+                 &             cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
+                 &             cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1) = a3d(:,:,:)
+            deallocate(a3d)
+            call h5dclose_f(dset_id, error)
+         enddo
+         deallocate(dims, off, cnt)
+      endif
+
+      if (size(w_lst) > 0) then
+         allocate(dims(ndims+1), off(ndims+1), cnt(ndims+1))
+         do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+            dims(:) = [ size(cg%w(w_lst(i))%arr, dim=1, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
+            call h5dopen_f(cg_g_id, cg%w(w_lst(i))%name, dset_id, error)
+            call h5dget_space_f(dset_id, filespace, error)
+            off(:) = [ 0_HSIZE_T, restart_off(:) ]
+            cnt(:) = 1
+            call h5sselect_hyperslab_f(filespace, H5S_SELECT_SET_F, off(:), cnt(:), error, block=dims(:))
+            call h5screate_simple_f(size(dims), dims(:), memspace, error)
+            allocate(a4d(dims(1), dims(1+xdim), dims(1+ydim), dims(1+zdim)))
+            call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, a4d, dims(:), error, file_space_id = filespace, mem_space_id = memspace)
+            cg%w(w_lst(i))%arr(:, cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
+                 &                cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
+                 &                cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1) = a4d(:,:,:,:)
+            deallocate(a4d)
+            call h5dclose_f(dset_id, error)
+         enddo
+         deallocate(dims, off, cnt)
+      endif
+
+      call h5gclose_f(cg_g_id, error)
+      deallocate(q_lst, w_lst)
+
+   end subroutine read_cg_from_restart
 
 !>
 !! \brief Compare a 1D real array across all processes. Die if any difference is found

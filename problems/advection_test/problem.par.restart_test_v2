@@ -1,0 +1,78 @@
+ $BASE_DOMAIN
+    n_d = 64, 64, 1
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = -20.
+    xmax   =  20.
+    ymin   = -18.
+    ymax   =  18.
+    zmin   = -14.
+    zmax   =  14.
+ /
+
+ $MPI_BLOCKS
+    psize = 1, 1, 1
+    bsize = 3*32
+    allow_uneven = .true.
+    allow_noncart = .true.
+    dd_unif_quality = 1.1
+    dd_rect_quality = 1.1
+    use_comm3d  = .false.
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1.0
+    nend   = 1000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='moving_pulse'
+    run_id =  'ts1'
+    use_v2_io = .true.
+    ix      = 0
+    iy      = 0
+    iz      = 0
+    dt_hdf  = 1.0
+    dt_res  = 1.0
+    dt_plt  = 0.0
+    dt_log  = 0.00
+    dt_tsl  = 0.00
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu = 1.67
+    selfgrav_neu = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-5
+    smallei= 1.e-5
+    limiter= 'vanleer'
+ /
+
+ $PROBLEM_CONTROL
+    pulse_vel = 40., -36., 28.
+ /
+
+ $INTERACTIONS
+ /
