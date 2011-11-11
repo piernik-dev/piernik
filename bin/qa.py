@@ -187,17 +187,17 @@ def qa_checks(files,options):
       clean_ind = []
       pfile = np.array(pfile)
       # remove interfaces as we currently don't handle them well
-      interfaces = [line_num(pfile,f) for f in filter(test_for_interfaces.search, pfile)]
+      interfaces = [line_num(pfile,i) for i in filter(test_for_interfaces.search, pfile)]
       while len(interfaces) > 0:
          if (debug): print "Removed interface"
          pfile = np.delete(pfile, np.s_[interfaces[0]:interfaces[1]+1],0)
-         interfaces = [line_num(pfile,f) for f in filter(test_for_interfaces.search, pfile)]
+         interfaces = [line_num(pfile,i) for i in filter(test_for_interfaces.search, pfile)]
 
       for obj in parse_f90file(pfile,f,warns):
          if (debug): print obj
          part = pfile[obj['beg']:obj['end']]
-         if (debug): 
-            for f in part: print f
+#         if (debug): 
+#            for f in part: print f
          # False refs need to be done before removal of types in module body
          qa_false_refs(part,obj['name'],warns,f)
          if(obj['type'] == 'mod'):
