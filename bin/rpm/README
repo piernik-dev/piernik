@@ -1,8 +1,7 @@
 The meta-package piernik-mpich2-0-fedora.noarch.rpm contains dependencies on
-everything that is necessary for compiling Piernik setups on a Fedora 16
-(probably also on some earlier versions as well).  To install an environment
-for using the Piernik code on a Fedora, use the following command (or
-equivalent):
+everything that is necessary for compiling Piernik setups on a Fedora 15 and
+later.  To install an environment for using the Piernik code on a Fedora,
+use the following command (or equivalent):
 
 sudo yum localinstall piernik-mpich2-0-fedora.noarch.rpm 
  
