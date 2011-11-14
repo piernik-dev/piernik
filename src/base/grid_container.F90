@@ -42,22 +42,24 @@ module grid_cont
    private
    public :: grid_container, segment, bnd_list
 
-   ! specify segment of data for boundary exchange, prolongation and restriction.
+   !> \brief Specification of segment of data for boundary exchange, prolongation and restriction.
    type :: segment
       integer :: proc                                     !< target process
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
    end type segment
 
-   !< segment type for boundary exchange
+   !> \brief Segment type with additional parameters for boundary exchange
    type, extends(segment) :: bnd_segment
       integer(kind=4) :: mbc                              !< MPI Boundary conditions Container
       integer(kind=4) :: tag                              !< unique tag for data exchange
    end type bnd_segment
 
+   !> \brief Array of boundary segments to exchange
    type :: bnd_list
-      type(bnd_segment), dimension(:), allocatable :: seg !< list of boundary segments to exchange
+      type(bnd_segment), dimension(:), allocatable :: seg !< segments
    end type bnd_list
 
+   !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
    type, extends(axes) :: grid_container
       real    :: dx                             !< length of the %grid cell in x-direction
       real    :: dy                             !< length of the %grid cell in y-direction
@@ -508,6 +510,8 @@ contains
 
    end subroutine cleanup
 
+!> \brief Create MPI types for boundary exchanges
+
    subroutine mpi_bnd_types(this)
 
       use constants,  only: FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, INVALID, I_ONE
@@ -693,7 +697,7 @@ contains
    end subroutine mpi_bnd_types
 
 !>
-!! \brief Register a new entry in current cg with given name. Called from cg_list::reg_var
+!! \brief Register a new 3D entry in current cg with given name. Called from cg_list::reg_var
 !!
 !! \warning This routine should not be called directly from user routines
 !<
@@ -731,7 +735,7 @@ contains
    end subroutine add_na
 
 !>
-!! \brief Register a new entry in current cg with given name. Called from cg_list::reg_var
+!! \brief Register a new 4D entry in current cg with given name. Called from cg_list::reg_var
 !!
 !! \warning This routine should not be called directly from user routines
 !! \deprecated Almost duplicated code with add_na
@@ -911,9 +915,9 @@ contains
       endif
 
    end function get_na_ind_4d
-!>
-!! \brief Check if an array of given name is already registered
-!<
+
+!> \brief Check if a 3D array of given name is already registered
+
    function exists(this, name)
 
       use dataio_pub, only: die, msg
@@ -940,9 +944,8 @@ contains
 
    end function exists
 
-!>
-!! \brief Check if an array of given name is already registered
-!<
+!> \brief Check if a 4D array of given name is already registered
+
    function exists_4d(this, name) result(exists)
 
       use dataio_pub, only: die, msg
