@@ -144,6 +144,7 @@ module grid_cont
 
       procedure :: init
       procedure :: cleanup
+      procedure :: set_axis
       procedure :: mpi_bnd_types
       procedure :: add_na
       procedure :: add_na_4d
@@ -180,7 +181,6 @@ contains
       integer, intent(in) :: grid_n
 
       integer :: i
-      real, dimension(:), pointer :: a0, al, ar, ia
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init] MPI not initialized.")
 
@@ -324,22 +324,9 @@ contains
 
          this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
 
-!--- Assignments -----------------------------------------------------------
-         ! left zone boundaries:  xl, yl, zl
-         ! zone centers:          x,  y,  z
-         ! right zone boundaries: xr, yr, zr
-
-         allocate(this%x(this%n_(xdim)), this%xl(this%n_(xdim)), this%xr(this%n_(xdim)), this%inv_x(this%n_(xdim)))
-         a0 => this%x; al => this%xl; ar => this%xr; ia => this%inv_x
-         call set_axis(xdim, a0, al, ar, ia, this, dom)
-
-         allocate(this%y(this%n_(ydim)), this%yl(this%n_(ydim)), this%yr(this%n_(ydim)), this%inv_y(this%n_(ydim)))
-         a0 => this%y; al => this%yl; ar => this%yr; ia => this%inv_y
-         call set_axis(ydim, a0, al, ar, ia, this, dom)
-
-         allocate(this%z(this%n_(zdim)), this%zl(this%n_(zdim)), this%zr(this%n_(zdim)), this%inv_z(this%n_(zdim)))
-         a0 => this%z; al => this%zl; ar => this%zr; ia => this%inv_z
-         call set_axis(zdim, a0, al, ar, ia, this, dom)
+         do i = xdim, zdim
+            call this%set_axis(i)
+         enddo
 
       endif
 
@@ -371,34 +358,65 @@ contains
 
    end subroutine init
 
-   subroutine set_axis(d, a0, al, ar, ia, cg, dom)
+!> \brief Calculate arrays of coordinates along a given direction
 
-      use constants, only: LO, HI, half, one, zero
-      use domain,    only: domain_container
+   subroutine set_axis(this, d)
+
+      use constants,  only: LO, HI, half, one, zero, xdim, ydim, zdim
+      use dataio_pub, only: die
 
       implicit none
 
-      integer(kind=4), intent(in) :: d                      !< direction
-      real, dimension(:), pointer, intent(inout) :: a0, al, ar, ia !< arrays with coordinates
-      class(grid_container), intent(in) :: cg
-      type(domain_container), intent(in) :: dom
+      class(grid_container),       intent(inout) :: this !< grid container, where the arrays have to be set
+      integer(kind=4),             intent(in)    :: d    !< direction
 
+      real, dimension(:), allocatable :: a0, al, ar, ia
       integer :: i
 
-      if (dom%has_dir(d)) then
-         a0(:) = dom%edge(d, LO) + cg%dl(d) * ([(i, i=1, cg%n_(d))] - half - cg%nb + cg%off(d))
+      allocate(a0(this%n_(d)), al(this%n_(d)), ar(this%n_(d)), ia(this%n_(d)))
+
+      if (this%dom%has_dir(d)) then
+         a0(:) = this%dom%edge(d, LO) + this%dl(d) * ([(i, i=1, this%n_(d))] - half - this%nb + this%off(d))
       else
-         a0(:) = half*(cg%fbnd(d, LO) + cg%fbnd(d, HI))
+         a0(:) = half*(this%fbnd(d, LO) + this%fbnd(d, HI))
       endif
 
-      al(:) = a0(:) - half*cg%dl(d)
-      ar(:) = a0(:) + half*cg%dl(d)
+      al(:) = a0(:) - half*this%dl(d)
+      ar(:) = a0(:) + half*this%dl(d)
 
       where ( a0(:) /= zero )
          ia(:) = one/a0(:)
       elsewhere
          ia(:) = zero
       endwhere
+
+!--- Assignments -----------------------------------------------------------
+         ! left zone boundaries:  xl, yl, zl
+         ! zone centers:          x,  y,  z
+         ! right zone boundaries: xr, yr, zr
+
+      select case (d)
+         case (xdim)
+            if (allocated(this%x) .or. allocated(this%xl) .or. allocated(this%xr) .or. allocated(this%inv_x)) call die("[grid_container:set_axis] x-coordinates already allocated")
+            call move_alloc(a0, this%x)
+            call move_alloc(al, this%xl)
+            call move_alloc(ar, this%xr)
+            call move_alloc(ia, this%inv_x)
+         case (ydim)
+            if (allocated(this%y) .or. allocated(this%yl) .or. allocated(this%yr) .or. allocated(this%inv_y)) call die("[grid_container:set_axis] y-coordinates already allocated")
+            call move_alloc(a0, this%y)
+            call move_alloc(al, this%yl)
+            call move_alloc(ar, this%yr)
+            call move_alloc(ia, this%inv_y)
+         case (zdim)
+            if (allocated(this%z) .or. allocated(this%zl) .or. allocated(this%zr) .or. allocated(this%inv_z)) call die("[grid_container:set_axis] z-coordinates already allocated")
+            call move_alloc(a0, this%z)
+            call move_alloc(al, this%zl)
+            call move_alloc(ar, this%zr)
+            call move_alloc(ia, this%inv_z)
+         case default
+            call die("[grid_container:set_axis] invalid direction")
+      end select
 
    end subroutine set_axis
 
@@ -417,18 +435,9 @@ contains
       class(grid_container) :: this
       integer :: d, t, g, b
 
-      if (allocated(this%x))     deallocate(this%x)
-      if (allocated(this%xl))    deallocate(this%xl)
-      if (allocated(this%xr))    deallocate(this%xr)
-      if (allocated(this%inv_x)) deallocate(this%inv_x)
-      if (allocated(this%y))     deallocate(this%y)
-      if (allocated(this%yl))    deallocate(this%yl)
-      if (allocated(this%yr))    deallocate(this%yr)
-      if (allocated(this%inv_y)) deallocate(this%inv_y)
-      if (allocated(this%z))     deallocate(this%z)
-      if (allocated(this%zl))    deallocate(this%zl)
-      if (allocated(this%zr))    deallocate(this%zr)
-      if (allocated(this%inv_z)) deallocate(this%inv_z)
+      deallocate(this%x, this%xl, this%xr, this%inv_x)
+      deallocate(this%y, this%yl, this%yr, this%inv_y)
+      deallocate(this%z, this%zl, this%zr, this%inv_z)
 
       if (allocated(this%gc_xdim)) deallocate(this%gc_xdim)
       if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)
