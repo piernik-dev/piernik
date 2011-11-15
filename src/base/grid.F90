@@ -54,7 +54,7 @@ contains
 !<
    subroutine init_grid
 
-      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, ndims, xdim, zdim, ARR, INVALID, &
+      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, ndims, xdim, zdim, INVALID, &
            &                 fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n,cs_i2_n
       use dataio_pub,  only: printinfo, die, code_progress
       use domain,      only: pdom, is_multicg
@@ -82,20 +82,12 @@ contains
 !!$      allocate(levels(1))
 !!$      call levels(1)%init
 
-      nrq = 0
       do g = lbound(pdom%pse(proc)%sel(:,:,:), dim=1), ubound(pdom%pse(proc)%sel(:,:,:), dim=1)
          call all_cg%add
          cg => all_cg%last%cg
 
          call cg%init(pdom, g)
-
-         if (allocated(cg%i_bnd)) then
-            do d = xdim, zdim
-               if (allocated(cg%i_bnd(d, ARR, cg%nb)%seg)) nrq = nrq + 2 * count(cg%i_bnd(d, ARR, cg%nb)%seg(:)%mbc /= INVALID)
-            enddo
-         endif
       enddo
-      call inflate_req(nrq)
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
@@ -110,6 +102,7 @@ contains
          call all_cg%reg_var(b0_n, AT_IGNORE, ndims)       !< Copy of main array of magnetic field's components
       endif
 
+      nrq = 0
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -117,8 +110,16 @@ contains
          cg%u  => cg%get_na_ptr_4d(fluid_n)
          cg%b  => cg%get_na_ptr_4d(mag_n)
          cg%wa => cg%get_na_ptr(wa_n)
+
+         if (allocated(cg%w)) then
+            do d = xdim, zdim
+               if (allocated(cg%w(1)%w_i_mbc(d, cg%nb)%mbc)) nrq = nrq + 2 * count(cg%w(1)%w_i_mbc(d, cg%nb)%mbc(:) /= INVALID) ! w(1) is probably fluid, but it can be any registered field
+            enddo
+         endif
+
          cgl => cgl%nxt
       enddo
+      call inflate_req(nrq)
 
 #ifdef ISO
       if (is_multicg) call die("[grid:init_cs_iso2] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval

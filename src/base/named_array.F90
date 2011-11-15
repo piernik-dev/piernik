@@ -40,12 +40,13 @@ module named_array
    implicit none
 
    private
-   public :: named_array4d, named_array3d
+   public :: named_array4d, named_array3d, mbc_list
 
+   !> \brief Common fields for 3D and 4D named arrays
    type, abstract :: generic_na
       character(len=dsetnamelen) :: name                 !< a user-provided id for the array
-      integer(kind=4) :: restart_mode                    !< \todo If not .true. then write names to the restart file
-   contains
+      integer(kind=4) :: restart_mode                    !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
+    contains
       procedure(g_na_clean), deferred, pass(this) :: clean
       procedure(g_na_check), deferred, pass(this) :: check
       procedure(g_na_b),     deferred, pass(this) :: lb
@@ -75,9 +76,16 @@ module named_array
       end function g_na_b
    end interface
 
-!< A named array for user-defined vector fields and similar
+   !> \brief List of MPI Boundary conditions Containers for boundary exchanges
+   type :: mbc_list
+      integer, dimension(:), allocatable :: mbc  !< MPI Boundary conditions Container for each segment
+   end type mbc_list
+
+   !> \brief A named array for multi-scalar and vector fields
    type, extends(generic_na) :: named_array4d
       real, dimension(:,:,:,:), pointer :: arr => null()
+      type(mbc_list), dimension(:,:), allocatable :: w_i_mbc  !< MPI Boundary conditions Containers for incoming guardcell updates on the w arrays
+      type(mbc_list), dimension(:,:), allocatable :: w_o_mbc  !< MPI Boundary conditions Containers for outgoing guardcell updates on the w arrays
       contains
          procedure :: array4d_init           ! \todo check why private here does not  work as expected
          procedure :: array4d_associate
@@ -91,7 +99,7 @@ module named_array
          generic, public :: get_sweep => array4d_get_sweep_one_var, array4d_get_sweep
    end type named_array4d
 
-!< A named array for user-defined variables, scalar fields and similar
+   !> \brief A named array for scalar fields
    type, extends(generic_na) :: named_array3d
       real, dimension(:,:,:), pointer :: arr => null()
       contains
@@ -107,16 +115,22 @@ module named_array
 
 contains
 
+!>
+!! \brief Initialize a 3d named array
+!!
+!! \details The mbc component is initialized separately. Note that mbc is common for all 3d named arrays and is a member of the grid container type.
+!<
+
    subroutine array3d_init(this, n3, name, restart_mode)
 
       use constants, only: big_float, ndims, xdim, ydim, zdim
 
       implicit none
 
-      class(named_array3d), intent(inout) :: this
-      integer(kind=4), dimension(ndims), intent(in) :: n3
-      character(len=*), intent(in) :: name
-      integer(kind=4), intent(in) :: restart_mode
+      class(named_array3d),              intent(inout) :: this
+      integer(kind=4), dimension(ndims), intent(in)    :: n3
+      character(len=*),                  intent(in)    :: name
+      integer(kind=4),                   intent(in)    :: restart_mode
 
       if (.not.associated(this%arr)) allocate(this%arr(n3(xdim), n3(ydim), n3(zdim)))
       this%arr = big_float
@@ -126,45 +140,67 @@ contains
 
    end subroutine array3d_init
 
+!>
+!! \brief deallocate array
+!!
+!! \details The mbc component is a member of the grid container type and this is cleaned up elsewhere
+!<
+
    subroutine array3d_clean(this)
+
       implicit none
+
       class(named_array3d), intent(inout) :: this
 
       if (associated(this%arr)) deallocate(this%arr)
-      return
+
    end subroutine array3d_clean
 
+!> \brief check if the array was initialized with sane values
+
    logical function array3d_check_if_dirty(this)
+
       use constants, only: big_float
+
       implicit none
+
       class(named_array3d), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) :/
 
       array3d_check_if_dirty = any( this%arr >= big_float )
 
    end function array3d_check_if_dirty
 
+!> \brief Initialize named array with a predefined simple array
+
    subroutine array3d_associate(this,other)
+
       implicit none
-      class(named_array3d), intent(inout) :: this
-      real, allocatable, dimension(:,:,:), target :: other
+
+      class(named_array3d),           intent(inout) :: this
+      real, dimension(:,:,:), target, intent(in)    :: other
 
       if (.not.associated(this%arr)) this%arr => other
 
    end subroutine array3d_associate
 
+!>
+!! \brief Initialize a 4d named array
+!!
+!! \details The mbc component is initialized separately.
+!<
+
    subroutine array4d_init(this, n4, name, restart_mode)
 
-      use constants, only: big_float, ndims, xdim, ydim, zdim
+      use constants, only: big_float, ndims, xdim, ydim, zdim, I_ONE
 
       implicit none
 
-      class(named_array4d), intent(inout) :: this
-      integer(kind=4), parameter :: ONE_MORE = 1
-      integer(kind=4), dimension(ndims+ONE_MORE), intent(in) :: n4
-      character(len=*), intent(in) :: name
-      integer(kind=4), intent(in) :: restart_mode
+      class(named_array4d),                    intent(inout) :: this
+      integer(kind=4), dimension(ndims+I_ONE), intent(in)    :: n4
+      character(len=*),                        intent(in)    :: name
+      integer(kind=4),                         intent(in)    :: restart_mode
 
-      if (.not.associated(this%arr)) allocate(this%arr(n4(ONE_MORE), n4(ONE_MORE+xdim), n4(ONE_MORE+ydim), n4(ONE_MORE+zdim)))
+      if (.not.associated(this%arr)) allocate(this%arr(n4(I_ONE), n4(I_ONE+xdim), n4(I_ONE+ydim), n4(I_ONE+zdim)))
       this%arr = big_float
       this%name = name
       this%restart_mode = restart_mode
@@ -172,39 +208,81 @@ contains
 
    end subroutine array4d_init
 
+!> \brief Initialize named array with a predefined simple array
+
    subroutine array4d_associate(this,other)
+
       implicit none
-      class(named_array4d), intent(inout) :: this
-      real, allocatable, dimension(:,:,:,:), target :: other
+
+      class(named_array4d),             intent(inout) :: this
+      real, dimension(:,:,:,:), target, intent(in)    :: other
 
       if (.not.associated(this%arr)) this%arr => other
 
    end subroutine array4d_associate
 
+!> \brief deallocate array and mbc
+
    subroutine array4d_clean(this)
+
+      use constants, only: xdim, zdim, INVALID
+      use mpisetup,  only: ierr
+
       implicit none
+
       class(named_array4d), intent(inout) :: this                  !! Unlimited polymorphism at (1) not yet supported
+
+      integer :: d, b, g
 
       if (associated(this%arr)) deallocate(this%arr)
 
+      do d = xdim, zdim
+         do b = lbound(this%w_o_mbc, dim=2), ubound(this%w_o_mbc, dim=2)
+            if (allocated(this%w_i_mbc(d, b)%mbc)) then
+               do g = lbound(this%w_i_mbc(d, b)%mbc, dim=1), ubound(this%w_i_mbc(d, b)%mbc, dim=1)
+                  if (this%w_i_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%w_i_mbc(d, b)%mbc(g), ierr)
+               enddo
+               deallocate(this%w_i_mbc(d, b)%mbc)
+            endif
+            if (allocated(this%w_o_mbc(d, b)%mbc)) then
+               do g = lbound(this%w_o_mbc(d, b)%mbc, dim=1), ubound(this%w_o_mbc(d, b)%mbc, dim=1)
+                  if (this%w_o_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%w_o_mbc(d, b)%mbc(g), ierr)
+               enddo
+              deallocate(this%w_o_mbc(d, b)%mbc)
+            endif
+         enddo
+      enddo
+      deallocate(this%w_i_mbc, this%w_o_mbc)
+
    end subroutine array4d_clean
 
+!> \brief check if the array was initialized with sane values
+
    logical function array4d_check_if_dirty(this)
+
       use constants, only: big_float
+
       implicit none
+
       class(named_array4d), intent(inout) :: this                  !> \todo i want to become polymorphic class(*) when I grow older
 
       array4d_check_if_dirty = any( this%arr >= big_float )
 
    end function array4d_check_if_dirty
 
+!> \brief Get a selected line of values
+
    function array3d_get_sweep(this,ndim,i1,i2) result(p1d)
+
       use constants, only: xdim, ydim, zdim
+
       implicit none
+
       class(named_array3d), intent(inout) :: this
-      real, dimension(:),  pointer  :: p1d
-      integer(kind=4), intent(in)   :: ndim
-      integer, intent(in)           :: i1, i2
+      integer(kind=4),      intent(in)    :: ndim
+      integer,              intent(in)    :: i1, i2
+
+      real, dimension(:), pointer         :: p1d
 
       if (.not.associated(this%arr)) then
          p1d => null()
@@ -218,17 +296,22 @@ contains
                p1d => this%arr(i1,i2,:)
          end select
       endif
+
    end function array3d_get_sweep
 
+!> \brief Get a selected line of values of one variable
+
    function array4d_get_sweep_one_var(this,ndim,nn,i1,i2) result(p1d)
+
       use constants, only: xdim, ydim, zdim
+
       implicit none
-      class(named_array4d), intent(inout)      :: this
 
-      integer(kind=4), intent(in)        :: ndim, nn
-      integer, intent(in)                :: i1, i2
+      class(named_array4d), intent(inout) :: this
+      integer(kind=4),      intent(in)    :: ndim, nn
+      integer,              intent(in)    :: i1, i2
 
-      real, dimension(:),  pointer       :: p1d
+      real, dimension(:),  pointer        :: p1d
 
       select case (ndim)
          case (xdim)
@@ -238,7 +321,10 @@ contains
          case (zdim)
             p1d => this%arr(nn,i1,i2,:)
       end select
+
    end function array4d_get_sweep_one_var
+
+!> \brief Get a selected line of values of all variables
 
    function array4d_get_sweep(this,ndim,i1,i2) result(p1d)
 
@@ -246,11 +332,11 @@ contains
 
       implicit none
 
-      class(named_array4d), intent(inout)      :: this
-      integer(kind=4), intent(in)        :: ndim
-      integer, intent(in)                :: i1, i2
+      class(named_array4d), intent(inout) :: this
+      integer(kind=4),      intent(in)    :: ndim
+      integer,              intent(in)    :: i1, i2
 
-      real, dimension(:,:),  pointer     :: p1d
+      real, dimension(:,:), pointer       :: p1d
 
       select case (ndim)
          case (xdim)
@@ -260,44 +346,55 @@ contains
          case (zdim)
             p1d => this%arr(:,i1,i2,:)
       end select
+
    end function array4d_get_sweep
 
-   function array4d_ubound(this,dim_) result(n)
+!> \brief Get the upper bound of a 4D named array
+   integer(kind=4) function array4d_ubound(this,dim_) result(n)
+
       implicit none
+
       class(named_array4d), intent(in) :: this
-      integer(kind=4), intent(in) :: dim_
-      integer(kind=4) :: n
+      integer(kind=4),      intent(in) :: dim_
 
       n = ubound(this%arr, dim=dim_, kind=4)
+
    end function array4d_ubound
 
-   function array4d_lbound(this,dim_) result(n)
+!> \brief Get the lower bound of a 4D named array
+   integer(kind=4) function array4d_lbound(this,dim_) result(n)
 
       implicit none
+
       class(named_array4d), intent(in) :: this
-      integer(kind=4), intent(in) :: dim_
-      integer(kind=4) :: n
+      integer(kind=4),      intent(in) :: dim_
 
       n = lbound(this%arr,dim=dim_,kind=4)
+
    end function array4d_lbound
 
-   function array3d_ubound(this,dim_) result(n)
+!> \brief Get the upper bound of a 3D named array
+   integer(kind=4) function array3d_ubound(this,dim_) result(n)
+
       implicit none
+
       class(named_array3d), intent(in) :: this
-      integer(kind=4), intent(in) :: dim_
-      integer(kind=4) :: n
+      integer(kind=4),      intent(in) :: dim_
 
       n = ubound(this%arr, dim=dim_, kind=4)
+
    end function array3d_ubound
 
-   function array3d_lbound(this,dim_) result(n)
+!> \brief Get the lower bound of a 3D named array
+   integer(kind=4) function array3d_lbound(this,dim_) result(n)
 
       implicit none
+
       class(named_array3d), intent(in) :: this
-      integer(kind=4), intent(in) :: dim_
-      integer(kind=4) :: n
+      integer(kind=4),      intent(in) :: dim_
 
       n = lbound(this%arr,dim=dim_,kind=4)
+
    end function array3d_lbound
 
 end module named_array

@@ -172,24 +172,24 @@ contains
 
          do d = xdim, zdim
             if (dmask(d)) then
-               if (allocated(cg%i_bnd(d, type, n)%seg)) then
-                  if (.not. allocated(cg%o_bnd(d, type, n)%seg)) call die("[internal_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")
-                  if (ubound(cg%i_bnd(d, type, n)%seg(:), dim=1) /= ubound(cg%o_bnd(d, type, n)%seg(:), dim=1)) &
+               if (allocated(cg%i_bnd(d, n)%seg)) then
+                  if (.not. allocated(cg%o_bnd(d, n)%seg)) call die("[internal_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")
+                  if (ubound(cg%i_bnd(d, n)%seg(:), dim=1) /= ubound(cg%o_bnd(d, n)%seg(:), dim=1)) &
                        call die("[internal_bnd:internal_boundaries] cg%i_bnd differs in number of entries from cg%o_bnd")
-                  do g = 1, ubound(cg%i_bnd(d, type, n)%seg(:), dim=1)
+                  do g = 1, ubound(cg%i_bnd(d, n)%seg(:), dim=1)
                      if (tgt3d) then
                         pa3d => cg%q(ind)%arr
-                        call MPI_Irecv(pa3d, I_ONE, cg%i_bnd(d, type, n)%seg(g)%mbc, cg%i_bnd(d, type, n)%seg(g)%proc, cg%i_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
-                        call MPI_Isend(pa3d, I_ONE, cg%o_bnd(d, type, n)%seg(g)%mbc, cg%o_bnd(d, type, n)%seg(g)%proc, cg%o_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
+                        call MPI_Irecv(pa3d, I_ONE, cg%q_i_mbc(d, n)%mbc(g), cg%i_bnd(d, n)%seg(g)%proc, cg%i_bnd(d, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
+                        call MPI_Isend(pa3d, I_ONE, cg%q_o_mbc(d, n)%mbc(g), cg%o_bnd(d, n)%seg(g)%proc, cg%o_bnd(d, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
                      else
                         pa4d => cg%w(ind)%arr
-                        call MPI_Irecv(pa4d, I_ONE, cg%i_bnd(d, type, n)%seg(g)%mbc, cg%i_bnd(d, type, n)%seg(g)%proc, cg%i_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
-                        call MPI_Isend(pa4d, I_ONE, cg%o_bnd(d, type, n)%seg(g)%mbc, cg%o_bnd(d, type, n)%seg(g)%proc, cg%o_bnd(d, type, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
+                        call MPI_Irecv(pa4d, I_ONE, cg%w(ind)%w_i_mbc(d, n)%mbc(g), cg%i_bnd(d, n)%seg(g)%proc, cg%i_bnd(d, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
+                        call MPI_Isend(pa4d, I_ONE, cg%w(ind)%w_o_mbc(d, n)%mbc(g), cg%o_bnd(d, n)%seg(g)%proc, cg%o_bnd(d, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
                      endif
                      nr = nr + I_TWO
                   enddo
                else
-                  if (allocated(cg%o_bnd(d, type, n)%seg)) call die("[grid_container:internal_boundaries] cg%o_bnd without cg%i_bnd")
+                  if (allocated(cg%o_bnd(d, n)%seg)) call die("[grid_container:internal_boundaries] cg%o_bnd without cg%i_bnd")
                endif
             endif
          enddo

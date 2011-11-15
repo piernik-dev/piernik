@@ -190,10 +190,10 @@ contains
          do d = xdim, zdim
             nr = 0
             if (dom%has_dir(d)) then
-               if (allocated(curl%i_bnd(d, ARR, ng)%seg)) then
-                  do g = 1, ubound(curl%i_bnd(d, ARR, ng)%seg(:), dim=1)
-                     if (proc == curl%i_bnd(d, ARR, ng)%seg(g)%proc) then
-                        ise => curl%i_bnd(d, ARR, ng)%seg(g)%se
+               if (allocated(curl%i_bnd(d, ng)%seg)) then
+                  do g = 1, ubound(curl%i_bnd(d, ng)%seg(:), dim=1)
+                     if (proc == curl%i_bnd(d, ng)%seg(g)%proc) then
+                        ise => curl%i_bnd(d, ng)%seg(g)%se
                         ose(:,:) = ise(:,:)
                         if (ise(d, LO) < curl%n_b(d)) then
                            ose(d, :) = ise(d, :) + curl%n_b(d)
@@ -205,21 +205,21 @@ contains
                              curl%mgvar(ose(xdim, LO):ose(xdim,HI), ose(ydim, LO):ose(ydim, HI), ose(zdim, LO):ose(zdim, HI), iv)
                      else
                         nr = nr + I_ONE
-                        call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%i_bnd(d, ARR, ng)%seg(g)%mbc, curl%i_bnd(d, ARR, ng)%seg(g)%proc, curl%i_bnd(d, ARR, ng)%seg(g)%tag, comm, req(nr), ierr)
+                        call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%q_i_mbc(d, ng)%mbc(g), curl%i_bnd(d, ng)%seg(g)%proc, curl%i_bnd(d, ng)%seg(g)%tag, comm, req(nr), ierr)
                      endif
                   enddo
                endif
-               if (allocated(curl%o_bnd(d, ARR, ng)%seg)) then
-                  do g = 1, ubound(curl%o_bnd(d, ARR, ng)%seg(:), dim=1)
-                     if (proc /= curl%o_bnd(d, ARR, ng)%seg(g)%proc) then
+               if (allocated(curl%o_bnd(d, ng)%seg)) then
+                  do g = 1, ubound(curl%o_bnd(d, ng)%seg(:), dim=1)
+                     if (proc /= curl%o_bnd(d, ng)%seg(g)%proc) then
                         nr = nr + I_ONE
                         ! if (cor) there should be MPI_Waitall for each d
                         ! for noncartesian division some y-boundary corner cells are independent from x-boundary face cells, (similarly for z-direction).
-                        call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%o_bnd(d, ARR, ng)%seg(g)%mbc, curl%o_bnd(d, ARR, ng)%seg(g)%proc, curl%o_bnd(d, ARR, ng)%seg(g)%tag, comm, req(nr), ierr)
+                        call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%q_o_mbc(d, ng)%mbc(g), curl%o_bnd(d, ng)%seg(g)%proc, curl%o_bnd(d, ng)%seg(g)%tag, comm, req(nr), ierr)
                      endif
                   enddo
                endif
-               if (ubound(curl%i_bnd(d, ARR, ng)%seg(:), dim=1) /= ubound(curl%o_bnd(d, ARR, ng)%seg(:), dim=1)) call die("mmf u/=u")
+               if (ubound(curl%i_bnd(d, ng)%seg(:), dim=1) /= ubound(curl%o_bnd(d, ng)%seg(:), dim=1)) call die("mmf u/=u")
                if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
             endif
          enddo
