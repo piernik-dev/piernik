@@ -573,16 +573,15 @@ contains
                   hl = LO+HI-lh ! HI for LO, LO for HI
                   b_layer(:,:) = this%my_se(:, :)
                   b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
-                  b_layer(d, hl) = b_layer(d, lh) ! boundary layer without corners
+                  b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell wide, without corners
                   do j = FIRST, LAST
                      do b = lbound(this%dom%pse(j)%sel(:, :, :), dim=1), ubound(this%dom%pse(j)%sel(:, :, :), dim=1)
-                        if (is_overlap(b_layer(:,:), this%dom%pse(j)%sel(b, :, :), per(:))) procmask(j) = procmask(j) + 1
+                        if (is_overlap(b_layer(:,:), this%dom%pse(j)%sel(b, :, :), per(:))) procmask(j) = procmask(j) + 1 ! count how many boundaries we share with that process
                      enddo
                   enddo
                enddo
                do ib = 1, this%nb
-                  allocate(this%i_bnd(d, ib)%seg(sum(procmask(:))))
-                  allocate(this%o_bnd(d, ib)%seg(sum(procmask(:))))
+                  allocate(this%i_bnd(d, ib)%seg(sum(procmask(:))), this%o_bnd(d, ib)%seg(sum(procmask(:))))
                enddo
 
                ! set up segments to be sent or received
@@ -594,11 +593,11 @@ contains
                         do b = lbound(dom%pse(j)%sel(:, :, :), dim=1), ubound(dom%pse(j)%sel(:, :, :), dim=1)
                            b_layer(:,:) = this%my_se(:, :)
                            b_layer(d, lh) = b_layer(d, lh) + lh-hl
-                           b_layer(d, hl) = b_layer(d, lh)
+                           b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell wide, without corners
                            bp_layer(:, :) = b_layer(:, :)
                            where (per(:) > 0)
                               bp_layer(:, LO) = mod(b_layer(:, LO) + per(:), per(:))
-                              bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:))
+                              bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:)) ! adjacent boundary layer, 1 cell wide, without corners, corrected for periodicity
                            endwhere
                            !> \todo save b_layer(:,:) and bp_layer(:,:) and move above calculations outside the b loop
 
