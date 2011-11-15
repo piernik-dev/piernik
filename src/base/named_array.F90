@@ -350,48 +350,52 @@ contains
    end function array4d_get_sweep
 
 !> \brief Get the upper bound of a 4D named array
-   integer(kind=4) function array4d_ubound(this,dim_) result(n)
+   function array4d_ubound(this,dim_) result(n)
 
       implicit none
 
       class(named_array4d), intent(in) :: this
       integer(kind=4),      intent(in) :: dim_
+      integer(kind=4) :: n
 
       n = ubound(this%arr, dim=dim_, kind=4)
 
    end function array4d_ubound
 
 !> \brief Get the lower bound of a 4D named array
-   integer(kind=4) function array4d_lbound(this,dim_) result(n)
+   function array4d_lbound(this,dim_) result(n)
 
       implicit none
 
       class(named_array4d), intent(in) :: this
       integer(kind=4),      intent(in) :: dim_
+      integer(kind=4) :: n
 
       n = lbound(this%arr,dim=dim_,kind=4)
 
    end function array4d_lbound
 
 !> \brief Get the upper bound of a 3D named array
-   integer(kind=4) function array3d_ubound(this,dim_) result(n)
+   function array3d_ubound(this,dim_) result(n)
 
       implicit none
 
       class(named_array3d), intent(in) :: this
       integer(kind=4),      intent(in) :: dim_
+      integer(kind=4) :: n
 
       n = ubound(this%arr, dim=dim_, kind=4)
 
    end function array3d_ubound
 
 !> \brief Get the lower bound of a 3D named array
-   integer(kind=4) function array3d_lbound(this,dim_) result(n)
+   function array3d_lbound(this,dim_) result(n)
 
       implicit none
 
       class(named_array3d), intent(in) :: this
       integer(kind=4),      intent(in) :: dim_
+      integer(kind=4) :: n
 
       n = lbound(this%arr,dim=dim_,kind=4)
 
