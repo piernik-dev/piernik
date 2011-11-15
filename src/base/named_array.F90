@@ -78,7 +78,7 @@ module named_array
 
    !> \brief List of MPI Boundary conditions Containers for boundary exchanges
    type :: mbc_list
-      integer, dimension(:), allocatable :: mbc  !< MPI Boundary conditions Container for each segment
+      integer(kind=4), dimension(:), allocatable :: mbc  !< MPI Boundary conditions Container for each segment
    end type mbc_list
 
    !> \brief A named array for multi-scalar and vector fields

@@ -380,8 +380,8 @@ contains
 
       implicit none
 
-      class(grid_container),       intent(inout) :: this !< grid container, where the arrays have to be set
-      integer(kind=4),             intent(in)    :: d    !< direction
+      class(grid_container), intent(inout) :: this !< grid container, where the arrays have to be set
+      integer,               intent(in)    :: d    !< direction
 
       real, dimension(:), allocatable :: a0, al, ar, ia
       integer :: i
@@ -686,7 +686,7 @@ contains
 
       implicit none
 
-      integer, dimension(:),                    intent(in)  :: sizes !< dimensions of the array
+      integer(kind=4), dimension(:),            intent(in)  :: sizes !< dimensions of the array
       integer(kind=8), dimension(ndims, LO:HI), intent(in)  :: se    !< segment to communicate
       integer(kind=4),                          intent(out) :: mbc   !< MPI Boundary conditions Container
 
