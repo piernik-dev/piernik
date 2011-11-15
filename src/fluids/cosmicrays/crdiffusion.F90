@@ -82,7 +82,7 @@ contains
       type(grid_container), pointer :: cg
       real, dimension(:,:,:,:), pointer :: wcr
 
-      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(CR)
+      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(all_cg%first%cg%get_na_ind_4d(wcr_n))
 
       cgl => all_cg%first
       do while (associated(cgl))

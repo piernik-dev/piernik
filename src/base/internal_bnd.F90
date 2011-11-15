@@ -51,11 +51,9 @@ module internal_bnd
 
 contains
 
-!> \brief A wrapper that calls internal_boundaries for 3D arrays (cg%q(:))
+!> \brief A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
 
    subroutine internal_boundaries_3d(ind, nb, dim)
-
-      use constants,  only: ARR
 
       implicit none
 
@@ -63,39 +61,21 @@ contains
       integer,         optional, intent(in) :: nb   !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
 
-      call internal_boundaries(ind, .true., ARR, nb, dim)
+      call internal_boundaries(ind, .true., nb, dim)
 
    end subroutine internal_boundaries_3d
 
-!> \brief A wrapper that calls internal_boundaries for 4D arrays (cg%u, cg%b, cg%w(:))
+!> \brief A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
 
-   subroutine internal_boundaries_4d(type, nb, dim)
-
-      use constants,  only: FLUID, MAG, CR, INT4, fluid_n, mag_n, wcr_n
-      use dataio_pub, only: die
-      use grid,       only: all_cg
+   subroutine internal_boundaries_4d(ind, nb, dim)
 
       implicit none
 
-      integer(kind=4),           intent(in) :: type !> FLUID, MAG, CR \todo put all of them into cg%w(:)
+      integer(kind=4),           intent(in) :: ind  !> index of cg%w(:) 4d array
       integer,         optional, intent(in) :: nb   !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
 
-      integer(kind=4) :: ind
-
-      select case (type)
-         case (FLUID)
-            ind = all_cg%first%cg%get_na_ind_4d(fluid_n)
-         case (MAG)
-            ind = all_cg%first%cg%get_na_ind_4d(mag_n)
-         case (CR)
-            ind = all_cg%first%cg%get_na_ind_4d(wcr_n)
-         case default
-            call die("[internal_bnd:internal_boundaries_4d] What?")
-            ind = 0_INT4 ! suppress compiler warnings
-      end select
-
-      call internal_boundaries(ind, .false., type, nb, dim)
+      call internal_boundaries(ind, .false., nb, dim)
 
    end subroutine internal_boundaries_4d
 
@@ -107,7 +87,7 @@ contains
 !! \todo Check how much performance is lost due to using MPI calls even for local copies. Decide whether it is worth to convert local MPI calls to direct memory copies.
 !<
 
-   subroutine internal_boundaries(ind, tgt3d, type, nb, dim)
+   subroutine internal_boundaries(ind, tgt3d, nb, dim)
 
       use constants,  only: FLUID, MAG, CR, ARR, xdim, zdim, I_ONE, I_TWO
       use dataio_pub, only: die, warn
@@ -121,8 +101,7 @@ contains
       implicit none
 
       integer(kind=4),           intent(in) :: ind    !> index of cg%q(:) 3d array or cg%w(:) 4d array
-      logical,                   intent(in) :: tgt3d  !> .true. for ARR
-      integer(kind=4),           intent(in) :: type   !> FLUID, MAG, CR, ARR, second index in [io]_bnd arrays
+      logical,                   intent(in) :: tgt3d  !> .true. for cg%q, .false. for cg%w
       integer,         optional, intent(in) :: nb     !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: dim    !> do the internal boundaries only in the specified dimension
 
@@ -139,8 +118,6 @@ contains
          return
          ! ToDo: move comm3d variants here
       endif
-
-      if (tgt3d .and. type /= ARR) call die("[internal_bnd:internal_boundaries] tgt3d .and. type /= ARR")
 
       dmask(:) = dom%has_dir(:)
       if (present(dim)) then

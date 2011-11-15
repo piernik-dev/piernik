@@ -636,7 +636,7 @@ contains
 
    subroutine all_fluid_boundaries
 
-      use constants,    only: xdim, zdim, FLUID
+      use constants,    only: xdim, zdim, fluid_n
       use domain,       only: dom, cdd
       use gc_list,      only: cg_list_element
       use grid,         only: all_cg
@@ -650,7 +650,7 @@ contains
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          do dir = xdim, zdim
-            if (dom%has_dir(dir)) call internal_boundaries_4d(FLUID, dim=dir)
+            if (dom%has_dir(dir)) call internal_boundaries_4d(all_cg%first%cg%get_na_ind_4d(fluid_n), dim=dir)
          enddo
       endif
 

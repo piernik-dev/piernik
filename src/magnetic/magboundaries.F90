@@ -651,7 +651,7 @@ contains
 
    subroutine all_mag_boundaries
 
-      use constants,    only: xdim, zdim, MAG
+      use constants,    only: xdim, zdim, mag_n
       use domain,       only: dom, cdd
       use gc_list,      only: cg_list_element
       use grid,         only: all_cg
@@ -665,7 +665,7 @@ contains
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          do dir = xdim, zdim
-            if (dom%has_dir(dir)) call internal_boundaries_4d(MAG, dim=dir)
+            if (dom%has_dir(dir)) call internal_boundaries_4d(all_cg%first%cg%get_na_ind_4d(mag_n), dim=dir)
          enddo
       endif
 
