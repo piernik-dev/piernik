@@ -493,14 +493,27 @@ contains
          do g = lbound(this%q(:), dim=1), ubound(this%q(:), dim=1)
             call this%q(g)%clean
          enddo
-         do d = xdim, zdim
-            do b = 1, this%nb
-               if (allocated(this%q_i_mbc(d, b)%mbc)) deallocate(this%q_i_mbc(d, b)%mbc)
-               if (allocated(this%q_o_mbc(d, b)%mbc)) deallocate(this%q_o_mbc(d, b)%mbc)
-            enddo
-         enddo
-         deallocate(this%q, this%q_i_mbc, this%q_o_mbc)
+         deallocate(this%q)
       endif
+
+      do d = xdim, zdim
+         do b = 1, this%nb
+            if (allocated(this%q_i_mbc(d, b)%mbc)) then
+               do g = lbound(this%q_i_mbc(d, b)%mbc, dim=1), ubound(this%q_i_mbc(d, b)%mbc, dim=1)
+                  if (this%q_i_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%q_i_mbc(d, b)%mbc(g), ierr)
+               enddo
+               deallocate(this%q_i_mbc(d, b)%mbc)
+            endif
+            if (allocated(this%q_o_mbc(d, b)%mbc)) then
+               do g = lbound(this%q_o_mbc(d, b)%mbc, dim=1), ubound(this%q_o_mbc(d, b)%mbc, dim=1)
+                  if (this%q_o_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%q_o_mbc(d, b)%mbc(g), ierr)
+               enddo
+               deallocate(this%q_o_mbc(d, b)%mbc)
+            endif
+         enddo
+      enddo
+      deallocate(this%q_i_mbc, this%q_o_mbc)
+
 
       if (allocated(this%w)) then
          do g = lbound(this%w(:), dim=1), ubound(this%w(:), dim=1)
@@ -779,6 +792,9 @@ contains
          endif
          allocate(tmp(lbound(this%w(:),dim=1):ubound(this%w(:), dim=1) + 1))
          tmp(:ubound(this%w(:), dim=1)) = this%w(:)
+         do iw = lbound(this%w(:), dim=1), ubound(this%w(:), dim=1) ! prevent memory leak
+            deallocate(this%w(iw)%w_i_mbc, this%w(iw)%w_o_mbc)
+         enddo
          call move_alloc(from=tmp, to=this%w)
       endif
 
