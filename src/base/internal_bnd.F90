@@ -47,7 +47,7 @@ module internal_bnd
    implicit none
 
    private
-   public :: internal_boundaries_3d, internal_boundaries_4d, internal_boundaries
+   public :: internal_boundaries_3d, internal_boundaries_4d
 
 contains
 
