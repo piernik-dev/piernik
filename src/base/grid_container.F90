@@ -448,9 +448,11 @@ contains
       class(grid_container) :: this
       integer :: d, t, g, b
 
-      deallocate(this%x, this%xl, this%xr, this%inv_x)
-      deallocate(this%y, this%yl, this%yr, this%inv_y)
-      deallocate(this%z, this%zl, this%zr, this%inv_z)
+! It seems that these deallocates are no longer necessary (gcc 4.6.2). According to valgrind the memory is implicitly freed somewhere else.
+!> \todo Verify this with another compiler
+!!$      deallocate(this%x, this%xl, this%xr, this%inv_x)
+!!$      deallocate(this%y, this%yl, this%yr, this%inv_y)
+!!$      deallocate(this%z, this%zl, this%zr, this%inv_z)
 
       if (allocated(this%gc_xdim)) deallocate(this%gc_xdim)
       if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)
