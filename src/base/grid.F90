@@ -43,9 +43,9 @@ module grid
    public :: init_grid, cleanup_grid, all_cg !, base, leafs, levels
 
    type(cg_list), protected :: all_cg    !< all grid containers
-!!$   type(cg_list), protected  :: base   !< base level grid containers
-!!$   type(cg_list), protected  :: leafs  !< grid containers not covered by other grid containers
-!!$   type(cg_list), dimension(:), allocatable, protected  :: levels !< grid containers grouped by levels
+!!$   type(cg_sublist), protected  :: base   !< base level grid containers
+!!$   type(cg_sublist), protected  :: leafs  !< grid containers not covered by other grid containers
+!!$   type(cg_sublist), dimension(:), allocatable, protected  :: levels !< grid containers grouped by levels
 
 contains
 

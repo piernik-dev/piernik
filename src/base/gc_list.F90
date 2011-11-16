@@ -27,9 +27,7 @@
 !
 #include "piernik.h"
 
-!>
-!! \brief This module contains grid container list and related methods
-!<
+!> \brief This module contains grid container list and related methods
 
 module gc_list
 
@@ -38,15 +36,17 @@ module gc_list
    implicit none
 
    private
-   public :: cg_list, cg_list_element, get_extremum
+   public :: cg_list, cg_sublist, cg_list_element
 
-   ! the prv and nxt pointers are not elements of the grid_container type to allow membership in several lists simultaneously
+   !> \brief A grid container with two links to other cg_list_elements
+   !> \details the prv and nxt pointers are not elements of the grid_container type to allow membership in several lists simultaneously
    type cg_list_element
       type(grid_container),  pointer :: cg       !< the current grid container
       type(cg_list_element), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
    end type cg_list_element
 
-   type cg_list
+   !> \brief A list of grid containers
+   type cg_sublist
 
       type(cg_list_element), pointer :: first !< first element of the chain of grid containers, the most important one
       type(cg_list_element), pointer :: last  !< last element of the chain - useful for expanding and merging lists
@@ -54,20 +54,37 @@ module gc_list
 
     contains
 
-      procedure :: init_el
+!      procedure :: init_el
       procedure :: init_new
-      generic, public :: init => init_new, init_el
+      generic, public :: init => init_new!, init_el
 
       procedure :: add_new
-      procedure :: add_el
-      generic, public :: add => add_new, add_el
+!      procedure :: add_el
+      generic, public :: add => add_new !, add_el
 
       procedure :: un_link
-
-      procedure :: reg_var
-
       procedure :: get_extremum
 
+   end type cg_sublist
+
+   !>
+   !! \brief A list of grid containers that are supposed to have the same variables registered
+   !!
+   !! \details The main purpose of this type is to provide a type for the set of all grid containers with methods and properties
+   !! that should not be available for any arbitrarily composed subset of grid containers. Typically there will be only one variable
+   !! of this type available in the code: grid::all_cg. Perhaps the multigrid solver will use another such variable for the levels
+   !! below the base level, where it is not necessary to keep all the fluid and magnetic field data.
+   !!
+   !! It should be possible to use this type for more fancy, multi-domain  grid configurations such as:
+   !! - Yin-Yang grid (covering sphere with two domains shaped as parts of the sphere to avoid  polar singulaties),
+   !! - Cylindrical grid with cartesian core covering singularity at the axis.
+   !! - Simulations with mixed dimensionality (e.g. 2d grid for dust particles and 3d grid for gas) should probably also use separate cg_list
+   !! for their data (and additional routine for coupling the two grid sets).
+   !<
+   type, extends(cg_sublist) :: cg_list
+   !> \todo store the information about registered entries also here (name, restart_mode, index, dim4)
+    contains
+      procedure :: reg_var
    end type cg_list
 
 contains
@@ -75,46 +92,47 @@ contains
 !! \brief sets counter and pointer to the last element, updates pointer to the first element if necessary.
 !<
 
-   subroutine init_el(this, cgle)
-
-      use dataio_pub, only: warn, die
-
-      implicit none
-
-      class(cg_list), intent(inout) :: this
-      type(cg_list_element), pointer, intent(inout) :: cgle
-
-      type(cg_list_element), pointer :: cur, prv
-
-      if (.not. associated(cgle)) then
-         call warn("[gc_list:init_el] tried to initialize with null() element")
-         return
-      endif
-
-      cur => cgle
-      if (associated(cur%prv)) call warn("[gc_list:init_el] this is not the first element of the chain")
-
-      do while (associated(cur%prv))
-         prv => cur
-         cur => cur%prv
-         if (.not. associated(cur%nxt, prv)) call die("[gc_list:init_el] this is not a straight list (rev)")
-         if (associated(cur, cgle)) call die("[gc_list:init_el] loops are not allowed (rev)")
-      enddo
-
-      this%first => cur
-      this%cnt = 1
-
-      do while (associated(cur%nxt))
-         prv => cur
-         cur => cur%nxt
-         this%cnt = this%cnt + 1
-         if (.not. associated(cur%prv, prv)) call die("[gc_list:init_el] this is not a straight list (fwd)")
-         ! we don't need second loop check here
-      enddo
-
-      this%last => cur
-
-   end subroutine init_el
+! unused
+!!$   subroutine init_el(this, cgle)
+!!$
+!!$      use dataio_pub, only: warn, die
+!!$
+!!$      implicit none
+!!$
+!!$      class(cg_sublist), intent(inout) :: this
+!!$      type(cg_list_element), pointer, intent(inout) :: cgle
+!!$
+!!$      type(cg_list_element), pointer :: cur, prv
+!!$
+!!$      if (.not. associated(cgle)) then
+!!$         call warn("[gc_list:init_el] tried to initialize with null() element")
+!!$         return
+!!$      endif
+!!$
+!!$      cur => cgle
+!!$      if (associated(cur%prv)) call warn("[gc_list:init_el] this is not the first element of the chain")
+!!$
+!!$      do while (associated(cur%prv))
+!!$         prv => cur
+!!$         cur => cur%prv
+!!$         if (.not. associated(cur%nxt, prv)) call die("[gc_list:init_el] this is not a straight list (rev)")
+!!$         if (associated(cur, cgle)) call die("[gc_list:init_el] loops are not allowed (rev)")
+!!$      enddo
+!!$
+!!$      this%first => cur
+!!$      this%cnt = 1
+!!$
+!!$      do while (associated(cur%nxt))
+!!$         prv => cur
+!!$         cur => cur%nxt
+!!$         this%cnt = this%cnt + 1
+!!$         if (.not. associated(cur%prv, prv)) call die("[gc_list:init_el] this is not a straight list (fwd)")
+!!$         ! we don't need second loop check here
+!!$      enddo
+!!$
+!!$      this%last => cur
+!!$
+!!$   end subroutine init_el
 
 !>
 !! \brief a constructor for an empty list
@@ -124,7 +142,7 @@ contains
 
       implicit none
 
-      class(cg_list), intent(out) :: this
+      class(cg_sublist), intent(out) :: this
 
       this%first => null()
       this%last => null()
@@ -142,7 +160,7 @@ contains
 
       implicit none
 
-      class(cg_list), intent(inout) :: this
+      class(cg_sublist), intent(inout) :: this
 
       type(cg_list_element), pointer :: new
 
@@ -163,30 +181,33 @@ contains
       this%last => new
       this%cnt = this%cnt + 1
 
+      !> \todo update the lists of registered variables
+
    end subroutine add_new
 
-   subroutine add_el(this, cgle)
-
-      use dataio_pub, only: die, warn
-
-      implicit none
-
-      class(cg_list), intent(inout) :: this
-      type(cg_list_element), pointer, intent(inout) :: cgle
-
-      if (.not. associated(cgle)) then
-         call warn("[gc_list:add_el] tried to add null() element")
-         return
-      endif
-
-      if (associated(cgle%prv)) call die("[gc_list:add_el] this is not a first link")
-      if (associated(cgle%nxt)) call die("[gc_list:add_el] this is a chain") !> todo convert to warn and count the links properly
-
-      cgle%prv => this%last
-      this%last%nxt => cgle
-      this%cnt = this%cnt + 1
-
-   end subroutine add_el
+! unused
+!!$   subroutine add_el(this, cgle)
+!!$
+!!$      use dataio_pub, only: die, warn
+!!$
+!!$      implicit none
+!!$
+!!$      class(cg_sublist), intent(inout) :: this
+!!$      type(cg_list_element), pointer, intent(inout) :: cgle
+!!$
+!!$      if (.not. associated(cgle)) then
+!!$         call warn("[gc_list:add_el] tried to add null() element")
+!!$         return
+!!$      endif
+!!$
+!!$      if (associated(cgle%prv)) call die("[gc_list:add_el] this is not a first link")
+!!$      if (associated(cgle%nxt)) call die("[gc_list:add_el] this is a chain") !> todo convert to warn and count the links properly
+!!$
+!!$      cgle%prv => this%last
+!!$      this%last%nxt => cgle
+!!$      this%cnt = this%cnt + 1
+!!$
+!!$   end subroutine add_el
 
 !>
 !! \brief destroy the element
@@ -198,7 +219,7 @@ contains
 
       implicit none
 
-      class(cg_list), intent(inout) :: this
+      class(cg_sublist), intent(inout) :: this
       type(cg_list_element), pointer, intent(inout) :: cgle
 
       type(cg_list_element), pointer :: cur
@@ -271,7 +292,7 @@ contains
 !>
 !! \brief Find munimum or maximum value over a specified list of grid containers
 !!
-!! \details It should be possible to find an extremum over a given level or leavf blocks or something
+!! \details It should be possible to find an extremum over a given level or leaf blocks or something
 !<
    subroutine get_extremum(this, ind, minmax, prop)
 
@@ -285,10 +306,10 @@ contains
 
       implicit none
 
-      class(cg_list),  intent(in)  :: this
-      integer(kind=4), intent(in)  :: ind  !< Index in cg%q(:)
-      integer(kind=4), intent(in)  :: minmax
-      type(value),     intent(out) :: prop
+      class(cg_sublist), intent(in)  :: this
+      integer(kind=4),   intent(in)  :: ind  !< Index in cg%q(:)
+      integer(kind=4),   intent(in)  :: minmax
+      type(value),       intent(out) :: prop
 
 
       type(grid_container), pointer :: cg

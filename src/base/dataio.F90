@@ -986,7 +986,7 @@ contains
       use types,      only: value                          !QA_WARN: used by get_extremum (intel compiler)
       use constants,  only: ION, DST, MINL, MAXL, half, wa_n
       use fluidtypes, only: phys_prop, component_fluid
-      use gc_list,    only: get_extremum, cg_list_element
+      use gc_list,    only: cg_list_element
       use global,     only: smallp
       use grid,       only: all_cg
       use units,      only: mH, kboltz
@@ -1092,7 +1092,7 @@ contains
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: flind
       use func,               only: L2norm, sq_sum3
-      use gc_list,            only: get_extremum, cg_list_element
+      use gc_list,            only: cg_list_element
       use global,             only: cfl, t, dt
       use grid,               only: all_cg
       use interactions,       only: has_interactions, collfaq

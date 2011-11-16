@@ -119,6 +119,8 @@ contains
 !! \brief Initialize a 3d named array
 !!
 !! \details The mbc component is initialized separately. Note that mbc is common for all 3d named arrays and is a member of the grid container type.
+!!
+!! \todo Consider providing an optional parameter that prevents allocating arr below base level to minimize multigrid overhead on memory
 !<
 
    subroutine array3d_init(this, n3, name, restart_mode)
@@ -187,6 +189,8 @@ contains
 !! \brief Initialize a 4d named array
 !!
 !! \details The mbc component is initialized separately.
+!!
+!! \todo Consider providing an optional parameter that prevents allocating arr below base level to minimize multigrid overhead on memory
 !<
 
    subroutine array4d_init(this, n4, name, restart_mode)
