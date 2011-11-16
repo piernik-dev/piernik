@@ -895,7 +895,6 @@ contains
       use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE, wa_n
       use dataio_pub, only: die
       use domain,     only: is_mpi_noncart, is_multicg, cdd, dom
-      use gc_list,    only: get_extremum
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL

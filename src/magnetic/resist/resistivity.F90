@@ -186,7 +186,7 @@ contains
       use constants,  only: small, xdim, ydim, zdim, MINL, MAXL, I_ONE, half, oneq
       use dataio_pub, only: die
       use domain,     only: dom, is_multicg
-      use gc_list,    only: cg_list_element, get_extremum
+      use gc_list,    only: cg_list_element
       use grid,       only: all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION
