@@ -36,7 +36,7 @@ module piernikdebug
    implicit none
 
    private
-   public :: init_piernikdebug, has_const_dt, constant_dt, force_dumps, aux_R, aux_I, aux_L, aux_S
+   public :: init_piernikdebug, has_const_dt, constant_dt, aux_R, aux_I, aux_L, aux_S!, force_dumps
 
    ! Auxiliary input parameters for debugging, quick tweaks and tests of new features.
    ! Their purpose is to avoid messing up existing namelists until it becomes clear that certain parameter is really useful.
@@ -117,20 +117,22 @@ contains
 
    end subroutine init_piernikdebug
 
-   subroutine force_dumps
+! This subroutine causes cyclic dependencies in setups with gravity because of dataio dependencies (e.g. in maclaurin setup)
 
-      use dataio,         only: write_data
-      use dataio_pub,     only: warn
-      use data_hdf5,      only: write_hdf5
-      use restart_hdf5,   only: write_restart_hdf5
-
-      implicit none
-
-      if (force_hdf5_dump)   call write_hdf5
-      if (force_res_dump)    call write_restart_hdf5
-      if (force_allbnd_dump) call warn("[fluidupdate:make_sweep] force_allbnd_dump has no effect for single-file HDF5 restart files")
-      if (force_log_dump)    call write_data(output='log')
-
-   end subroutine force_dumps
+!!$   subroutine force_dumps
+!!$
+!!$      use dataio,         only: write_data
+!!$      use dataio_pub,     only: warn
+!!$      use data_hdf5,      only: write_hdf5
+!!$      use restart_hdf5,   only: write_restart_hdf5
+!!$
+!!$      implicit none
+!!$
+!!$      if (force_hdf5_dump)   call write_hdf5
+!!$      if (force_res_dump)    call write_restart_hdf5
+!!$      if (force_allbnd_dump) call warn("[fluidupdate:make_sweep] force_allbnd_dump has no effect for single-file HDF5 restart files")
+!!$      if (force_log_dump)    call write_data(output='log')
+!!$
+!!$   end subroutine force_dumps
 
 end module piernikdebug

@@ -626,6 +626,7 @@ contains
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req, req
       use multigridvars, only: base, plvl, ord_prolong_face_norm, is_external, need_general_pf
 #ifdef DEBUG
+      use constants,     only: two
       use piernikdebug,  only: aux_R
 #endif /* DEBUG */
 
