@@ -40,13 +40,59 @@ module grid_cont
    implicit none
 
    private
-   public :: grid_container, segment, bnd_list
+   public :: grid_container, segment, bnd_list, pr_segment, tgt_list
 
    !> \brief Specification of segment of data for boundary exchange, prolongation and restriction.
    type :: segment
       integer :: proc                                     !< target process
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
    end type segment
+
+   !> \brief coefficient-layer pair used for prolongation
+   type :: c_layer
+      integer :: layer                                                !< index of a layer with face-prolongation coefficient coeff
+      real    :: coeff                                                !< coefficient for face prolongation
+   end type c_layer
+
+   !> \brief segment type for prolongation and restriction
+   type, extends(segment) :: pr_segment
+      real, allocatable, dimension(:,:,:) :: buf                      !< buffer for the coarse data (incoming prolongation and outgoing restriction) for each nonlocal operations
+      type(c_layer), dimension(:), allocatable :: f_lay               !< face layers to contribute to the prolonged face value
+   end type pr_segment                                                !< (not allocated for outgoing prolongation, incoming restriction and for local operations)
+
+   !< \brief target list container for prolongations, restrictions and boundary exchanges
+   type :: tgt_list
+      type(pr_segment), dimension(:), allocatable :: seg              !< a segment of data to be received or sent
+   end type tgt_list
+
+   !> \brief Multigrid-specific storage
+   !> \todo move as much as possible to cg%q(:)
+   type :: mg_arr
+      ! storage
+      real, allocatable, dimension(:,:,:,:) :: var                    !< main working array
+      real, allocatable, dimension(:,:,:)   :: bnd_x, bnd_y, bnd_z    !< given boundary values for potential; \todo make an array of pointers, indexed by (xdim:zdim)
+      real, allocatable, dimension(:,:,:)   :: prolong_x, prolong_xy  !< auxiliary prolongation arrays
+
+      ! data for FFT multigrid self-gravity solver
+      integer                                :: nxc                   !< first index (complex or real: fft(:,:,:) or fftr(:,:,:)) cell count
+      integer                                :: fft_type              !< type of FFT to employ (depending on boundaries)
+      complex, allocatable, dimension(:,:,:) :: fft                   !< a complex array for FFT operations (Fourier space)
+      real,    allocatable, dimension(:,:,:) :: fftr                  !< a real array for FFT operations (Fourier space for sine transform)
+      real,    allocatable, dimension(:,:,:) :: src                   !< an input array for FFT (real space data)
+      real,    allocatable, dimension(:,:,:) :: Green3D               !< Green's function (0.5 * fft_norm / (kx + ky + kz))
+      integer (kind = selected_int_kind(16)) :: planf, plani          !< FFT forward and inverse plans
+      real                                   :: fft_norm              !< normalization factor
+
+      ! geometrical factors
+      integer :: level                                                !< grid levels are tagged by some consecutive integer numbers
+      real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
+
+      ! prolongation and restriction
+      type(tgt_list) :: f_tgt                                         !< description of incoming restriction and outgoing prolongation data (this should be a linked list)
+      type(tgt_list) :: c_tgt                                         !< description of outgoing restriction and incoming prolongation data
+      type(tgt_list), dimension(xdim:zdim, LO:HI) :: pff_tgt, pfc_tgt !< description outgoing and incoming face prolongation data
+
+   end type mg_arr
 
    !> \brief Segment type with additional parameters for boundary exchange
    type, extends(segment) :: bnd_segment
@@ -60,83 +106,105 @@ module grid_cont
 
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
    type, extends(axes) :: grid_container
-      real    :: dx                             !< length of the %grid cell in x-direction
-      real    :: dy                             !< length of the %grid cell in y-direction
-      real    :: dz                             !< length of the %grid cell in z-direction
-      real    :: idx                            !< inverted length of the %grid cell in x-direction
-      real    :: idy                            !< inverted length of the %grid cell in y-direction
-      real    :: idz                            !< inverted length of the %grid cell in z-direction
-      real    :: dxmn                           !< the smallest length of the %grid cell (among dx, dy, and dz)
-      real    :: dvol                           !< volume of one %grid cell
-      real    :: vol                            !< volume of the grid; BEWARE: for cylindrical geometry it need to be multiplied by appropriate x(:) to get real volume
-      real, dimension(ndims, LO:HI) :: fbnd     !< current block boundary positions
 
-      real, dimension(ndims)          :: dl     !< array of %grid cell sizes in all directions, [ dx, dy, dz ]
-      real, dimension(ndims)          :: idl    !< array of inverted %grid cell sizes in all directions, 1./dl(:)
+      type(domain_container), pointer :: dom                     !< Parent domain, contains domain decomposition of a domain this cg belongs to (BEWARE: antiparallel)
 
-      real, allocatable, dimension(:) :: inv_x  !< array of invert x-positions of %grid cells centers
-      real, allocatable, dimension(:) :: inv_y  !< array of invert y-positions of %grid cells centers
-      real, allocatable, dimension(:) :: inv_z  !< array of invert z-positions of %grid cells centers
-      real, allocatable, dimension(:) :: xl     !< array of x-positions of %grid cells left borders
-      real, allocatable, dimension(:) :: yl     !< array of y-positions of %grid cells left borders
-      real, allocatable, dimension(:) :: zl     !< array of z-positions of %grid cells left borders
-      real, allocatable, dimension(:) :: xr     !< array of x-positions of %grid cells right borders
-      real, allocatable, dimension(:) :: yr     !< array of y-positions of %grid cells right borders
-      real, allocatable, dimension(:) :: zr     !< array of z-positions of %grid cells right borders
+      ! Cell properties
 
-      integer(kind=4) :: nxb                            !< number of %grid cells in one block (without boundary cells) in x-direction
-      integer(kind=4) :: nyb                            !< number of %grid cells in one block (without boundary cells) in y-direction
-      integer(kind=4) :: nzb                            !< number of %grid cells in one block (without boundary cells) in z-direction
-      integer(kind=4) :: is                             !< index of the first %grid cell of physical domain in x-direction
-      integer(kind=4) :: ie                             !< index of the last %grid cell of physical domain in x-direction
-      integer(kind=4) :: js                             !< index of the first %grid cell of physical domain in y-direction
-      integer(kind=4) :: je                             !< index of the last %grid cell of physical domain in y-direction
-      integer(kind=4) :: ks                             !< index of the first %grid cell of physical domain in z-direction
-      integer(kind=4) :: ke                             !< index of the last %grid cell of physical domain in z-direction
-      integer(kind=4) :: nb                             !< number of boundary cells surrounding the physical domain, same for all directions
-      integer(kind=4) :: maxxyz                         !< maximum number of %grid cells in any direction
-      integer(kind=4) :: isb, ieb, jsb, jeb, ksb, keb   !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
+      ! sizes
+      real, dimension(ndims) :: dl                               !< array of %grid cell sizes in all directions, [ dx, dy, dz ]
+      real :: dx                                                 !< length of the %grid cell in x-direction
+      real :: dy                                                 !< length of the %grid cell in y-direction
+      real :: dz                                                 !< length of the %grid cell in z-direction
+      real :: dvol                                               !< volume of one %grid cell
+      real :: dxy, dxz, dyz                                      !< cell surface area
 
-      logical :: empty                          !< .true. if there are no cells to process (e.g. some processes at base level in multigrid gravity)
+      ! shortcuts
+      real, dimension(ndims) :: idl                              !< array of inverted %grid cell sizes in all directions, 1./dl(:)
+      real :: idx                                                !< inverted length of the %grid cell in x-direction
+      real :: idy                                                !< inverted length of the %grid cell in y-direction
+      real :: idz                                                !< inverted length of the %grid cell in z-direction
+      real :: idx2, idy2, idz2                                   !< inverse of d{x,y,z} square
+      real :: dvol2                                              !< square of one cell volume
 
-      integer(kind=8), dimension(ndims) :: off    !< offset of the local domain within computational domain
-      integer(kind=4), dimension(ndims) :: n_b    !< [nxb, nyb, nzb]
-      integer(kind=8), dimension(ndims) :: h_cor1 !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:)
-      integer(kind=4), dimension(ndims) :: n_     !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
-      integer(kind=8), dimension(ndims, LO:HI) :: my_se !< own segment
-      integer :: grid_n                           !< number of own segment: my_se(:,:) = dom%pse(proc)%sel(grid_n, :, :)
+      ! Grid properties
 
-      integer(kind=4), dimension(ndims, LO:HI)  :: ijkse !< [[is, js, ks], [ie, je, ke]]
-      integer, dimension(ndims, LO:HI)  :: bnd  !< type of boundary conditions coded in integers
+      ! cell count and position
+      integer(kind=8), dimension(ndims) :: off                   !< offset of the local domain within computational domain
+      integer(kind=4), dimension(ndims) :: n_b                   !< [nxb, nyb, nzb]
+      integer(kind=4) :: nxb                                     !< number of %grid cells in one block (without boundary cells) in x-direction
+      integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
+      integer(kind=4) :: nzb                                     !< number of %grid cells in one block (without boundary cells) in z-direction
 
-      integer(kind=4), allocatable, dimension(:,:,:,:,:) :: mbc !< MPI Boundary conditions Container
+      ! shortcuts
+      integer(kind=4) :: is                                      !< index of the first %grid cell of physical domain in x-direction
+      integer(kind=4) :: ie                                      !< index of the last %grid cell of physical domain in x-direction
+      integer(kind=4) :: js                                      !< index of the first %grid cell of physical domain in y-direction
+      integer(kind=4) :: je                                      !< index of the last %grid cell of physical domain in y-direction
+      integer(kind=4) :: ks                                      !< index of the first %grid cell of physical domain in z-direction
+      integer(kind=4) :: ke                                      !< index of the last %grid cell of physical domain in z-direction
+      integer(kind=4) :: nb                                      !< number of boundary cells surrounding the physical domain, same for all directions
+      integer(kind=4) :: isb, ieb, jsb, jeb, ksb, keb            !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
+      integer(kind=4), dimension(ndims, LO:HI)  :: ijkse         !< [[is, js, ks], [ie, je, ke]]
+      integer(kind=8), dimension(ndims) :: h_cor1                !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:)
+      integer(kind=4), dimension(ndims) :: n_                    !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
+      integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment
 
-      type(domain_container), pointer :: dom                  !< Parent domain, contains domain decomposition of a domain this cg belongs to (BEWARE: antiparallel)
+      ! Physical size and coordinates
 
-      type(bnd_list), dimension(:,:), allocatable :: i_bnd, o_bnd  !< description of incoming and outgoing boundary data, the shape is (xdim:zdim, nb)
+      real, dimension(ndims, LO:HI) :: fbnd                      !< current block boundary positions
+      real, allocatable, dimension(:) :: inv_x                   !< array of invert x-positions of %grid cells centers
+      real, allocatable, dimension(:) :: inv_y                   !< array of invert y-positions of %grid cells centers
+      real, allocatable, dimension(:) :: inv_z                   !< array of invert z-positions of %grid cells centers
+      real, allocatable, dimension(:) :: xl                      !< array of x-positions of %grid cells left borders
+      real, allocatable, dimension(:) :: yl                      !< array of y-positions of %grid cells left borders
+      real, allocatable, dimension(:) :: zl                      !< array of z-positions of %grid cells left borders
+      real, allocatable, dimension(:) :: xr                      !< array of x-positions of %grid cells right borders
+      real, allocatable, dimension(:) :: yr                      !< array of y-positions of %grid cells right borders
+      real, allocatable, dimension(:) :: zr                      !< array of z-positions of %grid cells right borders
 
-      real, allocatable, dimension(:,:,:) :: gc_xdim !< array of geometrical coefficients in x-direction
-      real, allocatable, dimension(:,:,:) :: gc_ydim !< array of geometrical coefficients in y-direction
-      real, allocatable, dimension(:,:,:) :: gc_zdim !< array of geometrical coefficients in z-direction
+      ! External boundary conditions and internal boundaries
 
-      type(named_array3d), allocatable, dimension(:) :: q  !< 3D arrays such as gravitational potential pr user-defined quantities or gravitational potential
-      type(named_array4d), allocatable, dimension(:) :: w  !< 4D arrays such as u, vector fields (b) or other vector/multi-scalar user-defined quantities
+      integer, dimension(ndims, LO:HI)  :: bnd                   !< type of boundary conditions coded in integers
+      integer(kind=4), allocatable, dimension(:,:,:,:,:) :: mbc  !< MPI Boundary conditions Container for comm3d-based communication
+      type(bnd_list), dimension(:,:), allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim, nb)
+      type(bnd_list), dimension(:,:), allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim, nb)
 
-      type(mbc_list), dimension(:,:), allocatable :: q_i_mbc  !< MPI Boundary conditions Containers for incoming guardcell updates on the q arrays
-      type(mbc_list), dimension(:,:), allocatable :: q_o_mbc  !< MPI Boundary conditions Containers for outgoing guardcell updates on the q arrays
+      ! Non-cartesian geometrical factors
+
+      real, allocatable, dimension(:,:,:) :: gc_xdim             !< array of geometrical coefficients in x-direction
+      real, allocatable, dimension(:,:,:) :: gc_ydim             !< array of geometrical coefficients in y-direction
+      real, allocatable, dimension(:,:,:) :: gc_zdim             !< array of geometrical coefficients in z-direction
+
+      ! Registeed variables
+
+      type(named_array3d), allocatable, dimension(:) :: q        !< 3D arrays such as gravitational potential pr user-defined quantities or gravitational potential
+      type(named_array4d), allocatable, dimension(:) :: w        !< 4D arrays such as u, vector fields (b) or other vector/multi-scalar user-defined quantities
+
+      type(mbc_list), dimension(:,:), allocatable :: q_i_mbc     !< MPI Boundary conditions Containers for incoming guardcell updates on the q arrays
+      type(mbc_list), dimension(:,:), allocatable :: q_o_mbc     !< MPI Boundary conditions Containers for outgoing guardcell updates on the q arrays
 
       ! handy shortcuts to some entries in q(:)
-      real, dimension(:,:,:), pointer :: gpot    => null() !< Array for sum of gravitational potential at t += dt
-      real, dimension(:,:,:), pointer :: hgpot   => null() !< Array for sum of gravitational potential at t += 0.5*dt
-      real, dimension(:,:,:), pointer :: gp      => null() !< Array for gravitational potential from external fields
-      real, dimension(:,:,:), pointer :: sgp     => null() !< Array for gravitational potential from multigrid or FFT solver
-      real, dimension(:,:,:), pointer :: sgpm    => null() !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
-      real, dimension(:,:,:), pointer :: cs_iso2 => null()
-      real, dimension(:,:,:), pointer :: wa      => null() !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
+      real, dimension(:,:,:), pointer :: gpot    => null()       !< Array for sum of gravitational potential at t += dt
+      real, dimension(:,:,:), pointer :: hgpot   => null()       !< Array for sum of gravitational potential at t += 0.5*dt
+      real, dimension(:,:,:), pointer :: gp      => null()       !< Array for gravitational potential from external fields
+      real, dimension(:,:,:), pointer :: sgp     => null()       !< Array for gravitational potential from multigrid or FFT solver
+      real, dimension(:,:,:), pointer :: sgpm    => null()       !< Array for gravitational potential from multigrid or FFT solver at previous timestep saved by source_terms_grav.
+      real, dimension(:,:,:), pointer :: cs_iso2 => null()       !< COMMENT ME
+      real, dimension(:,:,:), pointer :: wa      => null()       !< Temporary array used for different purposes, usually has dimension (grid::nx, grid::ny, grid::nz)
 
       ! handy shortcuts to some entries in w(:)
-      real, dimension(:,:,:,:), pointer :: u     => null() !< Main array of all fluids' components
-      real, dimension(:,:,:,:), pointer :: b     => null() !< Main array of magnetic field's components
+      real, dimension(:,:,:,:), pointer :: u     => null()       !< Main array of all fluids' components
+      real, dimension(:,:,:,:), pointer :: b     => null()       !< Main array of magnetic field's components
+
+      ! Misc
+
+      type(mg_arr) :: mg                                         !< multigrid arrays (without multigrid will remain unallocated)
+      real :: vol                                                !< volume of the grid; BEWARE: for cylindrical geometry it need to be multiplied by appropriate x(:) to get real volume
+      real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
+      integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
+      logical :: empty                                           !< .true. if there are no cells to process (e.g. some processes at base level in multigrid gravity)
+      integer :: grid_n                                          !< number of own segment: my_se(:,:) = dom%pse(proc)%sel(grid_n, :, :)
 
    contains
 
@@ -351,6 +419,37 @@ contains
       this%ie = this%ijkse(xdim, HI)
       this%je = this%ijkse(ydim, HI)
       this%ke = this%ijkse(zdim, HI)
+
+      ! copied from multigrid
+      this%dxy = 1.
+      this%dxz = 1.
+      this%dyz = 1.
+
+      if (dom%has_dir(xdim)) then
+         this%idx2  = 1. / this%dx**2                      ! auxiliary invariants
+         this%dxy   = this%dxy * this%dx
+         this%dxz   = this%dxz * this%dx
+      else
+         this%idx2  = 0.
+      endif
+
+      if (dom%has_dir(ydim)) then
+         this%idy2  = 1. / this%dy**2
+         this%dxy   = this%dxy * this%dy
+         this%dyz   = this%dyz * this%dy
+      else
+         this%idy2  = 0.
+      endif
+
+      if (dom%has_dir(zdim)) then
+         this%idz2  = 1. / this%dz**2
+         this%dxz   = this%dxz * this%dz
+         this%dyz   = this%dyz * this%dz
+      else
+         this%idz2  = 0.
+      endif
+
+      this%dvol2 = this%dvol**2
 
       call this%mpi_bnd_types
 
