@@ -48,9 +48,9 @@ module named_array
       integer(kind=4) :: restart_mode                    !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
     contains
       procedure(g_na_clean), deferred, pass(this) :: clean
-      procedure(g_na_check), deferred, pass(this) :: check
-      procedure(g_na_b),     deferred, pass(this) :: lb
-      procedure(g_na_b),     deferred, pass(this) :: ub
+!!$      procedure(g_na_check), deferred, pass(this) :: check
+!!$      procedure(g_na_b),     deferred, pass(this) :: lb
+!!$      procedure(g_na_b),     deferred, pass(this) :: ub
       !> \todo add also init and get_sweep
    end type generic_na
 
@@ -61,19 +61,19 @@ module named_array
          class(generic_na), intent(inout) :: this
       end subroutine g_na_clean
 
-      logical function g_na_check(this)
-         import generic_na
-         implicit none
-         class(generic_na), intent(inout) :: this
-      end function g_na_check
-
-      function g_na_b(this,dim_) result(n)
-         import generic_na
-         implicit none
-         class(generic_na), intent(in) :: this
-         integer(kind=4), intent(in) :: dim_
-         integer(kind=4) :: n
-      end function g_na_b
+!!$      logical function g_na_check(this)
+!!$         import generic_na
+!!$         implicit none
+!!$         class(generic_na), intent(inout) :: this
+!!$      end function g_na_check
+!!$
+!!$      function g_na_b(this,dim_) result(n)
+!!$         import generic_na
+!!$         implicit none
+!!$         class(generic_na), intent(in) :: this
+!!$         integer(kind=4), intent(in) :: dim_
+!!$         integer(kind=4) :: n
+!!$      end function g_na_b
    end interface
 
    !> \brief List of MPI Boundary conditions Containers for boundary exchanges
@@ -92,9 +92,9 @@ module named_array
          procedure :: clean => array4d_clean
          procedure :: array4d_get_sweep
          procedure :: array4d_get_sweep_one_var
-         procedure :: check => array4d_check_if_dirty
-         procedure :: lb => array4d_lbound
-         procedure :: ub => array4d_ubound
+!!$         procedure :: check => array4d_check_if_dirty
+!!$         procedure :: lb => array4d_lbound
+!!$         procedure :: ub => array4d_ubound
          generic, public :: init => array4d_init, array4d_associate
          generic, public :: get_sweep => array4d_get_sweep_one_var, array4d_get_sweep
    end type named_array4d
@@ -106,10 +106,10 @@ module named_array
          procedure :: array3d_init
          procedure :: array3d_associate
          procedure :: clean => array3d_clean
-         procedure :: check => array3d_check_if_dirty
          procedure :: get_sweep => array3d_get_sweep
-         procedure :: lb => array3d_lbound
-         procedure :: ub => array3d_ubound
+!!$         procedure :: check => array3d_check_if_dirty
+!!$         procedure :: lb => array3d_lbound
+!!$         procedure :: ub => array3d_ubound
          generic, public :: init => array3d_init, array3d_associate
    end type named_array3d
 
@@ -160,17 +160,17 @@ contains
 
 !> \brief check if the array was initialized with sane values
 
-   logical function array3d_check_if_dirty(this)
-
-      use constants, only: big_float
-
-      implicit none
-
-      class(named_array3d), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) :/
-
-      array3d_check_if_dirty = any( this%arr >= big_float )
-
-   end function array3d_check_if_dirty
+!!$   logical function array3d_check_if_dirty(this)
+!!$
+!!$      use constants, only: big_float
+!!$
+!!$      implicit none
+!!$
+!!$      class(named_array3d), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) :/
+!!$
+!!$      array3d_check_if_dirty = any( this%arr >= big_float )
+!!$
+!!$   end function array3d_check_if_dirty
 
 !> \brief Initialize named array with a predefined simple array
 
@@ -262,17 +262,17 @@ contains
 
 !> \brief check if the array was initialized with sane values
 
-   logical function array4d_check_if_dirty(this)
-
-      use constants, only: big_float
-
-      implicit none
-
-      class(named_array4d), intent(inout) :: this                  !> \todo i want to become polymorphic class(*) when I grow older
-
-      array4d_check_if_dirty = any( this%arr >= big_float )
-
-   end function array4d_check_if_dirty
+!!$   logical function array4d_check_if_dirty(this)
+!!$
+!!$      use constants, only: big_float
+!!$
+!!$      implicit none
+!!$
+!!$      class(named_array4d), intent(inout) :: this                  !> \todo i want to become polymorphic class(*) when I grow older
+!!$
+!!$      array4d_check_if_dirty = any( this%arr >= big_float )
+!!$
+!!$   end function array4d_check_if_dirty
 
 !> \brief Get a selected line of values
 
@@ -353,56 +353,56 @@ contains
 
    end function array4d_get_sweep
 
-!> \brief Get the upper bound of a 4D named array
-   function array4d_ubound(this,dim_) result(n)
-
-      implicit none
-
-      class(named_array4d), intent(in) :: this
-      integer(kind=4),      intent(in) :: dim_
-      integer(kind=4) :: n
-
-      n = ubound(this%arr, dim=dim_, kind=4)
-
-   end function array4d_ubound
-
-!> \brief Get the lower bound of a 4D named array
-   function array4d_lbound(this,dim_) result(n)
-
-      implicit none
-
-      class(named_array4d), intent(in) :: this
-      integer(kind=4),      intent(in) :: dim_
-      integer(kind=4) :: n
-
-      n = lbound(this%arr,dim=dim_,kind=4)
-
-   end function array4d_lbound
-
-!> \brief Get the upper bound of a 3D named array
-   function array3d_ubound(this,dim_) result(n)
-
-      implicit none
-
-      class(named_array3d), intent(in) :: this
-      integer(kind=4),      intent(in) :: dim_
-      integer(kind=4) :: n
-
-      n = ubound(this%arr, dim=dim_, kind=4)
-
-   end function array3d_ubound
-
-!> \brief Get the lower bound of a 3D named array
-   function array3d_lbound(this,dim_) result(n)
-
-      implicit none
-
-      class(named_array3d), intent(in) :: this
-      integer(kind=4),      intent(in) :: dim_
-      integer(kind=4) :: n
-
-      n = lbound(this%arr,dim=dim_,kind=4)
-
-   end function array3d_lbound
+!!$!> \brief Get the upper bound of a 4D named array
+!!$   function array4d_ubound(this,dim_) result(n)
+!!$
+!!$      implicit none
+!!$
+!!$      class(named_array4d), intent(in) :: this
+!!$      integer(kind=4),      intent(in) :: dim_
+!!$      integer(kind=4) :: n
+!!$
+!!$      n = ubound(this%arr, dim=dim_, kind=4)
+!!$
+!!$   end function array4d_ubound
+!!$
+!!$!> \brief Get the lower bound of a 4D named array
+!!$   function array4d_lbound(this,dim_) result(n)
+!!$
+!!$      implicit none
+!!$
+!!$      class(named_array4d), intent(in) :: this
+!!$      integer(kind=4),      intent(in) :: dim_
+!!$      integer(kind=4) :: n
+!!$
+!!$      n = lbound(this%arr,dim=dim_,kind=4)
+!!$
+!!$   end function array4d_lbound
+!!$
+!!$!> \brief Get the upper bound of a 3D named array
+!!$   function array3d_ubound(this,dim_) result(n)
+!!$
+!!$      implicit none
+!!$
+!!$      class(named_array3d), intent(in) :: this
+!!$      integer(kind=4),      intent(in) :: dim_
+!!$      integer(kind=4) :: n
+!!$
+!!$      n = ubound(this%arr, dim=dim_, kind=4)
+!!$
+!!$   end function array3d_ubound
+!!$
+!!$!> \brief Get the lower bound of a 3D named array
+!!$   function array3d_lbound(this,dim_) result(n)
+!!$
+!!$      implicit none
+!!$
+!!$      class(named_array3d), intent(in) :: this
+!!$      integer(kind=4),      intent(in) :: dim_
+!!$      integer(kind=4) :: n
+!!$
+!!$      n = lbound(this%arr,dim=dim_,kind=4)
+!!$
+!!$   end function array3d_lbound
 
 end module named_array

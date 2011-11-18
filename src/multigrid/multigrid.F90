@@ -216,18 +216,18 @@ contains
       roof => lvl(ubound(lvl, dim=1))
 
       ! set up connections between levels
-      base%level = level_min
+      base%mg%level = level_min
       curl => base
       do while (associated(curl))
          if (.not. associated(curl, roof)) then
-            curl%finer => lvl(curl%level + 1)
-            curl%finer%level = curl%level + 1
+            curl%finer => lvl(curl%mg%level + 1)
+            curl%finer%mg%level = curl%mg%level + 1
          else
             curl%finer => null()
          endif
 
          if (.not. associated(curl, base)) then
-            curl%coarser => lvl(curl%level - 1)
+            curl%coarser => lvl(curl%mg%level - 1)
          else
             curl%coarser => null()
          endif
@@ -279,67 +279,36 @@ contains
 
          if (any(curl%n_b(:) < curl%nb .and. dom%has_dir(:) .and. .not. curl%empty)) then
             write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
-                 curl%nb, " > ", curl%n_b(:), " at level ", curl%level, ". You may try to set level_max <=", roof%level-curl%level+level_min-1
+                 curl%nb, " > ", curl%n_b(:), " at level ", curl%mg%level, ". You may try to set level_max <=", roof%mg%level-curl%mg%level+level_min-1
             call die(msg)
          endif
 
-         if (any(curl%n_b(:) * 2**(roof%level - curl%level) /= roof%n_b(:) .and. dom%has_dir(:)) .and. .not. curl%empty .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
-
-         !> \todo check if these are correctly defined for multipole solver
-         curl%dxy = 1.
-         curl%dxz = 1.
-         curl%dyz = 1.
-
-         if (dom%has_dir(xdim)) then
-            curl%idx2  = 1. / curl%dx**2                      ! auxiliary invariants
-            curl%dxy   = curl%dxy * curl%dx
-            curl%dxz   = curl%dxz * curl%dx
-         else
-            curl%idx2  = 0.
-         endif
-
-         if (dom%has_dir(ydim)) then
-            curl%idy2  = 1. / curl%dy**2
-            curl%dxy   = curl%dxy * curl%dy
-            curl%dyz   = curl%dyz * curl%dy
-         else
-            curl%idy2  = 0.
-         endif
-
-         if (dom%has_dir(zdim)) then
-            curl%idz2  = 1. / curl%dz**2
-            curl%dxz   = curl%dxz * curl%dz
-            curl%dyz   = curl%dyz * curl%dz
-         else
-            curl%idz2  = 0.
-         endif
-
-         curl%dvol2 = curl%dvol**2
+         if (any(curl%n_b(:) * 2**(roof%mg%level - curl%mg%level) /= roof%n_b(:) .and. dom%has_dir(:)) .and. .not. curl%empty .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
 
          ! data storage
-         !> \deprecated BEWARE prolong_x and %prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
-         if (allocated(curl%prolong_x) .or. allocated(curl%prolong_xy) .or. allocated(curl%mgvar) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
-         allocate(curl%mgvar     (curl%n_(xdim), curl%n_(ydim),        curl%n_(zdim),        ngridvars))
-         allocate(curl%prolong_xy(curl%n_(xdim), curl%n_(ydim),        curl%nzb/2+2*curl%nb))
-         allocate(curl%prolong_x (curl%n_(xdim), curl%nyb/2+2*curl%nb, curl%nzb/2+2*curl%nb))
-         mb_alloc  = mb_alloc + size(curl%prolong_x) + size(curl%prolong_xy) + size(curl%mgvar)
+         !> \deprecated BEWARE prolong_x and %mg%prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
+         if (allocated(curl%mg%prolong_x) .or. allocated(curl%mg%prolong_xy) .or. allocated(curl%mg%var) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
+         allocate(curl%mg%var     (curl%n_(xdim), curl%n_(ydim),        curl%n_(zdim),        ngridvars))
+         allocate(curl%mg%prolong_xy(curl%n_(xdim), curl%n_(ydim),        curl%nzb/2+2*curl%nb))
+         allocate(curl%mg%prolong_x (curl%n_(xdim), curl%nyb/2+2*curl%nb, curl%nzb/2+2*curl%nb))
+         mb_alloc  = mb_alloc + size(curl%mg%prolong_x) + size(curl%mg%prolong_xy) + size(curl%mg%var)
 
-         if ( allocated(curl%bnd_x) .or. allocated(curl%bnd_y) .or. allocated(curl%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
-         allocate(curl%bnd_x(curl%js:curl%je, curl%ks:curl%ke, LO:HI))
-         allocate(curl%bnd_y(curl%is:curl%ie, curl%ks:curl%ke, LO:HI))
-         allocate(curl%bnd_z(curl%is:curl%ie, curl%js:curl%je, LO:HI))
-         mb_alloc  = mb_alloc + size(curl%bnd_x) + size(curl%bnd_y) + size(curl%bnd_z)
+         if ( allocated(curl%mg%bnd_x) .or. allocated(curl%mg%bnd_y) .or. allocated(curl%mg%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
+         allocate(curl%mg%bnd_x(curl%js:curl%je, curl%ks:curl%ke, LO:HI))
+         allocate(curl%mg%bnd_y(curl%is:curl%ie, curl%ks:curl%ke, LO:HI))
+         allocate(curl%mg%bnd_z(curl%is:curl%ie, curl%js:curl%je, LO:HI))
+         mb_alloc  = mb_alloc + size(curl%mg%bnd_x) + size(curl%mg%bnd_y) + size(curl%mg%bnd_z)
 
          ! array initialization
          if (dirty_debug) then
-            curl%mgvar     (:, :, :, :) = dirtyH
-            curl%prolong_x (:, :, :)    = dirtyH
-            curl%prolong_xy(:, :, :)    = dirtyH
-            curl%bnd_x     (:, :, :)    = dirtyH
-            curl%bnd_y     (:, :, :)    = dirtyH
-            curl%bnd_z     (:, :, :)    = dirtyH
+            curl%mg%var       (:, :, :, :) = dirtyH
+            curl%mg%prolong_x (:, :, :)    = dirtyH
+            curl%mg%prolong_xy(:, :, :)    = dirtyH
+            curl%mg%bnd_x     (:, :, :)    = dirtyH
+            curl%mg%bnd_y     (:, :, :)    = dirtyH
+            curl%mg%bnd_z     (:, :, :)    = dirtyH
          else
-            curl%mgvar     (:, :, :, :) = 0.0 ! should not be necessary if dirty_debug shows nothing suspicious
+            curl%mg%var       (:, :, :, :) = 0.0 ! should not be necessary if dirty_debug shows nothing suspicious
          endif
 
          curl => curl%coarser ! descend until null() is encountered
@@ -372,7 +341,7 @@ contains
       call MPI_Allreduce(mb_alloc, min_m, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
       call MPI_Allreduce(mb_alloc, max_m, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
       if (master) then
-         write(msg, '(a,i2,a,3i4,a,2(f6.1,a))')"[multigrid:init_multigrid] Initialized ", roof%level, " levels, coarse level resolution [ ", &
+         write(msg, '(a,i2,a,3i4,a,2(f6.1,a))')"[multigrid:init_multigrid] Initialized ", roof%mg%level, " levels, coarse level resolution [ ", &
             base%dom%n_d(:)," ], allocated", min_m, " ..", max_m, "MiB"
          call mg_write_log(msg)
       endif
@@ -388,10 +357,11 @@ contains
 
       use constants,           only: LO, HI, I_ONE
       use dataio_pub,          only: msg
+      use grid_cont,           only: tgt_list
       use mpi,                 only: MPI_DOUBLE_PRECISION
       use mpisetup,            only: master, nproc, FIRST, LAST, comm, ierr
       use multigridhelpers,    only: mg_write_log
-      use multigridvars,       only: lvl, plvl, base, tot_ts, tgt_list
+      use multigridvars,       only: lvl, plvl, base, tot_ts
 #ifdef GRAV
       use multigrid_gravity,   only: cleanup_multigrid_grav
 #endif /* GRAV */
@@ -417,19 +387,19 @@ contains
       if (allocated(lvl)) then
          curl => base
          do while (associated(curl))
-            if (allocated(curl%prolong_xy)) deallocate(curl%prolong_xy)
-            if (allocated(curl%prolong_x))  deallocate(curl%prolong_x)
-            if (allocated(curl%mgvar))      deallocate(curl%mgvar)
-            if (allocated(curl%bnd_x))      deallocate(curl%bnd_x)
-            if (allocated(curl%bnd_y))      deallocate(curl%bnd_y)
-            if (allocated(curl%bnd_z))      deallocate(curl%bnd_z)
+            if (allocated(curl%mg%prolong_xy)) deallocate(curl%mg%prolong_xy)
+            if (allocated(curl%mg%prolong_x))  deallocate(curl%mg%prolong_x)
+            if (allocated(curl%mg%var))        deallocate(curl%mg%var)
+            if (allocated(curl%mg%bnd_x))      deallocate(curl%mg%bnd_x)
+            if (allocated(curl%mg%bnd_y))      deallocate(curl%mg%bnd_y)
+            if (allocated(curl%mg%bnd_z))      deallocate(curl%mg%bnd_z)
             if (allocated(curl%dom%pse)) then
                do g = FIRST, LAST
                   deallocate(curl%dom%pse(g)%sel)
                enddo
                deallocate(curl%dom%pse)
             endif
-            io_tgt(1:nseg) = [ curl%f_tgt, curl%c_tgt ]
+            io_tgt(1:nseg) = [ curl%mg%f_tgt, curl%mg%c_tgt ]
             do ib = 1, nseg
                if (allocated(io_tgt(ib)%seg)) then
                   do g = 1, ubound(io_tgt(ib)%seg, dim=1)

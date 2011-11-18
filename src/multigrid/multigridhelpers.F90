@@ -70,7 +70,7 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: iv   !< index of variable in lvl()%mgvar which we want to pollute
+      integer(kind=4), intent(in) :: iv   !< index of variable in lvl()%mg%var which we want to pollute
 
       type(plvl), pointer :: curl
 
@@ -80,7 +80,7 @@ contains
 
       curl => base
       do while (associated(curl))
-         curl%mgvar(:, :, :, iv) = dirtyH
+         curl%mg%var(:, :, :, iv) = dirtyH
          curl => curl%finer
       enddo
 
@@ -101,7 +101,7 @@ contains
 
       implicit none
 
-      integer(kind=4),   intent(in) :: iv     !< index of variable in lvl()%mgvar which we want to pollute
+      integer(kind=4),   intent(in) :: iv     !< index of variable in lvl()%mg%var which we want to pollute
       type(plvl), pointer, intent(in) :: curl !< level which we are checking
       character(len=*),  intent(in) :: label  !< label to indicate the origin of call
       integer(kind=4), optional, intent(in) :: expand !< also check guardcells
@@ -121,10 +121,10 @@ contains
       do k = curl%ks-ng*dom%D_z, curl%ke+ng*dom%D_z
          do j = curl%js-ng*dom%D_y, curl%je+ng*dom%D_y
             do i = curl%is-ng*dom%D_x, curl%ie+ng*dom%D_x
-               if (abs(curl%mgvar(i, j, k, iv)) > dirtyL) then
+               if (abs(curl%mg%var(i, j, k, iv)) > dirtyL) then
 !                        if (count([i<curl%is .or. i>curl%ie, j<curl%js .or. j>curl%je, k<curl%ks .or. k>curl%ke]) <=1) then ! excludes corners
                   write(msg, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &
-                          "[multigridhelpers:check_dirty] ", trim(label), "@", proc, " lvl(", curl%level, ")%mgvar(", i, ",", j, ",", k, ",", iv, ") = ", curl%mgvar(i, j, k, iv)
+                          "[multigridhelpers:check_dirty] ", trim(label), "@", proc, " lvl(", curl%mg%level, ")%mg%var(", i, ",", j, ",", k, ",", iv, ") = ", curl%mg%var(i, j, k, iv)
                   call warn(msg)
 !                        endif
                endif
@@ -267,7 +267,7 @@ contains
             do j = curl%js, curl%je
                do k = curl%ks, curl%ke
                   write(fu, '(3i4,i6,10es20.11e3)')i-curl%is+curl%off(xdim), j-curl%js+curl%off(ydim), k-curl%ks+curl%off(zdim), &
-                       &                           curl%level, curl%x(i), curl%y(j), curl%z(k), curl%mgvar(i, j, k, 1:ngridvars)
+                       &                           curl%mg%level, curl%x(i), curl%y(j), curl%z(k), curl%mg%var(i, j, k, 1:ngridvars)
                enddo
                write(fu, '(/)')
             enddo

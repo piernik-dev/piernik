@@ -57,9 +57,9 @@ contains
 
       type(plvl), pointer, intent(in) :: curl  !< level for which clear the boundary values
 
-      curl%bnd_x(:,:,:) = 0.
-      curl%bnd_y(:,:,:) = 0.
-      curl%bnd_z(:,:,:) = 0.
+      curl%mg%bnd_x(:,:,:) = 0.
+      curl%mg%bnd_y(:,:,:) = 0.
+      curl%mg%bnd_z(:,:,:) = 0.
 
    end subroutine zero_boundaries
 
@@ -89,7 +89,7 @@ contains
       fine   => coarse%finer
       if (.not. associated(fine)) call die("[multigridbasefuncs:prolong_level] fine == null()")
 
-      if (dirty_debug) fine%mgvar(:, :, :, iv) = dirtyH
+      if (dirty_debug) fine%mg%var(:, :, :, iv) = dirtyH
 
       call check_dirty(coarse, iv, "prolong-")
 
@@ -151,7 +151,7 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)  :: iv   !< index of variable in lvl()%mgvar for which we want to find the norm
+      integer(kind=4), intent(in)  :: iv   !< index of variable in lvl()%mg%var for which we want to find the norm
       real,    intent(out) :: norm !< the calculated norm
 
       real                 :: lsum
@@ -161,11 +161,11 @@ contains
 
       select case (dom%geometry_type)
          case (GEO_XYZ)
-            lsum = sum(roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, iv)**2) * roof%dvol
+            lsum = sum(roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, iv)**2) * roof%dvol
          case (GEO_RPZ)
             lsum = 0.
             do i = roof%is, roof%ie
-               lsum = lsum + sum(roof%mgvar(i, roof%js:roof%je, roof%ks:roof%ke, iv)**2) * roof%dvol * roof%x(i)
+               lsum = lsum + sum(roof%mg%var(i, roof%js:roof%je, roof%ks:roof%ke, iv)**2) * roof%dvol * roof%x(i)
             enddo
          case default
             call die("[multigridbasefuncs:norm_sq] Unsupported geometry.")
@@ -192,7 +192,7 @@ contains
       implicit none
 
       type(plvl), pointer, intent(in) :: curl !< level for which we want to subtract its average from
-      integer(kind=4), intent(in) :: iv   !< index of variable in lvl()%mgvar which we want to have zero average
+      integer(kind=4), intent(in) :: iv   !< index of variable in lvl()%mg%var which we want to have zero average
 
       real                :: lsum, avg, vol
       integer             :: i
@@ -201,11 +201,11 @@ contains
 
       select case (dom%geometry_type)
          case (GEO_XYZ)
-            lsum = sum(curl%mgvar(curl%is:curl%ie, curl%js:curl%je, curl%ks:curl%ke, iv)) * curl%dvol
+            lsum = sum(curl%mg%var(curl%is:curl%ie, curl%js:curl%je, curl%ks:curl%ke, iv)) * curl%dvol
          case (GEO_RPZ)
             lsum = 0.
             do i = curl%is, curl%ie
-               lsum = lsum + sum(curl%mgvar(i, curl%js:curl%je, curl%ks:curl%ke, iv)) * curl%dvol * curl%x(i)
+               lsum = lsum + sum(curl%mg%var(i, curl%js:curl%je, curl%ks:curl%ke, iv)) * curl%dvol * curl%x(i)
             enddo
          case default
             call die("[multigridbasefuncs:subtract_average] Unsupported geometry.")
@@ -214,7 +214,7 @@ contains
       call MPI_Allreduce(curl%vol, vol, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr) ! This probably can be calculated in init_multigrid
       avg = avg / vol
 
-      curl%mgvar(:, :, :, iv) = curl%mgvar(:, :, :, iv) - avg
+      curl%mg%var(:, :, :, iv) = curl%mg%var(:, :, :, iv) - avg
 
    end subroutine subtract_average
 
@@ -237,16 +237,17 @@ contains
       use constants,          only: xdim, ydim, zdim, LO, HI, LONG, I_ONE, half
       use dataio_pub,         only: die, warn
       use domain,             only: dom
+      use grid_cont,          only: pr_segment
       use mpi,                only: MPI_DOUBLE_PRECISION
       use mpisetup,           only: proc, comm, ierr, req, status, master
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: plvl, ord_prolong_face_norm, ord_prolong_face_par, base, extbnd_antimirror, is_external, need_general_pf, pr_segment
+      use multigridvars,      only: plvl, ord_prolong_face_norm, ord_prolong_face_par, base, extbnd_antimirror, is_external, need_general_pf
 
       implicit none
 
       type(plvl), pointer, intent(in) :: fine !< level for which approximate the solution
-      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mgvar ! \todo change the name
+      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mg%var ! \todo change the name
 
       integer                       :: i, j, k, d, lh, g, g1, gc, ib, jb, ibh, jbh, l
       type(plvl), pointer           :: coarse
@@ -307,10 +308,10 @@ contains
             ! Implement ord_prolong_face_par /= 0 if and only if it improves the coupling between fine and coarse solutions
          endif
 
-         do lh = LO, HI ! \todo convert plvl%bnd_[xyz] to an array and make obsolete the following pointer assignments
-            p_bnd(xdim, lh)%bnd => fine%bnd_x(:, :, lh)
-            p_bnd(ydim, lh)%bnd => fine%bnd_y(:, :, lh)
-            p_bnd(zdim, lh)%bnd => fine%bnd_z(:, :, lh)
+         do lh = LO, HI ! \todo convert plvl%mg%bnd_[xyz] to an array and make obsolete the following pointer assignments
+            p_bnd(xdim, lh)%bnd => fine%mg%bnd_x(:, :, lh)
+            p_bnd(ydim, lh)%bnd => fine%mg%bnd_y(:, :, lh)
+            p_bnd(zdim, lh)%bnd => fine%mg%bnd_z(:, :, lh)
             do d = xdim, zdim
                p_bnd(d, lh)%bnd(:, :) = 0. ! \todo mark dirty somehow, eg use a "magic" small value, like 1.234567890123456789e-123
             enddo
@@ -321,12 +322,12 @@ contains
          ! Gather coarse data for internal boundaries from others
          do d = xdim, zdim
             do lh = LO, HI
-               if (allocated(fine%pfc_tgt(d, lh)%seg)) then
-                  do g = 1, ubound(fine%pfc_tgt(d, lh)%seg(:), dim=1)
-                     if (fine%pfc_tgt(d, lh)%seg(g)%proc /= proc) then
+               if (allocated(fine%mg%pfc_tgt(d, lh)%seg)) then
+                  do g = 1, ubound(fine%mg%pfc_tgt(d, lh)%seg(:), dim=1)
+                     if (fine%mg%pfc_tgt(d, lh)%seg(g)%proc /= proc) then
                         nr = nr + I_ONE
-                        call MPI_Irecv(fine%pfc_tgt(d, lh)%seg(g)%buf(1, 1, 1), size(fine%pfc_tgt(d, lh)%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, &
-                             &         fine%pfc_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), ierr)
+                        call MPI_Irecv(fine%mg%pfc_tgt(d, lh)%seg(g)%buf(1, 1, 1), size(fine%mg%pfc_tgt(d, lh)%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, &
+                             &         fine%mg%pfc_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), ierr)
                      endif
                   enddo
                endif
@@ -337,10 +338,10 @@ contains
          off1(:) = int(mod(fine%off(:), 2_LONG), kind=4)
          do d = xdim, zdim
             do lh = LO, HI
-               if (allocated(coarse%pff_tgt(d, lh)%seg)) then
-                  do g = 1, ubound(coarse%pff_tgt(d, lh)%seg(:), dim=1)
+               if (allocated(coarse%mg%pff_tgt(d, lh)%seg)) then
+                  do g = 1, ubound(coarse%mg%pff_tgt(d, lh)%seg(:), dim=1)
 
-                     pseg => coarse%pff_tgt(d, lh)%seg(g)
+                     pseg => coarse%mg%pff_tgt(d, lh)%seg(g)
                      cse => pseg%se
 
                      if (pseg%proc /= proc) then
@@ -350,7 +351,7 @@ contains
                         do l = 1, ubound(pseg%f_lay(:), dim=1)
                            se(d,:) = pseg%f_lay(l)%layer
                            pseg%buf(:, :, :) = pseg%buf(:, :, :) + pseg%f_lay(l)%coeff * &
-                                coarse%mgvar(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI), soln)
+                                coarse%mg%var(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI), soln)
                         enddo
                         call MPI_Isend(pseg%buf(1, 1, 1), size(pseg%buf(:, :, :)), MPI_DOUBLE_PRECISION, pseg%proc, HI*d+lh, comm, req(nr), ierr)
                      endif
@@ -362,15 +363,15 @@ contains
          ! Make a copy of local coarse data to buffer (\todo: can be merged with interpolation step)
          do d = xdim, zdim
             do lh = LO, HI
-               if (allocated(fine%pfc_tgt(d, lh)%seg)) then
-                  do g = 1, ubound(fine%pfc_tgt(d, lh)%seg(:), dim=1)
-                     if (fine%pfc_tgt(d, lh)%seg(g)%proc == proc) then
+               if (allocated(fine%mg%pfc_tgt(d, lh)%seg)) then
+                  do g = 1, ubound(fine%mg%pfc_tgt(d, lh)%seg(:), dim=1)
+                     if (fine%mg%pfc_tgt(d, lh)%seg(g)%proc == proc) then
                         nullify(cse)
                         gc = 0
-                        do g1 = 1, ubound(coarse%pff_tgt(d, lh)%seg(:), dim=1) !> \todo should be set up in mpi_multigrid_prep_grav
-                           if (coarse%pff_tgt(d, lh)%seg(g1)%proc == proc) then
+                        do g1 = 1, ubound(coarse%mg%pff_tgt(d, lh)%seg(:), dim=1) !> \todo should be set up in mpi_multigrid_prep_grav
+                           if (coarse%mg%pff_tgt(d, lh)%seg(g1)%proc == proc) then
                               if (.not. associated(cse)) then
-                                 cse => coarse%pff_tgt(d, lh)%seg(g1)%se
+                                 cse => coarse%mg%pff_tgt(d, lh)%seg(g1)%se
                                  gc = g1
                               else
                                  call die("[multigridbasefuncs:prolong_faces] multiple local coarse grid targets")
@@ -380,12 +381,12 @@ contains
                         if (.not. associated(cse)) call die("[multigridbasefuncs:prolong_faces] missing coarse grid target")
 
                         se(:,:) = cse(:,:)
-                        pseg => fine%pfc_tgt(d, lh)%seg(g)
+                        pseg => fine%mg%pfc_tgt(d, lh)%seg(g)
                         pseg%buf(:,:,:) = 0. ! this can be avoided by extracting first assignment from the loop
-                        do l = 1, ubound(coarse%pff_tgt(d, lh)%seg(gc)%f_lay(:), dim=1)
-                           se(d,:) = coarse%pff_tgt(d, lh)%seg(gc)%f_lay(l)%layer
-                           pseg%buf(:,:,:) =  pseg%buf(:,:,:) + coarse%pff_tgt(d, lh)%seg(gc)%f_lay(l)%coeff * &
-                                coarse%mgvar(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI), soln)
+                        do l = 1, ubound(coarse%mg%pff_tgt(d, lh)%seg(gc)%f_lay(:), dim=1)
+                           se(d,:) = coarse%mg%pff_tgt(d, lh)%seg(gc)%f_lay(l)%layer
+                           pseg%buf(:,:,:) =  pseg%buf(:,:,:) + coarse%mg%pff_tgt(d, lh)%seg(gc)%f_lay(l)%coeff * &
+                                coarse%mg%var(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI), soln)
                         enddo
                      endif
                   enddo
@@ -395,7 +396,7 @@ contains
 
          if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
 
-         ! Interpolate content of buffers to boundary face-layes fine%bnd_[xyz](:, :, :)
+         ! Interpolate content of buffers to boundary face-layes fine%mg%bnd_[xyz](:, :, :)
          do d = xdim, zdim
             if (dom%has_dir(d)) then
                do lh = LO, HI
@@ -405,18 +406,18 @@ contains
                      p_bnd(d, lh)%bnd(:,:) = 0. ! BEWARE homogenous Dirichlet by default
                   else
                      p_bnd(d, lh)%bnd(:,:) = 0
-                     if (allocated(fine%pfc_tgt(d, lh)%seg)) then
-                        do g = 1, ubound(fine%pfc_tgt(d, lh)%seg(:), dim=1)
+                     if (allocated(fine%mg%pfc_tgt(d, lh)%seg)) then
+                        do g = 1, ubound(fine%mg%pfc_tgt(d, lh)%seg(:), dim=1)
 
                            ii(d) = 1
-                           do i = 1, ubound(fine%pfc_tgt(d, lh)%seg(g)%buf, dim=d1(d))
+                           do i = 1, ubound(fine%mg%pfc_tgt(d, lh)%seg(g)%buf, dim=d1(d))
                               ii(d1(d)) = i
-                              do j = 1, ubound(fine%pfc_tgt(d, lh)%seg(g)%buf, dim=d2(d))
+                              do j = 1, ubound(fine%mg%pfc_tgt(d, lh)%seg(g)%buf, dim=d2(d))
                                  ii(d2(d)) = j
 
 ! ? + off (0 or 1)
-                                 ib = 2*i - 1 + int(fine%pfc_tgt(d, lh)%seg(g)%se(d1(d), LO), kind=4) - int(mod(fine%off(d1(d)), 2_LONG), 4)
-                                 jb = 2*j - 1 + int(fine%pfc_tgt(d, lh)%seg(g)%se(d2(d), LO), kind=4) - int(mod(fine%off(d2(d)), 2_LONG), 4)
+                                 ib = 2*i - 1 + int(fine%mg%pfc_tgt(d, lh)%seg(g)%se(d1(d), LO), kind=4) - int(mod(fine%off(d1(d)), 2_LONG), 4)
+                                 jb = 2*j - 1 + int(fine%mg%pfc_tgt(d, lh)%seg(g)%se(d2(d), LO), kind=4) - int(mod(fine%off(d2(d)), 2_LONG), 4)
 
                                  ibh = ib
                                  if (dom%has_dir(d1(d)) .and. ubound(p_bnd(d, lh)%bnd(:,:), dim=1) > ib) ibh = ib + 1
@@ -425,7 +426,7 @@ contains
                                  if (dom%has_dir(d2(d)) .and. ubound(p_bnd(d, lh)%bnd(:,:), dim=2) > jb) jbh = jb + 1
                                  if (dom%has_dir(d2(d)) .and. lbound(p_bnd(d, lh)%bnd(:,:), dim=2) > jb) jb  = jb + 1
 
-                                 p_bnd(d, lh)%bnd(ib:ibh, jb:jbh) = p_bnd(d, lh)%bnd(ib:ibh, jb:jbh) + fine%pfc_tgt(d, lh)%seg(g)%buf(ii(xdim), ii(ydim), ii(zdim))
+                                 p_bnd(d, lh)%bnd(ib:ibh, jb:jbh) = p_bnd(d, lh)%bnd(ib:ibh, jb:jbh) + fine%mg%pfc_tgt(d, lh)%seg(g)%buf(ii(xdim), ii(ydim), ii(zdim))
                               enddo
                            enddo
                         enddo
@@ -467,30 +468,30 @@ contains
                pp_norm = 2.*sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 1)) ! normalization is required for ord_prolong_face_par == 1 and -2
                do j = coarse%js, coarse%je
                   do k = coarse%ks, coarse%ke
-                     fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 1) * ( &
-                          opfn1*(coarse%mgvar(coarse%is,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(coarse%is+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%is-2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k,    LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 1) * ( &
-                          opfn1*(coarse%mgvar(coarse%is,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(coarse%is+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%is-2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 2) * ( &
-                          opfn1*(coarse%mgvar(coarse%is  ,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(coarse%is+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%is-2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 2) * ( &
-                          opfn1*(coarse%mgvar(coarse%is,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(coarse%is+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%is-2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k,    HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 1) * ( &
-                          opfn1*(coarse%mgvar(coarse%ie,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(coarse%ie-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%ie+2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k,    HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 1) * ( &
-                          opfn1*(coarse%mgvar(coarse%ie,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(coarse%ie-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%ie+2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j,    -fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 2) * ( &
-                          opfn1*(coarse%mgvar(coarse%ie,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(coarse%ie-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%ie+2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 2) * ( &
-                          opfn1*(coarse%mgvar(coarse%ie,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(coarse%ie-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%ie+2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j,        -fine%ks+2*k,        LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 1) * ( &
+                          opfn1*(coarse%mg%var(coarse%is,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(coarse%is+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%is-2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k,        LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 1) * ( &
+                          opfn1*(coarse%mg%var(coarse%is,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(coarse%is+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%is-2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j,        -fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 2) * ( &
+                          opfn1*(coarse%mg%var(coarse%is  ,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(coarse%is+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%is-2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 2) * ( &
+                          opfn1*(coarse%mg%var(coarse%is,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(coarse%is+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%is-2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j,        -fine%ks+2*k,        HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 1) * ( &
+                          opfn1*(coarse%mg%var(coarse%ie,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(coarse%ie-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%ie+2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k,        HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 1) * ( &
+                          opfn1*(coarse%mg%var(coarse%ie,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(coarse%ie-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%ie+2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j,        -fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 2) * ( &
+                          opfn1*(coarse%mg%var(coarse%ie,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(coarse%ie-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%ie+2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 2) * ( &
+                          opfn1*(coarse%mg%var(coarse%ie,  j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(coarse%ie-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%ie+2,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
                   enddo
                enddo
             endif
@@ -499,30 +500,30 @@ contains
                pp_norm = 2.*sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 1))
                do i = coarse%is, coarse%ie
                   do k = coarse%ks, coarse%ke
-                     fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 1) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js,  k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js+1,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js-2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k,    LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 1) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js,  k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js+1,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js-2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 2) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js,  k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js+1,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js-2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 2) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js,  k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js+1,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js-2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k,    HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 1) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je,  k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je-1,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je+2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k,    HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 1) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je,  k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je-1,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je+2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i,    -fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 2) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je,  k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je-1,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je+2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 2) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je,  k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je-1,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je+2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i,        -fine%ks+2*k,        LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 1) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js,  k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js+1,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js-2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k,        LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 1) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js,  k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js+1,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js-2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i,        -fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 2) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js,  k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js+1,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js-2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 2) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js,  k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js+1,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js-2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i,        -fine%ks+2*k,        HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 1) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je,  k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je-1,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je+2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k,        HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 1) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je,  k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je-1,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je+2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i,        -fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 2) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je,  k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je-1,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je+2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 2) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je,  k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je-1,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je+2,k-dom%D_z:k+dom%D_z,soln)))) / pp_norm
                   enddo
                enddo
             endif
@@ -531,30 +532,30 @@ contains
                pp_norm = 2.*sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 1))
                do i = coarse%is, coarse%ie
                   do j = coarse%js, coarse%je
-                     fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 1) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,  soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks+1,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-2,soln)))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j,    LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 1) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,  soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks+1,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-2,soln)))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+dom%D_y,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 2) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,  soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks+1,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-2,soln)))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j+dom%D_y,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 2) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,  soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks+1,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-2,soln)))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i,    -fine%js+2*j,    HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 1) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,  soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke-1,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+2,soln)))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j,    HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 1) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,  soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke-1,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+2,soln)))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i,    -fine%js+2*j+dom%D_y,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 2) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,  soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke-1,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+2,soln)))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j+dom%D_y,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 2) * ( &
-                          opfn1*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,  soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln)) + &
-                          opfn3*(coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke-1,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+2,soln)))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i,        -fine%js+2*j,        LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 1) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,  soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks+1,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-2,soln)))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j,        LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 1) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,  soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks+1,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-2,soln)))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i,        -fine%js+2*j+dom%D_y,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 2) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,  soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks+1,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-2,soln)))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j+dom%D_y,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 2) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,  soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks+1,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-2,soln)))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i,        -fine%js+2*j,        HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 1) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,  soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke-1,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+2,soln)))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j,        HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 1) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,  soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke-1,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+2,soln)))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i,        -fine%js+2*j+dom%D_y,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 2) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,  soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke-1,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+2,soln)))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j+dom%D_y,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 2) * ( &
+                          opfn1*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,  soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln)) + &
+                          opfn3*(coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke-1,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+2,soln)))) / pp_norm
                   enddo
                enddo
             endif
@@ -565,22 +566,22 @@ contains
                pp_norm = 2.*sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 1)) ! normalization is required for ord_prolong_face_par == 1 and -2
                do j = coarse%js, coarse%je
                   do k = coarse%ks, coarse%ke
-                     fine%bnd_x(-fine%js+2*j,        -fine%ks+2*k,        LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 1) * &
-                        & (coarse%mgvar(coarse%is,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k,        LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 1) * &
-                        & (coarse%mgvar(coarse%is,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j,        -fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 2) * &
-                        & (coarse%mgvar(coarse%is,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 2) * &
-                        & (coarse%mgvar(coarse%is,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j,        -fine%ks+2*k,        HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 1) * &
-                        & (coarse%mgvar(coarse%ie,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k,        HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 1) * &
-                        & (coarse%mgvar(coarse%ie,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j,        -fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 2) * &
-                        & (coarse%mgvar(coarse%ie,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 2) * &
-                        & (coarse%mgvar(coarse%ie,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j,        -fine%ks+2*k,        LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 1) * &
+                        & (coarse%mg%var(coarse%is,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k,        LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 1) * &
+                        & (coarse%mg%var(coarse%is,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j,        -fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 2) * &
+                        & (coarse%mg%var(coarse%is,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 2) * &
+                        & (coarse%mg%var(coarse%is,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%is-1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j,        -fine%ks+2*k,        HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 1) * &
+                        & (coarse%mg%var(coarse%ie,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k,        HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 1) * &
+                        & (coarse%mg%var(coarse%ie,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j,        -fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 2) * &
+                        & (coarse%mg%var(coarse%ie,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_x(-fine%js+2*j+dom%D_y,-fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 2, 2) * &
+                        & (coarse%mg%var(coarse%ie,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(coarse%ie+1,j-dom%D_y:j+dom%D_y,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
                   enddo
                enddo
             endif
@@ -589,22 +590,22 @@ contains
                pp_norm = 2.*sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 1))
                do i = coarse%is, coarse%ie
                   do k = coarse%ks, coarse%ke
-                     fine%bnd_y(-fine%is+2*i,        -fine%ks+2*k,        LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 1) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k,        LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 1) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i,        -fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 2) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 2) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i,        -fine%ks+2*k,        HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 1) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k,        HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 1) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i,        -fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 2) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
-                     fine%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 2) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je,k-dom%D_z:k+dom%D_z,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i,        -fine%ks+2*k,        LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 1) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k,        LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 1) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i,        -fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 2) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k+dom%D_z,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 2) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%js-1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i,        -fine%ks+2*k,        HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 1) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k,        HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 1) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i,        -fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 1, 2) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
+                     fine%mg%bnd_y(-fine%is+2*i+dom%D_x,-fine%ks+2*k+dom%D_z,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_z:dom%D_z, 2, 2) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je,k-dom%D_z:k+dom%D_z,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,coarse%je+1,k-dom%D_z:k+dom%D_z,soln))) / pp_norm
                   enddo
                enddo
             endif
@@ -613,22 +614,22 @@ contains
                pp_norm = 2.*sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 1))
                do i = coarse%is, coarse%ie
                   do j = coarse%js, coarse%je
-                     fine%bnd_z(-fine%is+2*i,        -fine%js+2*j,        LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 1) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j,        LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 1) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i,        -fine%js+2*j+dom%D_y,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 2) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j+dom%D_y,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 2) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i,        -fine%js+2*j,        HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 1) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j,        HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 1) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i,        -fine%js+2*j+dom%D_y,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 2) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln))) / pp_norm
-                     fine%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j+dom%D_y,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 2) * &
-                        & (coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,soln) + coarse%mgvar(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i,        -fine%js+2*j,        LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 1) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j,        LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 1) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i,        -fine%js+2*j+dom%D_y,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 2) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j+dom%D_y,LO)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 2) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ks-1,soln))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i,        -fine%js+2*j,        HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 1) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j,        HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 1) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i,        -fine%js+2*j+dom%D_y,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 1, 2) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln))) / pp_norm
+                     fine%mg%bnd_z(-fine%is+2*i+dom%D_x,-fine%js+2*j+dom%D_y,HI)=sum(pp(-dom%D_x:dom%D_x, -dom%D_y:dom%D_y, 2, 2) * &
+                        & (coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke,soln) + coarse%mg%var(i-dom%D_x:i+dom%D_x,j-dom%D_y:j+dom%D_y,coarse%ke+1,soln))) / pp_norm
                   enddo
                enddo
             endif

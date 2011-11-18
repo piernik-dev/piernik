@@ -373,8 +373,8 @@ contains
          cgl => all_cg%first
          do while (associated(cgl))
             cg => cgl%cg
-            roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction) = (1. -1./diff_theta) * cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, defect)     =     -1./diff_theta  * cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction) = (1. -1./diff_theta) * cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, defect)     =     -1./diff_theta  * cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
             call residual(roof, defect, correction, source, cr_id)
             cgl => cgl%nxt
          enddo
@@ -415,7 +415,7 @@ contains
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
-         roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = cg%u(iarr_crs(cr_id),  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = cg%u(iarr_crs(cr_id),  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
          cgl => cgl%nxt
       enddo
       call check_dirty(roof, solution, "init solution")
@@ -458,7 +458,7 @@ contains
          cgl => all_cg%first
          do while (associated(cgl))
             cg => cgl%cg
-            roof%mgvar(       roof%is-dom%D_x:roof%ie+dom%D_x, roof%js-dom%D_y:roof%je+dom%D_y, roof%ks-dom%D_z:roof%ke+dom%D_z, diff_bx+ib-xdim) = &
+            roof%mg%var(       roof%is-dom%D_x:roof%ie+dom%D_x, roof%js-dom%D_y:roof%je+dom%D_y, roof%ks-dom%D_z:roof%ke+dom%D_z, diff_bx+ib-xdim) = &
                  cg%b(ib,   cg%is-dom%D_x:  cg%ie+dom%D_x,   cg%js-dom%D_y:  cg%je+dom%D_y,   cg%ks-dom%D_z:  cg%ke+dom%D_z)
             cgl => cgl%nxt
          enddo
@@ -553,7 +553,7 @@ contains
          call restrict_all(defect)
 
          call set_dirty(correction)
-         base%mgvar(:, :, :, correction) = 0.
+         base%mg%var(:, :, :, correction) = 0.
 
          curl => base
          do while (associated(curl))
@@ -564,9 +564,9 @@ contains
 
          call check_dirty(roof, correction, "c_residual")
          call check_dirty(roof, defect, "d_residual")
-         roof%mgvar     (roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = &
-              roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) - &
-              roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction)
+         roof%mg%var     (roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = &
+              roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) - &
+              roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction)
 
       enddo
 
@@ -589,11 +589,11 @@ contains
       call norm_sq(defect, norm_lhs)
 !     Do we need to take care of boundaries here?
 !      call mpi_multigrid_bnd(roof, solution, I_ONE, diff_extbnd)
-!      cg%u(iarr_crs(cr_id), is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z) = roof%mgvar(roof%is-dom%D_x:roof%ie+dom%D_x, roof%js-dom%D_y:roof%je+dom%D_y, roof%ks-dom%D_z:roof%ke+dom%D_z, solution)
+!      cg%u(iarr_crs(cr_id), is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z) = roof%mg%var(roof%is-dom%D_x:roof%ie+dom%D_x, roof%js-dom%D_y:roof%je+dom%D_y, roof%ks-dom%D_z:roof%ke+dom%D_z, solution)
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
-         cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = roof%mgvar(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution)
+         cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution)
          cgl => cgl%nxt
       enddo
 
@@ -642,14 +642,14 @@ contains
 
       ! Assumes dom%has_dir(crdim)
       !> \warning *curl%idl(crdim) makes a difference
-      d_par = (curl%mgvar(im(xdim), im(ydim), im(zdim), soln) - curl%mgvar(ilm(xdim), ilm(ydim), ilm(zdim), soln)) * curl%idl(crdim)
+      d_par = (curl%mg%var(im(xdim), im(ydim), im(zdim), soln) - curl%mg%var(ilm(xdim), ilm(ydim), ilm(zdim), soln)) * curl%idl(crdim)
       fcrdif = K_crs_perp(cr_id) * d_par
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
       if (K_crs_paral(cr_id) /= 0.) then
 
          b_perp = 0.
-         b_par = curl%mgvar(im(xdim), im(ydim), im(zdim), idiffb(crdim))
+         b_par = curl%mg%var(im(xdim), im(ydim), im(zdim), idiffb(crdim))
          db = d_par * b_par
          magb = b_par**2
 
@@ -657,11 +657,11 @@ contains
             if (present_not_crdim(idir)) then
                imp(:) = im(:) ; imp(idir) = imp(idir) + 1 ; ilmp(:) = imp(:) ; ilmp(crdim) = ilmp(crdim) - 1
                imm(:) = im(:) ; imm(idir) = imm(idir) - 1 ; ilmm(:) = imm(:) ; ilmm(crdim) = ilmm(crdim) - 1
-               b_perp = sum(curl%mgvar(ilm(xdim):imp(xdim), ilm(ydim):imp(ydim), ilm(zdim):imp(zdim), idiffb(idir)))*0.25
+               b_perp = sum(curl%mg%var(ilm(xdim):imp(xdim), ilm(ydim):imp(ydim), ilm(zdim):imp(zdim), idiffb(idir)))*0.25
                magb = magb + b_perp**2
                !> \warning *curl%idl(crdim) makes a difference
-               db = db + b_perp*((curl%mgvar(ilmp(xdim), ilmp(ydim), ilmp(zdim), soln) + curl%mgvar(imp(xdim), imp(ydim), imp(zdim), soln)) - &
-                  &              (curl%mgvar(ilmm(xdim), ilmm(ydim), ilmm(zdim), soln) + curl%mgvar(imm(xdim), imm(ydim), imm(zdim), soln))) * 0.25 * curl%idl(idir)
+               db = db + b_perp*((curl%mg%var(ilmp(xdim), ilmp(ydim), ilmp(zdim), soln) + curl%mg%var(imp(xdim), imp(ydim), imp(zdim), soln)) - &
+                  &              (curl%mg%var(ilmm(xdim), ilmm(ydim), ilmm(zdim), soln) + curl%mg%var(imm(xdim), imm(ydim), imm(zdim), soln))) * 0.25 * curl%idl(idir)
             endif
          enddo
 
@@ -699,9 +699,9 @@ contains
       implicit none
 
       type(plvl), pointer, intent(in) :: curl !< level for which approximate the solution
-      integer(kind=4),     intent(in) :: src   !< index of source in lvl()%mgvar
-      integer(kind=4),     intent(in) :: soln  !< index of solution in lvl()%mgvar
-      integer(kind=4),     intent(in) :: def   !< index of defect in lvl()%mgvar
+      integer(kind=4),     intent(in) :: src   !< index of source in lvl()%mg%var
+      integer(kind=4),     intent(in) :: soln  !< index of solution in lvl()%mg%var
+      integer(kind=4),     intent(in) :: def   !< index of defect in lvl()%mg%var
       integer,             intent(in) :: cr_id !< CR component index
 
       integer                         :: i, j, k
@@ -715,9 +715,9 @@ contains
       call mpi_multigrid_bnd(curl, soln, I_ONE, diff_extbnd, .true.) ! corners are required for fluxes
 
       do k = curl%ks, curl%ke
-         curl%mgvar     (curl%is:curl%ie, curl%js:curl%je, k, def)  =   &
-              curl%mgvar(curl%is:curl%ie, curl%js:curl%je, k, soln) -   &
-              curl%mgvar(curl%is:curl%ie, curl%js:curl%je, k, src)
+         curl%mg%var     (curl%is:curl%ie, curl%js:curl%je, k, def)  =   &
+              curl%mg%var(curl%is:curl%ie, curl%js:curl%je, k, soln) -   &
+              curl%mg%var(curl%is:curl%ie, curl%js:curl%je, k, src)
       enddo
 
       do idir = xdim, zdim
@@ -731,8 +731,8 @@ contains
                   enddo
                enddo
             enddo
-            curl%mgvar     (curl%is  :curl%ie,   curl%js:curl%je, curl%ks:curl%ke, def)    = &
-                 curl%mgvar(curl%is  :curl%ie,   curl%js:curl%je, curl%ks:curl%ke, def)    - &
+            curl%mg%var     (curl%is  :curl%ie,   curl%js:curl%je, curl%ks:curl%ke, def)    = &
+                 curl%mg%var(curl%is  :curl%ie,   curl%js:curl%je, curl%ks:curl%ke, def)    - &
               (       cg%wa(iml(xdim):imh(xdim), iml(ydim):imh(ydim), iml(zdim):imh(zdim)) - &
                       cg%wa(curl%is  :curl%ie,   curl%js:curl%je, curl%ks:curl%ke) ) * diff_theta * dt * curl%idl(idir)
          endif
@@ -765,8 +765,8 @@ contains
       implicit none
 
       type(plvl), pointer, intent(in) :: curl  !< level for which approximate the solution
-      integer(kind=4),     intent(in) :: src   !< index of source in lvl()%mgvar
-      integer(kind=4),     intent(in) :: soln  !< index of solution in lvl()%mgvar
+      integer(kind=4),     intent(in) :: src   !< index of source in lvl()%mg%var
+      integer(kind=4),     intent(in) :: soln  !< index of solution in lvl()%mg%var
       integer,             intent(in) :: cr_id !< CR component index
 
       integer, parameter              :: RED_BLACK = 2 !< the checkerboard requires two sweeps
@@ -813,7 +813,7 @@ contains
                if (id == RED_BLACK) i1 = curl%is + mod(n+j+k, RED_BLACK)
                do i = i1, curl%ie, id
 
-                  temp = curl%mgvar(i, j, k, soln) - curl%mgvar(i, j, k, src)
+                  temp = curl%mg%var(i, j, k, soln) - curl%mg%var(i, j, k, src)
                   dLdu = 0.
 
                   im = [i, j, k]
@@ -832,7 +832,7 @@ contains
                   enddo
 
                   ! ToDo add an option to automagically fine-tune overrelax
-                  curl%mgvar(i, j, k, soln) = curl%mgvar(i, j, k, soln) - overrelax * temp/(one - half * diff_theta * dt * dLdu)
+                  curl%mg%var(i, j, k, soln) = curl%mg%var(i, j, k, soln) - overrelax * temp/(one - half * diff_theta * dt * dLdu)
 
                enddo
             enddo

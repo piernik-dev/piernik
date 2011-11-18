@@ -39,12 +39,12 @@ module multigridvars
 ! pulled by MULTIGRID
 
    use constants, only: xdim, zdim, LO, HI
-   use grid_cont, only: grid_container, segment
+   use grid_cont, only: grid_container
 
    implicit none
 
    public ! QA_WARN no secrets are kept here
-   private :: xdim, zdim, LO, HI, grid_container, segment ! QA_WARN prevent re-exporting
+   private :: xdim, zdim, LO, HI, grid_container ! QA_WARN prevent re-exporting
 
    ! multigrid constants
    enum, bind(C)
@@ -101,50 +101,9 @@ module multigridvars
       character(len=prefix_len)       :: cprefix                      !< prefix for distinguishing V-cycles in the log (e.g inner or outer potential, CR component)
    end type vcycle_stats
 
-   type :: c_layer
-      integer :: layer                                                !< index of a layer with face-prolongation coefficient coeff
-      real    :: coeff                                                !< coefficient for face prolongation
-   end type c_layer
-
-   type, extends(segment) :: pr_segment                               !< segment type for prolongation and restriction
-      real, allocatable, dimension(:,:,:) :: buf                      !< buffer for the coarse data (incoming prolongation and outgoing restriction) for each nonlocal operations
-      type(c_layer), dimension(:), allocatable :: f_lay               !< face layers to contribute to the prolonged face value
-   end type pr_segment                                                !< (not allocated for outgoing prolongation, incoming restriction and for local operations)
-
-   type :: tgt_list                                                   !< target list container for prolongations, restrictions and boundary exchanges
-      type(pr_segment), dimension(:), allocatable :: seg              !< a segment of data to be received or sent
-   end type tgt_list
-
    type, extends(grid_container) :: plvl                              !< single level container
 
-      ! storage
-      real, allocatable, dimension(:,:,:,:) :: mgvar                  !< main working array
-      real, allocatable, dimension(:,:,:)   :: prolong_x, prolong_xy  !< auxiliary prolongation arrays
-      real, allocatable, dimension(:,:,:)   :: bnd_x, bnd_y, bnd_z    !< given boundary values for potential; \todo make an array of pointers, indexed by (xdim:zdim)
-
-      ! geometrical factors, cell counters, etc.
-      integer :: level                                                !< grid levels are tagged by some consecutive integer numbers
-
-      real    :: dxy, dxz, dyz                                        !< cell surface area
-      real    :: idx2, idy2, idz2                                     !< inverse of d{x,y,z} square
-      real    :: dvol2                                                !< square of cell volume
-      real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
-
-      type(tgt_list) :: f_tgt                                         !< description of incoming restriction and outgoing prolongation data (this should be a linked list)
-      type(tgt_list) :: c_tgt                                         !< description of outgoing restriction and incoming prolongation data
-      type(tgt_list), dimension(xdim:zdim, LO:HI) :: pff_tgt, pfc_tgt !< description outgoing and incoming face prolongation data
-
-      ! data for FFT solver
-      integer                                :: nxc                   !< first index (complex or real: fft(:,:,:) or fftr(:,:,:)) cell count
-      integer                                :: fft_type              !< type of FFT to employ (depending on boundaries)
-      complex, allocatable, dimension(:,:,:) :: fft                   !< a complex array for FFT operations (Fourier space)
-      real,    allocatable, dimension(:,:,:) :: fftr                  !< a real array for FFT operations (Fourier space for sine transform)
-      real,    allocatable, dimension(:,:,:) :: src                   !< an input array for FFT (real space data)
-      real,    allocatable, dimension(:,:,:) :: Green3D               !< Green's function (0.5 * fft_norm / (kx + ky + kz))
-      integer (kind = selected_int_kind(16)) :: planf, plani          !< FFT forward and inverse plans
-      real                                   :: fft_norm              !< normalization factor
-
-      type(plvl), pointer :: finer, coarser                           !< pointers to level+1 and level-1 (null() if such level does not eist)
+     type(plvl), pointer :: finer, coarser                           !< pointers to level+1 and level-1 (null() if such level does not eist)
 
     contains
 
@@ -187,40 +146,40 @@ contains
       real :: norm
       integer(kind=4) :: nr
 
-      if (iv < lbound(this%mgvar(:,:,:,:), dim=4) .or. iv > ubound(this%mgvar(:,:,:,:), dim=4)) call die("[multigridvars:restrict_level] Invalid variable index.")
+      if (iv < lbound(this%mg%var(:,:,:,:), dim=4) .or. iv > ubound(this%mg%var(:,:,:,:), dim=4)) call die("[multigridvars:restrict_level] Invalid variable index.")
 
       coarse => this%coarser
       if (.not. associated(coarse)) then
-         write(msg,'(a,i3)')"[multigridvars:restrict_level] no coarse level here: ", this%level
+         write(msg,'(a,i3)')"[multigridvars:restrict_level] no coarse level here: ", this%mg%level
          call warn(msg) ! can't restrict base level
       else
          !OPT find a way to reduce this to areas with nonlocal incoming restriction
-         coarse%mgvar(:,:,:, iv) = 0. ! disables check_dirty
+         coarse%mg%var(:,:,:, iv) = 0. ! disables check_dirty
       endif
 
       nr = 0
-      if (allocated(coarse%f_tgt%seg)) then
-         do g = 1, ubound(coarse%f_tgt%seg(:), dim=1)
-            if (coarse%f_tgt%seg(g)%proc /= proc) then
+      if (allocated(coarse%mg%f_tgt%seg)) then
+         do g = 1, ubound(coarse%mg%f_tgt%seg(:), dim=1)
+            if (coarse%mg%f_tgt%seg(g)%proc /= proc) then
                nr = nr + I_ONE
-               call MPI_Irecv(coarse%f_tgt%seg(g)%buf(1, 1, 1), size(coarse%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, coarse%f_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
+               call MPI_Irecv(coarse%mg%f_tgt%seg(g)%buf(1, 1, 1), size(coarse%mg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, coarse%mg%f_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
             endif
          enddo
       endif
 
-      do g = 1, ubound(this%c_tgt%seg(:), dim=1)
+      do g = 1, ubound(this%mg%c_tgt%seg(:), dim=1)
 
-         fse => this%c_tgt%seg(g)%se
+         fse => this%mg%c_tgt%seg(g)%se
 
          off1(:) = mod(this%off(:), 2_LONG)
          norm = 1./2**dom%eff_dim
-         if (this%c_tgt%seg(g)%proc == proc) then
+         if (this%mg%c_tgt%seg(g)%proc == proc) then
 
             nullify(cse)
-            do g1 = 1, ubound(coarse%f_tgt%seg(:), dim=1) !> \todo should be set up in init_multigrid
-               if (coarse%f_tgt%seg(g1)%proc == proc) then
+            do g1 = 1, ubound(coarse%mg%f_tgt%seg(:), dim=1) !> \todo should be set up in init_multigrid
+               if (coarse%mg%f_tgt%seg(g1)%proc == proc) then
                   if (.not. associated(cse)) then
-                     cse => coarse%f_tgt%seg(g1)%se
+                     cse => coarse%mg%f_tgt%seg(g1)%se
                   else
                      call die("[multigridvars:restrict_level] multiple local coarse grid targets")
                   endif
@@ -249,14 +208,14 @@ contains
                   jc = (j-off1(ydim)-this%js)/2+cse(ydim, LO)
                   do i = fse(xdim, LO), fse(xdim, HI)
                      ic = (i-off1(xdim)-this%is)/2+cse(xdim, LO)
-                     coarse%mgvar(ic, jc, kc, iv) = coarse%mgvar(ic, jc, kc, iv) + this%mgvar(i, j, k, iv) * norm
+                     coarse%mg%var(ic, jc, kc, iv) = coarse%mg%var(ic, jc, kc, iv) + this%mg%var(i, j, k, iv) * norm
                   enddo
                enddo
             enddo
             !\todo add geometrical terms to improve convergence on cylindrical grids
          else
             ! OPT: see the notes above
-            this%c_tgt%seg(g)%buf(:, :, :) = 0.
+            this%mg%c_tgt%seg(g)%buf(:, :, :) = 0.
             off1(:) = mod(this%off(:)+fse(:, LO) - this%ijkse(:, LO), 2_LONG)
             do k = fse(zdim, LO), fse(zdim, HI)
                kc = (k-fse(zdim, LO)+off1(zdim))/2 + 1
@@ -264,23 +223,23 @@ contains
                   jc = (j-fse(ydim, LO)+off1(ydim))/2 + 1
                   do i = fse(xdim, LO), fse(xdim, HI)
                      ic = (i-fse(xdim, LO)+off1(xdim))/2 + 1
-                     this%c_tgt%seg(g)%buf(ic, jc, kc) = this%c_tgt%seg(g)%buf(ic, jc, kc) + this%mgvar(i, j, k, iv) * norm
+                     this%mg%c_tgt%seg(g)%buf(ic, jc, kc) = this%mg%c_tgt%seg(g)%buf(ic, jc, kc) + this%mg%var(i, j, k, iv) * norm
                   enddo
                enddo
             enddo
             nr = nr + I_ONE
-            call MPI_Isend(this%c_tgt%seg(g)%buf(1, 1, 1), size(this%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, this%c_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
+            call MPI_Isend(this%mg%c_tgt%seg(g)%buf(1, 1, 1), size(this%mg%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, this%mg%c_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
          endif
       enddo
 
       if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
 
-      if (allocated(coarse%f_tgt%seg)) then
-         do g = 1, ubound(coarse%f_tgt%seg(:), dim=1)
-            if (coarse%f_tgt%seg(g)%proc /= proc) then
-               cse => coarse%f_tgt%seg(g)%se
-               coarse%mgvar     (cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI), iv) = &
-                    coarse%mgvar(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI), iv) + coarse%f_tgt%seg(g)%buf(:, :, :)
+      if (allocated(coarse%mg%f_tgt%seg)) then
+         do g = 1, ubound(coarse%mg%f_tgt%seg(:), dim=1)
+            if (coarse%mg%f_tgt%seg(g)%proc /= proc) then
+               cse => coarse%mg%f_tgt%seg(g)%se
+               coarse%mg%var     (cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI), iv) = &
+                    coarse%mg%var(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI), iv) + coarse%mg%f_tgt%seg(g)%buf(:, :, :)
             endif
          enddo
       endif
@@ -313,39 +272,39 @@ contains
       integer(kind=8), dimension(xdim:zdim) :: off1
       integer(kind=4) :: nr
 
-      if (iv < lbound(this%mgvar(:,:,:,:), dim=4) .or. iv > ubound(this%mgvar(:,:,:,:), dim=4)) call die("[multigridvars:prolong_level0] Invalid variable index.")
+      if (iv < lbound(this%mg%var(:,:,:,:), dim=4) .or. iv > ubound(this%mg%var(:,:,:,:), dim=4)) call die("[multigridvars:prolong_level0] Invalid variable index.")
 
       fine => this%finer
       if (.not. associated(fine)) then
-         write(msg,'(a,i3)')"[multigridvars:restrict_level] no fine level here: ", this%level
+         write(msg,'(a,i3)')"[multigridvars:restrict_level] no fine level here: ", this%mg%level
          call warn(msg) ! can't prolong finest level
       else
          ! OPT: try to remove or limit this  ~20% Ir, ~50% Dw_m
-         fine%mgvar(:,:,:, iv) = 0. ! disables check_dirty
+         fine%mg%var(:,:,:, iv) = 0. ! disables check_dirty
       endif
 
       nr = 0
-      if (allocated(fine%c_tgt%seg)) then
-         do g = 1, ubound(fine%c_tgt%seg(:), dim=1)
-            if (fine%c_tgt%seg(g)%proc /= proc) then
+      if (allocated(fine%mg%c_tgt%seg)) then
+         do g = 1, ubound(fine%mg%c_tgt%seg(:), dim=1)
+            if (fine%mg%c_tgt%seg(g)%proc /= proc) then
                nr = nr + I_ONE
-               call MPI_Irecv(fine%c_tgt%seg(g)%buf(1, 1, 1), size(fine%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, fine%c_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
+               call MPI_Irecv(fine%mg%c_tgt%seg(g)%buf(1, 1, 1), size(fine%mg%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, fine%mg%c_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
             endif
          enddo
       endif
 
       off1(:) = mod(fine%off(:), 2_LONG)
-      do g = 1, ubound(this%f_tgt%seg(:), dim=1)
+      do g = 1, ubound(this%mg%f_tgt%seg(:), dim=1)
 
-         cse => this%f_tgt%seg(g)%se
+         cse => this%mg%f_tgt%seg(g)%se
 
-         if (this%f_tgt%seg(g)%proc == proc) then
+         if (this%mg%f_tgt%seg(g)%proc == proc) then
 
             nullify(fse)
-            do g1 = 1, ubound(fine%c_tgt%seg(:), dim=1) !> \todo should be set up in init_multigrid
-               if (fine%c_tgt%seg(g1)%proc == proc) then
+            do g1 = 1, ubound(fine%mg%c_tgt%seg(:), dim=1) !> \todo should be set up in init_multigrid
+               if (fine%mg%c_tgt%seg(g1)%proc == proc) then
                   if (.not. associated(fse)) then
-                     fse => fine%c_tgt%seg(g1)%se
+                     fse => fine%mg%c_tgt%seg(g1)%se
                   else
                      call die("[multigridvars:prolong_level0] multiple local fine grid targets")
                   endif
@@ -371,24 +330,24 @@ contains
                   jc = (j-off1(ydim)-this%js)/2+cse(ydim, LO)
                   do i = fse(xdim, LO), fse(xdim, HI)
                      ic = (i-off1(xdim)-this%is)/2+cse(xdim, LO)
-                     fine%mgvar(i, j, k, iv) = this%mgvar(ic, jc, kc, iv)
+                     fine%mg%var(i, j, k, iv) = this%mg%var(ic, jc, kc, iv)
                   enddo
                enddo
             enddo
          else
             nr = nr + I_ONE
-            this%f_tgt%seg(g)%buf(:, :, :) = this%mgvar(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI), iv)
-            call MPI_Isend(this%f_tgt%seg(g)%buf(1, 1, 1), size(this%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, this%f_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
+            this%mg%f_tgt%seg(g)%buf(:, :, :) = this%mg%var(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI), iv)
+            call MPI_Isend(this%mg%f_tgt%seg(g)%buf(1, 1, 1), size(this%mg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, this%mg%f_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
          endif
 
       enddo
 
       if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
 
-      if (allocated(fine%c_tgt%seg)) then
-         do g = 1, ubound(fine%c_tgt%seg(:), dim=1)
-            if (fine%c_tgt%seg(g)%proc /= proc) then
-               fse => fine%c_tgt%seg(g)%se
+      if (allocated(fine%mg%c_tgt%seg)) then
+         do g = 1, ubound(fine%mg%c_tgt%seg(:), dim=1)
+            if (fine%mg%c_tgt%seg(g)%proc /= proc) then
+               fse => fine%mg%c_tgt%seg(g)%se
                off1(:) = mod(fine%off(:)+fse(:, LO) - this%ijkse(:, LO), 2_LONG)
                do k = fse(zdim, LO), fse(zdim, HI)
                   kc = (k-fse(zdim, LO)+off1(zdim))/2 + 1
@@ -396,7 +355,7 @@ contains
                      jc = (j-fse(ydim, LO)+off1(ydim))/2 + 1
                      do i = fse(xdim, LO), fse(xdim, HI)
                         ic = (i-fse(xdim, LO)+off1(xdim))/2 + 1
-                        fine%mgvar(i, j, k, iv) = fine%c_tgt%seg(g)%buf(ic, jc, kc)
+                        fine%mg%var(i, j, k, iv) = fine%mg%c_tgt%seg(g)%buf(ic, jc, kc)
                      enddo
                   enddo
                enddo

@@ -51,8 +51,9 @@ contains
       use constants,     only: xdim, ydim, zdim, LO, HI
       use dataio_pub,    only: warn, die
       use domain,        only: is_overlap
+      use grid_cont,     only: pr_segment
       use mpisetup,      only: proc, FIRST, LAST, procmask
-      use multigridvars, only: plvl, base, pr_segment
+      use multigridvars, only: plvl, base
 
       implicit none
 
@@ -75,14 +76,14 @@ contains
                coarsened(:,:) = curl%finer%dom%pse(j)%sel(1, :, :)/2
                if (is_overlap(curl%my_se(:, :), coarsened(:,:))) procmask(j) = 1 ! we can store also neigh(:,:), face and corner as a bitmask, if necessary
             enddo
-            allocate(curl%f_tgt%seg(count(procmask(:) /= 0)))
+            allocate(curl%mg%f_tgt%seg(count(procmask(:) /= 0)))
 
             g = 0
             do j = FIRST, LAST
                if (procmask(j) /= 0) then
                   g = g + 1
-                  if (.not. allocated(curl%f_tgt%seg) .or. g>ubound(curl%f_tgt%seg, dim=1)) call die("m:im f_tgt g>")
-                  seg => curl%f_tgt%seg(g)
+                  if (.not. allocated(curl%mg%f_tgt%seg) .or. g>ubound(curl%mg%f_tgt%seg, dim=1)) call die("m:im f_tgt g>")
+                  seg => curl%mg%f_tgt%seg(g)
                   if (allocated(seg%buf)) then
                      call warn("m:mmp i seg%buf a a")
                      deallocate(seg%buf)
@@ -105,14 +106,14 @@ contains
             do j = FIRST, LAST
                if (is_overlap(coarsened(:,:), curl%coarser%dom%pse(j)%sel(1, :, :))) procmask(j) = 1
             enddo
-            allocate(curl%c_tgt%seg(count(procmask(:) /= 0)))
+            allocate(curl%mg%c_tgt%seg(count(procmask(:) /= 0)))
 
             g = 0
             do j = FIRST, LAST
                if (procmask(j) /= 0) then
                   g = g + 1
-                  if (.not. allocated(curl%c_tgt%seg) .or. g>ubound(curl%c_tgt%seg, dim=1)) call die("m:im c_tgt g>")
-                  seg => curl%c_tgt%seg(g)
+                  if (.not. allocated(curl%mg%c_tgt%seg) .or. g>ubound(curl%mg%c_tgt%seg, dim=1)) call die("m:im c_tgt g>")
+                  seg => curl%mg%c_tgt%seg(g)
                   if (allocated(seg%buf)) then
                      call warn("m:mmp o seg%buf a a")
                      deallocate(seg%buf)
@@ -184,8 +185,8 @@ contains
 
       if (cdd%comm3d == MPI_COMM_NULL) then
 
-         ! \todo call curl%internal_boundaries(ib, curl%mgvar)
-         ! or    call curl%internal_boundaries(ib, curl%mgvar(:, :, :, iv)) (pointers in both cases)
+         ! \todo call curl%internal_boundaries(ib, curl%mg%var)
+         ! or    call curl%internal_boundaries(ib, curl%mg%var(:, :, :, iv)) (pointers in both cases)
 
          do d = xdim, zdim
             nr = 0
@@ -201,11 +202,11 @@ contains
                            ose(d, :) = ise(d, :) - curl%n_b(d)
                         endif
                         ! boundaries are always paired
-                        curl%mgvar(ise(xdim, LO):ise(xdim,HI), ise(ydim, LO):ise(ydim, HI), ise(zdim, LO):ise(zdim, HI), iv) = &
-                             curl%mgvar(ose(xdim, LO):ose(xdim,HI), ose(ydim, LO):ose(ydim, HI), ose(zdim, LO):ose(zdim, HI), iv)
+                        curl%mg%var(ise(xdim, LO):ise(xdim,HI), ise(ydim, LO):ise(ydim, HI), ise(zdim, LO):ise(zdim, HI), iv) = &
+                             curl%mg%var(ose(xdim, LO):ose(xdim,HI), ose(ydim, LO):ose(ydim, HI), ose(zdim, LO):ose(zdim, HI), iv)
                      else
                         nr = nr + I_ONE
-                        call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%q_i_mbc(d, ng)%mbc(g), curl%i_bnd(d, ng)%seg(g)%proc, curl%i_bnd(d, ng)%seg(g)%tag, comm, req(nr), ierr)
+                        call MPI_Irecv(curl%mg%var(1, 1, 1, iv), I_ONE, curl%q_i_mbc(d, ng)%mbc(g), curl%i_bnd(d, ng)%seg(g)%proc, curl%i_bnd(d, ng)%seg(g)%tag, comm, req(nr), ierr)
                      endif
                   enddo
                endif
@@ -215,7 +216,7 @@ contains
                         nr = nr + I_ONE
                         ! if (cor) there should be MPI_Waitall for each d
                         ! for noncartesian division some y-boundary corner cells are independent from x-boundary face cells, (similarly for z-direction).
-                        call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%q_o_mbc(d, ng)%mbc(g), curl%o_bnd(d, ng)%seg(g)%proc, curl%o_bnd(d, ng)%seg(g)%tag, comm, req(nr), ierr)
+                        call MPI_Isend(curl%mg%var(1, 1, 1, iv), I_ONE, curl%q_o_mbc(d, ng)%mbc(g), curl%o_bnd(d, ng)%seg(g)%proc, curl%o_bnd(d, ng)%seg(g)%tag, comm, req(nr), ierr)
                      endif
                   enddo
                endif
@@ -233,23 +234,23 @@ contains
             if (dom%has_dir(d)) then
                doff = dreq*(d-xdim)
                if (cdd%psize(d) > 1) then ! \todo remove psize(:), try to rely on offsets or boundary types
-                  if (.not. is_external(d, LO)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, LO, BLK, ng), cdd%procn(d, LO), 17_INT4+doff, cdd%comm3d, req(1+doff), ierr)
-                  if (.not. is_external(d, HI)) call MPI_Isend(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, HI, BLK, ng), cdd%procn(d, HI), 19_INT4+doff, cdd%comm3d, req(2+doff), ierr)
-                  if (.not. is_external(d, LO)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, LO, BND, ng), cdd%procn(d, LO), 19_INT4+doff, cdd%comm3d, req(3+doff), ierr)
-                  if (.not. is_external(d, HI)) call MPI_Irecv(curl%mgvar(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, HI, BND, ng), cdd%procn(d, HI), 17_INT4+doff, cdd%comm3d, req(4+doff), ierr)
+                  if (.not. is_external(d, LO)) call MPI_Isend(curl%mg%var(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, LO, BLK, ng), cdd%procn(d, LO), 17_INT4+doff, cdd%comm3d, req(1+doff), ierr)
+                  if (.not. is_external(d, HI)) call MPI_Isend(curl%mg%var(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, HI, BLK, ng), cdd%procn(d, HI), 19_INT4+doff, cdd%comm3d, req(2+doff), ierr)
+                  if (.not. is_external(d, LO)) call MPI_Irecv(curl%mg%var(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, LO, BND, ng), cdd%procn(d, LO), 19_INT4+doff, cdd%comm3d, req(3+doff), ierr)
+                  if (.not. is_external(d, HI)) call MPI_Irecv(curl%mg%var(1, 1, 1, iv), I_ONE, curl%mbc(ARR, d, HI, BND, ng), cdd%procn(d, HI), 17_INT4+doff, cdd%comm3d, req(4+doff), ierr)
                else
                   if (is_external(d, LO) .neqv. is_external(d, HI)) call die("[multigridmpifuncs:mpi_multigrid_bnd] inconsiztency in is_external(:)")
                   if (.not. is_external(d, LO)) then
                      select case (d)
                         case (xdim)
-                           curl%mgvar(curl%is-ng:curl%is-1,  :, :, iv) = curl%mgvar(curl%ie-ng+1:curl%ie,      :, :, iv)
-                           curl%mgvar(curl%ie+1 :curl%ie+ng, :, :, iv) = curl%mgvar(curl%is     :curl%is+ng-1, :, :, iv)
+                           curl%mg%var(curl%is-ng:curl%is-1,  :, :, iv) = curl%mg%var(curl%ie-ng+1:curl%ie,      :, :, iv)
+                           curl%mg%var(curl%ie+1 :curl%ie+ng, :, :, iv) = curl%mg%var(curl%is     :curl%is+ng-1, :, :, iv)
                         case (ydim)
-                           curl%mgvar(:, curl%js-ng:curl%js-1,  :, iv) = curl%mgvar(:, curl%je-ng+1:curl%je,      :, iv)
-                           curl%mgvar(:, curl%je+1 :curl%je+ng, :, iv) = curl%mgvar(:, curl%js     :curl%js+ng-1, :, iv)
+                           curl%mg%var(:, curl%js-ng:curl%js-1,  :, iv) = curl%mg%var(:, curl%je-ng+1:curl%je,      :, iv)
+                           curl%mg%var(:, curl%je+1 :curl%je+ng, :, iv) = curl%mg%var(:, curl%js     :curl%js+ng-1, :, iv)
                         case (zdim)
-                           curl%mgvar(:, :, curl%ks-ng:curl%ks-1,  iv) = curl%mgvar(:, :, curl%ke-ng+1:curl%ke,      iv)
-                           curl%mgvar(:, :, curl%ke+1 :curl%ke+ng, iv) = curl%mgvar(:, :, curl%ks     :curl%ks+ng-1, iv)
+                           curl%mg%var(:, :, curl%ks-ng:curl%ks-1,  iv) = curl%mg%var(:, :, curl%ke-ng+1:curl%ke,      iv)
+                           curl%mg%var(:, :, curl%ke+1 :curl%ke+ng, iv) = curl%mg%var(:, :, curl%ks     :curl%ks+ng-1, iv)
                      end select
                   endif
                endif
@@ -307,37 +308,37 @@ contains
             return
          case (extbnd_extrapolate) !> \deprecated mixed-tybe BC: free flux; BEWARE: it is not protected from inflow
             do i = 1, ng
-               if (is_external(xdim, LO)) curl%mgvar(curl%is-i, :, :, iv) = (1+i) * curl%mgvar(curl%is, :, :, iv) - i * curl%mgvar(curl%is+1, :, :, iv)
-               if (is_external(xdim, HI)) curl%mgvar(curl%ie+i, :, :, iv) = (1+i) * curl%mgvar(curl%ie, :, :, iv) - i * curl%mgvar(curl%ie-1, :, :, iv)
-               if (is_external(ydim, LO)) curl%mgvar(:, curl%js-i, :, iv) = (1+i) * curl%mgvar(:, curl%js, :, iv) - i * curl%mgvar(:, curl%js+1, :, iv)
-               if (is_external(ydim, HI)) curl%mgvar(:, curl%je+i, :, iv) = (1+i) * curl%mgvar(:, curl%je, :, iv) - i * curl%mgvar(:, curl%je-1, :, iv)
-               if (is_external(zdim, LO)) curl%mgvar(:, :, curl%ks-i, iv) = (1+i) * curl%mgvar(:, :, curl%ks, iv) - i * curl%mgvar(:, :, curl%ks+1, iv)
-               if (is_external(zdim, HI)) curl%mgvar(:, :, curl%ke+i, iv) = (1+i) * curl%mgvar(:, :, curl%ke, iv) - i * curl%mgvar(:, :, curl%ke-1, iv)
+               if (is_external(xdim, LO)) curl%mg%var(curl%is-i, :, :, iv) = (1+i) * curl%mg%var(curl%is, :, :, iv) - i * curl%mg%var(curl%is+1, :, :, iv)
+               if (is_external(xdim, HI)) curl%mg%var(curl%ie+i, :, :, iv) = (1+i) * curl%mg%var(curl%ie, :, :, iv) - i * curl%mg%var(curl%ie-1, :, :, iv)
+               if (is_external(ydim, LO)) curl%mg%var(:, curl%js-i, :, iv) = (1+i) * curl%mg%var(:, curl%js, :, iv) - i * curl%mg%var(:, curl%js+1, :, iv)
+               if (is_external(ydim, HI)) curl%mg%var(:, curl%je+i, :, iv) = (1+i) * curl%mg%var(:, curl%je, :, iv) - i * curl%mg%var(:, curl%je-1, :, iv)
+               if (is_external(zdim, LO)) curl%mg%var(:, :, curl%ks-i, iv) = (1+i) * curl%mg%var(:, :, curl%ks, iv) - i * curl%mg%var(:, :, curl%ks+1, iv)
+               if (is_external(zdim, HI)) curl%mg%var(:, :, curl%ke+i, iv) = (1+i) * curl%mg%var(:, :, curl%ke, iv) - i * curl%mg%var(:, :, curl%ke-1, iv)
             enddo
          case (extbnd_zero) ! homogenous Dirichlet BC with 0 at first guardcell row
-            if (is_external(xdim, LO)) curl%mgvar(:curl%is, :, :, iv) = 0.
-            if (is_external(xdim, HI)) curl%mgvar(curl%ie:, :, :, iv) = 0.
-            if (is_external(ydim, LO)) curl%mgvar(:, :curl%js, :, iv) = 0.
-            if (is_external(ydim, HI)) curl%mgvar(:, curl%je:, :, iv) = 0.
-            if (is_external(zdim, LO)) curl%mgvar(:, :, :curl%ks, iv) = 0.
-            if (is_external(zdim, HI)) curl%mgvar(:, :, curl%ke:, iv) = 0.
+            if (is_external(xdim, LO)) curl%mg%var(:curl%is, :, :, iv) = 0.
+            if (is_external(xdim, HI)) curl%mg%var(curl%ie:, :, :, iv) = 0.
+            if (is_external(ydim, LO)) curl%mg%var(:, :curl%js, :, iv) = 0.
+            if (is_external(ydim, HI)) curl%mg%var(:, curl%je:, :, iv) = 0.
+            if (is_external(zdim, LO)) curl%mg%var(:, :, :curl%ks, iv) = 0.
+            if (is_external(zdim, HI)) curl%mg%var(:, :, curl%ke:, iv) = 0.
          case (extbnd_mirror) ! reflecting BC (homogenous Neumamnn)
             do i = 1, ng
-               if (is_external(xdim, LO)) curl%mgvar(curl%is-i, :, :, iv) = curl%mgvar(curl%is+i-1, :, :, iv)
-               if (is_external(xdim, HI)) curl%mgvar(curl%ie+i, :, :, iv) = curl%mgvar(curl%ie-i+1, :, :, iv)
-               if (is_external(ydim, LO)) curl%mgvar(:, curl%js-i, :, iv) = curl%mgvar(:, curl%js+i-1, :, iv)
-               if (is_external(ydim, HI)) curl%mgvar(:, curl%je+i, :, iv) = curl%mgvar(:, curl%je-i+1, :, iv)
-               if (is_external(zdim, LO)) curl%mgvar(:, :, curl%ks-i, iv) = curl%mgvar(:, :, curl%ks+i-1, iv)
-               if (is_external(zdim, HI)) curl%mgvar(:, :, curl%ke+i, iv) = curl%mgvar(:, :, curl%ke-i+1, iv)
+               if (is_external(xdim, LO)) curl%mg%var(curl%is-i, :, :, iv) = curl%mg%var(curl%is+i-1, :, :, iv)
+               if (is_external(xdim, HI)) curl%mg%var(curl%ie+i, :, :, iv) = curl%mg%var(curl%ie-i+1, :, :, iv)
+               if (is_external(ydim, LO)) curl%mg%var(:, curl%js-i, :, iv) = curl%mg%var(:, curl%js+i-1, :, iv)
+               if (is_external(ydim, HI)) curl%mg%var(:, curl%je+i, :, iv) = curl%mg%var(:, curl%je-i+1, :, iv)
+               if (is_external(zdim, LO)) curl%mg%var(:, :, curl%ks-i, iv) = curl%mg%var(:, :, curl%ks+i-1, iv)
+               if (is_external(zdim, HI)) curl%mg%var(:, :, curl%ke+i, iv) = curl%mg%var(:, :, curl%ke-i+1, iv)
             enddo
          case (extbnd_antimirror) ! homogenous Dirichlet BC with 0 at external faces
             do i = 1, ng
-               if (is_external(xdim, LO)) curl%mgvar(curl%is-i, :, :, iv) = - curl%mgvar(curl%is+i-1, :, :, iv)
-               if (is_external(xdim, HI)) curl%mgvar(curl%ie+i, :, :, iv) = - curl%mgvar(curl%ie-i+1, :, :, iv)
-               if (is_external(ydim, LO)) curl%mgvar(:, curl%js-i, :, iv) = - curl%mgvar(:, curl%js+i-1, :, iv)
-               if (is_external(ydim, HI)) curl%mgvar(:, curl%je+i, :, iv) = - curl%mgvar(:, curl%je-i+1, :, iv)
-               if (is_external(zdim, LO)) curl%mgvar(:, :, curl%ks-i, iv) = - curl%mgvar(:, :, curl%ks+i-1, iv)
-               if (is_external(zdim, HI)) curl%mgvar(:, :, curl%ke+i, iv) = - curl%mgvar(:, :, curl%ke-i+1, iv)
+               if (is_external(xdim, LO)) curl%mg%var(curl%is-i, :, :, iv) = - curl%mg%var(curl%is+i-1, :, :, iv)
+               if (is_external(xdim, HI)) curl%mg%var(curl%ie+i, :, :, iv) = - curl%mg%var(curl%ie-i+1, :, :, iv)
+               if (is_external(ydim, LO)) curl%mg%var(:, curl%js-i, :, iv) = - curl%mg%var(:, curl%js+i-1, :, iv)
+               if (is_external(ydim, HI)) curl%mg%var(:, curl%je+i, :, iv) = - curl%mg%var(:, curl%je-i+1, :, iv)
+               if (is_external(zdim, LO)) curl%mg%var(:, :, curl%ks-i, iv) = - curl%mg%var(:, :, curl%ks+i-1, iv)
+               if (is_external(zdim, HI)) curl%mg%var(:, :, curl%ke+i, iv) = - curl%mg%var(:, :, curl%ke-i+1, iv)
             enddo
          case default
             write(msg, '(a,i3,a)')"[multigridmpifuncs:multigrid_ext_bnd] boundary type ",mode," not implemented"

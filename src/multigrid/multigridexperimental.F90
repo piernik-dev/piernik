@@ -170,32 +170,32 @@ contains
       if (.not. associated(fine)) call die("[multigridexperimental:prolong_level2I] fine == null()")
 
       ! convolve with the prolongation operator
-      fine%prolong_x(          fine%is    :fine%ie-1:2, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1) = &  ! x-odd cells
-           + P1 * coarse%mgvar(coarse%is-1:coarse%ie-1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
-           + P0 * coarse%mgvar(coarse%is  :coarse%ie  , coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
-           - P1 * coarse%mgvar(coarse%is+1:coarse%ie+1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv)
-      fine%prolong_x(          fine%is+1  :fine%ie:2,   coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1) = &  ! x-even cells
-           - P1 * coarse%mgvar(coarse%is-1:coarse%ie-1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
-           + P0 * coarse%mgvar(coarse%is  :coarse%ie+0, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
-           + P1 * coarse%mgvar(coarse%is+1:coarse%ie+1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv)
+      fine%mg%prolong_x(        fine%is    :fine%ie-1:2, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1) = &  ! x-odd cells
+           + P1 * coarse%mg%var(coarse%is-1:coarse%ie-1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
+           + P0 * coarse%mg%var(coarse%is  :coarse%ie  , coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
+           - P1 * coarse%mg%var(coarse%is+1:coarse%ie+1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv)
+      fine%mg%prolong_x(        fine%is+1  :fine%ie:2,   coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1) = &  ! x-even cells
+           - P1 * coarse%mg%var(coarse%is-1:coarse%ie-1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
+           + P0 * coarse%mg%var(coarse%is  :coarse%ie+0, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
+           + P1 * coarse%mg%var(coarse%is+1:coarse%ie+1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv)
 
-      fine%prolong_xy(           fine%is:fine%ie, fine%js    :fine%je-1:2, coarse%ks-1:coarse%ke+1) = &    ! y-odd cells
-           + P1 * fine%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-1:coarse%ke+1) &
-           + P0 * fine%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-1:coarse%ke+1) &
-           - P1 * fine%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-1:coarse%ke+1)
-      fine%prolong_xy(           fine%is:fine%ie, fine%js+1  :fine%je:2,   coarse%ks-1:coarse%ke+1) = &    ! y-even cells
-           - P1 * fine%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-1:coarse%ke+1) &
-           + P0 * fine%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-1:coarse%ke+1) &
-           + P1 * fine%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-1:coarse%ke+1)
+      fine%mg%prolong_xy(           fine%is:fine%ie, fine%js    :fine%je-1:2, coarse%ks-1:coarse%ke+1) = &    ! y-odd cells
+           + P1 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-1:coarse%ke+1) &
+           + P0 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-1:coarse%ke+1) &
+           - P1 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-1:coarse%ke+1)
+      fine%mg%prolong_xy(           fine%is:fine%ie, fine%js+1  :fine%je:2,   coarse%ks-1:coarse%ke+1) = &    ! y-even cells
+           - P1 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-1:coarse%ke+1) &
+           + P0 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-1:coarse%ke+1) &
+           + P1 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-1:coarse%ke+1)
 
-      fine%mgvar(                 fine%is:fine%ie, fine%js:fine%je, fine%ks    :fine%ke-1:2, iv) = &   ! z-odd cells
-           + P1 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
-           + P0 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
-           - P1 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1)
-      fine%mgvar(                 fine%is:fine%ie, fine%js:fine%je, fine%ks+1  :fine%ke:2,   iv) = &   ! z-even cells
-           - P1 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
-           + P0 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
-           + P1 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1)
+      fine%mg%var(                   fine%is:fine%ie, fine%js:fine%je, fine%ks    :fine%ke-1:2, iv) = &   ! z-odd cells
+           + P1 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
+           + P0 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
+           - P1 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1)
+      fine%mg%var(                   fine%is:fine%ie, fine%js:fine%je, fine%ks+1  :fine%ke:2,   iv) = &   ! z-even cells
+           - P1 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
+           + P0 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
+           + P1 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1)
 
    end subroutine prolong_level2I
 
@@ -222,32 +222,32 @@ contains
       if (.not. associated(fine)) call die("[multigridexperimental:prolong_level2D] fine == null()")
 
       ! convolve with the prolongation operator
-      fine%prolong_x(          fine%is    :fine%ie-1:2, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1) = &  ! x-odd cells
-           + P1 * coarse%mgvar(coarse%is-1:coarse%ie-1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
-           + P0 * coarse%mgvar(coarse%is  :coarse%ie  , coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
-           + P_1* coarse%mgvar(coarse%is+1:coarse%ie+1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv)
-      fine%prolong_x(          fine%is+1  :fine%ie:2,   coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1) = &  ! x-even cells
-           + P_1* coarse%mgvar(coarse%is-1:coarse%ie-1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
-           + P0 * coarse%mgvar(coarse%is  :coarse%ie+0, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
-           + P1 * coarse%mgvar(coarse%is+1:coarse%ie+1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv)
+      fine%mg%prolong_x(        fine%is    :fine%ie-1:2, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1) = &  ! x-odd cells
+           + P1 * coarse%mg%var(coarse%is-1:coarse%ie-1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
+           + P0 * coarse%mg%var(coarse%is  :coarse%ie  , coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
+           + P_1* coarse%mg%var(coarse%is+1:coarse%ie+1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv)
+      fine%mg%prolong_x(        fine%is+1  :fine%ie:2,   coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1) = &  ! x-even cells
+           + P_1* coarse%mg%var(coarse%is-1:coarse%ie-1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
+           + P0 * coarse%mg%var(coarse%is  :coarse%ie+0, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv) &
+           + P1 * coarse%mg%var(coarse%is+1:coarse%ie+1, coarse%js-1:coarse%je+1, coarse%ks-1:coarse%ke+1, iv)
 
-      fine%prolong_xy(           fine%is:fine%ie, fine%js    :fine%je-1:2, coarse%ks-1:coarse%ke+1) = &    ! y-odd cells
-           + P1 * fine%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-1:coarse%ke+1) &
-           + P0 * fine%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-1:coarse%ke+1) &
-           + P_1* fine%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-1:coarse%ke+1)
-      fine%prolong_xy(           fine%is:fine%ie, fine%js+1  :fine%je:2,   coarse%ks-1:coarse%ke+1) = &    ! y-even cells
-           + P_1* fine%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-1:coarse%ke+1) &
-           + P0 * fine%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-1:coarse%ke+1) &
-           + P1 * fine%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-1:coarse%ke+1)
+      fine%mg%prolong_xy(           fine%is:fine%ie, fine%js    :fine%je-1:2, coarse%ks-1:coarse%ke+1) = &    ! y-odd cells
+           + P1 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-1:coarse%ke+1) &
+           + P0 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-1:coarse%ke+1) &
+           + P_1* fine%mg%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-1:coarse%ke+1)
+      fine%mg%prolong_xy(           fine%is:fine%ie, fine%js+1  :fine%je:2,   coarse%ks-1:coarse%ke+1) = &    ! y-even cells
+           + P_1* fine%mg%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-1:coarse%ke+1) &
+           + P0 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-1:coarse%ke+1) &
+           + P1 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-1:coarse%ke+1)
 
-      fine%mgvar(                 fine%is:fine%ie, fine%js:fine%je, fine%ks    :fine%ke-1:2, iv) = &   ! z-odd cells
-           + P1 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
-           + P0 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
-           + P_1* fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1)
-      fine%mgvar(                 fine%is:fine%ie, fine%js:fine%je, fine%ks+1  :fine%ke:2,   iv) = &   ! z-even cells
-           + P_1* fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
-           + P0 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
-           + P1 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1)
+      fine%mg%var(                   fine%is:fine%ie, fine%js:fine%je, fine%ks    :fine%ke-1:2, iv) = &   ! z-odd cells
+           + P1 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
+           + P0 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
+           + P_1* fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1)
+      fine%mg%var(                   fine%is:fine%ie, fine%js:fine%je, fine%ks+1  :fine%ke:2,   iv) = &   ! z-even cells
+           + P_1* fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
+           + P0 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
+           + P1 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1)
 
    end subroutine prolong_level2D
 
@@ -275,44 +275,44 @@ contains
       if (.not. associated(fine)) call die("[multigridexperimental:prolong_level4I] fine == null()")
 
       ! convolve with the prolongation operator
-      fine%prolong_x(          fine%is    :fine%ie-1:2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2) = &  ! x-odd cells
-           - P2 * coarse%mgvar(coarse%is-2:coarse%ie-2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P1 * coarse%mgvar(coarse%is-1:coarse%ie-1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P0 * coarse%mgvar(coarse%is  :coarse%ie  , coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           - P1 * coarse%mgvar(coarse%is+1:coarse%ie+1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P2 * coarse%mgvar(coarse%is+2:coarse%ie+2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv)
-      fine%prolong_x(          fine%is+1  :fine%ie:2,   coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2) = &  ! x-even cells
-           + P2 * coarse%mgvar(coarse%is-2:coarse%ie-2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           - P1 * coarse%mgvar(coarse%is-1:coarse%ie-1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P0 * coarse%mgvar(coarse%is  :coarse%ie+0, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P1 * coarse%mgvar(coarse%is+1:coarse%ie+1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           - P2 * coarse%mgvar(coarse%is+2:coarse%ie+2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv)
+      fine%mg%prolong_x(        fine%is    :fine%ie-1:2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2) = &  ! x-odd cells
+           - P2 * coarse%mg%var(coarse%is-2:coarse%ie-2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P1 * coarse%mg%var(coarse%is-1:coarse%ie-1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P0 * coarse%mg%var(coarse%is  :coarse%ie  , coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           - P1 * coarse%mg%var(coarse%is+1:coarse%ie+1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P2 * coarse%mg%var(coarse%is+2:coarse%ie+2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv)
+      fine%mg%prolong_x(        fine%is+1  :fine%ie:2,   coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2) = &  ! x-even cells
+           + P2 * coarse%mg%var(coarse%is-2:coarse%ie-2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           - P1 * coarse%mg%var(coarse%is-1:coarse%ie-1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P0 * coarse%mg%var(coarse%is  :coarse%ie+0, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P1 * coarse%mg%var(coarse%is+1:coarse%ie+1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           - P2 * coarse%mg%var(coarse%is+2:coarse%ie+2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv)
 
-      fine%prolong_xy(           fine%is:fine%ie, fine%js    :fine%je-1:2, coarse%ks-2:coarse%ke+2) = &    ! y-odd cells
-           - P2 * fine%prolong_x(fine%is:fine%ie, coarse%js-2:coarse%je-2, coarse%ks-2:coarse%ke+2) &
-           + P1 * fine%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-2:coarse%ke+2) &
-           + P0 * fine%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-2:coarse%ke+2) &
-           - P1 * fine%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-2:coarse%ke+2) &
-           + P2 * fine%prolong_x(fine%is:fine%ie, coarse%js+2:coarse%je+2, coarse%ks-2:coarse%ke+2)
-      fine%prolong_xy(           fine%is:fine%ie, fine%js+1  :fine%je:2,   coarse%ks-2:coarse%ke+2) = &    ! y-even cells
-           + P2 * fine%prolong_x(fine%is:fine%ie, coarse%js-2:coarse%je-2, coarse%ks-2:coarse%ke+2) &
-           - P1 * fine%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-2:coarse%ke+2) &
-           + P0 * fine%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-2:coarse%ke+2) &
-           + P1 * fine%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-2:coarse%ke+2) &
-           - P2 * fine%prolong_x(fine%is:fine%ie, coarse%js+2:coarse%je+2, coarse%ks-2:coarse%ke+2)
+      fine%mg%prolong_xy(           fine%is:fine%ie, fine%js    :fine%je-1:2, coarse%ks-2:coarse%ke+2) = &    ! y-odd cells
+           - P2 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js-2:coarse%je-2, coarse%ks-2:coarse%ke+2) &
+           + P1 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-2:coarse%ke+2) &
+           + P0 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-2:coarse%ke+2) &
+           - P1 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-2:coarse%ke+2) &
+           + P2 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js+2:coarse%je+2, coarse%ks-2:coarse%ke+2)
+      fine%mg%prolong_xy(           fine%is:fine%ie, fine%js+1  :fine%je:2,   coarse%ks-2:coarse%ke+2) = &    ! y-even cells
+           + P2 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js-2:coarse%je-2, coarse%ks-2:coarse%ke+2) &
+           - P1 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-2:coarse%ke+2) &
+           + P0 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-2:coarse%ke+2) &
+           + P1 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-2:coarse%ke+2) &
+           - P2 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js+2:coarse%je+2, coarse%ks-2:coarse%ke+2)
 
-      fine%mgvar(                 fine%is:fine%ie, fine%js:fine%je, fine%ks    :fine%ke-1:2, iv) = &   ! z-odd cells
-           - P2 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-2:coarse%ke-2) &
-           + P1 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
-           + P0 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
-           - P1 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1) &
-           + P2 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+2:coarse%ke+2)
-      fine%mgvar(                 fine%is:fine%ie, fine%js:fine%je, fine%ks+1  :fine%ke:2,   iv) = &   ! z-even cells
-           + P2 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-2:coarse%ke-2) &
-           - P1 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
-           + P0 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
-           + P1 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1) &
-           - P2 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+2:coarse%ke+2)
+      fine%mg%var(                   fine%is:fine%ie, fine%js:fine%je, fine%ks    :fine%ke-1:2, iv) = &   ! z-odd cells
+           - P2 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-2:coarse%ke-2) &
+           + P1 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
+           + P0 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
+           - P1 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1) &
+           + P2 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+2:coarse%ke+2)
+      fine%mg%var(                   fine%is:fine%ie, fine%js:fine%je, fine%ks+1  :fine%ke:2,   iv) = &   ! z-even cells
+           + P2 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-2:coarse%ke-2) &
+           - P1 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
+           + P0 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
+           + P1 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1) &
+           - P2 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+2:coarse%ke+2)
 
    end subroutine prolong_level4I
 
@@ -340,44 +340,44 @@ contains
       if (.not. associated(fine)) call die("[multigridexperimental:prolong_level4D] fine == null()")
 
       ! convolve with the prolongation operator
-      fine%prolong_x(          fine%is    :fine%ie-1:2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2) = &  ! x-odd cells
-           + P2 * coarse%mgvar(coarse%is-2:coarse%ie-2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P1 * coarse%mgvar(coarse%is-1:coarse%ie-1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P0 * coarse%mgvar(coarse%is  :coarse%ie  , coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P_1* coarse%mgvar(coarse%is+1:coarse%ie+1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P_2* coarse%mgvar(coarse%is+2:coarse%ie+2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv)
-      fine%prolong_x(          fine%is+1  :fine%ie:2,   coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2) = &  ! x-even cells
-           + P_2* coarse%mgvar(coarse%is-2:coarse%ie-2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P_1* coarse%mgvar(coarse%is-1:coarse%ie-1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P0 * coarse%mgvar(coarse%is  :coarse%ie+0, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P1 * coarse%mgvar(coarse%is+1:coarse%ie+1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
-           + P2 * coarse%mgvar(coarse%is+2:coarse%ie+2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv)
+      fine%mg%prolong_x(        fine%is    :fine%ie-1:2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2) = &  ! x-odd cells
+           + P2 * coarse%mg%var(coarse%is-2:coarse%ie-2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P1 * coarse%mg%var(coarse%is-1:coarse%ie-1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P0 * coarse%mg%var(coarse%is  :coarse%ie  , coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P_1* coarse%mg%var(coarse%is+1:coarse%ie+1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P_2* coarse%mg%var(coarse%is+2:coarse%ie+2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv)
+      fine%mg%prolong_x(        fine%is+1  :fine%ie:2,   coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2) = &  ! x-even cells
+           + P_2* coarse%mg%var(coarse%is-2:coarse%ie-2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P_1* coarse%mg%var(coarse%is-1:coarse%ie-1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P0 * coarse%mg%var(coarse%is  :coarse%ie+0, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P1 * coarse%mg%var(coarse%is+1:coarse%ie+1, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv) &
+           + P2 * coarse%mg%var(coarse%is+2:coarse%ie+2, coarse%js-2:coarse%je+2, coarse%ks-2:coarse%ke+2, iv)
 
-      fine%prolong_xy(           fine%is:fine%ie, fine%js    :fine%je-1:2, coarse%ks-2:coarse%ke+2) = &    ! y-odd cells
-           + P2 * fine%prolong_x(fine%is:fine%ie, coarse%js-2:coarse%je-2, coarse%ks-2:coarse%ke+2) &
-           + P1 * fine%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-2:coarse%ke+2) &
-           + P0 * fine%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-2:coarse%ke+2) &
-           + P_1* fine%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-2:coarse%ke+2) &
-           + P_2* fine%prolong_x(fine%is:fine%ie, coarse%js+2:coarse%je+2, coarse%ks-2:coarse%ke+2)
-      fine%prolong_xy(           fine%is:fine%ie, fine%js+1  :fine%je:2,   coarse%ks-2:coarse%ke+2) = &    ! y-even cells
-           + P_2* fine%prolong_x(fine%is:fine%ie, coarse%js-2:coarse%je-2, coarse%ks-2:coarse%ke+2) &
-           + P_1* fine%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-2:coarse%ke+2) &
-           + P0 * fine%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-2:coarse%ke+2) &
-           + P1 * fine%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-2:coarse%ke+2) &
-           + P2 * fine%prolong_x(fine%is:fine%ie, coarse%js+2:coarse%je+2, coarse%ks-2:coarse%ke+2)
+      fine%mg%prolong_xy(           fine%is:fine%ie, fine%js    :fine%je-1:2, coarse%ks-2:coarse%ke+2) = &    ! y-odd cells
+           + P2 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js-2:coarse%je-2, coarse%ks-2:coarse%ke+2) &
+           + P1 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-2:coarse%ke+2) &
+           + P0 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-2:coarse%ke+2) &
+           + P_1* fine%mg%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-2:coarse%ke+2) &
+           + P_2* fine%mg%prolong_x(fine%is:fine%ie, coarse%js+2:coarse%je+2, coarse%ks-2:coarse%ke+2)
+      fine%mg%prolong_xy(           fine%is:fine%ie, fine%js+1  :fine%je:2,   coarse%ks-2:coarse%ke+2) = &    ! y-even cells
+           + P_2* fine%mg%prolong_x(fine%is:fine%ie, coarse%js-2:coarse%je-2, coarse%ks-2:coarse%ke+2) &
+           + P_1* fine%mg%prolong_x(fine%is:fine%ie, coarse%js-1:coarse%je-1, coarse%ks-2:coarse%ke+2) &
+           + P0 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js  :coarse%je  , coarse%ks-2:coarse%ke+2) &
+           + P1 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js+1:coarse%je+1, coarse%ks-2:coarse%ke+2) &
+           + P2 * fine%mg%prolong_x(fine%is:fine%ie, coarse%js+2:coarse%je+2, coarse%ks-2:coarse%ke+2)
 
-      fine%mgvar(                 fine%is:fine%ie, fine%js:fine%je, fine%ks    :fine%ke-1:2, iv) = &   ! z-odd cells
-           + P2 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-2:coarse%ke-2) &
-           + P1 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
-           + P0 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
-           + P_1* fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1) &
-           + P_2* fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+2:coarse%ke+2)
-      fine%mgvar(                 fine%is:fine%ie, fine%js:fine%je, fine%ks+1  :fine%ke:2,   iv) = &   ! z-even cells
-           + P_2* fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-2:coarse%ke-2) &
-           + P_1* fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
-           + P0 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
-           + P1 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1) &
-           + P2 * fine%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+2:coarse%ke+2)
+      fine%mg%var(                   fine%is:fine%ie, fine%js:fine%je, fine%ks    :fine%ke-1:2, iv) = &   ! z-odd cells
+           + P2 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-2:coarse%ke-2) &
+           + P1 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
+           + P0 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
+           + P_1* fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1) &
+           + P_2* fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+2:coarse%ke+2)
+      fine%mg%var(                   fine%is:fine%ie, fine%js:fine%je, fine%ks+1  :fine%ke:2,   iv) = &   ! z-even cells
+           + P_2* fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-2:coarse%ke-2) &
+           + P_1* fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks-1:coarse%ke-1) &
+           + P0 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks  :coarse%ke  ) &
+           + P1 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+1:coarse%ke+1) &
+           + P2 * fine%mg%prolong_xy(fine%is:fine%ie, fine%js:fine%je, coarse%ks+2:coarse%ke+2)
 
    end subroutine prolong_level4D
 
