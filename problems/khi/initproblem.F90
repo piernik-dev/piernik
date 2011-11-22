@@ -151,6 +151,8 @@ contains
                endif
                if (abs(rc) < lpert) then
                   cg%u(imyn,i,j,:) = vp*sin(k0*rcx)*cg%u(idnn,i,j,:)
+               else
+                  cg%u(imyn,i,j,:) = 0.0
                endif
                if (dom%has_dir(zdim)) then
                   cg%u(imzn,i,j,:) = vtransf*cg%u(1,i,j,:)
