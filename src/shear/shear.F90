@@ -86,6 +86,8 @@ contains
 
       omega   = 0.0
       qshear  = 0.0
+      eta_gas = 0.0
+      csvk    = 1.0
 
       if (master) then
          diff_nml(SHEARING)
@@ -188,7 +190,7 @@ contains
       do i=lbound(cg%u,1),ubound(cg%u,1)
          cg%u(i,:, cg%js:cg%je,:) = unshear_fft( cg%u(i,:, cg%js:cg%je,:), cg%x(:),ddly)
       enddo
-      cg%u(:,:,1:cg%nb,:)        = cg%u(:,:, cg%n_(ydim)-2*cg%js:cg%je,:)
+      cg%u(:,:,1:cg%nb,:)              = cg%u(:,:, cg%jeb:cg%je,:)
       cg%u(:,:, cg%je+1:cg%n_(ydim),:) = cg%u(:,:, cg%js:cg%jsb,:)
 #endif /* FFTW */
    end subroutine yshift
