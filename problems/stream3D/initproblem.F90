@@ -117,7 +117,7 @@ contains
       real :: ninv
 
       ninv = 1./n
-      dens_Rdistr = (R - Rin)**ninv / R**(2.+ninv)
+      dens_Rdistr = max((R - Rin),Rin)**ninv / R**(2.+ninv)
 
    end function dens_Rdistr
 

@@ -56,7 +56,6 @@
  /
 
  $FLUID_DUST
-    dragc_gas_dust = 1.0
  /
 
  $INTERACTIONS
