@@ -544,7 +544,7 @@ contains
 
       implicit none
 
-      class(grid_container) :: this
+      class(grid_container), intent(inout) :: this
       integer :: d, t, g, b
 
 ! It seems that these deallocates are no longer necessary (gcc 4.6.2). According to valgrind the memory is implicitly freed somewhere else.
@@ -552,6 +552,8 @@ contains
 !!$      deallocate(this%x, this%xl, this%xr, this%inv_x)
 !!$      deallocate(this%y, this%yl, this%yr, this%inv_y)
 !!$      deallocate(this%z, this%zl, this%zr, this%inv_z)
+
+      if (this%grid_n <= INVALID) return ! very dirty workaround for unability to determine whether a given cg was already deallocated
 
       if (allocated(this%gc_xdim)) deallocate(this%gc_xdim)
       if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)
@@ -599,17 +601,21 @@ contains
 
       do d = xdim, zdim
          do b = 1, this%nb
-            if (allocated(this%q_i_mbc(d, b)%mbc)) then
-               do g = lbound(this%q_i_mbc(d, b)%mbc, dim=1), ubound(this%q_i_mbc(d, b)%mbc, dim=1)
-                  if (this%q_i_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%q_i_mbc(d, b)%mbc(g), ierr)
-               enddo
-               deallocate(this%q_i_mbc(d, b)%mbc)
+            if (allocated(this%q_i_mbc)) then
+               if (allocated(this%q_i_mbc(d, b)%mbc)) then
+                  do g = lbound(this%q_i_mbc(d, b)%mbc, dim=1), ubound(this%q_i_mbc(d, b)%mbc, dim=1)
+                     if (this%q_i_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%q_i_mbc(d, b)%mbc(g), ierr)
+                  enddo
+                  deallocate(this%q_i_mbc(d, b)%mbc)
+               endif
             endif
-            if (allocated(this%q_o_mbc(d, b)%mbc)) then
-               do g = lbound(this%q_o_mbc(d, b)%mbc, dim=1), ubound(this%q_o_mbc(d, b)%mbc, dim=1)
-                  if (this%q_o_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%q_o_mbc(d, b)%mbc(g), ierr)
-               enddo
-               deallocate(this%q_o_mbc(d, b)%mbc)
+            if (allocated(this%q_o_mbc)) then
+               if (allocated(this%q_o_mbc(d, b)%mbc)) then
+                  do g = lbound(this%q_o_mbc(d, b)%mbc, dim=1), ubound(this%q_o_mbc(d, b)%mbc, dim=1)
+                     if (this%q_o_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%q_o_mbc(d, b)%mbc(g), ierr)
+                  enddo
+                  deallocate(this%q_o_mbc(d, b)%mbc)
+               endif
             endif
          enddo
       enddo
@@ -623,7 +629,7 @@ contains
          deallocate(this%w)
       endif
 
-      if (allocated(this%dom%pse)) deallocate(this%dom%pse) ! this is a side effect of keeping a copy of dom instead of pointing it
+      this%grid_n = INVALID
 
    end subroutine cleanup
 

@@ -65,8 +65,13 @@ module gc_list
       procedure :: add_new                           !< Add new element to the list
       generic, public :: add => add_new              !< All methods of adding a new element
 
-      procedure :: un_link                           !< Destroy the element
+      procedure :: del_lnk                           !< Destroy the element
+      procedure :: del_lst                           !< Destroy the list
+      generic, public :: delete => del_lnk, del_lst  !< All methods of destroying
+
+      procedure :: un_link                           !< Un-link the element
       procedure :: get_extremum                      !< Find munimum or maximum value over a s list
+      procedure :: print_list                        !< Print the list and associated cg ID
 !> \todo merge lists
 
    end type cg_list
@@ -177,6 +182,48 @@ contains
    end subroutine add_new
 
 !> \brief destroy the element
+   subroutine del_lnk(this, cgle)
+
+      use constants,  only: INVALID
+      use dataio_pub, only: warn
+
+      implicit none
+
+      class(cg_list), intent(inout) :: this
+      type(cg_list_element), pointer, intent(inout) :: cgle !< the element to be eradicated
+
+      if (.not. associated(cgle)) then
+         call warn("[gc_list:delete] tried to remove null() element")
+         return
+      endif
+
+      call this%un_link(cgle)
+      if (associated(cgle%cg)) then
+         if (cgle%cg%grid_n > INVALID) then ! dirty trick
+            call cgle%cg%cleanup
+!            deallocate(cgle%cg) ! if we deallocate now, we won't be able to determine this in the other lists
+         endif
+      endif
+      deallocate(cgle)
+
+   end subroutine del_lnk
+
+!> \brief destroy the list
+   subroutine del_lst(this)
+
+     implicit none
+
+     class(cg_list), intent(inout) :: this
+     type(cg_list_element), pointer :: cgl
+
+     do while (associated(this%first))
+        cgl => this%last
+        call this%delete(cgl) ! cannot juss pass this%last because if will change after un_link and wrong element will be deallocated
+     enddo
+
+   end subroutine del_lst
+
+!> \brief remove the element from the list, keep ith content
    subroutine un_link(this, cgle)
 
       use dataio_pub, only: warn, die
@@ -184,7 +231,7 @@ contains
       implicit none
 
       class(cg_list), intent(inout) :: this
-      type(cg_list_element), pointer, intent(inout) :: cgle !< the element to be eradicated
+      type(cg_list_element), pointer, intent(in) :: cgle !< the element to be unlinked
 
       type(cg_list_element), pointer :: cur
       integer :: cnt
@@ -217,6 +264,57 @@ contains
       if (this%cnt == cnt) call warn("[gc_list:un_link] element not found on the list")
 
    end subroutine un_link
+
+!> \brief print the list and associated cg ID for debugging purposes
+   subroutine print_list(this)
+
+      use dataio_pub, only: warn, msg
+
+      implicit none
+
+      class(cg_list), intent(inout) :: this
+
+      type(cg_list_element), pointer :: cur
+      integer :: cnt
+
+      if (.not. associated(this%first)) then
+         write(*,'(a)')"[gc_list:print_list] Empty list"
+         if (this%cnt /= 0) then
+            write(msg,'(a,i6)')"[gc_list:print_list] Empty list length /= 0 : ",this%cnt
+            call warn(msg)
+         endif
+         if (associated(this%last)) then
+            call warn("[gc_list:print_list] Tail without head")
+            if (associated(this%last%cg)) write(*,'(a,i7)')"Last element #",this%last%cg%grid_n
+         endif
+         return
+      endif
+
+      if (.not. associated(this%last)) call warn("[gc_list:print_list] Head without tail")
+
+      if (associated(this%first%cg)) write(*,'(a,i7)')"First element #",this%first%cg%grid_n
+      if (associated(this%last%cg)) write(*,'(a,i7)')"Last element #",this%last%cg%grid_n
+
+      cnt = 0
+      cur => this%first
+      do while (associated(cur))
+         cnt = cnt + 1
+         if (associated(cur%cg)) write(*,'(i5,a,i7)')cnt,"-th element #",cur%cg%grid_n
+         cur => cur%nxt
+      enddo
+
+      if (cnt /= this%cnt) then
+         write(msg, '(2(a,i5))')"[gc_list:print_list] this%cnt = ",this%cnt," /= ",cnt
+         call warn(msg)
+      endif
+
+      cur => this%last
+      do while (associated(cur))
+         cnt = cnt - 1
+         if (associated(cur%cg)) write(*,'(i5,a,i7)')cnt,"-th element #",cur%cg%grid_n
+         cur => cur%prv
+      enddo
+    end subroutine print_list
 
 !>
 !! \brief Use this routine to add a variable (cg%q or cg%w) to all grid containers.

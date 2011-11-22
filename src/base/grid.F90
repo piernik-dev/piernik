@@ -192,21 +192,23 @@ contains
 
       implicit none
 
-      type(cg_list_element), pointer :: cgl, erase
+      integer :: d
+      type(cg_list_element), pointer :: cgle
 
-      cgl => all_cg%first
-      do while (associated(cgl))
-
-         call cgl%cg%cleanup
-         erase => cgl
-         cgl => cgl%nxt
-
-         call all_cg%un_link(erase)
-         deallocate(erase%cg)
-         deallocate(erase)
+      call leaves%delete
+      call base_lev%delete
+      do d = lbound(base_dom, dim=1), ubound(base_dom, dim=1) ! currently we have only one base patch
+         call base_dom(d)%delete
       enddo
-
 !!$      deallocate(levels)
+
+      ! manually deallocate all grid containers first
+      cgle => all_cg%first
+      do while (associated(cgle))
+         deallocate(cgle%cg)
+         cgle => cgle%nxt
+      enddo
+      call all_cg%delete
 
    end subroutine cleanup_grid
 
