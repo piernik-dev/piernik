@@ -134,7 +134,6 @@ contains
       endif
 
       fluid_interactions => fluid_interactions_dummy
-      grain_size = grain_size
       grain_dens = grain_dens * gram * cm**(-2)  ! It is always grain_size * grain_dens, hence unit g/cm2 in grain_dens
       if (.not.allocated(epstein_factor)) allocate(epstein_factor(flind%fluids))
 
