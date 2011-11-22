@@ -155,7 +155,7 @@ contains
       use dataio_pub,  only: printio, printinfo, msg, die, nhdf, problem_name, run_id, nhdf, tmr_hdf, thdf, wd_wr
       use dataio_user, only: user_vars_hdf5
       use domain,      only: dom, is_multicg !, is_uneven
-      use grid,        only: all_cg
+      use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, &
@@ -230,7 +230,7 @@ contains
          call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
          if (.not. is_multicg) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
 
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
 
@@ -305,7 +305,7 @@ contains
       use dataio_pub,      only: die, msg, printio, printinfo, tmr_hdf, thdf
       use dataio_user,     only: user_vars_hdf5
       use gc_list,         only: cg_list_element
-      use grid,            only: all_cg
+      use grid,            only: leaves
       use grid_cont,       only: grid_container
       use h5lt,            only: h5ltmake_dataset_float_f, h5ltmake_dataset_double_f
       use hdf5,            only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, &
@@ -337,7 +337,7 @@ contains
 
       call h5open_f(error)
       call h5fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
-      cgl => all_cg%first
+      cgl => leaves%first
       ngc = 0
       do while (associated(cgl))
          cg => cgl%cg

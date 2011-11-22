@@ -54,7 +54,7 @@ contains
       use dataio_pub, only: warn
       use gc_list,    only: cg_list_element
       use global,     only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
@@ -65,7 +65,7 @@ contains
 
       if (.not.repeat_step) return
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -132,7 +132,7 @@ contains
       use domain,              only: dom, is_multicg
       use fluidboundaries,     only: bnd_u
       use global,              only: t, dt
-      use grid,                only: all_cg
+      use grid,                only: leaves
       use grid_cont,           only: grid_container
       use shear,               only: yshift
 #endif /* SHEAR */
@@ -155,7 +155,7 @@ contains
 #ifdef SHEAR
       type(grid_container), pointer :: cg
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[fluidupdate:make_3sweeps] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
 
       if (dom%has_dir(ydim)) call yshift(t, dt)
@@ -273,7 +273,7 @@ contains
 
    subroutine mag_add(dim1, dim2)
 
-      use grid,          only: all_cg
+      use grid,          only: leaves
       use gc_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use magboundaries, only: all_mag_boundaries
@@ -293,7 +293,7 @@ contains
       real, dimension(:,:,:), pointer :: wcu
 #endif /* RESISTIVE */
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 #ifdef RESISTIVE

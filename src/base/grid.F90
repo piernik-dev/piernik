@@ -35,17 +35,18 @@
 
 module grid
 
-   use gc_list,   only: cg_list
+   use gc_list,   only: cg_list_global, cg_list_level, cg_list_patch, cg_list
 
    implicit none
 
    private
-   public :: init_grid, cleanup_grid, all_cg !, base, leafs, levels
+   public :: init_grid, cleanup_grid, all_cg, base_lev, leaves
 
-   type(cg_list), protected :: all_cg    !< all grid containers
-!!$   type(cg_sublist), protected  :: base   !< base level grid containers
-!!$   type(cg_sublist), protected  :: leafs  !< grid containers not covered by other grid containers
-!!$   type(cg_sublist), dimension(:), allocatable, protected  :: levels !< grid containers grouped by levels
+   type(cg_list_global), protected :: all_cg                          !< all grid containers
+   type(cg_list_level), protected  :: base_lev                        !< base level grid containers
+   type(cg_list), protected  :: leaves                                !< grid containers not fully covered by finer grid containers
+   integer, parameter :: NBD = 1                                      !< at the moment the base domain may be composed of only one patch
+   type(cg_list_patch), dimension(NBD), target, protected :: base_dom !< base level patches; \todo relax the NBD=1 restriction if we want something like L-shaped or more complex domains
 
 contains
 
@@ -54,8 +55,8 @@ contains
 !<
    subroutine init_grid
 
-      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, ndims, xdim, zdim, INVALID, &
-           &                 fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n,cs_i2_n
+      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, INVALID, LONG, &
+           &                 ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n,cs_i2_n
       use dataio_pub,  only: printinfo, die, code_progress
       use domain,      only: pdom, is_multicg
       use fluidindex,  only: flind
@@ -66,9 +67,10 @@ contains
 
       implicit none
 
-      integer :: g, nrq, d
+      integer :: nrq, d
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      type(cg_list_patch), pointer :: pbd
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
@@ -76,18 +78,18 @@ contains
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
 
+      ! Create the empty main lists for base level only.
+      ! Refinement lists will be added by iterating the initproblem::init_prob routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update
+      ! Underground levels will be added in multigrid::init_multigrid
       call all_cg%init
-!!$      call base%init
-!!$      call leafs%init
-!!$      allocate(levels(1))
-!!$      call levels(1)%init
-
-      do g = lbound(pdom%pse(proc)%sel(:,:,:), dim=1), ubound(pdom%pse(proc)%sel(:,:,:), dim=1)
-         call all_cg%add
-         cg => all_cg%last%cg
-
-         call cg%init(pdom, g)
+      call base_lev%init
+      call leaves%init
+      do d = lbound(base_dom, dim=1), ubound(base_dom, dim=1) ! currently we have only one base patch
+         call base_dom(d)%init
       enddo
+
+      pbd => base_dom(NBD)
+      call dom2cg(pdom%n_d(:), [ 0_LONG, 0_LONG, 0_LONG ], 0, pdom%pse(proc), pbd)
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
@@ -140,10 +142,50 @@ contains
 
    end subroutine init_grid
 
-!>
-!! \brief deallocate everything
-!<
+!> \brief Create new cg according to domain decomposition data and add them to appropriate lists
+   subroutine dom2cg(n_d, offset, level, local_decomposition, patch)
 
+      use constants, only: ndims
+      use domain,    only: cuboids, pdom
+
+      implicit none
+
+      integer(kind=4), dimension(ndims), intent(in) :: n_d
+      integer(kind=8), dimension(ndims), intent(in) :: offset
+      integer, intent(in) :: level
+      type(cuboids), pointer, intent(in) :: local_decomposition
+      type(cg_list_patch), pointer, intent(inout) :: patch
+
+      integer :: g
+
+      do g = lbound(local_decomposition%sel(:,:,:), dim=1), ubound(local_decomposition%sel(:,:,:), dim=1)
+
+         ! create the new element in the patch and initialize it
+         call patch%add
+         call patch%last%cg%init(pdom, g)
+
+         ! add to the other lists
+         call all_cg%add(patch%last%cg)
+
+         call base_lev%add(patch%last%cg)
+
+         call leaves%add(patch%last%cg)
+
+      enddo
+
+      base_lev%lev = level
+      patch%n_d = n_d
+      patch%off = offset
+      patch%parent => null()
+      patch%children => null()
+
+   end subroutine dom2cg
+
+!> \brief Update the list of leaves
+! subroutine update leaves
+! end subroutine update leaves
+
+!> \brief deallocate everything
    subroutine cleanup_grid
 
       use gc_list, only: cg_list_element

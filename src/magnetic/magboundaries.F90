@@ -41,7 +41,7 @@ contains
       use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, I_FIVE, I_TEN
       use dataio_pub, only: die
       use domain,     only: cdd, is_mpi_noncart, is_multicg
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
       use mpisetup,   only: ierr, req, status, have_mpi
@@ -52,7 +52,7 @@ contains
       integer(kind=4)          :: i, itag, jtag
       type(grid_container), pointer :: cg
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[magboundaries:bnd_a] multiple grid pieces per procesor not implemented yet") !nontrivial MPI_Waitall
 
       if (have_mpi .and. is_mpi_noncart) call die("[magboundaries:bnd_a] is_mpi_noncart is not implemented") !procn, psize
@@ -654,7 +654,7 @@ contains
       use constants,    only: xdim, zdim, mag_n
       use domain,       only: dom, cdd
       use gc_list,      only: cg_list_element
-      use grid,         only: all_cg
+      use grid,         only: leaves
       use internal_bnd, only: internal_boundaries_4d
       use mpi,          only: MPI_COMM_NULL
 
@@ -665,11 +665,11 @@ contains
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          do dir = xdim, zdim
-            if (dom%has_dir(dir)) call internal_boundaries_4d(all_cg%first%cg%get_na_ind_4d(mag_n), dim=dir)
+            if (dom%has_dir(dir)) call internal_boundaries_4d(leaves%first%cg%get_na_ind_4d(mag_n), dim=dir)
          enddo
       endif
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          do dir = xdim, zdim
             if (dom%has_dir(dir)) call bnd_b(dir, cgl%cg)

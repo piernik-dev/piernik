@@ -148,7 +148,7 @@ contains
       use constants,   only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
       use dataio_pub,  only: msg, printinfo, warn, die
       use domain,      only: dom
-      use grid,        only: all_cg
+      use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use initionized, only: gamma_ion, idni, imxi, imzi, ieni
@@ -161,7 +161,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -267,7 +267,7 @@ contains
       use constants,   only: pi, GEO_XYZ, GEO_RPZ, AT_IGNORE
       use dataio_pub,  only: warn, die
       use domain,      only: dom
-      use grid,        only: all_cg
+      use grid,        only: leaves, all_cg
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
@@ -302,7 +302,7 @@ contains
 
       call all_cg%reg_var(apot_n, AT_IGNORE)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -371,7 +371,7 @@ contains
       use constants,  only: GEO_RPZ, I_ONE, I_TWO
       use dataio_pub, only: msg, printinfo, warn
       use domain,     only: dom
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
@@ -391,7 +391,7 @@ contains
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

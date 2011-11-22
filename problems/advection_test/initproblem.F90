@@ -151,7 +151,7 @@ contains
       use fluidindex,  only: flind
       use gc_list,     only: cg_list_element
       use global,      only: smallei, t
-      use grid,        only: all_cg
+      use grid,        only: leaves
       use grid_cont,   only: grid_container
 
       implicit none
@@ -165,7 +165,7 @@ contains
       ! Initialize the initial density arrays
       call analytic_solution(t)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -241,7 +241,7 @@ contains
       use fluidindex, only: flind
       use gc_list,    only: cg_list_element
       use global,     only: t, nstep
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,   only: master, comm, ierr
@@ -265,7 +265,7 @@ contains
 
       call analytic_solution(t)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -308,7 +308,7 @@ contains
       use dataio_pub, only: warn
       use domain,     only: dom
       use gc_list,    only: cg_list_element
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
@@ -323,7 +323,7 @@ contains
       real, dimension(:,:,:), pointer :: inid
       real, dimension(ndims) :: pos
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

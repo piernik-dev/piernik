@@ -56,7 +56,7 @@ contains
       use domain,        only: dom
       use fluidindex,    only: flind
       use global,        only: dt
-      use grid,          only: all_cg
+      use grid,          only: leaves
       use gc_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use magboundaries, only: bnd_emf
@@ -93,7 +93,7 @@ contains
          i1 => ii(rdir) ; i1m => ii(rdir) ; i2 => ii(rdir) ; i2m => ii(rdir) ! suppress compiler warnings
       endif
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          i_wa = cg%get_na_ind(wa_n)

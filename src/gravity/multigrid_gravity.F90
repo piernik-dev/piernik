@@ -389,7 +389,7 @@ contains
       use constants,        only: pi, dpi, GEO_XYZ, xdim, ydim, zdim, one, zero, half
       use dataio_pub,       only: die, warn
       use domain,           only: dom, cdd
-      use grid,             only: all_cg
+      use grid,             only: leaves
       use gc_list,          only: cg_list_element
       use mpi,              only: MPI_COMM_NULL
       use mpisetup,         only: master, nproc, proc
@@ -442,7 +442,7 @@ contains
          enddo
       endif
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cgl%cg%sgp(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
          cgl => cgl%nxt
@@ -990,7 +990,7 @@ contains
       use constants,          only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,         only: die
       use domain,             only: dom, is_multicg
-      use grid,               only: all_cg
+      use grid,               only: leaves
       use grid_cont,          only: grid_container
       use multigridbasefuncs, only: subtract_average
       use multigridhelpers,   only: set_dirty, check_dirty
@@ -1007,7 +1007,7 @@ contains
       integer :: i
       type(grid_container), pointer :: cg
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[multigrid_gravity:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       call set_dirty(source)
@@ -1132,7 +1132,7 @@ contains
 
    subroutine multigrid_solve_grav(dens)
 
-      use grid,          only: all_cg
+      use grid,          only: leaves
       use gc_list,       only: cg_list_element
       use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, tot_ts, ts
       use multipole,     only: multipole_solver
@@ -1164,7 +1164,7 @@ contains
 
       call vcycle_hg(inner)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cgl%cg%sgp(:,:,:) = roof%mg%var(:,:,:, solution)
          cgl => cgl%nxt
@@ -1179,7 +1179,7 @@ contains
 
          call vcycle_hg(outer)
 
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
             cgl%cg%sgp(:,:,:) = cgl%cg%sgp(:,:,:) + roof%mg%var(:, :, :, solution)
             cgl => cgl%nxt

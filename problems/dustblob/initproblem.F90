@@ -112,7 +112,7 @@ contains
       use domain,      only: dom
       use fluidindex,  only: flind
       use global,      only: smalld
-      use grid,        only: all_cg
+      use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use initdust,    only: idnd, imxd, imyd, imzd
@@ -128,7 +128,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

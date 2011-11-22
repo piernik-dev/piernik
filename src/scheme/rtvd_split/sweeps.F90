@@ -50,7 +50,7 @@ contains
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind
       use global,          only: dt
-      use grid,            only: all_cg
+      use grid,            only: leaves
       use grid_cont,       only: grid_container
       use interactions,    only: dragc_gas_dust
       use shear,           only: omega, qshear
@@ -64,7 +64,7 @@ contains
       real, parameter, dimension(2) :: fac = [half, one]
       type(grid_container), pointer :: cg
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[sweeps:source_terms_y] multiple grid pieces per procesor not implemented yet") !nontrivial u1
 
       allocate(vxr(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)), v_r(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)), rotaccr(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)))
@@ -169,7 +169,7 @@ contains
       use fluidindex,      only: flind, iarr_all_swp, nmag
       use gc_list,         only: cg_list_element
       use global,          only: dt, integration_order
-      use grid,            only: all_cg
+      use grid,            only: leaves
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
       use rtvd,            only: relaxing_tvd
@@ -192,7 +192,7 @@ contains
       type(grid_container), pointer     :: cg
 
       do istep = 1, integration_order
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
 

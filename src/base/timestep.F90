@@ -88,7 +88,7 @@ contains
       use dataio_pub,           only: tend, msg, warn
       use fluids_pub,           only: has_ion, has_dst, has_neu
       use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, cflcontrol
-      use grid,                 only: all_cg
+      use grid,                 only: leaves
       use gc_list,              only: cg_list_element
       use grid_cont,            only: grid_container
       use mpi,                  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, MPI_IN_PLACE
@@ -123,7 +123,7 @@ contains
       c_all = zero
       dt = huge(one)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

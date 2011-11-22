@@ -164,7 +164,7 @@ contains
       use constants,      only: xdim, ydim, zdim
       use domain,         only: dom
       use fluidindex,     only: flind
-      use grid,           only: all_cg
+      use grid,           only: leaves
       use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn
@@ -187,7 +187,7 @@ contains
       ysn = pos(2)
       zsn = pos(3)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -245,7 +245,7 @@ contains
       use constants, only: xdim, ydim, zdim, LO
       use domain,    only: dom
 #ifdef SHEAR
-      use grid,      only: all_cg
+      use grid,      only: leaves
       use grid_cont, only: grid_container
       use shear,     only: delj, eps
 #endif /* SHEAR */
@@ -274,7 +274,7 @@ contains
       endif
 
 #ifdef SHEAR
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[snsources:rand_coords] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
 
       jsn  = js+int((ysn-dom%edge(ydim, LO))/cg%dy)

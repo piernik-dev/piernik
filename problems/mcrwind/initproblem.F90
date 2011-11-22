@@ -125,7 +125,7 @@ contains
       use constants,      only: xdim, ydim, zdim
       use fluidindex,     only: flind
       use global,         only: smalld
-      use grid,           only: all_cg
+      use grid,           only: leaves
       use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
@@ -157,7 +157,7 @@ contains
 
       csim2 = flind%ion%cs2*(1.0+alpha)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -217,7 +217,7 @@ contains
 #endif /* COSM_RAYS */
 
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -324,7 +324,7 @@ contains
       use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
       use domain,         only: dom
       use fluidindex,     only: flind
-      use grid,           only: all_cg
+      use grid,           only: leaves
       use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn
@@ -344,7 +344,7 @@ contains
       ysn = pos(ydim)
       zsn = pos(zdim)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

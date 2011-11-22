@@ -824,7 +824,7 @@ contains
    end subroutine set_mpi_types
 
 !>
-!! \brief Register a new 3D entry in current cg with given name. Called from cg_list::reg_var
+!! \brief Register a new 3D entry in current cg with given name. Called from cg_list_global::reg_var
 !!
 !! \warning This routine should not be called directly from user routines
 !<
@@ -862,7 +862,7 @@ contains
    end subroutine add_na
 
 !>
-!! \brief Register a new 4D entry in current cg with given name. Called from cg_list::reg_var
+!! \brief Register a new 4D entry in current cg with given name. Called from cg_list_global::reg_var
 !!
 !! \warning This routine should not be called directly from user routines
 !! \deprecated Almost duplicated code with add_na

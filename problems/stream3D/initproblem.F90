@@ -127,7 +127,7 @@ contains
       use domain,      only: dom
       use global,      only: smalld
       use gravity,     only: ptmass
-      use grid,        only: all_cg
+      use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use initneutral, only: idnn, imxn, imyn, imzn, cs_iso_neu, cs_iso_neu2
@@ -152,7 +152,7 @@ contains
       real :: vx, vy, vz
 #endif /* !ISO */
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

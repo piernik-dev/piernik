@@ -71,7 +71,7 @@ contains
 
       use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: msg, printinfo
-      use grid,        only: all_cg
+      use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use initneutral, only: idnn,imxn,imyn,imzn,ienn, gamma_neu
@@ -93,7 +93,7 @@ contains
 
       call random_seed()
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

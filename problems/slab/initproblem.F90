@@ -92,7 +92,7 @@ contains
    subroutine init_prob
 
       use constants,   only: xdim, ydim, zdim
-      use grid,        only: all_cg
+      use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use initionized, only: idni,imxi,imyi,imzi
@@ -114,7 +114,7 @@ contains
 
 !   Secondary parameters
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

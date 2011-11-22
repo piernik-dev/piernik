@@ -369,7 +369,7 @@ contains
       use gc_list,        only: cg_list_element
       use global,         only: smalld
       use gravity,        only: grav_accel, nsub, tune_zeq_bnd
-      use grid,           only: all_cg
+      use grid,           only: leaves
       use grid_cont,      only: grid_container
 #ifndef ISO
       use fluidindex,     only: iarr_all_en
@@ -402,7 +402,7 @@ contains
 
       if (is_multicg) call die("[hydrostatic:outh_bnd] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

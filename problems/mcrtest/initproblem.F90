@@ -138,7 +138,7 @@ contains
       use dataio_pub,     only: msg, warn, printinfo, die
       use domain,         only: dom, is_multicg
       use fluidindex,     only: flind
-      use grid,           only: all_cg
+      use grid,           only: leaves
       use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
@@ -183,7 +183,7 @@ contains
       endif
 
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -240,7 +240,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
 
       do icr = 1, flind%crs%all

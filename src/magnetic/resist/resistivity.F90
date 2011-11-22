@@ -89,7 +89,7 @@ contains
       use dataio_pub, only: die, code_progress
       use domain,     only: dom
       use gc_list,    only: cg_list_element
-      use grid,       only: all_cg
+      use grid,       only: leaves, all_cg
       use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,   only: rbuff, ibuff, ierr, comm, master, slave, buffer_dim, FIRST
 
@@ -149,7 +149,7 @@ contains
       call all_cg%reg_var(dbz_n, AT_IGNORE)
 #ifdef ISO
       if (eta_1 == 0.) then
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
             cgl%cg%q(cgl%cg%get_na_ind(eta_n))%arr = eta_0
             cgl => cgl%nxt
@@ -161,7 +161,7 @@ contains
 
       if (eta1_active) then
 
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
             if (.not. dom%has_dir(xdim)) cgl%cg%q(cgl%cg%get_na_ind(dbx_n))%arr = 0.0
             if (.not. dom%has_dir(ydim)) cgl%cg%q(cgl%cg%get_na_ind(dby_n))%arr = 0.0
@@ -187,7 +187,7 @@ contains
       use dataio_pub, only: die
       use domain,     only: dom, is_multicg
       use gc_list,    only: cg_list_element
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION
       use mpisetup,   only: comm, ierr, FIRST
@@ -207,7 +207,7 @@ contains
 !> \deprecated BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
 !--- square current computing in cell corner step by step
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          eta => cg%get_na_ptr(eta_n)
@@ -271,15 +271,15 @@ contains
          cgl => cgl%nxt
       enddo
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum, wb, eta
 
-      call all_cg%get_extremum(cg%get_na_ind(eta_n), MAXL, etamax)
+      call leaves%get_extremum(cg%get_na_ind(eta_n), MAXL, etamax)
       call MPI_Bcast(etamax%val, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call all_cg%get_extremum(cg%get_na_ind(wb_n), MAXL, cu2max)
+      call leaves%get_extremum(cg%get_na_ind(wb_n), MAXL, cu2max)
 
 #ifndef ISO
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          eta => cg%get_na_ptr(eta_n)
@@ -290,7 +290,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call all_cg%get_extremum(cg%get_na_ind(wb_n), MINL, deimin)
+      call leaves%get_extremum(cg%get_na_ind(wb_n), MINL, deimin)
 #endif /* !ISO */
       NULLIFY(p)
 
@@ -384,7 +384,7 @@ contains
       use constants,     only: xdim, ydim, zdim, ndims, half, varlen, I_ONE, mag_n, wcu_n
       use domain,        only: dom
       use global,        only: dt
-      use grid,          only: all_cg
+      use grid,          only: leaves
       use gc_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use magboundaries, only: bnd_emf
@@ -407,7 +407,7 @@ contains
 
       call compute_resist
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          b_i   = cg%get_na_ind_4d(mag_n)
@@ -442,7 +442,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          do i1 = xdim, zdim
             if (dom%has_dir(i1)) call bnd_emf(cg%q(wcu_i)%arr,emf,i1, cgl%cg)

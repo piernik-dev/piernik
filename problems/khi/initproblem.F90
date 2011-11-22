@@ -110,7 +110,7 @@ contains
 
       use constants,   only: dpi, xdim, ydim, zdim
       use domain,      only: dom
-      use grid,        only: all_cg
+      use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
@@ -132,7 +132,7 @@ contains
       k0    = dpi/lambda
       vp    = (Mtop*sqrt(chi)+Mbot)*sqrt(gamma_neu*p0/dbot)/dpert
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

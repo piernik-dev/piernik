@@ -93,7 +93,7 @@ contains
       use dataio_pub, only: die, warn
       use domain,     only: cdd, dom
       use gc_list,    only: cg_list_element
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
       use mpisetup,   only: comm, ierr, req, status
@@ -132,7 +132,7 @@ contains
       endif
 
       nr = 0
-      cgl => all_cg%first
+      cgl => leaves%first
       if (tgt3d) then
          if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 3d index")
       else
@@ -142,9 +142,9 @@ contains
          cg => cgl%cg
 
          if (tgt3d) then
-            if (cg%q(ind)%name /= all_cg%first%cg%q(ind)%name) call die("[internal_bnd:internal_boundaries] 3d array name mismatch")
+            if (cg%q(ind)%name /= leaves%first%cg%q(ind)%name) call die("[internal_bnd:internal_boundaries] 3d array name mismatch")
          else
-            if (cg%w(ind)%name /= all_cg%first%cg%w(ind)%name) call die("[internal_bnd:internal_boundaries] 4d array name mismatch")
+            if (cg%w(ind)%name /= leaves%first%cg%w(ind)%name) call die("[internal_bnd:internal_boundaries] 4d array name mismatch")
          endif
 
          do d = xdim, zdim

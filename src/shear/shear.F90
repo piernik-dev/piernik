@@ -165,7 +165,7 @@ contains
       use constants,  only: xdim, ydim
       use dataio_pub, only: die
       use domain,     only: dom, is_multicg
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
 
       implicit none
@@ -177,7 +177,7 @@ contains
       integer :: i
 #endif /* FFTW */
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[shear:yshift] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       ddly  = dts * qshear*omega*dom%L_(xdim)
@@ -199,7 +199,7 @@ contains
       use constants,  only: dpi, xdim
       use dataio_pub, only: die
       use domain,     only: dom, is_multicg
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
 
       implicit none
@@ -221,7 +221,7 @@ contains
       real(kind=8),    dimension(:), allocatable :: ky
       type(grid_container), pointer :: cg
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[shear:unshear_fft] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       St = - ddy / cg%dy / dom%L_(xdim)
@@ -271,7 +271,7 @@ contains
       use constants,  only: xdim, half
       use dataio_pub, only: die
       use domain,     only: dom, is_multicg
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
 
       implicit none
@@ -289,7 +289,7 @@ contains
       ny = size(qty,2)
       nz = size(qty,3)
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[shear:unshear] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       my = 3*cg%nyb+2*cg%nb

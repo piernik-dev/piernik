@@ -201,7 +201,7 @@ contains
       use func,       only: ekin, emag
       use gc_list,    only: cg_list_element
       use global,     only: smalld, smallp
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
       use mpisetup,   only: master, comm, ierr
@@ -222,7 +222,7 @@ contains
       minpres = smallp
 
       ! collect the extrema
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

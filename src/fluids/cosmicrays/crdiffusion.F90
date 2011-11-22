@@ -69,7 +69,7 @@ contains
       use dataio_pub,   only: die
       use domain,       only: dom, cdd
       use internal_bnd, only: internal_boundaries_4d
-      use grid,         only: all_cg
+      use grid,         only: leaves
       use gc_list,      only: cg_list_element
       use grid_cont,    only: grid_container
       use mpi,          only: MPI_REQUEST_NULL, MPI_COMM_NULL
@@ -82,9 +82,9 @@ contains
       type(grid_container), pointer :: cg
       real, dimension(:,:,:,:), pointer :: wcr
 
-      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(all_cg%first%cg%get_na_ind_4d(wcr_n))
+      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(leaves%first%cg%get_na_ind_4d(wcr_n))
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          wcr => cg%get_na_ptr_4d(wcr_n)
@@ -169,7 +169,7 @@ contains
       use domain,         only: dom
       use fluidindex,     only: flind
       use global,         only: dt
-      use grid,           only: all_cg
+      use grid,           only: leaves
       use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
@@ -197,7 +197,7 @@ contains
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -250,7 +250,7 @@ contains
 
       call all_wcr_boundaries
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          wcr => cg%get_na_ptr_4d(wcr_n)

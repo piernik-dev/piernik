@@ -117,7 +117,7 @@ contains
       use domain,       only: dom
       use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
-      use grid,         only: all_cg
+      use grid,         only: leaves
       use gc_list,      only: cg_list_element
       use grid_cont,    only: grid_container
       use interactions, only: dragc_gas_dust
@@ -208,7 +208,7 @@ contains
       write(msg,*) '\eta vk / \Omega = ', eta_gas * neu%cs / csvk / omega
       call printinfo(msg)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

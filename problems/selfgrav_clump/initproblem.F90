@@ -152,7 +152,7 @@ contains
       use dataio_pub,        only: msg, die, warn, printinfo
       use domain,            only: dom, is_multicg
       use global,            only: smalld, smallei, t
-      use grid,              only: all_cg
+      use grid,              only: leaves
       use gc_list,           only: cg_list_element
       use grid_cont,         only: grid_container
       use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
@@ -187,7 +187,7 @@ contains
       totME(1) = clump_mass / (4./3. * pi * clump_r**3)
 
       Msph = 0.
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -247,7 +247,7 @@ contains
       endif
 
       if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
 
       ! Find C - the level of enthalpy at which density vanishes
       iC = 1
@@ -442,7 +442,7 @@ contains
    subroutine virialCheck(tol)
 
       use dataio_pub,        only: msg, die, warn, printinfo
-      use grid,              only: all_cg
+      use grid,              only: leaves
       use gc_list,           only: cg_list_element
       use grid_cont,         only: grid_container
       use initionized,       only: idni
@@ -464,7 +464,7 @@ contains
 
       TWP(:) = 0.
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -510,7 +510,7 @@ contains
    subroutine totalMEnthalpic(C, totME, mode)
 
       use constants,   only: I_ONE
-      use grid,        only: all_cg
+      use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use initionized, only: idni
@@ -530,7 +530,7 @@ contains
 
       totME = 0.
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

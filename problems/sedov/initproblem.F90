@@ -134,7 +134,7 @@ contains
       use dataio_pub, only: msg, die, printinfo
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
@@ -160,7 +160,7 @@ contains
 
 ! Uniform equilibrium state
 
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
 

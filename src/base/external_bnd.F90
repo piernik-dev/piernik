@@ -60,7 +60,7 @@ contains
       use dataio_pub,   only: die, msg
       use domain,       only: dom, cdd
       use gc_list,      only: cg_list_element
-      use grid,         only: all_cg
+      use grid,         only: leaves
       use grid_cont,    only: grid_container
       use internal_bnd, only: internal_boundaries_3d
       use mpi,          only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
@@ -94,7 +94,7 @@ contains
 
       endif
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

@@ -148,7 +148,7 @@ contains
       use domain,         only: dom
       use func,           only: ekin, emag
       use gc_list,        only: cg_list_element
-      use grid,           only: all_cg
+      use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre
       use initionized,    only: idni, imxi, imyi, imzi, ieni, gamma_ion
@@ -177,7 +177,7 @@ contains
       if (.not.dom%has_dir(ydim)) by0 = 0.
       if (.not.dom%has_dir(zdim)) bz0 = 0.
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -221,7 +221,7 @@ contains
       use dataio_pub,     only: die
       use gc_list,        only: cg_list_element
       use global,         only: t
-      use grid,           only: all_cg
+      use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
 
@@ -261,7 +261,7 @@ contains
 
       ampt     = amp_cr * r0**2 / sqrt(r0_par2 * r0_perp2)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -296,7 +296,7 @@ contains
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
       use global,         only: t, nstep
       use gc_list,        only: cg_list_element
-      use grid,           only: all_cg
+      use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
@@ -329,7 +329,7 @@ contains
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          aecr1 => cg%get_na_ptr(aecr1_n)

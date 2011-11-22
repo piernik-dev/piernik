@@ -639,7 +639,7 @@ contains
       use constants,    only: xdim, zdim, fluid_n
       use domain,       only: dom, cdd
       use gc_list,      only: cg_list_element
-      use grid,         only: all_cg
+      use grid,         only: leaves
       use internal_bnd, only: internal_boundaries_4d
       use mpi,          only: MPI_COMM_NULL
 
@@ -650,11 +650,11 @@ contains
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          do dir = xdim, zdim
-            if (dom%has_dir(dir)) call internal_boundaries_4d(all_cg%first%cg%get_na_ind_4d(fluid_n), dim=dir)
+            if (dom%has_dir(dir)) call internal_boundaries_4d(leaves%first%cg%get_na_ind_4d(fluid_n), dim=dir)
          enddo
       endif
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          do dir = xdim, zdim
             if (dom%has_dir(dir)) call bnd_u(dir, cgl%cg)

@@ -210,7 +210,7 @@ contains
       use dataio_pub, only: printinfo, warn
       use domain,     only: dom
       use fluidindex, only: flind
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
@@ -232,7 +232,7 @@ contains
       kx = 15.*dpi/dom%L_(xdim)
       kz =  5.*dpi/dom%L_(zdim)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -260,7 +260,7 @@ contains
 
       use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: printinfo
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use fluidindex, only: flind
@@ -283,7 +283,7 @@ contains
       call random_seed(put=seed)
       deallocate(seed)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -308,7 +308,7 @@ contains
       use fluidtypes,   only: component_fluid
       use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use gc_list,      only: cg_list_element
-      use grid,         only: all_cg
+      use grid,         only: leaves
       use grid_cont,    only: grid_container
       use hydrostatic,  only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
       use interactions, only: epstein_factor
@@ -333,7 +333,7 @@ contains
 
       call register_user_var(0_INT4)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -550,7 +550,7 @@ contains
       use domain,          only: is_multicg
       use gc_list,         only: cg_list_element
       use global,          only: dt, t, relax_time, smalld !, grace_period_passed
-      use grid,            only: all_cg
+      use grid,            only: leaves
       use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_mx, iarr_all_mz, iarr_all_dn
@@ -579,7 +579,7 @@ contains
 
       if (is_multicg) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -632,7 +632,7 @@ contains
       use constants, only: xdim, zdim
       use units,     only: newtong
       use gravity,   only: ptmass, sum_potential
-      use grid,      only: all_cg
+      use grid,      only: leaves
       use gc_list,   only: cg_list_element
       use grid_cont, only: grid_container
 
@@ -645,7 +645,7 @@ contains
       type(grid_container), pointer :: cg
 
       if (frun) then
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
 

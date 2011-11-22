@@ -1,4 +1,4 @@
-! $Id$
+ ! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
@@ -88,7 +88,7 @@ contains
 
       use constants,   only: pi, dpi, fpi, xdim, ydim, zdim
       use global,      only: smallei
-      use grid,        only: all_cg
+      use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use initionized, only: idni, imxi, imyi, imzi
@@ -107,7 +107,7 @@ contains
 
 !   Secondary parameters
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

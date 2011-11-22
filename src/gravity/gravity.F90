@@ -151,7 +151,7 @@ contains
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,         only: newtong
-      use grid,          only: all_cg
+      use grid,          only: leaves, all_cg
       use gc_list,       only: cg_list_element
 #ifdef SELF_GRAV
       use constants,     only: sgp_n, sgpm_n
@@ -279,7 +279,7 @@ contains
       call all_cg%reg_var(sgpm_n, AT_IGNORE)
 #endif /* SELF_GRAV */
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cgl%cg%gpot => cgl%cg%get_na_ptr(gpot_n)
          cgl%cg%gpot(:,:,:) = 0.0
@@ -309,7 +309,7 @@ contains
       use domain,            only: is_multicg
       use fluidindex,        only: iarr_all_sg
       use gc_list,           only: cg_list_element
-      use grid,              only: all_cg
+      use grid,              only: leaves
       use grid_cont,         only: grid_container
       use external_bnd,      only: arr3d_boundaries
 #ifdef POISSON_FFT
@@ -329,7 +329,7 @@ contains
 
       if (is_multicg) call die("[gravity:source_terms_grav] multiple grid pieces per procesor not implemented yet") !nontrivial all cg% must be solved at a time (nontrivial for multigrid, rarely possible dor FFT poisson solver)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          cg%sgpm = cg%sgp
@@ -354,10 +354,10 @@ contains
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
 
 !> \warning An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
-      call arr3d_boundaries(all_cg%first%cg%get_na_ind(sgp_n))
+      call arr3d_boundaries(leaves%first%cg%get_na_ind(sgp_n))
 
       if (frun) then
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
             cgl%cg%sgpm = cgl%cg%sgp
             cgl => cgl%nxt
@@ -376,7 +376,7 @@ contains
 
    subroutine grav_pot_3d_bnd
       use constants,         only: xdim, ydim, zdim, LO, HI, BND_OUT, BND_OUTH
-      use grid,              only: all_cg
+      use grid,              only: leaves
       use gc_list,           only: cg_list_element
       use grid_cont,         only: grid_container
       use domain,            only: dom
@@ -385,7 +385,7 @@ contains
       type(grid_container), pointer  :: cg
       integer :: i
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -440,7 +440,7 @@ contains
 
       use constants, only: one, half
       use global,    only: dt, dtm
-      use grid,      only: all_cg
+      use grid,      only: leaves
       use gc_list,   only: cg_list_element
       use grid_cont, only: grid_container
 
@@ -456,7 +456,7 @@ contains
          h = 0.0
       endif
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 #ifdef SELF_GRAV
@@ -731,7 +731,7 @@ contains
       use constants,  only: GEO_XYZ
       use dataio_pub, only: die, warn
       use domain,     only: dom
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
@@ -743,7 +743,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          if (.not.allocated(ax%x)) allocate(ax%x(size(cg%x)))
@@ -895,7 +895,7 @@ contains
       use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE, wa_n
       use dataio_pub, only: die
       use domain,     only: is_mpi_noncart, is_multicg, cdd, dom
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: master, nproc, FIRST, LAST, comm, ierr, have_mpi
@@ -914,7 +914,7 @@ contains
       type(grid_container), pointer :: cg
       integer(kind=4) :: wa_i
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[gravity:grav_accel2pot] multiple grid pieces per procesor not implemented yet") !nontrivial
 
       if (any([allocated(gravrx), allocated(gravry), allocated(gravrz)])) call die("[gravity:grav_accel2pot] gravr[xyz] already allocated")
@@ -1001,7 +1001,7 @@ contains
       gpwork = gpwork + ddgp(px,py,pz) + ddgph
       wa_i = cg%get_na_ind(wa_n)
       cg%wa(:,:,:) = gpwork(:,:,:)
-      call all_cg%get_extremum(wa_i, MAXL, gp_max)
+      call leaves%get_extremum(wa_i, MAXL, gp_max)
 
       call MPI_Bcast(gp_max%val, I_ONE, MPI_DOUBLE_PRECISION, gp_max%proc, comm, ierr)
       gpwork = gpwork - gp_max%val

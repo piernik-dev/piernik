@@ -349,7 +349,7 @@ contains
 
       use dataio_pub,         only: die
       use domain,             only: is_multicg
-      use grid,               only: all_cg
+      use grid,               only: leaves
       use gc_list,            only: cg_list_element
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_crs
@@ -370,7 +370,7 @@ contains
       call set_dirty(defect)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
       if (diff_theta /= 0.) then
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
             roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction) = (1. -1./diff_theta) * cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
@@ -396,7 +396,7 @@ contains
 
       use dataio_pub,       only: die
       use domain,           only: is_multicg
-      use grid,             only: all_cg
+      use grid,             only: leaves
       use gc_list,          only: cg_list_element
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crs
@@ -412,7 +412,7 @@ contains
       if (is_multicg) call die("[multigrid_diffusion:init_solution] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       call set_dirty(solution)
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = cg%u(iarr_crs(cr_id),  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
@@ -434,7 +434,7 @@ contains
       use constants,          only: I_ONE, xdim, ydim, zdim
       use dataio_pub,         only: die
       use domain,             only: dom, is_multicg
-      use grid,               only: all_cg
+      use grid,               only: leaves
       use gc_list,            only: cg_list_element
       use grid_cont,          only: grid_container
       use multigridbasefuncs, only: restrict_all
@@ -455,7 +455,7 @@ contains
 
       do ib = xdim, zdim
          call set_dirty(diff_bx+ib-xdim)
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
             roof%mg%var(       roof%is-dom%D_x:roof%ie+dom%D_x, roof%js-dom%D_y:roof%je+dom%D_y, roof%ks-dom%D_z:roof%ke+dom%D_z, diff_bx+ib-xdim) = &
@@ -487,7 +487,7 @@ contains
    subroutine vcycle_hg(cr_id)
 
       use dataio_pub,         only: msg, warn
-      use grid,               only: all_cg
+      use grid,               only: leaves
       use gc_list,            only: cg_list_element
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_crs
@@ -590,7 +590,7 @@ contains
 !     Do we need to take care of boundaries here?
 !      call mpi_multigrid_bnd(roof, solution, I_ONE, diff_extbnd)
 !      cg%u(iarr_crs(cr_id), is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z) = roof%mg%var(roof%is-dom%D_x:roof%ie+dom%D_x, roof%js-dom%D_y:roof%je+dom%D_y, roof%ks-dom%D_z:roof%ke+dom%D_z, solution)
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution)
@@ -613,7 +613,7 @@ contains
       use constants,      only: xdim, ydim, zdim, ndims
       use dataio_pub,     only: die
       use domain,         only: dom, is_multicg
-      use grid,           only: all_cg
+      use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
       use multigridvars,  only: plvl
@@ -637,7 +637,7 @@ contains
       ilm(:) = im(:) ; ilm(crdim) = ilm(crdim) - 1
       present_not_crdim(:) = dom%has_dir(:) .and. ( [ xdim,ydim,zdim ] /= crdim )
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[multigrid_diffusion:diff_flux] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       ! Assumes dom%has_dir(crdim)
@@ -690,7 +690,7 @@ contains
       use dataio_pub,        only: die
       use domain,            only: dom, is_multicg
       use global,            only: dt
-      use grid,              only: all_cg
+      use grid,              only: leaves
       use grid_cont,         only: grid_container
       use multigridhelpers,  only: check_dirty
       use multigridmpifuncs, only: mpi_multigrid_bnd
@@ -709,7 +709,7 @@ contains
       integer, dimension(ndims)       :: iml, imh
       type(grid_container), pointer   :: cg
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[multigrid_diffusion:residual] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       call mpi_multigrid_bnd(curl, soln, I_ONE, diff_extbnd, .true.) ! corners are required for fluxes
@@ -757,7 +757,7 @@ contains
       use dataio_pub,        only: die
       use domain,            only: dom, is_multicg
       use global,            only: dt
-      use grid,              only: all_cg
+      use grid,              only: leaves
       use grid_cont,         only: grid_container
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: plvl, base, extbnd_donothing
@@ -779,7 +779,7 @@ contains
       type(grid_container), pointer   :: cg
 
       idl2 = [curl%idx2, curl%idy2, curl%idz2]
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[multigrid_diffusion:approximate_solution] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
 
       if (associated(curl, base)) then

@@ -113,7 +113,7 @@ contains
 
       use constants,   only: xdim, ydim, zdim
       use domain,      only: dom
-      use grid,        only: all_cg
+      use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use initneutral, only: gamma_neu, idnn, imxn, imyn, imzn, ienn
@@ -128,7 +128,7 @@ contains
       penv = 3.2*rblob*sqrt(chi)/tkh/(Mext*gamma_neu/denv)
 
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

@@ -196,7 +196,7 @@ contains
       use constants,  only: xdim, ydim, zdim , LO, HI
       use dataio_pub, only: msg, die
       use domain,     only: is_multicg
-      use grid,       only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpisetup,   only: proc, master, FIRST, LAST, comm, status, ierr
       use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
@@ -210,7 +210,7 @@ contains
       integer, dimension(2*NDIM)          :: ic_rng
       type(grid_container), pointer :: cg
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[initproblem:read_IC_file] multiple grid pieces per procesor not implemented yet") !nontrivial ic_[ijk[se], allocate
 
       ! calculate index ranges for the subset of IC file covering local domain with a safety margin for interpolation
@@ -288,7 +288,7 @@ contains
       use dataio_pub,  only: warn, printinfo, msg, die
       use domain,      only: dom
       use global,      only: smalld
-      use grid,        only: all_cg
+      use grid,        only: leaves, all_cg
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind
@@ -310,7 +310,7 @@ contains
       enddo
 
       fl => flind%neu
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -465,7 +465,7 @@ contains
 
       use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: warn
-      use grid,        only: all_cg
+      use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind
@@ -484,7 +484,7 @@ contains
       real, dimension(:,:,:), pointer :: den0, vlx0, vly0
 
       fl => flind%neu
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 

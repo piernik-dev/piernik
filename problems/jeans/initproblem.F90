@@ -145,7 +145,7 @@ contains
       use constants,     only: pi, xdim, ydim, zdim, LO
       use dataio_pub,    only: tend, msg, printinfo, warn
       use domain,        only: dom
-      use grid,          only: all_cg
+      use grid,          only: leaves
       use gc_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use initionized,   only: gamma_ion, idni, imxi, imzi, ieni
@@ -203,7 +203,7 @@ contains
       endif
 ! Uniform equilibrium state
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          do k = cg%ks, cg%ke

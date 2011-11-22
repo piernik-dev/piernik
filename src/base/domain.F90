@@ -43,7 +43,7 @@ module domain
 
    private
    public :: cleanup_domain, init_domain, is_overlap, domain_container, user_divide_domain, allocate_pse, deallocate_pse, set_pse_sel, &
-        &    pdom, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, cdd
+        &    pdom, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, cdd, cuboids
 
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
