@@ -134,8 +134,8 @@ contains
       endif
 
       fluid_interactions => fluid_interactions_dummy
-      grain_size = grain_size * cm
-      grain_dens = grain_dens * gram * cm**(-3)
+      grain_size = grain_size
+      grain_dens = grain_dens * gram * cm**(-2)  ! It is always grain_size * grain_dens, hence unit g/cm2 in grain_dens
       if (.not.allocated(epstein_factor)) allocate(epstein_factor(flind%fluids))
 
       epstein_factor = 0.0
@@ -162,7 +162,6 @@ contains
       implicit none
 
       logical, save :: warned = .false.
-#ifdef BALSARA
       integer :: i
 
       if (associated(flind%dst)) then
@@ -181,7 +180,7 @@ contains
          warned = .true.
       endif
 
-#else /* !BALSARA */
+#ifndef BALSARA
       if (dragc_gas_dust > 0.0 .or. collision_factor > 0.0) then
          if (associated(flind%dst)) then
             if (master) call printinfo("[interactions:interactions_grace_passed] Initializing aerodynamical drag")
@@ -190,7 +189,7 @@ contains
             collfaq(flind%dst%pos,:) = dragc_gas_dust
             collfaq(:,flind%dst%pos) = dragc_gas_dust
 
-            fluid_interactions => fluid_interactions_aero_drag_ep
+            fluid_interactions => fluid_interactions_aero_drag
             has_interactions = .true.    !> \deprecated BEWARE: temporary hack,  switches on timestep_interactions
          else
             if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
@@ -294,13 +293,12 @@ contains
 
    subroutine update_grain_size(new_size)
       use fluidindex, only: flind
-      use units,      only: cm
       use constants,  only: DST
       implicit none
       real, intent(in) :: new_size
       integer :: i
 
-      grain_size = new_size * cm
+      grain_size = new_size
 
       do i = 1, flind%fluids
          if (flind%all_fluids(i)%tag /= DST) then
