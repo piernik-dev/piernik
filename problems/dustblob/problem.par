@@ -58,7 +58,7 @@
 
  $INTERACTIONS
  cfl_interact = 0.5
- dragc_gas_dust = 100.0
+ dragc_gas_dust = 1.0
  /
 
  $NUMERICAL_SETUP
@@ -67,6 +67,7 @@
     smallei= 1.e-4
     integration_order = 2
     limiter= 'vanleer'
+    dt_initial = 1.e-5
  /
 
  $PROBLEM_CONTROL
