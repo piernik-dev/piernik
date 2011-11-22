@@ -227,7 +227,7 @@ contains
 
    subroutine reg_var(this, name, restart_mode, dim4)
 
-      use dataio_pub, only: die
+      use dataio_pub, only: die, msg
 
       implicit none
 
@@ -241,7 +241,10 @@ contains
       cgl => this%first
       do while (associated(cgl))
          if (present(dim4)) then
-            if (dim4<=0) call die("[gc_list:reg_var] dim4<=0")
+            if (dim4<=0) then
+               write(msg,'(3a)')"[gc_list:reg_var] dim4<=0 for variable'",name,"'"
+               call die(msg)
+            endif
             call cgl%cg%add_na_4d(name, restart_mode, dim4)
          else
             call cgl%cg%add_na(name, restart_mode)
