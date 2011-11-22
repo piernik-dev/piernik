@@ -63,9 +63,6 @@
  /
 
  $PROBLEM_CONTROL
-   vx0 = -1.0
-   vy0 = 0.0
-   vz0 = 0.0
  /
 
  $INTERACTIONS
