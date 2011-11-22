@@ -210,7 +210,10 @@ contains
 
       ncrs = ncre + ncrn
 
-      if (ncrs > ncr_max) call die("[initcosmicrays:init_cosmicrays] ncrs > ncr_max") !> \warning higher ncr_max limit would require changes in names of components in common_hdf5
+      if (any([ncrs, ncrn, ncre] > ncr_max) .or. any([ncrs, ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
+      !> \warning higher ncr_max limit would require changes in names of components in common_hdf5
+
+      if (ncrs ==0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0")
 
       ma1d = [ncrs]
       call my_allocate(gamma_crs,   ma1d)

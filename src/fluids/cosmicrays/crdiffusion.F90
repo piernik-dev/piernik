@@ -40,19 +40,28 @@ module crdiffusion
    private
    public :: cr_diff, init_crdiffusion
 
+   logical :: has_cr
+
 contains
 
    subroutine init_crdiffusion(crsall)
 
-      use constants, only: wcr_n, AT_IGNORE
-      use cr_data,   only: divv_n
-      use grid,      only: all_cg
+      use constants,  only: wcr_n, AT_IGNORE
+      use cr_data,    only: divv_n
+      use dataio_pub, only: warn
+      use grid,       only: all_cg
 
       implicit none
 
       integer(kind=4), intent(in) :: crsall
 
-      call all_cg%reg_var(wcr_n, AT_IGNORE, crsall)
+      has_cr = (crsall > 0)
+
+      if (has_cr) then
+         call all_cg%reg_var(wcr_n, AT_IGNORE, crsall)
+      else
+         call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
+      endif
       call all_cg%reg_var(divv_n, AT_IGNORE)
 
    end subroutine init_crdiffusion
@@ -81,6 +90,8 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       real, dimension(:,:,:,:), pointer :: wcr
+
+      if (.not. has_cr) return
 
       if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(leaves%first%cg%get_na_ind_4d(wcr_n))
 
@@ -189,8 +200,7 @@ contains
       logical, dimension(ndims)            :: present_not_crdim
       real, dimension(:,:,:,:), pointer    :: wcr
 
-!=======================================================================
-
+      if (.not. has_cr) return
       if (.not.dom%has_dir(crdim)) return
 
       idm        = 0              ;      idm(crdim) = 1
