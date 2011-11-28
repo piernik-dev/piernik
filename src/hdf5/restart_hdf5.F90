@@ -87,7 +87,7 @@ contains
 
       filename = restart_fname(WR)
       if (master) then
-         write(msg,'(a,f4.2,2a)') 'Writing restart v', phv, trim(filename), " ... "
+         write(msg,'(a,f5.2,2a)') 'Writing restart v', phv, trim(filename), " ... "
          call printio(msg, .true.)
       endif
       call set_common_attributes(filename)
@@ -1229,11 +1229,11 @@ contains
       real, dimension(:), allocatable :: rbuf
       integer(kind=4), dimension(:), allocatable :: ibuf
       character(len=cbuff_len) :: cbuf
-      character(len=cbuff_len), dimension(*), parameter :: real_attrs = [ "time         ", "timestep     ", "last_hdf_time",  &
+      character(len=cbuff_len), dimension(6), parameter :: real_attrs = [ "time         ", "timestep     ", "last_hdf_time",  &
            &                                                              "magic_mass   ", "next_t_tsl   ", "next_t_log   " ]
-      character(len=cbuff_len), dimension(*), parameter :: int_attrs = [ "nstep            ", "nres             ", "nhdf             ", &
+      character(len=cbuff_len), dimension(6), parameter :: int_attrs = [ "nstep            ", "nres             ", "nhdf             ", &
            &                                                             "step_res         ", "step_hdf         ", "require_init_prob" ]
-      character(len=cbuff_len), dimension(*), parameter :: str_attrs = [ "problem_name", "domain      ", "run_id      " ]
+      character(len=cbuff_len), dimension(3), parameter :: str_attrs = [ "problem_name", "domain      ", "run_id      " ]
       !> \deprecated same strings are used independently in set_common_attributes*
       integer :: ia, j
       integer(kind=4) :: nres_old

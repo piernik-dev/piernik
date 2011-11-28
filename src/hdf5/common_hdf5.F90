@@ -712,7 +712,7 @@ contains
          call h5gopen_f(file_id, cg_gname, cgl_g_id, error)
       endif
 
-      call write_cg_to_hdf5(cgl_g_id, cg_n(:), cg_all_n_b(:,:)) !!!!!
+      call write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b) !!!!!
 
       if (can_i_write) then
          call h5gclose_f(cgl_g_id, error)

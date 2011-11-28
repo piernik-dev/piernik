@@ -58,7 +58,7 @@ contains
       use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, INVALID, LONG, &
            &                 ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n,cs_i2_n
       use dataio_pub,  only: printinfo, die, code_progress
-      use domain,      only: pdom, is_multicg
+      use domain,      only: pdom, is_multicg, cuboids
       use fluidindex,  only: flind
       use gc_list,     only: cg_list_element
       use global,      only: repeat_step
@@ -71,6 +71,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       type(cg_list_patch), pointer :: pbd
+      type(cuboids), pointer :: lpse
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
@@ -89,7 +90,8 @@ contains
       enddo
 
       pbd => base_dom(NBD)
-      call dom2cg(pdom%n_d(:), [ 0_LONG, 0_LONG, 0_LONG ], 0, pdom%pse(proc), pbd)
+      lpse => pdom%pse(proc)
+      call dom2cg(pdom%n_d(:), [ 0_LONG, 0_LONG, 0_LONG ], 0, lpse, pbd)
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
