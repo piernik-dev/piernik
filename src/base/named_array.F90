@@ -92,11 +92,14 @@ module named_array
          procedure :: clean => array4d_clean
          procedure :: array4d_get_sweep
          procedure :: array4d_get_sweep_one_var
+         procedure :: array4d_span
+         procedure :: array4d_span_one_var
          procedure :: check => array4d_check_if_dirty
          procedure :: lb => array4d_lbound
          procedure :: ub => array4d_ubound
          generic, public :: init => array4d_init, array4d_associate
          generic, public :: get_sweep => array4d_get_sweep_one_var, array4d_get_sweep
+         generic, public :: span => array4d_span_one_var, array4d_span
    end type named_array4d
 
    !> \brief A named array for scalar fields
@@ -108,6 +111,7 @@ module named_array
          procedure :: clean => array3d_clean
          procedure :: check => array3d_check_if_dirty
          procedure :: get_sweep => array3d_get_sweep
+         procedure :: span => array3d_span
          procedure :: lb => array3d_lbound
          procedure :: ub => array3d_ubound
          generic, public :: init => array3d_init, array3d_associate
@@ -352,6 +356,70 @@ contains
       end select
 
    end function array4d_get_sweep
+
+!> \brief Get a selected range of values
+
+   function array3d_span(this,v1,v2) result(p3d)
+
+      use constants, only: xdim, ydim, zdim, ndims
+
+      implicit none
+
+      class(named_array3d),      intent(inout) :: this
+      integer, dimension(ndims), intent(in)    :: v1, v2
+
+      real, dimension(:,:,:), pointer          :: p3d
+
+      if (.not.associated(this%arr)) then
+         p3d => null()
+      else
+         p3d => this%arr(v1(xdim):v2(xdim),v1(ydim):v2(ydim),v1(zdim):v2(zdim))
+      endif
+
+   end function array3d_span
+
+!> \brief Get a selected range of values of one variable
+
+   function array4d_span_one_var(this,nn,v1,v2) result(p3d)
+
+      use constants, only: xdim, ydim, zdim, ndims
+
+      implicit none
+
+      class(named_array4d),      intent(inout) :: this
+      integer(kind=4),           intent(in)    :: nn
+      integer, dimension(ndims), intent(in)    :: v1, v2
+
+      real, dimension(:,:,:),  pointer         :: p3d
+
+      if (.not.associated(this%arr)) then
+         p3d => null()
+      else
+         p3d => this%arr(nn,v1(xdim):v2(xdim),v1(ydim):v2(ydim),v1(zdim):v2(zdim))
+      endif
+
+   end function array4d_span_one_var
+
+!> \brief Get a selected line of values of all variables
+
+   function array4d_span(this,v1,v2) result(p3d)
+
+      use constants, only: xdim, ydim, zdim, ndims
+
+      implicit none
+
+      class(named_array4d),      intent(inout) :: this
+      integer, dimension(ndims), intent(in)    :: v1, v2
+
+      real, dimension(:,:,:,:), pointer        :: p3d
+
+      if (.not.associated(this%arr)) then
+         p3d => null()
+      else
+         p3d => this%arr(:,v1(xdim):v2(xdim),v1(ydim):v2(ydim),v1(zdim):v2(zdim))
+      endif
+
+   end function array4d_span
 
 !> \brief Get the upper bound of a 4D named array
    function array4d_ubound(this,dim_) result(n)
