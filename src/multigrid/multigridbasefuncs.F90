@@ -71,8 +71,8 @@ contains
    subroutine prolong_level(coarse, iv)
 
       use dataio_pub,            only: die
-      use multigridhelpers,      only: dirty_debug, check_dirty, dirtyH
       use multigridvars,         only: plvl, roof, ord_prolong, ngridvars, is_mg_uneven
+      use multigridhelpers,      only: dirty_debug, check_dirty, dirtyH
       use multigridexperimental, only: prolong_level_hord
 
       implicit none
@@ -112,8 +112,8 @@ contains
    subroutine restrict_all(iv)
 
       use dataio_pub,         only: die
-      use multigridhelpers,   only: check_dirty
       use multigridvars,      only: roof, base, ngridvars, plvl
+      use multigridhelpers,   only: check_dirty
 
       implicit none
 
@@ -240,9 +240,9 @@ contains
       use grid_cont,          only: pr_segment
       use mpi,                only: MPI_DOUBLE_PRECISION
       use mpisetup,           only: proc, comm, ierr, req, status, master
+      use multigridvars,      only: plvl, ord_prolong_face_norm, ord_prolong_face_par, base, extbnd_antimirror, is_external, need_general_pf
       use multigridhelpers,   only: check_dirty
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: plvl, ord_prolong_face_norm, ord_prolong_face_par, base, extbnd_antimirror, is_external, need_general_pf
 
       implicit none
 

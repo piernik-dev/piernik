@@ -108,8 +108,8 @@ contains
       use dataio_pub,        only: die, warn, msg
       use domain,            only: dom
       use mpisetup,          only: master
-      use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: ord_prolong, extbnd_antimirror, plvl
+      use multigridmpifuncs, only: mpi_multigrid_bnd
 
       implicit none
 

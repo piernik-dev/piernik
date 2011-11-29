@@ -901,8 +901,8 @@ contains
       use dataio_pub,       only: msg, die
       use global,           only: t
       use mpisetup,         only: master
-      use multigridhelpers, only: set_dirty, check_dirty, mg_write_log
       use multigridvars,    only: plvl, base, roof, stdout, solution
+      use multigridhelpers, only: set_dirty, check_dirty, mg_write_log
 
       implicit none
 
@@ -992,6 +992,7 @@ contains
       use domain,             only: dom, is_multicg
       use grid,               only: leaves
       use grid_cont,          only: grid_container
+      use multigridvars,      only: plvl  ! QA_WARN workaround for stupid INTEL compiler
       use multigridbasefuncs, only: subtract_average
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridvars,      only: roof, source, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval
@@ -1095,6 +1096,7 @@ contains
    subroutine store_solution(history)
 
       use global,            only: t
+      use multigridvars,     only: plvl  ! QA_WARN workaround for stupid INTEL compiler
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: roof, bnd_isolated, bnd_givenval, solution, extbnd_extrapolate, extbnd_mirror
 
@@ -1205,10 +1207,10 @@ contains
       use constants,          only: cbuff_len
       use mpisetup,           only: master, nproc
       use timer,              only: set_timer
-      use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
-      use multigridbasefuncs, only: norm_sq, restrict_all, subtract_average
       use dataio_pub,         only: msg, die, warn
       use multigridvars,      only: plvl, roof, base, source, solution, correction, defect, verbose_vcycle, bnd_periodic, stdout, tot_ts, ts
+      use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
+      use multigridbasefuncs, only: norm_sq, restrict_all, subtract_average
 
       implicit none
 
@@ -1389,9 +1391,9 @@ contains
       use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half, I_ONE
       use dataio_pub,         only: die
       use domain,             only: dom
+      use multigridvars,      only: plvl, extbnd_antimirror
       use multigridhelpers,   only: multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: plvl, extbnd_antimirror
 
       implicit none
 
@@ -1502,8 +1504,8 @@ contains
       use dataio_pub,        only: die, warn
       use domain,            only: dom
       use mpisetup,          only: master
-      use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: plvl, bnd_givenval, extbnd_antimirror
+      use multigridmpifuncs, only: mpi_multigrid_bnd
       use constants,         only: ndims
 
       implicit none
@@ -1596,9 +1598,9 @@ contains
    subroutine approximate_solution(curl, src, soln)
 
       use dataio_pub,         only: die
+      use multigridvars,      only: plvl, base, roof, ngridvars, correction
       use multigridhelpers,   only: check_dirty
       use multigridbasefuncs, only: prolong_level
-      use multigridvars,      only: plvl, base, roof, ngridvars, correction
 
       implicit none
 
@@ -1638,9 +1640,9 @@ contains
       use constants,         only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE
       use dataio_pub,        only: die
       use domain,            only: dom
+      use multigridvars,     only: plvl, base, extbnd_antimirror
       use multigridhelpers,  only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: plvl, base, extbnd_antimirror
 
       implicit none
 
@@ -1792,9 +1794,9 @@ contains
       use constants,         only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE
       use dataio_pub,        only: die, warn
       use domain,            only: dom
+      use multigridvars,     only: plvl, base, extbnd_antimirror, single_base
       use multigridhelpers,  only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: plvl, base, extbnd_antimirror, single_base
 
       implicit none
 
@@ -1984,9 +1986,9 @@ contains
    subroutine make_face_boundaries(curl, soln)
 
       use mpisetup,           only: nproc
+      use multigridvars,      only: bnd_givenval, bnd_periodic, base, single_base, plvl
       use multigridbasefuncs, only: zero_boundaries, prolong_faces
       use dataio_pub,         only: warn
-      use multigridvars,      only: bnd_givenval, bnd_periodic, base, single_base, plvl
 
       implicit none
 
