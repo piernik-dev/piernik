@@ -353,6 +353,9 @@ contains
       use gc_list,            only: cg_list_element
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_crs
+#if defined(__INTEL_COMPILER)
+      use multigridvars,      only: plvl ! QA_WARN workaround for stupid INTEL compiler
+#endif /* __INTEL_COMPILER */
       use multigridbasefuncs, only: norm_sq
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridvars,      only: roof, source, defect, correction
@@ -400,6 +403,9 @@ contains
       use gc_list,          only: cg_list_element
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crs
+#if defined(__INTEL_COMPILER)
+      use multigridvars,      only: plvl ! QA_WARN workaround for stupid INTEL compiler
+#endif /* __INTEL_COMPILER */
       use multigridhelpers, only: set_dirty, check_dirty
       use multigridvars,    only: roof, solution
 
@@ -437,10 +443,10 @@ contains
       use grid,               only: leaves
       use gc_list,            only: cg_list_element
       use grid_cont,          only: grid_container
+      use multigridvars,      only: base, roof, extbnd_mirror, plvl
       use multigridbasefuncs, only: restrict_all
       use multigridhelpers,   only: set_dirty, check_dirty, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: base, roof, extbnd_mirror, plvl
 
       implicit none
 
@@ -492,9 +498,9 @@ contains
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_crs
       use mpisetup,           only: master
+      use multigridvars,      only: source, defect, solution, correction, base, roof, plvl, ts, tot_ts
       use multigridbasefuncs, only: norm_sq, restrict_all, prolong_level
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, brief_v_log, dirty_label
-      use multigridvars,      only: source, defect, solution, correction, base, roof, plvl, ts, tot_ts
       use timer,              only: set_timer
 
       implicit none
@@ -692,9 +698,9 @@ contains
       use global,            only: dt
       use grid,              only: leaves
       use grid_cont,         only: grid_container
+      use multigridvars,     only: plvl
       use multigridhelpers,  only: check_dirty
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: plvl
 
       implicit none
 
@@ -759,8 +765,8 @@ contains
       use global,            only: dt
       use grid,              only: leaves
       use grid_cont,         only: grid_container
-      use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: plvl, base, extbnd_donothing
+      use multigridmpifuncs, only: mpi_multigrid_bnd
 
       implicit none
 
