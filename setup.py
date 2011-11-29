@@ -228,7 +228,7 @@ class DirectoryWalker:
                    self.index = 0
                 except OSError:
                    print "\033[91mCannot open problem directory '%s'." % self.directory + '\033[0m'
-                   exit()
+                   sys.exit()
             else:
                 # got a filename
                 fullname = os.path.join(self.directory, file)
@@ -304,11 +304,11 @@ if(options.verbose):
 
 if(options.show_problems):
    print get_stdout("cat problems/*/info")
-   exit()
+   sys.exit()
 
 if(options.show_units):
    print get_stdout("grep uses ./src/base/constants.F90")
-   exit()
+   sys.exit()
 
 if (len(args) < 1):
    parser.error("incorrect number of arguments")
@@ -317,7 +317,7 @@ if (len(args) < 1):
 probdir = 'problems/'+args[0]+'/'
 if (not os.path.isdir(probdir)):
    print "\033[91mCannot find problem directory '%s'." % probdir + '\033[0m'
-   exit()
+   sys.exit()
    
 # parse cppflags
 if(options.cppflags):
@@ -363,7 +363,7 @@ for pf in req_prob:
    if (not os.path.isfile(probdir+pf)):
       print "\033[91mCannot find required file",probdir+pf,"\033[0m"
       req_missing = True
-if (req_missing): exit()
+if (req_missing): sys.exit()
     
 allfiles.append(probdir+"piernik.def")
 allfiles.append(probdir+options.param)
@@ -550,7 +550,7 @@ if (not options.nocompile):
       makejobs = "-j%i" % multiprocessing.cpu_count()
    makecmd = "make %s -C %s" % ( makejobs, objdir)
    if( sp.call([makecmd], shell=True) != 0):
-      exit('\033[91m' + "It appears that '%s' crashed. Cannot continue." % makecmd + '\033[0m')
+      sys.exit('\033[91m' + "It appears that '%s' crashed. Cannot continue." % makecmd + '\033[0m')
 
 try: os.makedirs(rundir)
 except OSError:
