@@ -416,7 +416,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         tab => cg%q(ind)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         tab => cg%q(ind)%span(cg%ijkse)
          select case (minmax)
             case (MINL)
                if (minval(tab) < prop%val) then

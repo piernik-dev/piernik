@@ -371,8 +371,7 @@ contains
 
       class(named_array3d),      intent(inout) :: this
       integer, dimension(ndims), intent(in)    :: v1, v2
-
-      real, dimension(:,:,:), pointer          :: p3d
+      real,    dimension(:,:,:), pointer       :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -392,8 +391,7 @@ contains
 
       class(named_array3d),            intent(inout) :: this
       integer, dimension(ndims,LO:HI), intent(in)    :: v
-
-      real, dimension(:,:,:), pointer                :: p3d
+      real,    dimension(:,:,:), pointer             :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -414,8 +412,7 @@ contains
       class(named_array4d),      intent(inout) :: this
       integer(kind=4),           intent(in)    :: nn
       integer, dimension(ndims), intent(in)    :: v1, v2
-
-      real, dimension(:,:,:),  pointer         :: p3d
+      real,    dimension(:,:,:),  pointer      :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -436,8 +433,7 @@ contains
       class(named_array4d),            intent(inout) :: this
       integer(kind=4),                 intent(in)    :: nn
       integer, dimension(ndims,LO:HI), intent(in)    :: v
-
-      real, dimension(:,:,:),  pointer               :: p3d
+      real,    dimension(:,:,:),  pointer            :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -457,8 +453,7 @@ contains
 
       class(named_array4d),      intent(inout) :: this
       integer, dimension(ndims), intent(in)    :: v1, v2
-
-      real, dimension(:,:,:,:), pointer        :: p3d
+      real,    dimension(:,:,:,:), pointer     :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()
@@ -478,8 +473,7 @@ contains
 
       class(named_array4d),            intent(inout) :: this
       integer, dimension(ndims,LO:HI), intent(in)    :: v
-
-      real, dimension(:,:,:,:), pointer              :: p3d
+      real,    dimension(:,:,:,:), pointer           :: p3d
 
       if (.not.associated(this%arr)) then
          p3d => null()

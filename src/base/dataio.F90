@@ -744,7 +744,7 @@ contains
 !
    subroutine write_timeslice
 
-      use constants,   only: cwdlen, xdim, ydim, zdim, half
+      use constants,   only: cwdlen, xdim, ydim, zdim, half, fluid_n, mag_n, wa_n, gpot_n
       use dataio_pub,  only: wd_wr, warn
       use dataio_user, only: user_tsl
       use diagnostics, only: pop_vector
@@ -771,6 +771,8 @@ contains
       character(len=cwdlen)                               :: tsl_file, head_fmt
       character(len=cbuff_len), dimension(:), allocatable :: tsl_names
       real, allocatable, dimension(:)                     :: tsl_vars
+      real, dimension(:,:,:,:), pointer                   :: pu, pb
+      real, dimension(:,:,:),   pointer                   :: pwa
       type(phys_prop), pointer                            :: sn
 
       real, save :: tot_mass = 0.0, tot_momx = 0.0, tot_momy = 0.0, tot_momz = 0.0, &
@@ -838,35 +840,33 @@ contains
          endif
       endif
 
-      tot_mass = mpi_addmul(cg%u(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
-      tot_momx = mpi_addmul(cg%u(iarr_all_mx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
-      tot_momy = mpi_addmul(cg%u(iarr_all_my, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
-      tot_momz = mpi_addmul(cg%u(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      pu => cg%w(cg%get_na_ind_4d(fluid_n))%span(cg%ijkse)
+      pb => cg%w(cg%get_na_ind_4d(mag_n  ))%span(cg%ijkse)
+      pwa=> cg%q(cg%get_na_ind   (wa_n   ))%span(cg%ijkse)
+
+      tot_mass = mpi_addmul(pu(iarr_all_dn,:,:,:), cg%dvol)
+      tot_momx = mpi_addmul(pu(iarr_all_mx,:,:,:), cg%dvol)
+      tot_momy = mpi_addmul(pu(iarr_all_my,:,:,:), cg%dvol)
+      tot_momz = mpi_addmul(pu(iarr_all_mz,:,:,:), cg%dvol)
 #ifdef GRAV
-      tot_epot = mpi_addmul(cg%u(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) * cg%gpot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_epot = mpi_addmul(pu(iarr_all_dn(1),:,:,:) * cg%q(cg%get_na_ind(gpot_n))%span(cg%ijkse), cg%dvol)
 #endif /* GRAV */
 
       cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-           & half * (cg%u(iarr_all_mx(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
-           &      + cg%u(iarr_all_my(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2   &
-           &      + cg%u(iarr_all_mz(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)/ &
-           & max(cg%u(iarr_all_dn(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke),smalld)
-      tot_ekin = mpi_addmul(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+           & half * (pu(iarr_all_mx(1),:,:,:)**2 + pu(iarr_all_my(1),:,:,:)**2 + pu(iarr_all_mz(1),:,:,:))/ max(pu(iarr_all_dn(1),:,:,:),smalld)
+      tot_ekin = mpi_addmul(pwa, cg%dvol)
 
-      cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-           & half * (cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
-           &        cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2 + &
-           &        cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2)
-      tot_emag = mpi_addmul(cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      pwa = half * (pb(xdim,:,:,:)**2 + pb(ydim,:,:,:)**2 + pb(zdim,:,:,:)**2)
+      tot_emag = mpi_addmul(pwa, cg%dvol)
 
-      tot_mflx = mpi_addmul(cg%b(xdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dy*cg%dz/dom%n_d(xdim))
-      tot_mfly = mpi_addmul(cg%b(ydim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dz/dom%n_d(ydim))
-      tot_mflz = mpi_addmul(cg%b(zdim, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dx*cg%dy/dom%n_d(zdim))
+      tot_mflx = mpi_addmul(pb(xdim,:,:,:), cg%dy*cg%dz/dom%n_d(xdim))
+      tot_mfly = mpi_addmul(pb(ydim,:,:,:), cg%dx*cg%dz/dom%n_d(ydim))
+      tot_mflz = mpi_addmul(pb(zdim,:,:,:), cg%dx*cg%dy/dom%n_d(zdim))
 #ifdef ISO
       tot_eint = cs_iso2*tot_mass
       tot_ener = tot_eint+tot_ekin+tot_emag
 #else /* !ISO */
-      tot_ener = mpi_addmul(cg%u(iarr_all_en, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_ener = mpi_addmul(pu(iarr_all_en,:,:,:), cg%dvol)
       tot_eint = tot_ener - tot_ekin - tot_emag
 #endif /* !ISO */
 #ifdef GRAV
@@ -874,7 +874,7 @@ contains
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-      tot_encr = mpi_addmul(cg%u(iarr_all_crs, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), cg%dvol)
+      tot_encr = mpi_addmul(pu(iarr_all_crs,:,:,:), cg%dvol)
 #endif /* COSM_RAYS */
 
       call write_log(tsl)

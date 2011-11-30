@@ -1040,7 +1040,7 @@ contains
                      call h5dopen_f(cg_g_id, all_cg%first%cg%q(q_lst(i))%name, dset_id, error)
                      if (cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_src_n(ncg))
-                        pa3d => cg%q(q_lst(i))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
+                        pa3d => cg%q(q_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
                         dims(:) = cg%n_b
                      else
                         allocate(pa3d(cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
@@ -1060,7 +1060,7 @@ contains
                      call h5dopen_f(cg_g_id, all_cg%first%cg%w(w_lst(i))%name, dset_id, error)
                      if (cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_src_n(ncg))
-                        pa4d => cg%w(w_lst(i))%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) !< \todo use set_dims_for_restart
+                        pa4d => cg%w(w_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
                         dims(:) = [ size(pa4d, dim=1, kind=4), cg%n_b ]
                      else
                         allocate(pa4d(size(all_cg%first%cg%w(w_lst(i))%arr(:,:,:,:), dim=1), cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
@@ -1080,7 +1080,7 @@ contains
                   if (size(q_lst) > 0) then
                      do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
                         allocate(pa3d(cg%n_b(xdim), cg%n_b(ydim), cg%n_b(zdim)))
-                        pa3d(:,:,:) = cg%q(q_lst(i))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+                        pa3d => cg%q(q_lst(i))%span(cg%ijkse)
                         call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*i, comm, error)
                         deallocate(pa3d)
                      enddo
@@ -1088,7 +1088,7 @@ contains
                   if (size(w_lst) > 0) then
                      do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
                         allocate(pa4d(size(cg%w(w_lst(i))%arr(:,:,:,:), dim=1), cg%n_b(xdim), cg%n_b(ydim), cg%n_b(zdim)))
-                        pa4d(:,:,:,:) = cg%w(w_lst(i))%arr(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+                        pa4d => cg%w(w_lst(i))%span(cg%ijkse)
                         call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*(size(q_lst)+i), comm, error)
                         deallocate(pa4d)
                      enddo
