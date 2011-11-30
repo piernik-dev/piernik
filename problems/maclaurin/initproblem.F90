@@ -306,7 +306,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         apot => cg%get_na_ptr(apot_n)
+         apot => cg%ptr(apot_n)
 
          do k = cg%ks, cg%ke
             z02 = (cg%z(k)-z0)**2
@@ -395,7 +395,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         apot => cg%get_na_ptr(apot_n)
+         apot => cg%ptr(apot_n)
          if (.not. associated(apot))then
             if (master) call warn("[initproblem:finalize_problem_maclaurin] Cannot compare results with the analytical potential.")
             return
@@ -447,7 +447,7 @@ contains
       real, dimension(:,:,:), pointer :: apot
 
       ierrh = 0
-      apot => cg%get_na_ptr(apot_n)
+      apot => cg%ptr(apot_n)
       select case (trim(var))
          case ("apot")
             tab(:,:,:) = real(apot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)

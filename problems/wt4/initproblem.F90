@@ -393,7 +393,7 @@ contains
          cg%b(:, 1:cg%n_(xdim), 1:cg%n_(ydim), 1:cg%n_(zdim)) = 0.0
 
          do i = D0, VY0
-            q0 => cg%get_na_ptr(q_n(i))
+            q0 => cg%ptr(q_n(i))
             select case (i)
                case (D0)
                   q0 = cg%u(fl%idn,:,:,:)
@@ -529,9 +529,9 @@ contains
                   enddo
                enddo
             case (3)
-               den0 => cg%get_na_ptr(q_n(D0))
-               vlx0 => cg%get_na_ptr(q_n(VX0))
-               vly0 => cg%get_na_ptr(q_n(VY0))
+               den0 => cg%ptr(q_n(D0))
+               vlx0 => cg%ptr(q_n(VX0))
+               vly0 => cg%ptr(q_n(VY0))
                allocate(alf(cg%n_(xdim), cg%n_(ydim)))
                do i = 1, cg%n_(xdim)
                   do j = 1, cg%n_(ydim)

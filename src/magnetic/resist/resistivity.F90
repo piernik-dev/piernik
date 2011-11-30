@@ -151,7 +151,7 @@ contains
       if (eta_1 == 0.) then
          cgl => leaves%first
          do while (associated(cgl))
-            cgl%cg%q(cgl%cg%get_na_ind(eta_n))%arr = eta_0
+            cgl%cg%q(cgl%cg%ind(eta_n))%arr = eta_0
             cgl => cgl%nxt
          enddo
          etamax%val  = eta_0
@@ -163,9 +163,9 @@ contains
 
          cgl => leaves%first
          do while (associated(cgl))
-            if (.not. dom%has_dir(xdim)) cgl%cg%q(cgl%cg%get_na_ind(dbx_n))%arr = 0.0
-            if (.not. dom%has_dir(ydim)) cgl%cg%q(cgl%cg%get_na_ind(dby_n))%arr = 0.0
-            if (.not. dom%has_dir(zdim)) cgl%cg%q(cgl%cg%get_na_ind(dbz_n))%arr = 0.0
+            if (.not. dom%has_dir(xdim)) cgl%cg%q(cgl%cg%ind(dbx_n))%arr = 0.0
+            if (.not. dom%has_dir(ydim)) cgl%cg%q(cgl%cg%ind(dby_n))%arr = 0.0
+            if (.not. dom%has_dir(zdim)) cgl%cg%q(cgl%cg%ind(dbz_n))%arr = 0.0
             cgl => cgl%nxt
          enddo
 
@@ -210,12 +210,12 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         eta => cg%get_na_ptr(eta_n)
-         dbx => cg%get_na_ptr(dbx_n)
-         dby => cg%get_na_ptr(dby_n)
-         dbz => cg%get_na_ptr(dbz_n)
-         wb => cg%get_na_ptr(wb_n)
-         eh => cg%get_na_ptr(eh_n)
+         eta => cg%ptr(eta_n)
+         dbx => cg%ptr(dbx_n)
+         dby => cg%ptr(dby_n)
+         dbz => cg%ptr(dbz_n)
+         wb => cg%ptr(wb_n)
+         eh => cg%ptr(eh_n)
 
          if (dom%has_dir(xdim)) then
             dbx(2:cg%n_(xdim),:,:) = (cg%b(ydim,2:cg%n_(xdim),:,:)-cg%b(ydim,1:cg%n_(xdim)-1,:,:))*cg%idl(xdim) ; dbx(1,:,:) = dbx(2,:,:)
@@ -274,23 +274,23 @@ contains
       cg => leaves%first%cg
       if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum, wb, eta
 
-      call leaves%get_extremum(cg%get_na_ind(eta_n), MAXL, etamax)
+      call leaves%get_extremum(cg%ind(eta_n), MAXL, etamax)
       call MPI_Bcast(etamax%val, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call leaves%get_extremum(cg%get_na_ind(wb_n), MAXL, cu2max)
+      call leaves%get_extremum(cg%ind(wb_n), MAXL, cu2max)
 
 #ifndef ISO
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         eta => cg%get_na_ptr(eta_n)
-         wb => cg%get_na_ptr(wb_n)
+         eta => cg%ptr(eta_n)
+         wb => cg%ptr(wb_n)
          wb = ( cg%u(flind%ion%ien,:,:,:) - half*( cg%u(flind%ion%imx,:,:,:)**2  + cg%u(flind%ion%imy,:,:,:)**2  + cg%u(flind%ion%imz,:,:,:)**2 ) &
               / cg%u(flind%ion%idn,:,:,:) - half*( cg%b(xdim,:,:,:)**2  +   cg%b(ydim,:,:,:)**2  +   cg%b(zdim,:,:,:)**2))/ ( eta(:,:,:) * wb+small)
-         dt_eint = deint_max * abs(minval(cg%q(cg%get_na_ind(wb_n))%span(cg%ijkse)))
+         dt_eint = deint_max * abs(minval(cg%q(cg%ind(wb_n))%span(cg%ijkse)))
          cgl => cgl%nxt
       enddo
 
-      call leaves%get_extremum(cg%get_na_ind(wb_n), MINL, deimin)
+      call leaves%get_extremum(cg%ind(wb_n), MINL, deimin)
 #endif /* !ISO */
       NULLIFY(p)
 
@@ -410,9 +410,9 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         b_i   = cg%get_na_ind_4d(mag_n)
-         wcu_i = cg%get_na_ind(wcu_n)
-         eta_i = cg%get_na_ind(eta_n)
+         b_i   = cg%ind_4d(mag_n)
+         wcu_i = cg%ind(wcu_n)
+         eta_i = cg%ind(eta_n)
 
 !         select case (etadir)
 !            case (xdim)

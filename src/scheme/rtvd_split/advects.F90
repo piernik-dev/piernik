@@ -96,9 +96,9 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         i_wa = cg%get_na_ind(wa_n)
-         ui   = cg%get_na_ind_4d(fluid_n)
-         bi   = cg%get_na_ind_4d(mag_n)
+         i_wa = cg%ind(wa_n)
+         ui   = cg%ind_4d(fluid_n)
+         bi   = cg%ind_4d(mag_n)
 
          if (any([allocated(vv), allocated(vv0)])) call die("[advects:advectb] vv or vv0 already allocated")
          allocate(vv(cg%n_(vdir)), vv0(cg%n_(vdir)))

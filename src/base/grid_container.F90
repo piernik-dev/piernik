@@ -214,10 +214,10 @@ module grid_cont
       procedure :: mpi_bnd_types
       procedure :: add_na
       procedure :: add_na_4d
-      procedure :: get_na_ptr
-      procedure :: get_na_ptr_4d
-      procedure :: get_na_ind
-      procedure :: get_na_ind_4d
+      procedure :: ptr
+      procedure :: ptr_4d
+      procedure :: ind
+      procedure :: ind_4d
       procedure :: exists
       procedure :: exists_4d
 
@@ -933,7 +933,7 @@ contains
 !!
 !! \details This is the preferred method to access the registered array
 !<
-   function get_na_ptr(this, name) result(ptr)
+   function ptr(this, name) result(ptr)
 
       use dataio_pub, only: die, msg, warn
 
@@ -950,7 +950,7 @@ contains
       do i = lbound(this%q, dim=1), ubound(this%q, dim=1)
          if (trim(name) ==  this%q(i)%name) then
             if (associated(ptr)) then
-               write(msg, '(2a)') "[grid_container:get_na_ptr] multiple entries with the same name ",trim(name)
+               write(msg, '(2a)') "[grid_container:ptr] multiple entries with the same name ",trim(name)
                call die(msg)
             endif
             ptr => this%q(i)%arr
@@ -958,18 +958,18 @@ contains
       enddo
 
       if (.not. associated(ptr)) then
-         write(msg, '(2a)') "[grid_container:get_na_ptr] requested entry not found: ", trim(name)
+         write(msg, '(2a)') "[grid_container:ptr] requested entry not found: ", trim(name)
          call warn(msg)
       endif
 
-   end function get_na_ptr
+   end function ptr
 
 !>
 !! \brief Get the pointer to a named 4d array of given name.
 !!
 !! \details This is the preferred method to access the registered array
 !<
-   function get_na_ptr_4d(this, name) result(ptr)
+   function ptr_4d(this, name) result(ptr)
 
       use dataio_pub, only: die, msg, warn
 
@@ -986,7 +986,7 @@ contains
       do i = lbound(this%w, dim=1), ubound(this%w, dim=1)
          if (trim(name) ==  this%w(i)%name) then
             if (associated(ptr)) then
-               write(msg, '(2a)') "[grid_container:get_na_ptr_4d] multiple entries with the same name: ", trim(name)
+               write(msg, '(2a)') "[grid_container:ptr_4d] multiple entries with the same name: ", trim(name)
                call die(msg)
             endif
             ptr => this%w(i)%arr
@@ -994,18 +994,18 @@ contains
       enddo
 
       if (.not. associated(ptr)) then
-         write(msg, '(2a)') "[grid_container:get_na_ptr_4d] requested entry not found: ", trim(name)
+         write(msg, '(2a)') "[grid_container:ptr_4d] requested entry not found: ", trim(name)
          call warn(msg)
       endif
 
-   end function get_na_ptr_4d
+   end function ptr_4d
 
 !>
 !! \brief Get the index of a named 3d array of given name.
 !!
-!! \details This method is provided for convenience only. Use get_na_ptr whenever possible.
+!! \details This method is provided for convenience only. Use ptr whenever possible.
 !<
-   function get_na_ind(this, name) result(ind)
+   function ind(this, name) result(ind)
 
       use dataio_pub, only: die, msg, warn
 
@@ -1021,7 +1021,7 @@ contains
       do i = lbound(this%q, dim=1, kind=4), ubound(this%q, dim=1, kind=4)
          if (trim(name) ==  this%q(i)%name) then
             if (ind /= 0) then
-               write(msg, '(2a)') "[grid_container:get_na_ind] multiple entries with the same name: ", trim(name)
+               write(msg, '(2a)') "[grid_container:ind] multiple entries with the same name: ", trim(name)
                call die(msg)
             endif
             ind = i
@@ -1029,18 +1029,18 @@ contains
       enddo
 
       if (ind == 0) then
-         write(msg, '(2a)') "[grid_container:get_na_ind] requested entry not found: ", trim(name)
+         write(msg, '(2a)') "[grid_container:ind] requested entry not found: ", trim(name)
          call warn(msg)
       endif
 
-   end function get_na_ind
+   end function ind
 
 !>
 !! \brief Get the index of a named 4d array of given name.
 !!
-!! \details This method is provided for convenience only. Use get_na_ptr whenever possible.
+!! \details This method is provided for convenience only. Use ptr whenever possible.
 !<
-   function get_na_ind_4d(this, name) result(ind)
+   function ind_4d(this, name) result(ind)
 
       use dataio_pub, only: die, msg, warn
 
@@ -1056,7 +1056,7 @@ contains
       do i = lbound(this%w, dim=1, kind=4), ubound(this%w, dim=1, kind=4)
          if (trim(name) ==  this%w(i)%name) then
             if (ind /= 0) then
-               write(msg, '(2a)') "[grid_container:get_na_ind_4d] multiple entries with the same name: ", trim(name)
+               write(msg, '(2a)') "[grid_container:ind_4d] multiple entries with the same name: ", trim(name)
                call die(msg)
             endif
             ind = i
@@ -1064,11 +1064,11 @@ contains
       enddo
 
       if (ind == 0) then
-         write(msg, '(2a)') "[grid_container:get_na_ind_4d] requested entry not found: ", trim(name)
+         write(msg, '(2a)') "[grid_container:ind_4d] requested entry not found: ", trim(name)
          call warn(msg)
       endif
 
-   end function get_na_ind_4d
+   end function ind_4d
 
 !> \brief Check if a 3D array of given name is already registered
 

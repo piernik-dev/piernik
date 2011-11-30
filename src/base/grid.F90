@@ -112,9 +112,9 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%u  => cg%get_na_ptr_4d(fluid_n)
-         cg%b  => cg%get_na_ptr_4d(mag_n)
-         cg%wa => cg%get_na_ptr(wa_n)
+         cg%u  => cg%ptr_4d(fluid_n)
+         cg%b  => cg%ptr_4d(mag_n)
+         cg%wa => cg%ptr(wa_n)
 
          if (allocated(cg%w)) then
             do d = xdim, zdim
@@ -133,7 +133,7 @@ contains
 
       cgl => all_cg%first
       do while (associated(cgl))
-         cgl%cg%cs_iso2 => cgl%cg%get_na_ptr(cs_i2_n)
+         cgl%cg%cs_iso2 => cgl%cg%ptr(cs_i2_n)
          cgl%cg%cs_iso2(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
          cgl => cgl%nxt
       enddo

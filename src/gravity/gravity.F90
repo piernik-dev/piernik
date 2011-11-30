@@ -281,13 +281,13 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%gpot => cgl%cg%get_na_ptr(gpot_n)
+         cgl%cg%gpot => cgl%cg%ptr(gpot_n)
          cgl%cg%gpot(:,:,:) = 0.0
-         cgl%cg%hgpot => cgl%cg%get_na_ptr(hgpot_n)
-         cgl%cg%gp => cgl%cg%get_na_ptr(gp_n)
+         cgl%cg%hgpot => cgl%cg%ptr(hgpot_n)
+         cgl%cg%gp => cgl%cg%ptr(gp_n)
 #ifdef SELF_GRAV
-         cgl%cg%sgp => cgl%cg%get_na_ptr(sgp_n)
-         cgl%cg%sgpm => cgl%cg%get_na_ptr(sgpm_n)
+         cgl%cg%sgp => cgl%cg%ptr(sgp_n)
+         cgl%cg%sgpm => cgl%cg%ptr(sgpm_n)
 #endif /* SELF_GRAV */
          cgl => cgl%nxt
       enddo
@@ -354,7 +354,7 @@ contains
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
 
 !> \warning An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
-      call arr3d_boundaries(leaves%first%cg%get_na_ind(sgp_n))
+      call arr3d_boundaries(leaves%first%cg%ind(sgp_n))
 
       if (frun) then
          cgl => leaves%first
@@ -999,7 +999,7 @@ contains
 
       ddgph  = gpwork(1,1,1)-gpwork(cg%is,cg%js,cg%ks)
       gpwork = gpwork + ddgp(px,py,pz) + ddgph
-      wa_i = cg%get_na_ind(wa_n)
+      wa_i = cg%ind(wa_n)
       cg%wa(:,:,:) = gpwork(:,:,:)
       call leaves%get_extremum(wa_i, MAXL, gp_max)
 

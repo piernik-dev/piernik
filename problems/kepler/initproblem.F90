@@ -514,7 +514,7 @@ contains
                enddo
 
             enddo
-            cg%w(cg%get_na_ind_4d(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
+            cg%w(cg%ind_4d(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
             cg%b(:,:,:,:) = 0.0
             if (allocated(grav)) deallocate(grav)
             if (allocated(dens_prof)) deallocate(dens_prof)
@@ -612,7 +612,7 @@ contains
 
          do j = 1, cg%n_(ydim)
             do k = 1, cg%n_(zdim)
-               cg%u(:,:,j,k) = cg%u(:,:,j,k) - dt*(cg%u(:,:,j,k) - cg%w(cg%get_na_ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
+               cg%u(:,:,j,k) = cg%u(:,:,j,k) - dt*(cg%u(:,:,j,k) - cg%w(cg%ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
             enddo
          enddo
          where ( cg%u(iarr_all_dn,:,:,:) < 2.*smalld )
@@ -722,7 +722,7 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(cg%get_na_ind_4d(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
+      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(cg%ind_4d(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
    end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------
    function get_lcutoff(width, dist, n, vmin, vmax) result(y)

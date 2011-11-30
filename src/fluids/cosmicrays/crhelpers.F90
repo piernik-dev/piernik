@@ -52,7 +52,7 @@ contains
 
       real, dimension(:,:,:), pointer :: divvel
 
-      divvel => cg%get_na_ptr(divv_n)
+      divvel => cg%ptr(divv_n)
       if (.not. associated(divvel)) call die("[crhelpers:set_div_v1d] cannot get divvel")
 
       select case (dir)
@@ -91,7 +91,7 @@ contains
       integer                         :: idnf, imxf, imyf, imzf
       real, dimension(:,:,:), pointer :: divvel
 
-      divvel => cg%get_na_ptr(divv_n)
+      divvel => cg%ptr(divv_n)
       if (.not. associated(divvel)) call die("[crhelpers:div_v] cannot get divvel")
 
       if (any([allocated(vx), allocated(vy), allocated(vz)])) call die("[crhelpers:div_v] v[xyz] already allocated")

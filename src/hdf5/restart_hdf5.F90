@@ -556,7 +556,7 @@ contains
 
          ! Read the array
          if (tgt3d) then
-            pa3d => cg%q(cg%get_na_ind(cgname))%arr(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+            pa3d => cg%q(cg%ind(cgname))%arr(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
             if (associated(pa3d)) then
                call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
@@ -564,7 +564,7 @@ contains
                call die(msg)
             endif
          else
-            pa4d => cg%w(cg%get_na_ind_4d(cgname))%arr(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+            pa4d => cg%w(cg%ind_4d(cgname))%arr(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
             if (associated(pa4d)) then
                call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
@@ -587,7 +587,7 @@ contains
       call h5sclose_f(filespace, error)
       call h5dclose_f(dset_id, error)
 
-      if (tgt3d) call arr3d_boundaries(cg%get_na_ind(dname), area_type=area_type)
+      if (tgt3d) call arr3d_boundaries(cg%ind(dname), area_type=area_type)
          ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
 
       ! rank-4 arrays (cg%u(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here

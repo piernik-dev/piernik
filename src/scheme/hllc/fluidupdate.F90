@@ -105,10 +105,10 @@ contains
       real, dimension(xdim:zdim, cg%n_(ddim)) :: b1d
       real, dimension(:), pointer :: cs2
 
-      ui = cg%get_na_ind_4d(fluid_n)
+      ui = cg%ind_4d(fluid_n)
       cs2 => null()
       if (cg%exists(cs_i2_n)) then
-         i_cs_iso2 = cg%get_na_ind(cs_i2_n) ! BEWARE: magic strings across multiple files
+         i_cs_iso2 = cg%ind(cs_i2_n) ! BEWARE: magic strings across multiple files
       else
          i_cs_iso2 = -1
       endif

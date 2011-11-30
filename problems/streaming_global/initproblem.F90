@@ -368,7 +368,7 @@ contains
             endif
          enddo
 
-         cg%w(cg%get_na_ind_4d(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
+         cg%w(cg%ind_4d(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
          cg%b(:,:,:,:) = 0.0
          cgl => cgl%nxt
       enddo
@@ -449,12 +449,12 @@ contains
          if (grace_period_passed()) call update_grain_size(a*t+b)
 !         do j = 1, cg%n_(ydim)
 !            do k = 1, cg%n_(zdim)
-!               cg%u(iarr_all_dn,:,j,k) = cg%u(iarr_all_dn,:,j,k) - dt*(cg%u(iarr_all_dn,:,j,k) - cg%w(cg%get_na_ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
+!               cg%u(iarr_all_dn,:,j,k) = cg%u(iarr_all_dn,:,j,k) - dt*(cg%u(iarr_all_dn,:,j,k) - cg%w(cg%ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
 !            enddo
 !         enddo
          do j = 1, cg%n_(ydim)
             do k = 1, cg%n_(zdim)
-               cg%u(:,:,j,k) = (1.-funcR(:,:))*cg%u(iarr_all_dn,:,j,k) + cg%w(cg%get_na_ind_4d(inid_n))%arr(:,:,j,k)*funcR(:,:)
+               cg%u(:,:,j,k) = (1.-funcR(:,:))*cg%u(iarr_all_dn,:,j,k) + cg%w(cg%ind_4d(inid_n))%arr(:,:,j,k)*funcR(:,:)
             enddo
          enddo
 
@@ -596,7 +596,7 @@ contains
 
       type(grid_container), pointer, intent(in) :: cg
 
-      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(cg%get_na_ind_4d(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
+      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(cg%ind_4d(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
 
    end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------

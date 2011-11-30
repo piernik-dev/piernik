@@ -171,7 +171,7 @@ contains
 
          cg%b(:, :, :, :) = 0.
 
-         cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(cg%get_na_ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(cg%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
          ! Make uniform, completely boring flow
          cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
@@ -205,7 +205,7 @@ contains
       call analytic_solution(t)
 
       ierrh = 0
-      inid => cg%get_na_ptr(var)
+      inid => cg%ptr(var)
       if (associated(inid)) then
          tab(:,:,:) = real(inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
       else
@@ -269,7 +269,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         inid => cg%get_na_ptr(inid_n)
+         inid => cg%ptr(inid_n)
          if (.not. associated(inid))then
             if (master) call warn("[initproblem:finalize_problem_adv] Cannot compare results with the initial conditions.")
             return
@@ -327,7 +327,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         inid => cg%get_na_ptr(inid_n)
+         inid => cg%ptr(inid_n)
          if (.not. associated(inid))then
             if (master) call warn("[initproblem:analytic_solution] Cannot store the initial conditions.")
             return

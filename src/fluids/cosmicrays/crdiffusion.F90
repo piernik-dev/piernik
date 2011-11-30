@@ -93,12 +93,12 @@ contains
 
       if (.not. has_cr) return
 
-      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(leaves%first%cg%get_na_ind_4d(wcr_n))
+      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(leaves%first%cg%ind_4d(wcr_n))
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         wcr => cg%get_na_ptr_4d(wcr_n)
+         wcr => cg%ptr_4d(wcr_n)
          if (.not. associated(wcr)) call die("[crdiffusion:all_wcr_boundaries] cannot get wcr")
 
          req(:) = MPI_REQUEST_NULL
@@ -211,7 +211,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         wcr => cg%get_na_ptr_4d(wcr_n)
+         wcr => cg%ptr_4d(wcr_n)
          if (.not. associated(wcr)) call die("[crdiffusion:cr_diff] cannot get wcr")
                                                                          ! in case of integration with boundaries:
          ldm        = cg%ijkse(:,LO) ;      ldm(crdim) = 2               ! ldm =           1 + D_
@@ -263,7 +263,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         wcr => cg%get_na_ptr_4d(wcr_n)
+         wcr => cg%ptr_4d(wcr_n)
 
          ndm = cg%n_ - idm
          hdm = 1 + idm*ndm

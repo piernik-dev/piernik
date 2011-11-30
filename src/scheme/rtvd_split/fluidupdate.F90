@@ -71,14 +71,14 @@ contains
 
          if (cfl_violated) then
             t = t-2.0*dtm
-            cg%u = cg%w(cg%get_na_ind_4d(u0_n))%arr
-            cg%b = cg%w(cg%get_na_ind_4d(b0_n))%arr
+            cg%u = cg%w(cg%ind_4d(u0_n))%arr
+            cg%b = cg%w(cg%ind_4d(b0_n))%arr
             dt = dtm/dt_max_grow**2
             nstep = nstep - I_ONE
             if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
          else
-            cg%w(cg%get_na_ind_4d(u0_n))%arr = cg%u
-            cg%w(cg%get_na_ind_4d(b0_n))%arr = cg%b
+            cg%w(cg%ind_4d(u0_n))%arr = cg%u
+            cg%w(cg%ind_4d(b0_n))%arr = cg%b
          endif
 
          cgl => cgl%nxt
@@ -298,7 +298,7 @@ contains
          cg => cgl%cg
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
-         wcu => cg%get_na_ptr(wcu_n)
+         wcu => cg%ptr(wcu_n)
          if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") ! not tested custom_emf_bnd
          if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - wcu*cg%idl(dim1)

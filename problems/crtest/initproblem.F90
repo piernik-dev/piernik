@@ -265,7 +265,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         aecr1 => cg%get_na_ptr(aecr1_n)
+         aecr1 => cg%ptr(aecr1_n)
          if (.not. associated(aecr1)) call die("[initproblem:compute_analytic_ecr1] cannot find aecr1")
 
          do k = cg%ks, cg%ke
@@ -332,7 +332,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         aecr1 => cg%get_na_ptr(aecr1_n)
+         aecr1 => cg%ptr(aecr1_n)
          if (.not. associated(aecr1)) call die("[initproblem:check_norm] cannot find aecr1")
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
@@ -381,7 +381,7 @@ contains
 
       call compute_analytic_ecr1
 
-      aecr1 => cg%get_na_ptr(aecr1_n)
+      aecr1 => cg%ptr(aecr1_n)
       if (.not. associated(aecr1)) call die("[initproblem:crtest_analytic_ecr1] cannot find aecr1")
 
       ierrh = 0

@@ -128,7 +128,7 @@ contains
 
       !> OPTIMIZE ME
 
-      magi = cg%get_na_ind_4d(mag_n)
+      magi = cg%ind_4d(mag_n)
 
       ibx = iarr_mag_swp(cdim,xdim)
       iby = iarr_mag_swp(cdim,ydim)
@@ -196,8 +196,8 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            uhi = cg%get_na_ind_4d(uh_n)
-            ui  = cg%get_na_ind_4d(fluid_n)
+            uhi = cg%ind_4d(uh_n)
+            ui  = cg%ind_4d(fluid_n)
 
             if (allocated(b)) deallocate(b)
             if (allocated(u)) deallocate(u)
@@ -217,7 +217,7 @@ contains
 
             cs2 => null()
             if (cg%exists(cs_i2_n)) then
-               i_cs_iso2 = cg%get_na_ind(cs_i2_n) ! BEWARE: magic strings across multiple files
+               i_cs_iso2 = cg%ind(cs_i2_n) ! BEWARE: magic strings across multiple files
             else
                i_cs_iso2 = -1
             endif
