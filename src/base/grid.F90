@@ -32,6 +32,7 @@
 !<
 module grid
 
+   use constants, only: LONG, ndims
    use gc_list,   only: cg_list_global, cg_list_level, cg_list_patch, cg_list
 
    implicit none
@@ -39,8 +40,11 @@ module grid
    private
    public :: init_grid, cleanup_grid, all_cg, base_lev, leaves
 
+   integer, parameter :: base_level_number = 0 !< Base domain level number. Refinements are positively numbered, coarsened levels for use in multigrid solvers have negative numbers.
+   integer(kind=8), dimension(ndims), parameter :: base_level_offset = [ 0_LONG, 0_LONG, 0_LONG ] !< Base domain offset. .
+
    type(cg_list_global), protected :: all_cg                          !< all grid containers
-   type(cg_list_level), protected  :: base_lev                        !< base level grid containers
+   type(cg_list_level), target, protected  :: base_lev                !< base level grid containers
    type(cg_list), protected  :: leaves                                !< grid containers not fully covered by finer grid containers
    integer, parameter :: NBD = 1                                      !< at the moment the base domain may be composed of only one patch
    type(cg_list_patch), dimension(NBD), target, protected :: base_dom !< base level patches; \todo relax the NBD=1 restriction if we want something like L-shaped or more complex domains
@@ -52,7 +56,7 @@ contains
 !<
    subroutine init_grid
 
-      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, INVALID, LONG, &
+      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, INVALID, &
            &                 ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n,cs_i2_n
       use dataio_pub,  only: printinfo, die, code_progress
       use domain,      only: pdom, is_multicg, cuboids
@@ -88,7 +92,7 @@ contains
 
       pbd => base_dom(NBD)
       lpse => pdom%pse(proc)
-      call dom2cg(pdom%n_d(:), [ 0_LONG, 0_LONG, 0_LONG ], 0, lpse, pbd)
+      call dom2cg(pdom%n_d(:), base_level_offset, base_level_number, lpse, pbd)
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
@@ -161,13 +165,11 @@ contains
 
          ! create the new element in the patch and initialize it
          call patch%add
-         call patch%last%cg%init(pdom, g)
+         call patch%last%cg%init(pdom, g, level)
 
          ! add to the other lists
          call all_cg%add(patch%last%cg)
-
-         call base_lev%add(patch%last%cg)
-
+         if (level == base_level_number) call base_lev%add(patch%last%cg)
          call leaves%add(patch%last%cg)
 
       enddo
@@ -199,7 +201,6 @@ contains
       do d = lbound(base_dom, dim=1), ubound(base_dom, dim=1) ! currently we have only one base patch
          call base_dom(d)%delete
       enddo
-!!$      deallocate(levels)
 
       ! manually deallocate all grid containers first
       cgle => all_cg%first

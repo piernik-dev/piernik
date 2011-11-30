@@ -124,7 +124,7 @@ contains
                if (abs(curl%mg%var(i, j, k, iv)) > dirtyL) then
 !                        if (count([i<curl%is .or. i>curl%ie, j<curl%js .or. j>curl%je, k<curl%ks .or. k>curl%ke]) <=1) then ! excludes corners
                   write(msg, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &
-                          "[multigridhelpers:check_dirty] ", trim(label), "@", proc, " lvl(", curl%mg%level, ")%mg%var(", i, ",", j, ",", k, ",", iv, ") = ", curl%mg%var(i, j, k, iv)
+                          "[multigridhelpers:check_dirty] ", trim(label), "@", proc, " lvl(", curl%lev, ")%mg%var(", i, ",", j, ",", k, ",", iv, ") = ", curl%mg%var(i, j, k, iv)
                   call warn(msg)
 !                        endif
                endif
@@ -267,7 +267,7 @@ contains
             do j = curl%js, curl%je
                do k = curl%ks, curl%ke
                   write(fu, '(3i4,i6,10es20.11e3)')i-curl%is+curl%off(xdim), j-curl%js+curl%off(ydim), k-curl%ks+curl%off(zdim), &
-                       &                           curl%mg%level, curl%x(i), curl%y(j), curl%z(k), curl%mg%var(i, j, k, 1:ngridvars)
+                       &                           curl%lev, curl%x(i), curl%y(j), curl%z(k), curl%mg%var(i, j, k, 1:ngridvars)
                enddo
                write(fu, '(/)')
             enddo

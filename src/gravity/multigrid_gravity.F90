@@ -504,8 +504,11 @@ contains
       endif
 
       !special initialization of global base-level FFT-related data
-      if (any(lvl(:)%mg%fft_type /= fft_none) .and. dom%geometry_type /= GEO_XYZ) &
-           call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
+      if (dom%geometry_type /= GEO_XYZ) then
+         do i = lbound(lvl, dim=1), ubound(lvl, dim=1)
+            if (lvl(i)%mg%fft_type /= fft_none) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
+         enddo
+      endif
 
       ! FFT solver storage and data
       curl => base

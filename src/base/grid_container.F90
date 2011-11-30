@@ -84,7 +84,6 @@ module grid_cont
       real                                   :: fft_norm              !< normalization factor
 
       ! geometrical factors
-      integer :: level                                                !< grid levels are tagged by some consecutive integer numbers
       real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
 
       ! prolongation and restriction
@@ -135,6 +134,7 @@ module grid_cont
       integer(kind=4) :: nxb                                     !< number of %grid cells in one block (without boundary cells) in x-direction
       integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
       integer(kind=4) :: nzb                                     !< number of %grid cells in one block (without boundary cells) in z-direction
+      integer :: level_id                                        !< level id (number)
 
       ! shortcuts
       integer(kind=4) :: is                                      !< index of the first %grid cell of physical domain in x-direction
@@ -204,7 +204,7 @@ module grid_cont
       real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
       integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
       logical :: empty                                           !< .true. if there are no cells to process (e.g. some processes at base level in multigrid gravity)
-      integer :: grid_n                                          !< number of own segment: my_se(:,:) = dom%pse(proc)%sel(grid_n, :, :)
+      integer :: grid_id                                          !< number of own segment: my_se(:,:) = dom%pse(proc)%sel(grid_id, :, :)
 
    contains
 
@@ -232,7 +232,7 @@ contains
 !! \details This method sets up the grid container variables, coordinates and allocates basic arrays
 !<
 
-   subroutine init(this, dom, grid_n)
+   subroutine init(this, dom, grid_id, level_id)
 
       use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_SHE, BND_COR
       use dataio_pub, only: die, warn, printinfo, msg, code_progress
@@ -244,7 +244,8 @@ contains
 
       class(grid_container), intent(inout), target :: this ! intent(out) would silently clear everything, that was already set (also the fields in types derived from grid_container)
       type(domain_container), intent(in), pointer :: dom
-      integer, intent(in) :: grid_n
+      integer, intent(in) :: grid_id
+      integer, intent(in) :: level_id
 
       integer :: i, d, g, ib
 
@@ -253,11 +254,12 @@ contains
       this%dom => dom
       this%nb = dom%nb !> \todo make this one global constant back
 
-      this%grid_n     = grid_n
-      this%my_se(:,:) = dom%pse(proc)%sel(grid_n, :, :)
+      this%grid_id     = grid_id
+      this%my_se(:,:) = dom%pse(proc)%sel(grid_id, :, :)
       this%off(:)     = this%my_se(:, LO)
       this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
       this%n_b(:)     = int(this%h_cor1(:) - this%off(:), 4) ! Block 'physical' grid sizes
+      this%level_id   = level_id
 
       if (all(this%n_b(:) == 0)) then
          this%empty = .true.
@@ -312,7 +314,7 @@ contains
 #endif /* DEBUG */
       endif
 
-      !> \todo allocate this contitionally, only when comm3d is in use
+      !> \todo allocate this conditionally, only when comm3d is in use
       if (allocated(this%mbc)) call die("[grid_container:init] this%mbc already allocated")
       allocate(this%mbc(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK, 1:this%nb))
       this%mbc(:, :, :, :, :) = INVALID
@@ -553,7 +555,7 @@ contains
 !!$      deallocate(this%y, this%yl, this%yr, this%inv_y)
 !!$      deallocate(this%z, this%zl, this%zr, this%inv_z)
 
-      if (this%grid_n <= INVALID) return ! very dirty workaround for unability to determine whether a given cg was already deallocated
+      if (this%grid_id <= INVALID) return ! very dirty workaround for unability to determine whether a given cg was already deallocated
 
       if (allocated(this%gc_xdim)) deallocate(this%gc_xdim)
       if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)
@@ -629,7 +631,7 @@ contains
          deallocate(this%w)
       endif
 
-      this%grid_n = INVALID
+      this%grid_id = INVALID
 
    end subroutine cleanup
 
@@ -729,7 +731,7 @@ contains
                                  endwhere
                                  this%o_bnd(d, ib)%seg(g) = this%i_bnd(d, ib)%seg(g)
                                  this%i_bnd(d, ib)%seg(g)%tag = int(HI*ndims*b           + (HI*d+lh-LO), kind=4) ! Assume that we won't mix communication with different ib
-                                 this%o_bnd(d, ib)%seg(g)%tag = int(HI*ndims*this%grid_n + (HI*d+hl-LO), kind=4)
+                                 this%o_bnd(d, ib)%seg(g)%tag = int(HI*ndims*this%grid_id + (HI*d+hl-LO), kind=4)
                                  select case (lh)
                                     case (LO)
                                        this%i_bnd(d, ib)%seg(g)%se(d, LO) = this%i_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)

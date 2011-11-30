@@ -277,7 +277,7 @@ contains
       cg => leaves%first%cg
       if (is_multicg) call die("[snsources:rand_coords] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
 
-      jsn  = js+int((ysn-dom%edge(ydim, LO))/cg%dy)
+      jsn  = js+int((ysn-dom%edge(ydim, LO))*cg%idy)
       dysn  = dmod(ysn, cg%dy)
 
       epsi   = eps*cg%dy

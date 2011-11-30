@@ -76,7 +76,7 @@ contains
 
       use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, zdim, GEO_RPZ, LO, HI, I_TWO, I_ONE, half
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
-      use dataio_pub,          only: warn, die, code_progress
+      use dataio_pub,          only: printinfo, warn, die, code_progress
       use domain,              only: dom, is_uneven, is_multicg, cdd
       use grid,                only: leaves
       use gc_list,             only: cg_list_element
@@ -96,15 +96,15 @@ contains
 
       implicit none
 
-      integer, parameter    :: level_min = 1          !< Base (coarsest) level number, chosen arbitrarily.
-      integer               :: level_max              !< Levels of multigrid refinement
+      integer, parameter    :: level_incredible = 50  !< Increase this value only if your base domain contains much more than 10^15 cells in any active direction ;-)
+      integer               :: level_max              !< Maximum allowed levels of base grid coarsening
 
       integer               :: j, p
       logical, save         :: frun = .true.          !< First run flag
       real                  :: mb_alloc, min_m, max_m !< Allocation counter
       type(plvl), pointer   :: curl                   !< current level (a pointer sliding along the linked list)
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg            !> current grid container
 
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, multidim_code_3D
 
@@ -114,7 +114,7 @@ contains
       frun = .false.
 
       ! Default values for namelist variables
-      level_max             = 1
+      level_max             = level_incredible
       ord_prolong           = 0
       ord_prolong_face_norm = 2
       ord_prolong_face_par  = 0
@@ -200,14 +200,26 @@ contains
       endif
 
       if (allocated(lvl)) call die("[multigrid:init_multigrid] lvl already allocated")
-      if (level_max < 1) then
+      if (level_max <= 0) then
          if (master) call warn("[multigrid:init_multigrid] level_max < 1: solving on a single grid may be extremely slow")
-         level_max = 1
+         level_max = 0
+      endif
+
+      do j = 0, level_incredible
+         if (any((mod(dom%n_d(:), 2**(j+1)) /= 0 .or. dom%n_d(:)/2**(j+1) < dom%nb) .and. dom%has_dir(:))) exit
+      enddo
+      if (level_max > j) then
+         if (master) then
+            if (level_max /= level_incredible) call warn("[multigrid:init_multigrid] level_max is too big,")
+            write(msg,'(a,i3)')"[multigrid:init_multigrid] Automatically set level_max = ",j
+            call printinfo(msg)
+         endif
+         level_max = j
       endif
 
       if (is_multicg) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial lvl
 
-      allocate(lvl(level_min:level_min+level_max-1))
+      allocate(lvl(-level_max:0)) !! \deprecated this magic number will be fixed soon
       mb_alloc = mb_alloc + size(lvl)
 
       ! handy shortcuts
@@ -215,23 +227,19 @@ contains
       roof => lvl(ubound(lvl, dim=1))
 
       ! set up connections between levels
-      base%mg%level = level_min
-      curl => base
-      do while (associated(curl))
-         if (.not. associated(curl, roof)) then
-            curl%finer => lvl(curl%mg%level + 1)
-            curl%finer%mg%level = curl%mg%level + 1
+      do j = lbound(lvl, dim=1), ubound(lvl, dim=1)
+         lvl(j)%lev = j
+         if (j /= lbound(lvl, dim=1)) then
+            lvl(j)%coarser => lvl(j-1)
          else
-            curl%finer => null()
+            nullify(lvl(j)%coarser)
          endif
 
-         if (.not. associated(curl, base)) then
-            curl%coarser => lvl(curl%mg%level - 1)
+         if (j /= ubound(lvl, dim=1)) then
+            lvl(j)%finer => lvl(j+1)
          else
-            curl%coarser => null()
+           nullify(lvl(j)%finer)
          endif
-
-         curl => curl%finer
       enddo
 
       curl => roof
@@ -272,17 +280,17 @@ contains
             call curl%dom%set_derived ! fix what was inherited from finer level or dom and should be recalculated
          endif
 
-         call curl%init(curl%dom, 1)
+         call curl%init(curl%dom, 1, curl%lev)
 
          if (ubound(curl%dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid:init_multigrid] Multiple blocks per process not implemented yet")
 
          if (any(curl%n_b(:) < curl%nb .and. dom%has_dir(:) .and. .not. curl%empty)) then
             write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
-                 curl%nb, " > ", curl%n_b(:), " at level ", curl%mg%level, ". You may try to set level_max <=", roof%mg%level-curl%mg%level+level_min-1
+                 curl%nb, " > ", curl%n_b(:), " at level ", curl%lev, ". You may try to set level_max <=", -curl%lev
             call die(msg)
          endif
 
-         if (any(curl%n_b(:) * 2**(roof%mg%level - curl%mg%level) /= roof%n_b(:) .and. dom%has_dir(:)) .and. .not. curl%empty .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
+         if (any(curl%n_b(:) * 2**(roof%lev - curl%lev) /= roof%n_b(:) .and. dom%has_dir(:)) .and. .not. curl%empty .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
 
          ! data storage
          !! \deprecated BEWARE prolong_x and %mg%prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
@@ -340,7 +348,7 @@ contains
       call MPI_Allreduce(mb_alloc, min_m, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
       call MPI_Allreduce(mb_alloc, max_m, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
       if (master) then
-         write(msg, '(a,i2,a,3i4,a,2(f6.1,a))')"[multigrid:init_multigrid] Initialized ", roof%mg%level, " levels, coarse level resolution [ ", &
+         write(msg, '(a,i2,a,3i4,a,2(f6.1,a))')"[multigrid:init_multigrid] Initialized ", roof%lev - base%lev + 1, " levels, coarse level resolution [ ", &
             base%dom%n_d(:)," ], allocated", min_m, " ..", max_m, "MiB"
          call mg_write_log(msg)
       endif

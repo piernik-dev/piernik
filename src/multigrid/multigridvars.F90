@@ -103,6 +103,7 @@ module multigridvars
 
    type, extends(grid_container) :: plvl                              !< single level container
 
+     integer :: lev
      type(plvl), pointer :: finer, coarser                           !< pointers to level+1 and level-1 (null() if such level does not eist)
 
     contains
@@ -150,7 +151,7 @@ contains
 
       coarse => this%coarser
       if (.not. associated(coarse)) then
-         write(msg,'(a,i3)')"[multigridvars:restrict_level] no coarse level here: ", this%mg%level
+         write(msg,'(a,i3)')"[multigridvars:restrict_level] no coarse level here: ", this%lev
          call warn(msg) ! can't restrict base level
       else
          !OPT find a way to reduce this to areas with nonlocal incoming restriction
@@ -276,7 +277,7 @@ contains
 
       fine => this%finer
       if (.not. associated(fine)) then
-         write(msg,'(a,i3)')"[multigridvars:restrict_level] no fine level here: ", this%mg%level
+         write(msg,'(a,i3)')"[multigridvars:restrict_level] no fine level here: ", this%lev
          call warn(msg) ! can't prolong finest level
       else
          ! OPT: try to remove or limit this  ~20% Ir, ~50% Dw_m

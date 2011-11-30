@@ -184,8 +184,8 @@ contains
 
       ddly  = dts * qshear*omega*dom%L_(xdim)
       dely  = ts  * qshear*omega*dom%L_(xdim)
-      delj  = mod(int(dely/cg%dy), int(cg%nyb))
-      eps   = mod(dely, cg%dy)/cg%dy
+      delj  = mod(int(dely*cg%idy), int(cg%nyb))
+      eps   = mod(dely, cg%dy)*cg%idy
 #ifdef FFTW
       do i=lbound(cg%u,1),ubound(cg%u,1)
          cg%u(i,:, cg%js:cg%je,:) = unshear_fft( cg%u(i,:, cg%js:cg%je,:), cg%x(:),ddly)
@@ -226,7 +226,7 @@ contains
       cg => leaves%first%cg
       if (is_multicg) call die("[shear:unshear_fft] multiple grid pieces per procesor not implemented yet") !nontrivial
 
-      St = - ddy / cg%dy / dom%L_(xdim)
+      St = - ddy * cg%idy / dom%L_(xdim)
       if (.not.present(inv)) St = -St
 
       nx = size(qty,1)
@@ -307,8 +307,8 @@ contains
 
       do i = 1, cg%n_(xdim)
          dl  = fx * x(i)
-         ndl = mod(int(dl/cg%dy), int(cg%nyb))
-         ddl = mod(dl, cg%dy)/cg%dy
+         ndl = mod(int(dl*cg%idy), int(cg%nyb))
+         ddl = mod(dl, cg%dy)*cg%idy
 
          temp(         1:  cg%je,:)   = qty(i,   1:cg%je ,:)
          temp(  cg%je+1:2*cg%nyb+cg%nb,:)   = qty(i, cg%js:cg%je,:)

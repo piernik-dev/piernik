@@ -199,7 +199,7 @@ contains
 
       call this%un_link(cgle)
       if (associated(cgle%cg)) then
-         if (cgle%cg%grid_n > INVALID) then ! dirty trick
+         if (cgle%cg%grid_id > INVALID) then ! dirty trick
             call cgle%cg%cleanup
 !            deallocate(cgle%cg) ! if we deallocate now, we won't be able to determine this in the other lists
          endif
@@ -268,7 +268,7 @@ contains
 !> \brief print the list and associated cg ID for debugging purposes
    subroutine print_list(this)
 
-      use dataio_pub, only: warn, msg
+      use dataio_pub, only: warn, printinfo, msg
 
       implicit none
 
@@ -278,8 +278,7 @@ contains
       integer :: cnt
 
       if (.not. associated(this%first)) then
-         write(msg,'(a)')"[gc_list:print_list] Empty list"
-         call warn(msg)
+         call warn("[gc_list:print_list] Empty list")
          if (this%cnt /= 0) then
             write(msg,'(a,i6)')"[gc_list:print_list] Empty list length /= 0 : ",this%cnt
             call warn(msg)
@@ -287,7 +286,7 @@ contains
          if (associated(this%last)) then
             call warn("[gc_list:print_list] Tail without head")
             if (associated(this%last%cg)) then
-               write(msg,'(a,i7)')"Last element #",this%last%cg%grid_n
+               write(msg,'(a,i7)')"Last element #",this%last%cg%grid_id
                call warn(msg)
             endif
          endif
@@ -297,12 +296,12 @@ contains
       if (.not. associated(this%last)) call warn("[gc_list:print_list] Head without tail")
 
       if (associated(this%first%cg)) then
-         write(msg,'(a,i7)')"First element #",this%first%cg%grid_n
-         call warn(msg)
+         write(msg,'(a,i7)')"First element #",this%first%cg%grid_id
+         call printinfo(msg)
       endif
       if (associated(this%last%cg)) then
-         write(msg,'(a,i7)')"Last element #",this%last%cg%grid_n
-         call warn(msg)
+         write(msg,'(a,i7)')"Last element #",this%last%cg%grid_id
+         call printinfo(msg)
       endif
 
       cnt = 0
@@ -310,8 +309,8 @@ contains
       do while (associated(cur))
          cnt = cnt + 1
          if (associated(cur%cg)) then
-            write(msg,'(i5,a,i7)')cnt,"-th element #",cur%cg%grid_n
-            call warn(msg)
+            write(msg,'(i5,a,i7)')cnt,"-th element #",cur%cg%grid_id
+            call printinfo(msg)
          endif
          cur => cur%nxt
       enddo
@@ -323,11 +322,11 @@ contains
 
       cur => this%last
       do while (associated(cur))
-         cnt = cnt - 1
          if (associated(cur%cg)) then
-            write(msg,'(i5,a,i7)')cnt,"-th element #",cur%cg%grid_n
-            call warn(msg)
+            write(msg,'(i5,a,i7)')cnt,"-th element #",cur%cg%grid_id
+            call printinfo(msg)
          endif
+         cnt = cnt - 1
          cur => cur%prv
       enddo
     end subroutine print_list
@@ -345,7 +344,7 @@ contains
 
       implicit none
 
-      class(cg_list_global),     intent(in) :: this !< object invoking type-bound procedure
+      class(cg_list_global),     intent(in) :: this          !< object invoking type-bound procedure
       character(len=*),          intent(in) :: name          !< Name of the variable to be registered
       integer(kind=4),           intent(in) :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
       integer(kind=4), optional, intent(in) :: dim4          !< If present then register the variable in the cg%w array.
@@ -385,7 +384,7 @@ contains
 
       implicit none
 
-      class(cg_list),  intent(in)  :: this !< object invoking type-bound procedure
+      class(cg_list),  intent(in)  :: this    !< object invoking type-bound procedure
       integer(kind=4), intent(in)  :: ind     !< Index in cg%q(:)
       integer(kind=4), intent(in)  :: minmax  !< minimum or maximum ?
       type(value),     intent(out) :: prop    !< precise location of the extremum to be found
