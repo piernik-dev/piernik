@@ -84,7 +84,7 @@ contains
       integer(kind=8),               intent(in)  :: xn    !< no. of cell at which we are slicing the local block
       integer,                       intent(out) :: ierrh !< error handling
       real, dimension(:,:),          intent(out) :: tab   !< array containing given quantity
-      type(grid_container), pointer, intent(in)  :: cg
+      type(grid_container), pointer, intent(in)  :: cg    !< current grid container
 
       integer                                    :: is, ie, js, je, ks, ke, i_xyz
       type(component_fluid), pointer             :: fl_dni

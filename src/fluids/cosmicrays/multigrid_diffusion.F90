@@ -626,7 +626,7 @@ contains
 
       implicit none
 
-      integer(kind=4),           intent(in)  :: crdim
+      integer(kind=4),           intent(in)  :: crdim        !< direction in which we calculate flux
       integer, dimension(ndims), intent(in)  :: im           !< [first cell index, second cell index, third cell index]
       integer(kind=4),           intent(in)  :: soln         !< multigrid variable to differentiate
       type(plvl), pointer,       intent(in)  :: curl         !< level on which differentiate

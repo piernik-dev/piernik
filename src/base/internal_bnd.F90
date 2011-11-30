@@ -30,7 +30,7 @@
 !>
 !! \brief Update internal boundaries
 !!
-!! \detailed This module contains subroutines that are responsible for preparing internal boundary cells for cg%q(:) and cg%w(:) arrays.
+!! \details This module contains subroutines that are responsible for preparing internal boundary cells for cg%q(:) and cg%w(:) arrays.
 !! For simplicity, let's assume, that all boundaries, that rely on MPI communication are internal.
 !! This implies that periodic, corner shear and fine-coarse boundaries are also "internal"
 !!

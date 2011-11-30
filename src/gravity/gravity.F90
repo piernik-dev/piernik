@@ -830,7 +830,7 @@ contains
       integer(kind=4), intent(in)    :: n          !< number of elements of returned array grav
       real, dimension(n),intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
       integer, intent(in)            :: istep      !< istep=1 for halfstep, istep=2 for fullstep
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(in) :: cg !< current grid_container
 
 !> \todo offer high order gradient as an option in parameter file
 !      real, parameter :: onetw = 1./12.

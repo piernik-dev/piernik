@@ -135,7 +135,7 @@ contains
 !! \param chnk dimensions of data array dumped by this process
 !! \param lleft left limits of data from array to be dumped
 !! \param lright right limits of data from array to be dumped
-!! \loffs offset in area for this process
+!! \param loffs offset in area for this process
 !<
    subroutine set_dims_for_restart(area_type, chnk, lleft, lright, loffs, cg)
 
@@ -150,7 +150,7 @@ contains
       integer(kind=4),                   intent(in)  :: area_type
       integer,         dimension(ndims), intent(out) :: lleft, lright, chnk
       integer(kind=8), dimension(ndims), intent(out) :: loffs
-      type(grid_container), pointer,     intent(in)  :: cg
+      type(grid_container), pointer,     intent(in)  :: cg !< current grid container
 
       ! only physical domain without any boundaries
       lleft(:)  = cg%ijkse(:, LO)
@@ -187,7 +187,7 @@ contains
 !! \brief Routine to set dimensions of arrays related to domain in restart file
 !! \param area_type case name; possibilities:
 !!   AT_OUT_B - physical domain with outer boundaries,
-!    AT_NO_B  - only physical domain without any boundaries
+!!   AT_NO_B  - only physical domain without any boundaries
 !! \param area grid dimensions in the file
 !<
 

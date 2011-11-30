@@ -678,8 +678,9 @@ contains
 
       implicit none
 
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this, other !< two boxes
-      integer(kind=8), dimension(xdim:zdim), intent(in)        :: periods     !< where >0 then the direction is periodic with the given number of cells
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this !< object invoking type-bound procedure
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: other !< the other box
+      integer(kind=8), dimension(xdim:zdim), intent(in)        :: periods !< where >0 then the direction is periodic with the given number of cells
 
       integer :: i, j, k
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: oth
@@ -713,7 +714,8 @@ contains
 
       implicit none
 
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this, other !< two boxes
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this !< object invoking type-bound procedure
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: other !< the other box
 
       integer :: d
 
@@ -1250,7 +1252,7 @@ contains
 
       implicit none
 
-      class(domain_container), intent(inout) :: this
+      class(domain_container), intent(inout) :: this  !< object invoking type-bound procedure
       character(len=*), dimension(HI*ndims), intent(in) :: bnds  !< Six strings, describing boundary conditions
 
       integer :: d, lh
@@ -1294,7 +1296,7 @@ contains
 
       implicit none
 
-      class(domain_container), intent(inout) :: this
+      class(domain_container), intent(inout) :: this  !< object invoking type-bound procedure
       integer :: d
 
       this%has_dir(:) = this%n_d(:) > 1  ! redundant
@@ -1332,7 +1334,7 @@ contains
 
       implicit none
 
-      class(domain_container), intent(inout) :: this
+      class(domain_container), intent(inout) :: this  !< object invoking type-bound procedure
       integer :: i, j
 
       write(msg,'(a,3(F5.1,1X))') "LO edge: ", this%edge(:,LO); call printinfo(msg)
@@ -1368,8 +1370,8 @@ contains
 
       implicit none
 
-      class(domain_container), intent(inout) :: this
-      integer(kind=4), intent(in) :: nb    !< number of boundary cells surrounding the physical domain, same for all directions
+      class(domain_container), intent(inout) :: this  !< object invoking type-bound procedure
+      integer(kind=4), intent(in) :: nb !< number of boundary cells surrounding the physical domain, same for all directions
       integer(kind=4), dimension(ndims) :: n_d !< number of %grid cells in physical domain without boundary cells (where  == 1 then that dimension is reduced to a point with no boundary cells)
       character(len=*), dimension(HI*ndims), intent(in) :: bnds  !< Six strings, describing boundary conditions
       real, dimension(ndims, LO:HI), intent(inout)      :: edges  !< physical domain boundaries position

@@ -38,7 +38,6 @@
 !! This module contains a cleanup subroutine that does all deallocations. While this is not strictly required for correct execution of the multigrid solver, it helps a lot
 !! to debug memory leaks.
 !<
-
 module multigrid
 ! pulled by MULTIGRID
 
@@ -61,7 +60,7 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>level_max            </td><td>1      </td><td>integer value </td><td>\copydoc multigrid::level_max                </td></tr>
+!! <tr><td>level_max            </td><td>1      </td><td>integer value </td><td>\copydoc init_multigrid::level_max           </td></tr>
 !! <tr><td>ord_prolong          </td><td>0      </td><td>integer value </td><td>\copydoc multigridvars::ord_prolong          </td></tr>
 !! <tr><td>ord_prolong_face_norm</td><td>0      </td><td>integer value </td><td>\copydoc multigridvars::ord_prolong_face_norm</td></tr>
 !! <tr><td>ord_prolong_face_par </td><td>0      </td><td>integer value </td><td>\copydoc multigridvars::ord_prolong_face_par </td></tr>
@@ -103,7 +102,7 @@ contains
       integer               :: j, p
       logical, save         :: frun = .true.          !< First run flag
       real                  :: mb_alloc, min_m, max_m !< Allocation counter
-      type(plvl), pointer   :: curl                   !> current level (a pointer sliding along the linked list)
+      type(plvl), pointer   :: curl                   !< current level (a pointer sliding along the linked list)
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
@@ -181,12 +180,12 @@ contains
       mb_alloc = 0
       single_base = (nproc == 1)
 
-      ngridvars = correction  !< 4 variables are required for basic use of the multigrid solver
+      ngridvars = correction  !! 4 variables are required for basic use of the multigrid solver
       if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
 
       if (dom%geometry_type == GEO_RPZ) multidim_code_3D = .true. ! temporarily
 
-!> \todo Make an array of subroutine pointers
+!! \todo Make an array of subroutine pointers
 #ifdef GRAV
       call init_multigrid_grav
 #endif /* GRAV */
@@ -286,7 +285,7 @@ contains
          if (any(curl%n_b(:) * 2**(roof%mg%level - curl%mg%level) /= roof%n_b(:) .and. dom%has_dir(:)) .and. .not. curl%empty .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
 
          ! data storage
-         !> \deprecated BEWARE prolong_x and %mg%prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
+         !! \deprecated BEWARE prolong_x and %mg%prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
          if (allocated(curl%mg%prolong_x) .or. allocated(curl%mg%prolong_xy) .or. allocated(curl%mg%var) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
          allocate(curl%mg%var     (curl%n_(xdim), curl%n_(ydim),        curl%n_(zdim),        ngridvars))
          allocate(curl%mg%prolong_xy(curl%n_(xdim), curl%n_(ydim),        curl%nzb/2+2*curl%nb))

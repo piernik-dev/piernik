@@ -48,7 +48,7 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:,:) :: A
+      real, dimension(:,:,:,:) :: A  !< vector potential of magnetic field
       integer(kind=4)          :: i, itag, jtag
       type(grid_container), pointer :: cg
 
@@ -624,7 +624,7 @@ contains
       real,    intent(out) :: bndsign      !< 1. or -1. to change the sign or not
       integer, intent(out) :: zndiff       !< COMMENT ME
       integer, intent(out) :: rrbase       !< COMMENT ME
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(in) :: cg !< current grid containter
 
       select case (bndcase)
          case (1)

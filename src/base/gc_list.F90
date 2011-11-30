@@ -131,7 +131,7 @@ contains
 
       implicit none
 
-      class(cg_list), intent(out) :: this
+      class(cg_list), intent(out) :: this !< object invoking type-bound procedure
 
       this%first => null()
       this%last => null()
@@ -147,8 +147,8 @@ contains
 
       implicit none
 
-      class(cg_list), intent(inout) :: this
-      type(grid_container), optional, pointer, intent(in) :: cg
+      class(cg_list), intent(inout) :: this !< object invoking type-bound procedure
+      type(grid_container), optional, pointer, intent(in) :: cg !< new grid container that will be added to add_new::this
 
       type(cg_list_element), pointer :: new
 
@@ -189,7 +189,7 @@ contains
 
       implicit none
 
-      class(cg_list), intent(inout) :: this
+      class(cg_list), intent(inout) :: this !< object invoking type-bound procedure
       type(cg_list_element), pointer, intent(inout) :: cgle !< the element to be eradicated
 
       if (.not. associated(cgle)) then
@@ -213,7 +213,7 @@ contains
 
      implicit none
 
-     class(cg_list), intent(inout) :: this
+     class(cg_list), intent(inout) :: this !< object invoking type-bound procedure
      type(cg_list_element), pointer :: cgl
 
      do while (associated(this%first))
@@ -230,7 +230,7 @@ contains
 
       implicit none
 
-      class(cg_list), intent(inout) :: this
+      class(cg_list), intent(inout) :: this !< object invoking type-bound procedure
       type(cg_list_element), pointer, intent(in) :: cgle !< the element to be unlinked
 
       type(cg_list_element), pointer :: cur
@@ -272,34 +272,47 @@ contains
 
       implicit none
 
-      class(cg_list), intent(inout) :: this
+      class(cg_list), intent(inout) :: this !< object invoking type-bound procedure
 
       type(cg_list_element), pointer :: cur
       integer :: cnt
 
       if (.not. associated(this%first)) then
-         write(*,'(a)')"[gc_list:print_list] Empty list"
+         write(msg,'(a)')"[gc_list:print_list] Empty list"
+         call warn(msg)
          if (this%cnt /= 0) then
             write(msg,'(a,i6)')"[gc_list:print_list] Empty list length /= 0 : ",this%cnt
             call warn(msg)
          endif
          if (associated(this%last)) then
             call warn("[gc_list:print_list] Tail without head")
-            if (associated(this%last%cg)) write(*,'(a,i7)')"Last element #",this%last%cg%grid_n
+            if (associated(this%last%cg)) then
+               write(msg,'(a,i7)')"Last element #",this%last%cg%grid_n
+               call warn(msg)
+            endif
          endif
          return
       endif
 
       if (.not. associated(this%last)) call warn("[gc_list:print_list] Head without tail")
 
-      if (associated(this%first%cg)) write(*,'(a,i7)')"First element #",this%first%cg%grid_n
-      if (associated(this%last%cg)) write(*,'(a,i7)')"Last element #",this%last%cg%grid_n
+      if (associated(this%first%cg)) then
+         write(msg,'(a,i7)')"First element #",this%first%cg%grid_n
+         call warn(msg)
+      endif
+      if (associated(this%last%cg)) then
+         write(msg,'(a,i7)')"Last element #",this%last%cg%grid_n
+         call warn(msg)
+      endif
 
       cnt = 0
       cur => this%first
       do while (associated(cur))
          cnt = cnt + 1
-         if (associated(cur%cg)) write(*,'(i5,a,i7)')cnt,"-th element #",cur%cg%grid_n
+         if (associated(cur%cg)) then
+            write(msg,'(i5,a,i7)')cnt,"-th element #",cur%cg%grid_n
+            call warn(msg)
+         endif
          cur => cur%nxt
       enddo
 
@@ -311,7 +324,10 @@ contains
       cur => this%last
       do while (associated(cur))
          cnt = cnt - 1
-         if (associated(cur%cg)) write(*,'(i5,a,i7)')cnt,"-th element #",cur%cg%grid_n
+         if (associated(cur%cg)) then
+            write(msg,'(i5,a,i7)')cnt,"-th element #",cur%cg%grid_n
+            call warn(msg)
+         endif
          cur => cur%prv
       enddo
     end subroutine print_list
@@ -329,7 +345,7 @@ contains
 
       implicit none
 
-      class(cg_list_global),     intent(in) :: this
+      class(cg_list_global),     intent(in) :: this !< object invoking type-bound procedure
       character(len=*),          intent(in) :: name          !< Name of the variable to be registered
       integer(kind=4),           intent(in) :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
       integer(kind=4), optional, intent(in) :: dim4          !< If present then register the variable in the cg%w array.
@@ -369,7 +385,7 @@ contains
 
       implicit none
 
-      class(cg_list),  intent(in)  :: this
+      class(cg_list),  intent(in)  :: this !< object invoking type-bound procedure
       integer(kind=4), intent(in)  :: ind     !< Index in cg%q(:)
       integer(kind=4), intent(in)  :: minmax  !< minimum or maximum ?
       type(value),     intent(out) :: prop    !< precise location of the extremum to be found
@@ -454,7 +470,7 @@ contains
 !!$
 !!$      implicit none
 !!$
-!!$      class(cg_list), intent(inout) :: this
+!!$      class(cg_list), intent(inout) :: this !< object invoking type-bound procedure
 !!$      type(cg_list_element), pointer, intent(inout) :: cgle
 !!$
 !!$      type(cg_list_element), pointer :: cur, prv

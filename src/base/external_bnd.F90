@@ -30,7 +30,7 @@
 !>
 !! \brief Update external boundaries
 !!
-!! \detailed This module contains subroutines that are responsible for preparing external boundary cells for all simple boundary types for cg%q(:) and cg%w(:) arrays.
+!! \details This module contains subroutines that are responsible for preparing external boundary cells for all simple boundary types for cg%q(:) and cg%w(:) arrays.
 !! (i.e. no communication, dedicated arrays etc). Fancy, specialized boundary conditions should be defined somewhere else, in appropriate modules.
 !!
 !! Note that this routine may not properly update some layers of guardcells when number of guardcell layers exceedes number of active cells.

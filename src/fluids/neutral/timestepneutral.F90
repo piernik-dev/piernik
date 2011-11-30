@@ -68,8 +68,8 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
-      real, intent(out)                         :: dt
+      type(grid_container), pointer, intent(in) :: cg !< current grid container
+      real, intent(out)                         :: dt !< resulting timestep
       real, intent(out)                         :: c_neu !< maximum speed at which information travels in the neutral fluid
 
       real, dimension(ndims) :: c !< maximum velocity for all directions

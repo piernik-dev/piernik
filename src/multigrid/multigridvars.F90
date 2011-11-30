@@ -134,8 +134,8 @@ contains
 
       implicit none
 
-      class(plvl), intent(inout), target  :: this
-      integer(kind=4), intent(in)      :: iv
+      class(plvl), intent(inout), target  :: this  !< object invoking type-bound procedure
+      integer(kind=4), intent(in)         :: iv    !< variable to be restricted
 
       integer(kind=4), parameter :: tag1 = 1
       class(plvl), pointer :: coarse
@@ -261,7 +261,7 @@ contains
 
       implicit none
 
-      class(plvl), intent(inout), target  :: this
+      class(plvl), intent(inout), target  :: this  !< object invoking type-bound procedure
       integer(kind=4), intent(in)         :: iv    !< variable to be prolonged
 
       integer(kind=4), parameter :: tag1 = 1

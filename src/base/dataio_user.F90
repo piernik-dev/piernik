@@ -46,8 +46,8 @@ module dataio_user
          integer, intent(in)                       :: ij    !< direction perpendicular to the plane of plot, xdim means "yz" plane and so on
          integer(kind=8), intent(in)               :: xn    !< no. of cell at which we are slicing the local block
          integer, intent(inout)                    :: ierrh !< error handling
-         real, dimension(:,:), intent(inout)       :: tab   !< array  containing given quantity
-         type(grid_container), pointer, intent(in) :: cg
+         real, dimension(:,:), intent(inout)       :: tab   !< array containing given quantity
+         type(grid_container), pointer, intent(in) :: cg    !< current grid container
 
       end subroutine plt_hdf5
    end interface

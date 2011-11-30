@@ -273,7 +273,7 @@ contains
       real, dimension(flind%all,n), intent(inout) :: u                  !< vector of conservative variables
       real, dimension(flind%all,n), intent(in)    :: u0                 !< vector of conservative variables
       real, dimension(nmag,n),     intent(in)     :: bb                 !< local copy of magnetic field
-      real, dimension(:), pointer, intent(in)     :: divv
+      real, dimension(:), pointer, intent(in)     :: divv               !< vector of velocity divergence used in cosmic ray advection
       real, dimension(:), pointer, intent(in)     :: cs_iso2            !< square of local isothermal sound speed
       integer,                     intent(in)     :: istep              !< step number in the time integration scheme
       integer(kind=4),             intent(in)     :: sweep              !< direction (x, y or z) we are doing calculations for
