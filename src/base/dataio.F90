@@ -840,16 +840,16 @@ contains
          endif
       endif
 
-      pu => cg%w(cg%ind_4d(fluid_n))%span(cg%ijkse)
-      pb => cg%w(cg%ind_4d(mag_n  ))%span(cg%ijkse)
-      pwa=> cg%q(cg%ind   (wa_n   ))%span(cg%ijkse)
+      pu => cg%w(cg%ind_4d(fluid_n))%span(int(cg%ijkse))
+      pb => cg%w(cg%ind_4d(mag_n  ))%span(int(cg%ijkse))
+      pwa=> cg%q(cg%ind   (wa_n   ))%span(int(cg%ijkse))
 
       tot_mass = mpi_addmul(pu(iarr_all_dn,:,:,:), cg%dvol)
       tot_momx = mpi_addmul(pu(iarr_all_mx,:,:,:), cg%dvol)
       tot_momy = mpi_addmul(pu(iarr_all_my,:,:,:), cg%dvol)
       tot_momz = mpi_addmul(pu(iarr_all_mz,:,:,:), cg%dvol)
 #ifdef GRAV
-      tot_epot = mpi_addmul(pu(iarr_all_dn(1),:,:,:) * cg%q(cg%ind(gpot_n))%span(cg%ijkse), cg%dvol)
+      tot_epot = mpi_addmul(pu(iarr_all_dn(1),:,:,:) * cg%q(cg%ind(gpot_n))%span(int(cg%ijkse)), cg%dvol)
 #endif /* GRAV */
 
       cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &

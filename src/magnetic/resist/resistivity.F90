@@ -426,7 +426,7 @@ contains
 ! following solution seems to be a bit faster than former select case
          idmh(:) = cg%n_(:) - idm(:,etadir)
          idml(:) = 1 + idm(:,etadir)
-         cg%q(eta_i)%arr(:idmh(xdim),:idmh(ydim),:idmh(zdim)) = half*(cg%q(eta_i)%span([1,1,1],idmh) + cg%q(eta_i)%span(idml,cg%n_))
+         cg%q(eta_i)%arr(:idmh(xdim),:idmh(ydim),:idmh(zdim)) = half*(cg%q(eta_i)%span([1,1,1],idmh) + cg%q(eta_i)%span(idml,int(cg%n_)))
 
          do i1 = 1, ubound(cg%q(wcu_i)%arr,n1)
             do i2 = 1, ubound(cg%q(wcu_i)%arr,n2)
