@@ -933,7 +933,7 @@ contains
 !!
 !! \details This is the preferred method to access the registered array
 !<
-   function ptr(this, name) result(ptr)
+   function ptr(this, name) result(point)
 
       use dataio_pub, only: die, msg, warn
 
@@ -942,22 +942,22 @@ contains
       class(grid_container), intent(inout) :: this
       character(len=*), intent(in) :: name
 
-      real, dimension(:,:,:), pointer :: ptr
+      real, dimension(:,:,:), pointer :: point
       integer :: i
 
-      ptr => null()
+      point => null()
 
       do i = lbound(this%q, dim=1), ubound(this%q, dim=1)
          if (trim(name) ==  this%q(i)%name) then
-            if (associated(ptr)) then
+            if (associated(point)) then
                write(msg, '(2a)') "[grid_container:ptr] multiple entries with the same name ",trim(name)
                call die(msg)
             endif
-            ptr => this%q(i)%arr
+            point => this%q(i)%arr
          endif
       enddo
 
-      if (.not. associated(ptr)) then
+      if (.not. associated(point)) then
          write(msg, '(2a)') "[grid_container:ptr] requested entry not found: ", trim(name)
          call warn(msg)
       endif
@@ -969,7 +969,7 @@ contains
 !!
 !! \details This is the preferred method to access the registered array
 !<
-   function ptr_4d(this, name) result(ptr)
+   function ptr_4d(this, name) result(point)
 
       use dataio_pub, only: die, msg, warn
 
@@ -978,10 +978,10 @@ contains
       class(grid_container), intent(inout) :: this
       character(len=*), intent(in) :: name
 
-      real, dimension(:,:,:,:), pointer :: ptr
+      real, dimension(:,:,:,:), pointer :: point
       integer :: i
 
-      ptr => null()
+      point => null()
 
       do i = lbound(this%w, dim=1), ubound(this%w, dim=1)
          if (trim(name) ==  this%w(i)%name) then
@@ -989,11 +989,11 @@ contains
                write(msg, '(2a)') "[grid_container:ptr_4d] multiple entries with the same name: ", trim(name)
                call die(msg)
             endif
-            ptr => this%w(i)%arr
+            point => this%w(i)%arr
          endif
       enddo
 
-      if (.not. associated(ptr)) then
+      if (.not. associated(point)) then
          write(msg, '(2a)') "[grid_container:ptr_4d] requested entry not found: ", trim(name)
          call warn(msg)
       endif
@@ -1005,7 +1005,7 @@ contains
 !!
 !! \details This method is provided for convenience only. Use ptr whenever possible.
 !<
-   function ind(this, name) result(ind)
+   function ind(this, name) result(rind)
 
       use dataio_pub, only: die, msg, warn
 
@@ -1014,21 +1014,21 @@ contains
       class(grid_container), intent(inout) :: this
       character(len=*), intent(in) :: name
 
-      integer(kind=4) :: ind, i
+      integer(kind=4) :: rind, i
 
-      ind = 0
+      rind = 0
 
       do i = lbound(this%q, dim=1, kind=4), ubound(this%q, dim=1, kind=4)
          if (trim(name) ==  this%q(i)%name) then
-            if (ind /= 0) then
+            if (rind /= 0) then
                write(msg, '(2a)') "[grid_container:ind] multiple entries with the same name: ", trim(name)
                call die(msg)
             endif
-            ind = i
+            rind = i
          endif
       enddo
 
-      if (ind == 0) then
+      if (rind == 0) then
          write(msg, '(2a)') "[grid_container:ind] requested entry not found: ", trim(name)
          call warn(msg)
       endif
@@ -1040,7 +1040,7 @@ contains
 !!
 !! \details This method is provided for convenience only. Use ptr whenever possible.
 !<
-   function ind_4d(this, name) result(ind)
+   function ind_4d(this, name) result(rind)
 
       use dataio_pub, only: die, msg, warn
 
@@ -1049,21 +1049,21 @@ contains
       class(grid_container), intent(inout) :: this
       character(len=*), intent(in) :: name
 
-      integer(kind=4) :: ind, i
+      integer(kind=4) :: rind, i
 
-      ind = 0
+      rind = 0
 
       do i = lbound(this%w, dim=1, kind=4), ubound(this%w, dim=1, kind=4)
          if (trim(name) ==  this%w(i)%name) then
-            if (ind /= 0) then
+            if (rind /= 0) then
                write(msg, '(2a)') "[grid_container:ind_4d] multiple entries with the same name: ", trim(name)
                call die(msg)
             endif
-            ind = i
+            rind = i
          endif
       enddo
 
-      if (ind == 0) then
+      if (rind == 0) then
          write(msg, '(2a)') "[grid_container:ind_4d] requested entry not found: ", trim(name)
          call warn(msg)
       endif
