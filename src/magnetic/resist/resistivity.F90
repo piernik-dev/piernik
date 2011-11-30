@@ -286,7 +286,7 @@ contains
          wb => cg%get_na_ptr(wb_n)
          wb = ( cg%u(flind%ion%ien,:,:,:) - half*( cg%u(flind%ion%imx,:,:,:)**2  + cg%u(flind%ion%imy,:,:,:)**2  + cg%u(flind%ion%imz,:,:,:)**2 ) &
               / cg%u(flind%ion%idn,:,:,:) - half*( cg%b(xdim,:,:,:)**2  +   cg%b(ydim,:,:,:)**2  +   cg%b(zdim,:,:,:)**2))/ ( eta(:,:,:) * wb+small)
-         dt_eint = deint_max * abs(minval(wb(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)))
+         dt_eint = deint_max * abs(minval(cg%get_na_ptr(wb_n)%span(cg%ijkse)))
          cgl => cgl%nxt
       enddo
 
@@ -426,9 +426,7 @@ contains
 ! following solution seems to be a bit faster than former select case
          idmh(:) = cg%n_(:) - idm(:,etadir)
          idml(:) = 1 + idm(:,etadir)
-         cg%q(eta_i)%arr                  (          :idmh(xdim),            :idmh(ydim),            :idmh(zdim)) = &
-              &      half*(cg%q(eta_i)%arr(          :idmh(xdim),            :idmh(ydim),            :idmh(zdim)) + &
-              &            cg%q(eta_i)%arr(idml(xdim):cg%n_(xdim), idml(ydim):cg%n_(ydim), idml(zdim):cg%n_(zdim)) )
+         cg%q(eta_i)%arr(:idmh(xdim),:idmh(ydim),:idmh(zdim)) = half*(cg%q(eta_i)%span([1,1,1],idmh) + cg%q(eta_i)%span(idml,cg%n_))
 
          do i1 = 1, ubound(cg%q(wcu_i)%arr,n1)
             do i2 = 1, ubound(cg%q(wcu_i)%arr,n2)
