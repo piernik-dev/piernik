@@ -985,7 +985,7 @@ contains
 
       do i = lbound(this%w, dim=1), ubound(this%w, dim=1)
          if (trim(name) ==  this%w(i)%name) then
-            if (associated(ptr)) then
+            if (associated(point)) then
                write(msg, '(2a)') "[grid_container:ptr_4d] multiple entries with the same name: ", trim(name)
                call die(msg)
             endif
