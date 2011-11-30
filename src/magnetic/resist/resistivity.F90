@@ -286,7 +286,7 @@ contains
          wb => cg%get_na_ptr(wb_n)
          wb = ( cg%u(flind%ion%ien,:,:,:) - half*( cg%u(flind%ion%imx,:,:,:)**2  + cg%u(flind%ion%imy,:,:,:)**2  + cg%u(flind%ion%imz,:,:,:)**2 ) &
               / cg%u(flind%ion%idn,:,:,:) - half*( cg%b(xdim,:,:,:)**2  +   cg%b(ydim,:,:,:)**2  +   cg%b(zdim,:,:,:)**2))/ ( eta(:,:,:) * wb+small)
-         dt_eint = deint_max * abs(minval(cg%get_na_ptr(wb_n)%span(cg%ijkse)))
+         dt_eint = deint_max * abs(minval(cg%q(cg%get_na_ind(wb_n))%span(cg%ijkse)))
          cgl => cgl%nxt
       enddo
 
