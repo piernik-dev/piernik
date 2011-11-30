@@ -18,7 +18,6 @@
 !! \copydetails mpisetup::init_mpi
 !! \copydetails resistivity::init_resistivity
 !! \copydetails shear::init_shear
-!! \copydetails constants::init_constants
 !! \copydetails snsources::init_snsources
 !! \copydetails multigrid::init_multigrid
 !! \copydetails multigrid_diffusion::init_multigrid_diff

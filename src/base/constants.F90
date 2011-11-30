@@ -73,7 +73,7 @@ module constants
 
    ! dimensions
    enum, bind(C)
-      enumerator :: xdim = 1, ydim, zdim                 !< parameters assigned to the x-, y- and z-direction
+      enumerator :: xdim = 1, ydim, zdim                 !! parameters assigned to the x-, y- and z-direction
    end enum
    integer(kind=4), parameter :: ndims   = zdim - xdim + 1 !< We live in a 3-dimensional world
    !>
@@ -83,7 +83,7 @@ module constants
       reshape([xdim, ydim, zdim, ydim, zdim, xdim, zdim, xdim, ydim], [ndims, ndims])
 
    enum, bind(C)
-      enumerator :: LO = 1, HI                           !< indices for low (left) and high (right) boundaries
+      enumerator :: LO = 1, HI                           !! indices for low (left) and high (right) boundaries
    end enum
 
    ! string lengths
@@ -114,19 +114,19 @@ module constants
 
    ! grid geometry type
    enum, bind(C)
-       enumerator :: GEO_XYZ, GEO_RPZ                    !< cartesian (0) or cylindrical (1) grid with uniform cell spacing
-       enumerator :: GEO_INVALID = GEO_XYZ - 1           !< non-recognized grid geometry (-1)
+       enumerator :: GEO_XYZ, GEO_RPZ                    !! cartesian (0) or cylindrical (1) grid with uniform cell spacing
+       enumerator :: GEO_INVALID = GEO_XYZ - 1           !! non-recognized grid geometry (-1)
    end enum
 
    ! boundary conditions type
    enum, bind(C)
-      enumerator :: BND_MPI                              !< internal, processor-processor boundary (by default equal to 0)
-      enumerator :: BND_PER, BND_REF                     !< periodic boundary, reflecting boudary
-      enumerator :: BND_OUT, BND_OUTD, BND_OUTH          !< free boundary, one-way outflow boundary, hydrostatic boundary
-      enumerator :: BND_COR, BND_SHE                     !< corner boundary, shear boundary
-      enumerator :: BND_INF                              !< 'inf', COMMENT ME
-      enumerator :: BND_USER                             !< user boundaries (provided in read_problem_par)
-      enumerator :: BND_INVALID = BND_MPI  - 1           !< non-recognized boundary
+      enumerator :: BND_MPI                              !! internal, processor-processor boundary (by default equal to 0)
+      enumerator :: BND_PER, BND_REF                     !! periodic boundary, reflecting boudary
+      enumerator :: BND_OUT, BND_OUTD, BND_OUTH          !! free boundary, one-way outflow boundary, hydrostatic boundary
+      enumerator :: BND_COR, BND_SHE                     !! corner boundary, shear boundary
+      enumerator :: BND_INF                              !! 'inf', COMMENT ME
+      enumerator :: BND_USER                             !! user boundaries (provided in read_problem_par)
+      enumerator :: BND_INVALID = BND_MPI  - 1           !! non-recognized boundary
    end enum
 
    ! 3D and 4D array names
@@ -151,19 +151,19 @@ module constants
 
    ! first index of cg%mbc(:,:,:) array
    enum, bind(C)
-      enumerator :: FLUID = 1, MAG, CR, ARR              !< MPI container type for exchanging u(:,:,:,:),  b(ndims,:,:,:), wcr(flind%crs%all,:,:,:) and a rank-3 arrays
+      enumerator :: FLUID = 1, MAG, CR, ARR              !! MPI container type for exchanging u(:,:,:,:),  b(ndims,:,:,:), wcr(flind%crs%all,:,:,:) and a rank-3 arrays
    end enum
    ! last index of cg%mbc(:,:,:) array
    enum, bind(C)
-      enumerator :: BND = 1, BLK                         !< receiving and sending area
+      enumerator :: BND = 1, BLK                         !! receiving and sending area
    end enum
 
    ! Handling boundary cells in the output
    enum, bind(C)
-      enumerator :: AT_IGNORE       !< no output
-      enumerator :: AT_NO_B         !< no boundary cells
-      enumerator :: AT_OUT_B        !< external boundary cells
-      enumerator :: AT_USER         !< user defined area type
+      enumerator :: AT_IGNORE       !! no output
+      enumerator :: AT_NO_B         !! no boundary cells
+      enumerator :: AT_OUT_B        !! external boundary cells
+      enumerator :: AT_USER         !! user defined area type
    end enum
 
    ! Fluid type index, used in flind%tag

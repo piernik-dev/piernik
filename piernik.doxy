@@ -610,8 +610,8 @@ INPUT_ENCODING         = UTF-8
 # *.hxx *.hpp *.h++ *.idl *.odl *.cs *.php *.php3 *.inc *.m *.mm *.dox *.py
 # *.f90 *.f *.vhd *.vhdl
 
-FILE_PATTERNS          = *.f90 \
-               			 *.F90 \
+FILE_PATTERNS          = *.F90 \
+               			 *.f90 \
                          *.f95 \
                          *.f77 \
                          *.ftn \

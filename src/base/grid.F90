@@ -25,14 +25,11 @@
 !
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
-
 #include "piernik.h"
 #include "macros.h"
-
 !>
 !! \brief (DW) Module containing lists of grid containers for computational mesh and initialization and cleanup routines
 !<
-
 module grid
 
    use gc_list,   only: cg_list_global, cg_list_level, cg_list_patch, cg_list
@@ -51,7 +48,7 @@ module grid
 contains
 
 !>
-!! \brief Routine that allocates all grid containers and most important field arrays inside gc's
+!! \brief Routine that allocates all grid containers and most important field arrays inside gcs
 !<
    subroutine init_grid
 
@@ -97,13 +94,13 @@ contains
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
 #endif /* VERBOSE */
 
-      call all_cg%reg_var(wa_n, AT_IGNORE)                 ! BEWARE: magic string across multiple files
-      call all_cg%reg_var(fluid_n, AT_NO_B, flind%all)     !< Main array of all fluids' components, "u"
-      call all_cg%reg_var(uh_n, AT_IGNORE, flind%all)      !< Main array of all fluids' components (for t += dt/2)
-      call all_cg%reg_var(mag_n, AT_OUT_B, ndims)          !< Main array of magnetic field's components, "b"
+      call all_cg%reg_var(wa_n, AT_IGNORE)                 !! BEWARE: magic string across multiple files
+      call all_cg%reg_var(fluid_n, AT_NO_B, flind%all)     !! Main array of all fluids' components, "u"
+      call all_cg%reg_var(uh_n, AT_IGNORE, flind%all)      !! Main array of all fluids' components (for t += dt/2)
+      call all_cg%reg_var(mag_n, AT_OUT_B, ndims)          !! Main array of magnetic field's components, "b"
       if (repeat_step) then
-         call all_cg%reg_var(u0_n, AT_IGNORE, flind%all)   !< Copy of main array of all fluids' components
-         call all_cg%reg_var(b0_n, AT_IGNORE, ndims)       !< Copy of main array of magnetic field's components
+         call all_cg%reg_var(u0_n, AT_IGNORE, flind%all)   !! Copy of main array of all fluids' components
+         call all_cg%reg_var(b0_n, AT_IGNORE, ndims)       !! Copy of main array of magnetic field's components
       endif
 
       nrq = 0
@@ -183,7 +180,7 @@ contains
 
    end subroutine dom2cg
 
-!> \brief Update the list of leaves
+! \brief Update the list of leaves
 ! subroutine update leaves
 ! end subroutine update leaves
 

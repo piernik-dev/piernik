@@ -18,7 +18,7 @@
 !!
 !! This routine reads the PROBLEM_CONTROL namelist by master process and communicates read parameters to other processes.
 !! It can also calculate things that might be needed by the problem, except the initial conditions.
-!! \annotate Pointers assignment dependent on parameters from problem.par file should be placed at the end of this routine.
+!! \attention Pointers assignment dependent on parameters from problem.par file should be placed at the end of this routine.
 !!
 !! This routine is called before it is decided whether to read restart file or start from scratch.
 !!
