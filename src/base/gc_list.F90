@@ -377,7 +377,7 @@ contains
             write(msg, '(3a)')"[grid_container:add_na] A rank-3 array '",trim(name),"' was already registered."
             call die(msg)
          endif
-         call add2lst(this%q_lst, name, restart_mode, INVALID)
+         call add2lst(this%q_lst, name, restart_mode, int(INVALID, kind=4))
       endif
 
       cgl => this%first
@@ -721,7 +721,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         tab => cg%q(ind)%span(int(cg%ijkse))
+         tab => cg%q(ind)%span(cg%ijkse)
          select case (minmax)
             case (MINL)
                if (minval(tab) < prop%val) then
