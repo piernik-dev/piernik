@@ -31,8 +31,9 @@
 
 module gc_list
 
-   use constants, only: ndims
-   use grid_cont, only: grid_container
+   use constants,   only: ndims
+   use grid_cont,   only: grid_container
+   use named_array, only: na_var
 
    implicit none
 
@@ -91,7 +92,8 @@ module gc_list
    !! for their data (and additional routine for coupling the two grid sets).
    !<
    type, extends(cg_list) :: cg_list_global
-   !> \todo store the information about registered entries also here (name, restart_mode, index, dim4)
+      type(na_var), dimension(:), allocatable :: q_lst !< information about registered 3D named arrays
+      type(na_var), dimension(:), allocatable :: w_lst !< information about registered 4D named arrays
     contains
       procedure :: reg_var        !< Add a variable (cg%q or cg%w) to all grid containers
    end type cg_list_global

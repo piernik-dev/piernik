@@ -40,12 +40,18 @@ module named_array
    implicit none
 
    private
-   public :: named_array4d, named_array3d, mbc_list
+   public :: named_array4d, named_array3d, mbc_list, na_var
 
-   !> \brief Common fields for 3D and 4D named arrays
-   type, abstract :: generic_na
-      character(len=dsetnamelen) :: name                 !< a user-provided id for the array
-      integer(kind=4) :: restart_mode                    !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
+   !> \brief Common properties of 3D and 4D named arrays
+   type :: na_var
+      character(len=dsetnamelen) :: name  !< a user-provided id for the array
+      integer(kind=4) :: restart_mode     !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
+      integer(kind=4) :: dim4             !< <=0 for 3D arrays, >0 for 4D arrays
+      logical :: multigrid                !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
+   end type na_var
+
+   !> \brief Common methods for 3D and 4D named arrays
+   type, extends(na_var), abstract :: generic_na
     contains
       procedure(g_na_clean), deferred, pass(this) :: clean
       procedure(g_na_check), deferred, pass(this) :: check
@@ -133,7 +139,7 @@ contains
 
    subroutine array3d_init(this, n3, name, restart_mode)
 
-      use constants, only: big_float, ndims, xdim, ydim, zdim
+      use constants, only: big_float, ndims, xdim, ydim, zdim, INVALID
 
       implicit none
 
@@ -146,6 +152,8 @@ contains
       this%arr = big_float
       this%name = name
       this%restart_mode = restart_mode
+      this%dim4 = INVALID
+      this%multigrid = .false.
 !     if (.not.associated(this%arr)) this%arr = reshape( [ ( big_float, i=1, product(n3(:)) ) ], [ n3(1), n3(2), n3(3) ] ) ! lhs realloc
 
    end subroutine array3d_init
@@ -216,6 +224,8 @@ contains
       this%arr = big_float
       this%name = name
       this%restart_mode = restart_mode
+      this%dim4 = n4(I_ONE)
+      this%multigrid = .false.
 !     if (.not.associated(this%arr)) this%arr = reshape( [ ( big_float, i=1, product(n4(:)) ) ], [ n4(1), n4(2), n4(3), n4(4) ] ) ! lhs realloc
 
    end subroutine array4d_init

@@ -366,7 +366,7 @@ contains
          area_type = all_cg%first%cg%q(ind)%restart_mode
       else
          if (ind < lbound(all_cg%first%cg%w(:), dim=1) .or. ind > ubound(all_cg%first%cg%w(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 4D array")
-         dim1 = size(all_cg%first%cg%w(ind)%arr, dim=1)
+         dim1 = all_cg%first%cg%w(ind)%dim4
          rank = rank4
          dname = all_cg%first%cg%w(ind)%name
          area_type = all_cg%first%cg%w(ind)%restart_mode
@@ -506,7 +506,7 @@ contains
          area_type = all_cg%first%cg%q(ind)%restart_mode
       else
          if (ind < lbound(all_cg%first%cg%w(:), dim=1) .or. ind > ubound(all_cg%first%cg%w(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 4D array")
-         dim1 = size(all_cg%first%cg%w(ind)%arr, dim=1)
+         dim1 = all_cg%first%cg%w(ind)%dim4
          rank = rank4
          cgname = all_cg%first%cg%w(ind)%name
          area_type = all_cg%first%cg%w(ind)%restart_mode
@@ -902,7 +902,7 @@ contains
          allocate(ddims(drank))
          do i = lbound(fcg%w(:), dim=1, kind=4), ubound(fcg%w(:), dim=1, kind=4)
             if (fcg%w(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/fcg.w(i).name"
-                 call create_empty_cg_dataset(cg_g_id, fcg%w(i)%name, int([ size(fcg%w(i)%arr, dim=1, kind=4), cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
+                 call create_empty_cg_dataset(cg_g_id, fcg%w(i)%name, int([ fcg%w(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
          enddo
          deallocate(ddims)
       endif
@@ -1061,9 +1061,9 @@ contains
                      if (cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_src_n(ncg))
                         pa4d => cg%w(w_lst(i))%span(int(cg%ijkse)) !< \todo use set_dims_for_restart
-                        dims(:) = [ size(pa4d, dim=1, kind=4), cg%n_b ]
+                        dims(:) = [ cg%w(w_lst(i))%dim4, cg%n_b ]
                      else
-                        allocate(pa4d(size(all_cg%first%cg%w(w_lst(i))%arr(:,:,:,:), dim=1), cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
+                        allocate(pa4d(all_cg%first%cg%w(w_lst(i))%dim4, cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
                         call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, error)
                         dims(:) = shape(pa4d)
                      endif
@@ -1542,7 +1542,7 @@ contains
       if (size(w_lst) > 0) then
          allocate(dims(ndims+1), off(ndims+1), cnt(ndims+1))
          do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
-            dims(:) = [ size(cg%w(w_lst(i))%arr, dim=1, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
+            dims(:) = [ int(cg%w(w_lst(i))%dim4, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
             call h5dopen_f(cg_g_id, cg%w(w_lst(i))%name, dset_id, error)
             call h5dget_space_f(dset_id, filespace, error)
             off(:) = [ 0_HSIZE_T, restart_off(:) ]
