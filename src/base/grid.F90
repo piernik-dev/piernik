@@ -43,7 +43,7 @@ module grid
    integer, parameter :: base_level_number = 0 !< Base domain level number. Refinements are positively numbered, coarsened levels for use in multigrid solvers have negative numbers.
    integer(kind=8), dimension(ndims), parameter :: base_level_offset = [ 0_LONG, 0_LONG, 0_LONG ] !< Base domain offset. .
 
-   type(cg_list_global), protected :: all_cg                          !< all grid containers
+   type(cg_list_global) :: all_cg                                     !< all grid containers; \todo restore protected
    type(cg_list_level), target, protected  :: base_lev                !< base level grid containers
    type(cg_list), protected  :: leaves                                !< grid containers not fully covered by finer grid containers
    integer, parameter :: NBD = 1                                      !< at the moment the base domain may be composed of only one patch
@@ -208,6 +208,8 @@ contains
          deallocate(cgle%cg)
          cgle => cgle%nxt
       enddo
+      if (allocated(all_cg%q_lst)) deallocate(all_cg%q_lst)
+      if (allocated(all_cg%w_lst)) deallocate(all_cg%w_lst)
       call all_cg%delete
 
    end subroutine cleanup_grid

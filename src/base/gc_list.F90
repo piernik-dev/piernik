@@ -225,7 +225,7 @@ contains
 
    end subroutine del_lst
 
-!> \brief remove the element from the list, keep ith content
+!> \brief remove the element from the list, keep its contents
    subroutine un_link(this, cgle)
 
       use dataio_pub, only: warn, die
@@ -342,14 +342,15 @@ contains
 
    subroutine reg_var(this, name, restart_mode, dim4)
 
-      use dataio_pub, only: die, msg
+      use constants,   only: INVALID
+      use dataio_pub,  only: die, msg
 
       implicit none
 
-      class(cg_list_global),     intent(in) :: this          !< object invoking type-bound procedure
-      character(len=*),          intent(in) :: name          !< Name of the variable to be registered
-      integer(kind=4),           intent(in) :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
-      integer(kind=4), optional, intent(in) :: dim4          !< If present then register the variable in the cg%w array.
+      class(cg_list_global),     intent(inout) :: this          !< object invoking type-bound procedure
+      character(len=*),          intent(in)    :: name          !< Name of the variable to be registered
+      integer(kind=4),           intent(in)    :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
+      integer(kind=4), optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
 
       type(cg_list_element), pointer :: cgl
 
@@ -367,7 +368,37 @@ contains
          cgl => cgl%nxt
       enddo
 
+      if (present(dim4)) then
+         call add2lst(this%w_lst, name, restart_mode, dim4)
+      else
+         call add2lst(this%q_lst, name, restart_mode, INVALID)
+      endif
+
    end subroutine reg_var
+
+!> \brief Add a named array properties to the list
+
+   subroutine add2lst(lst, name, restart_mode, dim4)
+
+      implicit none
+
+      type(na_var), dimension(:), allocatable, intent(inout) :: lst           !< the list to which we want to appent an entry
+      character(len=*),                    intent(in)    :: name          !< Name of the variable to be registered
+      integer(kind=4),                     intent(in)    :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
+      integer(kind=4),                     intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
+
+      type(na_var), dimension(:), allocatable :: tmp
+
+      if (.not. allocated(lst)) then
+         allocate(lst(1))
+      else
+         allocate(tmp(lbound(lst(:),dim=1):ubound(lst(:), dim=1) + 1))
+         tmp(:ubound(lst(:), dim=1)) = lst(:)
+         call move_alloc(from=tmp, to=lst)
+      endif
+      lst(ubound(lst(:), dim=1)) = na_var(name, restart_mode, dim4, .false.)
+
+   end subroutine add2lst
 
 !>
 !! \brief Find munimum or maximum value over a specified list of grid containers
