@@ -53,6 +53,7 @@ module named_array
    !> \brief Common methods for 3D and 4D named arrays
    type, extends(na_var), abstract :: generic_na
     contains
+      procedure :: array_init
       procedure(g_na_clean), deferred, pass(this) :: clean
       procedure(g_na_check), deferred, pass(this) :: check
       procedure(g_na_b),     deferred, pass(this) :: lb
@@ -93,7 +94,6 @@ module named_array
       type(mbc_list), dimension(:,:), allocatable :: w_i_mbc  !< MPI Boundary conditions Containers for incoming guardcell updates on the w arrays
       type(mbc_list), dimension(:,:), allocatable :: w_o_mbc  !< MPI Boundary conditions Containers for outgoing guardcell updates on the w arrays
       contains
-         procedure :: array4d_init           ! \todo check why private here does not  work as expected
          procedure :: array4d_associate
          procedure :: clean => array4d_clean
          procedure :: array4d_get_sweep
@@ -105,7 +105,7 @@ module named_array
          procedure :: check => array4d_check_if_dirty
          procedure :: lb => array4d_lbound
          procedure :: ub => array4d_ubound
-         generic, public :: init => array4d_init, array4d_associate
+         generic, public :: init => array_init, array4d_associate
          generic, public :: get_sweep => array4d_get_sweep_one_var, array4d_get_sweep
          generic, public :: span => array4d_span_one_var, array4d_span, array4d_span_one_var_ijkse, array4d_span_ijkse
    end type named_array4d
@@ -114,7 +114,6 @@ module named_array
    type, extends(generic_na) :: named_array3d
       real, dimension(:,:,:), pointer :: arr => null()
       contains
-         procedure :: array3d_init
          procedure :: array3d_associate
          procedure :: clean => array3d_clean
          procedure :: check => array3d_check_if_dirty
@@ -123,40 +122,51 @@ module named_array
          procedure :: array3d_span_ijkse
          procedure :: lb => array3d_lbound
          procedure :: ub => array3d_ubound
-         generic, public :: init => array3d_init, array3d_associate
+         generic, public :: init => array_init, array3d_associate
          generic, public :: span => array3d_span, array3d_span_ijkse
    end type named_array3d
 
 contains
 
 !>
-!! \brief Initialize a 3d named array
+!! \brief Initialize a 3d or 4d named array
 !!
 !! \details The mbc component is initialized separately. Note that mbc is common for all 3d named arrays and is a member of the grid container type.
-!!
-!! \todo Consider providing an optional parameter that prevents allocating arr below base level to minimize multigrid overhead on memory
 !<
 
-   subroutine array3d_init(this, n3, name, restart_mode)
+   subroutine array_init(this, n, name, restart_mode)
 
-      use constants, only: big_float, ndims, xdim, ydim, zdim, INVALID
+      use constants,  only: big_float, ndims, xdim, ydim, zdim, INVALID, I_ONE
+      use dataio_pub, only: die
 
       implicit none
 
-      class(named_array3d),              intent(inout) :: this
-      integer(kind=4), dimension(ndims), intent(in)    :: n3
-      character(len=*),                  intent(in)    :: name
-      integer(kind=4),                   intent(in)    :: restart_mode
+      class(generic_na),             intent(inout) :: this
+      integer(kind=4), dimension(:), intent(in)    :: n
+      character(len=*),              intent(in)    :: name
+      integer(kind=4),               intent(in)    :: restart_mode
 
-      if (.not.associated(this%arr)) allocate(this%arr(n3(xdim), n3(ydim), n3(zdim)))
-      this%arr = big_float
+      select type(this)
+         type is(named_array3d)
+            if (size(n) /= ndims) call die("[named_array:array_init] expected 3d shape")
+            if (.not.associated(this%arr)) allocate(this%arr(n(xdim), n(ydim), n(zdim)))
+            this%arr = big_float
+            this%dim4 = INVALID
+            ! if (.not.associated(this%arr)) this%arr = reshape( [ ( big_float, i=1, product(n(:)) ) ], [ n(1), n(2), n(3) ] ) ! lhs realloc
+         type is(named_array4d)
+            if (size(n) /= I_ONE + ndims) call die("[named_array:array_init] expected 4d shape")
+            if (.not.associated(this%arr)) allocate(this%arr(n(I_ONE), n(I_ONE+xdim), n(I_ONE+ydim), n(I_ONE+zdim)))
+            this%arr = big_float
+            this%dim4 = n(I_ONE)
+            ! if (.not.associated(this%arr)) this%arr = reshape( [ ( big_float, i=1, product(n(:)) ) ], [ n(1), n(2), n(3), n(4) ] ) ! lhs realloc
+         class default
+            call die("[named_array:array_init] Unsupported class")
+      end select
       this%name = name
       this%restart_mode = restart_mode
-      this%dim4 = INVALID
       this%multigrid = .false.
-!     if (.not.associated(this%arr)) this%arr = reshape( [ ( big_float, i=1, product(n3(:)) ) ], [ n3(1), n3(2), n3(3) ] ) ! lhs realloc
 
-   end subroutine array3d_init
+   end subroutine array_init
 
 !>
 !! \brief deallocate array
@@ -200,35 +210,6 @@ contains
       if (.not.associated(this%arr)) this%arr => other
 
    end subroutine array3d_associate
-
-!>
-!! \brief Initialize a 4d named array
-!!
-!! \details The mbc component is initialized separately.
-!!
-!! \todo Consider providing an optional parameter that prevents allocating arr below base level to minimize multigrid overhead on memory
-!<
-
-   subroutine array4d_init(this, n4, name, restart_mode)
-
-      use constants, only: big_float, ndims, xdim, ydim, zdim, I_ONE
-
-      implicit none
-
-      class(named_array4d),                    intent(inout) :: this
-      integer(kind=4), dimension(ndims+I_ONE), intent(in)    :: n4
-      character(len=*),                        intent(in)    :: name
-      integer(kind=4),                         intent(in)    :: restart_mode
-
-      if (.not.associated(this%arr)) allocate(this%arr(n4(I_ONE), n4(I_ONE+xdim), n4(I_ONE+ydim), n4(I_ONE+zdim)))
-      this%arr = big_float
-      this%name = name
-      this%restart_mode = restart_mode
-      this%dim4 = n4(I_ONE)
-      this%multigrid = .false.
-!     if (.not.associated(this%arr)) this%arr = reshape( [ ( big_float, i=1, product(n4(:)) ) ], [ n4(1), n4(2), n4(3), n4(4) ] ) ! lhs realloc
-
-   end subroutine array4d_init
 
 !> \brief Initialize named array with a predefined simple array
 
