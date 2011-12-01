@@ -263,20 +263,18 @@ contains
       use constants,   only: cwdlen
       use dataio_user, only: problem_write_restart
       use grid,        only: all_cg
-      use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use mpi,         only: MPI_INFO_NULL
-      use mpisetup,    only: comm, FIRST
+      use mpisetup,    only: comm
 
       implicit none
       character(len=cwdlen), intent(in) :: filename      !> HDF File name
 
-      integer(kind=4)               :: i
-      integer(HID_T)                :: file_id       !> File identifier
-      integer(HID_T)                :: plist_id      !> Property list identifier
-      integer(kind=4)               :: error
-      type(grid_container), pointer :: fcg
+      integer(kind=4) :: i
+      integer(HID_T)  :: file_id       !> File identifier
+      integer(HID_T)  :: plist_id      !> Property list identifier
+      integer(kind=4) :: error
 
       ! Set up a new HDF5 file for parallel write
       call h5open_f(error)
@@ -285,15 +283,14 @@ contains
       call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
 
       ! Write scalar fields that were declared to be required on restart
-      fcg  => all_cg%first%cg
-      if (allocated(fcg%q)) then
-         do i = lbound(fcg%q(:), dim=1, kind=4), ubound(fcg%q(:), dim=1, kind=4)
+      if (allocated(all_cg%q_lst)) then
+         do i = lbound(all_cg%q_lst(:), dim=1, kind=4), ubound(all_cg%q_lst(:), dim=1, kind=4)
             call write_arr_to_restart(file_id, i, .true.)
          enddo
       endif
 
-      if (allocated(fcg%w)) then
-         do i = lbound(fcg%w(:), dim=1, kind=4), ubound(fcg%w(:), dim=1, kind=4)
+      if (allocated(all_cg%w_lst)) then
+         do i = lbound(all_cg%w_lst(:), dim=1, kind=4), ubound(all_cg%w_lst(:), dim=1, kind=4)
             call write_arr_to_restart(file_id, i, .false.)
          enddo
       endif
@@ -359,17 +356,17 @@ contains
       character(len=dsetnamelen)         :: dname
 
       if (tgt3d) then
-         if (ind < lbound(all_cg%first%cg%q(:), dim=1) .or. ind > ubound(all_cg%first%cg%q(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 3D array")
+         if (ind < lbound(all_cg%q_lst(:), dim=1) .or. ind > ubound(all_cg%q_lst(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 3D array")
          dim1 = 1
          rank = ndims
-         dname = all_cg%first%cg%q(ind)%name
-         area_type = all_cg%first%cg%q(ind)%restart_mode
+         dname = all_cg%q_lst(ind)%name
+         area_type = all_cg%q_lst(ind)%restart_mode
       else
-         if (ind < lbound(all_cg%first%cg%w(:), dim=1) .or. ind > ubound(all_cg%first%cg%w(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 4D array")
-         dim1 = all_cg%first%cg%w(ind)%dim4
+         if (ind < lbound(all_cg%w_lst(:), dim=1) .or. ind > ubound(all_cg%w_lst(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 4D array")
+         dim1 = all_cg%w_lst(ind)%dim4
          rank = rank4
-         dname = all_cg%first%cg%w(ind)%name
-         area_type = all_cg%first%cg%w(ind)%restart_mode
+         dname = all_cg%w_lst(ind)%name
+         area_type = all_cg%w_lst(ind)%restart_mode
       endif
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
@@ -499,17 +496,17 @@ contains
 
       !> \deprecated Duplicated code
       if (tgt3d) then
-         if (ind < lbound(all_cg%first%cg%q(:), dim=1) .or. ind > ubound(all_cg%first%cg%q(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 3D array")
+         if (ind < lbound(all_cg%q_lst(:), dim=1) .or. ind > ubound(all_cg%q_lst(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 3D array")
          dim1 = 1
          rank = ndims
-         cgname = all_cg%first%cg%q(ind)%name
-         area_type = all_cg%first%cg%q(ind)%restart_mode
+         cgname = all_cg%q_lst(ind)%name
+         area_type = all_cg%q_lst(ind)%restart_mode
       else
-         if (ind < lbound(all_cg%first%cg%w(:), dim=1) .or. ind > ubound(all_cg%first%cg%w(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 4D array")
-         dim1 = all_cg%first%cg%w(ind)%dim4
+         if (ind < lbound(all_cg%w_lst(:), dim=1) .or. ind > ubound(all_cg%w_lst(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 4D array")
+         dim1 = all_cg%w_lst(ind)%dim4
          rank = rank4
-         cgname = all_cg%first%cg%w(ind)%name
-         area_type = all_cg%first%cg%w(ind)%restart_mode
+         cgname = all_cg%w_lst(ind)%name
+         area_type = all_cg%w_lst(ind)%restart_mode
       endif
       dname = cgname
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
@@ -607,7 +604,6 @@ contains
       use fluidindex,  only: flind
       use global,      only: magic_mass, t, dt, nstep
       use grid,        only: all_cg
-      use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
            &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
@@ -631,7 +627,6 @@ contains
       integer(kind=4), dimension(1) :: ibuf
 
       real                          :: restart_hdf5_version
-      type(grid_container), pointer :: fcg
 
       nu = flind%all
 
@@ -705,15 +700,14 @@ contains
       if (associated(problem_read_restart)) call problem_read_restart(file_id)
 
       ! read auxiliary variables
-      fcg => all_cg%first%cg
-      if (allocated(fcg%q)) then
-         do i = lbound(fcg%q(:), dim=1, kind=4), ubound(fcg%q(:), dim=1, kind=4)
+      if (allocated(all_cg%q_lst)) then
+         do i = lbound(all_cg%q_lst(:), dim=1, kind=4), ubound(all_cg%q_lst(:), dim=1, kind=4)
             call read_arr_from_restart(file_id, i, .true.)
          enddo
       endif
 
-      if (allocated(fcg%w)) then
-         do i = lbound(fcg%w(:), dim=1, kind=4), ubound(fcg%w(:), dim=1, kind=4)
+      if (allocated(all_cg%w_lst)) then
+         do i = lbound(all_cg%w_lst(:), dim=1, kind=4), ubound(all_cg%w_lst(:), dim=1, kind=4)
             call read_arr_from_restart(file_id, i, .false.)
          enddo
       endif
@@ -869,7 +863,6 @@ contains
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, Z_avail, g)
 
       use constants, only: ndims, I_ONE, AT_IGNORE
-      use grid_cont, only: grid_container
       use grid,      only: all_cg
       use hdf5,      only: HID_T, HSIZE_T
 
@@ -882,27 +875,24 @@ contains
 
       integer(kind=4)                                      :: drank
       integer                                              :: i
-      type(grid_container),  pointer                       :: fcg
       integer(HSIZE_T), dimension(:),   allocatable        :: ddims
 
-      fcg  => all_cg%first%cg
-
-      if (allocated(fcg%q)) then
+      if (allocated(all_cg%q_lst)) then
          drank = ndims
          allocate(ddims(drank))
-         do i = lbound(fcg%q(:), dim=1, kind=4), ubound(fcg%q(:), dim=1, kind=4)
-            if (fcg%q(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/fcg.q(i).name"
-                 call create_empty_cg_dataset(cg_g_id, fcg%q(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
+         do i = lbound(all_cg%q_lst(:), dim=1), ubound(all_cg%q_lst(:), dim=1)
+            if (all_cg%q_lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/all_cg.q_lst(i)).name"
+                 call create_empty_cg_dataset(cg_g_id, all_cg%q_lst(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
          enddo
          deallocate(ddims)
       endif
 
-      if (allocated(fcg%w)) then
+      if (allocated(all_cg%w_lst)) then
          drank = ndims + I_ONE
          allocate(ddims(drank))
-         do i = lbound(fcg%w(:), dim=1, kind=4), ubound(fcg%w(:), dim=1, kind=4)
-            if (fcg%w(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/fcg.w(i).name"
-                 call create_empty_cg_dataset(cg_g_id, fcg%w(i)%name, int([ fcg%w(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
+         do i = lbound(all_cg%w_lst(:), dim=1), ubound(all_cg%w_lst(:), dim=1)
+            if (all_cg%w_lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/all_cg.w_lst(i).name"
+                 call create_empty_cg_dataset(cg_g_id, all_cg%w_lst(i)%name, int([ all_cg%w_lst(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
          enddo
          deallocate(ddims)
       endif
@@ -959,16 +949,16 @@ contains
 
       integer :: i
 
-      if (allocated(all_cg%first%cg%q)) then
-         do i = lbound(all_cg%first%cg%q(:), dim=1, kind=4), ubound(all_cg%first%cg%q(:), dim=1, kind=4)
-            if (all_cg%first%cg%q(i)%restart_mode /= AT_IGNORE) call append_int_to_array(q_lst, i)
+      if (allocated(all_cg%q_lst)) then
+         do i = lbound(all_cg%q_lst(:), dim=1, kind=4), ubound(all_cg%q_lst(:), dim=1, kind=4)
+            if (all_cg%q_lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(q_lst, i)
          enddo
       endif
       if (.not.allocated(q_lst)) allocate(q_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
 
-      if (allocated(all_cg%first%cg%w)) then
-         do i = lbound(all_cg%first%cg%w(:), dim=1, kind=4), ubound(all_cg%first%cg%w(:), dim=1, kind=4)
-            if (all_cg%first%cg%w(i)%restart_mode /= AT_IGNORE) call append_int_to_array(w_lst, i)
+      if (allocated(all_cg%w_lst)) then
+         do i = lbound(all_cg%w_lst(:), dim=1, kind=4), ubound(all_cg%w_lst(:), dim=1, kind=4)
+            if (all_cg%w_lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(w_lst, i)
          enddo
       endif
       if (.not.allocated(w_lst)) allocate(w_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
@@ -1037,7 +1027,7 @@ contains
                if (size(q_lst) > 0) then
                   allocate(dims(ndims))
                   do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
-                     call h5dopen_f(cg_g_id, all_cg%first%cg%q(q_lst(i))%name, dset_id, error)
+                     call h5dopen_f(cg_g_id, all_cg%q_lst(q_lst(i))%name, dset_id, error)
                      if (cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_src_n(ncg))
                         pa3d => cg%q(q_lst(i))%span(int(cg%ijkse)) !< \todo use set_dims_for_restart
@@ -1057,13 +1047,13 @@ contains
                if (size(w_lst) > 0) then
                   allocate(dims(ndims+1))
                   do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
-                     call h5dopen_f(cg_g_id, all_cg%first%cg%w(w_lst(i))%name, dset_id, error)
+                     call h5dopen_f(cg_g_id, all_cg%w_lst(w_lst(i))%name, dset_id, error)
                      if (cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_src_n(ncg))
                         pa4d => cg%w(w_lst(i))%span(int(cg%ijkse)) !< \todo use set_dims_for_restart
                         dims(:) = [ cg%w(w_lst(i))%dim4, cg%n_b ]
                      else
-                        allocate(pa4d(all_cg%first%cg%w(w_lst(i))%dim4, cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
+                        allocate(pa4d(all_cg%w_lst(w_lst(i))%dim4, cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
                         call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, error)
                         dims(:) = shape(pa4d)
                      endif
