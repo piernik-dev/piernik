@@ -37,6 +37,7 @@ program piernik
    use dataio_pub,  only: nend, tend, msg, printinfo, warn, die, code_progress
    use fluidupdate, only: fluid_update
    use global,      only: t, nstep, dt, dtm, cfl_violated
+   use grid,        only: all_cg
    use mpisetup,    only: comm, ierr, master
    use timer,       only: time_left, set_timer
    use timestep,    only: time_step
@@ -79,6 +80,8 @@ program piernik
    call print_progress(nstep)
 
    do while (t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() ) ! main loop
+
+      call all_cg%check_na
 
       call time_step(dt)
       call grace_period

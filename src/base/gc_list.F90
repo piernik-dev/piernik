@@ -96,6 +96,7 @@ module gc_list
       type(na_var), dimension(:), allocatable :: w_lst !< information about registered 4D named arrays
     contains
       procedure :: reg_var        !< Add a variable (cg%q or cg%w) to all grid containers
+      procedure :: check_na       !< Check if all named arrays are consistently registered
    end type cg_list_global
 
    !>
@@ -383,9 +384,9 @@ contains
       implicit none
 
       type(na_var), dimension(:), allocatable, intent(inout) :: lst           !< the list to which we want to appent an entry
-      character(len=*),                    intent(in)    :: name          !< Name of the variable to be registered
-      integer(kind=4),                     intent(in)    :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
-      integer(kind=4),                     intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
+      character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
+      integer(kind=4),                         intent(in)    :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
+      integer(kind=4),                         intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
 
       type(na_var), dimension(:), allocatable :: tmp
 
@@ -399,6 +400,53 @@ contains
       lst(ubound(lst(:), dim=1)) = na_var(name, restart_mode, dim4, .false.)
 
    end subroutine add2lst
+
+!> \brief Check if all named arrays are consistently registered
+
+   subroutine check_na(this)
+
+      use constants,  only: INVALID
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(cg_list_global), intent(in) :: this          !< object invoking type-bound procedure
+
+      integer :: i
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         if (allocated(this%q_lst) .neqv. allocated(cgl%cg%q)) then
+            call die("[named_array:check_na] allocated(all_cg%q_lst) .neqv. allocated(cgl%cg%q)")
+         else if (allocated(this%q_lst)) then
+            if (size(this%q_lst) /= size(cgl%cg%q)) then
+               call die("[named_array:check_na] size(all_cg%q_lst) /= size(cgl%cg%q)")
+            else
+               do i = lbound(this%q_lst, dim=1), ubound(this%q_lst, dim=1)
+                  if ( this%q_lst(i)%dim4 /= INVALID .or. this%q_lst(i)%dim4 /= cgl%cg%q(i)%dim4 .or. &
+                       this%q_lst(i)%name /= cgl%cg%q(i)%name .or. this%q_lst(i)%restart_mode /= cgl%cg%q(i)%restart_mode .or. &
+                       this%q_lst(i)%multigrid .neqv. cgl%cg%q(i)%multigrid) call die("[named_array:check_na] all_cg%q_lst(i) /= cgl%cg%q(i)")
+               enddo
+            endif
+         endif
+         if (allocated(this%w_lst) .neqv. allocated(cgl%cg%w)) then
+            call die("[named_array:check_na] allocated(all_cg%w_lst) .neqv. allocated(cgl%cg%w)")
+         else if (allocated(this%w_lst)) then
+            if (size(this%w_lst) /= size(cgl%cg%w)) then
+               call die("[named_array:check_na] size(all_cg%w_lst) /= size(cgl%cg%w)")
+            else
+               do i = lbound(this%w_lst, dim=1), ubound(this%w_lst, dim=1)
+                  if ( this%w_lst(i)%dim4 <= 0 .or. this%w_lst(i)%dim4 /= cgl%cg%w(i)%dim4 .or. &
+                       trim(this%w_lst(i)%name) /= trim(cgl%cg%w(i)%name) .or. this%w_lst(i)%restart_mode /= cgl%cg%w(i)%restart_mode .or. &
+                       this%w_lst(i)%multigrid .neqv. cgl%cg%w(i)%multigrid) call die("[named_array:check_na] all_cg%w_lst(i) /= cgl%cg%w(i)")
+               enddo
+            endif
+         endif
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine check_na
 
 !>
 !! \brief Find munimum or maximum value over a specified list of grid containers
