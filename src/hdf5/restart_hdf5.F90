@@ -1079,18 +1079,14 @@ contains
                   cg => get_nth_cg(cg_src_n(ncg))
                   if (size(q_lst) > 0) then
                      do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
-                        allocate(pa3d(cg%n_b(xdim), cg%n_b(ydim), cg%n_b(zdim)))
                         pa3d => cg%q(q_lst(i))%span(int(cg%ijkse))
                         call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*i, comm, error)
-                        deallocate(pa3d)
                      enddo
                   endif
                   if (size(w_lst) > 0) then
                      do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
-                        allocate(pa4d(size(cg%w(w_lst(i))%arr(:,:,:,:), dim=1), cg%n_b(xdim), cg%n_b(ydim), cg%n_b(zdim)))
                         pa4d => cg%w(w_lst(i))%span(int(cg%ijkse))
                         call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*(size(q_lst)+i), comm, error)
-                        deallocate(pa4d)
                      enddo
                   endif
                endif
