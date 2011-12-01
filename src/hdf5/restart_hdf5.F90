@@ -553,7 +553,7 @@ contains
 
          ! Read the array
          if (tgt3d) then
-            pa3d => cg%q(cg%ind(cgname))%arr(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+            pa3d => cg%q(all_cg%ind(cgname))%arr(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
             if (associated(pa3d)) then
                call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
@@ -561,7 +561,7 @@ contains
                call die(msg)
             endif
          else
-            pa4d => cg%w(cg%ind_4d(cgname))%arr(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+            pa4d => cg%w(all_cg%ind_4d(cgname))%arr(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
             if (associated(pa4d)) then
                call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
@@ -584,7 +584,7 @@ contains
       call h5sclose_f(filespace, error)
       call h5dclose_f(dset_id, error)
 
-      if (tgt3d) call arr3d_boundaries(cg%ind(dname), area_type=area_type)
+      if (tgt3d) call arr3d_boundaries(all_cg%ind(dname), area_type=area_type)
          ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
 
       ! rank-4 arrays (cg%u(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
@@ -1051,7 +1051,7 @@ contains
                      if (cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_src_n(ncg))
                         pa4d => cg%w(w_lst(i))%span(int(cg%ijkse)) !< \todo use set_dims_for_restart
-                        dims(:) = [ cg%w(w_lst(i))%dim4, cg%n_b ]
+                        dims(:) = [ all_cg%w_lst(w_lst(i))%dim4, cg%n_b ]
                      else
                         allocate(pa4d(all_cg%w_lst(w_lst(i))%dim4, cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
                         call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, error)
@@ -1459,6 +1459,7 @@ contains
       use constants,   only: xdim, ydim, zdim, LO, HI, LONG
       use dataio_pub,  only: die
       use domain,      only: is_overlap, dom
+      use grid,        only: all_cg
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
            &                 h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
@@ -1512,7 +1513,7 @@ contains
          allocate(dims(ndims), off(ndims), cnt(ndims))
          dims(:) = o_size(:)
          do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
-            call h5dopen_f(cg_g_id, cg%q(q_lst(i))%name, dset_id, error) ! open "/cg/cg_%08d/cg.q(q_lst(i)).name"
+            call h5dopen_f(cg_g_id, all_cg%q_lst(q_lst(i))%name, dset_id, error) ! open "/cg/cg_%08d/cg.q(q_lst(i)).name"
             call h5dget_space_f(dset_id, filespace, error)
             off(:) = restart_off(:)
             cnt(:) = 1
@@ -1532,8 +1533,8 @@ contains
       if (size(w_lst) > 0) then
          allocate(dims(ndims+1), off(ndims+1), cnt(ndims+1))
          do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
-            dims(:) = [ int(cg%w(w_lst(i))%dim4, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
-            call h5dopen_f(cg_g_id, cg%w(w_lst(i))%name, dset_id, error)
+            dims(:) = [ int(all_cg%w_lst(w_lst(i))%dim4, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
+            call h5dopen_f(cg_g_id, all_cg%w_lst(w_lst(i))%name, dset_id, error)
             call h5dget_space_f(dset_id, filespace, error)
             off(:) = [ 0_HSIZE_T, restart_off(:) ]
             cnt(:) = 1

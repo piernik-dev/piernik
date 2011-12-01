@@ -31,9 +31,8 @@
 
 module gc_list
 
-   use constants,   only: ndims
+   use constants,   only: ndims, dsetnamelen
    use grid_cont,   only: grid_container
-   use named_array, only: na_var
 
    implicit none
 
@@ -77,6 +76,14 @@ module gc_list
 
    end type cg_list
 
+   !> \brief Common properties of 3D and 4D named arrays
+   type :: na_var
+      character(len=dsetnamelen) :: name  !< a user-provided id for the array
+      integer(kind=4) :: restart_mode     !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
+      integer(kind=4) :: dim4             !< <=0 for 3D arrays, >0 for 4D arrays
+      logical :: multigrid                !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
+   end type na_var
+
    !>
    !! \brief A list of grid containers that are supposed to have the same variables registered
    !!
@@ -97,6 +104,10 @@ module gc_list
     contains
       procedure :: reg_var        !< Add a variable (cg%q or cg%w) to all grid containers
       procedure :: check_na       !< Check if all named arrays are consistently registered
+      procedure :: ind
+      procedure :: ind_4d
+      procedure :: exists
+      procedure :: exists_4d
    end type cg_list_global
 
    !>
@@ -355,6 +366,20 @@ contains
 
       type(cg_list_element), pointer :: cgl
 
+      if (present(dim4)) then
+         if (this%exists_4d(name)) then
+            write(msg, '(3a)')"[grid_container:add_na_4d] A rank-4 array '",trim(name),"' was already registered."
+            call die(msg)
+         endif
+         call add2lst(this%w_lst, name, restart_mode, dim4)
+      else
+         if (this%exists(name)) then
+            write(msg, '(3a)')"[grid_container:add_na] A rank-3 array '",trim(name),"' was already registered."
+            call die(msg)
+         endif
+         call add2lst(this%q_lst, name, restart_mode, INVALID)
+      endif
+
       cgl => this%first
       do while (associated(cgl))
          if (present(dim4)) then
@@ -362,18 +387,12 @@ contains
                write(msg,'(3a)')"[gc_list:reg_var] dim4<=0 for variable'",name,"'"
                call die(msg)
             endif
-            call cgl%cg%add_na_4d(name, restart_mode, dim4)
+            call add_na_4d(cgl%cg, dim4)
          else
-            call cgl%cg%add_na(name, restart_mode)
+            call add_na(cgl%cg)
          endif
          cgl => cgl%nxt
       enddo
-
-      if (present(dim4)) then
-         call add2lst(this%w_lst, name, restart_mode, dim4)
-      else
-         call add2lst(this%q_lst, name, restart_mode, INVALID)
-      endif
 
    end subroutine reg_var
 
@@ -424,9 +443,8 @@ contains
                call die("[named_array:check_na] size(all_cg%q_lst) /= size(cgl%cg%q)")
             else
                do i = lbound(this%q_lst, dim=1), ubound(this%q_lst, dim=1)
-                  if ( this%q_lst(i)%dim4 /= INVALID .or. this%q_lst(i)%dim4 /= cgl%cg%q(i)%dim4 .or. &
-                       this%q_lst(i)%name /= cgl%cg%q(i)%name .or. this%q_lst(i)%restart_mode /= cgl%cg%q(i)%restart_mode .or. &
-                       this%q_lst(i)%multigrid .neqv. cgl%cg%q(i)%multigrid) call die("[named_array:check_na] all_cg%q_lst(i) /= cgl%cg%q(i)")
+                  if (this%q_lst(i)%dim4 /= INVALID) call die("[named_array:check_na] all_cg%q_lst(i) /= cgl%cg%q(i)")
+                  !! \todo check allocation of cgl%cg%q(i)%arr  this%q_lst(i)%multigrid
                enddo
             endif
          endif
@@ -437,9 +455,7 @@ contains
                call die("[named_array:check_na] size(all_cg%w_lst) /= size(cgl%cg%w)")
             else
                do i = lbound(this%w_lst, dim=1), ubound(this%w_lst, dim=1)
-                  if ( this%w_lst(i)%dim4 <= 0 .or. this%w_lst(i)%dim4 /= cgl%cg%w(i)%dim4 .or. &
-                       trim(this%w_lst(i)%name) /= trim(cgl%cg%w(i)%name) .or. this%w_lst(i)%restart_mode /= cgl%cg%w(i)%restart_mode .or. &
-                       this%w_lst(i)%multigrid .neqv. cgl%cg%w(i)%multigrid) call die("[named_array:check_na] all_cg%w_lst(i) /= cgl%cg%w(i)")
+                  if (this%w_lst(i)%dim4 <= 0 .or. this%w_lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1)) call die("[named_array:check_na] all_cg%w_lst(i) /= cgl%cg%w(i)")
                enddo
             endif
          endif
@@ -447,6 +463,214 @@ contains
       enddo
 
    end subroutine check_na
+
+!>
+!! \brief Register a new 3D entry in current cg with given name. Called from cg_list_global::reg_var
+!!
+!! \warning This routine should not be called directly from user routines
+!<
+   subroutine add_na(this)
+
+      use grid_cont,   only: grid_container
+      use named_array, only: named_array3d
+
+      implicit none
+
+      type(grid_container), intent(inout) :: this
+
+      type(named_array3d), allocatable, dimension(:) :: tmp
+
+      if (.not. allocated(this%q)) then
+         allocate(this%q(1))
+      else
+         allocate(tmp(lbound(this%q(:),dim=1):ubound(this%q(:), dim=1) + 1))
+         tmp(:ubound(this%q(:), dim=1)) = this%q(:)
+         call move_alloc(from=tmp, to=this%q)
+      endif
+
+      call this%q(ubound(this%q(:), dim=1))%init(this%n_(:))
+
+   end subroutine add_na
+
+!>
+!! \brief Register a new 4D entry in current cg with given name. Called from cg_list_global::reg_var
+!!
+!! \warning This routine should not be called directly from user routines
+!! \deprecated Almost duplicated code with add_na
+!<
+   subroutine add_na_4d(this, n)
+
+      use constants,   only: xdim, zdim
+      use grid_cont,   only: grid_container, set_mpi_types
+      use named_array, only: named_array4d
+
+      implicit none
+
+      type(grid_container), intent(inout) :: this
+      integer(kind=4), intent(in) :: n
+
+      type(named_array4d), allocatable, dimension(:) :: tmp
+      integer :: iw, d, ib, g
+
+      if (.not. allocated(this%w)) then
+         allocate(this%w(1))
+      else
+         allocate(tmp(lbound(this%w(:),dim=1):ubound(this%w(:), dim=1) + 1))
+         tmp(:ubound(this%w(:), dim=1)) = this%w(:)
+         do iw = lbound(this%w(:), dim=1), ubound(this%w(:), dim=1) ! prevent memory leak
+            deallocate(this%w(iw)%w_i_mbc, this%w(iw)%w_o_mbc)
+         enddo
+         call move_alloc(from=tmp, to=this%w)
+      endif
+
+      iw = ubound(this%w(:), dim=1)
+      allocate(this%w(iw)%w_i_mbc(ndims, this%nb), this%w(iw)%w_o_mbc(ndims, this%nb))
+      do d = xdim, zdim
+         do ib = 1, this%nb
+            if (allocated(this%i_bnd(d, ib)%seg)) then
+               allocate(this%w(iw)%w_i_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)), &
+                    &   this%w(iw)%w_o_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)))
+
+               do g = lbound(this%i_bnd(d, ib)%seg, dim=1), ubound(this%i_bnd(d, ib)%seg, dim=1)
+                  call set_mpi_types([n, this%n_(:)], this%i_bnd(d, ib)%seg(g)%se(:,:), this%w(iw)%w_i_mbc(d, ib)%mbc(g))
+                  call set_mpi_types([n, this%n_(:)], this%o_bnd(d, ib)%seg(g)%se(:,:), this%w(iw)%w_o_mbc(d, ib)%mbc(g))
+               enddo
+            endif
+         enddo
+      enddo
+      call this%w(iw)%init( [n, this%n_(:)] )
+
+   end subroutine add_na_4d
+
+!>
+!! \brief Get the index of a named 3d array of given name.
+!!
+!! \details This method is provided for convenience only. Use ptr whenever possible.
+!<
+   function ind(this, name) result(rind)
+
+      use dataio_pub, only: die, msg, warn
+
+      implicit none
+
+      class(cg_list_global), intent(inout) :: this
+      character(len=*), intent(in) :: name
+
+      integer(kind=4) :: rind, i
+
+      rind = 0
+
+      do i = lbound(this%q_lst, dim=1, kind=4), ubound(this%q_lst, dim=1, kind=4)
+         if (trim(name) ==  this%q_lst(i)%name) then
+            if (rind /= 0) then
+               write(msg, '(2a)') "[grid_container:ind] multiple entries with the same name: ", trim(name)
+               call die(msg)
+            endif
+            rind = i
+         endif
+      enddo
+
+      if (rind == 0) then
+         write(msg, '(2a)') "[grid_container:ind] requested entry not found: ", trim(name)
+         call warn(msg)
+      endif
+
+   end function ind
+
+!>
+!! \brief Get the index of a named 4d array of given name.
+!!
+!! \details This method is provided for convenience only. Use ptr whenever possible.
+!<
+   function ind_4d(this, name) result(rind)
+
+      use dataio_pub, only: die, msg, warn
+
+      implicit none
+
+      class(cg_list_global), intent(inout) :: this
+      character(len=*), intent(in) :: name
+
+      integer(kind=4) :: rind, i
+
+      rind = 0
+
+      do i = lbound(this%w_lst, dim=1, kind=4), ubound(this%w_lst, dim=1, kind=4)
+         if (trim(name) ==  this%w_lst(i)%name) then
+            if (rind /= 0) then
+               write(msg, '(2a)') "[grid_container:ind_4d] multiple entries with the same name: ", trim(name)
+               call die(msg)
+            endif
+            rind = i
+         endif
+      enddo
+
+      if (rind == 0) then
+         write(msg, '(2a)') "[grid_container:ind_4d] requested entry not found: ", trim(name)
+         call warn(msg)
+      endif
+
+   end function ind_4d
+
+!> \brief Check if a 3D array of given name is already registered
+
+   function exists(this, name)
+
+      use dataio_pub, only: die, msg
+
+      implicit none
+
+      class(cg_list_global), intent(inout) :: this
+      character(len=*), intent(in) :: name
+
+      logical :: exists
+      integer :: i
+
+      exists = .false.
+
+      if (allocated(this%q_lst)) then
+         do i = lbound(this%q_lst, dim=1), ubound(this%q_lst, dim=1)
+            if (trim(name) ==  this%q_lst(i)%name) then
+               if (exists) then
+                  write(msg, '(2a)') "[grid_container:exists] multiple entries with the same name: ", trim(name)
+                  call die(msg)
+               endif
+               exists = .true.
+            endif
+         enddo
+      endif
+
+   end function exists
+
+!> \brief Check if a 4D array of given name is already registered
+
+   function exists_4d(this, name) result(exists)
+
+      use dataio_pub, only: die, msg
+
+      implicit none
+
+      class(cg_list_global), intent(inout) :: this
+      character(len=*), intent(in) :: name
+
+      logical :: exists
+      integer :: i
+
+      exists = .false.
+
+      if (allocated(this%w_lst)) then
+         do i = lbound(this%w_lst, dim=1), ubound(this%w_lst, dim=1)
+            if (trim(name) ==  this%w_lst(i)%name) then
+               if (exists) then
+                  write(msg, '(2a)') "[grid_container:exists] multiple entries with the same name: ", trim(name)
+                  call die(msg)
+               endif
+               exists = .true.
+            endif
+         enddo
+      endif
+
+   end function exists_4d
 
 !>
 !! \brief Find munimum or maximum value over a specified list of grid containers

@@ -56,7 +56,7 @@ contains
       use domain,        only: dom
       use fluidindex,    only: flind
       use global,        only: dt
-      use grid,          only: leaves
+      use grid,          only: leaves, all_cg
       use gc_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use magboundaries, only: bnd_emf
@@ -96,9 +96,9 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         i_wa = cg%ind(wa_n)
-         ui   = cg%ind_4d(fluid_n)
-         bi   = cg%ind_4d(mag_n)
+         i_wa = all_cg%ind(wa_n)
+         ui   = all_cg%ind_4d(fluid_n)
+         bi   = all_cg%ind_4d(mag_n)
 
          if (any([allocated(vv), allocated(vv0)])) call die("[advects:advectb] vv or vv0 already allocated")
          allocate(vv(cg%n_(vdir)), vv0(cg%n_(vdir)))

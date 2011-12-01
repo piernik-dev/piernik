@@ -78,7 +78,7 @@ contains
       use dataio_pub,   only: die
       use domain,       only: dom, cdd
       use internal_bnd, only: internal_boundaries_4d
-      use grid,         only: leaves
+      use grid,         only: leaves, all_cg
       use gc_list,      only: cg_list_element
       use grid_cont,    only: grid_container
       use mpi,          only: MPI_REQUEST_NULL, MPI_COMM_NULL
@@ -93,12 +93,12 @@ contains
 
       if (.not. has_cr) return
 
-      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(leaves%first%cg%ind_4d(wcr_n))
+      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(all_cg%ind_4d(wcr_n))
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         wcr => cg%ptr_4d(wcr_n)
+         wcr => cg%w(all_cg%ind_4d(wcr_n))%arr
          if (.not. associated(wcr)) call die("[crdiffusion:all_wcr_boundaries] cannot get wcr")
 
          req(:) = MPI_REQUEST_NULL
@@ -180,7 +180,7 @@ contains
       use domain,         only: dom
       use fluidindex,     only: flind
       use global,         only: dt
-      use grid,           only: leaves
+      use grid,           only: leaves, all_cg
       use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
@@ -199,6 +199,7 @@ contains
       type(grid_container),  pointer       :: cg
       logical, dimension(ndims)            :: present_not_crdim
       real, dimension(:,:,:,:), pointer    :: wcr
+      integer                              :: wcri
 
       if (.not. has_cr) return
       if (.not.dom%has_dir(crdim)) return
@@ -206,12 +207,13 @@ contains
       idm        = 0              ;      idm(crdim) = 1
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
+      wcri = all_cg%ind_4d(wcr_n)
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         wcr => cg%ptr_4d(wcr_n)
+         wcr => cg%w(wcri)%arr
          if (.not. associated(wcr)) call die("[crdiffusion:cr_diff] cannot get wcr")
                                                                          ! in case of integration with boundaries:
          ldm        = cg%ijkse(:,LO) ;      ldm(crdim) = 2               ! ldm =           1 + D_
@@ -263,7 +265,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         wcr => cg%ptr_4d(wcr_n)
+         wcr => cg%w(wcri)%arr
 
          ndm = cg%n_ - idm
          hdm = 1 + idm*ndm

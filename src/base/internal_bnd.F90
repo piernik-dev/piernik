@@ -141,12 +141,6 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (tgt3d) then
-            if (cg%q(ind)%name /= leaves%first%cg%q(ind)%name) call die("[internal_bnd:internal_boundaries] 3d array name mismatch")
-         else
-            if (cg%w(ind)%name /= leaves%first%cg%w(ind)%name) call die("[internal_bnd:internal_boundaries] 4d array name mismatch")
-         endif
-
          do d = xdim, zdim
             if (dmask(d)) then
                if (allocated(cg%i_bnd(d, n)%seg)) then

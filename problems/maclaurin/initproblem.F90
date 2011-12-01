@@ -281,7 +281,6 @@ contains
       real, parameter    :: small_e = 1e-3
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-      real, dimension(:,:,:), pointer :: apot
 
       AA1 = 2./3. ; AA3 = 2./3.
       if (e < 0. .and. master) call warn("[initproblem:compute_maclaurin_potential] e<0. not fully implemented yet!")
@@ -305,8 +304,6 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-
-         apot => cg%ptr(apot_n)
 
          do k = cg%ks, cg%ke
             z02 = (cg%z(k)-z0)**2
@@ -351,7 +348,7 @@ contains
                         potential = - 2./3. * (3*a12 - rr)
                      endif
                   endif
-                  apot(i, j, k) = potential * pi * newtong * d0
+                  cg%q(all_cg%ind(apot_n))%arr(i, j, k) = potential * pi * newtong * d0
                enddo
             enddo
          enddo
@@ -371,7 +368,7 @@ contains
       use constants,  only: GEO_RPZ, I_ONE, I_TWO
       use dataio_pub, only: msg, printinfo, warn
       use domain,     only: dom
-      use grid,       only: leaves
+      use grid,       only: leaves, all_cg
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
@@ -384,7 +381,6 @@ contains
       real               :: potential, fac
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-      real, dimension(:,:,:), pointer :: apot
 
       fac = 1.
       norm(:) = 0.
@@ -395,8 +391,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         apot => cg%ptr(apot_n)
-         if (.not. associated(apot))then
+         if (.not. all_cg%exists(apot_n)) then
             if (master) call warn("[initproblem:finalize_problem_maclaurin] Cannot compare results with the analytical potential.")
             return
          endif
@@ -404,7 +399,7 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  potential =  apot(i, j, k)
+                  potential = cg%q(all_cg%ind(apot_n))%arr(i, j, k)
                   if (dom%geometry_type == GEO_RPZ) fac = cg%x(i)
                   norm(1) = norm(1) + (potential - cg%sgp(i, j, k))**2 * fac
                   norm(2) = norm(2) + potential**2 * fac
@@ -436,7 +431,9 @@ contains
 
    subroutine maclaurin_error_vars(var, tab, ierrh, cg)
 
-      use grid_cont, only: grid_container
+      use dataio_pub, only: die
+      use grid,       only: all_cg
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -444,15 +441,15 @@ contains
       real(kind=4), dimension(:,:,:), intent(inout)   :: tab
       integer, intent(inout)                          :: ierrh
       type(grid_container), pointer, intent(in)       :: cg
-      real, dimension(:,:,:), pointer :: apot
+
+      if (.not. all_cg%exists(apot_n)) call die("[initproblem:maclaurin_error_vars] Cannot find apot_n")
 
       ierrh = 0
-      apot => cg%ptr(apot_n)
       select case (trim(var))
          case ("apot")
-            tab(:,:,:) = real(apot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(cg%q(all_cg%ind(apot_n))%span(cg%ijkse), 4)
          case ("errp")
-            tab(:,:,:) = real(apot(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(cg%q(all_cg%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

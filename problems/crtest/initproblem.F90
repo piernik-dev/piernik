@@ -221,7 +221,7 @@ contains
       use dataio_pub,     only: die
       use gc_list,        only: cg_list_element
       use global,         only: t
-      use grid,           only: leaves
+      use grid,           only: leaves, all_cg
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
 
@@ -233,7 +233,6 @@ contains
       integer, parameter :: icr = 1 !< Only first CR component
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-      real, dimension(:,:,:), pointer :: aecr1
 
       iecr = -1
 
@@ -265,8 +264,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         aecr1 => cg%ptr(aecr1_n)
-         if (.not. associated(aecr1)) call die("[initproblem:compute_analytic_ecr1] cannot find aecr1")
+         if (.not. all_cg%exists(aecr1_n)) call die("[initproblem:compute_analytic_ecr1] cannot find aecr1")
 
          do k = cg%ks, cg%ke
             delz = cg%z(k) - z0
@@ -277,7 +275,7 @@ contains
 
                   r_par2 = (bxn*delx + byn*dely + bzn*delz)**2 ! square of the distance form the center of the bump in direction parallel to the magnetic field
                   r_perp2 = delx**2 + dely**2 + delz**2 - r_par2
-                  aecr1(i, j, k) = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
+                  cg%q(all_cg%ind(aecr1_n))%arr(i, j, k) = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
 
                enddo
             enddo
@@ -296,7 +294,7 @@ contains
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
       use global,         only: t, nstep
       use gc_list,        only: cg_list_element
-      use grid,           only: leaves
+      use grid,           only: leaves, all_cg
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
@@ -311,7 +309,6 @@ contains
       integer, parameter :: icr = 1 !< Only first CR component
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-      real, dimension(:,:,:), pointer :: aecr1
 
       iecr = -1
 
@@ -332,12 +329,11 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         aecr1 => cg%ptr(aecr1_n)
-         if (.not. associated(aecr1)) call die("[initproblem:check_norm] cannot find aecr1")
+         if (.not. all_cg%exists(aecr1_n)) call die("[initproblem:check_norm] cannot find aecr1")
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  crt = aecr1(i, j, k)
+                  crt = cg%q(all_cg%ind(aecr1_n))%arr(i, j, k)
                   norm(1) = norm(1) + (crt - cg%u(iecr, i, j, k))**2
                   norm(2) = norm(2) + crt**2
                   dev(1) = min(dev(1), (crt - cg%u(iecr, i, j, k)))
@@ -368,6 +364,7 @@ contains
    subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
 
       use dataio_pub,     only: die
+      use grid,           only: all_cg
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs
 
@@ -377,19 +374,17 @@ contains
       real(kind=4), dimension(:,:,:), intent(inout)   :: tab
       integer, intent(inout)                          :: ierrh
       type(grid_container), pointer, intent(in)       :: cg
-      real, dimension(:,:,:), pointer :: aecr1
 
       call compute_analytic_ecr1
 
-      aecr1 => cg%ptr(aecr1_n)
-      if (.not. associated(aecr1)) call die("[initproblem:crtest_analytic_ecr1] cannot find aecr1")
+      if (.not. all_cg%exists(aecr1_n)) call die("[initproblem:crtest_analytic_ecr1] cannot find aecr1")
 
       ierrh = 0
       select case (trim(var))
          case ("acr1")
-            tab(:,:,:) = real(aecr1(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(cg%q(all_cg%ind(aecr1_n))%span(cg%ijkse), 4)
          case ("err1")
-            tab(:,:,:) = real(aecr1(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - cg%u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(cg%q(all_cg%ind(aecr1_n))%span(cg%ijkse) - cg%u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

@@ -151,7 +151,7 @@ contains
       use fluidindex,  only: flind
       use gc_list,     only: cg_list_element
       use global,      only: smallei, t
-      use grid,        only: leaves
+      use grid,        only: leaves, all_Cg
       use grid_cont,   only: grid_container
 
       implicit none
@@ -171,7 +171,7 @@ contains
 
          cg%b(:, :, :, :) = 0.
 
-         cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(cg%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(all_cg%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
          ! Make uniform, completely boring flow
          cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
@@ -191,6 +191,7 @@ contains
    subroutine inid_var_hdf5(var, tab, ierrh, cg)
 
       use global,    only: t
+      use grid,      only: all_cg
       use grid_cont, only: grid_container
 
       implicit none
@@ -200,14 +201,11 @@ contains
       integer, intent(inout)                          :: ierrh
       type(grid_container), pointer, intent(in)       :: cg
 
-      real, dimension(:,:,:), pointer :: inid
-
       call analytic_solution(t)
 
       ierrh = 0
-      inid => cg%ptr(var)
-      if (associated(inid)) then
-         tab(:,:,:) = real(inid(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+      if (all_cg%exists(var)) then
+         tab(:,:,:) = real(cg%q(all_cg%ind(var))%span(cg%ijkse), 4)
       else
          ierrh = -1
       endif
@@ -241,7 +239,7 @@ contains
       use fluidindex, only: flind
       use gc_list,    only: cg_list_element
       use global,     only: t, nstep
-      use grid,       only: leaves
+      use grid,       only: leaves, all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,   only: master, comm, ierr
@@ -269,7 +267,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         inid => cg%ptr(inid_n)
+         inid => cg%q(all_cg%ind(inid_n))%arr
          if (.not. associated(inid))then
             if (master) call warn("[initproblem:finalize_problem_adv] Cannot compare results with the initial conditions.")
             return
@@ -308,7 +306,7 @@ contains
       use dataio_pub, only: warn
       use domain,     only: dom
       use gc_list,    only: cg_list_element
-      use grid,       only: leaves
+      use grid,       only: leaves, all_cg
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
@@ -327,7 +325,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         inid => cg%ptr(inid_n)
+         inid => cg%q(all_cg%ind(inid_n))%arr
          if (.not. associated(inid))then
             if (master) call warn("[initproblem:analytic_solution] Cannot store the initial conditions.")
             return

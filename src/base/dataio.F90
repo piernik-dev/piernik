@@ -753,7 +753,7 @@ contains
       use fluidindex,  only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluidtypes,  only: phys_prop
       use global,      only: t, dt, smalld, nstep
-      use grid,        only: leaves
+      use grid,        only: leaves, all_cg
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
 #ifndef ISO
@@ -840,16 +840,16 @@ contains
          endif
       endif
 
-      pu => cg%w(cg%ind_4d(fluid_n))%span(int(cg%ijkse))
-      pb => cg%w(cg%ind_4d(mag_n  ))%span(int(cg%ijkse))
-      pwa=> cg%q(cg%ind   (wa_n   ))%span(int(cg%ijkse))
+      pu => cg%w(all_cg%ind_4d(fluid_n))%span(int(cg%ijkse))
+      pb => cg%w(all_cg%ind_4d(mag_n  ))%span(int(cg%ijkse))
+      pwa=> cg%q(all_cg%ind   (wa_n   ))%span(int(cg%ijkse))
 
       tot_mass = mpi_addmul(pu(iarr_all_dn,:,:,:), cg%dvol)
       tot_momx = mpi_addmul(pu(iarr_all_mx,:,:,:), cg%dvol)
       tot_momy = mpi_addmul(pu(iarr_all_my,:,:,:), cg%dvol)
       tot_momz = mpi_addmul(pu(iarr_all_mz,:,:,:), cg%dvol)
 #ifdef GRAV
-      tot_epot = mpi_addmul(pu(iarr_all_dn(1),:,:,:) * cg%q(cg%ind(gpot_n))%span(int(cg%ijkse)), cg%dvol)
+      tot_epot = mpi_addmul(pu(iarr_all_dn(1),:,:,:) * cg%q(all_cg%ind(gpot_n))%span(int(cg%ijkse)), cg%dvol)
 #endif /* GRAV */
 
       cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
@@ -988,7 +988,7 @@ contains
       use fluidtypes, only: phys_prop, component_fluid
       use gc_list,    only: cg_list_element
       use global,     only: smallp
-      use grid,       only: leaves
+      use grid,       only: leaves, all_cg
       use units,      only: mH, kboltz
 
       implicit none
@@ -998,7 +998,7 @@ contains
       integer(kind=4)                              :: wa_i
       type(cg_list_element), pointer               :: cgl
 
-      wa_i = leaves%first%cg%ind(wa_n)
+      wa_i = all_cg%ind(wa_n)
 
       pr => fl%snap
       cgl => leaves%first
@@ -1094,7 +1094,7 @@ contains
       use func,               only: L2norm, sq_sum3
       use gc_list,            only: cg_list_element
       use global,             only: cfl, t, dt
-      use grid,               only: leaves
+      use grid,               only: leaves, all_cg
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master
       use types,              only: value
@@ -1131,7 +1131,7 @@ contains
 #endif /* VARIABLE_GP */
       character(len=idlen)           :: id
 
-      wa_i = leaves%first%cg%ind(wa_n)
+      wa_i = all_cg%ind(wa_n)
       id = '' ! suppress compiler warnings if none of the modules requiring the id variable are swithed on.
       dxmn_safe = sqrt(huge(1.0))
       cgl => leaves%first

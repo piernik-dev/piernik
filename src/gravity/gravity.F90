@@ -151,7 +151,7 @@ contains
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,         only: newtong
-      use grid,          only: leaves, all_cg
+      use grid,          only: all_cg
       use gc_list,       only: cg_list_element
 #ifdef SELF_GRAV
       use constants,     only: sgp_n, sgpm_n
@@ -279,15 +279,15 @@ contains
       call all_cg%reg_var(sgpm_n, AT_IGNORE)
 #endif /* SELF_GRAV */
 
-      cgl => leaves%first
+      cgl => all_cg%first
       do while (associated(cgl))
-         cgl%cg%gpot => cgl%cg%ptr(gpot_n)
+         cgl%cg%gpot => cgl%cg%q(all_cg%ind(gpot_n))%arr
          cgl%cg%gpot(:,:,:) = 0.0
-         cgl%cg%hgpot => cgl%cg%ptr(hgpot_n)
-         cgl%cg%gp => cgl%cg%ptr(gp_n)
+         cgl%cg%hgpot => cgl%cg%q(all_cg%ind(hgpot_n))%arr
+         cgl%cg%gp => cgl%cg%q(all_cg%ind(gp_n))%arr
 #ifdef SELF_GRAV
-         cgl%cg%sgp => cgl%cg%ptr(sgp_n)
-         cgl%cg%sgpm => cgl%cg%ptr(sgpm_n)
+         cgl%cg%sgp => cgl%cg%q(all_cg%ind(sgp_n))%arr
+         cgl%cg%sgpm => cgl%cg%q(all_cg%ind(sgpm_n))%arr
 #endif /* SELF_GRAV */
          cgl => cgl%nxt
       enddo
@@ -309,7 +309,7 @@ contains
       use domain,            only: is_multicg
       use fluidindex,        only: iarr_all_sg
       use gc_list,           only: cg_list_element
-      use grid,              only: leaves
+      use grid,              only: leaves, all_cg
       use grid_cont,         only: grid_container
       use external_bnd,      only: arr3d_boundaries
 #ifdef POISSON_FFT
@@ -354,7 +354,7 @@ contains
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
 
 !> \warning An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
-      call arr3d_boundaries(leaves%first%cg%ind(sgp_n))
+      call arr3d_boundaries(all_cg%ind(sgp_n))
 
       if (frun) then
          cgl => leaves%first
@@ -895,7 +895,7 @@ contains
       use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE, wa_n
       use dataio_pub, only: die
       use domain,     only: is_mpi_noncart, is_multicg, cdd, dom
-      use grid,       only: leaves
+      use grid,       only: leaves, all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: master, nproc, FIRST, LAST, comm, ierr, have_mpi
@@ -999,7 +999,7 @@ contains
 
       ddgph  = gpwork(1,1,1)-gpwork(cg%is,cg%js,cg%ks)
       gpwork = gpwork + ddgp(px,py,pz) + ddgph
-      wa_i = cg%ind(wa_n)
+      wa_i = all_cg%ind(wa_n)
       cg%wa(:,:,:) = gpwork(:,:,:)
       call leaves%get_extremum(wa_i, MAXL, gp_max)
 

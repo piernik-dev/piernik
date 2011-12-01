@@ -60,7 +60,7 @@ contains
       use dataio_pub,   only: die, msg
       use domain,       only: dom, cdd
       use gc_list,      only: cg_list_element
-      use grid,         only: leaves
+      use grid,         only: leaves, all_cg
       use grid_cont,    only: grid_container
       use internal_bnd, only: internal_boundaries_3d
       use mpi,          only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
@@ -144,13 +144,13 @@ contains
                            endif
                         endif
                      case (BND_SHE) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
-                        write(msg,*) "[grid:arr3d_boundaries] 'she' not implemented for ",cg%q(ind)%name
+                        write(msg,*) "[grid:arr3d_boundaries] 'she' not implemented for ",all_cg%q_lst(ind)%name
                         dodie = .true.
                      case (BND_COR)
                         if (present(area_type)) then
                            if (area_type /= AT_NO_B) cycle
                         endif
-                        write(msg,*) "[grid:arr3d_boundaries] 'cor' not implemented for ", cg%q(ind)%name
+                        write(msg,*) "[grid:arr3d_boundaries] 'cor' not implemented for ", all_cg%q_lst(ind)%name
                         dodie = .true.
                      case default ! Set gradient == 0 on the external boundaries
                         if (present(area_type)) then

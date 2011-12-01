@@ -110,10 +110,11 @@ contains
 !------------------------------------------------------------------------------------------
    function interpolate_mag_field(cdim, cg, i1, i2) result (b)
 
-      use constants,       only: pdims, xdim, ydim, zdim, half, mag_n
-      use fluidindex,      only: iarr_mag_swp, nmag
-      use domain,          only: dom
-      use grid_cont,       only: grid_container
+      use constants,  only: pdims, xdim, ydim, zdim, half, mag_n
+      use fluidindex, only: iarr_mag_swp, nmag
+      use domain,     only: dom
+      use grid,       only: all_cg
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -128,7 +129,7 @@ contains
 
       !> OPTIMIZE ME
 
-      magi = cg%ind_4d(mag_n)
+      magi = all_cg%ind_4d(mag_n)
 
       ibx = iarr_mag_swp(cdim,xdim)
       iby = iarr_mag_swp(cdim,ydim)
@@ -169,7 +170,7 @@ contains
       use fluidindex,      only: flind, iarr_all_swp, nmag
       use gc_list,         only: cg_list_element
       use global,          only: dt, integration_order
-      use grid,            only: leaves
+      use grid,            only: leaves, all_cg
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
       use rtvd,            only: relaxing_tvd
@@ -191,13 +192,19 @@ contains
       type(cg_list_element), pointer    :: cgl
       type(grid_container), pointer     :: cg
 
+      uhi = all_cg%ind_4d(uh_n)
+      ui  = all_cg%ind_4d(fluid_n)
+      if (all_cg%exists(cs_i2_n)) then
+         i_cs_iso2 = all_cg%ind(cs_i2_n) ! BEWARE: magic strings across multiple files
+      else
+         i_cs_iso2 = -1
+      endif
+
+
       do istep = 1, integration_order
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-
-            uhi = cg%ind_4d(uh_n)
-            ui  = cg%ind_4d(fluid_n)
 
             if (allocated(b)) deallocate(b)
             if (allocated(u)) deallocate(u)
@@ -216,12 +223,6 @@ contains
             endif
 
             cs2 => null()
-            if (cg%exists(cs_i2_n)) then
-               i_cs_iso2 = cg%ind(cs_i2_n) ! BEWARE: magic strings across multiple files
-            else
-               i_cs_iso2 = -1
-            endif
-
             do i2 = cg%ijkse(pdims(cdim,zdim),LO), cg%ijkse(pdims(cdim,zdim),HI)
                do i1 = cg%ijkse(pdims(cdim,ydim),LO), cg%ijkse(pdims(cdim,ydim),HI)
 

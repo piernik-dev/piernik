@@ -54,7 +54,7 @@ contains
       use dataio_pub, only: warn
       use gc_list,    only: cg_list_element
       use global,     only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
-      use grid,       only: leaves
+      use grid,       only: leaves, all_cg
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
@@ -71,14 +71,14 @@ contains
 
          if (cfl_violated) then
             t = t-2.0*dtm
-            cg%u = cg%w(cg%ind_4d(u0_n))%arr
-            cg%b = cg%w(cg%ind_4d(b0_n))%arr
+            cg%u = cg%w(all_cg%ind_4d(u0_n))%arr
+            cg%b = cg%w(all_cg%ind_4d(b0_n))%arr
             dt = dtm/dt_max_grow**2
             nstep = nstep - I_ONE
             if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
          else
-            cg%w(cg%ind_4d(u0_n))%arr = cg%u
-            cg%w(cg%ind_4d(b0_n))%arr = cg%b
+            cg%w(all_cg%ind_4d(u0_n))%arr = cg%u
+            cg%w(all_cg%ind_4d(b0_n))%arr = cg%b
          endif
 
          cgl => cgl%nxt
@@ -275,6 +275,7 @@ contains
 
       use grid,          only: leaves
       use gc_list,       only: cg_list_element
+      use grid,          only: all_cg
       use grid_cont,     only: grid_container
       use magboundaries, only: all_mag_boundaries
       use user_hooks,    only: custom_emf_bnd
@@ -298,7 +299,7 @@ contains
          cg => cgl%cg
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
-         wcu => cg%ptr(wcu_n)
+         wcu => cg%q(all_cg%ind(wcu_n))%arr
          if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") ! not tested custom_emf_bnd
          if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - wcu*cg%idl(dim1)

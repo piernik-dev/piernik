@@ -308,7 +308,7 @@ contains
       use fluidtypes,   only: component_fluid
       use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use gc_list,      only: cg_list_element
-      use grid,         only: leaves
+      use grid,         only: leaves, all_cg
       use grid_cont,    only: grid_container
       use hydrostatic,  only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
       use interactions, only: epstein_factor
@@ -514,7 +514,7 @@ contains
                enddo
 
             enddo
-            cg%w(cg%ind_4d(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
+            cg%w(all_cg%ind_4d(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
             cg%b(:,:,:,:) = 0.0
             if (allocated(grav)) deallocate(grav)
             if (allocated(dens_prof)) deallocate(dens_prof)
@@ -550,7 +550,7 @@ contains
       use domain,          only: is_multicg
       use gc_list,         only: cg_list_element
       use global,          only: dt, t, relax_time, smalld !, grace_period_passed
-      use grid,            only: leaves
+      use grid,            only: leaves, all_cg
       use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_mx, iarr_all_mz, iarr_all_dn
@@ -612,7 +612,7 @@ contains
 
          do j = 1, cg%n_(ydim)
             do k = 1, cg%n_(zdim)
-               cg%u(:,:,j,k) = cg%u(:,:,j,k) - dt*(cg%u(:,:,j,k) - cg%w(cg%ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
+               cg%u(:,:,j,k) = cg%u(:,:,j,k) - dt*(cg%u(:,:,j,k) - cg%w(all_cg%ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
             enddo
          enddo
          where ( cg%u(iarr_all_dn,:,:,:) < 2.*smalld )
@@ -716,13 +716,14 @@ contains
    subroutine my_bnd_xr(cg)
 
       use constants,  only: xdim
+      use grid,       only: all_cg
       use grid_cont,  only: grid_container
 
       implicit none
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(cg%ind_4d(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
+      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(all_cg%ind_4d(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
    end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------
    function get_lcutoff(width, dist, n, vmin, vmax) result(y)

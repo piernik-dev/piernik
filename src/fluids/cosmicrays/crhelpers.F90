@@ -38,9 +38,9 @@ contains
 
    subroutine set_div_v1d(p, dir, i1, i2, cg)
 
-      use constants,   only: xdim, ydim, zdim
       use cr_data,     only: divv_n
       use dataio_pub,  only: die
+      use grid,        only: all_cg
       use grid_cont,   only: grid_container
 
       implicit none
@@ -50,19 +50,8 @@ contains
       real, dimension(:), pointer, intent(inout) :: p
       type(grid_container), pointer, intent(in) :: cg
 
-      real, dimension(:,:,:), pointer :: divvel
-
-      divvel => cg%ptr(divv_n)
-      if (.not. associated(divvel)) call die("[crhelpers:set_div_v1d] cannot get divvel")
-
-      select case (dir)
-         case (xdim)
-            p => divvel(:, i1, i2)
-         case (ydim)
-            p => divvel(i2, :, i1)
-         case (zdim)
-            p => divvel(i1, i2, :)
-      end select
+      if (.not. all_cg%exists(divv_n)) call die("[crhelpers:set_div_v1d] cannot get divvel")
+      p => cg%q(all_cg%ind(divv_n))%get_sweep(dir, i1, i2)
 
    end subroutine set_div_v1d
 
@@ -79,6 +68,7 @@ contains
       use dataio_pub,  only: die
       use domain,      only: dom, is_multicg
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use grid,        only: all_cg
       use grid_cont,   only: grid_container
 
       implicit none
@@ -91,7 +81,7 @@ contains
       integer                         :: idnf, imxf, imyf, imzf
       real, dimension(:,:,:), pointer :: divvel
 
-      divvel => cg%ptr(divv_n)
+      divvel => cg%q(all_cg%ind(divv_n))%arr
       if (.not. associated(divvel)) call die("[crhelpers:div_v] cannot get divvel")
 
       if (any([allocated(vx), allocated(vy), allocated(vz)])) call die("[crhelpers:div_v] v[xyz] already allocated")
