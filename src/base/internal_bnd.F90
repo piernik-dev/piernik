@@ -91,12 +91,13 @@ contains
 
       use constants,  only: FLUID, MAG, CR, ARR, xdim, zdim, I_ONE, I_TWO
       use dataio_pub, only: die, warn
-      use domain,     only: cdd, dom
+      use domain,     only: dom
       use gc_list,    only: cg_list_element
       use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
       use mpisetup,   only: comm, ierr, req, status
+      use types,      only: cdd
 
       implicit none
 

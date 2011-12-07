@@ -159,11 +159,12 @@ contains
       use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
-      use domain,        only: dom, is_uneven, cdd
+      use domain,        only: dom, is_uneven
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
       use mpisetup,      only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST
       use multigridvars, only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, ngridvars, single_base
       use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
+      use types,         only: cdd
 
       implicit none
 
@@ -388,7 +389,7 @@ contains
 
       use constants,        only: pi, dpi, GEO_XYZ, xdim, ydim, zdim, one, zero, half
       use dataio_pub,       only: die, warn
-      use domain,           only: dom, cdd
+      use domain,           only: dom
       use grid,             only: leaves
       use gc_list,          only: cg_list_element
       use mpi,              only: MPI_COMM_NULL
@@ -396,6 +397,7 @@ contains
       use multigridhelpers, only: vcycle_stats_init, dirty_debug, dirtyH
       use multigridvars,    only: lvl, plvl, roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, is_mg_uneven, need_general_pf, single_base
       use multipole,        only: init_multipole, coarsen_multipole
+      use types,            only: cdd
 
       implicit none
 

@@ -56,15 +56,15 @@ contains
 !<
    subroutine init_grid
 
-      use constants,   only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, INVALID, &
-           &                 ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n,cs_i2_n
-      use dataio_pub,  only: printinfo, die, code_progress
-      use domain,      only: pdom, is_multicg, cuboids
-      use fluidindex,  only: flind
-      use gc_list,     only: cg_list_element
-      use global,      only: repeat_step
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: proc, inflate_req
+      use constants,  only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, INVALID, &
+           &                ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n,cs_i2_n
+      use dataio_pub, only: printinfo, die, code_progress
+      use domain,     only: pdom, is_multicg, cuboids
+      use fluidindex, only: flind
+      use gc_list,    only: cg_list_element
+      use global,     only: repeat_step
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: proc, inflate_req
 
       implicit none
 

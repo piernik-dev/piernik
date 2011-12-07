@@ -42,11 +42,11 @@ contains
       use constants,             only: PIERNIK_INIT_DOMAIN, xdim, LO, HI, &
            &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_INF, BND_USER
       use dataio_pub,            only: msg, warn, die, code_progress
-      use domain,                only: cdd
       use fluidboundaries_funcs, only: bnd_null, bnd_xl_per, bnd_xl_ref, bnd_xl_out, bnd_xl_outd, bnd_xr_per, bnd_xr_ref, bnd_xr_out, bnd_xr_outd, &
            &                           user_bnd_xl, user_bnd_xr, func_bnd_xl, func_bnd_xr
       use grid_cont,             only: grid_container
       use mpi,                   only: MPI_COMM_NULL
+      use types,                 only: cdd
 
       implicit none
 
@@ -107,13 +107,14 @@ contains
       use constants,             only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, half, &
            &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
       use dataio_pub,            only: msg, warn, die
-      use domain,                only: cdd, dom, is_multicg
+      use domain,                only: dom, is_multicg
       use fluidboundaries_funcs, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,            only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use global,                only: smalld
       use grid_cont,             only: grid_container
       use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,              only: ierr, req, status, comm, proc
+      use types,                 only: cdd
 #ifdef COSM_RAYS
       use initcosmicrays,        only: smallecr
       use fluidindex,            only: iarr_all_crs
@@ -637,11 +638,12 @@ contains
    subroutine all_fluid_boundaries
 
       use constants,    only: xdim, zdim, fluid_n
-      use domain,       only: dom, cdd
+      use domain,       only: dom
       use gc_list,      only: cg_list_element
       use grid,         only: leaves, all_cg
       use internal_bnd, only: internal_boundaries_4d
       use mpi,          only: MPI_COMM_NULL
+      use types,        only: cdd
 
       implicit none
 

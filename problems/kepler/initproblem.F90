@@ -303,7 +303,7 @@ contains
 
       use constants,    only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI, INT4
       use dataio_pub,   only: msg, printinfo, die
-      use domain,       only: cdd, dom, is_multicg
+      use domain,       only: dom, is_multicg
       use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
       use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
@@ -314,6 +314,7 @@ contains
       use interactions, only: epstein_factor
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,     only: master, comm, ierr, FIRST
+      use types,        only: cdd
       use units,        only: newtong, gram, cm, kboltz, mH
 
       implicit none

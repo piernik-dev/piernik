@@ -43,7 +43,7 @@ module domain
 
    private
    public :: cleanup_domain, init_domain, is_overlap, domain_container, user_divide_domain, allocate_pse, deallocate_pse, set_pse_sel, &
-        &    pdom, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, cdd, cuboids
+        &    pdom, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, cuboids
 
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
@@ -95,17 +95,6 @@ module domain
       procedure :: init => init_domain_container
 
    end type domain_container
-
-   type cart_decomposition
-      integer(kind=4)                          :: comm3d  !< cartesian communicator
-      integer(kind=4), dimension(ndims)        :: psize   !< number of divisions in each direction
-      integer(kind=4), dimension(ndims)        :: pcoords !< own process coordinates within psize(:)-shaped array of processes
-      integer(kind=4), dimension(ndims, LO:HI) :: procn   !< array of neighbours proc numbers
-      integer(kind=4)                          :: procxyl !< neighbour in corner boundaries
-      integer(kind=4)                          :: procyxl !< neighbour in corner boundaries
-   end type cart_decomposition
-
-   type(cart_decomposition), protected :: cdd !< Cartesian Domain Decomposition stuff
 
    type(domain_container), protected, target :: dom !< complete description of base level domain
    type(domain_container), pointer :: pdom
@@ -230,6 +219,7 @@ contains
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use mpi,        only: MPI_COMM_NULL, MPI_PROC_NULL, MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_LAND
       use mpisetup,   only: buffer_dim, cbuff, ibuff, lbuff, rbuff, master, slave, proc, FIRST, LAST, nproc, comm, ierr, have_mpi
+      use types,      only: cdd
 
       implicit none
 
@@ -536,6 +526,7 @@ contains
       use dataio_pub, only: printinfo, die
       use mpi,        only: MPI_COMM_NULL
       use mpisetup,   only: master, FIRST, LAST, nproc, comm, proc, ierr
+      use types,      only: cdd
 
       implicit none
 
@@ -732,6 +723,7 @@ contains
 
       use mpi,      only: MPI_COMM_NULL
       use mpisetup, only: ierr
+      use types,    only: cdd
 
       implicit none
 

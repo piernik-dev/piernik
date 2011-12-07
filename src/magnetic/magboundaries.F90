@@ -40,11 +40,12 @@ contains
 
       use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, I_FIVE, I_TEN
       use dataio_pub, only: die
-      use domain,     only: cdd, is_mpi_noncart, is_multicg
+      use domain,     only: is_mpi_noncart, is_multicg
       use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
       use mpisetup,   only: ierr, req, status, have_mpi
+      use types,      only: cdd
 
       implicit none
 
@@ -79,10 +80,11 @@ contains
       use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, half, one, &
            &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub, only: msg, warn, die
-      use domain,     only: cdd, is_mpi_noncart, is_multicg
+      use domain,     only: is_mpi_noncart, is_multicg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: ierr, req, proc, status, comm, master, have_mpi
+      use types,      only: cdd
 #ifdef SHEAR
       use shear,      only: eps,delj
 #endif /* SHEAR */
@@ -652,11 +654,12 @@ contains
    subroutine all_mag_boundaries
 
       use constants,    only: xdim, zdim, mag_n
-      use domain,       only: dom, cdd
+      use domain,       only: dom
       use gc_list,      only: cg_list_element
       use grid,         only: leaves, all_cg
       use internal_bnd, only: internal_boundaries_4d
       use mpi,          only: MPI_COMM_NULL
+      use types,        only: cdd
 
       implicit none
 

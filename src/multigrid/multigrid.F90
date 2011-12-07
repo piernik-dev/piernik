@@ -77,7 +77,7 @@ contains
       use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, zdim, GEO_RPZ, LO, HI, I_TWO, I_ONE, half
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
-      use domain,              only: dom, is_uneven, is_multicg, cdd
+      use domain,              only: dom, is_uneven, is_multicg
       use grid,                only: leaves
       use gc_list,             only: cg_list_element
       use grid_cont,           only: grid_container
@@ -87,6 +87,7 @@ contains
       use multigridmpifuncs,   only: vertical_prep
       use multigridvars,       only: lvl, plvl, roof, base, ngridvars, correction, single_base, &
            &                         is_external, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
+      use types,               only: cdd
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
 #endif /* GRAV */

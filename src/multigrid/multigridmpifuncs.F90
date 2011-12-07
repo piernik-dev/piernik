@@ -149,10 +149,11 @@ contains
 
       use constants,     only: xdim, ydim, zdim, LO, HI, BND, BLK, ARR, INT4, I_ONE, I_FOUR
       use dataio_pub,    only: die
-      use domain,        only: is_mpi_noncart, cdd, dom
+      use domain,        only: is_mpi_noncart, dom
       use mpi,           only: MPI_REQUEST_NULL, MPI_COMM_NULL
       use mpisetup,      only: proc, comm, ierr, have_mpi, req, status
       use multigridvars, only: plvl, is_external, ngridvars
+      use types,         only: cdd
 
       implicit none
 

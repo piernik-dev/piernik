@@ -31,12 +31,12 @@
 !<
 module types
 
-   use constants, only: ndims
+   use constants, only: ndims, LO, HI
 
    implicit none
 
    private
-   public :: axes, value
+   public :: axes, value, cdd
 
    type :: value
       real                      :: val
@@ -50,5 +50,16 @@ module types
       real, allocatable, dimension(:) :: y      !< array of y-positions of %grid cells centers
       real, allocatable, dimension(:) :: z      !< array of z-positions of %grid cells centers
    end type axes
+
+   type cart_decomposition
+      integer(kind=4)                          :: comm3d  !< cartesian communicator
+      integer(kind=4), dimension(ndims)        :: psize   !< number of divisions in each direction
+      integer(kind=4), dimension(ndims)        :: pcoords !< own process coordinates within psize(:)-shaped array of processes
+      integer(kind=4), dimension(ndims, LO:HI) :: procn   !< array of neighbours proc numbers
+      integer(kind=4)                          :: procxyl !< neighbour in corner boundaries
+      integer(kind=4)                          :: procyxl !< neighbour in corner boundaries
+   end type cart_decomposition
+
+   type(cart_decomposition) :: cdd !< Cartesian Domain Decomposition stuff \todo find a bertter place and protect it
 
 end module types

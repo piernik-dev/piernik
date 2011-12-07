@@ -265,7 +265,7 @@ contains
       use constants,   only: DST, GEO_RPZ, xdim, ydim, zdim, INT4
       use global,      only: smalld
       use dataio_pub,  only: msg, printinfo, die
-      use domain,      only: dom, cdd, is_multicg
+      use domain,      only: dom, is_multicg
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin
@@ -276,6 +276,7 @@ contains
       use hydrostatic, only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
       use mpi,         only: MPI_COMM_NULL
       use mpisetup,    only: master, comm
+      use types,       only: cdd
       use units,       only: newtong
 
       implicit none

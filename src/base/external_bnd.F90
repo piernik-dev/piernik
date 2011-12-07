@@ -58,13 +58,14 @@ contains
 
       use constants,    only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B, I_ONE
       use dataio_pub,   only: die, msg
-      use domain,       only: dom, cdd
+      use domain,       only: dom
       use gc_list,      only: cg_list_element
       use grid,         only: leaves, all_cg
       use grid_cont,    only: grid_container
       use internal_bnd, only: internal_boundaries_3d
       use mpi,          only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
       use mpisetup,     only: ierr, comm, proc, req, status
+      use types,        only: cdd
 
       implicit none
 

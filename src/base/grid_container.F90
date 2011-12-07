@@ -228,9 +228,10 @@ contains
 
       use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_SHE, BND_COR
       use dataio_pub, only: die, warn, printinfo, msg, code_progress
-      use domain,     only: domain_container, cdd
+      use domain,     only: domain_container
       use mpi,        only: MPI_COMM_NULL
       use mpisetup,   only: proc, nproc, inflate_req
+      use types,      only: cdd
 
       implicit none
 
@@ -634,10 +635,11 @@ contains
 
       use constants,  only: FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE
       use dataio_pub, only: die
-      use domain,     only: dom, is_overlap, cdd
+      use domain,     only: dom, is_overlap
       use fluidindex, only: flind
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: ierr, proc, FIRST, LAST, procmask
+      use types,      only: cdd
 
       implicit none
 
