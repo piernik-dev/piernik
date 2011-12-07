@@ -135,6 +135,7 @@ module gc_list
       integer(kind=8), dimension(ndims) :: off                !< offset (with respect to the base level, counted on own level)
       type(cg_list_patch), pointer :: parent                  !< Parent patch (or null()). \todo Consider relaxing this restriction and allow multi-parent patches
       type(cg_list_patch), dimension(:), pointer :: children  !< refined patches
+      type(cg_list_level), pointer :: list_level              !< all cg on the same level
       !> \todo consider creating neigbour list (or (ndims, LO:HI) lists)
    end type cg_list_patch
 
@@ -207,7 +208,7 @@ contains
       type(cg_list_element), pointer, intent(inout) :: cgle !< the element to be eradicated
 
       if (.not. associated(cgle)) then
-         call warn("[gc_list:delete] tried to remove null() element")
+         call warn("[gc_list:del_lnk] tried to remove null() element")
          return
       endif
 
@@ -368,13 +369,13 @@ contains
 
       if (present(dim4)) then
          if (this%exists_4d(name)) then
-            write(msg, '(3a)')"[grid_container:add_na_4d] A rank-4 array '",trim(name),"' was already registered."
+            write(msg, '(3a)')"[gc_list:add_na_4d] A rank-4 array '",trim(name),"' was already registered."
             call die(msg)
          endif
          call add2lst(this%w_lst, name, restart_mode, dim4)
       else
          if (this%exists(name)) then
-            write(msg, '(3a)')"[grid_container:add_na] A rank-3 array '",trim(name),"' was already registered."
+            write(msg, '(3a)')"[gc_list:add_na] A rank-3 array '",trim(name),"' was already registered."
             call die(msg)
          endif
          call add2lst(this%q_lst, name, restart_mode, int(INVALID, kind=4))
@@ -437,25 +438,25 @@ contains
       cgl => this%first
       do while (associated(cgl))
          if (allocated(this%q_lst) .neqv. allocated(cgl%cg%q)) then
-            call die("[named_array:check_na] allocated(all_cg%q_lst) .neqv. allocated(cgl%cg%q)")
+            call die("[gc_list:check_na] allocated(all_cg%q_lst) .neqv. allocated(cgl%cg%q)")
          else if (allocated(this%q_lst)) then
             if (size(this%q_lst) /= size(cgl%cg%q)) then
-               call die("[named_array:check_na] size(all_cg%q_lst) /= size(cgl%cg%q)")
+               call die("[gc_list:check_na] size(all_cg%q_lst) /= size(cgl%cg%q)")
             else
                do i = lbound(this%q_lst, dim=1), ubound(this%q_lst, dim=1)
-                  if (this%q_lst(i)%dim4 /= INVALID) call die("[named_array:check_na] all_cg%q_lst(i) /= cgl%cg%q(i)")
+                  if (this%q_lst(i)%dim4 /= INVALID) call die("[gc_list:check_na] all_cg%q_lst(i) /= cgl%cg%q(i)")
                   !! \todo check allocation of cgl%cg%q(i)%arr  this%q_lst(i)%multigrid
                enddo
             endif
          endif
          if (allocated(this%w_lst) .neqv. allocated(cgl%cg%w)) then
-            call die("[named_array:check_na] allocated(all_cg%w_lst) .neqv. allocated(cgl%cg%w)")
+            call die("[gc_list:check_na] allocated(all_cg%w_lst) .neqv. allocated(cgl%cg%w)")
          else if (allocated(this%w_lst)) then
             if (size(this%w_lst) /= size(cgl%cg%w)) then
-               call die("[named_array:check_na] size(all_cg%w_lst) /= size(cgl%cg%w)")
+               call die("[gc_list:check_na] size(all_cg%w_lst) /= size(cgl%cg%w)")
             else
                do i = lbound(this%w_lst, dim=1), ubound(this%w_lst, dim=1)
-                  if (this%w_lst(i)%dim4 <= 0 .or. this%w_lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1)) call die("[named_array:check_na] all_cg%w_lst(i) /= cgl%cg%w(i)")
+                  if (this%w_lst(i)%dim4 <= 0 .or. this%w_lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1)) call die("[gc_list:check_na] all_cg%w_lst(i) /= cgl%cg%w(i)")
                enddo
             endif
          endif
@@ -563,7 +564,7 @@ contains
       do i = lbound(this%q_lst, dim=1, kind=4), ubound(this%q_lst, dim=1, kind=4)
          if (trim(name) ==  this%q_lst(i)%name) then
             if (rind /= 0) then
-               write(msg, '(2a)') "[grid_container:ind] multiple entries with the same name: ", trim(name)
+               write(msg, '(2a)') "[gc_list:ind] multiple entries with the same name: ", trim(name)
                call die(msg)
             endif
             rind = i
@@ -571,7 +572,7 @@ contains
       enddo
 
       if (rind == 0) then
-         write(msg, '(2a)') "[grid_container:ind] requested entry not found: ", trim(name)
+         write(msg, '(2a)') "[gc_list:ind] requested entry not found: ", trim(name)
          call warn(msg)
       endif
 
@@ -598,7 +599,7 @@ contains
       do i = lbound(this%w_lst, dim=1, kind=4), ubound(this%w_lst, dim=1, kind=4)
          if (trim(name) ==  this%w_lst(i)%name) then
             if (rind /= 0) then
-               write(msg, '(2a)') "[grid_container:ind_4d] multiple entries with the same name: ", trim(name)
+               write(msg, '(2a)') "[gc_list:ind_4d] multiple entries with the same name: ", trim(name)
                call die(msg)
             endif
             rind = i
@@ -606,7 +607,7 @@ contains
       enddo
 
       if (rind == 0) then
-         write(msg, '(2a)') "[grid_container:ind_4d] requested entry not found: ", trim(name)
+         write(msg, '(2a)') "[gc_list:ind_4d] requested entry not found: ", trim(name)
          call warn(msg)
       endif
 
@@ -632,7 +633,7 @@ contains
          do i = lbound(this%q_lst, dim=1), ubound(this%q_lst, dim=1)
             if (trim(name) ==  this%q_lst(i)%name) then
                if (exists) then
-                  write(msg, '(2a)') "[grid_container:exists] multiple entries with the same name: ", trim(name)
+                  write(msg, '(2a)') "[gc_list:exists] multiple entries with the same name: ", trim(name)
                   call die(msg)
                endif
                exists = .true.
@@ -662,7 +663,7 @@ contains
          do i = lbound(this%w_lst, dim=1), ubound(this%w_lst, dim=1)
             if (trim(name) ==  this%w_lst(i)%name) then
                if (exists) then
-                  write(msg, '(2a)') "[grid_container:exists] multiple entries with the same name: ", trim(name)
+                  write(msg, '(2a)') "[gc_list:exists] multiple entries with the same name: ", trim(name)
                   call die(msg)
                endif
                exists = .true.

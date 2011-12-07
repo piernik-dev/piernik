@@ -164,7 +164,7 @@ contains
                lleft(:)  = lleft(:)  - cg%nb
                chnk(:)   = chnk(:)   + cg%nb
             endwhere
-            where (cg%h_cor1(:) == dom%n_d(:) .and. dom%has_dir(:))
+            where (cg%h_cor1(:) == dom%n_d(:) .and. dom%has_dir(:)) !> \warning this should be checked against level%n_d
                lright(:) = lright(:) + cg%nb
                chnk(:)   = chnk(:)   + cg%nb
             endwhere

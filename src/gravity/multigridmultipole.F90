@@ -56,7 +56,7 @@ module multipole
    integer                   :: lmax                             !< Maximum l-order of multipole moments
    integer                   :: mmax                             !< Maximum m-order of multipole moments. Equal to lmax by default.
    integer                   :: ord_prolong_mpole                !< boundary prolongation operator order; allowed values are -2 .. 2
-   integer                   :: coarsen_multipole                !< If > 0 then evaluate multipoles at roof%level-coarsen_multipole level
+   integer                   :: coarsen_multipole                !< If > 0 then evaluate multipoles at roof%lev-coarsen_multipole level
    logical                   :: use_point_monopole               !< Don't evaluate multipole moments, use point-like mass approximation (crudest possible)
    logical                   :: interp_pt2mom                    !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
    logical                   :: interp_mom2pot                   !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
@@ -116,6 +116,7 @@ contains
       use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI
       use dataio_pub,    only: die, warn
       use domain,        only: dom
+      use grid,          only: base_lev
       use mpisetup,      only: master
       use multigridvars, only: roof
 
@@ -144,7 +145,7 @@ contains
                CoM(ydim) = 0.
             endif
             CoM(zdim) = dom%C_(zdim)
-            zaxis_inside = dom%edge(xdim, LO) <= dom%L_(xdim)/dom%n_d(xdim)
+            zaxis_inside = dom%edge(xdim, LO) <= base_lev%first%cg%dx !! \warning this check should be done on highest refinement level
             if (master) then
                if (zaxis_inside) call warn("[multipole:init_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
                if (use_point_monopole) call warn("[multipole:init_multipole] Point-like monopole is not implemented.")

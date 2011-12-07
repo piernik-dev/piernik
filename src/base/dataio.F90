@@ -859,9 +859,9 @@ contains
       pwa = half * (pb(xdim,:,:,:)**2 + pb(ydim,:,:,:)**2 + pb(zdim,:,:,:)**2)
       tot_emag = mpi_addmul(pwa, cg%dvol)
 
-      tot_mflx = mpi_addmul(pb(xdim,:,:,:), cg%dy*cg%dz/dom%n_d(xdim))
-      tot_mfly = mpi_addmul(pb(ydim,:,:,:), cg%dx*cg%dz/dom%n_d(ydim))
-      tot_mflz = mpi_addmul(pb(zdim,:,:,:), cg%dx*cg%dy/dom%n_d(zdim))
+      tot_mflx = mpi_addmul(pb(xdim,:,:,:), cg%dvol/dom%L_(xdim)) !cg%dy*cg%dz/dom%n_d(xdim))
+      tot_mfly = mpi_addmul(pb(ydim,:,:,:), cg%dvol/dom%L_(ydim)) !cg%dx*cg%dz/dom%n_d(ydim))
+      tot_mflz = mpi_addmul(pb(zdim,:,:,:), cg%dvol/dom%L_(zdim)) !cg%dx*cg%dy/dom%n_d(zdim))
 #ifdef ISO
       tot_eint = cs_iso2*tot_mass
       tot_ener = tot_eint+tot_ekin+tot_emag

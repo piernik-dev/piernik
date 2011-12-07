@@ -204,7 +204,7 @@ module grid_cont
       real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
       integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
       logical :: empty                                           !< .true. if there are no cells to process (e.g. some processes at base level in multigrid gravity)
-      integer :: grid_id                                          !< number of own segment: my_se(:,:) = dom%pse(proc)%sel(grid_id, :, :)
+      integer :: grid_id                                         !< index of own segment in own level decomposition, e.g. my_se(:,:) = base_lev%pse(proc)%sel(grid_id, :, :)
 
    contains
 
@@ -470,6 +470,7 @@ contains
 
       use constants,  only: LO, HI, half, one, zero, xdim, ydim, zdim
       use dataio_pub, only: die
+      use domain,     only: dom
 
       implicit none
 
@@ -481,8 +482,8 @@ contains
 
       allocate(a0(this%n_(d)), al(this%n_(d)), ar(this%n_(d)), ia(this%n_(d)))
 
-      if (this%dom%has_dir(d)) then
-         a0(:) = this%dom%edge(d, LO) + this%dl(d) * ([(i, i=1, this%n_(d))] - half - this%nb + this%off(d))
+      if (dom%has_dir(d)) then
+         a0(:) = dom%edge(d, LO) + this%dl(d) * ([(i, i=1, this%n_(d))] - half - this%nb + this%off(d))
       else
          a0(:) = half*(this%fbnd(d, LO) + this%fbnd(d, HI))
       endif

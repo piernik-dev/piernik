@@ -262,21 +262,21 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,    only: DST, GEO_RPZ, xdim, ydim, zdim, INT4
-      use global,       only: smalld
-      use dataio_pub,   only: msg, printinfo, die
-      use domain,       only: dom, cdd, is_multicg
-      use fluidindex,   only: flind
-      use fluidtypes,   only: component_fluid
-      use gravity,      only: ptmass, grav_pot2accel
-      use grid,         only: leaves, all_cg
-      use gc_list,      only: cg_list_element
-      use grid_cont,    only: grid_container
-      use mpi,          only: MPI_COMM_NULL
-      use mpisetup,     only: master, comm
-      use units,        only: newtong
-      use hydrostatic,  only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use func,         only: ekin
+      use constants,   only: DST, GEO_RPZ, xdim, ydim, zdim, INT4
+      use global,      only: smalld
+      use dataio_pub,  only: msg, printinfo, die
+      use domain,      only: dom, cdd, is_multicg
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use func,        only: ekin
+      use gravity,     only: ptmass, grav_pot2accel
+      use grid,        only: leaves, all_cg
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use hydrostatic, only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
+      use mpi,         only: MPI_COMM_NULL
+      use mpisetup,    only: master, comm
+      use units,       only: newtong
 
       implicit none
 

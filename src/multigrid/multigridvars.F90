@@ -33,6 +33,8 @@
 !! \brief Variables and data structures required by multigrid routines.
 !!
 !! \details These variables are not meant to be accessed (or worse: altered) from the outside of multigrid routines (Fortran has no friends :-( )
+!!
+!! The multigrid solver relies typically at most on 2 guardcells, but the impact on performance is not big so we've decided to have it uniform with the rest of Piernik
 !<
 
 module multigridvars
