@@ -80,18 +80,18 @@ contains
             temp = dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
             call poisson_xyzp(temp(:,:,:), cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke))
 
-            cg%sgp(:,:,1:cg%nb)        = cg%sgp(:,:, cg%keb:cg%ke)
+            cg%sgp(:,:,1:dom%nb)        = cg%sgp(:,:, cg%keb:cg%ke)
             cg%sgp(:,:, cg%ke+1:cg%nz) = cg%sgp(:,:, cg%ks:cg%ksb)
 
          else
             call poisson_xy2d(dens(cg%is:cg%ie,   cg%js:cg%je,1), &
                  &     cg%sgp (cg%is:cg%ie,   cg%js:cg%je,1), &
-                 &     cg%sgp (1:cg%nb,       cg%js:cg%je,1), &
+                 &     cg%sgp (1:dom%nb,       cg%js:cg%je,1), &
                  &     cg%sgp (cg%is+1:cg%nx, cg%js:cg%je,1), &
                  &            cg%dx)
 
          endif
-         cg%sgp(:,1:cg%nb,:)        = cg%sgp(:, cg%jeb:cg%je,:)
+         cg%sgp(:,1:dom%nb,:)        = cg%sgp(:, cg%jeb:cg%je,:)
          cg%sgp(:, cg%je+1:cg%ny,:) = cg%sgp(:, cg%js:cg%jsb,:)
 
          if (allocated(temp)) deallocate(temp)
@@ -235,8 +235,8 @@ contains
          call dfftw_execute(pb2)
          pot(i,:)  = rtmp(:) / n / n
       enddo
-      do i = 1, cg%nb
-         ctmp(:)   = fft(n-cg%nb+i,:) * exp( cmplx(0.0, -St*ky(:)*x(i)) )
+      do i = 1, dom%nb
+         ctmp(:)   = fft(n-dom%nb+i,:) * exp( cmplx(0.0, -St*ky(:)*x(i)) )
          call dfftw_execute(pb2)
          lpot(i,:) = rtmp(:) / n / n
 

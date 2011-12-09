@@ -386,7 +386,7 @@ contains
 
       use constants,       only: dpi, xdim, ydim, zdim
       use dataio_pub,      only: die
-      use domain,          only: is_multicg
+      use domain,          only: is_multicg, dom
       use global,          only: t, grace_period_passed, relax_time, smalld !, dt
       use gravity,         only: ptmass
       use gc_list,         only: cg_list_element
@@ -433,12 +433,12 @@ contains
             endwhere
 
             if (use_inner_orbital_period) then
-               funcR(1,:) = funcR(1,:) * sqrt( newtong*ptmass/cg%x(cg%nb)**3 ) / dpi
+               funcR(1,:) = funcR(1,:) * sqrt( newtong*ptmass/cg%x(dom%nb)**3 ) / dpi
             else
                funcR(1,:) = funcR(1,:) * dumping_coeff
             endif
             open(212,file="funcR.dat",status="unknown")
-            write(212,*) "# ",sqrt( newtong*ptmass/cg%x(cg%nb)**3 ) / dpi
+            write(212,*) "# ",sqrt( newtong*ptmass/cg%x(dom%nb)**3 ) / dpi
             do j = 1, cg%n_(xdim)
                write(212,*) cg%x(j),funcR(1,j)
             enddo
@@ -542,6 +542,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xl(cg)
 
+      use domain,     only: dom
       use grid_cont,  only: grid_container
       use gravity,    only: grav_pot2accel
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
@@ -567,7 +568,7 @@ contains
 
       call grav_pot2accel(xdim,1,1, cg%n_(xdim), grav, 1, cg)
 
-      do i = 1, cg%nb
+      do i = 1, dom%nb
          cg%u(iarr_all_dn,i,:,:) = cg%u(iarr_all_dn, cg%is,:,:)
          cg%u(iarr_all_mx,i,:,:) = min(0.0,cg%u(iarr_all_mx, cg%is,:,:))
 !         do p = 1, size(flind%all_fluids)
@@ -580,7 +581,7 @@ contains
 #endif /* !ISO */
       enddo
 
-      do i = cg%nb,1,-1
+      do i = dom%nb,1,-1
          vym(:,:,:) = cg%u(iarr_all_my,i+2,:,:)/cg%u(iarr_all_dn,i+1,:,:)
          vy(:,:,:)  = cg%u(iarr_all_my,i+1,:,:)/cg%u(iarr_all_dn,i+1,:,:)
 !         cg%u(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*cg%u(iarr_all_dn,i,:,:)

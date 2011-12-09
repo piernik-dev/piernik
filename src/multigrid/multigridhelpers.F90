@@ -113,7 +113,7 @@ contains
       if (curl%empty) return
 
       if (present(expand) .and. dom%eff_dim==ndims) then ! for 1D and 2D one should define ng_x,ng_y and ng_z
-         ng = min(curl%nb, expand)
+         ng = min(dom%nb, expand)
       else
          ng = 0
       endif

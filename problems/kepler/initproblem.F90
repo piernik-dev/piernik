@@ -437,7 +437,7 @@ contains
             middle_of_nx = cg%n_(xdim)/2 + 1
             n_x_cut      = maxloc(cg%x, mask=cg%x<=x_cut)
             if (densfile /= "") then
-               allocate(gdens(dom%n_d(xdim)+cg%nb*2))
+               allocate(gdens(dom%n_d(xdim)+dom%nb*2))
                if (master) call read_dens_profile(densfile,gdens)
                call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
@@ -669,6 +669,7 @@ contains
    subroutine my_bnd_xl(cg)
 
       use constants,  only: xdim, ydim, zdim
+      use domain,     only: dom
       use grid_cont,  only: grid_container
       use gravity,    only: grav_pot2accel
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
@@ -693,7 +694,7 @@ contains
 
       call grav_pot2accel(xdim,1,1, cg%n_(xdim), grav, 1, cg)
 
-      do i = 1, cg%nb
+      do i = 1, dom%nb
          cg%u(iarr_all_dn,i,:,:) = cg%u(iarr_all_dn, cg%is,:,:)
          cg%u(iarr_all_mx,i,:,:) = min(0.0,cg%u(iarr_all_mx, cg%is,:,:))
 !         do p = 1, size(flind%all_fluids)
@@ -706,7 +707,7 @@ contains
 #endif /* !ISO */
       enddo
 
-      do i = cg%nb,1,-1
+      do i = dom%nb,1,-1
          vym(:,:,:) = cg%u(iarr_all_my,i+2,:,:)/cg%u(iarr_all_dn,i+1,:,:)
          vy(:,:,:)  = cg%u(iarr_all_my,i+1,:,:)/cg%u(iarr_all_dn,i+1,:,:)
 !         cg%u(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*cg%u(iarr_all_dn,i,:,:)
@@ -796,6 +797,7 @@ contains
    subroutine read_dens_profile(densfile,gdens)
 
       use dataio_pub, only: printinfo, msg, warn
+      use domain,     only: dom
       use fgsl,       only: fgsl_size_t, fgsl_interp_accel, fgsl_interp, fgsl_int, fgsl_char, fgsl_strmax, fgsl_interp_cspline, &
            &                fgsl_interp_accel_alloc, fgsl_interp_alloc, fgsl_interp_name, fgsl_interp_init, fgsl_interp_eval, fgsl_interp_free, fgsl_interp_accel_free
       !, fgsl_spline

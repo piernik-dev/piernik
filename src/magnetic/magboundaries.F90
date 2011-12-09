@@ -40,7 +40,7 @@ contains
 
       use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, I_FIVE, I_TEN
       use dataio_pub, only: die
-      use domain,     only: is_mpi_noncart, is_multicg
+      use domain,     only: is_mpi_noncart, is_multicg, dom
       use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
@@ -64,10 +64,10 @@ contains
 
             jtag = I_TEN*i
             itag = jtag - I_FIVE
-            call MPI_Isend(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BLK, cg%nb), cdd%procn(i,LO), itag, cdd%comm3d, req(1), ierr)
-            call MPI_Isend(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BLK, cg%nb), cdd%procn(i,HI), jtag, cdd%comm3d, req(3), ierr)
-            call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BND, cg%nb), cdd%procn(i,LO), jtag, cdd%comm3d, req(2), ierr)
-            call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BND, cg%nb), cdd%procn(i,HI), itag, cdd%comm3d, req(4), ierr)
+            call MPI_Isend(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BLK, dom%nb), cdd%procn(i,LO), itag, cdd%comm3d, req(1), ierr)
+            call MPI_Isend(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BLK, dom%nb), cdd%procn(i,HI), jtag, cdd%comm3d, req(3), ierr)
+            call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, LO, BND, dom%nb), cdd%procn(i,LO), jtag, cdd%comm3d, req(2), ierr)
+            call MPI_Irecv(A(1,1,1,1), I_ONE, cg%mbc(MAG, i, HI, BND, dom%nb), cdd%procn(i,HI), itag, cdd%comm3d, req(4), ierr)
 
             call MPI_Waitall(I_FOUR,req(:),status(:,:),ierr)
          endif
@@ -80,7 +80,7 @@ contains
       use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, half, one, &
            &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
       use dataio_pub, only: msg, warn, die
-      use domain,     only: is_mpi_noncart, is_multicg
+      use domain,     only: is_mpi_noncart, is_multicg, dom
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: ierr, req, proc, status, comm, master, have_mpi
@@ -117,8 +117,8 @@ contains
          if (have_mpi .and. is_mpi_noncart) call die("[magboundaries:bnd_b] is_mpi_noncart is not implemented") !procn, procxyl, procyxl, psize, pcoords
 #ifdef SHEAR
          if (dir == xdim) then
-            allocate(send_left(3, cg%nb, cg%ny, cg%nz),send_right(3, cg%nb, cg%ny, cg%nz), &
-                 &   recv_left(3, cg%nb, cg%ny, cg%nz),recv_right(3, cg%nb, cg%ny, cg%nz))
+            allocate(send_left(3, dom%nb, cg%ny, cg%nz),send_right(3, dom%nb, cg%ny, cg%nz), &
+                 &   recv_left(3, dom%nb, cg%ny, cg%nz),recv_right(3, dom%nb, cg%ny, cg%nz))
 
             send_left (:,:,:,:)  = cg%b(:, cg%is:cg%isb,:,:)
             send_right(:,:,:,:)  = cg%b(:, cg%ieb:cg%ie,:,:)
@@ -128,7 +128,7 @@ contains
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
                send_left (:,:,  cg%js:cg%je,:) = cshift(send_left (:,:, cg%js :cg%je, :),dim=3,shift= delj)
-               send_left (:,:,      1:cg%nb,:) =        send_left (:,:, cg%jeb:cg%je, :)
+               send_left (:,:,      1:dom%nb,:) =        send_left (:,:, cg%jeb:cg%je, :)
                send_left (:,:,cg%je+1:cg%ny,:) =        send_left (:,:, cg%js :cg%jsb,:)
 !
 ! remapujemy  - interpolacja kwadratowa
@@ -143,7 +143,7 @@ contains
 ! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
 !
                send_right (:,:,  cg%js:cg%je,:) = cshift(send_right(:,:, cg%js :cg%je, :),dim=3,shift=-delj)
-               send_right (:,:,      1:cg%nb,:) =        send_right(:,:, cg%jeb:cg%je, :)
+               send_right (:,:,      1:dom%nb,:) =        send_right(:,:, cg%jeb:cg%je, :)
                send_right (:,:,cg%je+1:cg%ny,:) =        send_right(:,:, cg%js :cg%jsb,:)
 !
 ! remapujemy - interpolacja kwadratowa
@@ -155,15 +155,15 @@ contains
 !
 ! wysylamy na drugi brzeg
 !
-            call MPI_Isend(send_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag1, comm, req(1), ierr)
-            call MPI_Isend(send_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag2, comm, req(3), ierr)
-            call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), ierr)
-            call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*cg%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), ierr)
+            call MPI_Isend(send_left , 3*cg%ny*cg%nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag1, comm, req(1), ierr)
+            call MPI_Isend(send_right, 3*cg%ny*cg%nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag2, comm, req(3), ierr)
+            call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), ierr)
+            call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), ierr)
 
             call MPI_Waitall(I_FOUR,req(:),status(:,:),ierr)
 
-            cg%b(:,        1:cg%nb-1,:,:) = recv_left (:,  1:cg%nb-1,:,:)
-            cg%b(:,cg%ie+1+1:cg%n_(xdim),  :,:) = recv_right(:,1+1:cg%nb,  :,:)
+            cg%b(:,        1:dom%nb-1,:,:) = recv_left (:,  1:dom%nb-1,:,:)
+            cg%b(:,cg%ie+1+1:cg%n_(xdim),  :,:) = recv_right(:,1+1:dom%nb,  :,:)
 
             if (allocated(send_left))  deallocate(send_left)
             if (allocated(send_right)) deallocate(send_right)
@@ -178,10 +178,10 @@ contains
 
                jtag = tag2*dir
                itag = jtag - tag1
-               call MPI_Isend(cg%b(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BLK, cg%nb), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
-               call MPI_Isend(cg%b(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BLK, cg%nb), cdd%procn(dir,HI), jtag, cdd%comm3d, req(3), ierr)
-               call MPI_Irecv(cg%b(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BND, cg%nb), cdd%procn(dir,LO), jtag, cdd%comm3d, req(2), ierr)
-               call MPI_Irecv(cg%b(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BND, cg%nb), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
+               call MPI_Isend(cg%b(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BLK, dom%nb), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
+               call MPI_Isend(cg%b(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BLK, dom%nb), cdd%procn(dir,HI), jtag, cdd%comm3d, req(3), ierr)
+               call MPI_Irecv(cg%b(1,1,1,1), I_ONE, cg%mbc(MAG, dir, LO, BND, dom%nb), cdd%procn(dir,LO), jtag, cdd%comm3d, req(2), ierr)
+               call MPI_Irecv(cg%b(1,1,1,1), I_ONE, cg%mbc(MAG, dir, HI, BND, dom%nb), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
 
                call MPI_Waitall(I_FOUR,req(:),status(:,:),ierr)
             endif
@@ -195,7 +195,7 @@ contains
          if (cg%bnd(xdim, LO) == BND_COR) then
 !   - lower to left
             if (cdd%pcoords(xdim) == 0 .and. cdd%pcoords(ydim) == 0) then
-               do i=1, cg%nb
+               do i=1, dom%nb
                   do j=cg%js, cg%n_(ydim)
                      cg%b(xdim,i,j,:) = -cg%b(ydim,j,cg%isb+1-i,:)
                      cg%b(ydim,i,j,:) =  cg%b(xdim,j,cg%isb+1-i,:)
@@ -205,16 +205,16 @@ contains
             endif
 
             if (cdd%procxyl > 0) then
-               allocate(send_left(3, cg%nb, cg%n_(ydim), cg%n_(zdim)), recv_left(3, cg%n_(xdim), cg%nb, cg%n_(zdim)))
+               allocate(send_left(3, dom%nb, cg%n_(ydim), cg%n_(zdim)), recv_left(3, cg%n_(xdim), dom%nb, cg%n_(zdim)))
 
                send_left(:,:,:,:) = cg%b(:, cg%is:cg%isb,:,:)
 
-               call MPI_Isend(send_left, 3*cg%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag7, comm, req(1), ierr)
-               call MPI_Irecv(recv_left, 3*cg%n_(xdim)*cg%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag8, comm, req(2), ierr)
+               call MPI_Isend(send_left, 3*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag7, comm, req(1), ierr)
+               call MPI_Irecv(recv_left, 3*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag8, comm, req(2), ierr)
 
                call MPI_Waitall(I_TWO,req(:),status(:,:),ierr)
 
-               do i=1, cg%nb
+               do i=1, dom%nb
                   do j=1, cg%n_(ydim)
                      cg%b(xdim,i,j,:) = -recv_left(ydim,j, cg%is-i,:)
                      cg%b(ydim,i,j,:) =  recv_left(xdim,j, cg%is-i,:)
@@ -230,7 +230,7 @@ contains
          if (cg%bnd(ydim, LO) == BND_COR) then
 !   - left to lower
             if (cdd%pcoords(ydim) == 0 .and. cdd%pcoords(xdim) == 0 ) then
-               do j=1, cg%nb
+               do j=1, dom%nb
                   do i=cg%is, cg%n_(xdim)
                      cg%b(xdim,i,j,:) =  cg%b(ydim,cg%isb+1-j,i,:)
                      cg%b(ydim,i,j,:) = -cg%b(xdim,cg%isb+1-j,i,:)
@@ -238,8 +238,8 @@ contains
                   enddo
                enddo
 !   - interior to corner
-               do j=1, cg%nb
-                  do i=1, cg%nb
+               do j=1, dom%nb
+                  do i=1, dom%nb
                      cg%b(xdim,i,j,:) =  -cg%b(xdim,cg%isb+1-i,cg%jsb+1-j,:)
                      cg%b(ydim,i,j,:) =  -cg%b(ydim,cg%isb+1-i,cg%jsb+1-j,:)
                      cg%b(zdim,i,j,:) =   cg%b(zdim,cg%isb+1-i,cg%jsb+1-j,:)
@@ -248,16 +248,16 @@ contains
             endif
 
             if (cdd%procyxl > 0) then
-               allocate(send_left(3, cg%n_(xdim), cg%nb, cg%n_(zdim)), recv_left(3, cg%nb, cg%n_(ydim), cg%n_(zdim)))
+               allocate(send_left(3, cg%n_(xdim), dom%nb, cg%n_(zdim)), recv_left(3, dom%nb, cg%n_(ydim), cg%n_(zdim)))
 
                send_left(:,:,:,:) = cg%b(:,:, cg%js:cg%jsb,:)
 
-               call MPI_Isend   (send_left , 3*cg%n_(xdim)*cg%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag8, comm, req(1), ierr)
-               call MPI_Irecv   (recv_left , 3*cg%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag7, comm, req(2), ierr)
+               call MPI_Isend   (send_left , 3*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag8, comm, req(1), ierr)
+               call MPI_Irecv   (recv_left , 3*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag7, comm, req(2), ierr)
 
                call MPI_Waitall(I_TWO,req(:),status(:,:),ierr)
 
-               do j=1, cg%nb
+               do j=1, dom%nb
                   do i=1, cg%n_(xdim)
                      cg%b(xdim,i,j,:) =  recv_left(ydim, cg%js-j,i,:)
                      cg%b(ydim,i,j,:) = -recv_left(xdim, cg%js-j,i,:)
@@ -293,7 +293,7 @@ contains
                case (BND_COR, BND_INF, BND_MPI, BND_REF, BND_SHE)
                   ! Do nothing
                case (BND_PER)
-                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,1:cg%nb,:,:)              = cg%b(:, cg%ieb:cg%ie,:,:)
+                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,1:dom%nb,:,:)              = cg%b(:, cg%ieb:cg%ie,:,:)
                case (BND_OUT, BND_OUTD, BND_OUTH)
                   cg%b(:,1,:,:) = cg%b(:,2,:,:)
                case default
@@ -319,7 +319,7 @@ contains
                case (BND_COR, BND_INF, BND_MPI, BND_REF)
                   ! Do nothing
                case (BND_PER)
-                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,:,1:cg%nb,:)              = cg%b(:,:, cg%jeb:cg%je,:)
+                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,:,1:dom%nb,:)              = cg%b(:,:, cg%jeb:cg%je,:)
                case (BND_OUT, BND_OUTD, BND_OUTH)
                   cg%b(:,:,1,:) = cg%b(:,:,2,:)
                case default
@@ -346,7 +346,7 @@ contains
                case (BND_MPI, BND_REF)
                   ! Do nothing
                case (BND_PER)
-                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,:,:,1:cg%nb)              = cg%b(:,:,:, cg%keb:cg%ke)
+                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,:,:,1:dom%nb)              = cg%b(:,:,:, cg%keb:cg%ke)
                case (BND_OUT, BND_OUTD, BND_OUTH)
                   cg%b(:,:,:,1) = cg%b(:,:,:,2)
                case default
@@ -427,11 +427,11 @@ contains
                &      cg%bnd(xdim, LO) == BND_OUTD, cg%bnd(xdim, HI) == BND_OUTD, cg%bnd(xdim, LO) == BND_OUTH, cg%bnd(xdim, HI) == BND_OUTH] )) then
                select case (name)
                   case ("vxby","vxbz")
-                     call compute_bnd_indxs(1, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
+                     call compute_bnd_indxs(1, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vybx","vzbx","emfy","emfz")
-                     call compute_bnd_indxs(2, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
+                     call compute_bnd_indxs(2, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vybz","vzby","emfx")
-                     call compute_bnd_indxs(3, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
+                     call compute_bnd_indxs(3, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                end select  ! (name)
             endif
 
@@ -487,11 +487,11 @@ contains
                &      cg%bnd(ydim, LO) == BND_OUTD, cg%bnd(ydim, HI) == BND_OUTD, cg%bnd(ydim, LO) == BND_OUTH, cg%bnd(ydim, HI) == BND_OUTH] )) then
                select case (name)
                   case ("vybz","vybx")
-                     call compute_bnd_indxs(1, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
+                     call compute_bnd_indxs(1, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vzby","vxby","emfz","emfx")
-                     call compute_bnd_indxs(2, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
+                     call compute_bnd_indxs(2, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vzbx","vxbz","emfy")
-                     call compute_bnd_indxs(3, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
+                     call compute_bnd_indxs(3, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                end select  ! (name)
             endif
 
@@ -547,11 +547,11 @@ contains
                &      cg%bnd(zdim, LO) == BND_OUTD, cg%bnd(zdim, HI) == BND_OUTD, cg%bnd(zdim, LO) == BND_OUTH, cg%bnd(zdim, HI) == BND_OUTH] )) then
                select case (name)
                   case ("vzbx","vzby")
-                     call compute_bnd_indxs(1, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
+                     call compute_bnd_indxs(1, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vxbz","vybz","emfy","emfx")
-                     call compute_bnd_indxs(2, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
+                     call compute_bnd_indxs(2, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                   case ("vxby","vybx","emfz")
-                     call compute_bnd_indxs(3, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase, cg)
+                     call compute_bnd_indxs(3, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
                end select  ! (name)
             endif
 
@@ -611,9 +611,9 @@ contains
 !>
 !! \brief Routine delivers common boundary cells indexes in cases of reflection or outflow boundary types
 !<
-   subroutine compute_bnd_indxs(bndcase, ndirb, ledge, redge, lnbcells, rnbcells, bndsign, zndiff, rrbase, cg)
+   subroutine compute_bnd_indxs(bndcase, ndirb, ledge, redge, lnbcells, rnbcells, bndsign, zndiff, rrbase)
 
-      use grid_cont,  only: grid_container
+      use domain,    only: dom
 
       implicit none
 
@@ -626,26 +626,25 @@ contains
       real,    intent(out) :: bndsign      !< 1. or -1. to change the sign or not
       integer, intent(out) :: zndiff       !< COMMENT ME
       integer, intent(out) :: rrbase       !< COMMENT ME
-      type(grid_container), pointer, intent(in) :: cg !< current grid containter
 
       select case (bndcase)
          case (1)
-            ledge    = cg%nb
-            lnbcells = cg%nb-1
+            ledge    = dom%nb
+            lnbcells = dom%nb-1
             bndsign  = -1.
          case (2)
-            ledge    = cg%nb+1
-            lnbcells = cg%nb
+            ledge    = dom%nb+1
+            lnbcells = dom%nb
             bndsign  = -1.
          case (3)
-            ledge    = cg%nb
-            lnbcells = cg%nb
+            ledge    = dom%nb
+            lnbcells = dom%nb
             bndsign  = 1.
       end select  ! (name)
 
       zndiff   = ledge - lnbcells
-!     rnbcells = cg%nb - zndiff
-      rnbcells = 2*cg%nb - ledge
+!     rnbcells = dom%nb - zndiff
+      rnbcells = 2*dom%nb - ledge
       redge    = ndirb + ledge
       rrbase   = ndirb + lnbcells + 1  ! = redge + 1 - zndiff
 

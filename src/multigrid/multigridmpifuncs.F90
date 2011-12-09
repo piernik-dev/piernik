@@ -67,7 +67,7 @@ contains
       do while (associated(curl))
          if (ubound(curl%dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid:mpi_multigrid_prep] Multiple blocks per process not implemented yet")
 
-         ijks(:) = curl%ijkse(:, LO) - curl%off(:)  ! add this to convert absolute cell coordinates to local indices. (+curl%nb - off(:))
+         ijks(:) = curl%ijkse(:, LO) - curl%off(:)  ! add this to convert absolute cell coordinates to local indices. (+dom%nb - off(:))
 
          ! find fine target for receiving restricted data or sending data to be prolonged
          if (associated(curl%finer)) then
@@ -173,7 +173,7 @@ contains
 
       if (.not. associated(curl)) call die("[multigridmpifuncs:mpi_multigrid_bnd] Invalid level")
       if (iv < 1 .or. iv > ngridvars) call die("[multigridmpifuncs:mpi_multigrid_bnd] Invalid variable index.")
-      if (ng > curl%nb .or. ng <= 0) call die("[multigridmpifuncs:mpi_multigrid_bnd] Too many or <0 guardcells requested.")
+      if (ng > dom%nb .or. ng <= 0) call die("[multigridmpifuncs:mpi_multigrid_bnd] Too many or <0 guardcells requested.")
 
       if (present(corners)) then
          cor = corners

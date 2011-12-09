@@ -99,10 +99,10 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         n = cg%nb
+         n = dom%nb
          if (present(nb)) then
             n = nb
-            if (n<=0 .or. n>cg%nb) call die("[internal_bnd:arr3d_boundaries] wrong number of guardcell layers")
+            if (n<=0 .or. n>dom%nb) call die("[internal_bnd:arr3d_boundaries] wrong number of guardcell layers")
          endif
 
          req(:) = MPI_REQUEST_NULL
@@ -122,11 +122,11 @@ contains
                            endif
                            select case (2*d+lh)
                               case (2*xdim+LO)
-                                 pa3d(1:cg%nb, :, :) = pa3d(cg%ieb:cg%ie, :, :) ! local copy is cheap (and don't occur so often in large runs) so don't boyher with the value of n
+                                 pa3d(1:dom%nb, :, :) = pa3d(cg%ieb:cg%ie, :, :) ! local copy is cheap (and don't occur so often in large runs) so don't boyher with the value of n
                               case (2*ydim+LO)
-                                 pa3d(:, 1:cg%nb, :) = pa3d(:, cg%jeb:cg%je, :)
+                                 pa3d(:, 1:dom%nb, :) = pa3d(:, cg%jeb:cg%je, :)
                               case (2*zdim+LO)
-                                 pa3d(:, :, 1:cg%nb) = pa3d(:, :, cg%keb:cg%ke)
+                                 pa3d(:, :, 1:dom%nb) = pa3d(:, :, cg%keb:cg%ke)
                               case (2*xdim+HI)
                                  pa3d(cg%ie+1:cg%n_(xdim), :, :) = pa3d(cg%is:cg%isb, :, :)
                               case (2*ydim+HI)
@@ -157,7 +157,7 @@ contains
                         if (present(area_type)) then
                            if (area_type /= AT_NO_B) cycle
                         endif
-                        do i = 1, cg%nb
+                        do i = 1, dom%nb
                            select case (2*d+lh)
                               case (2*xdim+LO)
                                  pa3d(i, :, :) = pa3d(cg%is, :, :)

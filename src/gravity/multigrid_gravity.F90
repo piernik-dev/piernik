@@ -1100,6 +1100,7 @@ contains
 
    subroutine store_solution(history)
 
+      use domain,            only: dom
       use global,            only: t
       use multigridvars,     only: plvl  ! QA_WARN workaround for stupid INTEL compiler
       use multigridmpifuncs, only: mpi_multigrid_bnd
@@ -1124,9 +1125,9 @@ contains
       ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
       ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
       if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
-         call mpi_multigrid_bnd(roof, solution, roof%nb, extbnd_extrapolate)
+         call mpi_multigrid_bnd(roof, solution, dom%nb, extbnd_extrapolate)
       else
-         call mpi_multigrid_bnd(roof, solution, roof%nb, extbnd_mirror)
+         call mpi_multigrid_bnd(roof, solution, dom%nb, extbnd_mirror)
       endif
 
    end subroutine store_solution

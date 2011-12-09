@@ -59,7 +59,7 @@ contains
       use constants,  only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, INVALID, &
            &                ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n,cs_i2_n
       use dataio_pub, only: printinfo, die, code_progress
-      use domain,     only: pdom, is_multicg, cuboids
+      use domain,     only: dom, is_multicg, cuboids
       use fluidindex, only: flind
       use gc_list,    only: cg_list_element
       use global,     only: repeat_step
@@ -91,8 +91,8 @@ contains
       enddo
 
       pbd => base_dom(NBD)
-      lpse => pdom%pse(proc)
-      call dom2cg(pdom%n_d(:), base_level_offset, base_level_number, lpse, pbd)
+      lpse => dom%pse(proc)
+      call dom2cg(dom%n_d(:), base_level_offset, base_level_number, lpse, pbd)
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
@@ -118,7 +118,7 @@ contains
 
          if (allocated(cg%w)) then
             do d = xdim, zdim
-               if (allocated(cg%w(1)%w_i_mbc(d, cg%nb)%mbc)) nrq = nrq + 2 * count(cg%w(1)%w_i_mbc(d, cg%nb)%mbc(:) /= INVALID) ! w(1) is probably fluid, but it can be any registered field
+               if (allocated(cg%w(1)%w_i_mbc(d, dom%nb)%mbc)) nrq = nrq + 2 * count(cg%w(1)%w_i_mbc(d, dom%nb)%mbc(:) /= INVALID) ! w(1) is probably fluid, but it can be any registered field
             enddo
          endif
 

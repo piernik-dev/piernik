@@ -367,7 +367,7 @@ contains
             if (allocated(ic_data)) deallocate(ic_data)
          endif
 
-         do i = 1, cg%nb
+         do i = 1, dom%nb
             cg%u(:,i,:,:)           = cg%u(:, cg%is,:,:)
             cg%u(:, cg%ie+i,:,:)    = cg%u(:, cg%ie,:,:)
             cg%cs_iso2(i,:,:)       = cg%cs_iso2(cg%is,:,:)

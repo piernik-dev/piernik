@@ -391,42 +391,42 @@ contains
 
          if (dom%has_dir(xdim)) then
             if (cg%bnd(xdim,LO) >= BND_OUT .and. cg%bnd(xdim,LO) <= BND_OUTH) then
-               do i = 1, cg%nb+1
-                  cg%gp(i,:,:)               = cg%gp(cg%nb+2,:,:)
+               do i = 1, dom%nb+1
+                  cg%gp(i,:,:)               = cg%gp(dom%nb+2,:,:)
                enddo
             endif
 
             if (cg%bnd(xdim,HI) >= BND_OUT .and. cg%bnd(xdim,HI) <= BND_OUTH) then
-               do i = 1, cg%nb+1
-                  cg%gp(cg%n_(xdim)-cg%nb-1+i,:,:) = cg%gp(cg%n_(xdim)-cg%nb-1,:,:)
+               do i = 1, dom%nb+1
+                  cg%gp(cg%n_(xdim)-dom%nb-1+i,:,:) = cg%gp(cg%n_(xdim)-dom%nb-1,:,:)
                enddo
             endif
          endif
 
          if (dom%has_dir(ydim)) then
             if (cg%bnd(ydim,LO) >= BND_OUT .and. cg%bnd(ydim,LO) <= BND_OUTH) then
-               do i = 1, cg%nb+1
-                  cg%gp(:,i,:)               = cg%gp(:,cg%nb+2,:)
+               do i = 1, dom%nb+1
+                  cg%gp(:,i,:)               = cg%gp(:,dom%nb+2,:)
                enddo
             endif
 
             if (cg%bnd(ydim,HI) >= BND_OUT .and. cg%bnd(ydim,HI) <= BND_OUTH) then
-               do i = 1, cg%nb+1
-                  cg%gp(:,cg%n_(ydim)-cg%nb-1+i,:) = cg%gp(:,cg%n_(ydim)-cg%nb-1,:)
+               do i = 1, dom%nb+1
+                  cg%gp(:,cg%n_(ydim)-dom%nb-1+i,:) = cg%gp(:,cg%n_(ydim)-dom%nb-1,:)
                enddo
             endif
          endif
 
          if (dom%has_dir(zdim)) then
             if (cg%bnd(zdim,LO) >= BND_OUT .and. cg%bnd(zdim,LO) <= BND_OUTH) then
-               do i = 1, cg%nb+1
-                  cg%gp(:,:,i)               = cg%gp(:,:,cg%nb+2)
+               do i = 1, dom%nb+1
+                  cg%gp(:,:,i)               = cg%gp(:,:,dom%nb+2)
                enddo
             endif
 
             if (cg%bnd(zdim,HI) >= BND_OUT .and. cg%bnd(zdim,HI) <= BND_OUTH) then
-               do i = 1, cg%nb+1
-                  cg%gp(:,:,cg%n_(zdim)-cg%nb-1+i) = cg%gp(:,:,cg%n_(zdim)-cg%nb-1)
+               do i = 1, dom%nb+1
+                  cg%gp(:,:,cg%n_(zdim)-dom%nb-1+i) = cg%gp(:,:,cg%n_(zdim)-dom%nb-1)
                enddo
             endif
          endif

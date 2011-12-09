@@ -143,7 +143,6 @@ module grid_cont
       integer(kind=4) :: je                                      !< index of the last %grid cell of physical domain in y-direction
       integer(kind=4) :: ks                                      !< index of the first %grid cell of physical domain in z-direction
       integer(kind=4) :: ke                                      !< index of the last %grid cell of physical domain in z-direction
-      integer(kind=4) :: nb                                      !< number of boundary cells surrounding the physical domain, same for all directions
       integer(kind=4) :: isb, ieb, jsb, jeb, ksb, keb            !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkse         !< [[is, js, ks], [ie, je, ke]]
       integer(kind=8), dimension(ndims) :: h_cor1                !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:)
@@ -245,9 +244,8 @@ contains
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init] MPI not initialized.")
 
       this%dom => dom
-      this%nb = dom%nb !> \todo make this one global constant back
 
-      this%grid_id     = grid_id
+      this%grid_id    = grid_id
       this%my_se(:,:) = dom%pse(proc)%sel(grid_id, :, :)
       this%off(:)     = this%my_se(:, LO)
       this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
@@ -309,15 +307,15 @@ contains
 
       !> \todo allocate this conditionally, only when comm3d is in use
       if (allocated(this%mbc)) call die("[grid_container:init] this%mbc already allocated")
-      allocate(this%mbc(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK, 1:this%nb))
+      allocate(this%mbc(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK, 1:dom%nb))
       this%mbc(:, :, :, :, :) = INVALID
 
       if (this%empty) then
 
          this%fbnd(:,:) = dom%edge(:,:)
          this%n_(:) = 0
-         this%ijkse(:, LO) = this%nb + I_ONE
-         this%ijkse(:, HI) = this%nb
+         this%ijkse(:, LO) = dom%nb + I_ONE
+         this%ijkse(:, HI) = dom%nb
          this%dl(:) = 1.0
 
          this%isb   = 0 ! ???
@@ -336,14 +334,14 @@ contains
          do i = xdim, zdim
             if (dom%has_dir(i)) then
                if (this%n_b(i) < 1) call die("[grid_init] Too many CPUs for such a small grid.")
-               if (this%n_b(i) < this%nb) call warn("[grid_init] domain size in some directions is < nb, which may result in incomplete boundary cell update")
+               if (this%n_b(i) < dom%nb) call warn("[grid_init] domain size in some directions is < nb, which may result in incomplete boundary cell update")
             endif
          enddo
 
          where (dom%has_dir(:))
-            this%n_(:) = this%n_b(:) + I_TWO * this%nb       ! Block total grid size with guardcells
-            this%ijkse(:, LO) = this%nb + I_ONE
-            this%ijkse(:, HI) = this%nb + this%n_b(:)
+            this%n_(:) = this%n_b(:) + I_TWO * dom%nb       ! Block total grid size with guardcells
+            this%ijkse(:, LO) = dom%nb + I_ONE
+            this%ijkse(:, HI) = dom%nb + this%n_b(:)
             this%dl(:) = dom%L_(:) / dom%n_d(:)
             this%fbnd(:, LO) = dom%edge(:, LO) + this%dl(:) * this%off(:)
             this%fbnd(:, HI) = dom%edge(:, LO) + this%dl(:) * this%h_cor1(:)
@@ -357,7 +355,7 @@ contains
          endwhere
 
          if (dom%has_dir(xdim)) then
-            this%isb   = I_TWO*this%nb
+            this%isb   = I_TWO*dom%nb
             this%ieb   = this%n_b(xdim)+I_ONE
          else
             this%isb   = 1
@@ -365,7 +363,7 @@ contains
          endif
 
          if (dom%has_dir(ydim)) then
-            this%jsb   = I_TWO*this%nb
+            this%jsb   = I_TWO*dom%nb
             this%jeb   = this%n_b(ydim)+I_ONE
          else
             this%jsb   = 1
@@ -373,7 +371,7 @@ contains
          endif
 
          if (dom%has_dir(zdim)) then
-            this%ksb   = I_TWO*this%nb
+            this%ksb   = I_TWO*dom%nb
             this%keb   = this%n_b(zdim)+I_ONE
          else
             this%ksb   = 1
@@ -449,9 +447,9 @@ contains
       call this%mpi_bnd_types
 
       ! Initialize the communicators for q even if there are no q  arrays (temporarily required for multigrid)
-      allocate(this%q_i_mbc(ndims, this%nb), this%q_o_mbc(ndims, this%nb))
+      allocate(this%q_i_mbc(ndims, dom%nb), this%q_o_mbc(ndims, dom%nb))
       do d = xdim, zdim
-         do ib = 1, this%nb
+         do ib = 1, dom%nb
             if (allocated(this%i_bnd(d, ib)%seg)) then
                allocate(this%q_i_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)), &
                     &   this%q_o_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)))
@@ -484,7 +482,7 @@ contains
       allocate(a0(this%n_(d)), al(this%n_(d)), ar(this%n_(d)), ia(this%n_(d)))
 
       if (dom%has_dir(d)) then
-         a0(:) = dom%edge(d, LO) + this%dl(d) * ([(i, i=1, this%n_(d))] - half - this%nb + this%off(d))
+         a0(:) = dom%edge(d, LO) + this%dl(d) * ([(i, i=1, this%n_(d))] - half - dom%nb + this%off(d))
       else
          a0(:) = half*(this%fbnd(d, LO) + this%fbnd(d, HI))
       endif
@@ -559,7 +557,7 @@ contains
          do d = xdim, zdim
             if (dom%has_dir(d)) then
                do t = FLUID, ARR
-                  do b = 1, this%nb
+                  do b = 1, dom%nb
                      if (this%mbc(t, d, LO, BLK, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BLK, b), ierr)
                      if (this%mbc(t, d, LO, BND, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BND, b), ierr)
                      if (this%mbc(t, d, HI, BLK, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BLK, b), ierr)
@@ -596,7 +594,7 @@ contains
       endif
 
       do d = xdim, zdim
-         do b = 1, this%nb
+         do b = 1, dom%nb
             if (allocated(this%q_i_mbc)) then
                if (allocated(this%q_i_mbc(d, b)%mbc)) then
                   do g = lbound(this%q_i_mbc(d, b)%mbc, dim=1), ubound(this%q_i_mbc(d, b)%mbc, dim=1)
@@ -656,7 +654,7 @@ contains
       nc = [ flind%all, ndims, max(flind%crs%all,I_ONE), I_ONE ]      !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
 
       if (allocated(this%i_bnd) .or. allocated(this%o_bnd)) call die("[grid:grid_mpi_boundaries_prep] this%i_bnd or this%o_bnd already allocated")
-      allocate(this%i_bnd(xdim:zdim, this%nb), this%o_bnd(xdim:zdim, this%nb))
+      allocate(this%i_bnd(xdim:zdim, dom%nb), this%o_bnd(xdim:zdim, dom%nb))
 
       ! assume that cuboids fill the domain and don't collide
 
@@ -682,7 +680,7 @@ contains
                      enddo
                   enddo
                enddo
-               do ib = 1, this%nb
+               do ib = 1, dom%nb
                   allocate(this%i_bnd(d, ib)%seg(sum(procmask(:))), this%o_bnd(d, ib)%seg(sum(procmask(:))))
                enddo
 
@@ -709,13 +707,13 @@ contains
                               bp_layer(:, HI) = min(bp_layer(:, HI), this%dom%pse(j)%sel(b, :, HI))
                               b_layer(:,:) = bp_layer(:,:) - poff(:,:)
                               g = g + 1
-                              do ib = 1, this%nb
+                              do ib = 1, dom%nb
                                  this%i_bnd(d, ib)%seg(g)%proc = j
                                  this%i_bnd(d, ib)%seg(g)%se(:,LO) = b_layer(:, LO) + ijks(:)
                                  this%i_bnd(d, ib)%seg(g)%se(:,HI) = b_layer(:, HI) + ijks(:)
                                  if (any(this%i_bnd(d, ib)%seg(g)%se(d, :) < 0)) &
                                       this%i_bnd(d, ib)%seg(g)%se(d, :) = this%i_bnd(d, ib)%seg(g)%se(d, :) + this%dom%n_d(d)
-                                 if (any(this%i_bnd(d, ib)%seg(g)%se(d, :) > this%n_b(d) + 2*this%nb)) &
+                                 if (any(this%i_bnd(d, ib)%seg(g)%se(d, :) > this%n_b(d) + 2*dom%nb)) &
                                       this%i_bnd(d, ib)%seg(g)%se(d, :) = this%i_bnd(d, ib)%seg(g)%se(d, :) - this%dom%n_d(d)
 
                                  ! expand to cover corners (requires separate MPI_Waitall for each direction)
@@ -757,21 +755,21 @@ contains
                   if (dims(t) == 1+ndims) sizes(1) = nc(t)
                   sizes(dims(t)-zdim+xdim:dims(t)) = this%n_(:)
 
-                  do ib = 1, this%nb
+                  do ib = 1, dom%nb
 
                      subsizes(:) = sizes(:)
                      subsizes(dims(t)-zdim+d) = ib
                      starts(:) = 0
 
-                     starts(dims(t)-zdim+d) = this%nb-ib
+                     starts(dims(t)-zdim+d) = dom%nb-ib
                      call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, this%mbc(t, d, LO, BND, ib), ierr)
                      call MPI_Type_commit(this%mbc(t, d, LO, BND, ib), ierr)
 
-                     starts(dims(t)-zdim+d) = this%nb
+                     starts(dims(t)-zdim+d) = dom%nb
                      call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, this%mbc(t, d, LO, BLK, ib), ierr)
                      call MPI_Type_commit(this%mbc(t, d, LO, BLK, ib), ierr)
 
-                     starts(dims(t)-zdim+d) = this%n_b(d) + this%nb - ib
+                     starts(dims(t)-zdim+d) = this%n_b(d) + dom%nb - ib
                      call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, this%mbc(t, d, HI, BLK, ib), ierr)
                      call MPI_Type_commit(this%mbc(t, d, HI, BLK, ib), ierr)
 

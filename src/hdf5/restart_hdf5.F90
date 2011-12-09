@@ -161,14 +161,14 @@ contains
       select case (area_type)
          case (AT_OUT_B)                                   ! physical domain with outer boundaries
             where (cg%off(:) == 0 .and. dom%has_dir(:))
-               lleft(:)  = lleft(:)  - cg%nb
-               chnk(:)   = chnk(:)   + cg%nb
+               lleft(:)  = lleft(:)  - dom%nb
+               chnk(:)   = chnk(:)   + dom%nb
             endwhere
             where (cg%h_cor1(:) == dom%n_d(:) .and. dom%has_dir(:)) !> \warning this should be checked against level%n_d
-               lright(:) = lright(:) + cg%nb
-               chnk(:)   = chnk(:)   + cg%nb
+               lright(:) = lright(:) + dom%nb
+               chnk(:)   = chnk(:)   + dom%nb
             endwhere
-            where (loffs(:)>0) loffs(:) = loffs(:) + cg%nb ! the block adjacent to the left boundary are cg%nb cells wider than cg%n_b(:)
+            where (loffs(:)>0) loffs(:) = loffs(:) + dom%nb ! the block adjacent to the left boundary are dom%nb cells wider than cg%n_b(:)
          case (AT_NO_B)                                    ! only physical domain without any boundaries
             ! Nothing special
          case (AT_USER)                                    ! user defined domain (with no reference to simulations domain)

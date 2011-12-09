@@ -285,9 +285,9 @@ contains
 
          if (ubound(curl%dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid:init_multigrid] Multiple blocks per process not implemented yet")
 
-         if (any(curl%n_b(:) < curl%nb .and. dom%has_dir(:) .and. .not. curl%empty)) then
+         if (any(curl%n_b(:) < dom%nb .and. dom%has_dir(:) .and. .not. curl%empty)) then
             write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
-                 curl%nb, " > ", curl%n_b(:), " at level ", curl%lev, ". You may try to set level_max <=", -curl%lev
+                 dom%nb, " > ", curl%n_b(:), " at level ", curl%lev, ". You may try to set level_max <=", -curl%lev
             call die(msg)
          endif
 
@@ -297,8 +297,8 @@ contains
          !! \deprecated BEWARE prolong_x and %mg%prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
          if (allocated(curl%mg%prolong_x) .or. allocated(curl%mg%prolong_xy) .or. allocated(curl%mg%var) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
          allocate(curl%mg%var     (curl%n_(xdim), curl%n_(ydim),        curl%n_(zdim),        ngridvars))
-         allocate(curl%mg%prolong_xy(curl%n_(xdim), curl%n_(ydim),        curl%nzb/2+2*curl%nb))
-         allocate(curl%mg%prolong_x (curl%n_(xdim), curl%nyb/2+2*curl%nb, curl%nzb/2+2*curl%nb))
+         allocate(curl%mg%prolong_xy(curl%n_(xdim), curl%n_(ydim),        curl%nzb/2+2*dom%nb))
+         allocate(curl%mg%prolong_x (curl%n_(xdim), curl%nyb/2+2*dom%nb, curl%nzb/2+2*dom%nb))
          mb_alloc  = mb_alloc + size(curl%mg%prolong_x) + size(curl%mg%prolong_xy) + size(curl%mg%var)
 
          if ( allocated(curl%mg%bnd_x) .or. allocated(curl%mg%bnd_y) .or. allocated(curl%mg%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")

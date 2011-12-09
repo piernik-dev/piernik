@@ -192,8 +192,8 @@ contains
 
             do d = xdim, zdim ! debug
                if (dom%has_dir(d)) then
-                  if ((fse(d, LO)-off1(d)-this%nb-1)/2+cse(d, LO) < cse(d, LO)) call die("mv:rl <cse")
-                  if ((fse(d, HI)-off1(d)-this%nb-1)/2+cse(d, LO) > cse(d, HI)) call die("mv:rl >cse")
+                  if ((fse(d, LO)-off1(d)-dom%nb-1)/2+cse(d, LO) < cse(d, LO)) call die("mv:rl <cse")
+                  if ((fse(d, HI)-off1(d)-dom%nb-1)/2+cse(d, LO) > cse(d, HI)) call die("mv:rl >cse")
                endif
             enddo
             ! OPT: completely unoptimized,
@@ -320,8 +320,8 @@ contains
             ! Possible optimization candidate: reduce L1 and L2 cache misses on both read and write (RBGS only, secondary importance)
             do d = xdim, zdim ! debug
                if (dom%has_dir(d)) then
-                  if ((fse(d, LO)-off1(d)-this%nb-1)/2+cse(d, LO) < cse(d, LO)) call die("mv:rl <cse")
-                  if ((fse(d, HI)-off1(d)-this%nb-1)/2+cse(d, LO) > cse(d, HI)) call die("mv:rl >cse")
+                  if ((fse(d, LO)-off1(d)-dom%nb-1)/2+cse(d, LO) < cse(d, LO)) call die("mv:rl <cse")
+                  if ((fse(d, HI)-off1(d)-dom%nb-1)/2+cse(d, LO) > cse(d, HI)) call die("mv:rl >cse")
                endif
             enddo
             ! OPT: completely unoptimized

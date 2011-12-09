@@ -207,7 +207,7 @@ contains
                rc = sqrt(xi**2+yj**2)
                call random_number(noise)
 
-               ilook = (rc-dom%edge(xdim, LO))/cg%dx/sqrt(2.) + 0.5 + cg%nb
+               ilook = (rc-dom%edge(xdim, LO))/cg%dx/sqrt(2.) + 0.5 + dom%nb
                iOmega = omega(int(ilook))+(rc-cg%x(int(ilook))*sqrt(2.))*(omega(int(ilook)+1)-omega(int(ilook))) &
                     &   / (cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
 !

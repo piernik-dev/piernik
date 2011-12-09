@@ -115,18 +115,20 @@ contains
 
    subroutine bnd_xl_per(cg)
 
+      use domain,    only: dom
       use grid_cont, only: grid_container
 
       implicit none
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      cg%u(:,1:cg%nb,:,:) = cg%u(:, cg%ieb:cg%ie,:,:)
+      cg%u(:,1:dom%nb,:,:) = cg%u(:, cg%ieb:cg%ie,:,:)
 
    end subroutine bnd_xl_per
 
    subroutine bnd_xl_ref(cg)
 
+      use domain,     only: dom
       use grid_cont,  only: grid_container
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
@@ -142,14 +144,14 @@ contains
 
       integer :: ib
 
-      do ib=1, cg%nb
-         cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%is-ib,:,:)  = cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%nb+ib,:,:)
-         cg%u(iarr_all_mx, cg%is-ib,:,:)  = -cg%u(iarr_all_mx, cg%nb+ib,:,:)
+      do ib=1, dom%nb
+         cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%is-ib,:,:)  = cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], dom%nb+ib,:,:)
+         cg%u(iarr_all_mx, cg%is-ib,:,:)  = -cg%u(iarr_all_mx, dom%nb+ib,:,:)
 #ifndef ISO
-         cg%u(iarr_all_en, cg%is-ib,:,:)  =  cg%u(iarr_all_en, cg%nb+ib,:,:)
+         cg%u(iarr_all_en, cg%is-ib,:,:)  =  cg%u(iarr_all_en, dom%nb+ib,:,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-         cg%u(iarr_all_crs, cg%is-ib,:,:) =  cg%u(iarr_all_crs, cg%nb+ib,:,:)
+         cg%u(iarr_all_crs, cg%is-ib,:,:) =  cg%u(iarr_all_crs, dom%nb+ib,:,:)
 #endif /* COSM_RAYS */
       enddo
 
@@ -157,6 +159,7 @@ contains
 
    subroutine bnd_xl_out(cg)
 
+      use domain,         only: dom
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS
       use initcosmicrays, only: smallecr
@@ -169,7 +172,7 @@ contains
 
       integer :: ib
 
-      do ib = 1, cg%nb
+      do ib = 1, dom%nb
          cg%u(:,ib,:,:)            = cg%u(:, cg%is,:,:)
 #ifdef COSM_RAYS
          cg%u(iarr_all_crs,ib,:,:) = smallecr
@@ -180,6 +183,7 @@ contains
 
    subroutine bnd_xl_outd(cg)
 
+      use domain,         only: dom
       use grid_cont,      only: grid_container
       use fluidindex,     only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
@@ -196,7 +200,7 @@ contains
 
       integer :: ib
 
-      do ib = 1, cg%nb
+      do ib = 1, dom%nb
          cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz],ib,:,:)  = cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%is,:,:)
          cg%u(iarr_all_mx,ib,:,:)  = min(cg%u(iarr_all_mx, cg%is,:,:),0.0)
 #ifndef ISO
@@ -224,6 +228,7 @@ contains
 
    subroutine bnd_xr_ref(cg)
 
+      use domain,     only: dom
       use grid_cont,  only: grid_container
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
@@ -239,7 +244,7 @@ contains
 
       integer :: ib
 
-      do ib=1, cg%nb
+      do ib=1, dom%nb
          cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie+ib,:,:) = cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie+1-ib,:,:)
          cg%u(iarr_all_mx, cg%ie+ib,:,:)  = -cg%u(iarr_all_mx, cg%ie+1-ib,:,:)
 #ifndef ISO
@@ -254,6 +259,7 @@ contains
 
    subroutine bnd_xr_out(cg)
 
+      use domain,         only: dom
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS
       use initcosmicrays, only: smallecr
@@ -266,7 +272,7 @@ contains
 
       integer :: ib
 
-      do ib = 1, cg%nb
+      do ib = 1, dom%nb
          cg%u(:, cg%ie+ib,:,:)            = cg%u(:, cg%ie,:,:)
 #ifdef COSM_RAYS
          cg%u(iarr_all_crs, cg%ie+ib,:,:) = smallecr
@@ -277,6 +283,7 @@ contains
 
    subroutine bnd_xr_outd(cg)
 
+      use domain,         only: dom
       use grid_cont,      only: grid_container
       use fluidindex,     only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifndef ISO
@@ -293,7 +300,7 @@ contains
 
       integer :: ib
 
-      do ib = 1, cg%nb
+      do ib = 1, dom%nb
          cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie+ib,:,:) = cg%u([iarr_all_dn,iarr_all_my,iarr_all_mz], cg%ie,:,:)
          cg%u(iarr_all_mx, cg%ie+ib,:,:)  = max(cg%u(iarr_all_mx, cg%ie,:,:),0.0)
 #ifndef ISO

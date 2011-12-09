@@ -283,9 +283,9 @@ contains
       if (is_multicg) call die("[slice_hdf5:write_plot_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial message tagging
 
       xn = 1
-      if (dom%has_dir(plane)) xn = pl_i(plane) + cg%nb - cg%off(plane)
+      if (dom%has_dir(plane)) xn = pl_i(plane) + dom%nb - cg%off(plane)
 
-      if ((xn > cg%nb .and. xn <= cg%n_b(plane)+cg%nb) .or. (xn == 1 .and. .not. dom%has_dir(plane))) then
+      if ((xn > dom%nb .and. xn <= cg%n_b(plane)+dom%nb) .or. (xn == 1 .and. .not. dom%has_dir(plane))) then
          allocate(send(cg%n_b(d1(plane)), cg%n_b(d2(plane))))
          call common_plt_hdf5(var, plane, xn, send, ierrh, cg)
          if (associated(user_plt_hdf5) .and. ierrh /= 0) then
@@ -307,8 +307,8 @@ contains
 
          do p = FIRST, LAST
             xn_r = 1
-            if (dom%has_dir(plane)) xn_r = pl_i(plane) + cg%nb - dom%pse(p)%sel(1, plane, LO)
-            if ((xn_r > cg%nb .and. xn_r <= int(dom%pse(p)%sel(1, plane, HI) - dom%pse(p)%sel(1, plane, LO) + 1, 4) + cg%nb) .or. (xn_r == 1 .and. .not. dom%has_dir(plane))) then
+            if (dom%has_dir(plane)) xn_r = pl_i(plane) + dom%nb - dom%pse(p)%sel(1, plane, LO)
+            if ((xn_r > dom%nb .and. xn_r <= int(dom%pse(p)%sel(1, plane, HI) - dom%pse(p)%sel(1, plane, LO) + 1, 4) + dom%nb) .or. (xn_r == 1 .and. .not. dom%has_dir(plane))) then
                if (p == proc) then
                   img(1+dom%pse(p)%sel(1, d1(plane), LO):1+dom%pse(p)%sel(1, d1(plane), HI), 1+dom%pse(p)%sel(1, d2(plane), LO):1+dom%pse(p)%sel(1, d2(plane), HI)) = send(:,:)
                else
@@ -341,7 +341,7 @@ contains
 
          if (allocated(img))  deallocate(img)
       else
-         if ((xn > cg%nb .and. xn <= cg%n_b(plane)+cg%nb) .or. (xn == 1 .and. .not. dom%has_dir(plane))) &
+         if ((xn > dom%nb .and. xn <= cg%n_b(plane)+dom%nb) .or. (xn == 1 .and. .not. dom%has_dir(plane))) &
               call MPI_Send(send, size(send), MPI_DOUBLE_PRECISION, FIRST, tag, comm, ierr)
       endif
 

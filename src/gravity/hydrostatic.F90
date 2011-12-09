@@ -143,7 +143,7 @@ contains
 
       nstot = nsub * dom%n_t(zdim)
       dzs   = (dom%edge(zdim, HI)-dom%edge(zdim, LO))/real(nstot-2*dom%nb*nsub)
-      hsmin = dom%edge(zdim, LO)-cg%nb*cg%dl(zdim)
+      hsmin = dom%edge(zdim, LO)-dom%nb*cg%dl(zdim)
       hsbn  = cg%n_(zdim)
       hstn  = dom%n_t(zdim)
       sdlim = dom%edge(zdim,:)

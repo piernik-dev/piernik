@@ -190,7 +190,7 @@ contains
       do i=lbound(cg%u,1),ubound(cg%u,1)
          cg%u(i,:, cg%js:cg%je,:) = unshear_fft( cg%u(i,:, cg%js:cg%je,:), cg%x(:),ddly)
       enddo
-      cg%u(:,:,1:cg%nb,:)              = cg%u(:,:, cg%jeb:cg%je,:)
+      cg%u(:,:,1:dom%nb,:)              = cg%u(:,:, cg%jeb:cg%je,:)
       cg%u(:,:, cg%je+1:cg%n_(ydim),:) = cg%u(:,:, cg%js:cg%jsb,:)
 #endif /* FFTW */
    end subroutine yshift
@@ -294,7 +294,7 @@ contains
       cg => leaves%first%cg
       if (is_multicg) call die("[shear:unshear] multiple grid pieces per procesor not implemented yet") !nontrivial
 
-      my = 3*cg%nyb+2*cg%nb
+      my = 3*cg%nyb+2*dom%nb
 
       fx = dely / dom%L_(xdim)
       sg = -1
@@ -311,8 +311,8 @@ contains
          ddl = mod(dl, cg%dy)*cg%idy
 
          temp(         1:  cg%je,:)   = qty(i,   1:cg%je ,:)
-         temp(  cg%je+1:2*cg%nyb+cg%nb,:)   = qty(i, cg%js:cg%je,:)
-         temp(2*cg%nyb+cg%nb+1:3*cg%nyb+2*cg%nb,:) = qty(i, cg%js:ny    ,:)
+         temp(  cg%je+1:2*cg%nyb+dom%nb,:)   = qty(i, cg%js:cg%je,:)
+         temp(2*cg%nyb+dom%nb+1:3*cg%nyb+2*dom%nb,:) = qty(i, cg%js:ny    ,:)
 
          temp = cshift(temp,dim=1,shift=ndl)
 
@@ -323,9 +323,9 @@ contains
               - half*(ddl)*(1.0-ddl) * cshift(temp(:,:),shift= sg,dim=1) &
               + half*(ddl)*(1.0+ddl) * cshift(temp(:,:),shift=-sg,dim=1)
 
-         unshear(i, cg%js:cg%je,:) = temp(cg%je+1:cg%nb+2*cg%nyb,:)
+         unshear(i, cg%js:cg%je,:) = temp(cg%je+1:dom%nb+2*cg%nyb,:)
 
-         unshear(i,1:cg%nb,:)          = unshear(i, cg%jeb:cg%je,:)
+         unshear(i,1:dom%nb,:)          = unshear(i, cg%jeb:cg%je,:)
          unshear(i, cg%je+1:ny,:)   = unshear(i, cg%js:cg%jsb,:)
 
          !      unshear(i,:,:) = max(unshear(i,:,:), smalld)

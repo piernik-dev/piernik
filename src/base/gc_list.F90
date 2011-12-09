@@ -502,6 +502,7 @@ contains
    subroutine add_na_4d(this, n)
 
       use constants,   only: xdim, zdim
+      use domain,      only: dom
       use grid_cont,   only: grid_container, set_mpi_types
       use named_array, only: named_array4d
 
@@ -525,9 +526,9 @@ contains
       endif
 
       iw = ubound(this%w(:), dim=1)
-      allocate(this%w(iw)%w_i_mbc(ndims, this%nb), this%w(iw)%w_o_mbc(ndims, this%nb))
+      allocate(this%w(iw)%w_i_mbc(ndims, dom%nb), this%w(iw)%w_o_mbc(ndims, dom%nb))
       do d = xdim, zdim
-         do ib = 1, this%nb
+         do ib = 1, dom%nb
             if (allocated(this%i_bnd(d, ib)%seg)) then
                allocate(this%w(iw)%w_i_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)), &
                     &   this%w(iw)%w_o_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)))
@@ -727,12 +728,12 @@ contains
             case (MINL)
                if (minval(tab) < prop%val) then
                   prop%val = minval(tab)
-                  prop%loc = minloc(tab) + cg%nb
+                  prop%loc = minloc(tab) + dom%nb
                endif
             case (MAXL)
                if (maxval(tab) > prop%val) then
                   prop%val = maxval(tab)
-                  prop%loc = maxloc(tab) + cg%nb
+                  prop%loc = maxloc(tab) + dom%nb
                endif
          end select
          cgl => cgl%nxt
