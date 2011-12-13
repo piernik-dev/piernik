@@ -158,8 +158,10 @@ contains
       implicit none
 
       integer(HID_T), intent(in) :: file_id
+      integer(kind=4) :: dim4
 
-      call all_cg%reg_var(inid_n, AT_NO_B, all_cg%w_lst(all_cg%ind_4d(fluid_n))%dim4)
+      dim4 = all_cg%w_lst(all_cg%ind_4d(fluid_n))%dim4
+      call all_cg%reg_var(inid_n, AT_NO_B, dim4)
 
       if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused files
 
@@ -511,7 +513,7 @@ contains
       call sum_potential
 
    end subroutine my_grav_pot_3d
-
+!-----------------------------------------------------------------------------
    subroutine my_grav_ptmass_pure(gp, ax, flatten)
 
       use units,   only: newtong
