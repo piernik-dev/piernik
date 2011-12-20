@@ -240,7 +240,7 @@ contains
 
       use constants,   only: I_ONE, I_NINE
       use dataio_pub,  only: use_v2_io, parfile, parfilelines
-      use dataio_user, only: additional_attrs
+      use dataio_user, only: user_attrs_wr
       use global,      only: magic_mass, local_magic_mass
       use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
            &                 h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
@@ -308,7 +308,7 @@ contains
       call H5Tclose_f(type_id, error)
       call H5Pclose_f(prp_id, error)
 
-      if (associated(additional_attrs)) call additional_attrs(file_id)
+      if (associated(user_attrs_wr)) call user_attrs_wr(file_id)
 
       call h5fclose_f(file_id, error)
       call h5close_f(error)

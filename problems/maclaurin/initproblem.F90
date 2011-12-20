@@ -52,12 +52,12 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_vars_hdf5, additional_attrs
+      use dataio_user, only: user_vars_hdf5, user_attrs_wr
       use user_hooks,  only: finalize_problem
 
       implicit none
 
-      additional_attrs => init_prob_attrs
+      user_attrs_wr    => init_prob_attrs
       finalize_problem => finalize_problem_maclaurin
       user_vars_hdf5   => maclaurin_error_vars
 

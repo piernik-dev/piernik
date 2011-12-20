@@ -599,7 +599,7 @@ contains
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE, RD
       use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, run_id, piernik_hdf5_version, fix_string, &
            &                 domain_dump, last_hdf_time, next_t_log, next_t_tsl, nhdf, nres, step_hdf, new_id, step_res
-      use dataio_user, only: problem_read_restart
+      use dataio_user, only: problem_read_restart, user_attrs_rd
       use domain,      only: dom
       use fluidindex,  only: flind
       use global,      only: magic_mass, t, dt, nstep
@@ -697,6 +697,7 @@ contains
       call h5pclose_f(plist_id, error)
 
       ! set up things such as register user rank-3 and rank-4 arrays to be read by read_arr_from_restart. Read also anything that is not read by all read_arr_from_restart calls
+      if (associated(user_attrs_rd)) call user_attrs_rd(file_id)
       if (associated(problem_read_restart)) call problem_read_restart(file_id)
 
       ! read auxiliary variables
@@ -1193,7 +1194,7 @@ contains
            &                 cg_size_aname, cg_offset_aname, cg_lev_aname, cg_gname, base_d_gname, cg_cnt_aname
       use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, next_t_tsl, next_t_log, problem_name, new_id, domain_dump, &
            &                 require_init_prob, piernik_hdf5_version2, step_hdf, step_res, nres, nhdf
-      use dataio_user, only: problem_read_restart
+      use dataio_user, only: problem_read_restart, user_attrs_rd
       use domain,      only: dom, is_overlap
       use gc_list,     only: cg_list_element
       use global,      only: magic_mass, t, dt, nstep
@@ -1423,6 +1424,7 @@ contains
       ! For AMR this will be more complicated: check if all restart cg cover leaf patches, do an additional domain decomposition
 
       ! set up things such as register user rank-3 and rank-4 arrays to be read by read_arr_from_restart. Read also anything that is not read by all read_cg_from_restart calls
+      if (associated(user_attrs_rd)) call user_attrs_rd(file_id)
       if (associated(problem_read_restart)) call problem_read_restart(file_id)
 
       ! On each process determine which parts of the restart cg have to be read and where

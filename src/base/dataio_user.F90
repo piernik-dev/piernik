@@ -102,7 +102,8 @@ module dataio_user
       end subroutine add_data
    end interface
 
-   procedure(add_attr),  pointer :: additional_attrs      => Null()
+   procedure(add_attr),  pointer :: user_attrs_rd         => Null()
+   procedure(add_attr),  pointer :: user_attrs_wr         => Null()
    procedure(add_data),  pointer :: problem_write_restart => Null()
    procedure(add_data),  pointer :: problem_read_restart  => Null()
    procedure(plt_hdf5),  pointer :: user_plt_hdf5         => Null()

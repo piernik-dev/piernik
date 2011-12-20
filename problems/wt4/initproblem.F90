@@ -79,13 +79,13 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: additional_attrs, problem_read_restart
+      use dataio_user, only: user_attrs_wr, problem_read_restart
       use user_hooks,  only: problem_customize_solution
 
       implicit none
 
       problem_customize_solution => problem_customize_solution_wt4
-      additional_attrs           => init_prob_attrs
+      user_attrs_wr              => init_prob_attrs
       problem_read_restart       => register_initial_fld
 
    end subroutine problem_pointers
