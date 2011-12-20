@@ -79,14 +79,14 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_attrs_wr, problem_read_restart
+      use dataio_user, only: user_attrs_wr, user_reg_var_restart
       use user_hooks,  only: problem_customize_solution
 
       implicit none
 
       problem_customize_solution => problem_customize_solution_wt4
       user_attrs_wr              => init_prob_attrs
-      problem_read_restart       => register_initial_fld
+      user_reg_var_restart       => register_initial_fld
 
    end subroutine problem_pointers
 
@@ -437,15 +437,12 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine register_initial_fld(file_id)
+   subroutine register_initial_fld
 
       use constants, only: AT_NO_B
       use grid,      only: all_cg
-      use hdf5,      only: HID_T
 
       implicit none
-
-      integer(HID_T),intent(in) :: file_id
 
       integer :: i
 
@@ -454,8 +451,6 @@ contains
             call all_cg%reg_var(q_n(i), AT_NO_B)
          enddo
       endif
-
-      if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused variables
 
    end subroutine register_initial_fld
 

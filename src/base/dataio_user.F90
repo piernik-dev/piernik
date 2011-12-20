@@ -91,21 +91,14 @@ module dataio_user
    end interface
 
    interface
-      subroutine add_data(file_id)
-
-         use hdf5,      only: HID_T
-
+      subroutine add_data
          implicit none
-
-         integer(HID_T), intent(in) :: file_id
-
       end subroutine add_data
    end interface
 
    procedure(add_attr),  pointer :: user_attrs_rd         => Null()
    procedure(add_attr),  pointer :: user_attrs_wr         => Null()
-   procedure(add_data),  pointer :: problem_write_restart => Null()
-   procedure(add_data),  pointer :: problem_read_restart  => Null()
+   procedure(add_data),  pointer :: user_reg_var_restart  => Null()
    procedure(plt_hdf5),  pointer :: user_plt_hdf5         => Null()
    procedure(vars_hdf5), pointer :: user_vars_hdf5        => Null()
    procedure(tsl_out),   pointer :: user_tsl              => Null()

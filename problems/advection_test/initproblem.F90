@@ -55,14 +55,14 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_vars_hdf5, problem_read_restart
+      use dataio_user, only: user_vars_hdf5, user_reg_var_restart
       use user_hooks,  only: finalize_problem, problem_customize_solution
 
       implicit none
 
       finalize_problem           => finalize_problem_adv
       user_vars_hdf5             => inid_var_hdf5
-      problem_read_restart       => register_user_var
+      user_reg_var_restart       => register_user_var
       problem_customize_solution => finalize_problem_adv
 
    end subroutine problem_pointers
@@ -147,7 +147,7 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: xdim, ydim, zdim, INT4
+      use constants,   only: xdim, ydim, zdim
       use fluidindex,  only: flind
       use gc_list,     only: cg_list_element
       use global,      only: smallei, t
@@ -160,7 +160,7 @@ contains
       type(grid_container), pointer :: cg
 
       ! Create the initial density arrays
-      call register_user_var(0_INT4)
+      call register_user_var
 
       ! Initialize the initial density arrays
       call analytic_solution(t)
@@ -214,19 +214,14 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine register_user_var(file_id)
+   subroutine register_user_var
 
       use constants, only: AT_NO_B
       use grid,      only: all_cg
-      use hdf5,      only: HID_T
 
       implicit none
 
-      integer(HID_T), intent(in) :: file_id
-
       call all_cg%reg_var(inid_n, AT_NO_B)
-
-      if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused variables
 
    end subroutine register_user_var
 

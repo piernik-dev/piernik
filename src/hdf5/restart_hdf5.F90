@@ -261,7 +261,6 @@ contains
    subroutine write_restart_hdf5_v1(filename)
 
       use constants,   only: cwdlen
-      use dataio_user, only: problem_write_restart
       use grid,        only: all_cg
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
@@ -294,9 +293,6 @@ contains
             call write_arr_to_restart(file_id, i, .false.)
          enddo
       endif
-
-      ! problem-specific restart writes. Everything that was not written by the above write_arr_to_restart calls
-      if (associated(problem_write_restart)) call problem_write_restart(file_id)
 
 !     \todo writing axes using collective I/O takes order of magnitude more than
 !        dumping U and B arrays alltogether, since XYZ-axis is not even read
@@ -599,7 +595,7 @@ contains
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE, RD
       use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, run_id, piernik_hdf5_version, fix_string, &
            &                 domain_dump, last_hdf_time, next_t_log, next_t_tsl, nhdf, nres, step_hdf, new_id, step_res
-      use dataio_user, only: problem_read_restart, user_attrs_rd
+      use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
       use fluidindex,  only: flind
       use global,      only: magic_mass, t, dt, nstep
@@ -698,7 +694,7 @@ contains
 
       ! set up things such as register user rank-3 and rank-4 arrays to be read by read_arr_from_restart. Read also anything that is not read by all read_arr_from_restart calls
       if (associated(user_attrs_rd)) call user_attrs_rd(file_id)
-      if (associated(problem_read_restart)) call problem_read_restart(file_id)
+      if (associated(user_reg_var_restart)) call user_reg_var_restart
 
       ! read auxiliary variables
       if (allocated(all_cg%q_lst)) then
@@ -1194,7 +1190,7 @@ contains
            &                 cg_size_aname, cg_offset_aname, cg_lev_aname, cg_gname, base_d_gname, cg_cnt_aname
       use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, next_t_tsl, next_t_log, problem_name, new_id, domain_dump, &
            &                 require_init_prob, piernik_hdf5_version2, step_hdf, step_res, nres, nhdf
-      use dataio_user, only: problem_read_restart, user_attrs_rd
+      use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom, is_overlap
       use gc_list,     only: cg_list_element
       use global,      only: magic_mass, t, dt, nstep
@@ -1425,7 +1421,7 @@ contains
 
       ! set up things such as register user rank-3 and rank-4 arrays to be read by read_arr_from_restart. Read also anything that is not read by all read_cg_from_restart calls
       if (associated(user_attrs_rd)) call user_attrs_rd(file_id)
-      if (associated(problem_read_restart)) call problem_read_restart(file_id)
+      if (associated(user_reg_var_restart)) call user_reg_var_restart
 
       ! On each process determine which parts of the restart cg have to be read and where
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)

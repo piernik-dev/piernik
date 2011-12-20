@@ -60,14 +60,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_pointers
 
-      use dataio_user,         only: problem_read_restart, user_vars_hdf5
+      use dataio_user,         only: user_reg_var_restart, user_vars_hdf5
       use gravity,             only: grav_pot_3d, grav_type
 !     use fluidboundaries_funcs, only: user_bnd_xl, user_bnd_xr
       use user_hooks,          only: problem_customize_solution, problem_grace_passed
 
       implicit none
 
-      problem_read_restart       => register_user_var
+      user_reg_var_restart       => register_user_var
       problem_customize_solution => problem_customize_solution_kepler
 !     user_bnd_xl => my_bnd_xl
 !     user_bnd_xr => my_bnd_xr
@@ -149,21 +149,17 @@ contains
 
    end subroutine read_problem_par
 !-----------------------------------------------------------------------------
-   subroutine register_user_var(file_id)
+   subroutine register_user_var
 
       use constants, only: AT_NO_B, fluid_n
       use grid,      only: all_cg
-      use hdf5,      only: HID_T
 
       implicit none
 
-      integer(HID_T), intent(in) :: file_id
       integer(kind=4) :: dim4
 
       dim4 = all_cg%w_lst(all_cg%ind_4d(fluid_n))%dim4
       call all_cg%reg_var(inid_n, AT_NO_B, dim4)
-
-      if (.false.) write(*,*) file_id ! QA_WARN suppress compiler warnings on unused files
 
    end subroutine register_user_var
 !-----------------------------------------------------------------------------
@@ -264,7 +260,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,   only: DST, GEO_RPZ, xdim, ydim, zdim, INT4
+      use constants,   only: DST, GEO_RPZ, xdim, ydim, zdim
       use global,      only: smalld
       use dataio_pub,  only: msg, printinfo, die
       use domain,      only: dom, is_multicg
@@ -298,7 +294,7 @@ contains
 
       sqr_gm = sqrt(newtong*ptmass)
 
-      call register_user_var(0_INT4)
+      call register_user_var
 
       cgl => leaves%first
       do while (associated(cgl))

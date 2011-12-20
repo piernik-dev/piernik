@@ -542,7 +542,6 @@ contains
 
       use constants,   only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, INT4
       use dataio_pub,  only: die, nproc_io, can_i_write
-      use dataio_user, only: problem_write_restart
       use domain,      only: dom
       use gc_list,     only: cg_list_element
       use grid,        only: all_cg
@@ -716,7 +715,6 @@ contains
 
       if (can_i_write) then
          call h5gclose_f(cgl_g_id, error)
-         if (associated(problem_write_restart)) call problem_write_restart(file_id) ! may be called by not all processes
          call h5fclose_f(file_id, error)  ! Close the file
       endif
 
