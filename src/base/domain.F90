@@ -114,6 +114,7 @@ module domain
 
    integer(kind=4), dimension(ndims) :: psize !< desired number of MPI blocks in x, y and z-dimension
    integer(kind=4), dimension(ndims) :: bsize !< the size of cg for multiblock decomposition
+   !! \todo Implement maximum size of a cg (in cells) for use with GPGPU kernels. The minimum size id nb**dom%eff_dim
    logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
    logical :: allow_uneven            !< allows different values of n_b(:) on different processes
    logical :: allow_noncart           !< allows more than one neighbour on a boundary

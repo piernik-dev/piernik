@@ -30,6 +30,8 @@
 
 !>
 !! \brief Module that contains HDF5 I/O routines for writing plotfiles (2D slices)
+!!
+!! \todo The slices in AMR should produce a set of (ndim-1) arrays, as typically I/O v2 produces.
 !<
 module slice_hdf5
 
