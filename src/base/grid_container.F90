@@ -645,7 +645,7 @@ contains
 
       integer(kind=4), dimension(:), allocatable :: sizes, subsizes, starts
       integer :: t, g, j, b
-      integer(kind=4) :: d, hl, lh, ib
+      integer(kind=4) :: d, dd, hl, lh, ib
       integer(kind=4), parameter, dimension(FLUID:ARR) :: dims = [ I_ONE+ndims, I_ONE+ndims, I_ONE+ndims, ndims ] !< dimensionality of arrays
       integer(kind=4), dimension(FLUID:ARR) :: nc
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
@@ -717,11 +717,14 @@ contains
                                       this%i_bnd(d, ib)%seg(g)%se(d, :) = this%i_bnd(d, ib)%seg(g)%se(d, :) - this%dom%n_d(d)
 
                                  ! expand to cover corners (requires separate MPI_Waitall for each direction)
-                                 ! \todo create separate %mbc for corner-less exchange with one MPI_Waitall (can scale better)
-                                 where (dom%has_dir(:d-1))
-                                    this%i_bnd(d, ib)%seg(g)%se(:d-1, LO) = this%i_bnd(d, ib)%seg(g)%se(:d-1, LO) - ib
-                                    this%i_bnd(d, ib)%seg(g)%se(:d-1, HI) = this%i_bnd(d, ib)%seg(g)%se(:d-1, HI) + ib
-                                 endwhere
+                                 !! \todo create separate %mbc for corner-less exchange with one MPI_Waitall (can scale better)
+                                 !! \warning edges and corners will be filled multiple times
+                                 do dd = xdim, zdim
+                                    if (dd /= d .and. dom%has_dir(dd)) then
+                                       this%i_bnd(d, ib)%seg(g)%se(dd, LO) = this%i_bnd(d, ib)%seg(g)%se(dd, LO) - ib
+                                       this%i_bnd(d, ib)%seg(g)%se(dd, HI) = this%i_bnd(d, ib)%seg(g)%se(dd, HI) + ib
+                                    endif
+                                 enddo
                                  this%o_bnd(d, ib)%seg(g) = this%i_bnd(d, ib)%seg(g)
                                  this%i_bnd(d, ib)%seg(g)%tag = int(HI*ndims*b           + (HI*d+lh-LO), kind=4) ! Assume that we won't mix communication with different ib
                                  this%o_bnd(d, ib)%seg(g)%tag = int(HI*ndims*this%grid_id + (HI*d+hl-LO), kind=4)
