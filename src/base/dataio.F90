@@ -222,7 +222,7 @@ contains
       use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
       use data_hdf5,       only: init_data
       use dataio_pub,      only: nres, nrestart, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, wd_rd, &
-           &                     tmp_log_file, printinfo, warn, msg, nhdf, nstep_start, die, code_progress, wd_wr, &
+           &                     tmp_log_file, printinfo, printio, warn, msg, nhdf, nstep_start, die, code_progress, wd_wr, &
            &                     move_file, multiple_h5files, parfile, parfilelines, can_i_write
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use domain,          only: dom
@@ -432,7 +432,7 @@ contains
       can_i_write = mod( proc*nproc_io, nproc) < nproc_io
       if (can_i_write) then
          write(msg,'(a,i6,a)')"Process ",proc," can write"
-         call printinfo(msg)
+         call printio(msg)
       endif
 
       write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
