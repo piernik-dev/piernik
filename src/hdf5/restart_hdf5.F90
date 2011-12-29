@@ -468,7 +468,7 @@ contains
       implicit none
 
       integer(HID_T),             intent(in) :: file_id            !> File identifier
-      integer(kind=4),            intent(in) :: ind                !> index of cg%q(:) or cg%w(:) arrays
+      integer,                    intent(in) :: ind                !> index of cg%q(:) or cg%w(:) arrays
       logical,                    intent(in) :: tgt3d              !> .true. for 3D arrays, .false. otherwise
       integer(kind=4),  optional, intent(in) :: alt_area_type
       character(len=*), optional, intent(in) :: alt_name           !> used only in galdisk* setups
@@ -609,7 +609,7 @@ contains
       implicit none
 
       integer                       :: nu
-      integer(kind=4)               :: i
+      integer                       :: i
       character(len=cwdlen)         :: filename      !> File name
 
       integer(HID_T)                :: file_id       !> File identifier

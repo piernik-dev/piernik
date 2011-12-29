@@ -562,7 +562,7 @@ contains
       class(cg_list_global), intent(inout) :: this
       character(len=*), intent(in) :: name
 
-      integer(kind=4) :: rind, i
+      integer :: rind, i
 
       rind = 0
 
@@ -597,7 +597,7 @@ contains
       class(cg_list_global), intent(inout) :: this
       character(len=*), intent(in) :: name
 
-      integer(kind=4) :: rind, i
+      integer :: rind, i
 
       rind = 0
 
@@ -696,7 +696,7 @@ contains
       implicit none
 
       class(cg_list),  intent(in)  :: this    !< object invoking type-bound procedure
-      integer(kind=4), intent(in)  :: ind     !< Index in cg%q(:)
+      integer,         intent(in)  :: ind     !< Index in cg%q(:)
       integer(kind=4), intent(in)  :: minmax  !< minimum or maximum ?
       type(value),     intent(out) :: prop    !< precise location of the extremum to be found
 

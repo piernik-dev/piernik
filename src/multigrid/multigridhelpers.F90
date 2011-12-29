@@ -72,7 +72,7 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: iv   !< index of variable in cg%q(:) which we want to pollute
+      integer, intent(in) :: iv   !< index of variable in cg%q(:) which we want to pollute
 
       type(cg_list_level), pointer :: curl
       type(cg_list_element), pointer :: cgl
@@ -111,7 +111,7 @@ contains
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: curl   !< level which we are checking
-      integer(kind=4),              intent(in) :: iv     !< index of variable in cg%q(:) which we want to pollute
+      integer,                      intent(in) :: iv     !< index of variable in cg%q(:) which we want to pollute
       character(len=*),             intent(in) :: label  !< label to indicate the origin of call
       integer(kind=4), optional,    intent(in) :: expand !< also check guardcells
 

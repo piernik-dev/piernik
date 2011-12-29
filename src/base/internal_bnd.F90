@@ -61,7 +61,7 @@ contains
       implicit none
 
       class(cg_list),            intent(in) :: cglist !> the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind    !> index of cg%q(:) 3d array
+      integer,                   intent(in) :: ind    !> index of cg%q(:) 3d array
       integer,         optional, intent(in) :: nb     !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: dim    !> do the internal boundaries only in the specified dimension
 
@@ -78,7 +78,7 @@ contains
       implicit none
 
       class(cg_list),            intent(in) :: cglist !> the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind  !> index of cg%w(:) 4d array
+      integer,                   intent(in) :: ind  !> index of cg%w(:) 4d array
       integer,         optional, intent(in) :: nb   !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
 
@@ -111,7 +111,7 @@ contains
       implicit none
 
       class(cg_list),            intent(in) :: cglist !> the list on which to perform the boundary exchange
-      integer(kind=4),           intent(in) :: ind    !> index of cg%q(:) 3d array or cg%w(:) 4d array
+      integer,                   intent(in) :: ind    !> index of cg%q(:) 3d array or cg%w(:) 4d array
       logical,                   intent(in) :: tgt3d  !> .true. for cg%q, .false. for cg%w
       integer,         optional, intent(in) :: nb     !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: dim    !> do the internal boundaries only in the specified dimension

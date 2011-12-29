@@ -160,11 +160,11 @@ contains
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: curl  !< level which we are doing communication at
-      integer(kind=4), intent(in) :: iv        !< variable which we want to communicate
-      integer(kind=4), intent(in) :: ng        !< number of guardcells to exchange
-      integer(kind=4), intent(in) :: mode      !< what to do with external boundaries
-      logical, intent(in), optional :: corners !< if .true. then don't forget aboutpay close attention to corners
+      type(cg_list_level), pointer, intent(in) :: curl    !< level which we are doing communication at
+      integer,                      intent(in) :: iv      !< variable which we want to communicate
+      integer(kind=4),              intent(in) :: ng      !< number of guardcells to exchange
+      integer(kind=4),              intent(in) :: mode    !< what to do with external boundaries
+      logical, optional,            intent(in) :: corners !< if .true. then don't forget aboutpay close attention to corners
 
       integer(kind=4), parameter :: dreq = I_FOUR
       logical :: cor
@@ -253,7 +253,7 @@ contains
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: curl  !< level which we are preparing the guardcells at
-      integer(kind=4),              intent(in) :: iv    !< variable which we want to set
+      integer,                      intent(in) :: iv    !< variable which we want to set
       integer(kind=4),              intent(in) :: ng    !< number of guardcells to set
       integer(kind=4),              intent(in) :: mode  !< what to do with external boundaries
       logical,                      intent(in) :: cor   !< if .true. then don't forget about corners \deprecated BEWARE: not implemented properly

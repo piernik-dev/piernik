@@ -69,9 +69,9 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: ind  !> Negative value: index of cg%q(:) 3d array
-      integer, optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
-      integer(kind=4), intent(in), optional          :: area_type
+      integer,                   intent(in) :: ind  !> Negative value: index of cg%q(:) 3d array
+      integer,         optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: area_type
 
       integer :: i, d, n
       integer(kind=4) :: lh

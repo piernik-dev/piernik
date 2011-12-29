@@ -912,7 +912,7 @@ contains
       real, dimension(0:cdd%psize(xdim)-1,0:cdd%psize(ydim)-1,0:cdd%psize(zdim)-1) :: dgpx,      dgpy,      dgpz,     ddgp
       type(value)                                                      :: gp_max
       type(grid_container), pointer :: cg
-      integer(kind=4) :: wa_i
+      integer :: wa_i
 
       cg => leaves%first%cg
       if (is_multicg) call die("[gravity:grav_accel2pot] multiple grid pieces per procesor not implemented yet") !nontrivial

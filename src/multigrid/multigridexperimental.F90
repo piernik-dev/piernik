@@ -115,8 +115,8 @@ contains
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: coarse   !< level to prolong from
-      integer(kind=4), intent(in) :: iv    !< variable to be prolonged
+      type(cg_list_level), pointer, intent(in) :: coarse !< level to prolong from
+      integer,                      intent(in) :: iv     !< variable to be prolonged
 
       logical, save :: firstcall = .true.
 
@@ -156,13 +156,13 @@ contains
 
    subroutine prolong_level2I(coarse, iv)
 
-      use dataio_pub, only: die
+      use dataio_pub,  only: die
       use cg_list_lev, only: cg_list_level
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: coarse  !< level to prolong from
-      integer(kind=4), intent(in) :: iv    !< variable to be prolonged
+      type(cg_list_level), pointer, intent(in) :: coarse !< level to prolong from
+      integer,                      intent(in) :: iv     !< variable to be prolonged
 
       type(cg_list_level), pointer :: fine
 
@@ -209,13 +209,13 @@ contains
 
    subroutine prolong_level2D(coarse, iv)
 
-      use dataio_pub, only: die
+      use dataio_pub,  only: die
       use cg_list_lev, only: cg_list_level
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: coarse  !< level to prolong from
-      integer(kind=4), intent(in) :: iv    !< variable to be prolonged
+      type(cg_list_level), pointer, intent(in) :: coarse !< level to prolong from
+      integer,                      intent(in) :: iv     !< variable to be prolonged
 
       type(cg_list_level), pointer :: fine
       real, parameter :: P_1 = -3./32., P0 = 30./32., P1 = 5./32.
@@ -261,13 +261,13 @@ contains
 
    subroutine prolong_level4I(coarse, iv)
 
-      use dataio_pub, only: die
+      use dataio_pub,  only: die
       use cg_list_lev, only: cg_list_level
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: coarse  !< level to prolong from
-      integer(kind=4), intent(in) :: iv    !< variable to be prolonged
+      type(cg_list_level), pointer, intent(in) :: coarse !< level to prolong from
+      integer,                      intent(in) :: iv     !< variable to be prolonged
 
       type(cg_list_level), pointer :: fine
 
@@ -326,13 +326,13 @@ contains
 
    subroutine prolong_level4D(coarse, iv)
 
-      use dataio_pub, only: die
+      use dataio_pub,  only: die
       use cg_list_lev, only: cg_list_level
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: coarse  !< level to prolong from
-      integer(kind=4), intent(in) :: iv    !< variable to be prolonged
+      type(cg_list_level), pointer, intent(in) :: coarse !< level to prolong from
+      integer,                      intent(in) :: iv     !< variable to be prolonged
 
       type(cg_list_level), pointer :: fine
 

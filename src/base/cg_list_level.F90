@@ -90,8 +90,8 @@ contains
 
       implicit none
 
-      class(cg_list_level), intent(inout), target  :: this !< object invoking type-bound procedure
-      integer(kind=4), intent(in)      :: iv               !< variable to be restricted
+      class(cg_list_level), target, intent(inout) :: this !< object invoking type-bound procedure
+      integer,                      intent(in)    :: iv   !< variable to be restricted
 
       integer(kind=4), parameter :: tag1 = 1
       type(cg_list_level), pointer :: coarse
@@ -217,8 +217,8 @@ contains
 
       implicit none
 
-      class(cg_list_level), intent(inout), target  :: this !< object invoking type-bound procedure
-      integer(kind=4), intent(in)         :: iv    !< variable to be prolonged
+      class(cg_list_level), target, intent(inout) :: this !< object invoking type-bound procedure
+      integer,                      intent(in)    :: iv   !< variable to be prolonged
 
       integer(kind=4), parameter :: tag1 = 1
       type(cg_list_level), pointer :: fine

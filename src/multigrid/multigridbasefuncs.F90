@@ -86,7 +86,7 @@ contains
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: coarse !< level to prolong from
-      integer(kind=4), intent(in) :: iv    !< variable to be prolonged
+      integer,                      intent(in) :: iv     !< variable to be prolonged
 
       type(cg_list_level), pointer :: fine
 
@@ -125,7 +125,7 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)      :: iv    !< variable to be restricted
+      integer, intent(in) :: iv    !< variable to be restricted
 
       type(cg_list_level), pointer :: curl
 
@@ -158,8 +158,8 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)  :: iv   !< index of variable in cg%q(:) for which we want to find the norm
-      real,            intent(out) :: norm !< the calculated norm
+      integer, intent(in)  :: iv   !< index of variable in cg%q(:) for which we want to find the norm
+      real,    intent(out) :: norm !< the calculated norm
 
       integer :: i
       type(cg_list_element), pointer :: cgl
@@ -202,7 +202,7 @@ contains
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: curl !< level for which we want to subtract its average from
-      integer(kind=4),              intent(in) :: iv   !< index of variable in cg%q(:) which we want to have zero average
+      integer,                      intent(in) :: iv   !< index of variable in cg%q(:) which we want to have zero average
 
       real                :: avg, vol
       integer             :: i
@@ -267,7 +267,7 @@ contains
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: fine !< level for which approximate the solution
-      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:) ! \todo change the name
+      integer,                      intent(in) :: soln !< index of solution in cg%q(:) ! \todo change the name
 
       integer                       :: i, j, k, d, lh, g, g1, gc, ib, jb, ibh, jbh, l
       type(cg_list_level), pointer           :: coarse

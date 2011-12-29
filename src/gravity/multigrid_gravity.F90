@@ -1416,9 +1416,9 @@ contains
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: src  !< index of source in cg%q(:)
-      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
-      integer(kind=4), intent(in) :: def  !< index of defect in cg%q(:)
+      integer,                      intent(in) :: src  !< index of source in cg%q(:)
+      integer,                      intent(in) :: soln !< index of solution in cg%q(:)
+      integer,                      intent(in) :: def  !< index of defect in cg%q(:)
 
       select case (ord_laplacian)
       case (2)
@@ -1450,9 +1450,9 @@ contains
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: src  !< index of source in cg%q(:)
-      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
-      integer(kind=4), intent(in) :: def  !< index of defect in cg%q(:)
+      integer,                      intent(in) :: src  !< index of source in cg%q(:)
+      integer,                      intent(in) :: soln !< index of solution in cg%q(:)
+      integer,                      intent(in) :: def  !< index of defect in cg%q(:)
 
       real    :: L0, Lx, Ly, Lz, Lx1
       integer :: i, j, k
@@ -1572,9 +1572,9 @@ contains
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: src  !< index of source in cg%q(:)
-      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
-      integer(kind=4), intent(in) :: def  !< index of defect in cg%q(:)
+      integer,                      intent(in) :: src  !< index of source in cg%q(:)
+      integer,                      intent(in) :: soln !< index of solution in cg%q(:)
+      integer,                      intent(in) :: def  !< index of defect in cg%q(:)
 
       real, parameter     :: L4_scaling = 1./12. ! with L4_strength = 1. this gives an L4 approximation for finite differences approach
       integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
@@ -1674,8 +1674,8 @@ contains
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: src  !< index of source in cg%q(:)
-      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
+      integer,                      intent(in) :: src  !< index of source in cg%q(:)
+      integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
       call check_dirty(curl, src, "approx_soln src-")
 
@@ -1717,8 +1717,8 @@ contains
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: src  !< index of source in cg%q(:)
-      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
+      integer,                      intent(in) :: src  !< index of source in cg%q(:)
+      integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
       integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
 
@@ -1881,8 +1881,8 @@ contains
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: src  !< index of source in cg%q(:)
-      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
+      integer,                      intent(in) :: src  !< index of source in cg%q(:)
+      integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
       integer :: nf, n, nsmoo
       type(cg_list_element), pointer :: cgl
@@ -2102,7 +2102,7 @@ contains
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
+      integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
       if (grav_bnd == bnd_periodic .and. (nproc == 1 .or. (associated(curl, base) .and. single_base) ) ) then
          call zero_boundaries(curl)
