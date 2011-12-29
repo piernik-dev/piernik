@@ -97,16 +97,17 @@ module multigridexperimental
 
 contains
 
-!!$ ============================================================================
+!>
+!! \brief high-order order prolongation interpolation
 !!
-!> \brief high-order order prolongation interpolation
-!!
+!! \deprecated All prolongation routines will finally belong to cg_list_level type
+!<
 
    subroutine prolong_level_hord(coarse, iv)
 
       use constants,         only: ndims
       use dataio_pub,        only: die, warn, msg
-      use domain,            only: dom
+      use domain,            only: dom, is_multicg
       use mpisetup,          only: master
       use multigridvars,     only: ord_prolong, extbnd_antimirror, plvl
       use multigridmpifuncs, only: mpi_multigrid_bnd
@@ -130,6 +131,7 @@ contains
       call mpi_multigrid_bnd(coarse, iv, int(abs(ord_prolong/2), kind=4), extbnd_antimirror) ! exchange guardcells with corners
 
       if (dom%eff_dim<ndims) call die("[multigridexperimental:prolong_level_hord] 1D and 2D not finished")
+      if (is_multicg) call die("[multigridexperimental:prolong_level_hord] multicg not implemented")
 
       select case (ord_prolong)
       case (-4)

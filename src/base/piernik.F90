@@ -62,6 +62,8 @@ program piernik
 
    call init_piernik
 
+   call all_cg%check_na
+
    call MPI_Barrier(comm,ierr)
 !-------------------------------- MAIN LOOP ----------------------------------
 #ifdef PERFMON
@@ -366,23 +368,23 @@ contains
 !<
    subroutine cleanup_piernik
 
-      use user_hooks,   only: cleanup_problem
-      use dataio,       only: cleanup_dataio
-      use diagnostics,  only: cleanup_diagnostics
-      use domain,       only: cleanup_domain
-      use global,       only: cleanup_global
-      use grid,         only: cleanup_grid
-      use initfluids,   only: cleanup_fluids
-      use interactions, only: cleanup_interactions
-      use fluidindex,   only: cleanup_fluidindex
-      use fluxes,       only: cleanup_fluxes
-      use mpisetup,     only: cleanup_mpi
-      use timer,        only: cleanup_timers
+      use user_hooks,    only: cleanup_problem
+      use dataio,        only: cleanup_dataio
+      use diagnostics,   only: cleanup_diagnostics
+      use domain,        only: cleanup_domain
+      use global,        only: cleanup_global
+      use grid,          only: cleanup_grid
+      use initfluids,    only: cleanup_fluids
+      use interactions,  only: cleanup_interactions
+      use fluidindex,    only: cleanup_fluidindex
+      use fluxes,        only: cleanup_fluxes
+      use mpisetup,      only: cleanup_mpi
+      use timer,         only: cleanup_timers
 #ifdef RESISTIVE
-      use resistivity,  only: cleanup_resistivity
+      use resistivity,   only: cleanup_resistivity
 #endif /* RESISTIVE */
 #ifdef MULTIGRID
-      use multigrid,    only: cleanup_multigrid
+      use multigrid,     only: cleanup_multigrid
 #endif /* MULTIGRID */
       implicit none
 

@@ -68,13 +68,12 @@ contains
 !! <tr><td>verbose_vcycle       </td><td>.false.</td><td>logical       </td><td>\copydoc multigridvars::verbose_vcycle       </td></tr>
 !! <tr><td>do_ascii_dump        </td><td>.false.</td><td>logical       </td><td>\copydoc multigridhelpers::do_ascii_dump     </td></tr>
 !! <tr><td>dirty_debug          </td><td>.false.</td><td>logical       </td><td>\copydoc multigridhelpers::dirty_debug       </td></tr>
-!! <tr><td>multidim_code_3D     </td><td>.false.</td><td>logical       </td><td>\copydoc multigridhelpers::multidim_code_3D  </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_multigrid
 
-      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, zdim, GEO_RPZ, LO, HI, I_TWO, I_ONE, half
+      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, zdim, LO, HI, I_TWO, I_ONE, half
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
       use domain,              only: dom, is_uneven, is_multicg
@@ -83,7 +82,7 @@ contains
       use grid_cont,           only: grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_LOR, MPI_MIN, MPI_MAX, MPI_COMM_NULL
       use mpisetup,            only: comm, ierr, proc, master, slave, nproc, FIRST, LAST, buffer_dim, ibuff, lbuff
-      use multigridhelpers,    only: mg_write_log, dirtyH, do_ascii_dump, dirty_debug, multidim_code_3D
+      use multigridhelpers,    only: dirtyH, do_ascii_dump, dirty_debug
       use multigridmpifuncs,   only: vertical_prep
       use multigridvars,       only: lvl, plvl, roof, base, ngridvars, correction, single_base, &
            &                         is_external, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
@@ -107,7 +106,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !> current grid container
 
-      namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, multidim_code_3D
+      namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized") ! This check is too weak (geometry), arrays are required only for multigrid_gravity
 
@@ -124,7 +123,6 @@ contains
       verbose_vcycle        = .false.
       do_ascii_dump         = .false.
       dirty_debug           = .false.
-      multidim_code_3D      = .false.
 
       if (master) then
 
@@ -139,7 +137,6 @@ contains
          lbuff(2) = verbose_vcycle
          lbuff(3) = do_ascii_dump
          lbuff(4) = dirty_debug
-         lbuff(5) = multidim_code_3D
 
       endif
 
@@ -157,7 +154,6 @@ contains
          verbose_vcycle   = lbuff(2)
          do_ascii_dump    = lbuff(3)
          dirty_debug      = lbuff(4)
-         multidim_code_3D = lbuff(5)
 
       endif
 
@@ -183,8 +179,6 @@ contains
 
       ngridvars = correction  !! 4 variables are required for basic use of the multigrid solver
       if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
-
-      if (dom%geometry_type == GEO_RPZ) multidim_code_3D = .true. ! temporarily
 
 !! \todo Make an array of subroutine pointers
 #ifdef GRAV
@@ -351,7 +345,7 @@ contains
       if (master) then
          write(msg, '(a,i2,a,3i4,a,2(f6.1,a))')"[multigrid:init_multigrid] Initialized ", roof%lev - base%lev + 1, " levels, coarse level resolution [ ", &
             base%dom%n_d(:)," ], allocated", min_m, " ..", max_m, "MiB"
-         call mg_write_log(msg)
+         call printinfo(msg)
       endif
 
    end subroutine init_multigrid
@@ -364,11 +358,10 @@ contains
    subroutine cleanup_multigrid
 
       use constants,           only: LO, HI, I_ONE
-      use dataio_pub,          only: msg
+      use dataio_pub,          only: msg, printinfo
       use grid_cont,           only: tgt_list
       use mpi,                 only: MPI_DOUBLE_PRECISION
       use mpisetup,            only: master, nproc, FIRST, LAST, comm, ierr
-      use multigridhelpers,    only: mg_write_log
       use multigridvars,       only: lvl, plvl, base, tot_ts
 #ifdef GRAV
       use multigrid_gravity,   only: cleanup_multigrid_grav
@@ -430,7 +423,7 @@ contains
 
       if (master) then
          write(msg, '(a,3(g11.4,a))')"[multigrid] Spent ", sum(all_ts)/nproc, " seconds in multigrid_solve_* (min= ",minval(all_ts)," max= ",maxval(all_ts),")."
-         call mg_write_log(msg, .false.)
+         call printinfo(msg, .false.)
       endif
 
       if (allocated(all_ts)) deallocate(all_ts)

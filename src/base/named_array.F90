@@ -236,23 +236,25 @@ contains
 
       if (associated(this%arr)) deallocate(this%arr)
 
-      do d = xdim, zdim
-         do b = lbound(this%w_o_mbc, dim=2), ubound(this%w_o_mbc, dim=2)
-            if (allocated(this%w_i_mbc(d, b)%mbc)) then
-               do g = lbound(this%w_i_mbc(d, b)%mbc, dim=1), ubound(this%w_i_mbc(d, b)%mbc, dim=1)
-                  if (this%w_i_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%w_i_mbc(d, b)%mbc(g), ierr)
-               enddo
-               deallocate(this%w_i_mbc(d, b)%mbc)
-            endif
-            if (allocated(this%w_o_mbc(d, b)%mbc)) then
-               do g = lbound(this%w_o_mbc(d, b)%mbc, dim=1), ubound(this%w_o_mbc(d, b)%mbc, dim=1)
-                  if (this%w_o_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%w_o_mbc(d, b)%mbc(g), ierr)
-               enddo
-              deallocate(this%w_o_mbc(d, b)%mbc)
-            endif
+      if (allocated(this%w_i_mbc) .and. allocated(this%w_o_mbc)) then
+         do d = xdim, zdim
+            do b = lbound(this%w_o_mbc, dim=2), ubound(this%w_o_mbc, dim=2)
+               if (allocated(this%w_i_mbc(d, b)%mbc)) then
+                  do g = lbound(this%w_i_mbc(d, b)%mbc, dim=1), ubound(this%w_i_mbc(d, b)%mbc, dim=1)
+                     if (this%w_i_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%w_i_mbc(d, b)%mbc(g), ierr)
+                  enddo
+                  deallocate(this%w_i_mbc(d, b)%mbc)
+               endif
+               if (allocated(this%w_o_mbc(d, b)%mbc)) then
+                  do g = lbound(this%w_o_mbc(d, b)%mbc, dim=1), ubound(this%w_o_mbc(d, b)%mbc, dim=1)
+                     if (this%w_o_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%w_o_mbc(d, b)%mbc(g), ierr)
+                  enddo
+                  deallocate(this%w_o_mbc(d, b)%mbc)
+               endif
+            enddo
          enddo
-      enddo
-      deallocate(this%w_i_mbc, this%w_o_mbc)
+         deallocate(this%w_i_mbc, this%w_o_mbc)
+      endif
 
    end subroutine array4d_clean
 

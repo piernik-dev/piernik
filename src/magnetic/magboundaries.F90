@@ -667,7 +667,7 @@ contains
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          do dir = xdim, zdim
-            if (dom%has_dir(dir)) call internal_boundaries_4d(all_cg%ind_4d(mag_n), dim=dir)
+            if (dom%has_dir(dir)) call internal_boundaries_4d(all_cg, all_cg%ind_4d(mag_n), dim=dir) ! should be more selective (modified leaves?)
          enddo
       endif
 

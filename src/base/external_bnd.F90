@@ -91,9 +91,11 @@ contains
             if (area_type /= AT_NO_B) do_permpi = .false.
          endif
 
-         if (do_permpi) call internal_boundaries_3d(ind, nb=nb)
+         if (do_permpi) call internal_boundaries_3d(all_cg, ind, nb=nb) ! should be more selective (modified leaves?)
 
       endif
+
+      if (ind > ubound(all_cg%q_lst(:), dim=1) .or. ind < lbound(all_cg%q_lst(:), dim=1)) call die("[internal_bnd:arr3d_boundaries] wrong 3d index")
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -107,7 +109,6 @@ contains
 
          req(:) = MPI_REQUEST_NULL
 
-         if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[internal_bnd:arr3d_boundaries] wrong 3d index")
          pa3d =>cg%q(ind)%arr
 
          do d = xdim, zdim

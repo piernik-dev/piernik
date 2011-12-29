@@ -367,7 +367,7 @@ contains
       ibuffer(4)   = nstep                   ; ibuffer_name(4)   = "step_res" !rr2
       ibuffer(5)   = step_hdf                ; ibuffer_name(5)   = "step_hdf" !rr2
       ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
-      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb" ! BEWARE: assuming cga%cg_all(:)%nb equal everywhere
+      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb"
       ibuffer(10)  = require_init_prob       ; ibuffer_name(10)  = "require_init_prob" !rr2
 
       i = 1
@@ -460,7 +460,7 @@ contains
 !!$      rbuffer(6:7) = dom%edge(ydim, :)       ; rbuffer_name(6:7) = [ "ymin", "ymax" ] !rr1
 !!$      rbuffer(8:9) = dom%edge(zdim, :)       ; rbuffer_name(8:9) = [ "zmin", "zmax" ] !rr1
 !!$      ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
-!!$      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb" ! BEWARE: assuming cga%cg_all(:)%nb equal everywhere
+!!$      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb"
 !!$      external boundary types
 
    end subroutine set_common_attributes_v2

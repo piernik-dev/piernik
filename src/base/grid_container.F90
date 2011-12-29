@@ -65,8 +65,13 @@ module grid_cont
       type(pr_segment), dimension(:), allocatable :: seg              !< a segment of data to be received or sent
    end type tgt_list
 
-   !> \brief Multigrid-specific storage
-   !> \todo move as much as possible to cg%q(:)
+   !>
+   !! \brief Multigrid-specific storage
+   !!
+   !! \details The FFT-related arrays here cannot be declared as named arrays in cg%q(:) because their size or type differ
+   !!
+   !! \todo Provide an initialization (procedure pointer) in multigrid gravity for these things when a cg is dynamically added
+   !<
    type :: mg_arr
       ! storage
       real, allocatable, dimension(:,:,:,:) :: var                    !< main working array
@@ -84,9 +89,11 @@ module grid_cont
       real                                   :: fft_norm              !< normalization factor
 
       ! geometrical factors
+      !! \todo move to cg
       real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
 
       ! prolongation and restriction
+      !! \todo move to cg, should be initialized by cg_list_level procedure
       type(tgt_list) :: f_tgt                                         !< description of incoming restriction and outgoing prolongation data (this should be a linked list)
       type(tgt_list) :: c_tgt                                         !< description of outgoing restriction and incoming prolongation data
       type(tgt_list), dimension(xdim:zdim, LO:HI) :: pff_tgt, pfc_tgt !< description outgoing and incoming face prolongation data

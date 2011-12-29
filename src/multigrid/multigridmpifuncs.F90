@@ -229,6 +229,8 @@ contains
       else
          if (have_mpi .and. is_mpi_noncart) call die("[multigridmpifuncs:mpi_multigrid_bnd] is_mpi_noncart is not implemented") !procxl, procxr, procyl, procyr, proczl, proczr, psize,
 
+         !! \deprecated cannot call arr3d_boundaries, because it would destroy external boundary
+
          req(:) = MPI_REQUEST_NULL
 
          do d = xdim, zdim

@@ -32,16 +32,12 @@
 !<
 module grid
 
-   use constants, only: LONG, ndims
    use gc_list,   only: cg_list_global, cg_list_level, cg_list_patch, cg_list
 
    implicit none
 
    private
    public :: init_grid, cleanup_grid, all_cg, base_lev, leaves
-
-   integer, parameter :: base_level_number = 0 !< Base domain level number. Refinements are positively numbered, coarsened levels for use in multigrid solvers have negative numbers.
-   integer(kind=8), dimension(ndims), parameter :: base_level_offset = [ 0_LONG, 0_LONG, 0_LONG ] !< Base domain offset. .
 
    type(cg_list_global) :: all_cg                                     !< all grid containers; \todo restore protected
    type(cg_list_level), target, protected  :: base_lev                !< base level grid containers
@@ -57,7 +53,7 @@ contains
    subroutine init_grid
 
       use constants,  only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, INVALID, &
-           &                ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n,cs_i2_n
+           &                ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n, cs_i2_n, base_level_id, base_level_offset
       use dataio_pub, only: printinfo, die, code_progress
       use domain,     only: pdom, is_multicg, cuboids
       use fluidindex, only: flind
@@ -92,7 +88,7 @@ contains
 
       pbd => base_dom(NBD)
       lpse => pdom%pse(proc)
-      call dom2cg(pdom%n_d(:), base_level_offset, base_level_number, lpse, pbd)
+      call dom2cg(pdom%n_d(:), base_level_offset, base_level_id, lpse, pbd)
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
@@ -148,7 +144,7 @@ contains
 !> \brief Create new cg according to domain decomposition data and add them to appropriate lists
    subroutine dom2cg(n_d, offset, level, local_decomposition, patch)
 
-      use constants, only: ndims
+      use constants, only: ndims, base_level_id
       use domain,    only: cuboids, pdom
 
       implicit none
@@ -169,7 +165,7 @@ contains
 
          ! add to the other lists
          call all_cg%add(patch%last%cg)
-         if (level == base_level_number) call base_lev%add(patch%last%cg)
+         if (level == base_level_id) call base_lev%add(patch%last%cg)
          call leaves%add(patch%last%cg)
 
       enddo

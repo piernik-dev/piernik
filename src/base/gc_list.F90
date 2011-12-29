@@ -166,6 +166,7 @@ contains
       type(grid_container), optional, pointer, intent(in) :: cg !< new grid container that will be added to add_new::this
 
       type(cg_list_element), pointer :: new
+      integer :: i
 
       allocate(new)
       if (present(cg)) then
@@ -192,7 +193,20 @@ contains
       this%last => new
       this%cnt = this%cnt + 1
 
-      !> \todo update the lists of registered variables
+      ! adding a cg to all_cg list implies registering all known named arrays for this cg
+      select type(this)
+         type is (cg_list_global)
+            if (allocated(this%q_lst)) then
+               do i = lbound(this%q_lst, dim=1), ubound(this%q_lst, dim=1)
+                  call add_na(this%last%cg, this%q_lst(i)%multigrid)
+               enddo
+            endif
+            if (allocated(this%w_lst)) then
+               do i = lbound(this%w_lst, dim=1), ubound(this%w_lst, dim=1)
+                  call add_na_4d(this%last%cg, this%w_lst(i)%dim4 )
+               enddo
+            endif
+      end select
 
    end subroutine add_new
 
@@ -353,7 +367,7 @@ contains
 !! When dim4 is present then create a rank-4 array instead.(in cg%w)
 !<
 
-   subroutine reg_var(this, name, restart_mode, dim4)
+   subroutine reg_var(this, name, restart_mode, dim4, multigrid)
 
       use constants,   only: INVALID
       use dataio_pub,  only: die, msg
@@ -364,21 +378,27 @@ contains
       character(len=*),          intent(in)    :: name          !< Name of the variable to be registered
       integer(kind=4),           intent(in)    :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
       integer(kind=4), optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
+      logical, optional,         intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
 
       type(cg_list_element), pointer :: cgl
+      logical :: mg
+
+      mg = .false.
+      if (present(multigrid)) mg = multigrid
 
       if (present(dim4)) then
          if (this%exists_4d(name)) then
-            write(msg, '(3a)')"[gc_list:add_na_4d] A rank-4 array '",trim(name),"' was already registered."
+            write(msg, '(3a)')"[gc_list:reg_var] A rank-4 array '",trim(name),"' was already registered."
             call die(msg)
          endif
-         call add2lst(this%w_lst, name, restart_mode, dim4)
+         if (mg) call die("[gc_list:reg_var] there are no rank-4 multigrid arrays yet")
+         call add2lst(this%w_lst, name, restart_mode, dim4, mg)
       else
          if (this%exists(name)) then
-            write(msg, '(3a)')"[gc_list:add_na] A rank-3 array '",trim(name),"' was already registered."
+            write(msg, '(3a)')"[gc_list:reg_var] A rank-3 array '",trim(name),"' was already registered."
             call die(msg)
          endif
-         call add2lst(this%q_lst, name, restart_mode, int(INVALID, kind=4))
+         call add2lst(this%q_lst, name, restart_mode, int(INVALID, kind=4), mg)
       endif
 
       cgl => this%first
@@ -390,7 +410,7 @@ contains
             endif
             call add_na_4d(cgl%cg, dim4)
          else
-            call add_na(cgl%cg)
+            call add_na(cgl%cg, mg)
          endif
          cgl => cgl%nxt
       enddo
@@ -399,14 +419,15 @@ contains
 
 !> \brief Add a named array properties to the list
 
-   subroutine add2lst(lst, name, restart_mode, dim4)
+   subroutine add2lst(lst, name, restart_mode, dim4, multigrid)
 
       implicit none
 
       type(na_var), dimension(:), allocatable, intent(inout) :: lst           !< the list to which we want to appent an entry
       character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
       integer(kind=4),                         intent(in)    :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
-      integer(kind=4),                         intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
+      integer(kind=4),                         intent(in)    :: dim4          !< If not INVALID then the variable is in the cg%w array.
+      logical,                                 intent(in)    :: multigrid     !< If .true. then cg%q(:)%arr and cg%w(:)%arr are allocated also below base level
 
       type(na_var), dimension(:), allocatable :: tmp
 
@@ -417,7 +438,7 @@ contains
          tmp(:ubound(lst(:), dim=1)) = lst(:)
          call move_alloc(from=tmp, to=lst)
       endif
-      lst(ubound(lst(:), dim=1)) = na_var(name, restart_mode, dim4, .false.)
+      lst(ubound(lst(:), dim=1)) = na_var(name, restart_mode, dim4, multigrid)
 
    end subroutine add2lst
 
@@ -425,7 +446,7 @@ contains
 
    subroutine check_na(this)
 
-      use constants,  only: INVALID
+      use constants,  only: INVALID, base_level_id
       use dataio_pub, only: die
 
       implicit none
@@ -434,6 +455,7 @@ contains
 
       integer :: i
       type(cg_list_element), pointer :: cgl
+      logical :: bad
 
       cgl => this%first
       do while (associated(cgl))
@@ -445,7 +467,8 @@ contains
             else
                do i = lbound(this%q_lst, dim=1), ubound(this%q_lst, dim=1)
                   if (this%q_lst(i)%dim4 /= INVALID) call die("[gc_list:check_na] all_cg%q_lst(i) /= cgl%cg%q(i)")
-                  !! \todo check allocation of cgl%cg%q(i)%arr  this%q_lst(i)%multigrid
+                  if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%level_id < base_level_id .and. .not. this%q_lst(i)%multigrid) &
+                       call die("[gc_list:check_na] non-multigrid cgl%cg%q(i) allocated on coarse level")
                enddo
             endif
          endif
@@ -456,7 +479,10 @@ contains
                call die("[gc_list:check_na] size(all_cg%w_lst) /= size(cgl%cg%w)")
             else
                do i = lbound(this%w_lst, dim=1), ubound(this%w_lst, dim=1)
-                  if (this%w_lst(i)%dim4 <= 0 .or. this%w_lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1)) call die("[gc_list:check_na] all_cg%w_lst(i) /= cgl%cg%w(i)")
+                  bad = .false.
+                  if (associated(cgl%cg%w(i)%arr)) bad = this%w_lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%level_id >= base_level_id
+                  if (this%w_lst(i)%dim4 <= 0 .or. bad) call die("[gc_list:check_na] all_cg%w_lst(i) /= cgl%cg%w(i)")
+                  if (associated(cgl%cg%w(i)%arr) .and. cgl%cg%level_id < base_level_id) call die("[gc_list:check_na] cgl%cg%w(i) allocated on coarse level")
                enddo
             endif
          endif
@@ -470,14 +496,16 @@ contains
 !!
 !! \warning This routine should not be called directly from user routines
 !<
-   subroutine add_na(this)
+   subroutine add_na(this, multigrid)
 
+      use constants,   only: base_level_id
       use grid_cont,   only: grid_container
       use named_array, only: named_array3d
 
       implicit none
 
       type(grid_container), intent(inout) :: this
+      logical,              intent(in)    :: multigrid     !< If .true. then cg%q(:)%arr and cg%w(:)%arr are allocated also below base level
 
       type(named_array3d), allocatable, dimension(:) :: tmp
 
@@ -489,7 +517,7 @@ contains
          call move_alloc(from=tmp, to=this%q)
       endif
 
-      call this%q(ubound(this%q(:), dim=1))%init(this%n_(:))
+      if (multigrid .or. this%level_id >= base_level_id) call this%q(ubound(this%q(:), dim=1))%init(this%n_(:))
 
    end subroutine add_na
 
@@ -501,7 +529,7 @@ contains
 !<
    subroutine add_na_4d(this, n)
 
-      use constants,   only: xdim, zdim
+      use constants,   only: xdim, zdim, ndims, base_level_id
       use domain,      only: dom
       use grid_cont,   only: grid_container, set_mpi_types
       use named_array, only: named_array4d
@@ -520,27 +548,30 @@ contains
          allocate(tmp(lbound(this%w(:),dim=1):ubound(this%w(:), dim=1) + 1))
          tmp(:ubound(this%w(:), dim=1)) = this%w(:)
          do iw = lbound(this%w(:), dim=1), ubound(this%w(:), dim=1) ! prevent memory leak
-            deallocate(this%w(iw)%w_i_mbc, this%w(iw)%w_o_mbc)
+            if (allocated(this%w(iw)%w_i_mbc)) deallocate(this%w(iw)%w_i_mbc)
+            if (allocated(this%w(iw)%w_o_mbc)) deallocate(this%w(iw)%w_o_mbc)
          enddo
          call move_alloc(from=tmp, to=this%w)
       endif
 
-      iw = ubound(this%w(:), dim=1)
-      allocate(this%w(iw)%w_i_mbc(ndims, dom%nb), this%w(iw)%w_o_mbc(ndims, dom%nb))
-      do d = xdim, zdim
-         do ib = 1, dom%nb
-            if (allocated(this%i_bnd(d, ib)%seg)) then
-               allocate(this%w(iw)%w_i_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)), &
-                    &   this%w(iw)%w_o_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)))
+      if (this%level_id >= base_level_id) then
+         iw = ubound(this%w(:), dim=1)
+         allocate(this%w(iw)%w_i_mbc(ndims, dom%nb), this%w(iw)%w_o_mbc(ndims, dom%nb))
+         do d = xdim, zdim
+            do ib = 1, dom%nb
+               if (allocated(this%i_bnd(d, ib)%seg)) then
+                  allocate(this%w(iw)%w_i_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)), &
+                       &   this%w(iw)%w_o_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)))
 
-               do g = lbound(this%i_bnd(d, ib)%seg, dim=1), ubound(this%i_bnd(d, ib)%seg, dim=1)
-                  call set_mpi_types([n, this%n_(:)], this%i_bnd(d, ib)%seg(g)%se(:,:), this%w(iw)%w_i_mbc(d, ib)%mbc(g))
-                  call set_mpi_types([n, this%n_(:)], this%o_bnd(d, ib)%seg(g)%se(:,:), this%w(iw)%w_o_mbc(d, ib)%mbc(g))
-               enddo
-            endif
+                  do g = lbound(this%i_bnd(d, ib)%seg, dim=1), ubound(this%i_bnd(d, ib)%seg, dim=1)
+                     call set_mpi_types([n, this%n_(:)], this%i_bnd(d, ib)%seg(g)%se(:,:), this%w(iw)%w_i_mbc(d, ib)%mbc(g))
+                     call set_mpi_types([n, this%n_(:)], this%o_bnd(d, ib)%seg(g)%se(:,:), this%w(iw)%w_o_mbc(d, ib)%mbc(g))
+                  enddo
+               endif
+            enddo
          enddo
-      enddo
-      call this%w(iw)%init( [n, this%n_(:)] )
+         call this%w(iw)%init( [n, this%n_(:)] )
+      endif
 
    end subroutine add_na_4d
 

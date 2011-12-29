@@ -85,6 +85,7 @@ module multigrid_gravity
    !> \todo allow to perform one or more V-cycles with FFT method, the switch to the RBGS (may save one V-cycle in some cases)
    logical            :: fft_full_relax                               !< Perform full or boundary relaxation after local FFT solve
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
+   logical            :: multidim_code_3D                             !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
    character(len=cbuff_len) :: grav_bnd_str                           !< Type of gravitational boundary conditions.
 
    ! boundaries
@@ -150,6 +151,7 @@ contains
 !! <tr><td>use_point_monopole    </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::use_point_monopole            </td></tr>
 !! <tr><td>interp_pt2mom         </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_pt2mom                 </td></tr>
 !! <tr><td>interp_mom2pot        </td><td>.false.</td><td>logical        </td><td>\copydoc multipole::interp_mom2pot                </td></tr>
+!! <tr><td>multidim_code_3D      </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::multidim_code_3D      </td></tr>
 !! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str          </td></tr>
 !! </table>
 !! \n \n
@@ -174,7 +176,7 @@ contains
       namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, &
            &                       overrelax, overrelax_x, overrelax_y, overrelax_z, Jacobi_damp, L4_strength, nsmoof, ord_laplacian, ord_time_extrap, &
            &                       prefer_rbgs_relaxation, base_no_fft, fft_full_relax, fft_patient, trust_fft_solution, &
-           &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, &
+           &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str
 
       if (.not.frun) call die("[multigrid_gravity:init_multigrid_grav] Called more than once.")
@@ -210,6 +212,7 @@ contains
       fft_patient            = .false.
       interp_pt2mom          = .false.
       interp_mom2pot         = .false.
+      multidim_code_3D       = .false.
 
       periodic_bnd_cnt = count(dom%periodic(:) .and. dom%has_dir(:))
 
@@ -264,6 +267,7 @@ contains
          lbuff(6) = fft_patient
          lbuff(7) = interp_pt2mom
          lbuff(8) = interp_mom2pot
+         lbuff(9) = multidim_code_3D
 
          cbuff(1) = grav_bnd_str
 
@@ -304,10 +308,13 @@ contains
          fft_patient             = lbuff(6)
          interp_pt2mom           = lbuff(7)
          interp_mom2pot          = lbuff(8)
+         multidim_code_3D        = lbuff(9)
 
          grav_bnd_str   = cbuff(1)(1:len(grav_bnd_str))
 
       endif
+
+      if (dom%geometry_type == GEO_RPZ) multidim_code_3D = .true. ! temporarily
 
       ngridvars = max(ngridvars, correction)
 
@@ -1398,7 +1405,6 @@ contains
       use dataio_pub,         only: die
       use domain,             only: dom
       use multigridvars,      only: plvl, extbnd_antimirror
-      use multigridhelpers,   only: multidim_code_3D
       use multigridmpifuncs,  only: mpi_multigrid_bnd
 
       implicit none
@@ -1647,7 +1653,7 @@ contains
       use dataio_pub,        only: die
       use domain,            only: dom
       use multigridvars,     only: plvl, base, extbnd_antimirror
-      use multigridhelpers,  only: dirty_debug, check_dirty, multidim_code_3D, dirty_label
+      use multigridhelpers,  only: dirty_debug, check_dirty, dirty_label
       use multigridmpifuncs, only: mpi_multigrid_bnd
 
       implicit none
@@ -1801,7 +1807,7 @@ contains
       use dataio_pub,        only: die, warn
       use domain,            only: dom
       use multigridvars,     only: plvl, base, extbnd_antimirror, single_base
-      use multigridhelpers,  only: dirty_debug, check_dirty, dirtyL, multidim_code_3D
+      use multigridhelpers,  only: dirty_debug, check_dirty, dirtyL
       use multigridmpifuncs, only: mpi_multigrid_bnd
 
       implicit none

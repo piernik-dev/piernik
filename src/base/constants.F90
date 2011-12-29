@@ -171,6 +171,10 @@ module constants
       enumerator :: ION = 1, NEU, DST
    end enum
 
+   ! base level
+   integer, parameter :: base_level_id = 0 !< Base domain level id. Refinements are positively numbered, coarsened levels for use in multigrid solvers have negative numbers.
+   integer(kind=8), dimension(ndims), parameter :: base_level_offset = 0_LONG !< Base domain offset. .
+
    ! misc
    enum, bind(C)
       enumerator :: MINL, MAXL                           !< constants for func::get_extremum

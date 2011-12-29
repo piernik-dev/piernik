@@ -39,6 +39,7 @@
 !!
 !! \todo integrate here as much stuff from fluidboundaries, magboundaries, etc.  as possible.
 !!
+!! \todo make these functions members of some of the gc_list types
 !<
 
 module internal_bnd
@@ -53,29 +54,35 @@ contains
 
 !> \brief A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
 
-   subroutine internal_boundaries_3d(ind, nb, dim)
+   subroutine internal_boundaries_3d(cglist, ind, nb, dim)
+
+      use gc_list, only: cg_list
 
       implicit none
 
-      integer(kind=4),           intent(in) :: ind  !> index of cg%q(:) 3d array
-      integer,         optional, intent(in) :: nb   !> number of grid cells to exchange (not implemented for comm3d)
-      integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
+      class(cg_list),            intent(in) :: cglist !> the list on which to perform the boundary exchange
+      integer(kind=4),           intent(in) :: ind    !> index of cg%q(:) 3d array
+      integer,         optional, intent(in) :: nb     !> number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: dim    !> do the internal boundaries only in the specified dimension
 
-      call internal_boundaries(ind, .true., nb, dim)
+      call internal_boundaries(cglist, ind, .true., nb, dim)
 
    end subroutine internal_boundaries_3d
 
 !> \brief A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
 
-   subroutine internal_boundaries_4d(ind, nb, dim)
+   subroutine internal_boundaries_4d(cglist, ind, nb, dim)
+
+      use gc_list, only: cg_list
 
       implicit none
 
+      class(cg_list),            intent(in) :: cglist !> the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind  !> index of cg%w(:) 4d array
       integer,         optional, intent(in) :: nb   !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
 
-      call internal_boundaries(ind, .false., nb, dim)
+      call internal_boundaries(cglist, ind, .false., nb, dim)
 
    end subroutine internal_boundaries_4d
 
@@ -85,15 +92,17 @@ contains
 !! The corners should be properly updated if this%[io]_bnd(:, ind) was set up appropriately and this routine is called separately for each dimension.
 !!
 !! \todo Check how much performance is lost due to using MPI calls even for local copies. Decide whether it is worth to convert local MPI calls to direct memory copies.
+!!
+!! \warning cglist == leaves could be unsafe: need to figure out how to handle unneded edges; cglist == all_cg or base_lev should work well
 !<
 
-   subroutine internal_boundaries(ind, tgt3d, nb, dim)
+   subroutine internal_boundaries(cglist, ind, tgt3d, nb, dim)
 
       use constants,  only: FLUID, MAG, CR, ARR, xdim, zdim, I_ONE, I_TWO
       use dataio_pub, only: die, warn
       use domain,     only: dom
-      use gc_list,    only: cg_list_element
-      use grid,       only: leaves
+      use gc_list,    only: cg_list_element, cg_list
+      use grid,       only: leaves, all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
       use mpisetup,   only: comm, ierr, req, status
@@ -101,6 +110,7 @@ contains
 
       implicit none
 
+      class(cg_list),            intent(in) :: cglist !> the list on which to perform the boundary exchange
       integer(kind=4),           intent(in) :: ind    !> index of cg%q(:) 3d array or cg%w(:) 4d array
       logical,                   intent(in) :: tgt3d  !> .true. for cg%q, .false. for cg%w
       integer,         optional, intent(in) :: nb     !> number of grid cells to exchange (not implemented for comm3d)
@@ -113,6 +123,7 @@ contains
       type(cg_list_element),    pointer     :: cgl
       real, dimension(:,:,:),   pointer     :: pa3d
       real, dimension(:,:,:,:), pointer     :: pa4d
+      logical :: active
 
       if (cdd%comm3d /= MPI_COMM_NULL) then
          call warn("[internal_bnd:internal_boundaries] comm3d is implemented somewhere else.")
@@ -133,17 +144,24 @@ contains
       endif
 
       nr = 0
-      cgl => leaves%first
       if (tgt3d) then
-         if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 3d index")
+         if (ind > ubound(all_cg%q_lst(:), dim=1) .or. ind < lbound(all_cg%q_lst(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 3d index")
       else
-         if (ind > ubound(cgl%cg%w(:), dim=1) .or. ind < lbound(cgl%cg%w(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 4d index")
+         if (ind > ubound(all_cg%w_lst(:), dim=1) .or. ind < lbound(all_cg%w_lst(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 4d index")
       endif
+      cgl => cglist%first
       do while (associated(cgl))
          cg => cgl%cg
 
+         ! exclude non-multigrid variables below base level
+         if (tgt3d) then
+            active = associated(cg%q(ind)%arr)
+         else
+            active = associated(cg%w(ind)%arr)
+         endif
+
          do d = xdim, zdim
-            if (dmask(d)) then
+            if (dmask(d) .and. active) then
                if (allocated(cg%i_bnd(d, n)%seg)) then
                   if (.not. allocated(cg%o_bnd(d, n)%seg)) call die("[internal_bnd:internal_boundaries] cg%i_bnd without cg%o_bnd")
                   if (ubound(cg%i_bnd(d, n)%seg(:), dim=1) /= ubound(cg%o_bnd(d, n)%seg(:), dim=1)) &

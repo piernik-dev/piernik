@@ -284,7 +284,7 @@ contains
 
       if (.not. associated(lmpole, roof)) then
          curl => roof
-         do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = roof%level, lmpole%level + 1, -1
+         do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = roof%lev, lmpole%first%cg%lev + 1, -1
             call curl%restrict_level(solution)  ! Overkill, only some layers next to external boundary are needed.
             curl => curl%coarser
          enddo                                ! An alternative: do potential2img_mass on the roof and restrict bnd_[xyz] data.
@@ -303,7 +303,7 @@ contains
 
       if (.not. associated(lmpole, roof)) then
          curl => lmpole
-         do while (associated(curl) .and. .not. associated(curl, roof)) ! do lev = lmpole%level, roof%level - 1
+         do while (associated(curl) .and. .not. associated(curl, roof)) ! do lev = lmpole%first%cg%lev, roof%lev - 1
             call prolong_ext_bnd(curl)
             curl => curl%finer
          enddo
@@ -313,7 +313,7 @@ contains
 
 !!$ ============================================================================
 !>
-!! \brief Set boundary potential from monopole source. Fill lmpole%mg%bnd_[xyz] arrays with expected values of the gravitational potential at external face of computational domain.
+!! \brief Set boundary potential from monopole source. Fill lmpole%first%cg%mg%bnd_[xyz] arrays with expected values of the gravitational potential at external face of computational domain.
 !! \details This is a simplified approach that can be used for tests and as a fast replacement for the
 !! multipole boundary solver for nearly spherically symmetric source distributions.
 !! The isolated_monopole subroutine ignores the radial profile of the monopole
@@ -321,10 +321,10 @@ contains
 
    subroutine isolated_monopole
 
-      use dataio_pub,    only: die
       use constants,     only: xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
+      use dataio_pub,    only: die
+      use domain,        only: dom, is_multicg
       use multigridvars, only: is_external
-      use domain,        only: dom
       use units,         only: newtong
 
       implicit none
@@ -333,6 +333,7 @@ contains
       real    :: r2
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:isolated_monopole] non-cartesian geometry not implemented yet")
+      if (is_multicg) call die("[multigridmultipole:find_img_CoM] multicg not implemented yet") ! is_external
 
       do lh = LO, HI
          if (is_external(xdim, lh)) then
@@ -373,7 +374,7 @@ contains
 
       use constants,     only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, I_ONE !, GEO_RPZ
       use dataio_pub,    only: die
-      use domain,        only: dom
+      use domain,        only: dom, is_multicg
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,      only: comm, ierr
       use multigridvars, only: is_external
@@ -384,6 +385,7 @@ contains
       integer :: lh
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:find_img_CoM] non-cartesian geometry not implemented yet")
+      if (is_multicg) call die("[multigridmultipole:find_img_CoM] multicg not implemented yet") ! is_external
 
       lsum(:) = 0.
 
@@ -430,7 +432,8 @@ contains
    subroutine potential2img_mass
 
       use constants,     only: GEO_RPZ, LO, HI, xdim, ydim, zdim
-      use domain,        only: dom
+      use dataio_pub,    only: die
+      use domain,        only: dom, is_multicg
       use multigridvars, only: is_external, solution
 
       implicit none
@@ -440,6 +443,7 @@ contains
       ! a1 = -2. is the simplest, low order choice, gives best agreement of total mass and CoM location when compared to 3-D integration
       ! a1 = -1., a2 = -1./3. seems to do the best job,
       !> \todo: find out how and why
+      if (is_multicg) call die("[multigridmultipole:potential2img_mass] multicg not implemented yet") ! is_external
 
       !> \deprecated BEWARE: some cylindrical factors may be helpful
       if (is_external(xdim, LO)) then
@@ -538,6 +542,7 @@ contains
       use multigridvars,   only: plvl, is_external
       use constants,       only: HI, LO, xdim, ydim, zdim
       use dataio_pub,      only: die
+      use domain,        only: is_multicg
 
       implicit none
 
@@ -545,6 +550,8 @@ contains
 
       type(plvl), pointer :: fine
       integer :: lh
+
+      if (is_multicg) call die("[multigridmultipole:prolong_ext_bnd0] multicg not implemented yet") ! is_external
 
       if (.not. associated(coarse)) call die("[multigridmultipole:prolong_ext_bnd0] coarse == null()")
       fine   => coarse%finer
@@ -580,9 +587,10 @@ contains
 
    subroutine prolong_ext_bnd2(coarse)
 
-      use multigridvars,   only: plvl, is_external
-      use constants,       only: HI, LO, xdim, ydim, zdim
-      use dataio_pub,      only: die
+      use multigridvars, only: plvl, is_external
+      use constants,     only: HI, LO, xdim, ydim, zdim
+      use dataio_pub,    only: die
+      use domain,        only: is_multicg
 
       implicit none
 
@@ -598,6 +606,7 @@ contains
       real, dimension(-1:1)         :: p
       real, dimension(-1:1,-1:1,2,2):: pp   ! 2D prolongation stencil
 
+      if (is_multicg) call die("[multigridmultipole:prolong_ext_bnd2] multicg not implemented yet") ! is_external
       if (.not. associated(coarse)) call die("[multigridmultipole:prolong_ext_bnd0] coarse == null()")
       fine   => coarse%finer
       if (.not. associated(fine)) call die("[multigridmultipole:prolong_ext_bnd0] fine == null()")

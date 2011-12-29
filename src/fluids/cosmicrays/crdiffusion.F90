@@ -94,7 +94,7 @@ contains
 
       if (.not. has_cr) return
 
-      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(all_cg%ind_4d(wcr_n))
+      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(all_cg, all_cg%ind_4d(wcr_n)) ! should be more selective (modified leaves?)
 
       cgl => leaves%first
       do while (associated(cgl))
