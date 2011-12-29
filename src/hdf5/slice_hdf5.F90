@@ -248,7 +248,7 @@ contains
       use dataio_user, only: user_plt_hdf5
       use domain,      only: dom, is_multicg
       use global,      only: t
-      use grid,        only: all_cg
+      use grid,        only: all_cg, base_lev
       use grid_cont,   only: grid_container!, cg_list_element
       use hdf5,        only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,        only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
@@ -304,19 +304,19 @@ contains
 
          write(fname,'(2a)') trim(log_file(1:len_trim(log_file)-3)),"plt"
 
-         dims(:) = [ dom%n_d(d1(plane)), dom%n_d(d2(plane)) ] ! Dataset dimensions
+         dims(:) = [ base_lev%n_d(d1(plane)), base_lev%n_d(d2(plane)) ] ! Dataset dimensions
          allocate(img(dims(1), dims(2)))
 
          do p = FIRST, LAST
             xn_r = 1
-            if (dom%has_dir(plane)) xn_r = pl_i(plane) + dom%nb - dom%pse(p)%sel(1, plane, LO)
-            if ((xn_r > dom%nb .and. xn_r <= int(dom%pse(p)%sel(1, plane, HI) - dom%pse(p)%sel(1, plane, LO) + 1, 4) + dom%nb) .or. (xn_r == 1 .and. .not. dom%has_dir(plane))) then
+            if (dom%has_dir(plane)) xn_r = pl_i(plane) + dom%nb - base_lev%pse(p)%sel(1, plane, LO)
+            if ((xn_r > dom%nb .and. xn_r <= int(base_lev%pse(p)%sel(1, plane, HI) - base_lev%pse(p)%sel(1, plane, LO) + 1, 4) + dom%nb) .or. (xn_r == 1 .and. .not. dom%has_dir(plane))) then
                if (p == proc) then
-                  img(1+dom%pse(p)%sel(1, d1(plane), LO):1+dom%pse(p)%sel(1, d1(plane), HI), 1+dom%pse(p)%sel(1, d2(plane), LO):1+dom%pse(p)%sel(1, d2(plane), HI)) = send(:,:)
+                  img(1+base_lev%pse(p)%sel(1, d1(plane), LO):1+base_lev%pse(p)%sel(1, d1(plane), HI), 1+base_lev%pse(p)%sel(1, d2(plane), LO):1+base_lev%pse(p)%sel(1, d2(plane), HI)) = send(:,:)
                else
-                  allocate(recv(dom%pse(p)%sel(1, d1(plane), HI)-dom%pse(p)%sel(1, d1(plane), LO)+1, dom%pse(p)%sel(1, d2(plane), HI)-dom%pse(p)%sel(1, d2(plane), LO)+1))
+                  allocate(recv(base_lev%pse(p)%sel(1, d1(plane), HI)-base_lev%pse(p)%sel(1, d1(plane), LO)+1, base_lev%pse(p)%sel(1, d2(plane), HI)-base_lev%pse(p)%sel(1, d2(plane), LO)+1))
                   call MPI_Recv(recv, size(recv), MPI_DOUBLE_PRECISION, p, tag, comm, status(:,p), ierr)
-                  img(1+dom%pse(p)%sel(1, d1(plane), LO):1+dom%pse(p)%sel(1, d1(plane), HI), 1+dom%pse(p)%sel(1, d2(plane), LO):1+dom%pse(p)%sel(1, d2(plane), HI)) = recv(:,:)
+                  img(1+base_lev%pse(p)%sel(1, d1(plane), LO):1+base_lev%pse(p)%sel(1, d1(plane), HI), 1+base_lev%pse(p)%sel(1, d2(plane), LO):1+base_lev%pse(p)%sel(1, d2(plane), HI)) = recv(:,:)
                   deallocate(recv)
                endif
             endif

@@ -31,13 +31,13 @@
 
 module gc_list
 
-   use constants,   only: ndims, dsetnamelen
-   use grid_cont,   only: grid_container
+   use constants, only: dsetnamelen
+   use grid_cont, only: grid_container
 
    implicit none
 
    private
-   public :: cg_list_global, cg_list_level, cg_list_patch, cg_list, cg_list_element
+   public :: cg_list_global, cg_list, cg_list_element
 
    !>
    !! \brief A grid container with two links to other cg_list_elements
@@ -97,6 +97,8 @@ module gc_list
    !! - Cylindrical grid with cartesian core covering singularity at the axis.
    !! - Simulations with mixed dimensionality (e.g. 2d grid for dust particles and 3d grid for gas) should probably also use separate cg_list
    !! for their data (and additional routine for coupling the two grid sets).
+   !!
+   !! Unfortunately we cannot move this type to a separate file because of dependencies in add_new
    !<
    type, extends(cg_list) :: cg_list_global
       type(na_var), dimension(:), allocatable :: q_lst !< information about registered 3D named arrays
@@ -109,35 +111,6 @@ module gc_list
       procedure :: exists
       procedure :: exists_4d
    end type cg_list_global
-
-   !>
-   !! \brief A list of all cg of the same resolution.
-   !!
-   !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg ("islands: made of one or more cg: cg_list_patch).
-   !<
-   type, extends(cg_list) :: cg_list_level
-      integer :: lev                           !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
-      type(cg_list_level), pointer :: coarser  !< coarser level cg set or null()
-      type(cg_list_level), pointer :: finer    !< finer level cg set or null()
-    contains
-!      procedure :: prolong                    !< interpolate the grid data to this%finer level
-!      procedure :: restrict                   !< interpolate the grid data from this%coarser level
-! fine-coarse boundary exchanges may also belong to this type
-   end type cg_list_level
-
-   !>
-   !! \brief A list of grid containers that cover single box (or rectangle) on a certain resolution level
-   !!
-   !! \details This set would be a result of base domain or patch decomposition
-   !<
-   type, extends(cg_list) :: cg_list_patch
-      integer(kind=4), dimension(ndims) :: n_d                !< number of grid cells
-      integer(kind=8), dimension(ndims) :: off                !< offset (with respect to the base level, counted on own level)
-      type(cg_list_patch), pointer :: parent                  !< Parent patch (or null()). \todo Consider relaxing this restriction and allow multi-parent patches
-      type(cg_list_patch), dimension(:), pointer :: children  !< refined patches
-      type(cg_list_level), pointer :: list_level              !< all cg on the same level
-      !> \todo consider creating neigbour list (or (ndims, LO:HI) lists)
-   end type cg_list_patch
 
 contains
 

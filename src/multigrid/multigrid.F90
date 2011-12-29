@@ -73,18 +73,20 @@ contains
 !<
    subroutine init_multigrid
 
-      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, zdim, LO, HI, I_TWO, I_ONE, half
+      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, zdim, AT_IGNORE, LO, HI, LONG, I_TWO, I_ONE, half
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
+      use decomposition,       only: allocate_pse!, divide_domain!, deallocate_pse
       use domain,              only: dom, is_uneven, is_multicg
-      use grid,                only: leaves
+      use grid,                only: leaves, base_lev, all_cg, mpi_bnd_types, set_q_mbc
       use gc_list,             only: cg_list_element
+      use cg_list_lev,         only: cg_list_level, cg_list_patch
       use grid_cont,           only: grid_container
-      use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_LOR, MPI_MIN, MPI_MAX, MPI_COMM_NULL
+      use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_DOUBLE_PRECISION, MPI_IN_PLACE, MPI_LOR, MPI_LAND, MPI_MIN, MPI_MAX, MPI_COMM_NULL
       use mpisetup,            only: comm, ierr, proc, master, slave, nproc, FIRST, LAST, buffer_dim, ibuff, lbuff
       use multigridhelpers,    only: dirtyH, do_ascii_dump, dirty_debug
       use multigridmpifuncs,   only: vertical_prep
-      use multigridvars,       only: lvl, plvl, roof, base, ngridvars, correction, single_base, &
+      use multigridvars,       only: roof, base, single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, &
            &                         is_external, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
       use types,               only: cdd
 #ifdef GRAV
@@ -102,9 +104,12 @@ contains
       integer               :: j, p
       logical, save         :: frun = .true.          !< First run flag
       real                  :: mb_alloc, min_m, max_m !< Allocation counter
-      type(plvl), pointer   :: curl                   !< current level (a pointer sliding along the linked list)
+      type(cg_list_level),   pointer :: curl, tmpl    !< current level (a pointer sliding along the linked list) and temporary level
       type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg            !> current grid container
+      type(cg_list_patch) :: patch                    !< wrapper for current level (to be passed to divide domain)
+      type(grid_container),  pointer :: cg            !< current grid container
+      integer, parameter :: mg_gr_id = 1
+      logical :: dd
 
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug
 
@@ -157,6 +162,8 @@ contains
 
       endif
 
+      stdout = stdout .and. master
+
       if (is_multicg) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial is_external
 
       cgl => leaves%first
@@ -167,7 +174,7 @@ contains
          do j=xdim, zdim
             if (dom%has_dir(j) .and. .not. dom%periodic(j)) then
                is_external(j, LO) = (cg%off(j)    == 0)
-               is_external(j, HI) = (cg%h_cor1(j) == dom%n_d(j))
+               is_external(j, HI) = (cg%h_cor1(j) == base_lev%n_d(j)) !! \warning not true on AMR
             endif
          enddo
          cgl => cgl%nxt
@@ -177,7 +184,6 @@ contains
       mb_alloc = 0
       single_base = (nproc == 1)
 
-      ngridvars = correction  !! 4 variables are required for basic use of the multigrid solver
       if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
 
 !! \todo Make an array of subroutine pointers
@@ -194,14 +200,13 @@ contains
          ord_prolong_face_norm = 0
       endif
 
-      if (allocated(lvl)) call die("[multigrid:init_multigrid] lvl already allocated")
       if (level_max <= 0) then
          if (master) call warn("[multigrid:init_multigrid] level_max < 1: solving on a single grid may be extremely slow")
          level_max = 0
       endif
 
       do j = 0, level_incredible
-         if (any((mod(dom%n_d(:), 2**(j+1)) /= 0 .or. dom%n_d(:)/2**(j+1) < dom%nb) .and. dom%has_dir(:))) exit
+         if (any((mod(base_lev%n_d(:), 2_LONG**(j+1)) /= 0 .or. base_lev%n_d(:)/2**(j+1) < dom%nb) .and. dom%has_dir(:))) exit
       enddo
       if (level_max > j) then
          if (master) then
@@ -212,114 +217,145 @@ contains
          level_max = j
       endif
 
-      if (is_multicg) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial lvl
+      if (is_multicg) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial
 
-      allocate(lvl(-level_max:0)) !! \deprecated this magic number will be fixed soon
-      mb_alloc = mb_alloc + size(lvl)
+      roof => base_lev
 
-      ! handy shortcuts
-      base => lvl(lbound(lvl, dim=1))
-      roof => lvl(ubound(lvl, dim=1))
+      curl => roof
+      do while (associated(curl))
 
-      ! set up connections between levels
-      do j = lbound(lvl, dim=1), ubound(lvl, dim=1)
-         lvl(j)%lev = j
-         if (j /= lbound(lvl, dim=1)) then
-            lvl(j)%coarser => lvl(j-1)
-         else
-            nullify(lvl(j)%coarser)
+         base => curl
+
+         if (curl%lev <= -level_max) exit
+
+         ! create coarser level:
+         allocate(tmpl)
+         call tmpl%init         ! create an empty cg list
+         call tmpl%add          ! add first cg
+         tmpl%lev = curl%lev -1 ! set id (number)
+         curl%coarser => tmpl   ! set up connectivity
+         tmpl%finer => curl
+         tmpl%coarser => null()
+
+         ! set up decomposition of coarse levels
+         where (dom%has_dir(:))
+            tmpl%n_d(:) = tmpl%finer%n_d / I_TWO
+         elsewhere
+            tmpl%n_d(:) = I_ONE
+         endwhere
+
+         dd = any(tmpl%n_d(:)*2 /= tmpl%finer%n_d(:) .and. dom%has_dir(:))
+         call MPI_Allreduce(MPI_IN_PLACE, dd, I_ONE, MPI_LOGICAL, MPI_LOR, comm, ierr)
+         if (dd) then
+            write(msg, '(a,3f10.1)')"[multigrid:init_multigrid] Fractional number of domain cells: ", half*tmpl%finer%n_d(:)
+            if (master) call warn(msg)
+            deallocate(tmpl%first%cg) ! must manually deallocate here, because cg wasn't fully initialized yet
+            deallocate(tmpl%first)
+            deallocate(tmpl)
+            nullify(curl%coarser)
+            exit
          endif
 
-         if (j /= ubound(lvl, dim=1)) then
-            lvl(j)%finer => lvl(j+1)
+         if (tmpl%lev == -level_max .and. single_base) then ! Use tmpl%pse(nproc)%sel(mg_gr_id, :, :) with care, because this is an antiparallel thing
+            call allocate_pse(tmpl)
+            do p = FIRST, LAST
+               tmpl%pse(p)%sel(mg_gr_id,  :, LO) = 0
+               tmpl%pse(p)%sel(mg_gr_id,  :, HI) = -1
+            enddo
+            tmpl%pse(FIRST)%sel(mg_gr_id,  :, HI) = tmpl%n_d(:)-1 ! put the whole base level on the master CPU (\todo try a random or the last one)
          else
-           nullify(lvl(j)%finer)
+
+            patch%list_level => tmpl
+            patch%n_d = int(tmpl%n_d, kind=4)
+
+            dd = .true. !divide_domain(patch)
+            call allocate_pse(tmpl)
+            do p = FIRST, LAST
+               tmpl%pse(p)%sel(1, :, LO) = (tmpl%finer%pse(p)%sel(1, :, LO) + 1) / 2
+               tmpl%pse(p)%sel(1, :, HI) =  tmpl%finer%pse(p)%sel(1, :, HI)      / 2
+            enddo
+            call MPI_Allreduce(MPI_IN_PLACE, dd, I_ONE, MPI_LOGICAL, MPI_LAND, comm, ierr)
+            if (.not. dd) then
+               write(msg,'(a,i4)')"[multigrid:init_multigrid] Coarse domain decomposition failed at level ",tmpl%lev
+               if (master) call warn(msg)
+               deallocate(tmpl%first%cg)
+               deallocate(tmpl%first)
+               deallocate(tmpl)
+               nullify(curl%coarser)
+               exit
+            endif
+
          endif
+
+         call tmpl%print_segments
+
+         call tmpl%first%cg%init(tmpl%n_d, tmpl%pse(proc)%sel(mg_gr_id, :, :), mg_gr_id, tmpl%lev)
+         call mpi_bnd_types(tmpl%first%cg)
+         call set_q_mbc(tmpl%first%cg)
+
+         call all_cg%add(tmpl%first%cg)
+
+         curl => curl%coarser
       enddo
 
       curl => roof
       do while (associated(curl))
 
-         allocate(curl%dom)
-         if (associated(curl, roof)) then
-            curl%dom = dom       ! inherit roof from global domain
-            ! curl%dom%nb = 2  ! the multigrid solver relies typically at most on 2 guardcells, but the impact on performance is not big so we've decided to have it uniform with the rest of Piernik
-         else
-            ! set up decomposition of coarse levels
-            curl%dom = curl%finer%dom
-            where (dom%has_dir(:)) curl%dom%n_d(:) = curl%dom%n_d(:) / I_TWO
-            if (any(curl%dom%n_d(:)*2 /= curl%finer%dom%n_d(:) .and. dom%has_dir(:))) then
-               write(msg, '(a,3f10.1)')"[multigrid:init_multigrid] Fractional number of domain cells: ", half*curl%finer%dom%n_d(:)
-               call die(msg) ! handling this would require coarse grids bigger than base grid
-            endif
-            if (.not. allocated(curl%dom%pse)) then
-               if (master) call warn("[multigrid:init_multigrid] curl%dom%se not allocated implicitly")! this should detect changes in compiler behavior
-               allocate(curl%dom%pse(FIRST:LAST))
-               do p = FIRST, LAST
-                  allocate(curl%dom%pse(p)%sel(1, xdim:zdim, LO:HI))
-               enddo
-               !else curl%dom%se was implicitly allocated during assignment
-            endif
-            if (associated(curl, base) .and. single_base) then ! Use curl%dom%pse(nproc)%sel(1, :, :) with care, because this is an antiparallel thing
-               do p = FIRST, LAST
-                  curl%dom%pse(p)%sel(1,  :, LO) = 0
-                  curl%dom%pse(p)%sel(1,  :, HI) = -1
-               enddo
-               curl%dom%pse(0)%sel(1,  :, HI) = curl%dom%n_d(:)-1 ! put the whole base level on the master CPU (\todo try a random or the last one)
-            else
-               do p = FIRST, LAST
-                  curl%dom%pse(p)%sel(1, :, LO) = (curl%finer%dom%pse(p)%sel(1, :, LO) + 1) / 2
-                  curl%dom%pse(p)%sel(1, :, HI) =  curl%finer%dom%pse(p)%sel(1, :, HI)      / 2
-               enddo
-            endif
-            call curl%dom%set_derived ! fix what was inherited from finer level or dom and should be recalculated
-         endif
+         if (ubound(curl%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid:init_multigrid] Multiple blocks per process not implemented yet")
 
-         call curl%init(curl%dom, 1, curl%lev)
-
-         if (ubound(curl%dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid:init_multigrid] Multiple blocks per process not implemented yet")
-
-         if (any(curl%n_b(:) < dom%nb .and. dom%has_dir(:) .and. .not. curl%empty)) then
+         if (any(curl%first%cg%n_b(:) < dom%nb .and. dom%has_dir(:) .and. .not. curl%first%cg%empty)) then
             write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
-                 dom%nb, " > ", curl%n_b(:), " at level ", curl%lev, ". You may try to set level_max <=", -curl%lev
+                 dom%nb, " > ", curl%first%cg%n_b(:), " at level ", curl%lev, ". You may try to set level_max <=", -curl%lev
             call die(msg)
          endif
 
-         if (any(curl%n_b(:) * 2**(roof%lev - curl%lev) /= roof%n_b(:) .and. dom%has_dir(:)) .and. .not. curl%empty .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
+         if (any(curl%first%cg%n_b(:) * 2**(roof%lev - curl%lev) /= roof%first%cg%n_b(:) .and. dom%has_dir(:)) .and. .not. curl%first%cg%empty .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
 
          ! data storage
          !! \deprecated BEWARE prolong_x and %mg%prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
-         if (allocated(curl%mg%prolong_x) .or. allocated(curl%mg%prolong_xy) .or. allocated(curl%mg%var) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
-         allocate(curl%mg%var     (curl%n_(xdim), curl%n_(ydim),        curl%n_(zdim),        ngridvars))
-         allocate(curl%mg%prolong_xy(curl%n_(xdim), curl%n_(ydim),        curl%nzb/2+2*dom%nb))
-         allocate(curl%mg%prolong_x (curl%n_(xdim), curl%nyb/2+2*dom%nb, curl%nzb/2+2*dom%nb))
-         mb_alloc  = mb_alloc + size(curl%mg%prolong_x) + size(curl%mg%prolong_xy) + size(curl%mg%var)
+         if (allocated(curl%first%cg%mg%prolong_x) .or. allocated(curl%first%cg%mg%prolong_xy) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
+         allocate(curl%first%cg%mg%prolong_xy(curl%first%cg%n_(xdim), curl%first%cg%n_(ydim),                 curl%first%cg%nzb/2+2*dom%nb))
+         allocate(curl%first%cg%mg%prolong_x (curl%first%cg%n_(xdim), curl%first%cg%nyb/2+2*dom%nb, curl%first%cg%nzb/2+2*dom%nb))
+         mb_alloc  = mb_alloc + size(curl%first%cg%mg%prolong_x) + size(curl%first%cg%mg%prolong_xy)
 
-         if ( allocated(curl%mg%bnd_x) .or. allocated(curl%mg%bnd_y) .or. allocated(curl%mg%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
-         allocate(curl%mg%bnd_x(curl%js:curl%je, curl%ks:curl%ke, LO:HI))
-         allocate(curl%mg%bnd_y(curl%is:curl%ie, curl%ks:curl%ke, LO:HI))
-         allocate(curl%mg%bnd_z(curl%is:curl%ie, curl%js:curl%je, LO:HI))
-         mb_alloc  = mb_alloc + size(curl%mg%bnd_x) + size(curl%mg%bnd_y) + size(curl%mg%bnd_z)
+         if ( allocated(curl%first%cg%mg%bnd_x) .or. allocated(curl%first%cg%mg%bnd_y) .or. allocated(curl%first%cg%mg%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
+         allocate(curl%first%cg%mg%bnd_x(curl%first%cg%js:curl%first%cg%je, curl%first%cg%ks:curl%first%cg%ke, LO:HI))
+         allocate(curl%first%cg%mg%bnd_y(curl%first%cg%is:curl%first%cg%ie, curl%first%cg%ks:curl%first%cg%ke, LO:HI))
+         allocate(curl%first%cg%mg%bnd_z(curl%first%cg%is:curl%first%cg%ie, curl%first%cg%js:curl%first%cg%je, LO:HI))
+         mb_alloc  = mb_alloc + size(curl%first%cg%mg%bnd_x) + size(curl%first%cg%mg%bnd_y) + size(curl%first%cg%mg%bnd_z)
 
          ! array initialization
          if (dirty_debug) then
-            curl%mg%var       (:, :, :, :) = dirtyH
-            curl%mg%prolong_x (:, :, :)    = dirtyH
-            curl%mg%prolong_xy(:, :, :)    = dirtyH
-            curl%mg%bnd_x     (:, :, :)    = dirtyH
-            curl%mg%bnd_y     (:, :, :)    = dirtyH
-            curl%mg%bnd_z     (:, :, :)    = dirtyH
-         else
-            curl%mg%var       (:, :, :, :) = 0.0 ! should not be necessary if dirty_debug shows nothing suspicious
+            curl%first%cg%mg%prolong_x (:, :, :)    = dirtyH
+            curl%first%cg%mg%prolong_xy(:, :, :)    = dirtyH
+            curl%first%cg%mg%bnd_x     (:, :, :)    = dirtyH
+            curl%first%cg%mg%bnd_y     (:, :, :)    = dirtyH
+            curl%first%cg%mg%bnd_z     (:, :, :)    = dirtyH
          endif
 
          curl => curl%coarser ! descend until null() is encountered
       enddo
 
-      do p = FIRST, LAST
-         if (any(dom%pse(p)%sel(1,:,:) /= roof%dom%pse(p)%sel(1,:,:))) call die("[multigrid:init_multigrid] dom%se or roof%dom%se corrupted")
-         ! this should detect changes in compiler behavior
-      enddo
+      call all_cg%reg_var(source_n,     AT_IGNORE, multigrid = .true.)
+      call all_cg%reg_var(solution_n,   AT_IGNORE, multigrid = .true.)
+      call all_cg%reg_var(defect_n,     AT_IGNORE, multigrid = .true.)
+      call all_cg%reg_var(correction_n, AT_IGNORE, multigrid = .true.)
+
+      source     = all_cg%ind(source_n)
+      solution   = all_cg%ind(solution_n)
+      defect     = all_cg%ind(defect_n)
+      correction = all_cg%ind(correction_n)
+
+      if (dirty_debug) then
+         curl => roof
+         do while (associated(curl))
+            curl%first%cg%q(source)    %arr(:, :, :) = dirtyH
+            curl%first%cg%q(solution)  %arr(:, :, :) = dirtyH
+            curl%first%cg%q(defect)    %arr(:, :, :) = dirtyH
+            curl%first%cg%q(correction)%arr(:, :, :) = dirtyH
+            curl => curl%coarser
+         enddo
+      endif
 
       call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, I_ONE, MPI_LOGICAL, MPI_LOR, comm, ierr)
       if ((is_mg_uneven .or. is_uneven .or. cdd%comm3d == MPI_COMM_NULL) .and. ord_prolong /= 0) then
@@ -343,8 +379,8 @@ contains
       call MPI_Allreduce(mb_alloc, min_m, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
       call MPI_Allreduce(mb_alloc, max_m, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
       if (master) then
-         write(msg, '(a,i2,a,3i4,a,2(f6.1,a))')"[multigrid:init_multigrid] Initialized ", roof%lev - base%lev + 1, " levels, coarse level resolution [ ", &
-            base%dom%n_d(:)," ], allocated", min_m, " ..", max_m, "MiB"
+         write(msg, '(a,i2,a,3i4,a,2(f6.1,a))')"[multigrid:init_multigrid] Initialized ", roof%lev - base%lev, " coarse levels, coarse level resolution [ ", &
+            base%n_d(:)," ], allocated", min_m, " ..", max_m, "MiB"
          call printinfo(msg)
       endif
 
@@ -359,10 +395,12 @@ contains
 
       use constants,           only: LO, HI, I_ONE
       use dataio_pub,          only: msg, printinfo
-      use grid_cont,           only: tgt_list
+      use cg_list_lev,         only: cg_list_level
+      use grid,                only: base_lev
+      use grid_cont,           only: tgt_list, grid_container
       use mpi,                 only: MPI_DOUBLE_PRECISION
       use mpisetup,            only: master, nproc, FIRST, LAST, comm, ierr
-      use multigridvars,       only: lvl, plvl, base, tot_ts
+      use multigridvars,       only: base, tot_ts
 #ifdef GRAV
       use multigrid_gravity,   only: cleanup_multigrid_grav
 #endif /* GRAV */
@@ -376,7 +414,8 @@ contains
       real, allocatable, dimension(:) :: all_ts
       integer, parameter :: nseg = 2
       type(tgt_list), dimension(nseg) :: io_tgt
-      type(plvl), pointer   :: curl
+      type(cg_list_level), pointer   :: curl
+      type(grid_container), pointer :: cg
 
 #ifdef GRAV
       call cleanup_multigrid_grav
@@ -385,36 +424,33 @@ contains
       call cleanup_multigrid_diff
 #endif /* COSM_RAYS */
 
-      if (allocated(lvl)) then
-         curl => base
-         do while (associated(curl))
-            if (allocated(curl%mg%prolong_xy)) deallocate(curl%mg%prolong_xy)
-            if (allocated(curl%mg%prolong_x))  deallocate(curl%mg%prolong_x)
-            if (allocated(curl%mg%var))        deallocate(curl%mg%var)
-            if (allocated(curl%mg%bnd_x))      deallocate(curl%mg%bnd_x)
-            if (allocated(curl%mg%bnd_y))      deallocate(curl%mg%bnd_y)
-            if (allocated(curl%mg%bnd_z))      deallocate(curl%mg%bnd_z)
-            if (allocated(curl%dom%pse)) then
-               do g = FIRST, LAST
-                  deallocate(curl%dom%pse(g)%sel)
-               enddo
-               deallocate(curl%dom%pse)
-            endif
-            io_tgt(1:nseg) = [ curl%mg%f_tgt, curl%mg%c_tgt ]
-            do ib = 1, nseg
-               if (allocated(io_tgt(ib)%seg)) then
-                  do g = 1, ubound(io_tgt(ib)%seg, dim=1)
-                     if (allocated(io_tgt(ib)%seg(g)%buf)) deallocate(io_tgt(ib)%seg(g)%buf)
-                  enddo
-                  deallocate(io_tgt(ib)%seg)
-               endif
+      curl => base
+      do while (associated(curl) .and. .not. associated(curl, base_lev))
+         if (allocated(curl%first%cg%mg%prolong_xy)) deallocate(curl%first%cg%mg%prolong_xy)
+         if (allocated(curl%first%cg%mg%prolong_x))  deallocate(curl%first%cg%mg%prolong_x)
+         if (allocated(curl%first%cg%mg%bnd_x))      deallocate(curl%first%cg%mg%bnd_x)
+         if (allocated(curl%first%cg%mg%bnd_y))      deallocate(curl%first%cg%mg%bnd_y)
+         if (allocated(curl%first%cg%mg%bnd_z))      deallocate(curl%first%cg%mg%bnd_z)
+         if (allocated(curl%pse)) then
+            do g = FIRST, LAST
+               deallocate(curl%pse(g)%sel)
             enddo
-            call curl%cleanup
-            deallocate(curl%dom)
-            curl => curl%finer
+            deallocate(curl%pse)
+         endif
+         io_tgt(1:nseg) = [ curl%first%cg%mg%f_tgt, curl%first%cg%mg%c_tgt ]
+         do ib = 1, nseg
+            if (allocated(io_tgt(ib)%seg)) then
+               do g = 1, ubound(io_tgt(ib)%seg, dim=1)
+                  if (allocated(io_tgt(ib)%seg(g)%buf)) deallocate(io_tgt(ib)%seg(g)%buf)
+               enddo
+               deallocate(io_tgt(ib)%seg)
+            endif
          enddo
-         deallocate(lvl)
-      endif
+         cg => curl%first%cg
+         call curl%delete
+         curl => curl%finer
+         deallocate(curl%coarser)
+      enddo
 
       if (allocated(all_ts)) deallocate(all_ts)
       allocate(all_ts(FIRST:LAST))

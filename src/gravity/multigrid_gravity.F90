@@ -98,7 +98,7 @@ module multigrid_gravity
    integer, parameter :: nold_max=3                                   !< maximum implemented extrapolation order
    integer :: nold                                                    !< number of old solutions kept for solution recycling
    type :: old_soln                                                   !< container for an old solution with its timestamp
-      real, dimension(:,:,:), allocatable :: soln
+      real, dimension(:,:,:), allocatable :: soln  !! \todo register some named arrays for this and shuffle only their indices
       real :: time
    end type old_soln
    type :: soln_history                                               !< container for a set of several old potential solutions
@@ -164,7 +164,7 @@ contains
       use domain,        only: dom, is_uneven
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
       use mpisetup,      only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST
-      use multigridvars, only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, correction, ngridvars, single_base
+      use multigridvars, only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, single_base
       use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use types,         only: cdd
 
@@ -316,8 +316,6 @@ contains
 
       if (dom%geometry_type == GEO_RPZ) multidim_code_3D = .true. ! temporarily
 
-      ngridvars = max(ngridvars, correction)
-
       ! boundaries
       grav_bnd = bnd_invalid
       select case (grav_bnd_str)
@@ -396,13 +394,15 @@ contains
 
       use constants,        only: pi, dpi, GEO_XYZ, xdim, ydim, zdim, one, zero, half
       use dataio_pub,       only: die, warn
-      use domain,           only: dom
-      use grid,             only: leaves
+      use domain,           only: dom, is_multicg
       use gc_list,          only: cg_list_element
+      use cg_list_lev,      only: cg_list_level
+      use grid,             only: leaves
+      use grid_cont,        only: grid_container
       use mpi,              only: MPI_COMM_NULL
       use mpisetup,         only: master, nproc, proc
-      use multigridhelpers, only: vcycle_stats_init, dirty_debug, dirtyH
-      use multigridvars,    only: lvl, plvl, roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, vcycle_stats, is_mg_uneven, need_general_pf, single_base
+      use multigridhelpers, only: dirty_debug, dirtyH
+      use multigridvars,    only: roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, is_mg_uneven, need_general_pf, single_base
       use multipole,        only: init_multipole, coarsen_multipole
       use types,            only: cdd
 
@@ -413,8 +413,9 @@ contains
       type(soln_history), pointer      :: os
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
       integer :: i, j
-      type(plvl), pointer :: curl
+      type(cg_list_level), pointer :: curl
       type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       need_general_pf = cdd%comm3d == MPI_COMM_NULL .or. single_base .or. is_mg_uneven
 
@@ -422,6 +423,8 @@ contains
          coarsen_multipole = 0
          if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] multipole coarsening on uneven domains or with cdd%comm3d == MPI_COMM_NULL is not implemented yet.")
       endif
+
+      if (is_multicg) call die("[multigrid_gravity:init_multigrid_grav_post] multicg not implemented") ! nontrivial
 
       call mpi_multigrid_prep_grav !supplement to mpi_multigrid_prep
 
@@ -440,7 +443,7 @@ contains
             if (associated(os)) then
                do i = 1, nold
                   if ( allocated(os%old(i)%soln) ) call die("[multigrid_gravity:init_multigrid_grav_post] os%old(:)%soln arrays already allocated")
-                  allocate( os%old(i)%soln( roof%n_(xdim), roof%n_(ydim), roof%n_(zdim)))
+                  allocate( os%old(i)%soln( roof%first%cg%n_(xdim), roof%first%cg%n_(ydim), roof%first%cg%n_(zdim)))
                   mb_alloc = mb_alloc + size(os%old(i)%soln)
                   os%old(i)%time= -huge(1.0)
                   if (dirty_debug) os%old(i)%soln(:, :, :) = dirtyH
@@ -460,62 +463,77 @@ contains
       curl => base
       do while (associated(curl))
          ! this should work correctly also when dom%eff_dim < 3
-         if (curl%empty) then
-            curl%mg%fft_type = fft_none
-            curl%mg%r  = 0.
-            curl%mg%rx = 0.
-            curl%mg%ry = 0.
-            curl%mg%rz = 0.
-         else
-            curl%mg%r  = overrelax   / 2.
-            curl%mg%rx = curl%dvol2 * curl%idx2
-            curl%mg%ry = curl%dvol2 * curl%idy2
-            curl%mg%rz = curl%dvol2 * curl%idz2
-            curl%mg%r  = curl%mg%r  / (curl%mg%rx + curl%mg%ry + curl%mg%rz)
-            curl%mg%rx = overrelax_x * curl%mg%rx * curl%mg%r
-            curl%mg%ry = overrelax_y * curl%mg%ry * curl%mg%r
-            curl%mg%rz = overrelax_z * curl%mg%rz * curl%mg%r
-            curl%mg%r  = curl%mg%r  * curl%dvol2
-
-            !>
-            !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
-            !! and overrelaxation factors are required to get any convergence (often poor)
-            !<
-
-            if (prefer_rbgs_relaxation) then
-               curl%mg%fft_type = fft_none
-            else if (grav_bnd == bnd_periodic .and. nproc == 1) then
-               curl%mg%fft_type = fft_rcr
-            else if (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) then
-               curl%mg%fft_type = fft_dst
+         cgl => curl%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            if (cg%empty) then
+               cg%mg%fft_type = fft_none
+               cg%mg%r  = 0.
+               cg%mg%rx = 0.
+               cg%mg%ry = 0.
+               cg%mg%rz = 0.
             else
-               curl%mg%fft_type = fft_none
+               cg%mg%r  = overrelax   / 2.
+               cg%mg%rx = cg%dvol2 * cg%idx2
+               cg%mg%ry = cg%dvol2 * cg%idy2
+               cg%mg%rz = cg%dvol2 * cg%idz2
+               cg%mg%r  = cg%mg%r  / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
+               cg%mg%rx = overrelax_x * cg%mg%rx * cg%mg%r
+               cg%mg%ry = overrelax_y * cg%mg%ry * cg%mg%r
+               cg%mg%rz = overrelax_z * cg%mg%rz * cg%mg%r
+               cg%mg%r  = cg%mg%r  * cg%dvol2
+
+               !>
+               !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
+               !! and overrelaxation factors are required to get any convergence (often poor)
+               !<
+
+               if (prefer_rbgs_relaxation) then
+                  cg%mg%fft_type = fft_none
+               else if (grav_bnd == bnd_periodic .and. nproc == 1) then
+                  cg%mg%fft_type = fft_rcr
+               else if (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) then
+                  cg%mg%fft_type = fft_dst
+               else
+                  cg%mg%fft_type = fft_none
+               endif
             endif
-         endif
+            cgl => cgl%nxt
+         enddo
          curl => curl%finer
       enddo
 
       ! data related to local and global base-level FFT solver
-      if (.not. base%empty) then
-         if (base_no_fft) then
-            base%mg%fft_type = fft_none
-         else
-            select case (grav_bnd)
-               case (bnd_periodic)
-                  base%mg%fft_type = fft_rcr
-               case (bnd_dirichlet, bnd_isolated)
-                  base%mg%fft_type = fft_dst
-               case default
-                  base%mg%fft_type = fft_none
-                  if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] base_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
-            end select
+      cgl => base%first
+      do while (associated(cgl))
+         if (.not. cgl%cg%empty) then
+            if (base_no_fft) then
+               cgl%cg%mg%fft_type = fft_none
+            else
+               select case (grav_bnd)
+                  case (bnd_periodic)
+                     cgl%cg%mg%fft_type = fft_rcr
+                  case (bnd_dirichlet, bnd_isolated)
+                     cgl%cg%mg%fft_type = fft_dst
+                  case default
+                     cgl%cg%mg%fft_type = fft_none
+                     if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] base_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
+               end select
+            endif
          endif
-      endif
+         cgl => cgl%nxt
+      enddo
 
       !special initialization of global base-level FFT-related data
       if (dom%geometry_type /= GEO_XYZ) then
-         do i = lbound(lvl, dim=1), ubound(lvl, dim=1)
-            if (lvl(i)%mg%fft_type /= fft_none) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
+         curl => base
+         do while (associated(curl))
+            cgl => curl%first
+            do while (associated(cgl))
+               if (cgl%cg%mg%fft_type /= fft_none) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
+               cgl => cgl%nxt
+            enddo
+            curl => curl%finer
          enddo
       endif
 
@@ -523,94 +541,104 @@ contains
       curl => base
       do while (associated(curl))
 
-         curl%mg%planf = 0
-         curl%mg%plani = 0
+         cgl => curl%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            cg%mg%planf = 0
+            cg%mg%plani = 0
 
-         if (curl%mg%fft_type /= fft_none .and. .not. curl%empty) then
+            if (cg%mg%fft_type /= fft_none .and. .not. cg%empty) then
 
-            if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
+               if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
 
-            select case (curl%mg%fft_type)
-               case (fft_rcr)
-                  curl%mg%nxc = curl%nxb / 2 + 1
-               case (fft_dst)
-                  curl%mg%nxc = curl%nxb
-               case default
-                  call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
-            end select
+               select case (cg%mg%fft_type)
+                  case (fft_rcr)
+                     cg%mg%nxc = cg%nxb / 2 + 1
+                  case (fft_dst)
+                     cg%mg%nxc = cg%nxb
+                  case default
+                     call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
+               end select
 
-            if (allocated(curl%mg%Green3D) .or. allocated(curl%mg%src)) call die("[multigrid_gravity:init_multigrid_grav_post] Green3D or src arrays already allocated")
-            allocate(curl%mg%Green3D(curl%mg%nxc, curl%nyb, curl%nzb))
-            allocate(curl%mg%src    (curl%nxb, curl%nyb, curl%nzb))
-            mb_alloc = mb_alloc + size(curl%mg%Green3D) + size(curl%mg%src)
+               if (allocated(cg%mg%Green3D) .or. allocated(cg%mg%src)) call die("[multigrid_gravity:init_multigrid_grav_post] Green3D or src arrays already allocated")
+               allocate(cg%mg%Green3D(cg%mg%nxc, cg%nyb, cg%nzb))
+               allocate(cg%mg%src    (cg%nxb, cg%nyb, cg%nzb))
+               mb_alloc = mb_alloc + size(cg%mg%Green3D) + size(cg%mg%src)
 
-            if (allocated(kx)) deallocate(kx)
-            if (allocated(ky)) deallocate(ky)
-            if (allocated(kz)) deallocate(kz)
-            allocate(kx(curl%mg%nxc), ky(curl%nyb), kz(curl%nzb))
+               if (allocated(kx)) deallocate(kx)
+               if (allocated(ky)) deallocate(ky)
+               if (allocated(kz)) deallocate(kz)
+               allocate(kx(cg%mg%nxc), ky(cg%nyb), kz(cg%nzb))
 
-            select case (curl%mg%fft_type)
+               select case (cg%mg%fft_type)
 
-              ! curl%mg%fft_norm is set such that the following sequence gives identity:
-              ! call dfftw_execute(curl%mg%planf); curl%mg%fftr(:, :, :) = curl%mg%fftr(:, :, :) * curl%mg%fft_norm ; call dfftw_execute(curl%mg%plani)
+                  ! cg%mg%fft_norm is set such that the following sequence gives identity:
+                  ! call dfftw_execute(cg%mg%planf); cg%mg%fftr(:, :, :) = cg%mg%fftr(:, :, :) * cg%mg%fft_norm ; call dfftw_execute(cg%mg%plani)
 
-               case (fft_rcr)
-                  if (allocated(curl%mg%fft)) call die("[multigrid_gravity:init_multigrid_grav_post] fft or Green3D array already allocated")
-                  allocate(curl%mg%fft(curl%mg%nxc, curl%nyb, curl%nzb))
-                  mb_alloc = mb_alloc + 2*size(curl%mg%fft)
+                  case (fft_rcr)
+                     if (allocated(cg%mg%fft)) call die("[multigrid_gravity:init_multigrid_grav_post] fft or Green3D array already allocated")
+                     allocate(cg%mg%fft(cg%mg%nxc, cg%nyb, cg%nzb))
+                     mb_alloc = mb_alloc + 2*size(cg%mg%fft)
 
-                  curl%mg%fft_norm = one / real( product(curl%n_b(:), mask=dom%has_dir(:)) ) ! No 4 pi G factor here because the source was already multiplied by it
+                     cg%mg%fft_norm = one / real( product(cg%n_b(:), mask=dom%has_dir(:)) ) ! No 4 pi G factor here because the source was already multiplied by it
 
-                  ! FFT local solver initialization for 2nd order (3-point) Laplacian
-                  ! sin(k*x-d) - 2.*sin(k*x) + sin(k*x+d) = 2 * (cos(d)-1) * sin(k*x) = -4 * sin(d/2)**2 * sin(k*x)
-                  ! For 4th order: a*sin(k*x) + b*(sin(k*x-d) + sin(k*x+d)) + c*(sin(k*x-2*d) + sin(k*x+2*d)), a+2*b+2*c == 0 it would be:
-                  ! 4*(a+b+(a+2*b)*cos(d)) * sin(d/2)**2 * sin(k*x)
-                  ! For 6th order: a*sin(k*x) + b*(sin(k*x-d) + sin(k*x+d)) + c*(sin(k*x-2*d) + sin(k*x+2*d)) + e*(sin(k*x-3*d) + sin(k*x+3*d)), a+2*b+2*c+2*e == 0 it would be:
-                  ! 2*(3*a+4*b+2*c+4*(a+2*b+c)*cos(d)+2*(a+2*(b+c))*cos(2*d)) * sin(d/2)**2 * sin(k*x)
-                  ! asymptotically: -d**2/2 for d<pi
+                     ! FFT local solver initialization for 2nd order (3-point) Laplacian
+                     ! sin(k*x-d) - 2.*sin(k*x) + sin(k*x+d) = 2 * (cos(d)-1) * sin(k*x) = -4 * sin(d/2)**2 * sin(k*x)
+                     ! For 4th order: a*sin(k*x) + b*(sin(k*x-d) + sin(k*x+d)) + c*(sin(k*x-2*d) + sin(k*x+2*d)), a+2*b+2*c == 0 it would be:
+                     ! 4*(a+b+(a+2*b)*cos(d)) * sin(d/2)**2 * sin(k*x)
+                     ! For 6th order: a*sin(k*x) + b*(sin(k*x-d) + sin(k*x+d)) + c*(sin(k*x-2*d) + sin(k*x+2*d)) + e*(sin(k*x-3*d) + sin(k*x+3*d)), a+2*b+2*c+2*e == 0 it would be:
+                     ! 2*(3*a+4*b+2*c+4*(a+2*b+c)*cos(d)+2*(a+2*(b+c))*cos(2*d)) * sin(d/2)**2 * sin(k*x)
+                     ! asymptotically: -d**2/2 for d<pi
 
-                  kx(:) = curl%idx2 * (cos(dpi/curl%nxb*[( j, j=0, curl%mg%nxc-1 )]) - one)
-                  ky(:) = curl%idy2 * (cos(dpi/curl%nyb*[( j, j=0, curl%nyb-1 )]) - one)
-                  kz(:) = curl%idz2 * (cos(dpi/curl%nzb*[( j, j=0, curl%nzb-1 )]) - one)
-                  call dfftw_plan_dft_r2c_3d(curl%mg%planf, curl%nxb, curl%nyb, curl%nzb, curl%mg%src, curl%mg%fft, fftw_flags)
-                  call dfftw_plan_dft_c2r_3d(curl%mg%plani, curl%nxb, curl%nyb, curl%nzb, curl%mg%fft, curl%mg%src, fftw_flags)
+                     kx(:) = cg%idx2 * (cos(dpi/cg%nxb*[( j, j=0, cg%mg%nxc-1 )]) - one)
+                     ky(:) = cg%idy2 * (cos(dpi/cg%nyb*[( j, j=0, cg%nyb-1 )]) - one)
+                     kz(:) = cg%idz2 * (cos(dpi/cg%nzb*[( j, j=0, cg%nzb-1 )]) - one)
+                     call dfftw_plan_dft_r2c_3d(cg%mg%planf, cg%nxb, cg%nyb, cg%nzb, cg%mg%src, cg%mg%fft, fftw_flags)
+                     call dfftw_plan_dft_c2r_3d(cg%mg%plani, cg%nxb, cg%nyb, cg%nzb, cg%mg%fft, cg%mg%src, fftw_flags)
 
-               case (fft_dst)
+                  case (fft_dst)
 
-                  if (allocated(curl%mg%fftr)) call die("[multigrid_gravity:init_multigrid_grav_post] fftr array already allocated")
-                  allocate(curl%mg%fftr(curl%mg%nxc, curl%nyb, curl%nzb))
-                  mb_alloc = mb_alloc + size(curl%mg%fftr)
+                     if (allocated(cg%mg%fftr)) call die("[multigrid_gravity:init_multigrid_grav_post] fftr array already allocated")
+                     allocate(cg%mg%fftr(cg%mg%nxc, cg%nyb, cg%nzb))
+                     mb_alloc = mb_alloc + size(cg%mg%fftr)
 
-                  curl%mg%fft_norm = one / (8. * real( product(curl%n_b(:), mask=dom%has_dir(:)) ))
-                  kx(:) = curl%idx2 * (cos(pi/curl%nxb*[( j, j=1, curl%mg%nxc )]) - one)
-                  ky(:) = curl%idy2 * (cos(pi/curl%nyb*[( j, j=1, curl%nyb )]) - one)
-                  kz(:) = curl%idz2 * (cos(pi/curl%nzb*[( j, j=1, curl%nzb )]) - one)
-                  call dfftw_plan_r2r_3d(curl%mg%planf, curl%nxb, curl%nyb, curl%nzb, curl%mg%src,  curl%mg%fftr, FFTW_RODFT10, FFTW_RODFT10, FFTW_RODFT10, fftw_flags)
-                  call dfftw_plan_r2r_3d(curl%mg%plani, curl%nxb, curl%nyb, curl%nzb, curl%mg%fftr, curl%mg%src,  FFTW_RODFT01, FFTW_RODFT01, FFTW_RODFT01, fftw_flags)
+                     cg%mg%fft_norm = one / (8. * real( product(cg%n_b(:), mask=dom%has_dir(:)) ))
+                     kx(:) = cg%idx2 * (cos(pi/cg%nxb*[( j, j=1, cg%mg%nxc )]) - one)
+                     ky(:) = cg%idy2 * (cos(pi/cg%nyb*[( j, j=1, cg%nyb )]) - one)
+                     kz(:) = cg%idz2 * (cos(pi/cg%nzb*[( j, j=1, cg%nzb )]) - one)
+                     call dfftw_plan_r2r_3d(cg%mg%planf, cg%nxb, cg%nyb, cg%nzb, cg%mg%src,  cg%mg%fftr, FFTW_RODFT10, FFTW_RODFT10, FFTW_RODFT10, fftw_flags)
+                     call dfftw_plan_r2r_3d(cg%mg%plani, cg%nxb, cg%nyb, cg%nzb, cg%mg%fftr, cg%mg%src,  FFTW_RODFT01, FFTW_RODFT01, FFTW_RODFT01, fftw_flags)
 
-               case default
-                  call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
-            end select
+                  case default
+                     call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
+               end select
 
-            ! compute Green's function for 7-point 3D discrete laplacian
-            do i = 1, curl%mg%nxc
-               do j = 1, curl%nyb
-                  where ( (kx(i) + ky(j) + kz(:)) /= 0 )
-                     curl%mg%Green3D(i,j,:) = half * curl%mg%fft_norm / (kx(i) + ky(j) + kz(:))
-                  elsewhere
-                     curl%mg%Green3D(i,j,:) = zero
-                  endwhere
+               ! compute Green's function for 7-point 3D discrete laplacian
+               do i = 1, cg%mg%nxc
+                  do j = 1, cg%nyb
+                     where ( (kx(i) + ky(j) + kz(:)) /= 0 )
+                        cg%mg%Green3D(i,j,:) = half * cg%mg%fft_norm / (kx(i) + ky(j) + kz(:))
+                     elsewhere
+                        cg%mg%Green3D(i,j,:) = zero
+                     endwhere
+                  enddo
                enddo
-            enddo
 
-         endif
+            endif
+
+            cgl => cgl%nxt
+         enddo
          curl => curl%finer
       enddo
 
-      if (roof%mg%fft_type == fft_none .and. trust_fft_solution) then
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] cannot trust FFT solution on the roof.")
-         trust_fft_solution = .false.
-      endif
+      cgl => roof%first
+      do while (associated(cgl))
+         if (cgl%cg%mg%fft_type == fft_none .and. trust_fft_solution) then
+            if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] cannot trust FFT solution on the roof.")
+            trust_fft_solution = .false.
+         endif
+         cgl => cgl%nxt
+      enddo
 
       if (allocated(kx)) deallocate(kx)
       if (allocated(ky)) deallocate(ky)
@@ -618,7 +646,7 @@ contains
 
       if (grav_bnd == bnd_isolated) call init_multipole(mb_alloc)
 
-      call vcycle_stats_init(vstat, max_cycles)
+      call vstat%init(max_cycles)
       mb_alloc = mb_alloc + 2*max_cycles
 
    end subroutine init_multigrid_grav_post
@@ -633,10 +661,12 @@ contains
 
       use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG, zero, one, half
       use dataio_pub,    only: warn, die
-      use domain,        only: dom, is_overlap
+      use domain,        only: dom
+      use cg_list_lev,   only: cg_list_level
+      use grid,          only: is_overlap
       use grid_cont,     only: pr_segment
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req, req
-      use multigridvars, only: base, plvl, ord_prolong_face_norm, is_external, need_general_pf
+      use multigridvars, only: base, ord_prolong_face_norm, is_external, need_general_pf
 #ifdef DEBUG
       use constants,     only: two
       use piernikdebug,  only: aux_R
@@ -649,7 +679,7 @@ contains
       logical, dimension(xdim:zdim) :: dmask
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened, b_layer
       type(pr_segment), pointer :: seg
-      type(plvl), pointer   :: curl                   !> current level (a pointer sliding along the linked list)
+      type(cg_list_level), pointer   :: curl                   !> current level (a pointer sliding along the linked list)
       logical :: is_internal_fine
       integer, parameter :: max_opfn = 2
       real, dimension(0:max_opfn) :: opfn_c_ff, opfn_c_cf
@@ -690,17 +720,17 @@ contains
       curl => base
       do while (associated(curl))
 
-         if (ubound(curl%dom%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid_gravity:mpi_multigrid_prep_grav] Multiple blocks per process not implemented yet")
+         if (ubound(curl%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid_gravity:mpi_multigrid_prep_grav] Multiple blocks per process not implemented yet")
 
-         ijks(:) = curl%ijkse(:, LO) - curl%off(:)  ! add this to convert absolute cell coordinates to local indices. (+nb - off(:))
+         ijks(:) = curl%first%cg%ijkse(:, LO) - curl%first%cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+nb - off(:))
          per(:) = 0
-         where (curl%dom%periodic(:)) per(:) = curl%dom%n_d(:)
+         where (dom%periodic(:)) per(:) = curl%n_d(:)
 
          do d = xdim, zdim
             dmask(:) = .false.
             dmask(d) = .true.
             do lh = LO, HI
-               if (dom%has_dir(d) .and. .not. curl%empty) then
+               if (dom%has_dir(d) .and. .not. curl%first%cg%empty) then
                   hl = LO+HI-lh
 
                   ! find coarse target for receiving data to be prolonged
@@ -708,39 +738,39 @@ contains
                      procmask(:) = 0
                      ! two layers of cells are required for even locations (+ two layers per each interpolation order)
                      ! one layer of cells is required for odd locations (the local domain face is exactly at the centers of coarse cells)
-                     coarsened(:, :) = curl%my_se(:, :)/2
+                     coarsened(:, :) = curl%first%cg%my_se(:, :)/2
                      coarsened(d, hl) = coarsened(d, lh)
                      select case (lh)
                         case (LO)
-                           if (mod(curl%off(d),    2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
+                           if (mod(curl%first%cg%off(d),    2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
                         case (HI)
-                           if (mod(curl%h_cor1(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
+                           if (mod(curl%first%cg%h_cor1(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
                      end select
 
                      do j = FIRST, LAST
-                        if (is_overlap(coarsened(:,:), curl%coarser%dom%pse(j)%sel(1, :, :), per)) procmask(j) = 1
+                        if (is_overlap(coarsened(:,:), curl%coarser%pse(j)%sel(1, :, :), per)) procmask(j) = 1
                      enddo
-                     allocate(curl%mg%pfc_tgt(d, lh)%seg(count(procmask(:) /= 0)))
+                     allocate(curl%first%cg%mg%pfc_tgt(d, lh)%seg(count(procmask(:) /= 0)))
 
                      g = 0
                      do j = FIRST, LAST
                         if (procmask(j) /= 0) then
                            g = g + 1
-                           if (.not. allocated(curl%mg%pfc_tgt(d, lh)%seg) .or. g>ubound(curl%mg%pfc_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pfc_tgt g>")
-                           seg => curl%mg%pfc_tgt(d, lh)%seg(g)
+                           if (.not. allocated(curl%first%cg%mg%pfc_tgt(d, lh)%seg) .or. g>ubound(curl%first%cg%mg%pfc_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pfc_tgt g>")
+                           seg => curl%first%cg%mg%pfc_tgt(d, lh)%seg(g)
                            if (allocated(seg%buf)) then
                               call warn("mg:mmpg o seg%buf a a")
                               deallocate(seg%buf)
                            endif
                            seg%proc = j
                            ! find cross-section of own face segment with refined coarse segment
-                           b_layer(:, :) = curl%my_se(:, :)
+                           b_layer(:, :) = curl%first%cg%my_se(:, :)
                            b_layer(d, hl) = b_layer(d, lh)
                            !b_layer(d, lh) = b_layer(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
 
                            where (.not. dmask(:)) ! find extents perpendicular to d
-                              seg%se(:, LO) = max(b_layer(:, LO), curl%coarser%dom%pse(j)%sel(1, :, LO)*2  )
-                              seg%se(:, HI) = min(b_layer(:, HI), curl%coarser%dom%pse(j)%sel(1, :, HI)*2+1)
+                              seg%se(:, LO) = max(b_layer(:, LO), curl%coarser%pse(j)%sel(1, :, LO)*2  )
+                              seg%se(:, HI) = min(b_layer(:, HI), curl%coarser%pse(j)%sel(1, :, HI)*2+1)
                            endwhere
                            seg%se(d, :) = b_layer(d, :)
                            !if (j /= proc)
@@ -749,8 +779,8 @@ contains
                                 &           seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
                            ! not counted in mb_alloc
 
-                           seg%se(:, LO) = seg%se(:, LO) - curl%off(:) !+ ijks(:)
-                           seg%se(:, HI) = seg%se(:, HI) - curl%off(:) !+ ijks(:)
+                           seg%se(:, LO) = seg%se(:, LO) - curl%first%cg%off(:) !+ ijks(:)
+                           seg%se(:, HI) = seg%se(:, HI) - curl%first%cg%off(:) !+ ijks(:)
                         endif
                      enddo
 
@@ -760,29 +790,29 @@ contains
                   if (associated(curl%finer)) then
                      procmask(:) = 0
                      do j = FIRST, LAST
-                        is_internal_fine = curl%finer%dom%periodic(d)
-                        coarsened(:, :) = curl%finer%dom%pse(j)%sel(1, :, :)/2
+                        is_internal_fine = dom%periodic(d)
+                        coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)/2
                         coarsened(d, hl) = coarsened(d, lh)
                         select case (lh)
                            case (LO)
-                              if (mod(curl%finer%dom%pse(j)%sel(1, d, LO),     2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
-                              is_internal_fine = is_internal_fine .or. (curl%finer%dom%pse(j)%sel(1, d, lh) /= 0)
+                              if (mod(curl%finer%pse(j)%sel(1, d, LO),     2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
+                              is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) /= 0)
                            case (HI)
-                              if (mod(curl%finer%dom%pse(j)%sel(1, d, HI) + 1, 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
-                              is_internal_fine = is_internal_fine .or. (curl%finer%dom%pse(j)%sel(1, d, lh) + 1 < curl%finer%dom%n_d(d))
+                              if (mod(curl%finer%pse(j)%sel(1, d, HI) + 1, 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
+                              is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) + 1 < curl%finer%n_d(d))
                         end select
                         if (is_internal_fine) then
-                           if (is_overlap(coarsened(:, :), curl%my_se(:, :), per)) procmask(j) = 1
+                           if (is_overlap(coarsened(:, :), curl%first%cg%my_se(:, :), per)) procmask(j) = 1
                         endif
                      enddo
-                     allocate(curl%mg%pff_tgt(d, lh)%seg(count(procmask(:) /= 0)))
+                     allocate(curl%first%cg%mg%pff_tgt(d, lh)%seg(count(procmask(:) /= 0)))
 
                      g = 0
                      do j = FIRST, LAST
                         if (procmask(j) /= 0) then
                            g = g + 1
-                           if (.not. allocated(curl%mg%pff_tgt(d, lh)%seg) .or. g>ubound(curl%mg%pff_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pff_tgt g>")
-                           seg => curl%mg%pff_tgt(d, lh)%seg(g)
+                           if (.not. allocated(curl%first%cg%mg%pff_tgt(d, lh)%seg) .or. g>ubound(curl%first%cg%mg%pff_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pff_tgt g>")
+                           seg => curl%first%cg%mg%pff_tgt(d, lh)%seg(g)
                            if (allocated(seg%buf)) then
                               call warn("mg:mmpg o seg%buf a a")
                               deallocate(seg%buf)
@@ -790,12 +820,12 @@ contains
                            seg%proc = j
 
                            ! find cross-section of own segment with coarsened fine face segment
-                           coarsened(:, :) = curl%finer%dom%pse(j)%sel(1, :, :)
+                           coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)
                            coarsened(d, hl) = coarsened(d, lh)
                            coarsened(:, :) = coarsened(:, :)/2
                            where (.not. dmask(:))
-                              seg%se(:, LO) = max(curl%my_se(:, LO), coarsened(:, LO))
-                              seg%se(:, HI) = min(curl%my_se(:, HI), coarsened(:, HI))
+                              seg%se(:, LO) = max(curl%first%cg%my_se(:, LO), coarsened(:, LO))
+                              seg%se(:, HI) = min(curl%first%cg%my_se(:, HI), coarsened(:, HI))
                            endwhere
                            seg%se(d, :) = coarsened(d, :)
                            !if (j /= proc)
@@ -803,21 +833,21 @@ contains
                                 &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
                                 &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
 
-                           coarsened(:, :) = curl%finer%dom%pse(j)%sel(1, :, :)
+                           coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)
                            coarsened(d, hl) = coarsened(d, lh)
                            coarsened(d, lh) = coarsened(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
                            coarsened(:, :) = coarsened(:, :)/2
                            coarsened(d, :) = coarsened(d, :) + [ -ord_prolong_face_norm, ord_prolong_face_norm ]
 
-                           seg%se(:, LO) = max(curl%my_se(:, LO), coarsened(:, LO)) + ijks(:)
-                           seg%se(:, HI) = min(curl%my_se(:, HI), coarsened(:, HI)) + ijks(:)
+                           seg%se(:, LO) = max(curl%first%cg%my_se(:, LO), coarsened(:, LO)) + ijks(:)
+                           seg%se(:, HI) = min(curl%first%cg%my_se(:, HI), coarsened(:, HI)) + ijks(:)
 
                            coarsened(d, :) = coarsened(d, :) - [ -ord_prolong_face_norm, ord_prolong_face_norm ] ! revert broadening
                            allocate(seg%f_lay(seg%se(d, HI) - seg%se(d, LO) + 1))
                            do l = 1, size(seg%f_lay(:))
                               seg%f_lay(l)%layer = l + int(seg%se(d, LO), kind=4) - 1
                               nl = int(minval(abs(seg%f_lay(l)%layer - ijks(d) - coarsened(d, :))), kind=4)
-                              if (mod(curl%finer%dom%pse(j)%sel(1, d, lh) + lh - LO, 2_LONG) == 0) then ! fine face at coarse face
+                              if (mod(curl%finer%pse(j)%sel(1, d, lh) + lh - LO, 2_LONG) == 0) then ! fine face at coarse face
                                  seg%f_lay(l)%coeff = opfn_c_ff(nl)
                               else                                                              ! fine face at coarse center
                                  seg%f_lay(l)%coeff = opfn_c_cf(nl)
@@ -846,16 +876,19 @@ contains
    subroutine cleanup_multigrid_grav
 
       use constants,     only: LO, HI, ndims
+      use gc_list,       only: cg_list_element
+      use cg_list_lev,   only: cg_list_level
       use grid_cont,     only: tgt_list
       use multipole,     only: cleanup_multipole
-      use multigridvars, only: lvl, plvl, base
+      use multigridvars, only: base
 
       implicit none
 
       integer :: i, g, ib
       integer, parameter :: nseg = 2*(HI-LO+1)*ndims
       type(tgt_list), dimension(nseg) :: io_tgt
-      type(plvl), pointer :: curl
+      type(cg_list_level), pointer :: curl
+      type(cg_list_element), pointer :: cgl
 
       call cleanup_multipole
 
@@ -867,18 +900,19 @@ contains
       if (allocated(vstat%factor)) deallocate(vstat%factor)
       if (allocated(vstat%time)) deallocate(vstat%time)
 
-      if (allocated(lvl)) then
-         curl => base
-         do while (associated(curl))
-            if (allocated(curl%mg%fft))     deallocate(curl%mg%fft)
-            if (allocated(curl%mg%fftr))    deallocate(curl%mg%fftr)
-            if (allocated(curl%mg%src))     deallocate(curl%mg%src)
-            if (allocated(curl%mg%Green3D)) deallocate(curl%mg%Green3D)
+      curl => base
+      do while (associated(curl))
+         cgl => curl%first
+         do while (associated(cgl))
+            if (allocated(cgl%cg%mg%fft))     deallocate(cgl%cg%mg%fft)
+            if (allocated(cgl%cg%mg%fftr))    deallocate(cgl%cg%mg%fftr)
+            if (allocated(cgl%cg%mg%src))     deallocate(cgl%cg%mg%src)
+            if (allocated(cgl%cg%mg%Green3D)) deallocate(cgl%cg%mg%Green3D)
 
-            if (curl%mg%planf /= 0) call dfftw_destroy_plan(curl%mg%planf)
-            if (curl%mg%plani /= 0) call dfftw_destroy_plan(curl%mg%plani)
+            if (cgl%cg%mg%planf /= 0) call dfftw_destroy_plan(cgl%cg%mg%planf)
+            if (cgl%cg%mg%plani /= 0) call dfftw_destroy_plan(cgl%cg%mg%plani)
 
-            io_tgt(1:nseg) = [ curl%mg%pfc_tgt, curl%mg%pff_tgt ]
+            io_tgt(1:nseg) = [ cgl%cg%mg%pfc_tgt, cgl%cg%mg%pff_tgt ]
             do ib = 1, nseg
                if (allocated(io_tgt(ib)%seg)) then
                   do g = 1, ubound(io_tgt(ib)%seg, dim=1)
@@ -888,10 +922,10 @@ contains
                   deallocate(io_tgt(ib)%seg)
                endif
             enddo
-
-            curl => curl%finer
+            cgl => cgl%nxt
          enddo
-      endif
+         curl => curl%finer
+      enddo
 
       call dfftw_cleanup
 
@@ -910,11 +944,13 @@ contains
 
    subroutine init_solution(history)
 
-      use dataio_pub,       only: msg, die
+      use dataio_pub,       only: msg, die, printinfo
+      use cg_list_lev,      only: cg_list_level
+      use domain,           only: is_multicg
       use global,           only: t
       use mpisetup,         only: master
-      use multigridvars,    only: plvl, base, roof, stdout, solution
-      use multigridhelpers, only: set_dirty, check_dirty, mg_write_log
+      use multigridhelpers, only: set_dirty, check_dirty
+      use multigridvars,    only: base, roof, stdout, solution
 
       implicit none
 
@@ -922,7 +958,9 @@ contains
 
       integer :: p0, p1, p2, ordt
       real, dimension(3)  :: dt_fac
-      type(plvl), pointer :: curl
+      type(cg_list_level), pointer :: curl
+
+      if (is_multicg) call die("[multigrid_gravity:init_solution] multicg not implemented")
 
       call set_dirty(solution)
 
@@ -956,34 +994,34 @@ contains
          case (:-1)
             if (master .and. ord_time_extrap > -1) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] Clearing ",trim(vstat%cprefix),"solution."
-               call mg_write_log(msg, stdout)
+               call printinfo(msg, stdout)
             endif
             curl => base
             do while (associated(curl))
-               curl%mg%var(:, :, :, solution) = 0.
+               curl%first%cg%q(solution)%arr(:, :, :) = 0.
                curl => curl%finer
             enddo
             history%old(:)%time = -huge(1.0)
          case (0)
-            roof%mg%var(:, :, :, solution) = history%old(p0)%soln(:, :, :)
+            roof%first%cg%q(solution)%arr(:, :, :) = history%old(p0)%soln(:, :, :)
             if (master .and. ord_time_extrap > 0) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] No extrapolation of ",trim(vstat%cprefix),"solution."
-               call mg_write_log(msg, stdout)
+               call printinfo(msg, stdout)
             endif
          case (1)
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p0)%time - history%old(p1)%time)
-            roof%mg%var(:, :, :, solution) = (1. + dt_fac(1)) * history%old(p0)%soln(:, :, :) - dt_fac(1) *  history%old(p1)%soln(:, :, :)
+            roof%first%cg%q(solution)%arr(:, :, :) = (1. + dt_fac(1)) * history%old(p0)%soln(:, :, :) - dt_fac(1) *  history%old(p1)%soln(:, :, :)
             if (master .and. ord_time_extrap > 1) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] Linear extrapolation of ",trim(vstat%cprefix),"solution."
-               call mg_write_log(msg, stdout)
+               call printinfo(msg, stdout)
             endif
          case (2)
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p1)%time - history%old(p2)%time)
             dt_fac(2) = (t - history%old(p1)%time) / (history%old(p2)%time - history%old(p0)%time)
             dt_fac(3) = (t - history%old(p2)%time) / (history%old(p0)%time - history%old(p1)%time)
-            roof%mg%var(:, :, :, solution) = - dt_fac(2) * dt_fac(3) * history%old(p0)%soln(:, :, :) &
-                 &                           - dt_fac(1) * dt_fac(3) * history%old(p1)%soln(:, :, :) &
-                 &                           - dt_fac(1) * dt_fac(2) * history%old(p2)%soln(:, :, :)
+            roof%first%cg%q(solution)%arr(:, :, :) = - dt_fac(2) * dt_fac(3) * history%old(p0)%soln(:, :, :) &
+                 &                                    - dt_fac(1) * dt_fac(3) * history%old(p1)%soln(:, :, :) &
+                 &                                    - dt_fac(1) * dt_fac(2) * history%old(p2)%soln(:, :, :)
          case default
             call die("[multigrid_gravity:init_solution] Extrapolation order not implemented")
       end select
@@ -1002,9 +1040,9 @@ contains
       use constants,          only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,         only: die
       use domain,             only: dom, is_multicg
+!      use gc_list,            only: cg_list_element
       use grid,               only: leaves
       use grid_cont,          only: grid_container
-      use multigridvars,      only: plvl  ! QA_WARN workaround for stupid INTEL compiler
       use multigridbasefuncs, only: subtract_average
       use multigridhelpers,   only: set_dirty, check_dirty
       use multigridvars,      only: roof, source, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval
@@ -1018,18 +1056,19 @@ contains
       real, optional, dimension(:,:,:), intent(in)  :: dens !< input source field or nothing for empty space
       real :: fac
       integer :: i
+!      type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
       cg => leaves%first%cg
-      if (is_multicg) call die("[multigrid_gravity:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial plvl
+      if (is_multicg) call die("[multigrid_gravity:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial cg_list_level, dens, is_external
 
       call set_dirty(source)
 
       if (present(dens)) then
-         roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = fpiG * dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         roof%first%cg%q(source)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = fpiG * dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       else
          if (grav_bnd /= bnd_givenval) call die("[multigrid_gravity:init_source] empty space allowed only for given value boundaries.")
-         roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = 0.
+         roof%first%cg%q(source)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = 0.
       endif
 
       select case (grav_bnd)
@@ -1037,60 +1076,60 @@ contains
             call subtract_average(roof, source)
          case (bnd_dirichlet)
 #ifdef JEANS_PROBLEM
-            if (jeans_mode == 1) roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
-                 &               roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - fpiG * jeans_d0 ! remove density bias
+            if (jeans_mode == 1) roof%first%cg%q(source)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
+                 &               roof%first%cg%q(source)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) - fpiG * jeans_d0 ! remove density bias
 #endif /* JEANS_PROBLEM */
          case (bnd_givenval) ! convert potential into a layer of imaginary mass (subtract second derivative normal to computational domain boundary)
             if (is_external(xdim, LO)) then
-               fac = 2. * roof%idx2 / fpiG
-               if (dom%geometry_type == GEO_RPZ .and. roof%x(roof%is) /= 0.) fac = fac - 1./(roof%dx * roof%x(roof%is) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
-               roof%mg%var       (roof%is, roof%js:roof%je, roof%ks:roof%ke, source) = &
-                    & roof%mg%var(roof%is, roof%js:roof%je, roof%ks:roof%ke, source) - &
-                    & roof%mg%bnd_x(       roof%js:roof%je, roof%ks:roof%ke, LO) * fac
+               fac = 2. * roof%first%cg%idx2 / fpiG
+               if (dom%geometry_type == GEO_RPZ .and. roof%first%cg%x(roof%first%cg%is) /= 0.) fac = fac - 1./(roof%first%cg%dx * roof%first%cg%x(roof%first%cg%is) * fpiG) !> BEWARE is it roof%first%cg%x(ie), roof%first%cg%x(ie+1) or something in the middle?
+               roof%first%cg%q(source)%arr         (roof%first%cg%is, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
+                    & roof%first%cg%q(source)%arr  (roof%first%cg%is, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) - &
+                    & roof%first%cg%mg%bnd_x(                  roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke, LO) * fac
             endif
             if (is_external(xdim, HI)) then
-               fac = 2. * roof%idx2 / fpiG
-               if (dom%geometry_type == GEO_RPZ .and. roof%x(roof%ie) /= 0.) fac = fac - 1./(roof%dx * roof%x(roof%ie) * fpiG) !> BEWARE is it roof%x(ie), roof%x(ie+1) or something in the middle?
-               roof%mg%var       (roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) = &
-                    & roof%mg%var(roof%ie, roof%js:roof%je, roof%ks:roof%ke, source) - &
-                    & roof%mg%bnd_x(       roof%js:roof%je, roof%ks:roof%ke, HI) * fac
+               fac = 2. * roof%first%cg%idx2 / fpiG
+               if (dom%geometry_type == GEO_RPZ .and. roof%first%cg%x(roof%first%cg%ie) /= 0.) fac = fac - 1./(roof%first%cg%dx * roof%first%cg%x(roof%first%cg%ie) * fpiG) !> BEWARE is it roof%first%cg%x(ie), roof%first%cg%x(ie+1) or something in the middle?
+               roof%first%cg%q(source)%arr         (roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
+                    & roof%first%cg%q(source)%arr  (roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) - &
+                    & roof%first%cg%mg%bnd_x(                  roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke, HI) * fac
             endif
             if (is_external(ydim, LO)) then
                if (dom%geometry_type == GEO_RPZ) then
-                  do i = roof%is, roof%ie
-                     if (roof%x(i) /= 0.) then
-                        roof%mg%var       (i, roof%js, roof%ks:roof%ke, source) = &
-                             & roof%mg%var(i, roof%js, roof%ks:roof%ke, source) - &
-                             & roof%mg%bnd_y(i,        roof%ks:roof%ke, LO) * 2. * roof%idy2 / fpiG / roof%x(i)**2
+                  do i = roof%first%cg%is, roof%first%cg%ie
+                     if (roof%first%cg%x(i) /= 0.) then
+                        roof%first%cg%q(source)%arr         (i, roof%first%cg%js, roof%first%cg%ks:roof%first%cg%ke) = &
+                             & roof%first%cg%q(source)%arr  (i, roof%first%cg%js, roof%first%cg%ks:roof%first%cg%ke) - &
+                             & roof%first%cg%mg%bnd_y(i,                   roof%first%cg%ks:roof%first%cg%ke, LO) * 2. * roof%first%cg%idy2 / fpiG / roof%first%cg%x(i)**2
                      endif
                   enddo
                else
-                  roof%mg%var       (roof%is:roof%ie, roof%js, roof%ks:roof%ke, source) = &
-                       & roof%mg%var(roof%is:roof%ie, roof%js, roof%ks:roof%ke, source) - &
-                       & roof%mg%bnd_y(roof%is:roof%ie,        roof%ks:roof%ke, LO) * 2. * roof%idy2 / fpiG
+                  roof%first%cg%q(source)%arr         (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js, roof%first%cg%ks:roof%first%cg%ke) = &
+                       & roof%first%cg%q(source)%arr  (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js, roof%first%cg%ks:roof%first%cg%ke) - &
+                       & roof%first%cg%mg%bnd_y(roof%first%cg%is:roof%first%cg%ie,                   roof%first%cg%ks:roof%first%cg%ke, LO) * 2. * roof%first%cg%idy2 / fpiG
                endif
             endif
             if (is_external(ydim, HI)) then
                if (dom%geometry_type == GEO_RPZ) then
-                  do i = roof%is, roof%ie
-                     if (roof%x(i) /= 0.) then
-                        roof%mg%var       (i, roof%je, roof%ks:roof%ke, source) = &
-                             & roof%mg%var(i, roof%je, roof%ks:roof%ke, source) - &
-                             & roof%mg%bnd_y(i,        roof%ks:roof%ke, HI) * 2. * roof%idy2 / fpiG / roof%x(i)**2
+                  do i = roof%first%cg%is, roof%first%cg%ie
+                     if (roof%first%cg%x(i) /= 0.) then
+                        roof%first%cg%q(source)%arr         (i, roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
+                             & roof%first%cg%q(source)%arr  (i, roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) - &
+                             & roof%first%cg%mg%bnd_y(i,                   roof%first%cg%ks:roof%first%cg%ke, HI) * 2. * roof%first%cg%idy2 / fpiG / roof%first%cg%x(i)**2
                      endif
                   enddo
                else
-                  roof%mg%var       (roof%is:roof%ie, roof%je, roof%ks:roof%ke, source) = &
-                       & roof%mg%var(roof%is:roof%ie, roof%je, roof%ks:roof%ke, source) - &
-                       & roof%mg%bnd_y(roof%is:roof%ie,        roof%ks:roof%ke, HI) * 2. * roof%idy2 / fpiG
+                  roof%first%cg%q(source)%arr         (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
+                       & roof%first%cg%q(source)%arr  (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) - &
+                       & roof%first%cg%mg%bnd_y(roof%first%cg%is:roof%first%cg%ie,                   roof%first%cg%ks:roof%first%cg%ke, HI) * 2. * roof%first%cg%idy2 / fpiG
                endif
             endif
-            if (is_external(zdim, LO)) roof%mg%var  (roof%is:roof%ie, roof%js:roof%je, roof%ks, source) = &
-                 &                     roof%mg%var  (roof%is:roof%ie, roof%js:roof%je, roof%ks, source) - &
-                 &                     roof%mg%bnd_z(roof%is:roof%ie, roof%js:roof%je,          LO) * 2. * roof%idz2 / fpiG
-            if (is_external(zdim, HI)) roof%mg%var  (roof%is:roof%ie, roof%js:roof%je, roof%ke, source) = &
-                 &                     roof%mg%var  (roof%is:roof%ie, roof%js:roof%je, roof%ke, source) - &
-                 &                     roof%mg%bnd_z(roof%is:roof%ie, roof%js:roof%je,          HI) * 2. * roof%idz2 / fpiG
+            if (is_external(zdim, LO)) roof%first%cg%q(source)%arr  (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks) = &
+                 &                     roof%first%cg%q(source)%arr  (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks) - &
+                 &                     roof%first%cg%mg%bnd_z(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je,          LO) * 2. * roof%first%cg%idz2 / fpiG
+            if (is_external(zdim, HI)) roof%first%cg%q(source)%arr  (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ke) = &
+                 &                     roof%first%cg%q(source)%arr  (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ke) - &
+                 &                     roof%first%cg%mg%bnd_z(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je,          HI) * 2. * roof%first%cg%idz2 / fpiG
             !> \todo compactify the above mess
          case default
             call die("[multigrid_gravity:init_source] Unknown boundary type")
@@ -1109,7 +1148,6 @@ contains
 
       use domain,            only: dom
       use global,            only: t
-      use multigridvars,     only: plvl  ! QA_WARN workaround for stupid INTEL compiler
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: roof, bnd_isolated, bnd_givenval, solution, extbnd_extrapolate, extbnd_mirror
 
@@ -1125,7 +1163,7 @@ contains
          history%old(:)%time = t ! prevents extrapolation too early
       endif
 
-      history%old(history%last)%soln(:, :, :) = roof%mg%var(:, :, :, solution)
+      history%old(history%last)%soln(:, :, :) = roof%first%cg%q(solution)%arr(:, :, :)
       history%old(history%last)%time = t
       history%valid = .true.
 
@@ -1181,7 +1219,7 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%sgp(:,:,:) = roof%mg%var(:,:,:, solution)
+         cgl%cg%sgp(:,:,:) = roof%first%cg%q(solution)%arr(:,:,:)
          cgl => cgl%nxt
       enddo
 
@@ -1196,7 +1234,7 @@ contains
 
          cgl => leaves%first
          do while (associated(cgl))
-            cgl%cg%sgp(:,:,:) = cgl%cg%sgp(:,:,:) + roof%mg%var(:, :, :, solution)
+            cgl%cg%sgp(:,:,:) = cgl%cg%sgp(:,:,:) + roof%first%cg%q(solution)%arr(:, :, :)
             cgl => cgl%nxt
          enddo
 
@@ -1218,12 +1256,13 @@ contains
    subroutine vcycle_hg(history)
 
       use constants,          only: cbuff_len
+      use dataio_pub,         only: msg, die, warn, printinfo
+      use cg_list_lev,        only: cg_list_level
       use mpisetup,           only: master, nproc
-      use timer,              only: set_timer
-      use dataio_pub,         only: msg, die, warn
-      use multigridvars,      only: plvl, roof, base, source, solution, correction, defect, verbose_vcycle, bnd_periodic, stdout, tot_ts, ts
-      use multigridhelpers,   only: set_dirty, check_dirty, mg_write_log, brief_v_log, do_ascii_dump, numbered_ascii_dump
+      use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump
       use multigridbasefuncs, only: norm_sq, restrict_all, subtract_average
+      use multigridvars,      only: roof, base, source, solution, correction, defect, verbose_vcycle, bnd_periodic, stdout, tot_ts, ts
+      use timer,              only: set_timer
 
       implicit none
 
@@ -1237,7 +1276,7 @@ contains
       integer, parameter       :: fmtlen = 32
       character(len=fmtlen)    :: fmt
       character(len=cbuff_len) :: dname
-      type(plvl), pointer :: curl
+      type(cg_list_level), pointer :: curl
 
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       inquire(file = "_dump_result_", EXIST=dump_result)
@@ -1245,12 +1284,12 @@ contains
       do_ascii_dump = do_ascii_dump .or. dump_every_step .or. dump_result
 
       ! On single CPU use FFT if possible because it is faster. Can be disabled by prefer_rbgs_relaxation = .true.
-      if (nproc == 1 .and. roof%mg%fft_type /= fft_none) then
+      if (nproc == 1 .and. roof%first%cg%mg%fft_type /= fft_none) then
          call set_dirty(solution)
          call fft_solve_roof
          if (trust_fft_solution) then
             write(msg, '(3a)')"[multigrid_gravity:vcycle_hg] FFT solution trusted, skipping ", trim(vstat%cprefix), "cycle."
-            call mg_write_log(msg, stdout)
+            call printinfo(msg, stdout)
             return
          endif
       else
@@ -1293,7 +1332,7 @@ contains
                fmt='(3a,i3,a,f12.9,a,es8.2,a,f7.3)'
             endif
             write(msg, fmt)"[multigrid_gravity] ", trim(vstat%cprefix), "Cycle:", v, " norm/rhs= ", norm_lhs/norm_rhs, " reduction factor= ", norm_old/norm_lhs, "   dt_wall= ", ts
-            call mg_write_log(msg, stdout)
+            call printinfo(msg, stdout)
          endif
 
          vstat%count = v
@@ -1323,7 +1362,7 @@ contains
             else
                if (norm_lhs/norm_lowest > vcycle_abort) then
                   vstat%norm_final = norm_lhs/norm_rhs
-                  if (.not. verbose_vcycle) call brief_v_log(vstat)
+                  if (.not. verbose_vcycle) call vstat%brief_v_log
                   call die("[multigrid_gravity:vcycle_hg] Serious nonconvergence detected.")
                   !In such case one may increase nsmool, decrease refinement depth or use FFT
                endif
@@ -1336,7 +1375,7 @@ contains
          call restrict_all(defect)
 
          call set_dirty(correction)
-         base%mg%var(:, :, :, correction) = 0.
+         base%first%cg%q(correction)%arr(:, :, :) = 0.
 
          curl => base
          do while (associated(curl))
@@ -1344,9 +1383,9 @@ contains
             call check_dirty(curl, correction, "Vup relax+")
             curl => curl%finer
          enddo
-         roof%mg%var     (roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = &
-              roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) + &
-              roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, correction)
+         roof%first%cg%q(solution)%arr     (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
+              roof%first%cg%q(solution)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) + &
+              roof%first%cg%q(correction)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke)
 
       enddo
 
@@ -1356,7 +1395,7 @@ contains
       endif
 
       vstat%norm_final = norm_lhs/norm_rhs
-      if (.not. verbose_vcycle) call brief_v_log(vstat)
+      if (.not. verbose_vcycle) call vstat%brief_v_log
 
       call check_dirty(roof, solution, "final_solution")
 
@@ -1371,17 +1410,15 @@ contains
 
    subroutine residual(curl, src, soln, def)
 
-      use dataio_pub,            only: die
-      use multigridvars,         only: ngridvars, plvl
+      use dataio_pub,  only: die
+      use cg_list_lev, only: cg_list_level
 
       implicit none
 
-      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: src  !< index of source in lvl()%mg%var
-      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mg%var
-      integer(kind=4), intent(in) :: def  !< index of defect in lvl()%mg%var
-
-      if (any( [ src, soln, def ] <= 0) .or. any( [ src, soln, def ] > ngridvars)) call die("[multigrid_gravity:residual] Invalid variable index")
+      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      integer(kind=4), intent(in) :: src  !< index of source in cg%q(:)
+      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
+      integer(kind=4), intent(in) :: def  !< index of defect in cg%q(:)
 
       select case (ord_laplacian)
       case (2)
@@ -1401,99 +1438,109 @@ contains
 
    subroutine residual2(curl, src, soln, def)
 
-      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half, I_ONE
-      use dataio_pub,         only: die
-      use domain,             only: dom
-      use multigridvars,      only: plvl, extbnd_antimirror
-      use multigridmpifuncs,  only: mpi_multigrid_bnd
+      use constants,         only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half, I_ONE
+      use dataio_pub,        only: die
+      use domain,            only: dom
+      use gc_list,           only: cg_list_element
+      use cg_list_lev,       only: cg_list_level
+      use grid_cont,         only: grid_container
+      use multigridmpifuncs, only: mpi_multigrid_bnd
+      use multigridvars,     only: extbnd_antimirror
 
       implicit none
 
-      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: src  !< index of source in lvl()%mg%var
-      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mg%var
-      integer(kind=4), intent(in) :: def  !< index of defect in lvl()%mg%var
+      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      integer(kind=4), intent(in) :: src  !< index of source in cg%q(:)
+      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
+      integer(kind=4), intent(in) :: def  !< index of defect in cg%q(:)
 
       real    :: L0, Lx, Ly, Lz, Lx1
       integer :: i, j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror) ! no corners required
 
-      ! Coefficients for a simplest 3-point Laplacian operator: [ 1, -2, 1 ]
-      ! for 2D and 1D setups appropriate elements of [ Lx, Ly, Lz ] should be == 0.
-      Lx = curl%idx2
-      Ly = curl%idy2
-      Lz = curl%idz2
-      L0 = -2. * (Lx + Ly + Lz)
-
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
       ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
+      cgl => curl%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      select case (dom%geometry_type)
-         case (GEO_XYZ)
-            if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
-               do k = curl%ks, curl%ke
-                  curl%mg%var       (curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)        = &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k,   src)        - &
-                       ( curl%mg%var(curl%is-1:curl%ie-1, curl%js  :curl%je,   k,   soln)       + &
-                       & curl%mg%var(curl%is+1:curl%ie+1, curl%js  :curl%je,   k,   soln)) * Lx - &
-                       ( curl%mg%var(curl%is  :curl%ie,   curl%js-1:curl%je-1, k,   soln)       + &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js+1:curl%je+1, k,   soln)) * Ly - &
-                       ( curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k-1, soln)       + &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k+1, soln)) * Lz - &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k,   soln)  * L0
-               enddo
-            else
-               ! In 3D this implementation can give a bit more cache misses, few times more writes and significantly more instructions executed than monolithic 3D above
-               do k = curl%ks, curl%ke
-                  curl%mg%var       (curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   = &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k,   src)   - &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k,   soln)  * L0
-                  if (dom%has_dir(xdim)) &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   = &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   - &
-                       ( curl%mg%var(curl%is-1:curl%ie-1, curl%js  :curl%je,   k,   soln)  + &
-                       & curl%mg%var(curl%is+1:curl%ie+1, curl%js  :curl%je,   k,   soln)) * Lx
-                  if (dom%has_dir(ydim)) &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   = &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   - &
-                       ( curl%mg%var(curl%is  :curl%ie,   curl%js-1:curl%je-1, k,   soln)  + &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js+1:curl%je+1, k,   soln)) * Ly
-                  if (dom%has_dir(zdim)) &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   = &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k,   def)   - &
-                       ( curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k-1, soln)  + &
-                       & curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   k+1, soln)) * Lz
-               enddo
-            endif
-         case (GEO_RPZ)
-            Lx = curl%idx2
-            Lz = curl%idz2
-            do k = curl%ks, curl%ke
-               do j = curl%js, curl%je
-                  do i = curl%is, curl%ie
-                     if (curl%x(i) /= zero) then !> \todo convert Ly, Lx1 and L0 into precomputed arrays
-                        Ly = curl%idy2 / curl%x(i)**2 ! cylindrical factor
-                        Lx1 = half / (curl%dx * curl%x(i))
-                     else
-                        Ly = zero
-                        Lx1 = zero
-                     endif
-                     L0 = -2. * (Lx + Ly + Lz)
-                     curl%mg%var(i, j, k, def) = curl%mg%var(i, j, k, src) - curl%mg%var(i, j, k, soln) * L0
-                     if (dom%has_dir(xdim)) curl%mg%var(i,   j,   k,   def)  = curl%mg%var(i,   j,   k,   def)        - &
-                          &                (curl%mg%var(i+1, j,   k,   soln) + curl%mg%var(i-1, j,   k,   soln)) * Lx - &
-                          &                (curl%mg%var(i+1, j,   k,   soln) - curl%mg%var(i-1, j,   k,   soln)) * Lx1    ! cylindrical term
-                     if (dom%has_dir(ydim)) curl%mg%var(i,   j,   k,   def)  = curl%mg%var(i,   j,   k,   def)        - &
-                          &                (curl%mg%var(i,   j+1, k,   soln) + curl%mg%var(i,   j-1, k,   soln)) * Ly
-                     if (dom%has_dir(zdim)) curl%mg%var(i,   j,   k,   def)  = curl%mg%var(i,   j,   k,   def)        - &
-                          &                (curl%mg%var(i,   j,   k+1, soln) + curl%mg%var(i,   j,   k-1, soln)) * Lz
+         ! Coefficients for a simplest 3-point Laplacian operator: [ 1, -2, 1 ]
+         ! for 2D and 1D setups appropriate elements of [ Lx, Ly, Lz ] should be == 0.
+         Lx = cg%idx2
+         Ly = cg%idy2
+         Lz = cg%idz2
+         L0 = -2. * (Lx + Ly + Lz)
+
+         select case (dom%geometry_type)
+            case (GEO_XYZ)
+               if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
+                  do k = cg%ks, cg%ke
+                     cg%q(def)%arr        (cg%is  :cg%ie,   cg%js  :cg%je,   k)         = &
+                          & cg%q(src)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)         - &
+                          ( cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   k)         + &
+                          & cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   k))   * Lx - &
+                          ( cg%q(soln)%arr(cg%is  :cg%ie,   cg%js-1:cg%je-1, k)         + &
+                          & cg%q(soln)%arr(cg%is  :cg%ie,   cg%js+1:cg%je+1, k))   * Ly - &
+                          ( cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   k-1)       + &
+                          & cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   k+1)) * Lz - &
+                          & cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   k)    * L0
+                  enddo
+               else
+                  ! In 3D this implementation can give a bit more cache misses, few times more writes and significantly more instructions executed than monolithic 3D above
+                  do k = cg%ks, cg%ke
+                     cg%q(def)%arr        (cg%is  :cg%ie,   cg%js  :cg%je,   k)    = &
+                          & cg%q(src)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    - &
+                          & cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   k)    * L0
+                     if (dom%has_dir(xdim)) &
+                          & cg%q(def)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    = &
+                          & cg%q(def)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    - &
+                          ( cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   k)    + &
+                          & cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   k))   * Lx
+                     if (dom%has_dir(ydim)) &
+                          & cg%q(def)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    = &
+                          & cg%q(def)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    - &
+                          ( cg%q(soln)%arr(cg%is  :cg%ie,   cg%js-1:cg%je-1, k)    + &
+                          & cg%q(soln)%arr(cg%is  :cg%ie,   cg%js+1:cg%je+1, k))   * Ly
+                     if (dom%has_dir(zdim)) &
+                          & cg%q(def)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    = &
+                          & cg%q(def)%arr (cg%is  :cg%ie,   cg%js  :cg%je,   k)    - &
+                          ( cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   k-1)  + &
+                          & cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   k+1)) * Lz
+                  enddo
+               endif
+            case (GEO_RPZ)
+               Lx = cg%idx2
+               Lz = cg%idz2
+               do k = cg%ks, cg%ke
+                  do j = cg%js, cg%je
+                     do i = cg%is, cg%ie
+                        if (cg%x(i) /= zero) then !> \todo convert Ly, Lx1 and L0 into precomputed arrays
+                           Ly = cg%idy2 / cg%x(i)**2 ! cylindrical factor
+                           Lx1 = half / (cg%dx * cg%x(i))
+                        else
+                           Ly = zero
+                           Lx1 = zero
+                        endif
+                        L0 = -2. * (Lx + Ly + Lz)
+                        cg%q(def)%arr(i, j, k) = cg%q(src)%arr (i,   j,   k)   - cg%q(soln)%arr(i,   j,   k)    * L0
+                        if (dom%has_dir(xdim))   cg%q(def)%arr (i,   j,   k)   = cg%q(def) %arr(i,   j,   k)         - &
+                             &                  (cg%q(soln)%arr(i+1, j,   k)   + cg%q(soln)%arr(i-1, j,   k))   * Lx - &
+                             &                  (cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * Lx1    ! cylindrical term
+                        if (dom%has_dir(ydim))   cg%q(def)%arr (i,   j,   k)   = cg%q(def) %arr(i,   j,   k)         - &
+                             &                  (cg%q(soln)%arr(i,   j+1, k)   + cg%q(soln)%arr(i,   j-1, k))   * Ly
+                        if (dom%has_dir(zdim))   cg%q(def)%arr (i,   j,   k)   = cg%q(def) %arr(i,   j,   k)         - &
+                             &                  (cg%q(soln)%arr(i,   j,   k+1) + cg%q(soln)%arr(i,   j,   k-1)) * Lz
+                     enddo
                   enddo
                enddo
-            enddo
-         case default
-            call die("[multigrid_gravity:residual2] Unsupported geometry.")
-      end select
+            case default
+               call die("[multigrid_gravity:residual2] Unsupported geometry.")
+         end select
+         cgl => cgl%nxt
+      enddo
 
    end subroutine residual2
 
@@ -1512,20 +1559,22 @@ contains
 
    subroutine residual4(curl, src, soln, def)
 
-      use constants,         only: I_TWO
+      use constants,         only: I_TWO, ndims
       use dataio_pub,        only: die, warn
       use domain,            only: dom
+      use gc_list,           only: cg_list_element
+      use cg_list_lev,       only: cg_list_level
+      use grid_cont,         only: grid_container
       use mpisetup,          only: master
-      use multigridvars,     only: plvl, bnd_givenval, extbnd_antimirror
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use constants,         only: ndims
+      use multigridvars,     only: bnd_givenval, extbnd_antimirror
 
       implicit none
 
-      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: src  !< index of source in lvl()%mg%var
-      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mg%var
-      integer(kind=4), intent(in) :: def  !< index of defect in lvl()%mg%var
+      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      integer(kind=4), intent(in) :: src  !< index of source in cg%q(:)
+      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
+      integer(kind=4), intent(in) :: def  !< index of defect in cg%q(:)
 
       real, parameter     :: L4_scaling = 1./12. ! with L4_strength = 1. this gives an L4 approximation for finite differences approach
       integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
@@ -1535,6 +1584,8 @@ contains
 
       logical, save       :: firstcall = .true.
       integer             :: i, j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       if (dom%eff_dim<ndims) call die("[multigrid_gravity:residual4] Only 3D is implemented")
 
@@ -1551,54 +1602,60 @@ contains
       !c20 = -2.
       !c40 = c20 - 6. * L4_strength
 
-      Lx1 = c41 * curl%idx2
-      Ly1 = c41 * curl%idy2
-      Lz1 = c41 * curl%idz2
-      Lx2 = c42 * curl%idx2
-      Ly2 = c42 * curl%idy2
-      Lz2 = c42 * curl%idz2
-!      L0  = c40 * (curl%idx2 + curl%idy2 + curl%idz2 )
-      L0 = -2. * (Lx1 + Lx2 + Ly1 + Ly2 + Lz1 + Lz2)
+      cgl => curl%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      !> \deprecated BEWARE: cylindrical factors go here
-      curl%mg%var     (curl%is  :curl%ie,   curl%js  :curl%je,   curl%ks  :curl%ke,   def)        = &
-           curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   curl%ks  :curl%ke,   src)        - &
-           curl%mg%var(curl%is-2:curl%ie-2, curl%js  :curl%je,   curl%ks  :curl%ke,   soln) * Lx2 - &
-           curl%mg%var(curl%is+2:curl%ie+2, curl%js  :curl%je,   curl%ks  :curl%ke,   soln) * Lx2 - &
-           curl%mg%var(curl%is-1:curl%ie-1, curl%js  :curl%je,   curl%ks  :curl%ke,   soln) * Lx1 - &
-           curl%mg%var(curl%is+1:curl%ie+1, curl%js  :curl%je,   curl%ks  :curl%ke,   soln) * Lx1 - &
-           curl%mg%var(curl%is  :curl%ie,   curl%js-2:curl%je-2, curl%ks  :curl%ke,   soln) * Ly2 - &
-           curl%mg%var(curl%is  :curl%ie,   curl%js+2:curl%je+2, curl%ks  :curl%ke,   soln) * Ly2 - &
-           curl%mg%var(curl%is  :curl%ie,   curl%js-1:curl%je-1, curl%ks  :curl%ke,   soln) * Ly1 - &
-           curl%mg%var(curl%is  :curl%ie,   curl%js+1:curl%je+1, curl%ks  :curl%ke,   soln) * Ly1 - &
-           curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   curl%ks-2:curl%ke-2, soln) * Lz2 - &
-           curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   curl%ks+2:curl%ke+2, soln) * Lz2 - &
-           curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   curl%ks-1:curl%ke-1, soln) * Lz1 - &
-           curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   curl%ks+1:curl%ke+1, soln) * Lz1 - &
-           curl%mg%var(curl%is  :curl%ie,   curl%js  :curl%je,   curl%ks  :curl%ke,   soln) * L0
+         Lx1 = c41 * cg%idx2
+         Ly1 = c41 * cg%idy2
+         Lz1 = c41 * cg%idz2
+         Lx2 = c42 * cg%idx2
+         Ly2 = c42 * cg%idy2
+         Lz2 = c42 * cg%idz2
+         ! L0  = c40 * (cg%idx2 + cg%idy2 + cg%idz2 )
+         L0 = -2. * (Lx1 + Lx2 + Ly1 + Ly2 + Lz1 + Lz2)
 
-      ! WARNING: not optimized
-      if (grav_bnd == bnd_givenval) then ! probably also in some other cases
-         ! Use L2 Laplacian in two layers of cells next to the boundary because L4 seems to be incompatible with present image mass construction
-         Lx = c21 * curl%idx2
-         Ly = c21 * curl%idy2
-         Lz = c21 * curl%idz2
-         L0 = -2. * (Lx + Ly + Lz)
+         !> \deprecated BEWARE: cylindrical factors go here
+         cg%q(def)%arr     (cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks  :cg%ke)          = &
+              cg%q(src)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks  :cg%ke)          - &
+              cg%q(soln)%arr(cg%is-2:cg%ie-2, cg%js  :cg%je,   cg%ks  :cg%ke)   * Lx2 - &
+              cg%q(soln)%arr(cg%is+2:cg%ie+2, cg%js  :cg%je,   cg%ks  :cg%ke)   * Lx2 - &
+              cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   cg%ks  :cg%ke)   * Lx1 - &
+              cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   cg%ks  :cg%ke)   * Lx1 - &
+              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js-2:cg%je-2, cg%ks  :cg%ke)   * Ly2 - &
+              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js+2:cg%je+2, cg%ks  :cg%ke)   * Ly2 - &
+              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js-1:cg%je-1, cg%ks  :cg%ke)   * Ly1 - &
+              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js+1:cg%je+1, cg%ks  :cg%ke)   * Ly1 - &
+              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks-2:cg%ke-2) * Lz2 - &
+              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks+2:cg%ke+2) * Lz2 - &
+              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks-1:cg%ke-1) * Lz1 - &
+              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks+1:cg%ke+1) * Lz1 - &
+              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks  :cg%ke)   * L0
 
-         do k = curl%ks, curl%ke
-            do j = curl%js, curl%je
-               do i = curl%is, curl%ie
-                  if ( i<curl%is+L2w .or. i>curl%ie-L2w .or. j<curl%js+L2w .or. j>curl%je-L2w .or. k<curl%ks+L2w .or. k>curl%ke-L2w) then
-                     curl%mg%var       (i,   j,   k,   def)   = curl%mg%var(i,   j,   k,   src)        - &
-                          ( curl%mg%var(i-1, j,   k,   soln)  + curl%mg%var(i+1, j,   k,   soln)) * Lx - &
-                          ( curl%mg%var(i,   j-1, k,   soln)  + curl%mg%var(i,   j+1, k,   soln)) * Ly - &
-                          ( curl%mg%var(i,   j,   k-1, soln)  + curl%mg%var(i,   j,   k+1, soln)) * Lz - &
-                          & curl%mg%var(i,   j,   k,   soln)  * L0
-                  endif
+         ! WARNING: not optimized
+         if (grav_bnd == bnd_givenval) then ! probably also in some other cases
+            ! Use L2 Laplacian in two layers of cells next to the boundary because L4 seems to be incompatible with present image mass construction
+            Lx = c21 * cg%idx2
+            Ly = c21 * cg%idy2
+            Lz = c21 * cg%idz2
+            L0 = -2. * (Lx + Ly + Lz)
+
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     if ( i<cg%is+L2w .or. i>cg%ie-L2w .or. j<cg%js+L2w .or. j>cg%je-L2w .or. k<cg%ks+L2w .or. k>cg%ke-L2w) then
+                        cg%q(def)%arr        (i,   j,   k)   = cg%q(src)%arr (i,   j,   k)         - &
+                             ( cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * Lx - &
+                             ( cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * Ly - &
+                             ( cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * Lz - &
+                             & cg%q(soln)%arr(i,   j,   k)                                    * L0
+                     endif
+                  enddo
                enddo
             enddo
-         enddo
-      endif
+         endif
+         cgl => cgl%nxt
+      enddo
 
    end subroutine residual4
 
@@ -1609,22 +1666,20 @@ contains
 
    subroutine approximate_solution(curl, src, soln)
 
-      use dataio_pub,         only: die
-      use multigridvars,      only: plvl, base, roof, ngridvars, correction
+      use cg_list_lev,        only: cg_list_level
       use multigridhelpers,   only: check_dirty
       use multigridbasefuncs, only: prolong_level
+      use multigridvars,      only: base, roof, correction
 
       implicit none
 
-      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: src  !< index of source in lvl()%mg%var
-      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mg%var
-
-      if (any( [ src, soln ] <= 0) .or. any( [ src, soln ] > ngridvars)) call die("[multigrid_gravity:approximate_solution] Invalid variable index.")
+      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      integer(kind=4), intent(in) :: src  !< index of source in cg%q(:)
+      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
 
       call check_dirty(curl, src, "approx_soln src-")
 
-      if (curl%mg%fft_type /= fft_none) then
+      if (curl%first%cg%mg%fft_type /= fft_none) then
          call approximate_solution_fft(curl, src, soln)
       else
          call check_dirty(curl, soln, "approx_soln soln-")
@@ -1652,23 +1707,26 @@ contains
       use constants,         only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE
       use dataio_pub,        only: die
       use domain,            only: dom
-      use multigridvars,     only: plvl, base, extbnd_antimirror
+      use gc_list,           only: cg_list_element
+      use cg_list_lev,       only: cg_list_level
+      use grid_cont,         only: grid_container
       use multigridhelpers,  only: dirty_debug, check_dirty, dirty_label
       use multigridmpifuncs, only: mpi_multigrid_bnd
+      use multigridvars,     only: base, extbnd_antimirror
 
       implicit none
 
-      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: src  !< index of source in lvl()%mg%var
-      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mg%var
+      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      integer(kind=4), intent(in) :: src  !< index of source in cg%q(:)
+      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
 
       integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
 
       integer :: n, i, j, k, i1, j1, k1, id, jd, kd
       integer :: nsmoo
       real    :: crx, crx1, cry, crz, cr
-
-      if (curl%empty) return
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
       if (associated(curl, base)) then
          nsmoo = nsmoob
@@ -1681,116 +1739,123 @@ contains
       do n = 1, RED_BLACK*nsmoo
          call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror) ! no corners are required here
 
-         if (dirty_debug) then
-            write(dirty_label, '(a,i5)')"relax soln- smoo=", n
-            call check_dirty(curl, soln, dirty_label)
-         endif
+         cgl => curl%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            if (.not. cg%empty) then
+               if (dirty_debug) then
+                  write(dirty_label, '(a,i5)')"relax soln- smoo=", n
+                  call check_dirty(curl, soln, dirty_label)
+               endif
 
-         ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
-         ! do n = 1, nsmoo
-         !    call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
-         !    relax single layer of red cells at all faces
-         !    call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
-         !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
-         !    relax single layer of black cells at all faces
-         ! enddo
+               ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
+               ! do n = 1, nsmoo
+               !    call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
+               !    relax single layer of red cells at all faces
+               !    call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
+               !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
+               !    relax single layer of black cells at all faces
+               ! enddo
 
-         ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
+               ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
 
-         if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
-            do k = curl%ks, curl%ke
-               do j = curl%js, curl%je
-                  i1 = curl%is + mod(n+j+k, RED_BLACK)
-                  if (dom%geometry_type == GEO_RPZ) then
-!!$                     curl%mg%var(i1  :curl%ie  :2, j,   k,   soln) = &
-!!$                          curl%mg%rx * (curl%mg%var(i1-1:curl%ie-1:2, j,   k,   soln) + curl%mg%var(i1+1:curl%ie+1:2, j,   k,   soln)) + &
-!!$                          curl%mg%ry * (curl%mg%var(i1  :curl%ie  :2, j-1, k,   soln) + curl%mg%var(i1:  curl%ie:  2, j+1, k,   soln)) + &
-!!$                          curl%mg%rz * (curl%mg%var(i1  :curl%ie  :2, j,   k-1, soln) + curl%mg%var(i1:  curl%ie:  2, j,   k+1, soln)) - &
-!!$                          curl%mg%r  *  curl%mg%var(i1  :curl%ie  :2, j,   k,   src)  + &
-!!$                          curl%mg%rx * (curl%mg%var(i1+1:curl%ie+1:2, j,   k,   soln) - curl%mg%var(i1-1:curl%ie-1:2, j,   k,   soln)) * fac(i1:curl%ie:2)
-                     call die("[multigrid_gravity:approximate_solution_rbgs] This variant of relaxation loop is not implemented for cylindrical coordinates.")
-                  else
-                     curl%mg%var(i1  :curl%ie  :2, j,   k,   soln) = &
-                          curl%mg%rx * (curl%mg%var(i1-1:curl%ie-1:2, j,   k,   soln) + curl%mg%var(i1+1:curl%ie+1:2, j,   k,   soln)) + &
-                          curl%mg%ry * (curl%mg%var(i1  :curl%ie  :2, j-1, k,   soln) + curl%mg%var(i1:  curl%ie:  2, j+1, k,   soln)) + &
-                          curl%mg%rz * (curl%mg%var(i1  :curl%ie  :2, j,   k-1, soln) + curl%mg%var(i1:  curl%ie:  2, j,   k+1, soln)) - &
-                          curl%mg%r  *  curl%mg%var(i1  :curl%ie  :2, j,   k,   src)
+               if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
+                  do k = cg%ks, cg%ke
+                     do j = cg%js, cg%je
+                        i1 = cg%is + mod(n+j+k, RED_BLACK)
+                        if (dom%geometry_type == GEO_RPZ) then
+!!$                     cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
+!!$                          cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k)) + &
+!!$                          cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k) + cg%q(soln)%arr(i1:  cg%ie:  2, j+1, k)) + &
+!!$                          cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  2, j,   k+1)) - &
+!!$                          cg%mg%r  *  cg%q(src)%arr(i1  :cg%ie  :2, j,   k)  + &
+!!$                          cg%mg%rx * (cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k) - cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)) * fac(i1:cg%ie:2)
+                           call die("[multigrid_gravity:approximate_solution_rbgs] This variant of relaxation loop is not implemented for cylindrical coordinates.")
+                        else
+                           cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
+                                cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
+                                cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k)   + cg%q(soln)%arr(i1:  cg%ie:  2, j+1, k))   + &
+                                cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  2, j,   k+1)) - &
+                                cg%mg%r  *  cg%q(src)%arr (i1  :cg%ie  :2, j,   k)
+                        endif
+                     enddo
+                  enddo
+               else
+                  ! In 3D this variant significantly increases instruction count and also some data read
+                  i1 = cg%is; id = 1 ! mv to multigridvars, init_multigrid
+                  j1 = cg%js; jd = 1
+                  k1 = cg%ks; kd = 1
+                  if (dom%has_dir(xdim)) then
+                     id = RED_BLACK
+                  else if (dom%has_dir(ydim)) then
+                     jd = RED_BLACK
+                  else if (dom%has_dir(zdim)) then
+                     kd = RED_BLACK
                   endif
-               enddo
-            enddo
-         else
-            ! In 3D this variant significantly increases instruction count and also some data read
-            i1 = curl%is; id = 1 ! mv to multigridvars, init_multigrid
-            j1 = curl%js; jd = 1
-            k1 = curl%ks; kd = 1
-            if (dom%has_dir(xdim)) then
-               id = RED_BLACK
-            else if (dom%has_dir(ydim)) then
-               jd = RED_BLACK
-            else if (dom%has_dir(zdim)) then
-               kd = RED_BLACK
-            endif
 
-            if (kd == RED_BLACK) k1 = curl%ks + mod(n, RED_BLACK)
-            select case (dom%geometry_type)
-               case (GEO_XYZ)
-                  do k = k1, curl%ke, kd
-                     if (jd == RED_BLACK) j1 = curl%js + mod(n+k, RED_BLACK)
-                     do j = j1, curl%je, jd
-                        if (id == RED_BLACK) i1 = curl%is + mod(n+j+k, RED_BLACK)
-                        curl%mg%var                           (i1:  curl%ie  :id, j,   k,   soln) = &
-                             & (1. - Jacobi_damp)* curl%mg%var(i1  :curl%ie  :id, j,   k,   soln) - &
-                             &       Jacobi_damp * curl%mg%var(i1  :curl%ie  :id, j,   k,   src)  * curl%mg%r
-                        if (dom%has_dir(xdim))     curl%mg%var(i1  :curl%ie  :id, j,   k,   soln) = curl%mg%var(i1:  curl%ie:  id, j,   k,   soln)  + &
-                             &       Jacobi_damp *(curl%mg%var(i1-1:curl%ie-1:id, j,   k,   soln) + curl%mg%var(i1+1:curl%ie+1:id, j,   k,   soln)) * curl%mg%rx
-                        if (dom%has_dir(ydim))     curl%mg%var(i1  :curl%ie  :id, j,   k,   soln) = curl%mg%var(i1:  curl%ie:  id, j,   k,   soln)  + &
-                             &       Jacobi_damp *(curl%mg%var(i1  :curl%ie  :id, j-1, k,   soln) + curl%mg%var(i1:  curl%ie:  id, j+1, k,   soln)) * curl%mg%ry
-                        if (dom%has_dir(zdim))     curl%mg%var(i1  :curl%ie  :id, j,   k,   soln) = curl%mg%var(i1:  curl%ie:  id, j,   k,   soln)  + &
-                             &       Jacobi_damp *(curl%mg%var(i1  :curl%ie  :id, j,   k-1, soln) + curl%mg%var(i1:  curl%ie:  id, j,   k+1, soln)) * curl%mg%rz
-                     enddo
-                  enddo
-               case (GEO_RPZ)
-                  do k = k1, curl%ke, kd
-                     if (jd == RED_BLACK) j1 = curl%js + mod(n+k, RED_BLACK)
-                     do j = j1, curl%je, jd
-                        if (id == RED_BLACK) i1 = curl%is + mod(n+j+k, RED_BLACK)
-                        do i = i1, curl%ie, id
-                           cr  = overrelax / 2.
-                           crx = curl%dvol2 * curl%idx2 * curl%x(i)**2
-                           cry = curl%dvol2 * curl%idy2
-                           crz = curl%dvol2 * curl%idz2 * curl%x(i)**2
-                           cr  = cr  / (crx + cry + crz)
-                           crx = overrelax_x * crx * cr
-                           cry = overrelax_y * cry * cr
-                           crz = overrelax_z * crz * cr
-                           cr  = cr * curl%dvol2 * curl%x(i)**2
-
-                           crx1 = 2. * curl%x(i) / curl%dx
-                           if (crx1 /= 0.) crx1 = 1./crx1
-                           curl%mg%var                           (i,   j,   k,   soln) = &
-                                & (1. - Jacobi_damp)* curl%mg%var(i,   j,   k,   soln) - &
-                                &       Jacobi_damp * curl%mg%var(i,   j,   k,   src)  * cr
-                           if (dom%has_dir(xdim))     curl%mg%var(i,   j,   k,   soln) = curl%mg%var(i,   j,   k,   soln)  + &
-                                &       Jacobi_damp *(curl%mg%var(i-1, j,   k,   soln) + curl%mg%var(i+1, j,   k,   soln)) * crx + &
-                                &       Jacobi_damp *(curl%mg%var(i+1, j,   k,   soln) - curl%mg%var(i-1, j,   k,   soln)) * crx * crx1
-                           if (dom%has_dir(ydim))     curl%mg%var(i,   j,   k,   soln) = curl%mg%var(i,   j,   k,   soln)  + &
-                                &       Jacobi_damp *(curl%mg%var(i,   j-1, k,   soln) + curl%mg%var(i,   j+1, k,   soln)) * cry
-                           if (dom%has_dir(zdim))     curl%mg%var(i,   j,   k,   soln) = curl%mg%var(i,   j,   k,   soln)  + &
-                                &       Jacobi_damp *(curl%mg%var(i,   j,   k-1, soln) + curl%mg%var(i,   j,   k+1, soln)) * crz
+                  if (kd == RED_BLACK) k1 = cg%ks + mod(n, RED_BLACK)
+                  select case (dom%geometry_type)
+                     case (GEO_XYZ)
+                        do k = k1, cg%ke, kd
+                           if (jd == RED_BLACK) j1 = cg%js + mod(n+k, RED_BLACK)
+                           do j = j1, cg%je, jd
+                              if (id == RED_BLACK) i1 = cg%is + mod(n+j+k, RED_BLACK)
+                              cg%q(soln)%arr                           (i1:  cg%ie  :id, j,   k)   = &
+                                   & (1. - Jacobi_damp)* cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   - &
+                                   &       Jacobi_damp * cg%q(src)%arr (i1  :cg%ie  :id, j,   k)   * cg%mg%r
+                              if (dom%has_dir(xdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1:  cg%ie:  id, j,   k)    + &
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i1-1:cg%ie-1:id, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:id, j,   k))   * cg%mg%rx
+                              if (dom%has_dir(ydim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1:  cg%ie:  id, j,   k)    + &
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j-1, k)   + cg%q(soln)%arr(i1:  cg%ie:  id, j+1, k))   * cg%mg%ry
+                              if (dom%has_dir(zdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1:  cg%ie:  id, j,   k)    + &
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  id, j,   k+1)) * cg%mg%rz
+                           enddo
                         enddo
-                     enddo
-                  enddo
-               case default
-                  call die("[multigrid_gravity:approximate_solution_rbgs] Unsupported geometry.")
-            end select
-         endif
+                     case (GEO_RPZ)
+                        do k = k1, cg%ke, kd
+                           if (jd == RED_BLACK) j1 = cg%js + mod(n+k, RED_BLACK)
+                           do j = j1, cg%je, jd
+                              if (id == RED_BLACK) i1 = cg%is + mod(n+j+k, RED_BLACK)
+                              do i = i1, cg%ie, id
+                                 cr  = overrelax / 2.
+                                 crx = cg%dvol2 * cg%idx2 * cg%x(i)**2
+                                 cry = cg%dvol2 * cg%idy2
+                                 crz = cg%dvol2 * cg%idz2 * cg%x(i)**2
+                                 cr  = cr / (crx + cry + crz)
+                                 crx = overrelax_x * crx * cr
+                                 cry = overrelax_y * cry * cr
+                                 crz = overrelax_z * crz * cr
+                                 cr  = cr * cg%dvol2 * cg%x(i)**2
 
-         if (dirty_debug) then
-            write(dirty_label, '(a,i5)')"relax soln+ smoo=", n
-            call check_dirty(curl, soln, dirty_label)
+                                 crx1 = 2. * cg%x(i) * cg%idx
+                                 if (crx1 /= 0.) crx1 = 1./crx1
+                                 cg%q(soln)%arr                           (i,   j,   k)   = &
+                                      & (1. - Jacobi_damp)* cg%q(soln)%arr(i,   j,   k)   - &
+                                      &       Jacobi_damp * cg%q(src)%arr (i,   j,   k)   * cr
+                                 if (dom%has_dir(xdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
+                                      &       Jacobi_damp *(cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * crx + &
+                                      &       Jacobi_damp *(cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * crx * crx1
+                                 if (dom%has_dir(ydim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
+                                      &       Jacobi_damp *(cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * cry
+                                 if (dom%has_dir(zdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
+                                      &       Jacobi_damp *(cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * crz
+                              enddo
+                           enddo
+                        enddo
+                     case default
+                        call die("[multigrid_gravity:approximate_solution_rbgs] Unsupported geometry.")
+               end select
+            endif
          endif
-
+         cgl => cgl%nxt
       enddo
+
+      if (dirty_debug) then
+         write(dirty_label, '(a,i5)')"relax soln+ smoo=", n
+         call check_dirty(curl, soln, dirty_label)
+      endif
+
+   enddo
 
    end subroutine approximate_solution_rbgs
 
@@ -1806,69 +1871,94 @@ contains
       use constants,         only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE
       use dataio_pub,        only: die, warn
       use domain,            only: dom
-      use multigridvars,     only: plvl, base, extbnd_antimirror, single_base
+      use gc_list,           only: cg_list_element
+      use cg_list_lev,       only: cg_list_level
+      use grid_cont,         only: grid_container
       use multigridhelpers,  only: dirty_debug, check_dirty, dirtyL
       use multigridmpifuncs, only: mpi_multigrid_bnd
+      use multigridvars,     only: base, extbnd_antimirror, single_base
 
       implicit none
 
-      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: src  !< index of source in lvl()%mg%var
-      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mg%var
+      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      integer(kind=4), intent(in) :: src  !< index of source in cg%q(:)
+      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
 
       integer :: nf, n, nsmoo
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
-      if (curl%empty) return
+      if (curl%first%cg%empty) return
 
-      if (curl%mg%fft_type == fft_none) call die("[multigrid_gravity:approximate_solution_fft] unknown FFT type")
+      if (curl%first%cg%mg%fft_type == fft_none) call die("[multigrid_gravity:approximate_solution_fft] unknown FFT type")
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:approximate_solution_fft] FFT is not allowed in non-cartesian coordinates.")
 
       do nf = 1, nsmoof
-         curl%mg%src(:, :, :) = curl%mg%var(curl%is:curl%ie, curl%js:curl%je, curl%ks:curl%ke, src)
+         cgl => curl%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            cg%mg%src(:, :, :) = cg%q(src)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            cgl => cgl%nxt
+         enddo
 
-         if (curl%mg%fft_type == fft_dst) then !correct boundaries on non-periodic local domain
+         if (curl%first%cg%mg%fft_type == fft_dst) then !correct boundaries on non-periodic local domain
             if (nf == 1 .and. .not. associated(curl, base)) then
                call make_face_boundaries(curl, soln)
             else
                call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
+               cgl => curl%first
+               do while (associated(cgl))
+                  cg => cgl%cg
+                  if (dom%has_dir(xdim)) then
+                     cg%mg%bnd_x(:, :, LO) = half* sum (cg%q(soln)%arr(cg%is-1:cg%is, cg%js:cg%je, cg%ks:cg%ke), 1)
+                     cg%mg%bnd_x(:, :, HI) = half* sum (cg%q(soln)%arr(cg%ie:cg%ie+1, cg%js:cg%je, cg%ks:cg%ke), 1)
+                  endif
+                  if (dom%has_dir(ydim)) then
+                     cg%mg%bnd_y(:, :, LO) = half* sum (cg%q(soln)%arr(cg%is:cg%ie, cg%js-1:cg%js, cg%ks:cg%ke), 2)
+                     cg%mg%bnd_y(:, :, HI) = half* sum (cg%q(soln)%arr(cg%is:cg%ie, cg%je:cg%je+1, cg%ks:cg%ke), 2)
+                  endif
+                  if (dom%has_dir(zdim)) then
+                     cg%mg%bnd_z(:, :, LO) = half* sum (cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks-1:cg%ks), 3)
+                     cg%mg%bnd_z(:, :, HI) = half* sum (cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ke:cg%ke+1), 3)
+                  endif
+                  cgl => cgl%nxt
+               enddo
+            endif
+
+            cgl => curl%first
+            do while (associated(cgl))
+               cg => cgl%cg
+               if (dirty_debug) then
+                  if (dom%has_dir(xdim) .and. any(abs(curl%first%cg%mg%bnd_x(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_x")
+                  if (dom%has_dir(ydim) .and. any(abs(curl%first%cg%mg%bnd_y(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_y")
+                  if (dom%has_dir(zdim) .and. any(abs(curl%first%cg%mg%bnd_z(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_z")
+               endif
+
                if (dom%has_dir(xdim)) then
-                  curl%mg%bnd_x(:, :, LO) = half* sum (curl%mg%var(curl%is-1:curl%is, curl%js:curl%je, curl%ks:curl%ke, soln), 1)
-                  curl%mg%bnd_x(:, :, HI) = half* sum (curl%mg%var(curl%ie:curl%ie+1, curl%js:curl%je, curl%ks:curl%ke, soln), 1)
+                  cg%mg%src(1,      :, :) = cg%mg%src(1,      :, :) - cg%mg%bnd_x(:, :, LO) * 2. * cg%idx2
+                  cg%mg%src(cg%nxb, :, :) = cg%mg%src(cg%nxb, :, :) - cg%mg%bnd_x(:, :, HI) * 2. * cg%idx2
                endif
                if (dom%has_dir(ydim)) then
-                  curl%mg%bnd_y(:, :, LO) = half* sum (curl%mg%var(curl%is:curl%ie, curl%js-1:curl%js, curl%ks:curl%ke, soln), 2)
-                  curl%mg%bnd_y(:, :, HI) = half* sum (curl%mg%var(curl%is:curl%ie, curl%je:curl%je+1, curl%ks:curl%ke, soln), 2)
+                  cg%mg%src(:, 1,      :) = cg%mg%src(:, 1,      :) - cg%mg%bnd_y(:, :, LO) * 2. * cg%idy2
+                  cg%mg%src(:, cg%nyb, :) = cg%mg%src(:, cg%nyb, :) - cg%mg%bnd_y(:, :, HI) * 2. * cg%idy2
                endif
                if (dom%has_dir(zdim)) then
-                  curl%mg%bnd_z(:, :, LO) = half* sum (curl%mg%var(curl%is:curl%ie, curl%js:curl%je, curl%ks-1:curl%ks, soln), 3)
-                  curl%mg%bnd_z(:, :, HI) = half* sum (curl%mg%var(curl%is:curl%ie, curl%js:curl%je, curl%ke:curl%ke+1, soln), 3)
+                  cg%mg%src(:, :, 1     ) = cg%mg%src(:, :, 1     ) - cg%mg%bnd_z(:, :, LO) * 2. * cg%idz2
+                  cg%mg%src(:, :, cg%nzb) = cg%mg%src(:, :, cg%nzb) - cg%mg%bnd_z(:, :, HI) * 2. * cg%idz2
                endif
-            endif
-
-            if (dirty_debug) then
-               if (dom%has_dir(xdim) .and. any(abs(curl%mg%bnd_x(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_x")
-               if (dom%has_dir(ydim) .and. any(abs(curl%mg%bnd_y(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_y")
-               if (dom%has_dir(zdim) .and. any(abs(curl%mg%bnd_z(:, :, :)) > dirtyL)) call warn("approximate_solution_fft dirty bnd_z")
-            endif
-
-            if (dom%has_dir(xdim)) then
-               curl%mg%src(1,        :, :) = curl%mg%src(1,        :, :) - curl%mg%bnd_x(:, :, LO) * 2. * curl%idx2
-               curl%mg%src(curl%nxb, :, :) = curl%mg%src(curl%nxb, :, :) - curl%mg%bnd_x(:, :, HI) * 2. * curl%idx2
-            endif
-            if (dom%has_dir(ydim)) then
-               curl%mg%src(:, 1,        :) = curl%mg%src(:, 1,        :) - curl%mg%bnd_y(:, :, LO) * 2. * curl%idy2
-               curl%mg%src(:, curl%nyb, :) = curl%mg%src(:, curl%nyb, :) - curl%mg%bnd_y(:, :, HI) * 2. * curl%idy2
-            endif
-            if (dom%has_dir(zdim)) then
-               curl%mg%src(:, :, 1       ) = curl%mg%src(:, :, 1       ) - curl%mg%bnd_z(:, :, LO) * 2. * curl%idz2
-               curl%mg%src(:, :, curl%nzb) = curl%mg%src(:, :, curl%nzb) - curl%mg%bnd_z(:, :, HI) * 2. * curl%idz2
-            endif
+               cgl => cgl%nxt
+            enddo
          endif
 
          call fft_convolve(curl)
 
-         curl%mg%var(curl%is:curl%ie, curl%js:curl%je, curl%ks:curl%ke, soln) = curl%mg%src(:, :, :)
+         cgl => curl%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%mg%src(:, :, :)
+            cgl => cgl%nxt
+         enddo
 
          call check_dirty(curl, soln, "approx_soln fft+")
 
@@ -1884,104 +1974,110 @@ contains
          do n = 1, nsmoo
             call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
             ! Possible optimization: This is a quite costly part of the local FFT solver
-            if (fft_full_relax) then
-               if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
-                  curl%mg%var                   (curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  = &
-                       curl%mg%rx * (curl%mg%var(curl%is-1:curl%ie-1, curl%js:curl%je,     curl%ks:curl%ke,     soln)  + &
-                       &             curl%mg%var(curl%is+1:curl%ie+1, curl%js:curl%je,     curl%ks:curl%ke,     soln)) + &
-                       curl%mg%ry * (curl%mg%var(curl%is:curl%ie,     curl%js-1:curl%je-1, curl%ks:curl%ke,     soln)  + &
-                       &             curl%mg%var(curl%is:curl%ie,     curl%js+1:curl%je+1, curl%ks:curl%ke,     soln)) + &
-                       curl%mg%rz * (curl%mg%var(curl%is:curl%ie,     curl%js:curl%je,     curl%ks-1:curl%ke-1, soln)  + &
-                       &             curl%mg%var(curl%is:curl%ie,     curl%js:curl%je,     curl%ks+1:curl%ke+1, soln)) - &
-                       curl%mg%r  *  curl%mg%var(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     src)
+            cgl => curl%first
+            do while (associated(cgl))
+               cg => cgl%cg
+               if (fft_full_relax) then
+                  if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
+                     cg%q(soln)%arr                 (cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  = &
+                          cg%mg%rx * (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js:cg%je,     cg%ks:cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js:cg%je,     cg%ks:cg%ke)) + &
+                          cg%mg%ry * (cg%q(soln)%arr(cg%is:cg%ie,     cg%js-1:cg%je-1, cg%ks:cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js+1:cg%je+1, cg%ks:cg%ke)) + &
+                          cg%mg%rz * (cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks-1:cg%ke-1)  + &
+                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks+1:cg%ke+1)) - &
+                          cg%mg%r  *  cg%q(src)%arr (cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)
+                  else
+
+                     call die("[multigrid_gravity:approximate_solution_fft] fft_full_relax is allowed only for 3D at the moment")
+
+                     ! An additional array (cg%mg%src would be good enough) is required here to assemble partial results or use red-black passes
+                     cg%q(soln)%arr                 (cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  = &
+                          - cg%mg%r * cg%q(src)%arr (cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)
+                     if (dom%has_dir(xdim)) &
+                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  = &
+                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  + &
+                          cg%mg%rx * (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js:cg%je,     cg%ks:cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js:cg%je,     cg%ks:cg%ke))
+                     if (dom%has_dir(ydim)) &
+                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  = &
+                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  + &
+                          cg%mg%ry * (cg%q(soln)%arr(cg%is:cg%ie,     cg%js-1:cg%je-1, cg%ks:cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js+1:cg%je+1, cg%ks:cg%ke))
+                     if (dom%has_dir(zdim)) &
+                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  = &
+                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  + &
+                          cg%mg%rz * (cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks-1:cg%ke-1)  + &
+                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks+1:cg%ke+1))
+                  endif
                else
+                  ! relax only two layers of cells (1 is  significantly worse, 3 does not improve much)
+                  ! edges are relaxed twice, corners are relaxed three times which seems to be good
 
-                  call die("[multigrid_gravity:approximate_solution_fft] fft_full_relax is allowed only for 3D at the moment")
+                  if (dom%has_dir(xdim)) then
+                     cg%q(soln)%arr                 (cg%is        :cg%is+dom%D_x,   cg%js        :cg%je,         cg%ks        :cg%ke)  = & ! -X
+                          cg%mg%rx * (cg%q(soln)%arr(cg%is-dom%D_x:cg%is,           cg%js        :cg%je,         cg%ks        :cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%is+dom%D_x:cg%is+2*dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke)) + &
+                          cg%mg%ry * (cg%q(soln)%arr(cg%is        :cg%is+dom%D_x,   cg%js-dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%is        :cg%is+dom%D_x,   cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke)) + &
+                          cg%mg%rz * (cg%q(soln)%arr(cg%is        :cg%is+dom%D_x,   cg%js        :cg%je,         cg%ks-dom%D_z:cg%ke-dom%D_z)  + &
+                          &           cg%q(soln)%arr(cg%is        :cg%is+dom%D_x,   cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)) - &
+                          cg%mg%r  *  cg%q(src)%arr (cg%is        :cg%is+dom%D_x,   cg%js        :cg%je,         cg%ks        :cg%ke)
 
-                  ! An additional array (curl%mg%src would be good enough) is required here to assemble partial results or use red-black passes
-                  curl%mg%var                   (curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  = &
-                       - curl%mg%r * curl%mg%var(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     src)
-                  if (dom%has_dir(xdim)) &
-                       &             curl%mg%var(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  = &
-                       &             curl%mg%var(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  + &
-                       curl%mg%rx * (curl%mg%var(curl%is-1:curl%ie-1, curl%js:curl%je,     curl%ks:curl%ke,     soln)  + &
-                       &             curl%mg%var(curl%is+1:curl%ie+1, curl%js:curl%je,     curl%ks:curl%ke,     soln))
-                  if (dom%has_dir(ydim)) &
-                       &             curl%mg%var(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  = &
-                       &             curl%mg%var(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  + &
-                       curl%mg%ry * (curl%mg%var(curl%is:curl%ie,     curl%js-1:curl%je-1, curl%ks:curl%ke,     soln)  + &
-                       &             curl%mg%var(curl%is:curl%ie,     curl%js+1:curl%je+1, curl%ks:curl%ke,     soln))
-                  if (dom%has_dir(zdim)) &
-                       &             curl%mg%var(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  = &
-                       &             curl%mg%var(curl%is:curl%ie,     curl%js:curl%je,     curl%ks:curl%ke,     soln)  + &
-                       curl%mg%rz * (curl%mg%var(curl%is:curl%ie,     curl%js:curl%je,     curl%ks-1:curl%ke-1, soln)  + &
-                       &             curl%mg%var(curl%is:curl%ie,     curl%js:curl%je,     curl%ks+1:curl%ke+1, soln))
-               endif
-            else
-               ! relax only two layers of cells (1 is  significantly worse, 3 does not improve much)
-               ! edges are relaxed twice, corners are relaxed three times which seems to be good
+                     cg%q(soln)%arr                 (cg%ie-dom%D_x  :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke)  = & ! +X
+                          cg%mg%rx * (cg%q(soln)%arr(cg%ie-2*dom%D_x:cg%ie-dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%ie          :cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke)) + &
+                          cg%mg%ry * (cg%q(soln)%arr(cg%ie-dom%D_x  :cg%ie,         cg%js-dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%ie-dom%D_x  :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke)) + &
+                          cg%mg%rz * (cg%q(soln)%arr(cg%ie-dom%D_x  :cg%ie,         cg%js        :cg%je,         cg%ks-dom%D_z:cg%ke-dom%D_z)  + &
+                          &           cg%q(soln)%arr(cg%ie-dom%D_x  :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)) - &
+                          cg%mg%r  *  cg%q(src)%arr (cg%ie-dom%D_x  :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke)
+                  endif
 
-               if (dom%has_dir(xdim)) then
-                  curl%mg%var                   (curl%is        :curl%is+dom%D_x,   curl%js        :curl%je,         curl%ks        :curl%ke,         soln)  = & ! -X
-                       curl%mg%rx * (curl%mg%var(curl%is-dom%D_x:curl%is,           curl%js        :curl%je,         curl%ks        :curl%ke,         soln)  + &
-                       &             curl%mg%var(curl%is+dom%D_x:curl%is+2*dom%D_x, curl%js        :curl%je,         curl%ks        :curl%ke,         soln)) + &
-                       curl%mg%ry * (curl%mg%var(curl%is        :curl%is+dom%D_x,   curl%js-dom%D_y:curl%je-dom%D_y, curl%ks        :curl%ke,         soln)  + &
-                       &             curl%mg%var(curl%is        :curl%is+dom%D_x,   curl%js+dom%D_y:curl%je+dom%D_y, curl%ks        :curl%ke,         soln)) + &
-                       curl%mg%rz * (curl%mg%var(curl%is        :curl%is+dom%D_x,   curl%js        :curl%je,         curl%ks-dom%D_z:curl%ke-dom%D_z, soln)  + &
-                       &             curl%mg%var(curl%is        :curl%is+dom%D_x,   curl%js        :curl%je,         curl%ks+dom%D_z:curl%ke+dom%D_z, soln)) - &
-                       curl%mg%r  *  curl%mg%var(curl%is        :curl%is+dom%D_x,   curl%js        :curl%je,         curl%ks        :curl%ke,         src)
+                  if (dom%has_dir(ydim)) then
+                     cg%q(soln)%arr                 (cg%is        :cg%ie,         cg%js        :cg%js+dom%D_y,   cg%ks        :cg%ke)  = & ! -Y
+                          cg%mg%rx * (cg%q(soln)%arr(cg%is-dom%D_x:cg%ie-dom%D_x, cg%js        :cg%js+dom%D_y,   cg%ks        :cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%js+dom%D_y,   cg%ks        :cg%ke)) + &
+                          cg%mg%ry * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%js-dom%D_y:cg%js,           cg%ks        :cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%js+dom%D_y:cg%js+2*dom%D_y, cg%ks        :cg%ke)) + &
+                          cg%mg%rz * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%js        :cg%js+dom%D_y,   cg%ks-dom%D_z:cg%ke-dom%D_z)  + &
+                       &              cg%q(soln)%arr(cg%is        :cg%ie,         cg%js        :cg%js+dom%D_y,   cg%ks+dom%D_z:cg%ke+dom%D_z)) - &
+                       cg%mg%r  *     cg%q(src)%arr (cg%is        :cg%ie,         cg%js        :cg%js+dom%D_y,   cg%ks        :cg%ke)
 
-                  curl%mg%var                   (curl%ie-dom%D_x  :curl%ie,         curl%js        :curl%je,         curl%ks        :curl%ke,         soln)  = & ! +X
-                       curl%mg%rx * (curl%mg%var(curl%ie-2*dom%D_x:curl%ie-dom%D_x, curl%js        :curl%je,         curl%ks        :curl%ke,         soln)  + &
-                       &             curl%mg%var(curl%ie          :curl%ie+dom%D_x, curl%js        :curl%je,         curl%ks        :curl%ke,         soln)) + &
-                       curl%mg%ry * (curl%mg%var(curl%ie-dom%D_x  :curl%ie,         curl%js-dom%D_y:curl%je-dom%D_y, curl%ks        :curl%ke,         soln)  + &
-                       &             curl%mg%var(curl%ie-dom%D_x  :curl%ie,         curl%js+dom%D_y:curl%je+dom%D_y, curl%ks        :curl%ke,         soln)) + &
-                       curl%mg%rz * (curl%mg%var(curl%ie-dom%D_x  :curl%ie,         curl%js        :curl%je,         curl%ks-dom%D_z:curl%ke-dom%D_z, soln)  + &
-                       &             curl%mg%var(curl%ie-dom%D_x  :curl%ie,         curl%js        :curl%je,         curl%ks+dom%D_z:curl%ke+dom%D_z, soln)) - &
-                       curl%mg%r  *  curl%mg%var(curl%ie-dom%D_x  :curl%ie,         curl%js        :curl%je,         curl%ks        :curl%ke,         src)
-               endif
+                     cg%q(soln)%arr                 (cg%is        :cg%ie,         cg%je-dom%D_y  :cg%je,         cg%ks        :cg%ke)  = & ! +Y
+                          cg%mg%rx * (cg%q(soln)%arr(cg%is-dom%D_x:cg%ie-dom%D_x, cg%je-dom%D_y  :cg%je,         cg%ks        :cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%is+dom%D_x:cg%ie+dom%D_x, cg%je-dom%D_y  :cg%je,         cg%ks        :cg%ke)) + &
+                          cg%mg%ry * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%je-2*dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%je          :cg%je+dom%D_y, cg%ks        :cg%ke)) + &
+                          cg%mg%rz * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%je-dom%D_y  :cg%je,         cg%ks-dom%D_z:cg%ke-dom%D_z)  + &
+                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%je-dom%D_y  :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)) - &
+                          cg%mg%r  *  cg%q(src)%arr (cg%is        :cg%ie,         cg%je-dom%D_y  :cg%je,         cg%ks        :cg%ke)
+                  endif
 
-               if (dom%has_dir(ydim)) then
-                  curl%mg%var                   (curl%is        :curl%ie,         curl%js        :curl%js+dom%D_y,   curl%ks        :curl%ke,         soln)  = & ! -Y
-                       curl%mg%rx * (curl%mg%var(curl%is-dom%D_x:curl%ie-dom%D_x, curl%js        :curl%js+dom%D_y,   curl%ks        :curl%ke,         soln)  + &
-                       &             curl%mg%var(curl%is+dom%D_x:curl%ie+dom%D_x, curl%js        :curl%js+dom%D_y,   curl%ks        :curl%ke,         soln)) + &
-                       curl%mg%ry * (curl%mg%var(curl%is        :curl%ie,         curl%js-dom%D_y:curl%js,           curl%ks        :curl%ke,         soln)  + &
-                       &             curl%mg%var(curl%is        :curl%ie,         curl%js+dom%D_y:curl%js+2*dom%D_y, curl%ks        :curl%ke,         soln)) + &
-                       curl%mg%rz * (curl%mg%var(curl%is        :curl%ie,         curl%js        :curl%js+dom%D_y,   curl%ks-dom%D_z:curl%ke-dom%D_z, soln)  + &
-                       &             curl%mg%var(curl%is        :curl%ie,         curl%js        :curl%js+dom%D_y,   curl%ks+dom%D_z:curl%ke+dom%D_z, soln)) - &
-                       curl%mg%r  *  curl%mg%var(curl%is        :curl%ie,         curl%js        :curl%js+dom%D_y,   curl%ks        :curl%ke,         src)
+                  if (dom%has_dir(zdim)) then
+                     cg%q(soln)%arr                 (cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ks+dom%D_z)  = & ! -Z
+                          cg%mg%rx * (cg%q(soln)%arr(cg%is-dom%D_x:cg%ie-dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ks+dom%D_z)  + &
+                          &           cg%q(soln)%arr(cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ks+dom%D_z)) + &
+                          cg%mg%ry * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%js-dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ks+dom%D_z)  + &
+                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ks+dom%D_z)) + &
+                          cg%mg%rz * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks-dom%D_z:cg%ks)  + &
+                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ks+2*dom%D_z)) - &
+                          cg%mg%r  *  cg%q(src)%arr (cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ks+dom%D_z)
 
-                  curl%mg%var                   (curl%is        :curl%ie,         curl%je-dom%D_y  :curl%je,         curl%ks        :curl%ke,         soln)  = & ! +Y
-                       curl%mg%rx * (curl%mg%var(curl%is-dom%D_x:curl%ie-dom%D_x, curl%je-dom%D_y  :curl%je,         curl%ks        :curl%ke,         soln)  + &
-                       &             curl%mg%var(curl%is+dom%D_x:curl%ie+dom%D_x, curl%je-dom%D_y  :curl%je,         curl%ks        :curl%ke,         soln)) + &
-                       curl%mg%ry * (curl%mg%var(curl%is        :curl%ie,         curl%je-2*dom%D_y:curl%je-dom%D_y, curl%ks        :curl%ke,         soln)  + &
-                       &             curl%mg%var(curl%is        :curl%ie,         curl%je          :curl%je+dom%D_y, curl%ks        :curl%ke,         soln)) + &
-                       curl%mg%rz * (curl%mg%var(curl%is        :curl%ie,         curl%je-dom%D_y  :curl%je,         curl%ks-dom%D_z:curl%ke-dom%D_z, soln)  + &
-                       &             curl%mg%var(curl%is        :curl%ie,         curl%je-dom%D_y  :curl%je,         curl%ks+dom%D_z:curl%ke+dom%D_z, soln)) - &
-                       curl%mg%r  *  curl%mg%var(curl%is        :curl%ie,         curl%je-dom%D_y  :curl%je,         curl%ks        :curl%ke,         src)
-               endif
+                     cg%q(soln)%arr                 (cg%is        :cg%ie,         cg%js        :cg%je,         cg%ke-dom%D_z  :cg%ke )  = & ! +Z
+                          cg%mg%rx * (cg%q(soln)%arr(cg%is-dom%D_x:cg%ie-dom%D_x, cg%js        :cg%je,         cg%ke-dom%D_z  :cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ke-dom%D_z  :cg%ke)) + &
+                          cg%mg%ry * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%js-dom%D_y:cg%je-dom%D_y, cg%ke-dom%D_z  :cg%ke)  + &
+                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ke-dom%D_z  :cg%ke)) + &
+                          cg%mg%rz * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%js        :cg%je,         cg%ke-2*dom%D_z:cg%ke-dom%D_z)  + &
+                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%js        :cg%je,         cg%ke          :cg%ke+dom%D_z)) - &
+                          cg%mg%r  *  cg%q(src)%arr (cg%is        :cg%ie,         cg%js        :cg%je,         cg%ke-dom%D_z  :cg%ke)
+                  endif
 
-               if (dom%has_dir(zdim)) then
-                  curl%mg%var                   (curl%is        :curl%ie,         curl%js        :curl%je,         curl%ks        :curl%ks+dom%D_z,   soln)  = & ! -Z
-                       curl%mg%rx * (curl%mg%var(curl%is-dom%D_x:curl%ie-dom%D_x, curl%js        :curl%je,         curl%ks        :curl%ks+dom%D_z,   soln)  + &
-                       &             curl%mg%var(curl%is+dom%D_x:curl%ie+dom%D_x, curl%js        :curl%je,         curl%ks        :curl%ks+dom%D_z,   soln)) + &
-                       curl%mg%ry * (curl%mg%var(curl%is        :curl%ie,         curl%js-dom%D_y:curl%je-dom%D_y, curl%ks        :curl%ks+dom%D_z,   soln)  + &
-                       &             curl%mg%var(curl%is        :curl%ie,         curl%js+dom%D_y:curl%je+dom%D_y, curl%ks        :curl%ks+dom%D_z,   soln)) + &
-                       curl%mg%rz * (curl%mg%var(curl%is        :curl%ie,         curl%js        :curl%je,         curl%ks-dom%D_z:curl%ks,           soln)  + &
-                       &             curl%mg%var(curl%is        :curl%ie,         curl%js        :curl%je,         curl%ks+dom%D_z:curl%ks+2*dom%D_z, soln)) - &
-                       curl%mg%r  *  curl%mg%var(curl%is        :curl%ie,         curl%js        :curl%je,         curl%ks        :curl%ks+dom%D_z,   src)
-
-                  curl%mg%var                   (curl%is        :curl%ie,         curl%js        :curl%je,         curl%ke-dom%D_z  :curl%ke ,        soln)  = & ! +Z
-                       curl%mg%rx * (curl%mg%var(curl%is-dom%D_x:curl%ie-dom%D_x, curl%js        :curl%je,         curl%ke-dom%D_z  :curl%ke,         soln)  + &
-                       &             curl%mg%var(curl%is+dom%D_x:curl%ie+dom%D_x, curl%js        :curl%je,         curl%ke-dom%D_z  :curl%ke,         soln)) + &
-                       curl%mg%ry * (curl%mg%var(curl%is        :curl%ie,         curl%js-dom%D_y:curl%je-dom%D_y, curl%ke-dom%D_z  :curl%ke,         soln)  + &
-                       &             curl%mg%var(curl%is        :curl%ie,         curl%js+dom%D_y:curl%je+dom%D_y, curl%ke-dom%D_z  :curl%ke,         soln)) + &
-                       curl%mg%rz * (curl%mg%var(curl%is        :curl%ie,         curl%js        :curl%je,         curl%ke-2*dom%D_z:curl%ke-dom%D_z, soln)  + &
-                       &             curl%mg%var(curl%is        :curl%ie,         curl%js        :curl%je,         curl%ke          :curl%ke+dom%D_z, soln)) - &
-                       curl%mg%r  *  curl%mg%var(curl%is        :curl%ie,         curl%js        :curl%je,         curl%ke-dom%D_z  :curl%ke,         src)
                endif
 
-            endif
+               cgl => cgl%nxt
+            enddo
          enddo
 
          call check_dirty(curl, soln, "approx_soln relax+")
@@ -1997,15 +2093,16 @@ contains
 
    subroutine make_face_boundaries(curl, soln)
 
-      use mpisetup,           only: nproc
-      use multigridvars,      only: bnd_givenval, bnd_periodic, base, single_base, plvl
-      use multigridbasefuncs, only: zero_boundaries, prolong_faces
       use dataio_pub,         only: warn
+      use cg_list_lev,        only: cg_list_level
+      use mpisetup,           only: nproc
+      use multigridbasefuncs, only: zero_boundaries, prolong_faces
+      use multigridvars,      only: bnd_givenval, bnd_periodic, base, single_base
 
       implicit none
 
-      type(plvl), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer(kind=4), intent(in) :: soln !< index of solution in lvl()%mg%var
+      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      integer(kind=4), intent(in) :: soln !< index of solution in cg%q(:)
 
       if (grav_bnd == bnd_periodic .and. (nproc == 1 .or. (associated(curl, base) .and. single_base) ) ) then
          call zero_boundaries(curl)
@@ -2027,15 +2124,19 @@ contains
 
    subroutine fft_solve_roof
 
-      use multigridvars,    only: roof, source, solution
+      use dataio_pub,    only: die
+      use domain,        only: is_multicg
+      use multigridvars, only: roof, source, solution
 
       implicit none
 
-      if (roof%mg%fft_type == fft_none) return
+      if (is_multicg) call die("[multigrid_gravity:fft_solve_roof] multicg not supported")
 
-      roof%mg%src(:, :, :) = roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, source)
+      if (roof%first%cg%mg%fft_type == fft_none) return
+
+      roof%first%cg%mg%src(:, :, :) = roof%first%cg%q(source)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke)
       call fft_convolve(roof)
-      roof%mg%var(roof%is:roof%ie, roof%js:roof%je, roof%ks:roof%ke, solution) = roof%mg%src(:, :, :)
+      roof%first%cg%q(solution)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = roof%first%cg%mg%src(:, :, :)
 
    end subroutine fft_solve_roof
 
@@ -2046,26 +2147,37 @@ contains
 
    subroutine fft_convolve(curl)
 
-      use dataio_pub,    only: die
-      use multigridvars, only: plvl
+      use dataio_pub,  only: die
+      use gc_list,     only: cg_list_element
+      use cg_list_lev, only: cg_list_level
+      use grid_cont,   only: grid_container
 
       implicit none
 
-      type(plvl), pointer, intent(in) :: curl !< pointer to a level at which make the convolution
+      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level at which make the convolution
 
-      ! do the convolution in Fourier space; curl%mg%src(:,:,:) -> curl%mg%fft{r}(:,:,:)
-      call dfftw_execute(curl%mg%planf)
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer :: cg
 
-      select case (curl%mg%fft_type)
-         case (fft_rcr)
-            curl%mg%fft  = curl%mg%fft  * curl%mg%Green3D
-         case (fft_dst)
-            curl%mg%fftr = curl%mg%fftr * curl%mg%Green3D
-         case default
-            call die("[multigrid_gravity:fft_convolve] Unknown FFT type.")
-      end select
+      cgl => curl%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      call dfftw_execute(curl%mg%plani) ! curl%mg%fft{r}(:,:,:) -> curl%mg%src(:,:,:)
+         ! do the convolution in Fourier space; cg%mg%src(:,:,:) -> cg%mg%fft{r}(:,:,:)
+         call dfftw_execute(cg%mg%planf)
+
+         select case (cg%mg%fft_type)
+            case (fft_rcr)
+               cg%mg%fft  = cg%mg%fft  * cg%mg%Green3D
+            case (fft_dst)
+               cg%mg%fftr = cg%mg%fftr * cg%mg%Green3D
+            case default
+               call die("[multigrid_gravity:fft_convolve] Unknown FFT type.")
+         end select
+
+         call dfftw_execute(cg%mg%plani) ! cg%mg%fft{r}(:,:,:) -> cg%mg%src(:,:,:)
+         cgl => cgl%nxt
+      enddo
 
    end subroutine fft_convolve
 

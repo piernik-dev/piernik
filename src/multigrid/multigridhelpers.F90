@@ -39,7 +39,7 @@ module multigridhelpers
 
    private
 
-   public :: set_dirty, check_dirty, vcycle_stats_init, brief_v_log, mg_write_log, numbered_ascii_dump
+   public :: set_dirty, check_dirty, numbered_ascii_dump
    public :: do_ascii_dump, dirty_debug, dirty_label, dirtyH, dirtyL
 
    ! namelist parameters
@@ -65,21 +65,29 @@ contains
    subroutine set_dirty(iv)
 
       use dataio_pub,    only: die
-      use multigridvars, only: ngridvars, plvl, base
+      use gc_list,       only: cg_list_element
+      use cg_list_lev,   only: cg_list_level
+      use grid,          only: all_cg
+      use multigridvars, only: base
 
       implicit none
 
-      integer(kind=4), intent(in) :: iv   !< index of variable in lvl()%mg%var which we want to pollute
+      integer(kind=4), intent(in) :: iv   !< index of variable in cg%q(:) which we want to pollute
 
-      type(plvl), pointer :: curl
+      type(cg_list_level), pointer :: curl
+      type(cg_list_element), pointer :: cgl
 
       if (.not. dirty_debug) return
 
-      if (iv < 1 .or. iv > ngridvars) call die("[multigridhelpers:set_dirty] Invalid variable index.")
+      if (iv < lbound(all_cg%q_lst, dim=1) .or. iv > ubound(all_cg%q_lst, dim=1)) call die("[multigridhelpers:set_dirty] Invalid variable index.")
 
       curl => base
       do while (associated(curl))
-         curl%mg%var(:, :, :, iv) = dirtyH
+         cgl => curl%first
+         do while (associated(cgl))
+            cgl%cg%q(iv)%arr(:, :, :) = dirtyH
+            cgl => cgl%nxt
+         enddo
          curl => curl%finer
       enddo
 
@@ -92,24 +100,26 @@ contains
 
    subroutine check_dirty(curl, iv, label, expand)
 
-      use dataio_pub,    only: die, warn, msg
-      use domain,        only: dom
-      use mpisetup,      only: proc
-      use multigridvars, only: ngridvars, plvl
-      use constants,     only: ndims
+      use constants,   only: ndims
+      use dataio_pub,  only: die, warn, msg
+      use domain,      only: dom
+      use gc_list,     only: cg_list_element
+      use cg_list_lev, only: cg_list_level
+      use grid,        only: all_cg
+      use mpisetup,    only: proc
 
       implicit none
 
-      integer(kind=4),   intent(in) :: iv     !< index of variable in lvl()%mg%var which we want to pollute
-      type(plvl), pointer, intent(in) :: curl !< level which we are checking
-      character(len=*),  intent(in) :: label  !< label to indicate the origin of call
-      integer(kind=4), optional, intent(in) :: expand !< also check guardcells
+      type(cg_list_level), pointer, intent(in) :: curl   !< level which we are checking
+      integer(kind=4),              intent(in) :: iv     !< index of variable in cg%q(:) which we want to pollute
+      character(len=*),             intent(in) :: label  !< label to indicate the origin of call
+      integer(kind=4), optional,    intent(in) :: expand !< also check guardcells
 
       integer :: i, j, k, ng
+      type(cg_list_element), pointer :: cgl
 
       if (.not. dirty_debug) return
-      if (iv < 1 .or. iv > ngridvars) call die("[multigridhelpers:check_dirty] Invalid variable index.")
-      if (curl%empty) return
+      if (iv < lbound(all_cg%q_lst, dim=1) .or. iv > ubound(all_cg%q_lst, dim=1)) call die("[multigridhelpers:check_dirty] Invalid variable index.")
 
       if (present(expand) .and. dom%eff_dim==ndims) then ! for 1D and 2D one should define ng_x,ng_y and ng_z
          ng = min(dom%nb, expand)
@@ -117,121 +127,27 @@ contains
          ng = 0
       endif
 
-      do k = curl%ks-ng*dom%D_z, curl%ke+ng*dom%D_z
-         do j = curl%js-ng*dom%D_y, curl%je+ng*dom%D_y
-            do i = curl%is-ng*dom%D_x, curl%ie+ng*dom%D_x
-               if (abs(curl%mg%var(i, j, k, iv)) > dirtyL) then
-!                        if (count([i<curl%is .or. i>curl%ie, j<curl%js .or. j>curl%je, k<curl%ks .or. k>curl%ke]) <=1) then ! excludes corners
-                  write(msg, '(3a,i4,a,i2,a,3(i3,a),i2,a,g20.12)') &
-                          "[multigridhelpers:check_dirty] ", trim(label), "@", proc, " lvl(", curl%lev, ")%mg%var(", i, ",", j, ",", k, ",", iv, ") = ", curl%mg%var(i, j, k, iv)
-                  call warn(msg)
-!                        endif
-               endif
+      cgl => curl%first
+      do while (associated(cgl))
+         if (.not. cgl%cg%empty) then
+            do k = cgl%cg%ks-ng*dom%D_z, cgl%cg%ke+ng*dom%D_z
+               do j = cgl%cg%js-ng*dom%D_y, cgl%cg%je+ng*dom%D_y
+                  do i = cgl%cg%is-ng*dom%D_x, cgl%cg%ie+ng*dom%D_x
+                     if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
+                        ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
+                        write(msg, '(3a,i4,a,i2,a,4(i3,a),g20.12)') "[multigridhelpers:check_dirty] ", trim(label), "@", proc, " lvl(", curl%lev, &
+                             &                                      ")%q(",iv,")%arr(", i, ",", j, ",", k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
+                        call warn(msg)
+                        ! endif
+                     endif
+                  enddo
+               enddo
             enddo
-         enddo
+         endif
+         cgl => cgl%nxt
       enddo
 
    end subroutine check_dirty
-
-!!$ ============================================================================
-!>
-!! \brief Initialize vcycle_stats
-!<
-
-   subroutine vcycle_stats_init(vs, size)
-
-      use dataio_pub,    only: die
-      use multigridvars, only: vcycle_stats
-
-      implicit none
-
-      type(vcycle_stats), intent(out) :: vs   !< V-cycle statistics variable to be created or reset
-      integer, intent(in)             :: size !< size of the vs structure (usually max_cycles); for nonpositive value perform reset only
-
-      if (size > 0) then
-         if (allocated(vs%factor) .or. allocated(vs%time)) call die("[multigridhelpers:vcycle_stats_init] vcycle_stats already allocated.")
-         allocate(vs%factor(0:size), vs%time(0:size))
-      endif
-
-      vs%factor(:)  = 0.
-      vs%time(:)    = 0.
-      vs%count      = 0
-      vs%norm_rhs   = 0.
-      vs%norm_final = 0.
-      vs%cprefix    = ""
-
-   end subroutine vcycle_stats_init
-
-!!$ ============================================================================
-!>
-!! \brief Assembles one-line log of V-cycle achievements
-!<
-
-   subroutine brief_v_log(vs)
-
-      use constants,     only: fplen, fmt_len
-      use multigridvars, only: stdout, vcycle_stats
-      use mpisetup,      only: slave
-      use dataio_pub,    only: msg, warn
-
-      implicit none
-
-      type(vcycle_stats), intent(in) :: vs
-
-      real                   :: at
-      integer                :: i, lm, ftype
-      character(len=fplen)   :: normred
-      character(len=fmt_len), parameter, dimension(2) :: fmt_norm = [ '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f13.10,a)', '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,e13.6,a) ' ]
-
-      if (slave) return
-
-      if (vs%count > ubound(vs%factor, 1)) call warn("[multigridhelpers:brief_v_log] Trying to read beyond upper bound of vcycle_stats.")
-
-      at = 0.
-      if (vs%count > 0) at = sum(vs%time(1:vs%count))/vs%count ! average V-cycle time on PE# 0
-
-      ftype = 1
-      if (vs%norm_final < 1e-8) ftype = 2
-      write(msg, fmt_norm(ftype))"[multigrid] ", vs%count, trim(vs%cprefix), "cycles, dt_wall=", vs%time(0), " +", vs%count, "*", at, ", norm/rhs= ", vs%norm_final, " : "
-
-      do i = 0, min(vs%count, ubound(vs%factor, 1))
-         if (vs%factor(i) < 1.0e4) then
-            write(normred, '(f8.2)') vs%factor(i)
-         else if (vs%factor(i) < 1.0e7) then
-            write(normred, '(f8.0)') vs%factor(i)
-         else
-            write(normred, '(es9.2)') vs%factor(i)
-         endif
-         lm = len_trim(msg)
-         if (len(msg) >= lm + 9) msg(lm+2:lm+9) = normred(1:8)
-      enddo
-
-      call mg_write_log(msg, stdout)
-
-   end subroutine brief_v_log
-
-!!$ ============================================================================
-!>
-!! \brief Logfile
-!<
-
-   subroutine mg_write_log(msg, stdout_cntrl)
-
-      use dataio_pub,    only: printinfo
-      use mpisetup,      only: master
-
-      implicit none
-
-      character(len=*), intent(in)  :: msg          !< message to be logged
-      logical, optional, intent(in) :: stdout_cntrl !< flag to suppress printing to stdout
-
-      logical            :: to_stdout
-
-      to_stdout = master
-      if (present(stdout_cntrl)) to_stdout = to_stdout .and. stdout_cntrl
-      call printinfo(msg, to_stdout)
-
-   end subroutine mg_write_log
 
 !!$ ============================================================================
 !>
@@ -243,9 +159,11 @@ contains
    subroutine ascii_dump(filename)
 
       use constants,     only: xdim, ydim, zdim
-      use dataio_pub,    only: msg
+      use dataio_pub,    only: msg, printio
+      use gc_list,       only: cg_list_element
+      use cg_list_lev,   only: cg_list_level
       use mpisetup,      only: master
-      use multigridvars, only: base, plvl, ngridvars
+      use multigridvars, only: source, solution, defect, correction, base
 
       implicit none
 
@@ -253,26 +171,33 @@ contains
 
       integer, parameter :: fu=30
       integer            :: i, j, k
-      type(plvl), pointer :: curl
+      type(cg_list_level), pointer :: curl
+      type(cg_list_element), pointer :: cgl
 
       if (.not. do_ascii_dump) return
 
       open(fu, file=filename, status="unknown")
 
-      write(fu, '("#",a3,2a4,a6,10a20,/)')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)", "source", "solution", "defect", "correction", "bx", "by", "bz"
+      write(fu, '("#",a3,2a4,a6,10a20,/)')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)", "source", "solution", "defect", "correction" !, "bx", "by", "bz"
       curl => base
       do while (associated(curl))
-         do i = curl%is, curl%ie
-            do j = curl%js, curl%je
-               do k = curl%ks, curl%ke
-                  write(fu, '(3i4,i6,10es20.11e3)')i-curl%is+curl%off(xdim), j-curl%js+curl%off(ydim), k-curl%ks+curl%off(zdim), &
-                       &                           curl%lev, curl%x(i), curl%y(j), curl%z(k), curl%mg%var(i, j, k, 1:ngridvars)
+         cgl => curl%first
+         do while (associated(cgl))
+            do i = cgl%cg%is, cgl%cg%ie
+               do j = cgl%cg%js, cgl%cg%je
+                  do k = cgl%cg%ks, cgl%cg%ke
+                     write(fu, '(3i4,i6,10es20.11e3)')i-cgl%cg%is+cgl%cg%off(xdim), j-cgl%cg%js+cgl%cg%off(ydim), k-cgl%cg%ks+cgl%cg%off(zdim), &
+                          &                           curl%lev, cgl%cg%x(i), cgl%cg%y(j), cgl%cg%z(k), &
+                          &                           cgl%cg%q(source)    %arr(i, j, k), cgl%cg%q(solution)%arr(i, j, k), &
+                          &                           cgl%cg%q(correction)%arr(i, j, k), cgl%cg%q(defect)  %arr(i, j, k)
+                  enddo
+                  write(fu, '(/)')
                enddo
-               write(fu, '(/)')
+               write(fu, '(/,/)')
             enddo
-            write(fu, '(/,/)')
+            write(fu, '(/,/,/)')
+            cgl => cgl%nxt
          enddo
-         write(fu, '(/,/,/)')
          curl => curl%finer
       enddo
 
@@ -280,7 +205,7 @@ contains
 
       if (master) then
          write(msg,'(3a)') "[multigridhelpers:ascii_dump] Wrote dump '",filename,"'"
-         call mg_write_log(msg)
+         call printio(msg)
       endif
 
    end subroutine ascii_dump

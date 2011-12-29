@@ -186,6 +186,7 @@ contains
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC
       use dataio,                only: init_dataio, write_data
       use dataio_pub,            only: nrestart, wd_wr, wd_rd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, code_progress
+      use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
       use fluidboundaries,       only: all_fluid_boundaries
@@ -263,6 +264,7 @@ contains
       call init_domain
       code_progress = PIERNIK_INIT_DOMAIN ! Base domain is known and initial domain decomposition is known
 
+      call init_decomposition
       call init_grid         ! Most of the cg's vars are now initialized, only arrays left
       code_progress = PIERNIK_INIT_GRID      ! Now we can initialize things that depend on all the above fundamental calls
 
@@ -370,6 +372,7 @@ contains
 
       use user_hooks,    only: cleanup_problem
       use dataio,        only: cleanup_dataio
+      use decomposition, only: cleanup_decomposition
       use diagnostics,   only: cleanup_diagnostics
       use domain,        only: cleanup_domain
       use global,        only: cleanup_global
@@ -401,6 +404,7 @@ contains
       call cleanup_grid;          call nextdot(.false.)
       call cleanup_fluids;        call nextdot(.false.)
       call cleanup_global;        call nextdot(.false.)
+      call cleanup_decomposition; call nextdot(.false.)
       call cleanup_domain;        call nextdot(.false.)
       call cleanup_fluidindex;    call nextdot(.false., print_t = .true.)
       call cleanup_timers;        call nextdot(.false.)
