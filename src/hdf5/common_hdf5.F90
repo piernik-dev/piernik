@@ -696,7 +696,7 @@ contains
 
       else ! send all the necessary information to the master
          allocate(cg_rl(all_cg%cnt), cg_n_b(all_cg%cnt, ndims), cg_off(all_cg%cnt, ndims))
-         allocate(dbuf(cg_le:cg_dl, cg_n(all_cg%cnt), ndims))
+         allocate(dbuf(cg_le:cg_dl, all_cg%cnt, ndims))
          g = 1
          cgl => all_cg%first
          do while (associated(cgl))
