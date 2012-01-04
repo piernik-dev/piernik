@@ -42,7 +42,8 @@ module common_hdf5
    private
    public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2
    public :: nhdf_vars, hdf_vars, d_gname, base_d_gname, d_fc_aname, d_size_aname, d_edge_apname, d_bnd_apname, cg_gname, &
-         & cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref
+         & cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, &
+         & cg_dl_aname
 
    integer, parameter :: S_LEN = 30
 
@@ -51,7 +52,8 @@ module common_hdf5
    character(len=*), parameter :: d_gname = "domains", base_d_gname = "base", d_fc_aname = "fine_count", &
         &                         d_size_aname = "n_d", d_edge_apname = "-edge_position", d_bnd_apname = "-boundary_type", &
         &                         cg_gname = "cg", cg_cnt_aname = "cg_count", cg_lev_aname = "level", cg_size_aname = "n_b", &
-        &                         cg_offset_aname = "off"
+        &                         cg_offset_aname = "off", cg_ledge_aname = "left_edge", cg_redge_aname = "right_edge", &
+        &                         cg_dl_aname = "dl"
    character(len=singlechar), dimension(ndims), parameter :: dir_pref = [ "x", "y", "z" ]
 
 !> \brief Add an attribute (1D array) to the given group and initialize its value
@@ -540,7 +542,7 @@ contains
 
    subroutine write_to_hdf5_v2(filename, create_empty_cg_datasets, write_cg_to_hdf5)
 
-      use constants,   only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, INT4
+      use constants,   only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR, I_FIVE, INT4, LO, HI
       use dataio_pub,  only: die, nproc_io, can_i_write
       use domain,      only: dom
       use gc_list,     only: cg_list_element
@@ -548,7 +550,7 @@ contains
       use hdf5,        only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
            &                 h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
            &                 h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5zfilter_avail_f
-      use mpi,         only: MPI_INFO_NULL, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE
+      use mpi,         only: MPI_INFO_NULL, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
       use mpisetup,    only: comm, proc, FIRST, LAST, master
 
       implicit none
@@ -584,6 +586,9 @@ contains
       integer(kind=4),  dimension(:),   allocatable :: cg_rl                                    !> list of refinement levels from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b                                   !> list of n_b from all cgs/procs
       integer(kind=8),  dimension(:,:), allocatable :: cg_off                                   !> list of offsets from all cgs/procs
+      real(kind=8), dimension(:,:), allocatable     :: cg_le                                    !> list of left edges from all cgs/procs
+      real(kind=8), dimension(:,:), allocatable     :: cg_re                                    !> list of right edges from all cgs/procs
+      real(kind=8), dimension(:,:), allocatable     :: cg_dl                                    !> list of cell sizes from all cgs/procs
       type(cg_list_element), pointer                :: cgl
       logical(kind=4)                               :: Z_avail                                  !> .true. if HDF5 was compiled with zlib support
       character(len=dsetnamelen)                    :: d_label
@@ -615,20 +620,27 @@ contains
          ! Do not assume that the master knows all the lists
          do p = FIRST, LAST
             allocate(cg_rl(cg_n(p)), cg_n_b(cg_n(p), ndims), cg_off(cg_n(p), ndims))
+            allocate(cg_le(cg_n(p), ndims), cg_re(cg_n(p), ndims), cg_dl(cg_n(p), ndims))
             if (p == FIRST) then
                g = 1
                cgl => all_cg%first
                do while (associated(cgl))
                   cg_rl(g)     = 1  !> \deprecated change this once we introduce many levels
-                  cg_n_b(g, :) = cgl%cg%n_b(:)
-                  cg_off(g, :) = cgl%cg%off(:)
+                  cg_n_b(g, :) = cgl%cg%n_b
+                  cg_off(g, :) = cgl%cg%off
+                  cg_le(g, :)  = cgl%cg%fbnd(:,LO)
+                  cg_re(g, :)  = cgl%cg%fbnd(:,HI)
+                  cg_dl(g, :)  = cgl%cg%dl
                   g = g + 1
                   cgl => cgl%nxt
                enddo
             else
-               call MPI_Recv(cg_rl,  size(cg_rl),  MPI_INTEGER,  p, tag,       comm, MPI_STATUS_IGNORE, error)
-               call MPI_Recv(cg_n_b, size(cg_n_b), MPI_INTEGER,  p, tag+I_ONE, comm, MPI_STATUS_IGNORE, error)
-               call MPI_Recv(cg_off, size(cg_off), MPI_INTEGER8, p, tag+I_TWO, comm, MPI_STATUS_IGNORE, error)
+               call MPI_Recv(cg_rl,  size(cg_rl),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, error)
+               call MPI_Recv(cg_n_b, size(cg_n_b), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, error)
+               call MPI_Recv(cg_off, size(cg_off), MPI_INTEGER8, p, tag+I_TWO,   comm, MPI_STATUS_IGNORE, error)
+               call MPI_Recv(cg_le,  size(cg_le),  MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, error)
+               call MPI_Recv(cg_re,  size(cg_re),  MPI_REAL8,    p, tag+I_FOUR,  comm, MPI_STATUS_IGNORE, error)
+               call MPI_Recv(cg_dl,  size(cg_dl),  MPI_REAL8,    p, tag+I_FIVE,  comm, MPI_STATUS_IGNORE, error)
             endif
 
             do g = 1, cg_n(p)
@@ -637,6 +649,9 @@ contains
                call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                    ! create "/cg/cg_%08d/level"
                call create_attribute(cg_g_id, cg_size_aname, cg_n_b(g, :))                    ! create "/cg/cg_%08d/n_b"
                call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4))     ! create "/cg/cg_%08d/off"
+               call create_attribute(cg_g_id, cg_ledge_aname, cg_le(g, :))                    ! create "/cg/cg_%08d/left_edge"
+               call create_attribute(cg_g_id, cg_redge_aname, cg_re(g, :))                    ! create "/cg/cg_%08d/right_edge"
+               call create_attribute(cg_g_id, cg_dl_aname, cg_dl(g, :))                       ! create "/cg/cg_%08d/dl"
 
                cg_all_n_b(sum(cg_n(:p))-cg_n(p)+g, :) = cg_n_b(g, :)
 
@@ -648,6 +663,7 @@ contains
             enddo
 
             deallocate(cg_rl, cg_n_b, cg_off)
+            deallocate(cg_le, cg_re, cg_dl)
          enddo
 
          call h5gclose_f(cgl_g_id, error)
@@ -678,19 +694,27 @@ contains
 
       else ! send all the necessary information to the master
          allocate(cg_rl(all_cg%cnt), cg_n_b(all_cg%cnt, ndims), cg_off(all_cg%cnt, ndims))
+         allocate(cg_le(cg_n(p), ndims), cg_re(cg_n(p), ndims), cg_dl(cg_n(p), ndims))
          g = 1
          cgl => all_cg%first
          do while (associated(cgl))
             cg_rl(g)     = 1  !> \deprecated change this once we introduce many levels
             cg_n_b(g, :) = cgl%cg%n_b(:)
             cg_off(g, :) = cgl%cg%off(:)
+            cg_le(g, :)  = cgl%cg%fbnd(:,LO)
+            cg_re(g, :)  = cgl%cg%fbnd(:,HI)
+            cg_dl(g, :)  = cgl%cg%dl
             g = g + 1
             cgl => cgl%nxt
          enddo
-         call MPI_Send(cg_rl,  size(cg_rl),  MPI_INTEGER,  FIRST, tag,       comm, error)
-         call MPI_Send(cg_n_b, size(cg_n_b), MPI_INTEGER,  FIRST, tag+I_ONE, comm, error)
-         call MPI_Send(cg_off, size(cg_off), MPI_INTEGER8, FIRST, tag+I_TWO, comm, error)
+         call MPI_Send(cg_rl,  size(cg_rl),  MPI_INTEGER,  FIRST, tag,         comm, error)
+         call MPI_Send(cg_n_b, size(cg_n_b), MPI_INTEGER,  FIRST, tag+I_ONE,   comm, error)
+         call MPI_Send(cg_off, size(cg_off), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, error)
+         call MPI_Send(cg_le,  size(cg_le),  MPI_REAL8,    FIRST, tag+I_THREE, comm, error)
+         call MPI_Send(cg_re,  size(cg_re),  MPI_REAL8,    FIRST, tag+I_FOUR,  comm, error)
+         call MPI_Send(cg_dl,  size(cg_dl),  MPI_REAL8,    FIRST, tag+I_FIVE,  comm, error)
          deallocate(cg_rl, cg_n_b, cg_off)
+         deallocate(cg_le, cg_re, cg_dl)
       endif
 
       call MPI_Bcast(cg_all_n_b, size(cg_all_n_b), MPI_INTEGER, FIRST, comm, error)
