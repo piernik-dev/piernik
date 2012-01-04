@@ -74,17 +74,22 @@ module cg_list_lev
 
 contains
 
-!!$ ============================================================================
 !>
 !! \brief Simplest restriction (averaging).
+!!
 !! \todo implement high order restriction and test its influence on V-cycle convergence rate
+!!
+!! \details Some data can be locally copied without MPI, but this seems to have really little impact on the performance.
+!! Some tests show that purely MPI code without local copies is marginally faster.
 !<
 
    subroutine restrict_level(this, iv)
 
       use constants,  only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
-      use dataio_pub, only: msg, warn, die
+      use dataio_pub, only: msg, warn!, die
       use domain,     only: dom
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use mpisetup,   only: proc, comm, ierr, req, status
       use mpi,        only: MPI_DOUBLE_PRECISION
 
@@ -95,123 +100,96 @@ contains
 
       integer(kind=4), parameter :: tag1 = 1
       type(cg_list_level), pointer :: coarse
-      integer :: g, g1, d
+      integer :: g
       integer(kind=8), dimension(:,:), pointer :: fse, cse ! shortcuts for fine segment and coarse segment
       integer(kind=8) :: i, j, k, ic, jc, kc
       integer(kind=8), dimension(xdim:zdim) :: off1
       real :: norm
       integer(kind=4) :: nr
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg            !< current grid container
 
-      if (iv < lbound(this%first%cg%q, dim=1) .or. iv > ubound(this%first%cg%q, dim=1)) call die("[gc_list:restrict_level] Invalid variable index.")
+!      if (iv < lbound(this%first%cg%q, dim=1) .or. iv > ubound(this%first%cg%q, dim=1)) call die("[gc_list:restrict_level] Invalid variable index.")
 
       coarse => this%coarser
       if (.not. associated(coarse)) then
          write(msg,'(a,i3)')"[gc_list:restrict_level] no coarse level here: ", this%lev
          call warn(msg) ! can't restrict base level
-      else
-         !OPT find a way to reduce this to areas with nonlocal incoming restriction
-         coarse%first%cg%q(iv)%arr(:,:,:) = 0. ! disables check_dirty
+         return
       endif
 
       nr = 0
-      if (allocated(coarse%first%cg%mg%f_tgt%seg)) then
-         do g = 1, ubound(coarse%first%cg%mg%f_tgt%seg(:), dim=1)
-            if (coarse%first%cg%mg%f_tgt%seg(g)%proc /= proc) then
+      cgl => coarse%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         !OPT find a way to reduce this to areas with nonlocal incoming restriction
+         cg%q(iv)%arr(:,:,:) = 0. ! disables check_dirty
+
+         ! be ready to receive everything into right buffers
+         if (allocated(cg%mg%f_tgt%seg)) then
+            do g = 1, ubound(cg%mg%f_tgt%seg(:), dim=1)
                nr = nr + I_ONE
-               call MPI_Irecv(coarse%first%cg%mg%f_tgt%seg(g)%buf(1, 1, 1), size(coarse%first%cg%mg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, coarse%first%cg%mg%f_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
-            endif
-         enddo
-      endif
-
-      do g = 1, ubound(this%first%cg%mg%c_tgt%seg(:), dim=1)
-
-         fse => this%first%cg%mg%c_tgt%seg(g)%se
-
-         off1(:) = mod(this%first%cg%off(:), 2_LONG)
-         norm = 1./2**dom%eff_dim
-         if (this%first%cg%mg%c_tgt%seg(g)%proc == proc) then
-
-            nullify(cse)
-            do g1 = 1, ubound(coarse%first%cg%mg%f_tgt%seg(:), dim=1) !> \todo should be set up in init_multigrid
-               if (coarse%first%cg%mg%f_tgt%seg(g1)%proc == proc) then
-                  if (.not. associated(cse)) then
-                     cse => coarse%first%cg%mg%f_tgt%seg(g1)%se
-                  else
-                     call die("[gc_list:restrict_level] multiple local coarse grid targets")
-                  endif
-               endif
+               call MPI_Irecv(cg%mg%f_tgt%seg(g)%buf(1, 1, 1), size(cg%mg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%mg%f_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
             enddo
-            if (.not. associated(cse)) call die("[gc_list:restrict_level] cannot find local coarse grid")
+         endif
 
-            do d = xdim, zdim ! debug
-               if (dom%has_dir(d)) then
-                  if ((fse(d, LO)-off1(d)-dom%nb-1)/2+cse(d, LO) < cse(d, LO)) call die("mv:rl <cse")
-                  if ((fse(d, HI)-off1(d)-dom%nb-1)/2+cse(d, LO) > cse(d, HI)) call die("mv:rl >cse")
-               endif
-            enddo
-            ! OPT: completely unoptimized,
-            ! note that e.g. 10 cells on fine grid may contribute to 5 or 6 cells on coarse grid, depending on offset and both cases require a bit different code
-            ! \todo use array sections to restrict the fully covered interior of coarse segment and finish the boundaries, where necessary
-            ! OPT: old code operations: Ir:Dr:Dw:Dr_m:Dw_m = 13:8:1:1:0.1, this code 130:20:8:1.4:0.2
-            ! OPT: computation of ic consumes ~30% Ir
-            ! OPT: convert the loop over i (at least) to array section operation
-            ! previous implementation of restriction (sum of array sections without loops) was probably faster and did produce slightly different results
-            ! (with typical relative difference at level 1e-15 due to different numerical roundoffs)
-            ! It is possible that future optimisations will affect the results and bit-to-bit comparisions (with h5diff) will fail
-            do k = fse(zdim, LO), fse(zdim, HI)
-               kc = (k-off1(zdim)-this%first%cg%ks)/2+cse(zdim, LO)
-               do j = fse(ydim, LO), fse(ydim, HI)
-                  jc = (j-off1(ydim)-this%first%cg%js)/2+cse(ydim, LO)
-                  do i = fse(xdim, LO), fse(xdim, HI)
-                     ic = (i-off1(xdim)-this%first%cg%is)/2+cse(xdim, LO)
-                     coarse%first%cg%q(iv)%arr(ic, jc, kc) = coarse%first%cg%q(iv)%arr(ic, jc, kc) + this%first%cg%q(iv)%arr(i, j, k) * norm
-                  enddo
-               enddo
-            enddo
-            !\todo add geometrical terms to improve convergence on cylindrical grids
-         else
-            ! OPT: see the notes above
-            this%first%cg%mg%c_tgt%seg(g)%buf(:, :, :) = 0.
-            off1(:) = mod(this%first%cg%off(:)+fse(:, LO) - this%first%cg%ijkse(:, LO), 2_LONG)
+         cgl => cgl%nxt
+      enddo
+
+      ! interpolate to coarse buffer and send it
+      norm = 1./2**dom%eff_dim
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         do g = 1, ubound(cg%mg%c_tgt%seg(:), dim=1)
+
+            fse => cg%mg%c_tgt%seg(g)%se
+
+            cg%mg%c_tgt%seg(g)%buf(:, :, :) = 0.
+            off1(:) = mod(cg%off(:)+fse(:, LO) - cg%ijkse(:, LO), 2_LONG)
             do k = fse(zdim, LO), fse(zdim, HI)
                kc = (k-fse(zdim, LO)+off1(zdim))/2 + 1
                do j = fse(ydim, LO), fse(ydim, HI)
                   jc = (j-fse(ydim, LO)+off1(ydim))/2 + 1
                   do i = fse(xdim, LO), fse(xdim, HI)
                      ic = (i-fse(xdim, LO)+off1(xdim))/2 + 1
-                     this%first%cg%mg%c_tgt%seg(g)%buf(ic, jc, kc) = this%first%cg%mg%c_tgt%seg(g)%buf(ic, jc, kc) + this%first%cg%q(iv)%arr(i, j, k) * norm
+                     cg%mg%c_tgt%seg(g)%buf(ic, jc, kc) = cg%mg%c_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm
                   enddo
                enddo
             enddo
             nr = nr + I_ONE
-            call MPI_Isend(this%first%cg%mg%c_tgt%seg(g)%buf(1, 1, 1), size(this%first%cg%mg%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, this%first%cg%mg%c_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
-         endif
+            call MPI_Isend(cg%mg%c_tgt%seg(g)%buf(1, 1, 1), size(cg%mg%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%mg%c_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
+         enddo
+         cgl => cgl%nxt
       enddo
 
       if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
 
-      if (allocated(coarse%first%cg%mg%f_tgt%seg)) then
-         do g = 1, ubound(coarse%first%cg%mg%f_tgt%seg(:), dim=1)
-            if (coarse%first%cg%mg%f_tgt%seg(g)%proc /= proc) then
-               cse => coarse%first%cg%mg%f_tgt%seg(g)%se
-               coarse%first%cg%q(iv)%arr     (cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = &
-                    coarse%first%cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) + coarse%first%cg%mg%f_tgt%seg(g)%buf(:, :, :)
-            endif
-         enddo
-      endif
+      ! copy the received buffers to the right places
+      cgl => coarse%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         if (allocated(cg%mg%f_tgt%seg)) then
+            do g = 1, ubound(cg%mg%f_tgt%seg(:), dim=1)
+               cse => cg%mg%f_tgt%seg(g)%se
+               cg%q(iv)%arr     (cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = &
+                    cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) + cg%mg%f_tgt%seg(g)%buf(:, :, :)
+            enddo
+         endif
+         cgl => cgl%nxt
+      enddo
 
    end subroutine restrict_level
 
-!!$ ============================================================================
-!>
-!! \brief 0th order prolongation : injection
-!<
+!> \brief 0th order prolongation : injection
 
    subroutine prolong_level0(this, iv)
 
       use constants,  only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
-      use dataio_pub, only: msg, warn, die
-      use domain,     only: dom
+      use dataio_pub, only: msg, warn!, die
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
       use mpisetup,   only: proc, comm, ierr, req, status
       use mpi,        only: MPI_DOUBLE_PRECISION
 
@@ -222,102 +200,86 @@ contains
 
       integer(kind=4), parameter :: tag1 = 1
       type(cg_list_level), pointer :: fine
-      integer :: g, g1, d
+      integer :: g
       integer(kind=8), dimension(:,:), pointer :: fse, cse ! shortcuts for fine segment and coarse segment
       integer(kind=8) :: i, j, k, ic, jc, kc
       integer(kind=8), dimension(xdim:zdim) :: off1
       integer(kind=4) :: nr
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg            !< current grid container
 
-      if (iv < lbound(this%first%cg%q, dim=1) .or. iv > ubound(this%first%cg%q, dim=1)) call die("[gc_list:prolong_level0] Invalid variable index.")
+!      if (iv < lbound(this%first%cg%q, dim=1) .or. iv > ubound(this%first%cg%q, dim=1)) call die("[gc_list:prolong_level0] Invalid variable index.")
 
       fine => this%finer
       if (.not. associated(fine)) then
          write(msg,'(a,i3)')"[gc_list:restrict_level] no fine level here: ", this%lev
          call warn(msg) ! can't prolong finest level
-      else
+         return
+      endif
+
+      cgl => fine%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
          ! OPT: try to remove or limit this  ~20% Ir, ~50% Dw_m
          fine%first%cg%q(iv)%arr(:,:,:) = 0. ! disables check_dirty
-      endif
 
-      nr = 0
-      if (allocated(fine%first%cg%mg%c_tgt%seg)) then
-         do g = 1, ubound(fine%first%cg%mg%c_tgt%seg(:), dim=1)
-            if (fine%first%cg%mg%c_tgt%seg(g)%proc /= proc) then
+         ! be ready to receive everything into right buffers
+         nr = 0
+         if (allocated(cg%mg%c_tgt%seg)) then
+            do g = 1, ubound(cg%mg%c_tgt%seg(:), dim=1)
                nr = nr + I_ONE
-               call MPI_Irecv(fine%first%cg%mg%c_tgt%seg(g)%buf(1, 1, 1), size(fine%first%cg%mg%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, fine%first%cg%mg%c_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
-            endif
-         enddo
-      endif
-
-      off1(:) = mod(fine%first%cg%off(:), 2_LONG)
-      do g = 1, ubound(this%first%cg%mg%f_tgt%seg(:), dim=1)
-
-         cse => this%first%cg%mg%f_tgt%seg(g)%se
-
-         if (this%first%cg%mg%f_tgt%seg(g)%proc == proc) then
-
-            nullify(fse)
-            do g1 = 1, ubound(fine%first%cg%mg%c_tgt%seg(:), dim=1) !> \todo should be set up in init_multigrid
-               if (fine%first%cg%mg%c_tgt%seg(g1)%proc == proc) then
-                  if (.not. associated(fse)) then
-                     fse => fine%first%cg%mg%c_tgt%seg(g1)%se
-                  else
-                     call die("[gc_list:prolong_level0] multiple local fine grid targets")
-                  endif
-               endif
+               call MPI_Irecv(cg%mg%c_tgt%seg(g)%buf(1, 1, 1), size(cg%mg%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%mg%c_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
             enddo
-            if (.not. associated(fse)) call die("[gc_list:prolong_level0] cannot find local fine grid")
-
-            ! No guardcells required here
-
-            ! Possible optimization candidate: reduce L1 and L2 cache misses on both read and write (RBGS only, secondary importance)
-            do d = xdim, zdim ! debug
-               if (dom%has_dir(d)) then
-                  if ((fse(d, LO)-off1(d)-dom%nb-1)/2+cse(d, LO) < cse(d, LO)) call die("mv:rl <cse")
-                  if ((fse(d, HI)-off1(d)-dom%nb-1)/2+cse(d, LO) > cse(d, HI)) call die("mv:rl >cse")
-               endif
-            enddo
-            ! OPT: completely unoptimized
-            ! OPT: old code operations: Ir:Dr:Dw:Dr_m:Dw_m = 37:9:11:1.5:1.5, new code = 72:10:9:0.1:1.7
-            ! OPT: computation of ic consumes ~25% Ir
-            do k = fse(zdim, LO), fse(zdim, HI)
-               kc = (k-off1(zdim)-this%first%cg%ks)/2+cse(zdim, LO)
-               do j = fse(ydim, LO), fse(ydim, HI)
-                  jc = (j-off1(ydim)-this%first%cg%js)/2+cse(ydim, LO)
-                  do i = fse(xdim, LO), fse(xdim, HI)
-                     ic = (i-off1(xdim)-this%first%cg%is)/2+cse(xdim, LO)
-                     fine%first%cg%q(iv)%arr(i, j, k) = this%first%cg%q(iv)%arr(ic, jc, kc)
-                  enddo
-               enddo
-            enddo
-         else
-            nr = nr + I_ONE
-            this%first%cg%mg%f_tgt%seg(g)%buf(:, :, :) = this%first%cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
-            call MPI_Isend(this%first%cg%mg%f_tgt%seg(g)%buf(1, 1, 1), size(this%first%cg%mg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, this%first%cg%mg%f_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
          endif
+         cgl => cgl%nxt
+      enddo
 
+      ! send coarse data
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         off1(:) = mod(fine%first%cg%off(:), 2_LONG) !!!
+         do g = 1, ubound(cg%mg%f_tgt%seg(:), dim=1)
+
+            cse => cg%mg%f_tgt%seg(g)%se
+
+            nr = nr + I_ONE
+            cg%mg%f_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+            call MPI_Isend(cg%mg%f_tgt%seg(g)%buf(1, 1, 1), size(cg%mg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%mg%f_tgt%seg(g)%proc, tag1, comm, req(nr), ierr)
+
+         enddo
+         cgl => cgl%nxt
       enddo
 
       if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
 
-      if (allocated(fine%first%cg%mg%c_tgt%seg)) then
-         do g = 1, ubound(fine%first%cg%mg%c_tgt%seg(:), dim=1)
-            if (fine%first%cg%mg%c_tgt%seg(g)%proc /= proc) then
-               fse => fine%first%cg%mg%c_tgt%seg(g)%se
-               off1(:) = mod(fine%first%cg%off(:)+fse(:, LO) - this%first%cg%ijkse(:, LO), 2_LONG)
+      ! interpolate received coarse data to the right place
+      cgl => fine%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         if (allocated(cg%mg%c_tgt%seg)) then
+            do g = 1, ubound(cg%mg%c_tgt%seg(:), dim=1)
+               fse => cg%mg%c_tgt%seg(g)%se
+               if (associated(this%first)) then
+                  off1(:) = mod(cg%off(:)+fse(:, LO) - this%first%cg%ijkse(:, LO), 2_LONG) !!!
+               else
+                  off1(:) = mod(cg%off(:)+fse(:, LO) - 1, 2_LONG) !!!
+               endif
                do k = fse(zdim, LO), fse(zdim, HI)
                   kc = (k-fse(zdim, LO)+off1(zdim))/2 + 1
                   do j = fse(ydim, LO), fse(ydim, HI)
                      jc = (j-fse(ydim, LO)+off1(ydim))/2 + 1
                      do i = fse(xdim, LO), fse(xdim, HI)
                         ic = (i-fse(xdim, LO)+off1(xdim))/2 + 1
-                        fine%first%cg%q(iv)%arr(i, j, k) = fine%first%cg%mg%c_tgt%seg(g)%buf(ic, jc, kc)
+                        cg%q(iv)%arr(i, j, k) = cg%mg%c_tgt%seg(g)%buf(ic, jc, kc)
                      enddo
                   enddo
                enddo
-            endif
-         enddo
-      endif
+            enddo
+         endif
+         cgl => cgl%nxt
+      enddo
 
    end subroutine prolong_level0
 

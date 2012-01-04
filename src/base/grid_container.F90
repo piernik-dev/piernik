@@ -205,7 +205,6 @@ module grid_cont
       real :: vol                                                !< volume of the grid; BEWARE: for cylindrical geometry it need to be multiplied by appropriate x(:) to get real volume
       real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
       integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
-      logical :: empty                                           !< .true. if there are no cells to process (e.g. some processes at base level in multigrid gravity)
       integer :: grid_id                                         !< index of own segment in own level decomposition, e.g. my_se(:,:) = base_lev%pse(proc)%sel(grid_id, :, :)
 
    contains
@@ -253,13 +252,7 @@ contains
       this%n_b(:)     = int(this%h_cor1(:) - this%off(:), 4) ! Block 'physical' grid sizes
       this%level_id   = level_id
 
-      if (all(this%n_b(:) == 0)) then
-         this%empty = .true.
-      else if (any(this%n_b(:) <= 0)) then
-         call die("[grid_container:init] Mixed positive and non-positive grid sizes")
-      else
-         this%empty = .false.
-      endif
+      if (any(this%n_b(:) <= 0)) call die("[grid_container:init] Mixed positive and non-positive grid sizes")
 
       ! Inherit the boundaries from the domain, then set MPI or SHEAR boundaries where applicable
       this%bnd(:,:) = dom%bnd(:,:)
@@ -311,84 +304,61 @@ contains
       allocate(this%mbc(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK, 1:dom%nb))
       this%mbc(:, :, :, :, :) = INVALID
 
-      if (this%empty) then
+      do i = xdim, zdim
+         if (dom%has_dir(i)) then
+            if (this%n_b(i) < 1) call die("[grid_init] Too many CPUs for such a small grid.")
+            if (this%n_b(i) < dom%nb) call warn("[grid_init] domain size in some directions is < nb, which may result in incomplete boundary cell update")
+         endif
+      enddo
 
-         this%fbnd(:,:) = dom%edge(:,:)
-         this%n_(:) = 0
+      where (dom%has_dir(:))
+         this%n_(:) = this%n_b(:) + I_TWO * dom%nb       ! Block total grid size with guardcells
          this%ijkse(:, LO) = dom%nb + I_ONE
-         this%ijkse(:, HI) = dom%nb
+         this%ijkse(:, HI) = dom%nb + this%n_b(:)
+         this%dl(:) = dom%L_(:) / n_d(:)
+         this%fbnd(:, LO) = dom%edge(:, LO) + this%dl(:) * this%off(:)
+         this%fbnd(:, HI) = dom%edge(:, LO) + this%dl(:) * this%h_cor1(:)
+      elsewhere
+         this%n_(:) = 1
+         this%ijkse(:, LO) = 1
+         this%ijkse(:, HI) = 1
          this%dl(:) = 1.0
+         this%fbnd(:, LO) = dom%edge(:, LO)
+         this%fbnd(:, HI) = dom%edge(:, HI)
+      endwhere
 
-         this%isb   = 0 ! ???
-         this%ieb   = 0
-         this%jsb   = 0
-         this%jeb   = 0
-         this%ksb   = 0
-         this%keb   = 0
-
-         this%vol = 0.
-         this%dvol = 0.
-         this%maxxyz = 0
-
+      if (dom%has_dir(xdim)) then
+         this%isb   = I_TWO*dom%nb
+         this%ieb   = this%n_b(xdim)+I_ONE
       else
-
-         do i = xdim, zdim
-            if (dom%has_dir(i)) then
-               if (this%n_b(i) < 1) call die("[grid_init] Too many CPUs for such a small grid.")
-               if (this%n_b(i) < dom%nb) call warn("[grid_init] domain size in some directions is < nb, which may result in incomplete boundary cell update")
-            endif
-         enddo
-
-         where (dom%has_dir(:))
-            this%n_(:) = this%n_b(:) + I_TWO * dom%nb       ! Block total grid size with guardcells
-            this%ijkse(:, LO) = dom%nb + I_ONE
-            this%ijkse(:, HI) = dom%nb + this%n_b(:)
-            this%dl(:) = dom%L_(:) / n_d(:)
-            this%fbnd(:, LO) = dom%edge(:, LO) + this%dl(:) * this%off(:)
-            this%fbnd(:, HI) = dom%edge(:, LO) + this%dl(:) * this%h_cor1(:)
-         elsewhere
-            this%n_(:) = 1
-            this%ijkse(:, LO) = 1
-            this%ijkse(:, HI) = 1
-            this%dl(:) = 1.0
-            this%fbnd(:, LO) = dom%edge(:, LO)
-            this%fbnd(:, HI) = dom%edge(:, HI)
-         endwhere
-
-         if (dom%has_dir(xdim)) then
-            this%isb   = I_TWO*dom%nb
-            this%ieb   = this%n_b(xdim)+I_ONE
-         else
-            this%isb   = 1
-            this%ieb   = 1
-         endif
-
-         if (dom%has_dir(ydim)) then
-            this%jsb   = I_TWO*dom%nb
-            this%jeb   = this%n_b(ydim)+I_ONE
-         else
-            this%jsb   = 1
-            this%jeb   = 1
-         endif
-
-         if (dom%has_dir(zdim)) then
-            this%ksb   = I_TWO*dom%nb
-            this%keb   = this%n_b(zdim)+I_ONE
-         else
-            this%ksb   = 1
-            this%keb   = 1
-         endif
-
-         this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:))
-         this%dvol = product(this%dl(:), mask=dom%has_dir(:))
-
-         this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
-
-         do i = xdim, zdim
-            call this%set_axis(i)
-         enddo
-
+         this%isb   = 1
+         this%ieb   = 1
       endif
+
+      if (dom%has_dir(ydim)) then
+         this%jsb   = I_TWO*dom%nb
+         this%jeb   = this%n_b(ydim)+I_ONE
+      else
+         this%jsb   = 1
+         this%jeb   = 1
+      endif
+
+      if (dom%has_dir(zdim)) then
+         this%ksb   = I_TWO*dom%nb
+         this%keb   = this%n_b(zdim)+I_ONE
+      else
+         this%ksb   = 1
+         this%keb   = 1
+      endif
+
+      this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:))
+      this%dvol = product(this%dl(:), mask=dom%has_dir(:))
+
+      this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
+
+      do i = xdim, zdim
+         call this%set_axis(i)
+      enddo
 
       this%dxmn = minval(this%dl(:), mask=dom%has_dir(:))
 

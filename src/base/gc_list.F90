@@ -37,7 +37,7 @@ module gc_list
    implicit none
 
    private
-   public :: cg_list_global, cg_list, cg_list_element
+   public :: cg_list_global, cg_list, cg_list_element, ind_val
 
    !>
    !! \brief A grid container with two links to other cg_list_elements
@@ -72,6 +72,10 @@ module gc_list
       procedure :: un_link                           !< Un-link the element
       procedure :: get_extremum                      !< Find munimum or maximum value over a s list
       procedure :: print_list                        !< Print the list and associated cg ID
+      procedure :: set_q_value                       !< reset given field to the value
+      procedure :: q_copy                            !< copy a given field to another
+      procedure :: q_add                             !< add a field to another
+      procedure :: q_lin_comb                        !< assign linear combination of q fields
 !> \todo merge lists
 
    end type cg_list
@@ -111,6 +115,12 @@ module gc_list
       procedure :: exists
       procedure :: exists_4d
    end type cg_list_global
+
+   !> \brief Index - value pairs
+   type ind_val
+      integer :: ind  !< index in cg%q
+      real    :: val  !< value for multiplication
+   end type ind_val
 
 contains
 
@@ -551,7 +561,7 @@ contains
 !>
 !! \brief Get the index of a named 3d array of given name.
 !!
-!! \details This method is provided for convenience only. Use ptr whenever possible.
+!! \warning OPT The indices aren't updated so cache them, whenever possible
 !<
    function ind(this, name) result(rind)
 
@@ -769,6 +779,117 @@ contains
       endif
 
    end subroutine get_extremum
+
+!> \brief reset given field to the value (usually 0. or dirty)
+
+   subroutine set_q_value(this, ind, val)
+
+      implicit none
+
+      class(cg_list), intent(in) :: this    !< object invoking type-bound procedure
+      integer,        intent(in) :: ind     !< Index in cg%q(:)
+      real,           intent(in) :: val     !< value to put
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%q(ind)%arr(:, :, :) = val
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine set_q_value
+
+!> \brief copy a given field to another
+
+   subroutine q_copy(this, i_from, i_to)
+
+      implicit none
+
+      class(cg_list), intent(in) :: this    !< object invoking type-bound procedure
+      integer,        intent(in) :: i_from  !< Index of source in cg%q(:)
+      integer,        intent(in) :: i_to    !< Index of destination in cg%q(:)
+
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%q(i_to)%arr(:, :, :) = cgl%cg%q(i_from)%arr(:, :, :)
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine q_copy
+
+!> \brief Add a field to another (e.g. apply a correction)
+
+   subroutine q_add(this, i_add, i_to)
+
+      implicit none
+
+      class(cg_list), intent(in) :: this    !< object invoking type-bound procedure
+      integer,        intent(in) :: i_add   !< Index of field to be aded in cg%q(:)
+      integer,        intent(in) :: i_to    !< Index of field to be modified in cg%q(:)
+
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%q(i_to)%arr(:, :, :) = cgl%cg%q(i_to)%arr(:, :, :) + cgl%cg%q(i_add)%arr(:, :, :)
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine q_add
+
+!>
+!! \brief Assign linear combination of q fields on the whole list
+!!
+!! \details On the whole list cg%q(ind) is assigned to sum of iv%val * cg%q(iv%ind)
+!<
+
+   subroutine q_lin_comb(this, iv, ind)
+
+      use dataio_pub, only: die, warn
+
+      implicit none
+
+      class(cg_list),              intent(in) :: this    !< object invoking type-bound procedure
+      type(ind_val), dimension(:), intent(in) :: iv      !< list of (coefficient, index) pairs
+      integer,                     intent(in) :: ind     !< Index in cg%q(:)
+
+      integer :: i
+      type(ind_val), dimension(size(iv)) :: iv_safe !< sanitized copy of iv
+      logical :: swapped
+      type(cg_list_element), pointer :: cgl
+
+      if (size(iv) <= 0) then
+         call warn("[gc_list::q_lin_comb] Nothing to do")
+         return
+      endif
+
+      iv_safe(:) = iv(:)
+      ! if own field (ind) is involved then move it to the first position to avoid side effects and allow in-place operation
+      swapped =.false.
+      do i = lbound(iv, dim=1)+1, ubound(iv, dim=1)
+         if (ind == iv(i)%ind) then
+            if (swapped) call die("[gc_list::q_lin_comb] Cannot use own field twice due to side effects")
+            iv_safe(lbound(iv, dim=1)) = iv(i)
+            iv_safe(i) = iv(lbound(iv, dim=1))
+            swapped = .true.
+         endif
+      enddo
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%q(ind)%arr(:, :, :) = iv_safe(lbound(iv_safe, dim=1))%val * cgl%cg%q(iv_safe(lbound(iv_safe, dim=1))%ind)%arr(:, :, :)
+         do i = lbound(iv_safe, dim=1)+1, ubound(iv_safe, dim=1)
+            cgl%cg%q(ind)%arr(:, :, :) = cgl%cg%q(ind)%arr(:, :, :) + iv_safe(i)%val * cgl%cg%q(iv_safe(i)%ind)%arr(:, :, :)
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+    end subroutine q_lin_comb
 
 ! unused
 !!$!>

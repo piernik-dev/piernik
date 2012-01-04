@@ -68,7 +68,7 @@ contains
 
       call die("User boundaries are not defined")
 
-      if (.true. .or. cg%empty) return ! suppress compiler warnings
+      if (.true. .or. cg%grid_id >=0) return ! suppress compiler warnings
 
    end subroutine default_bnd
 !--------------------------------------------------------------------------------------------------
@@ -109,7 +109,7 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      if (.true. .or. cg%empty) return ! suppress compiler warnings
+      if (.true. .or. cg%grid_id >= 0) return ! suppress compiler warnings
 
    end subroutine bnd_null
 

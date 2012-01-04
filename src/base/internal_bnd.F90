@@ -187,6 +187,7 @@ contains
          if (nr >  ubound(req(:), dim=1)) call die("[grid_container:internal_boundaries] nr > size(req) at exit")
          cgl => cgl%nxt
       enddo
+
       call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
 
    end subroutine internal_boundaries

@@ -269,7 +269,7 @@ contains
       type(cg_list_level), pointer, intent(in) :: fine !< level for which approximate the solution
       integer,                      intent(in) :: soln !< index of solution in cg%q(:) ! \todo change the name
 
-      integer                       :: i, j, k, d, lh, g, g1, gc, ib, jb, ibh, jbh, l
+      integer                       :: i, j, k, d, lh, g, ib, jb, ibh, jbh, l
       type(cg_list_level), pointer           :: coarse
       integer, parameter            :: s_wdth  = 3           ! interpolation stencil width
       integer(kind=4), parameter    :: s_rng = (s_wdth-1)/2  ! stencil range around 0
@@ -345,11 +345,9 @@ contains
             do lh = LO, HI
                if (allocated(fine%first%cg%mg%pfc_tgt(d, lh)%seg)) then
                   do g = 1, ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1)
-                     if (fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%proc /= proc) then
-                        nr = nr + I_ONE
-                        call MPI_Irecv(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf(1, 1, 1), size(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, &
-                             &         fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), ierr)
-                     endif
+                     nr = nr + I_ONE
+                     call MPI_Irecv(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf(1, 1, 1), size(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, &
+                          &         fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), ierr)
                   enddo
                endif
             enddo
@@ -359,13 +357,13 @@ contains
          off1(:) = int(mod(fine%first%cg%off(:), 2_LONG), kind=4)
          do d = xdim, zdim
             do lh = LO, HI
-               if (allocated(coarse%first%cg%mg%pff_tgt(d, lh)%seg)) then
-                  do g = 1, ubound(coarse%first%cg%mg%pff_tgt(d, lh)%seg(:), dim=1)
+               if (associated(coarse%first)) then !!!
+                  if (allocated(coarse%first%cg%mg%pff_tgt(d, lh)%seg)) then
+                     do g = 1, ubound(coarse%first%cg%mg%pff_tgt(d, lh)%seg(:), dim=1)
 
-                     pseg => coarse%first%cg%mg%pff_tgt(d, lh)%seg(g)
-                     cse => pseg%se
+                        pseg => coarse%first%cg%mg%pff_tgt(d, lh)%seg(g)
+                        cse => pseg%se
 
-                     if (pseg%proc /= proc) then
                         nr = nr + I_ONE
                         se(:,:) = cse(:,:)
                         pseg%buf(:, :, :) = 0. ! this can be avoided by extracting first assignment from the loop
@@ -375,42 +373,8 @@ contains
                                 coarse%first%cg%q(soln)%arr(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI))
                         enddo
                         call MPI_Isend(pseg%buf(1, 1, 1), size(pseg%buf(:, :, :)), MPI_DOUBLE_PRECISION, pseg%proc, HI*d+lh, comm, req(nr), ierr)
-                     endif
-                  enddo
-               endif
-            enddo
-         enddo
-
-         ! Make a copy of local coarse data to buffer (\todo: can be merged with interpolation step)
-         do d = xdim, zdim
-            do lh = LO, HI
-               if (allocated(fine%first%cg%mg%pfc_tgt(d, lh)%seg)) then
-                  do g = 1, ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1)
-                     if (fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%proc == proc) then
-                        nullify(cse)
-                        gc = 0
-                        do g1 = 1, ubound(coarse%first%cg%mg%pff_tgt(d, lh)%seg(:), dim=1) !> \todo should be set up in mpi_multigrid_prep_grav
-                           if (coarse%first%cg%mg%pff_tgt(d, lh)%seg(g1)%proc == proc) then
-                              if (.not. associated(cse)) then
-                                 cse => coarse%first%cg%mg%pff_tgt(d, lh)%seg(g1)%se
-                                 gc = g1
-                              else
-                                 call die("[multigridbasefuncs:prolong_faces] multiple local coarse grid targets")
-                              endif
-                           endif
-                        enddo
-                        if (.not. associated(cse)) call die("[multigridbasefuncs:prolong_faces] missing coarse grid target")
-
-                        se(:,:) = cse(:,:)
-                        pseg => fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)
-                        pseg%buf(:,:,:) = 0. ! this can be avoided by extracting first assignment from the loop
-                        do l = 1, ubound(coarse%first%cg%mg%pff_tgt(d, lh)%seg(gc)%f_lay(:), dim=1)
-                           se(d,:) = coarse%first%cg%mg%pff_tgt(d, lh)%seg(gc)%f_lay(l)%layer
-                           pseg%buf(:,:,:) =  pseg%buf(:,:,:) + coarse%first%cg%mg%pff_tgt(d, lh)%seg(gc)%f_lay(l)%coeff * &
-                                coarse%first%cg%q(soln)%arr(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI))
-                        enddo
-                     endif
-                  enddo
+                     enddo
+                  endif
                endif
             enddo
          enddo

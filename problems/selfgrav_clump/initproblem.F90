@@ -259,7 +259,7 @@ contains
 
          t = iC * sqrt(tiny(1.0)) ! trick to allow solution extrapolation in multigrid_solve_grav
 
-         call multigrid_solve_grav(cg%u(idni,:,:,:))
+         call multigrid_solve_grav([idni])
          if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence (extremely risky)
             if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
                cg%sgp = (cg%sgp*cg%hgpot - cg%gpot**2)/(cg%sgp + cg%hgpot - 2.*cg%gpot)
@@ -411,7 +411,7 @@ contains
 
       ! final touch
       t = t_save ! restore initial time
-      call multigrid_solve_grav(cg%u(idni,:,:,:))
+      call multigrid_solve_grav([idni])
       cg%gpot = cg%sgp
 
       where (cg%u(idni, :, :, :) < smalld) cg%u(idni, :, :, :) = smalld

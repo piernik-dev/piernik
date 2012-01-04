@@ -230,22 +230,18 @@ contains
 !! \brief Initialization - continued after allocation of everything interesting
 !<
 
-   subroutine init_multigrid_diff_post(mb_alloc)
+   subroutine init_multigrid_diff_post
 
       use dataio_pub,         only: die
       use fluidindex,         only: flind
 
       implicit none
 
-      real, intent(inout)              :: mb_alloc               !< Allocation counter
-
       if (allocated(norm_was_zero)) call die("[multigrid_diffusion:init_multigrid] norm_was_zero already allocated")
       allocate(norm_was_zero(flind%crs%all))
-      mb_alloc = mb_alloc + size(norm_was_zero)/2
       norm_was_zero(:) = .false.
 
       call vstat%init(max_cycles)
-      mb_alloc = mb_alloc + 2*max_cycles
 
    end subroutine init_multigrid_diff_post
 
@@ -489,7 +485,7 @@ contains
 
       use dataio_pub,         only: msg, warn
       use grid,               only: leaves
-      use gc_list,            only: cg_list_element
+      use gc_list,            only: cg_list_element, ind_val
       use cg_list_lev,        only: cg_list_level
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_crs
@@ -554,12 +550,8 @@ contains
 
          call restrict_all(defect)
 
-         call set_dirty(correction)
-         cgl => base%first
-         do while (associated(cgl))
-            cgl%cg%q(correction)%arr(:, :, :) = 0.
-            cgl => cgl%nxt
-         enddo
+         !call set_dirty(correction)
+         call base%set_q_value(correction, 0.)
 
          curl => base
          do while (associated(curl))
@@ -570,14 +562,7 @@ contains
 
          call check_dirty(roof, correction, "c_residual")
          call check_dirty(roof, defect, "d_residual")
-         cgl => roof%first
-         do while (associated(cgl))
-            cg => cgl%cg
-            cg%q(solution)%arr       (cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-                 cg%q(solution)%arr  (cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) - &
-                 cg%q(correction)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            cgl => cgl%nxt
-         enddo
+         call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(correction, -1.) ], solution) ! solution := solution - correction
 
       enddo
 

@@ -253,7 +253,7 @@ contains
             ierrh = -1
       end select
 
-      if (.true. .or. cg%empty) return ! suppress compiler warnings
+      if (.true. .or. cg%grid_id > 0) return ! suppress compiler warnings
 
    end subroutine sedov_vars_hdf5
 !-----------------------------------------------------------------------------

@@ -333,7 +333,7 @@ contains
       if (cdd%comm3d == MPI_COMM_NULL) then
 
          do d = xdim, zdim
-            if (dom%has_dir(d) .and. .not. this%empty) then
+            if (dom%has_dir(d)) then
 
                ! identify processes with interesting neighbour data
                procmask(:) = 0

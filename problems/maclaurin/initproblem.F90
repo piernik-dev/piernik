@@ -275,7 +275,7 @@ contains
 
       implicit none
 
-      integer            :: i, j, k
+      integer            :: i, j, k, apot_i
       real               :: potential, r2, rr
       real               :: AA1, AA3, a12, a32, x02, y02, z02, lam, h, cdphi
       real, parameter    :: small_e = 1e-3
@@ -300,6 +300,7 @@ contains
       a32 = a3**2
 
       call all_cg%reg_var(apot_n, AT_IGNORE)
+      apot_i = all_cg%ind(apot_n)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -348,7 +349,7 @@ contains
                         potential = - 2./3. * (3*a12 - rr)
                      endif
                   endif
-                  cg%q(all_cg%ind(apot_n))%arr(i, j, k) = potential * pi * newtong * d0
+                  cg%q(apot_i)%arr(i, j, k) = potential * pi * newtong * d0
                enddo
             enddo
          enddo
@@ -376,7 +377,7 @@ contains
 
       implicit none
 
-      integer            :: i, j, k
+      integer            :: i, j, k, apot_i
       real, dimension(2) :: norm, dev
       real               :: potential, fac
       type(cg_list_element), pointer :: cgl
@@ -386,6 +387,7 @@ contains
       norm(:) = 0.
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
+      apot_i = all_cg%ind(apot_n)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -399,7 +401,7 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  potential = cg%q(all_cg%ind(apot_n))%arr(i, j, k)
+                  potential = cg%q(apot_i)%arr(i, j, k)
                   if (dom%geometry_type == GEO_RPZ) fac = cg%x(i)
                   norm(1) = norm(1) + (potential - cg%sgp(i, j, k))**2 * fac
                   norm(2) = norm(2) + potential**2 * fac

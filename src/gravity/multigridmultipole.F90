@@ -111,7 +111,7 @@ contains
 !! \brief Initialization routine, called from init_multigrid
 !<
 
-   subroutine init_multipole(mb_alloc)
+   subroutine init_multipole
 
       use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI
       use dataio_pub,    only: die, warn
@@ -121,8 +121,6 @@ contains
       use multigridvars, only: roof
 
       implicit none
-
-      real,                 intent(inout) :: mb_alloc               !< multigrid allocation counter
 
       integer               :: l,m
 
@@ -188,7 +186,6 @@ contains
 
          if (allocated(rn) .or. allocated(irn) .or. allocated(sfac) .or. allocated(cfac)) call die("[multipole:init_multipole] rn, irn, sfac or cfac already allocated")
          allocate(rn(0:lmax), irn(0:lmax), sfac(0:mmax), cfac(0:mmax))
-         mb_alloc = mb_alloc + size(rn) + size(irn) + size(sfac) + size(cfac)
 
          select case (dom%geometry_type)
             case (GEO_XYZ)
@@ -210,7 +207,6 @@ contains
 
          if (allocated(k12) .or. allocated(ofact) .or. allocated(Q)) call die("[multipole:init_multipole] k12, ofact or Q already allocated")
          allocate(k12(2, 1:lmax, 0:mmax), ofact(0:lm(lmax, 2*mmax)), Q(0:lm(lmax, 2*mmax), INSIDE:OUTSIDE, 0:rqbin))
-         mb_alloc = mb_alloc + size(k12) + size(ofact) + size(Q)
 
          ofact(:) = 0. ! prevent FPE spurious exceptions in multipole:img_mass2moments
          do l = 1, lmax

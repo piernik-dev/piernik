@@ -51,8 +51,9 @@ contains
       use constants,     only: xdim, ydim, zdim, LO, HI
       use dataio_pub,    only: warn, die
       use cg_list_lev,   only: cg_list_level
+      use gc_list,       only: cg_list_element
       use grid,          only: is_overlap
-      use grid_cont,     only: pr_segment
+      use grid_cont,     only: pr_segment, grid_container
       use mpisetup,      only: proc, FIRST, LAST, procmask
       use multigridvars, only: base
 
@@ -63,73 +64,91 @@ contains
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
       type(pr_segment), pointer :: seg
       type(cg_list_level), pointer :: curl
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg            !< current grid container
 
       curl => base
       do while (associated(curl))
-         if (ubound(curl%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid:mpi_multigrid_prep] Multiple blocks per process not implemented yet")
-
-         ijks(:) = curl%first%cg%ijkse(:, LO) - curl%first%cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+dom%nb - off(:))
+         if (ubound(curl%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid:mpi_multigrid_prep] Multiple blocks per process not implemented yet") ! %sel(1,
 
          ! find fine target for receiving restricted data or sending data to be prolonged
          if (associated(curl%finer)) then
-            procmask(:) = 0
-            do j = FIRST, LAST
-               coarsened(:,:) = curl%finer%pse(j)%sel(1, :, :)/2
-               if (is_overlap(curl%first%cg%my_se(:, :), coarsened(:,:))) procmask(j) = 1 ! we can store also neigh(:,:), face and corner as a bitmask, if necessary
-            enddo
-            allocate(curl%first%cg%mg%f_tgt%seg(count(procmask(:) /= 0)))
+            cgl => curl%first
+            do while (associated(cgl))
+               cg => cgl%cg
 
-            g = 0
-            do j = FIRST, LAST
-               if (procmask(j) /= 0) then
-                  g = g + 1
-                  if (.not. allocated(curl%first%cg%mg%f_tgt%seg) .or. g>ubound(curl%first%cg%mg%f_tgt%seg, dim=1)) call die("m:im f_tgt g>")
-                  seg => curl%first%cg%mg%f_tgt%seg(g)
-                  if (allocated(seg%buf)) then
-                     call warn("m:mmp i seg%buf a a")
-                     deallocate(seg%buf)
+               ijks(:) = cg%ijkse(:, LO) - cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+dom%nb - off(:))
+
+               procmask(:) = 0
+               do j = FIRST, LAST
+                  coarsened(:,:) = curl%finer%pse(j)%sel(1, :, :)/2
+                  if (is_overlap(cg%my_se(:, :), coarsened(:,:))) procmask(j) = 1 ! we can store also neigh(:,:), face and corner as a bitmask, if necessary
+               enddo
+               allocate(cg%mg%f_tgt%seg(count(procmask(:) /= 0)))
+
+               g = 0
+               do j = FIRST, LAST
+                  if (procmask(j) /= 0) then
+                     g = g + 1
+                     if (.not. allocated(cg%mg%f_tgt%seg) .or. g>ubound(cg%mg%f_tgt%seg, dim=1)) call die("m:im f_tgt g>")
+                     seg => cg%mg%f_tgt%seg(g)
+                     if (allocated(seg%buf)) then
+                        call warn("m:mmp i seg%buf a a")
+                        deallocate(seg%buf)
+                     endif
+                     seg%proc = j
+                     ! find cross-section of own segment with coarsened fine segment
+                     seg%se(:, LO) = max(cg%my_se(:, LO), curl%finer%pse(j)%sel(1, :, LO)/2) + ijks(:)
+                     seg%se(:, HI) = min(cg%my_se(:, HI), curl%finer%pse(j)%sel(1, :, HI)/2) + ijks(:)
+                     allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
+                          &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
+                          &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                   endif
-                  seg%proc = j
-                  ! find cross-section of own segment with coarsened fine segment
-                  seg%se(:, LO) = max(curl%first%cg%my_se(:, LO), curl%finer%pse(j)%sel(1, :, LO)/2) + ijks(:)
-                  seg%se(:, HI) = min(curl%first%cg%my_se(:, HI), curl%finer%pse(j)%sel(1, :, HI)/2) + ijks(:)
-                  if (j /= proc) allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, seg%se(ydim, HI)-seg%se(ydim, LO) + 1, seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
-                  ! not counted in mb_alloc
-               endif
+               enddo
+               cgl => cgl%nxt
             enddo
          endif
 
          ! find coarse target for sending restricted data or receiving data to be prolonged
          !> \deprecated almost duplicated code
          if (associated(curl%coarser)) then
-            procmask(:) = 0
-            coarsened(:,:) = curl%first%cg%my_se(:, :)/2
-            do j = FIRST, LAST
-               if (is_overlap(coarsened(:,:), curl%coarser%pse(j)%sel(1, :, :))) procmask(j) = 1
-            enddo
-            allocate(curl%first%cg%mg%c_tgt%seg(count(procmask(:) /= 0)))
+            cgl => curl%first
+            do while (associated(cgl))
+               cg => cgl%cg
 
-            g = 0
-            do j = FIRST, LAST
-               if (procmask(j) /= 0) then
-                  g = g + 1
-                  if (.not. allocated(curl%first%cg%mg%c_tgt%seg) .or. g>ubound(curl%first%cg%mg%c_tgt%seg, dim=1)) call die("m:im c_tgt g>")
-                  seg => curl%first%cg%mg%c_tgt%seg(g)
-                  if (allocated(seg%buf)) then
-                     call warn("m:mmp o seg%buf a a")
-                     deallocate(seg%buf)
+               ijks(:) = cg%ijkse(:, LO) - cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+dom%nb - off(:))
+
+               procmask(:) = 0
+               coarsened(:,:) = cg%my_se(:, :)/2
+               do j = FIRST, LAST
+                  if (ubound(curl%coarser%pse(j)%sel, dim=1) > 0) then
+                     if (is_overlap(coarsened(:,:), curl%coarser%pse(j)%sel(1, :, :))) procmask(j) = 1
                   endif
-                  seg%proc = j
-                  ! find cross-section of own segment with refined coarse segment
-                  seg%se(:, LO) = max(curl%first%cg%my_se(:, LO), curl%coarser%pse(j)%sel(1, :, LO)*2  )
-                  seg%se(:, HI) = min(curl%first%cg%my_se(:, HI), curl%coarser%pse(j)%sel(1, :, HI)*2+1)
-                  if (j /= proc) allocate(seg%buf(seg%se(xdim, HI)/2-seg%se(xdim, LO)/2 + 1, &
-                       &                          seg%se(ydim, HI)/2-seg%se(ydim, LO)/2 + 1, &
-                       &                          seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
-                  ! not counted in mb_alloc
-                  seg%se(:, LO) = seg%se(:, LO) + ijks(:)
-                  seg%se(:, HI) = seg%se(:, HI) + ijks(:)
-               endif
+               enddo
+               allocate(cg%mg%c_tgt%seg(count(procmask(:) /= 0)))
+
+               g = 0
+               do j = FIRST, LAST
+                  if (procmask(j) /= 0) then
+                     g = g + 1
+                     if (.not. allocated(cg%mg%c_tgt%seg) .or. g>ubound(cg%mg%c_tgt%seg, dim=1)) call die("m:im c_tgt g>")
+                     seg => cg%mg%c_tgt%seg(g)
+                     if (allocated(seg%buf)) then
+                        call warn("m:mmp o seg%buf a a")
+                        deallocate(seg%buf)
+                     endif
+                     seg%proc = j
+                     ! find cross-section of own segment with refined coarse segment
+                     seg%se(:, LO) = max(cg%my_se(:, LO), curl%coarser%pse(j)%sel(1, :, LO)*2  )
+                     seg%se(:, HI) = min(cg%my_se(:, HI), curl%coarser%pse(j)%sel(1, :, HI)*2+1)
+                     allocate(seg%buf(seg%se(xdim, HI)/2-seg%se(xdim, LO)/2 + 1, &
+                          &           seg%se(ydim, HI)/2-seg%se(ydim, LO)/2 + 1, &
+                          &           seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
+                     seg%se(:, LO) = seg%se(:, LO) + ijks(:)
+                     seg%se(:, HI) = seg%se(:, HI) + ijks(:)
+                  endif
+               enddo
+               cgl => cgl%nxt
             enddo
          endif
 
@@ -266,58 +285,57 @@ contains
       cgl => curl%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (.not. cg%empty) then
 
-            if (cor) then
-               if (.not. warned) then
-                  call warn("[multigridmpifuncs:multigrid_ext_bnd] some corners may not be properly filled. FIX ME!")
-                  warned = .true.
-               endif
+         if (cor) then
+            if (.not. warned) then
+               call warn("[multigridmpifuncs:multigrid_ext_bnd] some corners may not be properly filled. FIX ME!")
+               warned = .true.
             endif
-
-            !> \todo implement mixed BC
-            select case (mode)         !> \deprecated BEWARE: some cylindrical factors may be helpful
-               case (extbnd_donothing) ! remember to initialize everything first!
-                  return
-               case (extbnd_extrapolate) !> \deprecated mixed-tybe BC: free flux; BEWARE: it is not protected from inflow
-                  do i = 1, ng
-                     if (is_external(xdim, LO)) cg%q(iv)%arr(cg%is-i, :, :) = (1+i) * cg%q(iv)%arr(cg%is, :, :) - i * cg%q(iv)%arr(cg%is+1, :, :)
-                     if (is_external(xdim, HI)) cg%q(iv)%arr(cg%ie+i, :, :) = (1+i) * cg%q(iv)%arr(cg%ie, :, :) - i * cg%q(iv)%arr(cg%ie-1, :, :)
-                     if (is_external(ydim, LO)) cg%q(iv)%arr(:, cg%js-i, :) = (1+i) * cg%q(iv)%arr(:, cg%js, :) - i * cg%q(iv)%arr(:, cg%js+1, :)
-                     if (is_external(ydim, HI)) cg%q(iv)%arr(:, cg%je+i, :) = (1+i) * cg%q(iv)%arr(:, cg%je, :) - i * cg%q(iv)%arr(:, cg%je-1, :)
-                     if (is_external(zdim, LO)) cg%q(iv)%arr(:, :, cg%ks-i) = (1+i) * cg%q(iv)%arr(:, :, cg%ks) - i * cg%q(iv)%arr(:, :, cg%ks+1)
-                     if (is_external(zdim, HI)) cg%q(iv)%arr(:, :, cg%ke+i) = (1+i) * cg%q(iv)%arr(:, :, cg%ke) - i * cg%q(iv)%arr(:, :, cg%ke-1)
-                  enddo
-               case (extbnd_zero) ! homogenous Dirichlet BC with 0 at first guardcell row
-                  if (is_external(xdim, LO)) cg%q(iv)%arr(:cg%is, :, :) = 0.
-                  if (is_external(xdim, HI)) cg%q(iv)%arr(cg%ie:, :, :) = 0.
-                  if (is_external(ydim, LO)) cg%q(iv)%arr(:, :cg%js, :) = 0.
-                  if (is_external(ydim, HI)) cg%q(iv)%arr(:, cg%je:, :) = 0.
-                  if (is_external(zdim, LO)) cg%q(iv)%arr(:, :, :cg%ks) = 0.
-                  if (is_external(zdim, HI)) cg%q(iv)%arr(:, :, cg%ke:) = 0.
-               case (extbnd_mirror) ! reflecting BC (homogenous Neumamnn)
-                  do i = 1, ng
-                     if (is_external(xdim, LO)) cg%q(iv)%arr(cg%is-i, :, :) = cg%q(iv)%arr(cg%is+i-1, :, :)
-                     if (is_external(xdim, HI)) cg%q(iv)%arr(cg%ie+i, :, :) = cg%q(iv)%arr(cg%ie-i+1, :, :)
-                     if (is_external(ydim, LO)) cg%q(iv)%arr(:, cg%js-i, :) = cg%q(iv)%arr(:, cg%js+i-1, :)
-                     if (is_external(ydim, HI)) cg%q(iv)%arr(:, cg%je+i, :) = cg%q(iv)%arr(:, cg%je-i+1, :)
-                     if (is_external(zdim, LO)) cg%q(iv)%arr(:, :, cg%ks-i) = cg%q(iv)%arr(:, :, cg%ks+i-1)
-                     if (is_external(zdim, HI)) cg%q(iv)%arr(:, :, cg%ke+i) = cg%q(iv)%arr(:, :, cg%ke-i+1)
-                  enddo
-               case (extbnd_antimirror) ! homogenous Dirichlet BC with 0 at external faces
-                  do i = 1, ng
-                     if (is_external(xdim, LO)) cg%q(iv)%arr(cg%is-i, :, :) = - cg%q(iv)%arr(cg%is+i-1, :, :)
-                     if (is_external(xdim, HI)) cg%q(iv)%arr(cg%ie+i, :, :) = - cg%q(iv)%arr(cg%ie-i+1, :, :)
-                     if (is_external(ydim, LO)) cg%q(iv)%arr(:, cg%js-i, :) = - cg%q(iv)%arr(:, cg%js+i-1, :)
-                     if (is_external(ydim, HI)) cg%q(iv)%arr(:, cg%je+i, :) = - cg%q(iv)%arr(:, cg%je-i+1, :)
-                     if (is_external(zdim, LO)) cg%q(iv)%arr(:, :, cg%ks-i) = - cg%q(iv)%arr(:, :, cg%ks+i-1)
-                     if (is_external(zdim, HI)) cg%q(iv)%arr(:, :, cg%ke+i) = - cg%q(iv)%arr(:, :, cg%ke-i+1)
-                  enddo
-               case default
-                  write(msg, '(a,i3,a)')"[multigridmpifuncs:multigrid_ext_bnd] boundary type ",mode," not implemented"
-                  call die(msg)
-            end select
          endif
+
+         !> \todo implement mixed BC
+         select case (mode)         !> \deprecated BEWARE: some cylindrical factors may be helpful
+            case (extbnd_donothing) ! remember to initialize everything first!
+               return
+            case (extbnd_extrapolate) !> \deprecated mixed-tybe BC: free flux; BEWARE: it is not protected from inflow
+               do i = 1, ng
+                  if (is_external(xdim, LO)) cg%q(iv)%arr(cg%is-i, :, :) = (1+i) * cg%q(iv)%arr(cg%is, :, :) - i * cg%q(iv)%arr(cg%is+1, :, :)
+                  if (is_external(xdim, HI)) cg%q(iv)%arr(cg%ie+i, :, :) = (1+i) * cg%q(iv)%arr(cg%ie, :, :) - i * cg%q(iv)%arr(cg%ie-1, :, :)
+                  if (is_external(ydim, LO)) cg%q(iv)%arr(:, cg%js-i, :) = (1+i) * cg%q(iv)%arr(:, cg%js, :) - i * cg%q(iv)%arr(:, cg%js+1, :)
+                  if (is_external(ydim, HI)) cg%q(iv)%arr(:, cg%je+i, :) = (1+i) * cg%q(iv)%arr(:, cg%je, :) - i * cg%q(iv)%arr(:, cg%je-1, :)
+                  if (is_external(zdim, LO)) cg%q(iv)%arr(:, :, cg%ks-i) = (1+i) * cg%q(iv)%arr(:, :, cg%ks) - i * cg%q(iv)%arr(:, :, cg%ks+1)
+                  if (is_external(zdim, HI)) cg%q(iv)%arr(:, :, cg%ke+i) = (1+i) * cg%q(iv)%arr(:, :, cg%ke) - i * cg%q(iv)%arr(:, :, cg%ke-1)
+               enddo
+            case (extbnd_zero) ! homogenous Dirichlet BC with 0 at first guardcell row
+               if (is_external(xdim, LO)) cg%q(iv)%arr(:cg%is, :, :) = 0.
+               if (is_external(xdim, HI)) cg%q(iv)%arr(cg%ie:, :, :) = 0.
+               if (is_external(ydim, LO)) cg%q(iv)%arr(:, :cg%js, :) = 0.
+               if (is_external(ydim, HI)) cg%q(iv)%arr(:, cg%je:, :) = 0.
+               if (is_external(zdim, LO)) cg%q(iv)%arr(:, :, :cg%ks) = 0.
+               if (is_external(zdim, HI)) cg%q(iv)%arr(:, :, cg%ke:) = 0.
+            case (extbnd_mirror) ! reflecting BC (homogenous Neumamnn)
+               do i = 1, ng
+                  if (is_external(xdim, LO)) cg%q(iv)%arr(cg%is-i, :, :) = cg%q(iv)%arr(cg%is+i-1, :, :)
+                  if (is_external(xdim, HI)) cg%q(iv)%arr(cg%ie+i, :, :) = cg%q(iv)%arr(cg%ie-i+1, :, :)
+                  if (is_external(ydim, LO)) cg%q(iv)%arr(:, cg%js-i, :) = cg%q(iv)%arr(:, cg%js+i-1, :)
+                  if (is_external(ydim, HI)) cg%q(iv)%arr(:, cg%je+i, :) = cg%q(iv)%arr(:, cg%je-i+1, :)
+                  if (is_external(zdim, LO)) cg%q(iv)%arr(:, :, cg%ks-i) = cg%q(iv)%arr(:, :, cg%ks+i-1)
+                  if (is_external(zdim, HI)) cg%q(iv)%arr(:, :, cg%ke+i) = cg%q(iv)%arr(:, :, cg%ke-i+1)
+               enddo
+            case (extbnd_antimirror) ! homogenous Dirichlet BC with 0 at external faces
+               do i = 1, ng
+                  if (is_external(xdim, LO)) cg%q(iv)%arr(cg%is-i, :, :) = - cg%q(iv)%arr(cg%is+i-1, :, :)
+                  if (is_external(xdim, HI)) cg%q(iv)%arr(cg%ie+i, :, :) = - cg%q(iv)%arr(cg%ie-i+1, :, :)
+                  if (is_external(ydim, LO)) cg%q(iv)%arr(:, cg%js-i, :) = - cg%q(iv)%arr(:, cg%js+i-1, :)
+                  if (is_external(ydim, HI)) cg%q(iv)%arr(:, cg%je+i, :) = - cg%q(iv)%arr(:, cg%je-i+1, :)
+                  if (is_external(zdim, LO)) cg%q(iv)%arr(:, :, cg%ks-i) = - cg%q(iv)%arr(:, :, cg%ks+i-1)
+                  if (is_external(zdim, HI)) cg%q(iv)%arr(:, :, cg%ke+i) = - cg%q(iv)%arr(:, :, cg%ke-i+1)
+               enddo
+            case default
+               write(msg, '(a,i3,a)')"[multigridmpifuncs:multigrid_ext_bnd] boundary type ",mode," not implemented"
+               call die(msg)
+         end select
+
          cgl => cgl%nxt
       enddo
 

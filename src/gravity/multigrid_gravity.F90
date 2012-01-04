@@ -98,13 +98,15 @@ module multigrid_gravity
    integer, parameter :: nold_max=3                                   !< maximum implemented extrapolation order
    integer :: nold                                                    !< number of old solutions kept for solution recycling
    type :: old_soln                                                   !< container for an old solution with its timestamp
-      real, dimension(:,:,:), allocatable :: soln  !! \todo register some named arrays for this and shuffle only their indices
-      real :: time
+      integer :: i_hist                                               !< index to the old solution
+      real :: time                                                    !< time of the old solution
    end type old_soln
    type :: soln_history                                               !< container for a set of several old potential solutions
       type(old_soln), dimension(nold_max) :: old
       integer :: last                                                 !< index of the last stored potential
       logical :: valid                                                !< .true. when old(last) was properly initialized
+    contains
+      procedure :: init_history
    end type soln_history
    type(soln_history), target :: inner, outer                         !< storage for recycling the inner and outer potentials
 
@@ -390,27 +392,23 @@ contains
 !! \brief Initialization - continued after allocation of everything interesting
 !<
 
-   subroutine init_multigrid_grav_post(mb_alloc)
+   subroutine init_multigrid_grav_post
 
-      use constants,        only: pi, dpi, GEO_XYZ, xdim, ydim, zdim, one, zero, half
-      use dataio_pub,       only: die, warn
-      use domain,           only: dom, is_multicg
-      use gc_list,          only: cg_list_element
-      use cg_list_lev,      only: cg_list_level
-      use grid,             only: leaves
-      use grid_cont,        only: grid_container
-      use mpi,              only: MPI_COMM_NULL
-      use mpisetup,         only: master, nproc, proc
-      use multigridhelpers, only: dirty_debug, dirtyH
-      use multigridvars,    only: roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, is_mg_uneven, need_general_pf, single_base
-      use multipole,        only: init_multipole, coarsen_multipole
-      use types,            only: cdd
+      use constants,     only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n
+      use dataio_pub,    only: die, warn
+      use domain,        only: dom, is_multicg
+      use gc_list,       only: cg_list_element
+      use cg_list_lev,   only: cg_list_level
+      use grid,          only: leaves, all_cg
+      use grid_cont,     only: grid_container
+      use mpi,           only: MPI_COMM_NULL
+      use mpisetup,      only: master, nproc, proc
+      use multigridvars, only: roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, is_mg_uneven, need_general_pf, single_base
+      use multipole,     only: init_multipole, coarsen_multipole
+      use types,         only: cdd
 
       implicit none
 
-      real, intent(inout)              :: mb_alloc               !< Allocation counter
-
-      type(soln_history), pointer      :: os
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
       integer :: i, j
       type(cg_list_level), pointer :: curl
@@ -432,33 +430,11 @@ contains
       ord_time_extrap = min(nold_max-1, max(-1, ord_time_extrap))
       nold = ord_time_extrap + 1
       if (nold > 0) then
-         do j = 1, 2 ! inner and outer arrays
-            nullify(os)
-            select case (j)
-               case (1)
-                  os => inner
-               case (2)
-                  if (grav_bnd == bnd_isolated) os => outer
-            end select
-            if (associated(os)) then
-               do i = 1, nold
-                  if ( allocated(os%old(i)%soln) ) call die("[multigrid_gravity:init_multigrid_grav_post] os%old(:)%soln arrays already allocated")
-                  allocate( os%old(i)%soln( roof%first%cg%n_(xdim), roof%first%cg%n_(ydim), roof%first%cg%n_(zdim)))
-                  mb_alloc = mb_alloc + size(os%old(i)%soln)
-                  os%old(i)%time= -huge(1.0)
-                  if (dirty_debug) os%old(i)%soln(:, :, :) = dirtyH
-               enddo
-               os%valid = .false.
-               os%last  = 1
-            endif
-         enddo
+         call inner%init_history(nold, "i")
+         if (grav_bnd == bnd_isolated) call outer%init_history(nold, "o")
       endif
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgl%cg%sgp(:,:,:) = 0. !Initialize all the guardcells, even those which does not impact the solution
-         cgl => cgl%nxt
-      enddo
+      call leaves%set_q_value(all_cg%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
 
       curl => base
       do while (associated(curl))
@@ -466,38 +442,30 @@ contains
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
-            if (cg%empty) then
+
+            cg%mg%r  = overrelax   / 2.
+            cg%mg%rx = cg%dvol2 * cg%idx2
+            cg%mg%ry = cg%dvol2 * cg%idy2
+            cg%mg%rz = cg%dvol2 * cg%idz2
+            cg%mg%r  = cg%mg%r  / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
+            cg%mg%rx = overrelax_x * cg%mg%rx * cg%mg%r
+            cg%mg%ry = overrelax_y * cg%mg%ry * cg%mg%r
+            cg%mg%rz = overrelax_z * cg%mg%rz * cg%mg%r
+            cg%mg%r  = cg%mg%r  * cg%dvol2
+            !>
+            !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
+            !! and overrelaxation factors are required to get any convergence (often poor)
+            !<
+            if (prefer_rbgs_relaxation) then
                cg%mg%fft_type = fft_none
-               cg%mg%r  = 0.
-               cg%mg%rx = 0.
-               cg%mg%ry = 0.
-               cg%mg%rz = 0.
+            else if (grav_bnd == bnd_periodic .and. nproc == 1) then
+               cg%mg%fft_type = fft_rcr
+            else if (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) then
+               cg%mg%fft_type = fft_dst
             else
-               cg%mg%r  = overrelax   / 2.
-               cg%mg%rx = cg%dvol2 * cg%idx2
-               cg%mg%ry = cg%dvol2 * cg%idy2
-               cg%mg%rz = cg%dvol2 * cg%idz2
-               cg%mg%r  = cg%mg%r  / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
-               cg%mg%rx = overrelax_x * cg%mg%rx * cg%mg%r
-               cg%mg%ry = overrelax_y * cg%mg%ry * cg%mg%r
-               cg%mg%rz = overrelax_z * cg%mg%rz * cg%mg%r
-               cg%mg%r  = cg%mg%r  * cg%dvol2
-
-               !>
-               !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
-               !! and overrelaxation factors are required to get any convergence (often poor)
-               !<
-
-               if (prefer_rbgs_relaxation) then
-                  cg%mg%fft_type = fft_none
-               else if (grav_bnd == bnd_periodic .and. nproc == 1) then
-                  cg%mg%fft_type = fft_rcr
-               else if (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) then
-                  cg%mg%fft_type = fft_dst
-               else
-                  cg%mg%fft_type = fft_none
-               endif
+               cg%mg%fft_type = fft_none
             endif
+
             cgl => cgl%nxt
          enddo
          curl => curl%finer
@@ -506,20 +474,18 @@ contains
       ! data related to local and global base-level FFT solver
       cgl => base%first
       do while (associated(cgl))
-         if (.not. cgl%cg%empty) then
-            if (base_no_fft) then
-               cgl%cg%mg%fft_type = fft_none
-            else
-               select case (grav_bnd)
-                  case (bnd_periodic)
-                     cgl%cg%mg%fft_type = fft_rcr
-                  case (bnd_dirichlet, bnd_isolated)
-                     cgl%cg%mg%fft_type = fft_dst
-                  case default
-                     cgl%cg%mg%fft_type = fft_none
-                     if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] base_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
-               end select
-            endif
+         if (base_no_fft) then
+            cgl%cg%mg%fft_type = fft_none
+         else
+            select case (grav_bnd)
+               case (bnd_periodic)
+                  cgl%cg%mg%fft_type = fft_rcr
+               case (bnd_dirichlet, bnd_isolated)
+                  cgl%cg%mg%fft_type = fft_dst
+               case default
+                  cgl%cg%mg%fft_type = fft_none
+                  if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] base_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
+            end select
          endif
          cgl => cgl%nxt
       enddo
@@ -547,7 +513,7 @@ contains
             cg%mg%planf = 0
             cg%mg%plani = 0
 
-            if (cg%mg%fft_type /= fft_none .and. .not. cg%empty) then
+            if (cg%mg%fft_type /= fft_none) then
 
                if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
 
@@ -563,7 +529,6 @@ contains
                if (allocated(cg%mg%Green3D) .or. allocated(cg%mg%src)) call die("[multigrid_gravity:init_multigrid_grav_post] Green3D or src arrays already allocated")
                allocate(cg%mg%Green3D(cg%mg%nxc, cg%nyb, cg%nzb))
                allocate(cg%mg%src    (cg%nxb, cg%nyb, cg%nzb))
-               mb_alloc = mb_alloc + size(cg%mg%Green3D) + size(cg%mg%src)
 
                if (allocated(kx)) deallocate(kx)
                if (allocated(ky)) deallocate(ky)
@@ -578,7 +543,6 @@ contains
                   case (fft_rcr)
                      if (allocated(cg%mg%fft)) call die("[multigrid_gravity:init_multigrid_grav_post] fft or Green3D array already allocated")
                      allocate(cg%mg%fft(cg%mg%nxc, cg%nyb, cg%nzb))
-                     mb_alloc = mb_alloc + 2*size(cg%mg%fft)
 
                      cg%mg%fft_norm = one / real( product(cg%n_b(:), mask=dom%has_dir(:)) ) ! No 4 pi G factor here because the source was already multiplied by it
 
@@ -600,7 +564,6 @@ contains
 
                      if (allocated(cg%mg%fftr)) call die("[multigrid_gravity:init_multigrid_grav_post] fftr array already allocated")
                      allocate(cg%mg%fftr(cg%mg%nxc, cg%nyb, cg%nzb))
-                     mb_alloc = mb_alloc + size(cg%mg%fftr)
 
                      cg%mg%fft_norm = one / (8. * real( product(cg%n_b(:), mask=dom%has_dir(:)) ))
                      kx(:) = cg%idx2 * (cos(pi/cg%nxb*[( j, j=1, cg%mg%nxc )]) - one)
@@ -644,12 +607,39 @@ contains
       if (allocated(ky)) deallocate(ky)
       if (allocated(kz)) deallocate(kz)
 
-      if (grav_bnd == bnd_isolated) call init_multipole(mb_alloc)
+      if (grav_bnd == bnd_isolated) call init_multipole
 
       call vstat%init(max_cycles)
-      mb_alloc = mb_alloc + 2*max_cycles
 
    end subroutine init_multigrid_grav_post
+
+!> \brief Initialize structure for keeping historical potential fields
+
+   subroutine init_history(this, nold, prefix)
+
+      use constants,        only: singlechar, dsetnamelen, AT_IGNORE
+      use grid,             only: all_cg
+      use multigridhelpers, only: set_dirty
+
+      implicit none
+
+      class(soln_history),       intent(inout) :: this   !< COMMENT ME
+      integer,                   intent(in)    :: nold   !< how many historic points to store
+      character(len=singlechar), intent(in)    :: prefix !< 'i' for inner, 'o' for outer potential
+
+      integer :: i
+      character(len=dsetnamelen) :: hname
+
+      do i = 1, nold
+         write(hname,'(2a,i2.2)')prefix,"_h_",i
+         call all_cg%reg_var(hname, AT_IGNORE, multigrid = .true.)
+         this%old(i) = old_soln(all_cg%ind(hname), -huge(1.0))
+         call set_dirty(this%old(i)%i_hist)
+      enddo
+      this%valid = .false.
+      this%last  = 1
+
+   end subroutine init_history
 
 !!$ ============================================================================
 !>
@@ -663,8 +653,9 @@ contains
       use dataio_pub,    only: warn, die
       use domain,        only: dom
       use cg_list_lev,   only: cg_list_level
+      use gc_list,       only: cg_list_element
       use grid,          only: is_overlap
-      use grid_cont,     only: pr_segment
+      use grid_cont,     only: pr_segment, grid_container
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req, req
       use multigridvars, only: base, ord_prolong_face_norm, is_external, need_general_pf
 #ifdef DEBUG
@@ -680,6 +671,8 @@ contains
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened, b_layer
       type(pr_segment), pointer :: seg
       type(cg_list_level), pointer   :: curl                   !> current level (a pointer sliding along the linked list)
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg            !< current grid container
       logical :: is_internal_fine
       integer, parameter :: max_opfn = 2
       real, dimension(0:max_opfn) :: opfn_c_ff, opfn_c_cf
@@ -722,7 +715,6 @@ contains
 
          if (ubound(curl%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid_gravity:mpi_multigrid_prep_grav] Multiple blocks per process not implemented yet")
 
-         ijks(:) = curl%first%cg%ijkse(:, LO) - curl%first%cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+nb - off(:))
          per(:) = 0
          where (dom%periodic(:)) per(:) = curl%n_d(:)
 
@@ -730,133 +722,144 @@ contains
             dmask(:) = .false.
             dmask(d) = .true.
             do lh = LO, HI
-               if (dom%has_dir(d) .and. .not. curl%first%cg%empty) then
+               if (dom%has_dir(d)) then
                   hl = LO+HI-lh
 
                   ! find coarse target for receiving data to be prolonged
                   if (associated(curl%coarser) .and. .not. is_external(d, lh)) then
-                     procmask(:) = 0
-                     ! two layers of cells are required for even locations (+ two layers per each interpolation order)
-                     ! one layer of cells is required for odd locations (the local domain face is exactly at the centers of coarse cells)
-                     coarsened(:, :) = curl%first%cg%my_se(:, :)/2
-                     coarsened(d, hl) = coarsened(d, lh)
-                     select case (lh)
-                        case (LO)
-                           if (mod(curl%first%cg%off(d),    2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
-                        case (HI)
-                           if (mod(curl%first%cg%h_cor1(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
-                     end select
+                     cgl => curl%first
+                     do while (associated(cgl))
+                        cg => cgl%cg
+                        ijks(:) = cg%ijkse(:, LO) - cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+nb - off(:))
+                        procmask(:) = 0
+                        ! two layers of cells are required for even locations (+ two layers per each interpolation order)
+                        ! one layer of cells is required for odd locations (the local domain face is exactly at the centers of coarse cells)
+                        coarsened(:, :) = cg%my_se(:, :)/2
+                        coarsened(d, hl) = coarsened(d, lh)
+                        select case (lh)
+                           case (LO)
+                              if (mod(cg%off(d),    2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
+                           case (HI)
+                              if (mod(cg%h_cor1(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
+                        end select
 
-                     do j = FIRST, LAST
-                        if (is_overlap(coarsened(:,:), curl%coarser%pse(j)%sel(1, :, :), per)) procmask(j) = 1
-                     enddo
-                     allocate(curl%first%cg%mg%pfc_tgt(d, lh)%seg(count(procmask(:) /= 0)))
-
-                     g = 0
-                     do j = FIRST, LAST
-                        if (procmask(j) /= 0) then
-                           g = g + 1
-                           if (.not. allocated(curl%first%cg%mg%pfc_tgt(d, lh)%seg) .or. g>ubound(curl%first%cg%mg%pfc_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pfc_tgt g>")
-                           seg => curl%first%cg%mg%pfc_tgt(d, lh)%seg(g)
-                           if (allocated(seg%buf)) then
-                              call warn("mg:mmpg o seg%buf a a")
-                              deallocate(seg%buf)
+                        do j = FIRST, LAST
+                           if (ubound(curl%coarser%pse(j)%sel, dim=1) > 0) then
+                              if (is_overlap(coarsened(:,:), curl%coarser%pse(j)%sel(1, :, :), per)) procmask(j) = 1
                            endif
-                           seg%proc = j
-                           ! find cross-section of own face segment with refined coarse segment
-                           b_layer(:, :) = curl%first%cg%my_se(:, :)
-                           b_layer(d, hl) = b_layer(d, lh)
-                           !b_layer(d, lh) = b_layer(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
+                        enddo
+                        allocate(cg%mg%pfc_tgt(d, lh)%seg(count(procmask(:) /= 0)))
 
-                           where (.not. dmask(:)) ! find extents perpendicular to d
-                              seg%se(:, LO) = max(b_layer(:, LO), curl%coarser%pse(j)%sel(1, :, LO)*2  )
-                              seg%se(:, HI) = min(b_layer(:, HI), curl%coarser%pse(j)%sel(1, :, HI)*2+1)
-                           endwhere
-                           seg%se(d, :) = b_layer(d, :)
-                           !if (j /= proc)
-                           allocate(seg%buf(seg%se(xdim, HI)/2-seg%se(xdim, LO)/2 + 1, &
-                                &           seg%se(ydim, HI)/2-seg%se(ydim, LO)/2 + 1, &
-                                &           seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
-                           ! not counted in mb_alloc
+                        g = 0
+                        do j = FIRST, LAST
+                           if (procmask(j) /= 0) then
+                              g = g + 1
+                              if (.not. allocated(cg%mg%pfc_tgt(d, lh)%seg) .or. g>ubound(cg%mg%pfc_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pfc_tgt g>")
+                              seg => cg%mg%pfc_tgt(d, lh)%seg(g)
+                              if (allocated(seg%buf)) then
+                                 call warn("mg:mmpg o seg%buf a a")
+                                 deallocate(seg%buf)
+                              endif
+                              seg%proc = j
+                              ! find cross-section of own face segment with refined coarse segment
+                              b_layer(:, :) = cg%my_se(:, :)
+                              b_layer(d, hl) = b_layer(d, lh)
+                              !b_layer(d, lh) = b_layer(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
 
-                           seg%se(:, LO) = seg%se(:, LO) - curl%first%cg%off(:) !+ ijks(:)
-                           seg%se(:, HI) = seg%se(:, HI) - curl%first%cg%off(:) !+ ijks(:)
-                        endif
+                              where (.not. dmask(:)) ! find extents perpendicular to d
+                                 seg%se(:, LO) = max(b_layer(:, LO), curl%coarser%pse(j)%sel(1, :, LO)*2  )
+                                 seg%se(:, HI) = min(b_layer(:, HI), curl%coarser%pse(j)%sel(1, :, HI)*2+1)
+                              endwhere
+                              seg%se(d, :) = b_layer(d, :)
+                              allocate(seg%buf(seg%se(xdim, HI)/2-seg%se(xdim, LO)/2 + 1, &
+                                   &           seg%se(ydim, HI)/2-seg%se(ydim, LO)/2 + 1, &
+                                   &           seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
+
+                              seg%se(:, LO) = seg%se(:, LO) - cg%off(:) !+ ijks(:)
+                              seg%se(:, HI) = seg%se(:, HI) - cg%off(:) !+ ijks(:)
+                           endif
+                        enddo
+
+                        cgl => cgl%nxt
                      enddo
-
                   endif
 
                   ! find fine target(s) for sending the data to be prolonged
                   if (associated(curl%finer)) then
-                     procmask(:) = 0
-                     do j = FIRST, LAST
-                        is_internal_fine = dom%periodic(d)
-                        coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)/2
-                        coarsened(d, hl) = coarsened(d, lh)
-                        select case (lh)
-                           case (LO)
-                              if (mod(curl%finer%pse(j)%sel(1, d, LO),     2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
-                              is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) /= 0)
-                           case (HI)
-                              if (mod(curl%finer%pse(j)%sel(1, d, HI) + 1, 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
-                              is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) + 1 < curl%finer%n_d(d))
-                        end select
-                        if (is_internal_fine) then
-                           if (is_overlap(coarsened(:, :), curl%first%cg%my_se(:, :), per)) procmask(j) = 1
-                        endif
-                     enddo
-                     allocate(curl%first%cg%mg%pff_tgt(d, lh)%seg(count(procmask(:) /= 0)))
-
-                     g = 0
-                     do j = FIRST, LAST
-                        if (procmask(j) /= 0) then
-                           g = g + 1
-                           if (.not. allocated(curl%first%cg%mg%pff_tgt(d, lh)%seg) .or. g>ubound(curl%first%cg%mg%pff_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pff_tgt g>")
-                           seg => curl%first%cg%mg%pff_tgt(d, lh)%seg(g)
-                           if (allocated(seg%buf)) then
-                              call warn("mg:mmpg o seg%buf a a")
-                              deallocate(seg%buf)
+                     cgl => curl%first
+                     do while (associated(cgl))
+                        cg => cgl%cg
+                        ijks(:) = cg%ijkse(:, LO) - cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+nb - off(:))
+                        procmask(:) = 0
+                        do j = FIRST, LAST
+                           is_internal_fine = dom%periodic(d)
+                           coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)/2
+                           coarsened(d, hl) = coarsened(d, lh)
+                           select case (lh)
+                              case (LO)
+                                 if (mod(curl%finer%pse(j)%sel(1, d, LO),     2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
+                                 is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) /= 0)
+                              case (HI)
+                                 if (mod(curl%finer%pse(j)%sel(1, d, HI) + 1, 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
+                                 is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) + 1 < curl%finer%n_d(d))
+                           end select
+                           if (is_internal_fine) then
+                              if (is_overlap(coarsened(:, :), cg%my_se(:, :), per)) procmask(j) = 1
                            endif
-                           seg%proc = j
+                        enddo
+                        allocate(cg%mg%pff_tgt(d, lh)%seg(count(procmask(:) /= 0)))
 
-                           ! find cross-section of own segment with coarsened fine face segment
-                           coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)
-                           coarsened(d, hl) = coarsened(d, lh)
-                           coarsened(:, :) = coarsened(:, :)/2
-                           where (.not. dmask(:))
-                              seg%se(:, LO) = max(curl%first%cg%my_se(:, LO), coarsened(:, LO))
-                              seg%se(:, HI) = min(curl%first%cg%my_se(:, HI), coarsened(:, HI))
-                           endwhere
-                           seg%se(d, :) = coarsened(d, :)
-                           !if (j /= proc)
-                           allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
-                                &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
-                                &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
-
-                           coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)
-                           coarsened(d, hl) = coarsened(d, lh)
-                           coarsened(d, lh) = coarsened(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
-                           coarsened(:, :) = coarsened(:, :)/2
-                           coarsened(d, :) = coarsened(d, :) + [ -ord_prolong_face_norm, ord_prolong_face_norm ]
-
-                           seg%se(:, LO) = max(curl%first%cg%my_se(:, LO), coarsened(:, LO)) + ijks(:)
-                           seg%se(:, HI) = min(curl%first%cg%my_se(:, HI), coarsened(:, HI)) + ijks(:)
-
-                           coarsened(d, :) = coarsened(d, :) - [ -ord_prolong_face_norm, ord_prolong_face_norm ] ! revert broadening
-                           allocate(seg%f_lay(seg%se(d, HI) - seg%se(d, LO) + 1))
-                           do l = 1, size(seg%f_lay(:))
-                              seg%f_lay(l)%layer = l + int(seg%se(d, LO), kind=4) - 1
-                              nl = int(minval(abs(seg%f_lay(l)%layer - ijks(d) - coarsened(d, :))), kind=4)
-                              if (mod(curl%finer%pse(j)%sel(1, d, lh) + lh - LO, 2_LONG) == 0) then ! fine face at coarse face
-                                 seg%f_lay(l)%coeff = opfn_c_ff(nl)
-                              else                                                              ! fine face at coarse center
-                                 seg%f_lay(l)%coeff = opfn_c_cf(nl)
+                        g = 0
+                        do j = FIRST, LAST
+                           if (procmask(j) /= 0) then
+                              g = g + 1
+                              if (.not. allocated(cg%mg%pff_tgt(d, lh)%seg) .or. g>ubound(cg%mg%pff_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pff_tgt g>")
+                              seg => cg%mg%pff_tgt(d, lh)%seg(g)
+                              if (allocated(seg%buf)) then
+                                 call warn("mg:mmpg o seg%buf a a")
+                                 deallocate(seg%buf)
                               endif
-                           enddo
+                              seg%proc = j
 
-                        endif
+                              ! find cross-section of own segment with coarsened fine face segment
+                              coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)
+                              coarsened(d, hl) = coarsened(d, lh)
+                              coarsened(:, :) = coarsened(:, :)/2
+                              where (.not. dmask(:))
+                                 seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO))
+                                 seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
+                              endwhere
+                              seg%se(d, :) = coarsened(d, :)
+                              allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
+                                   &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
+                                   &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
+
+                              coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)
+                              coarsened(d, hl) = coarsened(d, lh)
+                              coarsened(d, lh) = coarsened(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
+                              coarsened(:, :) = coarsened(:, :)/2
+                              coarsened(d, :) = coarsened(d, :) + [ -ord_prolong_face_norm, ord_prolong_face_norm ]
+
+                              seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO)) + ijks(:)
+                              seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI)) + ijks(:)
+
+                              coarsened(d, :) = coarsened(d, :) - [ -ord_prolong_face_norm, ord_prolong_face_norm ] ! revert broadening
+                              allocate(seg%f_lay(seg%se(d, HI) - seg%se(d, LO) + 1))
+                              do l = 1, size(seg%f_lay(:))
+                                 seg%f_lay(l)%layer = l + int(seg%se(d, LO), kind=4) - 1
+                                 nl = int(minval(abs(seg%f_lay(l)%layer - ijks(d) - coarsened(d, :))), kind=4)
+                                 if (mod(curl%finer%pse(j)%sel(1, d, lh) + lh - LO, 2_LONG) == 0) then ! fine face at coarse face
+                                    seg%f_lay(l)%coeff = opfn_c_ff(nl)
+                                 else                                                              ! fine face at coarse center
+                                    seg%f_lay(l)%coeff = opfn_c_cf(nl)
+                                 endif
+                              enddo
+
+                           endif
+                        enddo
+
+                        cgl => cgl%nxt
                      enddo
-
                   endif
 
                endif
@@ -884,18 +887,13 @@ contains
 
       implicit none
 
-      integer :: i, g, ib
+      integer :: g, ib
       integer, parameter :: nseg = 2*(HI-LO+1)*ndims
       type(tgt_list), dimension(nseg) :: io_tgt
       type(cg_list_level), pointer :: curl
       type(cg_list_element), pointer :: cgl
 
       call cleanup_multipole
-
-      do i = 1, nold
-         if (allocated(inner%old(i)%soln)) deallocate(inner%old(i)%soln)
-         if (allocated(outer%old(i)%soln)) deallocate(outer%old(i)%soln)
-      enddo
 
       if (allocated(vstat%factor)) deallocate(vstat%factor)
       if (allocated(vstat%time)) deallocate(vstat%time)
@@ -945,22 +943,22 @@ contains
    subroutine init_solution(history)
 
       use dataio_pub,       only: msg, die, printinfo
-      use cg_list_lev,      only: cg_list_level
-      use domain,           only: is_multicg
+      use gc_list,          only: ind_val
       use global,           only: t
+      use grid,             only: all_cg, leaves
       use mpisetup,         only: master
       use multigridhelpers, only: set_dirty, check_dirty
-      use multigridvars,    only: base, roof, stdout, solution
+      use multigridvars,    only: roof, stdout, solution
 
       implicit none
 
       type(soln_history), intent(inout) :: history !< inner or outer potential history for recycling
 
       integer :: p0, p1, p2, ordt
-      real, dimension(3)  :: dt_fac
-      type(cg_list_level), pointer :: curl
-
-      if (is_multicg) call die("[multigrid_gravity:init_solution] multicg not implemented")
+      real, dimension(3) :: dt_fac
+      enum, bind(C)
+         enumerator :: RESET = -1, COPY = 0, LINEAR, QUADRATIC !! order of temporal interpolation
+      end enum
 
       call set_dirty(solution)
 
@@ -979,49 +977,46 @@ contains
          if ( history%old(p2)%time < history%old(p1)%time .and. &        ! quadratic interpolation
               history%old(p1)%time < history%old(p0)%time .and. &
               history%old(p0)%time < t) then
-            ordt = min(2, ord_time_extrap)
+            ordt = min(QUADRATIC, ord_time_extrap)
          else if (history%old(p1)%time < history%old(p0)%time .and. &
               &   history%old(p0)%time < t) then      ! linear extrapolation
-            ordt = min(1, ord_time_extrap)
+            ordt = min(LINEAR, ord_time_extrap)
          else                                                            ! simple recycling
-            ordt = min(0, ord_time_extrap)
+            ordt = min(COPY, ord_time_extrap)
          endif
       else                                                               ! coldstart
-         ordt = min(-1, ord_time_extrap)
+         ordt = min(RESET, ord_time_extrap)
       endif
 
       select case (ordt)
-         case (:-1)
-            if (master .and. ord_time_extrap > -1) then
+         case (:RESET)
+            if (master .and. ord_time_extrap > ordt) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] Clearing ",trim(vstat%cprefix),"solution."
                call printinfo(msg, stdout)
             endif
-            curl => base
-            do while (associated(curl))
-               curl%first%cg%q(solution)%arr(:, :, :) = 0.
-               curl => curl%finer
-            enddo
+            call all_cg%set_q_value(solution, 0.)
             history%old(:)%time = -huge(1.0)
-         case (0)
-            roof%first%cg%q(solution)%arr(:, :, :) = history%old(p0)%soln(:, :, :)
-            if (master .and. ord_time_extrap > 0) then
+         case (COPY)
+            call leaves%q_copy(history%old(p0)%i_hist, solution)
+            if (master .and. ord_time_extrap > ordt) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] No extrapolation of ",trim(vstat%cprefix),"solution."
                call printinfo(msg, stdout)
             endif
-         case (1)
+         case (LINEAR)
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p0)%time - history%old(p1)%time)
-            roof%first%cg%q(solution)%arr(:, :, :) = (1. + dt_fac(1)) * history%old(p0)%soln(:, :, :) - dt_fac(1) *  history%old(p1)%soln(:, :, :)
-            if (master .and. ord_time_extrap > 1) then
+            call leaves%q_lin_comb( [ ind_val(history%old(p0)%i_hist, (1.+dt_fac(1))), &
+                 &                    ind_val(history%old(p1)%i_hist,    -dt_fac(1) ) ], solution )
+            if (master .and. ord_time_extrap > ordt) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] Linear extrapolation of ",trim(vstat%cprefix),"solution."
                call printinfo(msg, stdout)
             endif
-         case (2)
+         case (QUADRATIC)
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p1)%time - history%old(p2)%time)
             dt_fac(2) = (t - history%old(p1)%time) / (history%old(p2)%time - history%old(p0)%time)
             dt_fac(3) = (t - history%old(p2)%time) / (history%old(p0)%time - history%old(p1)%time)
-            roof%first%cg%q(solution)%arr(:, :, :) = - dt_fac(2) * dt_fac(3) * history%old(p0)%soln(:, :, :) &
-                 &                                    - dt_fac(1) * dt_fac(3) * history%old(p1)%soln(:, :, :) &
-                 &                                    - dt_fac(1) * dt_fac(2) * history%old(p2)%soln(:, :, :)
+            call leaves%q_lin_comb([ ind_val(history%old(p0)%i_hist, -dt_fac(2)*dt_fac(3)), &
+                 &                   ind_val(history%old(p1)%i_hist, -dt_fac(1)*dt_fac(3)), &
+                 &                   ind_val(history%old(p2)%i_hist, -dt_fac(1)*dt_fac(2)) ], solution )
          case default
             call die("[multigrid_gravity:init_solution] Extrapolation order not implemented")
       end select
@@ -1033,14 +1028,17 @@ contains
 !!$ ============================================================================
 !>
 !! \brief Make a local copy of source (density) and multiply by 4 pi G
+!!
+!! \details Typically i_all_dens is a copy of fluidindex::iarr_all_sg.
+!! Passing this as an argument allows for independent computation of the potential for several density fields if necessary.
 !<
 
-   subroutine init_source(dens)
+   subroutine init_source(i_all_dens)
 
       use constants,          only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,         only: die
       use domain,             only: dom, is_multicg
-!      use gc_list,            only: cg_list_element
+      use gc_list,            only: cg_list_element
       use grid,               only: leaves
       use grid_cont,          only: grid_container
       use multigridbasefuncs, only: subtract_average
@@ -1053,27 +1051,33 @@ contains
 
       implicit none
 
-      real, optional, dimension(:,:,:), intent(in)  :: dens !< input source field or nothing for empty space
+      integer, dimension(:), optional, intent(in) :: i_all_dens !< indices to selfgravitating fluids
+
       real :: fac
       integer :: i
-!      type(cg_list_element), pointer :: cgl
+      type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      cg => leaves%first%cg
-      if (is_multicg) call die("[multigrid_gravity:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial cg_list_level, dens, is_external
+      if (is_multicg) call die("[multigrid_gravity:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial cg_list_level, is_external
 
       call set_dirty(source)
 
-      if (present(dens)) then
-         roof%first%cg%q(source)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = fpiG * dens(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+      if (present(i_all_dens)) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
+            cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_all_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke),1)
+            cgl => cgl%nxt
+         enddo
       else
          if (grav_bnd /= bnd_givenval) call die("[multigrid_gravity:init_source] empty space allowed only for given value boundaries.")
-         roof%first%cg%q(source)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = 0.
+         call leaves%set_q_value(source, 0.)
       endif
 
+      cg => leaves%first%cg
       select case (grav_bnd)
          case (bnd_periodic) ! probably also bnd_neumann
-            call subtract_average(roof, source)
+            call subtract_average(roof, source) !> \warning leaves will be more appropriate
          case (bnd_dirichlet)
 #ifdef JEANS_PROBLEM
             if (jeans_mode == 1) roof%first%cg%q(source)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
@@ -1148,6 +1152,7 @@ contains
 
       use domain,            only: dom
       use global,            only: t
+      use grid,              only: leaves
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: roof, bnd_isolated, bnd_givenval, solution, extbnd_extrapolate, extbnd_mirror
 
@@ -1163,7 +1168,7 @@ contains
          history%old(:)%time = t ! prevents extrapolation too early
       endif
 
-      history%old(history%last)%soln(:, :, :) = roof%first%cg%q(solution)%arr(:, :, :)
+      call leaves%q_copy(solution, history%old(history%last)%i_hist)
       history%old(history%last)%time = t
       history%valid = .true.
 
@@ -1183,20 +1188,19 @@ contains
 !! This routine is also responsible for communicating the solution to the rest of world via sgp array.
 !<
 
-   subroutine multigrid_solve_grav(dens)
+   subroutine multigrid_solve_grav(i_all_dens)
 
-      use grid,          only: leaves
-      use gc_list,       only: cg_list_element
-      use multigridvars, only: roof, solution, bnd_isolated, bnd_dirichlet, bnd_givenval, tot_ts, ts
+      use constants,     only: sgp_n
+      use grid,          only: leaves, all_cg
+      use multigridvars, only: solution, bnd_isolated, bnd_dirichlet, bnd_givenval, tot_ts, ts
       use multipole,     only: multipole_solver
       use timer,         only: set_timer
 
       implicit none
 
-      real, dimension(:,:,:), intent(in) :: dens !< input source field
+      integer, dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
 
       logical :: isolated
-      type(cg_list_element), pointer :: cgl
 
       ts =  set_timer("multigrid", .true.)
 
@@ -1213,15 +1217,11 @@ contains
 #endif /* !COSM_RAYS */
       endif
 
-      call init_source(dens)
+      call init_source(i_all_dens)
 
       call vcycle_hg(inner)
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgl%cg%sgp(:,:,:) = roof%first%cg%q(solution)%arr(:,:,:)
-         cgl => cgl%nxt
-      enddo
+      call leaves%q_copy(solution, all_cg%ind(sgp_n))
 
       if (isolated) then
          grav_bnd = bnd_givenval
@@ -1232,11 +1232,7 @@ contains
 
          call vcycle_hg(outer)
 
-         cgl => leaves%first
-         do while (associated(cgl))
-            cgl%cg%sgp(:,:,:) = cgl%cg%sgp(:,:,:) + roof%first%cg%q(solution)%arr(:, :, :)
-            cgl => cgl%nxt
-         enddo
+         call leaves%q_add(solution, all_cg%ind(sgp_n)) ! add solution to sgp
 
          grav_bnd = bnd_isolated ! restore
 
@@ -1255,9 +1251,10 @@ contains
 
    subroutine vcycle_hg(history)
 
+      use cg_list_lev,        only: cg_list_level
       use constants,          only: cbuff_len
       use dataio_pub,         only: msg, die, warn, printinfo
-      use cg_list_lev,        only: cg_list_level
+      use grid,               only: leaves
       use mpisetup,           only: master, nproc
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump
       use multigridbasefuncs, only: norm_sq, restrict_all, subtract_average
@@ -1374,8 +1371,8 @@ contains
          ! the Huang-Greengard V-cycle
          call restrict_all(defect)
 
-         call set_dirty(correction)
-         base%first%cg%q(correction)%arr(:, :, :) = 0.
+         ! call set_dirty(correction)
+         call base%set_q_value(correction, 0.)
 
          curl => base
          do while (associated(curl))
@@ -1383,9 +1380,7 @@ contains
             call check_dirty(curl, correction, "Vup relax+")
             curl => curl%finer
          enddo
-         roof%first%cg%q(solution)%arr     (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
-              roof%first%cg%q(solution)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) + &
-              roof%first%cg%q(correction)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke)
+         call leaves%q_add(correction, solution)
 
       enddo
 
@@ -1679,11 +1674,14 @@ contains
 
       call check_dirty(curl, src, "approx_soln src-")
 
-      if (curl%first%cg%mg%fft_type /= fft_none) then
-         call approximate_solution_fft(curl, src, soln)
-      else
-         call check_dirty(curl, soln, "approx_soln soln-")
-         call approximate_solution_rbgs(curl, src, soln)
+      if (associated(curl%first)) then
+         if (curl%first%cg%mg%fft_type /= fft_none) then
+            call approximate_solution_fft(curl, src, soln)
+         else
+            call check_dirty(curl, soln, "approx_soln soln-")
+            call approximate_solution_rbgs(curl, src, soln)
+         endif
+
       endif
 
       if (prefer_rbgs_relaxation .and. soln == correction .and. .not. associated(curl, roof)) call prolong_level(curl, correction)
@@ -1742,120 +1740,118 @@ contains
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
-            if (.not. cg%empty) then
-               if (dirty_debug) then
-                  write(dirty_label, '(a,i5)')"relax soln- smoo=", n
-                  call check_dirty(curl, soln, dirty_label)
+            if (dirty_debug) then
+               write(dirty_label, '(a,i5)')"relax soln- smoo=", n
+               call check_dirty(curl, soln, dirty_label)
+            endif
+
+            ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
+            ! do n = 1, nsmoo
+            !    call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
+            !    relax single layer of red cells at all faces
+            !    call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
+            !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
+            !    relax single layer of black cells at all faces
+            ! enddo
+
+            ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
+
+            if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
+               do k = cg%ks, cg%ke
+                  do j = cg%js, cg%je
+                     i1 = cg%is + mod(n+j+k, RED_BLACK)
+                     if (dom%geometry_type == GEO_RPZ) then
+!!$                  cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
+!!$                       cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k)) + &
+!!$                       cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k) + cg%q(soln)%arr(i1:  cg%ie:  2, j+1, k)) + &
+!!$                       cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  2, j,   k+1)) - &
+!!$                       cg%mg%r  *  cg%q(src)%arr(i1  :cg%ie  :2, j,   k)  + &
+!!$                       cg%mg%rx * (cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k) - cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)) * fac(i1:cg%ie:2)
+                        call die("[multigrid_gravity:approximate_solution_rbgs] This variant of relaxation loop is not implemented for cylindrical coordinates.")
+                     else
+                        cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
+                             cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
+                             cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k)   + cg%q(soln)%arr(i1:  cg%ie:  2, j+1, k))   + &
+                             cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  2, j,   k+1)) - &
+                             cg%mg%r  *  cg%q(src)%arr (i1  :cg%ie  :2, j,   k)
+                     endif
+                  enddo
+               enddo
+            else
+               ! In 3D this variant significantly increases instruction count and also some data read
+               i1 = cg%is; id = 1 ! mv to multigridvars, init_multigrid
+               j1 = cg%js; jd = 1
+               k1 = cg%ks; kd = 1
+               if (dom%has_dir(xdim)) then
+                  id = RED_BLACK
+               else if (dom%has_dir(ydim)) then
+                  jd = RED_BLACK
+               else if (dom%has_dir(zdim)) then
+                  kd = RED_BLACK
                endif
 
-               ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
-               ! do n = 1, nsmoo
-               !    call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
-               !    relax single layer of red cells at all faces
-               !    call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror)
-               !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
-               !    relax single layer of black cells at all faces
-               ! enddo
-
-               ! with explicit outer loops it is easier to describe a 3-D checkerboard :-)
-
-               if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
-                  do k = cg%ks, cg%ke
-                     do j = cg%js, cg%je
-                        i1 = cg%is + mod(n+j+k, RED_BLACK)
-                        if (dom%geometry_type == GEO_RPZ) then
-!!$                     cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
-!!$                          cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k)) + &
-!!$                          cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k) + cg%q(soln)%arr(i1:  cg%ie:  2, j+1, k)) + &
-!!$                          cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  2, j,   k+1)) - &
-!!$                          cg%mg%r  *  cg%q(src)%arr(i1  :cg%ie  :2, j,   k)  + &
-!!$                          cg%mg%rx * (cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k) - cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)) * fac(i1:cg%ie:2)
-                           call die("[multigrid_gravity:approximate_solution_rbgs] This variant of relaxation loop is not implemented for cylindrical coordinates.")
-                        else
-                           cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
-                                cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
-                                cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k)   + cg%q(soln)%arr(i1:  cg%ie:  2, j+1, k))   + &
-                                cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  2, j,   k+1)) - &
-                                cg%mg%r  *  cg%q(src)%arr (i1  :cg%ie  :2, j,   k)
-                        endif
+               if (kd == RED_BLACK) k1 = cg%ks + mod(n, RED_BLACK)
+               select case (dom%geometry_type)
+                  case (GEO_XYZ)
+                     do k = k1, cg%ke, kd
+                        if (jd == RED_BLACK) j1 = cg%js + mod(n+k, RED_BLACK)
+                        do j = j1, cg%je, jd
+                           if (id == RED_BLACK) i1 = cg%is + mod(n+j+k, RED_BLACK)
+                           cg%q(soln)%arr                           (i1:  cg%ie  :id, j,   k)   = &
+                                & (1. - Jacobi_damp)* cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   - &
+                                &       Jacobi_damp * cg%q(src)%arr (i1  :cg%ie  :id, j,   k)   * cg%mg%r
+                           if (dom%has_dir(xdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1:  cg%ie:  id, j,   k)    + &
+                                &       Jacobi_damp *(cg%q(soln)%arr(i1-1:cg%ie-1:id, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:id, j,   k))   * cg%mg%rx
+                           if (dom%has_dir(ydim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1:  cg%ie:  id, j,   k)    + &
+                                &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j-1, k)   + cg%q(soln)%arr(i1:  cg%ie:  id, j+1, k))   * cg%mg%ry
+                           if (dom%has_dir(zdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1:  cg%ie:  id, j,   k)    + &
+                                &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  id, j,   k+1)) * cg%mg%rz
+                        enddo
                      enddo
-                  enddo
-               else
-                  ! In 3D this variant significantly increases instruction count and also some data read
-                  i1 = cg%is; id = 1 ! mv to multigridvars, init_multigrid
-                  j1 = cg%js; jd = 1
-                  k1 = cg%ks; kd = 1
-                  if (dom%has_dir(xdim)) then
-                     id = RED_BLACK
-                  else if (dom%has_dir(ydim)) then
-                     jd = RED_BLACK
-                  else if (dom%has_dir(zdim)) then
-                     kd = RED_BLACK
-                  endif
+                  case (GEO_RPZ)
+                     do k = k1, cg%ke, kd
+                        if (jd == RED_BLACK) j1 = cg%js + mod(n+k, RED_BLACK)
+                        do j = j1, cg%je, jd
+                           if (id == RED_BLACK) i1 = cg%is + mod(n+j+k, RED_BLACK)
+                           do i = i1, cg%ie, id
+                              cr  = overrelax / 2.
+                              crx = cg%dvol2 * cg%idx2 * cg%x(i)**2
+                              cry = cg%dvol2 * cg%idy2
+                              crz = cg%dvol2 * cg%idz2 * cg%x(i)**2
+                              cr  = cr / (crx + cry + crz)
+                              crx = overrelax_x * crx * cr
+                              cry = overrelax_y * cry * cr
+                              crz = overrelax_z * crz * cr
+                              cr  = cr * cg%dvol2 * cg%x(i)**2
 
-                  if (kd == RED_BLACK) k1 = cg%ks + mod(n, RED_BLACK)
-                  select case (dom%geometry_type)
-                     case (GEO_XYZ)
-                        do k = k1, cg%ke, kd
-                           if (jd == RED_BLACK) j1 = cg%js + mod(n+k, RED_BLACK)
-                           do j = j1, cg%je, jd
-                              if (id == RED_BLACK) i1 = cg%is + mod(n+j+k, RED_BLACK)
-                              cg%q(soln)%arr                           (i1:  cg%ie  :id, j,   k)   = &
-                                   & (1. - Jacobi_damp)* cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   - &
-                                   &       Jacobi_damp * cg%q(src)%arr (i1  :cg%ie  :id, j,   k)   * cg%mg%r
-                              if (dom%has_dir(xdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1:  cg%ie:  id, j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i1-1:cg%ie-1:id, j,   k)   + cg%q(soln)%arr(i1+1:cg%ie+1:id, j,   k))   * cg%mg%rx
-                              if (dom%has_dir(ydim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1:  cg%ie:  id, j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j-1, k)   + cg%q(soln)%arr(i1:  cg%ie:  id, j+1, k))   * cg%mg%ry
-                              if (dom%has_dir(zdim))     cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   = cg%q(soln)%arr(i1:  cg%ie:  id, j,   k)    + &
-                                   &       Jacobi_damp *(cg%q(soln)%arr(i1  :cg%ie  :id, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  id, j,   k+1)) * cg%mg%rz
+                              crx1 = 2. * cg%x(i) * cg%idx
+                              if (crx1 /= 0.) crx1 = 1./crx1
+                              cg%q(soln)%arr                           (i,   j,   k)   = &
+                                   & (1. - Jacobi_damp)* cg%q(soln)%arr(i,   j,   k)   - &
+                                   &       Jacobi_damp * cg%q(src)%arr (i,   j,   k)   * cr
+                              if (dom%has_dir(xdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * crx + &
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * crx * crx1
+                              if (dom%has_dir(ydim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * cry
+                              if (dom%has_dir(zdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
+                                   &       Jacobi_damp *(cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * crz
                            enddo
                         enddo
-                     case (GEO_RPZ)
-                        do k = k1, cg%ke, kd
-                           if (jd == RED_BLACK) j1 = cg%js + mod(n+k, RED_BLACK)
-                           do j = j1, cg%je, jd
-                              if (id == RED_BLACK) i1 = cg%is + mod(n+j+k, RED_BLACK)
-                              do i = i1, cg%ie, id
-                                 cr  = overrelax / 2.
-                                 crx = cg%dvol2 * cg%idx2 * cg%x(i)**2
-                                 cry = cg%dvol2 * cg%idy2
-                                 crz = cg%dvol2 * cg%idz2 * cg%x(i)**2
-                                 cr  = cr / (crx + cry + crz)
-                                 crx = overrelax_x * crx * cr
-                                 cry = overrelax_y * cry * cr
-                                 crz = overrelax_z * crz * cr
-                                 cr  = cr * cg%dvol2 * cg%x(i)**2
-
-                                 crx1 = 2. * cg%x(i) * cg%idx
-                                 if (crx1 /= 0.) crx1 = 1./crx1
-                                 cg%q(soln)%arr                           (i,   j,   k)   = &
-                                      & (1. - Jacobi_damp)* cg%q(soln)%arr(i,   j,   k)   - &
-                                      &       Jacobi_damp * cg%q(src)%arr (i,   j,   k)   * cr
-                                 if (dom%has_dir(xdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                      &       Jacobi_damp *(cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * crx + &
-                                      &       Jacobi_damp *(cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * crx * crx1
-                                 if (dom%has_dir(ydim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                      &       Jacobi_damp *(cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * cry
-                                 if (dom%has_dir(zdim))     cg%q(soln)%arr(i,   j,   k)   = cg%q(soln)%arr(i,   j,   k)    + &
-                                      &       Jacobi_damp *(cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * crz
-                              enddo
-                           enddo
-                        enddo
-                     case default
-                        call die("[multigrid_gravity:approximate_solution_rbgs] Unsupported geometry.")
+                     enddo
+                  case default
+                     call die("[multigrid_gravity:approximate_solution_rbgs] Unsupported geometry.")
                end select
             endif
+            cgl => cgl%nxt
+         enddo
+
+         if (dirty_debug) then
+            write(dirty_label, '(a,i5)')"relax soln+ smoo=", n
+            call check_dirty(curl, soln, dirty_label)
          endif
-         cgl => cgl%nxt
+
       enddo
-
-      if (dirty_debug) then
-         write(dirty_label, '(a,i5)')"relax soln+ smoo=", n
-         call check_dirty(curl, soln, dirty_label)
-      endif
-
-   enddo
 
    end subroutine approximate_solution_rbgs
 
@@ -1887,8 +1883,6 @@ contains
       integer :: nf, n, nsmoo
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-
-      if (curl%first%cg%empty) return
 
       if (curl%first%cg%mg%fft_type == fft_none) call die("[multigrid_gravity:approximate_solution_fft] unknown FFT type")
 

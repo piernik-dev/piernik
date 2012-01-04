@@ -65,31 +65,17 @@ contains
    subroutine set_dirty(iv)
 
       use dataio_pub,    only: die
-      use gc_list,       only: cg_list_element
-      use cg_list_lev,   only: cg_list_level
       use grid,          only: all_cg
-      use multigridvars, only: base
 
       implicit none
 
       integer, intent(in) :: iv   !< index of variable in cg%q(:) which we want to pollute
 
-      type(cg_list_level), pointer :: curl
-      type(cg_list_element), pointer :: cgl
-
       if (.not. dirty_debug) return
 
       if (iv < lbound(all_cg%q_lst, dim=1) .or. iv > ubound(all_cg%q_lst, dim=1)) call die("[multigridhelpers:set_dirty] Invalid variable index.")
 
-      curl => base
-      do while (associated(curl))
-         cgl => curl%first
-         do while (associated(cgl))
-            cgl%cg%q(iv)%arr(:, :, :) = dirtyH
-            cgl => cgl%nxt
-         enddo
-         curl => curl%finer
-      enddo
+      call all_cg%set_q_value(iv, dirtyH)
 
    end subroutine set_dirty
 
@@ -129,21 +115,19 @@ contains
 
       cgl => curl%first
       do while (associated(cgl))
-         if (.not. cgl%cg%empty) then
-            do k = cgl%cg%ks-ng*dom%D_z, cgl%cg%ke+ng*dom%D_z
-               do j = cgl%cg%js-ng*dom%D_y, cgl%cg%je+ng*dom%D_y
-                  do i = cgl%cg%is-ng*dom%D_x, cgl%cg%ie+ng*dom%D_x
-                     if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
-                        ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
-                        write(msg, '(3a,i4,a,i2,a,4(i3,a),g20.12)') "[multigridhelpers:check_dirty] ", trim(label), "@", proc, " lvl(", curl%lev, &
-                             &                                      ")%q(",iv,")%arr(", i, ",", j, ",", k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
-                        call warn(msg)
-                        ! endif
-                     endif
-                  enddo
+         do k = cgl%cg%ks-ng*dom%D_z, cgl%cg%ke+ng*dom%D_z
+            do j = cgl%cg%js-ng*dom%D_y, cgl%cg%je+ng*dom%D_y
+               do i = cgl%cg%is-ng*dom%D_x, cgl%cg%ie+ng*dom%D_x
+                  if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
+                     ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
+                     write(msg, '(3a,i4,a,i2,a,4(i3,a),g20.12)') "[multigridhelpers:check_dirty] ", trim(label), "@", proc, " lvl(", curl%lev, &
+                          &                                      ")%q(",iv,")%arr(", i, ",", j, ",", k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
+                     call warn(msg)
+                     ! endif
+                  endif
                enddo
             enddo
-         endif
+         enddo
          cgl => cgl%nxt
       enddo
 
