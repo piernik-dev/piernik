@@ -87,7 +87,7 @@ contains
 
       filename = restart_fname(WR)
       if (master) then
-         write(msg,'(a,f5.2,2a)') 'Writing restart v', phv, trim(filename), " ... "
+         write(msg,'(a,f5.2,1x,2a)') 'Writing restart v', phv, trim(filename), " ... "
          call printio(msg, .true.)
       endif
       call set_common_attributes(filename)
