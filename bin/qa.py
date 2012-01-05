@@ -4,7 +4,7 @@ import re, sys
 import subprocess as sp
 import numpy as np
 
-debug = True
+debug = False
 
 typ1 = np.dtype([('name','a50'),('beg','i'),('end','i'),('type','a4')])
 
