@@ -4,7 +4,7 @@ import re, sys
 import subprocess as sp
 import numpy as np
 
-debug = False
+debug = True
 
 typ1 = np.dtype([('name','a50'),('beg','i'),('end','i'),('type','a4')])
 
@@ -19,6 +19,7 @@ test_for_interfaces = re.compile('''
    ''',re.VERBOSE)
 #test_for_routines  = re.compile('''^(?!\s{0,9}!).*(subroutine|function|type(,|\s::))''',re.VERBOSE)
 module_body        = re.compile('''^\s{0,3}(module|contains|program)''', re.VERBOSE)
+just_end           = re.compile('''^\s{0,9}end''', re.IGNORECASE)
 
 have_implicit      = re.compile('''implicit\snone''', re.IGNORECASE)
 have_privpub       = re.compile('''^\s{0,9}(public|private)''', re.VERBOSE)
@@ -106,25 +107,31 @@ def give_err(s):
    return b.FAIL + s + b.ENDC
 
 def parse_f90file(lines,fname,store):
-   if (debug): print fname
+   if (debug): print "[parse_f90file] fname = ", fname
    subs_array = np.zeros((0,), dtype=typ1)
 
    subs = filter(test_for_routines.search, lines)
    subs_names = []
    subs_types = []
    for f in subs:
-      if (re.match("\s{0,9}end",f)):
+      if (just_end.match(f)):
          word = f.strip().split(' ')
          subs_types.insert(0,word[1])
          subs_names.append(word[2])
    for f in subs_names:
        cur_sub = filter(re.compile(f).search, subs)
-       obj= (f, line_num(lines,cur_sub[0]), line_num(lines,cur_sub[1]), subs_types.pop())
+       if (len(cur_sub) > 2):
+          if (debug): print "[parse_f90file] f, cur_sub = ", f, cur_sub
+          for index in range(0,len(cur_sub)):
+             if just_end.match(cur_sub[index]) and cur_sub[index][-len(f):] == f: break 
+       else:
+          index = 1
+       obj= (f, line_num(lines,cur_sub[index-1]), line_num(lines,cur_sub[index]), subs_types.pop())
        subs_array = np.append(subs_array, np.array([obj],dtype=typ1))
    
    if (debug):
-      print subs
-      print subs_names
+      print "[parse_f90file] subs = ",subs
+      print "[parse_f90file] subs_names = ",subs_names
 
    mod = filter(module_body.match, lines)
    if (len(mod) > 1):
@@ -194,7 +201,7 @@ def qa_checks(files,options):
          interfaces = [line_num(pfile,i) for i in filter(test_for_interfaces.search, pfile)]
 
       for obj in parse_f90file(pfile,f,warns):
-         if (debug): print obj
+         if (debug): print '[qa_checks] obj =',obj
          part = pfile[obj['beg']:obj['end']]
 #         if (debug): 
 #            for f in part: print f
