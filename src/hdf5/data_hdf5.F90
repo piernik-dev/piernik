@@ -206,13 +206,14 @@ contains
    subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b)
 
       use constants,   only: xdim, ydim, zdim, ndims
-      use common_hdf5, only: n_cg_name, get_nth_cg
-      use dataio_pub,  only: die, nproc_io, can_i_write
+      use common_hdf5, only: n_cg_name, get_nth_cg, hdf_vars
+      use dataio_pub,  only: die, nproc_io, can_i_write, msg
+      use dataio_user, only: user_vars_hdf5
       use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
+      use hdf5,        only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_REAL, &
            &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
            &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
+      use mpi,         only: MPI_REAL, MPI_STATUS_IGNORE
       use mpisetup,    only: master, nproc, FIRST, LAST, proc, comm
 
       implicit none
@@ -225,10 +226,12 @@ contains
       integer(HID_T)                              :: dset_id, plist_id
       integer(kind=4)                             :: error
       integer(HSIZE_T), dimension(:), allocatable :: dims
-      real, pointer,    dimension(:,:,:)          :: pa3d
       integer                                     :: i, ncg
       type(grid_container), pointer               :: cg
       integer, allocatable, dimension(:)          :: cg_src_p, cg_src_n
+      real(kind=4), dimension(:,:,:), allocatable :: data
+      integer                                     :: ierrh
+      logical                                     :: ok_var
 
       ! construct source addresses of the cg to be written
       allocate(cg_src_p(1:sum(cg_n(:))), cg_src_n(1:sum(cg_n(:))))
@@ -252,32 +255,48 @@ contains
          if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)    ! \todo move property to problem.par
 
          if (nproc_io == 1) then ! perform serial write
+            allocate(data(cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
             if (master) then
                if (.not. can_i_write) call die("[restart_hdf5:write_cg_to_restart] Master can't write")
 
                allocate(dims(ndims))
-               call h5dopen_f(cg_g_id, 'dens', dset_id, error)
-               if (cg_src_p(ncg) == proc) then
-                  cg => get_nth_cg(cg_src_n(ncg))
-                  pa3d => cg%w(1)%span(1,cg%ijkse) !< \todo use set_dims_for_restart
-                  dims(:) = cg%n_b
-               else
-                  allocate(pa3d(cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
-                  call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, error)
-                  dims(:) = shape(pa3d)
-               endif
-               call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
-               call h5dclose_f(dset_id, error)
-               if (cg_src_p(ncg) /= proc) deallocate(pa3d)
+               dims(:) = shape(data)
+               do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+                  call h5dopen_f(cg_g_id, hdf_vars(i), dset_id, error)
+
+                  if (cg_src_p(ncg) == proc) then
+                     cg => get_nth_cg(cg_src_n(ncg))
+                     ierrh = 0; ok_var = .false.
+                     call datafields_hdf5(hdf_vars(i), data, ierrh, cg)
+                     if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
+                     if (ierrh>=0) ok_var = .true.
+                     if (.not.ok_var) then
+                        write(msg,'(3a)') "[data_hdf5:write_cg_to_output]: ", hdf_vars(i)," is not defined in datafields_hdf5, neither in user_vars_hdf5."
+                        call die(msg)
+                     endif
+                  else
+                     call MPI_Recv(data(1,1,1), size(data), MPI_REAL, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, error)
+                  endif
+                  call h5dwrite_f(dset_id, H5T_NATIVE_REAL, data, dims, error, xfer_prp = plist_id)
+                  call h5dclose_f(dset_id, error)
+               enddo
                deallocate(dims)
             else
                if (can_i_write) call die("[restart_hdf5:write_cg_to_restart] Slave can write")
                if (cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_src_n(ncg))
-                  pa3d => cg%w(1)%span(1,cg%ijkse) !< \todo use set_dims_for_restart
-                  call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*i, comm, error)
+                  ierrh = 0; ok_var = .false.
+                  call datafields_hdf5(hdf_vars(i), data, ierrh, cg)
+                  if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
+                  if (ierrh>=0) ok_var = .true.
+                  if (.not.ok_var) then
+                     write(msg,'(3a)') "[data_hdf5:write_cg_to_output]: ", hdf_vars(i)," is not defined in datafields_hdf5, neither in user_vars_hdf5."
+                     call die(msg)
+                  endif
+                  call MPI_Send(data(1,1,1), size(data), MPI_REAL, FIRST, ncg + sum(cg_n(:))*i, comm, error)
                endif
             endif
+            deallocate(data)
          else ! perform parallell write
             ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
             if (can_i_write) then
@@ -303,7 +322,7 @@ contains
 
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, Z_avail, g)
 
-      use common_hdf5, only: create_empty_cg_dataset
+      use common_hdf5, only: create_empty_cg_dataset, hdf_vars
       use hdf5,        only: HID_T, HSIZE_T
 
       implicit none
@@ -313,7 +332,11 @@ contains
       logical(kind=4), intent(in)                          :: Z_avail
       integer, intent(in)                                  :: g
 
-      call create_empty_cg_dataset(cg_g_id, 'dens', int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
+      integer :: i
+
+      do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+         call create_empty_cg_dataset(cg_g_id, hdf_vars(i), int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
+      enddo
    end subroutine create_empty_cg_datasets_in_output
 
    subroutine h5_write_to_single_file_v1(fname)
