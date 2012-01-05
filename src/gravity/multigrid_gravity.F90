@@ -977,15 +977,15 @@ contains
          if ( history%old(p2)%time < history%old(p1)%time .and. &        ! quadratic interpolation
               history%old(p1)%time < history%old(p0)%time .and. &
               history%old(p0)%time < t) then
-            ordt = min(QUADRATIC, ord_time_extrap)
+            ordt = min(int(QUADRATIC), ord_time_extrap)
          else if (history%old(p1)%time < history%old(p0)%time .and. &
               &   history%old(p0)%time < t) then      ! linear extrapolation
-            ordt = min(LINEAR, ord_time_extrap)
+            ordt = min(int(LINEAR), ord_time_extrap)
          else                                                            ! simple recycling
-            ordt = min(COPY, ord_time_extrap)
+            ordt = min(int(COPY), ord_time_extrap)
          endif
       else                                                               ! coldstart
-         ordt = min(RESET, ord_time_extrap)
+         ordt = min(int(RESET), ord_time_extrap)
       endif
 
       select case (ordt)
@@ -1051,7 +1051,7 @@ contains
 
       implicit none
 
-      integer, dimension(:), optional, intent(in) :: i_all_dens !< indices to selfgravitating fluids
+      integer(kind=4), dimension(:), optional, intent(in) :: i_all_dens !< indices to selfgravitating fluids
 
       real :: fac
       integer :: i
@@ -1198,7 +1198,7 @@ contains
 
       implicit none
 
-      integer, dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
+      integer(kind=4), dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
 
       logical :: isolated
 
