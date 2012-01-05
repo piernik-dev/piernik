@@ -845,13 +845,13 @@ contains
    subroutine write_restart_hdf5_v2(filename)
 
       use constants,   only: cwdlen
-      use common_hdf5, only: write_to_hdf5_v2
+      use common_hdf5, only: write_to_hdf5_v2, O_RES
 
       implicit none
 
       character(len=cwdlen), intent(in)              :: filename
 
-      call write_to_hdf5_v2(filename, create_empty_cg_datasets_in_restart, write_cg_to_restart)
+      call write_to_hdf5_v2(filename, O_RES, create_empty_cg_datasets_in_restart, write_cg_to_restart)
 
    end subroutine write_restart_hdf5_v2
 
