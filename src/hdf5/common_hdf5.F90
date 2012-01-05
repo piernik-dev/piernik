@@ -43,7 +43,7 @@ module common_hdf5
    public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2
    public :: nhdf_vars, hdf_vars, d_gname, base_d_gname, d_fc_aname, d_size_aname, d_edge_apname, d_bnd_apname, cg_gname, &
          & cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, &
-         & cg_dl_aname, O_OUT, O_RES
+         & cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg
 
    integer, parameter :: S_LEN = 30
 
@@ -532,7 +532,74 @@ contains
       character(len=dsetnamelen) :: n_cg_name
       write(n_cg_name,'(2a,i8.8)')trim(cg_gname), "_", g
    end function n_cg_name
-!>
+
+!> \brief find a n-th grid container on the cg_all list
+
+   function get_nth_cg(n) result(cg)
+
+      use dataio_pub, only: die
+      use gc_list,    only: cg_list_element
+      use grid,       only: all_cg
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      integer, intent(in) :: n
+
+      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer :: cgl
+
+      integer :: i
+
+      nullify(cg)
+      i = 1
+      cgl => all_cg%first
+      do while (associated(cgl))
+         if (i == n) then
+            cg => cgl%cg
+            exit
+         endif
+         i = i + 1
+         cgl => cgl%nxt
+      enddo
+
+      if (.not. associated(cg)) call die("[common_hdf5:get_nth_cg] cannot find n-th cg")
+
+   end function get_nth_cg
+
+
+!> \brief Create an empty double precision dataset of given dimensions. Use compression if available.
+   subroutine create_empty_cg_dataset(cg_g_id, name, ddims, Z_avail)
+
+     use constants,  only: I_NINE
+     use dataio_pub, only: enable_compression
+     use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_DOUBLE, &
+          &                h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, h5pset_shuffle_f, h5pset_chunk_f
+
+     implicit none
+
+     integer(HID_T), intent(in)                 :: cg_g_id !< group id where to create the dataset
+     character(len=*), intent(in)               :: name    !< name
+     integer(HSIZE_T), dimension(:), intent(in) :: ddims   !< dimensionality
+     logical(kind=4), intent(in)                        :: Z_avail !< can use compression?
+
+     integer(HID_T)  :: prp_id, filespace, dset_id
+     integer(kind=4) :: error
+
+     call h5pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
+     if (enable_compression .and. Z_avail) then
+        call h5pset_shuffle_f(prp_id, error)
+        call h5pset_deflate_f(prp_id, I_NINE, error)
+        call h5pset_chunk_f(prp_id, size(ddims, kind=4), ddims, error)
+     endif
+
+     call h5screate_simple_f(size(ddims, kind=4), ddims, filespace, error)
+     call h5dcreate_f(cg_g_id, name, H5T_NATIVE_DOUBLE, filespace, dset_id, error, dcpl_id = prp_id)
+     call h5dclose_f(dset_id, error)
+     call h5sclose_f(filespace, error)
+     call h5pclose_f(prp_id, error)
+
+   end subroutine create_empty_cg_dataset
 
 !! \brief Write a multi-file, multi-domain HDF5 file
 !!

@@ -176,7 +176,7 @@ contains
 
       call set_common_attributes(fname)
       if (use_v2_io) then
-         call h5_write_to_single_file_v1(fname)
+         call h5_write_to_single_file_v2(fname)
       else
          call h5_write_to_single_file_v1(fname)
       endif
@@ -190,6 +190,131 @@ contains
       nhdf = nhdf + I_ONE
 
    end subroutine h5_write_to_single_file
+
+   subroutine h5_write_to_single_file_v2(fname)
+      use common_hdf5, only: write_to_hdf5_v2, O_OUT
+
+      implicit none
+
+      character(len=*), intent(in)      :: fname
+
+      call write_to_hdf5_v2(fname, O_OUT, create_empty_cg_datasets_in_output, write_cg_to_output)
+   end subroutine h5_write_to_single_file_v2
+
+!> \brief Write all grid containers to the file
+
+   subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b)
+
+      use constants,   only: xdim, ydim, zdim, ndims
+      use common_hdf5, only: n_cg_name, get_nth_cg
+      use dataio_pub,  only: die, nproc_io, can_i_write
+      use grid_cont,   only: grid_container
+      use hdf5,        only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
+           &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
+           &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
+      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
+      use mpisetup,    only: master, nproc, FIRST, LAST, proc, comm
+
+      implicit none
+
+      integer(HID_T),                           intent(in) :: cgl_g_id    !> cg group identifier
+      integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !> offset for cg group numbering
+      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !> all cg sizes
+
+      integer(HID_T)                              :: cg_g_id            !> cg group identifier
+      integer(HID_T)                              :: dset_id, plist_id
+      integer(kind=4)                             :: error
+      integer(HSIZE_T), dimension(:), allocatable :: dims
+      real, pointer,    dimension(:,:,:)          :: pa3d
+      integer                                     :: i, ncg
+      type(grid_container), pointer               :: cg
+      integer, allocatable, dimension(:)          :: cg_src_p, cg_src_n
+
+      ! construct source addresses of the cg to be written
+      allocate(cg_src_p(1:sum(cg_n(:))), cg_src_n(1:sum(cg_n(:))))
+      do i = FIRST, LAST
+         cg_src_p(sum(cg_n(:i))-cg_n(i)+1:sum(cg_n(:i))) = i
+         do ncg = 1, cg_n(i)
+            cg_src_n(sum(cg_n(:i))-cg_n(i)+ncg) = ncg
+         enddo
+      enddo
+
+      !> \todo Do a consistency check
+
+      ! write all cg, one by one
+      do ncg = 1, sum(cg_n(:))
+
+         if (can_i_write) then
+            call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error)
+            call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+         endif
+
+         if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)    ! \todo move property to problem.par
+
+         if (nproc_io == 1) then ! perform serial write
+            if (master) then
+               if (.not. can_i_write) call die("[restart_hdf5:write_cg_to_restart] Master can't write")
+
+               allocate(dims(ndims))
+               call h5dopen_f(cg_g_id, 'dens', dset_id, error)
+               if (cg_src_p(ncg) == proc) then
+                  cg => get_nth_cg(cg_src_n(ncg))
+                  pa3d => cg%w(1)%span(1,cg%ijkse) !< \todo use set_dims_for_restart
+                  dims(:) = cg%n_b
+               else
+                  allocate(pa3d(cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
+                  call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, error)
+                  dims(:) = shape(pa3d)
+               endif
+               call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
+               call h5dclose_f(dset_id, error)
+               if (cg_src_p(ncg) /= proc) deallocate(pa3d)
+               deallocate(dims)
+            else
+               if (can_i_write) call die("[restart_hdf5:write_cg_to_restart] Slave can write")
+               if (cg_src_p(ncg) == proc) then
+                  cg => get_nth_cg(cg_src_n(ncg))
+                  pa3d => cg%w(1)%span(1,cg%ijkse) !< \todo use set_dims_for_restart
+                  call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*i, comm, error)
+               endif
+            endif
+         else ! perform parallell write
+            ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
+            if (can_i_write) then
+               ! write own
+               ! receive (from whom?)
+            else
+               ! send (where?)
+            endif
+            call die("[restart_hdf5:write_cg_to_restart] Parallel v2 I/O not implemented yet")
+         endif
+
+         if (can_i_write) then
+            call h5pclose_f(plist_id, error)
+            call h5gclose_f(cg_g_id, error)
+         endif
+
+      enddo
+
+      ! clean up
+      deallocate(cg_src_p, cg_src_n)
+
+   end subroutine write_cg_to_output
+
+   subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, Z_avail, g)
+
+      use common_hdf5, only: create_empty_cg_dataset
+      use hdf5,        only: HID_T, HSIZE_T
+
+      implicit none
+
+      integer(HID_T), intent(in)                           :: cg_g_id
+      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
+      logical(kind=4), intent(in)                          :: Z_avail
+      integer, intent(in)                                  :: g
+
+      call create_empty_cg_dataset(cg_g_id, 'dens', int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
+   end subroutine create_empty_cg_datasets_in_output
 
    subroutine h5_write_to_single_file_v1(fname)
 

@@ -859,9 +859,10 @@ contains
 
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, Z_avail, g)
 
-      use constants, only: ndims, I_ONE, AT_IGNORE
-      use grid,      only: all_cg
-      use hdf5,      only: HID_T, HSIZE_T
+      use common_hdf5, only: create_empty_cg_dataset
+      use constants,   only: ndims, I_ONE, AT_IGNORE
+      use grid,        only: all_cg
+      use hdf5,        only: HID_T, HSIZE_T
 
       implicit none
 
@@ -894,40 +895,6 @@ contains
          deallocate(ddims)
       endif
    end subroutine create_empty_cg_datasets_in_restart
-
-!> \brief Create an empty double precision dataset of given dimensions. Use compression if available.
-
-   subroutine create_empty_cg_dataset(cg_g_id, name, ddims, Z_avail)
-
-     use constants,  only: I_NINE
-     use dataio_pub, only: enable_compression
-     use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_DOUBLE, &
-          &                h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, h5pset_shuffle_f, h5pset_chunk_f
-
-     implicit none
-
-     integer(HID_T), intent(in)                 :: cg_g_id !< group id where to create the dataset
-     character(len=*), intent(in)               :: name    !< name
-     integer(HSIZE_T), dimension(:), intent(in) :: ddims   !< dimensionality
-     logical(kind=4), intent(in)                        :: Z_avail !< can use compression?
-
-     integer(HID_T)  :: prp_id, filespace, dset_id
-     integer(kind=4) :: error
-
-     call h5pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
-     if (enable_compression .and. Z_avail) then
-        call h5pset_shuffle_f(prp_id, error)
-        call h5pset_deflate_f(prp_id, I_NINE, error)
-        call h5pset_chunk_f(prp_id, size(ddims, kind=4), ddims, error)
-     endif
-
-     call h5screate_simple_f(size(ddims, kind=4), ddims, filespace, error)
-     call h5dcreate_f(cg_g_id, name, H5T_NATIVE_DOUBLE, filespace, dset_id, error, dcpl_id = prp_id)
-     call h5dclose_f(dset_id, error)
-     call h5sclose_f(filespace, error)
-     call h5pclose_f(prp_id, error)
-
-   end subroutine create_empty_cg_dataset
 
 !>
 !! \brief Find out which fields (cg%q and cg%w arrays) are stored in the restart file
@@ -967,7 +934,7 @@ contains
    subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b)
 
       use constants,   only: xdim, ydim, zdim, ndims
-      use common_hdf5, only: n_cg_name
+      use common_hdf5, only: n_cg_name, get_nth_cg
       use dataio_pub,  only: die, nproc_io, can_i_write
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
@@ -1122,40 +1089,6 @@ contains
       arr(ubound(arr(:))) = i
 
    end subroutine append_int_to_array
-
-!> \brief find a n-th grid container on the cg_all list
-
-   function get_nth_cg(n) result(cg)
-
-      use dataio_pub, only: die
-      use gc_list,    only: cg_list_element
-      use grid,       only: all_cg
-      use grid_cont,  only: grid_container
-
-      implicit none
-
-      integer, intent(in) :: n
-
-      type(grid_container), pointer :: cg
-      type(cg_list_element), pointer :: cgl
-
-      integer :: i
-
-      nullify(cg)
-      i = 1
-      cgl => all_cg%first
-      do while (associated(cgl))
-         if (i == n) then
-            cg => cgl%cg
-            exit
-         endif
-         i = i + 1
-         cgl => cgl%nxt
-      enddo
-
-      if (.not. associated(cg)) call die("[restart_hdf5:get_nth_cg] cannot find n-th cg")
-
-   end function get_nth_cg
 
 !>
 !! \brief Read a multi-file, multi-domain restart file
