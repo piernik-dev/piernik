@@ -66,7 +66,7 @@ contains
       use constants,   only: xdim, ydim, zdim, half
       use cr_data,     only: divv_n
       use dataio_pub,  only: die
-      use domain,      only: dom, is_multicg
+      use domain,      only: dom
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid,        only: all_cg
       use grid_cont,   only: grid_container
