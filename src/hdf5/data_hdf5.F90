@@ -150,9 +150,52 @@ contains
 !
    subroutine h5_write_to_single_file
 
-      use common_hdf5, only: nhdf_vars, hdf_vars, set_common_attributes
-      use constants,   only: ndims, cwdlen, I_ONE
-      use dataio_pub,  only: printio, printinfo, msg, die, nhdf, problem_name, run_id, nhdf, tmr_hdf, thdf, wd_wr
+      use mpi,         only: MPI_CHARACTER
+      use common_hdf5, only: set_common_attributes
+      use constants,   only: cwdlen, I_ONE
+      use dataio_pub,  only: printio, printinfo, nhdf, thdf, tmr_hdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
+         & msg, run_id, problem_name, use_v2_io
+      use mpisetup,    only: comm, ierr, master, FIRST
+      use timer,       only: set_timer
+
+      implicit none
+
+      character(len=cwdlen)             :: fname
+      real :: phv
+
+      thdf = set_timer(tmr_hdf,.true.)
+      ! Initialize HDF5 library and Fortran interfaces.
+      !
+      phv = piernik_hdf5_version ; if (use_v2_io) phv = piernik_hdf5_version2
+      if (master) then
+         write(fname, '(2a,a1,a3,a1,i4.4,a3)') trim(wd_wr), trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
+         write(msg,'(a,f5.2,1x,2a)') 'Writing datafile v', phv, trim(fname), " ... "
+         call printio(msg, .true.)
+      endif
+      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
+
+      call set_common_attributes(fname)
+      if (use_v2_io) then
+         call h5_write_to_single_file_v1(fname)
+      else
+         call h5_write_to_single_file_v1(fname)
+      endif
+
+      thdf = set_timer(tmr_hdf)
+      if (master) then
+         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
+         call printinfo(msg, .true.)
+      endif
+
+      nhdf = nhdf + I_ONE
+
+   end subroutine h5_write_to_single_file
+
+   subroutine h5_write_to_single_file_v1(fname)
+
+      use common_hdf5, only: nhdf_vars, hdf_vars
+      use constants,   only: ndims
+      use dataio_pub,  only: die, msg
       use dataio_user, only: user_vars_hdf5
       use domain,      only: dom, is_multicg !, is_uneven
       use grid,        only: leaves
@@ -162,18 +205,17 @@ contains
            &                 H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, &
            &                 h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
            &                 h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
-      use mpisetup,    only: comm, ierr, master, FIRST
-      use mpi,         only: MPI_CHARACTER, MPI_INFO_NULL
-      use timer,       only: set_timer
+      use mpisetup,    only: comm, FIRST
+      use mpi,         only: MPI_INFO_NULL
 
       implicit none
 
+      character(len=*), intent(in)      :: fname
       integer(HID_T)                    :: file_id                 !< File identifier
       integer(HID_T)                    :: plist_id, plist_idf     !< Property list identifier
       integer                           :: ierrh, i
       integer(kind=4)                   :: error
       logical                           :: ok_var
-      character(len=cwdlen)             :: fname
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
       real(kind=4), allocatable         :: data (:,:,:)            !< Data to write
@@ -182,18 +224,6 @@ contains
       integer(HID_T)                    :: filespace               !< Dataspace identifier in file
       integer(HID_T)                    :: memspace                !< Dataspace identifier in memory
       integer(HSIZE_T), dimension(rank) :: count, offset, stride, block, dimsf, chunk_dims
-
-      thdf = set_timer(tmr_hdf,.true.)
-      ! Initialize HDF5 library and Fortran interfaces.
-      !
-      if (master) then
-         write(fname, '(2a,a1,a3,a1,i4.4,a3)') trim(wd_wr), trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
-         write(msg,'(3a)') 'Writing datafile ', trim(fname), " ... "
-         call printio(msg, .true.)
-      endif
-      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
-
-      call set_common_attributes(fname)
 
       call h5open_f(error)
       !
@@ -279,15 +309,7 @@ contains
       call h5fclose_f(file_id, error)
       call h5close_f(error)
 
-      thdf = set_timer(tmr_hdf)
-      if (master) then
-         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
-         call printinfo(msg, .true.)
-      endif
-
-      nhdf = nhdf + I_ONE
-
-   end subroutine h5_write_to_single_file
+   end subroutine h5_write_to_single_file_v1
 
    function h5_filename() result(f)
       use constants,  only: fnamelen
