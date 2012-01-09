@@ -32,8 +32,8 @@
 !<
 module grid
 
-   use gc_list,     only: cg_list_global, cg_list
    use cg_list_lev, only: cg_list_level, cg_list_patch
+   use gc_list,     only: cg_list_global, cg_list
 
    implicit none
 
