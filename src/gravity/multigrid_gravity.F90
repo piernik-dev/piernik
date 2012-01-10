@@ -942,13 +942,16 @@ contains
 
    subroutine init_solution(history)
 
+#if defined(__INTEL_COMPILER)
+      use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
+#endif /* __INTEL_COMPILER */
       use dataio_pub,       only: msg, die, printinfo
       use gc_list,          only: ind_val
       use global,           only: t
       use grid,             only: all_cg, leaves
       use mpisetup,         only: master
-      use multigridhelpers, only: set_dirty, check_dirty
       use multigridvars,    only: roof, stdout, solution
+      use multigridhelpers, only: set_dirty, check_dirty
 
       implicit none
 
@@ -1035,6 +1038,9 @@ contains
 
    subroutine init_source(i_all_dens)
 
+#if defined(__INTEL_COMPILER)
+      use cg_list_lev,        only: cg_list_level    ! QA_WARN workaround for stupid INTEL compiler
+#endif /* __INTEL_COMPILER */
       use constants,          only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,         only: die
       use domain,             only: dom, is_multicg
@@ -1150,11 +1156,14 @@ contains
 
    subroutine store_solution(history)
 
+#if defined(__INTEL_COMPILER)
+      use cg_list_lev,       only: cg_list_level   ! QA_WARN workaround for stupid INTEL compiler
+#endif /* __INTEL_COMPILER */
       use domain,            only: dom
       use global,            only: t
       use grid,              only: leaves
-      use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: roof, bnd_isolated, bnd_givenval, solution, extbnd_extrapolate, extbnd_mirror
+      use multigridmpifuncs, only: mpi_multigrid_bnd
 
       implicit none
 
@@ -1439,8 +1448,8 @@ contains
       use gc_list,           only: cg_list_element
       use cg_list_lev,       only: cg_list_level
       use grid_cont,         only: grid_container
-      use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: extbnd_antimirror
+      use multigridmpifuncs, only: mpi_multigrid_bnd
 
       implicit none
 
@@ -1561,8 +1570,8 @@ contains
       use cg_list_lev,       only: cg_list_level
       use grid_cont,         only: grid_container
       use mpisetup,          only: master
-      use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: bnd_givenval, extbnd_antimirror
+      use multigridmpifuncs, only: mpi_multigrid_bnd
 
       implicit none
 
@@ -1708,9 +1717,9 @@ contains
       use gc_list,           only: cg_list_element
       use cg_list_lev,       only: cg_list_level
       use grid_cont,         only: grid_container
+      use multigridvars,     only: base, extbnd_antimirror
       use multigridhelpers,  only: dirty_debug, check_dirty, dirty_label
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: base, extbnd_antimirror
 
       implicit none
 
