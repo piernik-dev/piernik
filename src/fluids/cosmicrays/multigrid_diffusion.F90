@@ -345,15 +345,18 @@ contains
 
    subroutine init_source(cr_id)
 
+#if defined(__INTEL_COMPILER)
+      use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
+#endif /* __INTEL_COMPILER */
       use dataio_pub,         only: die
       use domain,             only: is_multicg
       use grid,               only: leaves
       use gc_list,            only: cg_list_element
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_crs
+      use multigridvars,      only: roof, source, defect, correction
       use multigridbasefuncs, only: norm_sq
       use multigridhelpers,   only: set_dirty, check_dirty
-      use multigridvars,      only: roof, source, defect, correction
 
       implicit none
 
@@ -392,14 +395,17 @@ contains
 
    subroutine init_solution(cr_id)
 
+#if defined(__INTEL_COMPILER)
+      use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
+#endif /* __INTEL_COMPILER */
       use dataio_pub,       only: die
       use domain,           only: is_multicg
       use grid,             only: leaves
       use gc_list,          only: cg_list_element
       use grid_cont,        only: grid_container
       use initcosmicrays,   only: iarr_crs
-      use multigridhelpers, only: set_dirty, check_dirty
       use multigridvars,    only: roof, solution
+      use multigridhelpers, only: set_dirty, check_dirty
 
       implicit none
 
