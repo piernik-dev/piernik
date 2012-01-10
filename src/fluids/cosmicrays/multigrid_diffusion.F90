@@ -541,9 +541,11 @@ contains
          if (norm_lhs/norm_rhs <= norm_tol) exit
 
          if (v>convergence_history) then
-            if (product(vstat%factor(v-convergence_history:v)) < barely_greater_than_1 .and. master) then
-               write(msg, '(a,i3,a,g15.5)')"[multigrid_diffusion:vcycle_hg] Too slow convergence: cycle = ",v,", norm_lhs/norm_rhs = ", norm_lhs/norm_rhs
-               call warn(msg)
+            if (product(vstat%factor(v-convergence_history:v)) < barely_greater_than_1) then
+               if (master) then
+                  write(msg, '(a,i3,a,g15.5)')"[multigrid_diffusion:vcycle_hg] Too slow convergence: cycle = ",v,", norm_lhs/norm_rhs = ", norm_lhs/norm_rhs
+                  call warn(msg)
+               endif
                exit
             endif
          endif
