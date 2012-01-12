@@ -74,6 +74,10 @@ parser.add_option("-p", "--plane", dest="plane", default="xy",
       help="plane, possible values {xy,yz,xz}")
 parser.add_option("-c", "--cell", "--i1", dest="i1", default=0, type="int",
       help="")
+parser.add_option("--vmin", dest="vmin", default=0.0, type="float",
+      help="")
+parser.add_option("--vmax", dest="vmax", default=0.0, type="float",
+      help="")
 parser.add_option("--wp", "--width", dest="width", default=8, type="int",
       help="picture width")
 parser.add_option("--hp", "--height", dest="height", default=6, type="int",
@@ -91,12 +95,15 @@ if not options.plane in ["xy","yz","xz","x","y","z"]:
 if len(args) > 1:
    ion()
 
+vmin = options.vmin
+vmax = options.vmax
+
 arr, title_str, extent = get_frame(args[0], options)
 figure(figsize=(options.width,options.height))
 if len(extent) == 2:
    plt = plot(linspace(extent[0],extent[1],num=len(arr)), arr)
 else:
-   plt = imshow(arr,extent=extent,interpolation='nearest')
+   plt = imshow(arr,extent=extent,interpolation='nearest', vmin=vmin, vmax=vmax)
    col=colorbar()
 title(title_str)
 draw()
@@ -108,7 +115,7 @@ if len(args) > 1:
       if len(extent) == 2:
          plt = plot(linspace(extent[0],extent[1],num=len(arr)), arr)
       else:
-         plt = imshow(arr,extent=extent,interpolation='nearest')
+         plt = imshow(arr,extent=extent,interpolation='nearest', vmin=vmin, vmax=vmax )
          col.update_bruteforce(plt)
       title(title_str)
       draw()
