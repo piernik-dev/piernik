@@ -817,7 +817,8 @@ contains
 
       write(msg,*) "[initproblem:read_dens_profile] Reading ", trim(densfile)
       open(1,file=densfile, status="old", form='unformatted')
-         read(1) n
+         read(1) i
+         n = i
          allocate(y(n), x(n))
          read(1) x
          read(1) y
