@@ -644,8 +644,8 @@ contains
          step_hdf = nstep
       endif
 
-      time_determined_dump = (((nres-nres_start) < (int((t-t_start) / dt_res) + 1) .or. output == 'end') .and. (nstep > step_res))
-      dump = (dt_res > 0.0 .and. time_determined_dump)
+      dump = (dt_res > 0.0)
+      if (dump) dump = (((nres-nres_start) < (int((t-t_start) / dt_res) + 1) .or. output == 'end') .and. (nstep > step_res))
       dump = (dump .or. output == 'res')
 
       if (dump) then
