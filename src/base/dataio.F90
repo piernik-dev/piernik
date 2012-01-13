@@ -621,6 +621,7 @@ contains
       implicit none
 
       character(len=*), intent(in) :: output
+      logical                      :: dump, time_determined_dump
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -629,27 +630,31 @@ contains
 
 !    call checkdf
 
-      if (dt_hdf > 0.0 .and. nstep > step_hdf .and. output /= 'gpt') then
-         if ((t-last_hdf_time) >= dt_hdf .or. output == 'hdf' .or. output == 'end') then
-            call write_hdf5
+      time_determined_dump = ((t-last_hdf_time) >= dt_hdf .or. output == 'end')
+      dump = (dt_hdf > 0.0 .and. time_determined_dump)
+      dump = (dump .or. output == 'hdf')
 
-            if ((t-last_hdf_time) >= dt_hdf) last_hdf_time = last_hdf_time + dt_hdf
-            if ((t-last_hdf_time) >= dt_hdf) last_hdf_time = t ! additional control
-                          ! in the case of changing dt_hdf into smaller value via msg
-            step_hdf = nstep
-         endif
+      if (dump) then
+         call write_hdf5
+
+         do while ((t-last_hdf_time) >= dt_hdf)
+            last_hdf_time = last_hdf_time + dt_hdf
+         enddo
+
+         step_hdf = nstep
       endif
 
-      if (dt_res > 0.0 .and. nstep > step_res) then
-         if ((nres-nres_start) < (int((t-t_start) / dt_res) + 1) &
-                .or. output == 'res' .or. output == 'end') then
-            if (nres > 0) then
-               call write_restart_hdf5
-            else
-               nres = 1
-            endif
-            step_res = nstep
+      time_determined_dump = (((nres-nres_start) < (int((t-t_start) / dt_res) + 1) .or. output == 'end') .and. (nstep > step_res))
+      dump = (dt_res > 0.0 .and. time_determined_dump)
+      dump = (dump .or. output == 'res')
+
+      if (dump) then
+         if (nres > 0) then
+            call write_restart_hdf5
+         else
+            nres = 1
          endif
+         step_res = nstep
       endif
       call write_plot
 
