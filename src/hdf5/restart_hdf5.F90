@@ -997,7 +997,7 @@ contains
                         pa3d => cg%q(q_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
                         dims(:) = cg%n_b
                      else
-                        allocate(pa3d(cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
+                        allocate(pa3d(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
                         call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, error)
                         dims(:) = shape(pa3d)
                      endif
@@ -1017,7 +1017,7 @@ contains
                         pa4d => cg%w(w_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
                         dims(:) = [ all_cg%w_lst(w_lst(i))%dim4, cg%n_b ]
                      else
-                        allocate(pa4d(all_cg%w_lst(w_lst(i))%dim4, cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
+                        allocate(pa4d(all_cg%w_lst(w_lst(i))%dim4, cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
                         call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, error)
                         dims(:) = shape(pa4d)
                      endif
@@ -1118,11 +1118,11 @@ contains
 
    subroutine read_restart_hdf5_v2(status_v2)
 
-      use constants,   only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, INVALID, RD, LO, HI
+      use constants,   only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, base_level_id, INVALID, RD, LO, HI
       use common_hdf5, only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
-           &                 cg_size_aname, cg_offset_aname, cg_lev_aname, cg_gname, base_d_gname, cg_cnt_aname
+           &                 cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname
       use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, next_t_tsl, next_t_log, problem_name, new_id, domain_dump, &
-           &                 require_init_prob, piernik_hdf5_version2, step_hdf, step_res, nres, nhdf
+           &                 require_init_prob, piernik_hdf5_version2, step_hdf, step_res, nres, nhdf, fix_string
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
       use gc_list,     only: cg_list_element
@@ -1255,11 +1255,11 @@ contains
          call compare_array1D(str_attrs(ia))
          select case (str_attrs(ia))
             case ("problem_name")
-               problem_name = trim(cbuf)
+               problem_name = fix_string(trim(cbuf))
             case ("domain")
-               domain_dump = trim(cbuf(:len(domain_dump)))
+               domain_dump = fix_string(trim(cbuf(:len(domain_dump))))
             case ("run_id")
-               new_id = trim(cbuf(:len(new_id)))
+               new_id = fix_string(trim(cbuf(:len(new_id))))
             case default
                write(msg,'(3a,i14,a)')"[restart_hdf5:read_restart_hdf5_v2] String attribute '",trim(real_attrs(ia)),"' with value = ",cbuf," was ignored"
                call warn(msg)
@@ -1303,7 +1303,7 @@ contains
       call h5gclose_f(doml_g_id, error)
 
       ! Read available cg pieces
-      call h5gopen_f(file_id, cg_gname, cgl_g_id, error)         ! open "/cg"
+      call h5gopen_f(file_id, data_gname, cgl_g_id, error)         ! open "/cg"
 
       allocate(ibuf(1))
       call read_attribute(cgl_g_id, cg_cnt_aname, ibuf)          ! open "/cg/cg_count"
@@ -1317,7 +1317,7 @@ contains
 
          allocate(ibuf(1))
          call read_attribute(cg_g_id, cg_lev_aname, ibuf)        ! open "/cg/cg_%08d/level"
-         if (ibuf(1) /= 1) call die("[restart_hdf5:read_restart_hdf5_v2] Only base level is supported")
+         if (ibuf(1) /= base_level_id) call die("[restart_hdf5:read_restart_hdf5_v2] Only base level is supported")
          cg_res(ia)%level=ibuf(1)
          deallocate(ibuf)
 

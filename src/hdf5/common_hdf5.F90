@@ -43,7 +43,7 @@ module common_hdf5
    public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2
    public :: nhdf_vars, hdf_vars, d_gname, base_d_gname, d_fc_aname, d_size_aname, d_edge_apname, d_bnd_apname, cg_gname, &
          & cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, &
-         & cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg
+         & cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg, data_gname
 
    integer, parameter :: S_LEN = 30
 
@@ -51,9 +51,9 @@ module common_hdf5
    integer, protected :: nhdf_vars !< number of quantities plotted to hdf files
    character(len=*), parameter :: d_gname = "domains", base_d_gname = "base", d_fc_aname = "fine_count", &
         &                         d_size_aname = "n_d", d_edge_apname = "-edge_position", d_bnd_apname = "-boundary_type", &
-        &                         cg_gname = "cg", cg_cnt_aname = "cg_count", cg_lev_aname = "level", cg_size_aname = "n_b", &
+        &                         cg_gname = "grid", cg_cnt_aname = "cg_count", cg_lev_aname = "level", cg_size_aname = "n_b", &
         &                         cg_offset_aname = "off", cg_ledge_aname = "left_edge", cg_redge_aname = "right_edge", &
-        &                         cg_dl_aname = "dl"
+        &                         cg_dl_aname = "dl", data_gname = "data"
    character(len=singlechar), dimension(ndims), parameter :: dir_pref = [ "x", "y", "z" ]
 
    ! enumerator for 'otype' used in various functions to distinguish different
@@ -63,11 +63,6 @@ module common_hdf5
       enumerator :: O_OUT
    end enum
 
-!> \brief Add an attribute (1D array) to the given group and initialize its value
-   interface create_attribute
-      module procedure create_int_attribute
-      module procedure create_real_attribute
-   end interface
 
 contains
 
@@ -247,8 +242,8 @@ contains
 !<
    subroutine set_common_attributes(filename)
 
-      use constants,   only: I_ONE, I_NINE
-      use dataio_pub,  only: use_v2_io, parfile, parfilelines
+      use constants,   only: I_ONE
+      use dataio_pub,  only: use_v2_io, parfile, parfilelines, gzip_level
       use dataio_user, only: user_attrs_wr
       use global,      only: magic_mass, local_magic_mass
       use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
@@ -292,7 +287,7 @@ contains
       ! call H5Zget_filter_info_f ! everything should be always fine for gzip
       call H5Pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
       if (Z_avail) then
-         call H5Pset_deflate_f(prp_id, I_NINE, error)
+         call H5Pset_deflate_f(prp_id, gzip_level, error)
          call H5Pset_chunk_f(prp_id, I_ONE, dimstr, error)
       endif
       call H5Tcopy_f(H5T_NATIVE_CHARACTER, type_id, error)
@@ -474,64 +469,81 @@ contains
 
    end subroutine set_common_attributes_v2
 
-!> \brief Attach an 32-bit integer attribute (scalar or rank-1 small array) to the given group.
-
-   subroutine create_int_attribute(g_id, name, int_array)
-
-     use constants, only: I_ONE
-     use hdf5,      only: H5T_NATIVE_INTEGER, HID_T, HSIZE_T, &
-          &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
-
-     implicit none
-
-     integer(HID_T), intent(in)                :: g_id      !< group id where to create the attribute
-     character(len=*), intent(in)              :: name      !< name
-     integer(kind=4), dimension(:), intent(in) :: int_array !< the data
-
-     integer(HID_T)  :: aspace_id, attr_id
-     integer(kind=4) :: error
-
-     call h5screate_simple_f(I_ONE, [ size(int_array, kind=HSIZE_T) ], aspace_id, error)
-     call h5acreate_f(g_id, name, H5T_NATIVE_INTEGER, aspace_id, attr_id, error)
-     call h5awrite_f(attr_id, H5T_NATIVE_INTEGER, int_array, [ size(int_array, kind=HSIZE_T) ], error)
-     call h5aclose_f(attr_id, error)
-     call h5sclose_f(aspace_id, error)
-
-   end subroutine create_int_attribute
-
-!> \brief Attach an 64-bit real attribute (scalar or rank-1 small array) to the given group.
-
-   subroutine create_real_attribute(g_id, name, real_array)
-
-     use constants, only: I_ONE
-     use hdf5,      only: H5T_NATIVE_DOUBLE, HID_T, HSIZE_T, &
-          &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
-
-     implicit none
-
-     integer(HID_T), intent(in)     :: g_id       !< group id where to create the attribute
-     character(len=*), intent(in)   :: name       !< name
-     real, dimension(:), intent(in) :: real_array !< the data
-
-     integer(HID_T)  :: aspace_id, attr_id
-     integer(kind=4) :: error
-
-     call h5screate_simple_f(I_ONE, [ size(real_array, kind=HSIZE_T) ], aspace_id, error)
-     call h5acreate_f(g_id, name, H5T_NATIVE_DOUBLE, aspace_id, attr_id, error)
-     call h5awrite_f(attr_id, H5T_NATIVE_DOUBLE, real_array, [ size(real_array, kind=HSIZE_T) ], error)
-     call h5aclose_f(attr_id, error)
-     call h5sclose_f(aspace_id, error)
-
-   end subroutine create_real_attribute
-
 !> \brief Generate numbered cg group name
    function n_cg_name(g)
       use constants, only: dsetnamelen
       implicit none
       integer, intent(in)        :: g !< group number
       character(len=dsetnamelen) :: n_cg_name
-      write(n_cg_name,'(2a,i8.8)')trim(cg_gname), "_", g
+      write(n_cg_name,'(2a,i10.10)')trim(cg_gname), "_", g-1
    end function n_cg_name
+
+!> \brief find a n-th grid container on the cg_all list
+
+   function get_nth_cg(n) result(cg)
+
+      use dataio_pub, only: die
+      use gc_list,    only: cg_list_element
+      use grid,       only: all_cg
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      integer, intent(in) :: n
+
+      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer :: cgl
+
+      integer :: i
+
+      nullify(cg)
+      i = 1
+      cgl => all_cg%first
+      do while (associated(cgl))
+         if (i == n) then
+            cg => cgl%cg
+            exit
+         endif
+         i = i + 1
+         cgl => cgl%nxt
+      enddo
+
+      if (.not. associated(cg)) call die("[common_hdf5:get_nth_cg] cannot find n-th cg")
+
+   end function get_nth_cg
+
+
+!> \brief Create an empty double precision dataset of given dimensions. Use compression if available.
+   subroutine create_empty_cg_dataset(cg_g_id, name, ddims, Z_avail)
+
+     use dataio_pub, only: enable_compression, gzip_level
+     use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_DOUBLE, &
+          &                h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, h5pset_shuffle_f, h5pset_chunk_f
+
+     implicit none
+
+     integer(HID_T), intent(in)                 :: cg_g_id !< group id where to create the dataset
+     character(len=*), intent(in)               :: name    !< name
+     integer(HSIZE_T), dimension(:), intent(in) :: ddims   !< dimensionality
+     logical(kind=4), intent(in)                        :: Z_avail !< can use compression?
+
+     integer(HID_T)  :: prp_id, filespace, dset_id
+     integer(kind=4) :: error
+
+     call h5pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
+     if (enable_compression .and. Z_avail) then
+        call h5pset_shuffle_f(prp_id, error)
+        call h5pset_deflate_f(prp_id, gzip_level, error)
+        call h5pset_chunk_f(prp_id, size(ddims, kind=4), ddims, error)
+     endif
+
+     call h5screate_simple_f(size(ddims, kind=4), ddims, filespace, error)
+     call h5dcreate_f(cg_g_id, name, H5T_NATIVE_DOUBLE, filespace, dset_id, error, dcpl_id = prp_id)
+     call h5dclose_f(dset_id, error)
+     call h5sclose_f(filespace, error)
+     call h5pclose_f(prp_id, error)
+
+   end subroutine create_empty_cg_dataset
 
 !> \brief find a n-th grid container on the cg_all list
 
@@ -616,16 +628,18 @@ contains
 
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
-      use constants,   only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
-      use dataio_pub,  only: die, nproc_io, can_i_write
-      use domain,      only: dom
-      use gc_list,     only: cg_list_element
-      use grid,        only: all_cg
-      use hdf5,        only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
-           &                 h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
-           &                 h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5zfilter_avail_f
-      use mpi,         only: MPI_INFO_NULL, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
-      use mpisetup,    only: comm, proc, FIRST, LAST, master
+      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
+      use dataio_pub,   only: die, nproc_io, can_i_write
+      use domain,       only: dom
+      use gc_list,      only: cg_list_element
+      use grid,         only: all_cg
+      use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
+           &                  h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
+           &                  h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5zfilter_avail_f
+      use mpi,          only: MPI_INFO_NULL, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
+      use mpisetup,     only: comm, proc, FIRST, LAST, master
+      use helpers_hdf5, only: create_attribute
+      use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets
 
       implicit none
       character(len=cwdlen), intent(in)             :: filename
@@ -658,6 +672,10 @@ contains
       integer, parameter                            :: tag = I_ONE
       integer(kind=4),  dimension(:),   pointer     :: cg_n                                     !> offset for cg group numbering
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b                               !> sizes of all cg
+      integer(kind=4),  dimension(:,:), pointer     :: cg_all_rl                                !> refinement levels of all cgs
+      integer(kind=8),  dimension(:,:), pointer     :: cg_all_off                               !> offsets of all cgs
+      integer(kind=8),  dimension(:), pointer       :: cg_all_parents                           !> parents IDs of all cgs
+      integer(kind=4),  dimension(:,:), pointer     :: cg_all_particles                         !> particles counts in all cgs
       integer(kind=4),  dimension(:),   allocatable :: cg_rl                                    !> list of refinement levels from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b                                   !> list of n_b from all cgs/procs
       integer(kind=8),  dimension(:,:), allocatable :: cg_off                                   !> list of offsets from all cgs/procs
@@ -671,6 +689,7 @@ contains
       type(cg_list_element), pointer                :: cgl
       logical(kind=4)                               :: Z_avail                                  !> .true. if HDF5 was compiled with zlib support
       character(len=dsetnamelen)                    :: d_label
+      integer(kind=4)                               :: indx
 
       ! Create a new file and initialize it
 
@@ -678,9 +697,10 @@ contains
       allocate(cg_n(FIRST:LAST))
       call MPI_Allgather(all_cg%cnt, I_ONE, MPI_INTEGER, cg_n, I_ONE, MPI_INTEGER, comm, error)
       cg_cnt = sum(cg_n(:))
-      allocate(cg_all_n_b(cg_cnt, ndims))
+      allocate(cg_all_n_b(ndims, cg_cnt))
 
       if (master) then
+         if (otype == O_OUT) allocate(cg_all_rl(I_ONE, cg_cnt), cg_all_off(ndims, cg_cnt), cg_all_parents(cg_cnt), cg_all_particles(I_ONE, cg_cnt))
 
          ! Open the HDF5 file only in master process and create all groups required for cg storage.
          ! Create also all related datasets and attributes. Do not write big datasets yet.
@@ -688,9 +708,13 @@ contains
          call h5open_f(error)
          call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error)
 
-         call h5gcreate_f(file_id, cg_gname, cgl_g_id, error)                                 ! create "/cg"
+         if (otype == O_OUT) then
+            call gdf_create_format_stamp(file_id)
+            call gdf_create_simulation_parameters(file_id)
+         endif
+         call h5gcreate_f(file_id, data_gname, cgl_g_id, error)                                 ! create "/data"
 
-         call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])                            ! create "/cg/cg_count"
+         call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])                            ! create "/data/cg_count"
 
          Z_avail = .false.
          if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
@@ -704,7 +728,7 @@ contains
                g = 1
                cgl => all_cg%first
                do while (associated(cgl))
-                  cg_rl(g)     = 1  !> \deprecated change this once we introduce many levels
+                  cg_rl(g)     = cgl%cg%level_id
                   cg_n_b(g, :) = cgl%cg%n_b
                   cg_off(g, :) = cgl%cg%off
                   if (otype == O_OUT) then
@@ -734,7 +758,14 @@ contains
                   call create_attribute(cg_g_id, cg_dl_aname, dbuf(cg_dl, g, :))                 ! create "/cg/cg_%08d/dl"
                endif
 
-               cg_all_n_b(sum(cg_n(:p))-cg_n(p)+g, :) = cg_n_b(g, :)
+               cg_all_n_b(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_b(g, :)
+               if (otype == O_OUT) then
+                  indx = sum(cg_n(:p))-cg_n(p)+g
+                  cg_all_rl(1,indx)    = cg_rl(g)
+                  cg_all_off(:,indx) = cg_off(g,:)
+                  cg_all_parents(indx)     = -1
+                  cg_all_particles(1,indx) = 0
+               endif
 
                if (any(cg_off(g, :) > 2.**31)) call die("[common_hdf5:write_to_hdf5_v2] large offsets require better treatment")
 
@@ -748,6 +779,8 @@ contains
          enddo
 
          call h5gclose_f(cgl_g_id, error)
+
+         if (otype == O_OUT) call gdf_create_root_datasets(file_id, cg_all_n_b, cg_all_off, cg_all_rl, cg_all_parents, cg_all_particles)
 
          ! describe_domains
          call h5gcreate_f(file_id, d_gname, doml_g_id, error)                    ! create "/domains"
@@ -773,13 +806,14 @@ contains
          call h5fclose_f(file_id, error)
          call h5close_f(error)
 
+         if (otype == O_OUT) deallocate(cg_all_rl, cg_all_off, cg_all_parents, cg_all_particles)
       else ! send all the necessary information to the master
          allocate(cg_rl(all_cg%cnt), cg_n_b(all_cg%cnt, ndims), cg_off(all_cg%cnt, ndims))
          if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, all_cg%cnt, ndims))
          g = 1
          cgl => all_cg%first
          do while (associated(cgl))
-            cg_rl(g)     = 1  !> \deprecated change this once we introduce many levels
+            cg_rl(g)     = cgl%cg%level_id
             cg_n_b(g, :) = cgl%cg%n_b(:)
             cg_off(g, :) = cgl%cg%off(:)
             if (otype == O_OUT) then
@@ -800,7 +834,6 @@ contains
 
       call MPI_Bcast(cg_all_n_b, size(cg_all_n_b), MPI_INTEGER, FIRST, comm, error)
 
-      call MPI_Barrier(comm, error)
       ! Reopen the HDF5 file for parallel write
       call h5open_f(error)
       if (can_i_write) then
@@ -813,7 +846,7 @@ contains
          else
             call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error)
          endif
-         call h5gopen_f(file_id, cg_gname, cgl_g_id, error)
+         call h5gopen_f(file_id, data_gname, cgl_g_id, error)
       endif
 
       call write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b) !!!!!

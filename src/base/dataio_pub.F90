@@ -47,7 +47,8 @@ module dataio_pub
    logical         :: use_v2_io                     !< prefer the new I/O format
    integer(kind=4) :: nproc_io                      !< how many processes do the I/O (v2 only)
    logical         :: can_i_write                   !< .true. for processes allowed to write
-   logical         :: enable_compression            !< set to .false. if you want to disable automatic compression and try to sped up the I/O operations
+   logical         :: enable_compression            !< set to .true. to enable automatic compression (test I/O performance before use, avoid on serial I/O)
+   integer         :: gzip_level                    !< gzip compression strength: 1 - lowest and fast, 9 - best and slow
 
    ! Buffer lengths used only in I/O routines
    integer, parameter :: msglen = 1024          !< 1kB for a message ought to be enough for anybody ;-)

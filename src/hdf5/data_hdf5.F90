@@ -65,6 +65,63 @@ contains
 
    end subroutine init_data
 
+   function datafields_descr(var) result(f)
+
+      use gdf, only: gdf_field_type
+
+      implicit none
+
+      character(len=*), intent(in) :: var
+      type(gdf_field_type) :: f
+
+      f%f2cgs = 1.0
+      f%stag  = 0
+      f%fn    = trim(var)
+      f%fu    = 'fixme'
+      select case (trim(var))
+         case ("dend", "deni", "denn")
+            f%fu = "\rm{g}/\rm{cm}^3"
+         case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
+            f%fu = "\rm{cm}/\rm{s}"
+         case ("enen", "enei")
+            f%fu = "\rm{g}*\rm{cm}^2/\rm{s}^2"
+         case ("pren", "prei")
+            f%fu = "\rm{g}/\rm{cm}/\rm{s}^2"
+         case ("magx", "magy", "magz")
+            f%stag = 1
+         case ("cr1" : "cr9")
+         case ("mgso")
+         case ("gpot")
+      end select
+   end function datafields_descr
+
+   subroutine create_datafields_descrs(place)
+
+      use common_hdf5,  only: hdf_vars
+      use gdf,          only: gdf_field_type
+      use hdf5,         only: HID_T, h5gcreate_f, h5gclose_f
+      use helpers_hdf5, only: create_attribute
+
+      implicit none
+
+      integer(HID_T), intent(in) :: place
+
+      integer(kind=4) :: i, error
+      integer(HID_T)  :: g_id
+      type(gdf_field_type), target :: f
+      integer(kind=8), target, dimension(1) :: ibuf
+
+      do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+         f = datafields_descr(hdf_vars(i))
+         call h5gcreate_f(place, hdf_vars(i), g_id, error)
+         call create_attribute(g_id, 'field_to_cgs', [f%f2cgs])
+         ibuf(1) = f%stag
+         call create_attribute(g_id, 'staggering',   ibuf)
+         call create_attribute(g_id, 'field_units',  f%fu)
+         call create_attribute(g_id, 'field_name',   f%fn)
+         call h5gclose_f(g_id, error)
+      enddo
+   end subroutine create_datafields_descrs
 !>
 !! \brief Routine calculating quantities for .hdf files
 !<
@@ -193,12 +250,18 @@ contains
 
    subroutine h5_write_to_single_file_v2(fname)
       use common_hdf5, only: write_to_hdf5_v2, O_OUT
+      use gdf,         only: gdf_create_field_types
+      use mpisetup,    only: comm, ierr, master
 
       implicit none
 
       character(len=*), intent(in)      :: fname
 
       call write_to_hdf5_v2(fname, O_OUT, create_empty_cg_datasets_in_output, write_cg_to_output)
+
+      if (master) call gdf_create_field_types(fname,create_datafields_descrs)
+      call MPI_Barrier(comm, ierr)
+
    end subroutine h5_write_to_single_file_v2
 
 !> \brief Write all grid containers to the file
@@ -255,9 +318,9 @@ contains
          if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)    ! \todo move property to problem.par
 
          if (nproc_io == 1) then ! perform serial write
-            allocate(data(cg_all_n_b(ncg, xdim), cg_all_n_b(ncg, ydim), cg_all_n_b(ncg, zdim)))
+            allocate(data(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
             if (master) then
-               if (.not. can_i_write) call die("[restart_hdf5:write_cg_to_restart] Master can't write")
+               if (.not. can_i_write) call die("[data_hdf5:write_cg_to_output] Master can't write")
 
                allocate(dims(ndims))
                dims(:) = shape(data)
@@ -282,18 +345,20 @@ contains
                enddo
                deallocate(dims)
             else
-               if (can_i_write) call die("[restart_hdf5:write_cg_to_restart] Slave can write")
+               if (can_i_write) call die("[data_hdf5:write_cg_to_output] Slave can write")
                if (cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_src_n(ncg))
-                  ierrh = 0; ok_var = .false.
-                  call datafields_hdf5(hdf_vars(i), data, ierrh, cg)
-                  if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
-                  if (ierrh>=0) ok_var = .true.
-                  if (.not.ok_var) then
-                     write(msg,'(3a)') "[data_hdf5:write_cg_to_output]: ", hdf_vars(i)," is not defined in datafields_hdf5, neither in user_vars_hdf5."
-                     call die(msg)
-                  endif
-                  call MPI_Send(data(1,1,1), size(data), MPI_REAL, FIRST, ncg + sum(cg_n(:))*i, comm, error)
+                  do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+                     ierrh = 0; ok_var = .false.
+                     call datafields_hdf5(hdf_vars(i), data, ierrh, cg)
+                     if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
+                     if (ierrh>=0) ok_var = .true.
+                     if (.not.ok_var) then
+                        write(msg,'(3a)') "[data_hdf5:write_cg_to_output]: ", hdf_vars(i)," is not defined in datafields_hdf5, neither in user_vars_hdf5."
+                        call die(msg)
+                     endif
+                     call MPI_Send(data(1,1,1), size(data), MPI_REAL, FIRST, ncg + sum(cg_n(:))*i, comm, error)
+                  enddo
                endif
             endif
             deallocate(data)
@@ -305,7 +370,7 @@ contains
             else
                ! send (where?)
             endif
-            call die("[restart_hdf5:write_cg_to_restart] Parallel v2 I/O not implemented yet")
+            call die("[data_hdf5:write_cg_to_output] Parallel v2 I/O not implemented yet")
          endif
 
          if (can_i_write) then
@@ -512,7 +577,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         write(gname,'("grid",i8.8)') ngc
+         write(gname,'("grid",i8.8)') ngc-1
          call h5gcreate_f(file_id, gname, grp_id, error)
 
          ! set attributes here

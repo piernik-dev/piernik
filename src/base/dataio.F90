@@ -46,7 +46,7 @@
 
 module dataio
 
-   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression
+   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
    use constants,  only: cwdlen, fmt_len, cbuff_len, varlen, idlen
 
    implicit none
@@ -118,7 +118,7 @@ module dataio
    namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
                              domain_dump, vars, mag_center, vizit, fmin, fmax, &
                              min_disk_space_MB, sleep_minutes, sleep_seconds, &
-                             user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io, enable_compression
+                             user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
 
    interface mpi_addmul
       module procedure mpi_sum4d_and_multiply
@@ -212,7 +212,8 @@ contains
 !! <tr><td>system_message_file</td><td>'/tmp/piernik_msg' </td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
 !! <tr><td>use_v2_io          </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::use_v2_io    </td></tr>
 !! <tr><td>nproc_io           </td><td>1                  </td><td>integer   </td><td>\copydoc dataio_pub::nproc_io     </td></tr>
-!! <tr><td>enable_compression </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio_pub::enable_compression</td></tr>
+!! <tr><td>enable_compression </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::enable_compression</td></tr>
+!! <tr><td>gzip_level         </td><td>9                  </td><td>integer   </td><td>\copydoc dataio_pub::gzip_level   </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -276,7 +277,8 @@ contains
       tsl_firstcall = .true.
       use_v2_io = .false.
       nproc_io = 1
-      enable_compression = .true.
+      enable_compression = .false.
+      gzip_level = 9
 
       nhdf  = 0
       nres  = 0
@@ -344,6 +346,7 @@ contains
          ibuff(44) = iy
          ibuff(45) = iz
          ibuff(46) = nproc_io
+         ibuff(47) = gzip_level
 
          rbuff(40) = dt_hdf
          rbuff(41) = dt_res
@@ -402,6 +405,7 @@ contains
          iy                  = ibuff(44)
          iz                  = ibuff(45)
          nproc_io            = int(ibuff(46), kind=4)
+         gzip_level          = ibuff(47)
 
          dt_hdf              = rbuff(40)
          dt_res              = rbuff(41)
@@ -427,6 +431,11 @@ contains
          user_message_file   = trim(cbuff(91))
          system_message_file = trim(cbuff(92))
 
+      endif
+
+      if (gzip_level < 1 .or. gzip_level > 9) then
+         call warn("[dataio:init_dataio] invalid compression level")
+         gzip_level = 9
       endif
 
       can_i_write = mod( proc*nproc_io, nproc) < nproc_io
