@@ -520,10 +520,12 @@ contains
       use global,       only: nstep
       use mpi,          only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use restart_hdf5, only: write_restart_hdf5
+      use timer,        only: time_left
 
       implicit none
 
       logical, intent(inout) :: end_sim
+      logical                :: tn
       integer                :: tsleep
 
 !--- process 0 checks for messages
@@ -545,6 +547,11 @@ contains
                call write_log
             case ('tsl')
                call write_timeslice
+            case ('wend')
+               wend = umsg_param
+               tn = time_left(wend)
+            case ('wleft')
+               tn = time_left(-1.0)
             case ('tend')
                tend   = umsg_param
             case ('nend')
@@ -574,8 +581,9 @@ contains
                   &"  hdf      - dumps a plotfile",char(10),&
                   &"  log      - update logfile",char(10),&
                   &"  tsl      - write a timeslice",char(10),&
+                  &"  wleft    - show how much walltime is left",char(10),&
                   &"  sleep <number> - wait <number> seconds",char(10),&
-                  &"  tend|nend|dtres|dthdf|dtlog|dttsl|dtplt <value> - update specified parameter with <value>",char(10),&
+                  &"  wend|tend|nend|dtres|dthdf|dtlog|dttsl|dtplt <value> - update specified parameter with <value>",char(10),&
                   &"Note that only one line at a time is read."
                   call printinfo(msg)
                endif
@@ -1417,9 +1425,9 @@ contains
                if (io/=0) then
                   write(msg, '(5a)'   )"[dataio:read_file_msg] ",trim(msg_origin(i))," message: '",trim(umsg),"'"
                else
-                  write(msg, '(3a)'   )"[dataio:read_file_msg] Cannot read ",trim(msg_origin(i))," message."
+                  write(msg, '(3a)'   )"[dataio:read_file_msg] No value provided in ",trim(msg_origin(i))," message."
                   call warn(msg)
-                  msg=""
+                  msg=''
                endif
             else
                msg_param_read = .true.

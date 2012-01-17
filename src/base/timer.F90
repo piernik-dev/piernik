@@ -215,6 +215,8 @@ contains
 
    function time_left(wend) result (tf)
 
+      use dataio_pub, only: msg, printinfo
+
       implicit none
 
       real, intent(in), optional :: wend
@@ -222,18 +224,23 @@ contains
       integer :: clock, cnt_rate, cnt_max
       real    :: r_clk_end
 
+      integer :: hh, mm
+      real    :: ss
+
       if (present(wend)) then
-         call system_clock(clock_start, cnt_rate, cnt_max)
-!         clock_end = clock_start + int(wend*3600.*cnt_rate)
-         if (wend < 1e-4*huge(1.0)) then
-            r_clk_end = clock_start + wend*3600.*cnt_rate
-            if (r_clk_end < cnt_max) then
-               clock_end = int(r_clk_end)
+         if (wend >= 0.0) then
+            call system_clock(clock_start, cnt_rate, cnt_max)
+!           clock_end = clock_start + int(wend*3600.*cnt_rate)
+            if (wend < 1e-4*huge(1.0)) then
+               r_clk_end = clock_start + wend*3600.*cnt_rate
+               if (r_clk_end < cnt_max) then
+                  clock_end = int(r_clk_end)
+               else
+                  clock_end = -cnt_max
+               endif
             else
                clock_end = -cnt_max
             endif
-         else
-            clock_end = -cnt_max
          endif
       endif
 !>
@@ -244,6 +251,18 @@ contains
       tf = .true.
       if (clock_end /= -cnt_max) then
          if ( clock_end - clock < 0 ) tf = .false.
+      endif
+
+      if (present(wend)) then
+         if (wend < 0) then
+            ss = (clock_end - clock)/(3600.*cnt_rate)
+            hh = int(ss)
+            ss = (ss - hh)*60.
+            mm = int(ss)
+            ss = (ss - mm)*60.
+            write(msg,'(A,I4,":",I2.2,":",F5.2)') "Walltime left until end of simulation: ", hh, mm, ss
+            call printinfo(msg)
+         endif
       endif
 
    end function time_left
