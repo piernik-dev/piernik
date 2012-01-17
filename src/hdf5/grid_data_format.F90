@@ -33,7 +33,7 @@ module gdf
 
    implicit none
    private
-   public :: gdf_create_root_datasets, gdf_create_simulation_parameters, gdf_create_format_stamp, gdf_create_field_types, gdf_field_type
+   public :: gdf_create_root_datasets, gdf_create_simulation_parameters, gdf_create_format_stamp, gdf_create_field_types, gdf_field_type, fmax
 
    integer, parameter :: fmax = 60
 
@@ -86,6 +86,7 @@ contains
       integer(kind=8), dimension(:), pointer :: ibuf
       integer, parameter :: uniqid_len = 12
       character(len=uniqid_len), target :: uniq_id = "ala123"
+      character(len=uniqid_len), pointer :: p_str
 
       call h5gcreate_f(file_id, 'simulation_parameters', g_id, error)
 
@@ -122,7 +123,8 @@ contains
       call create_attribute(g_id, 'domain_right_edge', dom%edge(:,HI))
       call create_attribute(g_id, 'current_time', [t])
       call create_attribute(g_id, 'field_ordering', [1])
-      call create_attribute(g_id, 'unique_identifier', uniq_id)
+      p_str => uniq_id
+      call create_attribute(g_id, 'unique_identifier', p_str)
       call create_attribute(g_id, 'boundary_conditions', [0,0,0,0,0,0])
       call h5gclose_f(g_id, error)
 

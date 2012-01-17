@@ -98,7 +98,7 @@ contains
    subroutine create_datafields_descrs(place)
 
       use common_hdf5,  only: hdf_vars
-      use gdf,          only: gdf_field_type
+      use gdf,          only: gdf_field_type, fmax
       use hdf5,         only: HID_T, h5gcreate_f, h5gclose_f
       use helpers_hdf5, only: create_attribute
 
@@ -109,18 +109,23 @@ contains
       integer(kind=4) :: i, error
       integer(HID_T)  :: g_id
       type(gdf_field_type), target :: f
-      integer(kind=8), target, dimension(1) :: ibuf
+      integer(kind=8), pointer, dimension(:) :: ibuf
+      character(len=fmax), pointer :: sbuf
 
+      allocate(ibuf(1))
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
          f = datafields_descr(hdf_vars(i))
          call h5gcreate_f(place, hdf_vars(i), g_id, error)
          call create_attribute(g_id, 'field_to_cgs', [f%f2cgs])
-         ibuf(1) = f%stag
+         ibuf = f%stag
          call create_attribute(g_id, 'staggering',   ibuf)
-         call create_attribute(g_id, 'field_units',  f%fu)
-         call create_attribute(g_id, 'field_name',   f%fn)
+         sbuf => f%fu
+         call create_attribute(g_id, 'field_units',  sbuf)
+         sbuf => f%fn
+         call create_attribute(g_id, 'field_name',   sbuf)
          call h5gclose_f(g_id, error)
       enddo
+      deallocate(ibuf)
    end subroutine create_datafields_descrs
 !>
 !! \brief Routine calculating quantities for .hdf files
