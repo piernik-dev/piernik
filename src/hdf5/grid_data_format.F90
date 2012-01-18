@@ -73,7 +73,7 @@ contains
       use global,       only: t
       use domain,       only: dom
       use dataio_pub,   only: domain_dump
-      use constants,    only: ndims, LO, HI
+      use constants,    only: ndims, LO, HI, INT4
       use hdf5,         only: HID_T, h5gcreate_f, h5gclose_f
       use helpers_hdf5, only: create_attribute
 
@@ -122,10 +122,10 @@ contains
       call create_attribute(g_id, 'domain_left_edge', dom%edge(:,LO))
       call create_attribute(g_id, 'domain_right_edge', dom%edge(:,HI))
       call create_attribute(g_id, 'current_time', [t])
-      call create_attribute(g_id, 'field_ordering', [1])
+      call create_attribute(g_id, 'field_ordering', [1_INT4])
       p_str => uniq_id
       call create_attribute(g_id, 'unique_identifier', p_str)
-      call create_attribute(g_id, 'boundary_conditions', [0,0,0,0,0,0])
+      call create_attribute(g_id, 'boundary_conditions', int([0,0,0,0,0,0], kind=4))
       call h5gclose_f(g_id, error)
 
    end subroutine gdf_create_simulation_parameters

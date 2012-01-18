@@ -106,7 +106,8 @@ contains
 
       integer(HID_T), intent(in) :: place
 
-      integer(kind=4) :: i, error
+      integer         :: i
+      integer(kind=4) :: error
       integer(HID_T)  :: g_id
       type(gdf_field_type), target :: f
       integer(kind=8), pointer, dimension(:) :: ibuf

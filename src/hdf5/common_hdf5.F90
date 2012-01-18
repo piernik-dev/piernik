@@ -660,7 +660,7 @@ contains
                g = 1
                cgl => all_cg%first
                do while (associated(cgl))
-                  cg_rl(g)     = cgl%cg%level_id
+                  cg_rl(g)     = int(cgl%cg%level_id, kind=4)
                   cg_n_b(g, :) = cgl%cg%n_b
                   cg_off(g, :) = cgl%cg%off
                   if (otype == O_OUT) then
@@ -692,7 +692,7 @@ contains
 
                cg_all_n_b(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_b(g, :)
                if (otype == O_OUT) then
-                  indx = sum(cg_n(:p))-cg_n(p)+g
+                  indx = int(sum(cg_n(:p))-cg_n(p)+g, kind=4)
                   cg_all_rl(1,indx)    = cg_rl(g)
                   cg_all_off(:,indx) = cg_off(g,:)
                   cg_all_parents(indx)     = -1
@@ -740,12 +740,13 @@ contains
 
          if (otype == O_OUT) deallocate(cg_all_rl, cg_all_off, cg_all_parents, cg_all_particles)
       else ! send all the necessary information to the master
+         !! \deprecated some duplicated code here
          allocate(cg_rl(all_cg%cnt), cg_n_b(all_cg%cnt, ndims), cg_off(all_cg%cnt, ndims))
          if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, all_cg%cnt, ndims))
          g = 1
          cgl => all_cg%first
          do while (associated(cgl))
-            cg_rl(g)     = cgl%cg%level_id
+            cg_rl(g)     = int(cgl%cg%level_id, kind=4)
             cg_n_b(g, :) = cgl%cg%n_b(:)
             cg_off(g, :) = cgl%cg%off(:)
             if (otype == O_OUT) then

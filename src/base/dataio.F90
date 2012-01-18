@@ -405,7 +405,7 @@ contains
          iy                  = ibuff(44)
          iz                  = ibuff(45)
          nproc_io            = int(ibuff(46), kind=4)
-         gzip_level          = ibuff(47)
+         gzip_level          = int(ibuff(47), kind=4)
 
          dt_hdf              = rbuff(40)
          dt_res              = rbuff(41)

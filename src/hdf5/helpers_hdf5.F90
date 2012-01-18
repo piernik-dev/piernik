@@ -58,6 +58,7 @@ contains
 !
    subroutine create_dataset_int4_dim2(place, dname, ddata)
 
+      use constants,     only: I_TWO
       use iso_c_binding, only: c_ptr, c_loc
       use hdf5,          only: HID_T, HSIZE_T, H5T_STD_I32LE, &
           &                    h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5dwrite_f, &
@@ -75,10 +76,10 @@ contains
       type(c_ptr) :: f_ptr
 
       dims = shape(ddata)
-      call h5screate_simple_f(2, dims, space, hdferr)
+      call h5screate_simple_f(I_TWO, dims, space, hdferr)
       call h5dcreate_f(place, dname, H5T_STD_I32LE, space, dset, hdferr)
       f_ptr = c_loc(ddata(1,1))
-      mem_type = h5kind_to_type(KIND(ddata(1,1)), H5_INTEGER_KIND)
+      mem_type = h5kind_to_type(int(KIND(ddata(1,1)), kind=4), H5_INTEGER_KIND)
       call h5dwrite_f(dset, mem_type, f_ptr, hdferr)
       call h5dclose_f(dset,  hdferr)
       call h5sclose_f(space, hdferr)
@@ -89,6 +90,7 @@ contains
 !
    subroutine create_dataset_int8_dim2(place, dname, ddata)
 
+      use constants,     only: I_TWO
       use iso_c_binding, only: c_ptr, c_loc
       use hdf5,          only: HID_T, HSIZE_T, H5T_STD_I64LE, &
           &                    h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5dwrite_f, &
@@ -106,10 +108,10 @@ contains
       type(c_ptr) :: f_ptr
 
       dims = shape(ddata)
-      call h5screate_simple_f(2, dims, space, hdferr)
+      call h5screate_simple_f(I_TWO, dims, space, hdferr)
       call h5dcreate_f(place, dname, H5T_STD_I64LE, space, dset, hdferr)
       f_ptr = c_loc(ddata(1,1))
-      mem_type = h5kind_to_type(KIND(ddata(1,1)), H5_INTEGER_KIND)
+      mem_type = h5kind_to_type(int(KIND(ddata(1,1)), kind=4), H5_INTEGER_KIND)
       call h5dwrite_f(dset, mem_type, f_ptr, hdferr)
       call h5dclose_f(dset,  hdferr)
       call h5sclose_f(space, hdferr)
@@ -120,6 +122,7 @@ contains
 !
    subroutine create_dataset_int8_dim1(place, dname, ddata)
 
+      use constants,     only: I_ONE
       use iso_c_binding, only: c_ptr, c_loc
       use hdf5,          only: HID_T, HSIZE_T, H5T_STD_I64LE, &
           &                    h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5dwrite_f, &
@@ -137,10 +140,10 @@ contains
       type(c_ptr) :: f_ptr
 
       dims = shape(ddata)
-      call h5screate_simple_f(1, dims, space, hdferr)
+      call h5screate_simple_f(I_ONE, dims, space, hdferr)
       call h5dcreate_f(place, dname, H5T_STD_I64LE, space, dset, hdferr)
       f_ptr = c_loc(ddata(1))
-      mem_type = h5kind_to_type(KIND(ddata(1)), H5_INTEGER_KIND)
+      mem_type = h5kind_to_type(int(KIND(ddata(1)), kind=4), H5_INTEGER_KIND)
       call h5dwrite_f(dset, mem_type, f_ptr, hdferr)
       call h5dclose_f(dset,  hdferr)
       call h5sclose_f(space, hdferr)
@@ -196,7 +199,7 @@ contains
       call h5screate_simple_f(I_ONE, dims, space, hdferr)
       call h5acreate_f(g_id, name, H5T_STD_I64LE, space, attr, hdferr)
       f_ptr = c_loc(int_array(1))
-      mem_type = h5kind_to_type(KIND(int_array(1)), H5_INTEGER_KIND)
+      mem_type = h5kind_to_type(int(KIND(int_array(1)), kind=4), H5_INTEGER_KIND)
       call h5awrite_f(attr, mem_type, f_ptr, hdferr)
       call h5aclose_f(attr,  hdferr)
       call h5sclose_f(space, hdferr)

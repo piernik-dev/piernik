@@ -14,7 +14,7 @@
 #
 
 PROG     = piernik
-F90      = h5pfc
+F90      = h5pfc -shlib
 F90FLAGS  = -fdefault-real-8 -fdefault-integer-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none 
 F90FLAGS += -O3 -funroll-loops
 F90FLAGS += -fno-realloc-lhs
@@ -25,5 +25,5 @@ USE_GNUCPP = yes
 MAKEFLAGS += -j4
 
 # for the kepler problem
-F90FLAGS += -I/home/gawrysz/usr/include/gfortran
+F90FLAGS += -I/home/gawrysz/usr/include/gfortran -I/usr/include
 LDFLAGS += -L/home/gawrysz/usr/lib/
