@@ -209,9 +209,10 @@ module grid_cont
 
    contains
 
-      procedure :: init
-      procedure :: cleanup
-      procedure :: set_axis
+      procedure :: init                                          !< Initialization
+      procedure :: cleanup                                       !< Deallocate all internals
+      procedure :: set_axis                                      !< Calculate arrays of coordinates along a given direction
+      procedure :: set_q_mbc                                     !< Initialize the communicators for q
 
    end type grid_container
 
@@ -615,5 +616,33 @@ contains
       deallocate(subsizes, starts)
 
    end subroutine set_mpi_types
+
+!> \brief Initialize the communicators for q even if there are no q arrays at the moment
+
+   subroutine set_q_mbc(this)
+
+      use constants, only: ndims, xdim, zdim
+      use domain,    only: dom
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+      integer :: d, ib, g
+
+      allocate(this%q_i_mbc(ndims, dom%nb), this%q_o_mbc(ndims, dom%nb))
+      do d = xdim, zdim
+         do ib = 1, dom%nb
+            if (allocated(this%i_bnd(d, ib)%seg)) then
+               allocate(this%q_i_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)), &
+                    &   this%q_o_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)))
+               do g = lbound(this%i_bnd(d, ib)%seg, dim=1), ubound(this%i_bnd(d, ib)%seg, dim=1)
+                  call set_mpi_types(this%n_(:), this%i_bnd(d, ib)%seg(g)%se(:,:), this%q_i_mbc(d, ib)%mbc(g))
+                  call set_mpi_types(this%n_(:), this%o_bnd(d, ib)%seg(g)%se(:,:), this%q_o_mbc(d, ib)%mbc(g))
+               enddo
+            endif
+         enddo
+      enddo
+
+   end subroutine set_q_mbc
 
 end module grid_cont

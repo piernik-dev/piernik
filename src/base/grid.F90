@@ -38,7 +38,7 @@ module grid
    implicit none
 
    private
-   public :: init_grid, cleanup_grid, all_cg, base_lev, leaves, mpi_bnd_types, set_q_mbc, is_overlap
+   public :: init_grid, cleanup_grid, all_cg, base_lev, leaves, mpi_bnd_types, is_overlap
 
    type(cg_list_global) :: all_cg                                     !< all grid containers; \todo restore protected
    type(cg_list_level), target  :: base_lev                !< base level grid containers \todo restore "protected"
@@ -209,7 +209,7 @@ contains
          call patch%last%cg%init(base_lev%n_d, base_lev%pse(proc)%sel(g, :, :), g, level)
 
          call mpi_bnd_types(patch%last%cg)
-         call set_q_mbc(patch%last%cg)
+         call patch%last%cg%set_q_mbc
 
          ! add to the other lists
          call all_cg%add(patch%last%cg)
@@ -252,35 +252,6 @@ contains
       call all_cg%delete
 
    end subroutine cleanup_grid
-
-!> \brief Initialize the communicators for q even if there are no q arrays at the moment
-
-   subroutine set_q_mbc(this)
-
-      use constants, only: ndims, xdim, zdim
-      use domain,    only: dom
-      use grid_cont, only: grid_container, set_mpi_types
-
-      implicit none
-
-      class(grid_container), intent(inout) :: this
-      integer :: d, ib, g
-
-      allocate(this%q_i_mbc(ndims, dom%nb), this%q_o_mbc(ndims, dom%nb))
-      do d = xdim, zdim
-         do ib = 1, dom%nb
-            if (allocated(this%i_bnd(d, ib)%seg)) then
-               allocate(this%q_i_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)), &
-                    &   this%q_o_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)))
-               do g = lbound(this%i_bnd(d, ib)%seg, dim=1), ubound(this%i_bnd(d, ib)%seg, dim=1)
-                  call set_mpi_types(this%n_(:), this%i_bnd(d, ib)%seg(g)%se(:,:), this%q_i_mbc(d, ib)%mbc(g))
-                  call set_mpi_types(this%n_(:), this%o_bnd(d, ib)%seg(g)%se(:,:), this%q_o_mbc(d, ib)%mbc(g))
-               enddo
-            endif
-         enddo
-      enddo
-
-   end subroutine set_q_mbc
 
 !> \brief Create MPI types for boundary exchanges
 

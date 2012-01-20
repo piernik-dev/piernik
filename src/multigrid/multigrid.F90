@@ -79,7 +79,7 @@ contains
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
       use domain,              only: dom, is_uneven, is_multicg
-      use grid,                only: leaves, base_lev, all_cg, mpi_bnd_types, set_q_mbc
+      use grid,                only: leaves, base_lev, all_cg, mpi_bnd_types
       use gc_list,             only: cg_list_element
       use cg_list_lev,         only: cg_list_level, cg_list_patch
       use decomposition,       only: divide_domain!, deallocate_pse
@@ -282,7 +282,7 @@ contains
             call tmpl%add          ! add first cg
             call tmpl%last%cg%init(tmpl%n_d, tmpl%pse(proc)%sel(mg_gr_id, :, :), mg_gr_id, tmpl%lev)
             call mpi_bnd_types(tmpl%last%cg)
-            call set_q_mbc(tmpl%last%cg)
+            call tmpl%last%cg%set_q_mbc
 
             call all_cg%add(tmpl%last%cg)
 
