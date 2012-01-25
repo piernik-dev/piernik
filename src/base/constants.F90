@@ -124,7 +124,6 @@ module constants
       enumerator :: BND_PER, BND_REF                     !! periodic boundary, reflecting boudary
       enumerator :: BND_OUT, BND_OUTD, BND_OUTH          !! free boundary, one-way outflow boundary, hydrostatic boundary
       enumerator :: BND_COR, BND_SHE                     !! corner boundary, shear boundary
-      enumerator :: BND_INF                              !! 'inf', COMMENT ME
       enumerator :: BND_USER                             !! user boundaries (provided in read_problem_par)
       enumerator :: BND_INVALID = BND_MPI  - 1           !! non-recognized boundary
    end enum

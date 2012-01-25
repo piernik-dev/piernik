@@ -78,7 +78,7 @@ contains
    subroutine bnd_b(dir, cg)
 
       use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, half, one, &
-           &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
+           &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE
       use dataio_pub, only: msg, warn, die
       use domain,     only: is_mpi_noncart, is_multicg, dom
       use grid_cont,  only: grid_container
@@ -274,12 +274,12 @@ contains
 
 ! Non-MPI boundary conditions
       if (frun) then
-         bnd_xl_not_provided = any( [BND_COR, BND_INF, BND_REF, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
-         bnd_xr_not_provided = any( [BND_COR, BND_INF, BND_REF, BND_MPI, BND_SHE] == cg%bnd(xdim, HI))
-         bnd_yl_not_provided = any( [BND_COR, BND_INF, BND_REF, BND_MPI ] == cg%bnd(ydim, LO))
-         bnd_yr_not_provided = any( [BND_COR, BND_INF, BND_REF, BND_MPI ] == cg%bnd(ydim, HI))
-         bnd_zl_not_provided = any( [BND_INF, BND_REF, BND_MPI ] == cg%bnd(zdim, LO))
-         bnd_zr_not_provided = any( [BND_INF, BND_REF, BND_MPI ] == cg%bnd(zdim, HI))
+         bnd_xl_not_provided = any( [BND_COR, BND_REF, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
+         bnd_xr_not_provided = any( [BND_COR, BND_REF, BND_MPI, BND_SHE] == cg%bnd(xdim, HI))
+         bnd_yl_not_provided = any( [BND_COR, BND_REF, BND_MPI ] == cg%bnd(ydim, LO))
+         bnd_yr_not_provided = any( [BND_COR, BND_REF, BND_MPI ] == cg%bnd(ydim, HI))
+         bnd_zl_not_provided = any( [BND_REF, BND_MPI ] == cg%bnd(zdim, LO))
+         bnd_zr_not_provided = any( [BND_REF, BND_MPI ] == cg%bnd(zdim, HI))
       endif
 
       if (dir==xdim .and. bnd_xl_not_provided .and. bnd_xr_not_provided) return  ! avoid triple case
@@ -290,7 +290,7 @@ contains
          case (xdim)
 
             select case (cg%bnd(xdim, LO))
-               case (BND_COR, BND_INF, BND_MPI, BND_REF, BND_SHE)
+               case (BND_COR, BND_MPI, BND_REF, BND_SHE)
                   ! Do nothing
                case (BND_PER)
                   if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,1:dom%nb,:,:)              = cg%b(:, cg%ieb:cg%ie,:,:)
@@ -302,7 +302,7 @@ contains
             end select  ! (cg%bnd(xdim, LO))
 
             select case (cg%bnd(xdim, HI))
-               case (BND_COR, BND_INF, BND_MPI, BND_REF, BND_SHE)
+               case (BND_COR, BND_MPI, BND_REF, BND_SHE)
                   ! Do nothing
                case (BND_PER)
                   if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:, cg%ie+1:cg%n_(xdim),:,:) = cg%b(:, cg%is:cg%isb,:,:)
@@ -316,7 +316,7 @@ contains
          case (ydim)
 
             select case (cg%bnd(ydim, LO))
-               case (BND_COR, BND_INF, BND_MPI, BND_REF)
+               case (BND_COR, BND_MPI, BND_REF)
                   ! Do nothing
                case (BND_PER)
                   if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,:,1:dom%nb,:)              = cg%b(:,:, cg%jeb:cg%je,:)
@@ -328,7 +328,7 @@ contains
             end select  ! (cg%bnd(ydim, LO))
 
             select case (cg%bnd(ydim, HI))
-               case (BND_COR, BND_INF, BND_MPI, BND_REF)
+               case (BND_COR, BND_MPI, BND_REF)
                   ! Do nothing
                case (BND_PER)
                   if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,:, cg%je+1:cg%n_(ydim),:) = cg%b(:,:, cg%js:cg%jsb,:)
@@ -374,7 +374,7 @@ contains
 
    subroutine bnd_emf(var, name, dir, cg)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF
+      use constants,  only: xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE
       use dataio_pub, only: msg, warn, die
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
@@ -404,12 +404,12 @@ contains
       allocate(dvarx(cg%n_(ydim), cg%n_(zdim)), dvary(cg%n_(xdim), cg%n_(zdim)), dvarz(cg%n_(xdim), cg%n_(ydim)))
 
       if (frun) then
-         bnd_xl_not_provided = any( [BND_COR, BND_INF, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
-         bnd_xr_not_provided = any( [BND_COR, BND_INF, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, HI))
-         bnd_yl_not_provided = any( [BND_COR, BND_INF, BND_PER, BND_MPI ] == cg%bnd(ydim, LO))
-         bnd_yr_not_provided = any( [BND_COR, BND_INF, BND_PER, BND_MPI ] == cg%bnd(ydim, HI))
-         bnd_zl_not_provided = any( [BND_INF, BND_PER, BND_MPI ] == cg%bnd(zdim, LO))
-         bnd_zr_not_provided = any( [BND_INF, BND_PER, BND_MPI ] == cg%bnd(zdim, HI))
+         bnd_xl_not_provided = any( [BND_COR, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
+         bnd_xr_not_provided = any( [BND_COR, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, HI))
+         bnd_yl_not_provided = any( [BND_COR, BND_PER, BND_MPI ] == cg%bnd(ydim, LO))
+         bnd_yr_not_provided = any( [BND_COR, BND_PER, BND_MPI ] == cg%bnd(ydim, HI))
+         bnd_zl_not_provided = any( [BND_PER, BND_MPI ] == cg%bnd(zdim, LO))
+         bnd_zr_not_provided = any( [BND_PER, BND_MPI ] == cg%bnd(zdim, HI))
          frun = .false.
       endif
 
@@ -436,7 +436,7 @@ contains
             endif
 
             select case (cg%bnd(xdim, LO))
-               case (BND_COR, BND_INF, BND_MPI, BND_PER, BND_SHE)
+               case (BND_COR, BND_MPI, BND_PER, BND_SHE)
                   ! Do nothing
                case (BND_REF)
                   if (zndiff == 1) var(ledge,:,:) = 0.0
@@ -459,7 +459,7 @@ contains
             end select  ! (cg%bnd(xdim, LO))
 
             select case (cg%bnd(xdim, HI))
-               case (BND_COR, BND_INF, BND_MPI, BND_PER, BND_SHE)
+               case (BND_COR, BND_MPI, BND_PER, BND_SHE)
                   ! Do nothing
                case (BND_REF)
                   if (zndiff == 1) var(redge,:,:) = 0.0
@@ -496,7 +496,7 @@ contains
             endif
 
             select case (cg%bnd(ydim, LO))
-               case (BND_COR, BND_INF, BND_MPI, BND_PER)
+               case (BND_COR, BND_MPI, BND_PER)
                   ! Do nothing
                case (BND_REF)
                   if (zndiff == 1) var(:,ledge,:) = 0.0
@@ -519,7 +519,7 @@ contains
             end select  ! (cg%bnd(ydim, LO))
 
             select case (cg%bnd(ydim, HI))
-               case (BND_COR, BND_INF, BND_MPI, BND_PER)
+               case (BND_COR, BND_MPI, BND_PER)
                   ! Do nothing
                case (BND_REF)
                   if (zndiff == 1) var(:,redge,:) = 0.0
@@ -556,7 +556,7 @@ contains
             endif
 
             select case (cg%bnd(zdim, LO))
-               case (BND_INF, BND_MPI, BND_PER)
+               case (BND_MPI, BND_PER)
                   ! Do nothing
                case (BND_REF)
                   if (zndiff == 1) var(:,:,ledge) = 0.0
@@ -579,7 +579,7 @@ contains
             end select  ! (cg%bnd(zdim, LO))
 
             select case (cg%bnd(zdim, HI))
-               case (BND_INF, BND_MPI, BND_PER)
+               case (BND_MPI, BND_PER)
                   ! Do nothing
                case (BND_REF)
                   if (zndiff == 1) var(:,:,redge) = 0.0

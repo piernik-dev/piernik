@@ -40,7 +40,7 @@ contains
    subroutine init_fluidboundaries(cg)
 
       use constants,             only: PIERNIK_INIT_DOMAIN, xdim, LO, HI, &
-           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_INF, BND_USER
+           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die, code_progress
       use fluidboundaries_funcs, only: bnd_null, bnd_xl_per, bnd_xl_ref, bnd_xl_out, bnd_xl_outd, bnd_xr_per, bnd_xr_ref, bnd_xr_out, bnd_xr_outd, &
            &                           user_bnd_xl, user_bnd_xr, func_bnd_xl, func_bnd_xr
@@ -55,7 +55,7 @@ contains
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[fluidboundaries:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
 
       select case (cg%bnd(xdim, LO))
-         case (BND_COR, BND_MPI, BND_SHE, BND_INF)
+         case (BND_COR, BND_MPI, BND_SHE)
             func_bnd_xl => bnd_null
          case (BND_PER)
             if (cdd%comm3d == MPI_COMM_NULL) then
@@ -78,7 +78,7 @@ contains
       end select
 
       select case (cg%bnd(xdim, HI))
-         case (BND_COR, BND_MPI, BND_SHE, BND_INF)
+         case (BND_COR, BND_MPI, BND_SHE)
             func_bnd_xr => bnd_null
          case (BND_PER)
             if (cdd%comm3d == MPI_COMM_NULL) then
@@ -105,7 +105,7 @@ contains
    subroutine bnd_u(dir, cg)
 
       use constants,             only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, half, &
-           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_INF, BND_USER
+           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die
       use domain,                only: dom, is_multicg
       use fluidboundaries_funcs, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
@@ -442,7 +442,7 @@ contains
       case (ydim)
 
          select case (cg%bnd(ydim, LO))
-         case (BND_COR, BND_INF, BND_MPI)
+         case (BND_COR, BND_MPI)
             ! Do nothing
          case (BND_PER)
              if (cdd%comm3d /= MPI_COMM_NULL) cg%u(:,:,1:dom%nb,:)                         = cg%u(:,:, cg%jeb:cg%je,:)
@@ -485,7 +485,7 @@ contains
          end select  ! (cg%bnd(ydim, LO))
 
          select case (cg%bnd(ydim, HI))
-         case (BND_COR, BND_INF, BND_MPI)
+         case (BND_COR, BND_MPI)
             ! Do nothing
          case (BND_PER)
             if (cdd%comm3d /= MPI_COMM_NULL) cg%u(:,:, cg%je+1:cg%n_(ydim),:)            = cg%u(:,:, cg%js:cg%jsb,:)

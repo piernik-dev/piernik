@@ -353,7 +353,7 @@ contains
    subroutine translate_bnds_to_ints(this, bnds)
 
       use constants, only: xdim, zdim, ndims, LO, HI, &
-         &                 BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_USER, BND_INF, BND_INVALID
+         &                 BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_USER, BND_INVALID
 
       implicit none
 
@@ -383,8 +383,6 @@ contains
                   this%bnd(d, lh) = BND_MPI
                case ('user')
                   this%bnd(d, lh) = BND_USER
-               case ('inf') ! what is this?
-                  this%bnd(d, lh) = BND_INF
                case default
                   this%bnd(d, lh) = BND_INVALID
             end select
