@@ -67,7 +67,8 @@ contains
 
    function datafields_descr(var) result(f)
 
-      use gdf, only: gdf_field_type
+      use gdf,    only: gdf_field_type
+      use units,  only: cm, gram, sek
 
       implicit none
 
@@ -81,12 +82,16 @@ contains
       select case (trim(var))
          case ("dend", "deni", "denn")
             f%fu = "\rm{g}/\rm{cm}^3"
+            f%f2cgs = gram/cm**3
          case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
             f%fu = "\rm{cm}/\rm{s}"
+            f%f2cgs = cm/sek
          case ("enen", "enei")
             f%fu = "\rm{g}*\rm{cm}^2/\rm{s}^2"
+            f%f2cgs = gram*cm**2/sek**2
          case ("pren", "prei")
             f%fu = "\rm{g}/\rm{cm}/\rm{s}^2"
+            f%f2cgs = gram/cm/sek**2
          case ("magx", "magy", "magz")
             f%stag = 1
          case ("cr1" : "cr9")
