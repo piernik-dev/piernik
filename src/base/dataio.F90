@@ -875,7 +875,7 @@ contains
 #endif /* GRAV */
 
       cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-           & half * (pu(iarr_all_mx(1),:,:,:)**2 + pu(iarr_all_my(1),:,:,:)**2 + pu(iarr_all_mz(1),:,:,:))/ max(pu(iarr_all_dn(1),:,:,:),smalld)
+           & half * (pu(iarr_all_mx(1),:,:,:)**2 + pu(iarr_all_my(1),:,:,:)**2 + pu(iarr_all_mz(1),:,:,:)**2)/ max(pu(iarr_all_dn(1),:,:,:),smalld)
       tot_ekin = mpi_addmul(pwa, cg%dvol)
 
       pwa = half * (pb(xdim,:,:,:)**2 + pb(ydim,:,:,:)**2 + pb(zdim,:,:,:)**2)
