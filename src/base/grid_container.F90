@@ -27,9 +27,9 @@
 !
 #include "piernik.h"
 #include "macros.h"
-!>
-!! \brief Module containing the grid container type and its associated methods
-!<
+
+!> \brief Module containing the grid container type and its associated methods
+
 module grid_cont
 
    use constants,   only: xdim, zdim, ndims, LO, HI
@@ -39,7 +39,7 @@ module grid_cont
    implicit none
 
    private
-   public :: grid_container, segment, bnd_list, pr_segment, tgt_list, set_mpi_types
+   public :: grid_container, segment, bnd_list, pr_segment, tgt_list, set_mpi_types, is_overlap
 
    !> \brief Specification of segment of data for boundary exchange, prolongation and restriction.
    type :: segment
@@ -57,6 +57,7 @@ module grid_cont
    type, extends(segment) :: pr_segment
       real, allocatable, dimension(:,:,:) :: buf                      !< buffer for the coarse data (incoming prolongation and outgoing restriction) for each nonlocal operations
       type(c_layer), dimension(:), allocatable :: f_lay               !< face layers to contribute to the prolonged face value
+      integer(kind=4) :: tag                                          !< unique tag for communication
    end type pr_segment                                                !< (not allocated for outgoing prolongation, incoming restriction and for local operations)
 
    !< \brief target list container for prolongations, restrictions and boundary exchanges
@@ -92,8 +93,6 @@ module grid_cont
 
       ! prolongation and restriction
       !! \todo move to cg, should be initialized by cg_list_level procedure
-      type(tgt_list) :: f_tgt                                         !< description of incoming restriction and outgoing prolongation data (this should be a linked list)
-      type(tgt_list) :: c_tgt                                         !< description of outgoing restriction and incoming prolongation data
       type(tgt_list), dimension(xdim:zdim, LO:HI) :: pff_tgt, pfc_tgt !< description outgoing and incoming face prolongation data
 
    end type mg_arr
@@ -127,6 +126,7 @@ module grid_cont
       real :: idy                                                !< inverted length of the %grid cell in y-direction
       real :: idz                                                !< inverted length of the %grid cell in z-direction
       real :: idx2, idy2, idz2                                   !< inverse of d{x,y,z} square
+      real, dimension(ndims) :: idl2                             !< [ idx2, idy2, idz2 ]
       real :: dvol2                                              !< square of one cell volume
 
       ! Grid properties
@@ -171,6 +171,12 @@ module grid_cont
       integer(kind=4), allocatable, dimension(:,:,:,:,:) :: mbc  !< MPI Boundary conditions Container for comm3d-based communication
       type(bnd_list), dimension(:,:), allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim, nb)
       type(bnd_list), dimension(:,:), allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim, nb)
+      logical, dimension(xdim:zdim, LO:HI) :: ext_bnd        !< .false. for BND_PER and BND_MPI
+
+      ! Prolongation and restriction
+
+      type(tgt_list) :: f_tgt                                    !< description of incoming restriction and outgoing prolongation data (this should be a linked list)
+      type(tgt_list) :: c_tgt                                    !< description of outgoing restriction and incoming prolongation data
 
       ! Non-cartesian geometrical factors
 
@@ -216,9 +222,12 @@ module grid_cont
 
    end type grid_container
 
+   interface is_overlap
+      module procedure is_overlap_simple, is_overlap_per
+   end interface
+
 contains
 
-!-----------------------------------------------------------------------------
 !>
 !! \brief Initialization of the grid container
 !!
@@ -262,6 +271,14 @@ contains
       ! For periodic boundaries do not set BND_MPI when local domain spans through the whole computational domain in given direction.
       where (dom%periodic(:) .and. this%h_cor1(:) /= n_d(:)) this%bnd(:, LO) = BND_MPI
       where (dom%periodic(:) .and. this%off(:)    /= 0)      this%bnd(:, HI) = BND_MPI
+
+      this%ext_bnd(:, :) = .false.
+      do i = xdim, zdim
+         if (dom%has_dir(i) .and. .not. dom%periodic(i)) then
+            this%ext_bnd(i, LO) = (this%off(i)    == 0)
+            this%ext_bnd(i, HI) = (this%h_cor1(i) == n_d(i)) !! \warning not true on AMR
+         endif
+      enddo
 
       ! For shear boundaries and some domain decompositions it is possible that a boundary can be mixed 'per' with 'mpi'
 
@@ -414,6 +431,8 @@ contains
          this%idz2  = 0.
       endif
 
+      this%idl2 = [ this%idx2, this%idy2, this%idz2 ]
+
       this%dvol2 = this%dvol**2
 
    end subroutine init
@@ -481,9 +500,7 @@ contains
 
    end subroutine set_axis
 
-!>
-!! \brief Routines that deallocates all internals of the grid container
-!<
+!> \brief Routines that deallocates all internals of the grid container
 
    subroutine cleanup(this)
 
@@ -495,14 +512,23 @@ contains
 
       class(grid_container), intent(inout) :: this
       integer :: d, t, g, b
-
-! It seems that these deallocates are no longer necessary (gcc 4.6.2). According to valgrind the memory is implicitly freed somewhere else.
-!> \todo Verify this with another compiler
-!!$      deallocate(this%x, this%xl, this%xr, this%inv_x)
-!!$      deallocate(this%y, this%yl, this%yr, this%inv_y)
-!!$      deallocate(this%z, this%zl, this%zr, this%inv_z)
+      integer, parameter :: nseg = 2
+      type(tgt_list), dimension(nseg) :: fc_tgt
 
       if (this%grid_id <= INVALID) return ! very dirty workaround for unability to determine whether a given cg was already deallocated
+
+      if (allocated(this%x))     deallocate(this%x)
+      if (allocated(this%xl))    deallocate(this%xl)
+      if (allocated(this%xr))    deallocate(this%xr)
+      if (allocated(this%inv_x)) deallocate(this%inv_x)
+      if (allocated(this%y))     deallocate(this%y)
+      if (allocated(this%yl))    deallocate(this%yl)
+      if (allocated(this%yr))    deallocate(this%yr)
+      if (allocated(this%inv_y)) deallocate(this%inv_y)
+      if (allocated(this%z))     deallocate(this%z)
+      if (allocated(this%zl))    deallocate(this%zl)
+      if (allocated(this%zr))    deallocate(this%zr)
+      if (allocated(this%inv_z)) deallocate(this%inv_z)
 
       if (allocated(this%gc_xdim)) deallocate(this%gc_xdim)
       if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)
@@ -541,6 +567,16 @@ contains
          deallocate(this%o_bnd)
       endif
 
+      fc_tgt(1:nseg) = [ this%f_tgt, this%c_tgt ]
+      do b = 1, nseg
+         if (allocated(fc_tgt(b)%seg)) then
+            do g = lbound(fc_tgt(b)%seg, dim=1), ubound(fc_tgt(b)%seg, dim=1)
+               if (allocated(fc_tgt(b)%seg(g)%buf)) deallocate(fc_tgt(b)%seg(g)%buf)
+            enddo
+            deallocate(fc_tgt(b)%seg)
+         endif
+      enddo
+
       if (allocated(this%q)) then
          do g = lbound(this%q(:), dim=1), ubound(this%q(:), dim=1)
             call this%q(g)%clean
@@ -577,6 +613,13 @@ contains
          enddo
          deallocate(this%w)
       endif
+
+      ! multigrid-specific arrays, not handled through named_array feature
+      if (allocated(this%mg%prolong_xy)) deallocate(this%mg%prolong_xy)
+      if (allocated(this%mg%prolong_x))  deallocate(this%mg%prolong_x)
+      if (allocated(this%mg%bnd_x))      deallocate(this%mg%bnd_x)
+      if (allocated(this%mg%bnd_y))      deallocate(this%mg%bnd_y)
+      if (allocated(this%mg%bnd_z))      deallocate(this%mg%bnd_z)
 
       this%grid_id = INVALID
 
@@ -616,6 +659,68 @@ contains
       deallocate(subsizes, starts)
 
    end subroutine set_mpi_types
+
+!>
+!! \brief is_overlap_per checks if two given blocks placed within a periodic domain are overlapping.
+!!
+!! \details to handle shearing box which is divided in y-direction at the edges, one has to provide another subroutine (is_overlap_per_shear) and add it to interface is_overlap
+!<
+
+   logical function is_overlap_per(this, other, periods) result(share)
+
+      use constants,  only: xdim, ydim, zdim, ndims, LO, HI
+      use domain,     only: dom
+
+      implicit none
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this !< object invoking type-bound procedure
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: other !< the other box
+      integer(kind=8), dimension(xdim:zdim), intent(in)        :: periods !< where >0 then the direction is periodic with the given number of cells
+
+      integer :: i, j, k
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: oth
+
+      share = .false.
+      do i = -1, 1
+         if ((dom%has_dir(xdim) .or. periods(xdim)>0) .or. i==0) then
+            do j = -1, 1
+               if ((dom%has_dir(ydim) .or. periods(ydim)>0) .or. j==0) then
+                  do k = -1, 1
+                     if ((dom%has_dir(zdim) .or. periods(zdim)>0) .or. k==0) then
+                        oth(:,:) = other(:,:) + reshape([i*periods(xdim), j*periods(ydim), k*periods(zdim), i*periods(xdim), j*periods(ydim), k*periods(zdim)], [ndims, HI])
+                        share = share .or. is_overlap_simple(this, oth)
+                     endif
+                  enddo
+               endif
+            enddo
+         endif
+      enddo
+
+   end function is_overlap_per
+
+!>
+!! \brief is_overlap_simple checks if two given blocks placed within a nonperiodic domain are overlapping.
+!! This routine is not supposed to take care of periodic domain - use is_overlap_per when you check overlap for boxes that cross the periodic domain boundary
+!<
+
+   logical function is_overlap_simple(this, other) result(share)
+
+      use constants,  only: xdim, zdim, LO, HI
+      use domain,     only: dom
+
+      implicit none
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this !< object invoking type-bound procedure
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: other !< the other box
+
+      integer :: d
+
+      share = .true.
+      do d = xdim, zdim
+         if (dom%has_dir(d)) share = share .and. (other(d, LO) <= this(d, HI)) .and. (other(d, HI) >= this(d, LO))
+      enddo
+
+   end function is_overlap_simple
 
 !> \brief Initialize the communicators for q even if there are no q arrays at the moment
 

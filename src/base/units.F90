@@ -74,7 +74,7 @@ module units
    public                                                ! QA_WARN no secrets are kept here
    private :: au_cm, pc_au, pc_cm, msun_g, mjup_g, day_s, yr_day, yr_s, newton_cgs, kB_cgs  ! QA_WARN don't use those vars outside units!
 
-   character(len=cbuff_len) :: units_set                !< type of units set
+   character(len=cbuff_len) :: units_set                 !< type of units set
    character(len=cbuff_len) :: s_len_u                   !< name of length unit
    character(len=cbuff_len) :: s_time_u                  !< name of time unit
    character(len=cbuff_len) :: s_mass_u                  !< name of mass unit

@@ -49,6 +49,10 @@ module fluidtypes
       type(value) :: temp_max
       type(value) :: temp_min
       type(value) :: cs_max
+      type(value) :: dtvx_min
+      type(value) :: dtvy_min
+      type(value) :: dtvz_min
+      type(value) :: dtcs_min
    end type phys_prop
 
    type :: component

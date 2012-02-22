@@ -46,8 +46,6 @@ module multigrid
    private
    public :: init_multigrid, cleanup_multigrid
 
-   integer, parameter :: mg_gr_id = 1
-
 contains
 
 !!$ ============================================================================
@@ -75,21 +73,20 @@ contains
 !<
    subroutine init_multigrid
 
-      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, zdim, AT_IGNORE, LO, HI, LONG, I_TWO, I_ONE, half
+      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, AT_IGNORE, LO, HI, LONG, I_TWO, I_ONE, half, wa_n
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
-      use domain,              only: dom, is_uneven, is_multicg
-      use grid,                only: leaves, base_lev, all_cg, mpi_bnd_types
+      use domain,              only: dom, is_uneven
+      use grid,                only: base_lev, all_cg
       use gc_list,             only: cg_list_element
       use cg_list_lev,         only: cg_list_level, cg_list_patch
       use decomposition,       only: divide_domain!, deallocate_pse
       use grid_cont,           only: grid_container
-      use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_LAND, MPI_COMM_NULL
+      use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_COMM_NULL
       use mpisetup,            only: comm, ierr, proc, master, slave, nproc, FIRST, buffer_dim, ibuff, lbuff
       use multigridhelpers,    only: dirtyH, do_ascii_dump, dirty_debug, set_dirty
-      use multigridmpifuncs,   only: vertical_prep
       use multigridvars,       only: roof, base, single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, &
-           &                         is_external, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
+           &                         ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
       use types,               only: cdd
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
@@ -109,7 +106,6 @@ contains
       type(cg_list_level),   pointer :: curl, tmpl    !< current level (a pointer sliding along the linked list) and temporary level
       type(cg_list_patch) :: patch                    !< wrapper for current level (to be passed to divide domain)
       type(grid_container),  pointer :: cg            !< current grid container
-      logical :: dd
 
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug
 
@@ -164,23 +160,6 @@ contains
 
       stdout = stdout .and. master
 
-      if (is_multicg) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial is_external
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-      ! mark external faces
-         is_external(:, :) = .false.
-         do j=xdim, zdim
-            if (dom%has_dir(j) .and. .not. dom%periodic(j)) then
-               is_external(j, LO) = (cg%off(j)    == 0)
-               is_external(j, HI) = (cg%h_cor1(j) == base_lev%n_d(j)) !! \warning not true on AMR
-            endif
-         enddo
-         cgl => cgl%nxt
-      enddo
-
-      is_mg_uneven = is_uneven
       single_base = (nproc == 1)
 
       if (dom%eff_dim < 1 .or. dom%eff_dim > 3) call die("[multigrid:init_multigrid] Unsupported number of dimensions.")
@@ -216,8 +195,6 @@ contains
          level_max = j
       endif
 
-      if (is_multicg) call die("[multigrid:init_multigrid] multiple grid pieces per procesor not implemented yet") !nontrivial
-
       roof => base_lev
 
       curl => roof
@@ -242,14 +219,11 @@ contains
             tmpl%n_d(:) = I_ONE
          endwhere
 
-         dd = any(tmpl%n_d(:)*2 /= tmpl%finer%n_d(:) .and. dom%has_dir(:))
-         call MPI_Allreduce(MPI_IN_PLACE, dd, I_ONE, MPI_LOGICAL, MPI_LOR, comm, ierr)
-         if (master .and. dd) then
+         if (master .and. any(tmpl%n_d(:)*2 /= tmpl%finer%n_d(:) .and. dom%has_dir(:))) then
             write(msg, '(a,3f10.1,a,i3)')"[multigrid:init_multigrid] Fractional number of domain cells: ", half*tmpl%finer%n_d(:), " at level ",tmpl%lev
             call die(msg)
          endif
 
-         ! Use tmpl%pse(nproc)%sel(mg_gr_id, :, :) with care, because this is an antiparallel thing
          if (tmpl%lev == -level_max .and. single_base) then
             call base_on_single(tmpl)
          else
@@ -257,9 +231,7 @@ contains
             patch%list_level => tmpl
             patch%n_d = int(tmpl%n_d, kind=4)
 
-            dd = divide_domain(patch)
-            call MPI_Allreduce(MPI_IN_PLACE, dd, I_ONE, MPI_LOGICAL, MPI_LAND, comm, ierr)
-            if (.not. dd) then
+            if (.not. divide_domain(patch)) then
                write(msg,'(a,i4)')"[multigrid:init_multigrid] Coarse domain decomposition failed at level ",tmpl%lev
                if (master) call warn(msg)
                if (single_base) then
@@ -278,23 +250,16 @@ contains
          call tmpl%print_segments
 
          do g = lbound(tmpl%pse(proc)%sel(:,:,:), dim=1), ubound(tmpl%pse(proc)%sel(:,:,:), dim=1)
-
-            call tmpl%add          ! add first cg
-            call tmpl%last%cg%init(tmpl%n_d, tmpl%pse(proc)%sel(mg_gr_id, :, :), mg_gr_id, tmpl%lev)
-            call mpi_bnd_types(tmpl%last%cg)
-            call tmpl%last%cg%set_q_mbc
-
+            call tmpl%init_new_cg(g)
             call all_cg%add(tmpl%last%cg)
-
          enddo
 
          curl => curl%coarser
       enddo
 
+      is_mg_uneven = is_uneven
       curl => roof
       do while (associated(curl))
-
-         if (ubound(curl%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid:init_multigrid] Multiple blocks per process not implemented yet")
 
          cgl => curl%first
          do while (associated(cgl))
@@ -328,10 +293,16 @@ contains
                cg%mg%bnd_z     (:, :, :)    = dirtyH
             endif
 
+            if (.not. associated(cg%wa)) cg%wa => cg%q(all_cg%ind(wa_n))%arr ! required for CR diffusion
+
             cgl => cgl%nxt
          enddo
+
+         call curl%vertical_prep
+
          curl => curl%coarser ! descend until null() is encountered
       enddo
+      call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, I_ONE, MPI_LOGICAL, MPI_LOR, comm, ierr)
 
       call all_cg%reg_var(source_n,     AT_IGNORE, multigrid = .true.)
       call all_cg%reg_var(solution_n,   AT_IGNORE, multigrid = .true.)
@@ -348,13 +319,10 @@ contains
       call set_dirty(defect)
       call set_dirty(correction)
 
-      call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, I_ONE, MPI_LOGICAL, MPI_LOR, comm, ierr)
       if ((is_mg_uneven .or. is_uneven .or. cdd%comm3d == MPI_COMM_NULL) .and. ord_prolong /= 0) then
          ord_prolong = 0
          if (master) call warn("[multigrid:init_multigrid] prolongation order /= injection not implemented on uneven or noncartesian domains yet.")
       endif
-
-      call vertical_prep
 
       tot_ts = 0.
 
@@ -380,9 +348,7 @@ contains
       use constants,           only: LO, HI, I_ONE
       use dataio_pub,          only: msg, printinfo
       use cg_list_lev,         only: cg_list_level
-      use gc_list,             only: cg_list_element
       use grid,                only: base_lev
-      use grid_cont,           only: tgt_list, grid_container
       use mpi,                 only: MPI_DOUBLE_PRECISION
       use mpisetup,            only: master, nproc, FIRST, LAST, comm, ierr
       use multigridvars,       only: base, tot_ts
@@ -395,13 +361,9 @@ contains
 
       implicit none
 
-      integer :: ib, g
+      integer :: g
       real, allocatable, dimension(:) :: all_ts
-      integer, parameter :: nseg = 2
-      type(tgt_list), dimension(nseg) :: io_tgt
       type(cg_list_level),   pointer :: curl
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
 
 #ifdef GRAV
       call cleanup_multigrid_grav
@@ -410,27 +372,9 @@ contains
       call cleanup_multigrid_diff
 #endif /* COSM_RAYS */
 
+      !! \todo move this loop to grid::cleanup_grid
       curl => base
       do while (associated(curl) .and. .not. associated(curl, base_lev))
-         cgl => curl%first
-         do while (associated(cgl))
-            cg => cgl%cg
-            if (allocated(cg%mg%prolong_xy)) deallocate(cg%mg%prolong_xy)
-            if (allocated(cg%mg%prolong_x))  deallocate(cg%mg%prolong_x)
-            if (allocated(cg%mg%bnd_x))      deallocate(cg%mg%bnd_x)
-            if (allocated(cg%mg%bnd_y))      deallocate(cg%mg%bnd_y)
-            if (allocated(cg%mg%bnd_z))      deallocate(cg%mg%bnd_z)
-            io_tgt(1:nseg) = [ cg%mg%f_tgt, cg%mg%c_tgt ]
-            do ib = 1, nseg
-               if (allocated(io_tgt(ib)%seg)) then
-                  do g = 1, ubound(io_tgt(ib)%seg, dim=1)
-                     if (allocated(io_tgt(ib)%seg(g)%buf)) deallocate(io_tgt(ib)%seg(g)%buf)
-                  enddo
-                  deallocate(io_tgt(ib)%seg)
-               endif
-            enddo
-            cgl => cgl%nxt
-         enddo
          call curl%delete
          curl => curl%finer
          deallocate(curl%coarser)
@@ -461,7 +405,7 @@ contains
    subroutine base_on_single(tmpl)
 
       use cg_list_lev,   only: cg_list_level
-      use constants,     only: LO, HI
+      use constants,     only: LO, HI, I_ONE
       use decomposition, only: allocate_pse
       use mpisetup,      only: nproc, FIRST
 
@@ -472,10 +416,10 @@ contains
       integer, dimension(nproc) :: n_cg
 
       n_cg(:) = 0
-      n_cg(1) = mg_gr_id
+      n_cg(1) = I_ONE
       call allocate_pse(tmpl, n_cg)
-      tmpl%pse(FIRST)%sel(mg_gr_id,  :, LO) = 0
-      tmpl%pse(FIRST)%sel(mg_gr_id,  :, HI) = tmpl%n_d(:)-1
+      tmpl%pse(FIRST)%sel(I_ONE,  :, LO) = 0
+      tmpl%pse(FIRST)%sel(I_ONE,  :, HI) = tmpl%n_d(:)-1
 
    end subroutine base_on_single
 

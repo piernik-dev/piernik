@@ -58,24 +58,30 @@ module gc_list
 
     contains
 
+      ! List management
 !      procedure :: init_el
       procedure :: init_new                          !< A constructor for an empty list
       generic, public :: init => init_new!, init_el  !< All constructors of a new list
-
       procedure :: add_new                           !< Add new element to the list
       generic, public :: add => add_new              !< All methods of adding a new element
-
       procedure :: del_lnk                           !< Destroy the element
       procedure :: del_lst                           !< Destroy the list
       generic, public :: delete => del_lnk, del_lst  !< All methods of destroying
 
       procedure :: un_link                           !< Un-link the element
+
+      ! Misc
       procedure :: get_extremum                      !< Find munimum or maximum value over a s list
       procedure :: print_list                        !< Print the list and associated cg ID
+
+      ! Arithmetic on the fields
       procedure :: set_q_value                       !< reset given field to the value
       procedure :: q_copy                            !< copy a given field to another
       procedure :: q_add                             !< add a field to another
+      procedure :: q_add_val                         !< add a value to a field
       procedure :: q_lin_comb                        !< assign linear combination of q fields
+      procedure :: subtract_average                  !< subtract average value from the list
+      procedure :: norm_sq                           !< calculate L2 norm
 !> \todo merge lists
 
    end type cg_list
@@ -842,10 +848,33 @@ contains
 
    end subroutine q_add
 
+!> \brief Add a value to a field (e.g. correct for average value)
+
+   subroutine q_add_val(this, i_add, val)
+
+      implicit none
+
+      class(cg_list), intent(in) :: this    !< object invoking type-bound procedure
+      integer,        intent(in) :: i_add   !< Index of field to be modified in cg%q(:)
+      real,           intent(in) :: val     !< Value to be added
+
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%q(i_add)%arr(:, :, :) = cgl%cg%q(i_add)%arr(:, :, :) + val
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine q_add_val
+
 !>
 !! \brief Assign linear combination of q fields on the whole list
 !!
 !! \details On the whole list cg%q(ind) is assigned to sum of iv%val * cg%q(iv%ind)
+!!
+!! \todo add an option to select region of cg
 !<
 
    subroutine q_lin_comb(this, iv, ind)
@@ -890,6 +919,102 @@ contains
       enddo
 
     end subroutine q_lin_comb
+
+!>
+!! \brief Compute the average value over a list and subtract it
+!!
+!! \details Typically it is used on a list of leaves or on a single level
+!<
+
+   subroutine subtract_average(this, iv)
+
+      use constants,  only: GEO_XYZ, GEO_RPZ, I_ONE
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_IN_PLACE
+      use mpisetup,   only: comm, ierr
+
+      implicit none
+
+      class(cg_list), intent(in) :: this !< list for which we want to subtract its average from
+      integer,        intent(in) :: iv   !< index of variable in cg%q(:) which we want to have zero average
+
+      real :: avg, vol
+      integer :: i
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
+
+      avg = 0.
+      vol = 0.
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         select case (dom%geometry_type)
+            case (GEO_XYZ)
+               avg = avg + sum(cg%q(iv)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol
+            case (GEO_RPZ)
+               do i = cg%is, cg%ie
+                  avg = avg + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol * cg%x(i)
+               enddo
+            case default
+               call die("[gc_list:subtract_average] Unsupported geometry.")
+         end select
+         vol = vol + cg%vol
+         cgl => cgl%nxt
+      enddo
+      call MPI_Allreduce(MPI_IN_PLACE, avg, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, vol, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr) !! \todo calculate this in some init routine
+      avg = avg / vol
+
+      call this%q_add_val(iv, -avg)
+
+   end subroutine subtract_average
+
+!>
+!! \brief Calculate L2 norm
+!!
+!! \todo modify the code for reusing in subtract_average?
+!<
+
+   real function norm_sq(this, iv) result (norm)
+
+      use constants,  only: GEO_XYZ, GEO_RPZ, I_ONE
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_IN_PLACE
+      use mpisetup,   only: comm, ierr
+
+      implicit none
+
+      class(cg_list), intent(in) :: this !< list for which we want to calculate the L2 norm
+      integer, intent(in)  :: iv   !< index of variable in cg%q(:) for which we want to find the norm
+
+      integer :: i
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
+
+      norm = 0.
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         select case (dom%geometry_type)
+            case (GEO_XYZ)
+               norm = norm + sum(cg%q(iv)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2) * cg%dvol
+            case (GEO_RPZ)
+               do i = cg%is, cg%ie
+                  norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2) * cg%dvol * cg%x(i)
+               enddo
+            case default
+               call die("[gc_list:norm_sq] Unsupported geometry.")
+         end select
+         cgl => cgl%nxt
+      enddo
+      call MPI_Allreduce(MPI_IN_PLACE, norm, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      norm = sqrt(norm)
+
+   end function norm_sq
 
 ! unused
 !!$!>

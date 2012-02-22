@@ -40,13 +40,13 @@
 module multigridvars
 ! pulled by MULTIGRID
 
-   use constants,   only: xdim, zdim, LO, HI, dsetnamelen
+   use constants,   only: LO, HI, dsetnamelen
    use cg_list_lev, only: cg_list_level
 
    implicit none
 
    public ! QA_WARN no secrets are kept here
-   private :: xdim, zdim, LO, HI, dsetnamelen, cg_list_level ! QA_WARN prevent re-exporting
+   private :: LO, HI, dsetnamelen, cg_list_level ! QA_WARN prevent re-exporting
 
    ! these 4 variables are required for basic use of the multigrid solver
    character(len=dsetnamelen), parameter :: source_n     = "source"     !< density field
@@ -73,7 +73,6 @@ module multigridvars
       enumerator :: bnd_givenval                                      !< given value boundary type (general Dirichlet)
       enumerator :: bnd_invalid = bnd_periodic - 1                    !< invalid
    end enum
-   logical, dimension(xdim:zdim, LO:HI) :: is_external                !< .true. for non-"mpi" local domain boundaries
    enum, bind(C)
       enumerator :: extbnd_donothing                                  !< Do not touch external boundaries
       enumerator :: extbnd_zero                                       !< Fill external boundaries with zeroes

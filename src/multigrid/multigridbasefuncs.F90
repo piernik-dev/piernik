@@ -40,7 +40,7 @@ module multigridbasefuncs
 
    private
 
-   public :: prolong_level, restrict_all, norm_sq, subtract_average, prolong_faces, zero_boundaries
+   public :: prolong_level, prolong_faces, zero_boundaries
 
 contains
 
@@ -81,7 +81,6 @@ contains
       use cg_list_lev,           only: cg_list_level
       use multigridhelpers,      only: dirty_debug, check_dirty, dirtyH
       use multigridvars,         only: roof, ord_prolong, is_mg_uneven
-      use multigridexperimental, only: prolong_level_hord
 
       implicit none
 
@@ -111,132 +110,6 @@ contains
 
    end subroutine prolong_level
 
-
-!!$ ============================================================================
-!>
-!! \brief Restriction operators
-!<
-
-   subroutine restrict_all(iv)
-
-      use cg_list_lev,      only: cg_list_level
-      use multigridhelpers, only: check_dirty
-      use multigridvars,    only: roof, base
-
-      implicit none
-
-      integer, intent(in) :: iv    !< variable to be restricted
-
-      type(cg_list_level), pointer :: curl
-
-      call check_dirty(roof, iv, "restrict_all-")
-
-      curl => roof
-      do while (associated(curl) .and. .not. associated(curl, base))
-         call curl%restrict_level(iv)
-         curl => curl%coarser
-      enddo
-
-      call check_dirty(base, iv, "restrict_all+")
-
-   end subroutine restrict_all
-
-!!$ ============================================================================
-!>
-!! \brief Calculate L2 norm
-!<
-
-   subroutine norm_sq(iv, norm)
-
-      use constants,  only: GEO_XYZ, GEO_RPZ, I_ONE
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use gc_list,    only: cg_list_element
-      use grid,       only: leaves
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_IN_PLACE
-      use mpisetup,   only: comm, ierr
-
-      implicit none
-
-      integer, intent(in)  :: iv   !< index of variable in cg%q(:) for which we want to find the norm
-      real,    intent(out) :: norm !< the calculated norm
-
-      integer :: i
-      type(cg_list_element), pointer :: cgl
-
-      norm = 0.
-      cgl => leaves%first
-      do while (associated(cgl))
-         select case (dom%geometry_type)
-            case (GEO_XYZ)
-               norm = norm + sum(cgl%cg%q(iv)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke)**2) * cgl%cg%dvol
-            case (GEO_RPZ)
-               do i = cgl%cg%is, cgl%cg%ie
-                  norm = norm + sum(cgl%cg%q(iv)%arr(i, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke)**2) * cgl%cg%dvol * cgl%cg%x(i)
-               enddo
-            case default
-               call die("[multigridbasefuncs:norm_sq] Unsupported geometry.")
-         end select
-         cgl => cgl%nxt
-      enddo
-      call MPI_Allreduce(MPI_IN_PLACE, norm, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
-      norm = sqrt(norm)
-
-   end subroutine norm_sq
-
-!!$ ============================================================================
-!>
-!! \brief Compute the global average value and subtract it from the whole domain
-!<
-
-   subroutine subtract_average(curl, iv)
-
-      use constants,   only: GEO_XYZ, GEO_RPZ, I_ONE
-      use dataio_pub,  only: die
-      use domain,      only: dom
-      use gc_list,     only: cg_list_element
-      use cg_list_lev, only: cg_list_level
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_IN_PLACE
-      use mpisetup,    only: comm, ierr
-
-      implicit none
-
-      type(cg_list_level), pointer, intent(in) :: curl !< level for which we want to subtract its average from
-      integer,                      intent(in) :: iv   !< index of variable in cg%q(:) which we want to have zero average
-
-      real                :: avg, vol
-      integer             :: i
-      type(cg_list_element), pointer :: cgl
-
-      avg = 0.
-      vol = 0.
-      cgl => curl%first
-      do while (associated(cgl))
-         select case (dom%geometry_type)
-            case (GEO_XYZ)
-               avg = avg + sum(cgl%cg%q(iv)%arr(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke)) * cgl%cg%dvol
-            case (GEO_RPZ)
-               do i = cgl%cg%is, cgl%cg%ie
-                  avg = avg + sum(cgl%cg%q(iv)%arr(i, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke)) * cgl%cg%dvol * cgl%cg%x(i)
-               enddo
-            case default
-               call die("[multigridbasefuncs:subtract_average] Unsupported geometry.")
-         end select
-         vol = vol + cgl%cg%vol
-         cgl => cgl%nxt
-      enddo
-      call MPI_Allreduce(MPI_IN_PLACE, avg, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, vol, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr) !! \todo calculate this in some init routine
-      avg = avg / vol
-
-      cgl => curl%first
-      do while (associated(cgl))
-         cgl%cg%q(iv)%arr(:, :, :) = cgl%cg%q(iv)%arr(:, :, :) - avg
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine subtract_average
-
 !!$ ============================================================================
 !>
 !! \brief Prolong solution data at level (lev-1) to faces at level lev
@@ -262,7 +135,7 @@ contains
       use mpisetup,          only: proc, comm, ierr, req, status, master
       use multigridhelpers,  only: check_dirty
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: ord_prolong_face_norm, ord_prolong_face_par, base, extbnd_antimirror, is_external, need_general_pf
+      use multigridvars,     only: ord_prolong_face_norm, ord_prolong_face_par, base, extbnd_antimirror, need_general_pf
 
       implicit none
 
@@ -314,7 +187,7 @@ contains
          call warn("[multigridbasefuncs:prolong_faces] Cannot prolong anything to base level")
          return
       endif
-      if (is_multicg) call die("[multigridbasefuncs:prolong_faces] multicg not implemented")
+      if (is_multicg) call die("[multigridbasefuncs:prolong_faces] multicg not implemented") ! fine%first%cg%
 
       if (.not. associated(fine)) call die("[multigridbasefuncs:prolong_faces] fine == null()")
       coarse => fine%coarser
@@ -344,7 +217,7 @@ contains
          do d = xdim, zdim
             do lh = LO, HI
                if (allocated(fine%first%cg%mg%pfc_tgt(d, lh)%seg)) then
-                  do g = 1, ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1)
+                  do g = lbound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1), ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1)
                      nr = nr + I_ONE
                      call MPI_Irecv(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf(1, 1, 1), size(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, &
                           &         fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), ierr)
@@ -359,7 +232,7 @@ contains
             do lh = LO, HI
                if (associated(coarse%first)) then !!!
                   if (allocated(coarse%first%cg%mg%pff_tgt(d, lh)%seg)) then
-                     do g = 1, ubound(coarse%first%cg%mg%pff_tgt(d, lh)%seg(:), dim=1)
+                     do g = lbound(coarse%first%cg%mg%pff_tgt(d, lh)%seg(:), dim=1), ubound(coarse%first%cg%mg%pff_tgt(d, lh)%seg(:), dim=1)
 
                         pseg => coarse%first%cg%mg%pff_tgt(d, lh)%seg(g)
                         cse => pseg%se
@@ -367,7 +240,7 @@ contains
                         nr = nr + I_ONE
                         se(:,:) = cse(:,:)
                         pseg%buf(:, :, :) = 0. ! this can be avoided by extracting first assignment from the loop
-                        do l = 1, ubound(pseg%f_lay(:), dim=1)
+                        do l = lbound(pseg%f_lay(:), dim=1), ubound(pseg%f_lay(:), dim=1)
                            se(d,:) = pseg%f_lay(l)%layer
                            pseg%buf(:, :, :) = pseg%buf(:, :, :) + pseg%f_lay(l)%coeff * &
                                 coarse%first%cg%q(soln)%arr(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI))
@@ -387,17 +260,17 @@ contains
                do lh = LO, HI
                   ! make external homogenous Dirichlet boundaries, where applicable, interpolate (inject) otherwise.
                   ! \todo for homogenous neumann boundary lay2 should be .false. and pc_bnd(1, :, :) should contain layer of the coarse data next to the external boundary
-                  if (is_external(d, lh)) then
+                  if (fine%first%cg%ext_bnd(d, lh)) then
                      p_bnd(d, lh)%bnd(:,:) = 0. ! BEWARE homogenous Dirichlet by default
                   else
                      p_bnd(d, lh)%bnd(:,:) = 0
                      if (allocated(fine%first%cg%mg%pfc_tgt(d, lh)%seg)) then
-                        do g = 1, ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1)
+                        do g = lbound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1), ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1)
 
                            ii(d) = 1
-                           do i = 1, ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf, dim=d1(d))
+                           do i = lbound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf, dim=d1(d)), ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf, dim=d1(d))
                               ii(d1(d)) = i
-                              do j = 1, ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf, dim=d2(d))
+                              do j = lbound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf, dim=d2(d)), ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf, dim=d2(d))
                                  ii(d2(d)) = j
 
 ! ? + off (0 or 1)
@@ -622,5 +495,204 @@ contains
       endif
 
    end subroutine prolong_faces
+
+!>
+!! \brief high-order order prolongation interpolation
+!!
+!! \details
+!! <table border="1" cellpadding="4" cellspacing="0">
+!!   <tr><td> Cell-face prolongation stencils for fast convergence on uniform grid </td>
+!!       <td> -1./12. </td><td> 7./12. </td><td> 7./12. </td><td> -1./12. </td><td> integral cubic </td></tr>
+!!   <tr><td> Slightly slower convergence, less wide stencil  </td>
+!!       <td>         </td><td> 1./2.  </td><td> 1./2.  </td><td>         </td><td> average; integral and direct linear </td></tr>
+!! </table>
+!!\n Prolongation of cell faces from cell centers are required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
+!!
+!!\n Cell-centered prolongation stencils, for odd fine cells, for even fine cells reverse the order.
+!! <table border="1" cellpadding="4" cellspacing="0">
+!!   <tr><td> 35./2048. </td><td> -252./2048. </td><td> 1890./2048. </td><td> 420./2048. </td><td> -45./2048. </td><td> direct quartic </td></tr>
+!!   <tr><td>           </td><td>   -7./128.  </td><td>  105./128.  </td><td>  35./128.  </td><td>  -5./128.  </td><td> direct cubic </td></tr>
+!!   <tr><td>           </td><td>   -3./32.   </td><td>   30./32.   </td><td>   5./32.   </td><td>            </td><td> direct quadratic </td></tr>
+!!   <tr><td>           </td><td>             </td><td>    1.       </td><td>            </td><td>            </td><td> injection (0-th order), direct and integral approach </td></tr>
+!!   <tr><td>           </td><td>             </td><td>    3./4.    </td><td>   1./4.    </td><td>            </td><td> linear, direct and integral approach </td></tr>
+!!   <tr><td>           </td><td>   -1./8.    </td><td>    1.       </td><td>   1./8.    </td><td>            </td><td> integral quadratic </td></tr>
+!!   <tr><td>           </td><td>   -5./64.   </td><td>   55./64.   </td><td>  17./64.   </td><td>  -3./64.   </td><td> integral cubic </td></tr>
+!!   <tr><td>   3./128. </td><td>  -11./64.   </td><td>    1.       </td><td>  11./64.   </td><td>  -3./128.  </td><td> integral quartic </td></tr>
+!! </table>
+!!
+!!\n General rule is that the second big positive coefficient should be assigned to closer neighbor of the coarse parent cell.
+!!\n Thus a single coarse contributes to fine cells in the following way:
+!! <table border="1" cellpadding="4" cellspacing="0">
+!!   <tr><td> fine level   </td>
+!!       <td> -3./128. </td><td> 3./128. </td><td> -11./64. </td><td>  11./64. </td><td> 1. </td><td> 1. </td>
+!!       <td> 11./64. </td><td> -11./64. </td><td> 3./128.  </td><td> -3./128. </td><td> integral quartic coefficients </td></tr>
+!!   <tr><td> coarse level </td>
+!!       <td colspan="2">                </td><td colspan="2">                 </td><td colspan="2"> 1.  </td>
+!!       <td colspan="2">                </td><td colspan="2">                 </td><td>                               </td></tr>
+!! </table>
+!!\n
+!!\n The term "n-th order integral interpolation" here means that the prolonged values satisfy the following condition:
+!!\n Integral over a cell of a n-th order polynomial fit to the nearest 5 points in each dimension on coarse level
+!! is equal to the sum of similar integrals over fine cells covering the coarse cell.
+!!\n
+!!\n The term "n-th order direct interpolation" here means that the prolonged values are n-th order polynomial fit
+!! to the nearest 5 points in each dimension on coarse level evaluated for fine cell centers.
+!!\n
+!!\n It seems that for 3D Cartesian grid with isolated boundaries and relaxation implemented in approximate_solution
+!! direct quadratic and cubic interpolations give best norm reduction factors per V-cycle (maclaurin problem).
+!!  For other boundary types, FFT implementation of approximate_solution, specific source distribution or
+!!  some other multigrid scheme may give faster convergence rate.
+!!\n
+!!\n Estimated prolongation costs for integral quartic stencil:
+!!\n  "gather" approach: loop over fine cells, each one collects weighted values from 5**3 coarse cells (125*n_fine multiplications
+!!\n  "scatter" approach: loop over coarse cells, each one contributes weighted values to 10**3 fine cells (1000*n_coarse multiplications, roughly equal to cost of gather)
+!!\n  "directionally split" approach: do the prolongation (either gather or scatter type) first in x direction (10*n_coarse multiplications -> 2*n_coarse intermediate cells
+!!                                  result), then in y direction (10*2*n_coarse multiplications -> 4*n_coarse intermediate cells result), then in z direction
+!!                                  (10*4*n_coarse multiplications -> 8*n_coarse = n_fine cells result). Looks like 70*n_coarse multiplications.
+!!                                  Will require two additional arrays for intermediate results.
+!!\n  "FFT" approach: do the convolution in Fourier space. Unfortunately it is not periodic box, so we cannot use power of 2 FFT sizes. No idea how fast or slow this can be.
+!!\n
+!!\n For AMR or nested grid low-order prolongation schemes (injection and linear interpolation at least) are known to produce artifacts
+!! on fine-coarse boundaries. For uniform grid the simplest operators are probably the fastest and give best V-cycle convergence rates.
+!!
+!! \deprecated These routines assume simplest domain decomposition where fine grids cover exactly the same area as coarse grids
+!!
+!! \todo This will finally belong to cg_list_level type
+!<
+
+   subroutine prolong_level_hord(coarse, iv)
+
+      use cg_list_lev,       only: cg_list_level
+      use constants,         only: ndims
+      use dataio_pub,        only: die, warn, msg
+      use domain,            only: dom, is_multicg
+      use grid_cont,         only: grid_container
+      use mpisetup,          only: master
+      use multigridmpifuncs, only: mpi_multigrid_bnd
+      use multigridvars,     only: ord_prolong, extbnd_antimirror
+
+      implicit none
+
+      type(cg_list_level), pointer, intent(in) :: coarse !< level to prolong from
+      integer,                      intent(in) :: iv     !< variable to be prolonged
+
+      logical, save :: firstcall = .true.
+      real :: P_2, P_1, P0, P1, P2
+      type(grid_container), pointer :: cg_f, cg_c
+
+      if (firstcall) then
+         if (master) then
+            write(msg,'(a,i3,a)')"[multigridbasefuncs:prolong_level_hord] prolongation order ",ord_prolong," is experimental"
+            call warn(msg)
+         endif
+         firstcall = .false.
+      endif
+      if (abs(ord_prolong) > 2*dom%nb) call die("[multigridbasefuncs:prolong_level_hord] not enough guardcells for given prolongation operator order")
+
+      call mpi_multigrid_bnd(coarse, iv, int((abs(ord_prolong)+1)/2, kind=4), extbnd_antimirror) ! exchange guardcells with corners
+
+      if (dom%eff_dim<ndims) call die("[multigridbasefuncs:prolong_level_hord] 1D and 2D not finished")
+      if (is_multicg) call die("[multigridbasefuncs:prolong_level_hord] multicg not implemented")
+
+      select case (ord_prolong)
+         case (-4)
+            P_2 = 35./2048.; P_1 = -252./2048.; P0 = 1890./2048.; P1 = 420./2048.; P2 = -45./2048.
+         case (-3)
+            P_2 = 0.;        P_1 = -7./128.;    P0 = 105./128.;   P1 = 35./128.;   P2 = -5./128.
+         case (-2)
+            P_2 = 0.;        P_1 = -3./32.;     P0 = 30./32.;     P1 = 5./32.;     P2 = 0.
+         case (-1)
+            P_2 = 0.;        P_1 = 0.;          P0 = 3./4.;       P1 = 1./4.;      P2 = 0.
+         case (1)
+            P_2 = 0.;        P_1 = 0.;          P0 = 3./4.;       P1 = 1./4.;      P2 = 0.
+         case (2)
+            P_2 = 0.;        P_1 = -1./8.;      P0 = 1.;          P1 = 1./8.;      P2 = 0.
+         case (3)
+            P_2 = 0.;        P_1 = -5./64.;     P0 = 55./64;      P1 = 17./64.;    P2 = -3./64.
+         case (4)
+            P_2 = 3./128.;   P_1 = -11./64.;    P0 = 1.;          P1 = 11./64.;    P2 = -3./128.
+            ! case 0 is handled through cg_list_level%prolong_level0
+         case default
+            call die("[multigridbasefuncs:prolong_level_hord] Unsupported order")
+            return
+      end select
+
+      ! this design doesn't allow multiple blocks or inter-process fine-coarse communication
+      if (.not. associated(coarse)) call die("[multigridbasefuncs:prolong_level_hord] coarse == null()")
+      if (.not. associated(coarse%finer)) call die("[multigridbasefuncs:prolong_level_hord] fine == null()")
+      cg_c => coarse%first%cg
+      cg_f => coarse%finer%first%cg
+
+      ! convolve with the prolongation operator
+      ! the two cases here are for optimization (see also call mpi_multigrid_bnd above)
+      if (P_2 == 0. .and. P2 == 0.) then
+         cg_f%mg%prolong_x(         cg_f%is  :cg_f%ie-1:2, cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1) = &  ! x-odd cells
+              + P1 * cg_c%q(iv)%arr(cg_c%is-1:cg_c%ie-1,   cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1)   &
+              + P0 * cg_c%q(iv)%arr(cg_c%is  :cg_c%ie,     cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1)   &
+              + P_1* cg_c%q(iv)%arr(cg_c%is+1:cg_c%ie+1,   cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1)
+         cg_f%mg%prolong_x(         cg_f%is+1:cg_f%ie:2,   cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1) = &  ! x-even cells
+              + P_1* cg_c%q(iv)%arr(cg_c%is-1:cg_c%ie-1,   cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1)   &
+              + P0 * cg_c%q(iv)%arr(cg_c%is  :cg_c%ie,     cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1)   &
+              + P1 * cg_c%q(iv)%arr(cg_c%is+1:cg_c%ie+1,   cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1)
+
+         cg_f%mg%prolong_xy(           cg_f%is:cg_f%ie, cg_f%js  :cg_f%je-1:2, cg_c%ks-1:cg_c%ke+1) = &    ! y-odd cells
+              + P1 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js-1:cg_c%je-1,   cg_c%ks-1:cg_c%ke+1)   &
+              + P0 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js  :cg_c%je,     cg_c%ks-1:cg_c%ke+1)   &
+              + P_1* cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js+1:cg_c%je+1,   cg_c%ks-1:cg_c%ke+1)
+         cg_f%mg%prolong_xy(           cg_f%is:cg_f%ie, cg_f%js+1:cg_f%je:2,   cg_c%ks-1:cg_c%ke+1) = &    ! y-even cells
+              + P_1* cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js-1:cg_c%je-1,   cg_c%ks-1:cg_c%ke+1)   &
+              + P0 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js  :cg_c%je,     cg_c%ks-1:cg_c%ke+1)   &
+              + P1 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js+1:cg_c%je+1,   cg_c%ks-1:cg_c%ke+1)
+
+         cg_f%q(iv)%arr(                cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_f%ks  :cg_f%ke-1:2) = &   ! z-odd cells
+              + P1 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-1:cg_c%ke-1  )   &
+              + P0 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks  :cg_c%ke    )   &
+              + P_1* cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+1:cg_c%ke+1  )
+         cg_f%q(iv)%arr(                cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_f%ks+1:cg_f%ke:2  ) = &   ! z-even cells
+              + P_1* cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-1:cg_c%ke-1  )   &
+              + P0 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks  :cg_c%ke    )   &
+              + P1 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+1:cg_c%ke+1  )
+      else
+         cg_f%mg%prolong_x(         cg_f%is  :cg_f%ie-1:2, cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2) = &  ! x-odd cells
+              + P2 * cg_c%q(iv)%arr(cg_c%is-2:cg_c%ie-2,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
+              + P1 * cg_c%q(iv)%arr(cg_c%is-1:cg_c%ie-1,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
+              + P0 * cg_c%q(iv)%arr(cg_c%is  :cg_c%ie,     cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
+              + P_1* cg_c%q(iv)%arr(cg_c%is+1:cg_c%ie+1,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
+              + P_2* cg_c%q(iv)%arr(cg_c%is+2:cg_c%ie+2,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)
+         cg_f%mg%prolong_x(         cg_f%is+1:cg_f%ie:2,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2) = &  ! x-even cells
+              + P_2* cg_c%q(iv)%arr(cg_c%is-2:cg_c%ie-2,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
+              + P_1* cg_c%q(iv)%arr(cg_c%is-1:cg_c%ie-1,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
+              + P0 * cg_c%q(iv)%arr(cg_c%is  :cg_c%ie,     cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
+              + P1 * cg_c%q(iv)%arr(cg_c%is+1:cg_c%ie+1,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
+              + P2 * cg_c%q(iv)%arr(cg_c%is+2:cg_c%ie+2,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)
+
+         cg_f%mg%prolong_xy(           cg_f%is:cg_f%ie, cg_f%js  :cg_f%je-1:2, cg_c%ks-2:cg_c%ke+2) = &    ! y-odd cells
+              + P2 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js-2:cg_c%je-2,   cg_c%ks-2:cg_c%ke+2)   &
+              + P1 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js-1:cg_c%je-1,   cg_c%ks-2:cg_c%ke+2)   &
+              + P0 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js  :cg_c%je,     cg_c%ks-2:cg_c%ke+2)   &
+              + P_1* cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js+1:cg_c%je+1,   cg_c%ks-2:cg_c%ke+2)   &
+              + P_2* cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js+2:cg_c%je+2,   cg_c%ks-2:cg_c%ke+2)
+         cg_f%mg%prolong_xy(           cg_f%is:cg_f%ie, cg_f%js+1:cg_f%je:2,   cg_c%ks-2:cg_c%ke+2) = &    ! y-even cells
+              + P_2* cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js-2:cg_c%je-2,   cg_c%ks-2:cg_c%ke+2)   &
+              + P_1* cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js-1:cg_c%je-1,   cg_c%ks-2:cg_c%ke+2)   &
+              + P0 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js  :cg_c%je,     cg_c%ks-2:cg_c%ke+2)   &
+              + P1 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js+1:cg_c%je+1,   cg_c%ks-2:cg_c%ke+2)   &
+              + P2 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js+2:cg_c%je+2,   cg_c%ks-2:cg_c%ke+2)
+
+         cg_f%q(iv)%arr(                cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_f%ks  :cg_f%ke-1:2) = &   ! z-odd cells
+              + P2 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-2:cg_c%ke-2  )   &
+              + P1 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-1:cg_c%ke-1  )   &
+              + P0 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks  :cg_c%ke    )   &
+              + P_1* cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+1:cg_c%ke+1  )   &
+              + P_2* cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+2:cg_c%ke+2  )
+         cg_f%q(iv)%arr(                cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_f%ks+1:cg_f%ke:2  ) = &   ! z-even cells
+              + P_2* cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-2:cg_c%ke-2  )   &
+              + P_1* cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-1:cg_c%ke-1  )   &
+              + P0 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks  :cg_c%ke    )   &
+              + P1 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+1:cg_c%ke+1  )   &
+              + P2 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+2:cg_c%ke+2  )
+      endif
+
+   end subroutine prolong_level_hord
 
 end module multigridbasefuncs

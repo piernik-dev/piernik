@@ -87,10 +87,11 @@ module multigrid_gravity
    logical            :: fft_patient                                  !< Spend more time in init_multigrid to find faster fft plan
    logical            :: multidim_code_3D                             !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
    character(len=cbuff_len) :: grav_bnd_str                           !< Type of gravitational boundary conditions.
+   logical            :: require_FFT                                  !< .true. if we use FFT solver anywhere (and need face prolongation)
 
    ! boundaries
-   integer                     :: grav_bnd                            !< boundary type for computational domain
-   !integer                     :: grav_extbnd_mode                    !< external boundary mode
+   integer            :: grav_bnd                                     !< boundary type for computational domain
+   !integer           :: grav_extbnd_mode                             !< external boundary mode
 
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
 
@@ -141,7 +142,7 @@ contains
 !! <tr><td>nsmoof                </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_gravity::nsmoof                </td></tr>
 !! <tr><td>ord_laplacian         </td><td>2      </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_laplacian         </td></tr>
 !! <tr><td>ord_time_extrap       </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_gravity::ord_time_extrap       </td></tr>
-!! <tr><td>prefer_rbgs_relaxation</td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::prefer_rbgs_relaxation</td></tr>
+!! <tr><td>prefer_rbgs_relaxation</td><td>.true. </td><td>logical        </td><td>\copydoc multigrid_gravity::prefer_rbgs_relaxation</td></tr>
 !! <tr><td>base_no_fft           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::base_no_fft           </td></tr>
 !! <tr><td>fft_full_relax        </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::fft_full_relax        </td></tr>
 !! <tr><td>fft_patient           </td><td>.false.</td><td>logical        </td><td>\copydoc multigrid_gravity::fft_patient           </td></tr>
@@ -163,7 +164,7 @@ contains
       use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
-      use domain,        only: dom, is_uneven
+      use domain,        only: dom, is_uneven, is_multicg
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
       use mpisetup,      only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST
       use multigridvars, only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, single_base
@@ -208,8 +209,8 @@ contains
 
       use_point_monopole     = .false.
       trust_fft_solution     = .false.
-      base_no_fft            = .false.
-      prefer_rbgs_relaxation = .false.
+      base_no_fft            = is_multicg
+      prefer_rbgs_relaxation = .true. !> \warning it seems that FFT local solver is broken somewhere. ToDo: restore .false. as a default
       fft_full_relax         = .false.
       fft_patient            = .false.
       interp_pt2mom          = .false.
@@ -239,6 +240,11 @@ contains
             ! ord_prolong_mpole = 0
          else if (dom%geometry_type /= GEO_XYZ) then
             call die("[multigrid_gravity:init_multigrid_grav] non-cartesian geometry not implemented yet.")
+         endif
+
+         if (is_multicg .and. .not. base_no_fft) then
+            call warn("[multigrid_gravity:init_multigrid_grav] base_no_fft set to .true. for multicg configuration")
+            base_no_fft = .true.
          endif
 
          rbuff(1) = norm_tol
@@ -396,7 +402,7 @@ contains
 
       use constants,     only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n
       use dataio_pub,    only: die, warn
-      use domain,        only: dom, is_multicg
+      use domain,        only: dom
       use gc_list,       only: cg_list_element
       use cg_list_lev,   only: cg_list_level
       use grid,          only: leaves, all_cg
@@ -421,10 +427,6 @@ contains
          coarsen_multipole = 0
          if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] multipole coarsening on uneven domains or with cdd%comm3d == MPI_COMM_NULL is not implemented yet.")
       endif
-
-      if (is_multicg) call die("[multigrid_gravity:init_multigrid_grav_post] multicg not implemented") ! nontrivial
-
-      call mpi_multigrid_prep_grav !supplement to mpi_multigrid_prep
 
       ! solution recycling
       ord_time_extrap = min(nold_max-1, max(-1, ord_time_extrap))
@@ -503,6 +505,8 @@ contains
          enddo
       endif
 
+      require_FFT = .false.
+
       ! FFT solver storage and data
       curl => base
       do while (associated(curl))
@@ -514,6 +518,8 @@ contains
             cg%mg%plani = 0
 
             if (cg%mg%fft_type /= fft_none) then
+
+               require_FFT = .true.
 
                if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
 
@@ -528,7 +534,7 @@ contains
 
                if (allocated(cg%mg%Green3D) .or. allocated(cg%mg%src)) call die("[multigrid_gravity:init_multigrid_grav_post] Green3D or src arrays already allocated")
                allocate(cg%mg%Green3D(cg%mg%nxc, cg%nyb, cg%nzb))
-               allocate(cg%mg%src    (cg%nxb, cg%nyb, cg%nzb))
+               allocate(cg%mg%src    (cg%nxb,    cg%nyb, cg%nzb))
 
                if (allocated(kx)) deallocate(kx)
                if (allocated(ky)) deallocate(ky)
@@ -594,6 +600,8 @@ contains
          curl => curl%finer
       enddo
 
+      if (require_FFT) call mpi_multigrid_prep_grav !supplement to mpi_multigrid_prep
+
       cgl => roof%first
       do while (associated(cgl))
          if (cgl%cg%mg%fft_type == fft_none .and. trust_fft_solution) then
@@ -644,7 +652,10 @@ contains
 !!$ ============================================================================
 !>
 !! \brief Set up communication for face prolongation
+!!
 !! \todo implement also prolongation of coarsened multipoles
+!!
+!! \todo move this to cg_list_level
 !<
 
    subroutine mpi_multigrid_prep_grav
@@ -654,10 +665,9 @@ contains
       use domain,        only: dom
       use cg_list_lev,   only: cg_list_level
       use gc_list,       only: cg_list_element
-      use grid,          only: is_overlap
-      use grid_cont,     only: pr_segment, grid_container
+      use grid_cont,     only: pr_segment, grid_container, is_overlap
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req, req
-      use multigridvars, only: base, ord_prolong_face_norm, is_external, need_general_pf
+      use multigridvars, only: base, ord_prolong_face_norm, need_general_pf
 #ifdef DEBUG
       use constants,     only: two
       use piernikdebug,  only: aux_R
@@ -726,59 +736,61 @@ contains
                   hl = LO+HI-lh
 
                   ! find coarse target for receiving data to be prolonged
-                  if (associated(curl%coarser) .and. .not. is_external(d, lh)) then
+                  if (associated(curl%coarser)) then
                      cgl => curl%first
                      do while (associated(cgl))
                         cg => cgl%cg
-                        ijks(:) = cg%ijkse(:, LO) - cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+nb - off(:))
-                        procmask(:) = 0
-                        ! two layers of cells are required for even locations (+ two layers per each interpolation order)
-                        ! one layer of cells is required for odd locations (the local domain face is exactly at the centers of coarse cells)
-                        coarsened(:, :) = cg%my_se(:, :)/2
-                        coarsened(d, hl) = coarsened(d, lh)
-                        select case (lh)
-                           case (LO)
-                              if (mod(cg%off(d),    2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
-                           case (HI)
-                              if (mod(cg%h_cor1(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
-                        end select
+                        if (.not. cg%ext_bnd(d, lh)) then
+                           ijks(:) = cg%ijkse(:, LO) - cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+nb - off(:))
+                           procmask(:) = 0
+                           ! two layers of cells are required for even locations (+ two layers per each interpolation order)
+                           ! one layer of cells is required for odd locations (the local domain face is exactly at the centers of coarse cells)
+                           coarsened(:, :) = cg%my_se(:, :)/2
+                           coarsened(d, hl) = coarsened(d, lh)
+                           select case (lh)
+                              case (LO)
+                                 if (mod(cg%off(d),    2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
+                              case (HI)
+                                 if (mod(cg%h_cor1(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
+                           end select
 
-                        do j = FIRST, LAST
-                           if (ubound(curl%coarser%pse(j)%sel, dim=1) > 0) then
-                              if (is_overlap(coarsened(:,:), curl%coarser%pse(j)%sel(1, :, :), per)) procmask(j) = 1
-                           endif
-                        enddo
-                        allocate(cg%mg%pfc_tgt(d, lh)%seg(count(procmask(:) /= 0)))
-
-                        g = 0
-                        do j = FIRST, LAST
-                           if (procmask(j) /= 0) then
-                              g = g + 1
-                              if (.not. allocated(cg%mg%pfc_tgt(d, lh)%seg) .or. g>ubound(cg%mg%pfc_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pfc_tgt g>")
-                              seg => cg%mg%pfc_tgt(d, lh)%seg(g)
-                              if (allocated(seg%buf)) then
-                                 call warn("mg:mmpg o seg%buf a a")
-                                 deallocate(seg%buf)
+                           do j = FIRST, LAST
+                              if (ubound(curl%coarser%pse(j)%sel, dim=1) > 0) then
+                                 if (is_overlap(coarsened(:,:), curl%coarser%pse(j)%sel(1, :, :), per)) procmask(j) = 1
                               endif
-                              seg%proc = j
-                              ! find cross-section of own face segment with refined coarse segment
-                              b_layer(:, :) = cg%my_se(:, :)
-                              b_layer(d, hl) = b_layer(d, lh)
-                              !b_layer(d, lh) = b_layer(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
+                           enddo
+                           allocate(cg%mg%pfc_tgt(d, lh)%seg(count(procmask(:) /= 0)))
 
-                              where (.not. dmask(:)) ! find extents perpendicular to d
-                                 seg%se(:, LO) = max(b_layer(:, LO), curl%coarser%pse(j)%sel(1, :, LO)*2  )
-                                 seg%se(:, HI) = min(b_layer(:, HI), curl%coarser%pse(j)%sel(1, :, HI)*2+1)
-                              endwhere
-                              seg%se(d, :) = b_layer(d, :)
-                              allocate(seg%buf(seg%se(xdim, HI)/2-seg%se(xdim, LO)/2 + 1, &
-                                   &           seg%se(ydim, HI)/2-seg%se(ydim, LO)/2 + 1, &
-                                   &           seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
+                           g = 0
+                           do j = FIRST, LAST
+                              if (procmask(j) /= 0) then
+                                 g = g + 1
+                                 if (.not. allocated(cg%mg%pfc_tgt(d, lh)%seg) .or. g>ubound(cg%mg%pfc_tgt(d, lh)%seg, dim=1)) call die("mg:mmpg pfc_tgt g>")
+                                 seg => cg%mg%pfc_tgt(d, lh)%seg(g)
+                                 if (allocated(seg%buf)) then
+                                    call warn("mg:mmpg o seg%buf a a")
+                                    deallocate(seg%buf)
+                                 endif
+                                 seg%proc = j
+                                 ! find cross-section of own face segment with refined coarse segment
+                                 b_layer(:, :) = cg%my_se(:, :)
+                                 b_layer(d, hl) = b_layer(d, lh)
+                                 !b_layer(d, lh) = b_layer(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
 
-                              seg%se(:, LO) = seg%se(:, LO) - cg%off(:) !+ ijks(:)
-                              seg%se(:, HI) = seg%se(:, HI) - cg%off(:) !+ ijks(:)
-                           endif
-                        enddo
+                                 where (.not. dmask(:)) ! find extents perpendicular to d
+                                    seg%se(:, LO) = max(b_layer(:, LO), curl%coarser%pse(j)%sel(1, :, LO)*2  )
+                                    seg%se(:, HI) = min(b_layer(:, HI), curl%coarser%pse(j)%sel(1, :, HI)*2+1)
+                                 endwhere
+                                 seg%se(d, :) = b_layer(d, :)
+                                 allocate(seg%buf(seg%se(xdim, HI)/2-seg%se(xdim, LO)/2 + 1, &
+                                      &           seg%se(ydim, HI)/2-seg%se(ydim, LO)/2 + 1, &
+                                      &           seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
+
+                                 seg%se(:, LO) = seg%se(:, LO) - cg%off(:) !+ ijks(:)
+                                 seg%se(:, HI) = seg%se(:, HI) - cg%off(:) !+ ijks(:)
+                              endif
+                           enddo
+                        endif
 
                         cgl => cgl%nxt
                      enddo
@@ -913,7 +925,7 @@ contains
             io_tgt(1:nseg) = [ cgl%cg%mg%pfc_tgt, cgl%cg%mg%pff_tgt ]
             do ib = 1, nseg
                if (allocated(io_tgt(ib)%seg)) then
-                  do g = 1, ubound(io_tgt(ib)%seg, dim=1)
+                  do g = lbound(io_tgt(ib)%seg, dim=1), ubound(io_tgt(ib)%seg, dim=1)
                      if (allocated(io_tgt(ib)%seg(g)%buf)) deallocate(io_tgt(ib)%seg(g)%buf)
                      if (allocated(io_tgt(ib)%seg(g)%f_lay)) deallocate(io_tgt(ib)%seg(g)%f_lay)
                   enddo
@@ -1043,13 +1055,12 @@ contains
 #endif /* __INTEL_COMPILER */
       use constants,          only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,         only: die
-      use domain,             only: dom, is_multicg
+      use domain,             only: dom
       use gc_list,            only: cg_list_element
       use grid,               only: leaves
       use grid_cont,          only: grid_container
-      use multigridbasefuncs, only: subtract_average
       use multigridhelpers,   only: set_dirty, check_dirty
-      use multigridvars,      only: roof, source, is_external, bnd_periodic, bnd_dirichlet, bnd_givenval
+      use multigridvars,      only: roof, source, bnd_periodic, bnd_dirichlet, bnd_givenval
       use units,              only: fpiG
 #ifdef JEANS_PROBLEM
       use problem_pub,        only: jeans_d0, jeans_mode ! hack for tests
@@ -1064,15 +1075,13 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (is_multicg) call die("[multigrid_gravity:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial cg_list_level, is_external
-
       call set_dirty(source)
 
       if (present(i_all_dens)) then
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_all_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke),1)
+            cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_all_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
             cgl => cgl%nxt
          enddo
       else
@@ -1083,64 +1092,70 @@ contains
       cg => leaves%first%cg
       select case (grav_bnd)
          case (bnd_periodic) ! probably also bnd_neumann
-            call subtract_average(roof, source) !> \warning leaves will be more appropriate
+            call leaves%subtract_average(source)
          case (bnd_dirichlet)
 #ifdef JEANS_PROBLEM
-            if (jeans_mode == 1) roof%first%cg%q(source)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
-                 &               roof%first%cg%q(source)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) - fpiG * jeans_d0 ! remove density bias
+            if (jeans_mode == 1) call leaves%q_add_val(source, - fpiG * jeans_d0) ! remove density bias
 #endif /* JEANS_PROBLEM */
          case (bnd_givenval) ! convert potential into a layer of imaginary mass (subtract second derivative normal to computational domain boundary)
-            if (is_external(xdim, LO)) then
-               fac = 2. * roof%first%cg%idx2 / fpiG
-               if (dom%geometry_type == GEO_RPZ .and. roof%first%cg%x(roof%first%cg%is) /= 0.) fac = fac - 1./(roof%first%cg%dx * roof%first%cg%x(roof%first%cg%is) * fpiG) !> BEWARE is it roof%first%cg%x(ie), roof%first%cg%x(ie+1) or something in the middle?
-               roof%first%cg%q(source)%arr         (roof%first%cg%is, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
-                    & roof%first%cg%q(source)%arr  (roof%first%cg%is, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) - &
-                    & roof%first%cg%mg%bnd_x(                  roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke, LO) * fac
-            endif
-            if (is_external(xdim, HI)) then
-               fac = 2. * roof%first%cg%idx2 / fpiG
-               if (dom%geometry_type == GEO_RPZ .and. roof%first%cg%x(roof%first%cg%ie) /= 0.) fac = fac - 1./(roof%first%cg%dx * roof%first%cg%x(roof%first%cg%ie) * fpiG) !> BEWARE is it roof%first%cg%x(ie), roof%first%cg%x(ie+1) or something in the middle?
-               roof%first%cg%q(source)%arr         (roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
-                    & roof%first%cg%q(source)%arr  (roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) - &
-                    & roof%first%cg%mg%bnd_x(                  roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke, HI) * fac
-            endif
-            if (is_external(ydim, LO)) then
-               if (dom%geometry_type == GEO_RPZ) then
-                  do i = roof%first%cg%is, roof%first%cg%ie
-                     if (roof%first%cg%x(i) /= 0.) then
-                        roof%first%cg%q(source)%arr         (i, roof%first%cg%js, roof%first%cg%ks:roof%first%cg%ke) = &
-                             & roof%first%cg%q(source)%arr  (i, roof%first%cg%js, roof%first%cg%ks:roof%first%cg%ke) - &
-                             & roof%first%cg%mg%bnd_y(i,                   roof%first%cg%ks:roof%first%cg%ke, LO) * 2. * roof%first%cg%idy2 / fpiG / roof%first%cg%x(i)**2
-                     endif
-                  enddo
-               else
-                  roof%first%cg%q(source)%arr         (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js, roof%first%cg%ks:roof%first%cg%ke) = &
-                       & roof%first%cg%q(source)%arr  (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js, roof%first%cg%ks:roof%first%cg%ke) - &
-                       & roof%first%cg%mg%bnd_y(roof%first%cg%is:roof%first%cg%ie,                   roof%first%cg%ks:roof%first%cg%ke, LO) * 2. * roof%first%cg%idy2 / fpiG
+
+            cgl => leaves%first
+            do while (associated(cgl))
+               cg => cgl%cg
+               if (cg%ext_bnd(xdim, LO)) then
+                  fac = 2. * cg%idx2 / fpiG
+                  if (dom%geometry_type == GEO_RPZ .and. cg%x(cg%is) /= 0.) fac = fac - 1./(cg%dx * cg%x(cg%is) * fpiG) !> BEWARE is it cg%x(ie), cg%x(ie+1) or something in the middle?
+                  cg%q(source)%arr       (cg%is, cg%js:cg%je, cg%ks:cg%ke) = &
+                       & cg%q(source)%arr(cg%is, cg%js:cg%je, cg%ks:cg%ke) - &
+                       & cg%mg%bnd_x(            cg%js:cg%je, cg%ks:cg%ke, LO) * fac
                endif
-            endif
-            if (is_external(ydim, HI)) then
-               if (dom%geometry_type == GEO_RPZ) then
-                  do i = roof%first%cg%is, roof%first%cg%ie
-                     if (roof%first%cg%x(i) /= 0.) then
-                        roof%first%cg%q(source)%arr         (i, roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
-                             & roof%first%cg%q(source)%arr  (i, roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) - &
-                             & roof%first%cg%mg%bnd_y(i,                   roof%first%cg%ks:roof%first%cg%ke, HI) * 2. * roof%first%cg%idy2 / fpiG / roof%first%cg%x(i)**2
-                     endif
-                  enddo
-               else
-                  roof%first%cg%q(source)%arr         (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = &
-                       & roof%first%cg%q(source)%arr  (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) - &
-                       & roof%first%cg%mg%bnd_y(roof%first%cg%is:roof%first%cg%ie,                   roof%first%cg%ks:roof%first%cg%ke, HI) * 2. * roof%first%cg%idy2 / fpiG
+               if (cg%ext_bnd(xdim, HI)) then
+                  fac = 2. * cg%idx2 / fpiG
+                  if (dom%geometry_type == GEO_RPZ .and. cg%x(cg%ie) /= 0.) fac = fac - 1./(cg%dx * cg%x(cg%ie) * fpiG) !> BEWARE is it cg%x(ie), cg%x(ie+1) or something in the middle?
+                  cg%q(source)%arr       (cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
+                       & cg%q(source)%arr(cg%ie, cg%js:cg%je, cg%ks:cg%ke) - &
+                       & cg%mg%bnd_x(            cg%js:cg%je, cg%ks:cg%ke, HI) * fac
                endif
-            endif
-            if (is_external(zdim, LO)) roof%first%cg%q(source)%arr  (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks) = &
-                 &                     roof%first%cg%q(source)%arr  (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks) - &
-                 &                     roof%first%cg%mg%bnd_z(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je,          LO) * 2. * roof%first%cg%idz2 / fpiG
-            if (is_external(zdim, HI)) roof%first%cg%q(source)%arr  (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ke) = &
-                 &                     roof%first%cg%q(source)%arr  (roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ke) - &
-                 &                     roof%first%cg%mg%bnd_z(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je,          HI) * 2. * roof%first%cg%idz2 / fpiG
-            !> \todo compactify the above mess
+               if (cg%ext_bnd(ydim, LO)) then
+                  if (dom%geometry_type == GEO_RPZ) then
+                     do i = cg%is, cg%ie
+                        if (cg%x(i) /= 0.) then
+                           cg%q(source)%arr       (i, cg%js, cg%ks:cg%ke) = &
+                                & cg%q(source)%arr(i, cg%js, cg%ks:cg%ke) - &
+                                & cg%mg%bnd_y(i,             cg%ks:cg%ke, LO) * 2. * cg%idy2 / fpiG / cg%x(i)**2
+                        endif
+                     enddo
+                  else
+                     cg%q(source)%arr       (cg%is:cg%ie, cg%js, cg%ks:cg%ke) = &
+                          & cg%q(source)%arr(cg%is:cg%ie, cg%js, cg%ks:cg%ke) - &
+                          & cg%mg%bnd_y     (cg%is:cg%ie,        cg%ks:cg%ke, LO) * 2. * cg%idy2 / fpiG
+                  endif
+               endif
+               if (cg%ext_bnd(ydim, HI)) then
+                  if (dom%geometry_type == GEO_RPZ) then
+                     do i = cg%is, cg%ie
+                        if (cg%x(i) /= 0.) then
+                           cg%q(source)%arr       (i, cg%je, cg%ks:cg%ke) = &
+                                & cg%q(source)%arr(i, cg%je, cg%ks:cg%ke) - &
+                                & cg%mg%bnd_y     (i,        cg%ks:cg%ke, HI) * 2. * cg%idy2 / fpiG / cg%x(i)**2
+                        endif
+                     enddo
+                  else
+                     cg%q(source)%arr       (cg%is:cg%ie, cg%je, cg%ks:cg%ke) = &
+                          & cg%q(source)%arr(cg%is:cg%ie, cg%je, cg%ks:cg%ke) - &
+                          & cg%mg%bnd_y     (cg%is:cg%ie,        cg%ks:cg%ke, HI) * 2. * cg%idy2 / fpiG
+                  endif
+               endif
+               if (cg%ext_bnd(zdim, LO)) cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks) = &
+                    &                    cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks) - &
+                    &                    cg%mg%bnd_z     (cg%is:cg%ie, cg%js:cg%je,          LO) * 2. * cg%idz2 / fpiG
+               if (cg%ext_bnd(zdim, HI)) cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ke) = &
+                    &                    cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ke) - &
+                    &                    cg%mg%bnd_z     (cg%is:cg%ie, cg%js:cg%je,          HI) * 2. * cg%idz2 / fpiG
+               !> \todo compactify the above mess
+               cgl => cgl%nxt
+            enddo
+
          case default
             call die("[multigrid_gravity:init_source] Unknown boundary type")
       end select
@@ -1266,7 +1281,6 @@ contains
       use grid,               only: leaves
       use mpisetup,           only: master, nproc
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump
-      use multigridbasefuncs, only: norm_sq, restrict_all, subtract_average
       use multigridvars,      only: roof, base, source, solution, correction, defect, verbose_vcycle, bnd_periodic, stdout, tot_ts, ts
       use timer,              only: set_timer
 
@@ -1302,7 +1316,8 @@ contains
          call init_solution(history)
       endif
 
-      call norm_sq(source, norm_rhs)
+      norm_lhs = 0.
+      norm_rhs = leaves%norm_sq(source)
       norm_old = norm_rhs
       norm_lowest = norm_rhs
 
@@ -1324,11 +1339,11 @@ contains
       do v = 0, max_cycles
 
          call set_dirty(defect)
-         call residual(roof, source, solution, defect)
-         if (grav_bnd == bnd_periodic) call subtract_average(roof, defect)
-         call check_dirty(roof, defect, "residual")
+         call residual(roof, source, solution, defect) !leaves
+         if (grav_bnd == bnd_periodic) call leaves%subtract_average(defect)
+         call check_dirty(roof, defect, "residual") !leaves
 
-         call norm_sq(defect, norm_lhs)
+         norm_lhs = leaves%norm_sq(defect)
          ts = set_timer("multigrid")
          tot_ts = tot_ts + ts
          if (master .and. verbose_vcycle) then
@@ -1378,7 +1393,7 @@ contains
          norm_old = norm_lhs
 
          ! the Huang-Greengard V-cycle
-         call restrict_all(defect)
+         call roof%restrict_all(defect)
 
          ! call set_dirty(correction)
          call base%set_q_value(correction, 0.)
@@ -1690,7 +1705,6 @@ contains
             call check_dirty(curl, soln, "approx_soln soln-")
             call approximate_solution_rbgs(curl, src, soln)
          endif
-
       endif
 
       if (prefer_rbgs_relaxation .and. soln == correction .and. .not. associated(curl, roof)) call prolong_level(curl, correction)
@@ -1746,13 +1760,13 @@ contains
       do n = 1, RED_BLACK*nsmoo
          call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_antimirror) ! no corners are required here
 
+         if (dirty_debug) then
+            write(dirty_label, '(a,i5)')"relax soln- smoo=", n
+            call check_dirty(curl, soln, dirty_label)
+         endif
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
-            if (dirty_debug) then
-               write(dirty_label, '(a,i5)')"relax soln- smoo=", n
-               call check_dirty(curl, soln, dirty_label)
-            endif
 
             ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
             ! do n = 1, nsmoo
@@ -2120,26 +2134,30 @@ contains
 
    end subroutine make_face_boundaries
 
-!!$ ============================================================================
 !>
-!! \brief Solve finest level if allowed (typically on single CPU)
+!! \brief Solve finest level if allowed (single cg and single thread)
 !<
 
    subroutine fft_solve_roof
 
       use dataio_pub,    only: die
       use domain,        only: is_multicg
+      use grid_cont,     only: grid_container
       use multigridvars, only: roof, source, solution
 
       implicit none
 
-      if (is_multicg) call die("[multigrid_gravity:fft_solve_roof] multicg not supported")
+      type(grid_container), pointer :: cg
 
-      if (roof%first%cg%mg%fft_type == fft_none) return
+      if (is_multicg) call die("[multigrid_gravity:fft_solve_roof] multicg not possible")
 
-      roof%first%cg%mg%src(:, :, :) = roof%first%cg%q(source)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke)
+      cg => roof%first%cg
+
+      if (cg%mg%fft_type == fft_none) return
+
+      cg%mg%src(:, :, :) = cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
       call fft_convolve(roof)
-      roof%first%cg%q(solution)%arr(roof%first%cg%is:roof%first%cg%ie, roof%first%cg%js:roof%first%cg%je, roof%first%cg%ks:roof%first%cg%ke) = roof%first%cg%mg%src(:, :, :)
+      cg%q(solution)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%mg%src(:, :, :)
 
    end subroutine fft_solve_roof
 

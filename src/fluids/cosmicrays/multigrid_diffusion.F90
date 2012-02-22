@@ -346,25 +346,21 @@ contains
    subroutine init_source(cr_id)
 
 #if defined(__INTEL_COMPILER)
-      use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_list_lev,        only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use dataio_pub,         only: die
-      use domain,             only: is_multicg
       use grid,               only: leaves
       use gc_list,            only: cg_list_element
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_crs
       use multigridvars,      only: roof, source, defect, correction
-      use multigridbasefuncs, only: norm_sq
-      use multigridhelpers,   only: set_dirty, check_dirty
+      use multigridhelpers,   only: set_dirty, check_dirty, dirty_label
 
       implicit none
 
       integer, intent(in) :: cr_id !< CR component index
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-
-      if (is_multicg) call die("[multigrid_diffusion:init_source] multiple grid pieces per procesor not implemented yet") !nontrivial cg_list_level
 
       call set_dirty(source)
       call set_dirty(correction)
@@ -375,16 +371,17 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
             cg%q(correction)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. -1./diff_theta) * cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            cg%q(defect)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)     =     -1./diff_theta  * cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            call residual(roof, defect, correction, source, cr_id)
+            cg%q(    defect)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) =     -1./diff_theta  * cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
             cgl => cgl%nxt
          enddo
+         call residual(roof, defect, correction, source, cr_id)
       else
          call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
       endif
-      call check_dirty(roof, source, "init source")
+      write(dirty_label, '(a,i2)')"init source#", cr_id
+      call check_dirty(roof, source, dirty_label)
 
-      call norm_sq(source, vstat%norm_rhs)
+      vstat%norm_rhs = leaves%norm_sq(source)
 
    end subroutine init_source
 
@@ -398,8 +395,6 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use dataio_pub,       only: die
-      use domain,           only: is_multicg
       use grid,             only: leaves
       use gc_list,          only: cg_list_element
       use grid_cont,        only: grid_container
@@ -412,8 +407,6 @@ contains
       integer, intent(in) :: cr_id !< CR component index
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-
-      if (is_multicg) call die("[multigrid_diffusion:init_solution] multiple grid pieces per procesor not implemented yet") !nontrivial cg_list_level
 
       call set_dirty(solution)
       cgl => leaves%first
@@ -436,16 +429,14 @@ contains
    subroutine init_b
 
       use constants,          only: I_ONE, xdim, zdim
-      use dataio_pub,         only: die
-      use domain,             only: dom, is_multicg
+      use domain,             only: dom
       use grid,               only: leaves
       use gc_list,            only: cg_list_element
       use cg_list_lev,        only: cg_list_level
       use grid_cont,          only: grid_container
-      use multigridbasefuncs, only: restrict_all
       use multigridhelpers,   only: set_dirty, check_dirty, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: base, extbnd_mirror
+      use multigridvars,      only: base, roof, extbnd_mirror
 
       implicit none
 
@@ -454,18 +445,16 @@ contains
       type(grid_container), pointer :: cg
       type(cg_list_level), pointer :: curl
 
-      if (is_multicg) call die("[multigrid_diffusion:init_b] multiple grid pieces per procesor not implemented yet") !nontrivial cg_list_level
-
       do ib = xdim, zdim
          call set_dirty(idiffb(ib))
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
             cg%q(idiffb(ib))%arr(cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z) = &
-                 cg%b(ib, cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z: cg%ke+dom%D_z)
+                 & cg%b(ib,      cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z)
             cgl => cgl%nxt
          enddo
-         call restrict_all(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
+         call roof%restrict_all(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
 
          curl => base
          do while (associated(curl%finer)) ! from base to one level below roof
@@ -474,10 +463,10 @@ contains
             !! |deprecated BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             !! the problem is that the cg%b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
             !<
-            write(dirty_label, '(a,i1)')"init b",ib
-            call check_dirty(curl, idiffb(ib), dirty_label)
             curl => curl%finer
          enddo
+         write(dirty_label, '(a,i1)')"init b",ib
+         call check_dirty(curl, idiffb(ib), dirty_label)
       enddo
 
    end subroutine init_b
@@ -496,7 +485,7 @@ contains
       use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_crs
       use mpisetup,           only: master
-      use multigridbasefuncs, only: norm_sq, restrict_all, prolong_level
+      use multigridbasefuncs, only: prolong_level
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, dirty_label
       use multigridvars,      only: source, defect, solution, correction, base, roof, ts, tot_ts
       use timer,              only: set_timer
@@ -520,7 +509,8 @@ contains
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       do_ascii_dump = do_ascii_dump .or. dump_every_step
 
-      call norm_sq(solution, norm_rhs)
+      norm_lhs = 0.
+      norm_rhs = leaves%norm_sq(solution)
       norm_old = norm_rhs
 
       do v = 0, max_cycles
@@ -528,7 +518,7 @@ contains
          call set_dirty(defect)
 
          call residual(roof, source, solution, defect, cr_id)
-         call norm_sq(defect, norm_lhs)
+         norm_lhs = leaves%norm_sq(defect)
          ts = set_timer("multigrid_diffusion")
          tot_ts = tot_ts + ts
 
@@ -556,7 +546,7 @@ contains
             endif
          endif
 
-         call restrict_all(defect)
+         call roof%restrict_all(defect)
 
          !call set_dirty(correction)
          call base%set_q_value(correction, 0.)
@@ -589,8 +579,8 @@ contains
       vstat%norm_final = norm_lhs/norm_rhs
       call vstat%brief_v_log
 
-      call norm_sq(solution, norm_rhs)
-      call norm_sq(defect, norm_lhs)
+      norm_rhs = leaves%norm_sq(solution)
+      norm_lhs = leaves%norm_sq(defect)
 !     Do we need to take care of boundaries here?
 !      call mpi_multigrid_bnd(roof, solution, I_ONE, diff_extbnd)
 !      cg%u(iarr_crs(cr_id), is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z) = cg%q(solution)%arr(cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z)
@@ -612,48 +602,41 @@ contains
 !! OPT: b_par/perp and magb are invariants of the solution and can be precomputed in init_b (requires additional 4*ndim temporary arrays)
 !<
 
-   subroutine diff_flux(crdim, im, soln, curl, cr_id, Keff)
+   subroutine diff_flux(crdim, im, soln, cg, cr_id, Keff)
 
       use constants,      only: xdim, ydim, zdim, ndims
-      use dataio_pub,     only: die
-      use domain,         only: dom, is_multicg
-      use cg_list_lev,    only: cg_list_level
-      use grid,           only: leaves
+      use domain,         only: dom
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
 
       implicit none
 
-      integer(kind=4),              intent(in)  :: crdim        !< direction in which we calculate flux
-      integer, dimension(ndims),    intent(in)  :: im           !< [first cell index, second cell index, third cell index]
-      integer,                                   intent(in)  :: soln         !< multigrid variable to differentiate
-      type(cg_list_level), pointer, intent(in)  :: curl         !< level on which differentiate
-      integer,                      intent(in)  :: cr_id        !< CR component index
-      real, optional,               intent(out) :: Keff         !< effective diffusion coefficient for relaxation
+      integer(kind=4),               intent(in)  :: crdim        !< direction in which we calculate flux
+      integer, dimension(ndims),     intent(in)  :: im           !< [first cell index, second cell index, third cell index]
+      integer,                       intent(in)  :: soln         !< multigrid variable to differentiate
+      type(grid_container), pointer, intent(in)  :: cg           !< level on which differentiate
+      integer,                       intent(in)  :: cr_id        !< CR component index
+      real, optional,                intent(out) :: Keff         !< effective diffusion coefficient for relaxation
 
       real                                   :: magb, fcrdif, kbm
       real                                   :: b_par, b_perp, d_par, db
       integer, dimension(ndims)              :: ilm, imp, imm, ilmp, ilmm
       integer(kind=4)                        :: idir
       logical, dimension(ndims)              :: present_not_crdim
-      type(grid_container), pointer          :: cg
 
       ilm(:) = im(:) ; ilm(crdim) = ilm(crdim) - 1
       present_not_crdim(:) = dom%has_dir(:) .and. ( [ xdim,ydim,zdim ] /= crdim )
 
-      cg => leaves%first%cg
-      if (is_multicg) call die("[multigrid_diffusion:diff_flux] multiple grid pieces per procesor not implemented yet") !nontrivial cg_list_level
-
       ! Assumes dom%has_dir(crdim)
-      !> \warning *curl%first%cg%idl(crdim) makes a difference
-      d_par = (curl%first%cg%q(soln)%arr(im(xdim), im(ydim), im(zdim)) - curl%first%cg%q(soln)%arr(ilm(xdim), ilm(ydim), ilm(zdim))) * curl%first%cg%idl(crdim)
+      !> \warning *cg%idl(crdim) makes a difference
+      d_par = (cg%q(soln)%arr(im(xdim), im(ydim), im(zdim)) - cg%q(soln)%arr(ilm(xdim), ilm(ydim), ilm(zdim))) * cg%idl(crdim)
       fcrdif = K_crs_perp(cr_id) * d_par
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
       if (K_crs_paral(cr_id) /= 0.) then
 
          b_perp = 0.
-         b_par = curl%first%cg%q(idiffb(crdim))%arr(im(xdim), im(ydim), im(zdim))
+         b_par = cg%q(idiffb(crdim))%arr(im(xdim), im(ydim), im(zdim))
          db = d_par * b_par
          magb = b_par**2
 
@@ -661,11 +644,11 @@ contains
             if (present_not_crdim(idir)) then
                imp(:) = im(:) ; imp(idir) = imp(idir) + 1 ; ilmp(:) = imp(:) ; ilmp(crdim) = ilmp(crdim) - 1
                imm(:) = im(:) ; imm(idir) = imm(idir) - 1 ; ilmm(:) = imm(:) ; ilmm(crdim) = ilmm(crdim) - 1
-               b_perp = sum(curl%first%cg%q(idiffb(crdim))%arr(ilm(xdim):imp(xdim), ilm(ydim):imp(ydim), ilm(zdim):imp(zdim)))*0.25
+               b_perp = sum(cg%q(idiffb(crdim))%arr(ilm(xdim):imp(xdim), ilm(ydim):imp(ydim), ilm(zdim):imp(zdim)))*0.25
                magb = magb + b_perp**2
-               !> \warning *curl%first%cg%idl(crdim) makes a difference
-               db = db + b_perp*((curl%first%cg%q(soln)%arr(ilmp(xdim), ilmp(ydim), ilmp(zdim)) + curl%first%cg%q(soln)%arr(imp(xdim), imp(ydim), imp(zdim))) - &
-                  &              (curl%first%cg%q(soln)%arr(ilmm(xdim), ilmm(ydim), ilmm(zdim)) + curl%first%cg%q(soln)%arr(imm(xdim), imm(ydim), imm(zdim)))) * 0.25 * curl%first%cg%idl(idir)
+               !> \warning *cg%idl(crdim) makes a difference
+               db = db + b_perp*((cg%q(soln)%arr(ilmp(xdim), ilmp(ydim), ilmp(zdim)) + cg%q(soln)%arr(imp(xdim), imp(ydim), imp(zdim))) - &
+                  &              (cg%q(soln)%arr(ilmm(xdim), ilmm(ydim), ilmm(zdim)) + cg%q(soln)%arr(imm(xdim), imm(ydim), imm(zdim)))) * 0.25 * cg%idl(idir)
             endif
          enddo
 
@@ -677,7 +660,7 @@ contains
 
       endif
 
-      cg%wa(im(xdim), im(ydim), im(zdim)) = fcrdif ! * diff_theta * dt / curl%first%cgdl(crdim) !> \warning *curl%first%cg%idl(crdim) makes a difference
+      cg%wa(im(xdim), im(ydim), im(zdim)) = fcrdif ! * diff_theta * dt / cg%dl(crdim) !> \warning *cg%idl(crdim) makes a difference
 
    end subroutine diff_flux
 
@@ -691,13 +674,12 @@ contains
    subroutine residual(curl, src, soln, def, cr_id)
 
       use constants,         only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
-      use dataio_pub,        only: die
-      use domain,            only: dom, is_multicg
+      use domain,            only: dom
       use cg_list_lev,       only: cg_list_level
+      use gc_list,           only: cg_list_element, ind_val
       use global,            only: dt
-      use grid,              only: leaves
       use grid_cont,         only: grid_container
-      use multigridhelpers,  only: check_dirty
+!      use multigridhelpers,  only: check_dirty
       use multigridmpifuncs, only: mpi_multigrid_bnd
 
       implicit none
@@ -708,41 +690,41 @@ contains
       integer,                      intent(in) :: def   !< index of defect in cg%q(:)
       integer,                      intent(in) :: cr_id !< CR component index
 
-      integer                         :: i, j, k
-      integer(kind=4)                 :: idir
-      integer, dimension(ndims)       :: iml, imh
-      type(grid_container), pointer   :: cg
-
-      cg => leaves%first%cg
-      if (is_multicg) call die("[multigrid_diffusion:residual] multiple grid pieces per procesor not implemented yet") !nontrivial cg_list_level
+      integer                        :: i, j, k
+      integer(kind=4)                :: idir
+      integer, dimension(ndims)      :: iml, imh
+      type(cg_list_element), pointer :: cgl
+      type(grid_container), pointer  :: cg
 
       call mpi_multigrid_bnd(curl, soln, I_ONE, diff_extbnd, .true.) ! corners are required for fluxes
 
-      do k = curl%first%cg%ks, curl%first%cg%ke
-         curl%first%cg%q(def)%arr     (curl%first%cg%is:curl%first%cg%ie, curl%first%cg%js:curl%first%cg%je, k)  =   &
-              curl%first%cg%q(soln)%arr(curl%first%cg%is:curl%first%cg%ie, curl%first%cg%js:curl%first%cg%je, k) -   &
-              curl%first%cg%q(src)%arr(curl%first%cg%is:curl%first%cg%ie, curl%first%cg%js:curl%first%cg%je, k)
-      enddo
+      call curl%q_lin_comb([ ind_val(soln, 1.), ind_val(src, -1.) ], def)
 
-      do idir = xdim, zdim
-         if (dom%has_dir(idir)) then
-            imh = curl%first%cg%ijkse(:,HI) ; imh(idir) = imh(idir) + 1
-            iml = curl%first%cg%ijkse(:,LO) ; iml(idir) = iml(idir) + 1
-            do k = curl%first%cg%ks, imh(zdim)
-               do j = curl%first%cg%js, imh(ydim)
-                  do i = curl%first%cg%is, imh(xdim)
-                     call diff_flux(idir, [i, j, k], soln, curl, cr_id)
+      cgl => curl%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         do idir = xdim, zdim
+            if (dom%has_dir(idir)) then
+               imh = cg%ijkse(:,HI) ; imh(idir) = imh(idir) + 1
+               iml = cg%ijkse(:,LO) ; iml(idir) = iml(idir) + 1
+               do k = cg%ks, imh(zdim)
+                  do j = cg%js, imh(ydim)
+                     do i = cg%is, imh(xdim)
+                        call diff_flux(idir, [i, j, k], soln, cg, cr_id)
+                     enddo
                   enddo
                enddo
-            enddo
-            curl%first%cg%q(def)%arr     (curl%first%cg%is  :curl%first%cg%ie,   curl%first%cg%js:curl%first%cg%je, curl%first%cg%ks:curl%first%cg%ke)    = &
-                 curl%first%cg%q(def)%arr(curl%first%cg%is  :curl%first%cg%ie,   curl%first%cg%js:curl%first%cg%je, curl%first%cg%ks:curl%first%cg%ke)    - &
-              (       cg%wa(iml(xdim):imh(xdim), iml(ydim):imh(ydim), iml(zdim):imh(zdim)) - &
-                      cg%wa(curl%first%cg%is  :curl%first%cg%ie,   curl%first%cg%js:curl%first%cg%je, curl%first%cg%ks:curl%first%cg%ke) ) * diff_theta * dt * curl%first%cg%idl(idir)
-         endif
+
+               cg%q(def)%arr     (cg%is    :cg%ie,     cg%js    :cg%je,     cg%ks    :cg%ke)     = &
+                    cg%q(def)%arr(cg%is    :cg%ie,     cg%js    :cg%je,     cg%ks    :cg%ke)     - &
+                    (       cg%wa(iml(xdim):imh(xdim), iml(ydim):imh(ydim), iml(zdim):imh(zdim)) - &
+                    &       cg%wa(cg%is    :cg%ie,     cg%js    :cg%je,     cg%ks    :cg%ke) ) * diff_theta * dt * cg%idl(idir)
+            endif
+         enddo
+         cgl => cgl%nxt
       enddo
 
-      call check_dirty(curl, def, "res def")
+!      call check_dirty(curl, def, "res def")
 
    end subroutine residual
 
@@ -758,11 +740,10 @@ contains
    subroutine approximate_solution(curl, src, soln, cr_id)
 
       use constants,         only: xdim, ydim, zdim, one, half, I_ONE, ndims
-      use dataio_pub,        only: die
-      use domain,            only: dom, is_multicg
+      use domain,            only: dom
       use cg_list_lev,       only: cg_list_level
+      use gc_list,           only: cg_list_element
       use global,            only: dt
-      use grid,              only: leaves
       use grid_cont,         only: grid_container
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: base, extbnd_donothing
@@ -779,29 +760,14 @@ contains
       integer                         :: n, i, j, k, i1, j1, k1, id, jd, kd, nsmoo
       integer(kind=4)                 :: idir
       integer, dimension(ndims)       :: im, ih
-      real,    dimension(ndims)       :: idl2
       real                            :: Keff1, Keff2, dLdu, temp
       type(grid_container), pointer   :: cg
-
-      idl2 = [curl%first%cg%idx2, curl%first%cg%idy2, curl%first%cg%idz2]
-      cg => leaves%first%cg
-      if (is_multicg) call die("[multigrid_diffusion:approximate_solution] multiple grid pieces per procesor not implemented yet") !nontrivial cg_list_level
+      type(cg_list_element), pointer  :: cgl
 
       if (associated(curl, base)) then
          nsmoo = nsmoob
       else
          nsmoo = nsmool
-      endif
-
-      i1 = curl%first%cg%is; id = 1 ! mv to multigridvars, init_multigrid
-      j1 = curl%first%cg%js; jd = 1
-      k1 = curl%first%cg%ks; kd = 1
-      if (dom%has_dir(xdim)) then
-         id = RED_BLACK
-      else if (dom%has_dir(ydim)) then
-         jd = RED_BLACK
-      else if (dom%has_dir(zdim)) then
-         kd = RED_BLACK
       endif
 
       do n = 1, RED_BLACK*nsmoo
@@ -811,36 +777,53 @@ contains
             call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_donothing, .true.)
          endif
 
-         if (kd == RED_BLACK) k1 = curl%first%cg%ks + mod(n, RED_BLACK)
-         do k = k1, curl%first%cg%ke, kd
-            if (jd == RED_BLACK) j1 = curl%first%cg%js + mod(n+k, RED_BLACK)
-            do j = j1, curl%first%cg%je, jd
-               if (id == RED_BLACK) i1 = curl%first%cg%is + mod(n+j+k, RED_BLACK)
-               do i = i1, curl%first%cg%ie, id
+         cgl => curl%first
+         do while (associated(cgl))
+            cg => cgl%cg
 
-                  temp = curl%first%cg%q(soln)%arr(i, j, k) - curl%first%cg%q(src)%arr(i, j, k)
-                  dLdu = 0.
+            i1 = cg%is; id = 1 ! mv to multigridvars, init_multigrid
+            j1 = cg%js; jd = 1
+            k1 = cg%ks; kd = 1
+            if (dom%has_dir(xdim)) then
+               id = RED_BLACK
+            else if (dom%has_dir(ydim)) then
+               jd = RED_BLACK
+            else if (dom%has_dir(zdim)) then
+               kd = RED_BLACK
+            endif
 
-                  im = [i, j, k]
+            if (kd == RED_BLACK) k1 = cg%ks + mod(n, RED_BLACK)
+            do k = k1, cg%ke, kd
+               if (jd == RED_BLACK) j1 = cg%js + mod(n+k, RED_BLACK)
+               do j = j1, cg%je, jd
+                  if (id == RED_BLACK) i1 = cg%is + mod(n+j+k, RED_BLACK)
+                  do i = i1, cg%ie, id
 
-                  do idir = xdim, zdim
-                     if (dom%has_dir(idir)) then
+                     temp = cg%q(soln)%arr(i, j, k) - cg%q(src)%arr(i, j, k)
+                     dLdu = 0.
 
-                        ih = im ; ih(idir) = ih(idir) + 1
-                        call diff_flux(idir, im, soln, curl, cr_id, Keff1)
-                        call diff_flux(idir, ih, soln, curl, cr_id, Keff2)
+                     im = [i, j, k]
 
-                        temp = temp - (cg%wa(ih(xdim), ih(ydim), ih(zdim)) - cg%wa(i, j, k)) * diff_theta * dt * curl%first%cg%idl(idir)
-                        dLdu = dLdu - 2 * (Keff1 + Keff2) * idl2(idir)
+                     do idir = xdim, zdim
+                        if (dom%has_dir(idir)) then
 
-                     endif
+                           ih = im ; ih(idir) = ih(idir) + 1
+                           call diff_flux(idir, im, soln, cg, cr_id, Keff1)
+                           call diff_flux(idir, ih, soln, cg, cr_id, Keff2)
+
+                           temp = temp - (cg%wa(ih(xdim), ih(ydim), ih(zdim)) - cg%wa(i, j, k)) * diff_theta * dt * cg%idl(idir)
+                           dLdu = dLdu - 2 * (Keff1 + Keff2) * cg%idl2(idir)
+
+                        endif
+                     enddo
+
+                     ! ToDo add an option to automagically fine-tune overrelax
+                     cg%q(soln)%arr(i, j, k) = cg%q(soln)%arr(i, j, k) - overrelax * temp/(one - half * diff_theta * dt * dLdu)
+
                   enddo
-
-                  ! ToDo add an option to automagically fine-tune overrelax
-                  curl%first%cg%q(soln)%arr(i, j, k) = curl%first%cg%q(soln)%arr(i, j, k) - overrelax * temp/(one - half * diff_theta * dt * dLdu)
-
                enddo
             enddo
+            cgl => cgl%nxt
          enddo
       enddo
 

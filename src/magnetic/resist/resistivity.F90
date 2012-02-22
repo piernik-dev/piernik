@@ -428,8 +428,8 @@ contains
          idml(:) = 1 + idm(:,etadir)
          cg%q(eta_i)%arr(:idmh(xdim),:idmh(ydim),:idmh(zdim)) = half*(cg%q(eta_i)%span([1,1,1],idmh) + cg%q(eta_i)%span(idml,int(cg%n_)))
 
-         do i1 = 1, ubound(cg%q(wcu_i)%arr,n1)
-            do i2 = 1, ubound(cg%q(wcu_i)%arr,n2)
+         do i1 = lbound(cg%q(wcu_i)%arr,n1), ubound(cg%q(wcu_i)%arr,n1)
+            do i2 = lbound(cg%q(wcu_i)%arr,n2), ubound(cg%q(wcu_i)%arr,n2)
                b1d   => cg%w(b_i  )%get_sweep(sdir,ibdir,i1,i2)
                eta1d => cg%q(eta_i)%get_sweep(sdir,      i1,i2)
                wcu1d => cg%q(wcu_i)%get_sweep(sdir,      i1,i2)

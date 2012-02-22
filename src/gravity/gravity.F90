@@ -281,13 +281,13 @@ contains
 
       cgl => all_cg%first
       do while (associated(cgl))
-         cgl%cg%gpot => cgl%cg%q(all_cg%ind(gpot_n))%arr
+         cgl%cg%gpot  => cgl%cg%q(all_cg%ind( gpot_n))%arr
          cgl%cg%gpot(:,:,:) = 0.0
          cgl%cg%hgpot => cgl%cg%q(all_cg%ind(hgpot_n))%arr
-         cgl%cg%gp => cgl%cg%q(all_cg%ind(gp_n))%arr
+         cgl%cg%gp    => cgl%cg%q(all_cg%ind(   gp_n))%arr
 #ifdef SELF_GRAV
-         cgl%cg%sgp => cgl%cg%q(all_cg%ind(sgp_n))%arr
-         cgl%cg%sgpm => cgl%cg%q(all_cg%ind(sgpm_n))%arr
+         cgl%cg%sgp   => cgl%cg%q(all_cg%ind(  sgp_n))%arr
+         cgl%cg%sgpm  => cgl%cg%q(all_cg%ind( sgpm_n))%arr
 #endif /* SELF_GRAV */
          cgl => cgl%nxt
       enddo
@@ -304,15 +304,15 @@ contains
    subroutine source_terms_grav
 
 #ifdef SELF_GRAV
-      use constants,         only: sgp_n
+      use constants,         only: sgp_n, sgpm_n
       use dataio_pub,        only: die
-      use domain,            only: is_multicg
       use fluidindex,        only: iarr_all_sg
       use gc_list,           only: cg_list_element
       use grid,              only: leaves, all_cg
       use grid_cont,         only: grid_container
       use external_bnd,      only: arr3d_boundaries
 #ifdef POISSON_FFT
+      use domain,            only: is_multicg
       use poissonsolver,     only: poisson_solve
 #endif /* POISSON_FFT */
 #ifdef MULTIGRID
@@ -324,25 +324,28 @@ contains
 
 #ifdef SELF_GRAV
       logical, save :: frun = .true.
+#ifdef POISSON_FFT
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+#endif /* POISSON_FFT */
 
-      if (is_multicg) call die("[gravity:source_terms_grav] multiple grid pieces per procesor not implemented yet") !nontrivial all cg% must be solved at a time (nontrivial for multigrid, rarely possible dor FFT poisson solver)
+      call leaves%q_copy(all_cg%ind(sgp_n), all_cg%ind(sgpm_n))
+
+#ifdef MULTIGRID
+      call multigrid_solve_grav(iarr_all_sg)
+#endif /* MULTIGRID */
+
+#ifdef POISSON_FFT
+      if (is_multicg) call die("[gravity:source_terms_grav] multiple grid pieces per procesor not implemented yet") !nontrivial all cg% must be solved at a time (nontrivial for multigrid, rarely possible for FFT poisson solver)
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         cg%sgpm = cg%sgp
-
 !! \todo prepare an array of procedure pointers to be called
-#ifdef POISSON_FFT
          call poisson_solve( sum(cg%u(iarr_all_sg,:,:,:),1) )
-#endif /* POISSON_FFT */
-#ifdef MULTIGRID
-         call multigrid_solve_grav(iarr_all_sg)
-#endif /* MULTIGRID */
          cgl => cgl%nxt
       enddo
+#endif /* POISSON_FFT */
 
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
 
@@ -350,11 +353,7 @@ contains
       call arr3d_boundaries(all_cg%ind(sgp_n))
 
       if (frun) then
-         cgl => leaves%first
-         do while (associated(cgl))
-            cgl%cg%sgpm = cgl%cg%sgp
-            cgl => cgl%nxt
-         enddo
+         call leaves%q_copy(all_cg%ind(sgp_n), all_cg%ind(sgpm_n))
          frun = .false.
       endif
 #endif /* SELF_GRAV */
@@ -492,9 +491,9 @@ contains
       logical, intent(in), optional         :: flatten
       integer :: i, j, k
 
-      do i = 1, ubound(gp,1)
-         do j = 1, ubound(gp,2)
-            do k = 1, ubound(gp,3)
+      do i = lbound(gp,1), ubound(gp,1)
+         do j = lbound(gp,2), ubound(gp,2)
+            do k = lbound(gp,3), ubound(gp,3)
                gp(i,j,k) = -(g_dir(1)*ax%x(i) + g_dir(2)*ax%y(j) + g_dir(3)*ax%z(k))
             enddo
          enddo
@@ -516,9 +515,9 @@ contains
       logical, intent(in), optional         :: flatten
       integer :: i, j, k
 
-      do i = 1, ubound(gp,1)
-         do j = 1, ubound(gp,2)
-            do k = 1, ubound(gp,3)
+      do i = lbound(gp,1), ubound(gp,1)
+         do j = lbound(gp,2), ubound(gp,2)
+            do k = lbound(gp,3), ubound(gp,3)
                gp(i,j,k) = -half*(g_dir(1)*ax%x(i)**2 + g_dir(2)*ax%y(j)**2 + g_dir(3)*ax%z(k)**2)
             enddo
          enddo
@@ -551,9 +550,9 @@ contains
 
       GM        = newtong*ptmass
 
-      do i = 1, ubound(gp,1)
+      do i = lbound(gp,1), ubound(gp,1)
          x2 = (ax%x(i) - ptm_x)**2
-         do j = 1, ubound(gp,2)
+         do j = lbound(gp,2), ubound(gp,2)
             rc2 = x2 + (ax%y(j) - ptm_y)**2
 
             if (do_flatten) then
@@ -598,9 +597,9 @@ contains
       r_smooth2 = r_smooth**2
       GM        = newtong*ptmass
 
-      do i = 1, ubound(gp,1)
+      do i = lbound(gp,1), ubound(gp,1)
          x2 = (ax%x(i) - ptm_x)**2
-         do j = 1, ubound(gp,2)
+         do j = lbound(gp,2), ubound(gp,2)
             rc2 = x2 + (ax%y(j) - ptm_y)**2
             fr  = min( (sqrt(rc2)/r_grav)**n_gravr , 100.0)    !> \deprecated BEWARE: hardcoded value
             fr  = max( 1./cosh(fr), smalld*1.e-2)              !> \deprecated BEWARE: hadrcoded value
@@ -641,9 +640,9 @@ contains
       GM1 =  newtong * ptmass
       GM2 =  newtong * ptmass2
 
-      do k = 1, ubound(gp,zdim)
+      do k = lbound(gp,zdim), ubound(gp,zdim)
          z2 = ax%z(k)**2
-         do j = 1, ubound(gp,ydim)
+         do j = lbound(gp,ydim), ubound(gp,ydim)
             yz2 = ax%y(j)**2 + z2
             gp(:,j,k) =  - GM1 / sqrt((ax%x(:) - ptm_x)**2  + yz2 + r_smooth2) &
                  &       - GM2 / sqrt((ax%x(:) - ptm2_x)**2 + yz2 + r_smooth2) &
@@ -675,11 +674,11 @@ contains
       gm =  - newtong * ptmass
       gmr = half * gm / r_smooth
 
-      do k = 1, ubound(gp,3)
+      do k = lbound(gp,3), ubound(gp,3)
          z2 = (ax%z(k) - ptm_z)**2
-         do j = 1, ubound(gp,2)
+         do j = lbound(gp,2), ubound(gp,2)
             yz2 = z2 + (ax%y(j) - ptm_y)**2
-            do i = 1, ubound(gp,1)
+            do i = lbound(gp,1), ubound(gp,1)
                r2 = yz2 + (ax%x(i) - ptm_x)**2
                if (r2 < r_smooth2) then
                   gp(i,j,k) = gmr * (3. - r2/r_smooth2)

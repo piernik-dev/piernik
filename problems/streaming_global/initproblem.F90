@@ -528,9 +528,9 @@ contains
       GM        = newtong*ptmass
 
 
-      do i = 1, ubound(gp,1)
+      do i = lbound(gp,1), ubound(gp,1)
          R2 = (ax%x(i) - ptm_x)**2
-         do j = 1, ubound(gp,2)
+         do j = lbound(gp,2), ubound(gp,2)
             gp(i,j,:) = -GM / sqrt( (ax%z(:) - ptm_z)**2 + R2 )
          enddo
       enddo

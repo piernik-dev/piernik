@@ -105,7 +105,10 @@ contains
 
    logical function divide_domain(patch) result(dom_divided)
 
+      use constants,   only: I_ONE
       use cg_list_lev, only: cg_list_patch
+      use mpi,         only: MPI_IN_PLACE, MPI_LOGICAL, MPI_LAND
+      use mpisetup,    only: comm, ierr
 
       implicit none
 
@@ -113,6 +116,7 @@ contains
 
       call divide_domain_int(dom_divided, patch) !%list_level%n_d, patch%list_level%pse)
       if (dom_divided) dom_divided = is_not_too_small(patch%list_level, "not catched anywhere")
+      call MPI_Allreduce(MPI_IN_PLACE, dom_divided, I_ONE, MPI_LOGICAL, MPI_LAND, comm, ierr)
 
    end function divide_domain
 
@@ -144,7 +148,8 @@ contains
 
       if (all(bsize(:) > 0 .or. .not. dom%has_dir(:))) then
          call stamp_cg(patch)
-         dom_divided = is_not_too_small(patch%list_level, "stamp_cg")
+         dom_divided = allocated(patch%list_level%pse)
+         if (dom_divided) dom_divided = is_not_too_small(patch%list_level, "stamp_cg")
          if (dom_divided) return
       endif
 
@@ -643,7 +648,7 @@ contains
       allocate(pb(tot_bl))
 
       if (tot_bl < nproc) then
-         if (master) call warn("[initproblem:stamp_cg] tot_bl < nproc")
+         if (master) call warn("[initproblem:stamp_cg] Found more processes than available blocks. Reverting to some other method.")
          return
       endif
 
@@ -797,6 +802,7 @@ contains
       allocate(list_level%pse(FIRST:LAST))
       do p = FIRST, LAST
          if (present(n_cg)) then
+            !if (n_cg(p+1) > 0)
             allocate(list_level%pse(p)%sel(n_cg(p+1), xdim:zdim, LO:HI))
          else
             allocate(list_level%pse(p)%sel(I_ONE, xdim:zdim, LO:HI))

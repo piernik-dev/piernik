@@ -1127,7 +1127,8 @@ contains
       use domain,      only: dom
       use gc_list,     only: cg_list_element
       use global,      only: magic_mass, t, dt, nstep
-      use grid,        only: all_cg, is_overlap
+      use grid,        only: all_cg
+      use grid_cont,   only: is_overlap
       use hdf5,        only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mpisetup,    only: master, comm
@@ -1390,8 +1391,8 @@ contains
       use constants,   only: xdim, ydim, zdim, LO, HI, LONG
       use dataio_pub,  only: die
       use domain,      only: dom
-      use grid,        only: all_cg, is_overlap
-      use grid_cont,   only: grid_container
+      use grid,        only: all_cg
+      use grid_cont,   only: grid_container, is_overlap
       use hdf5,        only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
            &                 h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
 

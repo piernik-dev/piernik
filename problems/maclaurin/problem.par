@@ -35,7 +35,7 @@
 
  $END_CONTROL
     tend   = 0.0
-    nend   = 1 ! we can set here 0 as weel, but this would issue a warning
+    nend   = 1 ! we can set here 0 as well, but this would issue a warning
  /
 
  $OUTPUT_CONTROL

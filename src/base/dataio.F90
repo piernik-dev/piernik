@@ -120,11 +120,6 @@ module dataio
                              min_disk_space_MB, sleep_minutes, sleep_seconds, &
                              user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
 
-   interface mpi_addmul
-      module procedure mpi_sum4d_and_multiply
-      module procedure mpi_sum3d_and_multiply
-   end interface mpi_addmul
-
 contains
 
    subroutine check_log
@@ -723,61 +718,26 @@ contains
 
    end subroutine find_last_restart
 
-   function mpi_sum4d_and_multiply(tab,factor) result(output)
-
-      use constants, only: I_ONE
-      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,  only: comm, ierr
-
-      implicit none
-
-      real, dimension(:,:,:,:), intent(in) :: tab
-      real, intent(in)                     :: factor
-      real                                 :: local, output
-
-      local = sum(tab(:,:,:,:)) * factor
-
-      call MPI_Allreduce(local, output, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
-
-   end function mpi_sum4d_and_multiply
-
-   function mpi_sum3d_and_multiply(tab,factor) result(output)
-
-      use constants, only: I_ONE
-      use mpi,       only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,  only: comm, ierr
-
-      implicit none
-
-      real, dimension(:,:,:), intent(in) :: tab
-      real, intent(in)                   :: factor
-      real                               :: local, output
-
-      local = sum(tab(:,:,:)) * factor
-
-      call MPI_Allreduce(local, output, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
-
-   end function mpi_sum3d_and_multiply
-!---------------------------------------------------------------------
 !>
 !! \brief writes integrals to text file
 !<
-!---------------------------------------------------------------------
-!
+
    subroutine write_timeslice
 
       use constants,   only: cwdlen, xdim, ydim, zdim, half, fluid_n, mag_n, wa_n, gpot_n
-      use dataio_pub,  only: wd_wr, warn
+      use dataio_pub,  only: wd_wr
       use dataio_user, only: user_tsl
       use diagnostics, only: pop_vector
-      use domain,      only: dom, is_multicg
+      use domain,      only: dom
       use fluids_pub,  only: has_ion, has_dst, has_neu
       use fluidindex,  only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluidtypes,  only: phys_prop
+      use gc_list,     only: cg_list_element
       use global,      only: t, dt, smalld, nstep
       use grid,        only: leaves, all_cg
       use grid_cont,   only: grid_container
-      use mpisetup,    only: master
+      use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,    only: master, comm, ierr
 #ifndef ISO
       use fluidindex,  only: iarr_all_en
 #endif /* !ISO */
@@ -796,25 +756,21 @@ contains
       real, dimension(:,:,:,:), pointer                   :: pu, pb
       real, dimension(:,:,:),   pointer                   :: pwa
       type(phys_prop), pointer                            :: sn
-
-      real, save :: tot_mass = 0.0, tot_momx = 0.0, tot_momy = 0.0, tot_momz = 0.0, &
-                    tot_ener = 0.0, tot_eint = 0.0, tot_ekin = 0.0, tot_emag = 0.0, &
-                    tot_epot = 0.0, tot_mflx = 0.0, tot_mfly = 0.0, tot_mflz = 0.0
-
-      type(tsl_container)           :: tsl
-      type(grid_container), pointer :: cg
-
+      type(tsl_container)            :: tsl
+      type(grid_container), pointer  :: cg
+      type(cg_list_element), pointer :: cgl
+      real                           :: cs_iso2
+      enum, bind(C)
+         enumerator :: T_MASS                                  !< total mass
+         enumerator :: T_MOMX, T_MOMY, T_MOMZ                  !< total momenta
+         enumerator :: T_ENER, T_EINT, T_EKIN, T_EMAG, T_EPOT  !< total energies
+         enumerator :: T_MFLX, T_MFLY, T_MFLZ                  !< total magnetic fluxes
 #ifdef COSM_RAYS
-      real, save                    :: tot_encr = 0.0
+         enumerator :: T_ENCR                                  !< total CR energy
 #endif /* COSM_RAYS */
-      real                          :: cs_iso2
-!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-!
-      cg => leaves%first%cg
-      if (is_multicg) then
-         if (master) call warn("[dataio:write_timeslice] multiple grid pieces per procesor not implemented yet in mpi_addmul. Bailing out.")
-         return
-      endif
+         enumerator :: T_LAST                                  !< DO NOT place any index behind this one
+      end enum
+      real, dimension(T_MASS:T_LAST-1), save :: tot_q          !< array of total quantities
 
       if (has_ion) then
          cs_iso2 = flind%ion%cs2
@@ -862,55 +818,63 @@ contains
          endif
       endif
 
-      pu => cg%w(all_cg%ind_4d(fluid_n))%span(cg%ijkse)
-      pb => cg%w(all_cg%ind_4d(mag_n  ))%span(cg%ijkse)
-      pwa=> cg%q(all_cg%ind   (wa_n   ))%span(cg%ijkse)
+      tot_q(:) = 0.
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      tot_mass = mpi_addmul(pu(iarr_all_dn,:,:,:), cg%dvol)
-      tot_momx = mpi_addmul(pu(iarr_all_mx,:,:,:), cg%dvol)
-      tot_momy = mpi_addmul(pu(iarr_all_my,:,:,:), cg%dvol)
-      tot_momz = mpi_addmul(pu(iarr_all_mz,:,:,:), cg%dvol)
+         pu => cg%w(all_cg%ind_4d(fluid_n))%span(cg%ijkse)
+         pb => cg%w(all_cg%ind_4d(mag_n  ))%span(cg%ijkse)
+         pwa=> cg%q(all_cg%ind   (wa_n   ))%span(cg%ijkse)
+
+         tot_q(T_MASS) = tot_q(T_MASS) + cg%dvol * sum(pu(iarr_all_dn,:,:,:))
+         tot_q(T_MOMX) = tot_q(T_MOMX) + cg%dvol * sum(pu(iarr_all_mx,:,:,:))
+         tot_q(T_MOMY) = tot_q(T_MOMY) + cg%dvol * sum(pu(iarr_all_my,:,:,:))
+         tot_q(T_MOMZ) = tot_q(T_MOMZ) + cg%dvol * sum(pu(iarr_all_mz,:,:,:))
 #ifdef GRAV
-      tot_epot = mpi_addmul(pu(iarr_all_dn(1),:,:,:) * cg%q(all_cg%ind(gpot_n))%span(cg%ijkse), cg%dvol)
+         tot_q(T_EPOT) = tot_q(T_EPOT) + cg%dvol * sum(pu(iarr_all_dn(1),:,:,:) * cg%q(all_cg%ind(gpot_n))%span(cg%ijkse))
 #endif /* GRAV */
 
-      cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-           & half * (pu(iarr_all_mx(1),:,:,:)**2 + pu(iarr_all_my(1),:,:,:)**2 + pu(iarr_all_mz(1),:,:,:)**2)/ max(pu(iarr_all_dn(1),:,:,:),smalld)
-      tot_ekin = mpi_addmul(pwa, cg%dvol)
+         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = half * (pu(iarr_all_mx(1),:,:,:)**2 + pu(iarr_all_my(1),:,:,:)**2 + pu(iarr_all_mz(1),:,:,:)**2)/ max(pu(iarr_all_dn(1),:,:,:),smalld)
+         tot_q(T_EKIN) = tot_q(T_EKIN) + cg%dvol * sum(pwa)
 
-      pwa = half * (pb(xdim,:,:,:)**2 + pb(ydim,:,:,:)**2 + pb(zdim,:,:,:)**2)
-      tot_emag = mpi_addmul(pwa, cg%dvol)
+         pwa = half * (pb(xdim,:,:,:)**2 + pb(ydim,:,:,:)**2 + pb(zdim,:,:,:)**2)
+         tot_q(T_EMAG) = tot_q(T_EMAG) + cg%dvol * sum(pwa)
 
-      tot_mflx = mpi_addmul(pb(xdim,:,:,:), cg%dvol/dom%L_(xdim)) !cg%dy*cg%dz/dom%n_d(xdim))
-      tot_mfly = mpi_addmul(pb(ydim,:,:,:), cg%dvol/dom%L_(ydim)) !cg%dx*cg%dz/dom%n_d(ydim))
-      tot_mflz = mpi_addmul(pb(zdim,:,:,:), cg%dvol/dom%L_(zdim)) !cg%dx*cg%dy/dom%n_d(zdim))
+         tot_q(T_MFLX) = tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim,:,:,:)) !cg%dy*cg%dz/dom%n_d(xdim)
+         tot_q(T_MFLY) = tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim,:,:,:)) !cg%dx*cg%dz/dom%n_d(ydim)
+         tot_q(T_MFLZ) = tot_q(T_MFLZ) + cg%dvol/dom%L_(zdim) * sum(pb(zdim,:,:,:)) !cg%dx*cg%dy/dom%n_d(zdim)
 #ifdef ISO
-      tot_eint = cs_iso2*tot_mass
-      tot_ener = tot_eint+tot_ekin+tot_emag
+         tot_q(T_EINT) = tot_q(T_EINT) + cs_iso2*tot_q(T_MASS)
+         tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_EINT)+tot_q(T_EKIN)+tot_q(T_EMAG)
 #else /* !ISO */
-      tot_ener = mpi_addmul(pu(iarr_all_en,:,:,:), cg%dvol)
-      tot_eint = tot_ener - tot_ekin - tot_emag
+         tot_q(T_ENER) = tot_q(T_ENER) + cg%dvol * sum(pu(iarr_all_en,:,:,:))
+         tot_q(T_EINT) = tot_q(T_EINT) + tot_q(T_ENER) - tot_q(T_EKIN) - tot_q(T_EMAG)
 #endif /* !ISO */
 #ifdef GRAV
-      tot_ener = tot_ener + tot_epot
+         tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENER) + tot_q(T_EPOT)
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
-      tot_encr = mpi_addmul(pu(iarr_all_crs,:,:,:), cg%dvol)
+         tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(pu(iarr_all_crs,:,:,:))
 #endif /* COSM_RAYS */
+
+         cgl => cgl%nxt
+      enddo
+      call MPI_Allreduce(MPI_IN_PLACE, tot_q(:), size(tot_q), MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
       call write_log(tsl)
 
       if (master) then
-         call pop_vector(tsl_vars, [t, dt, tot_mass, tot_momx, tot_momy, tot_momz, tot_ener, tot_epot, tot_eint, tot_ekin])
+         call pop_vector(tsl_vars, [t, dt, tot_q(T_MASS), tot_q(T_MOMX), tot_q(T_MOMY), tot_q(T_MOMZ), tot_q(T_ENER), tot_q(T_EPOT), tot_q(T_EINT), tot_q(T_EKIN)])
 #ifdef MAGNETIC
-         call pop_vector(tsl_vars, [tot_emag, tot_mflx, tot_mfly, tot_mflz, tsl%vai_max, tsl%b_min, tsl%b_max, tsl%divb_max])
+         call pop_vector(tsl_vars, [tot_q(T_EMAG), tot_q(T_MFLX), tot_q(T_MFLY), tot_q(T_MFLZ), tsl%vai_max, tsl%b_min, tsl%b_max, tsl%divb_max])
 #ifdef RESISTIVE
          if (eta1_active) call pop_vector(tsl_vars, [tsl%etamax])
 #endif /* RESISTIVE */
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-         call pop_vector(tsl_vars, [tot_encr, tsl%encr_min, tsl%encr_max])
+         call pop_vector(tsl_vars, [tot_q(T_ENCR), tsl%encr_min, tsl%encr_max])
 #endif /* COSM_RAYS */
 
          ! \todo: replicated code, simplify me
@@ -945,12 +909,8 @@ contains
 
    subroutine common_shout(pr, fluid, pres_tn, temp_tn, cs_tn)
 
-      use constants,   only: small
-      use dataio_pub,  only: msg, printinfo, warn
-      use domain,      only: dom, is_multicg
-      use global,      only: cfl
-      use grid,        only: leaves
-      use grid_cont,   only: grid_container
+      use dataio_pub,  only: msg, printinfo
+      use domain,      only: dom
       use fluidtypes,  only: phys_prop
 
       implicit none
@@ -958,9 +918,6 @@ contains
       type(phys_prop),  intent(in)  :: pr
       character(len=*), intent(in)  :: fluid
       logical,          intent(in)  :: pres_tn, temp_tn, cs_tn
-
-      real                          :: dxmn_safe
-      type(grid_container), pointer :: cg
 
       write(msg, fmt_loc)     'min(dens)   ',fluid, pr%dens_min%val, pr%dens_min%proc, pack(pr%dens_min%loc,dom%has_dir), pack(pr%dens_min%coords,dom%has_dir)
       call printinfo(msg, .false.)
@@ -979,46 +936,50 @@ contains
          call printinfo(msg, .false.)
       endif
 
-      if (is_multicg) then
-         call warn("[dataio:common_shout] multiple grid pieces per procesor not implemented yet") !nontrivial  cfl*cg%d[xyz], dxmn_safe
-      else
-         cg => leaves%first%cg
-
-         if (cg%dxmn >= sqrt(huge(1.0))) then
-            dxmn_safe = sqrt(huge(1.0))
-         else
-            dxmn_safe = cg%dxmn
-         endif
-
-         write(msg, fmt_dtloc)   'max(|vx|)   ',fluid, pr%velx_max%val, cfl*cg%dx/(pr%velx_max%val+small), pr%velx_max%proc, pack(pr%velx_max%loc,dom%has_dir), pack(pr%velx_max%coords,dom%has_dir)
+      write(msg, fmt_loc)   'max(|vx|)   ',fluid, pr%velx_max%val, pr%velx_max%proc, pack(pr%velx_max%loc,dom%has_dir), pack(pr%velx_max%coords,dom%has_dir)
+      call printinfo(msg, .false.)
+      write(msg, fmt_loc)   'max(|vy|)   ',fluid, pr%vely_max%val, pr%vely_max%proc, pack(pr%vely_max%loc,dom%has_dir), pack(pr%vely_max%coords,dom%has_dir)
+      call printinfo(msg, .false.)
+      write(msg, fmt_loc)   'max(|vz|)   ',fluid, pr%velz_max%val, pr%velz_max%proc, pack(pr%velz_max%loc,dom%has_dir), pack(pr%velz_max%coords,dom%has_dir)
+      call printinfo(msg, .false.)
+      if (cs_tn) then
+         write(msg, fmt_loc)'max(c_s )   ',fluid, pr%cs_max%val,   pr%cs_max%proc,   pack(pr%cs_max%loc,dom%has_dir), pack(pr%cs_max%coords,dom%has_dir)
          call printinfo(msg, .false.)
-         write(msg, fmt_dtloc)   'max(|vy|)   ',fluid, pr%vely_max%val, cfl*cg%dy/(pr%vely_max%val+small), pr%vely_max%proc, pack(pr%vely_max%loc,dom%has_dir), pack(pr%vely_max%coords,dom%has_dir)
-         call printinfo(msg, .false.)
-         write(msg, fmt_dtloc)   'max(|vz|)   ',fluid, pr%velz_max%val, cfl*cg%dz/(pr%velz_max%val+small), pr%velz_max%proc, pack(pr%velz_max%loc,dom%has_dir), pack(pr%velz_max%coords,dom%has_dir)
-         call printinfo(msg, .false.)
-         if (cs_tn) then
-            write(msg, fmt_dtloc)'max(c_s )   ',fluid, pr%cs_max%val, cfl*dxmn_safe/(pr%cs_max%val+small), pr%cs_max%proc, pack(pr%cs_max%loc,dom%has_dir), pack(pr%cs_max%coords,dom%has_dir)
-            call printinfo(msg, .false.)
-         endif
       endif
+
+      write(msg, fmt_loc)   'min(dt_vx)   ',fluid, pr%dtvx_min%val, pr%dtvx_min%proc, pack(pr%dtvx_min%loc,dom%has_dir), pack(pr%dtvx_min%coords,dom%has_dir)
+      call printinfo(msg, .false.)
+      write(msg, fmt_loc)   'min(ct_vy)   ',fluid, pr%dtvy_min%val, pr%dtvy_min%proc, pack(pr%dtvy_min%loc,dom%has_dir), pack(pr%dtvy_min%coords,dom%has_dir)
+      call printinfo(msg, .false.)
+      write(msg, fmt_loc)   'min(dt_vz)   ',fluid, pr%dtvz_min%val, pr%dtvz_min%proc, pack(pr%dtvz_min%loc,dom%has_dir), pack(pr%dtvz_min%coords,dom%has_dir)
+      call printinfo(msg, .false.)
+      if (cs_tn) then
+         write(msg, fmt_loc)'min(dt_cs)   ',fluid, pr%dtcs_min%val, pr%dtcs_min%proc,   pack(pr%dtcs_min%loc,dom%has_dir), pack(pr%dtcs_min%coords,dom%has_dir)
+         call printinfo(msg, .false.)
+      endif
+
    end subroutine common_shout
 
    subroutine get_common_vars(fl)
 
       use types,      only: value                          !QA_WARN: used by get_extremum (intel compiler)
-      use constants,  only: ION, DST, MINL, MAXL, half, wa_n
+      use constants,  only: ION, DST, MINL, MAXL, half, wa_n, small
       use fluidtypes, only: phys_prop, component_fluid
       use gc_list,    only: cg_list_element
-      use global,     only: smallp
+      use global,     only: smallp, cfl
       use grid,       only: leaves, all_cg
       use units,      only: mH, kboltz
 
       implicit none
 
       type(component_fluid), intent(inout), target :: fl
-      type(phys_prop), pointer                     :: pr
-      integer                                      :: wa_i
-      type(cg_list_element), pointer               :: cgl
+
+      type(phys_prop), pointer :: pr
+      integer :: wa_i
+      type(cg_list_element), pointer :: cgl
+#ifndef ISO
+      real :: dxmn_safe
+#endif /* !ISO */
 
       wa_i = all_cg%ind(wa_n)
 
@@ -1040,6 +1001,13 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         cgl%cg%wa = cfl * cgl%cg%dx / (cgl%cg%wa +small)
+         cgl => cgl%nxt
+      enddo
+      call leaves%get_extremum(wa_i, MINL, pr%dtvx_min)
+
+      cgl => leaves%first
+      do while (associated(cgl))
          cgl%cg%wa = abs(cgl%cg%u(fl%imy,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
          cgl => cgl%nxt
       enddo
@@ -1047,10 +1015,24 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
+         cgl%cg%wa = cfl * cgl%cg%dy / (cgl%cg%wa +small)
+         cgl => cgl%nxt
+      enddo
+      call leaves%get_extremum(wa_i, MINL, pr%dtvy_min)
+
+      cgl => leaves%first
+      do while (associated(cgl))
          cgl%cg%wa = abs(cgl%cg%u(fl%imz,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(wa_i, MAXL, pr%velz_max)
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%wa = cfl * cgl%cg%dz / (cgl%cg%wa +small)
+         cgl => cgl%nxt
+      enddo
+      call leaves%get_extremum(wa_i, MINL, pr%dtvz_min)
 
 #ifdef ISO
       pr%pres_min        = pr%dens_min
@@ -1085,6 +1067,19 @@ contains
          enddo
          call leaves%get_extremum(wa_i, MAXL, pr%cs_max)
          pr%cs_max%val = sqrt(pr%cs_max%val)
+
+         cgl => leaves%first
+         do while (associated(cgl))
+            if (cgl%cg%dxmn >= sqrt(huge(1.0))) then
+               dxmn_safe = sqrt(huge(1.0))
+            else
+               dxmn_safe = cgl%cg%dxmn
+            endif
+            cgl%cg%wa = (cfl * dxmn_safe)**2 / (cgl%cg%wa +small)
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(wa_i, MINL, pr%dtcs_min)
+         pr%dtcs_min%val = sqrt(pr%dtcs_min%val)
 
          cgl => leaves%first
          do while (associated(cgl))

@@ -260,7 +260,7 @@ contains
       call my_deallocate(iarr_all_cre)
       call my_deallocate(iarr_all_crs)
 
-      do i = 1, ubound(flind%all_fluids, dim=1)
+      do i = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
          deallocate(flind%all_fluids(i)%iarr)
          deallocate(flind%all_fluids(i)%iarr_swp)
       enddo

@@ -120,8 +120,8 @@ contains
                do i = cgl%cg%is-ng*dom%D_x, cgl%cg%ie+ng*dom%D_x
                   if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
                      ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
-                     write(msg, '(3a,i4,a,i2,a,4(i3,a),g20.12)') "[multigridhelpers:check_dirty] ", trim(label), "@", proc, " lvl(", curl%lev, &
-                          &                                      ")%q(",iv,")%arr(", i, ",", j, ",", k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
+                     write(msg, '(3a,i4,a,i3,a,i5,3a,3(i3,a),g20.12)') "[multigridhelpers:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
+                          &                                            " '", trim(all_cg%q_lst(iv)%name), "'(", i, ",", j, ",", k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
                      call warn(msg)
                      ! endif
                   endif
