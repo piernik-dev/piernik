@@ -107,7 +107,7 @@ contains
 
       class(cg_list_level), intent(inout) :: this
 
-      integer :: g, j, jf, fmax
+      integer :: g, j, jf, fmax, tag
       integer(kind=8), dimension(xdim:zdim) :: ijks
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
       type(pr_segment), pointer :: seg
@@ -160,7 +160,9 @@ contains
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
                     &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
-               seg%tag = cg%grid_id + this%tot_se * ps(g)%n_se ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
+               tag = cg%grid_id + this%tot_se * ps(g)%n_se
+               seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
+               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (1)")
             enddo
 
             if (allocated(ps)) deallocate(ps)
@@ -213,7 +215,9 @@ contains
                     &           seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
                seg%se(:, LO) = seg%se(:, LO) + ijks(:)
                seg%se(:, HI) = seg%se(:, HI) + ijks(:)
-               seg%tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
+               tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
+               seg%tag = int(tag, kind=4)
+               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (2)")
             enddo
 
             if (allocated(ps)) deallocate(ps)
