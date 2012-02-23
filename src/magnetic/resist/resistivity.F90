@@ -286,7 +286,7 @@ contains
          eta => cg%q(all_cg%ind(eta_n))%arr
          wb => cg%q(all_cg%ind(wb_n))%arr
          wb = (cg%u(flind%ion%ien,:,:,:) - ekin(cg%u(flind%ion%imx,:,:,:), cg%u(flind%ion%imy,:,:,:), cg%u(flind%ion%imz,:,:,:), cg%u(flind%ion%idn,:,:,:)) - &
-              emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:)**2, cg%b(zdim,:,:,:)**2))/ (eta(:,:,:) * wb+small)
+              emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)))/ (eta(:,:,:) * wb+small)
          dt_eint = deint_max * abs(minval(cg%q(all_cg%ind(wb_n))%span(cg%ijkse)))
          cgl => cgl%nxt
       enddo
