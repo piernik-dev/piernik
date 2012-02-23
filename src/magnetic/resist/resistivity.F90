@@ -183,9 +183,10 @@ contains
 
    subroutine compute_resist
 
-      use constants,  only: small, xdim, ydim, zdim, MINL, MAXL, I_ONE, half, oneq
+      use constants,  only: small, xdim, ydim, zdim, MINL, MAXL, I_ONE, oneq
       use dataio_pub, only: die
       use domain,     only: dom, is_multicg
+      use func,       only: ekin, emag
       use gc_list,    only: cg_list_element
       use grid,       only: leaves, all_cg
       use grid_cont,  only: grid_container
@@ -284,8 +285,8 @@ contains
          cg => cgl%cg
          eta => cg%q(all_cg%ind(eta_n))%arr
          wb => cg%q(all_cg%ind(wb_n))%arr
-         wb = ( cg%u(flind%ion%ien,:,:,:) - half*( cg%u(flind%ion%imx,:,:,:)**2  + cg%u(flind%ion%imy,:,:,:)**2  + cg%u(flind%ion%imz,:,:,:)**2 ) &
-              / cg%u(flind%ion%idn,:,:,:) - half*( cg%b(xdim,:,:,:)**2  +   cg%b(ydim,:,:,:)**2  +   cg%b(zdim,:,:,:)**2))/ ( eta(:,:,:) * wb+small)
+         wb = (cg%u(flind%ion%ien,:,:,:) - ekin(cg%u(flind%ion%imx,:,:,:), cg%u(flind%ion%imy,:,:,:), cg%u(flind%ion%imz,:,:,:), cg%u(flind%ion%idn,:,:,:)) - &
+              emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:)**2, cg%b(zdim,:,:,:)**2))/ (eta(:,:,:) * wb+small)
          dt_eint = deint_max * abs(minval(cg%q(all_cg%ind(wb_n))%span(cg%ijkse)))
          cgl => cgl%nxt
       enddo

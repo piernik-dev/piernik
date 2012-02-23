@@ -139,9 +139,10 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5, only: common_shortcuts
-      use constants,   only: varlen, half, xdim, ydim, zdim
+      use constants,   only: varlen, xdim, ydim, zdim
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
+      use func,        only: ekin, emag
       use grid_cont,   only: grid_container
 
       implicit none
@@ -176,28 +177,22 @@ contains
             tab(:,:,:) = real(cg%u(fl_dni%imx + i_xyz, RNG) / cg%u(fl_dni%idn, RNG), kind=4)
          case ("enen", "enei")
 #ifdef ISO
-            tab(:,:,:) = real(half *( cg%u(fl_dni%imx, RNG)**2 + &
-                 &                   cg%u(fl_dni%imy, RNG)**2 + &
-                 &                   cg%u(fl_dni%imz, RNG)**2 ) / cg%u(fl_dni%idn, RNG), kind=4)
+            tab(:,:,:) = real(ekin(cg%u(fl_dni%imx, RNG), cg%u(fl_dni%imy, RNG), cg%u(fl_dni%imz, RNG), cg%u(fl_dni%idn, RNG)), kind=4)
 #else /* !ISO */
             tab(:,:,:) = real(cg%u(fl_dni%ien, RNG), kind=4)
 #endif /* !ISO */
 #ifdef NEUTRAL
          case ("pren")
 #ifndef ISO
-            tab(:,:,:) = real( cg%u(flind%neu%ien, RNG) - half * ( &
-                 &             cg%u(flind%neu%imx, RNG)**2 + &
-                 &             cg%u(flind%neu%imy, RNG)**2 + &
-                 &             cg%u(flind%neu%imz, RNG)**2 ) / cg%u(flind%neu%idn, RNG), kind=4) * real(flind%neu%gam_1, kind=4)
+            tab(:,:,:) = real(flind%neu%gam_1, kind=4) * real( cg%u(flind%neu%ien, RNG) - &
+                 &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG)), kind=4)
 #endif /* !ISO */
 #endif /* NEUTRAL */
          case ("prei")
 #ifndef ISO
-            tab(:,:,:) = real( cg%u(flind%ion%ien, RNG) - half *( &
-                 &             cg%u(flind%ion%imx, RNG)**2 + &
-                 &             cg%u(flind%ion%imy, RNG)**2 + &
-                 &             cg%u(flind%ion%imz, RNG)**2 ) / cg%u(flind%ion%idn, RNG), kind=4) * real(flind%ion%gam_1, kind=4) - &
-                 &       real( half*(flind%ion%gam_1)*(cg%b(xdim, RNG)**2 + cg%b(ydim, RNG)**2 + cg%b(zdim, RNG)**2), kind=4)
+            tab(:,:,:) = real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
+                 &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4)
 #endif /* !ISO */
          case ("magx", "magy", "magz")
             tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)

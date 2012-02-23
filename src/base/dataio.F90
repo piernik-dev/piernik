@@ -724,7 +724,7 @@ contains
 
    subroutine write_timeslice
 
-      use constants,   only: cwdlen, xdim, ydim, zdim, half, fluid_n, mag_n, wa_n, gpot_n
+      use constants,   only: cwdlen, xdim, ydim, zdim, fluid_n, mag_n, gpot_n
       use dataio_pub,  only: wd_wr
       use dataio_user, only: user_tsl
       use diagnostics, only: pop_vector
@@ -732,6 +732,7 @@ contains
       use fluids_pub,  only: has_ion, has_dst, has_neu
       use fluidindex,  only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluidtypes,  only: phys_prop
+      use func,        only: ekin, emag
       use gc_list,     only: cg_list_element
       use global,      only: t, dt, smalld, nstep
       use grid,        only: leaves, all_cg
@@ -754,7 +755,6 @@ contains
       character(len=cbuff_len), dimension(:), allocatable :: tsl_names
       real, allocatable, dimension(:)                     :: tsl_vars
       real, dimension(:,:,:,:), pointer                   :: pu, pb
-      real, dimension(:,:,:),   pointer                   :: pwa
       type(phys_prop), pointer                            :: sn
       type(tsl_container)            :: tsl
       type(grid_container), pointer  :: cg
@@ -825,7 +825,6 @@ contains
 
          pu => cg%w(all_cg%ind_4d(fluid_n))%span(cg%ijkse)
          pb => cg%w(all_cg%ind_4d(mag_n  ))%span(cg%ijkse)
-         pwa=> cg%q(all_cg%ind   (wa_n   ))%span(cg%ijkse)
 
          tot_q(T_MASS) = tot_q(T_MASS) + cg%dvol * sum(pu(iarr_all_dn,:,:,:))
          tot_q(T_MOMX) = tot_q(T_MOMX) + cg%dvol * sum(pu(iarr_all_mx,:,:,:))
@@ -835,11 +834,8 @@ contains
          tot_q(T_EPOT) = tot_q(T_EPOT) + cg%dvol * sum(pu(iarr_all_dn(1),:,:,:) * cg%q(all_cg%ind(gpot_n))%span(cg%ijkse))
 #endif /* GRAV */
 
-         cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = half * (pu(iarr_all_mx(1),:,:,:)**2 + pu(iarr_all_my(1),:,:,:)**2 + pu(iarr_all_mz(1),:,:,:)**2)/ max(pu(iarr_all_dn(1),:,:,:),smalld)
-         tot_q(T_EKIN) = tot_q(T_EKIN) + cg%dvol * sum(pwa)
-
-         pwa = half * (pb(xdim,:,:,:)**2 + pb(ydim,:,:,:)**2 + pb(zdim,:,:,:)**2)
-         tot_q(T_EMAG) = tot_q(T_EMAG) + cg%dvol * sum(pwa)
+         tot_q(T_EKIN) = tot_q(T_EKIN) + cg%dvol * sum(ekin(pu(iarr_all_mx(1),:,:,:), pu(iarr_all_my(1),:,:,:), pu(iarr_all_mz(1),:,:,:), max(pu(iarr_all_dn(1),:,:,:),smalld)))
+         tot_q(T_EMAG) = tot_q(T_EMAG) + cg%dvol * sum(emag(pb(xdim,:,:,:), pb(ydim,:,:,:), pb(zdim,:,:,:)))
 
          tot_q(T_MFLX) = tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim,:,:,:)) !cg%dy*cg%dz/dom%n_d(xdim)
          tot_q(T_MFLY) = tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim,:,:,:)) !cg%dx*cg%dz/dom%n_d(ydim)
@@ -965,6 +961,7 @@ contains
       use types,      only: value                          !QA_WARN: used by get_extremum (intel compiler)
       use constants,  only: ION, DST, MINL, MAXL, half, wa_n, small
       use fluidtypes, only: phys_prop, component_fluid
+      use func,       only: ekin
       use gc_list,    only: cg_list_element
       use global,     only: smallp, cfl
       use grid,       only: leaves, all_cg
@@ -1052,7 +1049,7 @@ contains
       if (fl%tag /= DST) then
          cgl => leaves%first
          do while (associated(cgl))
-            cgl%cg%wa(:,:,:) = (cgl%cg%u(fl%ien,:,:,:) - half*((cgl%cg%u(fl%imx,:,:,:)**2 +cgl%cg%u(fl%imy,:,:,:)**2 + cgl%cg%u(fl%imz,:,:,:)**2)/cgl%cg%u(fl%idn,:,:,:))) ! eint
+            cgl%cg%wa(:,:,:) = cgl%cg%u(fl%ien,:,:,:) - ekin(cgl%cg%u(fl%imx,:,:,:), cgl%cg%u(fl%imy,:,:,:), cgl%cg%u(fl%imz,:,:,:), cgl%cg%u(fl%idn,:,:,:)) ! eint
             if (fl%tag == ION) cgl%cg%wa(:,:,:) = cgl%cg%wa(:,:,:) - half*(sum(cgl%cg%b(:,:,:,:)**2,dim=1))
             cgl%cg%wa(:,:,:) = max(fl%gam_1*cgl%cg%wa(:,:,:),smallp)  ! pres
             cgl => cgl%nxt

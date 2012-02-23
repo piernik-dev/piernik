@@ -222,9 +222,11 @@ contains
    end subroutine sweep1d_mh
 !---------------------------------------------------------------------------
    function utoq(u,b) result(q)
-      use constants,    only: half, two
-      use fluidtypes,   only: component_fluid
-      use fluidindex,   only: flind
+
+      use constants,  only: half, two
+      use fluidtypes, only: component_fluid
+      use fluidindex, only: flind
+      use func,       only: ekin
 
       implicit none
 
@@ -243,17 +245,21 @@ contains
          q(fl%imz,:) = u(fl%imz,:)/u(fl%idn,:)
 
          if (fl%has_energy) then
-            q(fl%ien,:) = (u(fl%ien,:) - half*( u(fl%imx,:)**2 + u(fl%imy,:)**2 + u(fl%imz,:)**2) / u(fl%idn,:)) * fl%gam_1
+            q(fl%ien,:) = (u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) * fl%gam_1
             if (fl%is_magnetized) q(fl%ien,:) = q(fl%ien,:) + (two-fl%gam)*half*sum(b(:,:)**2,dim=1)
          endif
       enddo
    end function utoq
 !---------------------------------------------------------------------------
    function compute_flux(u,b,cs2) result(f)
-      use constants,    only: half, two, xdim, ydim, zdim
-      use fluidindex,   only: flind
-      use fluidtypes,   only: component_fluid
+
+      use constants,  only: half, two, xdim, ydim, zdim
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use func,       only: ekin
+
       implicit none
+
       real, dimension(:,:), intent(in)       :: u, b
       real, dimension(:),   intent(in)       :: cs2
       real, dimension(size(u,1), size(u,2))  :: f
@@ -267,7 +273,7 @@ contains
 
          vx = u(fl%imx,:) / u(fl%idn,:)
          if (fl%has_energy) then
-            p = (u(fl%ien,:) - half*( u(fl%imx,:)**2 + u(fl%imy,:)**2 + u(fl%imz,:)**2) / u(fl%idn,:)) * flind%neu%gam_1
+            p = (u(fl%ien,:) - ekin(u(fl%imx,:), u(fl%imy,:), u(fl%imz,:), u(fl%idn,:))) * flind%neu%gam_1
             if (fl%is_magnetized) p = p + (two-fl%gam)*half*sum(b**2,dim=1)
          else
             p = cs2*u(fl%idn,:)
