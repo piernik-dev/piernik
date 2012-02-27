@@ -97,7 +97,7 @@ contains
 
       use constants,       only: pdims, LO, HI, ydim, zdim, fluid_n, uh_n, cs_i2_n, mag_n
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: flind, iarr_all_swp, nmag
+      use fluidindex,      only: flind, iarr_all_swp, nmag, iarr_mag_swp
       use gc_list,         only: cg_list_element
       use global,          only: dt, integration_order
       use grid,            only: leaves, all_cg
@@ -114,7 +114,7 @@ contains
 
       real, dimension(:,:), allocatable :: b
       real, dimension(:,:), allocatable :: u, u0
-      real, dimension(:,:), pointer     :: pu, pu0
+      real, dimension(:,:), pointer     :: pu, pu0, pb
       real, dimension(:), pointer       :: div_v1d => null(), cs2
       integer                           :: i1, i2, uhi, ui, magi
       integer                           :: istep
@@ -162,7 +162,8 @@ contains
                   if (full_dim) then
                      b = interpolate_mag_field(cdim, cg, i1, i2)
                   else
-                     b => cg%w(magi)%get_sweep(cdim, i1, i2)   ! BEWARE: is it correct for 2.5D ?
+                     pb => cg%w(magi)%get_sweep(cdim, i1, i2)   ! BEWARE: is it correct for 2.5D ?
+                     b(iarr_mag_swp(cdim,:),:)  = pb(:,:)
                   endif
 #endif /* MAGNETIC */
 
