@@ -211,7 +211,7 @@ contains
       use shear,                 only: init_shear
 #endif /* SHEAR */
 #ifdef GRAV
-      use gravity,               only: init_grav, grav_pot_3d, grav_pot_3d_called, source_terms_grav, grav_pot_3d_bnd
+      use gravity,               only: init_grav, grav_pot_3d, grav_pot_3d_called, source_terms_grav
       use hydrostatic,           only: cleanup_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
@@ -287,7 +287,6 @@ contains
 !> \deprecated It is only temporary solution, but grav_pot_3d must be called after init_prob due to csim2,c_si,alpha clash!!!
       if (associated(grav_pot_3d)) then
          call grav_pot_3d ! depends on grav
-         call grav_pot_3d_bnd
          grav_pot_3d_called = .true.
       else
 #ifdef VERBOSE
@@ -341,7 +340,6 @@ contains
          if (.not.grav_pot_3d_called) then
             if (associated(grav_pot_3d)) then
                call grav_pot_3d
-               call grav_pot_3d_bnd
                grav_pot_3d_called = .true.
             else
                call die("[piernik:init_piernik] grav_pot_3d failed for the 2nd time!")
