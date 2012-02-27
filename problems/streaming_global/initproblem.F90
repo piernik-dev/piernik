@@ -470,7 +470,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
-      use gravity,   only: sum_potential, grav_pot_3d_bnd
+      use gravity,   only: sum_potential
       use grid,      only: leaves
       use gc_list,   only: cg_list_element
       use grid_cont, only: grid_container
@@ -505,7 +505,6 @@ contains
       endif
 
       frun = .false.
-      call grav_pot_3d_bnd
       call sum_potential
 
    end subroutine my_grav_pot_3d
