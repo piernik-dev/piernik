@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 1024, 5, 128
+    n_d = 1024, 1, 128
     nb  = 4
     bnd_xl = 'out'
     bnd_xr = 'ref'
@@ -65,6 +65,7 @@
     integration_order = 2
     limiter= 'vanleer'
     cfr_smooth = 0.01
+    geometry25D = .true.
  /
 
  $GRAVITY

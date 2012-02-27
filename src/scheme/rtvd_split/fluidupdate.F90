@@ -192,12 +192,9 @@ contains
 !<
    subroutine make_sweep(dir, forward)
 
-      use constants,      only: ydim
       use domain,         only: dom
       use sweeps,         only: sweep
-#if defined SHEAR && defined FLUID_INTERACTIONS
-      use sweeps,         only: source_terms_y
-#endif /* SHEAR && FLUID_INTERACTIONS */
+      use global,         only: geometry25D
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
       use initcosmicrays, only: use_split
@@ -232,9 +229,7 @@ contains
 #endif /* COSM_RAYS */
          endif
       else
-#if defined SHEAR && defined FLUID_INTERACTIONS
-         if (dir == ydim) call source_terms_y
-#endif /* SHEAR && FLUID_INTERACTIONS */
+         if (geometry25D) call sweep(dir)
       endif
 
 #ifdef DEBUG

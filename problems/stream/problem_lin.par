@@ -75,6 +75,7 @@
     smallei= 1.e-5
     integration_order = 2
     limiter= 'vanleer'
+    geometry25D = .true.
  /
 
  $PROBLEM_CONTROL

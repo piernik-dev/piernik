@@ -46,7 +46,7 @@ module global
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
         &    integration_order, limiter, smalld, smallei, smallp, use_smalld, magic_mass, local_magic_mass, &
-        &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep
+        &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
@@ -63,6 +63,7 @@ module global
    real    :: cfl                      !< desired Courant–Friedrichs–Lewy number
    real    :: cfl_max                  !< warning threshold for the effective CFL number achieved
    logical :: use_smalld               !< correct denisty when it gets lower than smalld
+   logical :: geometry25D              !< include source terms in reduced dimension for 2D simulations
    real    :: smallp                   !< artificial infimum for pressure
    real    :: smalld                   !< artificial infimum for density
    real    :: smallc                   !< artificial infimum for freezing speed
@@ -80,7 +81,7 @@ module global
    logical, dimension(xdim:zdim) :: skip_sweep !< allows to skip sweep in chosen direction
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
-        &                     repeat_step, limiter, relax_time, integration_order, cfr_smooth, skip_sweep
+        &                     repeat_step, limiter, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D
 
 contains
 
@@ -110,6 +111,7 @@ contains
 !!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
 !!   <tr><td>relax_time       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::relax_time       </td></tr>
 !!   <tr><td>skip_sweep       </td><td>F, F, F</td><td>logical array                        </td><td>\copydoc global::skip_sweep       </td></tr>
+!!   <tr><td>geometry25D      </td><td>F      </td><td>logical value                        </td><td>\copydoc global::geometry25D      </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -132,6 +134,7 @@ contains
       limiter     = 'vanleer'
       cflcontrol  = 'warn'
       repeat_step = .true.
+      geometry25D = .false.
 
       cfl         = 0.7
       cfl_max     = 0.9
@@ -181,6 +184,7 @@ contains
          lbuff(1)   = use_smalld
          lbuff(2)   = repeat_step
          lbuff(3:5) = skip_sweep
+         lbuff(6)   = geometry25D
 
       endif
 
@@ -194,6 +198,7 @@ contains
          use_smalld    = lbuff(1)
          repeat_step   = lbuff(2)
          skip_sweep    = lbuff(3:5)
+         geometry25D   = lbuff(6)
 
          smalld      = rbuff( 1)
          smallc      = rbuff( 2)

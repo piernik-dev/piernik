@@ -35,78 +35,8 @@ module sweeps     ! split sweeps
 
    private
    public  :: sweep
-#if defined SHEAR && defined FLUID_INTERACTIONS
-   public  :: source_terms_y
-#endif /* SHEAR && FLUID_INTERACTIONS */
 
 contains
-
-#if defined SHEAR && defined FLUID_INTERACTIONS
-   subroutine source_terms_y
-
-      use constants,       only: xdim, zdim, half, one
-      use dataio_pub,      only: die
-      use domain,          only: is_multicg
-      use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_dn, iarr_all_mx, iarr_all_my, flind
-      use global,          only: dt
-      use grid,            only: leaves
-      use grid_cont,       only: grid_container
-      use interactions,    only: dragc_gas_dust
-      use shear,           only: omega, qshear
-
-      implicit none
-
-      real, dimension(:,:,:), allocatable :: vxr, v_r, rotaccr
-      real, dimension(:,:), allocatable   :: epsa
-      real, dimension(:,:,:), allocatable :: u1
-      integer :: ind,i
-      real, parameter, dimension(2) :: fac = [half, one]
-      type(grid_container), pointer :: cg
-
-      cg => leaves%first%cg
-      if (is_multicg) call die("[sweeps:source_terms_y] multiple grid pieces per procesor not implemented yet") !nontrivial u1
-
-      allocate(vxr(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)), v_r(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)), rotaccr(size(iarr_all_my), cg%n_(xdim), cg%n_(zdim)))
-      allocate(epsa(cg%n_(xdim), cg%n_(zdim)))
-      allocate(u1(flind%all, cg%n_(xdim), cg%n_(zdim)))
-
-      u1(:,:,:) = cg%u(:,:,1,:)
-
-      do i = 1,2
-         where (u1(iarr_all_dn,:,:) > 0.0)
-            vxr(:,:,:) = u1(iarr_all_mx,:,:) / u1(iarr_all_dn,:,:)
-            v_r(:,:,:) = u1(iarr_all_my,:,:) / u1(iarr_all_dn,:,:)
-         elsewhere
-            vxr(:,:,:) = 0.0
-            v_r(:,:,:) = 0.0
-         endwhere
-         epsa(:,:) =  u1(iarr_all_dn(2),:,:) / u1(iarr_all_dn(1),:,:)
-
-         do ind=1,size(iarr_all_my)
-            if (ind == 1) then
-               rotaccr(ind,:,:) = - dragc_gas_dust * epsa(:,:) * (v_r(1,:,:) - v_r(2,:,:))
-            else
-               rotaccr(ind,:,:) = - dragc_gas_dust * 1.0    * (v_r(2,:,:) - v_r(1,:,:))
-            endif
-!           rotaccr(ind,:,:) = rotaccr(ind,:,:) - 2.0*omega*vxr(ind,:,:)
-            rotaccr(ind,:,:) = rotaccr(ind,:,:) + (qshear-2.0)*omega*vxr(ind,:,:)
-         enddo
-
-         where (u1(iarr_all_dn,:,:) > 0.0)
-            u1(iarr_all_my,:,:) = u1(iarr_all_my,:,:) + fac(i)*dt*rotaccr(:,:,:)*cg%u(iarr_all_dn,:,1,:)
-         endwhere
-         cg%u(iarr_all_my,:,1,:) = u1(iarr_all_my,:,:)
-      enddo
-
-      deallocate(vxr, v_r, rotaccr)
-      deallocate(epsa)
-      deallocate(u1)
-
-      call all_fluid_boundaries
-
-   end subroutine source_terms_y
-#endif /* SHEAR && FLUID_INTERACTIONS */
 !------------------------------------------------------------------------------------------
    function interpolate_mag_field(cdim, cg, i1, i2) result (b)
 
@@ -165,7 +95,7 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweep(cdim)
 
-      use constants,       only: pdims, LO, HI, ydim, zdim, fluid_n, uh_n, cs_i2_n
+      use constants,       only: pdims, LO, HI, ydim, zdim, fluid_n, uh_n, cs_i2_n, mag_n
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swp, nmag
       use gc_list,         only: cg_list_element
@@ -186,25 +116,27 @@ contains
       real, dimension(:,:), allocatable :: u, u0
       real, dimension(:,:), pointer     :: pu, pu0
       real, dimension(:), pointer       :: div_v1d => null(), cs2
-      integer                           :: i1, i2, uhi, ui
+      integer                           :: i1, i2, uhi, ui, magi
       integer                           :: istep
       integer                           :: i_cs_iso2
+      logical                           :: full_dim
       type(cg_list_element), pointer    :: cgl
       type(grid_container), pointer     :: cg
 
       uhi = all_cg%ind_4d(uh_n)
       ui  = all_cg%ind_4d(fluid_n)
+      magi = all_cg%ind_4d(mag_n)
       if (all_cg%exists(cs_i2_n)) then
          i_cs_iso2 = all_cg%ind(cs_i2_n) ! BEWARE: magic strings across multiple files
       else
          i_cs_iso2 = -1
       endif
 
-
       do istep = 1, integration_order
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
+            full_dim = cg%n_(cdim) > 1
 
             if (allocated(b)) deallocate(b)
             if (allocated(u)) deallocate(u)
@@ -227,7 +159,11 @@ contains
                do i1 = cg%ijkse(pdims(cdim,ydim),LO), cg%ijkse(pdims(cdim,ydim),HI)
 
 #ifdef MAGNETIC
-                  b = interpolate_mag_field(cdim, cg, i1, i2)
+                  if (full_dim) then
+                     b = interpolate_mag_field(cdim, cg, i1, i2)
+                  else
+                     b => cg%w(magi)%get_sweep(cdim, i1, i2)   ! BEWARE: is it correct for 2.5D ?
+                  endif
 #endif /* MAGNETIC */
 
                   call set_geo_coeffs(cdim, flind, i1, i2, cg)
@@ -251,7 +187,7 @@ contains
             cgl => cgl%nxt
          enddo
 
-         call all_fluid_boundaries    ! \todo : call only x for istep=1, call all for istep=2
+         if (full_dim) call all_fluid_boundaries    ! \todo : call only x for istep=1, call all for istep=2
       enddo
 
       if (allocated(b)) deallocate(b)
