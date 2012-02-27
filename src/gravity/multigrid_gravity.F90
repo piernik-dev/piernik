@@ -1393,7 +1393,7 @@ contains
          norm_old = norm_lhs
 
          ! the Huang-Greengard V-cycle
-         call roof%restrict_all(defect)
+         call roof%restrict_to_floor(defect)
 
          ! call set_dirty(correction)
          call base%set_q_value(correction, 0.)

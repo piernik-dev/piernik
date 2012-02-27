@@ -64,7 +64,7 @@ module cg_list_lev
       procedure :: update_tot_se               !< count all cg on current level for computing tags in vertical_prep
       procedure :: prolong_level0              !< interpolate the grid data to this%finer level
       procedure :: restrict_level              !< interpolate the grid data from this%coarser level
-      procedure :: restrict_all                !< restrict as much as possible
+      procedure :: restrict_to_floor                !< restrict as much as possible
 
       ! fine-coarse boundary exchanges may also belong to this type
    end type cg_list_level
@@ -229,7 +229,7 @@ contains
 
 !> \brief Restrict as much as possible
 
-   recursive subroutine restrict_all(this, iv)
+   recursive subroutine restrict_to_floor(this, iv)
 
       implicit none
 
@@ -238,9 +238,9 @@ contains
 
       if (.not. associated(this%coarser)) return
       call this%restrict_level(iv)
-      call this%coarser%restrict_all(iv)
+      call this%coarser%restrict_to_floor(iv)
 
-   end subroutine restrict_all
+   end subroutine restrict_to_floor
 
 !>
 !! \brief Simplest restriction (averaging).

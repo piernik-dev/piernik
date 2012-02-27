@@ -454,7 +454,7 @@ contains
                  & cg%b(ib,      cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z)
             cgl => cgl%nxt
          enddo
-         call roof%restrict_all(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
+         call roof%restrict_to_floor(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
 
          curl => base
          do while (associated(curl%finer)) ! from base to one level below roof
@@ -546,7 +546,7 @@ contains
             endif
          endif
 
-         call roof%restrict_all(defect)
+         call roof%restrict_to_floor(defect)
 
          !call set_dirty(correction)
          call base%set_q_value(correction, 0.)
