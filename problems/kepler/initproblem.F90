@@ -306,12 +306,12 @@ contains
       use fluidtypes,   only: component_fluid
       use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use gc_list,      only: cg_list_element
-      use grid,         only: leaves, all_cg
+      use grid,         only: leaves, all_cg, base_lev
       use grid_cont,    only: grid_container
       use hydrostatic,  only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
       use interactions, only: epstein_factor
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,     only: master, comm, ierr, FIRST
+      use mpisetup,     only: master, comm, ierr, FIRST, proc
       use types,        only: cdd
       use units,        only: newtong, gram, cm, kboltz, mH
 
@@ -439,7 +439,8 @@ contains
                if (master) call read_dens_profile(densfile,gdens)
                call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
-               dens_prof(:)    = gdens(1+cdd%pcoords(xdim)*cg%nxb:cg%n_(xdim)+cdd%pcoords(xdim)*cg%nxb)
+               dens_prof(:) = gdens( base_lev%pse(proc)%sel(1, xdim, LO)+1:base_lev%pse(proc)%sel(1, xdim, HI)+1+dom%nb*2)
+
                deallocate(gdens)
             else
                dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%n_(xdim), 0.0, 1.0) + dens_amb
