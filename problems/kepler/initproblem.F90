@@ -439,7 +439,7 @@ contains
                if (master) call read_dens_profile(densfile,gdens)
                call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
-               dens_prof(:) = gdens( base_lev%pse(proc)%sel(1, xdim, LO)+1:base_lev%pse(proc)%sel(1, xdim, HI)+1+dom%nb*2)
+               dens_prof(:) = gdens( base_lev%pse(proc)%sel(cg%grid_id, xdim, LO)+1:base_lev%pse(proc)%sel(cg%grid_id, xdim, HI)+1+dom%nb*2)
 
                deallocate(gdens)
             else
