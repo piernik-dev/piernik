@@ -1150,9 +1150,9 @@ contains
       real                           :: dxmn_safe
       type(cg_list_element), pointer :: cgl
       integer                        :: wa_i
-      type(value)                    :: drag, cfi_max
+      type(value)                    :: drag
 #ifdef MAGNETIC
-      type(value)                    :: b_min, b_max, divb_max, vai_max
+      type(value)                    :: b_min, b_max, divb_max, vai_max, cfi_max
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
       type(value)                    :: encr_min, encr_max

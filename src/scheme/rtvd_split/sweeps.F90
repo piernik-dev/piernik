@@ -114,7 +114,10 @@ contains
 
       real, dimension(:,:), allocatable :: b
       real, dimension(:,:), allocatable :: u, u0
-      real, dimension(:,:), pointer     :: pu, pu0, pb
+      real, dimension(:,:), pointer     :: pu, pu0
+#ifdef MAGNETIC
+      real, dimension(:,:), pointer     :: pb
+#endif /* MAGNETIC */
       real, dimension(:), pointer       :: div_v1d => null(), cs2
       integer                           :: i1, i2, uhi, ui, magi
       integer                           :: istep
