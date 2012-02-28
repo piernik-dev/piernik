@@ -40,6 +40,7 @@ module types
 
    type :: value
       real                      :: val
+      real                      :: assoc
       real,    dimension(ndims) :: coords
       integer, dimension(ndims) :: loc
       integer                   :: proc

@@ -699,7 +699,7 @@ contains
 !!
 !! \details It should be possible to find an extremum over a given level or leaf blocks or something
 !<
-   subroutine get_extremum(this, ind, minmax, prop)
+   subroutine get_extremum(this, ind, minmax, prop, dir)
 
       use constants,  only: MINL, MAXL, I_ONE, ndims, xdim, ydim, zdim
       use dataio_pub, only: msg, warn, die
@@ -711,17 +711,18 @@ contains
 
       implicit none
 
-      class(cg_list),  intent(in)  :: this    !< object invoking type-bound procedure
-      integer,         intent(in)  :: ind     !< Index in cg%q(:)
-      integer(kind=4), intent(in)  :: minmax  !< minimum or maximum ?
-      type(value),     intent(out) :: prop    !< precise location of the extremum to be found
+      class(cg_list),            intent(in)  :: this    !< object invoking type-bound procedure
+      integer,                   intent(in)  :: ind     !< Index in cg%q(:)
+      integer(kind=4),           intent(in)  :: minmax  !< minimum or maximum ?
+      type(value),               intent(out) :: prop    !< precise location of the extremum to be found
+      integer(kind=4), optional, intent(in)  :: dir     !< order the cell size in dir direction
 
 
-      type(grid_container), pointer :: cg
-      type(cg_list_element), pointer :: cgl
-      integer, parameter :: tag1 = 11, tag2 = tag1 + 1
-      integer, dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
+      type(grid_container),   pointer :: cg
+      type(cg_list_element),  pointer :: cgl
       real, dimension(:,:,:), pointer :: tab
+      integer,                       parameter :: tag1 = 11, tag2 = tag1 + 1, tag3 = tag2 + 1
+      integer, dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
       enum, bind(C)
          enumerator :: I_V, I_P !< value and proc
       end enum
@@ -771,16 +772,19 @@ contains
          if (dom%has_dir(xdim)) prop%coords(xdim) = cg%x(prop%loc(xdim))
          if (dom%has_dir(ydim)) prop%coords(ydim) = cg%y(prop%loc(ydim))
          if (dom%has_dir(zdim)) prop%coords(zdim) = cg%z(prop%loc(zdim))
+         if (present(dir))      prop%assoc        = cg%dl(dir)
       endif
 
       if (prop%proc /= 0) then
          if (proc == prop%proc) then ! slave
             call MPI_Send (prop%loc,    ndims, MPI_INTEGER,          FIRST, tag1, comm, ierr)
             call MPI_Send (prop%coords, ndims, MPI_DOUBLE_PRECISION, FIRST, tag2, comm, ierr)
+            if (present(dir)) call MPI_Send (prop%assoc, I_ONE, MPI_DOUBLE_PRECISION, FIRST, tag3, comm, ierr)
          endif
          if (master) then
             call MPI_Recv (prop%loc,    ndims, MPI_INTEGER,          prop%proc, tag1, comm, MPI_STATUS_IGNORE, ierr)
             call MPI_Recv (prop%coords, ndims, MPI_DOUBLE_PRECISION, prop%proc, tag2, comm, MPI_STATUS_IGNORE, ierr)
+            if (present(dir)) call MPI_Recv (prop%assoc, I_ONE, MPI_DOUBLE_PRECISION, prop%proc, tag3, comm, MPI_STATUS_IGNORE, ierr)
          endif
       endif
 
