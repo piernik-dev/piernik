@@ -969,6 +969,8 @@ contains
       use global,     only: smallp, cfl
       use grid,       only: leaves, all_cg
       use units,      only: mH, kboltz
+      use domain,     only: is_multicg
+      use mpisetup,   only: master
 
       implicit none
 
@@ -998,15 +1000,17 @@ contains
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(wa_i, MAXL, pr%velx_max, xdim)
-      pr%velx_max%assoc = cfl * pr%velx_max%assoc / (pr%velx_max%val + small)
+      if (master) pr%velx_max%assoc = cfl * pr%velx_max%assoc / (pr%velx_max%val + small)
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgl%cg%wa = cfl * cgl%cg%dx / (cgl%cg%wa +small)
-         cgl => cgl%nxt
-      enddo
-      call leaves%get_extremum(wa_i, MINL, pr%dtvx_min, xdim)
-      pr%dtvx_min%assoc = cfl * pr%dtvx_min%assoc / (pr%dtvx_min%val + small)
+      if (is_multicg) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            cgl%cg%wa = cfl * cgl%cg%dx / (cgl%cg%wa +small)
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(wa_i, MINL, pr%dtvx_min, xdim)
+         if (master) pr%dtvx_min%assoc = cfl * pr%dtvx_min%assoc / (pr%dtvx_min%val + small)
+      endif
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -1014,15 +1018,17 @@ contains
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(wa_i, MAXL, pr%vely_max, ydim)
-      pr%vely_max%assoc = cfl * pr%vely_max%assoc / (pr%vely_max%val + small)
+      if (master) pr%vely_max%assoc = cfl * pr%vely_max%assoc / (pr%vely_max%val + small)
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgl%cg%wa = cfl * cgl%cg%dy / (cgl%cg%wa +small)
-         cgl => cgl%nxt
-      enddo
-      call leaves%get_extremum(wa_i, MINL, pr%dtvy_min, ydim)
-      pr%dtvy_min%assoc = cfl * pr%dtvy_min%assoc / (pr%dtvy_min%val + small)
+      if (is_multicg) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            cgl%cg%wa = cfl * cgl%cg%dy / (cgl%cg%wa +small)
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(wa_i, MINL, pr%dtvy_min, ydim)
+         if (master) pr%dtvy_min%assoc = cfl * pr%dtvy_min%assoc / (pr%dtvy_min%val + small)
+      endif
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -1030,15 +1036,17 @@ contains
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(wa_i, MAXL, pr%velz_max, zdim)
-      pr%velz_max%assoc = cfl * pr%velz_max%assoc / (pr%velz_max%val + small)
+      if (master) pr%velz_max%assoc = cfl * pr%velz_max%assoc / (pr%velz_max%val + small)
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgl%cg%wa = cfl * cgl%cg%dz / (cgl%cg%wa +small)
-         cgl => cgl%nxt
-      enddo
-      call leaves%get_extremum(wa_i, MINL, pr%dtvz_min, zdim)
-      pr%dtvz_min%assoc = cfl * pr%dtvz_min%assoc / (pr%dtvz_min%val + small)
+      if (is_multicg) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            cgl%cg%wa = cfl * cgl%cg%dz / (cgl%cg%wa +small)
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(wa_i, MINL, pr%dtvz_min, zdim)
+         if (master) pr%dtvz_min%assoc = cfl * pr%dtvz_min%assoc / (pr%dtvz_min%val + small)
+      endif
 
 #ifdef ISO
       pr%pres_min        = pr%dens_min
