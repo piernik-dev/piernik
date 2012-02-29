@@ -62,9 +62,9 @@ module cg_list_lev
       ! Prolongation and restriction
       procedure :: vertical_prep               !< initialize prolongation and restriction targets
       procedure :: update_tot_se               !< count all cg on current level for computing tags in vertical_prep
-      procedure :: prolong_level0              !< interpolate the grid data to this%finer level
-      procedure :: restrict_level              !< interpolate the grid data from this%coarser level
-      procedure :: restrict_to_floor                !< restrict as much as possible
+      procedure :: prolong0_q_1var              !< interpolate the grid data to this%finer level
+      procedure :: restrict_q_1var              !< interpolate the grid data from this%coarser level
+      procedure :: restrict_to_floor_q_1var                !< restrict as much as possible
 
       ! fine-coarse boundary exchanges may also belong to this type
    end type cg_list_level
@@ -229,7 +229,7 @@ contains
 
 !> \brief Restrict as much as possible
 
-   recursive subroutine restrict_to_floor(this, iv)
+   recursive subroutine restrict_to_floor_q_1var(this, iv)
 
       implicit none
 
@@ -237,10 +237,10 @@ contains
       integer,                      intent(in)    :: iv   !< variable to be restricted
 
       if (.not. associated(this%coarser)) return
-      call this%restrict_level(iv)
-      call this%coarser%restrict_to_floor(iv)
+      call this%restrict_q_1var(iv)
+      call this%coarser%restrict_to_floor_q_1var(iv)
 
-   end subroutine restrict_to_floor
+   end subroutine restrict_to_floor_q_1var
 
 !>
 !! \brief Simplest restriction (averaging).
@@ -251,7 +251,7 @@ contains
 !! Some tests show that purely MPI code without local copies is marginally faster.
 !<
 
-   subroutine restrict_level(this, iv)
+   subroutine restrict_q_1var(this, iv)
 
       use constants,  only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
       use dataio_pub, only: msg, warn!, die
@@ -278,7 +278,7 @@ contains
 
       coarse => this%coarser
       if (.not. associated(coarse)) then ! can't restrict base level
-         write(msg,'(a,i3)')"[cg_list_level:restrict_level] no coarser level than ", this%lev
+         write(msg,'(a,i3)')"[cg_list_level:restrict_q_1var] no coarser level than ", this%lev
          call warn(msg)
          return
       endif
@@ -341,7 +341,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine restrict_level
+   end subroutine restrict_q_1var
 
 !>
 !! \brief 0th order prolongation : injection
@@ -349,7 +349,7 @@ contains
 !! \todo implement high order prolongation. Watch f/c boundaries.
 !<
 
-   subroutine prolong_level0(this, iv)
+   subroutine prolong0_q_1var(this, iv)
 
       use constants,  only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
       use dataio_pub, only: msg, warn!, die
@@ -374,7 +374,7 @@ contains
 
       fine => this%finer
       if (.not. associated(fine)) then ! can't prolong finest level
-         write(msg,'(a,i3)')"[gc_list:restrict_level] no finer level than: ", this%lev
+         write(msg,'(a,i3)')"[gc_list:restrict_q_1var] no finer level than: ", this%lev
          call warn(msg)
          return
       endif
@@ -442,7 +442,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine prolong_level0
+   end subroutine prolong0_q_1var
 
 !> \brief Print detailed information about current level decomposition
 

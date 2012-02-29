@@ -101,7 +101,7 @@ contains
       call check_dirty(coarse, iv, "prolong-")
 
       if (ord_prolong == 0 .or. is_mg_uneven) then
-         call coarse%prolong_level0(iv)
+         call coarse%prolong0_q_1var(iv)
       else
          call prolong_level_hord(coarse, iv) ! experimental part
       endif
@@ -611,7 +611,7 @@ contains
             P_2 = 0.;        P_1 = -5./64.;     P0 = 55./64;      P1 = 17./64.;    P2 = -3./64.
          case (4)
             P_2 = 3./128.;   P_1 = -11./64.;    P0 = 1.;          P1 = 11./64.;    P2 = -3./128.
-            ! case 0 is handled through cg_list_level%prolong_level0
+            ! case 0 is handled through cg_list_level%prolong0_q_1var
          case default
             call die("[multigridbasefuncs:prolong_level_hord] Unsupported order")
             return

@@ -282,7 +282,7 @@ contains
       if (.not. associated(lmpole, roof)) then
          curl => roof
          do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = roof%lev, lmpole%first%cg%lev + 1, -1
-            call curl%restrict_level(solution)  ! Overkill, only some layers next to external boundary are needed.
+            call curl%restrict_q_1var(solution)  ! Overkill, only some layers next to external boundary are needed.
             curl => curl%coarser
          enddo                                ! An alternative: do potential2img_mass on the roof and restrict bnd_[xyz] data.
       endif
