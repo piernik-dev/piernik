@@ -96,6 +96,7 @@ contains
    subroutine sweep(cdim)
 
       use constants,       only: pdims, LO, HI, ydim, zdim, fluid_n, uh_n, cs_i2_n, mag_n
+      use domain,          only: dom
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swp, nmag, iarr_mag_swp
       use gc_list,         only: cg_list_element
@@ -126,6 +127,7 @@ contains
       type(cg_list_element), pointer    :: cgl
       type(grid_container), pointer     :: cg
 
+      full_dim = dom%has_dir(cdim)
       uhi = all_cg%ind_4d(uh_n)
       ui  = all_cg%ind_4d(fluid_n)
       magi = all_cg%ind_4d(mag_n)
@@ -139,7 +141,6 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            full_dim = cg%n_(cdim) > 1
 
             if (allocated(b)) deallocate(b)
             if (allocated(u)) deallocate(u)
