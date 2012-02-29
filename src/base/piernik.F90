@@ -417,11 +417,12 @@ contains
 !<
    subroutine grace_period
 
-      use dataio_pub,   only: printinfo
-      use global,       only: grace_period_passed, relax_time
-      use interactions, only: interactions_grace_passed
-      use mpisetup,     only: master
-      use user_hooks,   only: problem_grace_passed
+      use dataio_pub,      only: printinfo
+      use global,          only: grace_period_passed, relax_time
+      use interactions,    only: interactions_grace_passed
+      use mpisetup,        only: master
+      use user_hooks,      only: problem_grace_passed
+      use fluidboundaries, only: all_fluid_boundaries
 
       implicit none
 
@@ -436,6 +437,7 @@ contains
          endif
          call interactions_grace_passed
          if (associated(problem_grace_passed)) call problem_grace_passed
+         call all_fluid_boundaries
          runned = .true.
       endif
    end subroutine grace_period
