@@ -1,9 +1,8 @@
 PROG      = piernik
 USE_GNUCPP = yes
 ### GNU hydra AMD64
-F90       = /usr/bin/mpif90
+F90       = mpif90
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none 
-F90FLAGS += -O3 -funroll-loops -mtune=native -march=native 
+F90FLAGS += -O2 -funroll-loops
 F90FLAGS += -fno-realloc-lhs
 LDFLAGS   = -Wl,--as-needed -Wl,-O1
-#LIBS      = -lfgsl
