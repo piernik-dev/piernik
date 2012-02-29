@@ -287,9 +287,9 @@ contains
 
          allocate(noise(3,cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
          call random_number(noise)
-         cg%u(flind%dst%imx,:,:,:) = cg%u(flind%dst%imx,:,:,:) +amp_noise -2.0*amp_noise*noise(1,:,:,:) * cg%u(flind%dst%idn,:,:,:)
-         cg%u(flind%dst%imy,:,:,:) = cg%u(flind%dst%imy,:,:,:) +amp_noise -2.0*amp_noise*noise(2,:,:,:) * cg%u(flind%dst%idn,:,:,:)
-         cg%u(flind%dst%imz,:,:,:) = cg%u(flind%dst%imz,:,:,:) +amp_noise -2.0*amp_noise*noise(3,:,:,:) * cg%u(flind%dst%idn,:,:,:)
+         cg%u(flind%dst%imx,:,:,:) = cg%u(flind%dst%imx,:,:,:) +amp_noise*(1.0-2.0*noise(1,:,:,:)) * cg%u(flind%dst%idn,:,:,:)
+         cg%u(flind%dst%imy,:,:,:) = cg%u(flind%dst%imy,:,:,:) +amp_noise*(1.0-2.0*noise(2,:,:,:)) * cg%u(flind%dst%idn,:,:,:)
+         cg%u(flind%dst%imz,:,:,:) = cg%u(flind%dst%imz,:,:,:) +amp_noise*(1.0-2.0*noise(3,:,:,:)) * cg%u(flind%dst%idn,:,:,:)
          deallocate(noise)
 
          cgl => cgl%nxt
