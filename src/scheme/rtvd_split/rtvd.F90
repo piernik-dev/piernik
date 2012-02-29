@@ -384,7 +384,10 @@ contains
             u1(:,2:n) = u0(:,2:n) - rk2coef(integration_order,istep) * gc(GC1,:,2:n) * dtx * ( gc(GC2,:,2:n)*fu(:,2:n) - gc(GC3,:,2:n)*fu(:,1:n-1) )
          endif
          u1(:,1)   = u1(:,2)
-
+      else
+         ! normally vx => vel_sweep is calculated in fluxes, since we don't go
+         ! there we need to do it manually here
+         vel_sweep = u1(iarr_all_mx,:)/u1(iarr_all_dn,:)
       endif ! (n > 1)
 
       if (use_smalld) then
