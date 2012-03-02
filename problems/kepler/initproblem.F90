@@ -310,9 +310,8 @@ contains
       use grid_cont,    only: grid_container
       use hydrostatic,  only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
       use interactions, only: epstein_factor
-      use mpi,          only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
+      use mpi,          only: MPI_DOUBLE_PRECISION
       use mpisetup,     only: master, comm, ierr, FIRST, proc
-      use types,        only: cdd
       use units,        only: newtong, gram, cm, kboltz, mH
 
       implicit none
@@ -324,12 +323,10 @@ contains
 
       real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der, gdens
       type(component_fluid), pointer  :: fl
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
 !   Secondary parameters
-      if (cdd%comm3d == MPI_COMM_NULL) call die("[initproblem:init_prob] comm3d == MPI_COMM_NULL not implemented") !pcoords
-
       call register_user_var
 
       cgl => leaves%first
