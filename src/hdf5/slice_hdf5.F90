@@ -42,7 +42,7 @@ module slice_hdf5
    implicit none
 
    private
-   public :: init_plot, write_plot
+   public :: init_plot, write_plot, pl_i
 
    integer,                                       parameter :: planelen = 2                 !< length of plane names e.g. "xy", "yz", "rp" etc.
    character(len=planelen), dimension(xdim:zdim), parameter :: pl_id = [ "yz", "xz", "xy" ]

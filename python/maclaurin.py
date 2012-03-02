@@ -26,7 +26,7 @@ def Maclaurin_test(file):
    if (not os.path.isfile(file)):
       print "Cannot find ",file
       return
-   
+
    try:
       h5f = h5.openFile(file,"r")
    except:

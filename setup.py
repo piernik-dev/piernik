@@ -318,7 +318,7 @@ probdir = 'problems/'+args[0]+'/'
 if (not os.path.isdir(probdir)):
    print "\033[91mCannot find problem directory '%s'." % probdir + '\033[0m'
    sys.exit()
-   
+
 # parse cppflags
 if(options.cppflags):
    cppflags = '-D' + ' -D'.join(options.cppflags.split(","))
@@ -364,7 +364,7 @@ for pf in req_prob:
       print "\033[91mCannot find required file",probdir+pf,"\033[0m"
       req_missing = True
 if (req_missing): sys.exit()
-    
+
 allfiles.append(probdir+"piernik.def")
 allfiles.append(probdir+options.param)
 
