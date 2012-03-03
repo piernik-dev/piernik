@@ -63,6 +63,7 @@ program piernik
    call init_piernik
 
    call all_cg%check_na
+   call all_cg%check_for_dirt
 
    call MPI_Barrier(comm,ierr)
 !-------------------------------- MAIN LOOP ----------------------------------
@@ -84,6 +85,7 @@ program piernik
    do while (t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() ) ! main loop
 
       call all_cg%check_na
+      call all_cg%check_for_dirt
 
       call time_step(dt)
       call grace_period

@@ -116,6 +116,7 @@ module gc_list
     contains
       procedure :: reg_var        !< Add a variable (cg%q or cg%w) to all grid containers
       procedure :: check_na       !< Check if all named arrays are consistently registered
+      procedure :: check_for_dirt !< Check all named arrays for constants:big_float
       procedure :: ind
       procedure :: ind_4d
       procedure :: exists
@@ -480,6 +481,41 @@ contains
 
    end subroutine check_na
 
+!> \brief Check values of all named arrays for big_float
+
+   subroutine check_for_dirt(this)
+
+      use constants,  only: big_float
+      use dataio_pub, only: warn, msg
+
+      implicit none
+
+      class(cg_list_global), intent(in) :: this          !< object invoking type-bound procedure
+
+      integer :: i, bcount
+      type(cg_list_element), pointer :: cgl
+      logical :: bad
+
+      cgl => this%first
+      do while (associated(cgl))
+         do i = lbound(this%q_lst, dim=1), ubound(this%q_lst, dim=1)
+            if (cgl%cg%q(i)%check()) then
+               write(msg,'(3a,I12,a)') "[gc_list:check_for_dirt] Array ", trim(this%q_lst(i)%name), " has ", &
+                  & count(cgl%cg%q(i)%arr >= big_float), " wrong values."
+               call warn(msg)
+            endif
+         enddo
+         do i = lbound(this%w_lst, dim=1), ubound(this%w_lst, dim=1)
+            if (cgl%cg%w(i)%check()) then
+               write(msg,'(3a,I12,a)') "[gc_list:check_for_dirt] Array ", trim(this%w_lst(i)%name), " has ", &
+                  & count(cgl%cg%w(i)%arr >= big_float), " wrong values."
+               call warn(msg)
+            endif
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine check_for_dirt
 !>
 !! \brief Register a new 3D entry in current cg with given name. Called from cg_list_global::reg_var
 !!
