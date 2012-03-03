@@ -35,7 +35,7 @@ module user_hooks
 
    private
    public :: problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd, &
-     &       at_user_dims_settings, at_user_area_settings
+     &       at_user_dims_settings, at_user_area_settings, problem_post_restart
 
    interface
 
@@ -63,6 +63,7 @@ module user_hooks
 
    procedure(no_args),  pointer :: problem_customize_solution => NULL()
    procedure(no_args),  pointer :: problem_grace_passed       => NULL()
+   procedure(no_args),  pointer :: problem_post_restart       => NULL()
    procedure(no_args),  pointer :: finalize_problem           => NULL()
    procedure(no_args),  pointer :: cleanup_problem            => NULL()
    procedure(tab_args), pointer :: custom_emf_bnd             => NULL()

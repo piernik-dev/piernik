@@ -203,6 +203,7 @@ contains
       use mpisetup,              only: init_mpi
       use timestep,              only: init_time_step
       use units,                 only: init_units
+      use user_hooks,            only: problem_post_restart
 #ifdef MAGNETIC
       use magboundaries,         only: all_mag_boundaries
 #ifdef RESISTIVE
@@ -331,6 +332,10 @@ contains
          if (master) then
             write(msg,'(a,i4,a)') "[piernik:init_piernik] Restart file #",nrestart," read. Skipping init_prob."
             call printio(msg)
+         endif
+         if (associated(problem_post_restart)) then
+            if (master) call printinfo("[piernik:init_piernik] Calling problem specific, post restart procedure")
+            call problem_post_restart
          endif
       else
          call init_prob ! may depend on anything
