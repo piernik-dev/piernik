@@ -99,7 +99,7 @@ contains
       use gravity,             only: grav_pot_3d
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, FIRST
-      use user_hooks,          only: problem_customize_solution, problem_grace_passed
+      use user_hooks,          only: problem_customize_solution, problem_grace_passed, problem_post_restart
 
       implicit none
 
@@ -197,6 +197,7 @@ contains
          grav_pot_3d => my_grav_pot_3d
          user_vars_hdf5 => prob_vars_hdf5
          problem_grace_passed => add_random_noise
+         problem_post_restart => kepler_problem_post_restart
 !         problem_grace_passed => add_sine
       endif
 
@@ -539,6 +540,33 @@ contains
 
       mmsn_T = T_0 * r**(-k)
    end function mmsn_T
+!-----------------------------------------------------------------------------
+   subroutine kepler_problem_post_restart
+      use constants,       only: fluid_n, b0_n
+      use fluidboundaries, only: all_fluid_boundaries
+      use gc_list,         only: cg_list_element
+      use grid,            only: leaves, all_cg
+      implicit none
+      type(cg_list_element), pointer :: cgl
+      call my_grav_pot_3d
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%u  => cgl%cg%w(all_cg%ind_4d(inid_n))%arr
+         cgl%cg%b = 0.0
+         cgl%cg%w(all_cg%ind_4d(b0_n))%arr = 0.0
+         cgl => cgl%nxt
+      enddo
+
+      call all_fluid_boundaries
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%u  => cgl%cg%w(all_cg%ind_4d(fluid_n))%arr
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine kepler_problem_post_restart
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
 
