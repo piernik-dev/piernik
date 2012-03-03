@@ -548,21 +548,22 @@ contains
       use grid,            only: leaves, all_cg
       implicit none
       type(cg_list_element), pointer :: cgl
-      call my_grav_pot_3d
+
+      call my_grav_pot_3d   ! reset gp, to get right values on the boundaries
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%u  => cgl%cg%w(all_cg%ind_4d(inid_n))%arr
+         cgl%cg%u  => cgl%cg%w(all_cg%ind_4d(inid_n))%arr  ! BEWARE: Don't do things like that without parental supervision
          cgl%cg%b = 0.0
          cgl%cg%w(all_cg%ind_4d(b0_n))%arr = 0.0
          cgl => cgl%nxt
       enddo
 
-      call all_fluid_boundaries
+      call all_fluid_boundaries   ! all_fluid_boundaries properly set boundaries for %u pointer
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%u  => cgl%cg%w(all_cg%ind_4d(fluid_n))%arr
+         cgl%cg%u  => cgl%cg%w(all_cg%ind_4d(fluid_n))%arr ! Quick! Revert to sane state before anyone notices
          cgl => cgl%nxt
       enddo
 
