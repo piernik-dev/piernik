@@ -36,7 +36,7 @@
 !! \copydetails piernikcl::init_opencl
 !<
 module piernikcl
-! pulled PIERNIK_OPENCL
+! pulled by PIERNIK_OPENCL
    use cl,           only: cl_context, cl_command_queue, cl_device_id
 
    implicit none
