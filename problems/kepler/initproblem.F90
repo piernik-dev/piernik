@@ -216,7 +216,6 @@ contains
 
       implicit none
 
-      real, parameter :: amp = 1.e-6
       real :: kx, kz
       integer :: i, k
       type(cg_list_element), pointer :: cgl
@@ -237,9 +236,9 @@ contains
 
          do i = cg%is, cg%ie
             do k = cg%ks, cg%ke
-               cg%u(flind%dst%imx,i,:,k) = cg%u(flind%dst%imx,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u(flind%dst%idn,i,:,k)
-               cg%u(flind%dst%imy,i,:,k) = cg%u(flind%dst%imy,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u(flind%dst%idn,i,:,k)
-               cg%u(flind%dst%imz,i,:,k) = cg%u(flind%dst%imz,i,:,k) + amp*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u(flind%dst%idn,i,:,k)
+               cg%u(flind%dst%imx,i,:,k) = cg%u(flind%dst%imx,i,:,k) + amp_noise*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u(flind%dst%idn,i,:,k)
+               cg%u(flind%dst%imy,i,:,k) = cg%u(flind%dst%imy,i,:,k) + amp_noise*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u(flind%dst%idn,i,:,k)
+               cg%u(flind%dst%imz,i,:,k) = cg%u(flind%dst%imz,i,:,k) + amp_noise*sin(kx*cg%x(i) + kz*cg%z(k)) * cg%u(flind%dst%idn,i,:,k)
             enddo
          enddo
 #ifdef DEBUG
