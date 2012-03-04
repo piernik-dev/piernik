@@ -185,13 +185,19 @@ contains
 
    logical function array3d_check_if_dirty(this)
 
-      use constants, only: big_float
+      use constants,  only: big_float
+      use dataio_pub, only: warn
 
       implicit none
 
       class(named_array3d), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) :/
 
-      array3d_check_if_dirty = any( this%arr >= big_float )
+      if (associated(this%arr)) then
+         array3d_check_if_dirty = any( this%arr >= big_float )
+      else
+         call warn("[named_array:array3d_check_if_dirty] Array not allocated!")
+         array3d_check_if_dirty = .false.
+      endif
 
    end function array3d_check_if_dirty
 
@@ -262,13 +268,19 @@ contains
 
    logical function array4d_check_if_dirty(this)
 
-      use constants, only: big_float
+      use constants,  only: big_float
+      use dataio_pub, only: warn
 
       implicit none
 
       class(named_array4d), intent(inout) :: this                  !> \todo i want to become polymorphic class(*) when I grow older
 
-      array4d_check_if_dirty = any( this%arr >= big_float )
+      if (associated(this%arr)) then
+         array4d_check_if_dirty = any( this%arr >= big_float )
+      else
+         call warn("[named_array:array4d_check_if_dirty] Array not allocated!")
+         array4d_check_if_dirty = .false.
+      endif
 
    end function array4d_check_if_dirty
 
