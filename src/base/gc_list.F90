@@ -492,9 +492,8 @@ contains
 
       class(cg_list_global), intent(in) :: this          !< object invoking type-bound procedure
 
-      integer :: i, bcount
+      integer :: i
       type(cg_list_element), pointer :: cgl
-      logical :: bad
 
       cgl => this%first
       do while (associated(cgl))
