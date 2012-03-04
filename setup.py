@@ -464,11 +464,11 @@ m.write( "SRCS = $(SRCS_V) version.F90\n" )
 m.write( pretty_format_suf("OBJS = \\", files_to_build, '.o', columns) )
 m.write( "\nCPPFLAGS += %s\n" % cppflags )
 if( "PGPLOT" in our_defs ): m.write("LIBS += -lpgplot\n")
-if( "SHEAR" in our_defs or "MULTIGRID" in our_defs ): m.write("LIBS += `pkg-config --libs fftw3`\n")
-if( "POISSON_FFT" in our_defs): m.write("LIBS += `pkg-config --libs fftw3` `pkg-config --libs lapack`\n")
+if( "SHEAR" in our_defs or "MULTIGRID" in our_defs ): m.write("LIBS += $(shell pkg-config --libs fftw3)\n")
+if( "POISSON_FFT" in our_defs): m.write("LIBS += $(shell pkg-config --libs fftw3 lapack)\n")
 if( "PIERNIK_OPENCL" in our_defs): 
-   m.write("LIBS += `pkg-config --libs fortrancl`\n")
-   m.write("F90FLAGS += `pkg-config --cflags fortrancl`\n")
+   m.write("LIBS += $(shell pkg-config --libs fortrancl)\n")
+   m.write("F90FLAGS += $(shell pkg-config --cflags fortrancl)\n")
 if( options.laconic ):
    m.write("SILENT = 1\n\n")
 else:
