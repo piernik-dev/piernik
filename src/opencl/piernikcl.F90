@@ -37,26 +37,26 @@
 !<
 module piernikcl
 ! pulled PIERNIK_OPENCL
-   use cl,           only: cl_context, cl_command_queue
+   use cl,           only: cl_context, cl_command_queue, cl_device_id
 
    implicit none
    private
-   public  :: init_opencl, cleanup_opencl, context, command_queue
+   public  :: init_opencl, cleanup_opencl, context, command_queue, device
 
    integer :: ierr
    type(cl_context)       :: context
    type(cl_command_queue) :: command_queue
+   type(cl_device_id)     :: device
 
 contains
 
    subroutine init_opencl
 
-      use cl,        only: clCreateContext, clCreateCommandQueue, CL_QUEUE_PROFILING_ENABLE, cl_platform_id, cl_device_id
+      use cl,        only: clCreateContext, clCreateCommandQueue, CL_QUEUE_PROFILING_ENABLE, cl_platform_id
 
       implicit none
 
       type(cl_platform_id)   :: platform
-      type(cl_device_id)     :: device
 
       call piernikCL_get_suitable_gpu(platform,device)
 
@@ -91,6 +91,60 @@ contains
       if (ierr /= CL_SUCCESS) call die(msg)
 
    end subroutine clerr
+
+   subroutine piernikCL_build_kernel(kernel_file, kernel_name, device, context, kernel)
+      use cl,         only: cl_device_id, cl_context, cl_program, cl_kernel, clCreateProgramWithSource, clBuildProgram, &
+                        &   clCreateKernel, clCreateProgramWithSource, clReleaseProgram!, clGetProgramBuildInfo, CL_PROGRAM_BUILD_LOG
+      use dataio_pub, only: msg, die
+
+      implicit none
+
+      character(len=*), intent(in) :: kernel_file, kernel_name
+      type(cl_device_id), intent(in) :: device
+      type(cl_context), intent(inout) :: context
+      type(cl_kernel), intent(out) :: kernel
+
+      integer :: iunit, ierr, irec
+      integer, parameter :: source_length = 1000
+      character(len = source_length) :: source
+      type(cl_program) :: prog
+
+      ! read the source file
+      open(newunit = iunit, file = trim(kernel_file), access='direct', status = 'old', action = 'read', iostat = ierr, recl = 1)
+      if (ierr /= 0) then
+         write(msg,'(2a)') '[piernikcl:piernikCL_build_kernel] Cannot open file ',trim(kernel_file)
+         call die(msg)
+      endif
+      source = ''
+      irec = 1
+      do
+         read(unit = iunit, rec = irec, iostat = ierr) source(irec:irec)
+         if (ierr /= 0) exit
+         if (irec == source_length) then
+            write(msg, '(3a)') '[piernikcl:piernikCL_build_kernel] CL source file: ',trim(kernel_file),' is too big'
+            call die(msg)
+         endif
+         irec = irec + 1
+      enddo
+      close(unit = iunit)
+
+      ! create the program
+      prog = clCreateProgramWithSource(context, source, ierr)
+      prog = clCreateProgramWithSource(context, source, ierr)
+      call clerr(ierr,'Error: cannot create program from source.')
+
+      ! build
+      call clBuildProgram(prog, '-cl-mad-enable', ierr)
+      ! get the compilation log
+      ! call clGetProgramBuildInfo(prog, device, CL_PROGRAM_BUILD_LOG, source, irec)
+      ! if (len(trim(source)) > 0) print*, trim(source)
+      call clerr(ierr, 'Error: program build failed.')
+
+      ! finally get the kernel and release the program
+      kernel = clCreateKernel(prog, kernel_name, ierr)
+      call clReleaseProgram(prog, ierr)
+      return
+   end subroutine piernikCL_build_kernel
 
    subroutine piernikCL_get_suitable_gpu(platform,device)
 
