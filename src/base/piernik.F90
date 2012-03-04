@@ -232,6 +232,9 @@ contains
 #ifdef COSM_RAYS
       use crdiffusion,           only: init_crdiffusion
 #endif /* COSM_RAYS */
+#ifdef PIERNIK_OPENCL
+      use piernikcl,             only: init_opencl
+#endif /* PIERNIK_OPENCL */
 
       implicit none
 
@@ -243,6 +246,10 @@ contains
       call init_mpi
       code_progress = PIERNIK_INIT_MPI ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_GRID can be reshuffled when necessary
       call check_environment
+
+#ifdef PIERNIK_OPENCL
+      call init_opencl
+#endif /* PIERNIK_OPENCL */
 
 #ifdef DEBUG
       call init_piernikdebug ! Make it available as early as possible - right after init_mpi
@@ -394,6 +401,9 @@ contains
 #ifdef MULTIGRID
       use multigrid,     only: cleanup_multigrid
 #endif /* MULTIGRID */
+#ifdef PIERNIK_OPENCL
+      use piernikcl,     only: cleanup_opencl
+#endif /* PIERNIK_OPENCL */
       implicit none
 
       if (associated(cleanup_problem)) call cleanup_problem; call  nextdot(.false.)
@@ -414,6 +424,9 @@ contains
       call cleanup_fluidindex;    call nextdot(.false., print_t = .true.)
       call cleanup_timers;        call nextdot(.false.)
       call cleanup_diagnostics;   call nextdot(.false.)
+#ifdef PIERNIK_OPENCL
+      call cleanup_opencl;        call nextdot(.false.)
+#endif /* PIERNIK_OPENCL */
       call cleanup_mpi;           call nextdot(.true.)
 
    end subroutine cleanup_piernik
