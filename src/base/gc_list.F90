@@ -90,6 +90,7 @@ module gc_list
    type :: na_var
       character(len=dsetnamelen) :: name  !< a user-provided id for the array
       integer(kind=4) :: restart_mode     !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
+      integer(kind=4) :: position         !< VAR_CENTER by default, also possible VAR_CORNER and VAR_[XYZ]FACE
       integer(kind=4) :: dim4             !< <=0 for 3D arrays, >0 for 4D arrays
       logical :: multigrid                !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
    end type na_var
@@ -357,10 +358,10 @@ contains
 !! When dim4 is present then create a rank-4 array instead.(in cg%w)
 !<
 
-   subroutine reg_var(this, name, restart_mode, dim4, multigrid)
+   subroutine reg_var(this, name, restart_mode, dim4, position, multigrid)
 
-      use constants,   only: INVALID
-      use dataio_pub,  only: die, msg
+      use constants,   only: INVALID, VAR_CENTER, AT_NO_B
+      use dataio_pub,  only: die, warn, msg
 
       implicit none
 
@@ -368,13 +369,23 @@ contains
       character(len=*),          intent(in)    :: name          !< Name of the variable to be registered
       integer(kind=4),           intent(in)    :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
       integer(kind=4), optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
+      integer(kind=4), optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
       logical, optional,         intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
 
       type(cg_list_element), pointer :: cgl
       logical :: mg
+      integer(kind=4) :: pos
 
       mg = .false.
       if (present(multigrid)) mg = multigrid
+
+      pos = VAR_CENTER
+      if (present(position)) pos = position
+
+      if (pos /= VAR_CENTER .and. restart_mode == AT_NO_B) then
+         write(msg,'(3a)')"[gc_list:reg_var] no boundaries for restart with non cel-centered variable '",name,"' may result in loss of information in the restart files."
+         call warn(msg)
+      endif
 
       if (present(dim4)) then
          if (this%exists_4d(name)) then
@@ -382,13 +393,13 @@ contains
             call die(msg)
          endif
          if (mg) call die("[gc_list:reg_var] there are no rank-4 multigrid arrays yet")
-         call add2lst(this%w_lst, name, restart_mode, dim4, mg)
+         call add2lst(this%w_lst, name, restart_mode, pos, dim4, mg)
       else
          if (this%exists(name)) then
             write(msg, '(3a)')"[gc_list:reg_var] A rank-3 array '",trim(name),"' was already registered."
             call die(msg)
          endif
-         call add2lst(this%q_lst, name, restart_mode, int(INVALID, kind=4), mg)
+         call add2lst(this%q_lst, name, restart_mode, pos, int(INVALID, kind=4), mg)
       endif
 
       cgl => this%first
@@ -409,13 +420,14 @@ contains
 
 !> \brief Add a named array properties to the list
 
-   subroutine add2lst(lst, name, restart_mode, dim4, multigrid)
+   subroutine add2lst(lst, name, restart_mode, position, dim4, multigrid)
 
       implicit none
 
       type(na_var), dimension(:), allocatable, intent(inout) :: lst           !< the list to which we want to appent an entry
       character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
-      integer(kind=4),                         intent(in)    :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
+      integer(kind=4),                         intent(in)    :: restart_mode  !< Write to the restart if not AT_IGNORE. Several write modes can be supported.
+      integer(kind=4),                         intent(in)    :: position      !< VAR_CENTER in most cases, VAR_CORNER for magnetic field
       integer(kind=4),                         intent(in)    :: dim4          !< If not INVALID then the variable is in the cg%w array.
       logical,                                 intent(in)    :: multigrid     !< If .true. then cg%q(:)%arr and cg%w(:)%arr are allocated also below base level
 
@@ -428,7 +440,7 @@ contains
          tmp(:ubound(lst(:), dim=1)) = lst(:)
          call move_alloc(from=tmp, to=lst)
       endif
-      lst(ubound(lst(:), dim=1)) = na_var(name, restart_mode, dim4, multigrid)
+      lst(ubound(lst(:), dim=1)) = na_var(name, restart_mode, position, dim4, multigrid)
 
    end subroutine add2lst
 
