@@ -216,6 +216,7 @@ contains
    function time_left(wend) result (tf)
 
       use dataio_pub, only: msg, printinfo
+      use mpisetup,   only: master
 
       implicit none
 
@@ -254,7 +255,7 @@ contains
       endif
 
       if (present(wend)) then
-         if (wend < 0) then
+         if (wend < 0 .and. master) then
             ss = (clock_end - clock)/(3600.*cnt_rate)
             hh = int(ss)
             ss = (ss - hh)*60.
