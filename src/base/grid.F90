@@ -53,7 +53,7 @@ contains
 !<
    subroutine init_grid
 
-      use constants,  only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, VAR_CORNER, INVALID, &
+      use constants,  only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, VAR_XFACE, VAR_YFACE, VAR_ZFACE, INVALID, &
            &                ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n, cs_i2_n, base_level_id, base_level_offset
       use dataio_pub, only: printinfo, die, code_progress
       use domain,     only: dom, pdom, is_multicg
@@ -69,6 +69,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       type(cg_list_patch), pointer :: pbd
+      integer(kind=4), parameter, dimension(ndims) :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
@@ -100,10 +101,10 @@ contains
       call all_cg%reg_var(wa_n,    AT_IGNORE, multigrid=.true.)            !! Auxiliary array. Multigrid required only for CR diffusion
       call all_cg%reg_var(fluid_n, AT_NO_B,   flind%all)                   !! Main array of all fluids' components, "u"
       call all_cg%reg_var(uh_n,    AT_IGNORE, flind%all)                   !! Main array of all fluids' components (for t += dt/2)
-      call all_cg%reg_var(mag_n,   AT_OUT_B,  ndims, position=VAR_CORNER)  !! Main array of magnetic field's components, "b"
+      call all_cg%reg_var(mag_n,   AT_OUT_B,  ndims, position=xyz_face)    !! Main array of magnetic field's components, "b"
       if (repeat_step) then
          call all_cg%reg_var(u0_n, AT_IGNORE, flind%all)                   !! Copy of main array of all fluids' components
-         call all_cg%reg_var(b0_n, AT_IGNORE, ndims, position=VAR_CORNER)  !! Copy of main array of magnetic field's components
+         call all_cg%reg_var(b0_n, AT_IGNORE, ndims, position=xyz_face)    !! Copy of main array of magnetic field's components
       endif
 
       nrq = 0

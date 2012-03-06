@@ -88,11 +88,11 @@ module gc_list
 
    !> \brief Common properties of 3D and 4D named arrays
    type :: na_var
-      character(len=dsetnamelen) :: name  !< a user-provided id for the array
-      integer(kind=4) :: restart_mode     !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
-      integer(kind=4) :: position         !< VAR_CENTER by default, also possible VAR_CORNER and VAR_[XYZ]FACE
-      integer(kind=4) :: dim4             !< <=0 for 3D arrays, >0 for 4D arrays
-      logical :: multigrid                !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
+      character(len=dsetnamelen)                 :: name          !< a user-provided id for the array
+      integer(kind=4)                            :: restart_mode  !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
+      integer(kind=4), allocatable, dimension(:) :: position      !< VAR_CENTER by default, also possible VAR_CORNER and VAR_[XYZ]FACE
+      integer(kind=4)                            :: dim4          !< <=0 for 3D arrays, >0 for 4D arrays
+      logical                                    :: multigrid     !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
    end type na_var
 
    !>
@@ -365,24 +365,38 @@ contains
 
       implicit none
 
-      class(cg_list_global),     intent(inout) :: this          !< object invoking type-bound procedure
-      character(len=*),          intent(in)    :: name          !< Name of the variable to be registered
-      integer(kind=4),           intent(in)    :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
-      integer(kind=4), optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
-      integer(kind=4), optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
-      logical, optional,         intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
+      class(cg_list_global),                   intent(inout) :: this          !< object invoking type-bound procedure
+      character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
+      integer(kind=4),                         intent(in)    :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
+      integer(kind=4),               optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
+      integer(kind=4), dimension(:), optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
+      logical,                       optional, intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
 
       type(cg_list_element), pointer :: cgl
       logical :: mg
-      integer(kind=4) :: pos
+      integer :: nvar
+      integer(kind=4), allocatable, dimension(:) :: pos
 
       mg = .false.
       if (present(multigrid)) mg = multigrid
 
-      pos = VAR_CENTER
-      if (present(position)) pos = position
+      nvar = 1
+      if (present(dim4)) nvar = dim4
 
-      if (pos /= VAR_CENTER .and. restart_mode == AT_NO_B) then
+      if (allocated(pos)) call die("[gc_list:reg_var] pos(:) already allocated")
+      allocate(pos(nvar))
+
+      pos(:) = VAR_CENTER
+      if (present(position)) then
+         if (any(size(position) == [1, nvar])) then
+            pos = position
+         else
+            write(msg,'(2(a,i3))')"[gc_list:reg_var] position should be an array of 1 or ",nvar," values. Got ",size(position)
+            call die(msg)
+         endif
+      endif
+
+      if (any(pos(:) /= VAR_CENTER) .and. restart_mode == AT_NO_B) then
          write(msg,'(3a)')"[gc_list:reg_var] no boundaries for restart with non cel-centered variable '",name,"' may result in loss of information in the restart files."
          call warn(msg)
       endif
@@ -416,6 +430,8 @@ contains
          cgl => cgl%nxt
       enddo
 
+      deallocate(pos)
+
    end subroutine reg_var
 
 !> \brief Add a named array properties to the list
@@ -427,7 +443,7 @@ contains
       type(na_var), dimension(:), allocatable, intent(inout) :: lst           !< the list to which we want to appent an entry
       character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
       integer(kind=4),                         intent(in)    :: restart_mode  !< Write to the restart if not AT_IGNORE. Several write modes can be supported.
-      integer(kind=4),                         intent(in)    :: position      !< VAR_CENTER in most cases, VAR_CORNER for magnetic field
+      integer(kind=4), dimension(:),           intent(in)    :: position      !< VAR_CENTER in most cases, VAR_[XYZ]FACE for magnetic field
       integer(kind=4),                         intent(in)    :: dim4          !< If not INVALID then the variable is in the cg%w array.
       logical,                                 intent(in)    :: multigrid     !< If .true. then cg%q(:)%arr and cg%w(:)%arr are allocated also below base level
 
