@@ -141,6 +141,10 @@ program piernik
          write(msg, '(4a)') "Wall time limit exceeded at step ",trim(nstr),", t = ", trim(tstr)
          call warn(msg)
       endif
+
+#ifdef DEBUG
+      call all_cg%print_vars
+#endif
    endif
 
    if (associated(finalize_problem)) call finalize_problem

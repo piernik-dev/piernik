@@ -118,6 +118,7 @@ module gc_list
       procedure :: reg_var        !< Add a variable (cg%q or cg%w) to all grid containers
       procedure :: check_na       !< Check if all named arrays are consistently registered
       procedure :: check_for_dirt !< Check all named arrays for constants:big_float
+      procedure :: print_vars     !< write a summary on registered fields. Can be useful for debugging
       procedure :: ind
       procedure :: ind_4d
       procedure :: exists
@@ -756,6 +757,37 @@ contains
       endif
 
    end function exists_4d
+
+   subroutine print_vars(this)
+
+      use dataio_pub, only: printinfo, msg
+      use mpisetup,   only: slave
+
+      implicit none
+
+      class(cg_list_global), intent(inout) :: this
+
+      integer :: i
+
+      if (slave) return
+
+      write(msg,'(a,i2,a)')"[gc_list:print_vars] Found ",size(this%q_lst)," rank-3 arrays:"
+      call printinfo(msg)
+      do i = lbound(this%q_lst(:), dim=1), ubound(this%q_lst(:), dim=1)
+         write(msg,'(3a,i2,a,l2,a,i2)')"'", this%q_lst(i)%name, "', restart_mode=", this%q_lst(i)%restart_mode, ", multigrid=", this%q_lst(i)%multigrid, &
+              &                        ", position=", this%q_lst(i)%position(:)
+         call printinfo(msg)
+      enddo
+
+      write(msg,'(a,i2,a)')"[gc_list:print_vars] Found ",size(this%w_lst)," rank-4 arrays:"
+      call printinfo(msg)
+      do i = lbound(this%w_lst(:), dim=1), ubound(this%w_lst(:), dim=1)
+         write(msg,'(3a,2(i2,a),l2,a,100i2)')"'", this%w_lst(i)%name, "', components=", this%w_lst(i)%dim4, ", restart_mode=", this%w_lst(i)%restart_mode, &
+              &                              ", multigrid=", this%w_lst(i)%multigrid, ", position=", this%w_lst(i)%position(:)
+         call printinfo(msg)
+      enddo
+
+   end subroutine print_vars
 
 !>
 !! \brief Find munimum or maximum value over a specified list of grid containers
