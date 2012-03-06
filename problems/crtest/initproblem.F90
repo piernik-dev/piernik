@@ -133,7 +133,7 @@ contains
 
       if (r0 == 0.) call die("[initproblem:read_problem_par] r0 == 0")
 
-      call all_cg%reg_var(aecr1_n, AT_NO_B)
+      call all_cg%reg_var(aecr1_n, .false., AT_NO_B)
 
       if (norm_step <= 0) norm_step = huge(I_ONE)
 

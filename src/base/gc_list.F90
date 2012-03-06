@@ -86,9 +86,14 @@ module gc_list
 
    end type cg_list
 
-   !> \brief Common properties of 3D and 4D named arrays
+   !>
+   !! \brief Common properties of 3D and 4D named arrays
+   !!
+   !! \todo consider upgrading vital from logical to integer describing prolongation/restriction order or INVALID..
+   !<
    type :: na_var
       character(len=dsetnamelen)                 :: name          !< a user-provided id for the array
+      logical                                    :: vital         !< fields that are subject of automatic prolongation and restriction (e.g. state variables)
       integer(kind=4)                            :: restart_mode  !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
       integer(kind=4), allocatable, dimension(:) :: position      !< VAR_CENTER by default, also possible VAR_CORNER and VAR_[XYZ]FACE
       integer(kind=4)                            :: dim4          !< <=0 for 3D arrays, >0 for 4D arrays
@@ -359,7 +364,7 @@ contains
 !! When dim4 is present then create a rank-4 array instead.(in cg%w)
 !<
 
-   subroutine reg_var(this, name, restart_mode, dim4, position, multigrid)
+   subroutine reg_var(this, name, vital, restart_mode, dim4, position, multigrid)
 
       use constants,   only: INVALID, VAR_CENTER, AT_NO_B
       use dataio_pub,  only: die, warn, msg
@@ -368,6 +373,7 @@ contains
 
       class(cg_list_global),                   intent(inout) :: this          !< object invoking type-bound procedure
       character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
+      logical,                                 intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
       integer(kind=4),                         intent(in)    :: restart_mode  !< Write to the restar if not AT_IGNORE. Several write modes can be supported.
       integer(kind=4),               optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
       integer(kind=4), dimension(:), optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
@@ -408,13 +414,13 @@ contains
             call die(msg)
          endif
          if (mg) call die("[gc_list:reg_var] there are no rank-4 multigrid arrays yet")
-         call add2lst(this%w_lst, name, restart_mode, pos, dim4, mg)
+         call add2lst(this%w_lst, name, vital, restart_mode, pos, dim4, mg)
       else
          if (this%exists(name)) then
             write(msg, '(3a)')"[gc_list:reg_var] A rank-3 array '",trim(name),"' was already registered."
             call die(msg)
          endif
-         call add2lst(this%q_lst, name, restart_mode, pos, int(INVALID, kind=4), mg)
+         call add2lst(this%q_lst, name, vital, restart_mode, pos, int(INVALID, kind=4), mg)
       endif
 
       cgl => this%first
@@ -437,12 +443,13 @@ contains
 
 !> \brief Add a named array properties to the list
 
-   subroutine add2lst(lst, name, restart_mode, position, dim4, multigrid)
+   subroutine add2lst(lst, name, vital, restart_mode, position, dim4, multigrid)
 
       implicit none
 
       type(na_var), dimension(:), allocatable, intent(inout) :: lst           !< the list to which we want to appent an entry
       character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
+      logical,                                 intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
       integer(kind=4),                         intent(in)    :: restart_mode  !< Write to the restart if not AT_IGNORE. Several write modes can be supported.
       integer(kind=4), dimension(:),           intent(in)    :: position      !< VAR_CENTER in most cases, VAR_[XYZ]FACE for magnetic field
       integer(kind=4),                         intent(in)    :: dim4          !< If not INVALID then the variable is in the cg%w array.
@@ -457,7 +464,7 @@ contains
          tmp(:ubound(lst(:), dim=1)) = lst(:)
          call move_alloc(from=tmp, to=lst)
       endif
-      lst(ubound(lst(:), dim=1)) = na_var(name, restart_mode, position, dim4, multigrid)
+      lst(ubound(lst(:), dim=1)) = na_var(name, vital, restart_mode, position, dim4, multigrid)
 
    end subroutine add2lst
 
@@ -774,16 +781,16 @@ contains
       write(msg,'(a,i2,a)')"[gc_list:print_vars] Found ",size(this%q_lst)," rank-3 arrays:"
       call printinfo(msg)
       do i = lbound(this%q_lst(:), dim=1), ubound(this%q_lst(:), dim=1)
-         write(msg,'(3a,i2,a,l2,a,i2)')"'", this%q_lst(i)%name, "', restart_mode=", this%q_lst(i)%restart_mode, ", multigrid=", this%q_lst(i)%multigrid, &
-              &                        ", position=", this%q_lst(i)%position(:)
+         write(msg,'(3a,l2,a,i2,a,l2,a,i2)')"'", this%q_lst(i)%name, ", vital=", this%q_lst(i)%vital, "', restart_mode=", this%q_lst(i)%restart_mode, &
+              &                             ", multigrid=", this%q_lst(i)%multigrid, ", position=", this%q_lst(i)%position(:)
          call printinfo(msg)
       enddo
 
       write(msg,'(a,i2,a)')"[gc_list:print_vars] Found ",size(this%w_lst)," rank-4 arrays:"
       call printinfo(msg)
       do i = lbound(this%w_lst(:), dim=1), ubound(this%w_lst(:), dim=1)
-         write(msg,'(3a,2(i2,a),l2,a,100i2)')"'", this%w_lst(i)%name, "', components=", this%w_lst(i)%dim4, ", restart_mode=", this%w_lst(i)%restart_mode, &
-              &                              ", multigrid=", this%w_lst(i)%multigrid, ", position=", this%w_lst(i)%position(:)
+         write(msg,'(3a,l2,a,2(i2,a),l2,a,100i2)')"'", this%w_lst(i)%name, ", vital=", this%w_lst(i)%vital, "', components=", this%w_lst(i)%dim4, &
+              &                                   ", restart_mode=", this%w_lst(i)%restart_mode, ", multigrid=", this%w_lst(i)%multigrid, ", position=", this%w_lst(i)%position(:)
          call printinfo(msg)
       enddo
 

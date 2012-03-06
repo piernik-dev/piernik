@@ -299,7 +299,7 @@ contains
       a12 = a1**2
       a32 = a3**2
 
-      call all_cg%reg_var(apot_n, AT_IGNORE)
+      call all_cg%reg_var(apot_n, .false., AT_IGNORE)
       apot_i = all_cg%ind(apot_n)
 
       cgl => leaves%first

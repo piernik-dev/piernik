@@ -98,13 +98,13 @@ contains
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
 #endif /* VERBOSE */
 
-      call all_cg%reg_var(wa_n,    AT_IGNORE, multigrid=.true.)            !! Auxiliary array. Multigrid required only for CR diffusion
-      call all_cg%reg_var(fluid_n, AT_NO_B,   flind%all)                   !! Main array of all fluids' components, "u"
-      call all_cg%reg_var(uh_n,    AT_IGNORE, flind%all)                   !! Main array of all fluids' components (for t += dt/2)
-      call all_cg%reg_var(mag_n,   AT_OUT_B,  ndims, position=xyz_face)    !! Main array of magnetic field's components, "b"
+      call all_cg%reg_var(wa_n,    .false., AT_IGNORE, multigrid=.true.)            !! Auxiliary array. Multigrid required only for CR diffusion
+      call all_cg%reg_var(fluid_n, .true.,  AT_NO_B,   flind%all)                   !! Main array of all fluids' components, "u"
+      call all_cg%reg_var(uh_n,    .false., AT_IGNORE, flind%all)                   !! Main array of all fluids' components (for t += dt/2)
+      call all_cg%reg_var(mag_n,   .true.,  AT_OUT_B,  ndims, position=xyz_face)    !! Main array of magnetic field's components, "b"
       if (repeat_step) then
-         call all_cg%reg_var(u0_n, AT_IGNORE, flind%all)                   !! Copy of main array of all fluids' components
-         call all_cg%reg_var(b0_n, AT_IGNORE, ndims, position=xyz_face)    !! Copy of main array of magnetic field's components
+         call all_cg%reg_var(u0_n, .false., AT_IGNORE, flind%all)                   !! Copy of main array of all fluids' components
+         call all_cg%reg_var(b0_n, .false., AT_IGNORE, ndims, position=xyz_face)    !! Copy of main array of magnetic field's components
       endif
 
       nrq = 0
@@ -129,7 +129,7 @@ contains
 #ifdef ISO
       if (is_multicg) call die("[grid:init_cs_iso2] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
 
-      call all_cg%reg_var(cs_i2_n, AT_NO_B)
+      call all_cg%reg_var(cs_i2_n, .true., AT_NO_B)
 
       cgl => all_cg%first
       do while (associated(cgl))

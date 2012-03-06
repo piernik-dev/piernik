@@ -58,11 +58,11 @@ contains
       has_cr = (crsall > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, AT_IGNORE, crsall)
+         call all_cg%reg_var(wcr_n, .false., AT_IGNORE, crsall)
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
-      call all_cg%reg_var(divv_n, AT_IGNORE)
+      call all_cg%reg_var(divv_n, .false., AT_IGNORE)
 
    end subroutine init_crdiffusion
 

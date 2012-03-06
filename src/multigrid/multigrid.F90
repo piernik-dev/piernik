@@ -304,10 +304,10 @@ contains
       enddo
       call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, I_ONE, MPI_LOGICAL, MPI_LOR, comm, ierr)
 
-      call all_cg%reg_var(source_n,     AT_IGNORE, multigrid = .true.)
-      call all_cg%reg_var(solution_n,   AT_IGNORE, multigrid = .true.)
-      call all_cg%reg_var(defect_n,     AT_IGNORE, multigrid = .true.)
-      call all_cg%reg_var(correction_n, AT_IGNORE, multigrid = .true.)
+      call all_cg%reg_var(source_n,     .false., AT_IGNORE, multigrid = .true.)
+      call all_cg%reg_var(solution_n,   .false., AT_IGNORE, multigrid = .true.)
+      call all_cg%reg_var(defect_n,     .false., AT_IGNORE, multigrid = .true.)
+      call all_cg%reg_var(correction_n, .false., AT_IGNORE, multigrid = .true.)
 
       source     = all_cg%ind(source_n)
       solution   = all_cg%ind(solution_n)

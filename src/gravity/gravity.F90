@@ -271,12 +271,13 @@ contains
       endif
 
       ! Declare arrays for potential and make shortcuts
-      call all_cg%reg_var(gpot_n, AT_IGNORE)
-      call all_cg%reg_var(hgpot_n, AT_IGNORE)
-      call all_cg%reg_var(gp_n, AT_OUT_B)
+      ! All gravitational potential should be recalculated after refinement changes
+      call all_cg%reg_var(gpot_n,  .false., AT_IGNORE)
+      call all_cg%reg_var(hgpot_n, .false., AT_IGNORE)
+      call all_cg%reg_var(gp_n,    .false., AT_OUT_B)
 #ifdef SELF_GRAV
-      call all_cg%reg_var(sgp_n, AT_IGNORE)
-      call all_cg%reg_var(sgpm_n, AT_IGNORE)
+      call all_cg%reg_var(sgp_n,   .false., AT_IGNORE)
+      call all_cg%reg_var(sgpm_n,  .false., AT_IGNORE)
 #endif /* SELF_GRAV */
 
       cgl => all_cg%first

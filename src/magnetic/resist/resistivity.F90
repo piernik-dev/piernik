@@ -140,13 +140,13 @@ contains
 
       if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
-      call all_cg%reg_var(wcu_n, AT_IGNORE)
-      call all_cg%reg_var(eta_n, AT_IGNORE)
-      call all_cg%reg_var(wb_n,  AT_IGNORE)
-      call all_cg%reg_var(eh_n,  AT_IGNORE)
-      call all_cg%reg_var(dbx_n, AT_IGNORE)
-      call all_cg%reg_var(dby_n, AT_IGNORE)
-      call all_cg%reg_var(dbz_n, AT_IGNORE)
+      call all_cg%reg_var(wcu_n, .false., AT_IGNORE)
+      call all_cg%reg_var(eta_n, .false., AT_IGNORE)
+      call all_cg%reg_var(wb_n,  .false., AT_IGNORE)
+      call all_cg%reg_var(eh_n,  .false., AT_IGNORE)
+      call all_cg%reg_var(dbx_n, .false., AT_IGNORE)
+      call all_cg%reg_var(dby_n, .false., AT_IGNORE)
+      call all_cg%reg_var(dbz_n, .false., AT_IGNORE)
 #ifdef ISO
       if (eta_1 == 0.) then
          cgl => leaves%first

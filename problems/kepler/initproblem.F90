@@ -85,7 +85,7 @@ contains
       integer(kind=4) :: dim4 !< BEWARE: workaround for gcc-4.6 bug
 
       dim4 = all_cg%w_lst(all_cg%ind_4d(fluid_n))%dim4
-      call all_cg%reg_var(inid_n, AT_NO_B, dim4)
+      call all_cg%reg_var(inid_n, .false., AT_NO_B, dim4)
 
    end subroutine register_user_var
 !-----------------------------------------------------------------------------

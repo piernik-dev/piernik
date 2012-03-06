@@ -216,9 +216,9 @@ contains
          single_base = (nproc == 1)
       endif
 
-      call all_cg%reg_var(diff_bx_n, AT_IGNORE, multigrid = .true.)
-      call all_cg%reg_var(diff_by_n, AT_IGNORE, multigrid = .true.)
-      call all_cg%reg_var(diff_bz_n, AT_IGNORE, multigrid = .true.)
+      call all_cg%reg_var(diff_bx_n, .false., AT_IGNORE, multigrid = .true.)
+      call all_cg%reg_var(diff_by_n, .false., AT_IGNORE, multigrid = .true.)
+      call all_cg%reg_var(diff_bz_n, .false., AT_IGNORE, multigrid = .true.)
       idiffb(xdim) = all_cg%ind(diff_bx_n)
       idiffb(ydim) = all_cg%ind(diff_by_n)
       idiffb(zdim) = all_cg%ind(diff_bz_n)

@@ -306,7 +306,7 @@ contains
       real, dimension(:,:,:), pointer :: q0
 
       do i = D0, VY0
-         call all_cg%reg_var(q_n(i), AT_NO_B)
+         call all_cg%reg_var(q_n(i), .false., AT_NO_B)
       enddo
 
       fl => flind%neu
@@ -448,7 +448,7 @@ contains
 
       if (divine_intervention_type == 3) then
          do i = D0, VY0
-            call all_cg%reg_var(q_n(i), AT_NO_B)
+            call all_cg%reg_var(q_n(i), .false., AT_NO_B)
          enddo
       endif
 
