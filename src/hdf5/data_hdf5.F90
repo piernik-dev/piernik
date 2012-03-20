@@ -587,7 +587,7 @@ contains
          call h5gcreate_f(file_id, gname, grp_id, error)
 
          ! set attributes here
-         call h5ltmake_dataset_double_f(grp_id, "fbnd", int(2,kind=4), [integer(kind=HSIZE_T):: shape(cg%fbnd)], &
+         call h5ltmake_dataset_double_f(grp_id, "fbnd", int(2,kind=4), shape(cg%fbnd,kind=HSIZE_T), &
                                       & cg%fbnd, error)
 
          if (.not.allocated(data)) allocate(data(cg%n_b(xdim),cg%n_b(ydim),cg%n_b(zdim)))
