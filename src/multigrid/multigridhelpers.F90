@@ -64,8 +64,8 @@ contains
 
    subroutine set_dirty(iv)
 
-      use dataio_pub,    only: die
-      use grid,          only: all_cg
+      use dataio_pub, only: die
+      use gc_list,    only: all_cg
 
       implicit none
 
@@ -89,9 +89,8 @@ contains
       use constants,   only: ndims
       use dataio_pub,  only: die, warn, msg
       use domain,      only: dom
-      use gc_list,     only: cg_list_element
+      use gc_list,     only: cg_list_element, all_cg
       use cg_list_lev, only: cg_list_level
-      use grid,        only: all_cg
       use mpisetup,    only: proc
 
       implicit none

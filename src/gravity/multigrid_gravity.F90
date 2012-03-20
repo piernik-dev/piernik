@@ -403,9 +403,9 @@ contains
       use constants,     only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n
       use dataio_pub,    only: die, warn
       use domain,        only: dom
-      use gc_list,       only: cg_list_element
+      use gc_list,       only: cg_list_element, all_cg
       use cg_list_lev,   only: cg_list_level
-      use grid,          only: leaves, all_cg
+      use grid,          only: leaves
       use grid_cont,     only: grid_container
       use mpi,           only: MPI_COMM_NULL
       use mpisetup,      only: master, nproc, proc
@@ -626,7 +626,7 @@ contains
    subroutine init_history(this, nold, prefix)
 
       use constants,        only: singlechar, dsetnamelen, AT_IGNORE
-      use grid,             only: all_cg
+      use gc_list,          only: all_cg
       use multigridhelpers, only: set_dirty
 
       implicit none
@@ -958,9 +958,9 @@ contains
       use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use dataio_pub,       only: msg, die, printinfo
-      use gc_list,          only: ind_val
+      use gc_list,          only: ind_val, all_cg
       use global,           only: t
-      use grid,             only: all_cg, leaves
+      use grid,             only: leaves
       use mpisetup,         only: master
       use multigridvars,    only: roof, stdout, solution
       use multigridhelpers, only: set_dirty, check_dirty
@@ -1215,7 +1215,8 @@ contains
    subroutine multigrid_solve_grav(i_all_dens)
 
       use constants,     only: sgp_n
-      use grid,          only: leaves, all_cg
+      use gc_list,       only: all_cg
+      use grid,          only: leaves
       use multigridvars, only: solution, bnd_isolated, bnd_dirichlet, bnd_givenval, tot_ts, ts
       use multipole,     only: multipole_solver
       use timer,         only: set_timer

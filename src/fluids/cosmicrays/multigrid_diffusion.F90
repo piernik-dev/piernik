@@ -109,7 +109,7 @@ contains
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, warn, msg
       use domain,        only: dom
-      use grid,          only: all_cg
+      use gc_list,       only: all_cg
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use mpisetup,      only: comm, ierr, master, slave, nproc, ibuff, rbuff, lbuff, cbuff, buffer_dim, FIRST
       use multigridvars, only: extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, single_base

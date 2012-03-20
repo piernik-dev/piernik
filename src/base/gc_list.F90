@@ -37,7 +37,7 @@ module gc_list
    implicit none
 
    private
-   public :: cg_list_global, cg_list, cg_list_element, ind_val
+   public :: cg_list, cg_list_element, ind_val, all_cg
 
    !>
    !! \brief A grid container with two links to other cg_list_elements
@@ -135,6 +135,8 @@ module gc_list
       integer :: ind  !< index in cg%q
       real    :: val  !< value for multiplication
    end type ind_val
+
+   type(cg_list_global) :: all_cg                                     !< all grid containers; \todo restore protected
 
 contains
 

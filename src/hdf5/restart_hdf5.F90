@@ -261,7 +261,7 @@ contains
    subroutine write_restart_hdf5_v1(filename)
 
       use constants,   only: cwdlen
-      use grid,        only: all_cg
+      use gc_list,     only: all_cg
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use mpi,         only: MPI_INFO_NULL
@@ -320,8 +320,7 @@ contains
       use constants,  only: xdim, ydim, zdim, ndims, AT_OUT_B, AT_IGNORE, LONG, dsetnamelen
       use dataio_pub, only: die
       use domain,     only: is_multicg
-      use gc_list,    only: cg_list_element
-      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element, all_cg
       use grid_cont,  only: grid_container
       use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f, h5sclose_f, h5pclose_f, h5dclose_f, &
            &                H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5FD_MPIO_COLLECTIVE_F, &
@@ -456,8 +455,7 @@ contains
       use constants,    only: xdim, ydim, zdim, ndims, LONG, AT_IGNORE, dsetnamelen
       use dataio_pub,   only: msg, die
       use domain,       only: is_multicg
-      use grid,         only: all_cg
-      use gc_list,      only: cg_list_element
+      use gc_list,      only: cg_list_element, all_cg
       use grid_cont,    only: grid_container
       use hdf5,         only: HID_T, HSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, h5dread_f, h5sclose_f, h5pclose_f, h5dclose_f, &
            &                  H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
@@ -599,7 +597,7 @@ contains
       use domain,      only: dom
       use fluidindex,  only: flind
       use global,      only: magic_mass, t, dt, nstep
-      use grid,        only: all_cg
+      use gc_list,     only: all_cg
       use hdf5,        only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
            &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
@@ -861,7 +859,7 @@ contains
 
       use common_hdf5, only: create_empty_cg_dataset
       use constants,   only: ndims, I_ONE, AT_IGNORE
-      use grid,        only: all_cg
+      use gc_list,     only: all_cg
       use hdf5,        only: HID_T, HSIZE_T
 
       implicit none
@@ -905,7 +903,7 @@ contains
    subroutine qw_lst(q_lst, w_lst)
 
       use constants, only: AT_IGNORE
-      use grid,      only: all_cg
+      use gc_list,   only: all_cg
 
       implicit none
 
@@ -936,7 +934,7 @@ contains
       use constants,   only: xdim, ydim, zdim, ndims
       use common_hdf5, only: n_cg_name, get_nth_cg
       use dataio_pub,  only: die, nproc_io, can_i_write
-      use grid,        only: all_cg
+      use gc_list,     only: all_cg
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
            &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
@@ -1125,9 +1123,8 @@ contains
            &                 require_init_prob, piernik_hdf5_version2, step_hdf, step_res, nres, nhdf, fix_string
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
-      use gc_list,     only: cg_list_element
+      use gc_list,     only: cg_list_element, all_cg
       use global,      only: magic_mass, t, dt, nstep
-      use grid,        only: all_cg
       use grid_cont,   only: is_overlap
       use hdf5,        only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
@@ -1391,7 +1388,7 @@ contains
       use constants,   only: xdim, ydim, zdim, LO, HI, LONG
       use dataio_pub,  only: die
       use domain,      only: dom
-      use grid,        only: all_cg
+      use gc_list,     only: all_cg
       use grid_cont,   only: grid_container, is_overlap
       use hdf5,        only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
            &                 h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f

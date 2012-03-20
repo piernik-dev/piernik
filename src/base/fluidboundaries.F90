@@ -639,8 +639,8 @@ contains
 
       use constants,    only: xdim, zdim, fluid_n
       use domain,       only: dom
-      use gc_list,      only: cg_list_element
-      use grid,         only: leaves, all_cg
+      use gc_list,      only: cg_list_element, all_cg
+      use grid,         only: leaves
       use internal_bnd, only: internal_boundaries_4d
       use mpi,          only: MPI_COMM_NULL
       use types,        only: cdd

@@ -33,14 +33,13 @@
 module grid
 
    use cg_list_lev, only: cg_list_level, cg_list_patch
-   use gc_list,     only: cg_list_global, cg_list
+   use gc_list,     only: cg_list
 
    implicit none
 
    private
-   public :: init_grid, cleanup_grid, all_cg, base_lev, leaves
+   public :: init_grid, cleanup_grid, base_lev, leaves
 
-   type(cg_list_global) :: all_cg                                     !< all grid containers; \todo restore protected
    type(cg_list_level), target  :: base_lev                !< base level grid containers \todo restore "protected"
    type(cg_list), protected  :: leaves                                !< grid containers not fully covered by finer grid containers
    integer, parameter :: NBD = 1                                      !< at the moment the base domain may be composed of only one patch
@@ -58,7 +57,7 @@ contains
       use dataio_pub, only: printinfo, die, code_progress
       use domain,     only: dom, pdom, is_multicg
       use fluidindex, only: flind
-      use gc_list,    only: cg_list_element
+      use gc_list,    only: cg_list_element, all_cg
       use global,     only: repeat_step
       use grid_cont,  only: grid_container
       use mpisetup,   only: proc, inflate_req, FIRST
@@ -152,6 +151,7 @@ contains
       use decomposition, only: divide_domain
       use dataio_pub,    only: warn, die
       use domain,        only: is_mpi_noncart, is_multicg, is_refined, is_uneven
+      use gc_list,       only: all_cg
       use mpi,           only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
       use mpisetup,      only: proc, comm, ierr, LAST, master
       use types,         only: cdd
@@ -221,7 +221,7 @@ contains
 !> \brief deallocate everything
    subroutine cleanup_grid
 
-      use gc_list, only: cg_list_element
+      use gc_list, only: cg_list_element, all_cg
 
       implicit none
 

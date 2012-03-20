@@ -36,8 +36,8 @@ program piernik
    use dataio,      only: write_data, user_msg_handler, check_log, check_tsl
    use dataio_pub,  only: nend, tend, msg, printinfo, warn, die, code_progress
    use fluidupdate, only: fluid_update
+   use gc_list,     only: all_cg
    use global,      only: t, nstep, dt, dtm, cfl_violated
-   use grid,        only: all_cg
    use mpisetup,    only: comm, ierr, master
    use timer,       only: time_left, set_timer
    use timestep,    only: time_step

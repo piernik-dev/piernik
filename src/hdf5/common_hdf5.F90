@@ -483,8 +483,7 @@ contains
    function get_nth_cg(n) result(cg)
 
       use dataio_pub, only: die
-      use gc_list,    only: cg_list_element
-      use grid,       only: all_cg
+      use gc_list,    only: cg_list_element, all_cg
       use grid_cont,  only: grid_container
 
       implicit none
@@ -563,8 +562,7 @@ contains
       use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
       use dataio_pub,   only: die, nproc_io, can_i_write
       use domain,       only: dom
-      use gc_list,      only: cg_list_element
-      use grid,         only: all_cg
+      use gc_list,      only: cg_list_element, all_cg
       use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
            &                  h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
            &                  h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5zfilter_avail_f

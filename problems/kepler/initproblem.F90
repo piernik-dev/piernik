@@ -78,7 +78,7 @@ contains
    subroutine register_user_var
 
       use constants, only: AT_NO_B, fluid_n
-      use grid,      only: all_cg
+      use gc_list,   only: all_cg
 
       implicit none
 
@@ -305,8 +305,8 @@ contains
       use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
       use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
-      use gc_list,      only: cg_list_element
-      use grid,         only: leaves, all_cg, base_lev
+      use gc_list,      only: cg_list_element, all_cg
+      use grid,         only: leaves, base_lev
       use grid_cont,    only: grid_container
       use hydrostatic,  only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
       use interactions, only: epstein_factor
@@ -543,8 +543,8 @@ contains
    subroutine kepler_problem_post_restart
       use constants,       only: fluid_n, b0_n
       use fluidboundaries, only: all_fluid_boundaries
-      use gc_list,         only: cg_list_element
-      use grid,            only: leaves, all_cg
+      use gc_list,         only: cg_list_element, all_cg
+      use grid,            only: leaves
       implicit none
       type(cg_list_element), pointer :: cgl
 
@@ -573,9 +573,9 @@ contains
       use constants,       only: xdim, ydim, zdim
       use dataio_pub,      only: die
       use domain,          only: is_multicg
-      use gc_list,         only: cg_list_element
+      use gc_list,         only: cg_list_element, all_cg
       use global,          only: dt, t, relax_time, smalld !, grace_period_passed
-      use grid,            only: leaves, all_cg
+      use grid,            only: leaves
       use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_mx, iarr_all_mz, iarr_all_dn
@@ -742,7 +742,7 @@ contains
    subroutine my_bnd_xr(cg)
 
       use constants,  only: xdim
-      use grid,       only: all_cg
+      use gc_list,    only: all_cg
       use grid_cont,  only: grid_container
 
       implicit none

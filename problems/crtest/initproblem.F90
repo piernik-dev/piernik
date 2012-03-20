@@ -69,7 +69,7 @@ contains
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use dataio_pub,  only: die
       use domain,      only: dom
-      use grid,        only: all_cg
+      use gc_list,     only: all_cg
       use mpi,         only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,    only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave, FIRST
 
@@ -219,9 +219,9 @@ contains
    subroutine compute_analytic_ecr1
 
       use dataio_pub,     only: die
-      use gc_list,        only: cg_list_element
+      use gc_list,        only: cg_list_element, all_cg
       use global,         only: t
-      use grid,           only: leaves, all_cg
+      use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
 
@@ -293,8 +293,8 @@ contains
       use constants,      only: PIERNIK_FINISHED, I_ONE, I_TWO
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
       use global,         only: t, nstep
-      use gc_list,        only: cg_list_element
-      use grid,           only: leaves, all_cg
+      use gc_list,        only: cg_list_element, all_cg
+      use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
@@ -364,7 +364,7 @@ contains
    subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
 
       use dataio_pub,     only: die
-      use grid,           only: all_cg
+      use gc_list,        only: all_cg
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs
 

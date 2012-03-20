@@ -40,7 +40,7 @@ contains
 
       use cr_data,     only: divv_n
       use dataio_pub,  only: die
-      use grid,        only: all_cg
+      use gc_list,     only: all_cg
       use grid_cont,   only: grid_container
 
       implicit none
@@ -68,7 +68,7 @@ contains
       use dataio_pub,  only: die
       use domain,      only: dom
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use grid,        only: all_cg
+      use gc_list,     only: all_cg
       use grid_cont,   only: grid_container
 
       implicit none

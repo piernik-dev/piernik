@@ -287,9 +287,9 @@ contains
       use constants,   only: small, xdim, ydim, zdim, AT_NO_B
       use dataio_pub,  only: warn, printinfo, msg, die
       use domain,      only: dom
+      use gc_list,     only: cg_list_element, all_cg
       use global,      only: smalld
-      use grid,        only: leaves, all_cg
-      use gc_list,     only: cg_list_element
+      use grid,        only: leaves
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
@@ -440,7 +440,7 @@ contains
    subroutine register_initial_fld
 
       use constants, only: AT_NO_B
-      use grid,      only: all_cg
+      use gc_list,   only: all_cg
 
       implicit none
 
@@ -460,8 +460,8 @@ contains
 
       use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: warn
-      use grid,        only: leaves, all_cg
-      use gc_list,     only: cg_list_element
+      use grid,        only: leaves
+      use gc_list,     only: cg_list_element, all_cg
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid

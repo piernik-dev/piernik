@@ -734,9 +734,9 @@ contains
       use fluidindex,  only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluidtypes,  only: phys_prop
       use func,        only: ekin, emag
-      use gc_list,     only: cg_list_element
+      use gc_list,     only: cg_list_element, all_cg
       use global,      only: t, dt, smalld, nstep
-      use grid,        only: leaves, all_cg
+      use grid,        only: leaves
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,    only: master, comm, ierr
@@ -965,9 +965,9 @@ contains
       use constants,  only: ION, DST, MINL, MAXL, half, wa_n, small, xdim, ydim, zdim
       use fluidtypes, only: phys_prop, component_fluid
       use func,       only: ekin
-      use gc_list,    only: cg_list_element
+      use gc_list,    only: cg_list_element, all_cg
       use global,     only: smallp, cfl
-      use grid,       only: leaves, all_cg
+      use grid,       only: leaves
       use units,      only: mH, kboltz
       use domain,     only: is_multicg
       use mpisetup,   only: master
@@ -1123,9 +1123,9 @@ contains
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: flind
       use func,               only: L2norm, sq_sum3
-      use gc_list,            only: cg_list_element
+      use gc_list,            only: cg_list_element, all_cg
       use global,             only: cfl, t, dt
-      use grid,               only: leaves, all_cg
+      use grid,               only: leaves
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master
       use types,              only: value

@@ -43,7 +43,7 @@ contains
       use constants,  only: pdims, xdim, ydim, zdim, half, mag_n
       use fluidindex, only: iarr_mag_swp, nmag
       use domain,     only: dom
-      use grid,       only: all_cg
+      use gc_list,    only: all_cg
       use grid_cont,  only: grid_container
 
       implicit none
@@ -99,9 +99,9 @@ contains
       use domain,          only: dom
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swp, nmag, iarr_mag_swp
-      use gc_list,         only: cg_list_element
+      use gc_list,         only: cg_list_element, all_cg
       use global,          only: dt, integration_order
-      use grid,            only: leaves, all_cg
+      use grid,            only: leaves
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
       use rtvd,            only: relaxing_tvd

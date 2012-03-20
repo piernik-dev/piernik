@@ -248,7 +248,8 @@ contains
       use dataio_user, only: user_plt_hdf5
       use domain,      only: dom, is_multicg
       use global,      only: t
-      use grid,        only: all_cg, base_lev
+      use gc_list,     only: all_cg
+      use grid,        only: base_lev
       use grid_cont,   only: grid_container!, cg_list_element
       use hdf5,        only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,        only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f

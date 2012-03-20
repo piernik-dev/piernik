@@ -49,7 +49,7 @@ contains
       use constants,  only: wcr_n, AT_IGNORE
       use cr_data,    only: divv_n
       use dataio_pub, only: warn
-      use grid,       only: all_cg
+      use gc_list,    only: all_cg
 
       implicit none
 
@@ -78,8 +78,8 @@ contains
       use dataio_pub,   only: die
       use domain,       only: dom
       use internal_bnd, only: internal_boundaries_4d
-      use grid,         only: leaves, all_cg
-      use gc_list,      only: cg_list_element
+      use gc_list,      only: cg_list_element, all_cg
+      use grid,         only: leaves
       use grid_cont,    only: grid_container
       use mpi,          only: MPI_REQUEST_NULL, MPI_COMM_NULL
       use mpisetup,     only: comm, ierr, req, status
@@ -181,8 +181,8 @@ contains
       use domain,         only: dom
       use fluidindex,     only: flind
       use global,         only: dt
-      use grid,           only: leaves, all_cg
-      use gc_list,        only: cg_list_element
+      use gc_list,        only: cg_list_element, all_cg
+      use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
 

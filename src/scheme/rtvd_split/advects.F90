@@ -55,9 +55,9 @@ contains
       use dataio_pub,    only: die
       use domain,        only: dom
       use fluidindex,    only: flind
+      use gc_list,       only: cg_list_element, all_cg
       use global,        only: dt
-      use grid,          only: leaves, all_cg
-      use gc_list,       only: cg_list_element
+      use grid,          only: leaves
       use grid_cont,     only: grid_container
       use magboundaries, only: bnd_emf
       use rtvd,          only: tvdb

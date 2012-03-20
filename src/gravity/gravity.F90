@@ -151,8 +151,7 @@ contains
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,         only: newtong
-      use grid,          only: all_cg
-      use gc_list,       only: cg_list_element
+      use gc_list,       only: cg_list_element, all_cg
 #ifdef SELF_GRAV
       use constants,     only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
@@ -308,8 +307,8 @@ contains
       use constants,         only: sgp_n, sgpm_n
       use dataio_pub,        only: die
       use fluidindex,        only: iarr_all_sg
-      use gc_list,           only: cg_list_element
-      use grid,              only: leaves, all_cg
+      use gc_list,           only: cg_list_element, all_cg
+      use grid,              only: leaves
       use grid_cont,         only: grid_container
       use external_bnd,      only: arr3d_boundaries
 #ifdef POISSON_FFT
@@ -825,7 +824,8 @@ contains
       use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE, wa_n
       use dataio_pub, only: die
       use domain,     only: is_mpi_noncart, is_multicg, dom
-      use grid,       only: leaves, all_cg
+      use gc_list,    only: all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,   only: master, nproc, FIRST, LAST, comm, ierr, have_mpi

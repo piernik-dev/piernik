@@ -73,14 +73,14 @@ contains
 !<
    subroutine init_multigrid
 
+      use cg_list_lev,         only: cg_list_level, cg_list_patch
       use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, AT_IGNORE, LO, HI, LONG, I_TWO, I_ONE, half, wa_n
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
-      use domain,              only: dom, is_uneven
-      use grid,                only: base_lev, all_cg
-      use gc_list,             only: cg_list_element
-      use cg_list_lev,         only: cg_list_level, cg_list_patch
       use decomposition,       only: divide_domain!, deallocate_pse
+      use domain,              only: dom, is_uneven
+      use gc_list,             only: cg_list_element, all_cg
+      use grid,                only: base_lev
       use grid_cont,           only: grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_COMM_NULL
       use mpisetup,            only: comm, ierr, proc, master, slave, nproc, FIRST, buffer_dim, ibuff, lbuff
