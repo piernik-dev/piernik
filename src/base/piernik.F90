@@ -195,7 +195,6 @@ contains
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
-      use fluidboundaries,       only: all_fluid_boundaries
       use fluidboundaries_funcs, only: init_default_fluidboundaries
       use fluidindex,            only: flind
       use global,                only: init_global
@@ -208,12 +207,9 @@ contains
       use timestep,              only: init_time_step
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart
-#ifdef MAGNETIC
-      use magboundaries,         only: all_mag_boundaries
-#ifdef RESISTIVE
+#if defined MAGNETIC && defined RESISTIVE
       use resistivity,           only: init_resistivity, compute_resist
-#endif /* RESISTIVE */
-#endif /* MAGNETIC */
+#endif /* MAGNETIC && RESISTIVE */
 #ifdef SHEAR
       use shear,                 only: init_shear
 #endif /* SHEAR */
@@ -326,6 +322,7 @@ contains
       call read_problem_par ! may depend on anything but init_dataio, \todo add checks against PIERNIK_INIT_IO_IC to all initproblem::read_problem_par
 
       call init_dataio ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
+      if (nrestart /= 0) call all_boundaries
 
       if (master) then
          call printinfo("###############     Initial Conditions     ###############", .false.)
@@ -350,10 +347,7 @@ contains
          endif
       else
          call init_prob ! may depend on anything
-         call all_fluid_boundaries !> \warning Never assume that init_prob set guardcells correctly
-#ifdef MAGNETIC
-         call all_mag_boundaries
-#endif /* MAGNETIC */
+         call all_boundaries !> \warning Never assume that init_prob set guardcells correctly
 #ifdef GRAV
          if (.not.grav_pot_3d_called) then
             if (associated(grav_pot_3d)) then
@@ -434,6 +428,29 @@ contains
       call cleanup_mpi;           call nextdot(.true.)
 
    end subroutine cleanup_piernik
+
+!>
+!! Subroutine calling all type boundaries after initialization of new run or restart reading
+!! \todo probably should be moved to fluidboundaries or to a new module (elsewhere occurs circular dependencies)
+!<
+   subroutine all_boundaries
+
+      use fluidboundaries, only: all_fluid_boundaries
+#ifdef MAGNETIC
+      use magboundaries,   only: all_mag_boundaries
+#endif /* MAGNETIC */
+
+      implicit none
+
+!      if (all(cg%bnd(:,:) /= BND_USER)) then
+! \todo make sure that all_fluid_boundaries and all_mag_boundaries can handle BND_USER boundaries right now, or do the boundaries later
+      call all_fluid_boundaries
+#ifdef MAGNETIC
+      call all_mag_boundaries
+#endif /* MAGNETIC */
+!     endif
+
+   end subroutine all_boundaries
 
 !>
 !! Meta subroutine responsible for setting proper pointers or doing other magic

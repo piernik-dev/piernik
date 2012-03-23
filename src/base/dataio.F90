@@ -220,7 +220,6 @@ contains
            &                     move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use domain,          only: dom
-      use fluidboundaries, only: all_fluid_boundaries
       use global,          only: t, nstep
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, FIRST, nproc, proc
@@ -228,10 +227,6 @@ contains
       use slice_hdf5,      only: init_plot
       use timer,           only: time_left
       use version,         only: nenv,env, init_version
-!      use grid,            only: cg
-#ifdef MAGNETIC
-      use magboundaries,   only: all_mag_boundaries
-#endif /* MAGNETIC */
 
       implicit none
 
@@ -483,13 +478,6 @@ contains
          nres_start  = nrestart
          nhdf_start  = nhdf-1
          if (new_id /= '') run_id=new_id
-!         if (all(cg%bnd(:,:) /= BND_USER)) then
-         ! \todo make sure that all_fluid_boundaries and all_mag_boundaries can handle BND_USER boundaries right now, or do the boundaries later
-            call all_fluid_boundaries
-#ifdef MAGNETIC
-            call all_mag_boundaries
-#endif /* MAGNETIC */
-!         endif
       endif
 
 #ifdef VERBOSE
