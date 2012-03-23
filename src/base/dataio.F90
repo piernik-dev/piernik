@@ -215,7 +215,7 @@ contains
       use common_hdf5,     only: init_hdf5
       use constants,       only: idlen, small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
       use data_hdf5,       only: init_data
-      use dataio_pub,      only: nres, nrestart, last_hdf_time, step_hdf, step_res, next_t_log, next_t_tsl, log_file_initialized, &
+      use dataio_pub,      only: nres, nrestart, last_hdf_time, next_t_log, next_t_tsl, log_file_initialized, &
            &                     tmp_log_file, printinfo, printio, warn, msg, nhdf, nstep_start, die, code_progress, wd_wr, wd_rd, &
            &                     move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
@@ -272,9 +272,6 @@ contains
       nres  = 0
       next_t_tsl  = -1.*small
       next_t_log  = -1.*small
-
-      step_hdf  = -1
-      step_res  = -1
 
       nend = 1
       tend = -1.0
@@ -497,9 +494,8 @@ contains
 
       use constants,    only: I_ONE
       use data_hdf5,    only: write_hdf5
-      use dataio_pub,   only: step_hdf, msg, printinfo, warn
+      use dataio_pub,   only: msg, printinfo, warn
       use mpisetup,     only: comm, ierr, master, FIRST
-      use global,       only: nstep
       use mpi,          only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use restart_hdf5, only: write_restart_hdf5
       use timer,        only: time_left
@@ -524,7 +520,6 @@ contains
                call write_restart_hdf5
             case ('hdf')
                call write_hdf5
-               step_hdf = nstep
             case ('log')
                call write_log
             case ('tsl')
@@ -612,8 +607,8 @@ contains
    subroutine write_data(output)
 
       use data_hdf5,    only: write_hdf5
-      use dataio_pub,   only: nres, last_hdf_time, step_hdf, step_res
-      use global,       only: t, nstep
+      use dataio_pub,   only: nres, last_hdf_time
+      use global,       only: t
       use restart_hdf5, only: write_restart_hdf5
       use slice_hdf5,   only: write_plot
 
@@ -639,12 +634,10 @@ contains
          do while ((t-last_hdf_time) >= dt_hdf)
             last_hdf_time = last_hdf_time + dt_hdf
          enddo
-
-         step_hdf = nstep
       endif
 
       dump = (dt_res > 0.0)
-      if (dump) dump = (((nres-nres_start) < (int((t-t_start) / dt_res) + 1) .or. output == 'end') .and. (nstep > step_res))
+      if (dump) dump = (((nres-nres_start) < (int((t-t_start) / dt_res) + 1) .or. output == 'end'))
       dump = (dump .or. output == 'res')
 
       if (dump) then
@@ -653,7 +646,6 @@ contains
          else
             nres = 1
          endif
-         step_res = nstep
       endif
       call write_plot
 

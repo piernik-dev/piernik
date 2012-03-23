@@ -592,7 +592,7 @@ contains
 
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE, RD
       use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, run_id, piernik_hdf5_version, fix_string, &
-           &                 domain_dump, last_hdf_time, next_t_log, next_t_tsl, nhdf, nres, step_hdf, new_id, step_res
+           &                 domain_dump, last_hdf_time, next_t_log, next_t_tsl, nhdf, nres, new_id
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
       use fluidindex,  only: flind
@@ -726,10 +726,6 @@ contains
          nres = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nhdf", ibuf, error)
          nhdf = ibuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","step_res", ibuf, error)
-         step_res = ibuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","step_hdf", ibuf, error)
-         step_hdf = ibuf(1)
          call h5ltget_attribute_double_f(file_id,"/","next_t_tsl", rbuf, error)
          next_t_tsl = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","next_t_log", rbuf, error)
@@ -762,8 +758,6 @@ contains
       call MPI_Bcast(nstep,    I_ONE, MPI_INTEGER, FIRST, comm, ierr)
       call MPI_Bcast(nres,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
       call MPI_Bcast(nhdf,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(step_res, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(step_hdf, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
       if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
 
       call MPI_Bcast(next_t_tsl,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
@@ -1120,7 +1114,7 @@ contains
       use common_hdf5, only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
            &                 cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname
       use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, next_t_tsl, next_t_log, problem_name, new_id, domain_dump, &
-           &                 require_init_prob, piernik_hdf5_version2, step_hdf, step_res, nres, nhdf, fix_string
+           &                 require_init_prob, piernik_hdf5_version2, nres, nhdf, fix_string
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
       use gc_list,     only: cg_list_element, all_cg
@@ -1145,8 +1139,7 @@ contains
       character(len=cbuff_len) :: cbuf
       character(len=cbuff_len), dimension(6), parameter :: real_attrs = [ "time         ", "timestep     ", "last_hdf_time",  &
            &                                                              "magic_mass   ", "next_t_tsl   ", "next_t_log   " ]
-      character(len=cbuff_len), dimension(6), parameter :: int_attrs = [ "nstep            ", "nres             ", "nhdf             ", &
-           &                                                             "step_res         ", "step_hdf         ", "require_init_prob" ]
+      character(len=cbuff_len), dimension(4), parameter :: int_attrs = [ "nstep            ", "nres             ", "nhdf             ", "require_init_prob" ]
       character(len=cbuff_len), dimension(3), parameter :: str_attrs = [ "problem_name", "domain      ", "run_id      " ]
       !> \deprecated same strings are used independently in set_common_attributes*
       integer :: ia, j
@@ -1234,10 +1227,6 @@ contains
                nres = ibuf(1)
             case ("nhdf")
                nhdf = ibuf(1)
-            case ("step_res")
-               step_res = ibuf(1)
-            case ("step_hdf")
-               step_hdf = ibuf(1)
             case ("require_init_prob")
                require_init_prob = ibuf(1)
             case default

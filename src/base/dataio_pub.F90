@@ -69,8 +69,6 @@ module dataio_pub
    real                        :: next_t_log                     !< when to print statistics to the log file
    real                        :: next_t_tsl                     !< when to produce the timeslice file
    integer(kind=4)             :: nrestart                       !< number of restart file to be read while restart is not set to ''
-   integer(kind=4)             :: step_hdf                       !< number of simulation timestep corresponding to values dumped in hdf file
-   integer(kind=4)             :: step_res                       !< number of simulation timestep corresponding to values dumped in restart file
    character(len=domlen)       :: domain_dump                    !< string to choose if boundaries have to be dumped in hdf files
 
    ! Buffers for global use

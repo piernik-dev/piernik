@@ -334,7 +334,7 @@ contains
    subroutine set_common_attributes_v1(file_id)
 
       use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE
-      use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, next_t_tsl, next_t_log, nres, nhdf, domain_dump, step_hdf
+      use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, next_t_tsl, next_t_log, nres, nhdf, domain_dump
       use domain,      only: dom
       use global,      only: magic_mass, t, dt, nstep
       use hdf5,        only: HID_T, SIZE_T
@@ -368,11 +368,9 @@ contains
       ibuffer(1)   = nstep                   ; ibuffer_name(1)   = "nstep" !rr2
       ibuffer(2)   = nres + I_ONE            ; ibuffer_name(2)   = "nres" !rr2
       ibuffer(3)   = nhdf                    ; ibuffer_name(3)   = "nhdf" !rr2
-      ibuffer(4)   = nstep                   ; ibuffer_name(4)   = "step_res" !rr2
-      ibuffer(5)   = step_hdf                ; ibuffer_name(5)   = "step_hdf" !rr2
-      ibuffer(6:8) = dom%n_d(:)              ; ibuffer_name(6:8) = [ "nxd", "nyd", "nzd" ] !rr1
-      ibuffer(9)   = dom%nb                  ; ibuffer_name(9)   = "nb"
-      ibuffer(10)  = require_init_prob       ; ibuffer_name(10)  = "require_init_prob" !rr2
+      ibuffer(4:6) = dom%n_d(:)              ; ibuffer_name(4:6) = [ "nxd", "nyd", "nzd" ] !rr1
+      ibuffer(7)   = dom%nb                  ; ibuffer_name(7)   = "nb"
+      ibuffer(8)   = require_init_prob       ; ibuffer_name(8)   = "require_init_prob" !rr2
 
       i = 1
       do while (rbuffer_name(i) /= "")
@@ -404,7 +402,7 @@ contains
    subroutine set_common_attributes_v2(file_id)
 
       use constants,   only: cbuff_len, I_ONE
-      use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, next_t_tsl, next_t_log, nres, nhdf, domain_dump, step_hdf
+      use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, next_t_tsl, next_t_log, nres, nhdf, domain_dump
       use global,      only: magic_mass, t, dt, nstep
       use hdf5,        only: HID_T, SIZE_T
       use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
@@ -434,9 +432,7 @@ contains
       ibuffer(1) = nstep                 ; ibuffer_name(1) = "nstep" !rr2
       ibuffer(2) = nres + I_ONE          ; ibuffer_name(2) = "nres" !rr2
       ibuffer(3) = nhdf                  ; ibuffer_name(3) = "nhdf" !rr2
-      ibuffer(4) = nstep                 ; ibuffer_name(4) = "step_res" !rr2
-      ibuffer(5) = step_hdf              ; ibuffer_name(5) = "step_hdf" !rr2
-      ibuffer(6) = require_init_prob     ; ibuffer_name(6) = "require_init_prob" !rr2
+      ibuffer(4) = require_init_prob     ; ibuffer_name(4) = "require_init_prob" !rr2
 
       !> \todo  add number of pieces in the restart point/data dump
 
