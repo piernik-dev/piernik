@@ -46,8 +46,8 @@
 
 module dataio
 
-   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
-   use constants,  only: cwdlen, fmt_len, cbuff_len, varlen, idlen
+   use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
+   use constants,  only: cwdlen, fmt_len, cbuff_len, varlen
 
    implicit none
 
@@ -57,7 +57,6 @@ module dataio
    integer                  :: istep                 !< current number of substep (related to integration order)
 
    integer, parameter       :: nvarsmx = 16          !< maximum number of variables to dump in hdf files
-   character(len=idlen)     :: new_id                !< three character string to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
    character(len=cbuff_len) :: restart               !< choice of restart file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
    character(len=cbuff_len) :: mag_center            !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders, unused)
    integer                  :: resdel                !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
@@ -78,7 +77,6 @@ module dataio
    character(len=varlen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
 
    integer                  :: tsl_lun               !< luncher for timeslice file
-   integer                  :: step_res              !< number of simulation timestep corresponding to values dumped in restart file
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
    integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
    real                     :: t_start               !< time in simulation of start simulation run
@@ -176,10 +174,10 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>restart </td><td>'last'</td><td>'last' or another string of characters</td><td>\copydoc dataio::restart </td></tr>
-!! <tr><td>new_id  </td><td>''    </td><td>string of characters                  </td><td>\copydoc dataio::new_id  </td></tr>
+!! <tr><td>restart </td><td>'last'</td><td>'last' or another string of characters</td><td>\copydoc dataio::restart     </td></tr>
+!! <tr><td>new_id  </td><td>''    </td><td>string of characters                  </td><td>\copydoc dataio_pub::new_id  </td></tr>
 !! <tr><td>nrestart</td><td>3     </td><td>integer                               </td><td>\copydoc dataio_pub::nrestart</td></tr>
-!! <tr><td>resdel  </td><td>0     </td><td>integer                               </td><td>\copydoc dataio::resdel  </td></tr>
+!! <tr><td>resdel  </td><td>0     </td><td>integer                               </td><td>\copydoc dataio::resdel      </td></tr>
 !! </table>
 !! \n \n
 !! @b OUTPUT_CONTROL
@@ -215,11 +213,11 @@ contains
    subroutine init_dataio
 
       use common_hdf5,     only: init_hdf5
-      use constants,       only: small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
+      use constants,       only: idlen, small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
       use data_hdf5,       only: init_data
-      use dataio_pub,      only: nres, nrestart, last_hdf_time, step_hdf, next_t_log, next_t_tsl, log_file_initialized, log_file, maxparfilelines, wd_rd, &
-           &                     tmp_log_file, printinfo, printio, warn, msg, nhdf, nstep_start, die, code_progress, wd_wr, &
-           &                     move_file, multiple_h5files, parfile, parfilelines, can_i_write
+      use dataio_pub,      only: nres, nrestart, last_hdf_time, step_hdf, step_res, next_t_log, next_t_tsl, log_file_initialized, &
+           &                     tmp_log_file, printinfo, printio, warn, msg, nhdf, nstep_start, die, code_progress, wd_wr, wd_rd, &
+           &                     move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use domain,          only: dom
       use fluidboundaries, only: all_fluid_boundaries
@@ -529,7 +527,7 @@ contains
       if (master) call read_file_msg
 
       call MPI_Bcast(umsg,       umsg_len, MPI_CHARACTER,        FIRST, comm, ierr)
-      call MPI_Bcast(umsg_param, I_ONE,        MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(umsg_param, I_ONE,    MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
 !---  if a user message is received then:
       if (len_trim(umsg) /= 0) then
@@ -626,7 +624,7 @@ contains
    subroutine write_data(output)
 
       use data_hdf5,    only: write_hdf5
-      use dataio_pub,   only: nres, last_hdf_time, step_hdf
+      use dataio_pub,   only: nres, last_hdf_time, step_hdf, step_res
       use global,       only: t, nstep
       use restart_hdf5, only: write_restart_hdf5
       use slice_hdf5,   only: write_plot
@@ -1117,7 +1115,7 @@ contains
 !
    subroutine  write_log(tsl)
 
-      use constants,          only: small, MINL, MAXL, xdim, ydim, zdim, wa_n
+      use constants,          only: idlen, small, MINL, MAXL, xdim, ydim, zdim, wa_n
       use dataio_pub,         only: msg, printinfo
       use domain,             only: dom
       use fluids_pub,         only: has_dst, has_ion, has_neu

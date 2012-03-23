@@ -40,85 +40,86 @@ module dataio_pub
    private :: cbuff_len, domlen, idlen, cwdlen ! QA_WARN prevent re-exporting
    !mpisetup uses: ansi_white and ansi_black
 
-   real, parameter :: piernik_hdf5_version = 1.17   !< output version
+   real, parameter             :: piernik_hdf5_version = 1.17    !< output version
 
    ! v2 specific
-   real, parameter :: piernik_hdf5_version2 = 2.00  !< output version for multi-file, multi-domain I/O
-   logical         :: use_v2_io                     !< prefer the new I/O format
-   integer(kind=4) :: nproc_io                      !< how many processes do the I/O (v2 only)
-   logical         :: can_i_write                   !< .true. for processes allowed to write
-   logical         :: enable_compression            !< set to .true. to enable automatic compression (test I/O performance before use, avoid on serial I/O)
-   integer(kind=4) :: gzip_level                    !< gzip compression strength: 1 - lowest and fast, 9 - best and slow
+   real, parameter             :: piernik_hdf5_version2 = 2.00   !< output version for multi-file, multi-domain I/O
+   logical                     :: use_v2_io                      !< prefer the new I/O format
+   integer(kind=4)             :: nproc_io                       !< how many processes do the I/O (v2 only)
+   logical                     :: can_i_write                    !< .true. for processes allowed to write
+   logical                     :: enable_compression             !< set to .true. to enable automatic compression (test I/O performance before use, avoid on serial I/O)
+   integer(kind=4)             :: gzip_level                     !< gzip compression strength: 1 - lowest and fast, 9 - best and slow
 
    ! Buffer lengths used only in I/O routines
-   integer, parameter :: msglen = 1024          !< 1kB for a message ought to be enough for anybody ;-)
-   integer, parameter :: ansilen = 7, ansirst=4 !< length of our ANSI color-strings
+   integer, parameter          :: msglen = 1024                  !< 1kB for a message ought to be enough for anybody ;-)
+   integer, parameter          :: ansilen = 7, ansirst=4         !< length of our ANSI color-strings
 
    ! Simulation control
-   character(len=cbuff_len) :: problem_name     !< The problem name
-   character(len=idlen)     :: run_id           !< Auxiliary run identifier
-   character(len=idlen)     :: new_id           !< COMMENT ME
-   real                  :: tend                   !< simulation time to end
-   real                  :: wend                   !< wall clock time to end (in hours)
+   character(len=cbuff_len)    :: problem_name                   !< The problem name
+   character(len=idlen)        :: run_id                         !< Auxiliary run identifier
+   character(len=idlen)        :: new_id                         !< Auxiliary new runa identifier to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
+   real                        :: tend                           !< simulation time to end
+   real                        :: wend                           !< wall clock time to end (in hours)
 
-   integer               :: lun                    !< current free logical unit
-   integer               :: nend                   !< number of the step to end simulation
-   integer               :: nstep_start            !< number of start timestep
-   integer(kind=4)       :: nhdf                   !< current number of hdf file
-   integer(kind=4)       :: nres                   !< current number of restart file
-   real                  :: next_t_log             !< when to print statistics to the log file
-   real                  :: next_t_tsl             !< when to produce the timeslice file
-   integer(kind=4)       :: nrestart               !< number of restart file to be read while restart is not set to ''
-   integer (kind=4)      :: step_hdf               !< number of simulation timestep corresponding to values dumped in hdf file
-   integer(kind=4)       :: step_res               !< COMMENT ME
-   character(len=domlen) :: domain_dump         !< string to choose if boundaries have to be dumped in hdf files
+   integer                     :: lun                            !< current free logical unit
+   integer                     :: nend                           !< number of the step to end simulation
+   integer                     :: nstep_start                    !< number of start timestep
+   integer(kind=4)             :: nhdf                           !< current number of hdf file
+   integer(kind=4)             :: nres                           !< current number of restart file
+   real                        :: next_t_log                     !< when to print statistics to the log file
+   real                        :: next_t_tsl                     !< when to produce the timeslice file
+   integer(kind=4)             :: nrestart                       !< number of restart file to be read while restart is not set to ''
+   integer(kind=4)             :: step_hdf                       !< number of simulation timestep corresponding to values dumped in hdf file
+   integer(kind=4)             :: step_res                       !< number of simulation timestep corresponding to values dumped in restart file
+   character(len=domlen)       :: domain_dump                    !< string to choose if boundaries have to be dumped in hdf files
 
    ! Buffers for global use
-   character(len=cwdlen), save :: wd_rd = "./"   !< path to problem.par and/or restarts
-   character(len=cwdlen), save :: wd_wr = "./"   !< path where output is written
-   character(len=msglen), save :: cmdl_nml =" " !< buffer for namelist supplied via commandline
-   character(len=cwdlen) :: log_file            !< path to the current log file
-   character(len=cwdlen) :: tmp_log_file        !< path to the temporary log file
-   character(len=cwdlen) :: par_file            !< path to the parameter file
+   character(len=cwdlen), save :: wd_rd = "./"                   !< path to problem.par and/or restarts
+   character(len=cwdlen), save :: wd_wr = "./"                   !< path where output is written
+   character(len=msglen), save :: cmdl_nml =" "                  !< buffer for namelist supplied via commandline
+   character(len=cwdlen)       :: log_file                       !< path to the current log file
+   character(len=cwdlen)       :: tmp_log_file                   !< path to the temporary log file
+   character(len=cwdlen)       :: par_file                       !< path to the parameter file
    ! Handy variables
-   integer(kind=4)       :: ierrh                  !< variable for iostat
+   integer(kind=4)             :: ierrh                          !< variable for iostat
 
-   real               :: last_hdf_time                  !< time in simulation of the last resent hdf file dump
-   integer            :: code_progress                  !< rough estimate of code execution progress
+   real                        :: last_hdf_time                  !< time in simulation of the recent hdf file dump
+   real                        :: last_res_time                  !< time in simulation of the recent res file dump
+   integer                     :: code_progress                  !< rough estimate of code execution progress
 
    ! storage for the problem.par
-   integer, parameter :: maxparfilelen   = 128                         !< max length of line in problem.par file
-   integer, parameter :: maxparfilelines = 256                         !< max number of lines in problem.par
+   integer, parameter          :: maxparfilelen   = 128          !< max length of line in problem.par file
+   integer, parameter          :: maxparfilelines = 256          !< max number of lines in problem.par
    character(len=maxparfilelen), dimension(maxparfilelines) :: parfile !< contents of the parameter file
-   integer, save :: parfilelines = 0                                   !< number of lines in the parameter file
+   integer, save               :: parfilelines = 0               !< number of lines in the parameter file
 
-   logical, save      :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
-   logical, save      :: log_file_initialized = .false. !< logical to mark initialization of logfile
-   integer(kind=4), save :: require_init_prob = 0       !< 1 will call initproblem::init_prob on restart
+   logical, save               :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
+   logical, save               :: log_file_initialized = .false. !< logical to mark initialization of logfile
+   integer(kind=4), save       :: require_init_prob = 0          !< 1 will call initproblem::init_prob on restart
 !>
 !! \todo
 !!  Currently to use PGPLOT you need to:
 !!   1. set one of i{x,y,z} to positive value and zero to the others
 !!   2. use only one-element vars array in problem.par
 !<
-   logical            :: vizit = .false.        !< perform "live" visualization using pgplot (\deprecated BEWARE: highly experimental)
-   logical            :: multiple_h5files = .false. !< write one HDF5 file per proc
-   real               :: fmin                   !< minimum on pgplot scale
-   real               :: fmax                   !< maximum on pgplot scale
+   logical                     :: vizit = .false.                !< perform "live" visualization using pgplot (\deprecated BEWARE: highly experimental)
+   logical                     :: multiple_h5files = .false.     !< write one HDF5 file per proc
+   real                        :: fmin                           !< minimum on pgplot scale
+   real                        :: fmax                           !< maximum on pgplot scale
 
    ! stdout and logfile messages
-   integer, parameter :: T_PLAIN  = 0, &        !< enum for message types
+   integer, parameter :: T_PLAIN  = 0, &                         !< enum for message types
         &                T_ERR    = T_PLAIN  + 1, &
         &                T_WARN   = T_ERR    + 1, &
         &                T_INFO   = T_WARN   + 1, &
         &                T_IO     = T_INFO   + 1, &
         &                T_IO_NOA = T_IO     + 1, &
         &                T_SILENT = T_IO_NOA + 1
-   character(len=msglen)  :: msg                !< buffer for messages
-   character(len=ansirst) :: ansi_black
-   character(len=ansilen) :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
-   character(len=*),parameter :: tmr_hdf = "hdf_dump"
-   real                       :: thdf !< hdf dump wallclock
+   character(len=msglen)       :: msg                            !< buffer for messages
+   character(len=ansirst)      :: ansi_black
+   character(len=ansilen)      :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
+   character(len=*),parameter  :: tmr_hdf = "hdf_dump"
+   real                        :: thdf                           !< hdf dump wallclock
 
 contains
 !-----------------------------------------------------------------------------
