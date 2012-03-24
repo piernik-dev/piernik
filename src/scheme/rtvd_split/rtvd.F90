@@ -296,10 +296,8 @@ contains
       real, dimension(flind%all,n)    :: fr                 !< flux of the right-moving waves
       real, dimension(flind%all,n)    :: fl                 !< flux of the left-moving waves
       real, dimension(flind%all,n)    :: fu                 !< sum of fluxes of right- and left-moving waves
-      real, dimension(flind%all,n)    :: dfrp               !< second order correction of right-moving waves flux on the right cell boundary
-      real, dimension(flind%all,n)    :: dfrm               !< second order correction of right-moving waves flux on the left cell boundary
-      real, dimension(flind%all,n)    :: dflm               !< second order correction of left-moving waves flux on the left cell boundary
-      real, dimension(flind%all,n)    :: dflp               !< second order correction of left-moving waves flux on the right cell boundary
+      real, dimension(flind%all,n)    :: dfp               !< second order correction of left/right-moving waves flux on the right cell boundary
+      real, dimension(flind%all,n)    :: dfm               !< second order correction of left/right-moving waves flux on the left cell boundary
       real, dimension(flind%all,n)    :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
       real, dimension(flind%fluids,n) :: geosrc             !< source terms caused by geometry of coordinate system
       real, dimension(flind%fluids,n), target :: pressure   !< gas pressure
@@ -355,25 +353,32 @@ contains
          call all_fluxes(n, w, cfr, u1, bb, pressure, vel_sweep, cs_iso2)
          ! Right and left fluxes decoupling
 
-         fl = (u1*cfr-w)*half
-         fr = fl + w ! equivalent of fr = (u1*cfr+w)*half
+         ! original code
+         ! fl(:,1:n-1) = (cfr(:,2:n)*u1(:,2:n) - wl(:,2:n)) * 0.5
+         ! fr          = (cfr*u1 + w) * 0.5
+         ! following is equivalent but faster
 
-         fl(:,1:n-1) = fl(:,2:n)
+         fl(:,1:n-1) = (u1(:,2:n)*cfr(:,2:n) - w(:,2:n))*half
          fl(:,n) = fl(:,n-1)
+         fr(:,2:n) = fl(:,1:n-1) + w(:,2:n)
+         fr(:,1) = fr(:,2)
 
          if (istep == 2) then
 
             ! Second order flux corrections
-            dfrp(:,1:n-1) = half*(fr(:,2:n) - fr(:,1:n-1)); dfrp(:,n) = dfrp(:,n-1)
-            dfrm(:,2:n)   = dfrp(:,1:n-1);                 dfrm(:,1) = dfrm(:,2)
+            dfp(:,1:n-1) = half*(fr(:,2:n) - fr(:,1:n-1)); dfp(:,n) = dfp(:,n-1)
+            dfm(:,2:n)   = dfp(:,1:n-1);                   dfm(:,1) = dfm(:,2)
 
             ! Flux limiter application
-            call flimiter(fr,dfrm,dfrp)
+            call flimiter(fr,dfm,dfp)
 
-            dflp(:,1:n-1) = half*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
-            dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
-            call flimiter(fl,dflm,dflp)
+            !dflp(:,1:n-1) = half*(fl(:,1:n-1) - fl(:,2:n)); dflp(:,n) = dflp(:,n-1)
+            !dflm(:,2:n)   = dflp(:,1:n-1);                 dflm(:,1) = dflm(:,2)
+            dfp(:,1:n-1) = half*(fl(:,1:n-1) - fl(:,2:n)); dfp(:,n) = dfp(:,n-1)
+            dfm(:,2:n)   = dfp(:,1:n-1);                   dfm(:,1) = dfm(:,2)
+            call flimiter(fl,dfm,dfp)
             !OPT 60% of D1mr and 40% D1mw occured in few above lines (D1mr = 0.1% Dr, D1mw = 0.5% Dw)
+            ! That ^^ should be fixed now, please confirm
          endif
 
          ! u update
