@@ -189,6 +189,7 @@ contains
 !<
    subroutine init_piernik
 
+      use all_boundaries,        only: all_bnd
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC
       use dataio,                only: init_dataio, write_data
       use dataio_pub,            only: nrestart, wd_wr, wd_rd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, code_progress
@@ -322,7 +323,7 @@ contains
       call read_problem_par ! may depend on anything but init_dataio, \todo add checks against PIERNIK_INIT_IO_IC to all initproblem::read_problem_par
 
       call init_dataio ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
-      if (nrestart /= 0) call all_boundaries
+      if (nrestart /= 0) call all_bnd
 
       if (master) then
          call printinfo("###############     Initial Conditions     ###############", .false.)
@@ -347,7 +348,7 @@ contains
          endif
       else
          call init_prob ! may depend on anything
-         call all_boundaries !> \warning Never assume that init_prob set guardcells correctly
+         call all_bnd !> \warning Never assume that init_prob set guardcells correctly
 #ifdef GRAV
          if (.not.grav_pot_3d_called) then
             if (associated(grav_pot_3d)) then
@@ -428,29 +429,6 @@ contains
       call cleanup_mpi;           call nextdot(.true.)
 
    end subroutine cleanup_piernik
-
-!>
-!! Subroutine calling all type boundaries after initialization of new run or restart reading
-!! \todo probably should be moved to fluidboundaries or to a new module (elsewhere occurs circular dependencies)
-!<
-   subroutine all_boundaries
-
-      use fluidboundaries, only: all_fluid_boundaries
-#ifdef MAGNETIC
-      use magboundaries,   only: all_mag_boundaries
-#endif /* MAGNETIC */
-
-      implicit none
-
-!      if (all(cg%bnd(:,:) /= BND_USER)) then
-! \todo make sure that all_fluid_boundaries and all_mag_boundaries can handle BND_USER boundaries right now, or do the boundaries later
-      call all_fluid_boundaries
-#ifdef MAGNETIC
-      call all_mag_boundaries
-#endif /* MAGNETIC */
-!     endif
-
-   end subroutine all_boundaries
 
 !>
 !! Meta subroutine responsible for setting proper pointers or doing other magic
