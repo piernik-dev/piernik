@@ -8,5 +8,5 @@ I_MPI_F77:=ifort
 I_MPI_CC:=icc
 I_MPI_CXX:=icc
 F90       = /opt/intel/impi/4.0.3.008/intel64/bin/mpif90
-F90FLAGS  = -g -fpe0 -check all -traceback -fp-stack-check -heap-arrays -r8 -I/opt/intel/hdf5/include
+F90FLAGS  = -fc=ifort -f90=ifort -g -fpe0 -check all -traceback -fp-stack-check -heap-arrays -r8 -I/opt/intel/hdf5/include
 LDFLAGS   = -L/opt/intel/hdf5/lib
