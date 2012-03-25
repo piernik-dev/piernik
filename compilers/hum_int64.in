@@ -2,6 +2,11 @@ PROG      = piernik
 
 ### INTEL
 PATH:=/opt/intel/composer_xe_2011_sp1.6.233/bin/intel64/:${PATH}
+I_MPI_FC:=ifort
+I_MPI_F90:=ifort
+I_MPI_F77:=ifort
+I_MPI_CC:=icc
+I_MPI_CXX:=icc
 F90       = /opt/intel/impi/4.0.3.008/intel64/bin/mpif90
 F90FLAGS  = -g -fpe0 -check all -traceback -fp-stack-check -heap-arrays -r8 -I/opt/intel/hdf5/include
 LDFLAGS   = -L/opt/intel/hdf5/lib
