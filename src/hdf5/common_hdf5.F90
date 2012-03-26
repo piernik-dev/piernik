@@ -334,7 +334,7 @@ contains
    subroutine set_common_attributes_v1(file_id)
 
       use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE
-      use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, next_t_tsl, next_t_log, nres, nhdf, domain_dump
+      use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
       use domain,      only: dom
       use global,      only: magic_mass, t, dt, nstep
       use hdf5,        only: HID_T, SIZE_T
@@ -356,21 +356,24 @@ contains
 
       rbuffer(1)   = t                       ; rbuffer_name(1)   = "time" !rr2
       rbuffer(2)   = dt                      ; rbuffer_name(2)   = "timestep" !rr2
-      rbuffer(3)   = last_hdf_time           ; rbuffer_name(3)   = "last_hdf_time" !rr2
-      rbuffer(4:5) = dom%edge(xdim, :)       ; rbuffer_name(4:5) = [ "xmin", "xmax" ] !rr1
-      rbuffer(6:7) = dom%edge(ydim, :)       ; rbuffer_name(6:7) = [ "ymin", "ymax" ] !rr1
-      rbuffer(8:9) = dom%edge(zdim, :)       ; rbuffer_name(8:9) = [ "zmin", "zmax" ] !rr1
-      rbuffer(10)  = piernik_hdf5_version    ; rbuffer_name(10)  = "piernik" !rr1, rr2
-      rbuffer(11)  = magic_mass              ; rbuffer_name(11)  = "magic_mass" !rr2
-      rbuffer(12)  = next_t_tsl              ; rbuffer_name(12)  = "next_t_tsl" !rr2
-      rbuffer(13)  = next_t_log              ; rbuffer_name(13)  = "next_t_log" !rr2
+      rbuffer(3:4) = dom%edge(xdim, :)       ; rbuffer_name(3:4) = [ "xmin", "xmax" ] !rr1
+      rbuffer(5:6) = dom%edge(ydim, :)       ; rbuffer_name(5:6) = [ "ymin", "ymax" ] !rr1
+      rbuffer(7:8) = dom%edge(zdim, :)       ; rbuffer_name(7:8) = [ "zmin", "zmax" ] !rr1
+      rbuffer(9)   = piernik_hdf5_version    ; rbuffer_name(9)   = "piernik" !rr1, rr2
+      rbuffer(10)  = last_log_time           ; rbuffer_name(10)  = "last_log_time" !rr2
+      rbuffer(11)  = last_tsl_time           ; rbuffer_name(11)  = "last_tsl_time" !rr2
+      rbuffer(12)  = last_hdf_time           ; rbuffer_name(12)  = "last_hdf_time" !rr2
+      rbuffer(13)  = last_res_time           ; rbuffer_name(13)  = "last_res_time" !rr2
+      rbuffer(14)  = last_plt_time           ; rbuffer_name(14)  = "last_plt_time" !rr2
+      rbuffer(15)  = magic_mass              ; rbuffer_name(15)  = "magic_mass" !rr2
 
       ibuffer(1)   = nstep                   ; ibuffer_name(1)   = "nstep" !rr2
-      ibuffer(2)   = nres + I_ONE            ; ibuffer_name(2)   = "nres" !rr2
+      ibuffer(2)   = nres                    ; ibuffer_name(2)   = "nres" !rr2
       ibuffer(3)   = nhdf                    ; ibuffer_name(3)   = "nhdf" !rr2
-      ibuffer(4:6) = dom%n_d(:)              ; ibuffer_name(4:6) = [ "nxd", "nyd", "nzd" ] !rr1
-      ibuffer(7)   = dom%nb                  ; ibuffer_name(7)   = "nb"
-      ibuffer(8)   = require_init_prob       ; ibuffer_name(8)   = "require_init_prob" !rr2
+      ibuffer(4)   = nimg                    ; ibuffer_name(4)   = "nimg" !rr2
+      ibuffer(5:7) = dom%n_d(:)              ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
+      ibuffer(8)   = dom%nb                  ; ibuffer_name(8)   = "nb"
+      ibuffer(9)   = require_init_prob       ; ibuffer_name(9)   = "require_init_prob" !rr2
 
       i = 1
       do while (rbuffer_name(i) /= "")
@@ -402,7 +405,7 @@ contains
    subroutine set_common_attributes_v2(file_id)
 
       use constants,   only: cbuff_len, I_ONE
-      use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, next_t_tsl, next_t_log, nres, nhdf, domain_dump
+      use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nres, nhdf, nimg, domain_dump
       use global,      only: magic_mass, t, dt, nstep
       use hdf5,        only: HID_T, SIZE_T
       use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
@@ -423,16 +426,19 @@ contains
 
       rbuffer(1) = t                     ; rbuffer_name(1) = "time" !rr2
       rbuffer(2) = dt                    ; rbuffer_name(2) = "timestep" !rr2
-      rbuffer(3) = last_hdf_time         ; rbuffer_name(3) = "last_hdf_time" !rr2
-      rbuffer(4) = piernik_hdf5_version2 ; rbuffer_name(4) = "piernik" !rr1, rr2
-      rbuffer(5) = magic_mass            ; rbuffer_name(5) = "magic_mass" !rr2
-      rbuffer(6) = next_t_tsl            ; rbuffer_name(6) = "next_t_tsl" !rr2
-      rbuffer(7) = next_t_log            ; rbuffer_name(7) = "next_t_log" !rr2
+      rbuffer(3) = piernik_hdf5_version2 ; rbuffer_name(3) = "piernik" !rr1, rr2
+      rbuffer(4) = last_log_time         ; rbuffer_name(4) = "last_log_time" !rr2
+      rbuffer(5) = last_tsl_time         ; rbuffer_name(5) = "last_tsl_time" !rr2
+      rbuffer(6) = last_hdf_time         ; rbuffer_name(6) = "last_hdf_time" !rr2
+      rbuffer(7) = last_res_time         ; rbuffer_name(7) = "last_res_time" !rr2
+      rbuffer(8) = last_plt_time         ; rbuffer_name(8) = "last_plt_time" !rr2
+      rbuffer(9) = magic_mass            ; rbuffer_name(9) = "magic_mass" !rr2
 
       ibuffer(1) = nstep                 ; ibuffer_name(1) = "nstep" !rr2
-      ibuffer(2) = nres + I_ONE          ; ibuffer_name(2) = "nres" !rr2
+      ibuffer(2) = nres                  ; ibuffer_name(2) = "nres" !rr2
       ibuffer(3) = nhdf                  ; ibuffer_name(3) = "nhdf" !rr2
-      ibuffer(4) = require_init_prob     ; ibuffer_name(4) = "require_init_prob" !rr2
+      ibuffer(4) = nimg                  ; ibuffer_name(4) = "nimg" !rr2
+      ibuffer(5) = require_init_prob     ; ibuffer_name(5) = "require_init_prob" !rr2
 
       !> \todo  add number of pieces in the restart point/data dump
 

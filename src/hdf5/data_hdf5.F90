@@ -217,7 +217,7 @@ contains
       use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: printio, printinfo, nhdf, thdf, tmr_hdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
-         & msg, run_id, problem_name, use_v2_io
+         & msg, run_id, problem_name, use_v2_io, last_hdf_time
       use mpisetup,    only: comm, ierr, master, FIRST
       use timer,       only: set_timer
 
@@ -227,12 +227,13 @@ contains
       real :: phv
 
       thdf = set_timer(tmr_hdf,.true.)
+      nhdf = nhdf + I_ONE
       ! Initialize HDF5 library and Fortran interfaces.
       !
       phv = piernik_hdf5_version ; if (use_v2_io) phv = piernik_hdf5_version2
       if (master) then
          write(fname, '(2a,a1,a3,a1,i4.4,a3)') trim(wd_wr), trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
-         write(msg,'(a,f5.2,1x,2a)') 'Writing datafile v', phv, trim(fname), " ... "
+         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_hdf_time,' Writing datafile v', phv, trim(fname), " ... "
          call printio(msg, .true.)
       endif
       call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
@@ -249,8 +250,6 @@ contains
          write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
          call printinfo(msg, .true.)
       endif
-
-      nhdf = nhdf + I_ONE
 
    end subroutine h5_write_to_single_file
 
@@ -543,7 +542,7 @@ contains
 
       use constants,       only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
       use common_hdf5,     only: nhdf_vars, hdf_vars
-      use dataio_pub,      only: die, msg, printio, printinfo, tmr_hdf, thdf
+      use dataio_pub,      only: die, msg, printio, printinfo, tmr_hdf, thdf, last_hdf_time, piernik_hdf5_version
       use dataio_user,     only: user_vars_hdf5
       use gc_list,         only: cg_list_element
       use grid,            only: leaves
@@ -572,7 +571,7 @@ contains
       thdf = set_timer(tmr_hdf,.true.)
       fname = h5_filename()
       if (master) then
-         write(msg,'(3a)') 'Writing datafile ', trim(fname), " ... "
+         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_hdf_time,': Writing datafiles v', piernik_hdf5_version, trim(fname), " ... "
          call printio(msg, .true.)
       endif
 

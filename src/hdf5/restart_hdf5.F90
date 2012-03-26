@@ -72,7 +72,7 @@ contains
 
       use constants,   only: I_ONE, cwdlen, WR
       use common_hdf5, only: set_common_attributes
-      use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, use_v2_io, nres, piernik_hdf5_version, piernik_hdf5_version2
+      use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, use_v2_io, nres, piernik_hdf5_version, piernik_hdf5_version2, last_res_time
       use mpisetup,    only: comm, ierr, master
       use timer,       only: set_timer
 
@@ -81,13 +81,15 @@ contains
       character(len=cwdlen)         :: filename  ! File name
       real :: phv
 
+      nres = nres + I_ONE
+
       thdf = set_timer(tmr_hdf,.true.)
 
       phv = piernik_hdf5_version ; if (use_v2_io) phv = piernik_hdf5_version2
 
       filename = restart_fname(WR)
       if (master) then
-         write(msg,'(a,f5.2,1x,2a)') 'Writing restart v', phv, trim(filename), " ... "
+         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_res_time,' Writing restart v', phv, trim(filename), " ... "
          call printio(msg, .true.)
       endif
       call set_common_attributes(filename)
@@ -104,8 +106,6 @@ contains
          write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
          call printinfo(msg, .true.)
       endif
-
-      nres = nres + I_ONE
 
    end subroutine write_restart_hdf5
 
@@ -592,7 +592,7 @@ contains
 
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE, RD
       use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, run_id, piernik_hdf5_version, fix_string, &
-           &                 domain_dump, last_hdf_time, next_t_log, next_t_tsl, nhdf, nres, new_id
+           &                 domain_dump, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nhdf, nres, nimg, new_id
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
       use fluidindex,  only: flind
@@ -726,12 +726,18 @@ contains
          nres = ibuf(1)
          call h5ltget_attribute_int_f(file_id,"/","nhdf", ibuf, error)
          nhdf = ibuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","next_t_tsl", rbuf, error)
-         next_t_tsl = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","next_t_log", rbuf, error)
-         next_t_log = rbuf(1)
+         call h5ltget_attribute_int_f(file_id,"/","nimg", ibuf, error)
+         nimg = ibuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","last_log_time", rbuf, error)
+         last_log_time = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","last_tsl_time", rbuf, error)
+         last_tsl_time = rbuf(1)
          call h5ltget_attribute_double_f(file_id,"/","last_hdf_time", rbuf, error)
          last_hdf_time = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","last_res_time", rbuf, error)
+         last_res_time = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","last_plt_time", rbuf, error)
+         last_plt_time = rbuf(1)
 
          call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name, error)
          call h5ltget_attribute_string_f(file_id,"/","domain", domain_dump, error)
@@ -758,11 +764,14 @@ contains
       call MPI_Bcast(nstep,    I_ONE, MPI_INTEGER, FIRST, comm, ierr)
       call MPI_Bcast(nres,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
       call MPI_Bcast(nhdf,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(nimg,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
       if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
 
-      call MPI_Bcast(next_t_tsl,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(next_t_log,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(last_log_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(last_tsl_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
       call MPI_Bcast(last_hdf_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(last_res_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(last_plt_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
       call MPI_Bcast(t,             I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
       call MPI_Bcast(dt,            I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
 
@@ -1113,8 +1122,8 @@ contains
       use constants,   only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, base_level_id, INVALID, RD, LO, HI
       use common_hdf5, only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
            &                 cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname
-      use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, next_t_tsl, next_t_log, problem_name, new_id, domain_dump, &
-           &                 require_init_prob, piernik_hdf5_version2, nres, nhdf, fix_string
+      use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, problem_name, new_id, domain_dump, &
+           &                 require_init_prob, piernik_hdf5_version2, nres, nhdf, nimg, fix_string
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
       use gc_list,     only: cg_list_element, all_cg
@@ -1137,9 +1146,9 @@ contains
       real, dimension(:), allocatable :: rbuf
       integer(kind=4), dimension(:), allocatable :: ibuf
       character(len=cbuff_len) :: cbuf
-      character(len=cbuff_len), dimension(6), parameter :: real_attrs = [ "time         ", "timestep     ", "last_hdf_time",  &
-           &                                                              "magic_mass   ", "next_t_tsl   ", "next_t_log   " ]
-      character(len=cbuff_len), dimension(4), parameter :: int_attrs = [ "nstep            ", "nres             ", "nhdf             ", "require_init_prob" ]
+      character(len=cbuff_len), dimension(8), parameter :: real_attrs = [ "time         ", "timestep     ", "last_hdf_time", "last_res_time", "last_plt_time",  &
+           &                                                              "last_log_time", "last_tsl_time", "magic_mass   " ]
+      character(len=cbuff_len), dimension(5), parameter :: int_attrs = [ "nstep            ", "nres             ", "nhdf             ", "nimg             ", "require_init_prob" ]
       character(len=cbuff_len), dimension(3), parameter :: str_attrs = [ "problem_name", "domain      ", "run_id      " ]
       !> \deprecated same strings are used independently in set_common_attributes*
       integer :: ia, j
@@ -1202,12 +1211,16 @@ contains
                dt = rbuf(1)
             case ("last_hdf_time")
                last_hdf_time = rbuf(1)
+            case ("last_res_time")
+               last_res_time = rbuf(1)
+            case ("last_plt_time")
+               last_plt_time = rbuf(1)
+            case ("last_log_time")
+               last_log_time = rbuf(1)
+            case ("last_tsl_time")
+               last_tsl_time = rbuf(1)
             case ("magic_mass")
                magic_mass = rbuf(1)
-            case ("next_t_tsl")
-               next_t_tsl = rbuf(1)
-            case ("next_t_log")
-               next_t_log = rbuf(1)
             case default
                write(msg,'(3a,g15.5,a)')"[restart_hdf5:read_restart_hdf5_v2] Real attribute '",trim(real_attrs(ia)),"' with value = ",rbuf(1)," was ignored"
                call warn(msg)
@@ -1227,6 +1240,8 @@ contains
                nres = ibuf(1)
             case ("nhdf")
                nhdf = ibuf(1)
+            case ("nimg")
+               nimg = ibuf(1)
             case ("require_init_prob")
                require_init_prob = ibuf(1)
             case default

@@ -120,37 +120,6 @@ module dataio
 
 contains
 
-   subroutine check_log
-
-      use global,     only: t
-      use dataio_pub, only: next_t_log
-
-      implicit none
-
-      if (dt_log > 0.0) then
-         if (next_t_log <= t) then
-            call write_log
-            next_t_log = next_t_log + dt_log
-         endif
-      endif
-
-   end subroutine check_log
-
-   subroutine check_tsl
-
-      use global,     only: t
-      use dataio_pub, only: next_t_tsl
-
-      implicit none
-
-      if (dt_tsl > 0.0) then
-         if (next_t_tsl <= t) then
-            call write_timeslice
-            next_t_tsl = next_t_tsl + dt_tsl
-         endif
-      endif
-   end subroutine check_tsl
-
 !---------------------------------------------------------------------
 !
 ! initializes dataio parameters
@@ -213,10 +182,10 @@ contains
    subroutine init_dataio
 
       use common_hdf5,     only: init_hdf5
-      use constants,       only: idlen, small, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
+      use constants,       only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
       use data_hdf5,       only: init_data
-      use dataio_pub,      only: nres, nrestart, last_hdf_time, next_t_log, next_t_tsl, log_file_initialized, &
-           &                     tmp_log_file, printinfo, printio, warn, msg, nhdf, nstep_start, die, code_progress, wd_wr, wd_rd, &
+      use dataio_pub,      only: nres, nrestart, last_hdf_time, last_plt_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
+           &                     tmp_log_file, printinfo, printio, warn, msg, nhdf, nimg, nstep_start, die, code_progress, wd_wr, wd_rd, &
            &                     move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use domain,          only: dom
@@ -268,10 +237,9 @@ contains
       enable_compression = .false.
       gzip_level = 9
 
-      nhdf  = 0
+      nhdf  = -1
+      nimg  = -1
       nres  = 0
-      next_t_tsl  = -1.*small
-      next_t_log  = -1.*small
 
       nend = 1
       tend = -1.0
@@ -435,7 +403,11 @@ contains
 
       tn = time_left(wend)
 
+      last_log_time = -dt_log
+      last_tsl_time = -dt_tsl
       last_hdf_time = -dt_hdf
+      last_plt_time = -dt_plt
+      last_res_time = 0.0
 
       call init_hdf5(vars)
       call init_data
@@ -607,15 +579,14 @@ contains
    subroutine write_data(output)
 
       use data_hdf5,    only: write_hdf5
-      use dataio_pub,   only: nres, last_hdf_time
-      use global,       only: t
+      use dataio_pub,   only: last_res_time, last_hdf_time, last_plt_time
       use restart_hdf5, only: write_restart_hdf5
       use slice_hdf5,   only: write_plot
 
       implicit none
 
       character(len=*), intent(in) :: output
-      logical                      :: dump, time_determined_dump
+      logical                      :: dump
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -624,32 +595,63 @@ contains
 
 !    call checkdf
 
-      time_determined_dump = ((t-last_hdf_time) >= dt_hdf .or. output == 'end')
-      dump = (dt_hdf > 0.0 .and. time_determined_dump)
-      dump = (dump .or. output == 'hdf')
+      call determine_dump(dump, last_hdf_time, dt_hdf, output, 'hdf')
+      if (dump) call write_hdf5
 
-      if (dump) then
-         call write_hdf5
+      call determine_dump(dump, last_plt_time, dt_plt, output, 'plt')
+      if (dump) call write_plot
 
-         do while ((t-last_hdf_time) >= dt_hdf)
-            last_hdf_time = last_hdf_time + dt_hdf
-         enddo
-      endif
-
-      dump = (dt_res > 0.0)
-      if (dump) dump = (((nres-nres_start) < (int((t-t_start) / dt_res) + 1) .or. output == 'end'))
-      dump = (dump .or. output == 'res')
-
-      if (dump) then
-         if (nres > 0) then
-            call write_restart_hdf5
-         else
-            nres = 1
-         endif
-      endif
-      call write_plot
+      call determine_dump(dump, last_res_time, dt_res, output, 'res')
+      if (dump) call write_restart_hdf5
 
    end subroutine write_data
+
+   subroutine determine_dump(dump, last_dump_time, dt_dump, output, dumptype)
+
+      use global, only: t
+
+      implicit none
+
+      character(len=*), intent(in)    :: output, dumptype
+      real,             intent(in)    :: dt_dump
+      real,             intent(inout) :: last_dump_time
+      logical,          intent(out)   :: dump
+
+      dump = ((t-last_dump_time) >= dt_dump .or. output == 'end')
+      dump = (dump .and. dt_dump > 0.0)
+      dump = (dump .or. output == dumptype)
+
+      do while ((t-last_dump_time) >= dt_dump)
+         last_dump_time = last_dump_time + dt_dump
+      enddo
+
+   end subroutine determine_dump
+
+   subroutine check_log
+
+      use dataio_pub, only: last_log_time
+
+      implicit none
+
+      logical :: dump
+
+      call determine_dump(dump, last_log_time, dt_log, 'chk', 'log')
+      if (dump) call write_log
+
+   end subroutine check_log
+
+   subroutine check_tsl
+
+      use dataio_pub, only: last_tsl_time
+
+      implicit none
+
+      logical :: dump
+
+      call determine_dump(dump, last_tsl_time, dt_tsl, 'chk', 'tsl')
+      if (dump) call write_timeslice
+
+   end subroutine check_tsl
 
 !>
 !! \brief Find the restart point with highest number

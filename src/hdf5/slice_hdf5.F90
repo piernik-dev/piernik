@@ -162,73 +162,64 @@ contains
 
       use constants,   only: cwdlen, xdim, zdim
       use common_hdf5, only: nhdf_vars, hdf_vars
-      use dataio_pub,  only: log_file, tmr_hdf, thdf, printio, printinfo, msg
-      use global,      only: t
+      use dataio_pub,  only: log_file, tmr_hdf, thdf, printio, printinfo, msg, nimg, last_plt_time
       use hdf5,        only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
       use mpisetup,    only: comm, ierr, master
       use timer,       only: set_timer
 
       implicit none
 
-      integer, save         :: nimg = 0
       integer(kind=4)       :: error
-      real, save            :: last_plt_time = 0.0
       character(len=cwdlen) :: fname
       integer               :: i, d
       logical, save         :: first_entry = .true.
       integer(HID_T)        :: file_id                 !> File identifier
       integer(HID_T)        :: gr_id, gr2_id           !> Groups identifier
 
-      if ( ((t-last_plt_time > dt_plt) .or. first_entry ) .and. dt_plt > 0.0 ) then
+      thdf = set_timer(tmr_hdf,.true.)
 
-         thdf = set_timer(tmr_hdf,.true.)
+      nimg = nimg+1
+      write(fname,'(2a)') trim(log_file(1:len_trim(log_file)-3)),"plt"
 
-         write(fname,'(2a)') trim(log_file(1:len_trim(log_file)-3)),"plt"
+      if (master) then
+         write(msg,'(a,es23.16,a,i4.4,3a)') 'ordered t ',last_plt_time,': Writing plot ',nimg,'  into  ', trim(fname(3:)), " ... "
+         call printio(msg, .true.)
+      endif
 
-         if (master) then
-            write(msg,'(3a)') 'Writing plot     ', trim(fname(3:)), " ... "
-            call printio(msg, .true.)
-         endif
+      call H5open_f(error)
 
-         call H5open_f(error)
+      if (master .and. first_entry) then
+         call H5Fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
 
-         if (master .and. first_entry) then
-            call H5Fcreate_f(fname, H5F_ACC_TRUNC_F, file_id, error)
-
-            do d = xdim, zdim
-               if (pl_i(d) > 0) then
-                  call H5Gcreate_f(file_id, pl_id(d), gr_id, error)
-                  do i=1, nhdf_vars
-                     call H5Gcreate_f(gr_id, hdf_vars(i), gr2_id, error)
-                     call H5Gclose_f(gr2_id, error)
-                  enddo
-                  call H5Gclose_f(gr_id, error)
-               endif
-            enddo
-
-            call H5Fclose_f(file_id, error)
-         endif
-
-         call MPI_Barrier(comm, ierr)
-
-         do i = 1, nhdf_vars
-            do d = xdim, zdim
-               if (pl_i(d) > 0) call write_plot_hdf5(hdf_vars(i), d, nimg)
-            enddo
+         do d = xdim, zdim
+            if (pl_i(d) > 0) then
+               call H5Gcreate_f(file_id, pl_id(d), gr_id, error)
+               do i=1, nhdf_vars
+                  call H5Gcreate_f(gr_id, hdf_vars(i), gr2_id, error)
+                  call H5Gclose_f(gr2_id, error)
+               enddo
+               call H5Gclose_f(gr_id, error)
+            endif
          enddo
 
-         nimg = nimg+1
-         first_entry = .false.
-         call H5close_f(error)
+         call H5Fclose_f(file_id, error)
+      endif
 
-         last_plt_time = t
+      call MPI_Barrier(comm, ierr)
 
-         thdf = set_timer(tmr_hdf)
-         if (master) then
-            write(msg,'(a5,f10.2,a2)') 'done ', thdf, ' s'
-            call printinfo(msg, .true.)
-         endif
+      do i = 1, nhdf_vars
+         do d = xdim, zdim
+            if (pl_i(d) > 0) call write_plot_hdf5(hdf_vars(i), d, nimg)
+         enddo
+      enddo
 
+      first_entry = .false.
+      call H5close_f(error)
+
+      thdf = set_timer(tmr_hdf)
+      if (master) then
+         write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
+         call printinfo(msg, .true.)
       endif
 
    end subroutine write_plot
