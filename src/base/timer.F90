@@ -235,7 +235,7 @@ contains
          if (present(wend)) then
             if (wend >= 0.0d0) then
                call system_clock(clock_start, cnt_rate, cnt_max)
-               if (wend < 1d-4*huge(1.0d0)) then
+               if (wend < 1e-4*huge(real(1.0, kind=8))) then
                   r_clk_end = real(clock_start, kind=8) + wend*3600.0*real(cnt_rate, kind=8)
                   if (r_clk_end < cnt_max) then
                      clock_end = int(r_clk_end, kind=8)
