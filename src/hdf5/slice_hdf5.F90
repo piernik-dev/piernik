@@ -160,7 +160,7 @@ contains
 
    subroutine write_plot
 
-      use constants,   only: cwdlen, xdim, zdim
+      use constants,   only: cwdlen, xdim, zdim, I_ONE
       use common_hdf5, only: nhdf_vars, hdf_vars
       use dataio_pub,  only: log_file, tmr_hdf, thdf, printio, printinfo, msg, nimg, last_plt_time
       use hdf5,        only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
@@ -178,7 +178,7 @@ contains
 
       thdf = set_timer(tmr_hdf,.true.)
 
-      nimg = nimg+1
+      nimg = nimg + I_ONE
       write(fname,'(2a)') trim(log_file(1:len_trim(log_file)-3)),"plt"
 
       if (master) then
@@ -254,7 +254,7 @@ contains
 
       integer,               intent(in)        :: plane                         !> xdim means "yz" and so on
       character(len=varlen), intent(in)        :: var                           !> not yet implemented
-      integer,               intent(in)        :: nimg
+      integer(kind=4),       intent(in)        :: nimg
 
       real, dimension(:,:), allocatable        :: send, img, recv
       integer                                  :: ierrh, p
