@@ -59,8 +59,10 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>omega </td><td>0.0  </td><td>real value</td><td>\copydoc shear::omega </td></tr>
-!! <tr><td>qshear</td><td>0.0  </td><td>real value</td><td>\copydoc shear::qshear</td></tr>
+!! <tr><td>omega  </td><td>0.0  </td><td>real value</td><td>\copydoc shear::omega  </td></tr>
+!! <tr><td>qshear </td><td>0.0  </td><td>real value</td><td>\copydoc shear::qshear </td></tr>
+!! <tr><td>eta_gas</td><td>0.0  </td><td>real value</td><td>\copydoc shear::eta_gas</td></tr>
+!! <tr><td>csvk   </td><td>1.0  </td><td>real value</td><td>\copydoc shear::csvk   </td></tr>
 !! </table>
 !! \n \n
 !<

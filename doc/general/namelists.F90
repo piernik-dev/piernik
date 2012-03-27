@@ -7,15 +7,16 @@
 !!
 !! In the following section all namelists and its parameters descriptions are gathered.
 !!
+!! \copydetails domain::init_domain
 !! \copydetails dataio::init_dataio
+!! \copydetails global::init_global
+!! \copydetails piernikdebug::init_piernikdebug
 !! \copydetails gravity::init_grav
-!! \copydetails grid::init_grid
 !! \copydetails initcosmicrays::init_cosmicrays
 !! \copydetails initdust::init_dust
 !! \copydetails initionized::init_ionized
 !! \copydetails initneutral::init_neutral
 !! \copydetails interactions::init_interactions
-!! \copydetails mpisetup::init_mpi
 !! \copydetails resistivity::init_resistivity
 !! \copydetails shear::init_shear
 !! \copydetails snsources::init_snsources

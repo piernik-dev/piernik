@@ -74,9 +74,12 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>collision_factor</td><td>0.0</td><td>real value, between 0 and 1</td><td>\copydoc interactions::collision_factor</td></tr>
-!! <tr><td>dragc_gas_dust  </td><td>0.0</td><td>real value</td>                 <td>\copydoc interactions::dragc_gas_dust</td></tr>
-!! <tr><td>cfl_interact    </td><td>0.8</td><td>real value, between 0 and 1</td><td>\copydoc interactions::cfl_interact</td></tr>
+!! <tr><td>collision_factor</td><td>0.0    </td><td>real value, between 0 and 1</td><td>\copydoc interactions::collision_factor</td></tr>
+!! <tr><td>cfl_interact    </td><td>0.8    </td><td>real value, between 0 and 1</td><td>\copydoc interactions::cfl_interact    </td></tr>
+!! <tr><td>dragc_gas_dust  </td><td>0.0    </td><td>real value                 </td><td>\copydoc interactions::dragc_gas_dust  </td></tr>
+!! <tr><td>has_interactions</td><td>.false.</td><td>logical value              </td><td>\copydoc interactions::has_interactions</td></tr>
+!! <tr><td>grain_size      </td><td>10.0   </td><td>real value                 </td><td>\copydoc interactions::dragc_gas_dust  </td></tr>
+!! <tr><td>grain_dens      </td><td>1.6    </td><td>real value                 </td><td>\copydoc interactions::dragc_gas_dust  </td></tr>
 !! </table>
 !! \n \n
 !<

@@ -149,21 +149,6 @@ contains
 !! \brief Routine to set up computational domain and define its decomposition
 !!
 !! \n \n
-!! @b MPI_BLOCKS
-!! \n \n
-!! <table border="+1">
-!!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!!   <tr><td>psize(3)       </td><td>1      </td><td>integer</td><td>\copydoc domain::psize          </td></tr>
-!!   <tr><td>bsize(3)       </td><td>0      </td><td>integer</td><td>\copydoc domain::bsize          </td></tr>
-!!   <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc domain::reorder        </td></tr>
-!!   <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_uneven   </td></tr>
-!!   <tr><td>allow_noncart  </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_noncart  </td></tr>
-!!   <tr><td>allow_AMR      </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_AMR      </td></tr>
-!!   <tr><td>dd_unif_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_unif_quality</td></tr>
-!!   <tr><td>dd_rect_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_rect_quality</td></tr>
-!!   <tr><td>use_comm3d     </td><td>.true. </td><td>logical</td><td>\copydoc domain::use_comm3d     </td></tr>
-!! </table>
-!! \n \n
 !! @b BASE_DOMAIN
 !! \n \n
 !! <table border="+1">
@@ -186,6 +171,21 @@ contains
 !!   <tr><td>zmin    </td><td>0.         </td><td>real                                      </td><td>\copydoc domain::zmin    </td></tr>
 !!   <tr><td>zmax    </td><td>1.         </td><td>real                                      </td><td>\copydoc domain::zmax    </td></tr>
 !!   <tr><td>geometry</td><td>"cartesian"</td><td>character(len=cbuff_len)                  </td><td>\copydoc domain::geometry</td></tr>
+!! </table>
+!! \n \n
+!! @b MPI_BLOCKS
+!! \n \n
+!! <table border="+1">
+!!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!!   <tr><td>psize(3)       </td><td>1      </td><td>integer</td><td>\copydoc domain::psize          </td></tr>
+!!   <tr><td>bsize(3)       </td><td>0      </td><td>integer</td><td>\copydoc domain::bsize          </td></tr>
+!!   <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc domain::reorder        </td></tr>
+!!   <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_uneven   </td></tr>
+!!   <tr><td>allow_noncart  </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_noncart  </td></tr>
+!!   <tr><td>allow_AMR      </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_AMR      </td></tr>
+!!   <tr><td>dd_unif_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_unif_quality</td></tr>
+!!   <tr><td>dd_rect_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_rect_quality</td></tr>
+!!   <tr><td>use_comm3d     </td><td>.true. </td><td>logical</td><td>\copydoc domain::use_comm3d     </td></tr>
 !! </table>
 !! \n \n
 !<
