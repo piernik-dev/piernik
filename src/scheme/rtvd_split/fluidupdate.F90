@@ -200,7 +200,7 @@ contains
       use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
 #ifdef DEBUG
-!      use piernikdebug,   only: force_dumps
+      use piernikdebug,   only: force_dumps
 #endif /* DEBUG */
 
       implicit none
@@ -233,7 +233,7 @@ contains
       endif
 
 #ifdef DEBUG
-!      call force_dumps
+      call force_dumps
 #endif /* DEBUG */
 
    end subroutine make_sweep
