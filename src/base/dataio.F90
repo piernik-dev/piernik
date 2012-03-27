@@ -593,8 +593,6 @@ contains
       if (output == 'log' .or. output == 'end') call write_log
       if (output == 'tsl' .or. output == 'end') call write_timeslice
 
-!    call checkdf
-
       call determine_dump(dump, last_hdf_time, dt_hdf, output, 'hdf')
       if (dump) call write_hdf5
 
@@ -619,11 +617,8 @@ contains
 
       dump = ((t-last_dump_time) >= dt_dump .or. output == 'end')
       dump = (dump .and. dt_dump > 0.0)
+      if (dump) last_dump_time = last_dump_time + real(floor((t-last_dump_time)/dt_dump))*dt_dump
       dump = (dump .or. output == dumptype)
-
-      do while ((t-last_dump_time) >= dt_dump)
-         last_dump_time = last_dump_time + dt_dump
-      enddo
 
    end subroutine determine_dump
 
