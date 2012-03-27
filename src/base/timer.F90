@@ -215,7 +215,7 @@ contains
 
    function time_left(wend) result (tf)
 
-      use dataio_pub, only: msg, printinfo, warn
+      use dataio_pub, only: msg, printinfo, die
       use mpisetup,   only: slave
 
       implicit none
@@ -229,7 +229,8 @@ contains
       real(kind=8)    :: ss
 
       if (slave) then
-         call warn("[timer:time_left] slaves are not supposed to call me. ABORT!")
+         call die("[timer:time_left] slaves are not supposed to call me. ABORT!")
+         tf = .true. ! suppress complaints on possibly uninitialized value
       else
 
          if (present(wend)) then
