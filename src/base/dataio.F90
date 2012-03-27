@@ -57,8 +57,8 @@ module dataio
    integer                  :: istep                 !< current number of substep (related to integration order)
 
    integer, parameter       :: nvarsmx = 16          !< maximum number of variables to dump in hdf files
-   character(len=cbuff_len) :: restart               !< choice of restart file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
-   character(len=cbuff_len) :: mag_center            !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders, unused)
+   character(len=cbuff_len) :: restart               !< choice of restart %file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
+   logical                  :: mag_center            !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders, unused)
    integer                  :: resdel                !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
    real                     :: dt_hdf                !< time between successive hdf dumps
    real                     :: dt_res                !< time between successive restart file dumps
@@ -90,8 +90,6 @@ module dataio
    character(len=cwdlen)    :: filename              !< string of characters indicating currently used file
    character(len=fmt_len), protected, target :: fmt_loc, fmt_dtloc, fmt_vloc
 
-   namelist /END_CONTROL/ nend, tend, wend
-
    type :: tsl_container
       logical :: dummy
 #ifdef COSM_RAYS
@@ -111,12 +109,11 @@ module dataio
 #endif /* VARIABLE_GP */
    end type tsl_container
 
-
+   namelist /END_CONTROL/     nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
-   namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
-                             domain_dump, vars, mag_center, vizit, fmin, fmax, &
-                             min_disk_space_MB, sleep_minutes, sleep_seconds, &
-                             user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
+   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
+                              domain_dump, vars, mag_center, vizit, fmin, fmax, min_disk_space_MB, sleep_minutes, sleep_seconds, &
+                              user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
 
 contains
 
@@ -153,6 +150,8 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>problem_name       </td><td>"nameless"         </td><td>real      </td><td>\copydoc dataio_pub::problem_name </td></tr>
+!! <tr><td>run_id             </td><td>"___"              </td><td>real      </td><td>\copydoc dataio_pub::run_id       </td></tr>
 !! <tr><td>dt_hdf             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_hdf           </td></tr>
 !! <tr><td>dt_res             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_res           </td></tr>
 !! <tr><td>dt_tsl             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_tsl           </td></tr>
@@ -163,7 +162,7 @@ contains
 !! <tr><td>iz                 </td><td>                   </td><td>integer   </td><td>\copydoc dataio::iz               </td></tr>
 !! <tr><td>domain_dump        </td><td>'phys_domain'      </td><td>'phys_domain' or 'full_domain'                       </td><td>\copydoc dataio_pub::domain_dump</td></tr>
 !! <tr><td>vars               </td><td>''                 </td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more </td><td>\copydoc dataio::vars  </td></tr>
-!! <tr><td>mag_center         </td><td>'no'               </td><td>'yes'/'no'</td><td>\copydoc dataio::mag_center       </td></tr>
+!! <tr><td>mag_center         </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio::mag_center       </td></tr>
 !! <tr><td>vizit              </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::vizit        </td></tr>
 !! <tr><td>fmin               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmin         </td></tr>
 !! <tr><td>fmax               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmax         </td></tr>
@@ -172,6 +171,7 @@ contains
 !! <tr><td>sleep_seconds      </td><td>0                  </td><td>integer   </td><td>\copydoc dataio::sleep_seconds    </td></tr>
 !! <tr><td>user_message_file  </td><td>trim(wd_rd)//'/msg'</td><td>string similar to default value              </td><td>\copydoc dataio::user_message_file  </td></tr>
 !! <tr><td>system_message_file</td><td>'/tmp/piernik_msg' </td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
+!! <tr><td>multiple_h5files   </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::multiple_h5files</td></tr>
 !! <tr><td>use_v2_io          </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::use_v2_io    </td></tr>
 !! <tr><td>nproc_io           </td><td>1                  </td><td>integer   </td><td>\copydoc dataio_pub::nproc_io     </td></tr>
 !! <tr><td>enable_compression </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::enable_compression</td></tr>
@@ -182,7 +182,7 @@ contains
    subroutine init_dataio
 
       use common_hdf5,     only: init_hdf5
-      use constants,       only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE !, BND_USER
+      use constants,       only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE
       use data_hdf5,       only: init_data
       use dataio_pub,      only: nres, nrestart, last_hdf_time, last_plt_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                     tmp_log_file, printinfo, printio, warn, msg, nhdf, nimg, nstep_start, die, code_progress, wd_wr, wd_rd, &
@@ -209,33 +209,33 @@ contains
       if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initialized.")
 
       problem_name = "nameless"
-      run_id = "___"
-      restart = 'last'   ! 'last': automatic choice of the last restart file
-                         ! regardless of "nrestart" value;
-                         ! if something else is set: "nrestart" value is fixing
-      new_id  = ''
-      nrestart=  3
-      resdel  = 0
+      run_id       = "___"
+      restart      = 'last'   ! 'last': automatic choice of the last restart file regardless of "nrestart" value;
+                              ! if something else is set: "nrestart" value is fixing
+      new_id       = ''
+      nrestart     = 3
+      resdel       = 0
 
-      dt_hdf = 0.0
-      dt_res = 0.0
-      dt_tsl = 0.0
-      dt_log = 0.0
-      dt_plt = 0.0
-      domain_dump = 'phys_domain'
-      vars(:)   = ''
-      mag_center= 'no'
+      dt_hdf       = 0.0
+      dt_res       = 0.0
+      dt_tsl       = 0.0
+      dt_log       = 0.0
+      dt_plt       = 0.0
+
+      domain_dump       = 'phys_domain'
+      vars(:)           = ''
+      mag_center        = .false.
       min_disk_space_MB = 100
-      sleep_minutes   = 0
-      sleep_seconds   = 0
+      sleep_minutes     = 0
+      sleep_seconds     = 0
       write(user_message_file,'(a,"/msg")') trim(wd_rd)
       system_message_file = "/tmp/piernik_msg"
 
-      tsl_firstcall = .true.
-      use_v2_io = .false.
-      nproc_io = 1
+      tsl_firstcall      = .true.
+      use_v2_io          = .false.
+      nproc_io           = 1
       enable_compression = .false.
-      gzip_level = 9
+      gzip_level         = 9
 
       nhdf  = -1
       nimg  = -1
@@ -312,6 +312,7 @@ contains
          lbuff(1)  = vizit
          lbuff(2)  = multiple_h5files
          lbuff(3)  = use_v2_io
+         lbuff(4)  = mag_center
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
@@ -321,9 +322,8 @@ contains
             cbuff(40+iv) = vars(iv)
          enddo
 
-         cbuff(90) = mag_center
-         cbuff(91) = user_message_file(1:cbuff_len)
-         cbuff(92) = system_message_file(1:cbuff_len)
+         cbuff(90) = user_message_file(1:cbuff_len)
+         cbuff(91) = system_message_file(1:cbuff_len)
 
       endif
 
@@ -371,6 +371,7 @@ contains
          vizit               = lbuff(1)
          multiple_h5files    = lbuff(2)
          use_v2_io           = lbuff(3)
+         mag_center          = lbuff(4)
 
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
@@ -379,10 +380,8 @@ contains
             vars(iv)         = trim(cbuff(40+iv))
          enddo
 
-         mag_center          = trim(cbuff(90))
-
-         user_message_file   = trim(cbuff(91))
-         system_message_file = trim(cbuff(92))
+         user_message_file   = trim(cbuff(90))
+         system_message_file = trim(cbuff(91))
 
       endif
 
