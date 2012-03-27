@@ -28,8 +28,9 @@
  /
 
  $END_CONTROL
-    tend   = 0.0015
-    nend   = 4
+    tend   = 15.e5
+    nend   = 4000000
+    wend   = 10.0
  /
 
  $OUTPUT_CONTROL
@@ -38,11 +39,11 @@
     ix = 32
     iy = 32
     iz = 32
-    dt_hdf  = 0.1
+    dt_hdf  = 0.0
     dt_res  = 0.0
-    dt_plt  = 0.0001
-    dt_log  = 0.00001
-    dt_tsl  = 1.e-10
+    dt_plt  = 0.0
+    dt_log  = 0.0
+    dt_tsl  = 0.0
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'

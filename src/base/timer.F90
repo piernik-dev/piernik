@@ -59,7 +59,7 @@ module timer
    real    :: zcps, cputot, cpuallp, wctot, cpu_start, cpu_stop
    integer, dimension(3) :: iarray
    real(kind=4), dimension(2) :: tarray
-   integer :: clock_start, clock_end
+   integer(kind=8) :: clock_start, clock_end
 
 contains
 
@@ -215,54 +215,59 @@ contains
 
    function time_left(wend) result (tf)
 
-      use dataio_pub, only: msg, printinfo
-      use mpisetup,   only: master
+      use dataio_pub, only: msg, printinfo, warn
+      use mpisetup,   only: slave
 
       implicit none
 
-      real, intent(in), optional :: wend
+      real(kind=8), intent(in), optional :: wend
       logical :: tf
-      integer :: clock, cnt_rate, cnt_max
-      real    :: r_clk_end
+      integer(kind=8) :: clock, cnt_rate, cnt_max
+      real(kind=8)    :: r_clk_end
 
-      integer :: hh, mm
-      real    :: ss
+      integer(kind=8) :: hh, mm
+      real(kind=8)    :: ss
 
-      if (present(wend)) then
-         if (wend >= 0.0) then
-            call system_clock(clock_start, cnt_rate, cnt_max)
-!           clock_end = clock_start + int(wend*3600.*cnt_rate)
-            if (wend < 1e-4*huge(1.0)) then
-               r_clk_end = clock_start + wend*3600.*cnt_rate
-               if (r_clk_end < cnt_max) then
-                  clock_end = int(r_clk_end)
+      if (slave) then
+         call warn("[timer:time_left] slaves are not supposed to call me. ABORT!")
+      else
+
+         if (present(wend)) then
+            if (wend >= 0.0d0) then
+               call system_clock(clock_start, cnt_rate, cnt_max)
+               if (wend < 1d-4*huge(1.0d0)) then
+                  r_clk_end = real(clock_start, kind=8) + wend*3600.0*real(cnt_rate, kind=8)
+                  if (r_clk_end < cnt_max) then
+                     clock_end = int(r_clk_end, kind=8)
+                  else
+                     clock_end = -cnt_max
+                  endif
                else
                   clock_end = -cnt_max
                endif
-            else
-               clock_end = -cnt_max
             endif
          endif
-      endif
 !>
 !! \deprecated BEWARE: gfortran gives 1ms resolution, but ifort can offer 0.1ms, which will result in an integer overflow in less than 5 days
 !! Probably it is better to call date_and_time(VALUES) here
+!! if clock, cnt_rate, cnt_max are of kind=8 gfortran put results in 1 ns
 !<
-      call system_clock(clock, cnt_rate, cnt_max)
-      tf = .true.
-      if (clock_end /= -cnt_max) then
-         if ( clock_end - clock < 0 ) tf = .false.
-      endif
+         call system_clock(clock, cnt_rate, cnt_max)
+         tf = .true.
+         if (clock_end /= -cnt_max) then
+            if ( clock_end - clock < 0 ) tf = .false.
+         endif
 
-      if (present(wend)) then
-         if (wend < 0 .and. master) then
-            ss = (clock_end - clock)/(3600.*cnt_rate)
-            hh = int(ss)
-            ss = (ss - hh)*60.
-            mm = int(ss)
-            ss = (ss - mm)*60.
-            write(msg,'(A,I4,":",I2.2,":",F5.2)') "Walltime left until end of simulation: ", hh, mm, ss
-            call printinfo(msg)
+         if (present(wend)) then
+            if (wend < 0.0d0) then
+               ss = (clock_end - clock)/(3600.0*cnt_rate)
+               hh = int(ss,kind=8)
+               ss = (ss - hh)*60.0
+               mm = int(ss,kind=8)
+               ss = (ss - mm)*60.0
+               write(msg,'(A,I4,":",I2.2,":",F5.2)') "Walltime left until end of simulation: ", hh, mm, ss
+               call printinfo(msg)
+            endif
          endif
       endif
 

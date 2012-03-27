@@ -401,7 +401,7 @@ contains
       write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
       write(fmt_vloc, '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
 
-      tn = time_left(wend)
+      if (master) tn = time_left(wend)
 
       last_log_time = -dt_log
       last_tsl_time = -dt_tsl
@@ -498,9 +498,9 @@ contains
                call write_timeslice
             case ('wend')
                wend = umsg_param
-               tn = time_left(wend)
+               if (master) tn = time_left(wend)
             case ('wleft')
-               tn = time_left(-1.0)
+               if (master) tn = time_left(-1.0)
             case ('tend')
                tend   = umsg_param
             case ('nend')

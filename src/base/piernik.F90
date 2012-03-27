@@ -38,7 +38,8 @@ program piernik
    use fluidupdate, only: fluid_update
    use gc_list,     only: all_cg
    use global,      only: t, nstep, dt, dtm, cfl_violated
-   use mpisetup,    only: comm, ierr, master
+   use mpi,         only: MPI_LOGICAL
+   use mpisetup,    only: comm, ierr, master, FIRST
    use timer,       only: time_left, set_timer
    use timestep,    only: time_step
    use user_hooks,  only: finalize_problem
@@ -49,6 +50,7 @@ program piernik
    implicit none
 
    logical              :: end_sim !< Used in main loop, to test whether to stop simulation or not
+   logical              :: tleft   !< Used in main loop, to test whether to stop simulation or not
    character(len=fplen) :: nstr, tstr
    logical, save        :: first_step = .true.
    real                 :: ts    ! Timestep wallclock
@@ -82,7 +84,7 @@ program piernik
 
    call print_progress(nstep)
 
-   do while (t < tend .and. nstep < nend .and. .not.(end_sim) .and. time_left() ) ! main loop
+   do while (t < tend .and. nstep < nend .and. .not.(end_sim)) ! main loop
 
       call all_cg%check_na
       !call all_cg%check_for_dirt
@@ -113,6 +115,11 @@ program piernik
 
       call user_msg_handler(end_sim)
 
+      if (master) tleft = time_left()
+      call MPI_Bcast(tleft, I_ONE, MPI_LOGICAL, FIRST, comm, ierr)
+
+      if (.not.tleft) end_sim = .true.
+
       first_step = .false.
    enddo ! main loop
 
@@ -137,7 +144,7 @@ program piernik
          write(msg, '(4a)') "Enforced stop at step ",trim(nstr),", t = ", trim(tstr)
          call warn(msg)
       endif
-      if (.not.time_left()) then
+      if (.not.tleft) then
          write(msg, '(4a)') "Wall time limit exceeded at step ",trim(nstr),", t = ", trim(tstr)
          call warn(msg)
       endif
