@@ -914,7 +914,7 @@ contains
       write(msg, fmt_dtloc)   'max(|vz|)   ',fluid, pr%velz_max%val, pr%velz_max%assoc, pr%velz_max%proc, pack(pr%velz_max%loc,dom%has_dir), pack(pr%velz_max%coords,dom%has_dir)
       call printinfo(msg, .false.)
       if (cs_tn) then
-         write(msg, fmt_dtloc)'max(c_s )   ',fluid, pr%cs_max%val,   pr%cs_max%assoc,   pr%cs_max%proc,   pack(pr%cs_max%loc,dom%has_dir), pack(pr%cs_max%coords,dom%has_dir)
+         write(msg, fmt_dtloc)'max(c_s )   ',fluid, pr%cs_max%val,   pr%cs_max%assoc,   pr%cs_max%proc,   pack(pr%cs_max%loc,dom%has_dir),   pack(pr%cs_max%coords,dom%has_dir)
          call printinfo(msg, .false.)
       endif
 
@@ -926,7 +926,7 @@ contains
          write(msg, fmt_vloc)   'min(dt_vz)   ',fluid, pr%dtvz_min%val, pr%dtvz_min%assoc, pr%dtvz_min%proc, pack(pr%dtvz_min%loc,dom%has_dir), pack(pr%dtvz_min%coords,dom%has_dir)
          call printinfo(msg, .false.)
          if (cs_tn) then
-            write(msg, fmt_vloc)'min(dt_cs)   ',fluid, pr%dtcs_min%val, pr%dtcs_min%assoc, pr%dtcs_min%proc,   pack(pr%dtcs_min%loc,dom%has_dir), pack(pr%dtcs_min%coords,dom%has_dir)
+            write(msg, fmt_vloc)'min(dt_cs)   ',fluid, pr%dtcs_min%val, pr%dtcs_min%assoc, pr%dtcs_min%proc, pack(pr%dtcs_min%loc,dom%has_dir), pack(pr%dtcs_min%coords,dom%has_dir)
             call printinfo(msg, .false.)
          endif
       endif
@@ -1091,7 +1091,7 @@ contains
 !
    subroutine  write_log(tsl)
 
-      use constants,          only: idlen, small, MINL, MAXL, xdim, ydim, zdim, wa_n
+      use constants,          only: idlen, small, MINL, MAXL, xdim, ydim, zdim, wa_n, gpot_n, mag_n, HI, idm, ndims
       use dataio_pub,         only: msg, printinfo
       use domain,             only: dom
       use fluids_pub,         only: has_dst, has_ion, has_neu
@@ -1113,28 +1113,30 @@ contains
       use resistivity,        only: deimin
 #endif /* !ISO */
 #endif /* RESISTIVE */
-#if defined VARIABLE_GP || defined MAGNETIC
-      use domain,             only: dom
-#endif /* VARIABLE_GP || MAGNETIC */
 
       implicit none
 
-      type(tsl_container), optional  :: tsl
+      type(tsl_container), optional      :: tsl
 
-      real                           :: dxmn_safe
-      type(cg_list_element), pointer :: cgl
-      integer                        :: wa_i
-      type(value)                    :: drag
+      real                               :: dxmn_safe
+      type(cg_list_element), pointer     :: cgl
+      integer                            :: wa_i
+      type(value)                        :: drag
 #ifdef MAGNETIC
-      type(value)                    :: b_min, b_max, divb_max, vai_max, cfi_max
+      type(value)                        :: b_min, b_max, divb_max, vai_max, cfi_max
 #endif /* MAGNETIC */
 #ifdef COSM_RAYS
-      type(value)                    :: encr_min, encr_max
+      type(value)                        :: encr_min, encr_max
 #endif /* COSM_RAYS */
 #ifdef VARIABLE_GP
-      type(value)                    :: gpxmax, gpymax, gpzmax
+      type(value)                        :: gpxmax, gpymax, gpzmax
 #endif /* VARIABLE_GP */
-      character(len=idlen)           :: id
+#if defined VARIABLE_GP || defined MAGNETIC
+      integer                            :: var_i
+      integer, dimension(ndims,ndims,HI) :: D
+      real, dimension(:,:,:), pointer    :: p
+#endif /* VARIABLE_GP || MAGNETIC */
+      character(len=idlen)               :: id
 
       wa_i = all_cg%ind(wa_n)
       id = '' ! suppress compiler warnings if none of the modules requiring the id variable are swithed on.
@@ -1171,82 +1173,61 @@ contains
          cfi_max%assoc = cfl*dxmn_safe/sqrt(cfi_max%val**2+small)
 #endif /* MAGNETIC */
 
-#ifdef ISO
-!        cg%wa        = cg%cs_iso2(:,:,:)*cg%u(idni,:,:,:)
-!        call get_extremum(p, MINL, prei_min, cg)
-!        call get_extremum(p, MAXL, prei_max, cg) ; NULLIFY(p)
-!        p => cg%cs_iso2(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-!        call get_extremum(p, MAXL, csi_max, cg)  ; NULLIFY(p)
-!        p => cg%wa(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-!        cg%wa        = mH / kboltz * cs_iso2_arr(:,:,:)
-!        call get_extremum(p, MINL, temi_min, cg)
-!        call get_extremum(p, MAXL, temi_max, cg)
-#else /* !ISO */
-!        cg%wa(:,:,:) = (cg%u(ieni,:,:,:) &                ! eint
-!                    - half*((cg%u(imxi,:,:,:)**2 +cg%u(imyi,:,:,:)**2 + cg%u(imzi,:,:,:)**2)/cg%u(idni,:,:,:)))
-#ifdef MAGNETIC
-!        cg%wa(:,:,:) = cg%wa(:,:,:) - half*(cg%b(xdim,:,:,:)**2 + cg%b(ydim,:,:,:)**2 + cg%b(zdim,:,:,:)**2)
-#endif /* MAGNETIC */
-#endif /* !ISO */
       endif
 
       if (has_dst) call get_common_vars(flind%dst)
 
-!!$#if defined VARIABLE_GP || defined MAGNETIC
-!!$      nxl = 1 + dom%D_x
-!!$      nyl = 1 + dom%D_y
-!!$      nzl = 1 + dom%D_z
-!!$      nxu = cg%n_(xdim) - dom%D_x
-!!$      nyu = cg%n_(ydim) - dom%D_y
-!!$      nzu = cg%n_(zdim) - dom%D_z
-!!$#endif /* VARIABLE_GP || MAGNETIC */
-
+#if defined VARIABLE_GP || defined MAGNETIC
+      D = spread(reshape([dom%D_*idm(xdim,:),dom%D_*idm(ydim,:),dom%D_*idm(zdim,:)],[ndims,ndims]),ndims,HI)
+#endif /* VARIABLE_GP || MAGNETIC */
 #ifdef VARIABLE_GP
+      var_i = all_cg%ind(gpot_n)
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%wa            (cgl%cg%is        :cgl%cg%ie,         cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) = &
-              abs((cgl%cg%gpot(cgl%cg%is+dom%D_x:cgl%cg%ie+dom%D_x, cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke) - &
-                   cgl%cg%gpot(cgl%cg%is        :cgl%cg%ie,         cgl%cg%js:cgl%cg%je, cgl%cg%ks:cgl%cg%ke))*cgl%cg%idx)
-         cgl => cgl%nxt
+         p => cgl%cg%q(wa_i)%span(cgl%cg%ijkse)
+         p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idx)
+         cgl => cgl%nxt ; NULLIFY(p)
       enddo
       call leaves%get_extremum(wa_i, MAXL, gpxmax)
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%wa            (cgl%cg%is:cgl%cg%ie, cgl%cg%js        :cgl%cg%je,         cgl%cg%ks:cgl%cg%ke) = &
-              abs((cgl%cg%gpot(cgl%cg%is:cgl%cg%ie, cgl%cg%js+dom%D_y:cgl%cg%je+dom%D_y, cgl%cg%ks:cgl%cg%ke) - &
-                   cgl%cg%gpot(cgl%cg%is:cgl%cg%ie, cgl%cg%js        :cgl%cg%je,         cgl%cg%ks:cgl%cg%ke))*cgl%cg%idy)
-         cgl => cgl%nxt
+         p => cgl%cg%q(wa_i)%span(cgl%cg%ijkse)
+         p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idy)
+         cgl => cgl%nxt ; NULLIFY(p)
       enddo
       call leaves%get_extremum(wa_i, MAXL, gpymax)
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%wa            (cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks        :cgl%cg%ke        ) = &
-              abs((cgl%cg%gpot(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks+dom%D_z:cgl%cg%ke+dom%D_z) - &
-                   cgl%cg%gpot(cgl%cg%is:cgl%cg%ie, cgl%cg%js:cgl%cg%je, cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%idz)
-         cgl => cgl%nxt
+         p => cgl%cg%q(wa_i)%span(cgl%cg%ijkse)
+         p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idz)
+         cgl => cgl%nxt ; NULLIFY(p)
       enddo
       call leaves%get_extremum(wa_i, MAXL, gpzmax)
 #endif /* VARIABLE_GP */
 
 #ifdef MAGNETIC
+      var_i = all_cg%ind_4d(mag_n)
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%wa(            cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ) = &
-              &(cgl%cg%b(xdim, cgl%cg%is+dom%D_x:cgl%cg%ie+dom%D_x, cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ) - &
+         p => cgl%cg%q(wa_i)%span(cgl%cg%ijkse)
+         p =   (cgl%cg%b(xdim, cgl%cg%is+dom%D_x:cgl%cg%ie+dom%D_x, cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ) - &
               & cgl%cg%b(xdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dy*cgl%cg%dz &
               +(cgl%cg%b(ydim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js+dom%D_y:cgl%cg%je+dom%D_y, cgl%cg%ks        :cgl%cg%ke        ) - &
               & cgl%cg%b(ydim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dx*cgl%cg%dz &
               +(cgl%cg%b(zdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks+dom%D_z:cgl%cg%ke+dom%D_z) - &
               & cgl%cg%b(zdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dx*cgl%cg%dy
+!         p = (cgl%cg%w(var_i)%span(xdim,cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%w(var_i)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
+!            +(cgl%cg%w(var_i)%span(ydim,cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%w(var_i)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
+!            +(cgl%cg%w(var_i)%span(zdim,cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%w(var_i)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
          cgl%cg%wa = abs(cgl%cg%wa)
 
          cgl%cg%wa(cgl%cg%ie,:,:) = cgl%cg%wa(cgl%cg%ie-dom%D_x,:,:)
          cgl%cg%wa(:,cgl%cg%je,:) = cgl%cg%wa(:,cgl%cg%je-dom%D_y,:)
          cgl%cg%wa(:,:,cgl%cg%ke) = cgl%cg%wa(:,:,cgl%cg%ke-dom%D_z)
 
-         cgl => cgl%nxt
+         cgl => cgl%nxt ; NULLIFY(p)
       enddo
       call leaves%get_extremum(wa_i, MAXL, divb_max)
 #endif /* MAGNETIC */
