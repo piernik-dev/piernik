@@ -604,7 +604,7 @@ contains
 
    subroutine diff_flux(crdim, im, soln, cg, cr_id, Keff)
 
-      use constants,      only: xdim, ydim, zdim, ndims
+      use constants,      only: xdim, ydim, zdim, ndims, oneq
       use domain,         only: dom
       use grid_cont,      only: grid_container
       use initcosmicrays, only: K_crs_perp, K_crs_paral
@@ -644,11 +644,11 @@ contains
             if (present_not_crdim(idir)) then
                imp(:) = im(:) ; imp(idir) = imp(idir) + 1 ; ilmp(:) = imp(:) ; ilmp(crdim) = ilmp(crdim) - 1
                imm(:) = im(:) ; imm(idir) = imm(idir) - 1 ; ilmm(:) = imm(:) ; ilmm(crdim) = ilmm(crdim) - 1
-               b_perp = sum(cg%q(idiffb(crdim))%arr(ilm(xdim):imp(xdim), ilm(ydim):imp(ydim), ilm(zdim):imp(zdim)))*0.25
+               b_perp = sum(cg%q(idiffb(crdim))%arr(ilm(xdim):imp(xdim), ilm(ydim):imp(ydim), ilm(zdim):imp(zdim)))*oneq
                magb = magb + b_perp**2
                !> \warning *cg%idl(crdim) makes a difference
                db = db + b_perp*((cg%q(soln)%arr(ilmp(xdim), ilmp(ydim), ilmp(zdim)) + cg%q(soln)%arr(imp(xdim), imp(ydim), imp(zdim))) - &
-                  &              (cg%q(soln)%arr(ilmm(xdim), ilmm(ydim), ilmm(zdim)) + cg%q(soln)%arr(imm(xdim), imm(ydim), imm(zdim)))) * 0.25 * cg%idl(idir)
+                  &              (cg%q(soln)%arr(ilmm(xdim), ilmm(ydim), ilmm(zdim)) + cg%q(soln)%arr(imm(xdim), imm(ydim), imm(zdim)))) * oneq * cg%idl(idir)
             endif
          enddo
 

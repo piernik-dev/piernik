@@ -176,7 +176,7 @@ contains
 !<
    subroutine cr_diff(crdim)
 
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n, oneq
       use dataio_pub,     only: die
       use domain,         only: dom
       use fluidindex,     only: flind
@@ -232,22 +232,22 @@ contains
                   if (present_not_crdim(xdim)) then
                      dqm = half*((cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k)) - (cg%u(iarr_crs,il,jld,kld) + cg%u(iarr_crs,il,j,k))) * cg%idx
                      dqp = half*((cg%u(iarr_crs,ih,jld,kld) + cg%u(iarr_crs,ih,j,k)) - (cg%u(iarr_crs,i ,jld,kld) + cg%u(iarr_crs,i ,j,k))) * cg%idx
-                     decr(xdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                     bcomp(xdim)   = sum(cg%b(xdim,i:ih, jld:j, kld:k))*0.25
+                     decr(xdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
+                     bcomp(xdim)   = sum(cg%b(xdim,i:ih, jld:j, kld:k))*oneq
                   endif
 
                   if (present_not_crdim(ydim)) then
                      dqm = half*((cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k)) - (cg%u(iarr_crs,ild,jl,kld) + cg%u(iarr_crs,i,jl,k))) * cg%idy
                      dqp = half*((cg%u(iarr_crs,ild,jh,kld) + cg%u(iarr_crs,i,jh,k)) - (cg%u(iarr_crs,ild,j ,kld) + cg%u(iarr_crs,i,j ,k))) * cg%idy
-                     decr(ydim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                     bcomp(ydim)   = sum(cg%b(ydim,ild:i, j:jh, kld:k))*0.25
+                     decr(ydim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
+                     bcomp(ydim)   = sum(cg%b(ydim,ild:i, j:jh, kld:k))*oneq
                   endif
 
                   if (present_not_crdim(zdim)) then
                      dqm = half*((cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k )) - (cg%u(iarr_crs,ild,jld,kl) + cg%u(iarr_crs,i,j,kl))) * cg%idz
                      dqp = half*((cg%u(iarr_crs,ild,jld,kh) + cg%u(iarr_crs,i,j,kh)) - (cg%u(iarr_crs,ild,jld,k ) + cg%u(iarr_crs,i,j,k ))) * cg%idz
-                     decr(zdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*0.25
-                     bcomp(zdim)   = sum(cg%b(zdim,ild:i, jld:j, k:kh))*0.25
+                     decr(zdim,:) = (dqp+dqm)* (1.0 + sign(1.0, dqm*dqp))*oneq
+                     bcomp(zdim)   = sum(cg%b(zdim,ild:i, jld:j, k:kh))*oneq
                   endif
 
                   bb = sum(bcomp**2)
