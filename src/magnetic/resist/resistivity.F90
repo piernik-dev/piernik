@@ -55,7 +55,6 @@ module resistivity
    double precision                        :: d_eta_factor
    type(value)                             :: etamax, cu2max, deimin
    logical, save                           :: eta1_active = .true.       !< resistivity off-switcher while eta_1 == 0.0
-   integer, dimension(ndims,ndims)         :: idm                        !< identity matrix 3x3
    character(len=varlen), dimension(ndims) :: emfd
    character(len=dsetnamelen), parameter   :: eta_n = "eta", wb_n = "wb", eh_n = "eh", dbx_n = "dbx", dby_n = "dby", dbz_n = "dbz"
 
@@ -174,9 +173,6 @@ contains
          d_eta_factor = 1./(dims_twice+dble(eta_scale))
       endif
 
-      idm(1,:) = [1,0,0]
-      idm(2,:) = [0,1,0]
-      idm(3,:) = [0,0,1]
       emfd     = [ 'emfx', 'emfy', 'emfz' ]
 
    end subroutine init_resistivity
@@ -382,7 +378,7 @@ contains
 
    subroutine diffuseb(ibdir, sdir)
 
-      use constants,     only: xdim, ydim, zdim, ndims, half, varlen, I_ONE, mag_n, wcu_n
+      use constants,     only: xdim, ydim, zdim, ndims, half, varlen, I_ONE, mag_n, wcu_n, idm, uv
       use domain,        only: dom
       use gc_list,       only: cg_list_element, all_cg
       use global,        only: dt
@@ -427,7 +423,7 @@ contains
 ! following solution seems to be a bit faster than former select case
          idmh(:) = cg%n_(:) - idm(:,etadir)
          idml(:) = 1 + idm(:,etadir)
-         cg%q(eta_i)%arr(:idmh(xdim),:idmh(ydim),:idmh(zdim)) = half*(cg%q(eta_i)%span([1,1,1],idmh) + cg%q(eta_i)%span(idml,int(cg%n_)))
+         cg%q(eta_i)%arr(:idmh(xdim),:idmh(ydim),:idmh(zdim)) = half*(cg%q(eta_i)%span(uv,idmh) + cg%q(eta_i)%span(idml,int(cg%n_)))
 
          do i1 = lbound(cg%q(wcu_i)%arr,n1), ubound(cg%q(wcu_i)%arr,n1)
             do i2 = lbound(cg%q(wcu_i)%arr,n2), ubound(cg%q(wcu_i)%arr,n2)
