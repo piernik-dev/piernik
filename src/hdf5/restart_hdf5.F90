@@ -317,7 +317,7 @@ contains
 
    subroutine write_arr_to_restart(file_id, ind, tgt3d)
 
-      use constants,  only: xdim, ydim, zdim, ndims, AT_OUT_B, AT_IGNORE, LONG, dsetnamelen
+      use constants,  only: ndims, AT_OUT_B, AT_IGNORE, LONG, dsetnamelen
       use dataio_pub, only: die
       use domain,     only: is_multicg
       use gc_list,    only: cg_list_element, all_cg
@@ -416,14 +416,14 @@ contains
 
          ! write data
          if (tgt3d) then
-            pa3d => cg%q(ind)%arr(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+            pa3d => cg%q(ind)%span(lleft, lright)
             if (associated(pa3d)) then
                call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
                call die("[restart_hdf5:write_arr_to_restart] unassociated 3D array pointer")
             endif
          else
-            pa4d => cg%w(ind)%arr(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+            pa4d => cg%w(ind)%span(lleft, lright)
             if (associated(pa4d)) then
                call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dimsf(:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
@@ -452,7 +452,7 @@ contains
 
    subroutine read_arr_from_restart(file_id, ind, tgt3d, alt_area_type, alt_name)
 
-      use constants,    only: xdim, ydim, zdim, ndims, LONG, AT_IGNORE, dsetnamelen
+      use constants,    only: ndims, LONG, AT_IGNORE, dsetnamelen
       use dataio_pub,   only: msg, die
       use domain,       only: is_multicg
       use gc_list,      only: cg_list_element, all_cg
@@ -547,7 +547,7 @@ contains
 
          ! Read the array
          if (tgt3d) then
-            pa3d => cg%q(all_cg%ind(cgname))%arr(lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+            pa3d => cg%q(all_cg%ind(cgname))%span(lleft, lright)
             if (associated(pa3d)) then
                call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
@@ -555,7 +555,7 @@ contains
                call die(msg)
             endif
          else
-            pa4d => cg%w(all_cg%ind_4d(cgname))%arr(:, lleft(xdim):lright(xdim), lleft(ydim):lright(ydim), lleft(zdim):lright(zdim))
+            pa4d => cg%w(all_cg%ind_4d(cgname))%span(lleft, lright)
             if (associated(pa4d)) then
                call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
