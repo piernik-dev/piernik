@@ -236,7 +236,7 @@ contains
 
       use constants,   only: xdim, ydim, zdim, varlen, cwdlen, LO, HI
       use dataio_pub,  only: vizit, fmin, fmax, log_file, msg, die, warn
-      use dataio_user, only: user_plt_hdf5
+      use dataio_user, only: user_plt_hdf5, user_plt_attrs
       use domain,      only: dom, is_multicg
       use global,      only: t
       use gc_list,     only: all_cg
@@ -328,6 +328,7 @@ contains
             call h5ltmake_dataset_double_f(gr2_id, vdname, rank, dims, img, error)
             timebuffer(:) = [ t ]
             call h5ltset_attribute_double_f(gr2_id, vdname, "time", timebuffer, bufsize, error)
+            if (associated(user_plt_attrs)) call user_plt_attrs(gr2_id, vdname)
             call H5Gclose_f(gr2_id, error)
             call H5Gclose_f(gr_id, error)
             call H5Fclose_f(file_id, error)

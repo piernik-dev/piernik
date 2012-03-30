@@ -91,6 +91,19 @@ module dataio_user
    end interface
 
    interface
+      subroutine plt_attr(gr2_id,vdname)
+
+         use hdf5, only: HID_T
+
+         implicit none
+
+         integer(HID_T),   intent(in) :: gr2_id
+         character(len=*), intent(in) :: vdname
+
+      end subroutine plt_attr
+   end interface
+
+   interface
       subroutine add_data
          implicit none
       end subroutine add_data
@@ -98,6 +111,7 @@ module dataio_user
 
    procedure(add_attr),  pointer :: user_attrs_rd         => Null()
    procedure(add_attr),  pointer :: user_attrs_wr         => Null()
+   procedure(plt_attr),  pointer :: user_plt_attrs        => Null()
    procedure(add_data),  pointer :: user_reg_var_restart  => Null()
    procedure(plt_hdf5),  pointer :: user_plt_hdf5         => Null()
    procedure(vars_hdf5), pointer :: user_vars_hdf5        => Null()
