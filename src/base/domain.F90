@@ -80,7 +80,7 @@ module domain
       integer :: D_y                  !< set to 1 when y-direction exists, 0 otherwise.
       integer :: D_z                  !< set to 1 when z-direction exists, 0 otherwise.
 
-      integer, dimension(ndims) :: D_ !< set to 1 for existing directions, 0 otherwise. Useful for dimensionally-safe indices for difference operators on arrays,
+      integer(kind=4), dimension(ndims) :: D_ !< set to 1 for existing directions, 0 otherwise. Useful for dimensionally-safe indices for difference operators on arrays,
 
       logical, dimension(ndims) :: has_dir   !< .true. for existing directions
       integer :: eff_dim                     !< effective dimensionality of the simulation

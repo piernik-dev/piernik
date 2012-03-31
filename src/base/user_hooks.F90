@@ -50,7 +50,8 @@ module user_hooks
 
       subroutine indx_args(ll,lr,ch,lo)
          implicit none
-         integer,         dimension(:), intent(out) :: ll, lr, ch
+         integer(kind=4), dimension(:), intent(out) :: ll, lr
+         integer,         dimension(:), intent(out) :: ch
          integer(kind=8), dimension(:), intent(out) :: lo
       end subroutine indx_args
 

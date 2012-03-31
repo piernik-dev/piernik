@@ -371,8 +371,8 @@ contains
 
       implicit none
 
-      class(named_array3d),      intent(inout) :: this
-      integer, dimension(ndims), intent(in)    :: v1, v2
+      class(named_array3d),              intent(inout) :: this
+      integer(kind=4), dimension(ndims), intent(in)    :: v1, v2
 
       real,    dimension(:,:,:), pointer       :: p3d
 
@@ -413,9 +413,9 @@ contains
 
       implicit none
 
-      class(named_array4d),      intent(inout) :: this
-      integer(kind=4),           intent(in)    :: nn
-      integer, dimension(ndims), intent(in)    :: v1, v2
+      class(named_array4d),              intent(inout) :: this
+      integer(kind=4),                   intent(in)    :: nn
+      integer(kind=4), dimension(ndims), intent(in)    :: v1, v2
 
       real,    dimension(:,:,:),  pointer      :: p3d
 
@@ -435,9 +435,10 @@ contains
 
       implicit none
 
-      class(named_array4d),            intent(inout) :: this
-      integer(kind=4),                 intent(in)    :: nn
-      integer, dimension(ndims,LO:HI), intent(in)    :: v
+      class(named_array4d),                    intent(inout) :: this
+      integer(kind=4),                         intent(in)    :: nn
+      integer(kind=4), dimension(ndims,LO:HI), intent(in)    :: v
+
       real,    dimension(:,:,:),  pointer            :: p3d
 
       if (.not.associated(this%arr)) then
@@ -456,8 +457,8 @@ contains
 
       implicit none
 
-      class(named_array4d),      intent(inout) :: this
-      integer, dimension(ndims), intent(in)    :: v1, v2
+      class(named_array4d),              intent(inout) :: this
+      integer(kind=4), dimension(ndims), intent(in)    :: v1, v2
 
       real,    dimension(:,:,:,:), pointer     :: p3d
 
@@ -477,7 +478,7 @@ contains
 
       implicit none
 
-      class(named_array4d),            intent(inout) :: this
+      class(named_array4d),                    intent(inout) :: this
       integer(kind=4), dimension(ndims,LO:HI), intent(in)    :: v
 
       real,    dimension(:,:,:,:), pointer           :: p3d

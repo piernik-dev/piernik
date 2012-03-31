@@ -392,7 +392,7 @@ contains
       character(len=varlen)          :: emf
       integer                        :: i1, i2, b_i, wcu_i, eta_i
       integer(kind=4)                :: n1, n2, etadir
-      integer, dimension(ndims)      :: idml, idmh
+      integer(kind=4), dimension(ndims) :: idml, idmh
       real, dimension(:),    pointer :: b1d, eta1d, wcu1d
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
@@ -422,8 +422,8 @@ contains
 
 ! following solution seems to be a bit faster than former select case
          idmh(:) = cg%n_(:) - idm(:,etadir)
-         idml(:) = 1 + idm(:,etadir)
-         cg%q(eta_i)%arr(:idmh(xdim),:idmh(ydim),:idmh(zdim)) = half*(cg%q(eta_i)%span(uv,idmh) + cg%q(eta_i)%span(idml,int(cg%n_)))
+         idml(:) = I_ONE + idm(:,etadir)
+         cg%q(eta_i)%arr(:idmh(xdim),:idmh(ydim),:idmh(zdim)) = half*(cg%q(eta_i)%span(uv,idmh) + cg%q(eta_i)%span(idml,cg%n_))
 
          do i1 = lbound(cg%q(wcu_i)%arr,n1), ubound(cg%q(wcu_i)%arr,n1)
             do i2 = lbound(cg%q(wcu_i)%arr,n2), ubound(cg%q(wcu_i)%arr,n2)

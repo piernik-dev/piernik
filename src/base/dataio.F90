@@ -1133,7 +1133,7 @@ contains
 #endif /* VARIABLE_GP */
 #if defined VARIABLE_GP || defined MAGNETIC
       integer                            :: var_i
-      integer, dimension(ndims,ndims,HI) :: D
+      integer(kind=4), dimension(ndims,ndims,HI) :: D
       real, dimension(:,:,:), pointer    :: p
 #endif /* VARIABLE_GP || MAGNETIC */
       character(len=idlen)               :: id

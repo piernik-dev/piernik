@@ -148,7 +148,8 @@ contains
       implicit none
 
       integer(kind=4),                   intent(in)  :: area_type
-      integer,         dimension(ndims), intent(out) :: lleft, lright, chnk
+      integer(kind=4), dimension(ndims), intent(out) :: lleft, lright
+      integer,         dimension(ndims), intent(out) :: chnk
       integer(kind=8), dimension(ndims), intent(out) :: loffs
       type(grid_container), pointer,     intent(in)  :: cg !< current grid container
 
@@ -341,7 +342,8 @@ contains
       integer(HID_T)                     :: dfilespace, filespace     !> Dataspace identifiers in file
       integer(HID_T)                     :: memspace                  !> Dataspace identifier in memory
 
-      integer,         dimension(ndims)  :: area, lleft, lright, chnk
+      integer, dimension(ndims)          :: area, chnk
+      integer(kind=4), dimension(ndims)  :: lleft, lright
       integer(kind=8), dimension(ndims)  :: loffs
       integer(HSIZE_T), dimension(rank4) :: cnt, offset, stride
       integer(kind=4)                    :: rank, error, area_type
@@ -480,7 +482,8 @@ contains
       integer(HID_T)                         :: filespace          !> Dataspace identifier in file
       integer(HID_T)                         :: memspace           !> Dataspace identifier in memory
       integer(HSIZE_T), dimension(rank4)     :: cnt, offset, stride
-      integer,          dimension(ndims)     :: area, lleft, lright, chnk
+      integer, dimension(ndims)              :: area, chnk
+      integer(kind=4), dimension(ndims)      :: lleft, lright
       integer(kind=8),  dimension(ndims)     :: loffs
       integer(kind=4)                        :: rank, rankf, error, area_type
       integer                                :: ir, dim1
