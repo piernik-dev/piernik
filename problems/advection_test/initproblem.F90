@@ -60,10 +60,10 @@ contains
 
       implicit none
 
-      finalize_problem           => finalize_problem_adv
+      finalize_problem           => calculate_error_norm
       user_vars_hdf5             => inid_var_hdf5
       user_reg_var_restart       => register_user_var
-      problem_customize_solution => finalize_problem_adv
+      problem_customize_solution => calculate_error_norm
 
    end subroutine problem_pointers
 
@@ -227,7 +227,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine finalize_problem_adv
+   subroutine calculate_error_norm
 
       use constants,  only: I_ONE, I_TWO, PIERNIK_FINISHED
       use dataio_pub, only: code_progress, halfstep, msg, printinfo, warn
@@ -264,7 +264,7 @@ contains
 
          inid => cg%q(all_cg%ind(inid_n))%arr
          if (.not. associated(inid))then
-            if (master) call warn("[initproblem:finalize_problem_adv] Cannot compare results with the initial conditions.")
+            if (master) call warn("[initproblem:calculate_error_norm] Cannot compare results with the initial conditions.")
             return
          endif
 
@@ -283,11 +283,11 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, pos_err, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
 
       if (master) then
-         write(msg,'(a,f12.6,a,2f15.6)')"[initproblem:finalize_problem_adv] L2 error norm = ", sqrt(norm(N_D)/norm(N_2)), ", min and max error = ", neg_err, pos_err
+         write(msg,'(a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm = ", sqrt(norm(N_D)/norm(N_2)), ", min and max error = ", neg_err, pos_err
          call printinfo(msg)
       endif
 
-   end subroutine finalize_problem_adv
+   end subroutine calculate_error_norm
 
    !>
    !! \brief Put analytic solution in the inid arrays

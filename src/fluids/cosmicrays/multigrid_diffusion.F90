@@ -348,10 +348,10 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_lev,        only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
+      use constants,          only: fluid_n, wa_n
       use dataio_pub,         only: die
+      use gc_list,            only: all_cg, ind_val
       use grid,               only: leaves
-      use gc_list,            only: cg_list_element
-      use grid_cont,          only: grid_container
       use initcosmicrays,     only: iarr_crs
       use multigridvars,      only: roof, source, defect, correction
       use multigridhelpers,   only: set_dirty, check_dirty, dirty_label
@@ -359,21 +359,15 @@ contains
       implicit none
 
       integer, intent(in) :: cr_id !< CR component index
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
 
       call set_dirty(source)
       call set_dirty(correction)
       call set_dirty(defect)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
       if (diff_theta /= 0.) then
-         cgl => leaves%first
-         do while (associated(cgl))
-            cg => cgl%cg
-            cg%q(correction)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = (1. -1./diff_theta) * cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            cg%q(    defect)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) =     -1./diff_theta  * cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-            cgl => cgl%nxt
-         enddo
+         call leaves%wq_copy(all_cg%ind_4d(fluid_n), iarr_crs(cr_id), all_cg%ind(wa_n))
+         call leaves%q_lin_comb( [ ind_val(all_cg%ind(wa_n), (1. -1./diff_theta)) ], correction)
+         call leaves%q_lin_comb( [ ind_val(all_cg%ind(wa_n),     -1./diff_theta ) ], defect)
          call residual(roof, defect, correction, source, cr_id)
       else
          call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
@@ -395,9 +389,9 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
+      use constants,        only: fluid_n
       use grid,             only: leaves
-      use gc_list,          only: cg_list_element
-      use grid_cont,        only: grid_container
+      use gc_list,          only: all_cg
       use initcosmicrays,   only: iarr_crs
       use multigridvars,    only: roof, solution
       use multigridhelpers, only: set_dirty, check_dirty
@@ -405,16 +399,9 @@ contains
       implicit none
 
       integer, intent(in) :: cr_id !< CR component index
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
 
       call set_dirty(solution)
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         cg%q(solution)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%u(iarr_crs(cr_id),  cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         cgl => cgl%nxt
-      enddo
+      call leaves%wq_copy(all_cg%ind_4d(fluid_n), iarr_crs(cr_id), solution)
       call check_dirty(roof, solution, "init solution")
 
    end subroutine init_solution
@@ -478,11 +465,11 @@ contains
 
    subroutine vcycle_hg(cr_id)
 
-      use dataio_pub,         only: msg, warn
-      use grid,               only: leaves
-      use gc_list,            only: cg_list_element, ind_val
       use cg_list_lev,        only: cg_list_level
-      use grid_cont,          only: grid_container
+      use constants,          only: fluid_n
+      use dataio_pub,         only: msg, warn
+      use gc_list,            only: ind_val, all_cg
+      use grid,               only: leaves
       use initcosmicrays,     only: iarr_crs
       use mpisetup,           only: master
       use multigridbasefuncs, only: prolong_level
@@ -500,8 +487,6 @@ contains
       real               :: norm_lhs, norm_rhs, norm_old
       logical            :: dump_every_step
       type(cg_list_level), pointer :: curl
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
 
       write(vstat%cprefix,'("C",i1,"-")') cr_id !> \deprecated BEWARE: this is another place with 0 <= cr_id <= 9 limit
       write(dirty_label, '("md_",i1,"_dump")')  cr_id
@@ -584,12 +569,8 @@ contains
 !     Do we need to take care of boundaries here?
 !      call mpi_multigrid_bnd(roof, solution, I_ONE, diff_extbnd)
 !      cg%u(iarr_crs(cr_id), is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z) = cg%q(solution)%arr(cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z)
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         cg%u(iarr_crs(cr_id), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(solution)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
-         cgl => cgl%nxt
-      enddo
+
+      call leaves%qw_copy(solution, all_cg%ind_4d(fluid_n), iarr_crs(cr_id))
 
    end subroutine vcycle_hg
 

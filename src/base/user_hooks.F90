@@ -34,8 +34,8 @@ module user_hooks
    implicit none
 
    private
-   public :: problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, custom_emf_bnd, &
-     &       at_user_dims_settings, at_user_area_settings, problem_post_restart
+   public :: problem_customize_solution, problem_grace_passed, finalize_problem, cleanup_problem, &
+        &    custom_emf_bnd, at_user_dims_settings, at_user_area_settings, problem_post_restart
 
    interface
 

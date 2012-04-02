@@ -77,6 +77,8 @@ module gc_list
       ! Arithmetic on the fields
       procedure :: set_q_value                       !< reset given field to the value
       procedure :: q_copy                            !< copy a given field to another
+      procedure :: qw_copy                           !< copy a given rank-3 field to a component of rank-4 field
+      procedure :: wq_copy                           !< copy a component of rank-4 field to a given rank-3 field
       procedure :: q_add                             !< add a field to another
       procedure :: q_add_val                         !< add a value to a field
       procedure :: q_lin_comb                        !< assign linear combination of q fields
@@ -924,7 +926,6 @@ contains
       integer,        intent(in) :: i_from  !< Index of source in cg%q(:)
       integer,        intent(in) :: i_to    !< Index of destination in cg%q(:)
 
-
       type(cg_list_element), pointer :: cgl
 
       cgl => this%first
@@ -934,6 +935,48 @@ contains
       enddo
 
    end subroutine q_copy
+
+!> \brief copy a given rank-3 field to a component of a rank-4 field (cg%w(w_to)%arr(w_ind,:,:,:) = cg%q(q_from)%arr(:, :, :))
+
+   subroutine qw_copy(this, q_from, w_to, w_ind)
+
+      implicit none
+
+      class(cg_list), intent(in) :: this    !< object invoking type-bound procedure
+      integer,        intent(in) :: q_from  !< Index of source in cg%q(:)
+      integer,        intent(in) :: w_to    !< Index of destination in cg%w(:)
+      integer,        intent(in) :: w_ind   !< First index of destination in cg%w(w_to)%arr(:,:,:,:)
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%w(w_to)%arr(w_ind, :, :, :) = cgl%cg%q(q_from)%arr(:, :, :)
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine qw_copy
+
+!> \brief copy a component of rank-4 field to a given rank-3 field (cg%q(q_to)%arr(:, :, :) = cg%w(w_from)%arr(w_ind,:,:,:))
+
+   subroutine wq_copy(this, w_from, w_ind, q_to)
+
+      implicit none
+
+      class(cg_list), intent(in) :: this    !< object invoking type-bound procedure
+      integer,        intent(in) :: w_from  !< Index of source in cg%w(:)
+      integer,        intent(in) :: w_ind   !< First index of source in cg%w(w_from)%arr(:,:,:,:)
+      integer,        intent(in) :: q_to    !< Index of destination in cg%q(:)
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%q(q_to)%arr(:, :, :) = cgl%cg%w(w_from)%arr(w_ind, :, :, :)
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine wq_copy
 
 !> \brief Add a field to another (e.g. apply a correction)
 

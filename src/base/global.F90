@@ -125,7 +125,7 @@ contains
 
       implicit none
 
-      if (code_progress < PIERNIK_INIT_MPI) call die("[grid:init_grid] MPI not initialized.")
+      if (code_progress < PIERNIK_INIT_MPI) call die("[global:init_global] MPI not initialized.")
 
       dt_old = -1.
 

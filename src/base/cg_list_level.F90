@@ -62,9 +62,9 @@ module cg_list_lev
       ! Prolongation and restriction
       procedure :: vertical_prep               !< initialize prolongation and restriction targets
       procedure :: update_tot_se               !< count all cg on current level for computing tags in vertical_prep
-      procedure :: prolong0_q_1var              !< interpolate the grid data to this%finer level
-      procedure :: restrict_q_1var              !< interpolate the grid data from this%coarser level
-      procedure :: restrict_to_floor_q_1var                !< restrict as much as possible
+      procedure :: prolong0_q_1var             !< interpolate the grid data in specified q field to this%finer level
+      procedure :: restrict_q_1var             !< interpolate the grid data in specified q field from this%coarser level
+      procedure :: restrict_to_floor_q_1var    !< restrict specified q field as much as possible
 
       ! fine-coarse boundary exchanges may also belong to this type
    end type cg_list_level
@@ -374,7 +374,7 @@ contains
 
       fine => this%finer
       if (.not. associated(fine)) then ! can't prolong finest level
-         write(msg,'(a,i3)')"[gc_list:restrict_q_1var] no finer level than: ", this%lev
+         write(msg,'(a,i3)')"[gc_list:prolong0_q_1var] no finer level than: ", this%lev
          call warn(msg)
          return
       endif

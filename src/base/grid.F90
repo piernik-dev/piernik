@@ -38,12 +38,13 @@ module grid
    implicit none
 
    private
-   public :: init_grid, cleanup_grid, base_lev, leaves
+   public :: init_grid, cleanup_grid, base_lev, leaves, top_lev
 
-   type(cg_list_level), target  :: base_lev                !< base level grid containers \todo restore "protected"
+   type(cg_list_level), target  :: base_lev                           !< base level grid containers \todo restore "protected"
    type(cg_list), protected  :: leaves                                !< grid containers not fully covered by finer grid containers
    integer, parameter :: NBD = 1                                      !< at the moment the base domain may be composed of only one patch
    type(cg_list_patch), dimension(NBD), target, protected :: base_dom !< base level patches; \todo relax the NBD=1 restriction if we want something like L-shaped or more complex domains
+   type(cg_list_level), pointer :: top_lev                            !< finest level of refinement
 
 contains
 
@@ -211,6 +212,8 @@ contains
          call leaves%add(base_lev%last%cg)
 
       enddo
+
+      top_lev => base_lev
 
    end subroutine dom2cg
 
