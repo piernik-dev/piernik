@@ -365,7 +365,7 @@ contains
       call set_dirty(defect)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
       if (diff_theta /= 0.) then
-         call leaves%wq_copy(all_cg%ind_4d(fluid_n), iarr_crs(cr_id), all_cg%ind(wa_n))
+         call leaves%wq_copy(all_cg%ind_4d(fluid_n), int(iarr_crs(cr_id)), all_cg%ind(wa_n))
          call leaves%q_lin_comb( [ ind_val(all_cg%ind(wa_n), (1. -1./diff_theta)) ], correction)
          call leaves%q_lin_comb( [ ind_val(all_cg%ind(wa_n),     -1./diff_theta ) ], defect)
          call residual(roof, defect, correction, source, cr_id)
@@ -401,7 +401,7 @@ contains
       integer, intent(in) :: cr_id !< CR component index
 
       call set_dirty(solution)
-      call leaves%wq_copy(all_cg%ind_4d(fluid_n), iarr_crs(cr_id), solution)
+      call leaves%wq_copy(all_cg%ind_4d(fluid_n), int(iarr_crs(cr_id)), solution)
       call check_dirty(roof, solution, "init solution")
 
    end subroutine init_solution
@@ -570,7 +570,7 @@ contains
 !      call mpi_multigrid_bnd(roof, solution, I_ONE, diff_extbnd)
 !      cg%u(iarr_crs(cr_id), is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z) = cg%q(solution)%arr(cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z)
 
-      call leaves%qw_copy(solution, all_cg%ind_4d(fluid_n), iarr_crs(cr_id))
+      call leaves%qw_copy(solution, all_cg%ind_4d(fluid_n), int(iarr_crs(cr_id)))
 
    end subroutine vcycle_hg
 
