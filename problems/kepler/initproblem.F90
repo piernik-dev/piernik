@@ -570,15 +570,17 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
 
-      use constants,       only: xdim, ydim, zdim
-      use dataio_pub,      only: die
+      use constants,       only: xdim, ydim, zdim, I_ONE
+      use dataio_pub,      only: die, warn, msg
       use domain,          only: is_multicg
       use gc_list,         only: cg_list_element, all_cg
       use global,          only: dt, t, relax_time, smalld !, grace_period_passed
       use grid,            only: leaves
       use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_mx, iarr_all_mz, iarr_all_dn
+      use fluidindex,      only: iarr_all_mx, iarr_all_mz, iarr_all_dn, flind
+      use mpisetup,        only: comm, ierr
+      use mpi,             only: MPI_MAX, MPI_DOUBLE_PRECISION, MPI_IN_PLACE
       ! use interactions,    only: dragc_gas_dust
 #ifdef VERBOSE
 !      use dataio_pub,      only: msg, printinfo
@@ -590,7 +592,10 @@ contains
       integer                               :: j, k
       logical, save                         :: frun = .true.
       real, dimension(:,:), allocatable, save :: funcR
+      logical, dimension(:,:,:), allocatable  :: adjust
+      real, dimension(:,:,:), allocatable  :: vx_sign, vz_sign
       real, save :: x0, x1, y0, y1, a, b
+      real :: max_vx
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
@@ -607,6 +612,9 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
+         if (.not.allocated(adjust)) allocate(adjust(cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
+         if (.not.allocated(vx_sign)) allocate(vx_sign(cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
+         if (.not.allocated(vz_sign)) allocate(vz_sign(cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
 
          if (frun) then
             x0 = relax_time + 2.0
@@ -640,10 +648,32 @@ contains
                cg%u(:,:,j,k) = cg%u(:,:,j,k) - dt*(cg%u(:,:,j,k) - cg%w(all_cg%ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
             enddo
          enddo
-         where ( cg%u(iarr_all_dn,:,:,:) < 2.*smalld )
-            cg%u(iarr_all_mx,:,:,:) = cg%u(iarr_all_mx,:,:,:)*0.1
-            cg%u(iarr_all_mz,:,:,:) = cg%u(iarr_all_mz,:,:,:)*0.1
-         endwhere
+!        where ( cg%u(iarr_all_dn,:,:,:) < 2.*smalld )
+!           cg%u(iarr_all_mx,:,:,:) = cg%u(iarr_all_mx,:,:,:)*0.1
+!           cg%u(iarr_all_mz,:,:,:) = cg%u(iarr_all_mz,:,:,:)*0.1
+!        endwhere
+
+         max_vx = maxval( abs(cg%u(flind%neu%imx,:,:,:))/cg%u(flind%neu%idn,:,:,:) )
+         call MPI_Allreduce(MPI_IN_PLACE, max_vx, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+
+         adjust = abs(cg%u(flind%dst%imx,:,:,:))/cg%u(flind%dst%idn,:,:,:) >= max_vx
+         if ( any(adjust) ) then
+            write(msg,'(a,i6,a)') "[kepler_customize_solution]: ", count(adjust), &
+                " cells need adjustment"
+            call warn(msg)
+            where (adjust)
+               vx_sign = signum(cg%u(flind%dst%imx,:,:,:))
+               vz_sign = signum(cg%u(flind%dst%imz,:,:,:))
+            end where
+            where (adjust)
+               cg%u(flind%dst%idn,:,:,:) = max(cg%u(flind%dst%idn,:,:,:), 1.1*smalld)
+               cg%u(flind%dst%imx,:,:,:) = vx_sign * cg%u(flind%neu%imx,:,:,:)/cg%u(flind%neu%idn,:,:,:) * cg%u(flind%dst%idn,:,:,:)
+               cg%u(flind%dst%imz,:,:,:) = vz_sign * cg%u(flind%neu%imz,:,:,:)/cg%u(flind%neu%idn,:,:,:) * cg%u(flind%dst%idn,:,:,:)
+            endwhere
+         endif
+         if (allocated(adjust)) deallocate(adjust)
+         if (allocated(vx_sign)) deallocate(vx_sign)
+         if (allocated(vz_sign)) deallocate(vz_sign)
 
          cgl => cgl%nxt
       enddo
@@ -881,5 +911,15 @@ contains
       return
    end subroutine read_dens_profile
 !-----------------------------------------------------------------------------
+   elemental function signum(a) result (b)
+      implicit none
+      real, intent(in) :: a
+      real :: b
+      if (a > 0.0) then
+         b = 1.0
+      else
+         b = -1.0
+      endif
+   end function signum
 end module initproblem
 ! vim: set tw=120:
