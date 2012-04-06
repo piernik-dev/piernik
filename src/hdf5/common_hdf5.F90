@@ -334,6 +334,7 @@ contains
    subroutine set_common_attributes_v1(file_id)
 
       use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE
+      use units,       only: cm, gram, sek, kelvin, miu0
       use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
       use domain,      only: dom
       use global,      only: magic_mass, t, dt, nstep
@@ -366,6 +367,11 @@ contains
       rbuffer(13)  = last_res_time           ; rbuffer_name(13)  = "last_res_time" !rr2
       rbuffer(14)  = last_plt_time           ; rbuffer_name(14)  = "last_plt_time" !rr2
       rbuffer(15)  = magic_mass              ; rbuffer_name(15)  = "magic_mass" !rr2
+      rbuffer(16)  = cm                      ; rbuffer_name(16)  = "cm" !rr2
+      rbuffer(17)  = gram                    ; rbuffer_name(17)  = "gram" !rr2
+      rbuffer(18)  = sek                     ; rbuffer_name(18)  = "sek" !rr2
+      rbuffer(19)  = miu0                    ; rbuffer_name(19)  = "miu0" !rr2
+      rbuffer(20)  = kelvin                  ; rbuffer_name(20)  = "kelvin" !rr2
 
       ibuffer(1)   = nstep                   ; ibuffer_name(1)   = "nstep" !rr2
       ibuffer(2)   = nres                    ; ibuffer_name(2)   = "nres" !rr2
