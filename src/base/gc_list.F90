@@ -1103,7 +1103,7 @@ contains
          cg => cgl%cg
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               avg = avg + sum(cg%q(iv)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol
+               avg = avg + sum(cg%q(iv)%span(cg%ijkse)) * cg%dvol
             case (GEO_RPZ)
                do i = cg%is, cg%ie
                   avg = avg + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol * cg%x(i)
@@ -1152,7 +1152,7 @@ contains
          cg => cgl%cg
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               norm = norm + sum(cg%q(iv)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)**2) * cg%dvol
+               norm = norm + sum(cg%q(iv)%span(cg%ijkse)**2) * cg%dvol
             case (GEO_RPZ)
                do i = cg%is, cg%ie
                   norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2) * cg%dvol * cg%x(i)
