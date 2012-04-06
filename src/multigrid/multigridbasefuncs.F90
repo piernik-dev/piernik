@@ -242,8 +242,7 @@ contains
                         pseg%buf(:, :, :) = 0. ! this can be avoided by extracting first assignment from the loop
                         do l = lbound(pseg%f_lay(:), dim=1), ubound(pseg%f_lay(:), dim=1)
                            se(d,:) = pseg%f_lay(l)%layer
-                           pseg%buf(:, :, :) = pseg%buf(:, :, :) + pseg%f_lay(l)%coeff * &
-                                coarse%first%cg%q(soln)%arr(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI))
+                           pseg%buf(:, :, :) = pseg%buf(:, :, :) + pseg%f_lay(l)%coeff * coarse%first%cg%q(soln)%span(int(se,kind=4))
                         enddo
                         call MPI_Isend(pseg%buf(1, 1, 1), size(pseg%buf(:, :, :)), MPI_DOUBLE_PRECISION, pseg%proc, HI*d+lh, comm, req(nr), ierr)
                      enddo
