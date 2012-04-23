@@ -592,14 +592,16 @@ contains
       if (output == 'log' .or. output == 'end') call write_log
       if (output == 'tsl' .or. output == 'end') call write_timeslice
 
-      call determine_dump(dump, last_hdf_time, dt_hdf, output, 'hdf')
-      if (dump) call write_hdf5
+      call determine_dump(dump, last_res_time, dt_res, output, 'res')
+      if (dump) call write_restart_hdf5
 
       call determine_dump(dump, last_plt_time, dt_plt, output, 'plt')
       if (dump) call write_plot
 
-      call determine_dump(dump, last_res_time, dt_res, output, 'res')
-      if (dump) call write_restart_hdf5
+      if (output == 'end' .and. trim(problem_name) /= 'crash') write(problem_name, '(a,a6)') trim(problem_name), '_final'
+
+      call determine_dump(dump, last_hdf_time, dt_hdf, output, 'hdf')
+      if (dump) call write_hdf5
 
    end subroutine write_data
 
