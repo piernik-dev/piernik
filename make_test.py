@@ -14,7 +14,7 @@ class MakeTest(object):
       self.runpath  = os.path.join(self.initpath,'runs',test)
       self.test     = test
       os.chdir(self.runpath)
-      sp.call(["./piernik"])
+      sp.call(["mpiexec","./piernik"])
       self.runtest(test)
       os.chdir(self.initpath)
 
