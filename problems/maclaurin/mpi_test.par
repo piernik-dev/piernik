@@ -102,3 +102,6 @@
     lmax = 16
 !    use_point_monopole = .true.
  /
+
+ $AMR
+ /

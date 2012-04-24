@@ -71,3 +71,6 @@
    dragc_gas_dust = 1.0
    collision_factor = 1.0
  /
+
+ $AMR
+ /
