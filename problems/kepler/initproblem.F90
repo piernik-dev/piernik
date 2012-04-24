@@ -664,7 +664,7 @@ contains
             where (adjust)
                vx_sign = signum(cg%u(flind%dst%imx,:,:,:))
                vz_sign = signum(cg%u(flind%dst%imz,:,:,:))
-            end where
+            endwhere
             where (adjust)
                cg%u(flind%dst%idn,:,:,:) = max(cg%u(flind%dst%idn,:,:,:), 1.1*smalld)
                cg%u(flind%dst%imx,:,:,:) = vx_sign * cg%u(flind%neu%imx,:,:,:)/cg%u(flind%neu%idn,:,:,:) * cg%u(flind%dst%idn,:,:,:)
