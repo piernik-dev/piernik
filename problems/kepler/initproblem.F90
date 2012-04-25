@@ -77,14 +77,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine register_user_var
 
-      use constants, only: AT_NO_B, fluid_n
+      use constants, only: AT_NO_B
       use gc_list,   only: all_cg
 
       implicit none
 
       integer(kind=4) :: dim4 !< BEWARE: workaround for gcc-4.6 bug
 
-      dim4 = all_cg%w_lst(all_cg%ind_4d(fluid_n))%dim4
+      dim4 = all_cg%w_lst(all_cg%fi)%dim4
       call all_cg%reg_var(inid_n, .false., AT_NO_B, dim4)
 
    end subroutine register_user_var
@@ -541,7 +541,7 @@ contains
    end function mmsn_T
 !-----------------------------------------------------------------------------
    subroutine kepler_problem_post_restart
-      use constants,       only: fluid_n, b0_n
+      use constants,       only: b0_n
       use fluidboundaries, only: all_fluid_boundaries
       use gc_list,         only: cg_list_element, all_cg
       use grid,            only: leaves
@@ -562,7 +562,7 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%u  => cgl%cg%w(all_cg%ind_4d(fluid_n))%arr ! Quick! Revert to sane state before anyone notices
+         cgl%cg%u  => cgl%cg%w(all_cg%fi)%arr ! Quick! Revert to sane state before anyone notices
          cgl => cgl%nxt
       enddo
 
@@ -578,7 +578,7 @@ contains
       use grid,            only: leaves
       use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_mx, iarr_all_mz, iarr_all_dn, flind
+      use fluidindex,      only: flind !, iarr_all_mx, iarr_all_mz, iarr_all_dn
       use mpisetup,        only: comm, ierr
       use mpi,             only: MPI_MAX, MPI_DOUBLE_PRECISION, MPI_IN_PLACE
       ! use interactions,    only: dragc_gas_dust

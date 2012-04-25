@@ -151,14 +151,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine register_user_var
 
-      use constants, only: AT_NO_B, fluid_n
+      use constants, only: AT_NO_B
       use gc_list,   only: all_cg
 
       implicit none
 
       integer(kind=4) :: dim4
 
-      dim4 = all_cg%w_lst(all_cg%ind_4d(fluid_n))%dim4
+      dim4 = all_cg%w_lst(all_cg%fi)%dim4
       call all_cg%reg_var(inid_n, .false., AT_NO_B, dim4)
 
    end subroutine register_user_var
