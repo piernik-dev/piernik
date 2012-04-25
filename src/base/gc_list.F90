@@ -44,6 +44,8 @@ module gc_list
    !!
    !! \details the prv and nxt pointers are not elements of the grid_container type to allow membership in several lists simultaneously
    !<
+   integer :: fi, bi, wai                  !< indices of the most commonly used arrays stored in cg%w and cg%q
+
    type cg_list_element
       type(grid_container),  pointer :: cg       !< the current grid container
       type(cg_list_element), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
@@ -55,7 +57,6 @@ module gc_list
       type(cg_list_element), pointer :: first !< first element of the chain of grid containers, the most important one
       type(cg_list_element), pointer :: last  !< last element of the chain - useful for quick expanding and merging lists
       integer :: cnt                          !< number of chain links
-      integer :: fi, bi, wai                  !< indices of the most commonly used arrays stored in cg%w and cg%q
 
     contains
 
