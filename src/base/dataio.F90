@@ -710,7 +710,7 @@ contains
       use fluidindex,  only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluidtypes,  only: phys_prop
       use func,        only: ekin, emag
-      use gc_list,     only: cg_list_element, all_cg, fi, bi
+      use gc_list,     only: cg_list_element, all_cg
       use global,      only: t, dt, smalld, nstep
       use grid,        only: leaves
       use grid_cont,   only: grid_container
@@ -800,8 +800,8 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         pu => cg%w(fi)%span(cg%ijkse)
-         pb => cg%w(bi)%span(cg%ijkse)
+         pu => cg%w(all_cg%fi)%span(cg%ijkse)
+         pb => cg%w(all_cg%bi)%span(cg%ijkse)
 
          tot_q(T_MASS) = tot_q(T_MASS) + cg%dvol * sum(pu(iarr_all_dn,:,:,:))
          tot_q(T_MOMX) = tot_q(T_MOMX) + cg%dvol * sum(pu(iarr_all_mx,:,:,:))
@@ -1099,7 +1099,7 @@ contains
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: flind
       use func,               only: L2norm, sq_sum3
-      use gc_list,            only: cg_list_element, all_cg !, bi
+      use gc_list,            only: cg_list_element, all_cg
       use global,             only: cfl, t, dt
       use grid,               only: leaves
       use interactions,       only: has_interactions, collfaq
@@ -1219,9 +1219,9 @@ contains
               & cgl%cg%b(ydim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dx*cgl%cg%dz &
               +(cgl%cg%b(zdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks+dom%D_z:cgl%cg%ke+dom%D_z) - &
               & cgl%cg%b(zdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dx*cgl%cg%dy
-!         p = (cgl%cg%w(bi)%span(xdim,cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%w(bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
-!            +(cgl%cg%w(bi)%span(ydim,cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%w(bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
-!            +(cgl%cg%w(bi)%span(zdim,cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%w(bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
+!         p = (cgl%cg%w(all_cg%bi)%span(xdim,cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%w(all_cg%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
+!            +(cgl%cg%w(all_cg%bi)%span(ydim,cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%w(all_cg%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
+!            +(cgl%cg%w(all_cg%bi)%span(zdim,cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%w(all_cg%bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
          cgl%cg%wa = abs(cgl%cg%wa)
 
          cgl%cg%wa(cgl%cg%ie,:,:) = cgl%cg%wa(cgl%cg%ie-dom%D_x,:,:)

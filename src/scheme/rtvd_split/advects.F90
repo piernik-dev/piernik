@@ -55,7 +55,7 @@ contains
       use dataio_pub,    only: die
       use domain,        only: dom
       use fluidindex,    only: flind
-      use gc_list,       only: cg_list_element, bi, fi, wai
+      use gc_list,       only: cg_list_element, all_cg
       use global,        only: dt
       use grid,          only: leaves
       use grid_cont,     only: grid_container
@@ -107,18 +107,18 @@ contains
                ii(rdir) = j
                im(rdir) = ii(rdir)
                vv=0.0
-               pm1 => cg%w(fi)%get_sweep(vdir,imom,i1m,i2m)
-               pm2 => cg%w(fi)%get_sweep(vdir,imom,i1 ,i2 )
-               pd1 => cg%w(fi)%get_sweep(vdir,flind%ion%idn,i1m,i2m)
-               pd2 => cg%w(fi)%get_sweep(vdir,flind%ion%idn,i1 ,i2 )
+               pm1 => cg%w(all_cg%fi)%get_sweep(vdir,imom,i1m,i2m)
+               pm2 => cg%w(all_cg%fi)%get_sweep(vdir,imom,i1 ,i2 )
+               pd1 => cg%w(all_cg%fi)%get_sweep(vdir,flind%ion%idn,i1m,i2m)
+               pd2 => cg%w(all_cg%fi)%get_sweep(vdir,flind%ion%idn,i1 ,i2 )
                vv0 = (pm1+pm2)/(pd1+pd2) !< \todo workaround for bug in gcc-4.6, REMOVE ME
                !vv(2:cg%n_(vdir)-1)=(vv(1:cg%n_(vdir)-2) + vv(3:cg%n_(vdir)) + 2.0*vv(2:cg%n_(vdir)-1))*0.25
                vv(2:cg%n_(vdir)-1)=(vv0(1:cg%n_(vdir)-2) + vv0(3:cg%n_(vdir)) + 2.0*vv0(2:cg%n_(vdir)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
                vv(1)  = vv(2)
                vv(cg%n_(vdir)) = vv(cg%n_(vdir)-1)
 
-               vibj => cg%q(wai)%get_sweep(vdir,i1,i2)
-               call tvdb(vibj, cg%w(bi)%get_sweep(vdir,bdir,i1,i2), vv, cg%n_(vdir),dt, cg%idl(vdir))
+               vibj => cg%q(all_cg%wai)%get_sweep(vdir,i1,i2)
+               call tvdb(vibj, cg%w(all_cg%bi)%get_sweep(vdir,bdir,i1,i2), vv, cg%n_(vdir),dt, cg%idl(vdir))
                NULLIFY(pm1, pm2, pd1, pd2)
 
             enddo
