@@ -413,30 +413,31 @@ contains
 
    subroutine init_b
 
-      use constants,          only: I_ONE, xdim, zdim
+      use constants,          only: I_ONE, xdim, zdim, HI, LO
       use domain,             only: dom
       use grid,               only: leaves
-      use gc_list,            only: cg_list_element
+      use gc_list,            only: cg_list_element, all_cg
       use cg_list_lev,        only: cg_list_level
       use grid_cont,          only: grid_container
       use multigridhelpers,   only: set_dirty, check_dirty, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: base, roof, extbnd_mirror
+      use named_array,        only: p3
 
       implicit none
 
       integer(kind=4) :: ib
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-      type(cg_list_level), pointer :: curl
+      type(grid_container),  pointer :: cg
+      type(cg_list_level),   pointer :: curl
 
       do ib = xdim, zdim
          call set_dirty(idiffb(ib))
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            cg%q(idiffb(ib))%arr(cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z) = &
-                 & cg%b(ib,      cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z)
+            p3 => cg%q(idiffb(ib))%span(   cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_)
+            p3 =  cg%w(all_cg%bi )%span(ib,cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_) + 0.0
             cgl => cgl%nxt
          enddo
          call roof%restrict_to_floor_q_1var(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
@@ -565,7 +566,7 @@ contains
       norm_lhs = leaves%norm_sq(defect)
 !     Do we need to take care of boundaries here?
 !      call mpi_multigrid_bnd(roof, solution, I_ONE, diff_extbnd)
-!      cg%u(iarr_crs(cr_id), is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z) = cg%q(solution)%arr(cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z)
+!      cg%u%span(iarr_crs(cr_id),cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_) = cg%q(solution)%span(cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_)
 
       call leaves%qw_copy(solution, all_cg%fi, int(iarr_crs(cr_id)))
 
@@ -607,14 +608,14 @@ contains
 
       ! Assumes dom%has_dir(crdim)
       !> \warning *cg%idl(crdim) makes a difference
-      d_par = (cg%q(soln)%arr(im(xdim), im(ydim), im(zdim)) - cg%q(soln)%arr(ilm(xdim), ilm(ydim), ilm(zdim))) * cg%idl(crdim)
+      d_par = (cg%q(soln)%point(im) - cg%q(soln)%point(ilm)) * cg%idl(crdim)
       fcrdif = K_crs_perp(cr_id) * d_par
       if (present(Keff)) Keff = K_crs_perp(cr_id)
 
       if (K_crs_paral(cr_id) /= 0.) then
 
          b_perp = 0.
-         b_par = cg%q(idiffb(crdim))%arr(im(xdim), im(ydim), im(zdim))
+         b_par = cg%q(idiffb(crdim))%point(im)
          db = d_par * b_par
          magb = b_par**2
 
@@ -622,11 +623,10 @@ contains
             if (present_not_crdim(idir)) then
                imp(:) = im(:) ; imp(idir) = imp(idir) + 1 ; ilmp(:) = imp(:) ; ilmp(crdim) = ilmp(crdim) - 1
                imm(:) = im(:) ; imm(idir) = imm(idir) - 1 ; ilmm(:) = imm(:) ; ilmm(crdim) = ilmm(crdim) - 1
-               b_perp = sum(cg%q(idiffb(crdim))%arr(ilm(xdim):imp(xdim), ilm(ydim):imp(ydim), ilm(zdim):imp(zdim)))*oneq
+               b_perp = sum(cg%q(idiffb(crdim))%span(ilm,imp))*oneq
                magb = magb + b_perp**2
                !> \warning *cg%idl(crdim) makes a difference
-               db = db + b_perp*((cg%q(soln)%arr(ilmp(xdim), ilmp(ydim), ilmp(zdim)) + cg%q(soln)%arr(imp(xdim), imp(ydim), imp(zdim))) - &
-                  &              (cg%q(soln)%arr(ilmm(xdim), ilmm(ydim), ilmm(zdim)) + cg%q(soln)%arr(imm(xdim), imm(ydim), imm(zdim)))) * oneq * cg%idl(idir)
+               db = db + b_perp*((cg%q(soln)%point(ilmp) + cg%q(soln)%point(imp)) - (cg%q(soln)%point(ilmm) + cg%q(soln)%point(imm))) * oneq * cg%idl(idir)
             endif
          enddo
 
@@ -654,11 +654,12 @@ contains
       use constants,         only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
       use domain,            only: dom
       use cg_list_lev,       only: cg_list_level
-      use gc_list,           only: cg_list_element, ind_val
+      use gc_list,           only: cg_list_element, ind_val, all_cg
       use global,            only: dt
       use grid_cont,         only: grid_container
 !      use multigridhelpers,  only: check_dirty
       use multigridmpifuncs, only: mpi_multigrid_bnd
+      use named_array,       only: p3
 
       implicit none
 
@@ -693,10 +694,8 @@ contains
                   enddo
                enddo
 
-               cg%q(def)%arr     (cg%is    :cg%ie,     cg%js    :cg%je,     cg%ks    :cg%ke)     = &
-                    cg%q(def)%arr(cg%is    :cg%ie,     cg%js    :cg%je,     cg%ks    :cg%ke)     - &
-                    (       cg%wa(iml(xdim):imh(xdim), iml(ydim):imh(ydim), iml(zdim):imh(zdim)) - &
-                    &       cg%wa(cg%is    :cg%ie,     cg%js    :cg%je,     cg%ks    :cg%ke) ) * diff_theta * dt * cg%idl(idir)
+               p3 => cg%q(def)%span(cg%ijkse)
+               p3 = p3 - (cg%q(all_cg%wai)%span(iml,imh) - cg%q(all_cg%wai)%span(cg%ijkse) ) * diff_theta * dt * cg%idl(idir)
             endif
          enddo
          cgl => cgl%nxt
@@ -720,7 +719,7 @@ contains
       use constants,         only: xdim, ydim, zdim, one, half, I_ONE, ndims
       use domain,            only: dom
       use cg_list_lev,       only: cg_list_level
-      use gc_list,           only: cg_list_element
+      use gc_list,           only: cg_list_element, all_cg
       use global,            only: dt
       use grid_cont,         only: grid_container
       use multigridmpifuncs, only: mpi_multigrid_bnd
@@ -789,7 +788,7 @@ contains
                            call diff_flux(idir, im, soln, cg, cr_id, Keff1)
                            call diff_flux(idir, ih, soln, cg, cr_id, Keff2)
 
-                           temp = temp - (cg%wa(ih(xdim), ih(ydim), ih(zdim)) - cg%wa(i, j, k)) * diff_theta * dt * cg%idl(idir)
+                           temp = temp - (cg%q(all_cg%wai)%point(ih) - cg%wa(i, j, k)) * diff_theta * dt * cg%idl(idir)
                            dLdu = dLdu - 2 * (Keff1 + Keff2) * cg%idl2(idir)
 
                         endif
