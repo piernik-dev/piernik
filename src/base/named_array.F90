@@ -412,7 +412,7 @@ contains
          p1d => this%arr(:,v(xdim),v(ydim),v(zdim))
       else
          call die("[named_array:array4d_point] this%arr not associated")
-         p1d => null()) ! suppress use of uninitialized variable warning
+         p1d => null() ! suppress use of uninitialized variable warning
       endif
 
    end function array4d_point
