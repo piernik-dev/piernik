@@ -371,56 +371,73 @@ contains
 
    end function array4d_get_sweep
 
-!> \brief Get a selected value from the array
+!> \brief Get a selected value from the rank-3 array
 
-   function array3d_point(this,v) result(p)
+   function array3d_point(this, v) result(p)
 
-      use constants, only: xdim, ydim, zdim, ndims
+      use constants,  only: xdim, ydim, zdim, ndims
+      use dataio_pub, only: die
 
       implicit none
 
       class(named_array3d),      intent(inout) :: this
       integer, dimension(ndims), intent(in)    :: v
+
       real                                     :: p
 
-      if (associated(this%arr)) p = this%arr(v(xdim),v(ydim),v(zdim))
+      if (associated(this%arr)) then
+         p = this%arr(v(xdim),v(ydim),v(zdim))
+      else
+         call die("[named_array:array3d_point] this%arr not associated")
+         p = -huge(1.) ! suppress use of uninitialized variable warning
+      endif
 
    end function array3d_point
 
-!> \brief Get a selected value from the array
+!> \brief Get a selected value from the rank-4 array
 
-   function array4d_point(this,v) result(p1d)
+   function array4d_point(this, v) result(p1d)
 
-      use constants, only: xdim, ydim, zdim, ndims
+      use constants,  only: xdim, ydim, zdim, ndims
+      use dataio_pub, only: die
 
       implicit none
 
       class(named_array4d),      intent(inout) :: this
       integer, dimension(ndims), intent(in)    :: v
+
       real,    dimension(:),     pointer       :: p1d
 
-      if (.not.associated(this%arr)) then
-         p1d => null()
-      else
+      if (associated(this%arr)) then
          p1d => this%arr(:,v(xdim),v(ydim),v(zdim))
+      else
+         call die("[named_array:array4d_point] this%arr not associated")
+         p1d => null()) ! suppress use of uninitialized variable warning
       endif
 
    end function array4d_point
 
-!> \brief Get a selected values from the array
+!> \brief Get a selected vector from the rank-4 array
 
-   function array4d_point_one_var(this,nn,v) result(p)
+   function array4d_point_one_var(this, nn, v) result(p)
 
-      use constants, only: xdim, ydim, zdim, ndims
+      use constants,  only: xdim, ydim, zdim, ndims
+      use dataio_pub, only: die
 
       implicit none
 
       class(named_array4d),      intent(inout) :: this
       integer(kind=4),           intent(in)    :: nn
       integer, dimension(ndims), intent(in)    :: v
+
       real                                     :: p
 
-      if (associated(this%arr)) p = this%arr(nn,v(xdim),v(ydim),v(zdim))
+      if (associated(this%arr)) then
+         p = this%arr(nn,v(xdim),v(ydim),v(zdim))
+      else
+         call die("[named_array:array4d_point_one_var] this%arr not associated")
+         p = -huge(1.) ! suppress use of uninitialized variable warning
+      endif
 
    end function array4d_point_one_var
 
