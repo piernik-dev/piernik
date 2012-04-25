@@ -37,7 +37,7 @@ module gc_list
    implicit none
 
    private
-   public :: cg_list, cg_list_element, ind_val, all_cg
+   public :: cg_list, cg_list_element, ind_val, all_cg, fi, bi, wai
 
    !>
    !! \brief A grid container with two links to other cg_list_elements
@@ -55,6 +55,7 @@ module gc_list
       type(cg_list_element), pointer :: first !< first element of the chain of grid containers, the most important one
       type(cg_list_element), pointer :: last  !< last element of the chain - useful for quick expanding and merging lists
       integer :: cnt                          !< number of chain links
+      integer :: fi, bi, wai                  !< indices of the most commonly used arrays stored in cg%w and cg%q
 
     contains
 

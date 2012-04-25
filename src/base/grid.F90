@@ -58,7 +58,7 @@ contains
       use dataio_pub, only: printinfo, die, code_progress
       use domain,     only: dom, pdom, is_multicg
       use fluidindex, only: flind
-      use gc_list,    only: cg_list_element, all_cg
+      use gc_list,    only: cg_list_element, all_cg, fi, bi, wai
       use global,     only: repeat_step
       use grid_cont,  only: grid_container
       use mpisetup,   only: proc, inflate_req, FIRST
@@ -68,7 +68,7 @@ contains
       integer :: nrq, d
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      type(cg_list_patch), pointer :: pbd
+      type(cg_list_patch),   pointer :: pbd
       integer(kind=4), parameter, dimension(ndims) :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
@@ -107,14 +107,18 @@ contains
          call all_cg%reg_var(b0_n, .false., AT_IGNORE, ndims, position=xyz_face)    !! Copy of main array of magnetic field's components
       endif
 
+      fi  = all_cg%ind_4d(fluid_n)
+      bi  = all_cg%ind_4d(mag_n)
+      wai = all_cg%ind(wa_n)
+
       nrq = 0
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%u  => cg%w(all_cg%ind_4d(fluid_n))%arr
-         cg%b  => cg%w(all_cg%ind_4d(mag_n))%arr
-         cg%wa => cg%q(all_cg%ind(wa_n))%arr
+         cg%u  => cg%w(fi)%arr
+         cg%b  => cg%w(bi)%arr
+         cg%wa => cg%q(wai)%arr
 
          if (allocated(cg%w)) then
             do d = xdim, zdim
