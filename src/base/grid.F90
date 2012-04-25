@@ -2,7 +2,7 @@
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
-!    This file is part of PIERNIK code.
+!    This fie is part of PIERNIK code.
 !
 !    PIERNIK is free software: you can redistribute it and/or modify
 !    it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ contains
       use dataio_pub, only: printinfo, die, code_progress
       use domain,     only: dom, pdom, is_multicg
       use fluidindex, only: flind
-      use gc_list,    only: cg_list_element, all_cg, fi, bi, wai
+      use gc_list,    only: cg_list_element, all_cg
       use global,     only: repeat_step
       use grid_cont,  only: grid_container
       use mpisetup,   only: proc, inflate_req, FIRST
@@ -107,18 +107,18 @@ contains
          call all_cg%reg_var(b0_n, .false., AT_IGNORE, ndims, position=xyz_face)    !! Copy of main array of magnetic field's components
       endif
 
-      fi  = all_cg%ind_4d(fluid_n)
-      bi  = all_cg%ind_4d(mag_n)
-      wai = all_cg%ind(wa_n)
+      all_cg%fi  = all_cg%ind_4d(fluid_n)
+      all_cg%bi  = all_cg%ind_4d(mag_n)
+      all_cg%wai = all_cg%ind(wa_n)
 
       nrq = 0
       cgl => all_cg%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%u  => cg%w(fi)%arr
-         cg%b  => cg%w(bi)%arr
-         cg%wa => cg%q(wai)%arr
+         cg%u  => cg%w(all_cg%fi)%arr
+         cg%b  => cg%w(all_cg%bi)%arr
+         cg%wa => cg%q(all_cg%wai)%arr
 
          if (allocated(cg%w)) then
             do d = xdim, zdim

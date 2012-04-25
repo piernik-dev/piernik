@@ -37,15 +37,13 @@ module gc_list
    implicit none
 
    private
-   public :: cg_list, cg_list_element, ind_val, all_cg, fi, bi, wai
+   public :: cg_list, cg_list_element, ind_val, all_cg
 
    !>
    !! \brief A grid container with two links to other cg_list_elements
    !!
    !! \details the prv and nxt pointers are not elements of the grid_container type to allow membership in several lists simultaneously
    !<
-   integer :: fi, bi, wai                  !< indices of the most commonly used arrays stored in cg%w and cg%q
-
    type cg_list_element
       type(grid_container),  pointer :: cg       !< the current grid container
       type(cg_list_element), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
@@ -123,6 +121,10 @@ module gc_list
    type, extends(cg_list) :: cg_list_global
       type(na_var), dimension(:), allocatable :: q_lst !< information about registered 3D named arrays
       type(na_var), dimension(:), allocatable :: w_lst !< information about registered 4D named arrays
+      !< indices of the most commonly used arrays stored in cg%w and cg%q
+      integer :: fi                                    !< fluid           : cg%w(all_cg%fi)
+      integer :: bi                                    !< magnetic field  : cg%w(all_cg%bi)
+      integer :: wai                                   !< auxiliary array : cg%q(all_cg%wai)
     contains
       procedure :: reg_var        !< Add a variable (cg%q or cg%w) to all grid containers
       procedure :: check_na       !< Check if all named arrays are consistently registered
