@@ -938,7 +938,7 @@ contains
    subroutine get_common_vars(fl)
 
       use types,      only: value                          !QA_WARN: used by get_extremum (intel compiler)
-      use constants,  only: ION, DST, MINL, MAXL, half, wa_n, small, xdim, ydim, zdim
+      use constants,  only: ION, DST, MINL, MAXL, half, small, xdim, ydim, zdim
       use fluidtypes, only: phys_prop, component_fluid
       use func,       only: ekin
       use gc_list,    only: cg_list_element, all_cg
@@ -953,13 +953,10 @@ contains
       type(component_fluid), intent(inout), target :: fl
 
       type(phys_prop), pointer :: pr
-      integer :: wa_i
       type(cg_list_element), pointer :: cgl
 #ifndef ISO
       real :: dxmn_safe
 #endif /* !ISO */
-
-      wa_i = all_cg%ind(wa_n)
 
       pr => fl%snap
       cgl => leaves%first
@@ -967,15 +964,15 @@ contains
          cgl%cg%wa = cgl%cg%u(fl%idn,:,:,:)
          cgl => cgl%nxt
       enddo
-      call leaves%get_extremum(wa_i, MAXL, pr%dens_max)
-      call leaves%get_extremum(wa_i, MINL, pr%dens_min)
+      call leaves%get_extremum(all_cg%wai, MAXL, pr%dens_max)
+      call leaves%get_extremum(all_cg%wai, MINL, pr%dens_min)
 
       cgl => leaves%first
       do while (associated(cgl))
          cgl%cg%wa = abs(cgl%cg%u(fl%imx,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
          cgl => cgl%nxt
       enddo
-      call leaves%get_extremum(wa_i, MAXL, pr%velx_max, xdim)
+      call leaves%get_extremum(all_cg%wai, MAXL, pr%velx_max, xdim)
       if (master) pr%velx_max%assoc = cfl * pr%velx_max%assoc / (pr%velx_max%val + small)
 
       if (is_multicg) then
@@ -984,7 +981,7 @@ contains
             cgl%cg%wa = cfl * cgl%cg%dx / (cgl%cg%wa +small)
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(wa_i, MINL, pr%dtvx_min, xdim)
+         call leaves%get_extremum(all_cg%wai, MINL, pr%dtvx_min, xdim)
          if (master) pr%dtvx_min%assoc = cfl * pr%dtvx_min%assoc / (pr%dtvx_min%val + small)
       endif
 
@@ -993,7 +990,7 @@ contains
          cgl%cg%wa = abs(cgl%cg%u(fl%imy,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
          cgl => cgl%nxt
       enddo
-      call leaves%get_extremum(wa_i, MAXL, pr%vely_max, ydim)
+      call leaves%get_extremum(all_cg%wai, MAXL, pr%vely_max, ydim)
       if (master) pr%vely_max%assoc = cfl * pr%vely_max%assoc / (pr%vely_max%val + small)
 
       if (is_multicg) then
@@ -1002,7 +999,7 @@ contains
             cgl%cg%wa = cfl * cgl%cg%dy / (cgl%cg%wa +small)
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(wa_i, MINL, pr%dtvy_min, ydim)
+         call leaves%get_extremum(all_cg%wai, MINL, pr%dtvy_min, ydim)
          if (master) pr%dtvy_min%assoc = cfl * pr%dtvy_min%assoc / (pr%dtvy_min%val + small)
       endif
 
@@ -1011,7 +1008,7 @@ contains
          cgl%cg%wa = abs(cgl%cg%u(fl%imz,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
          cgl => cgl%nxt
       enddo
-      call leaves%get_extremum(wa_i, MAXL, pr%velz_max, zdim)
+      call leaves%get_extremum(all_cg%wai, MAXL, pr%velz_max, zdim)
       if (master) pr%velz_max%assoc = cfl * pr%velz_max%assoc / (pr%velz_max%val + small)
 
       if (is_multicg) then
@@ -1020,7 +1017,7 @@ contains
             cgl%cg%wa = cfl * cgl%cg%dz / (cgl%cg%wa +small)
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(wa_i, MINL, pr%dtvz_min, zdim)
+         call leaves%get_extremum(all_cg%wai, MINL, pr%dtvz_min, zdim)
          if (master) pr%dtvz_min%assoc = cfl * pr%dtvz_min%assoc / (pr%dtvz_min%val + small)
       endif
 
@@ -1047,15 +1044,15 @@ contains
             cgl%cg%wa(:,:,:) = max(fl%gam_1*cgl%cg%wa(:,:,:),smallp)  ! pres
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(wa_i, MAXL, pr%pres_max)
-         call leaves%get_extremum(wa_i, MINL, pr%pres_min)
+         call leaves%get_extremum(all_cg%wai, MAXL, pr%pres_max)
+         call leaves%get_extremum(all_cg%wai, MINL, pr%pres_min)
 
          cgl => leaves%first
          do while (associated(cgl))
             cgl%cg%wa(:,:,:) = fl%gam*cgl%cg%wa(:,:,:)/cgl%cg%u(fl%idn,:,:,:) ! sound speed squared
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(wa_i, MAXL, pr%cs_max)
+         call leaves%get_extremum(all_cg%wai, MAXL, pr%cs_max)
          pr%cs_max%val = sqrt(pr%cs_max%val)
 
          cgl => leaves%first
@@ -1068,7 +1065,7 @@ contains
             cgl%cg%wa = (cfl * dxmn_safe)**2 / (cgl%cg%wa +small)
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(wa_i, MINL, pr%dtcs_min)
+         call leaves%get_extremum(all_cg%wai, MINL, pr%dtcs_min)
          pr%dtcs_min%val = sqrt(pr%dtcs_min%val)
 
          cgl => leaves%first
@@ -1076,8 +1073,8 @@ contains
             cgl%cg%wa(:,:,:) = (mH * cgl%cg%wa(:,:,:))/ (kboltz * fl%gam) ! temperature
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(wa_i, MAXL, pr%temp_max)
-         call leaves%get_extremum(wa_i, MINL, pr%temp_min)
+         call leaves%get_extremum(all_cg%wai, MAXL, pr%temp_max)
+         call leaves%get_extremum(all_cg%wai, MINL, pr%temp_min)
 
       endif
 #endif /* !ISO */
@@ -1093,7 +1090,7 @@ contains
 !
    subroutine  write_log(tsl)
 
-      use constants,          only: idlen, small, MINL, MAXL, xdim, ydim, zdim, wa_n, gpot_n, HI, idm, ndims
+      use constants,          only: idlen, small, MINL, MAXL, xdim, ydim, zdim, gpot_n, HI, idm, ndims
       use dataio_pub,         only: msg, printinfo
       use domain,             only: dom
       use fluids_pub,         only: has_dst, has_ion, has_neu
@@ -1122,7 +1119,6 @@ contains
 
       real                               :: dxmn_safe
       type(cg_list_element), pointer     :: cgl
-      integer                            :: wa_i
       type(value)                        :: drag
 #ifdef MAGNETIC
       type(value)                        :: b_min, b_max, divb_max, vai_max, cfi_max
@@ -1140,7 +1136,6 @@ contains
 #endif /* VARIABLE_GP || MAGNETIC */
       character(len=idlen)               :: id
 
-      wa_i = all_cg%ind(wa_n)
       id = '' ! suppress compiler warnings if none of the modules requiring the id variable are swithed on.
       dxmn_safe = sqrt(huge(1.0))
       cgl => leaves%first
@@ -1161,15 +1156,15 @@ contains
             cgl%cg%wa(:,:,:) = sqrt(sq_sum3(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)))
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(wa_i, MAXL, b_max)
-         call leaves%get_extremum(wa_i, MINL, b_min)
+         call leaves%get_extremum(all_cg%wai, MAXL, b_max)
+         call leaves%get_extremum(all_cg%wai, MINL, b_min)
 
          cgl => leaves%first
          do while (associated(cgl))
             cgl%cg%wa(:,:,:)  = cgl%cg%wa(:,:,:) / sqrt(cgl%cg%u(flind%ion%idn,:,:,:))
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(wa_i, MAXL, vai_max)
+         call leaves%get_extremum(all_cg%wai, MAXL, vai_max)
          vai_max%assoc = cfl*dxmn_safe/(vai_max%val+small)
          cfi_max%val   = sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2)
          cfi_max%assoc = cfl*dxmn_safe/sqrt(cfi_max%val**2+small)
@@ -1186,33 +1181,33 @@ contains
       var_i = all_cg%ind(gpot_n)
       cgl => leaves%first
       do while (associated(cgl))
-         p => cgl%cg%q(wa_i)%span(cgl%cg%ijkse)
+         p => cgl%cg%q(all_cg%wai)%span(cgl%cg%ijkse)
          p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idx)
          cgl => cgl%nxt ; NULLIFY(p)
       enddo
-      call leaves%get_extremum(wa_i, MAXL, gpxmax)
+      call leaves%get_extremum(all_cg%wai, MAXL, gpxmax)
 
       cgl => leaves%first
       do while (associated(cgl))
-         p => cgl%cg%q(wa_i)%span(cgl%cg%ijkse)
+         p => cgl%cg%q(all_cg%wai)%span(cgl%cg%ijkse)
          p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idy)
          cgl => cgl%nxt ; NULLIFY(p)
       enddo
-      call leaves%get_extremum(wa_i, MAXL, gpymax)
+      call leaves%get_extremum(all_cg%wai, MAXL, gpymax)
 
       cgl => leaves%first
       do while (associated(cgl))
-         p => cgl%cg%q(wa_i)%span(cgl%cg%ijkse)
+         p => cgl%cg%q(all_cg%wai)%span(cgl%cg%ijkse)
          p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idz)
          cgl => cgl%nxt ; NULLIFY(p)
       enddo
-      call leaves%get_extremum(wa_i, MAXL, gpzmax)
+      call leaves%get_extremum(all_cg%wai, MAXL, gpzmax)
 #endif /* VARIABLE_GP */
 
 #ifdef MAGNETIC
       cgl => leaves%first
       do while (associated(cgl))
-         p => cgl%cg%q(wa_i)%span(cgl%cg%ijkse)
+         p => cgl%cg%q(all_cg%wai)%span(cgl%cg%ijkse)
          p =   (cgl%cg%b(xdim, cgl%cg%is+dom%D_x:cgl%cg%ie+dom%D_x, cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ) - &
               & cgl%cg%b(xdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dy*cgl%cg%dz &
               +(cgl%cg%b(ydim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js+dom%D_y:cgl%cg%je+dom%D_y, cgl%cg%ks        :cgl%cg%ke        ) - &
@@ -1230,7 +1225,7 @@ contains
 
          cgl => cgl%nxt ; NULLIFY(p)
       enddo
-      call leaves%get_extremum(wa_i, MAXL, divb_max)
+      call leaves%get_extremum(all_cg%wai, MAXL, divb_max)
 #endif /* MAGNETIC */
 
 #ifdef COSM_RAYS
@@ -1239,8 +1234,8 @@ contains
          cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
          cgl => cgl%nxt
       enddo
-      call leaves%get_extremum(wa_i, MAXL, encr_max)
-      call leaves%get_extremum(wa_i, MINL, encr_min)
+      call leaves%get_extremum(all_cg%wai, MAXL, encr_max)
+      call leaves%get_extremum(all_cg%wai, MINL, encr_min)
       encr_max%assoc = dt_crs
 #endif /* COSM_RAYS */
 
@@ -1250,7 +1245,7 @@ contains
             cgl%cg%wa = L2norm(cgl%cg%u(flind%dst%imx,:,:,:),cgl%cg%u(flind%dst%imy,:,:,:),cgl%cg%u(flind%dst%imz,:,:,:),cgl%cg%u(flind%neu%imx,:,:,:),cgl%cg%u(flind%neu%imy,:,:,:),cgl%cg%u(flind%neu%imz,:,:,:) ) * cgl%cg%u(flind%dst%idn,:,:,:)
             cgl => cgl%nxt
          enddo
-         call leaves%get_extremum(wa_i, MAXL, drag)
+         call leaves%get_extremum(all_cg%wai, MAXL, drag)
          drag%assoc = flind%neu%cs/(maxval(collfaq) * drag%val + small)
       endif
 

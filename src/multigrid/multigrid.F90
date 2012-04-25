@@ -74,7 +74,7 @@ contains
    subroutine init_multigrid
 
       use cg_list_lev,         only: cg_list_level, cg_list_patch
-      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, AT_IGNORE, LO, HI, LONG, I_TWO, I_ONE, half, wa_n
+      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, AT_IGNORE, LO, HI, LONG, I_TWO, I_ONE, half
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
       use decomposition,       only: divide_domain!, deallocate_pse
@@ -293,7 +293,7 @@ contains
                cg%mg%bnd_z     (:, :, :)    = dirtyH
             endif
 
-            if (.not. associated(cg%wa)) cg%wa => cg%q(all_cg%ind(wa_n))%arr ! required for CR diffusion
+            if (.not. associated(cg%wa)) cg%wa => cg%q(all_cg%wai)%arr ! required for CR diffusion
 
             cgl => cgl%nxt
          enddo

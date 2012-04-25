@@ -348,7 +348,6 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_lev,        only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use constants,          only: fluid_n, wa_n
       use dataio_pub,         only: die
       use gc_list,            only: all_cg, ind_val
       use grid,               only: leaves
@@ -365,9 +364,9 @@ contains
       call set_dirty(defect)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
       if (diff_theta /= 0.) then
-         call leaves%wq_copy(all_cg%ind_4d(fluid_n), int(iarr_crs(cr_id)), all_cg%ind(wa_n))
-         call leaves%q_lin_comb( [ ind_val(all_cg%ind(wa_n), (1. -1./diff_theta)) ], correction)
-         call leaves%q_lin_comb( [ ind_val(all_cg%ind(wa_n),     -1./diff_theta ) ], defect)
+         call leaves%wq_copy(all_cg%fi, int(iarr_crs(cr_id)), all_cg%wai)
+         call leaves%q_lin_comb( [ ind_val(all_cg%wai, (1. -1./diff_theta)) ], correction)
+         call leaves%q_lin_comb( [ ind_val(all_cg%wai,     -1./diff_theta ) ], defect)
          call residual(roof, defect, correction, source, cr_id)
       else
          call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
@@ -389,7 +388,6 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use constants,        only: fluid_n
       use grid,             only: leaves
       use gc_list,          only: all_cg
       use initcosmicrays,   only: iarr_crs
@@ -401,7 +399,7 @@ contains
       integer, intent(in) :: cr_id !< CR component index
 
       call set_dirty(solution)
-      call leaves%wq_copy(all_cg%ind_4d(fluid_n), int(iarr_crs(cr_id)), solution)
+      call leaves%wq_copy(all_cg%fi, int(iarr_crs(cr_id)), solution)
       call check_dirty(roof, solution, "init solution")
 
    end subroutine init_solution
@@ -466,7 +464,6 @@ contains
    subroutine vcycle_hg(cr_id)
 
       use cg_list_lev,        only: cg_list_level
-      use constants,          only: fluid_n
       use dataio_pub,         only: msg, warn
       use gc_list,            only: ind_val, all_cg
       use grid,               only: leaves
@@ -570,7 +567,7 @@ contains
 !      call mpi_multigrid_bnd(roof, solution, I_ONE, diff_extbnd)
 !      cg%u(iarr_crs(cr_id), is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z) = cg%q(solution)%arr(cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z)
 
-      call leaves%qw_copy(solution, all_cg%ind_4d(fluid_n), int(iarr_crs(cr_id)))
+      call leaves%qw_copy(solution, all_cg%fi, int(iarr_crs(cr_id)))
 
    end subroutine vcycle_hg
 

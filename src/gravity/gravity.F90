@@ -821,7 +821,7 @@ contains
 !<
    subroutine grav_accel2pot
 
-      use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE, wa_n
+      use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE
       use dataio_pub, only: die
       use domain,     only: is_mpi_noncart, is_multicg, dom
       use gc_list,    only: all_cg
@@ -842,7 +842,6 @@ contains
       real, dimension(0:cdd%psize(xdim)-1,0:cdd%psize(ydim)-1,0:cdd%psize(zdim)-1) :: dgpx,      dgpy,      dgpz,     ddgp
       type(value)                                                      :: gp_max
       type(grid_container), pointer :: cg
-      integer :: wa_i
 
       cg => leaves%first%cg
       if (is_multicg) call die("[gravity:grav_accel2pot] multiple grid pieces per procesor not implemented yet") !nontrivial
@@ -929,9 +928,8 @@ contains
 
       ddgph  = gpwork(1,1,1)-gpwork(cg%is,cg%js,cg%ks)
       gpwork = gpwork + ddgp(px,py,pz) + ddgph
-      wa_i = all_cg%ind(wa_n)
       cg%wa(:,:,:) = gpwork(:,:,:)
-      call leaves%get_extremum(wa_i, MAXL, gp_max)
+      call leaves%get_extremum(all_cg%wai, MAXL, gp_max)
 
       call MPI_Bcast(gp_max%val, I_ONE, MPI_DOUBLE_PRECISION, gp_max%proc, comm, ierr)
       gpwork = gpwork - gp_max%val
