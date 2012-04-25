@@ -1128,9 +1128,9 @@ contains
 #endif /* COSM_RAYS */
 #ifdef VARIABLE_GP
       type(value)                        :: gpxmax, gpymax, gpzmax
+      integer                            :: var_i
 #endif /* VARIABLE_GP */
 #if defined VARIABLE_GP || defined MAGNETIC
-      integer                            :: var_i
       integer(kind=4), dimension(ndims,ndims,HI) :: D
       real, dimension(:,:,:), pointer    :: p
 #endif /* VARIABLE_GP || MAGNETIC */
