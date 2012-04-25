@@ -176,7 +176,7 @@ contains
 !<
    subroutine cr_diff(crdim)
 
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n, oneq
+      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n, oneq, uv
       use dataio_pub,     only: die
       use domain,         only: dom
       use fluidindex,     only: flind
@@ -185,6 +185,7 @@ contains
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
+      use named_array,    only: p4
 
       implicit none
 
@@ -266,14 +267,14 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         wcr => cg%w(wcri)%arr
 
          ndm = cg%n_ - idm
          hdm = 1 + idm*ndm
          ldm = hdm - idm
-         cg%u(iarr_crs,:ndm(xdim), :ndm(ydim), :ndm(zdim)) =                         cg%u(iarr_crs,:ndm(xdim),:ndm(ydim),:ndm(zdim)) &
-           &    - ( wcr(:,1+idm(xdim):cg%n_(xdim),1+idm(ydim):cg%n_(ydim),1+idm(zdim):cg%n_(zdim)) - wcr(:,:ndm(xdim),:ndm(ydim),:ndm(zdim)) )
-         cg%u(iarr_crs,hdm(xdim):cg%n_(xdim),hdm(ydim):cg%n_(ydim),hdm(zdim):cg%n_(zdim)) = cg%u(iarr_crs,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
+         p4 => cg%w(all_cg%fi)%span(uv,ndm)
+         p4(iarr_crs,:,:,:) = p4(iarr_crs,:,:,:) - (cg%w(wcri)%span(uv+idm,cg%n_) - cg%w(wcri)%span(uv,ndm))
+         p4 => cg%w(all_cg%fi)%span(hdm,cg%n_)
+         p4(iarr_crs,:,:,:) = cg%w(all_cg%fi)%span(ldm,ndm)(iarr_crs,:,:,:) ! for sanity
 
          cgl => cgl%nxt
       enddo

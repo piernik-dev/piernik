@@ -354,11 +354,11 @@ contains
       integer                                    :: n
 
       n = size(b1d)
-      w(2:n)    = eta1d(2:n) * ( b1d(2:n) - b1d(1:n-1) )*idi ; w(1)  = w(2)
+      w(2:n)    = eta1d(2:n) * ( b1d(2:n) - b1d(1:n-1) )*idi ;  w(1)  = w(2)
       b1(1:n-1) = b1d(1:n-1) + half*(w(2:n) - w(1:n-1))*dt*idi; b1(n) = b1(n-1)
 
       w(2:n)    = eta1d(2:n) * ( b1(2:n) - b1(1:n-1) )*idi   ; w(1)  = w(2)
-      wp(1:n-1) = half*(w(2:n) - w(1:n-1))                    ; wp(n) = wp(n-1)
+      wp(1:n-1) = half*(w(2:n) - w(1:n-1))                   ; wp(n) = wp(n-1)
       wm(2:n)   = wp(1:n-1)                                  ; wm(1) = wm(2)
 
       call vanleer_limiter(w,wm,wp)

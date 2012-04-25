@@ -253,13 +253,14 @@ contains
 
    subroutine restrict_q_1var(this, iv)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
-      use dataio_pub, only: msg, warn!, die
-      use domain,     only: dom
-      use gc_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: proc, comm, ierr, req, status
-      use mpi,        only: MPI_DOUBLE_PRECISION
+      use constants,   only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
+      use dataio_pub,  only: msg, warn
+      use domain,      only: dom
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use mpisetup,    only: proc, comm, ierr, req, status
+      use mpi,         only: MPI_DOUBLE_PRECISION
+      use named_array, only: p3
 
       implicit none
 
@@ -334,8 +335,8 @@ contains
             cg%q(iv)%arr(:,:,:) = 0. ! disables check_dirty
             do g = lbound(cg%f_tgt%seg(:), dim=1), ubound(cg%f_tgt%seg(:), dim=1)
                cse => cg%f_tgt%seg(g)%se
-               cg%q(iv)%arr     (cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) = &
-                    cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI)) + cg%f_tgt%seg(g)%buf(:, :, :)
+               p3 => cg%q(iv)%span(cse)
+               p3 = p3 + cg%f_tgt%seg(g)%buf(:, :, :)
             enddo
          endif
          cgl => cgl%nxt
@@ -352,7 +353,7 @@ contains
    subroutine prolong0_q_1var(this, iv)
 
       use constants,  only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
-      use dataio_pub, only: msg, warn!, die
+      use dataio_pub, only: msg, warn
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpisetup,   only: proc, comm, ierr, req, status
@@ -402,6 +403,7 @@ contains
             cse => cg%f_tgt%seg(g)%se
 
             nr = nr + I_ONE
+!            cg%f_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%span(cse)
             cg%f_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
             call MPI_Isend(cg%f_tgt%seg(g)%buf(1, 1, 1), size(cg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%f_tgt%seg(g)%proc, cg%f_tgt%seg(g)%tag, comm, req(nr), ierr)
 
