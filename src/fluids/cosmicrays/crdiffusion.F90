@@ -184,8 +184,8 @@ contains
       use gc_list,        only: cg_list_element, all_cg
       use grid,           only: leaves
       use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use named_array,    only: p4
+      use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp, ncrs
+      use named_array,    only: p3, p4
 
       implicit none
 
@@ -273,8 +273,10 @@ contains
          ldm = hdm - idm
          p4 => cg%w(all_cg%fi)%span(uv,ndm)
          p4(iarr_crs,:,:,:) = p4(iarr_crs,:,:,:) - (cg%w(wcri)%span(uv+idm,cg%n_) - cg%w(wcri)%span(uv,ndm))
-         p4 => cg%w(all_cg%fi)%span(hdm,cg%n_)
-         p4(iarr_crs,:,:,:) = cg%w(all_cg%fi)%span(ldm,ndm)(iarr_crs,:,:,:) ! for sanity
+         do i = 1, ncrs
+            p3 => cg%w(all_cg%fi)%span(i,hdm,cg%n_)
+            p3 = cg%w(all_cg%fi)%span(iarr_crs(i),ldm,ndm) + 0.0 ! for sanity
+         enddo
 
          cgl => cgl%nxt
       enddo
