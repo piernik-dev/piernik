@@ -378,9 +378,9 @@ contains
 
    subroutine diffuseb(ibdir, sdir)
 
-      use constants,     only: xdim, ydim, zdim, ndims, half, varlen, I_ONE, mag_n, wcu_n, idm, uv
+      use constants,     only: xdim, ydim, zdim, ndims, half, varlen, I_ONE, wcu_n, idm, uv
       use domain,        only: dom
-      use gc_list,       only: cg_list_element, all_cg
+      use gc_list,       only: cg_list_element, all_cg, bi
       use global,        only: dt
       use grid,          only: leaves
       use grid_cont,     only: grid_container
@@ -390,7 +390,7 @@ contains
 
       integer(kind=4),  intent(in)   :: ibdir, sdir
       character(len=varlen)          :: emf
-      integer                        :: i1, i2, b_i, wcu_i, eta_i
+      integer                        :: i1, i2, wcu_i, eta_i
       integer(kind=4)                :: n1, n2, etadir
       integer(kind=4), dimension(ndims) :: idml, idmh
       real, dimension(:),    pointer :: b1d, eta1d, wcu1d
@@ -407,7 +407,6 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         b_i   = all_cg%ind_4d(mag_n)
          wcu_i = all_cg%ind(wcu_n)
          eta_i = all_cg%ind(eta_n)
 
@@ -427,7 +426,7 @@ contains
 
          do i1 = lbound(cg%q(wcu_i)%arr,n1), ubound(cg%q(wcu_i)%arr,n1)
             do i2 = lbound(cg%q(wcu_i)%arr,n2), ubound(cg%q(wcu_i)%arr,n2)
-               b1d   => cg%w(b_i  )%get_sweep(sdir,ibdir,i1,i2)
+               b1d   => cg%w(bi   )%get_sweep(sdir,ibdir,i1,i2)
                eta1d => cg%q(eta_i)%get_sweep(sdir,      i1,i2)
                wcu1d => cg%q(wcu_i)%get_sweep(sdir,      i1,i2)
                call tvdd_1d(b1d, eta1d, cg%idl(sdir), dt, wcu1d)

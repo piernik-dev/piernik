@@ -51,11 +51,11 @@ contains
 !<
    subroutine advectb(bdir, vdir)
 
-      use constants,     only: xdim, ydim, zdim, LO, HI, ndims, varlen, fluid_n, mag_n, wa_n
+      use constants,     only: xdim, ydim, zdim, LO, HI, ndims, varlen
       use dataio_pub,    only: die
       use domain,        only: dom
       use fluidindex,    only: flind
-      use gc_list,       only: cg_list_element, all_cg
+      use gc_list,       only: cg_list_element, bi, fi, wai
       use global,        only: dt
       use grid,          only: leaves
       use grid_cont,     only: grid_container
@@ -67,7 +67,7 @@ contains
       integer(kind=4),       intent(in) :: bdir, vdir
       integer, pointer                  :: i1, i2, i1m, i2m
       integer, dimension(ndims), target :: ii, im
-      integer                           :: rdir, i, j, i_wa, ui, bi
+      integer                           :: rdir, i, j
       integer(kind=4)                   :: imom                   !< index of vdir momentum
       real, dimension(:), allocatable   :: vv, vv0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       real, dimension(:),    pointer    :: pm1, pm2, pd1, pd2
@@ -96,9 +96,6 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         i_wa = all_cg%ind(wa_n)
-         ui   = all_cg%ind_4d(fluid_n)
-         bi   = all_cg%ind_4d(mag_n)
 
          if (any([allocated(vv), allocated(vv0)])) call die("[advects:advectb] vv or vv0 already allocated")
          allocate(vv(cg%n_(vdir)), vv0(cg%n_(vdir)))
@@ -110,17 +107,17 @@ contains
                ii(rdir) = j
                im(rdir) = ii(rdir)
                vv=0.0
-               pm1 => cg%w(ui)%get_sweep(vdir,imom,i1m,i2m)
-               pm2 => cg%w(ui)%get_sweep(vdir,imom,i1 ,i2 )
-               pd1 => cg%w(ui)%get_sweep(vdir,flind%ion%idn,i1m,i2m)
-               pd2 => cg%w(ui)%get_sweep(vdir,flind%ion%idn,i1 ,i2 )
+               pm1 => cg%w(fi)%get_sweep(vdir,imom,i1m,i2m)
+               pm2 => cg%w(fi)%get_sweep(vdir,imom,i1 ,i2 )
+               pd1 => cg%w(fi)%get_sweep(vdir,flind%ion%idn,i1m,i2m)
+               pd2 => cg%w(fi)%get_sweep(vdir,flind%ion%idn,i1 ,i2 )
                vv0 = (pm1+pm2)/(pd1+pd2) !< \todo workaround for bug in gcc-4.6, REMOVE ME
                !vv(2:cg%n_(vdir)-1)=(vv(1:cg%n_(vdir)-2) + vv(3:cg%n_(vdir)) + 2.0*vv(2:cg%n_(vdir)-1))*0.25
                vv(2:cg%n_(vdir)-1)=(vv0(1:cg%n_(vdir)-2) + vv0(3:cg%n_(vdir)) + 2.0*vv0(2:cg%n_(vdir)-1))*0.25 !< \todo workaround for bug in gcc-4.6, REMOVE ME
                vv(1)  = vv(2)
                vv(cg%n_(vdir)) = vv(cg%n_(vdir)-1)
 
-               vibj => cg%q(i_wa)%get_sweep(vdir,i1,i2)
+               vibj => cg%q(wai)%get_sweep(vdir,i1,i2)
                call tvdb(vibj, cg%w(bi)%get_sweep(vdir,bdir,i1,i2), vv, cg%n_(vdir),dt, cg%idl(vdir))
                NULLIFY(pm1, pm2, pd1, pd2)
 

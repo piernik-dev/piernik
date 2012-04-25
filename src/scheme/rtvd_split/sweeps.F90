@@ -40,10 +40,10 @@ contains
 !------------------------------------------------------------------------------------------
    function interpolate_mag_field(cdim, cg, i1, i2) result (b)
 
-      use constants,  only: pdims, xdim, ydim, zdim, half, mag_n
+      use constants,  only: pdims, xdim, ydim, zdim, half
       use fluidindex, only: iarr_mag_swp, nmag
       use domain,     only: dom
-      use gc_list,    only: all_cg
+      use gc_list,    only: bi
       use grid_cont,  only: grid_container
 
       implicit none
@@ -55,11 +55,9 @@ contains
 
       real, dimension(:), pointer :: pb, pb1
       integer(kind=4)                         :: ibx, iby, ibz
-      integer                                 :: i1p, i2p, magi
+      integer                                 :: i1p, i2p
 
       !> OPTIMIZE ME
-
-      magi = all_cg%ind_4d(mag_n)
 
       ibx = iarr_mag_swp(cdim,xdim)
       iby = iarr_mag_swp(cdim,ydim)
@@ -68,23 +66,23 @@ contains
       i1p = i1+dom%D_(pdims(cdim,ydim))
       i2p = i2+dom%D_(pdims(cdim,zdim))
 
-      pb => cg%w(magi)%get_sweep(cdim,ibx,i1,i2)
+      pb => cg%w(bi)%get_sweep(cdim,ibx,i1,i2)
       b(ibx,1:cg%n_(cdim)-1) = half*( pb(1:cg%n_(cdim)-1)+pb(2:cg%n_(cdim)) )
       b(ibx,  cg%n_(cdim)  ) = b(ibx,  cg%n_(cdim)-1)
 
-      pb  => cg%w(magi)%get_sweep(cdim,iby,i1,i2)
+      pb  => cg%w(bi)%get_sweep(cdim,iby,i1,i2)
       if (cdim == xdim) then
-         pb1 => cg%w(magi)%get_sweep(cdim,iby,i1p,i2)
+         pb1 => cg%w(bi)%get_sweep(cdim,iby,i1p,i2)
       else
-         pb1 => cg%w(magi)%get_sweep(cdim,iby,i1,i2p)
+         pb1 => cg%w(bi)%get_sweep(cdim,iby,i1,i2p)
       endif
       b(iby,:) = half*(pb + pb1)
 
-      pb  => cg%w(magi)%get_sweep(cdim,ibz,i1,i2)
+      pb  => cg%w(bi)%get_sweep(cdim,ibz,i1,i2)
       if (cdim == xdim) then
-         pb1 => cg%w(magi)%get_sweep(cdim,ibz,i1,i2p)
+         pb1 => cg%w(bi)%get_sweep(cdim,ibz,i1,i2p)
       else
-         pb1 => cg%w(magi)%get_sweep(cdim,ibz,i1p,i2)
+         pb1 => cg%w(bi)%get_sweep(cdim,ibz,i1p,i2)
       endif
       b(ibz,:) = half*(pb + pb1)
 
@@ -95,11 +93,11 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweep(cdim)
 
-      use constants,       only: pdims, LO, HI, ydim, zdim, fluid_n, uh_n, cs_i2_n, mag_n
+      use constants,       only: pdims, LO, HI, ydim, zdim, uh_n, cs_i2_n
       use domain,          only: dom
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind, iarr_all_swp, nmag, iarr_mag_swp
-      use gc_list,         only: cg_list_element, all_cg
+      use gc_list,         only: cg_list_element, all_cg, bi, fi
       use global,          only: dt, integration_order
       use grid,            only: leaves
       use grid_cont,       only: grid_container
@@ -120,7 +118,7 @@ contains
       real, dimension(:,:), pointer     :: pb
 #endif /* MAGNETIC */
       real, dimension(:), pointer       :: div_v1d => null(), cs2
-      integer                           :: i1, i2, uhi, ui, magi
+      integer                           :: i1, i2, uhi
       integer                           :: istep
       integer                           :: i_cs_iso2
       logical                           :: full_dim
@@ -129,8 +127,6 @@ contains
 
       full_dim = dom%has_dir(cdim)
       uhi = all_cg%ind_4d(uh_n)
-      ui  = all_cg%ind_4d(fluid_n)
-      magi = all_cg%ind_4d(mag_n)
       if (all_cg%exists(cs_i2_n)) then
          i_cs_iso2 = all_cg%ind(cs_i2_n) ! BEWARE: magic strings across multiple files
       else
@@ -166,7 +162,7 @@ contains
                   if (full_dim) then
                      b = interpolate_mag_field(cdim, cg, i1, i2)
                   else
-                     pb => cg%w(magi)%get_sweep(cdim, i1, i2)   ! BEWARE: is it correct for 2.5D ?
+                     pb => cg%w(bi)%get_sweep(cdim, i1, i2)   ! BEWARE: is it correct for 2.5D ?
                      b(iarr_mag_swp(cdim,:),:)  = pb(:,:)
                   endif
 #endif /* MAGNETIC */
@@ -176,7 +172,7 @@ contains
                   call set_div_v1d(div_v1d, cdim, i1, i2, cg)
 #endif /* COSM_RAYS */
 
-                  pu  => cg%w( ui)%get_sweep(cdim,i1,i2)
+                  pu  => cg%w( fi)%get_sweep(cdim,i1,i2)
                   pu0 => cg%w(uhi)%get_sweep(cdim,i1,i2)
                   if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(cdim,i1,i2)
 
