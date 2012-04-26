@@ -1882,7 +1882,7 @@ contains
 
    subroutine approximate_solution_fft(curl, src, soln)
 
-      use constants,         only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE
+      use constants,         only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2
       use dataio_pub,        only: die, warn
       use domain,            only: dom
       use gc_list,           only: cg_list_element
@@ -1902,6 +1902,8 @@ contains
       integer :: nf, n, nsmoo
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+      integer, dimension(ndims,LO:HI) :: pdn, D_2
+      integer                         :: dir
 
       if (curl%first%cg%mg%fft_type == fft_none) call die("[multigrid_gravity:approximate_solution_fft] unknown FFT type")
 
@@ -1991,101 +1993,42 @@ contains
             do while (associated(cgl))
                cg => cgl%cg
                if (fft_full_relax) then
+                  p3 => cg%q(soln)%span(cg%ijkse)
                   if (dom%eff_dim == ndims .and. .not. multidim_code_3D) then
-                     cg%q(soln)%arr                 (cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  = &
-                          cg%mg%rx * (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js:cg%je,     cg%ks:cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js:cg%je,     cg%ks:cg%ke)) + &
-                          cg%mg%ry * (cg%q(soln)%arr(cg%is:cg%ie,     cg%js-1:cg%je-1, cg%ks:cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js+1:cg%je+1, cg%ks:cg%ke)) + &
-                          cg%mg%rz * (cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks-1:cg%ke-1)  + &
-                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks+1:cg%ke+1)) - &
-                          cg%mg%r  *  cg%q(src)%arr (cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)
+                     p3 = cg%mg%rx * (cg%q(soln)%span(cg%ijkse-idm2(xdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(xdim,:,:))) + &
+                          cg%mg%ry * (cg%q(soln)%span(cg%ijkse-idm2(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(ydim,:,:))) + &
+                          cg%mg%rz * (cg%q(soln)%span(cg%ijkse-idm2(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(zdim,:,:))) - &
+                          cg%mg%r  *  cg%q(src)%span (cg%ijkse)
                   else
 
                      call die("[multigrid_gravity:approximate_solution_fft] fft_full_relax is allowed only for 3D at the moment")
 
                      ! An additional array (cg%mg%src would be good enough) is required here to assemble partial results or use red-black passes
-                     cg%q(soln)%arr                 (cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  = &
-                          - cg%mg%r * cg%q(src)%arr (cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)
-                     if (dom%has_dir(xdim)) &
-                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  = &
-                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  + &
-                          cg%mg%rx * (cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js:cg%je,     cg%ks:cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js:cg%je,     cg%ks:cg%ke))
-                     if (dom%has_dir(ydim)) &
-                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  = &
-                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  + &
-                          cg%mg%ry * (cg%q(soln)%arr(cg%is:cg%ie,     cg%js-1:cg%je-1, cg%ks:cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js+1:cg%je+1, cg%ks:cg%ke))
-                     if (dom%has_dir(zdim)) &
-                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  = &
-                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks:cg%ke)  + &
-                          cg%mg%rz * (cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks-1:cg%ke-1)  + &
-                          &           cg%q(soln)%arr(cg%is:cg%ie,     cg%js:cg%je,     cg%ks+1:cg%ke+1))
+                     p3 = - cg%mg%r * cg%q(src)%span(cg%ijkse)
+                     if (dom%has_dir(xdim)) p3 = p3 + cg%mg%rx * (cg%q(soln)%span(cg%ijkse-idm2(xdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(xdim,:,:)))
+                     if (dom%has_dir(ydim)) p3 = p3 + cg%mg%ry * (cg%q(soln)%span(cg%ijkse-idm2(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(ydim,:,:)))
+                     if (dom%has_dir(zdim)) p3 = p3 + cg%mg%rz * (cg%q(soln)%span(cg%ijkse-idm2(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(zdim,:,:)))
                   endif
                else
                   ! relax only two layers of cells (1 is  significantly worse, 3 does not improve much)
                   ! edges are relaxed twice, corners are relaxed three times which seems to be good
 
-                  if (dom%has_dir(xdim)) then
-                     cg%q(soln)%arr                 (cg%is        :cg%is+dom%D_x,   cg%js        :cg%je,         cg%ks        :cg%ke)  = & ! -X
-                          cg%mg%rx * (cg%q(soln)%arr(cg%is-dom%D_x:cg%is,           cg%js        :cg%je,         cg%ks        :cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%is+dom%D_x:cg%is+2*dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke)) + &
-                          cg%mg%ry * (cg%q(soln)%arr(cg%is        :cg%is+dom%D_x,   cg%js-dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%is        :cg%is+dom%D_x,   cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke)) + &
-                          cg%mg%rz * (cg%q(soln)%arr(cg%is        :cg%is+dom%D_x,   cg%js        :cg%je,         cg%ks-dom%D_z:cg%ke-dom%D_z)  + &
-                          &           cg%q(soln)%arr(cg%is        :cg%is+dom%D_x,   cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)) - &
-                          cg%mg%r  *  cg%q(src)%arr (cg%is        :cg%is+dom%D_x,   cg%js        :cg%je,         cg%ks        :cg%ke)
+                  D_2 = spread(dom%D_,2,2)
+                  do dir = xdim, zdim
+                     if (dom%has_dir(dir)) then
+                        pdn = cg%ijkse ; pdn(dir,HI) = pdn(dir,HI) + dom%D_(dir) ! -X/-Y/-Z
+                        p3 => cg%q(soln)%span(pdn)
+                        p3 = cg%mg%rx * (cg%q(soln)%span(pdn-idm2(xdim,:,:)*D_2) + cg%q(soln)%span(pdn+idm2(xdim,:,:)*D_2)) + &
+                             cg%mg%ry * (cg%q(soln)%span(pdn-idm2(ydim,:,:)*D_2) + cg%q(soln)%span(pdn+idm2(ydim,:,:)*D_2)) + &
+                             cg%mg%rz * (cg%q(soln)%span(pdn-idm2(zdim,:,:)*D_2) + cg%q(soln)%span(pdn+idm2(zdim,:,:)*D_2)) - cg%mg%r  *  cg%q(src)%span(pdn)
 
-                     cg%q(soln)%arr                 (cg%ie-dom%D_x  :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke)  = & ! +X
-                          cg%mg%rx * (cg%q(soln)%arr(cg%ie-2*dom%D_x:cg%ie-dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%ie          :cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ke)) + &
-                          cg%mg%ry * (cg%q(soln)%arr(cg%ie-dom%D_x  :cg%ie,         cg%js-dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%ie-dom%D_x  :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ke)) + &
-                          cg%mg%rz * (cg%q(soln)%arr(cg%ie-dom%D_x  :cg%ie,         cg%js        :cg%je,         cg%ks-dom%D_z:cg%ke-dom%D_z)  + &
-                          &           cg%q(soln)%arr(cg%ie-dom%D_x  :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)) - &
-                          cg%mg%r  *  cg%q(src)%arr (cg%ie-dom%D_x  :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ke)
-                  endif
-
-                  if (dom%has_dir(ydim)) then
-                     cg%q(soln)%arr                 (cg%is        :cg%ie,         cg%js        :cg%js+dom%D_y,   cg%ks        :cg%ke)  = & ! -Y
-                          cg%mg%rx * (cg%q(soln)%arr(cg%is-dom%D_x:cg%ie-dom%D_x, cg%js        :cg%js+dom%D_y,   cg%ks        :cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%js+dom%D_y,   cg%ks        :cg%ke)) + &
-                          cg%mg%ry * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%js-dom%D_y:cg%js,           cg%ks        :cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%js+dom%D_y:cg%js+2*dom%D_y, cg%ks        :cg%ke)) + &
-                          cg%mg%rz * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%js        :cg%js+dom%D_y,   cg%ks-dom%D_z:cg%ke-dom%D_z)  + &
-                       &              cg%q(soln)%arr(cg%is        :cg%ie,         cg%js        :cg%js+dom%D_y,   cg%ks+dom%D_z:cg%ke+dom%D_z)) - &
-                       cg%mg%r  *     cg%q(src)%arr (cg%is        :cg%ie,         cg%js        :cg%js+dom%D_y,   cg%ks        :cg%ke)
-
-                     cg%q(soln)%arr                 (cg%is        :cg%ie,         cg%je-dom%D_y  :cg%je,         cg%ks        :cg%ke)  = & ! +Y
-                          cg%mg%rx * (cg%q(soln)%arr(cg%is-dom%D_x:cg%ie-dom%D_x, cg%je-dom%D_y  :cg%je,         cg%ks        :cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%is+dom%D_x:cg%ie+dom%D_x, cg%je-dom%D_y  :cg%je,         cg%ks        :cg%ke)) + &
-                          cg%mg%ry * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%je-2*dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%je          :cg%je+dom%D_y, cg%ks        :cg%ke)) + &
-                          cg%mg%rz * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%je-dom%D_y  :cg%je,         cg%ks-dom%D_z:cg%ke-dom%D_z)  + &
-                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%je-dom%D_y  :cg%je,         cg%ks+dom%D_z:cg%ke+dom%D_z)) - &
-                          cg%mg%r  *  cg%q(src)%arr (cg%is        :cg%ie,         cg%je-dom%D_y  :cg%je,         cg%ks        :cg%ke)
-                  endif
-
-                  if (dom%has_dir(zdim)) then
-                     cg%q(soln)%arr                 (cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ks+dom%D_z)  = & ! -Z
-                          cg%mg%rx * (cg%q(soln)%arr(cg%is-dom%D_x:cg%ie-dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ks+dom%D_z)  + &
-                          &           cg%q(soln)%arr(cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ks        :cg%ks+dom%D_z)) + &
-                          cg%mg%ry * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%js-dom%D_y:cg%je-dom%D_y, cg%ks        :cg%ks+dom%D_z)  + &
-                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ks        :cg%ks+dom%D_z)) + &
-                          cg%mg%rz * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks-dom%D_z:cg%ks)  + &
-                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks+dom%D_z:cg%ks+2*dom%D_z)) - &
-                          cg%mg%r  *  cg%q(src)%arr (cg%is        :cg%ie,         cg%js        :cg%je,         cg%ks        :cg%ks+dom%D_z)
-
-                     cg%q(soln)%arr                 (cg%is        :cg%ie,         cg%js        :cg%je,         cg%ke-dom%D_z  :cg%ke )  = & ! +Z
-                          cg%mg%rx * (cg%q(soln)%arr(cg%is-dom%D_x:cg%ie-dom%D_x, cg%js        :cg%je,         cg%ke-dom%D_z  :cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%is+dom%D_x:cg%ie+dom%D_x, cg%js        :cg%je,         cg%ke-dom%D_z  :cg%ke)) + &
-                          cg%mg%ry * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%js-dom%D_y:cg%je-dom%D_y, cg%ke-dom%D_z  :cg%ke)  + &
-                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%js+dom%D_y:cg%je+dom%D_y, cg%ke-dom%D_z  :cg%ke)) + &
-                          cg%mg%rz * (cg%q(soln)%arr(cg%is        :cg%ie,         cg%js        :cg%je,         cg%ke-2*dom%D_z:cg%ke-dom%D_z)  + &
-                          &           cg%q(soln)%arr(cg%is        :cg%ie,         cg%js        :cg%je,         cg%ke          :cg%ke+dom%D_z)) - &
-                          cg%mg%r  *  cg%q(src)%arr (cg%is        :cg%ie,         cg%js        :cg%je,         cg%ke-dom%D_z  :cg%ke)
-                  endif
+                        pdn = cg%ijkse ; pdn(dir,HI) = pdn(dir,LO) - dom%D_(dir) ! +X/+Y/+Z
+                        p3 => cg%q(soln)%span(pdn)
+                        p3 = cg%mg%rx * (cg%q(soln)%span(pdn-idm2(xdim,:,:)*D_2) + cg%q(soln)%span(pdn+idm2(xdim,:,:)*D_2)) + &
+                             cg%mg%ry * (cg%q(soln)%span(pdn-idm2(ydim,:,:)*D_2) + cg%q(soln)%span(pdn+idm2(ydim,:,:)*D_2)) + &
+                             cg%mg%rz * (cg%q(soln)%span(pdn-idm2(zdim,:,:)*D_2) + cg%q(soln)%span(pdn+idm2(zdim,:,:)*D_2)) - cg%mg%r  *  cg%q(src)%span(pdn)
+                     endif
+                  enddo
 
                endif
 
