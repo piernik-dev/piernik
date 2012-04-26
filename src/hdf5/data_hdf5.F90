@@ -97,6 +97,7 @@ contains
          case ("cr1" : "cr9")
          case ("mgso")
          case ("gpot")
+         case ("trcr")
       end select
    end function datafields_descr
 
@@ -171,6 +172,10 @@ contains
             read(var,'(A2,I1)') aux, i !> \deprecated BEWARE 0 <= i <= 9, no other indices can be dumped to hdf file
             tab(:,:,:) = real(cg%u(flind%crs%beg+i-1, RNG), kind=4)
 #endif /* COSM_RAYS */
+#ifdef TRACER
+         case ("trcr")
+            tab(:,:,:) = real(cg%u(flind%trc%pos, RNG),4)
+#endif /* TRACER */
          case ("dend", "deni", "denn")
             tab(:,:,:) = real(cg%u(fl_dni%idn, RNG), kind=4)
          case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
@@ -233,7 +238,7 @@ contains
       phv = piernik_hdf5_version ; if (use_v2_io) phv = piernik_hdf5_version2
       if (master) then
          write(fname, '(2a,a1,a3,a1,i4.4,a3)') trim(wd_wr), trim(problem_name),"_", trim(run_id),"_", nhdf,".h5" !> \todo: merge with function restart_fname()
-         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_hdf_time,' Writing datafile v', phv, trim(fname), " ... "
+         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_hdf_time,': Writing datafile v', phv, trim(fname), " ... "
          call printio(msg, .true.)
       endif
       call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
@@ -571,7 +576,7 @@ contains
       thdf = set_timer(tmr_hdf,.true.)
       fname = h5_filename()
       if (master) then
-         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_hdf_time,': Writing datafiles v', piernik_hdf5_version, trim(fname), " ... "
+         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_hdf_time,': Writing datafile v', piernik_hdf5_version, trim(fname), " ... "
          call printio(msg, .true.)
       endif
 

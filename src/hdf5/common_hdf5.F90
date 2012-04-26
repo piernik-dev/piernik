@@ -124,6 +124,10 @@ contains
             case ('encr')
                nhdf_vars = nhdf_vars + size(iarr_all_crs,1)
 #endif /* COSM_RAYS */
+#ifdef TRACER
+            case ('trcr')
+               nhdf_vars = nhdf_vars + 1
+#endif /* TRACER */
             case default
                nhdf_vars = nhdf_vars + 1
          end select
@@ -172,6 +176,10 @@ contains
                hdf_vars(j) = 'mgso' ; j = j + 1
 #endif /* MULTIGRID */
 #endif /* GRAV */
+#ifdef TRACER
+            case ('trcr')
+               hdf_vars(j) = 'trcr' ; j = j + 1
+#endif /* TRACER */
             case ('pres')
                if (has_neu) then ; hdf_vars(j) = 'pren' ; j = j + 1 ; endif
                if (has_ion) then ; hdf_vars(j) = 'prei' ; j = j + 1 ; endif
