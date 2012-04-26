@@ -517,7 +517,7 @@ contains
 
    subroutine prolong_ext_bnd(coarse)
 
-      use constants,     only: ndims
+      use constants,     only: ndims, O_INJ, O_D2, O_I2
       use dataio_pub,    only: die
       use domain,        only: dom
       use cg_list_lev,   only: cg_list_level
@@ -527,10 +527,10 @@ contains
       type(cg_list_level), pointer, intent(in) :: coarse !< level to prolong from
 
       if (dom%eff_dim<ndims) call die("[multigridmultipole:prolong_ext_bnd0] 1D and 2D not finished")
-      if (abs(ord_prolong_mpole) > 2) call die("[multipole:prolong_ext_bnd] interpolation order too high")
+      if (abs(ord_prolong_mpole) > maxval(abs([O_D2, O_I2]))) call die("[multipole:prolong_ext_bnd] interpolation order too high")
 
       !> \deprecated BEWARE: do we need cylindrical factors for prolongation?
-      if (ord_prolong_mpole == 0) then
+      if (ord_prolong_mpole == O_INJ) then
          call prolong_ext_bnd0(coarse)
       else
          call prolong_ext_bnd2(coarse)
@@ -593,7 +593,7 @@ contains
 
    subroutine prolong_ext_bnd2(coarse)
 
-      use constants,     only: HI, LO, xdim, ydim, zdim
+      use constants,     only: HI, LO, xdim, ydim, zdim, O_INJ, O_LIN, O_D2, O_I2
       use dataio_pub,    only: die
       use domain,        only: is_multicg
       use cg_list_lev,   only: cg_list_level
@@ -618,16 +618,16 @@ contains
       if (.not. associated(fine)) call die("[multigridmultipole:prolong_ext_bnd0] fine == null()")
 
       select case (ord_prolong_mpole)
-         case (0)
+         case (O_INJ)
             p(:) = p0(:)
-         case (1,-1)
+         case (O_LIN)
             p(:) = p1(:)
-         case (2)
+         case (O_I2)
             p(:) = p2i(:)
-         case (-2)
+         case (O_D2)
             p(:) = p2d(:)
          case default
-            p(:) = p0(:)
+            call die("[multigridmultipole:prolong_ext_bnd2] invalid ord_prolong_mpole")
       end select
 
       do i = -1, 1

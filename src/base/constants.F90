@@ -175,6 +175,18 @@ module constants
       enumerator :: VAR_ZFACE       !! Z-face
    end enum
 
+   ! Interpolation order
+   enum, bind(C)
+      enumerator :: O_INJ = 0  !! injection
+      enumerator :: O_LIN = 1  !! linear
+      enumerator :: O_I2  = 2  !! integral quadratic
+      enumerator :: O_I3  = 3  !! integral cubic
+      enumerator :: O_I4  = 4  !! integral quartic
+      enumerator :: O_D2  = -2 !! direct quadratic
+      enumerator :: O_D3  = -3 !! direct cubic
+      enumerator :: O_D4  = -4 !! direct quartic
+   end enum
+
    ! Fluid type index, used in flind%tag
    enum, bind(C)
       enumerator :: ION = 1, NEU, DST

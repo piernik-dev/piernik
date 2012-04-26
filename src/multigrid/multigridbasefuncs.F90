@@ -77,8 +77,9 @@ contains
 
    subroutine prolong_level(coarse, iv)
 
-      use dataio_pub,            only: die
       use cg_list_lev,           only: cg_list_level
+      use constants,             only: O_INJ
+      use dataio_pub,            only: die
       use multigridhelpers,      only: dirty_debug, check_dirty, dirtyH
       use multigridvars,         only: roof, ord_prolong, is_mg_uneven
 
@@ -100,7 +101,7 @@ contains
 
       call check_dirty(coarse, iv, "prolong-")
 
-      if (ord_prolong == 0 .or. is_mg_uneven) then
+      if (ord_prolong == O_INJ .or. is_mg_uneven) then
          call coarse%prolong0_q_1var(iv)
       else
          call prolong_level_hord(coarse, iv) ! experimental part
@@ -126,7 +127,7 @@ contains
 
    subroutine prolong_faces(fine, soln)
 
-      use constants,         only: xdim, ydim, zdim, LO, HI, LONG, I_ONE, half
+      use constants,         only: xdim, ydim, zdim, LO, HI, LONG, I_ONE, half, O_INJ, O_LIN, O_D2, O_I2
       use dataio_pub,        only: die, warn
       use domain,            only: dom, is_multicg
       use cg_list_lev,       only: cg_list_level
@@ -195,11 +196,11 @@ contains
 
       if (need_general_pf) then
 
-         if (ord_prolong_face_par /= 0) then
-            ord_prolong_face_par = 0
+         if (ord_prolong_face_par /= O_INJ) then
+            ord_prolong_face_par = O_INJ
             if (master) call warn("[multigridbasefuncs:prolong_faces] only injection is supported for the current domain decomposition type.")
             ! The tests made with comm3d suggests that paralel interpolation only degrades convergence rate.
-            ! Implement ord_prolong_face_par /= 0 if and only if it improves the coupling between fine and coarse solutions
+            ! Implement ord_prolong_face_par /= O_INJ if and only if it improves the coupling between fine and coarse solutions
          endif
 
          do lh = LO, HI ! \todo convert cg_list_level%mg%bnd_[xyz] to an array and make obsolete the following pointer assignments
@@ -295,16 +296,16 @@ contains
 
       else
          select case (ord_prolong_face_par)
-            case (0)
+            case (O_INJ)
                p(:) = p0(:)
-            case (1,-1)
+            case (O_LIN)
                p(:) = p1(:)
-            case (2)
+            case (O_I2)
                p(:) = p2i(:)
-            case (-2)
+            case (O_D2)
                p(:) = p2d(:)
             case default
-               p(:) = p0(:)
+               call die("[multigridbasefuncs:prolong_faces] invalid ord_prolong_face_par")
          end select
 
          do i = -s_rng, s_rng
@@ -314,13 +315,14 @@ contains
             pp(i,:,2,2) = half*p(-i)*p(1:-1:-1)
          enddo
 
-         if (ord_prolong_face_norm > 1) ord_prolong_face_norm = 1
+         if (ord_prolong_face_norm > O_LIN) ord_prolong_face_norm = O_LIN
+         if (ord_prolong_face_norm < O_INJ) ord_prolong_face_norm = O_INJ
          b_rng = s_rng
-         if (ord_prolong_face_norm > 0) b_rng = max(b_rng, int(ord_prolong_face_norm+1, kind=4))
+         if (ord_prolong_face_norm > O_INJ) b_rng = max(b_rng, int(ord_prolong_face_norm+1, kind=4))
          call mpi_multigrid_bnd(coarse, soln, b_rng, extbnd_antimirror, corners=(ord_prolong_face_par/=0)) !> \deprecated BEWARE for higher prolongation order more guardcell are required
          call check_dirty(coarse, soln, "prolong_faces", s_rng)
 
-         if (ord_prolong_face_norm > 0) then
+         if (ord_prolong_face_norm /= O_INJ) then
             if (dom%has_dir(xdim)) then
                pp_norm = 2.*sum(pp(-dom%D_y:dom%D_y, -dom%D_z:dom%D_z, 1, 1)) ! normalization is required for ord_prolong_face_par == 1 and -2
                do j = coarse%first%cg%js, coarse%first%cg%je
@@ -562,7 +564,7 @@ contains
    subroutine prolong_level_hord(coarse, iv)
 
       use cg_list_lev,       only: cg_list_level
-      use constants,         only: ndims
+      use constants,         only: ndims, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4
       use dataio_pub,        only: die, warn, msg
       use domain,            only: dom, is_multicg
       use grid_cont,         only: grid_container
@@ -594,21 +596,21 @@ contains
       if (is_multicg) call die("[multigridbasefuncs:prolong_level_hord] multicg not implemented")
 
       select case (ord_prolong)
-         case (-4)
+         case (O_D4)
             P_2 = 35./2048.; P_1 = -252./2048.; P0 = 1890./2048.; P1 = 420./2048.; P2 = -45./2048.
-         case (-3)
+         case (O_D3)
             P_2 = 0.;        P_1 = -7./128.;    P0 = 105./128.;   P1 = 35./128.;   P2 = -5./128.
-         case (-2)
+         case (O_D2)
             P_2 = 0.;        P_1 = -3./32.;     P0 = 30./32.;     P1 = 5./32.;     P2 = 0.
-         case (-1)
+         case (O_LIN)
             P_2 = 0.;        P_1 = 0.;          P0 = 3./4.;       P1 = 1./4.;      P2 = 0.
-         case (1)
-            P_2 = 0.;        P_1 = 0.;          P0 = 3./4.;       P1 = 1./4.;      P2 = 0.
-         case (2)
+         case (O_INJ)
+            P_2 = 0.;        P_1 = 0.;          P0 = 1.;          P1 = 0.;         P2 = 0.
+         case (O_I2)
             P_2 = 0.;        P_1 = -1./8.;      P0 = 1.;          P1 = 1./8.;      P2 = 0.
-         case (3)
+         case (O_I3)
             P_2 = 0.;        P_1 = -5./64.;     P0 = 55./64;      P1 = 17./64.;    P2 = -3./64.
-         case (4)
+         case (O_I4)
             P_2 = 3./128.;   P_1 = -11./64.;    P0 = 1.;          P1 = 11./64.;    P2 = -3./128.
             ! case 0 is handled through cg_list_level%prolong0_q_1var
          case default

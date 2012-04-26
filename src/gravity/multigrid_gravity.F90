@@ -161,7 +161,7 @@ contains
 !<
    subroutine init_multigrid_grav
 
-      use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER
+      use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_D2, O_I2
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
       use domain,        only: dom, is_uneven, is_multicg
@@ -203,8 +203,8 @@ contains
       nsmool                 = 4
       nsmoob                 = 100
       nsmoof                 = 1
-      ord_laplacian          = 2
-      ord_prolong_mpole      = -2
+      ord_laplacian          = O_I2
+      ord_prolong_mpole      = O_D2
       ord_time_extrap        = 1
 
       use_point_monopole     = .false.
@@ -235,9 +235,9 @@ contains
             ! switch off FFT-related bits
             base_no_fft = .true.
             prefer_rbgs_relaxation = .true.
-            ord_laplacian = 2
+            ord_laplacian = O_I2
             L4_strength = 0.
-            ! ord_prolong_mpole = 0
+            ! ord_prolong_mpole = O_INJ
          else if (dom%geometry_type /= GEO_XYZ) then
             call die("[multigrid_gravity:init_multigrid_grav] non-cartesian geometry not implemented yet.")
          endif
@@ -660,7 +660,7 @@ contains
 
    subroutine mpi_multigrid_prep_grav
 
-      use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG, zero, one, half
+      use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG, zero, one, half, O_INJ, O_LIN, O_I2
       use dataio_pub,    only: warn, die
       use domain,        only: dom
       use cg_list_lev,   only: cg_list_level
@@ -693,10 +693,10 @@ contains
 
       if (ord_prolong_face_norm > max_opfn) ord_prolong_face_norm = max_opfn
       select case (ord_prolong_face_norm)
-         case (0)
+         case (O_INJ)
             opfn_c_ff(:) = [ half, zero, zero ]
             opfn_c_cf(:) = [ one,  zero, zero ]
-         case (1)
+         case (O_LIN)
 #ifdef DEBUG
             ! the maximum convergence is at aux_R(1) = 0.25 +/- 0.05
             opfn_c_ff(:) = half * [ one + aux_R(1), -aux_R(1), zero ]
@@ -706,7 +706,7 @@ contains
             opfn_c_ff(:) = [  5., -one, zero ] / 8.  ! adjusted experimentally
             opfn_c_cf(:) = [ 18.,  one, zero ] / 20. ! adjusted experimentally
 #endif /* !DEBUG */
-         case (2)
+         case (O_I2)
 #ifdef DEBUG
             ! the maximum convergence is at aux_R(1) = 0.35 +/- 0.1 and aux_R(3) = 0.20 +- 0.05
             opfn_c_ff(:) = half * [ one+aux_R(1), -two*aux_R(1)+aux_R(3), aux_R(1)-aux_R(3) ]
@@ -1430,8 +1430,9 @@ contains
 
    subroutine residual(curl, src, soln, def)
 
-      use dataio_pub,  only: die
       use cg_list_lev, only: cg_list_level
+      use constants,   only: O_I2, O_I4
+      use dataio_pub,  only: die
 
       implicit none
 
@@ -1441,9 +1442,9 @@ contains
       integer,                      intent(in) :: def  !< index of defect in cg%q(:)
 
       select case (ord_laplacian)
-      case (2)
+      case (O_I2)
          call residual2(curl, src, soln, def)
-      case (4)
+      case (O_I4)
          call residual4(curl, src, soln, def)
       case default
          call die("[multigrid_gravity:residual] The parameter 'ord_laplacian' must be 2 or 4")

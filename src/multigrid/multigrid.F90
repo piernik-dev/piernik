@@ -74,7 +74,7 @@ contains
    subroutine init_multigrid
 
       use cg_list_lev,         only: cg_list_level, cg_list_patch
-      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, AT_IGNORE, LO, HI, LONG, I_TWO, I_ONE, half
+      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, AT_IGNORE, LO, HI, LONG, I_TWO, I_ONE, half, O_INJ, O_LIN, O_I2
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
       use decomposition,       only: divide_domain!, deallocate_pse
@@ -116,9 +116,9 @@ contains
 
       ! Default values for namelist variables
       level_max             = level_incredible
-      ord_prolong           = 0
-      ord_prolong_face_norm = 2
-      ord_prolong_face_par  = 0
+      ord_prolong           = O_INJ
+      ord_prolong_face_norm = O_I2
+      ord_prolong_face_par  = O_INJ
       ! May all the logical parameters be .false. by default
       stdout                = .false.
       verbose_vcycle        = .false.
@@ -173,10 +173,12 @@ contains
 #endif /* COSM_RAYS */
 
       !! Sanity checks
-      if (ord_prolong_face_norm < 0) then
+      if (ord_prolong_face_norm < O_INJ) then
          if (master) call warn("[multigrid:init_multigrid] ord_prolong_face_norm < 0 is not defined, defaulting to 0")
-         ord_prolong_face_norm = 0
+         ord_prolong_face_norm = O_INJ
       endif
+
+      if (ord_prolong == -1) ord_prolong = O_LIN
 
       if (level_max <= 0) then
          if (master) call warn("[multigrid:init_multigrid] level_max < 1: solving on a single grid may be extremely slow")
@@ -274,7 +276,7 @@ contains
             if (any(cg%n_b(:) * 2**(roof%lev - curl%lev) /= roof%first%cg%n_b(:) .and. dom%has_dir(:)) .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
 
             ! data storage
-            !! \deprecated BEWARE prolong_x and %mg%prolong_xy are used only with RBGS relaxation when ord_prolong /= 0
+            !! \deprecated BEWARE prolong_x and %mg%prolong_xy are used only with RBGS relaxation when ord_prolong /= O_INJ
             if (allocated(cg%mg%prolong_x) .or. allocated(cg%mg%prolong_xy) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
             allocate(cg%mg%prolong_xy(cg%n_(xdim), cg%n_(ydim),       cg%nzb/2+2*dom%nb))
             allocate(cg%mg%prolong_x (cg%n_(xdim), cg%nyb/2+2*dom%nb, cg%nzb/2+2*dom%nb))
@@ -319,8 +321,8 @@ contains
       call set_dirty(defect)
       call set_dirty(correction)
 
-      if ((is_mg_uneven .or. is_uneven .or. cdd%comm3d == MPI_COMM_NULL) .and. ord_prolong /= 0) then
-         ord_prolong = 0
+      if ((is_mg_uneven .or. is_uneven .or. cdd%comm3d == MPI_COMM_NULL) .and. ord_prolong /= O_INJ) then
+         ord_prolong = O_INJ
          if (master) call warn("[multigrid:init_multigrid] prolongation order /= injection not implemented on uneven or noncartesian domains yet.")
       endif
 
