@@ -1,4 +1,4 @@
-! $Id: initdust.F90 4106 2011-03-10 10:40:20Z xarth $
+! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !

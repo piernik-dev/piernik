@@ -1,4 +1,4 @@
-! $Id: fluxdust.F90 4026 2011-03-02 20:12:50Z gawrysz $
+! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
