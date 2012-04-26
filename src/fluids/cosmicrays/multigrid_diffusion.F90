@@ -629,7 +629,7 @@ contains
             if (present_not_crdim(idir)) then
                imp(:) = im(:) ; imp(idir) = imp(idir) + 1 ; ilmp(:) = imp(:) ; ilmp(crdim) = ilmp(crdim) - 1
                imm(:) = im(:) ; imm(idir) = imm(idir) - 1 ; ilmm(:) = imm(:) ; ilmm(crdim) = ilmm(crdim) - 1
-               b_perp = sum(cg%q(idiffb(crdim))%span(ilm,imp))*oneq
+               b_perp = sum(cg%q(idiffb(crdim))%span(int(ilm, kind=4), int(imp, kind=4)))*oneq
                magb = magb + b_perp**2
                !> \warning *cg%idl(crdim) makes a difference
                db = db + b_perp*((cg%q(soln)%point(ilmp) + cg%q(soln)%point(imp)) - (cg%q(soln)%point(ilmm) + cg%q(soln)%point(imm))) * oneq * cg%idl(idir)
@@ -701,7 +701,7 @@ contains
                enddo
 
                p3 => cg%q(def)%span(cg%ijkse)
-               p3 = p3 - (cg%q(all_cg%wai)%span(iml,imh) - cg%q(all_cg%wai)%span(cg%ijkse) ) * diff_theta * dt * cg%idl(idir)
+               p3 = p3 - (cg%q(all_cg%wai)%span(int(iml, kind=4), int(imh, kind=4)) - cg%q(all_cg%wai)%span(cg%ijkse) ) * diff_theta * dt * cg%idl(idir)
             endif
          enddo
          cgl => cgl%nxt

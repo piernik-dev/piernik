@@ -271,8 +271,8 @@ contains
          ndm = cg%n_ - idm
          hdm = 1 + idm*ndm
          ldm = hdm - idm
-         p4 => cg%w(all_cg%fi)%span(uv,ndm)
-         p4(iarr_crs,:,:,:) = p4(iarr_crs,:,:,:) - (cg%w(wcri)%span(uv+idm,cg%n_) - cg%w(wcri)%span(uv,ndm))
+         p4 => cg%w(all_cg%fi)%span(uv, int(ndm, kind=4))
+         p4(iarr_crs,:,:,:) = p4(iarr_crs,:,:,:) - (cg%w(wcri)%span(int(uv+idm, kind=4), cg%n_) - cg%w(wcri)%span(uv, int(ndm, kind=4)))
          cg%u(iarr_crs,hdm(xdim):cg%n_(xdim),hdm(ydim):cg%n_(ydim),hdm(zdim):cg%n_(zdim)) = cg%u(iarr_crs,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
 
          cgl => cgl%nxt
