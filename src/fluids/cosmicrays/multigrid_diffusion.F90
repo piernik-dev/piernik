@@ -433,13 +433,19 @@ contains
 
       do ib = xdim, zdim
          call set_dirty(idiffb(ib))
+#if 1
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            p3 => cg%q(idiffb(ib))%span(   cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_)
-            p3 =  cg%w(all_cg%bi )%span(ib,cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_) + 0.0
+            p3 => cg%q(idiffb(ib))%span(   cg%ijkse(:,LO)-dom%D_(:),cg%ijkse(:,HI)+dom%D_(:))
+!            p3 =  cg%w(all_cg%bi )%span(ib,cg%ijkse(:,LO)-dom%D_(:),cg%ijkse(:,HI)+dom%D_(:)) + 0.0 ! Why this gives wrong results?
+            p3 = cg%b(ib, cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z)
             cgl => cgl%nxt
          enddo
+#else
+         ! This works well but copies all guardcells, which is not necessary
+         call leaves%wq_copy(all_cg%bi, ib, idiffb(ib))
+#endif
          call roof%restrict_to_floor_q_1var(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
 
          curl => base
