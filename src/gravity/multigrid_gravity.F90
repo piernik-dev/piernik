@@ -2098,6 +2098,7 @@ contains
       p3 => cg%q(source)%span(cg%ijkse)
       cg%mg%src(:, :, :) = p3
       call fft_convolve(roof)
+      p3 => cg%q(solution)%span(cg%ijkse)
       p3 = cg%mg%src(:, :, :)
 
    end subroutine fft_solve_roof
