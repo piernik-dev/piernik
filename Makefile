@@ -48,7 +48,7 @@ endif
 endif
 
 ctags:
-	ctags -R {src,problems}
+	ctags -R {src,problems} --fortran-kinds=+iL
 
 resetup:
 	@RS=1 $(MAKE) -k all

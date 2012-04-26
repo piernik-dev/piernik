@@ -131,6 +131,9 @@ contains
 #ifdef COSM_RAYS
       use initcosmicrays,  only: init_cosmicrays
 #endif /* COSM_RAYS */
+#ifdef TRACER
+      use inittracer,      only: init_tracer
+#endif /* TRACER */
 
       implicit none
 
@@ -152,6 +155,9 @@ contains
 #ifdef COSM_RAYS
       call init_cosmicrays
 #endif /* COSM_RAYS */
+#ifdef TRACER
+      call init_tracer
+#endif /* TRACER */
 
       call fluid_index    ! flind has valid values afterwards
 

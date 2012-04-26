@@ -138,6 +138,9 @@ contains
 #ifdef COSM_RAYS
       use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, cosmicray_index
 #endif /* COSM_RAYS */
+#ifdef TRACER
+      use inittracer,     only: tracer_index, itrc
+#endif /* TRACER */
 
       implicit none
 
@@ -167,6 +170,10 @@ contains
 !  Compute indexes for the CR component and update counters
       call cosmicray_index(flind)
 #endif /* !COSM_RAYS */
+
+#ifdef TRACER
+      call tracer_index(flind)
+#endif /* TRACER */
 
 ! Allocate index arrays
 #ifdef IONIZED
@@ -225,7 +232,14 @@ contains
       iarr_all_crs(1:flind%crs%all) = iarr_crs
 #endif /* COSM_RAYS */
 
+#ifdef TRACER
+      iarr_all_swp(xdim,flind%trc%beg:flind%trc%end) = itrc
+      iarr_all_swp(ydim,flind%trc%beg:flind%trc%end) = itrc
+      iarr_all_swp(zdim,flind%trc%beg:flind%trc%end) = itrc
+#endif /* TRACER */
+
       allocate(flind%all_fluids(flind%fluids))
+
       i = 1
 #ifdef IONIZED
       flind%all_fluids(i) = flind%ion ; i = i + 1

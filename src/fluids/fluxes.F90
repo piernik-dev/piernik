@@ -146,6 +146,10 @@ contains
 #ifdef COSM_RAYS
       use fluxcosmicrays, only: flux_crs
 #endif /* COSM_RAYS */
+#ifdef TRACER
+      use fluxtracer,     only: flux_tracer
+      use inittracer,     only: trace_fluid
+#endif /* TRACER */
       use fluidindex,     only: flind, nmag
 
       implicit none
@@ -191,6 +195,13 @@ contains
 
       cfr(flind%crs%beg:flind%crs%end,:)  = spread(cfr(flind%ion%iarr(1),:),1,flind%crs%all)
 #endif /* COSM_RAYS */
+
+#ifdef TRACER
+      puu   => uu(flind%trc%beg:flind%trc%end,:)
+      pflux => flux(flind%trc%beg:flind%trc%end,:)
+      pvx   => vx(flind%all_fluids(trace_fluid)%pos,:)
+      call flux_tracer(pflux,puu,pvx)
+#endif /* TRACER */
 
    end subroutine all_fluxes
 

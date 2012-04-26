@@ -204,6 +204,20 @@ contains
             cgl => cgl%nxt
          enddo
 
+#ifdef TRACER
+         do k = 1, cg%n_(zdim)
+            do j = 1, cg%n_(ydim)
+               do i = 1, cg%n_(xdim)
+                  r = sqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
+                  if ( r**2 < r0**2) then
+                     cg%u(flind%trc%pos, i, j, k)   = 1.0
+                  else
+                     cg%u(flind%trc%pos, i, j, k)   = 0.0
+                  endif
+               enddo
+            enddo
+         enddo
+#endif /* TRACER */
       enddo
 
    end subroutine init_prob
