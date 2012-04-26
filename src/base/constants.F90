@@ -193,7 +193,8 @@ module constants
    integer, parameter :: stderr = error_unit
    integer, parameter :: INVALID = -1
 
-   integer(kind=4), dimension(ndims,ndims), parameter :: idm = reshape(int([ [1,0,0], [0,1,0], [0,0,1] ], kind=4),[ndims,ndims])   !< identity matrix 3x3
-   integer(kind=4), dimension(ndims),       parameter :: uv  = int([1,1,1], kind=4)                                                !< unity vector
+   integer(kind=4), dimension(ndims,ndims),       parameter :: idm  = reshape(int([ [1,0,0], [0,1,0], [0,0,1] ], kind=4),[ndims,ndims])   !< identity matrix 3x3
+   integer(kind=4), dimension(ndims,ndims,LO:HI), parameter :: idm2 = reshape([idm,idm],[ndims,ndims,2])                              !< auxiliary matrix 3x3x2 based on identity matrix
+   integer(kind=4), dimension(ndims),             parameter :: uv   = int([1,1,1], kind=4)                                                !< unity vector
 
 end module constants

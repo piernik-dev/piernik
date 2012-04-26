@@ -1579,7 +1579,7 @@ contains
 
    subroutine residual4(curl, src, soln, def)
 
-      use constants,         only: I_TWO, ndims
+      use constants,         only: I_TWO, ndims, idm2, xdim, ydim, zdim
       use dataio_pub,        only: die, warn
       use domain,            only: dom
       use gc_list,           only: cg_list_element
@@ -1588,6 +1588,7 @@ contains
       use mpisetup,          only: master
       use multigridvars,     only: bnd_givenval, extbnd_antimirror
       use multigridmpifuncs, only: mpi_multigrid_bnd
+      use named_array,       only: p3
 
       implicit none
 
@@ -1605,7 +1606,7 @@ contains
       logical, save       :: firstcall = .true.
       integer             :: i, j, k
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       if (dom%eff_dim<ndims) call die("[multigrid_gravity:residual4] Only 3D is implemented")
 
@@ -1636,21 +1637,14 @@ contains
          L0 = -2. * (Lx1 + Lx2 + Ly1 + Ly2 + Lz1 + Lz2)
 
          !> \deprecated BEWARE: cylindrical factors go here
-         cg%q(def)%arr     (cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks  :cg%ke)          = &
-              cg%q(src)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks  :cg%ke)          - &
-              cg%q(soln)%arr(cg%is-2:cg%ie-2, cg%js  :cg%je,   cg%ks  :cg%ke)   * Lx2 - &
-              cg%q(soln)%arr(cg%is+2:cg%ie+2, cg%js  :cg%je,   cg%ks  :cg%ke)   * Lx2 - &
-              cg%q(soln)%arr(cg%is-1:cg%ie-1, cg%js  :cg%je,   cg%ks  :cg%ke)   * Lx1 - &
-              cg%q(soln)%arr(cg%is+1:cg%ie+1, cg%js  :cg%je,   cg%ks  :cg%ke)   * Lx1 - &
-              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js-2:cg%je-2, cg%ks  :cg%ke)   * Ly2 - &
-              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js+2:cg%je+2, cg%ks  :cg%ke)   * Ly2 - &
-              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js-1:cg%je-1, cg%ks  :cg%ke)   * Ly1 - &
-              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js+1:cg%je+1, cg%ks  :cg%ke)   * Ly1 - &
-              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks-2:cg%ke-2) * Lz2 - &
-              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks+2:cg%ke+2) * Lz2 - &
-              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks-1:cg%ke-1) * Lz1 - &
-              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks+1:cg%ke+1) * Lz1 - &
-              cg%q(soln)%arr(cg%is  :cg%ie,   cg%js  :cg%je,   cg%ks  :cg%ke)   * L0
+         p3 => cg%q(def)%span(cg%ijkse)
+         p3 = cg%q(src)%span(cg%ijkse) - &
+              cg%q(soln)%span(cg%ijkse-2*idm2(xdim,:,:)) * Lx2 - cg%q(soln)%span(cg%ijkse+2*idm2(xdim,:,:)) * Lx2 - &
+              cg%q(soln)%span(cg%ijkse-  idm2(xdim,:,:)) * Lx1 - cg%q(soln)%span(cg%ijkse+  idm2(xdim,:,:)) * Lx1 - &
+              cg%q(soln)%span(cg%ijkse-2*idm2(ydim,:,:)) * Ly2 - cg%q(soln)%span(cg%ijkse+2*idm2(ydim,:,:)) * Ly2 - &
+              cg%q(soln)%span(cg%ijkse-  idm2(ydim,:,:)) * Ly1 - cg%q(soln)%span(cg%ijkse+  idm2(ydim,:,:)) * Ly1 - &
+              cg%q(soln)%span(cg%ijkse-2*idm2(zdim,:,:)) * Lz2 - cg%q(soln)%span(cg%ijkse+2*idm2(zdim,:,:)) * Lz2 - &
+              cg%q(soln)%span(cg%ijkse-  idm2(zdim,:,:)) * Lz1 - cg%q(soln)%span(cg%ijkse+  idm2(zdim,:,:)) * Lz1 - cg%q(soln)%span(cg%ijkse)   * L0
 
          ! WARNING: not optimized
          if (grav_bnd == bnd_givenval) then ! probably also in some other cases
@@ -1786,11 +1780,11 @@ contains
                      i1 = cg%is + mod(n+j+k, RED_BLACK)
                      if (dom%geometry_type == GEO_RPZ) then
 !!$                  cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
-!!$                       cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k)) + &
-!!$                       cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k) + cg%q(soln)%arr(i1:  cg%ie:  2, j+1, k)) + &
+!!$                       cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
+!!$                       cg%mg%ry * (cg%q(soln)%arr(i1  :cg%ie  :2, j-1, k  ) + cg%q(soln)%arr(i1:  cg%ie:  2, j+1, k))   + &
 !!$                       cg%mg%rz * (cg%q(soln)%arr(i1  :cg%ie  :2, j,   k-1) + cg%q(soln)%arr(i1:  cg%ie:  2, j,   k+1)) - &
-!!$                       cg%mg%r  *  cg%q(src)%arr(i1  :cg%ie  :2, j,   k)  + &
-!!$                       cg%mg%rx * (cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k) - cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)) * fac(i1:cg%ie:2)
+!!$                       cg%mg%r  *  cg%q(src)%arr( i1  :cg%ie  :2, j,   k  )  + &
+!!$                       cg%mg%rx * (cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k  ) - cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k)) * fac(i1:cg%ie:2)
                         call die("[multigrid_gravity:approximate_solution_rbgs] This variant of relaxation loop is not implemented for cylindrical coordinates.")
                      else
                         cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
@@ -1897,6 +1891,7 @@ contains
       use multigridhelpers,  only: dirty_debug, check_dirty, dirtyL
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: base, extbnd_antimirror, single_base
+      use named_array,       only: p3
 
       implicit none
 
@@ -1905,8 +1900,8 @@ contains
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
       integer :: nf, n, nsmoo
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
       if (curl%first%cg%mg%fft_type == fft_none) call die("[multigrid_gravity:approximate_solution_fft] unknown FFT type")
 
@@ -1915,8 +1910,8 @@ contains
       do nf = 1, nsmoof
          cgl => curl%first
          do while (associated(cgl))
-            cg => cgl%cg
-            cg%mg%src(:, :, :) = cg%q(src)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+            cg => cgl%cg ; p3 => cg%q(src)%span(cg%ijkse)
+            cg%mg%src(:, :, :) = p3
             cgl => cgl%nxt
          enddo
 
@@ -1974,7 +1969,7 @@ contains
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
-            cg%q(soln)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%mg%src(:, :, :)
+            p3 => cg%q(soln)%span(cg%ijkse) ; p3 = cg%mg%src(:, :, :)
             cgl => cgl%nxt
          enddo
 
@@ -2145,6 +2140,7 @@ contains
       use domain,        only: is_multicg
       use grid_cont,     only: grid_container
       use multigridvars, only: roof, source, solution
+      use named_array,   only: p3
 
       implicit none
 
@@ -2156,9 +2152,10 @@ contains
 
       if (cg%mg%fft_type == fft_none) return
 
-      cg%mg%src(:, :, :) = cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+      p3 => cg%q(source)%span(cg%ijkse)
+      cg%mg%src(:, :, :) = p3
       call fft_convolve(roof)
-      cg%q(solution)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%mg%src(:, :, :)
+      p3 = cg%mg%src(:, :, :)
 
    end subroutine fft_solve_roof
 
