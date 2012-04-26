@@ -161,7 +161,7 @@ contains
 !<
    subroutine init_multigrid_grav
 
-      use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_D2, O_I2
+      use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
       use domain,        only: dom, is_uneven, is_multicg
@@ -205,7 +205,7 @@ contains
       nsmoof                 = 1
       ord_laplacian          = O_I2
       ord_prolong_mpole      = O_D2
-      ord_time_extrap        = 1
+      ord_time_extrap        = O_LIN
 
       use_point_monopole     = .false.
       trust_fft_solution     = .false.
@@ -957,6 +957,7 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
+      use constants,        only: INVALID, O_INJ, O_LIN, O_I2
       use dataio_pub,       only: msg, die, printinfo
       use gc_list,          only: ind_val, all_cg
       use global,           only: t
@@ -971,9 +972,6 @@ contains
 
       integer :: p0, p1, p2, ordt
       real, dimension(3) :: dt_fac
-      enum, bind(C)
-         enumerator :: RESET = -1, COPY = 0, LINEAR, QUADRATIC !! order of temporal interpolation
-      end enum
 
       call set_dirty(solution)
 
@@ -992,32 +990,32 @@ contains
          if ( history%old(p2)%time < history%old(p1)%time .and. &        ! quadratic interpolation
               history%old(p1)%time < history%old(p0)%time .and. &
               history%old(p0)%time < t) then
-            ordt = min(int(QUADRATIC), ord_time_extrap)
+            ordt = min(int(O_I2), ord_time_extrap)
          else if (history%old(p1)%time < history%old(p0)%time .and. &
               &   history%old(p0)%time < t) then      ! linear extrapolation
-            ordt = min(int(LINEAR), ord_time_extrap)
+            ordt = min(int(O_LIN), ord_time_extrap)
          else                                                            ! simple recycling
-            ordt = min(int(COPY), ord_time_extrap)
+            ordt = min(int(O_INJ), ord_time_extrap)
          endif
       else                                                               ! coldstart
-         ordt = min(int(RESET), ord_time_extrap)
+         ordt = min(int(INVALID), ord_time_extrap)
       endif
 
       select case (ordt)
-         case (:RESET)
+         case (:INVALID)
             if (master .and. ord_time_extrap > ordt) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] Clearing ",trim(vstat%cprefix),"solution."
                call printinfo(msg, stdout)
             endif
             call all_cg%set_q_value(solution, 0.)
             history%old(:)%time = -huge(1.0)
-         case (COPY)
+         case (O_INJ)
             call leaves%q_copy(history%old(p0)%i_hist, solution)
             if (master .and. ord_time_extrap > ordt) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] No extrapolation of ",trim(vstat%cprefix),"solution."
                call printinfo(msg, stdout)
             endif
-         case (LINEAR)
+         case (O_LIN)
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p0)%time - history%old(p1)%time)
             call leaves%q_lin_comb( [ ind_val(history%old(p0)%i_hist, (1.+dt_fac(1))), &
                  &                    ind_val(history%old(p1)%i_hist,    -dt_fac(1) ) ], solution )
@@ -1025,7 +1023,7 @@ contains
                write(msg, '(3a)')"[multigrid_gravity:init_solution] Linear extrapolation of ",trim(vstat%cprefix),"solution."
                call printinfo(msg, stdout)
             endif
-         case (QUADRATIC)
+         case (O_I2)
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p1)%time - history%old(p2)%time)
             dt_fac(2) = (t - history%old(p1)%time) / (history%old(p2)%time - history%old(p0)%time)
             dt_fac(3) = (t - history%old(p2)%time) / (history%old(p0)%time - history%old(p1)%time)
