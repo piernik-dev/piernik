@@ -222,7 +222,7 @@ contains
       use shear,                 only: init_shear
 #endif /* SHEAR */
 #ifdef GRAV
-      use gravity,               only: init_grav, grav_pot_3d, grav_pot_3d_called, source_terms_grav
+      use gravity,               only: init_grav, grav_pot_3d, grav_pot_3d_called, source_terms_grav, sum_potential
       use hydrostatic,           only: cleanup_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
@@ -330,6 +330,11 @@ contains
       call read_problem_par ! may depend on anything but init_dataio, \todo add checks against PIERNIK_INIT_IO_IC to all initproblem::read_problem_par
 
       call init_dataio ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
+#if defined GRAV && undefined SELF_GRAV
+      call sum_potential                  ! for the proper tsl&log data gpot array has to be fill in using gp array values after restart read
+                                          !< \todo check and fulfil this requirement for SELF_GRAV defined (should source_terms_grav be called here?)
+                                          !< \deprecated this probably should be guaranteed to be done elsewhere.
+#endif /* GRAV && !SELF_GRAV */
       if (nrestart /= 0) call all_bnd
 
       if (master) then

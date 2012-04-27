@@ -375,15 +375,17 @@ contains
 
       implicit none
 
-      real :: h
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+#ifdef SELF_GRAV
+      real :: h
 
       if (dtm /= 0) then
          h = dt/dtm
       else
          h = 0.0
       endif
+#endif /* SELF_GRAV */
 
       cgl => leaves%first
       do while (associated(cgl))
