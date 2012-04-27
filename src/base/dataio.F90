@@ -765,7 +765,8 @@ contains
             call pop_vector(tsl_names, cbuff_len, ["mass", "momx", "momy", "momz", "ener", "epot", "eint", "ekin"])
 
 #ifdef MAGNETIC
-            call pop_vector(tsl_names, cbuff_len, ["emag   ", "mflx   ", "mfly   ", "mflz   ", "vai_max", "b_min  ", "b_max  ", "divb_max"])
+            call pop_vector(tsl_names, cbuff_len, ["emag   ", "mflx   ", "mfly   ", "mflz   ", "vai_max", "b_min  ", "b_max  "])
+            call pop_vector(tsl_names, cbuff_len, ["divb_max"])
 #ifdef RESISTIVE
             if (eta1_active) call pop_vector(tsl_names, cbuff_len, ["eta_max"])
 #endif /* RESISTIVE */
