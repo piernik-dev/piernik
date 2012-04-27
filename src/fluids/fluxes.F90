@@ -164,7 +164,10 @@ contains
       real, dimension(:),              intent(in),  pointer :: cs_iso2  !< array with current sound speed squared
 
       real, dimension(:,:), pointer                     :: pflux, pcfr, puu, pbb
-      real, dimension(:), pointer                       :: pvx, ppp, pu1d, pfl1d
+      real, dimension(:), pointer                       :: pvx, ppp
+#ifdef TRACER
+      real, dimension(:), pointer                       :: pu1d, pfl1d
+#endif /* TRACER */
       type(component_fluid), pointer                    :: pfl
 
       integer :: p
