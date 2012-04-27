@@ -74,6 +74,7 @@ module fluidindex
    integer(kind=4), allocatable, dimension(:) :: iarr_all_crn   !< array of indexes pointing to ener. densities of all nuclear CR-components
    integer(kind=4), allocatable, dimension(:) :: iarr_all_cre   !< array of indexes pointing to ener. densities of all electron CR-components
    integer(kind=4), allocatable, dimension(:), target :: iarr_all_crs   !< array of indexes pointing to ener. densities of all CR-components
+   integer(kind=4), allocatable, dimension(:), target :: iarr_all_trc   !< array of indexes pointing to tracers
    integer(kind=4), allocatable, dimension(:,:) :: iarr_all_swp !< array (size = flind) of all fluid indexes in the order depending on sweeps direction
 
    integer(kind=4), allocatable, dimension(:) :: iarr_all_mag  !< array (size = nmag) of all magnetic field components
@@ -139,7 +140,7 @@ contains
       use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, cosmicray_index
 #endif /* COSM_RAYS */
 #ifdef TRACER
-      use inittracer,     only: tracer_index, itrc
+      use inittracer,     only: tracer_index, iarr_trc
 #endif /* TRACER */
 
       implicit none
@@ -198,6 +199,12 @@ contains
       allocate(iarr_all_crs(0))
 #endif /* !COSM_RAYS */
 
+#ifdef TRACER
+      allocate(iarr_all_trc(flind%trc%all))
+#else /* !TRACER */
+      allocate(iarr_all_trc(0))
+#endif /* !TRACER */
+
 #ifdef IONIZED
 ! Compute index arrays for magnetic field
       iarr_mag_swp(xdim,:) = [xdim,ydim,zdim]
@@ -233,9 +240,11 @@ contains
 #endif /* COSM_RAYS */
 
 #ifdef TRACER
-      iarr_all_swp(xdim,flind%trc%beg:flind%trc%end) = itrc
-      iarr_all_swp(ydim,flind%trc%beg:flind%trc%end) = itrc
-      iarr_all_swp(zdim,flind%trc%beg:flind%trc%end) = itrc
+      iarr_all_swp(xdim,flind%trc%beg:flind%trc%end) = iarr_trc
+      iarr_all_swp(ydim,flind%trc%beg:flind%trc%end) = iarr_trc
+      iarr_all_swp(zdim,flind%trc%beg:flind%trc%end) = iarr_trc
+
+      iarr_all_trc(1:flind%trc%all) = iarr_trc
 #endif /* TRACER */
 
       allocate(flind%all_fluids(flind%fluids))
@@ -273,6 +282,8 @@ contains
       call my_deallocate(iarr_all_crn)
       call my_deallocate(iarr_all_cre)
       call my_deallocate(iarr_all_crs)
+
+      call my_deallocate(iarr_all_trc)
 
       do i = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
          deallocate(flind%all_fluids(i)%iarr)

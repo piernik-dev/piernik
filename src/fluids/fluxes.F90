@@ -164,7 +164,7 @@ contains
       real, dimension(:),              intent(in),  pointer :: cs_iso2  !< array with current sound speed squared
 
       real, dimension(:,:), pointer                     :: pflux, pcfr, puu, pbb
-      real, dimension(:), pointer                       :: pvx, ppp
+      real, dimension(:), pointer                       :: pvx, ppp, pu1d, pfl1d
       type(component_fluid), pointer                    :: pfl
 
       integer :: p
@@ -197,10 +197,13 @@ contains
 #endif /* COSM_RAYS */
 
 #ifdef TRACER
-      puu   => uu(flind%trc%beg:flind%trc%end,:)
-      pflux => flux(flind%trc%beg:flind%trc%end,:)
-      pvx   => vx(flind%all_fluids(trace_fluid)%pos,:)
-      call flux_tracer(pflux,puu,pvx)
+      do p = 1, size(trace_fluid)
+         pu1d  => uu(flind%trc%beg + p - 1, :)
+         pfl1d => flux(flind%trc%beg + p - 1, :)
+         pvx   => vx(flind%all_fluids(trace_fluid(p))%pos, :)
+         call flux_tracer(pfl1d, pu1d, pvx)
+         cfr(flind%trc%beg + p - 1,:)  = cfr(flind%all_fluids(trace_fluid(p))%iarr(1),:)
+      enddo
 #endif /* TRACER */
 
    end subroutine all_fluxes

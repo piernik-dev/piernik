@@ -137,6 +137,9 @@ contains
 #ifdef COSM_RAYS
       use fluidindex, only: iarr_all_crs
 #endif /* COSM_RAYS */
+#ifdef TRACER
+      use fluidindex, only: iarr_all_trc
+#endif /* TRACER */
 
       implicit none
 
@@ -153,6 +156,12 @@ contains
 #ifdef COSM_RAYS
          cg%u(iarr_all_crs, cg%is-ib,:,:) =  cg%u(iarr_all_crs, dom%nb+ib,:,:)
 #endif /* COSM_RAYS */
+#ifdef COSM_RAYS
+         cg%u(iarr_all_crs, cg%is-ib,:,:) =  cg%u(iarr_all_crs, dom%nb+ib,:,:)
+#endif /* COSM_RAYS */
+#ifdef TRACER
+         cg%u(iarr_all_trc, cg%is-ib,:,:) =  cg%u(iarr_all_trc, dom%nb+ib,:,:)
+#endif /* TRACER */
       enddo
 
    end subroutine bnd_xl_ref
@@ -237,6 +246,9 @@ contains
 #ifdef COSM_RAYS
       use fluidindex, only: iarr_all_crs
 #endif /* COSM_RAYS */
+#ifdef TRACER
+      use fluidindex, only: iarr_all_trc
+#endif /* TRACER */
 
       implicit none
 
@@ -253,6 +265,9 @@ contains
 #ifdef COSM_RAYS
          cg%u(iarr_all_crs, cg%ie+ib,:,:) =  cg%u(iarr_all_crs, cg%ie+1-ib,:,:)
 #endif /* COSM_RAYS */
+#ifdef TRACER
+         cg%u(iarr_all_trc, cg%ie+ib,:,:) =  cg%u(iarr_all_trc, cg%ie+1-ib,:,:)
+#endif /* TRACER */
       enddo
 
    end subroutine bnd_xr_ref

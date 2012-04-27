@@ -174,7 +174,7 @@ contains
 #endif /* COSM_RAYS */
 #ifdef TRACER
          case ("trcr")
-            tab(:,:,:) = real(cg%u(flind%trc%pos, RNG),4)
+            tab(:,:,:) = real(cg%u(flind%trc%beg, RNG),4)
 #endif /* TRACER */
          case ("dend", "deni", "denn")
             tab(:,:,:) = real(cg%u(fl_dni%idn, RNG), kind=4)

@@ -63,18 +63,16 @@ contains
    subroutine flux_tracer(fluxt,uut,vx)
 
       implicit none
-      real, dimension(:,:), intent(out), pointer  :: fluxt   !< flux for tracer
-      real, dimension(:,:), intent(in),  pointer  :: uut     !< part of u for tracer
-      real, dimension(:),   intent(in),  pointer  :: vx      !< velocity field of fluid for current sweep
+      real, dimension(:), intent(out), pointer  :: fluxt   !< flux for tracer
+      real, dimension(:), intent(in),  pointer  :: uut     !< part of u for tracer
+      real, dimension(:), intent(in),  pointer  :: vx      !< velocity field of fluid for current sweep
 
-      integer :: n, nm, nt
+      integer :: n, nm
 
-      n  = size(fluxt,2); nm = n-1
-      nt = size(fluxt,1)
+      n  = size(fluxt,1); nm = n-1
 
-      fluxt(:,RNG) = uut(:,RNG)*spread(vx(RNG),1, nt)
-      fluxt(:,1)   = fluxt(:,2); fluxt(:,n) = fluxt(:,nm)
-
+      fluxt(RNG) = uut(RNG)*vx(RNG)
+      fluxt(1)   = fluxt(2); fluxt(n) = fluxt(nm)
       return
    end subroutine flux_tracer
 

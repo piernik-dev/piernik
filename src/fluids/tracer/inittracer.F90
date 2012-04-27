@@ -40,9 +40,12 @@ module inittracer
 ! pulled by TRACER
    implicit none
 
-   public ! QA_WARN no secrets are kept here
+   private
+   public :: init_tracer, tracer_index, iarr_trc, trace_fluid
 
-   integer               :: itrc, trace_fluid
+   integer, dimension(:), allocatable :: iarr_trc, trace_fluid
+   integer, private :: ntracers
+   integer, dimension(10) :: tracers
 
 contains
 
@@ -66,42 +69,51 @@ contains
 
       implicit none
 
-      namelist /FLUID_TRACER/ trace_fluid
+      namelist /FLUID_TRACER/ tracers
 
-      trace_fluid = 1
+      tracers = [1,0,0,0,0,0,0,0,0,0]
 
       if (master) then
          diff_nml(FLUID_TRACER)
 
-         ibuff(1)   = trace_fluid
+         ibuff(1:10)   = tracers
       endif
 
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
 
       if (slave) then
 
-         trace_fluid  = ibuff(1)
+         tracers  = ibuff(1:10)
 
       endif
+
+      ntracers = count(tracers > 0)
+
+      ! TODO: deallocate those arrays somewhere
+      allocate(trace_fluid(ntracers))
+      allocate(iarr_trc(ntracers))
+
+      trace_fluid = pack(tracers, mask=(tracers > 0))
 
    end subroutine init_tracer
 
    subroutine tracer_index(flind)
+      use constants,          only: I_ONE
       use fluidtypes,         only: var_numbers
 
       implicit none
       type(var_numbers), intent(inout) :: flind
+      integer :: i
 
-      flind%trc%beg    = flind%all + 1
-
-      itrc = flind%all + 1
-
-      flind%trc%all  = 1
-      flind%all      = itrc
-
+      flind%trc%beg    = flind%all + I_ONE
+      flind%trc%all  = ntracers
+      flind%all      = flind%all + flind%trc%all
       flind%trc%end    = flind%all
-      flind%components = flind%components + 1
-      flind%trc%pos    = flind%components
+
+      iarr_trc = [(i, i = 0, ntracers-1)] + flind%trc%beg
+!      flind%components = flind%components + 1
+!      flind%trc%pos    = flind%components
+      flind%trc%pos    = -1
 
    end subroutine tracer_index
 
