@@ -825,7 +825,7 @@ contains
          tot_q(T_EINT) = tot_q(T_EINT) + tot_q(T_ENER) - tot_q(T_EKIN) - tot_q(T_EMAG)
 #endif /* !ISO */
 #ifdef GRAV
-         tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENER) + tot_q(T_EPOT)
+         tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_EPOT)
 #endif /* GRAV */
 
 #ifdef COSM_RAYS
