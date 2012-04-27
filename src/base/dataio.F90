@@ -706,8 +706,8 @@ contains
       use dataio_user, only: user_tsl
       use diagnostics, only: pop_vector
       use domain,      only: dom
-      use fluids_pub,  only: has_ion, has_dst, has_neu
       use fluidindex,  only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use fluids_pub,  only: has_ion, has_dst, has_neu
       use fluidtypes,  only: phys_prop
       use func,        only: ekin, emag
       use gc_list,     only: cg_list_element, all_cg
@@ -730,13 +730,13 @@ contains
 
       character(len=cwdlen)                               :: tsl_file, head_fmt
       character(len=cbuff_len), dimension(:), allocatable :: tsl_names
-      real, allocatable, dimension(:)                     :: tsl_vars
+      real,                     dimension(:), allocatable :: tsl_vars
       real, dimension(:,:,:,:), pointer                   :: pu, pb
-      type(phys_prop), pointer                            :: sn
-      type(tsl_container)            :: tsl
-      type(grid_container), pointer  :: cg
-      type(cg_list_element), pointer :: cgl
-      real                           :: cs_iso2
+      type(phys_prop),          pointer                   :: sn
+      type(tsl_container)                                 :: tsl
+      type(grid_container),     pointer                   :: cg
+      type(cg_list_element),    pointer                   :: cgl
+      real                                                :: cs_iso2
       enum, bind(C)
          enumerator :: T_MASS                                  !< total mass
          enumerator :: T_MOMX, T_MOMY, T_MOMZ                  !< total momenta
@@ -758,16 +758,14 @@ contains
       endif
 
       if (master) then
-         write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') &
-              trim(wd_wr),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
+         write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') trim(wd_wr),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
          if (tsl_firstcall) then
             call pop_vector(tsl_names, cbuff_len, ["nstep   ", "time    ", "timestep"])
             call pop_vector(tsl_names, cbuff_len, ["mass", "momx", "momy", "momz", "ener", "epot", "eint", "ekin"])
 
 #ifdef MAGNETIC
-            call pop_vector(tsl_names, cbuff_len, ["emag   ", "mflx   ", "mfly   ", "mflz   ", "vai_max", "b_min  ", "b_max  "])
-            call pop_vector(tsl_names, cbuff_len, ["divb_max"])
+            call pop_vector(tsl_names, cbuff_len, ["emag   ", "mflx   ", "mfly   ", "mflz   ", "vai_max", "b_min  ", "b_max  ", "divb_max"])
 #ifdef RESISTIVE
             if (eta1_active) call pop_vector(tsl_names, cbuff_len, ["eta_max"])
 #endif /* RESISTIVE */
@@ -777,9 +775,9 @@ contains
 #endif /* COSM_RAYS */
             ! \todo: replicated code, simplify me
             if (has_ion) call pop_vector(tsl_names, cbuff_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max ", &
-                                                   "prei_min", "prei_max", "temi_min", "temi_max", "csi_max "])
+                                                                "prei_min", "prei_max", "temi_min", "temi_max", "csi_max "])
             if (has_neu) call pop_vector(tsl_names, cbuff_len, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", &
-                                                   "pren_min", "pren_max", "temn_min", "temn_max", "csn_max "])
+                                                                "pren_min", "pren_max", "temn_min", "temn_max", "csn_max "])
             if (has_dst) call pop_vector(tsl_names, cbuff_len, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
 
             if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
@@ -817,16 +815,9 @@ contains
          tot_q(T_MFLX) = tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim,:,:,:)) !cg%dy*cg%dz/dom%n_d(xdim)
          tot_q(T_MFLY) = tot_q(T_MFLY) + cg%dvol/dom%L_(ydim) * sum(pb(ydim,:,:,:)) !cg%dx*cg%dz/dom%n_d(ydim)
          tot_q(T_MFLZ) = tot_q(T_MFLZ) + cg%dvol/dom%L_(zdim) * sum(pb(zdim,:,:,:)) !cg%dx*cg%dy/dom%n_d(zdim)
-#ifdef ISO
-         tot_q(T_EINT) = tot_q(T_EINT) + cs_iso2*tot_q(T_MASS)
-         tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_EINT)+tot_q(T_EKIN)+tot_q(T_EMAG)
-#else /* !ISO */
+#ifndef ISO
          tot_q(T_ENER) = tot_q(T_ENER) + cg%dvol * sum(pu(iarr_all_en,:,:,:))
-         tot_q(T_EINT) = tot_q(T_EINT) + tot_q(T_ENER) - tot_q(T_EKIN) - tot_q(T_EMAG)
 #endif /* !ISO */
-#ifdef GRAV
-         tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_EPOT)
-#endif /* GRAV */
 
 #ifdef COSM_RAYS
          tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(pu(iarr_all_crs,:,:,:))
@@ -834,6 +825,17 @@ contains
 
          cgl => cgl%nxt
       enddo
+
+#ifdef ISO
+      tot_q(T_EINT) = tot_q(T_EINT) + cs_iso2*tot_q(T_MASS)
+      tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_EINT)+tot_q(T_EKIN)+tot_q(T_EMAG)
+#else /* !ISO */
+      tot_q(T_EINT) = tot_q(T_EINT) + tot_q(T_ENER) - tot_q(T_EKIN) - tot_q(T_EMAG)
+#endif /* !ISO */
+#ifdef GRAV
+      tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_EPOT)
+#endif /* GRAV */
+
       call MPI_Allreduce(MPI_IN_PLACE, tot_q(:), size(tot_q), MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
 
       call write_log(tsl)
@@ -854,12 +856,12 @@ contains
          if (has_ion) then
             sn=>flind%ion%snap
             call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
-                                    sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
+                                       sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
          endif
          if (has_neu) then
             sn=>flind%neu%snap
             call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
-                                    sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
+                                       sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
          endif
          if (has_dst) then
             sn=>flind%dst%snap
