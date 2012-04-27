@@ -109,6 +109,7 @@ module dataio_user
       end subroutine add_data
    end interface
 
+   procedure(add_data),  pointer :: user_attrs_pre        => Null()
    procedure(add_attr),  pointer :: user_attrs_rd         => Null()
    procedure(add_attr),  pointer :: user_attrs_wr         => Null()
    procedure(plt_attr),  pointer :: user_plt_attrs        => Null()

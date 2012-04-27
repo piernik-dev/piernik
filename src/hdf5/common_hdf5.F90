@@ -252,7 +252,7 @@ contains
 
       use constants,   only: I_ONE
       use dataio_pub,  only: use_v2_io, parfile, parfilelines, gzip_level
-      use dataio_user, only: user_attrs_wr
+      use dataio_user, only: user_attrs_wr, user_attrs_pre
       use global,      only: magic_mass, local_magic_mass
       use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
            &                 h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
@@ -276,6 +276,8 @@ contains
       call MPI_Reduce(local_magic_mass, magic_mass0, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, ierr)
       magic_mass       = magic_mass + magic_mass0
       local_magic_mass = 0.0
+
+      if (associated(user_attrs_pre)) call user_attrs_pre
 
       if (slave) return ! This data need not be written in parallel.
 
