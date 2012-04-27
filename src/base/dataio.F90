@@ -807,10 +807,10 @@ contains
          tot_q(T_MOMY) = tot_q(T_MOMY) + cg%dvol * sum(pu(iarr_all_my,:,:,:))
          tot_q(T_MOMZ) = tot_q(T_MOMZ) + cg%dvol * sum(pu(iarr_all_mz,:,:,:))
 #ifdef GRAV
-         tot_q(T_EPOT) = tot_q(T_EPOT) + cg%dvol * sum(pu(iarr_all_dn(1),:,:,:) * cg%q(all_cg%ind(gpot_n))%span(cg%ijkse))
+         tot_q(T_EPOT) = tot_q(T_EPOT) + cg%dvol * sum(sum(pu(iarr_all_dn(:),:,:,:),dim=1) * cg%q(all_cg%ind(gpot_n))%span(cg%ijkse))
 #endif /* GRAV */
 
-         tot_q(T_EKIN) = tot_q(T_EKIN) + cg%dvol * sum(ekin(pu(iarr_all_mx(1),:,:,:), pu(iarr_all_my(1),:,:,:), pu(iarr_all_mz(1),:,:,:), max(pu(iarr_all_dn(1),:,:,:),smalld)))
+         tot_q(T_EKIN) = tot_q(T_EKIN) + cg%dvol * sum(ekin(pu(iarr_all_mx(:),:,:,:), pu(iarr_all_my(:),:,:,:), pu(iarr_all_mz(:),:,:,:), max(pu(iarr_all_dn(:),:,:,:),smalld)))
          tot_q(T_EMAG) = tot_q(T_EMAG) + cg%dvol * sum(emag(pb(xdim,:,:,:), pb(ydim,:,:,:), pb(zdim,:,:,:)))
 
          tot_q(T_MFLX) = tot_q(T_MFLX) + cg%dvol/dom%L_(xdim) * sum(pb(xdim,:,:,:)) !cg%dy*cg%dz/dom%n_d(xdim)
