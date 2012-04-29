@@ -28,6 +28,11 @@
 #include "piernik.h"
 #include "macros.h"
 
+!>
+!! \brief Module providing few parameter for debugging and developing the code.
+!!
+!! \details Keep this module as free of dependences as possible to allow its use early after start and eliminate risk of cyclic dependences.
+!<
 module piernikdebug
 ! pulled by DEBUG
 
@@ -36,7 +41,7 @@ module piernikdebug
    implicit none
 
    private
-   public :: init_piernikdebug, has_const_dt, constant_dt, aux_R, aux_I, aux_L, aux_S, force_dumps
+   public :: init_piernikdebug, has_const_dt, constant_dt, aux_R, aux_I, aux_L, aux_S
 
    ! Auxiliary input parameters for debugging, quick tweaks and tests of new features.
    ! Their purpose is to avoid messing up existing namelists until it becomes clear that certain parameter is really useful.
@@ -49,12 +54,8 @@ module piernikdebug
 
    real,    protected :: constant_dt               !< value of timestep regardless of fluid state
    logical, protected :: has_const_dt              !< true if piernikdebug::constant_dt > 0
-   logical, protected :: force_hdf5_dump           !< dump hdf5 every sweep regardless of dataio_pub::dt_hdf
-   logical, protected :: force_res_dump            !< dump restart every sweep regardless of dataio_pub::dt_res
-   logical, protected :: force_allbnd_dump         !< dump restart with all boundaries every sweep regardless of dataio_pub::dt_res
-   logical, protected :: force_log_dump            !< dump log every sweep regardless of dataio_pub:dt_log
 
-   namelist /PIERNIK_DEBUG/ constant_dt, force_hdf5_dump, force_res_dump, force_allbnd_dump, force_log_dump, aux_R, aux_I, aux_L, aux_S
+   namelist /PIERNIK_DEBUG/ constant_dt, aux_R, aux_I, aux_L, aux_S
 
 contains
 
@@ -67,10 +68,6 @@ contains
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !!   <tr><td>constant_dt      </td><td>0.0    </td><td>real value             </td><td>\copydoc piernikdebug::constant_dt      </td></tr>
-!!   <tr><td>force_hdf5_dump  </td><td>       </td><td>logical value          </td><td>\copydoc piernikdebug::force_hdf5_dump  </td></tr>
-!!   <tr><td>force_res_dump   </td><td>       </td><td>logical value          </td><td>\copydoc piernikdebug::force_res_dump   </td></tr>
-!!   <tr><td>force_allbnd_dump</td><td>       </td><td>logical value          </td><td>\copydoc piernikdebug::force_allbnd_dump</td></tr>
-!!   <tr><td>force_log_dump   </td><td>       </td><td>logical value          </td><td>\copydoc piernikdebug::force_log_dump   </td></tr>
 !!   <tr><td>aux_R            </td><td>0.0    </td><td>5-element real array   </td><td>\copydoc piernikdebug::aux_R            </td></tr>
 !!   <tr><td>aux_I            </td><td>0      </td><td>5-element integer array</td><td>\copydoc piernikdebug::aux_I            </td></tr>
 !!   <tr><td>aux_L            </td><td>.false.</td><td>5-element logical array</td><td>\copydoc piernikdebug::aux_L            </td></tr>
@@ -102,11 +99,6 @@ contains
 
          rbuff(1) = constant_dt
 
-         lbuff(1) = force_hdf5_dump
-         lbuff(2) = force_log_dump
-         lbuff(3) = force_res_dump
-         lbuff(4) = force_allbnd_dump
-
          rbuff(buffer_dim-naux+1:buffer_dim) = aux_R(:)
          ibuff(buffer_dim-naux+1:buffer_dim) = aux_I(:)
          lbuff(buffer_dim-naux+1:buffer_dim) = aux_L(:)
@@ -122,11 +114,6 @@ contains
       if (slave) then
          constant_dt       = rbuff(1)
 
-         force_hdf5_dump   = lbuff(1)
-         force_log_dump    = lbuff(2)
-         force_res_dump    = lbuff(3)
-         force_allbnd_dump = lbuff(4)
-
          aux_R(:) = rbuff(buffer_dim-naux+1:buffer_dim)
          aux_I(:) = ibuff(buffer_dim-naux+1:buffer_dim)
          aux_L(:) = lbuff(buffer_dim-naux+1:buffer_dim)
@@ -137,21 +124,5 @@ contains
       has_const_dt = (constant_dt > 0.0)
 
    end subroutine init_piernikdebug
-
-   subroutine force_dumps
-
-      use dataio,         only: write_data
-      use dataio_pub,     only: warn
-      use data_hdf5,      only: write_hdf5
-      use restart_hdf5,   only: write_restart_hdf5
-
-      implicit none
-
-      if (force_hdf5_dump)   call write_hdf5
-      if (force_res_dump)    call write_restart_hdf5
-      if (force_allbnd_dump) call warn("[fluidupdate:make_sweep] force_allbnd_dump has no effect for single-file HDF5 restart files")
-      if (force_log_dump)    call write_data(output='log')
-
-   end subroutine force_dumps
 
 end module piernikdebug

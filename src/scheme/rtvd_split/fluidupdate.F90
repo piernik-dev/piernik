@@ -200,7 +200,7 @@ contains
       use initcosmicrays, only: use_split
 #endif /* COSM_RAYS */
 #ifdef DEBUG
-      use piernikdebug,   only: force_dumps
+      use piernikiodebug,   only: force_dumps
 #endif /* DEBUG */
 
       implicit none

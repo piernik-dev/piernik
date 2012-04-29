@@ -233,6 +233,7 @@ contains
 #endif /* SN_SRC */
 #ifdef DEBUG
       use piernikdebug,          only: init_piernikdebug
+      use piernikiodebug,        only: init_piernikiodebug
 #endif /* DEBUG */
 #ifdef CORIOLIS
       use coriolis,              only: init_coriolis
@@ -261,6 +262,7 @@ contains
 
 #ifdef DEBUG
       call init_piernikdebug ! Make it available as early as possible - right after init_mpi
+      call init_piernikiodebug
 #endif /* DEBUG */
 
       call problem_pointers ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
