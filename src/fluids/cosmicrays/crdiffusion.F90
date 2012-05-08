@@ -82,7 +82,7 @@ contains
       use grid,         only: leaves
       use grid_cont,    only: grid_container
       use mpi,          only: MPI_REQUEST_NULL, MPI_COMM_NULL
-      use mpisetup,     only: comm, ierr, req, status
+      use mpisetup,     only: ierr, req, status
       use types,        only: cdd
 
       implicit none

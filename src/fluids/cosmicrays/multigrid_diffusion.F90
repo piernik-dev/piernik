@@ -416,7 +416,7 @@ contains
       use constants,          only: I_ONE, xdim, zdim, HI, LO
       use domain,             only: dom
       use grid,               only: leaves
-      use gc_list,            only: cg_list_element, all_cg
+      use gc_list,            only: cg_list_element!, all_cg
       use cg_list_lev,        only: cg_list_level
       use grid_cont,          only: grid_container
       use multigridhelpers,   only: set_dirty, check_dirty, dirty_label

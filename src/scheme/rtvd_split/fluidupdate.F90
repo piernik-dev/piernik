@@ -270,7 +270,7 @@ contains
    subroutine mag_add(dim1, dim2)
 
       use grid,          only: leaves
-      use gc_list,       only: cg_list_element, all_cg
+      use gc_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use magboundaries, only: all_mag_boundaries
       use user_hooks,    only: custom_emf_bnd
@@ -278,6 +278,7 @@ contains
       use constants,     only: wcu_n
       use dataio_pub,    only: die
       use domain,        only: is_multicg
+      use gc_list,       only: all_cg
 #endif /* RESISTIVE */
 
       implicit none

@@ -77,16 +77,17 @@ contains
 
    subroutine bnd_b(dir, cg)
 
-      use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, half, one, &
+      use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
            &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE
       use dataio_pub, only: msg, warn, die
       use domain,     only: is_mpi_noncart, is_multicg, dom
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: ierr, req, proc, status, comm, master, have_mpi
+      use mpisetup,   only: ierr, req, status, comm, master, have_mpi
       use types,      only: cdd
 #ifdef SHEAR
-      use shear,      only: eps,delj
+      use constants,  only: half, one
+      use shear,      only: eps, delj
 #endif /* SHEAR */
 
       implicit none

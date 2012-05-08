@@ -45,6 +45,9 @@ contains
    subroutine poisson_solve(dens)
 
       use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE
+#ifdef SHEAR
+      use constants,  only: BND_SHE
+#endif /* SHEAR */
       use dataio_pub, only: die
       use domain,     only: dom, is_multicg
       use grid,       only: leaves
