@@ -660,7 +660,7 @@ contains
 
    subroutine mpi_multigrid_prep_grav
 
-      use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG, zero, one, half, O_INJ, O_LIN, O_I2
+      use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG, zero, one, half, O_INJ, O_LIN, O_I2, INT4
       use dataio_pub,    only: warn, die
       use domain,        only: dom
       use cg_list_lev,   only: cg_list_level
@@ -749,9 +749,9 @@ contains
                            coarsened(d, hl) = coarsened(d, lh)
                            select case (lh)
                               case (LO)
-                                 if (mod(cg%off(d),    2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
+                                 if (mod(cg%off(d),    2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1_INT4-ord_prolong_face_norm,        ord_prolong_face_norm ]
                               case (HI)
-                                 if (mod(cg%h_cor1(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
+                                 if (mod(cg%h_cor1(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [        -ord_prolong_face_norm, 1_INT4+ord_prolong_face_norm ]
                            end select
 
                            do j = FIRST, LAST
@@ -809,10 +809,12 @@ contains
                            coarsened(d, hl) = coarsened(d, lh)
                            select case (lh)
                               case (LO)
-                                 if (mod(curl%finer%pse(j)%sel(1, d, LO),     2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1-ord_prolong_face_norm,   ord_prolong_face_norm ]
+                                 if (mod(curl%finer%pse(j)%sel(1, d, LO),     2_LONG) == 0) &
+                                      coarsened(d, :) = coarsened(d, :) + [ -1_INT4-ord_prolong_face_norm,        ord_prolong_face_norm ]
                                  is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) /= 0)
                               case (HI)
-                                 if (mod(curl%finer%pse(j)%sel(1, d, HI) + 1, 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [   -ord_prolong_face_norm, 1+ord_prolong_face_norm ]
+                                 if (mod(curl%finer%pse(j)%sel(1, d, HI) + 1, 2_LONG) == 0) &
+                                      coarsened(d, :) = coarsened(d, :) + [        -ord_prolong_face_norm, 1_INT4+ord_prolong_face_norm ]
                                  is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) + 1 < curl%finer%n_d(d))
                            end select
                            if (is_internal_fine) then

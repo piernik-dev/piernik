@@ -147,9 +147,9 @@ contains
       if (slave) then
 
          level_max             = ibuff(1)
-         ord_prolong           = ibuff(2)
-         ord_prolong_face_norm = ibuff(3)
-         ord_prolong_face_par  = ibuff(4)
+         ord_prolong           = int(ibuff(2), kind=4)
+         ord_prolong_face_norm = int(ibuff(3), kind=4)
+         ord_prolong_face_par  = int(ibuff(4), kind=4)
 
          stdout           = lbuff(1)
          verbose_vcycle   = lbuff(2)

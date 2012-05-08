@@ -58,9 +58,9 @@ module multigridvars
    ! these constants should be moved to constants module
 
    ! namelist parameters
-   integer            :: ord_prolong                                  !< Prolongation operator order; allowed values are -4 -2, 0 (default), 2 and 4; -2 is often fast
-   integer            :: ord_prolong_face_norm                        !< Face prolongation operator order in the direction normal to the face; allowed values are 0, 1  and 2
-   integer            :: ord_prolong_face_par                         !< Face prolongation operator order in the directions parallel to the face; allowed values are -2 .. 2
+   integer(kind=4)    :: ord_prolong                                  !< Prolongation operator order; allowed values are -4 -2, 0 (default), 2 and 4; -2 is often fast
+   integer(kind=4)    :: ord_prolong_face_norm                        !< Face prolongation operator order in the direction normal to the face; allowed values are 0, 1  and 2
+   integer(kind=4)    :: ord_prolong_face_par                         !< Face prolongation operator order in the directions parallel to the face; allowed values are -2 .. 2
    logical            :: stdout                                       !< print verbose messages to stdout
    logical            :: verbose_vcycle                               !< Print one line of log per V-cycle, summary otherwise
 
