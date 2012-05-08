@@ -554,20 +554,19 @@ contains
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer, bp_layer, poff
 
-      nc = [ flind%all, ndims, max(flind%crs%all,I_ONE), I_ONE ]      !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
-
       if (cg%level_id /= this%lev) call die("[cg_list_level:mpi_bnd_types] Level mismatch")
 
       if (allocated(cg%i_bnd) .or. allocated(cg%o_bnd)) call die("[cg_list_level:mpi_bnd_types] cg%i_bnd or cg%o_bnd already allocated")
       allocate(cg%i_bnd(xdim:zdim, dom%nb), cg%o_bnd(xdim:zdim, dom%nb))
 
-      ! assume that cuboids fill the domain and don't collide
-
-      ijks(:) = cg%ijkse(:, LO) - cg%off(:)
-      per(:) = 0
-      where (dom%periodic(:)) per(:) = this%n_d(:)
-
+      ! There are two completely different approaches: Very general and the old one. Can be put into separate routines.
       if (cdd%comm3d == MPI_COMM_NULL) then
+
+         ! assume that cuboids fill the domain and don't collide
+
+         ijks(:) = cg%ijkse(:, LO) - cg%off(:)
+         per(:) = 0
+         where (dom%periodic(:)) per(:) = this%n_d(:)
 
          do d = xdim, zdim
             if (dom%has_dir(d)) then
@@ -654,6 +653,8 @@ contains
          enddo
 
       else
+
+         nc = [ flind%all, ndims, max(flind%crs%all,I_ONE), I_ONE ]      !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
 
          do d = xdim, zdim
             if (dom%has_dir(d)) then

@@ -2,7 +2,7 @@
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
-!    This fie is part of PIERNIK code.
+!    This file is part of PIERNIK code.
 !
 !    PIERNIK is free software: you can redistribute it and/or modify
 !    it under the terms of the GNU General Public License as published by
@@ -53,7 +53,7 @@ contains
 !<
    subroutine init_grid
 
-      use constants,  only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, AT_IGNORE, VAR_XFACE, VAR_YFACE, VAR_ZFACE, INVALID, &
+      use constants,  only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, INVALID, &
            &                ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n, cs_i2_n, base_level_id, base_level_offset
       use dataio_pub, only: printinfo, die, code_progress
       use domain,     only: dom, pdom, is_multicg
@@ -98,13 +98,13 @@ contains
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
 #endif /* VERBOSE */
 
-      call all_cg%reg_var(wa_n,    .false., AT_IGNORE, multigrid=.true.)            !! Auxiliary array. Multigrid required only for CR diffusion
-      call all_cg%reg_var(fluid_n, .true.,  AT_NO_B,   flind%all)                   !! Main array of all fluids' components, "u"
-      call all_cg%reg_var(uh_n,    .false., AT_IGNORE, flind%all)                   !! Main array of all fluids' components (for t += dt/2)
-      call all_cg%reg_var(mag_n,   .true.,  AT_OUT_B,  ndims, position=xyz_face)    !! Main array of magnetic field's components, "b"
+      call all_cg%reg_var(wa_n,                                                           multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
+      call all_cg%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all)                !! Main array of all fluids' components, "u"
+      call all_cg%reg_var(uh_n,                                             dim4 = flind%all)                !! Main array of all fluids' components (for t += dt/2)
+      call all_cg%reg_var(mag_n,   vital = .true., restart_mode = AT_OUT_B, dim4 = ndims, position=xyz_face) !! Main array of magnetic field's components, "b"
       if (repeat_step) then
-         call all_cg%reg_var(u0_n, .false., AT_IGNORE, flind%all)                   !! Copy of main array of all fluids' components
-         call all_cg%reg_var(b0_n, .false., AT_IGNORE, ndims, position=xyz_face)    !! Copy of main array of magnetic field's components
+         call all_cg%reg_var(u0_n,                                          dim4 = flind%all)                !! Copy of main array of all fluids' components
+         call all_cg%reg_var(b0_n,                                          dim4 = ndims, position=xyz_face) !! Copy of main array of magnetic field's components
       endif
 
       all_cg%fi  = all_cg%ind_4d(fluid_n)
@@ -133,7 +133,7 @@ contains
 #ifdef ISO
       if (is_multicg) call die("[grid:init_cs_iso2] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
 
-      call all_cg%reg_var(cs_i2_n, .true., AT_NO_B)
+      call all_cg%reg_var(cs_i2_n, vital = .true., restart_mode = AT_NO_B)
 
       cgl => all_cg%first
       do while (associated(cgl))

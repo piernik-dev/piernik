@@ -105,7 +105,7 @@ contains
 !<
    subroutine init_multigrid_diff
 
-      use constants,     only: xdim, ydim, zdim, GEO_XYZ, AT_IGNORE, half, zero, one
+      use constants,     only: xdim, ydim, zdim, GEO_XYZ, half, zero, one
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, warn, msg
       use domain,        only: dom
@@ -216,9 +216,9 @@ contains
          single_base = (nproc == 1)
       endif
 
-      call all_cg%reg_var(diff_bx_n, .false., AT_IGNORE, multigrid = .true.)
-      call all_cg%reg_var(diff_by_n, .false., AT_IGNORE, multigrid = .true.)
-      call all_cg%reg_var(diff_bz_n, .false., AT_IGNORE, multigrid = .true.)
+      call all_cg%reg_var(diff_bx_n, multigrid = .true.)
+      call all_cg%reg_var(diff_by_n, multigrid = .true.)
+      call all_cg%reg_var(diff_bz_n, multigrid = .true.)
       idiffb(xdim) = all_cg%ind(diff_bx_n)
       idiffb(ydim) = all_cg%ind(diff_by_n)
       idiffb(zdim) = all_cg%ind(diff_bz_n)

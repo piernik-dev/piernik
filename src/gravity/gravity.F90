@@ -147,7 +147,7 @@ contains
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
       use dataio_pub,    only: printinfo, warn, die, code_progress
-      use constants,     only: PIERNIK_INIT_GRID, AT_OUT_B, AT_IGNORE, gp_n, gpot_n, hgpot_n
+      use constants,     only: PIERNIK_INIT_GRID, AT_OUT_B, gp_n, gpot_n, hgpot_n
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,         only: newtong
@@ -271,12 +271,12 @@ contains
 
       ! Declare arrays for potential and make shortcuts
       ! All gravitational potential should be recalculated after refinement changes
-      call all_cg%reg_var(gpot_n,  .false., AT_IGNORE)
-      call all_cg%reg_var(hgpot_n, .false., AT_IGNORE)
-      call all_cg%reg_var(gp_n,    .false., AT_OUT_B)
+      call all_cg%reg_var(gpot_n)
+      call all_cg%reg_var(hgpot_n)
+      call all_cg%reg_var(gp_n, restart_mode = AT_OUT_B)
 #ifdef SELF_GRAV
-      call all_cg%reg_var(sgp_n,   .false., AT_IGNORE)
-      call all_cg%reg_var(sgpm_n,  .false., AT_IGNORE)
+      call all_cg%reg_var(sgp_n)
+      call all_cg%reg_var(sgpm_n)
 #endif /* SELF_GRAV */
 
       cgl => all_cg%first

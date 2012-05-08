@@ -46,7 +46,7 @@ contains
 
    subroutine init_crdiffusion(crsall)
 
-      use constants,  only: wcr_n, AT_IGNORE
+      use constants,  only: wcr_n
       use cr_data,    only: divv_n
       use dataio_pub, only: warn
       use gc_list,    only: all_cg
@@ -58,11 +58,11 @@ contains
       has_cr = (crsall > 0)
 
       if (has_cr) then
-         call all_cg%reg_var(wcr_n, .false., AT_IGNORE, crsall)
+         call all_cg%reg_var(wcr_n, dim4 = crsall)
       else
          call warn("[crdiffusion:init_crdiffusion] No CR species to diffuse")
       endif
-      call all_cg%reg_var(divv_n, .false., AT_IGNORE)
+      call all_cg%reg_var(divv_n)
 
    end subroutine init_crdiffusion
 

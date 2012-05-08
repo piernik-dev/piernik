@@ -625,7 +625,7 @@ contains
 
    subroutine init_history(this, nold, prefix)
 
-      use constants,        only: singlechar, dsetnamelen, AT_IGNORE
+      use constants,        only: singlechar, dsetnamelen
       use gc_list,          only: all_cg
       use multigridhelpers, only: set_dirty
 
@@ -640,7 +640,7 @@ contains
 
       do i = 1, nold
          write(hname,'(2a,i2.2)')prefix,"_h_",i
-         call all_cg%reg_var(hname, .true., AT_IGNORE, multigrid = .true.)
+         call all_cg%reg_var(hname, vital = .true., multigrid = .true.)
          this%old(i) = old_soln(all_cg%ind(hname), -huge(1.0))
          call set_dirty(this%old(i)%i_hist)
       enddo

@@ -74,7 +74,7 @@ contains
    subroutine init_multigrid
 
       use cg_list_lev,         only: cg_list_level, cg_list_patch
-      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, AT_IGNORE, LO, HI, LONG, I_TWO, I_ONE, half, O_INJ, O_LIN, O_I2
+      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, LO, HI, LONG, I_TWO, I_ONE, half, O_INJ, O_LIN, O_I2
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
       use decomposition,       only: divide_domain!, deallocate_pse
@@ -306,10 +306,13 @@ contains
       enddo
       call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, I_ONE, MPI_LOGICAL, MPI_LOR, comm, ierr)
 
-      call all_cg%reg_var(source_n,     .false., AT_IGNORE, multigrid = .true.)
-      call all_cg%reg_var(solution_n,   .false., AT_IGNORE, multigrid = .true.)
-      call all_cg%reg_var(defect_n,     .false., AT_IGNORE, multigrid = .true.)
-      call all_cg%reg_var(correction_n, .false., AT_IGNORE, multigrid = .true.)
+      if ((is_mg_uneven .or. is_uneven .or. cdd%comm3d == MPI_COMM_NULL) .and. ord_prolong /= O_INJ .and. master) &
+           call warn("[multigrid:init_multigrid] prolongation order /= injection may not work correctly on uneven or noncartesian domains yet.")
+
+      call all_cg%reg_var(source_n,     ord_prolong = ord_prolong, multigrid = .true.)
+      call all_cg%reg_var(solution_n,   ord_prolong = ord_prolong, multigrid = .true.)
+      call all_cg%reg_var(defect_n,     ord_prolong = ord_prolong, multigrid = .true.)
+      call all_cg%reg_var(correction_n, ord_prolong = ord_prolong, multigrid = .true.)
 
       source     = all_cg%ind(source_n)
       solution   = all_cg%ind(solution_n)
@@ -320,11 +323,6 @@ contains
       call set_dirty(solution)
       call set_dirty(defect)
       call set_dirty(correction)
-
-      if ((is_mg_uneven .or. is_uneven .or. cdd%comm3d == MPI_COMM_NULL) .and. ord_prolong /= O_INJ) then
-         ord_prolong = O_INJ
-         if (master) call warn("[multigrid:init_multigrid] prolongation order /= injection not implemented on uneven or noncartesian domains yet.")
-      endif
 
       tot_ts = 0.
 

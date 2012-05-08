@@ -264,7 +264,7 @@ contains
 !
    subroutine compute_maclaurin_potential
 
-      use constants,   only: pi, GEO_XYZ, GEO_RPZ, AT_IGNORE
+      use constants,   only: pi, GEO_XYZ, GEO_RPZ
       use dataio_pub,  only: warn, die
       use domain,      only: dom
       use gc_list,     only: cg_list_element, all_cg
@@ -299,7 +299,7 @@ contains
       a12 = a1**2
       a32 = a3**2
 
-      call all_cg%reg_var(apot_n, .false., AT_IGNORE)
+      call all_cg%reg_var(apot_n)
       apot_i = all_cg%ind(apot_n)
 
       cgl => leaves%first

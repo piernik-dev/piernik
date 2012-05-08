@@ -83,7 +83,7 @@ contains
 !<
    subroutine init_resistivity
 
-      use constants,  only: PIERNIK_INIT_GRID, zdim, xdim, ydim, AT_IGNORE, wcu_n
+      use constants,  only: PIERNIK_INIT_GRID, zdim, xdim, ydim, wcu_n
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub, only: die, code_progress
       use domain,     only: dom
@@ -139,13 +139,13 @@ contains
 
       if (eta_scale < 0) call die("eta_scale must be greater or equal 0")
 
-      call all_cg%reg_var(wcu_n, .false., AT_IGNORE)
-      call all_cg%reg_var(eta_n, .false., AT_IGNORE)
-      call all_cg%reg_var(wb_n,  .false., AT_IGNORE)
-      call all_cg%reg_var(eh_n,  .false., AT_IGNORE)
-      call all_cg%reg_var(dbx_n, .false., AT_IGNORE)
-      call all_cg%reg_var(dby_n, .false., AT_IGNORE)
-      call all_cg%reg_var(dbz_n, .false., AT_IGNORE)
+      call all_cg%reg_var(wcu_n)
+      call all_cg%reg_var(eta_n)
+      call all_cg%reg_var(wb_n)
+      call all_cg%reg_var(eh_n)
+      call all_cg%reg_var(dbx_n)
+      call all_cg%reg_var(dby_n)
+      call all_cg%reg_var(dbz_n)
 #ifdef ISO
       if (eta_1 == 0.) then
          cgl => leaves%first
