@@ -105,7 +105,7 @@ contains
    subroutine bnd_u(dir, cg)
 
       use constants,             only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
-           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_USER
+           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR,  BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die
       use domain,                only: dom, is_multicg
       use fluidboundaries_funcs, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
@@ -124,7 +124,7 @@ contains
 #ifdef SHEAR_BND
       use shear,                 only: qshear, omega, delj, eps, dely, unshear_fft
 #ifndef FFTW
-      use constants,             only: BND_SHE, half
+      use constants,             only: half
       use global,                only: smalld
 #endif /* !FFTW */
 #endif /* SHEAR_BND */
