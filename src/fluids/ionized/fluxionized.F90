@@ -75,11 +75,14 @@ contains
 
    subroutine flux_ion(fluxi, cfri, uui, n, vx, ps, bb, cs_iso2)
 
-      use constants,  only: small, half, xdim, ydim, zdim
+      use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: die
       use func,       only: ekin, emag
       use fluidindex, only: idn, imx, imy, imz, ien, flind
+#ifdef LOCAL_FR_SPEED
+      use constants,  only: half, small
       use global,     only: cfr_smooth
+#endif /* LOCAL_FR_SPEED */
 
       implicit none
 

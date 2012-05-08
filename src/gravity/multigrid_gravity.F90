@@ -408,7 +408,7 @@ contains
       use grid,          only: leaves
       use grid_cont,     only: grid_container
       use mpi,           only: MPI_COMM_NULL
-      use mpisetup,      only: master, nproc, proc
+      use mpisetup,      only: master, nproc
       use multigridvars, only: roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, is_mg_uneven, need_general_pf, single_base
       use multipole,     only: init_multipole, coarsen_multipole
       use types,         only: cdd
@@ -666,7 +666,7 @@ contains
       use cg_list_lev,   only: cg_list_level
       use gc_list,       only: cg_list_element
       use grid_cont,     only: pr_segment, grid_container, is_overlap
-      use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req, req
+      use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req
       use multigridvars, only: base, ord_prolong_face_norm, need_general_pf
 #ifdef DEBUG
       use constants,     only: two
@@ -1682,7 +1682,7 @@ contains
       use cg_list_lev,        only: cg_list_level
       use multigridhelpers,   only: check_dirty
       use multigridbasefuncs, only: prolong_level
-      use multigridvars,      only: base, roof, correction
+      use multigridvars,      only: roof, correction
 
       implicit none
 

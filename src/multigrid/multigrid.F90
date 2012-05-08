@@ -345,7 +345,7 @@ contains
 
    subroutine cleanup_multigrid
 
-      use constants,           only: LO, HI, I_ONE
+      use constants,           only: I_ONE
       use dataio_pub,          only: msg, printinfo
       use cg_list_lev,         only: cg_list_level
       use grid,                only: base_lev

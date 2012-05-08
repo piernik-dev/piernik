@@ -456,7 +456,7 @@ contains
 
    subroutine init_domain_container(this, nb, n_d, bnds, edges, geometry)
       use constants,    only: ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, &
-           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND, I_ONE
+           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, I_ONE
       use dataio_pub,   only: die, warn, msg
 
       implicit none

@@ -133,7 +133,7 @@ contains
       use cg_list_lev,       only: cg_list_level
       use grid_cont,         only: pr_segment
       use mpi,               only: MPI_DOUBLE_PRECISION
-      use mpisetup,          only: proc, comm, ierr, req, status, master
+      use mpisetup,          only: comm, ierr, req, status, master
       use multigridhelpers,  only: check_dirty
       use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,     only: ord_prolong_face_norm, ord_prolong_face_par, base, extbnd_antimirror, need_general_pf

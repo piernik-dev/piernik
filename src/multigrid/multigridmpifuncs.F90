@@ -59,7 +59,7 @@ contains
       use cg_list_lev,   only: cg_list_level
       use internal_bnd,  only: internal_boundaries_3d
       use mpi,           only: MPI_REQUEST_NULL, MPI_COMM_NULL
-      use mpisetup,      only: proc, comm, ierr, have_mpi, req, status
+      use mpisetup,      only: ierr, have_mpi, req, status
       use types,         only: cdd
 
       implicit none
