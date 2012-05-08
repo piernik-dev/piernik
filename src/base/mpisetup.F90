@@ -77,7 +77,7 @@ contains
       use constants,  only: cwdlen, I_ONE
       use mpi,        only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER
       use dataio_pub, only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
-      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
+      use dataio_pub, only: par_file, lun
 
       implicit none
 

@@ -86,15 +86,17 @@ contains
 
 !> \todo Remove precompiler directives from this routine, it is called only once.
    subroutine init_fluxes
-      use constants,   only: ION, NEU, DST
       use fluidindex,  only: flind
 #ifdef NEUTRAL
+      use constants,   only: NEU
       use fluxneutral, only: flux_neu
 #endif /* NEUTRAL */
 #ifdef DUST
+      use constants,   only: DST
       use fluxdust,    only: flux_dst
 #endif /* DUST */
 #ifdef IONIZED
+      use constants,   only: ION
       use fluxionized, only: flux_ion
 #endif /* IONIZED */
       implicit none

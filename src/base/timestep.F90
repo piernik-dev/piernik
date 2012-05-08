@@ -87,12 +87,12 @@ contains
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
       use fluids_pub,           only: has_ion, has_dst, has_neu
-      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep, cflcontrol
+      use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep
       use grid,                 only: leaves
       use gc_list,              only: cg_list_element
       use grid_cont,            only: grid_container
       use mpi,                  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,             only: comm, ierr, FIRST, master
+      use mpisetup,             only: comm, ierr, master
       use timestepdust,         only: timestep_dst
       use timestepinteractions, only: timestep_interactions
       use timestepionized,      only: timestep_ion

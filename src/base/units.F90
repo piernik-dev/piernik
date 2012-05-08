@@ -80,12 +80,12 @@ module units
    character(len=cbuff_len) :: s_mass_u                  !< name of mass unit
 
    real(kind=8), parameter :: au_cm       =  1.49597870691d13   ! Astonomical unit [cm]
-   real(kind=8), parameter :: pc_au       =  206264.806248712d0 ! Parsec [AU] 1 pc/1 AU = 1./atan(pi/180. * 1./3600.)
+   real(kind=8), parameter :: pc_au       =  206264.806248712   ! Parsec [AU] 1 pc/1 AU = 1./atan(pi/180. * 1./3600.)
    real(kind=8), parameter :: pc_cm       =  pc_au*au_cm        ! Parsec [cm]
    real(kind=8), parameter :: Msun_g      =  1.98892e33         ! Solar mass [g]
    real(kind=8), parameter :: Mjup_g      =  1.8986e30          ! Jovian mass [g]
-   real(kind=8), parameter :: day_s       =  24.d0*3600.d0      ! Earth's day [s]
-   real(kind=8), parameter :: yr_day      =  365.256363051d0    ! sideral year [days]
+   real(kind=8), parameter :: day_s       =  24.0*3600.0        ! Earth's day [s]
+   real(kind=8), parameter :: yr_day      =  365.2563630510     ! sideral year [days]
    real(kind=8), parameter :: yr_s        =  yr_day*day_s       ! Year [s]
    real(kind=8), parameter :: newton_cgs  =  6.67428e-8         ! Gravitational constant [ cm^3 / g s^2 ]
    real(kind=8), parameter :: kB_cgs      =  1.3806504e-16      ! Boltzmann constant [ g cm^2 / K s^2 ]

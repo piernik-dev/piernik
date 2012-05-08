@@ -96,7 +96,10 @@ contains
       use constants,       only: pdims, LO, HI, ydim, zdim, uh_n, cs_i2_n
       use domain,          only: dom
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: flind, iarr_all_swp, nmag, iarr_mag_swp
+      use fluidindex,      only: flind, iarr_all_swp, nmag
+#ifdef MAGNETIC
+      use fluidindex,      only: iarr_mag_swp
+#endif /* MAGNETIC */
       use gc_list,         only: cg_list_element, all_cg
       use global,          only: dt, integration_order
       use grid,            only: leaves

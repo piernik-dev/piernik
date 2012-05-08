@@ -235,7 +235,10 @@ contains
    subroutine write_plot_hdf5(var, plane, nimg)
 
       use constants,   only: xdim, ydim, zdim, varlen, cwdlen, LO, HI
-      use dataio_pub,  only: vizit, fmin, fmax, log_file, msg, die, warn
+      use dataio_pub,  only: vizit, log_file, msg, die, warn
+#ifdef PGPLOT
+      use dataio_pub,  only: fmin, fmax
+#endif /* PGPLOT */
       use dataio_user, only: user_plt_hdf5, user_plt_attrs
       use domain,      only: dom, is_multicg
       use global,      only: t

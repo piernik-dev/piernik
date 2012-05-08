@@ -125,8 +125,12 @@ contains
    subroutine fluid_index
 
 !      use diagnostics,    only: my_allocate
-      use constants,      only: xdim, ydim, zdim, ndims
+      use constants,      only: xdim, zdim
+#if defined IONIZED || defined COSM_RAYS || defined TRACER
+      use constants,      only: ydim
+#endif /* IONIZED || COSM_RAYS || TRACER */
 #ifdef IONIZED
+      use constants,      only: ndims
       use initionized,    only: ionized_index
 #endif /* IONIZED */
 #ifdef NEUTRAL

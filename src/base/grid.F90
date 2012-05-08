@@ -54,14 +54,20 @@ contains
    subroutine init_grid
 
       use constants,  only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, INVALID, &
-           &                ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n, cs_i2_n, base_level_id, base_level_offset
+           &                ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n, base_level_id, base_level_offset
+#ifdef ISO
+      use constants,  only: cs_i2_n
+#endif /* ISO */
       use dataio_pub, only: printinfo, die, code_progress
-      use domain,     only: dom, pdom, is_multicg
+      use domain,     only: pdom
+#ifdef ISO
+      use domain,     only: is_multicg
+#endif /* ISO */
       use fluidindex, only: flind
       use gc_list,    only: cg_list_element, all_cg
       use global,     only: repeat_step
       use grid_cont,  only: grid_container
-      use mpisetup,   only: proc, inflate_req, FIRST
+      use mpisetup,   only: inflate_req
 
       implicit none
 
@@ -158,7 +164,7 @@ contains
       use domain,        only: is_mpi_noncart, is_multicg, is_refined, is_uneven
       use gc_list,       only: all_cg
       use mpi,           only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
-      use mpisetup,      only: proc, comm, ierr, LAST, master
+      use mpisetup,      only: proc, comm, ierr, master
       use types,         only: cdd
 
       implicit none

@@ -585,7 +585,7 @@ contains
            &                  h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
            &                  h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5zfilter_avail_f
       use mpi,          only: MPI_INFO_NULL, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
-      use mpisetup,     only: comm, proc, FIRST, LAST, master
+      use mpisetup,     only: comm, FIRST, LAST, master
       use helpers_hdf5, only: create_attribute
       use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets
 

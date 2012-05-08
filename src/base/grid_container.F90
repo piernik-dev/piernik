@@ -236,12 +236,20 @@ contains
 
    subroutine init(this, n_d, my_se, grid_id, level_id)
 
-      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_SHE, BND_COR
+      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_COR
+#ifdef SHEAR_BND
+#ifndef FFTW
+      use constants,  only: BND_SHE
+#endif /* !FTTW */
+#endif /* SHEAR_BND */
       use dataio_pub, only: die, warn, printinfo, msg, code_progress
       use domain,     only: dom
       use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: proc, nproc, inflate_req
+      use mpisetup,   only: nproc, inflate_req
       use types,      only: cdd
+#ifdef DEBUG
+      use mpisetup,   only: proc
+#endif /* DEBUG */
 
       implicit none
 

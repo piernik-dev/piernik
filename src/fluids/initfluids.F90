@@ -120,11 +120,15 @@ contains
       use dataio_pub,      only: warn
 #endif /* defined NEUTRAL && defined IONIZED  */
 #ifdef IONIZED
-      use initionized,     only: init_ionized, cs_iso_ion
+      use initionized,     only: init_ionized
 #endif /* IONIZED */
 #ifdef NEUTRAL
-      use initneutral,     only: init_neutral, cs_iso_neu
+      use initneutral,     only: init_neutral
 #endif /* NEUTRAL */
+#if defined NEUTRAL && defined IONIZED
+      use initionized,     only: cs_iso_ion
+      use initneutral,     only: cs_iso_neu
+#endif /* NEUTRAL && IONIZED */
 #ifdef DUST
       use initdust,        only: init_dust
 #endif /* DUST */

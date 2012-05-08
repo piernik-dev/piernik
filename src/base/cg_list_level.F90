@@ -101,7 +101,7 @@ contains
       use dataio_pub,    only: die
       use gc_list,       only: cg_list_element
       use grid_cont,     only: pr_segment, grid_container, is_overlap
-      use mpisetup,      only: proc, FIRST, LAST
+      use mpisetup,      only: FIRST, LAST
 
       implicit none
 
@@ -258,7 +258,7 @@ contains
       use domain,      only: dom
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
-      use mpisetup,    only: proc, comm, ierr, req, status
+      use mpisetup,    only: comm, ierr, req, status
       use mpi,         only: MPI_DOUBLE_PRECISION
       use named_array, only: p3
 
@@ -356,7 +356,7 @@ contains
       use dataio_pub, only: msg, warn
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
-      use mpisetup,   only: proc, comm, ierr, req, status
+      use mpisetup,   only: comm, ierr, req, status
       use mpi,        only: MPI_DOUBLE_PRECISION
 
       implicit none
@@ -452,7 +452,7 @@ contains
 
       use constants,  only: LO, HI
       use dataio_pub, only: printinfo, msg
-      use mpisetup,   only: proc, FIRST, LAST, master, nproc
+      use mpisetup,   only: FIRST, LAST, master, nproc
 
       implicit none
 
@@ -538,7 +538,7 @@ contains
       use fluidindex, only: flind
       use grid_cont,  only: grid_container, is_overlap
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: ierr, proc, FIRST, LAST, procmask
+      use mpisetup,   only: ierr, FIRST, LAST, procmask
       use types,      only: cdd
 
       implicit none

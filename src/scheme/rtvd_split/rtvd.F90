@@ -231,7 +231,10 @@ contains
 
    subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg)
 
-      use constants,        only: one, zero, half, GEO_XYZ, xdim, ydim, zdim
+      use constants,        only: one, zero, half, GEO_XYZ
+#if defined IONIZED && defined MAGNETIC
+      use constants,        only: xdim, ydim, zdim
+#endif /* IONIZED && MAGNETIC */
       use dataio_pub,       only: msg, die
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind, nmag

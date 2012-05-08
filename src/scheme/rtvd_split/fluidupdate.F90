@@ -124,10 +124,11 @@ contains
 !<
    subroutine make_3sweeps(forward)
 
-      use constants,           only: xdim, ydim, zdim, I_ONE
+      use constants,           only: xdim, zdim, I_ONE
       use user_hooks,          only: problem_customize_solution
       use global,              only: skip_sweep
 #ifdef SHEAR
+      use constants,           only: ydim
       use dataio_pub,          only: die
       use domain,              only: dom, is_multicg
       use fluidboundaries,     only: bnd_u

@@ -98,7 +98,7 @@ contains
 
    subroutine internal_boundaries(cglist, ind, tgt3d, nb, dim)
 
-      use constants,  only: ARR, xdim, zdim, I_ONE, I_TWO
+      use constants,  only: xdim, zdim, I_ONE, I_TWO
       use dataio_pub, only: die, warn
       use domain,     only: dom
       use gc_list,    only: cg_list_element, cg_list, all_cg

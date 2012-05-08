@@ -60,8 +60,11 @@ contains
 
    subroutine timestep_ion(cg, dt, c_ion)
 
-      use constants,     only: zero, two, half, ndims, xdim, ydim, zdim
+      use constants,     only: zero, two, half, ndims
+#ifdef MAGNETIC
+      use constants,     only: xdim, ydim, zdim
       use domain,        only: dom
+#endif /* MAGNETIC */
       use fluidindex,    only: flind
       use fluidtypes,    only: component_fluid
       use grid_cont,     only: grid_container

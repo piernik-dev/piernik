@@ -287,7 +287,7 @@ contains
            &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
            &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
       use mpi,         only: MPI_REAL, MPI_STATUS_IGNORE
-      use mpisetup,    only: master, nproc, FIRST, LAST, proc, comm
+      use mpisetup,    only: master, FIRST, LAST, proc, comm
 
       implicit none
 
@@ -428,7 +428,7 @@ contains
            &                 H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, &
            &                 h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
            &                 h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
-      use mpisetup,    only: comm, FIRST
+      use mpisetup,    only: comm
       use mpi,         only: MPI_INFO_NULL
 
       implicit none

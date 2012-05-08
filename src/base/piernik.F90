@@ -204,7 +204,6 @@ contains
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
       use fluidboundaries_funcs, only: init_default_fluidboundaries
-      use fluidindex,            only: flind
       use global,                only: init_global
       use grid,                  only: init_grid
       use gridgeometry,          only: init_geometry
@@ -239,6 +238,7 @@ contains
       use coriolis,              only: init_coriolis
 #endif /* CORIOLIS */
 #ifdef COSM_RAYS
+      use fluidindex,            only: flind
       use crdiffusion,           only: init_crdiffusion
 #endif /* COSM_RAYS */
 #ifdef PIERNIK_OPENCL

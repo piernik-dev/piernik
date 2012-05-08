@@ -318,14 +318,21 @@ contains
 
    subroutine write_arr_to_restart(file_id, ind, tgt3d)
 
-      use constants,  only: ndims, AT_OUT_B, AT_IGNORE, LONG, dsetnamelen
+      use constants,  only: ndims, AT_IGNORE, LONG, dsetnamelen
+#ifdef INDEPENDENT_ATOUTB
+      use constants,  only: AT_OUT_B
+#endif /* INDEPENDENT_ATOUTB */
       use dataio_pub, only: die
       use domain,     only: is_multicg
       use gc_list,    only: cg_list_element, all_cg
       use grid_cont,  only: grid_container
       use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f, h5sclose_f, h5pclose_f, h5dclose_f, &
-           &                H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5FD_MPIO_COLLECTIVE_F, &
+           &                H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
            &                h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f
+
+#ifdef INDEPENDENT_ATOUTB
+      use hdf5,       only: H5FD_MPIO_INDEPENDENT_F
+#endif /* INDEPENDENT_ATOUTB */
 
       implicit none
 
@@ -459,7 +466,7 @@ contains
       use domain,       only: is_multicg
       use gc_list,      only: cg_list_element, all_cg
       use grid_cont,    only: grid_container
-      use hdf5,         only: HID_T, HSIZE_T, SIZE_T, H5T_NATIVE_DOUBLE, h5dread_f, h5sclose_f, h5pclose_f, h5dclose_f, &
+      use hdf5,         only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dread_f, h5sclose_f, h5pclose_f, h5dclose_f, &
            &                  H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
            &                  h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
            &                  h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
@@ -594,7 +601,7 @@ contains
    subroutine read_restart_hdf5_v1
 
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE, RD
-      use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, run_id, piernik_hdf5_version, fix_string, &
+      use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, piernik_hdf5_version, fix_string, &
            &                 domain_dump, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nhdf, nres, nimg, new_id
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
@@ -946,7 +953,7 @@ contains
            &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
            &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,    only: master, nproc, FIRST, LAST, proc, comm
+      use mpisetup,    only: master, FIRST, LAST, proc, comm
 
       implicit none
 

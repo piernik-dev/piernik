@@ -64,7 +64,7 @@ contains
       use grid_cont,    only: grid_container
       use internal_bnd, only: internal_boundaries_3d
       use mpi,          only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
-      use mpisetup,     only: ierr, comm, proc, req, status
+      use mpisetup,     only: ierr, comm, req, status
       use types,        only: cdd
 
       implicit none

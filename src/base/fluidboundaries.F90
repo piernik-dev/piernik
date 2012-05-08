@@ -104,16 +104,15 @@ contains
 
    subroutine bnd_u(dir, cg)
 
-      use constants,             only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, half, &
-           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_USER
+      use constants,             only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
+           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_USER
       use dataio_pub,            only: msg, warn, die
       use domain,                only: dom, is_multicg
       use fluidboundaries_funcs, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
       use fluidindex,            only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use global,                only: smalld
       use grid_cont,             only: grid_container
       use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,              only: ierr, req, status, comm, proc
+      use mpisetup,              only: ierr, req, status, comm
       use types,                 only: cdd
 #ifdef COSM_RAYS
       use initcosmicrays,        only: smallecr
@@ -124,8 +123,13 @@ contains
 #endif /* !ISO */
 #ifdef SHEAR_BND
       use shear,                 only: qshear, omega, delj, eps, dely, unshear_fft
+#ifndef FFTW
+      use constants,             only: BND_SHE, half
+      use global,                only: smalld
+#endif /* !FFTW */
 #endif /* SHEAR_BND */
 #ifdef GRAV
+      use constants,             only: BND_OUTH
       use hydrostatic,           only: outh_bnd
 #endif /* GRAV */
 

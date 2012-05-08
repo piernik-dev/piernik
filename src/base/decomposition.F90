@@ -866,7 +866,7 @@ contains
 
       no_primes = count(numb /= 0)
       allocate(tab(no_primes))
-      tab = pack(numb, numb /= 0)
+      tab = pack(numb, numb /= 0) !> \deprecated BEWARE: lhs reallocation
 #ifdef DEBUG
       if (master) then
          write(msg,'(2(A,I5))') "There are ", no_primes, " prime numbers less than", n

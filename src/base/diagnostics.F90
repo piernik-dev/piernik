@@ -108,7 +108,7 @@ contains
       integer :: i, nsize
 
       allocate(ivec(n))
-      ivec  = [(i,i=1,n+1)]       ! valgrind: Invalid write of size 4
+      ivec  = [(i,i=1,n+1)]       ! valgrind: Invalid write of size 4 \deprecated BEWARE: lhs reallocation
       nsize = abs(n-size(ivec))
       deallocate(ivec)
 
@@ -256,7 +256,7 @@ contains
       else
          old_size = size(vec)
          allocate(temp(old_size))
-         temp = vec
+         temp = vec  !> \deprecated BEWARE: lhs reallocation
          deallocate(vec)
          allocate(vec(old_size+addlen)) !> \deprecated BEWARE: vec not deallocated
          vec = ''
@@ -281,7 +281,7 @@ contains
       else
          old_size = size(vec)
          allocate(temp(old_size))
-         temp = vec
+         temp = vec  !> \deprecated BEWARE: lhs reallocation
          deallocate(vec)
          allocate(vec(old_size+addlen)) !> \deprecated BEWARE: vec not deallocated
          vec = 0.0
@@ -305,7 +305,7 @@ contains
       else
          old_size = size(vec)
          allocate(temp(old_size))
-         temp = vec
+         temp = vec  !> \deprecated BEWARE: lhs reallocation
          deallocate(vec)
          allocate(vec(old_size+addlen)) !> \deprecated BEWARE: vec not deallocated
          vec = 0

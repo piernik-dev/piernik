@@ -701,7 +701,10 @@ contains
 
    subroutine write_timeslice
 
-      use constants,   only: cwdlen, xdim, ydim, zdim, gpot_n
+      use constants,   only: cwdlen, xdim, ydim, zdim
+#ifdef GRAV
+      use constants,   only: gpot_n
+#endif /* GRAV */
       use dataio_pub,  only: wd_wr
       use dataio_user, only: user_tsl
       use diagnostics, only: pop_vector
@@ -1093,14 +1096,25 @@ contains
 !
    subroutine  write_log(tsl)
 
-      use constants,          only: idlen, small, MINL, MAXL, xdim, ydim, zdim, gpot_n, HI, idm, ndims
+      use constants,          only: idlen, small, MAXL
+#if defined COSM_RAYS || defined MAGNETIC
+      use constants,          only: MINL
+#endif /* COSM_RAYS || MAGNETIC */
+#ifdef VARIABLE_GP
+      use constants,          only: gpot_n
+#endif /* VARIABLE_GP */
+#if defined VARIABLE_GP || defined MAGNETIC
+      use constants,          only: xdim, ydim, zdim, HI, idm, ndims
+#endif /* VARIABLE_GP || MAGNETIC */
       use dataio_pub,         only: msg, printinfo
       use domain,             only: dom
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: flind
       use func,               only: L2norm, sq_sum3
       use gc_list,            only: cg_list_element, all_cg
-      use global,             only: cfl, t, dt
+#ifdef MAGNETIC
+      use global,             only: cfl
+#endif /* MAGNETIC */
       use grid,               only: leaves
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master
