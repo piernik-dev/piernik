@@ -391,7 +391,8 @@ contains
 
       type(cg_list_element), pointer :: cgl
       logical :: mg, vit
-      integer :: nvar, op, d4, rm
+      integer :: nvar
+      integer(kind=4) :: op, d4, rm
       integer(kind=4), allocatable, dimension(:) :: pos
 
       vit = .false.
