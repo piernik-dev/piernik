@@ -43,9 +43,9 @@ module inittracer
    private
    public :: init_tracer, tracer_index, iarr_trc, trace_fluid
 
-   integer, dimension(:), allocatable :: iarr_trc, trace_fluid
-   integer, private :: ntracers
-   integer, dimension(10) :: tracers
+   integer(kind=4), dimension(:), allocatable :: iarr_trc, trace_fluid
+   integer(kind=4) :: ntracers
+   integer(kind=4), dimension(10) :: tracers
 
 contains
 
@@ -71,7 +71,7 @@ contains
 
       namelist /FLUID_TRACER/ tracers
 
-      tracers = [1,0,0,0,0,0,0,0,0,0]
+      tracers = int([1,0,0,0,0,0,0,0,0,0], kind=4)
 
       if (master) then
          diff_nml(FLUID_TRACER)
@@ -83,11 +83,11 @@ contains
 
       if (slave) then
 
-         tracers  = ibuff(1:10)
+         tracers  = int(ibuff(1:10), kind=4)
 
       endif
 
-      ntracers = count(tracers > 0)
+      ntracers = count(tracers > 0, kind=4)
 
       ! TODO: deallocate those arrays somewhere
       allocate(trace_fluid(ntracers))
@@ -110,7 +110,7 @@ contains
       flind%all      = flind%all + flind%trc%all
       flind%trc%end    = flind%all
 
-      iarr_trc = [(i, i = 0, ntracers-1)] + flind%trc%beg
+      iarr_trc = int([(i, i = 0, ntracers-1)], kind=4) + flind%trc%beg
 !      flind%components = flind%components + 1
 !      flind%trc%pos    = flind%components
       flind%trc%pos    = -1
