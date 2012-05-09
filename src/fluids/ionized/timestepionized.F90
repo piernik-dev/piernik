@@ -60,10 +60,14 @@ contains
 
    subroutine timestep_ion(cg, dt, c_ion)
 
-      use constants,     only: two, half, ndims
+      use constants,     only: two, ndims
+#ifndef ISO
+      use constants,     only: half
+#endif /* !ISO */
 #ifdef MAGNETIC
       use constants,     only: xdim, ydim, zdim
       use domain,        only: dom
+      use func,          only: emag
 #else /* !MAGNETIC */
       use constants,     only: zero
 #endif /* !MAGNETIC */
@@ -99,7 +103,7 @@ contains
                by = (cg%b(ydim,i,j,k) + cg%b(ydim, i,         j+dom%D_y, k        ))/(1.+dom%D_y)
                bz = (cg%b(zdim,i,j,k) + cg%b(zdim, i,         j,         k+dom%D_z))/(1.+dom%D_z)
 
-               pmag = half*(bx*bx + by*by + bz*bz)
+               pmag = emag(bx, by, bz)
 #else /* !MAGNETIC */
                ! all_mag_boundaries has not been called so we cannot trust cg%b(xdim, cg%ie+dom%D_x:), cg%b(ydim,:cg%je+dom%D_y and cg%b(zdim,:,:, cg%ke+dom%D_z
                pmag = zero

@@ -141,13 +141,15 @@ contains
 
       use common_hdf5, only: common_shortcuts
       use constants,   only: varlen, xdim
-      use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
 #ifndef ISO
       use constants,   only: ydim, zdim
 #endif /* !ISO */
+#if defined(COSM_RAYS) || defined(TRACER) || !defined(ISO)
+      use fluidindex,  only: flind
+#endif /* COSM_RAYS || TRACER || !ISO */
 
       implicit none
 
