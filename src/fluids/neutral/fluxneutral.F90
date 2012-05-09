@@ -80,11 +80,15 @@ contains
 
       use constants,  only: small, half
       use func,       only: ekin
-      use fluidindex, only: idn, imx, imy, imz, ien, flind
-      use global,     only: cfr_smooth, smallp
+      use fluidindex, only: idn, imx, imy, imz, flind
+      use global,     only: cfr_smooth
 #ifdef GLOBAL_FR_SPEED
       use timestep,   only: c_all
 #endif /* GLOBAL_FR_SPEED */
+#ifndef ISO
+      use fluidindex, only: ien
+      use global,     only: smallp
+#endif /* !ISO */
 
       implicit none
 
