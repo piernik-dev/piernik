@@ -45,7 +45,8 @@ module inittracer
 
    integer(kind=4), dimension(:), allocatable :: iarr_trc, trace_fluid
    integer(kind=4) :: ntracers
-   integer(kind=4), dimension(10) :: tracers
+   integer, parameter :: tracers_max = 10
+   integer(kind=4), dimension(tracers_max) :: tracers
 
 contains
 
@@ -63,31 +64,35 @@ contains
 !<
    subroutine init_tracer
 
-      use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
-      use mpisetup,       only: master, slave, ibuff, buffer_dim, comm, ierr
-      use mpi,            only: MPI_INTEGER
+      use constants,  only: INT4
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
+      use dataio_pub, only: warn
+      use mpisetup,   only: master, slave, ibuff, buffer_dim, comm, ierr
+      use mpi,        only: MPI_INTEGER
 
       implicit none
 
       namelist /FLUID_TRACER/ tracers
 
-      tracers = int([1,0,0,0,0,0,0,0,0,0], kind=4)
+      tracers(:) = 0_INT4; tracers(1) = 1_INT4 ! activate only first tracer fluid by default
 
       if (master) then
          diff_nml(FLUID_TRACER)
 
-         ibuff(1:10)   = tracers
+         ibuff(1:tracers_max)   = tracers
       endif
 
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
 
       if (slave) then
 
-         tracers  = int(ibuff(1:10), kind=4)
+         tracers  = int(ibuff(1:tracers_max), kind=4)
 
       endif
 
       ntracers = count(tracers > 0, kind=4)
+
+      if (ntracers < 1) call warn("[inittracer:init_tracer] all tracer fluids are disabled")
 
       ! TODO: deallocate those arrays somewhere
       allocate(trace_fluid(ntracers))
