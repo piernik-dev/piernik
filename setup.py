@@ -354,6 +354,7 @@ for f in DirectoryWalker('src'):
 
 for f in DirectoryWalker(probdir):
    if(is_f90.search(f)): f90files.append(f)
+   if(is_header.search(f)): allfiles.append(f)
 
 pf = probdir+"info"
 if (not os.path.isfile(pf)): print "\033[93mCannot find optional file",pf,"\033[0m"
