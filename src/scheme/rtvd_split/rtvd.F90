@@ -232,12 +232,12 @@ contains
    subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg)
 
       use constants,        only: one, zero, half, GEO_XYZ
-#if defined IONIZED && defined MAGNETIC
+#if defined IONIZED && defined MAGNETIC && !defined(ISO)
       use constants,        only: xdim, ydim, zdim
-#endif /* IONIZED && MAGNETIC */
+#endif /* IONIZED && MAGNETIC && !ISO */
       use dataio_pub,       only: msg, die
       use domain,           only: dom
-      use fluidindex,       only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind, nmag
+      use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
       use global,           only: smalld, integration_order, use_smalld, local_magic_mass
       use grid_cont,        only: grid_container
@@ -248,16 +248,16 @@ contains
       use interactions,     only: fluid_interactions
 #endif /* !BALSARA */
 #ifndef ISO
-      use fluidindex,       only: iarr_all_en
+      use fluidindex,       only: iarr_all_en, iarr_all_my, iarr_all_mz
       use global,           only: smallei
 #endif /* !ISO */
 #ifdef GRAV
       use gravity,          only: grav_pot2accel
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      use initcosmicrays,   only: iarr_crs, iarr_crn, gamma_crs, cr_active, smallecr
+      use initcosmicrays,   only: iarr_crs, gamma_crs, cr_active, smallecr
 #ifdef COSM_RAYS_SOURCES
-      use sourcecosmicrays, only: src_crn
+      use sourcecosmicrays, only: src_crn, iarr_crn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS_DW

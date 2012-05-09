@@ -78,7 +78,10 @@ contains
       use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: die
       use func,       only: ekin, emag
-      use fluidindex, only: idn, imx, imy, imz, ien, flind
+      use fluidindex, only: idn, imx, imy, imz, flind
+#ifndef ISO
+      use fluidindex, only: ien
+#endif /* !ISO */
 #ifdef LOCAL_FR_SPEED
       use constants,  only: half, small
       use global,     only: cfr_smooth

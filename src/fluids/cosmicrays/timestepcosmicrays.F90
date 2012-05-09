@@ -52,8 +52,9 @@ contains
       use constants,           only: one, half
       use domain,              only: is_multicg
       use grid_cont,           only: grid_container
-      use initcosmicrays,      only: cfl_cr, K_crs_paral, K_crs_perp, use_split
+      use initcosmicrays,      only: cfl_cr, K_crs_paral, K_crs_perp
 #ifdef MULTIGRID
+      use initcosmicrays,      only: use_split
       use multigrid_diffusion, only: diff_explicit, diff_tstep_fac, diff_dt_crs_orig
 #endif /* MULTIGRID */
 

@@ -73,8 +73,10 @@ contains
       use constants,   only: varlen, xdim, ydim, zdim, half
       use common_hdf5, only: common_shortcuts
       use grid_cont,   only: grid_container
-      use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
+#ifndef ISO
+      use fluidindex,  only: flind
+#endif /* !ISO */
 #ifdef COSM_RAYS
       use fluidindex, only: iarr_all_crs
 #endif /* COSM_RAYS */

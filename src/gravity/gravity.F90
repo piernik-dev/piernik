@@ -367,8 +367,10 @@ contains
 
    subroutine sum_potential
 
+#ifdef SELF_GRAV
       use constants, only: one, half
       use global,    only: dt, dtm
+#endif /* SELF_GRAV */
       use grid,      only: leaves
       use gc_list,   only: cg_list_element
       use grid_cont, only: grid_container

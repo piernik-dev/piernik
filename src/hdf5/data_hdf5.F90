@@ -140,11 +140,14 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5, only: common_shortcuts
-      use constants,   only: varlen, xdim, ydim, zdim
+      use constants,   only: varlen, xdim
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
+#ifndef ISO
+      use constants,   only: ydim, zdim
+#endif /* !ISO */
 
       implicit none
 

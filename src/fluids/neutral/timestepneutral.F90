@@ -60,11 +60,14 @@ contains
 
    subroutine timestep_neu(cg, dt, c_neu)
 
-      use constants,     only: half, ndims
+      use constants,     only: ndims
       use fluidindex,    only: flind
       use fluidtypes,    only: component_fluid
       use grid_cont,     only: grid_container
       use timestepfuncs, only: compute_c_max, compute_dt
+#ifndef ISO
+      use constants,     only: half
+#endif /* !ISO */
 
       implicit none
 
