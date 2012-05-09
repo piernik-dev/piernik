@@ -79,4 +79,39 @@ contains
 
    end function ekin
 
+!> \brief Calculate mean value of 3D gaussian profile in n-times resampled cell
+   elemental function resample_gauss(x, y, z, dx, dy, dz, sx, sy, sz, n) result(val)
+      implicit none
+
+      real, intent(in) :: x, y, z      !! coordinates of the cell center in the reference frame of gaussian, i.e. (x - x_0) ...
+      real, intent(in) :: dx, dy, dz   !! cell sizes
+      real, intent(in) :: sx, sy, sz   !! sigmas
+      integer, intent(in) :: n
+      real :: val
+
+      real :: xi, yj, zk
+      real :: odx, ody, odz
+
+      integer :: i, j ,k
+
+      odx = dx / n
+      ody = dy / n
+      odz = dz / n
+
+      val = 0.0
+      do k = 1, n
+         zk = (z - 0.5*dz) + (k-0.5)*odz
+         do j = 1, n
+            yj = (y - 0.5*dy) + (j-0.5)*ody
+            do i = 1, n
+               xi = (x - 0.5*dx) + (i-0.5)*odx
+               val = val + exp( -0.5*sq_sum3((xi/sx)**2, (yj/sy)**2, (zk/sz)**2) )
+            enddo
+         enddo
+      enddo
+
+      val = val / n**3
+
+   end function resample_gauss
+
 end module func
