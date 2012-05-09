@@ -257,7 +257,8 @@ contains
 #ifdef COSM_RAYS
       use initcosmicrays,   only: iarr_crs, gamma_crs, cr_active, smallecr
 #ifdef COSM_RAYS_SOURCES
-      use sourcecosmicrays, only: src_crn, iarr_crn
+      use initcosmicrays,   only: iarr_crn
+      use sourcecosmicrays, only: src_crn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 #ifdef FLUID_INTERACTIONS_DW
