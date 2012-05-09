@@ -356,7 +356,7 @@ for f in DirectoryWalker(probdir):
    if(is_f90.search(f)): f90files.append(f)
 
 pf = probdir+"info"
-if (not os.path.isfile(pf)): print "\033[93mCannot find optonal file",pf,"\033[0m"
+if (not os.path.isfile(pf)): print "\033[93mCannot find optional file",pf,"\033[0m"
 req_prob= [ "piernik.def", "initproblem.F90", "problem.par" ]
 req_missing=False
 for pf in req_prob:
@@ -466,7 +466,7 @@ m.write( "\nCPPFLAGS += %s\n" % cppflags )
 if( "PGPLOT" in our_defs ): m.write("LIBS += -lpgplot\n")
 if( "SHEAR" in our_defs or "MULTIGRID" in our_defs ): m.write("LIBS += $(shell pkg-config --libs fftw3)\n")
 if( "POISSON_FFT" in our_defs): m.write("LIBS += $(shell pkg-config --libs fftw3 lapack)\n")
-if( "PIERNIK_OPENCL" in our_defs): 
+if( "PIERNIK_OPENCL" in our_defs):
    m.write("LIBS += $(shell pkg-config --libs fortrancl)\n")
    m.write("F90FLAGS += $(shell pkg-config --cflags fortrancl)\n")
 if( options.laconic ):
