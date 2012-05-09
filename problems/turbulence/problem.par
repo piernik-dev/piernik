@@ -44,6 +44,7 @@
     vars(3) = 'vely'
     vars(4) = 'velz'
     vars(5) = 'ener'
+    vars(6) = 'trcr'
  /
 
  $FLUID_NEUTRAL
@@ -65,6 +66,9 @@
  /
 
  $INTERACTIONS
+ /
+
+ $FLUID_TRACER
  /
 
  $AMR

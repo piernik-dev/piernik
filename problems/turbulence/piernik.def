@@ -2,6 +2,7 @@
 #undef ISO
 
 #define NEUTRAL
+#define TRACER
 
 /* choosing freezing speed */
 #define LOCAL_FR_SPEED

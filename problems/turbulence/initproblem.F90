@@ -3,10 +3,8 @@
 #include "piernik.h"
 #include "macros.h"
 
-#define RNG nb+1:nx-nb, nb+1:ny-nb, nb+1:nz-nb
 module initproblem
 
-! Initial condition for Sedov-Taylor explosion
    implicit none
 
    private
@@ -70,12 +68,15 @@ contains
    subroutine init_prob
 
       use constants,   only: xdim, ydim, zdim
+      use domain,      only: dom
       use dataio_pub,  only: msg, printinfo
       use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use initneutral, only: idnn,imxn,imyn,imzn,ienn, gamma_neu
+      use fluidindex,  only: flind
       use mpisetup,    only: proc
+      use func,        only: resample_gauss
 
       implicit none
 
@@ -84,7 +85,7 @@ contains
       real, dimension(6) :: mn
       real, dimension(3) :: deltav
       real, dimension(:,:,:,:), allocatable :: dv
-      real :: rms,cma, vol
+      real :: rms, cma, vol
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 !      real :: somx,somy,somz
@@ -151,6 +152,9 @@ contains
                        &                 cg%u(imyn,i,j,k)**2 + cg%u(imzn,i,j,k) )/cg%u(idnn,i,j,k)
                   cg%b(:,i,j,k)    = 0.0
                   cg%u(ienn,i,j,k) = cg%u(ienn,i,j,k) + 0.5*sum(cg%b(:,i,j,k)**2,1)
+                  cg%u(flind%trc%beg:flind%trc%end, i, j, k)   = &
+                        resample_gauss( cg%x(i), cg%y(j), cg%z(k), cg%dl(xdim), cg%dl(ydim), cg%dl(zdim), &
+                                        0.05*dom%L_(xdim), 0.05*dom%L_(ydim), 0.05*dom%L_(zdim), 10)
                enddo
             enddo
          enddo
