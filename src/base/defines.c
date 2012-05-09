@@ -119,3 +119,7 @@
 #    warning MULTIGRID defined but none of { GRAV, COSM_RAYS } are used.
 #  endif
 #endif
+
+#ifdef USER_RULES
+#include "user_rules.h"
+#endif
