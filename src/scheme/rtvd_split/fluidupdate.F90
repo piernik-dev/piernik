@@ -125,8 +125,8 @@ contains
    subroutine make_3sweeps(forward)
 
       use constants,           only: xdim, zdim, I_ONE
-      use user_hooks,          only: problem_customize_solution
       use global,              only: skip_sweep
+      use user_hooks,          only: problem_customize_solution
 #ifdef SHEAR
       use constants,           only: ydim
       use dataio_pub,          only: die
@@ -140,13 +140,11 @@ contains
 #ifdef GRAV
       use gravity,             only: source_terms_grav
 #endif /* GRAV */
-#ifdef COSM_RAYS
+#if defined(COSM_RAYS) && defined(MULTIGRID)
       use initcosmicrays,      only: use_split
-#ifdef MULTIGRID
-      use multigrid_diffusion, only: multigrid_solve_diff
       use fluidboundaries,     only: all_fluid_boundaries
-#endif /* MULTIGRID */
-#endif /* COSM_RAYS */
+      use multigrid_diffusion, only: multigrid_solve_diff
+#endif /* COSM_RAYS && MULTIGRID */
 
       implicit none
 

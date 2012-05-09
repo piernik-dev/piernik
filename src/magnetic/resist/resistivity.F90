@@ -179,7 +179,7 @@ contains
 
    subroutine compute_resist
 
-      use constants,  only: small, xdim, ydim, zdim, MINL, MAXL, I_ONE, oneq
+      use constants,  only: xdim, ydim, zdim, MAXL, I_ONE, oneq
       use dataio_pub, only: die
       use domain,     only: dom, is_multicg
       use func,       only: ekin, emag
@@ -189,6 +189,7 @@ contains
       use mpi,        only: MPI_DOUBLE_PRECISION
       use mpisetup,   only: comm, ierr, FIRST
 #ifndef ISO
+      use constants,  only: small, MINL
       use fluidindex, only: flind
 #endif /* !ISO */
 

@@ -944,15 +944,19 @@ contains
    subroutine get_common_vars(fl)
 
       use types,      only: value                          !QA_WARN: used by get_extremum (intel compiler)
-      use constants,  only: ION, DST, MINL, MAXL, half, small, xdim, ydim, zdim
+      use constants,  only: MINL, MAXL, small, xdim, ydim, zdim
+      use domain,     only: is_multicg
       use fluidtypes, only: phys_prop, component_fluid
       use func,       only: ekin
       use gc_list,    only: cg_list_element, all_cg
-      use global,     only: smallp, cfl
+      use global,     only: cfl
       use grid,       only: leaves
-      use units,      only: mH, kboltz
-      use domain,     only: is_multicg
       use mpisetup,   only: master
+      use units,      only: mH, kboltz
+#ifndef ISO
+      use constants,  only: ION, DST, half
+      use global,     only: smallp
+#endif /* !ISO */
 
       implicit none
 
