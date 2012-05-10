@@ -70,16 +70,21 @@ contains
 !<
    subroutine common_plt_hdf5(var, ij, xn, tab, ierrh, cg)
 
-      use constants,   only: varlen, xdim, ydim, zdim, half
+      use constants,   only: varlen, xdim, ydim, zdim, ndims, LO, HI
       use common_hdf5, only: common_shortcuts
-      use grid_cont,   only: grid_container
       use fluidtypes,  only: component_fluid
+      use func,        only: ekin, emag
+      use gc_list,     only: all_cg
+      use grid_cont,   only: grid_container
 #ifndef ISO
       use fluidindex,  only: flind
 #endif /* !ISO */
 #ifdef COSM_RAYS
       use fluidindex, only: iarr_all_crs
 #endif /* COSM_RAYS */
+#ifdef GRAV
+      use constants,  only: gpot_n
+#endif /* GRAV */
 
       implicit none
 
@@ -90,7 +95,8 @@ contains
       real, dimension(:,:),          intent(out) :: tab   !< array containing given quantity
       type(grid_container), pointer, intent(in)  :: cg    !< current grid container
 
-      integer                                    :: is, ie, js, je, ks, ke, i_xyz
+      integer                                    :: fi, i_xyz
+      integer, dimension(ndims,LO:HI)            :: ir
       type(component_fluid), pointer             :: fl_dni
 #ifdef COSM_RAYS
       integer                                    :: i
@@ -98,61 +104,51 @@ contains
 
       ierrh = 0
 
-      is=cg%is; ie=cg%ie
-      js=cg%js; je=cg%je
-      ks=cg%ks; ke=cg%ke
-      select case (ij)
-         case (xdim)
-            is = int(xn, kind=4)
-            ie = int(xn, kind=4)
-         case (ydim)
-            js = int(xn, kind=4)
-            je = int(xn, kind=4)
-         case (zdim)
-            ks = int(xn, kind=4)
-            ke = int(xn, kind=4)
-      end select
+      fi = all_cg%fi
+      ir = cg%ijkse
+      ir(ij,:) = int(xn, kind=4)
 
       call common_shortcuts(var, fl_dni, i_xyz)
 
       select case (var)
          case ("dend", "deni", "denn")
-            tab(:,:) = reshape(cg%u(fl_dni%idn, is:ie, js:je, ks:ke), shape(tab))
+            tab(:,:) = reshape(cg%w(fi)%span(fl_dni%idn, ir), shape(tab))
          case ("vlxd", "vlxn", "vlxi", "vlyd", "vlyn", "vlyi", "vlzd", "vlzn", "vlzi")
-            tab(:,:) = reshape(cg%u(fl_dni%imx + i_xyz, is:ie, js:je, ks:ke) / cg%u(fl_dni%idn, is:ie, js:je, ks:ke), shape(tab))
+            tab(:,:) = reshape(cg%w(fi)%span(fl_dni%imx + i_xyz, ir) / cg%w(fi)%span(fl_dni%idn, ir), shape(tab))
          case ("enen", "enei")
 #ifdef ISO
-            tab(:,:) = reshape(half * ( cg%u(fl_dni%imx, is:ie, js:je, ks:ke)**2 + &
-                 &                      cg%u(fl_dni%imy, is:ie, js:je, ks:ke)**2 + &
-                 &                      cg%u(fl_dni%imz, is:ie, js:je, ks:ke)**2 ) / &
-                 &                      cg%u(fl_dni%idn, is:ie, js:je, ks:ke), shape(tab))
+            tab(:,:) = reshape(ekin( cg%w(fi)%span(fl_dni%imx, ir), cg%w(fi)%span(fl_dni%imy, ir), &
+                 &                   cg%w(fi)%span(fl_dni%imz, ir), cg%w(fi)%span(fl_dni%idn, ir)), shape(tab))
 #else /* !ISO */
-            tab(:,:) = reshape(cg%u(fl_dni%ien, is:ie, js:je, ks:ke), shape(tab))
+            tab(:,:) = reshape(cg%w(fi)%span(fl_dni%ien, ir), shape(tab))
 #endif /* !ISO */
          case ('prei')
+#ifdef ISO
             tab(:,:) = 0.0
+#else /* !ISO */
+            tab(:,:) = reshape( cg%w(fi)%span(flind%ion%ien, ir) -    &
+                          ekin( cg%w(fi)%span(flind%ion%imx, ir), cg%w(fi)%span(flind%ion%imy, ir),   &
+                 &              cg%w(fi)%span(flind%ion%imz, ir), cg%w(fi)%span(flind%ion%idn, ir)) - &
+                 &        emag( cg%w(all_cg%bi)%span(xdim,ir), cg%w(all_cg%bi)%span(ydim,ir), cg%w(all_cg%bi)%span(zdim,ir)), shape(tab))*(flind%ion%gam_1)
+#endif /* !ISO */
          case ("pren")
 #ifdef ISO
-            tab = 0.0
+            tab(:,:) = 0.0
 #else /* !ISO */
-            ! BEWARE: Why there is only one case here?
-            if (ij==zdim) then
-               tab(:,:) = real( cg%u(flind%neu%ien, is:ie, js:je, xn) -    &
-                        half *( cg%u(flind%neu%imx, is:ie, js:je, xn)**2 + &
-                    &           cg%u(flind%neu%imy, is:ie, js:je, xn)**2 + &
-                    &           cg%u(flind%neu%imz, is:ie, js:je, xn)**2 ) / cg%u(flind%neu%idn, is:ie, js:je, xn), kind=4)*(flind%neu%gam_1)
-            endif
+               tab(:,:) = reshape( cg%w(fi)%span(flind%neu%ien, ir) -    &
+                             ekin( cg%w(fi)%span(flind%neu%imx, ir), cg%w(fi)%span(flind%neu%imy, ir), &
+                 &                 cg%w(fi)%span(flind%neu%imz, ir), cg%w(fi)%span(flind%neu%idn, ir)), shape(tab))*(flind%neu%gam_1)
 #endif /* !ISO */
          case ("magx", "magy", "magz")
-            tab(:,:) = reshape(cg%b(xdim + i_xyz, is:ie, js:je, ks:ke), shape(tab))
+            tab(:,:) = reshape(cg%w(all_cg%bi)%span(xdim + i_xyz, ir), shape(tab))
 #ifdef GRAV
          case ("gpot")
-            tab(:,:) = reshape(cg%gpot(is:ie, js:je, ks:ke), shape(tab))
+            tab(:,:) = reshape(cg%q(all_cg%ind(gpot_n))%span(ir), shape(tab))
 #endif /* GRAV */
 #ifdef COSM_RAYS
          case ("cr1" : "cr9")
             i = iarr_all_crs(ichar(var(3:3))-ichar('0'))
-            tab(:,:) = reshape(cg%u(i, is:ie, js:je, ks:ke), shape(tab))
+            tab(:,:) = reshape(cg%w(fi)%span(i, ir), shape(tab))
 #endif /* COSM_RAYS */
          case default
             ierrh = -1
