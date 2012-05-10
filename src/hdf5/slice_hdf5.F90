@@ -130,7 +130,7 @@ contains
             tab(:,:) = (reshape(cg%w(fi)%span(flind%ion%ien, ir), shape(tab)) -    &
                  & ekin(reshape(cg%w(fi)%span(flind%ion%imx, ir), shape(tab)), reshape(cg%w(fi)%span(flind%ion%imy, ir), shape(tab)),   &
                  &      reshape(cg%w(fi)%span(flind%ion%imz, ir), shape(tab)), reshape(cg%w(fi)%span(flind%ion%idn, ir), shape(tab))) - &
-                 & emag(reshape(cg%w(all_cg%bi)%span(xdim,ir), shape(tab)), reshape(cg%w(all_cg%bi)%span(ydim,ir), shape(tab)), reshape(cg%w(all_cg%bi)%span(zdim,ir)), shape(tab)))*(flind%ion%gam_1)
+                 & emag(reshape(cg%w(all_cg%bi)%span(xdim,ir), shape(tab)), reshape(cg%w(all_cg%bi)%span(ydim,ir), shape(tab)), reshape(cg%w(all_cg%bi)%span(zdim,ir), shape(tab))))*(flind%ion%gam_1)
 #endif /* !ISO */
          case ("pren")
 #ifdef ISO
@@ -138,7 +138,7 @@ contains
 #else /* !ISO */
                tab(:,:) = (reshape(cg%w(fi)%span(flind%neu%ien, ir), shape(tab)) -    &
                  &    ekin(reshape(cg%w(fi)%span(flind%neu%imx, ir), shape(tab)), reshape(cg%w(fi)%span(flind%neu%imy, ir), shape(tab)), &
-                 &         reshape(cg%w(fi)%span(flind%neu%imz, ir), shape(tab)), reshape(cg%w(fi)%span(flind%neu%idn, ir)), shape(tab)))*(flind%neu%gam_1)
+                 &         reshape(cg%w(fi)%span(flind%neu%imz, ir), shape(tab)), reshape(cg%w(fi)%span(flind%neu%idn, ir), shape(tab))))*(flind%neu%gam_1)
 #endif /* !ISO */
          case ("magx", "magy", "magz")
             tab(:,:) = reshape(cg%w(all_cg%bi)%span(xdim + i_xyz, ir), shape(tab))
