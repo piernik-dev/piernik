@@ -53,6 +53,8 @@ module initproblem
    !<
    real                     :: dumping_coeff, drag_max, drag_min, amp_noise
    logical                  :: use_inner_orbital_period  !< use 1./T_inner as dumping_coeff
+   integer(kind=4), parameter :: ngauss = 4
+   real, dimension(ngauss)  :: gauss
    character(len=cbuff_len) :: mag_field_orient
    character(len=cbuff_len) :: densfile
    real, dimension(:), allocatable :: taus, tauf
@@ -60,7 +62,7 @@ module initproblem
 
    namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, &
       & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
-      & drag_max, drag_min, densfile, amp_noise
+      & drag_max, drag_min, densfile, amp_noise, gauss
 
 contains
 !-----------------------------------------------------------------------------
@@ -110,6 +112,7 @@ contains
       densfile         = ''
       alpha            = 1.0
       amp_noise        = 1.e-6
+      gauss            = 0.0
 
       r_in             = 0.5
       f_in             = 10.0
@@ -153,6 +156,7 @@ contains
          rbuff(14) = drag_max
          rbuff(15) = drag_min
          rbuff(16) = amp_noise
+         rbuff(17:20) = gauss
 
       endif
 
@@ -186,6 +190,7 @@ contains
          drag_max         = rbuff(14)
          drag_min         = rbuff(15)
          amp_noise        = rbuff(16)
+         gauss            = rbuff(17:20)
 
       endif
 
@@ -545,8 +550,20 @@ contains
       use fluidboundaries, only: all_fluid_boundaries
       use gc_list,         only: cg_list_element, all_cg
       use grid,            only: leaves
+#ifdef TRACER
+      use constants,       only: xdim, ydim, zdim
+      use grid_cont,       only: grid_container
+      use func,            only: resample_gauss
+      use fluidindex,      only: flind
+#endif /* TRACER */
+
       implicit none
+
       type(cg_list_element), pointer :: cgl
+#ifdef TRACER
+      type(grid_container), pointer :: cg
+#endif /* TRACER */
+      integer :: i, j, k
 
       call my_grav_pot_3d   ! reset gp, to get right values on the boundaries
 
@@ -565,6 +582,31 @@ contains
          cgl%cg%u  => cgl%cg%w(all_cg%fi)%arr ! Quick! Revert to sane state before anyone notices
          cgl => cgl%nxt
       enddo
+
+#ifdef TRACER
+      if (gauss(4) > 0.0) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            cg => cgl%cg
+
+            do k = 1, cg%n_(zdim)
+               do j = 1, cg%n_(ydim)
+                  do i = 1, cg%n_(xdim)
+
+                     cg%u(flind%trc%beg:flind%trc%end, i, j, k)   = &
+                          resample_gauss( cg%x(i) - gauss(1), cg%y(j) - gauss(2), cg%z(k) - gauss(3), &
+                                          cg%dl(xdim), cg%dl(ydim), cg%dl(zdim), &
+                                          gauss(4), gauss(4), gauss(4), 10)
+
+                  enddo
+               enddo
+            enddo
+            cgl => cgl%nxt
+         enddo
+      endif
+
+      call all_fluid_boundaries
+#endif /* TRACER */
 
    end subroutine kepler_problem_post_restart
 !-----------------------------------------------------------------------------

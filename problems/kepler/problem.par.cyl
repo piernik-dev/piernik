@@ -36,17 +36,19 @@
  /
 
  $OUTPUT_CONTROL
+    use_v2_io = .true.
     problem_name ='kepler'
     run_id  =  'tst'
     dt_hdf  = 1.0
     dt_res  = 100.0
-    dt_log  = 1.0e-12
-    dt_tsl  = 1.0e-12
+    dt_log  = 0.1
+    dt_tsl  = 0.1
+    dt_plt  = 0.0
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
     vars(4) = 'velz'
-    vars(5) = 'tauf'
+    vars(5) = 'trcr'
  /
 
  $FLUID_NEUTRAL
@@ -95,6 +97,7 @@
     x_cut    = 7.0
     eps      = 1.0
     densfile = "dens.bin"
+    gauss    = 8.0, 3.14156, 0.0, 0.1
  /
 
  $PIERNIK_DEBUG
@@ -109,4 +112,8 @@
  /
 
  $AMR
+ /
+
+ $FLUID_TRACER
+   tracers(1) = 2
  /
