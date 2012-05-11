@@ -56,7 +56,7 @@ module dataio
 
    integer                  :: istep                 !< current number of substep (related to integration order)
 
-   integer, parameter       :: nvarsmx = 16          !< maximum number of variables to dump in hdf files
+   integer, parameter       :: nvarsmx = 20          !< maximum number of variables to dump in hdf files
    character(len=cbuff_len) :: restart               !< choice of restart %file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
    logical                  :: mag_center            !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders, unused)
    integer                  :: resdel                !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
