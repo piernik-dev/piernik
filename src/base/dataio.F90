@@ -195,6 +195,7 @@ contains
       use restart_hdf5,    only: read_restart_hdf5
       use slice_hdf5,      only: init_plot
       use timer,           only: time_left
+      use user_hooks,      only: user_vars_arr_in_restart
       use version,         only: nenv,env, init_version
 
       implicit none
@@ -435,6 +436,8 @@ contains
       endif
       call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
       call MPI_Bcast(log_file_initialized, I_ONE, MPI_LOGICAL, FIRST, comm, ierr)
+
+      if (associated(user_vars_arr_in_restart)) call user_vars_arr_in_restart
 
       nres = nrestart
 
