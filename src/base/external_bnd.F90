@@ -54,13 +54,12 @@ contains
 ! This routine sets up all guardcells (internal and external) for given rank-3 arrays.
 !
 
-   subroutine arr3d_boundaries(ind, nb, area_type)
+   subroutine arr3d_boundaries(cglist, ind, nb, area_type)
 
       use constants,    only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_SHE, BND_COR, AT_NO_B, I_ONE
       use dataio_pub,   only: die, msg
       use domain,       only: dom
-      use gc_list,      only: cg_list_element, all_cg
-      use grid,         only: leaves
+      use gc_list,      only: cg_list, cg_list_element, all_cg
       use grid_cont,    only: grid_container
       use internal_bnd, only: internal_boundaries_3d
       use mpi,          only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
@@ -69,8 +68,9 @@ contains
 
       implicit none
 
-      integer,                   intent(in) :: ind  !> Negative value: index of cg%q(:) 3d array
-      integer,         optional, intent(in) :: nb !> number of grid cells to exchange (not implemented for comm3d)
+      class(cg_list),            intent(in) :: cglist     !> the list on which to perform the boundary exchange
+      integer,                   intent(in) :: ind        !> Negative value: index of cg%q(:) 3d array
+      integer,         optional, intent(in) :: nb         !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: area_type
 
       integer :: i, d, n
@@ -97,7 +97,7 @@ contains
 
       if (ind > ubound(all_cg%q_lst(:), dim=1) .or. ind < lbound(all_cg%q_lst(:), dim=1)) call die("[internal_bnd:arr3d_boundaries] wrong 3d index")
 
-      cgl => leaves%first
+      cgl => cglist%first
       do while (associated(cgl))
          cg => cgl%cg
 

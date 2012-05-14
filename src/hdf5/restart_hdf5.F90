@@ -465,6 +465,7 @@ contains
       use dataio_pub,   only: msg, die
       use domain,       only: is_multicg
       use gc_list,      only: cg_list_element, all_cg
+      use grid,         only: leaves
       use grid_cont,    only: grid_container
       use hdf5,         only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dread_f, h5sclose_f, h5pclose_f, h5dclose_f, &
            &                  H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
@@ -588,8 +589,8 @@ contains
       call h5sclose_f(filespace, error)
       call h5dclose_f(dset_id, error)
 
-      if (tgt3d) call arr3d_boundaries(all_cg%ind(dname), area_type=area_type)
-         ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
+      if (tgt3d) call arr3d_boundaries(leaves, all_cg%ind(dname), area_type=area_type)
+      ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
 
       ! rank-4 arrays (cg%u(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
       !> \todo consider also calling 4D boundaries
