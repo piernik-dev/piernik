@@ -32,8 +32,8 @@
 program piernik
 ! pulled by ANY
 
-   use constants,   only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE
-   use dataio,      only: write_data, user_msg_handler, check_log, check_tsl
+   use constants,   only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL
+   use dataio,      only: write_data, user_msg_handler, check_log, check_tsl, dump
    use dataio_pub,  only: nend, tend, msg, printinfo, warn, die, code_progress
    use fluidupdate, only: fluid_update
    use gc_list,     only: all_cg
@@ -86,6 +86,8 @@ program piernik
 
    do while (t < tend .and. nstep < nend .and. .not.(end_sim)) ! main loop
 
+      dump(:) = .false.
+
       call all_cg%check_na
       !call all_cg%check_for_dirt
 
@@ -111,7 +113,7 @@ program piernik
       if (t == tlast .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
       call MPI_Barrier(comm,ierr)
-      call write_data(output='all')
+      call write_data(output=CHK)
 
       call user_msg_handler(end_sim)
 
@@ -159,7 +161,7 @@ program piernik
 #ifdef PERFMON
    call timer_stop
 #endif /* PERFMON */
-   call write_data(output='end')
+   call write_data(output=FINAL)
 !---------------------------- END OF MAIN LOOP ----------------------------------
 
    call MPI_Barrier(comm,ierr)
@@ -197,7 +199,7 @@ contains
    subroutine init_piernik
 
       use all_boundaries,        only: all_bnd
-      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, CHK
       use dataio,                only: init_dataio, write_data
       use dataio_pub,            only: nrestart, wd_wr, wd_rd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, code_progress
       use decomposition,         only: init_decomposition
@@ -376,7 +378,7 @@ contains
          ! Possible side-effects: if variable_gp then grav_pot_3d may be called twice (second call from source_terms_grav)
          call cleanup_hydrostatic
 #endif /* GRAV */
-         call write_data(output='all') ! moved from dataio::init_dataio
+         call write_data(output=CHK) ! moved from dataio::init_dataio
       endif
 
 #ifdef RESISTIVE

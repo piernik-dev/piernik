@@ -47,12 +47,12 @@
 module dataio
 
    use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
-   use constants,  only: cwdlen, fmt_len, cbuff_len, varlen
+   use constants,  only: cwdlen, fmt_len, cbuff_len, varlen, RES, TSL
 
    implicit none
 
    private
-   public :: check_log, check_tsl, write_data, write_crashed, cleanup_dataio, init_dataio, user_msg_handler
+   public :: check_log, check_tsl, dump, write_data, write_crashed, cleanup_dataio, init_dataio, user_msg_handler
 
    integer                  :: istep                 !< current number of substep (related to integration order)
 
@@ -81,6 +81,7 @@ module dataio
    integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
    real                     :: t_start               !< time in simulation of start simulation run
    logical                  :: tsl_firstcall         !< logical value to start a new timeslice file
+   logical, dimension(RES:TSL) :: dump = .false.     !< logical values for all dump types to restrict to only one dump of each type a step
 
    integer                  :: nchar                 !< number of characters in a user/system message
    integer, parameter       :: umsg_len = 16
@@ -556,7 +557,8 @@ contains
 !
    subroutine write_crashed(msg)
 
-      use dataio_pub,    only: nres, die
+      use constants,  only: FINAL
+      use dataio_pub, only: nres, die
 
       implicit none
 
@@ -566,7 +568,7 @@ contains
       problem_name = "crash"
       dt_hdf = tiny(1.0)
       nres = 1
-      call write_data(output='end')
+      call write_data(output=FINAL)
 
       call die(msg)
 
@@ -580,6 +582,7 @@ contains
 !
    subroutine write_data(output)
 
+      use constants,    only: FINAL, HDF, PLT, LOGF
       use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: last_res_time, last_hdf_time, last_plt_time
       use restart_hdf5, only: write_restart_hdf5
@@ -587,68 +590,72 @@ contains
 
       implicit none
 
-      character(len=*), intent(in) :: output
-      logical                      :: dump
+      integer(kind=4), intent(in) :: output
+!      logical                     :: dump
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-      if (output == 'log' .or. output == 'end') call write_log
-      if (output == 'tsl' .or. output == 'end') call write_timeslice
+      dump(LOGF) = (output == LOGF .or. output == FINAL) ; if (dump(LOGF)) call write_log
+      dump(TSL)  = (output == TSL  .or. output == FINAL) ; if (dump(TSL))  call write_timeslice
 
-      call determine_dump(dump, last_res_time, dt_res, output, 'res')
-      if (dump) call write_restart_hdf5
+      call determine_dump(dump(RES), last_res_time, dt_res, output, RES)
+      if (dump(RES)) call write_restart_hdf5
 
-      call determine_dump(dump, last_plt_time, dt_plt, output, 'plt')
-      if (dump) call write_plot
+      call determine_dump(dump(PLT), last_plt_time, dt_plt, output, PLT)
+      if (dump(PLT)) call write_plot
 
-      if (output == 'end' .and. trim(problem_name) /= 'crash') write(problem_name, '(a,a6)') trim(problem_name), '_final'
+      if (output == FINAL .and. trim(problem_name) /= 'crash') write(problem_name, '(a,a6)') trim(problem_name), '_final'
 
-      call determine_dump(dump, last_hdf_time, dt_hdf, output, 'hdf')
-      if (dump) call write_hdf5
+      call determine_dump(dump(HDF), last_hdf_time, dt_hdf, output, HDF)
+      if (dump(HDF)) call write_hdf5
 
    end subroutine write_data
 
-   subroutine determine_dump(dump, last_dump_time, dt_dump, output, dumptype)
+   subroutine determine_dump(dmp, last_dump_time, dt_dump, output, dumptype)
 
-      use global, only: t
+      use constants, only: FINAL
+      use global,    only: t
 
       implicit none
 
-      character(len=*), intent(in)    :: output, dumptype
-      real,             intent(in)    :: dt_dump
-      real,             intent(inout) :: last_dump_time
-      logical,          intent(out)   :: dump
+      integer(kind=4), intent(in)    :: output, dumptype
+      real,            intent(in)    :: dt_dump
+      real,            intent(inout) :: last_dump_time
+      logical,         intent(inout) :: dmp
 
-      dump = ((t-last_dump_time) >= dt_dump .or. output == 'end')
-      dump = (dump .and. dt_dump > 0.0)
-      if (dump) last_dump_time = last_dump_time + real(floor((t-last_dump_time)/dt_dump))*dt_dump
-      dump = (dump .or. output == dumptype)
+      dmp = ((.not.(dmp)) .and. (output == FINAL))
+      dmp = (dmp .or. (t-last_dump_time) >= dt_dump)
+      dmp = (dmp .and. dt_dump > 0.0)
+      if (dmp) last_dump_time = last_dump_time + real(floor((t-last_dump_time)/dt_dump))*dt_dump
+      dmp = (dmp .or. output == dumptype)
 
    end subroutine determine_dump
 
    subroutine check_log
 
+      use constants,  only: CHK, LOGF
       use dataio_pub, only: last_log_time
 
       implicit none
 
-      logical :: dump
+      logical :: dmp
 
-      call determine_dump(dump, last_log_time, dt_log, 'chk', 'log')
-      if (dump) call write_log
+      call determine_dump(dmp, last_log_time, dt_log, CHK, LOGF)
+      if (dmp) call write_log
 
    end subroutine check_log
 
    subroutine check_tsl
 
+      use constants,  only: CHK
       use dataio_pub, only: last_tsl_time
 
       implicit none
 
-      logical :: dump
+      logical :: dmp
 
-      call determine_dump(dump, last_tsl_time, dt_tsl, 'chk', 'tsl')
-      if (dump) call write_timeslice
+      call determine_dump(dmp, last_tsl_time, dt_tsl, CHK, TSL)
+      if (dmp) call write_timeslice
 
    end subroutine check_tsl
 

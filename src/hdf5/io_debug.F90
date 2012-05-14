@@ -108,7 +108,7 @@ contains
       if (force_hdf5_dump)   call write_hdf5
       if (force_res_dump)    call write_restart_hdf5
       if (force_allbnd_dump) call warn("[fluidupdate:make_sweep] force_allbnd_dump has no effect for single-file HDF5 restart files")
-      if (force_log_dump)    call write_data(output='log')
+      if (force_log_dump)    call write_data(output=LOGF)
 
    end subroutine force_dumps
 

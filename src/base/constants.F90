@@ -192,6 +192,11 @@ module constants
       enumerator :: ION = 1, NEU, DST
    end enum
 
+   ! Output type
+   enum, bind(C)
+      enumerator :: RES = 1, HDF, PLT, LOGF, TSL, FINAL, CHK
+   end enum
+
    ! base level
    integer, parameter :: base_level_id = 0 !< Base domain level id. Refinements are positively numbered, coarsened levels for use in multigrid solvers have negative numbers.
    integer(kind=8), dimension(ndims), parameter :: base_level_offset = 0_LONG !< Base domain offset. .
