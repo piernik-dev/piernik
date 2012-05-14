@@ -329,19 +329,19 @@ contains
 
 #ifndef ISO
       real, dimension(n) :: ekinl, ekinr
-#endif
+#endif /* !ISO */
 #ifdef __IFORT__
       integer :: i
-#endif
+#endif /* __IFORT__ */
 
       ! constants
       smallp = 1.e-7   ! BEWARE
 
 #ifndef ISO
       entho = one/(gamma-one)
-#else
+#else /* ISO */
       entho = 1.e25
-#endif
+#endif /* ISO */
       ! Left variables
       rl = max(qleft (idn,:), smalld)
       ul =     qleft (imx,:)
@@ -350,10 +350,10 @@ contains
 
       ekinl = half * rl * ( ul*ul + qleft(imy,:)**2 + qleft(imz,:)**2 )
       etotl = Pl*entho + ekinl
-#else
+#else /* ISO */
       Pl = cs2 * rl
       etotl = zero
-#endif
+#endif /* ISO */
       Ptotl = Pl
 
       ! Right variables
@@ -364,10 +364,10 @@ contains
 
       ekinr = half * rr * ( ur*ur + qright(imy,:)**2 + qright(imz,:)**2 )
       etotr = Pr*entho + ekinr
-#else
+#else /* ISO */
       PR = cs2 * rr
       etotr = zero
-#endif
+#endif /* ISO */
       Ptotr = Pr
 
       ! Compute average velocity
@@ -393,16 +393,16 @@ contains
       rstarl=rl*(SL-ul)/(SL-ustar)
 #ifndef ISO
       etotstarl=((SL-ul)*etotl-Ptotl*ul+Ptotstar*ustar)/(SL-ustar)
-#else
+#else /* ISO */
       etotstarl=zero
-#endif
+#endif /* ISO */
       ! Right star region variables
       rstarr=rr*(SR-ur)/(SR-ustar)
 #ifndef ISO
       etotstarr=((SR-ur)*etotr-Ptotr*ur+Ptotstar*ustar)/(SR-ustar)
-#else
+#else /* ISO */
       etotstarr=zero
-#endif
+#endif /* ISO */
 
       ! Sample the solution at x/t=0
       where (SL>zero)
@@ -432,7 +432,7 @@ contains
       fgdnv(imx,:) = ro*uo*uo+Ptoto
 #ifndef ISO
       fgdnv(ien,:) = (etoto+Ptoto)*uo
-#endif /* ISO */
+#endif /* !ISO */
 
       do ivar = imy,imz
 
@@ -444,7 +444,7 @@ contains
           elsewhere
              fgdnv(ivar,:) = fgdnv(idn,:)*qright(ivar,:)
           endwhere
-#else
+#else /* !__IFORT__ */
           do i = lbound(fgdnv(:,:),2), ubound(fgdnv(:,:),2)
              if (fgdnv(idn,i)>zero) then
                 fgdnv(ivar,i) = fgdnv(idn,i)*qleft (ivar,i)
@@ -452,12 +452,12 @@ contains
                 fgdnv(ivar,i) = fgdnv(idn,i)*qright(ivar,i)
              endif
           enddo
-#endif
+#endif /* !__IFORT__ */
       enddo
       return
 #ifndef ISO
       if (.false.) write(0,*) cs2
-#endif /* ISO */
+#endif /* !ISO */
    end subroutine riemann_hllc
 !---------------------------------------------------------------------------
 end module fluidupdate

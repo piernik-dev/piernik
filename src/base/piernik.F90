@@ -151,7 +151,7 @@ program piernik
 
 #ifdef DEBUG
       call all_cg%print_vars
-#endif
+#endif /* DEBUG */
    endif
 
    if (associated(finalize_problem)) call finalize_problem
