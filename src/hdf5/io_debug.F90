@@ -98,6 +98,7 @@ contains
 
    subroutine force_dumps
 
+      use constants,      only: LOGF
       use dataio,         only: write_data
       use dataio_pub,     only: warn
       use data_hdf5,      only: write_hdf5
