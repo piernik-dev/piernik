@@ -96,11 +96,12 @@ contains
       real, dimension(:,:),          intent(out) :: tab   !< array containing given quantity
       type(grid_container), pointer, intent(in)  :: cg    !< current grid container
 
-      integer                                    :: fi, i_xyz
-      integer, dimension(ndims,LO:HI)            :: ir
+      integer                                    :: fi
+      integer(kind=4)                            :: i_xyz
+      integer(kind=4), dimension(ndims,LO:HI)    :: ir
       type(component_fluid), pointer             :: fl_dni
 #ifdef COSM_RAYS
-      integer                                    :: i
+      integer(kind=4)                            :: i
 #endif /* COSM_RAYS */
 
       ierrh = 0

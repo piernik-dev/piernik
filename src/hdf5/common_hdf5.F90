@@ -206,7 +206,7 @@ contains
 !<
    subroutine common_shortcuts(var, fl_dni, i_xyz)
 
-      use constants,  only: varlen, singlechar
+      use constants,  only: varlen, singlechar, INT4
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
 
@@ -214,7 +214,7 @@ contains
 
       character(len=varlen),          intent(in)    :: var
       type(component_fluid), pointer, intent(inout) :: fl_dni
-      integer,                        intent(out)   :: i_xyz
+      integer(kind=4),                intent(out)   :: i_xyz
 
       character(len=singlechar) :: dc
 
@@ -230,7 +230,7 @@ contains
          end select
       endif
 
-      i_xyz = huge(1)
+      i_xyz = huge(1_INT4)
       if (var(1:2) == "vl") then
          dc = var(3:3)
       else if (var(1:3) == "mag") then
@@ -238,7 +238,7 @@ contains
       else
          dc = '_'
       endif
-      if (any([ "x", "y", "z" ] == dc)) i_xyz = ichar(dc) - ichar("x")
+      if (any([ "x", "y", "z" ] == dc)) i_xyz = ichar(dc, kind=4) - ichar("x", kind=4)
 
    end subroutine common_shortcuts
 

@@ -158,7 +158,7 @@ contains
       integer,                        intent(out) :: ierrh
       type(grid_container),  pointer, intent(in)  :: cg
       type(component_fluid), pointer              :: fl_dni
-      integer                                     :: i_xyz
+      integer(kind=4)                             :: i_xyz
 #ifdef COSM_RAYS
       integer                                     :: i
       integer, parameter                          :: auxlen = varlen - 1
