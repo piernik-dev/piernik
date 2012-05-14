@@ -81,6 +81,7 @@ module dataio
    integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
    real                     :: t_start               !< time in simulation of start simulation run
    logical                  :: tsl_firstcall         !< logical value to start a new timeslice file
+   logical                  :: initial_hdf_dump      !< force initial hdf dump
    logical, dimension(RES:TSL) :: dump = .false.     !< logical values for all dump types to restrict to only one dump of each type a step
 
    integer                  :: nchar                 !< number of characters in a user/system message
@@ -114,7 +115,8 @@ module dataio
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
                               domain_dump, vars, mag_center, vizit, fmin, fmax, min_disk_space_MB, sleep_minutes, sleep_seconds, &
-                              user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
+                              user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io, enable_compression, &
+                              gzip_level, initial_hdf_dump
 
 contains
 
@@ -224,6 +226,8 @@ contains
       dt_log       = 0.0
       dt_plt       = 0.0
 
+      initial_hdf_dump = .false.
+
       domain_dump       = 'phys_domain'
       vars(:)           = ''
       mag_center        = .false.
@@ -315,6 +319,7 @@ contains
          lbuff(2)  = multiple_h5files
          lbuff(3)  = use_v2_io
          lbuff(4)  = mag_center
+         lbuff(5)  = initial_hdf_dump
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
@@ -374,6 +379,7 @@ contains
          multiple_h5files    = lbuff(2)
          use_v2_io           = lbuff(3)
          mag_center          = lbuff(4)
+         initial_hdf_dump    = lbuff(5)
 
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
@@ -591,7 +597,6 @@ contains
       implicit none
 
       integer(kind=4), intent(in) :: output
-!      logical                     :: dump
 
 !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -604,9 +609,8 @@ contains
       call determine_dump(dump(PLT), last_plt_time, dt_plt, output, PLT)
       if (dump(PLT)) call write_plot
 
-      if (output == FINAL .and. trim(problem_name) /= 'crash') write(problem_name, '(a,a6)') trim(problem_name), '_final'
-
       call determine_dump(dump(HDF), last_hdf_time, dt_hdf, output, HDF)
+      call manage_hdf_dump(dump(HDF), output)
       if (dump(HDF)) call write_hdf5
 
    end subroutine write_data
@@ -630,6 +634,20 @@ contains
       dmp = (dmp .or. output == dumptype)
 
    end subroutine determine_dump
+
+   subroutine manage_hdf_dump(dmp, output)
+
+      use constants,    only: FINAL, INCEPTIVE
+
+      implicit none
+
+      integer(kind=4), intent(in)    :: output
+      logical,         intent(inout) :: dmp
+
+      if (output == FINAL .and. trim(problem_name) /= 'crash') write(problem_name, '(a,a6)') trim(problem_name), '_final'
+      if ((output == INCEPTIVE) .and. initial_hdf_dump) dmp = .true.  !< \todo problem_name may be enhanced by '_initial', but this and nhdf should be reverted just after write_hdf5 is called
+
+   end subroutine manage_hdf_dump
 
    subroutine check_log
 
