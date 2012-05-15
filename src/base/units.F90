@@ -176,11 +176,12 @@ contains
       logical, save            :: scale_me = .false.
       logical                  :: to_stdout
 
-      namelist /UNITS/ units_set, miu0, kelvin, cm, gram, sek
+      namelist /UNITS/ units_set, miu0, kelvin, cm, gram, sek, s_len_u, s_time_u, s_mass_u
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[units:init_units] MPI not initialized.")
 
       units_set='scaled'
+      s_len_u  = ' undefined'; s_time_u = s_len_u; s_mass_u = s_len_u
 
       miu0   = fpi
       kelvin = one
@@ -193,6 +194,9 @@ contains
          diff_nml(UNITS)
 
          cbuff(1) = units_set
+         cbuff(2) = s_len_u
+         cbuff(3) = s_time_u
+         cbuff(4) = s_mass_u
 
          rbuff(1) = miu0
          rbuff(2) = kelvin
@@ -208,6 +212,9 @@ contains
       if (slave) then
 
          units_set = cbuff(1)
+         s_len_u   = cbuff(2)
+         s_time_u  = cbuff(3)
+         s_mass_u  = cbuff(4)
 
          miu0   = rbuff(1)
          kelvin = rbuff(2)
@@ -221,7 +228,6 @@ contains
 #ifdef VERBOSE
       to_stdout = .true.
 #endif /* VERBOSE */
-      s_len_u  = ' undefined'; s_time_u = s_len_u; s_mass_u = s_len_u
 
 !>
 !! \deprecated BEWARE: miu0 and kelvin may be overwritten by values from problem.par even though we choose units_set value one of the following
@@ -315,8 +321,9 @@ contains
             if (any([cm == small, sek == small, gram == small])) &
                call die("[units:init_units] units_set=='user', yet one of {'cm','sek','gram'} is not set in problem.par") ! Don't believe in coincidence
             to_stdout = .true.               ! Force output in case someone is not aware what he/she is doing
-            s_len_u   = ' [user unit]'
-            s_time_u  = s_len_u; s_mass_u  = s_len_u
+            if (trim(s_len_u)  == ' undefined') s_len_u   = ' [user unit]'
+            if (trim(s_time_u) == ' undefined') s_time_u  = ' [user unit]'
+            if (trim(s_mass_u) == ' undefined') s_mass_u  = ' [user unit]'
 
          case default
             if (master) call warn("[units:init_units] you haven't chosen units set. That means physical vars taken from 'units' are worthless or equal 1")
