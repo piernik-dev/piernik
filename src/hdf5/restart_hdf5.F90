@@ -71,7 +71,7 @@ contains
    subroutine write_restart_hdf5
 
       use constants,   only: I_ONE, cwdlen, WR
-      use common_hdf5, only: set_common_attributes
+      use common_hdf5, only: set_common_attributes, output_fname
       use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, use_v2_io, nres, piernik_hdf5_version, piernik_hdf5_version2, last_res_time
       use mpisetup,    only: comm, ierr, master
       use timer,       only: set_timer
@@ -87,7 +87,7 @@ contains
 
       phv = piernik_hdf5_version ; if (use_v2_io) phv = piernik_hdf5_version2
 
-      filename = restart_fname(WR)
+      filename = output_fname(WR,'.res', nres, bcast=.true.)
       if (master) then
          write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_res_time,' Writing restart v', phv, trim(filename), " ... "
          call printio(msg, .true.)
@@ -221,41 +221,6 @@ contains
       end select
 
    end subroutine set_area_for_restart
-
-!>
-!! \brief Construct a filename for the restart file
-!!
-!! \todo add a part number for multifile restarts
-!! \todo sanitize problem_name and run_id
-!<
-
-   function restart_fname(wr_rd) result(filename)
-
-      use constants,   only: cwdlen, RD, WR
-      use dataio_pub,  only: problem_name, run_id, nres, wd_wr, wd_rd
-      use mpi,         only: MPI_CHARACTER
-      use mpisetup,    only: comm, ierr, master, FIRST
-
-      implicit none
-
-      character(len=cwdlen) :: filename, temp  ! File name
-      integer(kind=4), intent(in)   :: wr_rd
-
-      if (master) then
-         write(temp,'(a,a1,a3,a1,i4.4,a4)') trim(problem_name),'_', run_id,'_', nres,'.res'
-         select case (wr_rd)
-            case (RD)
-               write(filename,'(2a)') trim(wd_rd),trim(temp)
-            case (WR)
-               write(filename,'(2a)') trim(wd_wr),trim(temp)
-            case default
-               write(filename,'(2a)') './',trim(temp)
-         end select
-      endif
-
-      call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
-
-   end function restart_fname
 
 !> \brief Write restart dump v1.x
 
@@ -602,6 +567,7 @@ contains
    subroutine read_restart_hdf5_v1
 
       use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE, RD
+      use common_hdf5, only: output_fname
       use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, piernik_hdf5_version, fix_string, &
            &                 domain_dump, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nhdf, nres, nimg, new_id
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
@@ -635,7 +601,7 @@ contains
 
       nu = flind%all
 
-      filename = restart_fname(RD)
+      filename = output_fname(RD, '.res', nres, bcast=.true.)
 
       if (master) then
          write(msg, '(2a)') 'Reading restart file v1: ', trim(filename)
@@ -1132,7 +1098,8 @@ contains
 
       use constants,   only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, base_level_id, INVALID, RD, LO, HI
       use common_hdf5, only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
-           &                 cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname
+           &                 cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname, &
+           &                 output_fname
       use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, problem_name, new_id, domain_dump, &
            &                 require_init_prob, piernik_hdf5_version2, nres, nhdf, nimg, fix_string
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
@@ -1172,7 +1139,7 @@ contains
 
       if (master) call warn("[restart_hdf5:read_restart_hdf5_v2] Experimental implementation")
 
-      filename = restart_fname(RD)
+      filename = output_fname(RD, '.res', nres, bcast=.true.)
       if (master) then
          write(msg, '(2a)') 'Reading restart file v2: ', trim(filename)
          call printio(msg)

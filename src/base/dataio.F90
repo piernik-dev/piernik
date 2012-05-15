@@ -686,8 +686,8 @@ contains
 
    subroutine find_last_restart(restart_number)
 
-      use dataio_pub,    only: wd_rd
-      use constants,     only: cwdlen
+      use common_hdf5,   only: output_fname
+      use constants,     only: RD
 #if defined(__INTEL_COMPILER)
       use ifport,        only: unlink
 #endif /* __INTEL_COMPILER */
@@ -700,21 +700,16 @@ contains
 
       integer(kind=4), intent(out) :: restart_number
 
-      character(len=cwdlen)        :: file_name
       integer(kind=4)              :: nres
       integer                      :: unlink_stat
       logical                      :: exist
-      character(len=cwdlen)        :: file_name_base
 
       restart_number = 0
-
-      write(file_name_base,'(a,a1,a3,a1)') trim(problem_name),'_',run_id,'_'
 
       unlink_stat = unlink('restart_list.tmp')
 
       do nres = 999, 0, -1
-         write(file_name,'(a,a1,a,a1,a3,a1,i4.4,a4)') trim(wd_rd),'/',trim(problem_name),'_', run_id,'_',nres,'.res'
-         inquire(file = file_name, exist = exist)
+         inquire(file = trim(output_fname(RD,'.res', nres)), exist = exist)
          if (exist) then
             restart_number = nres
             return

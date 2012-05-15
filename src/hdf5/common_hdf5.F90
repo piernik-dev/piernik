@@ -43,7 +43,7 @@ module common_hdf5
    public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2
    public :: nhdf_vars, hdf_vars, d_gname, base_d_gname, d_fc_aname, d_size_aname, d_edge_apname, d_bnd_apname, cg_gname, &
          & cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, &
-         & cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg, data_gname
+         & cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg, data_gname, output_fname
 
    integer, parameter :: S_LEN = 30
 
@@ -810,6 +810,56 @@ contains
       deallocate(cg_n, cg_all_n_b)
 
    end subroutine write_to_hdf5_v2
+
+   function output_fname(wr_rd, ext, no, bcast, prefix) result(filename)
+
+      use constants,   only: cwdlen, RD, WR, I_FOUR, fnamelen
+      use dataio_pub,  only: problem_name, run_id, wd_wr, wd_rd, warn, die, msg
+      use mpi,         only: MPI_CHARACTER
+      use mpisetup,    only: comm, ierr, master, FIRST
+
+      implicit none
+
+      integer(kind=4), intent(in)   :: wr_rd, no
+      character(len=I_FOUR), intent(in)  :: ext
+      logical, intent(in), optional :: bcast
+      character(len=*), intent(in), optional :: prefix
+      character(len=cwdlen) :: filename, temp  ! File name
+
+
+      ! Sanity checks go here
+      if (present(prefix)) then
+         if (len_trim(prefix) >= fnamelen) then
+            write(msg,*) "[common_hdf5:output_fname]:", trim(prefix), "is longer than the allowed filename"
+            call die(msg)
+         endif
+         if (len_trim(prefix) > fnamelen/2) then
+            write(msg,*) "[common_hdf5:output_fname]: There is high chance that ", trim(prefix), " will overflow the filename"
+            call warn(msg)
+         endif
+      endif
+
+      if (master) then
+         if (present(prefix)) then
+            write(temp,'(2(a,"_"),a3,"_",i4.4,a4)') trim(prefix), trim(problem_name), run_id, no, ext
+         else
+            write(temp,'(a,"_",a3,"_",i4.4,a4)') trim(problem_name), run_id, no, ext
+         endif
+         select case (wr_rd)
+            case (RD)
+               write(filename,'(2a)') trim(wd_rd),trim(temp)
+            case (WR)
+               write(filename,'(2a)') trim(wd_wr),trim(temp)
+            case default
+               write(filename,'(2a)') './',trim(temp)
+         end select
+      endif
+
+      if (present(bcast)) then
+         if (bcast) call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
+      endif
+
+   end function output_fname
 
 ! This routine will become useful when we begin to use multiple domain containers (AMR or non-rectangular compound domains)
 ! This routine will become obsolete or will need serious rework with HDF5-1.8.8 ~xarth
