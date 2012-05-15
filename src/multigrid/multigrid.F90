@@ -74,7 +74,7 @@ contains
    subroutine init_multigrid
 
       use cg_list_lev,         only: cg_list_level, cg_list_patch
-      use constants,           only: PIERNIK_INIT_GRID, xdim, ydim, LO, HI, LONG, I_TWO, I_ONE, half, O_INJ, O_LIN, O_I2
+      use constants,           only: PIERNIK_INIT_GRID, LO, HI, LONG, I_TWO, I_ONE, half, O_INJ, O_LIN, O_I2
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
       use decomposition,       only: divide_domain!, deallocate_pse
@@ -276,11 +276,6 @@ contains
             if (any(cg%n_b(:) * 2**(roof%lev - curl%lev) /= roof%first%cg%n_b(:) .and. dom%has_dir(:)) .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
 
             ! data storage
-            !! \deprecated BEWARE prolong_x and %mg%prolong_xy are used only with RBGS relaxation when ord_prolong /= O_INJ
-            if (allocated(cg%mg%prolong_x) .or. allocated(cg%mg%prolong_xy) ) call die("[multigrid:init_multigrid] multigrid arrays already allocated")
-            allocate(cg%mg%prolong_xy(cg%n_(xdim), cg%n_(ydim),       cg%nzb/2+2*dom%nb))
-            allocate(cg%mg%prolong_x (cg%n_(xdim), cg%nyb/2+2*dom%nb, cg%nzb/2+2*dom%nb))
-
             if ( allocated(cg%mg%bnd_x) .or. allocated(cg%mg%bnd_y) .or. allocated(cg%mg%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
             allocate(cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, LO:HI))
             allocate(cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, LO:HI))
@@ -288,11 +283,9 @@ contains
 
             ! array initialization
             if (dirty_debug) then
-               cg%mg%prolong_x (:, :, :)    = dirtyH
-               cg%mg%prolong_xy(:, :, :)    = dirtyH
-               cg%mg%bnd_x     (:, :, :)    = dirtyH
-               cg%mg%bnd_y     (:, :, :)    = dirtyH
-               cg%mg%bnd_z     (:, :, :)    = dirtyH
+               cg%mg%bnd_x(:, :, :) = dirtyH
+               cg%mg%bnd_y(:, :, :) = dirtyH
+               cg%mg%bnd_z(:, :, :) = dirtyH
             endif
 
             if (.not. associated(cg%wa)) cg%wa => cg%q(all_cg%wai)%arr ! required for CR diffusion

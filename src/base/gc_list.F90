@@ -805,7 +805,7 @@ contains
       write(msg,'(a,i2,a)')"[gc_list:print_vars] Found ",size(this%q_lst)," rank-3 arrays:"
       call printinfo(msg)
       do i = lbound(this%q_lst(:), dim=1), ubound(this%q_lst(:), dim=1)
-         write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", this%q_lst(i)%name, ", vital=", this%q_lst(i)%vital, "', restart_mode=", this%q_lst(i)%restart_mode, &
+         write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", this%q_lst(i)%name, "', vital=", this%q_lst(i)%vital, ", restart_mode=", this%q_lst(i)%restart_mode, &
               &                                ", multigrid=", this%q_lst(i)%multigrid, ", ord_prolong=", this%q_lst(i)%ord_prolong, ", position=", this%q_lst(i)%position(:)
          call printinfo(msg)
       enddo
@@ -813,9 +813,9 @@ contains
       write(msg,'(a,i2,a)')"[gc_list:print_vars] Found ",size(this%w_lst)," rank-4 arrays:"
       call printinfo(msg)
       do i = lbound(this%w_lst(:), dim=1), ubound(this%w_lst(:), dim=1)
-         write(msg,'(3a,l2,a,2(i2,a),l2,a,i2,a,100i2)')"'", this%w_lst(i)%name, ", vital=", this%w_lst(i)%vital, "', components=", this%w_lst(i)%dim4, &
-              &                                        ", restart_mode=", this%w_lst(i)%restart_mode, ", multigrid=", this%w_lst(i)%multigrid, &
-              &                                        ", ord_prolong=", this%q_lst(i)%ord_prolong, ", position=", this%w_lst(i)%position(:)
+         write(msg,'(3a,l2,a,i2,a,l2,2(a,i2),a,100i2)')"'", this%w_lst(i)%name, "', vital=", this%w_lst(i)%vital, ", restart_mode=", this%w_lst(i)%restart_mode, &
+              &                                        ", multigrid=", this%w_lst(i)%multigrid, ", ord_prolong=", this%q_lst(i)%ord_prolong, &
+              &                                        ", components=", this%w_lst(i)%dim4, ", position=", this%w_lst(i)%position(:)
          call printinfo(msg)
       enddo
 

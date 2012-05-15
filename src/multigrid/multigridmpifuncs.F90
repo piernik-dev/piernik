@@ -182,7 +182,7 @@ contains
          select case (mode)         !> \deprecated BEWARE: some cylindrical factors may be helpful
             case (extbnd_donothing) ! remember to initialize everything first!
                return
-            case (extbnd_extrapolate) !> \deprecated mixed-tybe BC: free flux; BEWARE: it is not protected from inflow
+            case (extbnd_extrapolate) !> \deprecated mixed-type BC: free flux; BEWARE: it is not protected from inflow
                do i = 1, ng
                   if (cg%ext_bnd(xdim, LO)) cg%q(iv)%arr(cg%is-i, :, :) = (1+i) * cg%q(iv)%arr(cg%is, :, :) - i * cg%q(iv)%arr(cg%is+1, :, :)
                   if (cg%ext_bnd(xdim, HI)) cg%q(iv)%arr(cg%ie+i, :, :) = (1+i) * cg%q(iv)%arr(cg%ie, :, :) - i * cg%q(iv)%arr(cg%ie-1, :, :)

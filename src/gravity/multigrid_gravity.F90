@@ -627,7 +627,6 @@ contains
 
       use constants,        only: singlechar, dsetnamelen
       use gc_list,          only: all_cg
-      use multigridhelpers, only: set_dirty
 
       implicit none
 
@@ -640,9 +639,8 @@ contains
 
       do i = 1, nold
          write(hname,'(2a,i2.2)')prefix,"_h_",i
-         call all_cg%reg_var(hname, vital = .true., multigrid = .true.)
+         call all_cg%reg_var(hname, vital = .true.) ! no need for multigrid attribute here because history is defined only on leaves
          this%old(i) = old_soln(all_cg%ind(hname), -huge(1.0))
-         call set_dirty(this%old(i)%i_hist)
       enddo
       this%valid = .false.
       this%last  = 1

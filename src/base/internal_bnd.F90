@@ -39,7 +39,7 @@
 !!
 !! \todo integrate here as much stuff from fluidboundaries, magboundaries, etc.  as possible.
 !!
-!! \todo make these functions members of some of the gc_list types
+!! \todo these functions should become members of cg_list_level or a more general type that ensures proper block pairing (should be able to handle all_cg and leaves)
 !<
 
 module internal_bnd

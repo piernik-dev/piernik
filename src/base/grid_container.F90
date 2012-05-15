@@ -75,7 +75,6 @@ module grid_cont
    type :: mg_arr
       ! storage
       real, allocatable, dimension(:,:,:)   :: bnd_x, bnd_y, bnd_z    !< given boundary values for potential; \todo make an array of pointers, indexed by (xdim:zdim)
-      real, allocatable, dimension(:,:,:)   :: prolong_x, prolong_xy  !< auxiliary prolongation arrays
 
       ! data for FFT multigrid self-gravity solver
       integer                                :: nxc                   !< first index (complex or real: fft(:,:,:) or fftr(:,:,:)) cell count
@@ -171,12 +170,13 @@ module grid_cont
       integer(kind=4), allocatable, dimension(:,:,:,:,:) :: mbc  !< MPI Boundary conditions Container for comm3d-based communication
       type(bnd_list), dimension(:,:), allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim, nb)
       type(bnd_list), dimension(:,:), allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim, nb)
-      logical, dimension(xdim:zdim, LO:HI) :: ext_bnd        !< .false. for BND_PER and BND_MPI
+      logical, dimension(xdim:zdim, LO:HI) :: ext_bnd            !< .false. for BND_PER and BND_MPI
 
       ! Prolongation and restriction
 
       type(tgt_list) :: f_tgt                                    !< description of incoming restriction and outgoing prolongation data (this should be a linked list)
       type(tgt_list) :: c_tgt                                    !< description of outgoing restriction and incoming prolongation data
+      real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays
 
       ! Non-cartesian geometrical factors
 
@@ -236,7 +236,7 @@ contains
 
    subroutine init(this, n_d, my_se, grid_id, level_id)
 
-      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_COR
+      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_COR, big_float
 #ifdef SHEAR_BND
 #ifndef FFTW
       use constants,  only: BND_SHE
@@ -443,6 +443,15 @@ contains
 
       this%dvol2 = this%dvol**2
 
+      if (allocated(this%prolong_) .or. allocated(this%prolong_x) .or. allocated(this%prolong_xy) ) call die("[grid_container:init] prolong_* arrays already allocated")
+      allocate(this%prolong_  (this%nxb/2+2*dom%nb, this%nyb/2+2*dom%nb, this%nzb/2+2*dom%nb), &
+           &   this%prolong_x (this%n_(xdim),       this%nyb/2+2*dom%nb, this%nzb/2+2*dom%nb), &
+           &   this%prolong_xy(this%n_(xdim),       this%n_(ydim),       this%nzb/2+2*dom%nb))
+
+      this%prolong_  (:, :, :) = big_float
+      this%prolong_x (:, :, :) = big_float
+      this%prolong_xy(:, :, :) = big_float
+
    end subroutine init
 
 !> \brief Calculate arrays of coordinates along a given direction
@@ -622,12 +631,13 @@ contains
          deallocate(this%w)
       endif
 
-      ! multigrid-specific arrays, not handled through named_array feature
-      if (allocated(this%mg%prolong_xy)) deallocate(this%mg%prolong_xy)
-      if (allocated(this%mg%prolong_x))  deallocate(this%mg%prolong_x)
-      if (allocated(this%mg%bnd_x))      deallocate(this%mg%bnd_x)
-      if (allocated(this%mg%bnd_y))      deallocate(this%mg%bnd_y)
-      if (allocated(this%mg%bnd_z))      deallocate(this%mg%bnd_z)
+      ! arrays not handled through named_array feature
+      if (allocated(this%prolong_xy)) deallocate(this%prolong_xy)
+      if (allocated(this%prolong_x))  deallocate(this%prolong_x)
+      if (allocated(this%prolong_))   deallocate(this%prolong_)
+      if (allocated(this%mg%bnd_x))   deallocate(this%mg%bnd_x)
+      if (allocated(this%mg%bnd_y))   deallocate(this%mg%bnd_y)
+      if (allocated(this%mg%bnd_z))   deallocate(this%mg%bnd_z)
 
       this%grid_id = INVALID
 

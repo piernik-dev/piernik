@@ -627,71 +627,71 @@ contains
       ! convolve with the prolongation operator
       ! the two cases here are for optimization (see also call mpi_multigrid_bnd above)
       if (P_2 == 0. .and. P2 == 0.) then
-         cg_f%mg%prolong_x(         cg_f%is  :cg_f%ie-1:2, cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1) = &  ! x-odd cells
+         cg_f%prolong_x(         cg_f%is  :cg_f%ie-1:2, cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1) = &  ! x-odd cells
               + P1 * cg_c%q(iv)%arr(cg_c%is-1:cg_c%ie-1,   cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1)   &
               + P0 * cg_c%q(iv)%arr(cg_c%is  :cg_c%ie,     cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1)   &
               + P_1* cg_c%q(iv)%arr(cg_c%is+1:cg_c%ie+1,   cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1)
-         cg_f%mg%prolong_x(         cg_f%is+1:cg_f%ie:2,   cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1) = &  ! x-even cells
+         cg_f%prolong_x(         cg_f%is+1:cg_f%ie:2,   cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1) = &  ! x-even cells
               + P_1* cg_c%q(iv)%arr(cg_c%is-1:cg_c%ie-1,   cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1)   &
               + P0 * cg_c%q(iv)%arr(cg_c%is  :cg_c%ie,     cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1)   &
               + P1 * cg_c%q(iv)%arr(cg_c%is+1:cg_c%ie+1,   cg_c%js-1:cg_c%je+1, cg_c%ks-1:cg_c%ke+1)
 
-         cg_f%mg%prolong_xy(           cg_f%is:cg_f%ie, cg_f%js  :cg_f%je-1:2, cg_c%ks-1:cg_c%ke+1) = &    ! y-odd cells
-              + P1 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js-1:cg_c%je-1,   cg_c%ks-1:cg_c%ke+1)   &
-              + P0 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js  :cg_c%je,     cg_c%ks-1:cg_c%ke+1)   &
-              + P_1* cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js+1:cg_c%je+1,   cg_c%ks-1:cg_c%ke+1)
-         cg_f%mg%prolong_xy(           cg_f%is:cg_f%ie, cg_f%js+1:cg_f%je:2,   cg_c%ks-1:cg_c%ke+1) = &    ! y-even cells
-              + P_1* cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js-1:cg_c%je-1,   cg_c%ks-1:cg_c%ke+1)   &
-              + P0 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js  :cg_c%je,     cg_c%ks-1:cg_c%ke+1)   &
-              + P1 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js+1:cg_c%je+1,   cg_c%ks-1:cg_c%ke+1)
+         cg_f%prolong_xy(           cg_f%is:cg_f%ie, cg_f%js  :cg_f%je-1:2, cg_c%ks-1:cg_c%ke+1) = &    ! y-odd cells
+              + P1 * cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js-1:cg_c%je-1,   cg_c%ks-1:cg_c%ke+1)   &
+              + P0 * cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js  :cg_c%je,     cg_c%ks-1:cg_c%ke+1)   &
+              + P_1* cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js+1:cg_c%je+1,   cg_c%ks-1:cg_c%ke+1)
+         cg_f%prolong_xy(           cg_f%is:cg_f%ie, cg_f%js+1:cg_f%je:2,   cg_c%ks-1:cg_c%ke+1) = &    ! y-even cells
+              + P_1* cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js-1:cg_c%je-1,   cg_c%ks-1:cg_c%ke+1)   &
+              + P0 * cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js  :cg_c%je,     cg_c%ks-1:cg_c%ke+1)   &
+              + P1 * cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js+1:cg_c%je+1,   cg_c%ks-1:cg_c%ke+1)
 
          cg_f%q(iv)%arr(                cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_f%ks  :cg_f%ke-1:2) = &   ! z-odd cells
-              + P1 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-1:cg_c%ke-1  )   &
-              + P0 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks  :cg_c%ke    )   &
-              + P_1* cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+1:cg_c%ke+1  )
+              + P1 * cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-1:cg_c%ke-1  )   &
+              + P0 * cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks  :cg_c%ke    )   &
+              + P_1* cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+1:cg_c%ke+1  )
          cg_f%q(iv)%arr(                cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_f%ks+1:cg_f%ke:2  ) = &   ! z-even cells
-              + P_1* cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-1:cg_c%ke-1  )   &
-              + P0 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks  :cg_c%ke    )   &
-              + P1 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+1:cg_c%ke+1  )
+              + P_1* cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-1:cg_c%ke-1  )   &
+              + P0 * cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks  :cg_c%ke    )   &
+              + P1 * cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+1:cg_c%ke+1  )
       else
-         cg_f%mg%prolong_x(         cg_f%is  :cg_f%ie-1:2, cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2) = &  ! x-odd cells
+         cg_f%prolong_x(         cg_f%is  :cg_f%ie-1:2, cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2) = &  ! x-odd cells
               + P2 * cg_c%q(iv)%arr(cg_c%is-2:cg_c%ie-2,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
               + P1 * cg_c%q(iv)%arr(cg_c%is-1:cg_c%ie-1,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
               + P0 * cg_c%q(iv)%arr(cg_c%is  :cg_c%ie,     cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
               + P_1* cg_c%q(iv)%arr(cg_c%is+1:cg_c%ie+1,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
               + P_2* cg_c%q(iv)%arr(cg_c%is+2:cg_c%ie+2,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)
-         cg_f%mg%prolong_x(         cg_f%is+1:cg_f%ie:2,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2) = &  ! x-even cells
+         cg_f%prolong_x(         cg_f%is+1:cg_f%ie:2,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2) = &  ! x-even cells
               + P_2* cg_c%q(iv)%arr(cg_c%is-2:cg_c%ie-2,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
               + P_1* cg_c%q(iv)%arr(cg_c%is-1:cg_c%ie-1,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
               + P0 * cg_c%q(iv)%arr(cg_c%is  :cg_c%ie,     cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
               + P1 * cg_c%q(iv)%arr(cg_c%is+1:cg_c%ie+1,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)   &
               + P2 * cg_c%q(iv)%arr(cg_c%is+2:cg_c%ie+2,   cg_c%js-2:cg_c%je+2, cg_c%ks-2:cg_c%ke+2)
 
-         cg_f%mg%prolong_xy(           cg_f%is:cg_f%ie, cg_f%js  :cg_f%je-1:2, cg_c%ks-2:cg_c%ke+2) = &    ! y-odd cells
-              + P2 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js-2:cg_c%je-2,   cg_c%ks-2:cg_c%ke+2)   &
-              + P1 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js-1:cg_c%je-1,   cg_c%ks-2:cg_c%ke+2)   &
-              + P0 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js  :cg_c%je,     cg_c%ks-2:cg_c%ke+2)   &
-              + P_1* cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js+1:cg_c%je+1,   cg_c%ks-2:cg_c%ke+2)   &
-              + P_2* cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js+2:cg_c%je+2,   cg_c%ks-2:cg_c%ke+2)
-         cg_f%mg%prolong_xy(           cg_f%is:cg_f%ie, cg_f%js+1:cg_f%je:2,   cg_c%ks-2:cg_c%ke+2) = &    ! y-even cells
-              + P_2* cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js-2:cg_c%je-2,   cg_c%ks-2:cg_c%ke+2)   &
-              + P_1* cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js-1:cg_c%je-1,   cg_c%ks-2:cg_c%ke+2)   &
-              + P0 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js  :cg_c%je,     cg_c%ks-2:cg_c%ke+2)   &
-              + P1 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js+1:cg_c%je+1,   cg_c%ks-2:cg_c%ke+2)   &
-              + P2 * cg_f%mg%prolong_x(cg_f%is:cg_f%ie, cg_c%js+2:cg_c%je+2,   cg_c%ks-2:cg_c%ke+2)
+         cg_f%prolong_xy(           cg_f%is:cg_f%ie, cg_f%js  :cg_f%je-1:2, cg_c%ks-2:cg_c%ke+2) = &    ! y-odd cells
+              + P2 * cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js-2:cg_c%je-2,   cg_c%ks-2:cg_c%ke+2)   &
+              + P1 * cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js-1:cg_c%je-1,   cg_c%ks-2:cg_c%ke+2)   &
+              + P0 * cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js  :cg_c%je,     cg_c%ks-2:cg_c%ke+2)   &
+              + P_1* cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js+1:cg_c%je+1,   cg_c%ks-2:cg_c%ke+2)   &
+              + P_2* cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js+2:cg_c%je+2,   cg_c%ks-2:cg_c%ke+2)
+         cg_f%prolong_xy(           cg_f%is:cg_f%ie, cg_f%js+1:cg_f%je:2,   cg_c%ks-2:cg_c%ke+2) = &    ! y-even cells
+              + P_2* cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js-2:cg_c%je-2,   cg_c%ks-2:cg_c%ke+2)   &
+              + P_1* cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js-1:cg_c%je-1,   cg_c%ks-2:cg_c%ke+2)   &
+              + P0 * cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js  :cg_c%je,     cg_c%ks-2:cg_c%ke+2)   &
+              + P1 * cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js+1:cg_c%je+1,   cg_c%ks-2:cg_c%ke+2)   &
+              + P2 * cg_f%prolong_x(cg_f%is:cg_f%ie, cg_c%js+2:cg_c%je+2,   cg_c%ks-2:cg_c%ke+2)
 
          cg_f%q(iv)%arr(                cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_f%ks  :cg_f%ke-1:2) = &   ! z-odd cells
-              + P2 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-2:cg_c%ke-2  )   &
-              + P1 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-1:cg_c%ke-1  )   &
-              + P0 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks  :cg_c%ke    )   &
-              + P_1* cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+1:cg_c%ke+1  )   &
-              + P_2* cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+2:cg_c%ke+2  )
+              + P2 * cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-2:cg_c%ke-2  )   &
+              + P1 * cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-1:cg_c%ke-1  )   &
+              + P0 * cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks  :cg_c%ke    )   &
+              + P_1* cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+1:cg_c%ke+1  )   &
+              + P_2* cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+2:cg_c%ke+2  )
          cg_f%q(iv)%arr(                cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_f%ks+1:cg_f%ke:2  ) = &   ! z-even cells
-              + P_2* cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-2:cg_c%ke-2  )   &
-              + P_1* cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-1:cg_c%ke-1  )   &
-              + P0 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks  :cg_c%ke    )   &
-              + P1 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+1:cg_c%ke+1  )   &
-              + P2 * cg_f%mg%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+2:cg_c%ke+2  )
+              + P_2* cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-2:cg_c%ke-2  )   &
+              + P_1* cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks-1:cg_c%ke-1  )   &
+              + P0 * cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks  :cg_c%ke    )   &
+              + P1 * cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+1:cg_c%ke+1  )   &
+              + P2 * cg_f%prolong_xy(cg_f%is:cg_f%ie, cg_f%js:cg_f%je, cg_c%ks+2:cg_c%ke+2  )
       endif
 
    end subroutine prolong_level_hord
