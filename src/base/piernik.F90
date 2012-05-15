@@ -199,7 +199,7 @@ contains
    subroutine init_piernik
 
       use all_boundaries,        only: all_bnd
-      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, CHK, INCEPTIVE
+      use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE
       use dataio,                only: init_dataio, write_data
       use dataio_pub,            only: nrestart, wd_wr, wd_rd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, code_progress
       use decomposition,         only: init_decomposition
@@ -248,8 +248,6 @@ contains
 #endif /* PIERNIK_OPENCL */
 
       implicit none
-
-      integer(kind=4) :: initial_output
 
       call parse_cmdline
       write(par_file,'(2a)') trim(wd_rd),'problem.par'
@@ -364,7 +362,6 @@ contains
             if (master) call printinfo("[piernik:init_piernik] Calling problem specific, post restart procedure")
             call problem_post_restart
          endif
-         initial_output = INCEPTIVE
       else
          call init_prob ! may depend on anything
          call all_bnd !> \warning Never assume that init_prob set guardcells correctly
@@ -381,7 +378,6 @@ contains
          ! Possible side-effects: if variable_gp then grav_pot_3d may be called twice (second call from source_terms_grav)
          call cleanup_hydrostatic
 #endif /* GRAV */
-         initial_output = CHK
       endif
 
 #ifdef RESISTIVE
@@ -391,7 +387,7 @@ contains
       call diagnose_arrays ! may depend on everything
 #endif /* VERBOSE */
 
-      call write_data(output=initial_output)
+      call write_data(output=INCEPTIVE)
 
       call sanitize_smallx_checks ! depends on init_prob || init_dataio/read_restart_hdf5
 
