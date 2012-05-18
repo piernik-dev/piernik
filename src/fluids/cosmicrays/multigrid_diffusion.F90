@@ -416,13 +416,13 @@ contains
       use constants,          only: I_ONE, xdim, zdim, HI, LO
       use domain,             only: dom
       use grid,               only: leaves
-      use gc_list,            only: cg_list_element!, all_cg
+      use gc_list,            only: cg_list_element, all_cg
       use cg_list_lev,        only: cg_list_level
       use grid_cont,          only: grid_container
       use multigridhelpers,   only: set_dirty, check_dirty, dirty_label
       use multigridmpifuncs,  only: mpi_multigrid_bnd
       use multigridvars,      only: base, roof, extbnd_mirror
-      use named_array,        only: p3
+      use named_array,        only: p3, p4
 
       implicit none
 
@@ -437,9 +437,9 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
-            p3 => cg%q(idiffb(ib))%span(   cg%ijkse(:,LO)-dom%D_(:),cg%ijkse(:,HI)+dom%D_(:))
-!            p3 =  cg%w(all_cg%bi )%span(ib,cg%ijkse(:,LO)-dom%D_(:),cg%ijkse(:,HI)+dom%D_(:)) + 0.0 ! Why this gives wrong results?
-            p3 = cg%b(ib, cg%is-dom%D_x:cg%ie+dom%D_x, cg%js-dom%D_y:cg%je+dom%D_y, cg%ks-dom%D_z:cg%ke+dom%D_z)
+            p3 => cg%q(idiffb(ib))%span(cg%ijkse(:,LO)-dom%D_(:),cg%ijkse(:,HI)+dom%D_(:))
+            p4 => cg%w(all_cg%bi )%span(cg%ijkse(:,LO)-dom%D_(:),cg%ijkse(:,HI)+dom%D_(:))
+            p3 = p4(ib,:,:,:)
             cgl => cgl%nxt
          enddo
 #else
