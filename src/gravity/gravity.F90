@@ -61,8 +61,8 @@ module gravity
    integer(kind=4) :: nsub          !< number of subcells while additionally cell division in z-direction is present during establishment of hydrostatic equilibrium
    real    :: h_grav                !< altitude of acceleration cut used when n_gravh is set to non-zero
    real    :: r_grav                !< radius of gravitational potential cut used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
-   integer :: n_gravh               !< index of hyperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
-   integer :: n_gravr               !< index of hyperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
+   integer(kind=4) :: n_gravh       !< index of hyperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
+   integer(kind=4) :: n_gravr       !< index of hyperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
    real    :: tune_zeq              !< z-component of %gravity tuning factor used by hydrostatic_zeq
    real    :: tune_zeq_bnd          !< z-component of %gravity tuning factor supposed to be used in boundaries
    real    :: ptmass2               !< mass of the secondary for Roche potential
@@ -838,7 +838,7 @@ contains
       implicit none
 
       integer                                                          :: i, j, k, ip, px, py, pz
-      integer, dimension(3)                                            :: pc
+      integer(kind=4), dimension(ndims)                                :: pc
       real, allocatable, dimension(:,:,:), target                      :: gpwork
       real, dimension(:), allocatable                                  :: gravrx, gravry, gravrz
       real                                                             :: dgpx_proc, dgpy_proc, dgpz_proc, ddgph
@@ -893,9 +893,9 @@ contains
          do ip = FIRST, LAST
             call MPI_Cart_coords(cdd%comm3d, ip, ndims, pc, ierr)
 
-            px = pc(1)
-            py = pc(2)
-            pz = pc(3)
+            px = pc(xdim)
+            py = pc(ydim)
+            pz = pc(zdim)
 
             dgpx(px,py,pz) = dgpx_all(ip)
             dgpy(px,py,pz) = dgpy_all(ip)

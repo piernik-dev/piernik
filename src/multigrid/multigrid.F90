@@ -74,7 +74,7 @@ contains
    subroutine init_multigrid
 
       use cg_list_lev,         only: cg_list_level, cg_list_patch
-      use constants,           only: PIERNIK_INIT_GRID, LO, HI, LONG, I_TWO, I_ONE, half, O_INJ, O_LIN, O_I2
+      use constants,           only: PIERNIK_INIT_GRID, LO, HI, LONG, I_TWO, I_ONE, half, O_INJ, O_LIN, O_I2, INT4
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
       use decomposition,       only: divide_domain!, deallocate_pse
@@ -98,9 +98,10 @@ contains
       implicit none
 
       integer, parameter    :: level_incredible = 50  !< Increase this value only if your base domain contains much more than 10^15 cells in any active direction ;-)
-      integer               :: level_max              !< Maximum allowed levels of base grid coarsening
+      integer(kind=4)       :: level_max              !< Maximum allowed levels of base grid coarsening
 
-      integer               :: j, g
+      integer(kind=4)       :: j
+      integer               :: g
       logical, save         :: frun = .true.          !< First run flag
       type(cg_list_element), pointer :: cgl
       type(cg_list_level),   pointer :: curl, tmpl    !< current level (a pointer sliding along the linked list) and temporary level
@@ -208,9 +209,9 @@ contains
 
          ! create coarser level:
          allocate(tmpl)
-         call tmpl%init         ! create an empty cg list
-         tmpl%lev = curl%lev -1 ! set id (number)
-         curl%coarser => tmpl   ! set up connectivity
+         call tmpl%init               ! create an empty cg list
+         tmpl%lev = curl%lev - 1_INT4 ! set id (number)
+         curl%coarser => tmpl         ! set up connectivity
          tmpl%finer => curl
          tmpl%coarser => null()
 

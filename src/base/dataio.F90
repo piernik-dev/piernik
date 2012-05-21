@@ -59,20 +59,20 @@ module dataio
    integer, parameter       :: nvarsmx = 20          !< maximum number of variables to dump in hdf files
    character(len=cbuff_len) :: restart               !< choice of restart %file: if restart = 'last': automatic choice of the last restart file regardless of "nrestart" value; if something else is set: "nrestart" value is fixing
    logical                  :: mag_center            !< choice to dump magnetic fields values from cell centers or not (if not then values from cell borders, unused)
-   integer                  :: resdel                !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
+   integer(kind=4)          :: resdel                !< number of recent restart dumps which should be saved; each n-resdel-1 restart file is supposed to be deleted while writing n restart file
    real                     :: dt_hdf                !< time between successive hdf dumps
    real                     :: dt_res                !< time between successive restart file dumps
    real                     :: dt_tsl                !< time between successive timeslice dumps
    real                     :: dt_log                !< time between successive log dumps
    real                     :: dt_plt                !< time between successive domain slices files dumps
-   integer                  :: min_disk_space_MB     !< minimum disk space in MB to continue simulation <b>(currently not used)</b>
-   integer                  :: sleep_minutes         !< minutes of sleeping time before continue simulation
-   integer                  :: sleep_seconds         !< seconds of sleeping time before continue simulation
+   integer(kind=4)          :: min_disk_space_MB     !< minimum disk space in MB to continue simulation <b>(currently not used)</b>
+   integer(kind=4)          :: sleep_minutes         !< minutes of sleeping time before continue simulation
+   integer(kind=4)          :: sleep_seconds         !< seconds of sleeping time before continue simulation
    character(len=cwdlen)    :: user_message_file     !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
    character(len=cwdlen)    :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
-   integer                  :: ix                    !< index in x-direction of slice to dump in plt files
-   integer                  :: iy                    !< index in y-direction of slice to dump in plt files
-   integer                  :: iz                    !< index in z-direction of slice to dump in plt files
+   integer(kind=4)          :: ix                    !< index in x-direction of slice to dump in plt files
+   integer(kind=4)          :: iy                    !< index in y-direction of slice to dump in plt files
+   integer(kind=4)          :: iz                    !< index in z-direction of slice to dump in plt files
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=varlen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
 
@@ -513,7 +513,7 @@ contains
             case ('tend')
                tend   = umsg_param
             case ('nend')
-               nend   = int(umsg_param)
+               nend   = int(umsg_param, kind=4)
             case ('dtres')
                dt_res = umsg_param
             case ('dthdf')

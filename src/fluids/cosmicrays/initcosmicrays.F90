@@ -107,8 +107,8 @@ contains
 
       implicit none
 
-      integer                          :: nn
-      integer                          :: ne
+      integer(kind=4) :: nn
+      integer         :: ne
 
       namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_split, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
@@ -156,7 +156,7 @@ contains
 
          lbuff(1)   = use_split
 
-         nn         = count(rbuff(:) < huge(1.))    ! this must match the last rbuff() index above
+         nn         = count(rbuff(:) < huge(1.), kind=4)    ! this must match the last rbuff() index above
          ibuff(ubound(ibuff, 1)) = nn
          ne         = nn + 3 * ncrn
          if (ne + 3 * ncre > ubound(rbuff, 1)) call die("[initcosmicrays:init_cosmicrays] rbuff size exceeded.")

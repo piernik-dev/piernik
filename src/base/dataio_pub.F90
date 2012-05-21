@@ -62,7 +62,7 @@ module dataio_pub
    real                        :: wend                           !< wall clock time to end (in hours)
 
    integer                     :: lun                            !< current free logical unit
-   integer                     :: nend                           !< number of the step to end simulation
+   integer(kind=4)             :: nend                           !< number of the step to end simulation
    integer                     :: nstep_start                    !< number of start timestep
    integer(kind=4)             :: nhdf                           !< current number of hdf file
    integer(kind=4)             :: nres                           !< current number of restart file

@@ -54,9 +54,9 @@ module multigrid_diffusion
    real               :: norm_tol                                     !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
    real               :: vcycle_abort                                 !< abort the V-cycle when lhs norm raises by this factor
    real               :: overrelax                                    !< overrealaxation factor (if < 1. then works as underrelaxation), use with care
-   integer            :: max_cycles                                   !< Maximum allowed number of V-cycles
-   integer            :: nsmool                                       !< smoothing cycles per call
-   integer            :: nsmoob                                       !< smoothing cycles on base level;  \todo implement a convergence check
+   integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
+   integer(kind=4)    :: nsmool                                       !< smoothing cycles per call
+   integer(kind=4)    :: nsmoob                                       !< smoothing cycles on base level;  \todo implement a convergence check
    real               :: diff_theta                                   !< 0. is explicit, 1. is fully implicit 0.5 is Crank-Nicholson
    real,    protected :: diff_tstep_fac                               !< How much we stretch timestep. Note that for diff_theta == 0. this should not be > 1.
    logical, protected :: diff_explicit                                !< If .true. then do not use multigrid for diffusion

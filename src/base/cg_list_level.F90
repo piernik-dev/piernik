@@ -46,7 +46,7 @@ module cg_list_lev
    !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg ("islands: made of one or more cg: cg_list_patch).
    !<
    type, extends(cg_list) :: cg_list_level
-      integer :: lev                           !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
+      integer(kind=4) :: lev                   !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
       integer(kind=8), dimension(ndims) :: n_d !< maximum number of grid cells in each direction (size of fully occupied level)
       type(cuboids), dimension(:), allocatable :: pse  !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
       integer :: tot_se                        !< global number of segments on the level

@@ -57,8 +57,8 @@ contains
 
       implicit none
 
-      integer, dimension(ndims), intent(in) :: ti      !< local copy of [ dataio::ix, dataio::iy, dataio::iz ]
-      real,                      intent(in) :: tdt_plt !< local copy of dataio::dt_plt
+      integer(kind=4), dimension(ndims), intent(in) :: ti      !< local copy of [ dataio::ix, dataio::iy, dataio::iz ]
+      real,                              intent(in) :: tdt_plt !< local copy of dataio::dt_plt
 
       pl_i(:) = ti(:)
       dt_plt = tdt_plt

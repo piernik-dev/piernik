@@ -50,7 +50,7 @@ module resistivity
    real    :: j_crit                         !< critical value of current density
    real    :: jc2                            !< squared critical value of current density
    real    :: deint_max                      !< COMMENT ME
-   integer :: eta_scale                      !< COMMENT ME
+   integer(kind=4) :: eta_scale              !< COMMENT ME
    real    :: dt_resist, dt_eint
    double precision                        :: d_eta_factor
    type(value)                             :: etamax, cu2max, deimin

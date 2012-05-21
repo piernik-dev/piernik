@@ -73,12 +73,12 @@ module multigrid_gravity
    real               :: Jacobi_damp                                  !< omega factor for damped Jacobi relaxation. Jacobi_damp == 1 gives undamped method. Try 0.5 in 1D.
    real               :: vcycle_abort                                 !< abort the V-cycle when lhs norm raises by this factor
    real               :: L4_strength                                  !< strength of the 4th order terms in the Laplace operator; 0.: 2nd, 1.: 4th direct, 0.5: 4th integral
-   integer            :: max_cycles                                   !< Maximum allowed number of V-cycles
-   integer            :: nsmool                                       !< smoothing cycles per call
-   integer            :: nsmoob                                       !< smoothing cycles on base level when cannot use FFT. (a convergence check would be much better)
-   integer            :: nsmoof                                       !< FFT iterations per call
-   integer            :: ord_laplacian                                !< Laplace operator order; allowed values are 2 (default) and 4 (experimental, not fully implemented)
-   integer            :: ord_time_extrap                              !< Order of temporal extrapolation for solution recycling; -1 means 0-guess, 2 does parabolic interpolation
+   integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
+   integer(kind=4)    :: nsmool                                       !< smoothing cycles per call
+   integer(kind=4)    :: nsmoob                                       !< smoothing cycles on base level when cannot use FFT. (a convergence check would be much better)
+   integer(kind=4)    :: nsmoof                                       !< FFT iterations per call
+   integer(kind=4)    :: ord_laplacian                                !< Laplace operator order; allowed values are 2 (default) and 4 (experimental, not fully implemented)
+   integer(kind=4)    :: ord_time_extrap                              !< Order of temporal extrapolation for solution recycling; -1 means 0-guess, 2 does parabolic interpolation
    logical            :: trust_fft_solution                           !< Bypass the V-cycle, when doing FFT on whole domain, make sure first that FFT is properly set up.
    logical            :: base_no_fft                                  !< Deny solving the base level with FFT. Can be very slow.
    logical            :: prefer_rbgs_relaxation                       !< Prefer relaxation over FFT local solver. Typically faster.
@@ -96,7 +96,7 @@ module multigrid_gravity
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
 
    ! solution recycling
-   integer, parameter :: nold_max=3                                   !< maximum implemented extrapolation order
+   integer(kind=4), parameter :: nold_max=3                           !< maximum implemented extrapolation order
    integer :: nold                                                    !< number of old solutions kept for solution recycling
    type :: old_soln                                                   !< container for an old solution with its timestamp
       integer :: i_hist                                               !< index to the old solution
@@ -400,7 +400,7 @@ contains
 
    subroutine init_multigrid_grav_post
 
-      use constants,     only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n
+      use constants,     only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE
       use dataio_pub,    only: die, warn
       use domain,        only: dom
       use gc_list,       only: cg_list_element, all_cg
@@ -429,7 +429,7 @@ contains
       endif
 
       ! solution recycling
-      ord_time_extrap = min(nold_max-1, max(-1, ord_time_extrap))
+      ord_time_extrap = min(nold_max-I_ONE, max(-I_ONE, ord_time_extrap))
       nold = ord_time_extrap + 1
       if (nold > 0) then
          call inner%init_history(nold, "i")
@@ -990,15 +990,15 @@ contains
          if ( history%old(p2)%time < history%old(p1)%time .and. &        ! quadratic interpolation
               history%old(p1)%time < history%old(p0)%time .and. &
               history%old(p0)%time < t) then
-            ordt = min(int(O_I2), ord_time_extrap)
+            ordt = min(O_I2, ord_time_extrap)
          else if (history%old(p1)%time < history%old(p0)%time .and. &
               &   history%old(p0)%time < t) then      ! linear extrapolation
-            ordt = min(int(O_LIN), ord_time_extrap)
+            ordt = min(O_LIN, ord_time_extrap)
          else                                                            ! simple recycling
-            ordt = min(int(O_INJ), ord_time_extrap)
+            ordt = min(O_INJ, ord_time_extrap)
          endif
       else                                                               ! coldstart
-         ordt = min(int(INVALID), ord_time_extrap)
+         ordt = min(INVALID, ord_time_extrap)
       endif
 
       select case (ordt)

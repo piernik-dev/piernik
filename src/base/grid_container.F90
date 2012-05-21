@@ -253,11 +253,12 @@ contains
 
       implicit none
 
-      class(grid_container), intent(inout), target :: this ! intent(out) would silently clear everything, that was already set (also the fields in types derived from grid_container)
-      integer(kind=8), dimension(:) :: n_d     !< max resolution of my level
-      integer(kind=8), dimension(:,:) :: my_se !< my segment
-      integer, intent(in) :: grid_id
-      integer, intent(in) :: level_id
+      class(grid_container), target,   intent(inout) :: this ! intent(out) would silently clear everything, that was already set
+                                                             ! (also the fields in types derived from grid_container)
+      integer(kind=8), dimension(:),   intent(in) :: n_d     !< max resolution of my level
+      integer(kind=8), dimension(:,:), intent(in) :: my_se !< my segment
+      integer,                         intent(in) :: grid_id
+      integer(kind=4),                 intent(in) :: level_id
 
       integer :: i
 

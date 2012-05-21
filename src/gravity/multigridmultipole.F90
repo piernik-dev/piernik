@@ -53,10 +53,10 @@ module multipole
    integer, parameter        :: OUTSIDE = INSIDE + 1             !< index for exterior multipole expansion
 
    ! namelist parameters for MULTIGRID_GRAVITY
-   integer                   :: lmax                             !< Maximum l-order of multipole moments
-   integer                   :: mmax                             !< Maximum m-order of multipole moments. Equal to lmax by default.
-   integer                   :: ord_prolong_mpole                !< boundary prolongation operator order; allowed values are -2 .. 2
-   integer                   :: coarsen_multipole                !< If > 0 then evaluate multipoles at roof%lev-coarsen_multipole level
+   integer(kind=4)           :: lmax                             !< Maximum l-order of multipole moments
+   integer(kind=4)           :: mmax                             !< Maximum m-order of multipole moments. Equal to lmax by default.
+   integer(kind=4)           :: ord_prolong_mpole                !< boundary prolongation operator order; allowed values are -2 .. 2
+   integer(kind=4)           :: coarsen_multipole                !< If > 0 then evaluate multipoles at roof%lev-coarsen_multipole level
    logical                   :: use_point_monopole               !< Don't evaluate multipole moments, use point-like mass approximation (crudest possible)
    logical                   :: interp_pt2mom                    !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
    logical                   :: interp_mom2pot                   !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
@@ -122,7 +122,7 @@ contains
 
       implicit none
 
-      integer               :: l,m
+      integer :: l, m
 
       ! assume that Center of Mass is approximately in the center of computational domain by default
       CoM(0) = 1.
@@ -206,11 +206,11 @@ contains
          end select
 
          if (allocated(k12) .or. allocated(ofact) .or. allocated(Q)) call die("[multipole:init_multipole] k12, ofact or Q already allocated")
-         allocate(k12(2, 1:lmax, 0:mmax), ofact(0:lm(lmax, 2*mmax)), Q(0:lm(lmax, 2*mmax), INSIDE:OUTSIDE, 0:rqbin))
+         allocate(k12(2, 1:lmax, 0:mmax), ofact(0:lm(int(lmax), int(2*mmax))), Q(0:lm(int(lmax), int(2*mmax)), INSIDE:OUTSIDE, 0:rqbin))
 
          ofact(:) = 0. ! prevent FPE spurious exceptions in multipole:img_mass2moments
          do l = 1, lmax
-            do m = 0, min(l, mmax)
+            do m = 0, min(l, int(mmax))
                if (m == 0) then
                   ofact(l) = 2. ! lm(l,0)
                else                     ! ofact(l, 2*m) = ((-1)^m (2m-1)!!)**2 (l-m)! / (l+m)! ; Should work up to m=512 and even beyond

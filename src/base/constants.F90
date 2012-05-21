@@ -198,7 +198,7 @@ module constants
    end enum
 
    ! base level
-   integer, parameter :: base_level_id = 0 !< Base domain level id. Refinements are positively numbered, coarsened levels for use in multigrid solvers have negative numbers.
+   integer(kind=4), parameter :: base_level_id = 0 !< Base domain level id. Refinements are positively numbered, coarsened levels for use in multigrid solvers have negative numbers.
    integer(kind=8), dimension(ndims), parameter :: base_level_offset = 0_LONG !< Base domain offset. .
 
    ! misc
@@ -208,7 +208,7 @@ module constants
    end enum
    integer, parameter :: stdout = output_unit
    integer, parameter :: stderr = error_unit
-   integer, parameter :: INVALID = -1
+   integer(kind=4), parameter :: INVALID = -I_ONE
 
    integer(kind=4), dimension(ndims,ndims),       parameter :: idm  = reshape(int([ [1,0,0], [0,1,0], [0,0,1] ], kind=4),[ndims,ndims])   !< identity matrix 3x3
    integer(kind=4), dimension(ndims,ndims,LO:HI), parameter :: idm2 = reshape([idm,idm],[ndims,ndims,2_INT4])                             !< auxiliary matrix 3x3x2 based on identity matrix

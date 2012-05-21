@@ -169,10 +169,10 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(ndims), intent(in) :: n_d
-      integer(kind=8), dimension(ndims), intent(in) :: offset
-      integer, intent(in) :: level
-      type(cg_list_patch), pointer, intent(inout) :: patch
+      integer(kind=4), dimension(ndims), intent(in)    :: n_d
+      integer(kind=8), dimension(ndims), intent(in)    :: offset
+      integer(kind=4),                   intent(in)    :: level
+      type(cg_list_patch), pointer,      intent(inout) :: patch
 
       integer :: g
 
