@@ -61,7 +61,7 @@ module mpisetup
 
    integer, parameter :: buffer_dim = 200                   !< size of [cilr]buff arrays used to exchange namelist parameters
    character(len=cbuff_len), dimension(buffer_dim) :: cbuff !< buffer for character parameters
-   integer,                  dimension(buffer_dim) :: ibuff !< buffer for integer parameters
+   integer(kind=4),          dimension(buffer_dim) :: ibuff !< buffer for integer parameters
    real,                     dimension(buffer_dim) :: rbuff !< buffer for real parameters
    logical,                  dimension(buffer_dim) :: lbuff !< buffer for logical parameters
 
