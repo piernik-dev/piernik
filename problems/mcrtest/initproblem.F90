@@ -36,10 +36,10 @@ module initproblem
    private
    public :: read_problem_par, init_prob, problem_pointers
 
-   real               :: t_sn
-   integer            :: n_sn
-   integer            :: norm_step
-   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
+   real            :: t_sn
+   integer         :: n_sn
+   integer(kind=4) :: norm_step
+   real            :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
 
    namelist /PROBLEM_CONTROL/  d0, p0, bx0, by0, bz0, &
                                x0, y0, z0, r0, &

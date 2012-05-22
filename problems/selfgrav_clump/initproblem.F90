@@ -40,7 +40,7 @@ module initproblem
    real                   :: clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM
    real, dimension(ndims) :: clump_pos
    logical                :: crashNotConv, exp_speedup, verbose
-   integer                :: maxitC, maxitM
+   integer(kind=4)        :: maxitC, maxitM
    integer, parameter     :: REL_CALC = 1, REL_SET = REL_CALC + 1
 
    namelist /PROBLEM_CONTROL/  clump_mass, clump_vel_x, clump_vel_y, clump_vel_z, clump_K, clump_r, epsC, epsM, maxitC, maxitM, crashNotConv, exp_speedup, verbose

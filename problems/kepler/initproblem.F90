@@ -45,7 +45,7 @@ module initproblem
    real                     :: dens_amb      !< density of ambient medium (used for inner cutoff)
    real                     :: eps           !< dust to gas ratio
    real                     :: x_cut         !< radius of inner disk cut-off
-   integer                  :: cutoff_ncells !< width of cut-off profile
+   integer(kind=4)          :: cutoff_ncells !< width of cut-off profile
    real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary, \todo save it to restart as an attribute
    !>
    !! \f$\tau\f$ in \f$\frac{Du}{Dt} = - \frac{u-u_0}{\tau}f(R)
@@ -445,7 +445,7 @@ contains
 
                deallocate(gdens)
             else
-               dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, (middle_of_nx - n_x_cut(1)), cg%n_(xdim), 0.0, 1.0) + dens_amb
+               dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, int(middle_of_nx - n_x_cut(1), kind=4), cg%n_(xdim), 0.0, 1.0) + dens_amb
             endif
 
             !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
@@ -562,8 +562,8 @@ contains
       type(cg_list_element), pointer :: cgl
 #ifdef TRACER
       type(grid_container), pointer :: cg
-#endif /* TRACER */
       integer :: i, j, k
+#endif /* TRACER */
 
       call my_grav_pot_3d   ! reset gp, to get right values on the boundaries
 
@@ -828,11 +828,11 @@ contains
 
       implicit none
 
-      integer, intent(in) :: width  !< width of tanh profile [cells]
-      integer, intent(in) :: dist   !< distance between the expected position of the profile and the middle cell of the domain [cells]
-      integer(kind=4), intent(in) :: n !< length of the profile array
-      real, intent(in)    :: vmin   !< minimal value of the profile
-      real, intent(in)    :: vmax   !< maximum value of the profile
+      integer(kind=4), intent(in) :: width  !< width of tanh profile [cells]
+      integer(kind=4), intent(in) :: dist   !< distance between the expected position of the profile and the middle cell of the domain [cells]
+      integer(kind=4), intent(in) :: n      !< length of the profile array
+      real,            intent(in) :: vmin   !< minimal value of the profile
+      real,            intent(in) :: vmax   !< maximum value of the profile
       real, dimension(n)  :: y, x
 
       real, parameter     :: kstep = 1.0 !< iteration step for tanh fit
@@ -910,8 +910,7 @@ contains
       character(kind=fgsl_char,len=fgsl_strmax) :: fname
       real, dimension(:), allocatable :: x,y
       real                            :: xi
-      integer                         :: nxd, i
-      integer(fgsl_size_t)            :: n, nmax
+      integer(fgsl_size_t)            :: n, i, nmax, nxd
 
       write(msg,*) "[initproblem:read_dens_profile] Reading ", trim(densfile)
       open(1,file=densfile, status="old", form='unformatted')
@@ -923,7 +922,7 @@ contains
       close(1)
 
       nmax = n
-      nxd = size(gdens) - 2*dom%nb
+      nxd = int(size(gdens) - 2*dom%nb, kind=4)
 
       if (nxd == n) then
          call printinfo("[initproblem:read_dens_profile] Saved profile has required dimension \o/")

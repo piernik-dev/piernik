@@ -36,8 +36,8 @@ module initproblem
    public :: read_problem_par, init_prob, problem_pointers
    public :: d0, mode
 
-   real              :: d0, p0, amp, kx, ky, kz
-   integer           :: ix, iy, iz, mode
+   real            :: d0, p0, amp, kx, ky, kz
+   integer(kind=4) :: ix, iy, iz, mode
 
    namelist /PROBLEM_CONTROL/  d0, p0, ix, iy, iz, amp, mode
 

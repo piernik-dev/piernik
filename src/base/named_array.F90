@@ -403,8 +403,8 @@ contains
 
       implicit none
 
-      class(named_array4d),      intent(inout) :: this
-      integer, dimension(ndims), intent(in)    :: v
+      class(named_array4d),              intent(inout) :: this
+      integer(kind=4), dimension(ndims), intent(in)    :: v
 
       real,    dimension(:),     pointer       :: p1d
 
@@ -426,9 +426,9 @@ contains
 
       implicit none
 
-      class(named_array4d),      intent(inout) :: this
-      integer(kind=4),           intent(in)    :: nn
-      integer, dimension(ndims), intent(in)    :: v
+      class(named_array4d),              intent(inout) :: this
+      integer(kind=4),                   intent(in)    :: nn
+      integer(kind=4), dimension(ndims), intent(in)    :: v
 
       real                                     :: p
 

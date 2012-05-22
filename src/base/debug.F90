@@ -47,9 +47,9 @@ module piernikdebug
    ! Their purpose is to avoid messing up existing namelists until it becomes clear that certain parameter is really useful.
    ! There is no reason to give them protected attribute.
    integer, parameter                        :: naux = 5 !< number of auxiliary variables of each kind
-   real, dimension(naux)                     :: aux_R    !< real auxiliary parameter
-   integer, dimension(naux)                  :: aux_I    !< integer auxiliary parameter
-   logical, dimension(naux)                  :: aux_L    !< boolean auxiliary parameter
+   real,                     dimension(naux) :: aux_R    !< real auxiliary parameter
+   integer(kind=4),          dimension(naux) :: aux_I    !< integer auxiliary parameter
+   logical,                  dimension(naux) :: aux_L    !< boolean auxiliary parameter
    character(len=cbuff_len), dimension(naux) :: aux_S    !< string auxiliary parameter
 
    real,    protected :: constant_dt               !< value of timestep regardless of fluid state

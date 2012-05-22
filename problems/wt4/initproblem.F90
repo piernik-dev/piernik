@@ -44,7 +44,7 @@ module initproblem
    real                     :: ambient_density                !< modify velocities below this density
    real                     :: cs_mul                         !< temperature scaling factor, implemented for debugging only
    real                     :: damp_factor                    !< Set 1. to clear velocities in the ambient medium, 0. does nothing
-   integer                  :: divine_intervention_type       !< select type of every-step solution alteration
+   integer(kind=4)          :: divine_intervention_type       !< select type of every-step solution alteration
    real                     :: mincs2, maxcs2                 !< extreme soundspeed values found in the IC file
    real                     :: r_in                           !< inner radius of d_i_t = 3, for r < r_in we enforce den0, vlx0, vly0
    real                     :: r_out                          !< outer radius of d_i_t = 3, for r > r_out we enforce den0, vlx0, vly0

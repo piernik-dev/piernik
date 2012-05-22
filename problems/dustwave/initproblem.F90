@@ -37,8 +37,8 @@ module initproblem
    private
    public :: read_problem_par, init_prob, problem_pointers
 
-   real      :: d0, v0, v1
-   integer   :: m_x, m_y, m_z
+   real            :: d0, v0, v1
+   integer(kind=4) :: m_x, m_y, m_z
 
    namelist /PROBLEM_CONTROL/  d0, v0, v1, m_x, m_y, m_z
 

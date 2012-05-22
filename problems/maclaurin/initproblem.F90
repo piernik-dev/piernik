@@ -38,8 +38,8 @@ module initproblem
    public :: read_problem_par, init_prob, problem_pointers
 
    ! namelist parameters
-   real    :: x0, y0, z0, d0, a1, e
-   integer :: nsub
+   real            :: x0, y0, z0, d0, a1, e
+   integer(kind=4) :: nsub
    namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, nsub
 
    ! pivate data
