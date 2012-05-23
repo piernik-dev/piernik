@@ -814,7 +814,7 @@ contains
       call printinfo(msg)
       do i = lbound(this%w_lst(:), dim=1), ubound(this%w_lst(:), dim=1)
          write(msg,'(3a,l2,a,i2,a,l2,2(a,i2),a,100i2)')"'", this%w_lst(i)%name, "', vital=", this%w_lst(i)%vital, ", restart_mode=", this%w_lst(i)%restart_mode, &
-              &                                        ", multigrid=", this%w_lst(i)%multigrid, ", ord_prolong=", this%q_lst(i)%ord_prolong, &
+              &                                        ", multigrid=", this%w_lst(i)%multigrid, ", ord_prolong=", this%w_lst(i)%ord_prolong, &
               &                                        ", components=", this%w_lst(i)%dim4, ", position=", this%w_lst(i)%position(:)
          call printinfo(msg)
       enddo
