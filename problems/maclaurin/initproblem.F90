@@ -145,14 +145,14 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub,  only: msg, printinfo, warn, die
-      use domain,      only: dom
-      use grid,        only: leaves
-      use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use initionized, only: gamma_ion, idni, imxi, imzi, ieni
-      use mpisetup,    only: master
+      use constants,  only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
+      use dataio_pub, only: msg, printinfo, warn, die
+      use domain,     only: dom
+      use grid,       only: leaves
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
+      use initdust,   only: idnd, imxd, imzd
+      use mpisetup,   only: master
 
       implicit none
 
@@ -199,20 +199,18 @@ contains
                         enddo
                      enddo
                   enddo
-                  cg%u(idni, i, j, k) = dm / nsub**3
+                  cg%u(idnd, i, j, k) = dm / nsub**3
 
                enddo
             enddo
          enddo
 
-         cg%u(imxi:imzi, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         cg%u(imxd:imzd, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 
-#ifndef ISO
 #ifdef MAGNETIC
          cg%b(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 #endif /* MAGNETIC */
-         cg%u(ieni, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = p0/(gamma_ion - 1.0)
-#endif /* !ISO */
+
          cgl => cgl%nxt
       enddo
 

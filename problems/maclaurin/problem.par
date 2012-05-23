@@ -55,14 +55,8 @@
     vars(4) = 'errp'
  /
 
- $FLUID_IONIZED
-    gamma_ion  = 1.67
-    selfgrav_ion = .true.
- /
-
- $FLUID_NEUTRAL
-    gamma_neu = 1.67
-    selfgrav_neu = .false.
+ $FLUID_DUST
+    selfgrav_dst = .true.
  /
 
  $NUMERICAL_SETUP
