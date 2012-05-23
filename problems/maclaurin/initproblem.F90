@@ -151,8 +151,8 @@ contains
       use grid,       only: leaves
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
-      use initdust,   only: idnd, imxd, imzd
       use mpisetup,   only: master
+      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 
       implicit none
 
@@ -199,13 +199,15 @@ contains
                         enddo
                      enddo
                   enddo
-                  cg%u(idnd, i, j, k) = dm / nsub**3
+                  cg%u(iarr_all_dn, i, j, k) = dm / nsub**3
 
                enddo
             enddo
          enddo
 
-         cg%u(imxd:imzd, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         cg%u(iarr_all_mx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         cg%u(iarr_all_my, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         cg%u(iarr_all_mz, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
 
 #ifdef MAGNETIC
          cg%b(:, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
