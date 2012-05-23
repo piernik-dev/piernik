@@ -317,12 +317,14 @@ contains
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 
+#if defined IONIZED || defined NEUTRAL
 #ifndef ISO
       real, dimension(flind%fluids,n) :: ekin,eint
 #if defined IONIZED && defined MAGNETIC
       real, dimension(n)             :: emag
 #endif /* IONIZED && MAGNETIC */
 #endif /* !ISO */
+#endif /*  defined IONIZED || defined NEUTRAL  */
 #ifdef COSM_RAYS
       real, dimension(n)             :: grad_pcr,ecr
       real, dimension(n)             :: decr

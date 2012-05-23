@@ -487,6 +487,7 @@ contains
          allocate(tmp(lbound(lst(:),dim=1):ubound(lst(:), dim=1) + 1))
          tmp(:ubound(lst(:), dim=1)) = lst(:)
          call move_alloc(from=tmp, to=lst)
+         !! \warning slight memory leak here, e.g. in use at exit: 572 bytes in 115 blocks, perhaps associated with na_var%position
       endif
       lst(ubound(lst(:), dim=1)) = na_var(name, vital, restart_mode, ord_prolong, position, dim4, multigrid)
 

@@ -88,7 +88,9 @@ contains
 
       ! locals
 !      real               :: minvx, maxvx, amp
+#ifdef LOCAL_FR_SPEED
       real, dimension(size(vx)) :: absvx
+#endif /* LOCAL_FR_SPEED */
       integer                   :: nm
 
       nm = n-1
