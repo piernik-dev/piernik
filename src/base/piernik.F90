@@ -49,13 +49,13 @@ program piernik
 
    implicit none
 
-   logical              :: end_sim !< Used in main loop, to test whether to stop simulation or not
-   logical              :: tleft   !< Used in main loop, to test whether to stop simulation or not
+   logical              :: end_sim             !< Used in main loop, to test whether to stop simulation or not
+   logical, save        :: tleft = .true.      !< Used in main loop, to test whether to stop simulation or not
    character(len=fplen) :: nstr, tstr
    logical, save        :: first_step = .true.
-   real                 :: ts    ! Timestep wallclock
+   real                 :: ts                  !< Timestep wallclock
    real                 :: tlast
-   character(len=*),parameter :: tmr_fu = "fluid_update"
+   character(len=*), parameter :: tmr_fu = "fluid_update"
 
    ts=set_timer(tmr_fu,.true.)
    tlast = 0.0
