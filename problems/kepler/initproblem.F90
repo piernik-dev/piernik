@@ -44,7 +44,8 @@ module initproblem
    real                     :: dens_exp      !< exponent in profile density \f$\rho(R) = \rho_0 R^{-k}\f$
    real                     :: dens_amb      !< density of ambient medium (used for inner cutoff)
    real                     :: eps           !< dust to gas ratio
-   real                     :: x_cut         !< radius of inner disk cut-off
+   real                     :: x_cut, a_cut  !< radius of inner disk cut-off
+   real                     :: dens_max
    integer(kind=4)          :: cutoff_ncells !< width of cut-off profile
    real, save               :: T_inner = 0.0 !< Orbital period at the inner boundary, \todo save it to restart as an attribute
    !>
@@ -62,7 +63,7 @@ module initproblem
 
    namelist /PROBLEM_CONTROL/  alpha, d0, dout, r_max, mag_field_orient, r_in, r_out, f_in, f_out, &
       & dens_exp, eps, dens_amb, x_cut, cutoff_ncells, dumping_coeff, use_inner_orbital_period, &
-      & drag_max, drag_min, densfile, amp_noise, gauss
+      & drag_max, drag_min, densfile, amp_noise, gauss, a_cut, dens_max
 
 contains
 !-----------------------------------------------------------------------------
@@ -122,7 +123,9 @@ contains
       dens_exp         = 0.0
       dens_amb         = 1.e-3
       eps              = 1.0
-      x_cut            = 0.6
+      x_cut            = 2.5
+      a_cut            = 15.0
+      dens_max         = 500.0
 
       cutoff_ncells    = 8
       dumping_coeff    = 1.0
@@ -157,6 +160,8 @@ contains
          rbuff(15) = drag_min
          rbuff(16) = amp_noise
          rbuff(17:20) = gauss
+         rbuff(21) = a_cut
+         rbuff(22) = dens_max
 
       endif
 
@@ -191,6 +196,8 @@ contains
          drag_min         = rbuff(15)
          amp_noise        = rbuff(16)
          gauss            = rbuff(17:20)
+         a_cut            = rbuff(21)
+         dens_max         = rbuff(22)
 
       endif
 
@@ -445,7 +452,9 @@ contains
 
                deallocate(gdens)
             else
-               dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, int(middle_of_nx - n_x_cut(1), kind=4), cg%n_(xdim), 0.0, 1.0) + dens_amb
+!              dens_prof = get_lcutoff2(cg%x(:), x_cut, a_cut)
+               dens_prof = dens_prof(:)*(1.0-get_lcutoff2(cg%x(:), x_cut, a_cut)) + dens_max*get_lcutoff2(cg%x(:), x_cut, a_cut)
+!               dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, int(middle_of_nx - n_x_cut(1), kind=4), cg%n_(xdim), 0.0, 1.0) + dens_amb
             endif
 
             !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
@@ -613,14 +622,14 @@ contains
    subroutine problem_customize_solution_kepler
 
       use constants,       only: xdim, ydim, zdim, I_ONE
-      use dataio_pub,      only: die, warn, msg
+      use dataio_pub,      only: die!, warn, msg
       use domain,          only: is_multicg
       use gc_list,         only: cg_list_element, all_cg
       use global,          only: dt, t, relax_time, smalld !, grace_period_passed
       use grid,            only: leaves
       use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: flind !, iarr_all_mx, iarr_all_mz, iarr_all_dn
+      use fluidindex,      only: flind!, iarr_all_mz, iarr_all_dn
       use mpisetup,        only: comm, ierr
       use mpi,             only: MPI_MAX, MPI_DOUBLE_PRECISION, MPI_IN_PLACE
       ! use interactions,    only: dragc_gas_dust
@@ -631,13 +640,14 @@ contains
 
       implicit none
 
-      integer                               :: j, k
+      integer                               :: i, j, k
       logical, save                         :: frun = .true.
       real, dimension(:,:), allocatable, save :: funcR
       logical, dimension(:,:,:), allocatable  :: adjust
       real, dimension(:,:,:), allocatable  :: vx_sign, vz_sign
       real, save :: x0, x1, y0, y1, a, b
-      real :: max_vx
+      real :: max_vx, mean_vy
+      real, save :: max_vy = 100.0
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
@@ -683,6 +693,9 @@ contains
 #endif /* DEBUG */
             frun = .false.
             funcR(:,:) = spread(funcR(1,:),1,size(cg%u,dim=1))
+
+            max_vy = maxval( abs(cg%u(flind%dst%imy,:,:,:))/cg%u(flind%dst%idn,:,:,:) )
+            call MPI_Allreduce(MPI_IN_PLACE, max_vy, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
          endif
 
          do j = 1, cg%n_(ydim)
@@ -690,19 +703,19 @@ contains
                cg%u(:,:,j,k) = cg%u(:,:,j,k) - dt*(cg%u(:,:,j,k) - cg%w(all_cg%ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
             enddo
          enddo
-!        where ( cg%u(iarr_all_dn,:,:,:) < 2.*smalld )
-!           cg%u(iarr_all_mx,:,:,:) = cg%u(iarr_all_mx,:,:,:)*0.1
-!           cg%u(iarr_all_mz,:,:,:) = cg%u(iarr_all_mz,:,:,:)*0.1
-!        endwhere
+
+!         where ( cg%u(iarr_all_dn,:,:,:) < 2.0*smalld )
+!            cg%u(iarr_all_mz,:,:,:) = cg%u(iarr_all_mz,:,:,:)*0.1
+!         endwhere
 
          max_vx = maxval( abs(cg%u(flind%neu%imx,:,:,:))/cg%u(flind%neu%idn,:,:,:) )
          call MPI_Allreduce(MPI_IN_PLACE, max_vx, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
 
          adjust = abs(cg%u(flind%dst%imx,:,:,:))/cg%u(flind%dst%idn,:,:,:) >= max_vx
          if ( any(adjust) ) then
-            write(msg,'(a,i6,a)') "[kepler_customize_solution]: ", count(adjust), &
-                " cells need adjustment"
-            call warn(msg)
+!            write(msg,'(a,i6,a)') "[kepler_customize_solution]: ", count(adjust), &
+!                " cells need adjustment"
+!            call warn(msg)
             where (adjust)
                vx_sign = signum(cg%u(flind%dst%imx,:,:,:))
                vz_sign = signum(cg%u(flind%dst%imz,:,:,:))
@@ -713,6 +726,26 @@ contains
                cg%u(flind%dst%imz,:,:,:) = vz_sign * cg%u(flind%neu%imz,:,:,:)/cg%u(flind%neu%idn,:,:,:) * cg%u(flind%dst%idn,:,:,:)
             endwhere
          endif
+
+         do i = 1, cg%n_(xdim)
+            do j = 1, cg%n_(ydim)
+               mean_vy = sum( cg%u(flind%dst%imy, i, j, :) /  cg%u(flind%dst%idn, i, j, :) ) / cg%n_(zdim)
+               do k = 1, cg%n_(zdim)
+                  if ( (abs(cg%u(flind%dst%imy, i, j, k) - mean_vy * cg%u(flind%dst%idn, i, j, k)) &
+                     / (mean_vy * cg%u(flind%dst%idn, i, j, k)) >= 0.1) .and. &
+                         cg%u(flind%dst%idn, i, j, k) < 10.0*smalld ) then
+                     cg%u(flind%dst%idn, i ,j ,k) = max(cg%u(flind%dst%idn, i, j, k), 1.1*smalld)
+                     cg%u(flind%dst%imy, i, j, k) = mean_vy * cg%u(flind%dst%idn, i, j, k)
+                  endif
+               enddo
+            enddo
+         enddo
+
+!        where ( cg%u(flind%dst%imy,:,:,:) > max_vy*cg%u(flind%dst%idn,:,:,:) )
+!           cg%u(flind%dst%idn,:,:,:) = max(cg%u(flind%dst%idn,:,:,:), 1.1*smalld)
+!           cg%u(flind%dst%imy,:,:,:) = cg%u(flind%neu%imy,:,:,:)/cg%u(flind%neu%idn,:,:,:) * cg%u(flind%dst%idn,:,:,:)
+!        endwhere
+
          if (allocated(adjust)) deallocate(adjust)
          if (allocated(vx_sign)) deallocate(vx_sign)
          if (allocated(vz_sign)) deallocate(vz_sign)
@@ -857,6 +890,17 @@ contains
          y = eoshift(y,dim=1,shift=dist+width/2,boundary=vmax)
       endif
    end function get_lcutoff
+
+   function get_lcutoff2(x, x0, a) result (y)
+      use constants,   only: pi
+      implicit none
+      real, intent(in), dimension(:) :: x
+      real, intent(in) :: x0, a
+      real, dimension(size(x)) :: y
+
+      y = atan(-(x-x0)*a)/pi + 0.5
+
+   end function get_lcutoff2
 !-----------------------------------------------------------------------------
    integer function get_ncells(x,k)
       implicit none
