@@ -170,7 +170,7 @@ contains
 
          jc2 = j_crit**2
          dims_twice = 2. * dom%eff_dim
-         d_eta_factor = 1./(dims_twice+dble(eta_scale))
+         d_eta_factor = 1./(dims_twice+real(eta_scale, kind=8))
       endif
 
       emfd     = [ 'emfx', 'emfy', 'emfz' ]

@@ -494,7 +494,7 @@ contains
             ldom(:) = ldom(:) * fac(n,1)**[i, j, k]
          enddo
 
-         bsize = int(sum(ldom(:)/dble(n_d(:)) * product(int(n_d(:), kind=8)), MASK = n_d(:) > 1)) !ldom(1)*n_d(2)*n_d(3) + ldom(2)*n_d(1)*n_d(3) + ldom(3)*n_d(1)*n_d(2)
+         bsize = int(sum(ldom(:)/real(n_d(:), kind=8) * product(int(n_d(:), kind=8)), MASK = n_d(:) > 1)) !ldom(1)*n_d(2)*n_d(3) + ldom(2)*n_d(1)*n_d(3) + ldom(3)*n_d(1)*n_d(2)
          load_balance = product(real(n_d(:))) / ( real(nproc) * product( int((n_d(:)-1)/ldom(:)) + 1 ) )
 
          quality = load_balance/ (1 + b_load_fac*(bsize/ideal_bsize - 1.))
@@ -535,7 +535,7 @@ contains
 
       if (master) then
 #ifdef DEBUG
-         write(msg,'(a,3f10.2,a,i10)')"m:ddr id p_size = [",(nproc/product(dble(n_d(:))))**(1./dom%eff_dim)*n_d(:),"], bcells= ", int(ideal_bsize)
+         write(msg,'(a,3f10.2,a,i10)')"m:ddr id p_size = [",(nproc/product(real(n_d(:), kind=8)))**(1./dom%eff_dim)*n_d(:),"], bcells= ", int(ideal_bsize)
          call printinfo(msg)
 #endif /* DEBUG */
          write(msg,'(a,3i4,a)')      "[decomposition:divide_domain_rectlinear] Domain divided to [",p_size(:)," ] pieces"
@@ -543,7 +543,7 @@ contains
          if (is_uneven) then
             write(msg,'(2(a,3i5),a)')"                                         Sizes are from [", int(n_d(:)/p_size(:))," ] to [",int((n_d(:)-1)/p_size(:))+1," ] cells."
             call printinfo(msg)
-            write(msg,'(a,f8.5)')    "                                         Load balance is ",product(int(n_d(:), kind=8)) / ( dble(nproc) * product( int((n_d(:)-1)/p_size(:)) + 1 ) )
+            write(msg,'(a,f8.5)')    "                                         Load balance is ",product(int(n_d(:), kind=8)) / ( real(nproc, kind=8) * product( int((n_d(:)-1)/p_size(:)) + 1 ) )
          else
             write(msg,'(a,3i5,a)')   "                                         Size is [", int(n_d(:)/p_size(:))," ] cells."
          endif
@@ -572,7 +572,7 @@ contains
       real :: optc
 
       !> \todo Try to make an intelligent guess for slicing, then go down to the local minimum and explore neighbourhood. Exploring all possibilities is an O(nproc)**2 task
-      ! The best solution is probably near (nproc/product(dble(n_d(:))))**(1./dom%eff_dim)*n_d(:)
+      ! The best solution is probably near (nproc/product(real(n_d(:), kind=8)))**(1./dom%eff_dim)*n_d(:)
 
       is_mpi_noncart = .true.
       is_uneven = .true.
