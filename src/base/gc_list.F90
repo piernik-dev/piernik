@@ -846,7 +846,7 @@ contains
       integer(kind=4), optional, intent(in)  :: dir     !< order the cell size in dir direction
 
 
-      type(grid_container),   pointer :: cg
+      type(grid_container),   pointer :: cg, cg_x
       type(cg_list_element),  pointer :: cgl
       real, dimension(:,:,:), pointer :: tab
       integer,                       parameter :: tag1 = 11, tag2 = tag1 + 1, tag3 = tag2 + 1
@@ -869,6 +869,7 @@ contains
             call warn(msg)
       end select
 
+      nullify(cg_x)
       cgl => this%first
       if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[gc_list:get_extremum] Wrong index")
       do while (associated(cgl))
@@ -880,11 +881,13 @@ contains
                if (minval(tab) < prop%val) then
                   prop%val = minval(tab)
                   prop%loc = minloc(tab) + dom%nb
+                  cg_x => cg
                endif
             case (MAXL)
                if (maxval(tab) > prop%val) then
                   prop%val = maxval(tab)
                   prop%loc = maxloc(tab) + dom%nb
+                  cg_x => cg
                endif
          end select
          cgl => cgl%nxt
@@ -899,10 +902,15 @@ contains
 
       if (proc == prop%proc) then
          where (.not. dom%has_dir(:)) prop%coords(:) = 0.
-         if (dom%has_dir(xdim)) prop%coords(xdim) = cg%x(prop%loc(xdim))
-         if (dom%has_dir(ydim)) prop%coords(ydim) = cg%y(prop%loc(ydim))
-         if (dom%has_dir(zdim)) prop%coords(zdim) = cg%z(prop%loc(zdim))
-         if (present(dir))      prop%assoc        = cg%dl(dir)
+         if (associated(cg_x)) then
+            if (dom%has_dir(xdim)) prop%coords(xdim) = cg_x%x(prop%loc(xdim))
+            if (dom%has_dir(ydim)) prop%coords(ydim) = cg_x%y(prop%loc(ydim))
+            if (dom%has_dir(zdim)) prop%coords(zdim) = cg_x%z(prop%loc(zdim))
+            if (present(dir))      prop%assoc        = cg_x%dl(dir)
+            ! else prop%assoc = minval(cg_x%dl(:)) ???
+         else
+            call die("[gc_list:get_extremum] not associated(cg_x)")
+         endif
       endif
 
       if (prop%proc /= 0) then
