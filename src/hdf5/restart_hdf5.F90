@@ -89,7 +89,7 @@ contains
 
       filename = output_fname(WR,'.res', nres, bcast=.true.)
       if (master) then
-         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_res_time,' Writing restart v', phv, trim(filename), " ... "
+         write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_res_time,': Writing restart v', phv, trim(filename), " ... "
          call printio(msg, .true.)
       endif
       call set_common_attributes(filename)
