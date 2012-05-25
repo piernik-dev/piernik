@@ -627,7 +627,7 @@ contains
       real,            intent(inout) :: last_dump_time
       logical,         intent(inout) :: dmp
 
-      dmp = ((.not.(dmp)) .and. (output == FINAL))
+      dmp = ((.not.(dmp)) .and. (output == FINAL)) !! \warning strange logic: "dmp = .not. dmp"
       dmp = (dmp .or. (t-last_dump_time) >= dt_dump)
       dmp = (dmp .and. dt_dump > 0.0)
       if (dmp) last_dump_time = last_dump_time + real(floor((t-last_dump_time)/dt_dump))*dt_dump
@@ -656,7 +656,7 @@ contains
 
       implicit none
 
-      logical :: dmp
+      logical, save :: dmp = .false.
 
       call determine_dump(dmp, last_log_time, dt_log, CHK, LOGF)
       if (dmp) call write_log
@@ -670,7 +670,7 @@ contains
 
       implicit none
 
-      logical :: dmp
+      logical, save :: dmp = .false.
 
       call determine_dump(dmp, last_tsl_time, dt_tsl, CHK, TSL)
       if (dmp) call write_timeslice
