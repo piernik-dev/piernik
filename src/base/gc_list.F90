@@ -829,7 +829,7 @@ contains
 !<
    subroutine get_extremum(this, ind, minmax, prop, dir)
 
-      use constants,  only: MINL, MAXL, I_ONE, ndims, xdim, ydim, zdim
+      use constants,  only: MINL, MAXL, I_ONE, ndims, xdim, ydim, zdim, big_float
       use dataio_pub, only: msg, warn, die
       use domain,     only: dom
       use grid_cont,  only: grid_container
@@ -855,6 +855,8 @@ contains
          enumerator :: I_V, I_P !< value and proc
       end enum
       real, dimension(I_V:I_P)  :: v_red
+
+      if (.not. present(dir)) prop%assoc = - big_float ! means uninitialized
 
       prop%loc(:) = 0
       select case (minmax)
