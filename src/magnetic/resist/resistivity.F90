@@ -52,7 +52,7 @@ module resistivity
    real    :: deint_max                      !< COMMENT ME
    integer(kind=4) :: eta_scale              !< COMMENT ME
    real    :: dt_resist, dt_eint
-   double precision                        :: d_eta_factor
+   real(kind=8)                            :: d_eta_factor
    type(value)                             :: etamax, cu2max, deimin
    logical, save                           :: eta1_active = .true.       !< resistivity off-switcher while eta_1 == 0.0
    character(len=varlen), dimension(ndims) :: emfd
