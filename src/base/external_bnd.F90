@@ -71,14 +71,14 @@ contains
 
       class(cg_list),            intent(in) :: cglist     !> the list on which to perform the boundary exchange
       integer,                   intent(in) :: ind        !> Negative value: index of cg%q(:) 3d array
-      integer,         optional, intent(in) :: nb         !> number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: nb         !> number of grid cells to exchange (not implemented for comm3d)
       integer(kind=4), optional, intent(in) :: area_type
       integer(kind=4), optional, intent(in) :: bnd_type   !> Override default boundary type on external boundaries (useful in multigrid solver).
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overriden
       logical,         optional, intent(in) :: corners    !> When present and .true. then call internal_boundaries_3d for each direction separately
 
-      integer :: i, d, n
-      integer(kind=4) :: lh
+      integer :: i, n
+      integer(kind=4) :: lh, d
       logical :: dodie, do_permpi, do_cor
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg

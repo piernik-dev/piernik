@@ -57,10 +57,10 @@ module domain
 
    type :: domain_container
       ! primary parameters, read from /DOMAIN_SIZES/, /BOUNDARIES/ and /DOMAIN_LIMITS/ namelists
-      real, dimension(ndims, LO:HI) :: edge     !< physical domain boundary positions
-      integer(kind=4), dimension(ndims) :: n_d  !< number of grid cells in physical domain in x-, y- and z-direction (where equal to 1, the dimension is reduced to a point with no boundary cells)
-      integer(kind=4)                  :: nb    !< number of boundary cells surrounding the physical domain, same for all directions
-      integer, dimension(ndims, LO:HI) :: bnd   !< type of boundary conditions coded in integers
+      real, dimension(ndims, LO:HI)            :: edge !< physical domain boundary positions
+      integer(kind=4), dimension(ndims)        :: n_d  !< number of grid cells in physical domain in x-, y- and z-direction (where equal to 1, the dimension is reduced to a point with no boundary cells)
+      integer(kind=4)                          :: nb   !< number of boundary cells surrounding the physical domain, same for all directions
+      integer(kind=4), dimension(ndims, LO:HI) :: bnd  !< type of boundary conditions coded in integers
 
       ! derived parameters
       real, dimension(ndims) :: L_              !< span of the physical domain [ xmax-xmin, ymax-ymin, zmax-zmin ]

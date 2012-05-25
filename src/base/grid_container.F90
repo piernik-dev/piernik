@@ -166,7 +166,7 @@ module grid_cont
 
       ! External boundary conditions and internal boundaries
 
-      integer, dimension(ndims, LO:HI)  :: bnd                   !< type of boundary conditions coded in integers
+      integer(kind=4), dimension(ndims, LO:HI)  :: bnd           !< type of boundary conditions coded in integers
       integer(kind=4), allocatable, dimension(:,:,:,:,:) :: mbc  !< MPI Boundary conditions Container for comm3d-based communication
       type(bnd_list), dimension(:,:), allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim, nb)
       type(bnd_list), dimension(:,:), allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim, nb)
