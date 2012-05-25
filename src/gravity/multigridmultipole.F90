@@ -264,8 +264,7 @@ contains
 
       use cg_list_lev,        only: cg_list_level
       use multigridvars,      only: roof, solution
-      use multigridhelpers,   only: dirtyH, dirty_debug
-      use multigridbasefuncs, only: zero_boundaries
+      use multigridhelpers,   only: dirtyH, dirty_debug, zero_boundaries
 
       implicit none
 

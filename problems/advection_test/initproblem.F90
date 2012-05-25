@@ -221,7 +221,7 @@ contains
 
       implicit none
 
-      call all_cg%reg_var(inid_n, .false., AT_NO_B)
+      call all_cg%reg_var(inid_n, restart_mode = AT_NO_B)
 
    end subroutine register_user_var
 

@@ -147,12 +147,11 @@ contains
 
    subroutine multigrid_ext_bnd(curl, iv, ng, mode, cor)
 
-      use constants,     only: LO, HI, xdim, ydim, zdim
+      use constants,     only: LO, HI, xdim, ydim, zdim, BND_NONE, BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF
       use dataio_pub,    only: die, msg, warn
       use gc_list,       only: cg_list_element
       use cg_list_lev,   only: cg_list_level
       use grid_cont,     only: grid_container
-      use multigridvars, only: extbnd_donothing, extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror
 
       implicit none
 
@@ -180,9 +179,9 @@ contains
 
          !> \todo implement mixed BC
          select case (mode)         !> \deprecated BEWARE: some cylindrical factors may be helpful
-            case (extbnd_donothing) ! remember to initialize everything first!
+            case (BND_NONE) ! remember to initialize everything first!
                return
-            case (extbnd_extrapolate) !> \deprecated mixed-type BC: free flux; BEWARE: it is not protected from inflow
+            case (BND_XTRAP) !> \deprecated mixed-type BC: free flux; BEWARE: it is not protected from inflow
                do i = 1, ng
                   if (cg%ext_bnd(xdim, LO)) cg%q(iv)%arr(cg%is-i, :, :) = (1+i) * cg%q(iv)%arr(cg%is, :, :) - i * cg%q(iv)%arr(cg%is+1, :, :)
                   if (cg%ext_bnd(xdim, HI)) cg%q(iv)%arr(cg%ie+i, :, :) = (1+i) * cg%q(iv)%arr(cg%ie, :, :) - i * cg%q(iv)%arr(cg%ie-1, :, :)
@@ -191,14 +190,14 @@ contains
                   if (cg%ext_bnd(zdim, LO)) cg%q(iv)%arr(:, :, cg%ks-i) = (1+i) * cg%q(iv)%arr(:, :, cg%ks) - i * cg%q(iv)%arr(:, :, cg%ks+1)
                   if (cg%ext_bnd(zdim, HI)) cg%q(iv)%arr(:, :, cg%ke+i) = (1+i) * cg%q(iv)%arr(:, :, cg%ke) - i * cg%q(iv)%arr(:, :, cg%ke-1)
                enddo
-            case (extbnd_zero) ! homogenous Dirichlet BC with 0 at first guardcell row
+            case (BND_ZERO) ! homogenous Dirichlet BC with 0 at first guardcell row
                if (cg%ext_bnd(xdim, LO)) cg%q(iv)%arr(:cg%is, :, :) = 0.
                if (cg%ext_bnd(xdim, HI)) cg%q(iv)%arr(cg%ie:, :, :) = 0.
                if (cg%ext_bnd(ydim, LO)) cg%q(iv)%arr(:, :cg%js, :) = 0.
                if (cg%ext_bnd(ydim, HI)) cg%q(iv)%arr(:, cg%je:, :) = 0.
                if (cg%ext_bnd(zdim, LO)) cg%q(iv)%arr(:, :, :cg%ks) = 0.
                if (cg%ext_bnd(zdim, HI)) cg%q(iv)%arr(:, :, cg%ke:) = 0.
-            case (extbnd_mirror) ! reflecting BC (homogenous Neumamnn)
+            case (BND_REF) ! reflecting BC (homogenous Neumamnn)
                do i = 1, ng
                   if (cg%ext_bnd(xdim, LO)) cg%q(iv)%arr(cg%is-i, :, :) = cg%q(iv)%arr(cg%is+i-1, :, :)
                   if (cg%ext_bnd(xdim, HI)) cg%q(iv)%arr(cg%ie+i, :, :) = cg%q(iv)%arr(cg%ie-i+1, :, :)
@@ -207,7 +206,7 @@ contains
                   if (cg%ext_bnd(zdim, LO)) cg%q(iv)%arr(:, :, cg%ks-i) = cg%q(iv)%arr(:, :, cg%ks+i-1)
                   if (cg%ext_bnd(zdim, HI)) cg%q(iv)%arr(:, :, cg%ke+i) = cg%q(iv)%arr(:, :, cg%ke-i+1)
                enddo
-            case (extbnd_antimirror) ! homogenous Dirichlet BC with 0 at external faces
+            case (BND_NEGREF) ! homogenous Dirichlet BC with 0 at external faces
                do i = 1, ng
                   if (cg%ext_bnd(xdim, LO)) cg%q(iv)%arr(cg%is-i, :, :) = - cg%q(iv)%arr(cg%is+i-1, :, :)
                   if (cg%ext_bnd(xdim, HI)) cg%q(iv)%arr(cg%ie+i, :, :) = - cg%q(iv)%arr(cg%ie-i+1, :, :)

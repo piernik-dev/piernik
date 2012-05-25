@@ -105,14 +105,14 @@ contains
 !<
    subroutine init_multigrid_diff
 
-      use constants,     only: xdim, ydim, zdim, GEO_XYZ, half, zero, one
+      use constants,     only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use dataio_pub,    only: die, warn, msg
       use domain,        only: dom
       use gc_list,       only: all_cg
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use mpisetup,      only: comm, ierr, master, slave, nproc, ibuff, rbuff, lbuff, cbuff, buffer_dim, FIRST
-      use multigridvars, only: extbnd_zero, extbnd_extrapolate, extbnd_mirror, extbnd_antimirror, single_base
+      use multigridvars, only: single_base
 
       implicit none
 
@@ -184,14 +184,14 @@ contains
       endif
 
       ! boundaries
-      diff_extbnd = extbnd_zero
+      diff_extbnd = BND_ZERO
       select case (diff_bnd_str)
          case ("isolated", "iso", "free")
-            diff_extbnd = extbnd_extrapolate
+            diff_extbnd = BND_XTRAP
          case ("reflecting", "refl", "styrofoam")
-            diff_extbnd = extbnd_mirror
+            diff_extbnd = BND_REF
          case ("zero", "cold", "antireflecting")
-            diff_extbnd = extbnd_antimirror
+            diff_extbnd = BND_NEGREF
          case default
             write(msg,'(3a)')"[multigrid_diffusion:init_multigrid_diff] Non-recognized boundary description '",diff_bnd_str,"'"
             call die(msg)
@@ -413,16 +413,16 @@ contains
 
    subroutine init_b
 
-      use constants,          only: I_ONE, xdim, zdim, HI, LO
-      use domain,             only: dom
-      use grid,               only: leaves
-      use gc_list,            only: cg_list_element, all_cg
-      use cg_list_lev,        only: cg_list_level
-      use grid_cont,          only: grid_container
-      use multigridhelpers,   only: set_dirty, check_dirty, dirty_label
-      use multigridmpifuncs,  only: mpi_multigrid_bnd
-      use multigridvars,      only: base, roof, extbnd_mirror
-      use named_array,        only: p3, p4
+      use cg_list_lev,      only: cg_list_level
+      use constants,        only: I_ONE, xdim, zdim, HI, LO, BND_REF
+      use domain,           only: dom
+      use external_bnd,     only: arr3d_boundaries
+      use grid,             only: leaves
+      use gc_list,          only: cg_list_element, all_cg
+      use grid_cont,        only: grid_container
+      use multigridhelpers, only: set_dirty, check_dirty, dirty_label
+      use multigridvars,    only: base, roof
+      use named_array,      only: p3, p4
 
       implicit none
 
@@ -450,7 +450,7 @@ contains
 
          curl => base
          do while (associated(curl%finer)) ! from base to one level below roof
-            call mpi_multigrid_bnd(curl, idiffb(ib), I_ONE, extbnd_mirror, .true.) !> \todo use global boundary type for B
+            call arr3d_boundaries(curl, idiffb(ib), nb = I_ONE, bnd_type = BND_REF, corners = .true.) !> \todo use global boundary type for B
             !>
             !! |deprecated BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
             !! the problem is that the cg%b(:,:,:,:) elements are face-centered so restriction and external boundaries should take this into account
@@ -571,7 +571,7 @@ contains
       norm_rhs = leaves%norm_sq(solution)
       norm_lhs = leaves%norm_sq(defect)
 !     Do we need to take care of boundaries here?
-!      call mpi_multigrid_bnd(roof, solution, I_ONE, diff_extbnd)
+!      call arr3d_boundaries(roof, solution, nb = I_ONE, bnd_type = diff_extbnd)
 !      cg%u%span(iarr_crs(cr_id),cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_) = cg%q(solution)%span(cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_)
 
       call leaves%qw_copy(solution, all_cg%fi, int(iarr_crs(cr_id)))
@@ -657,14 +657,14 @@ contains
 
    subroutine residual(curl, src, soln, def, cr_id)
 
+      use cg_list_lev,       only: cg_list_level
       use constants,         only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
       use domain,            only: dom
-      use cg_list_lev,       only: cg_list_level
+      use external_bnd,      only: arr3d_boundaries
       use gc_list,           only: cg_list_element, ind_val, all_cg
       use global,            only: dt
       use grid_cont,         only: grid_container
 !      use multigridhelpers,  only: check_dirty
-      use multigridmpifuncs, only: mpi_multigrid_bnd
       use named_array,       only: p3
 
       implicit none
@@ -681,7 +681,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
 
-      call mpi_multigrid_bnd(curl, soln, I_ONE, diff_extbnd, .true.) ! corners are required for fluxes
+      call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = diff_extbnd, corners = .true.) ! corners are required for fluxes
 
       call curl%q_lin_comb([ ind_val(soln, 1.), ind_val(src, -1.) ], def)
 
@@ -722,14 +722,14 @@ contains
 
    subroutine approximate_solution(curl, src, soln, cr_id)
 
-      use constants,         only: xdim, ydim, zdim, one, half, I_ONE, ndims
-      use domain,            only: dom
-      use cg_list_lev,       only: cg_list_level
-      use gc_list,           only: cg_list_element, all_cg
-      use global,            only: dt
-      use grid_cont,         only: grid_container
-      use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,     only: base, extbnd_donothing
+      use cg_list_lev,   only: cg_list_level
+      use constants,     only: xdim, ydim, zdim, one, half, I_ONE, ndims, BND_NONE
+      use domain,        only: dom
+      use external_bnd,  only: arr3d_boundaries
+      use gc_list,       only: cg_list_element, all_cg
+      use global,        only: dt
+      use grid_cont,     only: grid_container
+      use multigridvars, only: base
 
       implicit none
 
@@ -755,9 +755,9 @@ contains
 
       do n = 1, RED_BLACK*nsmoo
          if (mod(n,2) == 1) then
-            call mpi_multigrid_bnd(curl, soln, I_ONE, diff_extbnd, .true.) ! corners are required for fluxes
+            call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = diff_extbnd, corners = .true.) ! corners are required for fluxes
          else
-            call mpi_multigrid_bnd(curl, soln, I_ONE, extbnd_donothing, .true.)
+            call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NONE, corners = .true.)
          endif
 
          cgl => curl%first

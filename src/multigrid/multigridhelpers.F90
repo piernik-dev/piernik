@@ -39,7 +39,7 @@ module multigridhelpers
 
    private
 
-   public :: set_dirty, check_dirty, numbered_ascii_dump
+   public :: set_dirty, check_dirty, numbered_ascii_dump, zero_boundaries
    public :: do_ascii_dump, dirty_debug, dirty_label, dirtyH, dirtyL
 
    ! namelist parameters
@@ -227,5 +227,31 @@ contains
       call ascii_dump(trim(msg))
 
    end subroutine numbered_ascii_dump
+
+
+!>
+!! \brief Clear boundary values
+!<
+
+   subroutine zero_boundaries(curl)
+
+      use gc_list,     only: cg_list_element
+      use cg_list_lev, only: cg_list_level
+
+      implicit none
+
+      type(cg_list_level), pointer, intent(in) :: curl  !< level for which clear the boundary values
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => curl%first
+      do while (associated(cgl))
+         cgl%cg%mg%bnd_x(:,:,:) = 0.
+         cgl%cg%mg%bnd_y(:,:,:) = 0.
+         cgl%cg%mg%bnd_z(:,:,:) = 0.
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine zero_boundaries
 
 end module multigridhelpers

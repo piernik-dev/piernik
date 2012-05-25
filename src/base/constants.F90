@@ -121,12 +121,20 @@ module constants
 
    ! boundary conditions type
    enum, bind(C)
-      enumerator :: BND_MPI                              !! internal, processor-processor boundary (by default equal to 0)
-      enumerator :: BND_PER, BND_REF                     !! periodic boundary, reflecting boudary
-      enumerator :: BND_OUT, BND_OUTD, BND_OUTH          !! free boundary, one-way outflow boundary, hydrostatic boundary
-      enumerator :: BND_COR, BND_SHE                     !! corner boundary, shear boundary
-      enumerator :: BND_USER                             !! user boundaries (provided in read_problem_par)
-      enumerator :: BND_INVALID = BND_MPI  - 1           !! non-recognized boundary
+      enumerator :: BND_MPI                   !! internal, processor-processor boundary (by default equal to 0)
+      enumerator :: BND_PER                   !! periodic boundary
+      enumerator :: BND_REF                   !! reflecting boudary
+      enumerator :: BND_NEGREF                !! antireflecting boundary
+      enumerator :: BND_ZERO                  !! zero-valued boundary
+      enumerator :: BND_NONE                  !! do not touch external boundary
+      enumerator :: BND_XTRAP                 !! linearly extrapolated boundary
+      enumerator :: BND_OUT                   !! free boundary
+      enumerator :: BND_OUTD                  !! one-way outflow boundary
+      enumerator :: BND_OUTH                  !! hydrostatic boundary
+      enumerator :: BND_COR                   !! corner boundary
+      enumerator :: BND_SHE                   !! shear boundary
+      enumerator :: BND_USER                  !! user boundaries (provided in read_problem_par)
+      enumerator :: BND_INVALID = BND_MPI - 1 !! non-recognized boundary
    end enum
 
    ! 3D and 4D array names
