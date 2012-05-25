@@ -941,14 +941,14 @@ contains
       write(msg, fmt_dtloc)   'max(|vz|)   ',fluid, pr%velz_max%val, pr%velz_max%assoc, pr%velz_max%proc, pack(pr%velz_max%loc,dom%has_dir), pack(pr%velz_max%coords,dom%has_dir)
       call printinfo(msg, .false.)
       if (cs_tn) then
-         write(msg, fmt_dtloc)'max(c_s )   ',fluid, pr%cs_max%val,   pr%cs_max%assoc,   pr%cs_max%proc,   pack(pr%cs_max%loc,dom%has_dir),   pack(pr%cs_max%coords,dom%has_dir)
+         write(msg, fmt_dtloc)'max(c_s)    ',fluid, pr%cs_max%val,   pr%cs_max%assoc,   pr%cs_max%proc,   pack(pr%cs_max%loc,dom%has_dir),   pack(pr%cs_max%coords,dom%has_dir)
          call printinfo(msg, .false.)
       endif
 
       if (is_multicg) then
          write(msg, fmt_vloc)   'min(dt_vx)   ',fluid, pr%dtvx_min%val, pr%dtvx_min%assoc, pr%dtvx_min%proc, pack(pr%dtvx_min%loc,dom%has_dir), pack(pr%dtvx_min%coords,dom%has_dir)
          call printinfo(msg, .false.)
-         write(msg, fmt_vloc)   'min(ct_vy)   ',fluid, pr%dtvy_min%val, pr%dtvy_min%assoc, pr%dtvy_min%proc, pack(pr%dtvy_min%loc,dom%has_dir), pack(pr%dtvy_min%coords,dom%has_dir)
+         write(msg, fmt_vloc)   'min(dt_vy)   ',fluid, pr%dtvy_min%val, pr%dtvy_min%assoc, pr%dtvy_min%proc, pack(pr%dtvy_min%loc,dom%has_dir), pack(pr%dtvy_min%coords,dom%has_dir)
          call printinfo(msg, .false.)
          write(msg, fmt_vloc)   'min(dt_vz)   ',fluid, pr%dtvz_min%val, pr%dtvz_min%assoc, pr%dtvz_min%proc, pack(pr%dtvz_min%loc,dom%has_dir), pack(pr%dtvz_min%coords,dom%has_dir)
          call printinfo(msg, .false.)
