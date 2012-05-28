@@ -448,7 +448,7 @@ contains
                   enddo
 #endif /* ZERO_BND_EMF */
                case default
-                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, LO)," not implemented for ",emfdir, " in ", dir
+                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, LO)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
             end select  ! (cg%bnd(xdim, LO))
 
@@ -471,7 +471,7 @@ contains
                   enddo
 #endif /* ZERO_BND_EMF */
                case default
-                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, HI)," not implemented for ",emfdir, " in ", dir
+                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, HI)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
             end select ! (cg%bnd(xdim, HI))
 
@@ -496,7 +496,7 @@ contains
                   enddo
 #endif /* ZERO_BND_EMF */
                case default
-                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, LO)," not implemented for ",emfdir, " in ", dir
+                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, LO)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
             end select  ! (cg%bnd(ydim, LO))
 
@@ -519,7 +519,7 @@ contains
                   enddo
 #endif /* ZERO_BND_EMF */
                case default
-                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, HI)," not implemented for ",emfdir, " in ", dir
+                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, HI)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
             end select ! (cg%bnd(ydim, HI))
 
@@ -544,7 +544,7 @@ contains
                   enddo
 #endif /* ZERO_BND_EMF */
                case default
-                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, LO)," not implemented for ",emfdir, " in ", dir
+                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, LO)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
             end select  ! (cg%bnd(zdim, LO))
 
@@ -567,7 +567,7 @@ contains
                   enddo
 #endif /* ZERO_BND_EMF */
                case default
-                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, HI)," not implemented for ",emfdir, " in ", dir
+                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, HI)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
             end select ! (cg%bnd(zdim, HI))
 
