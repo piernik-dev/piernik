@@ -77,7 +77,7 @@ contains
 
    subroutine bnd_b(dir, cg)
 
-      use constants,  only: MAG, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
+      use constants,  only: MAG, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
            &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE
       use dataio_pub, only: msg, warn, die
       use domain,     only: is_mpi_noncart, is_multicg, dom
@@ -104,12 +104,7 @@ contains
       real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
 #endif /* SHEAR */
       logical, save                         :: frun = .true.
-      logical, save                         :: bnd_xl_not_provided = .false.
-      logical, save                         :: bnd_xr_not_provided = .false.
-      logical, save                         :: bnd_yl_not_provided = .false.
-      logical, save                         :: bnd_yr_not_provided = .false.
-      logical, save                         :: bnd_zl_not_provided = .false.
-      logical, save                         :: bnd_zr_not_provided = .false.
+      logical, dimension(ndims,LO:HI), save :: bnd_not_provided = .false.
 
 ! MPI block comunication
       if (cdd%comm3d /= MPI_COMM_NULL) then
@@ -275,17 +270,15 @@ contains
 
 ! Non-MPI boundary conditions
       if (frun) then
-         bnd_xl_not_provided = any( [BND_COR, BND_REF, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
-         bnd_xr_not_provided = any( [BND_COR, BND_REF, BND_MPI, BND_SHE] == cg%bnd(xdim, HI))
-         bnd_yl_not_provided = any( [BND_COR, BND_REF, BND_MPI ] == cg%bnd(ydim, LO))
-         bnd_yr_not_provided = any( [BND_COR, BND_REF, BND_MPI ] == cg%bnd(ydim, HI))
-         bnd_zl_not_provided = any( [BND_REF, BND_MPI ] == cg%bnd(zdim, LO))
-         bnd_zr_not_provided = any( [BND_REF, BND_MPI ] == cg%bnd(zdim, HI))
+         bnd_not_provided(xdim,LO) = any( [BND_COR, BND_REF, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
+         bnd_not_provided(xdim,HI) = any( [BND_COR, BND_REF, BND_MPI, BND_SHE] == cg%bnd(xdim, HI))
+         bnd_not_provided(ydim,LO) = any( [BND_COR, BND_REF, BND_MPI ] == cg%bnd(ydim, LO))
+         bnd_not_provided(ydim,HI) = any( [BND_COR, BND_REF, BND_MPI ] == cg%bnd(ydim, HI))
+         bnd_not_provided(zdim,LO) = any( [BND_REF, BND_MPI ] == cg%bnd(zdim, LO))
+         bnd_not_provided(zdim,HI) = any( [BND_REF, BND_MPI ] == cg%bnd(zdim, HI))
       endif
 
-      if (dir==xdim .and. bnd_xl_not_provided .and. bnd_xr_not_provided) return  ! avoid triple case
-      if (dir==ydim .and. bnd_yl_not_provided .and. bnd_yr_not_provided) return  ! avoid triple case
-      if (dir==zdim .and. bnd_zl_not_provided .and. bnd_zr_not_provided) return  ! avoid triple case
+      if (bnd_not_provided(dir,LO) .and. bnd_not_provided(dir,HI)) return  ! avoid triple case
 
       select case (dir)
          case (xdim)
@@ -375,7 +368,7 @@ contains
 
    subroutine bnd_emf(var, emfdir, dir, cg)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE
+      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE
       use dataio_pub, only: msg, warn, die
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
@@ -392,39 +385,33 @@ contains
       real, dimension(:,:), allocatable     :: dvarz
       integer                               :: ib
       logical, save                         :: frun = .true.
-      logical, save                         :: bnd_xl_not_provided = .false.
-      logical, save                         :: bnd_xr_not_provided = .false.
-      logical, save                         :: bnd_yl_not_provided = .false.
-      logical, save                         :: bnd_yr_not_provided = .false.
-      logical, save                         :: bnd_zl_not_provided = .false.
-      logical, save                         :: bnd_zr_not_provided = .false.
-      integer                               :: ledge, redge, lnbcells, rnbcells, zndiff, rrbase
+      logical, dimension(ndims,LO:HI), save :: bnd_not_provided = .false.
+      integer                               :: ledge, redge, lnbcells, rnbcells, rrbase
+      logical                               :: zndiff
       real                                  :: bndsign
 
       if (any([allocated(dvarx), allocated(dvary), allocated(dvarz)])) call die("[magboundaries:bnd_emf] dvar[xyz] already allocated")
       allocate(dvarx(cg%n_(ydim), cg%n_(zdim)), dvary(cg%n_(xdim), cg%n_(zdim)), dvarz(cg%n_(xdim), cg%n_(ydim)))
 
       if (frun) then
-         bnd_xl_not_provided = any( [BND_COR, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
-         bnd_xr_not_provided = any( [BND_COR, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, HI))
-         bnd_yl_not_provided = any( [BND_COR, BND_PER, BND_MPI ] == cg%bnd(ydim, LO))
-         bnd_yr_not_provided = any( [BND_COR, BND_PER, BND_MPI ] == cg%bnd(ydim, HI))
-         bnd_zl_not_provided = any( [BND_PER, BND_MPI ] == cg%bnd(zdim, LO))
-         bnd_zr_not_provided = any( [BND_PER, BND_MPI ] == cg%bnd(zdim, HI))
+         bnd_not_provided(xdim,LO) = any( [BND_COR, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
+         bnd_not_provided(xdim,HI) = any( [BND_COR, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, HI))
+         bnd_not_provided(ydim,LO) = any( [BND_COR, BND_PER, BND_MPI ] == cg%bnd(ydim, LO))
+         bnd_not_provided(ydim,HI) = any( [BND_COR, BND_PER, BND_MPI ] == cg%bnd(ydim, HI))
+         bnd_not_provided(zdim,LO) = any( [BND_PER, BND_MPI ] == cg%bnd(zdim, LO))
+         bnd_not_provided(zdim,HI) = any( [BND_PER, BND_MPI ] == cg%bnd(zdim, HI))
          frun = .false.
       endif
 
-      if (dir==xdim .and. bnd_xl_not_provided .and. bnd_xr_not_provided) return  ! avoid triple case
-      if (dir==ydim .and. bnd_yl_not_provided .and. bnd_yr_not_provided) return  ! avoid triple case
-      if (dir==zdim .and. bnd_zl_not_provided .and. bnd_zr_not_provided) return  ! avoid triple case
+      if (bnd_not_provided(dir,LO) .and. bnd_not_provided(dir,HI)) return  ! avoid triple case
 
-      bndsign = huge(1.0); ledge=huge(1); redge=huge(1); lnbcells=huge(1); rnbcells=huge(1); zndiff=huge(1); rrbase=huge(1)
+      bndsign = huge(1.0); ledge=huge(1); redge=huge(1); lnbcells=huge(1); rnbcells=huge(1); zndiff=.false.; rrbase=huge(1)
       ! the code below should not use these values and the compiler should not complain on possible use of uninitialized variables.
 
-            if (any( [cg%bnd(dir, LO) == BND_REF,  cg%bnd(dir, HI) == BND_REF,  cg%bnd(dir, LO) == BND_OUT,  cg%bnd(dir, HI) == BND_OUT, &
-               &      cg%bnd(dir, LO) == BND_OUTD, cg%bnd(dir, HI) == BND_OUTD, cg%bnd(dir, LO) == BND_OUTH, cg%bnd(dir, HI) == BND_OUTH] )) then
-               call compute_bnd_indxs(emfdir, cg%n_b(dir),ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
-            endif
+      if (any( [cg%bnd(dir, LO) == BND_REF,  cg%bnd(dir, HI) == BND_REF,  cg%bnd(dir, LO) == BND_OUT,  cg%bnd(dir, HI) == BND_OUT, &
+         &      cg%bnd(dir, LO) == BND_OUTD, cg%bnd(dir, HI) == BND_OUTD, cg%bnd(dir, LO) == BND_OUTH, cg%bnd(dir, HI) == BND_OUTH] )) then
+         call compute_bnd_indxs(emfdir, cg%n_b(dir),ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+      endif
 
       select case (dir)
          case (xdim)
@@ -433,7 +420,7 @@ contains
                case (BND_COR, BND_MPI, BND_PER, BND_SHE)
                   ! Do nothing
                case (BND_REF)
-                  if (zndiff == 1) var(ledge,:,:) = 0.0
+                  if (zndiff) var(ledge,:,:) = 0.0
                   do ib=1,lnbcells
                      var(lnbcells+1-ib,:,:) = bndsign * var(ledge+ib,:,:)
                   enddo
@@ -456,7 +443,7 @@ contains
                case (BND_COR, BND_MPI, BND_PER, BND_SHE)
                   ! Do nothing
                case (BND_REF)
-                  if (zndiff == 1) var(redge,:,:) = 0.0
+                  if (zndiff) var(redge,:,:) = 0.0
                   do ib=1,rnbcells
                      var(redge+ib,:,:) = bndsign * var(rrbase-ib,:,:)
                   enddo
@@ -481,7 +468,7 @@ contains
                case (BND_COR, BND_MPI, BND_PER)
                   ! Do nothing
                case (BND_REF)
-                  if (zndiff == 1) var(:,ledge,:) = 0.0
+                  if (zndiff) var(:,ledge,:) = 0.0
                   do ib=1,lnbcells
                      var(:,lnbcells+1-ib,:) = bndsign * var(:,ledge+ib,:)
                   enddo
@@ -504,7 +491,7 @@ contains
                case (BND_COR, BND_MPI, BND_PER)
                   ! Do nothing
                case (BND_REF)
-                  if (zndiff == 1) var(:,redge,:) = 0.0
+                  if (zndiff) var(:,redge,:) = 0.0
                   do ib=1,rnbcells
                      var(:,redge+ib,:) = bndsign * var(:,rrbase-ib,:)
                   enddo
@@ -529,7 +516,7 @@ contains
                case (BND_MPI, BND_PER)
                   ! Do nothing
                case (BND_REF)
-                  if (zndiff == 1) var(:,:,ledge) = 0.0
+                  if (zndiff) var(:,:,ledge) = 0.0
                   do ib=1,lnbcells
                      var(:,:,lnbcells+1-ib) = bndsign * var(:,:,ledge+ib)
                   enddo
@@ -552,7 +539,7 @@ contains
                case (BND_MPI, BND_PER)
                   ! Do nothing
                case (BND_REF)
-                  if (zndiff == 1) var(:,:,redge) = 0.0
+                  if (zndiff) var(:,:,redge) = 0.0
                   do ib=1,rnbcells
                      var(:,:,redge+ib) = bndsign * var(:,:,rrbase-ib)
                   enddo
@@ -594,7 +581,7 @@ contains
       integer, intent(out) :: lnbcells     !< number of cells in a loop at left boundary
       integer, intent(out) :: rnbcells     !< number of cells in a loop at right boundary
       real,    intent(out) :: bndsign      !< 1. or -1. to change the sign or not
-      integer, intent(out) :: zndiff       !< COMMENT ME
+      logical, intent(out) :: zndiff       !< COMMENT ME
       integer, intent(out) :: rrbase       !< COMMENT ME
 
       select case (bndcase)
@@ -612,11 +599,11 @@ contains
             bndsign  = 1.
       end select  ! (bndcase)
 
-      zndiff   = ledge - lnbcells
-!     rnbcells = dom%nb - zndiff
+      zndiff   = (ledge - lnbcells == 1)
+!     rnbcells = dom%nb - ledge + lnbcells
       rnbcells = 2*dom%nb - ledge
       redge    = ndirb + ledge
-      rrbase   = ndirb + lnbcells + 1  ! = redge + 1 - zndiff
+      rrbase   = ndirb + lnbcells + 1  ! = redge + 1 - ledge + lnbcells
 
    end subroutine compute_bnd_indxs
 
