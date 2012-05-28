@@ -270,12 +270,9 @@ contains
 
 ! Non-MPI boundary conditions
       if (frun) then
-         bnd_not_provided(xdim,LO) = any( [BND_COR, BND_REF, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
-         bnd_not_provided(xdim,HI) = any( [BND_COR, BND_REF, BND_MPI, BND_SHE] == cg%bnd(xdim, HI))
-         bnd_not_provided(ydim,LO) = any( [BND_COR, BND_REF, BND_MPI ] == cg%bnd(ydim, LO))
-         bnd_not_provided(ydim,HI) = any( [BND_COR, BND_REF, BND_MPI ] == cg%bnd(ydim, HI))
-         bnd_not_provided(zdim,LO) = any( [BND_REF, BND_MPI ] == cg%bnd(zdim, LO))
-         bnd_not_provided(zdim,HI) = any( [BND_REF, BND_MPI ] == cg%bnd(zdim, HI))
+         bnd_not_provided(:, :) = (cg%bnd(:,:) == BND_REF) .or. (cg%bnd(:, :) == BND_MPI) !! what about BND_PER?
+         bnd_not_provided(xdim:ydim, :) = bnd_not_provided(xdim:ydim, :) .or. (cg%bnd(xdim:ydim, :) == BND_COR)
+         bnd_not_provided(xdim, :) = bnd_not_provided(xdim, :) .or. (cg%bnd(xdim, :) == BND_SHE)
       endif
 
       if (bnd_not_provided(dir,LO) .and. bnd_not_provided(dir,HI)) return  ! avoid triple case
@@ -394,12 +391,9 @@ contains
       allocate(dvarx(cg%n_(ydim), cg%n_(zdim)), dvary(cg%n_(xdim), cg%n_(zdim)), dvarz(cg%n_(xdim), cg%n_(ydim)))
 
       if (frun) then
-         bnd_not_provided(xdim,LO) = any( [BND_COR, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, LO))
-         bnd_not_provided(xdim,HI) = any( [BND_COR, BND_PER, BND_MPI, BND_SHE] == cg%bnd(xdim, HI))
-         bnd_not_provided(ydim,LO) = any( [BND_COR, BND_PER, BND_MPI ] == cg%bnd(ydim, LO))
-         bnd_not_provided(ydim,HI) = any( [BND_COR, BND_PER, BND_MPI ] == cg%bnd(ydim, HI))
-         bnd_not_provided(zdim,LO) = any( [BND_PER, BND_MPI ] == cg%bnd(zdim, LO))
-         bnd_not_provided(zdim,HI) = any( [BND_PER, BND_MPI ] == cg%bnd(zdim, HI))
+         bnd_not_provided(:, :) = (cg%bnd(:,:) == BND_PER) .or. (cg%bnd(:, :) == BND_MPI) !! what about BND_REF?
+         bnd_not_provided(xdim:ydim, :) = bnd_not_provided(xdim:ydim, :) .or. (cg%bnd(xdim:ydim, :) == BND_COR)
+         bnd_not_provided(xdim, :) = bnd_not_provided(xdim, :) .or. (cg%bnd(xdim, :) == BND_SHE)
          frun = .false.
       endif
 
