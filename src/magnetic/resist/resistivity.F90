@@ -35,7 +35,7 @@
 !<
 module resistivity
 ! pulled by RESISTIVE
-   use constants, only: ndims, varlen, dsetnamelen
+   use constants, only: dsetnamelen
    use types,     only: value
 
    implicit none
@@ -55,7 +55,6 @@ module resistivity
    real(kind=8)                            :: d_eta_factor
    type(value)                             :: etamax, cu2max, deimin
    logical, save                           :: eta1_active = .true.       !< resistivity off-switcher while eta_1 == 0.0
-   character(len=varlen), dimension(ndims) :: emfd
    character(len=dsetnamelen), parameter   :: eta_n = "eta", wb_n = "wb", eh_n = "eh", dbx_n = "dbx", dby_n = "dby", dbz_n = "dbz"
 
 contains
@@ -172,8 +171,6 @@ contains
          dims_twice = 2. * dom%eff_dim
          d_eta_factor = 1./(dims_twice+real(eta_scale, kind=8))
       endif
-
-      emfd     = [ 'emfx', 'emfy', 'emfz' ]
 
    end subroutine init_resistivity
 
@@ -379,7 +376,7 @@ contains
 
    subroutine diffuseb(ibdir, sdir)
 
-      use constants,     only: xdim, ydim, zdim, ndims, half, varlen, I_ONE, wcu_n, idm, uv
+      use constants,     only: xdim, ydim, zdim, ndims, half, I_ONE, wcu_n, idm, uv, INT4
       use domain,        only: dom
       use gc_list,       only: cg_list_element, all_cg
       use global,        only: dt
@@ -390,9 +387,8 @@ contains
       implicit none
 
       integer(kind=4),  intent(in)   :: ibdir, sdir
-      character(len=varlen)          :: emf
       integer                        :: i1, i2, wcu_i, eta_i
-      integer(kind=4)                :: n1, n2, etadir
+      integer(kind=4)                :: n1, n2, etadir, dir, emf
       integer(kind=4), dimension(ndims) :: idml, idmh
       real, dimension(:),    pointer :: b1d, eta1d, wcu1d
       type(cg_list_element), pointer :: cgl
@@ -401,7 +397,6 @@ contains
       n1 = I_ONE + mod(sdir    ,   ndims)
       n2 = I_ONE + mod(sdir+I_ONE, ndims)
       etadir = sum([xdim,ydim,zdim]) - ibdir - sdir
-      emf = emfd(etadir)
 
       call compute_resist
 
@@ -439,8 +434,9 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         do i1 = xdim, zdim
-            if (dom%has_dir(i1)) call bnd_emf(cg%q(wcu_i)%arr,emf,i1, cgl%cg)
+         do dir = xdim, zdim
+            emf = idm(etadir,dir) + 2_INT4
+            if (dom%has_dir(dir)) call bnd_emf(cg%q(wcu_i)%arr, emf, dir, cgl%cg)
          enddo
          cgl => cgl%nxt
       enddo

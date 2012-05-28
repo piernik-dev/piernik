@@ -51,7 +51,7 @@ contains
 !<
    subroutine advectb(bdir, vdir)
 
-      use constants,     only: xdim, ydim, zdim, LO, HI, ndims, varlen
+      use constants,     only: xdim, ydim, zdim, LO, HI, ndims, INT4
       use dataio_pub,    only: die
       use domain,        only: dom
       use fluidindex,    only: flind
@@ -73,17 +73,13 @@ contains
       real, dimension(:),    pointer    :: pm1, pm2, pd1, pd2
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
-      character(len=varlen)             :: emf
-      character(len=varlen), dimension(ndims,ndims) :: v_b_          !< \deprecated v_b_ should be moved to a init routine
-
-      v_b_(xdim,:) = [ 'vxbx', 'vxby', 'vxbz' ]
-      v_b_(ydim,:) = [ 'vybx', 'vyby', 'vybz' ]
-      v_b_(zdim,:) = [ 'vzbx', 'vzby', 'vzbz' ]
-
-      emf = v_b_(vdir, bdir)
+      integer(kind=4)                   :: dir
+      integer(kind=4), dimension(ndims) :: emf
 
       imom = flind%ion%idn + int(vdir, kind=4)
       rdir = sum([xdim,ydim,zdim]) - bdir - vdir
+      emf(vdir) = 1_INT4 ; emf(bdir) = 2_INT4 ; emf(rdir) = 3_INT4
+
       if (mod(3+vdir-bdir,3) == 1) then     ! even permutation
          i1 => ii(rdir) ; i1m => ii(rdir) ; i2 => ii(bdir) ; i2m => im(bdir)
       elseif (mod(3+vdir-bdir,3) == 2) then !  odd permutation
@@ -125,8 +121,8 @@ contains
             im(bdir) = ii(bdir)
          enddo
 
-         do i = xdim, zdim
-            if (dom%has_dir(i)) call bnd_emf(cg%wa,emf,i, cg)
+         do dir = xdim, zdim
+            if (dom%has_dir(dir)) call bnd_emf(cg%wa,emf(dir),dir, cg)
          enddo
 
          deallocate(vv, vv0)

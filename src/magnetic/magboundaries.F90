@@ -373,7 +373,7 @@ contains
 
 !=====================================================================================================
 
-   subroutine bnd_emf(var, name, dir, cg)
+   subroutine bnd_emf(var, emfdir, dir, cg)
 
       use constants,  only: xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE
       use dataio_pub, only: msg, warn, die
@@ -383,8 +383,8 @@ contains
       implicit none
 
       real, dimension(:,:,:), intent(inout) :: var
-      character(len=*), intent(in)          :: name
-      integer, intent(in)                   :: dir
+      integer(kind=4),        intent(in)    :: emfdir
+      integer(kind=4),        intent(in)    :: dir
       type(grid_container), pointer, intent(inout) :: cg
 
       real, dimension(:,:), allocatable     :: dvarx
@@ -421,20 +421,13 @@ contains
       bndsign = huge(1.0); ledge=huge(1); redge=huge(1); lnbcells=huge(1); rnbcells=huge(1); zndiff=huge(1); rrbase=huge(1)
       ! the code below should not use these values and the compiler should not complain on possible use of uninitialized variables.
 
+            if (any( [cg%bnd(dir, LO) == BND_REF,  cg%bnd(dir, HI) == BND_REF,  cg%bnd(dir, LO) == BND_OUT,  cg%bnd(dir, HI) == BND_OUT, &
+               &      cg%bnd(dir, LO) == BND_OUTD, cg%bnd(dir, HI) == BND_OUTD, cg%bnd(dir, LO) == BND_OUTH, cg%bnd(dir, HI) == BND_OUTH] )) then
+               call compute_bnd_indxs(emfdir, cg%n_b(dir),ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+            endif
+
       select case (dir)
          case (xdim)
-
-            if (any( [cg%bnd(xdim, LO) == BND_REF,  cg%bnd(xdim, HI) == BND_REF,  cg%bnd(xdim, LO) == BND_OUT,  cg%bnd(xdim, HI) == BND_OUT, &
-               &      cg%bnd(xdim, LO) == BND_OUTD, cg%bnd(xdim, HI) == BND_OUTD, cg%bnd(xdim, LO) == BND_OUTH, cg%bnd(xdim, HI) == BND_OUTH] )) then
-               select case (name)
-                  case ("vxby","vxbz")
-                     call compute_bnd_indxs(1, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
-                  case ("vybx","vzbx","emfy","emfz")
-                     call compute_bnd_indxs(2, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
-                  case ("vybz","vzby","emfx")
-                     call compute_bnd_indxs(3, cg%nxb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
-               end select  ! (name)
-            endif
 
             select case (cg%bnd(xdim, LO))
                case (BND_COR, BND_MPI, BND_PER, BND_SHE)
@@ -455,7 +448,7 @@ contains
                   enddo
 #endif /* ZERO_BND_EMF */
                case default
-                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, LO)," not implemented for ",name, " in ", dir
+                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, LO)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
             end select  ! (cg%bnd(xdim, LO))
 
@@ -478,23 +471,11 @@ contains
                   enddo
 #endif /* ZERO_BND_EMF */
                case default
-                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, HI)," not implemented for ",name, " in ", dir
+                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, HI)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
             end select ! (cg%bnd(xdim, HI))
 
          case (ydim)
-
-            if (any( [cg%bnd(ydim, LO) == BND_REF,  cg%bnd(ydim, HI) == BND_REF,  cg%bnd(ydim, LO) == BND_OUT,  cg%bnd(ydim, HI) == BND_OUT, &
-               &      cg%bnd(ydim, LO) == BND_OUTD, cg%bnd(ydim, HI) == BND_OUTD, cg%bnd(ydim, LO) == BND_OUTH, cg%bnd(ydim, HI) == BND_OUTH] )) then
-               select case (name)
-                  case ("vybz","vybx")
-                     call compute_bnd_indxs(1, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
-                  case ("vzby","vxby","emfz","emfx")
-                     call compute_bnd_indxs(2, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
-                  case ("vzbx","vxbz","emfy")
-                     call compute_bnd_indxs(3, cg%nyb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
-               end select  ! (name)
-            endif
 
             select case (cg%bnd(ydim, LO))
                case (BND_COR, BND_MPI, BND_PER)
@@ -515,7 +496,7 @@ contains
                   enddo
 #endif /* ZERO_BND_EMF */
                case default
-                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, LO)," not implemented for ",name, " in ", dir
+                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, LO)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
             end select  ! (cg%bnd(ydim, LO))
 
@@ -538,23 +519,11 @@ contains
                   enddo
 #endif /* ZERO_BND_EMF */
                case default
-                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, HI)," not implemented for ",name, " in ", dir
+                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, HI)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
             end select ! (cg%bnd(ydim, HI))
 
          case (zdim)
-
-            if (any( [cg%bnd(zdim, LO) == BND_REF,  cg%bnd(zdim, HI) == BND_REF,  cg%bnd(zdim, LO) == BND_OUT,  cg%bnd(zdim, HI) == BND_OUT, &
-               &      cg%bnd(zdim, LO) == BND_OUTD, cg%bnd(zdim, HI) == BND_OUTD, cg%bnd(zdim, LO) == BND_OUTH, cg%bnd(zdim, HI) == BND_OUTH] )) then
-               select case (name)
-                  case ("vzbx","vzby")
-                     call compute_bnd_indxs(1, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
-                  case ("vxbz","vybz","emfy","emfx")
-                     call compute_bnd_indxs(2, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
-                  case ("vxby","vybx","emfz")
-                     call compute_bnd_indxs(3, cg%nzb,ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
-               end select  ! (name)
-            endif
 
             select case (cg%bnd(zdim, LO))
                case (BND_MPI, BND_PER)
@@ -575,7 +544,7 @@ contains
                   enddo
 #endif /* ZERO_BND_EMF */
                case default
-                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, LO)," not implemented for ",name, " in ", dir
+                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, LO)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
             end select  ! (cg%bnd(zdim, LO))
 
@@ -598,7 +567,7 @@ contains
                   enddo
 #endif /* ZERO_BND_EMF */
                case default
-                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, HI)," not implemented for ",name, " in ", dir
+                  write(msg,'(a,i3,3a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, HI)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
             end select ! (cg%bnd(zdim, HI))
 
@@ -641,7 +610,7 @@ contains
             ledge    = dom%nb
             lnbcells = dom%nb
             bndsign  = 1.
-      end select  ! (name)
+      end select  ! (bndcase)
 
       zndiff   = ledge - lnbcells
 !     rnbcells = dom%nb - zndiff
