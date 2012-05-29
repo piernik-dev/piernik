@@ -366,7 +366,7 @@ contains
    subroutine bnd_emf(var, emfdir, dir, cg)
 
       use constants,  only: ndims, xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE
-      use dataio_pub, only: msg, warn, die
+      use dataio_pub, only: msg, warn
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
@@ -377,7 +377,9 @@ contains
       integer(kind=4),               intent(in)    :: dir
       type(grid_container), pointer, intent(inout) :: cg
 
+#ifndef ZERO_BND_EMF
       real, dimension(:,:,:), allocatable          :: dvar
+#endif /* !ZERO_BND_EMF */
       real                                         :: bndsign
       logical,                         save        :: frun = .true.
       logical, dimension(ndims,LO:HI), save        :: bnd_not_provided = .false.
@@ -385,11 +387,6 @@ contains
       integer(kind=4), dimension(ndims,LO:HI)      :: l, r
       integer(kind=4), dimension(LO:HI)            :: sbase, edge, nbcells, sidebase
       integer(kind=4)                              :: ssign, side, ib
-
-      if (allocated(dvar)) call die("[magboundaries:bnd_emf] dvar already allocated")
-      l = reshape([lbound(var),ubound(var)],shape=[ndims,HI]) ; r = l
-      l(dir,:) = 1
-      allocate(dvar(l(xdim,LO) ,l(ydim,LO), l(zdim,LO)))
 
       if (frun) then
          bnd_not_provided(:, :)         = (cg%bnd(:,:) == BND_PER)       .or. (cg%bnd(:,         :) == BND_MPI)
@@ -407,6 +404,8 @@ contains
          &      cg%bnd(dir, LO) == BND_OUTD, cg%bnd(dir, HI) == BND_OUTD, cg%bnd(dir, LO) == BND_OUTH, cg%bnd(dir, HI) == BND_OUTH] )) then
          call compute_bnd_indxs(emfdir, cg%n_b(dir),edge,nbcells,sidebase,bndsign,zndiff)
       endif
+
+      l = reshape([lbound(var),ubound(var)],shape=[ndims,HI]) ; r = l
 
       do side = LO, HI
          select case (cg%bnd(dir, side))
@@ -439,6 +438,9 @@ contains
                l(dir,LO) = sbase(side)+1 ; l(dir,HI) = sbase(side)+nbcells(side)
                var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = 0.0
 #else /* !ZERO_BND_EMF */
+               if (side == LO) then
+                  l(dir,:) = 1 ; allocate(dvar(l(xdim,HI) ,l(ydim,HI), l(zdim,HI)))
+               endif
                edge(side) = edge(side) + HI - side ; nbcells(side) = nbcells(side) + HI - side
 !               l(dir,:) = sidebase(side)+HI-side ; r(dir,:) = l(dir,:)-1 original
                l(dir,:) = edge(side)+HI-side ; r(dir,:) = l(dir,:)-1
@@ -448,14 +450,13 @@ contains
                   l(dir,:) = sbase(side) + ib
                   var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = var(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI)) + real(ib+sbase(side)-edge(side))*dvar
                enddo
+               if (side == HI) deallocate(dvar)
 #endif /* ZERO_BND_EMF */
             case default
                write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(dir, side)," not implemented for ",emfdir, " in ", dir
                if (master) call warn(msg)
          end select
       enddo
-
-      deallocate(dvar)
 
    end subroutine bnd_emf
 !>
