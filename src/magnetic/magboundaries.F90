@@ -272,7 +272,7 @@ contains
 
 ! Non-MPI boundary conditions
       if (frun) then
-         bnd_not_provided(:,         :) = (cg%bnd(:,:) == BND_REF)       .or. (cg%bnd(:,         :) == BND_MPI) !! what about BND_PER?
+         bnd_not_provided(:,         :) = (cg%bnd(:,:) == BND_REF)       .or. (cg%bnd(:,         :) == BND_MPI)
          bnd_not_provided(xdim:ydim, :) = bnd_not_provided(xdim:ydim, :) .or. (cg%bnd(xdim:ydim, :) == BND_COR)
          bnd_not_provided(xdim,      :) = bnd_not_provided(xdim,      :) .or. (cg%bnd(xdim,      :) == BND_SHE)
       endif
@@ -283,7 +283,7 @@ contains
 
       do side = LO, HI
          select case (cg%bnd(dir, side))
-            case (BND_MPI, BND_PER)
+            case (BND_MPI, BND_REF)
                ! Do nothing
             case (BND_COR)
                if (dir == zdim) then
@@ -295,7 +295,7 @@ contains
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
                   if (master) call warn(msg)
                endif
-            case (BND_REF)
+            case (BND_PER)
                   if (cdd%comm3d /= MPI_COMM_NULL) then
                      if (side == LO) then
                         eb = [cg%ieb, cg%jeb, cg%keb]
