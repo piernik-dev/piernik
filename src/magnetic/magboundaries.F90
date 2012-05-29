@@ -270,9 +270,9 @@ contains
 
 ! Non-MPI boundary conditions
       if (frun) then
-         bnd_not_provided(:, :) = (cg%bnd(:,:) == BND_REF) .or. (cg%bnd(:, :) == BND_MPI) !! what about BND_PER?
+         bnd_not_provided(:,         :) = (cg%bnd(:,:) == BND_REF)       .or. (cg%bnd(:,         :) == BND_MPI) !! what about BND_PER?
          bnd_not_provided(xdim:ydim, :) = bnd_not_provided(xdim:ydim, :) .or. (cg%bnd(xdim:ydim, :) == BND_COR)
-         bnd_not_provided(xdim, :) = bnd_not_provided(xdim, :) .or. (cg%bnd(xdim, :) == BND_SHE)
+         bnd_not_provided(xdim,      :) = bnd_not_provided(xdim,      :) .or. (cg%bnd(xdim,      :) == BND_SHE)
       endif
 
       if (bnd_not_provided(dir,LO) .and. bnd_not_provided(dir,HI)) return  ! avoid triple case
@@ -372,232 +372,131 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), intent(inout) :: var
-      integer(kind=4),        intent(in)    :: emfdir
-      integer(kind=4),        intent(in)    :: dir
+      real, dimension(:,:,:),        intent(inout) :: var
+      integer(kind=4),               intent(in)    :: emfdir
+      integer(kind=4),               intent(in)    :: dir
       type(grid_container), pointer, intent(inout) :: cg
 
-      real, dimension(:,:), allocatable     :: dvarx
-      real, dimension(:,:), allocatable     :: dvary
-      real, dimension(:,:), allocatable     :: dvarz
-      integer                               :: ib
-      logical, save                         :: frun = .true.
-      logical, dimension(ndims,LO:HI), save :: bnd_not_provided = .false.
-      integer                               :: ledge, redge, lnbcells, rnbcells, rrbase
-      logical                               :: zndiff
-      real                                  :: bndsign
+      real, dimension(:,:,:), allocatable          :: dvar
+      real                                         :: bndsign
+      logical,                         save        :: frun = .true.
+      logical, dimension(ndims,LO:HI), save        :: bnd_not_provided = .false.
+      logical                                      :: zndiff
+      integer(kind=4), dimension(ndims,LO:HI)      :: l, r
+      integer(kind=4), dimension(LO:HI)            :: sbase, edge, nbcells, sidebase
+      integer(kind=4)                              :: ssign, side, ib
 
-      if (any([allocated(dvarx), allocated(dvary), allocated(dvarz)])) call die("[magboundaries:bnd_emf] dvar[xyz] already allocated")
-      allocate(dvarx(cg%n_(ydim), cg%n_(zdim)), dvary(cg%n_(xdim), cg%n_(zdim)), dvarz(cg%n_(xdim), cg%n_(ydim)))
+      if (allocated(dvar)) call die("[magboundaries:bnd_emf] dvar already allocated")
+      l = reshape([lbound(var),ubound(var)],shape=[ndims,HI]) ; r = l
+      l(dir,:) = 1
+      allocate(dvar(l(xdim,LO) ,l(ydim,LO), l(zdim,LO)))
 
       if (frun) then
-         bnd_not_provided(:, :) = (cg%bnd(:,:) == BND_PER) .or. (cg%bnd(:, :) == BND_MPI) !! what about BND_REF?
+         bnd_not_provided(:, :)         = (cg%bnd(:,:) == BND_PER)       .or. (cg%bnd(:,         :) == BND_MPI)
          bnd_not_provided(xdim:ydim, :) = bnd_not_provided(xdim:ydim, :) .or. (cg%bnd(xdim:ydim, :) == BND_COR)
-         bnd_not_provided(xdim, :) = bnd_not_provided(xdim, :) .or. (cg%bnd(xdim, :) == BND_SHE)
+         bnd_not_provided(xdim, :)      = bnd_not_provided(xdim,      :) .or. (cg%bnd(xdim,      :) == BND_SHE)
          frun = .false.
       endif
 
       if (bnd_not_provided(dir,LO) .and. bnd_not_provided(dir,HI)) return  ! avoid triple case
 
-      bndsign = huge(1.0); ledge=huge(1); redge=huge(1); lnbcells=huge(1); rnbcells=huge(1); zndiff=.false.; rrbase=huge(1)
+      bndsign = huge(1.0); edge=huge(1); nbcells=huge(1); zndiff=.false.; sidebase=huge(1)
       ! the code below should not use these values and the compiler should not complain on possible use of uninitialized variables.
 
       if (any( [cg%bnd(dir, LO) == BND_REF,  cg%bnd(dir, HI) == BND_REF,  cg%bnd(dir, LO) == BND_OUT,  cg%bnd(dir, HI) == BND_OUT, &
          &      cg%bnd(dir, LO) == BND_OUTD, cg%bnd(dir, HI) == BND_OUTD, cg%bnd(dir, LO) == BND_OUTH, cg%bnd(dir, HI) == BND_OUTH] )) then
-         call compute_bnd_indxs(emfdir, cg%n_b(dir),ledge,redge,lnbcells,rnbcells,bndsign,zndiff,rrbase)
+         call compute_bnd_indxs(emfdir, cg%n_b(dir),edge,nbcells,sidebase,bndsign,zndiff)
       endif
 
-      select case (dir)
-         case (xdim)
-
-            select case (cg%bnd(xdim, LO))
-               case (BND_COR, BND_MPI, BND_PER, BND_SHE)
-                  ! Do nothing
-               case (BND_REF)
-                  if (zndiff) var(ledge,:,:) = 0.0
-                  do ib=1,lnbcells
-                     var(lnbcells+1-ib,:,:) = bndsign * var(ledge+ib,:,:)
-                  enddo
-               case (BND_OUT, BND_OUTD, BND_OUTH)
-#ifdef ZERO_BND_EMF
-                  var(1:lnbcells,:,:) = 0.0
-#else /* !ZERO_BND_EMF */
-                  ledge = ledge + 1 ; lnbcells = lnbcells + 1
-                  dvarx = var(ledge+1,:,:)-var(ledge,:,:)
-                  do ib=1,lnbcells
-                     var(ib,:,:) = var(ledge,:,:) - real(ledge-ib)*dvarx
-                  enddo
-#endif /* ZERO_BND_EMF */
-               case default
-                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, LO)," not implemented for ",emfdir, " in ", dir
+      do side = LO, HI
+         select case (cg%bnd(dir, side))
+            case (BND_MPI, BND_PER)
+               ! Do nothing
+            case (BND_COR)
+               if (dir == zdim) then
+                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(dir, side)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
-            end select  ! (cg%bnd(xdim, LO))
-
-            select case (cg%bnd(xdim, HI))
-               case (BND_COR, BND_MPI, BND_PER, BND_SHE)
-                  ! Do nothing
-               case (BND_REF)
-                  if (zndiff) var(redge,:,:) = 0.0
-                  do ib=1,rnbcells
-                     var(redge+ib,:,:) = bndsign * var(rrbase-ib,:,:)
-                  enddo
-               case (BND_OUT, BND_OUTD, BND_OUTH)
-#ifdef ZERO_BND_EMF
-                  var(redge+1:redge+rnbcells,:,:) = 0.0
-#else /* !ZERO_BND_EMF */
-!                  dvarx = var(rrbase,:,:)-var(rrbase-1,:,:) original
-                  dvarx = var(redge,:,:)-var(redge-1,:,:)
-                  do ib=1,rnbcells
-                     var(redge+ib,:,:) = var(redge,:,:) + real(ib)*dvarx
-                  enddo
-#endif /* ZERO_BND_EMF */
-               case default
-                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(xdim, HI)," not implemented for ",emfdir, " in ", dir
+               endif
+            case (BND_SHE)
+               if (dir /= xdim) then
+                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(dir, side)," not implemented for ",emfdir, " in ", dir
                   if (master) call warn(msg)
-            end select ! (cg%bnd(xdim, HI))
-
-         case (ydim)
-
-            select case (cg%bnd(ydim, LO))
-               case (BND_COR, BND_MPI, BND_PER)
-                  ! Do nothing
-               case (BND_REF)
-                  if (zndiff) var(:,ledge,:) = 0.0
-                  do ib=1,lnbcells
-                     var(:,lnbcells+1-ib,:) = bndsign * var(:,ledge+ib,:)
-                  enddo
-               case (BND_OUT, BND_OUTD, BND_OUTH)
+               endif
+            case (BND_REF)
+               sbase(:)  = [nbcells(LO)+1, edge(HI)] ; ssign = 2*side-3
+               if (zndiff) then
+                  l(dir,:) = edge(side)
+                  var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = 0.0
+               endif
+               do ib=1,nbcells(side)
+                  l(dir,:) = sbase(side)+ssign*ib
+                  r(dir,:) = sidebase(side)-ssign*ib
+                  var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = bndsign * var(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+               enddo
+            case (BND_OUT, BND_OUTD, BND_OUTH)
+               sbase(:)  = [0,edge(HI)]
 #ifdef ZERO_BND_EMF
-                  var(:,1:lnbcells,:) = 0.0
+               l(dir,LO) = sbase(side)+1 ; l(dir,HI) = sbase(side)+nbcells(side)
+               var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = 0.0
 #else /* !ZERO_BND_EMF */
-                  ledge = ledge + 1 ; lnbcells = lnbcells + 1
-                  dvary = var(:,ledge+1,:)-var(:,ledge,:)
-                  do ib=1,lnbcells
-                     var(:,ib,:) = var(:,ledge,:) - real(ledge-ib)*dvary
-                  enddo
+               edge(side) = edge(side) + HI - side ; nbcells(side) = nbcells(side) + HI - side
+!               l(dir,:) = sidebase(side)+HI-side ; r(dir,:) = l(dir,:)-1 original
+               l(dir,:) = edge(side)+HI-side ; r(dir,:) = l(dir,:)-1
+               dvar = var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) - var(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+               r(dir,:) = edge(side)
+               do ib=1,nbcells(side)
+                  l(dir,:) = sbase(side) + ib
+                  var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = var(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI)) + real(ib+sbase(side)-edge(side))*dvar
+               enddo
 #endif /* ZERO_BND_EMF */
-               case default
-                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, LO)," not implemented for ",emfdir, " in ", dir
-                  if (master) call warn(msg)
-            end select  ! (cg%bnd(ydim, LO))
+            case default
+               write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(dir, side)," not implemented for ",emfdir, " in ", dir
+               if (master) call warn(msg)
+         end select
+      enddo
 
-            select case (cg%bnd(ydim, HI))
-               case (BND_COR, BND_MPI, BND_PER)
-                  ! Do nothing
-               case (BND_REF)
-                  if (zndiff) var(:,redge,:) = 0.0
-                  do ib=1,rnbcells
-                     var(:,redge+ib,:) = bndsign * var(:,rrbase-ib,:)
-                  enddo
-               case (BND_OUT, BND_OUTD, BND_OUTH)
-#ifdef ZERO_BND_EMF
-                  var(:,redge+1:redge+rnbcells,:) = 0.0
-#else /* !ZERO_BND_EMF */
-!                  dvary = var(:,rrbase,:)-var(:,rrbase-1,:) original
-                  dvary = var(:,redge,:)-var(:,redge-1,:)
-                  do ib=1,rnbcells
-                     var(:,redge+ib,:) = var(:,redge,:) + real(ib)*dvary
-                  enddo
-#endif /* ZERO_BND_EMF */
-               case default
-                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(ydim, HI)," not implemented for ",emfdir, " in ", dir
-                  if (master) call warn(msg)
-            end select ! (cg%bnd(ydim, HI))
-
-         case (zdim)
-
-            select case (cg%bnd(zdim, LO))
-               case (BND_MPI, BND_PER)
-                  ! Do nothing
-               case (BND_REF)
-                  if (zndiff) var(:,:,ledge) = 0.0
-                  do ib=1,lnbcells
-                     var(:,:,lnbcells+1-ib) = bndsign * var(:,:,ledge+ib)
-                  enddo
-               case (BND_OUT, BND_OUTD, BND_OUTH)
-#ifdef ZERO_BND_EMF
-                  var(:,:,1:lnbcells) = 0.0
-#else /* !ZERO_BND_EMF */
-                  ledge = ledge + 1 ; lnbcells = lnbcells + 1
-                  dvarz = var(:,:,ledge+1)-var(:,:,ledge)
-                  do ib=1,lnbcells
-                     var(:,:,ib) = var(:,:,ledge) - real(ledge-ib)*dvarz
-                  enddo
-#endif /* ZERO_BND_EMF */
-               case default
-                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, LO)," not implemented for ",emfdir, " in ", dir
-                  if (master) call warn(msg)
-            end select  ! (cg%bnd(zdim, LO))
-
-            select case (cg%bnd(zdim, HI))
-               case (BND_MPI, BND_PER)
-                  ! Do nothing
-               case (BND_REF)
-                  if (zndiff) var(:,:,redge) = 0.0
-                  do ib=1,rnbcells
-                     var(:,:,redge+ib) = bndsign * var(:,:,rrbase-ib)
-                  enddo
-               case (BND_OUT, BND_OUTD, BND_OUTH)
-#ifdef ZERO_BND_EMF
-                  var(:,:,redge+1:redge+rnbcells) = 0.0
-#else /* !ZERO_BND_EMF */
-!                  dvarz = var(:,:,rrbase)-var(:,:,rrbase-1) original
-                  dvarz = var(:,:,redge)-var(:,:,redge-1)
-                  do ib=1,rnbcells
-                     var(:,:,redge+ib) = var(:,:,redge) + real(ib)*dvarz
-                  enddo
-#endif /* ZERO_BND_EMF */
-               case default
-                  write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(zdim, HI)," not implemented for ",emfdir, " in ", dir
-                  if (master) call warn(msg)
-            end select ! (cg%bnd(zdim, HI))
-
-      end select ! (dim)
-
-      deallocate(dvarx)
-      deallocate(dvary)
-      deallocate(dvarz)
+      deallocate(dvar)
 
    end subroutine bnd_emf
 !>
 !! \brief Routine delivers common boundary cells indexes in cases of reflection or outflow boundary types
 !<
-   subroutine compute_bnd_indxs(bndcase, ndirb, ledge, redge, lnbcells, rnbcells, bndsign, zndiff, rrbase)
+   subroutine compute_bnd_indxs(bndcase, ndirb, edge, nbcells, rrbase, bndsign, zndiff)
 
+      use constants, only: LO, HI
       use domain,    only: dom
 
       implicit none
 
-      integer, intent(in)  :: bndcase      !< 1 - v component compatible with direction; 2 - b component compatible with direction or emf component incompatible with direction; 3 - other cases; BEWARE: magic integers
-      integer(kind=4), intent(in) :: ndirb !< cg%{nxb,nyb,nzb} depanding on the current direction
-      integer, intent(out) :: ledge        !< index of the left edge of physical domain for emf
-      integer, intent(out) :: redge        !< index of the right edge of physical domain for emf
-      integer, intent(out) :: lnbcells     !< number of cells in a loop at left boundary
-      integer, intent(out) :: rnbcells     !< number of cells in a loop at right boundary
-      real,    intent(out) :: bndsign      !< 1. or -1. to change the sign or not
-      logical, intent(out) :: zndiff       !< COMMENT ME
-      integer, intent(out) :: rrbase       !< COMMENT ME
+      integer,                   intent(in)  :: bndcase !< 1 - v component compatible with direction; 2 - b component compatible with direction or emf component incompatible with direction; 3 - other cases; BEWARE: magic integers
+      integer(kind=4),           intent(in)  :: ndirb   !< cg%{nxb,nyb,nzb} depanding on the current direction
+      integer, dimension(LO:HI), intent(out) :: edge    !< index of the left and right edge of physical domain for emf
+      integer, dimension(LO:HI), intent(out) :: nbcells !< number of cells in a loop at left and right boundaries
+      integer, dimension(LO:HI), intent(out) :: rrbase  !< COMMENT ME
+      real,                      intent(out) :: bndsign !< 1. or -1. to change the sign or not
+      logical,                   intent(out) :: zndiff  !< COMMENT ME
 
       select case (bndcase)
          case (1)
-            ledge    = dom%nb
-            lnbcells = dom%nb-1
-            bndsign  = -1.
+            edge(LO)    = dom%nb
+            nbcells(LO) = dom%nb-1
+            bndsign     = -1.
          case (2)
-            ledge    = dom%nb+1
-            lnbcells = dom%nb
-            bndsign  = -1.
+            edge(LO)    = dom%nb+1
+            nbcells(LO) = dom%nb
+            bndsign     = -1.
          case (3)
-            ledge    = dom%nb
-            lnbcells = dom%nb
-            bndsign  = 1.
+            edge(LO)    = dom%nb
+            nbcells(LO) = dom%nb
+            bndsign     = 1.
       end select  ! (bndcase)
 
-      zndiff   = (ledge - lnbcells == 1)
-!     rnbcells = dom%nb - ledge + lnbcells
-      rnbcells = 2*dom%nb - ledge
-      redge    = ndirb + ledge
-      rrbase   = ndirb + lnbcells + 1  ! = redge + 1 - ledge + lnbcells
+      zndiff      = (edge(LO) - nbcells(LO) == 1)
+!     nbcells(HI) = dom%nb - edge(LO) + nbcells(LO)
+      nbcells(HI) = 2*dom%nb - edge(LO)
+      edge(HI)    = ndirb + edge(LO)
+      rrbase(LO)  = edge(LO)
+      rrbase(HI)  = ndirb + nbcells(LO) + 1  ! = edge(HI) + 1 - edge(LO) + nbcells(LO)
 
    end subroutine compute_bnd_indxs
 
