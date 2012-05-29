@@ -365,7 +365,8 @@ contains
 
    subroutine bnd_emf(var, emfdir, dir, cg)
 
-      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE
+      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, &
+                            BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE
       use dataio_pub, only: msg, warn
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
@@ -397,7 +398,7 @@ contains
 
       if (bnd_not_provided(dir,LO) .and. bnd_not_provided(dir,HI)) return  ! avoid triple case
 
-      bndsign = huge(1.0); edge=huge(1); nbcells=huge(1); zndiff=.false.; sidebase=huge(1)
+      bndsign = huge(1.0); edge=huge(I_ONE); nbcells=huge(I_ONE); zndiff=.false.; sidebase=huge(I_ONE)
       ! the code below should not use these values and the compiler should not complain on possible use of uninitialized variables.
 
       if (any( [cg%bnd(dir, LO) == BND_REF,  cg%bnd(dir, HI) == BND_REF,  cg%bnd(dir, LO) == BND_OUT,  cg%bnd(dir, HI) == BND_OUT, &
@@ -405,7 +406,7 @@ contains
          call compute_bnd_indxs(emfdir, cg%n_b(dir),edge,nbcells,sidebase,bndsign,zndiff)
       endif
 
-      l = reshape([lbound(var),ubound(var)],shape=[ndims,HI]) ; r = l
+      l = reshape([lbound(var, kind=4),ubound(var, kind=4)],shape=[ndims,HI]) ; r = l
 
       do side = LO, HI
          select case (cg%bnd(dir, side))
@@ -422,7 +423,7 @@ contains
                   if (master) call warn(msg)
                endif
             case (BND_REF)
-               sbase(:)  = [nbcells(LO)+1, edge(HI)] ; ssign = 2*side-3
+               sbase(:)  = [nbcells(LO)+I_ONE, edge(HI)] ; ssign = int(2*side-3, kind=4)
                if (zndiff) then
                   l(dir,:) = edge(side)
                   var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = 0.0
@@ -433,7 +434,7 @@ contains
                   var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = bndsign * var(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                enddo
             case (BND_OUT, BND_OUTD, BND_OUTH)
-               sbase(:)  = [0,edge(HI)]
+               sbase(:)  = [I_ZERO, edge(HI)]
 #ifdef ZERO_BND_EMF
                l(dir,LO) = sbase(side)+1 ; l(dir,HI) = sbase(side)+nbcells(side)
                var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = 0.0
@@ -441,7 +442,7 @@ contains
                l(dir,:) = 1 ; allocate(dvar(l(xdim,HI) ,l(ydim,HI), l(zdim,HI)))
                edge(side) = edge(side) + HI - side ; nbcells(side) = nbcells(side) + HI - side
 !               l(dir,:) = sidebase(side)+HI-side ; r(dir,:) = l(dir,:)-1 original
-               l(dir,:) = edge(side)+HI-side ; r(dir,:) = l(dir,:)-1
+               l(dir,:) = edge(side)+HI-side ; r(dir,:) = l(dir,:) - I_ONE
                dvar = var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) - var(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                r(dir,:) = edge(side)
                do ib=1,nbcells(side)
@@ -462,26 +463,28 @@ contains
 !<
    subroutine compute_bnd_indxs(bndcase, ndirb, edge, nbcells, rrbase, bndsign, zndiff)
 
-      use constants, only: LO, HI
+      use constants, only: LO, HI, I_ONE, I_TWO
       use domain,    only: dom
 
       implicit none
 
-      integer,                   intent(in)  :: bndcase !< 1 - v component compatible with direction; 2 - b component compatible with direction or emf component incompatible with direction; 3 - other cases; BEWARE: magic integers
-      integer(kind=4),           intent(in)  :: ndirb   !< cg%{nxb,nyb,nzb} depanding on the current direction
-      integer, dimension(LO:HI), intent(out) :: edge    !< index of the left and right edge of physical domain for emf
-      integer, dimension(LO:HI), intent(out) :: nbcells !< number of cells in a loop at left and right boundaries
-      integer, dimension(LO:HI), intent(out) :: rrbase  !< COMMENT ME
-      real,                      intent(out) :: bndsign !< 1. or -1. to change the sign or not
-      logical,                   intent(out) :: zndiff  !< COMMENT ME
+      integer(kind=4),                   intent(in)  :: bndcase !> 1 - v component compatible with direction;
+                                                                !! 2 - b component compatible with direction or emf component incompatible with direction;
+                                                                !< 3 - other cases; BEWARE: magic integers
+      integer(kind=4),                   intent(in)  :: ndirb   !< cg%{nxb,nyb,nzb} depanding on the current direction
+      integer(kind=4), dimension(LO:HI), intent(out) :: edge    !< index of the left and right edge of physical domain for emf
+      integer(kind=4), dimension(LO:HI), intent(out) :: nbcells !< number of cells in a loop at left and right boundaries
+      integer(kind=4), dimension(LO:HI), intent(out) :: rrbase  !< COMMENT ME
+      real,                              intent(out) :: bndsign !< 1. or -1. to change the sign or not
+      logical,                           intent(out) :: zndiff  !< COMMENT ME
 
       select case (bndcase)
          case (1)
             edge(LO)    = dom%nb
-            nbcells(LO) = dom%nb-1
+            nbcells(LO) = dom%nb - I_ONE
             bndsign     = -1.
          case (2)
-            edge(LO)    = dom%nb+1
+            edge(LO)    = dom%nb + I_ONE
             nbcells(LO) = dom%nb
             bndsign     = -1.
          case (3)
@@ -492,10 +495,10 @@ contains
 
       zndiff      = (edge(LO) - nbcells(LO) == 1)
 !     nbcells(HI) = dom%nb - edge(LO) + nbcells(LO)
-      nbcells(HI) = 2*dom%nb - edge(LO)
+      nbcells(HI) = I_TWO * dom%nb - edge(LO)
       edge(HI)    = ndirb + edge(LO)
       rrbase(LO)  = edge(LO)
-      rrbase(HI)  = ndirb + nbcells(LO) + 1  ! = edge(HI) + 1 - edge(LO) + nbcells(LO)
+      rrbase(HI)  = ndirb + nbcells(LO) + I_ONE  ! = edge(HI) + 1 - edge(LO) + nbcells(LO)
 
    end subroutine compute_bnd_indxs
 
