@@ -438,9 +438,7 @@ contains
                l(dir,LO) = sbase(side)+1 ; l(dir,HI) = sbase(side)+nbcells(side)
                var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = 0.0
 #else /* !ZERO_BND_EMF */
-               if (side == LO) then
-                  l(dir,:) = 1 ; allocate(dvar(l(xdim,HI) ,l(ydim,HI), l(zdim,HI)))
-               endif
+               l(dir,:) = 1 ; allocate(dvar(l(xdim,HI) ,l(ydim,HI), l(zdim,HI)))
                edge(side) = edge(side) + HI - side ; nbcells(side) = nbcells(side) + HI - side
 !               l(dir,:) = sidebase(side)+HI-side ; r(dir,:) = l(dir,:)-1 original
                l(dir,:) = edge(side)+HI-side ; r(dir,:) = l(dir,:)-1
@@ -450,7 +448,7 @@ contains
                   l(dir,:) = sbase(side) + ib
                   var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = var(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI)) + real(ib+sbase(side)-edge(side))*dvar
                enddo
-               if (side == HI) deallocate(dvar)
+               deallocate(dvar)
 #endif /* ZERO_BND_EMF */
             case default
                write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(dir, side)," not implemented for ",emfdir, " in ", dir
