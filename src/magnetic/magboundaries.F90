@@ -92,19 +92,21 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: dir
+      integer(kind=4),               intent(in)    :: dir
       type(grid_container), pointer, intent(inout) :: cg
 
-      integer(kind=4), parameter :: tag1 = 10, tag2 = 20
-      integer(kind=4), parameter :: tag7 = 70, tag8 = 80
-      integer           :: i, j
-      integer(kind=4) :: itag, jtag
-      real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
+      integer(kind=4), parameter                   :: tag1 = 10, tag2 = 20
+      integer(kind=4), parameter                   :: tag7 = 70, tag8 = 80
+      integer                                      :: i, j
+      integer(kind=4)                              :: itag, jtag, side
+      real, allocatable                            :: send_left(:,:,:,:),recv_left(:,:,:,:)
 #ifdef SHEAR
-      real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
+      real, allocatable                            :: send_right(:,:,:,:),recv_right(:,:,:,:)
 #endif /* SHEAR */
-      logical, save                         :: frun = .true.
-      logical, dimension(ndims,LO:HI), save :: bnd_not_provided = .false.
+      logical, save                                :: frun = .true.
+      logical, save,   dimension(ndims,LO:HI)      :: bnd_not_provided = .false.
+      integer(kind=4), dimension(ndims,LO:HI)      :: l, r
+      integer(kind=4), dimension(ndims)            :: eb, sb
 
 ! MPI block comunication
       if (cdd%comm3d /= MPI_COMM_NULL) then
@@ -277,87 +279,45 @@ contains
 
       if (bnd_not_provided(dir,LO) .and. bnd_not_provided(dir,HI)) return  ! avoid triple case
 
-      select case (dir)
-         case (xdim)
+      l = reshape([lbound(cg%b(xdim,:,:,:), kind=4),ubound(cg%b(xdim,:,:,:), kind=4)],shape=[ndims,HI]) ; r = l
 
-            select case (cg%bnd(xdim, LO))
-               case (BND_COR, BND_MPI, BND_REF, BND_SHE)
-                  ! Do nothing
-               case (BND_PER)
-                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,1:dom%nb,:,:)              = cg%b(:, cg%ieb:cg%ie,:,:)
-               case (BND_OUT, BND_OUTD, BND_OUTH)
-                  cg%b(:,1,:,:) = cg%b(:,2,:,:)
-               case default
-                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(xdim, LO)," not implemented in ",dir
+      do side = LO, HI
+         select case (cg%bnd(dir, side))
+            case (BND_MPI, BND_PER)
+               ! Do nothing
+            case (BND_COR)
+               if (dir == zdim) then
+                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
                   if (master) call warn(msg)
-            end select  ! (cg%bnd(xdim, LO))
-
-            select case (cg%bnd(xdim, HI))
-               case (BND_COR, BND_MPI, BND_REF, BND_SHE)
-                  ! Do nothing
-               case (BND_PER)
-                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:, cg%ie+1:cg%n_(xdim),:,:) = cg%b(:, cg%is:cg%isb,:,:)
-               case (BND_OUT, BND_OUTD, BND_OUTH)
-                  cg%b(:, cg%n_(xdim),:,:) = cg%b(:, cg%n_(xdim)-1,:,:)
-               case default
-                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(xdim, HI)," not implemented in ",dir
+               endif
+            case (BND_SHE)
+               if (dir /= xdim) then
+                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
                   if (master) call warn(msg)
-            end select  ! (cg%bnd(xdim, HI))
-
-         case (ydim)
-
-            select case (cg%bnd(ydim, LO))
-               case (BND_COR, BND_MPI, BND_REF)
-                  ! Do nothing
-               case (BND_PER)
-                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,:,1:dom%nb,:)              = cg%b(:,:, cg%jeb:cg%je,:)
-               case (BND_OUT, BND_OUTD, BND_OUTH)
-                  cg%b(:,:,1,:) = cg%b(:,:,2,:)
-               case default
-                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(ydim, LO)," not implemented in ",dir
-                  if (master) call warn(msg)
-            end select  ! (cg%bnd(ydim, LO))
-
-            select case (cg%bnd(ydim, HI))
-               case (BND_COR, BND_MPI, BND_REF)
-                  ! Do nothing
-               case (BND_PER)
-                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,:, cg%je+1:cg%n_(ydim),:) = cg%b(:,:, cg%js:cg%jsb,:)
-               case (BND_OUT, BND_OUTD, BND_OUTH)
-                  cg%b(:,:, cg%n_(ydim),:) = cg%b(:,:, cg%n_(ydim)-1,:)
-               case default
-                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(ydim, HI)," not implemented in ",dir
-                  if (master) call warn(msg)
-
-            end select  ! (cg%bnd(ydim, HI))
-
-         case (zdim)
-
-            select case (cg%bnd(zdim, LO))
-               case (BND_MPI, BND_REF)
-                  ! Do nothing
-               case (BND_PER)
-                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,:,:,1:dom%nb)              = cg%b(:,:,:, cg%keb:cg%ke)
-               case (BND_OUT, BND_OUTD, BND_OUTH)
-                  cg%b(:,:,:,1) = cg%b(:,:,:,2)
-               case default
-                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(zdim, LO)," not implemented in ",dir
-                  if (master) call warn(msg)
-            end select  ! (cg%bnd(zdim, LO))
-
-            select case (cg%bnd(zdim, HI))
-               case (BND_MPI, BND_REF)
-                  ! Do nothing
-               case (BND_PER)
-                  if (cdd%comm3d /= MPI_COMM_NULL) cg%b(:,:,:, cg%ke+1:cg%n_(zdim)) = cg%b(:,:,:, cg%ks:cg%ksb)
-               case (BND_OUT, BND_OUTD, BND_OUTH)
-                  cg%b(:,:,:, cg%n_(zdim)) = cg%b(:,:,:, cg%n_(zdim)-1)
-               case default
-                  write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(zdim, HI)," not implemented in ",dir
-                  if (master) call warn(msg)
-            end select  ! (cg%bnd(zdim, HI))
-
-      end select  ! (dim)
+               endif
+            case (BND_REF)
+                  if (cdd%comm3d /= MPI_COMM_NULL) then
+                     if (side == LO) then
+                        eb = [cg%ieb, cg%jeb, cg%keb]
+                        l(dir,:) = [1,dom%nb] ; r(dir,:) = [eb(dir),cg%ijkse(dir,HI)]
+                     else
+                        sb = [cg%isb, cg%jsb, cg%ksb]
+                        l(dir,:) = [cg%ijkse(dir,HI)+1,cg%n_(dir)] ; r(dir,:) = [cg%ijkse(dir,LO),sb(dir)]
+                     endif
+                  cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+                  endif
+            case (BND_OUT, BND_OUTD, BND_OUTH)
+                  if (side == LO) then
+                     l(dir,:) = 1 ; r(dir,:) = 2
+                  else
+                     l(dir,:) = cg%n_(dir) ; r(dir,:) = cg%n_(dir)-1
+                  endif
+                  cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+            case default
+               write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
+               if (master) call warn(msg)
+         end select
+      enddo
 
    end subroutine bnd_b
 
