@@ -299,10 +299,10 @@ contains
                   if (cdd%comm3d /= MPI_COMM_NULL) then
                      if (side == LO) then
                         eb = [cg%ieb, cg%jeb, cg%keb]
-                        l(dir,:) = [1,dom%nb] ; r(dir,:) = [eb(dir),cg%ijkse(dir,HI)]
+                        l(dir,:) = [I_ONE, dom%nb] ; r(dir,:) = [eb(dir),cg%ijkse(dir,HI)]
                      else
                         sb = [cg%isb, cg%jsb, cg%ksb]
-                        l(dir,:) = [cg%ijkse(dir,HI)+1,cg%n_(dir)] ; r(dir,:) = [cg%ijkse(dir,LO),sb(dir)]
+                        l(dir,:) = [cg%ijkse(dir,HI)+I_ONE,cg%n_(dir)] ; r(dir,:) = [cg%ijkse(dir,LO),sb(dir)]
                      endif
                   cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                   endif
@@ -310,7 +310,7 @@ contains
                   if (side == LO) then
                      l(dir,:) = 1 ; r(dir,:) = 2
                   else
-                     l(dir,:) = cg%n_(dir) ; r(dir,:) = cg%n_(dir)-1
+                     l(dir,:) = cg%n_(dir) ; r(dir,:) = cg%n_(dir)-I_ONE
                   endif
                   cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
             case default
