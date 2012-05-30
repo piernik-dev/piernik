@@ -33,7 +33,7 @@ module fluidboundaries_funcs
    implicit none
 
    private
-   public :: bnd_null, default_bnd, user_fluidbnd, init_default_fluidboundaries
+   public :: default_bnd, user_fluidbnd, init_default_fluidboundaries
 
    interface
 
