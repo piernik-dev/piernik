@@ -104,11 +104,11 @@ contains
 
    subroutine bnd_u(dir, cg)
 
-      use constants,             only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
-           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_USER
+      use constants,             only: FLUID, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
+           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_USER, INT4
       use dataio_pub,            only: msg, warn, die
       use domain,                only: dom, is_multicg
-      use fluidboundaries_funcs, only: user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr, func_bnd_xl, func_bnd_xr
+      use fluidboundaries_funcs, only: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
       use fluidindex,            only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid_cont,             only: grid_container
       use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
@@ -136,20 +136,21 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: dir
+      integer(kind=4),               intent(in)    :: dir
       type(grid_container), pointer, intent(inout) :: cg
 
-      integer(kind=4), parameter :: tag1 = 10, tag2 = 20
-      integer(kind=4), parameter :: tag7 = 70, tag8 = 80
-      logical, save    :: frun = .true.
-      integer :: i, j, ib
-      integer(kind=4) :: itag, jtag
-      real, allocatable :: send_left(:,:,:,:),recv_left(:,:,:,:)
+      integer(kind=4), parameter                   :: tag1 = 10, tag2 = 20
+      integer(kind=4), parameter                   :: tag7 = 70, tag8 = 80
+      integer(kind=4), dimension(ndims,LO:HI)      :: l, r, seb
+      logical, save                                :: frun = .true.
+      integer                                      :: i, j
+      integer(kind=4)                              :: itag, jtag, side, ssign, ib
+      real, allocatable                            :: send_left(:,:,:,:),recv_left(:,:,:,:)
 #ifdef GRAV
-      integer          :: kb
+      integer                                      :: kb
 #endif /* GRAV */
 #ifdef SHEAR_BND
-      real, allocatable :: send_right(:,:,:,:),recv_right(:,:,:,:)
+      real, allocatable                            :: send_right(:,:,:,:),recv_right(:,:,:,:)
 #endif /* SHEAR_BND */
 
       if (.not. any([xdim, ydim, zdim] == dir)) call die("[fluidboundaries:bnd_u] Invalid direction.")
@@ -439,204 +440,96 @@ contains
 !===============================================================
 
 ! Non-MPI boundary conditions
+      l = reshape([lbound(cg%u(xdim,:,:,:), kind=4),ubound(cg%u(xdim,:,:,:), kind=4)],shape=[ndims,HI]) ; r = l
 
-      select case (dir)
-      case (xdim)
-         call func_bnd_xl(cg)
-         call func_bnd_xr(cg)
-      case (ydim)
+      do side = LO, HI
 
-         select case (cg%bnd(ydim, LO))
-         case (BND_COR, BND_MPI)
-            ! Do nothing
-         case (BND_PER)
-             if (cdd%comm3d /= MPI_COMM_NULL) cg%u(:,:,1:dom%nb,:)                         = cg%u(:,:, cg%jeb:cg%je,:)
-         case (BND_USER)
-            call user_bnd_yl(cg)
-         case (BND_REF)
-            do ib=1, dom%nb
-
-               cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%js-ib,:)   = cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, dom%nb+ib,:)
-               cg%u(iarr_all_my,:, cg%js-ib,:)                 =-cg%u(iarr_all_my,:, dom%nb+ib,:)
-#ifndef ISO
-               cg%u(iarr_all_en,:, cg%js-ib,:)                 = cg%u(iarr_all_en,:, dom%nb+ib,:)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-               cg%u(iarr_all_crs,:, cg%js-ib,:)                 = cg%u(iarr_all_crs,:, dom%nb+ib,:)
-#endif /* COSM_RAYS */
-            enddo
-         case (BND_OUT)
-            do ib=1, dom%nb
-               cg%u(:,:,ib,:)                         = cg%u(:,:, cg%js,:)
-#ifdef COSM_RAYS
-               cg%u(iarr_all_crs,:,ib,:)                      = smallecr
-#endif /* COSM_RAYS */
-            enddo
-         case (BND_OUTD)
-            do ib=1, dom%nb
-
-               cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:,ib,:)        = cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%js,:)
-               cg%u(iarr_all_my,:,ib,:)                      = min(cg%u(iarr_all_my,:, cg%js,:),0.0)
-#ifndef ISO
-               cg%u(iarr_all_en,:,ib,:)                      = cg%u(iarr_all_en,:, cg%js,:)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-               cg%u(iarr_all_crs,:,ib,:)                      = smallecr
-#endif /* COSM_RAYS */
-            enddo
-         case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Left boundary condition ",i3," not implemented in Y-direction")') cg%bnd(ydim, LO)
-            call warn(msg)
-         end select  ! (cg%bnd(ydim, LO))
-
-         select case (cg%bnd(ydim, HI))
-         case (BND_COR, BND_MPI)
-            ! Do nothing
-         case (BND_PER)
-            if (cdd%comm3d /= MPI_COMM_NULL) cg%u(:,:, cg%je+1:cg%n_(ydim),:)            = cg%u(:,:, cg%js:cg%jsb,:)
-         case (BND_USER)
-            call user_bnd_yr(cg)
-         case (BND_REF)
-            do ib=1, dom%nb
-
-               cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%je+ib,:) = cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%je+1-ib,:)
-               cg%u(iarr_all_my,:, cg%je+ib,:)               =-cg%u(iarr_all_my,:, cg%je+1-ib,:)
-#ifndef ISO
-               cg%u(iarr_all_en,:, cg%je+ib,:)               = cg%u(iarr_all_en,:, cg%je+1-ib,:)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-               cg%u(iarr_all_crs,:, cg%je+ib,:)               = cg%u(iarr_all_crs,:, cg%je+1-ib,:)
-#endif /* COSM_RAYS */
-            enddo
-         case (BND_OUT)
-            do ib=1, dom%nb
-               cg%u(:,:, cg%je+ib,:)                  = cg%u(:,:, cg%je,:)
-#ifdef COSM_RAYS
-               cg%u(iarr_all_crs,:, cg%je+ib,:)               = smallecr
-#endif /* COSM_RAYS */
-            enddo
-         case (BND_OUTD)
-            do ib=1, dom%nb
-
-               cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%je+ib,:) = cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_mz ],:, cg%je,:)
-               cg%u(iarr_all_my,:, cg%je+ib,:)               = max(cg%u(iarr_all_my,:, cg%je,:),0.0)
-#ifndef ISO
-               cg%u(iarr_all_en,:, cg%je+ib,:)               = cg%u(iarr_all_en,:, cg%je,:)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-               cg%u(iarr_all_crs,:, cg%je+ib,:)               = smallecr
-#endif /* COSM_RAYS */
-            enddo
-         case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Right boundary condition ",i3," not implemented in Y-direction")') cg%bnd(ydim, HI)
-            call warn(msg)
-         end select  ! (cg%bnd(ydim, HI))
-
-      case (zdim)
-
-         select case (cg%bnd(zdim, LO))
+         select case (cg%bnd(dir, side))
          case (BND_MPI)
-            ! Do nothing if mpi
+            ! Do nothing
+         case (BND_COR)
+            if (dir == zdim) then
+               write(msg,'("[fluid_boundaries:bnd_u]: ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+               call warn(msg)
+            endif
+         case (BND_SHE)
+            if (dir /= xdim) then
+               write(msg,'("[fluid_boundaries:bnd_u]: ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+               call warn(msg)
+            endif
          case (BND_USER)
-            call user_bnd_zl(cg)
+            if (dir==xdim .and. side==LO) call user_bnd_xl(cg)
+            if (dir==xdim .and. side==HI) call user_bnd_xr(cg)
+            if (dir==ydim .and. side==LO) call user_bnd_yl(cg)
+            if (dir==ydim .and. side==HI) call user_bnd_yr(cg)
+            if (dir==zdim .and. side==LO) call user_bnd_zl(cg)
+            if (dir==zdim .and. side==HI) call user_bnd_zr(cg)
          case (BND_PER)
-            if (cdd%comm3d /= MPI_COMM_NULL) cg%u(:,:,:,1:dom%nb)                         = cg%u(:,:,:, cg%keb:cg%ke)
+            if (cdd%comm3d /= MPI_COMM_NULL) then
+               seb = reshape([[cg%isb, cg%jsb, cg%ksb],[cg%ieb, cg%jeb, cg%keb]],[ndims,HI])
+               r(dir, side) = seb(dir,3_INT4-side)
+               r(dir,3_INT4-side) = cg%ijkse(dir,3_INT4-side)
+               l(dir,:) = [1_INT4, dom%nb] + cg%ijkse(dir,side)*(side-1_INT4)
+               cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+            endif
          case (BND_REF)
-            do ib=1, dom%nb
-
-               cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%ks-ib)   = cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, dom%nb+ib)
-               cg%u(iarr_all_mz,:,:, cg%ks-ib)                 =-cg%u(iarr_all_mz,:,:, dom%nb+ib)
-#ifndef ISO
-               cg%u(iarr_all_en,:,:, cg%ks-ib)                 = cg%u(iarr_all_en,:,:, dom%nb+ib)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-               cg%u(iarr_all_crs,:,:, cg%ks-ib)                 = cg%u(iarr_all_crs,:,:, dom%nb+ib)
-#endif /* COSM_RAYS */
+            ssign = 2_INT4*side-3_INT4
+            do ib=1_INT4, dom%nb
+               l(dir,:) = cg%ijkse(dir,side)+ssign*ib ; r(dir,:) = cg%ijkse(dir,side)+ssign*(1_INT4-ib)
+               cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+               cg%u(iarr_all_dn+dir, l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = -cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI))
             enddo
          case (BND_OUT)
-            do ib=1, dom%nb
-               cg%u(:,:,:,ib)                         = cg%u(:,:,:, cg%ks)
+            r(dir,:) = cg%ijkse(dir,side)
+            ssign = 2_INT4*side-3_INT4
+            do ib=1_INT4, dom%nb
+               l(dir,:) = cg%ijkse(dir,side)+ssign*ib
+               cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
 #ifdef COSM_RAYS
-               cg%u(iarr_all_crs,:,:,ib)                      = smallecr
+               cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
 #endif /* COSM_RAYS */
             enddo
          case (BND_OUTD)
-            do ib=1, dom%nb
-
-               cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:,ib)        = cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%ks)
+            r(dir,:) = cg%ijkse(dir,side)
+            ssign = 2_INT4*side-3_INT4
+            do ib=1_INT4, dom%nb
+               l(dir,:) = cg%ijkse(dir,side)+ssign*ib
+               cg%u(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%u(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
 !> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
-               cg%u(iarr_all_mz,:,:,ib)                      = min(cg%u(iarr_all_mz,:,:, cg%ks),0.0)
-#ifndef ISO
-               cg%u(iarr_all_en,:,:,ib)                      = cg%u(iarr_all_en,:,:, cg%ks)
-#endif /* !ISO */
 #ifdef COSM_RAYS
-               cg%u(iarr_all_crs,:,:,ib)                      = smallecr
+               cg%u(iarr_all_crs,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = smallecr
 #endif /* COSM_RAYS */
             enddo
+            l(dir,:) = [1_INT4, dom%nb] + cg%ijkse(dir,side)*(side-1_INT4)
+            if (side == LO) then
+               cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = min(cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)),0.0)
+            else
+               cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = max(cg%u(iarr_all_dn+dir,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)),0.0)
+            endif
 #ifdef GRAV
          case (BND_OUTH)
-            do ib=1, dom%nb
-               kb = cg%ks-ib
-               call outh_bnd(kb+1, kb, "min")
-            enddo ! ib
+            if (dir == zdim) then
+               do ib=1_INT4, dom%nb
+                  if (side==LO) then
+                     kb = cg%ks-ib
+                     call outh_bnd(kb+1, kb, "min")
+                  endif
+                  if (side==HI) then
+                     kb = cg%ke-1_INT4+ib
+                     call outh_bnd(kb, kb+1, "max")
+                  endif
+               enddo
+            else
+               write(msg,'("[fluid_boundaries:bnd_u]: ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+               call warn(msg)
+            endif
 #endif /* GRAV */
          case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Left boundary condition ",i3," not implemented in Z-direction")') cg%bnd(zdim, LO)
+            write(msg,'("[fluid_boundaries:bnd_u]: ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
             call warn(msg)
-         end select  ! (cg%bnd(zdim, LO))
+         end select
 
-         select case (cg%bnd(zdim, HI))
-         case (BND_MPI)
-            ! Do nothing if mpi
-         case (BND_USER)
-            call user_bnd_zr(cg)
-         case (BND_PER)
-            if (cdd%comm3d /= MPI_COMM_NULL) cg%u(:,:,:, cg%ke+1:cg%n_(zdim))            = cg%u(:,:,:, cg%ks:cg%ksb)
-         case (BND_REF)
-            do ib=1, dom%nb
-
-               cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%ke+ib) = cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%ke+1-ib)
-               cg%u(iarr_all_mz,:,:, cg%ke+ib)               =-cg%u(iarr_all_mz,:,:, cg%ke+1-ib)
-#ifndef ISO
-               cg%u(iarr_all_en,:,:, cg%ke+ib)               = cg%u(iarr_all_en,:,:, cg%ke+1-ib)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-               cg%u(iarr_all_crs,:,:, cg%ke+ib)               = cg%u(iarr_all_crs,:,:, cg%ke+1-ib)
-#endif /* COSM_RAYS */
-            enddo
-         case (BND_OUT)
-            do ib=1, dom%nb
-               cg%u(:,:,:, cg%ke+ib)                  = cg%u(:,:,:, cg%ke)
-#ifdef COSM_RAYS
-               cg%u(iarr_all_crs,:,:, cg%ke+ib)               = smallecr
-#endif /* COSM_RAYS */
-            enddo
-         case (BND_OUTD)
-            do ib=1, dom%nb
-
-               cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%ke+ib) = cg%u( [ iarr_all_dn, iarr_all_mx, iarr_all_my ],:,:, cg%ke)
-!> \deprecated BEWARE: use of uninitialized value on first call (a side effect of r1726)
-               cg%u(iarr_all_mz,:,:, cg%ke+ib)               = max(cg%u(iarr_all_mz,:,:, cg%ke),0.0)
-#ifndef ISO
-               cg%u(iarr_all_en,:,:, cg%ke+ib)               = cg%u(iarr_all_en,:,:, cg%ke)
-#endif /* !ISO */
-#ifdef COSM_RAYS
-               cg%u(iarr_all_crs,:,:, cg%ke+ib)               = smallecr
-#endif /* COSM_RAYS */
-            enddo
-#ifdef GRAV
-         case (BND_OUTH)
-            do ib=1, dom%nb
-               kb = cg%ke-1+ib
-               call outh_bnd(kb, kb+1, "max")
-            enddo ! ib
-#endif /* GRAV */
-         case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Right boundary condition ",i3," not implemented in Z-direction")') cg%bnd(zdim, HI)
-            call warn(msg)
-         end select  ! (cg%bnd(zdim, HI))
-
-      end select  ! (dim)
+      enddo
 
    end subroutine bnd_u
 
