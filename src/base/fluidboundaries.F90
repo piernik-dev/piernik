@@ -39,11 +39,9 @@ contains
 
    subroutine init_fluidboundaries(cg)
 
-      use constants,             only: PIERNIK_INIT_DOMAIN, xdim, LO, HI, &
-           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER
+      use constants,             only: PIERNIK_INIT_DOMAIN, xdim, zdim, LO, HI, &
+           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die, code_progress
-      use fluidboundaries_funcs, only: bnd_null, bnd_xl_per, bnd_xl_ref, bnd_xl_out, bnd_xl_outd, bnd_xr_per, bnd_xr_ref, bnd_xr_out, bnd_xr_outd, &
-           &                           user_bnd_xl, user_bnd_xr, func_bnd_xl, func_bnd_xr
       use grid_cont,             only: grid_container
       use mpi,                   only: MPI_COMM_NULL
       use types,                 only: cdd
@@ -51,54 +49,43 @@ contains
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
+      integer(kind=4)                           :: dir, side
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[fluidboundaries:init_fluidboundaries] MPI not initialized.") ! bnd_xl, bnd_xr
 
-      select case (cg%bnd(xdim, LO))
-         case (BND_COR, BND_MPI, BND_SHE)
-            func_bnd_xl => bnd_null
-         case (BND_PER)
-            if (cdd%comm3d == MPI_COMM_NULL) then
-               func_bnd_xl => bnd_null
-            else
-               func_bnd_xl => bnd_xl_per
-            endif
-         case (BND_USER)
-            func_bnd_xl => user_bnd_xl
-         case (BND_REF)
-            func_bnd_xl => bnd_xl_ref
-         case (BND_OUT)
-            func_bnd_xl => bnd_xl_out
-         case (BND_OUTD)
-            func_bnd_xl => bnd_xl_outd
-         case default
-            func_bnd_xl => bnd_null
-            write(msg,'("[fluid_boundaries:init_fluidboundaries]: Left boundary condition ",i3," not implemented in X-direction")') cg%bnd(xdim, LO)
-            call warn(msg)
-      end select
+      do dir = xdim, zdim
+         do side = LO, HI
 
-      select case (cg%bnd(xdim, HI))
-         case (BND_COR, BND_MPI, BND_SHE)
-            func_bnd_xr => bnd_null
-         case (BND_PER)
-            if (cdd%comm3d == MPI_COMM_NULL) then
-               func_bnd_xr => bnd_null
-            else
-               func_bnd_xr => bnd_xr_per
-            endif
-         case (BND_USER)
-            func_bnd_xr => user_bnd_xr
-         case (BND_REF)
-            func_bnd_xr => bnd_xr_ref
-         case (BND_OUT)
-            func_bnd_xr => bnd_xr_out
-         case (BND_OUTD)
-            func_bnd_xr => bnd_xr_outd
-         case default
-            func_bnd_xr => bnd_null
-            write(msg,'("[fluid_boundaries:init_fluidboundaries]: Right boundary condition ",i3," not implemented in X-direction")') cg%bnd(xdim, HI)
-            call warn(msg)
-      end select
+            select case (cg%bnd(dir, side))
+               case (BND_MPI, BND_REF, BND_OUT, BND_OUTD, BND_USER)
+                  ! Do nothing
+               case (BND_COR)
+                  if (dir == zdim) then
+                     write(msg,'("[fluid_boundaries:bnd_u]: corner ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                     call warn(msg)
+                  endif
+               case (BND_SHE)
+                  if (dir /= xdim) then
+                     write(msg,'("[fluid_boundaries:bnd_u]: shear ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                     call warn(msg)
+                  endif
+               case (BND_PER)
+                  if (cdd%comm3d == MPI_COMM_NULL) then
+                     write(msg,'("[fluid_boundaries:bnd_u]: periodic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                     call warn(msg)
+                  endif
+               case (BND_OUTH)
+                  if (dir /= zdim) then
+                     write(msg,'("[fluid_boundaries:bnd_u]: outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                     call warn(msg)
+                  endif
+               case default
+                  write(msg,'("[fluid_boundaries:bnd_u]: unknown ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                  call warn(msg)
+            end select
+         enddo
+      enddo
+
 
    end subroutine init_fluidboundaries
 
@@ -108,7 +95,7 @@ contains
            &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER, INT4
       use dataio_pub,            only: msg, warn, die
       use domain,                only: dom, is_multicg
-      use fluidboundaries_funcs, only: user_bnd_xl, user_bnd_xr, user_bnd_yl, user_bnd_yr, user_bnd_zl, user_bnd_zr
+      use fluidboundaries_funcs, only: user_fluidbnd
       use fluidindex,            only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid_cont,             only: grid_container
       use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
@@ -122,7 +109,6 @@ contains
       use fluidindex,            only: iarr_all_en
 #endif /* !ISO */
 #ifdef SHEAR_BND
-      use constants,             only: BND_SHE
       use shear,                 only: qshear, omega, delj, eps, dely, unshear_fft
 #ifndef FFTW
       use constants,             only: half
@@ -445,25 +431,10 @@ contains
       do side = LO, HI
 
          select case (cg%bnd(dir, side))
-         case (BND_MPI)
+         case (BND_MPI, BND_COR, BND_SHE)
             ! Do nothing
-         case (BND_COR)
-            if (dir == zdim) then
-               write(msg,'("[fluid_boundaries:bnd_u]: ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
-               call warn(msg)
-            endif
-         case (BND_SHE)
-            if (dir /= xdim) then
-               write(msg,'("[fluid_boundaries:bnd_u]: ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
-               call warn(msg)
-            endif
          case (BND_USER)
-            if (dir==xdim .and. side==LO) call user_bnd_xl(cg)
-            if (dir==xdim .and. side==HI) call user_bnd_xr(cg)
-            if (dir==ydim .and. side==LO) call user_bnd_yl(cg)
-            if (dir==ydim .and. side==HI) call user_bnd_yr(cg)
-            if (dir==zdim .and. side==LO) call user_bnd_zl(cg)
-            if (dir==zdim .and. side==HI) call user_bnd_zr(cg)
+            call user_fluidbnd(dir,side,cg)
          case (BND_PER)
             if (cdd%comm3d /= MPI_COMM_NULL) then
                seb = reshape([[cg%isb, cg%jsb, cg%ksb],[cg%ieb, cg%jeb, cg%keb]],[ndims,HI])
@@ -519,13 +490,10 @@ contains
                      call outh_bnd(kb, kb+1, "max")
                   endif
                enddo
-            else
-               write(msg,'("[fluid_boundaries:bnd_u]: ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
-               call warn(msg)
             endif
 #endif /* GRAV */
          case default
-            write(msg,'("[fluid_boundaries:bnd_u]: ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+            write(msg,'("[fluid_boundaries:bnd_u]: Unrecognized ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
             call warn(msg)
          end select
 

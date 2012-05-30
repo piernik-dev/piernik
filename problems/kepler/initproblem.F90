@@ -98,7 +98,7 @@ contains
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use dataio_user,         only: user_vars_hdf5, user_reg_var_restart
       use domain,              only: dom
-      use fluidboundaries_funcs, only: user_bnd_xl, user_bnd_xr
+      use fluidboundaries_funcs, only: user_fluidbnd
       use gravity,             only: grav_pot_3d
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, FIRST
@@ -204,8 +204,7 @@ contains
       if (dom%geometry_type == GEO_RPZ) then ! BEWARE: cannot move this to problem_pointers because dom%geometry_type is set up in init_domain
          user_reg_var_restart       => register_user_var
          problem_customize_solution => problem_customize_solution_kepler
-         user_bnd_xl => my_bnd_xl
-         user_bnd_xr => my_bnd_xr
+         user_fluidbnd => my_fbnd
          grav_pot_3d => my_grav_pot_3d
          user_vars_hdf5 => prob_vars_hdf5
          problem_grace_passed => add_random_noise
@@ -794,6 +793,26 @@ contains
       call sum_potential
 
    end subroutine my_grav_pot_3d
+!-----------------------------------------------------------------------------
+   subroutine my_fbnd(dir,side,cg)
+
+      use constants,  only: xdim, LO
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: dir, side
+      type(grid_container), pointer, intent(inout) :: cg
+
+      if (dir == xdim) then
+         if (side == LO) then
+            call my_bnd_xl(cg)
+         else
+            call my_bnd_xr(cg)
+         endif
+      endif
+
+   end subroutine my_fbnd
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xl(cg)
 

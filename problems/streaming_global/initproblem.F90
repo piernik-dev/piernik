@@ -62,15 +62,14 @@ contains
 
       use dataio_user,         only: user_reg_var_restart, user_vars_hdf5
       use gravity,             only: grav_pot_3d, grav_type
-!     use fluidboundaries_funcs, only: user_bnd_xl, user_bnd_xr
+!     use fluidboundaries_funcs, only: user_fluidbnd
       use user_hooks,          only: problem_customize_solution, problem_grace_passed
 
       implicit none
 
       user_reg_var_restart       => register_user_var
       problem_customize_solution => problem_customize_solution_kepler
-!     user_bnd_xl => my_bnd_xl
-!     user_bnd_xr => my_bnd_xr
+!     user_fluidbnd => my_fbnd
       grav_pot_3d => my_grav_pot_3d
       user_vars_hdf5 => prob_vars_hdf5
       problem_grace_passed => add_random_noise
@@ -536,6 +535,26 @@ contains
       if (.false.) write(6,*) flatten
 
    end subroutine my_grav_ptmass_pure
+!-----------------------------------------------------------------------------
+   subroutine my_fbnd(dir,side,cg)
+
+      use constants,  only: xdim, LO
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: dir, side
+      type(grid_container), pointer, intent(inout) :: cg
+
+      if (dir == xdim) then
+         if (side == LO) then
+            call my_bnd_xl(cg)
+         else
+            call my_bnd_xr(cg)
+         endif
+      endif
+
+   end subroutine my_fbnd
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xl(cg)
 
