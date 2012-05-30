@@ -396,7 +396,7 @@ contains
             case (BND_OUT, BND_OUTD, BND_OUTH)
                sbase(:)  = [I_ZERO, edge(HI)]
 #ifdef ZERO_BND_EMF
-               l(dir,LO) = sbase(side)+1 ; l(dir,HI) = sbase(side)+nbcells(side)
+               l(dir,LO) = sbase(side)+I_ONE ; l(dir,HI) = sbase(side)+nbcells(side)
                var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = 0.0
 #else /* !ZERO_BND_EMF */
                l(dir,:) = 1 ; allocate(dvar(l(xdim,HI) ,l(ydim,HI), l(zdim,HI)))
