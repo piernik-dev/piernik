@@ -131,6 +131,7 @@ module constants
       enumerator :: BND_OUT                   !! free boundary
       enumerator :: BND_OUTD                  !! one-way outflow boundary
       enumerator :: BND_OUTH                  !! hydrostatic boundary
+      enumerator :: BND_OUTHD                 !! hydrostatic diode boundary (one-way outflow)
       enumerator :: BND_COR                   !! corner boundary
       enumerator :: BND_SHE                   !! shear boundary
       enumerator :: BND_USER                  !! user boundaries (provided in read_problem_par)

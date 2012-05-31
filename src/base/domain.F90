@@ -353,7 +353,7 @@ contains
    subroutine translate_bnds_to_ints(this, bnds)
 
       use constants, only: xdim, zdim, ndims, LO, HI, &
-         &                 BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_USER, BND_INVALID
+         &                 BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER, BND_INVALID
 
       implicit none
 
@@ -375,6 +375,8 @@ contains
                   this%bnd(d, lh) = BND_OUTD
                case ('outh')
                   this%bnd(d, lh) = BND_OUTH
+               case ('outhd')
+                  this%bnd(d, lh) = BND_OUTHD
                case ('she', 'shear', 'shearing')
                   this%bnd(d, lh) = BND_SHE
                case ('cor', 'corner')

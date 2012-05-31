@@ -244,7 +244,7 @@ contains
                                        pa3d(:, :, cg%ke+i) = (1+i) * pa3d(:, :, cg%ke) - i * pa3d(:, :, cg%ke-1)
                                  end select
                               enddo
-                           case default ! BND_OUT, BND_OUTD, BND_OUTH
+                           case default ! BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD
                               do i = 1, dom%nb
                                  select case (2*d+lh)
                                     case (2*xdim+LO)

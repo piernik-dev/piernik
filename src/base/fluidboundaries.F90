@@ -40,7 +40,7 @@ contains
    subroutine init_fluidboundaries(cg)
 
       use constants,             only: PIERNIK_INIT_DOMAIN, xdim, zdim, LO, HI, &
-           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE, BND_USER
+           &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die, code_progress
       use grid_cont,             only: grid_container
       use mpi,                   only: MPI_COMM_NULL
@@ -75,6 +75,11 @@ contains
                      call warn(msg)
                   endif
                case (BND_OUTH)
+                  if (dir /= zdim) then
+                     write(msg,'("[fluid_boundaries:bnd_u]: outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                     call warn(msg)
+                  endif
+               case (BND_OUTHD)
                   if (dir /= zdim) then
                      write(msg,'("[fluid_boundaries:bnd_u]: outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
                      call warn(msg)
@@ -116,7 +121,7 @@ contains
 #endif /* !FFTW */
 #endif /* SHEAR_BND */
 #ifdef GRAV
-      use constants,             only: BND_OUTH
+      use constants,             only: BND_OUTH, BND_OUTHD
       use hydrostatic,           only: outh_bnd
 #endif /* GRAV */
 
@@ -132,9 +137,6 @@ contains
       integer                                      :: i, j
       integer(kind=4)                              :: itag, jtag, side, ssign, ib
       real, allocatable                            :: send_left(:,:,:,:),recv_left(:,:,:,:)
-#ifdef GRAV
-      integer                                      :: kb
-#endif /* GRAV */
 #ifdef SHEAR_BND
       real, allocatable                            :: send_right(:,:,:,:),recv_right(:,:,:,:)
 #endif /* SHEAR_BND */
@@ -479,18 +481,9 @@ contains
             endif
 #ifdef GRAV
          case (BND_OUTH)
-            if (dir == zdim) then
-               do ib=1_INT4, dom%nb
-                  if (side==LO) then
-                     kb = cg%ks-ib
-                     call outh_bnd(kb+1, kb, "min")
-                  endif
-                  if (side==HI) then
-                     kb = cg%ke-1_INT4+ib
-                     call outh_bnd(kb, kb+1, "max")
-                  endif
-               enddo
-            endif
+            if (dir == zdim) call outh_bnd(side, cg, .false.)
+         case (BND_OUTHD)
+            if (dir == zdim) call outh_bnd(side, cg, .true.)
 #endif /* GRAV */
          case default
             write(msg,'("[fluid_boundaries:bnd_u]: Unrecognized ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir

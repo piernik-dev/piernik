@@ -360,16 +360,14 @@ contains
    !! \todo this procedure is incompatible with cg%cs_iso2
    !<
 
-   subroutine outh_bnd(kb, kk, minmax)
+   subroutine outh_bnd(side, cg, diode)
 
-      use constants,      only: xdim, ydim, zdim, half, one
+      use constants,      only: xdim, ydim, zdim, half, one, LO, HI, INT4
       use dataio_pub,     only: die
-      use domain,         only: is_multicg
+      use domain,         only: is_multicg, dom
       use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use gc_list,        only: cg_list_element
       use global,         only: smalld
       use gravity,        only: grav_accel, nsub, tune_zeq_bnd
-      use grid,           only: leaves
       use grid_cont,      only: grid_container
 #ifndef ISO
       use fluidindex,     only: iarr_all_en
@@ -382,29 +380,34 @@ contains
 
       implicit none
 
-      integer,          intent(in)                :: kb, kk
-      character(len=*), intent(in)                :: minmax
+      integer(kind=4),               intent(in)    :: side
+      type(grid_container), pointer, intent(inout) :: cg
+      logical,                       intent(in)    :: diode
 
-      integer                                     :: ksub, i, j
-      real, dimension(:,:,:),allocatable          :: db, csi2b
+      integer                                      :: ksub, i, j, kb, kk, ib
+      real, dimension(:,:,:),allocatable           :: db, csi2b
 #ifndef ISO
-      integer                                     :: ifluid
-      real, dimension(:,:,:),allocatable          :: ekb, eib
+      integer                                      :: ifluid
+      real, dimension(:,:,:),allocatable           :: ekb, eib
 #endif /* !ISO */
-      real, dimension(nsub+1)                     :: zs, gprofs
-      real, dimension(flind%fluids,nsub+1)        :: dprofs
-      real, dimension(flind%fluids)               :: factor
-      real                                        :: dzs,z1,z2
-      type(cg_list_element), pointer              :: cgl
-      type(grid_container), pointer               :: cg
+      real, dimension(nsub+1)                      :: zs, gprofs
+      real, dimension(flind%fluids,nsub+1)         :: dprofs
+      real, dimension(flind%fluids)                :: factor
+      real                                         :: dzs,z1,z2
+
+      do ib=1_INT4, dom%nb
+         if (side==LO) then
+            kk = cg%ks-ib
+            kb = kk+1
+         else
+            kb = cg%ke-1_INT4+ib
+            kk = kb + 1
+         endif
 
       if (.not.associated(grav_accel)) call die("[hydrostatic:outh_bnd] grav_accel not associated")
 
       if (is_multicg) call die("[hydrostatic:outh_bnd] multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
 
          if (any([allocated(db), allocated(csi2b)])) call die("[hydrostatic:outh_bnd] db or csi2b already allocated")
          allocate(db(flind%fluids, cg%n_(xdim), cg%n_(ydim)), csi2b(flind%fluids, cg%n_(xdim), cg%n_(ydim)))
@@ -449,25 +452,24 @@ contains
                db(:,i,j)  = dprofs(:,nsub+1)
                db(:,i,j)  = max(db(:,i,j), smalld)
 
-               cg%u(iarr_all_dn,i,j,kk)      =     db(:,i,j)
-               cg%u(iarr_all_mx,i,j,kk)      =     cg%u(iarr_all_mx,i,j,kb)
-               cg%u(iarr_all_my,i,j,kk)      =     cg%u(iarr_all_my,i,j,kb)
-               cg%u(iarr_all_mz,i,j,kk)      =     cg%u(iarr_all_mz,i,j,kb)
-               !> \deprecated to use outh together with outd user should manually interfere in the code of outh_bnd routine
-! zakomentowac nastepna linie jesli warunek diodowy nie ma byc stosowany razem z hydrostatycznym
-!           if (minmax == 'max') then
-!              cg%u(iarr_all_mz,i,j,kk)          =     max(cg%u(iarr_all_mz,i,j,kk),0.0)
-!           else
-!              cg%u(iarr_all_mz,i,j,kk)          =     min(cg%u(iarr_all_mz,i,j,kk),0.0)
-!           endif
-               if (.false.) print *, minmax
+               cg%u(iarr_all_dn,i,j,kk) = db(:,i,j)
+               cg%u(iarr_all_mx,i,j,kk) = cg%u(iarr_all_mx,i,j,kb)
+               cg%u(iarr_all_my,i,j,kk) = cg%u(iarr_all_my,i,j,kb)
+               cg%u(iarr_all_mz,i,j,kk) = cg%u(iarr_all_mz,i,j,kb)
+               if (diode) then
+                  if (side == HI) then
+                     cg%u(iarr_all_mz,i,j,kk) = max(cg%u(iarr_all_mz,i,j,kk),0.0)
+                  else
+                     cg%u(iarr_all_mz,i,j,kk) = min(cg%u(iarr_all_mz,i,j,kk),0.0)
+                  endif
+               endif
 #ifndef ISO
                eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(flind%all_fluids(:)%gam_1)
                eib(:,i,j) = max(eib(:,i,j), smallei)
-               cg%u(iarr_all_en,i,j,kk)      =     ekb(:,i,j) + eib(:,i,j)
+               cg%u(iarr_all_en,i,j,kk) = ekb(:,i,j) + eib(:,i,j)
 #endif /* !ISO */
 #ifdef COSM_RAYS
-               cg%u(iarr_all_crs,i,j,kk)     =     smallecr
+               cg%u(iarr_all_crs,i,j,kk) = smallecr
 #endif /* COSM_RAYS */
             enddo ! i
          enddo ! j
@@ -479,7 +481,6 @@ contains
          deallocate(eib)
 #endif /* !ISO */
 
-         cgl => cgl%nxt
       enddo
 
    end subroutine outh_bnd

@@ -78,7 +78,7 @@ contains
    subroutine bnd_b(dir, cg)
 
       use constants,  only: MAG, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
-           &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE
+           &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
       use dataio_pub, only: msg, warn, die
       use domain,     only: is_mpi_noncart, is_multicg, dom
       use grid_cont,  only: grid_container
@@ -306,7 +306,7 @@ contains
                      endif
                   cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                   endif
-            case (BND_OUT, BND_OUTD, BND_OUTH)
+            case (BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD)
                   if (side == LO) then
                      l(dir,:) = 1 ; r(dir,:) = 2
                   else
@@ -326,7 +326,7 @@ contains
    subroutine bnd_emf(var, emfdir, dir, cg)
 
       use constants,  only: ndims, xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, &
-                            BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_COR, BND_SHE
+                            BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
       use dataio_pub, only: msg, warn
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
@@ -393,7 +393,7 @@ contains
                   r(dir,:) = sidebase(side)-ssign*ib
                   var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = bndsign * var(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                enddo
-            case (BND_OUT, BND_OUTD, BND_OUTH)
+            case (BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD)
                sbase(:)  = [I_ZERO, edge(HI)]
 #ifdef ZERO_BND_EMF
                l(dir,LO) = sbase(side)+I_ONE ; l(dir,HI) = sbase(side)+nbcells(side)
