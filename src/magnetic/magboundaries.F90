@@ -361,8 +361,8 @@ contains
       bndsign = huge(1.0); edge=huge(I_ONE); nbcells=huge(I_ONE); zndiff=.false.; sidebase=huge(I_ONE)
       ! the code below should not use these values and the compiler should not complain on possible use of uninitialized variables.
 
-      if (any( [cg%bnd(dir, LO) == BND_REF,  cg%bnd(dir, HI) == BND_REF,  cg%bnd(dir, LO) == BND_OUT,  cg%bnd(dir, HI) == BND_OUT, &
-         &      cg%bnd(dir, LO) == BND_OUTD, cg%bnd(dir, HI) == BND_OUTD, cg%bnd(dir, LO) == BND_OUTH, cg%bnd(dir, HI) == BND_OUTH] )) then
+      if (any(cg%bnd(dir,LO) == [BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD]) .or. &
+       &  any(cg%bnd(dir,HI) == [BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD])) then
          call compute_bnd_indxs(emfdir, cg%n_b(dir),edge,nbcells,sidebase,bndsign,zndiff)
       endif
 
