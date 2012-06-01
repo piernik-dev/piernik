@@ -101,7 +101,7 @@ contains
       use fluidboundaries_funcs, only: user_fluidbnd
       use gravity,             only: grav_pot_3d
       use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, ierr, FIRST
+      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, mpi_err, FIRST
       use user_hooks,          only: problem_customize_solution, problem_grace_passed, problem_post_restart
 
       implicit none
@@ -165,10 +165,10 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -322,7 +322,7 @@ contains
       use hydrostatic,  only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
       use interactions, only: epstein_factor
       use mpi,          only: MPI_DOUBLE_PRECISION
-      use mpisetup,     only: master, comm, ierr, FIRST, proc
+      use mpisetup,     only: master, comm, mpi_err, FIRST, proc
       use units,        only: newtong, gram, cm, kboltz, mH
 
       implicit none
@@ -445,7 +445,7 @@ contains
             if (densfile /= "") then
                allocate(gdens(dom%n_d(xdim)+dom%nb*2))
                if (master) call read_dens_profile(densfile,gdens)
-               call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+               call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
                dens_prof(:) = gdens( base_lev%pse(proc)%sel(cg%grid_id, xdim, LO)+1:base_lev%pse(proc)%sel(cg%grid_id, xdim, HI)+1+dom%nb*2)
 
@@ -629,7 +629,7 @@ contains
       use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind!, iarr_all_mz, iarr_all_dn
-      use mpisetup,        only: comm, ierr
+      use mpisetup,        only: comm, mpi_err
       use mpi,             only: MPI_MAX, MPI_DOUBLE_PRECISION, MPI_IN_PLACE
       ! use interactions,    only: dragc_gas_dust
 #ifdef VERBOSE
@@ -694,7 +694,7 @@ contains
             funcR(:,:) = spread(funcR(1,:),1,size(cg%u,dim=1))
 
             max_vy = maxval( abs(cg%u(flind%dst%imy,:,:,:))/cg%u(flind%dst%idn,:,:,:) )
-            call MPI_Allreduce(MPI_IN_PLACE, max_vy, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+            call MPI_Allreduce(MPI_IN_PLACE, max_vy, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
          endif
 
          do j = 1, cg%n_(ydim)
@@ -708,7 +708,7 @@ contains
 !         endwhere
 
          max_vx = maxval( abs(cg%u(flind%neu%imx,:,:,:))/cg%u(flind%neu%idn,:,:,:) )
-         call MPI_Allreduce(MPI_IN_PLACE, max_vx, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+         call MPI_Allreduce(MPI_IN_PLACE, max_vx, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
 
          adjust = abs(cg%u(flind%dst%imx,:,:,:))/cg%u(flind%dst%idn,:,:,:) >= max_vx
          if ( any(adjust) ) then

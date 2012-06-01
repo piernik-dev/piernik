@@ -71,7 +71,7 @@ contains
       use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,     only: printinfo, die, code_progress
       use constants,      only: PIERNIK_INIT_GRID
-      use mpisetup,       only: ierr, master, slave, rbuff, buffer_dim, comm, FIRST
+      use mpisetup,       only: mpi_err, master, slave, rbuff, buffer_dim, comm, FIRST
       use mpi,            only: MPI_DOUBLE_PRECISION
       use fluidindex,     only: flind
 
@@ -101,7 +101,7 @@ contains
 
       endif
 
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
       if (slave) then
          omega   = rbuff(1)

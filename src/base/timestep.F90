@@ -92,7 +92,7 @@ contains
       use gc_list,              only: cg_list_element
       use grid_cont,            only: grid_container
       use mpi,                  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,             only: comm, ierr, master
+      use mpisetup,             only: comm, mpi_err, master
       use timestepdust,         only: timestep_dst
       use timestepinteractions, only: timestep_interactions
       use timestepionized,      only: timestep_ion
@@ -163,8 +163,8 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, dt,    I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, c_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dt,    I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
+      call MPI_Allreduce(MPI_IN_PLACE, c_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
 
       ! finally apply some sanity factors
       if (nstep <=1) then
@@ -207,7 +207,7 @@ contains
       use dataio_pub, only: msg, warn
       use global,     only: cfl, cfl_max, cfl_violated
       use mpi,        only: MPI_LOGICAL
-      use mpisetup,   only: comm, ierr, master, FIRST
+      use mpisetup,   only: comm, mpi_err, master, FIRST
 
       implicit none
 
@@ -228,7 +228,7 @@ contains
          if (len_trim(msg) > 0) call warn(msg)
       endif
 
-      call MPI_Bcast(cfl_violated, I_ONE, MPI_LOGICAL, FIRST, comm, ierr)
+      call MPI_Bcast(cfl_violated, I_ONE, MPI_LOGICAL, FIRST, comm, mpi_err)
 
    end subroutine cfl_warn
 

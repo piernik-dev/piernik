@@ -39,7 +39,7 @@ program piernik
    use gc_list,     only: all_cg
    use global,      only: t, nstep, dt, dtm, cfl_violated
    use mpi,         only: MPI_LOGICAL
-   use mpisetup,    only: comm, ierr, master, FIRST
+   use mpisetup,    only: comm, mpi_err, master, FIRST
    use timer,       only: time_left, set_timer
    use timestep,    only: time_step
    use user_hooks,  only: finalize_problem
@@ -67,7 +67,7 @@ program piernik
    call all_cg%check_na
    !call all_cg%check_for_dirt
 
-   call MPI_Barrier(comm,ierr)
+   call MPI_Barrier(comm,mpi_err)
 !-------------------------------- MAIN LOOP ----------------------------------
 #ifdef PERFMON
    call timer_start
@@ -112,13 +112,13 @@ program piernik
 
       if (t == tlast .and. .not. first_step .and. .not. cfl_violated) call die("[piernik] timestep is too small: t == t + 2 * dt")
 
-      call MPI_Barrier(comm,ierr)
+      call MPI_Barrier(comm,mpi_err)
       call write_data(output=CHK)
 
       call user_msg_handler(end_sim)
 
       if (master) tleft = time_left()
-      call MPI_Bcast(tleft, I_ONE, MPI_LOGICAL, FIRST, comm, ierr)
+      call MPI_Bcast(tleft, I_ONE, MPI_LOGICAL, FIRST, comm, mpi_err)
 
       if (.not.tleft) end_sim = .true.
 
@@ -164,7 +164,7 @@ program piernik
    call write_data(output=FINAL)
 !---------------------------- END OF MAIN LOOP ----------------------------------
 
-   call MPI_Barrier(comm,ierr)
+   call MPI_Barrier(comm,mpi_err)
 
    code_progress = PIERNIK_CLEANUP
 

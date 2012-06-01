@@ -104,7 +104,7 @@ contains
       use fluidindex,            only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use grid_cont,             only: grid_container
       use mpi,                   only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,              only: ierr, req, status, comm
+      use mpisetup,              only: mpi_err, req, status, comm
       use types,                 only: cdd
 #ifdef COSM_RAYS
       use initcosmicrays,        only: smallecr
@@ -211,12 +211,12 @@ contains
 !
 ! wysylamy na drugi brzeg
 !
-            call MPI_Isend(send_left , flind%all*ny*nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag1, comm, req(1), ierr)
-            call MPI_Isend(send_right, flind%all*ny*nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag2, comm, req(3), ierr)
-            call MPI_Irecv(recv_left , flind%all*ny*nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), ierr)
-            call MPI_Irecv(recv_right, flind%all*ny*nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), ierr)
+            call MPI_Isend(send_left , flind%all*ny*nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag1, comm, req(1), mpi_err)
+            call MPI_Isend(send_right, flind%all*ny*nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag2, comm, req(3), mpi_err)
+            call MPI_Irecv(recv_left , flind%all*ny*nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), mpi_err)
+            call MPI_Irecv(recv_right, flind%all*ny*nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), mpi_err)
 
-            call MPI_Waitall(I_FOUR,req(:),status(:,:),ierr)
+            call MPI_Waitall(I_FOUR,req(:),status(:,:),mpi_err)
 
 !
 ! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
@@ -273,12 +273,12 @@ contains
                   send_right(i,1:dom%nb,:,:) = unshear_fft(cg%u(i, cg%ieb:cg%ie, cg%js:cg%je,:), cg%x(cg%ieb:cg%ie),dely,.true.)
                enddo
 
-               call MPI_Isend(send_left , flind%all*cg%nyb*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag1, comm, req(1), ierr)
-               call MPI_Isend(send_right, flind%all*cg%nyb*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag2, comm, req(3), ierr)
-               call MPI_Irecv(recv_left , flind%all*cg%nyb*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), ierr)
-               call MPI_Irecv(recv_right, flind%all*cg%nyb*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), ierr)
+               call MPI_Isend(send_left , flind%all*cg%nyb*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag1, comm, req(1), mpi_err)
+               call MPI_Isend(send_right, flind%all*cg%nyb*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag2, comm, req(3), mpi_err)
+               call MPI_Irecv(recv_left , flind%all*cg%nyb*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), mpi_err)
+               call MPI_Irecv(recv_right, flind%all*cg%nyb*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), mpi_err)
 
-               call MPI_Waitall(I_FOUR, req(:),status(:,:),ierr)
+               call MPI_Waitall(I_FOUR, req(:),status(:,:),mpi_err)
 
                do i = lbound(cg%u,1), ubound(cg%u,1)
                   cg%u(i,1:dom%nb,        cg%js:cg%je,:) = unshear_fft(recv_left (i,1:dom%nb,:,:), cg%x(1:dom%nb),dely)
@@ -298,12 +298,12 @@ contains
 
                jtag = tag2 * dir
                itag = jtag - tag1
-               call MPI_Isend(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BLK, dom%nb), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), ierr)
-               call MPI_Isend(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BLK, dom%nb), cdd%procn(dir,HI), jtag, cdd%comm3d, req(2), ierr)
-               call MPI_Irecv(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BND, dom%nb), cdd%procn(dir,LO), jtag, cdd%comm3d, req(3), ierr)
-               call MPI_Irecv(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BND, dom%nb), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), ierr)
+               call MPI_Isend(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BLK, dom%nb), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), mpi_err)
+               call MPI_Isend(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BLK, dom%nb), cdd%procn(dir,HI), jtag, cdd%comm3d, req(2), mpi_err)
+               call MPI_Irecv(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BND, dom%nb), cdd%procn(dir,LO), jtag, cdd%comm3d, req(3), mpi_err)
+               call MPI_Irecv(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BND, dom%nb), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), mpi_err)
 
-               call MPI_Waitall(I_FOUR, req(:),status(:,:),ierr)
+               call MPI_Waitall(I_FOUR, req(:),status(:,:),mpi_err)
             endif
 #ifdef SHEAR_BND
          endif
@@ -335,10 +335,10 @@ contains
 
                send_left(:,:,:,:) = cg%u(:, cg%is:cg%isb,:,:)
 
-               call MPI_Isend(send_left, flind%all*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag7, comm, req(1), ierr)
-               call MPI_Irecv(recv_left, flind%all*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag8, comm, req(2), ierr)
+               call MPI_Isend(send_left, flind%all*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag7, comm, req(1), mpi_err)
+               call MPI_Irecv(recv_left, flind%all*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag8, comm, req(2), mpi_err)
 
-               call MPI_Waitall(I_TWO,req(:),status(:,:),ierr)
+               call MPI_Waitall(I_TWO,req(:),status(:,:),mpi_err)
 
                do i=1, dom%nb
                   do j=1, cg%n_(ydim)
@@ -399,10 +399,10 @@ contains
 
                send_left(:,:,:,:) = cg%u(:,:, cg%js:cg%jsb,:)
 
-               call MPI_Isend(send_left, flind%all*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag8, comm, req(1), ierr)
-               call MPI_Irecv(recv_left, flind%all*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag7, comm, req(2), ierr)
+               call MPI_Isend(send_left, flind%all*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag8, comm, req(1), mpi_err)
+               call MPI_Irecv(recv_left, flind%all*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag7, comm, req(2), mpi_err)
 
-               call MPI_Waitall(I_TWO, req(:),status(:,:),ierr)
+               call MPI_Waitall(I_TWO, req(:),status(:,:),mpi_err)
 
                do j=1, dom%nb
                   do i=1, cg%n_(xdim)

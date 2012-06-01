@@ -59,7 +59,7 @@ contains
       use cg_list_lev,   only: cg_list_level
       use internal_bnd,  only: internal_boundaries_3d
       use mpi,           only: MPI_REQUEST_NULL, MPI_COMM_NULL
-      use mpisetup,      only: ierr, have_mpi, req, status
+      use mpisetup,      only: mpi_err, have_mpi, req, status
       use types,         only: cdd
 
       implicit none
@@ -103,10 +103,10 @@ contains
             if (dom%has_dir(d)) then
                doff = dreq*(d-xdim)
                if (cdd%psize(d) > 1) then ! \todo remove psize(:), try to rely on offsets or boundary types
-                  if (.not. curl%first%cg%ext_bnd(d, LO)) call MPI_Isend(curl%first%cg%q(iv)%arr(1, 1, 1), I_ONE, curl%first%cg%mbc(ARR, d, LO, BLK, ng), cdd%procn(d, LO), 17_INT4+doff, cdd%comm3d, req(1+doff), ierr)
-                  if (.not. curl%first%cg%ext_bnd(d, HI)) call MPI_Isend(curl%first%cg%q(iv)%arr(1, 1, 1), I_ONE, curl%first%cg%mbc(ARR, d, HI, BLK, ng), cdd%procn(d, HI), 19_INT4+doff, cdd%comm3d, req(2+doff), ierr)
-                  if (.not. curl%first%cg%ext_bnd(d, LO)) call MPI_Irecv(curl%first%cg%q(iv)%arr(1, 1, 1), I_ONE, curl%first%cg%mbc(ARR, d, LO, BND, ng), cdd%procn(d, LO), 19_INT4+doff, cdd%comm3d, req(3+doff), ierr)
-                  if (.not. curl%first%cg%ext_bnd(d, HI)) call MPI_Irecv(curl%first%cg%q(iv)%arr(1, 1, 1), I_ONE, curl%first%cg%mbc(ARR, d, HI, BND, ng), cdd%procn(d, HI), 17_INT4+doff, cdd%comm3d, req(4+doff), ierr)
+                  if (.not. curl%first%cg%ext_bnd(d, LO)) call MPI_Isend(curl%first%cg%q(iv)%arr(1, 1, 1), I_ONE, curl%first%cg%mbc(ARR, d, LO, BLK, ng), cdd%procn(d, LO), 17_INT4+doff, cdd%comm3d, req(1+doff), mpi_err)
+                  if (.not. curl%first%cg%ext_bnd(d, HI)) call MPI_Isend(curl%first%cg%q(iv)%arr(1, 1, 1), I_ONE, curl%first%cg%mbc(ARR, d, HI, BLK, ng), cdd%procn(d, HI), 19_INT4+doff, cdd%comm3d, req(2+doff), mpi_err)
+                  if (.not. curl%first%cg%ext_bnd(d, LO)) call MPI_Irecv(curl%first%cg%q(iv)%arr(1, 1, 1), I_ONE, curl%first%cg%mbc(ARR, d, LO, BND, ng), cdd%procn(d, LO), 19_INT4+doff, cdd%comm3d, req(3+doff), mpi_err)
+                  if (.not. curl%first%cg%ext_bnd(d, HI)) call MPI_Irecv(curl%first%cg%q(iv)%arr(1, 1, 1), I_ONE, curl%first%cg%mbc(ARR, d, HI, BND, ng), cdd%procn(d, HI), 17_INT4+doff, cdd%comm3d, req(4+doff), mpi_err)
                else
                   if (curl%first%cg%ext_bnd(d, LO) .neqv. curl%first%cg%ext_bnd(d, HI)) call die("[multigridmpifuncs:mpi_multigrid_bnd] inconsiztency in ext_bnd(:)")
                   if (.not. curl%first%cg%ext_bnd(d, LO)) then
@@ -123,7 +123,7 @@ contains
                      end select
                   endif
                endif
-               if (cor) call MPI_Waitall(dreq, req(1+doff:4+doff), status(:,1+doff:4+doff), ierr)
+               if (cor) call MPI_Waitall(dreq, req(1+doff:4+doff), status(:,1+doff:4+doff), mpi_err)
             endif
          enddo
 
@@ -131,7 +131,7 @@ contains
 !! \todo Make a benchmark of a massively parallel run to determine difference in execution between calling MPI_Waitall for each direction and calling it once.
 !! If the difference is small then set cor permanently to .true.
 !<
-         if (.not. cor) call MPI_Waitall(size(req(:)), req(:), status(:,:), ierr)
+         if (.not. cor) call MPI_Waitall(size(req(:)), req(:), status(:,:), mpi_err)
 
       endif
 

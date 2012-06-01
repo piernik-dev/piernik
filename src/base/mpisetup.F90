@@ -41,12 +41,12 @@ module mpisetup
 
    private
    public :: cleanup_mpi, init_mpi, inflate_req, &
-        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, ierr, procmask, &
+        &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, mpi_err, procmask, &
         &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi
 
    integer(kind=4), protected :: nproc, proc, LAST          !< number of processes, rank of my process, rank of last process
    integer(kind=4), protected :: comm                       !< global communicator
-   integer(kind=4) :: ierr                                  !< error status
+   integer(kind=4) :: mpi_err                               !< error status
    integer(kind=INT4), parameter :: FIRST = 0               !< the rank of the master process
 
    logical, protected :: master, slave      !< shortcuts for testing proc == FIRST
@@ -96,11 +96,11 @@ contains
       logical :: tmp_log_exist
       integer :: iproc
 
-      call MPI_Init( ierr )
+      call MPI_Init( mpi_err )
       comm = MPI_COMM_WORLD
 
-      call MPI_Comm_rank(comm, proc, ierr)
-      call MPI_Comm_size(comm, nproc, ierr)
+      call MPI_Comm_rank(comm, proc, mpi_err)
+      call MPI_Comm_size(comm, nproc, mpi_err)
 
       LAST = nproc-I_ONE
       master = (proc == FIRST)
@@ -134,9 +134,9 @@ contains
       call printinfo(msg)
 #endif /* DEBUG */
 
-      call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
-      call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, FIRST, comm, ierr)
-      call MPI_Gather(pid_proc,  I_ONE, MPI_INTEGER,   pid_all,  I_ONE, MPI_INTEGER,   FIRST, comm, ierr)
+      call MPI_Gather(cwd_proc,  cwdlen, MPI_CHARACTER, cwd_all,  cwdlen, MPI_CHARACTER, FIRST, comm, mpi_err)
+      call MPI_Gather(host_proc, hnlen,  MPI_CHARACTER, host_all, hnlen,  MPI_CHARACTER, FIRST, comm, mpi_err)
+      call MPI_Gather(pid_proc,  I_ONE, MPI_INTEGER,   pid_all,  I_ONE, MPI_INTEGER,   FIRST, comm, mpi_err)
 
       if (master) then
          inquire(file=par_file, exist=par_file_exist)
@@ -213,9 +213,9 @@ contains
       if (allocated(status)) deallocate(status)
 
       if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
-      call MPI_Barrier(comm,ierr)
+      call MPI_Barrier(comm,mpi_err)
       if (have_mpi) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
-      call MPI_Finalize(ierr)
+      call MPI_Finalize(mpi_err)
 
    end subroutine cleanup_mpi
 

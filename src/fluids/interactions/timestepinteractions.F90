@@ -49,7 +49,7 @@ contains
       use grid_cont,    only: grid_container
       use interactions, only: collfaq, cfl_interact, has_interactions
       use mpi,          only: MPI_MIN, MPI_DOUBLE_PRECISION
-      use mpisetup,     only: comm, ierr, FIRST
+      use mpisetup,     only: comm, mpi_err, FIRST
 
       implicit none
 
@@ -70,8 +70,8 @@ contains
                             &  cg%u(flind%neu%imx,:,:,:),cg%u(flind%neu%imy,:,:,:),cg%u(flind%neu%imz,:,:,:) ) * cg%u(flind%dst%idn,:,:,:) )
          dt_interact_proc = flind%neu%cs / (maxval(collfaq) * val + small)
 
-         call MPI_Reduce(dt_interact_proc, dt_interact_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, FIRST, comm, ierr)
-         call MPI_Bcast(dt_interact_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+         call MPI_Reduce(dt_interact_proc, dt_interact_all, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, FIRST, comm, mpi_err)
+         call MPI_Bcast(dt_interact_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
          dt = cfl_interact*dt_interact_all
       else
          dt = huge(real(1.0,4))

@@ -258,7 +258,7 @@ contains
       use domain,      only: dom
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
-      use mpisetup,    only: comm, ierr, req, status
+      use mpisetup,    only: comm, mpi_err, req, status
       use mpi,         only: MPI_DOUBLE_PRECISION
       use named_array, only: p3
 
@@ -292,7 +292,7 @@ contains
          if (allocated(cg%f_tgt%seg)) then
             do g = lbound(cg%f_tgt%seg(:), dim=1), ubound(cg%f_tgt%seg(:), dim=1)
                nr = nr + I_ONE
-               call MPI_Irecv(cg%f_tgt%seg(g)%buf(1, 1, 1), size(cg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%f_tgt%seg(g)%proc, cg%f_tgt%seg(g)%tag, comm, req(nr), ierr)
+               call MPI_Irecv(cg%f_tgt%seg(g)%buf(1, 1, 1), size(cg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%f_tgt%seg(g)%proc, cg%f_tgt%seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
          cgl => cgl%nxt
@@ -320,12 +320,12 @@ contains
                enddo
             enddo
             nr = nr + I_ONE
-            call MPI_Isend(cg%c_tgt%seg(g)%buf(1, 1, 1), size(cg%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%c_tgt%seg(g)%proc, cg%c_tgt%seg(g)%tag, comm, req(nr), ierr)
+            call MPI_Isend(cg%c_tgt%seg(g)%buf(1, 1, 1), size(cg%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%c_tgt%seg(g)%proc, cg%c_tgt%seg(g)%tag, comm, req(nr), mpi_err)
          enddo
          cgl => cgl%nxt
       enddo
 
-      if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
+      if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), mpi_err)
 
       ! copy the received buffers to the right places
       cgl => coarse%first
@@ -356,7 +356,7 @@ contains
       use dataio_pub, only: msg, warn
       use gc_list,    only: cg_list_element
       use grid_cont,  only: grid_container
-      use mpisetup,   only: comm, ierr, req, status
+      use mpisetup,   only: comm, mpi_err, req, status
       use mpi,        only: MPI_DOUBLE_PRECISION
 
       implicit none
@@ -388,7 +388,7 @@ contains
          if (allocated(cg%c_tgt%seg)) then
             do g = lbound(cg%c_tgt%seg(:), dim=1), ubound(cg%c_tgt%seg(:), dim=1)
                nr = nr + I_ONE
-               call MPI_Irecv(cg%c_tgt%seg(g)%buf(1, 1, 1), size(cg%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%c_tgt%seg(g)%proc, cg%c_tgt%seg(g)%tag, comm, req(nr), ierr)
+               call MPI_Irecv(cg%c_tgt%seg(g)%buf(1, 1, 1), size(cg%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%c_tgt%seg(g)%proc, cg%c_tgt%seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
          cgl => cgl%nxt
@@ -405,13 +405,13 @@ contains
             nr = nr + I_ONE
 !            cg%f_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%span(cse)
             cg%f_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
-            call MPI_Isend(cg%f_tgt%seg(g)%buf(1, 1, 1), size(cg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%f_tgt%seg(g)%proc, cg%f_tgt%seg(g)%tag, comm, req(nr), ierr)
+            call MPI_Isend(cg%f_tgt%seg(g)%buf(1, 1, 1), size(cg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%f_tgt%seg(g)%proc, cg%f_tgt%seg(g)%tag, comm, req(nr), mpi_err)
 
          enddo
          cgl => cgl%nxt
       enddo
 
-      if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
+      if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), mpi_err)
 
       ! interpolate received coarse data to the right place
       cgl => fine%first
@@ -538,7 +538,7 @@ contains
       use fluidindex, only: flind
       use grid_cont,  only: grid_container, is_overlap
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: ierr, FIRST, LAST, procmask
+      use mpisetup,   only: mpi_err, FIRST, LAST, procmask
       use types,      only: cdd
 
       implicit none
@@ -671,20 +671,20 @@ contains
                      starts(:) = 0
 
                      starts(dims(t)-zdim+d) = dom%nb-ib
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BND, ib), ierr)
-                     call MPI_Type_commit(cg%mbc(t, d, LO, BND, ib), ierr)
+                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BND, ib), mpi_err)
+                     call MPI_Type_commit(cg%mbc(t, d, LO, BND, ib), mpi_err)
 
                      starts(dims(t)-zdim+d) = dom%nb
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BLK, ib), ierr)
-                     call MPI_Type_commit(cg%mbc(t, d, LO, BLK, ib), ierr)
+                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BLK, ib), mpi_err)
+                     call MPI_Type_commit(cg%mbc(t, d, LO, BLK, ib), mpi_err)
 
                      starts(dims(t)-zdim+d) = cg%n_b(d) + dom%nb - ib
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BLK, ib), ierr)
-                     call MPI_Type_commit(cg%mbc(t, d, HI, BLK, ib), ierr)
+                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BLK, ib), mpi_err)
+                     call MPI_Type_commit(cg%mbc(t, d, HI, BLK, ib), mpi_err)
 
                      starts(dims(t)-zdim+d) = cg%ijkse(d, HI)
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BND, ib), ierr)
-                     call MPI_Type_commit(cg%mbc(t, d, HI, BND, ib), ierr)
+                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BND, ib), mpi_err)
+                     call MPI_Type_commit(cg%mbc(t, d, HI, BND, ib), mpi_err)
 
                   enddo
 

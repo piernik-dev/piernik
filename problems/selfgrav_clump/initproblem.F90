@@ -63,7 +63,7 @@ contains
       use dataio_pub,    only: die
       use domain,        only: dom
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,      only: ierr, rbuff, ibuff, lbuff, master, slave, buffer_dim, comm, FIRST
+      use mpisetup,      only: mpi_err, rbuff, ibuff, lbuff, master, slave, buffer_dim, comm, FIRST
 
       implicit none
 
@@ -105,9 +105,9 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -157,7 +157,7 @@ contains
       use grid_cont,         only: grid_container
       use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
-      use mpisetup,          only: master, comm, ierr
+      use mpisetup,          only: master, comm, mpi_err
       use multigrid_gravity, only: multigrid_solve_grav
       use units,             only: newtong
 
@@ -239,8 +239,8 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce (MPI_IN_PLACE, iC,   I_ONE, MPI_INTEGER,          MPI_SUM, comm, ierr)
-      call MPI_Allreduce (MPI_IN_PLACE, Msph, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce (MPI_IN_PLACE, iC,   I_ONE, MPI_INTEGER,          MPI_SUM, comm, mpi_err)
+      call MPI_Allreduce (MPI_IN_PLACE, Msph, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
       if (master .and. verbose) then
          write(msg,'(a,es13.7,a,i7,a)')"[initproblem:init_prob] Starting with uniform sphere with M = ", Msph, " (", iC, " cells)"
          call printinfo(msg, .true.)
@@ -274,8 +274,8 @@ contains
 
          Cint = [ minval(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)), maxval(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)) ] ! rotation will modify this
 
-         call MPI_Allreduce (MPI_IN_PLACE, Cint(LOW),  I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-         call MPI_Allreduce (MPI_IN_PLACE, Cint(HIGH), I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+         call MPI_Allreduce (MPI_IN_PLACE, Cint(LOW),  I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
+         call MPI_Allreduce (MPI_IN_PLACE, Cint(HIGH), I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
 
          call totalMEnthalpic(Cint(LOW),  totME(LOW),  REL_CALC)
          call totalMEnthalpic(Cint(HIGH), totME(HIGH), REL_CALC)
@@ -446,7 +446,7 @@ contains
       use gc_list,           only: cg_list_element
       use grid_cont,         only: grid_container
       use initionized,       only: idni
-      use mpisetup,          only: master, comm, ierr
+      use mpisetup,          only: master, comm, mpi_err
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use multigridvars,     only: bnd_isolated
       use multigrid_gravity, only: grav_bnd
@@ -483,7 +483,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce (MPI_IN_PLACE, TWP, nTWP, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce (MPI_IN_PLACE, TWP, nTWP, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
 
       vc = abs(2.*TWP(1) + TWP(2) + 3*TWP(3))/abs(TWP(2))
       if (master .and. (verbose .or. tol < 1.0)) then
@@ -514,7 +514,7 @@ contains
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use initionized, only: idni
-      use mpisetup,    only: comm, ierr
+      use mpisetup,    only: comm, mpi_err
       use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
 
       implicit none
@@ -555,7 +555,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce (MPI_IN_PLACE, totME, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce (MPI_IN_PLACE, totME, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
 
    end subroutine totalMEnthalpic
 

@@ -71,7 +71,7 @@ contains
    subroutine init_neutral
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, lbuff, comm, ierr, buffer_dim, master, slave, FIRST
+      use mpisetup,      only: rbuff, lbuff, comm, mpi_err, buffer_dim, master, slave, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
 
       implicit none
@@ -93,8 +93,8 @@ contains
 
       endif
 
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
 
       if (slave) then
 

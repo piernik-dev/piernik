@@ -166,7 +166,7 @@ contains
       use dataio_pub,    only: msg, die, warn
       use domain,        only: dom, is_uneven, is_multicg
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
-      use mpisetup,      only: buffer_dim, comm, ierr, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST
+      use mpisetup,      only: buffer_dim, comm, mpi_err, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST
       use multigridvars, only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, single_base
       use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use types,         only: cdd
@@ -281,10 +281,10 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -2168,7 +2168,7 @@ contains
       use external_bnd,     only: arr3d_boundaries
       use grid_cont,        only: pr_segment
       use mpi,              only: MPI_DOUBLE_PRECISION
-      use mpisetup,         only: comm, ierr, req, status, master
+      use mpisetup,         only: comm, mpi_err, req, status, master
       use multigridhelpers, only: check_dirty
       use multigridvars,    only: ord_prolong_face_norm, ord_prolong_face_par, base, need_general_pf
 
@@ -2255,7 +2255,7 @@ contains
                   do g = lbound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1), ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1)
                      nr = nr + I_ONE
                      call MPI_Irecv(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf(1, 1, 1), size(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, &
-                          &         fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), ierr)
+                          &         fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), mpi_err)
                   enddo
                endif
             enddo
@@ -2279,14 +2279,14 @@ contains
                            se(d,:) = pseg%f_lay(l)%layer
                            pseg%buf(:, :, :) = pseg%buf(:, :, :) + pseg%f_lay(l)%coeff * coarse%first%cg%q(soln)%span(se)
                         enddo
-                        call MPI_Isend(pseg%buf(1, 1, 1), size(pseg%buf(:, :, :)), MPI_DOUBLE_PRECISION, pseg%proc, HI*d+lh, comm, req(nr), ierr)
+                        call MPI_Isend(pseg%buf(1, 1, 1), size(pseg%buf(:, :, :)), MPI_DOUBLE_PRECISION, pseg%proc, HI*d+lh, comm, req(nr), mpi_err)
                      enddo
                   endif
                endif
             enddo
          enddo
 
-         if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
+         if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), mpi_err)
 
          ! Interpolate content of buffers to boundary face-layes fine%first%cg%mg%bnd_[xyz](:, :, :)
          do d = xdim, zdim

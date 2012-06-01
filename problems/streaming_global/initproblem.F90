@@ -82,7 +82,7 @@ contains
 
       use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use mpi,                 only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
-      use mpisetup,            only: rbuff, lbuff, buffer_dim, master, slave, comm, ierr, FIRST
+      use mpisetup,            only: rbuff, lbuff, buffer_dim, master, slave, comm, mpi_err, FIRST
 
       implicit none
 
@@ -123,8 +123,8 @@ contains
 
       endif
 
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
 
       if (slave) then
 

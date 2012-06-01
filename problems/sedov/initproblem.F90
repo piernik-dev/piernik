@@ -66,7 +66,7 @@ contains
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use domain,      only: dom
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use mpisetup,    only: ibuff, rbuff, buffer_dim, master, slave, comm, ierr, FIRST
+      use mpisetup,    only: ibuff, rbuff, buffer_dim, master, slave, comm, mpi_err, FIRST
 
       implicit none
 
@@ -105,8 +105,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -276,7 +276,7 @@ contains
       use constants,   only: I_ONE
       use diagnostics, only: pop_vector
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,    only: proc, master, comm, ierr
+      use mpisetup,    only: proc, master, comm, mpi_err
 
       implicit none
 
@@ -288,7 +288,7 @@ contains
          call pop_vector(tsl_names, len(tsl_names(1)), ["foobar_sedov"])    !   add to header
       else
          ! do mpi stuff here...
-         call MPI_Allreduce(real(proc,8), output, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+         call MPI_Allreduce(real(proc,8), output, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
          if (master) call pop_vector(user_vars,[output])                 !   pop value
       endif
 

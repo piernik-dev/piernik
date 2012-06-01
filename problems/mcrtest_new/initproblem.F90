@@ -64,7 +64,7 @@ contains
       use dataio_pub,    only: die
       use domain,        only: dom
       use mpi,           only: MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, ierr, master, slave, FIRST
+      use mpisetup,      only: ibuff, rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
 
       implicit none
 
@@ -105,8 +105,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -144,7 +144,7 @@ contains
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
       use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
       use mpi,            only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX
-      use mpisetup,       only: comm, ierr, master
+      use mpisetup,       only: comm, mpi_err, master
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: icr_H1, icr_C12
 #endif /* COSM_RAYS_SOURCES */
@@ -245,7 +245,7 @@ contains
 
       do icr = 1, flind%crs%all
          maxv = maxval(cg%u(iarr_crs(icr),:,:,:))
-         call MPI_Allreduce(MPI_IN_PLACE, maxv, I_ONE, MPI_INTEGER, MPI_MAX, comm, ierr)
+         call MPI_Allreduce(MPI_IN_PLACE, maxv, I_ONE, MPI_INTEGER, MPI_MAX, comm, mpi_err)
          if (master) then
             write(msg,*) '[initproblem:init_prob] icr=',icr,' maxecr =',maxv
             call printinfo(msg)

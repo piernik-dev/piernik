@@ -67,7 +67,7 @@ contains
       use constants,  only: INT4
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub, only: warn
-      use mpisetup,   only: master, slave, ibuff, buffer_dim, comm, ierr
+      use mpisetup,   only: master, slave, ibuff, buffer_dim, comm, mpi_err
       use mpi,        only: MPI_INTEGER
 
       implicit none
@@ -82,7 +82,7 @@ contains
          ibuff(1:tracers_max)   = tracers
       endif
 
-      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, ierr)
+      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          0, comm, mpi_err)
 
       if (slave) then
 

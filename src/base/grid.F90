@@ -164,7 +164,7 @@ contains
       use domain,        only: is_mpi_noncart, is_multicg, is_refined, is_uneven
       use gc_list,       only: all_cg
       use mpi,           only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
-      use mpisetup,      only: proc, comm, ierr, master
+      use mpisetup,      only: proc, comm, mpi_err, master
       use types,         only: cdd
 
       implicit none
@@ -196,7 +196,7 @@ contains
 
       !\todo Analyze the decomposition and set up [ is_uneven, is_mpi_noncart, is_refined, ... ]
       is_multicg = (ubound(base_lev%pse(proc)%sel(:, :, :), dim=1) > 1)
-      call MPI_Allreduce(MPI_IN_PLACE, is_multicg, I_ONE, MPI_LOGICAL, MPI_LOR, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, is_multicg, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
       if (is_multicg .and. cdd%comm3d /= MPI_COMM_NULL) call die("[grid:dom2cg] is_multicg cannot be used with comm3d")
       if (is_refined) then
          is_mpi_noncart = .true.

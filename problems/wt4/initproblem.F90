@@ -96,7 +96,7 @@ contains
 
       use constants,   only: pi
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use mpisetup,    only: ierr, rbuff, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm, FIRST
+      use mpisetup,    only: mpi_err, rbuff, cbuff, ibuff, lbuff, master, slave, buffer_dim, comm, FIRST
       use mpi,         only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
 
       implicit none
@@ -155,10 +155,10 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -198,7 +198,7 @@ contains
       use domain,     only: is_multicg
       use grid,       only: leaves
       use grid_cont,  only: grid_container
-      use mpisetup,   only: proc, master, FIRST, LAST, comm, status, ierr
+      use mpisetup,   only: proc, master, FIRST, LAST, comm, status, mpi_err
       use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
@@ -245,16 +245,16 @@ contains
             enddo
             ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v) = ic_v(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke)
             do pe = FIRST+1, LAST
-               call MPI_Recv( ic_rng, 2*NDIM, MPI_INTEGER, pe, pe, comm, status, ierr)
+               call MPI_Recv( ic_rng, 2*NDIM, MPI_INTEGER, pe, pe, comm, status, mpi_err)
                call MPI_Send(      ic_v(ic_rng(1):ic_rng(2), ic_rng(3):ic_rng(4), ic_rng(5):ic_rng(6)), &
                     &         size(ic_v(ic_rng(1):ic_rng(2), ic_rng(3):ic_rng(4), ic_rng(5):ic_rng(6))), &
-                    &         MPI_DOUBLE_PRECISION, pe, pe, comm, ierr)
+                    &         MPI_DOUBLE_PRECISION, pe, pe, comm, mpi_err)
             enddo
          else
-            call MPI_Send( [ ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke ], 2*NDIM, MPI_INTEGER, FIRST, proc, comm, ierr)
+            call MPI_Send( [ ic_is, ic_ie, ic_js, ic_je, ic_ks, ic_ke ], 2*NDIM, MPI_INTEGER, FIRST, proc, comm, mpi_err)
             call MPI_Recv(      ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v), &
                  &         size(ic_data(ic_is:ic_ie, ic_js:ic_je, ic_ks:ic_ke, v)), &
-                 &         MPI_DOUBLE_PRECISION, FIRST, proc, comm, status, ierr)
+                 &         MPI_DOUBLE_PRECISION, FIRST, proc, comm, status, mpi_err)
          endif
       enddo
 

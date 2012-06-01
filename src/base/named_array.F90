@@ -240,7 +240,7 @@ contains
    subroutine array4d_clean(this)
 
       use constants, only: xdim, zdim, INVALID
-      use mpisetup,  only: ierr
+      use mpisetup,  only: mpi_err
 
       implicit none
 
@@ -255,13 +255,13 @@ contains
             do b = lbound(this%w_o_mbc, dim=2), ubound(this%w_o_mbc, dim=2)
                if (allocated(this%w_i_mbc(d, b)%mbc)) then
                   do g = lbound(this%w_i_mbc(d, b)%mbc, dim=1), ubound(this%w_i_mbc(d, b)%mbc, dim=1)
-                     if (this%w_i_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%w_i_mbc(d, b)%mbc(g), ierr)
+                     if (this%w_i_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%w_i_mbc(d, b)%mbc(g), mpi_err)
                   enddo
                   deallocate(this%w_i_mbc(d, b)%mbc)
                endif
                if (allocated(this%w_o_mbc(d, b)%mbc)) then
                   do g = lbound(this%w_o_mbc(d, b)%mbc, dim=1), ubound(this%w_o_mbc(d, b)%mbc, dim=1)
-                     if (this%w_o_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%w_o_mbc(d, b)%mbc(g), ierr)
+                     if (this%w_o_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%w_o_mbc(d, b)%mbc(g), mpi_err)
                   enddo
                   deallocate(this%w_o_mbc(d, b)%mbc)
                endif

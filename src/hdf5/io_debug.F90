@@ -67,7 +67,7 @@ contains
       use dataio_pub,            only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,            only: code_progress, die
       use mpi,                   only: MPI_LOGICAL
-      use mpisetup,              only: master, slave, comm, ierr, lbuff, buffer_dim, FIRST
+      use mpisetup,              only: master, slave, comm, mpi_err, lbuff, buffer_dim, FIRST
 
       implicit none
 
@@ -83,7 +83,7 @@ contains
 
       endif
 
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
 
       if (slave) then
 

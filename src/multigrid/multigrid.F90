@@ -83,7 +83,7 @@ contains
       use grid,                only: base_lev
       use grid_cont,           only: grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_COMM_NULL
-      use mpisetup,            only: comm, ierr, proc, master, slave, nproc, FIRST, buffer_dim, ibuff, lbuff
+      use mpisetup,            only: comm, mpi_err, proc, master, slave, nproc, FIRST, buffer_dim, ibuff, lbuff
       use multigridhelpers,    only: dirtyH, do_ascii_dump, dirty_debug, set_dirty
       use multigridvars,       only: roof, base, single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, &
            &                         ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
@@ -142,8 +142,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL, FIRST, comm, ierr)
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER, FIRST, comm, mpi_err)
+      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL, FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -298,7 +298,7 @@ contains
 
          curl => curl%coarser ! descend until null() is encountered
       enddo
-      call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, I_ONE, MPI_LOGICAL, MPI_LOR, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
 
       if ((is_mg_uneven .or. is_uneven .or. cdd%comm3d == MPI_COMM_NULL) .and. ord_prolong /= O_INJ .and. master) &
            call warn("[multigrid:init_multigrid] prolongation order /= injection may not work correctly on uneven or noncartesian domains yet.")
@@ -344,7 +344,7 @@ contains
       use cg_list_lev,         only: cg_list_level
       use grid,                only: base_lev
       use mpi,                 only: MPI_DOUBLE_PRECISION
-      use mpisetup,            only: master, nproc, FIRST, LAST, comm, ierr
+      use mpisetup,            only: master, nproc, FIRST, LAST, comm, mpi_err
       use multigridvars,       only: base, tot_ts
 #ifdef GRAV
       use multigrid_gravity,   only: cleanup_multigrid_grav
@@ -383,7 +383,7 @@ contains
       if (allocated(all_ts)) deallocate(all_ts)
       allocate(all_ts(FIRST:LAST))
 
-      call MPI_Gather(tot_ts, I_ONE, MPI_DOUBLE_PRECISION, all_ts, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Gather(tot_ts, I_ONE, MPI_DOUBLE_PRECISION, all_ts, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
       if (master) then
          write(msg, '(a,3(g11.4,a))')"[multigrid] Spent ", sum(all_ts)/nproc, " seconds in multigrid_solve_* (min= ",minval(all_ts)," max= ",maxval(all_ts),")."

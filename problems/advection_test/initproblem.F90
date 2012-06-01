@@ -77,7 +77,7 @@ contains
       use domain,     only: dom
       use fluidindex, only: flind
       use global,     only: smalld, smallei
-      use mpisetup,   only: ierr, rbuff, ibuff, master, slave, buffer_dim, comm, proc, have_mpi, LAST, FIRST
+      use mpisetup,   only: mpi_err, rbuff, ibuff, master, slave, buffer_dim, comm, proc, have_mpi, LAST, FIRST
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER
 
       implicit none
@@ -100,8 +100,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -237,7 +237,7 @@ contains
       use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,   only: master, comm, ierr
+      use mpisetup,   only: master, comm, mpi_err
 
       implicit none
 
@@ -278,9 +278,9 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, norm,    I_TWO, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, neg_err, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, pos_err, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, norm,    I_TWO, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
+      call MPI_Allreduce(MPI_IN_PLACE, neg_err, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
+      call MPI_Allreduce(MPI_IN_PLACE, pos_err, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
 
       if (master) then
          write(msg,'(a,f12.6,a,2f15.6)')"[initproblem:calculate_error_norm] L2 error norm = ", sqrt(norm(N_D)/norm(N_2)), ", min and max error = ", neg_err, pos_err

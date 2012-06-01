@@ -104,7 +104,7 @@ contains
       use gc_list,    only: cg_list_element, cg_list, all_cg
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: comm, ierr, req, status
+      use mpisetup,   only: comm, mpi_err, req, status
       use types,      only: cdd
 
       implicit none
@@ -168,12 +168,12 @@ contains
                   do g = lbound(cg%i_bnd(d, n)%seg(:), dim=1), ubound(cg%i_bnd(d, n)%seg(:), dim=1)
                      if (tgt3d) then
                         pa3d => cg%q(ind)%arr
-                        call MPI_Irecv(pa3d, I_ONE, cg%q_i_mbc(d, n)%mbc(g), cg%i_bnd(d, n)%seg(g)%proc, cg%i_bnd(d, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
-                        call MPI_Isend(pa3d, I_ONE, cg%q_o_mbc(d, n)%mbc(g), cg%o_bnd(d, n)%seg(g)%proc, cg%o_bnd(d, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
+                        call MPI_Irecv(pa3d, I_ONE, cg%q_i_mbc(d, n)%mbc(g), cg%i_bnd(d, n)%seg(g)%proc, cg%i_bnd(d, n)%seg(g)%tag, comm, req(nr+I_ONE), mpi_err)
+                        call MPI_Isend(pa3d, I_ONE, cg%q_o_mbc(d, n)%mbc(g), cg%o_bnd(d, n)%seg(g)%proc, cg%o_bnd(d, n)%seg(g)%tag, comm, req(nr+I_TWO), mpi_err)
                      else
                         pa4d => cg%w(ind)%arr
-                        call MPI_Irecv(pa4d, I_ONE, cg%w(ind)%w_i_mbc(d, n)%mbc(g), cg%i_bnd(d, n)%seg(g)%proc, cg%i_bnd(d, n)%seg(g)%tag, comm, req(nr+I_TWO), ierr)
-                        call MPI_Isend(pa4d, I_ONE, cg%w(ind)%w_o_mbc(d, n)%mbc(g), cg%o_bnd(d, n)%seg(g)%proc, cg%o_bnd(d, n)%seg(g)%tag, comm, req(nr+I_ONE), ierr)
+                        call MPI_Irecv(pa4d, I_ONE, cg%w(ind)%w_i_mbc(d, n)%mbc(g), cg%i_bnd(d, n)%seg(g)%proc, cg%i_bnd(d, n)%seg(g)%tag, comm, req(nr+I_TWO), mpi_err)
+                        call MPI_Isend(pa4d, I_ONE, cg%w(ind)%w_o_mbc(d, n)%mbc(g), cg%o_bnd(d, n)%seg(g)%proc, cg%o_bnd(d, n)%seg(g)%tag, comm, req(nr+I_ONE), mpi_err)
                      endif
                      nr = nr + I_TWO
                   enddo
@@ -187,7 +187,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Waitall(nr, req(:nr), status(:,:nr), ierr)
+      call MPI_Waitall(nr, req(:nr), status(:,:nr), mpi_err)
 
    end subroutine internal_boundaries
 

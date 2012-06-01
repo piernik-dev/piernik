@@ -89,7 +89,7 @@ contains
       use gc_list,    only: cg_list_element, all_cg
       use grid,       only: leaves
       use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,   only: rbuff, ibuff, ierr, comm, master, slave, buffer_dim, FIRST
+      use mpisetup,   only: rbuff, ibuff, mpi_err, comm, master, slave, buffer_dim, FIRST
 
       implicit none
 
@@ -121,8 +121,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
+      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -184,7 +184,7 @@ contains
       use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION
-      use mpisetup,   only: comm, ierr, FIRST
+      use mpisetup,   only: comm, mpi_err, FIRST
 #ifndef ISO
       use constants,  only: small, MINL
       use fluidindex, only: flind
@@ -270,7 +270,7 @@ contains
       if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum, wb, eta
 
       call leaves%get_extremum(all_cg%ind(eta_n), MAXL, etamax)
-      call MPI_Bcast(etamax%val, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(etamax%val, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
       call leaves%get_extremum(all_cg%ind(wb_n), MAXL, cu2max)
 
 #ifndef ISO
@@ -297,7 +297,7 @@ contains
 
       use constants, only: big, I_ONE
       use grid_cont, only: grid_container
-      use mpisetup,  only: comm, ierr
+      use mpisetup,  only: comm, mpi_err
       use mpi,       only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_IN_PLACE
 
       implicit none
@@ -313,7 +313,7 @@ contains
          dt_resist = big
       endif
 
-      call MPI_Allreduce(MPI_IN_PLACE, dt_resist, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dt_resist, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
 
    end subroutine timestep_resist
 

@@ -64,7 +64,7 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, buffer_dim, comm, ierr, master, slave, FIRST
+      use mpisetup,      only: rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION
 #ifdef GRAV
       use gravity,       only: grav_pot_3d, user_grav
@@ -97,7 +97,7 @@ contains
 
       endif
 
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
       if (slave) then
 

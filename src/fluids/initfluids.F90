@@ -214,7 +214,7 @@ contains
       use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
-      use mpisetup,   only: master, comm, ierr
+      use mpisetup,   only: master, comm, mpi_err
 
       implicit none
 
@@ -273,8 +273,8 @@ contains
 
       ! reduce across processes
       if (smalld >= big_float) then
-         call MPI_Allreduce(mindens, smalld, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
-         call MPI_Allreduce(MPI_IN_PLACE, maxdens, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, ierr)
+         call MPI_Allreduce(mindens, smalld, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
+         call MPI_Allreduce(MPI_IN_PLACE, maxdens, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
          span = log10(maxdens/mindens)
          mindens = mindens * safety_factor
          if (master) then
@@ -289,7 +289,7 @@ contains
 
       if (smallp >= big_float) then
          minpres = minpres * safety_factor
-         call MPI_Allreduce(minpres, smallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, ierr)
+         call MPI_Allreduce(minpres, smallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
          if (smallp < 0.) then
             write(msg,'(A,ES11.4,A)') "[func:sanitize_smallx_checks] Negative smallp detected! smallp=",smallp," may indicate nonphysical initial conditions."
             if (master) call warn(msg)

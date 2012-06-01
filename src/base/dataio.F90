@@ -194,7 +194,7 @@ contains
       use domain,          only: dom
       use global,          only: t, nstep
       use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, ierr, buffer_dim, FIRST, nproc, proc
+      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, mpi_err, buffer_dim, FIRST, nproc, proc
       use restart_hdf5,    only: read_restart_hdf5
       use slice_hdf5,      only: init_plot
       use timer,           only: time_left
@@ -334,10 +334,10 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -421,8 +421,8 @@ contains
       call init_plot( [ ix, iy, iz ], dt_plt)
 
       if (master .and. restart == 'last') call find_last_restart(nrestart)
-      call MPI_Barrier(comm,ierr)
-      call MPI_Bcast(nrestart, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Barrier(comm,mpi_err)
+      call MPI_Bcast(nrestart, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
 
       call init_version
       if (master) then
@@ -441,8 +441,8 @@ contains
             log_file_initialized = .true.
          endif
       endif
-      call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
-      call MPI_Bcast(log_file_initialized, I_ONE, MPI_LOGICAL, FIRST, comm, ierr)
+      call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, FIRST, comm, mpi_err)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
+      call MPI_Bcast(log_file_initialized, I_ONE, MPI_LOGICAL, FIRST, comm, mpi_err)
 
       if (associated(user_vars_arr_in_restart)) call user_vars_arr_in_restart
 
@@ -476,7 +476,7 @@ contains
       use constants,    only: I_ONE
       use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: msg, printinfo, warn
-      use mpisetup,     only: comm, ierr, master, FIRST
+      use mpisetup,     only: comm, mpi_err, master, FIRST
       use mpi,          only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
       use restart_hdf5, only: write_restart_hdf5
       use timer,        only: time_left
@@ -491,8 +491,8 @@ contains
 
       if (master) call read_file_msg
 
-      call MPI_Bcast(umsg,       umsg_len, MPI_CHARACTER,        FIRST, comm, ierr)
-      call MPI_Bcast(umsg_param, I_ONE,    MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(umsg,       umsg_len, MPI_CHARACTER,        FIRST, comm, mpi_err)
+      call MPI_Bcast(umsg_param, I_ONE,    MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
 !---  if a user message is received then:
       if (len_trim(umsg) /= 0) then
@@ -737,7 +737,7 @@ contains
       use grid,        only: leaves
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,    only: master, comm, ierr
+      use mpisetup,    only: master, comm, mpi_err
 #ifndef ISO
       use fluidindex,  only: iarr_all_en
 #endif /* !ISO */
@@ -859,7 +859,7 @@ contains
       tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_EPOT)
 #endif /* GRAV */
 
-      call MPI_Allreduce(MPI_IN_PLACE, tot_q(:), size(tot_q), MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, tot_q(:), size(tot_q), MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
 
       call write_log(tsl)
 

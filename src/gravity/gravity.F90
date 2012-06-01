@@ -148,7 +148,7 @@ contains
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
       use dataio_pub,    only: printinfo, warn, die, code_progress
       use constants,     only: PIERNIK_INIT_GRID, AT_OUT_B, gp_n, gpot_n, hgpot_n
-      use mpisetup,      only: ibuff, rbuff, cbuff, comm, ierr, master, slave, lbuff, buffer_dim, FIRST
+      use mpisetup,      only: ibuff, rbuff, cbuff, comm, mpi_err, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use units,         only: newtong
       use gc_list,       only: cg_list_element, all_cg
@@ -226,10 +226,10 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, ierr)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, ierr)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, ierr)
+      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -832,7 +832,7 @@ contains
       use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: master, nproc, FIRST, LAST, comm, ierr, have_mpi
+      use mpisetup,   only: master, nproc, FIRST, LAST, comm, mpi_err, have_mpi
       use types,      only: cdd, value
 
       implicit none
@@ -884,14 +884,14 @@ contains
       dgpy_proc = gpwork(cg%is,         cg%je+dom%D_y, cg%ks        )-gpwork(cg%is,cg%js,cg%ks)
       dgpz_proc = gpwork(cg%is,         cg%js,         cg%ke+dom%D_z)-gpwork(cg%is,cg%js,cg%ks)
 
-      call MPI_Gather ( dgpx_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpx_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
-      call MPI_Gather ( dgpy_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpy_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
-      call MPI_Gather ( dgpz_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpz_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, ierr )
+      call MPI_Gather ( dgpx_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpx_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, mpi_err )
+      call MPI_Gather ( dgpy_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpy_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, mpi_err )
+      call MPI_Gather ( dgpz_proc, I_ONE, MPI_DOUBLE_PRECISION, dgpz_all, I_ONE, MPI_DOUBLE_PRECISION, FIRST, cdd%comm3d, mpi_err )
 
       if (master) then
 
          do ip = FIRST, LAST
-            call MPI_Cart_coords(cdd%comm3d, ip, ndims, pc, ierr)
+            call MPI_Cart_coords(cdd%comm3d, ip, ndims, pc, mpi_err)
 
             px = pc(xdim)
             py = pc(ydim)
@@ -924,7 +924,7 @@ contains
 
       endif
 
-      call MPI_Bcast(ddgp, nproc, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(ddgp, nproc, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
       px = cdd%pcoords(xdim)
       py = cdd%pcoords(ydim)
@@ -935,7 +935,7 @@ contains
       cg%wa(:,:,:) = gpwork(:,:,:)
       call leaves%get_extremum(all_cg%wai, MAXL, gp_max)
 
-      call MPI_Bcast(gp_max%val, I_ONE, MPI_DOUBLE_PRECISION, gp_max%proc, comm, ierr)
+      call MPI_Bcast(gp_max%val, I_ONE, MPI_DOUBLE_PRECISION, gp_max%proc, comm, mpi_err)
       gpwork = gpwork - gp_max%val
 
       cg%gp = gpwork

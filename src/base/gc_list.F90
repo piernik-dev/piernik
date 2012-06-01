@@ -834,7 +834,7 @@ contains
       use domain,     only: dom
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
-      use mpisetup,   only: comm, ierr, master, proc, FIRST
+      use mpisetup,   only: comm, mpi_err, master, proc, FIRST
       use types,      only: value
 
       implicit none
@@ -895,7 +895,7 @@ contains
 
       v_red(I_V) = prop%val; v_red(I_P) = real(proc)
 
-      call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, op(minmax), comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, op(minmax), comm, mpi_err)
 
       prop%val = v_red(I_V)
       prop%proc = int(v_red(I_P))
@@ -915,14 +915,14 @@ contains
 
       if (prop%proc /= 0) then
          if (proc == prop%proc) then ! slave
-            call MPI_Send (prop%loc,    ndims, MPI_INTEGER,          FIRST, tag1, comm, ierr)
-            call MPI_Send (prop%coords, ndims, MPI_DOUBLE_PRECISION, FIRST, tag2, comm, ierr)
-            if (present(dir)) call MPI_Send (prop%assoc, I_ONE, MPI_DOUBLE_PRECISION, FIRST, tag3, comm, ierr)
+            call MPI_Send (prop%loc,    ndims, MPI_INTEGER,          FIRST, tag1, comm, mpi_err)
+            call MPI_Send (prop%coords, ndims, MPI_DOUBLE_PRECISION, FIRST, tag2, comm, mpi_err)
+            if (present(dir)) call MPI_Send (prop%assoc, I_ONE, MPI_DOUBLE_PRECISION, FIRST, tag3, comm, mpi_err)
          endif
          if (master) then
-            call MPI_Recv (prop%loc,    ndims, MPI_INTEGER,          prop%proc, tag1, comm, MPI_STATUS_IGNORE, ierr)
-            call MPI_Recv (prop%coords, ndims, MPI_DOUBLE_PRECISION, prop%proc, tag2, comm, MPI_STATUS_IGNORE, ierr)
-            if (present(dir)) call MPI_Recv (prop%assoc, I_ONE, MPI_DOUBLE_PRECISION, prop%proc, tag3, comm, MPI_STATUS_IGNORE, ierr)
+            call MPI_Recv (prop%loc,    ndims, MPI_INTEGER,          prop%proc, tag1, comm, MPI_STATUS_IGNORE, mpi_err)
+            call MPI_Recv (prop%coords, ndims, MPI_DOUBLE_PRECISION, prop%proc, tag2, comm, MPI_STATUS_IGNORE, mpi_err)
+            if (present(dir)) call MPI_Recv (prop%assoc, I_ONE, MPI_DOUBLE_PRECISION, prop%proc, tag3, comm, MPI_STATUS_IGNORE, mpi_err)
          endif
       endif
 
@@ -1116,7 +1116,7 @@ contains
       use domain,     only: dom
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_IN_PLACE
-      use mpisetup,   only: comm, ierr
+      use mpisetup,   only: comm, mpi_err
 
       implicit none
 
@@ -1146,8 +1146,8 @@ contains
          vol = vol + cg%vol
          cgl => cgl%nxt
       enddo
-      call MPI_Allreduce(MPI_IN_PLACE, avg, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, vol, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr) !! \todo calculate this in some init routine
+      call MPI_Allreduce(MPI_IN_PLACE, avg, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
+      call MPI_Allreduce(MPI_IN_PLACE, vol, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err) !! \todo calculate this in some init routine
       avg = avg / vol
 
       call this%q_add_val(iv, -avg)
@@ -1167,7 +1167,7 @@ contains
       use domain,     only: dom
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_IN_PLACE
-      use mpisetup,   only: comm, ierr
+      use mpisetup,   only: comm, mpi_err
 
       implicit none
 
@@ -1194,7 +1194,7 @@ contains
          end select
          cgl => cgl%nxt
       enddo
-      call MPI_Allreduce(MPI_IN_PLACE, norm, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, norm, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
       norm = sqrt(norm)
 
    end function norm_sq

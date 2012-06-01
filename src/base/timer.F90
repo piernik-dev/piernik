@@ -286,7 +286,7 @@ contains
       use domain,     only: dom
       use global,     only: nstep
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,   only: comm, ierr, master, FIRST
+      use mpisetup,   only: comm, mpi_err, master, FIRST
 
       implicit none
 
@@ -314,7 +314,7 @@ contains
       cpusecs  =  int ( cputot + half   ) - 3600 * cpuhours &
                                         - 60   * cpumins
 
-      call MPI_Reduce(cputot, cpuallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, ierr)
+      call MPI_Reduce(cputot, cpuallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, mpi_err)
 
       if (master) then
 

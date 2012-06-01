@@ -381,7 +381,7 @@ contains
       use gc_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,      only: comm, ierr
+      use mpisetup,      only: comm, mpi_err
 
       implicit none
 
@@ -423,7 +423,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce(lsum(0:ndims), CoM(0:ndims), ndims+I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(lsum(0:ndims), CoM(0:ndims), ndims+I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
 
       if (CoM(0) /= 0.) then
          CoM(xdim:zdim) = CoM(xdim:zdim) / CoM(0)
@@ -690,7 +690,7 @@ contains
       use gc_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,      only: comm, ierr
+      use mpisetup,      only: comm, mpi_err
 
       implicit none
 
@@ -745,8 +745,8 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, irmin, I_ONE, MPI_INTEGER, MPI_MIN, comm, ierr)
-      call MPI_Allreduce(MPI_IN_PLACE, irmax, I_ONE, MPI_INTEGER, MPI_MAX, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, irmin, I_ONE, MPI_INTEGER, MPI_MIN, comm, mpi_err)
+      call MPI_Allreduce(MPI_IN_PLACE, irmax, I_ONE, MPI_INTEGER, MPI_MAX, comm, mpi_err)
 
       ! integrate radially and apply normalization factor (the (4 \pi)/(2 l  + 1) terms cancel out)
       rr = max(1, irmin)
@@ -760,7 +760,7 @@ contains
          Q(:, OUTSIDE, r) = Q(:, OUTSIDE, r) * ofact(:) + Q(:, OUTSIDE, r+1)
       enddo
 
-      call MPI_Allreduce(MPI_IN_PLACE, Q(:, :, irmin:irmax), size(Q(:, :, irmin:irmax)), MPI_DOUBLE_PRECISION, MPI_SUM, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, Q(:, :, irmin:irmax), size(Q(:, :, irmin:irmax)), MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
 
    end subroutine img_mass2moments
 

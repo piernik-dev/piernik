@@ -228,7 +228,7 @@ contains
       use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: printio, printinfo, nhdf, thdf, tmr_hdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
          & msg, run_id, problem_name, use_v2_io, last_hdf_time
-      use mpisetup,    only: comm, ierr, master, FIRST
+      use mpisetup,    only: comm, mpi_err, master, FIRST
       use timer,       only: set_timer
 
       implicit none
@@ -246,7 +246,7 @@ contains
          write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_hdf_time,': Writing datafile v', phv, trim(fname), " ... "
          call printio(msg, .true.)
       endif
-      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, FIRST, comm, ierr)
+      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, FIRST, comm, mpi_err)
 
       call set_common_attributes(fname)
       if (use_v2_io) then
@@ -266,7 +266,7 @@ contains
    subroutine h5_write_to_single_file_v2(fname)
       use common_hdf5, only: write_to_hdf5_v2, O_OUT
       use gdf,         only: gdf_create_field_types
-      use mpisetup,    only: comm, ierr, master
+      use mpisetup,    only: comm, mpi_err, master
 
       implicit none
 
@@ -275,7 +275,7 @@ contains
       call write_to_hdf5_v2(fname, O_OUT, create_empty_cg_datasets_in_output, write_cg_to_output)
 
       if (master) call gdf_create_field_types(fname,create_datafields_descrs)
-      call MPI_Barrier(comm, ierr)
+      call MPI_Barrier(comm, mpi_err)
 
    end subroutine h5_write_to_single_file_v2
 
@@ -292,7 +292,7 @@ contains
            &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
            &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
       use mpi,         only: MPI_REAL, MPI_STATUS_IGNORE
-      use mpisetup,    only: master, FIRST, LAST, proc, comm, ierr
+      use mpisetup,    only: master, FIRST, LAST, proc, comm, mpi_err
 
       implicit none
 
@@ -353,7 +353,7 @@ contains
                         call die(msg)
                      endif
                   else
-                     call MPI_Recv(data(1,1,1), size(data), MPI_REAL, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, ierr)
+                     call MPI_Recv(data(1,1,1), size(data), MPI_REAL, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, mpi_err)
                   endif
                   call h5dwrite_f(dset_id, H5T_NATIVE_REAL, data, dims, error, xfer_prp = plist_id)
                   call h5dclose_f(dset_id, error)
@@ -372,7 +372,7 @@ contains
                         write(msg,'(3a)') "[data_hdf5:write_cg_to_output]: ", hdf_vars(i)," is not defined in datafields_hdf5, neither in user_vars_hdf5."
                         call die(msg)
                      endif
-                     call MPI_Send(data(1,1,1), size(data), MPI_REAL, FIRST, ncg + sum(cg_n(:))*i, comm, ierr)
+                     call MPI_Send(data(1,1,1), size(data), MPI_REAL, FIRST, ncg + sum(cg_n(:))*i, comm, mpi_err)
                   enddo
                endif
             endif

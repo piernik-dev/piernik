@@ -73,7 +73,7 @@ contains
       use constants,   only: I_ONE, cwdlen, WR
       use common_hdf5, only: set_common_attributes, output_fname
       use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, use_v2_io, nres, piernik_hdf5_version, piernik_hdf5_version2, last_res_time
-      use mpisetup,    only: comm, ierr, master
+      use mpisetup,    only: comm, mpi_err, master
       use timer,       only: set_timer
 
       implicit none
@@ -99,7 +99,7 @@ contains
       else
          call write_restart_hdf5_v1(filename)
       endif
-      call MPI_Barrier(comm, ierr)
+      call MPI_Barrier(comm, mpi_err)
 
       thdf = set_timer(tmr_hdf)
       if (master) then
@@ -579,7 +579,7 @@ contains
            &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mpi,         only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_INFO_NULL
-      use mpisetup,    only: comm, ierr, master, FIRST
+      use mpisetup,    only: comm, mpi_err, master, FIRST
 
       implicit none
 
@@ -736,25 +736,25 @@ contains
       endif
       call h5close_f(error)
 
-      call MPI_Bcast(restart_hdf5_version,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(restart_hdf5_version,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
-      call MPI_Bcast(nstep,    I_ONE, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(nres,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(nhdf,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
-      call MPI_Bcast(nimg,     I_ONE, MPI_INTEGER, FIRST, comm, ierr)
-      if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, I_ONE, MPI_INTEGER, FIRST, comm, ierr)
+      call MPI_Bcast(nstep,    I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+      call MPI_Bcast(nres,     I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+      call MPI_Bcast(nhdf,     I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+      call MPI_Bcast(nimg,     I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+      if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
 
-      call MPI_Bcast(last_log_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(last_tsl_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(last_hdf_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(last_res_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(last_plt_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(t,             I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
-      call MPI_Bcast(dt,            I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(last_log_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(last_tsl_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(last_hdf_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(last_res_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(last_plt_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(t,             I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(dt,            I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
-      call MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, FIRST, comm, ierr)
-      call MPI_Bcast(domain_dump,  domlen,    MPI_CHARACTER, FIRST, comm, ierr)
-      call MPI_Bcast(new_id,       idlen,     MPI_CHARACTER, FIRST, comm, ierr)
+      call MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, FIRST, comm, mpi_err)
+      call MPI_Bcast(domain_dump,  domlen,    MPI_CHARACTER, FIRST, comm, mpi_err)
+      call MPI_Bcast(new_id,       idlen,     MPI_CHARACTER, FIRST, comm, mpi_err)
 
    end subroutine read_restart_hdf5_v1
 
@@ -920,7 +920,7 @@ contains
            &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
            &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,    only: master, FIRST, LAST, proc, comm, ierr
+      use mpisetup,    only: master, FIRST, LAST, proc, comm, mpi_err
 
       implicit none
 
@@ -976,7 +976,7 @@ contains
                         dims(:) = cg%n_b
                      else
                         allocate(pa3d(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
-                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, ierr)
+                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa3d)
                      endif
                      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
@@ -996,7 +996,7 @@ contains
                         dims(:) = [ all_cg%w_lst(w_lst(i))%dim4, cg%n_b ]
                      else
                         allocate(pa4d(all_cg%w_lst(w_lst(i))%dim4, cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
-                        call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, ierr)
+                        call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa4d)
                      endif
                      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
@@ -1012,13 +1012,13 @@ contains
                   if (size(q_lst) > 0) then
                      do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
                         pa3d => cg%q(q_lst(i))%span(cg%ijkse)
-                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*i, comm, ierr)
+                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*i, comm, mpi_err)
                      enddo
                   endif
                   if (size(w_lst) > 0) then
                      do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
                         pa4d => cg%w(w_lst(i))%span(cg%ijkse)
-                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*(size(q_lst)+i), comm, ierr)
+                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*(size(q_lst)+i), comm, mpi_err)
                      enddo
                   endif
                endif
@@ -1109,7 +1109,7 @@ contains
       use grid_cont,   only: is_overlap
       use hdf5,        only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
-      use mpisetup,    only: master, comm, ierr
+      use mpisetup,    only: master, comm, mpi_err
 
       implicit none
 
@@ -1359,7 +1359,7 @@ contains
       call h5close_f(error)
 
       if (status_v2 /= STAT_OK) nres = nres_old ! let's hope read_restart_hdf5_v1 will fix what could possibly got broken here
-      call MPI_Barrier(comm, ierr)
+      call MPI_Barrier(comm, mpi_err)
 
    end subroutine read_restart_hdf5_v2
 
@@ -1478,7 +1478,7 @@ contains
       use constants,  only: I_ONE
       use dataio_pub, only: die
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,   only: slave, LAST, comm, proc, ierr
+      use mpisetup,   only: slave, LAST, comm, proc, mpi_err
 
       implicit none
 
@@ -1489,9 +1489,9 @@ contains
 
       allocate(aux(size(arr(:))))
 
-      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_DOUBLE_PRECISION, proc+I_ONE, tag, comm, ierr)
+      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_DOUBLE_PRECISION, proc+I_ONE, tag, comm, mpi_err)
       if (slave) then
-         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_DOUBLE_PRECISION, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, ierr)
+         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_DOUBLE_PRECISION, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, mpi_err)
          if (any(aux(:) /= arr(:))) call die("[restart_hdf5:compare_real_array1D] Inconsistency found.")
       endif
 
@@ -1506,7 +1506,7 @@ contains
       use constants,  only: I_ONE
       use dataio_pub, only: die
       use mpi,        only: MPI_INTEGER, MPI_STATUS_IGNORE
-      use mpisetup,   only: slave, LAST, comm, proc, ierr
+      use mpisetup,   only: slave, LAST, comm, proc, mpi_err
 
       implicit none
 
@@ -1517,9 +1517,9 @@ contains
 
       allocate(aux(size(arr(:))))
 
-      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_INTEGER, proc+I_ONE, tag, comm, ierr)
+      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_INTEGER, proc+I_ONE, tag, comm, mpi_err)
       if (slave) then
-         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_INTEGER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, ierr)
+         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_INTEGER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, mpi_err)
          if (any(aux(:) /= arr(:))) call die("[restart_hdf5:compare_int_array1D] Inconsistency found.")
       endif
 
@@ -1534,7 +1534,7 @@ contains
       use constants,  only: I_ONE
       use dataio_pub, only: die
       use mpi,        only: MPI_CHARACTER, MPI_STATUS_IGNORE
-      use mpisetup,   only: slave, LAST, comm, proc, ierr
+      use mpisetup,   only: slave, LAST, comm, proc, mpi_err
 
       implicit none
 
@@ -1543,9 +1543,9 @@ contains
       character(len=len(str)) :: aux
       integer(kind=4), parameter :: tag = 10
 
-      if (proc /= LAST) call MPI_Send(str, len(str, kind=4), MPI_CHARACTER, proc+I_ONE, tag, comm, ierr)
+      if (proc /= LAST) call MPI_Send(str, len(str, kind=4), MPI_CHARACTER, proc+I_ONE, tag, comm, mpi_err)
       if (slave) then
-         call MPI_Recv(aux, len(aux, kind=4), MPI_CHARACTER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, ierr)
+         call MPI_Recv(aux, len(aux, kind=4), MPI_CHARACTER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, mpi_err)
          if (aux /= str) call die("[restart_hdf5:compare_string] Inconsistency found.")
       endif
 

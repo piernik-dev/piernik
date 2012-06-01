@@ -524,7 +524,7 @@ contains
 
       use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, BLK, INVALID
       use domain,    only: dom
-      use mpisetup,  only: ierr
+      use mpisetup,  only: mpi_err
 
       implicit none
 
@@ -557,10 +557,10 @@ contains
             if (dom%has_dir(d)) then
                do t = FLUID, ARR
                   do b = 1, dom%nb
-                     if (this%mbc(t, d, LO, BLK, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BLK, b), ierr)
-                     if (this%mbc(t, d, LO, BND, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BND, b), ierr)
-                     if (this%mbc(t, d, HI, BLK, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BLK, b), ierr)
-                     if (this%mbc(t, d, HI, BND, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BND, b), ierr)
+                     if (this%mbc(t, d, LO, BLK, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BLK, b), mpi_err)
+                     if (this%mbc(t, d, LO, BND, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, LO, BND, b), mpi_err)
+                     if (this%mbc(t, d, HI, BLK, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BLK, b), mpi_err)
+                     if (this%mbc(t, d, HI, BND, b) /= INVALID) call MPI_Type_free(this%mbc(t, d, HI, BND, b), mpi_err)
                   enddo
                enddo
             endif
@@ -607,7 +607,7 @@ contains
             if (allocated(this%q_i_mbc)) then
                if (allocated(this%q_i_mbc(d, b)%mbc)) then
                   do g = lbound(this%q_i_mbc(d, b)%mbc, dim=1), ubound(this%q_i_mbc(d, b)%mbc, dim=1)
-                     if (this%q_i_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%q_i_mbc(d, b)%mbc(g), ierr)
+                     if (this%q_i_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%q_i_mbc(d, b)%mbc(g), mpi_err)
                   enddo
                   deallocate(this%q_i_mbc(d, b)%mbc)
                endif
@@ -615,7 +615,7 @@ contains
             if (allocated(this%q_o_mbc)) then
                if (allocated(this%q_o_mbc(d, b)%mbc)) then
                   do g = lbound(this%q_o_mbc(d, b)%mbc, dim=1), ubound(this%q_o_mbc(d, b)%mbc, dim=1)
-                     if (this%q_o_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%q_o_mbc(d, b)%mbc(g), ierr)
+                     if (this%q_o_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%q_o_mbc(d, b)%mbc(g), mpi_err)
                   enddo
                   deallocate(this%q_o_mbc(d, b)%mbc)
                endif
@@ -651,7 +651,7 @@ contains
       use constants,  only: xdim, zdim, ndims
       use dataio_pub, only: die
       use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION
-      use mpisetup,   only: ierr
+      use mpisetup,   only: mpi_err
 
       implicit none
 
@@ -672,8 +672,8 @@ contains
 
       subsizes(size(sizes)-zdim+xdim:size(sizes)) = int(se(:, HI) - se(:, LO) + 1, kind=4)
       starts  (size(sizes)-zdim+xdim:size(sizes)) = int(se(:, LO) - 1, kind=4)
-      call MPI_Type_create_subarray(size(sizes), sizes, subsizes, starts,  MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, mbc, ierr)
-      call MPI_Type_commit(mbc, ierr)
+      call MPI_Type_create_subarray(size(sizes), sizes, subsizes, starts,  MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, mbc, mpi_err)
+      call MPI_Type_commit(mbc, mpi_err)
 
       deallocate(subsizes, starts)
 

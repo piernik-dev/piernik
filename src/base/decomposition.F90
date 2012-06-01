@@ -90,12 +90,12 @@ contains
    subroutine cleanup_decomposition
 
       use mpi,      only: MPI_COMM_NULL
-      use mpisetup, only: ierr
+      use mpisetup, only: mpi_err
       use types,    only: cdd
 
       implicit none
 
-      if (cdd%comm3d /= MPI_COMM_NULL) call MPI_Comm_free(cdd%comm3d, ierr)
+      if (cdd%comm3d /= MPI_COMM_NULL) call MPI_Comm_free(cdd%comm3d, mpi_err)
 
       if (allocated(primes)) deallocate(primes)
 
@@ -108,7 +108,7 @@ contains
       use constants,   only: I_ONE
       use cg_list_lev, only: cg_list_patch
       use mpi,         only: MPI_IN_PLACE, MPI_LOGICAL, MPI_LAND
-      use mpisetup,    only: comm, ierr
+      use mpisetup,    only: comm, mpi_err
 
       implicit none
 
@@ -116,7 +116,7 @@ contains
 
       call divide_domain_int(dom_divided, patch) !%list_level%n_d, patch%list_level%pse)
       if (dom_divided) dom_divided = is_not_too_small(patch%list_level, "not catched anywhere")
-      call MPI_Allreduce(MPI_IN_PLACE, dom_divided, I_ONE, MPI_LOGICAL, MPI_LAND, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dom_divided, I_ONE, MPI_LOGICAL, MPI_LAND, comm, mpi_err)
 
    end function divide_domain
 
@@ -229,7 +229,7 @@ contains
       use domain,      only: dom, is_mpi_noncart, is_refined, use_comm3d, reorder
       use cg_list_lev, only: cg_list_patch
       use mpi,         only: MPI_COMM_NULL
-      use mpisetup,    only: master, FIRST, LAST, nproc, comm, proc, ierr
+      use mpisetup,    only: master, FIRST, LAST, nproc, comm, proc, mpi_err
       use types,       only: cdd
 
       implicit none
@@ -249,22 +249,22 @@ contains
          cdd%psize(:) = p_size(:)
          if (is_mpi_noncart .or. is_refined) call die("[decomposition:cartesian_tiling] MPI_Cart_create cannot be used for non-rectilinear or AMR domains")
 
-         call MPI_Cart_create(comm, ndims, cdd%psize, dom%periodic, reorder, cdd%comm3d, ierr)
-         call MPI_Cart_coords(cdd%comm3d, proc, ndims, cdd%pcoords, ierr)
+         call MPI_Cart_create(comm, ndims, cdd%psize, dom%periodic, reorder, cdd%comm3d, mpi_err)
+         call MPI_Cart_coords(cdd%comm3d, proc, ndims, cdd%pcoords, mpi_err)
 
          ! Compute neighbors
          do p = xdim, zdim
-            call MPI_Cart_shift(cdd%comm3d, p-xdim, I_ONE, cdd%procn(p, LO), cdd%procn(p, HI), ierr)
+            call MPI_Cart_shift(cdd%comm3d, p-xdim, I_ONE, cdd%procn(p, LO), cdd%procn(p, HI), mpi_err)
          enddo
 
          if (any(dom%bnd(xdim:ydim, LO) == BND_COR)) then
             if (cdd%pcoords(xdim) == 0 .and. cdd%pcoords(ydim) > 0) then
                pc(:) = [ cdd%pcoords(ydim), cdd%pcoords(xdim), cdd%pcoords(zdim) ]
-               call MPI_Cart_rank(cdd%comm3d, pc, cdd%procxyl, ierr)
+               call MPI_Cart_rank(cdd%comm3d, pc, cdd%procxyl, mpi_err)
             endif
             if (cdd%pcoords(ydim) == 0 .and. cdd%pcoords(xdim) > 0 ) then
                pc(:) = [ cdd%pcoords(ydim), cdd%pcoords(xdim), cdd%pcoords(zdim) ]
-               call MPI_Cart_rank(cdd%comm3d, pc, cdd%procyxl, ierr)
+               call MPI_Cart_rank(cdd%comm3d, pc, cdd%procyxl, mpi_err)
             endif
          endif
 
@@ -280,7 +280,7 @@ contains
             if (use_comm3d) call die("[decomposition:cartesian_tiling] MPI_Cart_create failed")
             pc(:) = [ mod(p, p_size(xdim)), mod(p/p_size(xdim), p_size(ydim)), p/product(p_size(xdim:ydim)) ]
          else
-            call MPI_Cart_coords(cdd%comm3d, p, ndims, pc, ierr)
+            call MPI_Cart_coords(cdd%comm3d, p, ndims, pc, mpi_err)
          endif
          where (dom%has_dir(:))
             patch%list_level%pse(p)%sel(I_ONE, :, LO) = (patch%n_d(:) *  pc(:) ) / p_size(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
@@ -724,7 +724,7 @@ contains
       use domain,     only: dom
       use cg_list_lev, only: cg_list_level
       use mpi,        only: MPI_IN_PLACE, MPI_LOGICAL, MPI_LAND
-      use mpisetup,   only: proc, comm, ierr
+      use mpisetup,   only: proc, comm, mpi_err
 
       implicit none
 
@@ -754,7 +754,7 @@ contains
          write(msg,'(3a)')"[decomposition:is_not_too_small] ",label," no pse"
          call warn(msg)
       endif
-      call MPI_Allreduce(MPI_IN_PLACE, dom_divided, I_ONE, MPI_LOGICAL, MPI_LAND, comm, ierr)
+      call MPI_Allreduce(MPI_IN_PLACE, dom_divided, I_ONE, MPI_LOGICAL, MPI_LAND, comm, mpi_err)
 
       if (allocated(list_level%pse) .and. .not. dom_divided) call deallocate_pse(list_level)
 

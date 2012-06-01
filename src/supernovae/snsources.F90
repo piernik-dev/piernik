@@ -77,7 +77,7 @@ contains
       use domain,         only: dom
       use initcosmicrays, only: cr_eff
       use mpi,            only: MPI_DOUBLE_PRECISION
-      use mpisetup,       only: rbuff, buffer_dim, comm, ierr, master, slave, FIRST
+      use mpisetup,       only: rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
 
       implicit none
 
@@ -97,7 +97,7 @@ contains
          rbuff(5)   = f_sn_kpc2
       endif
 
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, ierr)
+      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
       if (slave) then
 !        amp_ecr_sn  = rbuff(1)
