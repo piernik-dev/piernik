@@ -920,7 +920,7 @@ contains
            &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
            &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,    only: master, FIRST, LAST, proc, comm
+      use mpisetup,    only: master, FIRST, LAST, proc, comm, ierr
 
       implicit none
 
@@ -976,7 +976,7 @@ contains
                         dims(:) = cg%n_b
                      else
                         allocate(pa3d(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
-                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, error)
+                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, ierr)
                         dims(:) = shape(pa3d)
                      endif
                      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
@@ -996,7 +996,7 @@ contains
                         dims(:) = [ all_cg%w_lst(w_lst(i))%dim4, cg%n_b ]
                      else
                         allocate(pa4d(all_cg%w_lst(w_lst(i))%dim4, cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
-                        call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, error)
+                        call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, ierr)
                         dims(:) = shape(pa4d)
                      endif
                      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
@@ -1012,13 +1012,13 @@ contains
                   if (size(q_lst) > 0) then
                      do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
                         pa3d => cg%q(q_lst(i))%span(cg%ijkse)
-                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*i, comm, error)
+                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*i, comm, ierr)
                      enddo
                   endif
                   if (size(w_lst) > 0) then
                      do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
                         pa4d => cg%w(w_lst(i))%span(cg%ijkse)
-                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*(size(q_lst)+i), comm, error)
+                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*(size(q_lst)+i), comm, ierr)
                      enddo
                   endif
                endif
@@ -1109,7 +1109,7 @@ contains
       use grid_cont,   only: is_overlap
       use hdf5,        only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
-      use mpisetup,    only: master, comm
+      use mpisetup,    only: master, comm, ierr
 
       implicit none
 
@@ -1359,7 +1359,7 @@ contains
       call h5close_f(error)
 
       if (status_v2 /= STAT_OK) nres = nres_old ! let's hope read_restart_hdf5_v1 will fix what could possibly got broken here
-      call MPI_Barrier(comm, error)
+      call MPI_Barrier(comm, ierr)
 
    end subroutine read_restart_hdf5_v2
 
@@ -1478,7 +1478,7 @@ contains
       use constants,  only: I_ONE
       use dataio_pub, only: die
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,   only: slave, LAST, comm, proc
+      use mpisetup,   only: slave, LAST, comm, proc, ierr
 
       implicit none
 
@@ -1486,13 +1486,12 @@ contains
 
       real, dimension(:), allocatable :: aux
       integer(kind=4), parameter :: tag = 10
-      integer(kind=4) :: error
 
       allocate(aux(size(arr(:))))
 
-      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_DOUBLE_PRECISION, proc+I_ONE, tag, comm, error)
+      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_DOUBLE_PRECISION, proc+I_ONE, tag, comm, ierr)
       if (slave) then
-         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_DOUBLE_PRECISION, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, error)
+         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_DOUBLE_PRECISION, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, ierr)
          if (any(aux(:) /= arr(:))) call die("[restart_hdf5:compare_real_array1D] Inconsistency found.")
       endif
 
@@ -1507,7 +1506,7 @@ contains
       use constants,  only: I_ONE
       use dataio_pub, only: die
       use mpi,        only: MPI_INTEGER, MPI_STATUS_IGNORE
-      use mpisetup,   only: slave, LAST, comm, proc
+      use mpisetup,   only: slave, LAST, comm, proc, ierr
 
       implicit none
 
@@ -1515,13 +1514,12 @@ contains
 
       integer(kind=4), dimension(:), allocatable :: aux
       integer(kind=4), parameter :: tag = 10
-      integer(kind=4) :: error
 
       allocate(aux(size(arr(:))))
 
-      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_INTEGER, proc+I_ONE, tag, comm, error)
+      if (proc /= LAST) call MPI_Send(arr(:), size(arr(:), kind=4), MPI_INTEGER, proc+I_ONE, tag, comm, ierr)
       if (slave) then
-         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_INTEGER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, error)
+         call MPI_Recv(aux(:), size(aux(:), kind=4), MPI_INTEGER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, ierr)
          if (any(aux(:) /= arr(:))) call die("[restart_hdf5:compare_int_array1D] Inconsistency found.")
       endif
 
@@ -1536,7 +1534,7 @@ contains
       use constants,  only: I_ONE
       use dataio_pub, only: die
       use mpi,        only: MPI_CHARACTER, MPI_STATUS_IGNORE
-      use mpisetup,   only: slave, LAST, comm, proc
+      use mpisetup,   only: slave, LAST, comm, proc, ierr
 
       implicit none
 
@@ -1544,12 +1542,10 @@ contains
 
       character(len=len(str)) :: aux
       integer(kind=4), parameter :: tag = 10
-      integer(kind=4) :: error
 
-
-      if (proc /= LAST) call MPI_Send(str, len(str, kind=4), MPI_CHARACTER, proc+I_ONE, tag, comm, error)
+      if (proc /= LAST) call MPI_Send(str, len(str, kind=4), MPI_CHARACTER, proc+I_ONE, tag, comm, ierr)
       if (slave) then
-         call MPI_Recv(aux, len(aux, kind=4), MPI_CHARACTER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, error)
+         call MPI_Recv(aux, len(aux, kind=4), MPI_CHARACTER, proc-I_ONE, tag, comm, MPI_STATUS_IGNORE, ierr)
          if (aux /= str) call die("[restart_hdf5:compare_string] Inconsistency found.")
       endif
 

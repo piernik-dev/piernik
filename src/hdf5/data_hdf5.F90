@@ -292,7 +292,7 @@ contains
            &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
            &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
       use mpi,         only: MPI_REAL, MPI_STATUS_IGNORE
-      use mpisetup,    only: master, FIRST, LAST, proc, comm
+      use mpisetup,    only: master, FIRST, LAST, proc, comm, ierr
 
       implicit none
 
@@ -353,7 +353,7 @@ contains
                         call die(msg)
                      endif
                   else
-                     call MPI_Recv(data(1,1,1), size(data), MPI_REAL, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, error)
+                     call MPI_Recv(data(1,1,1), size(data), MPI_REAL, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, ierr)
                   endif
                   call h5dwrite_f(dset_id, H5T_NATIVE_REAL, data, dims, error, xfer_prp = plist_id)
                   call h5dclose_f(dset_id, error)
@@ -372,7 +372,7 @@ contains
                         write(msg,'(3a)') "[data_hdf5:write_cg_to_output]: ", hdf_vars(i)," is not defined in datafields_hdf5, neither in user_vars_hdf5."
                         call die(msg)
                      endif
-                     call MPI_Send(data(1,1,1), size(data), MPI_REAL, FIRST, ncg + sum(cg_n(:))*i, comm, error)
+                     call MPI_Send(data(1,1,1), size(data), MPI_REAL, FIRST, ncg + sum(cg_n(:))*i, comm, ierr)
                   enddo
                endif
             endif

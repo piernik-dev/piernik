@@ -585,7 +585,7 @@ contains
            &                  h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
            &                  h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5zfilter_avail_f
       use mpi,          only: MPI_INFO_NULL, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
-      use mpisetup,     only: comm, FIRST, LAST, master
+      use mpisetup,     only: comm, FIRST, LAST, master, ierr
       use helpers_hdf5, only: create_attribute
       use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets
 
@@ -643,7 +643,7 @@ contains
 
       ! Prepare groups and datasets for grid containers on the master
       allocate(cg_n(FIRST:LAST))
-      call MPI_Allgather(all_cg%cnt, I_ONE, MPI_INTEGER, cg_n, I_ONE, MPI_INTEGER, comm, error)
+      call MPI_Allgather(all_cg%cnt, I_ONE, MPI_INTEGER, cg_n, I_ONE, MPI_INTEGER, comm, ierr)
       cg_cnt = sum(cg_n(:))
       allocate(cg_all_n_b(ndims, cg_cnt))
 
@@ -688,10 +688,10 @@ contains
                   cgl => cgl%nxt
                enddo
             else
-               call MPI_Recv(cg_rl,  size(cg_rl),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, error)
-               call MPI_Recv(cg_n_b, size(cg_n_b), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, error)
-               call MPI_Recv(cg_off, size(cg_off), MPI_INTEGER8, p, tag+I_TWO,   comm, MPI_STATUS_IGNORE, error)
-               if (otype == O_OUT) call MPI_Recv(dbuf,   size(dbuf) ,  MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, error)
+               call MPI_Recv(cg_rl,  size(cg_rl),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, ierr)
+               call MPI_Recv(cg_n_b, size(cg_n_b), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, ierr)
+               call MPI_Recv(cg_off, size(cg_off), MPI_INTEGER8, p, tag+I_TWO,   comm, MPI_STATUS_IGNORE, ierr)
+               if (otype == O_OUT) call MPI_Recv(dbuf,   size(dbuf) ,  MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, ierr)
             endif
 
             do g = 1, cg_n(p)
@@ -773,15 +773,15 @@ contains
             g = g + 1
             cgl => cgl%nxt
          enddo
-         call MPI_Send(cg_rl,  size(cg_rl),  MPI_INTEGER,  FIRST, tag,         comm, error)
-         call MPI_Send(cg_n_b, size(cg_n_b), MPI_INTEGER,  FIRST, tag+I_ONE,   comm, error)
-         call MPI_Send(cg_off, size(cg_off), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, error)
-         if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf),   MPI_REAL8,    FIRST, tag+I_THREE, comm, error)
+         call MPI_Send(cg_rl,  size(cg_rl),  MPI_INTEGER,  FIRST, tag,         comm, ierr)
+         call MPI_Send(cg_n_b, size(cg_n_b), MPI_INTEGER,  FIRST, tag+I_ONE,   comm, ierr)
+         call MPI_Send(cg_off, size(cg_off), MPI_INTEGER8, FIRST, tag+I_TWO,   comm, ierr)
+         if (otype == O_OUT) call MPI_Send(dbuf,   size(dbuf),   MPI_REAL8,    FIRST, tag+I_THREE, comm, ierr)
          deallocate(cg_rl, cg_n_b, cg_off)
          if (allocated(dbuf)) deallocate(dbuf)
       endif
 
-      call MPI_Bcast(cg_all_n_b, size(cg_all_n_b), MPI_INTEGER, FIRST, comm, error)
+      call MPI_Bcast(cg_all_n_b, size(cg_all_n_b), MPI_INTEGER, FIRST, comm, ierr)
 
       ! Reopen the HDF5 file for parallel write
       call h5open_f(error)

@@ -36,7 +36,7 @@ module dataio_pub
    implicit none
 
    public  ! QA_WARN most variables are not secrets here
-   private :: colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan ! QA_WARN no need to use these symbols outside dataio_pub
+   private :: ierr, colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan ! QA_WARN no need to use these symbols outside dataio_pub
    private :: cbuff_len, domlen, idlen, cwdlen ! QA_WARN prevent re-exporting
    !mpisetup uses: ansi_white and ansi_black
 
@@ -78,7 +78,8 @@ module dataio_pub
    character(len=cwdlen)       :: tmp_log_file                   !< path to the temporary log file
    character(len=cwdlen)       :: par_file                       !< path to the parameter file
    ! Handy variables
-   integer(kind=4)             :: ierrh                          !< variable for iostat
+   integer(kind=4)             :: ierrh                          !< variable for iostat error on reading namelists (see macros.h)
+   integer(kind=4)             :: ierr                           !< variable for error code in MPI calls
 
    real                        :: last_log_time                  !< time in simulation of the recent dump of statistics into a log file
    real                        :: last_tsl_time                  !< time in simulation of the recent timeslice dump
@@ -184,7 +185,7 @@ contains
             msg_type_str = ''
       end select
 
-      call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierrh)
+      call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierr)
 
       if (mode /= T_SILENT) then
          if (mode == T_PLAIN) then
@@ -266,8 +267,6 @@ contains
       character(len=*), intent(in)  :: nm
       integer, optional, intent(in) :: allprocs
 
-      integer :: ierr
-
       call colormessage(nm, T_ERR)
 
       if (present(allprocs)) then
@@ -335,7 +334,7 @@ contains
       integer                          :: lun_bef, lun_aft
       integer(kind=4)                  :: proc
 
-      call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierrh)
+      call MPI_Comm_rank(MPI_COMM_WORLD, proc, ierr)
       if (proc > 0) call die("[dataio_pub:compare_namelist] This routine must not be called by many threads at once. Make sure that diff_nml macro is called only from rank 0.")
 
       if (code_progress > PIERNIK_INIT_IO_IC) call warn("[dataio_pub:compare_namelist] Late namelist")

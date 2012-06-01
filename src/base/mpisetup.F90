@@ -45,7 +45,8 @@ module mpisetup
         &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi
 
    integer(kind=4), protected :: nproc, proc, LAST          !< number of processes, rank of my process, rank of last process
-   integer(kind=4), protected :: comm, ierr                 !< global communicator, error status
+   integer(kind=4), protected :: comm                       !< global communicator
+   integer(kind=4) :: ierr                                  !< error status
    integer(kind=INT4), parameter :: FIRST = 0               !< the rank of the master process
 
    logical, protected :: master, slave      !< shortcuts for testing proc == FIRST
