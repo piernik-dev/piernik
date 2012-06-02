@@ -200,7 +200,7 @@ contains
 
       use all_boundaries,        only: all_bnd
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE
-      use dataio,                only: init_dataio, write_data
+      use dataio,                only: init_dataio, init_dataio_parameters, write_data
       use dataio_pub,            only: nrestart, wd_wr, wd_rd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, code_progress
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
@@ -266,6 +266,8 @@ contains
       call init_piernikdebug ! Make it available as early as possible - right after init_mpi
       call init_piernikiodebug
 #endif /* DEBUG */
+
+      call init_dataio_parameters ! Required very early to call colormessage without side-effects
 
       call problem_pointers ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
 

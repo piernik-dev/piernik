@@ -52,7 +52,7 @@ module dataio
    implicit none
 
    private
-   public :: check_log, check_tsl, dump, write_data, write_crashed, cleanup_dataio, init_dataio, user_msg_handler
+   public :: check_log, check_tsl, dump, write_data, write_crashed, cleanup_dataio, init_dataio, init_dataio_parameters, user_msg_handler
 
    integer                  :: istep                 !< current number of substep (related to integration order)
 
@@ -120,14 +120,9 @@ module dataio
 
 contains
 
-!---------------------------------------------------------------------
-!
-! initializes dataio parameters
-!
-!---------------------------------------------------------------------
-!
 !>
-!! \brief Routine that sets the initial values of data input/output parameters from namelists @c END_CONTROL, @c RESTART_CONTROL and @c OUTPUT_CONTROL
+!! \brief Routine that sets the initial values of data input/output parameters from namelists @c END_CONTROL, @c RESTART_CONTROL and @c OUTPUT_CONTROL.
+!! Called as early as possible.
 !!
 !! \n \n
 !! @b END_CONTROL
@@ -182,35 +177,25 @@ contains
 !! </table>
 !! \n \n
 !<
-   subroutine init_dataio
+   subroutine init_dataio_parameters
 
-      use common_hdf5,     only: init_hdf5
-      use constants,       only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_IO_IC, I_ONE
-      use data_hdf5,       only: init_data
-      use dataio_pub,      only: nres, nrestart, last_hdf_time, last_plt_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
-           &                     tmp_log_file, printinfo, printio, warn, msg, nhdf, nimg, nstep_start, die, code_progress, wd_wr, wd_rd, &
-           &                     move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write
-      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
-      use domain,          only: dom
-      use global,          only: t, nstep
-      use mpi,             only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,        only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, mpi_err, buffer_dim, FIRST, nproc, proc
-      use restart_hdf5,    only: read_restart_hdf5
-      use slice_hdf5,      only: init_plot
-      use timer,           only: time_left
-      use user_hooks,      only: user_vars_arr_in_restart
-      use version,         only: nenv,env, init_version
+      use constants,  only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_MPI, I_ONE
+      use dataio_pub, only: nres, nrestart, last_hdf_time, last_plt_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
+           &                tmp_log_file, printinfo, printio, warn, msg, nhdf, nimg, die, code_progress, wd_wr, wd_rd, &
+           &                move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
+      use mpi,        only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
+      use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, mpi_err, buffer_dim, FIRST, nproc, proc
 
       implicit none
 
-      logical              :: tn
       integer              :: system_status, i, par_lun
 
 #ifdef VERBOSE
-      call printinfo("[dataio:init_dataio] Commencing dataio module initialization")
+      if (master) call printinfo("[dataio:init_dataio_parameters] Commencing dataio module initialization")
 #endif /* VERBOSE */
 
-      if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initialized.")
+      if (code_progress < PIERNIK_INIT_MPI) call die("[dataio:init_dataio_parameters] Some physics modules are not initialized.")
 
       problem_name = "nameless"
       run_id       = "___"
@@ -260,11 +245,11 @@ contains
             if (ierrh == 0) then
                parfilelines = parfilelines + 1
                i = len_trim(parfile(parfilelines))
-               if (i >= len(parfile(parfilelines))) call warn("[dataio:init_dataio] problem.par contains very long lines. The copy in the logfile and HDF dumps can be truncated.")
+               if (i >= len(parfile(parfilelines))) call warn("[dataio:init_dataio_parameters] problem.par contains very long lines. The copy in the logfile and HDF dumps can be truncated.")
             endif
          enddo
          close(par_lun)
-         if (parfilelines == maxparfilelines) call warn("[dataio:init_dataio] problem.par has too many lines. The copy in the logfile and HDF dumps can be truncated.")
+         if (parfilelines == maxparfilelines) call warn("[dataio:init_dataio_parameters] problem.par has too many lines. The copy in the logfile and HDF dumps can be truncated.")
 
          diff_nml(OUTPUT_CONTROL)
          diff_nml(RESTART_CONTROL)
@@ -274,9 +259,14 @@ contains
             if (nproc_io <= 0 .or. nproc_io > nproc) nproc_io = nproc ! fully parallel v2 I/O
 
             if (nproc_io /= 1) then
-               call warn("[dataio:init_dataio] Parallel v2 I/O is not implemented yet")
+               call warn("[dataio:init_dataio_parameters] Parallel v2 I/O is not implemented yet")
                nproc_io = 1
             endif
+         endif
+
+         if (gzip_level < 1 .or. gzip_level > 9) then
+            call warn("[dataio:init_dataio_parameters] invalid compression level")
+            gzip_level = 9
          endif
 
 !  namelist /END_CONTROL/ nend, tend, wend
@@ -393,22 +383,11 @@ contains
 
       endif
 
-      if (gzip_level < 1 .or. gzip_level > 9) then
-         call warn("[dataio:init_dataio] invalid compression level")
-         gzip_level = 9
-      endif
-
       can_i_write = mod( proc*nproc_io, nproc) < nproc_io
       if (can_i_write) then
          write(msg,'(a,i6,a)')"Process ",proc," can write"
          call printio(msg)
       endif
-
-      write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
-      write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
-      write(fmt_vloc, '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
-
-      if (master) tn = time_left(wend)
 
       last_log_time = -dt_log
       last_tsl_time = -dt_tsl
@@ -416,25 +395,16 @@ contains
       last_plt_time = -dt_plt
       last_res_time = 0.0
 
-      call init_hdf5(vars)
-      call init_data
-      call init_plot( [ ix, iy, iz ], dt_plt)
-
       if (master .and. restart == 'last') call find_last_restart(nrestart)
       call MPI_Barrier(comm,mpi_err)
       call MPI_Bcast(nrestart, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
 
-      call init_version
       if (master) then
-         call printinfo("###############     Source configuration     ###############", .false.)
-         do i=1,nenv
-            call printinfo(env(i), .false.)
-         enddo
          write(log_file,'(6a,i3.3,a)') trim(wd_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
 !> \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
          system_status = move_file(trim(tmp_log_file), trim(log_file))
          if (system_status /= 0) then
-            write(msg,'(2a)')"[dataio:init_dataio] The log must be stored in ",tmp_log_file
+            write(msg,'(2a)')"[dataio:init_dataio_parameters] The log must be stored in ",tmp_log_file
             call warn(msg)
             log_file_initialized = .false.
          else
@@ -443,6 +413,50 @@ contains
       endif
       call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, FIRST, comm, mpi_err)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
       call MPI_Bcast(log_file_initialized, I_ONE, MPI_LOGICAL, FIRST, comm, mpi_err)
+
+   end subroutine init_dataio_parameters
+
+!> \brief Initialize these I/O variables that may depend on any other modules (called at the end of init_piernik)
+
+   subroutine init_dataio
+
+      use common_hdf5,  only: init_hdf5
+      use constants,    only: PIERNIK_INIT_IO_IC
+      use data_hdf5,    only: init_data
+      use dataio_pub,   only: nres, nrestart, printinfo, nhdf, nstep_start, die, code_progress
+      use domain,       only: dom
+      use global,       only: t, nstep
+      use mpisetup,     only: master
+      use restart_hdf5, only: read_restart_hdf5
+      use slice_hdf5,   only: init_plot
+      use timer,        only: time_left
+      use user_hooks,   only: user_vars_arr_in_restart
+      use version,      only: nenv,env, init_version
+
+      implicit none
+
+      logical :: tn
+      integer :: i
+
+      if (code_progress < PIERNIK_INIT_IO_IC) call die("[dataio:init_dataio] Some physics modules are not initialized.")
+
+      write(fmt_loc,  '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,16x,            ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
+      write(fmt_dtloc,'(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'  dt=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
+      write(fmt_vloc, '(2(a,i1),a)') "(2x,a12,a3,'  = ',es16.9,'   v=',es11.4, ",dom%eff_dim+1,"(1x,i4),",dom%eff_dim,"(1x,f12.4))"
+
+      if (master) tn = time_left(wend)
+
+      call init_hdf5(vars)
+      call init_data
+      call init_plot( [ ix, iy, iz ], dt_plt)
+
+      call init_version
+      if (master) then
+         call printinfo("###############     Source configuration     ###############", .false.)
+         do i=1,nenv
+            call printinfo(env(i), .false.)
+         enddo
+      endif
 
       if (associated(user_vars_arr_in_restart)) call user_vars_arr_in_restart
 
