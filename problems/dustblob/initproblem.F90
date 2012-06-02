@@ -116,9 +116,9 @@ contains
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use initdust,    only: idnd, imxd, imyd, imzd
-      use initneutral, only: idnn, imxn, imyn, imzn, gamma_neu
+      use initneutral, only: idnn, imxn, imyn, imzn
 #ifndef ISO
-      use initneutral, only: ienn
+      use initneutral, only: ienn, gamma_neu
 #endif /* !ISO */
 
       implicit none

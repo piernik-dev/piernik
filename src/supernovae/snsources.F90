@@ -163,13 +163,13 @@ contains
 
       use constants,      only: xdim, ydim, zdim
       use domain,         only: dom
-      use fluidindex,     only: flind
       use grid,           only: leaves
       use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crn
 #ifdef COSM_RAYS_SOURCES
-      use cr_data,  only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
+      use initcosmicrays, only: iarr_crn
+      use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
+      use fluidindex,     only: flind
 #endif /* COSM_RAYS_SOURCES */
 
       implicit none

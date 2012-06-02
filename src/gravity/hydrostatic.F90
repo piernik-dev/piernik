@@ -362,7 +362,7 @@ contains
 
    subroutine outh_bnd(side, cg, diode)
 
-      use constants,      only: xdim, ydim, zdim, half, one, LO, HI, INT4
+      use constants,      only: xdim, ydim, zdim, half, HI, INT4
       use dataio_pub,     only: die
       use domain,         only: is_multicg, dom
       use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz

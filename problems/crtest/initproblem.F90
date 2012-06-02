@@ -292,7 +292,7 @@ contains
 
       use constants,      only: PIERNIK_FINISHED, I_ONE, I_TWO
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
-      use global,         only: t, nstep
+      use global,         only: nstep
       use gc_list,        only: cg_list_element, all_cg
       use grid,           only: leaves
       use grid_cont,      only: grid_container

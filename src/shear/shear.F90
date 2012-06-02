@@ -166,7 +166,10 @@ contains
 
    subroutine yshift(ts,dts)
 
-      use constants,  only: xdim, ydim
+      use constants,  only: xdim
+#ifdef FFTW
+      use constants,  only: ydim
+#endif /* FFTW */
       use dataio_pub, only: die
       use domain,     only: dom, is_multicg
       use grid,       only: leaves
@@ -192,9 +195,10 @@ contains
       do i=lbound(cg%u,1),ubound(cg%u,1)
          cg%u(i,:, cg%js:cg%je,:) = unshear_fft( cg%u(i,:, cg%js:cg%je,:), cg%x(:),ddly)
       enddo
-      cg%u(:,:,1:dom%nb,:)              = cg%u(:,:, cg%jeb:cg%je,:)
+      cg%u(:,:,1:dom%nb,:)             = cg%u(:,:, cg%jeb:cg%je,:)
       cg%u(:,:, cg%je+1:cg%n_(ydim),:) = cg%u(:,:, cg%js:cg%jsb,:)
 #endif /* FFTW */
+
    end subroutine yshift
 !--------------------------------------------------------------------------------------------------
 #ifdef FFTW

@@ -248,8 +248,11 @@ contains
       use interactions,     only: fluid_interactions
 #endif /* !BALSARA */
 #ifndef ISO
-      use fluidindex,       only: iarr_all_en, iarr_all_my, iarr_all_mz
+      use fluidindex,       only: iarr_all_en
+#if defined IONIZED || defined NEUTRAL
+      use fluidindex,       only: iarr_all_my, iarr_all_mz
       use global,           only: smallei
+#endif /*  defined IONIZED || defined NEUTRAL  */
 #endif /* !ISO */
 #ifdef GRAV
       use gravity,          only: grav_pot2accel

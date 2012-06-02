@@ -114,10 +114,11 @@ contains
       use fluidindex,            only: iarr_all_en
 #endif /* !ISO */
 #ifdef SHEAR_BND
-      use shear,                 only: qshear, omega, delj, eps, dely, unshear_fft
+      use shear,                 only: dely, unshear_fft
 #ifndef FFTW
       use constants,             only: half
       use global,                only: smalld
+      use shear,                 only: qshear, delj, eps, omega
 #endif /* !FFTW */
 #endif /* SHEAR_BND */
 #ifdef GRAV

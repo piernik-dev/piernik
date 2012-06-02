@@ -112,7 +112,7 @@ contains
 
    subroutine init_prob
 
-      use constants,    only: pi, dpi, xdim, ydim, zdim
+      use constants,    only: dpi, xdim, ydim, zdim
       use dataio_pub,   only: msg, printinfo, run_id
       use domain,       only: dom
       use fluidindex,   only: flind

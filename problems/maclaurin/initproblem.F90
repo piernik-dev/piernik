@@ -42,7 +42,7 @@ module initproblem
    integer(kind=4) :: nsub
    namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, nsub
 
-   ! pivate data
+   ! private data
    real :: d1, p0, a3
    character(len=dsetnamelen), parameter :: apot_n = "apot"
 
@@ -67,7 +67,6 @@ contains
 
    subroutine read_problem_par
 
-      use constants,   only: pi
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use dataio_pub,  only: die, warn
       use global,      only: smalld

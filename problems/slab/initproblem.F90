@@ -100,7 +100,9 @@ contains
       use initionized, only: ieni, gamma_ion
       use global,      only: smallei
 #endif /* !ISO */
+#ifndef FFTW
       use shear,       only: qshear, omega
+#endif /* !FFTW */
 
       implicit none
 

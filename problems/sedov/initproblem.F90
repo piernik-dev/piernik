@@ -262,7 +262,7 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("fooo")  ! Totally bogus quantity, just to check user_vars_hdf5 works
-            tab(:,:,:) = .123456789
+            tab(:,:,:) = real(.123456789, kind=4)
          case default
             ierrh = -1
       end select

@@ -183,7 +183,7 @@ contains
    subroutine impose_inflow
 
       use constants,   only: xdim, ydim, zdim
-      use global,      only: smalld, smallei, t, dt
+      use global,      only: smalld, smallei, dt
       use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
