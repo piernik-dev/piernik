@@ -78,10 +78,15 @@ contains
 !
    subroutine flux_neu(fluxn, cfrn, uun, n, vx, p, bb, cs_iso2)
 
-      use constants,  only: small, half
       use func,       only: ekin
-      use fluidindex, only: idn, imx, imy, imz, flind
+      use fluidindex, only: idn, imx, imy, imz
+#if defined(LOCAL_FR_SPEED) || !defined(ISO)
+      use fluidindex, only: flind
+#endif /* defined(LOCAL_FR_SPEED) || !defined(ISO) */
+#ifdef LOCAL_FR_SPEED
+      use constants,  only: small, half
       use global,     only: cfr_smooth
+#endif /* LOCAL_FR_SPEED */
 #ifdef GLOBAL_FR_SPEED
       use timestep,   only: c_all
 #endif /* GLOBAL_FR_SPEED */
