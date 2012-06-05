@@ -42,6 +42,7 @@ contains
       use constants,             only: PIERNIK_INIT_DOMAIN, xdim, zdim, LO, HI, &
            &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER
       use dataio_pub,            only: msg, warn, die, code_progress
+      use domain,                only: is_multicg
       use grid_cont,             only: grid_container
       use mpi,                   only: MPI_COMM_NULL
       use types,                 only: cdd
@@ -75,12 +76,16 @@ contains
                      call warn(msg)
                   endif
                case (BND_OUTH)
-                  if (dir /= zdim) then
+                  if (dir == zdim) then
+                     if (is_multicg) call die("[fluid_boundaries:bnd_u] hydrostatic:outh_bnd with multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
+                  else
                      write(msg,'("[fluid_boundaries:bnd_u]: outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
                      call warn(msg)
                   endif
                case (BND_OUTHD)
-                  if (dir /= zdim) then
+                  if (dir == zdim) then
+                     if (is_multicg) call die("[fluid_boundaries:bnd_u] hydrostatic:outh_bnd with multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
+                  else
                      write(msg,'("[fluid_boundaries:bnd_u]: outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
                      call warn(msg)
                   endif
