@@ -38,7 +38,7 @@
 !<
 
 module initdust
-! pulled by DUST
+! pulled by ANY
    implicit none
 
    public ! QA_WARN no secrets are kept here

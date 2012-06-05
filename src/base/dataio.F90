@@ -102,10 +102,8 @@ module dataio
 #endif /* RESISTIVE */
 #ifdef MAGNETIC
       real :: b_min, b_max, divb_max
-#endif /* MAGNETIC */
-#ifdef IONIZED
       real :: vai_max
-#endif /* IONIZED */
+#endif /* MAGNETIC */
 #ifdef VARIABLE_GP
       real :: gpxmax, gpymax, gpzmax
 #endif /* VARIABLE_GP */

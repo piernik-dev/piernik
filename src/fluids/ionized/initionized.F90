@@ -38,7 +38,7 @@
 !<
 
 module initionized
-! pulled by IONIZED
+! pulled by ANY
    implicit none
 
    public ! QA_WARN no secrets are kept here

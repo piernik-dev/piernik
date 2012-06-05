@@ -191,13 +191,11 @@ contains
 #else /* !ISO */
             tab(:,:,:) = real(cg%u(fl_dni%ien, RNG), kind=4)
 #endif /* !ISO */
-#ifdef NEUTRAL
          case ("pren")
 #ifndef ISO
             tab(:,:,:) = real(flind%neu%gam_1, kind=4) * real( cg%u(flind%neu%ien, RNG) - &
                  &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG)), kind=4)
 #endif /* !ISO */
-#endif /* NEUTRAL */
          case ("prei")
 #ifndef ISO
             tab(:,:,:) = real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &

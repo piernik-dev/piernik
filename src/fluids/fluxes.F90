@@ -87,18 +87,10 @@ contains
 !> \todo Remove precompiler directives from this routine, it is called only once.
    subroutine init_fluxes
       use fluidindex,  only: flind
-#ifdef NEUTRAL
-      use constants,   only: NEU
+      use constants,   only: NEU, DST, ION
       use fluxneutral, only: flux_neu
-#endif /* NEUTRAL */
-#ifdef DUST
-      use constants,   only: DST
       use fluxdust,    only: flux_dst
-#endif /* DUST */
-#ifdef IONIZED
-      use constants,   only: ION
       use fluxionized, only: flux_ion
-#endif /* IONIZED */
       implicit none
       integer :: i
 
@@ -106,18 +98,12 @@ contains
 
       do i = 1, flind%fluids
          select case (flind%all_fluids(i)%tag)
-#ifdef NEUTRAL
             case (NEU)
                flist(flind%all_fluids(i)%pos)%flux_func => flux_neu
-#endif /* NEUTRAL */
-#ifdef DUST
             case (DST)
                flist(flind%all_fluids(i)%pos)%flux_func => flux_dst
-#endif /* DUST */
-#ifdef IONIZED
             case (ION)
                flist(flind%all_fluids(i)%pos)%flux_func => flux_ion
-#endif /* IONIZED */
          end select
       enddo
 

@@ -108,30 +108,18 @@ contains
 
    subroutine init_fluids
 
+      use fluids_pub,      only: has_dst, has_ion, has_neu
       use fluidindex,      only: fluid_index
       use fluxes,          only: set_limiter, init_fluxes
       use global,          only: limiter
-      use dataio_pub,      only: die, code_progress
+      use dataio_pub,      only: die, code_progress, warn
       use constants,       only: PIERNIK_INIT_GLOBAL
 #ifdef VERBOSE
       use dataio_pub,      only: printinfo
 #endif /* VERBOSE */
-#if defined NEUTRAL && defined IONIZED
-      use dataio_pub,      only: warn
-#endif /* defined NEUTRAL && defined IONIZED  */
-#ifdef IONIZED
-      use initionized,     only: init_ionized
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      use initneutral,     only: init_neutral
-#endif /* NEUTRAL */
-#if defined NEUTRAL && defined IONIZED
-      use initionized,     only: cs_iso_ion
-      use initneutral,     only: cs_iso_neu
-#endif /* NEUTRAL && IONIZED */
-#ifdef DUST
+      use initionized,     only: init_ionized, cs_iso_ion
+      use initneutral,     only: init_neutral, cs_iso_neu
       use initdust,        only: init_dust
-#endif /* DUST */
 #ifdef COSM_RAYS
       use initcosmicrays,  only: init_cosmicrays
 #endif /* COSM_RAYS */
@@ -147,15 +135,9 @@ contains
       call printinfo("[initfluids:init_fluids]: commencing...")
 #endif /* VERBOSE */
 
-#ifdef IONIZED
-      call init_ionized
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      call init_neutral
-#endif /* NEUTRAL */
-#ifdef DUST
-      call init_dust
-#endif /* DUST */
+      if (has_ion) call init_ionized
+      if (has_neu) call init_neutral
+      if (has_dst) call init_dust
 #ifdef COSM_RAYS
       call init_cosmicrays
 #endif /* COSM_RAYS */
@@ -167,10 +149,8 @@ contains
 
       call init_fluxes
 
-#if defined NEUTRAL && defined IONIZED
-      if (cs_iso_neu /= cs_iso_ion) &
+      if (has_neu .and. has_ion .and. cs_iso_neu /= cs_iso_ion) &
          call warn("[initfluids:init_fluids]: 'cs_iso_neu' and 'cs_iso_ion' should be equal")
-#endif /* defined NEUTRAL && defined IONIZED  */
 
       call set_limiter(limiter)
 #ifdef VERBOSE
@@ -180,18 +160,15 @@ contains
    end subroutine init_fluids
 
    subroutine cleanup_fluids
-#ifdef IONIZED
+      use fluids_pub,     only: has_ion
       use initionized,    only: cleanup_ionized
-#endif /* IONIZED */
 #ifdef COSM_RAYS
       use initcosmicrays, only: cleanup_cosmicrays
 #endif /* COSM_RAYS */
 
       implicit none
 
-#ifdef IONIZED
-      call cleanup_ionized
-#endif /* IONIZED */
+      if (has_ion) call cleanup_ionized
 #ifdef COSM_RAYS
       call cleanup_cosmicrays
 #endif /* COSM_RAYS */

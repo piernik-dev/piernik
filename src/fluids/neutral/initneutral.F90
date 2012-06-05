@@ -38,7 +38,7 @@
 !<
 
 module initneutral
-! pulled by NEUTRAL
+! pulled by ANY
    implicit none
 
    public ! QA_WARN no secrets are kept here

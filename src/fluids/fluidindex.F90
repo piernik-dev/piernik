@@ -126,19 +126,14 @@ contains
 
 !      use diagnostics,    only: my_allocate
       use constants,      only: xdim, zdim
+      use fluids_pub,     only: has_dst, has_ion, has_neu
 #if defined IONIZED || defined COSM_RAYS || defined TRACER
       use constants,      only: ydim
 #endif /* IONIZED || COSM_RAYS || TRACER */
-#ifdef IONIZED
       use constants,      only: ndims
       use initionized,    only: ionized_index
-#endif /* IONIZED */
-#ifdef NEUTRAL
       use initneutral,    only: neutral_index
-#endif /* NEUTRAL */
-#ifdef DUST
       use initdust,       only: dust_index
-#endif /* DUST */
 
 #ifdef COSM_RAYS
       use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, cosmicray_index
@@ -153,23 +148,23 @@ contains
 
       i_sg        = 0
 
-#ifdef IONIZED
-!  Compute indexes for the ionized fluid and update counters
-      allocate(flind%ion)
-      call ionized_index(flind)
-#endif /* IONIZED */
+      if (has_ion) then
+         !  Compute indexes for the ionized fluid and update counters
+         allocate(flind%ion)
+         call ionized_index(flind)
+      endif
 
-#ifdef NEUTRAL
-!  Compute indexes for the neutral fluid and update counters
-      allocate(flind%neu)
-      call neutral_index(flind)
-#endif /* NEUTRAL */
+      if (has_neu) then
+         !  Compute indexes for the neutral fluid and update counters
+         allocate(flind%neu)
+         call neutral_index(flind)
+      endif
 
-#ifdef DUST
-!  Compute indexes for the dust fluid and update counters
-      allocate(flind%dst)
-      call dust_index(flind)
-#endif /* DUST */
+      if (has_dst) then
+      !  Compute indexes for the dust fluid and update counters
+         allocate(flind%dst)
+         call dust_index(flind)
+      endif
 
 #ifdef COSM_RAYS
 !  Compute indexes for the CR component and update counters
@@ -181,9 +176,7 @@ contains
 #endif /* TRACER */
 
 ! Allocate index arrays
-#ifdef IONIZED
-      allocate(iarr_mag_swp(ndims,nmag),iarr_all_mag(nmag))
-#endif /* IONIZED */
+      if (has_ion) allocate(iarr_mag_swp(ndims,nmag),iarr_all_mag(nmag))
       allocate(iarr_all_swp(xdim:zdim, flind%all))
       allocate(iarr_all_dn(flind%fluids),iarr_all_mx(flind%fluids),iarr_all_my(flind%fluids),iarr_all_mz(flind%fluids))
       allocate(iarr_all_sg(flind%fluids_sg))
@@ -209,28 +202,22 @@ contains
       allocate(iarr_all_trc(0))
 #endif /* !TRACER */
 
-#ifdef IONIZED
-! Compute index arrays for magnetic field
-      iarr_mag_swp(xdim,:) = [xdim,ydim,zdim]
-      iarr_mag_swp(ydim,:) = [ydim,xdim,zdim]
-      iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
-      iarr_all_mag         = [xdim,ydim,zdim]
-#endif /* IONIZED */
+      if (has_ion) then
+         ! Compute index arrays for magnetic field
+         iarr_mag_swp(xdim,:) = [xdim,ydim,zdim]
+         iarr_mag_swp(ydim,:) = [ydim,xdim,zdim]
+         iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
+         iarr_all_mag         = [xdim,ydim,zdim]
 
-#ifdef IONIZED
-! Compute index arrays for the ionized fluid
-      call set_fluidindex_arrays(flind%ion,.true.)
-#endif /* IONIZED */
+         ! Compute index arrays for the ionized fluid
+         call set_fluidindex_arrays(flind%ion,.true.)
+      endif
 
-#ifdef NEUTRAL
-! Compute index arrays for the neutral fluid
-      call set_fluidindex_arrays(flind%neu,.true.)
-#endif /* NEUTRAL */
+      ! Compute index arrays for the neutral fluid
+      if (has_neu) call set_fluidindex_arrays(flind%neu,.true.)
 
-#ifdef DUST
-! Compute index arrays for the dust fluid
-      call set_fluidindex_arrays(flind%dst,.false.)
-#endif /* DUST */
+      ! Compute index arrays for the dust fluid
+      if (has_dst) call set_fluidindex_arrays(flind%dst,.false.)
 
 #ifdef COSM_RAYS
 ! Compute index arrays for the CR components
@@ -254,20 +241,26 @@ contains
       allocate(flind%all_fluids(flind%fluids))
 
       i = 1
-#ifdef IONIZED
-      flind%all_fluids(i) = flind%ion ; i = i + 1
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      flind%all_fluids(i) = flind%neu ; i = i + 1
-#endif /* NEUTRAL */
-#ifdef DUST
-      flind%all_fluids(i) = flind%dst ; i = i + 1
-#endif /* DUST */
+      if (has_ion) then
+         flind%all_fluids(i) = flind%ion
+         i = i + 1
+      endif
+
+      if (has_neu) then
+         flind%all_fluids(i) = flind%neu
+         i = i + 1
+      endif
+
+      if (has_dst) then
+         flind%all_fluids(i) = flind%dst
+         i = i + 1
+      endif
    end subroutine fluid_index
 
    subroutine cleanup_fluidindex
 
       use diagnostics, only: my_deallocate
+      use fluids_pub,  only: has_ion, has_neu, has_dst
 
       implicit none
 
@@ -294,15 +287,9 @@ contains
          deallocate(flind%all_fluids(i)%iarr_swp)
       enddo
       deallocate(flind%all_fluids)
-#ifdef IONIZED
-      deallocate(flind%ion) ! cannot check if allocated, because it is not allocatable
-#endif /* IONIZED */
-#ifdef NEUTRAL
-      deallocate(flind%neu)
-#endif /* NEUTRAL */
-#ifdef DUST
-      deallocate(flind%dst)
-#endif /* DUST */
+      if (has_ion) deallocate(flind%ion) ! cannot check if allocated, because it is not allocatable
+      if (has_neu) deallocate(flind%neu)
+      if (has_dst) deallocate(flind%dst)
 
    end subroutine cleanup_fluidindex
 
