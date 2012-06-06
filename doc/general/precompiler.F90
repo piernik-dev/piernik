@@ -91,13 +91,13 @@
 !!
 !! \b OTHERS:
 !!
-!! \b \#define \b "DEBUG"
+!! \b \#define \b "DEBUG" - enable modules: piernikdebug (src/base/debug.F90) and piernikiodebug (src/hdf5/io_debug.F90)
 !!
-!! \b \#define \b "VERBOSE"
+!! \b \#define \b "VERBOSE" - print additional diagnostic information on stdout
 !!
 !! \b \#define \b "PGPLOT"
 !!
-!! \b \#define \b "JEANS_PROBLEM"
+!! \b \#define \b "JEANS_PROBLEM" - switch on jeans problem-specific quirks
 !!
 !! \b \#define \b "INDEPENDENT_ATOUTB"
 !!
