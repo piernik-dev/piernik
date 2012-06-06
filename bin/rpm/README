@@ -1,18 +1,24 @@
 The meta-package piernik-mpich2-0-fedora.noarch.rpm contains dependencies on
-everything that is necessary for compiling Piernik setups on a Fedora 15 and
+everything that is necessary for compiling Piernik setups on a Fedora 17 and
 later.  To install an environment for using the Piernik code on a Fedora,
 use the following command (or equivalent):
 
 sudo yum localinstall piernik-mpich2-0-fedora.noarch.rpm 
  
-Since r5385 the Piernik code requires HDF5 libraries >= 1.8.8 which aren't
-availabe in main Fedora 16 repositories.  You may compile this library
-manually, or use rawhide source packages.  In the second case, the following
-commands might be helpful.  It might be necessary to install rpmbuild,
-rawhide repositories and some additional -devel packages to fulfill
-requirements.  Note that version numbers may change in the future.
+It is possible to use this meta-package on Fedora 16, but some problems must
+be resolved manually.  Since r5385 the Piernik code requires HDF5 libraries
+>= 1.8.8 which aren't availabe in main Fedora 16 repositories.  You may
+compile this library manually, or use rawhide source packages.  In the
+second case, the following commands might be helpful.  It might be necessary
+to install rpmbuild, rawhide repositories and some additional -devel
+packages to fulfill requirements.  Note that version numbers may change in
+the future.
 
 yumdownloader --source --enablerepo=rawhide-source hdf5-mpich2-devel
 rpm -Uvh hdf5-1.8.8-6.fc17.src.rpm
 rpmbuild -bb rpmbuild/SPECS/hdf5.spec
 yum localinstall rpmbuild/RPMS/i686/hdf5-mpich2{,-devel}-1.8.8-6.fc16.i686.rpm
+
+The gfortran compiler available in Fedora 15 (based on gcc 4.6.x) may fail
+to compile some Piernik setups due to internal compiler errors.  Use of such
+old Linux distribution is thus strongly discouraged.
