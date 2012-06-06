@@ -107,11 +107,9 @@
 !!
 !! \b \#define \b "USER_RULES"
 !!
-!! \b \#define \b "__IFORT__"
+!! \b \#define \b "__INTEL_COMPILER" - automatic flag placed by Intel Compiler
 !!
-!! \b \#define \b "__INTEL_COMPILER"
-!!
-!! \b \#define \b "__PGI"
+!! \b \#define \b "__PGI" - flag for Portland Compilers
 !!
 !<
 

@@ -500,8 +500,7 @@ contains
                   do j = cg%js, cg%je
                      mod_str(cg%is:cg%ie) = max(0., (1. + 1./max_ambient) * ambient_density_min / (max(0., cg%u(fl%idn, cg%is:cg%ie, j, k)) + ambient_density_min) - 1./max_ambient)
                      ! ifort can have memory leaks on WHERE - let's provide explicit loop for this crappy compiler
-                     ! The __IFORT__ macro has to be defined manually, e.g. in appropriate compiler.in file
-#ifdef __IFORT__
+#ifdef __INTEL_COMPILER
                      do i = cg%is, cg%ie
                         if (mod_str(i) > max_ambient**(-2)) then
                            cg%u(fl%idn,     i, j, k) = cg%u(fl%idn, i, j, k) + ambient_density_min * mod_str(i)
@@ -511,7 +510,7 @@ contains
                            cg%cs_iso2(i, j, k) = maxcs2           -  (maxcs2-mincs2)    * mod_str(i)
                         endif
                      enddo
-#else /* !__IFORT__ */
+#else /* !__INTEL_COMPILER */
                      where (mod_str(cg%is:cg%ie) > max_ambient**(-2))
                         cg%u(fl%idn,     cg%is:cg%ie, j, k) = cg%u(fl%idn, cg%is:cg%ie, j, k) + ambient_density_min * mod_str(cg%is:cg%ie)
                         cg%u(fl%imx,     cg%is:cg%ie, j, k) = cg%u(fl%imx, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
@@ -519,7 +518,7 @@ contains
                         cg%u(fl%imz,     cg%is:cg%ie, j, k) = cg%u(fl%imz, cg%is:cg%ie, j, k) * (1. - damp_factor   * mod_str(cg%is:cg%ie))
                         cg%cs_iso2(cg%is:cg%ie, j, k) = maxcs2               -  (maxcs2-mincs2)    * mod_str(cg%is:cg%ie)
                      endwhere
-#endif /* !__IFORT__ */
+#endif /* !__INTEL_COMPILER */
                   enddo
                enddo
             case (3)

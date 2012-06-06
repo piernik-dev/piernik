@@ -330,9 +330,9 @@ contains
 #ifndef ISO
       real, dimension(n) :: ekinl, ekinr
 #endif /* !ISO */
-#ifdef __IFORT__
+#ifdef __INTEL_COMPILER
       integer :: i
-#endif /* __IFORT__ */
+#endif /* __INTEL_COMPILER */
 
       ! constants
       smallp = 1.e-7   ! BEWARE
@@ -437,14 +437,13 @@ contains
       do ivar = imy,imz
 
       ! BEWARE the version with WHERE had huge, unexplained memory leaks when compiled with some Intel compilers
-      ! The __IFORT__ macro has to be defined manually, e.g. in appropriate compiler.in file
-#ifndef __IFORT__
+#ifndef __INTEL_COMPILER
           where (fgdnv(idn,:)>zero)
              fgdnv(ivar,:) = fgdnv(idn,:)*qleft (ivar,:)
           elsewhere
              fgdnv(ivar,:) = fgdnv(idn,:)*qright(ivar,:)
           endwhere
-#else /* !__IFORT__ */
+#else /* !__INTEL_COMPILER */
           do i = lbound(fgdnv(:,:),2), ubound(fgdnv(:,:),2)
              if (fgdnv(idn,i)>zero) then
                 fgdnv(ivar,i) = fgdnv(idn,i)*qleft (ivar,i)
@@ -452,7 +451,7 @@ contains
                 fgdnv(ivar,i) = fgdnv(idn,i)*qright(ivar,i)
              endif
           enddo
-#endif /* !__IFORT__ */
+#endif /* !__INTEL_COMPILER */
       enddo
       return
 #ifndef ISO
