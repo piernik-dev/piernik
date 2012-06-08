@@ -44,8 +44,6 @@ contains
       use dataio_pub,            only: msg, warn, die, code_progress
       use domain,                only: is_multicg
       use grid_cont,             only: grid_container
-      use mpi,                   only: MPI_COMM_NULL
-      use types,                 only: cdd
 
       implicit none
 
@@ -58,7 +56,7 @@ contains
          do side = LO, HI
 
             select case (cg%bnd(dir, side))
-               case (BND_MPI, BND_REF, BND_OUT, BND_OUTD, BND_USER)
+               case (BND_MPI, BND_REF, BND_OUT, BND_OUTD, BND_USER, BND_PER)
                   ! Do nothing
                case (BND_COR)
                   if (dir == zdim) then
@@ -68,11 +66,6 @@ contains
                case (BND_SHE)
                   if (dir /= xdim) then
                      write(msg,'("[fluid_boundaries:bnd_u]: shear ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
-                     call warn(msg)
-                  endif
-               case (BND_PER)
-                  if (cdd%comm3d == MPI_COMM_NULL) then
-                     write(msg,'("[fluid_boundaries:bnd_u]: periodic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
                      call warn(msg)
                   endif
                case (BND_OUTH)
