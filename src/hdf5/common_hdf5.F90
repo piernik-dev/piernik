@@ -274,12 +274,13 @@ contains
       real                           :: magic_mass0
 
       call MPI_Reduce(local_magic_mass, magic_mass0, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, mpi_err)
-      magic_mass       = magic_mass + magic_mass0
       local_magic_mass = 0.0
 
       if (associated(user_attrs_pre)) call user_attrs_pre
 
       if (slave) return ! This data need not be written in parallel.
+
+      magic_mass = magic_mass + magic_mass0
 
       call h5open_f(error)
       call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)

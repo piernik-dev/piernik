@@ -51,7 +51,7 @@ module global
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
    real            :: t, dt, dt_old, dtm
-   real, save      :: magic_mass = 0.0
+   real            :: magic_mass
    real, save      :: local_magic_mass = 0.0
    integer(kind=4) :: nstep
 
@@ -186,6 +186,8 @@ contains
          lbuff(3:5) = skip_sweep
          lbuff(6)   = geometry25D
 
+         magic_mass = 0.0
+
       endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
@@ -216,6 +218,8 @@ contains
          cflcontrol = cbuff(2)
 
          integration_order = ibuff(1)
+
+         magic_mass = huge(1.0) ! this variable should not be used on slaves
 
       endif
 
