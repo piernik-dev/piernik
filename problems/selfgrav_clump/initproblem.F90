@@ -448,8 +448,7 @@ contains
       use initionized,       only: idni
       use mpisetup,          only: master, comm, mpi_err
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use multigridvars,     only: bnd_isolated
-      use multigrid_gravity, only: grav_bnd
+      use multigrid_gravity, only: grav_bnd, bnd_isolated
 
       implicit none
 

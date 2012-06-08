@@ -50,12 +50,22 @@ module multigrid_gravity
 
    private
    public :: init_multigrid_grav, init_multigrid_grav_post, cleanup_multigrid_grav, multigrid_solve_grav
-   public :: grav_bnd
+   public :: grav_bnd, bnd_isolated! for selfgrav_clump/initproblem.F90
 
    include "fftw3.f"
    ! constants from fftw3.f
    !   integer, parameter :: FFTW_MEASURE=0, FFTW_PATIENT=32, FFTW_ESTIMATE=64
    !   integer, parameter :: FFTW_RODFT01=8, FFTW_RODFT10=9
+
+   ! boundaries
+   enum, bind(C)                                                      !< constants for enumerating multigrid boundary types
+      enumerator :: bnd_periodic                                      !< periodic
+      enumerator :: bnd_dirichlet                                     !< 0-value boundary type (uniform Dirichlet)
+      enumerator :: bnd_isolated                                      !< isolated boundary type
+      enumerator :: bnd_neumann                                       !< 0-gradient boundary type (uniform Neumann)
+      enumerator :: bnd_givenval                                      !< given value boundary type (general Dirichlet)
+      enumerator :: bnd_invalid = bnd_periodic - 1                    !< invalid
+   end enum
 
    ! multigrid constants
    enum, bind(C)
@@ -167,7 +177,7 @@ contains
       use domain,        only: dom, is_uneven, is_multicg
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
       use mpisetup,      only: buffer_dim, comm, mpi_err, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST
-      use multigridvars, only: bnd_periodic, bnd_dirichlet, bnd_isolated, bnd_invalid, single_base
+      use multigridvars, only: single_base
       use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use types,         only: cdd
 
@@ -409,7 +419,7 @@ contains
       use grid_cont,     only: grid_container
       use mpi,           only: MPI_COMM_NULL
       use mpisetup,      only: master, nproc
-      use multigridvars, only: roof, base, bnd_periodic, bnd_dirichlet, bnd_isolated, is_mg_uneven, need_general_pf, single_base
+      use multigridvars, only: roof, base, is_mg_uneven, need_general_pf, single_base
       use multipole,     only: init_multipole, coarsen_multipole
       use types,         only: cdd
 
@@ -1058,7 +1068,7 @@ contains
       use grid,               only: leaves
       use grid_cont,          only: grid_container
       use multigridhelpers,   only: set_dirty, check_dirty
-      use multigridvars,      only: roof, source, bnd_periodic, bnd_dirichlet, bnd_givenval
+      use multigridvars,      only: roof, source
       use units,              only: fpiG
 #ifdef JEANS_PROBLEM
       use problem_pub,        only: jeans_d0, jeans_mode ! hack for tests
@@ -1177,7 +1187,7 @@ contains
       use external_bnd,  only: arr3d_boundaries
       use global,        only: t
       use grid,          only: leaves
-      use multigridvars, only: roof, bnd_isolated, bnd_givenval, solution
+      use multigridvars, only: roof, solution
 
       implicit none
 
@@ -1216,7 +1226,7 @@ contains
       use constants,     only: sgp_n
       use gc_list,       only: all_cg
       use grid,          only: leaves
-      use multigridvars, only: solution, bnd_isolated, bnd_dirichlet, bnd_givenval, tot_ts, ts
+      use multigridvars, only: solution, tot_ts, ts
       use multipole,     only: multipole_solver
       use timer,         only: set_timer
 
@@ -1224,13 +1234,12 @@ contains
 
       integer(kind=4), dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
 
-      logical :: isolated
+      integer :: grav_bnd_global
 
       ts =  set_timer("multigrid", .true.)
+      grav_bnd_global = grav_bnd
 
-      isolated = (grav_bnd == bnd_isolated) !> \deprecated BEWARE: not elegant; probably there should be two global grav_bnd variables
-
-      if (isolated) then
+      if (grav_bnd_global == bnd_isolated) then
          grav_bnd = bnd_dirichlet
          vstat%cprefix = "Gi-"
       else
@@ -1247,7 +1256,7 @@ contains
 
       call leaves%q_copy(solution, all_cg%ind(sgp_n))
 
-      if (isolated) then
+      if (grav_bnd_global == bnd_isolated) then
          grav_bnd = bnd_givenval
 
          vstat%cprefix = "Go-"
@@ -1258,10 +1267,9 @@ contains
 
          call leaves%q_add(solution, all_cg%ind(sgp_n)) ! add solution to sgp
 
-         grav_bnd = bnd_isolated ! restore
-
       endif
 
+      grav_bnd = grav_bnd_global
       ts = set_timer("multigrid")
       tot_ts = tot_ts + ts
 
@@ -1281,7 +1289,7 @@ contains
       use grid,               only: leaves
       use mpisetup,           only: master, nproc
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump
-      use multigridvars,      only: roof, base, source, solution, correction, defect, verbose_vcycle, bnd_periodic, stdout, tot_ts, ts
+      use multigridvars,      only: roof, base, source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts
       use timer,              only: set_timer
 
       implicit none
@@ -1586,7 +1594,6 @@ contains
       use gc_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use mpisetup,      only: master
-      use multigridvars, only: bnd_givenval
       use named_array,   only: p3
 
       implicit none
@@ -2054,7 +2061,7 @@ contains
       use dataio_pub,       only: warn
       use mpisetup,         only: nproc
       use multigridhelpers, only: zero_boundaries
-      use multigridvars,    only: bnd_givenval, bnd_periodic, base, single_base
+      use multigridvars,    only: base, single_base
 
       implicit none
 

@@ -64,16 +64,6 @@ module multigridvars
    logical            :: stdout                                       !< print verbose messages to stdout
    logical            :: verbose_vcycle                               !< Print one line of log per V-cycle, summary otherwise
 
-   ! boundaries
-   enum, bind(C)                                                      !< constants for enumerating multigrid boundary types
-      enumerator :: bnd_periodic                                      !< periodic
-      enumerator :: bnd_dirichlet                                     !< 0-value boundary type (uniform Dirichlet)
-      enumerator :: bnd_isolated                                      !< isolated boundary type
-      enumerator :: bnd_neumann                                       !< 0-gradient boundary type (uniform Neumann)
-      enumerator :: bnd_givenval                                      !< given value boundary type (general Dirichlet)
-      enumerator :: bnd_invalid = bnd_periodic - 1                    !< invalid
-   end enum
-
    ! miscellaneous
    real                    :: ts                                      !< time for runtime profiling
    real                    :: tot_ts                                  !< total multigrid time
