@@ -101,10 +101,10 @@ contains
             if (present(corners)) do_cor = corners
             if (do_cor) then
                do d = xdim, zdim
-                  call internal_boundaries_3d(all_cg, ind, nb=nb, dim=d) ! should be more selective (modified leaves?)
+                  call internal_boundaries_3d(cglist, ind, nb=nb, dim=d)
                enddo
             else
-               call internal_boundaries_3d(all_cg, ind, nb=nb) ! should be more selective (modified leaves?)
+               call internal_boundaries_3d(cglist, ind, nb=nb)
             endif
          endif
 
