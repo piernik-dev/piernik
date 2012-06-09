@@ -1,0 +1,113 @@
+ $BASE_DOMAIN
+    n_d = 64, 64, 64
+    ! set n_d(:) to 3*64 if you want to have iy or iz /=0,
+    ! when prefer_rbgs_relaxation is .true.
+    ! or when parallel execution leads to nonconvergence
+    bnd_xl = 'per'
+    bnd_xr = 'per'
+    bnd_yl = 'per'
+    bnd_yr = 'per'
+    bnd_zl = 'per'
+    bnd_zr = 'per'
+    xmin   = 0.0
+    xmax   = 1.1446968195470935
+    ymin   = 0.0
+    ymax   = 1.1446968195470935
+    zmin   = 0.0
+    zmax   = 1.1446968195470935
+ /
+
+ $MPI_BLOCKS
+    psize = 1, 1, 1
+    allow_uneven = .true.
+    allow_noncart = .true. 
+    dd_unif_quality = 1.1  
+    dd_rect_quality = 1.1 
+    use_comm3d  = .false.  
+ /
+
+ $UNITS
+    units_set = "cgs"
+ /
+
+ $RESTART_CONTROL
+    restart  = 'last'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1.0
+    nend   = 1000
+ /
+
+ $OUTPUT_CONTROL
+    problem_name ='jeans'
+    run_id =  'ts1'
+    ix      = 0
+    iy      = 0
+    iz      = 0
+    dt_hdf  = 0.0
+    dt_res  = 0.0
+    dt_plt  = 0.0
+    dt_log  = 0.001
+    dt_tsl  = 0.001
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+    vars(5) = 'ener'
+    vars(6) = 'gpot'
+ /
+
+ $FLUID_IONIZED
+    gamma_ion  = 1.67
+    selfgrav_ion = .true.
+ /
+
+ $FLUID_NEUTRAL
+    gamma_neu = 1.67
+    selfgrav_neu = .false.
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.7
+    smalld = 1.e-5
+    smallei= 1.e-8
+    limiter= 'vanleer'
+ /
+
+ $GRAVITY
+    external_gp = "null"
+ /
+
+ $RESISTIVITY
+ /
+
+ $PROBLEM_CONTROL
+    d0     = 1.5e7
+    p0     = 1.5e7
+    amp    = 0.001
+    ix     = 2
+    iy     = 0
+    iz     = 0
+    mode   = 0
+ /
+
+ $MULTIGRID_SOLVER
+!    level_max = 3
+    stdout    = .true.
+    dirty_debug = .true.
+ /
+
+ $MULTIGRID_GRAVITY
+    nsmool    = 4
+    grav_bnd_str  = "periodic"
+    prefer_rbgs_relaxation = .true.
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+ /
