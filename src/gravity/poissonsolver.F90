@@ -44,7 +44,7 @@ contains
 !<
    subroutine poisson_solve(dens)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE
+      use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER
 #ifdef SHEAR
       use constants,  only: BND_SHE
 #endif /* SHEAR */

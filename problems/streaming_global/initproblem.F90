@@ -272,7 +272,7 @@ contains
       use grid_cont,   only: grid_container
       use hydrostatic, only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
       use mpi,         only: MPI_COMM_NULL
-      use mpisetup,    only: master, comm
+      use mpisetup,    only: master
       use types,       only: cdd
       use units,       only: newtong
 
