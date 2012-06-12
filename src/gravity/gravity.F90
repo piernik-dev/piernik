@@ -558,7 +558,7 @@ contains
    end subroutine grav_ptmass_softened
 
 !>
-!! \brief Roche potential for two bodies oncircular orbits. The coordinate system corotates with the bodies, so they stay on the X axis forever.
+!! \brief Roche potential for two bodies on circular orbits. The coordinate system corotates with the bodies, so they stay on the X axis forever.
 !<
 
    subroutine grav_roche(gp, ax, flatten)
@@ -637,26 +637,30 @@ contains
 !--------------------------------------------------------------------------
 !>
 !! \brief Routine that compute values of gravitational potential filling in gp array and setting gp_status character string \n\n
-!! The type of %gravity is governed by preprocessor: \n\n
-!! \deprecated BEWARE: This is no longer true: external_gp does the magic
+!! The type of %gravity is governed by external_gp value: \n\n
 !! \details
-!! GRAV_NULL - gravitational potential array is set to zero \n\n
-!! GRAV_UNIFORM - uniform type of %gravity in z-direction \n
+!! \b GRAV_NULL, \b grav_null, \b null - gravitational potential array is set to zero \n\n
+!! \b GRAV_UNIFORM, \b grav_unif, \b uniform - uniform type of %gravity in z-direction \n
 !! \f$\Phi\left(z\right)= - const \cdot z \f$\n
 !! where \f$ const \f$ is set by parameter @c g_z \n\n
-!! GRAV_LINEAR - linear type of %gravity growing along z-direction \n
+!! \b GRAV_LINEAR, \b grav_lin, \b linear - linear type of %gravity growing along z-direction \n
 !! \f$\Phi\left(z\right) = -1/2 \cdot const \cdot z^2\f$ \n\n
-!! GRAV_PTMASS - softened point mass type of %gravity \n
+!! \b GRAV_PTMASS, \b ptmass_soft, \b softened \b ptmass - softened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2+r_{soft}^2}\f$ \n
 !! where \f$r_{soft}\f$ is a radius of softening\n\n
-!! GRAV_PTMASSPURE - unsoftened point mass type of %gravity \n
+!! \b GRAV_PTMASSPURE, \b ptmass_pure, \b ptmass - unsoftened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2}\f$ \n\n
-!! GRAV_PTMASSSTIFF - softened point mass type of %gravity with stiff-body rotation inside softening radius\n
+!! \b GRAV_PTMASSSTIFF, \b ptmass_stiff, \b stiff \b ptmass - softened point mass type of %gravity with stiff-body rotation inside softening radius\n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+z^2}\f$ for \f$r > r_{soft}\f$ and \f$ GM/r_{soft} \left( - 3/2 + 1/2 {x^2+y^2+z^2}/r_{soft}^2 \right)\f$ inside \f$r_{soft}\f$ \n\n
-!! GRAV_PTFLAT - planar, softened point mass type of %gravity \n
+!! \b GRAV_PTFLAT, \b flat_ptmass_soft, \b flat \b softened \b ptmass - planar, softened point mass type of %gravity \n
 !! \f$\Phi\left(x,y,z\right)= - GM/\sqrt{x^2+y^2+r_{soft}^2}\f$ \n
 !! where \f$r_{soft}\f$ is a radius of softening\n\n
-!! GRAV_USER - not a standard type of %gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
+!! \b flat_ptmass, \b flat \b ptmass - planar, pure point mass type of %gravity \n
+!! \f$\Phi\left(x,y\right)= - GM/\sqrt{x^2+y^2}\f$ \n\n
+!! where \f$r_{soft}\f$ is a radius of softening\n\n
+!! \b GRAV_ROCHE, \b grav_roche, \b roche - Roche potential for two bodies on circular orbits. The coordinate system corotates with the bodies, so they stay on the X axis forever. \n\n
+!! \b GRAV_USER, \b grav_user, \b user - not a standard type of %gravity, implemented by user in the routine grav_pot_user from gravity_user module.\n\n
+!! If none of them is specified grav_accel specified by user is called.
 !<
 
    subroutine default_grav_pot_3d
@@ -672,9 +676,9 @@ contains
 
       implicit none
 
-      type(axes) :: ax
+      type(axes)                     :: ax
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       cgl => leaves%first
       do while (associated(cgl))

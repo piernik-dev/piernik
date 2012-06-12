@@ -43,17 +43,8 @@
 !!
 !! \b \#define \b "BALSARA"
 !!
-!! \b \#define \b "GRAV" - to include gravitational forces
-!!
-!! If no %gravity type is defined then vertical component of galactic %gravity is used:
-!!
-!! local Galactic %gravity only in z-direction (see <a href="http://cdsads.u-strasbg.fr/abs/1998ApJ...497..759F">Ferriere K., 1998, Astrophys. Journal, 497, 759</a>)\n
-!! \f[
-!! F_z = 3.23 \cdot 10^8 \cdot \left[\left(-4.4 \cdot 10^{-9} \cdot exp\left(-\frac{(r_{gc}-r_{gc_{}Sun})}{(4.9kpc)}\right) \cdot \frac{z}{\sqrt{(z^2+(0.2kpc)^2)}}\right)-\left( 1.7 \cdot 10^{-9} \cdot \frac{(r_{gc_{}Sun}^2 + (2.2kpc)^2)}{(r_{gc}^2 + (2.2kpc)^2)} \cdot \frac{z}{1kpc}\right) \right]
-!! \f]
-!! where \f$r_{gc}\f$ is galactocentric radius and \f$r_{gcSun}\f$ is the galactocentric radius of Sun.
-!! </td></tr></table>
-!! \n \n
+!! \b \#define \b "GRAV" - to include gravitational forces. The type of gravity is govern by external_gp value. Then chosen gravitational potential is computed.
+!! If no %gravity type is defined by external_gp character value then grav_accel defined by user is used and from given gravitational acceleration potential is computed.
 !!
 !! \b \#define \b "SELF_GRAV" - switch on self-gravity
 !!
