@@ -120,6 +120,14 @@
 #  endif
 #endif
 
+#if defined HLLC && defined CORIOLIS
+#error CORIOLIS for HLLC scheme has not been implemented yet.
+#endif
+
+#if defined HLLC && defined SN_SRC
+#warning SN_SRC step routines are not called in HLLC scheme - calling via problem_customize_solution is required.
+#endif
+
 #ifdef USER_RULES
 #include "user_rules.h"
 #endif

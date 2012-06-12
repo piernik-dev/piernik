@@ -264,9 +264,6 @@ contains
       use sourcecosmicrays, only: src_crn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
-#ifdef FLUID_INTERACTIONS_DW
-      use interactions,     only: fluid_interactions_dw
-#endif /* FLUID_INTERACTIONS_DW */
 #ifdef CORIOLIS
       use coriolis,         only: coriolis_force
 #endif /* CORIOLIS */
@@ -276,75 +273,71 @@ contains
 
       implicit none
 
-      integer(kind=4),             intent(in)     :: n                  !< array size
-      real, dimension(flind%all,n), intent(inout) :: u                  !< vector of conservative variables
-      real, dimension(flind%all,n), intent(in)    :: u0                 !< vector of conservative variables
-      real, dimension(nmag,n),     intent(in)     :: bb                 !< local copy of magnetic field
-      real, dimension(:), pointer, intent(in)     :: divv               !< vector of velocity divergence used in cosmic ray advection
-      real, dimension(:), pointer, intent(in)     :: cs_iso2            !< square of local isothermal sound speed
-      integer,                     intent(in)     :: istep              !< step number in the time integration scheme
-      integer(kind=4),             intent(in)     :: sweep              !< direction (x, y or z) we are doing calculations for
-      integer,                     intent(in)     :: i1                 !< coordinate of sweep in the 1st remaining direction
-      integer,                     intent(in)     :: i2                 !< coordinate of sweep in the 2nd remaining direction
-      real,                        intent(in)     :: dx                 !< cell length
-      real,                        intent(in)     :: dt                 !< time step
-      type(grid_container), pointer, intent(in)   :: cg                 !< current grid piece
+      integer(kind=4),               intent(in)    :: n                  !< array size
+      real, dimension(flind%all,n),  intent(inout) :: u                  !< vector of conservative variables
+      real, dimension(flind%all,n),  intent(in)    :: u0                 !< vector of conservative variables
+      real, dimension(nmag,n),       intent(in)    :: bb                 !< local copy of magnetic field
+      real, dimension(:), pointer,   intent(in)    :: divv               !< vector of velocity divergence used in cosmic ray advection
+      real, dimension(:), pointer,   intent(in)    :: cs_iso2            !< square of local isothermal sound speed
+      integer,                       intent(in)    :: istep              !< step number in the time integration scheme
+      integer(kind=4),               intent(in)    :: sweep              !< direction (x, y or z) we are doing calculations for
+      integer,                       intent(in)    :: i1                 !< coordinate of sweep in the 1st remaining direction
+      integer,                       intent(in)    :: i2                 !< coordinate of sweep in the 2nd remaining direction
+      real,                          intent(in)    :: dx                 !< cell length
+      real,                          intent(in)    :: dt                 !< time step
+      type(grid_container), pointer, intent(in)    :: cg                 !< current grid piece
 
 #ifdef GRAV
-      integer                        :: ind                !< fluid index
-      real, dimension(n)             :: gravacc            !< acceleration caused by gravitation
+      integer                                      :: ind                !< fluid index
+      real, dimension(n)                           :: gravacc            !< acceleration caused by gravitation
 #endif /* GRAV */
 
-      real                           :: dtx                !< dt/dx
-      real, dimension(flind%all,n)    :: cfr                !< freezing speed
+      real                                         :: dtx                !< dt/dx
+      real, dimension(flind%all,n)                 :: cfr                !< freezing speed
 !locals
-      real, dimension(flind%fluids,n) :: acc                !< acceleration
-      real, dimension(flind%all,n)    :: w                  !< auxiliary vector to calculate fluxes
-      real, dimension(flind%all,n)    :: fr                 !< flux of the right-moving waves
-      real, dimension(flind%all,n)    :: fl                 !< flux of the left-moving waves
-      real, dimension(flind%all,n)    :: fu                 !< sum of fluxes of right- and left-moving waves
-      real, dimension(flind%all,n)    :: dfp               !< second order correction of left/right-moving waves flux on the right cell boundary
-      real, dimension(flind%all,n)    :: dfm               !< second order correction of left/right-moving waves flux on the left cell boundary
-      real, dimension(flind%all,n)    :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
-      real, dimension(flind%fluids,n) :: geosrc             !< source terms caused by geometry of coordinate system
-      real, dimension(flind%fluids,n), target :: pressure   !< gas pressure
-      real, dimension(flind%fluids,n), target :: density    !< gas density
-      real, dimension(flind%fluids,n), target :: vel_sweep  !< velocity in the direction of current sweep
-      real, dimension(:,:), pointer  :: dens, vx
+      real, dimension(flind%fluids,n)              :: acc                !< acceleration
+      real, dimension(flind%all,n)                 :: w                  !< auxiliary vector to calculate fluxes
+      real, dimension(flind%all,n)                 :: fr                 !< flux of the right-moving waves
+      real, dimension(flind%all,n)                 :: fl                 !< flux of the left-moving waves
+      real, dimension(flind%all,n)                 :: fu                 !< sum of fluxes of right- and left-moving waves
+      real, dimension(flind%all,n)                 :: dfp                !< second order correction of left/right-moving waves flux on the right cell boundary
+      real, dimension(flind%all,n)                 :: dfm                !< second order correction of left/right-moving waves flux on the left cell boundary
+      real, dimension(flind%all,n)                 :: u1                 !< updated vector of conservative variables (after one timestep in second order scheme)
+      real, dimension(flind%fluids,n)              :: geosrc             !< source terms caused by geometry of coordinate system
+      real, dimension(flind%fluids,n), target      :: pressure           !< gas pressure
+      real, dimension(flind%fluids,n), target      :: density            !< gas density
+      real, dimension(flind%fluids,n), target      :: vel_sweep          !< velocity in the direction of current sweep
+      real, dimension(:,:),            pointer     :: dens, vx
       logical :: full_dim
 
 #ifdef COSM_RAYS
-      integer                       :: icr
+      integer                                      :: icr
 #ifdef COSM_RAYS_SOURCES
-      real                          :: srccrn(flind%crn%all,n)
+      real                                         :: srccrn(flind%crn%all,n)
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 
 #if defined IONIZED || defined NEUTRAL
 #ifndef ISO
-      real, dimension(flind%fluids,n) :: ekin,eint
+      real, dimension(flind%fluids,n)              :: ekin,eint
 #if defined IONIZED && defined MAGNETIC
-      real, dimension(n)             :: emag
+      real, dimension(n)                           :: emag
 #endif /* IONIZED && MAGNETIC */
 #endif /* !ISO */
 #endif /*  defined IONIZED || defined NEUTRAL  */
 #ifdef COSM_RAYS
-      real, dimension(n)             :: grad_pcr,ecr
-      real, dimension(n)             :: decr
+      real, dimension(n)                           :: grad_pcr, ecr, decr
 #endif /* COSM_RAYS */
-#ifdef FLUID_INTERACTIONS_DW
-      real, dimension(flind%all,n)    :: dintr
-#endif /* FLUID_INTERACTIONS_DW */
 
-      real, dimension(2,2), parameter:: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
+      real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
 #if !defined(GRAV) || !(defined COSM_RAYS && defined IONIZED)
-      integer                        :: dummy
+      integer                                      :: dummy
       if (.false.) dummy = i1 + i2 ! suppress compiler warnings on unused arguments
-#endif /* !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
-#if !defined(SHEAR) && !defined(GRAV) && ! defined(FLUID_INTERACTIONS_DW) && !(defined COSM_RAYS && defined IONIZED)
+#endif /* !GRAV || !(COSM_RAYS && IONIZED) */
+#if !defined(SHEAR) && !defined(GRAV) && !(defined COSM_RAYS && defined IONIZED)
       if (.false.) dummy = sweep
-#endif /* !SHEAR && !GRAV && !FLUID_INTERACTIONS_DW && !(COSM_RAYS && IONIZED) */
+#endif /* !SHEAR && !GRAV && !(COSM_RAYS && IONIZED) */
 
       !OPT: try to avoid these explicit initializations of u1(:,:) and u0(:,:)
       dtx       = dt / dx

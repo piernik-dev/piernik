@@ -31,7 +31,7 @@
 !! \anchor isothermal
 !! \b \#define \b "ISO" - the choice between adiabatic and isothermal fluids (if defined then isothermal fluid is set, otherwise adiabatic)
 !!
-!! \b \#define \b "ISO_LOCAL" - to choose isothermal fluids with locally specified soundspeed and temperature
+!! \b \#define \b "ISO_LOCAL" - to choose isothermal fluids with locally specified soundspeed and temperature (required ISO; currently works only with IONIZED)
 !!
 !! \b \#define \b "MAGNETIC" - to include parts of the code related to magnetic field (otherwise magnetic field is switched off even if ionized fluid is simulated)
 !!
@@ -57,11 +57,11 @@
 !!
 !! \b \#define \b "SELF_GRAV"
 !!
-!! \b \#define \b "VARIABLE_GP"
+!! \b \#define \b "VARIABLE_USER_GP" - user flag to switch on gravity maxima dumps to log and tsl files (for SELF_GRAV that is as default)
 !!
-!! \b \#define \b "CORIOLIS"
+!! \b \#define \b "CORIOLIS" - switch on Coriolis force
 !!
-!! \b \#define \b "SN_SRC"
+!! \b \#define \b "SN_SRC" - switch on supernovae insert (RTVD only; hooking to problem_customize_solution is strongly recommended)
 !! @n @n
 !!
 !! \b NUMERICAL \b SCHEMES \b AND \b SOLUTIONS:
@@ -84,9 +84,9 @@
 !!
 !! \b \#define \b "SHEAR_BND"
 !!
-!! \b \#define \b "NEW_HYDROSTATIC"
+!! \b \#define \b "NEW_HYDROSTATIC" - change hydrostatic_zeq scheme and find midplane corresponding to zero gravity (practically the least gravity absolute value)
 !!
-!! \b \#define \b "ZERO_BND_EMF"
+!! \b \#define \b "ZERO_BND_EMF" - switch to putting 0 on emf boundaries for outflow type boundary conditions instead of constant emf gradient as default
 !! @n @n
 !!
 !! \b OTHERS:
@@ -99,13 +99,13 @@
 !!
 !! \b \#define \b "JEANS_PROBLEM" - switch on jeans problem-specific quirks
 !!
-!! \b \#define \b "INDEPENDENT_ATOUTB"
+!! \b \#define \b "INDEPENDENT_ATOUTB" - switch to independent (instead of collective) write to files (restart files) for arrays with outer boundary area type
 !!
 !! \b \#define \b "PERFMON"
 !!
 !! \b \#define \b "PIERNIK_OPENCL"
 !!
-!! \b \#define \b "USER_RULES"
+!! \b \#define \b "USER_RULES" - include instructions from user_rules.h file from problem directory at the beginning of compilation
 !!
 !! \b \#define \b "__INTEL_COMPILER" - automatic flag placed by Intel Compiler
 !!
