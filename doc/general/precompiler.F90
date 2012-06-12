@@ -55,11 +55,11 @@
 !! </td></tr></table>
 !! \n \n
 !!
-!! \b \#define \b "SELF_GRAV"
+!! \b \#define \b "SELF_GRAV" - switch on self-gravity
 !!
 !! \b \#define \b "VARIABLE_USER_GP" - user flag to switch on gravity maxima dumps to log and tsl files (for SELF_GRAV that is as default)
 !!
-!! \b \#define \b "CORIOLIS" - switch on Coriolis force
+!! \b \#define \b "CORIOLIS" - switch on Coriolis force (RTVD only)
 !!
 !! \b \#define \b "SN_SRC" - switch on supernovae insert (RTVD only; hooking to problem_customize_solution is strongly recommended)
 !! @n @n
@@ -70,9 +70,9 @@
 !!
 !! \b \#define \b "HLLC" - to choose HLLC scheme (without magnetic fields; RTVD must be undefined)
 !!
-!! \b \#define \b "LOCAL_FR_SPEED"
+!! \b \#define \b "LOCAL_FR_SPEED" - choose locally computed freezing speed (i.e. in each cell)
 !!
-!! \b \#define \b "GLOBAL_FR_SPEED"
+!! \b \#define \b "GLOBAL_FR_SPEED" - choose globally computed freezing speed (i.e. constant for the whole domain)
 !!
 !! \b \#define \b "MULTIGRID" - to include self–gravity (multigrid solver, uses FFT when possible, recommended)
 !!
