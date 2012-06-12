@@ -43,12 +43,10 @@ contains
 
       real(kind=4), dimension(:,:), intent(in) :: f
       real(kind=4), intent(in)                 :: fmin, fmax
-      integer                          :: mxi, mxj, pgopen
-      integer                          :: i, l, c1, c2, nc
-      real(kind=4)                     :: contra, bright, angle, c, s
-      real(kind=4), dimension(6)       :: tr
-      real(kind=4), dimension(1)       :: alev
-      logical,save       :: frun = .true.
+      integer                                  :: mxi, mxj, pgopen
+      real(kind=4)                             :: contra, bright
+      real(kind=4), dimension(6)               :: tr
+      logical, save                            :: frun = .true.
 
       mxi = size(f,1)
       mxj = size(f,2)
@@ -161,15 +159,16 @@ contains
 
       implicit none
 
-      real(kind=4) :: d, vpx1, vpx2, vpy1, vpy2
+      real(kind=4)            :: d, vpx1, vpx2, vpy1, vpy2
+      real(kind=4), parameter :: two = 2.0, five = 5.0, eight = 8.0, one40th = 0.025
 !
       call pgsvp(nul, one, nul, one)
       call pgqvp(1, vpx1, vpx2, vpy1, vpy2)
-      d = min(vpx2-vpx1, vpy2-vpy1)/40.0
-      vpx1 = vpx1 + 5.0*d
-      vpx2 = vpx2 - 2.0*d
-      vpy1 = vpy1 + 8.0*d
-      vpy2 = vpy2 - 2.0*d
+      d = min(vpx2-vpx1, vpy2-vpy1) * one40th
+      vpx1 = vpx1 + five *d
+      vpx2 = vpx2 - two  *d
+      vpy1 = vpy1 + eight*d
+      vpy2 = vpy2 - two  *d
       call pgvsiz(vpx1, vpx2, vpy1, vpy2)
 
    end subroutine setvp
@@ -185,21 +184,13 @@ contains
 
       implicit none
 
-      integer      :: i1,i2,j1,j2
+      integer      :: i1, i2, j1, j2
       real(kind=4) :: tr(6)
       integer      :: k
       real(kind=4) :: xw(5), yw(5), t
 !
-      xw(1) = i1
-      yw(1) = j1
-      xw(2) = i1
-      yw(2) = j2
-      xw(3) = i2
-      yw(3) = j2
-      xw(4) = i2
-      yw(4) = j1
-      xw(5) = i1
-      yw(5) = j1
+      xw(:) = real([i1, i1, i2, i2, i1], kind=4)
+      yw(:) = real([j1, j2, j2, j1, j1], kind=4)
       do k=1,5
          t = xw(k)
          xw(k) = tr(1) + tr(2)*t + tr(3)*yw(k)
