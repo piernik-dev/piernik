@@ -37,21 +37,24 @@
 module interactions
 ! pulled by ANY
 
+   use constants, only: cbuff_len
+
    implicit none
 
    private
    public :: init_interactions, cleanup_interactions, fluid_interactions, collfaq, cfl_interact, dragc_gas_dust, has_interactions, &
       & interactions_grace_passed, epstein_factor, balsara_implicit_interactions, update_grain_size
 
-   real, allocatable, dimension(:,:)      :: collfaq     !< flind%fluids x flind%fluids array of collision factors
-   real :: collision_factor                              !< collision factor
-   real :: cfl_interact                                  !< Courant factor for %interactions
-   real :: dragc_gas_dust                                !< \deprecated remove me
-!   real :: taus                                          !< stopping time
-   real :: grain_size                                    !< size of dust grains in cm
-   real :: grain_dens                                    !< density of dust grains in g/cm^3
-   real, dimension(:), allocatable, protected :: epstein_factor !< grain_size * grain_dens / c_s for iso case
-   logical :: has_interactions
+   real, allocatable, dimension(:,:)          :: collfaq            !< flind%fluids x flind%fluids array of collision factors
+   real                                       :: collision_factor   !< collision factor
+   real                                       :: cfl_interact       !< Courant factor for %interactions
+   real                                       :: dragc_gas_dust     !< \deprecated remove me
+!   real                                       :: taus               !< stopping time
+   real                                       :: grain_size         !< size of dust grains in cm
+   real                                       :: grain_dens         !< density of dust grains in g/cm^3
+   real, dimension(:), allocatable, protected :: epstein_factor     !< grain_size * grain_dens / c_s for iso case
+   character(len=cbuff_len)                   :: interactions_type  !< type of interactions between fluids
+   logical                                    :: has_interactions
 
    interface
       function fluid_interactions_iface(dens,vel) result(acc)
@@ -80,18 +83,18 @@ contains
 !! <tr><td>has_interactions</td><td>.false.</td><td>logical value              </td><td>\copydoc interactions::has_interactions</td></tr>
 !! <tr><td>grain_size      </td><td>10.0   </td><td>real value                 </td><td>\copydoc interactions::dragc_gas_dust  </td></tr>
 !! <tr><td>grain_dens      </td><td>1.6    </td><td>real value                 </td><td>\copydoc interactions::dragc_gas_dust  </td></tr>
+!! <tr><td>interactions_type</td><td>'none'</td><td>'none'/'aerodrag'/'aerodrag_ep'/'dragforce_dw'/'balsara'</td><td>\copydoc interactions::interactions_type</td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_interactions
 
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die, code_progress
-      use constants,     only: PIERNIK_INIT_FLUIDS
-      use mpisetup,      only: master, slave, lbuff, rbuff, buffer_dim, mpi_err, comm, FIRST!, grace_period_passed
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
-      use units,         only: cm, gram
+      use constants,     only: PIERNIK_INIT_FLUIDS, cbuff_len
+      use dataio_pub,    only: die, code_progress, par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use fluidindex,    only: flind
+      use mpisetup,      only: master, slave, cbuff, lbuff, rbuff, buffer_dim, mpi_err, comm, FIRST!, grace_period_passed
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_CHARACTER
+      use units,         only: cm, gram
 
       implicit none
 
@@ -107,6 +110,8 @@ contains
 
       has_interactions  = .false.
 
+      interactions_type = 'none'
+
       if (master) then
 
          diff_nml(INTERACTIONS)
@@ -119,10 +124,13 @@ contains
 
          lbuff(1)  = has_interactions
 
+         cbuff(1)  = interactions_type
+
       endif
 
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
+      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -133,6 +141,8 @@ contains
          grain_dens           = rbuff(5)
 
          has_interactions     = lbuff(1)
+
+         interactions_type    = cbuff(1)
 
       endif
 
@@ -157,14 +167,14 @@ contains
    subroutine interactions_grace_passed
 
       use constants,     only: DST
+      use dataio_pub,    only: warn, printinfo, die, msg
       use fluidindex,    only: flind
-      use dataio_pub,    only: warn, printinfo
       use mpisetup,      only: master
 
       implicit none
 
       logical, save :: warned = .false.
-      integer :: i
+      integer       :: i
 
       if (associated(flind%dst)) then
          do i = 1, flind%fluids
@@ -191,7 +201,21 @@ contains
             collfaq(flind%dst%pos,:) = dragc_gas_dust
             collfaq(:,flind%dst%pos) = dragc_gas_dust
 
-            fluid_interactions => fluid_interactions_aero_drag
+            select case (interactions_type)
+               case ('none')
+                  ! already pointed to fluid_interactions_dummy
+               case ('aerodrag')
+                  fluid_interactions => fluid_interactions_aero_drag
+               case ('aerodrag_ep')
+                  fluid_interactions => fluid_interactions_aero_drag_ep
+               case ('dragforce_dw')
+                  fluid_interactions => dragforce
+               case ('balsara')
+                  call die("[interactions:interactions_grace_passed] precompiler flag BALSARA has to be defined")
+               case default
+                  write(msg,'(2a)') "[interactions:interactions_grace_passed] unknown value of interactions_type ", interactions_type
+                  call die(msg)
+            end select
             has_interactions = .true.    !> \deprecated BEWARE: temporary hack,  switches on timestep_interactions
          else
             if (.not. warned .and. master) call warn("[interactions:interactions_grace_passed] Cannot initialize aerodynamical drag because dust does not exist.")
@@ -298,7 +322,7 @@ contains
       use constants,  only: DST
       implicit none
       real, intent(in) :: new_size
-      integer :: i
+      integer          :: i
 
       grain_size = new_size
 
@@ -312,105 +336,31 @@ contains
 
    end subroutine update_grain_size
 
-#ifdef FLUID_INTERACTIONS_DW
 !>
-!! \brief Routine that governs the type of interaction
-!! \param sweep string of characters that points out the current sweep direction
-!! \param i1 integer, number of column in the first direction after one pointed out by sweep
-!! \param i2 integer, number of column in the second direction after one pointed out by sweep
-!! \param n number of elements in the spatial dimension of fluid sweep array
-!! \param du sweep array of fluid corrections
-!! \param uu sweep fluid array
-!!
-!! This is the place for contributions from any fluid %interactions that can be defined in this module. \n
-!! The manner to add another contribution is following:
-!! \code
-!!     call defined_interaction(sweep,i1,i2,n,ddu,uu)
-!!     du = du + ddu
-!! \endcode
-!! where \c defined_interaction has to be specified as a subroutine in this module.
+!! \brief Function that computes contribution from a drag force for all fluids
+!! \param dens density flind%fluids x ncells array
+!! \param velx velocity component of the current sweep direction
+!! \result acc acceleration due to drag force for all fluids
 !<
-   subroutine fluid_interactions_dw(sweep, i1, i2, n, du, uu)
-      use fluidindex,   only: flind
-      implicit none
-      integer, intent(in)   :: i1,i2,n
-      real, dimension(flind%all,n)  :: du,uu
-      integer, intent(in)           :: sweep
-      real, dimension(flind%all,n)  :: ddu
+   function dragforce(dens,velx) result(acc)
 
-      du=0.0
-      call dragforce(sweep,i1,i2, n, ddu, uu)
-      du = du + ddu
-
-   end subroutine fluid_interactions_dw
-
-!>
-!! \brief Routine that computes contribution from a drag force
-!! \param sweep string of characters that points out the current sweep direction
-!! \param i1 integer, number of column in the first direction after one pointed out by sweep
-!! \param i2 integer, number of column in the second direction after one pointed out by sweep
-!! \param n number of elements in the spatial dimension of fluid sweep array
-!! \param du sweep array of fluid corrections
-!! \param uu sweep fluid array
-!<
-   subroutine dragforce(sweep, i1, i2, n, du, uu)
-      use fluidindex,   only: flind, iarr_all_dn, iarr_all_mx
-      use grid,         only: cg
-      use constants,    only: xdim, ydim, zdim
-#ifndef ISO
-      use fluidindex,   only: iarr_all_en
-#endif /* !ISO */
+      use fluidindex, only: flind
 
       implicit none
 
-      real                  :: a1
-      integer, intent(in)   :: i1, i2, n
-      real, dimension(flind%all,n)  :: du,uu
-      integer, intent(in)           :: sweep
-      integer  :: ifl,jfl,rend
-      real, dimension(flind%fluids,flind%fluids,n) :: flch
-      real, dimension(flind%fluids,n)             :: colls
-      real, dimension(cg%maxxyz)                    :: r1,r2
+      real, dimension(:,:), intent(in), pointer  :: dens
+      real, dimension(:,:), intent(in), pointer  :: velx
+      real, dimension(size(dens,1),size(dens,2)) :: acc
+      integer                                    :: ifl, jfl
 
-      du=0.0
+      acc(:,:) = 0.0
 !-----collisions between fluids------
-      select case (sweep)
-         case (xdim)
-            a1    = cg%y(i1)
-            rend  = size(cg%x)
-            r1(1:rend) = cg%x(:)                            ! r1   max(size(x),size(y),size(z))
-            r2(1:rend) = a1 / (r1(1:rend)*r1(1:rend) + a1 * a1)
-         case (ydim)
-            a1    = cg%x(i2)
-            rend  = size(cg%y)
-            r1(1:rend) = cg%y(1:rend)
-            r2(1:rend) = a1 / (r1(1:rend)*r1(1:rend) + a1 * a1)
-         case (zdim)
-            a1    = 1.0
-            rend  = size(cg%z)
-            r1(1:rend) = 0.0
-            r2(1:rend) = 1.0
-      end select
-
       do ifl=1,flind%fluids
          do jfl=1,flind%fluids
-            if (ifl /= jfl) then
-               flch(ifl,jfl,:)= collfaq(ifl,jfl)*uu(iarr_all_dn(ifl),:) * uu(iarr_all_dn(jfl),:) &
-                        *( uu(iarr_all_mx(jfl),:)/uu(iarr_all_dn(jfl),:) &
-                         - uu(iarr_all_mx(ifl),:)/uu(iarr_all_dn(ifl),:))
-            else
-               flch(ifl,jfl,:)=0.0
-            endif
+            if (ifl /= jfl) acc(ifl,:) = acc(ifl,:) + collfaq(ifl,jfl) * dens(ifl,:) * dens(jfl,:) * (velx(jfl,:) - velx(ifl,:)) ! / dens(ifl,:) ?
          enddo
       enddo
-      do ifl=1,flind%fluids
-         colls(ifl,:)=sum(flch(ifl,:,:),1)
-      enddo
-#ifndef ISO
-      du(iarr_all_en(1:flind%energ),:)=uu(iarr_all_mx(1:flind%energ),:)*colls(1:flind%energ,:)
-#endif /* !ISO */
-      du(iarr_all_mx,:)=colls
 
-   end subroutine dragforce
-#endif /* FLUID_INTERACTIONS_DW */
+   end function dragforce
+
 end module interactions

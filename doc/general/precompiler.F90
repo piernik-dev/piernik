@@ -39,8 +39,6 @@
 !!
 !! \b \#define \b "FLUID_INTERACTIONS" - to take into account interactions between different fluids (eg. drag force)
 !!
-!! \b \#define \b "FLUID_INTERACTIONS_DW" - older type of fluids interaction scheme
-!!
 !! \b \#define \b "BALSARA"
 !!
 !! \b \#define \b "GRAV" - to include gravitational forces. The type of gravity is govern by external_gp value. Then chosen gravitational potential is computed.
