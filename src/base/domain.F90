@@ -94,7 +94,7 @@ module domain
 
    end type domain_container
 
-   type(domain_container), target :: dom !< complete description of base level domain \todo protect it
+   type(domain_container), target  :: dom !< complete description of base level domain \todo protect it
    type(domain_container), pointer :: pdom
 
    logical :: is_uneven          !< .true. when n_b(:) depend on process rank \todo protect it
@@ -117,29 +117,25 @@ module domain
 
    namelist /MPI_BLOCKS/ psize, bsize, reorder, allow_uneven, allow_noncart, allow_AMR, dd_unif_quality, dd_rect_quality, use_comm3d
 
-   integer(kind=4), dimension(ndims) :: n_d !< number of %grid cells in physical domain without boundary cells (where  == 1 then that dimension is reduced to a point with no boundary cells)
-   !< \deprecated nxd, nyd and nzd are obsoleted by the above definition. Will be removed soon
-   integer(kind=4), protected :: nxd    !< number of %grid cells in physical domain (without boundary cells) in x-direction (if == 1 then x-dimension is reduced to a point with no boundary cells)
-   integer(kind=4), protected :: nyd    !< number of %grid cells in physical domain (without boundary cells) in y-direction (-- || --)
-   integer(kind=4), protected :: nzd    !< number of %grid cells in physical domain (without boundary cells) in z-direction (-- || --)
-   integer(kind=4), protected :: nb     !< number of boundary cells surrounding the physical domain, same for all directions
-   character(len=cbuff_len) :: bnd_xl   !< type of boundary conditions for the left  x-boundary
-   character(len=cbuff_len) :: bnd_xr   !< type of boundary conditions for the right x-boundary
-   character(len=cbuff_len) :: bnd_yl   !< type of boundary conditions for the left  y-boundary
-   character(len=cbuff_len) :: bnd_yr   !< type of boundary conditions for the right y-boundary
-   character(len=cbuff_len) :: bnd_zl   !< type of boundary conditions for the left  z-boundary
-   character(len=cbuff_len) :: bnd_zr   !< type of boundary conditions for the right z-boundary
+   integer(kind=4), dimension(ndims) :: n_d               !< number of %grid cells in physical domain without boundary cells (where  == 1 then that dimension is reduced to a point with no boundary cells)
+   integer(kind=4), protected        :: nb                !< number of boundary cells surrounding the physical domain, same for all directions
+   character(len=cbuff_len)          :: bnd_xl            !< type of boundary conditions for the left  x-boundary
+   character(len=cbuff_len)          :: bnd_xr            !< type of boundary conditions for the right x-boundary
+   character(len=cbuff_len)          :: bnd_yl            !< type of boundary conditions for the left  y-boundary
+   character(len=cbuff_len)          :: bnd_yr            !< type of boundary conditions for the right y-boundary
+   character(len=cbuff_len)          :: bnd_zl            !< type of boundary conditions for the left  z-boundary
+   character(len=cbuff_len)          :: bnd_zr            !< type of boundary conditions for the right z-boundary
    character(len=cbuff_len), dimension(HI*ndims) :: bnds  !< Six strings, describing boundary conditions
-   real, dimension(ndims, LO:HI) :: edges
-   real :: xmin                         !< physical domain left x-boundary position
-   real :: xmax                         !< physical domain right x-boundary position
-   real :: ymin                         !< physical domain left y-boundary position
-   real :: ymax                         !< physical domain right y-boundary position
-   real :: zmin                         !< physical domain left z-boundary position
-   real :: zmax                         !< physical domain right z-boundary position
-   character(len=cbuff_len) :: geometry !< define system of coordinates: "cartesian" or "cylindrical"
+   character(len=cbuff_len)          :: geometry          !< define system of coordinates: "cartesian" or "cylindrical"
+   real, dimension(ndims, LO:HI)     :: edges
+   real                              :: xmin              !< physical domain left x-boundary position
+   real                              :: xmax              !< physical domain right x-boundary position
+   real                              :: ymin              !< physical domain left y-boundary position
+   real                              :: ymax              !< physical domain right y-boundary position
+   real                              :: zmin              !< physical domain left z-boundary position
+   real                              :: zmax              !< physical domain right z-boundary position
 
-   namelist /BASE_DOMAIN/ n_d, nxd, nyd, nzd, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry
+   namelist /BASE_DOMAIN/ n_d, nb, bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr, xmin, xmax, ymin, ymax, zmin, zmax, geometry
    !namelist /BASE_DOMAIN/ dom, geometry, nb
 
 contains
@@ -153,9 +149,6 @@ contains
 !! \n \n
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!!   <tr><td>nxd     </td><td>1          </td><td>positive integer                          </td><td>\copydoc domain::nxd     </td></tr>
-!!   <tr><td>nyd     </td><td>1          </td><td>positive integer                          </td><td>\copydoc domain::nyd     </td></tr>
-!!   <tr><td>nzd     </td><td>1          </td><td>positive integer                          </td><td>\copydoc domain::nzd     </td></tr>
 !!   <tr><td>n_d(3)  </td><td>1          </td><td>positive integer                          </td><td>\copydoc domain::n_d     </td></tr>
 !!   <tr><td>nb      </td><td>4          </td><td>positive integer                          </td><td>\copydoc domain::nb      </td></tr>
 !!   <tr><td>bnd_xl  </td><td>'per'      </td><td>'per', 'ref', 'out', 'outd', 'outh', 'cor'</td><td>\copydoc domain::bnd_xl  </td></tr>
@@ -206,21 +199,18 @@ contains
       psize(:) = I_ONE
       bsize(:) = I_ZERO
 
-      nxd    = 1
-      nyd    = 1
-      nzd    = 1
-      n_d(:) = I_ONE
-      nb     = 4
-      xmin = 0.; xmax = 1.
-      ymin = -big_float; ymax = big_float
-      zmin = 0.; zmax = 1.
+      n_d(:)   = I_ONE
+      nb       = 4
+      xmin     = 0.; xmax = 1.
+      ymin     = -big_float; ymax = big_float
+      zmin     = 0.; zmax = 1.
       geometry = "cartesian"
 
-      reorder   = .false.      !< \todo test it!
-      allow_uneven = .true.
-      allow_noncart = .false.  !< experimental implementation
-      allow_AMR = .false.      !< not implemented yet
-      use_comm3d = .true.      !< \todo make a big benchmark with and without comm3d
+      reorder       = .false.     !< \todo test it!
+      allow_uneven  = .true.
+      allow_noncart = .false.     !< experimental implementation
+      allow_AMR     = .false.     !< not implemented yet
+      use_comm3d    = .true.      !< \todo make a big benchmark with and without comm3d
 
       bnd_xl = 'per'
       bnd_xr = 'per'
@@ -235,9 +225,6 @@ contains
       if (master) then
          diff_nml(MPI_BLOCKS)
          diff_nml(BASE_DOMAIN)
-
-         if (any([nxd, nyd, nzd] > 1)) call warn("[domain:init_domain] Use n_d instead of nxd, nyd and nzd")
-         n_d(:) = max(n_d(:), [nxd, nyd, nzd])
 
          if (any(bsize(:) > 0 .and. bsize(:) < nb .and. n_d(:) > 1)) call die("[domain:init_domain] bsize(:) is too small.")
 
@@ -357,8 +344,8 @@ contains
 
       implicit none
 
-      class(domain_container), intent(inout) :: this  !< object invoking type-bound procedure
-      character(len=*), dimension(HI*ndims), intent(in) :: bnds  !< Six strings, describing boundary conditions
+      class(domain_container),               intent(inout) :: this  !< object invoking type-bound procedure
+      character(len=*), dimension(HI*ndims), intent(in)    :: bnds  !< Six strings, describing boundary conditions
 
       integer :: d, lh
 
@@ -402,7 +389,7 @@ contains
       implicit none
 
       class(domain_container), intent(inout) :: this  !< object invoking type-bound procedure
-      integer :: d
+      integer                                :: d
 
       this%has_dir(:) = this%n_d(:) > 1  ! redundant
 
@@ -457,18 +444,18 @@ contains
    end subroutine print_me
 
    subroutine init_domain_container(this, nb, n_d, bnds, edges, geometry)
-      use constants,    only: ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, &
-           &                GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, I_ONE
-      use dataio_pub,   only: die, warn, msg
+
+      use constants,  only: ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, I_ONE
+      use dataio_pub, only: die, warn, msg
 
       implicit none
 
-      class(domain_container), intent(inout) :: this  !< object invoking type-bound procedure
-      integer(kind=4), intent(in) :: nb !< number of boundary cells surrounding the physical domain, same for all directions
-      integer(kind=4), dimension(ndims) :: n_d !< number of %grid cells in physical domain without boundary cells (where  == 1 then that dimension is reduced to a point with no boundary cells)
-      character(len=*), dimension(HI*ndims), intent(in) :: bnds  !< Six strings, describing boundary conditions
-      real, dimension(ndims, LO:HI), intent(inout)      :: edges  !< physical domain boundaries position
-      character(len=*), intent(in) :: geometry !< define system of coordinates: "cartesian" or "cylindrical"
+      class(domain_container),                   intent(inout) :: this     !< object invoking type-bound procedure
+      integer(kind=4),                           intent(in)    :: nb       !< number of boundary cells surrounding the physical domain, same for all directions
+      integer(kind=4),  dimension(ndims)                       :: n_d      !< number of %grid cells in physical domain without boundary cells (where  == 1 then that dimension is reduced to a point with no boundary cells)
+      character(len=*), dimension(HI*ndims),     intent(in)    :: bnds     !< Six strings, describing boundary conditions
+      real,             dimension(ndims, LO:HI), intent(inout) :: edges    !< physical domain boundaries position
+      character(len=*),                          intent(in)    :: geometry !< define system of coordinates: "cartesian" or "cylindrical"
 
       real :: xmno, ymno, ymxo
 
