@@ -42,12 +42,12 @@ module dataio_user
 
          implicit none
 
-         character(len=*), intent(in)              :: var   !< quantity to be plotted
-         integer, intent(in)                       :: ij    !< direction perpendicular to the plane of plot, xdim means "yz" plane and so on
-         integer(kind=8), intent(in)               :: xn    !< no. of cell at which we are slicing the local block
-         integer, intent(inout)                    :: ierrh !< error handling
-         real, dimension(:,:), intent(inout)       :: tab   !< array containing given quantity
-         type(grid_container), pointer, intent(in) :: cg    !< current grid container
+         character(len=*),              intent(in)    :: var   !< quantity to be plotted
+         integer,                       intent(in)    :: ij    !< direction perpendicular to the plane of plot, xdim means "yz" plane and so on
+         integer(kind=8),               intent(in)    :: xn    !< no. of cell at which we are slicing the local block
+         integer,                       intent(inout) :: ierrh !< error handling
+         real, dimension(:,:),          intent(inout) :: tab   !< array containing given quantity
+         type(grid_container), pointer, intent(in)    :: cg    !< current grid container
 
       end subroutine plt_hdf5
    end interface
@@ -59,10 +59,10 @@ module dataio_user
 
          implicit none
 
-         character(len=*), intent(in)                  :: var
+         character(len=*),               intent(in)    :: var
          real(kind=4), dimension(:,:,:), intent(inout) :: tab
-         integer, intent(inout)                        :: ierrh
-         type(grid_container), pointer, intent(in)     :: cg
+         integer,                        intent(inout) :: ierrh
+         type(grid_container), pointer,  intent(in)    :: cg
 
       end subroutine vars_hdf5
    end interface
@@ -72,7 +72,7 @@ module dataio_user
 
          implicit none
 
-         real, dimension(:), intent(inout), allocatable                       :: user_vars
+         real,             dimension(:), intent(inout), allocatable           :: user_vars
          character(len=*), dimension(:), intent(inout), allocatable, optional :: tsl_names
 
       end subroutine tsl_out
