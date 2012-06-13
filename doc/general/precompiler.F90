@@ -39,7 +39,7 @@
 !!
 !! \b \#define \b "FLUID_INTERACTIONS" - to take into account interactions between different fluids (eg. drag force)
 !!
-!! \b \#define \b "BALSARA"
+!! \b \#define \b "BALSARA" - switch to implicit scheme for interactions from Balsara et al. MNRAS (2009) 397 24 and Tilley \& Balsara MNRAS (2008) 389 1058
 !!
 !! \b \#define \b "GRAV" - to include gravitational forces. The type of gravity is govern by external_gp value. Then chosen gravitational potential is computed.
 !! If no %gravity type is defined by external_gp character value then grav_accel defined by user is used and from given gravitational acceleration potential is computed.
