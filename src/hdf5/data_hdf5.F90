@@ -351,7 +351,7 @@ contains
             enddo
          enddo
          call h5pclose_f(plist_id, error)
-         
+
          call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
          if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
       endif
@@ -442,7 +442,7 @@ contains
 
       if (can_i_write) then
          call h5pclose_f(plist_id, error)
-      
+
          do ncg = 1, tot_cg_n
             do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
                call h5dclose_f(dset_id(ncg,i), error)
