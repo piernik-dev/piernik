@@ -809,8 +809,8 @@ contains
    end subroutine write_to_hdf5_v2
 
    function set_h5_properties(h5p, nproc_io) result (plist_id)
-      use hdf5,         only: HID_T, H5FD_MPIO_COLLECTIVE_F, h5pcreate_f, h5pset_fapl_mpio_f, h5pset_dxpl_mpio_f, &
-                        &  H5P_FILE_ACCESS_F
+      use hdf5,         only: HID_T, H5P_FILE_ACCESS_F, h5pcreate_f, h5pset_fapl_mpio_f!, &
+!                        &  H5FD_MPIO_COLLECTIVE_F, h5pset_dxpl_mpio_f
       use mpi,          only: MPI_INFO_NULL
       use mpisetup,     only: comm
 
