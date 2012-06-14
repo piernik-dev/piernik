@@ -791,7 +791,7 @@ contains
          call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
          call h5pclose_f(plist_id, error)
          plist_id = set_h5_properties(H5P_GROUP_ACCESS_F, nproc_io)
-         call h5gopen_f(file_id, data_gname, cgl_g_id, error)
+         call h5gopen_f(file_id, data_gname, cgl_g_id, error, gapl_id = plist_id)
          call h5pclose_f(plist_id, error)
       endif
 
