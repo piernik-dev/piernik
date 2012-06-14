@@ -283,8 +283,7 @@ contains
 
       use constants,   only: xdim, ydim, zdim, ndims
       use common_hdf5, only: n_cg_name, get_nth_cg, hdf_vars, set_h5_properties
-      use dataio_pub,  only: die, nproc_io, can_i_write, msg
-      use dataio_user, only: user_vars_hdf5
+      use dataio_pub,  only: die, nproc_io, can_i_write
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use grid,        only: leaves
@@ -311,8 +310,7 @@ contains
       type(grid_container), pointer               :: cg
       type(cg_list_element), pointer              :: cgl
       integer, allocatable, dimension(:)          :: cg_src_p, cg_src_n
-      real(kind=4), dimension(:,:,:), allocatable :: data
-      integer                                     :: ierrh
+      real(kind=4), dimension(:,:,:), pointer     :: data
       integer(kind=8)                             :: tot_cg_n
       logical                                     :: ok_var
 
@@ -369,14 +367,7 @@ contains
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
                   if (cg_src_p(ncg) == proc) then
                      cg => get_nth_cg(cg_src_n(ncg))
-                     ierrh = 0; ok_var = .false.
-                     call datafields_hdf5(hdf_vars(i), data, ierrh, cg)
-                     if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
-                     if (ierrh>=0) ok_var = .true.
-                     if (.not.ok_var) then
-                        write(msg,'(3a)') "[data_hdf5:write_cg_to_output]: ", hdf_vars(i)," is not defined in datafields_hdf5, neither in user_vars_hdf5."
-                        call die(msg)
-                     endif
+                     call get_data_from_cg(hdf_vars(i), cg, data)
                   else
                      call MPI_Recv(data(1,1,1), size(data), MPI_REAL, cg_src_p(ncg), ncg + tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                   endif
@@ -388,14 +379,7 @@ contains
                if (cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_src_n(ncg))
                   do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-                     ierrh = 0; ok_var = .false.
-                     call datafields_hdf5(hdf_vars(i), data, ierrh, cg)
-                     if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
-                     if (ierrh>=0) ok_var = .true.
-                     if (.not.ok_var) then
-                        write(msg,'(3a)') "[data_hdf5:write_cg_to_output]: ", hdf_vars(i)," is not defined in datafields_hdf5, neither in user_vars_hdf5."
-                        call die(msg)
-                     endif
+                     call get_data_from_cg(hdf_vars(i), cg, data)
                      call MPI_Send(data(1,1,1), size(data), MPI_REAL, FIRST, ncg + tot_cg_n*i, comm, mpi_err)
                   enddo
                endif
@@ -416,14 +400,7 @@ contains
                cg => cgl%cg
 
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-                  ierrh = 0; ok_var = .false.
-                  call datafields_hdf5(hdf_vars(i), data, ierrh, cg)
-                  if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
-                  if (ierrh>=0) ok_var = .true.
-                  if (.not.ok_var) then
-                     write(msg,'(3a)') "[data_hdf5:write_cg_to_output]: ", hdf_vars(i)," is not defined in datafields_hdf5, neither in user_vars_hdf5."
-                     call die(msg)
-                  endif
+                  call get_data_from_cg(hdf_vars(i), cg, data)
                   call h5dwrite_f(dset_id(ncg, i), H5T_NATIVE_REAL, data, dims, error, xfer_prp = plist_id)
                enddo
 
@@ -457,6 +434,32 @@ contains
 
    end subroutine write_cg_to_output
 
+   subroutine get_data_from_cg(hdf_var, cg, tab)
+
+      use dataio_pub,  only: die, msg
+      use dataio_user, only: user_vars_hdf5
+      use grid_cont,   only: grid_container
+
+      implicit none
+
+      character(len=*), intent(in)                           :: hdf_var
+      type(grid_container), pointer, intent(in)              :: cg
+      real(kind=4), dimension(:,:,:), pointer, intent(inout) :: tab
+
+      integer :: ierrh
+      logical :: ok_var
+
+      ierrh = 0
+      ok_var = .false.
+      call datafields_hdf5(hdf_var, tab, ierrh, cg)
+      if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_var, tab, ierrh, cg)
+      if (ierrh>=0) ok_var = .true.
+      if (.not.ok_var) then
+         write(msg,'(3a)') "[data_hdf5:get_data_from_cg]: ", hdf_var," is not defined in datafields_hdf5, neither in user_vars_hdf5."
+         call die(msg)
+      endif
+   end subroutine get_data_from_cg
+
    subroutine create_empty_cg_datasets_in_output(cg_g_id, cg_n_b, Z_avail, g)
 
       use common_hdf5, only: create_empty_cg_dataset, hdf_vars
@@ -480,8 +483,6 @@ contains
 
       use common_hdf5, only: nhdf_vars, hdf_vars
       use constants,   only: ndims
-      use dataio_pub,  only: die, msg
-      use dataio_user, only: user_vars_hdf5
       use domain,      only: dom, is_multicg !, is_uneven
       use grid,        only: leaves
       use gc_list,     only: cg_list_element
@@ -498,12 +499,11 @@ contains
       character(len=*), intent(in)      :: fname
       integer(HID_T)                    :: file_id                 !< File identifier
       integer(HID_T)                    :: plist_id, plist_idf     !< Property list identifier
-      integer                           :: ierrh, i
+      integer                           :: i
       integer(kind=4)                   :: error
-      logical                           :: ok_var
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
-      real(kind=4), allocatable         :: data (:,:,:)            !< Data to write
+      real(kind=4), pointer             :: data (:,:,:)            !< Data to write
       integer(kind=4), parameter        :: rank = ndims            !< Dataset rank = 3
       integer(HID_T)                    :: dset_id                 !< Dataset identifier
       integer(HID_T)                    :: filespace               !< Dataspace identifier in file
@@ -549,15 +549,8 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            if (.not.allocated(data)) allocate(data(cg%nxb, cg%nyb, cg%nzb))
-            ierrh = 0; ok_var = .false.
-            call datafields_hdf5(hdf_vars(i), data, ierrh, cg)
-            if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_vars(i), data, ierrh, cg)
-            if (ierrh>=0) ok_var = .true.
-            if (.not.ok_var) then
-               write(msg,'(3a)') "[data_hdf5:h5_write_to_single_file]: ", hdf_vars(i)," is not defined in datafields_hdf5, neither in user_vars_hdf5."
-               call die(msg)
-            endif
+            if (.not.associated(data)) allocate(data(cg%nxb, cg%nyb, cg%nzb))
+            call get_data_from_cg(hdf_vars(i), cg, data)
 
             chunk_dims = cg%n_b(:) ! Chunks dimensions
             call h5screate_simple_f(rank, chunk_dims, memspace, error)
@@ -577,7 +570,7 @@ contains
             ! Close dataspaces.
             call h5sclose_f(memspace, error)
 
-            if (allocated(data)) deallocate(data)
+            if (associated(data)) deallocate(data)
 
             cgl => cgl%nxt
          enddo
@@ -609,8 +602,7 @@ contains
 
       use constants,       only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
       use common_hdf5,     only: nhdf_vars, hdf_vars
-      use dataio_pub,      only: die, msg, printio, printinfo, tmr_hdf, thdf, last_hdf_time, piernik_hdf5_version
-      use dataio_user,     only: user_vars_hdf5
+      use dataio_pub,      only: msg, printio, printinfo, tmr_hdf, thdf, last_hdf_time, piernik_hdf5_version
       use gc_list,         only: cg_list_element
       use grid,            only: leaves
       use grid_cont,       only: grid_container
@@ -626,14 +618,12 @@ contains
       type(grid_container),  pointer    :: cg
       integer(kind=4), parameter        :: rank = 3
       integer(kind=4)                   :: error, i
-      integer                           :: error8
       integer(HID_T)                    :: file_id, grp_id
       integer(kind=8)                   :: ngc              !> current grid index
       integer(HSIZE_T), dimension(rank) :: dims
       character(len=dsetnamelen)        :: gname
       character(len=fnamelen)           :: fname
-      logical                           :: ok_var
-      real(kind=4), allocatable         :: data (:,:,:)     !> Data to write
+      real(kind=4), pointer             :: data (:,:,:)     !> Data to write
 
       thdf = set_timer(tmr_hdf,.true.)
       fname = h5_filename()
@@ -656,21 +646,13 @@ contains
          call h5ltmake_dataset_double_f(grp_id, "fbnd", int(2,kind=4), shape(cg%fbnd,kind=HSIZE_T), &
                                       & cg%fbnd, error)
 
-         if (.not.allocated(data)) allocate(data(cg%n_b(xdim),cg%n_b(ydim),cg%n_b(zdim)))
+         if (.not.associated(data)) allocate(data(cg%n_b(xdim),cg%n_b(ydim),cg%n_b(zdim)))
          dims = cg%n_b(:)
          do i = I_ONE, int(nhdf_vars, kind=4)
-            error = 0; ok_var = .false.
-            call datafields_hdf5(hdf_vars(i), data, error8, cg)
-            if (associated(user_vars_hdf5) .and. error8 /= 0) call user_vars_hdf5(hdf_vars(i), data, error8, cg)
-            if (error8>=0) ok_var = .true.
-            if (.not.ok_var) then
-               write(msg,'(3a)') "[data_hdf5:h5_write_to_multiple_files]: Neither datafields_hdf5", &
-                               & " nor user_vars_hdf5 defines ", hdf_vars(i)
-               call die(msg)
-            endif
+            call get_data_from_cg(hdf_vars(i), cg, data)
             call h5ltmake_dataset_float_f(grp_id, hdf_vars(i), rank, dims, data(:,:,:), error)
          enddo
-         if (allocated(data)) deallocate(data)
+         if (associated(data)) deallocate(data)
          call h5gclose_f(grp_id, error)
          ngc = ngc + 1
          cgl => cgl%nxt
