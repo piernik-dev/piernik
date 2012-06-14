@@ -79,11 +79,11 @@ module units
    character(len=cbuff_len) :: s_time_u                  !< name of time unit
    character(len=cbuff_len) :: s_mass_u                  !< name of mass unit
 
-   real(kind=8), parameter :: au_cm       =  1.49597870691d13   ! Astonomical unit [cm]
+   real(kind=8), parameter :: au_cm       =  1.49597870700d13   ! Astonomical unit [cm] (IAU 2009)
    real(kind=8), parameter :: pc_au       =  206264.806248712   ! Parsec [AU] 1 pc/1 AU = 1./atan(pi/180. * 1./3600.)
    real(kind=8), parameter :: pc_cm       =  pc_au*au_cm        ! Parsec [cm]
-   real(kind=8), parameter :: Msun_g      =  1.98892e33         ! Solar mass [g]
-   real(kind=8), parameter :: Mjup_g      =  1.8986e30          ! Jovian mass [g]
+   real(kind=8), parameter :: Msun_g      =  1.9884e33          ! Solar mass [g]  Astronomical Alamach 2013
+   real(kind=8), parameter :: Mjup_g      =  Msun_g/1.047348644e3 ! Jovian mass [g]  (IAU 2009)
    real(kind=8), parameter :: day_s       =  24.0*3600.0        ! Earth's day [s]
    real(kind=8), parameter :: yr_day      =  365.2563630510     ! sideral year [days]
    real(kind=8), parameter :: yr_s        =  yr_day*day_s       ! Year [s]
@@ -381,7 +381,7 @@ contains
       kboltz     = kB_cgs*erg/kelvin        !< boltzmann constant
       gasRconst  = 8.314472e7*erg/kelvin    !< gas constant R =  8.314472e7*erg/kelvin/mol = k_B * N_A
       N_A        = gasRconst / kboltz       !< Avogadro constant
-      clight     = 2.997924562e10*cm/sek    !< speed of light in vacuum
+      clight     = 2.99792458e10*cm/sek     !< speed of light in vacuum (IAU 2009)
       Gs         = sqrt(miu0*gram/cm)/sek   !< 1 Gs (cgs magnetic induction unit)
       mGs        = Gs*1.e-6                 !< 1 microgauss
       Tesla      = 1.e4*Gs                  !< 1 T (SI magnetic induction unit)
