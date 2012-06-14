@@ -311,8 +311,7 @@ contains
       type(cg_list_element), pointer              :: cgl
       integer, allocatable, dimension(:)          :: cg_src_p, cg_src_n
       real(kind=4), dimension(:,:,:), pointer     :: data
-      integer(kind=8)                             :: tot_cg_n
-      logical                                     :: ok_var
+      integer                                     :: tot_cg_n
 
       ! construct source addresses of the cg to be written
       tot_cg_n = sum(cg_n(:))
