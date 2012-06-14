@@ -584,8 +584,8 @@ contains
       use gc_list,      only: cg_list_element, all_cg
       use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
            &                  h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
-           &                  h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f, h5zfilter_avail_f
-      use mpi,          only: MPI_INFO_NULL, MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
+           &                  h5pclose_f, h5zfilter_avail_f
+      use mpi,          only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
       use mpisetup,     only: comm, FIRST, LAST, master, mpi_err
       use helpers_hdf5, only: create_attribute
       use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets
@@ -787,15 +787,9 @@ contains
       ! Reopen the HDF5 file for parallel write
       call h5open_f(error)
       if (can_i_write) then
-         if (nproc_io > 1) then
-            call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
-            ! when nproc_io < nproc we'll probably need another communicator for subset of processes that have can_i_write flag set
-            call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
-            call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
-            call h5pclose_f(plist_id, error)
-         else
-            call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error)
-         endif
+         plist_id = set_h5_properties(H5P_FILE_ACCESS_F, nproc_io)
+         call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
+         call h5pclose_f(plist_id, error)
          call h5gopen_f(file_id, data_gname, cgl_g_id, error)
       endif
 
@@ -811,6 +805,25 @@ contains
       deallocate(cg_n, cg_all_n_b)
 
    end subroutine write_to_hdf5_v2
+
+   function set_h5_properties(h5p, nproc_io) result (plist_id)
+      use hdf5,         only: HID_T, H5FD_MPIO_COLLECTIVE_F, h5pcreate_f, h5pset_fapl_mpio_f, h5pset_dxpl_mpio_f
+      use mpi,          only: MPI_INFO_NULL
+      use mpisetup,     only: comm
+
+      implicit none
+      integer(kind=4), intent(in) :: h5p
+      integer, intent(in) :: nproc_io
+      integer(HID_T) :: plist_id
+      integer(kind=4) :: error
+
+      call h5pcreate_f(h5p, plist_id, error)
+      if (nproc_io > 1) then
+         ! when nproc_io < nproc we'll probably need another communicator for subset of processes that have can_i_write flag set
+         call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
+         call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+      endif
+   end function set_h5_properties
 
    function output_fname(wr_rd, ext, no, bcast, prefix) result(filename)
 
