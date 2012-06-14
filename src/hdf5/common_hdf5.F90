@@ -809,7 +809,8 @@ contains
    end subroutine write_to_hdf5_v2
 
    function set_h5_properties(h5p, nproc_io) result (plist_id)
-      use hdf5,         only: HID_T, H5FD_MPIO_COLLECTIVE_F, h5pcreate_f, h5pset_fapl_mpio_f, h5pset_dxpl_mpio_f
+      use hdf5,         only: HID_T, H5FD_MPIO_COLLECTIVE_F, h5pcreate_f, h5pset_fapl_mpio_f, h5pset_dxpl_mpio_f, &
+                        &  H5P_FILE_ACCESS_F
       use mpi,          only: MPI_INFO_NULL
       use mpisetup,     only: comm
 
@@ -822,8 +823,11 @@ contains
       call h5pcreate_f(h5p, plist_id, error)
       if (nproc_io > 1) then
          ! when nproc_io < nproc we'll probably need another communicator for subset of processes that have can_i_write flag set
-         call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
-         call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+         if (h5p == H5P_FILE_ACCESS_F) then
+            call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
+!        else
+!           call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+         endif
       endif
    end function set_h5_properties
 
