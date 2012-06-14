@@ -582,7 +582,7 @@ contains
       use dataio_pub,   only: die, nproc_io, can_i_write
       use domain,       only: dom
       use gc_list,      only: cg_list_element, all_cg
-      use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
+      use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
            &                  h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
            &                  h5pclose_f, h5zfilter_avail_f
       use mpi,          only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
@@ -790,7 +790,9 @@ contains
          plist_id = set_h5_properties(H5P_FILE_ACCESS_F, nproc_io)
          call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
          call h5pclose_f(plist_id, error)
+         plist_id = set_h5_properties(H5P_GROUP_ACCESS_F, nproc_io)
          call h5gopen_f(file_id, data_gname, cgl_g_id, error)
+         call h5pclose_f(plist_id, error)
       endif
 
       call write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b) !!!!!
