@@ -911,16 +911,15 @@ contains
 
    subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b)
 
-      use constants,   only: xdim, ydim, zdim, ndims
-      use common_hdf5, only: n_cg_name, get_nth_cg
+      use constants,   only: xdim, ydim, zdim, ndims, dsetnamelen
+      use common_hdf5, only: get_nth_cg, cg_output
       use dataio_pub,  only: die, nproc_io, can_i_write
       use gc_list,     only: all_cg
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
-           &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
-           &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
+           &                h5dwrite_f, h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,    only: master, FIRST, LAST, proc, comm, mpi_err
+      use mpisetup,    only: master, FIRST, proc, comm, mpi_err
 
       implicit none
 
@@ -928,42 +927,42 @@ contains
       integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !> offset for cg group numbering
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !> all cg sizes
 
-      integer(HID_T)                              :: cg_g_id            !> cg group identifier
-      integer(HID_T)                              :: dset_id, plist_id
+      integer(HID_T)                              :: plist_id
       integer(kind=4)                             :: error
       integer(HSIZE_T), dimension(:), allocatable :: dims
       real, pointer,    dimension(:,:,:)          :: pa3d
       real, pointer,    dimension(:,:,:,:)        :: pa4d
-      integer                                     :: i, ncg, tot_cg_n, tot_lst_n
+      integer                                     :: i, ncg, tot_lst_n, ic
       type(grid_container), pointer               :: cg
-      integer, allocatable, dimension(:)          :: cg_src_p, cg_src_n
       integer, allocatable, dimension(:)          :: q_lst, w_lst
-
-      ! construct source addresses of the cg to be written
-      tot_cg_n = sum(cg_n(:))
-      allocate(cg_src_p(1:tot_cg_n), cg_src_n(1:tot_cg_n))
-      do i = FIRST, LAST
-         cg_src_p(sum(cg_n(:i))-cg_n(i)+1:sum(cg_n(:i))) = i
-         do ncg = 1, cg_n(i)
-            cg_src_n(sum(cg_n(:i))-cg_n(i)+ncg) = ncg
-         enddo
-      enddo
-
-      !> \todo Do a consistency check
+      type(cg_output) :: cg_desc
+      character(len=dsetnamelen), dimension(:), allocatable :: dsets
 
       call qw_lst(q_lst, w_lst)
       tot_lst_n = size(q_lst) + size(w_lst)
+      allocate(dsets(tot_lst_n))
+      ic = 1
+      if (size(q_lst) > 0) then
+         do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+            dsets(ic) = trim(all_cg%q_lst(q_lst(i))%name)
+            ic = ic + 1
+         enddo
+      endif
+      if (size(w_lst) > 0) then
+         do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+            dsets(ic) = trim(all_cg%w_lst(w_lst(i))%name)
+            ic = ic + 1
+         enddo
+      endif
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets)
+
+      if (can_i_write) then
+         call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
+         if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      endif
 
       ! write all cg, one by one
-      do ncg = 1, tot_cg_n
-
-         if (can_i_write) then
-            call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error)
-            call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-         endif
-
-         if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)    ! \todo move property to problem.par
-
+      do ncg = 1, cg_desc%tot_cg_n
          if (nproc_io == 1) then ! perform serial write
             if (master) then
                if (.not. can_i_write) call die("[restart_hdf5:write_cg_to_restart] Master can't write")
@@ -971,19 +970,17 @@ contains
                if (size(q_lst) > 0) then
                   allocate(dims(ndims))
                   do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
-                     call h5dopen_f(cg_g_id, all_cg%q_lst(q_lst(i))%name, dset_id, error)
-                     if (cg_src_p(ncg) == proc) then
-                        cg => get_nth_cg(cg_src_n(ncg))
+                     if (cg_desc%cg_src_p(ncg) == proc) then
+                        cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                         pa3d => cg%q(q_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
                         dims(:) = cg%n_b
                      else
                         allocate(pa3d(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
-                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
+                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa3d)
                      endif
-                     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
-                     call h5dclose_f(dset_id, error)
-                     if (cg_src_p(ncg) /= proc) deallocate(pa3d)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
+                     if (cg_desc%cg_src_p(ncg) /= proc) deallocate(pa3d)
                   enddo
                   deallocate(dims)
                endif
@@ -991,36 +988,35 @@ contains
                if (size(w_lst) > 0) then
                   allocate(dims(ndims+1))
                   do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
-                     call h5dopen_f(cg_g_id, all_cg%w_lst(w_lst(i))%name, dset_id, error)
-                     if (cg_src_p(ncg) == proc) then
-                        cg => get_nth_cg(cg_src_n(ncg))
+                     if (cg_desc%cg_src_p(ncg) == proc) then
+                        cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                         pa4d => cg%w(w_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
                         dims(:) = [ all_cg%w_lst(w_lst(i))%dim4, cg%n_b ]
                      else
                         allocate(pa4d(all_cg%w_lst(w_lst(i))%dim4, cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
-                        call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + tot_cg_n*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
+                        call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), &
+                           ncg + cg_desc%tot_cg_n*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa4d)
                      endif
-                     call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
-                     call h5dclose_f(dset_id, error)
-                     if (cg_src_p(ncg) /= proc) deallocate(pa4d)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
+                     if (cg_desc%cg_src_p(ncg) /= proc) deallocate(pa4d)
                   enddo
                   deallocate(dims)
                endif
             else
                if (can_i_write) call die("[restart_hdf5:write_cg_to_restart] Slave can write")
-               if (cg_src_p(ncg) == proc) then
-                  cg => get_nth_cg(cg_src_n(ncg))
+               if (cg_desc%cg_src_p(ncg) == proc) then
+                  cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                   if (size(q_lst) > 0) then
                      do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
                         pa3d => cg%q(q_lst(i))%span(cg%ijkse)
-                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + tot_cg_n*i, comm, mpi_err)
+                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
                      enddo
                   endif
                   if (size(w_lst) > 0) then
                      do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
                         pa4d => cg%w(w_lst(i))%span(cg%ijkse)
-                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + tot_cg_n*(size(q_lst)+i), comm, mpi_err)
+                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*(size(q_lst)+i), comm, mpi_err)
                      enddo
                   endif
                endif
@@ -1036,15 +1032,15 @@ contains
             call die("[restart_hdf5:write_cg_to_restart] Parallel v2 I/O not implemented yet")
          endif
 
-         if (can_i_write) then
-            call h5pclose_f(plist_id, error)
-            call h5gclose_f(cg_g_id, error)
-         endif
 
       enddo
 
       ! clean up
-      deallocate(cg_src_p, cg_src_n, q_lst, w_lst)
+      if (can_i_write) then
+         call h5pclose_f(plist_id, error)
+      endif
+      call cg_desc%clean()
+      deallocate(q_lst, w_lst, dsets)
 
    end subroutine write_cg_to_restart
 

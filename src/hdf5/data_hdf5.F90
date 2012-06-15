@@ -282,7 +282,7 @@ contains
    subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b)
 
       use constants,   only: xdim, ydim, zdim, ndims
-      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output
+      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars
       use dataio_pub,  only: die, nproc_io, can_i_write
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
@@ -307,7 +307,7 @@ contains
       real(kind=4), dimension(:,:,:), pointer     :: data
       type(cg_output) :: cg_desc
 
-      call cg_desc%init(cgl_g_id, cg_n, nproc_io)
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io, hdf_vars)
 
       if (can_i_write) then
          call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)

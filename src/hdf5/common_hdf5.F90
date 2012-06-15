@@ -35,7 +35,7 @@ module common_hdf5
 
 ! pulled by ANY
 
-   use constants, only: singlechar, ndims
+   use constants, only: singlechar, ndims, dsetnamelen
    use hdf5, only: HID_T
 
    implicit none
@@ -46,9 +46,7 @@ module common_hdf5
          & cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, &
          & cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output
 
-   integer, parameter :: S_LEN = 30
-
-   character(len=S_LEN), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
+   character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    integer, protected :: nhdf_vars !< number of quantities plotted to hdf files
    character(len=*), parameter :: d_gname = "domains", base_d_gname = "base", d_fc_aname = "fine_count", &
         &                         d_size_aname = "n_d", d_edge_apname = "-edge_position", d_bnd_apname = "-boundary_type", &
@@ -893,8 +891,9 @@ contains
 
    end function output_fname
 
-   subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io)
+   subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets)
 
+      use constants,    only: dsetnamelen
       use hdf5,         only: HID_T, H5P_GROUP_ACCESS_F, H5P_DATASET_ACCESS_F, h5gopen_f, h5pclose_f, h5dopen_f
       use dataio_pub,   only: can_i_write
       use mpisetup,     only: FIRST, LAST
@@ -905,6 +904,7 @@ contains
       integer(HID_T), intent(in) :: cgl_g_id
       integer(kind=4), dimension(:), pointer, intent(in) :: cg_n
       integer(kind=4), intent(in) :: nproc_io
+      character(len=dsetnamelen), dimension(:), intent(in) :: dsets
 
       integer :: i, ncg
       integer(HID_T) :: plist_id
@@ -942,10 +942,10 @@ contains
          call h5pclose_f(plist_id, error)
 
          plist_id = set_h5_properties(H5P_DATASET_ACCESS_F, nproc_io)
-         allocate(this%dset_id(1:this%tot_cg_n, lbound(hdf_vars,1):ubound(hdf_vars,1)))
+         allocate(this%dset_id(1:this%tot_cg_n, lbound(dsets, dim=1):ubound(dsets, dim=1)))
          do ncg = 1, this%tot_cg_n
-            do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-               call h5dopen_f(this%cg_g_id(ncg), hdf_vars(i), this%dset_id(ncg,i), error, dapl_id = plist_id)
+            do i = lbound(dsets, dim=1), ubound(dsets, dim=1)
+               call h5dopen_f(this%cg_g_id(ncg), dsets(i), this%dset_id(ncg,i), error, dapl_id = plist_id)
             enddo
          enddo
          call h5pclose_f(plist_id, error)
