@@ -934,13 +934,14 @@ contains
       integer(HSIZE_T), dimension(:), allocatable :: dims
       real, pointer,    dimension(:,:,:)          :: pa3d
       real, pointer,    dimension(:,:,:,:)        :: pa4d
-      integer                                     :: i, ncg
+      integer                                     :: i, ncg, tot_cg_n, tot_lst_n
       type(grid_container), pointer               :: cg
       integer, allocatable, dimension(:)          :: cg_src_p, cg_src_n
       integer, allocatable, dimension(:)          :: q_lst, w_lst
 
       ! construct source addresses of the cg to be written
-      allocate(cg_src_p(1:sum(cg_n(:))), cg_src_n(1:sum(cg_n(:))))
+      tot_cg_n = sum(cg_n(:))
+      allocate(cg_src_p(1:tot_cg_n), cg_src_n(1:tot_cg_n))
       do i = FIRST, LAST
          cg_src_p(sum(cg_n(:i))-cg_n(i)+1:sum(cg_n(:i))) = i
          do ncg = 1, cg_n(i)
@@ -951,9 +952,10 @@ contains
       !> \todo Do a consistency check
 
       call qw_lst(q_lst, w_lst)
+      tot_lst_n = size(q_lst) + size(w_lst)
 
       ! write all cg, one by one
-      do ncg = 1, sum(cg_n(:))
+      do ncg = 1, tot_cg_n
 
          if (can_i_write) then
             call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error)
@@ -976,7 +978,7 @@ contains
                         dims(:) = cg%n_b
                      else
                         allocate(pa3d(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
-                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*i, comm, MPI_STATUS_IGNORE, mpi_err)
+                        call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa3d)
                      endif
                      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
@@ -996,7 +998,7 @@ contains
                         dims(:) = [ all_cg%w_lst(w_lst(i))%dim4, cg%n_b ]
                      else
                         allocate(pa4d(all_cg%w_lst(w_lst(i))%dim4, cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
-                        call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + sum(cg_n(:))*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
+                        call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_src_p(ncg), ncg + tot_cg_n*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa4d)
                      endif
                      call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
@@ -1012,13 +1014,13 @@ contains
                   if (size(q_lst) > 0) then
                      do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
                         pa3d => cg%q(q_lst(i))%span(cg%ijkse)
-                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*i, comm, mpi_err)
+                        call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + tot_cg_n*i, comm, mpi_err)
                      enddo
                   endif
                   if (size(w_lst) > 0) then
                      do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
                         pa4d => cg%w(w_lst(i))%span(cg%ijkse)
-                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + sum(cg_n(:))*(size(q_lst)+i), comm, mpi_err)
+                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + tot_cg_n*(size(q_lst)+i), comm, mpi_err)
                      enddo
                   endif
                endif
