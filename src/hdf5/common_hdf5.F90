@@ -36,14 +36,15 @@ module common_hdf5
 ! pulled by ANY
 
    use constants, only: singlechar, ndims
+   use hdf5, only: HID_T
 
    implicit none
 
    private
-   public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2, set_h5_properties
+   public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2
    public :: nhdf_vars, hdf_vars, d_gname, base_d_gname, d_fc_aname, d_size_aname, d_edge_apname, d_bnd_apname, cg_gname, &
          & cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, &
-         & cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg, data_gname, output_fname
+         & cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output
 
    integer, parameter :: S_LEN = 30
 
@@ -63,6 +64,17 @@ module common_hdf5
       enumerator :: O_OUT
    end enum
 
+   type :: cg_output
+      integer(HID_T), dimension(:), allocatable   :: cg_g_id
+      integer(HID_T), dimension(:,:), allocatable :: dset_id
+      integer, allocatable, dimension(:)          :: offsets
+      integer, allocatable, dimension(:)          :: cg_src_p
+      integer, allocatable, dimension(:)          :: cg_src_n
+      integer                                     :: tot_cg_n
+   contains
+      procedure :: init => initialize_write_cg
+      procedure :: clean => finalize_write_cg
+   end type cg_output
 
 contains
 
@@ -880,6 +892,93 @@ contains
       endif
 
    end function output_fname
+
+   subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io)
+
+      use hdf5,         only: HID_T, H5P_GROUP_ACCESS_F, H5P_DATASET_ACCESS_F, h5gopen_f, h5pclose_f, h5dopen_f
+      use dataio_pub,   only: can_i_write
+      use mpisetup,     only: FIRST, LAST
+
+      implicit none
+
+      class(cg_output), intent(inout) :: this
+      integer(HID_T), intent(in) :: cgl_g_id
+      integer(kind=4), dimension(:), pointer, intent(in) :: cg_n
+      integer(kind=4), intent(in) :: nproc_io
+
+      integer :: i, ncg
+      integer(HID_T) :: plist_id
+      integer(kind=4) :: error
+
+      this%tot_cg_n = sum(cg_n)
+      allocate(this%cg_src_p(1:this%tot_cg_n))
+      allocate(this%cg_src_n(1:this%tot_cg_n))
+      allocate(this%cg_g_id(1:this%tot_cg_n))
+      allocate(this%offsets(0:nproc_io-1))
+
+      ! construct source addresses of the cg to be written
+      do i = FIRST, LAST
+         this%cg_src_p(sum(cg_n(:i))-cg_n(i)+1:sum(cg_n(:i))) = i
+         do ncg = 1, cg_n(i)
+            this%cg_src_n(sum(cg_n(:i))-cg_n(i)+ncg) = ncg
+         enddo
+      enddo
+
+      !> \todo silent assumption that nproc_io == nproc FIXME
+      this%offsets(:) = 0
+      if (nproc_io > 0) then
+         do i = 1, nproc_io-1
+            this%offsets(i) = sum(cg_n(:i-1))
+         enddo
+      endif
+
+      !> \todo Do a consistency check
+      if (can_i_write) then
+
+         plist_id = set_h5_properties(H5P_GROUP_ACCESS_F, nproc_io)
+         do ncg = 1, this%tot_cg_n
+            call h5gopen_f(cgl_g_id, n_cg_name(ncg), this%cg_g_id(ncg), error, gapl_id = plist_id)
+         enddo
+         call h5pclose_f(plist_id, error)
+
+         plist_id = set_h5_properties(H5P_DATASET_ACCESS_F, nproc_io)
+         allocate(this%dset_id(1:this%tot_cg_n, lbound(hdf_vars,1):ubound(hdf_vars,1)))
+         do ncg = 1, this%tot_cg_n
+            do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
+               call h5dopen_f(this%cg_g_id(ncg), hdf_vars(i), this%dset_id(ncg,i), error, dapl_id = plist_id)
+            enddo
+         enddo
+         call h5pclose_f(plist_id, error)
+      endif
+
+   end subroutine initialize_write_cg
+
+   subroutine finalize_write_cg(this)
+
+      use hdf5,         only: h5dclose_f, h5gclose_f
+      use dataio_pub,   only: can_i_write
+
+      implicit none
+
+      class(cg_output), intent(inout) :: this
+
+      integer :: ncg, i
+      integer(kind=4) :: error
+
+      if (can_i_write) then
+         do ncg = lbound(this%cg_g_id, 1), ubound(this%cg_g_id, 1)
+            do i = lbound(this%dset_id, 2), ubound(this%dset_id, 2)
+               call h5dclose_f(this%dset_id(ncg, i), error)
+            enddo
+            call h5gclose_f(this%cg_g_id(ncg), error)
+         enddo
+      endif
+      if (allocated(this%dset_id)) deallocate(this%dset_id)
+      if (allocated(this%cg_g_id)) deallocate(this%cg_g_id)
+      if (allocated(this%cg_src_p)) deallocate(this%cg_src_p)
+      if (allocated(this%cg_src_n)) deallocate(this%cg_src_n)
+
+   end subroutine finalize_write_cg
 
 ! This routine will become useful when we begin to use multiple domain containers (AMR or non-rectangular compound domains)
 ! This routine will become obsolete or will need serious rework with HDF5-1.8.8 ~xarth

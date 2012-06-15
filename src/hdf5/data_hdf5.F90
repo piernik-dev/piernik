@@ -282,7 +282,7 @@ contains
    subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b)
 
       use constants,   only: xdim, ydim, zdim, ndims
-      use common_hdf5, only: n_cg_name, get_nth_cg, hdf_vars, set_h5_properties
+      use common_hdf5, only: n_cg_name, get_nth_cg, hdf_vars, cg_output
       use dataio_pub,  only: die, nproc_io, can_i_write
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
@@ -300,55 +300,18 @@ contains
       integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !> offset for cg group numbering
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !> all cg sizes
 
-      integer(HID_T), dimension(:), allocatable   :: cg_g_id            !> cg group identifier
-      integer(HID_T), dimension(:,:), allocatable :: dset_id
       integer(HID_T)                              :: plist_id
       integer(kind=4)                             :: error
-      integer, dimension(:), allocatable          :: offsets
       integer(HSIZE_T), dimension(:), allocatable :: dims
       integer                                     :: i, ncg, n
       type(grid_container), pointer               :: cg
       type(cg_list_element), pointer              :: cgl
-      integer, allocatable, dimension(:)          :: cg_src_p, cg_src_n
       real(kind=4), dimension(:,:,:), pointer     :: data
-      integer                                     :: tot_cg_n
+      type(cg_output) :: cg_desc
 
-      ! construct source addresses of the cg to be written
-      tot_cg_n = sum(cg_n(:))
-      allocate(cg_src_p(1:tot_cg_n), cg_src_n(1:tot_cg_n), cg_g_id(1:tot_cg_n), offsets(0:nproc_io-1))
-      do i = FIRST, LAST
-         cg_src_p(sum(cg_n(:i))-cg_n(i)+1:sum(cg_n(:i))) = i
-         do ncg = 1, cg_n(i)
-            cg_src_n(sum(cg_n(:i))-cg_n(i)+ncg) = ncg
-         enddo
-      enddo
+      call cg_desc%init(cgl_g_id, cg_n, nproc_io)
 
-      !> \todo silent assumption that nproc_io == nproc FIXME
-      offsets(:) = 0
-      if (nproc_io > 0) then
-         do i = 1, nproc_io-1
-            offsets(i) = sum(cg_n(:i-1))
-         enddo
-      endif
-
-      !> \todo Do a consistency check
       if (can_i_write) then
-
-         plist_id = set_h5_properties(H5P_GROUP_ACCESS_F, nproc_io)
-         do ncg = 1, tot_cg_n
-            call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id(ncg), error, gapl_id = plist_id)
-         enddo
-         call h5pclose_f(plist_id, error)
-
-         plist_id = set_h5_properties(H5P_DATASET_ACCESS_F, nproc_io)
-         allocate(dset_id(1:tot_cg_n, lbound(hdf_vars,1):ubound(hdf_vars,1)))
-         do ncg = 1, tot_cg_n
-            do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-               call h5dopen_f(cg_g_id(ncg), hdf_vars(i), dset_id(ncg,i), error, dapl_id = plist_id)
-            enddo
-         enddo
-         call h5pclose_f(plist_id, error)
-
          call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
          if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
       else
@@ -357,7 +320,7 @@ contains
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
-         do ncg = 1, tot_cg_n
+         do ncg = 1, cg_desc%tot_cg_n
 
             allocate(data(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
             if (master) then
@@ -366,22 +329,22 @@ contains
                allocate(dims(ndims))
                dims(:) = shape(data)
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-                  if (cg_src_p(ncg) == proc) then
-                     cg => get_nth_cg(cg_src_n(ncg))
+                  if (cg_desc%cg_src_p(ncg) == proc) then
+                     cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                      call get_data_from_cg(hdf_vars(i), cg, data)
                   else
-                     call MPI_Recv(data(1,1,1), size(data), MPI_REAL, cg_src_p(ncg), ncg + tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
+                     call MPI_Recv(data(1,1,1), size(data), MPI_REAL, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                   endif
-                  call h5dwrite_f(dset_id(ncg, i), H5T_NATIVE_REAL, data, dims, error, xfer_prp = plist_id)
+                  call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, data, dims, error, xfer_prp = plist_id)
                enddo
                deallocate(dims)
             else
                if (can_i_write) call die("[data_hdf5:write_cg_to_output] Slave can write")
-               if (cg_src_p(ncg) == proc) then
-                  cg => get_nth_cg(cg_src_n(ncg))
+               if (cg_desc%cg_src_p(ncg) == proc) then
+                  cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                   do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
                      call get_data_from_cg(hdf_vars(i), cg, data)
-                     call MPI_Send(data(1,1,1), size(data), MPI_REAL, FIRST, ncg + tot_cg_n*i, comm, mpi_err)
+                     call MPI_Send(data(1,1,1), size(data), MPI_REAL, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
                   enddo
                endif
             endif
@@ -394,7 +357,7 @@ contains
             n = 1
             cgl => leaves%first
             do while (associated(cgl))
-               ncg = offsets(proc) + n
+               ncg = cg_desc%offsets(proc) + n
                allocate(data(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
                allocate(dims(ndims))
                dims(:) = shape(data)
@@ -402,7 +365,7 @@ contains
 
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
                   call get_data_from_cg(hdf_vars(i), cg, data)
-                  call h5dwrite_f(dset_id(ncg, i), H5T_NATIVE_REAL, data, dims, error, xfer_prp = plist_id)
+                  call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, data, dims, error, xfer_prp = plist_id)
                enddo
 
                cgl => cgl%nxt
@@ -417,20 +380,11 @@ contains
          !call die("[data_hdf5:write_cg_to_output] Parallel v2 I/O not implemented yet")
       endif
 
-
+      ! clean up
       if (can_i_write) then
          call h5pclose_f(plist_id, error)
-
-         do ncg = 1, tot_cg_n
-            do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
-               call h5dclose_f(dset_id(ncg,i), error)
-            enddo
-            call h5gclose_f(cg_g_id(ncg), error)
-         enddo
       endif
-
-      ! clean up
-      deallocate(dset_id, cg_g_id, cg_src_p, cg_src_n, offsets)
+      call cg_desc%clean()
 
    end subroutine write_cg_to_output
 
