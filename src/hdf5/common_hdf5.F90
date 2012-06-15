@@ -816,9 +816,9 @@ contains
 
       implicit none
       integer(kind=4), intent(in) :: h5p
-      integer, intent(in) :: nproc_io
-      integer(HID_T) :: plist_id
-      integer(kind=4) :: error
+      integer(kind=4), intent(in) :: nproc_io
+      integer(HID_T)              :: plist_id
+      integer(kind=4)             :: error
 
       call h5pcreate_f(h5p, plist_id, error)
       if (nproc_io > 1) then
@@ -840,11 +840,11 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)   :: wr_rd, no
-      character(len=I_FOUR), intent(in)  :: ext
-      logical, intent(in), optional :: bcast
-      character(len=*), intent(in), optional :: prefix
-      character(len=cwdlen) :: filename, temp  ! File name
+      integer(kind=4),       intent(in)           :: wr_rd, no
+      character(len=I_FOUR), intent(in)           :: ext
+      logical,               intent(in), optional :: bcast
+      character(len=*),      intent(in), optional :: prefix
+      character(len=cwdlen)                       :: filename, temp  ! File name
 
 
       ! Sanity checks go here
