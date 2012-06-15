@@ -351,6 +351,8 @@ contains
 
          call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
          if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+      else
+         allocate(dset_id(0,0)) ! suppress compiler warnings on possibly uninitialized array
       endif
 
       if (nproc_io == 1) then ! perform serial write
@@ -425,11 +427,10 @@ contains
             enddo
             call h5gclose_f(cg_g_id(ncg), error)
          enddo
-         deallocate(dset_id, cg_g_id)
       endif
 
       ! clean up
-      deallocate(cg_src_p, cg_src_n)
+      deallocate(dset_id, cg_g_id, cg_src_p, cg_src_n, offsets)
 
    end subroutine write_cg_to_output
 
