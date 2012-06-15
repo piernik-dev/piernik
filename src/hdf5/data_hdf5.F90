@@ -282,17 +282,15 @@ contains
    subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b)
 
       use constants,   only: xdim, ydim, zdim, ndims
-      use common_hdf5, only: n_cg_name, get_nth_cg, hdf_vars, cg_output
+      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output
       use dataio_pub,  only: die, nproc_io, can_i_write
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use grid,        only: leaves
       use hdf5,        only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_REAL, &
-           &                H5P_DATASET_ACCESS_F, H5P_GROUP_ACCESS_F, &
-           &                h5dopen_f, h5dclose_f, h5dwrite_f, h5gopen_f, h5gclose_f, &
-           &                h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
+           &                h5dwrite_f, h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
       use mpi,         only: MPI_REAL, MPI_STATUS_IGNORE
-      use mpisetup,    only: master, FIRST, LAST, proc, comm, mpi_err
+      use mpisetup,    only: master, FIRST, proc, comm, mpi_err
 
       implicit none
 
@@ -314,8 +312,6 @@ contains
       if (can_i_write) then
          call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
          if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      else
-         allocate(dset_id(0,0)) ! suppress compiler warnings on possibly uninitialized array
       endif
 
       if (nproc_io == 1) then ! perform serial write
