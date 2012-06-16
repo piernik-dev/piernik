@@ -916,8 +916,7 @@ contains
       use dataio_pub,  only: die, nproc_io, can_i_write
       use gc_list,     only: all_cg
       use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_DOUBLE, &
-           &                h5dwrite_f, h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
+      use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
 
@@ -927,7 +926,6 @@ contains
       integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !> offset for cg group numbering
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !> all cg sizes
 
-      integer(HID_T)                              :: plist_id
       integer(kind=4)                             :: error
       integer(HSIZE_T), dimension(:), allocatable :: dims
       real, pointer,    dimension(:,:,:)          :: pa3d
@@ -956,11 +954,6 @@ contains
       endif
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets)
 
-      if (can_i_write) then
-         call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-         if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
-      endif
-
       ! write all cg, one by one
       do ncg = 1, cg_desc%tot_cg_n
          if (nproc_io == 1) then ! perform serial write
@@ -979,7 +972,7 @@ contains
                         call MPI_Recv(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa3d)
                      endif
-                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = plist_id)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = cg_desc%xfer_prp)
                      if (cg_desc%cg_src_p(ncg) /= proc) deallocate(pa3d)
                   enddo
                   deallocate(dims)
@@ -998,7 +991,7 @@ contains
                            ncg + cg_desc%tot_cg_n*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa4d)
                      endif
-                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = plist_id)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
                      if (cg_desc%cg_src_p(ncg) /= proc) deallocate(pa4d)
                   enddo
                   deallocate(dims)
@@ -1036,9 +1029,6 @@ contains
       enddo
 
       ! clean up
-      if (can_i_write) then
-         call h5pclose_f(plist_id, error)
-      endif
       call cg_desc%clean()
       deallocate(q_lst, w_lst, dsets)
 

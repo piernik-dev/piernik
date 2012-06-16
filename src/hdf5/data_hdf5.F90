@@ -282,13 +282,12 @@ contains
    subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b)
 
       use constants,   only: xdim, ydim, zdim, ndims
-      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars, set_h5_properties
+      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars
       use dataio_pub,  only: die, nproc_io, can_i_write
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use grid,        only: leaves
-      use hdf5,        only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5T_NATIVE_REAL, h5sclose_f, &
-           &                h5dwrite_f, h5pclose_f, h5sselect_none_f, h5screate_simple_f
+      use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use mpi,         only: MPI_REAL, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
 
@@ -298,7 +297,7 @@ contains
       integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !> offset for cg group numbering
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !> all cg sizes
 
-      integer(HID_T)                              :: plist_id, filespace_id, memspace_id
+      integer(HID_T)                              :: filespace_id, memspace_id
       integer(kind=4)                             :: error
       integer(kind=4), parameter        :: rank = 3
       integer(HSIZE_T), dimension(:), allocatable :: dims
@@ -309,10 +308,6 @@ contains
       type(cg_output) :: cg_desc
 
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, hdf_vars)
-
-      if (can_i_write) then
-         plist_id = set_h5_properties(H5P_DATASET_XFER_F, nproc_io)
-      endif
 
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
@@ -331,7 +326,7 @@ contains
                   else
                      call MPI_Recv(data(1,1,1), size(data), MPI_REAL, cg_desc%cg_src_p(ncg), ncg + cg_desc%tot_cg_n*i, comm, MPI_STATUS_IGNORE, mpi_err)
                   endif
-                  call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, data, dims, error, xfer_prp = plist_id)
+                  call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, data, dims, error, xfer_prp = cg_desc%xfer_prp)
                enddo
                deallocate(dims)
             else
@@ -362,7 +357,7 @@ contains
 
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
                   call get_data_from_cg(hdf_vars(i), cg, data)
-                  call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, data, dims, error, xfer_prp = plist_id)
+                  call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, data, dims, error, xfer_prp = cg_desc%xfer_prp)
                enddo
 
                cgl => cgl%nxt
@@ -389,7 +384,7 @@ contains
 
                do i = lbound(hdf_vars, 1), ubound(hdf_vars, 1)
                   call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_REAL, data, dims, error, &
-                     xfer_prp = plist_id, file_space_id = filespace_id, mem_space_id = memspace_id)
+                     xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                enddo
                call h5sclose_f(memspace_id, error)
                call h5sclose_f(filespace_id, error)
@@ -404,9 +399,6 @@ contains
       endif
 
       ! clean up
-      if (can_i_write) then
-         call h5pclose_f(plist_id, error)
-      endif
       call cg_desc%clean()
 
    end subroutine write_cg_to_output

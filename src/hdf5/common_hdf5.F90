@@ -65,6 +65,7 @@ module common_hdf5
    type :: cg_output
       integer(HID_T), dimension(:), allocatable   :: cg_g_id
       integer(HID_T), dimension(:,:), allocatable :: dset_id
+      integer(HID_T)                              :: xfer_prp
       integer, allocatable, dimension(:)          :: offsets
       integer, allocatable, dimension(:)          :: cg_src_p
       integer, allocatable, dimension(:)          :: cg_src_n
@@ -894,7 +895,8 @@ contains
    subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets)
 
       use constants,    only: dsetnamelen
-      use hdf5,         only: HID_T, H5P_GROUP_ACCESS_F, H5P_DATASET_ACCESS_F, h5gopen_f, h5pclose_f, h5dopen_f
+      use hdf5,         only: HID_T, H5P_GROUP_ACCESS_F, H5P_DATASET_ACCESS_F, H5P_DATASET_XFER_F, &
+          & h5gopen_f, h5pclose_f, h5dopen_f
       use dataio_pub,   only: can_i_write
       use mpisetup,     only: FIRST, LAST
 
@@ -951,11 +953,13 @@ contains
          call h5pclose_f(plist_id, error)
       endif
 
+      this%xfer_prp = set_h5_properties(H5P_DATASET_XFER_F, nproc_io)
+
    end subroutine initialize_write_cg
 
    subroutine finalize_write_cg(this)
 
-      use hdf5,         only: h5dclose_f, h5gclose_f
+      use hdf5,         only: h5dclose_f, h5gclose_f, h5pclose_f
       use dataio_pub,   only: can_i_write
 
       implicit none
@@ -973,6 +977,7 @@ contains
             call h5gclose_f(this%cg_g_id(ncg), error)
          enddo
       endif
+      call h5pclose_f(this%xfer_prp, error)
       if (allocated(this%dset_id)) deallocate(this%dset_id)
       if (allocated(this%cg_g_id)) deallocate(this%cg_g_id)
       if (allocated(this%cg_src_p)) deallocate(this%cg_src_p)
