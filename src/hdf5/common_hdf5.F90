@@ -41,7 +41,7 @@ module common_hdf5
    implicit none
 
    private
-   public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2
+   public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2, set_h5_properties
    public :: nhdf_vars, hdf_vars, d_gname, base_d_gname, d_fc_aname, d_size_aname, d_edge_apname, d_bnd_apname, cg_gname, &
          & cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, &
          & cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output
@@ -819,8 +819,8 @@ contains
    end subroutine write_to_hdf5_v2
 
    function set_h5_properties(h5p, nproc_io) result (plist_id)
-      use hdf5,         only: HID_T, H5P_FILE_ACCESS_F, h5pcreate_f, h5pset_fapl_mpio_f!, &
-!                        &  H5FD_MPIO_COLLECTIVE_F, h5pset_dxpl_mpio_f
+      use hdf5,         only: HID_T, H5P_FILE_ACCESS_F, h5pcreate_f, h5pset_fapl_mpio_f, &
+                        &  H5FD_MPIO_COLLECTIVE_F, h5pset_dxpl_mpio_f, H5P_DATASET_XFER_F
       use mpi,          only: MPI_INFO_NULL
       use mpisetup,     only: comm
 
@@ -835,8 +835,8 @@ contains
          ! when nproc_io < nproc we'll probably need another communicator for subset of processes that have can_i_write flag set
          if (h5p == H5P_FILE_ACCESS_F) then
             call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
-!        else
-!           call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
+         else if (h5p == H5P_DATASET_XFER_F) then
+            call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
          endif
       endif
    end function set_h5_properties

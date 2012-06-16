@@ -282,13 +282,13 @@ contains
    subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b)
 
       use constants,   only: xdim, ydim, zdim, ndims
-      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars
+      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars, set_h5_properties
       use dataio_pub,  only: die, nproc_io, can_i_write
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use grid,        only: leaves
-      use hdf5,        only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5FD_MPIO_INDEPENDENT_F, H5T_NATIVE_REAL, &
-           &                h5dwrite_f, h5pcreate_f, h5pclose_f, h5pset_dxpl_mpio_f
+      use hdf5,        only: HID_T, HSIZE_T, H5P_DATASET_XFER_F, H5T_NATIVE_REAL, h5sclose_f, &
+           &                h5dwrite_f, h5pclose_f, h5sselect_none_f, h5screate_simple_f
       use mpi,         only: MPI_REAL, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
 
@@ -298,8 +298,9 @@ contains
       integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !> offset for cg group numbering
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !> all cg sizes
 
-      integer(HID_T)                              :: plist_id
+      integer(HID_T)                              :: plist_id, filespace_id, memspace_id
       integer(kind=4)                             :: error
+      integer(kind=4), parameter        :: rank = 3
       integer(HSIZE_T), dimension(:), allocatable :: dims
       integer                                     :: i, ncg, n
       type(grid_container), pointer               :: cg
@@ -310,8 +311,7 @@ contains
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, hdf_vars)
 
       if (can_i_write) then
-         call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-         if (nproc_io > 1) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_INDEPENDENT_F, error)
+         plist_id = set_h5_properties(H5P_DATASET_XFER_F, nproc_io)
       endif
 
       if (nproc_io == 1) then ! perform serial write
@@ -350,9 +350,10 @@ contains
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
          if (can_i_write) then
             ! write own
-            n = 1
+            n = 0
             cgl => leaves%first
             do while (associated(cgl))
+               n = n + 1
                ncg = cg_desc%offsets(proc) + n
                allocate(data(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
                allocate(dims(ndims))
@@ -366,7 +367,33 @@ contains
 
                cgl => cgl%nxt
                deallocate(data, dims)
-               n = n + 1
+            enddo
+
+            ! behold the MAGIC in its purest form!
+            ! following block does exactly *nothing*, yet it's necessary for
+            ! collective calls of PHDF5
+            ! BEWARE, we assume that at least 1 cg exist on a given proc
+            do ncg = 1, maxval(cg_n)-n
+               allocate(data(cg_all_n_b(xdim, 1), cg_all_n_b(ydim, 1), cg_all_n_b(zdim, 1)))
+               allocate(dims(ndims))
+               dims(:) = shape(data)
+
+               ! \todo
+               ! there should be something like H5S_NONE as a contradiction to
+               ! H5S_ALL, yet I cannot find it...
+               call h5screate_simple_f(rank, dims, filespace_id, error)
+               call h5sselect_none_f(filespace_id, error)  ! empty filespace
+
+               call h5screate_simple_f(rank, dims, memspace_id, error)
+               call h5sselect_none_f(memspace_id, error)   ! empty memoryscape
+
+               do i = lbound(hdf_vars, 1), ubound(hdf_vars, 1)
+                  call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_REAL, data, dims, error, &
+                     xfer_prp = plist_id, file_space_id = filespace_id, mem_space_id = memspace_id)
+               enddo
+               call h5sclose_f(memspace_id, error)
+               call h5sclose_f(filespace_id, error)
+               deallocate(data, dims)
             enddo
             ! receive (from whom?)
          else
