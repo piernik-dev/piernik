@@ -911,12 +911,13 @@ contains
 
    subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b)
 
-      use constants,   only: xdim, ydim, zdim, ndims, dsetnamelen
+      use constants,   only: xdim, ydim, zdim, ndims, dsetnamelen, I_ONE
       use common_hdf5, only: get_nth_cg, cg_output
       use dataio_pub,  only: die, nproc_io, can_i_write
-      use gc_list,     only: all_cg
+      use gc_list,     only: all_cg, cg_list_element
       use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f
+      use grid,        only: leaves
+      use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
 
@@ -926,12 +927,16 @@ contains
       integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !> offset for cg group numbering
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !> all cg sizes
 
+      integer(HID_T)                              :: filespace_id, memspace_id
       integer(kind=4)                             :: error
+      integer(kind=4), parameter                  :: rank4 = I_ONE + ndims
+      integer(kind=4), parameter                  :: rank3 = ndims
       integer(HSIZE_T), dimension(:), allocatable :: dims
       real, pointer,    dimension(:,:,:)          :: pa3d
       real, pointer,    dimension(:,:,:,:)        :: pa4d
-      integer                                     :: i, ncg, tot_lst_n, ic
+      integer                                     :: i, ncg, tot_lst_n, ic, n
       type(grid_container), pointer               :: cg
+      type(cg_list_element), pointer              :: cgl
       integer, allocatable, dimension(:)          :: q_lst, w_lst
       type(cg_output) :: cg_desc
       character(len=dsetnamelen), dimension(:), allocatable :: dsets
@@ -954,14 +959,14 @@ contains
       endif
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, dsets)
 
-      ! write all cg, one by one
-      do ncg = 1, cg_desc%tot_cg_n
-         if (nproc_io == 1) then ! perform serial write
+      if (nproc_io == 1) then ! perform serial write
+         ! write all cg, one by one
+         do ncg = 1, cg_desc%tot_cg_n
             if (master) then
                if (.not. can_i_write) call die("[restart_hdf5:write_cg_to_restart] Master can't write")
 
                if (size(q_lst) > 0) then
-                  allocate(dims(ndims))
+                  allocate(dims(rank3))
                   do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
                      if (cg_desc%cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_desc%cg_src_n(ncg))
@@ -979,7 +984,7 @@ contains
                endif
 
                if (size(w_lst) > 0) then
-                  allocate(dims(ndims+1))
+                  allocate(dims(rank4))
                   do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
                      if (cg_desc%cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_desc%cg_src_n(ncg))
@@ -1014,19 +1019,94 @@ contains
                   endif
                endif
             endif
-         else ! perform parallell write
-            ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
-            if (can_i_write) then
-               ! write own
-               ! receive (from whom?)
-            else
-               ! send (where?)
-            endif
-            call die("[restart_hdf5:write_cg_to_restart] Parallel v2 I/O not implemented yet")
+         enddo
+      else ! perform parallell write
+         ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
+         if (can_i_write) then
+            ! write own
+            n = 0
+            cgl => leaves%first
+            do while (associated(cgl))
+               n = n + 1
+               ncg = cg_desc%offsets(proc) + n
+               cg => cgl%cg
+               ic = 0
+               if (size(q_lst) > 0) then
+                  allocate(dims(rank3))
+                  dims(:) = cg%n_b
+                  do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+                     ic = ic + 1
+                     pa3d => cg%q(q_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                     dims(:) = cg%n_b
+                     call h5dwrite_f(cg_desc%dset_id(ncg, ic), H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = cg_desc%xfer_prp)
+                  enddo
+                  deallocate(dims)
+               endif
+               if (size(w_lst) > 0) then
+                  allocate(dims(rank4))
+                  do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+                     ic = ic + 1
+                     pa4d => cg%w(w_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                     dims(:) = [ all_cg%w_lst(w_lst(i))%dim4, cg%n_b ]
+                     call h5dwrite_f(cg_desc%dset_id(ncg, ic), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
+                  enddo
+                  deallocate(dims)
+               endif
+               cgl => cgl%nxt
+            enddo
+
+            cgl => leaves%first
+            cg => cgl%cg
+            do ncg = 1, maxval(cg_n)-n
+               ic = 0
+               if (size(q_lst) > 0) then
+                  allocate(dims(rank3))
+                  dims(:) = cg%n_b
+                  call h5screate_simple_f(rank3, dims, filespace_id, error)
+                  call h5sselect_none_f(filespace_id, error)  ! empty filespace
+                  call h5screate_simple_f(rank3, dims, memspace_id, error)
+                  call h5sselect_none_f(memspace_id, error)   ! empty memoryscape
+
+                  do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+                     ic = ic + 1
+                     pa3d => cg%q(q_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                     dims(:) = cg%n_b
+                     call h5dwrite_f(cg_desc%dset_id(1, ic), H5T_NATIVE_DOUBLE, pa3d, dims, error, &
+                        xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
+                  enddo
+                  call h5sclose_f(memspace_id, error)
+                  call h5sclose_f(filespace_id, error)
+                  deallocate(dims)
+               endif
+               if (size(w_lst) > 0) then
+                  allocate(dims(rank4))
+                  do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+                     ic = ic + 1
+                     dims(:) = [ all_cg%w_lst(w_lst(i))%dim4, cg%n_b ]
+                     ! dims can change so h5s* is here as well, I don't know it
+                     ! it's really necessary though,
+                     ! \todo check if it can be done only once...
+                     call h5screate_simple_f(rank4, dims, filespace_id, error)
+                     call h5sselect_none_f(filespace_id, error)  ! empty filespace
+                     call h5screate_simple_f(rank4, dims, memspace_id, error)
+                     call h5sselect_none_f(memspace_id, error)   ! empty memoryscape
+
+                     pa4d => cg%w(w_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                     call h5dwrite_f(cg_desc%dset_id(1, ic), H5T_NATIVE_DOUBLE, pa4d, dims, error, &
+                        xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
+                     call h5sclose_f(memspace_id, error)
+                     call h5sclose_f(filespace_id, error)
+                  enddo
+                  deallocate(dims)
+               endif
+            enddo
+            ! receive (from whom?)
+         else
+            call die("[restart_hdf5:write_cg_to_restart] nproc != nproc_io not implemented yet")
+            ! send (where?)
          endif
-
-
-      enddo
+         !call die("[restart_hdf5:write_cg_to_restart] Parallel v2 I/O not implemented yet")
+      endif
 
       ! clean up
       call cg_desc%clean()
