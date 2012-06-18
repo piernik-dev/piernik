@@ -309,16 +309,22 @@ contains
 
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, hdf_vars)
 
+      if (cg_desc%tot_cg_n < 1) call die("[data_hdf5:write_cg_to_output] no cg available!")
+
+      ! all arrays are rank 3 here
+      allocate(dims(ndims))
+      ! Allocate data with the size of first cg
+      allocate( data(cg_all_n_b(xdim, 1), cg_all_n_b(ydim, 1), cg_all_n_b(zdim, 1)) )
+
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
          do ncg = 1, cg_desc%tot_cg_n
+            dims = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
+            call recycle_data(dims, cg_all_n_b, ncg, data)
 
-            allocate(data(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
             if (master) then
                if (.not. can_i_write) call die("[data_hdf5:write_cg_to_output] Master can't write")
 
-               allocate(dims(ndims))
-               dims(:) = shape(data)
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
                   if (cg_desc%cg_src_p(ncg) == proc) then
                      cg => get_nth_cg(cg_desc%cg_src_n(ncg))
@@ -328,7 +334,6 @@ contains
                   endif
                   call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_REAL, data, dims, error, xfer_prp = cg_desc%xfer_prp)
                enddo
-               deallocate(dims)
             else
                if (can_i_write) call die("[data_hdf5:write_cg_to_output] Slave can write")
                if (cg_desc%cg_src_p(ncg) == proc) then
@@ -339,7 +344,6 @@ contains
                   enddo
                endif
             endif
-            deallocate(data)
          enddo
       else ! perform parallell write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
@@ -347,12 +351,12 @@ contains
             ! write own
             n = 0
             cgl => leaves%first
+
             do while (associated(cgl))
                n = n + 1
                ncg = cg_desc%offsets(proc) + n
-               allocate(data(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
-               allocate(dims(ndims))
-               dims(:) = shape(data)
+               dims = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
+               call recycle_data(dims, cg_all_n_b, ncg, data)
                cg => cgl%cg
 
                do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
@@ -361,35 +365,34 @@ contains
                enddo
 
                cgl => cgl%nxt
-               deallocate(data, dims)
             enddo
 
-            ! behold the MAGIC in its purest form!
-            ! following block does exactly *nothing*, yet it's necessary for
-            ! collective calls of PHDF5
+            ! Behold the MAGIC in its purest form!
+            ! Following block of code does exactly *nothing*, yet it's necessary for collective calls of PHDF5
             ! BEWARE, we assume that at least 1 cg exist on a given proc
+            ! \todo
+            ! there should be something like H5S_NONE as a contradiction to H5S_ALL, yet I cannot find it...
+
+            dims = [ cg_all_n_b(xdim, 1), cg_all_n_b(ydim, 1), cg_all_n_b(zdim, 1) ]
+
+            ! completely bogus values, only to make HDF5 happy
+            call h5screate_simple_f(rank, dims, filespace_id, error)
+            call h5screate_simple_f(rank, dims, memspace_id, error)
+            ! empty filespace
+            call h5sselect_none_f(filespace_id, error)
+            ! empty memoryspace
+            call h5sselect_none_f(memspace_id, error)
+
+            call recycle_data(dims, cg_all_n_b, 1, data)
             do ncg = 1, maxval(cg_n)-n
-               allocate(data(cg_all_n_b(xdim, 1), cg_all_n_b(ydim, 1), cg_all_n_b(zdim, 1)))
-               allocate(dims(ndims))
-               dims(:) = shape(data)
-
-               ! \todo
-               ! there should be something like H5S_NONE as a contradiction to
-               ! H5S_ALL, yet I cannot find it...
-               call h5screate_simple_f(rank, dims, filespace_id, error)
-               call h5sselect_none_f(filespace_id, error)  ! empty filespace
-
-               call h5screate_simple_f(rank, dims, memspace_id, error)
-               call h5sselect_none_f(memspace_id, error)   ! empty memoryscape
-
                do i = lbound(hdf_vars, 1), ubound(hdf_vars, 1)
                   call h5dwrite_f(cg_desc%dset_id(1, i), H5T_NATIVE_REAL, data, dims, error, &
                      xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                enddo
-               call h5sclose_f(memspace_id, error)
-               call h5sclose_f(filespace_id, error)
-               deallocate(data, dims)
             enddo
+
+            call h5sclose_f(memspace_id, error)
+            call h5sclose_f(filespace_id, error)
             ! receive (from whom?)
          else
             call die("[data_hdf5:write_cg_to_output] nproc != nproc_io not implemented yet")
@@ -399,7 +402,28 @@ contains
       endif
 
       ! clean up
+      if (allocated(dims)) deallocate(dims)
+      if (associated(data)) deallocate(data)
       call cg_desc%clean()
+
+      contains
+         ! Try to avoid pointless data reallocation for every cg if shape doesn't change
+         subroutine recycle_data(dims, cg_all_n_b, i, data)
+            use constants, only: xdim, ydim, zdim
+            use hdf5,      only: HSIZE_T
+            implicit none
+            integer(HSIZE_T), dimension(:) :: dims
+            integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !> all cg sizes
+            integer, intent(in) :: i
+            real(kind=4), dimension(:,:,:), pointer :: data
+
+            if (associated(data)) then
+               if ( any(dims /= shape(data)) ) then
+                  deallocate(data)
+                  allocate(data(cg_all_n_b(xdim, i), cg_all_n_b(ydim, i), cg_all_n_b(zdim, i)))
+               endif
+            endif
+         end subroutine recycle_data
 
    end subroutine write_cg_to_output
 
