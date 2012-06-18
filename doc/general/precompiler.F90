@@ -46,7 +46,7 @@
 !!
 !! \b \#define \b "SELF_GRAV" - switch on self-gravity
 !!
-!! \b \#define \b "VARIABLE_USER_GP" - user flag to switch on gravity maxima dumps to log and tsl files (for SELF_GRAV that is as default)
+!! \b \#define \b "VARIABLE_USER_GP" - user flag to switch on gravity maxima dumps to log and tsl files (for "SELF_GRAV" that is as default)
 !!
 !! \b \#define \b "CORIOLIS" - switch on Coriolis force (RTVD only)
 !!
