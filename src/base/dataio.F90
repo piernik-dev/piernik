@@ -603,6 +603,7 @@ contains
       use constants,    only: FINAL, HDF, PLT, LOGF
       use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: last_res_time, last_hdf_time, last_plt_time
+      use dataio_user,  only: user_post_write_data
       use restart_hdf5, only: write_restart_hdf5
       use slice_hdf5,   only: write_plot
 
@@ -624,6 +625,8 @@ contains
       call determine_dump(dump(HDF), last_hdf_time, dt_hdf, output, HDF)
       call manage_hdf_dump(dump(HDF), output)
       if (dump(HDF)) call write_hdf5
+
+      if (associated(user_post_write_data)) call user_post_write_data(output, dump)
 
    end subroutine write_data
 

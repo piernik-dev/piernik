@@ -104,6 +104,19 @@ module dataio_user
    end interface
 
    interface
+      subroutine postout(output,dump)
+
+         use constants, only: RES, TSL
+
+         implicit none
+
+         integer(kind=4),             intent(in) :: output
+         logical, dimension(RES:TSL), intent(in) :: dump
+
+      end subroutine postout
+   end interface
+
+   interface
       subroutine add_data
          implicit none
       end subroutine add_data
@@ -117,5 +130,6 @@ module dataio_user
    procedure(plt_hdf5),  pointer :: user_plt_hdf5         => Null()
    procedure(vars_hdf5), pointer :: user_vars_hdf5        => Null()
    procedure(tsl_out),   pointer :: user_tsl              => Null()
+   procedure(postout),   pointer :: user_post_write_data  => Null()
 
 end module dataio_user
