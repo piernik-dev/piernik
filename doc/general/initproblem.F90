@@ -46,6 +46,7 @@
 !! \b user_plt_hdf5        - \copy dataio_user::user_plt_hdf5 @n @n
 !! \b user_vars_hdf5       - \copy dataio_user::user_vars_hdf5 @n @n
 !! \b user_tsl             - \copy dataio_user::user_tsl @n @n
+!! \b user_post_write_data - \copy dataio_user::user_post_write_data @n @n
 !! @n @n
 !!
 !! It assumes that all procedure pointers are initialized to Null().
