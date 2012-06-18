@@ -512,7 +512,7 @@ contains
 
    subroutine parse_cmdline
 
-      use constants,  only: stdout, cwdlen
+      use constants,  only: stdout, cwdlen, INT4
       use dataio_pub, only: cmdl_nml, wd_rd, wd_wr, piernik_hdf5_version
       use version,    only: nenv,env, init_version
 
@@ -526,6 +526,8 @@ contains
       character(len=cwdlen)       :: arg
 !      character(len=*), parameter :: cmdlversion = '1.0'
       logical, save               :: do_time = .false.
+      integer(kind=4), dimension(:), allocatable :: revision
+      character(len=cwdlen)       :: aaa
 
       skip_next = .false.
 
@@ -539,8 +541,14 @@ contains
          select case (arg)
          case ('-v', '--version')
 !            print '(2a)', 'cmdline version ', cmdlversion
-            write(stdout, '(a,f5.2)') 'output version: ',piernik_hdf5_version
             call init_version
+            allocate(revision(nenv)) ; revision = 0_INT4
+            do j=1,nenv
+               read(env(j),'(a31,1x,i4)') aaa, revision(j)
+            enddo
+            write(stdout, '(a,i6)') 'code revision: ', maxval(revision)
+            deallocate(revision)
+            write(stdout, '(a,f5.2)') 'output version: ',piernik_hdf5_version
             write(stdout,'(a)') "###############     Source configuration     ###############"
             do j=1,nenv
                write(stdout,'(a)') env(j)
