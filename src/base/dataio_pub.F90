@@ -267,6 +267,7 @@ contains
 
       character(len=*), intent(in)  :: nm
       integer, optional, intent(in) :: allprocs
+      integer, dimension(:), pointer :: magic => null()
 
       call colormessage(nm, T_ERR)
 
@@ -276,7 +277,8 @@ contains
             call MPI_Finalize(mpi_err)
          endif
       endif
-
+      call colormessage("Following SIGSEGV is intended and serves for debugging", T_ERR)
+      print *, magic(0)/magic(0)
       call exit(-1)
 
    end subroutine die
