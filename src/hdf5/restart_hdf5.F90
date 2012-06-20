@@ -290,6 +290,7 @@ contains
       use dataio_pub, only: die
       use domain,     only: is_multicg
       use gc_list,    only: cg_list_element, all_cg
+      use grid,       only: leaves
       use grid_cont,  only: grid_container
       use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f, h5sclose_f, h5pclose_f, h5dclose_f, &
            &                H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
@@ -376,7 +377,7 @@ contains
       stride(:) = 1
       cnt(:)  = 1
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -506,7 +507,7 @@ contains
       stride(:) = 1
       cnt(:)  = 1
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -1172,8 +1173,9 @@ contains
            &                 require_init_prob, piernik_hdf5_version2, nres, nhdf, nimg, fix_string
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
-      use gc_list,     only: cg_list_element, all_cg
+      use gc_list,     only: cg_list_element
       use global,      only: magic_mass, t, dt, nstep
+      use grid,        only: leaves
       use grid_cont,   only: is_overlap
       use hdf5,        only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
@@ -1408,7 +1410,7 @@ contains
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
          my_box(:,LO) = cg_res(ia)%off(:)
          my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
             other_box(:,LO) = cgl%cg%off(:)
             other_box(:,HI) = cgl%cg%off(:) + cgl%cg%n_b(:) - 1

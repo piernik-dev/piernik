@@ -242,8 +242,7 @@ contains
       use dataio_user, only: user_plt_hdf5, user_plt_attrs
       use domain,      only: dom, is_multicg
       use global,      only: t
-      use gc_list,     only: all_cg
-      use grid,        only: base_lev
+      use grid,        only: base_lev, leaves
       use grid_cont,   only: grid_container!, cg_list_element
       use hdf5,        only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,        only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
@@ -276,7 +275,7 @@ contains
       character(len=vdn_len)                   :: vdname
       type(grid_container), pointer            :: cg
 
-      cg => all_cg%first%cg
+      cg => leaves%first%cg
       if (is_multicg) call die("[slice_hdf5:write_plot_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial message tagging
 
       xn = 1

@@ -40,11 +40,11 @@ module grid
    private
    public :: init_grid, cleanup_grid, base_lev, leaves, top_lev
 
-   type(cg_list_level), target  :: base_lev                           !< base level grid containers \todo restore "protected"
-   type(cg_list), protected  :: leaves                                !< grid containers not fully covered by finer grid containers
-   integer, parameter :: NBD = 1                                      !< at the moment the base domain may be composed of only one patch
+   type(cg_list_level), target                            :: base_lev !< base level grid containers \todo restore "protected"
+   type(cg_list), protected                               :: leaves   !< grid containers not fully covered by finer grid containers
+   integer, parameter                                     :: NBD = 1  !< at the moment the base domain may be composed of only one patch
    type(cg_list_patch), dimension(NBD), target, protected :: base_dom !< base level patches; \todo relax the NBD=1 restriction if we want something like L-shaped or more complex domains
-   type(cg_list_level), pointer :: top_lev                            !< finest level of refinement
+   type(cg_list_level), pointer                           :: top_lev  !< finest level of refinement
 
 contains
 
@@ -118,7 +118,7 @@ contains
       all_cg%wai = all_cg%ind(wa_n)
 
       nrq = 0
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -141,7 +141,7 @@ contains
 
       call all_cg%reg_var(cs_i2_n, vital = .true., restart_mode = AT_NO_B)
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cgl%cg%cs_iso2 => cgl%cg%q(all_cg%ind(cs_i2_n))%arr
          cgl%cg%cs_iso2(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
@@ -249,7 +249,7 @@ contains
       enddo
 
       ! manually deallocate all grid containers first
-      cgle => all_cg%first
+      cgle => leaves%first
       do while (associated(cgle))
          deallocate(cgle%cg)
          cgle => cgle%nxt

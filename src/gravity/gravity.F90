@@ -150,8 +150,9 @@ contains
       use constants,     only: PIERNIK_INIT_GRID, AT_OUT_B, gp_n, gpot_n, hgpot_n
       use mpisetup,      only: ibuff, rbuff, cbuff, comm, mpi_err, master, slave, lbuff, buffer_dim, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
-      use units,         only: newtong
       use gc_list,       only: cg_list_element, all_cg
+      use grid,          only: leaves
+      use units,         only: newtong
 #ifdef SELF_GRAV
       use constants,     only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
@@ -279,7 +280,7 @@ contains
       call all_cg%reg_var(sgpm_n)
 #endif /* SELF_GRAV */
 
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          cgl%cg%gpot  => cgl%cg%q(all_cg%ind( gpot_n))%arr
          cgl%cg%gpot(:,:,:) = 0.0

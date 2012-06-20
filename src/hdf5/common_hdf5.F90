@@ -593,13 +593,14 @@ contains
       use dataio_pub,   only: die, nproc_io, can_i_write
       use domain,       only: dom
       use gc_list,      only: cg_list_element, all_cg
+      use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets
+      use grid,         only: leaves
       use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
            &                  h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
            &                  h5pclose_f, h5zfilter_avail_f
+      use helpers_hdf5, only: create_attribute
       use mpi,          only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
       use mpisetup,     only: comm, FIRST, LAST, master, mpi_err
-      use helpers_hdf5, only: create_attribute
-      use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets
 
       implicit none
       character(len=cwdlen), intent(in)             :: filename
@@ -686,7 +687,7 @@ contains
             if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, cg_n(p), ndims))
             if (p == FIRST) then
                g = 1
-               cgl => all_cg%first
+               cgl => leaves%first
                do while (associated(cgl))
                   cg_rl(g)     = int(cgl%cg%level_id, kind=4)
                   cg_n_b(g, :) = cgl%cg%n_b
@@ -772,7 +773,7 @@ contains
          allocate(cg_rl(all_cg%cnt), cg_n_b(all_cg%cnt, ndims), cg_off(all_cg%cnt, ndims))
          if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, all_cg%cnt, ndims))
          g = 1
-         cgl => all_cg%first
+         cgl => leaves%first
          do while (associated(cgl))
             cg_rl(g)     = int(cgl%cg%level_id, kind=4)
             cg_n_b(g, :) = cgl%cg%n_b(:)
