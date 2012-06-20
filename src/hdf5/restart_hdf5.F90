@@ -377,6 +377,7 @@ contains
       stride(:) = 1
       cnt(:)  = 1
 
+      !> \todo check the hesitant choise to start from leaves%first or all_cg%first
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -507,6 +508,7 @@ contains
       stride(:) = 1
       cnt(:)  = 1
 
+      !> \todo check the hesitant choise to start from leaves%first or all_cg%first
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -1410,6 +1412,7 @@ contains
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
          my_box(:,LO) = cg_res(ia)%off(:)
          my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
+         !> \todo check the hesitant choise to start from leaves%first or all_cg%first
          cgl => leaves%first
          do while (associated(cgl))
             other_box(:,LO) = cgl%cg%off(:)

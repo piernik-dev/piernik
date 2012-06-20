@@ -687,6 +687,7 @@ contains
             if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, cg_n(p), ndims))
             if (p == FIRST) then
                g = 1
+               !> \todo check the hesitant choise to start from leaves%first or all_cg%first
                cgl => leaves%first
                do while (associated(cgl))
                   cg_rl(g)     = int(cgl%cg%level_id, kind=4)
@@ -773,6 +774,7 @@ contains
          allocate(cg_rl(all_cg%cnt), cg_n_b(all_cg%cnt, ndims), cg_off(all_cg%cnt, ndims))
          if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, all_cg%cnt, ndims))
          g = 1
+         !> \todo check the hesitant choise to start from leaves%first or all_cg%first
          cgl => leaves%first
          do while (associated(cgl))
             cg_rl(g)     = int(cgl%cg%level_id, kind=4)

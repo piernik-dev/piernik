@@ -249,7 +249,7 @@ contains
       enddo
 
       ! manually deallocate all grid containers first
-      cgle => leaves%first
+      cgle => all_cg%first
       do while (associated(cgle))
          deallocate(cgle%cg)
          cgle => cgle%nxt
