@@ -262,12 +262,14 @@ contains
    subroutine die(nm, allprocs)
 
       use mpi,    only: MPI_COMM_WORLD
+#if defined(__INTEL_COMPILER)
+      use ifcore, only: tracebackqq
+#endif /* __INTEL_COMPILER */
 
       implicit none
 
       character(len=*), intent(in)  :: nm
       integer, optional, intent(in) :: allprocs
-      integer, dimension(:), pointer :: magic => null()
 
       call colormessage(nm, T_ERR)
 
@@ -277,8 +279,14 @@ contains
             call MPI_Finalize(mpi_err)
          endif
       endif
-      call colormessage("Following SIGSEGV is intended and serves for debugging", T_ERR)
-      print *, magic(0)/magic(0)
+      call colormessage("Following backtrace is used for debugging, please attach it to your bug report", T_ERR)
+#if defined(__INTEL_COMPILER)
+      call colormessage("Be advised, that you need to compile the code with -g -traceback for the dump to be meaningful", T_ERR)
+      call tracebackqq()
+#else /* !__INTEL_COMPILER */
+      call colormessage("Be advised, that you need to compile the code with -g for the dump to be meaningful", T_ERR)
+      call abort()
+#endif /* !__INTEL_COMPILER */
       call exit(-1)
 
    end subroutine die
