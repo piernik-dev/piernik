@@ -106,7 +106,7 @@ contains
 
          do d = xdim, zdim
             if (dom%has_dir(d)) then
-               l = reshape([lbound(cg%b(xdim,:,:,:), kind=4),ubound(cg%b(xdim,:,:,:), kind=4)],shape=[ndims,HI]) ; r = l
+               l = reshape([lbound(wcr(xdim,:,:,:), kind=4),ubound(wcr(xdim,:,:,:), kind=4)],shape=[ndims,HI]) ; r = l
                do lh = LO, HI
                   select case (cg%bnd(d, lh))
                      case (BND_PER)
