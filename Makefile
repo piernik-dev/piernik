@@ -28,7 +28,7 @@ ALLOBJ = $(wildcard obj*)
 
 ECHO ?= /bin/echo
 
-.PHONY: $(ALLOBJ)
+.PHONY: $(ALLOBJ) check
 
 all: $(ALLOBJ)
 
@@ -67,3 +67,8 @@ allsetup:
 			./setup $$nm -o "A_"$$( basename $$i ) --nocompile && sed -i 's/ --nocompile//' "obj_A_"$$( basename $$i )"/"{.setup.call,Makefile,env.dat,version.F90} & \
 		fi; \
 	done
+
+check:
+	TMPDIR=$$(mktemp -d /dev/shm/test_XXXXXX);\
+	bitten-slave -d . --build-dir $$TMPDIR -k bitten/trunk.mcrtest.xml ;\
+	rm -rf $$TMPDIR
