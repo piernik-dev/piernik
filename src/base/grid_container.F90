@@ -146,7 +146,8 @@ module grid_cont
       integer(kind=4) :: ks                                      !< index of the first %grid cell of physical domain in z-direction
       integer(kind=4) :: ke                                      !< index of the last %grid cell of physical domain in z-direction
       integer(kind=4) :: isb, ieb, jsb, jeb, ksb, keb            !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
-      integer(kind=4), dimension(ndims, LO:HI)  :: ijkse         !< [[is, js, ks], [ie, je, ke]]
+      integer(kind=4), dimension(ndims, LO:HI)  :: ijkse         !< [[is,  js,  ks ], [ie,  je,  ke ]]
+      integer(kind=4), dimension(ndims, LO:HI)  :: ijkseb        !< [[isb, jsb, ksb], [ieb, jeb, keb]]
       integer(kind=8), dimension(ndims) :: h_cor1                !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:)
       integer(kind=4), dimension(ndims) :: n_                    !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
       integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment
@@ -339,19 +340,23 @@ contains
       enddo
 
       where (dom%has_dir(:))
-         this%n_(:) = this%n_b(:) + I_TWO * dom%nb       ! Block total grid size with guardcells
+         this%n_(:)        = this%n_b(:) + I_TWO * dom%nb       ! Block total grid size with guardcells
          this%ijkse(:, LO) = dom%nb + I_ONE
          this%ijkse(:, HI) = dom%nb + this%n_b(:)
-         this%dl(:) = dom%L_(:) / n_d(:)
-         this%fbnd(:, LO) = dom%edge(:, LO) + this%dl(:) * this%off(:)
-         this%fbnd(:, HI) = dom%edge(:, LO) + this%dl(:) * this%h_cor1(:)
+         this%ijkseb(:,LO) = I_TWO*dom%nb
+         this%ijkseb(:,HI) = this%n_b(:)+I_ONE
+         this%dl(:)        = dom%L_(:) / n_d(:)
+         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * this%off(:)
+         this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * this%h_cor1(:)
       elsewhere
-         this%n_(:) = 1
+         this%n_(:)        = 1
          this%ijkse(:, LO) = 1
          this%ijkse(:, HI) = 1
-         this%dl(:) = 1.0
-         this%fbnd(:, LO) = dom%edge(:, LO)
-         this%fbnd(:, HI) = dom%edge(:, HI)
+         this%ijkseb(:,LO) = 1
+         this%ijkseb(:,HI) = 1
+         this%dl(:)        = 1.0
+         this%fbnd(:, LO)  = dom%edge(:, LO)
+         this%fbnd(:, HI)  = dom%edge(:, HI)
       endwhere
 
       if (dom%has_dir(xdim)) then
