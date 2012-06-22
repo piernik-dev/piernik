@@ -84,13 +84,12 @@ module fluxes
 
 contains
 
-!> \todo Remove precompiler directives from this routine, it is called only once.
    subroutine init_fluxes
-      use fluidindex,  only: flind
       use constants,   only: NEU, DST, ION
-      use fluxneutral, only: flux_neu
       use fluxdust,    only: flux_dst
+      use fluidindex,  only: flind
       use fluxionized, only: flux_ion
+      use fluxneutral, only: flux_neu
       implicit none
       integer :: i
 
@@ -143,22 +142,21 @@ contains
       implicit none
 
       integer(kind=4), intent(in)                           :: n        !< size of input arrays
-      real, dimension(flind%all,n),    intent(out), target  :: flux     !< array storing all fluxes
-      real, dimension(flind%all,n),    intent(out), target  :: cfr      !< array storing all freezing speeds
-      real, dimension(flind%all,n),    intent(out), target  :: uu       !< array with current fluid state
-      real, dimension(nmag,n),         intent(in),  target  :: bb       !< array with current magnetic field state
-      real, dimension(flind%fluids,n), intent(out), target  :: vx       !< array storing velocity in current sweep direction (reused later)
-      real, dimension(flind%fluids,n), intent(out), target  :: pp       !< array storing pressure in current sweeo (reused later)
-      real, dimension(:),              intent(in),  pointer :: cs_iso2  !< array with current sound speed squared
+      real, dimension(flind%all,n),    target,  intent(out) :: flux     !< array storing all fluxes
+      real, dimension(flind%all,n),    target,  intent(out) :: cfr      !< array storing all freezing speeds
+      real, dimension(flind%all,n),    target,  intent(out) :: uu       !< array with current fluid state
+      real, dimension(nmag,n),         target,  intent(in)  :: bb       !< array with current magnetic field state
+      real, dimension(flind%fluids,n), target,  intent(out) :: vx       !< array storing velocity in current sweep direction (reused later)
+      real, dimension(flind%fluids,n), target,  intent(out) :: pp       !< array storing pressure in current sweeo (reused later)
+      real, dimension(:),              pointer, intent(in)  :: cs_iso2  !< array with current sound speed squared
 
-      real, dimension(:,:), pointer                     :: pflux, pcfr, puu, pbb
-      real, dimension(:), pointer                       :: pvx, ppp
+      real, dimension(:,:),            pointer              :: pflux, pcfr, puu, pbb
+      real, dimension(:),              pointer              :: pvx, ppp
 #ifdef TRACER
-      real, dimension(:), pointer                       :: pu1d, pfl1d
+      real, dimension(:),              pointer              :: pu1d, pfl1d
 #endif /* TRACER */
-      type(component_fluid), pointer                    :: pfl
-
-      integer :: p
+      type(component_fluid),           pointer              :: pfl
+      integer                                               :: p
 !>
 !! \todo pbb may need more careful treatment
 !!  currently it doesn't matter for dst and neu and
