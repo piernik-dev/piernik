@@ -98,7 +98,7 @@ contains
       integer(kind=4), parameter                   :: tag1 = 10, tag2 = 20
       integer(kind=4), parameter                   :: tag7 = 70, tag8 = 80
       integer                                      :: i, j
-      integer(kind=4)                              :: itag, jtag, side
+      integer(kind=4)                              :: itag, jtag, side, cside
       real, allocatable                            :: send_left(:,:,:,:),recv_left(:,:,:,:)
 #ifdef SHEAR
       real, allocatable                            :: send_right(:,:,:,:),recv_right(:,:,:,:)
@@ -296,10 +296,11 @@ contains
                endif
             case (BND_PER)
                   if (cdd%comm3d /= MPI_COMM_NULL) then
+                     cside = LO + HI - side
                      if (side == LO) then
                         l(dir,:) = [I_ONE, dom%nb] ; r(dir,:) = [cg%ijkseb(dir,HI),cg%ijkse(dir,HI)]
                      else
-                        l(dir,:) = [cg%ijkse(dir,HI)+I_ONE,cg%n_(dir)] ; r(dir,:) = [cg%ijkse(dir,LO),cg%ijkse(dir,LO)]
+                        l(dir,:) = [cg%ijkse(dir,HI)+I_ONE,cg%n_(dir)] ; r(dir,:) = [cg%ijkse(dir,LO),cg%ijkseb(dir,LO)]
                      endif
                   cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                   endif
