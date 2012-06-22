@@ -106,7 +106,6 @@ contains
       logical, save                                :: frun = .true.
       logical, save,   dimension(ndims,LO:HI)      :: bnd_not_provided = .false.
       integer(kind=4), dimension(ndims,LO:HI)      :: l, r
-      integer(kind=4), dimension(ndims)            :: eb, sb
 
 ! MPI block comunication
       if (cdd%comm3d /= MPI_COMM_NULL) then
@@ -298,11 +297,9 @@ contains
             case (BND_PER)
                   if (cdd%comm3d /= MPI_COMM_NULL) then
                      if (side == LO) then
-                        eb = [cg%ieb, cg%jeb, cg%keb]
-                        l(dir,:) = [I_ONE, dom%nb] ; r(dir,:) = [eb(dir),cg%ijkse(dir,HI)]
+                        l(dir,:) = [I_ONE, dom%nb] ; r(dir,:) = [cg%ijkseb(dir,HI),cg%ijkse(dir,HI)]
                      else
-                        sb = [cg%isb, cg%jsb, cg%ksb]
-                        l(dir,:) = [cg%ijkse(dir,HI)+I_ONE,cg%n_(dir)] ; r(dir,:) = [cg%ijkse(dir,LO),sb(dir)]
+                        l(dir,:) = [cg%ijkse(dir,HI)+I_ONE,cg%n_(dir)] ; r(dir,:) = [cg%ijkse(dir,LO),cg%ijkse(dir,LO)]
                      endif
                   cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                   endif
