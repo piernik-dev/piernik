@@ -296,13 +296,11 @@ contains
                endif
             case (BND_PER)
                   if (cdd%comm3d /= MPI_COMM_NULL) then
+                     l(dir,:) = cg%ijkse(dir,side)*(side-LO) + [I_ONE, dom%nb]
                      cside = LO + HI - side
-                     if (side == LO) then
-                        l(dir,:) = [I_ONE, dom%nb] ; r(dir,:) = [cg%ijkseb(dir,HI),cg%ijkse(dir,HI)]
-                     else
-                        l(dir,:) = [cg%ijkse(dir,HI)+I_ONE,cg%n_(dir)] ; r(dir,:) = [cg%ijkse(dir,LO),cg%ijkseb(dir,LO)]
-                     endif
-                  cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+                     r(dir, side) = cg%ijkseb(dir,cside)
+                     r(dir,cside) = cg%ijkse (dir,cside)
+                     cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                   endif
             case (BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD)
                   if (side == LO) then
