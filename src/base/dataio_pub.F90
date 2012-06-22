@@ -98,13 +98,8 @@ module dataio_pub
    logical, save               :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
    logical, save               :: log_file_initialized = .false. !< logical to mark initialization of logfile
    integer(kind=4), save       :: require_init_prob = 0          !< 1 will call initproblem::init_prob on restart
-!>
-!! \todo
-!!  Currently to use PGPLOT you need to:
-!!   1. set one of i{x,y,z} to positive value and zero to the others
-!!   2. use only one-element vars array in problem.par
-!<
-   logical                     :: vizit = .false.                !< perform "live" visualization using pgplot (\deprecated BEWARE: highly experimental)
+
+   logical                     :: vizit = .false.                !< perform "live" visualization using pgplot
    logical                     :: multiple_h5files = .false.     !< write one HDF5 file per proc
    real                        :: fmin                           !< minimum on pgplot scale
    real                        :: fmax                           !< maximum on pgplot scale

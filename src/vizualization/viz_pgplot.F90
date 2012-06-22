@@ -26,6 +26,15 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
+!>
+!! \brief Routines to perform "live" visualization using pgplot
+!!
+!!  Currently to use PGPLOT you need to:
+!!   1. set one of i{x,y,z} to positive value and zero to the others
+!!   2. use only one-element vars array in problem.par
+!!
+!! \deprecated BEWARE: highly experimental
+!<
 module viz
 ! pulled by PGPLOT
    implicit none
