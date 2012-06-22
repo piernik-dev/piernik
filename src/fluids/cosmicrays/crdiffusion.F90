@@ -68,29 +68,29 @@ contains
 
 !>
 !! \brief boundaries for wcr
-!! This procedure is a shameless copy of grid::arr3d_boundaries adapted for wcr
-!! \todo REMOVE ME, FIX ME, MERGE ME with grid::arr3d_boundaries or at least
-!!  have a decency to make me more general
+!! This procedure is a shameless copy of external_bnd::arr3d_boundaries adapted for wcr
+!! \todo REMOVE ME, FIX ME, MERGE ME with external_bnd::arr3d_boundaries or at least have a decency to make me more general
 !<
    subroutine all_wcr_boundaries
 
-      use constants,    only: CR, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE, wcr_n
+      use constants,    only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE, wcr_n
       use dataio_pub,   only: die
       use domain,       only: dom
-      use internal_bnd, only: internal_boundaries_4d
       use gc_list,      only: cg_list_element, all_cg
       use grid,         only: leaves
       use grid_cont,    only: grid_container
+      use internal_bnd, only: internal_boundaries_4d
       use mpi,          only: MPI_REQUEST_NULL, MPI_COMM_NULL
       use mpisetup,     only: mpi_err, req, status
       use types,        only: cdd
 
       implicit none
 
-      integer :: i, d, lh
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-      real, dimension(:,:,:,:), pointer :: wcr
+      integer(kind=4)                         :: i, d, lh, clh
+      integer(kind=4), dimension(ndims,LO:HI) :: l, r
+      real, dimension(:,:,:,:), pointer       :: wcr
+      type(cg_list_element),    pointer       :: cgl
+      type(grid_container),     pointer       :: cg
 
       if (.not. has_cr) return
 
@@ -106,24 +106,16 @@ contains
 
          do d = xdim, zdim
             if (dom%has_dir(d)) then
+               l = reshape([lbound(cg%b(xdim,:,:,:), kind=4),ubound(cg%b(xdim,:,:,:), kind=4)],shape=[ndims,HI]) ; r = l
                do lh = LO, HI
                   select case (cg%bnd(d, lh))
                      case (BND_PER)
                         if (cdd%comm3d /= MPI_COMM_NULL) then
-                           select case (2*d+lh)
-                              case (2*xdim+LO)
-                                 wcr(:,1:dom%nb, :, :) = wcr(:,cg%ieb:cg%ie, :, :)
-                              case (2*ydim+LO)
-                                 wcr(:,:, 1:dom%nb, :) = wcr(:,:, cg%jeb:cg%je, :)
-                              case (2*zdim+LO)
-                                 wcr(:,:, :, 1:dom%nb) = wcr(:,:, :, cg%keb:cg%ke)
-                              case (2*xdim+HI)
-                                 wcr(:,cg%ie+1:cg%n_(xdim), :, :) = wcr(:,cg%is:cg%isb, :, :)
-                              case (2*ydim+HI)
-                                 wcr(:,:, cg%je+1:cg%n_(ydim), :) = wcr(:,:, cg%js:cg%jsb, :)
-                              case (2*zdim+HI)
-                                 wcr(:,:, :, cg%ke+1:cg%n_(zdim)) = wcr(:,:, :, cg%ks:cg%ksb)
-                           end select
+                           l(d,:) = cg%ijkse(d,lh)*(lh-LO) + [I_ONE, dom%nb]
+                           clh = LO + HI - lh
+                           r(d, lh) = cg%ijkseb(d,clh)
+                           r(d,clh) = cg%ijkse (d,clh)
+                           wcr(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = wcr(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                         endif
                      case (BND_MPI)
                         if (cdd%comm3d /= MPI_COMM_NULL) then
@@ -135,21 +127,10 @@ contains
                            endif
                         endif
                      case default ! Set gradient == 0 on the external boundaries
+                        r(d,:) = cg%ijkse(d,lh) ; l(d,:) = cg%ijkse(d,lh)*(lh-LO)
                         do i = 1, dom%nb
-                           select case (2*d+lh)
-                              case (2*xdim+LO)
-                                 wcr(:, i, :, :) = wcr(:, cg%is, :, :)
-                              case (2*ydim+LO)
-                                 wcr(:, :, i, :) = wcr(:, :, cg%js, :)
-                              case (2*zdim+LO)
-                                 wcr(:, :, :, i) = wcr(:, :, :, cg%ks)
-                              case (2*xdim+HI)
-                                 wcr(:, cg%ie+i, :, :) = wcr(:, cg%ie, :, :)
-                              case (2*ydim+HI)
-                                 wcr(:, :, cg%je+i, :) = wcr(:, :, cg%je, :)
-                              case (2*zdim+HI)
-                                 wcr(:, :, :, cg%ke+i) = wcr(:, :, :, cg%ke)
-                           end select
+                           l(d,:) = l(d,:) + I_ONE
+                           wcr(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = wcr(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                         enddo
                   end select
 
