@@ -56,7 +56,7 @@ contains
 
    subroutine arr3d_boundaries(cglist, ind, nb, area_type, bnd_type, corners)
 
-      use constants,    only: ARR, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, LO, HI, &
+      use constants,    only: ARR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, I_TWO, I_THREE, LO, HI, &
            &                  BND_PER, BND_MPI, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
       use dataio_pub,   only: die, msg
       use domain,       only: dom
@@ -81,13 +81,12 @@ contains
       integer(kind=4), optional, intent(in) :: bnd_type
       logical,         optional, intent(in) :: corners    !> When present and .true. then call internal_boundaries_3d for each direction separately
 
-      integer :: i, n
-      integer(kind=4) :: lh, d
-      logical :: dodie, do_permpi, do_cor
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-      real, dimension(:,:,:), pointer :: pa3d
-      integer(kind=4) :: b_type
+      integer(kind=4)                         :: lh, clh, d, b_type, i, n
+      integer(kind=4), dimension(ndims,LO:HI) :: l, r
+      logical                                 :: dodie, do_permpi, do_cor
+      type(cg_list_element),  pointer         :: cgl
+      type(grid_container),   pointer         :: cg
+      real, dimension(:,:,:), pointer         :: pa3d
 
       dodie = .false.
 
@@ -132,6 +131,7 @@ contains
 
          do d = xdim, zdim
             if (dom%has_dir(d)) then
+               l = reshape([lbound(pa3d, kind=4),ubound(pa3d, kind=4)],shape=[ndims,HI]) ; r = l
                do lh = LO, HI
 
                   select case (cg%bnd(d, lh))
@@ -140,20 +140,12 @@ contains
                            if (present(area_type)) then
                               if (area_type /= AT_NO_B) cycle
                            endif
-                           select case (2*d+lh)
-                              case (2*xdim+LO)
-                                 pa3d(1:dom%nb, :, :) = pa3d(cg%ieb:cg%ie, :, :) ! local copy is cheap (and don't occur so often in large runs) so don't boyher with the value of n
-                              case (2*ydim+LO)
-                                 pa3d(:, 1:dom%nb, :) = pa3d(:, cg%jeb:cg%je, :)
-                              case (2*zdim+LO)
-                                 pa3d(:, :, 1:dom%nb) = pa3d(:, :, cg%keb:cg%ke)
-                              case (2*xdim+HI)
-                                 pa3d(cg%ie+1:cg%n_(xdim), :, :) = pa3d(cg%is:cg%isb, :, :)
-                              case (2*ydim+HI)
-                                 pa3d(:, cg%je+1:cg%n_(ydim), :) = pa3d(:, cg%js:cg%jsb, :)
-                              case (2*zdim+HI)
-                                 pa3d(:, :, cg%ke+1:cg%n_(zdim)) = pa3d(:, :, cg%ks:cg%ksb)
-                           end select
+                           l(d,:) = cg%ijkse(d,lh)*(lh-LO) + [I_ONE, dom%nb]
+                           clh = LO + HI - lh
+                           r(d, lh) = cg%ijkseb(d,clh)
+                           r(d,clh) = cg%ijkse (d,clh)
+                           pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = pa3d(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+                           ! local copy is cheap (and don't occur so often in large runs) so don't boyher with the value of n
                         endif
                      case (BND_MPI)
                         if (cdd%comm3d /= MPI_COMM_NULL) then
@@ -183,87 +175,34 @@ contains
                            case (BND_REF)  ! reflecting BC (e.g. homogenous Neumamnn)
                               ! there will be special rules for vector fields (velocity, magnetic) perpendiculal to the given boundary (like BND_NEGREF)
                               do i = 1, dom%nb
-                                 select case (2*d+lh)
-                                    case (2*xdim+LO)
-                                       pa3d(cg%is-i, :, :) = pa3d(cg%is+i-1, :, :)
-                                    case (2*ydim+LO)
-                                       pa3d(:, cg%js-i, :) = pa3d(:, cg%js+i-1, :)
-                                    case (2*zdim+LO)
-                                       pa3d(:, :, cg%ks-i) = pa3d(:, :, cg%ks+i-1)
-                                    case (2*xdim+HI)
-                                       pa3d(cg%ie+i, :, :) = pa3d(cg%ie-i+1, :, :)
-                                    case (2*ydim+HI)
-                                       pa3d(:, cg%je+i, :) = pa3d(:, cg%je-i+1, :)
-                                    case (2*zdim+HI)
-                                       pa3d(:, :, cg%ke+i) = pa3d(:, :, cg%ke-i+1)
-                                 end select
+                                 l(d,:) = cg%ijkse(d,lh)   -i     *(I_THREE-I_TWO*lh)
+                                 r(d,:) = cg%ijkse(d,lh)+(i-I_ONE)*(I_THREE-I_TWO*lh)
+                                 pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = pa3d(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                               enddo
                            case (BND_NEGREF)  ! reflecting BC (e.g. homogenous Neumamnn)
                               do i = 1, dom%nb
-                                 select case (2*d+lh)
-                                    case (2*xdim+LO)
-                                       pa3d(cg%is-i, :, :) = - pa3d(cg%is+i-1, :, :)
-                                    case (2*ydim+LO)
-                                       pa3d(:, cg%js-i, :) = - pa3d(:, cg%js+i-1, :)
-                                    case (2*zdim+LO)
-                                       pa3d(:, :, cg%ks-i) = - pa3d(:, :, cg%ks+i-1)
-                                    case (2*xdim+HI)
-                                       pa3d(cg%ie+i, :, :) = - pa3d(cg%ie-i+1, :, :)
-                                    case (2*ydim+HI)
-                                       pa3d(:, cg%je+i, :) = - pa3d(:, cg%je-i+1, :)
-                                    case (2*zdim+HI)
-                                       pa3d(:, :, cg%ke+i) = - pa3d(:, :, cg%ke-i+1)
-                                 end select
+                                 l(d,:) = cg%ijkse(d,lh)   -i     *(I_THREE-I_TWO*lh)
+                                 r(d,:) = cg%ijkse(d,lh)+(i-I_ONE)*(I_THREE-I_TWO*lh)
+                                 pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = - pa3d(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                               enddo
                            case (BND_ZERO)  ! zero BC (e.g. homogenous Dirichlet BC with 0 at first layer of cells)
-                              select case (2*d+lh)
-                                 case (2*xdim+LO)
-                                    pa3d(:cg%is, :, :) = 0.
-                                 case (2*ydim+LO)
-                                    pa3d(:, :cg%js, :) = 0.
-                                 case (2*zdim+LO)
-                                    pa3d(:, :, :cg%ks) = 0.
-                                 case (2*xdim+HI)
-                                    pa3d(cg%ie:, :, :) = 0.
-                                 case (2*ydim+HI)
-                                    pa3d(:, cg%je:, :) = 0.
-                                 case (2*zdim+HI)
-                                    pa3d(:, :, cg%ke:) = 0.
-                              end select
+                              clh = LO + HI - lh ; l(d,HI) = ubound(pa3d, dim=d, kind=4) ! restore after lh==LO case
+                              l(d,clh) = cg%ijkse(d,lh)
+                              pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = 0.
                            case (BND_NONE) ! remember to initialize everything first!
                            case (BND_XTRAP) !> \deprecated mixed-type BC: free flux; BEWARE: it is not protected from inflow
+                              r(d,:) = cg%ijkse(d,lh)+I_THREE-I_TWO*lh
                               do i = 1, dom%nb
-                                 select case (2*d+lh)
-                                    case (2*xdim+LO)
-                                       pa3d(cg%is-i, :, :) = (1+i) * pa3d(cg%is, :, :) - i * pa3d(cg%is+1, :, :)
-                                    case (2*ydim+LO)
-                                       pa3d(:, cg%js-i, :) = (1+i) * pa3d(:, cg%js, :) - i * pa3d(:, cg%js+1, :)
-                                    case (2*zdim+LO)
-                                       pa3d(:, :, cg%ks-i) = (1+i) * pa3d(:, :, cg%ks) - i * pa3d(:, :, cg%ks+1)
-                                    case (2*xdim+HI)
-                                       pa3d(cg%ie+i, :, :) = (1+i) * pa3d(cg%ie, :, :) - i * pa3d(cg%ie-1, :, :)
-                                    case (2*ydim+HI)
-                                       pa3d(:, cg%je+i, :) = (1+i) * pa3d(:, cg%je, :) - i * pa3d(:, cg%je-1, :)
-                                    case (2*zdim+HI)
-                                       pa3d(:, :, cg%ke+i) = (1+i) * pa3d(:, :, cg%ke) - i * pa3d(:, :, cg%ke-1)
-                                 end select
+                                 l(d,:) = cg%ijkse(d,lh)-i*(I_THREE-I_TWO*lh)
+                                 pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = &
+                                       (1+i) * pa3d(cg%ijkse(xdim,LO):cg%ijkse(xdim,HI),cg%ijkse(ydim,LO):cg%ijkse(ydim,HI),cg%ijkse(zdim,LO):cg%ijkse(zdim,HI)) &
+                                         - i * pa3d(       r(xdim,LO):       r(xdim,HI),       r(ydim,LO):       r(ydim,HI),       r(zdim,LO):       r(zdim,HI))
                               enddo
                            case default ! BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD
+                              r(d,:) = cg%ijkse(d,lh) ; l(d,:) = cg%ijkse(d,lh)*(lh-LO)
                               do i = 1, dom%nb
-                                 select case (2*d+lh)
-                                    case (2*xdim+LO)
-                                       pa3d(i, :, :) = pa3d(cg%is, :, :)
-                                    case (2*ydim+LO)
-                                       pa3d(:, i, :) = pa3d(:, cg%js, :)
-                                    case (2*zdim+LO)
-                                       pa3d(:, :, i) = pa3d(:, :, cg%ks)
-                                    case (2*xdim+HI)
-                                       pa3d(cg%ie+i, :, :) = pa3d(cg%ie, :, :)
-                                    case (2*ydim+HI)
-                                       pa3d(:, cg%je+i, :) = pa3d(:, cg%je, :)
-                                    case (2*zdim+HI)
-                                       pa3d(:, :, cg%ke+i) = pa3d(:, :, cg%ke)
-                                 end select
+                                 l(d,:) = l(d,:) + I_ONE
+                                 pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = pa3d(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                               enddo
                         end select
                   end select
