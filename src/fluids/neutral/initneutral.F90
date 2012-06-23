@@ -176,57 +176,7 @@ contains
       flind%neu%has_energy    = .true.
 #endif /* !ISO */
 
-      flind%neu%get_cs => neutral_sound_speed
-
    end subroutine neutral_index
-
-!>
-!! \brief (MH/JD) [R] Sound speed computation for the neutral fluid
-!!
-!! %Timestep for the neutral fluid is set as the minimum %timestep for all of the MPI blocks times the Courant number.
-!! To compute the %timestep in each MPI block, the fastest speed at which information travels in each direction is computed as
-!! \f{equation}
-!! c_x=\max\limits_{i,j,k}{\left(v_x^{i,j,k}+c_s^{i,j,k}\right)},
-!! \f}
-!! where \f$v_x^{i,j,k}\f$ is the maximum speed in \f$x\f$ direction for the cell \f$(i,j,k)\f$ and \f$c_s^{i,j,k}\f$ is the speed of sound for
-!! neutral fluid computed as \f$c_s^{i,j,k}=\sqrt{\left|\frac{\gamma p}{\rho^{i,j,k}}\right|}\f$, where \f$p\f$ stands for pressure,
-!! \f$\gamma\f$ is adiabatic index for neutral fluid and \f$\rho^{i,j,k}\f$ is the neutral fluid density in the cell
-!! \f$(i,j,k)\f$. For directions \f$y, z\f$ the computations are made in similar way.
-!!
-!! %Timestep for each MPI block is then computed as
-!! \f{equation}
-!! dt=\min{\left(\left|\frac{dx}{c_x}\right|,\left|\frac{dy}{c_y}\right|,\left|\frac{dz}{c_z}\right|\right)},
-!! \f}
-!! where \f$dx\f$, \f$dy\f$ and \f$dz\f$ are the cell lengths in each direction.
-!!
-!! Information about the computed %timesteps is exchanged between MPI blocks in order to choose the minimum %timestep for the fluid.
-!! The final %timestep is multiplied by the Courant number specified in parameters of each task.
-!<
-   pure function neutral_sound_speed(cg, fl, i, j, k) result(cs)
-      use fluidtypes,    only: component_fluid
-      use grid_cont,     only: grid_container
-#ifndef ISO
-      use func,          only: ekin
-#endif /* !ISO */
-      implicit none
-      type(grid_container), pointer, intent(in) :: cg !< current grid container
-      type(component_fluid), pointer, intent(in) :: fl
-      integer, intent(in) :: i, j, k
-      real :: cs
-
-      ! locals
-      real :: p
-
-#ifdef ISO
-      p  = cg%cs_iso2(i, j, k) * cg%u(fl%idn, i, j, k)
-      cs = sqrt(cg%cs_iso2(i, j, k))
-#else /* !ISO */
-      p  = (cg%u(fl%ien, i, j, k) - &
-         &  ekin(cg%u(fl%imx, i, j, k), cg%u(fl%imy, i, j, k), cg%u(fl%imz, i, j, k),  cg%u(fl%idn, i, j, k)) &
-         & ) * (fl%gam_1)
-      cs = sqrt(abs((fl%gam * p) / cg%u(fl%idn, i, j, k)))
-#endif /* !ISO */
-   end function neutral_sound_speed
 
    subroutine cleanup_neutral
 

@@ -86,16 +86,17 @@ contains
       use constants,            only: one, two, zero, half, I_ONE
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
-      use fluidtypes,           only: component_fluid
-      use fluidindex,           only: flind
+      use fluids_pub,           only: has_ion, has_dst, has_neu
       use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep
       use grid,                 only: leaves
       use gc_list,              only: cg_list_element
       use grid_cont,            only: grid_container
       use mpi,                  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,             only: comm, mpi_err, master
+      use timestepdust,         only: timestep_dst
       use timestepinteractions, only: timestep_interactions
-      use timestepfuncs,        only: timestep_fluid
+      use timestepionized,      only: timestep_ion
+      use timestepneutral,      only: timestep_neu
 #ifdef COSM_RAYS
       use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
@@ -113,9 +114,7 @@ contains
 
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      type(component_fluid), pointer :: fl
       real :: c_, dt_
-      integer :: ifl
 
 ! Timestep computation
 
@@ -128,13 +127,24 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
-            fl => flind%all_fluids(ifl)
-            !> \todo make the timestep_fluid routine member of fluidtypes::component_fluid
-            call timestep_fluid(cg, fl, dt_, c_)
+         !> \todo make the timestep_* routines members of fluidtypes::component_fluid
+         if (has_ion) then
+            call timestep_ion(cg, dt_, c_)
             dt    = min(dt, dt_)
             c_all = max(c_all, c_)
-         enddo
+         endif
+
+         if (has_neu) then
+            call timestep_neu(cg, dt_, c_)
+            dt    = min(dt, dt_)
+            c_all = max(c_all, c_)
+         endif
+
+         if (has_dst) then
+            call timestep_dst(cg, dt_, c_)
+            dt    = min(dt, dt_)
+            c_all = max(c_all, c_)
+         endif
 
 #ifdef COSM_RAYS
          call timestep_crs(cg)
