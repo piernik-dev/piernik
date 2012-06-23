@@ -140,7 +140,25 @@ contains
       flind%dst%is_magnetized = .false.
       flind%dst%has_energy    = .false.
 
+      flind%dst%get_cs => dust_sound_speed
+
    end subroutine dust_index
+
+   pure function dust_sound_speed(cg, fl, i, j, k) result(cs)
+      use fluidtypes,    only: component_fluid
+      use grid_cont,     only: grid_container
+      implicit none
+      type(grid_container), pointer, intent(in) :: cg !< current grid container
+      type(component_fluid), pointer, intent(in) :: fl
+      integer, intent(in) :: i, j, k
+      real :: cs
+
+      ! locals
+      real :: fnord
+
+      cs = 0.0
+      if (.false.) fnord = cg%u(fl%idn, i, j, k)
+   end function dust_sound_speed
 
    subroutine cleanup_dust
 

@@ -87,12 +87,26 @@ module fluidtypes
 
       real :: c !< COMMENT ME (this quantity was previously a member of phys_prop, but is used in completely different way than other phys_prop% members
 
+      procedure(get_sound_speed), nopass, pointer :: get_cs => null()
+
       contains
          procedure :: set_cs  => update_sound_speed
          procedure :: set_gam => update_adiabatic_index
          procedure :: info    => printinfo_component_fluid
          procedure :: get_tag
    end type component_fluid
+
+   abstract interface
+      pure function get_sound_speed(cg, fl, i, j, k) result(cs)
+         use grid_cont,     only: grid_container
+         import
+         implicit none
+         type(grid_container), pointer, intent(in) :: cg !< current grid container
+         type(component_fluid), pointer, intent(in) :: fl
+         integer, intent(in) :: i, j, k
+         real :: cs
+      end function get_sound_speed
+   end interface
 
    type :: var_numbers
       integer(kind=4) :: all         = 0      !< total number of fluid variables = the size of array \a u(:,:,:,:) in the first index

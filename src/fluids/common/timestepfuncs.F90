@@ -37,65 +37,61 @@ module timestepfuncs
    implicit none
 
    private
-   public :: compute_c_max, compute_dt
+   public :: timestep_fluid
 
 contains
 
-   subroutine compute_c_max(fl, cs, i, j, k, c, c_max, cg)
+   subroutine timestep_fluid(cg, fl, dt, c_fl)
 
-      use constants,  only: ndims
-      use fluidtypes, only: component_fluid
-      use grid_cont,  only: grid_container
+      use constants,     only: big, xdim, ydim, zdim, ndims, GEO_RPZ, LO
+      use domain,        only: dom
+      use fluidtypes,    only: component_fluid
+      use global,        only: cfl
+      use grid_cont,     only: grid_container
 
       implicit none
 
+      type(grid_container), pointer, intent(in) :: cg !< current grid container
       type(component_fluid), pointer, intent(in) :: fl
-      real, intent(in)                           :: cs
-      integer, intent(in)                        :: i, j, k
-      real, dimension(ndims), intent(inout)      :: c
-      real, intent(inout)                        :: c_max
-      type(grid_container), pointer, intent(in)  :: cg
+      real, intent(out) :: dt !< resulting timestep
+      real, intent(out) :: c_fl !< maximum speed at which information travels in fluid
 
-      real, dimension(ndims)                     :: v
+      ! locals
+      real, dimension(ndims) :: c !< maximum velocity for all directions
+      real, dimension(ndims) :: dt_dim !< timestep for the current cg
+      real, dimension(ndims) :: v !< velocity
+      integer :: i, j, k, d
 
-      if ( cg%u(fl%idn,i,j,k) > 0.0) then
-         v(:) = abs(cg%u(fl%imx:fl%imz, i, j, k)/cg%u(fl%idn, i, j, k))
-      else
-         v(:) = 0.0
-      endif
+      c_fl = 0.0; c(:) = 0.0
 
-      c(:) = max( c(:), v(:) + cs )
-      c_max = max(c_max, maxval(c(:)))
+      do k= cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
 
-   end subroutine compute_c_max
+               if (cg%u(fl%idn,i,j,k) > 0.0) then
+                  v = abs(cg%u(fl%imx:fl%imz, i, j, k) / cg%u(fl%idn, i, j, k))
+               else
+                  v = 0.0
+               endif
+               c = max(c, v + fl%get_cs(cg, fl, i, j, k))
+               c_fl = max(c_fl, maxval(c))
 
-   subroutine compute_dt(c, dt_out, cg)
-
-      use constants,  only: big, xdim, ydim, zdim, ndims, GEO_RPZ, LO
-      use domain,     only: dom
-      use global,     only: cfl
-      use grid_cont,  only: grid_container
-
-      implicit none
-
-      real, dimension(ndims), intent(in)  :: c
-      real, intent(out) :: dt_out
-      type(grid_container), pointer, intent(in) :: cg
-
-      real, dimension(ndims) :: dt_proc !< timestep for the current cg
-      integer :: d
+            enddo
+         enddo
+      enddo
 
       do d = xdim, zdim
-         if (dom%has_dir(d) .and. c(d) /= 0.) then
-            dt_proc(d) = cg%dl(d)/c(d)
-            if (dom%geometry_type == GEO_RPZ .and. d == ydim) dt_proc(d) = dt_proc(d) * dom%edge(xdim, LO)
+         if (dom%has_dir(d) .and. c(d) > 0.0) then
+            dt_dim(d) = cg%dl(d)/c(d)
+            if (dom%geometry_type == GEO_RPZ .and. d == ydim) dt_dim(d) = dt_dim(d) * dom%edge(xdim, LO)
          else
-            dt_proc(d) = big
+            dt_dim(d) = big
          endif
       enddo
 
-      dt_out = cfl * minval(dt_proc)
+      dt = cfl * minval(dt_dim)
+      fl%c  = c_fl
 
-   end subroutine compute_dt
+   end subroutine timestep_fluid
 
 end module timestepfuncs
