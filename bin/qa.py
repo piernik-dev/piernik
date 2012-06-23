@@ -14,7 +14,7 @@ test_for_routines  = re.compile('''
       (subroutine|function|type(,|\s))           # next goes subroutine or function or type
    ''',re.VERBOSE)
 test_for_interfaces = re.compile('''
-      ^\s{0,12}(|end)\s           # starts with spaces or spaces and one of { 'end', 'pure', ... }
+      ^\s{0,12}(|end|abstract)\s  # starts with spaces or spaces and one of { 'end', 'pure', ... }
       interface                   # next goes subroutine or function or type
    ''',re.VERBOSE)
 #test_for_routines  = re.compile('''^(?!\s{0,9}!).*(subroutine|function|type(,|\s::))''',re.VERBOSE)
