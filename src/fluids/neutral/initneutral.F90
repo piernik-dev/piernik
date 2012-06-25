@@ -312,9 +312,9 @@ contains
 #endif /* GLOBAL_FR_SPEED */
       return
       if (.false.) write(0,*) bb, cs_iso2
-#if defined(LOCAL_FR_SPEED) || !defined(ISO)
+#if defined(LOCAL_FR_SPEED) || defined(ISO)
       if (.false.) print *, this%all
-#endif /* defined(LOCAL_FR_SPEED) || !defined(ISO) */
+#endif /* defined(LOCAL_FR_SPEED) || defined(ISO) */
 
    end subroutine flux_neu
 
