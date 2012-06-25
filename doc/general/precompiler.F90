@@ -73,7 +73,7 @@
 !!
 !! \b \#define \b "SHEAR_BND"
 !!
-!! \b \#define \b "NEW_HYDROSTATIC" - change hydrostatic_zeq scheme and find midplane corresponding to zero gravity (practically the least gravity absolute value)
+!! \b \#define \b "HYDROSTATIC_V2" - change hydrostatic_zeq scheme and find midplane corresponding to zero gravity (practically the least gravity absolute value)
 !!
 !! \b \#define \b "ZERO_BND_EMF" - switch to putting 0 on emf boundaries for outflow type boundary conditions instead of constant emf gradient as default
 !! @n @n

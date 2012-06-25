@@ -190,13 +190,13 @@ contains
       allocate(dprofs(nstot))
 
       ksmid = 0
-#ifdef NEW_HYDROSTATIC
+#ifdef HYDROSTATIC_V2
       ksmid = minloc(abs(gprofs),1)          ! generally the midplane is where gravity is 0,  practically we want the least gravity absolute value
       hzeq_scheme => hzeq_scheme_v2
-#else /* !NEW_HYDROSTATIC */
+#else /* !HYDROSTATIC_V2 */
       ksmid = maxloc(zs,1,mask=(zs < 0.0))   ! the midplane is in between ksmid and ksmid+1
       hzeq_scheme => hzeq_scheme_v1
-#endif /* !NEW_HYDROSTATIC */
+#endif /* !HYDROSTATIC_V2 */
       if (ksmid == 0) call die("[hydrostatic:hydrostatic_main] ksmid not set")
 
       if (ksmid < nstot) then
@@ -270,11 +270,10 @@ contains
    end subroutine get_gprofs_accel
 
 !>
-!! \brief Routine that has to offer a z-sweep of gravity potential with extended z-grid
-!! \deprecated probably now the routine should have different name than gparray which got from the commented part of code
+!! \brief Routine that has to offer a z-sweep of external gravity potential with extended z-grid
 !! \warning in case of moving 'use types, only: axes'' behind use gravity there could be gcc(4.5) internal compiler error: in fold_convert_loc, at fold-const.c:2792 (solved in >=gcc-4.6)
 !<
-   subroutine get_gprofs_gparray(iia, jja)
+   subroutine get_gprofs_extgp(iia, jja)
 
       use constants, only: half
       use gravity,   only: tune_zeq, grav_type
@@ -303,11 +302,11 @@ contains
       if (allocated(ax%x))   deallocate(ax%x)
       if (allocated(ax%y))   deallocate(ax%y)
       if (allocated(ax%z))   deallocate(ax%z)
-   end subroutine get_gprofs_gparray
+   end subroutine get_gprofs_extgp
 
 !>
 !! \brief Routine that prepares data for constructing hydrostatic equilibrium by hydrostatic_main routine
-!! \details It is important to have get_gprofs pointer associated to a proper routine that gives back the column of nsub*nzt elements of gravitational acceleration in z direction. In the most common cases the gprofs_target parameter from GRAVITY namelist may be used. When it is set to 'accel' or 'gparr' the pointer is associated to get_gprofs_accel or get_gprofs_gparray routines, respectively.
+!! \details It is important to have get_gprofs pointer associated to a proper routine that gives back the column of nsub*nzt elements of gravitational acceleration in z direction. In the most common cases the gprofs_target parameter from GRAVITY namelist may be used. When it is set to 'accel' or 'extgp' the pointer is associated to get_gprofs_accel or get_gprofs_extgp routines, respectively.
 !! \note After calling this routine gprofs is multiplied by dzs/csim2 which are assumed to be constant. This is done for optimizing the hydrostatic_main routine.
 !! \param iia x-coordinate of z-column
 !! \param jja y-coordinate of z-column
@@ -331,8 +330,8 @@ contains
          select case (gprofs_target)
             case ('accel')
                get_gprofs => get_gprofs_accel
-            case ('gparr')
-               get_gprofs => get_gprofs_gparray
+            case ('extgp')
+               get_gprofs => get_gprofs_extgp
             case default
                call die("[hydrostatic:start_hydrostatic] get_gprofs'' target has not been specified")
          end select
