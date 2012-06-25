@@ -115,11 +115,6 @@ contains
       use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
-      use initdust,    only: idnd, imxd, imyd, imzd
-      use initneutral, only: idnn, imxn, imyn, imzn
-#ifndef ISO
-      use initneutral, only: ienn, gamma_neu
-#endif /* !ISO */
 
       implicit none
 
@@ -146,22 +141,22 @@ contains
                      rc = sqrt((xi-x0)**2+(yj-y0)**2)
                   endif
 
-                  cg%u(idnn,i,j,k) = d_gas
-                  cg%u(imxn,i,j,k) = 0.0
-                  cg%u(imyn,i,j,k) = d_gas*v_gas
-                  cg%u(imzn,i,j,k) = 0.0
+                  cg%u(flind%neu%idn,i,j,k) = d_gas
+                  cg%u(flind%neu%imx,i,j,k) = 0.0
+                  cg%u(flind%neu%imy,i,j,k) = d_gas*v_gas
+                  cg%u(flind%neu%imz,i,j,k) = 0.0
                   if (rc <= r0) then
-                     cg%u(idnd,i,j,k) = d_dust
-                     cg%u(imyd,i,j,k) = d_dust*v_dust
+                     cg%u(flind%dst%idn,i,j,k) = d_dust
+                     cg%u(flind%dst%imy,i,j,k) = d_dust*v_dust
                   else
-                     cg%u(idnd,i,j,k) = smalld
-                     cg%u(imyd,i,j,k) = 0.0
+                     cg%u(flind%dst%idn,i,j,k) = smalld
+                     cg%u(flind%dst%imy,i,j,k) = 0.0
                   endif
-                  cg%u(imxd,i,j,k) = 0.0
-                  cg%u(imzd,i,j,k) = 0.0
+                  cg%u(flind%dst%imx,i,j,k) = 0.0
+                  cg%u(flind%dst%imz,i,j,k) = 0.0
 #ifndef ISO
-                  cg%u(ienn,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(cg%u(imxn,i,j,k)**2 + &
-                       &                 cg%u(imyn,i,j,k)**2+cg%u(imzn,i,j,k)**2)/cg%u(idnn,i,j,k)
+                  cg%u(flind%dst%ien,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(cg%u(flind%neu%imx,i,j,k)**2 + &
+                       &                 cg%u(flind%neu%imy,i,j,k)**2+cg%u(flind%neu%imz,i,j,k)**2)/cg%u(flind%neu%idn,i,j,k)
 #endif /* !ISO */
                enddo
             enddo

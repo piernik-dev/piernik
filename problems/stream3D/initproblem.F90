@@ -125,16 +125,14 @@ contains
 
       use constants,   only: pi, dpi, xdim, ydim, zdim, LO
       use domain,      only: dom
+      use fluidindex,  only: flind
       use global,      only: smalld
       use gravity,     only: ptmass
       use grid,        only: leaves
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
-      use initneutral, only: idnn, imxn, imyn, imzn, cs_iso_neu, cs_iso_neu2
-      use initdust,    only: idnd, imxd, imyd, imzd
       use units,       only: newtong
 #ifndef ISO
-      use initneutral, only: ienn, gamma_neu
       use global,      only: smallei
 #endif /* !ISO */
 
@@ -167,8 +165,8 @@ contains
             sigma0 = 0.2* R0**(-1.5)
          endif
          H0 = R0 * HtoR
-         cs_iso_neu2 = H0 * (pi*newtong) * sigma0
-         cs_iso_neu = sqrt(cs_iso_neu2)
+         flind%neu%cs2 = H0 * (pi*newtong) * sigma0
+         flind%neu%cs = sqrt(flind%neu%cs2)
 
          rho0 = sigma0 / (sqrt(dpi)*H0)
 
@@ -182,8 +180,8 @@ contains
                   xi = cg%x(i)
                   rc = sqrt(xi**2+yj**2)
                   H = HtoR * rc
-                  cg%u(idnn,i,j,k) = max(rho0 * norm * dens_RdistR(rc,Rin,n) * exp(- 0.25 * zk**2 / H**2 ), smalld)
-                  cg%u(idnd,i,j,k) = eps*cg%u(idnn,i,j,k)
+                  cg%u(flind%neu%idn,i,j,k) = max(rho0 * norm * dens_RdistR(rc,Rin,n) * exp(- 0.25 * zk**2 / H**2 ), smalld)
+                  cg%u(flind%dst%idn,i,j,k) = eps*cg%u(flind%neu%idn,i,j,k)
                enddo
             enddo
          enddo
@@ -191,7 +189,7 @@ contains
          do i = 2, cg%n_(xdim)-1   ! 2d
             rc= cg%x(i)*sqrt(2.0)
             gradgp=  0.5*(cg%gp(i+1,i+1,max(cg%n_(zdim)/2,1))-cg%gp(i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx/sqrt(2.)
-            gradp = -0.5*(cg%u(idnn,i+1,i+1,max(cg%n_(zdim)/2,1))-cg%u(idnn,i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx /sqrt(2.)*cs_iso_neu2
+            gradp = -0.5*(cg%u(flind%neu%idn,i+1,i+1,max(cg%n_(zdim)/2,1))-cg%u(flind%neu%idn,i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx /sqrt(2.)*flind%neu%cs2
             omega(i)  = sqrt( abs( (gradgp-gradp)/rc ) )
             omegad(i) = sqrt( abs(    gradgp/rc      ) )
          enddo
@@ -212,20 +210,20 @@ contains
                     &   / (cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
 !
 !
-               cg%u(imxn,i,j,:) = -yj*iOmega*cg%u(idnn,i,j,:)
-               cg%u(imyn,i,j,:) =  xi*iOmega*cg%u(idnn,i,j,:)
-               cg%u(imzn,i,j,:) = 0.0
+               cg%u(flind%neu%imx,i,j,:) = -yj*iOmega*cg%u(flind%neu%idn,i,j,:)
+               cg%u(flind%neu%imy,i,j,:) =  xi*iOmega*cg%u(flind%neu%idn,i,j,:)
+               cg%u(flind%neu%imz,i,j,:) = 0.0
 #ifndef ISO
-               cg%u(ienn,i,j,:) = cs_iso_neu2/(gamma_neu-1.0)*cg%u(idnn,i,j,:)
-               cg%u(ienn,i,j,:) = max(cg%u(ienn,i,j,:), smallei)
-               cg%u(ienn,i,j,:) = cg%u(ienn,i,j,:) +0.5*(vx**2+vy**2+vz**2)*cg%u(idnn,i,j,:)
+               cg%u(flind%neu%ien,i,j,:) = flind%neu%cs2/(flind%neu%gam-1.0)*cg%u(flind%neu%idn,i,j,:)
+               cg%u(flind%neu%ien,i,j,:) = max(cg%u(flind%neu%ien,i,j,:), smallei)
+               cg%u(flind%neu%ien,i,j,:) = cg%u(flind%neu%ien,i,j,:) +0.5*(vx**2+vy**2+vz**2)*cg%u(flind%neu%idn,i,j,:)
 #endif /* !ISO */
 
                iOmega = omegad(int(ilook))+(rc-cg%x(int(ilook))*sqrt(2.))*(omegad(int(ilook)+1)-omegad(int(ilook))) &
                     &   /(cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
-               cg%u(imxd,i,j,:) = -yj*iOmega*cg%u(idnd,i,j,:) + amp*(noise(1,:)-0.5)
-               cg%u(imyd,i,j,:) =  xi*iOmega*cg%u(idnd,i,j,:) + amp*(noise(2,:)-0.5)
-               cg%u(imzd,i,j,:) = 0.0 + amp*(noise(3,:)-0.5)
+               cg%u(flind%dst%imx,i,j,:) = -yj*iOmega*cg%u(flind%dst%idn,i,j,:) + amp*(noise(1,:)-0.5)
+               cg%u(flind%dst%imy,i,j,:) =  xi*iOmega*cg%u(flind%dst%idn,i,j,:) + amp*(noise(2,:)-0.5)
+               cg%u(flind%dst%imz,i,j,:) = 0.0 + amp*(noise(3,:)-0.5)
 
             enddo
          enddo

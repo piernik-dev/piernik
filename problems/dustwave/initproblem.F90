@@ -104,12 +104,12 @@ contains
 
    subroutine init_prob
 
-      use constants, only: pi, xdim, ydim, zdim
-      use domain,    only: dom
-      use grid,      only: leaves
-      use gc_list,   only: cg_list_element
-      use grid_cont, only: grid_container
-      use initdust,  only: idnd, imxd, imyd, imzd
+      use constants,  only: pi, xdim, ydim, zdim
+      use domain,     only: dom
+      use grid,       only: leaves
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
+      use fluidindex, only: flind
 
       implicit none
 
@@ -132,10 +132,10 @@ contains
             do j = 1, cg%n_(ydim)
                do k = 1, cg%n_(zdim)
 
-                  cg%u(idnd,i,j,k) = d0
-                  cg%u(imxd,i,j,k) = d0*k_x/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
-                  cg%u(imyd,i,j,k) = d0*k_y/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
-                  cg%u(imzd,i,j,k) = d0*k_z/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
+                  cg%u(flind%dst%idn,i,j,k) = d0
+                  cg%u(flind%dst%imx,i,j,k) = d0*k_x/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
+                  cg%u(flind%dst%imy,i,j,k) = d0*k_y/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
+                  cg%u(flind%dst%imz,i,j,k) = d0*k_z/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))
 
                enddo
             enddo
