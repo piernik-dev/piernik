@@ -110,7 +110,7 @@ contains
 
       use fluids_pub,      only: has_dst, has_ion, has_neu
       use fluidindex,      only: fluid_index
-      use fluxes,          only: set_limiter, init_fluxes
+      use fluxes,          only: set_limiter
       use global,          only: limiter
       use dataio_pub,      only: die, code_progress, warn
       use constants,       only: PIERNIK_INIT_GLOBAL
@@ -146,8 +146,6 @@ contains
 #endif /* TRACER */
 
       call fluid_index    ! flind has valid values afterwards
-
-      call init_fluxes
 
       if (has_neu .and. has_ion .and. cs_iso_neu /= cs_iso_ion) &
          call warn("[initfluids:init_fluids]: 'cs_iso_neu' and 'cs_iso_ion' should be equal")

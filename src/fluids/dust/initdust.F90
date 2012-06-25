@@ -52,6 +52,7 @@ module initdust
       contains
          procedure, nopass :: get_tag
          procedure, pass :: get_cs => dust_cs
+         procedure, nopass :: compute_flux => flux_dust
    end type dust_fluid
 
 contains
@@ -174,4 +175,106 @@ contains
 
    end subroutine cleanup_dust
 
+#define RNG 2:nm
+!/*
+!>
+!! \brief Computation of %fluxes for the dust fluid
+!!
+!!The flux functions for dust are given by
+!!
+!!\f[
+!!  \vec{F}{(\vec{u})} =
+!!  \left(\begin{array}{c}
+!!    \rho v_x \\
+!!    \rho v_x^2 \\
+!!    \rho v_x v_y \\
+!!    \rho v_x v_z
+!!  \end{array}\right),
+!!  \qquad
+!!  \vec{G}{(\vec{u})} =
+!!  \left(\begin{array}{c}
+!!    \rho v_y \\
+!!    \rho v_y v_x \\
+!!    \rho v_y^2 \\
+!!    \rho v_y v_z
+!!  \end{array}\right),
+!!\qquad
+!!  \vec{H}{(\vec{u})} =
+!!  \left(\begin{array}{c}
+!!    \rho v_z \\
+!!    \rho v_z v_x\\
+!!    \rho v_z v_y \\
+!!    \rho v_z^2
+!!  \end{array}\right),
+!!\f]
+!!
+!<
+!*/
+   subroutine flux_dust(flux, cfr, uu, n, vx, ps, bb, cs_iso2)
+
+      use fluidindex, only: idn, imx, imy, imz
+#ifdef GLOBAL_FR_SPEED
+      use timestep,   only: c_all
+#endif /* GLOBAL_FR_SPEED */
+
+      implicit none
+      integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(inout), pointer :: flux     !< flux of dust
+      real, dimension(:,:), intent(inout), pointer :: cfr      !< freezing speed for dust
+      real, dimension(:,:), intent(in),    pointer :: uu       !< part of u for dust
+      real, dimension(:),   intent(inout), pointer :: vx        !< velocity of dust fluid for current sweep
+      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of dust fluid for current sweep
+      real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
+
+      ! locals
+!      real               :: minvx, maxvx, amp
+#ifdef LOCAL_FR_SPEED
+      real, dimension(size(vx)) :: absvx
+#endif /* LOCAL_FR_SPEED */
+      integer                   :: nm
+
+      nm = n-1
+
+      ps(:)  = 0.0
+      vx(RNG)=uu(imx,RNG)/uu(idn,RNG) ; vx(1) = vx(2); vx(n) = vx(nm)
+
+      flux(idn,RNG)=uu(imx,RNG)
+      flux(imx,RNG)=uu(imx,RNG)*vx(RNG)
+      flux(imy,RNG)=uu(imy,RNG)*vx(RNG)
+      flux(imz,RNG)=uu(imz,RNG)*vx(RNG)
+
+      flux(:,1) = flux(:,2); flux(:,n) = flux(:,nm)
+
+#ifdef LOCAL_FR_SPEED
+
+      ! The freezing speed is now computed locally (in each cell)
+      !  as in Trac & Pen (2003). This ensures much sharper shocks,
+      !  but sometimes may lead to numerical instabilities
+!     minvx = minval(vx(RNG))
+!     maxvx = maxval(vx(RNG))
+!     amp   = (maxvx-minvx)*half
+!      cfr(1,RNG) = max(sqrt(vx(RNG)**2+cfr_smooth*amp),small)
+      absvx = abs(vx)
+      cfr(idn,RNG) = max( absvx(1:n-2), absvx(2:nm), absvx(3:n) )
+
+      cfr(idn,1) = cfr(idn,2); cfr(idn,n) = cfr(idn,nm)
+
+      cfr(imx,:) = cfr(idn,:)
+      cfr(imy,:) = cfr(idn,:)
+      cfr(imz,:) = cfr(idn,:)
+
+#endif /* LOCAL_FR_SPEED */
+
+#ifdef GLOBAL_FR_SPEED
+      ! The freezing speed is now computed globally
+      !  (c=const for the whole domain) in subroutine 'timestep'
+
+      !  cfr(:,:) = flind%dst%c
+      cfr(:,:) = c_all
+#endif /* GLOBAL_FR_SPEED */
+      return
+      if (.false.) write(0,*) bb, cs_iso2
+
+   end subroutine flux_dust
 end module initdust

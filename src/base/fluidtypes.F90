@@ -94,6 +94,7 @@ module fluidtypes
          procedure :: info    => printinfo_component_fluid
          procedure(tag), nopass, deferred :: get_tag
          procedure(cs_get), pass, deferred :: get_cs
+         procedure(flux_interface), nopass, deferred :: compute_flux
    end type component_fluid
 
    abstract interface
@@ -111,6 +112,18 @@ module fluidtypes
          implicit none
          character(len=idlen)   :: tag
       end function tag
+
+      subroutine flux_interface(flux,cfr,uu,n,vx,ps,bb,cs_iso2)
+         implicit none
+         integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
+         real, dimension(:,:), intent(inout), pointer :: flux      !< flux of fluid
+         real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for fluid
+         real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for fluid
+         real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
+         real, dimension(:),   intent(inout), pointer :: vx        !< velocity of fluid for current sweep
+         real, dimension(:),   intent(inout), pointer :: ps        !< pressure of fluid for current sweep
+         real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
+      end subroutine flux_interface
    end interface
 
    type :: fluid_arr

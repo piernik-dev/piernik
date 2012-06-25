@@ -58,6 +58,7 @@ module initionized
       contains
          procedure, nopass :: get_tag
          procedure, pass :: get_cs => ion_cs
+         procedure, nopass :: compute_flux => flux_ion
    end type ion_fluid
 
 contains
@@ -249,5 +250,148 @@ contains
       implicit none
 
    end subroutine cleanup_ionized
+
+!/*
+!>
+!! \brief Computation of %fluxes for the ionized fluid
+!!
+!!The flux functions for ionized fluid are given by
+!!
+!!\f[
+!!  \vec{F}{(\vec{u})} =
+!!  \left(\begin{array}{c}
+!!    \rho v_x \\
+!!    \rho v_x^2 + p_* - B_x^2 \\
+!!    \rho v_x v_y - B_x B_y\\
+!!    \rho v_x v_z - B_x B_z\\
+!!    (e + p)v_x - \vec{B} \cdot \vec{v} \; B_x
+!!  \end{array}\right),
+!!  \qquad
+!!  \vec{G}{(\vec{u})} =
+!!  \left(\begin{array}{c}
+!!    \rho v_y \\
+!!    \rho v_y v_x  - B_y B_x\\
+!!    \rho v_y^2 + p_* - B_y^2 \\
+!!    \rho v_y v_z  - B_y B_z\\
+!!    (e + p)v_y - \vec{B} \cdot \vec{v} \; B_y
+!!  \end{array}\right),
+!!\qquad
+!!  \vec{H}{(\vec{u})} =
+!!  \left(\begin{array}{c}
+!!    \rho v_z \\
+!!    \rho v_z v_x  - B_z B_x\\
+!!    \rho v_z v_y  - B_z B_y\\
+!!    \rho v_z^2 + p_* - B_z^2 \\
+!!    (e + p)v_z - \vec{B} \cdot \vec{v} \; B_z
+!!  \end{array}\right),
+!!\f]
+!!where \f$p_* = p + B^2/2\f$, \f$e= e_{th} + \frac{1}{2} \rho v^2 + B^2/2\f$,  are the total pressure and total energy density,
+!!while \f$e_{th}\f$ is thermal energy density and  \f$e_{mag} = B^2/2\f$ is the magnetic energy density.
+!<
+!*/
+#define RNG 2:nm
+   subroutine flux_ion(flux, cfr, uu, n, vx, ps, bb, cs_iso2)
+
+      use constants,  only: xdim, ydim, zdim
+      use dataio_pub, only: die
+      use func,       only: ekin, emag
+      use fluidindex, only: idn, imx, imy, imz, flind
+#ifndef ISO
+      use fluidindex, only: ien
+#endif /* !ISO */
+#ifdef LOCAL_FR_SPEED
+      use constants,  only: half, small
+      use global,     only: cfr_smooth
+#endif /* LOCAL_FR_SPEED */
+
+      implicit none
+
+      integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(inout), pointer :: flux     !< flux of ionized fluid
+      real, dimension(:,:), intent(inout), pointer :: cfr      !< freezing speed for ionized fluid
+      real, dimension(:,:), intent(in),    pointer :: uu       !< part of u for ionized fluid
+      real, dimension(:),   intent(inout), pointer :: vx        !< velocity of ionized fluid for current sweep
+      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of ionized fluid for current sweep
+      real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),    pointer :: cs_iso2   !< local isothermal sound speed squared (optional)
+
+      ! locals
+      real, dimension(n) :: p           !< thermal pressure of ionized fluid
+      real, dimension(n) :: pmag        !< pressure of magnetic field
+      integer            :: nm
+#ifdef LOCAL_FR_SPEED
+      integer            :: i
+      real               :: minvx     !<
+      real               :: maxvx     !<
+      real               :: amp       !<
+#endif /* LOCAL_FR_SPEED */
+
+      nm = n-1
+#ifdef MAGNETIC
+      pmag(RNG)= emag(bb(xdim,RNG),bb(ydim,RNG),bb(zdim,RNG));  pmag(1) = pmag(2); pmag(n) = pmag(nm)
+#else /* !MAGNETIC */
+      pmag(:) = 0.0
+#endif /* !MAGNETIC */
+      vx(RNG)=uu(imx,RNG)/uu(idn,RNG); vx(1) = vx(2); vx(n) = vx(nm)
+
+#ifndef ISO
+      if (associated(cs_iso2)) call die("[fluxonized:flux_ion] cs_iso2 should not be present")
+#endif /* !ISO */
+
+#ifdef ISO
+      p(RNG) = cs_iso2(RNG) * uu(idn,RNG)
+      ps(RNG)= p(RNG) + pmag(RNG)
+#else /* !ISO */
+      ps(RNG)=(uu(ien,RNG) - ekin(uu(imx,RNG),uu(imy,RNG),uu(imz,RNG),uu(idn,RNG)) )*(flind%ion%gam_1) &
+           & + (2.0-flind%ion%gam)*pmag(RNG)
+      p(RNG) = ps(RNG)- pmag(RNG);  p(1) = p(2); p(n) = p(nm)
+#endif /* !ISO */
+      ps(1) = ps(2); ps(n) = ps(nm)
+
+      flux(idn,RNG)=uu(imx,RNG)
+      flux(imx,RNG)=uu(imx,RNG)*vx(RNG)+ps(RNG) - bb(xdim,RNG)**2
+      flux(imy,RNG)=uu(imy,RNG)*vx(RNG)-bb(ydim,RNG)*bb(xdim,RNG)
+      flux(imz,RNG)=uu(imz,RNG)*vx(RNG)-bb(zdim,RNG)*bb(xdim,RNG)
+#ifndef ISO
+      flux(ien,RNG)=(uu(ien,RNG)+ps(RNG))*vx(RNG)-bb(xdim,RNG)*(bb(xdim,RNG)*uu(imx,RNG) &
+                +bb(ydim,RNG)*uu(imy,RNG)+bb(zdim,RNG)*uu(imz,RNG))/uu(idn,RNG)
+#endif /* !ISO */
+      flux(:,1) = flux(:,2); flux(:,n) = flux(:,nm)
+#ifdef LOCAL_FR_SPEED
+
+      ! The freezing speed is now computed locally (in each cell)
+      !  as in Trac & Pen (2003). This ensures much sharper shocks,
+      !  but sometimes may lead to numerical instabilities
+      minvx = minval(vx(RNG))
+      maxvx = maxval(vx(RNG))
+      amp   = half*(maxvx-minvx)
+#ifdef ISO
+      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +               p(RNG))/uu(idn,RNG)),small)
+#else /* !ISO */
+      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + flind%ion%gam*p(RNG))/uu(idn,RNG)),small)
+#endif /* !ISO */
+      !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
+      !>
+      !! \todo find why is it so
+      !! if such a treatment is OK then should be applied also in both cases of neutral and ionized gas
+      !!    do i = 2,nm
+      !!       cfr(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
+      !!    enddo
+      !<
+
+      cfr(1,1) = cfr(1,2);  cfr(1,n) = cfr(1,nm)
+      do i = 2, flind%ion%all
+         cfr(i,:) = cfr(1,:)
+      enddo
+#endif /* LOCAL_FR_SPEED */
+
+#ifdef GLOBAL_FR_SPEED
+      ! The freezing speed is now computed globally
+      !  (c=const for the whole domain) in subroutine 'timestep'
+
+      cfr(:,:) = flind%ion%c
+#endif /* GLOBAL_FR_SPEED */
+
+   end subroutine flux_ion
 
 end module initionized

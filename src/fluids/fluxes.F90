@@ -48,9 +48,7 @@ module fluxes
 ! pulled by ANY
    implicit none
    private
-   public  :: all_fluxes, flimiter, set_limiter, init_fluxes, cleanup_fluxes
-
-   logical, save                              :: fluxes_initialized = .false.
+   public  :: all_fluxes, flimiter, set_limiter
 
    interface
       subroutine limiter(f,a,b)
@@ -61,61 +59,9 @@ module fluxes
       end subroutine limiter
    end interface
 
-   interface
-      subroutine flux_interface(flux,cfr,uu,n,vx,ps,bb,cs_iso2)
-         implicit none
-         integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
-         real, dimension(:,:), intent(inout), pointer :: flux      !< flux of fluid
-         real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for fluid
-         real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for fluid
-         real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
-         real, dimension(:),   intent(inout), pointer :: vx        !< velocity of fluid for current sweep
-         real, dimension(:),   intent(inout), pointer :: ps        !< pressure of fluid for current sweep
-         real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
-      end subroutine flux_interface
-   end interface
-
-   type :: flux_func
-      procedure(flux_interface), pointer, nopass :: flux_func
-   end type flux_func
-
-   type(flux_func), dimension(:), allocatable :: flist
    procedure(limiter), pointer :: flimiter
 
 contains
-
-   subroutine init_fluxes
-      use constants,   only: NEU, DST, ION
-      use fluxdust,    only: flux_dst
-      use fluidindex,  only: flind
-      use fluxionized, only: flux_ion
-      use fluxneutral, only: flux_neu
-      implicit none
-      integer :: i
-
-      allocate(flist(flind%fluids))
-
-      do i = 1, flind%fluids
-         select case (flind%all_fluids(i)%fl%tag)
-            case (NEU)
-               flist(flind%all_fluids(i)%fl%pos)%flux_func => flux_neu
-            case (DST)
-               flist(flind%all_fluids(i)%fl%pos)%flux_func => flux_dst
-            case (ION)
-               flist(flind%all_fluids(i)%fl%pos)%flux_func => flux_ion
-         end select
-      enddo
-
-      fluxes_initialized = .true.
-   end subroutine init_fluxes
-
-   subroutine cleanup_fluxes
-
-      implicit none
-
-      if (allocated(flist))  deallocate(flist)
-
-   end subroutine cleanup_fluxes
 
 !>
 !! \brief Subroutine which changes flux and cfr from mhdflux regarding specified fluids.
@@ -172,7 +118,7 @@ contains
          pvx   =>   vx(pfl%pos,:)
          ppp   =>   pp(pfl%pos,:)
 
-         call flist(pfl%pos)%flux_func(pflux, pcfr, puu, n, pvx, ppp, pbb, cs_iso2)
+         call pfl%compute_flux(pflux, pcfr, puu, n, pvx, ppp, pbb, cs_iso2)
       enddo
 
 #ifdef COSM_RAYS

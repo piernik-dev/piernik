@@ -56,6 +56,7 @@ module initneutral
       contains
          procedure, nopass :: get_tag
          procedure, pass :: get_cs => neu_cs
+         procedure, nopass :: compute_flux => flux_neu
    end type neutral_fluid
 
 contains
@@ -219,5 +220,146 @@ contains
       implicit none
 
    end subroutine cleanup_neutral
+
+!==========================================================================================
+!
+! OPT: This routine may cost as much as 30% of rtvd. It seems that all the data fit well a 512kB L2 cache, but Ir:Dr:Dw is like 8:2:1
+! OPT: \todo Try an explicit loop over RNG to check if we're better than the compiler
+! OPT: similar treatment may be helpful for fluxionized.F90, fluxdust.F90 and fluxcosmicrays.F90
+!
+#define RNG 2:nm
+!/*
+!>
+!! \brief Computation of %fluxes for the neutral fluid
+!!
+!!The flux functions for neutral fluid are given by
+!!
+!!\f[
+!!  \vec{F}{(\vec{u})} =
+!!  \left(\begin{array}{c}
+!!    \rho v_x \\
+!!    \rho v_x^2 + p \\
+!!    \rho v_x v_y\\
+!!    \rho v_x v_z\\
+!!    (e + p)v_x
+!!  \end{array}\right),
+!!  \qquad
+!!  \vec{G}{(\vec{u})} =
+!!  \left(\begin{array}{c}
+!!    \rho v_y \\
+!!    \rho v_y v_x\\
+!!    \rho v_y^2 + p\\
+!!    \rho v_y v_z\\
+!!    (e + p)v_y
+!!  \end{array}\right),
+!!\qquad
+!!  \vec{H}{(\vec{u})} =
+!!  \left(\begin{array}{c}
+!!    \rho v_z \\
+!!    \rho v_z v_x\\
+!!    \rho v_z v_y \\
+!!    \rho v_z^2 + p \\
+!!    (e + p)v_z
+!!  \end{array}\right),
+!!\f]
+!<
+!*/
+   subroutine flux_neu(flux, cfr, uu, n, vx, ps, bb, cs_iso2)
+
+      use func,       only: ekin
+      use fluidindex, only: idn, imx, imy, imz
+#if defined(LOCAL_FR_SPEED) || !defined(ISO)
+      use fluidindex, only: flind
+#endif /* defined(LOCAL_FR_SPEED) || !defined(ISO) */
+#ifdef LOCAL_FR_SPEED
+      use constants,  only: small, half
+      use global,     only: cfr_smooth
+#endif /* LOCAL_FR_SPEED */
+#ifdef GLOBAL_FR_SPEED
+      use timestep,   only: c_all
+#endif /* GLOBAL_FR_SPEED */
+#ifndef ISO
+      use fluidindex, only: ien
+      use global,     only: smallp
+#endif /* !ISO */
+
+      implicit none
+
+      integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(inout), pointer :: flux      !< flux of neutral fluid
+      real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for neutral fluid
+      real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for neutral fluid
+      real, dimension(:),   intent(inout), pointer :: vx        !< velocity of neutral fluid for current sweep
+      real, dimension(:),   intent(inout), pointer :: ps        !< pressure of neutral fluid for current sweep
+      real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
+      real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
+
+      ! locals
+      integer            :: nm
+#ifdef LOCAL_FR_SPEED
+      integer            :: i
+      real               :: minvx     !<
+      real               :: maxvx     !<
+      real               :: amp       !<
+#endif /* LOCAL_FR_SPEED */
+
+      nm = n-1
+      vx(RNG) = uu(imx,RNG)/uu(idn,RNG) ; vx(1) = vx(2); vx(n) = vx(nm)
+#ifdef ISO
+      ps(RNG)  = cs_iso2(RNG)*uu(idn,RNG) ; ps(1) = ps(2); ps(n) = ps(nm)
+#else /* !ISO */
+      ps(RNG)  = (uu(ien,RNG) - ekin(uu(imx,RNG),uu(imy,RNG),uu(imz,RNG),uu(idn,RNG)) )*(flind%neu%gam_1)
+      ps(RNG)  = max(ps(RNG), smallp)
+#endif /* !ISO */
+
+      flux(idn,RNG)=uu(imx,RNG)
+      flux(imx,RNG)=uu(imx,RNG)*vx(RNG)+ps(RNG)
+      flux(imy,RNG)=uu(imy,RNG)*vx(RNG)
+      flux(imz,RNG)=uu(imz,RNG)*vx(RNG)
+#ifndef ISO
+      flux(ien,RNG)=(uu(ien,RNG)+ps(RNG))*vx(RNG)
+#endif /* !ISO */
+      flux(:,1) = flux(:,2) ; flux(:,n) = flux(:,nm)
+
+#ifdef LOCAL_FR_SPEED
+
+      ! The freezing speed is now computed locally (in each cell)
+      !  as in Trac & Pen (2003). This ensures much sharper shocks,
+      !  but sometimes may lead to numerical instabilities
+      minvx = minval(vx(RNG))
+      maxvx = maxval(vx(RNG))
+      amp   = half*(maxvx-minvx)
+      !    c_fr  = 0.0
+#ifdef ISO
+      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(              ps(RNG))/uu(idn,RNG)),small)
+#else /* !ISO */
+      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(flind%neu%gam*ps(RNG))/uu(idn,RNG)),small)
+#endif /* !ISO */
+      !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
+      !>
+      !! \todo find why is it so
+      !! if such a treatment is OK then should be applied also in both cases of neutral and ionized gas
+      !!    do i = 2,nm
+      !!       cfr(1,i) = maxval( [c_fr(i-1), c_fr(i), c_fr(i+1)] )
+      !!    enddo
+      !<
+
+      cfr(1,1) = cfr(1,2);  cfr(1,n) = cfr(1,nm)
+      do i = 2, flind%neu%all
+         cfr(i,:) = cfr(1,:)
+      enddo
+#endif /* LOCAL_FR_SPEED */
+
+#ifdef GLOBAL_FR_SPEED
+      ! The freezing speed is now computed globally
+      !  (c=const for the whole domain) in subroutine 'timestep'
+
+      !    cfr(:,:) = flind%neu%c   ! check which c_xxx is better
+      cfr(:,:) = c_all
+#endif /* GLOBAL_FR_SPEED */
+      return
+      if (.false.) write(0,*) bb, cs_iso2
+
+   end subroutine flux_neu
 
 end module initneutral
