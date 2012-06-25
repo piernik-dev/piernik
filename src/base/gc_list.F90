@@ -498,7 +498,7 @@ contains
    subroutine check_na(this)
 
       use constants,  only: INVALID, base_level_id
-      use dataio_pub, only: die
+      use dataio_pub, only: msg, die
 
       implicit none
 
@@ -511,29 +511,45 @@ contains
       cgl => this%first
       do while (associated(cgl))
          if (allocated(this%q_lst) .neqv. allocated(cgl%cg%q)) then
-            call die("[gc_list:check_na] allocated(all_cg%q_lst) .neqv. allocated(cgl%cg%q)")
+            write(msg,'(2(a,l2))')"[gc_list:check_na] allocated(all_cg%q_lst) .neqv. allocated(cgl%cg%q):",allocated(this%q_lst)," .neqv. ",allocated(cgl%cg%q)
+            call die(msg)
          else if (allocated(this%q_lst)) then
             if (size(this%q_lst) /= size(cgl%cg%q)) then
-               call die("[gc_list:check_na] size(all_cg%q_lst) /= size(cgl%cg%q)")
+               write(msg,'(2(a,i5))')"[gc_list:check_na] size(all_cg%q_lst) /= size(cgl%cg%q)",size(this%q_lst)," /= ",size(cgl%cg%q)
+               call die(msg)
             else
                do i = lbound(this%q_lst, dim=1), ubound(this%q_lst, dim=1)
-                  if (this%q_lst(i)%dim4 /= INVALID) call die("[gc_list:check_na] all_cg%q_lst(i) /= cgl%cg%q(i)")
-                  if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%level_id < base_level_id .and. .not. this%q_lst(i)%multigrid) &
-                       call die("[gc_list:check_na] non-multigrid cgl%cg%q(i) allocated on coarse level")
+                  if (this%q_lst(i)%dim4 /= INVALID) then
+                     write(msg,'(3a,i10)')"[gc_list:check_na] all_cg%q_lst(",i,"), named '",this%q_lst(i)%name,"' has dim4 set to ",this%q_lst(i)%dim4
+                     call die(msg)
+                  endif
+                  if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%level_id < base_level_id .and. .not. this%q_lst(i)%multigrid) then
+                     write(msg,'(a,i3,3a)')"[gc_list:check_na] non-multigrid cgl%cg%q(",i,"), named '",this%q_lst(i)%name,"' allocated on coarse level"
+                     call die(msg)
+                  endif
                enddo
             endif
          endif
          if (allocated(this%w_lst) .neqv. allocated(cgl%cg%w)) then
-            call die("[gc_list:check_na] allocated(all_cg%w_lst) .neqv. allocated(cgl%cg%w)")
+            write(msg,'(2(a,l2))')"[gc_list:check_na] allocated(all_cg%w_lst) .neqv. allocated(cgl%cg%w)",allocated(this%w_lst)," .neqv. ",allocated(cgl%cg%w)
+            call die(msg)
          else if (allocated(this%w_lst)) then
             if (size(this%w_lst) /= size(cgl%cg%w)) then
-               call die("[gc_list:check_na] size(all_cg%w_lst) /= size(cgl%cg%w)")
+               write(msg,'(2(a,i5))')"[gc_list:check_na] size(all_cg%w_lst) /= size(cgl%cg%w)",size(this%w_lst)," /= ",size(cgl%cg%w)
+               call die(msg)
             else
                do i = lbound(this%w_lst, dim=1), ubound(this%w_lst, dim=1)
                   bad = .false.
                   if (associated(cgl%cg%w(i)%arr)) bad = this%w_lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%level_id >= base_level_id
-                  if (this%w_lst(i)%dim4 <= 0 .or. bad) call die("[gc_list:check_na] all_cg%w_lst(i) /= cgl%cg%w(i)")
-                  if (associated(cgl%cg%w(i)%arr) .and. cgl%cg%level_id < base_level_id) call die("[gc_list:check_na] cgl%cg%w(i) allocated on coarse level")
+                  if (this%w_lst(i)%dim4 <= 0 .or. bad) then
+                     write(msg,'(a,i3,2a,2(a,i7))')"[gc_list:check_na] all_cg%w_lst(",i,") named '",this%w_lst(i)%name,"' has inconsistent dim4: ",&
+                          &         this%w_lst(i)%dim4," /= ",size(cgl%cg%w(i)%arr, dim=1)
+                     call die(msg)
+                  endif
+                  if (associated(cgl%cg%w(i)%arr) .and. cgl%cg%level_id < base_level_id) then
+                     write(msg,'(a,i3,3a)')"[gc_list:check_na] cgl%cg%w(",i,"), named '",this%w_lst(i)%name,"' allocated on coarse level"
+                     call die(msg)
+                  endif
                enddo
             endif
          endif
