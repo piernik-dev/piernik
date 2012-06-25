@@ -119,22 +119,15 @@ contains
    end subroutine set_fluidindex_arrays
 
 !>
-!! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts
-!! of PIERNIK code
+!! \brief Subroutine fluid_index constructing all multi-fluid indexes used in other parts of PIERNIK code
 !<
    subroutine fluid_index
 
-!      use diagnostics,    only: my_allocate
-      use constants,      only: xdim, zdim
+      use constants,      only: ndims, xdim, ydim, zdim
       use fluids_pub,     only: has_dst, has_ion, has_neu
-#if defined IONIZED || defined COSM_RAYS || defined TRACER
-      use constants,      only: ydim
-#endif /* IONIZED || COSM_RAYS || TRACER */
-      use constants,      only: ndims
+      use initdust,       only: dust_index, dust_fluid
       use initionized,    only: ionized_index, ion_fluid
       use initneutral,    only: neutral_index, neutral_fluid
-      use initdust,       only: dust_index, dust_fluid
-
 #ifdef COSM_RAYS
       use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, cosmicray_index
 #endif /* COSM_RAYS */
