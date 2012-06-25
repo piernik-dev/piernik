@@ -82,7 +82,7 @@ contains
       logical,         optional, intent(in) :: corners    !> When present and .true. then call internal_boundaries_3d for each direction separately
 
       integer(kind=4)                         :: lh, clh, d, b_type, i, n
-      integer(kind=4), dimension(ndims,LO:HI) :: l, r
+      integer(kind=4), dimension(ndims,LO:HI) :: l, r, rh
       logical                                 :: dodie, do_permpi, do_cor
       type(cg_list_element),  pointer         :: cgl
       type(grid_container),   pointer         :: cg
@@ -191,12 +191,12 @@ contains
                               pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = 0.
                            case (BND_NONE) ! remember to initialize everything first!
                            case (BND_XTRAP) !> \deprecated mixed-type BC: free flux; BEWARE: it is not protected from inflow
-                              r(d,:) = cg%ijkse(d,lh)+I_THREE-I_TWO*lh
+                              rh(:,:) = r(:,:) ; rh(d,:) = cg%ijkse(d,lh) ; r(d,:) = cg%ijkse(d,lh)+I_THREE-I_TWO*lh
                               do i = 1, dom%nb
                                  l(d,:) = cg%ijkse(d,lh)-i*(I_THREE-I_TWO*lh)
                                  pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = &
-                                       (1+i) * pa3d(cg%ijkse(xdim,LO):cg%ijkse(xdim,HI),cg%ijkse(ydim,LO):cg%ijkse(ydim,HI),cg%ijkse(zdim,LO):cg%ijkse(zdim,HI)) &
-                                         - i * pa3d(       r(xdim,LO):       r(xdim,HI),       r(ydim,LO):       r(ydim,HI),       r(zdim,LO):       r(zdim,HI))
+                                       (1+i) * pa3d(rh(xdim,LO):rh(xdim,HI),rh(ydim,LO):rh(ydim,HI),rh(zdim,LO):rh(zdim,HI)) &
+                                         - i * pa3d( r(xdim,LO): r(xdim,HI), r(ydim,LO): r(ydim,HI), r(zdim,LO): r(zdim,HI))
                               enddo
                            case default ! BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD
                               r(d,:) = cg%ijkse(d,lh) ; l(d,:) = cg%ijkse(d,lh)*(lh-LO)
