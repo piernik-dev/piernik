@@ -52,7 +52,7 @@ contains
 
       logical, save                  :: first_run = .true.
       type(cg_list_element), pointer :: cgl
-      integer                        :: ddim
+      integer(kind=4)                :: ddim
 
       halfstep = .false.
       if (first_run) then
@@ -90,29 +90,28 @@ contains
    end subroutine fluid_update
 !---------------------------------------------------------------------------
    subroutine sweep(cg,dt,ddim)
+
+      use constants,       only: pdims, xdim, zdim, cs_i2_n
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_swp
       use gc_list,         only: all_cg
       use grid_cont,       only: grid_container
-      use constants,       only: ndims, LO, HI, pdims, xdim, zdim, cs_i2_n
 
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
-      real,    intent(in)                       :: dt
-      integer, intent(in)                       :: ddim
+      real,                          intent(in) :: dt
+      integer(kind=4),               intent(in) :: ddim
 
-      integer :: i1, i2, i_cs_iso2
-      integer, dimension(ndims,LO:HI)       :: i
-
+      integer                                   :: i1, i2, i_cs_iso2
       real, dimension(size(cg%u,1),cg%n_(ddim)) :: u1d
-      real, dimension(:,:), pointer :: pu
-      real, dimension(xdim:zdim, cg%n_(ddim)) :: b1d
-      real, dimension(:), pointer :: cs2
+      real, dimension(xdim:zdim,   cg%n_(ddim)) :: b1d
+      real, dimension(:,:), pointer             :: pu
+      real, dimension(:),   pointer             :: cs2
 
       cs2 => null()
-      if (cg%exists(cs_i2_n)) then
-         i_cs_iso2 = cg%ind(cs_i2_n) !> \deprecated BEWARE: magic strings across multiple files
+      if (all_cg%exists(cs_i2_n)) then
+         i_cs_iso2 = all_cg%ind(cs_i2_n) !> \deprecated BEWARE: magic strings across multiple files
       else
          i_cs_iso2 = -1
       endif
