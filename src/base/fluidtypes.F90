@@ -90,6 +90,7 @@ module fluidtypes
       contains
          procedure :: set_cs  => update_sound_speed
          procedure :: set_gam => update_adiabatic_index
+         procedure :: set_c   => update_freezing_speed
          procedure :: info    => printinfo_component_fluid
          procedure(tag), nopass, deferred :: get_tag
          procedure(cs_get), pass, deferred :: get_cs
@@ -151,6 +152,14 @@ module fluidtypes
          this%gam   = new_gamma
          this%gam_1 = new_gamma-1.0
       end subroutine update_adiabatic_index
+
+      subroutine update_freezing_speed(this, new_c)
+         implicit none
+         class(component_fluid) :: this
+         real, intent(in)       :: new_c
+
+         this%c   = new_c
+      end subroutine update_freezing_speed
 
       subroutine update_sound_speed(this,new_cs)
          implicit none

@@ -86,17 +86,14 @@ contains
       use constants,            only: one, two, zero, half, I_ONE
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
-      use fluids_pub,           only: has_ion, has_dst, has_neu
+      use fluidindex,           only: flind
       use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep
       use grid,                 only: leaves
       use gc_list,              only: cg_list_element
       use grid_cont,            only: grid_container
       use mpi,                  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,             only: comm, mpi_err, master
-      use timestepdust,         only: timestep_dst
       use timestepinteractions, only: timestep_interactions
-      use timestepionized,      only: timestep_ion
-      use timestepneutral,      only: timestep_neu
 #ifdef COSM_RAYS
       use timestepcosmicrays,   only: timestep_crs, dt_crs
 #endif /* COSM_RAYS */
@@ -115,6 +112,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       real :: c_, dt_
+      integer :: ifl
 
 ! Timestep computation
 
@@ -128,23 +126,11 @@ contains
          cg => cgl%cg
 
          !> \todo make the timestep_* routines members of fluidtypes::component_fluid
-         if (has_ion) then
-            call timestep_ion(cg, dt_, c_)
+         do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
+            call timestep_fluid(cg, flind%all_fluids(ifl)%fl, dt_, c_)
             dt    = min(dt, dt_)
             c_all = max(c_all, c_)
-         endif
-
-         if (has_neu) then
-            call timestep_neu(cg, dt_, c_)
-            dt    = min(dt, dt_)
-            c_all = max(c_all, c_)
-         endif
-
-         if (has_dst) then
-            call timestep_dst(cg, dt_, c_)
-            dt    = min(dt, dt_)
-            c_all = max(c_all, c_)
-         endif
+         enddo
 
 #ifdef COSM_RAYS
          call timestep_crs(cg)
@@ -276,5 +262,84 @@ contains
       endif
 
    end subroutine cfl_auto
+
+!------------------------------------------------------------------------------------------
+!>
+!! \brief %Timestep computation for the fluid (FIXME)
+!!
+!! %Timestep for the fluid is set as the minimum %timestep for all of the MPI blocks times the Courant number.
+!! To compute the %timestep in each MPI block, the fastest speed at which information travels in each direction is computed as
+!! \f{equation}
+!! c_x=\max\limits_{i,j,k}{\left(v_x^{i,j,k}+c_f^{i,j,k}\right)},
+!! \f}
+!! where \f$v_x^{i,j,k}\f$ is the maximum speed in \f$x\f$ direction for the cell \f$(i,j,k)\f$ and \f$c_f^{i,j,k}\f$ is the speed of sound for
+!! ionized fluid computed as \f$c_f^{i,j,k}=\sqrt{\left|\frac{2p_{mag}+\gamma p}{\rho^{i,j,k}}\right|}\f$, where \f$p\f$ stands for pressure,
+!! \f$p_{mag}\f$ is pressure of magnetic field, \f$\gamma\f$ is the adiabatic index of the ionized fluid and \f$\rho^{i,j,k}\f$ is fluid density in the cell
+!! \f$(i,j,k)\f$. For directions \f$y, z\f$ the computations are made in similar way.
+!!
+!! %Timestep for each MPI block is then computed as
+!! \f{equation}
+!! dt=\min{\left(\left|\frac{dx}{c_x}\right|,\left|\frac{dy}{c_y}\right|,\left|\frac{dz}{c_z}\right|\right)},
+!! \f}
+!! where \f$dx\f$, \f$dy\f$ and \f$dz\f$ are the cell lengths in each direction.
+!!
+!! Information about the computed %timesteps is exchanged between MPI blocks in order to choose the minimum %timestep for the fluid.
+!! The final %timestep is multiplied by the Courant number specified in parameters of each task.
+!<
+
+   subroutine timestep_fluid(cg, fl, dt, c_fl)
+
+      use constants,  only: big, xdim, ydim, zdim, ndims, GEO_RPZ, LO, ndims
+      use domain,     only: dom
+      use fluidtypes, only: component_fluid
+      use global,     only: cfl
+      use grid_cont,  only: grid_container
+
+      implicit none
+
+      type(grid_container), pointer, intent(in) :: cg !< current grid container
+      real, intent(out)                         :: dt !< resulting timestep
+      real, intent(out)                         :: c_fl !< maximum speed at which information travels in the fluid
+
+      real, dimension(ndims) :: c !< maximum velocity in all directions
+      real, dimension(ndims) :: v !< maximum velocity of fluid in all directinos
+
+      ! locals
+      class(component_fluid), pointer, intent(in) :: fl
+      integer :: i, j, k
+      real, dimension(ndims) :: dt_proc !< timestep for the current cg
+      integer :: d
+
+      c(:) = 0.0
+      c_fl = 0.0
+
+      do k = cg%ks, cg%ke
+         do j = cg%js, cg%je
+            do i = cg%is, cg%ie
+               if (cg%u(fl%idn,i,j,k) > 0.0) then
+                  v(:) = abs(cg%u(fl%imx:fl%imz, i, j, k) / cg%u(fl%idn, i, j, k))
+               else
+                  v(:) = 0.0
+               endif
+
+               c(:) = max( c(:), v(:) + fl%get_cs(cg, i, j, k) )
+               c_fl = max(c_fl, maxval(c(:)))
+            enddo
+         enddo
+      enddo
+
+      do d = xdim, zdim
+         if (dom%has_dir(d) .and. c(d) /= 0.) then
+            dt_proc(d) = cg%dl(d)/c(d)
+            if (dom%geometry_type == GEO_RPZ .and. d == ydim) dt_proc(d) = dt_proc(d) * dom%edge(xdim, LO)
+         else
+            dt_proc(d) = big
+         endif
+      enddo
+
+      dt = cfl * minval(dt_proc)
+      call fl%set_c(c_fl)
+
+   end subroutine timestep_fluid
 
 end module timestep
