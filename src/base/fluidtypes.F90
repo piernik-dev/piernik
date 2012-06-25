@@ -92,9 +92,19 @@ module fluidtypes
          procedure :: set_gam => update_adiabatic_index
          procedure :: info    => printinfo_component_fluid
          procedure(tag), nopass, deferred :: get_tag
+         procedure(cs_get), pass, deferred :: get_cs
    end type component_fluid
 
    abstract interface
+      real function cs_get(this, cg, i, j, k)
+         use grid_cont, only: grid_container
+         import
+         implicit none
+         class(component_fluid), intent(in) :: this
+         type(grid_container), pointer, intent(in) :: cg !< current grid container
+         integer, intent(in) :: i, j, k
+      end function cs_get
+
       function tag()
          use constants, only: idlen
          implicit none

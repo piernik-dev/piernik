@@ -65,9 +65,6 @@ contains
       use fluidtypes,    only: component_fluid
       use grid_cont,     only: grid_container
       use timestepfuncs, only: compute_c_max, compute_dt
-#ifndef ISO
-      use constants,     only: half
-#endif /* !ISO */
 
       implicit none
 
@@ -76,31 +73,20 @@ contains
       real, intent(out)                         :: c_neu !< maximum speed at which information travels in the neutral fluid
 
       real, dimension(ndims) :: c !< maximum velocity for all directions
-      real :: cs                  !< speed of sound
 
 ! locals
 
-      real                           :: p
       integer                        :: i, j, k
       class(component_fluid), pointer :: fl
 
-      c(:) = 0.0; cs = 0.0; p = 0.0; c_neu = 0.0
+      c(:) = 0.0; c_neu = 0.0
 
       fl => flind%neu
 
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-
-#ifdef ISO
-               p  = cg%cs_iso2(i,j,k)*cg%u(fl%idn,i,j,k)
-               cs = sqrt(cg%cs_iso2(i,j,k))
-#else /* !ISO */
-               p  = (cg%u(fl%ien,i,j,k)-half*sum(cg%u(fl%imx:fl%imz,i,j,k)**2,1)/cg%u(fl%idn,i,j,k))*(fl%gam_1)
-
-               cs = sqrt(abs(  (fl%gam*p)/cg%u(fl%idn,i,j,k)) )
-#endif /* !ISO */
-               call compute_c_max(fl, cs, i, j, k, c(:), c_neu, cg)
+               call compute_c_max(fl, fl%get_cs(cg, i, j, k), i, j, k, c(:), c_neu, cg)
             enddo
          enddo
       enddo

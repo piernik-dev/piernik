@@ -35,6 +35,7 @@
 !!
 !! In this module following namelist of parameters is specified:
 !! \copydetails initneutral::init_neutral
+!! \deprecated this module should not export any variables
 !<
 
 module initneutral
@@ -42,24 +43,44 @@ module initneutral
    use fluidtypes, only: component_fluid
    implicit none
 
-   public ! QA_WARN no secrets are kept here
-   private :: get_tag
+   public :: init_neutral, neutral_index, cleanup_neutral, neutral_fluid, &
+      gamma_neu, cs_iso_neu, cs_iso_neu2, selfgrav_neu, idnn, imxn, imyn, imzn, ienn
 
    real                  :: gamma_neu             !< adiabatic index for the neutral gas component
    real                  :: cs_iso_neu            !< isothermal sound speed (p = cs_iso_neu<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
    real                  :: cs_iso_neu2
    logical               :: selfgrav_neu          !< true if neutral gas is selfgravitating
-   integer(kind=4)       :: idnn, imxn, imyn, imzn
-#ifndef ISO
-   integer(kind=4)       :: ienn
-#endif /* !ISO */
+   integer(kind=4)       :: idnn, imxn, imyn, imzn, ienn
 
    type, extends(component_fluid) :: neutral_fluid
       contains
          procedure, nopass :: get_tag
+         procedure, pass :: get_cs => neu_cs
    end type neutral_fluid
 
 contains
+
+   real function neu_cs(this, cg, i, j, k)
+      use grid_cont, only: grid_container
+#ifndef ISO
+      use func,      only: ekin
+#endif /* !ISO */
+      implicit none
+      class(neutral_fluid), intent(in) :: this
+      type(grid_container), pointer, intent(in) :: cg !< current grid container
+      integer, intent(in) :: i, j, k
+
+      real :: p
+#ifdef ISO
+      p  = cg%cs_iso2(i, j, k) * cg%u(this%idn, i, j, k)
+      neu_cs = sqrt(cg%cs_iso2(i, j, k))
+#else /* !ISO */
+      p  = (cg%u(this%ien, i, j, k) - &
+         &   ekin(cg%u(this%imx, i, j, k), cg%u(this%imy, i, j, k), cg%u(this%imz, i, j, k), cg%u(this%idn, i, j, k)) &
+         & ) * this%gam_1
+      neu_cs = sqrt(abs((this%gam * p) / cg%u(this%idn, i, j, k)))
+#endif /* !ISO */
+   end function neu_cs
 
    function get_tag() result(tag)
       use constants, only: idlen

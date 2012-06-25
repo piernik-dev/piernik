@@ -51,9 +51,20 @@ module initdust
    type, extends(component_fluid) :: dust_fluid
       contains
          procedure, nopass :: get_tag
+         procedure, pass :: get_cs => dust_cs
    end type dust_fluid
 
 contains
+
+   real function dust_cs(this, cg, i, j, k)
+      use grid_cont, only: grid_container
+      implicit none
+      class(dust_fluid), intent(in) :: this
+      type(grid_container), pointer, intent(in) :: cg !< current grid container
+      integer, intent(in) :: i, j, k
+      dust_cs = 0.0
+      if (.false.) print *, cg%u(:, i, j, k), this%cs
+   end function dust_cs
 
    function get_tag() result(tag)
       use constants, only: idlen

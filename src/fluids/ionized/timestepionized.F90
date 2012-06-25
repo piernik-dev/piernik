@@ -60,17 +60,7 @@ contains
 
    subroutine timestep_ion(cg, dt, c_ion)
 
-      use constants,     only: two, ndims
-#ifndef ISO
-      use constants,     only: half
-#endif /* !ISO */
-#ifdef MAGNETIC
-      use constants,     only: xdim, ydim, zdim
-      use domain,        only: dom
-      use func,          only: emag
-#else /* !MAGNETIC */
-      use constants,     only: zero
-#endif /* !MAGNETIC */
+      use constants,     only: ndims
       use fluidindex,    only: flind
       use fluidtypes,    only: component_fluid
       use grid_cont,     only: grid_container
@@ -83,43 +73,19 @@ contains
       real, intent(out)                         :: c_ion !< maximum speed at which information travels in the ionized fluid
 
       real, dimension(ndims) :: c !< maximum velocity for all directions
-      real :: cs                  !< speed of sound
 
 ! locals
-      real                           :: pmag, bx, by, bz, ps, p
       integer                        :: i, j, k
       class(component_fluid), pointer :: fl
 
-      c(:) = 0.0; cs = 0.0;
-      pmag = 0.0; bx = 0.0; by = 0.0; bz = 0.0; ps = 0.0; p = 0.0; c_ion = 0.0
+      c(:) = 0.0
+      c_ion = 0.0
       fl => flind%ion
 
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-
-#ifdef MAGNETIC
-               bx = (cg%b(xdim,i,j,k) + cg%b(xdim, i+dom%D_x, j,         k        ))/(1.+dom%D_x)
-               by = (cg%b(ydim,i,j,k) + cg%b(ydim, i,         j+dom%D_y, k        ))/(1.+dom%D_y)
-               bz = (cg%b(zdim,i,j,k) + cg%b(zdim, i,         j,         k+dom%D_z))/(1.+dom%D_z)
-
-               pmag = emag(bx, by, bz)
-#else /* !MAGNETIC */
-               ! all_mag_boundaries has not been called so we cannot trust cg%b(xdim, cg%ie+dom%D_x:), cg%b(ydim,:cg%je+dom%D_y and cg%b(zdim,:,:, cg%ke+dom%D_z
-               pmag = zero
-#endif /* !MAGNETIC */
-
-#ifdef ISO
-               p  = cg%cs_iso2(i,j,k)*cg%u(fl%idn,i,j,k)
-               ps = p + pmag
-               cs = sqrt(abs(  (two*pmag+p)/cg%u(fl%idn,i,j,k)) )
-#else /* !ISO */
-               ps = (cg%u(fl%ien,i,j,k)-sum(cg%u(fl%imx:fl%imz,i,j,k)**2,1) &
-                     /cg%u(fl%idn,i,j,k)*half)*(fl%gam_1)+(two-fl%gam)*pmag
-               p  = ps - pmag
-               cs = sqrt(abs(  (two*pmag+fl%gam*p)/cg%u(fl%idn,i,j,k)) )
-#endif /* !ISO */
-               call compute_c_max(fl, cs, i, j, k, c(:), c_ion, cg)
+               call compute_c_max(fl, fl%get_cs(cg, i, j, k), i, j, k, c(:), c_ion, cg)
             enddo
          enddo
       enddo

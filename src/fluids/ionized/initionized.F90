@@ -35,6 +35,7 @@
 !!
 !! In this module following namelist of parameters is specified:
 !! \copydetails initionized::init_ionized
+!! \deprecated This module should not export any variables
 !<
 
 module initionized
@@ -42,25 +43,70 @@ module initionized
    use fluidtypes, only: component_fluid
    implicit none
 
-   public ! QA_WARN no secrets are kept here
-   private :: get_tag
+   private
+   public :: init_ionized, cleanup_ionized, ionized_index, ion_fluid, &
+      gamma_ion, cs_iso_ion, cs_iso_ion2, cs_ion, selfgrav_ion, idni, imxi, imyi, imzi, ieni
 
    real                  :: gamma_ion       !< adiabatic index for the ionized gas component
    real                  :: cs_iso_ion      !< isothermal sound speed (p = cs_iso_ion<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
    real                  :: cs_iso_ion2
    real                  :: cs_ion          !< COMMENT ME
    logical               :: selfgrav_ion    !< true if ionized gas is selfgravitating
-   integer(kind=4)       :: idni, imxi, imyi, imzi
-#ifndef ISO
-   integer(kind=4)       :: ieni
-#endif /* !ISO */
+   integer(kind=4)       :: idni, imxi, imyi, imzi, ieni
 
    type, extends(component_fluid) :: ion_fluid
       contains
          procedure, nopass :: get_tag
+         procedure, pass :: get_cs => ion_cs
    end type ion_fluid
 
 contains
+
+   real function ion_cs(this, cg, i, j, k)
+      use grid_cont, only: grid_container
+      use constants,     only: two
+#ifndef ISO
+      use func,          only: ekin
+#endif /* !ISO */
+#ifdef MAGNETIC
+      use constants,     only: xdim, ydim, zdim
+      use domain,        only: dom
+      use func,          only: emag
+#else /* !MAGNETIC */
+      use constants,     only: zero
+#endif /* !MAGNETIC */
+      use grid_cont,     only: grid_container
+
+      implicit none
+      class(ion_fluid), intent(in) :: this
+      type(grid_container), pointer, intent(in) :: cg !< current grid container
+      integer, intent(in) :: i, j, k
+
+      real :: bx, by, bz, pmag, p, ps
+
+#ifdef MAGNETIC
+      bx = (cg%b(xdim,i,j,k) + cg%b(xdim, i+dom%D_x, j,         k        ))/(1.+dom%D_x)
+      by = (cg%b(ydim,i,j,k) + cg%b(ydim, i,         j+dom%D_y, k        ))/(1.+dom%D_y)
+      bz = (cg%b(zdim,i,j,k) + cg%b(zdim, i,         j,         k+dom%D_z))/(1.+dom%D_z)
+
+      pmag = emag(bx, by, bz)
+#else /* !MAGNETIC */
+      ! all_mag_boundaries has not been called so we cannot trust cg%b(xdim, cg%ie+dom%D_x:), cg%b(ydim,:cg%je+dom%D_y and cg%b(zdim,:,:, cg%ke+dom%D_z
+      pmag = zero
+#endif /* !MAGNETIC */
+
+#ifdef ISO
+      p  = cg%cs_iso2(i, j, k) * cg%u(this%idn, i, j, k)
+      ps = p + pmag
+      ion_cs = sqrt(abs((two * pmag + p) / cg%u(this%idn, i, j, k)))
+#else /* !ISO */
+      ps = (cg%u(this%ien, i, j, k) - &
+         &   ekin(cg%u(this%imx, i, j, k), cg%u(this%imy, i, j, k), cg%u(this%imz, i, j, k), cg%u(this%idn, i, j, k)) &
+         & ) * (this%gam_1) + (two - this%gam) * pmag
+      p  = ps - pmag
+      ion_cs = sqrt(abs((two * pmag + this%gam * p) / cg%u(this%idn, i, j, k)))
+#endif /* !ISO */
+   end function ion_cs
 
    function get_tag() result(tag)
       use constants, only: idlen
