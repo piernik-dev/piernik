@@ -44,7 +44,7 @@ module initionized
    implicit none
 
    private
-   public :: init_ionized, cleanup_ionized, ionized_index, ion_fluid, &
+   public :: init_ionized, cleanup_ionized, ion_fluid, &
       gamma_ion, cs_iso_ion, cs_iso_ion2, cs_ion, selfgrav_ion, idni, imxi, imyi, imzi, ieni
 
    real                  :: gamma_ion       !< adiabatic index for the ionized gas component
@@ -59,9 +59,38 @@ module initionized
          procedure, nopass :: get_tag
          procedure, pass :: get_cs => ion_cs
          procedure, pass :: compute_flux => flux_ion
+         procedure, pass :: initialize_indices => initialize_ion_indices
    end type ion_fluid
 
 contains
+
+   subroutine initialize_ion_indices(this, flind)
+      use constants, only: ION
+      use fluidtypes, only: var_numbers
+      implicit none
+      class(ion_fluid), intent(inout) :: this
+      type(var_numbers), intent(inout) :: flind
+
+      logical :: has_energy, is_magnetized
+#ifdef ISO
+      has_energy = .false.
+#else /* !ISO */
+      has_energy = .true.
+#endif /* !ISO */
+#ifdef MAGNETIZED
+      is_magnetized = .true.
+#else /* !MAGNETIZED */
+      is_magnetized = .true.
+#endif /* !MAGNETIZED */
+
+      call this%set_fluid_index(flind, is_magnetized, selfgrav_ion, has_energy, cs_iso_ion, gamma_ion, ION)
+      idni = this%idn
+      imxi = this%imx
+      imyi = this%imy
+      imzi = this%imz
+      if (this%has_energy) ieni = this%ien
+
+   end subroutine initialize_ion_indices
 
    real function ion_cs(this, cg, i, j, k)
       use grid_cont, only: grid_container
@@ -177,76 +206,6 @@ contains
       cs_iso_ion2  = cs_iso_ion**2
 
    end subroutine init_ionized
-
-   subroutine ionized_index(flind)
-
-      use constants,    only: ION, xdim, ydim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR
-      use diagnostics,  only: ma1d, ma2d, my_allocate
-      use fluidtypes,   only: var_numbers
-
-      implicit none
-
-      type(var_numbers), intent(inout) :: flind
-
-      flind%ion%beg  = flind%all + I_ONE
-
-      idni = flind%all + I_ONE
-      imxi = flind%all + I_TWO
-      imyi = flind%all + I_THREE
-      imzi = flind%all + I_FOUR
-
-      flind%ion%idn  = idni
-      flind%ion%imx  = imxi
-      flind%ion%imy  = imyi
-      flind%ion%imz  = imzi
-
-      flind%ion%all  = 4
-      flind%all      = imzi
-#ifndef ISO
-      ieni          = imzi + I_ONE
-      flind%all      = flind%all + I_ONE
-      flind%ion%all  = flind%ion%all + I_ONE
-      flind%ion%ien  = ieni
-#endif /* !ISO */
-
-      ma1d = [flind%ion%all]
-      call my_allocate(flind%ion%iarr,      ma1d)
-      ma2d = [ndims, flind%ion%all]
-      call my_allocate(flind%ion%iarr_swp,  ma2d)
-
-      !\deprecated repeated magic integers (multifile: initneutral, initdust)
-      flind%ion%iarr(1:4)          = [idni,imxi,imyi,imzi]
-      flind%ion%iarr_swp(xdim,1:4) = [idni,imxi,imyi,imzi]
-      flind%ion%iarr_swp(ydim,1:4) = [idni,imyi,imxi,imzi]
-      flind%ion%iarr_swp(zdim,1:4) = [idni,imzi,imyi,imxi]
-
-#ifndef ISO
-      flind%ion%iarr(5)       = ieni
-      flind%ion%iarr_swp(:,5) = ieni
-      flind%ion%has_energy    = .true.
-
-      flind%energ = flind%energ + I_ONE
-#endif /* !ISO */
-
-      flind%ion%end    = flind%all
-      flind%components = flind%components + I_ONE
-      flind%fluids     = flind%fluids + I_ONE
-      flind%ion%pos    = flind%components
-      if (selfgrav_ion)  flind%fluids_sg = flind%fluids_sg + I_ONE
-
-      flind%ion%gam   = gamma_ion
-      flind%ion%gam_1 = gamma_ion-1.0
-      flind%ion%cs    = cs_iso_ion
-      flind%ion%cs2   = cs_iso_ion**2
-      flind%ion%tag   = ION
-
-      flind%ion%is_selfgrav   = selfgrav_ion
-      flind%ion%is_magnetized = .true.
-#ifndef ISO
-      flind%ion%has_energy    = .true.
-#endif /* !ISO */
-
-   end subroutine ionized_index
 
    subroutine cleanup_ionized
 

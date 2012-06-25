@@ -43,7 +43,7 @@ module initneutral
    use fluidtypes, only: component_fluid
    implicit none
 
-   public :: init_neutral, neutral_index, cleanup_neutral, neutral_fluid, &
+   public :: init_neutral, cleanup_neutral, neutral_fluid, &
       gamma_neu, cs_iso_neu, cs_iso_neu2, selfgrav_neu, idnn, imxn, imyn, imzn, ienn
 
    real                  :: gamma_neu             !< adiabatic index for the neutral gas component
@@ -57,9 +57,34 @@ module initneutral
          procedure, nopass :: get_tag
          procedure, pass :: get_cs => neu_cs
          procedure, pass :: compute_flux => flux_neu
+         procedure, pass :: initialize_indices => initialize_neu_indices
    end type neutral_fluid
 
 contains
+
+   subroutine initialize_neu_indices(this, flind)
+      use constants, only: NEU
+      use fluidtypes, only: var_numbers
+      implicit none
+      class(neutral_fluid), intent(inout) :: this
+      type(var_numbers), intent(inout) :: flind
+
+      logical :: has_energy
+#ifdef ISO
+      has_energy = .false.
+#else /* !ISO */
+      has_energy = .true.
+#endif /* !ISO */
+
+      call this%set_fluid_index(flind, .false., selfgrav_neu, has_energy, cs_iso_neu, gamma_neu, NEU)
+
+      idnn = this%idn
+      imxn = this%imx
+      imyn = this%imy
+      imzn = this%imz
+      if (this%has_energy) ienn = this%ien
+
+   end subroutine initialize_neu_indices
 
    real function neu_cs(this, cg, i, j, k)
       use grid_cont, only: grid_container
@@ -145,75 +170,6 @@ contains
       cs_iso_neu2      = cs_iso_neu**2
 
    end subroutine init_neutral
-
-   subroutine neutral_index(flind)
-      use constants,    only: NEU, xdim, ydim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR
-      use diagnostics,  only: ma1d, ma2d, my_allocate
-      use fluidtypes,   only: var_numbers
-
-      implicit none
-
-      type(var_numbers), intent(inout) :: flind
-
-      flind%neu%beg    = flind%all + I_ONE
-
-      idnn = flind%all + I_ONE
-      imxn = flind%all + I_TWO
-      imyn = flind%all + I_THREE
-      imzn = flind%all + I_FOUR
-
-      flind%neu%idn = idnn
-      flind%neu%imx = imxn
-      flind%neu%imy = imyn
-      flind%neu%imz = imzn
-
-      flind%neu%all  = 4
-      flind%all      = imzn
-#ifndef ISO
-      ienn          = imzn + I_ONE
-      flind%all      = flind%all + I_ONE
-      flind%neu%all  = flind%neu%all +I_ONE
-      flind%neu%ien  = ienn
-#endif /* !ISO */
-
-      ma1d = [flind%neu%all]
-      call my_allocate(flind%neu%iarr,       ma1d)
-      ma2d = [ndims, flind%neu%all]
-      call my_allocate(flind%neu%iarr_swp,   ma2d)
-
-      !\deprecated repeated magic integers
-      flind%neu%iarr(1:4)           = [idnn,imxn,imyn,imzn]
-      flind%neu%iarr_swp(xdim, 1:4) = [idnn,imxn,imyn,imzn]
-      flind%neu%iarr_swp(ydim, 1:4) = [idnn,imyn,imxn,imzn]
-      flind%neu%iarr_swp(zdim, 1:4) = [idnn,imzn,imyn,imxn]
-
-#ifndef ISO
-      flind%neu%iarr(5)       = ienn
-      flind%neu%iarr_swp(:,5) = ienn
-      flind%neu%has_energy    = .true.
-
-      flind%energ = flind%energ + I_ONE
-#endif /* !ISO */
-
-      flind%neu%end    = flind%all
-      flind%components = flind%components + I_ONE
-      flind%fluids     = flind%fluids + I_ONE
-      flind%neu%pos    = flind%components
-      if (selfgrav_neu)  flind%fluids_sg = flind%fluids_sg + I_ONE
-
-      flind%neu%gam   = gamma_neu
-      flind%neu%gam_1 = gamma_neu-1.0
-      flind%neu%cs    = cs_iso_neu
-      flind%neu%cs2   = cs_iso_neu**2
-      flind%neu%tag   = NEU
-
-      flind%neu%is_selfgrav   = selfgrav_neu
-      flind%neu%is_magnetized = .false.
-#ifndef ISO
-      flind%neu%has_energy    = .true.
-#endif /* !ISO */
-
-   end subroutine neutral_index
 
    subroutine cleanup_neutral
 

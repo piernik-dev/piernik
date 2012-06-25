@@ -120,9 +120,9 @@ contains
 
       use constants,      only: ndims, xdim, ydim, zdim
       use fluids_pub,     only: has_dst, has_ion, has_neu
-      use initdust,       only: dust_index, dust_fluid
-      use initionized,    only: ionized_index, ion_fluid
-      use initneutral,    only: neutral_index, neutral_fluid
+      use initdust,       only: dust_fluid
+      use initionized,    only: ion_fluid
+      use initneutral,    only: neutral_fluid
 #ifdef COSM_RAYS
       use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, cosmicray_index
 #endif /* COSM_RAYS */
@@ -139,19 +139,19 @@ contains
       if (has_ion) then
          !  Compute indexes for the ionized fluid and update counters
          allocate(ion_fluid::flind%ion)
-         call ionized_index(flind)
+         call flind%ion%initialize_indices(flind)
       endif
 
       if (has_neu) then
          !  Compute indexes for the neutral fluid and update counters
          allocate(neutral_fluid::flind%neu)
-         call neutral_index(flind)
+         call flind%neu%initialize_indices(flind)
       endif
 
       if (has_dst) then
       !  Compute indexes for the dust fluid and update counters
          allocate(dust_fluid::flind%dst)
-         call dust_index(flind)
+         call flind%dst%initialize_indices(flind)
       endif
 
 #ifdef COSM_RAYS

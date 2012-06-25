@@ -88,6 +88,7 @@ module fluidtypes
       real :: c !< COMMENT ME (this quantity was previously a member of phys_prop, but is used in completely different way than other phys_prop% members
 
       contains
+         procedure :: set_fluid_index
          procedure :: set_cs  => update_sound_speed
          procedure :: set_gam => update_adiabatic_index
          procedure :: set_c   => update_freezing_speed
@@ -95,9 +96,37 @@ module fluidtypes
          procedure(tag), nopass, deferred :: get_tag
          procedure(cs_get), pass, deferred :: get_cs
          procedure(flux_interface), pass, deferred :: compute_flux
+         procedure(pass_flind), pass, deferred :: initialize_indices
    end type component_fluid
 
+   type :: var_numbers
+      integer(kind=4) :: all         = 0      !< total number of fluid variables = the size of array \a u(:,:,:,:) in the first index
+      integer(kind=4) :: fluids      = 0      !< number of fluids (ionized gas, neutral gas, dust)
+      integer(kind=4) :: energ       = 0      !< number of non-isothermal fluids (indicating the presence of energy density in the vector of conservative variables)
+      integer(kind=4) :: components  = 0      !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
+      integer (kind=4):: fluids_sg   = 0      !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
+
+      type(fluid_arr), dimension(:), pointer :: all_fluids
+
+      class(component_fluid), pointer :: ion         !< numbers of variables for the ionized fluid
+      class(component_fluid), pointer :: neu         !< numbers of variables for the neutral fluid
+      class(component_fluid), pointer :: dst         !< numbers of variables for the dust fluid
+
+      !> \todo those vars should be converted to pointers
+      type(component) :: trc         !< numbers of tracer fluids
+      type(component) :: crs         !< numbers of variables in all cosmic ray components
+      type(component) :: crn         !< numbers of variables in cosmic ray nuclear components
+      type(component) :: cre         !< numbers of variables in cosmic ray electron components
+   end type var_numbers
+
    abstract interface
+      subroutine pass_flind(this, flind)
+         import
+         implicit none
+         class(component_fluid), intent(inout) :: this
+         type(var_numbers), intent(inout) :: flind
+      end subroutine pass_flind
+
       real function cs_get(this, cg, i, j, k)
          use grid_cont, only: grid_container
          import
@@ -131,26 +160,6 @@ module fluidtypes
    type :: fluid_arr
       class(component_fluid), pointer :: fl
    end type fluid_arr
-
-   type :: var_numbers
-      integer(kind=4) :: all         = 0      !< total number of fluid variables = the size of array \a u(:,:,:,:) in the first index
-      integer(kind=4) :: fluids      = 0      !< number of fluids (ionized gas, neutral gas, dust)
-      integer(kind=4) :: energ       = 0      !< number of non-isothermal fluids (indicating the presence of energy density in the vector of conservative variables)
-      integer(kind=4) :: components  = 0      !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
-      integer (kind=4):: fluids_sg   = 0      !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
-
-      type(fluid_arr), dimension(:), pointer :: all_fluids
-
-      class(component_fluid), pointer :: ion         !< numbers of variables for the ionized fluid
-      class(component_fluid), pointer :: neu         !< numbers of variables for the neutral fluid
-      class(component_fluid), pointer :: dst         !< numbers of variables for the dust fluid
-
-      !> \todo those vars should be converted to pointers
-      type(component) :: trc         !< numbers of tracer fluids
-      type(component) :: crs         !< numbers of variables in all cosmic ray components
-      type(component) :: crn         !< numbers of variables in cosmic ray nuclear components
-      type(component) :: cre         !< numbers of variables in cosmic ray electron components
-   end type var_numbers
 
    contains
 
@@ -213,5 +222,69 @@ module fluidtypes
          write(msg,*) "TAG   = ", this%tag;     call printinfo(msg)
 
       end subroutine printinfo_component_fluid
+
+      subroutine set_fluid_index(this, flind, is_magnetized, is_selfgrav, has_energy, cs_iso, gamma_, tag)
+         use constants,    only: xdim, ydim, zdim, ndims, I_ONE
+         use diagnostics,  only: ma1d, ma2d, my_allocate
+
+         implicit none
+
+         class(component_fluid), intent(inout) :: this
+         type(var_numbers), intent(inout) :: flind
+
+         logical, intent(in) :: is_selfgrav, is_magnetized, has_energy
+         real, intent(in) :: cs_iso, gamma_
+         integer(kind=4) :: tag
+
+         this%beg    = flind%all + I_ONE
+
+         this%idn = this%beg
+         this%imx = this%idn + I_ONE
+         this%imy = this%imx + I_ONE
+         this%imz = this%imy + I_ONE
+
+         this%all  = 4
+         flind%all      = this%imz
+         if (has_energy) then
+            flind%all = flind%all + I_ONE
+
+            this%ien  = this%imz + I_ONE
+            this%all  = this%all + I_ONE
+         endif
+
+         ma1d = [this%all]
+         call my_allocate(this%iarr,     ma1d)
+         ma2d = [ndims, this%all]
+         call my_allocate(this%iarr_swp, ma2d)
+
+         !\deprecated repeated magic integers
+         this%iarr(1:4)           = [this%idn, this%imx, this%imy, this%imz]
+         this%iarr_swp(xdim, 1:4) = [this%idn, this%imx, this%imy, this%imz]
+         this%iarr_swp(ydim, 1:4) = [this%idn, this%imy, this%imx, this%imz]
+         this%iarr_swp(zdim, 1:4) = [this%idn, this%imz, this%imy, this%imx]
+
+         if (has_energy) then
+            this%iarr(5)       = this%ien
+            this%iarr_swp(:,5) = this%ien
+
+            flind%energ = flind%energ + I_ONE
+         endif
+
+         this%end    = flind%all
+         flind%components = flind%components + I_ONE
+         flind%fluids     = flind%fluids + I_ONE
+         this%pos    = flind%components
+         if (is_selfgrav)  flind%fluids_sg = flind%fluids_sg + I_ONE
+
+         this%gam   = gamma_
+         this%gam_1 = gamma_ - 1.0
+         this%cs    = cs_iso
+         this%cs2   = cs_iso**2
+         this%tag   = tag
+
+         this%has_energy    = has_energy
+         this%is_selfgrav   = is_selfgrav
+         this%is_magnetized = is_magnetized
+      end subroutine set_fluid_index
 
 end module fluidtypes

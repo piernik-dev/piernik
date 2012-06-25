@@ -43,7 +43,7 @@ module initdust
    implicit none
 
    private
-   public :: init_dust, dust_fluid, dust_index, cleanup_dust
+   public :: init_dust, dust_fluid, cleanup_dust
 
    logical               :: selfgrav_dst    !< true if dust is selfgravitating
    integer(kind=4)       :: idnd, imxd, imyd, imzd
@@ -53,9 +53,24 @@ module initdust
          procedure, nopass :: get_tag
          procedure, pass :: get_cs => dust_cs
          procedure, pass :: compute_flux => flux_dust
+         procedure, pass :: initialize_indices => initialize_dust_indices
    end type dust_fluid
 
 contains
+
+   subroutine initialize_dust_indices(this, flind)
+      use constants, only: DST
+      use fluidtypes, only: var_numbers
+      implicit none
+      class(dust_fluid), intent(inout) :: this
+      type(var_numbers), intent(inout) :: flind
+
+      call this%set_fluid_index(flind, .false., selfgrav_dst, .false., 0.0, -1.0, DST)
+      idnd = this%idn
+      imxd = this%imx
+      imyd = this%imy
+      imzd = this%imz
+   end subroutine initialize_dust_indices
 
    real function dust_cs(this, cg, i, j, k)
       use grid_cont, only: grid_container
@@ -116,58 +131,6 @@ contains
       endif
 
    end subroutine init_dust
-
-   subroutine dust_index(flind)
-
-      use constants,     only: DST, xdim, ydim, zdim, ndims, I_ONE, I_TWO, I_THREE, I_FOUR
-      use diagnostics,   only: ma1d, ma2d, my_allocate
-      use fluidtypes,    only: var_numbers
-
-      implicit none
-
-      type(var_numbers), intent(inout) :: flind
-
-      flind%dst%beg  = flind%all + I_ONE
-
-      idnd = flind%all + I_ONE
-      imxd = flind%all + I_TWO
-      imyd = flind%all + I_THREE
-      imzd = flind%all + I_FOUR
-
-      flind%dst%idn  = idnd
-      flind%dst%imx  = imxd
-      flind%dst%imy  = imyd
-      flind%dst%imz  = imzd
-
-      flind%dst%all  = 4
-      flind%all      = imzd
-
-      ma1d = [flind%dst%all]
-      call my_allocate(flind%dst%iarr,     ma1d)
-      ma2d = [ndims, flind%dst%all]
-      call my_allocate(flind%dst%iarr_swp, ma2d)
-
-      flind%dst%iarr             = [idnd,imxd,imyd,imzd]
-      flind%dst%iarr_swp(xdim,:) = [idnd,imxd,imyd,imzd]
-      flind%dst%iarr_swp(ydim,:) = [idnd,imyd,imxd,imzd]
-      flind%dst%iarr_swp(zdim,:) = [idnd,imzd,imyd,imxd]
-
-      flind%dst%end    = flind%all
-      flind%components = flind%components + I_ONE
-      flind%fluids     = flind%fluids + I_ONE
-      flind%dst%pos    = flind%components
-      if (selfgrav_dst)  flind%fluids_sg = flind%fluids_sg + I_ONE
-
-      flind%dst%gam = -1.
-      flind%dst%cs  = 0.0
-      flind%dst%cs2 = 0.0
-      flind%dst%tag = DST
-
-      flind%dst%is_selfgrav   = selfgrav_dst
-      flind%dst%is_magnetized = .false.
-      flind%dst%has_energy    = .false.
-
-   end subroutine dust_index
 
    subroutine cleanup_dust
 
