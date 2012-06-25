@@ -154,7 +154,6 @@ contains
       cfri(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + flind%ion%gam*p(RNG))/uui(idn,RNG)),small)
 #endif /* !ISO */
       !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
-      !>
       !! \todo find why is it so
       !! if such a treatment is OK then should be applied also in both cases of neutral and ionized gas
       !!    do i = 2,nm

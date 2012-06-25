@@ -271,9 +271,12 @@ contains
 
    end function fluid_interactions_aero_drag_ep
 
+!>
+!! \details
+!! Balsara Dinshaw S., Tilley David A., Rettig Terrence, Brittain Sean D. MNRAS (2009) 397: 24.
+!! Tilley, David A., Balsara, Dinshaw S. MNRAS (2008) 389: 1058.
+!<
    subroutine balsara_implicit_interactions(u1,u0,vx,cs_iso2,istep)
-      ! Balsara Dinshaw S., Tilley David A., Rettig Terrence, Brittain Sean D. MNRAS (2009) 397: 24.
-      ! Tilley, David A., Balsara, Dinshaw S. MNRAS (2008) 389: 1058.
 
       use constants,  only: half, one, zero
       use fluidindex, only: iarr_all_dn, iarr_all_mx, flind
@@ -289,13 +292,12 @@ contains
 
       real, dimension(flind%fluids,size(u1,2)) :: vprim
       real, dimension(size(u1,2))              :: delta, drag
-
-      ! BEWARE: this bit assumes that we have 2 fluids && u1 == u0 - \grad F
-      ! \todo:
-      !  2) half-time step should be \le \frac{1}{2}\frac{c_s}{drag * \rho\prim_? |v'_d - v'_g|}
-      !  3) what if not isothermal?
-      !  4) remove hardcoded integers
-
+      !>
+      !! \deprecated BEWARE: this bit assumes that we have 2 fluids && u1 == u0 - \grad F
+      !! \todo 2) half-time step should be \le \frac{1}{2}\frac{c_s}{drag * \rho\prim_? |v'_d - v'_g|}
+      !! \todo 3) what if not isothermal?
+      !! \todo 4) remove hardcoded integers
+      !<
       if (epstein_factor(flind%neu%pos) <= zero) return
       drag(:) = dt*half / (grain_size * grain_dens) * sqrt( cs_iso2(:) + abs( vx(1,:) - vx(2,:) )**2)
 
