@@ -369,9 +369,10 @@ contains
 
             ! Behold the MAGIC in its purest form!
             ! Following block of code does exactly *nothing*, yet it's necessary for collective calls of PHDF5
-            ! BEWARE, we assume that at least 1 cg exist on a given proc
-            ! \todo
-            ! there should be something like H5S_NONE as a contradiction to H5S_ALL, yet I cannot find it...
+            !>
+            !! \deprecated BEWARE, we assume that at least 1 cg exist on a given proc
+            !! \todo there should be something like H5S_NONE as a contradiction to H5S_ALL, yet I cannot find it...
+            !<
 
             dims = [ cg_all_n_b(xdim, 1), cg_all_n_b(ydim, 1), cg_all_n_b(zdim, 1) ]
 

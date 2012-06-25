@@ -57,7 +57,7 @@ module cr_data
 
 !<====Cross sections for spallation from Garcia-Munoz 1987 (see also Longair)====>
 
-   real,parameter :: Myear=1d6*365*24*60*60 !> s \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
+   real, parameter :: Myear=1d6*365*24*60*60 !> s \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
    real, parameter :: mbarn=1e-27 !> cm2   \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
 
    real, parameter :: sigma_C12_Li7  = 10   * mbarn
