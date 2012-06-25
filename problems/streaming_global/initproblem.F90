@@ -283,7 +283,7 @@ contains
       real    :: rho, cs2
       real, dimension(:), allocatable :: vphi, grav, ln_dens_der
 
-      type(component_fluid), pointer  :: fl
+      class(component_fluid), pointer  :: fl
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
@@ -302,7 +302,7 @@ contains
          if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
          do p = 1, flind%fluids
-            fl => flind%all_fluids(p)
+            fl => flind%all_fluids(p)%fl
             if (fl%tag /= DST .and. master) then
                write(msg,'(A,F9.5)') "[init_problem:initprob] cs2 used = ", fl%cs2
                call printinfo(msg)
@@ -372,8 +372,8 @@ contains
       enddo
       open(12,file="vel_profile.dat",status="unknown")
          do i = 1, cg%n_(xdim)
-            write(12,'(3(E12.5,1X))') cg%x(i), cg%u(flind%all_fluids(1:2)%imy,i,max(cg%n_(ydim)/2,1),max(cg%n_(zdim)/2,1)) / &
-                &  cg%u(flind%all_fluids(1:2)%idn,i,max(cg%n_(ydim)/2,1),max(cg%n_(zdim)/2,1))
+            write(12,'(3(E12.5,1X))') cg%x(i), cg%u(flind%all_fluids(1:2)%fl%imy,i,max(cg%n_(ydim)/2,1),max(cg%n_(zdim)/2,1)) / &
+                &  cg%u(flind%all_fluids(1:2)%fl%idn,i,max(cg%n_(ydim)/2,1),max(cg%n_(zdim)/2,1))
          enddo
       close(12)
 
@@ -579,7 +579,7 @@ contains
 
       do i = 1, size(flind%all_fluids)
          ind_cs2    = i
-         cs2_arr(i) = flind%all_fluids(i)%cs2
+         cs2_arr(i) = flind%all_fluids(i)%fl%cs2
       enddo
 
       call grav_pot2accel(xdim,1,1, cg%n_(xdim), grav, 1, cg)

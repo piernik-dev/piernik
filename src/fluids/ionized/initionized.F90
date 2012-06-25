@@ -39,9 +39,11 @@
 
 module initionized
 ! pulled by ANY
+   use fluidtypes, only: component_fluid
    implicit none
 
    public ! QA_WARN no secrets are kept here
+   private :: get_tag
 
    real                  :: gamma_ion       !< adiabatic index for the ionized gas component
    real                  :: cs_iso_ion      !< isothermal sound speed (p = cs_iso_ion<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
@@ -53,7 +55,20 @@ module initionized
    integer(kind=4)       :: ieni
 #endif /* !ISO */
 
+   type, extends(component_fluid) :: ion_fluid
+      contains
+         procedure, nopass :: get_tag
+   end type ion_fluid
+
 contains
+
+   function get_tag() result(tag)
+      use constants, only: idlen
+      implicit none
+      character(len=idlen)   :: tag
+
+      tag = "ION"
+   end function get_tag
 
 !>
 !! \brief Routine to set parameters from namelist FLUID_IONIZED

@@ -994,7 +994,7 @@ contains
 
       implicit none
 
-      type(component_fluid), intent(inout), target :: fl
+      class(component_fluid), intent(inout), target :: fl
 
       type(phys_prop), pointer :: pr
       type(cg_list_element), pointer :: cgl

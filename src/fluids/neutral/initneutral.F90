@@ -39,9 +39,11 @@
 
 module initneutral
 ! pulled by ANY
+   use fluidtypes, only: component_fluid
    implicit none
 
    public ! QA_WARN no secrets are kept here
+   private :: get_tag
 
    real                  :: gamma_neu             !< adiabatic index for the neutral gas component
    real                  :: cs_iso_neu            !< isothermal sound speed (p = cs_iso_neu<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
@@ -52,7 +54,20 @@ module initneutral
    integer(kind=4)       :: ienn
 #endif /* !ISO */
 
+   type, extends(component_fluid) :: neutral_fluid
+      contains
+         procedure, nopass :: get_tag
+   end type neutral_fluid
+
 contains
+
+   function get_tag() result(tag)
+      use constants, only: idlen
+      implicit none
+      character(len=idlen)   :: tag
+
+      tag = "NEU"
+   end function get_tag
 
 !>
 !! \brief Routine to set parameters values from namelist FLUID_NEUTRAL

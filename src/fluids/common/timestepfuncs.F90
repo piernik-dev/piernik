@@ -49,7 +49,7 @@ contains
 
       implicit none
 
-      type(component_fluid), pointer, intent(in) :: fl
+      class(component_fluid), pointer, intent(in) :: fl
       real, intent(in)                           :: cs
       integer, intent(in)                        :: i, j, k
       real, dimension(ndims), intent(inout)      :: c

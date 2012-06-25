@@ -62,7 +62,7 @@ module fluidtypes
       integer(kind=4) :: pos = 0   !< index denoting position of the fluid in the row of fluids
    end type component
 
-   type, extends(component) :: component_fluid
+   type, abstract, extends(component) :: component_fluid
       integer(kind=4) :: idn = -1      !< index denoting position of the fluid density in array arrays::u
       integer(kind=4) :: imx = -1      !< index denoting position of the fluid x-momentum in array arrays::u
       integer(kind=4) :: imy = -1      !< index denoting position of the fluid y-momentum in array arrays::u
@@ -91,8 +91,20 @@ module fluidtypes
          procedure :: set_cs  => update_sound_speed
          procedure :: set_gam => update_adiabatic_index
          procedure :: info    => printinfo_component_fluid
-         procedure :: get_tag
+         procedure(tag), nopass, deferred :: get_tag
    end type component_fluid
+
+   abstract interface
+      function tag()
+         use constants, only: idlen
+         implicit none
+         character(len=idlen)   :: tag
+      end function tag
+   end interface
+
+   type :: fluid_arr
+      class(component_fluid), pointer :: fl
+   end type fluid_arr
 
    type :: var_numbers
       integer(kind=4) :: all         = 0      !< total number of fluid variables = the size of array \a u(:,:,:,:) in the first index
@@ -101,11 +113,11 @@ module fluidtypes
       integer(kind=4) :: components  = 0      !< number of components, such as CRs, tracers, magnetic helicity (in future), whose formal description does not involve [???]
       integer (kind=4):: fluids_sg   = 0      !< number of selfgravitating fluids (ionized gas, neutral gas, dust)
 
-      type(component_fluid), dimension(:), pointer :: all_fluids
+      type(fluid_arr), dimension(:), pointer :: all_fluids
 
-      type(component_fluid), pointer :: ion         !< numbers of variables for the ionized fluid
-      type(component_fluid), pointer :: neu         !< numbers of variables for the neutral fluid
-      type(component_fluid), pointer :: dst         !< numbers of variables for the dust fluid
+      class(component_fluid), pointer :: ion         !< numbers of variables for the ionized fluid
+      class(component_fluid), pointer :: neu         !< numbers of variables for the neutral fluid
+      class(component_fluid), pointer :: dst         !< numbers of variables for the dust fluid
 
       !> \todo those vars should be converted to pointers
       type(component) :: trc         !< numbers of tracer fluids
@@ -139,28 +151,10 @@ module fluidtypes
          this%cs2 = new_cs**2
       end subroutine update_sound_speed
 
-      function get_tag(this) result(tag)
-         use constants, only: ION, NEU, DST, idlen
-         implicit none
-         class(component_fluid) :: this
-         character(len=idlen)   :: tag
-
-         select case (this%tag)
-            case (ION)
-               tag = "ION"
-            case (NEU)
-               tag = "NEU"
-            case (DST)
-               tag = "DST"
-            case default
-               tag = "---"
-         end select
-      end function get_tag
-
       subroutine printinfo_component_fluid(this)
          use dataio_pub,  only: msg, printinfo
          implicit none
-         class(component_fluid) :: this
+         class(component_fluid), intent(in) :: this
 
          write(msg,*) "idn   = ", this%idn;     call printinfo(msg)
          write(msg,*) "imx   = ", this%imx;     call printinfo(msg)

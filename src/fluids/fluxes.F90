@@ -96,13 +96,13 @@ contains
       allocate(flist(flind%fluids))
 
       do i = 1, flind%fluids
-         select case (flind%all_fluids(i)%tag)
+         select case (flind%all_fluids(i)%fl%tag)
             case (NEU)
-               flist(flind%all_fluids(i)%pos)%flux_func => flux_neu
+               flist(flind%all_fluids(i)%fl%pos)%flux_func => flux_neu
             case (DST)
-               flist(flind%all_fluids(i)%pos)%flux_func => flux_dst
+               flist(flind%all_fluids(i)%fl%pos)%flux_func => flux_dst
             case (ION)
-               flist(flind%all_fluids(i)%pos)%flux_func => flux_ion
+               flist(flind%all_fluids(i)%fl%pos)%flux_func => flux_ion
          end select
       enddo
 
@@ -155,7 +155,7 @@ contains
 #ifdef TRACER
       real, dimension(:),              pointer              :: pu1d, pfl1d
 #endif /* TRACER */
-      type(component_fluid),           pointer              :: pfl
+      class(component_fluid),          pointer              :: pfl
       integer                                               :: p
 !>
 !! \todo pbb may need more careful treatment
@@ -165,7 +165,7 @@ contains
       pbb   =>   bb(:,:)
 
       do p = 1, flind%fluids
-         pfl   => flind%all_fluids(p)
+         pfl   => flind%all_fluids(p)%fl
          puu   =>   uu(pfl%beg:pfl%end,:)
          pcfr  =>  cfr(pfl%beg:pfl%end,:)
          pflux => flux(pfl%beg:pfl%end,:)
@@ -189,9 +189,9 @@ contains
       do p = 1, size(trace_fluid)
          pu1d  => uu(flind%trc%beg + p - 1, :)
          pfl1d => flux(flind%trc%beg + p - 1, :)
-         pvx   => vx(flind%all_fluids(trace_fluid(p))%pos, :)
+         pvx   => vx(flind%all_fluids(trace_fluid(p))%fl%pos, :)
          call flux_tracer(pfl1d, pu1d, pvx)
-         cfr(flind%trc%beg + p - 1,:)  = cfr(flind%all_fluids(trace_fluid(p))%iarr(1),:)
+         cfr(flind%trc%beg + p - 1,:)  = cfr(flind%all_fluids(trace_fluid(p))%fl%iarr(1),:)
       enddo
 #endif /* TRACER */
 

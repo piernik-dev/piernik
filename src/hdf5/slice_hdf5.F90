@@ -99,7 +99,7 @@ contains
       integer                                    :: fi
       integer(kind=4)                            :: i_xyz
       integer(kind=4), dimension(ndims,LO:HI)    :: ir
-      type(component_fluid), pointer             :: fl_dni
+      class(component_fluid), pointer            :: fl_dni
 #ifdef COSM_RAYS
       integer(kind=4)                            :: i
 #endif /* COSM_RAYS */

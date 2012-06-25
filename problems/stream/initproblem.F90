@@ -133,7 +133,7 @@ contains
       real(kind=4), dimension(:,:,:,:), allocatable :: noise
       integer, dimension(:), allocatable  :: seed
       complex(kind=8), dimension(7)       :: coeff
-      type(component_fluid), pointer      :: dst, neu
+      class(component_fluid), pointer     :: dst, neu
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 

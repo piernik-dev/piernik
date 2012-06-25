@@ -88,7 +88,7 @@ contains
 ! locals
       real                           :: pmag, bx, by, bz, ps, p
       integer                        :: i, j, k
-      type(component_fluid), pointer :: fl
+      class(component_fluid), pointer :: fl
 
       c(:) = 0.0; cs = 0.0;
       pmag = 0.0; bx = 0.0; by = 0.0; bz = 0.0; ps = 0.0; p = 0.0; c_ion = 0.0

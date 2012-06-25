@@ -197,7 +197,7 @@ contains
 
       type(cg_list_element), pointer  :: cgl
       type(grid_container), pointer   :: cg
-      type(component_fluid), pointer  :: fl
+      class(component_fluid), pointer :: fl
       integer                         :: i
       real, pointer, dimension(:,:,:) :: dn, mx, my, mz, en, bx, by, bz
       real, parameter                 :: safety_factor = 1.e-4
@@ -207,7 +207,6 @@ contains
       maxdens = 0.0
       mindens = smalld
       minpres = smallp
-
       ! collect the extrema
       cgl => leaves%first
       do while (associated(cgl))
@@ -219,7 +218,7 @@ contains
 
          if (smalld >= big_float) then
             do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-               dn => cg%u(flind%all_fluids(i)%idn,:,:,:)
+               dn => cg%u(flind%all_fluids(i)%fl%idn,:,:,:)
                maxdens = max( maxval(dn), maxdens )
                mindens = min( minval(dn), mindens )
             enddo
@@ -227,7 +226,7 @@ contains
 
          if (smallp >= big_float) then
             do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-               fl => flind%all_fluids(i)
+               fl => flind%all_fluids(i)%fl
                if (fl%tag == DST) cycle
                dn => cg%u(fl%idn,:,:,:)
                mx => cg%u(fl%imx,:,:,:)

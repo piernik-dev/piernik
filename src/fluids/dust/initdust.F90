@@ -39,14 +39,29 @@
 
 module initdust
 ! pulled by ANY
+   use fluidtypes, only: component_fluid
    implicit none
 
-   public ! QA_WARN no secrets are kept here
+   private
+   public :: init_dust, dust_fluid, dust_index, cleanup_dust
 
    logical               :: selfgrav_dst    !< true if dust is selfgravitating
    integer(kind=4)       :: idnd, imxd, imyd, imzd
 
+   type, extends(component_fluid) :: dust_fluid
+      contains
+         procedure, nopass :: get_tag
+   end type dust_fluid
+
 contains
+
+   function get_tag() result(tag)
+      use constants, only: idlen
+      implicit none
+      character(len=idlen)   :: tag
+
+      tag = "DST"
+   end function get_tag
 
 !>
 !! \brief Routine to set parameters from namelist FLUID_DUST

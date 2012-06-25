@@ -196,9 +196,9 @@ contains
          cg%gc_xdim(GC3,:,:) = spread( cg%xl(:),    1, flind%all)
 
          do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-            cg%gc_xdim(GC1, flind%all_fluids(i)%imy, :) = cg%gc_xdim(GC1, flind%all_fluids(i)%imy, :) * cg%inv_x(:)
-            cg%gc_xdim(GC2, flind%all_fluids(i)%imy, :) = cg%gc_xdim(GC2, flind%all_fluids(i)%imy, :) * cg%xr(:)
-            cg%gc_xdim(GC3, flind%all_fluids(i)%imy, :) = cg%gc_xdim(GC3, flind%all_fluids(i)%imy, :) * cg%xl(:)
+            cg%gc_xdim(GC1, flind%all_fluids(i)%fl%imy, :) = cg%gc_xdim(GC1, flind%all_fluids(i)%fl%imy, :) * cg%inv_x(:)
+            cg%gc_xdim(GC2, flind%all_fluids(i)%fl%imy, :) = cg%gc_xdim(GC2, flind%all_fluids(i)%fl%imy, :) * cg%xr(:)
+            cg%gc_xdim(GC3, flind%all_fluids(i)%fl%imy, :) = cg%gc_xdim(GC3, flind%all_fluids(i)%fl%imy, :) * cg%xl(:)
          enddo
          cg%gc_ydim(GC2:GC3,:,:) = 1.0     ! [ 1/r , 1 , 1]
 

@@ -91,7 +91,7 @@ contains
 
       implicit none
 
-      type(component_fluid), intent(inout) :: fl
+      class(component_fluid), intent(inout) :: fl
       logical, intent(in)                  :: have_ener
 
 #ifdef ISO
@@ -131,9 +131,9 @@ contains
       use constants,      only: ydim
 #endif /* IONIZED || COSM_RAYS || TRACER */
       use constants,      only: ndims
-      use initionized,    only: ionized_index
-      use initneutral,    only: neutral_index
-      use initdust,       only: dust_index
+      use initionized,    only: ionized_index, ion_fluid
+      use initneutral,    only: neutral_index, neutral_fluid
+      use initdust,       only: dust_index, dust_fluid
 
 #ifdef COSM_RAYS
       use initcosmicrays, only: iarr_crn, iarr_cre, iarr_crs, cosmicray_index
@@ -150,19 +150,19 @@ contains
 
       if (has_ion) then
          !  Compute indexes for the ionized fluid and update counters
-         allocate(flind%ion)
+         allocate(ion_fluid::flind%ion)
          call ionized_index(flind)
       endif
 
       if (has_neu) then
          !  Compute indexes for the neutral fluid and update counters
-         allocate(flind%neu)
+         allocate(neutral_fluid::flind%neu)
          call neutral_index(flind)
       endif
 
       if (has_dst) then
       !  Compute indexes for the dust fluid and update counters
-         allocate(flind%dst)
+         allocate(dust_fluid::flind%dst)
          call dust_index(flind)
       endif
 
@@ -242,17 +242,18 @@ contains
 
       i = 1
       if (has_ion) then
-         flind%all_fluids(i) = flind%ion
+         flind%all_fluids(i)%fl => flind%ion
          i = i + 1
       endif
 
       if (has_neu) then
-         flind%all_fluids(i) = flind%neu
+         flind%all_fluids(i)%fl => flind%neu
          i = i + 1
       endif
 
       if (has_dst) then
-         flind%all_fluids(i) = flind%dst
+!         allocate(dust_fluid::flind%all_fluids(i)%fl) ! = flind%dst
+         flind%all_fluids(i)%fl => flind%dst
          i = i + 1
       endif
    end subroutine fluid_index
@@ -283,8 +284,8 @@ contains
       call my_deallocate(iarr_all_trc)
 
       do i = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
-         deallocate(flind%all_fluids(i)%iarr)
-         deallocate(flind%all_fluids(i)%iarr_swp)
+         deallocate(flind%all_fluids(i)%fl%iarr)
+         deallocate(flind%all_fluids(i)%fl%iarr_swp)
       enddo
       deallocate(flind%all_fluids)
       if (has_ion) deallocate(flind%ion) ! cannot check if allocated, because it is not allocatable

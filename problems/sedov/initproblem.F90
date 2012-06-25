@@ -142,7 +142,7 @@ contains
       implicit none
 
       integer :: i, j, k, p
-      type(component_fluid), pointer :: fl
+      class(component_fluid), pointer :: fl
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
@@ -153,7 +153,7 @@ contains
       !  as an educational example
 
       do p = 1, flind%energ
-         fl => flind%all_fluids(p)
+         fl => flind%all_fluids(p)%fl
          if (fl%tag == DST) call die("[initproblem:init_prob] This setup is not suitable for dust!")
          write(msg,*) "Working with ", fl%tag, " fluid."
          if (master) call printinfo(msg)

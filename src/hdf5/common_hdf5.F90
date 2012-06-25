@@ -224,7 +224,7 @@ contains
       implicit none
 
       character(len=varlen),          intent(in)    :: var
-      type(component_fluid), pointer, intent(inout) :: fl_dni
+      class(component_fluid), pointer, intent(inout) :: fl_dni
       integer(kind=4),                intent(out)   :: i_xyz
 
       character(len=singlechar) :: dc

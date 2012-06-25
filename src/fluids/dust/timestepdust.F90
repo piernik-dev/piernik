@@ -58,7 +58,7 @@ contains
 ! locals
 
       integer                        :: i, j, k
-      type(component_fluid), pointer :: fl
+      class(component_fluid), pointer :: fl
 
       c_dst = 0.0; c(:) = 0.0
       fl => flind%dst

@@ -301,7 +301,7 @@ contains
       integer :: i, j, k, iic, jic, kic
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-      type(component_fluid), pointer :: fl
+      class(component_fluid), pointer :: fl
       real, dimension(:,:,:), pointer :: q0
 
       do i = D0, VY0
@@ -474,7 +474,7 @@ contains
       real            :: rc, ambient_density_min
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer  :: cg
-      type(component_fluid), pointer :: fl
+      class(component_fluid), pointer :: fl
       real, dimension(:,:,:), pointer :: den0, vlx0, vly0
 
       fl => flind%neu

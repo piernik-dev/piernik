@@ -333,7 +333,7 @@ contains
       real    :: csim2, gprim, H2
 
       real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der, gdens
-      type(component_fluid), pointer  :: fl
+      class(component_fluid), pointer  :: fl
       type(cg_list_element), pointer  :: cgl
       type(grid_container),  pointer  :: cg
 
@@ -475,7 +475,7 @@ contains
 #endif /* DEBUG */
 
             do p = 1, flind%fluids
-               fl => flind%all_fluids(p)
+               fl => flind%all_fluids(p)%fl
                if (fl%tag /= DST .and. master) then
                   write(msg,'(A,F9.5)') "[init_problem:initprob] cs2 used = ", fl%cs2
                   call printinfo(msg)
@@ -837,7 +837,7 @@ contains
 
       do i = 1, size(flind%all_fluids)
          ind_cs2    = i
-         cs2_arr(i) = flind%all_fluids(i)%cs2
+         cs2_arr(i) = flind%all_fluids(i)%fl%cs2
       enddo
 
       call grav_pot2accel(xdim,1,1, cg%n_(xdim), grav, 1, cg)

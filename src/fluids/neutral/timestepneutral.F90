@@ -82,7 +82,7 @@ contains
 
       real                           :: p
       integer                        :: i, j, k
-      type(component_fluid), pointer :: fl
+      class(component_fluid), pointer :: fl
 
       c(:) = 0.0; cs = 0.0; p = 0.0; c_neu = 0.0
 

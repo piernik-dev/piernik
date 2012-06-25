@@ -178,12 +178,12 @@ contains
 
       if (associated(flind%dst)) then
          do i = 1, flind%fluids
-            if (flind%all_fluids(i)%tag /= DST) then
-               epstein_factor(flind%all_fluids(i)%pos) = grain_size * grain_dens / flind%all_fluids(i)%cs !BEWARE iso assumed
-               if (epstein_factor(flind%all_fluids(i)%pos) <= 0.0) &
+            if (flind%all_fluids(i)%fl%tag /= DST) then
+               epstein_factor(flind%all_fluids(i)%fl%pos) = grain_size * grain_dens / flind%all_fluids(i)%fl%cs !BEWARE iso assumed
+               if (epstein_factor(flind%all_fluids(i)%fl%pos) <= 0.0) &
                   call warn("[interactions:interactions_grace_passed] epstein_factor <= 0.0, that's not good :/")
             else
-               epstein_factor(flind%all_fluids(i)%pos) = 0.0
+               epstein_factor(flind%all_fluids(i)%fl%pos) = 0.0
             endif
          enddo
          ! has_interactions = .true.    !> \deprecated BEWARE: temporary hack,  switches on timestep_interactions, don't needed in implicit solver??
@@ -327,10 +327,10 @@ contains
       grain_size = new_size
 
       do i = 1, flind%fluids
-         if (flind%all_fluids(i)%tag /= DST) then
-            epstein_factor(flind%all_fluids(i)%pos) = grain_size * grain_dens / flind%all_fluids(i)%cs !BEWARE iso assumed
+         if (flind%all_fluids(i)%fl%tag /= DST) then
+            epstein_factor(flind%all_fluids(i)%fl%pos) = grain_size * grain_dens / flind%all_fluids(i)%fl%cs !BEWARE iso assumed
          else
-            epstein_factor(flind%all_fluids(i)%pos) = 0.0
+            epstein_factor(flind%all_fluids(i)%fl%pos) = 0.0
          endif
       enddo
 
