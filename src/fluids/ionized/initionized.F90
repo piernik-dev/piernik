@@ -83,7 +83,10 @@ contains
       type(grid_container), pointer, intent(in) :: cg !< current grid container
       integer, intent(in) :: i, j, k
 
-      real :: bx, by, bz, pmag, p, ps
+#ifdef MAGNETIC
+      real :: bx, by, bz
+#endif /* MAGNETIC */
+      real :: pmag, p, ps
 
 #ifdef MAGNETIC
       bx = (cg%b(xdim,i,j,k) + cg%b(xdim, i+dom%D_x, j,         k        ))/(1.+dom%D_x)
@@ -365,7 +368,7 @@ contains
       maxvx = maxval(vx(RNG))
       amp   = half*(maxvx-minvx)
 #ifdef ISO
-      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +               p(RNG))/uu(idn,RNG)),small)
+      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +          p(RNG))/uu(idn,RNG)),small)
 #else /* !ISO */
       cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + this%gam*p(RNG))/uu(idn,RNG)),small)
 #endif /* !ISO */
