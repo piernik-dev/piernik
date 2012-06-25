@@ -122,7 +122,7 @@ head_block2='''
 \tawk -F"$$" '/Id:/ {print $$2}' *.h $(SRCS_V) | column -t; \\
 \tawk '{print}' piernik.def | sed -e '/^$$/ d' -e "/^\// d" ) > env.dat
 \t@( $(ECHO) "Top revision =" \\
-\t`awk 'BEGIN {max = 0} {if ($$1="Id:" && $$3>max) max=$$3} END {print max}' env.dat` ) >> env.dat
+\t`awk 'BEGIN {max = 0} {if ($$1=="Id:" && $$3>max) max=$$3} END {print max}' env.dat` ) >> env.dat
 
 version.F90: env.dat
 \t@( $(ECHO) -e "module version\\n   implicit none\\n   public\\n"; \\
