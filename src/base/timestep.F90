@@ -36,9 +36,9 @@ module timestep
    implicit none
 
    private
-   public :: init_time_step, time_step, c_all, cfl_manager
+   public :: init_time_step, time_step, cfl_manager
 
-   real :: c_all, c_all_old
+   real :: c_all_old
    procedure(), pointer :: cfl_manager => null()
 
 contains
@@ -81,18 +81,19 @@ contains
 !! These routines return limit for timestep due to various physical and numerical conditions.
 !! At the end the timestep is checked against remaining simulation time, mimimum, and maximum allowed values etc.
 !<
-   subroutine time_step(dt)
+   subroutine time_step(dt, flind)
 
       use constants,            only: one, two, zero, half, I_ONE
       use dataio,               only: write_crashed
       use dataio_pub,           only: tend, msg, warn
-      use fluidindex,           only: flind
+      use fluidtypes,           only: var_numbers
       use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep
       use grid,                 only: leaves
       use gc_list,              only: cg_list_element
       use grid_cont,            only: grid_container
       use mpi,                  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,             only: comm, mpi_err, master
+      use timestep_pub,         only: c_all
       use timestepinteractions, only: timestep_interactions
 #ifdef COSM_RAYS
       use timestepcosmicrays,   only: timestep_crs, dt_crs
@@ -108,6 +109,7 @@ contains
       implicit none
 
       real, intent(inout) :: dt !< the timestep
+      type(var_numbers), intent(in) :: flind
 
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
@@ -194,6 +196,7 @@ contains
       use global,     only: cfl, cfl_max, cfl_violated
       use mpi,        only: MPI_LOGICAL
       use mpisetup,   only: comm, mpi_err, master, FIRST
+      use timestep_pub, only: c_all
 
       implicit none
 
@@ -230,6 +233,7 @@ contains
       use dataio_pub, only: msg, warn
       use global,     only: cfl, cfl_max, dt, dt_old
       use mpisetup,   only: master
+      use timestep_pub, only: c_all
 
       implicit none
 

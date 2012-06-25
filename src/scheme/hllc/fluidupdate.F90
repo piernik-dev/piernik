@@ -307,9 +307,8 @@ contains
 !<
    subroutine riemann_hllc(qleft,qright,qgdnv,fgdnv, n, gamma, cs2)
 
-      use constants,  only: zero, one, half
+      use constants,  only: zero, one, half, idn, imx, imy, imz, ien
       use global,     only: smalld
-      use fluidindex, only: idn, imx, imy, imz, ien
 
       implicit none
 

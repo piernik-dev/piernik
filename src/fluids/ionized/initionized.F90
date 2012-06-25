@@ -58,7 +58,7 @@ module initionized
       contains
          procedure, nopass :: get_tag
          procedure, pass :: get_cs => ion_cs
-         procedure, nopass :: compute_flux => flux_ion
+         procedure, pass :: compute_flux => flux_ion
    end type ion_fluid
 
 contains
@@ -290,22 +290,21 @@ contains
 !<
 !*/
 #define RNG 2:nm
-   subroutine flux_ion(flux, cfr, uu, n, vx, ps, bb, cs_iso2)
+   subroutine flux_ion(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2)
 
-      use constants,  only: xdim, ydim, zdim
+      use constants,  only: xdim, ydim, zdim, idn, imx, imy, imz
+#ifndef ISO
+      use constants,  only: ien
+#endif /* !ISO */
       use dataio_pub, only: die
       use func,       only: ekin, emag
-      use fluidindex, only: idn, imx, imy, imz, flind
-#ifndef ISO
-      use fluidindex, only: ien
-#endif /* !ISO */
 #ifdef LOCAL_FR_SPEED
       use constants,  only: half, small
       use global,     only: cfr_smooth
 #endif /* LOCAL_FR_SPEED */
 
       implicit none
-
+      class(ion_fluid), intent(in)                 :: this
       integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
       real, dimension(:,:), intent(inout), pointer :: flux     !< flux of ionized fluid
       real, dimension(:,:), intent(inout), pointer :: cfr      !< freezing speed for ionized fluid
@@ -342,8 +341,8 @@ contains
       p(RNG) = cs_iso2(RNG) * uu(idn,RNG)
       ps(RNG)= p(RNG) + pmag(RNG)
 #else /* !ISO */
-      ps(RNG)=(uu(ien,RNG) - ekin(uu(imx,RNG),uu(imy,RNG),uu(imz,RNG),uu(idn,RNG)) )*(flind%ion%gam_1) &
-           & + (2.0-flind%ion%gam)*pmag(RNG)
+      ps(RNG)=(uu(ien,RNG) - ekin(uu(imx,RNG),uu(imy,RNG),uu(imz,RNG),uu(idn,RNG)) )*(this%gam_1) &
+           & + (2.0 - this%gam)*pmag(RNG)
       p(RNG) = ps(RNG)- pmag(RNG);  p(1) = p(2); p(n) = p(nm)
 #endif /* !ISO */
       ps(1) = ps(2); ps(n) = ps(nm)
@@ -368,7 +367,7 @@ contains
 #ifdef ISO
       cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) +               p(RNG))/uu(idn,RNG)),small)
 #else /* !ISO */
-      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + flind%ion%gam*p(RNG))/uu(idn,RNG)),small)
+      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(2.0*pmag(RNG) + this%gam*p(RNG))/uu(idn,RNG)),small)
 #endif /* !ISO */
       !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
       !>
@@ -380,7 +379,7 @@ contains
       !<
 
       cfr(1,1) = cfr(1,2);  cfr(1,n) = cfr(1,nm)
-      do i = 2, flind%ion%all
+      do i = 2, this%all
          cfr(i,:) = cfr(1,:)
       enddo
 #endif /* LOCAL_FR_SPEED */
@@ -389,7 +388,7 @@ contains
       ! The freezing speed is now computed globally
       !  (c=const for the whole domain) in subroutine 'timestep'
 
-      cfr(:,:) = flind%ion%c
+      cfr(:,:) = this%c
 #endif /* GLOBAL_FR_SPEED */
 
    end subroutine flux_ion

@@ -52,7 +52,7 @@ module initdust
       contains
          procedure, nopass :: get_tag
          procedure, pass :: get_cs => dust_cs
-         procedure, nopass :: compute_flux => flux_dust
+         procedure, pass :: compute_flux => flux_dust
    end type dust_fluid
 
 contains
@@ -210,14 +210,15 @@ contains
 !!
 !<
 !*/
-   subroutine flux_dust(flux, cfr, uu, n, vx, ps, bb, cs_iso2)
+   subroutine flux_dust(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2)
 
-      use fluidindex, only: idn, imx, imy, imz
+      use constants, only: idn, imx, imy, imz
 #ifdef GLOBAL_FR_SPEED
-      use timestep,   only: c_all
+      use timestep_pub, only: c_all
 #endif /* GLOBAL_FR_SPEED */
 
       implicit none
+      class(dust_fluid), intent(in)                :: this
       integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
       real, dimension(:,:), intent(inout), pointer :: flux     !< flux of dust
       real, dimension(:,:), intent(inout), pointer :: cfr      !< freezing speed for dust
@@ -274,7 +275,7 @@ contains
       cfr(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
       return
-      if (.false.) write(0,*) bb, cs_iso2
+      if (.false.) write(0,*) bb, cs_iso2, this%all
 
    end subroutine flux_dust
 end module initdust

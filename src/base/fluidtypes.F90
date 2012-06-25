@@ -94,7 +94,7 @@ module fluidtypes
          procedure :: info    => printinfo_component_fluid
          procedure(tag), nopass, deferred :: get_tag
          procedure(cs_get), pass, deferred :: get_cs
-         procedure(flux_interface), nopass, deferred :: compute_flux
+         procedure(flux_interface), pass, deferred :: compute_flux
    end type component_fluid
 
    abstract interface
@@ -113,8 +113,10 @@ module fluidtypes
          character(len=idlen)   :: tag
       end function tag
 
-      subroutine flux_interface(flux,cfr,uu,n,vx,ps,bb,cs_iso2)
+      subroutine flux_interface(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2)
+         import
          implicit none
+         class(component_fluid), intent(in)           :: this
          integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
          real, dimension(:,:), intent(inout), pointer :: flux      !< flux of fluid
          real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for fluid

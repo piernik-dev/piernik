@@ -57,6 +57,10 @@ module constants
    real, parameter :: thrq       = 3./4.                 !< three fourths
 
    enum, bind(C)
+      enumerator :: idn, imx, imy, imz, ien
+   end enum
+
+   enum, bind(C)
       enumerator :: I_ZERO = 0, I_ONE, I_TWO, I_THREE, I_FOUR, I_FIVE, I_SIX, I_SEVEN, I_EIGHT, I_NINE, I_TEN
    end enum
 

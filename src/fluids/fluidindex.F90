@@ -56,11 +56,6 @@ module fluidindex
    type(var_numbers),save :: flind     !< COMMENT ME
 
    integer(kind=4), parameter  :: nmag = ndims     !< number of magnetic field components
-   integer(kind=4), parameter  :: idn = 1          !< position of density in the vector of conserv. variables for single fluid
-   integer(kind=4), parameter  :: imx = idn + xdim !< position of x-mom. in the vector of conserv. variables for single fluid
-   integer(kind=4), parameter  :: imy = idn + ydim !< position of y-mom. in the vector of conserv. variables for single fluid
-   integer(kind=4), parameter  :: imz = idn + zdim !< position of z-mom. in the vector of conserv. variables for single fluid
-   integer(kind=4), parameter  :: ien = imz + 1    !< position of energy density in the vector of conserv. variables for single fluid (only for adiabatic fluids)
    integer(kind=4), parameter  :: icx = xdim       !< index of x-component of current density
    integer(kind=4), parameter  :: icy = ydim       !< index of y-component of current density
    integer(kind=4), parameter  :: icz = zdim       !< index of z-component of current density

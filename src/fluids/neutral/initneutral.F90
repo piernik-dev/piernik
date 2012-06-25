@@ -56,7 +56,7 @@ module initneutral
       contains
          procedure, nopass :: get_tag
          procedure, pass :: get_cs => neu_cs
-         procedure, nopass :: compute_flux => flux_neu
+         procedure, pass :: compute_flux => flux_neu
    end type neutral_fluid
 
 contains
@@ -264,27 +264,24 @@ contains
 !!\f]
 !<
 !*/
-   subroutine flux_neu(flux, cfr, uu, n, vx, ps, bb, cs_iso2)
+   subroutine flux_neu(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2)
 
       use func,       only: ekin
-      use fluidindex, only: idn, imx, imy, imz
-#if defined(LOCAL_FR_SPEED) || !defined(ISO)
-      use fluidindex, only: flind
-#endif /* defined(LOCAL_FR_SPEED) || !defined(ISO) */
+      use constants,  only: idn, imx, imy, imz
 #ifdef LOCAL_FR_SPEED
       use constants,  only: small, half
       use global,     only: cfr_smooth
 #endif /* LOCAL_FR_SPEED */
 #ifdef GLOBAL_FR_SPEED
-      use timestep,   only: c_all
+      use timestep_pub, only: c_all
 #endif /* GLOBAL_FR_SPEED */
 #ifndef ISO
-      use fluidindex, only: ien
+      use constants,  only: ien
       use global,     only: smallp
 #endif /* !ISO */
 
       implicit none
-
+      class(neutral_fluid), intent(in)             :: this
       integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
       real, dimension(:,:), intent(inout), pointer :: flux      !< flux of neutral fluid
       real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for neutral fluid
@@ -308,7 +305,7 @@ contains
 #ifdef ISO
       ps(RNG)  = cs_iso2(RNG)*uu(idn,RNG) ; ps(1) = ps(2); ps(n) = ps(nm)
 #else /* !ISO */
-      ps(RNG)  = (uu(ien,RNG) - ekin(uu(imx,RNG),uu(imy,RNG),uu(imz,RNG),uu(idn,RNG)) )*(flind%neu%gam_1)
+      ps(RNG)  = (uu(ien,RNG) - ekin(uu(imx,RNG),uu(imy,RNG),uu(imz,RNG),uu(idn,RNG)) )*(this%gam_1)
       ps(RNG)  = max(ps(RNG), smallp)
 #endif /* !ISO */
 
@@ -331,9 +328,9 @@ contains
       amp   = half*(maxvx-minvx)
       !    c_fr  = 0.0
 #ifdef ISO
-      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(              ps(RNG))/uu(idn,RNG)),small)
+      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(         ps(RNG))/uu(idn,RNG)),small)
 #else /* !ISO */
-      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(flind%neu%gam*ps(RNG))/uu(idn,RNG)),small)
+      cfr(1,RNG) = sqrt(vx(RNG)**2+cfr_smooth*amp) + max(sqrt( abs(this%gam*ps(RNG))/uu(idn,RNG)),small)
 #endif /* !ISO */
       !> \deprecated BEWARE: that is the cause of fast decreasing of timestep in galactic disk problem
       !>
@@ -345,7 +342,7 @@ contains
       !<
 
       cfr(1,1) = cfr(1,2);  cfr(1,n) = cfr(1,nm)
-      do i = 2, flind%neu%all
+      do i = 2, this%all
          cfr(i,:) = cfr(1,:)
       enddo
 #endif /* LOCAL_FR_SPEED */
@@ -354,11 +351,14 @@ contains
       ! The freezing speed is now computed globally
       !  (c=const for the whole domain) in subroutine 'timestep'
 
-      !    cfr(:,:) = flind%neu%c   ! check which c_xxx is better
+      !    cfr(:,:) = this%c   ! check which c_xxx is better
       cfr(:,:) = c_all
 #endif /* GLOBAL_FR_SPEED */
       return
       if (.false.) write(0,*) bb, cs_iso2
+#if defined(LOCAL_FR_SPEED) || !defined(ISO)
+      if (.false.) print *, this%all
+#endif /* defined(LOCAL_FR_SPEED) || !defined(ISO) */
 
    end subroutine flux_neu
 

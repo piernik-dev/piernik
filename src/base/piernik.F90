@@ -35,6 +35,7 @@ program piernik
    use constants,   only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL
    use dataio,      only: write_data, user_msg_handler, check_log, check_tsl, dump
    use dataio_pub,  only: nend, tend, msg, printinfo, warn, die, code_progress
+   use fluidindex,  only: flind
    use fluidupdate, only: fluid_update
    use gc_list,     only: all_cg
    use global,      only: t, nstep, dt, dtm, cfl_violated
@@ -91,7 +92,7 @@ program piernik
       call all_cg%check_na
       !call all_cg%check_for_dirt
 
-      call time_step(dt)
+      call time_step(dt, flind)
       call grace_period
 
       if (first_step) then
@@ -410,7 +411,6 @@ contains
       use initfluids,    only: cleanup_fluids
       use interactions,  only: cleanup_interactions
       use fluidindex,    only: cleanup_fluidindex
-      use fluxes,        only: cleanup_fluxes
       use mpisetup,      only: cleanup_mpi
       use timer,         only: cleanup_timers
 #ifdef RESISTIVE
@@ -426,7 +426,6 @@ contains
 
       if (associated(cleanup_problem)) call cleanup_problem; call  nextdot(.false.)
       call cleanup_interactions;  call nextdot(.false.)
-      call cleanup_fluxes;        call nextdot(.false.)
       call cleanup_dataio;        call nextdot(.false.)
 #ifdef RESISTIVE
       call cleanup_resistivity;   call nextdot(.false.)
