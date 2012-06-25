@@ -28,7 +28,7 @@
 #include "piernik.h"
 
 !>
-!! \brief (MH) Timestep computation for the dust fluid
+!! \brief Timestep computation for the dust fluid
 !<
 module timestepdust
 ! pulled by ANY

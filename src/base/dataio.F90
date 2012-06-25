@@ -35,7 +35,7 @@
 !
 
 !>
-!! \brief (DW) Module containing all main routines  responsible for data output
+!! \brief Module containing all main routines  responsible for data output
 !!
 !!
 !! In this module following namelists of parameters are specified:

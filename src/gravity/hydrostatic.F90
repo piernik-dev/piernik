@@ -28,7 +28,7 @@
 #include "piernik.h"
 
 !>
-!! \brief (DW) Module containing a subroutine that arranges %hydrostatic equilibrium in the vertical (z) direction
+!! \brief Module containing a subroutine that arranges %hydrostatic equilibrium in the vertical (z) direction
 !! \details There are two routines to call to set hydrostatic equilibrium:
 !! @n hydrostatic_zeq_coldens that fixes column density,
 !! @n hydrostatic_zeq_densmid that fixes density value in the midplane.

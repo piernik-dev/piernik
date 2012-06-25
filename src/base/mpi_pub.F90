@@ -28,12 +28,10 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief (KK)
+!! \brief This module is a middleware between Piernik and host mpi implementation
 !!
-!! This modules is a middleware between Piernik and host mpi implementation
-!! IMPORTANT: other modules beside this one should *not* use host mpi module
-!! directly
-!! REMARK: it required >=ifort-12.1 or >=gcc-FUTURE
+!! \annotate IMPORTANT: other modules beside this one should *not* use host mpi module directly
+!! \annotate REMARK: it required >=ifort-12.1 or >=gcc-FUTURE
 !<
 module mpi_pub
 ! pulled by NONE

@@ -28,9 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief (KK)
-!!
-!! This module provides global simulation variables such as t or nstep and some numerical parameters, like cfl
+!! \brief This module provides global simulation variables such as t or nstep and some numerical parameters, like cfl
 !!
 !! In this module following namelists of parameters are specified:
 !! \copydetails global::init_global

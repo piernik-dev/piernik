@@ -29,7 +29,7 @@
 #define RNG 2:nm
 !/*
 !>
-!! \brief (MH/JD) [R] Computation of %fluxes for the tracer fluid
+!! \brief Computation of %fluxes for the tracer fluid
 !!
 !!The flux functions for dust are given by:
 !!\f[

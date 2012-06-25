@@ -28,7 +28,7 @@
 #include "piernik.h"
 
 !>
-!! \brief (MH) Numerical scheme for the diffusive transport of Cosmic Rays
+!! \brief Numerical scheme for the diffusive transport of Cosmic Rays
 !<
 
 module crdiffusion

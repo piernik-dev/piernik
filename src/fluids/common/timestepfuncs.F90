@@ -28,7 +28,7 @@
 #include "piernik.h"
 
 !>
-!! \brief (KK)
+!! \brief Module of timestep routines common for fluids
 !<
 module timestepfuncs
 

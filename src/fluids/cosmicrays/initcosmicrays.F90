@@ -29,7 +29,7 @@
 #include "macros.h"
 
 !>
-!! \brief (MH) Initialization of Cosmic Ray component
+!! \brief Initialization of Cosmic Ray component
 !!
 !!
 !!

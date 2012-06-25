@@ -28,7 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief (DW) Module that contains all routines related to %interactions between fluids
+!! \brief Module that contains all routines related to %interactions between fluids
 !!
 !! In this module a namelist of parameters is specified:
 !!

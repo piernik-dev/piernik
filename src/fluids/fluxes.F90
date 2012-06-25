@@ -27,7 +27,7 @@
 !
 #include "piernik.h"
 !>
-!! \brief (MH/JD) [R] Module that collects all flux components from each fluid
+!! \brief Module that collects all flux components from each fluid
 !!
 !!The %fluxes for all fluids are combined in the same order as conservative variables in the array \a u(:,:,:,:)
 !!\f{equation}

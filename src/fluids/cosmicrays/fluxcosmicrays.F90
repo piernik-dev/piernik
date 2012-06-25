@@ -29,7 +29,7 @@
 #define RNG 2:n-1
 
 !>
-!! \brief (MH) Computation of advection %fluxes of Cosmic Rays
+!! \brief Computation of advection %fluxes of Cosmic Rays
 !!
 !!
 !<

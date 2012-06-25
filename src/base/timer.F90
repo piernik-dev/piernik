@@ -27,7 +27,7 @@
 !
 #include "piernik.h"
 !>
-!! \brief (KK)
+!! \brief Module for timers managements
 !<
 module timer
 

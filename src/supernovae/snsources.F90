@@ -28,7 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief (DW) Module containing subroutines and functions that govern supernovae insert
+!! \brief Module containing subroutines and functions that govern supernovae insert
 !<
 module snsources
 ! pulled by SN_SRC

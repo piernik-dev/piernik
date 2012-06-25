@@ -27,7 +27,7 @@
 !
 #include "piernik.h"
 !>
-!! \brief (JD) [R] This module implements relaxing TVD scheme
+!! \brief This module implements relaxing TVD scheme
 !!
 !! The implementation was based on TVD split MHD code by Pen et al. (2003).
 !<

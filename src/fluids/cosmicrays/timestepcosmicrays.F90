@@ -27,7 +27,7 @@
 !
 #include "piernik.h"
 !>
-!! \brief (MH) Computation of %timestep for diffusive Cosmic Ray transport
+!! \brief Computation of %timestep for diffusive Cosmic Ray transport
 !<
 
 module timestepcosmicrays

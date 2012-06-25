@@ -28,7 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief (KK)
+!! \brief MPI routines setup
 !!
 !! In this module following namelists of parameters are specified:
 !! \copydetails mpisetup::init_mpi

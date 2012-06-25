@@ -27,9 +27,9 @@
 !
 #include "piernik.h"
 !>
-!! /brief Global update of boundary routines
+!! \brief Global update of boundary routines
 !!
-!! /details moved to a separate file due to concerns about circular dependencies
+!! \details moved to a separate file due to concerns about circular dependencies
 !<
 module all_boundaries
 
@@ -42,6 +42,7 @@ contains
 
 !>
 !! Subroutine calling all type boundaries after initialization of new run or restart reading
+!! \todo make sure that all_fluid_boundaries and all_mag_boundaries can handle BND_USER boundaries right now, or do the boundaries later
 !<
 
    subroutine all_bnd
@@ -54,12 +55,11 @@ contains
       implicit none
 
 !      if (all(cg%bnd(:,:) /= BND_USER)) then
-! \todo make sure that all_fluid_boundaries and all_mag_boundaries can handle BND_USER boundaries right now, or do the boundaries later
       call all_fluid_boundaries
 #ifdef MAGNETIC
       call all_mag_boundaries
 #endif /* MAGNETIC */
-!     endif
+!      endif
 
    end subroutine all_bnd
 

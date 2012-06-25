@@ -28,7 +28,7 @@
 #include "piernik.h"
 
 !>
-!! \brief (MH) [R] Module to initialize all fluids, fluid components, tracers
+!! \brief Module to initialize all fluids, fluid components, tracers
 !! and other dependent variables which are relevant for the current problem.
 !!
 !! The Relaxing TVD scheme by Pen, Arras \& Wong (2003) was extended in PIERNIK

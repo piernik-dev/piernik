@@ -28,7 +28,7 @@
 #include "piernik.h"
 
 !>
-!! \brief (MH/JD) [R] Timestep computation for the neutral fluid
+!! \brief Timestep computation for the neutral fluid
 !!
 !! %Timestep for the neutral fluid is set as the minimum %timestep for all of the MPI blocks times the Courant number.
 !! To compute the %timestep in each MPI block, the fastest speed at which information travels in each direction is computed as

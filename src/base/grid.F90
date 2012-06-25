@@ -28,7 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief (DW) Module containing lists of grid containers for computational mesh and initialization and cleanup routines
+!! \brief Module containing lists of grid containers for computational mesh and initialization and cleanup routines
 !<
 module grid
 

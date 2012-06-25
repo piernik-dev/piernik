@@ -28,7 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief (KK)
+!! \brief Module of shearing box routines
 !!
 !! In this module following namelist of parameters is specified:
 !! \copydetails shear::init_shear

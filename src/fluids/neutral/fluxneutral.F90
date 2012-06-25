@@ -29,7 +29,7 @@
 #define RNG 2:nm
 !/*
 !>
-!! \brief (MH/JD) [R] Computation of %fluxes for the neutral fluid
+!! \brief Computation of %fluxes for the neutral fluid
 !!
 !!The flux functions for neutral fluid are given by
 !!

@@ -27,7 +27,7 @@
 !
 #include "piernik.h"
 !>
-!! \brief (DW) Module containing a routine to compute upper limit of %timestep due to fluids %interactions.
+!! \brief Module containing a routine to compute upper limit of %timestep due to fluids %interactions.
 !<
 module timestepinteractions
 ! pulled by ANY
@@ -39,7 +39,8 @@ contains
 !>
 !! \brief Routine that computes upper limit of %timestep due to fluids %interactions.
 !! \warning works only with neutrals and dust case !!!!
-!! \todo check if subtraction of momenta is really the case (i am confused again - DW)
+!! \deprecated BEWARE: works only with neu+dust!!!!
+!! \todo check if subtraction of momenta is really the case and rewrite for all fluids
 !<
    real function timestep_interactions(cg) result(dt)
 
@@ -60,8 +61,6 @@ contains
       type(grid_container), pointer, intent(in) :: cg
 
       !    dt_interact_proc = 1.0 / (maxval(collfaq)+small) / maxval(cg%u(iarr_all_dn,:,:,:))
-
-      !> \deprecated BEWARE: works only with neu+dust!!!!
 
       if (has_interactions) then
          !       val = maxval (  sqrt( (cg%u(flind%dst%imx,:,:,:)-cg%u(flind%neu%imx,:,:,:))**2 + (cg%u(flind%dst%imy,:,:,:)-cg%u(flind%neu%imy,:,:,:))**2 + &

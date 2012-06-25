@@ -28,9 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief (KK)
-!!
-!! This module contains everything closely related to management of computational domain.
+!! \brief This module contains everything closely related to management of computational domain.
 !!
 !! In this module following namelists of parameters are specified:
 !! \copydetails domain::init_domain
@@ -429,17 +427,17 @@ contains
 
       class(domain_container), intent(inout) :: this  !< object invoking type-bound procedure
 
-      write(msg,'(a,3(F5.1,1X))') "LO edge: ", this%edge(:,LO); call printinfo(msg)
-      write(msg,'(a,3(F5.1,1X))') "HI edge: ", this%edge(:,HI); call printinfo(msg)
-      write(msg,'(a,3(I4,1X))')   "n_d    : ", this%n_d(:); call printinfo(msg)
-      write(msg,'(a,3(I4,1X))')   "n_t    : ", this%n_t(:); call printinfo(msg)
-      write(msg,'(a,1(I4,1X))')   "nb     : ", this%nb; call printinfo(msg)
-      write(msg,'(a,3(I4,1X))')   "LO bnd : ", this%bnd(:,LO); call printinfo(msg)
-      write(msg,'(a,3(I4,1X))')   "HI bnd : ", this%bnd(:,HI); call printinfo(msg)
-      write(msg,'(a,3(F5.1,1X))') "L_     : ", this%L_(:); call printinfo(msg)
-      write(msg,'(a,3(F5.1,1X))') "C_     : ", this%C_(:); call printinfo(msg)
-      write(msg,'(a,1(F5.1,1X))') "Vol    : ", this%Vol; call printinfo(msg)
-      write(msg,'(a,3(L1,1X))')   "period : ", this%periodic(:); call printinfo(msg)
+      write(msg,'(a,3(F5.1,1X))') "LO edge: ", this%edge(:,LO)  ; call printinfo(msg)
+      write(msg,'(a,3(F5.1,1X))') "HI edge: ", this%edge(:,HI)  ; call printinfo(msg)
+      write(msg,'(a,3(I4,1X))')   "n_d    : ", this%n_d(:)      ; call printinfo(msg)
+      write(msg,'(a,3(I4,1X))')   "n_t    : ", this%n_t(:)      ; call printinfo(msg)
+      write(msg,'(a,1(I4,1X))')   "nb     : ", this%nb          ; call printinfo(msg)
+      write(msg,'(a,3(I4,1X))')   "LO bnd : ", this%bnd(:,LO)   ; call printinfo(msg)
+      write(msg,'(a,3(I4,1X))')   "HI bnd : ", this%bnd(:,HI)   ; call printinfo(msg)
+      write(msg,'(a,3(F5.1,1X))') "L_     : ", this%L_(:)       ; call printinfo(msg)
+      write(msg,'(a,3(F5.1,1X))') "C_     : ", this%C_(:)       ; call printinfo(msg)
+      write(msg,'(a,1(F5.1,1X))') "Vol    : ", this%Vol         ; call printinfo(msg)
+      write(msg,'(a,3(L1,1X))')   "period : ", this%periodic(:) ; call printinfo(msg)
 
    end subroutine print_me
 

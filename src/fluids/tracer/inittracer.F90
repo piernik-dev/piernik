@@ -28,12 +28,12 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief (MH) Initialization of the dust fluid
+!! \brief Initialization of the tracer fluid
 !!
 !!
 !!
 !! In this module following namelist of parameters is specified:
-!! \copydetails initdust::init_dust
+!! \copydetails inittracer::init_tracer
 !<
 
 module inittracer

@@ -28,7 +28,7 @@
 #include "piernik.h"
 
 !>
-!! \brief (MH) [R] In this module fluid variables of individual fluids are indexed to make use of the single array
+!! \brief In this module fluid variables of individual fluids are indexed to make use of the single array
 !! \a u(:,:,:,:) containing all fluid variables.
 !!
 !! \par The purpose of this module is to compute:

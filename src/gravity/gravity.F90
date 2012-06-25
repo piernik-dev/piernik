@@ -29,7 +29,7 @@
 #include "macros.h"
 
 !>
-!! \brief (DW) Module containing all main subroutines and functions that govern %gravity force in the code
+!! \brief Module containing all main subroutines and functions that govern %gravity force in the code
 !!
 !!
 !! In this module a namelist of parameters is specified:

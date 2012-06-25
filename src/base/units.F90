@@ -28,7 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief (DW) [R] Module containing physical %constants
+!! \brief Module containing physical %constants and %units
 !! \details Module units contains physical %constants for several units systems.
 !! To use one system a proper value of units_set should be set.
 !! Available units systems defined by units_set value:

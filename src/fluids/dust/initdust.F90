@@ -29,7 +29,7 @@
 #include "macros.h"
 
 !>
-!! \brief (MH) Initialization of the dust fluid
+!! \brief Initialization of the dust fluid
 !!
 !!
 !!

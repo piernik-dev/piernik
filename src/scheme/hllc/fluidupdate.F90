@@ -26,9 +26,13 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.def"
+!>
+!! \brief module for HLLC scheme (SPLIT MUSCL HANCOCK)
+!!
+!! \deprecated BEWARE: this module only care about neutral fluid
+!<
 module fluidupdate   ! SPLIT MUSCL HANCOCK
 ! pulled by HLLC
-!BEWARE: this module only care about neutral fluid
 
   implicit none
   private
@@ -108,7 +112,7 @@ contains
       ui = cg%ind_4d(fluid_n)
       cs2 => null()
       if (cg%exists(cs_i2_n)) then
-         i_cs_iso2 = cg%ind(cs_i2_n) ! BEWARE: magic strings across multiple files
+         i_cs_iso2 = cg%ind(cs_i2_n) !> \deprecated BEWARE: magic strings across multiple files
       else
          i_cs_iso2 = -1
       endif
@@ -199,7 +203,7 @@ contains
       ul = u - half*du   ! (14.33)
       ur = u + half*du
 
-      flux = compute_flux(ul,b,cs2) - compute_flux(ur,b,cs2)    ! interpolate b?
+      flux = compute_flux(ul,b,cs2) - compute_flux(ur,b,cs2)    !> \todo interpolate b?
 
       u_l = ur + half*dtodx*flux   ! (14.34) + (14.35)
       u_r(:,1:nx-1) = ul(:,2:nx) + half*dtodx*flux(:,2:nx); u_r(:,nx) = u_r(:,nx-1)
@@ -299,6 +303,9 @@ contains
 
    end function compute_flux
 !---------------------------------------------------------------------------
+!>
+!! \brief HLLC Riemann solver (Toro)
+!<
    subroutine riemann_hllc(qleft,qright,qgdnv,fgdnv, n, gamma, cs2)
 
       use constants,  only: zero, one, half
@@ -309,7 +316,6 @@ contains
 
       real, parameter    :: smallc = 1.e-8
 
-      ! HLLC Riemann solver (Toro)
       integer, intent(in) :: n
       real, intent(in)    :: gamma
       real, dimension(:,:), intent(in), pointer     :: qleft,qright
@@ -335,7 +341,7 @@ contains
 #endif /* __INTEL_COMPILER */
 
       ! constants
-      smallp = 1.e-7   ! BEWARE
+      smallp = 1.e-7   !> \deprecated BEWARE
 
 #ifndef ISO
       entho = one/(gamma-one)
