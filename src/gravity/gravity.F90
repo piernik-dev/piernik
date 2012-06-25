@@ -535,7 +535,7 @@ contains
          do_flatten = .false.
       endif
 
-      cs_iso2   = maxval(flind%all_fluids(:)%cs2)
+      cs_iso2   = maxval(flind%all_fluids(:)%fl%cs2)
       r_smooth2 = r_smooth**2
       GM        = newtong*ptmass
 

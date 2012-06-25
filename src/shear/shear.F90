@@ -116,7 +116,7 @@ contains
 
       allocate(global_gradP(flind%fluids))
       do i = 1, flind%fluids
-         global_gradP(i) = 2.0*omega * eta_gas * flind%all_fluids(i)%cs / csvk
+         global_gradP(i) = 2.0*omega * eta_gas * flind%all_fluids(i)%fl%cs / csvk
       enddo
 
    end subroutine init_shear

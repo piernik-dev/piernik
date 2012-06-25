@@ -144,7 +144,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cgl%cg%cs_iso2 => cgl%cg%q(all_cg%ind(cs_i2_n))%arr
-         cgl%cg%cs_iso2(:,:,:) = maxval(flind%all_fluids(:)%cs2)   ! set cs2 with sane values
+         cgl%cg%cs_iso2(:,:,:) = maxval(flind%all_fluids(:)%fl%cs2)   ! set cs2 with sane values
          cgl => cgl%nxt
       enddo
 #endif /* ISO */

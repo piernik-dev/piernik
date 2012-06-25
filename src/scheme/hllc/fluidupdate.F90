@@ -186,7 +186,7 @@ contains
       real, dimension(:,:), intent(in)           :: b
       real, dimension(:,:), intent(inout)        :: u
 
-      type(component_fluid), pointer             :: fl
+      class(component_fluid), pointer             :: fl
 
       real, dimension(size(u,1),size(u,2)), target :: flux, ql, qr, qgdn
       real, dimension(size(u,1),size(u,2)), target :: du, ul, ur, u_l, u_r
@@ -208,7 +208,7 @@ contains
       qr = utoq(u_r,b)
 
       do p = 1, flind%fluids
-         fl     => flind%all_fluids(p)
+         fl     => flind%all_fluids(p)%fl
          p_ql   => ql(fl%beg:fl%end,:)
          p_qr   => qr(fl%beg:fl%end,:)
          p_q    => qgdn(fl%beg:fl%end,:)
@@ -234,10 +234,10 @@ contains
       real, dimension(size(u,1),size(u,2))       :: q
 
       integer :: p
-      type(component_fluid), pointer :: fl
+      class(component_fluid), pointer :: fl
 
       do p = 1, flind%fluids
-         fl => flind%all_fluids(p)
+         fl => flind%all_fluids(p)%fl
 
          q(fl%idn,:) = u(fl%idn,:)
          q(fl%imx,:) = u(fl%imx,:)/u(fl%idn,:)
@@ -266,10 +266,10 @@ contains
       real, dimension(size(u,2))             :: vx, p
 
       integer :: ip
-      type(component_fluid), pointer :: fl
+      class(component_fluid), pointer :: fl
 
       do ip = 1, flind%fluids
-         fl => flind%all_fluids(ip)
+         fl => flind%all_fluids(ip)%fl
 
          vx = u(fl%imx,:) / u(fl%idn,:)
          if (fl%has_energy) then

@@ -418,13 +418,13 @@ contains
          db = cg%u(iarr_all_dn,:,:,kb)
          db = max(db,smalld)
 #ifdef ISO
-         csi2b = maxval(flind%all_fluids(:)%cs2)   !> \deprecated BEWARE should be fluid dependent
+         csi2b = maxval(flind%all_fluids(:)%fl%cs2)   !> \deprecated BEWARE should be fluid dependent
 #else /* !ISO */
          ekb = ekin(cg%u(iarr_all_mx,:,:,kb),cg%u(iarr_all_my,:,:,kb),cg%u(iarr_all_mz,:,:,kb),db)
          eib = cg%u(iarr_all_en,:,:,kb) - ekb
          eib = max(eib,smallei)
          do ifluid=1,flind%fluids
-            csi2b(ifluid,:,:) = (flind%all_fluids(ifluid)%gam_1)*eib(ifluid,:,:)/db(ifluid,:,:)
+            csi2b(ifluid,:,:) = (flind%all_fluids(ifluid)%fl%gam_1)*eib(ifluid,:,:)/db(ifluid,:,:)
          enddo
 #endif /* !ISO */
 
@@ -452,7 +452,7 @@ contains
 
                db(:,i,j)  = max(db(:,i,j), smalld)
 #ifndef ISO
-               eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(flind%all_fluids(:)%gam_1)
+               eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(flind%all_fluids(:)%fl%gam_1)
                eib(:,i,j) = max(eib(:,i,j), smallei)
 #endif /* !ISO */
             enddo
