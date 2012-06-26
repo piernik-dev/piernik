@@ -999,7 +999,7 @@ contains
                            ncg + cg_desc%tot_cg_n*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa4d)
                      endif
-                     call h5dwrite_f(cg_desc%dset_id(ncg, i), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, i+size(q_lst)), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
                      if (cg_desc%cg_src_p(ncg) /= proc) deallocate(pa4d)
                   enddo
                   deallocate(dims)
