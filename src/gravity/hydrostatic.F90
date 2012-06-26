@@ -384,7 +384,7 @@ contains
       type(grid_container), pointer, intent(inout) :: cg
       logical,                       intent(in)    :: diode
 
-      integer(kind=4)                              :: ib, ssign, kb, kk
+      integer(kind=4)                              :: ib, ssign, kb, kk, ifl
       integer                                      :: ksub, i, j, lksub
       real, dimension(:,:,:), allocatable          :: db, csi2b, dbr
       real, dimension(:,:),   allocatable          :: dprofs
@@ -418,7 +418,11 @@ contains
          db = cg%u(iarr_all_dn,:,:,kb)
          db = max(db,smalld)
 #ifdef ISO
-         csi2b = maxval(flind%all_fluids(:)%fl%cs2)   !> \deprecated BEWARE should be fluid dependent
+!         csi2b = maxval(flind%all_fluids(:)%fl%cs2)   !> \deprecated BEWARE should be fluid dependent
+         csi2b = 0.0
+         do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
+            csi2b = max(csi2b, flind%all_fluids(ifl)%fl%cs2)
+         enddo
 #else /* !ISO */
          ekb = ekin(cg%u(iarr_all_mx,:,:,kb),cg%u(iarr_all_my,:,:,kb),cg%u(iarr_all_mz,:,:,kb),db)
          eib = cg%u(iarr_all_en,:,:,kb) - ekb

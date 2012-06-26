@@ -524,7 +524,7 @@ contains
       type(axes), intent(in)                :: ax
       logical, intent(in), optional         :: flatten
 
-      integer             :: i, j
+      integer             :: i, j, ifl
       real                :: rc2, r_smooth2, GM, fr, x2
       real                :: cs_iso2
       logical             :: do_flatten
@@ -535,7 +535,12 @@ contains
          do_flatten = .false.
       endif
 
-      cs_iso2   = maxval(flind%all_fluids(:)%fl%cs2)
+      !cs_iso2   = maxval(flind%all_fluids(:)%fl%cs2)
+      cs_iso2 = 0.0
+      do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
+         cs_iso2 = max(cs_iso2, flind%all_fluids(ifl)%fl%cs2)
+      enddo
+
       r_smooth2 = r_smooth**2
       GM        = newtong*ptmass
 

@@ -99,6 +99,10 @@ module fluidtypes
          procedure(pass_flind), pass, deferred :: initialize_indices
    end type component_fluid
 
+   type :: fluid_arr
+      class(component_fluid), pointer :: fl
+   end type fluid_arr
+
    type :: var_numbers
       integer(kind=4) :: all         = 0      !< total number of fluid variables = the size of array \a u(:,:,:,:) in the first index
       integer(kind=4) :: fluids      = 0      !< number of fluids (ionized gas, neutral gas, dust)
@@ -156,10 +160,6 @@ module fluidtypes
          real, dimension(:),   intent(in),    pointer :: cs_iso2   !< isothermal sound speed squared
       end subroutine flux_interface
    end interface
-
-   type :: fluid_arr
-      class(component_fluid), pointer :: fl
-   end type fluid_arr
 
    contains
 

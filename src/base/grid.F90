@@ -71,11 +71,12 @@ contains
 
       implicit none
 
-      integer :: nrq, d
+      integer :: nrq, d, ifl
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       type(cg_list_patch),   pointer :: pbd
       integer(kind=4), parameter, dimension(ndims) :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
+      real :: cs_max
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
@@ -141,10 +142,15 @@ contains
 
       call all_cg%reg_var(cs_i2_n, vital = .true., restart_mode = AT_NO_B)
 
+      cs_max = 0.0
+      do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
+         cs_max = max(cs_max, flind%all_fluids(ifl)%fl%cs2)
+      enddo
+
       cgl => leaves%first
       do while (associated(cgl))
          cgl%cg%cs_iso2 => cgl%cg%q(all_cg%ind(cs_i2_n))%arr
-         cgl%cg%cs_iso2(:,:,:) = maxval(flind%all_fluids(:)%fl%cs2)   ! set cs2 with sane values
+         cgl%cg%cs_iso2(:,:,:) = cs_max   ! set cs2 with sane values
          cgl => cgl%nxt
       enddo
 #endif /* ISO */
