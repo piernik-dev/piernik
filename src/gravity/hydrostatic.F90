@@ -384,7 +384,7 @@ contains
       type(grid_container), pointer, intent(inout) :: cg
       logical,                       intent(in)    :: diode
 
-      integer(kind=4)                              :: ib, ssign, kb, kk, ifl
+      integer(kind=4)                              :: ib, ssign, kb, kk
       integer                                      :: ksub, i, j, lksub
       real, dimension(:,:,:), allocatable          :: db, csi2b, dbr
       real, dimension(:,:),   allocatable          :: dprofs
@@ -392,6 +392,8 @@ contains
 #ifndef ISO
       real, dimension(:,:,:), allocatable          :: ekb, eib
       integer                                      :: ifluid
+#else /* !ISO */
+      integer :: ifl
 #endif /* !ISO */
 
       if (.not.associated(get_gprofs)) call die("[hydrostatic:outh_bnd] get_gprofs not associated")

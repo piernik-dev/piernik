@@ -71,12 +71,15 @@ contains
 
       implicit none
 
-      integer :: nrq, d, ifl
+      integer :: nrq, d
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       type(cg_list_patch),   pointer :: pbd
       integer(kind=4), parameter, dimension(ndims) :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
-      real :: cs_max
+#ifdef ISO
+      integer :: ifl
+      real    :: cs_max
+#endif /* ISO */
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
