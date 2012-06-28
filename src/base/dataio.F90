@@ -735,32 +735,33 @@ contains
 
    subroutine write_timeslice
 
-      use constants,   only: cwdlen, xdim, ydim, zdim
+      use cg_list_global, only: all_cg
+      use constants,      only: cwdlen, xdim, ydim, zdim
 #ifdef GRAV
-      use constants,   only: gpot_n
+      use constants,      only: gpot_n
 #endif /* GRAV */
-      use dataio_pub,  only: wd_wr
-      use dataio_user, only: user_tsl
-      use diagnostics, only: pop_vector
-      use domain,      only: dom
-      use fluidindex,  only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use fluids_pub,  only: has_ion, has_dst, has_neu
-      use fluidtypes,  only: phys_prop
-      use func,        only: ekin, emag
-      use gc_list,     only: cg_list_element, all_cg
-      use global,      only: t, dt, smalld, nstep
-      use grid,        only: leaves
-      use grid_cont,   only: grid_container
-      use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,    only: master, comm, mpi_err
+      use dataio_pub,     only: wd_wr
+      use dataio_user,    only: user_tsl
+      use diagnostics,    only: pop_vector
+      use domain,         only: dom
+      use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use fluids_pub,     only: has_ion, has_dst, has_neu
+      use fluidtypes,     only: phys_prop
+      use func,           only: ekin, emag
+      use gc_list,        only: cg_list_element
+      use global,         only: t, dt, smalld, nstep
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use mpi,            only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,       only: master, comm, mpi_err
 #ifndef ISO
-      use fluidindex,  only: iarr_all_en
+      use fluidindex,     only: iarr_all_en
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use fluidindex,  only: iarr_all_crs
+      use fluidindex,     only: iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-      use resistivity, only: eta1_active
+      use resistivity,    only: eta1_active
 #endif /* RESISTIVE */
 
       implicit none
@@ -977,19 +978,20 @@ contains
 
    subroutine get_common_vars(fl)
 
-      use types,      only: value                          !QA_WARN: used by get_extremum (intel compiler)
-      use constants,  only: MINL, MAXL, small, xdim, ydim, zdim
-      use domain,     only: is_multicg
-      use fluidtypes, only: phys_prop, component_fluid
-      use func,       only: ekin
-      use gc_list,    only: cg_list_element, all_cg
-      use global,     only: cfl
-      use grid,       only: leaves
-      use mpisetup,   only: master
-      use units,      only: mH, kboltz
+      use types,          only: value                          !QA_WARN: used by get_extremum (intel compiler)
+      use cg_list_global, only: all_cg
+      use constants,      only: MINL, MAXL, small, xdim, ydim, zdim
+      use domain,         only: is_multicg
+      use fluidtypes,     only: phys_prop, component_fluid
+      use func,           only: ekin
+      use gc_list,        only: cg_list_element
+      use global,         only: cfl
+      use grid,           only: leaves
+      use mpisetup,       only: master
+      use units,          only: mH, kboltz
 #ifndef ISO
-      use constants,  only: ION, DST, half
-      use global,     only: smallp
+      use constants,      only: ION, DST, half
+      use global,         only: smallp
 #endif /* !ISO */
 
       implicit none
@@ -1134,6 +1136,7 @@ contains
 !
    subroutine  write_log(tsl)
 
+      use cg_list_global,     only: all_cg
       use constants,          only: idlen, small, MAXL
 #if defined COSM_RAYS || defined MAGNETIC
       use constants,          only: MINL
@@ -1149,7 +1152,7 @@ contains
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: flind
       use func,               only: L2norm, sq_sum3
-      use gc_list,            only: cg_list_element, all_cg
+      use gc_list,            only: cg_list_element
 #ifdef MAGNETIC
       use global,             only: cfl
 #endif /* MAGNETIC */

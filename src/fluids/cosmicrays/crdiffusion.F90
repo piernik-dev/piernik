@@ -46,10 +46,10 @@ contains
 
    subroutine init_crdiffusion(crsall)
 
-      use constants,  only: wcr_n
-      use cr_data,    only: divv_n
-      use dataio_pub, only: warn
-      use gc_list,    only: all_cg
+      use cg_list_global, only: all_cg
+      use constants,      only: wcr_n
+      use cr_data,        only: divv_n
+      use dataio_pub,     only: warn
 
       implicit none
 
@@ -73,16 +73,17 @@ contains
 !<
    subroutine all_wcr_boundaries
 
-      use constants,    only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE, wcr_n
-      use dataio_pub,   only: die
-      use domain,       only: dom
-      use gc_list,      only: cg_list_element, all_cg
-      use grid,         only: leaves
-      use grid_cont,    only: grid_container
-      use internal_bnd, only: internal_boundaries_4d
-      use mpi,          only: MPI_REQUEST_NULL, MPI_COMM_NULL
-      use mpisetup,     only: mpi_err, req, status
-      use types,        only: cdd
+      use cg_list_global, only: all_cg
+      use constants,      only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE, wcr_n
+      use dataio_pub,     only: die
+      use domain,         only: dom
+      use gc_list,        only: cg_list_element
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use internal_bnd,   only: internal_boundaries_4d
+      use mpi,            only: MPI_REQUEST_NULL, MPI_COMM_NULL
+      use mpisetup,       only: mpi_err, req, status
+      use types,          only: cdd
 
       implicit none
 
@@ -157,12 +158,13 @@ contains
 !<
    subroutine cr_diff(crdim)
 
+      use cg_list_global, only: all_cg
       use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n, oneq, uv
       use dataio_pub,     only: die
       use domain,         only: dom
       use fluidindex,     only: flind
       use global,         only: dt
-      use gc_list,        only: cg_list_element, all_cg
+      use gc_list,        only: cg_list_element
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp

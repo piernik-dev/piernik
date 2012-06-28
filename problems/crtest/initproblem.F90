@@ -65,13 +65,13 @@ contains
 
    subroutine read_problem_par
 
-      use constants,   only: I_ONE, I_TEN, AT_NO_B
-      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use dataio_pub,  only: die
-      use domain,      only: dom
-      use gc_list,     only: all_cg
-      use mpi,         only: MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,    only: ibuff, rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
+      use cg_list_global, only: all_cg
+      use constants,      only: I_ONE, I_TEN, AT_NO_B
+      use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use dataio_pub,     only: die
+      use domain,         only: dom
+      use mpi,            only: MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use mpisetup,       only: ibuff, rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
 
       implicit none
 
@@ -218,8 +218,9 @@ contains
 
    subroutine compute_analytic_ecr1
 
+      use cg_list_global, only: all_cg
       use dataio_pub,     only: die
-      use gc_list,        only: cg_list_element, all_cg
+      use gc_list,        only: cg_list_element
       use global,         only: t
       use grid,           only: leaves
       use grid_cont,      only: grid_container
@@ -290,10 +291,11 @@ contains
 
    subroutine check_norm
 
+      use cg_list_global, only: all_cg
       use constants,      only: PIERNIK_FINISHED, I_ONE, I_TWO
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
       use global,         only: nstep
-      use gc_list,        only: cg_list_element, all_cg
+      use gc_list,        only: cg_list_element
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre
@@ -363,8 +365,8 @@ contains
 
    subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
 
+      use cg_list_global, only: all_cg
       use dataio_pub,     only: die
-      use gc_list,        only: all_cg
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs
 

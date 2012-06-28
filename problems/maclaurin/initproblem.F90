@@ -263,14 +263,15 @@ contains
 !
    subroutine compute_maclaurin_potential
 
-      use constants,   only: pi, GEO_XYZ, GEO_RPZ
-      use dataio_pub,  only: warn, die
-      use domain,      only: dom
-      use gc_list,     only: cg_list_element, all_cg
-      use grid,        only: leaves
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: master
-      use units,       only: newtong
+      use cg_list_global, only: all_cg
+      use constants,      only: pi, GEO_XYZ, GEO_RPZ
+      use dataio_pub,     only: warn, die
+      use domain,         only: dom
+      use gc_list,        only: cg_list_element
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use mpisetup,       only: master
+      use units,          only: newtong
 
       implicit none
 
@@ -365,14 +366,15 @@ contains
 
    subroutine finalize_problem_maclaurin
 
-      use constants,  only: GEO_RPZ, I_ONE, I_TWO
-      use dataio_pub, only: msg, printinfo, warn
-      use domain,     only: dom
-      use gc_list,    only: cg_list_element, all_cg
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,   only: master, comm, mpi_err
+      use cg_list_global, only: all_cg
+      use constants,      only: GEO_RPZ, I_ONE, I_TWO
+      use dataio_pub,     only: msg, printinfo, warn
+      use domain,         only: dom
+      use gc_list,        only: cg_list_element
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,       only: master, comm, mpi_err
 
       implicit none
 
@@ -432,9 +434,9 @@ contains
 
    subroutine maclaurin_error_vars(var, tab, ierrh, cg)
 
-      use dataio_pub, only: die
-      use gc_list,    only: all_cg
-      use grid_cont,  only: grid_container
+      use cg_list_global, only: all_cg
+      use dataio_pub,     only: die
+      use grid_cont,      only: grid_container
 
       implicit none
 

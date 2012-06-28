@@ -410,18 +410,19 @@ contains
 
    subroutine init_multigrid_grav_post
 
-      use constants,     only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE
-      use dataio_pub,    only: die, warn
-      use domain,        only: dom
-      use gc_list,       only: cg_list_element, all_cg
-      use cg_list_lev,   only: cg_list_level
-      use grid,          only: leaves
-      use grid_cont,     only: grid_container
-      use mpi,           only: MPI_COMM_NULL
-      use mpisetup,      only: master, nproc
-      use multigridvars, only: roof, base, is_mg_uneven, need_general_pf, single_base
-      use multipole,     only: init_multipole, coarsen_multipole
-      use types,         only: cdd
+      use cg_list_global, only: all_cg
+      use constants,      only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE
+      use dataio_pub,     only: die, warn
+      use domain,         only: dom
+      use gc_list,        only: cg_list_element
+      use cg_list_lev,    only: cg_list_level
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use mpi,            only: MPI_COMM_NULL
+      use mpisetup,       only: master, nproc
+      use multigridvars,  only: roof, base, is_mg_uneven, need_general_pf, single_base
+      use multipole,      only: init_multipole, coarsen_multipole
+      use types,          only: cdd
 
       implicit none
 
@@ -635,8 +636,8 @@ contains
 
    subroutine init_history(this, nold, prefix)
 
-      use constants,        only: singlechar, dsetnamelen
-      use gc_list,          only: all_cg
+      use cg_list_global, only: all_cg
+      use constants,      only: singlechar, dsetnamelen
 
       implicit none
 
@@ -967,9 +968,10 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
+      use cg_list_global,   only: all_cg
       use constants,        only: INVALID, O_INJ, O_LIN, O_I2
       use dataio_pub,       only: msg, die, printinfo
-      use gc_list,          only: ind_val, all_cg
+      use gc_list,          only: ind_val
       use global,           only: t
       use grid,             only: leaves
       use mpisetup,         only: master
@@ -1223,12 +1225,12 @@ contains
 
    subroutine multigrid_solve_grav(i_all_dens)
 
-      use constants,     only: sgp_n
-      use gc_list,       only: all_cg
-      use grid,          only: leaves
-      use multigridvars, only: solution, tot_ts, ts
-      use multipole,     only: multipole_solver
-      use timer,         only: set_timer
+      use cg_list_global, only: all_cg
+      use constants,      only: sgp_n
+      use grid,           only: leaves
+      use multigridvars,  only: solution, tot_ts, ts
+      use multipole,      only: multipole_solver
+      use timer,          only: set_timer
 
       implicit none
 
@@ -1688,7 +1690,6 @@ contains
 
       use cg_list_lev,        only: cg_list_level
       use multigridhelpers,   only: check_dirty
-      use multigridbasefuncs, only: prolong_level
       use multigridvars,      only: roof, correction
 
       implicit none
@@ -1708,7 +1709,7 @@ contains
          endif
       endif
 
-      if (prefer_rbgs_relaxation .and. soln == correction .and. .not. associated(curl, roof)) call prolong_level(curl, correction)
+      if (prefer_rbgs_relaxation .and. soln == correction .and. .not. associated(curl, roof)) call curl%prolong_q_1var(correction)
       !> \deprecated BEWARE other implementations of the multigrid algorithm may be incompatible with prolongation called from here
 
       call check_dirty(curl, soln, "approx_soln soln+")
@@ -2261,6 +2262,7 @@ contains
                if (allocated(fine%first%cg%mg%pfc_tgt(d, lh)%seg)) then
                   do g = lbound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1), ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1)
                      nr = nr + I_ONE
+                     if (nr > size(req, dim=1)) call die("[multigrid_gravity:prolong_faces] size(req) too small for Irecv")
                      call MPI_Irecv(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf(1, 1, 1), size(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, &
                           &         fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), mpi_err)
                   enddo
@@ -2280,6 +2282,7 @@ contains
                         cse => pseg%se
 
                         nr = nr + I_ONE
+                        if (nr > size(req, dim=1)) call die("[multigrid_gravity:prolong_faces] size(req) too small for Isend")
                         se(:,:) = cse(:,:)
                         pseg%buf(:, :, :) = 0. ! this can be avoided by extracting first assignment from the loop
                         do l = lbound(pseg%f_lay(:), dim=1), ubound(pseg%f_lay(:), dim=1)

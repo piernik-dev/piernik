@@ -226,12 +226,12 @@ contains
 
    subroutine write_restart_hdf5_v1(filename)
 
-      use constants,   only: cwdlen
-      use gc_list,     only: all_cg
-      use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
+      use cg_list_global, only: all_cg
+      use constants,      only: cwdlen
+      use hdf5,           only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
-      use mpi,         only: MPI_INFO_NULL
-      use mpisetup,    only: comm
+      use mpi,            only: MPI_INFO_NULL
+      use mpisetup,       only: comm
 
       implicit none
       character(len=cwdlen), intent(in) :: filename      !> HDF File name
@@ -283,19 +283,19 @@ contains
 
    subroutine write_arr_to_restart(file_id, ind, tgt3d)
 
-      use constants,  only: ndims, AT_IGNORE, LONG, dsetnamelen
+      use cg_list_global, only: all_cg
+      use constants,      only: ndims, AT_IGNORE, LONG, dsetnamelen
 #ifdef INDEPENDENT_ATOUTB
-      use constants,  only: AT_OUT_B
+      use constants,      only: AT_OUT_B
 #endif /* INDEPENDENT_ATOUTB */
-      use dataio_pub, only: die
-      use domain,     only: is_multicg
-      use gc_list,    only: cg_list_element, all_cg
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
-      use hdf5,       only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f, h5sclose_f, h5pclose_f, h5dclose_f, &
-           &                H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
-           &                h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f
-
+      use dataio_pub,     only: die
+      use domain,         only: is_multicg
+      use gc_list,        only: cg_list_element
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use hdf5,           only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f, h5sclose_f, h5pclose_f, h5dclose_f, &
+           &                    H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
+           &                    h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f
 #ifdef INDEPENDENT_ATOUTB
       use hdf5,       only: H5FD_MPIO_INDEPENDENT_F
 #endif /* INDEPENDENT_ATOUTB */
@@ -428,17 +428,18 @@ contains
 
    subroutine read_arr_from_restart(file_id, ind, tgt3d, alt_area_type, alt_name)
 
-      use constants,    only: ndims, LONG, AT_IGNORE, dsetnamelen
-      use dataio_pub,   only: msg, die
-      use domain,       only: is_multicg
-      use gc_list,      only: cg_list_element, all_cg
-      use grid,         only: leaves
-      use grid_cont,    only: grid_container
-      use hdf5,         only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dread_f, h5sclose_f, h5pclose_f, h5dclose_f, &
-           &                  H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
-           &                  h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
-           &                  h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
-      use external_bnd, only: arr3d_boundaries
+      use cg_list_global, only: all_cg
+      use constants,      only: ndims, LONG, AT_IGNORE, dsetnamelen
+      use dataio_pub,     only: msg, die
+      use domain,         only: is_multicg
+      use gc_list,        only: cg_list_element
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use hdf5,           only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dread_f, h5sclose_f, h5pclose_f, h5dclose_f, &
+           &                    H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
+           &                    h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
+           &                    h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
+      use external_bnd,   only: arr3d_boundaries
 
       implicit none
 
@@ -569,20 +570,20 @@ contains
 
    subroutine read_restart_hdf5_v1
 
-      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE, RD
-      use common_hdf5, only: output_fname
-      use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, piernik_hdf5_version, fix_string, &
-           &                 domain_dump, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nhdf, nres, nimg, new_id
-      use dataio_user, only: user_reg_var_restart, user_attrs_rd
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use global,      only: magic_mass, t, dt, nstep
-      use gc_list,     only: all_cg
-      use hdf5,        only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
-           &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
-      use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
-      use mpi,         only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_INFO_NULL
-      use mpisetup,    only: comm, mpi_err, master, FIRST
+      use cg_list_global, only: all_cg
+      use constants,      only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE, RD
+      use common_hdf5,    only: output_fname
+      use dataio_pub,     only: msg, warn, die, printio, require_init_prob, problem_name, piernik_hdf5_version, fix_string, &
+           &                    domain_dump, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nhdf, nres, nimg, new_id
+      use dataio_user,    only: user_reg_var_restart, user_attrs_rd
+      use domain,         only: dom
+      use fluidindex,     only: flind
+      use global,         only: magic_mass, t, dt, nstep
+      use hdf5,           only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
+           &                    h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
+      use h5lt,           only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
+      use mpi,            only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_INFO_NULL
+      use mpisetup,       only: comm, mpi_err, master, FIRST
 
       implicit none
 
@@ -840,10 +841,10 @@ contains
 
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, Z_avail, g)
 
-      use common_hdf5, only: create_empty_cg_dataset
-      use constants,   only: ndims, I_ONE, AT_IGNORE
-      use gc_list,     only: all_cg
-      use hdf5,        only: HID_T, HSIZE_T
+      use cg_list_global, only: all_cg
+      use common_hdf5,    only: create_empty_cg_dataset
+      use constants,      only: ndims, I_ONE, AT_IGNORE
+      use hdf5,           only: HID_T, HSIZE_T
 
       implicit none
 
@@ -885,8 +886,8 @@ contains
 
    subroutine qw_lst(q_lst, w_lst)
 
-      use constants, only: AT_IGNORE
-      use gc_list,   only: all_cg
+      use cg_list_global, only: all_cg
+      use constants,      only: AT_IGNORE
 
       implicit none
 
@@ -914,15 +915,16 @@ contains
 
    subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b)
 
-      use constants,   only: xdim, ydim, zdim, ndims, dsetnamelen, I_ONE
-      use common_hdf5, only: get_nth_cg, cg_output
-      use dataio_pub,  only: die, nproc_io, can_i_write
-      use gc_list,     only: all_cg, cg_list_element
-      use grid_cont,   only: grid_container
-      use grid,        only: leaves
-      use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,    only: master, FIRST, proc, comm, mpi_err
+      use cg_list_global, only: all_cg
+      use constants,      only: xdim, ydim, zdim, ndims, dsetnamelen, I_ONE
+      use common_hdf5,    only: get_nth_cg, cg_output
+      use dataio_pub,     only: die, nproc_io, can_i_write
+      use gc_list,        only: cg_list_element
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use hdf5,           only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
+      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
+      use mpisetup,       only: master, FIRST, proc, comm, mpi_err
 
       implicit none
 
@@ -1439,14 +1441,14 @@ contains
 !> \brief Read as much as possible from stored cg to own cg
    subroutine read_cg_from_restart(cg, cgl_g_id, ncg, cg_r)
 
-      use common_hdf5, only: n_cg_name
-      use constants,   only: xdim, ydim, zdim, LO, HI, LONG
-      use dataio_pub,  only: die
-      use domain,      only: dom
-      use gc_list,     only: all_cg
-      use grid_cont,   only: grid_container, is_overlap
-      use hdf5,        only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
-           &                 h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
+      use cg_list_global, only: all_cg
+      use common_hdf5,    only: n_cg_name
+      use constants,      only: xdim, ydim, zdim, LO, HI, LONG
+      use dataio_pub,     only: die
+      use domain,         only: dom
+      use grid_cont,      only: grid_container, is_overlap
+      use hdf5,           only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
+           &                    h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
 
       implicit none
 

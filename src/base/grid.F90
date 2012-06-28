@@ -41,7 +41,7 @@ module grid
    public :: init_grid, cleanup_grid, base_lev, leaves, top_lev
 
    type(cg_list_level), target                            :: base_lev !< base level grid containers \todo restore "protected"
-   type(cg_list), protected                               :: leaves   !< grid containers not fully covered by finer grid containers
+   type(cg_list)                                          :: leaves   !< grid containers not fully covered by finer grid containers
    integer, parameter                                     :: NBD = 1  !< at the moment the base domain may be composed of only one patch
    type(cg_list_patch), dimension(NBD), target, protected :: base_dom !< base level patches; \todo relax the NBD=1 restriction if we want something like L-shaped or more complex domains
    type(cg_list_level), pointer                           :: top_lev  !< finest level of refinement
@@ -53,25 +53,25 @@ contains
 !<
    subroutine init_grid
 
-      use constants,  only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, INVALID, &
-           &                ndims, xdim, zdim, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n, base_level_id, base_level_offset
+      use cg_list_global, only: all_cg
+      use constants,      only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, I_ZERO, &
+           &                    ndims, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n, base_level_id, base_level_offset
 #ifdef ISO
-      use constants,  only: cs_i2_n
+      use constants,      only: cs_i2_n
 #endif /* ISO */
-      use dataio_pub, only: printinfo, die, code_progress
-      use domain,     only: pdom
+      use dataio_pub,     only: printinfo, die, code_progress
+      use domain,         only: pdom
 #ifdef ISO
-      use domain,     only: is_multicg
+      use domain,         only: is_multicg
 #endif /* ISO */
-      use fluidindex, only: flind
-      use gc_list,    only: cg_list_element, all_cg
-      use global,     only: repeat_step
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: inflate_req
+      use fluidindex,     only: flind
+      use gc_list,        only: cg_list_element
+      use global,         only: repeat_step
+      use grid_cont,      only: grid_container
 
       implicit none
 
-      integer :: nrq, d
+      integer :: d
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       type(cg_list_patch),   pointer :: pbd
@@ -91,7 +91,8 @@ contains
       ! Refinement lists will be added by iterating the initproblem::init_prob routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update
       ! Underground levels will be added in multigrid::init_multigrid
       call all_cg%init
-      call base_lev%init
+      all_cg%ord_prolong_nb = I_ZERO
+      call base_lev%init(pdom%n_d(:))
       call leaves%init
       do d = lbound(base_dom, dim=1), ubound(base_dom, dim=1) ! currently we have only one base patch
          call base_dom(d)%init
@@ -99,10 +100,6 @@ contains
 
       pbd => base_dom(NBD)
       call dom2cg(pdom%n_d(:), base_level_offset, base_level_id, pbd)
-
-!#ifdef VERBOSE
-      call base_lev%print_segments
-!#endif /* VERBOSE */
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
@@ -121,7 +118,6 @@ contains
       all_cg%bi  = all_cg%ind_4d(mag_n)
       all_cg%wai = all_cg%ind(wa_n)
 
-      nrq = 0
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -130,15 +126,8 @@ contains
          cg%b  => cg%w(all_cg%bi)%arr
          cg%wa => cg%q(all_cg%wai)%arr
 
-         if (allocated(cg%w)) then
-            do d = xdim, zdim
-               if (allocated(cg%w(1)%w_i_mbc(d, pdom%nb)%mbc)) nrq = nrq + 2 * count(cg%w(1)%w_i_mbc(d, pdom%nb)%mbc(:) /= INVALID) ! w(1) is probably fluid, but it can be any registered field
-            enddo
-         endif
-
          cgl => cgl%nxt
       enddo
-      call inflate_req(nrq)
 
 #ifdef ISO
       if (is_multicg) call die("[grid:init_cs_iso2] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
@@ -169,9 +158,9 @@ contains
 
       use constants,     only: ndims, I_ONE, base_level_id
       use decomposition, only: divide_domain
-      use dataio_pub,    only: warn, die
+      use dataio_pub,    only: die
       use domain,        only: is_mpi_noncart, is_multicg, is_refined, is_uneven
-      use gc_list,       only: all_cg
+      use gc_list,       only: cg_list_element
       use mpi,           only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
       use mpisetup,      only: proc, comm, mpi_err, master
       use types,         only: cdd
@@ -183,21 +172,15 @@ contains
       integer(kind=4),                   intent(in)    :: level
       type(cg_list_patch), pointer,      intent(inout) :: patch
 
-      integer :: g
+      type(cg_list_element), pointer :: cgl
+
+      if (level /= base_level_id) call die("[grid:dom2cg] can only create base level")
 
       patch%n_d = n_d
       patch%off = offset
       patch%parent => null()
       patch%children => null()
-
-      if (level == base_level_id) then
-         base_lev%lev = level
-         base_lev%n_d = n_d
-         patch%list_level => base_lev
-      else
-         patch%list_level => null()
-         call die("[grid:dom2cg] Only base level is currently supported")
-      endif
+      patch%list_level => base_lev
 
       if (.not. divide_domain(patch)) then
          if (master) call die("[grid:dom2cg] Domain decomposition failed")
@@ -214,22 +197,16 @@ contains
       if (is_mpi_noncart) is_uneven = .true.
 
       ! bnd_[xyz][lr] now become altered according to local topology of processes
-      if (is_multicg .and. master) call warn("[grid:dom2cg] Multiple blocks per process not fully implemented yet")
       if (is_refined) call die("[grid:dom2cg] Refinements are not implemented")
 
-      do g = lbound(base_lev%pse(proc)%sel(:,:,:), dim=1), ubound(base_lev%pse(proc)%sel(:,:,:), dim=1)
+      call base_lev%init_all_new_cg
 
-         if (level == base_level_id) then
-            call base_lev%init_new_cg(g)
-         else
-            call die("[grid:dom2cg] can only create base level yet")
-         endif
-
-         ! add to the other lists
-         call all_cg%add(base_lev%last%cg)
-         call patch%add(base_lev%last%cg)
-         call leaves%add(base_lev%last%cg)
-
+      ! add to the other lists
+      cgl => base_lev%first
+      do while (associated(cgl))
+         call patch%add(cgl%cg)  ! not used yet
+         call leaves%add(cgl%cg) ! need to be generated in a more general way
+         cgl => cgl%nxt
       enddo
 
       top_lev => base_lev
@@ -243,7 +220,8 @@ contains
 !> \brief deallocate everything
    subroutine cleanup_grid
 
-      use gc_list, only: cg_list_element, all_cg
+      use cg_list_global, only: all_cg
+      use gc_list,        only: cg_list_element
 
       implicit none
 

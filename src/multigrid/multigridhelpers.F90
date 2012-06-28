@@ -64,8 +64,8 @@ contains
 
    subroutine set_dirty(iv)
 
-      use dataio_pub, only: die
-      use gc_list,    only: all_cg
+      use cg_list_global, only: all_cg
+      use dataio_pub,     only: die
 
       implicit none
 
@@ -86,12 +86,13 @@ contains
 
    subroutine check_dirty(curl, iv, label, expand)
 
-      use constants,   only: ndims
-      use dataio_pub,  only: die, warn, msg
-      use domain,      only: dom
-      use gc_list,     only: cg_list_element, all_cg
-      use cg_list_lev, only: cg_list_level
-      use mpisetup,    only: proc
+      use cg_list_global, only: all_cg
+      use constants,      only: ndims
+      use dataio_pub,     only: die, warn, msg
+      use domain,         only: dom
+      use gc_list,        only: cg_list_element
+      use cg_list_lev,    only: cg_list_level
+      use mpisetup,       only: proc
 
       implicit none
 

@@ -73,17 +73,18 @@ contains
 !<
    subroutine init_multigrid
 
+      use cg_list_global,      only: all_cg
       use cg_list_lev,         only: cg_list_level, cg_list_patch
-      use constants,           only: PIERNIK_INIT_GRID, LO, HI, LONG, I_TWO, I_ONE, half, O_INJ, O_LIN, O_I2, INT4
+      use constants,           only: PIERNIK_INIT_GRID, LO, HI, I_ONE, O_INJ, O_LIN, O_I2, refinement_factor
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
       use decomposition,       only: divide_domain!, deallocate_pse
       use domain,              only: dom, is_uneven
-      use gc_list,             only: cg_list_element, all_cg
+      use gc_list,             only: cg_list_element
       use grid,                only: base_lev
       use grid_cont,           only: grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_COMM_NULL
-      use mpisetup,            only: comm, mpi_err, proc, master, slave, nproc, FIRST, buffer_dim, ibuff, lbuff
+      use mpisetup,            only: comm, mpi_err, master, slave, nproc, FIRST, buffer_dim, ibuff, lbuff
       use multigridhelpers,    only: dirtyH, do_ascii_dump, dirty_debug, set_dirty
       use multigridvars,       only: roof, base, single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, &
            &                         ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
@@ -101,7 +102,6 @@ contains
       integer(kind=4)       :: level_max              !< Maximum allowed levels of base grid coarsening
 
       integer(kind=4)       :: j
-      integer               :: g
       logical, save         :: frun = .true.          !< First run flag
       type(cg_list_element), pointer :: cgl
       type(cg_list_level),   pointer :: curl, tmpl    !< current level (a pointer sliding along the linked list) and temporary level
@@ -187,7 +187,7 @@ contains
       endif
 
       do j = 0, level_incredible
-         if (any((mod(base_lev%n_d(:), 2_LONG**(j+1)) /= 0 .or. base_lev%n_d(:)/2**(j+1) < dom%nb) .and. dom%has_dir(:))) exit
+         if (any((mod(base_lev%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_lev%n_d(:)/refinement_factor**(j+1) < dom%nb) .and. dom%has_dir(:))) exit
       enddo
       if (level_max > j) then
          if (master) then
@@ -209,23 +209,7 @@ contains
 
          ! create coarser level:
          allocate(tmpl)
-         call tmpl%init               ! create an empty cg list
-         tmpl%lev = curl%lev - 1_INT4 ! set id (number)
-         curl%coarser => tmpl         ! set up connectivity
-         tmpl%finer => curl
-         tmpl%coarser => null()
-
-         ! set up decomposition of coarse levels
-         where (dom%has_dir(:))
-            tmpl%n_d(:) = tmpl%finer%n_d / I_TWO
-         elsewhere
-            tmpl%n_d(:) = I_ONE
-         endwhere
-
-         if (master .and. any(tmpl%n_d(:)*2 /= tmpl%finer%n_d(:) .and. dom%has_dir(:))) then
-            write(msg, '(a,3f10.1,a,i3)')"[multigrid:init_multigrid] Fractional number of domain cells: ", half*tmpl%finer%n_d(:), " at level ",tmpl%lev
-            call die(msg)
-         endif
+         call tmpl%init(curl, coarse = .true.)   ! create an empty level
 
          if (tmpl%lev == -level_max .and. single_base) then
             call base_on_single(tmpl)
@@ -250,12 +234,7 @@ contains
 
          endif
 
-         call tmpl%print_segments
-
-         do g = lbound(tmpl%pse(proc)%sel(:,:,:), dim=1), ubound(tmpl%pse(proc)%sel(:,:,:), dim=1)
-            call tmpl%init_new_cg(g)
-            call all_cg%add(tmpl%last%cg)
-         enddo
+         call tmpl%init_all_new_cg
 
          curl => curl%coarser
       enddo
@@ -274,7 +253,7 @@ contains
                call die(msg)
             endif
 
-            if (any(cg%n_b(:) * 2**(roof%lev - curl%lev) /= roof%first%cg%n_b(:) .and. dom%has_dir(:)) .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
+            if (any(cg%n_b(:) * refinement_factor**(roof%lev - curl%lev) /= roof%first%cg%n_b(:) .and. dom%has_dir(:)) .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
 
             ! data storage
             if ( allocated(cg%mg%bnd_x) .or. allocated(cg%mg%bnd_y) .or. allocated(cg%mg%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
@@ -293,8 +272,6 @@ contains
 
             cgl => cgl%nxt
          enddo
-
-         call curl%vertical_prep
 
          curl => curl%coarser ! descend until null() is encountered
       enddo

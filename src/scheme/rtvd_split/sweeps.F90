@@ -40,11 +40,11 @@ contains
 !------------------------------------------------------------------------------------------
    function interpolate_mag_field(cdim, cg, i1, i2) result (b)
 
-      use constants,  only: pdims, xdim, ydim, zdim, half
-      use fluidindex, only: iarr_mag_swp, nmag
-      use domain,     only: dom
-      use gc_list,    only: all_cg
-      use grid_cont,  only: grid_container
+      use cg_list_global, only: all_cg
+      use constants,      only: pdims, xdim, ydim, zdim, half
+      use fluidindex,     only: iarr_mag_swp, nmag
+      use domain,         only: dom
+      use grid_cont,      only: grid_container
 
       implicit none
 
@@ -93,6 +93,7 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweep(cdim)
 
+      use cg_list_global,  only: all_cg
       use constants,       only: pdims, LO, HI, ydim, zdim, uh_n, cs_i2_n
       use domain,          only: dom
       use fluidboundaries, only: all_fluid_boundaries
@@ -100,7 +101,7 @@ contains
 #ifdef MAGNETIC
       use fluidindex,      only: iarr_mag_swp
 #endif /* MAGNETIC */
-      use gc_list,         only: cg_list_element, all_cg
+      use gc_list,         only: cg_list_element
       use global,          only: dt, integration_order
       use grid,            only: leaves
       use grid_cont,       only: grid_container

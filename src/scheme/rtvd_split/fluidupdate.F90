@@ -50,13 +50,14 @@ contains
 
    subroutine repeat_fluidstep
 
-      use constants,  only: I_ONE, u0_n, b0_n
-      use dataio_pub, only: warn
-      use gc_list,    only: cg_list_element, all_cg
-      use global,     only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: master
+      use cg_list_global, only: all_cg
+      use constants,      only: I_ONE, u0_n, b0_n
+      use dataio_pub,     only: warn
+      use gc_list,        only: cg_list_element
+      use global,         only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use mpisetup,       only: master
 
       implicit none
 
@@ -267,16 +268,16 @@ contains
 
    subroutine mag_add(dim1, dim2)
 
-      use grid,          only: leaves
-      use gc_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use magboundaries, only: all_mag_boundaries
-      use user_hooks,    only: custom_emf_bnd
+      use grid,           only: leaves
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
+      use magboundaries,  only: all_mag_boundaries
+      use user_hooks,     only: custom_emf_bnd
 #ifdef RESISTIVE
-      use constants,     only: wcu_n
-      use dataio_pub,    only: die
-      use domain,        only: is_multicg
-      use gc_list,       only: all_cg
+      use cg_list_global, only: all_cg
+      use constants,      only: wcu_n
+      use dataio_pub,     only: die
+      use domain,         only: is_multicg
 #endif /* RESISTIVE */
 
       implicit none

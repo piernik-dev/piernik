@@ -105,14 +105,14 @@ contains
 !<
    subroutine init_multigrid_diff
 
-      use constants,     only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die, warn, msg
-      use domain,        only: dom
-      use gc_list,       only: all_cg
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
-      use mpisetup,      only: comm, mpi_err, master, slave, nproc, ibuff, rbuff, lbuff, cbuff, buffer_dim, FIRST
-      use multigridvars, only: single_base
+      use cg_list_global, only: all_cg
+      use constants,      only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one
+      use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use dataio_pub,     only: die, warn, msg
+      use domain,         only: dom
+      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
+      use mpisetup,       only: comm, mpi_err, master, slave, nproc, ibuff, rbuff, lbuff, cbuff, buffer_dim, FIRST
+      use multigridvars,  only: single_base
 
       implicit none
 
@@ -345,15 +345,16 @@ contains
 
    subroutine init_source(cr_id)
 
+      use cg_list_global,   only: all_cg
 #if defined(__INTEL_COMPILER)
-      use cg_list_lev,        only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use dataio_pub,         only: die
-      use gc_list,            only: all_cg, ind_val
-      use grid,               only: leaves
-      use initcosmicrays,     only: iarr_crs
-      use multigridvars,      only: roof, source, defect, correction
-      use multigridhelpers,   only: set_dirty, check_dirty, dirty_label
+      use dataio_pub,       only: die
+      use gc_list,          only: ind_val
+      use grid,             only: leaves
+      use initcosmicrays,   only: iarr_crs
+      use multigridvars,    only: roof, source, defect, correction
+      use multigridhelpers, only: set_dirty, check_dirty, dirty_label
 
       implicit none
 
@@ -385,11 +386,11 @@ contains
 
    subroutine init_solution(cr_id)
 
+      use cg_list_global,   only: all_cg
 #if defined(__INTEL_COMPILER)
       use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use grid,             only: leaves
-      use gc_list,          only: all_cg
       use initcosmicrays,   only: iarr_crs
       use multigridvars,    only: roof, solution
       use multigridhelpers, only: set_dirty, check_dirty
@@ -413,12 +414,13 @@ contains
 
    subroutine init_b
 
+      use cg_list_global,   only: all_cg
       use cg_list_lev,      only: cg_list_level
       use constants,        only: I_ONE, xdim, zdim, HI, LO, BND_REF
       use domain,           only: dom
       use external_bnd,     only: arr3d_boundaries
       use grid,             only: leaves
-      use gc_list,          only: cg_list_element, all_cg
+      use gc_list,          only: cg_list_element
       use grid_cont,        only: grid_container
       use multigridhelpers, only: set_dirty, check_dirty, dirty_label
       use multigridvars,    only: base, roof
@@ -470,16 +472,16 @@ contains
 
    subroutine vcycle_hg(cr_id)
 
-      use cg_list_lev,        only: cg_list_level
-      use dataio_pub,         only: msg, warn
-      use gc_list,            only: ind_val, all_cg
-      use grid,               only: leaves
-      use initcosmicrays,     only: iarr_crs
-      use mpisetup,           only: master
-      use multigridbasefuncs, only: prolong_level
-      use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, dirty_label
-      use multigridvars,      only: source, defect, solution, correction, base, roof, ts, tot_ts
-      use timer,              only: set_timer
+      use cg_list_global,   only: all_cg
+      use cg_list_lev,      only: cg_list_level
+      use dataio_pub,       only: msg, warn
+      use gc_list,          only: ind_val
+      use grid,             only: leaves
+      use initcosmicrays,   only: iarr_crs
+      use mpisetup,         only: master
+      use multigridhelpers, only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, dirty_label
+      use multigridvars,    only: source, defect, solution, correction, base, roof, ts, tot_ts
+      use timer,            only: set_timer
 
       implicit none
 
@@ -543,7 +545,7 @@ contains
          curl => base
          do while (associated(curl))
             call approximate_solution(curl, defect, correction, cr_id)
-            call prolong_level(curl, correction)
+            if (.not. associated(curl, roof)) call curl%prolong_q_1var(correction)
             curl => curl%finer
          enddo
 
@@ -657,11 +659,12 @@ contains
 
    subroutine residual(curl, src, soln, def, cr_id)
 
+      use cg_list_global,    only: all_cg
       use cg_list_lev,       only: cg_list_level
       use constants,         only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
       use domain,            only: dom
       use external_bnd,      only: arr3d_boundaries
-      use gc_list,           only: cg_list_element, ind_val, all_cg
+      use gc_list,           only: cg_list_element, ind_val
       use global,            only: dt
       use grid_cont,         only: grid_container
 !      use multigridhelpers,  only: check_dirty
@@ -722,14 +725,15 @@ contains
 
    subroutine approximate_solution(curl, src, soln, cr_id)
 
-      use cg_list_lev,   only: cg_list_level
-      use constants,     only: xdim, ydim, zdim, one, half, I_ONE, ndims, BND_NONE
-      use domain,        only: dom
-      use external_bnd,  only: arr3d_boundaries
-      use gc_list,       only: cg_list_element, all_cg
-      use global,        only: dt
-      use grid_cont,     only: grid_container
-      use multigridvars, only: base
+      use cg_list_global, only: all_cg
+      use cg_list_lev,    only: cg_list_level
+      use constants,      only: xdim, ydim, zdim, one, half, I_ONE, ndims, BND_NONE
+      use domain,         only: dom
+      use external_bnd,   only: arr3d_boundaries
+      use gc_list,        only: cg_list_element
+      use global,         only: dt
+      use grid_cont,      only: grid_container
+      use multigridvars,  only: base
 
       implicit none
 

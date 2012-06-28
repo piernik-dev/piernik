@@ -38,10 +38,10 @@ contains
 
    subroutine set_div_v1d(p, dir, i1, i2, cg)
 
-      use cr_data,     only: divv_n
-      use dataio_pub,  only: die
-      use gc_list,     only: all_cg
-      use grid_cont,   only: grid_container
+      use cg_list_global, only: all_cg
+      use cr_data,        only: divv_n
+      use dataio_pub,     only: die
+      use grid_cont,      only: grid_container
 
       implicit none
 
@@ -63,13 +63,13 @@ contains
 
    subroutine div_v(ifluid, cg)
 
-      use constants,   only: xdim, ydim, zdim, half
-      use cr_data,     only: divv_n
-      use dataio_pub,  only: die
-      use domain,      only: dom
-      use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use gc_list,     only: all_cg
-      use grid_cont,   only: grid_container
+      use cg_list_global, only: all_cg
+      use constants,      only: xdim, ydim, zdim, half
+      use cr_data,        only: divv_n
+      use dataio_pub,     only: die
+      use domain,         only: dom
+      use fluidindex,     only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use grid_cont,      only: grid_container
 
       implicit none
 

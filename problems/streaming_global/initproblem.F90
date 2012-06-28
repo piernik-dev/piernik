@@ -150,8 +150,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine register_user_var
 
-      use constants, only: AT_NO_B
-      use gc_list,   only: all_cg
+      use cg_list_global, only: all_cg
+      use constants,      only: AT_NO_B
 
       implicit none
 
@@ -259,22 +259,23 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,   only: DST, GEO_RPZ, xdim, ydim, zdim
-      use global,      only: smalld
-      use dataio_pub,  only: msg, printinfo, die
-      use domain,      only: dom, is_multicg
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use func,        only: ekin
-      use gc_list,     only: cg_list_element, all_cg
-      use gravity,     only: ptmass, grav_pot2accel
-      use grid,        only: leaves
-      use grid_cont,   only: grid_container
-      use hydrostatic, only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use mpi,         only: MPI_COMM_NULL
-      use mpisetup,    only: master
-      use types,       only: cdd
-      use units,       only: newtong
+      use cg_list_global, only: all_cg
+      use constants,      only: DST, GEO_RPZ, xdim, ydim, zdim
+      use global,         only: smalld
+      use dataio_pub,     only: msg, printinfo, die
+      use domain,         only: dom, is_multicg
+      use fluidindex,     only: flind
+      use fluidtypes,     only: component_fluid
+      use func,           only: ekin
+      use gc_list,        only: cg_list_element
+      use gravity,        only: ptmass, grav_pot2accel
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
+      use mpi,            only: MPI_COMM_NULL
+      use mpisetup,       only: master
+      use types,          only: cdd
+      use units,          only: newtong
 
       implicit none
 
@@ -381,10 +382,11 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
 
+      use cg_list_global,  only: all_cg
       use constants,       only: dpi, xdim, ydim, zdim
       use dataio_pub,      only: die
       use domain,          only: is_multicg, dom
-      use gc_list,         only: cg_list_element, all_cg
+      use gc_list,         only: cg_list_element
       use global,          only: t, grace_period_passed, relax_time, smalld !, dt
       use gravity,         only: ptmass
       use grid,            only: leaves
@@ -607,9 +609,9 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xr(cg)
 
-      use constants,  only: xdim
-      use gc_list,    only: all_cg
-      use grid_cont,  only: grid_container
+      use cg_list_global, only: all_cg
+      use constants,      only: xdim
+      use grid_cont,      only: grid_container
 
       implicit none
 

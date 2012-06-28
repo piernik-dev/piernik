@@ -283,17 +283,18 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: small, xdim, ydim, zdim, AT_NO_B
-      use dataio_pub,  only: warn, printinfo, msg, die
-      use domain,      only: dom
-      use gc_list,     only: cg_list_element, all_cg
-      use global,      only: smalld
-      use grid,        only: leaves
-      use grid_cont,   only: grid_container
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use mpisetup,    only: master
-      use units,       only: kboltz, mH
+      use cg_list_global, only: all_cg
+      use constants,      only: small, xdim, ydim, zdim, AT_NO_B
+      use dataio_pub,     only: warn, printinfo, msg, die
+      use domain,         only: dom
+      use gc_list,        only: cg_list_element
+      use global,         only: smalld
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use fluidindex,     only: flind
+      use fluidtypes,     only: component_fluid
+      use mpisetup,       only: master
+      use units,          only: kboltz, mH
 
       implicit none
 
@@ -438,8 +439,8 @@ contains
 
    subroutine register_initial_fld
 
-      use constants, only: AT_NO_B
-      use gc_list,   only: all_cg
+      use cg_list_global, only: all_cg
+      use constants,      only: AT_NO_B
 
       implicit none
 
@@ -457,13 +458,14 @@ contains
 
    subroutine problem_customize_solution_wt4
 
-      use constants,   only: xdim, ydim, zdim
-      use dataio_pub,  only: warn
-      use grid,        only: leaves
-      use gc_list,     only: cg_list_element, all_cg
-      use grid_cont,   only: grid_container
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
+      use cg_list_global, only: all_cg
+      use constants,      only: xdim, ydim, zdim
+      use dataio_pub,     only: warn
+      use grid,           only: leaves
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
+      use fluidindex,     only: flind
+      use fluidtypes,     only: component_fluid
 
       implicit none
 

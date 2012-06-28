@@ -145,19 +145,20 @@ contains
 !<
    subroutine init_grav
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
-      use dataio_pub,    only: printinfo, warn, die, code_progress
-      use constants,     only: PIERNIK_INIT_GRID, AT_OUT_B, gp_n, gpot_n, hgpot_n
-      use mpisetup,      only: ibuff, rbuff, cbuff, comm, mpi_err, master, slave, lbuff, buffer_dim, FIRST
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
-      use gc_list,       only: cg_list_element, all_cg
-      use grid,          only: leaves
-      use units,         only: newtong
+      use cg_list_global, only: all_cg
+      use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
+      use dataio_pub,     only: printinfo, warn, die, code_progress
+      use constants,      only: PIERNIK_INIT_GRID, AT_OUT_B, gp_n, gpot_n, hgpot_n
+      use mpisetup,       only: ibuff, rbuff, cbuff, comm, mpi_err, master, slave, lbuff, buffer_dim, FIRST
+      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
+      use gc_list,        only: cg_list_element
+      use grid,           only: leaves
+      use units,          only: newtong
 #ifdef SELF_GRAV
-      use constants,     only: sgp_n, sgpm_n
+      use constants,      only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
 #ifdef CORIOLIS
-      use coriolis,      only: set_omega
+      use coriolis,       only: set_omega
 #endif /* CORIOLIS */
 
       implicit none
@@ -305,10 +306,11 @@ contains
    subroutine source_terms_grav
 
 #ifdef SELF_GRAV
+      use cg_list_global,    only: all_cg
       use constants,         only: sgp_n, sgpm_n
       use dataio_pub,        only: die
       use fluidindex,        only: iarr_all_sg
-      use gc_list,           only: cg_list_element, all_cg
+      use gc_list,           only: cg_list_element
       use grid,              only: leaves
       use grid_cont,         only: grid_container
       use external_bnd,      only: arr3d_boundaries
@@ -368,18 +370,17 @@ contains
 
    subroutine sum_potential
 
+      use cg_list_global, only: all_cg
+      use constants,      only: gp_n, gpot_n, hgpot_n
+      use gc_list,        only: ind_val
+      use grid,           only: leaves
 #ifdef SELF_GRAV
-      use constants, only: one, half
-      use global,    only: dt, dtm
+      use constants,      only: one, half, sgp_n, sgpm_n
+      use global,         only: dt, dtm
 #endif /* SELF_GRAV */
-      use grid,      only: leaves
-      use gc_list,   only: cg_list_element
-      use grid_cont, only: grid_container
 
       implicit none
 
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
 #ifdef SELF_GRAV
       real :: h
 
@@ -388,21 +389,15 @@ contains
       else
          h = 0.0
       endif
-#endif /* SELF_GRAV */
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-#ifdef SELF_GRAV
-         cg%gpot  = cg%gp + (one+h)     *cg%sgp -      h*cg%sgpm
-         cg%hgpot = cg%gp + (one+half*h)*cg%sgp - half*h*cg%sgpm
+      call leaves%q_lin_comb([ ind_val(all_cg%ind(gp_n), 1.), ind_val(all_cg%ind(sgp_n), one+h),      ind_val(all_cg%ind(sgpm_n), -h)     ], all_cg%ind(gpot_n))
+      call leaves%q_lin_comb([ ind_val(all_cg%ind(gp_n), 1.), ind_val(all_cg%ind(sgp_n), one+half*h), ind_val(all_cg%ind(sgpm_n), -half*h)], all_cg%ind(hgpot_n))
+
 #else /* !SELF_GRAV */
-         !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
-         cg%gpot  = cg%gp
-         cg%hgpot = cg%gp
+      !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
+      call leaves%q_copy(all_cg%ind(gp_n), all_cg%ind(gpot_n))
+      call leaves%q_copy(all_cg%ind(gp_n), all_cg%ind(hgpot_n))
 #endif /* !SELF_GRAV */
-         cgl => cgl%nxt
-      enddo
 
    end subroutine sum_potential
 
@@ -835,15 +830,15 @@ contains
 !<
    subroutine grav_accel2pot
 
-      use constants,  only: xdim, ydim, zdim, ndims, MAXL, I_ONE
-      use dataio_pub, only: die
-      use domain,     only: is_mpi_noncart, is_multicg, dom
-      use gc_list,    only: all_cg
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: master, nproc, FIRST, LAST, comm, mpi_err, have_mpi
-      use types,      only: cdd, value
+      use cg_list_global, only: all_cg
+      use constants,      only: xdim, ydim, zdim, ndims, MAXL, I_ONE
+      use dataio_pub,     only: die
+      use domain,         only: is_mpi_noncart, is_multicg, dom
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
+      use mpisetup,       only: master, nproc, FIRST, LAST, comm, mpi_err, have_mpi
+      use types,          only: cdd, value
 
       implicit none
 

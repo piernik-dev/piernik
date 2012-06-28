@@ -70,21 +70,21 @@ contains
 !<
    subroutine common_plt_hdf5(var, ij, xn, tab, ierrh, cg)
 
-      use constants,   only: varlen, xdim, ndims, LO, HI
-      use common_hdf5, only: common_shortcuts
-      use fluidtypes,  only: component_fluid
-      use func,        only: ekin, emag
-      use gc_list,     only: all_cg
-      use grid_cont,   only: grid_container
+      use cg_list_global, only: all_cg
+      use constants,      only: varlen, xdim, ndims, LO, HI
+      use common_hdf5,    only: common_shortcuts
+      use fluidtypes,     only: component_fluid
+      use func,           only: ekin, emag
+      use grid_cont,      only: grid_container
 #ifndef ISO
-      use constants,   only: ydim, zdim
-      use fluidindex,  only: flind
+      use constants,      only: ydim, zdim
+      use fluidindex,     only: flind
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use fluidindex, only: iarr_all_crs
+      use fluidindex,     only: iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef GRAV
-      use constants,  only: gpot_n
+      use constants,      only: gpot_n
 #endif /* GRAV */
 
       implicit none

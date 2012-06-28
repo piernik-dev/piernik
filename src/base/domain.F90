@@ -46,7 +46,7 @@ module domain
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
 !      The refined domains may cover whole parent domain or only a tiny part of it.
-!      The multigrid solver will operate also on a stack of coarser domains - parents of the base domain.
+!      The multigrid solver operates also on a stack of coarser domains - parents of the base domain.
 !      The coarser domains must be no smaller than the base domain.
 
    type :: cuboids

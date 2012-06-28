@@ -39,7 +39,7 @@ module grid_cont
    implicit none
 
    private
-   public :: grid_container, segment, bnd_list, pr_segment, tgt_list, set_mpi_types, is_overlap
+   public :: grid_container, pr_segment, tgt_list, is_overlap
 
    !> \brief Specification of segment of data for boundary exchange, prolongation and restriction.
    type :: segment
@@ -136,7 +136,7 @@ module grid_cont
       integer(kind=4) :: nxb                                     !< number of %grid cells in one block (without boundary cells) in x-direction
       integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
       integer(kind=4) :: nzb                                     !< number of %grid cells in one block (without boundary cells) in z-direction
-      integer :: level_id                                        !< level id (number)
+      integer :: level_id                                        !< level id (number); do not use it without a good reason, use cg_list_level%lev where possible instead
 
       ! shortcuts
       integer(kind=4) :: is                                      !< index of the first %grid cell of physical domain in x-direction
@@ -150,7 +150,8 @@ module grid_cont
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkseb        !< [[isb, jsb, ksb], [ieb, jeb, keb]]
       integer(kind=8), dimension(ndims) :: h_cor1                !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:)
       integer(kind=4), dimension(ndims) :: n_                    !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
-      integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment
+      integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
+                                                                 !! my_se(:,LO) = 0; my_se(:,HI) = top_lev%n_d(:) -1 would cover entire domain on the most refined level
 
       ! Physical size and coordinates
 
@@ -175,8 +176,10 @@ module grid_cont
 
       ! Prolongation and restriction
 
-      type(tgt_list) :: f_tgt                                    !< description of incoming restriction and outgoing prolongation data (this should be a linked list)
-      type(tgt_list) :: c_tgt                                    !< description of outgoing restriction and incoming prolongation data
+      type(tgt_list) :: ri_tgt                                    !< description of incoming restriction data (this should be a linked list)
+      type(tgt_list) :: ro_tgt                                    !< description of outgoing restriction data
+      type(tgt_list) :: pi_tgt                                    !< description of incoming prolongation data
+      type(tgt_list) :: po_tgt                                    !< description of outgoing prolongation data
       real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays
 
       ! Non-cartesian geometrical factors
@@ -220,7 +223,8 @@ module grid_cont
       procedure :: cleanup                                       !< Deallocate all internals
       procedure :: set_axis                                      !< Calculate arrays of coordinates along a given direction
       procedure :: set_q_mbc                                     !< Initialize the communicators for q
-
+      procedure :: add_na                                        !< Register a new 3D entry in current cg with given name.
+      procedure :: add_na_4d                                     !< Register a new 4D entry in current cg with given name.
    end type grid_container
 
    interface is_overlap
@@ -232,12 +236,15 @@ contains
 !>
 !! \brief Initialization of the grid container
 !!
-!! \details This method sets up the grid container variables, coordinates and allocates basic arrays
+!! \details This method sets up the grid container variables, coordinates and allocates basic arrays.
+!! Everything related to the interior of grid container should be set here.
+!! Things that are related to communication with other grid containers or global properties are set up in cg_list_level::init_all_new_cg.
 !<
 
    subroutine init(this, n_d, my_se, grid_id, level_id)
 
-      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_COR, big_float
+      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float,refinement_factor, &
+           &                FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_COR
 #ifdef SHEAR_BND
 #ifndef FFTW
       use constants,  only: BND_SHE
@@ -257,11 +264,12 @@ contains
       class(grid_container), target,   intent(inout) :: this ! intent(out) would silently clear everything, that was already set
                                                              ! (also the fields in types derived from grid_container)
       integer(kind=8), dimension(:),   intent(in) :: n_d     !< max resolution of my level
-      integer(kind=8), dimension(:,:), intent(in) :: my_se !< my segment
+      integer(kind=8), dimension(:,:), intent(in) :: my_se   !< my segment
       integer,                         intent(in) :: grid_id
       integer(kind=4),                 intent(in) :: level_id
 
       integer :: i
+      integer(kind=8), dimension(ndims) :: n2
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init] MPI not initialized.")
 
@@ -350,7 +358,7 @@ contains
          this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * this%h_cor1(:)
       elsewhere
          this%n_(:)        = 1
-         this%ijkse(:, LO) = 1
+         this%ijkse(:, LO) = 1 ! cannot use this%ijkse(:, :) = 1 due to where shape
          this%ijkse(:, HI) = 1
          this%ijkseb(:,LO) = 1
          this%ijkseb(:,HI) = 1
@@ -450,9 +458,16 @@ contains
       this%dvol2 = this%dvol**2
 
       if (allocated(this%prolong_) .or. allocated(this%prolong_x) .or. allocated(this%prolong_xy) ) call die("[grid_container:init] prolong_* arrays already allocated")
-      allocate(this%prolong_  (this%nxb/2+2*dom%nb, this%nyb/2+2*dom%nb, this%nzb/2+2*dom%nb), &
-           &   this%prolong_x (this%n_(xdim),       this%nyb/2+2*dom%nb, this%nzb/2+2*dom%nb), &
-           &   this%prolong_xy(this%n_(xdim),       this%n_(ydim),       this%nzb/2+2*dom%nb))
+      ! size of coarsened grid with guardcells, additional cell is required only when even-sized grid has odd offset
+      where (dom%has_dir(:))
+         n2(:) = (this%n_b(:) + 1 + mod(this%off, int(refinement_factor, kind=8)))/refinement_factor + 2*dom%nb + 1
+         ! +1 is because of some simplifications in cg_list_level::prolong_q_1var in treating grids with odd offsets
+      elsewhere
+         n2(:) = 1
+      endwhere
+      allocate(this%prolong_  (     n2(xdim),      n2(ydim), n2(zdim)), &
+           &   this%prolong_x (this%n_(xdim),      n2(ydim), n2(zdim)), &
+           &   this%prolong_xy(this%n_(xdim), this%n_(ydim), n2(zdim)))
 
       this%prolong_  (:, :, :) = big_float
       this%prolong_x (:, :, :) = big_float
@@ -535,8 +550,8 @@ contains
 
       class(grid_container), intent(inout) :: this
       integer :: d, t, g, b
-      integer, parameter :: nseg = 2
-      type(tgt_list), dimension(nseg) :: fc_tgt
+      integer, parameter :: nseg = 2*2
+      type(tgt_list), dimension(nseg) :: rpio_tgt
 
       if (this%grid_id <= INVALID) return ! very dirty workaround for unability to determine whether a given cg was already deallocated
 
@@ -590,13 +605,13 @@ contains
          deallocate(this%o_bnd)
       endif
 
-      fc_tgt(1:nseg) = [ this%f_tgt, this%c_tgt ]
+      rpio_tgt(1:nseg) = [ this%ri_tgt, this%ro_tgt, this%pi_tgt, this%po_tgt ]
       do b = 1, nseg
-         if (allocated(fc_tgt(b)%seg)) then
-            do g = lbound(fc_tgt(b)%seg, dim=1), ubound(fc_tgt(b)%seg, dim=1)
-               if (allocated(fc_tgt(b)%seg(g)%buf)) deallocate(fc_tgt(b)%seg(g)%buf)
+         if (allocated(rpio_tgt(b)%seg)) then
+            do g = lbound(rpio_tgt(b)%seg, dim=1), ubound(rpio_tgt(b)%seg, dim=1)
+               if (allocated(rpio_tgt(b)%seg(g)%buf)) deallocate(rpio_tgt(b)%seg(g)%buf)
             enddo
-            deallocate(fc_tgt(b)%seg)
+            deallocate(rpio_tgt(b)%seg)
          endif
       enddo
 
@@ -697,9 +712,9 @@ contains
 
       implicit none
 
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this !< object invoking type-bound procedure
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: other !< the other box
-      integer(kind=8), dimension(xdim:zdim), intent(in)        :: periods !< where >0 then the direction is periodic with the given number of cells
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this    !< this box
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: other   !< the other box
+      integer(kind=8), dimension(xdim:zdim),        intent(in) :: periods !< where >0 then the direction is periodic with the given number of cells
 
       integer :: i, j, k
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: oth
@@ -734,7 +749,7 @@ contains
 
       implicit none
 
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this !< object invoking type-bound procedure
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this  !< this box
       integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: other !< the other box
 
       integer :: d
@@ -773,5 +788,87 @@ contains
       enddo
 
    end subroutine set_q_mbc
+
+!>
+!! \brief Register a new 3D entry in current cg with given name. Called from cg_list_glob::reg_var
+!!
+!! \warning This routine should not be called directly from user routines
+!<
+   subroutine add_na(this, multigrid)
+
+      use constants,   only: base_level_id
+      use named_array, only: named_array3d
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+      logical,               intent(in)    :: multigrid     !< If .true. then cg%q(:)%arr and cg%w(:)%arr are allocated also below base level
+
+      type(named_array3d), allocatable, dimension(:) :: tmp
+
+      if (.not. allocated(this%q)) then
+         allocate(this%q(1))
+      else
+         allocate(tmp(lbound(this%q(:),dim=1):ubound(this%q(:), dim=1) + 1))
+         tmp(:ubound(this%q(:), dim=1)) = this%q(:)
+         call move_alloc(from=tmp, to=this%q)
+      endif
+
+      if (multigrid .or. this%level_id >= base_level_id) call this%q(ubound(this%q(:), dim=1))%init(this%n_(:))
+
+   end subroutine add_na
+
+!>
+!! \brief Register a new 4D entry in current cg with given name. Called from cg_list_glob::reg_var
+!!
+!! \warning This routine should not be called directly from user routines
+!! \deprecated Almost duplicated code with add_na
+!<
+   subroutine add_na_4d(this, n)
+
+      use constants,   only: xdim, zdim, ndims, base_level_id
+      use domain,      only: dom
+      use named_array, only: named_array4d
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+      integer(kind=4),       intent(in)    :: n
+
+      type(named_array4d), allocatable, dimension(:) :: tmp
+      integer :: iw, d, ib, g
+
+      if (.not. allocated(this%w)) then
+         allocate(this%w(1))
+      else
+         allocate(tmp(lbound(this%w(:),dim=1):ubound(this%w(:), dim=1) + 1))
+         tmp(:ubound(this%w(:), dim=1)) = this%w(:)
+         do iw = lbound(this%w(:), dim=1), ubound(this%w(:), dim=1) ! prevent memory leak
+            if (allocated(this%w(iw)%w_i_mbc)) deallocate(this%w(iw)%w_i_mbc)
+            if (allocated(this%w(iw)%w_o_mbc)) deallocate(this%w(iw)%w_o_mbc)
+         enddo
+         call move_alloc(from=tmp, to=this%w)
+      endif
+
+      if (this%level_id >= base_level_id) then
+         iw = ubound(this%w(:), dim=1)
+         allocate(this%w(iw)%w_i_mbc(ndims, dom%nb), this%w(iw)%w_o_mbc(ndims, dom%nb))
+         do d = xdim, zdim
+            do ib = 1, dom%nb
+               if (allocated(this%i_bnd(d, ib)%seg)) then
+                  allocate(this%w(iw)%w_i_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)), &
+                       &   this%w(iw)%w_o_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)))
+
+                  do g = lbound(this%i_bnd(d, ib)%seg, dim=1), ubound(this%i_bnd(d, ib)%seg, dim=1)
+                     call set_mpi_types([n, this%n_(:)], this%i_bnd(d, ib)%seg(g)%se(:,:), this%w(iw)%w_i_mbc(d, ib)%mbc(g))
+                     call set_mpi_types([n, this%n_(:)], this%o_bnd(d, ib)%seg(g)%se(:,:), this%w(iw)%w_o_mbc(d, ib)%mbc(g))
+                  enddo
+               endif
+            enddo
+         enddo
+         call this%w(iw)%init( [n, this%n_(:)] )
+      endif
+
+   end subroutine add_na_4d
 
 end module grid_cont

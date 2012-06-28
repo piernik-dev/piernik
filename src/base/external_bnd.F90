@@ -56,16 +56,17 @@ contains
 
    subroutine arr3d_boundaries(cglist, ind, nb, area_type, bnd_type, corners)
 
-      use constants,    only: ARR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, I_TWO, I_THREE, LO, HI, &
-           &                  BND_PER, BND_MPI, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
-      use dataio_pub,   only: die, msg
-      use domain,       only: dom
-      use gc_list,      only: cg_list, cg_list_element, all_cg
-      use grid_cont,    only: grid_container
-      use internal_bnd, only: internal_boundaries_3d
-      use mpi,          only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
-      use mpisetup,     only: mpi_err, comm, req, status
-      use types,        only: cdd
+      use cg_list_global, only: all_cg
+      use constants,      only: ARR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, I_TWO, I_THREE, LO, HI, &
+           &                    BND_PER, BND_MPI, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
+      use dataio_pub,     only: die, msg
+      use domain,         only: dom
+      use gc_list,        only: cg_list, cg_list_element
+      use grid_cont,      only: grid_container
+      use internal_bnd,   only: internal_boundaries_3d
+      use mpi,            only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
+      use mpisetup,       only: mpi_err, comm, req, status
+      use types,          only: cdd
 
       implicit none
 

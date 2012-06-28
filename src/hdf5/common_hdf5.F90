@@ -360,6 +360,7 @@ contains
       use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
       use domain,      only: dom
       use global,      only: magic_mass, t, dt, nstep
+      use grid,        only: top_lev
       use hdf5,        only: HID_T, SIZE_T
       use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
 
@@ -399,7 +400,8 @@ contains
       ibuffer(2)   = nres                    ; ibuffer_name(2)   = "nres" !rr2
       ibuffer(3)   = nhdf                    ; ibuffer_name(3)   = "nhdf" !rr2
       ibuffer(4)   = nimg                    ; ibuffer_name(4)   = "nimg" !rr2
-      ibuffer(5:7) = dom%n_d(:)              ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
+      !! \todo check if top_lev is complete, if not then find finest complete level (see data_hdf5::h5_write_to_single_file_v1)
+      ibuffer(5:7) = int(top_lev%n_d(:), kind=4) ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
       ibuffer(8)   = dom%nb                  ; ibuffer_name(8)   = "nb"
       ibuffer(9)   = require_init_prob       ; ibuffer_name(9)   = "require_init_prob" !rr2
 
@@ -512,9 +514,10 @@ contains
 
    function get_nth_cg(n) result(cg)
 
-      use dataio_pub, only: die
-      use gc_list,    only: cg_list_element, all_cg
-      use grid_cont,  only: grid_container
+      use cg_list_global, only: all_cg
+      use dataio_pub,     only: die
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
 
       implicit none
 
@@ -589,20 +592,22 @@ contains
 
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
-      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
-      use dataio_pub,   only: die, nproc_io, can_i_write
-      use domain,       only: dom
-      use gc_list,      only: cg_list_element, all_cg
-      use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets
-      use grid,         only: leaves
-      use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
-           &                  h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
-           &                  h5pclose_f, h5zfilter_avail_f
-      use helpers_hdf5, only: create_attribute
-      use mpi,          only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
-      use mpisetup,     only: comm, FIRST, LAST, master, mpi_err
+      use cg_list_global, only: all_cg
+      use constants,      only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
+      use dataio_pub,     only: die, nproc_io, can_i_write
+      use domain,         only: dom
+      use gc_list,        only: cg_list_element
+      use gdf,            only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets
+      use grid,           only: leaves
+      use hdf5,           only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
+           &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
+           &                    h5pclose_f, h5zfilter_avail_f
+      use helpers_hdf5,   only: create_attribute
+      use mpi,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
+      use mpisetup,       only: comm, FIRST, LAST, master, mpi_err
 
       implicit none
+
       character(len=cwdlen), intent(in)             :: filename
       integer(kind=4), intent(in)                   :: otype
       interface

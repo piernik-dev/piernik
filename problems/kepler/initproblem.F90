@@ -80,8 +80,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine register_user_var
 
-      use constants, only: AT_NO_B
-      use gc_list,   only: all_cg
+      use cg_list_global, only: all_cg
+      use constants,      only: AT_NO_B
 
       implicit none
 
@@ -310,20 +310,21 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,    only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
-      use dataio_pub,   only: msg, printinfo, die
-      use domain,       only: dom, is_multicg
-      use fluidindex,   only: flind
-      use fluidtypes,   only: component_fluid
-      use gravity,      only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
-      use gc_list,      only: cg_list_element, all_cg
-      use grid,         only: leaves, base_lev
-      use grid_cont,    only: grid_container
-      use hydrostatic,  only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use interactions, only: epstein_factor
-      use mpi,          only: MPI_DOUBLE_PRECISION
-      use mpisetup,     only: master, comm, mpi_err, FIRST, proc
-      use units,        only: newtong, gram, cm, kboltz, mH
+      use cg_list_global, only: all_cg
+      use constants,      only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
+      use dataio_pub,     only: msg, printinfo, die
+      use domain,         only: dom, is_multicg
+      use fluidindex,     only: flind
+      use fluidtypes,     only: component_fluid
+      use gravity,        only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
+      use gc_list,        only: cg_list_element
+      use grid,           only: leaves, base_lev
+      use grid_cont,      only: grid_container
+      use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
+      use interactions,   only: epstein_factor
+      use mpi,            only: MPI_DOUBLE_PRECISION
+      use mpisetup,       only: master, comm, mpi_err, FIRST, proc
+      use units,          only: newtong, gram, cm, kboltz, mH
 
       implicit none
 
@@ -554,9 +555,11 @@ contains
    end function mmsn_T
 !-----------------------------------------------------------------------------
    subroutine kepler_problem_post_restart
+
+      use cg_list_global,  only: all_cg
       use constants,       only: b0_n
       use fluidboundaries, only: all_fluid_boundaries
-      use gc_list,         only: cg_list_element, all_cg
+      use gc_list,         only: cg_list_element
       use grid,            only: leaves
 #ifdef TRACER
       use constants,       only: xdim, ydim, zdim
@@ -620,10 +623,11 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
 
+      use cg_list_global,  only: all_cg
       use constants,       only: xdim, ydim, zdim, I_ONE
       use dataio_pub,      only: die!, warn, msg
       use domain,          only: is_multicg
-      use gc_list,         only: cg_list_element, all_cg
+      use gc_list,         only: cg_list_element
       use global,          only: dt, t, relax_time, smalld !, grace_period_passed
       use grid,            only: leaves
       use grid_cont,       only: grid_container
@@ -865,9 +869,9 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xr(cg)
 
-      use constants,  only: xdim
-      use gc_list,    only: all_cg
-      use grid_cont,  only: grid_container
+      use cg_list_global, only: all_cg
+      use constants,      only: xdim
+      use grid_cont,      only: grid_container
 
       implicit none
 

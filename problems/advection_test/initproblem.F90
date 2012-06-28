@@ -147,12 +147,13 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: xdim, ydim, zdim
-      use fluidindex,  only: flind
-      use gc_list,     only: cg_list_element, all_cg
-      use global,      only: smallei, t
-      use grid,        only: leaves
-      use grid_cont,   only: grid_container
+      use cg_list_global, only: all_cg
+      use constants,      only: xdim, ydim, zdim
+      use fluidindex,     only: flind
+      use gc_list,        only: cg_list_element
+      use global,         only: smallei, t
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
 
       implicit none
 
@@ -190,9 +191,9 @@ contains
 
    subroutine inid_var_hdf5(var, tab, ierrh, cg)
 
-      use global,    only: t
-      use gc_list,   only: all_cg
-      use grid_cont, only: grid_container
+      use cg_list_global, only: all_cg
+      use global,         only: t
+      use grid_cont,      only: grid_container
 
       implicit none
 
@@ -216,8 +217,8 @@ contains
 
    subroutine register_user_var
 
-      use constants, only: AT_NO_B
-      use gc_list,   only: all_cg
+      use cg_list_global, only: all_cg
+      use constants,      only: AT_NO_B
 
       implicit none
 
@@ -229,15 +230,16 @@ contains
 
    subroutine calculate_error_norm
 
-      use constants,  only: I_ONE, I_TWO, PIERNIK_FINISHED
-      use dataio_pub, only: code_progress, halfstep, msg, printinfo, warn
-      use fluidindex, only: flind
-      use gc_list,    only: cg_list_element, all_cg
-      use global,     only: t, nstep
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,   only: master, comm, mpi_err
+      use cg_list_global, only: all_cg
+      use constants,      only: I_ONE, I_TWO, PIERNIK_FINISHED
+      use dataio_pub,     only: code_progress, halfstep, msg, printinfo, warn
+      use fluidindex,     only: flind
+      use gc_list,        only: cg_list_element
+      use global,         only: t, nstep
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,       only: master, comm, mpi_err
 
       implicit none
 
@@ -297,13 +299,14 @@ contains
 
    subroutine analytic_solution(t)
 
-      use constants,  only: xdim, zdim, ndims
-      use dataio_pub, only: warn
-      use domain,     only: dom
-      use gc_list,    only: cg_list_element, all_cg
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: master
+      use cg_list_global, only: all_cg
+      use constants,      only: xdim, zdim, ndims
+      use dataio_pub,     only: warn
+      use domain,         only: dom
+      use gc_list,        only: cg_list_element
+      use grid,           only: leaves
+      use grid_cont,      only: grid_container
+      use mpisetup,       only: master
 
       implicit none
 

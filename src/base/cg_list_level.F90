@@ -52,17 +52,22 @@ module cg_list_lev
       integer :: tot_se                        !< global number of segments on the level
       type(cg_list_level), pointer :: coarser  !< coarser level cg set or null()
       type(cg_list_level), pointer :: finer    !< finer level cg set or null()
+      integer(kind=4) :: ord_prolong_set       !< Number of boundary cells for prolongation used in last update of cg_list_level%vertical_prep
     contains
 
       ! Level management
-      procedure :: init_new_cg                 !< initialize newest grid container
-      procedure :: mpi_bnd_types               !< create MPI types for boundary exchanges
+      procedure :: init_lev, init_lev_base
+      generic, public :: init => init_lev, init_lev_base
+      procedure :: init_all_new_cg             !< initialize newest grid container
+      procedure, private :: mpi_bnd_types      !< create MPI types for boundary exchanges
       procedure :: print_segments              !< print detailed information about current level decomposition
 
       ! Prolongation and restriction
-      procedure :: vertical_prep               !< initialize prolongation and restriction targets
-      procedure :: update_tot_se               !< count all cg on current level for computing tags in vertical_prep
-      procedure :: prolong0_q_1var             !< interpolate the grid data in specified q field to this%finer level
+      procedure, private :: vertical_prep      !< initialize prolongation and restriction targets
+      procedure, private :: update_tot_se      !< count all cg on current level for computing tags in vertical_prep
+      procedure :: prolong                     !< interpolate the grid data which has the flag vital set to this%finer level
+      procedure :: restrict                    !< interpolate the grid data which has the flag vital set from this%coarser level
+      procedure :: prolong_q_1var              !< interpolate the grid data in specified q field to this%finer level
       procedure :: restrict_q_1var             !< interpolate the grid data in specified q field from this%coarser level
       procedure :: restrict_to_floor_q_1var    !< restrict specified q field as much as possible
 
@@ -85,6 +90,128 @@ module cg_list_lev
 
 contains
 
+!> \brief initialize the base level
+
+   subroutine init_lev_base(this, n_d)
+
+      use constants,  only: INVALID, base_level_id
+      use dataio_pub, only: die
+      use domain,     only: dom
+
+      implicit none
+
+      class(cg_list_level),              intent(inout) :: this
+      integer(kind=4), dimension(ndims), intent(in)    :: n_d    !< size of global base grid in cells
+
+      if (any(n_d(:) < 1)) call die("[cg_list_level::init_lev_base] non-positive base grid sizes")
+      if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_list_level::init_lev_base] base grid size incompatible with has_dir masks")
+
+      this%lev = base_level_id
+      this%n_d(:) = n_d(:)
+      this%tot_se = 0
+      this%coarser => null()
+      this%finer => null()
+      this%ord_prolong_set = INVALID
+      call this%init
+
+   end subroutine init_lev_base
+
+!> \brief add a fine or coarse level to a existing one
+
+   subroutine init_lev(this, link, coarse)
+
+      use constants,  only: INVALID, I_ONE, refinement_factor
+      use dataio_pub, only: die, msg
+      use domain,     only: dom
+      use mpisetup,   only: master
+
+      implicit none
+
+      class(cg_list_level), target, intent(inout) :: this
+      type(cg_list_level), pointer, intent(inout) :: link    !< lowest or highest refinement level (cannot refer to base_lev here due to cyclic deps)
+      logical,                      intent(in)    :: coarse  !< if .true. then add a level below base level
+
+      if (.not. associated(link)) call die("[cg_list_level::init_lev] cannot link to null")
+
+      this%n_d(:) = 1
+      this%tot_se = 0
+      if (coarse) then
+         if (associated(link%coarser)) call die("[cg_list_level::init_lev] coarser level already exists")
+         this%lev = link%lev - I_ONE
+         where (dom%has_dir(:))
+            this%n_d(:) = link%n_d(:) / refinement_factor
+         elsewhere
+            this%n_d(:) = I_ONE
+         endwhere
+         if (master .and. any(this%n_d(:)*refinement_factor /= link%n_d(:) .and. dom%has_dir(:))) then
+            write(msg, '(a,3f10.1,a,i3)')"[cg_list_level::init_lev] Fractional number of domain cells: ", link%n_d(:)/real(refinement_factor), " at level ",this%lev
+            call die(msg)
+         endif
+         this%coarser => null()
+         this%finer => link
+         select type(this)
+            type is (cg_list_level)
+               link%coarser => this
+            class default
+               call die("[cg_list_level::init_lev] cannot call this routine for derivatives of cg_list_level (coarse)")
+         end select
+      else
+         if (associated(link%finer)) call die("[cg_list_level::init_lev] finer level already exists")
+         this%lev = link%lev + I_ONE
+         this%n_d(:) = link%n_d(:) * refinement_factor
+         this%coarser => link
+         this%finer => null()
+         select type(this)
+            type is (cg_list_level)
+               link%finer => this
+            class default
+               call die("[cg_list_level::init_lev] cannot call this routine for derivatives of cg_list_level (fine)")
+         end select
+      endif
+
+      !! make sure that vertical_prep will be called where necessary
+      this%ord_prolong_set = INVALID
+      link%ord_prolong_set = INVALID
+      call this%init
+
+   end subroutine init_lev
+
+!> \brief Calculate minimal fine grid that completely covers given coarse grid
+
+   pure function c2f(coarse) result (fine)
+
+      use constants, only: xdim, zdim, LO, HI, refinement_factor
+      use domain,    only: dom
+
+      implicit none
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: coarse
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: fine
+
+      fine(:,:) = coarse(:,:) * refinement_factor
+      where (dom%has_dir(:)) fine(:, HI) = fine(:, HI) + refinement_factor - 1
+
+   end function c2f
+
+!> \brief Calculate minimal coarse grid that completely embeds given fine grid
+
+   pure function f2c(fine) result (coarse)
+
+      use constants, only: xdim, zdim, LO, HI, refinement_factor
+
+      implicit none
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: fine
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarse
+
+      integer, parameter :: bias = 128
+
+      coarse(:,:) =  (fine(:,:) + bias*refinement_factor) / refinement_factor - bias
+
+   end function f2c
+
 !>
 !! \brief Initialize prolongation and restriction targets. Called from init_multigrid.
 !!
@@ -97,19 +224,21 @@ contains
 
    subroutine vertical_prep(this)
 
-      use constants,     only: xdim, ydim, zdim, LO, HI
-      use dataio_pub,    only: die
-      use gc_list,       only: cg_list_element
-      use grid_cont,     only: pr_segment, grid_container, is_overlap
-      use mpisetup,      only: FIRST, LAST
+      use cg_list_global, only: all_cg
+      use constants,      only: xdim, ydim, zdim, LO, HI
+      use dataio_pub,     only: die
+      use domain,         only: dom
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: pr_segment, grid_container, is_overlap
+      use mpisetup,       only: FIRST, LAST
 
       implicit none
 
       class(cg_list_level), intent(inout) :: this
 
       integer :: g, j, jf, fmax, tag
-      integer(kind=8), dimension(xdim:zdim) :: ijks
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
+      integer, dimension(xdim:zdim, LO:HI) :: enlargement
       type(pr_segment), pointer :: seg
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
@@ -122,14 +251,18 @@ contains
 
       call this%update_tot_se
 
+      if (all_cg%ord_prolong_nb == this%ord_prolong_set) return ! no need to update vertical communication on this level
+
+      ! enlarge the fine blocks to allow for high orders of interpolation
+      enlargement(:, LO) = -dom%D_(:) * all_cg%ord_prolong_nb
+      enlargement(:, HI) =  dom%D_(:) * all_cg%ord_prolong_nb
+
       fine => this%finer
       ! find fine target for receiving restricted data or sending data to be prolonged
       if (associated(fine)) then
          cgl => this%first
          do while (associated(cgl))
             cg => cgl%cg
-
-            ijks(:) = cg%ijkse(:, LO) - cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+dom%nb - off(:))
 
             if (allocated(ps)) call die("cll:vp f a ps")
             fmax = 0
@@ -138,31 +271,55 @@ contains
             enddo
             allocate(ps(fmax))
 
-            if (allocated(cg%f_tgt%seg)) call die("cll:vp cg%f_tgt%seg a a")
+            if (allocated(cg%ri_tgt%seg)) deallocate(cg%ri_tgt%seg) ! call warn("cll:vp cg%ri_tgt%seg a a")
+            if (allocated(cg%po_tgt%seg)) deallocate(cg%po_tgt%seg)
             g = 0
             do j = FIRST, LAST
                do jf = lbound(fine%pse(j)%sel(:, :, :), dim=1), ubound(fine%pse(j)%sel(:, :, :), dim=1)
-                  if (is_overlap(cg%my_se(:, :), fine%pse(j)%sel(jf, :, :)/2)) then
+                  if (is_overlap(c2f(cg%my_se(:, :)), fine%pse(j)%sel(jf, :, :))) then
                      g = g + 1
                      ps(g) = int_pair(j, jf)
                   endif
                enddo
             enddo
-            allocate(cg%f_tgt%seg(g))
+            allocate(cg%ri_tgt%seg(g), cg%po_tgt%seg(g))
 
-            do g = lbound(cg%f_tgt%seg(:), dim=1), ubound(cg%f_tgt%seg(:), dim=1)
-               seg => cg%f_tgt%seg(g)
-               if (allocated(seg%buf)) call die("cll:vp f seg%buf a a")
+            !! \todo fuse the following two loops back into one
+            do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
+               seg => cg%ri_tgt%seg(g)
+               if (allocated(seg%buf)) call die("cll:vp fr seg%buf a a")
                seg%proc = ps(g)%proc
                ! find cross-section of own segment with coarsened fine segment
-               seg%se(:, LO) = max(cg%my_se(:, LO), fine%pse(seg%proc)%sel(ps(g)%n_se, :, LO)/2) + ijks(:)
-               seg%se(:, HI) = min(cg%my_se(:, HI), fine%pse(seg%proc)%sel(ps(g)%n_se, :, HI)/2) + ijks(:)
+               coarsened(:,:) = f2c(fine%pse(seg%proc)%sel(ps(g)%n_se, :, :))
+               seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO))
+               seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
                     &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (1)")
+               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (ri)")
+            enddo
+
+            ! When fine and coarse pieces are within prolongation stencil length, but there is no direct overlap we rely on guardcell update on coarse side
+            ! to provide valid prolongation data. An alternative approach would not require updating guardcells, but would usually result in setting up
+            ! many small teransactions on the corners, especially on cartesian decomposition.
+            !
+            ! When the overlap is one fine cell (half coarse cell), not all communications are necessary, but we don't want to complicate the code too much at the moment
+            do g = lbound(cg%po_tgt%seg(:), dim=1), ubound(cg%po_tgt%seg(:), dim=1)
+               seg => cg%po_tgt%seg(g)
+               if (allocated(seg%buf)) call die("cll:vp fp seg%buf a a")
+               seg%proc = ps(g)%proc
+               ! find cross-section of own segment with enlarged coarsened fine segment
+               coarsened(:,:) = f2c(fine%pse(seg%proc)%sel(ps(g)%n_se, :, :)) + enlargement(:,:)
+               seg%se(:, LO) = max(cg%my_se(:, LO) + enlargement(:, LO), coarsened(:, LO))
+               seg%se(:, HI) = min(cg%my_se(:, HI) + enlargement(:, HI), coarsened(:, HI))
+               allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
+                    &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
+                    &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
+               tag = cg%grid_id + this%tot_se * ps(g)%n_se
+               seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
+               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow po)")
             enddo
 
             if (allocated(ps)) deallocate(ps)
@@ -181,8 +338,6 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            ijks(:) = cg%ijkse(:, LO) - cg%off(:)  ! add this to convert absolute cell coordinates to local indices. (+dom%nb - off(:))
-
             if (allocated(ps)) call die("cll:vp c a ps")
             fmax = 0
             do j = FIRST, LAST
@@ -190,34 +345,53 @@ contains
             enddo
             allocate(ps(fmax))
 
-            if (allocated(cg%c_tgt%seg)) call die("cll:vp cg%c_tgt%seg a a")
+            if (allocated(cg%ro_tgt%seg)) deallocate(cg%ro_tgt%seg) ! call warn("cll:vp cg%ro_tgt%seg a a")
+            if (allocated(cg%pi_tgt%seg)) deallocate(cg%pi_tgt%seg)
             g = 0
-            coarsened(:,:) = cg%my_se(:, :)/2
             do j = FIRST, LAST
                do jf = lbound(coarse%pse(j)%sel(:, :, :), dim=1), ubound(coarse%pse(j)%sel(:, :, :), dim=1)
-                  if (is_overlap(coarsened(:,:), coarse%pse(j)%sel(jf, :, :))) then
+                  if (is_overlap(cg%my_se(:, :), c2f(coarse%pse(j)%sel(jf, :, :)))) then
                      g = g + 1
                      ps(g) = int_pair(j, jf)
                   endif
                enddo
             enddo
-            allocate(cg%c_tgt%seg(g))
+            allocate(cg%ro_tgt%seg(g), cg%pi_tgt%seg(g))
 
-            do g = lbound(cg%c_tgt%seg(:), dim=1), ubound(cg%c_tgt%seg(:), dim=1)
-               seg => cg%c_tgt%seg(g)
-               if (allocated(seg%buf)) call die("cll:vp c seg%buf a a")
+            !! \todo fuse the following two loops back into one
+            do g = lbound(cg%ro_tgt%seg(:), dim=1), ubound(cg%ro_tgt%seg(:), dim=1)
+               seg => cg%ro_tgt%seg(g)
+               if (allocated(seg%buf)) call die("cll:vp cr seg%buf a a")
                seg%proc = ps(g)%proc
-               ! find cross-section of own segment with refined coarse segment
-               seg%se(:, LO) = max(cg%my_se(:, LO), coarse%pse(seg%proc)%sel(ps(g)%n_se, :, LO)*2  )
-               seg%se(:, HI) = min(cg%my_se(:, HI), coarse%pse(seg%proc)%sel(ps(g)%n_se, :, HI)*2+1)
-               allocate(seg%buf(seg%se(xdim, HI)/2-seg%se(xdim, LO)/2 + 1, &
-                    &           seg%se(ydim, HI)/2-seg%se(ydim, LO)/2 + 1, &
-                    &           seg%se(zdim, HI)/2-seg%se(zdim, LO)/2 + 1))
-               seg%se(:, LO) = seg%se(:, LO) + ijks(:)
-               seg%se(:, HI) = seg%se(:, HI) + ijks(:)
+               ! find cross-section of coarsened own segment with coarse segment
+               coarsened(:,:) = f2c(cg%my_se(:,:))
+               seg%se(:, LO) = max(coarsened(:, LO), coarse%pse(seg%proc)%sel(ps(g)%n_se, :, LO))
+               seg%se(:, HI) = min(coarsened(:, HI), coarse%pse(seg%proc)%sel(ps(g)%n_se, :, HI))
+               allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
+                    &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
+                    &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
+               coarsened(:,:) = c2f(coarse%pse(seg%proc)%sel(ps(g)%n_se, :, :)) ! should be renamed to refined(:,:)
+               seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO))
+               seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (2)")
+               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (ro)")
+            enddo
+
+            do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
+               seg => cg%pi_tgt%seg(g)
+               if (allocated(seg%buf)) call die("cll:vp cp seg%buf a a")
+               seg%proc = ps(g)%proc
+               ! find cross-section of coarsened own segment with enlarged coarse segment
+               coarsened(:,:) = f2c(cg%my_se(:,:)) + enlargement(:,:)
+               seg%se(:, LO) = max(coarsened(:, LO), coarse%pse(seg%proc)%sel(ps(g)%n_se, :, LO) + enlargement(:, LO))
+               seg%se(:, HI) = min(coarsened(:, HI), coarse%pse(seg%proc)%sel(ps(g)%n_se, :, HI) + enlargement(:, HI))
+               allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
+                    &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
+                    &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
+               tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
+               seg%tag = int(tag, kind=4)
+               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (pi)")
             enddo
 
             if (allocated(ps)) deallocate(ps)
@@ -225,7 +399,83 @@ contains
          enddo
       endif
 
+      this%ord_prolong_set = all_cg%ord_prolong_nb
+
+      !> \todo update mpisetup::req(:)
+
    end subroutine vertical_prep
+
+!>
+!! \brief interpolate the grid data which has the flag vital set to this%finer level
+!!
+!! \todo implement it in a more efficient way (reqiures a lot more temporary buffers)
+!<
+   subroutine prolong(this)
+
+      use cg_list_global, only: all_cg
+      use constants,      only: base_level_id, wa_n
+      use dataio_pub,     only: warn
+
+      implicit none
+
+      class(cg_list_level), target, intent(inout) :: this !< object invoking type-bound procedure
+
+      integer :: i, iw, iwa
+
+      do i = lbound(all_cg%q_lst(:), dim=1), ubound(all_cg%q_lst(:), dim=1)
+         if (all_cg%q_lst(i)%vital .and. (all_cg%q_lst(i)%multigrid .or. this%lev > base_level_id)) call this%prolong_q_1var(i)
+      enddo
+
+      iwa = all_cg%ind(wa_n)
+
+      do i = lbound(all_cg%w_lst(:), dim=1), ubound(all_cg%w_lst(:), dim=1)
+         if (all_cg%w_lst(i)%vital .and. (all_cg%w_lst(i)%multigrid .or. this%lev >= base_level_id)) then
+            if (all_cg%w_lst(i)%multigrid) call warn("[cg_list_level:prolong] mg set for cg%w ???")
+            do iw = 1, all_cg%w_lst(i)%dim4
+               call this%wq_copy(i, iw, iwa)
+               call this%prolong_q_1var(iwa)
+               call this%finer%qw_copy(iwa, i, iw)
+            enddo
+         endif
+      enddo
+
+   end subroutine prolong
+
+!>
+!! \brief interpolate the grid data which has the flag vital set from this%coarser level
+!!
+!! \todo implement it in a more efficient way (reqiures a lot more temporary buffers)
+!<
+   subroutine restrict(this)
+
+      use cg_list_global, only: all_cg
+      use constants,      only: base_level_id, wa_n
+      use dataio_pub,     only: warn
+
+      implicit none
+
+      class(cg_list_level), target, intent(inout) :: this !< object invoking type-bound procedure
+
+      integer :: i, iw, iwa
+
+      do i = lbound(all_cg%q_lst(:), dim=1), ubound(all_cg%q_lst(:), dim=1)
+         if (all_cg%q_lst(i)%vital .and. (all_cg%q_lst(i)%multigrid .or. this%lev > base_level_id)) call this%restrict_q_1var(i)
+      enddo
+
+      iwa = all_cg%ind(wa_n)
+
+      do i = lbound(all_cg%w_lst(:), dim=1), ubound(all_cg%w_lst(:), dim=1)
+         if (all_cg%w_lst(i)%vital .and. (all_cg%w_lst(i)%multigrid .or. this%lev > base_level_id)) then
+            if (all_cg%w_lst(i)%multigrid) call warn("[cg_list_level:restrict] mg set for cg%w ???")
+            do iw = 1, all_cg%w_lst(i)%dim4
+               call this%wq_copy(i, iw, iwa)
+               call this%restrict_q_1var(iwa)
+               call this%coarser%qw_copy(iwa, i, iw)
+            enddo
+         endif
+      enddo
+
+   end subroutine restrict
 
 !> \brief Restrict as much as possible
 
@@ -253,8 +503,8 @@ contains
 
    subroutine restrict_q_1var(this, iv)
 
-      use constants,   only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
-      use dataio_pub,  only: msg, warn
+      use constants,   only: xdim, ydim, zdim, LO, HI, I_ONE, refinement_factor
+      use dataio_pub,  only: msg, warn, die
       use domain,      only: dom
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
@@ -269,7 +519,7 @@ contains
 
       type(cg_list_level), pointer :: coarse
       integer :: g
-      integer(kind=8), dimension(:,:), pointer :: fse, cse ! shortcuts for fine segment and coarse segment
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: fse, cse ! shortcuts for fine segment and coarse segment
       integer(kind=8) :: i, j, k, ic, jc, kc
       integer(kind=8), dimension(xdim:zdim) :: off1
       real :: norm
@@ -284,43 +534,50 @@ contains
          return
       endif
 
+      call this%vertical_prep
+      call coarse%vertical_prep
+
       ! be ready to receive everything into right buffers
       nr = 0
       cgl => coarse%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (allocated(cg%f_tgt%seg)) then
-            do g = lbound(cg%f_tgt%seg(:), dim=1), ubound(cg%f_tgt%seg(:), dim=1)
+         if (allocated(cg%ri_tgt%seg)) then
+            do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                nr = nr + I_ONE
-               call MPI_Irecv(cg%f_tgt%seg(g)%buf(1, 1, 1), size(cg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%f_tgt%seg(g)%proc, cg%f_tgt%seg(g)%tag, comm, req(nr), mpi_err)
+               if (nr > size(req, dim=1)) call die("[cg_list_level:restrict_q_1var] size(req) too small for Irecv")
+               call MPI_Irecv(cg%ri_tgt%seg(g)%buf(1, 1, 1), size(cg%ri_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%ri_tgt%seg(g)%proc, cg%ri_tgt%seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
          cgl => cgl%nxt
       enddo
 
       ! interpolate to coarse buffer and send it
-      norm = 1./2**dom%eff_dim
+      norm = 1./refinement_factor**dom%eff_dim
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
-         do g = lbound(cg%c_tgt%seg(:), dim=1), ubound(cg%c_tgt%seg(:), dim=1)
+         do g = lbound(cg%ro_tgt%seg(:), dim=1), ubound(cg%ro_tgt%seg(:), dim=1)
 
-            fse => cg%c_tgt%seg(g)%se
+            fse(:,:) = cg%ro_tgt%seg(g)%se(:,:)
+            fse(:, LO) = fse(:, LO) - cg%off(:)
+            fse(:, HI) = fse(:, HI) - cg%off(:)
 
-            cg%c_tgt%seg(g)%buf(:, :, :) = 0.
-            off1(:) = mod(cg%off(:)+fse(:, LO) - cg%ijkse(:, LO), 2_LONG)
+            cg%ro_tgt%seg(g)%buf(:, :, :) = 0.
+            off1(:) = mod(cg%ro_tgt%seg(g)%se(:, LO), int(refinement_factor, kind=8))
             do k = fse(zdim, LO), fse(zdim, HI)
-               kc = (k-fse(zdim, LO)+off1(zdim))/2 + 1
+               kc = (k-fse(zdim, LO)+off1(zdim))/refinement_factor + 1
                do j = fse(ydim, LO), fse(ydim, HI)
-                  jc = (j-fse(ydim, LO)+off1(ydim))/2 + 1
+                  jc = (j-fse(ydim, LO)+off1(ydim))/refinement_factor + 1
                   do i = fse(xdim, LO), fse(xdim, HI)
-                     ic = (i-fse(xdim, LO)+off1(xdim))/2 + 1
-                     cg%c_tgt%seg(g)%buf(ic, jc, kc) = cg%c_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i, j, k) * norm
+                     ic = (i-fse(xdim, LO)+off1(xdim))/refinement_factor + 1
+                     cg%ro_tgt%seg(g)%buf(ic, jc, kc) = cg%ro_tgt%seg(g)%buf(ic, jc, kc) + cg%q(iv)%arr(i+cg%is, j+cg%js, k+cg%ks) * norm
                   enddo
                enddo
             enddo
             nr = nr + I_ONE
-            call MPI_Isend(cg%c_tgt%seg(g)%buf(1, 1, 1), size(cg%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%c_tgt%seg(g)%proc, cg%c_tgt%seg(g)%tag, comm, req(nr), mpi_err)
+            if (nr > size(req, dim=1)) call die("[cg_list_level:restrict_q_1var] size(req) too small for Isend")
+            call MPI_Isend(cg%ro_tgt%seg(g)%buf(1, 1, 1), size(cg%ro_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%ro_tgt%seg(g)%proc, cg%ro_tgt%seg(g)%tag, comm, req(nr), mpi_err)
          enddo
          cgl => cgl%nxt
       enddo
@@ -331,12 +588,15 @@ contains
       cgl => coarse%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (allocated(cg%f_tgt%seg)) then
+         if (allocated(cg%ri_tgt%seg)) then
             cg%q(iv)%arr(:,:,:) = 0. ! disables check_dirty
-            do g = lbound(cg%f_tgt%seg(:), dim=1), ubound(cg%f_tgt%seg(:), dim=1)
-               cse => cg%f_tgt%seg(g)%se
+            do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
+               cse(:,:) = cg%ri_tgt%seg(g)%se(:,:)
+               cse(:, LO) = cse(:, LO) - cg%off(:) + cg%ijkse(:, LO)
+               cse(:, HI) = cse(:, HI) - cg%off(:) + cg%ijkse(:, LO)
+
                p3 => cg%q(iv)%span(cse)
-               p3 = p3 + cg%f_tgt%seg(g)%buf(:, :, :)
+               p3 = p3 + cg%ri_tgt%seg(g)%buf(:, :, :) !errors on overlap?
             enddo
          endif
          cgl => cgl%nxt
@@ -345,19 +605,80 @@ contains
    end subroutine restrict_q_1var
 
 !>
-!! \brief 0th order prolongation : injection
+!! \brief high-order order prolongation interpolation
+!!
+!! \details
+!! <table border="1" cellpadding="4" cellspacing="0">
+!!   <tr><td> Cell-face prolongation stencils for fast convergence on uniform grid </td>
+!!       <td> -1./12. </td><td> 7./12. </td><td> 7./12. </td><td> -1./12. </td><td> integral cubic </td></tr>
+!!   <tr><td> Slightly slower convergence, less wide stencil  </td>
+!!       <td>         </td><td> 1./2.  </td><td> 1./2.  </td><td>         </td><td> average; integral and direct linear </td></tr>
+!! </table>
+!!\n Prolongation of cell faces from cell centers are required for FFT local solver, red-black Gauss-Seidel relaxation don't use it.
+!!
+!!\n Cell-centered prolongation stencils, for odd fine cells, for even fine cells reverse the order.
+!! <table border="1" cellpadding="4" cellspacing="0">
+!!   <tr><td> 35./2048. </td><td> -252./2048. </td><td> 1890./2048. </td><td> 420./2048. </td><td> -45./2048. </td><td> direct quartic </td></tr>
+!!   <tr><td>           </td><td>   -7./128.  </td><td>  105./128.  </td><td>  35./128.  </td><td>  -5./128.  </td><td> direct cubic </td></tr>
+!!   <tr><td>           </td><td>   -3./32.   </td><td>   30./32.   </td><td>   5./32.   </td><td>            </td><td> direct quadratic </td></tr>
+!!   <tr><td>           </td><td>             </td><td>    1.       </td><td>            </td><td>            </td><td> injection (0-th order), direct and integral approach </td></tr>
+!!   <tr><td>           </td><td>             </td><td>    3./4.    </td><td>   1./4.    </td><td>            </td><td> linear, direct and integral approach </td></tr>
+!!   <tr><td>           </td><td>   -1./8.    </td><td>    1.       </td><td>   1./8.    </td><td>            </td><td> integral quadratic </td></tr>
+!!   <tr><td>           </td><td>   -5./64.   </td><td>   55./64.   </td><td>  17./64.   </td><td>  -3./64.   </td><td> integral cubic </td></tr>
+!!   <tr><td>   3./128. </td><td>  -11./64.   </td><td>    1.       </td><td>  11./64.   </td><td>  -3./128.  </td><td> integral quartic </td></tr>
+!! </table>
+!!
+!!\n General rule is that the second big positive coefficient should be assigned to closer neighbor of the coarse parent cell.
+!!\n Thus a single coarse contributes to fine cells in the following way:
+!! <table border="1" cellpadding="4" cellspacing="0">
+!!   <tr><td> fine level   </td>
+!!       <td> -3./128. </td><td> 3./128. </td><td> -11./64. </td><td>  11./64. </td><td> 1. </td><td> 1. </td>
+!!       <td> 11./64. </td><td> -11./64. </td><td> 3./128.  </td><td> -3./128. </td><td> integral quartic coefficients </td></tr>
+!!   <tr><td> coarse level </td>
+!!       <td colspan="2">                </td><td colspan="2">                 </td><td colspan="2"> 1.  </td>
+!!       <td colspan="2">                </td><td colspan="2">                 </td><td>                               </td></tr>
+!! </table>
+!!\n
+!!\n The term "n-th order integral interpolation" here means that the prolonged values satisfy the following condition:
+!!\n Integral over a cell of a n-th order polynomial fit to the nearest 5 points in each dimension on coarse level
+!! is equal to the sum of similar integrals over fine cells covering the coarse cell.
+!!\n
+!!\n The term "n-th order direct interpolation" here means that the prolonged values are n-th order polynomial fit
+!! to the nearest 5 points in each dimension on coarse level evaluated for fine cell centers.
+!!\n
+!!\n It seems that for 3D Cartesian grid with isolated boundaries and relaxation implemented in approximate_solution
+!! direct quadratic and cubic interpolations give best norm reduction factors per V-cycle (maclaurin problem).
+!!  For other boundary types, FFT implementation of approximate_solution, specific source distribution or
+!!  some other multigrid scheme may give faster convergence rate.
+!!\n
+!!\n Estimated prolongation costs for integral quartic stencil:
+!!\n  "gather" approach: loop over fine cells, each one collects weighted values from 5**3 coarse cells (125*n_fine multiplications
+!!\n  "scatter" approach: loop over coarse cells, each one contributes weighted values to 10**3 fine cells (1000*n_coarse multiplications, roughly equal to cost of gather)
+!!\n  "directionally split" approach: do the prolongation (either gather or scatter type) first in x direction (10*n_coarse multiplications -> 2*n_coarse intermediate cells
+!!                                  result), then in y direction (10*2*n_coarse multiplications -> 4*n_coarse intermediate cells result), then in z direction
+!!                                  (10*4*n_coarse multiplications -> 8*n_coarse = n_fine cells result). Looks like 70*n_coarse multiplications.
+!!                                  Will require two additional arrays for intermediate results.
+!!\n  "FFT" approach: do the convolution in Fourier space. Unfortunately it is not periodic box, so we cannot use power of 2 FFT sizes. No idea how fast or slow this can be.
+!!\n
+!!\n For AMR or nested grid low-order prolongation schemes (injection and linear interpolation at least) are known to produce artifacts
+!! on fine-coarse boundaries. For uniform grid the simplest operators are probably the fastest and give best V-cycle convergence rates.
+!!
+!! \deprecated These routines assume simplest domain decomposition where fine grids cover exactly the same area as coarse grids
 !!
 !! \todo implement high order prolongation. Watch f/c boundaries.
 !<
 
-   subroutine prolong0_q_1var(this, iv)
+   subroutine prolong_q_1var(this, iv)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, LONG, I_ONE
-      use dataio_pub, only: msg, warn
-      use gc_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: comm, mpi_err, req, status
-      use mpi,        only: MPI_DOUBLE_PRECISION
+      use cg_list_global, only: all_cg
+      use constants,      only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, BND_REF, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4, refinement_factor
+      use dataio_pub,     only: msg, warn, die
+      use domain,         only: dom
+      use external_bnd,   only: arr3d_boundaries
+      use gc_list,        only: cg_list_element
+      use grid_cont,      only: grid_container
+      use mpisetup,       only: comm, mpi_err, req, status
+      use mpi,            only: MPI_DOUBLE_PRECISION
 
       implicit none
 
@@ -366,18 +687,58 @@ contains
 
       type(cg_list_level), pointer :: fine
       integer :: g
-      integer(kind=8), dimension(:,:), pointer :: fse, cse ! shortcuts for fine segment and coarse segment
-      integer(kind=8) :: i, j, k, ic, jc, kc
-      integer(kind=8), dimension(xdim:zdim) :: off1
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: fse, cse ! shortcuts for fine segment and coarse segment
+      integer(kind=8) :: iec, jec, kec
+      integer(kind=8), dimension(xdim:zdim) :: off, odd, D
       integer(kind=4) :: nr
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
+      real :: P_2, P_1, P0, P1, P2
+      integer :: stencil_range
+      integer, parameter ::  bias = 128 !< prevents inconsistiences in arithmetic on integers due to rounding towards 0 (stencil_range should be more than enough)
 
       fine => this%finer
       if (.not. associated(fine)) then ! can't prolong finest level
-         write(msg,'(a,i3)')"[gc_list:prolong0_q_1var] no finer level than: ", this%lev
+         write(msg,'(a,i3)')"[gc_list:prolong_q_1var] no finer level than: ", this%lev
          call warn(msg)
          return
+      endif
+
+      call this%vertical_prep
+      call fine%vertical_prep
+
+!> \todo something like this (connected with a todo below):      if (dirty_debug) fine%first%cg%q(iv)%arr(:, :, :) = dirtyH
+
+      select case (all_cg%q_lst(iv)%ord_prolong)
+         case (O_D4)
+            P_2 = 35./2048.; P_1 = -252./2048.; P0 = 1890./2048.; P1 = 420./2048.; P2 = -45./2048.
+         case (O_D3)
+            P_2 = 0.;        P_1 = -7./128.;    P0 = 105./128.;   P1 = 35./128.;   P2 = -5./128.
+         case (O_D2)
+            P_2 = 0.;        P_1 = -3./32.;     P0 = 30./32.;     P1 = 5./32.;     P2 = 0.
+         case (O_LIN)
+            P_2 = 0.;        P_1 = 0.;          P0 = 3./4.;       P1 = 1./4.;      P2 = 0.
+         case (O_INJ)
+            P_2 = 0.;        P_1 = 0.;          P0 = 1.;          P1 = 0.;         P2 = 0.
+         case (O_I2)
+            P_2 = 0.;        P_1 = -1./8.;      P0 = 1.;          P1 = 1./8.;      P2 = 0.
+         case (O_I3)
+            P_2 = 0.;        P_1 = -5./64.;     P0 = 55./64;      P1 = 17./64.;    P2 = -3./64.
+         case (O_I4)
+            P_2 = 3./128.;   P_1 = -11./64.;    P0 = 1.;          P1 = 11./64.;    P2 = -3./128.
+         case default
+            call die("[cg_list_level:prolong_q_1var] Unsupported order")
+            return
+      end select
+
+      ! this is just for optimization. Setting stencil_range = I_TWO should work correctly for all interpolations.
+      stencil_range = I_ZERO
+      if (P_1 /= 0. .or. P1 /= 0.) stencil_range = I_ONE
+      if (P_2 /= 0. .or. P2 /= 0.) stencil_range = I_TWO
+
+      if (all_cg%q_lst(iv)%ord_prolong /= O_INJ) then
+         !> \todo some variables may need special care on external boundaries
+         call arr3d_boundaries(this, iv, bnd_type = BND_REF, corners = .true.) ! nb =  int(stencil_range, kind=4) ! not needed for injection
       endif
 
       nr = 0
@@ -385,10 +746,11 @@ contains
       cgl => fine%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (allocated(cg%c_tgt%seg)) then
-            do g = lbound(cg%c_tgt%seg(:), dim=1), ubound(cg%c_tgt%seg(:), dim=1)
+         if (allocated(cg%pi_tgt%seg)) then
+            do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
                nr = nr + I_ONE
-               call MPI_Irecv(cg%c_tgt%seg(g)%buf(1, 1, 1), size(cg%c_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%c_tgt%seg(g)%proc, cg%c_tgt%seg(g)%tag, comm, req(nr), mpi_err)
+               if (nr > size(req, dim=1)) call die("[cg_list_level:prolong_q_1var] size(req) too small for Irecv")
+               call MPI_Irecv(cg%pi_tgt%seg(g)%buf(1, 1, 1), size(cg%pi_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%pi_tgt%seg(g)%proc, cg%pi_tgt%seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
          cgl => cgl%nxt
@@ -398,53 +760,164 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
-         do g = lbound(cg%f_tgt%seg(:), dim=1), ubound(cg%f_tgt%seg(:), dim=1)
+         do g = lbound(cg%po_tgt%seg(:), dim=1), ubound(cg%po_tgt%seg(:), dim=1)
 
-            cse => cg%f_tgt%seg(g)%se
+            cse(:, LO) = cg%po_tgt%seg(g)%se(:,LO) - cg%off(:) + cg%ijkse(:, LO)
+            cse(:, HI) = cg%po_tgt%seg(g)%se(:,HI) - cg%off(:) + cg%ijkse(:, LO)
 
             nr = nr + I_ONE
-!            cg%f_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%span(cse)
-            cg%f_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
-            call MPI_Isend(cg%f_tgt%seg(g)%buf(1, 1, 1), size(cg%f_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%f_tgt%seg(g)%proc, cg%f_tgt%seg(g)%tag, comm, req(nr), mpi_err)
-
+            if (nr > size(req, dim=1)) call die("[cg_list_level:prolong_q_1var] size(req) too small for Isend")
+!            cg%po_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%span(cse)
+            cg%po_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+            call MPI_Isend(cg%po_tgt%seg(g)%buf(1, 1, 1), size(cg%po_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%po_tgt%seg(g)%proc, cg%po_tgt%seg(g)%tag, comm, req(nr), mpi_err)
          enddo
          cgl => cgl%nxt
       enddo
 
       if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), mpi_err)
 
-      ! interpolate received coarse data to the right place
+      ! merge received coarse data into one array and interpolate it into the right place
       cgl => fine%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (allocated(cg%c_tgt%seg)) then
+         if (allocated(cg%pi_tgt%seg)) then
 
             cg%q(iv)%arr(:,:,:) = 0. ! disables check_dirty
+            cg%prolong_(:,:,:) = 0
 
-            do g = lbound(cg%c_tgt%seg(:), dim=1), ubound(cg%c_tgt%seg(:), dim=1)
-               fse => cg%c_tgt%seg(g)%se
-               if (associated(this%first)) then
-                  off1(:) = mod(cg%off(:)+fse(:, LO) - this%first%cg%ijkse(:, LO), 2_LONG)          !!!      this%first%cg%ijkse ???
-               else
-                  off1(:) = mod(cg%off(:)+fse(:, LO) - 1, 2_LONG) !!!
-               endif
-               do k = fse(zdim, LO), fse(zdim, HI)
-                  kc = (k-fse(zdim, LO)+off1(zdim))/2 + 1
-                  do j = fse(ydim, LO), fse(ydim, HI)
-                     jc = (j-fse(ydim, LO)+off1(ydim))/2 + 1
-                     do i = fse(xdim, LO), fse(xdim, HI)
-                        ic = (i-fse(xdim, LO)+off1(xdim))/2 + 1
-                        cg%q(iv)%arr(i, j, k) = cg%c_tgt%seg(g)%buf(ic, jc, kc)
-                     enddo
-                  enddo
-               enddo
+            do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
+               fse(:,:) = cg%pi_tgt%seg(g)%se(:,:)
+
+               off(:) = fse(:,LO) + (refinement_factor*bias - cg%off(:))/refinement_factor - bias +cg%ijkse(:,LO) + mod(cg%off(:), int(refinement_factor, kind=8))
+               cg%prolong_(off(xdim):off(xdim)+ubound(cg%pi_tgt%seg(g)%buf, dim=1)-1, &
+                    &      off(ydim):off(ydim)+ubound(cg%pi_tgt%seg(g)%buf, dim=2)-1, &
+                    &      off(zdim):off(zdim)+ubound(cg%pi_tgt%seg(g)%buf, dim=3)-1) = cg%pi_tgt%seg(g)%buf(:,:,:)
+
             enddo
 
+            iec = cg%is + (cg%ie - cg%is - 1)/refinement_factor + dom%D_x
+            jec = cg%js + (cg%je - cg%js - 1)/refinement_factor + dom%D_y
+            kec = cg%ks + (cg%ke - cg%ks - 1)/refinement_factor + dom%D_z
+
+            !! almost all occurences of number "2" are in fact connected to refinement_factor
+
+            ! When the grid offset is odd, the coarse data is shifted by half coarse cell (or one fine cell)
+            odd(:) = int(mod(cg%off(:), int(refinement_factor, kind=8)), kind=4)
+
+            ! When the grid offset is odd we need to apply mirrored prolongation stencil (swap even and odd stencils)
+            where (dom%has_dir(:))
+               D(:) = 1 - 2 * odd(:)
+            elsewhere
+               D(:) = 0
+            endwhere
+
+            ! Perform directional-split interpolation
+            select case (stencil_range*dom%D_x) ! stencil_range or I_ZERO if .not. dom%has_dir(xdim)
+               case (I_ZERO)
+                  cg%prolong_x(           cg%is          :cg%ie+dom%D_x:2,       cg%js:jec, cg%ks:kec) = &
+                       &      cg%prolong_(cg%is          :iec,                   cg%js:jec, cg%ks:kec)
+                  if (dom%has_dir(xdim)) &
+                       cg%prolong_x(      cg%is+dom%D_x  :cg%ie        :2,       cg%js:jec, cg%ks:kec) = &
+                       &      cg%prolong_(cg%is+odd(xdim):iec-dom%D_x+odd(xdim), cg%js:jec, cg%ks:kec)
+               case (I_ONE)
+                  cg%prolong_x(           cg%is                  :cg%ie+dom%D_x:2,               cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z) = &
+                       + P1 * cg%prolong_(cg%is-D(xdim)          :iec-D(xdim),                   cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z)   &
+                       + P0 * cg%prolong_(cg%is                  :iec,                           cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z)   &
+                       + P_1* cg%prolong_(cg%is+D(xdim)          :iec+D(xdim),                   cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z)
+                  cg%prolong_x(           cg%is+dom%D_x          :cg%ie        :2,               cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z) = &
+                       + P_1* cg%prolong_(cg%is+odd(xdim)-D(xdim):iec-dom%D_x+odd(xdim)-D(xdim), cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z)   &
+                       + P0 * cg%prolong_(cg%is+odd(xdim)        :iec-dom%D_x+odd(xdim),         cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z)   &
+                       + P1 * cg%prolong_(cg%is+odd(xdim)+D(xdim):iec-dom%D_x+odd(xdim)+D(xdim), cg%js-dom%D_y:jec+dom%D_y, cg%ks-dom%D_z:kec+dom%D_z)
+               case (I_TWO)
+                  cg%prolong_x(           cg%is                    :cg%ie+dom%D_x:2,                 cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z) = &
+                       + P2 * cg%prolong_(cg%is-2*D(xdim)          :iec-2*D(xdim),                   cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P1 * cg%prolong_(cg%is-  D(xdim)          :iec-  D(xdim),                   cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P0 * cg%prolong_(cg%is                    :iec,                             cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P_1* cg%prolong_(cg%is+  D(xdim)          :iec+  D(xdim),                   cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P_2* cg%prolong_(cg%is+2*D(xdim)          :iec+2*D(xdim),                   cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)
+                  cg%prolong_x(           cg%is+dom%D_x            :cg%ie:2,                         cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z) = &
+                       + P_2* cg%prolong_(cg%is+odd(xdim)-2*D(xdim):iec-dom%D_x+odd(xdim)-2*D(xdim), cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P_1* cg%prolong_(cg%is+odd(xdim)-  D(xdim):iec-dom%D_x+odd(xdim)-  D(xdim), cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P0 * cg%prolong_(cg%is+odd(xdim)          :iec-dom%D_x+odd(xdim),           cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P1 * cg%prolong_(cg%is+odd(xdim)+  D(xdim):iec-dom%D_x+odd(xdim)+  D(xdim), cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P2 * cg%prolong_(cg%is+odd(xdim)+2*D(xdim):iec-dom%D_x+odd(xdim)+2*D(xdim), cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)
+               case default
+                  call die("[cg_list_level:prolong_q_1var] unsupported stencil size")
+            end select
+
+            select case (stencil_range*dom%D_y)
+               case (I_ZERO)
+                  cg%prolong_xy(           cg%is:cg%ie, cg%js          :cg%je+dom%D_y:2,       cg%ks:kec) = &
+                       &      cg%prolong_x(cg%is:cg%ie, cg%js          :jec,                   cg%ks:kec)
+                  if (dom%has_dir(ydim)) &
+                       cg%prolong_xy(      cg%is:cg%ie, cg%js+dom%D_y  :cg%je        :2,       cg%ks:kec) = &
+                       &      cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim):jec-dom%D_y+odd(ydim), cg%ks:kec)
+               case (I_ONE)
+                  cg%prolong_xy(           cg%is:cg%ie, cg%js                  :cg%je+dom%D_y:2,               cg%ks-dom%D_z:kec+dom%D_z) = &
+                       + P1 * cg%prolong_x(cg%is:cg%ie, cg%js-D(ydim)          :jec-D(ydim),                   cg%ks-dom%D_z:kec+dom%D_z)   &
+                       + P0 * cg%prolong_x(cg%is:cg%ie, cg%js                  :jec,                           cg%ks-dom%D_z:kec+dom%D_z)   &
+                       + P_1* cg%prolong_x(cg%is:cg%ie, cg%js+D(ydim)          :jec+D(ydim),                   cg%ks-dom%D_z:kec+dom%D_z)
+                  cg%prolong_xy(           cg%is:cg%ie, cg%js+dom%D_y          :cg%je        :2,               cg%ks-dom%D_z:kec+dom%D_z) = &
+                       + P_1* cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)-D(ydim):jec-dom%D_y+odd(ydim)-D(ydim), cg%ks-dom%D_z:kec+dom%D_z)   &
+                       + P0 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)        :jec-dom%D_y+odd(ydim),         cg%ks-dom%D_z:kec+dom%D_z)   &
+                       + P1 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)+D(ydim):jec-dom%D_y+odd(ydim)+D(ydim), cg%ks-dom%D_z:kec+dom%D_z)
+               case (I_TWO)
+                  cg%prolong_xy(           cg%is:cg%ie, cg%js                    :cg%je+dom%D_y:2,                 cg%ks-2*dom%D_z:kec+2*dom%D_z) = &
+                       + P2 * cg%prolong_x(cg%is:cg%ie, cg%js-2*D(ydim)          :jec-2*D(ydim),                   cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P1 * cg%prolong_x(cg%is:cg%ie, cg%js-  D(ydim)          :jec-  D(ydim),                   cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P0 * cg%prolong_x(cg%is:cg%ie, cg%js                    :jec,                             cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P_1* cg%prolong_x(cg%is:cg%ie, cg%js+  D(ydim)          :jec+  D(ydim),                   cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P_2* cg%prolong_x(cg%is:cg%ie, cg%js+2*D(ydim)          :jec+2*D(ydim),                   cg%ks-2*dom%D_z:kec+2*dom%D_z)
+                  cg%prolong_xy(           cg%is:cg%ie, cg%js+dom%D_y            :cg%je        :2,                 cg%ks-2*dom%D_z:kec+2*dom%D_z) = &
+                       + P_2* cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)-2*D(ydim):jec-dom%D_y+odd(ydim)-2*D(ydim), cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P_1* cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)-  D(ydim):jec-dom%D_y+odd(ydim)-  D(ydim), cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P0 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)          :jec-dom%D_y+odd(ydim),           cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P1 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)+  D(ydim):jec-dom%D_y+odd(ydim)+  D(ydim), cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
+                       + P2 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)+2*D(ydim):jec-dom%D_y+odd(ydim)+2*D(ydim), cg%ks-2*dom%D_z:kec+2*dom%D_z)
+               case default
+                  call die("[cg_list_level:prolong_q_1var] unsupported stencil size")
+            end select
+
+            select case (stencil_range*dom%D_z)
+               case (I_ZERO)
+                  cg%q(iv)%arr (            cg%is:cg%ie, cg%js:cg%je, cg%ks          :cg%ke+dom%D_z:2      ) = &
+                       &      cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks          :kec                  )
+                  if (dom%has_dir(zdim)) &
+                       cg%q(iv)%arr (       cg%is:cg%ie, cg%js:cg%je, cg%ks+dom%D_z  :cg%ke        :2      ) = &
+                       &      cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim):kec-dom%D_z+odd(zdim))
+               case (I_ONE)
+                  cg%q(iv)%arr(             cg%is:cg%ie, cg%js:cg%je, cg%ks                  :cg%ke+dom%D_z:2              ) = &
+                       + P1 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks-D(zdim)          :kec-D(zdim)                  )   &
+                       + P0 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks                  :kec                          )   &
+                       + P_1* cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+D(zdim)          :kec+D(zdim)                  )
+                  cg%q(iv)%arr(             cg%is:cg%ie, cg%js:cg%je, cg%ks+dom%D_z          :cg%ke        :2              ) = &
+                       + P_1* cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)-D(zdim):kec-dom%D_z+odd(zdim)-D(zdim))   &
+                       + P0 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)        :kec-dom%D_z+odd(zdim)        )   &
+                       + P1 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)+D(zdim):kec-dom%D_z+odd(zdim)+D(zdim))
+               case (I_TWO)
+                  cg%q(iv)%arr(             cg%is:cg%ie, cg%js:cg%je, cg%ks                    :cg%ke+dom%D_z:2) = &
+                       + P2 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks-2*D(zdim)          :kec-2*D(zdim)  )   &
+                       + P1 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks-  D(zdim)          :kec-  D(zdim)  )   &
+                       + P0 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks                    :kec            )   &
+                       + P_1* cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+  D(zdim)          :kec+  D(zdim)  )   &
+                       + P_2* cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+2*D(zdim)          :kec+2*D(zdim)  )
+                  cg%q(iv)%arr(             cg%is:cg%ie, cg%js:cg%je, cg%ks+dom%D_z            :cg%ke        :2) = &
+                       + P_2* cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)-2*D(zdim):kec-dom%D_z+odd(zdim)-2*D(zdim))   &
+                       + P_1* cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)-  D(zdim):kec-dom%D_z+odd(zdim)-  D(zdim))   &
+                       + P0 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)          :kec-dom%D_z+odd(zdim)          )   &
+                       + P1 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)+  D(zdim):kec-dom%D_z+odd(zdim)+  D(zdim))   &
+                       + P2 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)+2*D(zdim):kec-dom%D_z+odd(zdim)+2*D(zdim))
+               case default
+                  call die("[cg_list_level:prolong_q_1var] unsupported stencil size")
+            end select
+            ! Alternatively, an FFT convolution may be employed after injection. No idea at what stencil size the FFT is faster. It is finite size for sure :-)
          endif
          cgl => cgl%nxt
       enddo
 
-   end subroutine prolong0_q_1var
+!> \todo (connected with todo above)      call check_dirty(fine, iv, "prolong+")
+
+   end subroutine prolong_q_1var
 
 !> \brief Print detailed information about current level decomposition
 
@@ -490,25 +963,53 @@ contains
 
    end subroutine print_segments
 
-!> \brief Initialize newest grid container
+!> \brief Initialize all grid containers on a new grid level
 
-   subroutine init_new_cg(this, gr_id)
+   subroutine init_all_new_cg(this)
 
-      use mpisetup, only: proc
+      use cg_list_global, only: all_cg
+      use grid_cont,      only: grid_container
+      use mpisetup,       only: proc
 
       implicit none
 
       class(cg_list_level), intent(inout) :: this
-      integer,              intent(in)    :: gr_id
 
-      call this%add
-      call this%last%cg%init(this%n_d, this%pse(proc)%sel(gr_id, :, :), gr_id, this%lev) ! we cannot pass "this" as an argument because of circular dependencies
-      call mpi_bnd_types(this, this%last%cg)
-      call this%last%cg%set_q_mbc
+      integer :: gr_id, i
+      type(grid_container), pointer :: cg
 
-!! \todo add an optional argument, array of pointers to lists, where the cg should be added. Requires polymorphic array of pointers.
+      do gr_id = lbound(this%pse(proc)%sel(:,:,:), dim=1), ubound(this%pse(proc)%sel(:,:,:), dim=1)
+         call this%add
+         cg => this%last%cg
 
-   end subroutine init_new_cg
+         !> \todo Integrate the following few calls into grid_container type, note that mpi_bnd_types will require access to whole this%pse(:)%sel(:,:,:)
+         call cg%init(this%n_d, this%pse(proc)%sel(gr_id, :, :), gr_id, this%lev) ! we cannot pass "this" as an argument because of circular dependencies
+         call this%mpi_bnd_types(cg)
+         call cg%set_q_mbc
+         ! register all known named arrays for this cg
+         if (allocated(all_cg%q_lst)) then
+            do i = lbound(all_cg%q_lst, dim=1), ubound(all_cg%q_lst, dim=1)
+               call cg%add_na(all_cg%q_lst(i)%multigrid)
+            enddo
+         endif
+         if (allocated(all_cg%w_lst)) then
+            do i = lbound(all_cg%w_lst, dim=1), ubound(all_cg%w_lst, dim=1)
+               call cg%add_na_4d(all_cg%w_lst(i)%dim4)
+            enddo
+         endif
+
+         call all_cg%add(cg)
+         !> \todo add an optional argument, array of pointers to lists, where the cg should be added. Requires polymorphic array of pointers.
+
+      enddo
+
+!#ifdef VERBOSE
+      call this%print_segments
+!#endif /* VERBOSE */
+
+      call all_cg%update_req
+
+   end subroutine init_all_new_cg
 
 !> \brief Count all cg on current level. Useful for computing tags in vertical_prep
 
