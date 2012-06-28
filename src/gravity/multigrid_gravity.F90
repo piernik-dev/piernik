@@ -901,18 +901,18 @@ contains
 
    subroutine cleanup_multigrid_grav
 
-      use constants,     only: LO, HI, ndims
+!!$      use constants,     only: LO, HI, ndims
       use gc_list,       only: cg_list_element
       use cg_list_lev,   only: cg_list_level
-      use grid_cont,     only: tgt_list
+!!$      use grid_cont,     only: tgt_list
       use multipole,     only: cleanup_multipole
       use multigridvars, only: base
 
       implicit none
 
-      integer :: g, ib
-      integer, parameter :: nseg = 2*(HI-LO+1)*ndims
-      type(tgt_list), dimension(nseg) :: io_tgt
+!!$      integer :: g, ib
+!!$      integer, parameter :: nseg = 2*(HI-LO+1)*ndims
+!!$      type(tgt_list), dimension(nseg) :: io_tgt
       type(cg_list_level), pointer :: curl
       type(cg_list_element), pointer :: cgl
 
@@ -933,16 +933,16 @@ contains
             if (cgl%cg%mg%planf /= 0) call dfftw_destroy_plan(cgl%cg%mg%planf)
             if (cgl%cg%mg%plani /= 0) call dfftw_destroy_plan(cgl%cg%mg%plani)
 
-            io_tgt(1:nseg) = [ cgl%cg%mg%pfc_tgt, cgl%cg%mg%pff_tgt ]
-            do ib = 1, nseg
-               if (allocated(io_tgt(ib)%seg)) then
-                  do g = lbound(io_tgt(ib)%seg, dim=1), ubound(io_tgt(ib)%seg, dim=1)
-                     if (allocated(io_tgt(ib)%seg(g)%buf)) deallocate(io_tgt(ib)%seg(g)%buf)
-                     if (allocated(io_tgt(ib)%seg(g)%f_lay)) deallocate(io_tgt(ib)%seg(g)%f_lay)
-                  enddo
-                  deallocate(io_tgt(ib)%seg)
-               endif
-            enddo
+!!$            io_tgt(1:nseg) = [ cgl%cg%mg%pfc_tgt, cgl%cg%mg%pff_tgt ]
+!!$            do ib = 1, nseg
+!!$               if (allocated(io_tgt(ib)%seg)) then
+!!$                  do g = lbound(io_tgt(ib)%seg, dim=1), ubound(io_tgt(ib)%seg, dim=1)
+!!$                     if (allocated(io_tgt(ib)%seg(g)%buf)) deallocate(io_tgt(ib)%seg(g)%buf)
+!!$                     if (allocated(io_tgt(ib)%seg(g)%f_lay)) deallocate(io_tgt(ib)%seg(g)%f_lay)
+!!$                  enddo
+!!$                  deallocate(io_tgt(ib)%seg)
+!!$               endif
+!!$            enddo
             cgl => cgl%nxt
          enddo
          curl => curl%finer
