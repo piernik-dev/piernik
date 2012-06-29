@@ -56,17 +56,16 @@ contains
 
    subroutine arr3d_boundaries(cglist, ind, nb, area_type, bnd_type, corners)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: ARR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, I_TWO, I_THREE, LO, HI, &
-           &                    BND_PER, BND_MPI, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
-      use dataio_pub,     only: die, msg
-      use domain,         only: dom
-      use gc_list,        only: cg_list, cg_list_element
-      use grid_cont,      only: grid_container
-      use internal_bnd,   only: internal_boundaries_3d
-      use mpi,            only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
-      use mpisetup,       only: mpi_err, comm, req, status
-      use types,          only: cdd
+      use constants,    only: ARR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, I_TWO, I_THREE, LO, HI, &
+           &                  BND_PER, BND_MPI, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
+      use dataio_pub,   only: die, msg
+      use domain,       only: dom
+      use gc_list,      only: cg_list, cg_list_element
+      use grid_cont,    only: grid_container
+      use internal_bnd, only: internal_boundaries_3d
+      use mpi,          only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
+      use mpisetup,     only: mpi_err, comm, req, status
+      use types,        only: cdd
 
       implicit none
 
@@ -114,8 +113,6 @@ contains
 
       endif
 
-      if (ind > ubound(all_cg%q_lst(:), dim=1) .or. ind < lbound(all_cg%q_lst(:), dim=1)) call die("[internal_bnd:arr3d_boundaries] wrong 3d index")
-
       cgl => cglist%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -128,6 +125,7 @@ contains
 
          req(:) = MPI_REQUEST_NULL
 
+         if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[internal_bnd:arr3d_boundaries] wrong 3d index")
          pa3d =>cg%q(ind)%arr
 
          do d = xdim, zdim
@@ -158,13 +156,13 @@ contains
                            endif
                         endif
                      case (BND_SHE) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
-                        write(msg,*) "[grid:arr3d_boundaries] 'she' not implemented for ",all_cg%q_lst(ind)%name
+                        write(msg,*) "[grid:arr3d_boundaries] 'she' not implemented"
                         dodie = .true.
                      case (BND_COR)
                         if (present(area_type)) then
                            if (area_type /= AT_NO_B) cycle
                         endif
-                        write(msg,*) "[grid:arr3d_boundaries] 'cor' not implemented for ", all_cg%q_lst(ind)%name
+                        write(msg,*) "[grid:arr3d_boundaries] 'cor' not implemented"
                         dodie = .true.
                      case default ! Set gradient == 0 on the external boundaries
                         if (present(area_type)) then

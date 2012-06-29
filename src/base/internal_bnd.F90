@@ -98,15 +98,14 @@ contains
 
    subroutine internal_boundaries(cglist, ind, tgt3d, nb, dim)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: xdim, zdim, I_ONE, I_TWO
-      use dataio_pub,     only: die, warn
-      use domain,         only: dom
-      use gc_list,        only: cg_list_element, cg_list
-      use grid_cont,      only: grid_container
-      use mpi,            only: MPI_COMM_NULL
-      use mpisetup,       only: comm, mpi_err, req, status
-      use types,          only: cdd
+      use constants,  only: xdim, zdim, I_ONE, I_TWO
+      use dataio_pub, only: die, warn
+      use domain,     only: dom
+      use gc_list,    only: cg_list_element, cg_list
+      use grid_cont,  only: grid_container
+      use mpi,        only: MPI_COMM_NULL
+      use mpisetup,   only: comm, mpi_err, req, status
+      use types,      only: cdd
 
       implicit none
 
@@ -144,11 +143,6 @@ contains
       endif
 
       nr = 0
-      if (tgt3d) then
-         if (ind > ubound(all_cg%q_lst(:), dim=1) .or. ind < lbound(all_cg%q_lst(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 3d index")
-      else
-         if (ind > ubound(all_cg%w_lst(:), dim=1) .or. ind < lbound(all_cg%w_lst(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 4d index")
-      endif
       cgl => cglist%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -171,10 +165,12 @@ contains
                      if (nr+I_TWO >  ubound(req(:), dim=1)) call die("[grid_container:internal_boundaries] size(req) too small")
 
                      if (tgt3d) then
+                        if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 3d index")
                         pa3d => cg%q(ind)%arr
                         call MPI_Irecv(pa3d, I_ONE, cg%q_i_mbc(d, n)%mbc(g), cg%i_bnd(d, n)%seg(g)%proc, cg%i_bnd(d, n)%seg(g)%tag, comm, req(nr+I_ONE), mpi_err)
                         call MPI_Isend(pa3d, I_ONE, cg%q_o_mbc(d, n)%mbc(g), cg%o_bnd(d, n)%seg(g)%proc, cg%o_bnd(d, n)%seg(g)%tag, comm, req(nr+I_TWO), mpi_err)
                      else
+                        if (ind > ubound(cg%w(:), dim=1) .or. ind < lbound(cg%w(:), dim=1)) call die("[internal_bnd:internal_boundaries] wrong 4d index")
                         pa4d => cg%w(ind)%arr
                         call MPI_Irecv(pa4d, I_ONE, cg%w(ind)%w_i_mbc(d, n)%mbc(g), cg%i_bnd(d, n)%seg(g)%proc, cg%i_bnd(d, n)%seg(g)%tag, comm, req(nr+I_TWO), mpi_err)
                         call MPI_Isend(pa4d, I_ONE, cg%w(ind)%w_o_mbc(d, n)%mbc(g), cg%o_bnd(d, n)%seg(g)%proc, cg%o_bnd(d, n)%seg(g)%tag, comm, req(nr+I_ONE), mpi_err)
