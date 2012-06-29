@@ -55,22 +55,6 @@ module fluidboundaries_funcs
 contains
 
 !--------------------------------------------------------------------------------------------------
-   subroutine default_bnd(dir,side,cg)
-
-      use grid_cont,  only: grid_container
-      use dataio_pub, only: die
-
-      implicit none
-
-      integer(kind=4),               intent(in)    :: dir, side
-      type(grid_container), pointer, intent(inout) :: cg
-
-      call die("User boundaries are not defined")
-
-      if (.true. .or. cg%grid_id*dir*side >=0) return ! suppress compiler warnings
-
-   end subroutine default_bnd
-!--------------------------------------------------------------------------------------------------
    subroutine init_default_fluidboundaries
 
       use constants,  only: PIERNIK_INIT_MPI
