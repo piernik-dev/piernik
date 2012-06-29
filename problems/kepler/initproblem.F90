@@ -628,7 +628,7 @@ contains
       use dataio_pub,      only: die!, warn, msg
       use domain,          only: is_multicg
       use gc_list,         only: cg_list_element
-      use global,          only: dt, t, relax_time, smalld !, grace_period_passed
+      use global,          only: dt, relax_time, smalld !, t, grace_period_passed
       use grid,            only: leaves
       use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries

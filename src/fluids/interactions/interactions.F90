@@ -166,10 +166,13 @@ contains
 
    subroutine interactions_grace_passed
 
-      use constants,     only: DST
-      use dataio_pub,    only: warn, printinfo, die, msg
-      use fluidindex,    only: flind
-      use mpisetup,      only: master
+      use constants,  only: DST
+      use dataio_pub, only: warn, printinfo, die
+#ifndef BALSARA
+      use dataio_pub, only: msg
+#endif /* !BALSARA */
+      use fluidindex, only: flind
+      use mpisetup,   only: master
 
       implicit none
 
