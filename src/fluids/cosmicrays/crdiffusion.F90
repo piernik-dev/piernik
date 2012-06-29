@@ -48,7 +48,7 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: wcr_n
-      use cr_data,        only: divv_n
+      use crhelpers,      only: divv_n
       use dataio_pub,     only: warn
 
       implicit none

@@ -31,19 +31,13 @@
 !<
 module cr_data
 
-! pulled by COSM_RAYS
-
-   use constants, only: dsetnamelen
+! pulled by COSM_RAYS_SOURCES
 
    implicit none
 
    public               ! QA_WARN no secrets are kept here
 
-   ! names of auxiliary arrays
-   character(len=dsetnamelen), parameter :: divv_n = "divvel" !< divergence of velocity
-
    !! Composition
-
    ! Isotope list
    enum, bind(C)
       enumerator :: icr_H1 = 1

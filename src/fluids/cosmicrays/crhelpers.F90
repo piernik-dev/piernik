@@ -29,17 +29,19 @@
 
 module crhelpers
 ! pulled by COSM_RAYS
+   use constants, only: dsetnamelen
    implicit none
 
    private
-   public :: div_v, set_div_v1d
+   public :: div_v, set_div_v1d, divv_n
+
+   character(len=dsetnamelen), parameter :: divv_n = "divvel" !< divergence of velocity
 
 contains
 
    subroutine set_div_v1d(p, dir, i1, i2, cg)
 
       use cg_list_global, only: all_cg
-      use cr_data,        only: divv_n
       use dataio_pub,     only: die
       use grid_cont,      only: grid_container
 
@@ -65,7 +67,6 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: xdim, ydim, zdim, half
-      use cr_data,        only: divv_n
       use dataio_pub,     only: die
       use domain,         only: dom
       use fluidindex,     only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
