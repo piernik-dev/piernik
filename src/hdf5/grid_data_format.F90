@@ -90,7 +90,7 @@ contains
       character(len=uniqid_len), pointer :: p_str
       integer(kind=4) :: ndims
 
-      ndims = size(n_d)
+      ndims = size(n_d, kind=4)
 
       call h5gcreate_f(file_id, 'simulation_parameters', g_id, error)
 
