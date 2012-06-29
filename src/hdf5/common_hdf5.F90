@@ -594,10 +594,11 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
-      use dataio_pub,     only: die, nproc_io, can_i_write
+      use dataio_pub,     only: die, nproc_io, can_i_write, domain_dump
       use domain,         only: dom
       use gc_list,        only: cg_list_element
       use gdf,            only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets
+      use global,         only: t
       use grid,           only: leaves
       use hdf5,           only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
            &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
@@ -676,7 +677,7 @@ contains
 
          if (otype == O_OUT) then
             call gdf_create_format_stamp(file_id)
-            call gdf_create_simulation_parameters(file_id)
+            call gdf_create_simulation_parameters(file_id, t, dom%n_d, dom%nb, dom%edge, domain_dump)
          endif
          call h5gcreate_f(file_id, data_gname, cgl_g_id, error)                                 ! create "/data"
 

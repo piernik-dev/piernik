@@ -68,25 +68,29 @@ contains
       call create_dataset(file, 'grid_particle_count', cg_all_particles)
    end subroutine gdf_create_root_datasets
 
-   subroutine gdf_create_simulation_parameters(file_id)
+   subroutine gdf_create_simulation_parameters(file_id, t, n_d, nb, edge, domain_dump)
 
-      use global,       only: t
-      use domain,       only: dom
-      use dataio_pub,   only: domain_dump
-      use constants,    only: ndims, LO, HI, INT4
       use hdf5,         only: HID_T, h5gcreate_f, h5gclose_f
       use helpers_hdf5, only: create_attribute
 
       implicit none
 
       integer(HID_T), intent(in) :: file_id
+      real, intent(in)              :: t    !< time in physical units
+      integer(kind=4), dimension(:) :: n_d  !< number of grid cells in physical domain in x-, y- and z-direction
+      integer(kind=4)               :: nb   !< number of boundary cells surrounding the physical domain, same for all directions
+      real, dimension(:, :)         :: edge !< physical domain boundary positions
+      character(len=*), intent(in)  :: domain_dump
 
       integer(HID_T) :: g_id
-      integer(kind=4)                :: error
+      integer(kind=4) :: error
       integer(kind=8), dimension(:), pointer :: ibuf
       integer, parameter :: uniqid_len = 12
       character(len=uniqid_len), target :: uniq_id = "ala123"
       character(len=uniqid_len), pointer :: p_str
+      integer(kind=4) :: ndims
+
+      ndims = size(n_d)
 
       call h5gcreate_f(file_id, 'simulation_parameters', g_id, error)
 
@@ -104,7 +108,7 @@ contains
          case ('phys_domain')
             ibuf = int(0,8)
          case ('full_domain')
-            ibuf = int(dom%nb,8)
+            ibuf = int(nb,8)
       end select
       call create_attribute(g_id, 'num_ghost_zones', ibuf)
       deallocate(ibuf)
@@ -112,17 +116,17 @@ contains
       allocate(ibuf(ndims))
       select case (trim(domain_dump))
          case ('phys_domain')
-            ibuf = dom%n_d            !???
+            ibuf = n_d            !???
          case ('full_domain')
-            ibuf = dom%n_d + 2*dom%nb !???
+            ibuf = n_d + 2*nb !???
       end select
       call create_attribute(g_id, 'domain_dimensions', ibuf)
       deallocate(ibuf)
 
-      call create_attribute(g_id, 'domain_left_edge', dom%edge(:,LO))
-      call create_attribute(g_id, 'domain_right_edge', dom%edge(:,HI))
+      call create_attribute(g_id, 'domain_left_edge', edge(:, lbound(edge, dim=2)))
+      call create_attribute(g_id, 'domain_right_edge', edge(:, ubound(edge, dim=2)))
       call create_attribute(g_id, 'current_time', [t])
-      call create_attribute(g_id, 'field_ordering', [1_INT4])
+      call create_attribute(g_id, 'field_ordering', [int(1, kind=4)])
       p_str => uniq_id
       call create_attribute(g_id, 'unique_identifier', p_str)
       call create_attribute(g_id, 'boundary_conditions', int([0,0,0,0,0,0], kind=4))

@@ -38,6 +38,10 @@ module helpers_hdf5
    private
    public :: create_attribute, create_dataset
 
+   enum, bind(C)
+      enumerator :: I_ONE = 1, I_TWO
+   end enum
+
 !> \brief Add an attribute (1D array) to the given _id and initialize its value
    interface create_attribute
       module procedure create_int_attribute
@@ -58,7 +62,6 @@ contains
 !
    subroutine create_dataset_int4_dim2(place, dname, ddata)
 
-      use constants,     only: I_TWO
       use iso_c_binding, only: c_ptr, c_loc
       use hdf5,          only: HID_T, HSIZE_T, H5T_STD_I32LE, &
           &                    h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5dwrite_f, &
@@ -90,7 +93,6 @@ contains
 !
    subroutine create_dataset_int8_dim2(place, dname, ddata)
 
-      use constants,     only: I_TWO
       use iso_c_binding, only: c_ptr, c_loc
       use hdf5,          only: HID_T, HSIZE_T, H5T_STD_I64LE, &
           &                    h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5dwrite_f, &
@@ -122,7 +124,6 @@ contains
 !
    subroutine create_dataset_int8_dim1(place, dname, ddata)
 
-      use constants,     only: I_ONE
       use iso_c_binding, only: c_ptr, c_loc
       use hdf5,          only: HID_T, HSIZE_T, H5T_STD_I64LE, &
           &                    h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5dwrite_f, &
@@ -154,7 +155,6 @@ contains
 !
    subroutine create_int_attribute(g_id, name, int_array)
 
-     use constants, only: I_ONE
      use hdf5,      only: H5T_NATIVE_INTEGER, HID_T, HSIZE_T, &
           &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
 
@@ -180,7 +180,6 @@ contains
    subroutine create_int8_attribute(g_id, name, int_array)
 
       use iso_c_binding, only: c_ptr, c_loc
-      use constants, only: I_ONE
       use hdf5,      only: HID_T, HSIZE_T, h5kind_to_type, H5_INTEGER_KIND, H5T_STD_I64LE, &
           &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
 
@@ -210,7 +209,6 @@ contains
 !
    subroutine create_real_attribute(g_id, name, real_array)
 
-     use constants, only: I_ONE
      use hdf5,      only: H5T_NATIVE_DOUBLE, HID_T, HSIZE_T, &
           &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
 
@@ -236,7 +234,6 @@ contains
    subroutine create_str_attribute(g_id, name, data)
 
       use iso_c_binding, only: c_loc, c_ptr
-      use constants, only: I_ONE
       use hdf5,      only: HID_T, HSIZE_T, SIZE_T, &
            &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f, &
            &               H5Tcopy_f, H5T_C_S1, H5Tset_size_f, H5T_FORTRAN_S1, H5Tset_size_f, H5tclose_f
