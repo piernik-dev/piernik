@@ -45,6 +45,7 @@ program piernik
    use timestep,       only: time_step
    use user_hooks,     only: finalize_problem
 #ifdef PERFMON
+   use domain,         only: dom
    use timer,          only: timer_start, timer_stop
 #endif /* PERFMON */
 
@@ -160,7 +161,7 @@ program piernik
    if (associated(finalize_problem)) call finalize_problem
 
 #ifdef PERFMON
-   call timer_stop
+   call timer_stop(dom%total_ncells)
 #endif /* PERFMON */
    call write_data(output=FINAL)
 !---------------------------- END OF MAIN LOOP ----------------------------------

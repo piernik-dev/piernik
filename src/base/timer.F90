@@ -279,16 +279,16 @@ contains
 !! \details Final wall clock time, expressed in hours, minutes, and seconds.
 !!          cpu usage, expressed in hours, minutes, and seconds.
 !<
-   subroutine timer_stop
+   subroutine timer_stop(total_ncells)
 
       use constants,  only: I_ONE, half
       use dataio_pub, only: msg, printinfo
-      use domain,     only: dom
       use global,     only: nstep
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,   only: comm, mpi_err, master, FIRST
 
       implicit none
+      integer(kind=8), intent(in) :: total_ncells !< total number of %grid cells
 
       real(kind=4)       :: dtime
 
@@ -318,7 +318,7 @@ contains
 
       if (master) then
 
-         zcps  = real(nstep) * real(dom%total_ncells) / cpuallp
+         zcps  = real(nstep) * real(total_ncells) / cpuallp
 
          call printinfo("", .true.)
          write(msg, "('CPU time        = ', f12.2,' s')") cpuallp
