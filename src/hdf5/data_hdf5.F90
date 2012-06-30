@@ -478,7 +478,7 @@ contains
       use common_hdf5, only: nhdf_vars, hdf_vars
       use constants,   only: ndims
       use domain,      only: is_multicg !, is_uneven
-      use grid,        only: top_lev
+      use grid,        only: finest
       use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, &
@@ -516,8 +516,8 @@ contains
       call h5fopen_f(trim(fname), H5F_ACC_RDWR_F, file_id, error, access_prp = plist_idf)
       call h5pclose_f(plist_idf, error)
 
-      !! \todo check if top_lev is complete, if not then find finest complete level
-      dimsf  = top_lev%n_d(:)    ! Dataset dimensions
+      !! \todo check if finest is complete, if not then find finest complete level
+      dimsf  = finest%n_d(:)    ! Dataset dimensions
       !
       ! Create the data space for the  dataset.
       !
@@ -541,7 +541,7 @@ contains
          if (.not. is_multicg) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
 
          !! \todo if there are fine levels restrict the data first and write warning that v2 should be used instead
-         cgl => top_lev%first
+         cgl => finest%first
          do while (associated(cgl))
             cg => cgl%cg
 

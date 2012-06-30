@@ -41,12 +41,11 @@ module multigridvars
 ! pulled by MULTIGRID
 
    use constants,   only: dsetnamelen
-   use cg_list_lev, only: cg_list_level
 
    implicit none
 
    public ! QA_WARN no secrets are kept here
-   private :: dsetnamelen, cg_list_level ! QA_WARN prevent re-exporting
+   private :: dsetnamelen ! QA_WARN prevent re-exporting
 
    ! these 4 variables are required for basic use of the multigrid solver
    character(len=dsetnamelen), parameter :: source_n     = "source"     !< density field
@@ -83,9 +82,6 @@ module multigridvars
        procedure :: init
        procedure :: brief_v_log
    end type vcycle_stats
-
-   type(cg_list_level), pointer                           :: base     !< pointer to coarsest level
-   type(cg_list_level), pointer                           :: roof     !< pointer to finest level
 
 contains
 

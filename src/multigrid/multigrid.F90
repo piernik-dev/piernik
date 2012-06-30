@@ -81,12 +81,12 @@ contains
       use decomposition,       only: divide_domain!, deallocate_pse
       use domain,              only: dom, is_uneven
       use gc_list,             only: cg_list_element
-      use grid,                only: base_lev
+      use grid,                only: base_lev, finest, coarsest
       use grid_cont,           only: grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_COMM_NULL
       use mpisetup,            only: comm, mpi_err, master, slave, nproc, FIRST, buffer_dim, ibuff, lbuff
       use multigridhelpers,    only: dirtyH, do_ascii_dump, dirty_debug, set_dirty
-      use multigridvars,       only: roof, base, single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, &
+      use multigridvars,       only: single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, &
            &                         ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
       use types,               only: cdd
 #ifdef GRAV
@@ -198,12 +198,10 @@ contains
          level_max = j
       endif
 
-      roof => base_lev
-
-      curl => roof
+      curl => finest
       do while (associated(curl))
 
-         base => curl
+         coarsest => curl
 
          if (curl%lev <= -level_max) exit
 
@@ -240,7 +238,7 @@ contains
       enddo
 
       is_mg_uneven = is_uneven
-      curl => roof
+      curl => finest
       do while (associated(curl))
 
          cgl => curl%first
@@ -253,7 +251,7 @@ contains
                call die(msg)
             endif
 
-            if (any(cg%n_b(:) * refinement_factor**(roof%lev - curl%lev) /= roof%first%cg%n_b(:) .and. dom%has_dir(:)) .and. (.not. associated(curl, base) .or. .not. single_base)) is_mg_uneven = .true.
+            if (any(cg%n_b(:) * refinement_factor**(finest%lev - curl%lev) /= finest%first%cg%n_b(:) .and. dom%has_dir(:)) .and. (.not. associated(curl, coarsest) .or. .not. single_base)) is_mg_uneven = .true.
 
             ! data storage
             if ( allocated(cg%mg%bnd_x) .or. allocated(cg%mg%bnd_y) .or. allocated(cg%mg%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
@@ -306,7 +304,7 @@ contains
 
       ! summary
       if (master) then
-         write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", roof%lev - base%lev, " coarse levels, coarse level resolution [ ", base%n_d(:)," ]"
+         write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", finest%lev - coarsest%lev, " coarse levels, coarse level resolution [ ", coarsest%n_d(:)," ]"
          call printinfo(msg)
       endif
 
@@ -319,10 +317,10 @@ contains
       use constants,           only: I_ONE
       use dataio_pub,          only: msg, printinfo
       use cg_list_lev,         only: cg_list_level
-      use grid,                only: base_lev
+      use grid,                only: base_lev, coarsest
       use mpi,                 only: MPI_DOUBLE_PRECISION
       use mpisetup,            only: master, nproc, FIRST, LAST, comm, mpi_err
-      use multigridvars,       only: base, tot_ts
+      use multigridvars,       only: tot_ts
 #ifdef GRAV
       use multigrid_gravity,   only: cleanup_multigrid_grav
 #endif /* GRAV */
@@ -344,7 +342,7 @@ contains
 #endif /* COSM_RAYS */
 
       !! \todo move this loop to grid::cleanup_grid
-      curl => base
+      curl => coarsest
       do while (associated(curl) .and. .not. associated(curl, base_lev))
          call curl%delete
          curl => curl%finer
@@ -371,7 +369,12 @@ contains
 
    end subroutine cleanup_multigrid
 
-!> \brief Put the whole base level on the master CPU (\todo try a random or the last one)
+!>
+!! \brief Put the whole coarsest level on the master CPU
+!!
+!! \todo try a random or the last one
+!! \deprecated this routine should belong to decomposition module
+!<
 
    subroutine base_on_single(tmpl)
 

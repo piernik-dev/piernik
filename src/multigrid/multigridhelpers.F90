@@ -145,9 +145,10 @@ contains
       use constants,     only: xdim, ydim, zdim
       use dataio_pub,    only: msg, printio
       use gc_list,       only: cg_list_element
+      use grid,          only: coarsest
       use cg_list_lev,   only: cg_list_level
       use mpisetup,      only: master
-      use multigridvars, only: source, solution, defect, correction, base
+      use multigridvars, only: source, solution, defect, correction
 
       implicit none
 
@@ -163,7 +164,7 @@ contains
       open(fu, file=filename, status="unknown")
 
       write(fu, '("#",a3,2a4,a6,10a20,/)')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)", "source", "solution", "defect", "correction" !, "bx", "by", "bz"
-      curl => base
+      curl => coarsest
       do while (associated(curl))
          cgl => curl%first
          do while (associated(cgl))

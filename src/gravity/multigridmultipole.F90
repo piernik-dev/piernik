@@ -56,7 +56,7 @@ module multipole
    integer(kind=4)           :: lmax                             !< Maximum l-order of multipole moments
    integer(kind=4)           :: mmax                             !< Maximum m-order of multipole moments. Equal to lmax by default.
    integer(kind=4)           :: ord_prolong_mpole                !< boundary prolongation operator order; allowed values are -2 .. 2
-   integer(kind=4)           :: coarsen_multipole                !< If > 0 then evaluate multipoles at roof%lev-coarsen_multipole level
+   integer(kind=4)           :: coarsen_multipole                !< If > 0 then evaluate multipoles at finest%lev-coarsen_multipole level
    logical                   :: use_point_monopole               !< Don't evaluate multipole moments, use point-like mass approximation (crudest possible)
    logical                   :: interp_pt2mom                    !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
    logical                   :: interp_mom2pot                   !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
@@ -116,9 +116,8 @@ contains
       use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI
       use dataio_pub,    only: die, warn
       use domain,        only: dom
-      use grid,          only: base_lev
+      use grid,          only: base_lev, finest
       use mpisetup,      only: master
-      use multigridvars, only: roof
 
       implicit none
 
@@ -162,7 +161,7 @@ contains
       endif
       if (mmax < 0) mmax = lmax
 
-      lmpole => roof
+      lmpole => finest
       do l = 1, coarsen_multipole
          if (associated(lmpole%coarser)) then
             lmpole => lmpole%coarser
@@ -262,9 +261,10 @@ contains
 
    subroutine multipole_solver
 
-      use cg_list_lev,        only: cg_list_level
-      use multigridvars,      only: roof, solution
-      use multigridhelpers,   only: dirtyH, dirty_debug, zero_boundaries
+      use cg_list_lev,      only: cg_list_level
+      use grid,             only: finest
+      use multigridvars,    only: solution
+      use multigridhelpers, only: dirtyH, dirty_debug, zero_boundaries
 
       implicit none
 
@@ -278,12 +278,12 @@ contains
          call zero_boundaries(lmpole)
       endif
 
-      if (.not. associated(lmpole, roof)) then
-         curl => roof
-         do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = roof%lev, lmpole%first%cg%lev + 1, -1
+      if (.not. associated(lmpole, finest)) then
+         curl => finest
+         do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = finest%lev, lmpole%first%cg%lev + 1, -1
             call curl%restrict_q_1var(solution)  ! Overkill, only some layers next to external boundary are needed.
             curl => curl%coarser
-         enddo                                ! An alternative: do potential2img_mass on the roof and restrict bnd_[xyz] data.
+         enddo                                ! An alternative: do potential2img_mass on the finest and restrict bnd_[xyz] data.
       endif
       call potential2img_mass
 
@@ -297,9 +297,9 @@ contains
          call moments2bnd_potential
       endif
 
-      if (.not. associated(lmpole, roof)) then
+      if (.not. associated(lmpole, finest)) then
          curl => lmpole
-         do while (associated(curl) .and. .not. associated(curl, roof)) ! do lev = lmpole%first%cg%lev, roof%lev - 1
+         do while (associated(curl) .and. .not. associated(curl, finest)) ! do lev = lmpole%first%cg%lev, finest%lev - 1
             call prolong_ext_bnd(curl)
             curl => curl%finer
          enddo

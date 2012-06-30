@@ -78,12 +78,12 @@ module multigrid_gravity
    real               :: L4_strength                                  !< strength of the 4th order terms in the Laplace operator; 0.: 2nd, 1.: 4th direct, 0.5: 4th integral
    integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
    integer(kind=4)    :: nsmool                                       !< smoothing cycles per call
-   integer(kind=4)    :: nsmoob                                       !< smoothing cycles on base level when cannot use FFT. (a convergence check would be much better)
+   integer(kind=4)    :: nsmoob                                       !< smoothing cycles on coarsest level when cannot use FFT. (a convergence check would be much better)
    integer(kind=4)    :: nsmoof                                       !< FFT iterations per call
    integer(kind=4)    :: ord_laplacian                                !< Laplace operator order; allowed values are 2 (default) and 4 (experimental, not fully implemented)
    integer(kind=4)    :: ord_time_extrap                              !< Order of temporal extrapolation for solution recycling; -1 means 0-guess, 2 does parabolic interpolation
    logical            :: trust_fft_solution                           !< Bypass the V-cycle, when doing FFT on whole domain, make sure first that FFT is properly set up.
-   logical            :: base_no_fft                                  !< Deny solving the base level with FFT. Can be very slow.
+   logical            :: base_no_fft                                  !< Deny solving the coarsest level with FFT. Can be very slow.
    logical            :: prefer_rbgs_relaxation                       !< Prefer relaxation over FFT local solver. Typically faster.
    !> \todo allow to perform one or more V-cycles with FFT method, the switch to the RBGS (may save one V-cycle in some cases)
    logical            :: fft_full_relax                               !< Perform full or boundary relaxation after local FFT solve
@@ -368,7 +368,7 @@ contains
       ! something is a bit messed up here
       if (cdd%comm3d /= MPI_COMM_NULL .and. .not. base_no_fft) then
          base_no_fft = .true.
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav] cdd%comm3d disables use of FFT at base level")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav] cdd%comm3d disables use of FFT at coarsest level")
       endif
 
       single_base = .not. base_no_fft
@@ -409,11 +409,11 @@ contains
       use domain,         only: dom
       use gc_list,        only: cg_list_element
       use cg_list_lev,    only: cg_list_level
-      use grid,           only: leaves
+      use grid,           only: leaves, finest, coarsest
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_COMM_NULL
       use mpisetup,       only: master, nproc
-      use multigridvars,  only: roof, base, is_mg_uneven, need_general_pf, single_base
+      use multigridvars,  only: is_mg_uneven, need_general_pf, single_base
       use multipole,      only: init_multipole, coarsen_multipole
       use types,          only: cdd
 
@@ -442,7 +442,7 @@ contains
 
       call leaves%set_q_value(all_cg%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
 
-      curl => base
+      curl => coarsest
       do while (associated(curl))
          ! this should work correctly also when dom%eff_dim < 3
          cgl => curl%first
@@ -481,22 +481,22 @@ contains
 
       ! data related to local and global base-level FFT solver
       if (base_no_fft) then
-         base%fft_type = fft_none
+         coarsest%fft_type = fft_none
       else
          select case (grav_bnd)
          case (bnd_periodic)
-            base%fft_type = fft_rcr
+            coarsest%fft_type = fft_rcr
          case (bnd_dirichlet, bnd_isolated)
-            base%fft_type = fft_dst
+            coarsest%fft_type = fft_dst
          case default
-            base%fft_type = fft_none
+            coarsest%fft_type = fft_none
             if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] base_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
          end select
       endif
 
       !special initialization of global base-level FFT-related data
       if (dom%geometry_type /= GEO_XYZ) then
-         curl => base
+         curl => coarsest
          do while (associated(curl))
             if (curl%fft_type /= fft_none) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
             curl => curl%finer
@@ -506,7 +506,7 @@ contains
       require_FFT = .false.
 
       ! FFT solver storage and data
-      curl => base
+      curl => coarsest
       do while (associated(curl))
 
          cgl => curl%first
@@ -609,8 +609,8 @@ contains
 
       if (require_FFT) call mpi_multigrid_prep_grav !supplement to mpi_multigrid_prep
 
-      if (roof%fft_type == fft_none .and. trust_fft_solution) then
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] cannot trust FFT solution on the roof.")
+      if (finest%fft_type == fft_none .and. trust_fft_solution) then
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] cannot trust FFT solution on the finest level.")
          trust_fft_solution = .false.
       endif
 
@@ -666,9 +666,10 @@ contains
       use domain,        only: dom
       use cg_list_lev,   only: cg_list_level
       use gc_list,       only: cg_list_element
+      use grid,          only: coarsest
       use grid_cont,     only: pr_segment, grid_container, is_overlap
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req
-      use multigridvars, only: base, ord_prolong_face_norm, need_general_pf
+      use multigridvars, only: ord_prolong_face_norm, need_general_pf
 #ifdef DEBUG
       use constants,     only: two
       use piernikdebug,  only: aux_R
@@ -721,7 +722,7 @@ contains
             call die("mg:mmpg opfn_c_[cf]f(:)")
       end select
 
-      curl => base
+      curl => coarsest
       do while (associated(curl))
 
          if (ubound(curl%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid_gravity:mpi_multigrid_prep_grav] Multiple blocks per process not implemented yet")
@@ -894,11 +895,11 @@ contains
    subroutine cleanup_multigrid_grav
 
 !!$      use constants,     only: LO, HI, ndims
-      use gc_list,       only: cg_list_element
-      use cg_list_lev,   only: cg_list_level
-!!$      use grid_cont,     only: tgt_list
-      use multipole,     only: cleanup_multipole
-      use multigridvars, only: base
+      use gc_list,     only: cg_list_element
+      use grid,        only: coarsest
+      use cg_list_lev, only: cg_list_level
+!!$      use grid_cont,   only: tgt_list
+      use multipole,   only: cleanup_multipole
 
       implicit none
 
@@ -913,7 +914,7 @@ contains
       if (allocated(vstat%factor)) deallocate(vstat%factor)
       if (allocated(vstat%time)) deallocate(vstat%time)
 
-      curl => base
+      curl => coarsest
       do while (associated(curl))
          cgl => curl%first
          do while (associated(cgl))
@@ -965,9 +966,9 @@ contains
       use dataio_pub,       only: msg, die, printinfo
       use gc_list,          only: ind_val
       use global,           only: t
-      use grid,             only: leaves
+      use grid,             only: leaves, finest
       use mpisetup,         only: master
-      use multigridvars,    only: roof, stdout, solution
+      use multigridvars,    only: stdout, solution
       use multigridhelpers, only: set_dirty, check_dirty
 
       implicit none
@@ -1038,7 +1039,7 @@ contains
             call die("[multigrid_gravity:init_solution] Extrapolation order not implemented")
       end select
 
-      call check_dirty(roof, solution, "init_soln")
+      call check_dirty(finest, solution, "init_soln")
 
    end subroutine init_solution
 
@@ -1059,10 +1060,10 @@ contains
       use dataio_pub,         only: die
       use domain,             only: dom
       use gc_list,            only: cg_list_element
-      use grid,               only: leaves
+      use grid,               only: leaves, finest
       use grid_cont,          only: grid_container
       use multigridhelpers,   only: set_dirty, check_dirty
-      use multigridvars,      only: roof, source
+      use multigridvars,      only: source
       use units,              only: fpiG
 #ifdef JEANS_PROBLEM
       use problem_pub,        only: jeans_d0, jeans_mode ! hack for tests
@@ -1162,7 +1163,7 @@ contains
             call die("[multigrid_gravity:init_source] Unknown boundary type")
       end select
 
-      call check_dirty(roof, source, "init_src")
+      call check_dirty(finest, source, "init_src")
 
    end subroutine init_source
 
@@ -1180,8 +1181,8 @@ contains
       use domain,        only: dom
       use external_bnd,  only: arr3d_boundaries
       use global,        only: t
-      use grid,          only: leaves
-      use multigridvars, only: roof, solution
+      use grid,          only: leaves, finest
+      use multigridvars, only: solution
 
       implicit none
 
@@ -1202,9 +1203,9 @@ contains
       ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
       ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
       if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
-         call arr3d_boundaries(roof, solution, nb = dom%nb, bnd_type = BND_XTRAP)
+         call arr3d_boundaries(finest, solution, nb = dom%nb, bnd_type = BND_XTRAP)
       else
-         call arr3d_boundaries(roof, solution, nb = dom%nb, bnd_type = BND_REF)
+         call arr3d_boundaries(finest, solution, nb = dom%nb, bnd_type = BND_REF)
       endif
 
    end subroutine store_solution
@@ -1280,10 +1281,10 @@ contains
       use cg_list_lev,        only: cg_list_level
       use constants,          only: cbuff_len, fft_none
       use dataio_pub,         only: msg, die, warn, printinfo
-      use grid,               only: leaves
+      use grid,               only: leaves, finest, coarsest
       use mpisetup,           only: master, nproc
       use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump
-      use multigridvars,      only: roof, base, source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts
+      use multigridvars,      only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts
       use timer,              only: set_timer
 
       implicit none
@@ -1306,7 +1307,7 @@ contains
       do_ascii_dump = do_ascii_dump .or. dump_every_step .or. dump_result
 
       ! On single CPU use FFT if possible because it is faster. Can be disabled by prefer_rbgs_relaxation = .true.
-      if (nproc == 1 .and. roof%fft_type /= fft_none) then
+      if (nproc == 1 .and. finest%fft_type /= fft_none) then
          call set_dirty(solution)
          call fft_solve_roof
          if (trust_fft_solution) then
@@ -1333,7 +1334,7 @@ contains
          norm_was_zero = .false.
       endif
 
-!      if (.not. history%valid .and. prefer_rbgs_relaxation) call approximate_solution(roof, source, solution) ! not necessary when init_solution called FFT
+!      if (.not. history%valid .and. prefer_rbgs_relaxation) call approximate_solution(finest, source, solution) ! not necessary when init_solution called FFT
 ! difficult statement: for approximate_solution_fft it requires to pass a flag to use guardcells instead of prolonging faces.
 ! how much does it improve? (make a benchmark at some point)
 
@@ -1341,9 +1342,9 @@ contains
       do v = 0, max_cycles
 
          call set_dirty(defect)
-         call residual(roof, source, solution, defect) !leaves
+         call residual(finest, source, solution, defect) !leaves
          if (grav_bnd == bnd_periodic) call leaves%subtract_average(defect)
-         call check_dirty(roof, defect, "residual") !leaves
+         call check_dirty(finest, defect, "residual") !leaves
 
          norm_lhs = leaves%norm_sq(defect)
          ts = set_timer("multigrid")
@@ -1395,12 +1396,12 @@ contains
          norm_old = norm_lhs
 
          ! the Huang-Greengard V-cycle
-         call roof%restrict_to_floor_q_1var(defect)
+         call finest%restrict_to_floor_q_1var(defect)
 
          ! call set_dirty(correction)
-         call base%set_q_value(correction, 0.)
+         call coarsest%set_q_value(correction, 0.)
 
-         curl => base
+         curl => coarsest
          do while (associated(curl))
             call approximate_solution(curl, defect, correction)
             call check_dirty(curl, correction, "Vup relax+")
@@ -1418,7 +1419,7 @@ contains
       vstat%norm_final = norm_lhs/norm_rhs
       if (.not. verbose_vcycle) call vstat%brief_v_log
 
-      call check_dirty(roof, solution, "final_solution")
+      call check_dirty(finest, solution, "final_solution")
 
       call store_solution(history)
 
@@ -1682,8 +1683,9 @@ contains
 
       use cg_list_lev,      only: cg_list_level
       use constants,        only: fft_none
+      use grid,             only: finest
       use multigridhelpers, only: check_dirty
-      use multigridvars,    only: roof, correction
+      use multigridvars,    only: correction
 
       implicit none
 
@@ -1700,7 +1702,7 @@ contains
          call approximate_solution_rbgs(curl, src, soln)
       endif
 
-      if (prefer_rbgs_relaxation .and. soln == correction .and. .not. associated(curl, roof)) call curl%prolong_q_1var(correction)
+      if (prefer_rbgs_relaxation .and. soln == correction .and. .not. associated(curl, finest)) call curl%prolong_q_1var(correction)
       !> \deprecated BEWARE other implementations of the multigrid algorithm may be incompatible with prolongation called from here
 
       call check_dirty(curl, soln, "approx_soln soln+")
@@ -1713,7 +1715,7 @@ contains
 !!
 !! \details This is the most costly routine in a serial run. Try to find optimal values for nsmool and nsmoob.
 !! This routine also depends a lot on communication so it  may limit scalability of the multigrid.
-!! \todo Implement convergence check on base level (not very important since we have a FFT solver for base level)
+!! \todo Implement convergence check on coarsest level (not very important since we have a FFT solver for coarsest level)
 !<
 
    subroutine approximate_solution_rbgs(curl, src, soln)
@@ -1724,8 +1726,8 @@ contains
       use domain,           only: dom
       use external_bnd,     only: arr3d_boundaries
       use gc_list,          only: cg_list_element
+      use grid,             only: coarsest
       use grid_cont,        only: grid_container
-      use multigridvars,    only: base
       use multigridhelpers, only: dirty_debug, check_dirty, dirty_label
 
       implicit none
@@ -1742,7 +1744,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (associated(curl, base)) then
+      if (associated(curl, coarsest)) then
          nsmoo = nsmoob
       else
          nsmoo = nsmool
@@ -1886,10 +1888,11 @@ contains
       use domain,           only: dom
       use external_bnd,     only: arr3d_boundaries
       use gc_list,          only: cg_list_element
+      use grid,             only: coarsest
       use grid_cont,        only: grid_container
       use multigridhelpers, only: dirty_debug, check_dirty, dirtyL
       use multigridmpifuncs, only: mpi_multigrid_bnd
-      use multigridvars,    only: base, single_base
+      use multigridvars,    only: single_base
       use named_array,      only: p3
 
       implicit none
@@ -1917,7 +1920,7 @@ contains
          enddo
 
          if (curl%fft_type == fft_dst) then !correct boundaries on non-periodic local domain
-            if (nf == 1 .and. .not. associated(curl, base)) then
+            if (nf == 1 .and. .not. associated(curl, coarsest)) then
                call make_face_boundaries(curl, soln)
             else
                call mpi_multigrid_bnd(curl, soln, I_ONE, BND_NEGREF)
@@ -1979,7 +1982,7 @@ contains
 
          !> \deprecated BEWARE use dom%has_dir() here in a way that does not degrade performance
 
-         if (associated(curl, base) .and. single_base) then !> do not relax if it is a whole domain (BEWARE: simplified check)
+         if (associated(curl, coarsest) .and. single_base) then !> do not relax if it is a whole domain (BEWARE: simplified check)
             nsmoo = 0
          else
             nsmoo = nsmool
@@ -2051,19 +2054,20 @@ contains
 
       use cg_list_lev,      only: cg_list_level
       use dataio_pub,       only: warn
+      use grid,             only: coarsest
       use mpisetup,         only: nproc
       use multigridhelpers, only: zero_boundaries
-      use multigridvars,    only: base, single_base
+      use multigridvars,    only: single_base
 
       implicit none
 
       type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
-      if (grav_bnd == bnd_periodic .and. (nproc == 1 .or. (associated(curl, base) .and. single_base) ) ) then
+      if (grav_bnd == bnd_periodic .and. (nproc == 1 .or. (associated(curl, coarsest) .and. single_base) ) ) then
          call zero_boundaries(curl)
       else
-         if (.not. associated(curl, base)) then
+         if (.not. associated(curl, coarsest)) then
             call prolong_faces(curl, soln)
          else
             if (grav_bnd /= bnd_givenval) call zero_boundaries(curl)
@@ -2073,30 +2077,29 @@ contains
 
    end subroutine make_face_boundaries
 
-!>
-!! \brief Solve finest level if allowed (single cg and single thread)
-!<
+!> \brief Solve finest level if allowed (single cg and single thread)
 
    subroutine fft_solve_roof
 
       use constants,     only: fft_none
       use dataio_pub,    only: die
+      use grid,          only: finest
       use grid_cont,     only: grid_container
-      use multigridvars, only: roof, source, solution
+      use multigridvars, only: source, solution
       use named_array,   only: p3
 
       implicit none
 
       type(grid_container), pointer :: cg
 
-      if (associated(roof%first%nxt)) call die("[multigrid_gravity:fft_solve_roof] multicg not possible")
+      if (associated(finest%first%nxt)) call die("[multigrid_gravity:fft_solve_roof] multicg not possible")
 
-      if (roof%fft_type == fft_none) return
+      if (finest%fft_type == fft_none) return
 
-      cg => roof%first%cg
+      cg => finest%first%cg
       p3 => cg%q(source)%span(cg%ijkse)
       cg%mg%src(:, :, :) = p3
-      call fft_convolve(roof)
+      call fft_convolve(finest)
       p3 => cg%q(solution)%span(cg%ijkse)
       p3 = cg%mg%src(:, :, :)
 
@@ -2165,11 +2168,12 @@ contains
       use dataio_pub,       only: die, warn
       use domain,           only: dom, is_multicg
       use external_bnd,     only: arr3d_boundaries
+      use grid,             only: coarsest
       use grid_cont,        only: pr_segment
       use mpi,              only: MPI_DOUBLE_PRECISION
       use mpisetup,         only: comm, mpi_err, req, status, master
       use multigridhelpers, only: check_dirty
-      use multigridvars,    only: ord_prolong_face_norm, ord_prolong_face_par, base, need_general_pf
+      use multigridvars,    only: ord_prolong_face_norm, ord_prolong_face_par, need_general_pf
 
       implicit none
 
@@ -2217,21 +2221,21 @@ contains
       ! for ord_prolong_face_par = -2 it is ~2.5 (convergence in 8 cycles instead of 10 cycles)
       ! for ord_prolong_face_par =  1 it is ~3.6 (worst convergence, 11 -> 9 cycles)
 
-      if (associated(fine, base)) then
-         call warn("[multigridbasefuncs:prolong_faces] Cannot prolong anything to base level")
+      if (associated(fine, coarsest)) then
+         call warn("[multigrid_gravity:prolong_faces] Cannot prolong anything to coarsest level")
          return
       endif
-      if (is_multicg) call die("[multigridbasefuncs:prolong_faces] multicg not implemented") ! fine%first%cg%
+      if (is_multicg) call die("[multigrid_gravity:prolong_faces] multicg not implemented") ! fine%first%cg%
 
-      if (.not. associated(fine)) call die("[multigridbasefuncs:prolong_faces] fine == null()")
+      if (.not. associated(fine)) call die("[multigrid_gravity:prolong_faces] fine == null()")
       coarse => fine%coarser
-      if (.not. associated(coarse)) call die("[multigridbasefuncs:prolong_faces] coarse == null()")
+      if (.not. associated(coarse)) call die("[multigrid_gravity:prolong_faces] coarse == null()")
 
       if (need_general_pf) then
 
          if (ord_prolong_face_par /= O_INJ) then
             ord_prolong_face_par = O_INJ
-            if (master) call warn("[multigridbasefuncs:prolong_faces] only injection is supported for the current domain decomposition type.")
+            if (master) call warn("[multigrid_gravity:prolong_faces] only injection is supported for the current domain decomposition type.")
             ! The tests made with comm3d suggests that paralel interpolation only degrades convergence rate.
             ! Implement ord_prolong_face_par /= O_INJ if and only if it improves the coupling between fine and coarse solutions
          endif
@@ -2340,7 +2344,7 @@ contains
             case (O_D2)
                p(:) = p2d(:)
             case default
-               call die("[multigridbasefuncs:prolong_faces] invalid ord_prolong_face_par")
+               call die("[multigrid_gravity:prolong_faces] invalid ord_prolong_face_par")
          end select
 
          do i = -s_rng, s_rng

@@ -150,7 +150,7 @@ module grid_cont
       integer(kind=8), dimension(ndims) :: h_cor1                !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:)
       integer(kind=4), dimension(ndims) :: n_                    !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
       integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
-                                                                 !! my_se(:,LO) = 0; my_se(:,HI) = top_lev%n_d(:) -1 would cover entire domain on the most refined level
+                                                                 !! my_se(:,LO) = 0; my_se(:,HI) = finest%n_d(:) -1 would cover entire domain on the most refined level
 
       ! Physical size and coordinates
 

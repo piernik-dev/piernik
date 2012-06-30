@@ -56,7 +56,7 @@ module multigrid_diffusion
    real               :: overrelax                                    !< overrealaxation factor (if < 1. then works as underrelaxation), use with care
    integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
    integer(kind=4)    :: nsmool                                       !< smoothing cycles per call
-   integer(kind=4)    :: nsmoob                                       !< smoothing cycles on base level;  \todo implement a convergence check
+   integer(kind=4)    :: nsmoob                                       !< smoothing cycles on coarsest level;  \todo implement a convergence check
    real               :: diff_theta                                   !< 0. is explicit, 1. is fully implicit 0.5 is Crank-Nicholson
    real,    protected :: diff_tstep_fac                               !< How much we stretch timestep. Note that for diff_theta == 0. this should not be > 1.
    logical, protected :: diff_explicit                                !< If .true. then do not use multigrid for diffusion
@@ -351,9 +351,9 @@ contains
 #endif /* __INTEL_COMPILER */
       use dataio_pub,       only: die
       use gc_list,          only: ind_val
-      use grid,             only: leaves
+      use grid,             only: leaves, finest
       use initcosmicrays,   only: iarr_crs
-      use multigridvars,    only: roof, source, defect, correction
+      use multigridvars,    only: source, defect, correction
       use multigridhelpers, only: set_dirty, check_dirty, dirty_label
 
       implicit none
@@ -368,12 +368,12 @@ contains
          call leaves%wq_copy(all_cg%fi, int(iarr_crs(cr_id)), all_cg%wai)
          call leaves%q_lin_comb( [ ind_val(all_cg%wai, (1. -1./diff_theta)) ], correction)
          call leaves%q_lin_comb( [ ind_val(all_cg%wai,     -1./diff_theta ) ], defect)
-         call residual(roof, defect, correction, source, cr_id)
+         call residual(finest, defect, correction, source, cr_id)
       else
          call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
       endif
       write(dirty_label, '(a,i2)')"init source#", cr_id
-      call check_dirty(roof, source, dirty_label)
+      call check_dirty(finest, source, dirty_label)
 
       vstat%norm_rhs = leaves%norm_sq(source)
 
@@ -390,9 +390,9 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use grid,             only: leaves
+      use grid,             only: leaves, finest
       use initcosmicrays,   only: iarr_crs
-      use multigridvars,    only: roof, solution
+      use multigridvars,    only: solution
       use multigridhelpers, only: set_dirty, check_dirty
 
       implicit none
@@ -401,7 +401,7 @@ contains
 
       call set_dirty(solution)
       call leaves%wq_copy(all_cg%fi, int(iarr_crs(cr_id)), solution)
-      call check_dirty(roof, solution, "init solution")
+      call check_dirty(finest, solution, "init solution")
 
    end subroutine init_solution
 
@@ -419,11 +419,10 @@ contains
       use constants,        only: I_ONE, xdim, zdim, HI, LO, BND_REF
       use domain,           only: dom
       use external_bnd,     only: arr3d_boundaries
-      use grid,             only: leaves
+      use grid,             only: leaves, coarsest, finest
       use gc_list,          only: cg_list_element
       use grid_cont,        only: grid_container
       use multigridhelpers, only: set_dirty, check_dirty, dirty_label
-      use multigridvars,    only: base, roof
       use named_array,      only: p3, p4
 
       implicit none
@@ -448,10 +447,10 @@ contains
          ! This works well but copies all guardcells, which is not necessary
          call leaves%wq_copy(all_cg%bi, ib, idiffb(ib))
 #endif
-         call roof%restrict_to_floor_q_1var(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
+         call finest%restrict_to_floor_q_1var(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
 
-         curl => base
-         do while (associated(curl%finer)) ! from base to one level below roof
+         curl => coarsest
+         do while (associated(curl%finer)) ! from coarsest to one level below finest
             call arr3d_boundaries(curl, idiffb(ib), nb = I_ONE, bnd_type = BND_REF, corners = .true.) !> \todo use global boundary type for B
             !>
             !! |deprecated BEWARE b is set on a staggered grid; corners should be properly set here (now they are not)
@@ -476,11 +475,11 @@ contains
       use cg_list_lev,      only: cg_list_level
       use dataio_pub,       only: msg, warn
       use gc_list,          only: ind_val
-      use grid,             only: leaves
+      use grid,             only: leaves, coarsest, finest
       use initcosmicrays,   only: iarr_crs
       use mpisetup,         only: master
       use multigridhelpers, only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, dirty_label
-      use multigridvars,    only: source, defect, solution, correction, base, roof, ts, tot_ts
+      use multigridvars,    only: source, defect, solution, correction, ts, tot_ts
       use timer,            only: set_timer
 
       implicit none
@@ -508,7 +507,7 @@ contains
 
          call set_dirty(defect)
 
-         call residual(roof, source, solution, defect, cr_id)
+         call residual(finest, source, solution, defect, cr_id)
          norm_lhs = leaves%norm_sq(defect)
          ts = set_timer("multigrid_diffusion")
          tot_ts = tot_ts + ts
@@ -537,27 +536,27 @@ contains
             endif
          endif
 
-         call roof%restrict_to_floor_q_1var(defect)
+         call finest%restrict_to_floor_q_1var(defect)
 
          !call set_dirty(correction)
-         call base%set_q_value(correction, 0.)
+         call coarsest%set_q_value(correction, 0.)
 
-         curl => base
+         curl => coarsest
          do while (associated(curl))
             call approximate_solution(curl, defect, correction, cr_id)
-            if (.not. associated(curl, roof)) call curl%prolong_q_1var(correction)
+            if (.not. associated(curl, finest)) call curl%prolong_q_1var(correction)
             curl => curl%finer
          enddo
 
-         call check_dirty(roof, correction, "c_residual")
-         call check_dirty(roof, defect, "d_residual")
+         call check_dirty(finest, correction, "c_residual")
+         call check_dirty(finest, defect, "d_residual")
          call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(correction, -1.) ], solution) ! solution := solution - correction
 
       enddo
 
       if (dump_every_step) call numbered_ascii_dump(dirty_label)
 
-      call check_dirty(roof, solution, "v_soln")
+      call check_dirty(finest, solution, "v_soln")
 
       if (v > max_cycles) then
          if (master .and. norm_lhs/norm_rhs > norm_tol) then
@@ -573,7 +572,7 @@ contains
       norm_rhs = leaves%norm_sq(solution)
       norm_lhs = leaves%norm_sq(defect)
 !     Do we need to take care of boundaries here?
-!      call arr3d_boundaries(roof, solution, nb = I_ONE, bnd_type = diff_extbnd)
+!      call arr3d_boundaries(finest, solution, nb = I_ONE, bnd_type = diff_extbnd)
 !      cg%u%span(iarr_crs(cr_id),cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_) = cg%q(solution)%span(cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_)
 
       call leaves%qw_copy(solution, all_cg%fi, int(iarr_crs(cr_id)))
@@ -719,7 +718,7 @@ contains
 !! \brief Relaxation.
 !!
 !! \details This is the most costly routine in a serial run. Try to find optimal values for nsmool.
-!! It seems that for this particular scheme nsmoob can be set even to 1 when the base level is coarsened enough.
+!! It seems that for this particular scheme nsmoob can be set even to 1 when the coarsest level is coarsened enough.
 !! This routine also depends a lot on communication so it  may limit scalability of the multigrid.
 !<
 
@@ -732,8 +731,8 @@ contains
       use external_bnd,   only: arr3d_boundaries
       use gc_list,        only: cg_list_element
       use global,         only: dt
+      use grid,           only: coarsest
       use grid_cont,      only: grid_container
-      use multigridvars,  only: base
 
       implicit none
 
@@ -751,7 +750,7 @@ contains
       type(grid_container), pointer   :: cg
       type(cg_list_element), pointer  :: cgl
 
-      if (associated(curl, base)) then
+      if (associated(curl, coarsest)) then
          nsmoo = nsmoob
       else
          nsmoo = nsmool

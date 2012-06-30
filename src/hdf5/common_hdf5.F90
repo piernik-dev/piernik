@@ -360,7 +360,7 @@ contains
       use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
       use domain,      only: dom
       use global,      only: magic_mass, t, dt, nstep
-      use grid,        only: top_lev
+      use grid,        only: finest
       use hdf5,        only: HID_T, SIZE_T
       use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
 
@@ -400,8 +400,8 @@ contains
       ibuffer(2)   = nres                    ; ibuffer_name(2)   = "nres" !rr2
       ibuffer(3)   = nhdf                    ; ibuffer_name(3)   = "nhdf" !rr2
       ibuffer(4)   = nimg                    ; ibuffer_name(4)   = "nimg" !rr2
-      !! \todo check if top_lev is complete, if not then find finest complete level (see data_hdf5::h5_write_to_single_file_v1)
-      ibuffer(5:7) = int(top_lev%n_d(:), kind=4) ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
+      !! \todo check if finest is complete, if not then find finest complete level (see data_hdf5::h5_write_to_single_file_v1)
+      ibuffer(5:7) = int(finest%n_d(:), kind=4) ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
       ibuffer(8)   = dom%nb                  ; ibuffer_name(8)   = "nb"
       ibuffer(9)   = require_init_prob       ; ibuffer_name(9)   = "require_init_prob" !rr2
 
