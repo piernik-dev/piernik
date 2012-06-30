@@ -1891,7 +1891,6 @@ contains
       use grid,             only: coarsest
       use grid_cont,        only: grid_container
       use multigridhelpers, only: dirty_debug, check_dirty, dirtyL
-      use multigridmpifuncs, only: mpi_multigrid_bnd
       use multigridvars,    only: single_base
       use named_array,      only: p3
 
@@ -1923,8 +1922,7 @@ contains
             if (nf == 1 .and. .not. associated(curl, coarsest)) then
                call make_face_boundaries(curl, soln)
             else
-               call mpi_multigrid_bnd(curl, soln, I_ONE, BND_NEGREF)
-!               call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NEGREF) ! why it does a deadlock?
+               call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NEGREF)
                cgl => curl%first
                do while (associated(cgl))
                   cg => cgl%cg
