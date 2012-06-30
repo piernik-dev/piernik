@@ -201,7 +201,7 @@ contains
 
    pure function f2c(fine) result (coarse)
 
-      use constants, only: xdim, zdim, LO, HI, refinement_factor
+      use constants, only: xdim, zdim, LO, HI, refinement_factor, LONG
 
       implicit none
 
@@ -211,7 +211,7 @@ contains
 
       integer(kind=8) :: bias !< prevents inconsistiences in arithmetic on integers due to rounding towards 0 (stencil_range should be more than enough)
 
-      bias = max(0, -minval(fine(:,:)))
+      bias = max(0_LONG, -minval(fine(:,:)))
       coarse(:,:) =  (fine(:,:) + bias*refinement_factor) / refinement_factor - bias
 
    end function f2c
