@@ -209,8 +209,9 @@ contains
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarse
 
-      integer, parameter :: bias = 128
+      integer(kind=8) :: bias !< prevents inconsistiences in arithmetic on integers due to rounding towards 0 (stencil_range should be more than enough)
 
+      bias = max(0, -minval(fine(:,:)))
       coarse(:,:) =  (fine(:,:) + bias*refinement_factor) / refinement_factor - bias
 
    end function f2c
@@ -698,7 +699,6 @@ contains
       type(grid_container),  pointer :: cg            !< current grid container
       real :: P_2, P_1, P0, P1, P2
       integer :: stencil_range
-      integer, parameter ::  bias = 128 !< prevents inconsistiences in arithmetic on integers due to rounding towards 0 (stencil_range should be more than enough)
 
       fine => this%finer
       if (.not. associated(fine)) then ! can't prolong finest level
@@ -791,7 +791,7 @@ contains
             do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
                fse(:,:) = cg%pi_tgt%seg(g)%se(:,:)
 
-               off(:) = fse(:,LO) + (refinement_factor*bias - cg%off(:))/refinement_factor - bias +cg%ijkse(:,LO) + mod(cg%off(:), int(refinement_factor, kind=8))
+               off(:) = fse(:,LO) - cg%off(:)/refinement_factor + cg%ijkse(:,LO)
                cg%prolong_(off(xdim):off(xdim)+ubound(cg%pi_tgt%seg(g)%buf, dim=1)-1, &
                     &      off(ydim):off(ydim)+ubound(cg%pi_tgt%seg(g)%buf, dim=2)-1, &
                     &      off(zdim):off(zdim)+ubound(cg%pi_tgt%seg(g)%buf, dim=3)-1) = cg%pi_tgt%seg(g)%buf(:,:,:)
