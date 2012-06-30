@@ -215,6 +215,13 @@ module constants
    integer(kind=8), dimension(ndims), parameter :: base_level_offset = 0_LONG !< Base domain offset. .
    integer(kind=4), parameter :: refinement_factor = 2 !< Resolution difference between consecutive levels. This is deeply hardwired into prolongation, restriction and such routines
 
+   ! type of FFT transform used in multigrid
+   enum, bind(C)
+      enumerator :: fft_rcr  =  1 !< full
+      enumerator :: fft_dst       !< discrete sine
+      enumerator :: fft_none = -1 !< none
+   end enum
+
    ! misc
    enum, bind(C)
       enumerator :: MINL, MAXL                           !< constants for func::get_extremum

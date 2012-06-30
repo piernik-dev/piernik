@@ -53,6 +53,7 @@ module cg_list_lev
       type(cg_list_level), pointer :: coarser  !< coarser level cg set or null()
       type(cg_list_level), pointer :: finer    !< finer level cg set or null()
       integer(kind=4) :: ord_prolong_set       !< Number of boundary cells for prolongation used in last update of cg_list_level%vertical_prep
+      integer :: fft_type                      !< type of FFT to employ in some multigrid solvers (depending on boundaries)
     contains
 
       ! Level management
@@ -94,7 +95,7 @@ contains
 
    subroutine init_lev_base(this, n_d)
 
-      use constants,  only: INVALID, base_level_id
+      use constants,  only: INVALID, base_level_id, fft_none
       use dataio_pub, only: die
       use domain,     only: dom
 
@@ -112,6 +113,7 @@ contains
       this%coarser => null()
       this%finer => null()
       this%ord_prolong_set = INVALID
+      this%fft_type = fft_none
       call this%init
 
    end subroutine init_lev_base
@@ -120,7 +122,7 @@ contains
 
    subroutine init_lev(this, link, coarse)
 
-      use constants,  only: INVALID, I_ONE, refinement_factor
+      use constants,  only: INVALID, I_ONE, refinement_factor, fft_none
       use dataio_pub, only: die, msg
       use domain,     only: dom
       use mpisetup,   only: master
@@ -172,6 +174,7 @@ contains
       !! make sure that vertical_prep will be called where necessary
       this%ord_prolong_set = INVALID
       link%ord_prolong_set = INVALID
+      this%fft_type = fft_none
       call this%init
 
    end subroutine init_lev

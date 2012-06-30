@@ -78,7 +78,6 @@ module grid_cont
 
       ! data for FFT multigrid self-gravity solver
       integer                                :: nxc                   !< first index (complex or real: fft(:,:,:) or fftr(:,:,:)) cell count
-      integer                                :: fft_type              !< type of FFT to employ (depending on boundaries)
       complex, allocatable, dimension(:,:,:) :: fft                   !< a complex array for FFT operations (Fourier space)
       real,    allocatable, dimension(:,:,:) :: fftr                  !< a real array for FFT operations (Fourier space for sine transform)
       real,    allocatable, dimension(:,:,:) :: src                   !< an input array for FFT (real space data)

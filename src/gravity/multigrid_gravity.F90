@@ -67,13 +67,6 @@ module multigrid_gravity
       enumerator :: bnd_invalid = bnd_periodic - 1                    !< invalid
    end enum
 
-   ! multigrid constants
-   enum, bind(C)
-      enumerator :: fft_rcr = 1                                       !< type of FFT transform: full
-      enumerator :: fft_dst                                           !< type of FFT transform: discrete sine
-      enumerator :: fft_none=-1                                       !< type of FFT transform: none
-   end enum
-
    ! namelist parameters
    real               :: norm_tol                                     !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
    real               :: overrelax                                    !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
@@ -411,8 +404,8 @@ contains
    subroutine init_multigrid_grav_post
 
       use cg_list_global, only: all_cg
-      use constants,      only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE
-      use dataio_pub,     only: die, warn
+      use constants,      only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr
+      use dataio_pub,     only: die, warn, printinfo, msg
       use domain,         only: dom
       use gc_list,        only: cg_list_element
       use cg_list_lev,    only: cg_list_level
@@ -469,49 +462,43 @@ contains
             !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
             !! and overrelaxation factors are required to get any convergence (often poor)
             !<
-            if (prefer_rbgs_relaxation) then
-               cg%mg%fft_type = fft_none
-            else if (grav_bnd == bnd_periodic .and. nproc == 1) then
-               cg%mg%fft_type = fft_rcr
-            else if (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) then
-               cg%mg%fft_type = fft_dst
-            else
-               cg%mg%fft_type = fft_none
-            endif
 
             cgl => cgl%nxt
          enddo
+
+         if (prefer_rbgs_relaxation) then
+            curl%fft_type = fft_none
+         else if (grav_bnd == bnd_periodic .and. nproc == 1) then
+            curl%fft_type = fft_rcr
+         else if (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) then
+            curl%fft_type = fft_dst
+         else
+            curl%fft_type = fft_none
+         endif
+
          curl => curl%finer
       enddo
 
       ! data related to local and global base-level FFT solver
-      cgl => base%first
-      do while (associated(cgl))
-         if (base_no_fft) then
-            cgl%cg%mg%fft_type = fft_none
-         else
-            select case (grav_bnd)
-               case (bnd_periodic)
-                  cgl%cg%mg%fft_type = fft_rcr
-               case (bnd_dirichlet, bnd_isolated)
-                  cgl%cg%mg%fft_type = fft_dst
-               case default
-                  cgl%cg%mg%fft_type = fft_none
-                  if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] base_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
-            end select
-         endif
-         cgl => cgl%nxt
-      enddo
+      if (base_no_fft) then
+         base%fft_type = fft_none
+      else
+         select case (grav_bnd)
+         case (bnd_periodic)
+            base%fft_type = fft_rcr
+         case (bnd_dirichlet, bnd_isolated)
+            base%fft_type = fft_dst
+         case default
+            base%fft_type = fft_none
+            if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] base_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
+         end select
+      endif
 
       !special initialization of global base-level FFT-related data
       if (dom%geometry_type /= GEO_XYZ) then
          curl => base
          do while (associated(curl))
-            cgl => curl%first
-            do while (associated(cgl))
-               if (cgl%cg%mg%fft_type /= fft_none) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
-               cgl => cgl%nxt
-            enddo
+            if (curl%fft_type /= fft_none) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
             curl => curl%finer
          enddo
       endif
@@ -528,13 +515,13 @@ contains
             cg%mg%planf = 0
             cg%mg%plani = 0
 
-            if (cg%mg%fft_type /= fft_none) then
+            if (curl%fft_type /= fft_none) then
 
                require_FFT = .true.
 
                if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
 
-               select case (cg%mg%fft_type)
+               select case (curl%fft_type)
                   case (fft_rcr)
                      cg%mg%nxc = cg%nxb / 2 + 1
                   case (fft_dst)
@@ -552,7 +539,7 @@ contains
                if (allocated(kz)) deallocate(kz)
                allocate(kx(cg%mg%nxc), ky(cg%nyb), kz(cg%nzb))
 
-               select case (cg%mg%fft_type)
+               select case (curl%fft_type)
 
                   ! cg%mg%fft_norm is set such that the following sequence gives identity:
                   ! call dfftw_execute(cg%mg%planf); cg%mg%fftr(:, :, :) = cg%mg%fftr(:, :, :) * cg%mg%fft_norm ; call dfftw_execute(cg%mg%plani)
@@ -577,6 +564,9 @@ contains
                      call dfftw_plan_dft_r2c_3d(cg%mg%planf, cg%nxb, cg%nyb, cg%nzb, cg%mg%src, cg%mg%fft, fftw_flags)
                      call dfftw_plan_dft_c2r_3d(cg%mg%plani, cg%nxb, cg%nyb, cg%nzb, cg%mg%fft, cg%mg%src, fftw_flags)
 
+                     write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav_post] Level ",curl%lev,", FFT: RCR"
+                     if (master) call printinfo(msg)
+
                   case (fft_dst)
 
                      if (allocated(cg%mg%fftr)) call die("[multigrid_gravity:init_multigrid_grav_post] fftr array already allocated")
@@ -588,6 +578,9 @@ contains
                      kz(:) = cg%idz2 * (cos(pi/cg%nzb*[( j, j=1, cg%nzb )]) - one)
                      call dfftw_plan_r2r_3d(cg%mg%planf, cg%nxb, cg%nyb, cg%nzb, cg%mg%src,  cg%mg%fftr, FFTW_RODFT10, FFTW_RODFT10, FFTW_RODFT10, fftw_flags)
                      call dfftw_plan_r2r_3d(cg%mg%plani, cg%nxb, cg%nyb, cg%nzb, cg%mg%fftr, cg%mg%src,  FFTW_RODFT01, FFTW_RODFT01, FFTW_RODFT01, fftw_flags)
+
+                     write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav_post] Level ",curl%lev,", FFT: DST"
+                     if (master) call printinfo(msg)
 
                   case default
                      call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
@@ -604,6 +597,9 @@ contains
                   enddo
                enddo
 
+            else
+               write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav_post] Level ",curl%lev,", FFT: none"
+               if (master) call printinfo(msg)
             endif
 
             cgl => cgl%nxt
@@ -613,14 +609,10 @@ contains
 
       if (require_FFT) call mpi_multigrid_prep_grav !supplement to mpi_multigrid_prep
 
-      cgl => roof%first
-      do while (associated(cgl))
-         if (cgl%cg%mg%fft_type == fft_none .and. trust_fft_solution) then
-            if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] cannot trust FFT solution on the roof.")
-            trust_fft_solution = .false.
-         endif
-         cgl => cgl%nxt
-      enddo
+      if (roof%fft_type == fft_none .and. trust_fft_solution) then
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] cannot trust FFT solution on the roof.")
+         trust_fft_solution = .false.
+      endif
 
       if (allocated(kx)) deallocate(kx)
       if (allocated(ky)) deallocate(ky)
@@ -1286,7 +1278,7 @@ contains
    subroutine vcycle_hg(history)
 
       use cg_list_lev,        only: cg_list_level
-      use constants,          only: cbuff_len
+      use constants,          only: cbuff_len, fft_none
       use dataio_pub,         only: msg, die, warn, printinfo
       use grid,               only: leaves
       use mpisetup,           only: master, nproc
@@ -1314,7 +1306,7 @@ contains
       do_ascii_dump = do_ascii_dump .or. dump_every_step .or. dump_result
 
       ! On single CPU use FFT if possible because it is faster. Can be disabled by prefer_rbgs_relaxation = .true.
-      if (nproc == 1 .and. roof%first%cg%mg%fft_type /= fft_none) then
+      if (nproc == 1 .and. roof%fft_type /= fft_none) then
          call set_dirty(solution)
          call fft_solve_roof
          if (trust_fft_solution) then
@@ -1688,9 +1680,10 @@ contains
 
    subroutine approximate_solution(curl, src, soln)
 
-      use cg_list_lev,        only: cg_list_level
-      use multigridhelpers,   only: check_dirty
-      use multigridvars,      only: roof, correction
+      use cg_list_lev,      only: cg_list_level
+      use constants,        only: fft_none
+      use multigridhelpers, only: check_dirty
+      use multigridvars,    only: roof, correction
 
       implicit none
 
@@ -1700,13 +1693,11 @@ contains
 
       call check_dirty(curl, src, "approx_soln src-")
 
-      if (associated(curl%first)) then
-         if (curl%first%cg%mg%fft_type /= fft_none) then
-            call approximate_solution_fft(curl, src, soln)
-         else
-            call check_dirty(curl, soln, "approx_soln soln-")
-            call approximate_solution_rbgs(curl, src, soln)
-         endif
+      if (curl%fft_type /= fft_none) then
+         call approximate_solution_fft(curl, src, soln)
+      else
+         call check_dirty(curl, soln, "approx_soln soln-")
+         call approximate_solution_rbgs(curl, src, soln)
       endif
 
       if (prefer_rbgs_relaxation .and. soln == correction .and. .not. associated(curl, roof)) call curl%prolong_q_1var(correction)
@@ -1890,7 +1881,7 @@ contains
    subroutine approximate_solution_fft(curl, src, soln)
 
       use cg_list_lev,      only: cg_list_level
-      use constants,        only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2, BND_NEGREF
+      use constants,        only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2, BND_NEGREF, fft_none, fft_dst
       use dataio_pub,       only: die, warn
       use domain,           only: dom
       use external_bnd,     only: arr3d_boundaries
@@ -1913,7 +1904,7 @@ contains
       integer, dimension(ndims,LO:HI) :: pdn, D_2
       integer                         :: dir
 
-      if (curl%first%cg%mg%fft_type == fft_none) call die("[multigrid_gravity:approximate_solution_fft] unknown FFT type")
+      if (curl%fft_type == fft_none) call die("[multigrid_gravity:approximate_solution_fft] unknown FFT type")
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:approximate_solution_fft] FFT is not allowed in non-cartesian coordinates.")
 
@@ -1925,7 +1916,7 @@ contains
             cgl => cgl%nxt
          enddo
 
-         if (curl%first%cg%mg%fft_type == fft_dst) then !correct boundaries on non-periodic local domain
+         if (curl%fft_type == fft_dst) then !correct boundaries on non-periodic local domain
             if (nf == 1 .and. .not. associated(curl, base)) then
                call make_face_boundaries(curl, soln)
             else
@@ -2088,8 +2079,8 @@ contains
 
    subroutine fft_solve_roof
 
+      use constants,     only: fft_none
       use dataio_pub,    only: die
-      use domain,        only: is_multicg
       use grid_cont,     only: grid_container
       use multigridvars, only: roof, source, solution
       use named_array,   only: p3
@@ -2098,12 +2089,11 @@ contains
 
       type(grid_container), pointer :: cg
 
-      if (is_multicg) call die("[multigrid_gravity:fft_solve_roof] multicg not possible")
+      if (associated(roof%first%nxt)) call die("[multigrid_gravity:fft_solve_roof] multicg not possible")
+
+      if (roof%fft_type == fft_none) return
 
       cg => roof%first%cg
-
-      if (cg%mg%fft_type == fft_none) return
-
       p3 => cg%q(source)%span(cg%ijkse)
       cg%mg%src(:, :, :) = p3
       call fft_convolve(roof)
@@ -2119,6 +2109,7 @@ contains
 
    subroutine fft_convolve(curl)
 
+      use constants,   only: fft_rcr, fft_dst
       use dataio_pub,  only: die
       use gc_list,     only: cg_list_element
       use cg_list_lev, only: cg_list_level
@@ -2138,7 +2129,7 @@ contains
          ! do the convolution in Fourier space; cg%mg%src(:,:,:) -> cg%mg%fft{r}(:,:,:)
          call dfftw_execute(cg%mg%planf)
 
-         select case (cg%mg%fft_type)
+         select case (curl%fft_type)
             case (fft_rcr)
                cg%mg%fft  = cg%mg%fft  * cg%mg%Green3D
             case (fft_dst)
