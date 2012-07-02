@@ -135,79 +135,16 @@ contains
 
 !!$ ============================================================================
 !>
-!! \brief Emergency routine for quick ASCII dumps
-!!
-!! \details Absolute integer coordinates also allow seamless concatenation of dumps made by all PEs.
-!<
-
-   subroutine ascii_dump(filename)
-
-      use cg_list_global, only: all_cg
-      use constants,      only: xdim, ydim, zdim
-      use dataio_pub,     only: msg, printio
-      use gc_list,        only: cg_list_element
-      use mpisetup,       only: master
-      use multigridvars,  only: source, solution, defect, correction
-
-      implicit none
-
-      character(len=*), intent(in) :: filename !< name to write the emergency dump
-
-      integer, parameter :: fu=30
-      integer, dimension(4) :: qlst
-      integer            :: i, j, k, q
-      type(cg_list_element), pointer :: cgl
-
-      if (.not. do_ascii_dump) return
-
-      qlst = [ source, solution, defect, correction ]
-
-      open(fu, file=filename, status="unknown")
-      write(fu, '("#",a3,2a4,a6,3a20)', advance='no')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)"
-      do q = lbound(qlst, dim=1), ubound(qlst, dim=1)
-         write(fu, '(a20)', advance='no') trim(all_cg%q_lst(qlst(q))%name)
-      enddo
-      write(fu, '(/)')
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         do i = cgl%cg%is, cgl%cg%ie
-            do j = cgl%cg%js, cgl%cg%je
-               do k = cgl%cg%ks, cgl%cg%ke
-                  write(fu, '(3i4,i6,3es20.11e3)', advance='no') i-cgl%cg%is+cgl%cg%off(xdim), j-cgl%cg%js+cgl%cg%off(ydim), k-cgl%cg%ks+cgl%cg%off(zdim), &
-                       &                           cgl%cg%level_id, cgl%cg%x(i), cgl%cg%y(j), cgl%cg%z(k)
-                  do q = lbound(qlst, dim=1), ubound(qlst, dim=1)
-                     write(fu, '(es20.11e3)', advance='no') cgl%cg%q(qlst(q))%arr(i, j, k)
-                  enddo
-                  write(fu, '()')
-               enddo
-               write(fu, '()')
-            enddo
-            write(fu, '()')
-         enddo
-         write(fu, '()')
-         cgl => cgl%nxt
-      enddo
-
-      close(fu)
-
-      if (master) then
-         write(msg,'(3a)') "[multigridhelpers:ascii_dump] Wrote dump '",filename,"'"
-         call printio(msg)
-      endif
-
-   end subroutine ascii_dump
-
-!!$ ============================================================================
-!>
 !! \brief Construct name of emergency ASCII dump
 !<
 
    subroutine numbered_ascii_dump(basename, a)
 
-      use dataio_pub, only: halfstep, msg
-      use global,     only: nstep
-      use mpisetup,   only: proc
+      use cg_list_global, only: all_cg
+      use dataio_pub,     only: halfstep, msg
+      use global,         only: nstep
+      use mpisetup,       only: proc
+      use multigridvars,  only: source, solution, defect, correction
 
       implicit none
 
@@ -229,7 +166,7 @@ contains
       do l = 1, len_trim(msg)
          if (msg(l:l) == " ") msg(l:l) = "_"
       enddo
-      call ascii_dump(trim(msg))
+      call all_cg%ascii_dump(trim(msg), [ source, solution, defect, correction ])
 
    end subroutine numbered_ascii_dump
 

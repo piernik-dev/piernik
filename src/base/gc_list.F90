@@ -72,6 +72,7 @@ module gc_list
       ! Misc
       procedure :: get_extremum                      !< Find munimum or maximum value over a s list
       procedure :: print_list                        !< Print the list and associated cg ID
+      procedure :: ascii_dump                        !< Emergency routine for quick ASCII dumps
 
       ! Arithmetic on the fields
       procedure :: set_q_value                       !< reset given field to the value
@@ -697,6 +698,63 @@ contains
       enddo
 
    end subroutine zero_boundaries
+
+!>
+!! \brief Emergency routine for quick ASCII dumps
+!!
+!! \details Absolute integer coordinates also allow seamless concatenation of dumps made by all PEs.
+!!
+!! \warning This routine is intended only for debugging. It is strongly discouraged to use it for data dumps in production runs.
+!<
+
+   subroutine ascii_dump(this, filename, qlst)
+
+      use constants,      only: LO
+      use dataio_pub,     only: msg, printio
+
+      implicit none
+
+      class(cg_list),        intent(inout) :: this     !< list for which do the dump (usually all_cg)
+      character(len=*),      intent(in)    :: filename !< name to write the emergency dump (should be different on each process)
+      integer, dimension(:), intent(in)    :: qlst     !< list of scalar fields to be printed
+
+      integer, parameter :: fu=30
+      integer            :: i, j, k, q
+      type(cg_list_element), pointer :: cgl
+
+      open(fu, file=filename, status="unknown")
+      write(fu, '("#",a3,2a4,a6,3a20)', advance='no')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)"
+      do q = lbound(qlst(:), dim=1), ubound(qlst(:), dim=1)
+!         write(fu, '(a20)', advance='no') trim(all_cg%q_lst(qlst(q))%name) !> \deprecated temporarily disabled due to cyclic dependencies
+         write(fu, '(i20)', advance='no') q
+      enddo
+      write(fu, '(/)')
+
+      cgl => this%first
+      do while (associated(cgl))
+         do i = cgl%cg%is, cgl%cg%ie
+            do j = cgl%cg%js, cgl%cg%je
+               do k = cgl%cg%ks, cgl%cg%ke
+                  write(fu, '(3i4,i6,3es20.11e3)', advance='no') [ i, j, k ] - cgl%cg%ijkse(:, LO) + cgl%cg%off(:), cgl%cg%level_id, cgl%cg%x(i), cgl%cg%y(j), cgl%cg%z(k)
+                  do q = lbound(qlst(:), dim=1), ubound(qlst(:), dim=1)
+                     write(fu, '(es20.11e3)', advance='no') cgl%cg%q(qlst(q))%arr(i, j, k)
+                  enddo
+                  write(fu, '()')
+               enddo
+               write(fu, '()')
+            enddo
+            write(fu, '()')
+         enddo
+         write(fu, '()')
+         cgl => cgl%nxt
+      enddo
+
+      close(fu)
+
+      write(msg,'(3a)') "[multigridhelpers:ascii_dump] Wrote dump '",filename,"'"
+      call printio(msg)
+
+   end subroutine ascii_dump
 
 ! unused
 !!$!>
