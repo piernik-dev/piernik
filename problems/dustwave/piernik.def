@@ -8,7 +8,6 @@
 #define LOCAL_FR_SPEED
 
 /* physics including */
-#define COLLISIONS
 
 /* gravity type choosing */
 #undef GRAV

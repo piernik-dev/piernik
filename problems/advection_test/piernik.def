@@ -1,4 +1,3 @@
-#define HDF5
 #undef IONIZED
 #undef MAGNETIC
 #define NEUTRAL

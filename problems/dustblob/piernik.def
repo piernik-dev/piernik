@@ -10,7 +10,6 @@
 
 /* physics including */
 #define FLUID_INTERACTIONS
-#define COLLISIONS
 
 /* gravity type choosing */
 #undef GRAV
