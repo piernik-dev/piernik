@@ -151,11 +151,13 @@ contains
       use constants,         only: pi, xdim, ydim, zdim, I_ONE
       use dataio_pub,        only: msg, die, warn, printinfo
       use domain,            only: dom, is_multicg
+      use fluidindex,        only: flind
+      use fluidtypes,        only: component_fluid
+      use func,              only: ekin, emag
+      use gc_list,           only: cg_list_element
       use global,            only: smalld, smallei, t
       use grid,              only: leaves
-      use gc_list,           only: cg_list_element
       use grid_cont,         only: grid_container
-      use initionized,       only: gamma_ion, idni, imxi, imyi, imzi, ieni
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
       use mpisetup,          only: master, comm, mpi_err
       use multigrid_gravity, only: multigrid_solve_grav
@@ -163,22 +165,25 @@ contains
 
       implicit none
 
-      real, parameter           :: virial_tol = 0.01
-      integer, parameter        :: LOW=1, HIGH=LOW+1, TRY=3, NLIM=3
-      integer                   :: i, j, k, tt,tmax, iC, iC_cg, iM, il, ih, jl, jh, kl, kh
-      logical                   :: doneC, doneM
-      real, dimension(LOW:HIGH) :: Cint, totME
-      character(len=HIGH)       :: ind
-      real, dimension(TRY)      :: Cint_try, totME_try
-      character(len=TRY)        :: i_try
-      real                      :: Cint_old, Clim, Clim_old
-      real, dimension(NLIM)     :: Clast
-      integer, parameter        :: cmt_len=9 ! length of the " Exp warp" string
-      character(len=cmt_len)    :: Ccomment
-      real                      :: t_save
-      real                      :: Msph
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      real, parameter                 :: virial_tol = 0.01
+      integer, parameter              :: LOW=1, HIGH=LOW+1, TRY=3, NLIM=3
+      integer                         :: i, j, k, tt,tmax, iC, iC_cg, iM, il, ih, jl, jh, kl, kh
+      logical                         :: doneC, doneM
+      real, dimension(LOW:HIGH)       :: Cint, totME
+      character(len=HIGH)             :: ind
+      real, dimension(TRY)            :: Cint_try, totME_try
+      character(len=TRY)              :: i_try
+      real                            :: Cint_old, Clim, Clim_old
+      real, dimension(NLIM)           :: Clast
+      integer, parameter              :: cmt_len=9 ! length of the " Exp warp" string
+      character(len=cmt_len)          :: Ccomment
+      real                            :: t_save
+      real                            :: Msph
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+
+      fl => flind%ion
 
       t_save = t
       Cint_old = huge(1.)
@@ -193,8 +198,8 @@ contains
 
          iC_cg = 0
          cg%b(:,    :, :, :) = 0.
-         cg%u(idni, :, :, :) = smalld
-         cg%u(ieni, :, :, :) = smallei
+         cg%u(fl%idn, :, :, :) = smalld
+         cg%u(fl%ien, :, :, :) = smallei
 
          ! Initialize density with uniform sphere
          il = cg%ie+1
@@ -226,7 +231,7 @@ contains
             do j = jl, jh
                do i = il, ih
                   if (sum(([cg%x(i), cg%y(j), cg%z(k)] -clump_pos(:))**2) < clump_r**2) then
-                     cg%u(idni, i, j, k) = totME(1)
+                     cg%u(fl%idn, i, j, k) = totME(1)
                      iC_cg = iC_cg + 1
                   endif
                enddo
@@ -259,7 +264,7 @@ contains
 
          t = iC * sqrt(tiny(1.0)) ! trick to allow solution extrapolation in multigrid_solve_grav
 
-         call multigrid_solve_grav([idni])
+         call multigrid_solve_grav([fl%idn])
          if (exp_speedup .and. Clim_old /= 0.) then ! extrapolate potential assuming exponential convergence (extremely risky)
             if (abs(1. - Clim/Clim_old) < min(sqrt(epsC), 100.*epsC, 0.01)) then
                cg%sgp = (cg%sgp*cg%hgpot - cg%gpot**2)/(cg%sgp + cg%hgpot - 2.*cg%gpot)
@@ -411,20 +416,19 @@ contains
 
       ! final touch
       t = t_save ! restore initial time
-      call multigrid_solve_grav([idni])
+      call multigrid_solve_grav([fl%idn])
       cg%gpot = cg%sgp
 
-      where (cg%u(idni, :, :, :) < smalld) cg%u(idni, :, :, :) = smalld
-      cg%u(imxi, :, :, :) = clump_vel_x * cg%u(idni,:,:,:)
-      cg%u(imyi, :, :, :) = clump_vel_y * cg%u(idni,:,:,:)
-      cg%u(imzi, :, :, :) = clump_vel_z * cg%u(idni,:,:,:)
+      where (cg%u(fl%idn, :, :, :) < smalld) cg%u(fl%idn, :, :, :) = smalld
+      cg%u(fl%imx, :, :, :) = clump_vel_x * cg%u(fl%idn,:,:,:)
+      cg%u(fl%imy, :, :, :) = clump_vel_y * cg%u(fl%idn,:,:,:)
+      cg%u(fl%imz, :, :, :) = clump_vel_z * cg%u(fl%idn,:,:,:)
       do k = cg%ks, cg%ke
          do j = cg%js, cg%je
             do i = cg%is, cg%ie
-               cg%u(ieni,i,j,k) = max(smallei,                                             &
-                    &              presrho(cg%u(idni, i, j, k)) / (gamma_ion-1.0)        + &
-                    &              0.5 * sum(cg%u(imxi:imzi,i,j,k)**2,1) / cg%u(idni,i,j,k) + &
-                    &              0.5 * sum(cg%b(:,i,j,k)**2,1))
+               cg%u(fl%ien,i,j,k) = max(smallei, presrho(cg%u(fl%idn, i, j, k)) / fl%gam_1                              + &
+                    &              ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
+                    &              emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)))
             enddo
          enddo
       enddo
@@ -442,24 +446,24 @@ contains
    subroutine virialCheck(tol)
 
       use dataio_pub,        only: msg, die, warn, printinfo
-      use grid,              only: leaves
       use gc_list,           only: cg_list_element
+      use fluidindex,        only: flind
+      use grid,              only: leaves
       use grid_cont,         only: grid_container
-      use initionized,       only: idni
-      use mpisetup,          only: master, comm, mpi_err
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,          only: master, comm, mpi_err
       use multigrid_gravity, only: grav_bnd, bnd_isolated
 
       implicit none
 
-      real, intent(in)      :: tol
+      real, intent(in)                :: tol
 
-      integer               :: i, j, k
-      integer, parameter    :: nTWP = 3
-      real, dimension(nTWP) :: TWP, TWPcg
-      real                  :: vc
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      integer                         :: i, j, k
+      integer, parameter              :: nTWP = 3
+      real, dimension(nTWP)           :: TWP, TWPcg
+      real                            :: vc
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
       TWP(:) = 0.
 
@@ -471,9 +475,9 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-!               TWPcg(1) = TWPcg(1) + cg%u(idni, i, j, k) * 0.                !T, will be /= 0. for rotating clump
-                  TWPcg(2) = TWPcg(2) + cg%u(idni, i, j, k) * cg%sgp(i, j, k) * 0.5 !W
-                  TWPcg(3) = TWPcg(3) + presrho(cg%u(idni, i, j, k))             !P
+!               TWPcg(1) = TWPcg(1) + cg%u(flind%ion%idn, i, j, k) * 0.                !T, will be /= 0. for rotating clump
+                  TWPcg(2) = TWPcg(2) + cg%u(flind%ion%idn, i, j, k) * cg%sgp(i, j, k) * 0.5 !W
+                  TWPcg(3) = TWPcg(3) + presrho(cg%u(flind%ion%idn, i, j, k))             !P
                enddo
             enddo
          enddo
@@ -508,24 +512,24 @@ contains
 
    subroutine totalMEnthalpic(C, totME, mode)
 
-      use constants,   only: I_ONE
-      use grid,        only: leaves
-      use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use initionized, only: idni
-      use mpisetup,    only: comm, mpi_err
-      use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use constants,  only: I_ONE
+      use fluidindex, only: flind
+      use gc_list,    only: cg_list_element
+      use grid,       only: leaves
+      use grid_cont,  only: grid_container
+      use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,   only: comm, mpi_err
 
       implicit none
 
-      real,    intent(in)  :: C
-      real,    intent(out) :: totME
-      integer, intent(in)  :: mode
+      real,    intent(in)            :: C
+      real,    intent(out)           :: totME
+      integer, intent(in)            :: mode
 
-      integer              :: i, j, k
-      real                 :: rho, totMEcg
+      integer                        :: i, j, k
+      real                           :: rho, totMEcg
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       totME = 0.
 
@@ -542,7 +546,7 @@ contains
                         totMEcg = totMEcg + rhoH(h(C, cg%sgp(i,j,k)))
                      case (REL_SET)
                         rho = rhoH(h(C, cg%sgp(i,j,k)))
-                        cg%u(idni, i, j, k) = rho
+                        cg%u(flind%ion%idn, i, j, k) = rho
                         totMEcg = totME + rho
                   end select
                enddo
@@ -576,13 +580,13 @@ contains
 
    real function presrho(rho)
 
-      use initionized, only: gamma_ion
+      use fluidindex, only: flind
 
       implicit none
 
       real, intent(in) :: rho
 
-      presrho = clump_K *  rho ** gamma_ion
+      presrho = clump_K *  rho ** flind%ion%gam
 
    end function presrho
 
@@ -591,8 +595,8 @@ contains
 
    real function rhoH(H)
 
-      use initionized, only: gamma_ion
-      use global,      only: smalld
+      use fluidindex, only: flind
+      use global,     only: smalld
 
       implicit none
 
@@ -600,7 +604,7 @@ contains
 
       rhoH = smalld
 
-      if (H > 0.) rhoH = ( (1. - 1./gamma_ion) * H / clump_K)**(1./(gamma_ion - 1.))
+      if (H > 0.) rhoH = ( (1. - 1./flind%ion%gam) * H / clump_K)**(1./flind%ion%gam_1)
 
       rhoH = max(smalld, rhoH)
 
@@ -611,13 +615,13 @@ contains
 
    real function hRho(rho)
 
-      use initionized,   only: gamma_ion
+      use fluidindex, only: flind
 
       implicit none
 
       real, intent(in) :: rho
 
-      hRho = clump_K * gamma_ion / (gamma_ion - 1.) * rho ** (gamma_ion - 1.)
+      hRho = clump_K * flind%ion%gam / flind%ion%gam_1 * rho ** flind%ion%gam_1
 
    end function hRho
 

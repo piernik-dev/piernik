@@ -36,10 +36,9 @@ module initproblem
    private
    public :: read_problem_par, init_prob, problem_pointers
 
-   real              :: d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
+   real   :: d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
 
-   namelist /PROBLEM_CONTROL/  &
-                               d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
+   namelist /PROBLEM_CONTROL/  d_gas, p_gas, v_gas, d_dust, v_dust, x0, y0, z0, r0
 
 contains
 
@@ -54,9 +53,10 @@ contains
 !-----------------------------------------------------------------------------
 
    subroutine read_problem_par
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun     ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, buffer_dim, master, slave, comm, mpi_err, FIRST
+
+      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
       use mpi,           only: MPI_DOUBLE_PRECISION
+      use mpisetup,      only: rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
 
       implicit none
 
@@ -74,15 +74,15 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         rbuff(1)     = d_gas
-         rbuff(2)     = p_gas
-         rbuff(3)     = v_gas
-         rbuff(4)     = d_dust
-         rbuff(5)     = v_dust
-         rbuff(6)     = x0
-         rbuff(7)     = y0
-         rbuff(8)     = z0
-         rbuff(9)     = r0
+         rbuff(1) = d_gas
+         rbuff(2) = p_gas
+         rbuff(3) = v_gas
+         rbuff(4) = d_dust
+         rbuff(5) = v_dust
+         rbuff(6) = x0
+         rbuff(7) = y0
+         rbuff(8) = z0
+         rbuff(9) = r0
 
       endif
 
@@ -90,15 +90,15 @@ contains
 
       if (slave) then
 
-         d_gas        = rbuff(1)
-         p_gas        = rbuff(2)
-         v_gas        = rbuff(3)
-         d_dust       = rbuff(4)
-         v_dust       = rbuff(5)
-         x0           = rbuff(6)
-         y0           = rbuff(7)
-         z0           = rbuff(8)
-         r0           = rbuff(9)
+         d_gas    = rbuff(1)
+         p_gas    = rbuff(2)
+         v_gas    = rbuff(3)
+         d_dust   = rbuff(4)
+         v_dust   = rbuff(5)
+         x0       = rbuff(6)
+         y0       = rbuff(7)
+         z0       = rbuff(8)
+         r0       = rbuff(9)
 
       endif
 
@@ -108,20 +108,20 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: xdim, ydim, zdim
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use global,      only: smalld
-      use grid,        only: leaves
-      use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
+      use constants,  only: xdim, ydim, zdim
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use gc_list,    only: cg_list_element
+      use global,     only: smalld
+      use grid,       only: leaves
+      use grid_cont,  only: grid_container
 
       implicit none
 
-      real    :: xi,yj,zk, rc
-      integer :: i, j, k
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real                            :: xi, yj, zk, rc
+      integer                         :: i, j, k
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -167,6 +167,6 @@ contains
 
    end subroutine init_prob
 
-!-----------------------------------------------------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------------
 
 end module initproblem

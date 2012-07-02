@@ -62,8 +62,8 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, buffer_dim, master, slave, comm, mpi_err, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION
+      use mpisetup,      only: rbuff, buffer_dim, master, slave, comm, mpi_err, FIRST
 
       implicit none
 
@@ -71,15 +71,15 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         rbuff(1) = dl
-         rbuff(2) = vxl
-         rbuff(3) = vyl
-         rbuff(4) = vzl
-         rbuff(5) = bxl
-         rbuff(6) = byl
-         rbuff(7) = bzl
-         rbuff(8) = el
-         rbuff(9) = dr
+         rbuff(1)  = dl
+         rbuff(2)  = vxl
+         rbuff(3)  = vyl
+         rbuff(4)  = vzl
+         rbuff(5)  = bxl
+         rbuff(6)  = byl
+         rbuff(7)  = bzl
+         rbuff(8)  = el
+         rbuff(9)  = dr
          rbuff(10) = vxr
          rbuff(11) = vyr
          rbuff(12) = vzr
@@ -117,26 +117,28 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,   only: xdim, ydim, zdim
-      use grid,        only: leaves
-      use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use initionized, only: idni,imxi,imyi,imzi
+      use constants,  only: xdim, ydim, zdim
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use func,       only: ekin, emag
+      use gc_list,    only: cg_list_element
+      use grid,       only: leaves
+      use grid_cont,  only: grid_container
 #ifndef ISO
-      use initionized, only: ieni
-      use global,      only: smallei
+      use global,     only: smallei
 #endif /* !ISO */
       implicit none
 
-      integer  :: i,j,k
-      real     :: xi,yj,zk
-      real     :: vx,vy,vz,rho,pre,bx,by,bz
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      integer                         :: i, j, k
+      real                            :: xi, yj, zk, vx, vy, vz, rho, pre, bx, by, bz
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
       call read_problem_par
 
 !   Secondary parameters
+      fl => flind%ion
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -169,21 +171,21 @@ contains
                      bz  = bzr
                   endif
 
-                  cg%u(idni,i,j,k) = rho
-                  cg%u(imxi,i,j,k) = vx*cg%u(idni,i,j,k)
-                  cg%u(imyi,i,j,k) = vy*cg%u(idni,i,j,k)
-                  cg%u(imzi,i,j,k) = vz*cg%u(idni,i,j,k)
+                  cg%u(fl%idn,i,j,k) = rho
+                  cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+                  cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
+                  cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
 #ifndef ISO
-                  cg%u(ieni,i,j,k) = pre ! pre here means eint
-                  cg%u(ieni,i,j,k) = max(cg%u(ieni,i,j,k), smallei)
-                  cg%u(ieni,i,j,k) = cg%u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u(idni,i,j,k)
+                  cg%u(fl%ien,i,j,k) = pre ! pre here means eint
+                  cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k), smallei)
+                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) +ekin(vx, vy, vz, cg%u(fl%idn,i,j,k))
 #endif /* !ISO */
-                  cg%b(1,i,j,k)   =  bx
-                  cg%b(2,i,j,k)   =  by
-                  cg%b(3,i,j,k)   =  bz
+                  cg%b(xdim,i,j,k)   =  bx
+                  cg%b(ydim,i,j,k)   =  by
+                  cg%b(zdim,i,j,k)   =  bz
 
 #ifndef ISO
-                  cg%u(ieni,i,j,k)   = cg%u(ieni,i,j,k) +0.5*sum(cg%b(:,i,j,k)**2,1)
+                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
                enddo
             enddo

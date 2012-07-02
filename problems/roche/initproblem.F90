@@ -62,35 +62,35 @@ contains
       use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use domain,     only: dom
       use mpi,        only: MPI_DOUBLE_PRECISION
-      use mpisetup,   only: rbuff, buffer_dim, proc, comm, mpi_err, FIRST
+      use mpisetup,   only: rbuff, buffer_dim, comm, mpi_err, FIRST, master, slave
 
       implicit none
 
-      xblob            = -0.5
-      yblob            = 0.0
-      zblob            = 0.0
-      dblob            = 0.0005
-      Tblob            = 3500
-      dnblob           = 1.0
-      dnambfac            = 1.e-5
-      p0ambfac         = 1.e-4
-      rclear           = dom%L_(xdim)/dom%n_d(xdim) ! BEWARE: why the x-direction is so special here?
-      vxfac            = 1.0
-      taucool          = 1.0e30
+      xblob        = -0.5
+      yblob        = 0.0
+      zblob        = 0.0
+      dblob        = 0.0005
+      Tblob        = 3500
+      dnblob       = 1.0
+      dnambfac     = 1.e-5
+      p0ambfac     = 1.e-4
+      rclear       = dom%L_(xdim)/dom%n_d(xdim) ! BEWARE: why the x-direction is so special here?
+      vxfac        = 1.0
+      taucool      = 1.0e30
 
-      if (proc == 0) then
+      if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
-         rbuff(1) = xblob
-         rbuff(2) = yblob
-         rbuff(3) = zblob
-         rbuff(4) = dblob
-         rbuff(5) = Tblob
-         rbuff(6) = dnblob
-         rbuff(7) = dnambfac
-         rbuff(8) = p0ambfac
-         rbuff(9) = rclear
+         rbuff(1)  = xblob
+         rbuff(2)  = yblob
+         rbuff(3)  = zblob
+         rbuff(4)  = dblob
+         rbuff(5)  = Tblob
+         rbuff(6)  = dnblob
+         rbuff(7)  = dnambfac
+         rbuff(8)  = p0ambfac
+         rbuff(9)  = rclear
          rbuff(10) = vxfac
          rbuff(11) = taucool
 
@@ -98,19 +98,19 @@ contains
 
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
 
-      if (proc /= 0) then
+      if (slave) then
 
-         xblob            = rbuff(1)
-         yblob            = rbuff(2)
-         zblob            = rbuff(3)
-         dblob            = rbuff(4)
-         Tblob            = rbuff(5)
-         dnblob           = rbuff(6)
-         dnambfac         = rbuff(7)
-         p0ambfac         = rbuff(8)
-         rclear           = rbuff(9)
-         vxfac            = rbuff(10)
-         taucool          = rbuff(11)
+         xblob     = rbuff(1)
+         yblob     = rbuff(2)
+         zblob     = rbuff(3)
+         dblob     = rbuff(4)
+         Tblob     = rbuff(5)
+         dnblob    = rbuff(6)
+         dnambfac  = rbuff(7)
+         p0ambfac  = rbuff(8)
+         rclear    = rbuff(9)
+         vxfac     = rbuff(10)
+         taucool   = rbuff(11)
 
       endif
 
@@ -128,24 +128,23 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: xdim, ydim, zdim
-      use global,      only: smalld
-      use grid,        only: leaves
-      use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
+      use constants,  only: xdim, ydim, zdim
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use gc_list,    only: cg_list_element
+      use global,     only: smalld
+      use grid,       only: leaves
+      use grid_cont,  only: grid_container
 
       implicit none
 
-      integer :: i, j, k, imx,imy,imz,idn
-      real    :: xi, yj, vx, vy, vz, zk
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      integer                         :: i, j, k
+      real                            :: xi, yj, vx, vy, vz, zk
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
-      imx=imxn
-      imy=imyn
-      imz=imzn
-      idn=idnn
+      fl => flind%neu
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -158,17 +157,17 @@ contains
                do k = 1,cg%n_(zdim)
                   zk = cg%z(k)
 !blob
-                  cg%u(idn,i,j,k) = dnamb + dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
-                  cg%u(idn,i,j,k) = max(cg%u(idn,i,j,k), smalld)
-                  cg%u(ienn,i,j,k) = pamb/(gamma_neu-1.0) + pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
+                  cg%u(fl%idn,i,j,k) = dnamb + dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
+                  cg%u(fl%idn,i,j,k) = max(cg%u(fl%idn,i,j,k), smalld)
+                  cg%u(fl%ien,i,j,k) = pamb/fl%gam_1 + pblob/fl%gam_1*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
 
-                  vx = vxfac*sqrt(gamma_neu*pblob/dnblob)
+                  vx = vxfac*sqrt(fl%gam*pblob/dnblob)
                   vy = 0.0
                   vz = 0.0
 
-                  cg%u(imx,i,j,k) = vx*(cg%u(idn,i,j,k)-dnamb)
-                  cg%u(imy,i,j,k) = vy*(cg%u(idn,i,j,k)-dnamb)
-                  cg%u(imz,i,j,k) = vz*(cg%u(idn,i,j,k)-dnamb)
+                  cg%u(fl%imx,i,j,k) = vx*(cg%u(fl%idn,i,j,k)-dnamb)
+                  cg%u(fl%imy,i,j,k) = vy*(cg%u(fl%idn,i,j,k)-dnamb)
+                  cg%u(fl%imz,i,j,k) = vz*(cg%u(fl%idn,i,j,k)-dnamb)
 
                enddo
             enddo
@@ -182,27 +181,25 @@ contains
 
    subroutine impose_inflow
 
-      use constants,   only: xdim, ydim, zdim
-      use global,      only: smalld, smallei, dt
-      use grid,        only: leaves
-      use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use gravity,     only: ptm_x,ptm2_x
-      use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
+      use constants,  only: xdim, ydim, zdim
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use global,     only: smalld, smallei, dt
+      use grid,       only: leaves
+      use gc_list,    only: cg_list_element
+      use grid_cont,  only: grid_container
+      use gravity,    only: ptm_x, ptm2_x
 
       implicit none
 
-      integer :: i, j, k, imx,imy,imz,idn,ien
-      real :: xi, yj,zk,r1,r2,dntemp,vx,vy,vz, dnold, enold, entemp, csaim, enaim, coolfac
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      integer                         :: i, j, k
+      real                            :: xi, yj, zk, r1, r2, dntemp, vx, vy, vz, dnold, enold, entemp, csaim, enaim, coolfac
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
 
-      imx=imxn
-      imy=imyn
-      imz=imzn
-      idn=idnn
-      ien=ienn
+      fl => flind%neu
 
 !clearing the compact star
       cgl => leaves%first
@@ -223,23 +220,23 @@ contains
 
                   if (r1<rclear) then
 
-                     cg%u(idn,i,j,k) = smalld + cg%u(idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
-! cg%u(idn,i,j,k) = dnamb + cg%u(idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                     cg%u(imx,i,j,k) = cg%u(imx,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                     cg%u(imy,i,j,k) = cg%u(imy,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                     cg%u(imz,i,j,k) = cg%u(imz,i,j,k)*exp((r1/rclear-1.0)/1.0)
-                     cg%u(ien,i,j,k) = smallei + cg%u(ien,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                     cg%u(fl%idn,i,j,k) = smalld + cg%u(fl%idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
+!                     cg%u(fl%idn,i,j,k) = dnamb + cg%u(fl%idn,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                     cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                     cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                     cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k)*exp((r1/rclear-1.0)/1.0)
+                     cg%u(fl%ien,i,j,k) = smallei + cg%u(fl%ien,i,j,k)*exp((r1/rclear-1.0)/1.0)
 
 
                   endif
 
                   if (r2<rclear) then
 
-                     cg%u(idn,i,j,k) = smalld + cg%u(idn,i,j,k)*exp((r2/rclear-1.0)/1.0)
-                     cg%u(imx,i,j,k) = cg%u(imx,i,j,k)*exp((r2/rclear-1.0)/1.0)
-                     cg%u(imy,i,j,k) = cg%u(imy,i,j,k)*exp((r2/rclear-1.0)/1.0)
-                     cg%u(imz,i,j,k) = cg%u(imz,i,j,k)*exp((r2/rclear-1.0)/1.0)
-                     cg%u(ien,i,j,k) = smallei + cg%u(ien,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                     cg%u(fl%idn,i,j,k) = smalld + cg%u(fl%idn,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                     cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                     cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                     cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k)*exp((r2/rclear-1.0)/1.0)
+                     cg%u(fl%ien,i,j,k) = smallei + cg%u(fl%ien,i,j,k)*exp((r2/rclear-1.0)/1.0)
 
                   endif
 
@@ -255,33 +252,33 @@ contains
                do i = 1,cg%n_(xdim)
                   xi = cg%x(i)
 !blob
-                  dnold = cg%u(idn,i,j,k)
+                  dnold = cg%u(fl%idn,i,j,k)
                   dntemp = dnamb + dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
-                  cg%u(idn,i,j,k) = max(dntemp, dnold)
+                  cg%u(fl%idn,i,j,k) = max(dntemp, dnold)
 !              cooling
 !              ~sound speed ~temp
-                  csaim = pamb/dnamb/(gamma_neu-1.0)
-                  enaim = csaim * cg%u(idnn,i,j,k)
-                  enold = cg%u(ienn,i,j,k)
+                  csaim = pamb/dnamb/fl%gam_1
+                  enaim = csaim * cg%u(fl%idn,i,j,k)
+                  enold = cg%u(fl%ien,i,j,k)
                   coolfac = max((taucool / dt), 1.0)
-!               cg%u(ienn,i,j,k) = enold - (enold - enaim)/coolfac
-!               cg%u(ienn,i,j,k) = max(enaim,cg%u(ienn,i,j,k))
+!               cg%u(fl%ien,i,j,k) = enold - (enold - enaim)/coolfac
+!               cg%u(fl%ien,i,j,k) = max(enaim,cg%u(fl%ien,i,j,k))
 
 !hot blob
-                  enold = cg%u(ienn,i,j,k)
-                  entemp = pamb/(gamma_neu-1.0) + pblob/(gamma_neu-1.0)*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
-                  cg%u(ienn,i,j,k) = max(entemp, enold)
+                  enold = cg%u(fl%ien,i,j,k)
+                  entemp = pamb/fl%gam_1 + pblob/fl%gam_1*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
+                  cg%u(fl%ien,i,j,k) = max(entemp, enold)
 !no inflow
-!               cg%u(idnn,i,j,k) = dnold
-!               cg%u(ienn,i,j,k) = enold
+!               cg%u(fl%idn,i,j,k) = dnold
+!               cg%u(fl%ien,i,j,k) = enold
 
-                  vx = vxfac*sqrt(gamma_neu*pblob/dnblob)
+                  vx = vxfac*sqrt(fl%gam*pblob/dnblob)
                   vy = 0.0
                   vz = 0.0
 
-                  cg%u(imx,i,j,k) = cg%u(imx,i,j,k) + vx*(cg%u(idn,i,j,k)-dnold)
-                  cg%u(imy,i,j,k) = cg%u(imy,i,j,k) + vy*(cg%u(idn,i,j,k)-dnold)
-                  cg%u(imz,i,j,k) = cg%u(imz,i,j,k) + vz*(cg%u(idn,i,j,k)-dnold)
+                  cg%u(fl%imx,i,j,k) = cg%u(fl%imx,i,j,k) + vx*(cg%u(fl%idn,i,j,k)-dnold)
+                  cg%u(fl%imy,i,j,k) = cg%u(fl%imy,i,j,k) + vy*(cg%u(fl%idn,i,j,k)-dnold)
+                  cg%u(fl%imz,i,j,k) = cg%u(fl%imz,i,j,k) + vz*(cg%u(fl%idn,i,j,k)-dnold)
 
                enddo
             enddo

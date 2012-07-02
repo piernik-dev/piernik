@@ -91,14 +91,14 @@ contains
 
       if (slave) then
 
-         chi          = rbuff(1)
-         dbot         = rbuff(2)
-         lpert        = rbuff(3)
-         Mtop         = rbuff(4)
-         Mbot         = rbuff(5)
-         dpert        = rbuff(6)
-         tkh          = rbuff(7)
-         vtransf      = rbuff(8)
+         chi      = rbuff(1)
+         dbot     = rbuff(2)
+         lpert    = rbuff(3)
+         Mtop     = rbuff(4)
+         Mbot     = rbuff(5)
+         dpert    = rbuff(6)
+         tkh      = rbuff(7)
+         vtransf  = rbuff(8)
 
       endif
 
@@ -108,29 +108,32 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: dpi, xdim, ydim, zdim
-      use domain,      only: dom
-      use grid,        only: leaves
-      use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use initneutral, only: idnn, imxn, imyn, imzn, ienn, gamma_neu
+      use constants,  only: dpi, xdim, ydim, zdim
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use gc_list,    only: cg_list_element
+      use grid,       only: leaves
+      use grid_cont,  only: grid_container
 
       implicit none
 
-      real :: dtop, lambda, p0, vtop, vbot, k0, vp, rcx, rcy, rc
-      integer :: i,j
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      real                            :: dtop, lambda, p0, vtop, vbot, k0, vp, rcx, rcy, rc
+      integer                         :: i, j
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+
+      fl => flind%neu
 
       dtop = dbot/chi
       lambda = 1./6.
 
-      p0 = lambda**2 * (1.+chi)**2 /(chi*tkh**2) *dbot &
-            / ( (Mtop*sqrt(chi)+Mbot)**2 * gamma_neu)
-      vtop  =  1.*Mtop*sqrt(gamma_neu*p0/dtop)
-      vbot  = -1.*Mbot*sqrt(gamma_neu*p0/dbot)
+      p0 = lambda**2 * (1.+chi)**2 /(chi*tkh**2) *dbot / ( (Mtop*sqrt(chi)+Mbot)**2 * fl%gam)
+      vtop  =  1.*Mtop*sqrt(fl%gam*p0/dtop)
+      vbot  = -1.*Mbot*sqrt(fl%gam*p0/dbot)
       k0    = dpi/lambda
-      vp    = (Mtop*sqrt(chi)+Mbot)*sqrt(gamma_neu*p0/dbot)/dpert
+      vp    = (Mtop*sqrt(chi)+Mbot)*sqrt(fl%gam*p0/dbot)/dpert
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -140,26 +143,26 @@ contains
             rcx = cg%x(i)
             do j = 1, cg%n_(ydim)
                rcy = cg%y(j)
-               rc=rcy-0.5*dom%L_(ydim)
+               rc  = rcy-0.5*dom%L_(ydim)
                if (rc > 0.0) then
-                  cg%u(idnn,i,j,:) = dtop
-                  cg%u(imxn,i,j,:) = vtop*dtop
+                  cg%u(fl%idn,i,j,:) = dtop
+                  cg%u(fl%imx,i,j,:) = vtop*dtop
                endif
                if (rc <= 0.0) then
-                  cg%u(idnn,i,j,:) = dbot
-                  cg%u(imxn,i,j,:) = vbot*dbot
+                  cg%u(fl%idn,i,j,:) = dbot
+                  cg%u(fl%imx,i,j,:) = vbot*dbot
                endif
                if (abs(rc) < lpert) then
-                  cg%u(imyn,i,j,:) = vp*sin(k0*rcx)*cg%u(idnn,i,j,:)
+                  cg%u(fl%imy,i,j,:) = vp*sin(k0*rcx)*cg%u(fl%idn,i,j,:)
                else
-                  cg%u(imyn,i,j,:) = 0.0
+                  cg%u(fl%imy,i,j,:) = 0.0
                endif
                if (dom%has_dir(zdim)) then
-                  cg%u(imzn,i,j,:) = vtransf*cg%u(1,i,j,:)
+                  cg%u(fl%imz,i,j,:) = vtransf*cg%u(fl%idn,i,j,:)
                else
-                  cg%u(imzn,i,j,:) = 0.0
+                  cg%u(fl%imz,i,j,:) = 0.0
                endif
-               cg%u(ienn,i,j,:) = p0/(gamma_neu-1.0)
+               cg%u(fl%ien,i,j,:) = p0/fl%gam_1
             enddo
          enddo
 

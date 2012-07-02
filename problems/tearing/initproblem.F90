@@ -70,10 +70,10 @@ contains
 
       implicit none
 
-      beta         =  1.0
-      d0           =  1.0
-      v0           =  0.1
-      alpha        =  1.0
+      beta        =  1.0
+      d0          =  1.0
+      v0          =  0.1
+      alpha       =  1.0
 
       if (master) then
 
@@ -90,10 +90,10 @@ contains
 
       if (slave) then
 
-         beta         = rbuff(1)
-         v0           = rbuff(2)
-         d0           = rbuff(3)
-         alpha        = rbuff(4)
+         beta     = rbuff(1)
+         v0       = rbuff(2)
+         d0       = rbuff(3)
+         alpha    = rbuff(4)
 
       endif
 
@@ -103,45 +103,45 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: pi, xdim, ydim, zdim
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use grid,        only: leaves
-      use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use initionized, only: idni, imxi, imyi, imzi
-#ifndef ISO
-      use initionized, only: ieni
-#endif /* !ISO */
+      use constants,  only: pi, xdim, ydim, zdim, half
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use func,       only: ekin, emag
+      use gc_list,    only: cg_list_element
+      use grid,       only: leaves
+      use grid_cont,  only: grid_container
 
       implicit none
 
-      integer  :: i, j, k
-      real     :: vzab, b0
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      integer                         :: i, j, k
+      real                            :: vzab, b0
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
+      fl => flind%ion
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%u(idni,:,:,:) = d0
-         cg%u(imyi,:,:,:) = 0.0
-         cg%u(imzi,:,:,:) = 0.0
+         cg%u(fl%idn,:,:,:) = d0
+         cg%u(fl%imy,:,:,:) = 0.0
+         cg%u(fl%imz,:,:,:) = 0.0
 
-         cg%b(xdim,:,:,:)  = 0.0
-         cg%b(zdim,:,:,:)  = 0.0
+         cg%b(xdim,:,:,:)   = 0.0
+         cg%b(zdim,:,:,:)   = 0.0
 
          call read_problem_par
 
-         b0 = sqrt(2.*alpha*d0*flind%ion%cs2)
+         b0 = sqrt(2.*alpha*d0*fl%cs2)
 
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
 
                   vzab = v0*cos(2.*pi*cg%y(j)/dom%L_(ydim))
-                  cg%u(imxi,i,j,k) = cg%u(idni,i,j,k)*vzab
+                  cg%u(fl%imx,i,j,k) = cg%u(fl%idn,i,j,k)*vzab
 
                   if (abs(cg%x(i)-dom%C_(xdim)) <= 0.25*dom%L_(xdim)) then
                      cg%b(ydim,i,j,k) = -b0
@@ -153,11 +153,8 @@ contains
          enddo
 
 #ifndef ISO
-         cg%u(ieni,:,:,:) = 0.5*beta + &
-              &               0.5*(cg%u(imxi,:,:,:)**2  + cg%u(imyi,:,:,:)**2 + &
-              &               cg%u(imzi,:,:,:)**2) / cg%u(idni,:,:,:)
-
-         cg%u(ieni,:,:,:)   = cg%u(ieni,:,:,:) + 0.5*sum(cg%b(:,:,:,:)**2,1)
+         cg%u(fl%ien,:,:,:) = half*beta + ekin(cg%u(fl%imx,:,:,:), cg%u(fl%imy,:,:,:), cg%u(fl%imz,:,:,:), cg%u(fl%idn,:,:,:))
+         cg%u(fl%ien,:,:,:) = cg%u(fl%ien,:,:,:) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:))
 #endif /* !ISO */
 
          cgl => cgl%nxt

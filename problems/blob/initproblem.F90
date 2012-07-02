@@ -58,8 +58,8 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION
+      use mpisetup,      only: rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
 
       implicit none
 
@@ -93,15 +93,15 @@ contains
 
       if (slave) then
 
-         chi          = rbuff(1)
-         rblob        = rbuff(2)
-         blobxc       = rbuff(3)
-         blobyc       = rbuff(4)
-         blobzc       = rbuff(5)
-         Mext         = rbuff(6)
-         denv         = rbuff(7)
-         tkh          = rbuff(8)
-         vgal         = rbuff(9)
+         chi      = rbuff(1)
+         rblob    = rbuff(2)
+         blobxc   = rbuff(3)
+         blobyc   = rbuff(4)
+         blobzc   = rbuff(5)
+         Mext     = rbuff(6)
+         denv     = rbuff(7)
+         tkh      = rbuff(8)
+         vgal     = rbuff(9)
 
       endif
 
@@ -111,29 +111,32 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: xdim, ydim, zdim
-      use domain,      only: dom
-      use grid,        only: leaves
-      use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use initneutral, only: gamma_neu, idnn, imxn, imyn, imzn, ienn
+      use constants,  only: xdim, ydim, zdim
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use gc_list,    only: cg_list_element
+      use grid,       only: leaves
+      use grid_cont,  only: grid_container
 
       implicit none
 
-      real    :: penv, rcx, rcy, rrel
-      integer :: i, j, k
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      real                            :: penv, rcx, rcy, rrel
+      integer                         :: i, j, k
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
-      penv = 3.2*rblob*sqrt(chi)/tkh/(Mext*gamma_neu/denv)
+      fl => flind%neu
 
+      penv = 3.2*rblob*sqrt(chi)/tkh/(Mext*fl%gam/denv)
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%u(imzn, :, :, :) = 0.0
-         cg%u(ienn, :, :, :) = penv/(gamma_neu-1.0)
+         cg%u(fl%imz, :, :, :) = 0.0
+         cg%u(fl%ien, :, :, :) = penv/fl%gam_1
 
          do i = 1, cg%n_(xdim)
             rcx = (cg%x(i)-blobxc)**2
@@ -147,13 +150,13 @@ contains
                   endif
 
                   if (rblob >= rrel) then
-                     cg%u(idnn,i,j,k) = chi*denv
-                     cg%u(imxn,i,j,k) = chi*denv*vgal
-                     cg%u(imyn,i,j,k) = 0.0
+                     cg%u(fl%idn,i,j,k) = chi*denv
+                     cg%u(fl%imx,i,j,k) = chi*denv*vgal
+                     cg%u(fl%imy,i,j,k) = 0.0
                   else
-                     cg%u(idnn,i,j,k) = denv
-                     cg%u(imxn,i,j,k) = denv*vgal
-                     cg%u(imyn,i,j,k) = Mext*gamma_neu*penv
+                     cg%u(fl%idn,i,j,k) = denv
+                     cg%u(fl%imx,i,j,k) = denv*vgal
+                     cg%u(fl%imy,i,j,k) = Mext*fl%gam*penv
                   endif
                enddo
             enddo

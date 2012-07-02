@@ -88,25 +88,25 @@ contains
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
 
-      norm_step    = I_TEN   !< how often to compute the norm (in steps)
+      norm_step    = I_TEN     !< how often to compute the norm (in steps)
 
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
-         rbuff(1) = d0
-         rbuff(2) = p0
-         rbuff(3) = bx0
-         rbuff(4) = by0
-         rbuff(5) = bz0
-         rbuff(6) = x0
-         rbuff(7) = y0
-         rbuff(8) = z0
-         rbuff(9) = r0
-         rbuff(10)= beta_cr
-         rbuff(11)= amp_cr
+         rbuff(1)  = d0
+         rbuff(2)  = p0
+         rbuff(3)  = bx0
+         rbuff(4)  = by0
+         rbuff(5)  = bz0
+         rbuff(6)  = x0
+         rbuff(7)  = y0
+         rbuff(8)  = z0
+         rbuff(9)  = r0
+         rbuff(10) = beta_cr
+         rbuff(11) = amp_cr
 
-         ibuff(1) = norm_step
+         ibuff(1)  = norm_step
 
       endif
 
@@ -115,19 +115,19 @@ contains
 
       if (slave) then
 
-         d0           = rbuff(1)
-         p0           = rbuff(2)
-         bx0          = rbuff(3)
-         by0          = rbuff(4)
-         bz0          = rbuff(5)
-         x0           = rbuff(6)
-         y0           = rbuff(7)
-         z0           = rbuff(8)
-         r0           = rbuff(9)
-         beta_cr      = rbuff(10)
-         amp_cr       = rbuff(11)
+         d0        = rbuff(1)
+         p0        = rbuff(2)
+         bx0       = rbuff(3)
+         by0       = rbuff(4)
+         bz0       = rbuff(5)
+         x0        = rbuff(6)
+         y0        = rbuff(7)
+         z0        = rbuff(8)
+         r0        = rbuff(9)
+         beta_cr   = rbuff(10)
+         amp_cr    = rbuff(11)
 
-         norm_step    = int(ibuff(1), kind=4)
+         norm_step = int(ibuff(1), kind=4)
 
       endif
 
@@ -146,21 +146,24 @@ contains
       use constants,      only: xdim, ydim, zdim, HI
       use dataio_pub,     only: die
       use domain,         only: dom
+      use fluidindex,     only: flind
+      use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag
       use gc_list,        only: cg_list_element
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre
-      use initionized,    only: idni, imxi, imyi, imzi, ieni, gamma_ion
 
       implicit none
 
-      integer :: i, j, k
-      integer, parameter :: icr = 1 !< Only first CR component
-      integer :: iecr
-      real    :: cs_iso, r2
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      integer                         :: i, j, k, iecr
+      integer, parameter              :: icr = 1 !< Only first CR component
+      real                            :: cs_iso, r2
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+
+      fl => flind%ion
 
       iecr = -1
       if (ncrn+ncre >= icr) then
@@ -184,16 +187,16 @@ contains
          cg%b(xdim, :, :, :) = bx0
          cg%b(ydim, :, :, :) = by0
          cg%b(zdim, :, :, :) = bz0
-         cg%u(idni, :, :, :) = d0
-         cg%u(imxi:imzi, :, :, :) = 0.0
+         cg%u(fl%idn, :, :, :) = d0
+         cg%u(fl%imx:fl%imz, :, :, :) = 0.0
 
 #ifndef ISO
-         cg%u(ieni,:,:,:) = p0/(gamma_ion-1.0) + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)) + &
-              &             ekin(cg%u(imxi,:,:,:), cg%u(imyi,:,:,:), cg%u(imzi,:,:,:), cg%u(idni,:,:,:))
+         cg%u(fl%ien,:,:,:) = p0/fl%gam_1 + emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)) + &
+              &               ekin(cg%u(fl%imx,:,:,:), cg%u(fl%imy,:,:,:), cg%u(fl%imz,:,:,:), cg%u(fl%idn,:,:,:))
 #endif /* !ISO */
 
 #ifdef COSM_RAYS
-         cg%u(iecr,:,:,:) = beta_cr*cs_iso**2 * cg%u(idni,:,:,:)/(gamma_crs(icr)-1.0)
+         cg%u(iecr,:,:,:) = beta_cr*fl%cs2 * cg%u(fl%idn,:,:,:)/(gamma_crs(icr)-1.0)
 
 ! Explosions
          do k = cg%ks, cg%ke
@@ -228,12 +231,11 @@ contains
 
       implicit none
 
-      integer            :: i, j, k
-      real               :: r_par2, r_perp2, delx, dely, delz, magb, ampt, r0_par2, r0_perp2, bxn, byn, bzn
-      integer            :: iecr
-      integer, parameter :: icr = 1 !< Only first CR component
+      integer                        :: i, j, k, iecr
+      real                           :: r_par2, r_perp2, delx, dely, delz, magb, ampt, r0_par2, r0_perp2, bxn, byn, bzn
+      integer, parameter             :: icr = 1 !< Only first CR component
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       iecr = -1
 
@@ -294,8 +296,8 @@ contains
       use cg_list_global, only: all_cg
       use constants,      only: PIERNIK_FINISHED, I_ONE, I_TWO
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
-      use global,         only: nstep
       use gc_list,        only: cg_list_element
+      use global,         only: nstep
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre
@@ -304,13 +306,12 @@ contains
 
       implicit none
 
-      integer            :: i, j, k
-      real, dimension(2) :: norm, dev
-      real               :: crt
-      integer            :: iecr
-      integer, parameter :: icr = 1 !< Only first CR component
+      integer                        :: i, j, k, iecr
+      real, dimension(2)             :: norm, dev
+      real                           :: crt
+      integer, parameter             :: icr = 1 !< Only first CR component
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       iecr = -1
 
@@ -372,10 +373,10 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),               intent(in)    :: var
+      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      integer,                        intent(inout) :: ierrh
+      type(grid_container), pointer,  intent(in)    :: cg
 
       call compute_analytic_ecr1
 

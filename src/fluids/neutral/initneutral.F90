@@ -35,7 +35,7 @@
 !!
 !! In this module following namelist of parameters is specified:
 !! \copydetails initneutral::init_neutral
-!! \deprecated this module should not export any variables
+!! \deprecated This module should not export any variables
 !<
 
 module initneutral
@@ -43,6 +43,7 @@ module initneutral
    use fluidtypes, only: component_fluid
    implicit none
 
+   private
    public :: init_neutral, cleanup_neutral, neutral_fluid, &
       gamma_neu, cs_iso_neu, cs_iso_neu2, selfgrav_neu, idnn, imxn, imyn, imzn, ienn
 
@@ -63,11 +64,11 @@ module initneutral
 contains
 
    subroutine initialize_neu_indices(this, flind)
-      use constants, only: NEU
+      use constants,  only: NEU
       use fluidtypes, only: var_numbers
       implicit none
       class(neutral_fluid), intent(inout) :: this
-      type(var_numbers), intent(inout) :: flind
+      type(var_numbers),    intent(inout) :: flind
 
       logical :: has_energy
 #ifdef ISO
@@ -87,14 +88,14 @@ contains
    end subroutine initialize_neu_indices
 
    real function neu_cs(this, cg, i, j, k)
-      use grid_cont, only: grid_container
+      use grid_cont,     only: grid_container
 #ifndef ISO
-      use func,      only: ekin
+      use func,          only: ekin
 #endif /* !ISO */
       implicit none
-      class(neutral_fluid), intent(in) :: this
+      class(neutral_fluid),          intent(in) :: this
       type(grid_container), pointer, intent(in) :: cg !< current grid container
-      integer, intent(in) :: i, j, k
+      integer,                       intent(in) :: i, j, k
 
       real :: p
 #ifdef ISO
@@ -117,7 +118,7 @@ contains
    end function get_tag
 
 !>
-!! \brief Routine to set parameters values from namelist FLUID_NEUTRAL
+!! \brief Routine to set parameters from namelist FLUID_NEUTRAL
 !!
 !! \n \n
 !! @b FLUID_NEUTRAL
@@ -132,9 +133,9 @@ contains
 !<
    subroutine init_neutral
 
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, lbuff, comm, mpi_err, buffer_dim, master, slave, FIRST
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun ! QA_WARN required for diff_nml
+      use mpisetup,   only: rbuff, lbuff, comm, mpi_err, buffer_dim, master, slave, FIRST
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
 
       implicit none
 
@@ -148,10 +149,10 @@ contains
 
          diff_nml(FLUID_NEUTRAL)
 
-         lbuff(1)   = selfgrav_neu
+         lbuff(1)  = selfgrav_neu
 
-         rbuff(1)   = gamma_neu
-         rbuff(2)   = cs_iso_neu
+         rbuff(1)  = gamma_neu
+         rbuff(2)  = cs_iso_neu
 
       endif
 
@@ -162,12 +163,12 @@ contains
 
          selfgrav_neu = lbuff(1)
 
-         gamma_neu   = rbuff(1)
-         cs_iso_neu  = rbuff(2)
+         gamma_neu    = rbuff(1)
+         cs_iso_neu   = rbuff(2)
 
       endif
 
-      cs_iso_neu2      = cs_iso_neu**2
+      cs_iso_neu2 = cs_iso_neu**2
 
    end subroutine init_neutral
 
@@ -183,7 +184,6 @@ contains
 ! OPT: \todo Try an explicit loop over RNG to check if we're better than the compiler
 ! OPT: similar treatment may be helpful for fluxionized.F90, fluxdust.F90 and fluxcosmicrays.F90
 !
-#define RNG 2:nm
 !/*
 !>
 !! \brief Computation of %fluxes for the neutral fluid
@@ -220,25 +220,26 @@ contains
 !!\f]
 !<
 !*/
+#define RNG 2:nm
    subroutine flux_neu(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2)
 
-      use func,       only: ekin
-      use constants,  only: idn, imx, imy, imz
+      use constants,    only: idn, imx, imy, imz
+      use func,         only: ekin
 #ifdef LOCAL_FR_SPEED
-      use constants,  only: small, half
-      use global,     only: cfr_smooth
+      use constants,    only: small, half
+      use global,       only: cfr_smooth
 #endif /* LOCAL_FR_SPEED */
 #ifdef GLOBAL_FR_SPEED
       use timestep_pub, only: c_all
 #endif /* GLOBAL_FR_SPEED */
 #ifndef ISO
-      use constants,  only: ien
-      use global,     only: smallp
+      use constants,    only: ien
+      use global,       only: smallp
 #endif /* !ISO */
 
       implicit none
       class(neutral_fluid), intent(in)             :: this
-      integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
+      integer(kind=4),      intent(in)             :: n         !< number of cells in the current sweep
       real, dimension(:,:), intent(inout), pointer :: flux      !< flux of neutral fluid
       real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for neutral fluid
       real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for neutral fluid
@@ -259,10 +260,10 @@ contains
       nm = n-1
       vx(RNG) = uu(imx,RNG)/uu(idn,RNG) ; vx(1) = vx(2); vx(n) = vx(nm)
 #ifdef ISO
-      ps(RNG)  = cs_iso2(RNG)*uu(idn,RNG) ; ps(1) = ps(2); ps(n) = ps(nm)
+      ps(RNG) = cs_iso2(RNG) * uu(idn,RNG) ; ps(1) = ps(2); ps(n) = ps(nm)
 #else /* !ISO */
-      ps(RNG)  = (uu(ien,RNG) - ekin(uu(imx,RNG),uu(imy,RNG),uu(imz,RNG),uu(idn,RNG)) )*(this%gam_1)
-      ps(RNG)  = max(ps(RNG), smallp)
+      ps(RNG) = (uu(ien,RNG) - ekin(uu(imx,RNG),uu(imy,RNG),uu(imz,RNG),uu(idn,RNG)) )*(this%gam_1)
+      ps(RNG) = max(ps(RNG), smallp)
 #endif /* !ISO */
 
       flux(idn,RNG)=uu(imx,RNG)

@@ -59,8 +59,8 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, buffer_dim, master, slave, comm, mpi_err, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION
+      use mpisetup,      only: rbuff, buffer_dim, master, slave, comm, mpi_err, FIRST
 
       implicit none
       d0     = 1.0
@@ -72,11 +72,11 @@ contains
 
          diff_nml(PROBLEM_CONTROL)
 
-         rbuff(1)  = d0
-         rbuff(2)  = bxn
-         rbuff(3)  = byn
-         rbuff(4)  = bzn
-         rbuff(5)  = alpha
+         rbuff(1) = d0
+         rbuff(2) = bxn
+         rbuff(3) = byn
+         rbuff(4) = bzn
+         rbuff(5) = alpha
 
       endif
 
@@ -84,11 +84,11 @@ contains
 
       if (slave) then
 
-         d0           = rbuff(1)
-         bxn          = rbuff(2)
-         byn          = rbuff(3)
-         bzn          = rbuff(4)
-         alpha        = rbuff(5)
+         d0       = rbuff(1)
+         bxn      = rbuff(2)
+         byn      = rbuff(3)
+         bzn      = rbuff(4)
+         alpha    = rbuff(5)
 
       endif
 
@@ -100,34 +100,37 @@ contains
 
       use constants,   only: xdim, ydim, zdim
       use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use func,        only: ekin, emag
+      use gc_list,     only: cg_list_element
       use global,      only: smalld
       use grid,        only: leaves
-      use gc_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use hydrostatic, only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use initionized, only: idni, imxi, imyi, imzi
 #ifdef SHEAR
       use shear,       only: qshear, omega
 #endif /* SHEAR */
 
       implicit none
 
-      integer :: i,j,k
-      real :: b0, csim2
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      integer                         :: i,j,k
+      real                            :: b0, csim2
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
 !   Secondary parameters
+      fl => flind%ion
 
-      b0 = sqrt(2.*alpha*d0*flind%ion%cs2)
+      b0 = sqrt(2.*alpha*d0*fl%cs2)
 
-      csim2 = flind%ion%cs2*(1.0+alpha)
+      csim2 = fl%cs2*(1.0+alpha)
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         cg%cs_iso2(:,:,:) = flind%ion%cs2
+         cg%cs_iso2(:,:,:) = fl%cs2
 
          call set_default_hsparams(cg)
          call hydrostatic_zeq_densmid(1, 1, d0, csim2)
@@ -135,19 +138,17 @@ contains
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%u(idni,i,j,k)   = max(smalld, dprof(k))
+                  cg%u(fl%idn,i,j,k)   = max(smalld, dprof(k))
 
-                  cg%u(imxi,i,j,k) = 0.0
-                  cg%u(imyi,i,j,k) = 0.0
-                  cg%u(imzi,i,j,k) = 0.0
+                  cg%u(fl%imx,i,j,k) = 0.0
+                  cg%u(fl%imy,i,j,k) = 0.0
+                  cg%u(fl%imz,i,j,k) = 0.0
 #ifdef SHEAR
-                  cg%u(imyi,i,j,k) = -qshear*omega*x(i)*cg%u(idni,i,j,k)
+                  cg%u(fl%imy,i,j,k) = -qshear*omega*x(i)*cg%u(fl%idn,i,j,k)
 #endif /* SHEAR */
 
 #ifndef ISO
-                  cg%u(ieni,i,j,k) = flind%ion%cs2/(flind%ion%gam_1) * cg%u(idni,i,j,k) + &
-                       &                 0.5*(cg%u(imxi,i,j,k)**2 + cg%u(imyi,i,j,k)**2 + &
-                       &                 cg%u(imzi,i,j,k)**2 ) / cg%u(idni,i,j,k)
+                  cg%u(fl%ien,i,j,k) = fl%cs2/fl%gam_1 * cg%u(fl%idn,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
 #endif /* !ISO */
 
                enddo
@@ -157,11 +158,11 @@ contains
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%b(xdim,i,j,k)   = b0*sqrt(cg%u(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
-                  cg%b(ydim,i,j,k)   = b0*sqrt(cg%u(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
-                  cg%b(zdim,i,j,k)   = b0*sqrt(cg%u(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(xdim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(ydim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(zdim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
-                  cg%u(ieni,i,j,k)   = cg%u(ieni,i,j,k) +0.5*sum(cg%b(:,i,j,k)**2,1)
+                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(xdim,i,j,k), cg%b(xdim,i,j,k))
 #endif /* !ISO */
                enddo
             enddo

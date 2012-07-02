@@ -60,8 +60,8 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION
+      use mpisetup,      only: rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
 
       implicit none
 
@@ -86,7 +86,7 @@ contains
          rbuff(7)  = z0
          rbuff(8)  = amp_cr
          rbuff(9)  = beta_cr
-         rbuff(13) = alpha
+         rbuff(10) = alpha
 
       endif
 
@@ -94,16 +94,16 @@ contains
 
       if (slave) then
 
-         d0           = rbuff(1)
-         bxn          = rbuff(2)
-         byn          = rbuff(3)
-         bzn          = rbuff(4)
-         x0           = rbuff(5)
-         y0           = rbuff(6)
-         z0           = rbuff(7)
-         amp_cr       = rbuff(8)
-         beta_cr      = rbuff(9)
-         alpha        = rbuff(13)
+         d0        = rbuff(1)
+         bxn       = rbuff(2)
+         byn       = rbuff(3)
+         bzn       = rbuff(4)
+         x0        = rbuff(5)
+         y0        = rbuff(6)
+         z0        = rbuff(7)
+         amp_cr    = rbuff(8)
+         beta_cr   = rbuff(9)
+         alpha     = rbuff(10)
 
       endif
 
@@ -116,37 +116,42 @@ contains
       use constants,      only: xdim, ydim, zdim
       use domain,         only: dom
       use fluidindex,     only: flind
+      use fluidtypes,     only: component_fluid
+      use func,           only: ekin, emag
+      use gc_list,        only: cg_list_element
       use global,         only: smalld
       use grid,           only: leaves
-      use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use initcosmicrays, only: gamma_crs, iarr_crs
-      use initionized,    only: idni, imxi, imyi, imzi
       use snsources,      only: r_sn
 #ifdef SHEAR
       use shear,          only: qshear, omega
 #endif /* SHEAR */
+#ifdef COSM_RAYS
+      use initcosmicrays, only: gamma_crs, iarr_crs
+#endif /* COSM_RAYS */
 
       implicit none
 
-      integer :: i, j, k
-      real    :: b0, csim2
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      integer                         :: i, j, k
+      real                            :: b0, csim2
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
 !   Secondary parameters
+      fl => flind%ion
 
-      b0 = sqrt(2.*alpha*d0*flind%ion%cs2)
+      b0 = sqrt(2.*alpha*d0*fl%cs2)
 
-      csim2 = flind%ion%cs2*(1.0+alpha)
+      csim2 = fl%cs2*(1.0+alpha)
 
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (associated(cg%cs_iso2)) cg%cs_iso2(:,:,:) = flind%ion%cs2
+         if (associated(cg%cs_iso2)) cg%cs_iso2(:,:,:) = fl%cs2
 
          call set_default_hsparams(cg)
          call hydrostatic_zeq_densmid(1, 1, d0, csim2)
@@ -154,22 +159,20 @@ contains
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%u(idni,i,j,k)   = max(smalld, dprof(k))
+                  cg%u(fl%idn,i,j,k)   = max(smalld, dprof(k))
 
-                  cg%u(imxi,i,j,k) = 0.0
-                  cg%u(imyi,i,j,k) = 0.0
-                  cg%u(imzi,i,j,k) = 0.0
+                  cg%u(fl%imx,i,j,k) = 0.0
+                  cg%u(fl%imy,i,j,k) = 0.0
+                  cg%u(fl%imz,i,j,k) = 0.0
 #ifdef SHEAR
-                  cg%u(imyi,i,j,k) = -qshear*omega*cg%x(i)*cg%u(idni,i,j,k)
+                  cg%u(fl%imy,i,j,k) = -qshear*omega*cg%x(i)*cg%u(fl%idn,i,j,k)
 #endif /* SHEAR */
 
 #ifndef ISO
-                  cg%u(ieni,i,j,k) = flind%ion%cs2/(flind%ion%gam_1) * cg%u(idni,i,j,k) + &
-                       &                 0.5*(cg%u(imxi,i,j,k)**2 + cg%u(imyi,i,j,k)**2 + &
-                       &                 cg%u(imzi,i,j,k)**2 ) / cg%u(idni,i,j,k)
+                  cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1) * cg%u(fl%idn,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
 #endif /* !ISO */
 #ifdef COSM_RAYS
-                  cg%u(iarr_crs,i,j,k) =  beta_cr*flind%ion%cs2 * cg%u(idni,i,j,k)/( gamma_crs - 1.0 )
+                  cg%u(iarr_crs,i,j,k) =  beta_cr*fl%cs2 * cg%u(fl%idn,i,j,k)/( gamma_crs - 1.0 )
 #ifdef GALAXY
 ! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
                   cg%u(iarr_crs,i,j,k)= cg%u(iarr_crs,i,j,k) &
@@ -186,11 +189,11 @@ contains
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%b(xdim,i,j,k)   = b0*sqrt(cg%u(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
-                  cg%b(ydim,i,j,k)   = b0*sqrt(cg%u(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
-                  cg%b(zdim,i,j,k)   = b0*sqrt(cg%u(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(xdim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(ydim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(zdim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
-                  cg%u(ieni,i,j,k)   = cg%u(ieni,i,j,k) +0.5*sum(cg%b(:,i,j,k)**2,1)
+                  cg%u(fl%ien,i,j,k)   = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
                enddo
             enddo

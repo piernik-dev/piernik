@@ -35,11 +35,11 @@ module initproblem
    private
    public :: read_problem_par, init_prob, problem_pointers
 
-   real :: d0,r0,bx0,by0,bz0
+   real               :: d0, r0, bx0, by0, bz0
    integer, parameter :: one = 1
    character(len=one) :: dir
 
-   namelist /PROBLEM_CONTROL/  d0, r0,bx0,by0,bz0
+   namelist /PROBLEM_CONTROL/  d0, r0, bx0, by0, bz0
 
 contains
 
@@ -55,8 +55,8 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, buffer_dim, master, slave, comm, mpi_err, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION
+      use mpisetup,      only: rbuff, buffer_dim, master, slave, comm, mpi_err, FIRST
 
       implicit none
 
@@ -79,11 +79,11 @@ contains
 
       if (slave) then
 
-         d0           = rbuff(1)
-         r0           = rbuff(2)
-         bx0          = rbuff(3)
-         by0          = rbuff(4)
-         bz0          = rbuff(5)
+         d0       = rbuff(1)
+         r0       = rbuff(2)
+         bx0      = rbuff(3)
+         by0      = rbuff(4)
+         bz0      = rbuff(5)
 
       endif
 
@@ -91,30 +91,32 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,   only: xdim, ydim, zdim
-      use grid,        only: leaves
-      use gc_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use initionized, only: idni,imxi,imyi,imzi
+      use constants,  only: xdim, ydim, zdim, half
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use func,       only: ekin, emag
+      use gc_list,    only: cg_list_element
+      use grid,       only: leaves
+      use grid_cont,  only: grid_container
 #ifndef ISO
-      use initionized, only: ieni, gamma_ion
-      use global,      only: smallei
+      use global,     only: smallei
 #endif /* !ISO */
 #ifndef FFTW
-      use shear,       only: qshear, omega
+      use shear,      only: qshear, omega
 #endif /* !FFTW */
 
       implicit none
 
-      integer  :: i,j,k
-      real     :: xi,yj,zk
-      real     :: vx,vy,vz
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      integer                         :: i, j, k
+      real                            :: xi, yj, zk, vx, vy, vz
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
       call read_problem_par
 
 !   Secondary parameters
+      fl => flind%ion
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -134,25 +136,25 @@ contains
 #endif /* !FFTW */
                   vz = 0.0
                   if (abs(yj) <= r0 ) then
-                     cg%u(idni,i,j,k) = d0
+                     cg%u(fl%idn,i,j,k) = d0
                   else
-                     cg%u(idni,i,j,k) = 0.5*d0
+                     cg%u(fl%idn,i,j,k) = half*d0
                   endif
 
-                  cg%u(imxi,i,j,k) = vx*cg%u(idni,i,j,k)
-                  cg%u(imyi,i,j,k) = vy*cg%u(idni,i,j,k)
-                  cg%u(imzi,i,j,k) = vz*cg%u(idni,i,j,k)
+                  cg%u(fl%imx,i,j,k) = vx*cg%u(fl%idn,i,j,k)
+                  cg%u(fl%imy,i,j,k) = vy*cg%u(fl%idn,i,j,k)
+                  cg%u(fl%imz,i,j,k) = vz*cg%u(fl%idn,i,j,k)
 #ifndef ISO
-                  cg%u(ieni,i,j,k) = 1.0/(gamma_ion-1.0)!*cg%u(idni,i,j,k)
-                  cg%u(ieni,i,j,k) = max(cg%u(ieni,i,j,k), smallei)
-                  cg%u(ieni,i,j,k) = cg%u(ieni,i,j,k) +0.5*(vx**2+vy**2+vz**2)*cg%u(idni,i,j,k)
+                  cg%u(fl%ien,i,j,k) = 1.0/fl%gam_1 !*cg%u(fl%idn,i,j,k)
+                  cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k), smallei)
+                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) + ekin(vx, vy, vz, cg%u(fl%idn,i,j,k))
 #endif /* !ISO */
-                  cg%b(1,i,j,k)   =  bx0
-                  cg%b(2,i,j,k)   =  by0
-                  cg%b(3,i,j,k)   =  bz0
+                  cg%b(xdim,i,j,k)   =  bx0
+                  cg%b(ydim,i,j,k)   =  by0
+                  cg%b(zdim,i,j,k)   =  bz0
 
 #ifndef ISO
-                  cg%u(ieni,i,j,k)   = cg%u(ieni,i,j,k) +0.5*sum(cg%b(:,i,j,k)**2,1)
+                  cg%u(fl%ien,i,j,k)   = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
                enddo
             enddo

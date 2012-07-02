@@ -65,11 +65,11 @@ module initionized
 contains
 
    subroutine initialize_ion_indices(this, flind)
-      use constants, only: ION
+      use constants,  only: ION
       use fluidtypes, only: var_numbers
       implicit none
-      class(ion_fluid), intent(inout) :: this
-      type(var_numbers), intent(inout) :: flind
+      class(ion_fluid),     intent(inout) :: this
+      type(var_numbers),    intent(inout) :: flind
 
       logical :: has_energy, is_magnetized
 #ifdef ISO
@@ -93,8 +93,8 @@ contains
    end subroutine initialize_ion_indices
 
    real function ion_cs(this, cg, i, j, k)
-      use grid_cont, only: grid_container
       use constants,     only: two
+      use grid_cont,     only: grid_container
 #ifndef ISO
       use func,          only: ekin
 #endif /* !ISO */
@@ -105,12 +105,11 @@ contains
 #else /* !MAGNETIC */
       use constants,     only: zero
 #endif /* !MAGNETIC */
-      use grid_cont,     only: grid_container
 
       implicit none
-      class(ion_fluid), intent(in) :: this
+      class(ion_fluid),              intent(in) :: this
       type(grid_container), pointer, intent(in) :: cg !< current grid container
-      integer, intent(in) :: i, j, k
+      integer,                       intent(in) :: i, j, k
 
 #ifdef MAGNETIC
       real :: bx, by, bz
@@ -166,27 +165,27 @@ contains
 !<
    subroutine init_ionized
 
-      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
-      use mpisetup,        only: rbuff, lbuff, comm, mpi_err, buffer_dim, master, slave, FIRST
-      use mpi,             only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun ! QA_WARN required for diff_nml
+      use mpisetup,   only: rbuff, lbuff, comm, mpi_err, buffer_dim, master, slave, FIRST
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_LOGICAL
 
       implicit none
 
       namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion
 
-      gamma_ion     = 5./3.
-      cs_iso_ion    = 1.0
-      selfgrav_ion  = .false.
+      gamma_ion    = 5./3.
+      cs_iso_ion   = 1.0
+      selfgrav_ion = .false.
 
       if (master) then
 
          diff_nml(FLUID_IONIZED)
 
-         lbuff(1)   = selfgrav_ion
+         lbuff(1)  = selfgrav_ion
 
-         rbuff(1)   = gamma_ion
-         rbuff(2)   = cs_iso_ion
-         rbuff(3)   = cs_ion
+         rbuff(1)  = gamma_ion
+         rbuff(2)  = cs_iso_ion
+         rbuff(3)  = cs_ion
 
       endif
 
@@ -203,7 +202,7 @@ contains
 
       endif
 
-      cs_iso_ion2  = cs_iso_ion**2
+      cs_iso_ion2 = cs_iso_ion**2
 
    end subroutine init_ionized
 
@@ -254,23 +253,23 @@ contains
 #define RNG 2:nm
    subroutine flux_ion(this, flux, cfr, uu, n, vx, ps, bb, cs_iso2)
 
-      use constants,  only: xdim, ydim, zdim, idn, imx, imy, imz
+      use constants,    only: xdim, ydim, zdim, idn, imx, imy, imz
 #ifndef ISO
-      use constants,  only: ien
+      use constants,    only: ien
 #endif /* !ISO */
-      use dataio_pub, only: die
-      use func,       only: ekin, emag
+      use dataio_pub,   only: die
+      use func,         only: ekin, emag
 #ifdef LOCAL_FR_SPEED
-      use constants,  only: half, small
-      use global,     only: cfr_smooth
+      use constants,    only: small, half
+      use global,       only: cfr_smooth
 #endif /* LOCAL_FR_SPEED */
 
       implicit none
-      class(ion_fluid), intent(in)                 :: this
-      integer(kind=4), intent(in)                  :: n         !< number of cells in the current sweep
-      real, dimension(:,:), intent(inout), pointer :: flux     !< flux of ionized fluid
-      real, dimension(:,:), intent(inout), pointer :: cfr      !< freezing speed for ionized fluid
-      real, dimension(:,:), intent(in),    pointer :: uu       !< part of u for ionized fluid
+      class(ion_fluid),     intent(in)             :: this
+      integer(kind=4),      intent(in)             :: n         !< number of cells in the current sweep
+      real, dimension(:,:), intent(inout), pointer :: flux      !< flux of ionized fluid
+      real, dimension(:,:), intent(inout), pointer :: cfr       !< freezing speed for ionized fluid
+      real, dimension(:,:), intent(in),    pointer :: uu        !< part of u for ionized fluid
       real, dimension(:),   intent(inout), pointer :: vx        !< velocity of ionized fluid for current sweep
       real, dimension(:),   intent(inout), pointer :: ps        !< pressure of ionized fluid for current sweep
       real, dimension(:,:), intent(in),    pointer :: bb        !< magnetic field x,y,z-components table
@@ -300,10 +299,10 @@ contains
 #endif /* !ISO */
 
 #ifdef ISO
-      p(RNG) = cs_iso2(RNG) * uu(idn,RNG)
-      ps(RNG)= p(RNG) + pmag(RNG)
+      p(RNG)  = cs_iso2(RNG) * uu(idn,RNG)
+      ps(RNG) = p(RNG) + pmag(RNG)
 #else /* !ISO */
-      ps(RNG)=(uu(ien,RNG) - ekin(uu(imx,RNG),uu(imy,RNG),uu(imz,RNG),uu(idn,RNG)) )*(this%gam_1) &
+      ps(RNG) = (uu(ien,RNG) - ekin(uu(imx,RNG),uu(imy,RNG),uu(imz,RNG),uu(idn,RNG)) )*(this%gam_1) &
            & + (2.0 - this%gam)*pmag(RNG)
       p(RNG) = ps(RNG)- pmag(RNG);  p(1) = p(2); p(n) = p(nm)
 #endif /* !ISO */
@@ -317,7 +316,8 @@ contains
       flux(ien,RNG)=(uu(ien,RNG)+ps(RNG))*vx(RNG)-bb(xdim,RNG)*(bb(xdim,RNG)*uu(imx,RNG) &
                 +bb(ydim,RNG)*uu(imy,RNG)+bb(zdim,RNG)*uu(imz,RNG))/uu(idn,RNG)
 #endif /* !ISO */
-      flux(:,1) = flux(:,2); flux(:,n) = flux(:,nm)
+      flux(:,1) = flux(:,2) ; flux(:,n) = flux(:,nm)
+
 #ifdef LOCAL_FR_SPEED
 
       ! The freezing speed is now computed locally (in each cell)

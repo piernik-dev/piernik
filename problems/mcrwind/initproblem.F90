@@ -64,8 +64,8 @@ contains
    subroutine read_problem_par
 
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
       use mpi,           only: MPI_DOUBLE_PRECISION
+      use mpisetup,      only: rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
 #ifdef GRAV
       use gravity,       only: grav_pot_3d, user_grav
 #endif /* GRAV */
@@ -101,16 +101,16 @@ contains
 
       if (slave) then
 
-         d0           = rbuff(1)
-         bxn          = rbuff(2)
-         byn          = rbuff(3)
-         bzn          = rbuff(4)
-         x0           = rbuff(5)
-         y0           = rbuff(6)
-         z0           = rbuff(7)
-         amp_cr       = rbuff(8)
-         beta_cr      = rbuff(9)
-         alpha        = rbuff(10)
+         d0        = rbuff(1)
+         bxn       = rbuff(2)
+         byn       = rbuff(3)
+         bzn       = rbuff(4)
+         x0        = rbuff(5)
+         y0        = rbuff(6)
+         z0        = rbuff(7)
+         amp_cr    = rbuff(8)
+         beta_cr   = rbuff(9)
+         alpha     = rbuff(10)
 
       endif
 
@@ -124,38 +124,41 @@ contains
 
       use constants,      only: xdim, ydim, zdim
       use fluidindex,     only: flind
+      use fluidtypes,     only: component_fluid
+      use func,           only: ekin, emag
+      use gc_list,        only: cg_list_element
       use global,         only: smalld
       use grid,           only: leaves
-      use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use initionized,    only: idni, imxi, imyi, imzi
 #ifdef SHEAR
       use shear,          only: qshear, omega
 #endif /* SHEAR */
 #ifdef COSM_RAYS
-      use initcosmicrays, only: iarr_crn, gamma_crn
+      use initcosmicrays, only: gamma_crn, iarr_crn
 #endif /* COSM_RAYS */
 #ifdef GRAV
       use gravity,        only: grav_pot_3d
 #endif /* GRAV */
       implicit none
 
-      integer            :: i, j, k
-      real               :: b0, csim2
-      real, dimension(3) :: sn_pos
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      integer                         :: i, j, k
+      real                            :: b0, csim2
+      real, dimension(3)              :: sn_pos
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
       call grav_pot_3d
 
       sn_pos = [x0,y0,z0]
 
 !   Secondary parameters
+      fl => flind%ion
 
-      b0 = sqrt(2.*alpha*d0*flind%ion%cs2)
+      b0 = sqrt(2.*alpha*d0*fl%cs2)
 
-      csim2 = flind%ion%cs2*(1.0+alpha)
+      csim2 = fl%cs2*(1.0+alpha)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -167,23 +170,21 @@ contains
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%u(idni,i,j,k)   = max(smalld, dprof(k))
+                  cg%u(fl%idn,i,j,k)   = max(smalld, dprof(k))
 
-                  cg%u(imxi,i,j,k) = 0.0
-                  cg%u(imyi,i,j,k) = 0.0
-                  cg%u(imzi,i,j,k) = 0.0
+                  cg%u(fl%imx,i,j,k) = 0.0
+                  cg%u(fl%imy,i,j,k) = 0.0
+                  cg%u(fl%imz,i,j,k) = 0.0
 #ifdef SHEAR
-                  cg%u(imyi,i,j,k) = -qshear*omega*cg%x(i)*cg%u(idni,i,j,k)
+                  cg%u(fl%imy,i,j,k) = -qshear*omega*cg%x(i)*cg%u(fl%idn,i,j,k)
 #endif /* SHEAR */
 
 #ifndef ISO
-                  cg%u(ieni,i,j,k) = flind%ion%cs2/(flind%ion%gam_1) * cg%u(idni,i,j,k) + &
-                       &                 0.5*(cg%u(imxi,i,j,k)**2 + cg%u(imyi,i,j,k)**2 + &
-                       &                 cg%u(imzi,i,j,k)**2 ) / cg%u(idni,i,j,k)
+                  cg%u(fl%ien,i,j,k) = fl%cs2/(fl%gam_1) * cg%u(fl%idn,i,j,k) + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
 #endif /* !ISO */
 #ifdef COSM_RAYS
                   cg%u(iarr_crn,i,j,k)  = 0.0
-                  cg%u(iarr_crn(1),i,j,k) = beta_cr*flind%ion%cs2 * cg%u(idni,i,j,k)/( gamma_crn(1) - 1.0 )
+                  cg%u(iarr_crn(1),i,j,k) = beta_cr*fl%cs2 * cg%u(fl%idn,i,j,k)/( gamma_crn(1) - 1.0 )
 !#ifdef GALAXY
 !! Single SN explosion in x0,y0,z0 at t = 0 if amp_cr /= 0
 !
@@ -224,11 +225,11 @@ contains
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%b(xdim,i,j,k)   = b0*sqrt(cg%u(idni,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
-                  cg%b(ydim,i,j,k)   = b0*sqrt(cg%u(idni,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
-                  cg%b(zdim,i,j,k)   = b0*sqrt(cg%u(idni,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(xdim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(ydim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
+                  cg%b(zdim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
 #ifndef ISO
-                  cg%u(ieni,i,j,k)   = cg%u(ieni,i,j,k) +0.5*sum(cg%b(:,i,j,k)**2,1)
+                  cg%u(fl%ien,i,j,k)   = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 #endif /* !ISO */
                enddo
             enddo
@@ -241,8 +242,8 @@ contains
 
    subroutine my_grav_pot_3d
 
-      use gravity,    only: grav_accel, grav_accel2pot
       use dataio_pub, only: die, warn
+      use gravity,    only: grav_accel, grav_accel2pot
       use mpisetup,   only: master
 
       implicit none
@@ -282,15 +283,15 @@ contains
 
    subroutine galactic_grav_accel(sweep, i1,i2, xsw, n, grav)
 
-      use units,       only: r_gc_sun, kpc
-      use gravity,     only: r_gc
       use constants,   only: zdim
+      use gravity,     only: r_gc
+      use units,       only: r_gc_sun, kpc
 
       implicit none
 
-      integer(kind=4), intent(in)    :: sweep
-      integer, intent(in)            :: i1, i2
-      integer(kind=4), intent(in)    :: n
+      integer(kind=4),   intent(in)  :: sweep
+      integer,           intent(in)  :: i1, i2
+      integer(kind=4),   intent(in)  :: n
       real, dimension(n),intent(in)  :: xsw
       real, dimension(n),intent(out) :: grav
 
@@ -324,8 +325,8 @@ contains
       use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
       use domain,         only: dom
       use fluidindex,     only: flind
-      use grid,           only: leaves
       use gc_list,        only: cg_list_element
+      use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn
       use snsources,      only: r_sn
@@ -334,11 +335,10 @@ contains
 
       real, dimension(ndims), intent(in) :: pos
 
-      integer :: i, j, k, ipm, jpm, icr
-      real    :: decr, xsn, ysn, zsn
-      real    :: ysna !, ysni, ysno
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      integer                            :: i, j, k, ipm, jpm, icr
+      real                               :: decr, xsn, ysn, zsn, ysna !, ysni, ysno
+      type(cg_list_element), pointer     :: cgl
+      type(grid_container),  pointer     :: cg
 
       xsn = pos(xdim)
       ysn = pos(ydim)

@@ -36,15 +36,12 @@ module initproblem
    private
    public :: read_problem_par, init_prob, problem_pointers
 
-   real            :: t_sn
-   integer         :: n_sn
-   integer(kind=4) :: norm_step
-   real            :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
+   integer(kind=4)    :: norm_step
+   real               :: t_sn
+   integer            :: n_sn
+   real               :: d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr
 
-   namelist /PROBLEM_CONTROL/  d0, p0, bx0, by0, bz0, &
-                               x0, y0, z0, r0, &
-                               beta_cr, amp_cr, &
-                               norm_step
+   namelist /PROBLEM_CONTROL/ d0, p0, bx0, by0, bz0, x0, y0, z0, r0, beta_cr, amp_cr, norm_step
 
 contains
 
@@ -60,11 +57,12 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun ! QA_WARN required for diff_nml
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,   only: ibuff, rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
+      use constants,      only: I_TEN
+      use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun ! QA_WARN required for diff_nml
+      use dataio_pub,     only: die
+      use domain,         only: dom
+      use mpi,            only: MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use mpisetup,       only: ibuff, rbuff, buffer_dim, comm, mpi_err, master, slave, FIRST
 
       implicit none
 
@@ -83,25 +81,25 @@ contains
       beta_cr      = 0.0       !< ambient level
       amp_cr       = 1.0       !< amplitude of the blob
 
-      norm_step    = 10        !< how often to compute the norm (in steps)
+      norm_step    = I_TEN     !< how often to compute the norm (in steps)
 
       if (master) then
 
          diff_nml(PROBLEM_CONTROL)
 
-         rbuff(1) = d0
-         rbuff(2) = p0
-         rbuff(3) = bx0
-         rbuff(4) = by0
-         rbuff(5) = bz0
-         rbuff(6) = x0
-         rbuff(7) = y0
-         rbuff(8) = z0
-         rbuff(9) = r0
-         rbuff(10)= beta_cr
-         rbuff(11)= amp_cr
+         rbuff(1)  = d0
+         rbuff(2)  = p0
+         rbuff(3)  = bx0
+         rbuff(4)  = by0
+         rbuff(5)  = bz0
+         rbuff(6)  = x0
+         rbuff(7)  = y0
+         rbuff(8)  = z0
+         rbuff(9)  = r0
+         rbuff(10) = beta_cr
+         rbuff(11) = amp_cr
 
-         ibuff(1) = norm_step
+         ibuff(1)  = norm_step
 
       endif
 
@@ -110,19 +108,19 @@ contains
 
       if (slave) then
 
-         d0           = rbuff(1)
-         p0           = rbuff(2)
-         bx0          = rbuff(3)
-         by0          = rbuff(4)
-         bz0          = rbuff(5)
-         x0           = rbuff(6)
-         y0           = rbuff(7)
-         z0           = rbuff(8)
-         r0           = rbuff(9)
-         beta_cr      = rbuff(10)
-         amp_cr       = rbuff(11)
+         d0        = rbuff(1)
+         p0        = rbuff(2)
+         bx0       = rbuff(3)
+         by0       = rbuff(4)
+         bz0       = rbuff(5)
+         x0        = rbuff(6)
+         y0        = rbuff(7)
+         z0        = rbuff(8)
+         r0        = rbuff(9)
+         beta_cr   = rbuff(10)
+         amp_cr    = rbuff(11)
 
-         norm_step    = ibuff(1)
+         norm_step = int(ibuff(1), kind=4)
 
       endif
 
@@ -138,11 +136,12 @@ contains
       use dataio_pub,     only: msg, warn, printinfo, die
       use domain,         only: dom, is_multicg
       use fluidindex,     only: flind
-      use grid,           only: leaves
+      use fluidtypes,     only: component_fluid
+      use func,           only: ekin, emag
       use gc_list,        only: cg_list_element
+      use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
-      use initionized,    only: idni, imxi, imzi, ieni, gamma_ion
       use mpi,            only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX
       use mpisetup,       only: comm, mpi_err, master
 #ifdef COSM_RAYS_SOURCES
@@ -151,17 +150,16 @@ contains
 
       implicit none
 
-      integer :: i, j, k
-      integer :: icr
-      real    :: cs_iso
-      real    :: xsn, ysn, zsn
-      real    :: r2, maxv
-      integer :: ipm, jpm, kpm
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      integer                         :: i, j, k, icr, ipm, jpm, kpm
+      real                            :: cs_iso, xsn, ysn, zsn, r2, maxv
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 #ifndef COSM_RAYS_SOURCES
-      integer, parameter :: icr_H1 = 1, icr_C12 = 2
+      integer, parameter              :: icr_H1 = 1, icr_C12 = 2
 #endif /* !COSM_RAYS_SOURCES */
+
+      fl => flind%ion
 
       ! BEWARE: temporary fix
       xsn = x0
@@ -190,16 +188,16 @@ contains
          cg%b(xdim, :, :, :) = bx0
          cg%b(ydim, :, :, :) = by0
          cg%b(zdim, :, :, :) = bz0
-         cg%u(idni, :, :, :) = d0
-         cg%u(imxi:imzi, :, :, :) = 0.0
+         cg%u(fl%idn, :, :, :) = d0
+         cg%u(fl%imx:fl%imz, :, :, :) = 0.0
 
 #ifndef ISO
          do k = 1, cg%n_(zdim)
             do j = 1, cg%n_(ydim)
                do i = 1, cg%n_(xdim)
-                  cg%u(ieni,i,j,k) = p0/(gamma_ion-1.0) + &
-                       &                0.5*sum(cg%u(imxi:imzi,i,j,k)**2,1)/cg%u(idni,i,j,k) + &
-                       &                0.5*sum(cg%b(:,i,j,k)**2,1)
+                  cg%u(fl%ien,i,j,k) = p0/fl%gam_1 + &
+                       &               ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
+                       &               emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
                enddo
             enddo
          enddo
@@ -207,7 +205,7 @@ contains
 
 #ifdef COSM_RAYS
          do icr = 1, flind%crs%all
-            cg%u(iarr_crs(icr), :, :, :) =  beta_cr*cs_iso**2 * cg%u(idni, :, :, :)/(gamma_crn(icr)-1.0)
+            cg%u(iarr_crs(icr), :, :, :) =  beta_cr*fl%cs2 * cg%u(fl%idn, :, :, :)/(gamma_crn(icr)-1.0)
          enddo
 
 ! Explosions
