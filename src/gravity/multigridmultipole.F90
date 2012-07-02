@@ -261,10 +261,11 @@ contains
 
    subroutine multipole_solver
 
-      use cg_list_lev,      only: cg_list_level
-      use grid,             only: finest
-      use multigridvars,    only: solution
-      use multigridhelpers, only: dirtyH, dirty_debug
+      use cg_list_lev,   only: cg_list_level
+      use constants,     only: dirtyH
+      use global,        only: dirty_debug
+      use grid,          only: finest
+      use multigridvars, only: solution
 
       implicit none
 

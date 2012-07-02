@@ -44,10 +44,11 @@ module global
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
         &    integration_order, limiter, smalld, smallei, smallp, use_smalld, magic_mass, local_magic_mass, &
-        &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D
+        &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, dirty_debug
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
+   logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
    real            :: t, dt, dt_old, dtm
    real            :: magic_mass
    real, save      :: local_magic_mass = 0.0

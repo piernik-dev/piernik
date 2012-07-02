@@ -35,103 +35,23 @@
 
 module multigridhelpers
 ! pulled by MULTIGRID
+
    implicit none
 
    private
 
-   public :: set_dirty, check_dirty, numbered_ascii_dump
-   public :: do_ascii_dump, dirty_debug, dirty_label, dirtyH, dirtyL
+   public :: numbered_ascii_dump
+   public :: do_ascii_dump, dirty_label
 
    ! namelist parameters
    logical            :: do_ascii_dump                      !< to dump, or not to dump: that is a question (ascii)
-   logical            :: dirty_debug                        !< Initialize everything with some insane values (dirtyH, defined below) and check if they can propagate
    integer, parameter    :: dl_len = 64                     !< length of label buffer
    character(len=dl_len) :: dirty_label                     !< buffer for label for check_dirty subroutine
    real, parameter    :: big_s =  huge(real(1.0,4))         !< largest single-precision number
-   real, parameter    :: dirtyH = big_s                     !< If dirty_debug then initialize arrays with this insane value
-   real, parameter    :: dirtyL = sqrt(big_s)               !< If dirty_debug then check if the solution got contaminated by dirtyH by checking if it contains anything above dirtyL
 
 contains
 
 !> \todo write also general set_dirty_array and check_dirty_array routines so there will be no need to use dirtyH and dirtyL outside multigridhelpers module.
-
-!!$ ============================================================================
-!>
-!! \brief This routine pollutes selected multigrid variable with an insane value dirtyH.
-!! \details If anything in the multigrid works by accident, through compiler-dependent initialization or unintentional relying on outdated values,
-!! the insane value should pollute the solution in an easily visible way.
-!<
-
-   subroutine set_dirty(iv)
-
-      use cg_list_global, only: all_cg
-      use dataio_pub,     only: die
-
-      implicit none
-
-      integer, intent(in) :: iv   !< index of variable in cg%q(:) which we want to pollute
-
-      if (.not. dirty_debug) return
-
-      if (iv < lbound(all_cg%q_lst, dim=1) .or. iv > ubound(all_cg%q_lst, dim=1)) call die("[multigridhelpers:set_dirty] Invalid variable index.")
-
-      call all_cg%set_q_value(iv, dirtyH)
-
-   end subroutine set_dirty
-
-!!$ ============================================================================
-!>
-!! \brief This routine checks for detectable traces of set_dirty calls.
-!<
-
-   subroutine check_dirty(curl, iv, label, expand)
-
-      use cg_list_global, only: all_cg
-      use constants,      only: ndims
-      use dataio_pub,     only: die, warn, msg
-      use domain,         only: dom
-      use gc_list,        only: cg_list_element
-      use cg_list_lev,    only: cg_list_level
-      use mpisetup,       only: proc
-
-      implicit none
-
-      type(cg_list_level), pointer, intent(in) :: curl   !< level which we are checking
-      integer,                      intent(in) :: iv     !< index of variable in cg%q(:) which we want to pollute
-      character(len=*),             intent(in) :: label  !< label to indicate the origin of call
-      integer(kind=4), optional,    intent(in) :: expand !< also check guardcells
-
-      integer :: i, j, k, ng
-      type(cg_list_element), pointer :: cgl
-
-      if (.not. dirty_debug) return
-      if (iv < lbound(all_cg%q_lst, dim=1) .or. iv > ubound(all_cg%q_lst, dim=1)) call die("[multigridhelpers:check_dirty] Invalid variable index.")
-
-      if (present(expand) .and. dom%eff_dim==ndims) then ! for 1D and 2D one should define ng_x,ng_y and ng_z
-         ng = min(dom%nb, expand)
-      else
-         ng = 0
-      endif
-
-      cgl => curl%first
-      do while (associated(cgl))
-         do k = cgl%cg%ks-ng*dom%D_z, cgl%cg%ke+ng*dom%D_z
-            do j = cgl%cg%js-ng*dom%D_y, cgl%cg%je+ng*dom%D_y
-               do i = cgl%cg%is-ng*dom%D_x, cgl%cg%ie+ng*dom%D_x
-                  if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
-                     ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
-                     write(msg, '(3a,i4,a,i3,a,i5,3a,3(i3,a),g20.12)') "[multigridhelpers:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, " cg#", cgl%cg%grid_id, &
-                          &                                            " '", trim(all_cg%q_lst(iv)%name), "'(", i, ",", j, ",", k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
-                     call warn(msg)
-                     ! endif
-                  endif
-               enddo
-            enddo
-         enddo
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine check_dirty
 
 !!$ ============================================================================
 !>

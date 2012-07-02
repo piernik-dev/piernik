@@ -73,6 +73,8 @@ module gc_list
       procedure :: get_extremum                      !< Find munimum or maximum value over a s list
       procedure :: print_list                        !< Print the list and associated cg ID
       procedure :: ascii_dump                        !< Emergency routine for quick ASCII dumps
+      procedure :: set_dirty                         !< Pollute selected array with an insane value dirtyH.
+      procedure :: check_dirty                       !< Check for detectable traces of set_dirty calls.
 
       ! Arithmetic on the fields
       procedure :: set_q_value                       !< reset given field to the value
@@ -751,10 +753,85 @@ contains
 
       close(fu)
 
-      write(msg,'(3a)') "[multigridhelpers:ascii_dump] Wrote dump '",filename,"'"
+      write(msg,'(3a)') "[gc_list:ascii_dump] Wrote dump '",filename,"'"
       call printio(msg)
 
    end subroutine ascii_dump
+
+!>
+!! \brief This routine pollutes selected array with an insane value dirtyH.
+!!
+!! \details If anything in the multigrid works by accident, through compiler-dependent initialization or unintentional relying on outdated values,
+!! the insane value should pollute the solution in an easily visible way.
+!<
+
+   subroutine set_dirty(this, iv)
+
+      use constants,  only: dirtyH
+      use global,     only: dirty_debug
+
+      implicit none
+
+      class(cg_list), intent(inout) :: this !< list for which we want to apply pollution
+      integer,        intent(in)    :: iv   !< index of variable in cg%q(:) which we want to pollute
+
+      if (.not. dirty_debug) return
+
+      call this%set_q_value(iv, dirtyH)
+
+   end subroutine set_dirty
+
+!>
+!! \brief This routine checks for detectable traces of set_dirty calls.
+!<
+
+   subroutine check_dirty(this, iv, label, expand)
+
+      use constants,  only: dirtyL
+      use dataio_pub, only: warn, msg
+      use domain,     only: dom
+      use global,     only: dirty_debug
+      use mpisetup,   only: proc
+
+      implicit none
+
+      class(cg_list),            intent(inout) :: this   !< level which we are checking
+      integer,                   intent(in)    :: iv     !< index of variable in cg%q(:) which we want to pollute
+      character(len=*),          intent(in)    :: label  !< label to indicate the origin of call
+      integer(kind=4), optional, intent(in)    :: expand !< also check guardcells
+
+      integer :: i, j, k, ng
+      type(cg_list_element), pointer :: cgl
+
+      if (.not. dirty_debug) return
+!      if (iv < lbound(all_cg%q_lst, dim=1) .or. iv > ubound(all_cg%q_lst, dim=1)) call die("[multigridhelpers:check_dirty] Invalid variable index.")
+
+      ng = 0
+      if (present(expand)) ng = min(dom%nb, expand)
+
+      cgl => this%first
+      do while (associated(cgl))
+         do k = cgl%cg%ks-ng*dom%D_z, cgl%cg%ke+ng*dom%D_z
+            do j = cgl%cg%js-ng*dom%D_y, cgl%cg%je+ng*dom%D_y
+               do i = cgl%cg%is-ng*dom%D_x, cgl%cg%ie+ng*dom%D_x
+                  if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
+                     ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
+                     write(msg, '(3a,i4,a,i3,a,i5,a,i3,a,3(i3,a),g20.12)') "[gc_list:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, &
+                          &                                                " cg#", cgl%cg%grid_id, " '", iv, "'(", i, ",", j, ",", k, ") = ", &
+                          &                                                cgl%cg%q(iv)%arr(i, j, k)
+!!$                     write(msg, '(3a,i4,a,i3,a,i5,3a,3(i3,a),g20.12)') "[gc_list:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, &
+!!$                          &                                            " cg#", cgl%cg%grid_id, " '", trim(all_cg%q_lst(iv)%name), "'(", i, ",", j, ",", k, ") = ", &
+!!$                          &                                            cgl%cg%q(iv)%arr(i, j, k)
+                     call warn(msg)
+                     ! endif
+                  endif
+               enddo
+            enddo
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine check_dirty
 
 ! unused
 !!$!>

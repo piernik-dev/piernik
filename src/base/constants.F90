@@ -73,6 +73,8 @@ module constants
    ! some numerical representation extrema
    real, parameter :: big        = huge(real(1.0,4))     !< a constant used as the upper limit number
    real, parameter :: big_float  = huge(real(1.0,4))     !< replicated temporarily 'big' for compatibility \todo choose one and convert occurrences of the other one
+   real, parameter :: dirtyH     = big                   !< If dirty_debug then pollute arrays with this insane value
+   real, parameter :: dirtyL     = sqrt(dirtyH)          !< If dirty_debug then assume that the array got contaminated by dirtyH by checking against this value
    real, parameter :: small      = tiny(real(1.0,4))     !< a constant used as the lower limit number
    integer, parameter :: big_int = huge(int(1,4))
 

@@ -354,15 +354,15 @@ contains
       use grid,             only: leaves, finest
       use initcosmicrays,   only: iarr_crs
       use multigridvars,    only: source, defect, correction
-      use multigridhelpers, only: set_dirty, check_dirty, dirty_label
+      use multigridhelpers, only: dirty_label
 
       implicit none
 
       integer, intent(in) :: cr_id !< CR component index
 
-      call set_dirty(source)
-      call set_dirty(correction)
-      call set_dirty(defect)
+      call all_cg%set_dirty(source)
+      call all_cg%set_dirty(correction)
+      call all_cg%set_dirty(defect)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
       if (diff_theta /= 0.) then
          call leaves%wq_copy(all_cg%fi, int(iarr_crs(cr_id)), all_cg%wai)
@@ -373,7 +373,7 @@ contains
          call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
       endif
       write(dirty_label, '(a,i2)')"init source#", cr_id
-      call check_dirty(finest, source, dirty_label)
+      call finest%check_dirty(source, dirty_label)
 
       vstat%norm_rhs = leaves%norm_sq(source)
 
@@ -386,22 +386,21 @@ contains
 
    subroutine init_solution(cr_id)
 
-      use cg_list_global,   only: all_cg
+      use cg_list_global, only: all_cg
 #if defined(__INTEL_COMPILER)
-      use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_list_lev,    only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use grid,             only: leaves, finest
-      use initcosmicrays,   only: iarr_crs
-      use multigridvars,    only: solution
-      use multigridhelpers, only: set_dirty, check_dirty
+      use grid,           only: leaves, finest
+      use initcosmicrays, only: iarr_crs
+      use multigridvars,  only: solution
 
       implicit none
 
       integer, intent(in) :: cr_id !< CR component index
 
-      call set_dirty(solution)
+      call all_cg%set_dirty(solution)
       call leaves%wq_copy(all_cg%fi, int(iarr_crs(cr_id)), solution)
-      call check_dirty(finest, solution, "init solution")
+      call finest%check_dirty(solution, "init solution")
 
    end subroutine init_solution
 
@@ -422,7 +421,7 @@ contains
       use grid,             only: leaves, coarsest, finest
       use gc_list,          only: cg_list_element
       use grid_cont,        only: grid_container
-      use multigridhelpers, only: set_dirty, check_dirty, dirty_label
+      use multigridhelpers, only: dirty_label
       use named_array,      only: p3, p4
 
       implicit none
@@ -433,7 +432,7 @@ contains
       type(cg_list_level),   pointer :: curl
 
       do ib = xdim, zdim
-         call set_dirty(idiffb(ib))
+         call all_cg%set_dirty(idiffb(ib))
 #if 1
          cgl => leaves%first
          do while (associated(cgl))
@@ -459,7 +458,7 @@ contains
             curl => curl%finer
          enddo
          write(dirty_label, '(a,i1)')"init b",ib
-         call check_dirty(curl, idiffb(ib), dirty_label)
+         call curl%check_dirty(idiffb(ib), dirty_label)
       enddo
 
    end subroutine init_b
@@ -478,7 +477,7 @@ contains
       use grid,             only: leaves, coarsest, finest
       use initcosmicrays,   only: iarr_crs
       use mpisetup,         only: master
-      use multigridhelpers, only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump, dirty_label
+      use multigridhelpers, only: do_ascii_dump, numbered_ascii_dump, dirty_label
       use multigridvars,    only: source, defect, solution, correction, ts, tot_ts
       use timer,            only: set_timer
 
@@ -505,7 +504,7 @@ contains
 
       do v = 0, max_cycles
 
-         call set_dirty(defect)
+         call all_cg%set_dirty(defect)
 
          call residual(finest, source, solution, defect, cr_id)
          norm_lhs = leaves%norm_sq(defect)
@@ -538,7 +537,7 @@ contains
 
          call finest%restrict_to_floor_q_1var(defect)
 
-         !call set_dirty(correction)
+         !call all_cg%set_dirty(correction)
          call coarsest%set_q_value(correction, 0.)
 
          curl => coarsest
@@ -548,15 +547,15 @@ contains
             curl => curl%finer
          enddo
 
-         call check_dirty(finest, correction, "c_residual")
-         call check_dirty(finest, defect, "d_residual")
+         call finest%check_dirty(correction, "c_residual")
+         call finest%check_dirty(defect, "d_residual")
          call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(correction, -1.) ], solution) ! solution := solution - correction
 
       enddo
 
       if (dump_every_step) call numbered_ascii_dump(dirty_label)
 
-      call check_dirty(finest, solution, "v_soln")
+      call finest%check_dirty(solution, "v_soln")
 
       if (v > max_cycles) then
          if (master .and. norm_lhs/norm_rhs > norm_tol) then
@@ -658,16 +657,15 @@ contains
 
    subroutine residual(curl, src, soln, def, cr_id)
 
-      use cg_list_global,    only: all_cg
-      use cg_list_lev,       only: cg_list_level
-      use constants,         only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
-      use domain,            only: dom
-      use external_bnd,      only: arr3d_boundaries
-      use gc_list,           only: cg_list_element, ind_val
-      use global,            only: dt
-      use grid_cont,         only: grid_container
-!      use multigridhelpers,  only: check_dirty
-      use named_array,       only: p3
+      use cg_list_global, only: all_cg
+      use cg_list_lev,    only: cg_list_level
+      use constants,      only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
+      use domain,         only: dom
+      use external_bnd,   only: arr3d_boundaries
+      use gc_list,        only: cg_list_element, ind_val
+      use global,         only: dt
+      use grid_cont,      only: grid_container
+      use named_array,    only: p3
 
       implicit none
 
@@ -709,7 +707,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-!      call check_dirty(curl, def, "res def")
+!      call curl%check_dirty(def, "res def")
 
    end subroutine residual
 

@@ -959,17 +959,16 @@ contains
    subroutine init_solution(history)
 
 #if defined(__INTEL_COMPILER)
-      use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_list_lev,    only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use cg_list_global,   only: all_cg
-      use constants,        only: INVALID, O_INJ, O_LIN, O_I2
-      use dataio_pub,       only: msg, die, printinfo
-      use gc_list,          only: ind_val
-      use global,           only: t
-      use grid,             only: leaves, finest
-      use mpisetup,         only: master
-      use multigridvars,    only: stdout, solution
-      use multigridhelpers, only: set_dirty, check_dirty
+      use cg_list_global, only: all_cg
+      use constants,      only: INVALID, O_INJ, O_LIN, O_I2
+      use dataio_pub,     only: msg, die, printinfo
+      use gc_list,        only: ind_val
+      use global,         only: t
+      use grid,           only: leaves, finest
+      use mpisetup,       only: master
+      use multigridvars,  only: stdout, solution
 
       implicit none
 
@@ -978,7 +977,7 @@ contains
       integer :: p0, p1, p2, ordt
       real, dimension(3) :: dt_fac
 
-      call set_dirty(solution)
+      call all_cg%set_dirty(solution)
 
       p0 = history%last
       if (nold > 0) then
@@ -1039,7 +1038,7 @@ contains
             call die("[multigrid_gravity:init_solution] Extrapolation order not implemented")
       end select
 
-      call check_dirty(finest, solution, "init_soln")
+      call finest%check_dirty(solution, "init_soln")
 
    end subroutine init_solution
 
@@ -1053,20 +1052,20 @@ contains
 
    subroutine init_source(i_all_dens)
 
+      use cg_list_global, only: all_cg
 #if defined(__INTEL_COMPILER)
-      use cg_list_lev,        only: cg_list_level    ! QA_WARN workaround for stupid INTEL compiler
+      use cg_list_lev,    only: cg_list_level    ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use constants,          only: GEO_RPZ, LO, HI, xdim, ydim, zdim
-      use dataio_pub,         only: die
-      use domain,             only: dom
-      use gc_list,            only: cg_list_element
-      use grid,               only: leaves, finest
-      use grid_cont,          only: grid_container
-      use multigridhelpers,   only: set_dirty, check_dirty
-      use multigridvars,      only: source
-      use units,              only: fpiG
+      use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim
+      use dataio_pub,     only: die
+      use domain,         only: dom
+      use gc_list,        only: cg_list_element
+      use grid,           only: leaves, finest
+      use grid_cont,      only: grid_container
+      use multigridvars,  only: source
+      use units,          only: fpiG
 #ifdef JEANS_PROBLEM
-      use problem_pub,        only: jeans_d0, jeans_mode ! hack for tests
+      use problem_pub,    only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
 
       implicit none
@@ -1078,7 +1077,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      call set_dirty(source)
+      call all_cg%set_dirty(source)
 
       if (present(i_all_dens)) then
          cgl => leaves%first
@@ -1163,7 +1162,7 @@ contains
             call die("[multigrid_gravity:init_source] Unknown boundary type")
       end select
 
-      call check_dirty(finest, source, "init_src")
+      call finest%check_dirty(source, "init_src")
 
    end subroutine init_source
 
@@ -1278,14 +1277,15 @@ contains
 
    subroutine vcycle_hg(history)
 
-      use cg_list_lev,        only: cg_list_level
-      use constants,          only: cbuff_len, fft_none
-      use dataio_pub,         only: msg, die, warn, printinfo
-      use grid,               only: leaves, finest, coarsest
-      use mpisetup,           only: master, nproc
-      use multigridhelpers,   only: set_dirty, check_dirty, do_ascii_dump, numbered_ascii_dump
-      use multigridvars,      only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts
-      use timer,              only: set_timer
+      use cg_list_global,   only: all_cg
+      use cg_list_lev,      only: cg_list_level
+      use constants,        only: cbuff_len, fft_none
+      use dataio_pub,       only: msg, die, warn, printinfo
+      use grid,             only: leaves, finest, coarsest
+      use mpisetup,         only: master, nproc
+      use multigridhelpers, only: do_ascii_dump, numbered_ascii_dump
+      use multigridvars,    only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts
+      use timer,            only: set_timer
 
       implicit none
 
@@ -1308,7 +1308,7 @@ contains
 
       ! On single CPU use FFT if possible because it is faster. Can be disabled by prefer_rbgs_relaxation = .true.
       if (nproc == 1 .and. finest%fft_type /= fft_none) then
-         call set_dirty(solution)
+         call all_cg%set_dirty(solution)
          call fft_solve_roof
          if (trust_fft_solution) then
             write(msg, '(3a)')"[multigrid_gravity:vcycle_hg] FFT solution trusted, skipping ", trim(vstat%cprefix), "cycle."
@@ -1341,10 +1341,10 @@ contains
       ! iterations
       do v = 0, max_cycles
 
-         call set_dirty(defect)
+         call all_cg%set_dirty(defect)
          call residual(finest, source, solution, defect) !leaves
          if (grav_bnd == bnd_periodic) call leaves%subtract_average(defect)
-         call check_dirty(finest, defect, "residual") !leaves
+         call finest%check_dirty(defect, "residual") !leaves
 
          norm_lhs = leaves%norm_sq(defect)
          ts = set_timer("multigrid")
@@ -1398,13 +1398,13 @@ contains
          ! the Huang-Greengard V-cycle
          call finest%restrict_to_floor_q_1var(defect)
 
-         ! call set_dirty(correction)
+         ! call all_cg%set_dirty(correction)
          call coarsest%set_q_value(correction, 0.)
 
          curl => coarsest
          do while (associated(curl))
             call approximate_solution(curl, defect, correction)
-            call check_dirty(curl, correction, "Vup relax+")
+            call curl%check_dirty(correction, "Vup relax+")
             curl => curl%finer
          enddo
          call leaves%q_add(correction, solution)
@@ -1419,7 +1419,7 @@ contains
       vstat%norm_final = norm_lhs/norm_rhs
       if (.not. verbose_vcycle) call vstat%brief_v_log
 
-      call check_dirty(finest, solution, "final_solution")
+      call finest%check_dirty(solution, "final_solution")
 
       call store_solution(history)
 
@@ -1684,7 +1684,6 @@ contains
       use cg_list_lev,      only: cg_list_level
       use constants,        only: fft_none
       use grid,             only: finest
-      use multigridhelpers, only: check_dirty
       use multigridvars,    only: correction
 
       implicit none
@@ -1693,19 +1692,19 @@ contains
       integer,                      intent(in) :: src  !< index of source in cg%q(:)
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
-      call check_dirty(curl, src, "approx_soln src-")
+      call curl%check_dirty(src, "approx_soln src-")
 
       if (curl%fft_type /= fft_none) then
          call approximate_solution_fft(curl, src, soln)
       else
-         call check_dirty(curl, soln, "approx_soln soln-")
+         call curl%check_dirty(soln, "approx_soln soln-")
          call approximate_solution_rbgs(curl, src, soln)
       endif
 
       if (prefer_rbgs_relaxation .and. soln == correction .and. .not. associated(curl, finest)) call curl%prolong_q_1var(correction)
       !> \deprecated BEWARE other implementations of the multigrid algorithm may be incompatible with prolongation called from here
 
-      call check_dirty(curl, soln, "approx_soln soln+")
+      call curl%check_dirty(soln, "approx_soln soln+")
 
    end subroutine approximate_solution
 
@@ -1726,9 +1725,10 @@ contains
       use domain,           only: dom
       use external_bnd,     only: arr3d_boundaries
       use gc_list,          only: cg_list_element
+      use global,           only: dirty_debug
       use grid,             only: coarsest
       use grid_cont,        only: grid_container
-      use multigridhelpers, only: dirty_debug, check_dirty, dirty_label
+      use multigridhelpers, only: dirty_label
 
       implicit none
 
@@ -1757,7 +1757,7 @@ contains
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax soln- smoo=", n
-            call check_dirty(curl, soln, dirty_label)
+            call curl%check_dirty(soln, dirty_label)
          endif
          cgl => curl%first
          do while (associated(cgl))
@@ -1866,7 +1866,7 @@ contains
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax soln+ smoo=", n
-            call check_dirty(curl, soln, dirty_label)
+            call curl%check_dirty(soln, dirty_label)
          endif
 
       enddo
@@ -1882,17 +1882,17 @@ contains
 
    subroutine approximate_solution_fft(curl, src, soln)
 
-      use cg_list_lev,      only: cg_list_level
-      use constants,        only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2, BND_NEGREF, fft_none, fft_dst
-      use dataio_pub,       only: die, warn
-      use domain,           only: dom
-      use external_bnd,     only: arr3d_boundaries
-      use gc_list,          only: cg_list_element
-      use grid,             only: coarsest
-      use grid_cont,        only: grid_container
-      use multigridhelpers, only: dirty_debug, check_dirty, dirtyL
-      use multigridvars,    only: single_base
-      use named_array,      only: p3
+      use cg_list_lev,   only: cg_list_level
+      use constants,     only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2, BND_NEGREF, fft_none, fft_dst, dirtyL
+      use dataio_pub,    only: die, warn
+      use domain,        only: dom
+      use external_bnd,  only: arr3d_boundaries
+      use gc_list,       only: cg_list_element
+      use global,        only: dirty_debug
+      use grid,          only: coarsest
+      use grid_cont,     only: grid_container
+      use multigridvars, only: single_base
+      use named_array,   only: p3
 
       implicit none
 
@@ -1976,7 +1976,7 @@ contains
             cgl => cgl%nxt
          enddo
 
-         call check_dirty(curl, soln, "approx_soln fft+")
+         call curl%check_dirty(soln, "approx_soln fft+")
 
          !> \deprecated BEWARE use dom%has_dir() here in a way that does not degrade performance
 
@@ -2037,7 +2037,7 @@ contains
             enddo
          enddo
 
-         call check_dirty(curl, soln, "approx_soln relax+")
+         call curl%check_dirty(soln, "approx_soln relax+")
 
       enddo
 
@@ -2160,17 +2160,16 @@ contains
 
    subroutine prolong_faces(fine, soln)
 
-      use cg_list_lev,      only: cg_list_level
-      use constants,        only: xdim, ydim, zdim, LO, HI, LONG, I_ONE, half, O_INJ, O_LIN, O_D2, O_I2, BND_NEGREF
-      use dataio_pub,       only: die, warn
-      use domain,           only: dom, is_multicg
-      use external_bnd,     only: arr3d_boundaries
-      use grid,             only: coarsest
-      use grid_cont,        only: pr_segment
-      use mpi,              only: MPI_DOUBLE_PRECISION
-      use mpisetup,         only: comm, mpi_err, req, status, master
-      use multigridhelpers, only: check_dirty
-      use multigridvars,    only: ord_prolong_face_norm, ord_prolong_face_par, need_general_pf
+      use cg_list_lev,   only: cg_list_level
+      use constants,     only: xdim, ydim, zdim, LO, HI, LONG, I_ONE, half, O_INJ, O_LIN, O_D2, O_I2, BND_NEGREF
+      use dataio_pub,    only: die, warn
+      use domain,        only: dom, is_multicg
+      use external_bnd,  only: arr3d_boundaries
+      use grid,          only: coarsest
+      use grid_cont,     only: pr_segment
+      use mpi,           only: MPI_DOUBLE_PRECISION
+      use mpisetup,      only: comm, mpi_err, req, status, master
+      use multigridvars, only: ord_prolong_face_norm, ord_prolong_face_par, need_general_pf
 
       implicit none
 
@@ -2356,7 +2355,7 @@ contains
          b_rng = s_rng
          if (ord_prolong_face_norm > O_INJ) b_rng = max(b_rng, int(ord_prolong_face_norm+1, kind=4))
          call arr3d_boundaries(coarse, soln, nb = b_rng, bnd_type = BND_NEGREF, corners = (ord_prolong_face_par/=0)) !> \deprecated BEWARE for higher prolongation order more guardcell are required
-         call check_dirty(coarse, soln, "prolong_faces", s_rng)
+         call coarse%check_dirty(soln, "prolong_faces", s_rng)
 
          if (ord_prolong_face_norm /= O_INJ) then
             if (dom%has_dir(xdim)) then
