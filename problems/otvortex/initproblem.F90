@@ -145,7 +145,7 @@ contains
 #ifndef ISO
                   cg%u(fl%ien,i,j,k) = pre/fl%gam_1
                   cg%u(fl%ien,i,j,k) = max(cg%u(fl%ien,i,j,k), smallei)
-                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) +ekin(vx, vy, vz, cg%u(fl%idn,i,j,k))
+                  cg%u(fl%ien,i,j,k) = cg%u(fl%ien,i,j,k) +ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
 #endif /* !ISO */
                   cg%b(xdim,i,j,k)  = bx
                   cg%b(ydim,i,j,k)  = by
