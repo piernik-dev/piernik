@@ -264,7 +264,7 @@ contains
       use cg_list_lev,      only: cg_list_level
       use grid,             only: finest
       use multigridvars,    only: solution
-      use multigridhelpers, only: dirtyH, dirty_debug, zero_boundaries
+      use multigridhelpers, only: dirtyH, dirty_debug
 
       implicit none
 
@@ -275,7 +275,7 @@ contains
          lmpole%first%cg%mg%bnd_y(:, :, :) = dirtyH
          lmpole%first%cg%mg%bnd_z(:, :, :) = dirtyH
       else
-         call zero_boundaries(lmpole)
+         call lmpole%zero_boundaries
       endif
 
       if (.not. associated(lmpole, finest)) then

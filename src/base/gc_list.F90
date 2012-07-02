@@ -83,6 +83,9 @@ module gc_list
       procedure :: q_lin_comb                        !< assign linear combination of q fields
       procedure :: subtract_average                  !< subtract average value from the list
       procedure :: norm_sq                           !< calculate L2 norm
+
+      ! Multigrid
+      procedure :: zero_boundaries                   !< Clear boundary values
 !> \todo merge lists
 
    end type cg_list
@@ -674,6 +677,26 @@ contains
       norm = sqrt(norm)
 
    end function norm_sq
+
+!> \brief Clear boundary values
+
+   subroutine zero_boundaries(this)
+
+      implicit none
+
+      class(cg_list), intent(inout) :: this  !< list for which clear the boundary values (typically a single level)
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%mg%bnd_x(:,:,:) = 0.
+         cgl%cg%mg%bnd_y(:,:,:) = 0.
+         cgl%cg%mg%bnd_z(:,:,:) = 0.
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine zero_boundaries
 
 ! unused
 !!$!>
