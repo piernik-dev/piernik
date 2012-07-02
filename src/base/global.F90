@@ -44,7 +44,7 @@ module global
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
         &    integration_order, limiter, smalld, smallei, smallp, use_smalld, magic_mass, local_magic_mass, &
-        &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, dirty_debug
+        &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, dirty_debug, do_ascii_dump
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
@@ -53,6 +53,7 @@ module global
    real            :: magic_mass
    real, save      :: local_magic_mass = 0.0
    integer(kind=4) :: nstep
+   logical         :: do_ascii_dump                      !< to dump, or not to dump: that is a question (ascii)
 
    ! Namelist variables
 

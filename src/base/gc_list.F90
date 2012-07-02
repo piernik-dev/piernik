@@ -36,7 +36,7 @@ module gc_list
    implicit none
 
    private
-   public :: cg_list, cg_list_element, ind_val
+   public :: cg_list, cg_list_element, ind_val, dirty_label
 
    !>
    !! \brief A grid container with two links to other cg_list_elements
@@ -72,6 +72,7 @@ module gc_list
       ! Misc
       procedure :: get_extremum                      !< Find munimum or maximum value over a s list
       procedure :: print_list                        !< Print the list and associated cg ID
+      procedure :: numbered_ascii_dump               !< Construct name of emergency ASCII dump
       procedure :: ascii_dump                        !< Emergency routine for quick ASCII dumps
       procedure :: set_dirty                         !< Pollute selected array with an insane value dirtyH.
       procedure :: check_dirty                       !< Check for detectable traces of set_dirty calls.
@@ -98,6 +99,9 @@ module gc_list
       integer :: ind  !< index in cg%q
       real    :: val  !< value for multiplication
    end type ind_val
+
+   integer, parameter    :: dl_len = 64 !< length of label buffer
+   character(len=dl_len) :: dirty_label !< buffer for label for check_dirty subroutine
 
 contains
 
@@ -701,6 +705,40 @@ contains
 
    end subroutine zero_boundaries
 
+!> \brief Construct name of emergency ASCII dump
+
+   subroutine numbered_ascii_dump(this, qlst, basename, a)
+
+      use dataio_pub, only: halfstep, msg
+      use global,     only: nstep, do_ascii_dump
+      use mpisetup,   only: proc
+
+      implicit none
+
+      class(cg_list),        intent(inout) :: this     !< list for which do the dump (usually all_cg)
+      integer, dimension(:), intent(in)    :: qlst     !< list of scalar fields to be printed
+      character(len=*),      intent(in)    :: basename !< first part of the filename
+      integer, optional,     intent(in)    :: a        !< additional number
+
+      integer             :: l, n
+
+      if (.not. do_ascii_dump) return
+
+      n = 2 * nstep
+      if (halfstep) n = n + 1
+
+      if (present(a)) then
+         write(msg, '(a,i4,i6,i3)') trim(basename), proc, n, a
+      else
+         write(msg, '(a,i4,i6)')    trim(basename), proc, n
+      endif
+      do l = 1, len_trim(msg)
+         if (msg(l:l) == " ") msg(l:l) = "_"
+      enddo
+      call this%ascii_dump(trim(msg), qlst)
+
+   end subroutine numbered_ascii_dump
+
 !>
 !! \brief Emergency routine for quick ASCII dumps
 !!
@@ -711,8 +749,8 @@ contains
 
    subroutine ascii_dump(this, filename, qlst)
 
-      use constants,      only: LO
-      use dataio_pub,     only: msg, printio
+      use constants,  only: LO
+      use dataio_pub, only: msg, printio
 
       implicit none
 
@@ -728,7 +766,7 @@ contains
       write(fu, '("#",a3,2a4,a6,3a20)', advance='no')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)"
       do q = lbound(qlst(:), dim=1), ubound(qlst(:), dim=1)
 !         write(fu, '(a20)', advance='no') trim(all_cg%q_lst(qlst(q))%name) !> \deprecated temporarily disabled due to cyclic dependencies
-         write(fu, '(i20)', advance='no') q
+         write(fu, '(i20)', advance='no') qlst(q)
       enddo
       write(fu, '(/)')
 
@@ -767,8 +805,8 @@ contains
 
    subroutine set_dirty(this, iv)
 
-      use constants,  only: dirtyH
-      use global,     only: dirty_debug
+      use constants, only: dirtyH
+      use global,    only: dirty_debug
 
       implicit none
 

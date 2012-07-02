@@ -345,16 +345,15 @@ contains
 
    subroutine init_source(cr_id)
 
-      use cg_list_global,   only: all_cg
+      use cg_list_global, only: all_cg
 #if defined(__INTEL_COMPILER)
-      use cg_list_lev,      only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_list_lev,    only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use dataio_pub,       only: die
-      use gc_list,          only: ind_val
-      use grid,             only: leaves, finest
-      use initcosmicrays,   only: iarr_crs
-      use multigridvars,    only: source, defect, correction
-      use multigridhelpers, only: dirty_label
+      use dataio_pub,     only: die
+      use gc_list,        only: ind_val, dirty_label
+      use grid,           only: leaves, finest
+      use initcosmicrays, only: iarr_crs
+      use multigridvars,  only: source, defect, correction
 
       implicit none
 
@@ -413,16 +412,15 @@ contains
 
    subroutine init_b
 
-      use cg_list_global,   only: all_cg
-      use cg_list_lev,      only: cg_list_level
-      use constants,        only: I_ONE, xdim, zdim, HI, LO, BND_REF
-      use domain,           only: dom
-      use external_bnd,     only: arr3d_boundaries
-      use grid,             only: leaves, coarsest, finest
-      use gc_list,          only: cg_list_element
-      use grid_cont,        only: grid_container
-      use multigridhelpers, only: dirty_label
-      use named_array,      only: p3, p4
+      use cg_list_global, only: all_cg
+      use cg_list_lev,    only: cg_list_level
+      use constants,      only: I_ONE, xdim, zdim, HI, LO, BND_REF
+      use domain,         only: dom
+      use external_bnd,   only: arr3d_boundaries
+      use grid,           only: leaves, coarsest, finest
+      use gc_list,        only: cg_list_element, dirty_label
+      use grid_cont,      only: grid_container
+      use named_array,    only: p3, p4
 
       implicit none
 
@@ -470,16 +468,16 @@ contains
 
    subroutine vcycle_hg(cr_id)
 
-      use cg_list_global,   only: all_cg
-      use cg_list_lev,      only: cg_list_level
-      use dataio_pub,       only: msg, warn
-      use gc_list,          only: ind_val
-      use grid,             only: leaves, coarsest, finest
-      use initcosmicrays,   only: iarr_crs
-      use mpisetup,         only: master
-      use multigridhelpers, only: do_ascii_dump, numbered_ascii_dump, dirty_label
-      use multigridvars,    only: source, defect, solution, correction, ts, tot_ts
-      use timer,            only: set_timer
+      use cg_list_global, only: all_cg
+      use cg_list_lev,    only: cg_list_level
+      use dataio_pub,     only: msg, warn
+      use gc_list,        only: ind_val, dirty_label
+      use global,         only: do_ascii_dump
+      use grid,           only: leaves, coarsest, finest
+      use initcosmicrays, only: iarr_crs
+      use mpisetup,       only: master
+      use multigridvars,  only: source, defect, solution, correction, ts, tot_ts
+      use timer,          only: set_timer
 
       implicit none
 
@@ -521,7 +519,7 @@ contains
 
          norm_old = norm_lhs
 
-         if (dump_every_step) call numbered_ascii_dump(dirty_label, v)
+         if (dump_every_step) call all_cg%numbered_ascii_dump([ source, solution, defect, correction ], dirty_label, v)
 
          if (norm_lhs/norm_rhs <= norm_tol) exit
 
@@ -553,7 +551,7 @@ contains
 
       enddo
 
-      if (dump_every_step) call numbered_ascii_dump(dirty_label)
+      if (dump_every_step) call all_cg%numbered_ascii_dump([ source, solution, defect, correction ], dirty_label)
 
       call finest%check_dirty(solution, "v_soln")
 

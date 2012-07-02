@@ -1277,15 +1277,15 @@ contains
 
    subroutine vcycle_hg(history)
 
-      use cg_list_global,   only: all_cg
-      use cg_list_lev,      only: cg_list_level
-      use constants,        only: cbuff_len, fft_none
-      use dataio_pub,       only: msg, die, warn, printinfo
-      use grid,             only: leaves, finest, coarsest
-      use mpisetup,         only: master, nproc
-      use multigridhelpers, only: do_ascii_dump, numbered_ascii_dump
-      use multigridvars,    only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts
-      use timer,            only: set_timer
+      use cg_list_global, only: all_cg
+      use cg_list_lev,    only: cg_list_level
+      use constants,      only: cbuff_len, fft_none
+      use dataio_pub,     only: msg, die, warn, printinfo
+      use global,         only: do_ascii_dump
+      use grid,           only: leaves, finest, coarsest
+      use mpisetup,       only: master, nproc
+      use multigridvars,  only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts
+      use timer,          only: set_timer
 
       implicit none
 
@@ -1370,9 +1370,9 @@ contains
          if (norm_old/norm_lhs <= suspicious_factor .or. dump_every_step .or. (norm_lhs/norm_rhs <= norm_tol .and. dump_result)) then
             write(dname,'(2a)')trim(vstat%cprefix),"mdump"
             if (dump_result .and. norm_lhs/norm_rhs <= norm_tol) then
-               call numbered_ascii_dump(dname)
+               call all_cg%numbered_ascii_dump([ source, solution, defect, correction ], dname)
             else
-               call numbered_ascii_dump(dname, v)
+               call all_cg%numbered_ascii_dump([ source, solution, defect, correction ], dname, v)
             endif
          endif
 
@@ -1724,11 +1724,10 @@ contains
       use dataio_pub,       only: die
       use domain,           only: dom
       use external_bnd,     only: arr3d_boundaries
-      use gc_list,          only: cg_list_element
+      use gc_list,          only: cg_list_element, dirty_label
       use global,           only: dirty_debug
       use grid,             only: coarsest
       use grid_cont,        only: grid_container
-      use multigridhelpers, only: dirty_label
 
       implicit none
 

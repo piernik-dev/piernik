@@ -66,7 +66,7 @@ contains
 !! <tr><td>ord_prolong_face_par </td><td>0      </td><td>integer value </td><td>\copydoc multigridvars::ord_prolong_face_par </td></tr>
 !! <tr><td>stdout               </td><td>.false.</td><td>logical       </td><td>\copydoc multigridvars::stdout               </td></tr>
 !! <tr><td>verbose_vcycle       </td><td>.false.</td><td>logical       </td><td>\copydoc multigridvars::verbose_vcycle       </td></tr>
-!! <tr><td>do_ascii_dump        </td><td>.false.</td><td>logical       </td><td>\copydoc multigridhelpers::do_ascii_dump     </td></tr>
+!! <tr><td>do_ascii_dump        </td><td>.false.</td><td>logical       </td><td>\copydoc global::do_ascii_dump               </td></tr>
 !! <tr><td>dirty_debug          </td><td>.false.</td><td>logical       </td><td>\copydoc global::dirty_debug                 </td></tr>
 !! </table>
 !! \n \n
@@ -81,12 +81,11 @@ contains
       use decomposition,       only: divide_domain!, deallocate_pse
       use domain,              only: dom, is_uneven
       use gc_list,             only: cg_list_element
-      use global,              only: dirty_debug
+      use global,              only: dirty_debug, do_ascii_dump
       use grid,                only: base_lev, finest, coarsest
       use grid_cont,           only: grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_COMM_NULL
       use mpisetup,            only: comm, mpi_err, master, slave, nproc, FIRST, buffer_dim, ibuff, lbuff
-      use multigridhelpers,    only: do_ascii_dump
       use multigridvars,       only: single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, &
            &                         ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
       use types,               only: cdd
