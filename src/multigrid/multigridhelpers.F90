@@ -142,48 +142,51 @@ contains
 
    subroutine ascii_dump(filename)
 
-      use constants,     only: xdim, ydim, zdim
-      use dataio_pub,    only: msg, printio
-      use gc_list,       only: cg_list_element
-      use grid,          only: coarsest
-      use cg_list_lev,   only: cg_list_level
-      use mpisetup,      only: master
-      use multigridvars, only: source, solution, defect, correction
+      use cg_list_global, only: all_cg
+      use constants,      only: xdim, ydim, zdim
+      use dataio_pub,     only: msg, printio
+      use gc_list,        only: cg_list_element
+      use mpisetup,       only: master
+      use multigridvars,  only: source, solution, defect, correction
 
       implicit none
 
       character(len=*), intent(in) :: filename !< name to write the emergency dump
 
       integer, parameter :: fu=30
-      integer            :: i, j, k
-      type(cg_list_level), pointer :: curl
+      integer, dimension(4) :: qlst
+      integer            :: i, j, k, q
       type(cg_list_element), pointer :: cgl
 
       if (.not. do_ascii_dump) return
 
-      open(fu, file=filename, status="unknown")
+      qlst = [ source, solution, defect, correction ]
 
-      write(fu, '("#",a3,2a4,a6,10a20,/)')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)", "source", "solution", "defect", "correction" !, "bx", "by", "bz"
-      curl => coarsest
-      do while (associated(curl))
-         cgl => curl%first
-         do while (associated(cgl))
-            do i = cgl%cg%is, cgl%cg%ie
-               do j = cgl%cg%js, cgl%cg%je
-                  do k = cgl%cg%ks, cgl%cg%ke
-                     write(fu, '(3i4,i6,10es20.11e3)')i-cgl%cg%is+cgl%cg%off(xdim), j-cgl%cg%js+cgl%cg%off(ydim), k-cgl%cg%ks+cgl%cg%off(zdim), &
-                          &                           curl%lev, cgl%cg%x(i), cgl%cg%y(j), cgl%cg%z(k), &
-                          &                           cgl%cg%q(source)    %arr(i, j, k), cgl%cg%q(solution)%arr(i, j, k), &
-                          &                           cgl%cg%q(correction)%arr(i, j, k), cgl%cg%q(defect)  %arr(i, j, k)
+      open(fu, file=filename, status="unknown")
+      write(fu, '("#",a3,2a4,a6,3a20)', advance='no')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)"
+      do q = lbound(qlst, dim=1), ubound(qlst, dim=1)
+         write(fu, '(a20)', advance='no') trim(all_cg%q_lst(qlst(q))%name)
+      enddo
+      write(fu, '(/)')
+
+      cgl => all_cg%first
+      do while (associated(cgl))
+         do i = cgl%cg%is, cgl%cg%ie
+            do j = cgl%cg%js, cgl%cg%je
+               do k = cgl%cg%ks, cgl%cg%ke
+                  write(fu, '(3i4,i6,3es20.11e3)', advance='no') i-cgl%cg%is+cgl%cg%off(xdim), j-cgl%cg%js+cgl%cg%off(ydim), k-cgl%cg%ks+cgl%cg%off(zdim), &
+                       &                           cgl%cg%level_id, cgl%cg%x(i), cgl%cg%y(j), cgl%cg%z(k)
+                  do q = lbound(qlst, dim=1), ubound(qlst, dim=1)
+                     write(fu, '(es20.11e3)', advance='no') cgl%cg%q(qlst(q))%arr(i, j, k)
                   enddo
-                  write(fu, '(/)')
+                  write(fu, '()')
                enddo
-               write(fu, '(/,/)')
+               write(fu, '()')
             enddo
-            write(fu, '(/,/,/)')
-            cgl => cgl%nxt
+            write(fu, '()')
          enddo
-         curl => curl%finer
+         write(fu, '()')
+         cgl => cgl%nxt
       enddo
 
       close(fu)
