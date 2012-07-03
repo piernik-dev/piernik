@@ -41,10 +41,9 @@ contains
 
    subroutine set_div_v1d(p, dir, i1, i2, cg)
 
-      use cg_list_global, only: all_cg
-      use dataio_pub,     only: die
-      use grid_cont,      only: grid_container
-      use named_array,    only: qna
+      use dataio_pub,  only: die
+      use grid_cont,   only: grid_container
+      use named_array, only: qna
 
       implicit none
 
@@ -53,7 +52,7 @@ contains
       real, dimension(:), pointer, intent(inout) :: p
       type(grid_container), pointer, intent(in) :: cg
 
-      if (.not. all_cg%exists(divv_n)) call die("[crhelpers:set_div_v1d] cannot get divvel")
+      if (.not. qna%exists(divv_n)) call die("[crhelpers:set_div_v1d] cannot get divvel")
       p => cg%q(qna%ind(divv_n))%get_sweep(dir, i1, i2)
 
    end subroutine set_div_v1d

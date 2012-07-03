@@ -65,8 +65,6 @@ module cg_list_global
       procedure         :: check_na       !< Check if all named arrays are consistently registered
       procedure         :: check_for_dirt !< Check all named arrays for constants:big_float
       procedure, nopass :: print_vars     !< Write a summary on registered fields. Can be useful for debugging
-      procedure, nopass :: exists         !< Check if a 3D array of given name is already registered
-      procedure, nopass :: exists_4d      !< Check if a 4D array of given name is already registered
       procedure         :: update_req     !< Update mpisetup::req(:)
    end type cg_list_glob
 
@@ -118,7 +116,7 @@ contains
       if (present(multigrid)) mg = multigrid
 
       if (present(dim4)) then
-         if (this%exists_4d(name)) then
+         if (wna%exists(name)) then
             write(msg, '(3a)')"[cg_list_global:reg_var] A rank-4 array '",trim(name),"' was already registered."
             call die(msg)
          endif
@@ -126,7 +124,7 @@ contains
          d4 = dim4
          nvar = dim4
       else
-         if (this%exists(name)) then
+         if (qna%exists(name)) then
             write(msg, '(3a)')"[cg_list_global:reg_var] A rank-3 array '",trim(name),"' was already registered."
             call die(msg)
          endif
@@ -324,66 +322,6 @@ contains
       enddo
 
    end subroutine check_for_dirt
-
-!> \brief Check if a 3D array of given name is already registered
-
-   function exists(name)
-
-      use dataio_pub,  only: die, msg
-      use named_array, only: qna
-
-      implicit none
-
-      character(len=*), intent(in) :: name
-
-      logical :: exists
-      integer :: i
-
-      exists = .false.
-
-      if (allocated(qna%lst)) then
-         do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-            if (trim(name) ==  qna%lst(i)%name) then
-               if (exists) then
-                  write(msg, '(2a)') "[cg_list_global:exists] multiple entries with the same name: ", trim(name)
-                  call die(msg)
-               endif
-               exists = .true.
-            endif
-         enddo
-      endif
-
-   end function exists
-
-!> \brief Check if a 4D array of given name is already registered
-
-   function exists_4d(name) result(exists)
-
-      use dataio_pub,  only: die, msg
-      use named_array, only: wna
-
-      implicit none
-
-      character(len=*), intent(in) :: name
-
-      logical :: exists
-      integer :: i
-
-      exists = .false.
-
-      if (allocated(wna%lst)) then
-         do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
-            if (trim(name) ==  wna%lst(i)%name) then
-               if (exists) then
-                  write(msg, '(2a)') "[cg_list_global:exists] multiple entries with the same name: ", trim(name)
-                  call die(msg)
-               endif
-               exists = .true.
-            endif
-         enddo
-      endif
-
-   end function exists_4d
 
 !> \brief Update mpisetup::req(:)
 

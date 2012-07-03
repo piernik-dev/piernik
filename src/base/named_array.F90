@@ -54,9 +54,10 @@ module named_array
    end type na_var
 
    type :: na_var_list
-       type(na_var), dimension(:), allocatable :: lst
+      type(na_var), dimension(:), allocatable :: lst
     contains
-       procedure :: ind                                           !< Get the index of a named array of given name.
+      procedure :: ind                                           !< Get the index of a named array of given name.
+      procedure :: exists                                        !< Check if a named array of given name is already registered
    end type na_var_list
 
    type(na_var_list) :: qna !< list of registered 3D named arrays
@@ -161,7 +162,7 @@ contains
       implicit none
 
       class(na_var_list), intent(inout) :: this
-      character(len=*),   intent(in) :: name
+      character(len=*),   intent(in)    :: name
 
       integer :: rind, i
 
@@ -183,6 +184,36 @@ contains
       endif
 
    end function ind
+
+!> \brief Check if a named array of given name is already registered
+
+   function exists(this, name)
+
+      use dataio_pub,  only: die, msg
+
+      implicit none
+
+      class(na_var_list), intent(inout) :: this
+      character(len=*),   intent(in)    :: name
+
+      logical :: exists
+      integer :: i
+
+      exists = .false.
+
+      if (allocated(this%lst)) then
+         do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
+            if (trim(name) ==  this%lst(i)%name) then
+               if (exists) then
+                  write(msg, '(2a)') "[named_array:exists] multiple entries with the same name: ", trim(name)
+                  call die(msg)
+               endif
+               exists = .true.
+            endif
+         enddo
+      endif
+
+   end function exists
 
 !>
 !! \brief Initialize a 3d named array

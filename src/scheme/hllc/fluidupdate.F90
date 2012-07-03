@@ -110,7 +110,7 @@ contains
       real, dimension(:),   pointer             :: cs2
 
       cs2 => null()
-      if (all_cg%exists(cs_i2_n)) then
+      if (qna%exists(cs_i2_n)) then
          i_cs_iso2 = qna%ind(cs_i2_n) !> \deprecated BEWARE: magic strings across multiple files
       else
          i_cs_iso2 = -1

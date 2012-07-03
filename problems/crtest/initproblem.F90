@@ -221,7 +221,6 @@ contains
 
    subroutine compute_analytic_ecr1
 
-      use cg_list_global, only: all_cg
       use dataio_pub,     only: die
       use gc_list,        only: cg_list_element
       use global,         only: t
@@ -268,7 +267,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (.not. all_cg%exists(aecr1_n)) call die("[initproblem:compute_analytic_ecr1] cannot find aecr1")
+         if (.not. qna%exists(aecr1_n)) call die("[initproblem:compute_analytic_ecr1] cannot find aecr1")
 
          do k = cg%ks, cg%ke
             delz = cg%z(k) - z0
@@ -294,7 +293,6 @@ contains
 
    subroutine check_norm
 
-      use cg_list_global, only: all_cg
       use constants,      only: PIERNIK_FINISHED, I_ONE, I_TWO
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
       use gc_list,        only: cg_list_element
@@ -334,7 +332,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (.not. all_cg%exists(aecr1_n)) call die("[initproblem:check_norm] cannot find aecr1")
+         if (.not. qna%exists(aecr1_n)) call die("[initproblem:check_norm] cannot find aecr1")
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
@@ -368,7 +366,6 @@ contains
 
    subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
 
-      use cg_list_global, only: all_cg
       use dataio_pub,     only: die
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs
@@ -383,7 +380,7 @@ contains
 
       call compute_analytic_ecr1
 
-      if (.not. all_cg%exists(aecr1_n)) call die("[initproblem:crtest_analytic_ecr1] cannot find aecr1")
+      if (.not. qna%exists(aecr1_n)) call die("[initproblem:crtest_analytic_ecr1] cannot find aecr1")
 
       ierrh = 0
       select case (trim(var))

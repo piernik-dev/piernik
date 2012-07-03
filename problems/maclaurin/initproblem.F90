@@ -367,16 +367,15 @@ contains
 
    subroutine finalize_problem_maclaurin
 
-      use cg_list_global, only: all_cg
-      use constants,      only: GEO_RPZ, I_ONE, I_TWO
-      use dataio_pub,     only: msg, printinfo, warn
-      use domain,         only: dom
-      use gc_list,        only: cg_list_element
-      use grid,           only: leaves
-      use grid_cont,      only: grid_container
-      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,       only: master, comm, mpi_err
-      use named_array,    only: qna
+      use constants,   only: GEO_RPZ, I_ONE, I_TWO
+      use dataio_pub,  only: msg, printinfo, warn
+      use domain,      only: dom
+      use gc_list,     only: cg_list_element
+      use grid,        only: leaves
+      use grid_cont,   only: grid_container
+      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,    only: master, comm, mpi_err
+      use named_array, only: qna
 
       implicit none
 
@@ -396,7 +395,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (.not. all_cg%exists(apot_n)) then
+         if (.not. qna%exists(apot_n)) then
             if (master) call warn("[initproblem:finalize_problem_maclaurin] Cannot compare results with the analytical potential.")
             return
          endif
@@ -436,10 +435,9 @@ contains
 
    subroutine maclaurin_error_vars(var, tab, ierrh, cg)
 
-      use cg_list_global, only: all_cg
-      use dataio_pub,     only: die
-      use grid_cont,      only: grid_container
-      use named_array,    only: qna
+      use dataio_pub,  only: die
+      use grid_cont,   only: grid_container
+      use named_array, only: qna
 
       implicit none
 
@@ -448,7 +446,7 @@ contains
       integer, intent(inout)                          :: ierrh
       type(grid_container), pointer, intent(in)       :: cg
 
-      if (.not. all_cg%exists(apot_n)) call die("[initproblem:maclaurin_error_vars] Cannot find apot_n")
+      if (.not. qna%exists(apot_n)) call die("[initproblem:maclaurin_error_vars] Cannot find apot_n")
 
       ierrh = 0
       select case (trim(var))

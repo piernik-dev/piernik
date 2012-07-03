@@ -191,10 +191,9 @@ contains
 
    subroutine inid_var_hdf5(var, tab, ierrh, cg)
 
-      use cg_list_global, only: all_cg
-      use global,         only: t
-      use grid_cont,      only: grid_container
-      use named_array,    only: qna
+      use global,      only: t
+      use grid_cont,   only: grid_container
+      use named_array, only: qna
 
       implicit none
 
@@ -206,7 +205,7 @@ contains
       call analytic_solution(t)
 
       ierrh = 0
-      if (all_cg%exists(var)) then
+      if (qna%exists(var)) then
          tab(:,:,:) = real(cg%q(qna%ind(var))%span(cg%ijkse), 4)
       else
          ierrh = -1
