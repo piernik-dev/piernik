@@ -63,7 +63,6 @@ module cg_list_global
     contains
       procedure         :: reg_var        !< Add a variable (cg%q or cg%w) to all grid containers
       procedure         :: check_na       !< Check if all named arrays are consistently registered
-      procedure         :: check_for_dirt !< Check all named arrays for constants:big_float
    end type cg_list_glob
 
    type(cg_list_glob) :: all_cg   !< all grid containers; \todo restore protected
@@ -237,42 +236,5 @@ contains
       enddo
 
    end subroutine check_na
-
-!> \brief Check values of all named arrays for big_float
-
-   subroutine check_for_dirt(this)
-
-      use constants,   only: big_float
-      use dataio_pub,  only: warn, msg
-      use gc_list,     only: cg_list_element
-      use named_array, only: qna, wna
-
-      implicit none
-
-      class(cg_list_glob), intent(in) :: this          !< object invoking type-bound procedure
-
-      integer :: i
-      type(cg_list_element), pointer :: cgl
-
-      cgl => this%first
-      do while (associated(cgl))
-         do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-            if (cgl%cg%q(i)%check()) then
-               write(msg,'(3a,I12,a)') "[cg_list_global:check_for_dirt] Array ", trim(qna%lst(i)%name), " has ", &
-                  & count(cgl%cg%q(i)%arr >= big_float), " wrong values."
-               call warn(msg)
-            endif
-         enddo
-         do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
-            if (cgl%cg%w(i)%check()) then
-               write(msg,'(3a,I12,a)') "[cg_list_global:check_for_dirt] Array ", trim(wna%lst(i)%name), " has ", &
-                  & count(cgl%cg%w(i)%arr >= big_float), " wrong values."
-               call warn(msg)
-            endif
-         enddo
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine check_for_dirt
 
 end module cg_list_global

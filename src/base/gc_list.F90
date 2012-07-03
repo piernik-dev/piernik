@@ -76,6 +76,7 @@ module gc_list
       procedure :: ascii_dump                        !< Emergency routine for quick ASCII dumps
       procedure :: set_dirty                         !< Pollute selected array with an insane value dirtyH.
       procedure :: check_dirty                       !< Check for detectable traces of set_dirty calls.
+      procedure :: check_for_dirt                    !< Check all named arrays for constants:big_float
       procedure :: update_req                        !< Update mpisetup::req(:)
 
       ! Arithmetic on the fields
@@ -820,9 +821,7 @@ contains
 
    end subroutine set_dirty
 
-!>
-!! \brief This routine checks for detectable traces of set_dirty calls.
-!<
+!> \brief This routine checks for detectable traces of set_dirty calls.
 
    subroutine check_dirty(this, iv, label, expand)
 
@@ -869,6 +868,42 @@ contains
       enddo
 
    end subroutine check_dirty
+
+!> \brief Check values of all named arrays for big_float
+
+   subroutine check_for_dirt(this)
+
+      use constants,   only: big_float
+      use dataio_pub,  only: warn, msg
+      use named_array, only: qna, wna
+
+      implicit none
+
+      class(cg_list), intent(in) :: this          !< object invoking type-bound procedure
+
+      integer :: i
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+            if (cgl%cg%q(i)%check()) then
+               write(msg,'(3a,I12,a)') "[cg_list_global:check_for_dirt] Array ", trim(qna%lst(i)%name), " has ", &
+                  & count(cgl%cg%q(i)%arr >= big_float), " wrong values."
+               call warn(msg)
+            endif
+         enddo
+         do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+            if (cgl%cg%w(i)%check()) then
+               write(msg,'(3a,I12,a)') "[cg_list_global:check_for_dirt] Array ", trim(wna%lst(i)%name), " has ", &
+                  & count(cgl%cg%w(i)%arr >= big_float), " wrong values."
+               call warn(msg)
+            endif
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine check_for_dirt
 
 !> \brief Update mpisetup::req(:)
 
