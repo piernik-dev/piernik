@@ -69,7 +69,6 @@ contains
       use gc_list,        only: cg_list_element
       use global,         only: repeat_step
       use grid_cont,      only: grid_container
-      use named_array,    only: qna, wna
 
       implicit none
 
@@ -115,10 +114,6 @@ contains
          call all_cg%reg_var(u0_n,                                          dim4 = flind%all)                !! Copy of main array of all fluids' components
          call all_cg%reg_var(b0_n,                                          dim4 = ndims, position=xyz_face) !! Copy of main array of magnetic field's components
       endif
-
-      all_cg%fi  = wna%ind(fluid_n)
-      all_cg%bi  = wna%ind(mag_n)
-      all_cg%wai = qna%ind(wa_n)
 
       cgl => leaves%first
       do while (associated(cgl))
