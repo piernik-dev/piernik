@@ -79,10 +79,11 @@ contains
 
    subroutine reg_var(this, name, vital, restart_mode, ord_prolong, dim4, position, multigrid)
 
-      use constants,   only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, O_INJ
+      use constants,   only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4
       use dataio_pub,  only: die, warn, msg
+      use domain,      only: dom
       use gc_list,     only: cg_list_element
-      use named_array, only: qna, wna
+      use named_array, only: qna, wna, na_var
 
       implicit none
 
@@ -147,18 +148,26 @@ contains
       endif
 
       if (present(dim4)) then
-         call add2lst(wna%lst, name, vit, rm, op, pos, d4, mg)
+         call wna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
       else
-         call add2lst(qna%lst, name, vit, rm, op, pos, d4, mg)
+         call qna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
       endif
+
+      select case (op)
+         case (O_INJ)
+            this%ord_prolong_nb = max(this%ord_prolong_nb, I_ZERO)
+         case (O_LIN, O_I2, O_D2)
+            this%ord_prolong_nb = max(this%ord_prolong_nb, I_ONE)
+         case (O_I3, O_I4, O_D3, O_D4)
+            this%ord_prolong_nb = max(this%ord_prolong_nb, I_TWO)
+         case default
+            call die("[cg_list_global:reg_var] Unknown prolongation order")
+      end select
+      if (this%ord_prolong_nb > dom%nb) call die("[cg_list_global:reg_var] Insufficient number of guardcells for requested prolongation stencil")
 
       cgl => this%first
       do while (associated(cgl))
          if (present(dim4)) then
-            if (dim4<=0) then
-               write(msg,'(3a)')"[cg_list_global:reg_var] dim4<=0 for variable'",name,"'"
-               call die(msg)
-            endif
             call cgl%cg%add_na_4d(dim4)
          else
             call cgl%cg%add_na(mg)
@@ -169,53 +178,6 @@ contains
       deallocate(pos)
 
    end subroutine reg_var
-
-!> \brief Add a named array properties to the list
-
-   subroutine add2lst(lst, name, vital, restart_mode, ord_prolong, position, dim4, multigrid)
-
-      use constants,   only: I_ZERO, I_ONE, I_TWO, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4
-      use dataio_pub,  only: die
-      use domain,      only: dom
-      use named_array, only: na_var
-
-      implicit none
-
-      type(na_var), dimension(:), allocatable, intent(inout) :: lst           !< the list to which we want to append an entry
-      character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
-      logical,                                 intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
-      integer(kind=4),                         intent(in)    :: restart_mode  !< Write to the restart if not AT_IGNORE. Several write modes can be supported.
-      integer(kind=4),                         intent(in)    :: ord_prolong   !< Prolongation order for the variable
-      integer(kind=4), dimension(:),           intent(in)    :: position      !< VAR_CENTER in most cases, VAR_[XYZ]FACE for magnetic field
-      integer(kind=4),                         intent(in)    :: dim4          !< If not INVALID then the variable is in the cg%w array.
-      logical,                                 intent(in)    :: multigrid     !< If .true. then cg%q(:)%arr and cg%w(:)%arr are allocated also below base level
-
-      type(na_var), dimension(:), allocatable :: tmp
-
-      if (.not. allocated(lst)) then
-         allocate(lst(1))
-      else
-         allocate(tmp(lbound(lst(:),dim=1):ubound(lst(:), dim=1) + 1))
-         tmp(:ubound(lst(:), dim=1)) = lst(:)
-         call move_alloc(from=tmp, to=lst)
-         !! \warning slight memory leak here, e.g. in use at exit: 572 bytes in 115 blocks, perhaps associated with na_var%position
-      endif
-      lst(ubound(lst(:), dim=1)) = na_var(name, vital, restart_mode, ord_prolong, position, dim4, multigrid)
-
-      select case (ord_prolong)
-         case (O_INJ)
-            all_cg%ord_prolong_nb = max(all_cg%ord_prolong_nb, I_ZERO)
-         case (O_LIN, O_I2, O_D2)
-            all_cg%ord_prolong_nb = max(all_cg%ord_prolong_nb, I_ONE)
-         case (O_I3, O_I4, O_D3, O_D4)
-            all_cg%ord_prolong_nb = max(all_cg%ord_prolong_nb, I_TWO)
-         case default
-            call die("[cg_list_global:add2lst] Unknown prolongation order")
-      end select
-
-      if (all_cg%ord_prolong_nb > dom%nb) call die("[cg_list_global:add2lst] Insufficient number of guardcells for requested prolongation stencil")
-
-   end subroutine add2lst
 
 !> \brief Check if all named arrays are consistently registered
 

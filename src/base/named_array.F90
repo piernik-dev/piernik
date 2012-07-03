@@ -59,6 +59,7 @@ module named_array
       procedure :: ind                                           !< Get the index of a named array of given name.
       procedure :: exists                                        !< Check if a named array of given name is already registered
       procedure :: print_vars                                    !< Write a summary on registered fields. Can be useful for debugging
+      procedure :: add2lst                                       !< Add a named array properties to the list
    end type na_var_list
 
    type(na_var_list) :: qna !< list of registered 3D named arrays
@@ -215,6 +216,29 @@ contains
       endif
 
    end function exists
+
+!> \brief Add a named array properties to the list
+
+   subroutine add2lst(this, element)
+
+      implicit none
+
+      class(na_var_list), intent(inout) :: this
+      type(na_var),       intent(in)    :: element
+
+      type(na_var), dimension(:), allocatable :: tmp
+
+      if (.not. allocated(this%lst)) then
+         allocate(this%lst(1))
+      else
+         allocate(tmp(lbound(this%lst(:),dim=1):ubound(this%lst(:), dim=1) + 1))
+         tmp(:ubound(this%lst(:), dim=1)) = this%lst(:)
+         call move_alloc(from=tmp, to=this%lst)
+         !! \warning slight memory leak here, e.g. in use at exit: 572 bytes in 115 blocks, perhaps associated with na_var%position
+      endif
+      this%lst(ubound(this%lst(:), dim=1)) = element
+
+   end subroutine add2lst
 
 !> \brief Summarize all registered fields and their properties
 
