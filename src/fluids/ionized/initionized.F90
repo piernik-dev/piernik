@@ -44,11 +44,10 @@ module initionized
    implicit none
 
    private
-   public :: init_ionized, cleanup_ionized, ion_fluid, gamma_ion, cs_iso_ion, cs_iso_ion2, cs_ion, selfgrav_ion
+   public :: init_ionized, cleanup_ionized, ion_fluid, gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion
 
    real    :: gamma_ion       !< adiabatic index for the ionized gas component
    real    :: cs_iso_ion      !< isothermal sound speed (p = cs_iso_ion<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
-   real    :: cs_iso_ion2
    real    :: cs_ion          !< COMMENT ME
    logical :: selfgrav_ion    !< true if ionized gas is selfgravitating
 
@@ -194,8 +193,6 @@ contains
          cs_ion       = rbuff(3)
 
       endif
-
-      cs_iso_ion2 = cs_iso_ion**2
 
    end subroutine init_ionized
 

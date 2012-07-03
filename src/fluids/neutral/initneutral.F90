@@ -44,11 +44,10 @@ module initneutral
    implicit none
 
    private
-   public :: init_neutral, cleanup_neutral, neutral_fluid, gamma_neu, cs_iso_neu, cs_iso_neu2, selfgrav_neu
+   public :: init_neutral, cleanup_neutral, neutral_fluid, gamma_neu, cs_iso_neu, selfgrav_neu
 
    real    :: gamma_neu             !< adiabatic index for the neutral gas component
    real    :: cs_iso_neu            !< isothermal sound speed (p = cs_iso_neu<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
-   real    :: cs_iso_neu2
    logical :: selfgrav_neu          !< true if neutral gas is selfgravitating
 
    type, extends(component_fluid) :: neutral_fluid
@@ -159,8 +158,6 @@ contains
          cs_iso_neu   = rbuff(2)
 
       endif
-
-      cs_iso_neu2 = cs_iso_neu**2
 
    end subroutine init_neutral
 
