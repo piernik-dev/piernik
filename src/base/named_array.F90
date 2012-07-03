@@ -170,15 +170,17 @@ contains
 
       rind = 0
 
-      do i = lbound(this%lst, dim=1, kind=4), ubound(this%lst, dim=1, kind=4)
-         if (trim(name) ==  this%lst(i)%name) then
-            if (rind /= 0) then
-               write(msg, '(2a)') "[named_array:ind] multiple entries with the same name: ", trim(name)
-               call die(msg)
+      if (allocated(this%lst)) then
+         do i = lbound(this%lst, dim=1), ubound(this%lst, dim=1)
+            if (trim(name) == this%lst(i)%name) then
+               if (rind /= 0) then
+                  write(msg, '(2a)') "[named_array:ind] multiple entries with the same name: ", trim(name)
+                  call die(msg)
+               endif
+               rind = i
             endif
-            rind = i
-         endif
-      enddo
+         enddo
+      endif
 
       if (rind == 0) then
          write(msg, '(2a)') "[named_array:ind] requested entry not found: ", trim(name)
