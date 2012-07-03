@@ -90,6 +90,16 @@ contains
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
 
+      ! Register all primary fields
+      call all_cg%reg_var(wa_n,                                                           multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
+      call all_cg%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all)                !! Main array of all fluids' components, "u"
+      call all_cg%reg_var(uh_n,                                             dim4 = flind%all)                !! Main array of all fluids' components (for t += dt/2)
+      call all_cg%reg_var(mag_n,   vital = .true., restart_mode = AT_OUT_B, dim4 = ndims, position=xyz_face) !! Main array of magnetic field's components, "b"
+      if (repeat_step) then
+         call all_cg%reg_var(u0_n,                                          dim4 = flind%all)                !! Copy of main array of all fluids' components
+         call all_cg%reg_var(b0_n,                                          dim4 = ndims, position=xyz_face) !! Copy of main array of magnetic field's components
+      endif
+
       ! Create the empty main lists for base level only.
       ! Refinement lists will be added by iterating the initproblem::init_prob routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update
       ! Underground levels will be added in multigrid::init_multigrid
@@ -107,15 +117,6 @@ contains
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: all_cg finished. \o/")
 #endif /* VERBOSE */
-
-      call all_cg%reg_var(wa_n,                                                           multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
-      call all_cg%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all)                !! Main array of all fluids' components, "u"
-      call all_cg%reg_var(uh_n,                                             dim4 = flind%all)                !! Main array of all fluids' components (for t += dt/2)
-      call all_cg%reg_var(mag_n,   vital = .true., restart_mode = AT_OUT_B, dim4 = ndims, position=xyz_face) !! Main array of magnetic field's components, "b"
-      if (repeat_step) then
-         call all_cg%reg_var(u0_n,                                          dim4 = flind%all)                !! Copy of main array of all fluids' components
-         call all_cg%reg_var(b0_n,                                          dim4 = ndims, position=xyz_face) !! Copy of main array of magnetic field's components
-      endif
 
       cgl => leaves%first
       do while (associated(cgl))

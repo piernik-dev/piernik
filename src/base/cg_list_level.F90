@@ -1162,9 +1162,9 @@ contains
 
          !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
          nc(:) = I_ONE ! set at least one component, even if there is none at all
-         if (all_cg%fi      > 0) nc(FLUID) = wna%lst(all_cg%fi)%dim4
-         if (all_cg%bi      > 0) nc(MAG)   = wna%lst(all_cg%bi)%dim4
-         if (wna%ind(wcr_n) > 0) nc(CR)    = wna%lst(wna%ind(wcr_n))%dim4
+         if (all_cg%fi     > 0) nc(FLUID) = wna%lst(all_cg%fi)%dim4
+         if (all_cg%bi     > 0) nc(MAG)   = wna%lst(all_cg%bi)%dim4
+         if (wna%exists(wcr_n)) nc(CR)    = wna%lst(wna%ind(wcr_n))%dim4
 
          do d = xdim, zdim
             if (dom%has_dir(d)) then
