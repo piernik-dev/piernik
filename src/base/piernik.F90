@@ -48,6 +48,9 @@ program piernik
    use domain,         only: dom
    use timer,          only: timer_start, timer_stop
 #endif /* PERFMON */
+#ifdef DEBUG
+   use named_array,    only: qna, wna
+#endif /* DEBUG */
 
    implicit none
 
@@ -154,7 +157,8 @@ program piernik
       endif
 
 #ifdef DEBUG
-      call all_cg%print_vars
+      call qna%print_vars
+      call wna%print_vars
 #endif /* DEBUG */
    endif
 

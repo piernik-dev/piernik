@@ -64,7 +64,6 @@ module cg_list_global
       procedure         :: reg_var        !< Add a variable (cg%q or cg%w) to all grid containers
       procedure         :: check_na       !< Check if all named arrays are consistently registered
       procedure         :: check_for_dirt !< Check all named arrays for constants:big_float
-      procedure, nopass :: print_vars     !< Write a summary on registered fields. Can be useful for debugging
    end type cg_list_glob
 
    type(cg_list_glob) :: all_cg   !< all grid containers; \todo restore protected
@@ -321,38 +320,5 @@ contains
       enddo
 
    end subroutine check_for_dirt
-
-!> \brief Summarize all registered fields and their properties
-
-   subroutine print_vars
-
-      use dataio_pub,  only: printinfo, msg
-      use mpisetup,    only: slave
-      use named_array, only: qna, wna
-
-      implicit none
-
-      integer :: i
-
-      if (slave) return
-
-      write(msg,'(a,i2,a)')"[cg_list_global:print_vars] Found ",size(qna%lst(:))," rank-3 arrays:"
-      call printinfo(msg)
-      do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-         write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", qna%lst(i)%name, "', vital=", qna%lst(i)%vital, ", restart_mode=", qna%lst(i)%restart_mode, &
-              &                                ", multigrid=", qna%lst(i)%multigrid, ", ord_prolong=", qna%lst(i)%ord_prolong, ", position=", qna%lst(i)%position(:)
-         call printinfo(msg)
-      enddo
-
-      write(msg,'(a,i2,a)')"[cg_list_global:print_vars] Found ",size(wna%lst(:))," rank-4 arrays:"
-      call printinfo(msg)
-      do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
-         write(msg,'(3a,l2,a,i2,a,l2,2(a,i2),a,100i2)')"'", wna%lst(i)%name, "', vital=", wna%lst(i)%vital, ", restart_mode=", wna%lst(i)%restart_mode, &
-              &                                        ", multigrid=", wna%lst(i)%multigrid, ", ord_prolong=", wna%lst(i)%ord_prolong, &
-              &                                        ", components=", wna%lst(i)%dim4, ", position=", wna%lst(i)%position(:)
-         call printinfo(msg)
-      enddo
-
-   end subroutine print_vars
 
 end module cg_list_global

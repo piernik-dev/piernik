@@ -58,6 +58,7 @@ module named_array
     contains
       procedure :: ind                                           !< Get the index of a named array of given name.
       procedure :: exists                                        !< Check if a named array of given name is already registered
+      procedure :: print_vars                                    !< Write a summary on registered fields. Can be useful for debugging
    end type na_var_list
 
    type(na_var_list) :: qna !< list of registered 3D named arrays
@@ -214,6 +215,48 @@ contains
       endif
 
    end function exists
+
+!> \brief Summarize all registered fields and their properties
+
+   subroutine print_vars(this)
+
+      use constants,  only: INVALID
+      use dataio_pub, only: printinfo, warn, msg
+      use mpisetup,   only: slave
+
+      implicit none
+
+      class(na_var_list), intent(inout) :: this
+
+      integer :: i, d3
+
+      if (slave) return
+
+      d3 = count(this%lst(:)%dim4 == INVALID)
+
+      if (d3 /= 0) then
+         write(msg,'(a,i2,a)')"[named_array:print_vars] Found ",size(this%lst(:))," rank-3 arrays:"
+         call printinfo(msg)
+      endif
+      if (count(this%lst(:)%dim4 /= INVALID) /= 0) then
+         write(msg,'(a,i2,a)')"[named_array:print_vars] Found ",size(this%lst(:))," rank-4 arrays:"
+         call printinfo(msg)
+         if (d3 /=0) call warn("[named_array:print_vars] Both rank-3 and rank-4 named arrays are present in the same list!")
+      endif
+
+      do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
+         if (this%lst(i)%dim4 == INVALID) then
+            write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
+                 &                                ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, ", position=", this%lst(i)%position(:)
+         else
+            write(msg,'(3a,l2,a,i2,a,l2,2(a,i2),a,100i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
+                 &                                        ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, &
+                 &                                        ", components=", this%lst(i)%dim4, ", position=", this%lst(i)%position(:)
+         endif
+         call printinfo(msg)
+      enddo
+
+   end subroutine print_vars
 
 !>
 !! \brief Initialize a 3d named array
