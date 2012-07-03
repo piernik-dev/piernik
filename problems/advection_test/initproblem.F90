@@ -147,13 +147,13 @@ contains
 
    subroutine init_prob
 
-      use cg_list_global, only: all_cg
-      use constants,      only: xdim, ydim, zdim
-      use fluidindex,     only: flind
-      use gc_list,        only: cg_list_element
-      use global,         only: smallei, t
-      use grid,           only: leaves
-      use grid_cont,      only: grid_container
+      use constants,   only: xdim, ydim, zdim
+      use fluidindex,  only: flind
+      use gc_list,     only: cg_list_element
+      use global,      only: smallei, t
+      use grid,        only: leaves
+      use grid_cont,   only: grid_container
+      use named_array, only: qna
 
       implicit none
 
@@ -172,7 +172,7 @@ contains
 
          cg%b(:, :, :, :) = 0.
 
-         cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(all_cg%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
+         cg%u(flind%neu%idn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = cg%q(qna%ind(inid_n))%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)
 
          ! Make uniform, completely boring flow
          cg%u(flind%neu%imx, :, :, :) = pulse_vel(xdim) * cg%u(flind%neu%idn, :, :, :)
@@ -194,6 +194,7 @@ contains
       use cg_list_global, only: all_cg
       use global,         only: t
       use grid_cont,      only: grid_container
+      use named_array,    only: qna
 
       implicit none
 
@@ -206,7 +207,7 @@ contains
 
       ierrh = 0
       if (all_cg%exists(var)) then
-         tab(:,:,:) = real(cg%q(all_cg%ind(var))%span(cg%ijkse), 4)
+         tab(:,:,:) = real(cg%q(qna%ind(var))%span(cg%ijkse), 4)
       else
          ierrh = -1
       endif
@@ -230,16 +231,16 @@ contains
 
    subroutine calculate_error_norm
 
-      use cg_list_global, only: all_cg
-      use constants,      only: I_ONE, I_TWO, PIERNIK_FINISHED
-      use dataio_pub,     only: code_progress, halfstep, msg, printinfo, warn
-      use fluidindex,     only: flind
-      use gc_list,        only: cg_list_element
-      use global,         only: t, nstep
-      use grid,           only: leaves
-      use grid_cont,      only: grid_container
-      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,       only: master, comm, mpi_err
+      use constants,   only: I_ONE, I_TWO, PIERNIK_FINISHED
+      use dataio_pub,  only: code_progress, halfstep, msg, printinfo, warn
+      use fluidindex,  only: flind
+      use gc_list,     only: cg_list_element
+      use global,      only: t, nstep
+      use grid,        only: leaves
+      use grid_cont,   only: grid_container
+      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,    only: master, comm, mpi_err
+      use named_array, only: qna
 
       implicit none
 
@@ -264,7 +265,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         inid => cg%q(all_cg%ind(inid_n))%arr
+         inid => cg%q(qna%ind(inid_n))%arr
          if (.not. associated(inid))then
             if (master) call warn("[initproblem:calculate_error_norm] Cannot compare results with the initial conditions.")
             return
@@ -299,14 +300,14 @@ contains
 
    subroutine analytic_solution(t)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: xdim, zdim, ndims
-      use dataio_pub,     only: warn
-      use domain,         only: dom
-      use gc_list,        only: cg_list_element
-      use grid,           only: leaves
-      use grid_cont,      only: grid_container
-      use mpisetup,       only: master
+      use constants,   only: xdim, zdim, ndims
+      use dataio_pub,  only: warn
+      use domain,      only: dom
+      use gc_list,     only: cg_list_element
+      use grid,        only: leaves
+      use grid_cont,   only: grid_container
+      use mpisetup,    only: master
+      use named_array, only: qna
 
       implicit none
 
@@ -323,7 +324,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         inid => cg%q(all_cg%ind(inid_n))%arr
+         inid => cg%q(qna%ind(inid_n))%arr
          if (.not. associated(inid))then
             if (master) call warn("[initproblem:analytic_solution] Cannot store the initial conditions.")
             return

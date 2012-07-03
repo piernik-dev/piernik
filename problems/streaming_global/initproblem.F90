@@ -152,13 +152,13 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: AT_NO_B
-      use named_array,    only: w_lst
+      use named_array,    only: wna
 
       implicit none
 
       integer(kind=4) :: dim4
 
-      dim4 = w_lst(all_cg%fi)%dim4
+      dim4 = wna%lst(all_cg%fi)%dim4
       call all_cg%reg_var(inid_n, restart_mode = AT_NO_B, dim4 = dim4)
 
    end subroutine register_user_var
@@ -260,23 +260,23 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use cg_list_global, only: all_cg
-      use constants,      only: DST, GEO_RPZ, xdim, ydim, zdim
-      use global,         only: smalld
-      use dataio_pub,     only: msg, printinfo, die
-      use domain,         only: dom, is_multicg
-      use fluidindex,     only: flind
-      use fluidtypes,     only: component_fluid
-      use func,           only: ekin
-      use gc_list,        only: cg_list_element
-      use gravity,        only: ptmass, grav_pot2accel
-      use grid,           only: leaves
-      use grid_cont,      only: grid_container
-      use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use mpi,            only: MPI_COMM_NULL
-      use mpisetup,       only: master
-      use types,          only: cdd
-      use units,          only: newtong
+      use constants,   only: DST, GEO_RPZ, xdim, ydim, zdim
+      use global,      only: smalld
+      use dataio_pub,  only: msg, printinfo, die
+      use domain,      only: dom, is_multicg
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use func,        only: ekin
+      use gc_list,     only: cg_list_element
+      use gravity,     only: ptmass, grav_pot2accel
+      use grid,        only: leaves
+      use grid_cont,   only: grid_container
+      use hydrostatic, only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
+      use mpi,         only: MPI_COMM_NULL
+      use mpisetup,    only: master
+      use named_array, only: wna
+      use types,       only: cdd
+      use units,       only: newtong
 
       implicit none
 
@@ -368,7 +368,7 @@ contains
             endif
          enddo
 
-         cg%w(all_cg%ind_4d(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
+         cg%w(wna%ind(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
          cg%b(:,:,:,:) = 0.0
          cgl => cgl%nxt
       enddo
@@ -383,19 +383,19 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
 
-      use cg_list_global,  only: all_cg
       use constants,       only: dpi, xdim, ydim, zdim
       use dataio_pub,      only: die
       use domain,          only: is_multicg, dom
+      use fluidboundaries, only: all_fluid_boundaries
+      use fluidindex,      only: iarr_all_dn, iarr_all_mz
       use gc_list,         only: cg_list_element
       use global,          only: t, grace_period_passed, relax_time, smalld !, dt
       use gravity,         only: ptmass
       use grid,            only: leaves
       use grid_cont,       only: grid_container
-      use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_dn, iarr_all_mz
-      use units,           only: newtong
       use interactions,    only: update_grain_size
+      use named_array,     only: wna
+      use units,           only: newtong
 #ifdef VERBOSE
 !      use dataio_pub,      only: msg, printinfo
 !      use mpisetup,        only: master
@@ -450,12 +450,12 @@ contains
          if (grace_period_passed()) call update_grain_size(a*t+b)
 !         do j = 1, cg%n_(ydim)
 !            do k = 1, cg%n_(zdim)
-!               cg%u(iarr_all_dn,:,j,k) = cg%u(iarr_all_dn,:,j,k) - dt*(cg%u(iarr_all_dn,:,j,k) - cg%w(all_cg%ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
+!               cg%u(iarr_all_dn,:,j,k) = cg%u(iarr_all_dn,:,j,k) - dt*(cg%u(iarr_all_dn,:,j,k) - cg%w(wna%ind(inid_n))%arr(:,:,j,k))*funcR(:,:)
 !            enddo
 !         enddo
          do j = 1, cg%n_(ydim)
             do k = 1, cg%n_(zdim)
-               cg%u(:,:,j,k) = (1.-funcR(:,:))*cg%u(iarr_all_dn,:,j,k) + cg%w(all_cg%ind_4d(inid_n))%arr(:,:,j,k)*funcR(:,:)
+               cg%u(:,:,j,k) = (1.-funcR(:,:))*cg%u(iarr_all_dn,:,j,k) + cg%w(wna%ind(inid_n))%arr(:,:,j,k)*funcR(:,:)
             enddo
          enddo
 
@@ -610,15 +610,15 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xr(cg)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: xdim
-      use grid_cont,      only: grid_container
+      use constants,   only: xdim
+      use grid_cont,   only: grid_container
+      use named_array, only: wna
 
       implicit none
 
       type(grid_container), pointer, intent(in) :: cg
 
-      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(all_cg%ind_4d(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
+      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(wna%ind(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
 
    end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------

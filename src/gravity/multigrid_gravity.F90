@@ -403,19 +403,19 @@ contains
 
    subroutine init_multigrid_grav_post
 
-      use cg_list_global, only: all_cg
-      use constants,      only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr
-      use dataio_pub,     only: die, warn, printinfo, msg
-      use domain,         only: dom
-      use gc_list,        only: cg_list_element
-      use cg_list_lev,    only: cg_list_level
-      use grid,           only: leaves, finest, coarsest
-      use grid_cont,      only: grid_container
-      use mpi,            only: MPI_COMM_NULL
-      use mpisetup,       only: master, nproc
-      use multigridvars,  only: is_mg_uneven, need_general_pf, single_base
-      use multipole,      only: init_multipole, coarsen_multipole
-      use types,          only: cdd
+      use constants,     only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr
+      use dataio_pub,    only: die, warn, printinfo, msg
+      use domain,        only: dom
+      use gc_list,       only: cg_list_element
+      use cg_list_lev,   only: cg_list_level
+      use grid,          only: leaves, finest, coarsest
+      use grid_cont,     only: grid_container
+      use mpi,           only: MPI_COMM_NULL
+      use mpisetup,      only: master, nproc
+      use multigridvars, only: is_mg_uneven, need_general_pf, single_base
+      use multipole,     only: init_multipole, coarsen_multipole
+      use named_array,   only: qna
+      use types,         only: cdd
 
       implicit none
 
@@ -440,7 +440,7 @@ contains
          if (grav_bnd == bnd_isolated) call outer%init_history(nold, "o")
       endif
 
-      call leaves%set_q_value(all_cg%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
+      call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
 
       curl => coarsest
       do while (associated(curl))
@@ -630,6 +630,7 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: singlechar, dsetnamelen
+      use named_array,    only: qna
 
       implicit none
 
@@ -643,7 +644,7 @@ contains
       do i = 1, nold
          write(hname,'(2a,i2.2)')prefix,"_h_",i
          call all_cg%reg_var(hname, vital = .true.) ! no need for multigrid attribute here because history is defined only on leaves
-         this%old(i) = old_soln(all_cg%ind(hname), -huge(1.0))
+         this%old(i) = old_soln(qna%ind(hname), -huge(1.0))
       enddo
       this%valid = .false.
       this%last  = 1
@@ -1217,12 +1218,12 @@ contains
 
    subroutine multigrid_solve_grav(i_all_dens)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: sgp_n
-      use grid,           only: leaves
-      use multigridvars,  only: solution, tot_ts, ts
-      use multipole,      only: multipole_solver
-      use timer,          only: set_timer
+      use constants,     only: sgp_n
+      use grid,          only: leaves
+      use multigridvars, only: solution, tot_ts, ts
+      use multipole,     only: multipole_solver
+      use named_array,   only: qna
+      use timer,         only: set_timer
 
       implicit none
 
@@ -1248,7 +1249,7 @@ contains
 
       call vcycle_hg(inner)
 
-      call leaves%q_copy(solution, all_cg%ind(sgp_n))
+      call leaves%q_copy(solution, qna%ind(sgp_n))
 
       if (grav_bnd_global == bnd_isolated) then
          grav_bnd = bnd_givenval
@@ -1259,7 +1260,7 @@ contains
 
          call vcycle_hg(outer)
 
-         call leaves%q_add(solution, all_cg%ind(sgp_n)) ! add solution to sgp
+         call leaves%q_add(solution, qna%ind(sgp_n)) ! add solution to sgp
 
       endif
 

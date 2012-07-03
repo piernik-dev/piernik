@@ -416,10 +416,9 @@ contains
 !<
    subroutine prolong(this)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: base_level_id, wa_n
-      use dataio_pub,     only: warn
-      use named_array,    only: q_lst, w_lst
+      use constants,   only: base_level_id, wa_n
+      use dataio_pub,  only: warn
+      use named_array, only: qna, wna
 
       implicit none
 
@@ -427,16 +426,16 @@ contains
 
       integer :: i, iw, iwa
 
-      do i = lbound(q_lst(:), dim=1), ubound(q_lst(:), dim=1)
-         if (q_lst(i)%vital .and. (q_lst(i)%multigrid .or. this%lev > base_level_id)) call this%prolong_q_1var(i)
+      do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%lev > base_level_id)) call this%prolong_q_1var(i)
       enddo
 
-      iwa = all_cg%ind(wa_n)
+      iwa = qna%ind(wa_n)
 
-      do i = lbound(w_lst(:), dim=1), ubound(w_lst(:), dim=1)
-         if (w_lst(i)%vital .and. (w_lst(i)%multigrid .or. this%lev >= base_level_id)) then
-            if (w_lst(i)%multigrid) call warn("[cg_list_level:prolong] mg set for cg%w ???")
-            do iw = 1, w_lst(i)%dim4
+      do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%lev >= base_level_id)) then
+            if (wna%lst(i)%multigrid) call warn("[cg_list_level:prolong] mg set for cg%w ???")
+            do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, iwa)
                call this%prolong_q_1var(iwa)
                call this%finer%qw_copy(iwa, i, iw)
@@ -453,10 +452,9 @@ contains
 !<
    subroutine restrict(this)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: base_level_id, wa_n
-      use dataio_pub,     only: warn
-      use named_array,    only: q_lst, w_lst
+      use constants,   only: base_level_id, wa_n
+      use dataio_pub,  only: warn
+      use named_array, only: qna, wna
 
       implicit none
 
@@ -464,16 +462,16 @@ contains
 
       integer :: i, iw, iwa
 
-      do i = lbound(q_lst(:), dim=1), ubound(q_lst(:), dim=1)
-         if (q_lst(i)%vital .and. (q_lst(i)%multigrid .or. this%lev > base_level_id)) call this%restrict_q_1var(i)
+      do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%lev > base_level_id)) call this%restrict_q_1var(i)
       enddo
 
-      iwa = all_cg%ind(wa_n)
+      iwa = qna%ind(wa_n)
 
-      do i = lbound(w_lst(:), dim=1), ubound(w_lst(:), dim=1)
-         if (w_lst(i)%vital .and. (w_lst(i)%multigrid .or. this%lev > base_level_id)) then
-            if (w_lst(i)%multigrid) call warn("[cg_list_level:restrict] mg set for cg%w ???")
-            do iw = 1, w_lst(i)%dim4
+      do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%lev > base_level_id)) then
+            if (wna%lst(i)%multigrid) call warn("[cg_list_level:restrict] mg set for cg%w ???")
+            do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, iwa)
                call this%restrict_q_1var(iwa)
                call this%coarser%qw_copy(iwa, i, iw)
@@ -684,7 +682,7 @@ contains
       use grid_cont,      only: grid_container
       use mpisetup,       only: comm, mpi_err, req, status
       use mpi,            only: MPI_DOUBLE_PRECISION
-      use named_array,    only: q_lst
+      use named_array,    only: qna
 
       implicit none
 
@@ -714,7 +712,7 @@ contains
 
 !> \todo something like this (connected with a todo below):      if (dirty_debug) fine%first%cg%q(iv)%arr(:, :, :) = dirtyH
 
-      select case (q_lst(iv)%ord_prolong)
+      select case (qna%lst(iv)%ord_prolong)
          case (O_D4)
             P_2 = 35./2048.; P_1 = -252./2048.; P0 = 1890./2048.; P1 = 420./2048.; P2 = -45./2048.
          case (O_D3)
@@ -741,7 +739,7 @@ contains
       if (P_1 /= 0. .or. P1 /= 0.) stencil_range = I_ONE
       if (P_2 /= 0. .or. P2 /= 0.) stencil_range = I_TWO
 
-      if (q_lst(iv)%ord_prolong /= O_INJ) then
+      if (qna%lst(iv)%ord_prolong /= O_INJ) then
          !> \todo some variables may need special care on external boundaries
          call arr3d_boundaries(this, iv, bnd_type = BND_REF, corners = .true.) ! nb =  int(stencil_range, kind=4) ! not needed for injection
       endif
@@ -975,7 +973,7 @@ contains
       use cg_list_global, only: all_cg
       use grid_cont,      only: grid_container
       use mpisetup,       only: proc
-      use named_array,    only: q_lst, w_lst
+      use named_array,    only: qna, wna
 
       implicit none
 
@@ -993,14 +991,14 @@ contains
          call this%mpi_bnd_types(cg)
          call cg%set_q_mbc
          ! register all known named arrays for this cg
-         if (allocated(q_lst)) then
-            do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
-               call cg%add_na(q_lst(i)%multigrid)
+         if (allocated(qna%lst)) then
+            do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+               call cg%add_na(qna%lst(i)%multigrid)
             enddo
          endif
-         if (allocated(w_lst)) then
-            do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
-               call cg%add_na_4d(w_lst(i)%dim4)
+         if (allocated(wna%lst)) then
+            do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+               call cg%add_na_4d(wna%lst(i)%dim4)
             enddo
          endif
 

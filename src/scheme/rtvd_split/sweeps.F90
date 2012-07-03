@@ -106,6 +106,7 @@ contains
       use grid,            only: leaves
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
+      use named_array,     only: qna, wna
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v, set_div_v1d
@@ -130,9 +131,9 @@ contains
       type(grid_container), pointer     :: cg
 
       full_dim = dom%has_dir(cdim)
-      uhi = all_cg%ind_4d(uh_n)
+      uhi = wna%ind(uh_n)
       if (all_cg%exists(cs_i2_n)) then
-         i_cs_iso2 = all_cg%ind(cs_i2_n) ! BEWARE: magic strings across multiple files
+         i_cs_iso2 = qna%ind(cs_i2_n) ! BEWARE: magic strings across multiple files
       else
          i_cs_iso2 = -1
       endif

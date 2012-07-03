@@ -91,6 +91,7 @@ contains
       use grid,           only: leaves
       use mpi,            only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,       only: rbuff, ibuff, mpi_err, comm, master, slave, buffer_dim, FIRST
+      use named_array,    only: qna
 
       implicit none
 
@@ -150,7 +151,7 @@ contains
       if (eta_1 == 0.) then
          cgl => leaves%first
          do while (associated(cgl))
-            cgl%cg%q(all_cg%ind(eta_n))%arr = eta_0
+            cgl%cg%q(qna%ind(eta_n))%arr = eta_0
             cgl => cgl%nxt
          enddo
          etamax%val  = eta_0
@@ -162,9 +163,9 @@ contains
 
          cgl => leaves%first
          do while (associated(cgl))
-            if (.not. dom%has_dir(xdim)) cgl%cg%q(all_cg%ind(dbx_n))%arr = 0.0
-            if (.not. dom%has_dir(ydim)) cgl%cg%q(all_cg%ind(dby_n))%arr = 0.0
-            if (.not. dom%has_dir(zdim)) cgl%cg%q(all_cg%ind(dbz_n))%arr = 0.0
+            if (.not. dom%has_dir(xdim)) cgl%cg%q(qna%ind(dbx_n))%arr = 0.0
+            if (.not. dom%has_dir(ydim)) cgl%cg%q(qna%ind(dby_n))%arr = 0.0
+            if (.not. dom%has_dir(zdim)) cgl%cg%q(qna%ind(dbz_n))%arr = 0.0
             cgl => cgl%nxt
          enddo
 
@@ -177,19 +178,19 @@ contains
 
    subroutine compute_resist
 
-      use cg_list_global, only: all_cg
-      use constants,      only: xdim, ydim, zdim, MAXL, I_ONE, oneq
-      use dataio_pub,     only: die
-      use domain,         only: dom, is_multicg
-      use func,           only: ekin, emag
-      use gc_list,        only: cg_list_element
-      use grid,           only: leaves
-      use grid_cont,      only: grid_container
-      use mpi,            only: MPI_DOUBLE_PRECISION
-      use mpisetup,       only: comm, mpi_err, FIRST
+      use constants,   only: xdim, ydim, zdim, MAXL, I_ONE, oneq
+      use dataio_pub,  only: die
+      use domain,      only: dom, is_multicg
+      use func,        only: ekin, emag
+      use gc_list,     only: cg_list_element
+      use grid,        only: leaves
+      use grid_cont,   only: grid_container
+      use mpi,         only: MPI_DOUBLE_PRECISION
+      use mpisetup,    only: comm, mpi_err, FIRST
+      use named_array, only: qna
 #ifndef ISO
-      use constants,      only: small, MINL
-      use fluidindex,     only: flind
+      use constants,   only: small, MINL
+      use fluidindex,  only: flind
 #endif /* !ISO */
 
       implicit none
@@ -207,12 +208,12 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         eta => cg%q(all_cg%ind(eta_n))%arr
-         dbx => cg%q(all_cg%ind(dbx_n))%arr
-         dby => cg%q(all_cg%ind(dby_n))%arr
-         dbz => cg%q(all_cg%ind(dbz_n))%arr
-         wb => cg%q(all_cg%ind(wb_n))%arr
-         eh => cg%q(all_cg%ind(eh_n))%arr
+         eta => cg%q(qna%ind(eta_n))%arr
+         dbx => cg%q(qna%ind(dbx_n))%arr
+         dby => cg%q(qna%ind(dby_n))%arr
+         dbz => cg%q(qna%ind(dbz_n))%arr
+         wb => cg%q(qna%ind(wb_n))%arr
+         eh => cg%q(qna%ind(eh_n))%arr
 
          if (dom%has_dir(xdim)) then
             dbx(2:cg%n_(xdim),:,:) = (cg%b(ydim,2:cg%n_(xdim),:,:)-cg%b(ydim,1:cg%n_(xdim)-1,:,:))*cg%idl(xdim) ; dbx(1,:,:) = dbx(2,:,:)
@@ -271,23 +272,23 @@ contains
       cg => leaves%first%cg
       if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum, wb, eta
 
-      call leaves%get_extremum(all_cg%ind(eta_n), MAXL, etamax)
+      call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
       call MPI_Bcast(etamax%val, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call leaves%get_extremum(all_cg%ind(wb_n), MAXL, cu2max)
+      call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
 
 #ifndef ISO
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         eta => cg%q(all_cg%ind(eta_n))%arr
-         wb => cg%q(all_cg%ind(wb_n))%arr
+         eta => cg%q(qna%ind(eta_n))%arr
+         wb => cg%q(qna%ind(wb_n))%arr
          wb = (cg%u(flind%ion%ien,:,:,:) - ekin(cg%u(flind%ion%imx,:,:,:), cg%u(flind%ion%imy,:,:,:), cg%u(flind%ion%imz,:,:,:), cg%u(flind%ion%idn,:,:,:)) - &
               emag(cg%b(xdim,:,:,:), cg%b(ydim,:,:,:), cg%b(zdim,:,:,:)))/ (eta(:,:,:) * wb+small)
-         dt_eint = deint_max * abs(minval(cg%q(all_cg%ind(wb_n))%span(cg%ijkse)))
+         dt_eint = deint_max * abs(minval(cg%q(qna%ind(wb_n))%span(cg%ijkse)))
          cgl => cgl%nxt
       enddo
 
-      call leaves%get_extremum(all_cg%ind(wb_n), MINL, deimin)
+      call leaves%get_extremum(qna%ind(wb_n), MINL, deimin)
 #endif /* !ISO */
       NULLIFY(p)
 
@@ -386,6 +387,7 @@ contains
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use magboundaries,  only: bnd_emf
+      use named_array,    only: qna
 
       implicit none
 
@@ -406,8 +408,8 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         wcu_i = all_cg%ind(wcu_n)
-         eta_i = all_cg%ind(eta_n)
+         wcu_i = qna%ind(wcu_n)
+         eta_i = qna%ind(eta_n)
 
 !         select case (etadir)
 !            case (xdim)

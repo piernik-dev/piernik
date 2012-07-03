@@ -153,6 +153,7 @@ contains
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use gc_list,        only: cg_list_element
       use grid,           only: leaves
+      use named_array,    only: qna
       use units,          only: newtong
 #ifdef SELF_GRAV
       use constants,      only: sgp_n, sgpm_n
@@ -283,13 +284,13 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%gpot  => cgl%cg%q(all_cg%ind( gpot_n))%arr
+         cgl%cg%gpot  => cgl%cg%q(qna%ind( gpot_n))%arr
          cgl%cg%gpot(:,:,:) = 0.0
-         cgl%cg%hgpot => cgl%cg%q(all_cg%ind(hgpot_n))%arr
-         cgl%cg%gp    => cgl%cg%q(all_cg%ind(   gp_n))%arr
+         cgl%cg%hgpot => cgl%cg%q(qna%ind(hgpot_n))%arr
+         cgl%cg%gp    => cgl%cg%q(qna%ind(   gp_n))%arr
 #ifdef SELF_GRAV
-         cgl%cg%sgp   => cgl%cg%q(all_cg%ind(  sgp_n))%arr
-         cgl%cg%sgpm  => cgl%cg%q(all_cg%ind( sgpm_n))%arr
+         cgl%cg%sgp   => cgl%cg%q(qna%ind(  sgp_n))%arr
+         cgl%cg%sgpm  => cgl%cg%q(qna%ind( sgpm_n))%arr
 #endif /* SELF_GRAV */
          cgl => cgl%nxt
       enddo
@@ -306,7 +307,6 @@ contains
    subroutine source_terms_grav
 
 #ifdef SELF_GRAV
-      use cg_list_global,    only: all_cg
       use constants,         only: sgp_n, sgpm_n
       use dataio_pub,        only: die
       use fluidindex,        only: iarr_all_sg
@@ -314,6 +314,7 @@ contains
       use grid,              only: leaves
       use grid_cont,         only: grid_container
       use external_bnd,      only: arr3d_boundaries
+      use named_array,       only: qna
 #ifdef POISSON_FFT
       use domain,            only: is_multicg
       use poissonsolver,     only: poisson_solve
@@ -332,7 +333,7 @@ contains
       type(grid_container), pointer :: cg
 #endif /* POISSON_FFT */
 
-      call leaves%q_copy(all_cg%ind(sgp_n), all_cg%ind(sgpm_n))
+      call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
 
 #ifdef MULTIGRID
       call multigrid_solve_grav(iarr_all_sg)
@@ -353,10 +354,10 @@ contains
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
 
 !> \warning An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
-      call arr3d_boundaries(leaves, all_cg%ind(sgp_n))
+      call arr3d_boundaries(leaves, qna%ind(sgp_n))
 
       if (frun) then
-         call leaves%q_copy(all_cg%ind(sgp_n), all_cg%ind(sgpm_n))
+         call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
          frun = .false.
       endif
 #endif /* SELF_GRAV */
@@ -370,13 +371,13 @@ contains
 
    subroutine sum_potential
 
-      use cg_list_global, only: all_cg
-      use constants,      only: gp_n, gpot_n, hgpot_n
-      use gc_list,        only: ind_val
-      use grid,           only: leaves
+      use constants,   only: gp_n, gpot_n, hgpot_n
+      use gc_list,     only: ind_val
+      use grid,        only: leaves
+      use named_array, only: qna
 #ifdef SELF_GRAV
-      use constants,      only: one, half, sgp_n, sgpm_n
-      use global,         only: dt, dtm
+      use constants,   only: one, half, sgp_n, sgpm_n
+      use global,      only: dt, dtm
 #endif /* SELF_GRAV */
 
       implicit none
@@ -390,13 +391,13 @@ contains
          h = 0.0
       endif
 
-      call leaves%q_lin_comb([ ind_val(all_cg%ind(gp_n), 1.), ind_val(all_cg%ind(sgp_n), one+h),      ind_val(all_cg%ind(sgpm_n), -h)     ], all_cg%ind(gpot_n))
-      call leaves%q_lin_comb([ ind_val(all_cg%ind(gp_n), 1.), ind_val(all_cg%ind(sgp_n), one+half*h), ind_val(all_cg%ind(sgpm_n), -half*h)], all_cg%ind(hgpot_n))
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+h),      ind_val(qna%ind(sgpm_n), -h)     ], qna%ind(gpot_n))
+      call leaves%q_lin_comb([ ind_val(qna%ind(gp_n), 1.), ind_val(qna%ind(sgp_n), one+half*h), ind_val(qna%ind(sgpm_n), -half*h)], qna%ind(hgpot_n))
 
 #else /* !SELF_GRAV */
       !> \deprecated BEWARE: as long as grav_pot_3d is called only in init_piernik this assignment probably don't need to be repeated more than once
-      call leaves%q_copy(all_cg%ind(gp_n), all_cg%ind(gpot_n))
-      call leaves%q_copy(all_cg%ind(gp_n), all_cg%ind(hgpot_n))
+      call leaves%q_copy(qna%ind(gp_n), qna%ind(gpot_n))
+      call leaves%q_copy(qna%ind(gp_n), qna%ind(hgpot_n))
 #endif /* !SELF_GRAV */
 
    end subroutine sum_potential

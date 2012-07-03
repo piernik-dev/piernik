@@ -113,6 +113,7 @@ contains
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
       use mpisetup,       only: comm, mpi_err, master, slave, nproc, ibuff, rbuff, lbuff, cbuff, buffer_dim, FIRST
       use multigridvars,  only: single_base
+      use named_array,    only: qna
 
       implicit none
 
@@ -219,9 +220,9 @@ contains
       call all_cg%reg_var(diff_bx_n, multigrid = .true.)
       call all_cg%reg_var(diff_by_n, multigrid = .true.)
       call all_cg%reg_var(diff_bz_n, multigrid = .true.)
-      idiffb(xdim) = all_cg%ind(diff_bx_n)
-      idiffb(ydim) = all_cg%ind(diff_by_n)
-      idiffb(zdim) = all_cg%ind(diff_bz_n)
+      idiffb(xdim) = qna%ind(diff_bx_n)
+      idiffb(ydim) = qna%ind(diff_by_n)
+      idiffb(zdim) = qna%ind(diff_bz_n)
 
    end subroutine init_multigrid_diff
 

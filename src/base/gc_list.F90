@@ -751,7 +751,7 @@ contains
 
       use constants,   only: LO
       use dataio_pub,  only: msg, printio
-      use named_array, only: q_lst
+      use named_array, only: qna
 
       implicit none
 
@@ -766,7 +766,7 @@ contains
       open(fu, file=filename, status="unknown")
       write(fu, '("#",a3,2a4,a6,3a20)', advance='no')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)"
       do q = lbound(qlst(:), dim=1), ubound(qlst(:), dim=1)
-         write(fu, '(a20)', advance='no') trim(q_lst(qlst(q))%name)
+         write(fu, '(a20)', advance='no') trim(qna%lst(qlst(q))%name)
       enddo
       write(fu, '(/)')
 
@@ -830,7 +830,7 @@ contains
       use domain,      only: dom
       use global,      only: dirty_debug
       use mpisetup,    only: proc
-      use named_array, only: q_lst
+      use named_array, only: qna
 
       implicit none
 
@@ -843,7 +843,7 @@ contains
       type(cg_list_element), pointer :: cgl
 
       if (.not. dirty_debug) return
-      if (iv < lbound(q_lst, dim=1) .or. iv > ubound(q_lst, dim=1)) call die("[gc_list:check_dirty] Invalid variable index.")
+      if (iv < lbound(qna%lst, dim=1) .or. iv > ubound(qna%lst, dim=1)) call die("[gc_list:check_dirty] Invalid variable index.")
 
       ng = 0
       if (present(expand)) ng = min(dom%nb, expand)
@@ -856,7 +856,7 @@ contains
                   if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
                      ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
                      write(msg, '(3a,i4,a,i3,a,i5,3a,3(i3,a),g20.12)') "[gc_list:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, &
-                          &                                            " cg#", cgl%cg%grid_id, " '", trim(q_lst(iv)%name), "'(", i, ",", j, ",", k, ") = ", &
+                          &                                            " cg#", cgl%cg%grid_id, " '", trim(qna%lst(iv)%name), "'(", i, ",", j, ",", k, ") = ", &
                           &                                            cgl%cg%q(iv)%arr(i, j, k)
                      call warn(msg)
                      ! endif

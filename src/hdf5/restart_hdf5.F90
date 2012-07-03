@@ -231,7 +231,7 @@ contains
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use mpi,         only: MPI_INFO_NULL
       use mpisetup,    only: comm
-      use named_array, only: q_lst, w_lst
+      use named_array, only: qna, wna
 
       implicit none
       character(len=cwdlen), intent(in) :: filename      !> HDF File name
@@ -248,14 +248,14 @@ contains
       call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
 
       ! Write scalar fields that were declared to be required on restart
-      if (allocated(q_lst)) then
-         do i = lbound(q_lst(:), dim=1, kind=4), ubound(q_lst(:), dim=1, kind=4)
+      if (allocated(qna%lst)) then
+         do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
             call write_arr_to_restart(file_id, i, .true.)
          enddo
       endif
 
-      if (allocated(w_lst)) then
-         do i = lbound(w_lst(:), dim=1, kind=4), ubound(w_lst(:), dim=1, kind=4)
+      if (allocated(wna%lst)) then
+         do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
             call write_arr_to_restart(file_id, i, .false.)
          enddo
       endif
@@ -298,7 +298,7 @@ contains
 #ifdef INDEPENDENT_ATOUTB
       use hdf5,        only: H5FD_MPIO_INDEPENDENT_F
 #endif /* INDEPENDENT_ATOUTB */
-      use named_array, only: q_lst, w_lst
+      use named_array, only: qna, wna
 
       implicit none
 
@@ -326,17 +326,17 @@ contains
       character(len=dsetnamelen)         :: dname
 
       if (tgt3d) then
-         if (ind < lbound(q_lst(:), dim=1) .or. ind > ubound(q_lst(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 3D array")
+         if (ind < lbound(qna%lst(:), dim=1) .or. ind > ubound(qna%lst(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 3D array")
          dim1 = 1
          rank = ndims
-         dname = q_lst(ind)%name
-         area_type = q_lst(ind)%restart_mode
+         dname = qna%lst(ind)%name
+         area_type = qna%lst(ind)%restart_mode
       else
-         if (ind < lbound(w_lst(:), dim=1) .or. ind > ubound(w_lst(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 4D array")
-         dim1 = w_lst(ind)%dim4
+         if (ind < lbound(wna%lst(:), dim=1) .or. ind > ubound(wna%lst(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 4D array")
+         dim1 = wna%lst(ind)%dim4
          rank = rank4
-         dname = w_lst(ind)%name
-         area_type = w_lst(ind)%restart_mode
+         dname = wna%lst(ind)%name
+         area_type = wna%lst(ind)%restart_mode
       endif
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
@@ -428,19 +428,18 @@ contains
 
    subroutine read_arr_from_restart(file_id, ind, tgt3d, alt_area_type, alt_name)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: ndims, LONG, AT_IGNORE, dsetnamelen
-      use dataio_pub,     only: msg, die
-      use domain,         only: is_multicg
-      use external_bnd,   only: arr3d_boundaries
-      use gc_list,        only: cg_list_element
-      use grid,           only: leaves
-      use grid_cont,      only: grid_container
-      use hdf5,           only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dread_f, h5sclose_f, h5pclose_f, h5dclose_f, &
-           &                    H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
-           &                    h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
-           &                    h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
-      use named_array,    only: q_lst, w_lst
+      use constants,    only: ndims, LONG, AT_IGNORE, dsetnamelen
+      use dataio_pub,   only: msg, die
+      use domain,       only: is_multicg
+      use external_bnd, only: arr3d_boundaries
+      use gc_list,      only: cg_list_element
+      use grid,         only: leaves
+      use grid_cont,    only: grid_container
+      use hdf5,         only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dread_f, h5sclose_f, h5pclose_f, h5dclose_f, &
+           &                  H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
+           &                  h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
+           &                  h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
+      use named_array,  only: qna, wna
 
       implicit none
 
@@ -470,17 +469,17 @@ contains
 
       !> \deprecated Duplicated code
       if (tgt3d) then
-         if (ind < lbound(q_lst(:), dim=1) .or. ind > ubound(q_lst(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 3D array")
+         if (ind < lbound(qna%lst(:), dim=1) .or. ind > ubound(qna%lst(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 3D array")
          dim1 = 1
          rank = ndims
-         cgname = q_lst(ind)%name
-         area_type = q_lst(ind)%restart_mode
+         cgname = qna%lst(ind)%name
+         area_type = qna%lst(ind)%restart_mode
       else
-         if (ind < lbound(w_lst(:), dim=1) .or. ind > ubound(w_lst(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 4D array")
-         dim1 = w_lst(ind)%dim4
+         if (ind < lbound(wna%lst(:), dim=1) .or. ind > ubound(wna%lst(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 4D array")
+         dim1 = wna%lst(ind)%dim4
          rank = rank4
-         cgname = w_lst(ind)%name
-         area_type = w_lst(ind)%restart_mode
+         cgname = wna%lst(ind)%name
+         area_type = wna%lst(ind)%restart_mode
       endif
       dname = cgname
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
@@ -528,7 +527,7 @@ contains
 
          ! Read the array
          if (tgt3d) then
-            pa3d => cg%q(all_cg%ind(cgname))%span(lleft, lright)
+            pa3d => cg%q(qna%ind(cgname))%span(lleft, lright)
             if (associated(pa3d)) then
                call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa3d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
@@ -536,7 +535,7 @@ contains
                call die(msg)
             endif
          else
-            pa4d => cg%w(all_cg%ind_4d(cgname))%span(lleft, lright)
+            pa4d => cg%w(wna%ind(cgname))%span(lleft, lright)
             if (associated(pa4d)) then
                call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, pa4d, dimsf(ir:), error, file_space_id = filespace, mem_space_id = memspace, xfer_prp = plist_id)
             else
@@ -559,7 +558,7 @@ contains
       call h5sclose_f(filespace, error)
       call h5dclose_f(dset_id, error)
 
-      if (tgt3d) call arr3d_boundaries(leaves, all_cg%ind(dname), area_type=area_type)
+      if (tgt3d) call arr3d_boundaries(leaves, qna%ind(dname), area_type=area_type)
       ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
 
       ! rank-4 arrays (cg%u(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here
@@ -584,7 +583,7 @@ contains
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mpi,         only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_INFO_NULL
       use mpisetup,    only: comm, mpi_err, master, FIRST
-      use named_array, only: q_lst, w_lst
+      use named_array, only: qna, wna
 
       implicit none
 
@@ -677,14 +676,14 @@ contains
       if (associated(user_reg_var_restart)) call user_reg_var_restart
 
       ! read auxiliary variables
-      if (allocated(q_lst)) then
-         do i = lbound(q_lst(:), dim=1, kind=4), ubound(q_lst(:), dim=1, kind=4)
+      if (allocated(qna%lst)) then
+         do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
             call read_arr_from_restart(file_id, i, .true.)
          enddo
       endif
 
-      if (allocated(w_lst)) then
-         do i = lbound(w_lst(:), dim=1, kind=4), ubound(w_lst(:), dim=1, kind=4)
+      if (allocated(wna%lst)) then
+         do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
             call read_arr_from_restart(file_id, i, .false.)
          enddo
       endif
@@ -845,7 +844,7 @@ contains
       use common_hdf5, only: create_empty_cg_dataset
       use constants,   only: ndims, I_ONE, AT_IGNORE
       use hdf5,        only: HID_T, HSIZE_T
-      use named_array, only: q_lst, w_lst
+      use named_array, only: qna, wna
 
       implicit none
 
@@ -858,22 +857,22 @@ contains
       integer                                              :: i
       integer(HSIZE_T), dimension(:),   allocatable        :: ddims
 
-      if (allocated(q_lst)) then
+      if (allocated(qna%lst)) then
          drank = ndims
          allocate(ddims(drank))
-         do i = lbound(q_lst(:), dim=1), ubound(q_lst(:), dim=1)
-            if (q_lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/all_cg.q_lst(i)).name"
-                 call create_empty_cg_dataset(cg_g_id, q_lst(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
+         do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+            if (qna%lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/all_cg.qna%lst(i_).name"
+                 call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
          enddo
          deallocate(ddims)
       endif
 
-      if (allocated(w_lst)) then
+      if (allocated(wna%lst)) then
          drank = ndims + I_ONE
          allocate(ddims(drank))
-         do i = lbound(w_lst(:), dim=1), ubound(w_lst(:), dim=1)
-            if (w_lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/all_cg.w_lst(i).name"
-                 call create_empty_cg_dataset(cg_g_id, w_lst(i)%name, int([ w_lst(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
+         do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+            if (wna%lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/all_cg.wna%lst(i_.name"
+                 call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, int([ wna%lst(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
          enddo
          deallocate(ddims)
       endif
@@ -882,13 +881,13 @@ contains
 !>
 !! \brief Find out which fields (cg%q and cg%w arrays) are stored in the restart file
 !!
-!! \details The result arrays q_lst, w_lst need to be deallocated separately
+!! \details The result arrays qna, wna need to be deallocated separately
 !<
 
    subroutine qw_lst(qr_lst, wr_lst)
 
       use constants,   only: AT_IGNORE
-      use named_array, only: q_lst, w_lst
+      use named_array, only: qna, wna
 
       implicit none
 
@@ -896,16 +895,16 @@ contains
 
       integer :: i
 
-      if (allocated(q_lst)) then
-         do i = lbound(q_lst(:), dim=1, kind=4), ubound(q_lst(:), dim=1, kind=4)
-            if (q_lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(qr_lst, i)
+      if (allocated(qna%lst)) then
+         do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
+            if (qna%lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(qr_lst, i)
          enddo
       endif
       if (.not.allocated(qr_lst)) allocate(qr_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
 
-      if (allocated(w_lst)) then
-         do i = lbound(w_lst(:), dim=1, kind=4), ubound(w_lst(:), dim=1, kind=4)
-            if (w_lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(wr_lst, i)
+      if (allocated(wna%lst)) then
+         do i = lbound(wna%lst(:), dim=1, kind=4), ubound(wna%lst(:), dim=1, kind=4)
+            if (wna%lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(wr_lst, i)
          enddo
       endif
       if (.not.allocated(wr_lst)) allocate(wr_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
@@ -925,7 +924,7 @@ contains
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
-      use named_array, only: q_lst, w_lst
+      use named_array, only: qna, wna
 
       implicit none
 
@@ -953,13 +952,13 @@ contains
       ic = 1
       if (size(qr_lst) > 0) then
          do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
-            dsets(ic) = trim(q_lst(qr_lst(i))%name)
+            dsets(ic) = trim(qna%lst(qr_lst(i))%name)
             ic = ic + 1
          enddo
       endif
       if (size(wr_lst) > 0) then
          do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
-            dsets(ic) = trim(w_lst(wr_lst(i))%name)
+            dsets(ic) = trim(wna%lst(wr_lst(i))%name)
             ic = ic + 1
          enddo
       endif
@@ -995,9 +994,9 @@ contains
                      if (cg_desc%cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_desc%cg_src_n(ncg))
                         pa4d => cg%w(wr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
-                        dims(:) = [ w_lst(wr_lst(i))%dim4, cg%n_b ]
+                        dims(:) = [ wna%lst(wr_lst(i))%dim4, cg%n_b ]
                      else
-                        allocate(pa4d(w_lst(wr_lst(i))%dim4, cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
+                        allocate(pa4d(wna%lst(wr_lst(i))%dim4, cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
                         call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), &
                            ncg + cg_desc%tot_cg_n*(size(qr_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa4d)
@@ -1053,7 +1052,7 @@ contains
                   do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
                      ic = ic + 1
                      pa4d => cg%w(wr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
-                     dims(:) = [ w_lst(wr_lst(i))%dim4, cg%n_b ]
+                     dims(:) = [ wna%lst(wr_lst(i))%dim4, cg%n_b ]
                      call h5dwrite_f(cg_desc%dset_id(ncg, ic), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
                   enddo
                   deallocate(dims)
@@ -1088,7 +1087,7 @@ contains
                   allocate(dims(rank4))
                   do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
                      ic = ic + 1
-                     dims(:) = [ w_lst(wr_lst(i))%dim4, cg%n_b ]
+                     dims(:) = [ wna%lst(wr_lst(i))%dim4, cg%n_b ]
                      ! dims can change so h5s* is here as well, I don't know it
                      ! it's really necessary though,
                      ! \todo check if it can be done only once...
@@ -1449,7 +1448,7 @@ contains
       use grid_cont,   only: grid_container, is_overlap
       use hdf5,        only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
            &                 h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
-      use named_array, only: q_lst, w_lst
+      use named_array, only: qna, wna
 
       implicit none
 
@@ -1500,7 +1499,7 @@ contains
          allocate(dims(ndims), off(ndims), cnt(ndims))
          dims(:) = o_size(:)
          do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
-            call h5dopen_f(cg_g_id, q_lst(qr_lst(i))%name, dset_id, error) ! open "/cg/cg_%08d/cg.q(qr_lst(i)).name"
+            call h5dopen_f(cg_g_id, qna%lst(qr_lst(i))%name, dset_id, error) ! open "/cg/cg_%08d/cg.q(qr_lst(i)).name"
             call h5dget_space_f(dset_id, filespace, error)
             off(:) = restart_off(:)
             cnt(:) = 1
@@ -1520,8 +1519,8 @@ contains
       if (size(wr_lst) > 0) then
          allocate(dims(ndims+1), off(ndims+1), cnt(ndims+1))
          do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
-            dims(:) = [ int(w_lst(wr_lst(i))%dim4, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
-            call h5dopen_f(cg_g_id, w_lst(wr_lst(i))%name, dset_id, error)
+            dims(:) = [ int(wna%lst(wr_lst(i))%dim4, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
+            call h5dopen_f(cg_g_id, wna%lst(wr_lst(i))%name, dset_id, error)
             call h5dget_space_f(dset_id, filespace, error)
             off(:) = [ 0_HSIZE_T, restart_off(:) ]
             cnt(:) = 1

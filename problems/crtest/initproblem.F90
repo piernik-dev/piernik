@@ -228,6 +228,7 @@ contains
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
+      use named_array,    only: qna
 
       implicit none
 
@@ -278,7 +279,7 @@ contains
 
                   r_par2 = (bxn*delx + byn*dely + bzn*delz)**2 ! square of the distance form the center of the bump in direction parallel to the magnetic field
                   r_perp2 = delx**2 + dely**2 + delz**2 - r_par2
-                  cg%q(all_cg%ind(aecr1_n))%arr(i, j, k) = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
+                  cg%q(qna%ind(aecr1_n))%arr(i, j, k) = ampt * exp( - r_par2/r0_par2 - r_perp2/r0_perp2)
 
                enddo
             enddo
@@ -303,6 +304,7 @@ contains
       use initcosmicrays, only: iarr_crs, ncrn, ncre
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,       only: master, comm, mpi_err
+      use named_array,    only: qna
 
       implicit none
 
@@ -336,7 +338,7 @@ contains
          do k = cg%ks, cg%ke
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  crt = cg%q(all_cg%ind(aecr1_n))%arr(i, j, k)
+                  crt = cg%q(qna%ind(aecr1_n))%arr(i, j, k)
                   norm(1) = norm(1) + (crt - cg%u(iecr, i, j, k))**2
                   norm(2) = norm(2) + crt**2
                   dev(1) = min(dev(1), (crt - cg%u(iecr, i, j, k)))
@@ -370,6 +372,7 @@ contains
       use dataio_pub,     only: die
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs
+      use named_array,    only: qna
 
       implicit none
 
@@ -385,9 +388,9 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("acr1")
-            tab(:,:,:) = real(cg%q(all_cg%ind(aecr1_n))%span(cg%ijkse), 4)
+            tab(:,:,:) = real(cg%q(qna%ind(aecr1_n))%span(cg%ijkse), 4)
          case ("err1")
-            tab(:,:,:) = real(cg%q(all_cg%ind(aecr1_n))%span(cg%ijkse) - cg%u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(cg%q(qna%ind(aecr1_n))%span(cg%ijkse) - cg%u(iarr_crs(1), cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

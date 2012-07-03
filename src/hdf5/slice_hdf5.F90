@@ -85,6 +85,7 @@ contains
 #endif /* COSM_RAYS */
 #ifdef GRAV
       use constants,      only: gpot_n
+      use named_array,    only: qna
 #endif /* GRAV */
 
       implicit none
@@ -145,7 +146,7 @@ contains
             tab(:,:) = reshape(cg%w(all_cg%bi)%span(xdim + i_xyz, ir), shape(tab))
 #ifdef GRAV
          case ("gpot")
-            tab(:,:) = reshape(cg%q(all_cg%ind(gpot_n))%span(ir), shape(tab))
+            tab(:,:) = reshape(cg%q(qna%ind(gpot_n))%span(ir), shape(tab))
 #endif /* GRAV */
 #ifdef COSM_RAYS
          case ("cr1" : "cr9")

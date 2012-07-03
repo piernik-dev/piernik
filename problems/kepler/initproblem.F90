@@ -82,13 +82,13 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: AT_NO_B
-      use named_array,    only: w_lst
+      use named_array,    only: wna
 
       implicit none
 
       integer(kind=4) :: dim4 !< BEWARE: workaround for gcc-4.6 bug
 
-      dim4 = w_lst(all_cg%fi)%dim4
+      dim4 = wna%lst(all_cg%fi)%dim4
       call all_cg%reg_var(inid_n, restart_mode = AT_NO_B, dim4 = dim4)
 
    end subroutine register_user_var
@@ -311,7 +311,6 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use cg_list_global, only: all_cg
       use constants,      only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
       use dataio_pub,     only: msg, printinfo, die
       use domain,         only: dom, is_multicg
@@ -325,6 +324,7 @@ contains
       use interactions,   only: epstein_factor
       use mpi,            only: MPI_DOUBLE_PRECISION
       use mpisetup,       only: master, comm, mpi_err, FIRST, proc
+      use named_array,    only: wna
       use units,          only: newtong, gram, cm, kboltz, mH
 
       implicit none
@@ -526,7 +526,7 @@ contains
                enddo
 
             enddo
-            cg%w(all_cg%ind_4d(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
+            cg%w(wna%ind(inid_n))%arr(:,:,:,:) = cg%u(:,:,:,:)
             cg%b(:,:,:,:) = 0.0
             if (allocated(grav)) deallocate(grav)
             if (allocated(dens_prof)) deallocate(dens_prof)
@@ -562,6 +562,7 @@ contains
       use fluidboundaries, only: all_fluid_boundaries
       use gc_list,         only: cg_list_element
       use grid,            only: leaves
+      use named_array,     only: wna
 #ifdef TRACER
       use constants,       only: xdim, ydim, zdim
       use grid_cont,       only: grid_container
@@ -581,9 +582,9 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%u  => cgl%cg%w(all_cg%ind_4d(inid_n))%arr  ! BEWARE: Don't do things like that without parental supervision
+         cgl%cg%u  => cgl%cg%w(wna%ind(inid_n))%arr  ! BEWARE: Don't do things like that without parental supervision
          cgl%cg%b = 0.0
-         cgl%cg%w(all_cg%ind_4d(b0_n))%arr = 0.0
+         cgl%cg%w(wna%ind(b0_n))%arr = 0.0
          cgl => cgl%nxt
       enddo
 
@@ -624,7 +625,6 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
 
-      use cg_list_global,  only: all_cg
       use constants,       only: xdim, ydim, zdim, I_ONE
       use dataio_pub,      only: die!, warn, msg
       use domain,          only: is_multicg
@@ -636,6 +636,7 @@ contains
       use fluidindex,      only: flind!, iarr_all_mz, iarr_all_dn
       use mpisetup,        only: comm, mpi_err
       use mpi,             only: MPI_MAX, MPI_DOUBLE_PRECISION, MPI_IN_PLACE
+      use named_array,     only: wna
       ! use interactions,    only: dragc_gas_dust
 #ifdef VERBOSE
 !      use dataio_pub,      only: msg, printinfo
@@ -704,7 +705,7 @@ contains
 
          do j = 1, cg%n_(ydim)
             do k = 1, cg%n_(zdim)
-               cg%u(:,:,j,k) = cg%u(:,:,j,k) - dt*(cg%u(:,:,j,k) - cg%w(all_cg%ind_4d(inid_n))%arr(:,:,j,k))*funcR(:,:)
+               cg%u(:,:,j,k) = cg%u(:,:,j,k) - dt*(cg%u(:,:,j,k) - cg%w(wna%ind(inid_n))%arr(:,:,j,k))*funcR(:,:)
             enddo
          enddo
 
@@ -870,15 +871,15 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xr(cg)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: xdim
-      use grid_cont,      only: grid_container
+      use constants,   only: xdim
+      use grid_cont,   only: grid_container
+      use named_array, only: wna
 
       implicit none
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(all_cg%ind_4d(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
+      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(wna%ind(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
    end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------
    function get_lcutoff(width, dist, n, vmin, vmax) result(y)

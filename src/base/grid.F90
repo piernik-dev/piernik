@@ -69,6 +69,7 @@ contains
       use gc_list,        only: cg_list_element
       use global,         only: repeat_step
       use grid_cont,      only: grid_container
+      use named_array,    only: qna, wna
 
       implicit none
 
@@ -115,9 +116,9 @@ contains
          call all_cg%reg_var(b0_n,                                          dim4 = ndims, position=xyz_face) !! Copy of main array of magnetic field's components
       endif
 
-      all_cg%fi  = all_cg%ind_4d(fluid_n)
-      all_cg%bi  = all_cg%ind_4d(mag_n)
-      all_cg%wai = all_cg%ind(wa_n)
+      all_cg%fi  = wna%ind(fluid_n)
+      all_cg%bi  = wna%ind(mag_n)
+      all_cg%wai = qna%ind(wa_n)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -142,7 +143,7 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%cs_iso2 => cgl%cg%q(all_cg%ind(cs_i2_n))%arr
+         cgl%cg%cs_iso2 => cgl%cg%q(qna%ind(cs_i2_n))%arr
          cgl%cg%cs_iso2(:,:,:) = cs_max   ! set cs2 with sane values
          cgl => cgl%nxt
       enddo
@@ -224,7 +225,7 @@ contains
 
       use cg_list_global, only: all_cg
       use gc_list,        only: cg_list_element
-      use named_array,    only: q_lst, w_lst
+      use named_array,    only: qna, wna
 
       implicit none
 
@@ -244,8 +245,8 @@ contains
          deallocate(cgle%cg)
          cgle => cgle%nxt
       enddo
-      if (allocated(q_lst)) deallocate(q_lst)
-      if (allocated(w_lst)) deallocate(w_lst)
+      if (allocated(qna%lst)) deallocate(qna%lst)
+      if (allocated(wna%lst)) deallocate(wna%lst)
       call all_cg%delete
 
    end subroutine cleanup_grid

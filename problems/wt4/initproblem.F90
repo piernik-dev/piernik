@@ -294,6 +294,7 @@ contains
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use mpisetup,       only: master
+      use named_array,    only: qna
       use units,          only: kboltz, mH
 
       implicit none
@@ -393,7 +394,7 @@ contains
          cg%b(:, 1:cg%n_(xdim), 1:cg%n_(ydim), 1:cg%n_(zdim)) = 0.0
 
          do i = D0, VY0
-            q0 => cg%q(all_cg%ind(q_n(i)))%arr
+            q0 => cg%q(qna%ind(q_n(i)))%arr
             select case (i)
                case (D0)
                   q0 = cg%u(fl%idn,:,:,:)
@@ -458,14 +459,14 @@ contains
 
    subroutine problem_customize_solution_wt4
 
-      use cg_list_global, only: all_cg
-      use constants,      only: xdim, ydim, zdim
-      use dataio_pub,     only: warn
-      use grid,           only: leaves
-      use gc_list,        only: cg_list_element
-      use grid_cont,      only: grid_container
-      use fluidindex,     only: flind
-      use fluidtypes,     only: component_fluid
+      use constants,   only: xdim, ydim, zdim
+      use dataio_pub,  only: warn
+      use grid,        only: leaves
+      use gc_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use named_array, only: qna
 
       implicit none
 
@@ -524,9 +525,9 @@ contains
                   enddo
                enddo
             case (3)
-               den0 => cg%q(all_cg%ind(q_n(D0)))%arr
-               vlx0 => cg%q(all_cg%ind(q_n(VX0)))%arr
-               vly0 => cg%q(all_cg%ind(q_n(VY0)))%arr
+               den0 => cg%q(qna%ind(q_n(D0)))%arr
+               vlx0 => cg%q(qna%ind(q_n(VX0)))%arr
+               vly0 => cg%q(qna%ind(q_n(VY0)))%arr
                allocate(alf(cg%n_(xdim), cg%n_(ydim)))
                do i = 1, cg%n_(xdim)
                   do j = 1, cg%n_(ydim)

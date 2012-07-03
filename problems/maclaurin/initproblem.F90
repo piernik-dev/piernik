@@ -271,6 +271,7 @@ contains
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use mpisetup,       only: master
+      use named_array,    only: qna
       use units,          only: newtong
 
       implicit none
@@ -300,7 +301,7 @@ contains
       a32 = a3**2
 
       call all_cg%reg_var(apot_n)
-      apot_i = all_cg%ind(apot_n)
+      apot_i = qna%ind(apot_n)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -375,6 +376,7 @@ contains
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,       only: master, comm, mpi_err
+      use named_array,    only: qna
 
       implicit none
 
@@ -388,7 +390,7 @@ contains
       norm(:) = 0.
       dev(1) = huge(1.0)
       dev(2) = -dev(1)
-      apot_i = all_cg%ind(apot_n)
+      apot_i = qna%ind(apot_n)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -437,6 +439,7 @@ contains
       use cg_list_global, only: all_cg
       use dataio_pub,     only: die
       use grid_cont,      only: grid_container
+      use named_array,    only: qna
 
       implicit none
 
@@ -450,9 +453,9 @@ contains
       ierrh = 0
       select case (trim(var))
          case ("apot")
-            tab(:,:,:) = real(cg%q(all_cg%ind(apot_n))%span(cg%ijkse), 4)
+            tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse), 4)
          case ("errp")
-            tab(:,:,:) = real(cg%q(all_cg%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+            tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case default
             ierrh = -1
       end select

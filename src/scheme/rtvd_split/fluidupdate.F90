@@ -50,14 +50,14 @@ contains
 
    subroutine repeat_fluidstep
 
-      use cg_list_global, only: all_cg
-      use constants,      only: I_ONE, u0_n, b0_n
-      use dataio_pub,     only: warn
-      use gc_list,        only: cg_list_element
-      use global,         only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
-      use grid,           only: leaves
-      use grid_cont,      only: grid_container
-      use mpisetup,       only: master
+      use constants,   only: I_ONE, u0_n, b0_n
+      use dataio_pub,  only: warn
+      use gc_list,     only: cg_list_element
+      use global,      only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
+      use grid,        only: leaves
+      use grid_cont,   only: grid_container
+      use mpisetup,    only: master
+      use named_array, only: wna
 
       implicit none
 
@@ -72,14 +72,14 @@ contains
 
          if (cfl_violated) then
             t = t-2.0*dtm
-            cg%u = cg%w(all_cg%ind_4d(u0_n))%arr
-            cg%b = cg%w(all_cg%ind_4d(b0_n))%arr
+            cg%u = cg%w(wna%ind(u0_n))%arr
+            cg%b = cg%w(wna%ind(b0_n))%arr
             dt = dtm/dt_max_grow**2
             nstep = nstep - I_ONE
             if (master) call warn("[fluidupdate:fluid_update] Redoing previous step...")
          else
-            cg%w(all_cg%ind_4d(u0_n))%arr = cg%u
-            cg%w(all_cg%ind_4d(b0_n))%arr = cg%b
+            cg%w(wna%ind(u0_n))%arr = cg%u
+            cg%w(wna%ind(b0_n))%arr = cg%b
          endif
 
          cgl => cgl%nxt
@@ -268,16 +268,16 @@ contains
 
    subroutine mag_add(dim1, dim2)
 
-      use grid,           only: leaves
-      use gc_list,        only: cg_list_element
-      use grid_cont,      only: grid_container
-      use magboundaries,  only: all_mag_boundaries
-      use user_hooks,     only: custom_emf_bnd
+      use grid,          only: leaves
+      use gc_list,       only: cg_list_element
+      use grid_cont,     only: grid_container
+      use magboundaries, only: all_mag_boundaries
+      use user_hooks,    only: custom_emf_bnd
 #ifdef RESISTIVE
-      use cg_list_global, only: all_cg
-      use constants,      only: wcu_n
-      use dataio_pub,     only: die
-      use domain,         only: is_multicg
+      use constants,     only: wcu_n
+      use dataio_pub,    only: die
+      use domain,        only: is_multicg
+      use named_array,   only: qna
 #endif /* RESISTIVE */
 
       implicit none
@@ -294,7 +294,7 @@ contains
          cg => cgl%cg
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
-         wcu => cg%q(all_cg%ind(wcu_n))%arr
+         wcu => cg%q(qna%ind(wcu_n))%arr
          if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") ! not tested custom_emf_bnd
          if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - wcu*cg%idl(dim1)

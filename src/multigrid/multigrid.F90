@@ -88,6 +88,7 @@ contains
       use mpisetup,            only: comm, mpi_err, master, slave, nproc, FIRST, buffer_dim, ibuff, lbuff
       use multigridvars,       only: single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, &
            &                         ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
+      use named_array,         only: qna
       use types,               only: cdd
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
@@ -283,10 +284,10 @@ contains
       call all_cg%reg_var(defect_n,     ord_prolong = ord_prolong, multigrid = .true.)
       call all_cg%reg_var(correction_n, ord_prolong = ord_prolong, multigrid = .true.)
 
-      source     = all_cg%ind(source_n)
-      solution   = all_cg%ind(solution_n)
-      defect     = all_cg%ind(defect_n)
-      correction = all_cg%ind(correction_n)
+      source     = qna%ind(source_n)
+      solution   = qna%ind(solution_n)
+      defect     = qna%ind(defect_n)
+      correction = qna%ind(correction_n)
 
       call all_cg%set_dirty(source)
       call all_cg%set_dirty(solution)

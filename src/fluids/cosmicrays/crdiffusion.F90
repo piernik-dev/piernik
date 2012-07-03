@@ -83,6 +83,7 @@ contains
       use internal_bnd,   only: internal_boundaries_4d
       use mpi,            only: MPI_REQUEST_NULL, MPI_COMM_NULL
       use mpisetup,       only: mpi_err, req, status
+      use named_array,    only: wna
       use types,          only: cdd
 
       implicit none
@@ -95,12 +96,12 @@ contains
 
       if (.not. has_cr) return
 
-      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(all_cg, all_cg%ind_4d(wcr_n)) ! should be more selective (modified leaves?)
+      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(all_cg, wna%ind(wcr_n)) ! should be more selective (modified leaves?)
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         wcr => cg%w(all_cg%ind_4d(wcr_n))%arr
+         wcr => cg%w(wna%ind(wcr_n))%arr
          if (.not. associated(wcr)) call die("[crdiffusion:all_wcr_boundaries] cannot get wcr")
 
          req(:) = MPI_REQUEST_NULL
@@ -168,7 +169,7 @@ contains
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use named_array,    only: p4
+      use named_array,    only: p4, wna
 
       implicit none
 
@@ -192,7 +193,7 @@ contains
       idm        = 0              ;      idm(crdim) = 1
       decr(:,:)  = 0.             ;      bcomp(:)   = 0.                 ! essential where ( .not.dom%has_dir(dim) .and. (dim /= crdim) )
       present_not_crdim = dom%has_dir .and. ( [ xdim,ydim,zdim ] /= crdim )
-      wcri = all_cg%ind_4d(wcr_n)
+      wcri = wna%ind(wcr_n)
 
       cgl => leaves%first
       do while (associated(cgl))

@@ -739,6 +739,7 @@ contains
       use constants,      only: cwdlen, xdim, ydim, zdim
 #ifdef GRAV
       use constants,      only: gpot_n
+      use named_array,    only: qna
 #endif /* GRAV */
       use dataio_pub,     only: wd_wr
       use dataio_user,    only: user_tsl
@@ -845,7 +846,7 @@ contains
          tot_q(T_MOMY) = tot_q(T_MOMY) + cg%dvol * sum(pu(iarr_all_my,:,:,:))
          tot_q(T_MOMZ) = tot_q(T_MOMZ) + cg%dvol * sum(pu(iarr_all_mz,:,:,:))
 #ifdef GRAV
-         tot_q(T_EPOT) = tot_q(T_EPOT) + cg%dvol * sum(sum(pu(iarr_all_dn(:),:,:,:),dim=1) * cg%q(all_cg%ind(gpot_n))%span(cg%ijkse))
+         tot_q(T_EPOT) = tot_q(T_EPOT) + cg%dvol * sum(sum(pu(iarr_all_dn(:),:,:,:),dim=1) * cg%q(qna%ind(gpot_n))%span(cg%ijkse))
 #endif /* GRAV */
 
          tot_q(T_EKIN) = tot_q(T_EKIN) + cg%dvol * sum(ekin(pu(iarr_all_mx(:),:,:,:), pu(iarr_all_my(:),:,:,:), pu(iarr_all_mz(:),:,:,:), max(pu(iarr_all_dn(:),:,:,:),smalld)))
@@ -1143,6 +1144,7 @@ contains
 #endif /* COSM_RAYS || MAGNETIC */
 #ifdef VARIABLE_GP
       use constants,          only: gpot_n
+      use named_array,        only: qna
 #endif /* VARIABLE_GP */
 #if defined VARIABLE_GP || defined MAGNETIC
       use constants,          only: xdim, ydim, zdim, HI, idm, ndims
@@ -1236,7 +1238,7 @@ contains
       D = spread(reshape([dom%D_*idm(xdim,:),dom%D_*idm(ydim,:),dom%D_*idm(zdim,:)],[ndims,ndims]),ndims,HI)
 #endif /* VARIABLE_GP || MAGNETIC */
 #ifdef VARIABLE_GP
-      var_i = all_cg%ind(gpot_n)
+      var_i = qna%ind(gpot_n)
       cgl => leaves%first
       do while (associated(cgl))
          p => cgl%cg%q(all_cg%wai)%span(cgl%cg%ijkse)

@@ -40,7 +40,7 @@ module named_array
    implicit none
 
    private
-   public :: named_array4d, named_array3d, mbc_list, p3, p4, na_var, q_lst, w_lst
+   public :: named_array4d, named_array3d, mbc_list, p3, p4, na_var, qna, wna
 
    !> \brief Common properties of 3D and 4D named arrays
    type :: na_var
@@ -53,8 +53,14 @@ module named_array
       logical                                    :: multigrid     !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
    end type na_var
 
-   type(na_var), dimension(:), allocatable, target :: q_lst !< information about registered 3D named arrays
-   type(na_var), dimension(:), allocatable, target :: w_lst !< information about registered 4D named arrays
+   type :: na_var_list
+       type(na_var), dimension(:), allocatable :: lst
+    contains
+       procedure :: ind                                           !< Get the index of a named array of given name.
+   end type na_var_list
+
+   type(na_var_list) :: qna !< list of registered 3D named arrays
+   type(na_var_list) :: wna !< list of registered 4D named arrays
 
    real, dimension(:,:,:),   pointer :: p3   !< auxiliary pointer to 3D named_arrays
    real, dimension(:,:,:,:), pointer :: p4   !< auxiliary pointer to 4D named_arrays
@@ -142,6 +148,41 @@ module named_array
    end type named_array3d
 
 contains
+
+!>
+!! \brief Get the index of a named array of given name.
+!!
+!! \warning OPT The indices aren't updated so cache them, whenever possible
+!<
+   function ind(this, name) result(rind)
+
+      use dataio_pub,  only: die, msg, warn
+
+      implicit none
+
+      class(na_var_list), intent(inout) :: this
+      character(len=*),   intent(in) :: name
+
+      integer :: rind, i
+
+      rind = 0
+
+      do i = lbound(this%lst, dim=1, kind=4), ubound(this%lst, dim=1, kind=4)
+         if (trim(name) ==  this%lst(i)%name) then
+            if (rind /= 0) then
+               write(msg, '(2a)') "[named_array:ind] multiple entries with the same name: ", trim(name)
+               call die(msg)
+            endif
+            rind = i
+         endif
+      enddo
+
+      if (rind == 0) then
+         write(msg, '(2a)') "[named_array:ind] requested entry not found: ", trim(name)
+         call warn(msg)
+      endif
+
+   end function ind
 
 !>
 !! \brief Initialize a 3d named array
