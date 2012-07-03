@@ -115,18 +115,10 @@ contains
       if (present(multigrid)) mg = multigrid
 
       if (present(dim4)) then
-         if (wna%exists(name)) then
-            write(msg, '(3a)')"[cg_list_global:reg_var] A rank-4 array '",trim(name),"' was already registered."
-            call die(msg)
-         endif
          if (mg) call die("[cg_list_global:reg_var] there are no rank-4 multigrid arrays yet")
          d4 = dim4
          nvar = dim4
       else
-         if (qna%exists(name)) then
-            write(msg, '(3a)')"[cg_list_global:reg_var] A rank-3 array '",trim(name),"' was already registered."
-            call die(msg)
-         endif
          d4 = int(INVALID, kind=4)
          nvar = 1
       endif

@@ -221,12 +221,19 @@ contains
 
    subroutine add2lst(this, element)
 
+      use dataio_pub,  only: die, msg
+
       implicit none
 
       class(na_var_list), intent(inout) :: this
       type(na_var),       intent(in)    :: element
 
       type(na_var), dimension(:), allocatable :: tmp
+
+      if (this%exists(element%name)) then
+         write(msg, '(3a)')"[named_array:add2lst] An array '",trim(element%name),"' was already registered in this list."
+         call die(msg)
+      endif
 
       if (.not. allocated(this%lst)) then
          allocate(this%lst(1))
