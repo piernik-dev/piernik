@@ -31,24 +31,12 @@
 
 module cg_list_global
 
-   use constants, only: dsetnamelen
-   use gc_list,   only: cg_list
+   use gc_list,     only: cg_list
 
    implicit none
 
    private
    public :: all_cg
-
-   !> \brief Common properties of 3D and 4D named arrays
-   type :: na_var
-      character(len=dsetnamelen)                 :: name          !< a user-provided id for the array
-      logical                                    :: vital         !< fields that are subject of automatic prolongation and restriction (e.g. state variables)
-      integer(kind=4)                            :: restart_mode  !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
-      integer(kind=4)                            :: ord_prolong   !< Prolongation order for the variable
-      integer(kind=4), allocatable, dimension(:) :: position      !< VAR_CENTER by default, also possible VAR_CORNER and VAR_[XYZ]FACE
-      integer(kind=4)                            :: dim4          !< <=0 for 3D arrays, >0 for 4D arrays
-      logical                                    :: multigrid     !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
-   end type na_var
 
    !>
    !! \brief A list of grid containers that are supposed to have the same variables registered
@@ -65,8 +53,6 @@ module cg_list_global
    !<
    type, extends(cg_list) :: cg_list_glob
 
-      type(na_var), dimension(:), allocatable :: q_lst !< information about registered 3D named arrays
-      type(na_var), dimension(:), allocatable :: w_lst !< information about registered 4D named arrays
       integer(kind=4) :: ord_prolong_nb                !< Maximum number of boundary cells required for prolongation
 
       !< indices of the most commonly used arrays stored in cg%w and cg%q
@@ -75,15 +61,15 @@ module cg_list_global
       integer :: wai                                   !< auxiliary array : cg%q(all_cg%wai)
 
     contains
-      procedure :: reg_var        !< Add a variable (cg%q or cg%w) to all grid containers
-      procedure :: check_na       !< Check if all named arrays are consistently registered
-      procedure :: check_for_dirt !< Check all named arrays for constants:big_float
-      procedure :: print_vars     !< Write a summary on registered fields. Can be useful for debugging
-      procedure :: ind            !< Get the index of a named 3d array of given name.
-      procedure :: ind_4d         !< Get the index of a named 4d array of given name.
-      procedure :: exists         !< Check if a 3D array of given name is already registered
-      procedure :: exists_4d      !< Check if a 4D array of given name is already registered
-      procedure :: update_req     !< Update mpisetup::req(:)
+      procedure         :: reg_var        !< Add a variable (cg%q or cg%w) to all grid containers
+      procedure         :: check_na       !< Check if all named arrays are consistently registered
+      procedure         :: check_for_dirt !< Check all named arrays for constants:big_float
+      procedure, nopass :: print_vars     !< Write a summary on registered fields. Can be useful for debugging
+      procedure, nopass :: ind            !< Get the index of a named 3d array of given name.
+      procedure, nopass :: ind_4d         !< Get the index of a named 4d array of given name.
+      procedure, nopass :: exists         !< Check if a 3D array of given name is already registered
+      procedure, nopass :: exists_4d      !< Check if a 4D array of given name is already registered
+      procedure         :: update_req     !< Update mpisetup::req(:)
    end type cg_list_glob
 
    type(cg_list_glob) :: all_cg   !< all grid containers; \todo restore protected
@@ -99,9 +85,10 @@ contains
 
    subroutine reg_var(this, name, vital, restart_mode, ord_prolong, dim4, position, multigrid)
 
-      use constants,  only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, O_INJ
-      use dataio_pub, only: die, warn, msg
-      use gc_list,    only: cg_list_element
+      use constants,   only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, O_INJ
+      use dataio_pub,  only: die, warn, msg
+      use gc_list,     only: cg_list_element
+      use named_array, only: q_lst, w_lst
 
       implicit none
 
@@ -166,9 +153,9 @@ contains
       endif
 
       if (present(dim4)) then
-         call add2lst(this%w_lst, name, vit, rm, op, pos, d4, mg)
+         call add2lst(w_lst, name, vit, rm, op, pos, d4, mg)
       else
-         call add2lst(this%q_lst, name, vit, rm, op, pos, d4, mg)
+         call add2lst(q_lst, name, vit, rm, op, pos, d4, mg)
       endif
 
       cgl => this%first
@@ -193,13 +180,14 @@ contains
 
    subroutine add2lst(lst, name, vital, restart_mode, ord_prolong, position, dim4, multigrid)
 
-      use constants,  only: I_ZERO, I_ONE, I_TWO, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4
-      use dataio_pub, only: die
-      use domain,     only: dom
+      use constants,   only: I_ZERO, I_ONE, I_TWO, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4
+      use dataio_pub,  only: die
+      use domain,      only: dom
+      use named_array, only: na_var
 
       implicit none
 
-      type(na_var), dimension(:), allocatable, intent(inout) :: lst           !< the list to which we want to appent an entry
+      type(na_var), dimension(:), allocatable, intent(inout) :: lst           !< the list to which we want to append an entry
       character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
       logical,                                 intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
       integer(kind=4),                         intent(in)    :: restart_mode  !< Write to the restart if not AT_IGNORE. Several write modes can be supported.
@@ -239,9 +227,10 @@ contains
 
    subroutine check_na(this)
 
-      use constants,  only: INVALID, base_level_id
-      use dataio_pub, only: msg, die
-      use gc_list,    only: cg_list_element
+      use constants,   only: INVALID, base_level_id
+      use dataio_pub,  only: msg, die
+      use gc_list,     only: cg_list_element
+      use named_array, only: q_lst, w_lst
 
       implicit none
 
@@ -253,44 +242,44 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
-         if (allocated(this%q_lst) .neqv. allocated(cgl%cg%q)) then
-            write(msg,'(2(a,l2))')"[cg_list_global:check_na] allocated(all_cg%q_lst) .neqv. allocated(cgl%cg%q):",allocated(this%q_lst)," .neqv. ",allocated(cgl%cg%q)
+         if (allocated(q_lst) .neqv. allocated(cgl%cg%q)) then
+            write(msg,'(2(a,l2))')"[cg_list_global:check_na] allocated(q_lst) .neqv. allocated(cgl%cg%q):",allocated(q_lst)," .neqv. ",allocated(cgl%cg%q)
             call die(msg)
-         else if (allocated(this%q_lst)) then
-            if (size(this%q_lst) /= size(cgl%cg%q)) then
-               write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(all_cg%q_lst) /= size(cgl%cg%q)",size(this%q_lst)," /= ",size(cgl%cg%q)
+         else if (allocated(q_lst)) then
+            if (size(q_lst) /= size(cgl%cg%q)) then
+               write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(q_lst) /= size(cgl%cg%q)",size(q_lst)," /= ",size(cgl%cg%q)
                call die(msg)
             else
-               do i = lbound(this%q_lst, dim=1), ubound(this%q_lst, dim=1)
-                  if (this%q_lst(i)%dim4 /= INVALID) then
-                     write(msg,'(3a,i10)')"[cg_list_global:check_na] all_cg%q_lst(",i,"), named '",this%q_lst(i)%name,"' has dim4 set to ",this%q_lst(i)%dim4
+               do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+                  if (q_lst(i)%dim4 /= INVALID) then
+                     write(msg,'(3a,i10)')"[cg_list_global:check_na] q_lst(",i,"), named '",q_lst(i)%name,"' has dim4 set to ",q_lst(i)%dim4
                      call die(msg)
                   endif
-                  if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%level_id < base_level_id .and. .not. this%q_lst(i)%multigrid) then
-                     write(msg,'(a,i3,3a)')"[cg_list_global:check_na] non-multigrid cgl%cg%q(",i,"), named '",this%q_lst(i)%name,"' allocated on coarse level"
+                  if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%level_id < base_level_id .and. .not. q_lst(i)%multigrid) then
+                     write(msg,'(a,i3,3a)')"[cg_list_global:check_na] non-multigrid cgl%cg%q(",i,"), named '",q_lst(i)%name,"' allocated on coarse level"
                      call die(msg)
                   endif
                enddo
             endif
          endif
-         if (allocated(this%w_lst) .neqv. allocated(cgl%cg%w)) then
-            write(msg,'(2(a,l2))')"[cg_list_global:check_na] allocated(all_cg%w_lst) .neqv. allocated(cgl%cg%w)",allocated(this%w_lst)," .neqv. ",allocated(cgl%cg%w)
+         if (allocated(w_lst) .neqv. allocated(cgl%cg%w)) then
+            write(msg,'(2(a,l2))')"[cg_list_global:check_na] allocated(w_lst) .neqv. allocated(cgl%cg%w)",allocated(w_lst)," .neqv. ",allocated(cgl%cg%w)
             call die(msg)
-         else if (allocated(this%w_lst)) then
-            if (size(this%w_lst) /= size(cgl%cg%w)) then
-               write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(all_cg%w_lst) /= size(cgl%cg%w)",size(this%w_lst)," /= ",size(cgl%cg%w)
+         else if (allocated(w_lst)) then
+            if (size(w_lst) /= size(cgl%cg%w)) then
+               write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(w_lst) /= size(cgl%cg%w)",size(w_lst)," /= ",size(cgl%cg%w)
                call die(msg)
             else
-               do i = lbound(this%w_lst, dim=1), ubound(this%w_lst, dim=1)
+               do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
                   bad = .false.
-                  if (associated(cgl%cg%w(i)%arr)) bad = this%w_lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%level_id >= base_level_id
-                  if (this%w_lst(i)%dim4 <= 0 .or. bad) then
-                     write(msg,'(a,i3,2a,2(a,i7))')"[cg_list_global:check_na] all_cg%w_lst(",i,") named '",this%w_lst(i)%name,"' has inconsistent dim4: ",&
-                          &         this%w_lst(i)%dim4," /= ",size(cgl%cg%w(i)%arr, dim=1)
+                  if (associated(cgl%cg%w(i)%arr)) bad = w_lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%level_id >= base_level_id
+                  if (w_lst(i)%dim4 <= 0 .or. bad) then
+                     write(msg,'(a,i3,2a,2(a,i7))')"[cg_list_global:check_na] w_lst(",i,") named '",w_lst(i)%name,"' has inconsistent dim4: ",&
+                          &         w_lst(i)%dim4," /= ",size(cgl%cg%w(i)%arr, dim=1)
                      call die(msg)
                   endif
                   if (associated(cgl%cg%w(i)%arr) .and. cgl%cg%level_id < base_level_id) then
-                     write(msg,'(a,i3,3a)')"[cg_list_global:check_na] cgl%cg%w(",i,"), named '",this%w_lst(i)%name,"' allocated on coarse level"
+                     write(msg,'(a,i3,3a)')"[cg_list_global:check_na] cgl%cg%w(",i,"), named '",w_lst(i)%name,"' allocated on coarse level"
                      call die(msg)
                   endif
                enddo
@@ -305,9 +294,10 @@ contains
 
    subroutine check_for_dirt(this)
 
-      use constants,  only: big_float
-      use dataio_pub, only: warn, msg
-      use gc_list,    only: cg_list_element
+      use constants,   only: big_float
+      use dataio_pub,  only: warn, msg
+      use gc_list,     only: cg_list_element
+      use named_array, only: q_lst, w_lst
 
       implicit none
 
@@ -318,16 +308,16 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
-         do i = lbound(this%q_lst, dim=1), ubound(this%q_lst, dim=1)
+         do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
             if (cgl%cg%q(i)%check()) then
-               write(msg,'(3a,I12,a)') "[cg_list_global:check_for_dirt] Array ", trim(this%q_lst(i)%name), " has ", &
+               write(msg,'(3a,I12,a)') "[cg_list_global:check_for_dirt] Array ", trim(q_lst(i)%name), " has ", &
                   & count(cgl%cg%q(i)%arr >= big_float), " wrong values."
                call warn(msg)
             endif
          enddo
-         do i = lbound(this%w_lst, dim=1), ubound(this%w_lst, dim=1)
+         do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
             if (cgl%cg%w(i)%check()) then
-               write(msg,'(3a,I12,a)') "[cg_list_global:check_for_dirt] Array ", trim(this%w_lst(i)%name), " has ", &
+               write(msg,'(3a,I12,a)') "[cg_list_global:check_for_dirt] Array ", trim(w_lst(i)%name), " has ", &
                   & count(cgl%cg%w(i)%arr >= big_float), " wrong values."
                call warn(msg)
             endif
@@ -342,21 +332,21 @@ contains
 !!
 !! \warning OPT The indices aren't updated so cache them, whenever possible
 !<
-   function ind(this, name) result(rind)
+   function ind(name) result(rind)
 
-      use dataio_pub, only: die, msg, warn
+      use dataio_pub,  only: die, msg, warn
+      use named_array, only: q_lst
 
       implicit none
 
-      class(cg_list_glob), intent(inout) :: this
-      character(len=*),    intent(in)    :: name
+      character(len=*), intent(in) :: name
 
       integer :: rind, i
 
       rind = 0
 
-      do i = lbound(this%q_lst, dim=1, kind=4), ubound(this%q_lst, dim=1, kind=4)
-         if (trim(name) ==  this%q_lst(i)%name) then
+      do i = lbound(q_lst, dim=1, kind=4), ubound(q_lst, dim=1, kind=4)
+         if (trim(name) ==  q_lst(i)%name) then
             if (rind /= 0) then
                write(msg, '(2a)') "[cg_list_global:ind] multiple entries with the same name: ", trim(name)
                call die(msg)
@@ -377,21 +367,21 @@ contains
 !!
 !! \details This method is provided for convenience only. Use ptr whenever possible.
 !<
-   function ind_4d(this, name) result(rind)
+   function ind_4d(name) result(rind)
 
-      use dataio_pub, only: die, msg, warn
+      use dataio_pub,  only: die, msg, warn
+      use named_array, only: w_lst
 
       implicit none
 
-      class(cg_list_glob), intent(inout) :: this
-      character(len=*),    intent(in)    :: name
+      character(len=*), intent(in) :: name
 
       integer :: rind, i
 
       rind = 0
 
-      do i = lbound(this%w_lst, dim=1, kind=4), ubound(this%w_lst, dim=1, kind=4)
-         if (trim(name) ==  this%w_lst(i)%name) then
+      do i = lbound(w_lst, dim=1, kind=4), ubound(w_lst, dim=1, kind=4)
+         if (trim(name) ==  w_lst(i)%name) then
             if (rind /= 0) then
                write(msg, '(2a)') "[cg_list_global:ind_4d] multiple entries with the same name: ", trim(name)
                call die(msg)
@@ -409,23 +399,23 @@ contains
 
 !> \brief Check if a 3D array of given name is already registered
 
-   function exists(this, name)
+   function exists(name)
 
-      use dataio_pub, only: die, msg
+      use dataio_pub,  only: die, msg
+      use named_array, only: q_lst
 
       implicit none
 
-      class(cg_list_glob), intent(inout) :: this
-      character(len=*),    intent(in)    :: name
+      character(len=*), intent(in) :: name
 
       logical :: exists
       integer :: i
 
       exists = .false.
 
-      if (allocated(this%q_lst)) then
-         do i = lbound(this%q_lst, dim=1), ubound(this%q_lst, dim=1)
-            if (trim(name) ==  this%q_lst(i)%name) then
+      if (allocated(q_lst)) then
+         do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+            if (trim(name) ==  q_lst(i)%name) then
                if (exists) then
                   write(msg, '(2a)') "[cg_list_global:exists] multiple entries with the same name: ", trim(name)
                   call die(msg)
@@ -439,23 +429,23 @@ contains
 
 !> \brief Check if a 4D array of given name is already registered
 
-   function exists_4d(this, name) result(exists)
+   function exists_4d(name) result(exists)
 
-      use dataio_pub, only: die, msg
+      use dataio_pub,  only: die, msg
+      use named_array, only: w_lst
 
       implicit none
 
-      class(cg_list_glob), intent(inout) :: this
-      character(len=*),    intent(in)    :: name
+      character(len=*), intent(in) :: name
 
       logical :: exists
       integer :: i
 
       exists = .false.
 
-      if (allocated(this%w_lst)) then
-         do i = lbound(this%w_lst, dim=1), ubound(this%w_lst, dim=1)
-            if (trim(name) ==  this%w_lst(i)%name) then
+      if (allocated(w_lst)) then
+         do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+            if (trim(name) ==  w_lst(i)%name) then
                if (exists) then
                   write(msg, '(2a)') "[cg_list_global:exists] multiple entries with the same name: ", trim(name)
                   call die(msg)
@@ -499,33 +489,32 @@ contains
 
 !> \brief Summarize all registered fields and their properties
 
-   subroutine print_vars(this)
+   subroutine print_vars
 
-      use dataio_pub, only: printinfo, msg
-      use mpisetup,   only: slave
+      use dataio_pub,  only: printinfo, msg
+      use mpisetup,    only: slave
+      use named_array, only: q_lst, w_lst
 
       implicit none
-
-      class(cg_list_glob), intent(inout) :: this
 
       integer :: i
 
       if (slave) return
 
-      write(msg,'(a,i2,a)')"[cg_list_global:print_vars] Found ",size(this%q_lst)," rank-3 arrays:"
+      write(msg,'(a,i2,a)')"[cg_list_global:print_vars] Found ",size(q_lst)," rank-3 arrays:"
       call printinfo(msg)
-      do i = lbound(this%q_lst(:), dim=1), ubound(this%q_lst(:), dim=1)
-         write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", this%q_lst(i)%name, "', vital=", this%q_lst(i)%vital, ", restart_mode=", this%q_lst(i)%restart_mode, &
-              &                                ", multigrid=", this%q_lst(i)%multigrid, ", ord_prolong=", this%q_lst(i)%ord_prolong, ", position=", this%q_lst(i)%position(:)
+      do i = lbound(q_lst(:), dim=1), ubound(q_lst(:), dim=1)
+         write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", q_lst(i)%name, "', vital=", q_lst(i)%vital, ", restart_mode=", q_lst(i)%restart_mode, &
+              &                                ", multigrid=", q_lst(i)%multigrid, ", ord_prolong=", q_lst(i)%ord_prolong, ", position=", q_lst(i)%position(:)
          call printinfo(msg)
       enddo
 
-      write(msg,'(a,i2,a)')"[cg_list_global:print_vars] Found ",size(this%w_lst)," rank-4 arrays:"
+      write(msg,'(a,i2,a)')"[cg_list_global:print_vars] Found ",size(w_lst)," rank-4 arrays:"
       call printinfo(msg)
-      do i = lbound(this%w_lst(:), dim=1), ubound(this%w_lst(:), dim=1)
-         write(msg,'(3a,l2,a,i2,a,l2,2(a,i2),a,100i2)')"'", this%w_lst(i)%name, "', vital=", this%w_lst(i)%vital, ", restart_mode=", this%w_lst(i)%restart_mode, &
-              &                                        ", multigrid=", this%w_lst(i)%multigrid, ", ord_prolong=", this%w_lst(i)%ord_prolong, &
-              &                                        ", components=", this%w_lst(i)%dim4, ", position=", this%w_lst(i)%position(:)
+      do i = lbound(w_lst(:), dim=1), ubound(w_lst(:), dim=1)
+         write(msg,'(3a,l2,a,i2,a,l2,2(a,i2),a,100i2)')"'", w_lst(i)%name, "', vital=", w_lst(i)%vital, ", restart_mode=", w_lst(i)%restart_mode, &
+              &                                        ", multigrid=", w_lst(i)%multigrid, ", ord_prolong=", w_lst(i)%ord_prolong, &
+              &                                        ", components=", w_lst(i)%dim4, ", position=", w_lst(i)%position(:)
          call printinfo(msg)
       enddo
 

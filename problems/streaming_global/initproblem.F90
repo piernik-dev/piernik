@@ -152,12 +152,13 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: AT_NO_B
+      use named_array,    only: w_lst
 
       implicit none
 
       integer(kind=4) :: dim4
 
-      dim4 = all_cg%w_lst(all_cg%fi)%dim4
+      dim4 = w_lst(all_cg%fi)%dim4
       call all_cg%reg_var(inid_n, restart_mode = AT_NO_B, dim4 = dim4)
 
    end subroutine register_user_var

@@ -224,6 +224,7 @@ contains
 
       use cg_list_global, only: all_cg
       use gc_list,        only: cg_list_element
+      use named_array,    only: q_lst, w_lst
 
       implicit none
 
@@ -243,8 +244,8 @@ contains
          deallocate(cgle%cg)
          cgle => cgle%nxt
       enddo
-      if (allocated(all_cg%q_lst)) deallocate(all_cg%q_lst)
-      if (allocated(all_cg%w_lst)) deallocate(all_cg%w_lst)
+      if (allocated(q_lst)) deallocate(q_lst)
+      if (allocated(w_lst)) deallocate(w_lst)
       call all_cg%delete
 
    end subroutine cleanup_grid

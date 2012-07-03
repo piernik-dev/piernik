@@ -226,12 +226,12 @@ contains
 
    subroutine write_restart_hdf5_v1(filename)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: cwdlen
-      use hdf5,           only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
+      use constants,   only: cwdlen
+      use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
-      use mpi,            only: MPI_INFO_NULL
-      use mpisetup,       only: comm
+      use mpi,         only: MPI_INFO_NULL
+      use mpisetup,    only: comm
+      use named_array, only: q_lst, w_lst
 
       implicit none
       character(len=cwdlen), intent(in) :: filename      !> HDF File name
@@ -248,14 +248,14 @@ contains
       call h5fopen_f(filename, H5F_ACC_RDWR_F, file_id, error, access_prp = plist_id)
 
       ! Write scalar fields that were declared to be required on restart
-      if (allocated(all_cg%q_lst)) then
-         do i = lbound(all_cg%q_lst(:), dim=1, kind=4), ubound(all_cg%q_lst(:), dim=1, kind=4)
+      if (allocated(q_lst)) then
+         do i = lbound(q_lst(:), dim=1, kind=4), ubound(q_lst(:), dim=1, kind=4)
             call write_arr_to_restart(file_id, i, .true.)
          enddo
       endif
 
-      if (allocated(all_cg%w_lst)) then
-         do i = lbound(all_cg%w_lst(:), dim=1, kind=4), ubound(all_cg%w_lst(:), dim=1, kind=4)
+      if (allocated(w_lst)) then
+         do i = lbound(w_lst(:), dim=1, kind=4), ubound(w_lst(:), dim=1, kind=4)
             call write_arr_to_restart(file_id, i, .false.)
          enddo
       endif
@@ -283,22 +283,22 @@ contains
 
    subroutine write_arr_to_restart(file_id, ind, tgt3d)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: ndims, AT_IGNORE, LONG, dsetnamelen
+      use constants,   only: ndims, AT_IGNORE, LONG, dsetnamelen
 #ifdef INDEPENDENT_ATOUTB
-      use constants,      only: AT_OUT_B
+      use constants,   only: AT_OUT_B
 #endif /* INDEPENDENT_ATOUTB */
-      use dataio_pub,     only: die
-      use domain,         only: is_multicg
-      use gc_list,        only: cg_list_element
-      use grid,           only: leaves
-      use grid_cont,      only: grid_container
-      use hdf5,           only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f, h5sclose_f, h5pclose_f, h5dclose_f, &
-           &                    H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
-           &                    h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f
+      use dataio_pub,  only: die
+      use domain,      only: is_multicg
+      use gc_list,     only: cg_list_element
+      use grid,        only: leaves
+      use grid_cont,   only: grid_container
+      use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f, h5sclose_f, h5pclose_f, h5dclose_f, &
+           &                 H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
+           &                 h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f
 #ifdef INDEPENDENT_ATOUTB
-      use hdf5,       only: H5FD_MPIO_INDEPENDENT_F
+      use hdf5,        only: H5FD_MPIO_INDEPENDENT_F
 #endif /* INDEPENDENT_ATOUTB */
+      use named_array, only: q_lst, w_lst
 
       implicit none
 
@@ -326,17 +326,17 @@ contains
       character(len=dsetnamelen)         :: dname
 
       if (tgt3d) then
-         if (ind < lbound(all_cg%q_lst(:), dim=1) .or. ind > ubound(all_cg%q_lst(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 3D array")
+         if (ind < lbound(q_lst(:), dim=1) .or. ind > ubound(q_lst(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 3D array")
          dim1 = 1
          rank = ndims
-         dname = all_cg%q_lst(ind)%name
-         area_type = all_cg%q_lst(ind)%restart_mode
+         dname = q_lst(ind)%name
+         area_type = q_lst(ind)%restart_mode
       else
-         if (ind < lbound(all_cg%w_lst(:), dim=1) .or. ind > ubound(all_cg%w_lst(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 4D array")
-         dim1 = all_cg%w_lst(ind)%dim4
+         if (ind < lbound(w_lst(:), dim=1) .or. ind > ubound(w_lst(:), dim=1)) call die("[restart_hdf5:write_arr_to_restart] Invalid 4D array")
+         dim1 = w_lst(ind)%dim4
          rank = rank4
-         dname = all_cg%w_lst(ind)%name
-         area_type = all_cg%w_lst(ind)%restart_mode
+         dname = w_lst(ind)%name
+         area_type = w_lst(ind)%restart_mode
       endif
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
@@ -432,6 +432,7 @@ contains
       use constants,      only: ndims, LONG, AT_IGNORE, dsetnamelen
       use dataio_pub,     only: msg, die
       use domain,         only: is_multicg
+      use external_bnd,   only: arr3d_boundaries
       use gc_list,        only: cg_list_element
       use grid,           only: leaves
       use grid_cont,      only: grid_container
@@ -439,7 +440,7 @@ contains
            &                    H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
            &                    h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
            &                    h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
-      use external_bnd,   only: arr3d_boundaries
+      use named_array,    only: q_lst, w_lst
 
       implicit none
 
@@ -469,17 +470,17 @@ contains
 
       !> \deprecated Duplicated code
       if (tgt3d) then
-         if (ind < lbound(all_cg%q_lst(:), dim=1) .or. ind > ubound(all_cg%q_lst(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 3D array")
+         if (ind < lbound(q_lst(:), dim=1) .or. ind > ubound(q_lst(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 3D array")
          dim1 = 1
          rank = ndims
-         cgname = all_cg%q_lst(ind)%name
-         area_type = all_cg%q_lst(ind)%restart_mode
+         cgname = q_lst(ind)%name
+         area_type = q_lst(ind)%restart_mode
       else
-         if (ind < lbound(all_cg%w_lst(:), dim=1) .or. ind > ubound(all_cg%w_lst(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 4D array")
-         dim1 = all_cg%w_lst(ind)%dim4
+         if (ind < lbound(w_lst(:), dim=1) .or. ind > ubound(w_lst(:), dim=1)) call die("[restart_hdf5:read_arr_from_restart] Invalid 4D array")
+         dim1 = w_lst(ind)%dim4
          rank = rank4
-         cgname = all_cg%w_lst(ind)%name
-         area_type = all_cg%w_lst(ind)%restart_mode
+         cgname = w_lst(ind)%name
+         area_type = w_lst(ind)%restart_mode
       endif
       dname = cgname
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
@@ -570,20 +571,20 @@ contains
 
    subroutine read_restart_hdf5_v1
 
-      use cg_list_global, only: all_cg
-      use constants,      only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE, RD
-      use common_hdf5,    only: output_fname
-      use dataio_pub,     only: msg, warn, die, printio, require_init_prob, problem_name, piernik_hdf5_version, fix_string, &
-           &                    domain_dump, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nhdf, nres, nimg, new_id
-      use dataio_user,    only: user_reg_var_restart, user_attrs_rd
-      use domain,         only: dom
-      use fluidindex,     only: flind
-      use global,         only: magic_mass, t, dt, nstep
-      use hdf5,           only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
-           &                    h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
-      use h5lt,           only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
-      use mpi,            only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_INFO_NULL
-      use mpisetup,       only: comm, mpi_err, master, FIRST
+      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE, RD
+      use common_hdf5, only: output_fname
+      use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, piernik_hdf5_version, fix_string, &
+           &                 domain_dump, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nhdf, nres, nimg, new_id
+      use dataio_user, only: user_reg_var_restart, user_attrs_rd
+      use domain,      only: dom
+      use fluidindex,  only: flind
+      use global,      only: magic_mass, t, dt, nstep
+      use hdf5,        only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
+           &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
+      use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
+      use mpi,         only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_INFO_NULL
+      use mpisetup,    only: comm, mpi_err, master, FIRST
+      use named_array, only: q_lst, w_lst
 
       implicit none
 
@@ -676,14 +677,14 @@ contains
       if (associated(user_reg_var_restart)) call user_reg_var_restart
 
       ! read auxiliary variables
-      if (allocated(all_cg%q_lst)) then
-         do i = lbound(all_cg%q_lst(:), dim=1, kind=4), ubound(all_cg%q_lst(:), dim=1, kind=4)
+      if (allocated(q_lst)) then
+         do i = lbound(q_lst(:), dim=1, kind=4), ubound(q_lst(:), dim=1, kind=4)
             call read_arr_from_restart(file_id, i, .true.)
          enddo
       endif
 
-      if (allocated(all_cg%w_lst)) then
-         do i = lbound(all_cg%w_lst(:), dim=1, kind=4), ubound(all_cg%w_lst(:), dim=1, kind=4)
+      if (allocated(w_lst)) then
+         do i = lbound(w_lst(:), dim=1, kind=4), ubound(w_lst(:), dim=1, kind=4)
             call read_arr_from_restart(file_id, i, .false.)
          enddo
       endif
@@ -841,10 +842,10 @@ contains
 
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, Z_avail, g)
 
-      use cg_list_global, only: all_cg
-      use common_hdf5,    only: create_empty_cg_dataset
-      use constants,      only: ndims, I_ONE, AT_IGNORE
-      use hdf5,           only: HID_T, HSIZE_T
+      use common_hdf5, only: create_empty_cg_dataset
+      use constants,   only: ndims, I_ONE, AT_IGNORE
+      use hdf5,        only: HID_T, HSIZE_T
+      use named_array, only: q_lst, w_lst
 
       implicit none
 
@@ -857,22 +858,22 @@ contains
       integer                                              :: i
       integer(HSIZE_T), dimension(:),   allocatable        :: ddims
 
-      if (allocated(all_cg%q_lst)) then
+      if (allocated(q_lst)) then
          drank = ndims
          allocate(ddims(drank))
-         do i = lbound(all_cg%q_lst(:), dim=1), ubound(all_cg%q_lst(:), dim=1)
-            if (all_cg%q_lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/all_cg.q_lst(i)).name"
-                 call create_empty_cg_dataset(cg_g_id, all_cg%q_lst(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
+         do i = lbound(q_lst(:), dim=1), ubound(q_lst(:), dim=1)
+            if (q_lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/all_cg.q_lst(i)).name"
+                 call create_empty_cg_dataset(cg_g_id, q_lst(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
          enddo
          deallocate(ddims)
       endif
 
-      if (allocated(all_cg%w_lst)) then
+      if (allocated(w_lst)) then
          drank = ndims + I_ONE
          allocate(ddims(drank))
-         do i = lbound(all_cg%w_lst(:), dim=1), ubound(all_cg%w_lst(:), dim=1)
-            if (all_cg%w_lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/all_cg.w_lst(i).name"
-                 call create_empty_cg_dataset(cg_g_id, all_cg%w_lst(i)%name, int([ all_cg%w_lst(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
+         do i = lbound(w_lst(:), dim=1), ubound(w_lst(:), dim=1)
+            if (w_lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/all_cg.w_lst(i).name"
+                 call create_empty_cg_dataset(cg_g_id, w_lst(i)%name, int([ w_lst(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
          enddo
          deallocate(ddims)
       endif
@@ -884,30 +885,30 @@ contains
 !! \details The result arrays q_lst, w_lst need to be deallocated separately
 !<
 
-   subroutine qw_lst(q_lst, w_lst)
+   subroutine qw_lst(qr_lst, wr_lst)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: AT_IGNORE
+      use constants,   only: AT_IGNORE
+      use named_array, only: q_lst, w_lst
 
       implicit none
 
-      integer, dimension(:), allocatable, intent(out) :: q_lst, w_lst
+      integer, dimension(:), allocatable, intent(out) :: qr_lst, wr_lst
 
       integer :: i
 
-      if (allocated(all_cg%q_lst)) then
-         do i = lbound(all_cg%q_lst(:), dim=1, kind=4), ubound(all_cg%q_lst(:), dim=1, kind=4)
-            if (all_cg%q_lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(q_lst, i)
+      if (allocated(q_lst)) then
+         do i = lbound(q_lst(:), dim=1, kind=4), ubound(q_lst(:), dim=1, kind=4)
+            if (q_lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(qr_lst, i)
          enddo
       endif
-      if (.not.allocated(q_lst)) allocate(q_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
+      if (.not.allocated(qr_lst)) allocate(qr_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
 
-      if (allocated(all_cg%w_lst)) then
-         do i = lbound(all_cg%w_lst(:), dim=1, kind=4), ubound(all_cg%w_lst(:), dim=1, kind=4)
-            if (all_cg%w_lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(w_lst, i)
+      if (allocated(w_lst)) then
+         do i = lbound(w_lst(:), dim=1, kind=4), ubound(w_lst(:), dim=1, kind=4)
+            if (w_lst(i)%restart_mode /= AT_IGNORE) call append_int_to_array(wr_lst, i)
          enddo
       endif
-      if (.not.allocated(w_lst)) allocate(w_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
+      if (.not.allocated(wr_lst)) allocate(wr_lst(0))  ! without it intrinsics like size, ubound, lbound return bogus values
 
    end subroutine qw_lst
 
@@ -915,16 +916,16 @@ contains
 
    subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b)
 
-      use cg_list_global, only: all_cg
-      use constants,      only: xdim, ydim, zdim, ndims, dsetnamelen, I_ONE
-      use common_hdf5,    only: get_nth_cg, cg_output
-      use dataio_pub,     only: die, nproc_io, can_i_write
-      use gc_list,        only: cg_list_element
-      use grid,           only: leaves
-      use grid_cont,      only: grid_container
-      use hdf5,           only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,       only: master, FIRST, proc, comm, mpi_err
+      use constants,   only: xdim, ydim, zdim, ndims, dsetnamelen, I_ONE
+      use common_hdf5, only: get_nth_cg, cg_output
+      use dataio_pub,  only: die, nproc_io, can_i_write
+      use gc_list,     only: cg_list_element
+      use grid,        only: leaves
+      use grid_cont,   only: grid_container
+      use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
+      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
+      use mpisetup,    only: master, FIRST, proc, comm, mpi_err
+      use named_array, only: q_lst, w_lst
 
       implicit none
 
@@ -942,23 +943,23 @@ contains
       integer                                     :: i, ncg, tot_lst_n, ic, n
       type(grid_container), pointer               :: cg
       type(cg_list_element), pointer              :: cgl
-      integer, allocatable, dimension(:)          :: q_lst, w_lst
+      integer, allocatable, dimension(:)          :: qr_lst, wr_lst
       type(cg_output) :: cg_desc
       character(len=dsetnamelen), dimension(:), allocatable :: dsets
 
-      call qw_lst(q_lst, w_lst)
-      tot_lst_n = size(q_lst) + size(w_lst)
+      call qw_lst(qr_lst, wr_lst)
+      tot_lst_n = size(qr_lst) + size(wr_lst)
       allocate(dsets(tot_lst_n))
       ic = 1
-      if (size(q_lst) > 0) then
-         do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
-            dsets(ic) = trim(all_cg%q_lst(q_lst(i))%name)
+      if (size(qr_lst) > 0) then
+         do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
+            dsets(ic) = trim(q_lst(qr_lst(i))%name)
             ic = ic + 1
          enddo
       endif
-      if (size(w_lst) > 0) then
-         do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
-            dsets(ic) = trim(all_cg%w_lst(w_lst(i))%name)
+      if (size(wr_lst) > 0) then
+         do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
+            dsets(ic) = trim(w_lst(wr_lst(i))%name)
             ic = ic + 1
          enddo
       endif
@@ -970,12 +971,12 @@ contains
             if (master) then
                if (.not. can_i_write) call die("[restart_hdf5:write_cg_to_restart] Master can't write")
 
-               if (size(q_lst) > 0) then
+               if (size(qr_lst) > 0) then
                   allocate(dims(rank3))
-                  do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+                  do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
                      if (cg_desc%cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                        pa3d => cg%q(q_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                        pa3d => cg%q(qr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
                         dims(:) = cg%n_b
                      else
                         allocate(pa3d(cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
@@ -988,20 +989,20 @@ contains
                   deallocate(dims)
                endif
 
-               if (size(w_lst) > 0) then
+               if (size(wr_lst) > 0) then
                   allocate(dims(rank4))
-                  do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+                  do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
                      if (cg_desc%cg_src_p(ncg) == proc) then
                         cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                        pa4d => cg%w(w_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
-                        dims(:) = [ all_cg%w_lst(w_lst(i))%dim4, cg%n_b ]
+                        pa4d => cg%w(wr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                        dims(:) = [ w_lst(wr_lst(i))%dim4, cg%n_b ]
                      else
-                        allocate(pa4d(all_cg%w_lst(w_lst(i))%dim4, cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
+                        allocate(pa4d(w_lst(wr_lst(i))%dim4, cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg)))
                         call MPI_Recv(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, cg_desc%cg_src_p(ncg), &
-                           ncg + cg_desc%tot_cg_n*(size(q_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
+                           ncg + cg_desc%tot_cg_n*(size(qr_lst)+i), comm, MPI_STATUS_IGNORE, mpi_err)
                         dims(:) = shape(pa4d)
                      endif
-                     call h5dwrite_f(cg_desc%dset_id(ncg, i+size(q_lst)), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
+                     call h5dwrite_f(cg_desc%dset_id(ncg, i+size(qr_lst)), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
                      if (cg_desc%cg_src_p(ncg) /= proc) deallocate(pa4d)
                   enddo
                   deallocate(dims)
@@ -1010,16 +1011,16 @@ contains
                if (can_i_write) call die("[restart_hdf5:write_cg_to_restart] Slave can write")
                if (cg_desc%cg_src_p(ncg) == proc) then
                   cg => get_nth_cg(cg_desc%cg_src_n(ncg))
-                  if (size(q_lst) > 0) then
-                     do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
-                        pa3d => cg%q(q_lst(i))%span(cg%ijkse)
+                  if (size(qr_lst) > 0) then
+                     do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
+                        pa3d => cg%q(qr_lst(i))%span(cg%ijkse)
                         call MPI_Send(pa3d(:,:,:), size(pa3d(:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*i, comm, mpi_err)
                      enddo
                   endif
-                  if (size(w_lst) > 0) then
-                     do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
-                        pa4d => cg%w(w_lst(i))%span(cg%ijkse)
-                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*(size(q_lst)+i), comm, mpi_err)
+                  if (size(wr_lst) > 0) then
+                     do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
+                        pa4d => cg%w(wr_lst(i))%span(cg%ijkse)
+                        call MPI_Send(pa4d(:,:,:,:), size(pa4d(:,:,:,:)), MPI_DOUBLE_PRECISION, FIRST, ncg + cg_desc%tot_cg_n*(size(qr_lst)+i), comm, mpi_err)
                      enddo
                   endif
                endif
@@ -1036,23 +1037,23 @@ contains
                ncg = cg_desc%offsets(proc) + n
                cg => cgl%cg
                ic = 0
-               if (size(q_lst) > 0) then
+               if (size(qr_lst) > 0) then
                   allocate(dims(rank3))
                   dims(:) = cg%n_b
-                  do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+                  do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
                      ic = ic + 1
-                     pa3d => cg%q(q_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                     pa3d => cg%q(qr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
                      dims(:) = cg%n_b
                      call h5dwrite_f(cg_desc%dset_id(ncg, ic), H5T_NATIVE_DOUBLE, pa3d, dims, error, xfer_prp = cg_desc%xfer_prp)
                   enddo
                   deallocate(dims)
                endif
-               if (size(w_lst) > 0) then
+               if (size(wr_lst) > 0) then
                   allocate(dims(rank4))
-                  do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+                  do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
                      ic = ic + 1
-                     pa4d => cg%w(w_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
-                     dims(:) = [ all_cg%w_lst(w_lst(i))%dim4, cg%n_b ]
+                     pa4d => cg%w(wr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                     dims(:) = [ w_lst(wr_lst(i))%dim4, cg%n_b ]
                      call h5dwrite_f(cg_desc%dset_id(ncg, ic), H5T_NATIVE_DOUBLE, pa4d, dims, error, xfer_prp = cg_desc%xfer_prp)
                   enddo
                   deallocate(dims)
@@ -1064,7 +1065,7 @@ contains
             cg => cgl%cg
             do ncg = 1, maxval(cg_n)-n
                ic = 0
-               if (size(q_lst) > 0) then
+               if (size(qr_lst) > 0) then
                   allocate(dims(rank3))
                   dims(:) = cg%n_b
                   call h5screate_simple_f(rank3, dims, filespace_id, error)
@@ -1072,9 +1073,9 @@ contains
                   call h5screate_simple_f(rank3, dims, memspace_id, error)
                   call h5sselect_none_f(memspace_id, error)   ! empty memoryscape
 
-                  do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
+                  do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
                      ic = ic + 1
-                     pa3d => cg%q(q_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                     pa3d => cg%q(qr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
                      dims(:) = cg%n_b
                      call h5dwrite_f(cg_desc%dset_id(1, ic), H5T_NATIVE_DOUBLE, pa3d, dims, error, &
                         xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
@@ -1083,11 +1084,11 @@ contains
                   call h5sclose_f(filespace_id, error)
                   deallocate(dims)
                endif
-               if (size(w_lst) > 0) then
+               if (size(wr_lst) > 0) then
                   allocate(dims(rank4))
-                  do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
+                  do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
                      ic = ic + 1
-                     dims(:) = [ all_cg%w_lst(w_lst(i))%dim4, cg%n_b ]
+                     dims(:) = [ w_lst(wr_lst(i))%dim4, cg%n_b ]
                      ! dims can change so h5s* is here as well, I don't know it
                      ! it's really necessary though,
                      ! \todo check if it can be done only once...
@@ -1096,7 +1097,7 @@ contains
                      call h5screate_simple_f(rank4, dims, memspace_id, error)
                      call h5sselect_none_f(memspace_id, error)   ! empty memoryscape
 
-                     pa4d => cg%w(w_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
+                     pa4d => cg%w(wr_lst(i))%span(cg%ijkse) !< \todo use set_dims_for_restart
                      call h5dwrite_f(cg_desc%dset_id(1, ic), H5T_NATIVE_DOUBLE, pa4d, dims, error, &
                         xfer_prp = cg_desc%xfer_prp, file_space_id = filespace_id, mem_space_id = memspace_id)
                      call h5sclose_f(memspace_id, error)
@@ -1115,7 +1116,7 @@ contains
 
       ! clean up
       call cg_desc%clean()
-      deallocate(q_lst, w_lst, dsets)
+      deallocate(qr_lst, wr_lst, dsets)
 
    end subroutine write_cg_to_restart
 
@@ -1441,14 +1442,14 @@ contains
 !> \brief Read as much as possible from stored cg to own cg
    subroutine read_cg_from_restart(cg, cgl_g_id, ncg, cg_r)
 
-      use cg_list_global, only: all_cg
-      use common_hdf5,    only: n_cg_name
-      use constants,      only: xdim, ydim, zdim, LO, HI, LONG
-      use dataio_pub,     only: die
-      use domain,         only: dom
-      use grid_cont,      only: grid_container, is_overlap
-      use hdf5,           only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
-           &                    h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
+      use common_hdf5, only: n_cg_name
+      use constants,   only: xdim, ydim, zdim, LO, HI, LONG
+      use dataio_pub,  only: die
+      use domain,      only: dom
+      use grid_cont,   only: grid_container, is_overlap
+      use hdf5,        only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
+           &                 h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
+      use named_array, only: q_lst, w_lst
 
       implicit none
 
@@ -1464,7 +1465,7 @@ contains
       integer(kind=4) :: error
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box, restart_box
       integer(kind=8), dimension(xdim:zdim) :: own_off, restart_off, o_size   ! the position and size of the overlapped region
-      integer, allocatable, dimension(:) :: q_lst, w_lst
+      integer, allocatable, dimension(:) :: qr_lst, wr_lst
       integer :: d, i
       real, dimension(:,:,:), allocatable :: a3d
       real, dimension(:,:,:,:), allocatable :: a4d
@@ -1492,14 +1493,14 @@ contains
       if (any(restart_off(:) > cg_r%n_b(:)))call die("[restart_hdf5:read_cg_from_restart] restart_off(:) > cg_r%n_b(:)")
       if (any(o_size(:) > cg%n_b(:)) .or. any(o_size(:) > cg_r%n_b(:)))call die("[restart_hdf5:read_cg_from_restart] o_size(:) > cg%n_b(:) or o_size(:) > cg_r%n_b(:)")
 
-      call qw_lst(q_lst, w_lst)
+      call qw_lst(qr_lst, wr_lst)
       call h5gopen_f(cgl_g_id, n_cg_name(ncg), cg_g_id, error) ! open "/cg/cg_%08d, ncg"
 
-      if (size(q_lst) > 0) then
+      if (size(qr_lst) > 0) then
          allocate(dims(ndims), off(ndims), cnt(ndims))
          dims(:) = o_size(:)
-         do i = lbound(q_lst, dim=1), ubound(q_lst, dim=1)
-            call h5dopen_f(cg_g_id, all_cg%q_lst(q_lst(i))%name, dset_id, error) ! open "/cg/cg_%08d/cg.q(q_lst(i)).name"
+         do i = lbound(qr_lst, dim=1), ubound(qr_lst, dim=1)
+            call h5dopen_f(cg_g_id, q_lst(qr_lst(i))%name, dset_id, error) ! open "/cg/cg_%08d/cg.q(qr_lst(i)).name"
             call h5dget_space_f(dset_id, filespace, error)
             off(:) = restart_off(:)
             cnt(:) = 1
@@ -1507,7 +1508,7 @@ contains
             call h5screate_simple_f(size(dims, kind=4), dims(:), memspace, error)
             allocate(a3d(dims(xdim), dims(ydim), dims(zdim)))
             call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, a3d, dims(:), error, file_space_id = filespace, mem_space_id = memspace)
-            cg%q(q_lst(i))%arr(cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
+            cg%q(qr_lst(i))%arr(cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
                  &             cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
                  &             cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1) = a3d(:,:,:)
             deallocate(a3d)
@@ -1516,11 +1517,11 @@ contains
          deallocate(dims, off, cnt)
       endif
 
-      if (size(w_lst) > 0) then
+      if (size(wr_lst) > 0) then
          allocate(dims(ndims+1), off(ndims+1), cnt(ndims+1))
-         do i = lbound(w_lst, dim=1), ubound(w_lst, dim=1)
-            dims(:) = [ int(all_cg%w_lst(w_lst(i))%dim4, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
-            call h5dopen_f(cg_g_id, all_cg%w_lst(w_lst(i))%name, dset_id, error)
+         do i = lbound(wr_lst, dim=1), ubound(wr_lst, dim=1)
+            dims(:) = [ int(w_lst(wr_lst(i))%dim4, kind=HSIZE_T), int(o_size(:), kind=HSIZE_T) ]
+            call h5dopen_f(cg_g_id, w_lst(wr_lst(i))%name, dset_id, error)
             call h5dget_space_f(dset_id, filespace, error)
             off(:) = [ 0_HSIZE_T, restart_off(:) ]
             cnt(:) = 1
@@ -1528,7 +1529,7 @@ contains
             call h5screate_simple_f(size(dims, kind=4), dims(:), memspace, error)
             allocate(a4d(dims(1), dims(1+xdim), dims(1+ydim), dims(1+zdim)))
             call h5dread_f(dset_id, H5T_NATIVE_DOUBLE, a4d, dims(:), error, file_space_id = filespace, mem_space_id = memspace)
-            cg%w(w_lst(i))%arr(:, cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
+            cg%w(wr_lst(i))%arr(:, cg%is+own_off(xdim):cg%is+own_off(xdim)+o_size(xdim)-1, &
                  &                cg%js+own_off(ydim):cg%js+own_off(ydim)+o_size(ydim)-1, &
                  &                cg%ks+own_off(zdim):cg%ks+own_off(zdim)+o_size(zdim)-1) = a4d(:,:,:,:)
             deallocate(a4d)
@@ -1538,7 +1539,7 @@ contains
       endif
 
       call h5gclose_f(cg_g_id, error)
-      deallocate(q_lst, w_lst)
+      deallocate(qr_lst, wr_lst)
 
    end subroutine read_cg_from_restart
 

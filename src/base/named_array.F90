@@ -35,10 +35,26 @@
 !<
 module named_array
 
+   use constants, only: dsetnamelen
+
    implicit none
 
    private
-   public :: named_array4d, named_array3d, mbc_list, p3, p4
+   public :: named_array4d, named_array3d, mbc_list, p3, p4, na_var, q_lst, w_lst
+
+   !> \brief Common properties of 3D and 4D named arrays
+   type :: na_var
+      character(len=dsetnamelen)                 :: name          !< a user-provided id for the array
+      logical                                    :: vital         !< fields that are subject of automatic prolongation and restriction (e.g. state variables)
+      integer(kind=4)                            :: restart_mode  !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
+      integer(kind=4)                            :: ord_prolong   !< Prolongation order for the variable
+      integer(kind=4), allocatable, dimension(:) :: position      !< VAR_CENTER by default, also possible VAR_CORNER and VAR_[XYZ]FACE
+      integer(kind=4)                            :: dim4          !< <=0 for 3D arrays, >0 for 4D arrays
+      logical                                    :: multigrid     !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
+   end type na_var
+
+   type(na_var), dimension(:), allocatable, target :: q_lst !< information about registered 3D named arrays
+   type(na_var), dimension(:), allocatable, target :: w_lst !< information about registered 4D named arrays
 
    real, dimension(:,:,:),   pointer :: p3   !< auxiliary pointer to 3D named_arrays
    real, dimension(:,:,:,:), pointer :: p4   !< auxiliary pointer to 4D named_arrays
@@ -50,7 +66,7 @@ module named_array
       procedure(g_na_check), deferred, pass(this) :: check
       procedure(g_na_b),     deferred, pass(this) :: lb
       procedure(g_na_b),     deferred, pass(this) :: ub
-      !> \todo add also init and get_sweep
+      !> \todo add also init, span and get_sweep
    end type generic_na
 
    interface
