@@ -69,7 +69,9 @@ contains
       use gc_list,        only: cg_list_element
       use global,         only: repeat_step
       use grid_cont,      only: grid_container
-
+#ifdef ISO
+      use named_array,    only: qna
+#endif /* ISO */
       implicit none
 
       integer :: d
