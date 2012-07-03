@@ -36,6 +36,7 @@
 !! In this module following namelist of parameters is specified:
 !! \copydetails initionized::init_ionized
 !! \deprecated This module should not export any variables
+!! \deprecated cs_ion has been cancelled due to unusability
 !<
 
 module initionized
@@ -44,11 +45,11 @@ module initionized
    implicit none
 
    private
-   public :: init_ionized, cleanup_ionized, ion_fluid, gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion
+   public :: init_ionized, cleanup_ionized, ion_fluid, gamma_ion, cs_iso_ion, selfgrav_ion
 
    real    :: gamma_ion       !< adiabatic index for the ionized gas component
    real    :: cs_iso_ion      !< isothermal sound speed (p = cs_iso_ion<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
-   real    :: cs_ion          !< COMMENT ME
+!   real    :: cs_ion          !< unimplemented, unused
    logical :: selfgrav_ion    !< true if ionized gas is selfgravitating
 
    type, extends(component_fluid) :: ion_fluid
@@ -150,7 +151,6 @@ contains
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>gamma_ion     </td><td>5./3.   </td><td>real value </td><td>\copydoc initionized::gamma_ion    </td></tr>
 !! <tr><td>cs_iso_ion    </td><td>1.0     </td><td>real value </td><td>\copydoc initionized::cs_iso_ion   </td></tr>
-!! <tr><td>cs_ion        </td><td>        </td><td>real value </td><td>\copydoc initionized::cs_ion       </td></tr>
 !! <tr><td>selfgrav_ion  </td><td>.false. </td><td>logical    </td><td>\copydoc initionized::selfgrav_ion </td></tr>
 !! </table>
 !! \n \n
@@ -163,7 +163,7 @@ contains
 
       implicit none
 
-      namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, cs_ion, selfgrav_ion
+      namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, selfgrav_ion
 
       gamma_ion    = 5./3.
       cs_iso_ion   = 1.0
@@ -177,7 +177,6 @@ contains
 
          rbuff(1)  = gamma_ion
          rbuff(2)  = cs_iso_ion
-         rbuff(3)  = cs_ion
 
       endif
 
@@ -190,7 +189,6 @@ contains
 
          gamma_ion    = rbuff(1)
          cs_iso_ion   = rbuff(2)
-         cs_ion       = rbuff(3)
 
       endif
 

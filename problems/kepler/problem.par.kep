@@ -48,7 +48,6 @@
  /
 
  $FLUID_IONIZED
-    cs_ion     = 0.2
     cs_iso_ion = 0.2
  /
 

@@ -94,8 +94,6 @@
 !!
 !! \todo Subdivide different fluids into species
 !!
-!! \warning check if cs_iso and cs_neu are correctly defined (end of init_fluids
-!!  subroutine) for your purposes (if used).
 !<
 
 module initfluids
