@@ -57,7 +57,8 @@ module cg_list_lev
     contains
 
       ! Level management
-      procedure :: init_lev, init_lev_base
+      procedure :: init_lev
+      procedure :: init_lev_base
       generic, public :: init => init_lev, init_lev_base
       procedure :: init_all_new_cg             !< initialize newest grid container
       procedure, private :: mpi_bnd_types      !< create MPI types for boundary exchanges
