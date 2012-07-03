@@ -45,39 +45,35 @@ module initdust
    private
    public :: init_dust, dust_fluid, cleanup_dust
 
-   logical               :: selfgrav_dst    !< true if dust is selfgravitating
-   integer(kind=4)       :: idnd, imxd, imyd, imzd
+   logical :: selfgrav_dst    !< true if dust is selfgravitating
 
    type, extends(component_fluid) :: dust_fluid
       contains
          procedure, nopass :: get_tag
-         procedure, pass :: get_cs => dust_cs
-         procedure, pass :: compute_flux => flux_dust
-         procedure, pass :: initialize_indices => initialize_dust_indices
+         procedure, pass   :: get_cs => dust_cs
+         procedure, pass   :: compute_flux => flux_dust
+         procedure, pass   :: initialize_indices => initialize_dust_indices
    end type dust_fluid
 
 contains
 
    subroutine initialize_dust_indices(this, flind)
-      use constants, only: DST
+      use constants,  only: DST
       use fluidtypes, only: var_numbers
       implicit none
       class(dust_fluid), intent(inout) :: this
       type(var_numbers), intent(inout) :: flind
 
       call this%set_fluid_index(flind, .false., selfgrav_dst, .false., 0.0, -1.0, DST)
-      idnd = this%idn
-      imxd = this%imx
-      imyd = this%imy
-      imzd = this%imz
+
    end subroutine initialize_dust_indices
 
    real function dust_cs(this, cg, i, j, k)
       use grid_cont, only: grid_container
       implicit none
-      class(dust_fluid), intent(in) :: this
+      class(dust_fluid),             intent(in) :: this
       type(grid_container), pointer, intent(in) :: cg !< current grid container
-      integer, intent(in) :: i, j, k
+      integer,                       intent(in) :: i, j, k
       dust_cs = 0.0
       if (.false.) print *, cg%u(:, i, j, k), this%cs
    end function dust_cs

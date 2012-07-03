@@ -44,21 +44,19 @@ module initneutral
    implicit none
 
    private
-   public :: init_neutral, cleanup_neutral, neutral_fluid, &
-      gamma_neu, cs_iso_neu, cs_iso_neu2, selfgrav_neu, idnn, imxn, imyn, imzn, ienn
+   public :: init_neutral, cleanup_neutral, neutral_fluid, gamma_neu, cs_iso_neu, cs_iso_neu2, selfgrav_neu
 
-   real                  :: gamma_neu             !< adiabatic index for the neutral gas component
-   real                  :: cs_iso_neu            !< isothermal sound speed (p = cs_iso_neu<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
-   real                  :: cs_iso_neu2
-   logical               :: selfgrav_neu          !< true if neutral gas is selfgravitating
-   integer(kind=4)       :: idnn, imxn, imyn, imzn, ienn
+   real    :: gamma_neu             !< adiabatic index for the neutral gas component
+   real    :: cs_iso_neu            !< isothermal sound speed (p = cs_iso_neu<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
+   real    :: cs_iso_neu2
+   logical :: selfgrav_neu          !< true if neutral gas is selfgravitating
 
    type, extends(component_fluid) :: neutral_fluid
       contains
          procedure, nopass :: get_tag
-         procedure, pass :: get_cs => neu_cs
-         procedure, pass :: compute_flux => flux_neu
-         procedure, pass :: initialize_indices => initialize_neu_indices
+         procedure, pass   :: get_cs => neu_cs
+         procedure, pass   :: compute_flux => flux_neu
+         procedure, pass   :: initialize_indices => initialize_neu_indices
    end type neutral_fluid
 
 contains
@@ -78,12 +76,6 @@ contains
 #endif /* !ISO */
 
       call this%set_fluid_index(flind, .false., selfgrav_neu, has_energy, cs_iso_neu, gamma_neu, NEU)
-
-      idnn = this%idn
-      imxn = this%imx
-      imyn = this%imy
-      imzn = this%imz
-      if (this%has_energy) ienn = this%ien
 
    end subroutine initialize_neu_indices
 

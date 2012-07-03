@@ -44,22 +44,20 @@ module initionized
    implicit none
 
    private
-   public :: init_ionized, cleanup_ionized, ion_fluid, &
-      gamma_ion, cs_iso_ion, cs_iso_ion2, cs_ion, selfgrav_ion, idni, imxi, imyi, imzi, ieni
+   public :: init_ionized, cleanup_ionized, ion_fluid, gamma_ion, cs_iso_ion, cs_iso_ion2, cs_ion, selfgrav_ion
 
-   real                  :: gamma_ion       !< adiabatic index for the ionized gas component
-   real                  :: cs_iso_ion      !< isothermal sound speed (p = cs_iso_ion<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
-   real                  :: cs_iso_ion2
-   real                  :: cs_ion          !< COMMENT ME
-   logical               :: selfgrav_ion    !< true if ionized gas is selfgravitating
-   integer(kind=4)       :: idni, imxi, imyi, imzi, ieni
+   real    :: gamma_ion       !< adiabatic index for the ionized gas component
+   real    :: cs_iso_ion      !< isothermal sound speed (p = cs_iso_ion<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
+   real    :: cs_iso_ion2
+   real    :: cs_ion          !< COMMENT ME
+   logical :: selfgrav_ion    !< true if ionized gas is selfgravitating
 
    type, extends(component_fluid) :: ion_fluid
       contains
          procedure, nopass :: get_tag
-         procedure, pass :: get_cs => ion_cs
-         procedure, pass :: compute_flux => flux_ion
-         procedure, pass :: initialize_indices => initialize_ion_indices
+         procedure, pass   :: get_cs => ion_cs
+         procedure, pass   :: compute_flux => flux_ion
+         procedure, pass   :: initialize_indices => initialize_ion_indices
    end type ion_fluid
 
 contains
@@ -84,11 +82,6 @@ contains
 #endif /* !MAGNETIZED */
 
       call this%set_fluid_index(flind, is_magnetized, selfgrav_ion, has_energy, cs_iso_ion, gamma_ion, ION)
-      idni = this%idn
-      imxi = this%imx
-      imyi = this%imy
-      imzi = this%imz
-      if (this%has_energy) ieni = this%ien
 
    end subroutine initialize_ion_indices
 
