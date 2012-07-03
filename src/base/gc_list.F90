@@ -76,6 +76,7 @@ module gc_list
       procedure :: ascii_dump                        !< Emergency routine for quick ASCII dumps
       procedure :: set_dirty                         !< Pollute selected array with an insane value dirtyH.
       procedure :: check_dirty                       !< Check for detectable traces of set_dirty calls.
+      procedure :: update_req                        !< Update mpisetup::req(:)
 
       ! Arithmetic on the fields
       procedure :: set_q_value                       !< reset given field to the value
@@ -868,6 +869,35 @@ contains
       enddo
 
    end subroutine check_dirty
+
+!> \brief Update mpisetup::req(:)
+
+   subroutine update_req(this)
+
+      use constants, only: INVALID, xdim, zdim
+      use domain,    only: dom
+      use mpisetup,  only: inflate_req
+
+      implicit none
+
+      class(cg_list), intent(in) :: this
+
+      integer :: nrq, d
+      type(cg_list_element), pointer :: cgl
+
+      nrq = 0
+      cgl => this%first
+      do while (associated(cgl))
+
+         do d = xdim, zdim
+            if (allocated(cgl%cg%q_i_mbc(d, dom%nb)%mbc)) nrq = nrq + 2 * count(cgl%cg%q_i_mbc(d, dom%nb)%mbc(:) /= INVALID)
+         enddo
+
+         cgl => cgl%nxt
+      enddo
+      call inflate_req(nrq)
+
+   end subroutine update_req
 
 ! unused
 !!$!>

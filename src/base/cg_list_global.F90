@@ -65,7 +65,6 @@ module cg_list_global
       procedure         :: check_na       !< Check if all named arrays are consistently registered
       procedure         :: check_for_dirt !< Check all named arrays for constants:big_float
       procedure, nopass :: print_vars     !< Write a summary on registered fields. Can be useful for debugging
-      procedure         :: update_req     !< Update mpisetup::req(:)
    end type cg_list_glob
 
    type(cg_list_glob) :: all_cg   !< all grid containers; \todo restore protected
@@ -322,36 +321,6 @@ contains
       enddo
 
    end subroutine check_for_dirt
-
-!> \brief Update mpisetup::req(:)
-
-   subroutine update_req(this)
-
-      use constants, only: INVALID, xdim, zdim
-      use domain,    only: dom
-      use gc_list,   only: cg_list_element
-      use mpisetup,  only: inflate_req
-
-      implicit none
-
-      class(cg_list_glob), intent(inout) :: this
-
-      integer :: nrq, d
-      type(cg_list_element), pointer :: cgl
-
-      nrq = 0
-      cgl => this%first
-      do while (associated(cgl))
-
-         do d = xdim, zdim
-            if (allocated(cgl%cg%q_i_mbc(d, dom%nb)%mbc)) nrq = nrq + 2 * count(cgl%cg%q_i_mbc(d, dom%nb)%mbc(:) /= INVALID)
-         enddo
-
-         cgl => cgl%nxt
-      enddo
-      call inflate_req(nrq)
-
-   end subroutine update_req
 
 !> \brief Summarize all registered fields and their properties
 
