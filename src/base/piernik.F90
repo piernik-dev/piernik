@@ -289,6 +289,10 @@ contains
       call init_fluids
       code_progress = PIERNIK_INIT_FLUIDS ! Fluid properties are set up
 
+#ifdef COSM_RAYS
+      call init_crdiffusion(flind%crs%all) ! depends on fluids
+#endif /* COSM_RAYS */
+
       call init_interactions ! requires flind and units
 
       call init_domain
@@ -299,10 +303,6 @@ contains
       code_progress = PIERNIK_INIT_GRID      ! Now we can initialize things that depend on all the above fundamental calls
 
       call init_geometry ! depends on domain; \todo move this call to init_domain or init_grid
-
-#ifdef COSM_RAYS
-      call init_crdiffusion(flind%crs%all) ! depends on grid and fluids
-#endif /* COSM_RAYS */
 
 #ifdef SHEAR
       call init_shear ! depends on fluids

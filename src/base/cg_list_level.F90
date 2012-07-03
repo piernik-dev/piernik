@@ -1037,14 +1037,15 @@ contains
 
    subroutine mpi_bnd_types(this, cg)
 
-      use constants,  only: FLUID, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use grid_cont,  only: grid_container, is_overlap
-      use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: mpi_err, FIRST, LAST, procmask
-      use types,      only: cdd
+      use constants,      only: FLUID, MAG, CR, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE, wcr_n
+      use cg_list_global, only: all_cg
+      use dataio_pub,     only: die
+      use domain,         only: dom
+      use grid_cont,      only: grid_container, is_overlap
+      use mpi,            only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
+      use mpisetup,       only: mpi_err, FIRST, LAST, procmask
+      use named_array,    only: wna
+      use types,          only: cdd
 
       implicit none
 
@@ -1159,7 +1160,11 @@ contains
 
       else
 
-         nc = [ flind%all, ndims, max(flind%crs%all,I_ONE), I_ONE ]      !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
+         !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
+         nc(:) = I_ONE ! set at least one component, even if there is none at all
+         if (all_cg%fi      > 0) nc(FLUID) = wna%lst(all_cg%fi)%dim4
+         if (all_cg%bi      > 0) nc(MAG)   = wna%lst(all_cg%bi)%dim4
+         if (wna%ind(wcr_n) > 0) nc(CR)    = wna%lst(wna%ind(wcr_n))%dim4
 
          do d = xdim, zdim
             if (dom%has_dir(d)) then
