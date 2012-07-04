@@ -232,9 +232,6 @@ contains
    subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg)
 
       use constants,        only: one, zero, half, GEO_XYZ
-#if defined IONIZED && defined MAGNETIC && !defined(ISO)
-      use constants,        only: xdim, ydim, zdim
-#endif /* IONIZED && MAGNETIC && !ISO */
       use dataio_pub,       only: msg, die
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind, nmag
@@ -253,6 +250,9 @@ contains
       use fluidindex,       only: iarr_all_my, iarr_all_mz
       use global,           only: smallei
 #endif /*  defined IONIZED || defined NEUTRAL  */
+#if defined IONIZED && defined MAGNETIC
+      use constants,        only: xdim, ydim, zdim
+#endif /* IONIZED && MAGNETIC */
 #endif /* !ISO */
 #ifdef GRAV
       use gravity,          only: grav_pot2accel
@@ -312,22 +312,20 @@ contains
 
 #ifdef COSM_RAYS
       integer                                      :: icr
+      real, dimension(n)                           :: grad_pcr, ecr, decr
 #ifdef COSM_RAYS_SOURCES
       real                                         :: srccrn(flind%crn%all,n)
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 
-#if defined IONIZED || defined NEUTRAL
 #ifndef ISO
-      real, dimension(flind%fluids,n)              :: ekin,eint
+#if defined IONIZED || defined NEUTRAL
+      real, dimension(flind%fluids,n)              :: ekin, eint
+#endif /*  defined IONIZED || defined NEUTRAL  */
 #if defined IONIZED && defined MAGNETIC
       real, dimension(n)                           :: emag
 #endif /* IONIZED && MAGNETIC */
 #endif /* !ISO */
-#endif /*  defined IONIZED || defined NEUTRAL  */
-#ifdef COSM_RAYS
-      real, dimension(n)                           :: grad_pcr, ecr, decr
-#endif /* COSM_RAYS */
 
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
@@ -453,11 +451,11 @@ contains
 
 #if defined COSM_RAYS && defined IONIZED
    ! ---- 2 -----------------------
-   ! \todo move to proper module
+   ! \todo move to a proper module
+      grad_pcr(:) = 0.0
       if (full_dim) then
-         grad_pcr(:) = 0
-         if (flind%crn%all > 0) then !> \deprecated BEWARE: quick hack
-            do icr = 1, 1 !> \deprecated flind_crs  !BEWARE TEMPORARY!
+         if (flind%crs%all > 0) then !> \deprecated BEWARE: quick hack
+            do icr = 1, flind%crs%all
                decr(:)                = -(gamma_crs(icr)-1.)*u1(iarr_crs(icr),:)*divv(:)*dt
                u1  (iarr_crs(icr),:)  = u1(iarr_crs(icr),:) + rk2coef(integration_order,istep)*decr(:)
                u1  (iarr_crs(icr),:)  = max(smallecr,u1(iarr_crs(icr),:))
@@ -466,10 +464,8 @@ contains
                grad_pcr(2:n-1) = grad_pcr(2:n-1) + cr_active*(gamma_crs(icr) -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx)
 
             enddo
+            grad_pcr(1:2)   = 0.0 ; grad_pcr(n-1:n) = 0.0
          endif
-         grad_pcr(1:2)   = 0.0 ; grad_pcr(n-1:n) = 0.0
-      else
-         grad_pcr(:) = 0
       endif
 #ifndef ISO
       !> \deprecated BEWARE: u1(imx)/u1(idn) was changed to vx, CHECK VALIDITY!
