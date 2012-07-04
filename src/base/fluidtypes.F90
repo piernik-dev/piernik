@@ -131,6 +131,7 @@ module fluidtypes
          type(var_numbers), intent(inout) :: flind
       end subroutine pass_flind
 
+      !> \todo try to remove dependency of this module on the grid_container
       real function cs_get(this, cg, i, j, k)
          use grid_cont, only: grid_container
          import
