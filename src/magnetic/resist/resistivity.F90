@@ -275,6 +275,7 @@ contains
       call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
       call MPI_Bcast(etamax%val, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
       call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
+      etamax%assoc = dt_resist ; cu2max%assoc = dt_resist
 
 #ifndef ISO
       cgl => leaves%first
@@ -289,6 +290,7 @@ contains
       enddo
 
       call leaves%get_extremum(qna%ind(wb_n), MINL, deimin)
+      deimin%assoc = dt_eint
 #endif /* !ISO */
       NULLIFY(p)
 

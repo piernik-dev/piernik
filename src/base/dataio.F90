@@ -101,8 +101,7 @@ module dataio
       real :: etamax
 #endif /* RESISTIVE */
 #ifdef MAGNETIC
-      real :: b_min, b_max, divb_max
-      real :: vai_max
+      real :: b_min, b_max, divb_max, vai_max
 #endif /* MAGNETIC */
 #ifdef VARIABLE_GP
       real :: gpxmax, gpymax, gpzmax
@@ -737,10 +736,6 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: cwdlen, xdim, ydim, zdim
-#ifdef GRAV
-      use constants,      only: gpot_n
-      use named_array,    only: qna
-#endif /* GRAV */
       use dataio_pub,     only: wd_wr
       use dataio_user,    only: user_tsl
       use diagnostics,    only: pop_vector
@@ -755,6 +750,10 @@ contains
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,       only: master, comm, mpi_err
+#ifdef GRAV
+      use constants,      only: gpot_n
+      use named_array,    only: qna
+#endif /* GRAV */
 #ifndef ISO
       use fluidindex,     only: iarr_all_en
 #endif /* !ISO */
@@ -924,8 +923,7 @@ contains
 
    subroutine common_shout(pr, fluid, pres_tn, temp_tn, cs_tn)
 
-      use dataio_pub,  only: msg, printinfo
-      use domain,      only: dom, is_multicg
+      use domain,      only: is_multicg
       use fluidtypes,  only: phys_prop
 
       implicit none
@@ -934,48 +932,62 @@ contains
       character(len=*), intent(in)  :: fluid
       logical,          intent(in)  :: pres_tn, temp_tn, cs_tn
 
-      write(msg, fmt_loc)     'min(dens)   ',fluid, pr%dens_min%val, pr%dens_min%proc, pack(pr%dens_min%loc,dom%has_dir), pack(pr%dens_min%coords,dom%has_dir)
-      call printinfo(msg, .false.)
-      write(msg, fmt_loc)     'max(dens)   ',fluid, pr%dens_max%val, pr%dens_max%proc, pack(pr%dens_max%loc,dom%has_dir), pack(pr%dens_max%coords,dom%has_dir)
-      call printinfo(msg, .false.)
+      call cmnlog_s(fmt_loc, 'min(dens)   ', fluid, pr%dens_min)
+      call cmnlog_s(fmt_loc, 'max(dens)   ', fluid, pr%dens_max)
       if (temp_tn) then
-         write(msg, fmt_loc)  'min(temp)   ',fluid, pr%temp_min%val, pr%temp_min%proc, pack(pr%temp_min%loc,dom%has_dir), pack(pr%temp_min%coords,dom%has_dir)
-         call printinfo(msg, .false.)
-         write(msg, fmt_loc)  'max(temp)   ',fluid, pr%temp_max%val, pr%temp_max%proc, pack(pr%temp_max%loc,dom%has_dir), pack(pr%temp_max%coords,dom%has_dir)
-         call printinfo(msg, .false.)
+         call cmnlog_s(fmt_loc, 'min(temp)   ', fluid, pr%temp_min)
+         call cmnlog_s(fmt_loc, 'max(temp)   ', fluid, pr%temp_max)
       endif
       if (pres_tn) then
-         write(msg, fmt_loc)  'min(pres)   ',fluid, pr%pres_min%val, pr%pres_min%proc, pack(pr%pres_min%loc,dom%has_dir), pack(pr%pres_min%coords,dom%has_dir)
-         call printinfo(msg, .false.)
-         write(msg, fmt_loc)  'max(pres)   ',fluid, pr%pres_max%val, pr%pres_max%proc, pack(pr%pres_max%loc,dom%has_dir), pack(pr%pres_max%coords,dom%has_dir)
-         call printinfo(msg, .false.)
+         call cmnlog_s(fmt_loc, 'min(pres)   ', fluid, pr%pres_min)
+         call cmnlog_s(fmt_loc, 'max(pres)   ', fluid, pr%pres_max)
       endif
 
-      write(msg, fmt_dtloc)   'max(|vx|)   ',fluid, pr%velx_max%val, pr%velx_max%assoc, pr%velx_max%proc, pack(pr%velx_max%loc,dom%has_dir), pack(pr%velx_max%coords,dom%has_dir)
-      call printinfo(msg, .false.)
-      write(msg, fmt_dtloc)   'max(|vy|)   ',fluid, pr%vely_max%val, pr%vely_max%assoc, pr%vely_max%proc, pack(pr%vely_max%loc,dom%has_dir), pack(pr%vely_max%coords,dom%has_dir)
-      call printinfo(msg, .false.)
-      write(msg, fmt_dtloc)   'max(|vz|)   ',fluid, pr%velz_max%val, pr%velz_max%assoc, pr%velz_max%proc, pack(pr%velz_max%loc,dom%has_dir), pack(pr%velz_max%coords,dom%has_dir)
-      call printinfo(msg, .false.)
-      if (cs_tn) then
-         write(msg, fmt_dtloc)'max(c_s)    ',fluid, pr%cs_max%val,   pr%cs_max%assoc,   pr%cs_max%proc,   pack(pr%cs_max%loc,dom%has_dir),   pack(pr%cs_max%coords,dom%has_dir)
-         call printinfo(msg, .false.)
-      endif
+      call cmnlog_l(fmt_dtloc, 'max(|vx|)   ', fluid, pr%velx_max)
+      call cmnlog_l(fmt_dtloc, 'max(|vy|)   ', fluid, pr%vely_max)
+      call cmnlog_l(fmt_dtloc, 'max(|vz|)   ', fluid, pr%velz_max)
+      if (cs_tn) call cmnlog_l(fmt_dtloc, 'max(c_s)    ', fluid, pr%cs_max)
 
       if (is_multicg) then
-         write(msg, fmt_vloc)   'min(dt_vx)   ',fluid, pr%dtvx_min%val, pr%dtvx_min%assoc, pr%dtvx_min%proc, pack(pr%dtvx_min%loc,dom%has_dir), pack(pr%dtvx_min%coords,dom%has_dir)
-         call printinfo(msg, .false.)
-         write(msg, fmt_vloc)   'min(dt_vy)   ',fluid, pr%dtvy_min%val, pr%dtvy_min%assoc, pr%dtvy_min%proc, pack(pr%dtvy_min%loc,dom%has_dir), pack(pr%dtvy_min%coords,dom%has_dir)
-         call printinfo(msg, .false.)
-         write(msg, fmt_vloc)   'min(dt_vz)   ',fluid, pr%dtvz_min%val, pr%dtvz_min%assoc, pr%dtvz_min%proc, pack(pr%dtvz_min%loc,dom%has_dir), pack(pr%dtvz_min%coords,dom%has_dir)
-         call printinfo(msg, .false.)
-         if (cs_tn) then
-            write(msg, fmt_vloc)'min(dt_cs)   ',fluid, pr%dtcs_min%val, pr%dtcs_min%assoc, pr%dtcs_min%proc, pack(pr%dtcs_min%loc,dom%has_dir), pack(pr%dtcs_min%coords,dom%has_dir)
-            call printinfo(msg, .false.)
-         endif
+         call cmnlog_l(fmt_vloc, 'min(dt_vx)   ', fluid, pr%dtvx_min)
+         call cmnlog_l(fmt_vloc, 'min(dt_vy)   ', fluid, pr%dtvy_min)
+         call cmnlog_l(fmt_vloc, 'min(dt_vz)   ', fluid, pr%dtvz_min)
+         if (cs_tn) call cmnlog_l(fmt_vloc, 'min(dt_cs)   ', fluid, pr%dtcs_min)
       endif
 
    end subroutine common_shout
+
+!>
+!!  Common log print (short - without assoc value)
+!<
+   subroutine cmnlog_s(fmt_, title, id, ess)
+      use dataio_pub, only: msg, printinfo
+      use domain,     only: dom
+      use types,      only: value
+      implicit none
+      character(len=*), intent(in) :: fmt_, title, id
+      type(value),      intent(in) :: ess
+
+      write(msg, fmt_)  title, id, ess%val, ess%proc, pack(ess%loc,dom%has_dir), pack(ess%coords,dom%has_dir)
+      call printinfo(msg, .false.)
+
+   end subroutine cmnlog_s
+
+!>
+!!  Common log print (long - including assoc value)
+!<
+   subroutine cmnlog_l(fmt_, title, id, ess)
+      use dataio_pub, only: msg, printinfo
+      use domain,     only: dom
+      use types,      only: value
+      implicit none
+      character(len=*), intent(in) :: fmt_, title, id
+      type(value),      intent(in) :: ess
+
+      write(msg, fmt_) title, id, ess%val, ess%assoc, ess%proc, pack(ess%loc,dom%has_dir), pack(ess%coords,dom%has_dir)
+      call printinfo(msg, .false.)
+
+   end subroutine cmnlog_l
 
    subroutine get_common_vars(fl)
 
@@ -999,7 +1011,7 @@ contains
 
       class(component_fluid), intent(inout), target :: fl
 
-      type(phys_prop), pointer :: pr
+      type(phys_prop),       pointer :: pr
       type(cg_list_element), pointer :: cgl
 #ifndef ISO
       real :: dxmn_safe
@@ -1139,25 +1151,12 @@ contains
 
       use cg_list_global,     only: all_cg
       use constants,          only: idlen, small, MAXL
-#if defined COSM_RAYS || defined MAGNETIC
-      use constants,          only: MINL
-#endif /* COSM_RAYS || MAGNETIC */
-#ifdef VARIABLE_GP
-      use constants,          only: gpot_n
-      use named_array,        only: qna
-#endif /* VARIABLE_GP */
-#if defined VARIABLE_GP || defined MAGNETIC
-      use constants,          only: xdim, ydim, zdim, HI, idm, ndims
-#endif /* VARIABLE_GP || MAGNETIC */
       use dataio_pub,         only: msg, printinfo
       use domain,             only: dom
-      use fluids_pub,         only: has_dst, has_ion, has_neu
       use fluidindex,         only: flind
+      use fluids_pub,         only: has_dst, has_ion, has_neu
       use func,               only: L2norm, sq_sum3
       use gc_list,            only: cg_list_element
-#ifdef MAGNETIC
-      use global,             only: cfl
-#endif /* MAGNETIC */
       use grid,               only: leaves
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master
@@ -1166,17 +1165,29 @@ contains
       use fluidindex,         only: iarr_all_crs
       use timestepcosmicrays, only: dt_crs
 #endif /* COSM_RAYS */
+#if defined COSM_RAYS || defined MAGNETIC
+      use constants,          only: MINL
+#endif /* COSM_RAYS || MAGNETIC */
+#ifdef MAGNETIC
+      use global,             only: cfl
+#endif /* MAGNETIC */
 #ifdef RESISTIVE
-      use resistivity,        only: dt_resist, etamax, cu2max, eta1_active
+      use resistivity,        only: etamax, cu2max, eta1_active
 #ifndef ISO
       use resistivity,        only: deimin
 #endif /* !ISO */
 #endif /* RESISTIVE */
+#ifdef VARIABLE_GP
+      use constants,          only: gpot_n
+      use named_array,        only: qna
+#endif /* VARIABLE_GP */
+#if defined VARIABLE_GP || defined MAGNETIC
+      use constants,          only: xdim, ydim, zdim, HI, idm, ndims
+#endif /* VARIABLE_GP || MAGNETIC */
 
       implicit none
 
       type(tsl_container), optional      :: tsl
-
       real                               :: dxmn_safe
       type(cg_list_element), pointer     :: cgl
       type(value)                        :: drag
@@ -1316,17 +1327,12 @@ contains
                call common_shout(flind%ion%snap,'ION',.true.,.true.,.true.)
 #ifdef MAGNETIC
                id = "ION"
-               write(msg, fmt_dtloc) 'max(c_f)    ', id, cfi_max%val, cfi_max%assoc
-               call printinfo(msg, .false.)
-               write(msg, fmt_dtloc) 'max(v_a)    ', id, vai_max%val, vai_max%assoc, vai_max%proc, pack(vai_max%loc,dom%has_dir), pack(vai_max%coords,dom%has_dir)
-               call printinfo(msg, .false.)
+               write(msg, fmt_dtloc) 'max(c_f)    ', id, cfi_max%val, cfi_max%assoc ; call printinfo(msg, .false.)
+               call cmnlog_l(fmt_dtloc, 'max(v_a)    ', id, vai_max)
                id = "MAG"
-               write(msg, fmt_loc)   'min(|b|)    ', id, b_min%val,     b_min%proc,     pack(b_min%loc,dom%has_dir), pack(b_min%coords,dom%has_dir)
-               call printinfo(msg, .false.)
-               write(msg, fmt_loc)   'max(|b|)    ', id, b_max%val,     b_max%proc,     pack(b_max%loc,dom%has_dir), pack(b_max%coords,dom%has_dir)
-               call printinfo(msg, .false.)
-               write(msg, fmt_loc)   'max(|divb|) ', id, divb_max%val,  divb_max%proc,  pack(divb_max%loc,dom%has_dir), pack(divb_max%coords,dom%has_dir)
-               call printinfo(msg, .false.)
+               call cmnlog_s(fmt_loc, 'min(|b|)    ', id, b_min)
+               call cmnlog_s(fmt_loc, 'max(|b|)    ', id, b_max)
+               call cmnlog_s(fmt_loc, 'max(|divb|) ', id, divb_max)
 #else /* !MAGNETIC */
 !               if (csi_max%val > 0.) write(msg, fmtff8) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
 !               call printinfo(msg, .false.)
@@ -1334,38 +1340,27 @@ contains
             endif
             if (has_neu) call common_shout(flind%neu%snap,'NEU',.true.,.true.,.true.)
             if (has_dst) call common_shout(flind%dst%snap,'DST',.false.,.false.,.false.)
-            if (has_interactions) then
-               write(msg, fmt_dtloc) 'max(drag)   ', "INT", drag%val, drag%assoc, drag%proc, pack(drag%loc,dom%has_dir), pack(drag%coords,dom%has_dir)
-               call printinfo(msg, .false.)
-            endif
+            if (has_interactions) call cmnlog_l(fmt_dtloc, 'max(drag)   ', "INT", drag)
 #ifdef COSM_RAYS
             id = "CRS"
-            write(msg, fmt_loc)   'min(encr)   ', id, encr_min%val, encr_min%proc, pack(encr_min%loc,dom%has_dir), pack(encr_min%coords,dom%has_dir)
-            call printinfo(msg, .false.)
-            write(msg, fmt_dtloc) 'max(encr)   ', id, encr_max%val, encr_max%assoc, encr_max%proc, pack(encr_max%loc,dom%has_dir), pack(encr_max%coords,dom%has_dir)
-            call printinfo(msg, .false.)
+            call cmnlog_s(fmt_loc,   'min(encr)   ', id, encr_min)
+            call cmnlog_l(fmt_dtloc, 'max(encr)   ', id, encr_max)
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
             if (eta1_active) then
                id = "RES"
-               write(msg, fmt_dtloc) 'max(eta)    ', id, etamax%val, dt_resist, etamax%proc, pack(etamax%loc,dom%has_dir), pack(etamax%coords,dom%has_dir)
-               call printinfo(msg, .false.)
-               write(msg, fmt_dtloc) 'max(cu2)    ', id, cu2max%val, dt_resist, cu2max%proc, pack(cu2max%loc,dom%has_dir), pack(cu2max%coords,dom%has_dir)
-               call printinfo(msg, .false.)
+               call cmnlog_l(fmt_dtloc, 'max(eta)    ', id, etamax)
+               call cmnlog_l(fmt_dtloc, 'max(cu2)    ', id, cu2max)
 #ifndef ISO
-               write(msg, fmt_dtloc) 'min(dei)    ', id, deimin%val, dt_resist, deimin%proc, pack(deimin%loc,dom%has_dir), pack(deimin%coords,dom%has_dir)
-               call printinfo(msg, .false.)
+               call cmnlog_l(fmt_dtloc, 'min(dei)    ', id, deimin)
 #endif /* !ISO */
             endif
 #endif /* RESISTIVE */
 #ifdef VARIABLE_GP
             id = "GPT"
-            write(msg, fmt_loc)   'max(|gpx|)  ', id, gpxmax%val, gpxmax%proc, pack(gpxmax%loc,dom%has_dir), pack(gpxmax%coords,dom%has_dir)
-            call printinfo(msg, .false.)
-            write(msg, fmt_loc)   'max(|gpy|)  ', id, gpymax%val, gpymax%proc, pack(gpymax%loc,dom%has_dir), pack(gpymax%coords,dom%has_dir)
-            call printinfo(msg, .false.)
-            write(msg, fmt_loc)   'max(|gpz|)  ', id, gpzmax%val, gpzmax%proc, pack(gpzmax%loc,dom%has_dir), pack(gpzmax%coords,dom%has_dir)
-            call printinfo(msg, .false.)
+            call cmnlog_s(fmt_loc, 'max(|gpx|)  ', id, gpxmax)
+            call cmnlog_s(fmt_loc, 'max(|gpy|)  ', id, gpymax)
+            call cmnlog_s(fmt_loc, 'max(|gpz|)  ', id, gpzmax)
 #endif /* VARIABLE_GP */
             call printinfo('================================================================================================================', .false.)
          else
