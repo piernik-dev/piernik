@@ -195,7 +195,7 @@ contains
       implicit none
 
       class(cg_list_glob), intent(inout) :: this          !< object invoking type-bound procedure
-      integer,             intent(in)    :: nfluids       !< number of components in the main array of fluids (should be flind%all)
+      integer(kind=4),     intent(in)    :: nfluids       !< number of components in the main array of fluids (should be flind%all)
 
       integer(kind=4), parameter, dimension(ndims) :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
 
