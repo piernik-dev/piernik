@@ -55,30 +55,25 @@ contains
    subroutine init_grid
 
       use cg_list_global, only: all_cg
-      use constants,      only: PIERNIK_INIT_DOMAIN, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, I_ZERO, &
-           &                    ndims, fluid_n, uh_n, mag_n, wa_n, u0_n, b0_n, base_level_id, base_level_offset
-#ifdef ISO
-      use constants,      only: cs_i2_n
-#endif /* ISO */
+      use constants,      only: PIERNIK_INIT_DOMAIN, I_ZERO, base_level_id, base_level_offset
       use dataio_pub,     only: printinfo, die, code_progress
       use domain,         only: pdom
-#ifdef ISO
-      use domain,         only: is_multicg
-#endif /* ISO */
-      use fluidindex,     only: flind
       use gc_list,        only: cg_list_element
-      use global,         only: repeat_step
       use grid_cont,      only: grid_container
 #ifdef ISO
+      use constants,      only: I_ONE, cs_i2_n
+      use fluidindex,     only: flind
       use named_array,    only: qna
+      use mpi,            only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MAX
+      use mpisetup,       only: comm, mpi_err
 #endif /* ISO */
+
       implicit none
 
       integer :: d
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
       type(cg_list_patch),   pointer :: pbd
-      integer(kind=4), parameter, dimension(ndims) :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
 #ifdef ISO
       integer :: ifl
       real    :: cs_max
@@ -89,16 +84,6 @@ contains
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
-
-      ! Register all primary fields
-      call all_cg%reg_var(wa_n,                                                           multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
-      call all_cg%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = flind%all)                !! Main array of all fluids' components, "u"
-      call all_cg%reg_var(uh_n,                                             dim4 = flind%all)                !! Main array of all fluids' components (for t += dt/2)
-      call all_cg%reg_var(mag_n,   vital = .true., restart_mode = AT_OUT_B, dim4 = ndims, position=xyz_face) !! Main array of magnetic field's components, "b"
-      if (repeat_step) then
-         call all_cg%reg_var(u0_n,                                          dim4 = flind%all)                !! Copy of main array of all fluids' components
-         call all_cg%reg_var(b0_n,                                          dim4 = ndims, position=xyz_face) !! Copy of main array of magnetic field's components
-      endif
 
       ! Create the empty main lists for base level only.
       ! Refinement lists will be added by iterating the initproblem::init_prob routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update
@@ -130,14 +115,13 @@ contains
       enddo
 
 #ifdef ISO
-      if (is_multicg) call die("[grid:init_cs_iso2] multiple grid pieces per procesor not fully implemented yet") !nontrivial maxval
-
-      call all_cg%reg_var(cs_i2_n, vital = .true., restart_mode = AT_NO_B)
+      !> \deprecated this whole ISO-dependent part should be moved somewhere else. Grid should not depend on fluidindex.
 
       cs_max = 0.0
       do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
          cs_max = max(cs_max, flind%all_fluids(ifl)%fl%cs2)
       enddo
+      call MPI_Allreduce(MPI_IN_PLACE, cs_max, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
 
       cgl => leaves%first
       do while (associated(cgl))

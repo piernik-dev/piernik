@@ -205,6 +205,7 @@ contains
    subroutine init_piernik
 
       use all_boundaries,        only: all_bnd
+      use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
       use dataio_pub,            only: nrestart, wd_wr, wd_rd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, code_progress
@@ -288,6 +289,8 @@ contains
 
       call init_fluids
       code_progress = PIERNIK_INIT_FLUIDS ! Fluid properties are set up
+
+      call all_cg%register_fluids(flind%all) ! Register named fields for u, b and wa
 
 #ifdef COSM_RAYS
       call init_crdiffusion(flind%crs%all) ! depends on fluids

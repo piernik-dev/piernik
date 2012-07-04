@@ -62,8 +62,9 @@ module cg_list_global
       integer :: wai                                   !< auxiliary array : cg%q(all_cg%wai)
 
     contains
-      procedure         :: reg_var        !< Add a variable (cg%q or cg%w) to all grid containers
-      procedure         :: check_na       !< Check if all named arrays are consistently registered
+      procedure         :: reg_var         !< Add a variable (cg%q or cg%w) to all grid containers
+      procedure         :: register_fluids !< Register all crucial fields, which we cannot live without
+      procedure         :: check_na        !< Check if all named arrays are consistently registered
    end type cg_list_glob
 
    type(cg_list_glob) :: all_cg   !< all grid containers; \todo restore protected
@@ -179,6 +180,40 @@ contains
       deallocate(pos)
 
    end subroutine reg_var
+
+!> \brief Register all crucial fields, which we cannot live without
+
+   subroutine register_fluids(this, nfluids)
+
+      use constants,  only: wa_n, fluid_n, uh_n, mag_n, u0_n, b0_n, ndims, AT_NO_B, AT_OUT_B, VAR_XFACE, VAR_YFACE, VAR_ZFACE, PIERNIK_INIT_FLUIDS
+      use dataio_pub, only: die, code_progress
+      use global,     only: repeat_step
+#ifdef ISO
+      use constants,  only: cs_i2_n
+#endif /* ISO */
+
+      implicit none
+
+      class(cg_list_glob), intent(inout) :: this          !< object invoking type-bound procedure
+      integer,             intent(in)    :: nfluids       !< number of components in the main array of fluids (should be flind%all)
+
+      integer(kind=4), parameter, dimension(ndims) :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
+
+      if (code_progress < PIERNIK_INIT_FLUIDS) call die("[cg_list_global:register_fluids] Fluids are not yet initialized")
+
+      call this%reg_var(wa_n,                                                           multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
+      call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = nfluids)                  !! Main array of all fluids' components, "u"
+      call this%reg_var(uh_n,                                             dim4 = nfluids)                  !! Main array of all fluids' components (for t += dt/2)
+      call this%reg_var(mag_n,   vital = .true., restart_mode = AT_OUT_B, dim4 = ndims, position=xyz_face) !! Main array of magnetic field's components, "b"
+      if (repeat_step) then
+         call this%reg_var(u0_n,                                          dim4 = nfluids)                  !! Copy of main array of all fluids' components
+         call this%reg_var(b0_n,                                          dim4 = ndims, position=xyz_face) !! Copy of main array of magnetic field's components
+      endif
+#ifdef ISO
+      call all_cg%reg_var(cs_i2_n, vital = .true., restart_mode = AT_NO_B)
+#endif /* ISO */
+
+   end subroutine register_fluids
 
 !> \brief Check if all named arrays are consistently registered
 
