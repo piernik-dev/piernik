@@ -1152,10 +1152,9 @@ contains
       use cg_list_global,     only: all_cg
       use constants,          only: idlen, small, MAXL
       use dataio_pub,         only: msg, printinfo
-      use domain,             only: dom
       use fluidindex,         only: flind
       use fluids_pub,         only: has_dst, has_ion, has_neu
-      use func,               only: L2norm, sq_sum3
+      use func,               only: L2norm
       use gc_list,            only: cg_list_element
       use grid,               only: leaves
       use interactions,       only: has_interactions, collfaq
@@ -1169,6 +1168,7 @@ contains
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
 #ifdef MAGNETIC
+      use func,               only: sq_sum3
       use global,             only: cfl
 #endif /* MAGNETIC */
 #ifdef RESISTIVE
@@ -1183,6 +1183,7 @@ contains
 #endif /* VARIABLE_GP */
 #if defined VARIABLE_GP || defined MAGNETIC
       use constants,          only: xdim, ydim, zdim, HI, idm, ndims
+      use domain,             only: dom
 #endif /* VARIABLE_GP || MAGNETIC */
 
       implicit none
