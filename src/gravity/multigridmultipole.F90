@@ -461,51 +461,58 @@ contains
       cgl => lmpole%first
       do while (associated(cgl))
          cg => cgl%cg
+         associate( &
+            bnd_x => cg%mg%bnd_x, &
+            bnd_y => cg%mg%bnd_y, &
+            bnd_z => cg%mg%bnd_z, &
+            soln => cg%q(solution)%arr &
+         )
          !> \deprecated BEWARE: some cylindrical factors may be helpful
          if (cg%ext_bnd(xdim, LO)) then
             if (zaxis_inside .and. dom%geometry_type == GEO_RPZ) then
-               cg%mg%bnd_x(                            cg%js:cg%je, cg%ks:cg%ke, LO) = 0. ! treat as internal
+               bnd_x(                    cg%js:cg%je, cg%ks:cg%ke, LO) = 0. ! treat as internal
             else
-               cg%mg%bnd_x(                            cg%js:cg%je, cg%ks:cg%ke, LO) =   ( &
-                    & a1 * cg%q(solution)%arr(cg%is,   cg%js:cg%je, cg%ks:cg%ke) + &
-                    & a2 * cg%q(solution)%arr(cg%is+1, cg%js:cg%je, cg%ks:cg%ke) ) * cg%idx
+               bnd_x(                    cg%js:cg%je, cg%ks:cg%ke, LO) =   ( &
+                    & a1 * soln(cg%is,   cg%js:cg%je, cg%ks:cg%ke) + &
+                    & a2 * soln(cg%is+1, cg%js:cg%je, cg%ks:cg%ke) ) * cg%idx
             endif
          endif
 
-         if (cg%ext_bnd(xdim, HI)) cg%mg%bnd_x(   cg%js:cg%je, cg%ks:cg%ke, HI) =   ( &
-              &   a1 * cg%q(solution)%arr(cg%ie,   cg%js:cg%je, cg%ks:cg%ke) + &
-              &   a2 * cg%q(solution)%arr(cg%ie-1, cg%js:cg%je, cg%ks:cg%ke) ) * cg%idx
+         if (cg%ext_bnd(xdim, HI)) bnd_x(   cg%js:cg%je, cg%ks:cg%ke, HI) =   ( &
+              &   a1 * soln(cg%ie,   cg%js:cg%je, cg%ks:cg%ke) + &
+              &   a2 * soln(cg%ie-1, cg%js:cg%je, cg%ks:cg%ke) ) * cg%idx
 
          if (cg%ext_bnd(ydim, LO)) then
-            cg%mg%bnd_y                   (cg%is:cg%ie,          cg%ks:cg%ke, LO) =    ( &
-                 & a1 * cg%q(solution)%arr(cg%is:cg%ie, cg%js,   cg%ks:cg%ke) + &
-                 & a2 * cg%q(solution)%arr(cg%is:cg%ie, cg%js+1, cg%ks:cg%ke) ) * cg%idy
+            bnd_y           (cg%is:cg%ie,          cg%ks:cg%ke, LO) =    ( &
+                 & a1 * soln(cg%is:cg%ie, cg%js,   cg%ks:cg%ke) + &
+                 & a2 * soln(cg%is:cg%ie, cg%js+1, cg%ks:cg%ke) ) * cg%idy
             if (dom%geometry_type == GEO_RPZ) then
                do i = cg%is, cg%ie ! cg%inv_x(i) is sanitized for x(i) == 0.
-                  cg%mg%bnd_y(i, cg%ks:cg%ke, LO) = cg%mg%bnd_y(i, cg%ks:cg%ke, LO) * cg%inv_x(i)
+                  bnd_y(i, cg%ks:cg%ke, LO) = bnd_y(i, cg%ks:cg%ke, LO) * cg%inv_x(i)
                enddo
             endif
          endif
 
          if (cg%ext_bnd(ydim, HI)) then
-            cg%mg%bnd_y                   (cg%is:cg%ie,          cg%ks:cg%ke, HI) =   ( &
-                 & a1 * cg%q(solution)%arr(cg%is:cg%ie, cg%je,   cg%ks:cg%ke) + &
-                 & a2 * cg%q(solution)%arr(cg%is:cg%ie, cg%je-1, cg%ks:cg%ke) ) * cg%idy
+            bnd_y           (cg%is:cg%ie,          cg%ks:cg%ke, HI) =   ( &
+                 & a1 * soln(cg%is:cg%ie, cg%je,   cg%ks:cg%ke) + &
+                 & a2 * soln(cg%is:cg%ie, cg%je-1, cg%ks:cg%ke) ) * cg%idy
             if (dom%geometry_type == GEO_RPZ) then
                do i = cg%is, cg%ie
-                  cg%mg%bnd_y(i, cg%ks:cg%ke, HI) = cg%mg%bnd_y(i, cg%ks:cg%ke, HI) * cg%inv_x(i)
+                  bnd_y(i, cg%ks:cg%ke, HI) = bnd_y(i, cg%ks:cg%ke, HI) * cg%inv_x(i)
                enddo
             endif
          endif
 
-         if (cg%ext_bnd(zdim, LO)) cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, LO) =    ( &
-              &         a1 * cg%q(solution)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks) + &
-              &         a2 * cg%q(solution)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks+1) ) * cg%idz
+         if (cg%ext_bnd(zdim, LO)) bnd_z(cg%is:cg%ie, cg%js:cg%je, LO) =    ( &
+              &         a1 * soln(cg%is:cg%ie, cg%js:cg%je, cg%ks) + &
+              &         a2 * soln(cg%is:cg%ie, cg%js:cg%je, cg%ks+1) ) * cg%idz
 
-         if (cg%ext_bnd(zdim, HI)) cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, HI) =   ( &
-              &         a1 * cg%q(solution)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ke) + &
-              &         a2 * cg%q(solution)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ke-1) ) * cg%idz
+         if (cg%ext_bnd(zdim, HI)) bnd_z(cg%is:cg%ie, cg%js:cg%je, HI) =   ( &
+              &         a1 * soln(cg%is:cg%ie, cg%js:cg%je, cg%ke) + &
+              &         a2 * soln(cg%is:cg%ie, cg%js:cg%je, cg%ke-1) ) * cg%idz
          cgl => cgl%nxt
+         end associate
       enddo
 
    end subroutine potential2img_mass
