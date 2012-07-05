@@ -1151,7 +1151,7 @@ contains
 
       use cg_list_global,     only: all_cg
       use constants,          only: idlen, small, MAXL
-      use dataio_pub,         only: msg, printinfo
+      use dataio_pub,         only: printinfo
       use fluidindex,         only: flind
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use func,               only: L2norm
@@ -1168,6 +1168,7 @@ contains
       use constants,          only: MINL
 #endif /* COSM_RAYS || MAGNETIC */
 #ifdef MAGNETIC
+      use dataio_pub,         only: msg
       use func,               only: sq_sum3
       use global,             only: cfl
 #endif /* MAGNETIC */
