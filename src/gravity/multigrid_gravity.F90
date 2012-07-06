@@ -169,7 +169,7 @@ contains
       use dataio_pub,    only: msg, die, warn
       use domain,        only: dom, is_uneven, is_multicg
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
-      use mpisetup,      only: buffer_dim, comm, mpi_err, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST
+      use mpisetup,      only: buffer_dim, comm, mpi_err, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST, nproc
       use multigridvars, only: single_base
       use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
       use types,         only: cdd
@@ -211,7 +211,7 @@ contains
       ord_time_extrap        = O_LIN
 
       use_point_monopole     = .false.
-      trust_fft_solution     = .false.
+      trust_fft_solution     = .true.
       base_no_fft            = is_multicg
       prefer_rbgs_relaxation = .true. !> \warning it seems that FFT local solver is broken somewhere. ToDo: restore .false. as a default
       fft_full_relax         = .false.
@@ -248,6 +248,11 @@ contains
          if (is_multicg .and. .not. base_no_fft) then
             call warn("[multigrid_gravity:init_multigrid_grav] base_no_fft set to .true. for multicg configuration")
             base_no_fft = .true.
+         endif
+
+         if (.not. prefer_rbgs_relaxation .and. nproc > 1) then
+            prefer_rbgs_relaxation = .true.
+            call warn("[multigrid_gravity:init_multigrid_grav] FFT local solver disabled for multithreaded runs due to unresolved incompatibilities with mew grid features")
          endif
 
          rbuff(1) = norm_tol
