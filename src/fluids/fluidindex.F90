@@ -45,20 +45,17 @@
 
 module fluidindex
 ! pulled by ANY
-   use constants,  only: ndims, xdim, ydim, zdim
+   use constants,  only: ndims
    use fluidtypes, only: var_numbers
 
    implicit none
 
-   private :: ndims, xdim, ydim, zdim, var_numbers ! QA_WARN: prevent reexporting
+   private :: ndims, var_numbers ! QA_WARN: prevent reexporting
    public ! QA_WARN no secrets are kept here
 
    type(var_numbers),save :: flind     !< COMMENT ME
 
    integer(kind=4), parameter  :: nmag = ndims     !< number of magnetic field components
-   integer(kind=4), parameter  :: icx = xdim       !< index of x-component of current density
-   integer(kind=4), parameter  :: icy = ydim       !< index of y-component of current density
-   integer(kind=4), parameter  :: icz = zdim       !< index of z-component of current density
 
    integer(kind=4), allocatable, dimension(:) :: iarr_all_dn   !< array of indexes pointing to mass densities of all fluids
    integer(kind=4), allocatable, dimension(:) :: iarr_all_sg   !< array of indexes pointing to mass densities of all selfgravitating fluids
@@ -66,28 +63,28 @@ module fluidindex
    integer(kind=4), allocatable, dimension(:) :: iarr_all_my   !< array of indexes pointing to mom. densities of all fluids
    integer(kind=4), allocatable, dimension(:) :: iarr_all_mz   !< array of indexes pointing to mom. densities of all fluids
    integer(kind=4), allocatable, dimension(:) :: iarr_all_en   !< array of indexes pointing to ener. densities of all fluids
-   integer(kind=4), allocatable, dimension(:) :: iarr_all_crn   !< array of indexes pointing to ener. densities of all nuclear CR-components
-   integer(kind=4), allocatable, dimension(:) :: iarr_all_cre   !< array of indexes pointing to ener. densities of all electron CR-components
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_crn  !< array of indexes pointing to ener. densities of all nuclear CR-components
+   integer(kind=4), allocatable, dimension(:) :: iarr_all_cre  !< array of indexes pointing to ener. densities of all electron CR-components
    integer(kind=4), allocatable, dimension(:), target :: iarr_all_crs   !< array of indexes pointing to ener. densities of all CR-components
    integer(kind=4), allocatable, dimension(:), target :: iarr_all_trc   !< array of indexes pointing to tracers
-   integer(kind=4), allocatable, dimension(:,:) :: iarr_all_swp !< array (size = flind) of all fluid indexes in the order depending on sweeps direction
+   integer(kind=4), allocatable, dimension(:,:) :: iarr_all_swp         !< array (size = flind) of all fluid indexes in the order depending on sweeps direction
 
-   integer(kind=4), allocatable, dimension(:) :: iarr_all_mag  !< array (size = nmag) of all magnetic field components
-   integer(kind=4), allocatable, dimension(:,:) :: iarr_mag_swp !< array (size = nmag) of all mag. field indexes in the order depending on sweeps direction
+   integer(kind=4), allocatable, dimension(:)   :: iarr_all_mag         !< array (size = nmag) of all magnetic field components
+   integer(kind=4), allocatable, dimension(:,:) :: iarr_mag_swp         !< array (size = nmag) of all mag. field indexes in the order depending on sweeps direction
 
-   integer(kind=4) :: i_sg                                     !< index denoting position of the selfgravitating fluid in the row of fluids - should be an iarr_sg !
+   integer(kind=4) :: i_sg                                              !< index denoting position of the selfgravitating fluid in the row of fluids - should be an iarr_sg !
 
 contains
 
    subroutine set_fluidindex_arrays(fl, have_ener)
 
-      use constants, only: I_ONE
+      use constants,  only: I_ONE
       use fluidtypes, only: component_fluid
 
       implicit none
 
       class(component_fluid), intent(inout) :: fl
-      logical, intent(in)                  :: have_ener
+      logical,                intent(in)    :: have_ener
 
 #ifdef ISO
       logical :: fnord
