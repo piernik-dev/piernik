@@ -418,7 +418,7 @@ contains
 #ifndef BALSARA
       acc = acc + fluid_interactions(dens, vx)  ! n safe
 #else /* !BALSARA */
-      call balsara_implicit_interactions(u1,u0,vx,cs_iso2,istep) ! n safe
+      call balsara_implicit_interactions(u1, u0, vx, cs_iso2, dt, istep) ! n safe
 #endif /* !BALSARA */
 #ifdef SHEAR
       acc = acc + shear_acc(sweep,u) ! n safe
