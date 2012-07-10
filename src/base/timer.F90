@@ -279,16 +279,16 @@ contains
 !! \details Final wall clock time, expressed in hours, minutes, and seconds.
 !!          cpu usage, expressed in hours, minutes, and seconds.
 !<
-   subroutine timer_stop(total_ncells)
+   subroutine timer_stop(nstep, total_ncells)
 
       use constants,  only: I_ONE, half
       use dataio_pub, only: msg, printinfo
-      use global,     only: nstep
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,   only: comm, mpi_err, master, FIRST
 
       implicit none
       integer(kind=8), intent(in) :: total_ncells !< total number of %grid cells
+      integer(kind=4), intent(in) :: nstep !< total number of steps
 
       real(kind=4)       :: dtime
 

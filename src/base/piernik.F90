@@ -165,7 +165,7 @@ program piernik
    if (associated(finalize_problem)) call finalize_problem
 
 #ifdef PERFMON
-   call timer_stop(dom%total_ncells)
+   call timer_stop(nstep, dom%total_ncells)
 #endif /* PERFMON */
    call write_data(output=FINAL)
 !---------------------------- END OF MAIN LOOP ----------------------------------
