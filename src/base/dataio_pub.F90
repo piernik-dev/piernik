@@ -132,7 +132,7 @@ contains
 
       integer                       :: log_lun                !< luncher for log file
       character(len=ansilen)        :: ansicolor
-      integer, parameter            :: msg_type_len = 7       !< length of the "Warning" word.
+      integer, parameter            :: msg_type_len = len("Warning")
       character(len=msg_type_len)   :: msg_type_str
       integer(kind=4)               :: proc
       integer                       :: outunit
