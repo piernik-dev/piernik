@@ -740,7 +740,7 @@ contains
       if (P_1 /= 0. .or. P1 /= 0.) stencil_range = I_ONE
       if (P_2 /= 0. .or. P2 /= 0.) stencil_range = I_TWO
 
-      if (qna%lst(iv)%ord_prolong /= O_INJ) then
+      if (this%ord_prolong_set /= O_INJ) then
          !> \todo some variables may need special care on external boundaries
          call arr3d_boundaries(this, iv, bnd_type = BND_REF, corners = .true.) ! nb =  int(stencil_range, kind=4) ! not needed for injection
       endif
@@ -786,8 +786,8 @@ contains
          cg => cgl%cg
          if (allocated(cg%pi_tgt%seg)) then
 
-            cg%q(iv)%arr(:,:,:) = 0. ! disables check_dirty
-            cg%prolong_(:,:,:) = 0
+!            cg%q(iv)%arr(:,:,:) = 0. ! disables check_dirty
+!            cg%prolong_(:,:,:) = 0
 
             do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
                fse(:,:) = cg%pi_tgt%seg(g)%se(:,:)
@@ -796,6 +796,10 @@ contains
                cg%prolong_(off(xdim):off(xdim)+ubound(cg%pi_tgt%seg(g)%buf, dim=1)-1, &
                     &      off(ydim):off(ydim)+ubound(cg%pi_tgt%seg(g)%buf, dim=2)-1, &
                     &      off(zdim):off(zdim)+ubound(cg%pi_tgt%seg(g)%buf, dim=3)-1) = cg%pi_tgt%seg(g)%buf(:,:,:)
+
+               !> When this%ord_prolong_set /= O_INJ, the received cg%pi_tgt%seg(:)%buf(:,:,:) may overlap
+               !! The incoming data thus must either contain valid guardcells (even if qna%lst(iv)%ord_prolong == O_INJ)
+               !! or the guardcells must be zeroed before sending data and received buffer should be added to cg%prolong_(:,:,:) not just assigned
 
             enddo
 
