@@ -42,17 +42,18 @@ module common_hdf5
 
    private
    public :: init_hdf5, cleanup_hdf5, set_common_attributes, common_shortcuts, write_to_hdf5_v2, set_h5_properties
-   public :: nhdf_vars, hdf_vars, d_gname, base_d_gname, d_fc_aname, d_size_aname, d_edge_apname, d_bnd_apname, cg_gname, &
-         & cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref, cg_ledge_aname, cg_redge_aname, &
-         & cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, cg_output
+   public :: nhdf_vars, hdf_vars, d_gname, base_d_gname, d_fc_aname, d_size_aname, d_edge_apname, d_bnd_apname, &
+      cg_gname, cg_cnt_aname, cg_lev_aname, cg_size_aname, cg_offset_aname, n_cg_name, dir_pref, cg_ledge_aname, &
+      cg_redge_aname, cg_dl_aname, O_OUT, O_RES, create_empty_cg_dataset, get_nth_cg, data_gname, output_fname, &
+      cg_output
 
    character(len=dsetnamelen), allocatable, dimension(:), protected :: hdf_vars  !< dataset names for hdf files
    integer, protected :: nhdf_vars !< number of quantities plotted to hdf files
    character(len=*), parameter :: d_gname = "domains", base_d_gname = "base", d_fc_aname = "fine_count", &
-        &                         d_size_aname = "n_d", d_edge_apname = "-edge_position", d_bnd_apname = "-boundary_type", &
-        &                         cg_gname = "grid", cg_cnt_aname = "cg_count", cg_lev_aname = "level", cg_size_aname = "n_b", &
-        &                         cg_offset_aname = "off", cg_ledge_aname = "left_edge", cg_redge_aname = "right_edge", &
-        &                         cg_dl_aname = "dl", data_gname = "data"
+        & d_size_aname = "n_d", d_edge_apname = "-edge_position", d_bnd_apname = "-boundary_type", &
+        & cg_gname = "grid", cg_cnt_aname = "cg_count", cg_lev_aname = "level", cg_size_aname = "n_b", &
+        & cg_offset_aname = "off", cg_ledge_aname = "left_edge", cg_redge_aname = "right_edge", &
+        & cg_dl_aname = "dl", data_gname = "data"
    character(len=singlechar), dimension(ndims), parameter :: dir_pref = [ "x", "y", "z" ]
 
    ! enumerator for 'otype' used in various functions to distinguish different
@@ -265,9 +266,10 @@ contains
       use dataio_pub,  only: use_v2_io, parfile, parfilelines, gzip_level
       use dataio_user, only: user_attrs_wr, user_attrs_pre
       use global,      only: magic_mass, local_magic_mass
-      use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, H5P_DATASET_CREATE_F, &
-           &                 h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, H5Pset_chunk_f, &
-           &                 h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
+      use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
+         & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
+         & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
+         & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,    only: slave, comm, mpi_err, FIRST
       use version,     only: env, nenv
@@ -346,7 +348,8 @@ contains
 !>
 !! \brief Common attributes for v2 files
 !!
-!! The rr1 marks critical attributes that are read by read_restart_hdf5 and compared against value read from the problem.par file.
+!! The rr1 marks critical attributes that are read by read_restart_hdf5 and compared against value read from the
+!! problem.par file.
 !! The rr2 marks runtime values that are read by read_restart_hdf5 and assigned to something in the code.
 !> \todo Set up an universal table(s) of attribute names for use by both set_common_attributes and read_restart_hdf5.
 !! Provide indices for critical attributes (rr1) and for runtime attributes (rr2).
@@ -357,7 +360,8 @@ contains
 
       use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE
       use units,       only: cm, gram, sek, kelvin, miu0
-      use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
+      use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
+         & last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
       use domain,      only: dom
       use global,      only: magic_mass, t, dt, nstep
       use grid,        only: finest
@@ -400,7 +404,10 @@ contains
       ibuffer(2)   = nres                    ; ibuffer_name(2)   = "nres" !rr2
       ibuffer(3)   = nhdf                    ; ibuffer_name(3)   = "nhdf" !rr2
       ibuffer(4)   = nimg                    ; ibuffer_name(4)   = "nimg" !rr2
-      !! \todo check if finest is complete, if not then find finest complete level (see data_hdf5::h5_write_to_single_file_v1)
+      !>
+      !! \todo check if finest is complete, if not then find finest complete level
+      !! (see data_hdf5::h5_write_to_single_file_v1)
+      !<
       ibuffer(5:7) = int(finest%n_d(:), kind=4) ; ibuffer_name(5:7) = [ "nxd", "nyd", "nzd" ] !rr1
       ibuffer(8)   = dom%nb                  ; ibuffer_name(8)   = "nb"
       ibuffer(9)   = require_init_prob       ; ibuffer_name(9)   = "require_init_prob" !rr2
@@ -429,13 +436,15 @@ contains
 !>
 !! \brief Common attributes for v2 files
 !!
-!! \warning Do not remove redundancy between set_common_attributes_v1 and set_common_attributes_v2 until we get mature state of the v2 outputs
+!! \warning Do not remove redundancy between set_common_attributes_v1 and set_common_attributes_v2 until we get mature
+!! state of the v2 outputs
 !<
 
    subroutine set_common_attributes_v2(file_id)
 
       use constants,   only: cbuff_len, I_ONE
-      use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nres, nhdf, nimg, domain_dump
+      use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
+         & last_res_time, last_plt_time, last_log_time, last_tsl_time, nres, nhdf, nimg, domain_dump
       use global,      only: magic_mass, t, dt, nstep
       use hdf5,        only: HID_T, SIZE_T
       use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
@@ -548,9 +557,10 @@ contains
 !> \brief Create an empty double precision dataset of given dimensions. Use compression if available.
    subroutine create_empty_cg_dataset(cg_g_id, name, ddims, Z_avail)
 
-     use dataio_pub, only: enable_compression, gzip_level
-     use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_DOUBLE, &
-          &                h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, h5pset_shuffle_f, h5pset_chunk_f
+      use dataio_pub, only: enable_compression, gzip_level
+      use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_DOUBLE, &
+         & h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, &
+         & h5pset_shuffle_f, h5pset_chunk_f
 
      implicit none
 
@@ -580,12 +590,16 @@ contains
 !! \brief Write a multi-file, multi-domain HDF5 file
 !!
 !! \details There are three approaches to be implemented:
-!! - Single-file, serial I/O. The easiest way. Master writes everything, slaves send their data to the master. Does not take advantage of parallel filesystems. Best choice for non-parallel filesystems.
-!! - Multi-file, serial I/O. An extension of the above approach. Selected processes (can be all) write to their files, other processes send them their data.
+!! - Single-file, serial I/O. The easiest way. Master writes everything, slaves send their data to the master. Does not
+!!   take advantage of parallel filesystems. Best choice for non-parallel filesystems.
+!! - Multi-file, serial I/O. An extension of the above approach. Selected processes (can be all) write to their files,
+!!   other processes send them their data.
 !!   Can take advantage of parallel filesystems. Can use local scratch filesystems. Requires additional work on reading.
-!! - Single-file, parallel I/O. The most ambitious approach. Selected processes (can be all) write to the files, other processes send them their data.
+!! - Single-file, parallel I/O. The most ambitious approach. Selected processes (can be all) write to the files, other
+!!   processes send them their data.
 !!   Can take advantage of parallel filesystems. Currently does not allow for compression during write.
-!!   Requires a lot of pseudo-collective operations. The "flexible PHDF5" would simplify the code, but it needs to be implemented.first.
+!!   Requires a lot of pseudo-collective operations. The "flexible PHDF5" would simplify the code, but it needs to be
+!!   implemented.first.
 !!
 !! \warning Partial implementation: Single-file, serial I/O works for non-AMR setups.
 !<
@@ -601,8 +615,8 @@ contains
       use global,         only: t
       use grid,           only: leaves
       use hdf5,           only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
-           &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, &
-           &                    h5pclose_f, h5zfilter_avail_f
+         & h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
+         & h5zfilter_avail_f
       use helpers_hdf5,   only: create_attribute
       use mpi,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
       use mpisetup,       only: comm, FIRST, LAST, master, mpi_err
@@ -630,31 +644,36 @@ contains
          end subroutine write_cg_to_hdf5
       end interface
 
-      integer(HID_T)                                :: file_id                                  !> File identifier
-      integer(HID_T)                                :: plist_id                                 !> Property list identifier
-      integer(HID_T)                                :: cgl_g_id,  cg_g_id                       !> cg list and cg group identifiers
-      integer(HID_T)                                :: doml_g_id, dom_g_id                      !> domain list and domain group identifiers
+      integer(HID_T)                                :: file_id          !> File identifier
+      integer(HID_T)                                :: plist_id         !> Property list identifier
+      integer(HID_T)                                :: cgl_g_id         !> cg list identifiers
+      integer(HID_T)                                :: cg_g_id          !> cg group identifiers
+      integer(HID_T)                                :: doml_g_id        !> domain list identifier
+      integer(HID_T)                                :: dom_g_id         !> domain group identifier
       integer(kind=4)                               :: error, cg_cnt
       integer                                       :: g, p, i
       integer, parameter                            :: tag = I_ONE
-      integer(kind=4),  dimension(:),   pointer     :: cg_n                                     !> offset for cg group numbering
-      integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b                               !> sizes of all cg
-      integer(kind=4),  dimension(:,:), pointer     :: cg_all_rl                                !> refinement levels of all cgs
-      integer(kind=8),  dimension(:,:), pointer     :: cg_all_off                               !> offsets of all cgs
-      integer(kind=8),  dimension(:), pointer       :: cg_all_parents                           !> parents IDs of all cgs
-      integer(kind=4),  dimension(:,:), pointer     :: cg_all_particles                         !> particles counts in all cgs
-      integer(kind=4),  dimension(:),   allocatable :: cg_rl                                    !> list of refinement levels from all cgs/procs
-      integer(kind=4),  dimension(:,:), pointer     :: cg_n_b                                   !> list of n_b from all cgs/procs
-      integer(kind=8),  dimension(:,:), allocatable :: cg_off                                   !> list of offsets from all cgs/procs
+      integer(kind=4),  dimension(:),   pointer     :: cg_n             !> offset for cg group numbering
+      integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b       !> sizes of all cg
+      integer(kind=4),  dimension(:,:), pointer     :: cg_all_rl        !> refinement levels of all cgs
+      integer(kind=8),  dimension(:,:), pointer     :: cg_all_off       !> offsets of all cgs
+      integer(kind=8),  dimension(:), pointer       :: cg_all_parents   !> parents IDs of all cgs
+      integer(kind=4),  dimension(:,:), pointer     :: cg_all_particles !> particles counts in all cgs
+      integer(kind=4),  dimension(:),   allocatable :: cg_rl            !> list of refinement levels from all cgs/procs
+      integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !> list of n_b from all cgs/procs
+      integer(kind=8),  dimension(:,:), allocatable :: cg_off           !> list of offsets from all cgs/procs
 
       enum, bind(c)
          enumerator :: cg_le !> index list of left edges from all cgs/procs
          enumerator :: cg_re !> index list of right edges from all cgs/procs
          enumerator :: cg_dl !> index list of cell sizes from all cgs/procs
       end enum
-      real(kind=8), dimension(:,:,:), allocatable   :: dbuf !> auxilliary array for communication of {cg_le, cg_re, cg_dl} lists
+      !>
+      !! auxilliary array for communication of {cg_le, cg_re, cg_dl} lists
+      !<
+      real(kind=8), dimension(:,:,:), allocatable   :: dbuf
       type(cg_list_element), pointer                :: cgl
-      logical(kind=4)                               :: Z_avail                                  !> .true. if HDF5 was compiled with zlib support
+      logical(kind=4)                               :: Z_avail !> .true. if HDF5 was compiled with zlib support
       character(len=dsetnamelen)                    :: d_label
       integer(kind=4)                               :: indx
 
@@ -667,7 +686,10 @@ contains
       allocate(cg_all_n_b(ndims, cg_cnt))
 
       if (master) then
-         if (otype == O_OUT) allocate(cg_all_rl(I_ONE, cg_cnt), cg_all_off(ndims, cg_cnt), cg_all_parents(cg_cnt), cg_all_particles(I_ONE, cg_cnt))
+         if (otype == O_OUT) then
+            allocate(cg_all_rl(I_ONE, cg_cnt), cg_all_off(ndims, cg_cnt), cg_all_parents(cg_cnt))
+            allocate(cg_all_particles(I_ONE, cg_cnt))
+         endif
 
          ! Open the HDF5 file only in master process and create all groups required for cg storage.
          ! Create also all related datasets and attributes. Do not write big datasets yet.
@@ -679,9 +701,9 @@ contains
             call gdf_create_format_stamp(file_id)
             call gdf_create_simulation_parameters(file_id, t, dom%n_d, dom%nb, dom%edge, domain_dump)
          endif
-         call h5gcreate_f(file_id, data_gname, cgl_g_id, error)                                 ! create "/data"
+         call h5gcreate_f(file_id, data_gname, cgl_g_id, error)     ! create "/data"
 
-         call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])                            ! create "/data/cg_count"
+         call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])  ! create "/data/cg_count"
 
          Z_avail = .false.
          if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
@@ -711,19 +733,20 @@ contains
                call MPI_Recv(cg_rl,  size(cg_rl),  MPI_INTEGER,  p, tag,         comm, MPI_STATUS_IGNORE, mpi_err)
                call MPI_Recv(cg_n_b, size(cg_n_b), MPI_INTEGER,  p, tag+I_ONE,   comm, MPI_STATUS_IGNORE, mpi_err)
                call MPI_Recv(cg_off, size(cg_off), MPI_INTEGER8, p, tag+I_TWO,   comm, MPI_STATUS_IGNORE, mpi_err)
-               if (otype == O_OUT) call MPI_Recv(dbuf,   size(dbuf) ,  MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
+               if (otype == O_OUT) &
+                  & call MPI_Recv(dbuf,   size(dbuf) ,  MPI_REAL8,    p, tag+I_THREE, comm, MPI_STATUS_IGNORE, mpi_err)
             endif
 
             do g = 1, cg_n(p)
                call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/cg/cg_%08d"
 
-               call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                    ! create "/cg/cg_%08d/level"
-               call create_attribute(cg_g_id, cg_size_aname, cg_n_b(g, :))                    ! create "/cg/cg_%08d/n_b"
-               call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4))     ! create "/cg/cg_%08d/off"
+               call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/cg/cg_%08d/level"
+               call create_attribute(cg_g_id, cg_size_aname, cg_n_b(g, :))                ! create "/cg/cg_%08d/n_b"
+               call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4)) ! create "/cg/cg_%08d/off"
                if (otype == O_OUT) then
-                  call create_attribute(cg_g_id, cg_ledge_aname, dbuf(cg_le, g, :))              ! create "/cg/cg_%08d/left_edge"
-                  call create_attribute(cg_g_id, cg_redge_aname, dbuf(cg_re, g, :))              ! create "/cg/cg_%08d/right_edge"
-                  call create_attribute(cg_g_id, cg_dl_aname, dbuf(cg_dl, g, :))                 ! create "/cg/cg_%08d/dl"
+                  call create_attribute(cg_g_id, cg_ledge_aname, dbuf(cg_le, g, :))  ! create "/cg/cg_%08d/left_edge"
+                  call create_attribute(cg_g_id, cg_redge_aname, dbuf(cg_re, g, :))  ! create "/cg/cg_%08d/right_edge"
+                  call create_attribute(cg_g_id, cg_dl_aname, dbuf(cg_dl, g, :))     ! create "/cg/cg_%08d/dl"
                endif
 
                cg_all_n_b(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_b(g, :)
@@ -735,7 +758,8 @@ contains
                   cg_all_particles(1,indx) = 0
                endif
 
-               if (any(cg_off(g, :) > 2.**31)) call die("[common_hdf5:write_to_hdf5_v2] large offsets require better treatment")
+               if (any(cg_off(g, :) > 2.**31)) &
+                  & call die("[common_hdf5:write_to_hdf5_v2] large offsets require better treatment")
 
                call create_empty_cg_datasets(cg_g_id, cg_n_b, Z_avail, g) !!!!!
 
@@ -748,23 +772,28 @@ contains
 
          call h5gclose_f(cgl_g_id, error)
 
-         if (otype == O_OUT) call gdf_create_root_datasets(file_id, cg_all_n_b, cg_all_off, cg_all_rl, cg_all_parents, cg_all_particles)
+         if (otype == O_OUT) &
+            & call gdf_create_root_datasets(file_id, cg_all_n_b, cg_all_off, &
+            &                               cg_all_rl, cg_all_parents, cg_all_particles)
 
          ! describe_domains
-         call h5gcreate_f(file_id, d_gname, doml_g_id, error)                    ! create "/domains"
+         call h5gcreate_f(file_id, d_gname, doml_g_id, error) ! create "/domains"
 
-         call h5gcreate_f(doml_g_id, base_d_gname, dom_g_id, error)              ! create "/domains/base"
-         call create_attribute(dom_g_id, d_size_aname, dom%n_d(:))               ! create "/domains/base/n_d"
+         call h5gcreate_f(doml_g_id, base_d_gname, dom_g_id, error) ! create "/domains/base"
+         call create_attribute(dom_g_id, d_size_aname, dom%n_d(:)) ! create "/domains/base/n_d"
          do i = xdim, zdim
             write(d_label, '(2a)') dir_pref(i), d_edge_apname
-            call create_attribute(dom_g_id, d_label, dom%edge(i, :))             ! create "/domains/base/[xyz]-edge_position"
+            call create_attribute(dom_g_id, d_label, dom%edge(i, :)) ! create "/domains/base/[xyz]-edge_position"
             write(d_label, '(2a)') dir_pref(i), d_bnd_apname
-            call create_attribute(dom_g_id, d_label, int(dom%bnd(i, :), kind=4)) ! create "/domains/base/[xyz]-boundary_type"
+            ! create "/domains/base/[xyz]-boundary_type"
+            call create_attribute(dom_g_id, d_label, int(dom%bnd(i, :), kind=4))
          enddo
 
          call h5gclose_f(dom_g_id, error)
 
-         call create_attribute(doml_g_id, d_fc_aname, [ 0_INT4 ] )               ! create "/domains/fine_count"  ! we have only base domain at the moment
+         ! create "/domains/fine_count"
+         ! we have only base domain at the moment
+         call create_attribute(doml_g_id, d_fc_aname, [ 0_INT4 ] )
 
          !> \todo add here all fine domains
          ! name "fine_00000001"
@@ -842,7 +871,8 @@ contains
 
       call h5pcreate_f(h5p, plist_id, error)
       if (nproc_io > 1) then
-         ! when nproc_io < nproc we'll probably need another communicator for subset of processes that have can_i_write flag set
+         ! when nproc_io < nproc we'll probably need another communicator for subset of processes that
+         ! have can_i_write flag set
          if (h5p == H5P_FILE_ACCESS_F) then
             call h5pset_fapl_mpio_f(plist_id, comm, MPI_INFO_NULL, error)
          else if (h5p == H5P_DATASET_XFER_F) then
@@ -874,7 +904,8 @@ contains
             call die(msg)
          endif
          if (len_trim(prefix) > fnamelen/2) then
-            write(msg,*) "[common_hdf5:output_fname]: There is high chance that ", trim(prefix), " will overflow the filename"
+            write(msg,*) "[common_hdf5:output_fname]: There is high chance that ", trim(prefix), &
+               & " will overflow the filename"
             call warn(msg)
          endif
       endif
@@ -994,363 +1025,5 @@ contains
 
    end subroutine finalize_write_cg
 
-! This routine will become useful when we begin to use multiple domain containers (AMR or non-rectangular compound domains)
-! This routine will become obsolete or will need serious rework with HDF5-1.8.8 ~xarth
-!!$   subroutine write_grid_containter(cg, file_id, plist_id)
-!!$
-!!$      use constants, only: xdim, ydim, zdim, ndims, dsetnamelen, LO, HI, I_ONE, I_TWO, I_THREE, I_FOUR, INT4
-!!$      use grid_cont, only: grid_container
-!!$      use hdf5,      only: HID_T, SIZE_T, HSIZE_T, H5T_NATIVE_INTEGER, H5T_STD_I8LE, H5T_NATIVE_DOUBLE, H5T_COMPOUND_F, &
-!!$           &               h5screate_simple_f, h5tarray_create_f, h5tget_size_f, h5tcreate_f, h5tinsert_f, h5dwrite_f, h5sclose_f, h5tclose_f, h5dclose_f, h5dcreate_f
-!!$
-!!$      implicit none
-!!$
-!!$      type(grid_container), pointer, intent(in) :: cg
-!!$      integer(HID_T), intent(in)                :: file_id, plist_id
-!!$
-!!$      integer(SIZE_T), parameter :: n_int4 = 19, n_r8 = 14, n_nxarr_r8 = 4, n_nyarr_r8 = 4, n_nzarr_r8 = 4, &
-!!$         & n_ndims_r8 = 2, n_ndims_i4 =1, n_ndims_i8 = 1, n_ndims_lohi_i4 = 2
-!!$
-!!$      integer(SIZE_T) :: n_arr3d_r8, n_ndims_arr4d_r8, n_u_arr4d_r8, n_stub
-!!$      integer :: total_no
-!!$
-!!$      integer(SIZE_T) :: int4_ts, r8_ts, nxarr_r8_ts, nyarr_r8_ts, nzarr_r8_ts, arr3d_r8_ts, ndims_r8_ts, &
-!!$         & ndims_i4_ts, ndims_i8_ts, ndims_lohi_i4_ts, ndims_arr4d_r8_ts, u_arr4d_r8_ts, type_size, offset
-!!$      integer(HID_T)  :: ndims_r8_t, ndims_i4_t, ndims_i8_t, nxarr_r8_t, nyarr_r8_t, nzarr_r8_t, arr3d_r8_t, ndims_lohi_i4_t, &
-!!$         & ndims_arr4d_r8_t, u_arr4d_r8_t, dtype_id, dspace_id, dset_id
-!!$      integer(HSIZE_T),  dimension(1) :: dims
-!!$      integer(HID_T),    dimension(:), allocatable :: types, dmem_id
-!!$      integer(SIZE_T),   dimension(:), allocatable :: types_sizes
-!!$      character(len=dsetnamelen), dimension(:), allocatable :: types_names
-!!$      character(len=dsetnamelen) :: dset_name
-!!$
-!!$      integer(kind=4) :: error
-!!$      integer :: i
-!!$
-!!$      dims = 1
-!!$      call h5screate_simple_f(I_ONE, dims, dspace_id, error)
-!!$
-!!$      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_ONE, [integer(HSIZE_T):: ndims],              ndims_r8_t, error)
-!!$      call h5tarray_create_f(H5T_NATIVE_INTEGER, I_ONE, [integer(HSIZE_T):: ndims],              ndims_i4_t, error)
-!!$      call h5tarray_create_f(H5T_NATIVE_INTEGER, I_TWO, [integer(HSIZE_T):: ndims, HI-LO+1],     ndims_lohi_i4_t, error)
-!!$      call h5tarray_create_f(H5T_STD_I8LE,       I_ONE, [integer(HSIZE_T):: ndims],              ndims_i8_t, error)
-!!$      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_ONE, [integer(HSIZE_T):: cg%n_(xdim)],        nxarr_r8_t, error)
-!!$      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_ONE, [integer(HSIZE_T):: cg%n_(ydim)],        nyarr_r8_t, error)
-!!$      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_ONE, [integer(HSIZE_T):: cg%n_(zdim)],        nzarr_r8_t, error)
-!!$      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_THREE, [integer(HSIZE_T):: cg%n_(:)   ],        arr3d_r8_t, error)
-!!$      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_FOUR, [integer(HSIZE_T):: ndims, cg%n_(:)],    ndims_arr4d_r8_t, error)
-!!$      call h5tarray_create_f(H5T_NATIVE_DOUBLE,  I_FOUR, [integer(HSIZE_T):: size(cg%u,1), cg%n_(:)], u_arr4d_r8_t, error)
-!!$
-!!$      n_arr3d_r8 = 10  ! gc_{x,y,z}dim
-!!$      n_stub     = 0
-!!$      if (associated(cg%cs_iso2))  n_stub = n_stub + I_ONE
-!!$      if (associated(cg%wa))       n_stub = n_stub + I_ONE
-!!$      if (associated(cg%gpot))     n_stub = n_stub + I_ONE
-!!$      if (associated(cg%hgpot))    n_stub = n_stub + I_ONE
-!!$      if (associated(cg%gp))       n_stub = n_stub + I_ONE
-!!$      if (associated(cg%sgp))      n_stub = n_stub + I_ONE
-!!$      if (associated(cg%sgpm))     n_stub = n_stub + I_ONE
-!!$      n_arr3d_r8 = n_arr3d_r8 - n_stub
-!!$
-!!$      n_ndims_arr4d_r8 = 1  ! b
-!!$      if (associated(cg%b0%arr)) then
-!!$         n_ndims_arr4d_r8 = n_ndims_arr4d_r8 + I_ONE
-!!$      else
-!!$         n_stub = n_stub + I_ONE
-!!$      endif
-!!$
-!!$      n_u_arr4d_r8 = 2 ! u,uh
-!!$      if (associated(cg%u0%arr)) then
-!!$         n_u_arr4d_r8 = n_u_arr4d_r8 + I_ONE
-!!$      else
-!!$         n_stub = n_stub + I_ONE
-!!$      endif
-!!$
-!!$      call h5tget_size_f(H5T_NATIVE_INTEGER, int4_ts,error)
-!!$      call h5tget_size_f(H5T_NATIVE_DOUBLE,  r8_ts, error)
-!!$      call h5tget_size_f(ndims_r8_t,         ndims_r8_ts, error)
-!!$      call h5tget_size_f(ndims_i4_t,         ndims_i4_ts, error)
-!!$      call h5tget_size_f(ndims_i8_t,         ndims_i8_ts, error)
-!!$      call h5tget_size_f(ndims_lohi_i4_t,    ndims_lohi_i4_ts, error)
-!!$      call h5tget_size_f(nxarr_r8_t,         nxarr_r8_ts, error)
-!!$      call h5tget_size_f(nyarr_r8_t,         nyarr_r8_ts, error)
-!!$      call h5tget_size_f(nzarr_r8_t,         nzarr_r8_ts, error)
-!!$      call h5tget_size_f(arr3d_r8_t,         arr3d_r8_ts, error)
-!!$      call h5tget_size_f(ndims_arr4d_r8_t,   ndims_arr4d_r8_ts, error)
-!!$      call h5tget_size_f(u_arr4d_r8_t,       u_arr4d_r8_ts, error)
-!!$
-!!$      type_size = (n_int4+n_stub)*int4_ts + n_r8*r8_ts + n_ndims_r8*ndims_r8_ts + n_ndims_i4*ndims_i4_ts + n_ndims_i8*ndims_i8_ts + n_ndims_lohi_i4*ndims_lohi_i4_ts &
-!!$            & + n_nxarr_r8*nxarr_r8_ts + n_nyarr_r8*nyarr_r8_ts + n_nzarr_r8*nzarr_r8_ts + n_arr3d_r8*arr3d_r8_ts + n_ndims_arr4d_r8*ndims_arr4d_r8_ts + n_u_arr4d_r8*u_arr4d_r8_ts
-!!$
-!!$      call h5tcreate_f(H5T_COMPOUND_F, type_size, dtype_id, error)
-!!$
-!!$      total_no =  int(n_int4 + n_r8 + n_ndims_r8 + n_ndims_i4  + n_ndims_i8 + n_ndims_lohi_i4 + n_nxarr_r8 + n_nyarr_r8 + &
-!!$         n_nzarr_r8 + n_arr3d_r8 + n_ndims_arr4d_r8 + n_u_arr4d_r8 + n_stub, kind(total_no))
-!!$
-!!$      allocate(types(total_no), types_sizes(total_no), types_names(total_no), dmem_id(total_no))
-!!$
-!!$      types(1)  = H5T_NATIVE_INTEGER;  types_sizes(1)  = int4_ts;        types_names(1)  = "nx"
-!!$      types(2)  = H5T_NATIVE_INTEGER;  types_sizes(2)  = int4_ts;        types_names(2)  = "ny"
-!!$      types(3)  = H5T_NATIVE_INTEGER;  types_sizes(3)  = int4_ts;        types_names(3)  = "nz"
-!!$      types(4)  = H5T_NATIVE_INTEGER;  types_sizes(4)  = int4_ts;        types_names(4)  = "nxb"
-!!$      types(5)  = H5T_NATIVE_INTEGER;  types_sizes(5)  = int4_ts;        types_names(5)  = "nyb"
-!!$      types(6)  = H5T_NATIVE_INTEGER;  types_sizes(6)  = int4_ts;        types_names(6)  = "nzb"
-!!$      types(7)  = H5T_NATIVE_INTEGER;  types_sizes(7)  = int4_ts;        types_names(7)  = "is"
-!!$      types(8)  = H5T_NATIVE_INTEGER;  types_sizes(8)  = int4_ts;        types_names(8)  = "ie"
-!!$      types(9)  = H5T_NATIVE_INTEGER;  types_sizes(9)  = int4_ts;        types_names(9)  = "js"
-!!$      types(10) = H5T_NATIVE_INTEGER;  types_sizes(10) = int4_ts;        types_names(10) = "je"
-!!$      types(11) = H5T_NATIVE_INTEGER;  types_sizes(11) = int4_ts;        types_names(11) = "ks"
-!!$      types(12) = H5T_NATIVE_INTEGER;  types_sizes(12) = int4_ts;        types_names(12) = "ke"
-!!$      types(13) = H5T_NATIVE_INTEGER;  types_sizes(13) = int4_ts;        types_names(13) = "maxxyz"
-!!$      types(14) = H5T_NATIVE_INTEGER;  types_sizes(14) = int4_ts;        types_names(14) = "isb"
-!!$      types(15) = H5T_NATIVE_INTEGER;  types_sizes(15) = int4_ts;        types_names(15) = "ieb"
-!!$      types(16) = H5T_NATIVE_INTEGER;  types_sizes(16) = int4_ts;        types_names(16) = "jsb"
-!!$      types(17) = H5T_NATIVE_INTEGER;  types_sizes(17) = int4_ts;        types_names(17) = "jeb"
-!!$      types(18) = H5T_NATIVE_INTEGER;  types_sizes(18) = int4_ts;        types_names(18) = "ksb"
-!!$      types(19) = H5T_NATIVE_INTEGER;  types_sizes(19) = int4_ts;        types_names(19) = "keb"
-!!$
-!!$      types(20) = H5T_NATIVE_DOUBLE;   types_sizes(20) = r8_ts;          types_names(20) = "dx"
-!!$      types(21) = H5T_NATIVE_DOUBLE;   types_sizes(21) = r8_ts;          types_names(21) = "dy"
-!!$      types(22) = H5T_NATIVE_DOUBLE;   types_sizes(22) = r8_ts;          types_names(22) = "dz"
-!!$      types(23) = H5T_NATIVE_DOUBLE;   types_sizes(23) = r8_ts;          types_names(23) = "idx"
-!!$      types(24) = H5T_NATIVE_DOUBLE;   types_sizes(24) = r8_ts;          types_names(24) = "idy"
-!!$      types(25) = H5T_NATIVE_DOUBLE;   types_sizes(25) = r8_ts;          types_names(25) = "idz"
-!!$      types(26) = H5T_NATIVE_DOUBLE;   types_sizes(26) = r8_ts;          types_names(26) = "dxmn"
-!!$      types(27) = H5T_NATIVE_DOUBLE;   types_sizes(27) = r8_ts;          types_names(27) = "dvol"
-!!$      types(28) = H5T_NATIVE_DOUBLE;   types_sizes(28) = r8_ts;          types_names(28) = "xminb"
-!!$      types(29) = H5T_NATIVE_DOUBLE;   types_sizes(29) = r8_ts;          types_names(29) = "xmaxb"
-!!$      types(30) = H5T_NATIVE_DOUBLE;   types_sizes(30) = r8_ts;          types_names(30) = "yminb"
-!!$      types(31) = H5T_NATIVE_DOUBLE;   types_sizes(31) = r8_ts;          types_names(31) = "ymaxb"
-!!$      types(32) = H5T_NATIVE_DOUBLE;   types_sizes(32) = r8_ts;          types_names(32) = "zminb"
-!!$      types(33) = H5T_NATIVE_DOUBLE;   types_sizes(33) = r8_ts;          types_names(33) = "zmaxb"
-!!$
-!!$      types(34) = ndims_r8_t;          types_sizes(34) = ndims_r8_ts;    types_names(34) = "dl"
-!!$      types(35) = ndims_r8_t;          types_sizes(35) = ndims_r8_ts;    types_names(35) = "idl"
-!!$
-!!$      types(36) = nxarr_r8_t;          types_sizes(36) = nxarr_r8_ts;    types_names(36) = "x"
-!!$      types(37) = nxarr_r8_t;          types_sizes(37) = nxarr_r8_ts;    types_names(37) = "xl"
-!!$      types(38) = nxarr_r8_t;          types_sizes(38) = nxarr_r8_ts;    types_names(38) = "xr"
-!!$      types(39) = nxarr_r8_t;          types_sizes(39) = nxarr_r8_ts;    types_names(39) = "inv_x"
-!!$
-!!$      types(40) = nyarr_r8_t;          types_sizes(40) = nyarr_r8_ts;    types_names(40) = "y"
-!!$      types(41) = nyarr_r8_t;          types_sizes(41) = nyarr_r8_ts;    types_names(41) = "yl"
-!!$      types(42) = nyarr_r8_t;          types_sizes(42) = nyarr_r8_ts;    types_names(42) = "yr"
-!!$      types(43) = nyarr_r8_t;          types_sizes(43) = nyarr_r8_ts;    types_names(43) = "inv_y"
-!!$
-!!$      types(44) = nzarr_r8_t;          types_sizes(44) = nzarr_r8_ts;    types_names(44) = "z"
-!!$      types(45) = nzarr_r8_t;          types_sizes(45) = nzarr_r8_ts;    types_names(45) = "zl"
-!!$      types(46) = nzarr_r8_t;          types_sizes(46) = nzarr_r8_ts;    types_names(46) = "zr"
-!!$      types(47) = nzarr_r8_t;          types_sizes(47) = nzarr_r8_ts;    types_names(47) = "inv_z"
-!!$
-!!$      types(48) = ndims_i4_t;          types_sizes(48) = ndims_i4_ts;    types_names(48) = "n_b"
-!!$
-!!$      types(49) = ndims_i8_t;          types_sizes(49) = ndims_i8_ts;    types_names(49) = "off"
-!!$
-!!$      types(50) = ndims_lohi_i4_t;     types_sizes(50) = ndims_lohi_i4_ts; types_names(50) = "ijkse"
-!!$      types(51) = ndims_lohi_i4_t;     types_sizes(51) = ndims_lohi_i4_ts; types_names(51) = "bnd"
-!!$
-!!$      types(52) = arr3d_r8_t;          types_sizes(52) = arr3d_r8_ts;    types_names(52) = "gc_xdim"
-!!$      types(53) = arr3d_r8_t;          types_sizes(53) = arr3d_r8_ts;    types_names(53) = "gc_ydim"
-!!$      types(54) = arr3d_r8_t;          types_sizes(54) = arr3d_r8_ts;    types_names(54) = "gc_zdim"
-!!$
-!!$      types_names(55) = dname(WA)
-!!$      if (associated(cg%wa)) then
-!!$         types(55) = arr3d_r8_t;          types_sizes(55) = arr3d_r8_ts
-!!$      else
-!!$         types(55) = H5T_NATIVE_INTEGER;  types_sizes(55) = int4_ts
-!!$      endif
-!!$      types_names(56) = dname(GPOT)
-!!$      if (associated(cg%gpot)) then
-!!$         types(56) = arr3d_r8_t;          types_sizes(56) = arr3d_r8_ts
-!!$      else
-!!$         types(56) = H5T_NATIVE_INTEGER;  types_sizes(56) = int4_ts
-!!$      endif
-!!$      types_names(57) = dname(HGPOT)
-!!$      if (associated(cg%hgpot)) then
-!!$         types(57) = arr3d_r8_t;          types_sizes(57) = arr3d_r8_ts
-!!$      else
-!!$         types(57) = H5T_NATIVE_INTEGER;  types_sizes(57) = int4_ts
-!!$      endif
-!!$      types_names(58) = dname(GP)
-!!$      if (associated(cg%gp)) then
-!!$         types(58) = arr3d_r8_t;          types_sizes(58) = arr3d_r8_ts
-!!$      else
-!!$         types(58) = H5T_NATIVE_INTEGER;  types_sizes(58) = int4_ts
-!!$      endif
-!!$      types_names(59) = dname(SGP)
-!!$      if (associated(cg%sgp)) then
-!!$         types(59) = arr3d_r8_t;          types_sizes(59) = arr3d_r8_ts
-!!$      else
-!!$         types(59) = H5T_NATIVE_INTEGER;  types_sizes(59) = int4_ts
-!!$      endif
-!!$      types_names(60) = dname(SGPM)
-!!$      if (associated(cg%sgpm)) then
-!!$         types(60) = arr3d_r8_t;          types_sizes(60) = arr3d_r8_ts
-!!$      else
-!!$         types(60) = H5T_NATIVE_INTEGER;  types_sizes(60) = int4_ts
-!!$      endif
-!!$      types_names(61) = dname(CS_ISO2)
-!!$      if (associated(cg%cs_iso2)) then
-!!$         types(61) = arr3d_r8_t;          types_sizes(61) = arr3d_r8_ts
-!!$      else
-!!$         types(61) = H5T_NATIVE_INTEGER;  types_sizes(61) = int4_ts
-!!$      endif
-!!$
-!!$      types(62) = ndims_arr4d_r8_t;    types_sizes(62) = ndims_arr4d_r8_ts;    types_names(62) = "b"
-!!$      types_names(63) = dname(B0)
-!!$      if (associated(cg%b0%arr)) then
-!!$         types(63) = ndims_arr4d_r8_t;    types_sizes(63) = ndims_arr4d_r8_ts
-!!$      else
-!!$         types(63) = H5T_NATIVE_INTEGER;  types_sizes(63) = int4_ts
-!!$      endif
-!!$
-!!$      types(64) = u_arr4d_r8_t;        types_sizes(64) = u_arr4d_r8_ts;        types_names(64) = "u"
-!!$      types(65) = u_arr4d_r8_t;        types_sizes(65) = u_arr4d_r8_ts;        types_names(65) = "uh"
-!!$      types_names(66) = dname(U0)
-!!$      if (associated(cg%u0%arr)) then
-!!$         types(66) = u_arr4d_r8_t;        types_sizes(66) = u_arr4d_r8_ts
-!!$      else
-!!$         types(66) = H5T_NATIVE_INTEGER;  types_sizes(66) = int4_ts
-!!$      endif
-!!$
-!!$      offset = 0
-!!$      do i = 1, total_no
-!!$         call h5tinsert_f(dtype_id, types_names(i),  offset, types(i), error)
-!!$         offset = offset + types_sizes(i)
-!!$      enddo
-!!$
-!!$      write(dset_name,'("cg",i4.4)') 1
-!!$      call h5dcreate_f(file_id, dset_name, dtype_id, dspace_id, dset_id, error)
-!!$
-!!$      do i = 1, total_no
-!!$         call h5tcreate_f(H5T_COMPOUND_F, types_sizes(i), dmem_id(i), error)
-!!$         offset = 0
-!!$         call h5tinsert_f(dmem_id(i), types_names(i), offset, types(i), error)
-!!$      enddo
-!!$
-!!$      dims = 1
-!!$      call h5dwrite_f(dset_id, dmem_id(1),  int(cg%n_(xdim), kind=4), dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(2),  int(cg%n_(ydim), kind=4), dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(3),  int(cg%n_(zdim), kind=4), dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(4),  int(cg%nxb, kind=4),    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(5),  int(cg%nyb, kind=4),    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(6),  int(cg%nzb, kind=4),    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(7),  int(cg%is, kind=4),     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(8),  int(cg%ie, kind=4),     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(9),  int(cg%js, kind=4),     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(10), int(cg%je, kind=4),     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(11), int(cg%ks, kind=4),     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(12), int(cg%ke, kind=4),     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(13), int(cg%maxxyz, kind=4), dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(14), int(cg%isb, kind=4),    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(15), int(cg%ieb, kind=4),    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(16), int(cg%jsb, kind=4),    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(17), int(cg%jeb, kind=4),    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(18), int(cg%ksb, kind=4),    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(19), int(cg%keb, kind=4),    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(20), cg%dx,     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(21), cg%dy,     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(22), cg%dz,     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(23), cg%idx,    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(24), cg%idy,    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(25), cg%idz,    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(26), cg%dxmn,   dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(27), cg%dvol,   dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(28), cg%fbnd(xdim, LO), dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(29), cg%fbnd(xdim, HI), dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(30), cg%fbnd(ydim, LO), dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(31), cg%fbnd(ydim, HI), dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(32), cg%fbnd(zdim, LO), dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(33), cg%fbnd(zdim, HI), dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(34), cg%dl,     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(35), cg%idl,    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(36), cg%x,      dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(37), cg%xl,     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(38), cg%xr,     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(39), cg%inv_x,  dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(40), cg%y,      dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(41), cg%yl,     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(42), cg%yr,     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(43), cg%inv_y,  dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(44), cg%z,      dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(45), cg%zl,     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(46), cg%zr,     dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(47), cg%inv_z,  dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(48), int(cg%n_b, kind=4),    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(49), int(cg%n_b, kind=4),    dims, error, xfer_prp=plist_id) !!!
-!!$      call h5dwrite_f(dset_id, dmem_id(50), int(cg%ijkse, kind=4),  dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(51), int(cg%bnd, kind=4),    dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(52), int(cg%gc_xdim, kind=4),dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(53), int(cg%gc_ydim, kind=4),dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(54), int(cg%gc_zdim, kind=4),dims, error, xfer_prp=plist_id)
-!!$      if (associated(cg%wa)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(55), cg%wa     ,dims, error, xfer_prp=plist_id)
-!!$      else
-!!$         call h5dwrite_f(dset_id, dmem_id(55), -999_INT4      ,dims, error, xfer_prp=plist_id)
-!!$      endif
-!!$      if (associated(cg%gpot)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(56), cg%gpot   ,dims, error, xfer_prp=plist_id)
-!!$      else
-!!$         call h5dwrite_f(dset_id, dmem_id(56), -999_INT4      ,dims, error, xfer_prp=plist_id)
-!!$      endif
-!!$      if (associated(cg%hgpot)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(57), cg%hgpot  ,dims, error, xfer_prp=plist_id)
-!!$      else
-!!$         call h5dwrite_f(dset_id, dmem_id(57), -999_INT4      ,dims, error, xfer_prp=plist_id)
-!!$      endif
-!!$      if (associated(cg%gp)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(58), cg%gp     ,dims, error, xfer_prp=plist_id)
-!!$      else
-!!$         call h5dwrite_f(dset_id, dmem_id(58), -999_INT4      ,dims, error, xfer_prp=plist_id)
-!!$      endif
-!!$      if (associated(cg%sgp)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(59), cg%sgp    ,dims, error, xfer_prp=plist_id)
-!!$      else
-!!$         call h5dwrite_f(dset_id, dmem_id(59), -999_INT4      ,dims, error, xfer_prp=plist_id)
-!!$      endif
-!!$      if (associated(cg%sgpm)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(60), cg%sgpm   ,dims, error, xfer_prp=plist_id)
-!!$      else
-!!$         call h5dwrite_f(dset_id, dmem_id(60), -999_INT4      ,dims, error, xfer_prp=plist_id)
-!!$      endif
-!!$      if (associated(cg%cs_iso2)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(61), cg%cs_iso2,dims, error, xfer_prp=plist_id)
-!!$      else
-!!$         call h5dwrite_f(dset_id, dmem_id(61), -999_INT4      ,dims, error, xfer_prp=plist_id)
-!!$      endif
-!!$      call h5dwrite_f(dset_id, dmem_id(62), cg%b,dims, error, xfer_prp=plist_id)
-!!$      if (associated(cg%b0%arr)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(63), cg%b0%arr     ,dims, error, xfer_prp=plist_id)
-!!$      else
-!!$         call h5dwrite_f(dset_id, dmem_id(63), -999_INT4      ,dims, error, xfer_prp=plist_id)
-!!$      endif
-!!$      call h5dwrite_f(dset_id, dmem_id(64), cg%u,  dims, error, xfer_prp=plist_id)
-!!$      call h5dwrite_f(dset_id, dmem_id(65), cg%uh%arr, dims, error, xfer_prp=plist_id)
-!!$      if (associated(cg%u0%arr)) then
-!!$         call h5dwrite_f(dset_id, dmem_id(66), cg%u0%arr     ,dims, error, xfer_prp=plist_id)
-!!$      else
-!!$         call h5dwrite_f(dset_id, dmem_id(66), -999_INT4      ,dims, error, xfer_prp=plist_id)
-!!$      endif
-!!$
-!!$      call h5dclose_f(dset_id, error)
-!!$      do i = 1, total_no
-!!$         call h5tclose_f(dmem_id(i),error)
-!!$      enddo
-!!$      CALL h5sclose_f(dspace_id, error)
-!!$      CALL h5tclose_f(dtype_id, error)
-!!$      call h5tclose_f(ndims_r8_t, error)
-!!$      call h5tclose_f(ndims_i4_t, error)
-!!$      call h5tclose_f(ndims_i8_t, error)
-!!$      call h5tclose_f(ndims_lohi_i4_t, error)
-!!$      call h5tclose_f(nxarr_r8_t, error)
-!!$      call h5tclose_f(nyarr_r8_t, error)
-!!$      call h5tclose_f(nzarr_r8_t, error)
-!!$      call h5tclose_f(arr3d_r8_t, error)
-!!$      call h5tclose_f(ndims_arr4d_r8_t, error)
-!!$      call h5tclose_f(u_arr4d_r8_t, error)
-!!$
-!!$      deallocate(types,types_sizes,types_names,dmem_id)
-!!$
-!!$   end subroutine write_grid_containter
-
 end module common_hdf5
+! vim: set tw=120:
