@@ -608,6 +608,7 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
+      use units,          only: cm, sek
       use dataio_pub,     only: die, nproc_io, can_i_write, domain_dump
       use domain,         only: dom
       use gc_list,        only: cg_list_element
@@ -699,7 +700,7 @@ contains
 
          if (otype == O_OUT) then
             call gdf_create_format_stamp(file_id)
-            call gdf_create_simulation_parameters(file_id, t, dom%n_d, dom%nb, dom%edge, domain_dump)
+            call gdf_create_simulation_parameters(file_id, t/sek, dom%n_d, dom%nb, dom%edge/cm, domain_dump)
          endif
          call h5gcreate_f(file_id, data_gname, cgl_g_id, error)     ! create "/data"
 
