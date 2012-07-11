@@ -29,7 +29,6 @@
 #include "piernik.h"
 #include "macros.h"
 
-!!$ ============================================================================
 !>
 !! \brief Multigrid Poisson solver
 !!
@@ -119,10 +118,6 @@ module multigrid_gravity
 
 contains
 
-!!$ ============================================================================
-!!
-!! Initialization
-!!
 !>
 !! \brief Routine to set parameters values from namelist MULTIGRID_GRAVITY
 !!
@@ -401,14 +396,11 @@ contains
 
    end subroutine init_multigrid_grav
 
-!!$ ============================================================================
-!>
-!! \brief Initialization - continued after allocation of everything interesting
-!<
+!> \brief Initialization - continued after allocation of everything interesting
 
    subroutine init_multigrid_grav_post
 
-      use constants,     only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr
+      use constants,     only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, varlen
       use dataio_pub,    only: die, warn, printinfo, msg
       use domain,        only: dom
       use gc_list,       only: cg_list_element
@@ -429,6 +421,7 @@ contains
       type(cg_list_level), pointer :: curl
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+      character(len=varlen) :: FFTn
 
       need_general_pf = cdd%comm3d == MPI_COMM_NULL .or. single_base .or. is_mg_uneven
 
@@ -569,9 +562,6 @@ contains
                      call dfftw_plan_dft_r2c_3d(cg%mg%planf, cg%nxb, cg%nyb, cg%nzb, cg%mg%src, cg%mg%fft, fftw_flags)
                      call dfftw_plan_dft_c2r_3d(cg%mg%plani, cg%nxb, cg%nyb, cg%nzb, cg%mg%fft, cg%mg%src, fftw_flags)
 
-                     write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav_post] Level ",curl%lev,", FFT: RCR"
-                     if (master) call printinfo(msg)
-
                   case (fft_dst)
 
                      if (allocated(cg%mg%fftr)) call die("[multigrid_gravity:init_multigrid_grav_post] fftr array already allocated")
@@ -583,9 +573,6 @@ contains
                      kz(:) = cg%idz2 * (cos(pi/cg%nzb*[( j, j=1, cg%nzb )]) - one)
                      call dfftw_plan_r2r_3d(cg%mg%planf, cg%nxb, cg%nyb, cg%nzb, cg%mg%src,  cg%mg%fftr, FFTW_RODFT10, FFTW_RODFT10, FFTW_RODFT10, fftw_flags)
                      call dfftw_plan_r2r_3d(cg%mg%plani, cg%nxb, cg%nyb, cg%nzb, cg%mg%fftr, cg%mg%src,  FFTW_RODFT01, FFTW_RODFT01, FFTW_RODFT01, fftw_flags)
-
-                     write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav_post] Level ",curl%lev,", FFT: DST"
-                     if (master) call printinfo(msg)
 
                   case default
                      call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
@@ -602,13 +589,26 @@ contains
                   enddo
                enddo
 
-            else
-               write(msg,'(a,i3,a)')"[multigrid_gravity:init_multigrid_grav_post] Level ",curl%lev,", FFT: none"
-               if (master) call printinfo(msg)
             endif
 
             cgl => cgl%nxt
          enddo
+
+         if (master) then
+            select case (curl%fft_type)
+               case (fft_rcr)
+                  FFTn="RCR"
+               case (fft_dst)
+                  FFTn="DST"
+               case (fft_none)
+                  FFTn="none"
+               case default
+                  call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
+            end select
+            write(msg,'(a,i3,2a)')"[multigrid_gravity:init_multigrid_grav_post] Level ",curl%lev,", FFT: ", trim(FFTn)
+            call printinfo(msg)
+         endif
+
          curl => curl%finer
       enddo
 
@@ -656,7 +656,6 @@ contains
 
    end subroutine init_history
 
-!!$ ============================================================================
 !>
 !! \brief Set up communication for face prolongation
 !!
@@ -893,10 +892,7 @@ contains
 
    end subroutine mpi_multigrid_prep_grav
 
-!!$ ============================================================================
-!>
-!! \brief Cleanup
-!<
+!> \brief Cleanup
 
    subroutine cleanup_multigrid_grav
 
@@ -951,7 +947,6 @@ contains
 
    end subroutine cleanup_multigrid_grav
 
-!!$ ============================================================================
 !>
 !! \brief This routine tries to construct first guess of potential based on previously obtained solution, if any.
 !! If for some reason it is not desired to do the extrapolation (i.e. timestep varies too much) it would be good to have more control on this behavior.
@@ -1048,7 +1043,6 @@ contains
 
    end subroutine init_solution
 
-!!$ ============================================================================
 !>
 !! \brief Make a local copy of source (density) and multiply by 4 pi G
 !!
@@ -1076,7 +1070,7 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(:), optional, intent(in) :: i_all_dens !< indices to selfgravitating fluids
+      integer(kind=4), dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
 
       real :: fac
       integer :: i
@@ -1085,7 +1079,7 @@ contains
 
       call all_cg%set_dirty(source)
 
-      if (present(i_all_dens)) then
+      if (size(i_all_dens) > 0) then
          cgl => leaves%first
          do while (associated(cgl))
             cg => cgl%cg
@@ -1172,10 +1166,7 @@ contains
 
    end subroutine init_source
 
-!!$ ============================================================================
-!>
-!! \brief This routine manages old copies of potential for recycling.
-!<
+!> \brief This routine manages old copies of potential for recycling.
 
    subroutine store_solution(history)
 
@@ -1215,7 +1206,6 @@ contains
 
    end subroutine store_solution
 
-!!$ ============================================================================
 !>
 !! \brief Multigrid gravity driver. This is the only multigrid routine intended to be called from the gravity module.
 !! This routine is also responsible for communicating the solution to the rest of world via sgp array.
@@ -1235,6 +1225,7 @@ contains
       integer(kind=4), dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
 
       integer :: grav_bnd_global
+      integer, dimension(0) :: empty_array !< trick to avoid compiler warnings on possibly uninitialized i_all_dens.0 in init_source
 
       ts =  set_timer("multigrid", .true.)
       grav_bnd_global = grav_bnd
@@ -1261,7 +1252,7 @@ contains
 
          vstat%cprefix = "Go-"
          call multipole_solver
-         call init_source
+         call init_source(empty_array)
 
          call vcycle_hg(outer)
 
@@ -1275,7 +1266,6 @@ contains
 
    end subroutine multigrid_solve_grav
 
-!!$ ============================================================================
 !>
 !! \brief The solver. Here we choose an adaptation of the Huang-Greengard V-cycle.
 !! For more difficult problems, like variable coefficient diffusion equation a more sophisticated V-cycle may be more effective.
@@ -1340,9 +1330,11 @@ contains
          norm_was_zero = .false.
       endif
 
-!      if (.not. history%valid .and. prefer_rbgs_relaxation) call approximate_solution(finest, source, solution) ! not necessary when init_solution called FFT
-! difficult statement: for approximate_solution_fft it requires to pass a flag to use guardcells instead of prolonging faces.
-! how much does it improve? (make a benchmark at some point)
+      ! if (.not. history%valid .and. prefer_rbgs_relaxation) call approximate_solution(finest, source, solution)
+      ! not necessary when init_solution called FFT
+      ! In single-process run, the above call may often save one V-cycle, but it always costs almost like one V-cycle.
+      ! \todo test it in massively-parallel run (and most probably throw out for simplicity)
+      ! difficult statement: for approximate_solution_fft it requires to pass a flag to use guardcells instead of prolonging faces.
 
       ! iterations
       do v = 0, max_cycles
@@ -1404,7 +1396,7 @@ contains
          ! the Huang-Greengard V-cycle
          call finest%restrict_to_floor_q_1var(defect)
 
-         ! call all_cg%set_dirty(correction)
+         call all_cg%set_dirty(correction)
          call coarsest%set_q_value(correction, 0.)
 
          curl => coarsest
@@ -1431,10 +1423,7 @@ contains
 
    end subroutine vcycle_hg
 
-!!$ ============================================================================
-!>
-!! \brief Calculate the residuum for the Poisson equation.
-!<
+!> \brief Calculate the residuum for the Poisson equation.
 
    subroutine residual(curl, src, soln, def)
 
@@ -1460,10 +1449,7 @@ contains
 
    end subroutine residual
 
-!!$ ============================================================================
-!>
-!! \brief 2nd order Laplacian
-!<
+!> \brief 2nd order Laplacian
 
    subroutine residual2(curl, src, soln, def)
 
@@ -1487,7 +1473,8 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NEGREF) ! no corners required
+      call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
+      ! corners are required for non-cartesian decompositions because current implementation of arr3d_boundaries may use overlapping buffers at triple points
 
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
       ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
@@ -1572,7 +1559,6 @@ contains
 
    end subroutine residual2
 
-!!$ ============================================================================
 !>
 !! \brief 4th order Laplacian
 !!
@@ -1587,15 +1573,15 @@ contains
 
    subroutine residual4(curl, src, soln, def)
 
-      use cg_list_lev,   only: cg_list_level
-      use constants,     only: I_TWO, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
-      use dataio_pub,    only: die, warn
-      use domain,        only: dom
-      use external_bnd,  only: arr3d_boundaries
-      use gc_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use mpisetup,      only: master
-      use named_array,   only: p3
+      use cg_list_lev,  only: cg_list_level
+      use constants,    only: I_TWO, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
+      use dataio_pub,   only: die, warn
+      use domain,       only: dom
+      use external_bnd, only: arr3d_boundaries
+      use gc_list,      only: cg_list_element
+      use grid_cont,    only: grid_container
+      use mpisetup,     only: master
+      use named_array,  only: p3
 
       implicit none
 
@@ -1687,10 +1673,8 @@ contains
 
    subroutine approximate_solution(curl, src, soln)
 
-      use cg_list_lev,      only: cg_list_level
-      use constants,        only: fft_none
-      use grid,             only: finest
-      use multigridvars,    only: correction
+      use cg_list_lev, only: cg_list_level
+      use constants,   only: fft_none
 
       implicit none
 
@@ -1703,37 +1687,32 @@ contains
       if (curl%fft_type /= fft_none) then
          call approximate_solution_fft(curl, src, soln)
       else
-         call curl%check_dirty(soln, "approx_soln soln-")
          call approximate_solution_rbgs(curl, src, soln)
       endif
-
-      if (prefer_rbgs_relaxation .and. soln == correction .and. .not. associated(curl, finest)) call curl%prolong_q_1var(correction)
-      !> \deprecated BEWARE other implementations of the multigrid algorithm may be incompatible with prolongation called from here
 
       call curl%check_dirty(soln, "approx_soln soln+")
 
    end subroutine approximate_solution
 
-!!$ ============================================================================
 !>
 !! \brief Red-Black Gauss-Seidel relaxation.
 !!
 !! \details This is the most costly routine in a serial run. Try to find optimal values for nsmool and nsmoob.
 !! This routine also depends a lot on communication so it  may limit scalability of the multigrid.
-!! \todo Implement convergence check on coarsest level (not very important since we have a FFT solver for coarsest level)
 !<
 
    subroutine approximate_solution_rbgs(curl, src, soln)
 
-      use cg_list_lev,      only: cg_list_level
-      use constants,        only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
-      use dataio_pub,       only: die
-      use domain,           only: dom
-      use external_bnd,     only: arr3d_boundaries
-      use gc_list,          only: cg_list_element, dirty_label
-      use global,           only: dirty_debug
-      use grid,             only: coarsest
-      use grid_cont,        only: grid_container
+      use cg_list_lev,   only: cg_list_level
+      use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
+      use dataio_pub,    only: die
+      use domain,        only: dom
+      use external_bnd,  only: arr3d_boundaries
+      use gc_list,       only: cg_list_element, dirty_label
+      use global,        only: dirty_debug
+      use grid,          only: coarsest
+      use grid_cont,     only: grid_container
+      use multigridvars, only: correction
 
       implicit none
 
@@ -1751,18 +1730,22 @@ contains
 
       if (associated(curl, coarsest)) then
          nsmoo = nsmoob
+         !> \todo Implement automatic convergence check on coarsest level (not very important when we have a FFT solver for coarsest level)
       else
          nsmoo = nsmool
+         if (soln == correction) call curl%coarser%prolong_q_1var(soln) ! make sure that prolongation is called only in ascending (coarse -> fine) part of V-cycle.
+         !> \warning this may be incompatible with V-cycles other than Huang - Greengard
       endif
 
       if (dom%geometry_type == GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
 
       do n = 1, RED_BLACK*nsmoo
-         call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NEGREF) ! no corners are required here
+         call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
+         ! corners are required for non-cartesian decompositions because current implementation of arr3d_boundaries may use overlapping buffers at triple points
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax soln- smoo=", n
-            call curl%check_dirty(soln, dirty_label)
+            call curl%check_dirty(soln, dirty_label, expand=1)
          endif
          cgl => curl%first
          do while (associated(cgl))
@@ -1782,7 +1765,7 @@ contains
             if (dom%eff_dim==ndims .and. .not. multidim_code_3D) then
                do k = cg%ks, cg%ke
                   do j = cg%js, cg%je
-                     i1 = cg%is + mod(n+j+k, RED_BLACK)
+                     i1 = cg%is + int(mod(n+j+k+sum(cg%off(xdim:zdim)), int(RED_BLACK, kind=8)), kind=4)
                      if (dom%geometry_type == GEO_RPZ) then
 !!$                  cg%q(soln)%arr(i1  :cg%ie  :2, j,   k) = &
 !!$                       cg%mg%rx * (cg%q(soln)%arr(i1-1:cg%ie-1:2, j,   k  ) + cg%q(soln)%arr(i1+1:cg%ie+1:2, j,   k))   + &
@@ -1813,13 +1796,13 @@ contains
                   kd = RED_BLACK
                endif
 
-               if (kd == RED_BLACK) k1 = cg%ks + mod(n, RED_BLACK)
+               if (kd == RED_BLACK) k1 = cg%ks + int(mod(n+cg%off(zdim), int(RED_BLACK, kind=8)), kind=4)
                select case (dom%geometry_type)
                   case (GEO_XYZ)
                      do k = k1, cg%ke, kd
-                        if (jd == RED_BLACK) j1 = cg%js + mod(n+k, RED_BLACK)
+                        if (jd == RED_BLACK) j1 = cg%js + int(mod(n+k+sum(cg%off(ydim:zdim)), int(RED_BLACK, kind=8)), kind=4)
                         do j = j1, cg%je, jd
-                           if (id == RED_BLACK) i1 = cg%is + mod(n+j+k, RED_BLACK)
+                           if (id == RED_BLACK) i1 = cg%is + int(mod(n+j+k+sum(cg%off(xdim:zdim)), int(RED_BLACK, kind=8)), kind=4)
                            cg%q(soln)%arr                           (i1:  cg%ie  :id, j,   k)   = &
                                 & (1. - Jacobi_damp)* cg%q(soln)%arr(i1  :cg%ie  :id, j,   k)   - &
                                 &       Jacobi_damp * cg%q(src)%arr (i1  :cg%ie  :id, j,   k)   * cg%mg%r
@@ -1833,9 +1816,9 @@ contains
                      enddo
                   case (GEO_RPZ)
                      do k = k1, cg%ke, kd
-                        if (jd == RED_BLACK) j1 = cg%js + mod(n+k, RED_BLACK)
+                        if (jd == RED_BLACK) j1 = cg%js + int(mod(n+k+sum(cg%off(ydim:zdim)), int(RED_BLACK, kind=8)), kind=4)
                         do j = j1, cg%je, jd
-                           if (id == RED_BLACK) i1 = cg%is + mod(n+j+k, RED_BLACK)
+                           if (id == RED_BLACK) i1 = cg%is + int(mod(n+j+k+sum(cg%off(xdim:zdim)), int(RED_BLACK, kind=8)), kind=4)
                            do i = i1, cg%ie, id
                               cr  = overrelax / 2.
                               crx = cg%dvol2 * cg%idx2 * cg%x(i)**2
@@ -1878,7 +1861,6 @@ contains
 
    end subroutine approximate_solution_rbgs
 
-!!$ ============================================================================
 !>
 !! \brief FFT given-boundary Poisson solver applied to local domain. Should require less communication than RBGS implementation.
 !!
@@ -2048,18 +2030,15 @@ contains
 
    end subroutine approximate_solution_fft
 
-!!$ ============================================================================
-!>
-!! \brief This routine prepares boundary values for local-FFT solver
-!<
+!> \brief This routine prepares boundary values for local-FFT solver
 
    subroutine make_face_boundaries(curl, soln)
 
-      use cg_list_lev,      only: cg_list_level
-      use dataio_pub,       only: warn
-      use grid,             only: coarsest
-      use mpisetup,         only: nproc
-      use multigridvars,    only: single_base
+      use cg_list_lev,   only: cg_list_level
+      use dataio_pub,    only: warn
+      use grid,          only: coarsest
+      use mpisetup,      only: nproc
+      use multigridvars, only: single_base
 
       implicit none
 
@@ -2107,10 +2086,7 @@ contains
 
    end subroutine fft_solve_roof
 
-!!$ ============================================================================
-!>
-!! \brief Do the FFT convolution
-!<
+!> \brief Do the FFT convolution
 
    subroutine fft_convolve(curl)
 
@@ -2149,7 +2125,6 @@ contains
 
    end subroutine fft_convolve
 
-!!$ ============================================================================
 !>
 !! \brief Prolong solution data at level (lev-1) to faces at level lev
 !!

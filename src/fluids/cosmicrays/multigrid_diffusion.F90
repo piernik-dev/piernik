@@ -775,11 +775,11 @@ contains
                kd = RED_BLACK
             endif
 
-            if (kd == RED_BLACK) k1 = cg%ks + mod(n, RED_BLACK)
+            if (kd == RED_BLACK) k1 = cg%ks + int(mod(n+cg%off(zdim), int(RED_BLACK, kind=8)), kind=4)
             do k = k1, cg%ke, kd
-               if (jd == RED_BLACK) j1 = cg%js + mod(n+k, RED_BLACK)
+               if (jd == RED_BLACK) j1 = cg%js + int(mod(n+k+sum(cg%off(ydim:zdim)), int(RED_BLACK, kind=8)), kind=4)
                do j = j1, cg%je, jd
-                  if (id == RED_BLACK) i1 = cg%is + mod(n+j+k, RED_BLACK)
+                  if (id == RED_BLACK) i1 = cg%is + int(mod(n+j+k+sum(cg%off(xdim:zdim)), int(RED_BLACK, kind=8)), kind=4)
                   do i = i1, cg%ie, id
 
                      temp = cg%q(soln)%arr(i, j, k) - cg%q(src)%arr(i, j, k)

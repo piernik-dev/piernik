@@ -711,7 +711,7 @@ contains
       call this%vertical_prep
       call fine%vertical_prep
 
-!> \todo something like this (connected with a todo below):      if (dirty_debug) fine%first%cg%q(iv)%arr(:, :, :) = dirtyH
+      call fine%set_dirty(iv)
 
       select case (qna%lst(iv)%ord_prolong)
          case (O_D4)
@@ -785,9 +785,6 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
          if (allocated(cg%pi_tgt%seg)) then
-
-!            cg%q(iv)%arr(:,:,:) = 0. ! disables check_dirty
-!            cg%prolong_(:,:,:) = 0
 
             do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
                fse(:,:) = cg%pi_tgt%seg(g)%se(:,:)
@@ -923,7 +920,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-!> \todo (connected with todo above)      call check_dirty(fine, iv, "prolong+")
+      call fine%check_dirty(iv, "prolong+")
 
    end subroutine prolong_q_1var
 
