@@ -1224,7 +1224,7 @@ contains
       integer(kind=4), dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
 
       integer :: grav_bnd_global
-      integer, dimension(0) :: empty_array !< trick to avoid compiler warnings on possibly uninitialized i_all_dens.0 in init_source
+      integer(kind=4), dimension(0) :: empty_array !< trick to avoid compiler warnings on possibly uninitialized i_all_dens.0 in init_source
 
       ts =  set_timer("multigrid", .true.)
       grav_bnd_global = grav_bnd
@@ -1744,7 +1744,7 @@ contains
 
          if (dirty_debug) then
             write(dirty_label, '(a,i5)')"relax soln- smoo=", n
-            call curl%check_dirty(soln, dirty_label, expand=1)
+            call curl%check_dirty(soln, dirty_label, expand=I_ONE)
          endif
          cgl => curl%first
          do while (associated(cgl))
