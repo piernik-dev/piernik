@@ -86,7 +86,7 @@ contains
 !<
    subroutine div_v_6th_lp(ifluid, cg)
       use cg_list_global, only: all_cg
-      use constants,      only: xdim, zdim, big, ndims, INT4
+      use constants,      only: xdim, ydim, zdim, pdims, big
       use domain,         only: dom
       use fluidindex,     only: iarr_all_dn
       use grid_cont,      only: grid_container
@@ -96,7 +96,7 @@ contains
 
       integer(kind=4),               intent(in)    :: ifluid
       type(grid_container), pointer, intent(inout) :: cg
-      real, dimension(:),   pointer                :: divvel, mom, dn
+      real, dimension(:),   pointer                :: divvel, mom, dens
       integer(kind=4)                              :: dir, dir2, dir3
       integer                                      :: i2, i3
       real, parameter                              :: p3_4 = 3./4., m3_20 = -3./20., p1_60 = 1./60.
@@ -104,14 +104,17 @@ contains
       cg%q(qna%ind(divv_n))%arr(:,:,:) = 0.0
 
       do dir = xdim, zdim
-      dir2 = mod(dir,ndims)+1_INT4 ; dir3 = mod(dir+1_INT4,ndims)+1_INT4
-      if (dom%has_dir(dir)) then
-         do i2 = 1, cg%n_(dir2)
-            do i3 = 1, cg%n_(dir3)
+         if (.not. dom%has_dir(dir)) cycle
+         do i2 = 1, cg%n_(pdims(dir, ydim))
+            do i3 = 1, cg%n_(pdims(dir, zdim))
                divvel => cg%q(qna%ind(divv_n))%get_sweep(dir, i2, i3)
-               mom    => cg%w(all_cg%fi)%get_sweep(dir, iarr_all_dn(ifluid)+dir, i2, i3)
-               dn     => cg%w(all_cg%fi)%get_sweep(dir, iarr_all_dn(ifluid)    , i2, i3)
-               associate( vv  => (mom(:) / dn(:)), nn  => cg%n_(dir), idl => cg%idl(dir) )
+               mom  => cg%w(all_cg%fi)%get_sweep(dir, iarr_all_dn(ifluid) + dir, i2, i3)
+               dens => cg%w(all_cg%fi)%get_sweep(dir, iarr_all_dn(ifluid)      , i2, i3)
+               associate( &
+                  vv => mom(:) / dens(:), &
+                  nn => cg%n_(dir), &
+                  idl => cg%idl(dir) &
+               )
                   divvel(4:nn-3)  = divvel(4:nn-3) + (vv(5:nn-2) - vv(3:nn-4)) * (p3_4  * idl)
                   divvel(4:nn-3)  = divvel(4:nn-3) + (vv(6:nn-1) - vv(2:nn-5)) * (m3_20 * idl)
                   divvel(4:nn-3)  = divvel(4:nn-3) + (vv(7:nn  ) - vv(1:nn-6)) * (p1_60 * idl)
@@ -120,7 +123,6 @@ contains
                end associate
             enddo
          enddo
-      endif
       enddo
 
    end subroutine div_v_6th_lp
@@ -133,7 +135,7 @@ contains
    subroutine div_v_1st(ifluid, cg)
 
       use cg_list_global, only: all_cg
-      use constants,      only: xdim, zdim, half, ndims, INT4
+      use constants,      only: xdim, ydim, zdim, pdims, half
       use domain,         only: dom
       use fluidindex,     only: iarr_all_dn
       use grid_cont,      only: grid_container
@@ -150,21 +152,23 @@ contains
       cg%q(qna%ind(divv_n))%arr(:,:,:) = 0.0
 
       do dir = xdim, zdim
-         dir2 = mod(dir,ndims)+1_INT4 ; dir3 = mod(dir+1_INT4,ndims)+1_INT4
-         if (dom%has_dir(dir)) then
-            do i2 = 1, cg%n_(dir2)
-               do i3 = 1, cg%n_(dir3)
-                  divvel => cg%q(qna%ind(divv_n))%get_sweep(dir, i2, i3)
-                  mom    => cg%w(all_cg%fi)%get_sweep(dir, iarr_all_dn(ifluid)+dir, i2, i3)
-                  dn     => cg%w(all_cg%fi)%get_sweep(dir, iarr_all_dn(ifluid)    , i2, i3)
-                  associate( vv  => (mom(:) / dn(:)), nn  => cg%n_(dir), idl => cg%idl(dir) )
-                     divvel(2:nn-1) = divvel(2:nn-1) + (vv(3:nn) - vv(1:nn-2)) * (half * idl)
-                     divvel(1) = divvel(2)
-                     divvel(nn) = divvel(nn-1) ! for sanity
-                  end associate
-               enddo
+         if (.not.dom%has_dir(dir)) cycle
+         do i2 = 1, cg%n_(pdims(dir, ydim))
+            do i3 = 1, cg%n_(pdims(dir, zdim))
+               divvel => cg%q(qna%ind(divv_n))%get_sweep(dir, i2, i3)
+               mom    => cg%w(all_cg%fi)%get_sweep(dir, iarr_all_dn(ifluid)+dir, i2, i3)
+               dn     => cg%w(all_cg%fi)%get_sweep(dir, iarr_all_dn(ifluid)    , i2, i3)
+               associate( &
+                  vv => (mom(:) / dn(:)), &
+                  nn => cg%n_(dir), &
+                  idl => cg%idl(dir) &
+               )
+                  divvel(2:nn-1) = divvel(2:nn-1) + (vv(3:nn) - vv(1:nn-2)) * (half * idl)
+                  divvel(1) = divvel(2)
+                  divvel(nn) = divvel(nn-1) ! for sanity
+               end associate
             enddo
-         endif
+         enddo
       enddo
 
    end subroutine div_v_1st
