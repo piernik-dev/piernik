@@ -97,7 +97,7 @@ contains
       integer(kind=4),               intent(in)    :: ifluid
       type(grid_container), pointer, intent(inout) :: cg
       real, dimension(:),   pointer                :: divvel, mom, dens
-      integer(kind=4)                              :: dir, dir2, dir3
+      integer(kind=4)                              :: dir
       integer                                      :: i2, i3
       real, parameter                              :: p3_4 = 3./4., m3_20 = -3./20., p1_60 = 1./60.
 
@@ -146,7 +146,7 @@ contains
       integer(kind=4),               intent(in)    :: ifluid
       type(grid_container), pointer, intent(inout) :: cg
       real, dimension(:),   pointer                :: divvel, mom, dn
-      integer(kind=4)                              :: dir, dir2, dir3
+      integer(kind=4)                              :: dir
       integer                                      :: i2, i3
 
       cg%q(qna%ind(divv_n))%arr(:,:,:) = 0.0
