@@ -1087,7 +1087,6 @@ contains
             cgl => cgl%nxt
          enddo
       else
-         if (grav_bnd /= bnd_givenval) call die("[multigrid_gravity:init_source] empty space allowed only for given value boundaries.")
          call leaves%set_q_value(source, 0.)
       endif
 
