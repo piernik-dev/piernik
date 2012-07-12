@@ -155,7 +155,7 @@ contains
                   cg%u(flind%dst%imx,i,j,k) = 0.0
                   cg%u(flind%dst%imz,i,j,k) = 0.0
 #ifndef ISO
-                  cg%u(flind%dst%ien,i,j,:) = p_gas/(gamma_neu-1.0) + 0.5*(cg%u(flind%neu%imx,i,j,k)**2 + &
+                  cg%u(flind%dst%ien,i,j,:) = p_gas/(flind%neu%gam-1.0) + 0.5*(cg%u(flind%neu%imx,i,j,k)**2 + &
                        &                 cg%u(flind%neu%imy,i,j,k)**2+cg%u(flind%neu%imz,i,j,k)**2)/cg%u(flind%neu%idn,i,j,k)
 #endif /* !ISO */
                enddo

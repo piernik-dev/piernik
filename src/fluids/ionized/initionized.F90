@@ -45,7 +45,7 @@ module initionized
    implicit none
 
    private
-   public :: init_ionized, cleanup_ionized, ion_fluid, gamma_ion, cs_iso_ion, selfgrav_ion
+   public :: init_ionized, cleanup_ionized, ion_fluid
 
    real    :: gamma_ion       !< adiabatic index for the ionized gas component
    real    :: cs_iso_ion      !< isothermal sound speed (p = cs_iso_ion<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal

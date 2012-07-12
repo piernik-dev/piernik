@@ -225,7 +225,7 @@ contains
                   cg%u(neu%imy,i,j,k) = uy * rhog
                   cg%u(neu%imz,i,j,k) = 0.0
 #ifndef ISO
-                  cg%u(neu%ien,i,j,:) = 1.0/(gamma_neu-1.0)
+                  cg%u(neu%ien,i,j,:) = 1.0/(neu%gam-1.0)
 #endif /* !ISO */
 #endif /* NEUTRAL */
 #ifdef DUST

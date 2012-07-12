@@ -107,7 +107,7 @@ contains
    subroutine init_fluids
 
       use fluids_pub,      only: has_dst, has_ion, has_neu
-      use fluidindex,      only: fluid_index
+      use fluidindex,      only: fluid_index, flind
       use fluxes,          only: set_limiter
       use global,          only: limiter
       use dataio_pub,      only: die, code_progress, warn
@@ -115,8 +115,8 @@ contains
 #ifdef VERBOSE
       use dataio_pub,      only: printinfo
 #endif /* VERBOSE */
-      use initionized,     only: init_ionized, cs_iso_ion
-      use initneutral,     only: init_neutral, cs_iso_neu
+      use initionized,     only: init_ionized
+      use initneutral,     only: init_neutral
       use initdust,        only: init_dust
 #ifdef COSM_RAYS
       use initcosmicrays,  only: init_cosmicrays
@@ -145,8 +145,8 @@ contains
 
       call fluid_index    ! flind has valid values afterwards
 
-      if (has_neu .and. has_ion .and. cs_iso_neu /= cs_iso_ion) &
-         call warn("[initfluids:init_fluids]: 'cs_iso_neu' and 'cs_iso_ion' should be equal")
+      if (has_neu .and. has_ion .and. flind%ion%cs2 /= flind%neu%cs2) &
+         call warn("[initfluids:init_fluids]: flind%neu%cs2 and flind%ion%cs should be equal")
 
       call set_limiter(limiter)
 #ifdef VERBOSE
