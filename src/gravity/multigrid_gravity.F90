@@ -1022,9 +1022,7 @@ contains
                call printinfo(msg, stdout)
             endif
          case (O_I2)
-            dt_fac(1) = (t - history%old(p0)%time) / (history%old(p1)%time - history%old(p2)%time)
-            dt_fac(2) = (t - history%old(p1)%time) / (history%old(p2)%time - history%old(p0)%time)
-            dt_fac(3) = (t - history%old(p2)%time) / (history%old(p0)%time - history%old(p1)%time)
+            dt_fac(:) = (t - history%old([ p0, p1, p2 ])%time) / (history%old([ p1, p2, p0 ])%time - history%old([ p2, p0, p1 ])%time)
             call leaves%q_lin_comb([ ind_val(history%old(p0)%i_hist, -dt_fac(2)*dt_fac(3)), &
                  &                   ind_val(history%old(p1)%i_hist, -dt_fac(1)*dt_fac(3)), &
                  &                   ind_val(history%old(p2)%i_hist, -dt_fac(1)*dt_fac(2)) ], solution )
