@@ -477,6 +477,8 @@ contains
          curl => curl%finer
       enddo
 
+      base_no_fft = base_no_fft .and. (coarsest%tot_se > 1)
+
       ! data related to local and global base-level FFT solver
       if (base_no_fft) then
          coarsest%fft_type = fft_none

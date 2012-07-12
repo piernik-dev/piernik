@@ -1012,6 +1012,7 @@ contains
 !#ifdef VERBOSE
       call this%print_segments
 !#endif /* VERBOSE */
+      call this%update_tot_se
 
       call all_cg%update_req
 
