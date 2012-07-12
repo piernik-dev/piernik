@@ -490,17 +490,8 @@ contains
             coarsest%fft_type = fft_dst
          case default
             coarsest%fft_type = fft_none
-            if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] base_no_fft set but no suitable boundary conditions found. Reverting to RBGS relaxation.")
+            if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] base_no_fft unset but no suitable boundary conditions found. Reverting to RBGS relaxation.")
          end select
-      endif
-
-      !special initialization of global base-level FFT-related data
-      if (dom%geometry_type /= GEO_XYZ) then
-         curl => coarsest
-         do while (associated(curl))
-            if (curl%fft_type /= fft_none) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
-            curl => curl%finer
-         enddo
       endif
 
       require_FFT = .false.
