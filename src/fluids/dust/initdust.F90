@@ -45,7 +45,7 @@ module initdust
    private
    public :: init_dust, dust_fluid, cleanup_dust
 
-   logical :: selfgrav_dst    !< true if dust is selfgravitating
+   logical :: selfgrav    !< true if dust is selfgravitating
 
    type, extends(component_fluid) :: dust_fluid
       contains
@@ -64,7 +64,7 @@ contains
       class(dust_fluid), intent(inout) :: this
       type(var_numbers), intent(inout) :: flind
 
-      call this%set_fluid_index(flind, .false., selfgrav_dst, .false., 0.0, -1.0, DST)
+      call this%set_fluid_index(flind, .false., selfgrav, .false., 0.0, -1.0, DST)
 
    end subroutine initialize_dust_indices
 
@@ -94,7 +94,7 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>selfgrav_dst  </td><td>.false.</td><td>logical   </td><td>\copydoc initdust::selfgrav_dst  </td></tr>
+!! <tr><td>selfgrav  </td><td>.false.</td><td>logical   </td><td>\copydoc initdust::selfgrav  </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -106,15 +106,15 @@ contains
 
       implicit none
 
-      namelist /FLUID_DUST/ selfgrav_dst
+      namelist /FLUID_DUST/ selfgrav
 
-      selfgrav_dst = .false.
+      selfgrav = .false.
 
       if (master) then
 
          diff_nml(FLUID_DUST)
 
-         lbuff(1)   = selfgrav_dst
+         lbuff(1)   = selfgrav
 
       endif
 
@@ -122,7 +122,7 @@ contains
 
       if (slave) then
 
-         selfgrav_dst    = lbuff(1)
+         selfgrav    = lbuff(1)
 
       endif
 

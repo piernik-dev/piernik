@@ -59,7 +59,7 @@
  /
 
  $FLUID_NEUTRAL
-   cs_iso_neu = 100.0
+   cs_iso = 100.0
  /
 
  $PROBLEM_CONTROL

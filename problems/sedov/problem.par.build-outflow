@@ -56,11 +56,11 @@
  /
 
  $FLUID_IONIZED
-    gamma_ion  = 1.666666667
+    gamma  = 1.666666667
  /
 
  $FLUID_NEUTRAL
-    gamma_neu = 1.666666667
+    gamma = 1.666666667
  /
 
  $NUMERICAL_SETUP

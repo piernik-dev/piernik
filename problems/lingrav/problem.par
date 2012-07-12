@@ -50,7 +50,7 @@
  /
 
  $FLUID_IONIZED
-    gamma_ion = 1.66666667
+    gamma = 1.66666667
  /
 
  $NUMERICAL_SETUP

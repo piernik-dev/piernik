@@ -49,8 +49,8 @@
  /
 
  $FLUID_NEUTRAL
-    gamma_neu  = 1.0
-    cs_iso_neu = 0.3 ! ~ 307K ~ 1.13 km/s
+    gamma  = 1.0
+    cs_iso = 0.3 ! ~ 307K ~ 1.13 km/s
  /
 
  $FLUID_DUST

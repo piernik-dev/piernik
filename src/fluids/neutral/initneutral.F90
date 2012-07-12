@@ -46,9 +46,9 @@ module initneutral
    private
    public :: init_neutral, cleanup_neutral, neutral_fluid
 
-   real    :: gamma_neu             !< adiabatic index for the neutral gas component
-   real    :: cs_iso_neu            !< isothermal sound speed (p = cs_iso_neu<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
-   logical :: selfgrav_neu          !< true if neutral gas is selfgravitating
+   real    :: gamma             !< adiabatic index for the neutral gas component
+   real    :: cs_iso            !< isothermal sound speed (p = cs_iso<sup>2</sup>\f$\rho\f$), active only if neutral gas is \ref isothermal
+   logical :: selfgrav          !< true if neutral gas is selfgravitating
 
    type, extends(component_fluid) :: neutral_fluid
       contains
@@ -74,7 +74,7 @@ contains
       has_energy = .true.
 #endif /* !ISO */
 
-      call this%set_fluid_index(flind, .false., selfgrav_neu, has_energy, cs_iso_neu, gamma_neu, NEU)
+      call this%set_fluid_index(flind, .false., selfgrav, has_energy, cs_iso, gamma, NEU)
 
    end subroutine initialize_neu_indices
 
@@ -116,9 +116,9 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>gamma_neu     </td><td>5./3.   </td><td>real value </td><td>\copydoc initneutral::gamma_neu    </td></tr>
-!! <tr><td>cs_iso_neu    </td><td>1.0     </td><td>real value </td><td>\copydoc initneutral::cs_iso_neu   </td></tr>
-!! <tr><td>selfgrav_neu  </td><td>.false. </td><td>logical    </td><td>\copydoc initneutral::selfgrav_neu </td></tr>
+!! <tr><td>gamma     </td><td>5./3.   </td><td>real value </td><td>\copydoc initneutral::gamma    </td></tr>
+!! <tr><td>cs_iso    </td><td>1.0     </td><td>real value </td><td>\copydoc initneutral::cs_iso   </td></tr>
+!! <tr><td>selfgrav  </td><td>.false. </td><td>logical    </td><td>\copydoc initneutral::selfgrav </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -130,20 +130,20 @@ contains
 
       implicit none
 
-      namelist /FLUID_NEUTRAL/ gamma_neu, cs_iso_neu, selfgrav_neu
+      namelist /FLUID_NEUTRAL/ gamma, cs_iso, selfgrav
 
-      gamma_neu    = 5./3.
-      cs_iso_neu   = 1.0
-      selfgrav_neu = .false.
+      gamma    = 5./3.
+      cs_iso   = 1.0
+      selfgrav = .false.
 
       if (master) then
 
          diff_nml(FLUID_NEUTRAL)
 
-         lbuff(1)  = selfgrav_neu
+         lbuff(1)  = selfgrav
 
-         rbuff(1)  = gamma_neu
-         rbuff(2)  = cs_iso_neu
+         rbuff(1)  = gamma
+         rbuff(2)  = cs_iso
 
       endif
 
@@ -152,10 +152,10 @@ contains
 
       if (slave) then
 
-         selfgrav_neu = lbuff(1)
+         selfgrav = lbuff(1)
 
-         gamma_neu    = rbuff(1)
-         cs_iso_neu   = rbuff(2)
+         gamma    = rbuff(1)
+         cs_iso   = rbuff(2)
 
       endif
 

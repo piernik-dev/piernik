@@ -56,7 +56,7 @@
  /
 
  $FLUID_DUST
-    selfgrav_dst = .true.
+    selfgrav = .true.
  /
 
  $NUMERICAL_SETUP

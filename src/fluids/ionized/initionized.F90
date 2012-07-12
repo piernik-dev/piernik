@@ -47,10 +47,10 @@ module initionized
    private
    public :: init_ionized, cleanup_ionized, ion_fluid
 
-   real    :: gamma_ion       !< adiabatic index for the ionized gas component
-   real    :: cs_iso_ion      !< isothermal sound speed (p = cs_iso_ion<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
-!   real    :: cs_ion          !< unimplemented, unused
-   logical :: selfgrav_ion    !< true if ionized gas is selfgravitating
+   real    :: gamma       !< adiabatic index for the ionized gas component
+   real    :: cs_iso      !< isothermal sound speed (p = cs_iso<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
+!   real    :: cs_ion      !< unimplemented, unused
+   logical :: selfgrav    !< true if ionized gas is selfgravitating
 
    type, extends(component_fluid) :: ion_fluid
       contains
@@ -81,7 +81,7 @@ contains
       is_magnetized = .true.
 #endif /* !MAGNETIZED */
 
-      call this%set_fluid_index(flind, is_magnetized, selfgrav_ion, has_energy, cs_iso_ion, gamma_ion, ION)
+      call this%set_fluid_index(flind, is_magnetized, selfgrav, has_energy, cs_iso, gamma, ION)
 
    end subroutine initialize_ion_indices
 
@@ -149,9 +149,9 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>gamma_ion     </td><td>5./3.   </td><td>real value </td><td>\copydoc initionized::gamma_ion    </td></tr>
-!! <tr><td>cs_iso_ion    </td><td>1.0     </td><td>real value </td><td>\copydoc initionized::cs_iso_ion   </td></tr>
-!! <tr><td>selfgrav_ion  </td><td>.false. </td><td>logical    </td><td>\copydoc initionized::selfgrav_ion </td></tr>
+!! <tr><td>gamma     </td><td>5./3.   </td><td>real value </td><td>\copydoc initionized::gamma    </td></tr>
+!! <tr><td>cs_iso    </td><td>1.0     </td><td>real value </td><td>\copydoc initionized::cs_iso   </td></tr>
+!! <tr><td>selfgrav  </td><td>.false. </td><td>logical    </td><td>\copydoc initionized::selfgrav </td></tr>
 !! </table>
 !! \n \n
 !<
@@ -163,20 +163,20 @@ contains
 
       implicit none
 
-      namelist /FLUID_IONIZED/ gamma_ion, cs_iso_ion, selfgrav_ion
+      namelist /FLUID_IONIZED/ gamma, cs_iso, selfgrav
 
-      gamma_ion    = 5./3.
-      cs_iso_ion   = 1.0
-      selfgrav_ion = .false.
+      gamma    = 5./3.
+      cs_iso   = 1.0
+      selfgrav = .false.
 
       if (master) then
 
          diff_nml(FLUID_IONIZED)
 
-         lbuff(1)  = selfgrav_ion
+         lbuff(1)  = selfgrav
 
-         rbuff(1)  = gamma_ion
-         rbuff(2)  = cs_iso_ion
+         rbuff(1)  = gamma
+         rbuff(2)  = cs_iso
 
       endif
 
@@ -185,10 +185,10 @@ contains
 
       if (slave) then
 
-         selfgrav_ion = lbuff(1)
+         selfgrav = lbuff(1)
 
-         gamma_ion    = rbuff(1)
-         cs_iso_ion   = rbuff(2)
+         gamma    = rbuff(1)
+         cs_iso   = rbuff(2)
 
       endif
 

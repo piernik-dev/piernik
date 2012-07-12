@@ -52,8 +52,8 @@
  /
 
  $FLUID_NEUTRAL
-    gamma_neu  = 1.0
-    cs_iso_neu = 0.25 ! 0.05507   ! 150K for PLN
+    gamma  = 1.0
+    cs_iso = 0.25 ! 0.05507   ! 150K for PLN
  /
 
  $FLUID_DUST

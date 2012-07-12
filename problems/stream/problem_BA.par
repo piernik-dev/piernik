@@ -47,8 +47,8 @@
  /
 
  $FLUID_NEUTRAL
-    gamma_neu   = 1.0
-    cs_iso_neu  = 1.0
+    gamma   = 1.0
+    cs_iso  = 1.0
  /
 
  $FLUID_DUST

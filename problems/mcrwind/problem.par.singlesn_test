@@ -52,8 +52,8 @@
  /
 
  $FLUID_IONIZED
-    gamma_ion = 1.66666667
-    cs_iso_ion  =  7.0            ! sound speed
+    gamma = 1.66666667
+    cs_iso  =  7.0            ! sound speed
  /
 
  $NUMERICAL_SETUP

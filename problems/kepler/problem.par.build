@@ -51,7 +51,7 @@
  /
 
  $FLUID_IONIZED
-    cs_iso_ion = 0.2
+    cs_iso = 0.2
  /
 
  $NUMERICAL_SETUP
