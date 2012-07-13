@@ -400,19 +400,20 @@ contains
 
    subroutine init_multigrid_grav_post
 
-      use constants,     only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, varlen
-      use dataio_pub,    only: die, warn, printinfo, msg
-      use domain,        only: dom
-      use cg_list,       only: cg_list_element
-      use cg_list_level, only: cg_list_level_T
-      use grid,          only: leaves, finest, coarsest
-      use grid_cont,     only: grid_container
-      use mpi,           only: MPI_COMM_NULL
-      use mpisetup,      only: master, nproc
-      use multigridvars, only: is_mg_uneven, need_general_pf, single_base
-      use multipole,     only: init_multipole, coarsen_multipole
-      use named_array,   only: qna
-      use types,         only: cdd
+      use cg_list,        only: cg_list_element
+      use cg_list_global, only: all_cg
+      use cg_list_level,  only: cg_list_level_T
+      use constants,      only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, varlen
+      use dataio_pub,     only: die, warn, printinfo, msg
+      use domain,         only: dom
+      use grid,           only: leaves, finest, coarsest
+      use grid_cont,      only: grid_container
+      use mpi,            only: MPI_COMM_NULL
+      use mpisetup,       only: master, nproc
+      use multigridvars,  only: is_mg_uneven, need_general_pf, single_base
+      use multipole,      only: init_multipole, coarsen_multipole
+      use named_array,    only: qna
+      use types,          only: cdd
 
       implicit none
 
@@ -440,29 +441,30 @@ contains
 
       call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
 
+      ! this should work correctly also when dom%eff_dim < 3
+      cgl => all_cg%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         cg%mg%r  = overrelax   / 2.
+         cg%mg%rx = cg%dvol2 * cg%idx2
+         cg%mg%ry = cg%dvol2 * cg%idy2
+         cg%mg%rz = cg%dvol2 * cg%idz2
+         cg%mg%r  = cg%mg%r  / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
+         cg%mg%rx = overrelax_x * cg%mg%rx * cg%mg%r
+         cg%mg%ry = overrelax_y * cg%mg%ry * cg%mg%r
+         cg%mg%rz = overrelax_z * cg%mg%rz * cg%mg%r
+         cg%mg%r  = cg%mg%r  * cg%dvol2
+         !>
+         !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
+         !! and overrelaxation factors are required to get any convergence (often poor)
+         !<
+
+         cgl => cgl%nxt
+      enddo
+
       curl => coarsest
       do while (associated(curl))
-         ! this should work correctly also when dom%eff_dim < 3
-         cgl => curl%first
-         do while (associated(cgl))
-            cg => cgl%cg
-
-            cg%mg%r  = overrelax   / 2.
-            cg%mg%rx = cg%dvol2 * cg%idx2
-            cg%mg%ry = cg%dvol2 * cg%idy2
-            cg%mg%rz = cg%dvol2 * cg%idz2
-            cg%mg%r  = cg%mg%r  / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
-            cg%mg%rx = overrelax_x * cg%mg%rx * cg%mg%r
-            cg%mg%ry = overrelax_y * cg%mg%ry * cg%mg%r
-            cg%mg%rz = overrelax_z * cg%mg%rz * cg%mg%r
-            cg%mg%r  = cg%mg%r  * cg%dvol2
-            !>
-            !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
-            !! and overrelaxation factors are required to get any convergence (often poor)
-            !<
-
-            cgl => cgl%nxt
-         enddo
 
          if (prefer_rbgs_relaxation) then
             curl%fft_type = fft_none
@@ -890,18 +892,16 @@ contains
    subroutine cleanup_multigrid_grav
 
 !!$      use constants,     only: LO, HI, ndims
-      use cg_list,     only: cg_list_element
-      use grid,        only: coarsest
-      use cg_list_level, only: cg_list_level_T
+      use cg_list,        only: cg_list_element
+      use cg_list_global, only: all_cg
 !!$      use grid_cont,   only: tgt_list
-      use multipole,   only: cleanup_multipole
+      use multipole,      only: cleanup_multipole
 
       implicit none
 
 !!$      integer :: g, ib
 !!$      integer, parameter :: nseg = 2*(HI-LO+1)*ndims
 !!$      type(tgt_list), dimension(nseg) :: io_tgt
-      type(cg_list_level_T), pointer :: curl
       type(cg_list_element), pointer :: cgl
 
       call cleanup_multipole
@@ -909,17 +909,15 @@ contains
       if (allocated(vstat%factor)) deallocate(vstat%factor)
       if (allocated(vstat%time)) deallocate(vstat%time)
 
-      curl => coarsest
-      do while (associated(curl))
-         cgl => curl%first
-         do while (associated(cgl))
-            if (allocated(cgl%cg%mg%fft))     deallocate(cgl%cg%mg%fft)
-            if (allocated(cgl%cg%mg%fftr))    deallocate(cgl%cg%mg%fftr)
-            if (allocated(cgl%cg%mg%src))     deallocate(cgl%cg%mg%src)
-            if (allocated(cgl%cg%mg%Green3D)) deallocate(cgl%cg%mg%Green3D)
+      cgl => all_cg%first
+      do while (associated(cgl))
+         if (allocated(cgl%cg%mg%fft))     deallocate(cgl%cg%mg%fft)
+         if (allocated(cgl%cg%mg%fftr))    deallocate(cgl%cg%mg%fftr)
+         if (allocated(cgl%cg%mg%src))     deallocate(cgl%cg%mg%src)
+         if (allocated(cgl%cg%mg%Green3D)) deallocate(cgl%cg%mg%Green3D)
 
-            if (cgl%cg%mg%planf /= 0) call dfftw_destroy_plan(cgl%cg%mg%planf)
-            if (cgl%cg%mg%plani /= 0) call dfftw_destroy_plan(cgl%cg%mg%plani)
+         if (cgl%cg%mg%planf /= 0) call dfftw_destroy_plan(cgl%cg%mg%planf)
+         if (cgl%cg%mg%plani /= 0) call dfftw_destroy_plan(cgl%cg%mg%plani)
 
 !!$            io_tgt(1:nseg) = [ cgl%cg%mg%pfc_tgt, cgl%cg%mg%pff_tgt ]
 !!$            do ib = 1, nseg
@@ -931,9 +929,7 @@ contains
 !!$                  deallocate(io_tgt(ib)%seg)
 !!$               endif
 !!$            enddo
-            cgl => cgl%nxt
-         enddo
-         curl => curl%finer
+         cgl => cgl%nxt
       enddo
 
       call dfftw_cleanup
