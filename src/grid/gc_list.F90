@@ -317,13 +317,14 @@ contains
 !<
    subroutine get_extremum(this, ind, minmax, prop, dir)
 
-      use constants,  only: MINL, MAXL, I_ONE, ndims, xdim, ydim, zdim, big_float
-      use dataio_pub, only: msg, warn, die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
-      use mpisetup,   only: comm, mpi_err, master, proc, FIRST
-      use types,      only: value
+      use constants,   only: MINL, MAXL, I_ONE, ndims, xdim, ydim, zdim, big_float
+      use dataio_pub,  only: msg, warn, die
+      use domain,      only: dom
+      use grid_cont,   only: grid_container
+      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
+      use mpisetup,    only: comm, mpi_err, master, proc, FIRST
+      use named_array, only: qna
+      use types,       only: value
 
       implicit none
 
@@ -397,7 +398,8 @@ contains
             if (present(dir))      prop%assoc        = cg_x%dl(dir)
             ! else prop%assoc = minval(cg_x%dl(:)) ???
          else
-            call die("[gc_list:get_extremum] not associated(cg_x)")
+            write(msg,'(a,a)') "[gc_list:get_extremum] cg_x not associated for q array name ", qna%lst(ind)%name
+            call die(msg)
          endif
       endif
 
