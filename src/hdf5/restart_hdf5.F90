@@ -431,7 +431,6 @@ contains
       use constants,    only: ndims, LONG, AT_IGNORE, dsetnamelen
       use dataio_pub,   only: msg, die
       use domain,       only: is_multicg
-      use external_bnd, only: arr3d_boundaries
       use gc_list,      only: cg_list_element
       use grid,         only: leaves
       use grid_cont,    only: grid_container
@@ -558,7 +557,7 @@ contains
       call h5sclose_f(filespace, error)
       call h5dclose_f(dset_id, error)
 
-      if (tgt3d) call arr3d_boundaries(leaves, qna%ind(dname), area_type=area_type)
+      if (tgt3d) call leaves%arr3d_boundaries(qna%ind(dname), area_type=area_type)
       ! Originally the pa3d array was written with the guardcells. The internal guardcells will be exchanged but the external ones are lost.
 
       ! rank-4 arrays (cg%u(:,:,:,:) and b(:,:,:,:)) have their own guardcell-exchange routines, which can also be called here

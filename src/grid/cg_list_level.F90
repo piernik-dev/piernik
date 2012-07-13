@@ -31,9 +31,10 @@
 
 module cg_list_lev
 
-   use constants, only: ndims
-   use gc_list,   only: cg_list
-   use domain,    only: cuboids
+   use cg_list_bnd, only: cg_list_bnd_T
+   use constants,   only: ndims
+   use domain,      only: cuboids
+   use gc_list,     only: cg_list
 
    implicit none
 
@@ -45,7 +46,7 @@ module cg_list_lev
    !!
    !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg ("islands: made of one or more cg: cg_list_patch).
    !<
-   type, extends(cg_list) :: cg_list_level
+   type, extends(cg_list_bnd_T) :: cg_list_level
       integer(kind=4) :: lev                   !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
       integer(kind=8), dimension(ndims) :: n_d !< maximum number of grid cells in each direction (size of fully occupied level)
       type(cuboids), dimension(:), allocatable :: pse  !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
@@ -678,7 +679,6 @@ contains
       use constants,      only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, BND_REF, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4, refinement_factor
       use dataio_pub,     only: msg, warn, die
       use domain,         only: dom
-      use external_bnd,   only: arr3d_boundaries
       use gc_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use mpisetup,       only: comm, mpi_err, req, status
@@ -742,7 +742,7 @@ contains
 
       if (this%ord_prolong_set /= O_INJ) then
          !> \todo some variables may need special care on external boundaries
-         call arr3d_boundaries(this, iv, bnd_type = BND_REF, corners = .true.) ! nb =  int(stencil_range, kind=4) ! not needed for injection
+         call this%arr3d_boundaries(iv, bnd_type = BND_REF, corners = .true.) ! nb =  int(stencil_range, kind=4) ! not needed for injection
       endif
 
       nr = 0

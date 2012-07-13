@@ -313,7 +313,6 @@ contains
       use gc_list,           only: cg_list_element
       use grid,              only: leaves
       use grid_cont,         only: grid_container
-      use external_bnd,      only: arr3d_boundaries
       use named_array,       only: qna
 #ifdef POISSON_FFT
       use domain,            only: is_multicg
@@ -354,7 +353,7 @@ contains
       ! communicate boundary values for sgp(:, :, :) because multigrid solver gives at most 2 guardcells, while for hydro solver typically 4 is required.
 
 !> \warning An improper evaluation of guardcell potential may occur when the multigrid boundary conditions doesn't match /BOUNDARIES/ namelist (e.g. isolated on periodic domain).
-      call arr3d_boundaries(leaves, qna%ind(sgp_n))
+      call leaves%arr3d_boundaries(qna%ind(sgp_n))
 
       if (frun) then
          call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))

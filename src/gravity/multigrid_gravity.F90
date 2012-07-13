@@ -1165,7 +1165,6 @@ contains
 #endif /* __INTEL_COMPILER */
       use constants,     only: BND_XTRAP, BND_REF
       use domain,        only: dom
-      use external_bnd,  only: arr3d_boundaries
       use global,        only: t
       use grid,          only: leaves, finest
       use multigridvars, only: solution
@@ -1189,9 +1188,9 @@ contains
       ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
       ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
       if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
-         call arr3d_boundaries(finest, solution, nb = dom%nb, bnd_type = BND_XTRAP)
+         call finest%arr3d_boundaries(solution, nb = dom%nb, bnd_type = BND_XTRAP)
       else
-         call arr3d_boundaries(finest, solution, nb = dom%nb, bnd_type = BND_REF)
+         call finest%arr3d_boundaries(solution, nb = dom%nb, bnd_type = BND_REF)
       endif
 
    end subroutine store_solution
@@ -1447,7 +1446,6 @@ contains
       use constants,    only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half, I_ONE, BND_NEGREF
       use dataio_pub,   only: die
       use domain,       only: dom
-      use external_bnd, only: arr3d_boundaries
       use gc_list,      only: cg_list_element
       use grid_cont,    only: grid_container
 
@@ -1463,7 +1461,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
+      call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
       ! corners are required for non-cartesian decompositions because current implementation of arr3d_boundaries may use overlapping buffers at triple points
 
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
@@ -1567,7 +1565,6 @@ contains
       use constants,    only: I_TWO, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
       use dataio_pub,   only: die, warn
       use domain,       only: dom
-      use external_bnd, only: arr3d_boundaries
       use gc_list,      only: cg_list_element
       use grid_cont,    only: grid_container
       use mpisetup,     only: master
@@ -1598,7 +1595,7 @@ contains
          firstcall = .false.
       endif
 
-      call arr3d_boundaries(curl, soln, nb = I_TWO, bnd_type = BND_NEGREF) ! no corners required
+      call curl%arr3d_boundaries(soln, nb = I_TWO, bnd_type = BND_NEGREF) ! no corners required
 
       c21 = 1.
       c42 = - L4_scaling * L4_strength
@@ -1697,7 +1694,6 @@ contains
       use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
       use dataio_pub,    only: die
       use domain,        only: dom
-      use external_bnd,  only: arr3d_boundaries
       use gc_list,       only: cg_list_element, dirty_label
       use global,        only: dirty_debug
       use grid,          only: coarsest
@@ -1730,7 +1726,7 @@ contains
       if (dom%geometry_type == GEO_RPZ .and. .not. multidim_code_3D) call die("[multigrid_gravity:approximate_solution_rbgs] multidim_code_3D = .false. not implemented")
 
       do n = 1, RED_BLACK*nsmoo
-         call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
+         call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
          ! corners are required for non-cartesian decompositions because current implementation of arr3d_boundaries may use overlapping buffers at triple points
 
          if (dirty_debug) then
@@ -1743,9 +1739,9 @@ contains
 
             ! Possible optimization: this is the most costly part of the RBGS relaxation (instruction count, read and write data, L1 and L2 read cache miss)
             ! do n = 1, nsmoo
-            !    call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NEGREF)
+            !    call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF)
             !    relax single layer of red cells at all faces
-            !    call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NEGREF)
+            !    call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF)
             !    relax interior cells (except for single layer of cells at all faces), first red, then 1-cell behind black one.
             !    relax single layer of black cells at all faces
             ! enddo
@@ -1863,7 +1859,6 @@ contains
       use constants,     only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2, BND_NEGREF, fft_none, fft_dst, dirtyL
       use dataio_pub,    only: die, warn
       use domain,        only: dom
-      use external_bnd,  only: arr3d_boundaries
       use gc_list,       only: cg_list_element
       use global,        only: dirty_debug
       use grid,          only: coarsest
@@ -1899,7 +1894,7 @@ contains
             if (nf == 1 .and. .not. associated(curl, coarsest)) then
                call make_face_boundaries(curl, soln)
             else
-               call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NEGREF)
+               call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF)
                cgl => curl%first
                do while (associated(cgl))
                   cg => cgl%cg
@@ -1965,7 +1960,7 @@ contains
 
          !relax the boundaries
          do n = 1, nsmoo
-            call arr3d_boundaries(curl, soln, nb = I_ONE, bnd_type = BND_NEGREF)
+            call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF)
             ! Possible optimization: This is a quite costly part of the local FFT solver
             cgl => curl%first
             do while (associated(cgl))
@@ -2134,7 +2129,6 @@ contains
       use constants,     only: xdim, ydim, zdim, LO, HI, LONG, I_ONE, half, O_INJ, O_LIN, O_D2, O_I2, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom, is_multicg
-      use external_bnd,  only: arr3d_boundaries
       use grid,          only: coarsest
       use grid_cont,     only: pr_segment
       use mpi,           only: MPI_DOUBLE_PRECISION
@@ -2324,7 +2318,7 @@ contains
          if (ord_prolong_face_norm < O_INJ) ord_prolong_face_norm = O_INJ
          b_rng = s_rng
          if (ord_prolong_face_norm > O_INJ) b_rng = max(b_rng, int(ord_prolong_face_norm+1, kind=4))
-         call arr3d_boundaries(coarse, soln, nb = b_rng, bnd_type = BND_NEGREF, corners = (ord_prolong_face_par/=0)) !> \deprecated BEWARE for higher prolongation order more guardcell are required
+         call coarse%arr3d_boundaries(soln, nb = b_rng, bnd_type = BND_NEGREF, corners = (ord_prolong_face_par/=0)) !> \deprecated BEWARE for higher prolongation order more guardcell are required
          call coarse%check_dirty(soln, "prolong_faces", s_rng)
          associate ( &
             ffcg => fine%first%cg, &

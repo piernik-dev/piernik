@@ -68,8 +68,8 @@ contains
 
 !>
 !! \brief boundaries for wcr
-!! This procedure is a shameless copy of external_bnd::arr3d_boundaries adapted for wcr
-!! \todo REMOVE ME, FIX ME, MERGE ME with external_bnd::arr3d_boundaries or at least have a decency to make me more general
+!! This procedure is a shameless copy of cg_list_bnd%arr3d_boundaries adapted for wcr
+!! \todo REMOVE ME, FIX ME, MERGE ME with cg_list_bnd%arr3d_boundaries or at least have a decency to make me more general
 !<
    subroutine all_wcr_boundaries
 
@@ -80,7 +80,6 @@ contains
       use gc_list,        only: cg_list_element
       use grid,           only: leaves
       use grid_cont,      only: grid_container
-      use internal_bnd,   only: internal_boundaries_4d
       use mpi,            only: MPI_REQUEST_NULL, MPI_COMM_NULL
       use mpisetup,       only: mpi_err, req, status
       use named_array,    only: wna
@@ -96,7 +95,7 @@ contains
 
       if (.not. has_cr) return
 
-      if (cdd%comm3d == MPI_COMM_NULL) call internal_boundaries_4d(all_cg, wna%ind(wcr_n)) ! should be more selective (modified leaves?)
+      if (cdd%comm3d == MPI_COMM_NULL) call all_cg%internal_boundaries_4d(wna%ind(wcr_n)) ! should be more selective (modified leaves?)
 
       cgl => leaves%first
       do while (associated(cgl))

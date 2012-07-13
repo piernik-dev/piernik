@@ -465,7 +465,6 @@ contains
       use domain,         only: dom
       use gc_list,        only: cg_list_element
       use grid,           only: leaves
-      use internal_bnd,   only: internal_boundaries_4d
       use mpi,            only: MPI_COMM_NULL
       use types,          only: cdd
 
@@ -476,7 +475,7 @@ contains
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          do dir = xdim, zdim
-            if (dom%has_dir(dir)) call internal_boundaries_4d(all_cg, all_cg%bi, dim=dir) ! should be more selective (modified leaves?)
+            if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(all_cg%bi, dim=dir) ! should be more selective (modified leaves?)
          enddo
       endif
 

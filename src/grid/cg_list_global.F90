@@ -31,7 +31,7 @@
 
 module cg_list_global
 
-   use gc_list,     only: cg_list
+   use cg_list_bnd, only: cg_list_bnd_T
 
    implicit none
 
@@ -51,7 +51,7 @@ module cg_list_global
    !! - Simulations with mixed dimensionality (e.g. 2d grid for dust particles and 3d grid for gas) should probably also use separate cg_list
    !! for their data (and additional routine for coupling the two grid sets).
    !<
-   type, extends(cg_list) :: cg_list_glob
+   type, extends(cg_list_bnd_T) :: cg_list_glob
 
       integer(kind=4) :: ord_prolong_nb                !< Maximum number of boundary cells required for prolongation
 
