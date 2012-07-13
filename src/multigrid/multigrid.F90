@@ -80,7 +80,7 @@ contains
       use dataio_pub,          only: printinfo, warn, die, code_progress
       use decomposition,       only: divide_domain!, deallocate_pse
       use domain,              only: dom, is_uneven
-      use gc_list,             only: cg_list_element
+      use cg_list,             only: cg_list_element
       use global,              only: dirty_debug, do_ascii_dump
       use grid,                only: base_lev, finest, coarsest
       use grid_cont,           only: grid_container
@@ -111,7 +111,8 @@ contains
 
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug
 
-      if (code_progress < PIERNIK_INIT_GRID) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized") ! This check is too weak (geometry), arrays are required only for multigrid_gravity
+      if (code_progress < PIERNIK_INIT_GRID) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
+      ! This check is too weak (geometry), arrays are required only for multigrid_gravity
 
       if (.not.frun) call die("[multigrid:init_multigrid] Called more than once.")
       frun = .false.
@@ -204,13 +205,13 @@ contains
 
          coarsest => curl
 
-         if (curl%lev <= -level_max) exit
+         if (curl%level_id <= -level_max) exit
 
          ! create coarser level:
          allocate(tmpl)
          call tmpl%init(curl, coarse = .true.)   ! create an empty level
 
-         if (tmpl%lev == -level_max .and. single_base) then
+         if (tmpl%level_id == -level_max .and. single_base) then
             call base_on_single(tmpl)
          else
 
@@ -218,11 +219,11 @@ contains
             patch%n_d = int(tmpl%n_d, kind=4)
 
             if (.not. divide_domain(patch)) then
-               write(msg,'(a,i4)')"[multigrid:init_multigrid] Coarse domain decomposition failed at level ",tmpl%lev
+               write(msg,'(a,i4)')"[multigrid:init_multigrid] Coarse domain decomposition failed at level ",tmpl%level_id
                if (master) call warn(msg)
                if (single_base) then
                   call base_on_single(tmpl)
-                  level_max = -tmpl%lev
+                  level_max = -tmpl%level_id
                else
                   deallocate(tmpl)
                   nullify(curl%coarser)
@@ -248,14 +249,16 @@ contains
 
             if (any(cg%n_b(:) < dom%nb .and. dom%has_dir(:))) then
                write(msg, '(a,i1,a,3i4,2(a,i2))')"[multigrid:init_multigrid] Number of guardcells exceeds number of interior cells: ", &
-                    dom%nb, " > ", cg%n_b(:), " at level ", curl%lev, ". You may try to set level_max <=", -curl%lev
+                    dom%nb, " > ", cg%n_b(:), " at level ", curl%level_id, ". You may try to set level_max <=", -curl%level_id
                call die(msg)
             endif
 
-            if (any(cg%n_b(:) * refinement_factor**(finest%lev - curl%lev) /= finest%first%cg%n_b(:) .and. dom%has_dir(:)) .and. (.not. associated(curl, coarsest) .or. .not. single_base)) is_mg_uneven = .true.
+            if (any(cg%n_b(:) * refinement_factor**(finest%level_id - curl%level_id) /= finest%first%cg%n_b(:) .and. dom%has_dir(:)) .and. &
+                 (.not. associated(curl, coarsest) .or. .not. single_base)) is_mg_uneven = .true.
 
             ! data storage
-            if ( allocated(cg%mg%bnd_x) .or. allocated(cg%mg%bnd_y) .or. allocated(cg%mg%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
+            if ( allocated(cg%mg%bnd_x) .or. allocated(cg%mg%bnd_y) .or. allocated(cg%mg%bnd_z)) &
+                 call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
             allocate(cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, LO:HI))
             allocate(cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, LO:HI))
             allocate(cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, LO:HI))
@@ -305,7 +308,8 @@ contains
 
       ! summary
       if (master) then
-         write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", finest%lev - coarsest%lev, " coarse levels, coarse level resolution [ ", coarsest%n_d(:)," ]"
+         write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", finest%level_id - coarsest%level_id, &
+              &                      " coarse levels, coarse level resolution [ ", coarsest%n_d(:)," ]"
          call printinfo(msg)
       endif
 

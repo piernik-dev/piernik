@@ -83,7 +83,7 @@ contains
       use constants,   only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4, fluid_n, mag_n, wa_n
       use dataio_pub,  only: die, warn, msg
       use domain,      only: dom
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use named_array, only: qna, wna, na_var
 
       implicit none
@@ -221,7 +221,7 @@ contains
 
       use constants,   only: INVALID, base_level_id
       use dataio_pub,  only: msg, die
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use named_array, only: qna, wna
 
       implicit none

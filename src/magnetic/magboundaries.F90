@@ -463,7 +463,7 @@ contains
       use cg_list_global, only: all_cg
       use constants,      only: xdim, zdim
       use domain,         only: dom
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid,           only: leaves
       use mpi,            only: MPI_COMM_NULL
       use types,          only: cdd

@@ -149,7 +149,7 @@ contains
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre
@@ -222,7 +222,7 @@ contains
    subroutine compute_analytic_ecr1
 
       use dataio_pub,     only: die
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use global,         only: t
       use grid,           only: leaves
       use grid_cont,      only: grid_container
@@ -295,7 +295,7 @@ contains
 
       use constants,      only: PIERNIK_FINISHED, I_ONE, I_TWO
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use global,         only: nstep
       use grid,           only: leaves
       use grid_cont,      only: grid_container

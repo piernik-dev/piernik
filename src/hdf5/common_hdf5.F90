@@ -525,7 +525,7 @@ contains
 
       use cg_list_global, only: all_cg
       use dataio_pub,     only: die
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
 
       implicit none
@@ -611,7 +611,7 @@ contains
       use units,          only: cm, sek
       use dataio_pub,     only: die, nproc_io, can_i_write, domain_dump
       use domain,         only: dom
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use gdf,            only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets
       use global,         only: t
       use grid,           only: leaves

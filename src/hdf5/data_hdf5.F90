@@ -284,7 +284,7 @@ contains
       use constants,   only: xdim, ydim, zdim, ndims
       use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars
       use dataio_pub,  only: die, nproc_io, can_i_write
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use grid,        only: leaves
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
@@ -479,7 +479,7 @@ contains
       use constants,   only: ndims
       use domain,      only: is_multicg !, is_uneven
       use grid,        only: finest
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, &
            &                 H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, &
@@ -599,7 +599,7 @@ contains
       use constants,       only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
       use common_hdf5,     only: nhdf_vars, hdf_vars
       use dataio_pub,      only: msg, printio, printinfo, tmr_hdf, thdf, last_hdf_time, piernik_hdf5_version
-      use gc_list,         only: cg_list_element
+      use cg_list,         only: cg_list_element
       use grid,            only: leaves
       use grid_cont,       only: grid_container
       use h5lt,            only: h5ltmake_dataset_float_f, h5ltmake_dataset_double_f

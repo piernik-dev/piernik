@@ -44,14 +44,14 @@
 
 module cg_list_bnd
 ! pulled by ANY
-   use gc_list,   only: cg_list
+   use cg_list,   only: cg_list_T
 
    implicit none
 
    private
    public :: cg_list_bnd_T
 
-   type, extends(cg_list) :: cg_list_bnd_T
+   type, extends(cg_list_T) :: cg_list_bnd_T
     contains
       procedure          :: internal_boundaries_3d  !> A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
       procedure          :: internal_boundaries_4d  !> A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
@@ -108,7 +108,7 @@ contains
       use constants,  only: xdim, zdim, I_ONE, I_TWO
       use dataio_pub, only: die, warn
       use domain,     only: dom
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_COMM_NULL
       use mpisetup,   only: comm, mpi_err, req, status
@@ -215,7 +215,7 @@ contains
            &                  BND_PER, BND_MPI, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
       use dataio_pub,   only: die, msg
       use domain,       only: dom
-      use gc_list,      only: cg_list_element
+      use cg_list,      only: cg_list_element
       use grid_cont,    only: grid_container
       use mpi,          only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
       use mpisetup,     only: mpi_err, comm, req, status

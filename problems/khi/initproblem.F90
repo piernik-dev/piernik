@@ -112,7 +112,7 @@ contains
       use domain,     only: dom
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use grid,       only: leaves
       use grid_cont,  only: grid_container
 

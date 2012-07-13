@@ -34,7 +34,6 @@ module grid
 
    use cg_list_bnd, only: cg_list_bnd_T
    use cg_list_lev, only: cg_list_level, cg_list_patch
-   use gc_list,     only: cg_list
 
    implicit none
 
@@ -59,7 +58,7 @@ contains
       use constants,      only: PIERNIK_INIT_DOMAIN, I_ZERO, base_level_id, base_level_offset
       use dataio_pub,     only: printinfo, die, code_progress
       use domain,         only: pdom
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
 #ifdef ISO
       use constants,      only: I_ONE, cs_i2_n
@@ -145,7 +144,7 @@ contains
       use decomposition, only: divide_domain
       use dataio_pub,    only: die
       use domain,        only: is_mpi_noncart, is_multicg, is_refined, is_uneven
-      use gc_list,       only: cg_list_element
+      use cg_list,       only: cg_list_element
       use mpi,           only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
       use mpisetup,      only: proc, comm, mpi_err, master
       use types,         only: cdd
@@ -207,7 +206,7 @@ contains
    subroutine cleanup_grid
 
       use cg_list_global, only: all_cg
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use named_array,    only: qna, wna
 
       implicit none

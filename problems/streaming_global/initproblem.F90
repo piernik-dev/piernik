@@ -170,7 +170,7 @@ contains
       use domain,     only: dom
       use fluidindex, only: flind
       use grid,       only: leaves
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
@@ -220,7 +220,7 @@ contains
       use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: printinfo
       use grid,       only: leaves
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use fluidindex, only: flind
       use mpisetup,   only: proc, master
@@ -267,7 +267,7 @@ contains
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use gravity,     only: ptmass, grav_pot2accel
       use grid,        only: leaves
       use grid_cont,   only: grid_container
@@ -388,7 +388,7 @@ contains
       use domain,          only: is_multicg, dom
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_dn, iarr_all_mz
-      use gc_list,         only: cg_list_element
+      use cg_list,         only: cg_list_element
       use global,          only: t, grace_period_passed, relax_time, smalld !, dt
       use gravity,         only: ptmass
       use grid,            only: leaves
@@ -474,7 +474,7 @@ contains
 
       use gravity,   only: sum_potential
       use grid,      only: leaves
-      use gc_list,   only: cg_list_element
+      use cg_list,   only: cg_list_element
       use grid_cont, only: grid_container
       use types,     only: axes
 

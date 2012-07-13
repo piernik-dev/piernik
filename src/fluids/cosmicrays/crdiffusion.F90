@@ -77,7 +77,7 @@ contains
       use constants,      only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE, wcr_n
       use dataio_pub,     only: die
       use domain,         only: dom
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_REQUEST_NULL, MPI_COMM_NULL
@@ -164,7 +164,7 @@ contains
       use domain,         only: dom
       use fluidindex,     only: flind
       use global,         only: dt
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp

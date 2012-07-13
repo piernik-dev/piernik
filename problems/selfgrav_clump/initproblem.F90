@@ -154,7 +154,7 @@ contains
       use fluidindex,        only: flind
       use fluidtypes,        only: component_fluid
       use func,              only: ekin, emag
-      use gc_list,           only: cg_list_element
+      use cg_list,           only: cg_list_element
       use global,            only: smalld, smallei, t
       use grid,              only: leaves
       use grid_cont,         only: grid_container
@@ -446,7 +446,7 @@ contains
    subroutine virialCheck(tol)
 
       use dataio_pub,        only: msg, die, warn, printinfo
-      use gc_list,           only: cg_list_element
+      use cg_list,           only: cg_list_element
       use fluidindex,        only: flind
       use grid,              only: leaves
       use grid_cont,         only: grid_container
@@ -514,7 +514,7 @@ contains
 
       use constants,  only: I_ONE
       use fluidindex, only: flind
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use grid,       only: leaves
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM

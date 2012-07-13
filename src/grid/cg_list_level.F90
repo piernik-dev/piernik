@@ -34,7 +34,7 @@ module cg_list_lev
    use cg_list_bnd, only: cg_list_bnd_T
    use constants,   only: ndims
    use domain,      only: cuboids
-   use gc_list,     only: cg_list
+   use cg_list,     only: cg_list_T
 
    implicit none
 
@@ -47,7 +47,7 @@ module cg_list_lev
    !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg ("islands: made of one or more cg: cg_list_patch).
    !<
    type, extends(cg_list_bnd_T) :: cg_list_level
-      integer(kind=4) :: lev                   !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
+      integer(kind=4) :: level_id              !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
       integer(kind=8), dimension(ndims) :: n_d !< maximum number of grid cells in each direction (size of fully occupied level)
       type(cuboids), dimension(:), allocatable :: pse  !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
       integer :: tot_se                        !< global number of segments on the level
@@ -82,7 +82,7 @@ module cg_list_lev
    !!
    !! \details This set would be a result of base domain or patch decomposition
    !<
-   type, extends(cg_list) :: cg_list_patch
+   type, extends(cg_list_T) :: cg_list_patch
       integer(kind=4), dimension(ndims) :: n_d                !< number of grid cells
       integer(kind=8), dimension(ndims) :: off                !< offset (with respect to the base level, counted on own level)
       type(cg_list_patch), pointer :: parent                  !< Parent patch (or null()). \todo Consider relaxing this restriction and allow multi-parent patches
@@ -109,7 +109,7 @@ contains
       if (any(n_d(:) < 1)) call die("[cg_list_level::init_lev_base] non-positive base grid sizes")
       if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_list_level::init_lev_base] base grid size incompatible with has_dir masks")
 
-      this%lev = base_level_id
+      this%level_id = base_level_id
       this%n_d(:) = n_d(:)
       this%tot_se = 0
       this%coarser => null()
@@ -141,14 +141,14 @@ contains
       this%tot_se = 0
       if (coarse) then
          if (associated(link%coarser)) call die("[cg_list_level::init_lev] coarser level already exists")
-         this%lev = link%lev - I_ONE
+         this%level_id = link%level_id - I_ONE
          where (dom%has_dir(:))
             this%n_d(:) = link%n_d(:) / refinement_factor
          elsewhere
             this%n_d(:) = I_ONE
          endwhere
          if (master .and. any(this%n_d(:)*refinement_factor /= link%n_d(:) .and. dom%has_dir(:))) then
-            write(msg, '(a,3f10.1,a,i3)')"[cg_list_level::init_lev] Fractional number of domain cells: ", link%n_d(:)/real(refinement_factor), " at level ",this%lev
+            write(msg, '(a,3f10.1,a,i3)')"[cg_list_level::init_lev] Fractional number of domain cells: ", link%n_d(:)/real(refinement_factor), " at level ",this%level_id
             call die(msg)
          endif
          this%coarser => null()
@@ -161,7 +161,7 @@ contains
          end select
       else
          if (associated(link%finer)) call die("[cg_list_level::init_lev] finer level already exists")
-         this%lev = link%lev + I_ONE
+         this%level_id = link%level_id + I_ONE
          this%n_d(:) = link%n_d(:) * refinement_factor
          this%coarser => link
          this%finer => null()
@@ -234,7 +234,7 @@ contains
       use constants,      only: xdim, ydim, zdim, LO, HI
       use dataio_pub,     only: die
       use domain,         only: dom
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid_cont,      only: pr_segment, grid_container, is_overlap
       use mpisetup,       only: FIRST, LAST
 
@@ -429,13 +429,13 @@ contains
       integer :: i, iw, iwa
 
       do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%lev > base_level_id)) call this%prolong_q_1var(i)
+         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id > base_level_id)) call this%prolong_q_1var(i)
       enddo
 
       iwa = qna%ind(wa_n)
 
       do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
-         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%lev >= base_level_id)) then
+         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id >= base_level_id)) then
             if (wna%lst(i)%multigrid) call warn("[cg_list_level:prolong] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, iwa)
@@ -465,13 +465,13 @@ contains
       integer :: i, iw, iwa
 
       do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%lev > base_level_id)) call this%restrict_q_1var(i)
+         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id > base_level_id)) call this%restrict_q_1var(i)
       enddo
 
       iwa = qna%ind(wa_n)
 
       do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
-         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%lev > base_level_id)) then
+         if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id > base_level_id)) then
             if (wna%lst(i)%multigrid) call warn("[cg_list_level:restrict] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, iwa)
@@ -512,7 +512,7 @@ contains
       use constants,   only: xdim, ydim, zdim, LO, HI, I_ONE, refinement_factor
       use dataio_pub,  only: msg, warn, die
       use domain,      only: dom
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use mpisetup,    only: comm, mpi_err, req, status
       use mpi,         only: MPI_DOUBLE_PRECISION
@@ -535,7 +535,7 @@ contains
 
       coarse => this%coarser
       if (.not. associated(coarse)) then ! can't restrict base level
-         write(msg,'(a,i3)')"[cg_list_level:restrict_q_1var] no coarser level than ", this%lev
+         write(msg,'(a,i3)')"[cg_list_level:restrict_q_1var] no coarser level than ", this%level_id
          call warn(msg)
          return
       endif
@@ -679,7 +679,7 @@ contains
       use constants,      only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, BND_REF, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4, refinement_factor
       use dataio_pub,     only: msg, warn, die
       use domain,         only: dom
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
       use mpisetup,       only: comm, mpi_err, req, status
       use mpi,            only: MPI_DOUBLE_PRECISION
@@ -703,7 +703,7 @@ contains
 
       fine => this%finer
       if (.not. associated(fine)) then ! can't prolong finest level
-         write(msg,'(a,i3)')"[gc_list:prolong_q_1var] no finer level than: ", this%lev
+         write(msg,'(a,i3)')"[gc_list:prolong_q_1var] no finer level than: ", this%level_id
          call warn(msg)
          return
       endif
@@ -961,7 +961,7 @@ contains
             call printinfo(msg)
          enddo
       enddo
-      write(msg,'(a,i3,a,f8.5)')"[cg_list_level:print_segments] Load balance at level ", this%lev," : ",product(real(this%n_d(:)))/(nproc*maxval(maxcnt(:)))
+      write(msg,'(a,i3,a,f8.5)')"[cg_list_level:print_segments] Load balance at level ", this%level_id," : ",product(real(this%n_d(:)))/(nproc*maxval(maxcnt(:)))
       !> \todo add calculation of total internal boundary surface in cells
       call printinfo(msg)
       deallocate(maxcnt)
@@ -989,7 +989,7 @@ contains
          cg => this%last%cg
 
          !> \todo Integrate the following few calls into grid_container type, note that mpi_bnd_types will require access to whole this%pse(:)%sel(:,:,:)
-         call cg%init(this%n_d, this%pse(proc)%sel(gr_id, :, :), gr_id, this%lev) ! we cannot pass "this" as an argument because of circular dependencies
+         call cg%init(this%n_d, this%pse(proc)%sel(gr_id, :, :), gr_id, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
          call this%mpi_bnd_types(cg)
          call cg%set_q_mbc
          ! register all known named arrays for this cg
@@ -1063,7 +1063,7 @@ contains
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer, bp_layer, poff
 
-      if (cg%level_id /= this%lev) call die("[cg_list_level:mpi_bnd_types] Level mismatch")
+      if (cg%level_id /= this%level_id) call die("[cg_list_level:mpi_bnd_types] Level mismatch")
 
       if (allocated(cg%i_bnd) .or. allocated(cg%o_bnd)) call die("[cg_list_level:mpi_bnd_types] cg%i_bnd or cg%o_bnd already allocated")
       allocate(cg%i_bnd(xdim:zdim, dom%nb), cg%o_bnd(xdim:zdim, dom%nb))

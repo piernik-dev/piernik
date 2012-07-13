@@ -744,7 +744,7 @@ contains
       use fluids_pub,     only: has_ion, has_dst, has_neu
       use fluidtypes,     only: phys_prop
       use func,           only: ekin, emag
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use global,         only: t, dt, smalld, nstep
       use grid,           only: leaves
       use grid_cont,      only: grid_container
@@ -997,7 +997,7 @@ contains
       use domain,         only: is_multicg
       use fluidtypes,     only: phys_prop, component_fluid
       use func,           only: ekin
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use global,         only: cfl
       use grid,           only: leaves
       use mpisetup,       only: master
@@ -1155,7 +1155,7 @@ contains
       use fluidindex,         only: flind
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use func,               only: L2norm
-      use gc_list,            only: cg_list_element
+      use cg_list,            only: cg_list_element
       use grid,               only: leaves
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master

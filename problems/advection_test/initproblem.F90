@@ -149,7 +149,7 @@ contains
 
       use constants,   only: xdim, ydim, zdim
       use fluidindex,  only: flind
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use global,      only: smallei, t
       use grid,        only: leaves
       use grid_cont,   only: grid_container
@@ -233,7 +233,7 @@ contains
       use constants,   only: I_ONE, I_TWO, PIERNIK_FINISHED
       use dataio_pub,  only: code_progress, halfstep, msg, printinfo, warn
       use fluidindex,  only: flind
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use global,      only: t, nstep
       use grid,        only: leaves
       use grid_cont,   only: grid_container
@@ -302,7 +302,7 @@ contains
       use constants,   only: xdim, zdim, ndims
       use dataio_pub,  only: warn
       use domain,      only: dom
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use grid,        only: leaves
       use grid_cont,   only: grid_container
       use mpisetup,    only: master

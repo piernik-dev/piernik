@@ -131,7 +131,7 @@ contains
       use constants,  only: xdim, ydim, zdim
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use global,     only: smalld
       use grid,       only: leaves
       use grid_cont,  only: grid_container
@@ -186,7 +186,7 @@ contains
       use fluidtypes, only: component_fluid
       use global,     only: smalld, smallei, dt
       use grid,       only: leaves
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use gravity,    only: ptm_x, ptm2_x
 

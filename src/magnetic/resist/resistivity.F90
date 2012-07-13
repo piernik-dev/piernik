@@ -87,7 +87,7 @@ contains
       use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid,           only: leaves
       use mpi,            only: MPI_INTEGER, MPI_DOUBLE_PRECISION
       use mpisetup,       only: rbuff, ibuff, mpi_err, comm, master, slave, buffer_dim, FIRST
@@ -182,7 +182,7 @@ contains
       use dataio_pub,  only: die
       use domain,      only: dom, is_multicg
       use func,        only: ekin, emag
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use grid,        only: leaves
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_DOUBLE_PRECISION
@@ -384,7 +384,7 @@ contains
       use cg_list_global, only: all_cg
       use constants,      only: xdim, ydim, zdim, ndims, half, I_ONE, wcu_n, idm, uv, INT4
       use domain,         only: dom
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use global,         only: dt
       use grid,           only: leaves
       use grid_cont,      only: grid_container

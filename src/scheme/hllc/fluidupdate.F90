@@ -44,7 +44,7 @@ contains
       use global,         only: dt, dtm, t
       use user_hooks,     only: problem_customize_solution
       use grid,           only: leaves
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use constants,      only: xdim, zdim
       use domain,         only: dom
 
@@ -94,7 +94,7 @@ contains
       use constants,       only: pdims, xdim, zdim, cs_i2_n
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_swp
-      use gc_list,         only: all_cg
+      use cg_list,         only: all_cg
       use grid_cont,       only: grid_container
 
       implicit none

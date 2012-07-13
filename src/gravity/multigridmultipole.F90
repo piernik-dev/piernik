@@ -56,7 +56,7 @@ module multipole
    integer(kind=4)           :: lmax                             !< Maximum l-order of multipole moments
    integer(kind=4)           :: mmax                             !< Maximum m-order of multipole moments. Equal to lmax by default.
    integer(kind=4)           :: ord_prolong_mpole                !< boundary prolongation operator order; allowed values are -2 .. 2
-   integer(kind=4)           :: coarsen_multipole                !< If > 0 then evaluate multipoles at finest%lev-coarsen_multipole level
+   integer(kind=4)           :: coarsen_multipole                !< If > 0 then evaluate multipoles at finest%level_id-coarsen_multipole level
    logical                   :: use_point_monopole               !< Don't evaluate multipole moments, use point-like mass approximation (crudest possible)
    logical                   :: interp_pt2mom                    !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
    logical                   :: interp_mom2pot                   !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
@@ -281,7 +281,7 @@ contains
 
       if (.not. associated(lmpole, finest)) then
          curl => finest
-         do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = finest%lev, lmpole%first%cg%lev + 1, -1
+         do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = finest%level_id, lmpole%first%cg%level_id + 1, -1
             call curl%restrict_q_1var(solution)  ! Overkill, only some layers next to external boundary are needed.
             curl => curl%coarser
          enddo                                ! An alternative: do potential2img_mass on the finest and restrict bnd_[xyz] data.
@@ -300,7 +300,7 @@ contains
 
       if (.not. associated(lmpole, finest)) then
          curl => lmpole
-         do while (associated(curl) .and. .not. associated(curl, finest)) ! do lev = lmpole%first%cg%lev, finest%lev - 1
+         do while (associated(curl) .and. .not. associated(curl, finest)) ! do lev = lmpole%first%cg%level_id, finest%level_id - 1
             call prolong_ext_bnd(curl)
             curl => curl%finer
          enddo
@@ -321,7 +321,7 @@ contains
       use constants,     only: xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
       use dataio_pub,    only: die
       use domain,        only: dom
-      use gc_list,       only: cg_list_element
+      use cg_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use units,         only: newtong
 
@@ -379,7 +379,7 @@ contains
       use constants,     only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, I_ONE !, GEO_RPZ
       use dataio_pub,    only: die
       use domain,        only: dom
-      use gc_list,       only: cg_list_element
+      use cg_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,      only: comm, mpi_err
@@ -444,7 +444,7 @@ contains
 
       use constants,     only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use domain,        only: dom
-      use gc_list,       only: cg_list_element
+      use cg_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use multigridvars, only: solution
 
@@ -695,7 +695,7 @@ contains
       use constants,     only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
       use dataio_pub,    only: die
       use domain,        only: dom
-      use gc_list,       only: cg_list_element
+      use cg_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,      only: comm, mpi_err
@@ -879,7 +879,7 @@ contains
       use dataio_pub,    only: die
       use constants,     only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI
       use domain,        only: dom
-      use gc_list,       only: cg_list_element
+      use cg_list,       only: cg_list_element
       use grid_cont,     only: grid_container
 
       implicit none

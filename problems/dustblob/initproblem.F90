@@ -111,7 +111,7 @@ contains
       use constants,  only: xdim, ydim, zdim
       use domain,     only: dom
       use fluidindex, only: flind
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use global,     only: smalld
       use grid,       only: leaves
       use grid_cont,  only: grid_container

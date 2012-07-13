@@ -149,7 +149,7 @@ contains
       use fluidtypes, only: component_fluid
       use func,       only: ekin, emag
       use grid,       only: leaves
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
       use units,      only: fpiG, newtong

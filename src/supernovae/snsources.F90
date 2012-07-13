@@ -164,7 +164,7 @@ contains
       use constants,      only: xdim, ydim, zdim
       use domain,         only: dom
       use grid,           only: leaves
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS_SOURCES
       use initcosmicrays, only: iarr_crn

@@ -129,7 +129,7 @@ contains
       use global,      only: smalld
       use gravity,     only: ptmass
       use grid,        only: leaves
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use units,       only: newtong
 #ifndef ISO

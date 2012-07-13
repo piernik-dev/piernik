@@ -403,7 +403,7 @@ contains
       use constants,     only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, varlen
       use dataio_pub,    only: die, warn, printinfo, msg
       use domain,        only: dom
-      use gc_list,       only: cg_list_element
+      use cg_list,       only: cg_list_element
       use cg_list_lev,   only: cg_list_level
       use grid,          only: leaves, finest, coarsest
       use grid_cont,     only: grid_container
@@ -598,7 +598,7 @@ contains
                case default
                   call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
             end select
-            write(msg,'(a,i3,2a)')"[multigrid_gravity:init_multigrid_grav_post] Level ",curl%lev,", FFT: ", trim(FFTn)
+            write(msg,'(a,i3,2a)')"[multigrid_gravity:init_multigrid_grav_post] Level ",curl%level_id,", FFT: ", trim(FFTn)
             call printinfo(msg)
          endif
 
@@ -663,7 +663,7 @@ contains
       use dataio_pub,    only: warn, die
       use domain,        only: dom
       use cg_list_lev,   only: cg_list_level
-      use gc_list,       only: cg_list_element
+      use cg_list,       only: cg_list_element
       use grid,          only: coarsest
       use grid_cont,     only: pr_segment, grid_container, is_overlap
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req
@@ -890,7 +890,7 @@ contains
    subroutine cleanup_multigrid_grav
 
 !!$      use constants,     only: LO, HI, ndims
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use grid,        only: coarsest
       use cg_list_lev, only: cg_list_level
 !!$      use grid_cont,   only: tgt_list
@@ -958,7 +958,7 @@ contains
       use cg_list_global, only: all_cg
       use constants,      only: INVALID, O_INJ, O_LIN, O_I2
       use dataio_pub,     only: msg, die, printinfo
-      use gc_list,        only: ind_val
+      use cg_list,        only: ind_val
       use global,         only: t
       use grid,           only: leaves, finest
       use mpisetup,       only: master
@@ -1050,7 +1050,7 @@ contains
       use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,     only: die
       use domain,         only: dom
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid,           only: leaves, finest
       use grid_cont,      only: grid_container
       use multigridvars,  only: source
@@ -1446,7 +1446,7 @@ contains
       use constants,    only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half, I_ONE, BND_NEGREF
       use dataio_pub,   only: die
       use domain,       only: dom
-      use gc_list,      only: cg_list_element
+      use cg_list,      only: cg_list_element
       use grid_cont,    only: grid_container
 
       implicit none
@@ -1565,7 +1565,7 @@ contains
       use constants,    only: I_TWO, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
       use dataio_pub,   only: die, warn
       use domain,       only: dom
-      use gc_list,      only: cg_list_element
+      use cg_list,      only: cg_list_element
       use grid_cont,    only: grid_container
       use mpisetup,     only: master
       use named_array,  only: p3
@@ -1694,7 +1694,7 @@ contains
       use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
       use dataio_pub,    only: die
       use domain,        only: dom
-      use gc_list,       only: cg_list_element, dirty_label
+      use cg_list,       only: cg_list_element, dirty_label
       use global,        only: dirty_debug
       use grid,          only: coarsest
       use grid_cont,     only: grid_container
@@ -1859,7 +1859,7 @@ contains
       use constants,     only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2, BND_NEGREF, fft_none, fft_dst, dirtyL
       use dataio_pub,    only: die, warn
       use domain,        only: dom
-      use gc_list,       only: cg_list_element
+      use cg_list,       only: cg_list_element
       use global,        only: dirty_debug
       use grid,          only: coarsest
       use grid_cont,     only: grid_container
@@ -2077,7 +2077,7 @@ contains
 
       use constants,   only: fft_rcr, fft_dst
       use dataio_pub,  only: die
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use cg_list_lev, only: cg_list_level
       use grid_cont,   only: grid_container
 

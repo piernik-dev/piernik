@@ -222,7 +222,7 @@ contains
       use domain,     only: dom
       use fluidindex, only: flind
       use grid,       only: leaves
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
@@ -271,7 +271,7 @@ contains
       use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: printinfo
       use grid,       only: leaves
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use fluidindex, only: flind
       use mpisetup,   only: proc, master
@@ -317,7 +317,7 @@ contains
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use gravity,        only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid,           only: leaves, base_lev
       use grid_cont,      only: grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
@@ -560,7 +560,7 @@ contains
       use cg_list_global,  only: all_cg
       use constants,       only: b0_n
       use fluidboundaries, only: all_fluid_boundaries
-      use gc_list,         only: cg_list_element
+      use cg_list,         only: cg_list_element
       use grid,            only: leaves
       use named_array,     only: wna
 #ifdef TRACER
@@ -628,7 +628,7 @@ contains
       use constants,       only: xdim, ydim, zdim, I_ONE
       use dataio_pub,      only: die!, warn, msg
       use domain,          only: is_multicg
-      use gc_list,         only: cg_list_element
+      use cg_list,         only: cg_list_element
       use global,          only: dt, relax_time, smalld !, t, grace_period_passed
       use grid,            only: leaves
       use grid_cont,       only: grid_container
@@ -768,7 +768,7 @@ contains
       use units,     only: newtong
       use gravity,   only: ptmass, sum_potential
       use grid,      only: leaves
-      use gc_list,   only: cg_list_element
+      use cg_list,   only: cg_list_element
       use grid_cont, only: grid_container
 
       implicit none

@@ -287,7 +287,7 @@ contains
       use constants,      only: small, xdim, ydim, zdim, AT_NO_B
       use dataio_pub,     only: warn, printinfo, msg, die
       use domain,         only: dom
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use global,         only: smalld
       use grid,           only: leaves
       use grid_cont,      only: grid_container
@@ -462,7 +462,7 @@ contains
       use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: warn
       use grid,        only: leaves
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid

@@ -151,7 +151,7 @@ contains
       use constants,      only: PIERNIK_INIT_GRID, AT_OUT_B, gp_n, gpot_n, hgpot_n
       use mpisetup,       only: ibuff, rbuff, cbuff, comm, mpi_err, master, slave, lbuff, buffer_dim, FIRST
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid,           only: leaves
       use named_array,    only: qna
       use units,          only: newtong
@@ -310,7 +310,7 @@ contains
       use constants,         only: sgp_n, sgpm_n
       use dataio_pub,        only: die
       use fluidindex,        only: iarr_all_sg
-      use gc_list,           only: cg_list_element
+      use cg_list,           only: cg_list_element
       use grid,              only: leaves
       use grid_cont,         only: grid_container
       use named_array,       only: qna
@@ -371,7 +371,7 @@ contains
    subroutine sum_potential
 
       use constants,   only: gp_n, gpot_n, hgpot_n
-      use gc_list,     only: ind_val
+      use cg_list,     only: ind_val
       use grid,        only: leaves
       use named_array, only: qna
 #ifdef SELF_GRAV
@@ -670,7 +670,7 @@ contains
       use dataio_pub, only: die, warn
       use domain,     only: dom
       use grid,       only: leaves
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
       use types,      only: axes

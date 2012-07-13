@@ -351,7 +351,7 @@ contains
       use cg_list_lev,    only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use dataio_pub,     only: die
-      use gc_list,        only: ind_val, dirty_label
+      use cg_list,        only: ind_val, dirty_label
       use grid,           only: leaves, finest
       use initcosmicrays, only: iarr_crs
       use multigridvars,  only: source, defect, correction
@@ -418,7 +418,7 @@ contains
       use constants,      only: I_ONE, xdim, zdim, HI, LO, BND_REF
       use domain,         only: dom
       use grid,           only: leaves, coarsest, finest
-      use gc_list,        only: cg_list_element, dirty_label
+      use cg_list,        only: cg_list_element, dirty_label
       use grid_cont,      only: grid_container
       use named_array,    only: p3, p4
 
@@ -471,7 +471,7 @@ contains
       use cg_list_global, only: all_cg
       use cg_list_lev,    only: cg_list_level
       use dataio_pub,     only: msg, warn
-      use gc_list,        only: ind_val, dirty_label
+      use cg_list,        only: ind_val, dirty_label
       use global,         only: do_ascii_dump
       use grid,           only: leaves, coarsest, finest
       use initcosmicrays, only: iarr_crs
@@ -659,7 +659,7 @@ contains
       use cg_list_lev,    only: cg_list_level
       use constants,      only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
       use domain,         only: dom
-      use gc_list,        only: cg_list_element, ind_val
+      use cg_list,        only: cg_list_element, ind_val
       use global,         only: dt
       use grid_cont,      only: grid_container
       use named_array,    only: p3
@@ -723,7 +723,7 @@ contains
       use cg_list_lev,    only: cg_list_level
       use constants,      only: xdim, ydim, zdim, one, half, I_ONE, ndims, BND_NONE
       use domain,         only: dom
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use global,         only: dt
       use grid,           only: coarsest
       use grid_cont,      only: grid_container

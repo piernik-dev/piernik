@@ -126,7 +126,7 @@ contains
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use global,         only: smalld
       use grid,           only: leaves
       use grid_cont,      only: grid_container
@@ -325,7 +325,7 @@ contains
       use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
       use domain,         only: dom
       use fluidindex,     only: flind
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn

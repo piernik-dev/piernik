@@ -148,7 +148,7 @@ contains
       use dataio_pub, only: msg, printinfo, warn, die
       use domain,     only: dom
       use grid,       only: leaves
-      use gc_list,    only: cg_list_element
+      use cg_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
@@ -267,7 +267,7 @@ contains
       use constants,      only: pi, GEO_XYZ, GEO_RPZ
       use dataio_pub,     only: warn, die
       use domain,         only: dom
-      use gc_list,        only: cg_list_element
+      use cg_list,        only: cg_list_element
       use grid,           only: leaves
       use grid_cont,      only: grid_container
       use mpisetup,       only: master
@@ -370,7 +370,7 @@ contains
       use constants,   only: GEO_RPZ, I_ONE, I_TWO
       use dataio_pub,  only: msg, printinfo, warn
       use domain,      only: dom
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use grid,        only: leaves
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE

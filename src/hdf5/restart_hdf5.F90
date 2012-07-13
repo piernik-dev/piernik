@@ -289,7 +289,7 @@ contains
 #endif /* INDEPENDENT_ATOUTB */
       use dataio_pub,  only: die
       use domain,      only: is_multicg
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use grid,        only: leaves
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f, h5sclose_f, h5pclose_f, h5dclose_f, &
@@ -431,7 +431,7 @@ contains
       use constants,    only: ndims, LONG, AT_IGNORE, dsetnamelen
       use dataio_pub,   only: msg, die
       use domain,       only: is_multicg
-      use gc_list,      only: cg_list_element
+      use cg_list,      only: cg_list_element
       use grid,         only: leaves
       use grid_cont,    only: grid_container
       use hdf5,         only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dread_f, h5sclose_f, h5pclose_f, h5dclose_f, &
@@ -917,7 +917,7 @@ contains
       use constants,   only: xdim, ydim, zdim, ndims, dsetnamelen, I_ONE
       use common_hdf5, only: get_nth_cg, cg_output
       use dataio_pub,  only: die, nproc_io, can_i_write
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use grid,        only: leaves
       use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
@@ -1176,7 +1176,7 @@ contains
            &                 require_init_prob, piernik_hdf5_version2, nres, nhdf, nimg, fix_string
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
-      use gc_list,     only: cg_list_element
+      use cg_list,     only: cg_list_element
       use global,      only: magic_mass, t, dt, nstep
       use grid,        only: leaves
       use grid_cont,   only: is_overlap
