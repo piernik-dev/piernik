@@ -74,7 +74,7 @@ contains
    subroutine init_multigrid
 
       use cg_list_global,      only: all_cg
-      use cg_list_lev,         only: cg_list_level, cg_list_patch
+      use cg_list_level,       only: cg_list_level_T, cg_list_patch_T
       use constants,           only: PIERNIK_INIT_GRID, LO, HI, I_ONE, O_INJ, O_LIN, O_I2, refinement_factor, dirtyH
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
@@ -105,8 +105,8 @@ contains
       integer(kind=4)       :: j
       logical, save         :: frun = .true.          !< First run flag
       type(cg_list_element), pointer :: cgl
-      type(cg_list_level),   pointer :: curl, tmpl    !< current level (a pointer sliding along the linked list) and temporary level
-      type(cg_list_patch) :: patch                    !< wrapper for current level (to be passed to divide domain)
+      type(cg_list_level_T),   pointer :: curl, tmpl    !< current level (a pointer sliding along the linked list) and temporary level
+      type(cg_list_patch_T) :: patch                    !< wrapper for current level (to be passed to divide domain)
       type(grid_container),  pointer :: cg            !< current grid container
 
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug
@@ -321,7 +321,7 @@ contains
 
       use constants,           only: I_ONE
       use dataio_pub,          only: msg, printinfo
-      use cg_list_lev,         only: cg_list_level
+      use cg_list_level,       only: cg_list_level_T
       use grid,                only: base_lev, coarsest
       use mpi,                 only: MPI_DOUBLE_PRECISION
       use mpisetup,            only: master, nproc, FIRST, LAST, comm, mpi_err
@@ -337,7 +337,7 @@ contains
 
       integer :: g
       real, allocatable, dimension(:) :: all_ts
-      type(cg_list_level),   pointer :: curl
+      type(cg_list_level_T),   pointer :: curl
 
 #ifdef GRAV
       call cleanup_multigrid_grav
@@ -383,14 +383,14 @@ contains
 
    subroutine base_on_single(tmpl)
 
-      use cg_list_lev,   only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use constants,     only: LO, HI, I_ONE
       use decomposition, only: allocate_pse
       use mpisetup,      only: nproc, FIRST
 
       implicit none
 
-      type(cg_list_level), pointer, intent(inout) :: tmpl
+      type(cg_list_level_T), pointer, intent(inout) :: tmpl
 
       integer, dimension(nproc) :: n_cg
 

@@ -404,7 +404,7 @@ contains
       use dataio_pub,    only: die, warn, printinfo, msg
       use domain,        only: dom
       use cg_list,       only: cg_list_element
-      use cg_list_lev,   only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use grid,          only: leaves, finest, coarsest
       use grid_cont,     only: grid_container
       use mpi,           only: MPI_COMM_NULL
@@ -418,7 +418,7 @@ contains
 
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
       integer :: i, j
-      type(cg_list_level), pointer :: curl
+      type(cg_list_level_T), pointer :: curl
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       character(len=varlen) :: FFTn
@@ -654,7 +654,7 @@ contains
 !!
 !! \todo implement also prolongation of coarsened multipoles
 !!
-!! \todo move this to cg_list_level
+!! \todo move this to cg_list_level_T
 !<
 
    subroutine mpi_multigrid_prep_grav
@@ -662,7 +662,7 @@ contains
       use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG, zero, one, half, O_INJ, O_LIN, O_I2, INT4
       use dataio_pub,    only: warn, die
       use domain,        only: dom
-      use cg_list_lev,   only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use cg_list,       only: cg_list_element
       use grid,          only: coarsest
       use grid_cont,     only: pr_segment, grid_container, is_overlap
@@ -680,7 +680,7 @@ contains
       logical, dimension(xdim:zdim) :: dmask
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened, b_layer
       type(pr_segment), pointer :: seg
-      type(cg_list_level), pointer   :: curl                   !> current level (a pointer sliding along the linked list)
+      type(cg_list_level_T), pointer   :: curl                   !> current level (a pointer sliding along the linked list)
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
       logical :: is_internal_fine
@@ -892,7 +892,7 @@ contains
 !!$      use constants,     only: LO, HI, ndims
       use cg_list,     only: cg_list_element
       use grid,        only: coarsest
-      use cg_list_lev, only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
 !!$      use grid_cont,   only: tgt_list
       use multipole,   only: cleanup_multipole
 
@@ -901,7 +901,7 @@ contains
 !!$      integer :: g, ib
 !!$      integer, parameter :: nseg = 2*(HI-LO+1)*ndims
 !!$      type(tgt_list), dimension(nseg) :: io_tgt
-      type(cg_list_level), pointer :: curl
+      type(cg_list_level_T), pointer :: curl
       type(cg_list_element), pointer :: cgl
 
       call cleanup_multipole
@@ -953,7 +953,7 @@ contains
    subroutine init_solution(history)
 
 #if defined(__INTEL_COMPILER)
-      use cg_list_lev,    only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_list_level,  only: cg_list_level_T  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use cg_list_global, only: all_cg
       use constants,      only: INVALID, O_INJ, O_LIN, O_I2
@@ -1045,7 +1045,7 @@ contains
 
       use cg_list_global, only: all_cg
 #if defined(__INTEL_COMPILER)
-      use cg_list_lev,    only: cg_list_level    ! QA_WARN workaround for stupid INTEL compiler
+      use cg_list_level,  only: cg_list_level_T    ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,     only: die
@@ -1161,7 +1161,7 @@ contains
    subroutine store_solution(history)
 
 #if defined(__INTEL_COMPILER)
-      use cg_list_lev,   only: cg_list_level   ! QA_WARN workaround for stupid INTEL compiler
+      use cg_list_level, only: cg_list_level_T   ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use constants,     only: BND_XTRAP, BND_REF
       use domain,        only: dom
@@ -1263,7 +1263,7 @@ contains
    subroutine vcycle_hg(history)
 
       use cg_list_global, only: all_cg
-      use cg_list_lev,    only: cg_list_level
+      use cg_list_level,  only: cg_list_level_T
       use constants,      only: cbuff_len, fft_none
       use dataio_pub,     only: msg, die, warn, printinfo
       use global,         only: do_ascii_dump
@@ -1284,7 +1284,7 @@ contains
       integer, parameter       :: fmtlen = 32
       character(len=fmtlen)    :: fmt
       character(len=cbuff_len) :: dname
-      type(cg_list_level), pointer :: curl
+      type(cg_list_level_T), pointer :: curl
 
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       inquire(file = "_dump_result_", EXIST=dump_result)
@@ -1416,13 +1416,13 @@ contains
 
    subroutine residual(curl, src, soln, def)
 
-      use cg_list_lev, only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use constants,   only: O_I2, O_I4
       use dataio_pub,  only: die
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                      intent(in) :: src  !< index of source in cg%q(:)
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
       integer,                      intent(in) :: def  !< index of defect in cg%q(:)
@@ -1442,7 +1442,7 @@ contains
 
    subroutine residual2(curl, src, soln, def)
 
-      use cg_list_lev,  only: cg_list_level
+      use cg_list_level,only: cg_list_level_T
       use constants,    only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half, I_ONE, BND_NEGREF
       use dataio_pub,   only: die
       use domain,       only: dom
@@ -1451,7 +1451,7 @@ contains
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                      intent(in) :: src  !< index of source in cg%q(:)
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
       integer,                      intent(in) :: def  !< index of defect in cg%q(:)
@@ -1561,7 +1561,7 @@ contains
 
    subroutine residual4(curl, src, soln, def)
 
-      use cg_list_lev,  only: cg_list_level
+      use cg_list_level,only: cg_list_level_T
       use constants,    only: I_TWO, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
       use dataio_pub,   only: die, warn
       use domain,       only: dom
@@ -1572,7 +1572,7 @@ contains
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                      intent(in) :: src  !< index of source in cg%q(:)
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
       integer,                      intent(in) :: def  !< index of defect in cg%q(:)
@@ -1660,12 +1660,12 @@ contains
 
    subroutine approximate_solution(curl, src, soln)
 
-      use cg_list_lev, only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use constants,   only: fft_none
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                      intent(in) :: src  !< index of source in cg%q(:)
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
@@ -1690,7 +1690,7 @@ contains
 
    subroutine approximate_solution_rbgs(curl, src, soln)
 
-      use cg_list_lev,   only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
       use dataio_pub,    only: die
       use domain,        only: dom
@@ -1702,7 +1702,7 @@ contains
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                      intent(in) :: src  !< index of source in cg%q(:)
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
@@ -1855,7 +1855,7 @@ contains
 
    subroutine approximate_solution_fft(curl, src, soln)
 
-      use cg_list_lev,   only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use constants,     only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2, BND_NEGREF, fft_none, fft_dst, dirtyL
       use dataio_pub,    only: die, warn
       use domain,        only: dom
@@ -1868,7 +1868,7 @@ contains
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                      intent(in) :: src  !< index of source in cg%q(:)
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
@@ -2019,7 +2019,7 @@ contains
 
    subroutine make_face_boundaries(curl, soln)
 
-      use cg_list_lev,   only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use dataio_pub,    only: warn
       use grid,          only: coarsest
       use mpisetup,      only: nproc
@@ -2027,7 +2027,7 @@ contains
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
       if (grav_bnd == bnd_periodic .and. (nproc == 1 .or. (associated(curl, coarsest) .and. single_base) ) ) then
@@ -2078,12 +2078,12 @@ contains
       use constants,   only: fft_rcr, fft_dst
       use dataio_pub,  only: die
       use cg_list,     only: cg_list_element
-      use cg_list_lev, only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use grid_cont,   only: grid_container
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: curl !< pointer to a level at which make the convolution
+      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level at which make the convolution
 
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
@@ -2118,14 +2118,14 @@ contains
 !! The tests were performed on uniform grid, where the interpolation affects only convergence factors.
 !! On a refinement step the interpolation type affects also sulution by influencing the way how fine and coarse grids are coupled.
 !!
-!! \todo move to cg_list_level or multigrid_gravity
+!! \todo move to cg_list_level_T or multigrid_gravity
 !!
 !! OPT: completely unoptimized
 !<
 
    subroutine prolong_faces(fine, soln)
 
-      use cg_list_lev,   only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use constants,     only: xdim, ydim, zdim, LO, HI, LONG, I_ONE, half, O_INJ, O_LIN, O_D2, O_I2, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom, is_multicg
@@ -2137,11 +2137,11 @@ contains
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: fine !< level for which approximate the solution
+      type(cg_list_level_T), pointer, intent(in) :: fine !< level for which approximate the solution
       integer,                      intent(in) :: soln !< index of solution in cg%q(:) ! \todo change the name
 
       integer                       :: i, j, k, d, lh, g, ib, jb, ibh, jbh, l
-      type(cg_list_level), pointer           :: coarse
+      type(cg_list_level_T), pointer           :: coarse
       integer, parameter            :: s_wdth  = 3           ! interpolation stencil width
       integer(kind=4), parameter    :: s_rng = (s_wdth-1)/2  ! stencil range around 0
       real, parameter, dimension(s_wdth) :: p0  = [ 0.,       1.,     0.     ] ! injection
@@ -2200,7 +2200,7 @@ contains
             ! Implement ord_prolong_face_par /= O_INJ if and only if it improves the coupling between fine and coarse solutions
          endif
 
-         do lh = LO, HI ! \todo convert cg_list_level%mg%bnd_[xyz] to an array and make obsolete the following pointer assignments
+         do lh = LO, HI ! \todo convert cg_list_level_T%mg%bnd_[xyz] to an array and make obsolete the following pointer assignments
             p_bnd(xdim, lh)%bnd => fine%first%cg%mg%bnd_x(:, :, lh)
             p_bnd(ydim, lh)%bnd => fine%first%cg%mg%bnd_y(:, :, lh)
             p_bnd(zdim, lh)%bnd => fine%first%cg%mg%bnd_z(:, :, lh)

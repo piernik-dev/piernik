@@ -51,7 +51,7 @@ module cg_list_global
    !! - Simulations with mixed dimensionality (e.g. 2d grid for dust particles and 3d grid for gas) should probably also use separate cg_list
    !! for their data (and additional routine for coupling the two grid sets).
    !<
-   type, extends(cg_list_bnd_T) :: cg_list_glob
+   type, extends(cg_list_bnd_T) :: cg_list_global_T
 
       integer(kind=4) :: ord_prolong_nb                !< Maximum number of boundary cells required for prolongation
 
@@ -65,9 +65,9 @@ module cg_list_global
       procedure         :: reg_var         !< Add a variable (cg%q or cg%w) to all grid containers
       procedure         :: register_fluids !< Register all crucial fields, which we cannot live without
       procedure         :: check_na        !< Check if all named arrays are consistently registered
-   end type cg_list_glob
+   end type cg_list_global_T
 
-   type(cg_list_glob) :: all_cg   !< all grid containers; \todo restore protected
+   type(cg_list_global_T) :: all_cg   !< all grid containers; \todo restore protected
 
 contains
 
@@ -88,7 +88,7 @@ contains
 
       implicit none
 
-      class(cg_list_glob),                     intent(inout) :: this          !< object invoking type-bound procedure
+      class(cg_list_global_T),                     intent(inout) :: this          !< object invoking type-bound procedure
       character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
       logical,                       optional, intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
       integer(kind=4),               optional, intent(in)    :: restart_mode  !< Write to the restart if not AT_IGNORE. Several write modes can be supported.
@@ -194,7 +194,7 @@ contains
 
       implicit none
 
-      class(cg_list_glob), intent(inout) :: this          !< object invoking type-bound procedure
+      class(cg_list_global_T), intent(inout) :: this          !< object invoking type-bound procedure
       integer(kind=4),     intent(in)    :: nfluids       !< number of components in the main array of fluids (should be flind%all)
 
       integer(kind=4), parameter, dimension(ndims) :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
@@ -226,7 +226,7 @@ contains
 
       implicit none
 
-      class(cg_list_glob), intent(in) :: this          !< object invoking type-bound procedure
+      class(cg_list_global_T), intent(in) :: this          !< object invoking type-bound procedure
 
       integer :: i
       type(cg_list_element), pointer :: cgl

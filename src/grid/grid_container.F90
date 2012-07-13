@@ -90,7 +90,7 @@ module grid_cont
       real    :: r, rx, ry, rz                                        !< geometric factors for relaxation (diffusion) used in approximate_solution_rbgs
 
       ! prolongation and restriction
-      !! \todo move to cg, should be initialized by cg_list_level procedure
+      !! \todo move to cg, should be initialized by cg_list_level_T procedure
       type(tgt_list), dimension(xdim:zdim, LO:HI) :: pff_tgt, pfc_tgt !< description outgoing and incoming face prolongation data
 
    end type mg_arr
@@ -135,7 +135,7 @@ module grid_cont
       integer(kind=4) :: nxb                                     !< number of %grid cells in one block (without boundary cells) in x-direction
       integer(kind=4) :: nyb                                     !< number of %grid cells in one block (without boundary cells) in y-direction
       integer(kind=4) :: nzb                                     !< number of %grid cells in one block (without boundary cells) in z-direction
-      integer :: level_id                                        !< level id (number); do not use it without a good reason, use cg_list_level%lev where possible instead
+      integer :: level_id                                        !< level id (number); do not use it without a good reason, use cg_list_level_T%lev where possible instead
 
       ! shortcuts
       integer(kind=4) :: is                                      !< index of the first %grid cell of physical domain in x-direction
@@ -237,7 +237,7 @@ contains
 !!
 !! \details This method sets up the grid container variables, coordinates and allocates basic arrays.
 !! Everything related to the interior of grid container should be set here.
-!! Things that are related to communication with other grid containers or global properties are set up in cg_list_level::init_all_new_cg.
+!! Things that are related to communication with other grid containers or global properties are set up in cg_list_level_T::init_all_new_cg.
 !<
 
    subroutine init(this, n_d, my_se, grid_id, level_id)
@@ -460,7 +460,7 @@ contains
       ! size of coarsened grid with guardcells, additional cell is required only when even-sized grid has odd offset
       where (dom%has_dir(:))
          n2(:) = (this%n_b(:) + 1 + mod(this%off, int(refinement_factor, kind=8)))/refinement_factor + 2*dom%nb + 1
-         ! +1 is because of some simplifications in cg_list_level::prolong_q_1var in treating grids with odd offsets
+         ! +1 is because of some simplifications in cg_list_level_T::prolong_q_1var in treating grids with odd offsets
       elsewhere
          n2(:) = 1
       endwhere

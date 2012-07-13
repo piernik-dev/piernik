@@ -33,19 +33,19 @@
 module grid
 
    use cg_list_bnd, only: cg_list_bnd_T
-   use cg_list_lev, only: cg_list_level, cg_list_patch
+   use cg_list_level, only: cg_list_level_T, cg_list_patch_T
 
    implicit none
 
    private
    public :: init_grid, cleanup_grid, base_lev, leaves, finest, coarsest
 
-   type(cg_list_level), target                            :: base_lev !< base level grid containers \todo restore "protected"
+   type(cg_list_level_T), target                            :: base_lev !< base level grid containers \todo restore "protected"
    type(cg_list_bnd_T)                                    :: leaves   !< grid containers not fully covered by finer grid containers
    integer, parameter                                     :: NBD = 1  !< at the moment the base domain may be composed of only one patch
-   type(cg_list_patch), dimension(NBD), target, protected :: base_dom !< base level patches; \todo relax the NBD=1 restriction if we want something like L-shaped or more complex domains
-   type(cg_list_level), pointer                           :: finest   !< finest level of refinement
-   type(cg_list_level), pointer                           :: coarsest !< coarsest level of refinement
+   type(cg_list_patch_T), dimension(NBD), target, protected :: base_dom !< base level patches; \todo relax the NBD=1 restriction if we want something like L-shaped or more complex domains
+   type(cg_list_level_T), pointer                           :: finest   !< finest level of refinement
+   type(cg_list_level_T), pointer                           :: coarsest !< coarsest level of refinement
 
 contains
 
@@ -73,7 +73,7 @@ contains
       integer :: d
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      type(cg_list_patch),   pointer :: pbd
+      type(cg_list_patch_T),   pointer :: pbd
 #ifdef ISO
       integer :: ifl
       real    :: cs_max
@@ -154,7 +154,7 @@ contains
       integer(kind=4), dimension(ndims), intent(in)    :: n_d
       integer(kind=8), dimension(ndims), intent(in)    :: offset
       integer(kind=4),                   intent(in)    :: level
-      type(cg_list_patch), pointer,      intent(inout) :: patch
+      type(cg_list_patch_T), pointer,      intent(inout) :: patch
 
       type(cg_list_element), pointer :: cgl
 

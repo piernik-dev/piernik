@@ -29,7 +29,7 @@
 
 !> \brief This module contains grid container level list and related methods
 
-module cg_list_lev
+module cg_list_level
 
    use cg_list_bnd, only: cg_list_bnd_T
    use constants,   only: ndims
@@ -39,21 +39,21 @@ module cg_list_lev
    implicit none
 
    private
-   public :: cg_list_level, cg_list_patch
+   public :: cg_list_level_T, cg_list_patch_T
 
    !>
    !! \brief A list of all cg of the same resolution.
    !!
    !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg ("islands: made of one or more cg: cg_list_patch).
    !<
-   type, extends(cg_list_bnd_T) :: cg_list_level
+   type, extends(cg_list_bnd_T) :: cg_list_level_T
       integer(kind=4) :: level_id              !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
       integer(kind=8), dimension(ndims) :: n_d !< maximum number of grid cells in each direction (size of fully occupied level)
       type(cuboids), dimension(:), allocatable :: pse  !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
       integer :: tot_se                        !< global number of segments on the level
-      type(cg_list_level), pointer :: coarser  !< coarser level cg set or null()
-      type(cg_list_level), pointer :: finer    !< finer level cg set or null()
-      integer(kind=4) :: ord_prolong_set       !< Number of boundary cells for prolongation used in last update of cg_list_level%vertical_prep
+      type(cg_list_level_T), pointer :: coarser  !< coarser level cg set or null()
+      type(cg_list_level_T), pointer :: finer    !< finer level cg set or null()
+      integer(kind=4) :: ord_prolong_set       !< Number of boundary cells for prolongation used in last update of cg_list_level_T%vertical_prep
       integer :: fft_type                      !< type of FFT to employ in some multigrid solvers (depending on boundaries)
     contains
 
@@ -75,21 +75,21 @@ module cg_list_lev
       procedure :: restrict_to_floor_q_1var    !< restrict specified q field as much as possible
 
       ! fine-coarse boundary exchanges may also belong to this type
-   end type cg_list_level
+   end type cg_list_level_T
 
    !>
    !! \brief A list of grid containers that cover single box (or rectangle) on a certain resolution level
    !!
    !! \details This set would be a result of base domain or patch decomposition
    !<
-   type, extends(cg_list_T) :: cg_list_patch
-      integer(kind=4), dimension(ndims) :: n_d                !< number of grid cells
-      integer(kind=8), dimension(ndims) :: off                !< offset (with respect to the base level, counted on own level)
-      type(cg_list_patch), pointer :: parent                  !< Parent patch (or null()). \todo Consider relaxing this restriction and allow multi-parent patches
-      type(cg_list_patch), dimension(:), pointer :: children  !< refined patches
-      type(cg_list_level), pointer :: list_level              !< all cg on the same level
+   type, extends(cg_list_T) :: cg_list_patch_T
+      integer(kind=4), dimension(ndims) :: n_d                  !< number of grid cells
+      integer(kind=8), dimension(ndims) :: off                  !< offset (with respect to the base level, counted on own level)
+      type(cg_list_patch_T), pointer :: parent                  !< Parent patch (or null()). \todo Consider relaxing this restriction and allow multi-parent patches
+      type(cg_list_patch_T), dimension(:), pointer :: children  !< refined patches
+      type(cg_list_level_T), pointer :: list_level              !< all cg on the same level
       !> \todo consider creating neigbour list (or (ndims, LO:HI) lists)
-   end type cg_list_patch
+   end type cg_list_patch_T
 
 contains
 
@@ -103,11 +103,11 @@ contains
 
       implicit none
 
-      class(cg_list_level),              intent(inout) :: this
+      class(cg_list_level_T),              intent(inout) :: this
       integer(kind=4), dimension(ndims), intent(in)    :: n_d    !< size of global base grid in cells
 
-      if (any(n_d(:) < 1)) call die("[cg_list_level::init_lev_base] non-positive base grid sizes")
-      if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_list_level::init_lev_base] base grid size incompatible with has_dir masks")
+      if (any(n_d(:) < 1)) call die("[cg_list_level_T::init_lev_base] non-positive base grid sizes")
+      if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_list_level_T::init_lev_base] base grid size incompatible with has_dir masks")
 
       this%level_id = base_level_id
       this%n_d(:) = n_d(:)
@@ -131,16 +131,16 @@ contains
 
       implicit none
 
-      class(cg_list_level), target, intent(inout) :: this
-      type(cg_list_level), pointer, intent(inout) :: link    !< lowest or highest refinement level (cannot refer to base_lev here due to cyclic deps)
+      class(cg_list_level_T), target, intent(inout) :: this
+      type(cg_list_level_T), pointer, intent(inout) :: link    !< lowest or highest refinement level (cannot refer to base_lev here due to cyclic deps)
       logical,                      intent(in)    :: coarse  !< if .true. then add a level below base level
 
-      if (.not. associated(link)) call die("[cg_list_level::init_lev] cannot link to null")
+      if (.not. associated(link)) call die("[cg_list_level_T::init_lev] cannot link to null")
 
       this%n_d(:) = 1
       this%tot_se = 0
       if (coarse) then
-         if (associated(link%coarser)) call die("[cg_list_level::init_lev] coarser level already exists")
+         if (associated(link%coarser)) call die("[cg_list_level_T::init_lev] coarser level already exists")
          this%level_id = link%level_id - I_ONE
          where (dom%has_dir(:))
             this%n_d(:) = link%n_d(:) / refinement_factor
@@ -148,28 +148,28 @@ contains
             this%n_d(:) = I_ONE
          endwhere
          if (master .and. any(this%n_d(:)*refinement_factor /= link%n_d(:) .and. dom%has_dir(:))) then
-            write(msg, '(a,3f10.1,a,i3)')"[cg_list_level::init_lev] Fractional number of domain cells: ", link%n_d(:)/real(refinement_factor), " at level ",this%level_id
+            write(msg, '(a,3f10.1,a,i3)')"[cg_list_level_T::init_lev] Fractional number of domain cells: ", link%n_d(:)/real(refinement_factor), " at level ",this%level_id
             call die(msg)
          endif
          this%coarser => null()
          this%finer => link
          select type(this)
-            type is (cg_list_level)
+            type is (cg_list_level_T)
                link%coarser => this
             class default
-               call die("[cg_list_level::init_lev] cannot call this routine for derivatives of cg_list_level (coarse)")
+               call die("[cg_list_level_T::init_lev] cannot call this routine for derivatives of cg_list_level (coarse)")
          end select
       else
-         if (associated(link%finer)) call die("[cg_list_level::init_lev] finer level already exists")
+         if (associated(link%finer)) call die("[cg_list_level_T::init_lev] finer level already exists")
          this%level_id = link%level_id + I_ONE
          this%n_d(:) = link%n_d(:) * refinement_factor
          this%coarser => link
          this%finer => null()
          select type(this)
-            type is (cg_list_level)
+            type is (cg_list_level_T)
                link%finer => this
             class default
-               call die("[cg_list_level::init_lev] cannot call this routine for derivatives of cg_list_level (fine)")
+               call die("[cg_list_level_T::init_lev] cannot call this routine for derivatives of cg_list_level (fine)")
          end select
       endif
 
@@ -240,7 +240,7 @@ contains
 
       implicit none
 
-      class(cg_list_level), intent(inout) :: this
+      class(cg_list_level_T), intent(inout) :: this
 
       integer :: g, j, jf, fmax, tag
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
@@ -248,7 +248,7 @@ contains
       type(pr_segment), pointer :: seg
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
-      type(cg_list_level),   pointer :: fine, coarse  !< shortcut
+      type(cg_list_level_T),   pointer :: fine, coarse  !< shortcut
       type :: int_pair
          integer :: proc
          integer :: n_se
@@ -304,7 +304,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (ri)")
+               if (tag /= int(seg%tag)) call die("[cg_list_level_T:vertical_prep] tag overflow (ri)")
             enddo
 
             ! When fine and coarse pieces are within prolongation stencil length, but there is no direct overlap we rely on guardcell update on coarse side
@@ -325,7 +325,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow po)")
+               if (tag /= int(seg%tag)) call die("[cg_list_level_T:vertical_prep] tag overflow po)")
             enddo
 
             if (allocated(ps)) deallocate(ps)
@@ -381,7 +381,7 @@ contains
                seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (ro)")
+               if (tag /= int(seg%tag)) call die("[cg_list_level_T:vertical_prep] tag overflow (ro)")
             enddo
 
             do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
@@ -397,7 +397,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (pi)")
+               if (tag /= int(seg%tag)) call die("[cg_list_level_T:vertical_prep] tag overflow (pi)")
             enddo
 
             if (allocated(ps)) deallocate(ps)
@@ -424,7 +424,7 @@ contains
 
       implicit none
 
-      class(cg_list_level), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
 
       integer :: i, iw, iwa
 
@@ -436,7 +436,7 @@ contains
 
       do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id >= base_level_id)) then
-            if (wna%lst(i)%multigrid) call warn("[cg_list_level:prolong] mg set for cg%w ???")
+            if (wna%lst(i)%multigrid) call warn("[cg_list_level_T:prolong] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, iwa)
                call this%prolong_q_1var(iwa)
@@ -460,7 +460,7 @@ contains
 
       implicit none
 
-      class(cg_list_level), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
 
       integer :: i, iw, iwa
 
@@ -472,7 +472,7 @@ contains
 
       do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id > base_level_id)) then
-            if (wna%lst(i)%multigrid) call warn("[cg_list_level:restrict] mg set for cg%w ???")
+            if (wna%lst(i)%multigrid) call warn("[cg_list_level_T:restrict] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, iwa)
                call this%restrict_q_1var(iwa)
@@ -489,7 +489,7 @@ contains
 
       implicit none
 
-      class(cg_list_level), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
       integer,                      intent(in)    :: iv   !< variable to be restricted
 
       if (.not. associated(this%coarser)) return
@@ -520,10 +520,10 @@ contains
 
       implicit none
 
-      class(cg_list_level), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
       integer,                      intent(in)    :: iv   !< variable to be restricted
 
-      type(cg_list_level), pointer :: coarse
+      type(cg_list_level_T), pointer :: coarse
       integer :: g
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: fse, cse ! shortcuts for fine segment and coarse segment
       integer(kind=8) :: i, j, k, ic, jc, kc
@@ -535,7 +535,7 @@ contains
 
       coarse => this%coarser
       if (.not. associated(coarse)) then ! can't restrict base level
-         write(msg,'(a,i3)')"[cg_list_level:restrict_q_1var] no coarser level than ", this%level_id
+         write(msg,'(a,i3)')"[cg_list_level_T:restrict_q_1var] no coarser level than ", this%level_id
          call warn(msg)
          return
       endif
@@ -551,7 +551,7 @@ contains
          if (allocated(cg%ri_tgt%seg)) then
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                nr = nr + I_ONE
-               if (nr > size(req, dim=1)) call die("[cg_list_level:restrict_q_1var] size(req) too small for Irecv")
+               if (nr > size(req, dim=1)) call die("[cg_list_level_T:restrict_q_1var] size(req) too small for Irecv")
                call MPI_Irecv(cg%ri_tgt%seg(g)%buf(1, 1, 1), size(cg%ri_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%ri_tgt%seg(g)%proc, cg%ri_tgt%seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
@@ -582,7 +582,7 @@ contains
                enddo
             enddo
             nr = nr + I_ONE
-            if (nr > size(req, dim=1)) call die("[cg_list_level:restrict_q_1var] size(req) too small for Isend")
+            if (nr > size(req, dim=1)) call die("[cg_list_level_T:restrict_q_1var] size(req) too small for Isend")
             call MPI_Isend(cg%ro_tgt%seg(g)%buf(1, 1, 1), size(cg%ro_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%ro_tgt%seg(g)%proc, cg%ro_tgt%seg(g)%tag, comm, req(nr), mpi_err)
          enddo
          cgl => cgl%nxt
@@ -687,10 +687,10 @@ contains
 
       implicit none
 
-      class(cg_list_level), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
       integer,                      intent(in)    :: iv   !< variable to be prolonged
 
-      type(cg_list_level), pointer :: fine
+      type(cg_list_level_T), pointer :: fine
       integer :: g
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: fse, cse ! shortcuts for fine segment and coarse segment
       integer(kind=8) :: iec, jec, kec
@@ -731,7 +731,7 @@ contains
          case (O_I4)
             P_2 = 3./128.;   P_1 = -11./64.;    P0 = 1.;          P1 = 11./64.;    P2 = -3./128.
          case default
-            call die("[cg_list_level:prolong_q_1var] Unsupported order")
+            call die("[cg_list_level_T:prolong_q_1var] Unsupported order")
             return
       end select
 
@@ -753,7 +753,7 @@ contains
          if (allocated(cg%pi_tgt%seg)) then
             do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
                nr = nr + I_ONE
-               if (nr > size(req, dim=1)) call die("[cg_list_level:prolong_q_1var] size(req) too small for Irecv")
+               if (nr > size(req, dim=1)) call die("[cg_list_level_T:prolong_q_1var] size(req) too small for Irecv")
                call MPI_Irecv(cg%pi_tgt%seg(g)%buf(1, 1, 1), size(cg%pi_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%pi_tgt%seg(g)%proc, cg%pi_tgt%seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
@@ -770,7 +770,7 @@ contains
             cse(:, HI) = cg%po_tgt%seg(g)%se(:,HI) - cg%off(:) + cg%ijkse(:, LO)
 
             nr = nr + I_ONE
-            if (nr > size(req, dim=1)) call die("[cg_list_level:prolong_q_1var] size(req) too small for Isend")
+            if (nr > size(req, dim=1)) call die("[cg_list_level_T:prolong_q_1var] size(req) too small for Isend")
 !            cg%po_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%span(cse)
             cg%po_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
             call MPI_Isend(cg%po_tgt%seg(g)%buf(1, 1, 1), size(cg%po_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%po_tgt%seg(g)%proc, cg%po_tgt%seg(g)%tag, comm, req(nr), mpi_err)
@@ -847,7 +847,7 @@ contains
                        + P1 * cg%prolong_(cg%is+odd(xdim)+  D(xdim):iec-dom%D_x+odd(xdim)+  D(xdim), cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
                        + P2 * cg%prolong_(cg%is+odd(xdim)+2*D(xdim):iec-dom%D_x+odd(xdim)+2*D(xdim), cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)
                case default
-                  call die("[cg_list_level:prolong_q_1var] unsupported stencil size")
+                  call die("[cg_list_level_T:prolong_q_1var] unsupported stencil size")
             end select
 
             select case (stencil_range*dom%D_y)
@@ -880,7 +880,7 @@ contains
                        + P1 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)+  D(ydim):jec-dom%D_y+odd(ydim)+  D(ydim), cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
                        + P2 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)+2*D(ydim):jec-dom%D_y+odd(ydim)+2*D(ydim), cg%ks-2*dom%D_z:kec+2*dom%D_z)
                case default
-                  call die("[cg_list_level:prolong_q_1var] unsupported stencil size")
+                  call die("[cg_list_level_T:prolong_q_1var] unsupported stencil size")
             end select
 
             select case (stencil_range*dom%D_z)
@@ -913,7 +913,7 @@ contains
                        + P1 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)+  D(zdim):kec-dom%D_z+odd(zdim)+  D(zdim))   &
                        + P2 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)+2*D(zdim):kec-dom%D_z+odd(zdim)+2*D(zdim))
                case default
-                  call die("[cg_list_level:prolong_q_1var] unsupported stencil size")
+                  call die("[cg_list_level_T:prolong_q_1var] unsupported stencil size")
             end select
             ! Alternatively, an FFT convolution may be employed after injection. No idea at what stencil size the FFT is faster. It is finite size for sure :-)
          endif
@@ -934,7 +934,7 @@ contains
 
       implicit none
 
-      class(cg_list_level), intent(in) :: this
+      class(cg_list_level_T), intent(in) :: this
 
       integer :: p, i, hl
       integer(kind=8) :: ccnt
@@ -952,7 +952,7 @@ contains
             ccnt = product(this%pse(p)%sel(i, :, HI) - this%pse(p)%sel(i, :, LO) + 1)
             maxcnt(p) = maxcnt(p) + ccnt
             if (i == 1) then
-               write(header, '(a,i4)')"[cg_list_level:print_segments] segment @", p
+               write(header, '(a,i4)')"[cg_list_level_T:print_segments] segment @", p
                hl = len_trim(header)
             else
                header = repeat(" ", hl)
@@ -961,7 +961,7 @@ contains
             call printinfo(msg)
          enddo
       enddo
-      write(msg,'(a,i3,a,f8.5)')"[cg_list_level:print_segments] Load balance at level ", this%level_id," : ",product(real(this%n_d(:)))/(nproc*maxval(maxcnt(:)))
+      write(msg,'(a,i3,a,f8.5)')"[cg_list_level_T:print_segments] Load balance at level ", this%level_id," : ",product(real(this%n_d(:)))/(nproc*maxval(maxcnt(:)))
       !> \todo add calculation of total internal boundary surface in cells
       call printinfo(msg)
       deallocate(maxcnt)
@@ -979,7 +979,7 @@ contains
 
       implicit none
 
-      class(cg_list_level), intent(inout) :: this
+      class(cg_list_level_T), intent(inout) :: this
 
       integer :: gr_id, i
       type(grid_container), pointer :: cg
@@ -1026,7 +1026,7 @@ contains
 
       implicit none
 
-      class(cg_list_level), intent(inout) :: this
+      class(cg_list_level_T), intent(inout) :: this
 
       integer :: p
 
@@ -1052,7 +1052,7 @@ contains
 
       implicit none
 
-      class(cg_list_level), intent(in)    :: this
+      class(cg_list_level_T), intent(in)    :: this
       type(grid_container), intent(inout) :: cg
 
       integer(kind=4), dimension(:), allocatable :: sizes, subsizes, starts
@@ -1063,9 +1063,9 @@ contains
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer, bp_layer, poff
 
-      if (cg%level_id /= this%level_id) call die("[cg_list_level:mpi_bnd_types] Level mismatch")
+      if (cg%level_id /= this%level_id) call die("[cg_list_level_T:mpi_bnd_types] Level mismatch")
 
-      if (allocated(cg%i_bnd) .or. allocated(cg%o_bnd)) call die("[cg_list_level:mpi_bnd_types] cg%i_bnd or cg%o_bnd already allocated")
+      if (allocated(cg%i_bnd) .or. allocated(cg%o_bnd)) call die("[cg_list_level_T:mpi_bnd_types] cg%i_bnd or cg%o_bnd already allocated")
       allocate(cg%i_bnd(xdim:zdim, dom%nb), cg%o_bnd(xdim:zdim, dom%nb))
 
       ! There are two completely different approaches: Very general and the old one. Can be put into separate routines.
@@ -1211,4 +1211,4 @@ contains
 
    end subroutine mpi_bnd_types
 
-end module cg_list_lev
+end module cg_list_level

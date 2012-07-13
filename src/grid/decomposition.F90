@@ -48,12 +48,12 @@ module decomposition
       subroutine divide_domain_template(dom_divided, patch)
 
          use constants,   only: ndims
-         use cg_list_lev, only: cg_list_patch
+         use cg_list_level, only: cg_list_patch_T
 
          implicit none
 
          logical,             intent(out)   :: dom_divided !< Set to .true. after a succesful decomposition
-         type(cg_list_patch), intent(inout) :: patch       !< the patch, which we want to be chopped into pieces
+         type(cg_list_patch_T), intent(inout) :: patch       !< the patch, which we want to be chopped into pieces
 
       end subroutine divide_domain_template
    end interface
@@ -106,13 +106,13 @@ contains
    logical function divide_domain(patch) result(dom_divided)
 
       use constants,   only: I_ONE
-      use cg_list_lev, only: cg_list_patch
+      use cg_list_level, only: cg_list_patch_T
       use mpi,         only: MPI_IN_PLACE, MPI_LOGICAL, MPI_LAND
       use mpisetup,    only: comm, mpi_err
 
       implicit none
 
-      type(cg_list_patch), intent(inout) :: patch  !< the patch, which we want to be chopped into pieces
+      type(cg_list_patch_T), intent(inout) :: patch  !< the patch, which we want to be chopped into pieces
 
       call divide_domain_int(dom_divided, patch) !%list_level%n_d, patch%list_level%pse)
       if (dom_divided) dom_divided = is_not_too_small(patch%list_level, "not catched anywhere")
@@ -127,13 +127,13 @@ contains
       use constants,   only: ndims
       use dataio_pub,  only: warn, printinfo, msg
       use domain,      only: dom, psize, bsize, allow_noncart, allow_uneven, dd_rect_quality, dd_unif_quality
-      use cg_list_lev, only: cg_list_patch
+      use cg_list_level, only: cg_list_patch_T
       use mpisetup,    only: nproc, master, have_mpi
 
       implicit none
 
       logical,             intent(out)   :: dom_divided !< Set to .true. after a succesful decomposition
-      type(cg_list_patch), intent(inout) :: patch       !< the patch, which we want to be chopped into pieces
+      type(cg_list_patch_T), intent(inout) :: patch       !< the patch, which we want to be chopped into pieces
 
       real :: quality
       integer(kind=4), dimension(ndims) :: p_size
@@ -227,7 +227,7 @@ contains
       use constants,   only: xdim, ydim, zdim, ndims, LO, HI, BND_COR, I_ONE
       use dataio_pub,  only: printinfo, die
       use domain,      only: dom, is_mpi_noncart, is_refined, use_comm3d, reorder
-      use cg_list_lev, only: cg_list_patch
+      use cg_list_level, only: cg_list_patch_T
       use mpi,         only: MPI_COMM_NULL
       use mpisetup,    only: master, FIRST, LAST, nproc, comm, proc, mpi_err
       use types,       only: cdd
@@ -235,7 +235,7 @@ contains
       implicit none
 
       integer(kind=4), dimension(ndims), intent(in)    :: p_size
-      type(cg_list_patch),               intent(inout) :: patch   !< the patch, which we want to be chopped into pieces
+      type(cg_list_patch_T),               intent(inout) :: patch   !< the patch, which we want to be chopped into pieces
 
       integer(kind=4) :: p
       integer(kind=4), dimension(ndims) :: pc
@@ -303,13 +303,13 @@ contains
 
       use constants,   only: ndims, xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE
       use dataio_pub,  only: printinfo, die
-      use cg_list_lev, only: cg_list_patch
+      use cg_list_level, only: cg_list_patch_T
       use mpisetup,    only: master, nproc, proc
 
       implicit none
 
       integer(kind=4), dimension(ndims), intent(in)    :: p_size
-      type(cg_list_patch),               intent(inout) :: patch   !< the patch, which we want to be chopped into pieces
+      type(cg_list_patch_T),               intent(inout) :: patch   !< the patch, which we want to be chopped into pieces
 
       integer(kind=4) :: p, px, py
       integer(kind=4), dimension(:), allocatable :: pz_slab, py_slab
@@ -613,12 +613,12 @@ contains
       use constants,   only: xdim, zdim, LO, HI
       use dataio_pub,  only: warn, msg, die
       use domain,      only: dom, bsize
-      use cg_list_lev, only: cg_list_patch
+      use cg_list_level, only: cg_list_patch_T
       use mpisetup,    only: master, proc, nproc
 
       implicit none
 
-      type(cg_list_patch), intent(inout) :: patch  !< the patch, which we want to be chopped into pieces
+      type(cg_list_patch_T), intent(inout) :: patch  !< the patch, which we want to be chopped into pieces
 
       integer, dimension(xdim:zdim) :: n_bl, b_loc
       integer, dimension(xdim:zdim, LO:HI) :: se
@@ -722,13 +722,13 @@ contains
       use constants,  only: I_ONE, LO, HI
       use dataio_pub, only: warn, msg
       use domain,     only: dom
-      use cg_list_lev, only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use mpi,        only: MPI_IN_PLACE, MPI_LOGICAL, MPI_LAND
       use mpisetup,   only: proc, comm, mpi_err
 
       implicit none
 
-      type(cg_list_level), pointer, intent(inout) :: list_level
+      type(cg_list_level_T), pointer, intent(inout) :: list_level
       character(len=*), intent(in) :: label
 
       integer :: p
@@ -765,14 +765,14 @@ contains
    subroutine set_pse_sel(p, n, se, list_level)
 
       use constants,   only: xdim, zdim, LO, HI
-      use cg_list_lev, only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
 
       implicit none
 
       integer(kind=4),                      intent(in)    :: p            !< process
       integer,                              intent(in)    :: n            !< block number
       integer, dimension(xdim:zdim, LO:HI), intent(in)    :: se           !< segment
-      type(cg_list_level), pointer,         intent(inout) :: list_level
+      type(cg_list_level_T), pointer,         intent(inout) :: list_level
 
       list_level%pse(p)%sel(n,:,:) = se(:,:)
 
@@ -788,12 +788,12 @@ contains
 
       use constants,   only: xdim, zdim, LO, HI, I_ONE
       use dataio_pub,  only: die
-      use cg_list_lev, only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use mpisetup,    only: FIRST, LAST, nproc
 
       implicit none
 
-      type(cg_list_level), pointer,        intent(inout) :: list_level
+      type(cg_list_level_T), pointer,        intent(inout) :: list_level
       integer, dimension(nproc), optional, intent(in)    :: n_cg        !< how many segments per process?
 
       integer :: p
@@ -816,12 +816,12 @@ contains
 
    subroutine deallocate_pse(list_level)
 
-      use cg_list_lev, only: cg_list_level
+      use cg_list_level, only: cg_list_level_T
       use mpisetup,    only: FIRST, LAST
 
       implicit none
 
-      type(cg_list_level), pointer, intent(inout) :: list_level
+      type(cg_list_level_T), pointer, intent(inout) :: list_level
 
       integer :: p
 

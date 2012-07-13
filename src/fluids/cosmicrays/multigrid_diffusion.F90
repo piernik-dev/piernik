@@ -348,7 +348,7 @@ contains
 
       use cg_list_global, only: all_cg
 #if defined(__INTEL_COMPILER)
-      use cg_list_lev,    only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_list_level,  only: cg_list_level_T  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use dataio_pub,     only: die
       use cg_list,        only: ind_val, dirty_label
@@ -388,7 +388,7 @@ contains
 
       use cg_list_global, only: all_cg
 #if defined(__INTEL_COMPILER)
-      use cg_list_lev,    only: cg_list_level  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_list_level,  only: cg_list_level_T  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use grid,           only: leaves, finest
       use initcosmicrays, only: iarr_crs
@@ -414,7 +414,7 @@ contains
    subroutine init_b
 
       use cg_list_global, only: all_cg
-      use cg_list_lev,    only: cg_list_level
+      use cg_list_level,  only: cg_list_level_T
       use constants,      only: I_ONE, xdim, zdim, HI, LO, BND_REF
       use domain,         only: dom
       use grid,           only: leaves, coarsest, finest
@@ -427,7 +427,7 @@ contains
       integer(kind=4) :: ib
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      type(cg_list_level),   pointer :: curl
+      type(cg_list_level_T),   pointer :: curl
 
       do ib = xdim, zdim
          call all_cg%set_dirty(idiffb(ib))
@@ -469,7 +469,7 @@ contains
    subroutine vcycle_hg(cr_id)
 
       use cg_list_global, only: all_cg
-      use cg_list_lev,    only: cg_list_level
+      use cg_list_level,  only: cg_list_level_T
       use dataio_pub,     only: msg, warn
       use cg_list,        only: ind_val, dirty_label
       use global,         only: do_ascii_dump
@@ -488,7 +488,7 @@ contains
       integer            :: v
       real               :: norm_lhs, norm_rhs, norm_old
       logical            :: dump_every_step
-      type(cg_list_level), pointer :: curl
+      type(cg_list_level_T), pointer :: curl
 
       write(vstat%cprefix,'("C",i1,"-")') cr_id !> \deprecated BEWARE: this is another place with 0 <= cr_id <= 9 limit
       write(dirty_label, '("md_",i1,"_dump")')  cr_id
@@ -656,7 +656,7 @@ contains
    subroutine residual(curl, src, soln, def, cr_id)
 
       use cg_list_global, only: all_cg
-      use cg_list_lev,    only: cg_list_level
+      use cg_list_level,  only: cg_list_level_T
       use constants,      only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
       use domain,         only: dom
       use cg_list,        only: cg_list_element, ind_val
@@ -666,7 +666,7 @@ contains
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: curl !< level for which approximate the solution
+      type(cg_list_level_T), pointer, intent(in) :: curl !< level for which approximate the solution
       integer,                      intent(in) :: src   !< index of source in cg%q(:)
       integer,                      intent(in) :: soln  !< index of solution in cg%q(:)
       integer,                      intent(in) :: def   !< index of defect in cg%q(:)
@@ -720,7 +720,7 @@ contains
    subroutine approximate_solution(curl, src, soln, cr_id)
 
       use cg_list_global, only: all_cg
-      use cg_list_lev,    only: cg_list_level
+      use cg_list_level,  only: cg_list_level_T
       use constants,      only: xdim, ydim, zdim, one, half, I_ONE, ndims, BND_NONE
       use domain,         only: dom
       use cg_list,        only: cg_list_element
@@ -730,7 +730,7 @@ contains
 
       implicit none
 
-      type(cg_list_level), pointer, intent(in) :: curl  !< level for which approximate the solution
+      type(cg_list_level_T), pointer, intent(in) :: curl  !< level for which approximate the solution
       integer,                      intent(in) :: src   !< index of source in cg%q(:)
       integer,                      intent(in) :: soln  !< index of solution in cg%q(:)
       integer,                      intent(in) :: cr_id !< CR component index
