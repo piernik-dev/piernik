@@ -237,7 +237,7 @@ contains
 !!
 !! \details This method sets up the grid container variables, coordinates and allocates basic arrays.
 !! Everything related to the interior of grid container should be set here.
-!! Things that are related to communication with other grid containers or global properties are set up in cg_list_level_T::init_all_new_cg.
+!! Things that are related to communication with other grid containers or global properties are set up in cg_list_level::init_all_new_cg.
 !<
 
    subroutine init(this, n_d, my_se, grid_id, level_id)
@@ -460,7 +460,7 @@ contains
       ! size of coarsened grid with guardcells, additional cell is required only when even-sized grid has odd offset
       where (dom%has_dir(:))
          n2(:) = (this%n_b(:) + 1 + mod(this%off, int(refinement_factor, kind=8)))/refinement_factor + 2*dom%nb + 1
-         ! +1 is because of some simplifications in cg_list_level_T::prolong_q_1var in treating grids with odd offsets
+         ! +1 is because of some simplifications in cg_list_level::prolong_q_1var in treating grids with odd offsets
       elsewhere
          n2(:) = 1
       endwhere

@@ -138,7 +138,7 @@ contains
          if (associated(cg)) then
             new%cg => cg
          else
-            call die("[gc_list:add_new] tried to add null() element")
+            call die("[cg_list:add_new] tried to add null() element")
          endif
       else
          allocate(new%cg)
@@ -146,11 +146,11 @@ contains
       new%nxt => null()
 
       if (.not. associated(this%first)) then ! the list was empty
-         if (associated(this%last)) call die("[gc_list:add_new] last without first")
+         if (associated(this%last)) call die("[cg_list:add_new] last without first")
          this%first => new
          new%prv => null()
       else
-         if (.not. associated(this%last)) call die("[gc_list:add_new] first without last")
+         if (.not. associated(this%last)) call die("[cg_list:add_new] first without last")
          this%last%nxt => new
          new%prv => this%last
       endif
@@ -172,7 +172,7 @@ contains
       type(cg_list_element), pointer, intent(inout) :: cgle !< the element to be eradicated
 
       if (.not. associated(cgle)) then
-         call warn("[gc_list:del_lnk] tried to remove null() element")
+         call warn("[cg_list:del_lnk] tried to remove null() element")
          return
       endif
 
@@ -216,15 +216,15 @@ contains
       integer :: cnt
 
       if (.not. associated(cgle)) then
-         call warn("[gc_list:un_link] tried to remove null() element")
+         call warn("[cg_list:un_link] tried to remove null() element")
          return
       endif
 
       cur => this%first
       cnt = this%cnt
 
-      if (.not. associated(this%first)) call die("[gc_list:un_link] Cannot remove anything from an empty list")
-      if (cnt <= 0) call die("[gc_list:un_link] this%cnt <=0 .and. associated(this%first)")
+      if (.not. associated(this%first)) call die("[cg_list:un_link] Cannot remove anything from an empty list")
+      if (cnt <= 0) call die("[cg_list:un_link] this%cnt <=0 .and. associated(this%first)")
 
       do while (associated(cur))
          if (associated(cur, cgle)) then
@@ -240,7 +240,7 @@ contains
          cur => cur%nxt
       enddo
 
-      if (this%cnt == cnt) call warn("[gc_list:un_link] element not found on the list")
+      if (this%cnt == cnt) call warn("[cg_list:un_link] element not found on the list")
 
    end subroutine un_link
 
@@ -257,13 +257,13 @@ contains
       integer :: cnt
 
       if (.not. associated(this%first)) then
-         call warn("[gc_list:print_list] Empty list")
+         call warn("[cg_list:print_list] Empty list")
          if (this%cnt /= 0) then
-            write(msg,'(a,i6)')"[gc_list:print_list] Empty list length /= 0 : ",this%cnt
+            write(msg,'(a,i6)')"[cg_list:print_list] Empty list length /= 0 : ",this%cnt
             call warn(msg)
          endif
          if (associated(this%last)) then
-            call warn("[gc_list:print_list] Tail without head")
+            call warn("[cg_list:print_list] Tail without head")
             if (associated(this%last%cg)) then
                write(msg,'(a,i7)')"Last element #",this%last%cg%grid_id
                call warn(msg)
@@ -272,7 +272,7 @@ contains
          return
       endif
 
-      if (.not. associated(this%last)) call warn("[gc_list:print_list] Head without tail")
+      if (.not. associated(this%last)) call warn("[cg_list:print_list] Head without tail")
 
       if (associated(this%first%cg)) then
          write(msg,'(a,i7)')"First element #",this%first%cg%grid_id
@@ -295,7 +295,7 @@ contains
       enddo
 
       if (cnt /= this%cnt) then
-         write(msg, '(2(a,i5))')"[gc_list:print_list] this%cnt = ",this%cnt," /= ",cnt
+         write(msg, '(2(a,i5))')"[cg_list:print_list] this%cnt = ",this%cnt," /= ",cnt
          call warn(msg)
       endif
 
@@ -354,13 +354,13 @@ contains
          case (MAXL)
             prop%val = -huge(1.)
          case default
-            write(msg,*) "[gc_list:get_extremum]: I don't know what to do with minmax = ", minmax
+            write(msg,*) "[cg_list:get_extremum]: I don't know what to do with minmax = ", minmax
             call warn(msg)
       end select
 
       nullify(cg_x)
       cgl => this%first
-      if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[gc_list:get_extremum] Wrong index")
+      if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[cg_list:get_extremum] Wrong index")
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -398,7 +398,7 @@ contains
             if (present(dir))      prop%assoc        = cg_x%dl(dir)
             ! else prop%assoc = minval(cg_x%dl(:)) ???
          else
-            write(msg,'(a,a)') "[gc_list:get_extremum] cg_x not associated for q array name ", qna%lst(ind)%name
+            write(msg,'(a,a)') "[cg_list:get_extremum] cg_x not associated for q array name ", qna%lst(ind)%name
             call die(msg)
          endif
       endif
@@ -566,7 +566,7 @@ contains
       type(cg_list_element), pointer :: cgl
 
       if (size(iv) <= 0) then
-         call warn("[gc_list::q_lin_comb] Nothing to do")
+         call warn("[cg_list::q_lin_comb] Nothing to do")
          return
       endif
 
@@ -575,7 +575,7 @@ contains
       swapped =.false.
       do i = lbound(iv, dim=1)+1, ubound(iv, dim=1)
          if (ind == iv(i)%ind) then
-            if (swapped) call die("[gc_list::q_lin_comb] Cannot use own field twice due to side effects")
+            if (swapped) call die("[cg_list::q_lin_comb] Cannot use own field twice due to side effects")
             iv_safe(lbound(iv, dim=1)) = iv(i)
             iv_safe(i) = iv(lbound(iv, dim=1))
             swapped = .true.
@@ -631,7 +631,7 @@ contains
                   avg = avg + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol * cg%x(i)
                enddo
             case default
-               call die("[gc_list:subtract_average] Unsupported geometry.")
+               call die("[cg_list:subtract_average] Unsupported geometry.")
          end select
          vol = vol + cg%vol
          cgl => cgl%nxt
@@ -680,7 +680,7 @@ contains
                   norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2) * cg%dvol * cg%x(i)
                enddo
             case default
-               call die("[gc_list:norm_sq] Unsupported geometry.")
+               call die("[cg_list:norm_sq] Unsupported geometry.")
          end select
          cgl => cgl%nxt
       enddo
@@ -795,7 +795,7 @@ contains
 
       close(fu)
 
-      write(msg,'(3a)') "[gc_list:ascii_dump] Wrote dump '",filename,"'"
+      write(msg,'(3a)') "[cg_list:ascii_dump] Wrote dump '",filename,"'"
       call printio(msg)
 
    end subroutine ascii_dump
@@ -845,7 +845,7 @@ contains
       type(cg_list_element), pointer :: cgl
 
       if (.not. dirty_debug) return
-      if (iv < lbound(qna%lst, dim=1) .or. iv > ubound(qna%lst, dim=1)) call die("[gc_list:check_dirty] Invalid variable index.")
+      if (iv < lbound(qna%lst, dim=1) .or. iv > ubound(qna%lst, dim=1)) call die("[cg_list:check_dirty] Invalid variable index.")
 
       ng = 0
       if (present(expand)) ng = min(dom%nb, expand)
@@ -858,7 +858,7 @@ contains
                do i = cgl%cg%is-ng*dom%D_x, cgl%cg%ie+ng*dom%D_x
                   if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
                      ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
-                     write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') "[gc_list:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, &
+                     write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') "[cg_list:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, &
                           &                                          " cg#", cgl%cg%grid_id, " '", trim(qna%lst(iv)%name), "'(", &
                           &                                          [ i, j, k ] - cgl%cg%ijkse(:, LO) + cgl%cg%off(:), ") = ", cgl%cg%q(iv)%arr(i, j, k)
                      call warn(msg)
@@ -872,7 +872,7 @@ contains
       enddo
 
       if (cnt /= 0) then
-         write(msg,'(a,i8,a,i5)')"[gc_list:check_dirty] Found ", cnt, " dirty value @ process ", proc
+         write(msg,'(a,i8,a,i5)')"[cg_list:check_dirty] Found ", cnt, " dirty value @ process ", proc
          call die(msg)
       endif
 
@@ -959,18 +959,18 @@ contains
 !!$      type(cg_list_element), pointer :: cur, prv
 !!$
 !!$      if (.not. associated(cgle)) then
-!!$         call warn("[gc_list:init_el] tried to initialize with null() element")
+!!$         call warn("[cg_list:init_el] tried to initialize with null() element")
 !!$         return
 !!$      endif
 !!$
 !!$      cur => cgle
-!!$      if (associated(cur%prv)) call warn("[gc_list:init_el] this is not the first element of the chain")
+!!$      if (associated(cur%prv)) call warn("[cg_list:init_el] this is not the first element of the chain")
 !!$
 !!$      do while (associated(cur%prv))
 !!$         prv => cur
 !!$         cur => cur%prv
-!!$         if (.not. associated(cur%nxt, prv)) call die("[gc_list:init_el] this is not a straight list (rev)")
-!!$         if (associated(cur, cgle)) call die("[gc_list:init_el] loops are not allowed (rev)")
+!!$         if (.not. associated(cur%nxt, prv)) call die("[cg_list:init_el] this is not a straight list (rev)")
+!!$         if (associated(cur, cgle)) call die("[cg_list:init_el] loops are not allowed (rev)")
 !!$      enddo
 !!$
 !!$      this%first => cur
@@ -980,7 +980,7 @@ contains
 !!$         prv => cur
 !!$         cur => cur%nxt
 !!$         this%cnt = this%cnt + 1
-!!$         if (.not. associated(cur%prv, prv)) call die("[gc_list:init_el] this is not a straight list (fwd)")
+!!$         if (.not. associated(cur%prv, prv)) call die("[cg_list:init_el] this is not a straight list (fwd)")
 !!$         ! we don't need second loop check here
 !!$      enddo
 !!$
