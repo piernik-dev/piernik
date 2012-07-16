@@ -220,7 +220,6 @@ contains
       use interactions,          only: init_interactions
       use initproblem,           only: init_prob, read_problem_par, problem_pointers
       use mpisetup,              only: init_mpi
-      use timestep,              only: init_time_step
       use units,                 only: init_units
       use user_hooks,            only: problem_post_restart
 #if defined MAGNETIC && defined RESISTIVE
@@ -284,8 +283,6 @@ contains
 
       call init_global
       code_progress = PIERNIK_INIT_GLOBAL ! Global parameters are set up
-
-      call init_time_step
 
       call init_fluids
       code_progress = PIERNIK_INIT_FLUIDS ! Fluid properties are set up

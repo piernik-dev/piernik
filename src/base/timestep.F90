@@ -36,10 +36,10 @@ module timestep
    implicit none
 
    private
-   public :: init_time_step, time_step, cfl_manager
+   public :: time_step, cfl_manager
 
    real :: c_all_old
-   procedure(), pointer :: cfl_manager => null()
+   procedure(), pointer :: cfl_manager => init_time_step
 
 contains
 
@@ -59,7 +59,6 @@ contains
 
       if (code_progress < PIERNIK_INIT_GLOBAL) call die("[grid:init_grid] globals not initialized.")
 
-      if (associated(cfl_manager)) call die("[timestep:init_time_step] cfl_manager already associated.")
       select case (cflcontrol)
          case ('warn')
             cfl_manager => cfl_warn
@@ -71,6 +70,8 @@ contains
             write(msg, '(3a)')"[timestep:init_time_step] Unknown cfl_manager '",trim(cflcontrol),"'. Assuming 'none'."
             call warn(msg)
       end select
+      if (.not.associated(cfl_manager)) call die("[timestep:init_time_step] cfl_manager was not associated.")
+      call cfl_manager
 
    end subroutine init_time_step
 
