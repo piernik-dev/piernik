@@ -38,9 +38,11 @@
 !<
 module initcosmicrays
 ! pulled by COSM_RAYS
+   use constants, only: cbuff_len
    implicit none
 
    public ! QA_WARN no secrets are kept here
+   private :: cbuff_len ! QA_WARN prevent reexport
 
    integer, parameter                  :: ncr_max = 9  !< maximum number of CR nuclear and electron components
 
@@ -59,6 +61,7 @@ module initcosmicrays
    real, dimension(ncr_max)            :: gamma_cre    !< array containing adiabatic indexes of all CR nuclear components
    real, dimension(ncr_max)            :: K_cre_paral  !< array containing parallel diffusion coefficients of all CR electron components
    real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components
+   character(len=cbuff_len)            :: divv_scheme  !< scheme used to calculate div(v), see crhelpers for more details
 
    ! public component data
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
@@ -68,7 +71,6 @@ module initcosmicrays
    real,    allocatable, dimension(:)  :: gamma_crs    !< array containing adiabatic indexes of all CR components
    real,    allocatable, dimension(:)  :: K_crs_paral  !< array containing parallel diffusion coefficients of all CR components
    real,    allocatable, dimension(:)  :: K_crs_perp   !< array containing perpendicular diffusion coefficients of all CR components
-
    !> \deprecated BEWARE Possible confusion: *_perp coefficients are not "perpendicular" but rather isotropic
 
 contains
@@ -94,16 +96,18 @@ contains
    !! <tr><td>K_crn_perp  </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::K_crn_perp </td></tr>
    !! <tr><td>K_cre_paral </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::K_cre_paral</td></tr>
    !! <tr><td>K_cre_perp  </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::K_cre_perp </td></tr>
+   !! <tr><td>divv_scheme </td><td>''    </td><td>string    </td><td>\copydoc initcosmicrays::divv_scheme</td></tr>
    !! </table>
    !! \n \n
    !<
    subroutine init_cosmicrays
 
+      use constants,       only: cbuff_len
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
-      use mpisetup,        only: ibuff, rbuff, lbuff, comm, mpi_err, buffer_dim, master, slave, FIRST
-      use mpi,             only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_INTEGER
+      use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, comm, mpi_err, buffer_dim, master, slave, FIRST
+      use mpi,             only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_INTEGER, MPI_CHARACTER
 
       implicit none
 
@@ -112,7 +116,8 @@ contains
 
       namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_split, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
-           &                 ncre, gamma_cre, K_cre_paral, K_cre_perp
+           &                 ncre, gamma_cre, K_cre_paral, K_cre_perp, &
+           &                 divv_scheme
 
       cfl_cr     = 0.9
       smallecr   = 0.0
@@ -130,6 +135,8 @@ contains
       gamma_cre(:)   = 4./3.
       K_cre_paral(:) = 0.0
       K_cre_perp(:)  = 0.0
+
+      divv_scheme = ''
 
       if (master) then
 
@@ -156,6 +163,8 @@ contains
 
          lbuff(1)   = use_split
 
+         cbuff(1)   = divv_scheme
+
          nn         = count(rbuff(:) < huge(1.), kind=4)    ! this must match the last rbuff() index above
          ibuff(ubound(ibuff, 1)) = nn
          ne         = nn + 3 * ncrn
@@ -178,6 +187,7 @@ contains
       call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
       call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
       call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
+      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER, FIRST, comm, mpi_err)
 
       if (slave) then
 
@@ -193,6 +203,8 @@ contains
 
          nn         = ibuff(ubound(ibuff, 1))    ! this must match the last rbuff() index above
          ne         = nn + 3 * ncrn
+
+         divv_scheme = cbuff(1)
 
          if (ncrn > 0) then
             gamma_crn  (1:ncrn) = rbuff(nn+1       :nn+  ncrn)

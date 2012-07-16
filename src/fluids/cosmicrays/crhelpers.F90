@@ -45,14 +45,30 @@ module crhelpers
    end interface
 
    character(len=dsetnamelen), parameter :: divv_n = "divvel" !< divergence of velocity
-   !! \todo get rid of DIVV_LP
-#ifdef DIVV_LP
-   procedure(div_v_func), pointer :: div_v => div_v_6th_lp
-#else /* !DIVV_LP */
-   procedure(div_v_func), pointer :: div_v => div_v_1st
-#endif /* !DIVV_LP */
+   procedure(div_v_func), pointer :: div_v => init_div_v
 
 contains
+
+   subroutine init_div_v(ifluid, cg)
+
+      use grid_cont,      only: grid_container
+      use initcosmicrays, only: divv_scheme
+
+      implicit none
+
+      integer(kind=4),               intent(in)    :: ifluid
+      type(grid_container), pointer, intent(inout) :: cg
+
+      select case (trim(divv_scheme))
+         case ("6lp", "6th_order_legandre")
+            div_v => div_v_6th_lp
+         case default
+            div_v => div_v_1st
+      end select
+
+      call div_v(ifluid, cg)
+      return
+   end subroutine init_div_v
 
    subroutine set_div_v1d(p, dir, i1, i2, cg)
 
