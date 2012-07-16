@@ -1269,9 +1269,12 @@ contains
       character(len=fmtlen)    :: fmt
       character(len=cbuff_len) :: dname
       type(cg_list_level_T), pointer :: curl
+      integer, dimension(4) :: mg_fields
 
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       inquire(file = "_dump_result_", EXIST=dump_result)
+      write(dname,'(2a)')trim(vstat%cprefix),"mdump"
+      mg_fields = [ source, solution, defect, correction ]
 
       do_ascii_dump = do_ascii_dump .or. dump_every_step .or. dump_result
 
@@ -1338,14 +1341,8 @@ contains
          endif
          vstat%time(vstat%count) = ts
 
-         if (norm_old/norm_lhs <= suspicious_factor .or. dump_every_step .or. (norm_lhs/norm_rhs <= norm_tol .and. dump_result)) then
-            write(dname,'(2a)')trim(vstat%cprefix),"mdump"
-            if (dump_result .and. norm_lhs/norm_rhs <= norm_tol) then
-               call all_cg%numbered_ascii_dump([ source, solution, defect, correction ], dname)
-            else
-               call all_cg%numbered_ascii_dump([ source, solution, defect, correction ], dname, v)
-            endif
-         endif
+         if (v>0 .and. norm_old/norm_lhs <= suspicious_factor)          call all_cg%numbered_ascii_dump(mg_fields, dname, v)
+         if (dump_result .and. norm_lhs/norm_rhs <= norm_tol) call all_cg%numbered_ascii_dump(mg_fields, dname)
 
          if (norm_lhs/norm_rhs <= norm_tol) exit
 
@@ -1379,6 +1376,8 @@ contains
             curl => curl%finer
          enddo
          call leaves%q_add(correction, solution)
+
+         if (dump_every_step) call all_cg%numbered_ascii_dump(mg_fields, dname, v)
 
       enddo
 
