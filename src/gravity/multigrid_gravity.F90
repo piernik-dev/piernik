@@ -42,7 +42,7 @@
 module multigrid_gravity
 ! pulled by MULTIGRID && GRAV
 
-   use constants,     only: cbuff_len
+   use constants,     only: cbuff_len, ndims
    use multigridvars, only: vcycle_stats
 
    implicit none
@@ -69,9 +69,7 @@ module multigrid_gravity
    ! namelist parameters
    real               :: norm_tol                                     !< stop V-cycle iterations when the ratio of norms ||residual||/||source|| is below this value
    real               :: overrelax                                    !< overrealaxation factor (if < 1. then works as underrelaxation), provided for tests
-   real               :: overrelax_x                                  !< x-direction overrealaxation factor for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
-   real               :: overrelax_y                                  !< y-direction overrealaxation factor for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
-   real               :: overrelax_z                                  !< z-direction overrealaxation factor for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
+   real, dimension(ndims) :: overrelax_xyz                            !< directional overrealaxation factor for fine tuning convergence ratio when cell spacing is not equal in all 3 directions. Use with care, patience and lots of hope.
    real               :: Jacobi_damp                                  !< omega factor for damped Jacobi relaxation. Jacobi_damp == 1 gives undamped method. Try 0.5 in 1D.
    real               :: vcycle_abort                                 !< abort the V-cycle when lhs norm raises by this factor
    real               :: L4_strength                                  !< strength of the 4th order terms in the Laplace operator; 0.: 2nd, 1.: 4th direct, 0.5: 4th integral
@@ -132,9 +130,7 @@ contains
 !! <tr><td>nsmool                </td><td>4      </td><td>integer value  </td><td>\copydoc multigrid_gravity::nsmool                </td></tr>
 !! <tr><td>nsmoob                </td><td>100    </td><td>integer value  </td><td>\copydoc multigrid_gravity::nsmoob                </td></tr>
 !! <tr><td>overrelax             </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax             </td></tr>
-!! <tr><td>overrelax_x           </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax_x           </td></tr>
-!! <tr><td>overrelax_y           </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax_y           </td></tr>
-!! <tr><td>overrelax_z           </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax_z           </td></tr>
+!! <tr><td>overrelax_xxyz(ndims) </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::overrelax_xyz         </td></tr>
 !! <tr><td>Jacobi_damp           </td><td>1.     </td><td>real value     </td><td>\copydoc multigrid_gravity::Jacobi_damp           </td></tr>
 !! <tr><td>L4_strength           </td><td>1.0    </td><td>real value     </td><td>\copydoc multigrid_gravity::L4_strength           </td></tr>
 !! <tr><td>nsmoof                </td><td>1      </td><td>integer value  </td><td>\copydoc multigrid_gravity::nsmoof                </td></tr>
@@ -175,7 +171,7 @@ contains
       logical, save :: frun = .true.      !< First run flag
 
       namelist /MULTIGRID_GRAVITY/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, &
-           &                       overrelax, overrelax_x, overrelax_y, overrelax_z, Jacobi_damp, L4_strength, nsmoof, ord_laplacian, ord_time_extrap, &
+           &                       overrelax, overrelax_xyz, Jacobi_damp, L4_strength, nsmoof, ord_laplacian, ord_time_extrap, &
            &                       prefer_rbgs_relaxation, base_no_fft, fft_full_relax, fft_patient, trust_fft_solution, &
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str
@@ -186,9 +182,7 @@ contains
       ! Default values for namelist variables
       norm_tol               = 1.e-6
       overrelax              = 1.
-      overrelax_x            = 1.
-      overrelax_y            = 1.
-      overrelax_z            = 1.
+      overrelax_xyz(:)       = 1.
       Jacobi_damp            = 1.
       vcycle_abort           = 2.
       L4_strength            = 1.0
@@ -252,9 +246,7 @@ contains
 
          rbuff(1) = norm_tol
          rbuff(2) = overrelax
-         rbuff(3) = overrelax_x
-         rbuff(4) = overrelax_y
-         rbuff(5) = overrelax_z
+         rbuff(3:5) = overrelax_xyz
          rbuff(6) = Jacobi_damp
          rbuff(7) = vcycle_abort
          rbuff(8) = L4_strength
@@ -293,9 +285,7 @@ contains
 
          norm_tol       = rbuff(1)
          overrelax      = rbuff(2)
-         overrelax_x    = rbuff(3)
-         overrelax_y    = rbuff(4)
-         overrelax_z    = rbuff(5)
+         overrelax_xyz  = rbuff(3:5)
          Jacobi_damp    = rbuff(6)
          vcycle_abort   = rbuff(7)
          L4_strength    = rbuff(8)
@@ -373,12 +363,10 @@ contains
 
       single_base = .not. base_no_fft
 
-      if (.not. prefer_rbgs_relaxation .and. any([ overrelax, overrelax_x, overrelax_y, overrelax_z ] /= 1.)) then
+      if (.not. prefer_rbgs_relaxation .and. any([ overrelax, overrelax_xyz(:) ] /= 1.)) then
          if (master) call warn("[multigrid_gravity:init_multigrid_grav] Overrelaxation is disabled for FFT local solver.")
          overrelax = 1.
-         overrelax_x   = 1.
-         overrelax_y   = 1.
-         overrelax_z   = 1.
+         overrelax_xyz(:) = 1.
       endif
 
       if (master) then
@@ -386,8 +374,8 @@ contains
             write(msg, '(a,g12.5,a)')"[multigrid_gravity:init_multigrid_grav] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
             call warn(msg)
          endif
-         if (overrelax /= 1. .or. overrelax_x /= 1. .or. overrelax_y /= 1. .or. overrelax_z /= 1.) then
-            write(msg, '(a,f8.5,a,3f8.5,a)')"[multigrid_gravity:init_multigrid_grav] Overrelaxation factors: global = ", overrelax, ", directional = [", overrelax_x, overrelax_y, overrelax_z, "]"
+         if (overrelax /= 1. .or. any(overrelax_xyz(:) /= 1.)) then
+            write(msg, '(a,f8.5,a,3f8.5,a)')"[multigrid_gravity:init_multigrid_grav] Overrelaxation factors: global = ", overrelax, ", directional = [", overrelax_xyz(:), "]"
             call warn(msg)
          endif
       endif
@@ -403,7 +391,7 @@ contains
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
       use cg_list_level,  only: cg_list_level_T
-      use constants,      only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, varlen
+      use constants,      only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, varlen, xdim, ydim, zdim
       use dataio_pub,     only: die, warn, printinfo, msg
       use domain,         only: dom
       use grid,           only: leaves, finest, coarsest
@@ -451,9 +439,9 @@ contains
          cg%mg%ry = cg%dvol2 * cg%idy2
          cg%mg%rz = cg%dvol2 * cg%idz2
          cg%mg%r  = cg%mg%r  / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
-         cg%mg%rx = overrelax_x * cg%mg%rx * cg%mg%r
-         cg%mg%ry = overrelax_y * cg%mg%ry * cg%mg%r
-         cg%mg%rz = overrelax_z * cg%mg%rz * cg%mg%r
+         cg%mg%rx = overrelax_xyz(xdim)* cg%mg%rx * cg%mg%r
+         cg%mg%ry = overrelax_xyz(ydim)* cg%mg%ry * cg%mg%r
+         cg%mg%rz = overrelax_xyz(zdim)* cg%mg%rz * cg%mg%r
          cg%mg%r  = cg%mg%r  * cg%dvol2
          !>
          !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
@@ -1807,9 +1795,9 @@ contains
                               cry = cg%dvol2 * cg%idy2
                               crz = cg%dvol2 * cg%idz2 * cg%x(i)**2
                               cr  = cr / (crx + cry + crz)
-                              crx = overrelax_x * crx * cr
-                              cry = overrelax_y * cry * cr
-                              crz = overrelax_z * crz * cr
+                              crx = overrelax_xyz(xdim)* crx * cr
+                              cry = overrelax_xyz(ydim)* cry * cr
+                              crz = overrelax_xyz(zdim)* crz * cr
                               cr  = cr * cg%dvol2 * cg%x(i)**2
 
                               crx1 = 2. * cg%x(i) * cg%idx

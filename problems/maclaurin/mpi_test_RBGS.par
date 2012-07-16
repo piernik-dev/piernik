@@ -50,14 +50,8 @@
     vars(4) = 'errp'
  /
 
- $FLUID_IONIZED
-    gamma  = 1.67
+ $FLUID_DUST
     selfgrav = .true.
- /
-
- $FLUID_NEUTRAL
-    gamma = 1.67
-    selfgrav = .false.
  /
 
  $NUMERICAL_SETUP
@@ -92,15 +86,15 @@
  $MULTIGRID_GRAVITY
     norm_tol  = 1.e-6
     nsmool    = 8
-    overrelax     =  1.0054
     grav_bnd_str  = "isolated"
     prefer_rbgs_relaxation = .true.
-    gb_solve_gather = .true.
     max_cycles = 100
     vcycle_abort  = 100.
-    overrelax_x = 1.0023
-    overrelax_z = 1.000
-    overrelax_y = 1.06
+!    overrelax     =  .9941
+!    overrelax_xyz = 1.0019, .9939, 1.205
+ /
+
+ $INTERACTIONS
  /
 
  $AMR
