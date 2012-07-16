@@ -117,4 +117,26 @@ contains
 
    end function resample_gauss
 
+!>
+!! \brief Calculate first 4 terms of taylor expansion of cosh
+!!
+!! We often need to calculate cosh for very large numbers, which may lead to FPEs. Most of the time, we are
+!! not actually interested in the exact values, but rather the approximate shape of the function.
+!! This helper grows to infinity at much slower pace than fortran intrinsic
+
+   elemental function crude_cosh(x) result (res)
+      implicit none
+      real, intent(in) :: x
+      real, parameter, dimension(*) :: cosh_coef = [0.5, 0.041666666666666664, 0.001388888888888889]
+      real :: res, x2
+      integer :: i
+
+      x2 = x**2
+      res = 1.0
+      do i = lbound(cosh_coef, 1), ubound(cosh_coef, 1)
+         res = res + x2 * cosh_coef(i)
+         x2 = x2**2
+      enddo
+   end function crude_cosh
+
 end module func
