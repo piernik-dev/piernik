@@ -43,7 +43,7 @@ module hydrostatic
    private
 #ifdef GRAV
    public :: set_default_hsparams, hydrostatic_zeq_coldens, hydrostatic_zeq_densmid, cleanup_hydrostatic, outh_bnd
-   public :: dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hstn, hsl, sdlim, hscg
+   public :: dprof, gprofs, nstot, zs, dzs, hsmin, hsbn, hsl, sdlim, hscg
 #endif /* GRAV */
 
    real, allocatable, dimension(:), save :: zs        !< array of z-positions of subgrid cells centers
@@ -54,7 +54,6 @@ module hydrostatic
    real,                            save :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
    real,                            save :: hsmin     !< lower position limit
    integer(kind=4),                 save :: hsbn      !< number of cells in proceeded block
-   integer,                         save :: hstn      !< number of cells in proceeded domain
    real, allocatable, dimension(:), save :: hsl       !< lower borders of cells of proceeded block
    real, dimension(2),              save :: sdlim     !< edges for sd sum
    type(grid_container), pointer,   save :: hscg
@@ -145,7 +144,6 @@ contains
       dzs   = (dom%edge(zdim, HI)-dom%edge(zdim, LO))/real(nstot-2*dom%nb*nsub)
       hsmin = dom%edge(zdim, LO)-dom%nb*cg%dl(zdim)
       hsbn  = cg%n_(zdim)
-      hstn  = dom%n_t(zdim)
       sdlim = dom%edge(zdim,:)
       if (allocated(dprof)) call my_deallocate(dprof)
       call my_allocate(dprof, [cg%n_(zdim)], "dprof")
