@@ -1341,7 +1341,7 @@ contains
          endif
          vstat%time(vstat%count) = ts
 
-         if (v>0 .and. norm_old/norm_lhs <= suspicious_factor)          call all_cg%numbered_ascii_dump(mg_fields, dname, v)
+         if (v>0 .and. norm_old/norm_lhs <= suspicious_factor) call all_cg%numbered_ascii_dump(mg_fields, dname, v)
          if (dump_result .and. norm_lhs/norm_rhs <= norm_tol) call all_cg%numbered_ascii_dump(mg_fields, dname)
 
          if (norm_lhs/norm_rhs <= norm_tol) exit
