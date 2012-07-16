@@ -1425,12 +1425,12 @@ contains
 
    subroutine residual2(curl, src, soln, def)
 
-      use cg_list_level,only: cg_list_level_T
-      use constants,    only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half, I_ONE, BND_NEGREF
-      use dataio_pub,   only: die
-      use domain,       only: dom
-      use cg_list,      only: cg_list_element
-      use grid_cont,    only: grid_container
+      use cg_list_level, only: cg_list_level_T
+      use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half, I_ONE, BND_NEGREF
+      use dataio_pub,    only: die
+      use domain,        only: dom
+      use cg_list,       only: cg_list_element
+      use grid_cont,     only: grid_container
 
       implicit none
 
@@ -1544,14 +1544,14 @@ contains
 
    subroutine residual4(curl, src, soln, def)
 
-      use cg_list_level,only: cg_list_level_T
-      use constants,    only: I_TWO, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
-      use dataio_pub,   only: die, warn
-      use domain,       only: dom
-      use cg_list,      only: cg_list_element
-      use grid_cont,    only: grid_container
-      use mpisetup,     only: master
-      use named_array,  only: p3
+      use cg_list_level, only: cg_list_level_T
+      use constants,     only: I_TWO, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
+      use dataio_pub,    only: die, warn
+      use domain,        only: dom
+      use cg_list,       only: cg_list_element
+      use grid_cont,     only: grid_container
+      use mpisetup,      only: master
+      use named_array,   only: p3
 
       implicit none
 
