@@ -30,7 +30,7 @@
 !! \brief Definitions of 3D and 4D named arrays
 !!
 !! \details The named arrays are used almost exclusively in grid container, where anyone may register a rank-3 (cg%q(:)) or rank-4 (cg%w) array.
-!! The mainteance of named arrays(initialization, cleanup, boundary cell exchange, I/O) is unified as much as possible,
+!! The maintenance of named arrays(initialization, cleanup, boundary cell exchange, I/O) is unified as much as possible,
 !! which saves us from writing a lot of partially duplicated code.
 !<
 module named_array

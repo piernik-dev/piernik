@@ -45,7 +45,7 @@ contains
 !!
 !! \warning There might be other evolving variables (such as global::magic_mass) that should be added here
 !!
-!! \todo Move this routine somewhere else, because it should be available for all hydro shemes
+!! \todo Move this routine somewhere else, because it should be available for all hydro schemes
 !>
 
    subroutine repeat_fluidstep
@@ -156,7 +156,7 @@ contains
       type(grid_container), pointer :: cg
 
       cg => leaves%first%cg
-      if (is_multicg) call die("[fluidupdate:make_3sweeps] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
+      if (is_multicg) call die("[fluidupdate:make_3sweeps] multiple grid pieces per processor not implemented yet") !nontrivial SHEAR
 
       if (dom%has_dir(ydim)) call yshift(t, dt)
       if (dom%has_dir(xdim)) call bnd_u(xdim, cg)
@@ -295,7 +295,7 @@ contains
 #ifdef RESISTIVE
 ! DIFFUSION FULL STEP
          wcu => cg%q(qna%ind(wcu_n))%arr
-         if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per procesor not implemented yet") ! not tested custom_emf_bnd
+         if (is_multicg) call die("[fluidupdate:mag_add] multiple grid pieces per processor not implemented yet") ! not tested custom_emf_bnd
          if (associated(custom_emf_bnd)) call custom_emf_bnd(wcu)
          cg%b(dim2,:,:,:) = cg%b(dim2,:,:,:) - wcu*cg%idl(dim1)
          wcu = pshift(wcu,dim1)

@@ -34,7 +34,7 @@
 !! For simplicity, let's assume that all boundaries that rely on MPI communication are internal.
 !! This implies that periodic, corner shear and fine-coarse boundaries are also "internal"
 !!
-!! Note that this routine may not properly update some layers of guardcells when number of guardcell layers exceedes number of active cells.
+!! Note that this routine may not properly update some layers of guardcells when number of guardcell layers exceeds number of active cells.
 !! Appropriate checks should be made in divide_domain routine.
 !!
 !! \todo integrate here as much stuff from fluidboundaries, magboundaries, etc. as possible.
@@ -100,7 +100,7 @@ contains
 !!
 !! \todo Check how much performance is lost due to using MPI calls even for local copies. Decide whether it is worth to convert local MPI calls to direct memory copies.
 !!
-!! \warning this == leaves could be unsafe: need to figure out how to handle unneded edges; this == all_cg or base_lev should work well
+!! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base_lev should work well
 !<
 
    subroutine internal_boundaries(this, ind, tgt3d, nb, dim)
@@ -203,7 +203,7 @@ contains
 !! \details This routine is responsible for preparing external boundary cells for all simple boundary types for cg%q(:) and cg%w(:) arrays
 !! (i.e. no communication, dedicated arrays etc). Fancy, specialized boundary conditions should be defined somewhere else, in appropriate modules.
 !!
-!! Note that this routine may not properly update some layers of guardcells when number of guardcell layers exceedes number of active cells.
+!! Note that this routine may not properly update some layers of guardcells when number of guardcell layers exceeds number of active cells.
 !! Appropriate checks should be made in divide_domain routine.
 !!
 !! \todo integrate here as much stuff from fluidboundaries, magboundaries, etc. as possible.
@@ -230,7 +230,7 @@ contains
 
       !>
       !! Override default boundary type on external boundaries (useful in multigrid solver).
-      !! Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overriden
+      !! Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
       !<
       integer(kind=4), optional, intent(in) :: bnd_type
       logical,         optional, intent(in) :: corners    !> When present and .true. then call internal_boundaries_3d for each direction separately
@@ -298,7 +298,7 @@ contains
                            r(d, lh) = cg%ijkseb(d,clh)
                            r(d,clh) = cg%ijkse (d,clh)
                            pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = pa3d(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
-                           ! local copy is cheap (and don't occur so often in large runs) so don't boyher with the value of n
+                           ! local copy is cheap (and don't occur so often in large runs) so don't bother with the value of n
                         endif
                      case (BND_MPI)
                         if (cdd%comm3d /= MPI_COMM_NULL) then
@@ -325,14 +325,14 @@ contains
                         b_type = cg%bnd(d, lh)
                         if (present(bnd_type)) b_type = bnd_type
                         select case (b_type)
-                           case (BND_REF)  ! reflecting BC (e.g. homogenous Neumamnn)
-                              ! there will be special rules for vector fields (velocity, magnetic) perpendiculal to the given boundary (like BND_NEGREF)
+                           case (BND_REF)  ! reflecting BC (e.g. homogeneous Neumamnn)
+                              ! there will be special rules for vector fields (velocity, magnetic) perpendicular to the given boundary (like BND_NEGREF)
                               do i = 1, dom%nb
                                  l(d,:) = cg%ijkse(d,lh)   -i     *(I_THREE-I_TWO*lh)
                                  r(d,:) = cg%ijkse(d,lh)+(i-I_ONE)*(I_THREE-I_TWO*lh)
                                  pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = pa3d(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                               enddo
-                           case (BND_NEGREF)  ! reflecting BC (e.g. homogenous Neumamnn)
+                           case (BND_NEGREF)  ! reflecting BC (e.g. homogeneous Neumamnn)
                               do i = 1, dom%nb
                                  l(d,:) = cg%ijkse(d,lh)   -i     *(I_THREE-I_TWO*lh)
                                  r(d,:) = cg%ijkse(d,lh)+(i-I_ONE)*(I_THREE-I_TWO*lh)
@@ -362,7 +362,7 @@ contains
 
                enddo
             endif
-            !> \warning outside xdim-zdim loop MPI_Waitall may change the operations order and as a result may leave mpi-corners uninitiallized
+            !> \warning outside xdim-zdim loop MPI_Waitall may change the operations order and as a result may leave mpi-corners uninitialized
             if (cdd%comm3d /= MPI_COMM_NULL) call MPI_Waitall(size(req(:)), req(:), status(:,:), mpi_err)
          enddo
 

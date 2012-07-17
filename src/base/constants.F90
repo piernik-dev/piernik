@@ -84,7 +84,7 @@ module constants
    end enum
    integer(kind=4), parameter :: ndims   = zdim - xdim + 1 !< We live in a 3-dimensional world
    !>
-   !! array of all positive permutaions of xyzdim
+   !! array of all positive permutations of xyzdim
    !<
    integer(kind=4), dimension(ndims, ndims) :: pdims = &
       reshape([xdim, ydim, zdim, ydim, zdim, xdim, zdim, xdim, ydim], [ndims, ndims])
@@ -121,7 +121,7 @@ module constants
 
    ! grid geometry type
    enum, bind(C)
-       enumerator :: GEO_XYZ, GEO_RPZ                    !! cartesian (0) or cylindrical (1) grid with uniform cell spacing
+       enumerator :: GEO_XYZ, GEO_RPZ                    !! Cartesian (0) or cylindrical (1) grid with uniform cell spacing
        enumerator :: GEO_INVALID = GEO_XYZ - 1           !! non-recognized grid geometry (-1)
    end enum
 
@@ -129,7 +129,7 @@ module constants
    enum, bind(C)
       enumerator :: BND_MPI                   !! internal, processor-processor boundary (by default equal to 0)
       enumerator :: BND_PER                   !! periodic boundary
-      enumerator :: BND_REF                   !! reflecting boudary
+      enumerator :: BND_REF                   !! reflecting boundary
       enumerator :: BND_NEGREF                !! antireflecting boundary
       enumerator :: BND_ZERO                  !! zero-valued boundary
       enumerator :: BND_NONE                  !! do not touch external boundary
@@ -161,7 +161,7 @@ module constants
    ! misc
    character(len=dsetnamelen), parameter :: wcu_n   = "wcu"     !< (resistivity) COMMENT ME
    character(len=dsetnamelen), parameter :: cs_i2_n = "cs_iso2" !< map of imposed isothermal sound speed
-   character(len=dsetnamelen), parameter :: wcr_n   = "wcr"     !< auxiliary array for CR diffuion
+   character(len=dsetnamelen), parameter :: wcr_n   = "wcr"     !< auxiliary array for CR diffusion
    character(len=dsetnamelen), parameter :: wa_n    = "wa"      !< general-purpose auxiliary 3D array
 
    ! first index of cg%mbc(:,:,:) array

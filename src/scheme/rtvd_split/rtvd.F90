@@ -227,7 +227,7 @@ contains
 ! OPT: \todo try to pass pointers instead of arrays, or assemble the arrays here
 ! OPT: n is usually short enough for all the data to fit L2 cache (checked on 512kB)
 ! OPT: we may also try to work on bigger parts of the u(:,:,:,:) at a time , but the exact amount may depend on size of the L2 cache
-! OPT: try an explicit loop over n to see if berrer pipelining can be achieved
+! OPT: try an explicit loop over n to see if better pipelining can be achieved
 
    subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg)
 
@@ -377,7 +377,7 @@ contains
             dfp(:,1:n-1) = half*(fl(:,1:n-1) - fl(:,2:n)); dfp(:,n) = dfp(:,n-1)
             dfm(:,2:n)   = dfp(:,1:n-1);                   dfm(:,1) = dfm(:,2)
             call flimiter(fl,dfm,dfp)
-            !OPT 60% of D1mr and 40% D1mw occured in few above lines (D1mr = 0.1% Dr, D1mw = 0.5% Dw)
+            !OPT 60% of D1mr and 40% D1mw occurred in few above lines (D1mr = 0.1% Dr, D1mw = 0.5% Dw)
             ! That ^^ should be fixed now, please confirm
          endif
 

@@ -88,7 +88,7 @@ module cg_list_level
       type(cg_list_patch_T), pointer :: parent                  !< Parent patch (or null()). \todo Consider relaxing this restriction and allow multi-parent patches
       type(cg_list_patch_T), dimension(:), pointer :: children  !< refined patches
       type(cg_list_level_T), pointer :: list_level              !< all cg on the same level
-      !> \todo consider creating neigbour list (or (ndims, LO:HI) lists)
+      !> \todo consider creating neighbour list (or (ndims, LO:HI) lists)
    end type cg_list_patch_T
 
 contains
@@ -211,7 +211,7 @@ contains
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarse
 
-      integer(kind=8) :: bias !< prevents inconsistiences in arithmetic on integers due to rounding towards 0 (stencil_range should be more than enough)
+      integer(kind=8) :: bias !< prevents inconsistencies in arithmetic on integers due to rounding towards 0 (stencil_range should be more than enough)
 
       bias = max(0_LONG, -minval(fine(:,:)))
       coarse(:,:) =  (fine(:,:) + bias*refinement_factor) / refinement_factor - bias
@@ -309,7 +309,7 @@ contains
 
             ! When fine and coarse pieces are within prolongation stencil length, but there is no direct overlap we rely on guardcell update on coarse side
             ! to provide valid prolongation data. An alternative approach would not require updating guardcells, but would usually result in setting up
-            ! many small teransactions on the corners, especially on cartesian decomposition.
+            ! many small transactions on the corners, especially on Cartesian decomposition.
             !
             ! When the overlap is one fine cell (half coarse cell), not all communications are necessary, but we don't want to complicate the code too much at the moment
             do g = lbound(cg%po_tgt%seg(:), dim=1), ubound(cg%po_tgt%seg(:), dim=1)
@@ -414,7 +414,7 @@ contains
 !>
 !! \brief interpolate the grid data which has the flag vital set to this%finer level
 !!
-!! \todo implement it in a more efficient way (reqiures a lot more temporary buffers)
+!! \todo implement it in a more efficient way (requires a lot more temporary buffers)
 !<
    subroutine prolong(this)
 
@@ -450,7 +450,7 @@ contains
 !>
 !! \brief interpolate the grid data which has the flag vital set from this%coarser level
 !!
-!! \todo implement it in a more efficient way (reqiures a lot more temporary buffers)
+!! \todo implement it in a more efficient way (requires a lot more temporary buffers)
 !<
    subroutine restrict(this)
 
@@ -804,7 +804,7 @@ contains
             jec = cg%js + (cg%je - cg%js - 1)/refinement_factor + dom%D_y
             kec = cg%ks + (cg%ke - cg%ks - 1)/refinement_factor + dom%D_z
 
-            !! almost all occurences of number "2" are in fact connected to refinement_factor
+            !! almost all occurrences of number "2" are in fact connected to refinement_factor
 
             ! When the grid offset is odd, the coarse data is shifted by half coarse cell (or one fine cell)
             odd(:) = int(mod(cg%off(:), int(refinement_factor, kind=8)), kind=4)

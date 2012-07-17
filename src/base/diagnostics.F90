@@ -85,7 +85,7 @@ contains
 
       implicit none
 
-      ! Unfotrunately deallocating through my_deallocate does not erase the entry in array_names
+      ! Unfortunately deallocating through my_deallocate does not erase the entry in array_names
       !call diagnose_arrays
 
       if (allocated(array_names)) deallocate(array_names)
@@ -158,7 +158,7 @@ contains
 !! \brief Print the size in bytes together with a binary prefix, when applicable
 !!
 !! \details When size is less than 2**1 no prefix is printed, only "B" that stands for bytes.
-!! KiB prefix is used for sizes from 2**11 to 2**21-1, then MiB, GiB, etc. fo larger sizes.
+!! KiB prefix is used for sizes from 2**11 to 2**21-1, then MiB, GiB, etc. for larger sizes.
 !! ZiB and YiB are out of 8-byte integer range.
 !<
 

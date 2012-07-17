@@ -36,7 +36,7 @@
 !! In this module following namelist of parameters is specified:
 !! \copydetails initionized::init_ionized
 !! \deprecated This module should not export any variables
-!! \deprecated cs_ion has been cancelled due to unusability
+!! \deprecated cs_ion has been obsoleted
 !<
 
 module initionized

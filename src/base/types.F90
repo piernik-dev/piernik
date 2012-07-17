@@ -61,6 +61,6 @@ module types
       integer(kind=4)                          :: procyxl !< neighbour in corner boundaries
    end type cart_decomposition
 
-   type(cart_decomposition) :: cdd !< Cartesian Domain Decomposition stuff \todo find a bertter place and protect it
+   type(cart_decomposition) :: cdd !< Cartesian Domain Decomposition stuff \todo find a better place and protect it
 
 end module types

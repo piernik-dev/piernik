@@ -52,7 +52,7 @@ module decomposition
 
          implicit none
 
-         logical,             intent(out)   :: dom_divided !< Set to .true. after a succesful decomposition
+         logical,             intent(out)   :: dom_divided !< Set to .true. after a successful decomposition
          type(cg_list_patch_T), intent(inout) :: patch       !< the patch, which we want to be chopped into pieces
 
       end subroutine divide_domain_template
@@ -132,7 +132,7 @@ contains
 
       implicit none
 
-      logical,             intent(out)   :: dom_divided !< Set to .true. after a succesful decomposition
+      logical,             intent(out)   :: dom_divided !< Set to .true. after a successful decomposition
       type(cg_list_patch_T), intent(inout) :: patch       !< the patch, which we want to be chopped into pieces
 
       real :: quality
@@ -217,9 +217,9 @@ contains
    end subroutine divide_domain_int
 
 !>
-!! \brief Decomposes the domain into topologically cartesian grid
+!! \brief Decomposes the domain into topologically Cartesian grid
 !!
-!! \details Each process gets a single piece of the grid. There are ar most 6 neighbours; each boundary is either external boundary or is shared with one neighbour.
+!! \details Each process gets a single piece of the grid. There are at most 6 neighbours; each boundary is either external boundary or is shared with one neighbour.
 !<
 
    subroutine cartesian_tiling(p_size, patch)
@@ -713,8 +713,8 @@ contains
 !! \details When a piece of grid is narrower than number of guardcells we may expect the following problems:
 !!  * Complicated boundary exchange routines because a single neighbour cannot provide valid boundary data in one step.
 !!  * Huge memory overhead because number of guardcells is much larger than number of active cells.
-!!  * Huge pergormance penalty because everything becomes dominated by guardcell operations.
-!! If this routine prevents you runnina a simulation then probably you either try to use too many processors or you use wrong domain decomposition scheme.
+!!  * Huge performance penalty because everything becomes dominated by guardcell operations.
+!! If this routine prevents you running a simulation then probably you either try to use too many processors or you use wrong domain decomposition scheme.
 !<
 
    logical function is_not_too_small(list_level, label) result(dom_divided)

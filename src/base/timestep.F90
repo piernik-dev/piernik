@@ -80,7 +80,7 @@ contains
 !!
 !! \details This routine calls various routines associated with different modules.
 !! These routines return limit for timestep due to various physical and numerical conditions.
-!! At the end the timestep is checked against remaining simulation time, mimimum, and maximum allowed values etc.
+!! At the end the timestep is checked against remaining simulation time, minimum, and maximum allowed values etc.
 !<
    subroutine time_step(dt, flind)
 
@@ -307,7 +307,7 @@ contains
       real, intent(out)                         :: c_fl !< maximum speed at which information travels in the fluid
 
       real, dimension(ndims) :: c !< maximum velocity in all directions
-      real, dimension(ndims) :: v !< maximum velocity of fluid in all directinos
+      real, dimension(ndims) :: v !< maximum velocity of fluid in all directions
 
       ! locals
       class(component_fluid), pointer, intent(in) :: fl

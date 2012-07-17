@@ -48,7 +48,7 @@ module cg_list
       type(cg_list_element), pointer :: prv, nxt !< pointers to previous and next grid container or null() at the end of the list
    end type cg_list_element
 
-   !> \brief Abitrary list of grid containers
+   !> \brief Arbitrary list of grid containers
    type cg_list_T
 
       type(cg_list_element), pointer :: first !< first element of the chain of grid containers, the most important one
@@ -70,7 +70,7 @@ module cg_list
       procedure :: un_link                           !< Un-link the element
 
       ! Misc
-      procedure :: get_extremum                      !< Find munimum or maximum value over a s list
+      procedure :: get_extremum                      !< Find minimum or maximum value over a s list
       procedure :: print_list                        !< Print the list and associated cg ID
       procedure :: numbered_ascii_dump               !< Construct name of emergency ASCII dump
       procedure :: ascii_dump                        !< Emergency routine for quick ASCII dumps
@@ -96,7 +96,7 @@ module cg_list
 
    end type cg_list_T
 
-   !> \brief Index - value pairs for calling arithmetics on the grids with q_lin_comb
+   !> \brief Index - value pairs for calling arithmetic on the grids with q_lin_comb
    type ind_val
       integer :: ind  !< index in cg%q
       real    :: val  !< value for multiplication
@@ -197,7 +197,7 @@ contains
 
       do while (associated(this%first))
          cgl => this%last
-         call this%delete(cgl) ! cannot juss pass this%last because if will change after un_link and wrong element will be deallocated
+         call this%delete(cgl) ! cannot just pass this%last because if will change after un_link and wrong element will be deallocated
       enddo
 
    end subroutine del_lst
@@ -311,7 +311,7 @@ contains
     end subroutine print_list
 
 !>
-!! \brief Find munimum or maximum value over a specified list of grid containers
+!! \brief Find minimum or maximum value over a specified list of grid containers
 !!
 !! \details It should be possible to find an extremum over a given level or leaf blocks or something
 !<
@@ -507,7 +507,7 @@ contains
       implicit none
 
       class(cg_list_T), intent(in) :: this    !< object invoking type-bound procedure
-      integer,        intent(in) :: i_add   !< Index of field to be aded in cg%q(:)
+      integer,        intent(in) :: i_add   !< Index of field to be added in cg%q(:)
       integer,        intent(in) :: i_to    !< Index of field to be modified in cg%q(:)
 
 

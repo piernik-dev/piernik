@@ -187,7 +187,7 @@ module grid_cont
       real, allocatable, dimension(:,:,:) :: gc_ydim             !< array of geometrical coefficients in y-direction
       real, allocatable, dimension(:,:,:) :: gc_zdim             !< array of geometrical coefficients in z-direction
 
-      ! Registeed variables
+      ! Registered variables
 
       type(named_array3d), allocatable, dimension(:) :: q        !< 3D arrays such as gravitational potential pr user-defined quantities or gravitational potential
       type(named_array4d), allocatable, dimension(:) :: w        !< 4D arrays such as u, vector fields (b) or other vector/multi-scalar user-defined quantities
@@ -552,7 +552,7 @@ contains
       integer, parameter :: nseg = 2*2
       type(tgt_list), dimension(nseg) :: rpio_tgt
 
-      if (this%grid_id <= INVALID) return ! very dirty workaround for unability to determine whether a given cg was already deallocated
+      if (this%grid_id <= INVALID) return ! very dirty workaround for inability to determine whether a given cg was already deallocated
 
       if (allocated(this%x))     deallocate(this%x)
       if (allocated(this%xl))    deallocate(this%xl)

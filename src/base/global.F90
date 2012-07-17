@@ -62,7 +62,7 @@ module global
    real    :: dt_min                   !< minimum allowed timestep
    real    :: cfl                      !< desired Courant–Friedrichs–Lewy number
    real    :: cfl_max                  !< warning threshold for the effective CFL number achieved
-   logical :: use_smalld               !< correct denisty when it gets lower than smalld
+   logical :: use_smalld               !< correct density when it gets lower than smalld
    logical :: geometry25D              !< include source terms in reduced dimension for 2D simulations
    real    :: smallp                   !< artificial infimum for pressure
    real    :: smalld                   !< artificial infimum for density

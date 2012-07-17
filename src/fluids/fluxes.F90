@@ -93,7 +93,7 @@ contains
       real, dimension(flind%all,n),    target,  intent(out) :: uu       !< array with current fluid state
       real, dimension(nmag,n),         target,  intent(in)  :: bb       !< array with current magnetic field state
       real, dimension(flind%fluids,n), target,  intent(out) :: vx       !< array storing velocity in current sweep direction (reused later)
-      real, dimension(flind%fluids,n), target,  intent(out) :: pp       !< array storing pressure in current sweeo (reused later)
+      real, dimension(flind%fluids,n), target,  intent(out) :: pp       !< array storing pressure in current sweep (reused later)
       real, dimension(:),              pointer, intent(in)  :: cs_iso2  !< array with current sound speed squared
 
       real, dimension(:,:),            pointer              :: pflux, pcfr, puu, pbb

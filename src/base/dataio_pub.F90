@@ -58,7 +58,7 @@ module dataio_pub
    ! Simulation control
    character(len=cbuff_len)    :: problem_name                   !< The problem name
    character(len=idlen)        :: run_id                         !< Auxiliary run identifier
-   character(len=idlen)        :: new_id                         !< Auxiliary new runa identifier to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
+   character(len=idlen)        :: new_id                         !< Auxiliary new run identifier to change run_id when restarting simulation (e.g. to avoid overwriting of the output from the previous (pre-restart) simulation; if new_id = '' then run_id is still used)
    real                        :: tend                           !< simulation time to end
    real                        :: wend                           !< wall clock time to end (in hours)
 
@@ -130,7 +130,7 @@ contains
       character(len=*),  intent(in) :: nm
       integer,           intent(in) :: mode
 
-      integer                       :: log_lun                !< luncher for log file
+      integer                       :: log_lun                !< logical unit number for log file
       character(len=ansilen)        :: ansicolor
       integer, parameter            :: msg_type_len = len("Warning")
       character(len=msg_type_len)   :: msg_type_str

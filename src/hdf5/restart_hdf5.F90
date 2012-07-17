@@ -261,7 +261,7 @@ contains
       endif
 
 !     \todo writing axes using collective I/O takes order of magnitude more than
-!        dumping U and B arrays alltogether, since XYZ-axis is not even read
+!        dumping U and B arrays altogether, since XYZ-axis is not even read
 !        back during restart I'm commenting this out. Rewrite or punt.
 !      call write_axes_to_restart(file_id)
 
@@ -357,7 +357,7 @@ contains
 
       call h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
 #ifdef INDEPENDENT_ATOUTB
-      !> \warning collective write may be unproper (some fields may stay unwritten)
+      !> \warning collective write may be improper (some fields may stay unwritten)
       !! seen for: Intel compiler version 12.0.4, HDF5 1.8.5 , OpenMPI 1.4.1
       !!    n_d = [250, 250, 200], nb = 5, psize = [ 5,  5, 8]
       !! or n_d = [500, 500, 200], nb = 5, psize = [10, 10, 4]
@@ -377,7 +377,7 @@ contains
       stride(:) = 1
       cnt(:)  = 1
 
-      !> \todo check the hesitant choise to start from leaves%first or all_cg%first
+      !> \todo check the hesitant choice to start from leaves%first or all_cg%first
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -423,7 +423,7 @@ contains
 !>
 !! \brief Read interior cells of a specified array from the restart file.
 !!
-!! \details  Boundary cells are exchanged with the neughbours. Corner boundary cells are not guaranteed to be correct.
+!! \details  Boundary cells are exchanged with the neighbours. Corner boundary cells are not guaranteed to be correct.
 !<
 
    subroutine read_arr_from_restart(file_id, ind, tgt3d, alt_area_type, alt_name)
@@ -508,7 +508,7 @@ contains
       stride(:) = 1
       cnt(:)  = 1
 
-      !> \todo check the hesitant choise to start from leaves%first or all_cg%first
+      !> \todo check the hesitant choice to start from leaves%first or all_cg%first
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -802,7 +802,7 @@ contains
 !!   - cg%q arrays marked for restart (restart only)
 !!   - named quantities for data dumps
 !!
-!! At the moment we assume that all problem-specific data is either registeres in cg%q and cg%w arrays or can be written to global attributes.
+!! At the moment we assume that all problem-specific data is either registered in cg%q and cg%w arrays or can be written to global attributes.
 !!
 !! It will be possible to provide support for problem-specific data that should be appended to grid containers when anyone will need it
 !!
@@ -1024,7 +1024,7 @@ contains
                endif
             endif
          enddo
-      else ! perform parallell write
+      else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
          if (can_i_write) then
             ! write own
@@ -1156,11 +1156,11 @@ contains
 !! - Compute domain decomposition for current refinement topology description (different number of processors and different decomposition method is allowed)
 !! - Calculate on master which parts (if any) cannot be read directly and should be communicated, send the lists to the involved slaves
 !! - Read the data (own and requested by others) from the file(s)
-!! - Receive anything that had to be read on onther processes
-!! - Check for local completness
+!! - Receive anything that had to be read on other processes
+!! - Check for local completeness
 !!
 !! Optionally:
-!! - When a single file is visible by multiple processes and the fileststem does not tolerate massively concurrent I/O load,
+!! - When a single file is visible by multiple processes and the filesystem does not tolerate massively concurrent I/O load,
 !!   choose one or few process to do the I/O and make the others to wait for the data.
 !! - It should be possible to read runtime parameters from data stored in restart point rather than from actual problem.par file(s).
 !!   A way to override some of them (in most cases  END_CONTROL::tend and nend) should be provided.
@@ -1413,7 +1413,7 @@ contains
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
          my_box(:,LO) = cg_res(ia)%off(:)
          my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
-         !> \todo check the hesitant choise to start from leaves%first or all_cg%first
+         !> \todo check the hesitant choice to start from leaves%first or all_cg%first
          cgl => leaves%first
          do while (associated(cgl))
             other_box(:,LO) = cgl%cg%off(:)

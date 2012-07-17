@@ -345,7 +345,7 @@ contains
                endif
             endif
          enddo
-      else ! perform parallell write
+      else ! perform parallel write
          ! This piece will be a generalization of the serial case. It should work correctly also for nproc_io == 1 so it should replace the serial code
          if (can_i_write) then
             ! write own

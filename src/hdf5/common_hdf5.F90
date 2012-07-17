@@ -670,7 +670,7 @@ contains
          enumerator :: cg_dl !> index list of cell sizes from all cgs/procs
       end enum
       !>
-      !! auxilliary array for communication of {cg_le, cg_re, cg_dl} lists
+      !! auxiliary array for communication of {cg_le, cg_re, cg_dl} lists
       !<
       real(kind=8), dimension(:,:,:), allocatable   :: dbuf
       type(cg_list_element), pointer                :: cgl
@@ -707,7 +707,8 @@ contains
          call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])  ! create "/data/cg_count"
 
          Z_avail = .false.
-         if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
+         !if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
+         call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
          !> \todo test it thoroughly before enabling for > 1
 
          ! Do not assume that the master knows all the lists
@@ -716,7 +717,7 @@ contains
             if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, cg_n(p), ndims))
             if (p == FIRST) then
                g = 1
-               !> \todo check the hesitant choise to start from leaves%first or all_cg%first
+               !> \todo check the hesitant choice to start from leaves%first or all_cg%first
                cgl => leaves%first
                do while (associated(cgl))
                   cg_rl(g)     = int(cgl%cg%level_id, kind=4)
@@ -810,7 +811,7 @@ contains
          allocate(cg_rl(all_cg%cnt), cg_n_b(all_cg%cnt, ndims), cg_off(all_cg%cnt, ndims))
          if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, all_cg%cnt, ndims))
          g = 1
-         !> \todo check the hesitant choise to start from leaves%first or all_cg%first
+         !> \todo check the hesitant choice to start from leaves%first or all_cg%first
          cgl => leaves%first
          do while (associated(cgl))
             cg_rl(g)     = int(cgl%cg%level_id, kind=4)

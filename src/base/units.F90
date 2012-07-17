@@ -395,7 +395,7 @@ contains
       Mearth     = 5.977e27*gram            !< mass of Earth
       earthradius= 6378.17*km               !< radius of Earth
 
-      ! Following physicical constants are used in various modules.
+      ! Following physical constants are used in various modules.
       ! They need to have some sane values.
       if (scale_me) then
          kboltz    = 1.0  ! dataio

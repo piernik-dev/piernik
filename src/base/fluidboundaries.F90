@@ -70,14 +70,14 @@ contains
                   endif
                case (BND_OUTH)
                   if (dir == zdim) then
-                     if (is_multicg) call die("[fluid_boundaries:bnd_u] hydrostatic:outh_bnd with multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
+                     if (is_multicg) call die("[fluid_boundaries:bnd_u] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet") !nontrivial not really checked
                   else
                      write(msg,'("[fluid_boundaries:bnd_u]: outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
                      call warn(msg)
                   endif
                case (BND_OUTHD)
                   if (dir == zdim) then
-                     if (is_multicg) call die("[fluid_boundaries:bnd_u] hydrostatic:outh_bnd with multiple grid pieces per procesor not implemented yet") !nontrivial not really checked
+                     if (is_multicg) call die("[fluid_boundaries:bnd_u] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet") !nontrivial not really checked
                   else
                      write(msg,'("[fluid_boundaries:bnd_u]: outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
                      call warn(msg)
@@ -149,7 +149,7 @@ contains
 
 ! MPI block communication
       if (cdd%comm3d /= MPI_COMM_NULL) then
-         if (is_multicg) call die("[fluidboundaries:bnd_u] multiple grid pieces per procesor not implemented for comm3d")
+         if (is_multicg) call die("[fluidboundaries:bnd_u] multiple grid pieces per processor not implemented for comm3d")
 #ifdef SHEAR_BND
          if (dir == xdim) then
 #ifndef FFTW

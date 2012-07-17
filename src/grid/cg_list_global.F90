@@ -47,7 +47,7 @@ module cg_list_global
    !!
    !! It should be possible to use this type for more fancy, multi-domain  grid configurations such as:
    !! - Yin-Yang grid (covering sphere with two domains shaped as parts of the sphere to avoid polar singularities),
-   !! - Cylindrical grid with cartesian core covering singularity at the axis.
+   !! - Cylindrical grid with Cartesian core covering singularity at the axis.
    !! - Simulations with mixed dimensionality (e.g. 2d grid for dust particles and 3d grid for gas) should probably also use separate cg_list
    !! for their data (and additional routine for coupling the two grid sets).
    !<

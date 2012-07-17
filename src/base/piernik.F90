@@ -455,7 +455,7 @@ contains
 
 !>
 !! Meta subroutine responsible for setting proper pointers or doing other magic
-!! after relaxiation/grace period has passed
+!! after relaxation/grace period has passed
 !<
    subroutine grace_period
 

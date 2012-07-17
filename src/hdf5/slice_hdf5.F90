@@ -225,11 +225,11 @@ contains
 
    end subroutine write_plot
 
-! /details This routine appends a nimg-th slice of data, taken perpendiclularly to the plane direction, of the var field
+! /details This routine appends a nimg-th slice of data, taken perpendicularly to the plane direction, of the var field
 !
 ! In AMR it will probably work only on base level (or any other regular, uniform grid) unless someone decides to complicate the format
 !
-! I/O is not paralelized here because it is not straightforwart to paralelize, when vizit is .true.
+! I/O is not parallelized here because it is not straightforward to do, when vizit is .true.
 !
 ! /todo non-blocking receive ?
 
@@ -277,7 +277,7 @@ contains
       type(grid_container), pointer            :: cg
 
       cg => leaves%first%cg
-      if (is_multicg) call die("[slice_hdf5:write_plot_hdf5] multiple grid pieces per procesor not implemented yet") !nontrivial message tagging
+      if (is_multicg) call die("[slice_hdf5:write_plot_hdf5] multiple grid pieces per processor not implemented yet") !nontrivial message tagging
 
       xn = 1
       if (dom%has_dir(plane)) xn = pl_i(plane) + dom%nb - cg%off(plane)
