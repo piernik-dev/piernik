@@ -707,7 +707,7 @@ contains
          call create_attribute(cgl_g_id, cg_cnt_aname, [ cg_cnt ])  ! create "/data/cg_count"
 
          Z_avail = .false.
-         !if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
+         if (nproc_io == 1) call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
          call h5zfilter_avail_f(H5Z_FILTER_DEFLATE_F, Z_avail, error)
          !> \todo test it thoroughly before enabling for > 1
 
