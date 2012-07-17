@@ -76,7 +76,7 @@ module dataio
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=varlen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
 
-   integer                  :: tsl_lun               !< luncher for timeslice file
+   integer                  :: tsl_lun               !< logical unit number for timeslice file
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
    integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
    real                     :: t_start               !< time in simulation of start simulation run
@@ -255,10 +255,8 @@ contains
          if (use_v2_io) then
             if (nproc_io <= 0 .or. nproc_io > nproc) nproc_io = nproc ! fully parallel v2 I/O
 
-            if (nproc_io /= 1) then
-               call warn("[dataio:init_dataio_parameters] Parallel v2 I/O is not implemented yet")
-               nproc_io = 1
-            endif
+            if (nproc_io /= 1) &
+               call warn("[dataio:init_dataio_parameters] Parallel v2 I/O is experimental feature")
          endif
 
          if (gzip_level < 1 .or. gzip_level > 9) then
@@ -1209,7 +1207,7 @@ contains
 #endif /* VARIABLE_GP || MAGNETIC */
       character(len=idlen)               :: id
 
-      id = '' ! suppress compiler warnings if none of the modules requiring the id variable are swithed on.
+      id = '' ! suppress compiler warnings if none of the modules requiring the id variable are switched on.
       dxmn_safe = sqrt(huge(1.0))
       cgl => leaves%first
       do while (associated(cgl))
