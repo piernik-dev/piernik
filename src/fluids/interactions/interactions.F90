@@ -49,9 +49,9 @@ module interactions
    real                                       :: collision_factor   !< collision factor
    real                                       :: cfl_interact       !< Courant factor for %interactions
    real                                       :: dragc_gas_dust     !< \deprecated remove me
-!   real                                       :: taus               !< stopping time
    real                                       :: grain_size         !< size of dust grains in cm
    real                                       :: grain_dens         !< density of dust grains in g/cm^3
+   real                                       :: grain_dens_x_size  !< size times density of dust grains in g/cm^2
    real, dimension(:), allocatable, protected :: epstein_factor     !< grain_size * grain_dens / c_s for iso case
    character(len=cbuff_len)                   :: interactions_type  !< type of interactions between fluids
    logical                                    :: has_interactions
@@ -147,7 +147,7 @@ contains
       endif
 
       fluid_interactions => fluid_interactions_dummy
-      grain_dens = grain_dens * gram * cm**(-2)  ! It is always grain_size * grain_dens, hence unit g/cm2 in grain_dens
+      grain_dens_x_size = grain_dens * grain_size * gram / cm**2
       if (.not.allocated(epstein_factor)) allocate(epstein_factor(flind%fluids))
 
       epstein_factor = 0.0
@@ -182,7 +182,7 @@ contains
       if (associated(flind%dst)) then
          do i = 1, flind%fluids
             if (flind%all_fluids(i)%fl%tag /= DST) then
-               epstein_factor(flind%all_fluids(i)%fl%pos) = grain_size * grain_dens / flind%all_fluids(i)%fl%cs !BEWARE iso assumed
+               epstein_factor(flind%all_fluids(i)%fl%pos) = grain_dens_x_size / flind%all_fluids(i)%fl%cs !BEWARE iso assumed
                if (epstein_factor(flind%all_fluids(i)%fl%pos) <= 0.0) &
                   call warn("[interactions:interactions_grace_passed] epstein_factor <= 0.0, that's not good :/")
             else
@@ -302,7 +302,7 @@ contains
       !! \todo 4) remove hardcoded integers
       !<
       if (epstein_factor(flind%neu%pos) <= zero) return
-      drag(:) = dt*half / (grain_size * grain_dens) * sqrt( cs_iso2(:) + abs( vx(1,:) - vx(2,:) )**2)
+      drag(:) = dt*half / grain_dens_x_size * sqrt( cs_iso2(:) + abs( vx(1,:) - vx(2,:) )**2)
 
       delta(:) = one + drag(:) * (u1(iarr_all_dn(1),:) + u1(iarr_all_dn(2),:))
       delta(:) = one/delta(:)
@@ -325,19 +325,18 @@ contains
    subroutine update_grain_size(new_size)
       use fluidindex, only: flind
       use constants,  only: DST
+      use units,      only: gram, cm
       implicit none
       real, intent(in) :: new_size
-      integer          :: i
 
       grain_size = new_size
+      grain_dens_x_size = grain_size * grain_dens * gram / cm**2
 
-      do i = 1, flind%fluids
-         if (flind%all_fluids(i)%fl%tag /= DST) then
-            epstein_factor(flind%all_fluids(i)%fl%pos) = grain_size * grain_dens / flind%all_fluids(i)%fl%cs !BEWARE iso assumed
-         else
-            epstein_factor(flind%all_fluids(i)%fl%pos) = 0.0
-         endif
-      enddo
+      where (flind%all_fluids(:)%fl%tag /= DST)
+         epstein_factor(:) = grain_dens_x_size / flind%all_fluids(:)%fl%cs !BEWARE iso assumed
+      elsewhere
+         epstein_factor(:) = 0.0
+      endwhere
 
    end subroutine update_grain_size
 
