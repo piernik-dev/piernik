@@ -1,0 +1,22 @@
+/* choosing fluids */
+#define IONIZED
+#define COSM_RAYS
+
+/* BEWARE: buggy! */
+#define COSM_RAYS_SOURCES
+
+/* adiabatic or isothermal */
+#undef ISO
+
+/* choosing freezing speed */
+#define LOCAL_FR_SPEED
+
+/* physics including */
+#define MAGNETIC
+
+/* gravity type choosing */
+#undef GRAV
+
+/* include multigrid for diffusion */
+#undef MULTIGRID
+#define RTVD

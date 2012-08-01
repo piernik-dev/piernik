@@ -1,0 +1,127 @@
+ $BASE_DOMAIN
+    n_d = 64, 64, 64
+    nb  = 4
+    bnd_xl = 'out'
+    bnd_xr = 'out'
+    bnd_yl = 'out'
+    bnd_yr = 'out'
+    bnd_zl = 'out'
+    bnd_zr = 'out'
+    xmin   =-1.0
+    xmax   = 1.0
+    ymin   =-1.0
+    ymax   = 1.0
+    zmin   =-1.0
+    zmax   = 1.0
+ /
+
+ $MPI_BLOCKS
+    psize = 1, 1, 1
+ /
+
+ $UNITS
+ /
+
+ $RESTART_CONTROL
+    restart  = 'none'
+    new_id   = ''
+    nrestart = 0
+ /
+
+ $END_CONTROL
+    tend   = 1.0
+    nend   = 0
+ /
+
+ $OUTPUT_CONTROL
+    problem_name = 'divv'
+    run_id = 'r65'
+    dt_hdf  = 0.1
+    dt_plt  = 0.0
+    dt_res  = 0.0
+    dt_log  = 1.e-6
+    dt_tsl  = 1.e-6
+    vars(1) = 'dens'
+    vars(2) = 'velx'
+    vars(3) = 'vely'
+    vars(4) = 'velz'
+!    vars(5) = 'ener'
+!    vars(9) = 'encr'
+    vars(5)= 'dvel'
+
+ /
+
+ $NUMERICAL_SETUP
+    cfl    = 0.5
+    smalld = 1.e-3
+    smallei= 1.e-5
+    integration_order = 2
+    limiter= 'vanleer'
+ /
+
+ $FLUID_IONIZED
+    gamma  = 1.666666666666667
+ /
+
+ $COSMIC_RAYS
+    cfl_cr      = 0.9
+    cr_active   = 1.0
+    ncrn        = 4
+    gamma_crn(1)   = 1.333333
+    gamma_crn(2)   = 1.333333
+    gamma_crn(3)   = 1.333333
+    K_crn_paral(1) = 0.0 !10000.0 ! anisotropic
+    K_crn_paral(2) = 0.0 ! 10000.0
+    K_crn_paral(3) = 0.0
+    K_crn_perp(1)  = 0.0     ! isotropic
+    K_crn_perp(2)  = 0.0
+    K_crn_perp(3)  = 0.0
+    ncre        = 0
+    use_split   = .true.
+    divv_scheme = "6lp"
+ /
+
+ $MULTIGRID_SOLVER
+!    stdout = .true.
+    level_max = 5
+    dirty_debug = .false.
+ /
+
+ $MULTIGRID_DIFFUSION
+    diff_explicit = .true.
+    diff_theta     = 0.6
+    diff_tstep_fac = 1000
+    norm_tol = 1e-2
+    nsmool = 4
+    nsmoob = 4
+    max_cycles = 50
+ /
+
+ $PROBLEM_CONTROL
+    d0     = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
+    p0     = 1.0
+    bx0    = 0.0
+    by0    = 0.0
+    bz0    = 0.0
+    x0     = 0.0
+    y0     = 0.0
+    z0     = 0.0
+    r0     = 0.7
+    beta_cr= 0.0
+    amp_cr = 0.0
+    norm_step = 1
+    c_exp_x = 0.0
+    c_exp_y = 0.0
+    c_exp_z = 0.0
+    c_rot_x = 0.0
+    c_rot_y = 0.0
+    c_rot_z = 1.0
+
+ /
+
+ $INTERACTIONS
+ /
+
+ $AMR
+ /
+
