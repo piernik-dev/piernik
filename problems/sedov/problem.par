@@ -35,9 +35,6 @@
  $OUTPUT_CONTROL
     problem_name ='sedov'
     run_id =  'tst'
-    ix = 32
-    iy = 32
-    iz = 32
     dt_hdf  = 0.1
     dt_res  = 0.0
     dt_plt  = 0.0001

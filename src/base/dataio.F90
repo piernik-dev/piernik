@@ -47,7 +47,7 @@
 module dataio
 
    use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
-   use constants,  only: cwdlen, fmt_len, cbuff_len, varlen, RES, TSL
+   use constants,  only: cwdlen, fmt_len, cbuff_len, varlen, RES, TSL, ndims
 
    implicit none
 
@@ -70,9 +70,7 @@ module dataio
    integer(kind=4)          :: sleep_seconds         !< seconds of sleeping time before continue simulation
    character(len=cwdlen)    :: user_message_file     !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
    character(len=cwdlen)    :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
-   integer(kind=4)          :: ix                    !< index in x-direction of slice to dump in plt files
-   integer(kind=4)          :: iy                    !< index in y-direction of slice to dump in plt files
-   integer(kind=4)          :: iz                    !< index in z-direction of slice to dump in plt files
+   integer(kind=4), dimension(ndims) :: plt_plane    !< indices of cells that are sliced in plt files
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=varlen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
 
@@ -110,7 +108,7 @@ module dataio
 
    namelist /END_CONTROL/     nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
-   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
+   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, plt_plane, &
                               domain_dump, vars, mag_center, vizit, fmin, fmax, min_disk_space_MB, sleep_minutes, sleep_seconds, &
                               user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io, enable_compression, &
                               gzip_level, initial_hdf_dump
@@ -152,9 +150,7 @@ contains
 !! <tr><td>dt_tsl             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_tsl           </td></tr>
 !! <tr><td>dt_log             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_log           </td></tr>
 !! <tr><td>dt_plt             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_plt           </td></tr>
-!! <tr><td>ix                 </td><td>                   </td><td>integer   </td><td>\copydoc dataio::ix               </td></tr>
-!! <tr><td>iy                 </td><td>                   </td><td>integer   </td><td>\copydoc dataio::iy               </td></tr>
-!! <tr><td>iz                 </td><td>                   </td><td>integer   </td><td>\copydoc dataio::iz               </td></tr>
+!! <tr><td>plt_plane          </td><td>(nxd, nyd, nzd)/2  </td><td>integer(3)</td><td>\copydoc dataio::plt_plane        </td></tr>
 !! <tr><td>domain_dump        </td><td>'phys_domain'      </td><td>'phys_domain' or 'full_domain'                       </td><td>\copydoc dataio_pub::domain_dump</td></tr>
 !! <tr><td>vars               </td><td>''                 </td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more </td><td>\copydoc dataio::vars  </td></tr>
 !! <tr><td>mag_center         </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio::mag_center       </td></tr>
@@ -176,7 +172,7 @@ contains
 !<
    subroutine init_dataio_parameters
 
-      use constants,  only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_MPI, I_ONE, xdim, ydim, zdim
+      use constants,  only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_MPI, I_ONE
       use dataio_pub, only: nres, nrestart, last_hdf_time, last_plt_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                tmp_log_file, printinfo, printio, warn, msg, nhdf, nimg, die, code_progress, wd_wr, wd_rd, &
            &                move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write
@@ -209,9 +205,7 @@ contains
       dt_log       = 0.0
       dt_plt       = 0.0
 
-      ix = max(I_ONE, dom%n_t(xdim)/2)
-      iy = max(I_ONE, dom%n_t(ydim)/2)
-      iz = max(I_ONE, dom%n_t(zdim)/2)
+      plt_plane = max(I_ONE, dom%n_d(:)/2)
 
       initial_hdf_dump = .false.
 
@@ -283,7 +277,7 @@ contains
          ibuff(20) = nrestart
          ibuff(21) = resdel
 
-!   namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, ix, iy, iz, &
+!   namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, plt_plane, &
 !                             domain_dump, vars, mag_center, vizit, fmin, fmax, &
 !                             min_disk_space_MB, sleep_minutes, sleep_seconds, &
 !                             user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io
@@ -291,9 +285,7 @@ contains
          ibuff(40) = min_disk_space_MB
          ibuff(41) = sleep_minutes
          ibuff(42) = sleep_seconds
-         ibuff(43) = ix
-         ibuff(44) = iy
-         ibuff(45) = iz
+         ibuff(43:45) = plt_plane
          ibuff(46) = nproc_io
          ibuff(47) = gzip_level
 
@@ -351,9 +343,7 @@ contains
          min_disk_space_MB   = ibuff(40)
          sleep_minutes       = ibuff(41)
          sleep_seconds       = ibuff(42)
-         ix                  = ibuff(43)
-         iy                  = ibuff(44)
-         iz                  = ibuff(45)
+         plt_plane           = ibuff(43:45)
          nproc_io            = int(ibuff(46), kind=4)
          gzip_level          = int(ibuff(47), kind=4)
 
@@ -448,7 +438,7 @@ contains
 
       call init_hdf5(vars)
       call init_data
-      call init_plot( [ ix, iy, iz ], dt_plt)
+      call init_plot( plt_plane, dt_plt)
 
       call init_version
       if (master) then

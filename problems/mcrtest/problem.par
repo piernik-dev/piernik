@@ -36,11 +36,11 @@
  $OUTPUT_CONTROL
     problem_name = 'mcr'
     run_id = 'tst'
-    dt_hdf  = 5.0
-    dt_plt  = 0.1
+    dt_hdf  = 0.0
+    dt_plt  = 0.0
     dt_res  = 0.0
-    dt_log  = 0.05
-    dt_tsl  = 0.000
+    dt_log  = 0.0
+    dt_tsl  = 0.0
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'

@@ -37,9 +37,7 @@
  $OUTPUT_CONTROL
     problem_name ='jeans'
     run_id =  'ts1'
-    ix      = 0
-    iy      = 0
-    iz      = 0
+    plt_plane = 0, 0, 0
     dt_hdf  = 0.0
     dt_res  = 0.0
     dt_plt  = 0.0
