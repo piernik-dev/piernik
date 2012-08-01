@@ -858,6 +858,7 @@ contains
 
 #ifdef COSM_RAYS
          tot_q(T_ENCR) = tot_q(T_ENCR) + cg%dvol * sum(pu(iarr_all_crs,:,:,:))
+         tot_q(T_ENER) = tot_q(T_ENER) + tot_q(T_ENCR)
 #endif /* COSM_RAYS */
 
          cgl => cgl%nxt
