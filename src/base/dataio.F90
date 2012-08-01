@@ -172,7 +172,7 @@ contains
 !<
    subroutine init_dataio_parameters
 
-      use constants,  only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_MPI, I_ONE
+      use constants,  only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_MPI, I_ONE, I_TWO
       use dataio_pub, only: nres, nrestart, last_hdf_time, last_plt_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                tmp_log_file, printinfo, printio, warn, msg, nhdf, nimg, die, code_progress, wd_wr, wd_rd, &
            &                move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write
@@ -205,7 +205,7 @@ contains
       dt_log       = 0.0
       dt_plt       = 0.0
 
-      plt_plane = max(I_ONE, dom%n_d(:)/2)
+      plt_plane = max(I_ONE, dom%n_d(:)/I_TWO)
 
       initial_hdf_dump = .false.
 
