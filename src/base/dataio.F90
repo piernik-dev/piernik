@@ -176,11 +176,12 @@ contains
 !<
    subroutine init_dataio_parameters
 
-      use constants,  only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_MPI, I_ONE
+      use constants,  only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_MPI, I_ONE, xdim, ydim, zdim
       use dataio_pub, only: nres, nrestart, last_hdf_time, last_plt_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                tmp_log_file, printinfo, printio, warn, msg, nhdf, nimg, die, code_progress, wd_wr, wd_rd, &
            &                move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
+      use domain,     only: dom ! \todo remove me when plt is obsolete
       use mpi,        only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, mpi_err, buffer_dim, FIRST, nproc, proc
 
@@ -207,6 +208,10 @@ contains
       dt_tsl       = 0.0
       dt_log       = 0.0
       dt_plt       = 0.0
+
+      ix = max(I_ONE, dom%n_t(xdim)/2)
+      iy = max(I_ONE, dom%n_t(ydim)/2)
+      iz = max(I_ONE, dom%n_t(zdim)/2)
 
       initial_hdf_dump = .false.
 
