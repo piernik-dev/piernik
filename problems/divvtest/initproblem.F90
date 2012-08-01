@@ -131,12 +131,9 @@ contains
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: icr_H1, icr_C12
 #endif /* COSM_RAYS_SOURCES */
-#ifdef COSM_RAYS
-      use dataio_pub,     only: die
-#endif /* COSM_RAYS */
       use crhelpers,      only: div_v
       use dataio_pub,     only: warn
-      use domain,         only: dom, is_multicg
+      use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use func,           only: emag, ekin
@@ -150,7 +147,7 @@ contains
       integer :: i, j, k, icr
       real    :: cs_iso
       real    :: r
-      real    :: r2, maxv
+      real    :: r2
       integer :: ipm, jpm, kpm
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
@@ -244,7 +241,6 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial maxv
 #endif /* COSM_RAYS */
 
    end subroutine init_prob
