@@ -37,8 +37,10 @@ for fn in args.files:
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
-for fn in data:
-   ax.plot(fn[:, 1], fn[:, fno])
+for i, fn in enumerate(data):
+   ax.plot(fn[:, 1], fn[:, fno], label=args.files[i])
+
+ax.legend()
 
 plt.ylabel(field)
 plt.xlabel(header[1])
