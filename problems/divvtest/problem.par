@@ -45,9 +45,7 @@
     vars(2) = 'velx'
     vars(3) = 'vely'
     vars(4) = 'velz'
-!    vars(5) = 'ener'
-!    vars(9) = 'encr'
-    vars(5)= 'dvel'
+    vars(5) = 'dvel'
 
  /
 
@@ -100,22 +98,14 @@
  $PROBLEM_CONTROL
     d0     = 1.0 ! when COSM_RAYS_SOURCES are defined, the density somehow scales the result of sourcecosmicrays.F90 and values like 1e5 quickly lead to FP overflow. This must be a bug.
     p0     = 1.0
-    bx0    = 0.0
-    by0    = 0.0
-    bz0    = 0.0
-    x0     = 0.0
-    y0     = 0.0
-    z0     = 0.0
+    b0     = 0.0, 0.0, 0.0
+    sn_pos = 0.0, 0.0, 0.0
     r0     = 0.7
     beta_cr= 0.0
     amp_cr = 0.0
     norm_step = 1
-    c_exp_x = 0.0
-    c_exp_y = 0.0
-    c_exp_z = 0.0
-    c_rot_x = 0.0
-    c_rot_y = 0.0
-    c_rot_z = 1.0
+    c_exp = 0.0, 0.0, 0.0
+    c_rot = 0.0, 0.0, 1.0
 
  /
 
