@@ -979,8 +979,8 @@ contains
       character(kind=fgsl_char,len=fgsl_strmax) :: fname
       real, dimension(:), allocatable :: x,y
       real                            :: xi
-      integer(fgsl_size_t)            :: n, nmax, nxd
-      integer(kind=4) :: i
+      integer(fgsl_size_t)            :: n, nmax
+      integer(kind=4) :: i, nxd
 
       write(msg,*) "[initproblem:read_dens_profile] Reading ", trim(densfile)
       open(1,file=densfile, status="old", form='unformatted')
