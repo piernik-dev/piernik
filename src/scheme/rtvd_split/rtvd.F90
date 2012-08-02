@@ -397,10 +397,10 @@ contains
 
       if (use_smalld) then
          ! This is needed e.g. for outflow boundaries in presence of perp. gravity
-         local_magic_mass = local_magic_mass - sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb))
+         local_magic_mass = local_magic_mass - sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2)*cg%dvol
          u1(iarr_all_dn,:) = max(u1(iarr_all_dn,:),smalld)
-!         local_magic_mass = local_magic_mass + sum( abs(u1(iarr_all_dn,dom%nb+1:n-dom%nb) - u0(iarr_all_dn,dom%nb+1:n-dom%nb)) )
-         local_magic_mass = local_magic_mass + sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb))
+!         local_magic_mass = local_magic_mass + sum( abs(u1(iarr_all_dn,dom%nb+1:n-dom%nb) - u0(iarr_all_dn,dom%nb+1:n-dom%nb)) )*cg%dvol
+         local_magic_mass = local_magic_mass + sum(u1(iarr_all_dn,dom%nb+1:n-dom%nb),dim=2)*cg%dvol
       else
          if (any(u1(iarr_all_dn,:) < 0.0)) then
             write(msg,'(3A,I4,1X,I4,A)') "[rtvd:relaxing_tvd] negative density in sweep ",sweep,"( ", i1, i2, " )"

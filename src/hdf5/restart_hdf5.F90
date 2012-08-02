@@ -577,7 +577,7 @@ contains
       use domain,      only: dom
       use fluidindex,  only: flind
       use global,      only: magic_mass, t, dt, nstep
-      use hdf5,        only: HID_T, SIZE_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
+      use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
            &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mpi,         only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_INFO_NULL
@@ -592,12 +592,12 @@ contains
 
       integer(HID_T)                :: file_id       !> File identifier
       integer(HID_T)                :: plist_id      !> Property list identifier
-      integer(SIZE_T)               :: bufsize
 
       integer(kind=4)               :: error
       logical                       :: file_exist
 
       real,            dimension(1) :: rbuf
+      real,            dimension(flind%fluids) :: rbufm
       integer(kind=4), dimension(1) :: ibuf
 
       real                          :: restart_hdf5_version
@@ -691,37 +691,23 @@ contains
 
       if (master) then
          call h5fopen_f (filename, H5F_ACC_RDONLY_F, file_id, error)
-         bufsize = 1
-         call h5ltget_attribute_double_f(file_id,"/","piernik", rbuf, error)
-         restart_hdf5_version = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","time", rbuf, error)
-         t = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","timestep", rbuf, error)
-         dt = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","magic_mass", rbuf, error)
-         magic_mass = rbuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","nstep", ibuf, error)
-         nstep = ibuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","nres", ibuf, error)
-         nres = ibuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","nhdf", ibuf, error)
-         nhdf = ibuf(1)
-         call h5ltget_attribute_int_f(file_id,"/","nimg", ibuf, error)
-         nimg = ibuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","last_log_time", rbuf, error)
-         last_log_time = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","last_tsl_time", rbuf, error)
-         last_tsl_time = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","last_hdf_time", rbuf, error)
-         last_hdf_time = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","last_res_time", rbuf, error)
-         last_res_time = rbuf(1)
-         call h5ltget_attribute_double_f(file_id,"/","last_plt_time", rbuf, error)
-         last_plt_time = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","piernik",       rbuf, error) ; restart_hdf5_version = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","time",          rbuf, error) ; t  = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","timestep",      rbuf, error) ; dt = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","magic_mass",   rbufm, error) ; magic_mass(:) = rbufm(:)
+         call h5ltget_attribute_double_f(file_id,"/","last_log_time", rbuf, error) ; last_log_time = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","last_tsl_time", rbuf, error) ; last_tsl_time = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","last_hdf_time", rbuf, error) ; last_hdf_time = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","last_res_time", rbuf, error) ; last_res_time = rbuf(1)
+         call h5ltget_attribute_double_f(file_id,"/","last_plt_time", rbuf, error) ; last_plt_time = rbuf(1)
+         call h5ltget_attribute_int_f(file_id,"/","nstep", ibuf, error) ; nstep = ibuf(1)
+         call h5ltget_attribute_int_f(file_id,"/","nres",  ibuf, error) ; nres  = ibuf(1)
+         call h5ltget_attribute_int_f(file_id,"/","nhdf",  ibuf, error) ; nhdf  = ibuf(1)
+         call h5ltget_attribute_int_f(file_id,"/","nimg",  ibuf, error) ; nimg  = ibuf(1)
 
          call h5ltget_attribute_string_f(file_id,"/","problem_name", problem_name, error)
-         call h5ltget_attribute_string_f(file_id,"/","domain", domain_dump, error)
-         call h5ltget_attribute_string_f(file_id,"/","run_id", new_id, error)
+         call h5ltget_attribute_string_f(file_id,"/","domain",       domain_dump,  error)
+         call h5ltget_attribute_string_f(file_id,"/","run_id",       new_id,       error)
 
          if (restart_hdf5_version > 1.11) then
             call h5ltget_attribute_int_f(file_id,"/","require_init_prob", ibuf, error)
@@ -1168,6 +1154,7 @@ contains
 
    subroutine read_restart_hdf5_v2(status_v2)
 
+      use cg_list,     only: cg_list_element
       use constants,   only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, base_level_id, INVALID, RD, LO, HI
       use common_hdf5, only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
            &                 cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname, &
@@ -1176,7 +1163,7 @@ contains
            &                 require_init_prob, piernik_hdf5_version2, nres, nhdf, nimg, fix_string
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
-      use cg_list,     only: cg_list_element
+      use fluidindex,  only: flind
       use global,      only: magic_mass, t, dt, nstep
       use grid,        only: leaves
       use grid_cont,   only: is_overlap
@@ -1188,27 +1175,26 @@ contains
 
       integer, intent(out)  :: status_v2
 
-      integer(HID_T) :: file_id              !> File identifier
-      integer(HID_T) :: doml_g_id, dom_g_id  !> domain list and domain group identifiers
-      integer(HID_T) :: cgl_g_id,  cg_g_id   !> cg list and cg group identifiers
-      character(len=cwdlen) :: filename
-      logical :: file_exist, outside, overlapped
-      integer(kind=4) :: error
-      real, dimension(:), allocatable :: rbuf
-      integer(kind=4), dimension(:), allocatable :: ibuf
-      character(len=cbuff_len) :: cbuf
+      integer(HID_T)                                    :: file_id              !> File identifier
+      integer(HID_T)                                    :: doml_g_id, dom_g_id  !> domain list and domain group identifiers
+      integer(HID_T)                                    :: cgl_g_id,  cg_g_id   !> cg list and cg group identifiers
+      logical                                           :: file_exist, outside, overlapped
+      integer                                           :: ia, j
+      integer(kind=8)                                   :: tot_cells
+      integer(kind=8), dimension(xdim:zdim, LO:HI)      :: my_box, other_box
+      integer(kind=4)                                   :: error, nres_old
+      integer(kind=4), dimension(:), allocatable        :: ibuf
+      real,            dimension(:), allocatable        :: rbuf
+      character(len=cbuff_len)                          :: cbuf
       character(len=cbuff_len), dimension(8), parameter :: real_attrs = [ "time         ", "timestep     ", "last_hdf_time", "last_res_time", "last_plt_time",  &
            &                                                              "last_log_time", "last_tsl_time", "magic_mass   " ]
       character(len=cbuff_len), dimension(5), parameter :: int_attrs = [ "nstep            ", "nres             ", "nhdf             ", "nimg             ", "require_init_prob" ]
       character(len=cbuff_len), dimension(3), parameter :: str_attrs = [ "problem_name", "domain      ", "run_id      " ]
       !> \deprecated same strings are used independently in set_common_attributes*
-      integer :: ia, j
-      integer(kind=4) :: nres_old
-      character(len=dsetnamelen) :: d_label
-      integer(kind=8) :: tot_cells
-      type(cg_essentials), dimension(:), allocatable :: cg_res
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: my_box, other_box
-      type(cg_list_element), pointer :: cgl
+      character(len=cwdlen)                             :: filename
+      character(len=dsetnamelen)                        :: d_label
+      type(cg_essentials), dimension(:), allocatable    :: cg_res
+      type(cg_list_element), pointer                    :: cgl
 
       if (master) call warn("[restart_hdf5:read_restart_hdf5_v2] Experimental implementation")
 
@@ -1253,6 +1239,9 @@ contains
       ! Compare attributes in the root of the restart point file with values read from problem.par
       !> \todo merge this code somehow with set_common_attributes_v2
       do ia = lbound(real_attrs, dim=1), ubound(real_attrs, dim=1)
+         if (real_attrs(ia) == "magic_mass") then
+            deallocate(rbuf) ; allocate(rbuf(flind%fluids))
+         endif
          call h5ltget_attribute_double_f(file_id, "/", trim(real_attrs(ia)), rbuf, error)
          call compare_array1D(rbuf(:))
          select case (real_attrs(ia))
@@ -1271,7 +1260,8 @@ contains
             case ("last_tsl_time")
                last_tsl_time = rbuf(1)
             case ("magic_mass")
-               magic_mass = rbuf(1)
+               magic_mass(:) = rbuf(:)
+!               deallocate(rbuf) ; allocate(rbuf(1)) ! not necessary while magic_mass is the last issue in real_attrs
             case default
                write(msg,'(3a,g15.5,a)')"[restart_hdf5:read_restart_hdf5_v2] Real attribute '",trim(real_attrs(ia)),"' with value = ",rbuf(1)," was ignored"
                call warn(msg)

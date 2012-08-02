@@ -106,24 +106,25 @@ contains
 
    subroutine init_fluids
 
-      use fluids_pub,      only: has_dst, has_ion, has_neu
-      use fluidindex,      only: fluid_index, flind
-      use fluxes,          only: set_limiter
-      use global,          only: limiter
-      use dataio_pub,      only: die, code_progress, warn
       use constants,       only: PIERNIK_INIT_GLOBAL
-#ifdef VERBOSE
-      use dataio_pub,      only: printinfo
-#endif /* VERBOSE */
+      use dataio_pub,      only: die, code_progress, warn
+      use fluidindex,      only: fluid_index, flind
+      use fluids_pub,      only: has_dst, has_ion, has_neu
+      use fluxes,          only: set_limiter
+      use global,          only: limiter, magic_mass, local_magic_mass !, recent_magic_mass
+      use initdust,        only: init_dust
       use initionized,     only: init_ionized
       use initneutral,     only: init_neutral
-      use initdust,        only: init_dust
+      use mpisetup,        only: master
 #ifdef COSM_RAYS
       use initcosmicrays,  only: init_cosmicrays
 #endif /* COSM_RAYS */
 #ifdef TRACER
       use inittracer,      only: init_tracer
 #endif /* TRACER */
+#ifdef VERBOSE
+      use dataio_pub,      only: printinfo
+#endif /* VERBOSE */
 
       implicit none
 
@@ -148,6 +149,15 @@ contains
       if (has_neu .and. has_ion .and. flind%ion%cs2 /= flind%neu%cs2) &
          call warn("[initfluids:init_fluids]: flind%neu%cs2 and flind%ion%cs should be equal")
 
+      !> \todo find a better place for the following (somewhere between calling fluid_index and reading restart)
+      allocate(magic_mass(flind%fluids), local_magic_mass(flind%fluids)) !, recent_magic_mass(flind%fluids))
+      local_magic_mass = 0.0
+      if (master) then
+         magic_mass = 0.0
+      else
+         magic_mass = huge(1.0) ! this variable should not be used on slaves
+      endif
+
       call set_limiter(limiter)
 #ifdef VERBOSE
       call printinfo("[initfluids:init_fluids]: finished. \o/")
@@ -157,6 +167,7 @@ contains
 
    subroutine cleanup_fluids
       use fluids_pub,     only: has_ion
+      use global,         only: magic_mass, local_magic_mass !, recent_magic_mass
       use initionized,    only: cleanup_ionized
 #ifdef COSM_RAYS
       use initcosmicrays, only: cleanup_cosmicrays
@@ -168,6 +179,8 @@ contains
 #ifdef COSM_RAYS
       call cleanup_cosmicrays
 #endif /* COSM_RAYS */
+      !> \todo find a better place for the following (somewhere between calling fluid_index and reading restart)
+      deallocate(magic_mass, local_magic_mass) !, recent_magic_mass)
 
    end subroutine cleanup_fluids
 

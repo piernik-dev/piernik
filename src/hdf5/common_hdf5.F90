@@ -265,6 +265,7 @@ contains
       use constants,   only: I_ONE
       use dataio_pub,  only: use_v2_io, parfile, parfilelines, gzip_level
       use dataio_user, only: user_attrs_wr, user_attrs_pre
+      use fluidindex,  only: flind
       use global,      only: magic_mass, local_magic_mass
       use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
          & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
@@ -284,10 +285,10 @@ contains
       logical(kind=4)                :: Z_avail
       integer(SIZE_T)                :: maxlen
       integer(kind=4)                :: error
-      real                           :: magic_mass0
+      real, dimension(flind%fluids)  :: magic_mass0
 
-      call MPI_Reduce(local_magic_mass, magic_mass0, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, mpi_err)
-      local_magic_mass = 0.0
+      call MPI_Reduce(local_magic_mass, magic_mass0, int(flind%fluids, kind=4), MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, mpi_err)
+      local_magic_mass(:) = 0.0
 
       if (associated(user_attrs_pre)) call user_attrs_pre
 
@@ -358,15 +359,16 @@ contains
 
    subroutine set_common_attributes_v1(file_id)
 
-      use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE
-      use units,       only: cm, gram, sek, kelvin, miu0
-      use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
-         & last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
-      use domain,      only: dom
-      use global,      only: magic_mass, t, dt, nstep
-      use grid,        only: finest
-      use hdf5,        only: HID_T, SIZE_T
-      use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
+      use constants,  only: cbuff_len, xdim, ydim, zdim, I_ONE
+      use dataio_pub, only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
+         &                  last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use global,     only: magic_mass, t, dt, nstep
+      use grid,       only: finest
+      use hdf5,       only: HID_T, SIZE_T
+      use h5lt,       only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
+      use units,      only: cm, gram, sek, kelvin, miu0
 
       implicit none
 
@@ -374,14 +376,16 @@ contains
 
       integer(kind=4)                              :: fe
       integer(SIZE_T)                              :: i
-      integer(SIZE_T), parameter                   :: bufsize = I_ONE
       integer(kind=4)                              :: error
       integer, parameter                           :: buf_len = 50
+      integer(SIZE_T), parameter                   :: bufsize = I_ONE
+      integer(SIZE_T),          dimension(buf_len) :: rbuffer_size
       integer(kind=4),          dimension(buf_len) :: ibuffer
       real,                     dimension(buf_len) :: rbuffer
       character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
       character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
 
+      rbuffer_size = bufsize
       rbuffer(1)   = t                       ; rbuffer_name(1)   = "time" !rr2
       rbuffer(2)   = dt                      ; rbuffer_name(2)   = "timestep" !rr2
       rbuffer(3:4) = dom%edge(xdim, :)       ; rbuffer_name(3:4) = [ "xmin", "xmax" ] !rr1
@@ -393,12 +397,13 @@ contains
       rbuffer(12)  = last_hdf_time           ; rbuffer_name(12)  = "last_hdf_time" !rr2
       rbuffer(13)  = last_res_time           ; rbuffer_name(13)  = "last_res_time" !rr2
       rbuffer(14)  = last_plt_time           ; rbuffer_name(14)  = "last_plt_time" !rr2
-      rbuffer(15)  = magic_mass              ; rbuffer_name(15)  = "magic_mass" !rr2
-      rbuffer(16)  = cm                      ; rbuffer_name(16)  = "cm" !rr2
-      rbuffer(17)  = gram                    ; rbuffer_name(17)  = "gram" !rr2
-      rbuffer(18)  = sek                     ; rbuffer_name(18)  = "sek" !rr2
-      rbuffer(19)  = miu0                    ; rbuffer_name(19)  = "miu0" !rr2
-      rbuffer(20)  = kelvin                  ; rbuffer_name(20)  = "kelvin" !rr2
+      rbuffer(15)  = cm                      ; rbuffer_name(15)  = "cm" !rr2
+      rbuffer(16)  = gram                    ; rbuffer_name(16)  = "gram" !rr2
+      rbuffer(17)  = sek                     ; rbuffer_name(17)  = "sek" !rr2
+      rbuffer(18)  = miu0                    ; rbuffer_name(18)  = "miu0" !rr2
+      rbuffer(19)  = kelvin                  ; rbuffer_name(19)  = "kelvin" !rr2
+      rbuffer_size(20) = flind%fluids
+      rbuffer(20:19+rbuffer_size(20)) = magic_mass ; rbuffer_name(20:19+rbuffer_size(20)) = "magic_mass" !rr2
 
       ibuffer(1)   = nstep                   ; ibuffer_name(1)   = "nstep" !rr2
       ibuffer(2)   = nres                    ; ibuffer_name(2)   = "nres" !rr2
@@ -414,8 +419,8 @@ contains
 
       i = 1
       do while (rbuffer_name(i) /= "")
-         call h5ltset_attribute_double_f(file_id, "/", rbuffer_name(i), rbuffer(i), bufsize, error)
-         i = i + bufsize
+         call h5ltset_attribute_double_f(file_id, "/", rbuffer_name(i), rbuffer(i:i-I_ONE+rbuffer_size(i)), rbuffer_size(i), error)
+         i = i + rbuffer_size(i)
       enddo
 
       i = 1
@@ -442,12 +447,13 @@ contains
 
    subroutine set_common_attributes_v2(file_id)
 
-      use constants,   only: cbuff_len, I_ONE
-      use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
-         & last_res_time, last_plt_time, last_log_time, last_tsl_time, nres, nhdf, nimg, domain_dump
-      use global,      only: magic_mass, t, dt, nstep
-      use hdf5,        only: HID_T, SIZE_T
-      use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
+      use constants,  only: cbuff_len, I_ONE
+      use dataio_pub, only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
+         &                  last_res_time, last_plt_time, last_log_time, last_tsl_time, nres, nhdf, nimg, domain_dump
+      use fluidindex, only: flind
+      use global,     only: magic_mass, t, dt, nstep
+      use hdf5,       only: HID_T, SIZE_T
+      use h5lt,       only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
 
       implicit none
 
@@ -458,11 +464,13 @@ contains
       integer(SIZE_T), parameter                   :: bufsize = I_ONE
       integer(kind=4)                              :: error
       integer, parameter                           :: buf_len = 50
+      integer(SIZE_T),          dimension(buf_len) :: rbuffer_size
       integer(kind=4),          dimension(buf_len) :: ibuffer
       real,                     dimension(buf_len) :: rbuffer
       character(len=cbuff_len), dimension(buf_len) :: ibuffer_name = ''
       character(len=cbuff_len), dimension(buf_len) :: rbuffer_name = ''
 
+      rbuffer_size = bufsize
       rbuffer(1) = t                     ; rbuffer_name(1) = "time" !rr2
       rbuffer(2) = dt                    ; rbuffer_name(2) = "timestep" !rr2
       rbuffer(3) = piernik_hdf5_version2 ; rbuffer_name(3) = "piernik" !rr1, rr2
@@ -471,7 +479,8 @@ contains
       rbuffer(6) = last_hdf_time         ; rbuffer_name(6) = "last_hdf_time" !rr2
       rbuffer(7) = last_res_time         ; rbuffer_name(7) = "last_res_time" !rr2
       rbuffer(8) = last_plt_time         ; rbuffer_name(8) = "last_plt_time" !rr2
-      rbuffer(9) = magic_mass            ; rbuffer_name(9) = "magic_mass" !rr2
+      rbuffer_size(9) = flind%fluids
+      rbuffer(9:8+rbuffer_size(9)) = magic_mass ; rbuffer_name(9:8+rbuffer_size(9)) = "magic_mass" !rr2
 
       ibuffer(1) = nstep                 ; ibuffer_name(1) = "nstep" !rr2
       ibuffer(2) = nres                  ; ibuffer_name(2) = "nres" !rr2
@@ -483,8 +492,8 @@ contains
 
       i = 1
       do while (rbuffer_name(i) /= "")
-         call h5ltset_attribute_double_f(file_id, "/", rbuffer_name(i), rbuffer(i), bufsize, error)
-         i = i + bufsize
+         call h5ltset_attribute_double_f(file_id, "/", rbuffer_name(i), rbuffer(i:i-I_ONE+rbuffer_size(i)), rbuffer_size(i), error)
+         i = i + rbuffer_size(i)
       enddo
 
       i = 1

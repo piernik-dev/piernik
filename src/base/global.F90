@@ -43,17 +43,18 @@ module global
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
-        &    integration_order, limiter, smalld, smallei, smallp, use_smalld, magic_mass, local_magic_mass, &
+        &    integration_order, limiter, smalld, smallei, smallp, use_smalld, magic_mass, local_magic_mass, recent_magic_mass, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, dirty_debug, do_ascii_dump
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
-   real            :: t, dt, dt_old, dtm
-   real            :: magic_mass
-   real, save      :: local_magic_mass = 0.0
-   integer(kind=4) :: nstep
    logical         :: do_ascii_dump                      !< to dump, or not to dump: that is a question (ascii)
+   integer(kind=4) :: nstep
+   real            :: t, dt, dt_old, dtm
+   real, dimension(:),   allocatable       :: magic_mass
+   real, dimension(:),   allocatable, save :: local_magic_mass
+   real, dimension(:,:), allocatable, save :: recent_magic_mass
 
    ! Namelist variables
 
@@ -73,12 +74,12 @@ module global
    !! \f$c_{\textrm{fr}} = \sqrt{v^2 + \frac{1}{2}(\max{v} - \min{v})c_{\textrm{fr}}^{\textrm{smooth}}} + \ldots\f$
    !<
    real    :: cfr_smooth
-   integer(kind=4), protected :: integration_order !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
-   character(len=cbuff_len) :: limiter     !< type of flux limiter
-   character(len=cbuff_len) :: cflcontrol  !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
-   logical                  :: repeat_step !< repeat fluid step if cfl condition is violated (significantly increases mem usage)
-   real    :: relax_time                   !< relaxation/grace time, additional physics will be turned off until global::t >= global::relax_time
-   logical, dimension(xdim:zdim) :: skip_sweep !< allows to skip sweep in chosen direction
+   real    :: relax_time                              !< relaxation/grace time, additional physics will be turned off until global::t >= global::relax_time
+   integer(kind=4), protected    :: integration_order !< Runge-Kutta time integration order (1 - 1st order, 2 - 2nd order)
+   character(len=cbuff_len)      :: limiter           !< type of flux limiter
+   character(len=cbuff_len)      :: cflcontrol        !< type of cfl control just before each sweep (possibilities: 'none', 'main', 'user')
+   logical                       :: repeat_step       !< repeat fluid step if cfl condition is violated (significantly increases mem usage)
+   logical, dimension(xdim:zdim) :: skip_sweep        !< allows to skip sweep in chosen direction
 
    namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
         &                     repeat_step, limiter, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D
@@ -186,8 +187,6 @@ contains
          lbuff(3:5) = skip_sweep
          lbuff(6)   = geometry25D
 
-         magic_mass = 0.0
-
       endif
 
       call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
@@ -218,8 +217,6 @@ contains
          cflcontrol = cbuff(2)
 
          integration_order = ibuff(1)
-
-         magic_mass = huge(1.0) ! this variable should not be used on slaves
 
       endif
 
