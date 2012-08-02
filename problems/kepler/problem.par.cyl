@@ -48,7 +48,6 @@
     vars(2) = 'velx'
     vars(3) = 'vely'
     vars(4) = 'velz'
-    vars(5) = 'trcr'
  /
 
  $FLUID_NEUTRAL
