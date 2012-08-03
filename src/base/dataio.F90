@@ -40,8 +40,6 @@
 !!
 !! In this module following namelists of parameters are specified:
 !! \copydetails dataio::init_dataio
-!!
-!! \todo check and if necessary bring back usefulness of min_disk_space_MB parameter
 !<
 
 module dataio
@@ -65,9 +63,6 @@ module dataio
    real                     :: dt_tsl                !< time between successive timeslice dumps
    real                     :: dt_log                !< time between successive log dumps
    real                     :: dt_plt                !< time between successive domain slices files dumps
-   integer(kind=4)          :: min_disk_space_MB     !< minimum disk space in MB to continue simulation <b>(currently not used)</b>
-   integer(kind=4)          :: sleep_minutes         !< minutes of sleeping time before continue simulation
-   integer(kind=4)          :: sleep_seconds         !< seconds of sleeping time before continue simulation
    character(len=cwdlen)    :: user_message_file     !< path to possible user message file containing dt_xxx changes or orders to dump/stop/end simulation
    character(len=cwdlen)    :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
    integer(kind=4), dimension(ndims) :: plt_plane    !< indices of cells that are sliced in plt files
@@ -109,9 +104,8 @@ module dataio
    namelist /END_CONTROL/     nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, plt_plane, &
-                              domain_dump, vars, mag_center, vizit, fmin, fmax, min_disk_space_MB, sleep_minutes, sleep_seconds, &
-                              user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io, enable_compression, &
-                              gzip_level, initial_hdf_dump
+                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
+                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump
 
 contains
 
@@ -157,9 +151,6 @@ contains
 !! <tr><td>vizit              </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::vizit        </td></tr>
 !! <tr><td>fmin               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmin         </td></tr>
 !! <tr><td>fmax               </td><td>                   </td><td>real      </td><td>\copydoc dataio_pub::fmax         </td></tr>
-!! <tr><td>min_disk_space_MB  </td><td>100                </td><td>integer   </td><td>\copydoc dataio::min_disk_space_MB</td></tr>
-!! <tr><td>sleep_minutes      </td><td>0                  </td><td>integer   </td><td>\copydoc dataio::sleep_minutes    </td></tr>
-!! <tr><td>sleep_seconds      </td><td>0                  </td><td>integer   </td><td>\copydoc dataio::sleep_seconds    </td></tr>
 !! <tr><td>user_message_file  </td><td>trim(wd_rd)//'/msg'</td><td>string similar to default value              </td><td>\copydoc dataio::user_message_file  </td></tr>
 !! <tr><td>system_message_file</td><td>'/tmp/piernik_msg' </td><td>string of characters similar to default value</td><td>\copydoc dataio::system_message_file</td></tr>
 !! <tr><td>multiple_h5files   </td><td>.false.            </td><td>logical   </td><td>\copydoc dataio_pub::multiple_h5files</td></tr>
@@ -212,9 +203,6 @@ contains
       domain_dump       = 'phys_domain'
       vars(:)           = ''
       mag_center        = .false.
-      min_disk_space_MB = 100
-      sleep_minutes     = 0
-      sleep_seconds     = 0
       write(user_message_file,'(a,"/msg")') trim(wd_rd)
       system_message_file = "/tmp/piernik_msg"
 
@@ -279,15 +267,11 @@ contains
 
 !   namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, plt_plane, &
 !                             domain_dump, vars, mag_center, vizit, fmin, fmax, &
-!                             min_disk_space_MB, sleep_minutes, sleep_seconds, &
 !                             user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io
 
-         ibuff(40) = min_disk_space_MB
-         ibuff(41) = sleep_minutes
-         ibuff(42) = sleep_seconds
-         ibuff(43:45) = plt_plane
-         ibuff(46) = nproc_io
-         ibuff(47) = gzip_level
+         ibuff(40:42) = plt_plane
+         ibuff(43) = nproc_io
+         ibuff(44) = gzip_level
 
          rbuff(40) = dt_hdf
          rbuff(41) = dt_res
@@ -337,15 +321,11 @@ contains
          resdel              = ibuff(21)
 
 !  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, domain, vars, mag_center, &
-!                            min_disk_space_MB, sleep_minutes, ix, iy, iz &
-!                            user_message_file, system_message_file
+!                            ix, iy, iz, user_message_file, system_message_file
 
-         min_disk_space_MB   = ibuff(40)
-         sleep_minutes       = ibuff(41)
-         sleep_seconds       = ibuff(42)
-         plt_plane           = ibuff(43:45)
-         nproc_io            = int(ibuff(46), kind=4)
-         gzip_level          = int(ibuff(47), kind=4)
+         plt_plane           = ibuff(40:42)
+         nproc_io            = int(ibuff(43), kind=4)
+         gzip_level          = int(ibuff(44), kind=4)
 
          dt_hdf              = rbuff(40)
          dt_res              = rbuff(41)
