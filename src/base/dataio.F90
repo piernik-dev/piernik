@@ -880,6 +880,7 @@ contains
       call MPI_Allreduce(MPI_IN_PLACE, tot_q(:), size(tot_q), MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
 
       call write_log(tsl)
+      call update_magic_mass(tsl=.true.)
 
       if (master) then
          call pop_vector(tsl_vars, [t, dt, tot_q(T_MASS), tot_q(T_MOMX), tot_q(T_MOMY), tot_q(T_MOMZ), tot_q(T_ENER), tot_q(T_EPOT), tot_q(T_EINT), tot_q(T_EKIN)])
@@ -893,7 +894,6 @@ contains
          call pop_vector(tsl_vars, [tot_q(T_ENCR), tsl%encr_min, tsl%encr_max])
 #endif /* COSM_RAYS */
 
-         call update_magic_mass(tsl=.true.)
          ! \todo: replicated code, simplify me
          if (has_ion) then
             sn=>flind%ion%snap
