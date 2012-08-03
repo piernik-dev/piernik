@@ -328,15 +328,30 @@ contains
       use units,      only: gram, cm
       implicit none
       real, intent(in) :: new_size
+#if defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
+      integer :: i
+#endif /* __INTEL_COMPILER) */
 
       grain_size = new_size
       grain_dens_x_size = grain_size * grain_dens * gram / cm**2
 
+#if defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
+      epstein_factor(:) = 0.0
+      do i = lbound(flind%all_fluids, 1), ubound(flind%all_fluids, 1)
+         if (flind%all_fluids(i)%fl%tag /= DST) &
+            epstein_factor(i) = grain_dens_x_size / flind%all_fluids(i)%fl%cs !BEWARE iso assumed
+      enddo
+#else /* !__INTEL_COMPILER) */
       where (flind%all_fluids(:)%fl%tag /= DST)
          epstein_factor(:) = grain_dens_x_size / flind%all_fluids(:)%fl%cs !BEWARE iso assumed
       elsewhere
          epstein_factor(:) = 0.0
       endwhere
+#endif /* !__INTEL_COMPILER */
 
    end subroutine update_grain_size
 

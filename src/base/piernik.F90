@@ -248,10 +248,20 @@ contains
 #ifdef COSM_RAYS
       use fluidindex,            only: flind
       use crdiffusion,           only: init_crdiffusion
+#if defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
+      use crhelpers,             only: init_div_v
+#endif /* __INTEL_COMPILER */
 #endif /* COSM_RAYS */
 #ifdef PIERNIK_OPENCL
       use piernikcl,             only: init_opencl
 #endif /* PIERNIK_OPENCL */
+#if defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
+      use timestep,              only: init_time_step
+#endif /* __INTEL_COMPILER */
 
       implicit none
 
@@ -290,6 +300,11 @@ contains
       call all_cg%register_fluids(flind%all) ! Register named fields for u, b and wa
 
 #ifdef COSM_RAYS
+#if defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
+      call init_div_v
+#endif /* __INTEL_COMPILER */
       call init_crdiffusion(flind%crs%all) ! depends on fluids
 #endif /* COSM_RAYS */
 
@@ -336,6 +351,12 @@ contains
 #ifdef MULTIGRID
       call init_multigrid ! depends on grid, geometry, units and arrays
 #endif /* MULTIGRID */
+
+#if defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
+      call init_time_step
+#endif /* __INTEL_COMPILER */
 
       code_progress = PIERNIK_INIT_IO_IC       ! Almost everything is initialized: do problem-related stuff here, set-up I/O and create or read the initial conditions.
 

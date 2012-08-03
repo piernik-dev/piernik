@@ -37,9 +37,20 @@ module timestep
 
    private
    public :: time_step, cfl_manager
+#if defined(__INTEL_COMPILER)
+   !! \deprecated remove this clause as soon as Intel Compiler gets required
+   !! features and/or bug fixes
+   public :: init_time_step
+#endif /* __INTEL_COMPILER */
 
    real :: c_all_old
+#if defined(__INTEL_COMPILER)
+   !! \deprecated remove this clause as soon as Intel Compiler gets required
+   !! features and/or bug fixes
+   procedure(), pointer :: cfl_manager
+#else /* !__INTEL_COMPILER */
    procedure(), pointer :: cfl_manager => init_time_step
+#endif /* !__INTEL_COMPILER */
 
 contains
 
@@ -71,7 +82,11 @@ contains
             call warn(msg)
       end select
       if (.not.associated(cfl_manager)) call die("[timestep:init_time_step] cfl_manager was not associated.")
+#if !defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
       call cfl_manager
+#endif /* !__INTEL_COMPILER */
 
    end subroutine init_time_step
 

@@ -32,6 +32,11 @@
 !<
 module grid
 
+#if defined(__INTEL_COMPILER)
+   !! \deprecated remove this clause as soon as Intel Compiler gets required
+   !! features and/or bug fixes
+   use cg_list  ! QA_WARN required for ifort-12.2.x
+#endif /* __INTEL_COMPILER */
    use cg_list_bnd, only: cg_list_bnd_T
    use cg_list_level, only: cg_list_level_T, cg_list_patch_T
 

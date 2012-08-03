@@ -127,7 +127,13 @@ contains
    elemental function crude_cosh(x) result (res)
       implicit none
       real, intent(in) :: x
+#if defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
+      real, parameter, dimension(3) :: cosh_coef = [0.5, 0.041666666666666664, 0.001388888888888889]
+#else /* !__INTEL_COMPILER */
       real, parameter, dimension(*) :: cosh_coef = [0.5, 0.041666666666666664, 0.001388888888888889]
+#endif
       real :: res, x2
       integer :: i
 

@@ -34,6 +34,11 @@ module crhelpers
 
    private
    public :: div_v, set_div_v1d, divv_n
+#if defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
+   public :: init_div_v
+#endif
 
    interface
       subroutine div_v_func(ifluid, cg)
@@ -45,11 +50,38 @@ module crhelpers
    end interface
 
    character(len=dsetnamelen), parameter :: divv_n = "divvel" !< divergence of velocity
-   procedure(div_v_func), pointer :: div_v => init_div_v
+
+#if defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
+   procedure(div_v_func), pointer :: div_v
+#else /* !__INTEL_COMPILER */
+   procedure(div_v_func), pointer :: div_v => init_divv
+#endif /* !__INTEL_COMPILER */
 
 contains
 
-   subroutine init_div_v(ifluid, cg)
+#if defined(__INTEL_COMPILER)
+   !! \deprecated remove this clause as soon as Intel Compiler gets required
+   !! features and/or bug fixes
+   subroutine init_div_v
+
+      use initcosmicrays, only: divv_scheme
+
+      implicit none
+
+      select case (trim(divv_scheme))
+         case ("6lp", "6th_order_legandre")
+            div_v => div_v_6th_lp
+         case default
+            div_v => div_v_1st
+      end select
+
+      return
+   end subroutine init_div_v
+#endif /* __INTEL_COMPILER */
+
+   subroutine init_divv(ifluid, cg)
 
       use grid_cont,      only: grid_container
       use initcosmicrays, only: divv_scheme
@@ -68,7 +100,7 @@ contains
 
       call div_v(ifluid, cg)
       return
-   end subroutine init_div_v
+   end subroutine init_divv
 
    subroutine set_div_v1d(p, dir, i1, i2, cg)
 
