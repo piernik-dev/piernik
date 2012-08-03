@@ -728,7 +728,7 @@ contains
    subroutine write_timeslice
 
       use cg_list_global, only: all_cg
-      use constants,      only: cwdlen, xdim, ydim, zdim
+      use constants,      only: cwdlen, xdim, ydim, zdim, DST
       use dataio_pub,     only: wd_wr
       use dataio_user,    only: user_tsl
       use diagnostics,    only: pop_vector
@@ -780,6 +780,7 @@ contains
          enumerator :: T_LAST                                  !< DO NOT place any index behind this one
       end enum
       real, dimension(T_MASS:T_LAST-1), save :: tot_q          !< array of total quantities
+      integer(kind=4)                        :: ifl
 
       if (has_ion) then
          cs_iso2 = flind%ion%cs2
@@ -894,21 +895,14 @@ contains
          call pop_vector(tsl_vars, [tot_q(T_ENCR), tsl%encr_min, tsl%encr_max])
 #endif /* COSM_RAYS */
 
-         ! \todo: replicated code, simplify me
-         if (has_ion) then
-            sn=>flind%ion%snap
-            call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
-                                       sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val, sn%mmass_cur, sn%mmass_cum])
-         endif
-         if (has_neu) then
-            sn=>flind%neu%snap
-            call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
-                                       sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val, sn%mmass_cur, sn%mmass_cum])
-         endif
-         if (has_dst) then
-            sn=>flind%dst%snap
-            call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, sn%mmass_cur, sn%mmass_cum])
-         endif
+         do ifl = lbound(flind%all_fluids, 1, kind=4), ubound(flind%all_fluids, 1, kind=4)
+            sn => flind%all_fluids(ifl)%fl%snap
+            call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val])
+            if (flind%all_fluids(ifl)%fl%tag /= DST) then
+               call pop_vector(tsl_vars, [sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
+            endif
+            call pop_vector(tsl_vars, [sn%mmass_cur, sn%mmass_cum])
+         enddo
 
       endif
 
