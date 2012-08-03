@@ -539,13 +539,13 @@ contains
 
    function array3d_point(this, v) result(p)
 
-      use constants,  only: xdim, ydim, zdim, ndims
+      use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: die
 
       implicit none
 
-      class(named_array3d),      intent(inout) :: this
-      integer, dimension(ndims), intent(in)    :: v
+      class(named_array3d),  intent(inout) :: this
+      integer, dimension(:), intent(in)    :: v
 
       real                                     :: p
 
@@ -562,13 +562,13 @@ contains
 
    function array4d_point(this, v) result(p1d)
 
-      use constants,  only: xdim, ydim, zdim, ndims
+      use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: die
 
       implicit none
 
-      class(named_array4d),              intent(inout) :: this
-      integer(kind=4), dimension(ndims), intent(in)    :: v
+      class(named_array4d),          intent(inout) :: this
+      integer(kind=4), dimension(:), intent(in)    :: v
 
       real,    dimension(:),     pointer       :: p1d
 
@@ -585,14 +585,14 @@ contains
 
    function array4d_point_one_var(this, nn, v) result(p)
 
-      use constants,  only: xdim, ydim, zdim, ndims
+      use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: die
 
       implicit none
 
-      class(named_array4d),              intent(inout) :: this
-      integer(kind=4),                   intent(in)    :: nn
-      integer(kind=4), dimension(ndims), intent(in)    :: v
+      class(named_array4d),          intent(inout) :: this
+      integer(kind=4),               intent(in)    :: nn
+      integer(kind=4), dimension(:), intent(in)    :: v
 
       real                                     :: p
 
@@ -609,12 +609,12 @@ contains
 
    function array3d_span(this,v1,v2) result(p3d)
 
-      use constants, only: xdim, ydim, zdim, ndims
+      use constants, only: xdim, ydim, zdim
 
       implicit none
 
-      class(named_array3d),              intent(inout) :: this
-      integer(kind=4), dimension(ndims), intent(in)    :: v1, v2
+      class(named_array3d),          intent(inout) :: this
+      integer(kind=4), dimension(:), intent(in)    :: v1, v2
 
       real,    dimension(:,:,:), pointer       :: p3d
 
@@ -630,12 +630,12 @@ contains
 
    function array3d_span_ijkse(this,v) result(p3d)
 
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI
+      use constants, only: xdim, ydim, zdim, LO, HI
 
       implicit none
 
-      class(named_array3d),                    intent(inout) :: this
-      integer(kind=4), dimension(ndims,LO:HI), intent(in)    :: v
+      class(named_array3d),            intent(inout) :: this
+      integer(kind=4), dimension(:,:), intent(in)    :: v
 
       real,    dimension(:,:,:), pointer             :: p3d
 
@@ -651,12 +651,12 @@ contains
 
    function array3d_span_ijkse8(this,v) result(p3d)
 
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI
+      use constants, only: xdim, ydim, zdim, LO, HI
 
       implicit none
 
-      class(named_array3d),                    intent(inout) :: this
-      integer(kind=8), dimension(ndims,LO:HI), intent(in)    :: v
+      class(named_array3d),            intent(inout) :: this
+      integer(kind=8), dimension(:,:), intent(in)    :: v
 
       real,    dimension(:,:,:), pointer             :: p3d
 
@@ -672,13 +672,13 @@ contains
 
    function array4d_span_one_var(this,nn,v1,v2) result(p3d)
 
-      use constants, only: xdim, ydim, zdim, ndims
+      use constants, only: xdim, ydim, zdim
 
       implicit none
 
-      class(named_array4d),              intent(inout) :: this
-      integer(kind=4),                   intent(in)    :: nn
-      integer(kind=4), dimension(ndims), intent(in)    :: v1, v2
+      class(named_array4d),          intent(inout) :: this
+      integer(kind=4),               intent(in)    :: nn
+      integer(kind=4), dimension(:), intent(in)    :: v1, v2
 
       real,    dimension(:,:,:),  pointer      :: p3d
 
@@ -694,13 +694,13 @@ contains
 
    function array4d_span_one_var_ijkse(this,nn,v) result(p3d)
 
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI
+      use constants, only: xdim, ydim, zdim, LO, HI
 
       implicit none
 
-      class(named_array4d),                    intent(inout) :: this
-      integer(kind=4),                         intent(in)    :: nn
-      integer(kind=4), dimension(ndims,LO:HI), intent(in)    :: v
+      class(named_array4d),             intent(inout) :: this
+      integer(kind=4),                  intent(in)    :: nn
+      integer(kind=4), dimension(:, :), intent(in)    :: v
 
       real,    dimension(:,:,:),  pointer            :: p3d
 
@@ -716,12 +716,12 @@ contains
 
    function array4d_span(this,v1,v2) result(p3d)
 
-      use constants, only: xdim, ydim, zdim, ndims
+      use constants, only: xdim, ydim, zdim
 
       implicit none
 
-      class(named_array4d),              intent(inout) :: this
-      integer(kind=4), dimension(ndims), intent(in)    :: v1, v2
+      class(named_array4d),          intent(inout) :: this
+      integer(kind=4), dimension(:), intent(in)    :: v1, v2
 
       real,    dimension(:,:,:,:), pointer     :: p3d
 
@@ -737,12 +737,12 @@ contains
 
    function array4d_span_ijkse(this,v) result(p3d)
 
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI
+      use constants, only: xdim, ydim, zdim, LO, HI
 
       implicit none
 
-      class(named_array4d),                    intent(inout) :: this
-      integer(kind=4), dimension(ndims,LO:HI), intent(in)    :: v
+      class(named_array4d),             intent(inout) :: this
+      integer(kind=4), dimension(:, :), intent(in)    :: v
 
       real,    dimension(:,:,:,:), pointer           :: p3d
 
