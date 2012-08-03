@@ -299,13 +299,13 @@ contains
 
       implicit none
 
-      allocate(magic_mass(flind%fluids), local_magic_mass(flind%fluids), recent_magic_mass(flind%fluids))
+      allocate(local_magic_mass(flind%fluids), recent_magic_mass(flind%fluids))
       local_magic_mass  = 0.0
       recent_magic_mass = 0.0
       if (master) then
+         allocate(magic_mass(flind%fluids))
          magic_mass = 0.0
-      else
-         magic_mass = huge(1.0) ! this variable should not be used on slaves
+         ! this variable should not be used on slaves
       endif
 
    end subroutine init_magic_mass
