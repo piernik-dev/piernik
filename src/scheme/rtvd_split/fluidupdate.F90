@@ -43,7 +43,7 @@ contains
 !<
 !! \brief Save the current state after correct time-step or restore previously saved state and try a shorter timestep.
 !!
-!! \warning There might be other evolving variables (such as global::magic_mass) that should be added here
+!! \warning There might be other evolving variables (such as mass_defect::magic_mass) that should be added here
 !!
 !! \todo Move this routine somewhere else, because it should be available for all hydro schemes
 !>

@@ -43,7 +43,7 @@ module global
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
-        &    integration_order, limiter, smalld, smallei, smallp, use_smalld, magic_mass, local_magic_mass, recent_magic_mass, &
+        &    integration_order, limiter, smalld, smallei, smallp, use_smalld, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, dirty_debug, do_ascii_dump
 
    real, parameter :: dt_default_grow = 2.
@@ -52,8 +52,6 @@ module global
    logical         :: do_ascii_dump                      !< to dump, or not to dump: that is a question (ascii)
    integer(kind=4) :: nstep
    real            :: t, dt, dt_old, dtm
-   real, dimension(:),   allocatable       :: magic_mass
-   real, dimension(:),   allocatable, save :: local_magic_mass, recent_magic_mass
 
    ! Namelist variables
 

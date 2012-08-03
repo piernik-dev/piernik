@@ -100,7 +100,7 @@ module initfluids
 ! pulled by ANY
    implicit none
    private
-   public :: init_fluids, cleanup_fluids, sanitize_smallx_checks, update_magic_mass
+   public :: init_fluids, cleanup_fluids, sanitize_smallx_checks
 
 contains
 
@@ -115,6 +115,7 @@ contains
       use initdust,        only: init_dust
       use initionized,     only: init_ionized
       use initneutral,     only: init_neutral
+      use mass_defect,     only: init_magic_mass
 #ifdef COSM_RAYS
       use initcosmicrays,  only: init_cosmicrays
 #endif /* COSM_RAYS */
@@ -163,6 +164,7 @@ contains
    subroutine cleanup_fluids
       use fluids_pub,     only: has_ion
       use initionized,    only: cleanup_ionized
+      use mass_defect,    only: cleanup_magic_mass
 #ifdef COSM_RAYS
       use initcosmicrays, only: cleanup_cosmicrays
 #endif /* COSM_RAYS */
@@ -291,68 +293,5 @@ contains
       if (associated(fl)) nullify(fl)
 
    end subroutine sanitize_smallx_checks
-
-!> \todo find a better place for this routine
-   subroutine init_magic_mass
-
-      use fluidindex, only: flind
-      use global,     only: magic_mass, local_magic_mass, recent_magic_mass
-      use mpisetup,   only: master
-
-      implicit none
-
-      allocate(local_magic_mass(flind%fluids), recent_magic_mass(flind%fluids))
-      local_magic_mass  = 0.0
-      recent_magic_mass = 0.0
-      if (master) then
-         allocate(magic_mass(flind%fluids))
-         magic_mass = 0.0
-         ! this variable should not be used on slaves
-      endif
-
-   end subroutine init_magic_mass
-
-!> \todo find a better place for this routine
-   subroutine update_magic_mass(tsl)
-
-      use fluidindex,  only: flind
-      use global,      only: magic_mass, local_magic_mass, recent_magic_mass
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,    only: comm, mpi_err, FIRST, master
-
-      implicit none
-
-      logical, optional             :: tsl
-      real, dimension(flind%fluids) :: magic_mass0
-      integer(kind=4)               :: ifl, pos
-
-      call MPI_Reduce(local_magic_mass, magic_mass0, int(flind%fluids, kind=4), MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, mpi_err)
-      local_magic_mass(:) = 0.0
-
-      if (master) then
-         magic_mass = magic_mass + magic_mass0
-
-         if (present(tsl)) then
-            do ifl = 1, flind%fluids
-               pos = flind%all_fluids(ifl)%fl%pos
-               flind%all_fluids(ifl)%fl%snap%mmass_cum = magic_mass(pos)
-               flind%all_fluids(ifl)%fl%snap%mmass_cur = magic_mass(pos) - recent_magic_mass(pos)
-            enddo
-            recent_magic_mass(:) = magic_mass(:)
-         endif
-      endif
-
-   end subroutine update_magic_mass
-
-!> \todo find a better place for this routine
-   subroutine cleanup_magic_mass
-
-      use global, only: magic_mass, local_magic_mass, recent_magic_mass
-
-      implicit none
-
-      deallocate(magic_mass, local_magic_mass, recent_magic_mass)
-
-   end subroutine cleanup_magic_mass
 
 end module initfluids

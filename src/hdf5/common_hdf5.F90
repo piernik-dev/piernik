@@ -269,7 +269,7 @@ contains
          & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
          & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use initfluids,  only: update_magic_mass
+      use mass_defect, only: update_magic_mass
       use mpisetup,    only: slave
       use version,     only: env, nenv
 
@@ -353,16 +353,17 @@ contains
 
    subroutine set_common_attributes_v1(file_id)
 
-      use constants,  only: cbuff_len, xdim, ydim, zdim, I_ONE
-      use dataio_pub, only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
-         &                  last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use global,     only: magic_mass, t, dt, nstep
-      use grid,       only: finest
-      use hdf5,       only: HID_T, SIZE_T
-      use h5lt,       only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
-      use units,      only: cm, gram, sek, kelvin, miu0
+      use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE
+      use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
+         &                   last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
+      use domain,      only: dom
+      use fluidindex,  only: flind
+      use global,      only: t, dt, nstep
+      use grid,        only: finest
+      use hdf5,        only: HID_T, SIZE_T
+      use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
+      use mass_defect, only: magic_mass
+      use units,       only: cm, gram, sek, kelvin, miu0
 
       implicit none
 
@@ -441,13 +442,14 @@ contains
 
    subroutine set_common_attributes_v2(file_id)
 
-      use constants,  only: cbuff_len, I_ONE
-      use dataio_pub, only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
-         &                  last_res_time, last_plt_time, last_log_time, last_tsl_time, nres, nhdf, nimg, domain_dump
-      use fluidindex, only: flind
-      use global,     only: magic_mass, t, dt, nstep
-      use hdf5,       only: HID_T, SIZE_T
-      use h5lt,       only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
+      use constants,   only: cbuff_len, I_ONE
+      use dataio_pub,  only: require_init_prob, piernik_hdf5_version2, problem_name, run_id, last_hdf_time, &
+         &                   last_res_time, last_plt_time, last_log_time, last_tsl_time, nres, nhdf, nimg, domain_dump
+      use fluidindex,  only: flind
+      use global,      only: t, dt, nstep
+      use hdf5,        only: HID_T, SIZE_T
+      use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
+      use mass_defect, only: magic_mass
 
       implicit none
 

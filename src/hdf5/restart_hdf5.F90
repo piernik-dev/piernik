@@ -576,10 +576,11 @@ contains
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
       use fluidindex,  only: flind
-      use global,      only: magic_mass, t, dt, nstep
+      use global,      only: t, dt, nstep
       use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
            &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
+      use mass_defect, only: magic_mass
       use mpi,         only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_INFO_NULL
       use mpisetup,    only: comm, mpi_err, master, FIRST
       use named_array, only: qna, wna
@@ -1164,11 +1165,12 @@ contains
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
       use fluidindex,  only: flind
-      use global,      only: magic_mass, t, dt, nstep
+      use global,      only: t, dt, nstep
       use grid,        only: leaves
       use grid_cont,   only: is_overlap
       use hdf5,        only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
+      use mass_defect, only: magic_mass
       use mpisetup,    only: master, comm, mpi_err
 
       implicit none

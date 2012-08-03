@@ -236,9 +236,10 @@ contains
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind, nmag
       use fluxes,           only: flimiter, all_fluxes
-      use global,           only: smalld, integration_order, use_smalld, local_magic_mass
+      use global,           only: smalld, integration_order, use_smalld
       use grid_cont,        only: grid_container
       use gridgeometry,     only: gc, GC1, GC2, GC3, geometry_source_terms
+      use mass_defect,      only: local_magic_mass
 #ifdef BALSARA
       use interactions,     only: balsara_implicit_interactions
 #else /* !BALSARA */

@@ -741,7 +741,7 @@ contains
       use global,         only: t, dt, smalld, nstep
       use grid,           only: leaves
       use grid_cont,      only: grid_container
-      use initfluids,     only: update_magic_mass
+      use mass_defect,    only: update_magic_mass
       use mpi,            only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,       only: master, comm, mpi_err
 #ifdef GRAV
