@@ -145,8 +145,10 @@ contains
 
       call fluid_index    ! flind has valid values afterwards
 
-      if (has_neu .and. has_ion .and. flind%ion%cs2 /= flind%neu%cs2) &
-         call warn("[initfluids:init_fluids]: flind%neu%cs2 and flind%ion%cs should be equal")
+      if (has_neu .and. has_ion) then
+         if (flind%ion%cs2 /= flind%neu%cs2) &
+            call warn("[initfluids:init_fluids]: flind%neu%cs2 and flind%ion%cs should be equal")
+      endif
 
       !> \todo find a better place for the following (somewhere between calling fluid_index and reading restart)
       call init_magic_mass
