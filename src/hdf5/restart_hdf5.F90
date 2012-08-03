@@ -377,7 +377,6 @@ contains
       stride(:) = 1
       cnt(:)  = 1
 
-      !> \todo check the hesitant choice to start from leaves%first or all_cg%first
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -508,7 +507,6 @@ contains
       stride(:) = 1
       cnt(:)  = 1
 
-      !> \todo check the hesitant choice to start from leaves%first or all_cg%first
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -847,7 +845,7 @@ contains
          drank = ndims
          allocate(ddims(drank))
          do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-            if (qna%lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/all_cg.qna%lst(i_).name"
+            if (qna%lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/leaves.qna%lst(i_).name"
                  call create_empty_cg_dataset(cg_g_id, qna%lst(i)%name, int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
          enddo
          deallocate(ddims)
@@ -857,7 +855,7 @@ contains
          drank = ndims + I_ONE
          allocate(ddims(drank))
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
-            if (wna%lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/all_cg.wna%lst(i_.name"
+            if (wna%lst(i)%restart_mode /= AT_IGNORE) &                                ! create "/cg/cg_%08d/leaves.wna%lst(i_.name"
                  call create_empty_cg_dataset(cg_g_id, wna%lst(i)%name, int([ wna%lst(i)%dim4, cg_n_b(g, :) ], kind=HSIZE_T), Z_avail)
          enddo
          deallocate(ddims)
@@ -1405,7 +1403,6 @@ contains
       do ia = lbound(cg_res, dim=1), ubound(cg_res, dim=1)
          my_box(:,LO) = cg_res(ia)%off(:)
          my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
-         !> \todo check the hesitant choice to start from leaves%first or all_cg%first
          cgl => leaves%first
          do while (associated(cgl))
             other_box(:,LO) = cgl%cg%off(:)

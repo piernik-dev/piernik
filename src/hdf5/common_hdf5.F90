@@ -528,9 +528,9 @@ contains
 
    function get_nth_cg(n) result(cg)
 
-      use cg_list_global, only: all_cg
       use dataio_pub,     only: die
       use cg_list,        only: cg_list_element
+      use grid,           only: leaves
       use grid_cont,      only: grid_container
 
       implicit none
@@ -544,7 +544,7 @@ contains
 
       nullify(cg)
       i = 1
-      cgl => all_cg%first
+      cgl => leaves%first
       do while (associated(cgl))
          if (i == n) then
             cg => cgl%cg
@@ -611,7 +611,6 @@ contains
 
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
-      use cg_list_global, only: all_cg
       use constants,      only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
       use units,          only: cm, sek
       use dataio_pub,     only: die, nproc_io, can_i_write, domain_dump
@@ -687,7 +686,7 @@ contains
 
       ! Prepare groups and datasets for grid containers on the master
       allocate(cg_n(FIRST:LAST))
-      call MPI_Allgather(all_cg%cnt, I_ONE, MPI_INTEGER, cg_n, I_ONE, MPI_INTEGER, comm, mpi_err)
+      call MPI_Allgather(leaves%cnt, I_ONE, MPI_INTEGER, cg_n, I_ONE, MPI_INTEGER, comm, mpi_err)
       cg_cnt = sum(cg_n(:))
       allocate(cg_all_n_b(ndims, cg_cnt))
 
@@ -722,7 +721,6 @@ contains
             if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, cg_n(p), ndims))
             if (p == FIRST) then
                g = 1
-               !> \todo check the hesitant choice to start from leaves%first or all_cg%first
                cgl => leaves%first
                do while (associated(cgl))
                   cg_rl(g)     = int(cgl%cg%level_id, kind=4)
@@ -813,10 +811,9 @@ contains
          if (otype == O_OUT) deallocate(cg_all_rl, cg_all_off, cg_all_parents, cg_all_particles)
       else ! send all the necessary information to the master
          !! \deprecated some duplicated code here
-         allocate(cg_rl(all_cg%cnt), cg_n_b(all_cg%cnt, ndims), cg_off(all_cg%cnt, ndims))
-         if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, all_cg%cnt, ndims))
+         allocate(cg_rl(leaves%cnt), cg_n_b(leaves%cnt, ndims), cg_off(leaves%cnt, ndims))
+         if (otype == O_OUT) allocate(dbuf(cg_le:cg_dl, leaves%cnt, ndims))
          g = 1
-         !> \todo check the hesitant choice to start from leaves%first or all_cg%first
          cgl => leaves%first
          do while (associated(cgl))
             cg_rl(g)     = int(cgl%cg%level_id, kind=4)
