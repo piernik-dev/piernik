@@ -53,6 +53,8 @@ module fluidtypes
       type(value) :: dtvy_min
       type(value) :: dtvz_min
       type(value) :: dtcs_min
+      real        :: mmass_cur
+      real        :: mmass_cum
    end type phys_prop
 
    type :: component

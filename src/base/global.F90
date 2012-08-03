@@ -53,8 +53,7 @@ module global
    integer(kind=4) :: nstep
    real            :: t, dt, dt_old, dtm
    real, dimension(:),   allocatable       :: magic_mass
-   real, dimension(:),   allocatable, save :: local_magic_mass
-   real, dimension(:,:), allocatable, save :: recent_magic_mass
+   real, dimension(:),   allocatable, save :: local_magic_mass, recent_magic_mass
 
    ! Namelist variables
 

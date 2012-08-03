@@ -741,6 +741,7 @@ contains
       use global,         only: t, dt, smalld, nstep
       use grid,           only: leaves
       use grid_cont,      only: grid_container
+      use initfluids,     only: update_magic_mass
       use mpi,            only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,       only: master, comm, mpi_err
 #ifdef GRAV
@@ -806,11 +807,18 @@ contains
             call pop_vector(tsl_names, cbuff_len, ["encr_tot", "encr_min", "encr_max"])
 #endif /* COSM_RAYS */
             ! \todo: replicated code, simplify me
-            if (has_ion) call pop_vector(tsl_names, cbuff_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max ", &
-                                                                "prei_min", "prei_max", "temi_min", "temi_max", "csi_max "])
-            if (has_neu) call pop_vector(tsl_names, cbuff_len, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", &
-                                                                "pren_min", "pren_max", "temn_min", "temn_max", "csn_max "])
-            if (has_dst) call pop_vector(tsl_names, cbuff_len, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
+            if (has_ion) then
+               call pop_vector(tsl_names, cbuff_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max ", "prei_min", "prei_max", "temi_min", "temi_max", "csi_max "])
+               call pop_vector(tsl_names, cbuff_len, ["ion_mmass_cur", "ion_mmass_cum"])
+            endif
+            if (has_neu) then
+               call pop_vector(tsl_names, cbuff_len, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", "pren_min", "pren_max", "temn_min", "temn_max", "csn_max "])
+               call pop_vector(tsl_names, cbuff_len, ["neu_mmass_cur", "neu_mmass_cum"])
+            endif
+            if (has_dst) then
+               call pop_vector(tsl_names, cbuff_len, ["dend_min", "dend_max", "vxd_max ", "vyd_max ", "vzd_max "])
+               call pop_vector(tsl_names, cbuff_len, ["dst_mmass_cur", "dst_mmass_cum"])
+            endif
 
             if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
             write(head_fmt,'(A,I2,A)') "(a1,a8,",size(tsl_names)-1,"a16)"
@@ -885,20 +893,21 @@ contains
          call pop_vector(tsl_vars, [tot_q(T_ENCR), tsl%encr_min, tsl%encr_max])
 #endif /* COSM_RAYS */
 
+         call update_magic_mass(tsl=.true.)
          ! \todo: replicated code, simplify me
          if (has_ion) then
             sn=>flind%ion%snap
             call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
-                                       sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
+                                       sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val, sn%mmass_cur, sn%mmass_cum])
          endif
          if (has_neu) then
             sn=>flind%neu%snap
             call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, &
-                                       sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
+                                       sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val, sn%mmass_cur, sn%mmass_cum])
          endif
          if (has_dst) then
             sn=>flind%dst%snap
-            call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val])
+            call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val, sn%mmass_cur, sn%mmass_cum])
          endif
 
       endif

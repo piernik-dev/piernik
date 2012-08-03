@@ -265,14 +265,12 @@ contains
       use constants,   only: I_ONE
       use dataio_pub,  only: use_v2_io, parfile, parfilelines, gzip_level
       use dataio_user, only: user_attrs_wr, user_attrs_pre
-      use fluidindex,  only: flind
-      use global,      only: magic_mass, local_magic_mass
       use hdf5,        only: HID_T, SIZE_T, HSIZE_T, H5F_ACC_TRUNC_F, H5T_NATIVE_CHARACTER, H5Z_FILTER_DEFLATE_F, &
          & H5P_DATASET_CREATE_F, h5open_f, h5fcreate_f, h5fclose_f, H5Zfilter_avail_f, H5Pcreate_f, H5Pset_deflate_f, &
          & H5Pset_chunk_f, h5tcopy_f, h5tset_size_f, h5screate_simple_f, H5Dcreate_f, H5Dwrite_f, H5Dclose_f, &
          & H5Sclose_f, H5Tclose_f, H5Pclose_f, h5close_f
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,    only: slave, comm, mpi_err, FIRST
+      use initfluids,  only: update_magic_mass
+      use mpisetup,    only: slave
       use version,     only: env, nenv
 
       implicit none
@@ -285,16 +283,12 @@ contains
       logical(kind=4)                :: Z_avail
       integer(SIZE_T)                :: maxlen
       integer(kind=4)                :: error
-      real, dimension(flind%fluids)  :: magic_mass0
 
-      call MPI_Reduce(local_magic_mass, magic_mass0, int(flind%fluids, kind=4), MPI_DOUBLE_PRECISION, MPI_SUM, FIRST, comm, mpi_err)
-      local_magic_mass(:) = 0.0
+      call update_magic_mass
 
       if (associated(user_attrs_pre)) call user_attrs_pre
 
       if (slave) return ! This data need not be written in parallel.
-
-      magic_mass = magic_mass + magic_mass0
 
       call h5open_f(error)
       call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
