@@ -530,6 +530,7 @@ contains
       integer(kind=8), dimension(xdim:zdim) :: off1
       real :: norm
       integer(kind=4) :: nr
+      integer(kind=4), dimension(:,:), pointer :: mpistatus
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
 
@@ -588,7 +589,10 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), mpi_err)
+      if (nr > 0) then
+         mpistatus => status(:, :nr)
+         call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+      endif
 
       ! copy the received buffers to the right places
       cgl => coarse%first
@@ -696,6 +700,7 @@ contains
       integer(kind=8) :: iec, jec, kec
       integer(kind=8), dimension(xdim:zdim) :: off, odd, D
       integer(kind=4) :: nr
+      integer(kind=4), dimension(:, :), pointer :: mpistatus
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
       real :: P_2, P_1, P0, P1, P2
@@ -778,7 +783,10 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (nr>0) call MPI_Waitall(nr, req(:nr), status(:,:nr), mpi_err)
+      if (nr > 0) then
+         mpistatus => status(:, :nr)
+         call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+      endif
 
       ! merge received coarse data into one array and interpolate it into the right place
       cgl => fine%first

@@ -52,8 +52,8 @@ module mpisetup
    logical, protected :: master, slave      !< shortcuts for testing proc == FIRST
    logical, protected :: have_mpi           !< .true. when run on more than one processor
 
-   integer(kind=4), allocatable, dimension(:)   :: req    !< request array for MPI_Waitall
-   integer(kind=4), allocatable, dimension(:,:) :: status !< status array for MPI_Waitall
+   integer(kind=4), allocatable, dimension(:), target   :: req    !< request array for MPI_Waitall
+   integer(kind=4), allocatable, dimension(:,:), target :: status !< status array for MPI_Waitall
    !> \warning Because we use one centralized req(:) and status(:,:) arrays, the routines that are using them should not call each other to avoid any interference.
    !! If you want nested non-blocking communication, only one set of MPI transactions may use these arrays.
    !< All other sets of communication should define their own req(:) and status(:,:) arrays

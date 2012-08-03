@@ -595,7 +595,7 @@ contains
       implicit none
 
       integer(kind=4),               intent(in)  :: crdim        !< direction in which we calculate flux
-      integer, dimension(ndims),     intent(in)  :: im           !< [first cell index, second cell index, third cell index]
+      integer, dimension(:),         intent(in)  :: im           !< [first cell index, second cell index, third cell index]
       integer,                       intent(in)  :: soln         !< multigrid variable to differentiate
       type(grid_container), pointer, intent(in)  :: cg           !< level on which differentiate
       integer,                       intent(in)  :: cr_id        !< CR component index
