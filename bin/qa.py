@@ -123,12 +123,12 @@ def parse_f90file(lines,fname,store):
        if (len(cur_sub) > 2):
           if (debug): print "[parse_f90file] f, cur_sub = ", f, cur_sub
           for index in range(0,len(cur_sub)):
-             if just_end.match(cur_sub[index]) and cur_sub[index][-len(f):] == f: break 
+             if just_end.match(cur_sub[index]) and cur_sub[index][-len(f):] == f: break
        else:
           index = 1
        obj= (f, line_num(lines,cur_sub[index-1]), line_num(lines,cur_sub[index]), subs_types.pop())
        subs_array = np.append(subs_array, np.array([obj],dtype=typ1))
-   
+
    if (debug):
       print "[parse_f90file] subs = ",subs
       print "[parse_f90file] subs_names = ",subs_names
@@ -203,7 +203,7 @@ def qa_checks(files,options):
       for obj in parse_f90file(pfile,f,warns):
          if (debug): print '[qa_checks] obj =',obj
          part = pfile[obj['beg']:obj['end']]
-#         if (debug): 
+#         if (debug):
 #            for f in part: print f
          # False refs need to be done before removal of types in module body
          qa_false_refs(part,obj['name'],warns,f)
@@ -280,7 +280,7 @@ def qa_depreciated_syntax(lines,rname,store,fname):
 #    print b.OKGREEN + "QA: " + b.ENDC + "Checking for depreciated syntax"
     for f in filter(not_function.match, filter(depr_syntax_1.search, lines)):
        store.append(give_warn("!! lacking ::   ") + wtf(lines,f,rname,fname))
-    for f in filter(depr_syntax_2.search, lines):
+    for f in filter(remove_warn.match, filter(depr_syntax_2.search, lines)):
        store.append(give_warn("!! greedy use   ") + wtf(lines,f,rname,fname))
     for f in filter(depr_syntax_3.search, lines):
        store.append(give_warn("!! wrong syntax ") + wtf(lines,f,rname,fname))
