@@ -59,14 +59,15 @@ module decomposition
 
     contains
 
-      procedure          :: decompose_patch             !< Main wrapper for a block decomposer
-      procedure, private :: decompose_patch_int         !< Compute allowed domain decomposition
+      procedure :: decompose_patch                      !< Main wrapper for a block decomposer
+      procedure :: allocate_pse                         !< allocate the segment list
+      procedure :: deallocate_pse                       !< deallocate the segment list
 
+      procedure, private :: decompose_patch_int         !< Compute allowed domain decomposition
       procedure, private :: cartesian_tiling            !< Decomposes the box into a topologically cartesian grid
       procedure, private :: choppy_tiling               !< Less structured box decomposition
       procedure, private :: stamp_cg                    !< Divide the box into lots of identical blocks
-      procedure :: allocate_pse                !< allocate the segment list
-      procedure :: deallocate_pse              !< deallocate the segment list
+      procedure, private :: is_not_too_small            !< Prevent domain decompositions into pieces that are narrower than allowed mimimum size
    end type box_T
 
    ! Private variables
@@ -118,7 +119,7 @@ contains
       this%off(:) = off(:)
 
       call this%decompose_patch_int(patch_divided, n_pieces)
-      if (patch_divided) patch_divided = is_not_too_small(this, "not catched anywhere")
+      if (patch_divided) patch_divided = this%is_not_too_small("not catched anywhere")
       call MPI_Allreduce(MPI_IN_PLACE, patch_divided, I_ONE, MPI_LOGICAL, MPI_LAND, comm, mpi_err)
 
    end function decompose_patch
@@ -152,7 +153,7 @@ contains
       if (all(bsize(:) > 0 .or. .not. dom%has_dir(:)) .and. .not. present(n_pieces)) then
          call patch%stamp_cg
          patch_divided = allocated(patch%pse)
-         if (patch_divided) patch_divided = is_not_too_small(patch, "stamp_cg")
+         if (patch_divided) patch_divided = patch%is_not_too_small("stamp_cg")
          if (patch_divided) return
       endif
 
@@ -164,7 +165,7 @@ contains
                call printinfo(msg)
             endif
             call patch%cartesian_tiling(psize(:), pieces)
-            patch_divided = is_not_too_small(patch, "cartesian_tiling")
+            patch_divided = patch%is_not_too_small("cartesian_tiling")
             if (patch_divided) return
          else
             write(msg,'(a,3i6,a,3i4,a)')"[decomposition:decompose_patch_int] Cannot divide domain with [",patch%n_d(:)," ] cells to [",psize(:)," ] piecess. "
@@ -181,7 +182,7 @@ contains
          quality = ideal_bsize / sum(p_size(:)/real(patch%n_d(:)) * product(real(patch%n_d(:))), MASK = patch%n_d(:) > 1)
          if (quality >= dd_unif_quality .or. .not. (allow_uneven .or. allow_noncart)) then
             call patch%cartesian_tiling(p_size(:), pieces)
-            patch_divided = is_not_too_small(patch, "decompose_patch_uniform")
+            patch_divided = patch%is_not_too_small("decompose_patch_uniform")
             if (patch_divided) return
          else
             write(msg,'(2(a,f6.3),a)')"[decomposition:decompose_patch_int] Quality of uniform division = ",quality," is below threshold ",dd_unif_quality, ", trying harder ..."
@@ -196,7 +197,7 @@ contains
          if (product(p_size(:)) == pieces) then
             if (quality > dd_rect_quality .or. .not. allow_noncart) then
                call patch%cartesian_tiling(p_size(:), pieces)
-               patch_divided = is_not_too_small(patch, "decompose_patch_rectlinear")
+               patch_divided = patch%is_not_too_small("decompose_patch_rectlinear")
                if (patch_divided) return
             endif
          endif
@@ -211,7 +212,7 @@ contains
          call decompose_patch_slices(p_size(:), patch%n_d, pieces)
          ! if good_enough then return
          call patch%choppy_tiling(p_size(:), pieces)
-         patch_divided = is_not_too_small(patch, "decompose_patch_slices")
+         patch_divided = patch%is_not_too_small("decompose_patch_slices")
          if (patch_divided) return
          if (master) call warn("[decomposition:decompose_patch_int] decompose_patch_slices failed")
       else
@@ -231,7 +232,7 @@ contains
          enddo
       endif
       call patch%cartesian_tiling(p_size(:), product(p_size(:)))
-      patch_divided = is_not_too_small(patch, "decompose_patch_cartesian_less_than_nproc")
+      patch_divided = patch%is_not_too_small("decompose_patch_cartesian_less_than_nproc")
       if (patch_divided) return
 
       ! Everything failed
@@ -725,7 +726,7 @@ contains
    end subroutine simple_ordering
 
 !>
-!! \brief Prevent domain decompositions into pieces that are narrower than number of guardcells
+!! \brief Prevent domain decompositions into pieces that are narrower than allowed mimimum size
 !!
 !! \details When a piece of grid is narrower than number of guardcells we may expect the following problems:
 !!  * Complicated boundary exchange routines because a single neighbour cannot provide valid boundary data in one step.
@@ -734,7 +735,7 @@ contains
 !! If this routine prevents you running a simulation then probably you either try to use too many processors or you use wrong domain decomposition scheme.
 !<
 
-   logical function is_not_too_small(patch, label) result(patch_divided)
+   logical function is_not_too_small(this, label) result(patch_divided)
 
       use constants,  only: I_ONE, LO, HI
       use dataio_pub, only: warn, msg
@@ -744,19 +745,19 @@ contains
 
       implicit none
 
-      type(box_T), intent(inout) :: patch
+      class(box_T), intent(inout) :: this
       character(len=*), intent(in) :: label
 
       integer :: p
 
       patch_divided = .true.
 
-      if (allocated(patch%pse)) then
-         if (allocated(patch%pse(proc)%sel)) then
-            do p = lbound(patch%pse(proc)%sel(:, :, :), dim=1), ubound(patch%pse(proc)%sel(:, :, :), dim=1)
-               patch_divided = patch_divided .and. all(patch%pse(proc)%sel(p, :, HI) - patch%pse(proc)%sel(p, :, LO) >= minsize(:) - 1 .or. .not. dom%has_dir(:))
-               if (.not. all(patch%pse(proc)%sel(p, :, HI) - patch%pse(proc)%sel(p, :, LO) >= minsize(:) - 1 .or. .not. dom%has_dir(:))) then
-                  write(msg,'(3a,2(3i6,a))')"[decomposition:is_not_too_small] ",label," [",patch%pse(proc)%sel(p, :, LO),"]:[",patch%pse(proc)%sel(p, :, HI), "]"
+      if (allocated(this%pse)) then
+         if (allocated(this%pse(proc)%sel)) then
+            do p = lbound(this%pse(proc)%sel(:, :, :), dim=1), ubound(this%pse(proc)%sel(:, :, :), dim=1)
+               patch_divided = patch_divided .and. all(this%pse(proc)%sel(p, :, HI) - this%pse(proc)%sel(p, :, LO) >= minsize(:) - 1 .or. .not. dom%has_dir(:))
+               if (.not. all(this%pse(proc)%sel(p, :, HI) - this%pse(proc)%sel(p, :, LO) >= minsize(:) - 1 .or. .not. dom%has_dir(:))) then
+                  write(msg,'(3a,2(3i6,a))')"[decomposition:is_not_too_small] ",label," [",this%pse(proc)%sel(p, :, LO),"]:[",this%pse(proc)%sel(p, :, HI), "]"
                   call warn(msg)
                endif
             enddo
@@ -772,7 +773,7 @@ contains
       endif
       call MPI_Allreduce(MPI_IN_PLACE, patch_divided, I_ONE, MPI_LOGICAL, MPI_LAND, comm, mpi_err)
 
-      if (allocated(patch%pse) .and. .not. patch_divided) call patch%deallocate_pse
+      if (allocated(this%pse) .and. .not. patch_divided) call this%deallocate_pse
 
    end function is_not_too_small
 
