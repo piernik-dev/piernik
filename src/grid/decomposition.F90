@@ -113,7 +113,7 @@ contains
       class(box_T),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
       integer(kind=4), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level), \todo make use of it
-      integer, optional,                 intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
+      integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
       this%n_d(:) = n_d(:)
       this%off(:) = off(:)
@@ -128,20 +128,21 @@ contains
 
    subroutine decompose_patch_int(patch, patch_divided, n_pieces)
 
-      use constants,  only: ndims
+      use constants,  only: ndims, I_ONE
       use dataio_pub, only: warn, printinfo, msg
       use domain,     only: dom, psize, bsize, allow_noncart, allow_uneven, dd_rect_quality, dd_unif_quality, minsize, use_comm3d
       use mpisetup,   only: nproc, master, have_mpi
 
       implicit none
 
-      class(box_T),      intent(inout) :: patch         !< the patch, which we want to be chopped into pieces
-      logical,           intent(out)   :: patch_divided !< Set to .true. after a successful decomposition
-      integer, optional, intent(in)    :: n_pieces      !< how many pieces the patch should be divided to?
+      class(box_T),              intent(inout) :: patch         !< the patch, which we want to be chopped into pieces
+      logical,                   intent(out)   :: patch_divided !< Set to .true. after a successful decomposition
+      integer(kind=4), optional, intent(in)    :: n_pieces      !< how many pieces the patch should be divided to?
 
       real :: quality
       integer(kind=4), dimension(ndims) :: p_size
-      integer :: pieces, ml
+      integer(kind=4) :: pieces
+      integer :: ml
 
       pieces = nproc
       if (present(n_pieces)) pieces = n_pieces
@@ -228,7 +229,7 @@ contains
          p_size(:) = patch%n_d(:) / minsize(:)
          do while (product(p_size(:)) > nproc)
             ml = maxloc(p_size(:), dim=1)
-            if (p_size(ml) > 1) p_size(ml) = p_size(ml) - 1
+            if (p_size(ml) > 1) p_size(ml) = p_size(ml) - I_ONE
          enddo
       endif
       call patch%cartesian_tiling(p_size(:), product(p_size(:)))
@@ -249,7 +250,7 @@ contains
 
    subroutine cartesian_tiling(patch, p_size, pieces)
 
-      use constants,  only: xdim, ydim, ndims, LO, HI, I_ONE
+      use constants,  only: xdim, ydim, ndims, LO, HI, I_ZERO, I_ONE
       use dataio_pub, only: printinfo, die
       use domain,     only: dom, use_comm3d
       use mpi,        only: MPI_COMM_NULL
@@ -259,7 +260,7 @@ contains
 
       class(box_T),                      intent(inout) :: patch   !< the patch, which we want to be chopped into pieces
       integer(kind=4), dimension(ndims), intent(in)    :: p_size
-      integer,                           intent(in)    :: pieces      !< number of pieces
+      integer(kind=4),                   intent(in)    :: pieces      !< number of pieces
 
       integer(kind=4) :: p
       integer(kind=4), dimension(ndims) :: pc
@@ -285,7 +286,7 @@ contains
          if (master) call printinfo("[decomposition:cartesian_tiling] Cartesian decomposition without comm3d")
       endif
 
-      do p = 0, pieces-1
+      do p = I_ZERO, pieces-I_ONE
          if (cdd%comm3d == MPI_COMM_NULL) then
             if (use_comm3d .and. nproc == pieces) call die("[decomposition:cartesian_tiling] MPI_Cart_create failed")
             pc(:) = [ mod(p, p_size(xdim)), mod(p/p_size(xdim), p_size(ydim)), p/product(p_size(xdim:ydim)) ]
@@ -324,7 +325,7 @@ contains
 
       class(box_T),                      intent(inout) :: patch   !< the patch, which we want to be chopped into pieces
       integer(kind=4), dimension(ndims), intent(in)    :: p_size
-      integer,                           intent(in)    :: pieces      !< number of pieces
+      integer(kind=4),                   intent(in)    :: pieces      !< number of pieces
 
       integer(kind=4) :: p, px, py
       integer(kind=4), dimension(:), allocatable :: pz_slab, py_slab
@@ -389,7 +390,7 @@ contains
 
       integer(kind=4), dimension(ndims), intent(out) :: p_size
       integer(kind=4), dimension(ndims), intent(in)  :: n_d         !< size of the box to be divided
-      integer,                           intent(in)  :: pieces      !< number of pieces
+      integer(kind=4),                   intent(in)  :: pieces      !< number of pieces
 
       integer(kind=4) :: n
       integer :: j1, j2, j3, jj, p
@@ -462,7 +463,7 @@ contains
 
       integer(kind=4), dimension(ndims), intent(out) :: p_size
       integer(kind=4), dimension(ndims), intent(in)  :: n_d         !< size of the box to be divided
-      integer,                           intent(in)  :: pieces      !< number of pieces
+      integer(kind=4),                   intent(in)  :: pieces      !< number of pieces
 
       real, parameter :: b_load_fac = 0.25 ! estimated increase of execution time after doubling the total size of internal boundaries.
       ! \todo estimate this factor for massively parallel runs and for Intel processors
@@ -585,7 +586,7 @@ contains
 
       integer(kind=4), dimension(ndims), intent(inout) :: p_size
       integer(kind=4), dimension(ndims), intent(in)    :: n_d         !< size of the box to be divided
-      integer,                           intent(in)    :: pieces      !< number of pieces
+      integer(kind=4),                   intent(in)    :: pieces      !< number of pieces
 
       real, parameter :: minfac = 1.3 ! prevent domain division to halves if cell count in a given direction is too low. (not verified for optimality)
       real :: optc

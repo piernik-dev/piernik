@@ -1265,7 +1265,7 @@ contains
       class(cg_list_level_T), target,    intent(inout) :: this     !< current level
       integer(kind=4), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level)
-      integer, optional,                 intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
+      integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
       type(box_T), dimension(:), allocatable :: tmp
 
