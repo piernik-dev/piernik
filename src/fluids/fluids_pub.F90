@@ -48,4 +48,7 @@ module fluids_pub
 #else /* !DUST */
    logical, protected                         :: has_dst = .false.
 #endif /* !DUST */
+
+   real :: cs2_max ! maximum of isothermal sound speeds over all fluids
+
 end module fluids_pub

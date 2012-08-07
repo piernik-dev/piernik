@@ -142,17 +142,17 @@ contains
 
    subroutine init_prob
 
-      use constants,  only: pi, xdim, ydim, zdim, LO
-      use dataio_pub, only: tend, msg, printinfo, warn
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use fluidtypes, only: component_fluid
-      use func,       only: ekin, emag
-      use grid,       only: leaves
-      use cg_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: master
-      use units,      only: fpiG, newtong
+      use constants,   only: pi, xdim, ydim, zdim, LO
+      use dataio_pub,  only: tend, msg, printinfo, warn
+      use domain,      only: dom
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use func,        only: ekin, emag
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use mpisetup,    only: master
+      use units,       only: fpiG, newtong
 
       implicit none
 

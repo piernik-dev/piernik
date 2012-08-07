@@ -32,57 +32,28 @@
 !<
 module grid
 
-#if defined(__INTEL_COMPILER)
-   !! \deprecated remove this clause as soon as Intel Compiler gets required
-   !! features and/or bug fixes
-   use cg_list  ! QA_WARN required for ifort-12.2.x
-#endif /* __INTEL_COMPILER */
-   use cg_list_bnd, only: cg_list_bnd_T
-   use cg_list_level, only: cg_list_level_T, cg_list_patch_T
-
    implicit none
 
    private
-   public :: init_grid, cleanup_grid, base_lev, leaves, finest, coarsest
-
-   type(cg_list_level_T), target                            :: base_lev !< base level grid containers \todo restore "protected"
-   type(cg_list_bnd_T)                                    :: leaves   !< grid containers not fully covered by finer grid containers
-   integer, parameter                                     :: NBD = 1  !< at the moment the base domain may be composed of only one patch
-   type(cg_list_patch_T), dimension(NBD), target, protected :: base_dom !< base level patches; \todo relax the NBD=1 restriction if we want something like L-shaped or more complex domains
-   type(cg_list_level_T), pointer                           :: finest   !< finest level of refinement
-   type(cg_list_level_T), pointer                           :: coarsest !< coarsest level of refinement
+   public :: init_grid, cleanup_grid
 
 contains
 
-!>
-!! \brief Routine that allocates all grid containers and most important field arrays inside gcs
-!<
+!> \brief Routine that prepares base level and most importand cg lists
+
    subroutine init_grid
 
-      use cg_list_global, only: all_cg
-      use constants,      only: PIERNIK_INIT_DOMAIN, I_ZERO, base_level_id, base_level_offset
-      use dataio_pub,     only: printinfo, die, code_progress
-      use domain,         only: pdom
       use cg_list,        only: cg_list_element
-      use grid_cont,      only: grid_container
-#ifdef ISO
-      use constants,      only: I_ONE, cs_i2_n
-      use fluidindex,     only: flind
-      use named_array,    only: qna
-      use mpi,            only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MAX
-      use mpisetup,       only: comm, mpi_err
-#endif /* ISO */
+      use cg_list_bnd,    only: leaves
+      use cg_list_global, only: all_cg
+      use cg_list_level,  only: base_lev
+      use constants,      only: PIERNIK_INIT_DOMAIN, I_ZERO, base_level_offset
+      use dataio_pub,     only: printinfo, die, code_progress
+      use domain,         only: dom
 
       implicit none
 
-      integer :: d
       type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-      type(cg_list_patch_T),   pointer :: pbd
-#ifdef ISO
-      integer :: ifl
-      real    :: cs_max
-#endif /* ISO */
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
@@ -95,113 +66,26 @@ contains
       ! Underground levels will be added in multigrid::init_multigrid
       call all_cg%init
       all_cg%ord_prolong_nb = I_ZERO
-      call base_lev%init(pdom%n_d(:))
+      call base_lev%add_level(dom%n_d(:))
+
       call leaves%init
-      do d = lbound(base_dom, dim=1), ubound(base_dom, dim=1) ! currently we have only one base patch
-         call base_dom(d)%init
-      enddo
 
-      pbd => base_dom(NBD)
-      call dom2cg(pdom%n_d(:), base_level_offset, base_level_id, pbd)
-
-#ifdef VERBOSE
-      call printinfo("[grid:init_grid]: all_cg finished. \o/")
-#endif /* VERBOSE */
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         cg%u  => cg%w(all_cg%fi)%arr
-         cg%b  => cg%w(all_cg%bi)%arr
-         cg%wa => cg%q(all_cg%wai)%arr
-
-         cgl => cgl%nxt
-      enddo
-
-#ifdef ISO
-      !> \deprecated this whole ISO-dependent part should be moved somewhere else. Grid should not depend on fluidindex.
-
-      cs_max = 0.0
-      do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
-         cs_max = max(cs_max, flind%all_fluids(ifl)%fl%cs2)
-      enddo
-      call MPI_Allreduce(MPI_IN_PLACE, cs_max, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgl%cg%cs_iso2 => cgl%cg%q(qna%ind(cs_i2_n))%arr
-         cgl%cg%cs_iso2(:,:,:) = cs_max   ! set cs2 with sane values
-         cgl => cgl%nxt
-      enddo
-#endif /* ISO */
-
-#ifdef VERBOSE
-      call printinfo("[grid:init_grid]: cg finished. \o/")
-#endif /* VERBOSE */
-
-   end subroutine init_grid
-
-!> \brief Create new cg according to domain decomposition data and add them to appropriate lists
-   subroutine dom2cg(n_d, offset, level, patch)
-
-      use constants,     only: ndims, I_ONE, base_level_id
-      use decomposition, only: divide_domain
-      use dataio_pub,    only: die
-      use domain,        only: is_mpi_noncart, is_multicg, is_refined, is_uneven
-      use cg_list,       only: cg_list_element
-      use mpi,           only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
-      use mpisetup,      only: proc, comm, mpi_err, master
-      use types,         only: cdd
-
-      implicit none
-
-      integer(kind=4), dimension(ndims), intent(in)    :: n_d
-      integer(kind=8), dimension(ndims), intent(in)    :: offset
-      integer(kind=4),                   intent(in)    :: level
-      type(cg_list_patch_T), pointer,      intent(inout) :: patch
-
-      type(cg_list_element), pointer :: cgl
-
-      if (level /= base_level_id) call die("[grid:dom2cg] can only create base level")
-
-      patch%n_d = n_d
-      patch%off = offset
-      patch%parent => null()
-      patch%children => null()
-      patch%list_level => base_lev
-
-      if (.not. divide_domain(patch)) then
-         if (master) call die("[grid:dom2cg] Domain decomposition failed")
-      endif
-
-      !\todo Analyze the decomposition and set up [ is_uneven, is_mpi_noncart, is_refined, ... ]
-      is_multicg = (ubound(base_lev%pse(proc)%sel(:, :, :), dim=1) > 1)
-      call MPI_Allreduce(MPI_IN_PLACE, is_multicg, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
-      if (is_multicg .and. cdd%comm3d /= MPI_COMM_NULL) call die("[grid:dom2cg] is_multicg cannot be used with comm3d")
-      if (is_refined) then
-         is_mpi_noncart = .true.
-         is_multicg = .true.
-      endif
-      if (is_mpi_noncart) is_uneven = .true.
-
-      ! bnd_[xyz][lr] now become altered according to local topology of processes
-      if (is_refined) call die("[grid:dom2cg] Refinements are not implemented")
+      call base_lev%add_patch(dom%n_d(:), base_level_offset)
 
       call base_lev%init_all_new_cg
 
       ! add to the other lists
       cgl => base_lev%first
       do while (associated(cgl))
-         call patch%add(cgl%cg)  ! not used yet
          call leaves%add(cgl%cg) ! need to be generated in a more general way
          cgl => cgl%nxt
       enddo
 
-      finest => base_lev
-      coarsest => base_lev
+#ifdef VERBOSE
+      call printinfo("[grid:init_grid]: cg finished. \o/")
+#endif /* VERBOSE */
 
-   end subroutine dom2cg
+   end subroutine init_grid
 
 ! \brief Update the list of leaves
 ! subroutine update leaves
@@ -210,20 +94,32 @@ contains
 !> \brief deallocate everything
    subroutine cleanup_grid
 
-      use cg_list_global, only: all_cg
       use cg_list,        only: cg_list_element
+      use cg_list_bnd,    only: leaves
+      use cg_list_global, only: all_cg
+      use cg_list_level,  only: cg_list_level_T, coarsest
       use named_array,    only: qna, wna
 
       implicit none
 
-      integer :: d
       type(cg_list_element), pointer :: cgle
+      type(cg_list_level_T), pointer :: curl
+      integer :: p
 
       call leaves%delete
-      call base_lev%delete
-      if (allocated(base_lev%pse)) deallocate(base_lev%pse)
-      do d = lbound(base_dom, dim=1), ubound(base_dom, dim=1) ! currently we have only one base patch
-         call base_dom(d)%delete
+      curl => coarsest
+      do while (associated(curl))
+         call curl%delete
+         if (allocated(curl%pse)) deallocate(curl%pse) ! curl%pse(:)%sel should be deallocated automagically
+         do p = lbound(curl%patches, dim=1), ubound(curl%patches, dim=1)
+            deallocate(curl%patches(p)%pse) ! curl%patches(p)%pse(:)%sel should be deallocated automagically
+         enddo
+         deallocate(curl%patches)
+
+         curl => curl%finer
+         if (associated(curl)) then
+            if (associated(curl%coarser)) deallocate(curl%coarser)
+         endif
       enddo
 
       ! manually deallocate all grid containers first

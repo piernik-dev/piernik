@@ -40,18 +40,14 @@ module domain
    implicit none
 
    private
-   public :: cleanup_domain, init_domain, domain_container, pdom, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, cuboids, &
-        &    psize, bsize, allow_noncart, allow_uneven, dd_unif_quality, dd_rect_quality, use_comm3d, reorder! temporary export
+   public :: cleanup_domain, init_domain, domain_container, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, &
+        &    psize, bsize, minsize, allow_noncart, allow_uneven, dd_unif_quality, dd_rect_quality, use_comm3d, reorder! temporary export
 
 ! AMR: There will be at least one domain container for the base grid.
 !      It will be possible to host one or more refined domains on the base container and on the refined containers.
 !      The refined domains may cover whole parent domain or only a tiny part of it.
 !      The multigrid solver operates also on a stack of coarser domains - parents of the base domain.
 !      The coarser domains must be no smaller than the base domain.
-
-   type :: cuboids
-      integer(kind=8), dimension(:,:,:), allocatable :: sel !< list of grid chunks (:, xdim:zdim, LO:HI)
-   end type cuboids
 
    type :: domain_container
       ! primary parameters, read from /DOMAIN_SIZES/, /BOUNDARIES/ and /DOMAIN_LIMITS/ namelists
@@ -93,7 +89,6 @@ module domain
    end type domain_container
 
    type(domain_container), target  :: dom !< complete description of base level domain \todo protect it
-   type(domain_container), pointer :: pdom
 
    logical :: is_uneven          !< .true. when n_b(:) depend on process rank \todo protect it
    logical :: is_mpi_noncart     !< .true. when there exist a process that has more than one neighbour in any direction \todo protect it
@@ -102,9 +97,11 @@ module domain
 
    ! Namelist variables
 
-   integer(kind=4), dimension(ndims) :: psize !< desired number of MPI blocks in x, y and z-dimension
-   integer(kind=4), dimension(ndims) :: bsize !< the size of cg for multiblock decomposition
+   integer(kind=4), dimension(ndims) :: psize   !< desired number of MPI blocks in x, y and z-dimension
+   integer(kind=4), dimension(ndims) :: bsize   !< the size of cg for multiblock decomposition
+   integer(kind=4), dimension(ndims) :: minsize !< minimum size of cg, default is dom$nb
    !! \todo Implement maximum size of a cg (in cells) for use with GPGPU kernels. The minimum size id nb**dom%eff_dim
+
    logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
    logical :: allow_uneven            !< allows different values of n_b(:) on different processes
    logical :: allow_noncart           !< allows more than one neighbour on a boundary
@@ -113,7 +110,7 @@ module domain
    real    :: dd_rect_quality         !< rectilinear domain decomposition may be rejected it its quality is below this threshold (not used yet)
    logical :: use_comm3d              !< If .false. then do not call any MPI_Cart_* functions
 
-   namelist /MPI_BLOCKS/ psize, bsize, reorder, allow_uneven, allow_noncart, allow_AMR, dd_unif_quality, dd_rect_quality, use_comm3d
+   namelist /MPI_BLOCKS/ psize, bsize, minsize, reorder, allow_uneven, allow_noncart, allow_AMR, dd_unif_quality, dd_rect_quality, use_comm3d
 
    integer(kind=4), dimension(ndims) :: n_d               !< number of %grid cells in physical domain without boundary cells (where  == 1 then that dimension is reduced to a point with no boundary cells)
    integer(kind=4), protected        :: nb                !< number of boundary cells surrounding the physical domain, same for all directions
@@ -170,6 +167,7 @@ contains
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !!   <tr><td>psize(3)       </td><td>1      </td><td>integer</td><td>\copydoc domain::psize          </td></tr>
 !!   <tr><td>bsize(3)       </td><td>0      </td><td>integer</td><td>\copydoc domain::bsize          </td></tr>
+!!   <tr><td>minsize(3)     </td><td>domain::nb </td><td>integer</td><td>\copydoc domain::minsize        </td></tr>
 !!   <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc domain::reorder        </td></tr>
 !!   <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_uneven   </td></tr>
 !!   <tr><td>allow_noncart  </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_noncart  </td></tr>
@@ -182,7 +180,7 @@ contains
 !<
    subroutine init_domain
 
-      use constants,  only: xdim, zdim, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, big_float
+      use constants,  only: xdim, zdim, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, INVALID, big_float
       use dataio_pub, only: die, warn, code_progress
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use mpi,        only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
@@ -194,8 +192,9 @@ contains
 
       ! Begin processing of namelist parameters
 
-      psize(:) = I_ONE
-      bsize(:) = I_ZERO
+      psize(:)   = I_ONE
+      bsize(:)   = I_ZERO
+      minsize(:) = INVALID
 
       n_d(:)   = I_ONE
       nb       = 4
@@ -237,7 +236,8 @@ contains
          ibuff(         xdim:zdim) = psize(:)
          ibuff(  zdim+xdim:2*zdim) = n_d(:)
          ibuff(2*zdim+xdim:3*zdim) = bsize(:)
-         ibuff(3*zdim+1)           = nb
+         ibuff(3*zdim+xdim:4*zdim) = minsize(:)
+         ibuff(4*zdim+1)           = nb
 
          rbuff(1) = xmin
          rbuff(2) = xmax
@@ -289,14 +289,13 @@ contains
          psize(:)   = int(ibuff(         xdim:zdim), kind=4)
          n_d(:)     = int(ibuff(  zdim+xdim:2*zdim), kind=4)
          bsize(:)   = int(ibuff(2*zdim+xdim:3*zdim), kind=4)
-         nb         = int(ibuff(3*zdim+1),           kind=4)
+         minsize(:) = int(ibuff(3*zdim+xdim:4*zdim), kind=4)
+         nb         = int(ibuff(4*zdim+1),           kind=4)
 
       endif
 
       bnds = [bnd_xl, bnd_xr, bnd_yl, bnd_yr, bnd_zl, bnd_zr]
       edges = reshape( [xmin, ymin, zmin, xmax, ymax, zmax], shape=[ndims,HI-LO+I_ONE] )
-
-      pdom => dom
 
       call dom%init(nb, n_d, bnds, edges, geometry)
 
@@ -410,8 +409,10 @@ contains
 
       where (this%has_dir(:))
          this%n_t(:) = this%n_d(:) + I_TWO * this%nb
+         minsize(:) = max(minsize(:), this%nb)
       elsewhere
          this%n_t(:) = 1
+         minsize(:) = 1
       endwhere
 
    end subroutine set_derived

@@ -31,15 +31,14 @@
 
 module cg_list_level
 
-   use cg_list_bnd, only: cg_list_bnd_T
-   use constants,   only: ndims
-   use domain,      only: cuboids
-   use cg_list,     only: cg_list_T
+   use cg_list_bnd,   only: cg_list_bnd_T
+   use constants,     only: ndims
+   use decomposition, only: cuboids, box_T
 
    implicit none
 
    private
-   public :: cg_list_level_T, cg_list_patch_T
+   public :: cg_list_level_T, base_lev, finest, coarsest
 
    !>
    !! \brief A list of all cg of the same resolution.
@@ -47,23 +46,27 @@ module cg_list_level
    !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg ("islands: made of one or more cg: cg_list_patch).
    !<
    type, extends(cg_list_bnd_T) :: cg_list_level_T
-      integer(kind=4) :: level_id              !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
-      integer(kind=8), dimension(ndims) :: n_d !< maximum number of grid cells in each direction (size of fully occupied level)
-      type(cuboids), dimension(:), allocatable :: pse  !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
-      integer :: tot_se                        !< global number of segments on the level
-      type(cg_list_level_T), pointer :: coarser  !< coarser level cg set or null()
-      type(cg_list_level_T), pointer :: finer    !< finer level cg set or null()
-      integer(kind=4) :: ord_prolong_set       !< Number of boundary cells for prolongation used in last update of cg_list_level_T%vertical_prep
-      integer :: fft_type                      !< type of FFT to employ in some multigrid solvers (depending on boundaries)
+
+      integer(kind=4) :: level_id                       !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
+      integer(kind=8), dimension(ndims) :: n_d          !< maximum number of grid cells in each direction (size of fully occupied level)
+      type(cuboids), dimension(:), allocatable :: pse   !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
+      integer :: tot_se                                 !< global number of segments on the level
+      type(cg_list_level_T), pointer :: coarser         !< coarser level cg set or null()
+      type(cg_list_level_T), pointer :: finer           !< finer level cg set or null()
+      integer(kind=4) :: ord_prolong_set                !< Number of boundary cells for prolongation used in last update of cg_list_level_T%vertical_prep
+      integer :: fft_type                               !< type of FFT to employ in some multigrid solvers (depending on boundaries)
+      type(box_T), dimension(:), allocatable :: patches !< list of patches that exist on the current level
+
     contains
 
       ! Level management
-      procedure :: init_lev
-      procedure :: init_lev_base
-      generic, public :: init => init_lev, init_lev_base
+      procedure :: add_lev                     !< add a finer or coarser level
+      procedure :: add_lev_base                !< initialize the base level
+      generic, public :: add_level => add_lev, add_lev_base
       procedure :: init_all_new_cg             !< initialize newest grid container
       procedure, private :: mpi_bnd_types      !< create MPI types for boundary exchanges
       procedure :: print_segments              !< print detailed information about current level decomposition
+      procedure :: add_patch                   !< add a new piece of grid to the current level and decompose it
 
       ! Prolongation and restriction
       procedure, private :: vertical_prep      !< initialize prolongation and restriction targets
@@ -77,25 +80,15 @@ module cg_list_level
       ! fine-coarse boundary exchanges may also belong to this type
    end type cg_list_level_T
 
-   !>
-   !! \brief A list of grid containers that cover single box (or rectangle) on a certain resolution level
-   !!
-   !! \details This set would be a result of base domain or patch decomposition
-   !<
-   type, extends(cg_list_T) :: cg_list_patch_T
-      integer(kind=4), dimension(ndims) :: n_d                  !< number of grid cells
-      integer(kind=8), dimension(ndims) :: off                  !< offset (with respect to the base level, counted on own level)
-      type(cg_list_patch_T), pointer :: parent                  !< Parent patch (or null()). \todo Consider relaxing this restriction and allow multi-parent patches
-      type(cg_list_patch_T), dimension(:), pointer :: children  !< refined patches
-      type(cg_list_level_T), pointer :: list_level              !< all cg on the same level
-      !> \todo consider creating neighbour list (or (ndims, LO:HI) lists)
-   end type cg_list_patch_T
+   type(cg_list_level_T), target  :: base_lev             !< base level grid containers
+   type(cg_list_level_T), pointer :: finest   => base_lev !< finest level of refinement
+   type(cg_list_level_T), pointer :: coarsest => base_lev !< coarsest level of refinement
 
 contains
 
 !> \brief initialize the base level
 
-   subroutine init_lev_base(this, n_d)
+   subroutine add_lev_base(this, n_d)
 
       use constants,  only: INVALID, base_level_id, fft_none
       use dataio_pub, only: die
@@ -103,11 +96,11 @@ contains
 
       implicit none
 
-      class(cg_list_level_T),              intent(inout) :: this
+      class(cg_list_level_T),            intent(inout) :: this
       integer(kind=4), dimension(ndims), intent(in)    :: n_d    !< size of global base grid in cells
 
-      if (any(n_d(:) < 1)) call die("[cg_list_level:init_lev_base] non-positive base grid sizes")
-      if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_list_level:init_lev_base] base grid size incompatible with has_dir masks")
+      if (any(n_d(:) < 1)) call die("[cg_list_level:add_lev_base] non-positive base grid sizes")
+      if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_list_level:add_lev_base] base grid size incompatible with has_dir masks")
 
       this%level_id = base_level_id
       this%n_d(:) = n_d(:)
@@ -118,11 +111,11 @@ contains
       this%fft_type = fft_none
       call this%init
 
-   end subroutine init_lev_base
+   end subroutine add_lev_base
 
 !> \brief add a fine or coarse level to a existing one
 
-   subroutine init_lev(this, link, coarse)
+   subroutine add_lev(this, coarse)
 
       use constants,  only: INVALID, I_ONE, refinement_factor, fft_none
       use dataio_pub, only: die, msg
@@ -131,55 +124,56 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), target, intent(inout) :: this
-      type(cg_list_level_T), pointer, intent(inout) :: link    !< lowest or highest refinement level (cannot refer to base_lev here due to cyclic deps)
-      logical,                      intent(in)    :: coarse  !< if .true. then add a level below base level
+      class(cg_list_level_T), target, intent(inout) :: this    !< lowest or highest refinement level
+      logical,                        intent(in)    :: coarse  !< if .true. then add a level below base level
 
-      if (.not. associated(link)) call die("[cg_list_level:init_lev] cannot link to null")
+      type(cg_list_level_T), pointer :: new_lev !< fresh refinement level to be added
 
-      this%n_d(:) = 1
-      this%tot_se = 0
+      allocate(new_lev)
+      new_lev%n_d(:) = 1
+      new_lev%tot_se = 0
+      new_lev%coarser => null()
+      new_lev%finer => null()
+
       if (coarse) then
-         if (associated(link%coarser)) call die("[cg_list_level:init_lev] coarser level already exists")
-         this%level_id = link%level_id - I_ONE
-         where (dom%has_dir(:))
-            this%n_d(:) = link%n_d(:) / refinement_factor
-         elsewhere
-            this%n_d(:) = I_ONE
-         endwhere
-         if (master .and. any(this%n_d(:)*refinement_factor /= link%n_d(:) .and. dom%has_dir(:))) then
-            write(msg, '(a,3f10.1,a,i3)')"[cg_list_level:init_lev] Fractional number of domain cells: ", link%n_d(:)/real(refinement_factor), " at level ",this%level_id
+         if (associated(this%coarser)) call die("[cg_list_level:add_lev] coarser level already exists")
+         select type(this)
+            type is (cg_list_level_T)
+               this%coarser => new_lev
+               new_lev%finer => this
+            class default
+               call die("[cg_list_level:add_lev] cannot call this routine for derivatives of cg_list_level (coarse)")
+         end select
+
+         coarsest => new_lev
+         new_lev%level_id = this%level_id - I_ONE
+         where (dom%has_dir(:)) new_lev%n_d(:) = this%n_d(:) / refinement_factor
+         if (master .and. any(new_lev%n_d(:)*refinement_factor /= this%n_d(:) .and. dom%has_dir(:))) then
+            write(msg, '(a,3f10.1,a,i3)')"[cg_list_level:add_lev] Fractional number of domain cells: ", this%n_d(:)/real(refinement_factor), " at level ",new_lev%level_id
             call die(msg)
          endif
-         this%coarser => null()
-         this%finer => link
-         select type(this)
-            type is (cg_list_level_T)
-               link%coarser => this
-            class default
-               call die("[cg_list_level:init_lev] cannot call this routine for derivatives of cg_list_level (coarse)")
-         end select
       else
-         if (associated(link%finer)) call die("[cg_list_level:init_lev] finer level already exists")
-         this%level_id = link%level_id + I_ONE
-         this%n_d(:) = link%n_d(:) * refinement_factor
-         this%coarser => link
-         this%finer => null()
+         if (associated(this%finer)) call die("[cg_list_level:add_lev] finer level already exists")
          select type(this)
             type is (cg_list_level_T)
-               link%finer => this
+               this%finer => new_lev
+               new_lev%coarser => this
             class default
-               call die("[cg_list_level:init_lev] cannot call this routine for derivatives of cg_list_level (fine)")
+               call die("[cg_list_level:add_lev] cannot call this routine for derivatives of cg_list_level (fine)")
          end select
+
+         finest => new_lev
+         new_lev%level_id = this%level_id + I_ONE
+         where (dom%has_dir(:)) new_lev%n_d(:) = this%n_d(:) * refinement_factor
       endif
 
       !! make sure that vertical_prep will be called where necessary
+      new_lev%ord_prolong_set = INVALID
       this%ord_prolong_set = INVALID
-      link%ord_prolong_set = INVALID
-      this%fft_type = fft_none
-      call this%init
+      new_lev%fft_type = fft_none
+      call new_lev%init
 
-   end subroutine init_lev
+   end subroutine add_lev
 
 !> \brief Calculate minimal fine grid that completely covers given coarse grid
 
@@ -248,7 +242,7 @@ contains
       type(pr_segment), pointer :: seg
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
-      type(cg_list_level_T),   pointer :: fine, coarse  !< shortcut
+      type(cg_list_level_T), pointer :: fine, coarse  !< shortcut
       type :: int_pair
          integer :: proc
          integer :: n_se
@@ -490,7 +484,7 @@ contains
       implicit none
 
       class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
-      integer,                      intent(in)    :: iv   !< variable to be restricted
+      integer,                        intent(in)    :: iv   !< variable to be restricted
 
       if (.not. associated(this%coarser)) return
       call this%restrict_q_1var(iv)
@@ -521,7 +515,7 @@ contains
       implicit none
 
       class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
-      integer,                      intent(in)    :: iv   !< variable to be restricted
+      integer,                        intent(in)    :: iv   !< variable to be restricted
 
       type(cg_list_level_T), pointer :: coarse
       integer :: g
@@ -692,7 +686,7 @@ contains
       implicit none
 
       class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
-      integer,                      intent(in)    :: iv   !< variable to be prolonged
+      integer,                        intent(in)    :: iv   !< variable to be prolonged
 
       type(cg_list_level_T), pointer :: fine
       integer :: g
@@ -981,9 +975,18 @@ contains
    subroutine init_all_new_cg(this)
 
       use cg_list_global, only: all_cg
+      use constants,      only: I_ONE, xdim, zdim, LO, HI
+      use dataio_pub,     only: warn, die
+      use decomposition,  only: cdd
+      use domain,         only: is_mpi_noncart, is_multicg, is_refined, is_uneven
       use grid_cont,      only: grid_container
-      use mpisetup,       only: proc
+      use mpi,            only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
+      use mpisetup,       only: proc, comm, mpi_err
       use named_array,    only: qna, wna
+#ifdef ISO
+      use constants,      only: cs_i2_n
+      use fluids_pub,     only: cs2_max
+#endif /* ISO */
 
       implicit none
 
@@ -991,6 +994,31 @@ contains
 
       integer :: gr_id, i
       type(grid_container), pointer :: cg
+
+      if (size(this%patches(:), dim=1) > 1) call die("[cg_list_level:init_all_new_cg] multiple patches per level will be supported soon")
+
+      !> \todo call here somewhat more sophisticated routine for grid block (re)distribution
+      allocate(this%pse(lbound(this%patches(I_ONE)%pse, dim=1):ubound(this%patches(I_ONE)%pse, dim=1)))
+      do i = lbound(this%pse, dim=1), ubound(this%pse, dim=1)
+         allocate(this%pse(i)%sel(size(this%patches(I_ONE)%pse(i)%sel(:,:,:), dim=1), xdim:zdim, LO:HI))
+         this%pse(i)%sel(:,:,:) = this%patches(I_ONE)%pse(i)%sel(:,:,:)
+      enddo
+
+!#ifdef VERBOSE
+      call this%print_segments
+!#endif /* VERBOSE */
+
+      ! Analyze the decomposition and set up [ is_uneven, is_mpi_noncart, is_refined, ... ]
+      ! \todo Try to move this is_* computation somewhere else
+      is_multicg = is_multicg .or. (ubound(this%pse(proc)%sel(:, :, :), dim=1) > 1)
+      call MPI_Allreduce(MPI_IN_PLACE, is_multicg, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
+      if (is_multicg .and. cdd%comm3d /= MPI_COMM_NULL) call die("[cg_list_level:init_all_new_cg] is_multicg cannot be used with comm3d")
+      if (is_refined) then
+         is_mpi_noncart = .true.
+         is_multicg = .true.
+      endif
+      if (is_mpi_noncart) is_uneven = .true.
+      if (is_refined) call warn("[cg_list_level:init_all_new_cg] Refinements are not implemented")
 
       do gr_id = lbound(this%pse(proc)%sel(:,:,:), dim=1), ubound(this%pse(proc)%sel(:,:,:), dim=1)
          call this%add
@@ -1015,11 +1043,16 @@ contains
          call all_cg%add(cg)
          !> \todo add an optional argument, array of pointers to lists, where the cg should be added. Requires polymorphic array of pointers.
 
+         cg%u  => cg%w(all_cg%fi)%arr
+         cg%b  => cg%w(all_cg%bi)%arr
+         cg%wa => cg%q(all_cg%wai)%arr
+#ifdef ISO
+         cg%cs_iso2 => cg%q(qna%ind(cs_i2_n))%arr
+         cg%cs_iso2(:,:,:) = cs2_max   ! set cs2 with sane values
+#endif /* ISO */
+
       enddo
 
-!#ifdef VERBOSE
-      call this%print_segments
-!#endif /* VERBOSE */
       call this%update_tot_se
 
       call all_cg%update_req
@@ -1056,7 +1089,7 @@ contains
       use mpi,            only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,       only: mpi_err, FIRST, LAST, procmask
       use named_array,    only: wna
-      use types,          only: cdd
+      use decomposition,  only: cdd
 
       implicit none
 
@@ -1218,5 +1251,37 @@ contains
       endif
 
    end subroutine mpi_bnd_types
+
+!> \brief Add a new piece of grid to the list of patches on current refinement level and decompose it
+
+   subroutine add_patch(this, n_d, off, n_pieces)
+
+      use constants,     only: ndims
+      use dataio_pub,    only: msg, die
+      use decomposition, only: box_T
+
+      implicit none
+
+      class(cg_list_level_T), target,    intent(inout) :: this     !< current level
+      integer(kind=4), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
+      integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level)
+      integer, optional,                 intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
+
+      type(box_T), dimension(:), allocatable :: tmp
+
+      if (.not. allocated(this%patches)) then
+         allocate(this%patches(1))
+      else
+         allocate(tmp(lbound(this%patches(:),dim=1):ubound(this%patches(:), dim=1) + 1))
+         tmp(:ubound(this%patches(:), dim=1)) = this%patches(:)
+         call move_alloc(from=tmp, to=this%patches)
+      endif
+
+      if (.not. this%patches(ubound(this%patches(:), dim=1))%decompose_patch(n_d(:), off(:), n_pieces)) then
+         write(msg,'(a,i4)')"[cg_list_level:add_patch] Coarse domain decomposition failed at level ",this%level_id
+         call die(msg)
+      endif
+
+   end subroutine add_patch
 
 end module cg_list_level

@@ -144,14 +144,14 @@ contains
 
    subroutine init_prob
 
-      use constants,  only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub, only: msg, printinfo, warn, die
-      use domain,     only: dom
-      use grid,       only: leaves
-      use cg_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: master
-      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use constants,   only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
+      use dataio_pub,  only: msg, printinfo, warn, die
+      use domain,      only: dom
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use mpisetup,    only: master
+      use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 
       implicit none
 
@@ -268,7 +268,7 @@ contains
       use dataio_pub,     only: warn, die
       use domain,         only: dom
       use cg_list,        only: cg_list_element
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use mpisetup,       only: master
       use named_array,    only: qna
@@ -371,7 +371,7 @@ contains
       use dataio_pub,  only: msg, printinfo, warn
       use domain,      only: dom
       use cg_list,     only: cg_list_element
-      use grid,        only: leaves
+      use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,    only: master, comm, mpi_err

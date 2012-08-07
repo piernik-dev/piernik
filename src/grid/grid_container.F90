@@ -41,10 +41,11 @@ module grid_cont
    private
    public :: grid_container, pr_segment, tgt_list, is_overlap
 
-   !> \brief Specification of segment of data for boundary exchange, prolongation and restriction.
+   !> \brief Specification of segment of data for boundary exchange
    type :: segment
       integer :: proc                                     !< target process
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
+      integer(kind=4) :: tag                              !< unique tag for data exchange
    end type segment
 
    !> \brief coefficient-layer pair used for prolongation
@@ -57,8 +58,7 @@ module grid_cont
    type, extends(segment) :: pr_segment
       real, allocatable, dimension(:,:,:) :: buf                      !< buffer for the coarse data (incoming prolongation and outgoing restriction) for each nonlocal operations
       type(c_layer), dimension(:), allocatable :: f_lay               !< face layers to contribute to the prolonged face value
-      integer(kind=4) :: tag                                          !< unique tag for communication
-   end type pr_segment                                                !< (not allocated for outgoing prolongation, incoming restriction and for local operations)
+   end type pr_segment
 
    !< \brief target list container for prolongations, restrictions and boundary exchanges
    type :: tgt_list
@@ -95,14 +95,9 @@ module grid_cont
 
    end type mg_arr
 
-   !> \brief Segment type with additional parameters for boundary exchange
-   type, extends(segment) :: bnd_segment
-      integer(kind=4) :: tag                              !< unique tag for data exchange
-   end type bnd_segment
-
    !> \brief Array of boundary segments to exchange
    type :: bnd_list
-      type(bnd_segment), dimension(:), allocatable :: seg !< segments
+      type(segment), dimension(:), allocatable :: seg !< segments
    end type bnd_list
 
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
@@ -242,21 +237,18 @@ contains
 
    subroutine init(this, n_d, my_se, grid_id, level_id)
 
-      use constants,  only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float,refinement_factor, &
-           &                FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_COR
+      use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float,refinement_factor, &
+           &                   FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_COR
+      use dataio_pub,    only: die, warn, msg, code_progress
+      use decomposition, only: cdd
+      use domain,        only: dom
+      use mpi,           only: MPI_COMM_NULL
+      use mpisetup,      only: nproc, inflate_req
 #ifdef SHEAR_BND
 #ifndef FFTW
-      use constants,  only: BND_SHE
+      use constants,     only: BND_SHE
 #endif /* !FTTW */
 #endif /* SHEAR_BND */
-      use dataio_pub, only: die, warn, printinfo, msg, code_progress
-      use domain,     only: dom
-      use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: nproc, inflate_req
-      use types,      only: cdd
-#ifdef DEBUG
-      use mpisetup,   only: proc
-#endif /* DEBUG */
 
       implicit none
 
@@ -326,12 +318,6 @@ contains
          if (cdd%pcoords(xdim) == psize(xdim)-1) this%bnd(xdim, HI) = BND_SHE
 #endif /* !FFTW */
 #endif /* SHEAR_BND */
-#ifdef DEBUG
-         do i = xdim, zdim
-            write(msg,*) 'dir',i,': ',cdd%procn(i, LO), proc, cdd%procn(i, HI)
-            call printinfo(msg)
-         enddo
-#endif /* DEBUG */
       endif
 
       !> \todo allocate this conditionally, only when comm3d is in use

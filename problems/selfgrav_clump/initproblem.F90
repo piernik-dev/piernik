@@ -156,7 +156,7 @@ contains
       use func,              only: ekin, emag
       use cg_list,           only: cg_list_element
       use global,            only: smalld, smallei, t
-      use grid,              only: leaves
+      use cg_list_bnd,       only: leaves
       use grid_cont,         only: grid_container
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
       use mpisetup,          only: master, comm, mpi_err
@@ -448,7 +448,7 @@ contains
       use dataio_pub,        only: msg, die, warn, printinfo
       use cg_list,           only: cg_list_element
       use fluidindex,        only: flind
-      use grid,              only: leaves
+      use cg_list_bnd,       only: leaves
       use grid_cont,         only: grid_container
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,          only: master, comm, mpi_err
@@ -512,13 +512,13 @@ contains
 
    subroutine totalMEnthalpic(C, totME, mode)
 
-      use constants,  only: I_ONE
-      use fluidindex, only: flind
-      use cg_list,    only: cg_list_element
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,   only: comm, mpi_err
+      use constants,   only: I_ONE
+      use fluidindex,  only: flind
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
+      use grid_cont,   only: grid_container
+      use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,    only: comm, mpi_err
 
       implicit none
 

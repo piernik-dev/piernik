@@ -165,14 +165,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_sine
 
-      use constants,  only: dpi, xdim, zdim
-      use dataio_pub, only: printinfo, warn
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use grid,       only: leaves
-      use cg_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: master
+      use constants,   only: dpi, xdim, zdim
+      use dataio_pub,  only: printinfo, warn
+      use domain,      only: dom
+      use fluidindex,  only: flind
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use mpisetup,    only: master
 
       implicit none
 
@@ -217,13 +217,13 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_random_noise
 
-      use constants,  only: xdim, ydim, zdim
-      use dataio_pub, only: printinfo
-      use grid,       only: leaves
-      use cg_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use fluidindex, only: flind
-      use mpisetup,   only: proc, master
+      use constants,   only: xdim, ydim, zdim
+      use dataio_pub,  only: printinfo
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use fluidindex,  only: flind
+      use mpisetup,    only: proc, master
 
       implicit none
 
@@ -260,23 +260,23 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,   only: DST, GEO_RPZ, xdim, ydim, zdim
-      use global,      only: smalld
-      use dataio_pub,  only: msg, printinfo, die
-      use domain,      only: dom, is_multicg
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use func,        only: ekin
-      use cg_list,     only: cg_list_element
-      use gravity,     only: ptmass, grav_pot2accel
-      use grid,        only: leaves
-      use grid_cont,   only: grid_container
-      use hydrostatic, only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use mpi,         only: MPI_COMM_NULL
-      use mpisetup,    only: master
-      use named_array, only: wna
-      use types,       only: cdd
-      use units,       only: newtong
+      use cg_list,       only: cg_list_element
+      use cg_list_bnd,   only: leaves
+      use constants,     only: DST, GEO_RPZ, xdim, ydim, zdim
+      use dataio_pub,    only: msg, printinfo, die
+      use decomposition, only: cdd
+      use domain,        only: dom, is_multicg
+      use fluidindex,    only: flind
+      use fluidtypes,    only: component_fluid
+      use func,          only: ekin
+      use global,        only: smalld
+      use gravity,       only: ptmass, grav_pot2accel
+      use grid_cont,     only: grid_container
+      use hydrostatic  , only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
+      use mpi,           only: MPI_COMM_NULL
+      use mpisetup,      only: master
+      use named_array  , only: wna
+      use units,         only: newtong
 
       implicit none
 
@@ -391,7 +391,7 @@ contains
       use cg_list,         only: cg_list_element
       use global,          only: t, grace_period_passed, relax_time, smalld !, dt
       use gravity,         only: ptmass
-      use grid,            only: leaves
+      use cg_list_bnd,     only: leaves
       use grid_cont,       only: grid_container
       use interactions,    only: update_grain_size
       use named_array,     only: wna
@@ -472,11 +472,11 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
-      use gravity,   only: sum_potential
-      use grid,      only: leaves
-      use cg_list,   only: cg_list_element
-      use grid_cont, only: grid_container
-      use types,     only: axes
+      use gravity,     only: sum_potential
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use types,       only: axes
 
       implicit none
 

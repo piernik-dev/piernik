@@ -104,12 +104,12 @@ contains
 
    subroutine init_prob
 
-      use constants,  only: pi, xdim, ydim, zdim
-      use domain,     only: dom
-      use grid,       only: leaves
-      use cg_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use fluidindex, only: flind
+      use constants,   only: pi, xdim, ydim, zdim
+      use domain,      only: dom
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use fluidindex,  only: flind
 
       implicit none
 

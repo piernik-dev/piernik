@@ -235,22 +235,21 @@ contains
 
    subroutine write_plot_hdf5(var, plane, nimg)
 
-      use constants,   only: xdim, ydim, zdim, varlen, cwdlen, LO, HI
-      use dataio_pub,  only: vizit, log_file, msg, die, warn
+      use cg_list_level, only: base_lev
+      use constants,     only: xdim, ydim, zdim, varlen, cwdlen, LO, HI
+      use dataio_pub,    only: vizit, log_file, msg, die, warn
+      use dataio_user,   only: user_plt_hdf5, user_plt_attrs
+      use domain,        only: dom, is_multicg
+      use global,        only: t
+      use cg_list_bnd,   only: leaves
+      use grid_cont,     only: grid_container!, cg_list_element
+      use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
+      use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
+      use mpi,           only: MPI_DOUBLE_PRECISION
+      use mpisetup,      only: comm, mpi_err, proc, FIRST, LAST, status, master
 #ifdef PGPLOT
-      use dataio_pub,  only: fmin, fmax
-#endif /* PGPLOT */
-      use dataio_user, only: user_plt_hdf5, user_plt_attrs
-      use domain,      only: dom, is_multicg
-      use global,      only: t
-      use grid,        only: base_lev, leaves
-      use grid_cont,   only: grid_container!, cg_list_element
-      use hdf5,        only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
-      use h5lt,        only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpi,         only: MPI_DOUBLE_PRECISION
-      use mpisetup,    only: comm, mpi_err, proc, FIRST, LAST, status, master
-#ifdef PGPLOT
-      use viz,         only: draw_me
+      use dataio_pub,    only: fmin, fmax
+      use viz,           only: draw_me
 #endif /* PGPLOT */
 
       implicit none

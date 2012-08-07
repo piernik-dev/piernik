@@ -117,15 +117,15 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,  only: xdim, ydim, zdim
-      use fluidindex, only: flind
-      use fluidtypes, only: component_fluid
-      use func,       only: ekin, emag
-      use cg_list,    only: cg_list_element
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
+      use constants,   only: xdim, ydim, zdim
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use func,        only: ekin, emag
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
+      use grid_cont,   only: grid_container
 #ifndef ISO
-      use global,     only: smallei
+      use global,      only: smallei
 #endif /* !ISO */
       implicit none
 

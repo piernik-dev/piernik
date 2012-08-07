@@ -128,7 +128,7 @@ contains
       use func,           only: ekin, emag
       use cg_list,        only: cg_list_element
       use global,         only: smalld
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
 #ifdef SHEAR
@@ -326,7 +326,7 @@ contains
       use domain,         only: dom
       use fluidindex,     only: flind
       use cg_list,        only: cg_list_element
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn
       use snsources,      only: r_sn

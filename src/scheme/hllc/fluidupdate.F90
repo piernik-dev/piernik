@@ -40,13 +40,14 @@ module fluidupdate   ! SPLIT MUSCL HANCOCK
 
 contains
    subroutine fluid_update
-      use dataio_pub,     only: halfstep
-      use global,         only: dt, dtm, t
-      use user_hooks,     only: problem_customize_solution
-      use grid,           only: leaves
-      use cg_list,        only: cg_list_element
-      use constants,      only: xdim, zdim
-      use domain,         only: dom
+
+      use dataio_pub,  only: halfstep
+      use global,      only: dt, dtm, t
+      use user_hooks,  only: problem_customize_solution
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use constants,   only: xdim, zdim
+      use domain,      only: dom
 
       implicit none
 

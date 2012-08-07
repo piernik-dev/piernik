@@ -79,23 +79,21 @@ contains
 !<
    subroutine init_multigrid
 
+      use cg_list,             only: cg_list_element
       use cg_list_global,      only: all_cg
-      use cg_list_level,       only: cg_list_level_T, cg_list_patch_T
-      use constants,           only: PIERNIK_INIT_GRID, LO, HI, I_ONE, O_INJ, O_LIN, O_I2, refinement_factor, dirtyH
+      use cg_list_level,       only: cg_list_level_T, base_lev, finest, coarsest
+      use constants,           only: PIERNIK_INIT_GRID, LO, HI, I_ONE, O_INJ, O_LIN, O_I2, refinement_factor, dirtyH, base_level_offset
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
-      use decomposition,       only: divide_domain!, deallocate_pse
-      use domain,              only: dom, is_uneven
-      use cg_list,             only: cg_list_element
+      use decomposition,       only: cdd
+      use domain,              only: dom, is_uneven, minsize
       use global,              only: dirty_debug, do_ascii_dump
-      use grid,                only: base_lev, finest, coarsest
       use grid_cont,           only: grid_container
       use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_COMM_NULL
       use mpisetup,            only: comm, mpi_err, master, slave, nproc, FIRST, buffer_dim, ibuff, lbuff
       use multigridvars,       only: single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, &
            &                         ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
       use named_array,         only: qna
-      use types,               only: cdd
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
 #endif /* GRAV */
@@ -111,8 +109,7 @@ contains
       integer(kind=4)       :: j
       logical, save         :: frun = .true.          !< First run flag
       type(cg_list_element), pointer :: cgl
-      type(cg_list_level_T),   pointer :: curl, tmpl    !< current level (a pointer sliding along the linked list) and temporary level
-      type(cg_list_patch_T) :: patch                    !< wrapper for current level (to be passed to divide domain)
+      type(cg_list_level_T), pointer :: curl          !< current level (a pointer sliding along the linked list) and temporary level
       type(grid_container),  pointer :: cg            !< current grid container
 
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug
@@ -195,7 +192,7 @@ contains
       endif
 
       do j = 0, level_incredible
-         if (any((mod(base_lev%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_lev%n_d(:)/refinement_factor**(j+1) < dom%nb) .and. dom%has_dir(:))) exit
+         if (any((mod(base_lev%n_d(:), int(refinement_factor, kind=8)**(j+1)) /= 0 .or. base_lev%n_d(:)/refinement_factor**(j+1) < minsize(:)) .and. dom%has_dir(:))) exit
       enddo
       if (level_max > j) then
          if (master) then
@@ -209,38 +206,16 @@ contains
       curl => finest
       do while (associated(curl))
 
-         coarsest => curl
-
          if (curl%level_id <= -level_max) exit
 
          ! create coarser level:
-         allocate(tmpl)
-         call tmpl%init(curl, coarse = .true.)   ! create an empty level
-
-         if (tmpl%level_id == -level_max .and. single_base) then
-            call base_on_single(tmpl)
+         call curl%add_level(coarse = .true.)
+         if (coarsest%level_id == -level_max .and. single_base) then
+            call coarsest%add_patch(int(coarsest%n_d(:), kind=4), base_level_offset, n_pieces=I_ONE)
          else
-
-            patch%list_level => tmpl
-            patch%n_d = int(tmpl%n_d, kind=4)
-
-            if (.not. divide_domain(patch)) then
-               write(msg,'(a,i4)')"[multigrid:init_multigrid] Coarse domain decomposition failed at level ",tmpl%level_id
-               if (master) call warn(msg)
-               if (single_base) then
-                  call base_on_single(tmpl)
-                  level_max = -tmpl%level_id
-               else
-                  deallocate(tmpl)
-                  nullify(curl%coarser)
-                  exit
-                  !> \warning possible memory leak here
-               endif
-            endif
-
+            call coarsest%add_patch(int(coarsest%n_d(:), kind=4), base_level_offset)
          endif
-
-         call tmpl%init_all_new_cg
+         call coarsest%init_all_new_cg
 
          curl => curl%coarser
       enddo
@@ -327,8 +302,6 @@ contains
 
       use constants,           only: I_ONE
       use dataio_pub,          only: msg, printinfo
-      use cg_list_level,       only: cg_list_level_T
-      use grid,                only: base_lev, coarsest
       use mpi,                 only: MPI_DOUBLE_PRECISION
       use mpisetup,            only: master, nproc, FIRST, LAST, comm, mpi_err
       use multigridvars,       only: tot_ts
@@ -341,9 +314,7 @@ contains
 
       implicit none
 
-      integer :: g
       real, allocatable, dimension(:) :: all_ts
-      type(cg_list_level_T),   pointer :: curl
 
 #ifdef GRAV
       call cleanup_multigrid_grav
@@ -351,20 +322,6 @@ contains
 #ifdef COSM_RAYS
       call cleanup_multigrid_diff
 #endif /* COSM_RAYS */
-
-      !! \todo move this loop to grid::cleanup_grid
-      curl => coarsest
-      do while (associated(curl) .and. .not. associated(curl, base_lev))
-         call curl%delete
-         curl => curl%finer
-         deallocate(curl%coarser)
-         if (allocated(curl%pse)) then
-            do g = FIRST, LAST
-               deallocate(curl%pse(g)%sel)
-            enddo
-            deallocate(curl%pse)
-         endif
-      enddo
 
       if (allocated(all_ts)) deallocate(all_ts)
       allocate(all_ts(FIRST:LAST))
@@ -379,33 +336,5 @@ contains
       if (allocated(all_ts)) deallocate(all_ts)
 
    end subroutine cleanup_multigrid
-
-!>
-!! \brief Put the whole coarsest level on the master CPU
-!!
-!! \todo try a random or the last one
-!! \deprecated this routine should belong to decomposition module
-!<
-
-   subroutine base_on_single(tmpl)
-
-      use cg_list_level, only: cg_list_level_T
-      use constants,     only: LO, HI, I_ONE
-      use decomposition, only: allocate_pse
-      use mpisetup,      only: nproc, FIRST
-
-      implicit none
-
-      type(cg_list_level_T), pointer, intent(inout) :: tmpl
-
-      integer, dimension(nproc) :: n_cg
-
-      n_cg(:) = 0
-      n_cg(1) = I_ONE
-      call allocate_pse(tmpl, n_cg)
-      tmpl%pse(FIRST)%sel(I_ONE,  :, LO) = 0
-      tmpl%pse(FIRST)%sel(I_ONE,  :, HI) = tmpl%n_d(:)-1
-
-   end subroutine base_on_single
 
 end module multigrid

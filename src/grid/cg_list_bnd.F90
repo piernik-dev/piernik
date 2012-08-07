@@ -35,7 +35,7 @@
 !! This implies that periodic, corner shear and fine-coarse boundaries are also "internal"
 !!
 !! Note that this routine may not properly update some layers of guardcells when number of guardcell layers exceeds number of active cells.
-!! Appropriate checks should be made in divide_domain routine.
+!! Appropriate checks should be made in decompose_patch routine.
 !!
 !! \todo integrate here as much stuff from fluidboundaries, magboundaries, etc. as possible.
 !!
@@ -49,7 +49,7 @@ module cg_list_bnd
    implicit none
 
    private
-   public :: cg_list_bnd_T
+   public :: cg_list_bnd_T, leaves
 
    type, extends(cg_list_T) :: cg_list_bnd_T
     contains
@@ -59,6 +59,8 @@ module cg_list_bnd
       procedure          :: arr3d_boundaries        !> This routine sets up all guardcells (internal and external) for given rank-3 arrays.
       !> \todo move routines for external guardcells for rank-4 arrays here as well (fluidboundaries and magboundaries)
    end type cg_list_bnd_T
+
+   type(cg_list_bnd_T) :: leaves   !< grid containers not fully covered by finer grid containers
 
 contains
 
@@ -105,14 +107,14 @@ contains
 
    subroutine internal_boundaries(this, ind, tgt3d, nb, dim)
 
-      use constants,  only: xdim, zdim, I_ONE, I_TWO
-      use dataio_pub, only: die, warn
-      use domain,     only: dom
-      use cg_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: comm, mpi_err, req, status
-      use types,      only: cdd
+      use constants,     only: xdim, zdim, I_ONE, I_TWO
+      use dataio_pub,    only: die, warn
+      use decomposition, only: cdd
+      use domain,        only: dom
+      use cg_list,       only: cg_list_element
+      use grid_cont,     only: grid_container
+      use mpi,           only: MPI_COMM_NULL
+      use mpisetup,      only: comm, mpi_err, req, status
 
       implicit none
 
@@ -204,22 +206,22 @@ contains
 !! (i.e. no communication, dedicated arrays etc). Fancy, specialized boundary conditions should be defined somewhere else, in appropriate modules.
 !!
 !! Note that this routine may not properly update some layers of guardcells when number of guardcell layers exceeds number of active cells.
-!! Appropriate checks should be made in divide_domain routine.
+!! Appropriate checks should be made in decompose_patch routine.
 !!
 !! \todo integrate here as much stuff from fluidboundaries, magboundaries, etc. as possible.
 !<
 
    subroutine arr3d_boundaries(this, ind, nb, area_type, bnd_type, corners)
 
-      use constants,    only: ARR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, I_TWO, I_THREE, LO, HI, &
-           &                  BND_PER, BND_MPI, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
-      use dataio_pub,   only: die, msg
-      use domain,       only: dom
-      use cg_list,      only: cg_list_element
-      use grid_cont,    only: grid_container
-      use mpi,          only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
-      use mpisetup,     only: mpi_err, comm, req, status
-      use types,        only: cdd
+      use constants,     only: ARR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, I_TWO, I_THREE, LO, HI, &
+           &                   BND_PER, BND_MPI, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
+      use dataio_pub,    only: die, msg
+      use decomposition, only: cdd
+      use domain,        only: dom
+      use cg_list,       only: cg_list_element
+      use grid_cont,     only: grid_container
+      use mpi,           only: MPI_REQUEST_NULL, MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR, MPI_COMM_NULL
+      use mpisetup,      only: mpi_err, comm, req, status
 
       implicit none
 

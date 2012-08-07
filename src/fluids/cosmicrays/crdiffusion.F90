@@ -76,14 +76,14 @@ contains
       use cg_list_global, only: all_cg
       use constants,      only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE, wcr_n
       use dataio_pub,     only: die
+      use decomposition,  only: cdd
       use domain,         only: dom
       use cg_list,        only: cg_list_element
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_REQUEST_NULL, MPI_COMM_NULL
       use mpisetup,       only: mpi_err, req, status
       use named_array,    only: wna
-      use types,          only: cdd
 
       implicit none
 
@@ -165,7 +165,7 @@ contains
       use fluidindex,     only: flind
       use global,         only: dt
       use cg_list,        only: cg_list_element
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
       use named_array,    only: p4, wna

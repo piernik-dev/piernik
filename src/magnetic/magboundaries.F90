@@ -38,14 +38,14 @@ contains
 
    subroutine bnd_a(A)
 
-      use constants,  only: MAG, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, I_FIVE, I_TEN
-      use dataio_pub, only: die
-      use domain,     only: is_mpi_noncart, is_multicg, dom
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: mpi_err, req, status, have_mpi
-      use types,      only: cdd
+      use constants,     only: MAG, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, I_FIVE, I_TEN
+      use dataio_pub,    only: die
+      use decomposition, only: cdd
+      use domain,        only: is_mpi_noncart, is_multicg, dom
+      use cg_list_bnd,   only: leaves
+      use grid_cont,     only: grid_container
+      use mpi,           only: MPI_COMM_NULL
+      use mpisetup,      only: mpi_err, req, status, have_mpi
 
       implicit none
 
@@ -77,17 +77,17 @@ contains
 
    subroutine bnd_b(dir, cg)
 
-      use constants,  only: MAG, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
-           &                BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
-      use dataio_pub, only: msg, warn, die
-      use domain,     only: is_mpi_noncart, is_multicg, dom
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,   only: mpi_err, req, status, comm, master, have_mpi
-      use types,      only: cdd
+      use constants,     only: MAG, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
+           &                   BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
+      use dataio_pub,    only: msg, warn, die
+      use decomposition, only: cdd
+      use domain,        only: is_mpi_noncart, is_multicg, dom
+      use grid_cont,     only: grid_container
+      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
+      use mpisetup,      only: mpi_err, req, status, comm, master, have_mpi
 #ifdef SHEAR
-      use constants,  only: half, one
-      use shear,      only: eps, delj
+      use constants,     only: half, one
+      use shear,         only: eps, delj
 #endif /* SHEAR */
 
       implicit none
@@ -462,11 +462,11 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: xdim, zdim
+      use decomposition,  only: cdd
       use domain,         only: dom
       use cg_list,        only: cg_list_element
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use mpi,            only: MPI_COMM_NULL
-      use types,          only: cdd
 
       implicit none
 

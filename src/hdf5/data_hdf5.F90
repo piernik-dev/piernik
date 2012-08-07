@@ -286,7 +286,7 @@ contains
       use dataio_pub,  only: die, nproc_io, can_i_write
       use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
-      use grid,        only: leaves
+      use cg_list_bnd, only: leaves
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use mpi,         only: MPI_REAL, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
@@ -475,18 +475,18 @@ contains
 
    subroutine h5_write_to_single_file_v1(fname)
 
-      use common_hdf5, only: nhdf_vars, hdf_vars
-      use constants,   only: ndims
-      use domain,      only: is_multicg !, is_uneven
-      use grid,        only: finest
-      use cg_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, &
-           &                 H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, &
-           &                 h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
-           &                 h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
-      use mpisetup,    only: comm
-      use mpi,         only: MPI_INFO_NULL
+      use cg_list,       only: cg_list_element
+      use cg_list_level, only: finest
+      use common_hdf5,   only: nhdf_vars, hdf_vars
+      use constants,     only: ndims
+      use domain,        only: is_multicg !, is_uneven
+      use grid_cont,     only: grid_container
+      use hdf5,          only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, &
+           &                   H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, &
+           &                   h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
+           &                   h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
+      use mpisetup,      only: comm
+      use mpi,           only: MPI_INFO_NULL
 
       implicit none
 
@@ -596,17 +596,17 @@ contains
 
    subroutine h5_write_to_multiple_files
 
-      use constants,       only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
-      use common_hdf5,     only: nhdf_vars, hdf_vars
-      use dataio_pub,      only: msg, printio, printinfo, tmr_hdf, thdf, last_hdf_time, piernik_hdf5_version
-      use cg_list,         only: cg_list_element
-      use grid,            only: leaves
-      use grid_cont,       only: grid_container
-      use h5lt,            only: h5ltmake_dataset_float_f, h5ltmake_dataset_double_f
-      use hdf5,            only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, &
-           &                     h5gclose_f, HSIZE_T
-      use mpisetup,        only: master
-      use timer,           only: set_timer
+      use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
+      use common_hdf5, only: nhdf_vars, hdf_vars
+      use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, last_hdf_time, piernik_hdf5_version
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
+      use grid_cont,   only: grid_container
+      use h5lt,        only: h5ltmake_dataset_float_f, h5ltmake_dataset_double_f
+      use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, &
+           &                 h5gclose_f, HSIZE_T
+      use mpisetup,    only: master
+      use timer,       only: set_timer
 
       implicit none
 

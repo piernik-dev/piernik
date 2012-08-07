@@ -350,9 +350,10 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_level,  only: cg_list_level_T  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
+      use cg_list_level,  only: finest
       use dataio_pub,     only: die
       use cg_list,        only: ind_val, dirty_label
-      use grid,           only: leaves, finest
+      use cg_list_bnd,    only: leaves
       use initcosmicrays, only: iarr_crs
       use multigridvars,  only: source, defect, correction
 
@@ -390,7 +391,8 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_level,  only: cg_list_level_T  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use grid,           only: leaves, finest
+      use cg_list_level,  only: finest
+      use cg_list_bnd,    only: leaves
       use initcosmicrays, only: iarr_crs
       use multigridvars,  only: solution
 
@@ -414,10 +416,10 @@ contains
    subroutine init_b
 
       use cg_list_global, only: all_cg
-      use cg_list_level,  only: cg_list_level_T
+      use cg_list_level,  only: cg_list_level_T, coarsest, finest
       use constants,      only: I_ONE, xdim, zdim, HI, LO, BND_REF
       use domain,         only: dom
-      use grid,           only: leaves, coarsest, finest
+      use cg_list_bnd,    only: leaves
       use cg_list,        only: cg_list_element, dirty_label
       use grid_cont,      only: grid_container
       use named_array,    only: p3, p4
@@ -469,11 +471,11 @@ contains
    subroutine vcycle_hg(cr_id)
 
       use cg_list_global, only: all_cg
-      use cg_list_level,  only: cg_list_level_T
+      use cg_list_level,  only: cg_list_level_T, coarsest, finest
       use dataio_pub,     only: msg, warn
       use cg_list,        only: ind_val, dirty_label
       use global,         only: do_ascii_dump
-      use grid,           only: leaves, coarsest, finest
+      use cg_list_bnd,    only: leaves
       use initcosmicrays, only: iarr_crs
       use mpisetup,       only: master
       use multigridvars,  only: source, defect, solution, correction, ts, tot_ts
@@ -720,12 +722,11 @@ contains
    subroutine approximate_solution(curl, src, soln, cr_id)
 
       use cg_list_global, only: all_cg
-      use cg_list_level,  only: cg_list_level_T
+      use cg_list_level,  only: cg_list_level_T, coarsest
       use constants,      only: xdim, ydim, zdim, one, half, I_ONE, ndims, BND_NONE
       use domain,         only: dom
       use cg_list,        only: cg_list_element
       use global,         only: dt
-      use grid,           only: coarsest
       use grid_cont,      only: grid_container
 
       implicit none

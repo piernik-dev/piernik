@@ -108,13 +108,13 @@ contains
 
    subroutine init_prob
 
-      use constants,  only: xdim, ydim, zdim
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use cg_list,    only: cg_list_element
-      use global,     only: smalld
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
+      use constants,   only: xdim, ydim, zdim
+      use domain,      only: dom
+      use fluidindex,  only: flind
+      use cg_list,     only: cg_list_element
+      use global,      only: smalld
+      use cg_list_bnd, only: leaves
+      use grid_cont,   only: grid_container
 
       implicit none
 

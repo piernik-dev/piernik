@@ -719,7 +719,7 @@ contains
       use func,           only: ekin, emag
       use cg_list,        only: cg_list_element
       use global,         only: t, dt, smalld, nstep
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use mass_defect,    only: update_magic_mass
       use mpi,            only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
@@ -976,7 +976,7 @@ contains
       use func,           only: ekin
       use cg_list,        only: cg_list_element
       use global,         only: cfl
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use mpisetup,       only: master
       use units,          only: mH, kboltz
 #ifndef ISO
@@ -1133,7 +1133,7 @@ contains
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use func,               only: L2norm
       use cg_list,            only: cg_list_element
-      use grid,               only: leaves
+      use cg_list_bnd,        only: leaves
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master
       use types,              only: value

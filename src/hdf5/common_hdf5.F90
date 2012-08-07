@@ -353,17 +353,17 @@ contains
 
    subroutine set_common_attributes_v1(file_id)
 
-      use constants,   only: cbuff_len, xdim, ydim, zdim, I_ONE
-      use dataio_pub,  only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
-         &                   last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use global,      only: t, dt, nstep
-      use grid,        only: finest
-      use hdf5,        only: HID_T, SIZE_T
-      use h5lt,        only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
-      use mass_defect, only: magic_mass
-      use units,       only: cm, gram, sek, kelvin, miu0
+      use cg_list_level, only: finest
+      use constants,     only: cbuff_len, xdim, ydim, zdim, I_ONE
+      use dataio_pub,    only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
+         &                     last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
+      use domain,        only: dom
+      use fluidindex,    only: flind
+      use global,        only: t, dt, nstep
+      use hdf5,          only: HID_T, SIZE_T
+      use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
+      use mass_defect,   only: magic_mass
+      use units,         only: cm, gram, sek, kelvin, miu0
 
       implicit none
 
@@ -530,7 +530,7 @@ contains
 
       use dataio_pub,     only: die
       use cg_list,        only: cg_list_element
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
 
       implicit none
@@ -618,7 +618,7 @@ contains
       use cg_list,        only: cg_list_element
       use gdf,            only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets
       use global,         only: t
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use hdf5,           only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
          & h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
          & h5zfilter_avail_f

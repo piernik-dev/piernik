@@ -192,13 +192,13 @@ contains
 
    subroutine read_IC_file
 
-      use constants,  only: xdim, ydim, zdim , LO, HI
-      use dataio_pub, only: msg, die
-      use domain,     only: is_multicg
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: proc, master, FIRST, LAST, comm, status, mpi_err
-      use mpi,        only: MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use constants,   only: xdim, ydim, zdim , LO, HI
+      use dataio_pub,  only: msg, die
+      use domain,      only: is_multicg
+      use cg_list_bnd, only: leaves
+      use grid_cont,   only: grid_container
+      use mpisetup,    only: proc, master, FIRST, LAST, comm, status, mpi_err
+      use mpi,         only: MPI_INTEGER, MPI_DOUBLE_PRECISION
 
       implicit none
 
@@ -289,7 +289,7 @@ contains
       use domain,         only: dom
       use cg_list,        only: cg_list_element
       use global,         only: smalld
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
@@ -461,7 +461,7 @@ contains
 
       use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: warn
-      use grid,        only: leaves
+      use cg_list_bnd, only: leaves
       use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind

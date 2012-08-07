@@ -58,7 +58,7 @@ contains
       use fluidindex,     only: flind
       use cg_list,        only: cg_list_element
       use global,         only: dt
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use magboundaries,  only: bnd_emf
       use rtvd,           only: tvdb

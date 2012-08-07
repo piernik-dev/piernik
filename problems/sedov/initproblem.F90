@@ -130,14 +130,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,  only: ION, DST, xdim, ydim, zdim
-      use dataio_pub, only: msg, die, printinfo
-      use fluidindex, only: flind
-      use fluidtypes, only: component_fluid
-      use grid,       only: leaves
-      use cg_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: master
+      use constants,   only: ION, DST, xdim, ydim, zdim
+      use dataio_pub,  only: msg, die, printinfo
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use mpisetup,    only: master
 
       implicit none
 

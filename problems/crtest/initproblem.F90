@@ -150,7 +150,7 @@ contains
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag
       use cg_list,        only: cg_list_element
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre
 
@@ -224,7 +224,7 @@ contains
       use dataio_pub,     only: die
       use cg_list,        only: cg_list_element
       use global,         only: t
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use named_array,    only: qna
@@ -297,7 +297,7 @@ contains
       use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
       use cg_list,        only: cg_list_element
       use global,         only: nstep
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE

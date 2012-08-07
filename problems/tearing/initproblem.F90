@@ -103,14 +103,14 @@ contains
 
    subroutine init_prob
 
-      use constants,  only: pi, xdim, ydim, zdim, half
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use fluidtypes, only: component_fluid
-      use func,       only: ekin, emag
-      use cg_list,    only: cg_list_element
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
+      use constants,   only: pi, xdim, ydim, zdim, half
+      use domain,      only: dom
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use func,        only: ekin, emag
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
+      use grid_cont,   only: grid_container
 
       implicit none
 

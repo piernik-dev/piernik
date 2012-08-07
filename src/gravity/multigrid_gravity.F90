@@ -158,12 +158,12 @@ contains
       use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
+      use decomposition, only: cdd
       use domain,        only: dom, is_uneven, is_multicg
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
       use mpisetup,      only: buffer_dim, comm, mpi_err, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST, nproc
       use multigridvars, only: single_base
       use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
-      use types,         only: cdd
 
       implicit none
 
@@ -390,18 +390,18 @@ contains
 
       use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
-      use cg_list_level,  only: cg_list_level_T
+      use cg_list_level,  only: cg_list_level_T, finest, coarsest
       use constants,      only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, varlen, xdim, ydim, zdim
       use dataio_pub,     only: die, warn, printinfo, msg
+      use decomposition,  only: cdd
       use domain,         only: dom
-      use grid,           only: leaves, finest, coarsest
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_COMM_NULL
       use mpisetup,       only: master, nproc
       use multigridvars,  only: is_mg_uneven, need_general_pf, single_base
       use multipole,      only: init_multipole, coarsen_multipole
       use named_array,    only: qna
-      use types,          only: cdd
 
       implicit none
 
@@ -652,9 +652,8 @@ contains
       use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG, zero, one, half, O_INJ, O_LIN, O_I2, INT4
       use dataio_pub,    only: warn, die
       use domain,        only: dom
-      use cg_list_level, only: cg_list_level_T
+      use cg_list_level, only: cg_list_level_T, coarsest
       use cg_list,       only: cg_list_element
-      use grid,          only: coarsest
       use grid_cont,     only: pr_segment, grid_container, is_overlap
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req
       use multigridvars, only: ord_prolong_face_norm, need_general_pf
@@ -746,6 +745,8 @@ contains
 
                            do j = FIRST, LAST
                               if (ubound(curl%coarser%pse(j)%sel, dim=1) > 0) then
+                                 !> \warning: it is not anymore guaranteed that curl%coarser%pse(j)%sel(1, :, :) exists
+                                 ! Typically it does on coarser level (counterintuitive but true), but not necessarily on the finer one
                                  if (is_overlap(coarsened(:,:), curl%coarser%pse(j)%sel(1, :, :), per)) procmask(j) = 1
                               endif
                            enddo
@@ -795,18 +796,22 @@ contains
                         procmask(:) = 0
                         do j = FIRST, LAST
                            is_internal_fine = dom%periodic(d)
-                           coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)/2
-                           coarsened(d, hl) = coarsened(d, lh)
-                           select case (lh)
-                              case (LO)
-                                 if (mod(curl%finer%pse(j)%sel(1, d, LO),     2_LONG) == 0) &
-                                      coarsened(d, :) = coarsened(d, :) + [ -1_INT4-ord_prolong_face_norm,        ord_prolong_face_norm ]
-                                 is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) /= 0)
-                              case (HI)
-                                 if (mod(curl%finer%pse(j)%sel(1, d, HI) + 1, 2_LONG) == 0) &
-                                      coarsened(d, :) = coarsened(d, :) + [        -ord_prolong_face_norm, 1_INT4+ord_prolong_face_norm ]
-                                 is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) + 1 < curl%finer%n_d(d))
-                           end select
+                           if (ubound(curl%finer%pse(j)%sel, dim=1) > 0) then
+                              coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)/2
+                              coarsened(d, hl) = coarsened(d, lh)
+                              select case (lh)
+                                 case (LO)
+                                    if (mod(curl%finer%pse(j)%sel(1, d, LO),     2_LONG) == 0) &
+                                         coarsened(d, :) = coarsened(d, :) + [ -1_INT4-ord_prolong_face_norm,        ord_prolong_face_norm ]
+                                    is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) /= 0)
+                                 case (HI)
+                                    if (mod(curl%finer%pse(j)%sel(1, d, HI) + 1, 2_LONG) == 0) &
+                                         coarsened(d, :) = coarsened(d, :) + [        -ord_prolong_face_norm, 1_INT4+ord_prolong_face_norm ]
+                                    is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) + 1 < curl%finer%n_d(d))
+                              end select
+                           else
+                              coarsened(:,:) = -2*dom%nb
+                           endif
                            if (is_internal_fine) then
                               if (is_overlap(coarsened(:, :), cg%my_se(:, :), per)) procmask(j) = 1
                            endif
@@ -826,38 +831,40 @@ contains
                               seg%proc = j
 
                               ! find cross-section of own segment with coarsened fine face segment
-                              coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)
-                              coarsened(d, hl) = coarsened(d, lh)
-                              coarsened(:, :) = coarsened(:, :)/2
-                              where (.not. dmask(:))
-                                 seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO))
-                                 seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
-                              endwhere
-                              seg%se(d, :) = coarsened(d, :)
-                              allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
-                                   &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
-                                   &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
+                              if (ubound(curl%finer%pse(j)%sel, dim=1) > 0) then
+                                 coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)
+                                 coarsened(d, hl) = coarsened(d, lh)
+                                 coarsened(:, :) = coarsened(:, :)/2
+                                 where (.not. dmask(:))
+                                    seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO))
+                                    seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
+                                 endwhere
+                                 seg%se(d, :) = coarsened(d, :)
+                                 allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
+                                      &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
+                                      &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
 
-                              coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)
-                              coarsened(d, hl) = coarsened(d, lh)
-                              coarsened(d, lh) = coarsened(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
-                              coarsened(:, :) = coarsened(:, :)/2
-                              coarsened(d, :) = coarsened(d, :) + [ -ord_prolong_face_norm, ord_prolong_face_norm ]
+                                 coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)
+                                 coarsened(d, hl) = coarsened(d, lh)
+                                 coarsened(d, lh) = coarsened(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
+                                 coarsened(:, :) = coarsened(:, :)/2
+                                 coarsened(d, :) = coarsened(d, :) + [ -ord_prolong_face_norm, ord_prolong_face_norm ]
 
-                              seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO)) + ijks(:)
-                              seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI)) + ijks(:)
+                                 seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO)) + ijks(:)
+                                 seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI)) + ijks(:)
 
-                              coarsened(d, :) = coarsened(d, :) - [ -ord_prolong_face_norm, ord_prolong_face_norm ] ! revert broadening
-                              allocate(seg%f_lay(seg%se(d, HI) - seg%se(d, LO) + 1))
-                              do l = 1, size(seg%f_lay(:))
-                                 seg%f_lay(l)%layer = l + int(seg%se(d, LO), kind=4) - 1
-                                 nl = int(minval(abs(seg%f_lay(l)%layer - ijks(d) - coarsened(d, :))), kind=4)
-                                 if (mod(curl%finer%pse(j)%sel(1, d, lh) + lh - LO, 2_LONG) == 0) then ! fine face at coarse face
-                                    seg%f_lay(l)%coeff = opfn_c_ff(nl)
-                                 else                                                              ! fine face at coarse center
-                                    seg%f_lay(l)%coeff = opfn_c_cf(nl)
-                                 endif
-                              enddo
+                                 coarsened(d, :) = coarsened(d, :) - [ -ord_prolong_face_norm, ord_prolong_face_norm ] ! revert broadening
+                                 allocate(seg%f_lay(seg%se(d, HI) - seg%se(d, LO) + 1))
+                                 do l = 1, size(seg%f_lay(:))
+                                    seg%f_lay(l)%layer = l + int(seg%se(d, LO), kind=4) - 1
+                                    nl = int(minval(abs(seg%f_lay(l)%layer - ijks(d) - coarsened(d, :))), kind=4)
+                                    if (mod(curl%finer%pse(j)%sel(1, d, lh) + lh - LO, 2_LONG) == 0) then ! fine face at coarse face
+                                       seg%f_lay(l)%coeff = opfn_c_ff(nl)
+                                    else                                                              ! fine face at coarse center
+                                       seg%f_lay(l)%coeff = opfn_c_cf(nl)
+                                    endif
+                                 enddo
+                              endif
 
                            endif
                         enddo
@@ -939,12 +946,13 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_level,  only: cg_list_level_T  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
+      use cg_list_level,  only: finest
       use cg_list_global, only: all_cg
       use constants,      only: INVALID, O_INJ, O_LIN, O_I2
       use dataio_pub,     only: msg, die, printinfo
       use cg_list,        only: ind_val
       use global,         only: t
-      use grid,           only: leaves, finest
+      use cg_list_bnd,    only: leaves
       use mpisetup,       only: master
       use multigridvars,  only: stdout, solution
 
@@ -1031,11 +1039,12 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_level,  only: cg_list_level_T    ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
+      use cg_list_level,  only: finest
       use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,     only: die
       use domain,         only: dom
       use cg_list,        only: cg_list_element
-      use grid,           only: leaves, finest
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use multigridvars,  only: source
       use units,          only: fpiG
@@ -1147,10 +1156,11 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_level, only: cg_list_level_T   ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
+      use cg_list_level, only: finest
       use constants,     only: BND_XTRAP, BND_REF
       use domain,        only: dom
       use global,        only: t
-      use grid,          only: leaves, finest
+      use cg_list_bnd,   only: leaves
       use multigridvars, only: solution
 
       implicit none
@@ -1187,7 +1197,7 @@ contains
    subroutine multigrid_solve_grav(i_all_dens)
 
       use constants,     only: sgp_n
-      use grid,          only: leaves
+      use cg_list_bnd,   only: leaves
       use multigridvars, only: solution, tot_ts, ts
       use multipole,     only: multipole_solver
       use named_array,   only: qna
@@ -1247,11 +1257,11 @@ contains
    subroutine vcycle_hg(history)
 
       use cg_list_global, only: all_cg
-      use cg_list_level,  only: cg_list_level_T
+      use cg_list_level,  only: cg_list_level_T, finest, coarsest
       use constants,      only: cbuff_len, fft_none
       use dataio_pub,     only: msg, die, warn, printinfo
       use global,         only: do_ascii_dump
-      use grid,           only: leaves, finest, coarsest
+      use cg_list_bnd,    only: leaves
       use mpisetup,       only: master, nproc
       use multigridvars,  only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts
       use timer,          only: set_timer
@@ -1673,13 +1683,12 @@ contains
 
    subroutine approximate_solution_rbgs(curl, src, soln)
 
-      use cg_list_level, only: cg_list_level_T
+      use cg_list_level, only: cg_list_level_T, coarsest
       use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
       use dataio_pub,    only: die
       use domain,        only: dom
       use cg_list,       only: cg_list_element, dirty_label
       use global,        only: dirty_debug
-      use grid,          only: coarsest
       use grid_cont,     only: grid_container
       use multigridvars, only: correction
 
@@ -1838,13 +1847,12 @@ contains
 
    subroutine approximate_solution_fft(curl, src, soln)
 
-      use cg_list_level, only: cg_list_level_T
+      use cg_list_level, only: cg_list_level_T, coarsest
       use constants,     only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2, BND_NEGREF, fft_none, fft_dst, dirtyL
       use dataio_pub,    only: die, warn
       use domain,        only: dom
       use cg_list,       only: cg_list_element
       use global,        only: dirty_debug
-      use grid,          only: coarsest
       use grid_cont,     only: grid_container
       use multigridvars, only: single_base
       use named_array,   only: p3
@@ -2002,9 +2010,8 @@ contains
 
    subroutine make_face_boundaries(curl, soln)
 
-      use cg_list_level, only: cg_list_level_T
+      use cg_list_level, only: cg_list_level_T, coarsest
       use dataio_pub,    only: warn
-      use grid,          only: coarsest
       use mpisetup,      only: nproc
       use multigridvars, only: single_base
 
@@ -2030,9 +2037,9 @@ contains
 
    subroutine fft_solve_roof
 
+      use cg_list_level, only: finest
       use constants,     only: fft_none
       use dataio_pub,    only: die
-      use grid,          only: finest
       use grid_cont,     only: grid_container
       use multigridvars, only: source, solution
       use named_array,   only: p3
@@ -2108,11 +2115,10 @@ contains
 
    subroutine prolong_faces(fine, soln)
 
-      use cg_list_level, only: cg_list_level_T
+      use cg_list_level, only: cg_list_level_T, coarsest
       use constants,     only: xdim, ydim, zdim, LO, HI, LONG, I_ONE, half, O_INJ, O_LIN, O_D2, O_I2, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom, is_multicg
-      use grid,          only: coarsest
       use grid_cont,     only: pr_segment
       use mpi,           only: MPI_DOUBLE_PRECISION
       use mpisetup,      only: comm, mpi_err, req, status, master

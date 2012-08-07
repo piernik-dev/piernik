@@ -217,14 +217,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_sine
 
-      use constants,  only: dpi, xdim, zdim
-      use dataio_pub, only: printinfo, warn
-      use domain,     only: dom
-      use fluidindex, only: flind
-      use grid,       only: leaves
-      use cg_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use mpisetup,   only: master
+      use constants,   only: dpi, xdim, zdim
+      use dataio_pub,  only: printinfo, warn
+      use domain,      only: dom
+      use fluidindex,  only: flind
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use mpisetup,    only: master
 
       implicit none
 
@@ -268,13 +268,13 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_random_noise
 
-      use constants,  only: xdim, ydim, zdim
-      use dataio_pub, only: printinfo
-      use grid,       only: leaves
-      use cg_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use fluidindex, only: flind
-      use mpisetup,   only: proc, master
+      use constants,   only: xdim, ydim, zdim
+      use dataio_pub,  only: printinfo
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use fluidindex,  only: flind
+      use mpisetup,    only: proc, master
 
       implicit none
 
@@ -311,21 +311,22 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,      only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
-      use dataio_pub,     only: msg, printinfo, die
-      use domain,         only: dom, is_multicg
-      use fluidindex,     only: flind
-      use fluidtypes,     only: component_fluid
-      use gravity,        only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
-      use cg_list,        only: cg_list_element
-      use grid,           only: leaves, base_lev
-      use grid_cont,      only: grid_container
-      use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use interactions,   only: epstein_factor
-      use mpi,            only: MPI_DOUBLE_PRECISION
-      use mpisetup,       only: master, comm, mpi_err, FIRST, proc
-      use named_array,    only: wna
-      use units,          only: newtong, gram, cm, kboltz, mH
+      use cg_list_level, only: base_lev
+      use constants,     only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
+      use dataio_pub,    only: msg, printinfo, die
+      use domain,        only: dom, is_multicg
+      use fluidindex,    only: flind
+      use fluidtypes,    only: component_fluid
+      use gravity,       only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
+      use cg_list,       only: cg_list_element
+      use cg_list_bnd,   only: leaves
+      use grid_cont,     only: grid_container
+      use hydrostatic,   only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
+      use interactions,  only: epstein_factor
+      use mpi,           only: MPI_DOUBLE_PRECISION
+      use mpisetup,      only: master, comm, mpi_err, FIRST, proc
+      use named_array,   only: wna
+      use units,         only: newtong, gram, cm, kboltz, mH
 
       implicit none
 
@@ -561,7 +562,7 @@ contains
       use constants,       only: b0_n
       use fluidboundaries, only: all_fluid_boundaries
       use cg_list,         only: cg_list_element
-      use grid,            only: leaves
+      use cg_list_bnd,     only: leaves
       use named_array,     only: wna
 #ifdef TRACER
       use constants,       only: xdim, ydim, zdim
@@ -630,7 +631,7 @@ contains
       use domain,          only: is_multicg
       use cg_list,         only: cg_list_element
       use global,          only: dt, relax_time, smalld !, t, grace_period_passed
-      use grid,            only: leaves
+      use cg_list_bnd,     only: leaves
       use grid_cont,       only: grid_container
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: flind!, iarr_all_mz, iarr_all_dn
@@ -764,12 +765,12 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
-      use constants, only: xdim, zdim
-      use units,     only: newtong
-      use gravity,   only: ptmass, sum_potential
-      use grid,      only: leaves
-      use cg_list,   only: cg_list_element
-      use grid_cont, only: grid_container
+      use constants,   only: xdim, zdim
+      use units,       only: newtong
+      use gravity,     only: ptmass, sum_potential
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
 
       implicit none
 

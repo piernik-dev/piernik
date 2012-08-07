@@ -101,10 +101,10 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use grid,       only: leaves
-      use cg_list,    only: cg_list_element
-      use grid_cont,  only: grid_container
-      use fluidindex, only: flind
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+      use fluidindex,  only: flind
 
       implicit none
 

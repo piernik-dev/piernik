@@ -166,14 +166,14 @@ contains
 
    subroutine yshift(ts,dts)
 
-      use constants,  only: xdim
+      use constants,   only: xdim
 #ifdef FFTW
-      use constants,  only: ydim
+      use constants,   only: ydim
 #endif /* FFTW */
-      use dataio_pub, only: die
-      use domain,     only: dom, is_multicg
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
+      use dataio_pub,  only: die
+      use domain,      only: dom, is_multicg
+      use cg_list_bnd, only: leaves
+      use grid_cont,   only: grid_container
 
       implicit none
 
@@ -204,11 +204,11 @@ contains
 #ifdef FFTW
    function unshear_fft(qty,x,ddy,inv)
 
-      use constants,  only: dpi, xdim
-      use dataio_pub, only: die
-      use domain,     only: dom, is_multicg
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
+      use constants,   only: dpi, xdim
+      use dataio_pub,  only: die
+      use domain,      only: dom, is_multicg
+      use cg_list_bnd, only: leaves
+      use grid_cont,   only: grid_container
 
       implicit none
 
@@ -276,11 +276,11 @@ contains
 !--------------------------------------------------------------------------------------------------
    function unshear(qty,x,inv)
 
-      use constants,  only: xdim, half
-      use dataio_pub, only: die
-      use domain,     only: dom, is_multicg
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
+      use constants,   only: xdim, half
+      use dataio_pub,  only: die
+      use domain,      only: dom, is_multicg
+      use cg_list_bnd, only: leaves
+      use grid_cont,   only: grid_container
 
       implicit none
 

@@ -103,7 +103,7 @@ contains
 #endif /* MAGNETIC */
       use cg_list,         only: cg_list_element
       use global,          only: dt, integration_order
-      use grid,            only: leaves
+      use cg_list_bnd,     only: leaves
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
       use named_array,     only: qna, wna

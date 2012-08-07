@@ -106,27 +106,29 @@ contains
 
    subroutine init_fluids
 
-      use constants,       only: PIERNIK_INIT_GLOBAL
-      use dataio_pub,      only: die, code_progress, warn
-      use fluidindex,      only: fluid_index, flind
-      use fluids_pub,      only: has_dst, has_ion, has_neu
-      use fluxes,          only: set_limiter
-      use global,          only: limiter
-      use initdust,        only: init_dust
-      use initionized,     only: init_ionized
-      use initneutral,     only: init_neutral
-      use mass_defect,     only: init_magic_mass
+      use constants,      only: PIERNIK_INIT_GLOBAL
+      use dataio_pub,     only: die, code_progress, warn
+      use fluidindex,     only: fluid_index, flind
+      use fluids_pub,     only: has_dst, has_ion, has_neu, cs2_max
+      use fluxes,         only: set_limiter
+      use global,         only: limiter
+      use initdust,       only: init_dust
+      use initionized,    only: init_ionized
+      use initneutral,    only: init_neutral
+      use mass_defect,    only: init_magic_mass
 #ifdef COSM_RAYS
-      use initcosmicrays,  only: init_cosmicrays
+      use initcosmicrays, only: init_cosmicrays
 #endif /* COSM_RAYS */
 #ifdef TRACER
-      use inittracer,      only: init_tracer
+      use inittracer,     only: init_tracer
 #endif /* TRACER */
 #ifdef VERBOSE
-      use dataio_pub,      only: printinfo
+      use dataio_pub,     only: printinfo
 #endif /* VERBOSE */
 
       implicit none
+
+      integer :: ifl
 
       if (code_progress < PIERNIK_INIT_GLOBAL) call die("[initfluids:init_fluids] MPI not initialized.") ! limiter, init_ionized, init_neutral, init_dust, init_cosmicrays
 
@@ -145,6 +147,13 @@ contains
 #endif /* TRACER */
 
       call fluid_index    ! flind has valid values afterwards
+
+      cs2_max = 0.0
+      do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
+         cs2_max = max(cs2_max, flind%all_fluids(ifl)%fl%cs2)
+      enddo
+      ! All processes should have same fluids, so MPI_Allreduce shouldn't be required
+      !call MPI_Allreduce(MPI_IN_PLACE, cs_max, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
 
       if (has_neu .and. has_ion) then
          if (flind%ion%cs2 /= flind%neu%cs2) &
@@ -186,17 +195,17 @@ contains
 
    subroutine sanitize_smallx_checks
 
-      use constants,  only: big_float, DST, I_ONE, xdim, ydim, zdim
-      use dataio_pub, only: warn, msg
-      use fluidindex, only: flind
-      use fluidtypes, only: component_fluid
-      use func,       only: ekin, emag
-      use cg_list,    only: cg_list_element
-      use global,     only: smalld, smallp
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
-      use mpisetup,   only: master, comm, mpi_err
+      use constants,   only: big_float, DST, I_ONE, xdim, ydim, zdim
+      use dataio_pub,  only: warn, msg
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use func,        only: ekin, emag
+      use cg_list,     only: cg_list_element
+      use global,      only: smalld, smallp
+      use cg_list_bnd, only: leaves
+      use grid_cont,   only: grid_container
+      use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
+      use mpisetup,    only: master, comm, mpi_err
 
       implicit none
 

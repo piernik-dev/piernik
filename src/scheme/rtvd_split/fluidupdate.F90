@@ -54,7 +54,7 @@ contains
       use dataio_pub,  only: warn
       use cg_list,     only: cg_list_element
       use global,      only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
-      use grid,        only: leaves
+      use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
       use named_array, only: wna
@@ -134,7 +134,7 @@ contains
       use domain,              only: dom, is_multicg
       use fluidboundaries,     only: bnd_u
       use global,              only: t, dt
-      use grid,                only: leaves
+      use cg_list_bnd,         only: leaves
       use grid_cont,           only: grid_container
       use shear,               only: yshift
 #endif /* SHEAR */
@@ -268,7 +268,7 @@ contains
 
    subroutine mag_add(dim1, dim2)
 
-      use grid,          only: leaves
+      use cg_list_bnd,   only: leaves
       use cg_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use magboundaries, only: all_mag_boundaries

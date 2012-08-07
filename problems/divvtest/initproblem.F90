@@ -137,7 +137,7 @@ contains
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use func,           only: emag, ekin
-      use grid,           only: leaves
+      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
 

@@ -117,6 +117,7 @@ contains
          pulse_size = 0.5
          if (master) call warn("[initproblem:read_problem_par] Pulse width was invalid. Adjusted to 0.5.")
       endif
+
       if (pulse_amp <= 0.) then
          if (have_mpi) then
             pulse_amp = 1. + proc/real(LAST)
@@ -151,7 +152,7 @@ contains
       use fluidindex,  only: flind
       use cg_list,     only: cg_list_element
       use global,      only: smallei, t
-      use grid,        only: leaves
+      use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
       use named_array, only: qna
 
@@ -235,7 +236,7 @@ contains
       use fluidindex,  only: flind
       use cg_list,     only: cg_list_element
       use global,      only: t, nstep
-      use grid,        only: leaves
+      use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,    only: master, comm, mpi_err
@@ -303,7 +304,7 @@ contains
       use dataio_pub,  only: warn
       use domain,      only: dom
       use cg_list,     only: cg_list_element
-      use grid,        only: leaves
+      use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
       use named_array, only: qna

@@ -44,14 +44,14 @@ contains
 !<
    subroutine poisson_solve(dens)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER
+      use constants,   only: xdim, ydim, zdim, LO, HI, BND_PER
 #ifdef SHEAR
-      use constants,  only: BND_SHE
+      use constants,   only: BND_SHE
 #endif /* SHEAR */
-      use dataio_pub, only: die
-      use domain,     only: dom, is_multicg
-      use grid,       only: leaves
-      use grid_cont,  only: grid_container
+      use dataio_pub,  only: die
+      use domain,      only: dom, is_multicg
+      use cg_list_bnd, only: leaves
+      use grid_cont,   only: grid_container
 
       implicit none
 
@@ -113,11 +113,11 @@ contains
 #ifdef SHEAR
    subroutine poisson_xy2d(den, pot, lpot, rpot, dx)
 
-      use constants, only: dpi, xdim, ydim
-      use domain,    only: dom
-      use grid,      only: cg
-      use shear,     only: dely
-      use units,     only: newtong
+      use constants,  only: dpi, xdim, ydim
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use shear,      only: dely
+      use units,      only: newtong
 
       implicit none
 
@@ -152,6 +152,8 @@ contains
 !
 !----------------------------------------------------------------------
 !
+
+      call die("[poissonsolver:poisson_xy2d] This routine is really out of date. Fix it before use")
 
       St = dely / dom%L_(xdim)
       St = -St * cg%nyb / dom%L_(ydim)

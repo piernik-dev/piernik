@@ -104,7 +104,7 @@ contains
       use dataio_pub,           only: tend, msg, warn
       use fluidtypes,           only: var_numbers
       use global,               only: t, dt_old, dt_max_grow, dt_initial, dt_min, nstep
-      use grid,                 only: leaves
+      use cg_list_bnd,          only: leaves
       use cg_list,              only: cg_list_element
       use grid_cont,            only: grid_container
       use mpi,                  only: MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX, MPI_IN_PLACE

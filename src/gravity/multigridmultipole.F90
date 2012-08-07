@@ -113,10 +113,10 @@ contains
 
    subroutine init_multipole
 
+      use cg_list_level, only: base_lev, finest
       use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI
       use dataio_pub,    only: die, warn
       use domain,        only: dom
-      use grid,          only: base_lev, finest
       use mpisetup,      only: master
 
       implicit none
@@ -261,10 +261,9 @@ contains
 
    subroutine multipole_solver
 
-      use cg_list_level, only: cg_list_level_T
+      use cg_list_level, only: cg_list_level_T, finest
       use constants,     only: dirtyH
       use global,        only: dirty_debug
-      use grid,          only: finest
       use multigridvars, only: solution
 
       implicit none
@@ -318,12 +317,12 @@ contains
 
    subroutine isolated_monopole
 
-      use constants,     only: xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
-      use dataio_pub,    only: die
-      use domain,        only: dom
-      use cg_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use units,         only: newtong
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
+      use units,      only: newtong
 
       implicit none
 
@@ -376,13 +375,13 @@ contains
 
    subroutine find_img_CoM
 
-      use constants,     only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, I_ONE !, GEO_RPZ
-      use dataio_pub,    only: die
-      use domain,        only: dom
-      use cg_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,      only: comm, mpi_err
+      use cg_list,    only: cg_list_element
+      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, I_ONE !, GEO_RPZ
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,   only: comm, mpi_err
 
       implicit none
 
@@ -442,9 +441,9 @@ contains
 
    subroutine potential2img_mass
 
+      use cg_list,       only: cg_list_element
       use constants,     only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use domain,        only: dom
-      use cg_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use multigridvars, only: solution
 
@@ -524,10 +523,10 @@ contains
 
    subroutine prolong_ext_bnd(coarse)
 
+      use cg_list_level, only: cg_list_level_T
       use constants,     only: ndims, O_INJ, O_D2, O_I2
       use dataio_pub,    only: die
       use domain,        only: dom
-      use cg_list_level, only: cg_list_level_T
 
       implicit none
 
@@ -552,10 +551,10 @@ contains
 
    subroutine prolong_ext_bnd0(coarse)
 
+      use cg_list_level, only: cg_list_level_T
       use constants,     only: HI, LO, xdim, ydim, zdim
       use dataio_pub,    only: die
       use domain,        only: is_multicg
-      use cg_list_level, only: cg_list_level_T
 
       implicit none
 
@@ -600,10 +599,10 @@ contains
 
    subroutine prolong_ext_bnd2(coarse)
 
+      use cg_list_level, only: cg_list_level_T
       use constants,     only: HI, LO, xdim, ydim, zdim, O_INJ, O_LIN, O_D2, O_I2
       use dataio_pub,    only: die
       use domain,        only: is_multicg
-      use cg_list_level, only: cg_list_level_T
 
       implicit none
 
@@ -692,13 +691,13 @@ contains
 
    subroutine img_mass2moments
 
-      use constants,     only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
-      use dataio_pub,    only: die
-      use domain,        only: dom
-      use cg_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,      only: comm, mpi_err
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
+      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,   only: comm, mpi_err
 
       implicit none
 
@@ -876,11 +875,11 @@ contains
 
    subroutine moments2bnd_potential
 
-      use dataio_pub,    only: die
-      use constants,     only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI
-      use domain,        only: dom
-      use cg_list,       only: cg_list_element
-      use grid_cont,     only: grid_container
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
 
       implicit none
 
