@@ -41,9 +41,6 @@
  $OUTPUT_CONTROL
     problem_name ='maclaurin'
     run_id =  'sph'
-    ix      = 0
-    iy      = 0
-    iz      = 0
     dt_hdf  = 10.0
     dt_res  = 0.0
     dt_plt  = 0.0
