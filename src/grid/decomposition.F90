@@ -57,8 +57,6 @@ module decomposition
       integer(kind=8), dimension(ndims) :: off          !< offset (with respect to the base level, counted on own level)
       type(cuboids), dimension(:), allocatable :: pse   !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
 
-      procedure(decompose_patch_template), pointer :: user_decompose_patch => Null() ! It should at least allocate and set up curl%pse(:)%sel(:,:,:)
-
     contains
 
       procedure          :: decompose_patch             !< Main wrapper for a block decomposer
@@ -74,22 +72,6 @@ module decomposition
    ! Private variables
    type(primes_T) :: primes
    real :: ideal_bsize
-
-   interface
-      subroutine decompose_patch_template(patch, patch_divided, n_pieces)
-
-         use constants,   only: ndims
-
-         import box_T
-
-         implicit none
-
-         class(box_T),      intent(inout) :: patch         !< the patch, which we want to be chopped into pieces
-         logical,           intent(out)   :: patch_divided !< Set to .true. after a successful decomposition
-         integer, optional, intent(in)    :: n_pieces      !< how many pieces the patch should be divided to?
-
-      end subroutine decompose_patch_template
-   end interface
 
 contains
 
@@ -165,13 +147,6 @@ contains
       call primes%sieve(pieces)
 
       patch_divided = .false.
-
-      ! First try the decomposition provided by the user
-      if (associated(patch%user_decompose_patch)) then
-         call patch%user_decompose_patch(patch_divided, pieces)
-         if (patch_divided) patch_divided = is_not_too_small(patch, "user_decompose_patch")
-         if (patch_divided) return
-      endif
 
       ! Try the decomposition into same-size blocks
       if (all(bsize(:) > 0 .or. .not. dom%has_dir(:)) .and. .not. present(n_pieces)) then
