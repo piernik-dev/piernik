@@ -982,11 +982,6 @@ contains
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
       use mpisetup,       only: proc, comm, mpi_err
-      use named_array,    only: qna, wna
-#ifdef ISO
-      use constants,      only: cs_i2_n
-      use fluids_pub,     only: cs2_max
-#endif /* ISO */
 
       implicit none
 
@@ -1024,32 +1019,10 @@ contains
          call this%add
          cg => this%last%cg
 
-         !> \todo Integrate the following few calls into grid_container type, note that mpi_bnd_types will require access to whole this%pse(:)%sel(:,:,:)
          call cg%init(this%n_d, this%pse(proc)%sel(gr_id, :, :), gr_id, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
-         call this%mpi_bnd_types(cg)
-         call cg%set_q_mbc
-         ! register all known named arrays for this cg
-         if (allocated(qna%lst)) then
-            do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-               call cg%add_na(qna%lst(i)%multigrid)
-            enddo
-         endif
-         if (allocated(wna%lst)) then
-            do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
-               call cg%add_na_4d(wna%lst(i)%dim4)
-            enddo
-         endif
-
+         call this%mpi_bnd_types(cg)                                                   ! require access to whole this%pse(:)%sel(:,:,:)
+         call cg%add_all_na                                                            ! require mpi_bnd_types properly calculated
          call all_cg%add(cg)
-         !> \todo add an optional argument, array of pointers to lists, where the cg should be added. Requires polymorphic array of pointers.
-
-         cg%u  => cg%w(wna%fi)%arr
-         cg%b  => cg%w(wna%bi)%arr
-         cg%wa => cg%q(qna%wai)%arr
-#ifdef ISO
-         cg%cs_iso2 => cg%q(qna%ind(cs_i2_n))%arr
-         cg%cs_iso2(:,:,:) = cs2_max   ! set cs2 with sane values
-#endif /* ISO */
 
       enddo
 
@@ -1077,7 +1050,13 @@ contains
       enddo
    end subroutine update_tot_se
 
-!> \brief Create MPI types for boundary exchanges
+!>
+!! \brief Create MPI types for boundary exchanges
+!!
+!! \details this type can be a member of grid container type if we pass this%pse(:)%sel(:, :, :) as an argument.
+!! It would simplify dependencies and this%init_all_new_cg, but it could be quite a big object.
+!! \todo Put this%pse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
+!<
 
    subroutine mpi_bnd_types(this, cg)
 
@@ -1248,6 +1227,8 @@ contains
          enddo
 
       endif
+
+      call cg%set_q_mbc
 
    end subroutine mpi_bnd_types
 

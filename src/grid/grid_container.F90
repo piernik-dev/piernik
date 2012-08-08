@@ -217,8 +217,10 @@ module grid_cont
       procedure :: cleanup                                       !< Deallocate all internals
       procedure :: set_axis                                      !< Calculate arrays of coordinates along a given direction
       procedure :: set_q_mbc                                     !< Initialize the communicators for q
+      procedure :: add_all_na                                    !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
       procedure :: add_na                                        !< Register a new 3D entry in current cg with given name.
       procedure :: add_na_4d                                     !< Register a new 4D entry in current cg with given name.
+
    end type grid_container
 
    interface is_overlap
@@ -773,6 +775,44 @@ contains
       enddo
 
    end subroutine set_q_mbc
+
+!> \brief Register all known named arrays for this cg, sey up shortcuts to the crucial fields
+
+   subroutine add_all_na(this)
+
+      use named_array, only: qna, wna
+#ifdef ISO
+      use constants,   only: cs_i2_n
+      use fluids_pub,  only: cs2_max
+#endif /* ISO */
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+
+      integer :: i
+
+      if (allocated(qna%lst)) then
+         do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+            call this%add_na(qna%lst(i)%multigrid)
+         enddo
+      endif
+      if (allocated(wna%lst)) then
+         do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+            call this%add_na_4d(wna%lst(i)%dim4)
+         enddo
+      endif
+
+      ! shortcuts
+      this%u  => this%w(wna%fi)%arr
+      this%b  => this%w(wna%bi)%arr
+      this%wa => this%q(qna%wai)%arr
+#ifdef ISO
+      this%cs_iso2 => this%q(qna%ind(cs_i2_n))%arr
+      this%cs_iso2(:,:,:) = cs2_max   ! set cs2 with sane values
+#endif /* ISO */
+
+   end subroutine add_all_na
 
 !>
 !! \brief Register a new 3D entry in current cg with given name. Called from cg_list_glob::reg_var
