@@ -809,7 +809,7 @@ contains
       this%wa => this%q(qna%wai)%arr
 #ifdef ISO
       this%cs_iso2 => this%q(qna%ind(cs_i2_n))%arr
-      this%cs_iso2(:,:,:) = cs2_max   ! set cs2 with sane values
+      if (associated(this%cs_iso2)) this%cs_iso2(:,:,:) = cs2_max   ! set cs2 with sane values on non-multigrid grid pieces
 #endif /* ISO */
 
    end subroutine add_all_na
