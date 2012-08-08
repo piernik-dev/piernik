@@ -33,12 +33,16 @@ module cg_list_level
 
    use cg_list_bnd,   only: cg_list_bnd_T
    use constants,     only: ndims
-   use decomposition, only: cuboids, box_T
+   use decomposition, only: box_T
 
    implicit none
 
    private
    public :: cg_list_level_T, base_lev, finest, coarsest
+
+   type :: cuboids
+      integer(kind=8), allocatable, dimension(:,:,:) :: sel !< crude array of grid pieces
+   end type cuboids
 
    !>
    !! \brief A list of all cg of the same resolution.
@@ -69,6 +73,8 @@ module cg_list_level
       procedure :: add_patch                                !< add a new piece of grid to the current level and decompose it
       procedure, private :: update_decomposition_properties !< Update some flags in domain module
       procedure, private :: distribute                      !< Get all decomposed patches and compute which pieces go to which process
+      procedure, private :: calc_ord_range                  !< Compute which id's should belong to which process
+      procedure, private :: simple_ordering                 !< This is just counting, not ordering
 
       ! Prolongation and restriction
       procedure, private :: vertical_prep                   !< initialize prolongation and restriction targets
@@ -1010,22 +1016,36 @@ contains
 
    subroutine distribute(this)
 
-      use constants,      only: I_ONE, xdim, zdim, LO, HI
+      use constants,      only: xdim, zdim, LO, HI
       use dataio_pub,     only: die
+      use mpisetup,       only: FIRST, LAST
 
       implicit none
 
       class(cg_list_level_T), intent(inout) :: this
 
-      integer :: i
+      integer :: i, p, s
+      integer(kind=8), dimension(FIRST:LAST) :: min_id, max_id, pieces, filled
 
-      if (size(this%patches(:), dim=1) > 1) call die("[cg_list_level:init_all_new_cg] multiple patches per level will be supported soon")
+      call this%simple_ordering
+      call this%calc_ord_range(min_id, max_id, pieces)
+      allocate(this%pse(FIRST:LAST))
+      do i = FIRST, LAST
+         allocate(this%pse(i)%sel(pieces(i), xdim:zdim, LO:HI))
+      enddo
+      filled(:) = 0
 
-      !> \todo call here somewhat more sophisticated routine for grid block (re)distribution
-      allocate(this%pse(lbound(this%patches(I_ONE)%pse, dim=1):ubound(this%patches(I_ONE)%pse, dim=1)))
-      do i = lbound(this%pse, dim=1), ubound(this%pse, dim=1)
-         allocate(this%pse(i)%sel(size(this%patches(I_ONE)%pse(i)%sel(:,:,:), dim=1), xdim:zdim, LO:HI))
-         this%pse(i)%sel(:,:,:) = this%patches(I_ONE)%pse(i)%sel(:,:,:)
+      do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
+         do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
+            do i = FIRST, LAST
+               if (this%patches(p)%pse(s)%id >= min_id(i) .and. this%patches(p)%pse(s)%id <= max_id(i)) then
+                  filled(i) = filled(i) + 1
+                  if (filled(i) > size(this%pse(i)%sel(:,:,:), dim=1)) call die("[cg_list_level:distribute] overflow")
+                  this%pse(i)%sel(filled(i), :, :) = this%patches(p)%pse(s)%se(:,:)
+                  exit
+               endif
+            enddo
+         enddo
       enddo
 
       call this%update_decomposition_properties
@@ -1034,6 +1054,60 @@ contains
 !#endif /* VERBOSE */
 
    end subroutine distribute
+
+!>
+!! \brief Compute which id's should belong to which process
+!!
+!! \todo Reduce assumptions on the set of id only to uniqueness (i.e. some id might be absent, some might be <0 or >this%tot_se, perform partial sort (qsort? shell sort?))
+!<
+
+   subroutine calc_ord_range(this, min_id, max_id, pieces)
+
+      use mpisetup, only: nproc, FIRST, LAST
+
+      implicit none
+
+      class(cg_list_level_T),                 intent(inout) :: this
+      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: min_id
+      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: max_id
+      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: pieces
+
+      integer :: p
+
+      ! At the moment all id are in [0 .. this%tot_se-1] range. This will change in future
+      !> \todo implement different weights of pieces
+
+      do p = FIRST, LAST
+         min_id(p) = ( p      * this%tot_se) / nproc
+         max_id(p) = ((p + 1) * this%tot_se) / nproc - 1
+      enddo
+      pieces(:) = max_id(:) - min_id(:) + 1
+
+   end subroutine calc_ord_range
+
+!> \brief OMG! This is just counting, not ordering!
+!> \todo Implement anything better. Peano-Hilbert ordering will appear here sooner or later :-)
+
+   subroutine simple_ordering(this)
+
+      implicit none
+
+      class(cg_list_level_T), intent(inout) :: this
+
+      integer :: p, s
+      integer(kind=8) :: id
+
+      id = 0
+      do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
+         do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
+            this%patches(p)%pse(s)%id = id
+            id = id + 1
+         enddo
+      enddo
+
+      this%tot_se = int(id, kind=4) ! obsoletes update_tot_se ?
+
+   end subroutine simple_ordering
 
 !> \brief Update some flags in domain module [ is_uneven, is_mpi_noncart, is_refined, is_multicg ]
 

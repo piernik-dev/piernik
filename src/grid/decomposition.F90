@@ -36,29 +36,29 @@
 
 module decomposition
 
-   use constants, only: ndims
+   use constants, only: ndims, xdim, zdim, LO, HI
    use primes,    only: primes_T
 
    implicit none
 
    private
-   public :: cleanup_decomposition, init_decomposition, set_pse_sel, box_T, cuboids
+   public :: cleanup_decomposition, init_decomposition, box_T, cuboid
 
-   type :: cuboids
-      integer(kind=8), dimension(:,:,:), allocatable :: sel !< list of grid chunks (:, xdim:zdim, LO:HI)
-   end type cuboids
+   type :: cuboid
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se !< grid piece
+      integer(kind=8) :: id                              !< piece number (set e.g. by Hilbert ordering)
+   end type cuboid
 
    !> \brief A box (or rectangle) within a certain refinement level to be decomposed into smaller pieces
    type :: box_T
       integer(kind=4), dimension(ndims) :: n_d          !< number of grid cells
       integer(kind=8), dimension(ndims) :: off          !< offset (with respect to the base level, counted on own level)
-      type(cuboids), dimension(:), allocatable :: pse   !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
+      type(cuboid), dimension(:), allocatable :: pse    !< list of grid pieces
 
     contains
 
       procedure :: decompose_patch                      !< Main wrapper for a block decomposer
       procedure :: allocate_pse                         !< allocate the segment list
-      procedure :: deallocate_pse                       !< deallocate the segment list
 
       procedure, private :: decompose_patch_int         !< Compute allowed domain decomposition
       procedure, private :: cartesian_tiling            !< Decomposes the box into a topologically cartesian grid
@@ -255,7 +255,7 @@ contains
       use dataio_pub, only: printinfo, die
       use domain,     only: dom, use_comm3d
       use mpi,        only: MPI_COMM_NULL
-      use mpisetup,   only: master, proc, nproc, mpi_err
+      use mpisetup,   only: master, nproc, mpi_err
 
       implicit none
 
@@ -300,12 +300,10 @@ contains
             endif
          endif
          where (dom%has_dir(:))
-            patch%pse(p)%sel(I_ONE, :, LO) = (patch%n_d(:) *  pc(:) ) / p_size(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
-            patch%pse(p)%sel(I_ONE, :, HI) = (patch%n_d(:) * (pc(:)+1))/p_size(:) - 1 ! offset of high boundaries of the local domain (n_d(:) - 1 at right external boundaries)
+            patch%pse(p+1)%se(:, LO) = (patch%n_d(:) *  pc(:) ) / p_size(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
+            patch%pse(p+1)%se(:, HI) = (patch%n_d(:) * (pc(:)+1))/p_size(:) - 1 ! offset of high boundaries of the local domain (n_d(:) - 1 at right external boundaries)
          endwhere
       enddo
-
-      if (ubound(patch%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[decomposition:cartesian_tiling] No multiblock support.")
 
    end subroutine cartesian_tiling
 
@@ -319,8 +317,8 @@ contains
    subroutine choppy_tiling(patch, p_size, pieces)
 
       use constants,  only: ndims, xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE
-      use dataio_pub, only: printinfo, die
-      use mpisetup,   only: master, proc
+      use dataio_pub, only: printinfo
+      use mpisetup,   only: master
 
       implicit none
 
@@ -342,8 +340,8 @@ contains
       enddo
       do p = I_ONE, p_size(zdim)
          do px = pz_slab(p), pz_slab(p+1)-I_ONE
-            patch%pse(px)%sel(I_ONE, zdim, LO) = nint((patch%n_d(zdim) *  pz_slab(p)   ) / real(pieces))
-            patch%pse(px)%sel(I_ONE, zdim, HI) = nint((patch%n_d(zdim) *  pz_slab(p+1) ) / real(pieces)) - 1
+            patch%pse(px+1)%se(zdim, LO) = nint((patch%n_d(zdim) *  pz_slab(p)   ) / real(pieces))
+            patch%pse(px+1)%se(zdim, HI) = nint((patch%n_d(zdim) *  pz_slab(p+1) ) / real(pieces)) - 1
          enddo
          allocate(py_slab(p_size(ydim) + 1))
          py_slab(1) = I_ZERO
@@ -353,19 +351,17 @@ contains
          enddo
          do py = I_ONE, p_size(ydim)
             do px = pz_slab(p)+py_slab(py), pz_slab(p)+py_slab(py+1) - I_ONE
-               patch%pse(px)%sel(I_ONE, ydim, LO) = nint((patch%n_d(ydim) *  py_slab(py)   ) / real(pz_slab(p+1)-pz_slab(p)))
-               patch%pse(px)%sel(I_ONE, ydim, HI) = nint((patch%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - I_ONE
+               patch%pse(px+1)%se(ydim, LO) = nint((patch%n_d(ydim) *  py_slab(py)   ) / real(pz_slab(p+1)-pz_slab(p)))
+               patch%pse(px+1)%se(ydim, HI) = nint((patch%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - I_ONE
             enddo
             do px = I_ZERO, py_slab(py+1)-py_slab(py) - I_ONE
-               patch%pse(pz_slab(p)+py_slab(py)+px)%sel(I_ONE, xdim, LO) = (patch%n_d(xdim) *  px    ) / (py_slab(py+1)-py_slab(py))
-               patch%pse(pz_slab(p)+py_slab(py)+px)%sel(I_ONE, xdim, HI) = (patch%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1 ! no need to sort lengths here
+               patch%pse(pz_slab(p)+py_slab(py)+px+1)%se(xdim, LO) = (patch%n_d(xdim) *  px    ) / (py_slab(py+1)-py_slab(py))
+               patch%pse(pz_slab(p)+py_slab(py)+px+1)%se(xdim, HI) = (patch%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1 ! no need to sort lengths here
             enddo
          enddo
          if (allocated(py_slab)) deallocate(py_slab)
       enddo
       if (allocated(pz_slab)) deallocate(pz_slab)
-
-      if (ubound(patch%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[decomposition:choppy_tiling] No multiblock support.")
 
    end subroutine choppy_tiling
 
@@ -641,7 +637,6 @@ contains
       class(box_T), intent(inout) :: patch  !< the patch, which we want to be chopped into pieces
 
       integer, dimension(xdim:zdim) :: n_bl, b_loc
-      integer, dimension(xdim:zdim, LO:HI) :: se
       integer :: tot_bl, loc_bl, bl_s, bl_e
       integer, dimension(nproc) :: n_cg ! BEWARE: antiparallel
       integer, allocatable, dimension(:) :: pb ! BEWARE: antiparallel
@@ -688,20 +683,18 @@ contains
       enddo
       pb(n_cg(nproc):) = nproc-1
 
-      do p = 0, nproc-1
-         if (size(patch%pse(p)%sel(:,:,:), dim=1) /= count(pb(:) == p)) call die("[initproblem:stamp_cg] size(pse(p)%sel(:,:,:), dim=1) /= count(pb(:) == p)")
-      enddo
+!!$      do p = 0, nproc-1
+!!$         if (size(patch%pse(p)%sel(:,:,:), dim=1) /= count(pb(:) == p)) call die("[initproblem:stamp_cg] size(pse(p)%sel(:,:,:), dim=1) /= count(pb(:) == p)")
+!!$      enddo
 
-      se(:,:) = 0
       do b = 1, tot_bl
          ! pb(b) = min((b*nproc)/tot_bl, nproc-1)
          call simple_ordering(b, n_bl(:), b_loc(:)) !> \todo implement Morton and Hilbert ordering
 
          where (dom%has_dir(:))
-            se(:, LO) = b_loc(:) * bsize(xdim:zdim)
-            se(:, HI) = se(:, LO) + bsize(xdim:zdim) - 1
+            patch%pse(b)%se(:, LO) = b_loc(:) * bsize(xdim:zdim)
+            patch%pse(b)%se(:, HI) = patch%pse(b)%se(:, LO) + bsize(xdim:zdim) - 1
          endwhere
-         patch%pse(pb(b))%sel(b-n_cg(pb(b)+1)+1,:,:) = se(:,:) ! equivalent to call set_pse_sel(pb(b), b-n_cg(pb(b)+1)+1, se)
       enddo
       !> \todo implement merging to larger cuboids
 
@@ -743,7 +736,7 @@ contains
       use dataio_pub, only: warn, msg
       use domain,     only: dom, minsize
       use mpi,        only: MPI_IN_PLACE, MPI_LOGICAL, MPI_LAND
-      use mpisetup,   only: proc, comm, mpi_err
+      use mpisetup,   only: comm, mpi_err, master
 
       implicit none
 
@@ -755,19 +748,13 @@ contains
       patch_divided = .true.
 
       if (allocated(this%pse)) then
-         if (allocated(this%pse(proc)%sel)) then
-            do p = lbound(this%pse(proc)%sel(:, :, :), dim=1), ubound(this%pse(proc)%sel(:, :, :), dim=1)
-               patch_divided = patch_divided .and. all(this%pse(proc)%sel(p, :, HI) - this%pse(proc)%sel(p, :, LO) >= minsize(:) - 1 .or. .not. dom%has_dir(:))
-               if (.not. all(this%pse(proc)%sel(p, :, HI) - this%pse(proc)%sel(p, :, LO) >= minsize(:) - 1 .or. .not. dom%has_dir(:))) then
-                  write(msg,'(3a,2(3i6,a))')"[decomposition:is_not_too_small] ",label," [",this%pse(proc)%sel(p, :, LO),"]:[",this%pse(proc)%sel(p, :, HI), "]"
-                  call warn(msg)
-               endif
-            enddo
-         else
-            patch_divided = .false.
-            write(msg,'(3a)')"[decomposition:is_not_too_small] ",label," no pse(proc)%sel"
-            call warn(msg)
-         endif
+         do p = lbound(this%pse, dim=1), ubound(this%pse, dim=1)
+            if (.not. all(this%pse(p)%se(:, HI) - this%pse(p)%se(:, LO) >= minsize(:) - 1 .or. .not. dom%has_dir(:))) then
+               patch_divided = .false.
+               write(msg,'(3a,2(3i6,a))')"[decomposition:is_not_too_small] ",label," [",this%pse(p)%se(:, LO),"]:[",this%pse(p)%se(:, HI), "]"
+               if (master) call warn(msg)
+            endif
+         enddo
       else
          patch_divided = .false.
          write(msg,'(3a)')"[decomposition:is_not_too_small] ",label," no pse"
@@ -775,26 +762,9 @@ contains
       endif
       call MPI_Allreduce(MPI_IN_PLACE, patch_divided, I_ONE, MPI_LOGICAL, MPI_LAND, comm, mpi_err)
 
-      if (allocated(this%pse) .and. .not. patch_divided) call this%deallocate_pse
+      if (allocated(this%pse) .and. .not. patch_divided) deallocate(this%pse)
 
    end function is_not_too_small
-
-!> \brief public routine for setting user decompositions
-
-   subroutine set_pse_sel(this, p, n, se)
-
-      use constants,   only: xdim, zdim, LO, HI
-
-      implicit none
-
-      class(box_T),                         intent(inout) :: this
-      integer(kind=4),                      intent(in)    :: p            !< process
-      integer,                              intent(in)    :: n            !< block number
-      integer, dimension(xdim:zdim, LO:HI), intent(in)    :: se           !< segment
-
-      this%pse(p)%sel(n,:,:) = se(:,:)
-
-   end subroutine set_pse_sel
 
 !>
 !! \brief allocate the segment list
@@ -804,9 +774,8 @@ contains
 
    subroutine allocate_pse(patch, n_cg)
 
-      use constants,   only: xdim, zdim, LO, HI, I_ONE
       use dataio_pub,  only: die
-      use mpisetup,    only: FIRST, LAST, nproc
+      use mpisetup,    only: nproc
 
       implicit none
 
@@ -816,38 +785,16 @@ contains
       integer :: p
 
       if (allocated(patch%pse)) call die("[decomposition:allocate_pse] pse already allocated")
-      allocate(patch%pse(FIRST:LAST))
-      do p = FIRST, LAST
-         if (present(n_cg)) then
-            !if (n_cg(p+1) > 0)
-            allocate(patch%pse(p)%sel(n_cg(p+1), xdim:zdim, LO:HI))
-         else
-            allocate(patch%pse(p)%sel(I_ONE, xdim:zdim, LO:HI))
-         endif
-         patch%pse(p)%sel(:, :, :) = 0
+      if (present(n_cg)) then
+         !if (n_cg(p+1) > 0)
+         allocate(patch%pse(sum(n_cg(:))))
+      else
+         allocate(patch%pse(nproc))
+      endif
+      do p = lbound(patch%pse, dim=1), ubound(patch%pse, dim=1)
+         patch%pse(p)%se(:, :) = 0
       enddo
 
    end subroutine allocate_pse
-
-!> \brief deallocate the segment list
-
-   subroutine deallocate_pse(patch)
-
-      use mpisetup, only: FIRST, LAST
-
-      implicit none
-
-      class(box_T), intent(inout) :: patch
-
-      integer :: p
-
-      if (allocated(patch%pse)) then
-         do p = FIRST, LAST
-            deallocate(patch%pse(p)%sel)
-         enddo
-         deallocate(patch%pse)
-      endif
-
-   end subroutine deallocate_pse
 
 end module decomposition
