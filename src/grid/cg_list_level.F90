@@ -977,7 +977,7 @@ contains
       use cg_list_global, only: all_cg
       use constants,      only: I_ONE, xdim, zdim, LO, HI
       use dataio_pub,     only: warn, die
-      use decomposition,  only: cdd
+      use cart_comm,      only: cdd
       use domain,         only: is_mpi_noncart, is_multicg, is_refined, is_uneven
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
@@ -1089,7 +1089,7 @@ contains
       use mpi,            only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,       only: mpi_err, FIRST, LAST, procmask
       use named_array,    only: wna
-      use decomposition,  only: cdd
+      use cart_comm,      only: cdd
 
       implicit none
 

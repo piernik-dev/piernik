@@ -264,7 +264,7 @@ contains
       use cg_list_bnd,   only: leaves
       use constants,     only: DST, GEO_RPZ, xdim, ydim, zdim
       use dataio_pub,    only: msg, printinfo, die
-      use decomposition, only: cdd
+      use cart_comm,     only: cdd
       use domain,        only: dom, is_multicg
       use fluidindex,    only: flind
       use fluidtypes,    only: component_fluid

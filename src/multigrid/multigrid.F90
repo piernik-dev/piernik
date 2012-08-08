@@ -85,7 +85,7 @@ contains
       use constants,           only: PIERNIK_INIT_GRID, LO, HI, I_ONE, O_INJ, O_LIN, O_I2, refinement_factor, dirtyH, base_level_offset
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
-      use decomposition,       only: cdd
+      use cart_comm,           only: cdd
       use domain,              only: dom, is_uneven, minsize
       use global,              only: dirty_debug, do_ascii_dump
       use grid_cont,           only: grid_container

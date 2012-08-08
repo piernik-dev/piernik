@@ -76,7 +76,7 @@ contains
       use cg_list_global, only: all_cg
       use constants,      only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE, wcr_n
       use dataio_pub,     only: die
-      use decomposition,  only: cdd
+      use cart_comm,      only: cdd
       use domain,         only: dom
       use cg_list,        only: cg_list_element
       use cg_list_bnd,    only: leaves

@@ -158,7 +158,7 @@ contains
       use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
-      use decomposition, only: cdd
+      use cart_comm,     only: cdd
       use domain,        only: dom, is_uneven, is_multicg
       use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_COMM_NULL
       use mpisetup,      only: buffer_dim, comm, mpi_err, master, slave, ibuff, cbuff, rbuff, lbuff, FIRST, nproc
@@ -393,7 +393,7 @@ contains
       use cg_list_level,  only: cg_list_level_T, finest, coarsest
       use constants,      only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, varlen, xdim, ydim, zdim
       use dataio_pub,     only: die, warn, printinfo, msg
-      use decomposition,  only: cdd
+      use cart_comm,      only: cdd
       use domain,         only: dom
       use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container

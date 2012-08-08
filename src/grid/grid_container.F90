@@ -240,7 +240,7 @@ contains
       use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float,refinement_factor, &
            &                   FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_COR
       use dataio_pub,    only: die, warn, msg, code_progress
-      use decomposition, only: cdd
+      use cart_comm,     only: cdd
       use domain,        only: dom
       use mpi,           only: MPI_COMM_NULL
       use mpisetup,      only: nproc, inflate_req

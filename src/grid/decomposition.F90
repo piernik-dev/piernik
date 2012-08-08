@@ -38,14 +38,11 @@ module decomposition
 
    use constants, only: ndims
    use primes,    only: primes_T
-   use cart_comm, only: cart_decomposition
 
    implicit none
 
    private
-   public :: cleanup_decomposition, init_decomposition, set_pse_sel, box_T, cuboids, cdd
-
-   type(cart_decomposition) :: cdd !< Cartesian Domain Decomposition stuff
+   public :: cleanup_decomposition, init_decomposition, set_pse_sel, box_T, cuboids
 
    type :: cuboids
       integer(kind=8), dimension(:,:,:), allocatable :: sel !< list of grid chunks (:, xdim:zdim, LO:HI)
@@ -80,6 +77,7 @@ contains
 
    subroutine init_decomposition
 
+      use cart_comm, only: cdd
       use mpisetup,  only: nproc
 
       implicit none
@@ -92,6 +90,8 @@ contains
 !> \brief Free the resources
 
    subroutine cleanup_decomposition
+
+      use cart_comm, only: cdd
 
       implicit none
 
@@ -250,6 +250,7 @@ contains
 
    subroutine cartesian_tiling(patch, p_size, pieces)
 
+      use cart_comm,  only: cdd
       use constants,  only: xdim, ydim, ndims, LO, HI, I_ZERO, I_ONE
       use dataio_pub, only: printinfo, die
       use domain,     only: dom, use_comm3d

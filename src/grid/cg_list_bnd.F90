@@ -109,7 +109,7 @@ contains
 
       use constants,     only: xdim, zdim, I_ONE, I_TWO
       use dataio_pub,    only: die, warn
-      use decomposition, only: cdd
+      use cart_comm,     only: cdd
       use domain,        only: dom
       use cg_list,       only: cg_list_element
       use grid_cont,     only: grid_container
@@ -216,7 +216,7 @@ contains
       use constants,     only: ARR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, I_TWO, I_THREE, LO, HI, &
            &                   BND_PER, BND_MPI, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
       use dataio_pub,    only: die, msg
-      use decomposition, only: cdd
+      use cart_comm,     only: cdd
       use domain,        only: dom
       use cg_list,       only: cg_list_element
       use grid_cont,     only: grid_container

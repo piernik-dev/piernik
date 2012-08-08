@@ -40,7 +40,7 @@ module cart_comm
    implicit none
 
    private
-   public :: cart_decomposition
+   public :: cdd
 
    type cart_decomposition
       integer(kind=4)                          :: comm3d  !< cartesian communicator
@@ -54,6 +54,8 @@ module cart_comm
        procedure :: cleanup   !< free the resources
        procedure :: init_cart !< initialize Cartesian communicator
    end type cart_decomposition
+
+   type(cart_decomposition) :: cdd !< Cartesian Domain Decomposition stuff for global decompositions
 
 contains
 

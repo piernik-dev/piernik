@@ -833,7 +833,7 @@ contains
       use cg_list_global, only: all_cg
       use constants,      only: xdim, ydim, zdim, ndims, MAXL, I_ONE
       use dataio_pub,     only: die
-      use decomposition,  only: cdd
+      use cart_comm,      only: cdd
       use domain,         only: is_mpi_noncart, is_multicg, dom
       use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
