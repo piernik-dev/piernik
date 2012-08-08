@@ -67,6 +67,7 @@ module cg_list_level
       procedure, private :: mpi_bnd_types      !< create MPI types for boundary exchanges
       procedure :: print_segments              !< print detailed information about current level decomposition
       procedure :: add_patch                   !< add a new piece of grid to the current level and decompose it
+      procedure, private :: update_decomposition_properties !< Update some flags in domain module
 
       ! Prolongation and restriction
       procedure, private :: vertical_prep      !< initialize prolongation and restriction targets
@@ -976,12 +977,9 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: I_ONE, xdim, zdim, LO, HI
-      use dataio_pub,     only: warn, die
-      use cart_comm,      only: cdd
-      use domain,         only: is_mpi_noncart, is_multicg, is_refined, is_uneven
+      use dataio_pub,     only: die
       use grid_cont,      only: grid_container
-      use mpi,            only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
-      use mpisetup,       only: proc, comm, mpi_err
+      use mpisetup,       only: proc
 
       implicit none
 
@@ -999,21 +997,11 @@ contains
          this%pse(i)%sel(:,:,:) = this%patches(I_ONE)%pse(i)%sel(:,:,:)
       enddo
 
+      call this%update_decomposition_properties
+
 !#ifdef VERBOSE
       call this%print_segments
 !#endif /* VERBOSE */
-
-      ! Analyze the decomposition and set up [ is_uneven, is_mpi_noncart, is_refined, ... ]
-      ! \todo Try to move this is_* computation somewhere else
-      is_multicg = is_multicg .or. (ubound(this%pse(proc)%sel(:, :, :), dim=1) > 1)
-      call MPI_Allreduce(MPI_IN_PLACE, is_multicg, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
-      if (is_multicg .and. cdd%comm3d /= MPI_COMM_NULL) call die("[cg_list_level:init_all_new_cg] is_multicg cannot be used with comm3d")
-      if (is_refined) then
-         is_mpi_noncart = .true.
-         is_multicg = .true.
-      endif
-      if (is_mpi_noncart) is_uneven = .true.
-      if (is_refined) call warn("[cg_list_level:init_all_new_cg] Refinements are not implemented")
 
       do gr_id = lbound(this%pse(proc)%sel(:,:,:), dim=1), ubound(this%pse(proc)%sel(:,:,:), dim=1)
          call this%add
@@ -1031,6 +1019,34 @@ contains
       call all_cg%update_req
 
    end subroutine init_all_new_cg
+
+!> \brief Update some flags in domain module [ is_uneven, is_mpi_noncart, is_refined, is_multicg ]
+
+   subroutine update_decomposition_properties(this)
+
+      use cart_comm, only: cdd
+      use constants, only: I_ONE
+      use domain,    only: is_mpi_noncart, is_multicg, is_refined, is_uneven
+      use mpi,       only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
+      use mpisetup,  only: proc, comm, mpi_err
+
+      implicit none
+
+      class(cg_list_level_T), intent(inout) :: this
+
+      is_multicg = is_multicg .or. (ubound(this%pse(proc)%sel(:, :, :), dim=1) > 1)
+      call MPI_Allreduce(MPI_IN_PLACE, is_multicg, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
+      if (is_multicg .and. cdd%comm3d /= MPI_COMM_NULL) call die("[cg_list_level:update_decomposition_properties] is_multicg cannot be used with comm3d")
+
+      ! if (.not. associated(this%finer)) ! is_refined == "top level is partial"
+      if (is_refined) then
+         is_mpi_noncart = .true.
+         is_multicg = .true.
+         call warn("[cg_list_level:update_decomposition_properties] Refinements are not implemented")
+      endif
+      if (is_mpi_noncart) is_uneven = .true.
+
+   end subroutine update_decomposition_properties
 
 !> \brief Count all cg on current level. Useful for computing tags in vertical_prep
 
