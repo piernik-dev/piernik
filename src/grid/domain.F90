@@ -81,10 +81,9 @@ module domain
 
     contains
 
-      procedure :: set_derived
-      procedure :: translate_bnds_to_ints
-      procedure :: print_me
-      procedure :: init => init_domain_container
+      procedure :: translate_bnds_to_ints     !< Convert strings to integer-coded boundary types
+      procedure :: print_me                   !< Print computational domain details
+      procedure :: init                       !< Initialize all variables of domain_container type
 
    end type domain_container
 
@@ -299,6 +298,12 @@ contains
 
       call dom%init(nb, n_d, bnds, edges, geometry)
 
+      where (dom%has_dir(:))
+         minsize(:) = max(minsize(:), dom%nb)
+      elsewhere
+         minsize(:) = 1
+      endwhere
+
 #ifdef MULTIGRID
       if (allow_AMR .and. master) call warn("[domain:init_domain] Multigrid solver is not yet capable of using AMR domains.")
       allow_AMR = .false.
@@ -327,7 +332,6 @@ contains
 
    end subroutine cleanup_domain
 
-!-----------------------------------------------------------------------------
 !>
 !! \brief An interpreter of string-defined boundary types
 !!
@@ -336,8 +340,7 @@ contains
 
    subroutine translate_bnds_to_ints(this, bnds)
 
-      use constants, only: xdim, zdim, ndims, LO, HI, &
-         &                 BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER, BND_INVALID
+      use constants, only: xdim, zdim, ndims, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER, BND_INVALID
 
       implicit none
 
@@ -376,48 +379,7 @@ contains
       enddo
    end subroutine translate_bnds_to_ints
 
-!-----------------------------------------------------------------------------
-
-   subroutine set_derived(this)
-
-      use constants,  only: xdim, ydim, zdim, LO, HI, BND_PER, BND_SHE, I_TWO
-      use dataio_pub, only: die
-
-      implicit none
-
-      class(domain_container), intent(inout) :: this  !< object invoking type-bound procedure
-      integer                                :: d
-
-      this%has_dir(:) = this%n_d(:) > 1  ! redundant
-
-      this%periodic(:) = .false.
-      do d = xdim, zdim
-         if ((any(this%bnd(d, :) == BND_PER) .or. (d==xdim .and. any(this%bnd(d, :) == BND_SHE))) .and. this%has_dir(d)) then
-            this%periodic(d) = .true.
-            if (this%bnd(d, LO) /= this%bnd(d, HI)) call die("[types:set_derived] Periodic BC do not match")
-         endif
-      enddo
-      if (any(this%bnd(ydim:zdim, :) == BND_SHE)) call die("[types:set_derived] Shearing BC not allowed for y- and z-direction")
-
-      ! auxiliary lengths
-      this%L_(:) = this%edge(:, HI) - this%edge(:, LO)
-      this%C_(:) = (this%edge(:, HI) + this%edge(:, LO))/2
-
-      !volume and total grid sizes
-      this%Vol = product(this%L_(:), mask=this%has_dir(:))
-      !> \deprecated BEWARE: Vol computed above is not true for non-cartesian geometry
-
-      where (this%has_dir(:))
-         this%n_t(:) = this%n_d(:) + I_TWO * this%nb
-         minsize(:) = max(minsize(:), this%nb)
-      elsewhere
-         this%n_t(:) = 1
-         minsize(:) = 1
-      endwhere
-
-   end subroutine set_derived
-
-!-----------------------------------------------------------------------------
+!> \brief Print computational domain details
 
    subroutine print_me(this)
 
@@ -442,9 +404,11 @@ contains
 
    end subroutine print_me
 
-   subroutine init_domain_container(this, nb, n_d, bnds, edges, geometry)
+!> \brief Initialize all variables of domain_container type
 
-      use constants,  only: ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, I_ONE
+   subroutine init(this, nb, n_d, bnds, edges, geometry)
+
+      use constants,  only: ndims, LO, HI, big_float, dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, GEO_INVALID, BND_PER, BND_REF, BND_SHE, I_ONE, I_TWO
       use dataio_pub, only: die, warn, msg
 
       implicit none
@@ -457,6 +421,7 @@ contains
       character(len=*),                          intent(in)    :: geometry !< define system of coordinates: "cartesian" or "cylindrical"
 
       real :: xmno, ymno, ymxo
+      integer :: d
 
       ! Sanitize input parameters, if possible
       this%n_d(:) = max(I_ONE, n_d(:))
@@ -539,8 +504,33 @@ contains
 
       this%edge(:,:) = edges(:,:)
 
-      call this%set_derived ! finish up with the rest of domain_container members
+      ! finish up with the rest of domain_container members
 
-   end subroutine init_domain_container
+      this%has_dir(:) = this%n_d(:) > 1  ! redundant
+
+      this%periodic(:) = .false.
+      do d = xdim, zdim
+         if ((any(this%bnd(d, :) == BND_PER) .or. (d==xdim .and. any(this%bnd(d, :) == BND_SHE))) .and. this%has_dir(d)) then
+            this%periodic(d) = .true.
+            if (this%bnd(d, LO) /= this%bnd(d, HI)) call die("[types:set_derived] Periodic BC do not match")
+         endif
+      enddo
+      if (any(this%bnd(ydim:zdim, :) == BND_SHE)) call die("[types:set_derived] Shearing BC not allowed for y- and z-direction")
+
+      ! auxiliary lengths
+      this%L_(:) = this%edge(:, HI) - this%edge(:, LO)
+      this%C_(:) = (this%edge(:, HI) + this%edge(:, LO))/2
+
+      !volume and total grid sizes
+      this%Vol = product(this%L_(:), mask=this%has_dir(:))
+      !> \deprecated BEWARE: Vol computed above is not true for non-cartesian geometry
+
+      where (this%has_dir(:))
+         this%n_t(:) = this%n_d(:) + I_TWO * this%nb
+      elsewhere
+         this%n_t(:) = 1
+      endwhere
+
+   end subroutine init
 
 end module domain
