@@ -251,7 +251,7 @@ contains
                cg%mg%bnd_z(:, :, :) = dirtyH
             endif
 
-            if (.not. associated(cg%wa)) cg%wa => cg%q(all_cg%wai)%arr ! required for CR diffusion
+            if (.not. associated(cg%wa)) cg%wa => cg%q(qna%wai)%arr ! required for CR diffusion
 
             cgl => cgl%nxt
          enddo

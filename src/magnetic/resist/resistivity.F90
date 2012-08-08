@@ -381,7 +381,6 @@ contains
 
    subroutine diffuseb(ibdir, sdir)
 
-      use cg_list_global, only: all_cg
       use constants,      only: xdim, ydim, zdim, ndims, half, I_ONE, wcu_n, idm, uv, INT4
       use domain,         only: dom
       use cg_list,        only: cg_list_element
@@ -389,7 +388,7 @@ contains
       use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use magboundaries,  only: bnd_emf
-      use named_array,    only: qna
+      use named_array,    only: qna, wna
 
       implicit none
 
@@ -429,7 +428,7 @@ contains
 
          do i1 = lbound(cg%q(wcu_i)%arr,n1), ubound(cg%q(wcu_i)%arr,n1)
             do i2 = lbound(cg%q(wcu_i)%arr,n2), ubound(cg%q(wcu_i)%arr,n2)
-               b1d   => cg%w(all_cg%bi)%get_sweep(sdir,ibdir,i1,i2)
+               b1d   => cg%w(wna%bi)%get_sweep(sdir,ibdir,i1,i2)
                eta1d => cg%q(eta_i    )%get_sweep(sdir,      i1,i2)
                wcu1d => cg%q(wcu_i    )%get_sweep(sdir,      i1,i2)
                call tvdd_1d(b1d, eta1d, cg%idl(sdir), dt, wcu1d)

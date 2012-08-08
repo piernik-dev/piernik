@@ -133,12 +133,12 @@ contains
 !! in particular in http://turbulence.pha.jhu.edu/Database-functions.pdf
 !<
    subroutine div_v_6th_lp(ifluid, cg)
-      use cg_list_global, only: all_cg
+
       use constants,      only: xdim, ydim, zdim, pdims, big
       use domain,         only: dom
       use fluidindex,     only: iarr_all_dn
       use grid_cont,      only: grid_container
-      use named_array,    only: qna
+      use named_array,    only: qna, wna
 
       implicit none
 
@@ -156,8 +156,8 @@ contains
          do i2 = 1, cg%n_(pdims(dir, ydim))
             do i3 = 1, cg%n_(pdims(dir, zdim))
                divvel => cg%q(qna%ind(divv_n))%get_sweep(dir, i2, i3)
-               mom  => cg%w(all_cg%fi)%get_sweep(dir, iarr_all_dn(ifluid) + dir, i2, i3)
-               dens => cg%w(all_cg%fi)%get_sweep(dir, iarr_all_dn(ifluid)      , i2, i3)
+               mom  => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid) + dir, i2, i3)
+               dens => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)      , i2, i3)
                associate( &
                   vv => mom(:) / dens(:), &
                   nn => cg%n_(dir), &
@@ -182,12 +182,11 @@ contains
 
    subroutine div_v_1st(ifluid, cg)
 
-      use cg_list_global, only: all_cg
       use constants,      only: xdim, ydim, zdim, pdims, half
       use domain,         only: dom
       use fluidindex,     only: iarr_all_dn
       use grid_cont,      only: grid_container
-      use named_array,    only: qna
+      use named_array,    only: qna, wna
 
       implicit none
 
@@ -204,8 +203,8 @@ contains
          do i2 = 1, cg%n_(pdims(dir, ydim))
             do i3 = 1, cg%n_(pdims(dir, zdim))
                divvel => cg%q(qna%ind(divv_n))%get_sweep(dir, i2, i3)
-               mom    => cg%w(all_cg%fi)%get_sweep(dir, iarr_all_dn(ifluid)+dir, i2, i3)
-               dn     => cg%w(all_cg%fi)%get_sweep(dir, iarr_all_dn(ifluid)    , i2, i3)
+               mom    => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)+dir, i2, i3)
+               dn     => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)    , i2, i3)
                associate( &
                   vv => (mom(:) / dn(:)), &
                   nn => cg%n_(dir), &

@@ -95,7 +95,6 @@ contains
       use constants,       only: pdims, xdim, zdim, cs_i2_n
       use fluidboundaries, only: all_fluid_boundaries
       use fluidindex,      only: iarr_all_swp
-      use cg_list,         only: all_cg
       use grid_cont,       only: grid_container
 
       implicit none
@@ -119,7 +118,7 @@ contains
 
       do i2 = 1, cg%n_(pdims(ddim,3))
          do i1 = 1, cg%n_(pdims(ddim,2))
-            pu => cg%w(all_cg%fi)%get_sweep(ddim,i1,i2)
+            pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
             if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
 
             u1d(iarr_all_swp(ddim,:),:) = pu(:,:)

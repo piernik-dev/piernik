@@ -55,12 +55,6 @@ module cg_list_global
 
       integer(kind=4) :: ord_prolong_nb                !< Maximum number of boundary cells required for prolongation
 
-      !< indices of the most commonly used arrays stored in cg%w and cg%q
-      !< \todo consider moving these shortcuts to named_array
-      integer :: fi                                    !< fluid           : cg%w(all_cg%fi)
-      integer :: bi                                    !< magnetic field  : cg%w(all_cg%bi)
-      integer :: wai                                   !< auxiliary array : cg%q(all_cg%wai)
-
     contains
       procedure         :: reg_var         !< Add a variable (cg%q or cg%w) to all grid containers
       procedure         :: register_fluids !< Register all crucial fields, which we cannot live without
@@ -80,7 +74,7 @@ contains
 
    subroutine reg_var(this, name, vital, restart_mode, ord_prolong, dim4, position, multigrid)
 
-      use constants,   only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4, fluid_n, mag_n, wa_n
+      use constants,   only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4
       use dataio_pub,  only: die, warn, msg
       use domain,      only: dom
       use cg_list,     only: cg_list_element
@@ -145,15 +139,6 @@ contains
       else
          call qna%add2lst(na_var(name, vit, rm, op, pos, d4, mg))
       endif
-
-      select case (name)
-         case (fluid_n)
-            if (present(dim4)) this%fi  = wna%ind(fluid_n)
-         case (mag_n)
-            if (present(dim4)) this%bi  = wna%ind(mag_n)
-         case (wa_n)
-            if (.not. present(dim4)) this%wai = qna%ind(wa_n)
-      end select
 
       select case (op)
          case (O_INJ)

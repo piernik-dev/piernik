@@ -88,7 +88,7 @@ contains
 
       integer(kind=4) :: dim4 !< BEWARE: workaround for gcc-4.6 bug
 
-      dim4 = wna%lst(all_cg%fi)%dim4
+      dim4 = wna%lst(wna%fi)%dim4
       call all_cg%reg_var(inid_n, restart_mode = AT_NO_B, dim4 = dim4)
 
    end subroutine register_user_var
@@ -558,7 +558,6 @@ contains
 !-----------------------------------------------------------------------------
    subroutine kepler_problem_post_restart
 
-      use cg_list_global,  only: all_cg
       use constants,       only: b0_n
       use fluidboundaries, only: all_fluid_boundaries
       use cg_list,         only: cg_list_element
@@ -593,7 +592,7 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%u  => cgl%cg%w(all_cg%fi)%arr ! Quick! Revert to sane state before anyone notices
+         cgl%cg%u  => cgl%cg%w(wna%fi)%arr ! Quick! Revert to sane state before anyone notices
          cgl => cgl%nxt
       enddo
 

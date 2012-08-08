@@ -53,6 +53,7 @@ module named_array
       logical                                    :: multigrid     !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
    end type na_var
 
+   !> \brief the generic list of named arrays with supporting routines
    type :: na_var_list
       type(na_var), dimension(:), allocatable :: lst
     contains
@@ -62,8 +63,21 @@ module named_array
       procedure :: add2lst                                       !< Add a named array properties to the list
    end type na_var_list
 
-   type(na_var_list) :: qna !< list of registered 3D named arrays
-   type(na_var_list) :: wna !< list of registered 4D named arrays
+   ! types with indices of the most commonly used arrays stored in cg%w and cg%q
+
+   !> \brief the most commonly used 3D named array is wa, thus we add a shortcut here
+   type, extends(na_var_list) :: na_var_list_q
+      integer :: wai                                   !< auxiliary array : cg%q(qna%wai)
+   end type na_var_list_q
+
+   !> \brief the most commonly used 4D named arraya are u and b, thus we add shortcuts here
+   type, extends(na_var_list) :: na_var_list_w
+      integer :: fi                                    !< fluid           : cg%w(wna%fi)
+      integer :: bi                                    !< magnetic field  : cg%w(wna%bi)
+   end type na_var_list_w
+
+   type(na_var_list_q) :: qna !< list of registered 3D named arrays
+   type(na_var_list_w) :: wna !< list of registered 4D named arrays
 
    real, dimension(:,:,:),   pointer :: p3   !< auxiliary pointer to 3D named_arrays
    real, dimension(:,:,:,:), pointer :: p4   !< auxiliary pointer to 4D named_arrays
@@ -223,7 +237,8 @@ contains
 
    subroutine add2lst(this, element)
 
-      use dataio_pub,  only: die, msg
+      use constants,  only: fluid_n, mag_n, wa_n
+      use dataio_pub, only: die, msg
 
       implicit none
 
@@ -246,6 +261,14 @@ contains
          !! \warning slight memory leak here, e.g. in use at exit: 572 bytes in 115 blocks, perhaps associated with na_var%position
       endif
       this%lst(ubound(this%lst(:), dim=1)) = element
+
+      select type(this)
+         type is (na_var_list_w)
+            if (element%name == fluid_n) this%fi  = ubound(this%lst(:), dim=1)
+            if (element%name == mag_n)   this%bi  = ubound(this%lst(:), dim=1)
+         type is (na_var_list_q)
+            if (element%name == wa_n)    this%wai = ubound(this%lst(:), dim=1)
+      end select
 
    end subroutine add2lst
 

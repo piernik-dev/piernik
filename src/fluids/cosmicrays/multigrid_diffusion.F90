@@ -356,6 +356,7 @@ contains
       use cg_list_bnd,    only: leaves
       use initcosmicrays, only: iarr_crs
       use multigridvars,  only: source, defect, correction
+      use named_array,    only: qna, wna
 
       implicit none
 
@@ -366,9 +367,9 @@ contains
       call all_cg%set_dirty(defect)
       ! Trick residual subroutine to initialize with: u + (1-theta) dt grad (c grad u)
       if (diff_theta /= 0.) then
-         call leaves%wq_copy(all_cg%fi, int(iarr_crs(cr_id)), all_cg%wai)
-         call leaves%q_lin_comb( [ ind_val(all_cg%wai, (1. -1./diff_theta)) ], correction)
-         call leaves%q_lin_comb( [ ind_val(all_cg%wai,     -1./diff_theta ) ], defect)
+         call leaves%wq_copy(wna%fi, int(iarr_crs(cr_id)), qna%wai)
+         call leaves%q_lin_comb( [ ind_val(qna%wai, (1. -1./diff_theta)) ], correction)
+         call leaves%q_lin_comb( [ ind_val(qna%wai,     -1./diff_theta ) ], defect)
          call residual(finest, defect, correction, source, cr_id)
       else
          call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
@@ -395,13 +396,14 @@ contains
       use cg_list_bnd,    only: leaves
       use initcosmicrays, only: iarr_crs
       use multigridvars,  only: solution
+      use named_array,    only: wna
 
       implicit none
 
       integer, intent(in) :: cr_id !< CR component index
 
       call all_cg%set_dirty(solution)
-      call leaves%wq_copy(all_cg%fi, int(iarr_crs(cr_id)), solution)
+      call leaves%wq_copy(wna%fi, int(iarr_crs(cr_id)), solution)
       call finest%check_dirty(solution, "init solution")
 
    end subroutine init_solution
@@ -422,7 +424,7 @@ contains
       use cg_list_bnd,    only: leaves
       use cg_list,        only: cg_list_element, dirty_label
       use grid_cont,      only: grid_container
-      use named_array,    only: p3, p4
+      use named_array,    only: p3, p4, wna
 
       implicit none
 
@@ -438,13 +440,13 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
             p3 => cg%q(idiffb(ib))%span(cg%ijkse(:,LO)-dom%D_(:),cg%ijkse(:,HI)+dom%D_(:))
-            p4 => cg%w(all_cg%bi )%span(cg%ijkse(:,LO)-dom%D_(:),cg%ijkse(:,HI)+dom%D_(:))
+            p4 => cg%w(wna%bi )%span(cg%ijkse(:,LO)-dom%D_(:),cg%ijkse(:,HI)+dom%D_(:))
             p3 = p4(ib,:,:,:)
             cgl => cgl%nxt
          enddo
 #else
          ! This works well but copies all guardcells, which is not necessary
-         call leaves%wq_copy(all_cg%bi, ib, idiffb(ib))
+         call leaves%wq_copy(wna%bi, ib, idiffb(ib))
 #endif
          call finest%restrict_to_floor_q_1var(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
 
@@ -479,6 +481,7 @@ contains
       use initcosmicrays, only: iarr_crs
       use mpisetup,       only: master
       use multigridvars,  only: source, defect, solution, correction, ts, tot_ts
+      use named_array,    only: wna
       use timer,          only: set_timer
 
       implicit none
@@ -574,7 +577,7 @@ contains
 !      call finest%arr3d_boundaries(solution, nb = I_ONE, bnd_type = diff_extbnd)
 !      cg%u%span(iarr_crs(cr_id),cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_) = cg%q(solution)%span(cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_)
 
-      call leaves%qw_copy(solution, all_cg%fi, int(iarr_crs(cr_id)))
+      call leaves%qw_copy(solution, wna%fi, int(iarr_crs(cr_id)))
 
    end subroutine vcycle_hg
 
@@ -657,14 +660,13 @@ contains
 
    subroutine residual(curl, src, soln, def, cr_id)
 
-      use cg_list_global, only: all_cg
       use cg_list_level,  only: cg_list_level_T
       use constants,      only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
       use domain,         only: dom
       use cg_list,        only: cg_list_element, ind_val
       use global,         only: dt
       use grid_cont,      only: grid_container
-      use named_array,    only: p3
+      use named_array,    only: p3, qna
 
       implicit none
 
@@ -700,7 +702,7 @@ contains
                enddo
 
                p3 => cg%q(def)%span(cg%ijkse)
-               p3 = p3 - (cg%q(all_cg%wai)%span(int(iml, kind=4), int(imh, kind=4)) - cg%q(all_cg%wai)%span(cg%ijkse) ) * diff_theta * dt * cg%idl(idir)
+               p3 = p3 - (cg%q(qna%wai)%span(int(iml, kind=4), int(imh, kind=4)) - cg%q(qna%wai)%span(cg%ijkse) ) * diff_theta * dt * cg%idl(idir)
             endif
          enddo
          cgl => cgl%nxt
@@ -721,13 +723,13 @@ contains
 
    subroutine approximate_solution(curl, src, soln, cr_id)
 
-      use cg_list_global, only: all_cg
       use cg_list_level,  only: cg_list_level_T, coarsest
       use constants,      only: xdim, ydim, zdim, one, half, I_ONE, ndims, BND_NONE
       use domain,         only: dom
       use cg_list,        only: cg_list_element
       use global,         only: dt
       use grid_cont,      only: grid_container
+      use named_array,    only: qna
 
       implicit none
 
@@ -792,7 +794,7 @@ contains
                            call diff_flux(idir, im, soln, cg, cr_id, Keff1)
                            call diff_flux(idir, ih, soln, cg, cr_id, Keff2)
 
-                           temp = temp - (cg%q(all_cg%wai)%point(ih) - cg%wa(i, j, k)) * diff_theta * dt * cg%idl(idir)
+                           temp = temp - (cg%q(qna%wai)%point(ih) - cg%wa(i, j, k)) * diff_theta * dt * cg%idl(idir)
                            dLdu = dLdu - 2 * (Keff1 + Keff2) * cg%idl2(idir)
 
                         endif

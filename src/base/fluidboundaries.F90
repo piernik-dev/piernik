@@ -502,6 +502,7 @@ contains
       use cart_comm,      only: cdd
       use domain,         only: dom
       use mpi,            only: MPI_COMM_NULL
+      use named_array,    only: wna
 
       implicit none
 
@@ -510,7 +511,7 @@ contains
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          do dir = xdim, zdim
-            if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(all_cg%fi, dim=dir) ! should be more selective (modified leaves?)
+            if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%fi, dim=dir) ! should be more selective (modified leaves?)
          enddo
       endif
 

@@ -830,7 +830,6 @@ contains
 !<
    subroutine grav_accel2pot
 
-      use cg_list_global, only: all_cg
       use constants,      only: xdim, ydim, zdim, ndims, MAXL, I_ONE
       use dataio_pub,     only: die
       use cart_comm,      only: cdd
@@ -839,6 +838,7 @@ contains
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,       only: master, nproc, FIRST, LAST, comm, mpi_err, have_mpi
+      use named_array,    only: qna
       use types,          only: value
 
       implicit none
@@ -939,7 +939,7 @@ contains
       ddgph  = gpwork(1,1,1)-gpwork(cg%is,cg%js,cg%ks)
       gpwork = gpwork + ddgp(px,py,pz) + ddgph
       cg%wa(:,:,:) = gpwork(:,:,:)
-      call leaves%get_extremum(all_cg%wai, MAXL, gp_max)
+      call leaves%get_extremum(qna%wai, MAXL, gp_max)
 
       call MPI_Bcast(gp_max%val, I_ONE, MPI_DOUBLE_PRECISION, gp_max%proc, comm, mpi_err)
       gpwork = gpwork - gp_max%val

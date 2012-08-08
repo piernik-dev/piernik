@@ -158,7 +158,7 @@ contains
 
       integer(kind=4) :: dim4
 
-      dim4 = wna%lst(all_cg%fi)%dim4
+      dim4 = wna%lst(wna%fi)%dim4
       call all_cg%reg_var(inid_n, restart_mode = AT_NO_B, dim4 = dim4)
 
    end subroutine register_user_var

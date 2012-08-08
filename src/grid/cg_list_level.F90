@@ -1043,9 +1043,9 @@ contains
          call all_cg%add(cg)
          !> \todo add an optional argument, array of pointers to lists, where the cg should be added. Requires polymorphic array of pointers.
 
-         cg%u  => cg%w(all_cg%fi)%arr
-         cg%b  => cg%w(all_cg%bi)%arr
-         cg%wa => cg%q(all_cg%wai)%arr
+         cg%u  => cg%w(wna%fi)%arr
+         cg%b  => cg%w(wna%bi)%arr
+         cg%wa => cg%q(qna%wai)%arr
 #ifdef ISO
          cg%cs_iso2 => cg%q(qna%ind(cs_i2_n))%arr
          cg%cs_iso2(:,:,:) = cs2_max   ! set cs2 with sane values
@@ -1082,7 +1082,6 @@ contains
    subroutine mpi_bnd_types(this, cg)
 
       use constants,      only: FLUID, MAG, CR, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE, wcr_n
-      use cg_list_global, only: all_cg
       use dataio_pub,     only: die
       use domain,         only: dom
       use grid_cont,      only: grid_container, is_overlap
@@ -1206,8 +1205,8 @@ contains
 
          !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
          nc(:) = I_ONE ! set at least one component, even if there is none at all
-         if (all_cg%fi     > 0) nc(FLUID) = wna%lst(all_cg%fi)%dim4
-         if (all_cg%bi     > 0) nc(MAG)   = wna%lst(all_cg%bi)%dim4
+         if (wna%fi        > 0) nc(FLUID) = wna%lst(wna%fi)%dim4
+         if (wna%bi        > 0) nc(MAG)   = wna%lst(wna%bi)%dim4
          if (wna%exists(wcr_n)) nc(CR)    = wna%lst(wna%ind(wcr_n))%dim4
 
          do d = xdim, zdim

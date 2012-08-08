@@ -467,6 +467,7 @@ contains
       use cg_list,        only: cg_list_element
       use cg_list_bnd,    only: leaves
       use mpi,            only: MPI_COMM_NULL
+      use named_array,    only: wna
 
       implicit none
 
@@ -475,7 +476,7 @@ contains
 
       if (cdd%comm3d == MPI_COMM_NULL) then
          do dir = xdim, zdim
-            if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(all_cg%bi, dim=dir) ! should be more selective (modified leaves?)
+            if (dom%has_dir(dir)) call all_cg%internal_boundaries_4d(wna%bi, dim=dir) ! should be more selective (modified leaves?)
          enddo
       endif
 

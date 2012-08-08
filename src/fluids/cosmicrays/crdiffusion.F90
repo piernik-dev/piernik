@@ -158,7 +158,6 @@ contains
 !<
    subroutine cr_diff(crdim)
 
-      use cg_list_global, only: all_cg
       use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n, oneq, uv
       use dataio_pub,     only: die
       use domain,         only: dom
@@ -254,7 +253,7 @@ contains
          ndm = cg%n_ - idm
          hdm = 1 + idm*ndm
          ldm = hdm - idm
-         p4 => cg%w(all_cg%fi)%span(uv, int(ndm, kind=4))
+         p4 => cg%w(wna%fi)%span(uv, int(ndm, kind=4))
          p4(iarr_crs,:,:,:) = p4(iarr_crs,:,:,:) - (cg%w(wcri)%span(int(uv+idm, kind=4), cg%n_) - cg%w(wcri)%span(uv, int(ndm, kind=4)))
          cg%u(iarr_crs,hdm(xdim):cg%n_(xdim),hdm(ydim):cg%n_(ydim),hdm(zdim):cg%n_(zdim)) = cg%u(iarr_crs,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
 
