@@ -60,23 +60,24 @@ module cg_list_level
     contains
 
       ! Level management
-      procedure :: add_lev                     !< add a finer or coarser level
-      procedure :: add_lev_base                !< initialize the base level
+      procedure :: add_lev                                  !< add a finer or coarser level
+      procedure :: add_lev_base                             !< initialize the base level
       generic, public :: add_level => add_lev, add_lev_base
-      procedure :: init_all_new_cg             !< initialize newest grid container
-      procedure, private :: mpi_bnd_types      !< create MPI types for boundary exchanges
-      procedure :: print_segments              !< print detailed information about current level decomposition
-      procedure :: add_patch                   !< add a new piece of grid to the current level and decompose it
+      procedure :: init_all_new_cg                          !< initialize newest grid container
+      procedure, private :: mpi_bnd_types                   !< create MPI types for boundary exchanges
+      procedure :: print_segments                           !< print detailed information about current level decomposition
+      procedure :: add_patch                                !< add a new piece of grid to the current level and decompose it
       procedure, private :: update_decomposition_properties !< Update some flags in domain module
+      procedure, private :: distribute                      !< Get all decomposed patches and compute which pieces go to which process
 
       ! Prolongation and restriction
-      procedure, private :: vertical_prep      !< initialize prolongation and restriction targets
-      procedure, private :: update_tot_se      !< count all cg on current level for computing tags in vertical_prep
-      procedure :: prolong                     !< interpolate the grid data which has the flag vital set to this%finer level
-      procedure :: restrict                    !< interpolate the grid data which has the flag vital set from this%coarser level
-      procedure :: prolong_q_1var              !< interpolate the grid data in specified q field to this%finer level
-      procedure :: restrict_q_1var             !< interpolate the grid data in specified q field from this%coarser level
-      procedure :: restrict_to_floor_q_1var    !< restrict specified q field as much as possible
+      procedure, private :: vertical_prep                   !< initialize prolongation and restriction targets
+      procedure, private :: update_tot_se                   !< count all cg on current level for computing tags in vertical_prep
+      procedure :: prolong                                  !< interpolate the grid data which has the flag vital set to this%finer level
+      procedure :: restrict                                 !< interpolate the grid data which has the flag vital set from this%coarser level
+      procedure :: prolong_q_1var                           !< interpolate the grid data in specified q field to this%finer level
+      procedure :: restrict_q_1var                          !< interpolate the grid data in specified q field from this%coarser level
+      procedure :: restrict_to_floor_q_1var                 !< restrict specified q field as much as possible
 
       ! fine-coarse boundary exchanges may also belong to this type
    end type cg_list_level_T
@@ -976,8 +977,6 @@ contains
    subroutine init_all_new_cg(this)
 
       use cg_list_global, only: all_cg
-      use constants,      only: I_ONE, xdim, zdim, LO, HI
-      use dataio_pub,     only: die
       use grid_cont,      only: grid_container
       use mpisetup,       only: proc
 
@@ -985,23 +984,10 @@ contains
 
       class(cg_list_level_T), intent(inout) :: this
 
-      integer :: gr_id, i
+      integer :: gr_id
       type(grid_container), pointer :: cg
 
-      if (size(this%patches(:), dim=1) > 1) call die("[cg_list_level:init_all_new_cg] multiple patches per level will be supported soon")
-
-      !> \todo call here somewhat more sophisticated routine for grid block (re)distribution
-      allocate(this%pse(lbound(this%patches(I_ONE)%pse, dim=1):ubound(this%patches(I_ONE)%pse, dim=1)))
-      do i = lbound(this%pse, dim=1), ubound(this%pse, dim=1)
-         allocate(this%pse(i)%sel(size(this%patches(I_ONE)%pse(i)%sel(:,:,:), dim=1), xdim:zdim, LO:HI))
-         this%pse(i)%sel(:,:,:) = this%patches(I_ONE)%pse(i)%sel(:,:,:)
-      enddo
-
-      call this%update_decomposition_properties
-
-!#ifdef VERBOSE
-      call this%print_segments
-!#endif /* VERBOSE */
+      call this%distribute
 
       do gr_id = lbound(this%pse(proc)%sel(:,:,:), dim=1), ubound(this%pse(proc)%sel(:,:,:), dim=1)
          call this%add
@@ -1020,15 +1006,45 @@ contains
 
    end subroutine init_all_new_cg
 
+!> \brief Get all decomposed patches and compute which pieces go to which process
+
+   subroutine distribute(this)
+
+      use constants,      only: I_ONE, xdim, zdim, LO, HI
+      use dataio_pub,     only: die
+
+      implicit none
+
+      class(cg_list_level_T), intent(inout) :: this
+
+      integer :: i
+
+      if (size(this%patches(:), dim=1) > 1) call die("[cg_list_level:init_all_new_cg] multiple patches per level will be supported soon")
+
+      !> \todo call here somewhat more sophisticated routine for grid block (re)distribution
+      allocate(this%pse(lbound(this%patches(I_ONE)%pse, dim=1):ubound(this%patches(I_ONE)%pse, dim=1)))
+      do i = lbound(this%pse, dim=1), ubound(this%pse, dim=1)
+         allocate(this%pse(i)%sel(size(this%patches(I_ONE)%pse(i)%sel(:,:,:), dim=1), xdim:zdim, LO:HI))
+         this%pse(i)%sel(:,:,:) = this%patches(I_ONE)%pse(i)%sel(:,:,:)
+      enddo
+
+      call this%update_decomposition_properties
+!#ifdef VERBOSE
+      call this%print_segments
+!#endif /* VERBOSE */
+
+   end subroutine distribute
+
 !> \brief Update some flags in domain module [ is_uneven, is_mpi_noncart, is_refined, is_multicg ]
 
    subroutine update_decomposition_properties(this)
 
-      use cart_comm, only: cdd
-      use constants, only: I_ONE
-      use domain,    only: is_mpi_noncart, is_multicg, is_refined, is_uneven
-      use mpi,       only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
-      use mpisetup,  only: proc, comm, mpi_err
+      use cart_comm,  only: cdd
+      use constants,  only: I_ONE
+      use dataio_pub, only: warn, die
+      use domain,     only: is_mpi_noncart, is_multicg, is_refined, is_uneven
+      use mpi,        only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
+      use mpisetup,   only: proc, comm, mpi_err
 
       implicit none
 
