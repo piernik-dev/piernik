@@ -296,8 +296,8 @@ contains
       real, dimension(flind%fluids,size(u1,2)) :: vprim
       real, dimension(size(u1,2))              :: delta, drag
       !>
-      !! \deprecated BEWARE: this bit assumes that we have 2 fluids && u1 == u0 - \grad F
-      !! \todo 2) half-time step should be \le \frac{1}{2}\frac{c_s}{drag * \rho\prim_? |v'_d - v'_g|}
+      !! \deprecated BEWARE: this bit assumes that we have 2 fluids and \f$u_1 \equiv u_0 - \grad F\f$
+      !! \todo 2) half-time step should be \f$\le \frac{1}{2}\frac{c_s}{drag * \rho\prim_? |v'_d - v'_g|}\f$
       !! \todo 3) what if not isothermal?
       !! \todo 4) remove hardcoded integers
       !<

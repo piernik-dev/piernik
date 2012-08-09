@@ -25,28 +25,28 @@
 !!
 !! There are to sets of procedure pointers for users: @n @n
 !! imported from user_hooks module: @n @n
-!! \b problem_customize_solution - \copy user_hooks::problem_customize_solution @n @n
-!! \b problem_grace_passed       - \copy user_hooks::problem_grace_passed @n @n
-!! \b user_vars_arr_in_restart   - \copy user_hooks::user_vars_arr_in_restart @n @n
-!! \b problem_post_restart       - \copy user_hooks::problem_post_restart @n @n
-!! \b finalize_problem           - \copy user_hooks::finalize_problem @n @n
-!! \b cleanup_problem            - \copy user_hooks::cleanup_problem @n @n
-!! \b problem_refine_derefine    - \copy user_hooks::problem_refine_derefine @n @n
-!! \b custom_emf_bnd             - \copy user_hooks::custom_emf_bnd @n @n
-!! \b at_user_dims_settings      - \copy user_hooks::at_user_dims_settings @n @n
-!! \b at_user_area_settings      - \copy user_hooks::at_user_area_settings @n @n
+!! \b problem_customize_solution - \copydoc user_hooks::problem_customize_solution @n @n
+!! \b problem_grace_passed       - \copydoc user_hooks::problem_grace_passed @n @n
+!! \b user_vars_arr_in_restart   - \copydoc user_hooks::user_vars_arr_in_restart @n @n
+!! \b problem_post_restart       - \copydoc user_hooks::problem_post_restart @n @n
+!! \b finalize_problem           - \copydoc user_hooks::finalize_problem @n @n
+!! \b cleanup_problem            - \copydoc user_hooks::cleanup_problem @n @n
+!! \b problem_refine_derefine    - \copydoc user_hooks::problem_refine_derefine @n @n
+!! \b custom_emf_bnd             - \copydoc user_hooks::custom_emf_bnd @n @n
+!! \b at_user_dims_settings      - \copydoc user_hooks::at_user_dims_settings @n @n
+!! \b at_user_area_settings      - \copydoc user_hooks::at_user_area_settings @n @n
 !! @n @n
 !!
 !! imported from dataio_user module: @n @n
-!! \b user_attrs_pre       - \copy dataio_user::user_attrs_pre @n @n
-!! \b user_attrs_rd        - \copy dataio_user::user_attrs_rd @n @n
-!! \b user_attrs_wr        - \copy dataio_user::user_attrs_wr @n @n
-!! \b user_plt_attrs       - \copy dataio_user::user_plt_attrs @n @n
-!! \b user_reg_var_restart - \copy dataio_user::user_reg_var_restart @n @n
-!! \b user_plt_hdf5        - \copy dataio_user::user_plt_hdf5 @n @n
-!! \b user_vars_hdf5       - \copy dataio_user::user_vars_hdf5 @n @n
-!! \b user_tsl             - \copy dataio_user::user_tsl @n @n
-!! \b user_post_write_data - \copy dataio_user::user_post_write_data @n @n
+!! \b user_attrs_pre       - \copydoc dataio_user::user_attrs_pre @n @n
+!! \b user_attrs_rd        - \copydoc dataio_user::user_attrs_rd @n @n
+!! \b user_attrs_wr        - \copydoc dataio_user::user_attrs_wr @n @n
+!! \b user_plt_attrs       - \copydoc dataio_user::user_plt_attrs @n @n
+!! \b user_reg_var_restart - \copydoc dataio_user::user_reg_var_restart @n @n
+!! \b user_plt_hdf5        - \copydoc dataio_user::user_plt_hdf5 @n @n
+!! \b user_vars_hdf5       - \copydoc dataio_user::user_vars_hdf5 @n @n
+!! \b user_tsl             - \copydoc dataio_user::user_tsl @n @n
+!! \b user_post_write_data - \copydoc dataio_user::user_post_write_data @n @n
 !! @n @n
 !!
 !! It assumes that all procedure pointers are initialized to Null().
