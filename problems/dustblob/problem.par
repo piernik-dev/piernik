@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 40, 40, 1
+    n_d = 100, 100, 1
     nb  = 5
     bnd_xl = 'per'
     bnd_xr = 'per'
@@ -36,10 +36,10 @@
  $OUTPUT_CONTROL
     problem_name ='dustblob'
     run_id  =  'tst'
-    iz = 1
-    dt_plt  = 0.0001
-    dt_hdf  = 0.05
-    dt_res  = 100.0e0
+    plt_plane = 0, 0, 1
+    dt_plt  = 0.0
+    dt_hdf  = 0.5
+    dt_res  = 0.0
     dt_log  = 0.001
     dt_tsl  = 0.00001
     vars(1) = 'dens'
@@ -57,8 +57,9 @@
  /
 
  $INTERACTIONS
- cfl_interact = 0.5
- dragc_gas_dust = 1.0
+    cfl_interact = 0.5
+    dragc_gas_dust = 1.0
+    interactions_type = 'aerodrag'
  /
 
  $NUMERICAL_SETUP
