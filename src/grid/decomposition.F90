@@ -265,14 +265,11 @@ contains
 
       integer(kind=4) :: p
       integer(kind=4), dimension(ndims) :: pc
-      integer, dimension(nproc) :: n_cg ! BEWARE: antiparallel
 
       if (product(p_size(:)) /= pieces) call die("[decomposition:cartesian_tiling] product(p_size(:)) /= pieces")
 
       if (pieces > nproc) call die("[decomposition:cartesian_tiling] cartesian decomposition into more pieces than processes not implemented yet")
-      n_cg(:) = 0
-      n_cg(1:pieces) = 1
-      call patch%allocate_pse(n_cg(:))
+      call patch%allocate_pse(pieces)
 
       if (use_comm3d) then
          if (pieces > 1 .or. nproc == 1) then
@@ -627,20 +624,17 @@ contains
 
    subroutine stamp_cg(patch)
 
-      use constants,  only: xdim, zdim, LO, HI
-      use dataio_pub, only: warn, msg, die
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use dataio_pub, only: warn, msg
       use domain,     only: dom, bsize
-      use mpisetup,   only: master, proc, nproc
+      use mpisetup,   only: master
 
       implicit none
 
       class(box_T), intent(inout) :: patch  !< the patch, which we want to be chopped into pieces
 
-      integer, dimension(xdim:zdim) :: n_bl, b_loc
-      integer :: tot_bl, loc_bl, bl_s, bl_e
-      integer, dimension(nproc) :: n_cg ! BEWARE: antiparallel
-      integer, allocatable, dimension(:) :: pb ! BEWARE: antiparallel
-      integer :: p, b
+      integer, dimension(xdim:zdim) :: n_bl
+      integer :: tot_bl, bx, by, bz, b
 
       if (any(bsize(xdim:zdim) <=0)) then
          if (master) call warn("[initproblem:stamp_cg] some(bsize(1:3)) <=0")
@@ -659,66 +653,25 @@ contains
          n_bl(:) = 1
       endwhere
       tot_bl = product(n_bl(:), mask=dom%has_dir(:))
-      if (allocated(pb)) call die("[initproblem:stamp_cg] pb already allocated")
-      allocate(pb(tot_bl))
 
-      if (tot_bl < nproc) then
-         if (master) call warn("[initproblem:stamp_cg] Found more processes than available blocks. Reverting to some other method.")
-         return
-      endif
+      call patch%allocate_pse(tot_bl)
 
-      do p = 0, nproc-1
-         n_cg(p+1) = (((p + 1) * tot_bl)/nproc) - ((p * tot_bl)/nproc) ! number of blocks on process p
+      b = 0
+      do bz = 0, n_bl(zdim)-1
+         do by = 0, n_bl(ydim)-1
+            do bx = 0, n_bl(xdim)-1
+               b = b + 1 !b = 1 + bx + n_bl(xdim)*(by + bz*n_bl(ydim))
+               where (dom%has_dir(:))
+                  patch%pse(b)%se(:, LO) = [ bx, by, bz ] * bsize(xdim:zdim)
+                  patch%pse(b)%se(:, HI) = patch%pse(b)%se(:, LO) + bsize(xdim:zdim) - 1
+               endwhere
+            enddo
+         enddo
       enddo
-      call patch%allocate_pse(n_cg(:))
-
-      bl_s = (proc * tot_bl)/nproc + 1
-      bl_e = ((proc + 1) * tot_bl)/nproc
-      loc_bl = bl_e - bl_s + 1
-      if (loc_bl /= n_cg(proc + 1)) call die("[initproblem:stamp_cg] loc_bl /= n_cg(proc + 1)")
-
-      do p = 0, nproc-1
-         n_cg(p+1) = (p * tot_bl)/nproc + 1 ! first block on process p
-         if (p>0) pb(n_cg(p):n_cg(p+1)-1) = p-1
-      enddo
-      pb(n_cg(nproc):) = nproc-1
-
-!!$      do p = 0, nproc-1
-!!$         if (size(patch%pse(p)%sel(:,:,:), dim=1) /= count(pb(:) == p)) call die("[initproblem:stamp_cg] size(pse(p)%sel(:,:,:), dim=1) /= count(pb(:) == p)")
-!!$      enddo
-
-      do b = 1, tot_bl
-         ! pb(b) = min((b*nproc)/tot_bl, nproc-1)
-         call simple_ordering(b, n_bl(:), b_loc(:)) !> \todo implement Morton and Hilbert ordering
-
-         where (dom%has_dir(:))
-            patch%pse(b)%se(:, LO) = b_loc(:) * bsize(xdim:zdim)
-            patch%pse(b)%se(:, HI) = patch%pse(b)%se(:, LO) + bsize(xdim:zdim) - 1
-         endwhere
-      enddo
-      !> \todo implement merging to larger cuboids
 
       if (master) call warn("[initproblem:stamp_cg] Experimental implementation")
 
-      deallocate(pb)
-
    end subroutine stamp_cg
-
-!> \brief Simple block ordering
-
-   subroutine simple_ordering(b, n_bl, b_loc)
-
-      use constants, only: xdim, ydim, zdim
-
-      implicit none
-
-      integer, intent(in) :: b                            !< block number
-      integer, dimension(xdim:zdim), intent(in)  :: n_bl  !< extents of block array
-      integer, dimension(xdim:zdim), intent(out) :: b_loc !< location of block b
-
-      b_loc(:) = [ mod(b-1, n_bl(xdim)), mod((b-1)/n_bl(xdim), n_bl(ydim)), (b-1)/product(n_bl(xdim:ydim)) ]
-
-   end subroutine simple_ordering
 
 !>
 !! \brief Prevent domain decompositions into pieces that are narrower than allowed mimimum size
@@ -743,18 +696,26 @@ contains
       class(box_T), intent(inout) :: this
       character(len=*), intent(in) :: label
 
-      integer :: p
+      integer :: p, too_small
 
       patch_divided = .true.
-
+      too_small = 0
       if (allocated(this%pse)) then
          do p = lbound(this%pse, dim=1), ubound(this%pse, dim=1)
             if (.not. all(this%pse(p)%se(:, HI) - this%pse(p)%se(:, LO) >= minsize(:) - 1 .or. .not. dom%has_dir(:))) then
                patch_divided = .false.
+               too_small = too_small + 1
+#ifdef VERBOSE
                write(msg,'(3a,2(3i6,a))')"[decomposition:is_not_too_small] ",label," [",this%pse(p)%se(:, LO),"]:[",this%pse(p)%se(:, HI), "]"
                if (master) call warn(msg)
+#endif /* VERBOSE */
             endif
          enddo
+
+         if (too_small > 0) then
+            write(msg,'(2a,2(a,i6))')"[decomposition:is_not_too_small] ",label," produced ", too_small, " grid pieces out of ",size(this%pse, dim=1)
+            if (master) call warn(msg)
+         endif
       else
          patch_divided = .false.
          write(msg,'(3a)')"[decomposition:is_not_too_small] ",label," no pse"
@@ -779,18 +740,16 @@ contains
 
       implicit none
 
-      class(box_T),                        intent(inout) :: patch
-      integer, dimension(nproc), optional, intent(in)    :: n_cg        !< how many segments per process?
+      class(box_T),      intent(inout) :: patch
+      integer, optional, intent(in)    :: n_cg        !< how many segments
 
-      integer :: p
+      integer :: p, nseg
+
+      nseg = nproc
+      if (present(n_cg)) nseg = n_cg
 
       if (allocated(patch%pse)) call die("[decomposition:allocate_pse] pse already allocated")
-      if (present(n_cg)) then
-         !if (n_cg(p+1) > 0)
-         allocate(patch%pse(sum(n_cg(:))))
-      else
-         allocate(patch%pse(nproc))
-      endif
+      allocate(patch%pse(nseg))
       do p = lbound(patch%pse, dim=1), ubound(patch%pse, dim=1)
          patch%pse(p)%se(:, :) = 0
       enddo
