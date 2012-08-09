@@ -48,7 +48,7 @@ module interactions
    real, allocatable, dimension(:,:)          :: collfaq            !< flind%fluids x flind%fluids array of collision factors
    real                                       :: collision_factor   !< collision factor
    real                                       :: cfl_interact       !< Courant factor for %interactions
-   real                                       :: dragc_gas_dust     !< \deprecated remove me
+   real                                       :: dragc_gas_dust     !< Drag cooefficient \deprecated remove me
    real                                       :: grain_size         !< size of dust grains in cm
    real                                       :: grain_dens         !< density of dust grains in g/cm^3
    real                                       :: grain_dens_x_size  !< size times density of dust grains in g/cm^2
@@ -81,8 +81,8 @@ contains
 !! <tr><td>cfl_interact    </td><td>0.8    </td><td>real value, between 0 and 1</td><td>\copydoc interactions::cfl_interact    </td></tr>
 !! <tr><td>dragc_gas_dust  </td><td>0.0    </td><td>real value                 </td><td>\copydoc interactions::dragc_gas_dust  </td></tr>
 !! <tr><td>has_interactions</td><td>.false.</td><td>logical value              </td><td>\copydoc interactions::has_interactions</td></tr>
-!! <tr><td>grain_size      </td><td>10.0   </td><td>real value                 </td><td>\copydoc interactions::dragc_gas_dust  </td></tr>
-!! <tr><td>grain_dens      </td><td>1.6    </td><td>real value                 </td><td>\copydoc interactions::dragc_gas_dust  </td></tr>
+!! <tr><td>grain_size      </td><td>10.0   </td><td>real value                 </td><td>\copydoc interactions::grain_size      </td></tr>
+!! <tr><td>grain_dens      </td><td>1.6    </td><td>real value                 </td><td>\copydoc interactions::grain_dens      </td></tr>
 !! <tr><td>interactions_type</td><td>'none'</td><td>'none'/'aerodrag'/'aerodrag_ep'/'dragforce_dw'/'balsara'</td><td>\copydoc interactions::interactions_type</td></tr>
 !! </table>
 !! \n \n
@@ -296,8 +296,8 @@ contains
       real, dimension(flind%fluids,size(u1,2)) :: vprim
       real, dimension(size(u1,2))              :: delta, drag
       !>
-      !! \deprecated BEWARE: this bit assumes that we have 2 fluids and \f$u_1 \equiv u_0 - \grad F\f$
-      !! \todo 2) half-time step should be \f$\le \frac{1}{2}\frac{c_s}{drag * \rho\prim_? |v'_d - v'_g|}\f$
+      !! \deprecated BEWARE: this bit assumes that we have 2 fluids and \f$u_1 \equiv u_0 - \nabla F\f$
+      !! \todo 2) half-time step should be \f$\le \frac{1}{2}\frac{c_s}{drag * \rho'_? |v'_d - v'_g|}\f$
       !! \todo 3) what if not isothermal?
       !! \todo 4) remove hardcoded integers
       !<
