@@ -73,7 +73,7 @@ module cg_list_level
       procedure :: add_patch                                !< add a new piece of grid to the current level and decompose it
       procedure, private :: update_decomposition_properties !< Update some flags in domain module
       procedure, private :: distribute                      !< Get all decomposed patches and compute which pieces go to which process
-      procedure, private :: calc_ord_range                  !< Compute which id's should belong to which process
+      procedure, private :: calc_ord_range                  !< Compute which id\'s should belong to which process
       procedure, private :: simple_ordering                 !< This is just counting, not ordering
 
       ! Prolongation and restriction
@@ -1056,7 +1056,7 @@ contains
    end subroutine distribute
 
 !>
-!! \brief Compute which id's should belong to which process
+!! \brief Compute which id\'s should belong to which process
 !!
 !! \todo Reduce assumptions on the set of id only to uniqueness (i.e. some id might be absent, some might be <0 or >this%tot_se, perform partial sort (qsort? shell sort?))
 !<

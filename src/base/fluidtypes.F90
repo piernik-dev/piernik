@@ -71,10 +71,10 @@ module fluidtypes
       integer(kind=4) :: imz = -1      !< index denoting position of the fluid z-momentum in array arrays::u
       integer(kind=4) :: ien = -1      !< index denoting position of the fluid energy in array arrays::u
 
-      real    :: cs    = 0.0   !< fluid's isothermal sound speed
-      real    :: cs2   = 0.0   !< fluid's isothermal sound speed squared
-      real    :: gam   = -1.0  !< fluid's adiabatic index
-      real    :: gam_1 = -1.0  !< fluid's adiabatic index minus one
+      real    :: cs    = 0.0   !< fluid\'s isothermal sound speed
+      real    :: cs2   = 0.0   !< fluid\'s isothermal sound speed squared
+      real    :: gam   = -1.0  !< fluid\'s adiabatic index
+      real    :: gam_1 = -1.0  !< fluid\'s adiabatic index minus one
 
       logical :: is_selfgrav   = .false. !< True if fluid is selfgravitating
       logical :: is_magnetized = .false. !< True if fluid is magnetized
