@@ -68,10 +68,10 @@ contains
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !!   <tr><td>constant_dt      </td><td>0.0    </td><td>real value             </td><td>\copydoc piernikdebug::constant_dt      </td></tr>
-!!   <tr><td>aux_R            </td><td>0.0    </td><td>5-element real array   </td><td>\copydoc piernikdebug::aux_R            </td></tr>
-!!   <tr><td>aux_I            </td><td>0      </td><td>5-element integer array</td><td>\copydoc piernikdebug::aux_I            </td></tr>
-!!   <tr><td>aux_L            </td><td>.false.</td><td>5-element logical array</td><td>\copydoc piernikdebug::aux_L            </td></tr>
-!!   <tr><td>aux_S            </td><td>""     </td><td>5-element string array </td><td>\copydoc piernikdebug::aux_S            </td></tr>
+!!   <tr><td>aux_R            </td><td>0.0    </td><td>5-element real array   </td><td>\copydoc piernikdebug::aux_r            </td></tr>
+!!   <tr><td>aux_I            </td><td>0      </td><td>5-element integer array</td><td>\copydoc piernikdebug::aux_i            </td></tr>
+!!   <tr><td>aux_L            </td><td>.false.</td><td>5-element logical array</td><td>\copydoc piernikdebug::aux_l            </td></tr>
+!!   <tr><td>aux_S            </td><td>""     </td><td>5-element string array </td><td>\copydoc piernikdebug::aux_s            </td></tr>
 !! </table>
 !! \n \n
 !<
