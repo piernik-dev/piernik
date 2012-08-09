@@ -170,7 +170,7 @@ contains
 !!   <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc domain::reorder        </td></tr>
 !!   <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_uneven   </td></tr>
 !!   <tr><td>allow_noncart  </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_noncart  </td></tr>
-!!   <tr><td>allow_AMR      </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_AMR      </td></tr>
+!!   <tr><td>allow_AMR      </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_amr      </td></tr>
 !!   <tr><td>dd_unif_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_unif_quality</td></tr>
 !!   <tr><td>dd_rect_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_rect_quality</td></tr>
 !!   <tr><td>use_comm3d     </td><td>.true. </td><td>logical</td><td>\copydoc domain::use_comm3d     </td></tr>
