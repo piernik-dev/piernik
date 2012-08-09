@@ -98,7 +98,7 @@ contains
 
       implicit none
 
-      namelist /INTERACTIONS/ collision_factor, cfl_interact, dragc_gas_dust, has_interactions, grain_size, grain_dens
+      namelist /INTERACTIONS/ collision_factor, cfl_interact, dragc_gas_dust, has_interactions, grain_size, grain_dens, interactions_type
 
       if (code_progress < PIERNIK_INIT_FLUIDS) call die("[interactions:init_interactions] fluids not initialized.")
 
