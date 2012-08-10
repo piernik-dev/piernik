@@ -30,7 +30,7 @@
 
 !> \brief This module serves an array of prime numbers. Used primarily in decomposition module.
 
-module primes
+module primes_utils
 
    implicit none
 
@@ -127,4 +127,4 @@ contains
 
    end subroutine erase
 
-end module primes
+end module primes_utils

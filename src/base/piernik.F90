@@ -261,6 +261,7 @@ contains
       !! \deprecated remove this clause as soon as Intel Compiler gets required
       !! features and/or bug fixes
       use timestep,              only: init_time_step
+      use cg_list_level,         only: intel_init_cg_list_level
 #endif /* __INTEL_COMPILER */
 
       implicit none
@@ -274,6 +275,11 @@ contains
       code_progress = PIERNIK_INIT_MPI ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_GRID can be reshuffled when necessary
       call check_environment
 
+#if defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
+      call intel_init_cg_list_level
+#endif /* __INTEL_COMPILER */
 #ifdef PIERNIK_OPENCL
       call init_opencl
 #endif /* PIERNIK_OPENCL */

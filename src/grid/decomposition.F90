@@ -36,8 +36,8 @@
 
 module decomposition
 
-   use constants, only: ndims, xdim, zdim, LO, HI
-   use primes,    only: primes_T
+   use constants,    only: ndims, xdim, zdim, LO, HI
+   use primes_utils, only: primes_T
 
    implicit none
 
