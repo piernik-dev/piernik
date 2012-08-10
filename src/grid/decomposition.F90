@@ -624,7 +624,7 @@ contains
 
    subroutine stamp_cg(patch)
 
-      use constants,  only: xdim, ydim, zdim, LO, HI
+      use constants,  only: xdim, ydim, zdim, LO, HI, I_ONE
       use dataio_pub, only: warn, msg
       use domain,     only: dom, bsize
       use mpisetup,   only: master
@@ -633,8 +633,8 @@ contains
 
       class(box_T), intent(inout) :: patch  !< the patch, which we want to be chopped into pieces
 
-      integer, dimension(xdim:zdim) :: n_bl
-      integer :: tot_bl, bx, by, bz, b
+      integer(kind=4), dimension(xdim:zdim) :: n_bl
+      integer(kind=4) :: tot_bl, bx, by, bz, b
 
       if (any(bsize(xdim:zdim) <=0)) then
          if (master) call warn("[initproblem:stamp_cg] some(bsize(1:3)) <=0")
@@ -657,10 +657,10 @@ contains
       call patch%allocate_pse(tot_bl)
 
       b = 0
-      do bz = 0, n_bl(zdim)-1
-         do by = 0, n_bl(ydim)-1
-            do bx = 0, n_bl(xdim)-1
-               b = b + 1 !b = 1 + bx + n_bl(xdim)*(by + bz*n_bl(ydim))
+      do bz = 0, n_bl(zdim)-I_ONE
+         do by = 0, n_bl(ydim)-I_ONE
+            do bx = 0, n_bl(xdim)-I_ONE
+               b = b + I_ONE !b = 1 + bx + n_bl(xdim)*(by + bz*n_bl(ydim))
                where (dom%has_dir(:))
                   patch%pse(b)%se(:, LO) = [ bx, by, bz ] * bsize(xdim:zdim)
                   patch%pse(b)%se(:, HI) = patch%pse(b)%se(:, LO) + bsize(xdim:zdim) - 1
@@ -740,8 +740,8 @@ contains
 
       implicit none
 
-      class(box_T),      intent(inout) :: patch
-      integer, optional, intent(in)    :: n_cg        !< how many segments
+      class(box_T),              intent(inout) :: patch
+      integer(kind=4), optional, intent(in)    :: n_cg        !< how many segments
 
       integer :: p, nseg
 
