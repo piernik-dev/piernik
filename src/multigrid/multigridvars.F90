@@ -53,8 +53,6 @@ module multigridvars
    character(len=dsetnamelen), parameter :: correction_n = "correction" !< correction to the potential to be applied at the end of V-cycle
    integer :: source, solution, defect, correction !< indices to the fields described above
 
-   ! these constants should be moved to constants module
-
    ! namelist parameters
    integer(kind=4)    :: ord_prolong                                  !< Prolongation operator order; allowed values are -4 -2, 0 (default), 2 and 4; -2 is often fast
    integer(kind=4)    :: ord_prolong_face_norm                        !< Face prolongation operator order in the direction normal to the face; allowed values are 0, 1  and 2
@@ -68,5 +66,20 @@ module multigridvars
    logical                 :: is_mg_uneven                            !< .true. when domain shapes differ across procesors, even on the coarsest grids
    logical                 :: single_base                             !< .true. when the whole base level is located on a single cpu
    logical                 :: need_general_pf                         !< .false. only for most regular domain decomposition
+   logical                 :: fft_full_relax                          !< Perform full or boundary relaxation after local FFT solve
+   integer(kind=4)         :: nsmool                                  !< smoothing cycles per call
+   integer(kind=4)         :: nsmoof                                  !< FFT iterations per call
+   logical                 :: multidim_code_3D                        !< prefer code written for any 1D and 2D configuration even in 3D for benchmarking and debugging
+
+   ! boundaries
+   enum, bind(C)                                                      !< constants for enumerating multigrid boundary types
+      enumerator :: bnd_periodic                                      !< periodic
+      enumerator :: bnd_dirichlet                                     !< 0-value boundary type (uniform Dirichlet)
+      enumerator :: bnd_isolated                                      !< isolated boundary type
+      enumerator :: bnd_neumann                                       !< 0-gradient boundary type (uniform Neumann)
+      enumerator :: bnd_givenval                                      !< given value boundary type (general Dirichlet)
+      enumerator :: bnd_invalid = bnd_periodic - 1                    !< invalid
+   end enum
+   integer            :: grav_bnd                                     !< boundary type for computational domain
 
 end module multigridvars

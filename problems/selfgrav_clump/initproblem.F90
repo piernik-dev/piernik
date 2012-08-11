@@ -452,7 +452,7 @@ contains
       use grid_cont,         only: grid_container
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,          only: master, comm, mpi_err
-      use multigrid_gravity, only: grav_bnd, bnd_isolated
+      use multigridvars,     only: grav_bnd, bnd_isolated
 
       implicit none
 
