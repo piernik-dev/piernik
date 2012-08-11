@@ -28,7 +28,6 @@
 
 #include "piernik.h"
 
-!!$ ============================================================================
 !>
 !! \brief Variables and data structures required by multigrid routines.
 !!
@@ -69,89 +68,5 @@ module multigridvars
    logical                 :: is_mg_uneven                            !< .true. when domain shapes differ across procesors, even on the coarsest grids
    logical                 :: single_base                             !< .true. when the whole base level is located on a single cpu
    logical                 :: need_general_pf                         !< .false. only for most regular domain decomposition
-
-   integer, parameter :: prefix_len = 3                               !< length of prefix for distinguishing V-cycles in the log
-   type :: vcycle_stats
-      real, allocatable, dimension(:) :: factor                       !< norm reduction factor
-      real, allocatable, dimension(:) :: time                         !< time spent
-      integer                         :: count                        !< number of executed V-cycles
-      real                            :: norm_rhs                     !< norm of the source
-      real                            :: norm_final                   !< norm of the defect relative to the source
-      character(len=prefix_len)       :: cprefix                      !< prefix for distinguishing V-cycles in the log (e.g inner or outer potential, CR component)
-    contains
-       procedure :: init
-       procedure :: brief_v_log
-   end type vcycle_stats
-
-contains
-
-!> \brief Initialize vcycle_stats
-
-   subroutine init(this, size)
-
-      use dataio_pub,    only: die
-
-      implicit none
-
-      class(vcycle_stats), intent(out) :: this   !< V-cycle statistics variable to be created or reset
-      integer(kind=4),     intent(in)  :: size !< size of the vs structure (usually max_cycles); for nonpositive value perform reset only
-
-      if (size > 0) then
-         if (allocated(this%factor) .or. allocated(this%time)) call die("[multigridhelpers:vcycle_stats_init] vcycle_stats already allocated.")
-         allocate(this%factor(0:size), this%time(0:size))
-      endif
-
-      this%factor(:)  = 0.
-      this%time(:)    = 0.
-      this%count      = 0
-      this%norm_rhs   = 0.
-      this%norm_final = 0.
-      this%cprefix    = ""
-
-   end subroutine init
-
-!> \brief Assembles one-line log of V-cycle achievements
-
-   subroutine brief_v_log(this)
-
-      use constants,     only: fplen, fmt_len
-      use mpisetup,      only: slave
-      use dataio_pub,    only: msg, warn, printinfo
-
-      implicit none
-
-      class(vcycle_stats), intent(in) :: this
-
-      real                   :: at
-      integer                :: i, lm, ftype
-      character(len=fplen)   :: normred
-      character(len=fmt_len), parameter, dimension(2) :: fmt_norm = [ '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,f13.10,a)', '(a,i3,1x,2a,f7.3,a,i3,a,f7.3,a,e13.6,a) ' ]
-
-      if (slave) return
-
-      if (this%count > ubound(this%factor, 1)) call warn("[multigridhelpers:brief_v_log] Trying to read beyond upper bound of vcycle_stats.")
-
-      at = 0.
-      if (this%count > 0) at = sum(this%time(1:this%count))/this%count ! average V-cycle time on PE# 0
-
-      ftype = 1
-      if (this%norm_final < 1e-8) ftype = 2
-      write(msg, fmt_norm(ftype))"[multigrid] ", this%count, trim(this%cprefix), "cycles, dt_wall=", this%time(0), " +", this%count, "*", at, ", norm/rhs= ", this%norm_final, " : "
-
-      do i = 0, min(this%count, ubound(this%factor, 1))
-         if (this%factor(i) < 1.0e4) then
-            write(normred, '(f8.2)') this%factor(i)
-         else if (this%factor(i) < 1.0e7) then
-            write(normred, '(f8.0)') this%factor(i)
-         else
-            write(normred, '(es9.2)') this%factor(i)
-         endif
-         lm = len_trim(msg)
-         if (len(msg) >= lm + 9) msg(lm+2:lm+9) = normred(1:8)
-      enddo
-
-      call printinfo(msg, stdout)
-
-   end subroutine brief_v_log
 
 end module multigridvars

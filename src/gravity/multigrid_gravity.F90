@@ -42,8 +42,8 @@
 module multigrid_gravity
 ! pulled by MULTIGRID && GRAV
 
-   use constants,     only: cbuff_len, ndims
-   use multigridvars, only: vcycle_stats
+   use constants,        only: cbuff_len, ndims
+   use multigrid_vstats, only: vcycle_stats
 
    implicit none
 

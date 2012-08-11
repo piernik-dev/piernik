@@ -41,8 +41,8 @@
 module multigrid_diffusion
 ! pulled by MULTIGRID && COSM_RAYS
 
-   use constants,     only: cbuff_len, ndims, dsetnamelen
-   use multigridvars, only: vcycle_stats
+   use constants,        only: cbuff_len, ndims, dsetnamelen
+   use multigrid_vstats, only: vcycle_stats
 
    implicit none
 
