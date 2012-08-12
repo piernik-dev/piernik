@@ -76,6 +76,8 @@ module mpisetup
       module procedure MPI_Bcast_single_real8
       module procedure MPI_Bcast_single_integer4
       module procedure MPI_Bcast_single_integer8
+      module procedure MPI_Bcast_vec_logical
+      module procedure MPI_Bcast_vec_string
       module procedure MPI_Bcast_vec_int4
       module procedure MPI_Bcast_arr2d_int4
       module procedure MPI_Bcast_vec_int8
@@ -267,7 +269,23 @@ contains
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Bcast
-!! Broadcast single logical value from FIRST to all
+!! Broadcast logical vector from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Bcast_vec_logical(lvar)
+
+      use mpi,         only: MPI_LOGICAL
+
+      implicit none
+
+      logical, dimension(:), intent(inout) :: lvar   !< logical scalar that will be broadcasted
+
+      call MPI_Bcast(lvar, size(lvar), MPI_LOGICAL, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_vec_logical
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast single string value from FIRST to all
 !! \todo unlimited polimorphism will obsolete me
 !<
    subroutine MPI_Bcast_single_string(cvar, clen)
@@ -281,6 +299,23 @@ contains
 
       call MPI_Bcast(cvar, clen, MPI_CHARACTER, FIRST, comm, mpi_err)
    end subroutine MPI_Bcast_single_string
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast single string value from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Bcast_vec_string(cvar, clen)
+
+      use mpi,         only: MPI_CHARACTER
+
+      implicit none
+
+      character(len=*), dimension(:), intent(inout) :: cvar   !< vector of strings that will be broadcasted
+      integer, intent(in) :: clen !< length of the cvar
+
+      call MPI_Bcast(cvar, clen*size(cvar), MPI_CHARACTER, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_vec_string
 !-----------------------------------------------------------------------------
 !>
 !! \brief Wrapper for MPI_Bcast
