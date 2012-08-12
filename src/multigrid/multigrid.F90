@@ -89,8 +89,8 @@ contains
       use domain,              only: dom, is_uneven, minsize
       use global,              only: dirty_debug, do_ascii_dump
       use grid_cont,           only: grid_container
-      use mpi,                 only: MPI_INTEGER, MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_COMM_NULL
-      use mpisetup,            only: comm, mpi_err, master, slave, nproc, FIRST, buffer_dim, ibuff, lbuff
+      use mpi,                 only: MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_COMM_NULL
+      use mpisetup,            only: comm, mpi_err, master, slave, nproc, ibuff, lbuff, piernik_MPI_Bcast
       use multigridvars,       only: single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, &
            &                         ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
       use named_array,         only: qna
@@ -147,8 +147,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER, FIRST, comm, mpi_err)
-      call MPI_Bcast(lbuff, buffer_dim, MPI_LOGICAL, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(lbuff)
 
       if (slave) then
 

@@ -149,8 +149,7 @@ contains
       use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
       use dataio_pub,     only: printinfo, warn, die, code_progress
       use constants,      only: PIERNIK_INIT_GRID, AT_OUT_B, gp_n, gpot_n, hgpot_n
-      use mpisetup,       only: ibuff, rbuff, cbuff, comm, mpi_err, master, slave, lbuff, buffer_dim, FIRST
-      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL, MPI_CHARACTER
+      use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
       use cg_list,        only: cg_list_element
       use cg_list_bnd,    only: leaves
       use named_array,    only: qna
@@ -229,10 +228,10 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(lbuff)
+      call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
 

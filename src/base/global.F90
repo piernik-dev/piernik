@@ -118,8 +118,7 @@ contains
       use constants,  only: big_float, PIERNIK_INIT_MPI
       use dataio_pub, only: die, msg, warn, code_progress
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
-      use mpi,        only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_LOGICAL
-      use mpisetup,   only: buffer_dim, cbuff, ibuff, lbuff, rbuff, master, slave, comm, mpi_err, FIRST
+      use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -186,10 +185,10 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
+      call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(lbuff)
 
       if (slave) then
 

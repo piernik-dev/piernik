@@ -106,8 +106,7 @@ contains
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
-      use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, comm, mpi_err, buffer_dim, master, slave, FIRST
-      use mpi,             only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_INTEGER, MPI_CHARACTER
+      use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -184,10 +183,10 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call MPI_Bcast(lbuff,    buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(lbuff)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
 

@@ -92,8 +92,7 @@ contains
       use constants,     only: PIERNIK_INIT_FLUIDS, cbuff_len
       use dataio_pub,    only: die, code_progress, par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use fluidindex,    only: flind
-      use mpisetup,      only: master, slave, cbuff, lbuff, rbuff, buffer_dim, mpi_err, comm, FIRST!, grace_period_passed
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_LOGICAL, MPI_CHARACTER
+      use mpisetup,      only: master, slave, cbuff, lbuff, rbuff, piernik_MPI_Bcast
       use units,         only: cm, gram
 
       implicit none
@@ -128,9 +127,9 @@ contains
 
       endif
 
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(lbuff)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
 

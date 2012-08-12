@@ -89,8 +89,7 @@ contains
       use domain,         only: dom
       use cg_list,        only: cg_list_element
       use cg_list_bnd,    only: leaves
-      use mpi,            only: MPI_INTEGER, MPI_DOUBLE_PRECISION
-      use mpisetup,       only: rbuff, ibuff, mpi_err, comm, master, slave, buffer_dim, FIRST
+      use mpisetup,       only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
       use named_array,    only: qna
 
       implicit none
@@ -123,8 +122,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff,    buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
-      call MPI_Bcast(rbuff,    buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
 
@@ -178,15 +177,14 @@ contains
 
    subroutine compute_resist
 
-      use constants,   only: xdim, ydim, zdim, MAXL, I_ONE, oneq
+      use constants,   only: xdim, ydim, zdim, MAXL, oneq
       use dataio_pub,  only: die
       use domain,      only: dom, is_multicg
       use func,        only: ekin, emag
       use cg_list,     only: cg_list_element
       use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
-      use mpi,         only: MPI_DOUBLE_PRECISION
-      use mpisetup,    only: comm, mpi_err, FIRST
+      use mpisetup,    only: piernik_MPI_Bcast
       use named_array, only: qna
 #ifndef ISO
       use constants,   only: small, MINL
@@ -273,7 +271,7 @@ contains
       if (is_multicg) call die("[resistivity:compute_resist] multiple grid pieces per procesor not implemented yet") !nontrivial get_extremum, wb, eta
 
       call leaves%get_extremum(qna%ind(eta_n), MAXL, etamax)
-      call MPI_Bcast(etamax%val, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(etamax%val)
       call leaves%get_extremum(qna%ind(wb_n), MAXL, cu2max)
       etamax%assoc = dt_resist ; cu2max%assoc = dt_resist
 
