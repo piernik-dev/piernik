@@ -567,7 +567,7 @@ contains
 
    subroutine read_restart_hdf5_v1
 
-      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, I_ONE, RD
+      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, RD
       use common_hdf5, only: output_fname
       use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, piernik_hdf5_version, fix_string, &
            &                 domain_dump, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nhdf, nres, nimg, new_id
@@ -579,8 +579,8 @@ contains
            &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mass_defect, only: magic_mass
-      use mpi,         only: MPI_CHARACTER, MPI_INTEGER, MPI_DOUBLE_PRECISION, MPI_INFO_NULL
-      use mpisetup,    only: comm, mpi_err, master, FIRST
+      use mpi,         only: MPI_INFO_NULL
+      use mpisetup,    only: comm, master, piernik_MPI_Bcast, ibuff, rbuff, cbuff, slave
       use named_array, only: qna, wna
 
       implicit none
@@ -724,25 +724,52 @@ contains
       endif
       call h5close_f(error)
 
-      call MPI_Bcast(restart_hdf5_version,    I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(restart_hdf5_version)
 
-      call MPI_Bcast(nstep,    I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
-      call MPI_Bcast(nres,     I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
-      call MPI_Bcast(nhdf,     I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
-      call MPI_Bcast(nimg,     I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
-      if (restart_hdf5_version > 1.11) call MPI_Bcast(require_init_prob, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+      if (master) then
+         ibuff(1) = nstep
+         ibuff(2) = nres
+         ibuff(3) = nhdf
+         ibuff(4) = nimg
+         if (restart_hdf5_version > 1.11) ibuff(5) = require_init_prob
 
-      call MPI_Bcast(last_log_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call MPI_Bcast(last_tsl_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call MPI_Bcast(last_hdf_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call MPI_Bcast(last_res_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call MPI_Bcast(last_plt_time, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call MPI_Bcast(t,             I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call MPI_Bcast(dt,            I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+         rbuff(1) = last_log_time
+         rbuff(2) = last_tsl_time
+         rbuff(3) = last_hdf_time
+         rbuff(4) = last_res_time
+         rbuff(5) = last_plt_time
+         rbuff(6) = t
+         rbuff(7) = dt
 
-      call MPI_Bcast(problem_name, cbuff_len, MPI_CHARACTER, FIRST, comm, mpi_err)
-      call MPI_Bcast(domain_dump,  domlen,    MPI_CHARACTER, FIRST, comm, mpi_err)
-      call MPI_Bcast(new_id,       idlen,     MPI_CHARACTER, FIRST, comm, mpi_err)
+         cbuff(1) = problem_name
+         cbuff(2)(1:domlen) = domain_dump
+         cbuff(3)(1:idlen)  = new_id
+      endif
+
+      call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
+
+      if (slave) then
+         nstep = ibuff(1)
+         nres = ibuff(2)
+         nhdf = ibuff(3)
+         nimg = ibuff(4)
+         if (restart_hdf5_version > 1.11) require_init_prob = ibuff(5)
+
+         last_log_time = rbuff(1)
+         last_tsl_time = rbuff(2)
+         last_hdf_time = rbuff(3)
+         last_res_time = rbuff(4)
+         last_plt_time = rbuff(5)
+         t = rbuff(6)
+         dt = rbuff(7)
+
+         problem_name = cbuff(1)
+         domain_dump = cbuff(2)(1:domlen)
+         new_id = cbuff(3)(1:idlen)
+
+      endif
 
    end subroutine read_restart_hdf5_v1
 
