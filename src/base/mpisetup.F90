@@ -42,16 +42,18 @@ module mpisetup
    private
    public :: cleanup_mpi, init_mpi, inflate_req, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, mpi_err, procmask, &
-        &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, &
+        &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, is_spawned, &
         &    piernik_MPI_Barrier, piernik_MPI_Bcast
 
    integer(kind=4), protected :: nproc, proc, LAST          !< number of processes, rank of my process, rank of last process
    integer(kind=4), protected :: comm                       !< global communicator
+   integer(kind=4), protected :: intercomm                  !< intercommunicator
    integer(kind=4) :: mpi_err                               !< error status
    integer(kind=INT4), parameter :: FIRST = 0               !< the rank of the master process
 
    logical, protected :: master, slave      !< shortcuts for testing proc == FIRST
    logical, protected :: have_mpi           !< .true. when run on more than one processor
+   logical, protected :: is_spawned         !< .true. if Piernik was run via MPI_Spawn
 
    integer(kind=4), allocatable, dimension(:), target   :: req    !< request array for MPI_Waitall
    integer(kind=4), allocatable, dimension(:,:), target :: status !< status array for MPI_Waitall
@@ -95,7 +97,7 @@ contains
    subroutine init_mpi
 
       use constants,  only: cwdlen, I_ONE
-      use mpi,        only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER
+      use mpi,        only: MPI_COMM_WORLD, MPI_CHARACTER, MPI_INTEGER, MPI_COMM_NULL
       use dataio_pub, only: die, printinfo, msg, ansi_white, ansi_black, tmp_log_file
       use dataio_pub, only: par_file, lun
 
@@ -118,6 +120,9 @@ contains
       call MPI_Init( mpi_err )
       comm = MPI_COMM_WORLD
 
+      call MPI_Comm_get_parent(intercomm, mpi_err)
+      is_spawned = (intercomm /= MPI_COMM_NULL)
+
       call MPI_Comm_rank(comm, proc, mpi_err)
       call MPI_Comm_size(comm, nproc, mpi_err)
 
@@ -137,6 +142,8 @@ contains
 #ifdef VERBOSE
          call printinfo("[mpisetup:init_mpi]: commencing...")
 #endif /* VERBOSE */
+         if (is_spawned) &
+            call printinfo("[mpisetup:init_mpi] Piernik was called via MPI_Spawn. Additional magic will happen!")
       endif
 
       if (allocated(cwd_all) .or. allocated(host_all) .or. allocated(pid_all)) call die("[mpisetup:init_mpi] cwd_all, host_all or pid_all already allocated")
@@ -234,6 +241,7 @@ contains
       if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
       call MPI_Barrier(comm,mpi_err)
       if (have_mpi) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
+      if (is_spawned) call MPI_Comm_disconnect(intercomm, mpi_err)
       call MPI_Finalize(mpi_err)
 
    end subroutine cleanup_mpi
