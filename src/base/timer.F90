@@ -36,7 +36,7 @@ module timer
    integer, parameter, private :: S_LEN = 30
 
    private
-   public :: cleanup_timers, time_left, set_timer, timer_start, timer_stop
+   public :: cleanup_timers, time_left, set_timer, timer_start, timer_stop, tmr_fu
 
    type, private :: timer_info
       character(len=S_LEN) :: key
@@ -60,6 +60,8 @@ module timer
    integer, dimension(3) :: iarray
    real(kind=4), dimension(2) :: tarray
    integer(kind=8) :: clock_start, clock_end
+
+   character(len=*), parameter :: tmr_fu = "fluid_update"  !< main timer used to measure fluid_update step
 
 contains
 
