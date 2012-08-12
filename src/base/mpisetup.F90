@@ -42,7 +42,8 @@ module mpisetup
    private
    public :: cleanup_mpi, init_mpi, inflate_req, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, mpi_err, procmask, &
-        &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi
+        &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, &
+        &    piernik_MPI_Barrier, piernik_MPI_Bcast
 
    integer(kind=4), protected :: nproc, proc, LAST          !< number of processes, rank of my process, rank of last process
    integer(kind=4), protected :: comm                       !< global communicator
@@ -65,6 +66,11 @@ module mpisetup
    integer(kind=4),          dimension(buffer_dim) :: ibuff !< buffer for integer parameters
    real,                     dimension(buffer_dim) :: rbuff !< buffer for real parameters
    logical,                  dimension(buffer_dim) :: lbuff !< buffer for logical parameters
+
+   !! \todo exapand this wrapper to make it more general
+   interface piernik_MPI_Bcast
+      module procedure MPI_Bcast_single_logical
+   end interface piernik_MPI_Bcast
 
 contains
 
@@ -219,4 +225,30 @@ contains
 
    end subroutine cleanup_mpi
 
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Barrier
+!<
+   subroutine piernik_MPI_Barrier
+
+      implicit none
+
+      call MPI_Barrier(comm, mpi_err)
+   end subroutine piernik_MPI_Barrier
+
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Barrier
+!<
+   subroutine MPI_Bcast_single_logical(lvar)
+
+      use constants,   only: I_ONE
+      use mpi,         only: MPI_LOGICAL
+
+      implicit none
+
+      logical, intent(inout) :: lvar   !< logical scalar that will be broadcasted
+
+      call MPI_Bcast(lvar, I_ONE, MPI_LOGICAL, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_single_logical
 end module mpisetup
