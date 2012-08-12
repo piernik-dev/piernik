@@ -67,9 +67,20 @@ module mpisetup
    real,                     dimension(buffer_dim) :: rbuff !< buffer for real parameters
    logical,                  dimension(buffer_dim) :: lbuff !< buffer for logical parameters
 
-   !! \todo exapand this wrapper to make it more general
+   !! \todo exapand this wrapper to make it more general, unlimited polimorphism
+   !! will render this obsolete
    interface piernik_MPI_Bcast
       module procedure MPI_Bcast_single_logical
+      module procedure MPI_Bcast_single_string
+      module procedure MPI_Bcast_single_real4
+      module procedure MPI_Bcast_single_real8
+      module procedure MPI_Bcast_single_integer4
+      module procedure MPI_Bcast_single_integer8
+      module procedure MPI_Bcast_vec_int4
+      module procedure MPI_Bcast_arr2d_int4
+      module procedure MPI_Bcast_vec_int8
+      module procedure MPI_Bcast_vec_real4
+      module procedure MPI_Bcast_vec_real8
    end interface piernik_MPI_Bcast
 
 contains
@@ -238,7 +249,9 @@ contains
 
 !-----------------------------------------------------------------------------
 !>
-!! \brief Wrapper for MPI_Barrier
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast single logical value from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
 !<
    subroutine MPI_Bcast_single_logical(lvar)
 
@@ -251,4 +264,169 @@ contains
 
       call MPI_Bcast(lvar, I_ONE, MPI_LOGICAL, FIRST, comm, mpi_err)
    end subroutine MPI_Bcast_single_logical
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast single logical value from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Bcast_single_string(cvar, clen)
+
+      use mpi,         only: MPI_CHARACTER
+
+      implicit none
+
+      character(len=*), intent(inout) :: cvar   !< string that will be broadcasted
+      integer, intent(in) :: clen !< length of the cvar
+
+      call MPI_Bcast(cvar, clen, MPI_CHARACTER, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_single_string
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast single integer(kind=4) value from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Bcast_single_integer4(ivar4)
+
+      use constants,   only: I_ONE
+      use mpi,         only: MPI_INTEGER
+
+      implicit none
+
+      integer(kind=4), intent(inout) :: ivar4   !< integer scalar that will be broadcasted
+
+      call MPI_Bcast(ivar4, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_single_integer4
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast single integer(kind=8) value from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Bcast_single_integer8(ivar8)
+
+      use constants,   only: I_ONE
+      use mpi,         only: MPI_INTEGER8
+
+      implicit none
+
+      integer(kind=8), intent(inout) :: ivar8   !< integer scalar that will be broadcasted
+
+      call MPI_Bcast(ivar8, I_ONE, MPI_INTEGER8, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_single_integer8
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast single real(kind=4) value from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Bcast_single_real4(rvar4)
+
+      use constants,   only: I_ONE
+      use mpi,         only: MPI_REAL
+
+      implicit none
+
+      real(kind=4), intent(inout) :: rvar4   !< integer scalar that will be broadcasted
+
+      call MPI_Bcast(rvar4, I_ONE, MPI_REAL, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_single_real4
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast single real(kind=8) value from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Bcast_single_real8(rvar8)
+
+      use constants,   only: I_ONE
+      use mpi,         only: MPI_DOUBLE_PRECISION
+
+      implicit none
+
+      real(kind=8), intent(inout) :: rvar8   !< real scalar that will be broadcasted
+
+      call MPI_Bcast(rvar8, I_ONE, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_single_real8
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast real(kind=4) vector from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Bcast_vec_real4(rvar4)
+
+      use mpi,         only: MPI_REAL
+
+      implicit none
+
+      real(kind=4), dimension(:), intent(inout) :: rvar4   !< real4 vector that will be broadcasted
+
+      call MPI_Bcast(rvar4, size(rvar4), MPI_REAL, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_vec_real4
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast real(kind=8) vector from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Bcast_vec_real8(rvar8)
+
+      use mpi,         only: MPI_DOUBLE_PRECISION
+
+      implicit none
+
+      real(kind=8), dimension(:), intent(inout) :: rvar8   !< real8 vector that will be broadcasted
+
+      call MPI_Bcast(rvar8, size(rvar8), MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_vec_real8
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast integer(kind=4) vector from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Bcast_vec_int4(ivar4)
+
+      use mpi,         only: MPI_INTEGER
+
+      implicit none
+
+      integer(kind=4), dimension(:), intent(inout) :: ivar4   !< int4 vector that will be broadcasted
+
+      call MPI_Bcast(ivar4, size(ivar4), MPI_INTEGER, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_vec_int4
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast integer(kind=4) vector from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Bcast_arr2d_int4(ivar4)
+
+      use mpi,         only: MPI_INTEGER
+
+      implicit none
+
+      integer(kind=4), dimension(:, :), intent(inout) :: ivar4   !< int4 arr2d that will be broadcasted
+
+      call MPI_Bcast(ivar4, size(ivar4), MPI_INTEGER, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_arr2d_int4
+!-----------------------------------------------------------------------------
+!>
+!! \brief Wrapper for MPI_Bcast
+!! Broadcast integer(kind=8) vector from FIRST to all
+!! \todo unlimited polimorphism will obsolete me
+!<
+   subroutine MPI_Bcast_vec_int8(ivar8)
+
+      use mpi,         only: MPI_INTEGER8
+
+      implicit none
+
+      integer(kind=8), dimension(:), intent(inout) :: ivar8   !< int8 vec that will be broadcasted
+
+      call MPI_Bcast(ivar8, size(ivar8), MPI_INTEGER8, FIRST, comm, mpi_err)
+   end subroutine MPI_Bcast_vec_int8
 end module mpisetup
