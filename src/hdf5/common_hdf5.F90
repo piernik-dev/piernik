@@ -624,7 +624,7 @@ contains
          & h5zfilter_avail_f
       use helpers_hdf5,   only: create_attribute
       use mpi,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
-      use mpisetup,       only: comm, FIRST, LAST, master, mpi_err
+      use mpisetup,       only: comm, FIRST, LAST, master, mpi_err, piernik_MPI_Bcast
 
       implicit none
 
@@ -835,7 +835,7 @@ contains
          if (allocated(dbuf)) deallocate(dbuf)
       endif
 
-      call MPI_Bcast(cg_all_n_b, size(cg_all_n_b), MPI_INTEGER, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(cg_all_n_b)
 
       ! Reopen the HDF5 file for parallel write
       call h5open_f(error)
@@ -889,8 +889,7 @@ contains
 
       use constants,   only: cwdlen, RD, WR, I_FOUR, fnamelen
       use dataio_pub,  only: problem_name, run_id, wd_wr, wd_rd, warn, die, msg
-      use mpi,         only: MPI_CHARACTER
-      use mpisetup,    only: comm, mpi_err, master, FIRST
+      use mpisetup,    only: master, piernik_MPI_Bcast
 
       implicit none
 
@@ -931,7 +930,7 @@ contains
       endif
 
       if (present(bcast)) then
-         if (bcast) call MPI_Bcast(filename, cwdlen, MPI_CHARACTER, FIRST, comm, mpi_err)
+         if (bcast) call piernik_MPI_Bcast(filename, cwdlen)
       endif
 
    end function output_fname

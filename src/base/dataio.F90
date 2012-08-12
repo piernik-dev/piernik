@@ -169,8 +169,7 @@ contains
            &                move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use domain,     only: dom ! \todo remove me when plt is obsolete
-      use mpi,        only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, comm, mpi_err, buffer_dim, FIRST, nproc, proc
+      use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier
 
       implicit none
 
@@ -300,10 +299,10 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
+      call piernik_MPI_Bcast(lbuff)
+      call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
 
@@ -366,8 +365,8 @@ contains
       last_res_time = 0.0
 
       if (master .and. restart == 'last') call find_last_restart(nrestart)
-      call MPI_Barrier(comm,mpi_err)
-      call MPI_Bcast(nrestart, I_ONE, MPI_INTEGER, FIRST, comm, mpi_err)
+      call piernik_MPI_Barrier
+      call piernik_MPI_Bcast(nrestart)
 
       if (master) then
          write(log_file,'(6a,i3.3,a)') trim(wd_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
@@ -381,8 +380,8 @@ contains
             log_file_initialized = .true.
          endif
       endif
-      call MPI_Bcast(log_file, cwdlen, MPI_CHARACTER, FIRST, comm, mpi_err)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
-      call MPI_Bcast(log_file_initialized, I_ONE, MPI_LOGICAL, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(log_file, cwdlen)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
+      call piernik_MPI_Bcast(log_file_initialized)
 
    end subroutine init_dataio_parameters
 
@@ -457,11 +456,9 @@ contains
 
    subroutine user_msg_handler(end_sim)
 
-      use constants,    only: I_ONE
       use data_hdf5,    only: write_hdf5
       use dataio_pub,   only: msg, printinfo, warn
-      use mpisetup,     only: comm, mpi_err, master, FIRST
-      use mpi,          only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use mpisetup,     only: master, piernik_MPI_Bcast
       use restart_hdf5, only: write_restart_hdf5
       use timer,        only: time_left
 
@@ -475,8 +472,8 @@ contains
 
       if (master) call read_file_msg
 
-      call MPI_Bcast(umsg,       umsg_len, MPI_CHARACTER,        FIRST, comm, mpi_err)
-      call MPI_Bcast(umsg_param, I_ONE,    MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(umsg, umsg_len)
+      call piernik_MPI_Bcast(umsg_param)
 
 !---  if a user message is received then:
       if (len_trim(umsg) /= 0) then

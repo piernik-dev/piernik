@@ -221,12 +221,11 @@ contains
 !
    subroutine h5_write_to_single_file
 
-      use mpi,         only: MPI_CHARACTER
       use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: printio, printinfo, nhdf, thdf, tmr_hdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
          & msg, run_id, problem_name, use_v2_io, last_hdf_time
-      use mpisetup,    only: comm, mpi_err, master, FIRST
+      use mpisetup,    only: master, piernik_MPI_Bcast
       use timer,       only: set_timer
 
       implicit none
@@ -244,7 +243,7 @@ contains
          write(msg,'(a,es23.16,a,f5.2,1x,2a)') 'ordered t ',last_hdf_time,': Writing datafile v', phv, trim(fname), " ... "
          call printio(msg, .true.)
       endif
-      call MPI_Bcast(fname, cwdlen, MPI_CHARACTER, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(fname, cwdlen)
 
       call set_common_attributes(fname)
       if (use_v2_io) then
