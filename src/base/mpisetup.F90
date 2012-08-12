@@ -43,7 +43,7 @@ module mpisetup
    public :: cleanup_mpi, init_mpi, inflate_req, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, mpi_err, procmask, &
         &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, is_spawned, &
-        &    piernik_MPI_Barrier, piernik_MPI_Bcast
+        &    piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master
 
    integer(kind=4), protected :: nproc, proc, LAST          !< number of processes, rank of my process, rank of last process
    integer(kind=4), protected :: comm                       !< global communicator
@@ -241,7 +241,10 @@ contains
       if (master) call printinfo("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++", .false.)
       call MPI_Barrier(comm,mpi_err)
       if (have_mpi) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
-      if (is_spawned) call MPI_Comm_disconnect(intercomm, mpi_err)
+      if (is_spawned) then
+         call report_to_master(-1)
+         call MPI_Comm_disconnect(intercomm, mpi_err)
+      endif
       call MPI_Finalize(mpi_err)
 
    end subroutine cleanup_mpi
@@ -472,4 +475,22 @@ contains
 
       call MPI_Bcast(ivar8, size(ivar8), MPI_INTEGER8, FIRST, comm, mpi_err)
    end subroutine MPI_Bcast_vec_int8
+!-----------------------------------------------------------------------------
+!>
+!! \brief Routine used to communicate events to master Python script
+!! \todo just a proof of concept
+   subroutine report_to_master(ivar4)
+
+      use constants,   only: I_ONE
+      use mpi,         only: MPI_INTEGER, MPI_BOTTOM, MPI_MAX
+
+      implicit none
+
+      integer(kind=4), intent(in) :: ivar4   !< integer scalar that will be broadcasted
+      integer(kind=4) :: buffer
+
+      if (.not.is_spawned) return
+      buffer = ivar4
+      call MPI_Reduce(buffer, MPI_BOTTOM, I_ONE, MPI_INTEGER, MPI_MAX, 0, intercomm, mpi_err)
+   end subroutine report_to_master
 end module mpisetup

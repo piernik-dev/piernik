@@ -647,13 +647,17 @@ contains
 
    subroutine check_tsl
 
+      use mpisetup,   only: report_to_master
       use constants,  only: CHK
       use dataio_pub, only: last_tsl_time
 
       implicit none
 
       call determine_dump(dump(TSL), last_tsl_time, dt_tsl, CHK, TSL)
-      if (dump(TSL)) call write_timeslice
+      if (dump(TSL)) then
+         call write_timeslice
+         call report_to_master(10)
+      endif
 
    end subroutine check_tsl
 
