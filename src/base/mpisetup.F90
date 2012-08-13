@@ -479,18 +479,28 @@ contains
 !>
 !! \brief Routine used to communicate events to master Python script
 !! \todo just a proof of concept
-   subroutine report_to_master(ivar4)
+   subroutine report_to_master(ivar4, only_master)
 
       use constants,   only: I_ONE
-      use mpi,         only: MPI_INTEGER, MPI_BOTTOM, MPI_MAX
+      use mpi,         only: MPI_INTEGER
 
       implicit none
 
-      integer(kind=4), intent(in) :: ivar4   !< integer scalar that will be broadcasted
-      integer(kind=4) :: buffer
+      integer(kind=4), intent(in) :: ivar4 !< integer scalar that will be send to python
+      !>
+      !! if more than one process calls mpisetup::report_to_master, this
+      !! variable lets the slaves skip sending message
+      !<
+      logical, optional, intent(in) :: only_master
+      integer :: tag  !< master scripts accepts ANY_TAG, so it can carry meaningful value too
 
       if (.not.is_spawned) return
-      buffer = ivar4
-      call MPI_Reduce(buffer, MPI_BOTTOM, I_ONE, MPI_INTEGER, MPI_MAX, 0, intercomm, mpi_err)
+
+      if (present(only_master)) then
+         if (only_master .and. slave) return
+      endif
+      tag = proc ! use proc number as tag
+
+      call MPI_Send(ivar4, I_ONE, MPI_INTEGER, FIRST, tag, intercomm, mpi_err)
    end subroutine report_to_master
 end module mpisetup

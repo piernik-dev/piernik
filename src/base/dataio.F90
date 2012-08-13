@@ -656,7 +656,7 @@ contains
       call determine_dump(dump(TSL), last_tsl_time, dt_tsl, CHK, TSL)
       if (dump(TSL)) then
          call write_timeslice
-         call report_to_master(10)
+         call report_to_master(10, only_master=.True.)
       endif
 
    end subroutine check_tsl
