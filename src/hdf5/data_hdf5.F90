@@ -140,7 +140,7 @@ contains
    subroutine datafields_hdf5(var, tab, ierrh, cg)
 
       use common_hdf5, only: common_shortcuts
-      use constants,   only: varlen, xdim
+      use constants,   only: dsetnamelen, xdim
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
@@ -153,15 +153,16 @@ contains
 
       implicit none
 
-      character(len=varlen),          intent(in)  :: var
+      character(len=dsetnamelen),     intent(in)  :: var
       real(kind=4), dimension(:,:,:)              :: tab
       integer,                        intent(out) :: ierrh
       type(grid_container),  pointer, intent(in)  :: cg
-      class(component_fluid), pointer              :: fl_dni
+
+      class(component_fluid), pointer             :: fl_dni
       integer(kind=4)                             :: i_xyz
 #ifdef COSM_RAYS
       integer                                     :: i
-      integer, parameter                          :: auxlen = varlen - 1
+      integer, parameter                          :: auxlen = dsetnamelen - 1
       character(len=auxlen)                       :: aux
 #endif /* COSM_RAYS */
 #define RNG cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke
@@ -453,11 +454,10 @@ contains
       if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_var, tab, ierrh, cg)
 
       ! Check if a given name was registered in named arrays. This is lowest-priority identification.
-      if (ierrh /= 0) then  ! All scalar named arrays shoud be handled here
-         !> \warning If a registered name is longer than varlen, it won't be properly identified here
-         !> \todo Increase varlen or something like that
+      if (ierrh /= 0) then  ! All simple scalar named arrays shoud be handled here
          if (qna%exists(hdf_var)) then
             tab(:,:,:) = real(cg%q(qna%ind(hdf_var))%span(cg%ijkse), 4)
+            ierrh = 0
          else
             ierrh = -1
          endif

@@ -84,7 +84,7 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,   only: varlen
+      use constants,   only: dsetnamelen
       use fluids_pub,  only: has_ion, has_dst, has_neu
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 #ifdef COSM_RAYS
@@ -94,12 +94,12 @@ contains
 
       implicit none
 
-      character(len=varlen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
+      character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
 
       integer               :: nvars, i, j
 #if defined COSM_RAYS
       integer               :: k
-      character(len=varlen) :: aux
+      character(len=dsetnamelen) :: aux
 #endif /* COSM_RAYS */
 
       nvars = 1
@@ -218,15 +218,15 @@ contains
 !<
    subroutine common_shortcuts(var, fl_dni, i_xyz)
 
-      use constants,  only: varlen, singlechar, INT4
+      use constants,  only: dsetnamelen, singlechar, INT4
       use fluidindex, only: flind
       use fluidtypes, only: component_fluid
 
       implicit none
 
-      character(len=varlen),          intent(in)    :: var
+      character(len=dsetnamelen),      intent(in)    :: var
       class(component_fluid), pointer, intent(inout) :: fl_dni
-      integer(kind=4),                intent(out)   :: i_xyz
+      integer(kind=4),                 intent(out)   :: i_xyz
 
       character(len=singlechar) :: dc
 

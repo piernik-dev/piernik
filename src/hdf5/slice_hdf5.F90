@@ -70,7 +70,7 @@ contains
 !<
    subroutine common_plt_hdf5(var, ij, xn, tab, ierrh, cg)
 
-      use constants,      only: varlen, xdim, ndims, LO, HI
+      use constants,      only: dsetnamelen, xdim, ndims, LO, HI
       use common_hdf5,    only: common_shortcuts
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag
@@ -90,7 +90,7 @@ contains
 
       implicit none
 
-      character(len=varlen),         intent(in)  :: var   !< quantity to be plotted
+      character(len=dsetnamelen),    intent(in)  :: var   !< quantity to be plotted
       integer,                       intent(in)  :: ij    !< direction perpendicular to the plane of plot, xdim means "yz" plane
       integer(kind=8),               intent(in)  :: xn    !< no. of cell at which we are slicing the local block
       integer,                       intent(out) :: ierrh !< error handling
@@ -234,7 +234,7 @@ contains
    subroutine write_plot_hdf5(var, plane, nimg)
 
       use cg_list_level, only: base_lev
-      use constants,     only: xdim, ydim, zdim, varlen, cwdlen, LO, HI
+      use constants,     only: xdim, ydim, zdim, dsetnamelen, cwdlen, LO, HI
       use dataio_pub,    only: vizit, log_file, msg, die, warn
       use dataio_user,   only: user_plt_hdf5, user_plt_attrs
       use domain,        only: dom, is_multicg
@@ -252,9 +252,9 @@ contains
 
       implicit none
 
-      integer,               intent(in)        :: plane                         !> xdim means "yz" and so on
-      character(len=varlen), intent(in)        :: var                           !> not yet implemented
-      integer(kind=4),       intent(in)        :: nimg
+      integer,                    intent(in) :: plane                         !> xdim means "yz" and so on
+      character(len=dsetnamelen), intent(in) :: var                           !> not yet implemented
+      integer(kind=4),            intent(in) :: nimg
 
       real, dimension(:,:), allocatable        :: send, img, recv
       integer                                  :: ierrh, p

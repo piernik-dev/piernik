@@ -377,7 +377,7 @@ contains
       use cg_list,             only: cg_list_element
       use cg_list_global,      only: all_cg
       use cg_list_level,       only: cg_list_level_T, finest, coarsest
-      use constants,           only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, varlen, xdim, ydim, zdim
+      use constants,           only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, dsetnamelen, xdim, ydim, zdim
       use dataio_pub,          only: die, warn, printinfo, msg
       use cart_comm,           only: cdd
       use domain,              only: dom
@@ -397,7 +397,7 @@ contains
       type(cg_list_level_T), pointer :: curl
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-      character(len=varlen) :: FFTn
+      character(len=dsetnamelen) :: FFTn
 
       need_general_pf = cdd%comm3d == MPI_COMM_NULL .or. single_base .or. is_mg_uneven
 

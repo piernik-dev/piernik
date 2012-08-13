@@ -100,8 +100,7 @@ module constants
    integer, parameter :: cbuff_len = 32                  !< length for problem parameters
    integer, parameter :: fplen = 24                      !< length of buffer for printed FP or integer number
    integer, parameter :: domlen = 16                     !< should be <= cbuff_len
-   integer, parameter :: dsetnamelen = 16                !< length of dataset name
-   integer, parameter :: varlen = 4                      !< length of state variable names in hdf files
+   integer, parameter :: dsetnamelen = 16                !< length of dataset name and state variable names in hdf files
    integer, parameter :: idlen = 3                       !< COMMENT ME
    integer, parameter :: singlechar = 1                  !< a single character
 

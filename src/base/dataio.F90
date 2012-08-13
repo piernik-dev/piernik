@@ -45,7 +45,7 @@
 module dataio
 
    use dataio_pub, only: domain_dump, fmin, fmax, vizit, nend, tend, wend, new_id, nrestart, problem_name, run_id, multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level
-   use constants,  only: cwdlen, fmt_len, cbuff_len, varlen, RES, TSL, ndims
+   use constants,  only: cwdlen, fmt_len, cbuff_len, dsetnamelen, RES, TSL, ndims
 
    implicit none
 
@@ -67,7 +67,7 @@ module dataio
    character(len=cwdlen)    :: system_message_file   !< path to possible system (UPS) message file containing orders to dump/stop/end simulation
    integer(kind=4), dimension(ndims) :: plt_plane    !< indices of cells that are sliced in plt files
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
-   character(len=varlen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
+   character(len=dsetnamelen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
 
    integer                  :: tsl_lun               !< logical unit number for timeslice file
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
