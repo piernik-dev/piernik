@@ -20,27 +20,27 @@ def get_np():
 
 
 def parse_mpisignals(fn='../src/base/mpi_signals.F90'):
-   import re
-   enum = re.compile("enumerator", re.IGNORECASE)
-   equal = re.compile("=")
+    import re
+    enum = re.compile("enumerator", re.IGNORECASE)
+    equal = re.compile("=")
 
-   f = file(fn,'r')
-   lines = [line.split('::')[-1].strip() 
+    f = file(fn, 'r')
+    lines = [line.split('::')[-1].strip()
             for line in  filter(enum.search, f.readlines())]
-   f.close()
+    f.close()
 
-   mpi_signals = {}
-   i = 0
-   for line in lines:
-      if equal.search(line):
-         temp = line.split("=")
-         name, i = temp[0], int(temp[-1])
-      else:
-         name = line
-      mpi_signals[name[4:].lower().strip()] = i
-      i += 1
+    mpi_signals = {}
+    i = 0
+    for line in lines:
+        if equal.search(line):
+            temp = line.split("=")
+            name, i = temp[0], int(temp[-1])
+        else:
+            name = line
+        mpi_signals[name[4:].lower().strip()] = i
+        i += 1
 
-   return mpi_signals
+    return mpi_signals
 
 
 if have_argparse:
@@ -77,7 +77,8 @@ while True:
          MPI.ANY_SOURCE, MPI.ANY_TAG,
          status)
     if not signal[0] in mpi_signals.values():
-        print("I've got signal %i but I have no clue what to do with it :/" % signal[0])
+        print("I've got signal %i but I have no clue what to do with it :/" %
+        signal[0])
 
     if signal[0] == mpi_signals['tsl_updated']:
         print "Python script: TSL was updated"
