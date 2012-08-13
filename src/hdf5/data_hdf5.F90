@@ -432,6 +432,7 @@ contains
       use dataio_pub,  only: die, msg
       use dataio_user, only: user_vars_hdf5
       use grid_cont,   only: grid_container
+      use named_array, only: qna
 
       implicit none
 
@@ -444,8 +445,24 @@ contains
 
       ierrh = 0
       ok_var = .false.
+
+      ! Try some default names first
       call datafields_hdf5(hdf_var, tab, ierrh, cg)
+
+      ! Call user routines for user variables or quantites computed in user routines
       if (associated(user_vars_hdf5) .and. ierrh /= 0) call user_vars_hdf5(hdf_var, tab, ierrh, cg)
+
+      ! Check if a given name was registered in named arrays. This is lowest-priority identification.
+      if (ierrh /= 0) then  ! All scalar named arrays shoud be handled here
+         !> \warning If a registered name is longer than varlen, it won't be properly identified here
+         !> \todo Increase varlen or something like that
+         if (qna%exists(hdf_var)) then
+            tab(:,:,:) = real(cg%q(qna%ind(hdf_var))%span(cg%ijkse), 4)
+         else
+            ierrh = -1
+         endif
+      endif
+
       if (ierrh>=0) ok_var = .true.
       if (.not.ok_var) then
          write(msg,'(3a)') "[data_hdf5:get_data_from_cg]: ", hdf_var," is not defined in datafields_hdf5, neither in user_vars_hdf5."

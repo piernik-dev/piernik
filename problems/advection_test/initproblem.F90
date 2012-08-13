@@ -202,7 +202,7 @@ contains
       integer, intent(inout)                          :: ierrh
       type(grid_container), pointer, intent(in)       :: cg
 
-      call analytic_solution(t)
+      call analytic_solution(t) ! cannot handle this automagically because here we modify it
 
       ierrh = 0
       if (qna%exists(var)) then
