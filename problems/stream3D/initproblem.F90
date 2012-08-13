@@ -61,8 +61,7 @@ contains
 
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun         ! QA_WARN required for diff_nml
       use constants,     only: cbuff_len
-      use mpisetup,      only: cbuff, rbuff, master, slave, comm, mpi_err, buffer_dim, FIRST
-      use mpi,           only: MPI_CHARACTER, MPI_DOUBLE_PRECISION
+      use mpisetup,      only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -89,8 +88,8 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
+      call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
 

@@ -77,8 +77,7 @@ contains
       use domain,     only: dom
       use fluidindex, only: flind
       use global,     only: smalld, smallei
-      use mpisetup,   only: mpi_err, rbuff, ibuff, master, slave, buffer_dim, comm, proc, have_mpi, LAST, FIRST
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER
+      use mpisetup,   only: rbuff, ibuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
 
       implicit none
 
@@ -100,8 +99,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
 

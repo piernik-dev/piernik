@@ -59,8 +59,7 @@ contains
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
       use domain,        only: dom
-      use mpi,           only: MPI_DOUBLE_PRECISION, MPI_INTEGER
-      use mpisetup,      only: mpi_err, rbuff, ibuff, master, slave, buffer_dim, comm, FIRST
+      use mpisetup,      only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
       use problem_pub,   only: jeans_d0, jeans_mode
 
       implicit none
@@ -89,8 +88,8 @@ contains
 
       endif
 
-      call MPI_Bcast(ibuff, buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
-      call MPI_Bcast(rbuff, buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(rbuff)
 
       if (slave) then
 

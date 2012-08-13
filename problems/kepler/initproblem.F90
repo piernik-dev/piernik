@@ -101,8 +101,7 @@ contains
       use domain,              only: dom
       use fluidboundaries_funcs, only: user_fluidbnd
       use gravity,             only: grav_pot_3d
-      use mpi,                 only: MPI_CHARACTER, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_LOGICAL
-      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, buffer_dim, master, slave, comm, mpi_err, FIRST
+      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
       use user_hooks,          only: problem_customize_solution, problem_grace_passed, problem_post_restart
 
       implicit none
@@ -166,10 +165,10 @@ contains
 
       endif
 
-      call MPI_Bcast(cbuff, cbuff_len*buffer_dim, MPI_CHARACTER,        FIRST, comm, mpi_err)
-      call MPI_Bcast(rbuff,           buffer_dim, MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-      call MPI_Bcast(ibuff,           buffer_dim, MPI_INTEGER,          FIRST, comm, mpi_err)
-      call MPI_Bcast(lbuff,           buffer_dim, MPI_LOGICAL,          FIRST, comm, mpi_err)
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
+      call piernik_MPI_Bcast(rbuff)
+      call piernik_MPI_Bcast(ibuff)
+      call piernik_MPI_Bcast(lbuff)
 
       if (slave) then
 
