@@ -265,7 +265,8 @@ contains
       if (smalld >= big_float) then
          call MPI_Allreduce(mindens, smalld, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
          call MPI_Allreduce(MPI_IN_PLACE, maxdens, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
-         span = log10(maxdens/mindens)
+         span = 0
+         if (maxdens > mindens) span = log10(maxdens/mindens)
          mindens = mindens * safety_factor
          if (master) then
             write(msg,'(A,ES11.4)') "[func:sanitize_smallx_checks] adjusted smalld to ", smalld
