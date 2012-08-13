@@ -73,7 +73,7 @@ contains
       use constants,   only: I_ONE, cwdlen, WR
       use common_hdf5, only: set_common_attributes, output_fname
       use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, use_v2_io, nres, piernik_hdf5_version, piernik_hdf5_version2, last_res_time
-      use mpisetup,    only: comm, mpi_err, master
+      use mpisetup,    only: master, piernik_MPI_Barrier
       use timer,       only: set_timer
 
       implicit none
@@ -99,7 +99,7 @@ contains
       else
          call write_restart_hdf5_v1(filename)
       endif
-      call MPI_Barrier(comm, mpi_err)
+      call piernik_MPI_Barrier
 
       thdf = set_timer(tmr_hdf)
       if (master) then
@@ -1196,7 +1196,7 @@ contains
       use hdf5,        only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
       use mass_defect, only: magic_mass
-      use mpisetup,    only: master, comm, mpi_err
+      use mpisetup,    only: master, piernik_MPI_Barrier
 
       implicit none
 
@@ -1449,7 +1449,7 @@ contains
       call h5close_f(error)
 
       if (status_v2 /= STAT_OK) nres = nres_old ! let's hope read_restart_hdf5_v1 will fix what could possibly got broken here
-      call MPI_Barrier(comm, mpi_err)
+      call piernik_MPI_Barrier
 
    end subroutine read_restart_hdf5_v2
 

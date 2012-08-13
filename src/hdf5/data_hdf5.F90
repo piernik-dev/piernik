@@ -263,7 +263,7 @@ contains
    subroutine h5_write_to_single_file_v2(fname)
       use common_hdf5, only: write_to_hdf5_v2, O_OUT
       use gdf,         only: gdf_create_field_types
-      use mpisetup,    only: comm, mpi_err, master
+      use mpisetup,    only: master, piernik_MPI_Barrier
 
       implicit none
 
@@ -272,7 +272,7 @@ contains
       call write_to_hdf5_v2(fname, O_OUT, create_empty_cg_datasets_in_output, write_cg_to_output)
 
       if (master) call gdf_create_field_types(fname,create_datafields_descrs)
-      call MPI_Barrier(comm, mpi_err)
+      call piernik_MPI_Barrier
 
    end subroutine h5_write_to_single_file_v2
 

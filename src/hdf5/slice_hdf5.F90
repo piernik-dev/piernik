@@ -163,7 +163,7 @@ contains
       use common_hdf5, only: nhdf_vars, hdf_vars
       use dataio_pub,  only: log_file, tmr_hdf, thdf, printio, printinfo, msg, nimg, last_plt_time
       use hdf5,        only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
-      use mpisetup,    only: comm, mpi_err, master
+      use mpisetup,    only: master, piernik_MPI_Barrier
       use timer,       only: set_timer
 
       implicit none
@@ -204,7 +204,7 @@ contains
          call H5Fclose_f(file_id, error)
       endif
 
-      call MPI_Barrier(comm, mpi_err)
+      call piernik_MPI_Barrier
 
       do i = 1, nhdf_vars
          do d = xdim, zdim
@@ -244,7 +244,7 @@ contains
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
       use mpi,           only: MPI_DOUBLE_PRECISION
-      use mpisetup,      only: comm, mpi_err, proc, FIRST, LAST, status, master
+      use mpisetup,      only: comm, mpi_err, proc, FIRST, LAST, status, master, piernik_MPI_Barrier
 #ifdef PGPLOT
       use dataio_pub,    only: fmin, fmax
       use viz,           only: draw_me
@@ -340,7 +340,7 @@ contains
               call MPI_Send(send, size(send), MPI_DOUBLE_PRECISION, FIRST, tag, comm, mpi_err)
       endif
 
-      call MPI_Barrier(comm, mpi_err) ! We must synchronize everyone before we reuse buffers and variables
+      call piernik_MPI_Barrier ! We must synchronize everyone before we reuse buffers and variables
 
       if (allocated(send)) deallocate(send)
 
