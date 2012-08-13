@@ -648,6 +648,7 @@ contains
    subroutine check_tsl
 
       use mpisetup,   only: report_to_master
+      use mpisignals, only: sig
       use constants,  only: CHK
       use dataio_pub, only: last_tsl_time
 
@@ -656,7 +657,7 @@ contains
       call determine_dump(dump(TSL), last_tsl_time, dt_tsl, CHK, TSL)
       if (dump(TSL)) then
          call write_timeslice
-         call report_to_master(10, only_master=.True.)
+         call report_to_master(sig%tsl_updated, only_master=.True.)
       endif
 
    end subroutine check_tsl

@@ -36,7 +36,7 @@ while True:
       print "Python script: TSL was updated"
       print "GRID magic can happen here \o/"
 #  if status.Get_tag() == 1:
-   if signal[0] < 0:
+   if signal[0] <= 0:
       break
 
 piernik.Disconnect()

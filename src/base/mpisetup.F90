@@ -231,6 +231,7 @@ contains
    subroutine cleanup_mpi
 
       use dataio_pub, only: printinfo
+      use mpisignals, only: sig
 
       implicit none
 
@@ -242,7 +243,7 @@ contains
       call MPI_Barrier(comm,mpi_err)
       if (have_mpi) call sleep(1) ! Prevent random SIGSEGVs in openmpi's MPI_Finalize
       if (is_spawned) then
-         call report_to_master(-1)
+         call report_to_master(sig%clean_exit)
          call MPI_Comm_disconnect(intercomm, mpi_err)
       endif
       call MPI_Finalize(mpi_err)
