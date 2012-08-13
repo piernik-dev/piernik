@@ -44,6 +44,11 @@ module multigrid_gravity
 
    use constants,        only: cbuff_len, ndims
    use multigrid_vstats, only: vcycle_stats
+#if defined(__INTEL_COMPILER)
+   !! \deprecated remove this clause as soon as Intel Compiler gets required
+   !! features and/or bug fixes
+   use named_array ! QA_WARN required for ifort-12.1.x
+#endif /* __INTEL_COMPILER */
 
    implicit none
 
