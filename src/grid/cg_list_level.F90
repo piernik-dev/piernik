@@ -429,7 +429,7 @@ contains
 
       this%ord_prolong_set = all_cg%ord_prolong_nb
 
-      !> \todo update mpisetup::req(:)
+      call all_cg%update_req
 
    end subroutine vertical_prep
 
@@ -1028,8 +1028,6 @@ contains
 
       call this%update_tot_se
 
-      call all_cg%update_req
-
    end subroutine init_all_new_cg
 
 !> \brief Get all decomposed patches and compute which pieces go to which process
@@ -1186,6 +1184,8 @@ contains
 
    subroutine mpi_bnd_types(this, cg)
 
+      use cart_comm,      only: cdd
+      use cg_list_global, only: all_cg
       use constants,      only: FLUID, MAG, CR, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE, wcr_n
       use dataio_pub,     only: die
       use domain,         only: dom
@@ -1193,7 +1193,6 @@ contains
       use mpi,            only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,       only: mpi_err, FIRST, LAST, procmask
       use named_array,    only: wna
-      use cart_comm,      only: cdd
 
       implicit none
 
@@ -1355,6 +1354,7 @@ contains
       endif
 
       call cg%set_q_mbc
+      call all_cg%update_req
 
    end subroutine mpi_bnd_types
 

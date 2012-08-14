@@ -926,9 +926,10 @@ contains
 
       class(cg_list_T), intent(in) :: this
 
-      integer :: nrq, d
+      integer :: nrq, d, dr, dp
       type(cg_list_element), pointer :: cgl
 
+      ! calculate number of boundaries to communicate
       nrq = 0
       cgl => this%first
       do while (associated(cgl))
@@ -936,6 +937,24 @@ contains
          do d = xdim, zdim
             if (allocated(cgl%cg%q_i_mbc(d, dom%nb)%mbc)) nrq = nrq + 2 * count(cgl%cg%q_i_mbc(d, dom%nb)%mbc(:) /= INVALID)
          enddo
+
+         cgl => cgl%nxt
+      enddo
+      call inflate_req(nrq)
+
+      ! calculate number of prolongation-restriction pairs
+      nrq = 0
+      cgl => this%first
+      do while (associated(cgl))
+         dr = 0
+         if (allocated(cgl%cg%ri_tgt%seg)) dr =      size(cgl%cg%ri_tgt%seg(:), dim=1)
+         if (allocated(cgl%cg%ro_tgt%seg)) dr = dr + size(cgl%cg%ro_tgt%seg(:), dim=1)
+
+         dp = 0
+         if (allocated(cgl%cg%pi_tgt%seg)) dp =      size(cgl%cg%pi_tgt%seg(:), dim=1)
+         if (allocated(cgl%cg%po_tgt%seg)) dp = dp + size(cgl%cg%po_tgt%seg(:), dim=1)
+
+         nrq = nrq + max(dr, dp)
 
          cgl => cgl%nxt
       enddo
