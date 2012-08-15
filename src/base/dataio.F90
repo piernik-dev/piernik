@@ -625,8 +625,8 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)    :: output
-      logical,         intent(inout) :: dmp
+      integer(kind=4), intent(in)    :: output  !< type of output
+      logical,         intent(inout) :: dmp     !< perform I/O if True
 
       if (output == FINAL .and. trim(problem_name) /= 'crash') write(problem_name, '(a,a6)') trim(problem_name), '_final'
       if ((output == INCEPTIVE) .and. initial_hdf_dump) dmp = .true.  !< \todo problem_name may be enhanced by '_initial', but this and nhdf should be reverted just after write_hdf5 is called

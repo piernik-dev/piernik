@@ -166,8 +166,8 @@ contains
 
       implicit none
 
-      integer(kind=8), intent(in) :: size
-      character(len=*), intent(out) :: str
+      integer(kind=8), intent(in) :: size   !< size in bytes
+      character(len=*), intent(out) :: str  !< string with bytes value suffixed with unit
 
       real, parameter :: over = 2.
       real, parameter :: Ki = 2.**10
@@ -191,8 +191,8 @@ contains
 
       implicit none
 
-      integer(kind=8),  intent(in) :: new_size
-      character(len=*), intent(in) :: new_name
+      integer(kind=8),  intent(in) :: new_size   !< size of recently added array described by new_name
+      character(len=*), intent(in) :: new_name   !< name of recently added array
 
       call incr_vec(array_sizes,1)
       call incr_vec(array_names,1,an_len)
@@ -208,9 +208,9 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lensize
-      character(len=*), intent(in), dimension(:) :: words
-      character(len=lensize), dimension(:), allocatable, intent(inout) :: vec
+      integer, intent(in) :: lensize  !< size of each element of vec
+      character(len=*), intent(in), dimension(:) :: words  !< array that will be appended to vec
+      character(len=lensize), dimension(:), allocatable, intent(inout) :: vec   !< vector that will be incremeneted
       integer :: old , i
 
       old = 0
@@ -225,12 +225,12 @@ contains
 
    end subroutine pop_char_vector
 
-   subroutine pop_real_vector(vec,words)
+   subroutine pop_real_vector(vec, words)
 
       implicit none
 
-      real, intent(in), dimension(:) :: words
-      real, dimension(:), allocatable, intent(inout) :: vec
+      real, intent(in), dimension(:) :: words !< array that will be appended to vec
+      real, dimension(:), allocatable, intent(inout) :: vec !< vector that will be incremeneted
 
       integer :: old
 
@@ -241,12 +241,13 @@ contains
 
    end subroutine pop_real_vector
 
-   subroutine increase_char_vector(vec,addlen,lensize)
+   subroutine increase_char_vector(vec, addlen, lensize)
 
       implicit none
 
-      integer, intent(in) :: lensize, addlen !< \todo get rid of lensize
-      character(len=lensize), dimension(:), allocatable, intent(inout) :: vec
+      integer, intent(in) :: lensize !< size of each element of vec \todo get rid of lensize
+      integer, intent(in) :: addlen  !< number of elements appended to vec
+      character(len=lensize), dimension(:), allocatable, intent(inout) :: vec !< vector that will be incremeneted
       character(len=lensize), dimension(:), allocatable :: temp
       integer :: old_size
 
@@ -266,12 +267,13 @@ contains
 
    end subroutine increase_char_vector
 
-   subroutine increase_real_vector(vec,addlen)
+   subroutine increase_real_vector(vec, addlen)
 
       implicit none
 
-      integer, intent(in) :: addlen
-      real, dimension(:), allocatable, intent(inout) :: vec
+      integer, intent(in) :: addlen !< number of elements appended to vec
+      real, dimension(:), allocatable, intent(inout) :: vec !< vector that will be incremeneted
+
       real, dimension(:), allocatable :: temp
       integer :: old_size
 
@@ -294,8 +296,9 @@ contains
 
       implicit none
 
-      integer, intent(in) :: addlen
-      integer(kind=8), dimension(:), allocatable, intent(inout) :: vec
+      integer, intent(in) :: addlen !< number of elements appended to vec
+      integer(kind=8), dimension(:), allocatable, intent(inout) :: vec !< vector that will be incremeneted
+
       integer(kind=8), dimension(:), allocatable :: temp
       integer :: old_size
 
@@ -318,7 +321,7 @@ contains
 
    subroutine deallocate_array_1D_int4(array)
       implicit none
-      integer(kind=4), dimension(:), allocatable, intent(inout)  :: array
+      integer(kind=4), dimension(:), allocatable, intent(inout)  :: array !< array that will be deallocated
 
       used_memory = used_memory - size(array)*i4_s
       if (allocated(array)) deallocate(array)
@@ -327,7 +330,7 @@ contains
 
    subroutine deallocate_array_2D_int4(array)
       implicit none
-      integer(kind=4), dimension(:,:), allocatable, intent(inout)  :: array
+      integer(kind=4), dimension(:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*i4_s
       if (allocated(array)) deallocate(array)
@@ -336,7 +339,7 @@ contains
 
    subroutine deallocate_array_3D_int4(array)
       implicit none
-      integer(kind=4), dimension(:,:,:), allocatable, intent(inout)  :: array
+      integer(kind=4), dimension(:,:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*i4_s
       if (allocated(array)) deallocate(array)
@@ -345,7 +348,7 @@ contains
 
    subroutine deallocate_array_1D_real(array)
       implicit none
-      real, dimension(:), allocatable, intent(inout)  :: array
+      real, dimension(:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*r8_s
       if (allocated(array)) deallocate(array)
@@ -354,7 +357,7 @@ contains
 
    subroutine deallocate_array_2D_real(array)
       implicit none
-      real, dimension(:,:), allocatable, intent(inout)  :: array
+      real, dimension(:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*r8_s
       if (allocated(array)) deallocate(array)
@@ -363,7 +366,7 @@ contains
 
    subroutine deallocate_array_3D_real(array)
       implicit none
-      real, dimension(:,:,:), allocatable, intent(inout)  :: array
+      real, dimension(:,:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*r8_s
       if (allocated(array)) deallocate(array)
@@ -372,7 +375,7 @@ contains
 
    subroutine deallocate_array_4D_real(array)
       implicit none
-      real, dimension(:,:,:,:), allocatable, intent(inout)  :: array
+      real, dimension(:,:,:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*r8_s
       if (allocated(array)) deallocate(array)
@@ -381,22 +384,22 @@ contains
 
    subroutine deallocate_array_5D_real(array)
       implicit none
-      real, dimension(:,:,:,:,:), allocatable, intent(inout)  :: array
+      real, dimension(:,:,:,:,:), allocatable, intent(inout)  :: array  !< array that will be deallocated
 
       used_memory = used_memory - size(array)*r8_s
       if (allocated(array)) deallocate(array)
 
    end subroutine deallocate_array_5D_real
 
-   subroutine allocate_array_1D_int4(array,as,aname)
+   subroutine allocate_array_1D_int4(array, as, aname)
 
       use constants, only: big_int
 
       implicit none
 
-      integer(kind=4), dimension(:), allocatable, intent(inout)  :: array
-      integer(kind=4), dimension(1), intent(in)          :: as
-      character(len=*), intent(in), optional             :: aname
+      integer(kind=4), dimension(:), allocatable, intent(inout)  :: array  !< array that will be allocated
+      integer(kind=4), dimension(1), intent(in)          :: as     !< size of allocated array
+      character(len=*), intent(in), optional             :: aname  !< name of allocated array
 
       if (.not.allocated(array)) then
          allocate( array(as(1)) )
@@ -413,9 +416,9 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(:,:), allocatable, intent(inout)  :: array
-      integer(kind=4), dimension(2), intent(in)            :: as
-      character(len=*), intent(in), optional               :: aname
+      integer(kind=4), dimension(:,:), allocatable, intent(inout)  :: array  !< array that will be allocated
+      integer(kind=4), dimension(2), intent(in)            :: as     !< size of allocated array
+      character(len=*), intent(in), optional               :: aname  !< name of allocated array
 
       if (.not.allocated(array)) then
          allocate( array(as(1),as(2)) )
@@ -432,9 +435,9 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(:,:,:), allocatable, intent(inout)  :: array
-      integer(kind=4), dimension(3), intent(in)              :: as
-      character(len=*), intent(in), optional                 :: aname
+      integer(kind=4), dimension(:,:,:), allocatable, intent(inout)  :: array  !< array that will be allocated
+      integer(kind=4), dimension(3), intent(in)              :: as     !< size of allocated array
+      character(len=*), intent(in), optional                 :: aname  !< name of allocated array
 
       if (.not.allocated(array)) then
          allocate( array(as(1),as(2),as(3)) )
@@ -451,9 +454,9 @@ contains
 
       implicit none
 
-      real, dimension(:), allocatable, intent(inout)  :: array
-      integer(kind=4), dimension(1), intent(in)       :: as
-      character(len=*), intent(in), optional          :: aname
+      real, dimension(:), allocatable, intent(inout)  :: array  !< array that will be allocated
+      integer(kind=4), dimension(1), intent(in)       :: as     !< size of allocated array
+      character(len=*), intent(in), optional          :: aname  !< name of allocated array
 
       if (.not.allocated(array)) then
          allocate( array(as(1)) )
@@ -470,9 +473,9 @@ contains
 
       implicit none
 
-      real, dimension(:,:), allocatable, intent(inout)  :: array
-      integer(kind=4), dimension(2), intent(in)         :: as
-      character(len=*), intent(in), optional            :: aname
+      real, dimension(:,:), allocatable, intent(inout)  :: array  !< array that will be allocated
+      integer(kind=4), dimension(2), intent(in)         :: as     !< size of allocated array
+      character(len=*), intent(in), optional            :: aname  !< name of allocated array
 
       if (.not.allocated(array)) then
          allocate( array(as(1),as(2)) )
@@ -489,9 +492,9 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), allocatable, intent(inout)  :: array
-      integer(kind=4), dimension(3), intent(in)           :: as
-      character(len=*), intent(in), optional              :: aname
+      real, dimension(:,:,:), allocatable, intent(inout)  :: array  !< array that will be allocated
+      integer(kind=4), dimension(3), intent(in)           :: as     !< size of allocated array
+      character(len=*), intent(in), optional              :: aname  !< name of allocated array
 
       if (.not.allocated(array)) then
          allocate( array(as(1),as(2),as(3)) )
@@ -508,9 +511,9 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:,:), allocatable, intent(inout)  :: array
-      integer(kind=4), dimension(4), intent(in)             :: as
-      character(len=*), intent(in), optional                :: aname
+      real, dimension(:,:,:,:), allocatable, intent(inout)  :: array  !< array that will be allocated
+      integer(kind=4), dimension(4), intent(in)             :: as     !< size of allocated array
+      character(len=*), intent(in), optional                :: aname  !< name of allocated array
 
       if (.not.allocated(array)) then
          allocate( array(as(1),as(2),as(3),as(4)) )
@@ -527,9 +530,9 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:,:,:), allocatable, intent(inout)  :: array
-      integer(kind=4), dimension(5), intent(in)               :: as
-      character(len=*), intent(in), optional                  :: aname
+      real, dimension(:,:,:,:,:), allocatable, intent(inout)  :: array  !< array that will be allocated
+      integer(kind=4), dimension(5), intent(in)               :: as     !< size of allocated array
+      character(len=*), intent(in), optional                  :: aname  !< name of allocated array
 
       if (.not.allocated(array)) then
          allocate( array(as(1),as(2),as(3),as(4),as(5)) )

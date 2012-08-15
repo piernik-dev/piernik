@@ -260,8 +260,8 @@ contains
       implicit none
 
       class(box_T),                      intent(inout) :: patch   !< the patch, which we want to be chopped into pieces
-      integer(kind=4), dimension(ndims), intent(in)    :: p_size
-      integer(kind=4),                   intent(in)    :: pieces      !< number of pieces
+      integer(kind=4), dimension(ndims), intent(in)    :: p_size  !< number of pieces in each direction
+      integer(kind=4),                   intent(in)    :: pieces  !< number of pieces
 
       integer(kind=4) :: p
       integer(kind=4), dimension(ndims) :: pc
@@ -320,7 +320,7 @@ contains
       implicit none
 
       class(box_T),                      intent(inout) :: patch   !< the patch, which we want to be chopped into pieces
-      integer(kind=4), dimension(ndims), intent(in)    :: p_size
+      integer(kind=4), dimension(ndims), intent(in)    :: p_size  !< number of pieces in each direction
       integer(kind=4),                   intent(in)    :: pieces      !< number of pieces
 
       integer(kind=4) :: p, px, py
@@ -382,9 +382,9 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(ndims), intent(out) :: p_size
-      integer(kind=4), dimension(ndims), intent(in)  :: n_d         !< size of the box to be divided
-      integer(kind=4),                   intent(in)  :: pieces      !< number of pieces
+      integer(kind=4), dimension(ndims), intent(out) :: p_size    !< number of pieces in each direction
+      integer(kind=4), dimension(ndims), intent(in)  :: n_d       !< size of the box to be divided
+      integer(kind=4),                   intent(in)  :: pieces    !< number of pieces
 
       integer(kind=4) :: n
       integer :: j1, j2, j3, jj, p
@@ -455,9 +455,9 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(ndims), intent(out) :: p_size
-      integer(kind=4), dimension(ndims), intent(in)  :: n_d         !< size of the box to be divided
-      integer(kind=4),                   intent(in)  :: pieces      !< number of pieces
+      integer(kind=4), dimension(ndims), intent(out) :: p_size   !< number of pieces in each direction
+      integer(kind=4), dimension(ndims), intent(in)  :: n_d      !< size of the box to be divided
+      integer(kind=4),                   intent(in)  :: pieces   !< number of pieces
 
       real, parameter :: b_load_fac = 0.25 ! estimated increase of execution time after doubling the total size of internal boundaries.
       ! \todo estimate this factor for massively parallel runs and for Intel processors
@@ -578,7 +578,7 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(ndims), intent(inout) :: p_size
+      integer(kind=4), dimension(ndims), intent(inout) :: p_size      !< number of pieces in each direction
       integer(kind=4), dimension(ndims), intent(in)    :: n_d         !< size of the box to be divided
       integer(kind=4),                   intent(in)    :: pieces      !< number of pieces
 
