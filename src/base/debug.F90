@@ -81,7 +81,7 @@ contains
       use constants,             only: PIERNIK_INIT_MPI
       use dataio_pub,            only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,            only: code_progress, die
-      use mpisetup,              only: master, slave, rbuff, lbuff, cbuff, ibuff, piernik_MPI_Bcast
+      use mpisetup,              only: master, slave, rbuff, lbuff, cbuff, ibuff, buffer_dim, piernik_MPI_Bcast
 
       implicit none
 
