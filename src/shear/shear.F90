@@ -339,7 +339,183 @@ contains
       if (allocated(temp)) deallocate(temp)
 
    end function unshear
-
 !--------------------------------------------------------------------------------------------------
+#ifdef SHEAR_BND
+   subroutine bnd_shear_u(dir, cg)
+      use cart_comm,             only: cdd
+      use constants,             only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, BND_SHE
+      use domain,                only: dom
+      use fluidindex,            only: flind, iarr_all_dn, iarr_all_my
+      use grid_cont,             only: grid_container
+      use mpi,                   only: MPI_COMM_NULL
+#ifndef FFTW
+      use constants,             only: half
+      use global,                only: smalld
+      use shear,                 only: qshear, delj, eps, omega
+#endif /* !FFTW */
 
+      implicit none
+
+      integer(kind=4),               intent(in)    :: dir
+      type(grid_container), pointer, intent(inout) :: cg
+      real, allocatable                            :: send_left(:,:,:,:),recv_left(:,:,:,:)
+      real, allocatable                            :: send_right(:,:,:,:),recv_right(:,:,:,:)
+
+      if (cdd%comm3d /= MPI_COMM_NULL) then
+         if (dir == xdim) then
+#ifndef FFTW
+            allocate(send_right(flind%all, dom%nb,ny,nz), send_left (flind%all, dom%nb,ny,nz), &
+                 &    recv_left(flind%all, dom%nb,ny,nz), recv_right(flind%all, dom%nb,ny,nz) )
+            send_left(:,:,:,:)          =  cg%u(:, cg%is:cg%isb,:,:)
+            send_right(:,:,:,:)         =  cg%u(:, cg%ieb:cg%ie,:,:)
+!
+! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
+!
+            if (cg%bnd(xdim, LO) == BND_SHE) then
+               do i=1, dom%nb
+                  send_left (iarr_all_my,i,:,:) = send_left(iarr_all_my,i,:,:) + qshear*omega * cg%x(dom%nb+i) * send_left(iarr_all_dn,i,:,:)
+#ifndef ISO
+                  send_left (iarr_all_en,i,:,:) = send_left(iarr_all_en,i,:,:) - half*(qshear*omega * cg%x(dom%nb+i))**2 * send_left(iarr_all_dn,i,:,:)
+#endif /* !ISO */
+               enddo
+!
+! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
+!
+               if (dom%has_dir(ydim)) then
+                  send_left (:,:, cg%js:cg%je,  :) = cshift(send_left (:,:, cg%js:cg%je,:),dim=3,shift= delj)
+                  send_left (:,:, 1:dom%nb,      :) = send_left (:,:, cg%jeb:cg%je,:)
+                  send_left (:,:, cg%je+1:cg%n_(ydim),:) = send_left (:,:, cg%js:cg%jsb,:)
+               endif
+!
+! remapujemy  - interpolacja kwadratowa
+!
+               send_left (:,:,:,:)  = (1.+eps)*(1.-eps) * send_left (:,:,:,:) &
+                    &                 -half*eps*(1.-eps) * cshift(send_left(:,:,:,:),shift=-1,dim=3) &
+                    &                 +half*eps*(1.+eps) * cshift(send_left(:,:,:,:),shift=1 ,dim=3)
+            endif !(cg%bnd(xdim, LO) == BND_SHE)
+!
+! odejmujemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
+!
+            if (cg%bnd(xdim, HI) == BND_SHE) then
+               do i=1, dom%nb
+                  send_right(iarr_all_my,i,:,:) = send_right(iarr_all_my,i,:,:) +qshear*omega * cg%x(cg%nxb+i) * send_right(iarr_all_dn,i,:,:)
+#ifndef ISO
+                  send_right(iarr_all_en,i,:,:) = send_right(iarr_all_en,i,:,:) -half*(qshear*omega * cg%x(cg%nxb+i))**2 * send_right(iarr_all_dn,i,:,:)
+#endif /* !ISO */
+               enddo
+!
+! przesuwamy o calkowita liczbe komorek + periodyczny wb w kierunku y
+!
+               if (dom%has_dir(ydim)) then
+                  send_right (:,:, cg%js:cg%je,  :) = cshift(send_right(:,:, cg%js:cg%je,:),dim=3,shift=-delj)
+                  send_right (:,:, 1:dom%nb,      :) = send_right(:,:, cg%jeb:cg%je,:)
+                  send_right (:,:, cg%je+1:cg%n_(ydim),:) = send_right(:,:, cg%js:cg%jsb,:)
+               endif
+!
+! remapujemy  - interpolacja kwadratowa
+!
+               send_right (:,:,:,:) = (1.+eps)*(1.-eps) * send_right (:,:,:,:) &
+                    &                 -half*eps*(1.-eps) * cshift(send_right(:,:,:,:),shift=1 ,dim=3) &
+                    &                 +half*eps*(1.+eps) * cshift(send_right(:,:,:,:),shift=-1,dim=3)
+            endif !(cg%bnd(xdim, HI) == BND_SHE)
+!
+! wysylamy na drugi brzeg
+!
+            call MPI_Isend(send_left , flind%all*ny*nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag1, comm, req(1), mpi_err)
+            call MPI_Isend(send_right, flind%all*ny*nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag2, comm, req(3), mpi_err)
+            call MPI_Irecv(recv_left , flind%all*ny*nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), mpi_err)
+            call MPI_Irecv(recv_right, flind%all*ny*nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), mpi_err)
+
+            call MPI_Waitall(I_FOUR,req(:),status(:,:),mpi_err)
+
+!
+! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na prawym brzegu
+!
+            if (cg%bnd(xdim, HI) == BND_SHE) then
+               do i=1, dom%nb
+#ifndef ISO
+                  recv_right (iarr_all_en,i,:,:) = recv_right (iarr_all_en,i,:,:) +half*(qshear*omega * cg%x(cg%ie+i))**2 * recv_right(iarr_all_dn,i,:,:)
+#endif /* !ISO */
+                  recv_right (iarr_all_my,i,:,:) = recv_right (iarr_all_my,i,:,:) -qshear*omega * cg%x(cg%ie+i)     * recv_right(iarr_all_dn,i,:,:)
+               enddo
+            endif !(cg%bnd(xdim, HI) == BND_SHE)
+!
+! dodajemy ped_y i energie odpowiadajace niezaburzonej rozniczkowej rotacji na lewym brzegu
+!
+            if (cg%bnd(xdim, LO) == BND_SHE) then
+               do i=1, dom%nb
+#ifndef ISO
+                  recv_left(iarr_all_en,i,:,:) = recv_left(iarr_all_en,i,:,:) +half*(qshear*omega * cg%x(i))**2 * recv_left(iarr_all_dn,i,:,:)
+#endif /* !ISO */
+                  recv_left(iarr_all_my,i,:,:) = recv_left(iarr_all_my,i,:,:) -qshear*omega * cg%x(i)     * recv_left(iarr_all_dn,i,:,:)
+               enddo
+            endif !(cg%bnd(xdim, LO) == BND_SHE)
+
+            cg%u(:, 1:dom%nb,            :,:) = recv_left (:,1:dom%nb,:,:)
+            cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = recv_right(:,1:dom%nb,:,:)
+
+            !> \deprecated BEWARE: smalld is called only for the first fluid
+            cg%u(iarr_all_dn(1), 1:dom%nb,           :, :) = max(cg%u(iarr_all_dn(1),       1:dom%nb,      :,:), smalld)
+            cg%u(iarr_all_dn(1), cg%ie+1:cg%n_(xdim),:,:) = max(cg%u(iarr_all_dn(1), cg%ie+1:cg%n_(xdim),:,:), smalld)
+            if (allocated(send_left))  deallocate(send_left)
+            if (allocated(send_right)) deallocate(send_right)
+            if (allocated(recv_left))  deallocate(recv_left)
+            if (allocated(recv_right)) deallocate(recv_right)
+
+#else /* FFTW */
+
+            if ( all(cg%bnd(xdim, LO:HI) == BND_SHE) ) then
+
+               if (allocated(send_right)) deallocate(send_right)
+               if (.not.allocated(send_right)) allocate(send_right(flind%all, dom%nb, cg%nyb, cg%n_(zdim)))
+
+               if (allocated(send_left)) deallocate(send_left)
+               if (.not.allocated(send_left)) allocate(send_left(flind%all, dom%nb, cg%nyb, cg%n_(zdim)))
+
+               if (allocated(recv_left)) deallocate(recv_left)
+               if (.not.allocated(recv_left)) allocate(recv_left(flind%all, dom%nb, cg%nyb, cg%n_(zdim)))
+
+               if (allocated(recv_right)) deallocate(recv_right)
+               if (.not.allocated(recv_right)) allocate(recv_right(flind%all, dom%nb, cg%nyb, cg%n_(zdim)))
+
+               do i = lbound(cg%u,1), ubound(cg%u,1)
+                  send_left( i,1:dom%nb,:,:) = unshear_fft(cg%u(i, cg%is:cg%isb, cg%js:cg%je,:), cg%x(cg%is:cg%isb),dely,.true.)
+                  send_right(i,1:dom%nb,:,:) = unshear_fft(cg%u(i, cg%ieb:cg%ie, cg%js:cg%je,:), cg%x(cg%ieb:cg%ie),dely,.true.)
+               enddo
+
+               call MPI_Isend(send_left , flind%all*cg%nyb*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag1, comm, req(1), mpi_err)
+               call MPI_Isend(send_right, flind%all*cg%nyb*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag2, comm, req(3), mpi_err)
+               call MPI_Irecv(recv_left , flind%all*cg%nyb*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), mpi_err)
+               call MPI_Irecv(recv_right, flind%all*cg%nyb*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), mpi_err)
+
+               call MPI_Waitall(I_FOUR, req(:),status(:,:),mpi_err)
+
+               do i = lbound(cg%u,1), ubound(cg%u,1)
+                  cg%u(i,1:dom%nb,        cg%js:cg%je,:) = unshear_fft(recv_left (i,1:dom%nb,:,:), cg%x(1:dom%nb),dely)
+                  cg%u(i, cg%ie+1:cg%n_(xdim), cg%js:cg%je,:) = unshear_fft(recv_right(i,1:dom%nb,:,:), cg%x(cg%ie+1:cg%n_(xdim)),dely)
+               enddo
+
+               if (allocated(send_left))  deallocate(send_left)
+               if (allocated(send_right)) deallocate(send_right)
+               if (allocated(recv_left))  deallocate(recv_left)
+               if (allocated(recv_right)) deallocate(recv_right)
+
+            endif
+#endif /* FFTW */
+         else
+            if (cdd%psize(dir) > 1) then
+
+               jtag = tag2 * dir
+               itag = jtag - tag1
+               call MPI_Isend(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BLK, dom%nb), cdd%procn(dir,LO), itag, cdd%comm3d, req(1), mpi_err)
+               call MPI_Isend(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BLK, dom%nb), cdd%procn(dir,HI), jtag, cdd%comm3d, req(2), mpi_err)
+               call MPI_Irecv(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BND, dom%nb), cdd%procn(dir,LO), jtag, cdd%comm3d, req(3), mpi_err)
+               call MPI_Irecv(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BND, dom%nb), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), mpi_err)
+
+               call MPI_Waitall(I_FOUR, req(:),status(:,:),mpi_err)
+            endif
+         endif
+      endif
+   end subroutine bnd_shear_u
+#endif /* SHEAR_BND */
 end module shear
