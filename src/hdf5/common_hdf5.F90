@@ -275,9 +275,9 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)   :: filename        !> HDF File name
+      character(len=*), intent(in)   :: filename        !< HDF File name
 
-      integer(HID_T)                 :: file_id         !> File identifier
+      integer(HID_T)                 :: file_id         !< File identifier
       integer(HID_T)                 :: type_id, dspace_id, dset_id, prp_id
       integer(HSIZE_T), dimension(1) :: dimstr
       logical(kind=4)                :: Z_avail
@@ -367,7 +367,7 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)                   :: file_id       !> File identifier
+      integer(HID_T), intent(in)                   :: file_id       !< File identifier
 
       integer(kind=4)                              :: fe
       integer(SIZE_T)                              :: i
@@ -453,7 +453,7 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)                   :: file_id       !> File identifier
+      integer(HID_T), intent(in)                   :: file_id       !< File identifier
 
       integer(kind=4)                              :: fe
       integer(SIZE_T)                              :: i
@@ -607,6 +607,11 @@ contains
 !!   implemented.first.
 !!
 !! \warning Partial implementation: Single-file, serial I/O works for non-AMR setups.
+!!
+!! \param create_empty_cg_datasets
+!!    Function resposinble for creating empty datasets, called by master
+!! \param write_cg_to_hdf5
+!!    Function that performs actual I/O, called by all
 !<
 
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
@@ -628,9 +633,12 @@ contains
 
       implicit none
 
-      character(len=cwdlen), intent(in)             :: filename
-      integer(kind=4), intent(in)                   :: otype
+      character(len=cwdlen), intent(in)             :: filename         !< Name of the HDF5 file
+      integer(kind=4), intent(in)                   :: otype            !< Output type (restart, data)
       interface
+         !>
+         !! Function resposinble for creating empty datasets, called by master
+         !<
          subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, Z_avail, g)
             use hdf5,     only: HID_T
             implicit none
@@ -640,6 +648,9 @@ contains
             integer, intent(in)                                  :: g
          end subroutine create_empty_cg_datasets
 
+         !>
+         !! Function that performs actual I/O, called by all
+         !<
          subroutine write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b)
             use hdf5,     only: HID_T
             implicit none
@@ -649,36 +660,36 @@ contains
          end subroutine write_cg_to_hdf5
       end interface
 
-      integer(HID_T)                                :: file_id          !> File identifier
-      integer(HID_T)                                :: plist_id         !> Property list identifier
-      integer(HID_T)                                :: cgl_g_id         !> cg list identifiers
-      integer(HID_T)                                :: cg_g_id          !> cg group identifiers
-      integer(HID_T)                                :: doml_g_id        !> domain list identifier
-      integer(HID_T)                                :: dom_g_id         !> domain group identifier
+      integer(HID_T)                                :: file_id          !< File identifier
+      integer(HID_T)                                :: plist_id         !< Property list identifier
+      integer(HID_T)                                :: cgl_g_id         !< cg list identifiers
+      integer(HID_T)                                :: cg_g_id          !< cg group identifiers
+      integer(HID_T)                                :: doml_g_id        !< domain list identifier
+      integer(HID_T)                                :: dom_g_id         !< domain group identifier
       integer(kind=4)                               :: error, cg_cnt
       integer                                       :: g, p, i
       integer, parameter                            :: tag = I_ONE
-      integer(kind=4),  dimension(:),   pointer     :: cg_n             !> offset for cg group numbering
-      integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b       !> sizes of all cg
-      integer(kind=4),  dimension(:,:), pointer     :: cg_all_rl        !> refinement levels of all cgs
-      integer(kind=8),  dimension(:,:), pointer     :: cg_all_off       !> offsets of all cgs
-      integer(kind=8),  dimension(:), pointer       :: cg_all_parents   !> parents IDs of all cgs
-      integer(kind=4),  dimension(:,:), pointer     :: cg_all_particles !> particles counts in all cgs
-      integer(kind=4),  dimension(:),   allocatable :: cg_rl            !> list of refinement levels from all cgs/procs
-      integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !> list of n_b from all cgs/procs
-      integer(kind=8),  dimension(:,:), allocatable :: cg_off           !> list of offsets from all cgs/procs
+      integer(kind=4),  dimension(:),   pointer     :: cg_n             !< offset for cg group numbering
+      integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b       !< sizes of all cg
+      integer(kind=4),  dimension(:,:), pointer     :: cg_all_rl        !< refinement levels of all cgs
+      integer(kind=8),  dimension(:,:), pointer     :: cg_all_off       !< offsets of all cgs
+      integer(kind=8),  dimension(:), pointer       :: cg_all_parents   !< parents IDs of all cgs
+      integer(kind=4),  dimension(:,:), pointer     :: cg_all_particles !< particles counts in all cgs
+      integer(kind=4),  dimension(:),   allocatable :: cg_rl            !< list of refinement levels from all cgs/procs
+      integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
+      integer(kind=8),  dimension(:,:), allocatable :: cg_off           !< list of offsets from all cgs/procs
 
       enum, bind(c)
-         enumerator :: cg_le !> index list of left edges from all cgs/procs
-         enumerator :: cg_re !> index list of right edges from all cgs/procs
-         enumerator :: cg_dl !> index list of cell sizes from all cgs/procs
+         enumerator :: cg_le !< index list of left edges from all cgs/procs
+         enumerator :: cg_re !< index list of right edges from all cgs/procs
+         enumerator :: cg_dl !< index list of cell sizes from all cgs/procs
       end enum
       !>
       !! auxiliary array for communication of {cg_le, cg_re, cg_dl} lists
       !<
       real(kind=8), dimension(:,:,:), allocatable   :: dbuf
       type(cg_list_element), pointer                :: cgl
-      logical(kind=4)                               :: Z_avail !> .true. if HDF5 was compiled with zlib support
+      logical(kind=4)                               :: Z_avail !< .true. if HDF5 was compiled with zlib support
       character(len=dsetnamelen)                    :: d_label
       integer(kind=4)                               :: indx
 

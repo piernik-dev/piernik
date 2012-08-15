@@ -124,7 +124,7 @@ contains
 
       implicit none
 
-      class(cg_list_level_T),            intent(inout) :: this
+      class(cg_list_level_T),            intent(inout) :: this   !< object invoking type bound procedure
       integer(kind=4), dimension(ndims), intent(in)    :: n_d    !< size of global base grid in cells
 
       if (any(n_d(:) < 1)) call die("[cg_list_level:add_lev_base] non-positive base grid sizes")
@@ -262,7 +262,7 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), intent(inout) :: this
+      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       integer :: g, j, jf, fmax, tag
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
@@ -964,7 +964,7 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), intent(in) :: this
+      class(cg_list_level_T), intent(in) :: this   !< object invoking type bound procedure
 
       integer :: p, i, hl
       integer(kind=8) :: ccnt
@@ -1008,7 +1008,7 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), intent(inout) :: this
+      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       integer :: gr_id
       type(grid_container), pointer :: cg
@@ -1040,7 +1040,7 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), intent(inout) :: this
+      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       integer :: i, p, s
       integer(kind=8), dimension(FIRST:LAST) :: min_id, max_id, pieces, filled
@@ -1085,10 +1085,10 @@ contains
 
       implicit none
 
-      class(cg_list_level_T),                 intent(inout) :: this
-      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: min_id
-      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: max_id
-      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: pieces
+      class(cg_list_level_T),                 intent(inout) :: this   !< object invoking type bound procedure
+      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: min_id !< \todo comment me
+      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: max_id !< \todo comment me
+      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: pieces !< \todo comment me
 
       integer :: p
 
@@ -1110,7 +1110,7 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), intent(inout) :: this
+      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       integer :: p, s
       integer(kind=8) :: id
@@ -1140,7 +1140,7 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), intent(inout) :: this
+      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       is_multicg = is_multicg .or. (ubound(this%pse(proc)%sel(:, :, :), dim=1) > 1)
       call MPI_Allreduce(MPI_IN_PLACE, is_multicg, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
@@ -1164,7 +1164,7 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), intent(inout) :: this
+      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
       integer :: p
 
@@ -1196,8 +1196,8 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), intent(in)    :: this
-      type(grid_container), intent(inout) :: cg
+      class(cg_list_level_T), intent(in)  :: this    !< object invoking type bound procedure
+      type(grid_container), intent(inout) :: cg      !< grid container that we are currently working on
 
       integer(kind=4), dimension(:), allocatable :: sizes, subsizes, starts
       integer :: t, g, j, b

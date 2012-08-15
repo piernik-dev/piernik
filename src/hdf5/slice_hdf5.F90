@@ -172,8 +172,8 @@ contains
       character(len=cwdlen) :: fname
       integer               :: i, d
       logical, save         :: first_entry = .true.
-      integer(HID_T)        :: file_id                 !> File identifier
-      integer(HID_T)        :: gr_id, gr2_id           !> Groups identifier
+      integer(HID_T)        :: file_id                 !< File identifier
+      integer(HID_T)        :: gr_id, gr2_id           !< Groups identifier
 
       thdf = set_timer(tmr_hdf,.true.)
 
@@ -252,9 +252,9 @@ contains
 
       implicit none
 
-      integer,                    intent(in) :: plane                         !> xdim means "yz" and so on
-      character(len=dsetnamelen), intent(in) :: var                           !> not yet implemented
-      integer(kind=4),            intent(in) :: nimg
+      integer,                    intent(in) :: plane   !< xdim means "yz" and so on
+      character(len=dsetnamelen), intent(in) :: var     !< variable name
+      integer(kind=4),            intent(in) :: nimg    !< no. image
 
       real, dimension(:,:), allocatable        :: send, img, recv
       integer                                  :: ierrh, p
@@ -263,8 +263,8 @@ contains
       integer,                       parameter :: vdn_len = 12
       integer,                       parameter :: tag = 101
       integer(kind=4),               parameter :: rank = 2
-      integer(HID_T)                           :: file_id                       !> File identifier
-      integer(HID_T)                           :: gr_id, gr2_id                 !> Group identifier
+      integer(HID_T)                           :: file_id         !< File identifier
+      integer(HID_T)                           :: gr_id, gr2_id   !< Group identifier
       integer(HSIZE_T), dimension(rank)        :: dims
       integer, dimension(xdim:zdim), parameter :: d1 = [ ydim, xdim, xdim ] , d2 = [ zdim, zdim, ydim ] ! d1(d) and d2(2) are perpendicular to direction d
       integer(SIZE_T),               parameter :: bufsize = 1

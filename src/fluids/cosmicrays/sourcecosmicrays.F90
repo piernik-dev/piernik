@@ -62,7 +62,7 @@ contains
       real, allocatable               :: dgas(:)
 
       real, parameter  :: gamma_lor = 10.
-      real(kind=8), parameter :: speed_of_light = 3e10*1e6*365.*24.*60.*60. !> cm/Myr \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
+      real(kind=8), parameter :: speed_of_light = 3e10*1e6*365.*24.*60.*60. !< cm/Myr \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
       real, parameter  :: ndim = 2.
 
       allocate(dgas(n))

@@ -29,6 +29,8 @@
 #include "piernik.h"
 
 !>
+!! \brief Implementation of Grid Data Format
+!<
 module gdf
 
    implicit none
@@ -54,12 +56,12 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in) :: file !> File identifier
-      integer(kind=4),  dimension(:,:), pointer, intent(in) :: cg_all_n_b       !> sizes of all cg
-      integer(kind=4),  dimension(:,:), pointer, intent(in) :: cg_all_rl        !> refinement levels of all cgs
-      integer(kind=8),  dimension(:,:), pointer, intent(in) :: cg_all_off       !> offsets of all cgs
-      integer(kind=8),  dimension(:), pointer, intent(in) :: cg_all_parents     !> parents IDs of all cgs
-      integer(kind=4),  dimension(:,:), pointer, intent(in) :: cg_all_particles !> particles counts in all cgs
+      integer(HID_T), intent(in) :: file !< File identifier
+      integer(kind=4),  dimension(:,:), pointer, intent(in) :: cg_all_n_b       !< sizes of all cg
+      integer(kind=4),  dimension(:,:), pointer, intent(in) :: cg_all_rl        !< refinement levels of all cgs
+      integer(kind=8),  dimension(:,:), pointer, intent(in) :: cg_all_off       !< offsets of all cgs
+      integer(kind=8),  dimension(:), pointer, intent(in) :: cg_all_parents     !< parents IDs of all cgs
+      integer(kind=4),  dimension(:,:), pointer, intent(in) :: cg_all_particles !< particles counts in all cgs
 
       call create_dataset(file, 'grid_dimensions', cg_all_n_b)
       call create_dataset(file, 'grid_left_index', cg_all_off)

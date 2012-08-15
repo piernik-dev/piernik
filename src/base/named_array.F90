@@ -468,7 +468,7 @@ contains
 
       implicit none
 
-      class(named_array4d), intent(inout) :: this                  !> \todo i want to become polymorphic class(*) when I grow older
+      class(named_array4d), intent(inout) :: this                  !< \todo i want to become polymorphic class(*) when I grow older
 
       if (associated(this%arr)) then
          array4d_check_if_dirty = any( this%arr >= big_float )

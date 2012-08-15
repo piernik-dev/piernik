@@ -68,7 +68,7 @@ contains
 
       implicit none
 
-      class(cart_decomposition), intent(inout) :: this
+      class(cart_decomposition), intent(inout) :: this   !< object invoking type-bound procedure
 
       this%procn(:,:) = MPI_PROC_NULL
       this%psize(:)   = -I_ONE
@@ -88,7 +88,7 @@ contains
 
       implicit none
 
-      class(cart_decomposition), intent(inout) :: this
+      class(cart_decomposition), intent(inout) :: this   !< object invoking type-bound procedure
 
       if (this%comm3d /= MPI_COMM_NULL) call MPI_Comm_free(this%comm3d, mpi_err)
 
@@ -105,7 +105,7 @@ contains
 
       implicit none
 
-      class(cart_decomposition),         intent(inout) :: this
+      class(cart_decomposition),         intent(inout) :: this   !< object invoking type-bound procedure
       integer(kind=4), dimension(ndims), intent(in)    :: p_size !< how many cuts are there in each direction?
 
       integer(kind=4) :: p

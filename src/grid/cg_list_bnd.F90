@@ -53,10 +53,10 @@ module cg_list_bnd
 
    type, extends(cg_list_T) :: cg_list_bnd_T
     contains
-      procedure          :: internal_boundaries_3d  !> A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
-      procedure          :: internal_boundaries_4d  !> A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
-      procedure, private :: internal_boundaries     !> Exchanges guardcells for BND_MPI and BND_PER boundaries (internal and periodic external boundaries)
-      procedure          :: arr3d_boundaries        !> This routine sets up all guardcells (internal and external) for given rank-3 arrays.
+      procedure          :: internal_boundaries_3d  !< A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
+      procedure          :: internal_boundaries_4d  !< A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
+      procedure, private :: internal_boundaries     !< Exchanges guardcells for BND_MPI and BND_PER boundaries (internal and periodic external boundaries)
+      procedure          :: arr3d_boundaries        !< This routine sets up all guardcells (internal and external) for given rank-3 arrays.
       !> \todo move routines for external guardcells for rank-4 arrays here as well (fluidboundaries and magboundaries)
    end type cg_list_bnd_T
 
@@ -70,10 +70,10 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this   !> the list on which to perform the boundary exchange
-      integer,                   intent(in) :: ind    !> index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: nb     !> number of grid cells to exchange (not implemented for comm3d)
-      integer(kind=4), optional, intent(in) :: dim    !> do the internal boundaries only in the specified dimension
+      class(cg_list_bnd_T),      intent(in) :: this   !< the list on which to perform the boundary exchange
+      integer,                   intent(in) :: ind    !< index of cg%q(:) 3d array
+      integer(kind=4), optional, intent(in) :: nb     !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: dim    !< do the internal boundaries only in the specified dimension
 
       call internal_boundaries(this, ind, .true., nb, dim)
 
@@ -85,10 +85,10 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this !> the list on which to perform the boundary exchange
-      integer,                   intent(in) :: ind  !> index of cg%w(:) 4d array
-      integer(kind=4), optional, intent(in) :: nb   !> number of grid cells to exchange (not implemented for comm3d)
-      integer(kind=4), optional, intent(in) :: dim  !> do the internal boundaries only in the specified dimension
+      class(cg_list_bnd_T),      intent(in) :: this !< the list on which to perform the boundary exchange
+      integer,                   intent(in) :: ind  !< index of cg%w(:) 4d array
+      integer(kind=4), optional, intent(in) :: nb   !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: dim  !< do the internal boundaries only in the specified dimension
 
       call internal_boundaries(this, ind, .false., nb, dim)
 
@@ -118,14 +118,14 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this   !> the list on which to perform the boundary exchange
-      integer,                   intent(in) :: ind    !> index of cg%q(:) 3d array or cg%w(:) 4d array
-      logical,                   intent(in) :: tgt3d  !> .true. for cg%q, .false. for cg%w
-      integer(kind=4), optional, intent(in) :: nb     !> number of grid cells to exchange (not implemented for comm3d)
-      integer(kind=4), optional, intent(in) :: dim    !> do the internal boundaries only in the specified dimension
+      class(cg_list_bnd_T),      intent(in) :: this   !< the list on which to perform the boundary exchange
+      integer,                   intent(in) :: ind    !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                   intent(in) :: tgt3d  !< .true. for cg%q, .false. for cg%w
+      integer(kind=4), optional, intent(in) :: nb     !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: dim    !< do the internal boundaries only in the specified dimension
 
       integer                               :: g, d, n
-      integer(kind=4)                       :: nr     !> index of first free slot in req and status arrays
+      integer(kind=4)                       :: nr     !< index of first free slot in req and status arrays
       logical, dimension(xdim:zdim)         :: dmask
       type(grid_container),     pointer     :: cg
       type(cg_list_element),    pointer     :: cgl
@@ -225,17 +225,13 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this       !> the list on which to perform the boundary exchange
-      integer,                   intent(in) :: ind        !> Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: nb         !> number of grid cells to exchange (not implemented for comm3d)
-      integer(kind=4), optional, intent(in) :: area_type
-
-      !>
-      !! Override default boundary type on external boundaries (useful in multigrid solver).
-      !! Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
-      !<
-      integer(kind=4), optional, intent(in) :: bnd_type
-      logical,         optional, intent(in) :: corners    !> When present and .true. then call internal_boundaries_3d for each direction separately
+      class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
+      integer,                   intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4), optional, intent(in) :: nb         !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
+      integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
+                                                          !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
+      logical,         optional, intent(in) :: corners    !< When present and .true. then call internal_boundaries_3d for each direction separately
 
       integer(kind=4)                         :: lh, clh, d, b_type, i, n
       integer(kind=4), dimension(ndims,LO:HI) :: l, r, rh

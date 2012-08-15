@@ -69,9 +69,9 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)   :: place !> object id where dataset will be created
-      character(len=*), intent(in) :: dname !> name of dataset
-      integer(kind=4), dimension(:,:), pointer, intent(in) :: ddata !> data used to create dataset
+      integer(HID_T), intent(in)   :: place !< object id where dataset will be created
+      character(len=*), intent(in) :: dname !< name of dataset
+      integer(kind=4), dimension(:,:), pointer, intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)  :: dset, space, mem_type
       integer(kind=4) :: hdferr
@@ -100,9 +100,9 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)   :: place !> object id where dataset will be created
-      character(len=*), intent(in) :: dname !> name of dataset
-      integer(kind=8), dimension(:,:), pointer, intent(in) :: ddata !> data used to create dataset
+      integer(HID_T), intent(in)   :: place !< object id where dataset will be created
+      character(len=*), intent(in) :: dname !< name of dataset
+      integer(kind=8), dimension(:,:), pointer, intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)  :: dset, space, mem_type
       integer(kind=4) :: hdferr
@@ -131,9 +131,9 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)   :: place !> object id where dataset will be created
-      character(len=*), intent(in) :: dname !> name of dataset
-      integer(kind=8), dimension(:), pointer, intent(in) :: ddata !> data used to create dataset
+      integer(HID_T), intent(in)   :: place !< object id where dataset will be created
+      character(len=*), intent(in) :: dname !< name of dataset
+      integer(kind=8), dimension(:), pointer, intent(in) :: ddata !< data used to create dataset
 
       integer(HID_T)  :: dset, space, mem_type
       integer(kind=4) :: hdferr

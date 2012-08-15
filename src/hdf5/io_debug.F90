@@ -53,10 +53,10 @@ contains
 !! \n \n
 !! <table border="+1">
 !!   <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!!   <tr><td>force_hdf5_dump  </td><td>       </td><td>logical value          </td><td>\copydoc piernikdebug::force_hdf5_dump  </td></tr>
-!!   <tr><td>force_res_dump   </td><td>       </td><td>logical value          </td><td>\copydoc piernikdebug::force_res_dump   </td></tr>
-!!   <tr><td>force_allbnd_dump</td><td>       </td><td>logical value          </td><td>\copydoc piernikdebug::force_allbnd_dump</td></tr>
-!!   <tr><td>force_log_dump   </td><td>       </td><td>logical value          </td><td>\copydoc piernikdebug::force_log_dump   </td></tr>
+!!   <tr><td>force_hdf5_dump  </td><td>       </td><td>logical value          </td><td>\copydoc piernikiodebug::force_hdf5_dump  </td></tr>
+!!   <tr><td>force_res_dump   </td><td>       </td><td>logical value          </td><td>\copydoc piernikiodebug::force_res_dump   </td></tr>
+!!   <tr><td>force_allbnd_dump</td><td>       </td><td>logical value          </td><td>\copydoc piernikiodebug::force_allbnd_dump</td></tr>
+!!   <tr><td>force_log_dump   </td><td>       </td><td>logical value          </td><td>\copydoc piernikiodebug::force_log_dump   </td></tr>
 !! </table>
 !! \n \n
 !<

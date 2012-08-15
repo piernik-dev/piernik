@@ -416,6 +416,11 @@ contains
    end subroutine bnd_emf
 !>
 !! \brief Routine delivers common boundary cells indexes in cases of reflection or outflow boundary types
+!!
+!! \param bndcase
+!!    1 - v component compatible with direction;
+!!    2 - b component compatible with direction or emf component incompatible with direction;
+!!    3 - other cases; BEWARE: magic integers
 !<
    subroutine compute_bnd_indxs(bndcase, ndirb, edge, nbcells, rrbase, bndsign, zndiff)
 
@@ -424,9 +429,7 @@ contains
 
       implicit none
 
-      integer(kind=4),                   intent(in)  :: bndcase !> 1 - v component compatible with direction;
-                                                                !! 2 - b component compatible with direction or emf component incompatible with direction;
-                                                                !< 3 - other cases; BEWARE: magic integers
+      integer(kind=4),                   intent(in)  :: bndcase
       integer(kind=4),                   intent(in)  :: ndirb   !< cg%{nxb,nyb,nzb} depanding on the current direction
       integer(kind=4), dimension(LO:HI), intent(out) :: edge    !< index of the left and right edge of physical domain for emf
       integer(kind=4), dimension(LO:HI), intent(out) :: nbcells !< number of cells in a loop at left and right boundaries

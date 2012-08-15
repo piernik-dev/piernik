@@ -43,7 +43,7 @@ module restart_hdf5
 
    integer,          parameter :: STAT_OK = 0
 
-   type cg_essentials                            !> All vital attributes of a cg in one place
+   type cg_essentials                            !< All vital attributes of a cg in one place
       integer(kind=4), dimension(ndims) :: n_b
       integer(kind=8), dimension(ndims) :: off
       integer(kind=4)                   :: level
@@ -165,7 +165,7 @@ contains
                lleft(:)  = lleft(:)  - dom%nb
                chnk(:)   = chnk(:)   + dom%nb
             endwhere
-            where (cg%h_cor1(:) == dom%n_d(:) .and. dom%has_dir(:)) !> \warning this should be checked against level%n_d
+            where (cg%h_cor1(:) == dom%n_d(:) .and. dom%has_dir(:)) !! \warning this should be checked against level%n_d
                lright(:) = lright(:) + dom%nb
                chnk(:)   = chnk(:)   + dom%nb
             endwhere
@@ -234,11 +234,11 @@ contains
       use named_array, only: qna, wna
 
       implicit none
-      character(len=cwdlen), intent(in) :: filename      !> HDF File name
+      character(len=cwdlen), intent(in) :: filename      !< HDF File name
 
       integer(kind=4) :: i
-      integer(HID_T)  :: file_id       !> File identifier
-      integer(HID_T)  :: plist_id      !> Property list identifier
+      integer(HID_T)  :: file_id       !< File identifier
+      integer(HID_T)  :: plist_id      !< Property list identifier
       integer(kind=4) :: error
 
       ! Set up a new HDF5 file for parallel write
@@ -302,18 +302,18 @@ contains
 
       implicit none
 
-      integer(HID_T),  intent(in)        :: file_id                   !> File identifier
-      integer(kind=4), intent(in)        :: ind                       !> index of cg%q(:) or cg%w(:) array
-      logical,         intent(in)        :: tgt3d                     !> .true. for 3D array, .false. otherwise
+      integer(HID_T),  intent(in)        :: file_id                   !< File identifier
+      integer(kind=4), intent(in)        :: ind                       !< index of cg%q(:) or cg%w(:) array
+      logical,         intent(in)        :: tgt3d                     !< .true. for 3D array, .false. otherwise
 
-      real, pointer, dimension(:,:,:)    :: pa3d                      !> pointer to specified scope of pa3d
-      real, pointer, dimension(:,:,:,:)  :: pa4d                      !> pointer to specified scope of pa4d
+      real, pointer, dimension(:,:,:)    :: pa3d                      !< pointer to specified scope of pa3d
+      real, pointer, dimension(:,:,:,:)  :: pa4d                      !< pointer to specified scope of pa4d
       integer, parameter                 :: rank4 = 1 + ndims
       integer(HSIZE_T), dimension(rank4) :: dimsf, chunk_dims
-      integer(HID_T)                     :: dset_id                   !> Dataset identifier
-      integer(HID_T)                     :: dplist_id, plist_id       !> Property list identifiers
-      integer(HID_T)                     :: dfilespace, filespace     !> Dataspace identifiers in file
-      integer(HID_T)                     :: memspace                  !> Dataspace identifier in memory
+      integer(HID_T)                     :: dset_id                   !< Dataset identifier
+      integer(HID_T)                     :: dplist_id, plist_id       !< Property list identifiers
+      integer(HID_T)                     :: dfilespace, filespace     !< Dataspace identifiers in file
+      integer(HID_T)                     :: memspace                  !< Dataspace identifier in memory
 
       integer, dimension(ndims)          :: area, chnk
       integer(kind=4), dimension(ndims)  :: lleft, lright
@@ -441,20 +441,20 @@ contains
 
       implicit none
 
-      integer(HID_T),             intent(in) :: file_id            !> File identifier
-      integer,                    intent(in) :: ind                !> index of cg%q(:) or cg%w(:) arrays
-      logical,                    intent(in) :: tgt3d              !> .true. for 3D arrays, .false. otherwise
+      integer(HID_T),             intent(in) :: file_id            !< File identifier
+      integer,                    intent(in) :: ind                !< index of cg%q(:) or cg%w(:) arrays
+      logical,                    intent(in) :: tgt3d              !< .true. for 3D arrays, .false. otherwise
       integer(kind=4),  optional, intent(in) :: alt_area_type
-      character(len=*), optional, intent(in) :: alt_name           !> used only in galdisk* setups
+      character(len=*), optional, intent(in) :: alt_name           !< used only in galdisk* setups
 
-      real, pointer, dimension(:,:,:)        :: pa3d               !> pointer to specified scope of pa3d
-      real, pointer, dimension(:,:,:,:)      :: pa4d               !> pointer to specified scope of pa4d
+      real, pointer, dimension(:,:,:)        :: pa3d               !< pointer to specified scope of pa3d
+      real, pointer, dimension(:,:,:,:)      :: pa4d               !< pointer to specified scope of pa4d
       integer, parameter                     :: rank4 = 1 + ndims
       integer(HSIZE_T), dimension(rank4)     :: dimsf, chunk_dims
-      integer(HID_T)                         :: dset_id            !> Dataset identifier
-      integer(HID_T)                         :: plist_id           !> Property list identifier
-      integer(HID_T)                         :: filespace          !> Dataspace identifier in file
-      integer(HID_T)                         :: memspace           !> Dataspace identifier in memory
+      integer(HID_T)                         :: dset_id            !< Dataset identifier
+      integer(HID_T)                         :: plist_id           !< Property list identifier
+      integer(HID_T)                         :: filespace          !< Dataspace identifier in file
+      integer(HID_T)                         :: memspace           !< Dataspace identifier in memory
       integer(HSIZE_T), dimension(rank4)     :: cnt, offset, stride
       integer, dimension(ndims)              :: area, chnk
       integer(kind=4), dimension(ndims)      :: lleft, lright
@@ -483,7 +483,7 @@ contains
       ir = rank4 - rank + 1 ! 1 for 4-D arrays, 2 for 3-D arrays (to simplify use of count(:), offset(:), stride(:), block(:), dimsf(:) and chunk_dims(:)
 
       if (present(alt_area_type)) area_type = alt_area_type
-      if (area_type == AT_IGNORE) return !> \todo write a list of unsaved arrays?
+      if (area_type == AT_IGNORE) return !! \todo write a list of unsaved arrays?
       call set_area_for_restart(area_type, area)
 
       dimsf = [dim1, area(:)]      ! Dataset dimensions
@@ -587,10 +587,10 @@ contains
 
       integer                       :: nu
       integer                       :: i
-      character(len=cwdlen)         :: filename      !> File name
+      character(len=cwdlen)         :: filename      !< File name
 
-      integer(HID_T)                :: file_id       !> File identifier
-      integer(HID_T)                :: plist_id      !> Property list identifier
+      integer(HID_T)                :: file_id       !< File identifier
+      integer(HID_T)                :: plist_id      !< Property list identifier
 
       integer(kind=4)               :: error
       logical                       :: file_exist
@@ -939,9 +939,9 @@ contains
 
       implicit none
 
-      integer(HID_T),                           intent(in) :: cgl_g_id    !> cg group identifier
-      integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !> offset for cg group numbering
-      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !> all cg sizes
+      integer(HID_T),                           intent(in) :: cgl_g_id    !< cg group identifier
+      integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !< offset for cg group numbering
+      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !< all cg sizes
 
       integer(HID_T)                              :: filespace_id, memspace_id
       integer(kind=4)                             :: error
@@ -1202,9 +1202,9 @@ contains
 
       integer, intent(out)  :: status_v2
 
-      integer(HID_T)                                    :: file_id              !> File identifier
-      integer(HID_T)                                    :: doml_g_id, dom_g_id  !> domain list and domain group identifiers
-      integer(HID_T)                                    :: cgl_g_id,  cg_g_id   !> cg list and cg group identifiers
+      integer(HID_T)                                    :: file_id              !< File identifier
+      integer(HID_T)                                    :: doml_g_id, dom_g_id  !< domain list and domain group identifiers
+      integer(HID_T)                                    :: cgl_g_id,  cg_g_id   !< cg list and cg group identifiers
       logical                                           :: file_exist, outside, overlapped
       integer                                           :: ia, j
       integer(kind=8)                                   :: tot_cells
@@ -1467,12 +1467,12 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(inout) :: cg        !> Own grid container
-      integer(HID_T),                intent(in)    :: cgl_g_id  !> cg group identifier in the restart file
-      integer,                       intent(in)    :: ncg       !> number of cg in the restart file
-      type(cg_essentials),           intent(in)    :: cg_r      !> cg attributes that do not need to be reread
+      type(grid_container), pointer, intent(inout) :: cg        !< Own grid container
+      integer(HID_T),                intent(in)    :: cgl_g_id  !< cg group identifier in the restart file
+      integer,                       intent(in)    :: ncg       !< number of cg in the restart file
+      type(cg_essentials),           intent(in)    :: cg_r      !< cg attributes that do not need to be reread
 
-      integer(HID_T) :: cg_g_id !> cg group identifier
+      integer(HID_T) :: cg_g_id !< cg group identifier
       integer(HID_T) :: dset_id
       integer(HID_T) :: filespace, memspace
       integer(HSIZE_T), dimension(:), allocatable :: dims, off, cnt

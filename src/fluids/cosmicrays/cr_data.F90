@@ -51,8 +51,8 @@ module cr_data
 
 !<====Cross sections for spallation from Garcia-Munoz 1987 (see also Longair)====>
 
-   real, parameter :: Myear=1d6*365*24*60*60 !> s \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
-   real, parameter :: mbarn=1e-27 !> cm2   \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
+   real, parameter :: Myear=1d6*365*24*60*60 !< s \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
+   real, parameter :: mbarn=1e-27 !< cm2   \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
 
    real, parameter :: sigma_C12_Li7  = 10   * mbarn
    real, parameter :: sigma_C12_Be9  =  6   * mbarn
@@ -66,7 +66,7 @@ module cr_data
 
 !<====Decay half live times from Garcia-Munoz 1987====>
 
-   real, parameter :: tau_Be10 = 1.6 !> Myr \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
+   real, parameter :: tau_Be10 = 1.6 !< Myr \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
 
 !<Initial source abundances (in numer density) relative to hydrogen (compare e.g. Longair)>
 

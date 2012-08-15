@@ -83,7 +83,7 @@ contains
       logical, dimension(xdim:zdim) :: dmask
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened, b_layer
       type(pr_segment), pointer :: seg
-      type(cg_list_level_T), pointer   :: curl                   !> current level (a pointer sliding along the linked list)
+      type(cg_list_level_T), pointer   :: curl        !< current level (a pointer sliding along the linked list)
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
       logical :: is_internal_fine

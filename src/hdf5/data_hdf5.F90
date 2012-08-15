@@ -293,9 +293,9 @@ contains
 
       implicit none
 
-      integer(HID_T),                           intent(in) :: cgl_g_id    !> cg group identifier
-      integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !> offset for cg group numbering
-      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !> all cg sizes
+      integer(HID_T),                           intent(in) :: cgl_g_id    !< cg group identifier
+      integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !< offset for cg group numbering
+      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !< all cg sizes
 
       integer(HID_T)                              :: filespace_id, memspace_id
       integer(kind=4)                             :: error
@@ -408,15 +408,17 @@ contains
       call cg_desc%clean()
 
       contains
-         ! Try to avoid pointless data reallocation for every cg if shape doesn't change
+         !>
+         !! Try to avoid pointless data reallocation for every cg if shape doesn't change
+         !<
          subroutine recycle_data(dims, cg_all_n_b, i, data)
             use constants, only: xdim, ydim, zdim
             use hdf5,      only: HSIZE_T
             implicit none
-            integer(HSIZE_T), dimension(:) :: dims
-            integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !> all cg sizes
-            integer, intent(in) :: i
-            real(kind=4), dimension(:,:,:), pointer :: data
+            integer(HSIZE_T), dimension(:) :: dims !< shape of current cg
+            integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !< all cg sizes
+            integer, intent(in) :: i !< no. of cg
+            real(kind=4), dimension(:,:,:), pointer :: data !< temporary storage array used for I/O
 
             if (associated(data)) then
                if ( any(dims /= shape(data)) ) then
@@ -631,11 +633,11 @@ contains
       integer(kind=4), parameter        :: rank = 3
       integer(kind=4)                   :: error, i
       integer(HID_T)                    :: file_id, grp_id
-      integer(kind=8)                   :: ngc              !> current grid index
+      integer(kind=8)                   :: ngc              !< current grid index
       integer(HSIZE_T), dimension(rank) :: dims
       character(len=dsetnamelen)        :: gname
       character(len=fnamelen)           :: fname
-      real(kind=4), pointer             :: data (:,:,:)     !> Data to write
+      real(kind=4), pointer             :: data (:,:,:)     !< Data to write
 
       thdf = set_timer(tmr_hdf,.true.)
       fname = h5_filename()

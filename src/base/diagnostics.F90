@@ -245,7 +245,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: lensize, addlen !> \todo get rid of lensize
+      integer, intent(in) :: lensize, addlen !< \todo get rid of lensize
       character(len=lensize), dimension(:), allocatable, intent(inout) :: vec
       character(len=lensize), dimension(:), allocatable :: temp
       integer :: old_size
@@ -256,9 +256,9 @@ contains
       else
          old_size = size(vec)
          allocate(temp(old_size))
-         temp = vec  !> \deprecated BEWARE: lhs reallocation
+         temp = vec  !! \deprecated BEWARE: lhs reallocation
          deallocate(vec)
-         allocate(vec(old_size+addlen)) !> \deprecated BEWARE: vec not deallocated
+         allocate(vec(old_size+addlen)) !! \deprecated BEWARE: vec not deallocated
          vec = ''
          vec(:old_size) = temp
          deallocate(temp)
@@ -281,9 +281,9 @@ contains
       else
          old_size = size(vec)
          allocate(temp(old_size))
-         temp = vec  !> \deprecated BEWARE: lhs reallocation
+         temp = vec  !! \deprecated BEWARE: lhs reallocation
          deallocate(vec)
-         allocate(vec(old_size+addlen)) !> \deprecated BEWARE: vec not deallocated
+         allocate(vec(old_size+addlen)) !! \deprecated BEWARE: vec not deallocated
          vec = 0.0
          vec(:old_size) = temp
          deallocate(temp)
@@ -305,9 +305,9 @@ contains
       else
          old_size = size(vec)
          allocate(temp(old_size))
-         temp = vec  !> \deprecated BEWARE: lhs reallocation
+         temp = vec  !! \deprecated BEWARE: lhs reallocation
          deallocate(vec)
-         allocate(vec(old_size+addlen)) !> \deprecated BEWARE: vec not deallocated
+         allocate(vec(old_size+addlen)) !! \deprecated BEWARE: vec not deallocated
          vec = 0
          vec(:old_size) = temp
          deallocate(temp)
