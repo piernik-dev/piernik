@@ -297,8 +297,8 @@ contains
             endif
          endif
          where (dom%has_dir(:))
-            patch%pse(p+1)%se(:, LO) = (patch%n_d(:) *  pc(:) ) / p_size(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
-            patch%pse(p+1)%se(:, HI) = (patch%n_d(:) * (pc(:)+1))/p_size(:) - 1 ! offset of high boundaries of the local domain (n_d(:) - 1 at right external boundaries)
+            patch%pse(p+1)%se(:, LO) = patch%off(:) + (patch%n_d(:) *  pc(:) ) / p_size(:)     ! offset of low boundaries of the local domain (0 at low external boundaries)
+            patch%pse(p+1)%se(:, HI) = patch%off(:) + (patch%n_d(:) * (pc(:)+1))/p_size(:) - 1 ! offset of high boundaries of the local domain (n_d(:) - 1 at right external boundaries)
          endwhere
       enddo
 
@@ -337,8 +337,8 @@ contains
       enddo
       do p = I_ONE, p_size(zdim)
          do px = pz_slab(p), pz_slab(p+1)-I_ONE
-            patch%pse(px+1)%se(zdim, LO) = nint((patch%n_d(zdim) *  pz_slab(p)   ) / real(pieces))
-            patch%pse(px+1)%se(zdim, HI) = nint((patch%n_d(zdim) *  pz_slab(p+1) ) / real(pieces)) - 1
+            patch%pse(px+1)%se(zdim, LO) = patch%off(zdim) + nint((patch%n_d(zdim) *  pz_slab(p)   ) / real(pieces))
+            patch%pse(px+1)%se(zdim, HI) = patch%off(zdim) + nint((patch%n_d(zdim) *  pz_slab(p+1) ) / real(pieces)) - 1
          enddo
          allocate(py_slab(p_size(ydim) + 1))
          py_slab(1) = I_ZERO
@@ -348,12 +348,12 @@ contains
          enddo
          do py = I_ONE, p_size(ydim)
             do px = pz_slab(p)+py_slab(py), pz_slab(p)+py_slab(py+1) - I_ONE
-               patch%pse(px+1)%se(ydim, LO) = nint((patch%n_d(ydim) *  py_slab(py)   ) / real(pz_slab(p+1)-pz_slab(p)))
-               patch%pse(px+1)%se(ydim, HI) = nint((patch%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - I_ONE
+               patch%pse(px+1)%se(ydim, LO) = patch%off(ydim) + nint((patch%n_d(ydim) *  py_slab(py)   ) / real(pz_slab(p+1)-pz_slab(p)))
+               patch%pse(px+1)%se(ydim, HI) = patch%off(ydim) + nint((patch%n_d(ydim) *  py_slab(py+1) ) / real(pz_slab(p+1)-pz_slab(p))) - I_ONE
             enddo
             do px = I_ZERO, py_slab(py+1)-py_slab(py) - I_ONE
-               patch%pse(pz_slab(p)+py_slab(py)+px+1)%se(xdim, LO) = (patch%n_d(xdim) *  px    ) / (py_slab(py+1)-py_slab(py))
-               patch%pse(pz_slab(p)+py_slab(py)+px+1)%se(xdim, HI) = (patch%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1 ! no need to sort lengths here
+               patch%pse(pz_slab(p)+py_slab(py)+px+1)%se(xdim, LO) = patch%off(xdim) + (patch%n_d(xdim) *  px    ) / (py_slab(py+1)-py_slab(py))
+               patch%pse(pz_slab(p)+py_slab(py)+px+1)%se(xdim, HI) = patch%off(xdim) + (patch%n_d(xdim) * (px+1) ) / (py_slab(py+1)-py_slab(py)) - 1 ! no need to sort lengths here
             enddo
          enddo
          if (allocated(py_slab)) deallocate(py_slab)
@@ -662,7 +662,7 @@ contains
             do bx = 0, n_bl(xdim)-I_ONE
                b = b + I_ONE !b = 1 + bx + n_bl(xdim)*(by + bz*n_bl(ydim))
                where (dom%has_dir(:))
-                  patch%pse(b)%se(:, LO) = [ bx, by, bz ] * bsize(xdim:zdim)
+                  patch%pse(b)%se(:, LO) = patch%off(:) + [ bx, by, bz ] * bsize(xdim:zdim)
                   patch%pse(b)%se(:, HI) = patch%pse(b)%se(:, LO) + bsize(xdim:zdim) - 1
                endwhere
             enddo

@@ -97,7 +97,7 @@ contains
       use cg_list,        only: cg_list_element
       use cg_list_bnd,    only: leaves
       use cg_list_global, only: all_cg
-      use cg_list_level,  only: cg_list_level_T, coarsest
+      use cg_list_level,  only: cg_list_level_T, coarsest, base_lev
       use named_array,    only: qna, wna
 
       implicit none
@@ -118,7 +118,7 @@ contains
 
          curl => curl%finer
          if (associated(curl)) then
-            if (associated(curl%coarser)) deallocate(curl%coarser)
+            if (associated(curl%coarser) .and. .not. associated(curl%coarser, base_lev)) deallocate(curl%coarser)
          endif
       enddo
 

@@ -213,7 +213,7 @@ module constants
 
    ! base level
    integer(kind=4), parameter :: base_level_id = 0 !< Base domain level id. Refinements are positively numbered, coarsened levels for use in multigrid solvers have negative numbers.
-   integer(kind=8), dimension(ndims), parameter :: base_level_offset = 0_LONG !< Base domain offset. .
+   integer(kind=8), dimension(ndims), parameter :: base_level_offset = 0_LONG !< Offset of the base domain and all full levels. Neither multigrid nor refinement can properly work with non-0 offset.
    integer(kind=4), parameter :: refinement_factor = 2 !< Resolution difference between consecutive levels. This is deeply hardwired into prolongation, restriction and such routines
 
    ! type of FFT transform used in multigrid
