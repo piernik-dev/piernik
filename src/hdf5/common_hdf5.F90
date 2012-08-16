@@ -621,7 +621,8 @@ contains
       use dataio_pub,     only: die, nproc_io, can_i_write, domain_dump
       use domain,         only: dom
       use cg_list,        only: cg_list_element
-      use gdf,            only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets
+      use gdf,            only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets, &
+         & gdf_root_datasets_T, gdf_parameters_T
       use global,         only: t
       use cg_list_bnd,    only: leaves
       use hdf5,           only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
@@ -671,10 +672,6 @@ contains
       integer, parameter                            :: tag = I_ONE
       integer(kind=4),  dimension(:),   pointer     :: cg_n             !< offset for cg group numbering
       integer(kind=4),  dimension(:,:), pointer     :: cg_all_n_b       !< sizes of all cg
-      integer(kind=4),  dimension(:,:), pointer     :: cg_all_rl        !< refinement levels of all cgs
-      integer(kind=8),  dimension(:,:), pointer     :: cg_all_off       !< offsets of all cgs
-      integer(kind=8),  dimension(:), pointer       :: cg_all_parents   !< parents IDs of all cgs
-      integer(kind=4),  dimension(:,:), pointer     :: cg_all_particles !< particles counts in all cgs
       integer(kind=4),  dimension(:),   allocatable :: cg_rl            !< list of refinement levels from all cgs/procs
       integer(kind=4),  dimension(:,:), pointer     :: cg_n_b           !< list of n_b from all cgs/procs
       integer(kind=8),  dimension(:,:), allocatable :: cg_off           !< list of offsets from all cgs/procs
@@ -693,6 +690,9 @@ contains
       character(len=dsetnamelen)                    :: d_label
       integer(kind=4)                               :: indx
 
+      type(gdf_root_datasets_T) :: rd
+      type(gdf_parameters_T) :: gdf_sp
+
       ! Create a new file and initialize it
 
       ! Prepare groups and datasets for grid containers on the master
@@ -702,10 +702,7 @@ contains
       allocate(cg_all_n_b(ndims, cg_cnt))
 
       if (master) then
-         if (otype == O_OUT) then
-            allocate(cg_all_rl(I_ONE, cg_cnt), cg_all_off(ndims, cg_cnt), cg_all_parents(cg_cnt))
-            allocate(cg_all_particles(I_ONE, cg_cnt))
-         endif
+         if (otype == O_OUT) call rd%init(cg_cnt)
 
          ! Open the HDF5 file only in master process and create all groups required for cg storage.
          ! Create also all related datasets and attributes. Do not write big datasets yet.
@@ -715,7 +712,27 @@ contains
 
          if (otype == O_OUT) then
             call gdf_create_format_stamp(file_id)
-            call gdf_create_simulation_parameters(file_id, t/sek, dom%n_d, dom%nb, dom%edge/cm, domain_dump)
+            call gdf_sp%init()
+            gdf_sp%current_time = t/sek
+            gdf_sp%domain_left_edge = dom%edge(:, LO) / cm
+            gdf_sp%domain_right_edge = dom%edge(:, HI) / cm
+            gdf_sp%field_ordering = 1
+            gdf_sp%boundary_conditions = int([0,0,0,0,0,0], kind=4)  !! \todo fix hardcoded integers
+            gdf_sp%refine_by = int([2], kind=8) !! \todo fix hardcoded integers
+            gdf_sp%cosmological_simulation = int([0], kind=8) !! \todo fix hardcoded integers
+            gdf_sp%dimensionality = int([dom%eff_dim], kind=8)
+            gdf_sp%unique_identifier = "Piernik"
+            select case (trim(domain_dump))
+               case ('phys_domain')
+                  gdf_sp%num_ghost_zones = int(0, kind=8)
+                  gdf_sp%domain_dimensions = dom%n_d
+               case ('full_domain')
+                  gdf_sp%num_ghost_zones = int(dom%nb, kind=8)
+                  gdf_sp%domain_dimensions = dom%n_d + dom%nb*2
+            end select
+
+            call gdf_create_simulation_parameters(file_id, gdf_sp)
+            call gdf_sp%cleanup()
          endif
          call h5gcreate_f(file_id, data_gname, cgl_g_id, error)     ! create "/data"
 
@@ -768,10 +785,10 @@ contains
                cg_all_n_b(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_b(g, :)
                if (otype == O_OUT) then
                   indx = int(sum(cg_n(:p))-cg_n(p)+g, kind=4)
-                  cg_all_rl(1,indx)    = cg_rl(g)
-                  cg_all_off(:,indx) = cg_off(g,:)
-                  cg_all_parents(indx)     = -1
-                  cg_all_particles(1,indx) = 0
+                  rd%grid_level(1, indx) = cg_rl(g)
+                  rd%grid_left_index(:,indx) = cg_off(g,:)
+                  rd%grid_parent_id(indx)     = -1
+                  rd%grid_particle_count(1,indx) = 0
                endif
 
                if (any(cg_off(g, :) > 2.**31)) &
@@ -785,12 +802,12 @@ contains
             deallocate(cg_rl, cg_n_b, cg_off)
             if (allocated(dbuf)) deallocate(dbuf)
          enddo
+         rd%grid_dimensions = cg_all_n_b
 
          call h5gclose_f(cgl_g_id, error)
 
          if (otype == O_OUT) &
-            & call gdf_create_root_datasets(file_id, cg_all_n_b, cg_all_off, &
-            &                               cg_all_rl, cg_all_parents, cg_all_particles)
+            & call gdf_create_root_datasets(file_id, rd)
 
          ! describe_domains
          call h5gcreate_f(file_id, d_gname, doml_g_id, error) ! create "/domains"
@@ -819,7 +836,7 @@ contains
          call h5fclose_f(file_id, error)
          call h5close_f(error)
 
-         if (otype == O_OUT) deallocate(cg_all_rl, cg_all_off, cg_all_parents, cg_all_particles)
+         if (otype == O_OUT) call rd%cleanup()
       else ! send all the necessary information to the master
          !! \deprecated some duplicated code here
          allocate(cg_rl(leaves%cnt), cg_n_b(leaves%cnt, ndims), cg_off(leaves%cnt, ndims))
