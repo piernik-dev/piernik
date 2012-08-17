@@ -388,7 +388,7 @@ contains
       use multigrid_fftapprox, only: mpi_multigrid_prep_grav
       use multigridvars,       only: is_mg_uneven, need_general_pf, single_base, bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
       use multipole,           only: init_multipole, coarsen_multipole
-      use named_array,         only: qna
+      use named_array_list,    only: qna
 
       implicit none
 
@@ -605,7 +605,7 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: singlechar, dsetnamelen
-      use named_array,    only: qna
+      use named_array_list, only: qna
 
       implicit none
 
@@ -944,7 +944,7 @@ contains
       use cg_list_bnd,   only: leaves
       use multigridvars, only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
       use multipole,     only: multipole_solver
-      use named_array,   only: qna
+      use named_array_list, only: qna
       use timer,         only: set_timer
 
       implicit none

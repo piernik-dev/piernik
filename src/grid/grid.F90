@@ -98,7 +98,7 @@ contains
       use cg_list_bnd,    only: leaves
       use cg_list_global, only: all_cg
       use cg_list_level,  only: cg_list_level_T, coarsest, base_lev
-      use named_array,    only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 

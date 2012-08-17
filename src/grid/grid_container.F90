@@ -34,18 +34,20 @@ module grid_cont
 
    use constants,   only: xdim, zdim, ndims, LO, HI
    use types,       only: axes
-   use named_array, only: named_array4d, named_array3d, mbc_list
+   use named_array, only: named_array4d, named_array3d
 
    implicit none
 
    private
-   public :: grid_container, pr_segment, tgt_list, is_overlap
+   public :: grid_container, pr_segment, tgt_list, is_overlap, segment
 
    !> \brief Specification of segment of data for boundary exchange
    type :: segment
       integer :: proc                                     !< target process
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se  !< range
       integer(kind=4) :: tag                              !< unique tag for data exchange
+      real, allocatable, dimension(:,:,:)   :: buf        !< buffer for the 3D (scalar) data to be sent or received
+      real, allocatable, dimension(:,:,:,:) :: buf4       !< buffer for the 4D (vector) data to be sent or received
    end type segment
 
    !> \brief coefficient-layer pair used for prolongation
@@ -56,7 +58,6 @@ module grid_cont
 
    !> \brief segment type for prolongation and restriction
    type, extends(segment) :: pr_segment
-      real, allocatable, dimension(:,:,:) :: buf                      !< buffer for the coarse data (incoming prolongation and outgoing restriction) for each nonlocal operations
       type(c_layer), dimension(:), allocatable :: f_lay               !< face layers to contribute to the prolonged face value
    end type pr_segment
 
@@ -187,9 +188,6 @@ module grid_cont
       type(named_array3d), allocatable, dimension(:) :: q        !< 3D arrays such as gravitational potential pr user-defined quantities or gravitational potential
       type(named_array4d), allocatable, dimension(:) :: w        !< 4D arrays such as u, vector fields (b) or other vector/multi-scalar user-defined quantities
 
-      type(mbc_list), dimension(:,:), allocatable :: q_i_mbc     !< MPI Boundary conditions Containers for incoming guardcell updates on the q arrays
-      type(mbc_list), dimension(:,:), allocatable :: q_o_mbc     !< MPI Boundary conditions Containers for outgoing guardcell updates on the q arrays
-
       ! handy shortcuts to some entries in q(:)
       real, dimension(:,:,:), pointer :: gpot    => null()       !< Array for sum of gravitational potential at t += dt
       real, dimension(:,:,:), pointer :: hgpot   => null()       !< Array for sum of gravitational potential at t += 0.5*dt
@@ -216,7 +214,6 @@ module grid_cont
       procedure :: init                                          !< Initialization
       procedure :: cleanup                                       !< Deallocate all internals
       procedure :: set_axis                                      !< Calculate arrays of coordinates along a given direction
-      procedure :: set_q_mbc                                     !< Initialize the communicators for q
       procedure :: add_all_na                                    !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
       procedure :: add_na                                        !< Register a new 3D entry in current cg with given name.
       procedure :: add_na_4d                                     !< Register a new 4D entry in current cg with given name.
@@ -609,29 +606,6 @@ contains
          deallocate(this%q)
       endif
 
-      do d = xdim, zdim
-         do b = 1, dom%nb
-            if (allocated(this%q_i_mbc)) then
-               if (allocated(this%q_i_mbc(d, b)%mbc)) then
-                  do g = lbound(this%q_i_mbc(d, b)%mbc, dim=1), ubound(this%q_i_mbc(d, b)%mbc, dim=1)
-                     if (this%q_i_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%q_i_mbc(d, b)%mbc(g), mpi_err)
-                  enddo
-                  deallocate(this%q_i_mbc(d, b)%mbc)
-               endif
-            endif
-            if (allocated(this%q_o_mbc)) then
-               if (allocated(this%q_o_mbc(d, b)%mbc)) then
-                  do g = lbound(this%q_o_mbc(d, b)%mbc, dim=1), ubound(this%q_o_mbc(d, b)%mbc, dim=1)
-                     if (this%q_o_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%q_o_mbc(d, b)%mbc(g), mpi_err)
-                  enddo
-                  deallocate(this%q_o_mbc(d, b)%mbc)
-               endif
-            endif
-         enddo
-      enddo
-      deallocate(this%q_i_mbc, this%q_o_mbc)
-
-
       if (allocated(this%w)) then
          do g = lbound(this%w(:), dim=1), ubound(this%w(:), dim=1)
             call this%w(g)%clean
@@ -748,39 +722,11 @@ contains
 
    end function is_overlap_simple
 
-!> \brief Initialize the communicators for q even if there are no q arrays at the moment
-
-   subroutine set_q_mbc(this)
-
-      use constants, only: ndims, xdim, zdim
-      use domain,    only: dom
-
-      implicit none
-
-      class(grid_container), intent(inout) :: this
-      integer :: d, ib, g
-
-      allocate(this%q_i_mbc(ndims, dom%nb), this%q_o_mbc(ndims, dom%nb))
-      do d = xdim, zdim
-         do ib = 1, dom%nb
-            if (allocated(this%i_bnd(d, ib)%seg)) then
-               allocate(this%q_i_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)), &
-                    &   this%q_o_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)))
-               do g = lbound(this%i_bnd(d, ib)%seg, dim=1), ubound(this%i_bnd(d, ib)%seg, dim=1)
-                  call set_mpi_types(this%n_(:), this%i_bnd(d, ib)%seg(g)%se(:,:), this%q_i_mbc(d, ib)%mbc(g))
-                  call set_mpi_types(this%n_(:), this%o_bnd(d, ib)%seg(g)%se(:,:), this%q_o_mbc(d, ib)%mbc(g))
-               enddo
-            endif
-         enddo
-      enddo
-
-   end subroutine set_q_mbc
-
 !> \brief Register all known named arrays for this cg, sey up shortcuts to the crucial fields
 
    subroutine add_all_na(this)
 
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 #ifdef ISO
       use constants,   only: cs_i2_n
       use fluids_pub,  only: cs2_max
@@ -851,48 +797,25 @@ contains
 !<
    subroutine add_na_4d(this, n)
 
-      use constants,   only: xdim, zdim, ndims, base_level_id
-      use domain,      only: dom
+      use constants,   only: base_level_id
       use named_array, only: named_array4d
 
       implicit none
 
       class(grid_container), intent(inout) :: this
-      integer(kind=4),       intent(in)    :: n
+      integer(kind=4),       intent(in)    :: n            !< Length of the vector quantity to be stored (first dimension of the array)
 
       type(named_array4d), allocatable, dimension(:) :: tmp
-      integer :: iw, d, ib, g
 
       if (.not. allocated(this%w)) then
          allocate(this%w(1))
       else
          allocate(tmp(lbound(this%w(:),dim=1):ubound(this%w(:), dim=1) + 1))
          tmp(:ubound(this%w(:), dim=1)) = this%w(:)
-         do iw = lbound(this%w(:), dim=1), ubound(this%w(:), dim=1) ! prevent memory leak
-            if (allocated(this%w(iw)%w_i_mbc)) deallocate(this%w(iw)%w_i_mbc)
-            if (allocated(this%w(iw)%w_o_mbc)) deallocate(this%w(iw)%w_o_mbc)
-         enddo
          call move_alloc(from=tmp, to=this%w)
       endif
 
-      if (this%level_id >= base_level_id) then
-         iw = ubound(this%w(:), dim=1)
-         allocate(this%w(iw)%w_i_mbc(ndims, dom%nb), this%w(iw)%w_o_mbc(ndims, dom%nb))
-         do d = xdim, zdim
-            do ib = 1, dom%nb
-               if (allocated(this%i_bnd(d, ib)%seg)) then
-                  allocate(this%w(iw)%w_i_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)), &
-                       &   this%w(iw)%w_o_mbc(d, ib)%mbc(lbound(this%i_bnd(d, ib)%seg, dim=1):ubound(this%i_bnd(d, ib)%seg, dim=1)))
-
-                  do g = lbound(this%i_bnd(d, ib)%seg, dim=1), ubound(this%i_bnd(d, ib)%seg, dim=1)
-                     call set_mpi_types([n, this%n_(:)], this%i_bnd(d, ib)%seg(g)%se(:,:), this%w(iw)%w_i_mbc(d, ib)%mbc(g))
-                     call set_mpi_types([n, this%n_(:)], this%o_bnd(d, ib)%seg(g)%se(:,:), this%w(iw)%w_o_mbc(d, ib)%mbc(g))
-                  enddo
-               endif
-            enddo
-         enddo
-         call this%w(iw)%init( [n, this%n_(:)] )
-      endif
+      if (this%level_id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [n, this%n_(:)] )
 
    end subroutine add_na_4d
 

@@ -90,7 +90,7 @@ contains
       use cg_list,        only: cg_list_element
       use cg_list_bnd,    only: leaves
       use mpisetup,       only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
-      use named_array,    only: qna
+      use named_array_list, only: qna
 
       implicit none
 
@@ -185,7 +185,7 @@ contains
       use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
       use mpisetup,    only: piernik_MPI_Bcast
-      use named_array, only: qna
+      use named_array_list, only: qna
 #ifndef ISO
       use constants,   only: small, MINL
       use fluidindex,  only: flind
@@ -386,7 +386,7 @@ contains
       use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use magboundaries,  only: bnd_emf
-      use named_array,    only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 

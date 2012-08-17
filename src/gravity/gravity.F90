@@ -152,7 +152,7 @@ contains
       use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
       use cg_list,        only: cg_list_element
       use cg_list_bnd,    only: leaves
-      use named_array,    only: qna
+      use named_array_list, only: qna
       use units,          only: newtong
 #ifdef SELF_GRAV
       use constants,      only: sgp_n, sgpm_n
@@ -312,7 +312,7 @@ contains
       use cg_list,           only: cg_list_element
       use cg_list_bnd,       only: leaves
       use grid_cont,         only: grid_container
-      use named_array,       only: qna
+      use named_array_list,  only: qna
 #ifdef POISSON_FFT
       use domain,            only: is_multicg
       use poissonsolver,     only: poisson_solve
@@ -372,7 +372,7 @@ contains
       use constants,   only: gp_n, gpot_n, hgpot_n
       use cg_list,     only: ind_val
       use cg_list_bnd, only: leaves
-      use named_array, only: qna
+      use named_array_list, only: qna
 #ifdef SELF_GRAV
       use constants,   only: one, half, sgp_n, sgpm_n
       use global,      only: dt, dtm
@@ -837,7 +837,7 @@ contains
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,       only: master, nproc, FIRST, LAST, comm, mpi_err, have_mpi
-      use named_array,    only: qna
+      use named_array_list, only: qna
       use types,          only: value
 
       implicit none

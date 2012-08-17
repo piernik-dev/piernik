@@ -435,7 +435,7 @@ contains
       use dataio_pub,  only: die, msg
       use dataio_user, only: user_vars_hdf5
       use grid_cont,   only: grid_container
-      use named_array, only: qna
+      use named_array_list, only: qna
 
       implicit none
 

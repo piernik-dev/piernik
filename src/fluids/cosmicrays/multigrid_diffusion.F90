@@ -112,7 +112,7 @@ contains
       use domain,         only: dom
       use mpisetup,       only: master, slave, nproc, ibuff, rbuff, lbuff, cbuff, piernik_MPI_Bcast
       use multigridvars,  only: single_base
-      use named_array,    only: qna
+      use named_array_list, only: qna
 
       implicit none
 
@@ -355,7 +355,7 @@ contains
       use cg_list_bnd,    only: leaves
       use initcosmicrays, only: iarr_crs
       use multigridvars,  only: source, defect, correction
-      use named_array,    only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -395,7 +395,7 @@ contains
       use cg_list_bnd,    only: leaves
       use initcosmicrays, only: iarr_crs
       use multigridvars,  only: solution
-      use named_array,    only: wna
+      use named_array_list, only: wna
 
       implicit none
 
@@ -423,7 +423,8 @@ contains
       use cg_list_bnd,    only: leaves
       use cg_list,        only: cg_list_element, dirty_label
       use grid_cont,      only: grid_container
-      use named_array,    only: p3, p4, wna
+      use named_array,    only: p3, p4
+      use named_array_list, only: wna
 
       implicit none
 
@@ -480,7 +481,7 @@ contains
       use initcosmicrays, only: iarr_crs
       use mpisetup,       only: master
       use multigridvars,  only: source, defect, solution, correction, ts, tot_ts
-      use named_array,    only: wna
+      use named_array_list, only: wna
       use timer,          only: set_timer
 
       implicit none
@@ -665,7 +666,8 @@ contains
       use cg_list,        only: cg_list_element, ind_val
       use global,         only: dt
       use grid_cont,      only: grid_container
-      use named_array,    only: p3, qna
+      use named_array,    only: p3
+      use named_array_list, only: qna
 
       implicit none
 
@@ -728,7 +730,7 @@ contains
       use cg_list,        only: cg_list_element
       use global,         only: dt
       use grid_cont,      only: grid_container
-      use named_array,    only: qna
+      use named_array_list, only: qna
 
       implicit none
 

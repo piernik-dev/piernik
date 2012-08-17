@@ -75,7 +75,7 @@ contains
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag
       use grid_cont,      only: grid_container
-      use named_array,    only: wna
+      use named_array_list, only: wna
 #ifndef ISO
       use constants,      only: ydim, zdim
       use fluidindex,     only: flind
@@ -85,7 +85,7 @@ contains
 #endif /* COSM_RAYS */
 #ifdef GRAV
       use constants,      only: gpot_n
-      use named_array,    only: qna
+      use named_array_list, only: qna
 #endif /* GRAV */
 
       implicit none

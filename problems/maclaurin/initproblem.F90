@@ -67,8 +67,10 @@ contains
 
    subroutine read_problem_par
 
+      use constants,   only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
       use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use dataio_pub,  only: die, warn
+      use dataio_pub,  only: die, warn, msg, printinfo
+      use domain,      only: dom
       use global,      only: smalld
       use mpisetup,    only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
 
@@ -137,19 +139,29 @@ contains
 
       call compute_maclaurin_potential
 
+      if (master) then
+         write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
+         call printinfo(msg, .true.)
+         if (x0-a1<dom%edge(xdim, LO) .or. x0+a1>dom%edge(xdim, HI)) call warn("[initproblem:init_prob] Part of the spheroid is outside the domain in the X-direction.")
+         if ( (dom%geometry_type == GEO_XYZ .and. (y0-a1<dom%edge(ydim, LO) .or. y0+a1>dom%edge(ydim, HI))) .or. &
+              (dom%geometry_type == GEO_RPZ .and. (atan2(a1,x0) > minval([y0-dom%edge(ydim, LO), dom%edge(ydim, HI)-y0]))) ) & ! will fail when some one adds 2*k*pi to y0
+              call warn("[initproblem:init_prob] Part of the spheroid is outside the domain")
+         write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
+         call printinfo(msg, .true.)
+      endif
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
 
    subroutine init_prob
 
-      use constants,   only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub,  only: msg, printinfo, warn, die
-      use domain,      only: dom
+      use constants,   only: GEO_XYZ, GEO_RPZ
+      use dataio_pub,  only: die
       use cg_list_bnd, only: leaves
       use cg_list,     only: cg_list_element
+      use domain,      only: dom
       use grid_cont,   only: grid_container
-      use mpisetup,    only: master
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 
       implicit none
@@ -214,17 +226,6 @@ contains
          cgl => cgl%nxt
       enddo
 
-      if (master) then
-         write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
-         call printinfo(msg, .true.)
-         if (x0-a1<dom%edge(xdim, LO) .or. x0+a1>dom%edge(xdim, HI)) call warn("[initproblem:init_prob] Part of the spheroid is outside the domain in the X-direction.")
-         if ( (dom%geometry_type == GEO_XYZ .and. (y0-a1<dom%edge(ydim, LO) .or. y0+a1>dom%edge(ydim, HI))) .or. &
-              (dom%geometry_type == GEO_RPZ .and. (atan2(a1,x0) > minval([y0-dom%edge(ydim, LO), dom%edge(ydim, HI)-y0]))) ) & ! will fail when some one adds 2*k*pi to y0
-              call warn("[initproblem:init_prob] Part of the spheroid is outside the domain")
-         write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
-         call printinfo(msg, .true.)
-      endif
-
    end subroutine init_prob
 
 !-----------------------------------------------------------------------------
@@ -270,7 +271,7 @@ contains
       use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use mpisetup,       only: master
-      use named_array,    only: qna
+      use named_array_list, only: qna
       use units,          only: newtong
 
       implicit none
@@ -374,7 +375,7 @@ contains
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,    only: master, comm, mpi_err
-      use named_array, only: qna
+      use named_array_list, only: qna
 
       implicit none
 
@@ -436,7 +437,7 @@ contains
 
       use dataio_pub,  only: die
       use grid_cont,   only: grid_container
-      use named_array, only: qna
+      use named_array_list, only: qna
 
       implicit none
 

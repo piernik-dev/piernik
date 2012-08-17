@@ -36,7 +36,11 @@ module initproblem
    public :: read_problem_par, init_prob, problem_pointers
    public :: d0, mode
 
-   real            :: d0, p0, amp, kx, ky, kz
+   ! Private variables
+   real :: kx, ky, kz
+
+   ! Namelist variables
+   real            :: d0, p0, amp
    integer(kind=4) :: ix, iy, iz, mode
 
    namelist /PROBLEM_CONTROL/  d0, p0, ix, iy, iz, amp, mode
@@ -57,12 +61,19 @@ contains
 
       use constants,     only: xdim, ydim, zdim, pi
       use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
-      use dataio_pub,    only: msg, die, warn
+      use dataio_pub,    only: tend, msg, die, warn, printinfo
       use domain,        only: dom
+      use fluidindex,    only: flind
+      use fluidtypes,    only: component_fluid
       use mpisetup,      only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
       use problem_pub,   only: jeans_d0, jeans_mode
+      use units,         only: fpiG, newtong
 
       implicit none
+
+      class(component_fluid), pointer :: fl
+      real                            :: kn, cs0, omg2, kJ, Tamp_rounded, Tamp_aux, Tamp, omg
+      integer, parameter              :: g_lun = 137
 
       ! namelist default parameter values
       d0          = 1.0                   !< Average density of the medium (density bias required for correct EOS evaluation)
@@ -135,34 +146,6 @@ contains
       jeans_d0 = d0
       jeans_mode = mode
 
-   end subroutine read_problem_par
-
-!-----------------------------------------------------------------------------
-
-   subroutine init_prob
-
-      use constants,   only: pi, xdim, ydim, zdim, LO
-      use dataio_pub,  only: tend, msg, printinfo, warn
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use func,        only: ekin, emag
-      use cg_list_bnd, only: leaves
-      use cg_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: master
-      use units,       only: fpiG, newtong
-
-      implicit none
-
-      class(component_fluid), pointer :: fl
-      integer                         :: i, j, k
-      real                            :: xi, yj, zk, kn, Tamp, pres, Tamp_rounded, Tamp_aux
-      real                            :: cs0, omg, omg2, kJ
-      integer, parameter              :: g_lun = 137
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
-
       fl => flind%ion
 
       cs0  = sqrt(fl%gam * p0 / d0)
@@ -177,6 +160,12 @@ contains
          if (master) call warn("[initproblem:init_prob] No waves (kn == 0)")
       endif
       if (mode == 1) Tamp = Tamp / 4.
+      if (Tamp > 0) then
+         Tamp_aux = 10**int(log(Tamp)/log(10.))
+         Tamp_rounded = (int(1.05*Tamp/Tamp_aux)+1)*Tamp_aux
+      else
+         Tamp_rounded = 0.
+      endif
 
       if (master) then
          write(msg, *) 'Unperturbed adiabatic sound speed = ', cs0
@@ -204,55 +193,8 @@ contains
             !call printinfo(msg, .true.)
          endif
          call printinfo('Divide T(t) for .tsl by L to get proper amplitude !', .true.)
-      endif
-! Uniform equilibrium state
-
-      cgl => leaves%first
-      do while (associated(cgl))
-         cg => cgl%cg
-         do k = cg%ks, cg%ke
-            zk = cg%z(k)-dom%edge(zdim, LO)
-            do j = cg%js, cg%je
-               yj = cg%y(j)-dom%edge(ydim, LO)
-               do i = cg%is, cg%ie
-                  xi = cg%x(i)-dom%edge(xdim, LO)
-                  select case (mode)
-                     case (0)
-                        cg%u(fl%idn,i,j,k)  = d0 * (1. +          amp * sin(kx*xi + ky*yj + kz*zk))
-                        pres                = p0 * (1. + fl%gam * amp * sin(kx*xi + ky*yj + kz*zk))
-                     case (1)
-                        cg%u(fl%idn,i,j,k)  = d0 * (1. +          amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
-                        pres                = p0 * (1. + fl%gam * amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
-                     case default ! should not happen
-                        cg%u(fl%idn,i,j,k)  = d0
-                        pres                = p0
-                  end select
-
-                  cg%u(fl%imx:fl%imz,i,j,k) = 0.0
-#ifndef ISO
-                  cg%u(fl%ien,i,j,k)        = pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
-
-#ifdef MAGNETIC
-                  cg%b(:,i,j,k)             = 0.0
-                  cg%u(fl%ien,i,j,k)        = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k)), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)
-#endif /* MAGNETIC */
-#endif /* !ISO */
-               enddo
-            enddo
-         enddo
-         cgl => cgl%nxt
-      enddo
-
-      if (Tamp > 0) then
-         Tamp_aux = 10**int(log(Tamp)/log(10.))
-         Tamp_rounded = (int(1.05*Tamp/Tamp_aux)+1)*Tamp_aux
-      else
-         Tamp_rounded = 0.
-      endif
-      if (master) then
          call printinfo('', .true.)
          call printinfo('To verify results, run:', .true.)
-
 #ifdef MULTIGRID
          call printinfo(' % gnuplot verify.gpl; display jeans-mg.png', .true.)
 #else /* !MULTIGRID */
@@ -301,6 +243,67 @@ contains
          endif
          close(g_lun)
       endif
+
+   end subroutine read_problem_par
+
+!-----------------------------------------------------------------------------
+
+   subroutine init_prob
+
+      use constants,   only: xdim, ydim, zdim, LO
+      use domain,      only: dom
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use func,        only: ekin, emag
+      use cg_list_bnd, only: leaves
+      use cg_list,     only: cg_list_element
+      use grid_cont,   only: grid_container
+
+      implicit none
+
+      class(component_fluid), pointer :: fl
+      integer                         :: i, j, k
+      real                            :: xi, yj, zk, pres
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
+
+! Uniform equilibrium state
+      fl => flind%ion
+      cgl => leaves%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         do k = cg%ks, cg%ke
+            zk = cg%z(k)-dom%edge(zdim, LO)
+            do j = cg%js, cg%je
+               yj = cg%y(j)-dom%edge(ydim, LO)
+               do i = cg%is, cg%ie
+                  xi = cg%x(i)-dom%edge(xdim, LO)
+                  select case (mode)
+                     case (0)
+                        cg%u(fl%idn,i,j,k)  = d0 * (1. +          amp * sin(kx*xi + ky*yj + kz*zk))
+                        pres                = p0 * (1. + fl%gam * amp * sin(kx*xi + ky*yj + kz*zk))
+                     case (1)
+                        cg%u(fl%idn,i,j,k)  = d0 * (1. +          amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
+                        pres                = p0 * (1. + fl%gam * amp * sin(kx*xi) * sin(ky*yj) * sin(kz*zk))
+                     case default ! should not happen
+                        cg%u(fl%idn,i,j,k)  = d0
+                        pres                = p0
+                  end select
+
+                  cg%u(fl%imx:fl%imz,i,j,k) = 0.0
+#ifndef ISO
+                  cg%u(fl%ien,i,j,k)        = pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k))
+
+#ifdef MAGNETIC
+                  cg%b(:,i,j,k)             = 0.0
+                  cg%u(fl%ien,i,j,k)        = cg%u(fl%ien,i,j,k) + emag(cg%b(xdim,i,j,k)), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k)
+#endif /* MAGNETIC */
+#endif /* !ISO */
+               enddo
+            enddo
+         enddo
+         cgl => cgl%nxt
+      enddo
 
    end subroutine init_prob
 

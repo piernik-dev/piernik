@@ -78,7 +78,7 @@ contains
       use dataio_pub,  only: die, warn, msg
       use domain,      only: dom
       use cg_list,     only: cg_list_element
-      use named_array, only: qna, wna, na_var
+      use named_array_list, only: qna, wna, na_var
 
       implicit none
 
@@ -207,7 +207,7 @@ contains
       use constants,   only: INVALID, base_level_id
       use dataio_pub,  only: msg, die
       use cg_list,     only: cg_list_element
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 

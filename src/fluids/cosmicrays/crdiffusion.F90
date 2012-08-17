@@ -83,7 +83,7 @@ contains
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_REQUEST_NULL, MPI_COMM_NULL
       use mpisetup,       only: mpi_err, req, status
-      use named_array,    only: wna
+      use named_array_list, only: wna
 
       implicit none
 
@@ -167,7 +167,8 @@ contains
       use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use named_array,    only: p4, wna
+      use named_array,    only: p4
+      use named_array_list, only: wna
 
       implicit none
 

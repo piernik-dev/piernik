@@ -151,7 +151,7 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: AT_NO_B
-      use named_array,    only: wna
+      use named_array_list, only: wna
 
       implicit none
 
@@ -393,7 +393,7 @@ contains
       use cg_list_bnd,     only: leaves
       use grid_cont,       only: grid_container
       use interactions,    only: update_grain_size
-      use named_array,     only: wna
+      use named_array_list, only: wna
       use units,           only: newtong
 #ifdef VERBOSE
 !      use dataio_pub,      only: msg, printinfo
@@ -611,7 +611,7 @@ contains
 
       use constants,   only: xdim
       use grid_cont,   only: grid_container
-      use named_array, only: wna
+      use named_array_list, only: wna
 
       implicit none
 

@@ -231,7 +231,7 @@ contains
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
       use mpi,         only: MPI_INFO_NULL
       use mpisetup,    only: comm
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
       character(len=cwdlen), intent(in) :: filename      !< HDF File name
@@ -298,7 +298,7 @@ contains
 #ifdef INDEPENDENT_ATOUTB
       use hdf5,        only: H5FD_MPIO_INDEPENDENT_F
 #endif /* INDEPENDENT_ATOUTB */
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -437,7 +437,7 @@ contains
            &                 H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
            &                 h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
            &                 h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -581,7 +581,7 @@ contains
       use mass_defect, only: magic_mass
       use mpi,         only: MPI_INFO_NULL
       use mpisetup,    only: comm, master, piernik_MPI_Bcast, ibuff, rbuff, cbuff, slave
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -855,7 +855,7 @@ contains
       use common_hdf5, only: create_empty_cg_dataset
       use constants,   only: ndims, I_ONE, AT_IGNORE
       use hdf5,        only: HID_T, HSIZE_T
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -898,7 +898,7 @@ contains
    subroutine qw_lst(qr_lst, wr_lst)
 
       use constants,   only: AT_IGNORE
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -935,7 +935,7 @@ contains
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -1463,7 +1463,7 @@ contains
       use grid_cont,   only: grid_container, is_overlap
       use hdf5,        only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
            &                 h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 

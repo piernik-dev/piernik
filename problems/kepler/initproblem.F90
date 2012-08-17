@@ -82,7 +82,7 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: AT_NO_B
-      use named_array,    only: wna
+      use named_array_list, only: wna
 
       implicit none
 
@@ -324,7 +324,7 @@ contains
       use interactions,  only: epstein_factor
       use mpi,           only: MPI_DOUBLE_PRECISION
       use mpisetup,      only: master, comm, mpi_err, FIRST, proc
-      use named_array,   only: wna
+      use named_array_list, only: wna
       use units,         only: newtong, gram, cm, kboltz, mH
 
       implicit none
@@ -561,7 +561,7 @@ contains
       use fluidboundaries, only: all_fluid_boundaries
       use cg_list,         only: cg_list_element
       use cg_list_bnd,     only: leaves
-      use named_array,     only: wna
+      use named_array_list, only: wna
 #ifdef TRACER
       use constants,       only: xdim, ydim, zdim
       use grid_cont,       only: grid_container
@@ -635,7 +635,7 @@ contains
       use fluidindex,      only: flind!, iarr_all_mz, iarr_all_dn
       use mpisetup,        only: comm, mpi_err
       use mpi,             only: MPI_MAX, MPI_DOUBLE_PRECISION, MPI_IN_PLACE
-      use named_array,     only: wna
+      use named_array_list, only: wna
       ! use interactions,    only: dragc_gas_dust
 #ifdef VERBOSE
 !      use dataio_pub,      only: msg, printinfo
@@ -872,7 +872,7 @@ contains
 
       use constants,   only: xdim
       use grid_cont,   only: grid_container
-      use named_array, only: wna
+      use named_array_list, only: wna
 
       implicit none
 

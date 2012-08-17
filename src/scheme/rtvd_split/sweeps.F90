@@ -44,7 +44,7 @@ contains
       use fluidindex,     only: iarr_mag_swp, nmag
       use domain,         only: dom
       use grid_cont,      only: grid_container
-      use named_array,    only: wna
+      use named_array_list, only: wna
 
       implicit none
 
@@ -105,7 +105,7 @@ contains
       use cg_list_bnd,     only: leaves
       use grid_cont,       only: grid_container
       use gridgeometry,    only: set_geo_coeffs
-      use named_array,     only: qna, wna
+      use named_array_list, only: qna, wna
       use rtvd,            only: relaxing_tvd
 #ifdef COSM_RAYS
       use crhelpers,       only: div_v, set_div_v1d

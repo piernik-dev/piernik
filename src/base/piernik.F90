@@ -50,7 +50,7 @@ program piernik
    use timer,           only: timer_start, timer_stop
 #endif /* PERFMON */
 #ifdef DEBUG
-   use named_array,     only: qna, wna
+   use named_array_list,  only: qna, wna
 #endif /* DEBUG */
 
    implicit none

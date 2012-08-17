@@ -226,7 +226,7 @@ contains
       use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
-      use named_array,    only: qna
+      use named_array_list, only: qna
 
       implicit none
 
@@ -301,7 +301,7 @@ contains
       use initcosmicrays, only: iarr_crs, ncrn, ncre
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,       only: master, comm, mpi_err
-      use named_array,    only: qna
+      use named_array_list, only: qna
 
       implicit none
 
@@ -368,7 +368,7 @@ contains
       use dataio_pub,     only: die
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crs
-      use named_array,    only: qna
+      use named_array_list, only: qna
 
       implicit none
 

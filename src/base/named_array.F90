@@ -27,57 +27,19 @@
 !
 #include "piernik.h"
 !>
-!! \brief Definitions of 3D and 4D named arrays
+!! \brief Definitions of 3D and 4D data storage for named arrays
 !!
-!! \details The named arrays are used almost exclusively in grid container, where anyone may register a rank-3 (cg%q(:)) or rank-4 (cg%w) array.
+!! \details The named arrays are used exclusively through grid container, where anyone may register a rank-3 (cg%q(:)) or rank-4 (cg%w(:)) array.
+!!
 !! The maintenance of named arrays(initialization, cleanup, boundary cell exchange, I/O) is unified as much as possible,
 !! which saves us from writing a lot of partially duplicated code.
 !<
 module named_array
 
-   use constants, only: dsetnamelen
-
    implicit none
 
    private
-   public :: named_array4d, named_array3d, mbc_list, p3, p4, na_var, qna, wna
-
-   !> \brief Common properties of 3D and 4D named arrays
-   type :: na_var
-      character(len=dsetnamelen)                 :: name          !< a user-provided id for the array
-      logical                                    :: vital         !< fields that are subject of automatic prolongation and restriction (e.g. state variables)
-      integer(kind=4)                            :: restart_mode  !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
-      integer(kind=4)                            :: ord_prolong   !< Prolongation order for the variable
-      integer(kind=4), allocatable, dimension(:) :: position      !< VAR_CENTER by default, also possible VAR_CORNER and VAR_[XYZ]FACE
-      integer(kind=4)                            :: dim4          !< <=0 for 3D arrays, >0 for 4D arrays
-      logical                                    :: multigrid     !< .true. for variables that may exist below base level (e.g. work fields for multigrid solver)
-   end type na_var
-
-   !> \brief the generic list of named arrays with supporting routines
-   type :: na_var_list
-      type(na_var), dimension(:), allocatable :: lst
-    contains
-      procedure :: ind                                           !< Get the index of a named array of given name.
-      procedure :: exists                                        !< Check if a named array of given name is already registered
-      procedure :: print_vars                                    !< Write a summary on registered fields. Can be useful for debugging
-      procedure :: add2lst                                       !< Add a named array properties to the list
-   end type na_var_list
-
-   ! types with indices of the most commonly used arrays stored in cg%w and cg%q
-
-   !> \brief the most commonly used 3D named array is wa, thus we add a shortcut here
-   type, extends(na_var_list) :: na_var_list_q
-      integer :: wai                                   !< auxiliary array : cg%q(qna%wai)
-   end type na_var_list_q
-
-   !> \brief the most commonly used 4D named arraya are u and b, thus we add shortcuts here
-   type, extends(na_var_list) :: na_var_list_w
-      integer :: fi                                    !< fluid           : cg%w(wna%fi)
-      integer :: bi                                    !< magnetic field  : cg%w(wna%bi)
-   end type na_var_list_w
-
-   type(na_var_list_q) :: qna !< list of registered 3D named arrays
-   type(na_var_list_w) :: wna !< list of registered 4D named arrays
+   public :: named_array4d, named_array3d, p3, p4
 
    real, dimension(:,:,:),   pointer :: p3   !< auxiliary pointer to 3D named_arrays
    real, dimension(:,:,:,:), pointer :: p4   !< auxiliary pointer to 4D named_arrays
@@ -85,49 +47,20 @@ module named_array
    !> \brief Common methods for 3D and 4D named arrays
    type, abstract :: generic_na
     contains
-      procedure(g_na_clean), deferred, pass(this) :: clean
-      procedure(g_na_check), deferred, pass(this) :: check
-      procedure(g_na_b),     deferred, pass(this) :: lb
-      procedure(g_na_b),     deferred, pass(this) :: ub
-      !> \todo add also init, span and get_sweep
+      procedure :: lb
+      procedure :: ub
+      procedure :: named_array_init
+      procedure :: clean
+      procedure :: check
+      generic, public :: init => named_array_init
+      !> \todo add also span and get_sweep
    end type generic_na
-
-   interface
-      subroutine g_na_clean(this)
-         import generic_na
-         implicit none
-         class(generic_na), intent(inout) :: this
-      end subroutine g_na_clean
-
-      logical function g_na_check(this)
-         import generic_na
-         implicit none
-         class(generic_na), intent(inout) :: this
-      end function g_na_check
-
-      function g_na_b(this,dim_) result(n)
-         import generic_na
-         implicit none
-         class(generic_na), intent(in) :: this
-         integer(kind=4), intent(in) :: dim_
-         integer(kind=4) :: n
-      end function g_na_b
-   end interface
-
-   !> \brief List of MPI Boundary conditions Containers for boundary exchanges
-   type :: mbc_list
-      integer(kind=4), dimension(:), allocatable :: mbc  !< MPI Boundary conditions Container for each segment
-   end type mbc_list
 
    !> \brief A named array for multi-scalar and vector fields
    type, extends(generic_na) :: named_array4d
       real, dimension(:,:,:,:), pointer :: arr => null()
-      type(mbc_list), dimension(:,:), allocatable :: w_i_mbc  !< MPI Boundary conditions Containers for incoming guardcell updates on the w arrays
-      type(mbc_list), dimension(:,:), allocatable :: w_o_mbc  !< MPI Boundary conditions Containers for outgoing guardcell updates on the w arrays
       contains
-         procedure :: array4d_init
          procedure :: array4d_associate
-         procedure :: clean => array4d_clean
          procedure :: array4d_get_sweep
          procedure :: array4d_get_sweep_one_var
          procedure :: array4d_point
@@ -135,266 +68,160 @@ module named_array
          procedure :: array4d_span
          procedure :: array4d_span_one_var
          procedure :: array4d_span_ijkse
+         procedure :: array4d_span_ijkse8
          procedure :: array4d_span_one_var_ijkse
-         procedure :: check => array4d_check_if_dirty
-         procedure :: lb => array4d_lbound
-         procedure :: ub => array4d_ubound
-         generic, public :: init => array4d_init, array4d_associate
+         generic, public :: init      => array4d_associate
+         generic, public :: span      => array4d_span_one_var, array4d_span, array4d_span_one_var_ijkse, array4d_span_ijkse, array4d_span_ijkse8
          generic, public :: get_sweep => array4d_get_sweep_one_var, array4d_get_sweep
-         generic, public :: point => array4d_point, array4d_point_one_var
-         generic, public :: span => array4d_span_one_var, array4d_span, array4d_span_one_var_ijkse, array4d_span_ijkse
+         generic, public :: point     => array4d_point, array4d_point_one_var
    end type named_array4d
 
    !> \brief A named array for scalar fields
    type, extends(generic_na) :: named_array3d
       real, dimension(:,:,:), pointer :: arr => null()
       contains
-         procedure :: array3d_init
          procedure :: array3d_associate
-         procedure :: clean => array3d_clean
-         procedure :: check => array3d_check_if_dirty
-         procedure :: get_sweep => array3d_get_sweep
-         procedure :: point => array3d_point
          procedure :: array3d_span
          procedure :: array3d_span_ijkse
          procedure :: array3d_span_ijkse8
-         procedure :: lb => array3d_lbound
-         procedure :: ub => array3d_ubound
-         generic, public :: init => array3d_init, array3d_associate
-         generic, public :: span => array3d_span, array3d_span_ijkse, array3d_span_ijkse8
+         generic, public :: init      => array3d_associate
+         generic, public :: span      => array3d_span, array3d_span_ijkse, array3d_span_ijkse8
+         procedure       :: get_sweep => array3d_get_sweep
+         procedure       :: point     => array3d_point
    end type named_array3d
 
 contains
-
-!>
-!! \brief Get the index of a named array of given name.
-!!
-!! \warning OPT The indices aren't updated so cache them, whenever possible
-!<
-   function ind(this, name) result(rind)
-
-      use dataio_pub,  only: die, msg, warn
-
-      implicit none
-
-      class(na_var_list), intent(inout) :: this
-      character(len=*),   intent(in)    :: name
-
-      integer :: rind, i
-
-      rind = 0
-
-      if (allocated(this%lst)) then
-         do i = lbound(this%lst, dim=1), ubound(this%lst, dim=1)
-            if (trim(name) == this%lst(i)%name) then
-               if (rind /= 0) then
-                  write(msg, '(2a)') "[named_array:ind] multiple entries with the same name: ", trim(name)
-                  call die(msg)
-               endif
-               rind = i
-            endif
-         enddo
-      endif
-
-      if (rind == 0) then
-         write(msg, '(2a)') "[named_array:ind] requested entry not found: ", trim(name)
-         call warn(msg)
-      endif
-
-   end function ind
-
-!> \brief Check if a named array of given name is already registered
-
-   function exists(this, name)
-
-      use dataio_pub,  only: die, msg
-
-      implicit none
-
-      class(na_var_list), intent(inout) :: this
-      character(len=*),   intent(in)    :: name
-
-      logical :: exists
-      integer :: i
-
-      exists = .false.
-
-      if (allocated(this%lst)) then
-         do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
-            if (trim(name) ==  this%lst(i)%name) then
-               if (exists) then
-                  write(msg, '(2a)') "[named_array:exists] multiple entries with the same name: ", trim(name)
-                  call die(msg)
-               endif
-               exists = .true.
-            endif
-         enddo
-      endif
-
-   end function exists
-
-!> \brief Add a named array properties to the list
-
-   subroutine add2lst(this, element)
-
-      use constants,  only: fluid_n, mag_n, wa_n
-      use dataio_pub, only: die, msg
-
-      implicit none
-
-      class(na_var_list), intent(inout) :: this
-      type(na_var),       intent(in)    :: element
-
-      type(na_var), dimension(:), allocatable :: tmp
-
-      if (this%exists(element%name)) then
-         write(msg, '(3a)')"[named_array:add2lst] An array '",trim(element%name),"' was already registered in this list."
-         call die(msg)
-      endif
-
-      if (.not. allocated(this%lst)) then
-         allocate(this%lst(1))
-      else
-         allocate(tmp(lbound(this%lst(:),dim=1):ubound(this%lst(:), dim=1) + 1))
-         tmp(:ubound(this%lst(:), dim=1)) = this%lst(:)
-         call move_alloc(from=tmp, to=this%lst)
-         !! \warning slight memory leak here, e.g. in use at exit: 572 bytes in 115 blocks, perhaps associated with na_var%position
-      endif
-      this%lst(ubound(this%lst(:), dim=1)) = element
-
-      select type(this)
-         type is (na_var_list_w)
-            if (element%name == fluid_n) this%fi  = ubound(this%lst(:), dim=1)
-            if (element%name == mag_n)   this%bi  = ubound(this%lst(:), dim=1)
-         type is (na_var_list_q)
-            if (element%name == wa_n)    this%wai = ubound(this%lst(:), dim=1)
-      end select
-
-   end subroutine add2lst
-
-!> \brief Summarize all registered fields and their properties
-
-   subroutine print_vars(this)
-
-      use constants,  only: INVALID
-      use dataio_pub, only: printinfo, warn, msg
-      use mpisetup,   only: slave
-
-      implicit none
-
-      class(na_var_list), intent(inout) :: this
-
-      integer :: i, d3
-
-      if (slave) return
-
-      d3 = count(this%lst(:)%dim4 == INVALID)
-
-      if (d3 /= 0) then
-         write(msg,'(a,i2,a)')"[named_array:print_vars] Found ",size(this%lst(:))," rank-3 arrays:"
-         call printinfo(msg)
-      endif
-      if (count(this%lst(:)%dim4 /= INVALID) /= 0) then
-         write(msg,'(a,i2,a)')"[named_array:print_vars] Found ",size(this%lst(:))," rank-4 arrays:"
-         call printinfo(msg)
-         if (d3 /=0) call warn("[named_array:print_vars] Both rank-3 and rank-4 named arrays are present in the same list!")
-      endif
-
-      do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
-         if (this%lst(i)%dim4 == INVALID) then
-            write(msg,'(3a,l2,a,i2,a,l2,2(a,i2))')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
-                 &                                ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, ", position=", this%lst(i)%position(:)
-         else
-            write(msg,'(3a,l2,a,i2,a,l2,2(a,i2),a,100i2)')"'", this%lst(i)%name, "', vital=", this%lst(i)%vital, ", restart_mode=", this%lst(i)%restart_mode, &
-                 &                                        ", multigrid=", this%lst(i)%multigrid, ", ord_prolong=", this%lst(i)%ord_prolong, &
-                 &                                        ", components=", this%lst(i)%dim4, ", position=", this%lst(i)%position(:)
-         endif
-         call printinfo(msg)
-      enddo
-
-   end subroutine print_vars
-
-!>
-!! \brief Initialize a 3d named array
-!!
-!! \details The mbc component is initialized separately. Note that mbc is common for all 3d named arrays and is a member of the grid container type.
-!<
-
-   subroutine array3d_init(this, n)
-
-      use constants,  only: big_float, ndims, xdim, ydim, zdim
-      use dataio_pub, only: die
-
-      implicit none
-
-      class(named_array3d),          intent(inout) :: this
-      integer(kind=4), dimension(:), intent(in)    :: n
-
-      if (size(n) /= ndims) call die("[named_array:array_init] expected 3d shape")
-      if (.not.associated(this%arr)) allocate(this%arr(n(xdim), n(ydim), n(zdim)))
-      this%arr = big_float
-      ! if (.not.associated(this%arr)) this%arr = reshape( [ ( big_float, i=1, product(n(:)) ) ], [ n(1), n(2), n(3) ] ) ! lhs realloc
-
-   end subroutine array3d_init
 
 !>
 !! \brief Initialize a 4d named array
 !!
 !! \details The mbc component is initialized separately
 !<
-
-   subroutine array4d_init(this, n)
+   subroutine named_array_init(this, n)
 
       use constants,  only: big_float, ndims, xdim, ydim, zdim, I_ONE
       use dataio_pub, only: die
 
       implicit none
 
-      class(named_array4d),          intent(inout) :: this
+      class(generic_na),          intent(inout) :: this
       integer(kind=4), dimension(:), intent(in)    :: n
 
-      if (size(n) /= I_ONE + ndims) call die("[named_array:array_init] expected 4d shape")
-      if (.not.associated(this%arr)) allocate(this%arr(n(I_ONE), n(I_ONE+xdim), n(I_ONE+ydim), n(I_ONE+zdim)))
-      this%arr = big_float
-      ! if (.not.associated(this%arr)) this%arr = reshape( [ ( big_float, i=1, product(n(:)) ) ], [ n(1), n(2), n(3), n(4) ] ) ! lhs realloc
+      select type(this)
+         type is (named_array3d)
+            if (size(n) /= ndims) call die("[named_array:array_init] expected 3d shape")
+            if (.not.associated(this%arr)) allocate(this%arr(n(xdim), n(ydim), n(zdim)))
+            this%arr = big_float
+         type is (named_array4d)
+            if (size(n) /= I_ONE + ndims) call die("[named_array:array_init] expected 4d shape")
+            if (.not.associated(this%arr)) allocate(this%arr(n(I_ONE), n(I_ONE+xdim), n(I_ONE+ydim), n(I_ONE+zdim)))
+            this%arr = big_float
+         class default
+            call die("[named_array:named_array_init] No initialization for generic named array")
+      end select
 
-   end subroutine array4d_init
+   end subroutine named_array_init
 
-!>
-!! \brief deallocate array
-!!
-!! \details The mbc component is a member of the grid container type and this is cleaned up elsewhere
-!<
+!> \brief deallocate named array
 
-   subroutine array3d_clean(this)
+   subroutine clean(this)
+
+      use dataio_pub, only: die
 
       implicit none
 
-      class(named_array3d), intent(inout) :: this
+      class(generic_na), intent(inout) :: this
 
-      if (associated(this%arr)) deallocate(this%arr)
-
-   end subroutine array3d_clean
+      select type(this)
+         type is (named_array3d)
+            if (associated(this%arr)) deallocate(this%arr)
+         type is (named_array4d)
+            if (associated(this%arr)) deallocate(this%arr)
+         class default
+            call die("[named_array:clean] No cleanup for generic named array")
+      end select
+   end subroutine clean
 
 !> \brief check if the array was initialized with sane values
 
-   logical function array3d_check_if_dirty(this)
+   logical function check(this)
 
       use constants,  only: big_float
-      use dataio_pub, only: warn
+      use dataio_pub, only: warn, die
 
       implicit none
 
-      class(named_array3d), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) :/
+      class(generic_na), intent(inout) :: this                  !! \todo i want to become polymorphic class(*) :/
 
-      if (associated(this%arr)) then
-         array3d_check_if_dirty = any( this%arr >= big_float )
-      else
-         call warn("[named_array:array3d_check_if_dirty] Array not allocated!")
-         array3d_check_if_dirty = .false.
-      endif
+      check = .false.
+      select type(this)
+         type is (named_array3d)
+            if (associated(this%arr)) then
+               check = any( this%arr >= big_float )
+            else
+               call warn("[named_array:check] Array not allocated!")
+            endif
+         type is (named_array4d)
+            if (associated(this%arr)) then
+               check = any( this%arr >= big_float )
+            else
+               call warn("[named_array:check] Array not allocated!")
+            endif
+         class default
+            call die("[named_array:ccheck] No check for generic named array")
+      end select
 
-   end function array3d_check_if_dirty
+   end function check
+
+!> \brief Get the upper bound of a named array
+
+   function ub(this, dim_) result(n)
+
+      use constants,  only: INVALID
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(generic_na), intent(in) :: this
+      integer(kind=4),      intent(in) :: dim_
+      integer(kind=4) :: n
+
+      n = INVALID
+      select type(this)
+         type is (named_array3d)
+            n = ubound(this%arr, dim=dim_, kind=4)
+         type is (named_array4d)
+            n = ubound(this%arr, dim=dim_, kind=4)
+         class default
+            call die("[named_array:ub] No upper bound for generic named array")
+      end select
+
+   end function ub
+
+!> \brief Get the lower bound of a named array
+
+   function lb(this, dim_) result(n)
+
+      use constants,  only: INVALID
+      use dataio_pub, only: die
+
+      implicit none
+
+      class(generic_na), intent(in) :: this
+      integer(kind=4),      intent(in) :: dim_
+      integer(kind=4) :: n
+
+      n = INVALID
+      select type(this)
+         type is (named_array3d)
+            n = lbound(this%arr,dim=dim_,kind=4)
+         type is (named_array4d)
+            n = lbound(this%arr,dim=dim_,kind=4)
+         class default
+            call die("[named_array:ub] No lower bound for generic named array")
+      end select
+
+   end function lb
 
 !> \brief Initialize named array with a predefined simple array
 
@@ -421,63 +248,6 @@ contains
       if (.not.associated(this%arr)) this%arr => other
 
    end subroutine array4d_associate
-
-!> \brief deallocate array and mbc
-
-   subroutine array4d_clean(this)
-
-      use constants, only: xdim, zdim, INVALID
-      use mpisetup,  only: mpi_err
-
-      implicit none
-
-      class(named_array4d), intent(inout) :: this                  !! Unlimited polymorphism at (1) not yet supported
-
-      integer :: d, b, g
-
-      if (associated(this%arr)) deallocate(this%arr)
-
-      if (allocated(this%w_i_mbc) .and. allocated(this%w_o_mbc)) then
-         do d = xdim, zdim
-            do b = lbound(this%w_o_mbc, dim=2), ubound(this%w_o_mbc, dim=2)
-               if (allocated(this%w_i_mbc(d, b)%mbc)) then
-                  do g = lbound(this%w_i_mbc(d, b)%mbc, dim=1), ubound(this%w_i_mbc(d, b)%mbc, dim=1)
-                     if (this%w_i_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%w_i_mbc(d, b)%mbc(g), mpi_err)
-                  enddo
-                  deallocate(this%w_i_mbc(d, b)%mbc)
-               endif
-               if (allocated(this%w_o_mbc(d, b)%mbc)) then
-                  do g = lbound(this%w_o_mbc(d, b)%mbc, dim=1), ubound(this%w_o_mbc(d, b)%mbc, dim=1)
-                     if (this%w_o_mbc(d, b)%mbc(g) /= INVALID) call MPI_Type_free(this%w_o_mbc(d, b)%mbc(g), mpi_err)
-                  enddo
-                  deallocate(this%w_o_mbc(d, b)%mbc)
-               endif
-            enddo
-         enddo
-         deallocate(this%w_i_mbc, this%w_o_mbc)
-      endif
-
-   end subroutine array4d_clean
-
-!> \brief check if the array was initialized with sane values
-
-   logical function array4d_check_if_dirty(this)
-
-      use constants,  only: big_float
-      use dataio_pub, only: warn
-
-      implicit none
-
-      class(named_array4d), intent(inout) :: this                  !< \todo i want to become polymorphic class(*) when I grow older
-
-      if (associated(this%arr)) then
-         array4d_check_if_dirty = any( this%arr >= big_float )
-      else
-         call warn("[named_array:array4d_check_if_dirty] Array not allocated!")
-         array4d_check_if_dirty = .false.
-      endif
-
-   end function array4d_check_if_dirty
 
 !> \brief Get a selected line of values
 
@@ -777,56 +547,23 @@ contains
 
    end function array4d_span_ijkse
 
-!> \brief Get the upper bound of a 4D named array
-   function array4d_ubound(this,dim_) result(n)
+   function array4d_span_ijkse8(this,v) result(p3d)
+
+      use constants, only: xdim, ydim, zdim, LO, HI
 
       implicit none
 
-      class(named_array4d), intent(in) :: this
-      integer(kind=4),      intent(in) :: dim_
-      integer(kind=4) :: n
+      class(named_array4d),             intent(inout) :: this
+      integer(kind=8), dimension(:, :), intent(in)    :: v
 
-      n = ubound(this%arr, dim=dim_, kind=4)
+      real,    dimension(:,:,:,:), pointer           :: p3d
 
-   end function array4d_ubound
+      if (.not.associated(this%arr)) then
+         p3d => null()
+      else
+         p3d => this%arr(:,v(xdim,LO):v(xdim,HI),v(ydim,LO):v(ydim,HI),v(zdim,LO):v(zdim,HI))
+      endif
 
-!> \brief Get the lower bound of a 4D named array
-   function array4d_lbound(this,dim_) result(n)
-
-      implicit none
-
-      class(named_array4d), intent(in) :: this
-      integer(kind=4),      intent(in) :: dim_
-      integer(kind=4) :: n
-
-      n = lbound(this%arr,dim=dim_,kind=4)
-
-   end function array4d_lbound
-
-!> \brief Get the upper bound of a 3D named array
-   function array3d_ubound(this,dim_) result(n)
-
-      implicit none
-
-      class(named_array3d), intent(in) :: this
-      integer(kind=4),      intent(in) :: dim_
-      integer(kind=4) :: n
-
-      n = ubound(this%arr, dim=dim_, kind=4)
-
-   end function array3d_ubound
-
-!> \brief Get the lower bound of a 3D named array
-   function array3d_lbound(this,dim_) result(n)
-
-      implicit none
-
-      class(named_array3d), intent(in) :: this
-      integer(kind=4),      intent(in) :: dim_
-      integer(kind=4) :: n
-
-      n = lbound(this%arr,dim=dim_,kind=4)
-
-   end function array3d_lbound
+   end function array4d_span_ijkse8
 
 end module named_array

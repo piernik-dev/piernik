@@ -93,7 +93,7 @@ contains
       use mpisetup,            only: comm, mpi_err, master, slave, nproc, ibuff, lbuff, piernik_MPI_Bcast
       use multigridvars,       only: single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, &
            &                         ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
-      use named_array,         only: qna
+      use named_array_list,    only: qna
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
 #endif /* GRAV */

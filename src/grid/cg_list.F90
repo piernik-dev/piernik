@@ -323,7 +323,7 @@ contains
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
       use mpisetup,    only: comm, mpi_err, master, proc, FIRST
-      use named_array, only: qna
+      use named_array_list, only: qna
       use types,       only: value
 
       implicit none
@@ -755,7 +755,7 @@ contains
 
       use constants,   only: LO
       use dataio_pub,  only: msg, printio
-      use named_array, only: qna
+      use named_array_list, only: qna
 
       implicit none
 
@@ -832,7 +832,7 @@ contains
       use domain,      only: dom
       use global,      only: dirty_debug
       use mpisetup,    only: proc
-      use named_array, only: qna
+      use named_array_list, only: qna
 
       implicit none
 
@@ -884,7 +884,7 @@ contains
 
       use constants,   only: big_float
       use dataio_pub,  only: warn, msg
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -918,7 +918,7 @@ contains
 
    subroutine update_req(this)
 
-      use constants, only: INVALID, xdim, zdim
+      use constants, only: xdim, zdim
       use domain,    only: dom
       use mpisetup,  only: inflate_req
 
@@ -935,7 +935,7 @@ contains
       do while (associated(cgl))
 
          do d = xdim, zdim
-            if (allocated(cgl%cg%q_i_mbc(d, dom%nb)%mbc)) nrq = nrq + 2 * count(cgl%cg%q_i_mbc(d, dom%nb)%mbc(:) /= INVALID)
+            if (allocated(cgl%cg%i_bnd(d, dom%nb)%seg)) nrq = nrq + 2 * size(cgl%cg%i_bnd(d, dom%nb)%seg)
          enddo
 
          cgl => cgl%nxt

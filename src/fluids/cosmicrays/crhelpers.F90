@@ -106,7 +106,7 @@ contains
 
       use dataio_pub,  only: die
       use grid_cont,   only: grid_container
-      use named_array, only: qna
+      use named_array_list, only: qna
 
       implicit none
 
@@ -138,7 +138,7 @@ contains
       use domain,         only: dom
       use fluidindex,     only: iarr_all_dn
       use grid_cont,      only: grid_container
-      use named_array,    only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -186,7 +186,7 @@ contains
       use domain,         only: dom
       use fluidindex,     only: iarr_all_dn
       use grid_cont,      only: grid_container
-      use named_array,    only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 

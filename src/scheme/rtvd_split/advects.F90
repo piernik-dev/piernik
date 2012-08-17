@@ -60,7 +60,7 @@ contains
       use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use magboundaries,  only: bnd_emf
-      use named_array,    only: qna, wna
+      use named_array_list, only: qna, wna
       use rtvd,           only: tvdb
 
       implicit none

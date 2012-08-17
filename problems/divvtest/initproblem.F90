@@ -253,7 +253,7 @@ contains
       use constants,   only: dsetnamelen
       use crhelpers,   only: divv_n
       use grid_cont,   only: grid_container
-      use named_array, only: qna
+      use named_array_list, only: qna
 
       implicit none
 

@@ -725,10 +725,10 @@ contains
       use mass_defect,    only: update_magic_mass
       use mpi,            only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,       only: master, comm, mpi_err
-      use named_array,    only: wna
+      use named_array_list, only: wna
 #ifdef GRAV
       use constants,      only: gpot_n
-      use named_array,    only: qna
+      use named_array_list, only: qna
 #endif /* GRAV */
 #ifndef ISO
       use fluidindex,     only: iarr_all_en
@@ -979,7 +979,7 @@ contains
       use global,         only: cfl
       use cg_list_bnd,    only: leaves
       use mpisetup,       only: master
-      use named_array,    only: qna
+      use named_array_list, only: qna
       use units,          only: mH, kboltz
 #ifndef ISO
       use constants,      only: ION, DST, half
@@ -1137,7 +1137,7 @@ contains
       use cg_list_bnd,        only: leaves
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master
-      use named_array,        only: qna
+      use named_array_list,   only: qna
       use types,              only: value
 #ifdef COSM_RAYS
       use fluidindex,         only: iarr_all_crs

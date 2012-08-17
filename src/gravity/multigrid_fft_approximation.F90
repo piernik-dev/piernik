@@ -553,7 +553,7 @@ contains
       use domain,        only: dom, is_multicg
       use grid_cont,     only: pr_segment
       use mpi,           only: MPI_DOUBLE_PRECISION
-      use mpisetup,      only: comm, mpi_err, req, status, master
+      use mpisetup,      only: comm, mpi_err, req, status, master, inflate_req
       use multigridvars, only: ord_prolong_face_norm, ord_prolong_face_par, need_general_pf
 
       implicit none
@@ -638,7 +638,7 @@ contains
                if (allocated(fine%first%cg%mg%pfc_tgt(d, lh)%seg)) then
                   do g = lbound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1), ubound(fine%first%cg%mg%pfc_tgt(d, lh)%seg(:), dim=1)
                      nr = nr + I_ONE
-                     if (nr > size(req, dim=1)) call die("[multigrid_fft_approximation:prolong_faces] size(req) too small for Irecv")
+                     if (nr > size(req, dim=1)) call inflate_req
                      call MPI_Irecv(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf(1, 1, 1), size(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, &
                           &         fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%proc, HI*d+lh, comm, req(nr), mpi_err)
                   enddo
@@ -658,7 +658,7 @@ contains
                         cse => pseg%se
 
                         nr = nr + I_ONE
-                        if (nr > size(req, dim=1)) call die("[multigrid_fft_approximation:prolong_faces] size(req) too small for Isend")
+                        if (nr > size(req, dim=1)) call inflate_req
                         se(:,:) = cse(:,:)
                         pseg%buf(:, :, :) = 0. ! this can be avoided by extracting first assignment from the loop
                         do l = lbound(pseg%f_lay(:), dim=1), ubound(pseg%f_lay(:), dim=1)

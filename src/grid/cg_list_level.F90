@@ -442,7 +442,7 @@ contains
 
       use constants,   only: base_level_id, wa_n
       use dataio_pub,  only: warn
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -478,7 +478,7 @@ contains
 
       use constants,   only: base_level_id, wa_n
       use dataio_pub,  only: warn
-      use named_array, only: qna, wna
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -532,11 +532,11 @@ contains
    subroutine restrict_q_1var(this, iv)
 
       use constants,   only: xdim, ydim, zdim, LO, HI, I_ONE, refinement_factor
-      use dataio_pub,  only: msg, warn, die
+      use dataio_pub,  only: msg, warn
       use domain,      only: dom
       use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
-      use mpisetup,    only: comm, mpi_err, req, status
+      use mpisetup,    only: comm, mpi_err, req, status, inflate_req
       use mpi,         only: MPI_DOUBLE_PRECISION
       use named_array, only: p3
 
@@ -574,7 +574,7 @@ contains
          if (allocated(cg%ri_tgt%seg)) then
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                nr = nr + I_ONE
-               if (nr > size(req, dim=1)) call die("[cg_list_level:restrict_q_1var] size(req) too small for Irecv")
+               if (nr > size(req, dim=1)) call inflate_req
                call MPI_Irecv(cg%ri_tgt%seg(g)%buf(1, 1, 1), size(cg%ri_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%ri_tgt%seg(g)%proc, cg%ri_tgt%seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
@@ -605,7 +605,7 @@ contains
                enddo
             enddo
             nr = nr + I_ONE
-            if (nr > size(req, dim=1)) call die("[cg_list_level:restrict_q_1var] size(req) too small for Isend")
+            if (nr > size(req, dim=1)) call inflate_req
             call MPI_Isend(cg%ro_tgt%seg(g)%buf(1, 1, 1), size(cg%ro_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%ro_tgt%seg(g)%proc, cg%ro_tgt%seg(g)%tag, comm, req(nr), mpi_err)
          enddo
          cgl => cgl%nxt
@@ -707,9 +707,9 @@ contains
       use domain,         only: dom
       use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
-      use mpisetup,       only: comm, mpi_err, req, status
+      use mpisetup,       only: comm, mpi_err, req, status, inflate_req
       use mpi,            only: MPI_DOUBLE_PRECISION
-      use named_array,    only: qna
+      use named_array_list, only: qna
 
       implicit none
 
@@ -780,7 +780,7 @@ contains
          if (allocated(cg%pi_tgt%seg)) then
             do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
                nr = nr + I_ONE
-               if (nr > size(req, dim=1)) call die("[cg_list_level:prolong_q_1var] size(req) too small for Irecv")
+               if (nr > size(req, dim=1)) call inflate_req
                call MPI_Irecv(cg%pi_tgt%seg(g)%buf(1, 1, 1), size(cg%pi_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%pi_tgt%seg(g)%proc, cg%pi_tgt%seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
@@ -797,7 +797,7 @@ contains
             cse(:, HI) = cg%po_tgt%seg(g)%se(:,HI) - cg%off(:) + cg%ijkse(:, LO)
 
             nr = nr + I_ONE
-            if (nr > size(req, dim=1)) call die("[cg_list_level:prolong_q_1var] size(req) too small for Isend")
+            if (nr > size(req, dim=1)) call inflate_req
 !            cg%po_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%span(cse)
             cg%po_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
             call MPI_Isend(cg%po_tgt%seg(g)%buf(1, 1, 1), size(cg%po_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%po_tgt%seg(g)%proc, cg%po_tgt%seg(g)%tag, comm, req(nr), mpi_err)
@@ -969,7 +969,9 @@ contains
       integer :: p, i, hl
       integer(kind=8) :: ccnt
       real, allocatable, dimension(:) :: maxcnt
+#ifdef VERBOSE
       character(len=len(msg)) :: header
+#endif /* VERBOSE */
 
       if (.not. master) return
 
@@ -981,6 +983,7 @@ contains
          do i = lbound(this%pse(p)%sel(:, :, :), dim=1), ubound(this%pse(p)%sel(:, :, :), dim=1)
             ccnt = product(this%pse(p)%sel(i, :, HI) - this%pse(p)%sel(i, :, LO) + 1)
             maxcnt(p) = maxcnt(p) + ccnt
+#ifdef VERBOSE
             if (i == 1) then
                write(header, '(a,i4)')"[cg_list_level:print_segments] segment @", p
                hl = len_trim(header)
@@ -989,9 +992,12 @@ contains
             endif
             write(msg,'(2a,2(3i6,a),i8,a)') header(:hl), " : [", this%pse(p)%sel(i, :, LO), "] : [", this%pse(p)%sel(i, :, HI), "] #", ccnt, " cells"
             call printinfo(msg)
+#endif /* VERBOSE */
          enddo
       enddo
-      write(msg,'(a,i3,a,f8.5)')"[cg_list_level:print_segments] Load balance at level ", this%level_id," : ",product(real(this%n_d(:)))/(nproc*maxval(maxcnt(:)))
+
+      write(msg, '(a,i3,a,f5.1,a,f8.5)')"[cg_list_level:print_segments] Level ", this%level_id, " filled in ",(100.*sum(maxcnt(:)))/product(real(this%n_d(:))), &
+           &                            "%, load balance : ", sum(maxcnt(:))/(nproc*maxval(maxcnt(:)))
       !> \todo add calculation of total internal boundary surface in cells
       call printinfo(msg)
       deallocate(maxcnt)
@@ -1026,6 +1032,7 @@ contains
 
       enddo
 
+      call this%update_req ! Perhaps this%mpi_bnd_types added some new entries
       call this%update_tot_se
 
    end subroutine init_all_new_cg
@@ -1047,8 +1054,9 @@ contains
 
       call this%simple_ordering
       call this%calc_ord_range(min_id, max_id, pieces)
-      allocate(this%pse(FIRST:LAST))
+      if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
       do i = FIRST, LAST
+         if (allocated(this%pse(i)%sel)) deallocate(this%pse(i)%sel) !> \todo recycle previous list somehow?
          allocate(this%pse(i)%sel(pieces(i), xdim:zdim, LO:HI))
       enddo
       filled(:) = 0
@@ -1067,9 +1075,7 @@ contains
       enddo
 
       call this%update_decomposition_properties
-!#ifdef VERBOSE
-      call this%print_segments
-!#endif /* VERBOSE */
+      call this%print_segments !> \todo move to a better place or print a summary after whole update refinement process
 
    end subroutine distribute
 
@@ -1185,14 +1191,13 @@ contains
    subroutine mpi_bnd_types(this, cg)
 
       use cart_comm,      only: cdd
-      use cg_list_global, only: all_cg
       use constants,      only: FLUID, MAG, CR, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE, wcr_n
       use dataio_pub,     only: die
       use domain,         only: dom
       use grid_cont,      only: grid_container, is_overlap
       use mpi,            only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,       only: mpi_err, FIRST, LAST, procmask
-      use named_array,    only: wna
+      use named_array_list, only: wna
 
       implicit none
 
@@ -1352,9 +1357,6 @@ contains
          enddo
 
       endif
-
-      call cg%set_q_mbc
-      call all_cg%update_req
 
    end subroutine mpi_bnd_types
 

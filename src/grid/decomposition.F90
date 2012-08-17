@@ -669,8 +669,6 @@ contains
          enddo
       enddo
 
-      if (master) call warn("[initproblem:stamp_cg] Experimental implementation")
-
    end subroutine stamp_cg
 
 !>

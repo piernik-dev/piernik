@@ -347,7 +347,7 @@ contains
       use cart_comm,      only: cdd
       use domain,         only: dom
       use mpi,            only: MPI_COMM_NULL
-      use named_array,    only: wna
+      use named_array_list, only: wna
 
       implicit none
 

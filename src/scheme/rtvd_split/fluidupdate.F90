@@ -57,7 +57,7 @@ contains
       use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
-      use named_array, only: wna
+      use named_array_list, only: wna
 
       implicit none
 
@@ -277,7 +277,7 @@ contains
       use constants,     only: wcu_n
       use dataio_pub,    only: die
       use domain,        only: is_multicg
-      use named_array,   only: qna
+      use named_array_list, only: qna
 #endif /* RESISTIVE */
 
       implicit none

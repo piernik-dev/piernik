@@ -76,7 +76,7 @@ contains
       use dataio_pub, only: warn
       use domain,     only: dom
       use fluidindex, only: flind
-      use global,     only: smalld, smallei
+      use global,     only: smalld, smallei, t
       use mpisetup,   only: rbuff, ibuff, master, slave, proc, have_mpi, LAST, piernik_MPI_Bcast
 
       implicit none
@@ -141,6 +141,12 @@ contains
 
       if (norm_step <= 0) norm_step = huge(I_ONE)
 
+      ! Create the initial density arrays
+      call register_user_var
+
+      ! Initialize the initial density arrays
+      call analytic_solution(t)
+
    end subroutine read_problem_par
 
 !-----------------------------------------------------------------------------
@@ -150,21 +156,15 @@ contains
       use constants,   only: xdim, ydim, zdim
       use fluidindex,  only: flind
       use cg_list,     only: cg_list_element
-      use global,      only: smallei, t
+      use global,      only: smallei
       use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
-      use named_array, only: qna
+      use named_array_list, only: qna
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-
-      ! Create the initial density arrays
-      call register_user_var
-
-      ! Initialize the initial density arrays
-      call analytic_solution(t)
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -193,7 +193,7 @@ contains
 
       use global,      only: t
       use grid_cont,   only: grid_container
-      use named_array, only: qna
+      use named_array_list, only: qna
 
       implicit none
 
@@ -239,7 +239,7 @@ contains
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
       use mpisetup,    only: master, comm, mpi_err
-      use named_array, only: qna
+      use named_array_list, only: qna
 
       implicit none
 
@@ -306,7 +306,7 @@ contains
       use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
-      use named_array, only: qna
+      use named_array_list, only: qna
 
       implicit none
 

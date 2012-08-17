@@ -69,8 +69,12 @@ module mpisetup
    real,                     dimension(buffer_dim) :: rbuff !< buffer for real parameters
    logical,                  dimension(buffer_dim) :: lbuff !< buffer for logical parameters
 
-   !! \todo exapand this wrapper to make it more general, unlimited polimorphism
-   !! will render this obsolete
+   interface inflate_req
+      module procedure doublesize_req
+      module procedure setsize_req
+   end interface
+
+   !! \todo exapand this wrapper to make it more general, unlimited polimorphism will render this obsolete
    interface piernik_MPI_Bcast
       module procedure MPI_Bcast_single_logical
       module procedure MPI_Bcast_single_string
@@ -190,11 +194,9 @@ contains
 
    end subroutine init_mpi
 
-!-----------------------------------------------------------------------------
-!>
-!! Increase size of req(:) and status(:,:) arrays for non-blocking communication on request.
-!<
-   subroutine inflate_req(nreq)
+!> \brief Set size of req(:) and status(:,:) arrays for non-blocking communication on request.
+
+   subroutine setsize_req(nreq)
 
       use dataio_pub, only: warn, msg
       use mpi,        only: MPI_STATUS_SIZE
@@ -208,7 +210,7 @@ contains
       if (allocated(req)) then
          sreq = size(req)
          if (sreq < nreq) then
-            write(msg, '(2(a,i6))')"[mpisetup:inflate_req] reallocating req and status from ",sreq," to ",nreq
+            write(msg, '(2(a,i6))')"[mpisetup:setsize_req] reallocating req and status from ",sreq," to ",nreq
             if (master) call warn(msg)
             deallocate(req)
             if (allocated(status)) deallocate(status)
@@ -217,17 +219,44 @@ contains
          sreq = 0
       endif
 
-      if (sreq < nreq) then
-         allocate(req(nreq))
-         allocate(status(MPI_STATUS_SIZE, nreq))
-      endif
+      if (sreq < nreq) allocate(req(nreq), status(MPI_STATUS_SIZE, nreq))
 
-   end subroutine inflate_req
+   end subroutine setsize_req
 
-!-----------------------------------------------------------------------------
 !>
-!! \brief Prepare to clean exit from the code
+!! \brief Double size of req(:) and status(:,:) arrays for non-blocking communication on request.
+!!
+!! \details Perform an emergency resize by a factor of 2. Save existing values stored in req(:) and status(:,:).
 !<
+
+   subroutine doublesize_req
+
+      use dataio_pub, only: warn, msg, die
+      use mpi,        only: MPI_STATUS_SIZE
+
+      implicit none
+
+      integer :: sreq
+      integer(kind=4), allocatable, dimension(:)   :: new_req    !< new request array for MPI_Waitall
+      integer(kind=4), allocatable, dimension(:,:) :: new_status !< new status array for MPI_Waitall
+
+      if (.not. allocated(req)) call die("[mpisetup:doublesize_req] req not allocated")
+      sreq = size(req)
+      if (sreq <= 0) call die("[mpisetup:doublesize_req] req is a 0-zised array")
+
+      write(msg, '(2(a,i6))')"[mpisetup:doublesize_req] Emergency doubling size of req and status from ",sreq," to ",2*sreq
+      if (master) call warn(msg)
+      allocate(new_req(2*sreq), new_status(MPI_STATUS_SIZE, 2*sreq))
+      new_req(1:sreq) = req(:)
+      new_status(:, 1:sreq) = status(:,:)
+
+      call move_alloc(from=new_req, to=req)
+      call move_alloc(from=new_status, to=status)
+
+   end subroutine doublesize_req
+
+!> \brief Prepare to clean exit from the code
+
    subroutine cleanup_mpi
 
       use dataio_pub, only: printinfo

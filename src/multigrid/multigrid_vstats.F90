@@ -118,7 +118,7 @@ contains
          else if (this%factor(i) < 1.0e7) then
             write(normred, '(f8.0)') this%factor(i)
          else
-            write(normred, '(es9.2)') this%factor(i)
+            write(normred, '(es8.1)') this%factor(i)
          endif
          lm = len_trim(msg)
          if (len(msg) >= lm + 9) msg(lm+2:lm+9) = normred(1:8)

@@ -470,7 +470,7 @@ contains
       use cg_list,        only: cg_list_element
       use cg_list_bnd,    only: leaves
       use mpi,            only: MPI_COMM_NULL
-      use named_array,    only: wna
+      use named_array_list, only: wna
 
       implicit none
 

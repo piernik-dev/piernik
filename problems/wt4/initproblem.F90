@@ -293,7 +293,7 @@ contains
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use mpisetup,       only: master
-      use named_array,    only: qna
+      use named_array_list, only: qna
       use units,          only: kboltz, mH
 
       implicit none
@@ -465,7 +465,7 @@ contains
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
-      use named_array, only: qna
+      use named_array_list, only: qna
 
       implicit none
 
