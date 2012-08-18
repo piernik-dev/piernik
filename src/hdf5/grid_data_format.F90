@@ -202,7 +202,7 @@ contains
    subroutine gdf_root_datasets_init_new(this, n)
       implicit none
       class(gdf_root_datasets_T), intent(inout) :: this
-      integer, intent(in) :: n
+      integer(kind=4), intent(in) :: n
 
       allocate(this%grid_dimensions(3, n))
       allocate(this%grid_left_index(3, n))
