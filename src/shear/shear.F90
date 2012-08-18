@@ -343,13 +343,15 @@ contains
 #ifdef SHEAR_BND
    subroutine bnd_shear_u(dir, cg)
       use cart_comm,             only: cdd
-      use constants,             only: FLUID, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, BND_SHE
+      use constants,             only: FLUID, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, BND_SHE
       use domain,                only: dom
-      use fluidindex,            only: flind, iarr_all_dn, iarr_all_my
+      use fluidindex,            only: flind
       use grid_cont,             only: grid_container
-      use mpi,                   only: MPI_COMM_NULL
+      use mpi,                   only: MPI_COMM_NULL, MPI_DOUBLE_PRECISION
+      use mpisetup,              only: req, status, mpi_err, comm
 #ifndef FFTW
-      use constants,             only: half
+      use constants,             only: half, ydim
+      use fluidindex,            only: iarr_all_dn, iarr_all_my
       use global,                only: smalld
       use shear,                 only: qshear, delj, eps, omega
 #endif /* !FFTW */
@@ -360,6 +362,10 @@ contains
       type(grid_container), pointer, intent(inout) :: cg
       real, allocatable                            :: send_left(:,:,:,:),recv_left(:,:,:,:)
       real, allocatable                            :: send_right(:,:,:,:),recv_right(:,:,:,:)
+#ifdef FFTW
+      integer(kind=4)                              :: i, itag, jtag
+      integer(kind=4), parameter                   :: tag1 = 11, tag2 = 22
+#endif /* FFTW */
 
       if (cdd%comm3d /= MPI_COMM_NULL) then
          if (dir == xdim) then
