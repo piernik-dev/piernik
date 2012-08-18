@@ -271,10 +271,10 @@ contains
       use global,        only: smalld
       use gravity,       only: ptmass, grav_pot2accel
       use grid_cont,     only: grid_container
-      use hydrostatic  , only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
+      use hydrostatic,   only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
       use mpi,           only: MPI_COMM_NULL
       use mpisetup,      only: master
-      use named_array  , only: wna
+      use named_array_list, only: wna
       use units,         only: newtong
 
       implicit none
