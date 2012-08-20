@@ -100,9 +100,15 @@ contains
 !! \details This routine should not be called directly. Appropriate wrappers for rank-3 and rank-4 arrays are provided above.
 !! The corners should be properly updated if this%[io]_bnd(:, ind) was set up appropriately and this routine is called separately for each dimension.
 !!
+!! OPT: Since r6414 (see also r6406 .. 6409) we don't use MPI types for boundary exchanges.
+!! The implementation with MPI_Types was a bit faster, but it had a severe limitation of total number of MPI types declared (in my case it was 261888)
+!! That amount was exceeded much faster than expected because for each grid container we declared number_of_neighbours*dom%nb*(1+size(wna%lst)) MPI types.
+!! Note that some of them were never used.
+!! \todo Try to define MPI_types for communication right before MPI_Isend/MPI_Irecv calls and release just after use. Then compare performance.
+!!
 !! \todo Check how much performance is lost due to using MPI calls even for local copies. Decide whether it is worth to convert local MPI calls to direct memory copies.
 !!
-!! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base_lev should work well
+!! \warning this == leaves could be unsafe: need to figure out how to handle unneeded edges; this == all_cg or base_lev or other concatenation of whole levels should work well
 !<
 
    subroutine internal_boundaries(this, ind, tgt3d, nb, dim)
