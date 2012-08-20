@@ -274,7 +274,7 @@ contains
       type(grid_container), pointer            :: cg
 
       cg => leaves%first%cg
-      if (is_multicg) call die("[slice_hdf5:write_plot_hdf5] multiple grid pieces per processor not implemented yet") !nontrivial message tagging
+      if (is_multicg) call die("[slice_hdf5:write_plot_hdf5] multiple grid pieces per processor not implemented yet (1)") !nontrivial message tagging
 
       xn = 1
       if (dom%has_dir(plane)) xn = pl_i(plane) + dom%nb - cg%off(plane)
@@ -301,14 +301,15 @@ contains
 
          do p = FIRST, LAST
             xn_r = 1
-            if (dom%has_dir(plane)) xn_r = pl_i(plane) + dom%nb - base_lev%pse(p)%sel(1, plane, LO)
-            if ((xn_r > dom%nb .and. xn_r <= int(base_lev%pse(p)%sel(1, plane, HI) - base_lev%pse(p)%sel(1, plane, LO) + 1, 4) + dom%nb) .or. (xn_r == 1 .and. .not. dom%has_dir(plane))) then
+            if (dom%has_dir(plane)) xn_r = pl_i(plane) + dom%nb - base_lev%pse(p)%c(1)%se(plane, LO)
+            if (size(base_lev%pse(p)%c(:)) > 1) call die("[slice_hdf5:write_plot_hdf5] multiple grid pieces per processor not implemented yet (2)")
+            if ((xn_r > dom%nb .and. xn_r <= int(base_lev%pse(p)%c(1)%se(plane, HI) - base_lev%pse(p)%c(1)%se(plane, LO) + 1, 4) + dom%nb) .or. (xn_r == 1 .and. .not. dom%has_dir(plane))) then
                if (p == proc) then
-                  img(1+base_lev%pse(p)%sel(1, d1(plane), LO):1+base_lev%pse(p)%sel(1, d1(plane), HI), 1+base_lev%pse(p)%sel(1, d2(plane), LO):1+base_lev%pse(p)%sel(1, d2(plane), HI)) = send(:,:)
+                  img(1+base_lev%pse(p)%c(1)%se(d1(plane), LO):1+base_lev%pse(p)%c(1)%se(d1(plane), HI), 1+base_lev%pse(p)%c(1)%se(d2(plane), LO):1+base_lev%pse(p)%c(1)%se(d2(plane), HI)) = send(:,:)
                else
-                  allocate(recv(base_lev%pse(p)%sel(1, d1(plane), HI)-base_lev%pse(p)%sel(1, d1(plane), LO)+1, base_lev%pse(p)%sel(1, d2(plane), HI)-base_lev%pse(p)%sel(1, d2(plane), LO)+1))
+                  allocate(recv(base_lev%pse(p)%c(1)%se(d1(plane), HI)-base_lev%pse(p)%c(1)%se(d1(plane), LO)+1, base_lev%pse(p)%c(1)%se(d2(plane), HI)-base_lev%pse(p)%c(1)%se(d2(plane), LO)+1))
                   call MPI_Recv(recv, size(recv), MPI_DOUBLE_PRECISION, p, tag, comm, status(:,p), mpi_err)
-                  img(1+base_lev%pse(p)%sel(1, d1(plane), LO):1+base_lev%pse(p)%sel(1, d1(plane), HI), 1+base_lev%pse(p)%sel(1, d2(plane), LO):1+base_lev%pse(p)%sel(1, d2(plane), HI)) = recv(:,:)
+                  img(1+base_lev%pse(p)%c(1)%se(d1(plane), LO):1+base_lev%pse(p)%c(1)%se(d1(plane), HI), 1+base_lev%pse(p)%c(1)%se(d2(plane), LO):1+base_lev%pse(p)%c(1)%se(d2(plane), HI)) = recv(:,:)
                   deallocate(recv)
                endif
             endif

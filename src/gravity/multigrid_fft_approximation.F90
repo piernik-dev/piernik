@@ -126,7 +126,7 @@ contains
       curl => coarsest
       do while (associated(curl))
 
-         if (ubound(curl%pse(proc)%sel(:,:,:), dim=1) > 1) call die("[multigrid_fft_approximation:mpi_multigrid_prep_grav] Multiple blocks per process not implemented yet")
+         if (ubound(curl%pse(proc)%c(:), dim=1) > 1) call die("[multigrid_fft_approximation:mpi_multigrid_prep_grav] Multiple blocks per process not implemented yet")
 
          per(:) = 0
          where (dom%periodic(:)) per(:) = curl%n_d(:)
@@ -158,10 +158,10 @@ contains
                            end select
 
                            do j = FIRST, LAST
-                              if (ubound(curl%coarser%pse(j)%sel, dim=1) > 0) then
-                                 !> \warning: it is not anymore guaranteed that curl%coarser%pse(j)%sel(1, :, :) exists
+                              if (ubound(curl%coarser%pse(j)%c, dim=1) > 0) then
+                                 !> \warning: it is not anymore guaranteed that curl%coarser%pse(j)%c(1)%se(:,:) exists
                                  ! Typically it does on coarser level (counterintuitive but true), but not necessarily on the finer one
-                                 if (is_overlap(coarsened(:,:), curl%coarser%pse(j)%sel(1, :, :), per)) procmask(j) = 1
+                                 if (is_overlap(coarsened(:,:), curl%coarser%pse(j)%c(1)%se(:,:), per)) procmask(j) = 1
                               endif
                            enddo
                            allocate(cg%mg%pfc_tgt(d, lh)%seg(count(procmask(:) /= 0)))
@@ -183,8 +183,8 @@ contains
                                  !b_layer(d, lh) = b_layer(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
 
                                  where (.not. dmask(:)) ! find extents perpendicular to d
-                                    seg%se(:, LO) = max(b_layer(:, LO), curl%coarser%pse(j)%sel(1, :, LO)*2  )
-                                    seg%se(:, HI) = min(b_layer(:, HI), curl%coarser%pse(j)%sel(1, :, HI)*2+1)
+                                    seg%se(:, LO) = max(b_layer(:, LO), curl%coarser%pse(j)%c(1)%se(:, LO)*2  )
+                                    seg%se(:, HI) = min(b_layer(:, HI), curl%coarser%pse(j)%c(1)%se(:, HI)*2+1)
                                  endwhere
                                  seg%se(d, :) = b_layer(d, :)
                                  allocate(seg%buf(seg%se(xdim, HI)/2-seg%se(xdim, LO)/2 + 1, &
@@ -210,18 +210,18 @@ contains
                         procmask(:) = 0
                         do j = FIRST, LAST
                            is_internal_fine = dom%periodic(d)
-                           if (ubound(curl%finer%pse(j)%sel, dim=1) > 0) then
-                              coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)/2
+                           if (ubound(curl%finer%pse(j)%c, dim=1) > 0) then
+                              coarsened(:, :) = curl%finer%pse(j)%c(1)%se(:,:)/2
                               coarsened(d, hl) = coarsened(d, lh)
                               select case (lh)
                                  case (LO)
-                                    if (mod(curl%finer%pse(j)%sel(1, d, LO),     2_LONG) == 0) &
+                                    if (mod(curl%finer%pse(j)%c(1)%se(d, LO),     2_LONG) == 0) &
                                          coarsened(d, :) = coarsened(d, :) + [ -1_INT4-ord_prolong_face_norm,        ord_prolong_face_norm ]
-                                    is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) /= 0)
+                                    is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%c(1)%se(d, lh) /= 0)
                                  case (HI)
-                                    if (mod(curl%finer%pse(j)%sel(1, d, HI) + 1, 2_LONG) == 0) &
+                                    if (mod(curl%finer%pse(j)%c(1)%se(d, HI) + 1, 2_LONG) == 0) &
                                          coarsened(d, :) = coarsened(d, :) + [        -ord_prolong_face_norm, 1_INT4+ord_prolong_face_norm ]
-                                    is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%sel(1, d, lh) + 1 < curl%finer%n_d(d))
+                                    is_internal_fine = is_internal_fine .or. (curl%finer%pse(j)%c(1)%se(d, lh) + 1 < curl%finer%n_d(d))
                               end select
                            else
                               coarsened(:,:) = -2*dom%nb
@@ -245,8 +245,8 @@ contains
                               seg%proc = j
 
                               ! find cross-section of own segment with coarsened fine face segment
-                              if (ubound(curl%finer%pse(j)%sel, dim=1) > 0) then
-                                 coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)
+                              if (ubound(curl%finer%pse(j)%c, dim=1) > 0) then
+                                 coarsened(:, :) = curl%finer%pse(j)%c(1)%se(:,:)
                                  coarsened(d, hl) = coarsened(d, lh)
                                  coarsened(:, :) = coarsened(:, :)/2
                                  where (.not. dmask(:))
@@ -258,7 +258,7 @@ contains
                                       &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
                                       &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
 
-                                 coarsened(:, :) = curl%finer%pse(j)%sel(1, :, :)
+                                 coarsened(:, :) = curl%finer%pse(j)%c(1)%se(:,:)
                                  coarsened(d, hl) = coarsened(d, lh)
                                  coarsened(d, lh) = coarsened(d, lh) + 2*lh-LO-HI ! extend to two layers of buffer
                                  coarsened(:, :) = coarsened(:, :)/2
@@ -272,7 +272,7 @@ contains
                                  do l = 1, size(seg%f_lay(:))
                                     seg%f_lay(l)%layer = l + int(seg%se(d, LO), kind=4) - 1
                                     nl = int(minval(abs(seg%f_lay(l)%layer - ijks(d) - coarsened(d, :))), kind=4)
-                                    if (mod(curl%finer%pse(j)%sel(1, d, lh) + lh - LO, 2_LONG) == 0) then ! fine face at coarse face
+                                    if (mod(curl%finer%pse(j)%c(1)%se(d, lh) + lh - LO, 2_LONG) == 0) then ! fine face at coarse face
                                        seg%f_lay(l)%coeff = opfn_c_ff(nl)
                                     else                                                              ! fine face at coarse center
                                        seg%f_lay(l)%coeff = opfn_c_cf(nl)

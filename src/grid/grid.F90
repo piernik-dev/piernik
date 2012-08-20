@@ -110,9 +110,9 @@ contains
       curl => coarsest
       do while (associated(curl))
          call curl%delete
-         if (allocated(curl%pse)) deallocate(curl%pse) ! curl%pse(:)%sel should be deallocated automagically
+         if (allocated(curl%pse)) deallocate(curl%pse) ! curl%pse(:)%c should be deallocated automagically
          do p = lbound(curl%patches, dim=1), ubound(curl%patches, dim=1)
-            deallocate(curl%patches(p)%pse) ! curl%patches(p)%pse(:)%sel should be deallocated automagically
+            deallocate(curl%patches(p)%pse) ! curl%patches(p)%pse(:)%c should be deallocated automagically
          enddo
          deallocate(curl%patches)
 

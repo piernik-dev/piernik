@@ -32,6 +32,7 @@
 module cg_list_level
 
    use cg_list_bnd,   only: cg_list_bnd_T
+   use constants,     only: ndims, LO, HI
    use constants,     only: ndims
    use decomposition, only: box_T
 
@@ -44,8 +45,16 @@ module cg_list_level
    !! features and/or bug fixes
    public :: intel_init_cg_list_level
 #endif /* __INTEL_COMPILER */
+
+   !> \brief A single grid piece plus auxiliary data
+   type :: cuboid
+      integer(kind=8), dimension(ndims, LO:HI) :: se !< a single grid piece
+      logical :: is_new                              !< a flag that marks newly added grid pieces
+   end type cuboid
+
+   !> \brief A list of grid pieces (typically used as a list of all grids residing on a given process)
    type :: cuboids
-      integer(kind=8), allocatable, dimension(:,:,:) :: sel !< crude array of grid pieces
+      type(cuboid), allocatable, dimension(:) :: c !< an array of grid piece
    end type cuboids
 
    !>
@@ -79,6 +88,7 @@ module cg_list_level
       procedure, private :: distribute                      !< Get all decomposed patches and compute which pieces go to which process
       procedure, private :: calc_ord_range                  !< Compute which id\'s should belong to which process
       procedure, private :: simple_ordering                 !< This is just counting, not ordering
+      procedure, private :: mark_new                        !< Detect which grid containers are new
 
       ! Prolongation and restriction
       procedure, private :: vertical_prep                   !< initialize prolongation and restriction targets
@@ -295,7 +305,7 @@ contains
             if (allocated(ps)) call die("cll:vp f a ps")
             fmax = 0
             do j = FIRST, LAST
-               fmax = fmax + size(fine%pse(j)%sel(:, :, :), dim=1)
+               fmax = fmax + size(fine%pse(j)%c(:))
             enddo
             allocate(ps(fmax))
 
@@ -303,8 +313,8 @@ contains
             if (allocated(cg%po_tgt%seg)) deallocate(cg%po_tgt%seg)
             g = 0
             do j = FIRST, LAST
-               do jf = lbound(fine%pse(j)%sel(:, :, :), dim=1), ubound(fine%pse(j)%sel(:, :, :), dim=1)
-                  if (is_overlap(c2f(cg%my_se(:, :)), fine%pse(j)%sel(jf, :, :))) then
+               do jf = lbound(fine%pse(j)%c(:), dim=1), ubound(fine%pse(j)%c(:), dim=1)
+                  if (is_overlap(c2f(cg%my_se(:, :)), fine%pse(j)%c(jf)%se(:,:))) then
                      g = g + 1
                      ps(g) = int_pair(j, jf)
                   endif
@@ -318,7 +328,7 @@ contains
                if (allocated(seg%buf)) call die("cll:vp fr seg%buf a a")
                seg%proc = ps(g)%proc
                ! find cross-section of own segment with coarsened fine segment
-               coarsened(:,:) = f2c(fine%pse(seg%proc)%sel(ps(g)%n_se, :, :))
+               coarsened(:,:) = f2c(fine%pse(seg%proc)%c(ps(g)%n_se)%se(:,:))
                seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO))
                seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
@@ -339,7 +349,7 @@ contains
                if (allocated(seg%buf)) call die("cll:vp fp seg%buf a a")
                seg%proc = ps(g)%proc
                ! find cross-section of own segment with enlarged coarsened fine segment
-               coarsened(:,:) = f2c(fine%pse(seg%proc)%sel(ps(g)%n_se, :, :)) + enlargement(:,:)
+               coarsened(:,:) = f2c(fine%pse(seg%proc)%c(ps(g)%n_se)%se(:,:)) + enlargement(:,:)
                seg%se(:, LO) = max(cg%my_se(:, LO) + enlargement(:, LO), coarsened(:, LO))
                seg%se(:, HI) = min(cg%my_se(:, HI) + enlargement(:, HI), coarsened(:, HI))
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
@@ -369,7 +379,7 @@ contains
             if (allocated(ps)) call die("cll:vp c a ps")
             fmax = 0
             do j = FIRST, LAST
-               fmax = fmax + size(coarse%pse(j)%sel(:, :, :), dim=1)
+               fmax = fmax + size(coarse%pse(j)%c(:))
             enddo
             allocate(ps(fmax))
 
@@ -377,8 +387,8 @@ contains
             if (allocated(cg%pi_tgt%seg)) deallocate(cg%pi_tgt%seg)
             g = 0
             do j = FIRST, LAST
-               do jf = lbound(coarse%pse(j)%sel(:, :, :), dim=1), ubound(coarse%pse(j)%sel(:, :, :), dim=1)
-                  if (is_overlap(cg%my_se(:, :), c2f(coarse%pse(j)%sel(jf, :, :)))) then
+               do jf = lbound(coarse%pse(j)%c(:), dim=1), ubound(coarse%pse(j)%c(:), dim=1)
+                  if (is_overlap(cg%my_se(:, :), c2f(coarse%pse(j)%c(jf)%se(:,:)))) then
                      g = g + 1
                      ps(g) = int_pair(j, jf)
                   endif
@@ -393,12 +403,12 @@ contains
                seg%proc = ps(g)%proc
                ! find cross-section of coarsened own segment with coarse segment
                coarsened(:,:) = f2c(cg%my_se(:,:))
-               seg%se(:, LO) = max(coarsened(:, LO), coarse%pse(seg%proc)%sel(ps(g)%n_se, :, LO))
-               seg%se(:, HI) = min(coarsened(:, HI), coarse%pse(seg%proc)%sel(ps(g)%n_se, :, HI))
+               seg%se(:, LO) = max(coarsened(:, LO), coarse%pse(seg%proc)%c(ps(g)%n_se)%se(:, LO))
+               seg%se(:, HI) = min(coarsened(:, HI), coarse%pse(seg%proc)%c(ps(g)%n_se)%se(:, HI))
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
                     &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
-               coarsened(:,:) = c2f(coarse%pse(seg%proc)%sel(ps(g)%n_se, :, :)) ! should be renamed to refined(:,:)
+               coarsened(:,:) = c2f(coarse%pse(seg%proc)%c(ps(g)%n_se)%se(:,:)) ! should be renamed to refined(:,:)
                seg%se(:, LO) = max(cg%my_se(:, LO), coarsened(:, LO))
                seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
@@ -412,8 +422,8 @@ contains
                seg%proc = ps(g)%proc
                ! find cross-section of coarsened own segment with enlarged coarse segment
                coarsened(:,:) = f2c(cg%my_se(:,:)) + enlargement(:,:)
-               seg%se(:, LO) = max(coarsened(:, LO), coarse%pse(seg%proc)%sel(ps(g)%n_se, :, LO) + enlargement(:, LO))
-               seg%se(:, HI) = min(coarsened(:, HI), coarse%pse(seg%proc)%sel(ps(g)%n_se, :, HI) + enlargement(:, HI))
+               seg%se(:, LO) = max(coarsened(:, LO), coarse%pse(seg%proc)%c(ps(g)%n_se)%se(:, LO) + enlargement(:, LO))
+               seg%se(:, HI) = min(coarsened(:, HI), coarse%pse(seg%proc)%c(ps(g)%n_se)%se(:, HI) + enlargement(:, HI))
                allocate(seg%buf(seg%se(xdim, HI)-seg%se(xdim, LO) + 1, &
                     &           seg%se(ydim, HI)-seg%se(ydim, LO) + 1, &
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
@@ -980,8 +990,8 @@ contains
       maxcnt(:) = 0
       do p = FIRST, LAST
          hl = 0
-         do i = lbound(this%pse(p)%sel(:, :, :), dim=1), ubound(this%pse(p)%sel(:, :, :), dim=1)
-            ccnt = product(this%pse(p)%sel(i, :, HI) - this%pse(p)%sel(i, :, LO) + 1)
+         do i = lbound(this%pse(p)%c(:), dim=1), ubound(this%pse(p)%c(:), dim=1)
+            ccnt = product(this%pse(p)%c(i)%se(:, HI) - this%pse(p)%c(i)%se(:, LO) + 1)
             maxcnt(p) = maxcnt(p) + ccnt
 #ifdef VERBOSE
             if (i == 1) then
@@ -990,7 +1000,7 @@ contains
             else
                header = repeat(" ", hl)
             endif
-            write(msg,'(2a,2(3i6,a),i8,a)') header(:hl), " : [", this%pse(p)%sel(i, :, LO), "] : [", this%pse(p)%sel(i, :, HI), "] #", ccnt, " cells"
+            write(msg,'(2a,2(3i18,a),i8,a)') header(:hl), " : [", this%pse(p)%c(i)%se(:, LO), "] : [", this%pse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
             call printinfo(msg)
 #endif /* VERBOSE */
          enddo
@@ -1016,20 +1026,25 @@ contains
 
       class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
-      integer :: gr_id
+      integer :: i, gr_id
       type(grid_container), pointer :: cg
 
       call this%distribute
+      call this%mark_new
 
-      do gr_id = lbound(this%pse(proc)%sel(:,:,:), dim=1), ubound(this%pse(proc)%sel(:,:,:), dim=1)
-         call this%add
-         cg => this%last%cg
+      gr_id = 0
+      if (associated(this%last)) gr_id = this%last%cg%grid_id
 
-         call cg%init(this%n_d, this%pse(proc)%sel(gr_id, :, :), gr_id, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
-         call this%mpi_bnd_types(cg)                                                   ! require access to whole this%pse(:)%sel(:,:,:)
-         call cg%add_all_na                                                            ! require mpi_bnd_types properly calculated
-         call all_cg%add(cg)
-
+      do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
+         if (this%pse(proc)%c(i)%is_new) then
+            gr_id = gr_id + 1
+            call this%add
+            cg => this%last%cg
+            call cg%init(this%n_d, this%pse(proc)%c(i)%se(:, :), gr_id, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
+            call this%mpi_bnd_types(cg)                                                ! require access to whole this%pse(:)%c(:)%se(:,:)
+            call cg%add_all_na                                                         ! require mpi_bnd_types properly calculated
+            call all_cg%add(cg)
+         endif
       enddo
 
       call this%update_req ! Perhaps this%mpi_bnd_types added some new entries
@@ -1037,11 +1052,47 @@ contains
 
    end subroutine init_all_new_cg
 
+!> \brief Detect which grid containers are new
+
+   subroutine mark_new(this)
+
+      use cg_list,    only: cg_list_element
+      use dataio_pub, only: warn
+      use mpisetup,   only: proc
+
+      implicit none
+
+      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
+
+      type(cg_list_element), pointer :: cgl
+      integer :: i, occured
+
+      cgl => this%first
+      do while (associated(cgl))
+
+         occured = 0
+         do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
+            if (all(this%pse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
+               this%pse(proc)%c(i)%is_new = .false.
+               occured = occured + 1
+            endif
+         enddo
+
+         if (occured <= 0) then
+            call warn("[cg_list_level:mark_new] Existing cg not found in new list")
+         else if (occured > 1) then
+            call warn("[cg_list_level:mark_new] Existing cg found multiple times in new list")
+         endif
+
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine mark_new
+
 !> \brief Get all decomposed patches and compute which pieces go to which process
 
    subroutine distribute(this)
 
-      use constants,      only: xdim, zdim, LO, HI
       use dataio_pub,     only: die
       use mpisetup,       only: FIRST, LAST
 
@@ -1056,8 +1107,8 @@ contains
       call this%calc_ord_range(min_id, max_id, pieces)
       if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
       do i = FIRST, LAST
-         if (allocated(this%pse(i)%sel)) deallocate(this%pse(i)%sel) !> \todo recycle previous list somehow?
-         allocate(this%pse(i)%sel(pieces(i), xdim:zdim, LO:HI))
+         if (allocated(this%pse(i)%c)) deallocate(this%pse(i)%c) !> \todo recycle previous list somehow?
+         allocate(this%pse(i)%c(pieces(i)))
       enddo
       filled(:) = 0
 
@@ -1066,8 +1117,8 @@ contains
             do i = FIRST, LAST
                if (this%patches(p)%pse(s)%id >= min_id(i) .and. this%patches(p)%pse(s)%id <= max_id(i)) then
                   filled(i) = filled(i) + 1
-                  if (filled(i) > size(this%pse(i)%sel(:,:,:), dim=1)) call die("[cg_list_level:distribute] overflow")
-                  this%pse(i)%sel(filled(i), :, :) = this%patches(p)%pse(s)%se(:,:)
+                  if (filled(i) > size(this%pse(i)%c(:))) call die("[cg_list_level:distribute] overflow")
+                  this%pse(i)%c(filled(i)) = cuboid(this%patches(p)%pse(s)%se(:,:), .true.) ! The is_new flag will be fixed in mark_new subroutine
                   exit
                endif
             enddo
@@ -1148,7 +1199,7 @@ contains
 
       class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
-      is_multicg = is_multicg .or. (ubound(this%pse(proc)%sel(:, :, :), dim=1) > 1)
+      is_multicg = is_multicg .or. (ubound(this%pse(proc)%c(:), dim=1) > 1)
       call MPI_Allreduce(MPI_IN_PLACE, is_multicg, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
       if (is_multicg .and. cdd%comm3d /= MPI_COMM_NULL) call die("[cg_list_level:update_decomposition_properties] is_multicg cannot be used with comm3d")
 
@@ -1176,14 +1227,14 @@ contains
 
       this%tot_se = 0
       do p = FIRST, LAST
-         this%tot_se = this%tot_se + ubound(this%pse(p)%sel(:,:,:), dim=1)
+         this%tot_se = this%tot_se + ubound(this%pse(p)%c(:), dim=1)
       enddo
    end subroutine update_tot_se
 
 !>
 !! \brief Create MPI types for boundary exchanges
 !!
-!! \details this type can be a member of grid container type if we pass this%pse(:)%sel(:, :, :) as an argument.
+!! \details this type can be a member of grid container type if we pass this%pse(:)%c(:) as an argument.
 !! It would simplify dependencies and this%init_all_new_cg, but it could be quite a big object.
 !! \todo Put this%pse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
 !<
@@ -1237,8 +1288,8 @@ contains
                   b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
                   b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell wide, without corners
                   do j = FIRST, LAST
-                     do b = lbound(this%pse(j)%sel(:, :, :), dim=1), ubound(this%pse(j)%sel(:, :, :), dim=1)
-                        if (is_overlap(b_layer(:,:), this%pse(j)%sel(b, :, :), per(:))) procmask(j) = procmask(j) + 1 ! count how many boundaries we share with that process
+                     do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
+                        if (is_overlap(b_layer(:,:), this%pse(j)%c(b)%se(:,:), per(:))) procmask(j) = procmask(j) + 1 ! count how many boundaries we share with that process
                      enddo
                   enddo
                enddo
@@ -1252,7 +1303,7 @@ contains
                   if (procmask(j) /= 0) then
                      do lh = LO, HI
                         hl = LO+HI-lh
-                        do b = lbound(this%pse(j)%sel(:, :, :), dim=1), ubound(this%pse(j)%sel(:, :, :), dim=1)
+                        do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
                            b_layer(:,:) = cg%my_se(:, :)
                            b_layer(d, lh) = b_layer(d, lh) + lh-hl
                            b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell wide, without corners
@@ -1263,10 +1314,10 @@ contains
                            endwhere
                            !> \todo save b_layer(:,:) and bp_layer(:,:) and move above calculations outside the b loop
 
-                           if (is_overlap(bp_layer(:,:), this%pse(j)%sel(b, :, :))) then
+                           if (is_overlap(bp_layer(:,:), this%pse(j)%c(b)%se(:,:))) then
                               poff(:,:) = bp_layer(:,:) - b_layer(:,:) ! displacement due to periodicity
-                              bp_layer(:, LO) = max(bp_layer(:, LO), this%pse(j)%sel(b, :, LO))
-                              bp_layer(:, HI) = min(bp_layer(:, HI), this%pse(j)%sel(b, :, HI))
+                              bp_layer(:, LO) = max(bp_layer(:, LO), this%pse(j)%c(b)%se(:, LO))
+                              bp_layer(:, HI) = min(bp_layer(:, HI), this%pse(j)%c(b)%se(:, HI))
                               b_layer(:,:) = bp_layer(:,:) - poff(:,:)
                               g = g + 1
                               do ib = 1, dom%nb
