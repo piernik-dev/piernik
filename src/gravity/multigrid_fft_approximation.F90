@@ -307,11 +307,10 @@ contains
       use cg_list_level, only: cg_list_level_T, coarsest
       use constants,     only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2, BND_NEGREF, fft_none, fft_dst, dirtyL
       use dataio_pub,    only: die, warn
-      use domain,        only: dom, is_multicg
+      use domain,        only: dom
       use cg_list,       only: cg_list_element
       use global,        only: dirty_debug
       use grid_cont,     only: grid_container
-      use mpisetup,      only: nproc
       use multigridvars, only: single_base, fft_full_relax, multidim_code_3D, nsmool, nsmoof
       use named_array,   only: p3
 
@@ -327,7 +326,9 @@ contains
       integer, dimension(ndims,LO:HI) :: pdn, D_2
       integer                         :: dir
 
-      if (nproc > 1 .or. is_multicg) call warn("[multigrid_fft_approximation:approximate_solution_fft] This routine will likely fail due to numerous incompatibilities with newest grid features")
+      if (associated(curl%first)) then
+         if (associated(curl%first%nxt)) call warn("[multigrid_fft_approximation:approximate_solution_fft] This routine will likely fail due to numerous incompatibilities with newest grid features")
+      endif
 
       if (curl%fft_type == fft_none) call die("[multigrid_fft_approximation:approximate_solution_fft] unknown FFT type")
 
