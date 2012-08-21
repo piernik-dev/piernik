@@ -43,8 +43,6 @@ contains
 
    subroutine init_grid
 
-      use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
       use cg_list_global, only: all_cg
       use cg_list_level,  only: base_lev
       use constants,      only: PIERNIK_INIT_DOMAIN, I_ZERO, base_level_offset
@@ -52,8 +50,6 @@ contains
       use domain,         only: dom
 
       implicit none
-
-      type(cg_list_element), pointer :: cgl
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
@@ -68,18 +64,11 @@ contains
       all_cg%ord_prolong_nb = I_ZERO
       call base_lev%add_level(dom%n_d(:))
 
-      call leaves%init
-
       call base_lev%add_patch(dom%n_d(:), base_level_offset)
 
       call base_lev%init_all_new_cg
 
-      ! add to the other lists
-      cgl => base_lev%first
-      do while (associated(cgl))
-         call leaves%add(cgl%cg) ! need to be generated in a more general way
-         cgl => cgl%nxt
-      enddo
+      call all_cg%update_leaves
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: cg finished. \o/")
@@ -97,7 +86,7 @@ contains
       use cg_list,        only: cg_list_element
       use cg_list_bnd,    only: leaves
       use cg_list_global, only: all_cg
-      use cg_list_level,  only: cg_list_level_T, coarsest, base_lev
+      use cg_list_level,  only: cg_list_level_T, coarsest, finest, base_lev
       use named_array_list, only: qna, wna
 
       implicit none
@@ -106,7 +95,7 @@ contains
       type(cg_list_level_T), pointer :: curl
       integer :: p
 
-      call leaves%delete
+      call leaves%clear
       curl => coarsest
       do while (associated(curl))
          call curl%delete
@@ -121,6 +110,7 @@ contains
             if (associated(curl%coarser) .and. .not. associated(curl%coarser, base_lev)) deallocate(curl%coarser)
          endif
       enddo
+      if (.not. associated(finest, base_lev)) deallocate(finest)
 
       ! manually deallocate all grid containers first
       cgle => all_cg%first

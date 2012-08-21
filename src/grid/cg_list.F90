@@ -68,6 +68,7 @@ module cg_list
       generic, public :: delete => del_lnk, del_lst  !< All methods of destroying
 
       procedure :: un_link                           !< Un-link the element
+      procedure :: clear                             !< Clear the list, don't touch cg's
 
       ! Misc
       procedure :: get_extremum                      !< Find minimum or maximum value over a s list
@@ -201,6 +202,22 @@ contains
       enddo
 
    end subroutine del_lst
+
+   subroutine clear(this)
+
+      implicit none
+
+      class(cg_list_T), intent(inout) :: this !< object invoking type-bound procedure
+
+      type(cg_list_element), pointer :: cgl
+
+      do while (associated(this%first))
+         cgl => this%last
+         call this%un_link(cgl)
+         deallocate(cgl)
+      enddo
+
+   end subroutine clear
 
 !> \brief remove the element from the list, keep its contents
    subroutine un_link(this, cgle)

@@ -60,6 +60,13 @@ module cg_list_bnd
       !> \todo move routines for external guardcells for rank-4 arrays here as well (fluidboundaries and magboundaries)
    end type cg_list_bnd_T
 
+   !>
+   !! \deprecated A it is much easied to complete boundary exchanges on whole levels, the leaves list contains all grids from the base level upwards.
+   !! Thus the variable name could be a bit misleading.
+   !!
+   !! \todo exclude base level and some higher levels if these are fully covered by finer grids (does it have side effects on visualization?)
+   !! Perhaps it will be useful to keep few similar lists with slightly different inclusion criteria
+   !<
    type(cg_list_bnd_T) :: leaves   !< grid containers not fully covered by finer grid containers
 
 contains

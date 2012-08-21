@@ -56,9 +56,11 @@ module cg_list_global
       integer(kind=4) :: ord_prolong_nb                !< Maximum number of boundary cells required for prolongation
 
     contains
-      procedure         :: reg_var         !< Add a variable (cg%q or cg%w) to all grid containers
-      procedure         :: register_fluids !< Register all crucial fields, which we cannot live without
-      procedure         :: check_na        !< Check if all named arrays are consistently registered
+      procedure :: reg_var         !< Add a variable (cg%q or cg%w) to all grid containers
+      procedure :: register_fluids !< Register all crucial fields, which we cannot live without
+      procedure :: check_na        !< Check if all named arrays are consistently registered
+
+      procedure :: update_leaves   !< Select grids that should be listed on leaves list
    end type cg_list_global_T
 
    type(cg_list_global_T) :: all_cg   !< all grid containers; \todo restore protected
@@ -266,5 +268,29 @@ contains
       enddo
 
    end subroutine check_na
+
+!> \brief Select grids that should be listed on leaves list
+
+   subroutine update_leaves(this)
+
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
+
+      implicit none
+
+      class(cg_list_global_T), intent(in) :: this          !< object invoking type-bound procedure
+
+      type(cg_list_element), pointer :: cgl
+
+      call leaves%clear
+
+      call leaves%init
+      cgl => this%first
+      do while (associated(cgl))
+         if (cgl%cg%level_id >=0) call leaves%add(cgl%cg)
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine update_leaves
 
 end module cg_list_global

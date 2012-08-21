@@ -625,41 +625,6 @@ contains
 
    end subroutine cleanup
 
-!> \brief Create an MPI type for exchanging a segment of data
-
-   subroutine set_mpi_types(sizes, se, mbc)
-
-      use constants,  only: xdim, zdim, ndims
-      use dataio_pub, only: die
-      use mpi,        only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION
-      use mpisetup,   only: mpi_err
-
-      implicit none
-
-      integer(kind=4), dimension(:),            intent(in)  :: sizes !< dimensions of the array
-      integer(kind=8), dimension(ndims, LO:HI), intent(in)  :: se    !< segment to communicate
-      integer(kind=4),                          intent(out) :: mbc   !< MPI Boundary conditions Container
-
-      integer(kind=4), dimension(:), allocatable :: subsizes, starts
-
-      allocate(subsizes(size(sizes)), starts(size(sizes)))
-
-      if (size(sizes) == 1+ndims) then
-         subsizes(1) = sizes(1)
-         starts(1) = 0
-      else if (size(sizes) /= ndims) then
-         call die("[grid_container:set_mpi_types] Only 3D and 4D arrays are supported")
-      endif
-
-      subsizes(size(sizes)-zdim+xdim:size(sizes)) = int(se(:, HI) - se(:, LO) + 1, kind=4)
-      starts  (size(sizes)-zdim+xdim:size(sizes)) = int(se(:, LO) - 1, kind=4)
-      call MPI_Type_create_subarray(size(sizes), sizes, subsizes, starts,  MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, mbc, mpi_err)
-      call MPI_Type_commit(mbc, mpi_err)
-
-      deallocate(subsizes, starts)
-
-   end subroutine set_mpi_types
-
 !>
 !! \brief is_overlap_per checks if two given blocks placed within a periodic domain are overlapping.
 !!

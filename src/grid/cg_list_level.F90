@@ -968,28 +968,53 @@ contains
 
    subroutine print_segments(this)
 
+      use cg_list,    only: cg_list_element
       use constants,  only: LO, HI
-      use dataio_pub, only: printinfo, msg
-      use mpisetup,   only: FIRST, LAST, master, nproc
+      use dataio_pub, only: printinfo, msg, warn
+      use mpisetup,   only: FIRST, LAST, master, nproc, proc
 
       implicit none
 
       class(cg_list_level_T), intent(in) :: this   !< object invoking type bound procedure
 
-      integer :: p, i, hl
+      integer :: p, i, hl, tot_cg
       integer(kind=8) :: ccnt
       real, allocatable, dimension(:) :: maxcnt
+      type(cg_list_element), pointer :: cgl
 #ifdef VERBOSE
       character(len=len(msg)) :: header
 #endif /* VERBOSE */
 
+      i = 0
+      cgl => this%first
+      do while (associated(cgl))
+         i = i + 1
+         cgl => cgl%nxt
+      enddo
+      if (i /= this%cnt .or. this%cnt /= size(this%pse(proc)%c(:)) .or. size(this%pse(proc)%c(:)) /= i) then
+         write(msg, '(2(a,i4),a,3i7)')"[cg_list_level:print_segments] Uncertain number of grid pieces @PE ",proc," on level ", this%level_id, &
+              &                       " : ",i,this%cnt,size(this%pse(proc)%c(:))
+         call warn(msg)
+
+         cgl => this%first
+         do while (associated(cgl))
+            write(msg,'(2(a,i7),2(a,3i10),a)')" @",proc," #",cgl%cg%grid_id," : [", cgl%cg%my_se(:, LO), "] : [", cgl%cg%my_se(:, HI)," ]"
+            call printinfo(msg)
+            cgl => cgl%nxt
+         enddo
+      endif
+
       if (.not. master) return
 
       !call dom%print_me
+
+      ! print segments according to list of patches
       allocate(maxcnt(FIRST:LAST))
       maxcnt(:) = 0
+      tot_cg = 0
       do p = FIRST, LAST
          hl = 0
+         tot_cg = tot_cg + size(this%pse(p)%c(:))
          do i = lbound(this%pse(p)%c(:), dim=1), ubound(this%pse(p)%c(:), dim=1)
             ccnt = product(this%pse(p)%c(i)%se(:, HI) - this%pse(p)%c(i)%se(:, LO) + 1)
             maxcnt(p) = maxcnt(p) + ccnt
@@ -1000,14 +1025,20 @@ contains
             else
                header = repeat(" ", hl)
             endif
-            write(msg,'(2a,2(3i18,a),i8,a)') header(:hl), " : [", this%pse(p)%c(i)%se(:, LO), "] : [", this%pse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
+            if (maxval(this%n_d(:)) < 1000000) then
+               write(msg,'(2a,2(3i7,a),i8,a)') header(:hl), " : [", this%pse(p)%c(i)%se(:, LO), "] : [", this%pse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
+            else if (maxval(this%n_d(:)) < 1000000000) then
+               write(msg,'(2a,2(3i10,a),i8,a)') header(:hl), " : [", this%pse(p)%c(i)%se(:, LO), "] : [", this%pse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
+            else
+               write(msg,'(2a,2(3i18,a),i8,a)') header(:hl), " : [", this%pse(p)%c(i)%se(:, LO), "] : [", this%pse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
+            endif
             call printinfo(msg)
 #endif /* VERBOSE */
          enddo
       enddo
 
-      write(msg, '(a,i3,a,f5.1,a,f8.5)')"[cg_list_level:print_segments] Level ", this%level_id, " filled in ",(100.*sum(maxcnt(:)))/product(real(this%n_d(:))), &
-           &                            "%, load balance : ", sum(maxcnt(:))/(nproc*maxval(maxcnt(:)))
+      write(msg, '(a,i3,a,f5.1,a,i5,a,f8.5)')"[cg_list_level:print_segments] Level ", this%level_id, " filled in ",(100.*sum(maxcnt(:)))/product(real(this%n_d(:))), &
+           &                                 "%, ",tot_cg," grid(s), load balance : ", sum(maxcnt(:))/(nproc*maxval(maxcnt(:)))
       !> \todo add calculation of total internal boundary surface in cells
       call printinfo(msg)
       deallocate(maxcnt)
@@ -1049,6 +1080,7 @@ contains
 
       call this%update_req ! Perhaps this%mpi_bnd_types added some new entries
       call this%update_tot_se
+      call this%print_segments
 
    end subroutine init_all_new_cg
 
@@ -1126,7 +1158,6 @@ contains
       enddo
 
       call this%update_decomposition_properties
-      call this%print_segments !> \todo move to a better place or print a summary after whole update refinement process
 
    end subroutine distribute
 
