@@ -596,11 +596,31 @@ while True:
     if (cnt == 0):
         break
 
+# assing color to boxes according to their location in source tree
+colors = { 'src': 'red', 'src/base': 'green', 'problems': 'blue' }
+
+# create dictionary that maps file to directories
+dirs = {}
+for f in files:
+    temp = f.rstrip('.F90').split('/')
+    key = temp[-1]
+    dirs[key] = [temp[0]]
+    if len(temp) > 2:
+        for directory in temp[1:-1]:
+           dirs[key].append("%s/%s" % (dirs[key][-1], directory))
+    dirs[key] = set(dirs[key])
+
 # write the connectivity file
 dd = open(objdir + '/dep.dot', "w")
 dd.write("digraph piernik {\n")
 for m in dep:
     for mod in dep_s[m].difference(dep[m]):
+        try:
+            longest_key = max(dirs[mod].intersection(set(colors.keys())))
+            dd.write("\t \"%s\" [color=%s];\n" % (mod, colors[longest_key]))
+            del dirs[mod] # prevent duplicates
+        except:
+            pass
         dd.write('\t "' + mod + '" -> "' + m + '"\n')
 dd.write("}\n")
 dd.close()
