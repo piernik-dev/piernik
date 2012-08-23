@@ -38,9 +38,9 @@ module initproblem
    public :: read_problem_par, init_prob, problem_pointers
 
    character(len=cbuff_len) :: fnoise
-   real :: rhog, eps, amp, kx, kz
+   real                     :: rhog, eps, amp, kx, kz
    real, dimension(8), save :: vec
-   logical :: linear
+   logical                  :: linear
 
    namelist /PROBLEM_CONTROL/  rhog, eps, amp, fnoise, kx,kz, linear
 
@@ -58,8 +58,8 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, cbuff, lbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use mpisetup,   only: rbuff, cbuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -110,13 +110,13 @@ contains
 
    subroutine init_prob
 
+      use cg_list,      only: cg_list_element
+      use cg_list_bnd,  only: leaves
       use constants,    only: dpi, xdim, ydim, zdim
       use dataio_pub,   only: msg, printinfo, run_id
       use domain,       only: dom
       use fluidindex,   only: flind
       use fluidtypes,   only: component_fluid
-      use cg_list_bnd,  only: leaves
-      use cg_list,      only: cg_list_element
       use grid_cont,    only: grid_container
       use interactions, only: dragc_gas_dust
       use mpisetup,     only: proc
@@ -126,14 +126,14 @@ contains
 #endif /* SHEAR */
       implicit none
 
-      real                                :: rcx, rcy, ux, uy, wx, wy, taus, eta, vk, beta !, inv
-      integer                             :: i, j, k, n, clock
+      real                                          :: rcx, rcy, ux, uy, wx, wy, taus, eta, vk, beta !, inv
+      integer                                       :: i, j, k, n, clock
       real(kind=4), dimension(:,:,:,:), allocatable :: noise
-      integer, dimension(:), allocatable  :: seed
-      complex(kind=8), dimension(7)       :: coeff
-      class(component_fluid), pointer     :: dst, neu
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      integer, dimension(:), allocatable            :: seed
+      complex(kind=8), dimension(7)                 :: coeff
+      class(component_fluid), pointer               :: dst, neu
+      type(cg_list_element),  pointer               :: cgl
+      type(grid_container),   pointer               :: cg
 
 #ifdef DUST
       dst => flind%dst

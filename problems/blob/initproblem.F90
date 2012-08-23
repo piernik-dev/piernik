@@ -57,8 +57,8 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
+      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -110,12 +110,12 @@ contains
 
    subroutine init_prob
 
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
       use constants,   only: xdim, ydim, zdim
       use domain,      only: dom
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
-      use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
 
       implicit none

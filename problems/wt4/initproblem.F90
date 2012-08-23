@@ -94,8 +94,8 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use mpisetup,    only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use mpisetup,   only: rbuff, cbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -191,13 +191,13 @@ contains
 
    subroutine read_IC_file
 
+      use cg_list_bnd, only: leaves
       use constants,   only: xdim, ydim, zdim , LO, HI
       use dataio_pub,  only: msg, die
       use domain,      only: is_multicg
-      use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
-      use mpisetup,    only: proc, master, FIRST, LAST, comm, status, mpi_err
       use mpi,         only: MPI_INTEGER, MPI_DOUBLE_PRECISION
+      use mpisetup,    only: proc, master, FIRST, LAST, comm, status, mpi_err
 
       implicit none
 
@@ -206,7 +206,7 @@ contains
       real, allocatable, dimension(:,:,:) :: ic_v
       integer, parameter                  :: NDIM = 3
       integer, dimension(2*NDIM)          :: ic_rng
-      type(grid_container), pointer :: cg
+      type(grid_container), pointer       :: cg
 
       cg => leaves%first%cg
       if (is_multicg) call die("[initproblem:read_IC_file] multiple grid pieces per procesor not implemented yet") !nontrivial ic_[ijk[se], allocate
@@ -282,26 +282,26 @@ contains
 
    subroutine init_prob
 
-      use cg_list_global, only: all_cg
-      use constants,      only: small, xdim, ydim, zdim, AT_NO_B
-      use dataio_pub,     only: warn, printinfo, msg, die
-      use domain,         only: dom
-      use cg_list,        only: cg_list_element
-      use global,         only: smalld
-      use cg_list_bnd,    only: leaves
-      use grid_cont,      only: grid_container
-      use fluidindex,     only: flind
-      use fluidtypes,     only: component_fluid
-      use mpisetup,       only: master
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use cg_list_global,   only: all_cg
+      use constants,        only: small, xdim, ydim, zdim, AT_NO_B
+      use dataio_pub,       only: warn, printinfo, msg, die
+      use domain,           only: dom
+      use global,           only: smalld
+      use grid_cont,        only: grid_container
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use mpisetup,         only: master
       use named_array_list, only: qna
-      use units,          only: kboltz, mH
+      use units,            only: kboltz, mH
 
       implicit none
 
-      real, parameter :: beat_dx = 1e-5
-      integer :: i, j, k, iic, jic, kic
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real, parameter                 :: beat_dx = 1e-5
+      integer                         :: i, j, k, iic, jic, kic
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
       class(component_fluid), pointer :: fl
       real, dimension(:,:,:), pointer :: q0
 
@@ -420,15 +420,15 @@ contains
 
    subroutine init_prob_attrs(file_id)
 
-      use units, only: fpiG
       use hdf5,  only: HID_T, SIZE_T
       use h5lt,  only: h5ltset_attribute_double_f
+      use units, only: fpiG
 
       implicit none
 
-      integer(HID_T),intent(in)  :: file_id
-      integer(SIZE_T)            :: bufsize
-      integer(kind=4)            :: error
+      integer(HID_T),intent(in) :: file_id
+      integer(SIZE_T)           :: bufsize
+      integer(kind=4)           :: error
 
       bufsize = 1
       call h5ltset_attribute_double_f(file_id, "/", "fpiG", [fpiG], bufsize, error)
@@ -458,26 +458,26 @@ contains
 
    subroutine problem_customize_solution_wt4
 
-      use constants,   only: xdim, ydim, zdim
-      use dataio_pub,  only: warn
-      use cg_list_bnd, only: leaves
-      use cg_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use constants,        only: xdim, ydim, zdim
+      use dataio_pub,       only: warn
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
       implicit none
 
-      integer :: i, j, k
-      real, allocatable, dimension(:) :: mod_str
-      real, parameter :: max_ambient = 100. ! do not modify solution if density is above max_ambient * ambient_density
+      integer                           :: i, j, k
+      real, allocatable, dimension(:)   :: mod_str
+      real, parameter                   :: max_ambient = 100. ! do not modify solution if density is above max_ambient * ambient_density
       real, allocatable, dimension(:,:) :: alf
-      real            :: rc, ambient_density_min
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer  :: cg
-      class(component_fluid), pointer :: fl
-      real, dimension(:,:,:), pointer :: den0, vlx0, vly0
+      real                              :: rc, ambient_density_min
+      type(cg_list_element),  pointer   :: cgl
+      type(grid_container),   pointer   :: cg
+      class(component_fluid), pointer   :: fl
+      real, dimension(:,:,:), pointer   :: den0, vlx0, vly0
 
       fl => flind%neu
       cgl => leaves%first

@@ -80,8 +80,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
-      use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use mpisetup,            only: rbuff, lbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use mpisetup,   only: rbuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -149,8 +149,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine register_user_var
 
-      use cg_list_global, only: all_cg
-      use constants,      only: AT_NO_B
+      use cg_list_global,   only: all_cg
+      use constants,        only: AT_NO_B
       use named_array_list, only: wna
 
       implicit none
@@ -164,22 +164,22 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_sine
 
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
       use constants,   only: dpi, xdim, zdim
       use dataio_pub,  only: printinfo, warn
       use domain,      only: dom
       use fluidindex,  only: flind
-      use cg_list_bnd, only: leaves
-      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
 
       implicit none
 
-      real, parameter :: amp = 1.e-6
-      real :: kx, kz
-      integer :: i, k
+      real, parameter                :: amp = 1.e-6
+      real                           :: kx, kz
+      integer                        :: i, k
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       if (.not. associated(flind%dst)) then
          if (master) call warn("[initproblem:add_sine]: Cannot add sine wave perturbation to dust, because there is no dust.")
@@ -216,21 +216,21 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_random_noise
 
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
       use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: printinfo
-      use cg_list_bnd, only: leaves
-      use cg_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
       use fluidindex,  only: flind
+      use grid_cont,   only: grid_container
       use mpisetup,    only: proc, master
 
       implicit none
 
-      integer, dimension(:), allocatable  :: seed
-      integer :: n, clock, i
+      integer, dimension(:), allocatable    :: seed
+      integer                               :: n, clock, i
       real, dimension(:,:,:,:), allocatable :: noise
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer        :: cgl
+      type(grid_container),  pointer        :: cg
 
       if (amp_noise <= 0.0) return
       if (master) call printinfo("[initproblem:add_random_noise]: adding random noise to dust")
@@ -259,34 +259,34 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use cg_list,       only: cg_list_element
-      use cg_list_bnd,   only: leaves
-      use constants,     only: DST, GEO_RPZ, xdim, ydim, zdim
-      use dataio_pub,    only: msg, printinfo, die
-      use cart_comm,     only: cdd
-      use domain,        only: dom, is_multicg
-      use fluidindex,    only: flind
-      use fluidtypes,    only: component_fluid
-      use func,          only: ekin
-      use global,        only: smalld
-      use gravity,       only: ptmass, grav_pot2accel
-      use grid_cont,     only: grid_container
-      use hydrostatic,   only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use mpi,           only: MPI_COMM_NULL
-      use mpisetup,      only: master
+      use cart_comm,        only: cdd
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use constants,        only: DST, GEO_RPZ, xdim, ydim, zdim
+      use dataio_pub,       only: msg, printinfo, die
+      use domain,           only: dom, is_multicg
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use func,             only: ekin
+      use global,           only: smalld
+      use gravity,          only: ptmass, grav_pot2accel
+      use grid_cont,        only: grid_container
+      use hydrostatic,      only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
+      use mpi,              only: MPI_COMM_NULL
+      use mpisetup,         only: master
       use named_array_list, only: wna
-      use units,         only: newtong
+      use units,            only: newtong
 
       implicit none
 
-      integer :: i, j, k, p
-      real    :: zk, R, vz, sqr_gm, vr
-      real    :: rho, cs2
+      integer                         :: i, j, k, p
+      real                            :: zk, R, vz, sqr_gm, vr
+      real                            :: rho, cs2
       real, dimension(:), allocatable :: vphi, grav, ln_dens_der
 
-      class(component_fluid), pointer  :: fl
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer :: fl
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
 !   Secondary parameters
       if (cdd%comm3d == MPI_COMM_NULL) call die("[initproblem:init_prob] comm3d == MPI_COMM_NULL not implemented") !pcoords
@@ -382,32 +382,32 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
 
-      use constants,       only: dpi, xdim, ydim, zdim
-      use dataio_pub,      only: die
-      use domain,          only: is_multicg, dom
-      use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_dn, iarr_all_mz
-      use cg_list,         only: cg_list_element
-      use global,          only: t, grace_period_passed, relax_time, smalld !, dt
-      use gravity,         only: ptmass
-      use cg_list_bnd,     only: leaves
-      use grid_cont,       only: grid_container
-      use interactions,    only: update_grain_size
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use constants,        only: dpi, xdim, ydim, zdim
+      use dataio_pub,       only: die
+      use domain,           only: is_multicg, dom
+      use fluidboundaries,  only: all_fluid_boundaries
+      use fluidindex,       only: iarr_all_dn, iarr_all_mz
+      use global,           only: t, grace_period_passed, relax_time, smalld !, dt
+      use gravity,          only: ptmass
+      use grid_cont,        only: grid_container
+      use interactions,     only: update_grain_size
       use named_array_list, only: wna
-      use units,           only: newtong
+      use units,            only: newtong
 #ifdef VERBOSE
-!      use dataio_pub,      only: msg, printinfo
-!      use mpisetup,        only: master
+!      use dataio_pub,       only: msg, printinfo
+!      use mpisetup,         only: master
 #endif /* VERBOSE */
 
       implicit none
 
-      integer                               :: j, k
-      logical, save                         :: frun = .true.
+      integer                                 :: j, k
+      logical,                           save :: frun = .true.
       real, dimension(:,:), allocatable, save :: funcR
-      real, save :: x0, x1, y0, y1, a, b
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real,                              save :: x0, x1, y0, y1, a, b
+      type(cg_list_element), pointer          :: cgl
+      type(grid_container),  pointer          :: cg
 
       if (is_multicg) call die("[initproblem:problem_customize_solution_kepler] multiple grid pieces per procesor not implemented yet") !nontrivial
 
@@ -471,17 +471,17 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
-      use gravity,     only: sum_potential
-      use cg_list_bnd, only: leaves
       use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
+      use gravity,     only: sum_potential
       use grid_cont,   only: grid_container
       use types,       only: axes
 
       implicit none
 
-      logical, save :: frun = .true.
+      logical, save                  :: frun = .true.
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer  :: cg
+      type(grid_container),  pointer :: cg
       type(axes)                     :: ax
 
       if (frun) then
@@ -512,18 +512,18 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_grav_ptmass_pure(gp, ax, flatten)
 
-      use units,   only: newtong
       use gravity, only: ptmass, ptm_x, ptm_z
       use types,   only: axes
+      use units,   only: newtong
 
       implicit none
 
-      real, dimension(:,:,:), pointer       :: gp
-      type(axes), intent(in)                :: ax
-      logical, intent(in), optional         :: flatten
+      real, dimension(:,:,:), pointer :: gp
+      type(axes), intent(in)          :: ax
+      logical, intent(in), optional   :: flatten
 
-      integer             :: i, j
-      real                :: GM, R2
+      integer                         :: i, j
+      real                            :: GM, R2
 
       GM        = newtong*ptmass
 
@@ -540,8 +540,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_fbnd(dir,side,cg)
 
-      use constants,  only: xdim, LO
-      use grid_cont,  only: grid_container
+      use constants, only: xdim, LO
+      use grid_cont, only: grid_container
 
       implicit none
 
@@ -561,9 +561,9 @@ contains
    subroutine my_bnd_xl(cg)
 
       use domain,     only: dom
-      use grid_cont,  only: grid_container
-      use gravity,    only: grav_pot2accel
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
+      use gravity,    only: grav_pot2accel
+      use grid_cont,  only: grid_container
 #ifndef ISO
       use fluidindex, only: iarr_all_en
 #endif /* ISO */
@@ -571,13 +571,13 @@ contains
 
       implicit none
 
-      type(grid_container), pointer, intent(in) :: cg
+      type(grid_container), pointer, intent(in)                    :: cg
 
-      integer :: i
-      real, dimension(cg%n_(xdim)) :: grav
+      integer                                                      :: i
+      real, dimension(cg%n_(xdim))                                 :: grav
       real, dimension(size(iarr_all_my), cg%n_(ydim), cg%n_(zdim)) :: vy,vym
-      real, dimension(size(flind%all_fluids))    :: cs2_arr
-      integer, dimension(size(flind%all_fluids)) :: ind_cs2
+      real, dimension(size(flind%all_fluids))                      :: cs2_arr
+      integer, dimension(size(flind%all_fluids))                   :: ind_cs2
 
       do i = 1, size(flind%all_fluids)
          ind_cs2    = i
@@ -609,8 +609,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xr(cg)
 
-      use constants,   only: xdim
-      use grid_cont,   only: grid_container
+      use constants,        only: xdim
+      use grid_cont,        only: grid_container
       use named_array_list, only: wna
 
       implicit none
@@ -623,16 +623,16 @@ contains
 !-----------------------------------------------------------------------------
    subroutine prob_vars_hdf5(var,tab, ierrh, cg)
 
-      use grid_cont,  only: grid_container
-      use interactions, only: epstein_factor
       use fluidindex,   only: flind
+      use grid_cont,    only: grid_container
+      use interactions, only: epstein_factor
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),               intent(in)    :: var
+      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      integer,                        intent(inout) :: ierrh
+      type(grid_container), pointer,  intent(in)    :: cg
 
       ierrh = 0
       select case (trim(var))

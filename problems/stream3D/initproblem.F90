@@ -59,9 +59,9 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun         ! QA_WARN required for diff_nml
-      use constants,     only: cbuff_len
-      use mpisetup,      only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun         ! QA_WARN required for diff_nml
+      use constants,  only: cbuff_len
+      use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -122,13 +122,13 @@ contains
 
    subroutine init_prob
 
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
       use constants,   only: pi, dpi, xdim, ydim, zdim, LO
       use domain,      only: dom
       use fluidindex,  only: flind
       use global,      only: smalld
       use gravity,     only: ptmass
-      use cg_list_bnd, only: leaves
-      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use units,       only: newtong
 #ifndef ISO
@@ -137,16 +137,16 @@ contains
 
       implicit none
 
-      integer :: i,j,k
-      real :: xi,yj,zk, rc, H0, sqr_gm, rho0
-      real :: n,norm, H, ninv
-      real :: gradP, iOmega, ilook, gradgp
+      integer                            :: i,j,k
+      real                               :: xi,yj,zk, rc, H0, sqr_gm, rho0
+      real                               :: n,norm, H, ninv
+      real                               :: gradP, iOmega, ilook, gradgp
       real, dimension(:, :), allocatable :: noise
-      real, dimension(:), allocatable :: omega,omegad
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real, dimension(:),    allocatable :: omega,omegad
+      type(cg_list_element), pointer     :: cgl
+      type(grid_container),  pointer     :: cg
 #ifndef ISO
-      real :: vx, vy, vz
+      real                               :: vx, vy, vz
 #endif /* !ISO */
 
       cgl => leaves%first

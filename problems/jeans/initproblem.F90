@@ -59,15 +59,15 @@ contains
 
    subroutine read_problem_par
 
-      use constants,     only: xdim, ydim, zdim, pi
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
-      use dataio_pub,    only: tend, msg, die, warn, printinfo
-      use domain,        only: dom
-      use fluidindex,    only: flind
-      use fluidtypes,    only: component_fluid
-      use mpisetup,      only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
-      use problem_pub,   only: jeans_d0, jeans_mode
-      use units,         only: fpiG, newtong
+      use constants,   only: xdim, ydim, zdim, pi
+      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
+      use dataio_pub,  only: tend, msg, die, warn, printinfo
+      use domain,      only: dom
+      use fluidindex,  only: flind
+      use fluidtypes,  only: component_fluid
+      use mpisetup,    only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
+      use problem_pub, only: jeans_d0, jeans_mode
+      use units,       only: fpiG, newtong
 
       implicit none
 
@@ -250,13 +250,13 @@ contains
 
    subroutine init_prob
 
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
       use constants,   only: xdim, ydim, zdim, LO
       use domain,      only: dom
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
-      use cg_list_bnd, only: leaves
-      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
 
       implicit none

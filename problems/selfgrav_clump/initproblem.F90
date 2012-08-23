@@ -59,10 +59,10 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
-      use dataio_pub,    only: die
-      use domain,        only: dom
-      use mpisetup,      only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
+      use dataio_pub, only: die
+      use domain,     only: dom
+      use mpisetup,   only: rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -147,15 +147,15 @@ contains
 !
    subroutine init_prob
 
+      use cg_list,           only: cg_list_element
+      use cg_list_bnd,       only: leaves
       use constants,         only: pi, xdim, ydim, zdim, I_ONE
       use dataio_pub,        only: msg, die, warn, printinfo
       use domain,            only: dom, is_multicg
       use fluidindex,        only: flind
       use fluidtypes,        only: component_fluid
       use func,              only: ekin, emag
-      use cg_list,           only: cg_list_element
       use global,            only: smalld, smallei, t
-      use cg_list_bnd,       only: leaves
       use grid_cont,         only: grid_container
       use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_MIN, MPI_MAX, MPI_SUM
       use mpisetup,          only: master, comm, mpi_err
@@ -444,14 +444,14 @@ contains
 
    subroutine virialCheck(tol)
 
-      use dataio_pub,        only: msg, die, warn, printinfo
-      use cg_list,           only: cg_list_element
-      use fluidindex,        only: flind
-      use cg_list_bnd,       only: leaves
-      use grid_cont,         only: grid_container
-      use mpi,               only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,          only: master, comm, mpi_err
-      use multigridvars,     only: grav_bnd, bnd_isolated
+      use cg_list,       only: cg_list_element
+      use cg_list_bnd,   only: leaves
+      use dataio_pub,    only: msg, die, warn, printinfo
+      use fluidindex,    only: flind
+      use grid_cont,     only: grid_container
+      use mpi,           only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,      only: master, comm, mpi_err
+      use multigridvars, only: grav_bnd, bnd_isolated
 
       implicit none
 
@@ -511,10 +511,10 @@ contains
 
    subroutine totalMEnthalpic(C, totME, mode)
 
-      use constants,   only: I_ONE
-      use fluidindex,  only: flind
       use cg_list,     only: cg_list_element
       use cg_list_bnd, only: leaves
+      use constants,   only: I_ONE
+      use fluidindex,  only: flind
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,    only: comm, mpi_err

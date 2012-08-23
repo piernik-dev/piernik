@@ -63,10 +63,10 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,    only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use mpisetup,      only: rbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 #ifdef GRAV
-      use gravity,       only: grav_pot_3d, user_grav
+      use gravity,    only: grav_pot_3d, user_grav
 #endif /* GRAV */
 
       implicit none
@@ -121,13 +121,13 @@ contains
 
    subroutine init_prob
 
+      use cg_list,        only: cg_list_element
+      use cg_list_bnd,    only: leaves
       use constants,      only: xdim, ydim, zdim
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag
-      use cg_list,        only: cg_list_element
       use global,         only: smalld
-      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use hydrostatic,    only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
 #ifdef SHEAR
@@ -282,9 +282,9 @@ contains
 
    subroutine galactic_grav_accel(sweep, i1,i2, xsw, n, grav)
 
-      use constants,   only: zdim
-      use gravity,     only: r_gc
-      use units,       only: r_gc_sun, kpc
+      use constants, only: zdim
+      use gravity,   only: r_gc
+      use units,     only: r_gc_sun, kpc
 
       implicit none
 
@@ -320,12 +320,12 @@ contains
 !<
    subroutine cr_sn_beware(pos)
 
+      use cg_list,        only: cg_list_element
+      use cg_list_bnd,    only: leaves
       use constants,      only: xdim, ydim, zdim, ndims
       use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
       use domain,         only: dom
       use fluidindex,     only: flind
-      use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn
       use snsources,      only: r_sn

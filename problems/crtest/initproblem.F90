@@ -142,14 +142,14 @@ contains
 
    subroutine init_prob
 
+      use cg_list,        only: cg_list_element
+      use cg_list_bnd,    only: leaves
       use constants,      only: xdim, ydim, zdim, HI
       use dataio_pub,     only: die
       use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use func,           only: ekin, emag
-      use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: gamma_crs, iarr_crs, ncrn, ncre
 
@@ -220,12 +220,12 @@ contains
 
    subroutine compute_analytic_ecr1
 
-      use dataio_pub,     only: die
-      use cg_list,        only: cg_list_element
-      use global,         only: t
-      use cg_list_bnd,    only: leaves
-      use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use dataio_pub,       only: die
+      use global,           only: t
+      use grid_cont,        only: grid_container
+      use initcosmicrays,   only: iarr_crs, ncrn, ncre, K_crn_paral, K_crn_perp
       use named_array_list, only: qna
 
       implicit none
@@ -292,15 +292,15 @@ contains
 
    subroutine check_norm
 
-      use constants,      only: PIERNIK_FINISHED, I_ONE, I_TWO
-      use dataio_pub,     only: code_progress, halfstep, msg, die, printinfo
-      use cg_list,        only: cg_list_element
-      use global,         only: nstep
-      use cg_list_bnd,    only: leaves
-      use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crs, ncrn, ncre
-      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,       only: master, comm, mpi_err
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use constants,        only: PIERNIK_FINISHED, I_ONE, I_TWO
+      use dataio_pub,       only: code_progress, halfstep, msg, die, printinfo
+      use global,           only: nstep
+      use grid_cont,        only: grid_container
+      use initcosmicrays,   only: iarr_crs, ncrn, ncre
+      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,         only: master, comm, mpi_err
       use named_array_list, only: qna
 
       implicit none
@@ -365,9 +365,9 @@ contains
 
    subroutine crtest_analytic_ecr1(var, tab, ierrh, cg)
 
-      use dataio_pub,     only: die
-      use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crs
+      use dataio_pub,       only: die
+      use grid_cont,        only: grid_container
+      use initcosmicrays,   only: iarr_crs
       use named_array_list, only: qna
 
       implicit none

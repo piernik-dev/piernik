@@ -80,8 +80,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine register_user_var
 
-      use cg_list_global, only: all_cg
-      use constants,      only: AT_NO_B
+      use cg_list_global,   only: all_cg
+      use constants,        only: AT_NO_B
       use named_array_list, only: wna
 
       implicit none
@@ -95,14 +95,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
-      use constants,           only: GEO_RPZ
-      use dataio_pub,          only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use dataio_user,         only: user_vars_hdf5, user_reg_var_restart
-      use domain,              only: dom
+      use constants,             only: GEO_RPZ
+      use dataio_pub,            only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use dataio_user,           only: user_vars_hdf5, user_reg_var_restart
+      use domain,                only: dom
       use fluidboundaries_funcs, only: user_fluidbnd
-      use gravity,             only: grav_pot_3d
-      use mpisetup,            only: cbuff, rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
-      use user_hooks,          only: problem_customize_solution, problem_grace_passed, problem_post_restart
+      use gravity,               only: grav_pot_3d
+      use mpisetup,              only: cbuff, rbuff, ibuff, lbuff, master, slave, piernik_MPI_Bcast
+      use user_hooks,            only: problem_customize_solution, problem_grace_passed, problem_post_restart
 
       implicit none
 
@@ -216,12 +216,12 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_sine
 
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
       use constants,   only: dpi, xdim, zdim
       use dataio_pub,  only: printinfo, warn
       use domain,      only: dom
       use fluidindex,  only: flind
-      use cg_list_bnd, only: leaves
-      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
 
@@ -267,21 +267,21 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_random_noise
 
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
       use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: printinfo
-      use cg_list_bnd, only: leaves
-      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind
       use mpisetup,    only: proc, master
 
       implicit none
 
-      integer, dimension(:), allocatable  :: seed
-      integer :: n, clock, i
+      integer, dimension(:), allocatable    :: seed
+      integer                               :: n, clock, i
       real, dimension(:,:,:,:), allocatable :: noise
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(cg_list_element), pointer        :: cgl
+      type(grid_container),  pointer        :: cg
 
       if (amp_noise <= 0.0) return
       if (master) call printinfo("[initproblem:add_random_noise]: adding random noise to dust")
@@ -310,34 +310,34 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use cg_list_level, only: base_lev
-      use constants,     only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
-      use dataio_pub,    only: msg, printinfo, die
-      use domain,        only: dom, is_multicg
-      use fluidindex,    only: flind
-      use fluidtypes,    only: component_fluid
-      use gravity,       only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
-      use cg_list,       only: cg_list_element
-      use cg_list_bnd,   only: leaves
-      use grid_cont,     only: grid_container
-      use hydrostatic,   only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use interactions,  only: epstein_factor
-      use mpi,           only: MPI_DOUBLE_PRECISION
-      use mpisetup,      only: master, comm, mpi_err, FIRST, proc
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use cg_list_level,    only: base_lev
+      use constants,        only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
+      use dataio_pub,       only: msg, printinfo, die
+      use domain,           only: dom, is_multicg
+      use fluidindex,       only: flind
+      use fluidtypes,       only: component_fluid
+      use gravity,          only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
+      use grid_cont,        only: grid_container
+      use hydrostatic,      only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
+      use interactions,     only: epstein_factor
+      use mpi,              only: MPI_DOUBLE_PRECISION
+      use mpisetup,         only: master, comm, mpi_err, FIRST, proc
       use named_array_list, only: wna
-      use units,         only: newtong, gram, cm, kboltz, mH
+      use units,            only: newtong, gram, cm, kboltz, mH
 
       implicit none
 
-      integer :: i, j, k, kmid, p, middle_of_nx
-      integer, dimension(1) :: n_x_cut
-      real    :: xi, yj, zk, rc, vx, vy, vz, b0, sqr_gm, vr, vphi
-      real    :: csim2, gprim, H2
+      integer                         :: i, j, k, kmid, p, middle_of_nx
+      integer, dimension(1)           :: n_x_cut
+      real                            :: xi, yj, zk, rc, vx, vy, vz, b0, sqr_gm, vr, vphi
+      real                            :: csim2, gprim, H2
 
       real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der, gdens
-      class(component_fluid), pointer  :: fl
-      type(cg_list_element), pointer  :: cgl
-      type(grid_container),  pointer  :: cg
+      class(component_fluid), pointer :: fl
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
 !   Secondary parameters
       call register_user_var
@@ -557,16 +557,16 @@ contains
 !-----------------------------------------------------------------------------
    subroutine kepler_problem_post_restart
 
-      use constants,       only: b0_n
-      use fluidboundaries, only: all_fluid_boundaries
-      use cg_list,         only: cg_list_element
-      use cg_list_bnd,     only: leaves
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use constants,        only: b0_n
+      use fluidboundaries,  only: all_fluid_boundaries
       use named_array_list, only: wna
 #ifdef TRACER
-      use constants,       only: xdim, ydim, zdim
-      use grid_cont,       only: grid_container
-      use func,            only: resample_gauss
-      use fluidindex,      only: flind
+      use constants,        only: xdim, ydim, zdim
+      use grid_cont,        only: grid_container
+      use func,             only: resample_gauss
+      use fluidindex,       only: flind
 #endif /* TRACER */
 
       implicit none
@@ -624,36 +624,36 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler
 
-      use constants,       only: xdim, ydim, zdim, I_ONE
-      use dataio_pub,      only: die!, warn, msg
-      use domain,          only: is_multicg
-      use cg_list,         only: cg_list_element
-      use global,          only: dt, relax_time, smalld !, t, grace_period_passed
-      use cg_list_bnd,     only: leaves
-      use grid_cont,       only: grid_container
-      use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: flind!, iarr_all_mz, iarr_all_dn
-      use mpisetup,        only: comm, mpi_err
-      use mpi,             only: MPI_MAX, MPI_DOUBLE_PRECISION, MPI_IN_PLACE
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use constants,        only: xdim, ydim, zdim, I_ONE
+      use dataio_pub,       only: die!, warn, msg
+      use domain,           only: is_multicg
+      use global,           only: dt, relax_time, smalld !, t, grace_period_passed
+      use grid_cont,        only: grid_container
+      use fluidboundaries,  only: all_fluid_boundaries
+      use fluidindex,       only: flind!, iarr_all_mz, iarr_all_dn
+      use mpisetup,         only: comm, mpi_err
+      use mpi,              only: MPI_MAX, MPI_DOUBLE_PRECISION, MPI_IN_PLACE
       use named_array_list, only: wna
       ! use interactions,    only: dragc_gas_dust
 #ifdef VERBOSE
-!      use dataio_pub,      only: msg, printinfo
-!      use mpisetup,        only: master
+!      use dataio_pub,       only: msg, printinfo
+!      use mpisetup,         only: master
 #endif /* VERBOSE */
 
       implicit none
 
-      integer                               :: i, j, k
-      logical, save                         :: frun = .true.
+      integer                                 :: i, j, k
+      logical, save                           :: frun = .true.
       real, dimension(:,:), allocatable, save :: funcR
       logical, dimension(:,:,:), allocatable  :: adjust
-      real, dimension(:,:,:), allocatable  :: vx_sign, vz_sign
-      real, save :: x0, x1, y0, y1, a, b
-      real :: max_vx, mean_vy
-      real, save :: max_vy = 100.0
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real, dimension(:,:,:), allocatable     :: vx_sign, vz_sign
+      real, save                              :: x0, x1, y0, y1, a, b
+      real                                    :: max_vx, mean_vy
+      real, save                              :: max_vy = 100.0
+      type(cg_list_element), pointer          :: cgl
+      type(grid_container),  pointer          :: cg
 
 !      if (grace_period_passed() .and. t <= x1) then
 !         dragc_gas_dust = a*t+b
@@ -763,20 +763,20 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
-      use constants,   only: xdim, zdim
-      use units,       only: newtong
-      use gravity,     only: ptmass, sum_potential
-      use cg_list_bnd, only: leaves
       use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
+      use constants,   only: xdim, zdim
+      use gravity,     only: ptmass, sum_potential
       use grid_cont,   only: grid_container
+      use units,       only: newtong
 
       implicit none
 
-      logical, save :: frun = .true.
-      real          :: r2
-      integer       :: i, k
+      logical, save                  :: frun = .true.
+      real                           :: r2
+      integer                        :: i, k
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       if (frun) then
          cgl => leaves%first
@@ -823,8 +823,8 @@ contains
 
       use constants,  only: xdim, ydim, zdim
       use domain,     only: dom
-      use grid_cont,  only: grid_container
       use gravity,    only: grav_pot2accel
+      use grid_cont,  only: grid_container
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
 #ifndef ISO
       use fluidindex, only: iarr_all_en
@@ -870,8 +870,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xr(cg)
 
-      use constants,   only: xdim
-      use grid_cont,   only: grid_container
+      use constants,        only: xdim
+      use grid_cont,        only: grid_container
       use named_array_list, only: wna
 
       implicit none

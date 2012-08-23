@@ -63,9 +63,9 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use domain,      only: dom
-      use mpisetup,    only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
+      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use domain,     only: dom
+      use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -129,21 +129,21 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
       use constants,   only: ION, DST, xdim, ydim, zdim
       use dataio_pub,  only: msg, die, printinfo
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
-      use cg_list_bnd, only: leaves
-      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
 
       implicit none
 
-      integer :: i, j, k, p
+      integer                         :: i, j, k, p
       class(component_fluid), pointer :: fl
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
 
       if (flind%energ < flind%fluids) call die("[initproblem:init_prob] Not all fluids are adiabatic!")
 
@@ -228,12 +228,12 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)        :: var   !< quantity to be plotted
-      integer, intent(in)                 :: ij    !< plane of plot
-      integer(kind=8), intent(in)         :: xn    !< no. of cell at which we are slicing the local block
-      integer, intent(inout)              :: ierrh !< error handling
-      real, dimension(:,:), intent(inout) :: tab   !< array  containing given quantity
-      type(grid_container), pointer, intent(in) :: cg
+      character(len=*),              intent(in)    :: var   !< quantity to be plotted
+      integer,                       intent(in)    :: ij    !< plane of plot
+      integer(kind=8),               intent(in)    :: xn    !< no. of cell at which we are slicing the local block
+      integer,                       intent(inout) :: ierrh !< error handling
+      real, dimension(:,:),          intent(inout) :: tab   !< array  containing given quantity
+      type(grid_container), pointer, intent(in)    :: cg
 
       ierrh = 0
       select case (var)
@@ -249,14 +249,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_vars_hdf5(var, tab, ierrh, cg)
 
-      use grid_cont,  only: grid_container
+      use grid_cont, only: grid_container
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),               intent(in)    :: var
+      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      integer,                        intent(inout) :: ierrh
+      type(grid_container), pointer,  intent(in)    :: cg
 
       ierrh = 0
       select case (trim(var))

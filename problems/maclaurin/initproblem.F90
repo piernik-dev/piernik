@@ -67,12 +67,12 @@ contains
 
    subroutine read_problem_par
 
-      use constants,   only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub,  only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use dataio_pub,  only: die, warn, msg, printinfo
-      use domain,      only: dom
-      use global,      only: smalld
-      use mpisetup,    only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
+      use constants,  only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
+      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use dataio_pub, only: die, warn, msg, printinfo
+      use domain,     only: dom
+      use global,     only: smalld
+      use mpisetup,   only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 
@@ -156,20 +156,20 @@ contains
 
    subroutine init_prob
 
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
       use constants,   only: GEO_XYZ, GEO_RPZ
       use dataio_pub,  only: die
-      use cg_list_bnd, only: leaves
-      use cg_list,     only: cg_list_element
       use domain,      only: dom
       use grid_cont,   only: grid_container
       use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
 
       implicit none
 
-      integer :: i, j, k, ii, jj, kk
-      real    :: xx, yy, zz, rr, dm
+      integer                        :: i, j, k, ii, jj, kk
+      real                           :: xx, yy, zz, rr, dm
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -235,9 +235,9 @@ contains
 
    subroutine init_prob_attrs(file_id)
 
-      use units, only: fpiG
       use hdf5,  only: HID_T, SIZE_T
       use h5lt,  only: h5ltset_attribute_double_f
+      use units, only: fpiG
 
       implicit none
 
@@ -263,25 +263,25 @@ contains
 !
    subroutine compute_maclaurin_potential
 
-      use cg_list_global, only: all_cg
-      use constants,      only: pi, GEO_XYZ, GEO_RPZ
-      use dataio_pub,     only: warn, die
-      use domain,         only: dom
-      use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
-      use grid_cont,      only: grid_container
-      use mpisetup,       only: master
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use cg_list_global,   only: all_cg
+      use constants,        only: pi, GEO_XYZ, GEO_RPZ
+      use dataio_pub,       only: warn, die
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: master
       use named_array_list, only: qna
-      use units,          only: newtong
+      use units,            only: newtong
 
       implicit none
 
-      integer            :: i, j, k, apot_i
-      real               :: potential, r2, rr
-      real               :: AA1, AA3, a12, a32, x02, y02, z02, lam, h, cdphi
-      real, parameter    :: small_e = 1e-3
+      integer                        :: i, j, k, apot_i
+      real                           :: potential, r2, rr
+      real                           :: AA1, AA3, a12, a32, x02, y02, z02, lam, h, cdphi
+      real, parameter                :: small_e = 1e-3
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       AA1 = 2./3. ; AA3 = 2./3.
       if (e < 0. .and. master) call warn("[initproblem:compute_maclaurin_potential] e<0. not fully implemented yet!")
@@ -367,23 +367,23 @@ contains
 
    subroutine finalize_problem_maclaurin
 
-      use constants,   only: GEO_RPZ, I_ONE, I_TWO
-      use dataio_pub,  only: msg, printinfo, warn
-      use domain,      only: dom
-      use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
-      use grid_cont,   only: grid_container
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,    only: master, comm, mpi_err
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use constants,        only: GEO_RPZ, I_ONE, I_TWO
+      use dataio_pub,       only: msg, printinfo, warn
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,         only: master, comm, mpi_err
       use named_array_list, only: qna
 
       implicit none
 
-      integer            :: i, j, k, apot_i
-      real, dimension(2) :: norm, dev
-      real               :: potential, fac
+      integer                        :: i, j, k, apot_i
+      real, dimension(2)             :: norm, dev
+      real                           :: potential, fac
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       fac = 1.
       norm(:) = 0.
@@ -435,16 +435,16 @@ contains
 
    subroutine maclaurin_error_vars(var, tab, ierrh, cg)
 
-      use dataio_pub,  only: die
-      use grid_cont,   only: grid_container
+      use dataio_pub,       only: die
+      use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),               intent(in)    :: var
+      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      integer,                        intent(inout) :: ierrh
+      type(grid_container), pointer,  intent(in)    :: cg
 
       if (.not. qna%exists(apot_n)) call die("[initproblem:maclaurin_error_vars] Cannot find apot_n")
 

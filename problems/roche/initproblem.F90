@@ -127,12 +127,12 @@ contains
 
    subroutine init_prob
 
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
       use constants,   only: xdim, ydim, zdim
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
-      use cg_list,     only: cg_list_element
       use global,      only: smalld
-      use cg_list_bnd, only: leaves
       use grid_cont,   only: grid_container
 
       implicit none
@@ -180,12 +180,12 @@ contains
 
    subroutine impose_inflow
 
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
       use constants,   only: xdim, ydim, zdim
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use global,      only: smalld, smallei, dt
-      use cg_list_bnd, only: leaves
-      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use gravity,     only: ptm_x, ptm2_x
 

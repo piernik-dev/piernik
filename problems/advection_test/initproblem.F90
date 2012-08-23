@@ -153,12 +153,12 @@ contains
 
    subroutine init_prob
 
-      use constants,   only: xdim, ydim, zdim
-      use fluidindex,  only: flind
-      use cg_list,     only: cg_list_element
-      use global,      only: smallei
-      use cg_list_bnd, only: leaves
-      use grid_cont,   only: grid_container
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use constants,        only: xdim, ydim, zdim
+      use fluidindex,       only: flind
+      use global,           only: smallei
+      use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
       implicit none
@@ -191,8 +191,8 @@ contains
 
    subroutine inid_var_hdf5(var, tab, ierrh, cg)
 
-      use global,      only: t
-      use grid_cont,   only: grid_container
+      use global,           only: t
+      use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
       implicit none
@@ -230,15 +230,15 @@ contains
 
    subroutine calculate_error_norm
 
-      use constants,   only: I_ONE, I_TWO, PIERNIK_FINISHED
-      use dataio_pub,  only: code_progress, halfstep, msg, printinfo, warn
-      use fluidindex,  only: flind
-      use cg_list,     only: cg_list_element
-      use global,      only: t, nstep
-      use cg_list_bnd, only: leaves
-      use grid_cont,   only: grid_container
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,    only: master, comm, mpi_err
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use constants,        only: I_ONE, I_TWO, PIERNIK_FINISHED
+      use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
+      use fluidindex,       only: flind
+      use global,           only: t, nstep
+      use grid_cont,        only: grid_container
+      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,         only: master, comm, mpi_err
       use named_array_list, only: qna
 
       implicit none
@@ -246,10 +246,10 @@ contains
       enum, bind(C)
          enumerator :: N_D, N_2
       end enum
-      real, dimension(N_D:N_2) :: norm
-      real :: neg_err, pos_err
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real, dimension(N_D:N_2)        :: norm
+      real                            :: neg_err, pos_err
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
       real, dimension(:,:,:), pointer :: inid
 
       if (code_progress < PIERNIK_FINISHED .and. (mod(nstep, norm_step) /= 0 .or. halfstep)) return
@@ -299,25 +299,25 @@ contains
 
    subroutine analytic_solution(t)
 
-      use constants,   only: xdim, zdim, ndims
-      use dataio_pub,  only: warn
-      use domain,      only: dom
-      use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: master
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use constants,        only: xdim, zdim, ndims
+      use dataio_pub,       only: warn
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: master
       use named_array_list, only: qna
 
       implicit none
 
-      real, intent(in) :: t !< time of the solution
+      real, intent(in)                :: t !< time of the solution
 
-      real :: dini
-      integer :: i, j, k, d
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      real                            :: dini
+      integer                         :: i, j, k, d
+      type(cg_list_element),  pointer :: cgl
+      type(grid_container),   pointer :: cg
       real, dimension(:,:,:), pointer :: inid
-      real, dimension(ndims) :: pos
+      real, dimension(ndims)          :: pos
 
       cgl => leaves%first
       do while (associated(cgl))
