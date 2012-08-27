@@ -229,7 +229,8 @@ contains
                         !>
                         !! \todo optimize me
                         !! Following 2 lines (along with other occurences of
-                        !! similar constructs) cause ~10% perfomance drop.
+                        !! similar constructs) cause ~10% perfomance drop wrt
+                        !! in-place communication using MPI_Types.
                         !! They can be optimized by using explicit loop over
                         !! last index:
                         !!    do ni = lbound(i_seg%buf4, 4), ubound(i_seg%buf4, 4)
