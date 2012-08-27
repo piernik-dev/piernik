@@ -384,14 +384,12 @@ contains
 
       integer(kind=4)                              :: ib, ssign, kb, kk
       integer                                      :: ksub, i, j, lksub
+      integer                                      :: ifl
       real, dimension(:,:,:), allocatable          :: db, csi2b, dbr
       real, dimension(:,:),   allocatable          :: dprofs
       real, dimension(flind%fluids)                :: factor
 #ifndef ISO
       real, dimension(:,:,:), allocatable          :: ekb, eib
-      integer                                      :: ifluid
-#else /* !ISO */
-      integer :: ifl
 #endif /* !ISO */
 
       if (.not.associated(get_gprofs)) call die("[hydrostatic:outh_bnd] get_gprofs not associated")
@@ -427,8 +425,8 @@ contains
          ekb = ekin(cg%u(iarr_all_mx,:,:,kb),cg%u(iarr_all_my,:,:,kb),cg%u(iarr_all_mz,:,:,kb),db)
          eib = cg%u(iarr_all_en,:,:,kb) - ekb
          eib = max(eib,smallei)
-         do ifluid=1,flind%fluids
-            csi2b(ifluid,:,:) = (flind%all_fluids(ifluid)%fl%gam_1)*eib(ifluid,:,:)/db(ifluid,:,:)
+         do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
+            csi2b(ifl,:,:) = (flind%all_fluids(ifl)%fl%gam_1)*eib(ifl,:,:)/db(ifl,:,:)
          enddo
 #endif /* !ISO */
 
@@ -456,7 +454,9 @@ contains
 
                db(:,i,j)  = max(db(:,i,j), smalld)
 #ifndef ISO
-               eib(:,i,j) = csi2b(:,i,j)*db(:,i,j)/(flind%all_fluids(:)%fl%gam_1)
+               do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
+                  eib(ifl, i, j) = csi2b(ifl, i, j)*db(ifl, i, j) / (flind%all_fluids(ifl)%fl%gam_1)
+               enddo
                eib(:,i,j) = max(eib(:,i,j), smallei)
 #endif /* !ISO */
             enddo
