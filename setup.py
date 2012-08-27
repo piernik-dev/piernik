@@ -286,6 +286,8 @@ parser.add_option("-p", "--param", dest="param", metavar="FILE",
                   help="use FILE instead problem.par", default="problem.par")
 parser.add_option("-d", "--define", dest="cppflags", metavar="CPPFLAGS",
                   help="add precompiler directives, use comma-separated list")
+parser.add_option("--f90flags", dest="f90flags", metavar="F90FLAGS",
+                  help="pass additional compiler flags to F90FLAGS")
 parser.add_option("-c", "--compiler", dest="compiler", default="default.in",
                   help="choose specified config from compilers directory",
                   metavar="FILE")
@@ -512,6 +514,8 @@ m.write(pretty_format_suf("SRCS_V = \\", stripped_files_v, '', columns))
 m.write("SRCS = $(SRCS_V) version.F90\n")
 m.write(pretty_format_suf("OBJS = \\", files_to_build, '.o', columns))
 m.write("\nCPPFLAGS += %s\n" % cppflags)
+if (len(options.f90flags) > 0):
+    m.write("\nF90FLAGS += %s\n" % str(options.f90flags))
 if("PGPLOT" in our_defs):
     m.write("LIBS += -lpgplot\n")
 if("SHEAR" in our_defs or "MULTIGRID" in our_defs):
