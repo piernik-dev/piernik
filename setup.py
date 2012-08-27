@@ -514,8 +514,8 @@ m.write(pretty_format_suf("SRCS_V = \\", stripped_files_v, '', columns))
 m.write("SRCS = $(SRCS_V) version.F90\n")
 m.write(pretty_format_suf("OBJS = \\", files_to_build, '.o', columns))
 m.write("\nCPPFLAGS += %s\n" % cppflags)
-if (len(options.f90flags) > 0):
-    m.write("\nF90FLAGS += %s\n" % str(options.f90flags))
+if (isinstance(options.f90flags, str)):
+    m.write("\nF90FLAGS += %s\n" % options.f90flags)
 if("PGPLOT" in our_defs):
     m.write("LIBS += -lpgplot\n")
 if("SHEAR" in our_defs or "MULTIGRID" in our_defs):
