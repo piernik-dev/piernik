@@ -45,15 +45,18 @@ module mpisetup
         &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, is_spawned, &
         &    piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master
 
-   integer(kind=4), protected :: nproc, proc, LAST          !< number of processes, rank of my process, rank of last process
-   integer(kind=4), protected :: comm                       !< global communicator
-   integer(kind=4), protected :: intercomm                  !< intercommunicator
-   integer(kind=4) :: mpi_err                               !< error status
-   integer(kind=INT4), parameter :: FIRST = 0               !< the rank of the master process
+   integer(kind=4), protected :: nproc          !< number of processes
+   integer(kind=4), protected :: proc           !< rank of my process
+   integer(kind=4), protected :: LAST           !< rank of the last process
+   integer(kind=4), protected :: comm           !< global communicator
+   integer(kind=4), protected :: intercomm      !< intercommunicator
+   integer(kind=4) :: mpi_err                   !< error status
+   integer(kind=INT4), parameter :: FIRST = 0   !< the rank of the master process
 
-   logical, protected :: master, slave      !< shortcuts for testing proc == FIRST
-   logical, protected :: have_mpi           !< .true. when run on more than one processor
-   logical, protected :: is_spawned         !< .true. if Piernik was run via MPI_Spawn
+   logical, protected :: master      !< .True. if proc == FIRST
+   logical, protected :: slave       !< .True. if proc != FIRST
+   logical, protected :: have_mpi    !< .True. when run on more than one processor
+   logical, protected :: is_spawned  !< .True. if Piernik was run via MPI_Spawn
 
    integer(kind=4), allocatable, dimension(:), target   :: req    !< request array for MPI_Waitall
    integer(kind=4), allocatable, dimension(:,:), target :: status !< status array for MPI_Waitall
