@@ -891,7 +891,7 @@ contains
       if (associated(user_tsl)) call user_tsl(tsl_vars)
 
       if (master) then
-         write(tsl_lun, '(1x,i8,50(1x,es15.8))') nstep, tsl_vars
+         write(tsl_lun, '(1x,i8,100(1x,es15.8))') nstep, tsl_vars
 
 ! some quantities computed in "write_log".One can add more, or change.
          close(tsl_lun)
