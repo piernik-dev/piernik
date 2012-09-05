@@ -168,7 +168,7 @@ contains
            &                tmp_log_file, printinfo, printio, warn, msg, nhdf, nimg, die, code_progress, wd_wr, wd_rd, &
            &                move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
-      use domain,     only: dom ! \todo remove me when plt is obsolete
+      use domain,     only: dom
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier
 
       implicit none
