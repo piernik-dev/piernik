@@ -775,6 +775,7 @@ contains
 !!
 !! \details Typically i_all_dens is a copy of fluidindex::iarr_all_sg.
 !! Passing this as an argument allows for independent computation of the potential for several density fields if necessary.
+!! \todo compactify the following more (if possible)
 !<
 
    subroutine init_source(i_all_dens)
@@ -800,10 +801,10 @@ contains
 
       integer(kind=4), dimension(:), intent(in) :: i_all_dens !< indices to selfgravitating fluids
 
-      real :: fac
-      integer :: i
+      real                           :: fac
+      integer                        :: i, side
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       call all_cg%set_dirty(source)
 
@@ -831,57 +832,35 @@ contains
             cgl => leaves%first
             do while (associated(cgl))
                cg => cgl%cg
-               if (cg%ext_bnd(xdim, LO)) then
-                  fac = 2. * cg%idx2 / fpiG
-                  if (dom%geometry_type == GEO_RPZ .and. cg%x(cg%is) /= 0.) fac = fac - 1./(cg%dx * cg%x(cg%is) * fpiG) !> BEWARE is it cg%x(ie), cg%x(ie+1) or something in the middle?
-                  cg%q(source)%arr       (cg%is, cg%js:cg%je, cg%ks:cg%ke) = &
-                       & cg%q(source)%arr(cg%is, cg%js:cg%je, cg%ks:cg%ke) - &
-                       & cg%mg%bnd_x(            cg%js:cg%je, cg%ks:cg%ke, LO) * fac
-               endif
-               if (cg%ext_bnd(xdim, HI)) then
-                  fac = 2. * cg%idx2 / fpiG
-                  if (dom%geometry_type == GEO_RPZ .and. cg%x(cg%ie) /= 0.) fac = fac - 1./(cg%dx * cg%x(cg%ie) * fpiG) !> BEWARE is it cg%x(ie), cg%x(ie+1) or something in the middle?
-                  cg%q(source)%arr       (cg%ie, cg%js:cg%je, cg%ks:cg%ke) = &
-                       & cg%q(source)%arr(cg%ie, cg%js:cg%je, cg%ks:cg%ke) - &
-                       & cg%mg%bnd_x(            cg%js:cg%je, cg%ks:cg%ke, HI) * fac
-               endif
-               if (cg%ext_bnd(ydim, LO)) then
-                  if (dom%geometry_type == GEO_RPZ) then
-                     do i = cg%is, cg%ie
-                        if (cg%x(i) /= 0.) then
-                           cg%q(source)%arr       (i, cg%js, cg%ks:cg%ke) = &
-                                & cg%q(source)%arr(i, cg%js, cg%ks:cg%ke) - &
-                                & cg%mg%bnd_y(i,             cg%ks:cg%ke, LO) * 2. * cg%idy2 / fpiG / cg%x(i)**2
-                        endif
-                     enddo
-                  else
-                     cg%q(source)%arr       (cg%is:cg%ie, cg%js, cg%ks:cg%ke) = &
-                          & cg%q(source)%arr(cg%is:cg%ie, cg%js, cg%ks:cg%ke) - &
-                          & cg%mg%bnd_y     (cg%is:cg%ie,        cg%ks:cg%ke, LO) * 2. * cg%idy2 / fpiG
+               do side = LO, HI
+                  if (cg%ext_bnd(xdim, side)) then
+                     fac = 2. * cg%idx2 / fpiG
+                     if (dom%geometry_type == GEO_RPZ .and. cg%x(cg%ijkse(xdim,side)) /= 0.) fac = fac - 1./(cg%dx * cg%x(cg%ijkse(xdim,side)) * fpiG) !> BEWARE is it cg%x(ie), cg%x(ie+1) or something in the middle?
+                     cg%q(source)%arr       (cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) = &
+                          & cg%q(source)%arr(cg%ijkse(xdim,side), cg%js:cg%je, cg%ks:cg%ke) - &
+                          & cg%mg%bnd_x(                          cg%js:cg%je, cg%ks:cg%ke, side) * fac
                   endif
-               endif
-               if (cg%ext_bnd(ydim, HI)) then
-                  if (dom%geometry_type == GEO_RPZ) then
-                     do i = cg%is, cg%ie
-                        if (cg%x(i) /= 0.) then
-                           cg%q(source)%arr       (i, cg%je, cg%ks:cg%ke) = &
-                                & cg%q(source)%arr(i, cg%je, cg%ks:cg%ke) - &
-                                & cg%mg%bnd_y     (i,        cg%ks:cg%ke, HI) * 2. * cg%idy2 / fpiG / cg%x(i)**2
-                        endif
-                     enddo
-                  else
-                     cg%q(source)%arr       (cg%is:cg%ie, cg%je, cg%ks:cg%ke) = &
-                          & cg%q(source)%arr(cg%is:cg%ie, cg%je, cg%ks:cg%ke) - &
-                          & cg%mg%bnd_y     (cg%is:cg%ie,        cg%ks:cg%ke, HI) * 2. * cg%idy2 / fpiG
+               enddo
+               do side = LO, HI
+                  if (cg%ext_bnd(ydim, side)) then
+                     if (dom%geometry_type == GEO_RPZ) then
+                        do i = cg%is, cg%ie
+                           if (cg%x(i) /= 0.) cg%q(source)%arr(i, cg%ijkse(ydim,side), cg%ks:cg%ke) = &
+                                &             cg%q(source)%arr(i, cg%ijkse(ydim,side), cg%ks:cg%ke) - &
+                                &             cg%mg%bnd_y     (i,                      cg%ks:cg%ke, side) * 2. * cg%idy2 / fpiG / cg%x(i)**2
+                        enddo
+                     else
+                        cg%q(source)%arr     (cg%is:cg%ie, cg%ijkse(ydim,side), cg%ks:cg%ke) = &
+                           & cg%q(source)%arr(cg%is:cg%ie, cg%ijkse(ydim,side), cg%ks:cg%ke) - &
+                           & cg%mg%bnd_y     (cg%is:cg%ie,                      cg%ks:cg%ke, side) * 2. * cg%idy2 / fpiG
+                     endif
                   endif
+               enddo
+               do side = LO, HI
+                  if (cg%ext_bnd(zdim, side)) cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ijkse(zdim,side)) = &
+                       &                      cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ijkse(zdim,side)) - &
+                       &                      cg%mg%bnd_z     (cg%is:cg%ie, cg%js:cg%je, side) * 2. * cg%idz2 / fpiG
                endif
-               if (cg%ext_bnd(zdim, LO)) cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks) = &
-                    &                    cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks) - &
-                    &                    cg%mg%bnd_z     (cg%is:cg%ie, cg%js:cg%je,          LO) * 2. * cg%idz2 / fpiG
-               if (cg%ext_bnd(zdim, HI)) cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ke) = &
-                    &                    cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ke) - &
-                    &                    cg%mg%bnd_z     (cg%is:cg%ie, cg%js:cg%je,          HI) * 2. * cg%idz2 / fpiG
-               !> \todo compactify the above mess
                cgl => cgl%nxt
             enddo
 
