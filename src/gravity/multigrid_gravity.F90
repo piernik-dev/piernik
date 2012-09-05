@@ -690,13 +690,13 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_level,  only: cg_list_level_T  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
+      use cg_list,        only: ind_val
+      use cg_list_bnd,    only: leaves
       use cg_list_level,  only: finest
       use cg_list_global, only: all_cg
       use constants,      only: INVALID, O_INJ, O_LIN, O_I2
       use dataio_pub,     only: msg, die, printinfo
-      use cg_list,        only: ind_val
       use global,         only: t
-      use cg_list_bnd,    only: leaves
       use mpisetup,       only: master
       use multigridvars,  only: stdout, solution
 
@@ -860,7 +860,7 @@ contains
                   if (cg%ext_bnd(zdim, side)) cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ijkse(zdim,side)) = &
                        &                      cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ijkse(zdim,side)) - &
                        &                      cg%mg%bnd_z     (cg%is:cg%ie, cg%js:cg%je, side) * 2. * cg%idz2 / fpiG
-               endif
+               enddo
                cgl => cgl%nxt
             enddo
 
@@ -1139,9 +1139,9 @@ contains
       implicit none
 
       type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,                      intent(in) :: src  !< index of source in cg%q(:)
-      integer,                      intent(in) :: soln !< index of solution in cg%q(:)
-      integer,                      intent(in) :: def  !< index of defect in cg%q(:)
+      integer,                        intent(in) :: src  !< index of source in cg%q(:)
+      integer,                        intent(in) :: soln !< index of solution in cg%q(:)
+      integer,                        intent(in) :: def  !< index of defect in cg%q(:)
 
       select case (ord_laplacian)
       case (O_I2)
@@ -1169,14 +1169,14 @@ contains
       implicit none
 
       type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,                      intent(in) :: src  !< index of source in cg%q(:)
-      integer,                      intent(in) :: soln !< index of solution in cg%q(:)
-      integer,                      intent(in) :: def  !< index of defect in cg%q(:)
+      integer,                        intent(in) :: src  !< index of source in cg%q(:)
+      integer,                        intent(in) :: soln !< index of solution in cg%q(:)
+      integer,                        intent(in) :: def  !< index of defect in cg%q(:)
 
       real    :: L0, Lx, Ly, Lz, Lx1
       integer :: i, j, k
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
       ! corners are required for non-cartesian decompositions because current implementation of arr3d_boundaries may use overlapping buffers at triple points
@@ -1409,11 +1409,11 @@ contains
 
    subroutine approximate_solution_rbgs(curl, src, soln)
 
+      use cg_list,       only: cg_list_element, dirty_label
       use cg_list_level, only: cg_list_level_T, coarsest
       use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
       use dataio_pub,    only: die
       use domain,        only: dom
-      use cg_list,       only: cg_list_element, dirty_label
       use global,        only: dirty_debug
       use grid_cont,     only: grid_container
       use multigridvars, only: correction, multidim_code_3D, nsmool
@@ -1421,8 +1421,8 @@ contains
       implicit none
 
       type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,                      intent(in) :: src  !< index of source in cg%q(:)
-      integer,                      intent(in) :: soln !< index of solution in cg%q(:)
+      integer,                        intent(in) :: src  !< index of source in cg%q(:)
+      integer,                        intent(in) :: soln !< index of solution in cg%q(:)
 
       integer, parameter :: RED_BLACK = 2 !< the checkerboard requires two sweeps
 
@@ -1430,7 +1430,7 @@ contains
       integer :: nsmoo
       real    :: crx, crx1, cry, crz, cr
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       if (associated(curl, coarsest)) then
          nsmoo = nsmoob
