@@ -27,6 +27,9 @@
 !
 #include "piernik.h"
 
+!>
+!! \brief Module of boundary conditions for fluids
+!<
 module fluidboundaries
 ! pulled by ANY
 
@@ -94,10 +97,10 @@ contains
 
    subroutine bnd_u(dir, cg)
 
+      use cart_comm,             only: cdd
       use constants,             only: FLUID, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
            &                           BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_COR, BND_SHE, BND_USER, INT4
       use dataio_pub,            only: msg, warn, die
-      use cart_comm,             only: cdd
       use domain,                only: dom, is_multicg
       use fluidboundaries_funcs, only: user_fluidbnd
       use fluidindex,            only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
@@ -340,13 +343,13 @@ contains
 
    subroutine all_fluid_boundaries
 
-      use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
-      use cg_list_global, only: all_cg
-      use constants,      only: xdim, zdim
-      use cart_comm,      only: cdd
-      use domain,         only: dom
-      use mpi,            only: MPI_COMM_NULL
+      use cart_comm,        only: cdd
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use cg_list_global,   only: all_cg
+      use constants,        only: xdim, zdim
+      use domain,           only: dom
+      use mpi,              only: MPI_COMM_NULL
       use named_array_list, only: wna
 
       implicit none

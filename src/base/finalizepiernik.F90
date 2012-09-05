@@ -27,6 +27,9 @@
 !
 #include "piernik.h"
 
+!>
+!! \brief Module for a general cleaning up routine after successful run
+!<
 module finalizepiernik
 
    implicit none
@@ -39,18 +42,18 @@ contains
 !<
    subroutine cleanup_piernik
 
-      use user_hooks,    only: cleanup_problem
       use dataio,        only: cleanup_dataio
       use decomposition, only: cleanup_decomposition
       use diagnostics,   only: cleanup_diagnostics
       use domain,        only: cleanup_domain
+      use fluidindex,    only: cleanup_fluidindex
       use global,        only: cleanup_global
       use grid,          only: cleanup_grid
       use initfluids,    only: cleanup_fluids
       use interactions,  only: cleanup_interactions
-      use fluidindex,    only: cleanup_fluidindex
       use mpisetup,      only: cleanup_mpi
       use timer,         only: cleanup_timers
+      use user_hooks,    only: cleanup_problem
 #ifdef RESISTIVE
       use resistivity,   only: cleanup_resistivity
 #endif /* RESISTIVE */

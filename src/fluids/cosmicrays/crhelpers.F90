@@ -27,6 +27,9 @@
 !
 #include "piernik.h"
 
+!>
+!! \brief Module containing routines for divergence computing which are used (so far only) in cosmic rays integration schemes
+!<
 module crhelpers
 ! pulled by COSM_RAYS
    use constants, only: dsetnamelen
@@ -42,7 +45,7 @@ module crhelpers
 
    interface
       subroutine div_v_func(ifluid, cg)
-         use grid_cont,   only: grid_container
+         use grid_cont, only: grid_container
          implicit none
          integer(kind=4),               intent(in)    :: ifluid
          type(grid_container), pointer, intent(inout) :: cg
@@ -104,8 +107,8 @@ contains
 
    subroutine set_div_v1d(p, dir, i1, i2, cg)
 
-      use dataio_pub,  only: die
-      use grid_cont,   only: grid_container
+      use dataio_pub,       only: die
+      use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
       implicit none
@@ -134,10 +137,10 @@ contains
 !<
    subroutine div_v_6th_lp(ifluid, cg)
 
-      use constants,      only: xdim, ydim, zdim, pdims, big
-      use domain,         only: dom
-      use fluidindex,     only: iarr_all_dn
-      use grid_cont,      only: grid_container
+      use constants,        only: xdim, ydim, zdim, pdims, big
+      use domain,           only: dom
+      use fluidindex,       only: iarr_all_dn
+      use grid_cont,        only: grid_container
       use named_array_list, only: qna, wna
 
       implicit none
@@ -182,10 +185,10 @@ contains
 
    subroutine div_v_1st(ifluid, cg)
 
-      use constants,      only: xdim, ydim, zdim, pdims, half
-      use domain,         only: dom
-      use fluidindex,     only: iarr_all_dn
-      use grid_cont,      only: grid_container
+      use constants,        only: xdim, ydim, zdim, pdims, half
+      use domain,           only: dom
+      use fluidindex,       only: iarr_all_dn
+      use grid_cont,        only: grid_container
       use named_array_list, only: qna, wna
 
       implicit none

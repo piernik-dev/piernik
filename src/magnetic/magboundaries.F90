@@ -27,6 +27,9 @@
 !
 #include "piernik.h"
 
+!>
+!! \brief Module of boundary conditions for magnetic fields, magnetic vector potential and electromotive forces
+!<
 module magboundaries
 ! pulled by MAGNETIC
    implicit none
@@ -38,19 +41,19 @@ contains
 
    subroutine bnd_a(A)
 
+      use cart_comm,     only: cdd
+      use cg_list_bnd,   only: leaves
       use constants,     only: MAG, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, I_FIVE, I_TEN
       use dataio_pub,    only: die
-      use cart_comm,     only: cdd
       use domain,        only: is_mpi_noncart, is_multicg, dom
-      use cg_list_bnd,   only: leaves
       use grid_cont,     only: grid_container
       use mpi,           only: MPI_COMM_NULL
       use mpisetup,      only: mpi_err, req, status, have_mpi
 
       implicit none
 
-      real, dimension(:,:,:,:) :: A  !< vector potential of magnetic field
-      integer(kind=4)          :: i, itag, jtag
+      real, dimension(:,:,:,:)      :: A  !< vector potential of magnetic field
+      integer(kind=4)               :: i, itag, jtag
       type(grid_container), pointer :: cg
 
       cg => leaves%first%cg
@@ -77,10 +80,10 @@ contains
 
    subroutine bnd_b(dir, cg)
 
+      use cart_comm,     only: cdd
       use constants,     only: MAG, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
            &                   BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
       use dataio_pub,    only: msg, warn, die
-      use cart_comm,     only: cdd
       use domain,        only: is_mpi_noncart, is_multicg, dom
       use grid_cont,     only: grid_container
       use mpi,           only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
@@ -463,13 +466,13 @@ contains
 
    subroutine all_mag_boundaries
 
-      use cg_list_global, only: all_cg
-      use constants,      only: xdim, zdim
-      use cart_comm,      only: cdd
-      use domain,         only: dom
-      use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
-      use mpi,            only: MPI_COMM_NULL
+      use cart_comm,        only: cdd
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use cg_list_global,   only: all_cg
+      use constants,        only: xdim, zdim
+      use domain,           only: dom
+      use mpi,              only: MPI_COMM_NULL
       use named_array_list, only: wna
 
       implicit none
