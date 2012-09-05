@@ -188,7 +188,7 @@ contains
       use_point_monopole     = .false.
       trust_fft_solution     = .true.
       base_no_fft            = is_multicg
-      prefer_rbgs_relaxation = .true. !> \warning it seems that FFT local solver is broken somewhere. ToDo: restore .false. as a default
+      prefer_rbgs_relaxation = .true. !> \warning it seems that FFT local solver is broken somewhere. \todo restore .false. as a default
       fft_full_relax         = .false.
       fft_patient            = .false.
       interp_pt2mom          = .false.
@@ -879,11 +879,11 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_list_level, only: cg_list_level_T   ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
+      use cg_list_bnd,   only: leaves
       use cg_list_level, only: finest
       use constants,     only: BND_XTRAP, BND_REF
       use domain,        only: dom
       use global,        only: t
-      use cg_list_bnd,   only: leaves
       use multigridvars, only: solution, grav_bnd, bnd_isolated, bnd_givenval
 
       implicit none
@@ -919,8 +919,8 @@ contains
 
    subroutine multigrid_solve_grav(i_all_dens)
 
-      use constants,     only: sgp_n
       use cg_list_bnd,   only: leaves
+      use constants,     only: sgp_n
       use multigridvars, only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
       use multipole,     only: multipole_solver
       use named_array_list, only: qna
@@ -979,12 +979,12 @@ contains
 
    subroutine vcycle_hg(history)
 
+      use cg_list_bnd,    only: leaves
       use cg_list_global, only: all_cg
       use cg_list_level,  only: cg_list_level_T, finest, coarsest
       use constants,      only: cbuff_len, fft_none
       use dataio_pub,     only: msg, die, warn, printinfo
       use global,         only: do_ascii_dump
-      use cg_list_bnd,    only: leaves
       use mpisetup,       only: master, nproc
       use multigridvars,  only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
       use timer,          only: set_timer
@@ -1133,8 +1133,8 @@ contains
    subroutine residual(curl, src, soln, def)
 
       use cg_list_level, only: cg_list_level_T
-      use constants,   only: O_I2, O_I4
-      use dataio_pub,  only: die
+      use constants,     only: O_I2, O_I4
+      use dataio_pub,    only: die
 
       implicit none
 
@@ -1158,11 +1158,11 @@ contains
 
    subroutine residual2(curl, src, soln, def)
 
+      use cg_list,       only: cg_list_element
       use cg_list_level, only: cg_list_level_T
-      use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, zero, half, I_ONE, BND_NEGREF
+      use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, half, I_ONE, BND_NEGREF
       use dataio_pub,    only: die
       use domain,        only: dom
-      use cg_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use multigridvars, only: multidim_code_3D
 
@@ -1173,10 +1173,11 @@ contains
       integer,                        intent(in) :: soln !< index of solution in cg%q(:)
       integer,                        intent(in) :: def  !< index of defect in cg%q(:)
 
-      real    :: L0, Lx, Ly, Lz, Lx1
-      integer :: i, j, k
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
+      integer                         :: i, j, k
+      real                            :: L0, Lx, Ly, Lz
+      real, dimension(:), allocatable :: Lx1, Ly_a, L0_a
+      type(cg_list_element), pointer  :: cgl
+      type(grid_container),  pointer  :: cg
 
       call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
       ! corners are required for non-cartesian decompositions because current implementation of arr3d_boundaries may use overlapping buffers at triple points
@@ -1232,30 +1233,28 @@ contains
                   enddo
                endif
             case (GEO_RPZ)
-               Lx = cg%idx2
-               Lz = cg%idz2
+!               Lx = cg%idx2 ! already set
+!               Lz = cg%idz2 ! already set
+               !> \todo convert Lx1, Ly_a and L0_a into precomputed arrays
+               allocate(Lx1(size(cg%inv_x)), Ly_a(size(cg%inv_x)), L0_a(size(cg%inv_x)))
+               Ly_a(cg%is:cg%ie) = cg%idy2 * cg%inv_x(cg%is:cg%ie)**2 ! cylindrical factor
+               Lx1 (cg%is:cg%ie) = half * (cg%idx * cg%inv_x(cg%is:cg%ie))
+               L0_a(cg%is:cg%ie) = -2. * (Lx + Ly_a(cg%is:cg%ie) + Lz)
                do k = cg%ks, cg%ke
                   do j = cg%js, cg%je
                      do i = cg%is, cg%ie
-                        if (cg%x(i) /= zero) then !> \todo convert Ly, Lx1 and L0 into precomputed arrays
-                           Ly = cg%idy2 / cg%x(i)**2 ! cylindrical factor
-                           Lx1 = half / (cg%dx * cg%x(i))
-                        else
-                           Ly = zero
-                           Lx1 = zero
-                        endif
-                        L0 = -2. * (Lx + Ly + Lz)
-                        cg%q(def)%arr(i, j, k) = cg%q(src)%arr (i,   j,   k)   - cg%q(soln)%arr(i,   j,   k)    * L0
+                        cg%q(def)%arr(i, j, k) = cg%q(src)%arr (i,   j,   k)   - cg%q(soln)%arr(i,   j,   k)    * L0_a(i)
                         if (dom%has_dir(xdim))   cg%q(def)%arr (i,   j,   k)   = cg%q(def) %arr(i,   j,   k)         - &
                              &                  (cg%q(soln)%arr(i+1, j,   k)   + cg%q(soln)%arr(i-1, j,   k))   * Lx - &
-                             &                  (cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * Lx1    ! cylindrical term
+                             &                  (cg%q(soln)%arr(i+1, j,   k)   - cg%q(soln)%arr(i-1, j,   k))   * Lx1(i)    ! cylindrical term
                         if (dom%has_dir(ydim))   cg%q(def)%arr (i,   j,   k)   = cg%q(def) %arr(i,   j,   k)         - &
-                             &                  (cg%q(soln)%arr(i,   j+1, k)   + cg%q(soln)%arr(i,   j-1, k))   * Ly
+                             &                  (cg%q(soln)%arr(i,   j+1, k)   + cg%q(soln)%arr(i,   j-1, k))   * Ly_a(i)
                         if (dom%has_dir(zdim))   cg%q(def)%arr (i,   j,   k)   = cg%q(def) %arr(i,   j,   k)         - &
                              &                  (cg%q(soln)%arr(i,   j,   k+1) + cg%q(soln)%arr(i,   j,   k-1)) * Lz
                      enddo
                   enddo
                enddo
+               deallocate(Lx1, Ly_a, L0_a)
             case default
                call die("[multigrid_gravity:residual2] Unsupported geometry.")
          end select
@@ -1278,11 +1277,11 @@ contains
 
    subroutine residual4(curl, src, soln, def)
 
+      use cg_list,       only: cg_list_element
       use cg_list_level, only: cg_list_level_T
       use constants,     only: I_TWO, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom
-      use cg_list,       only: cg_list_element
       use grid_cont,     only: grid_container
       use mpisetup,      only: master
       use multigridvars, only: grav_bnd, bnd_givenval
@@ -1291,9 +1290,9 @@ contains
       implicit none
 
       type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,                      intent(in) :: src  !< index of source in cg%q(:)
-      integer,                      intent(in) :: soln !< index of solution in cg%q(:)
-      integer,                      intent(in) :: def  !< index of defect in cg%q(:)
+      integer,                        intent(in) :: src  !< index of source in cg%q(:)
+      integer,                        intent(in) :: soln !< index of solution in cg%q(:)
+      integer,                        intent(in) :: def  !< index of defect in cg%q(:)
 
       real, parameter     :: L4_scaling = 1./12. ! with L4_strength = 1. this gives an L4 approximation for finite differences approach
       integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
