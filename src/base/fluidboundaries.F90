@@ -153,7 +153,7 @@ contains
                call MPI_Irecv(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, LO, BND, dom%nb), cdd%procn(dir,LO), jtag, cdd%comm3d, req(3), mpi_err)
                call MPI_Irecv(cg%u(1,1,1,1), I_ONE, cg%mbc(FLUID, dir, HI, BND, dom%nb), cdd%procn(dir,HI), itag, cdd%comm3d, req(4), mpi_err)
 
-               call MPI_Waitall(I_FOUR, req(:),status(:,:),mpi_err)
+               call MPI_Waitall(I_FOUR, req, status, mpi_err)
             endif
 
 ! MPI + non-MPI corner-periodic boundary condition
@@ -185,7 +185,7 @@ contains
                call MPI_Isend(send_left, flind%all*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag7, comm, req(1), mpi_err)
                call MPI_Irecv(recv_left, flind%all*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procxyl, tag8, comm, req(2), mpi_err)
 
-               call MPI_Waitall(I_TWO,req(:),status(:,:),mpi_err)
+               call MPI_Waitall(I_TWO,req, status, mpi_err)
 
                do i=1, dom%nb
                   do j=1, cg%n_(ydim)
@@ -249,7 +249,7 @@ contains
                call MPI_Isend(send_left, flind%all*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag8, comm, req(1), mpi_err)
                call MPI_Irecv(recv_left, flind%all*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag7, comm, req(2), mpi_err)
 
-               call MPI_Waitall(I_TWO, req(:),status(:,:),mpi_err)
+               call MPI_Waitall(I_TWO, req, status, mpi_err)
 
                do j=1, dom%nb
                   do i=1, cg%n_(xdim)

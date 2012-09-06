@@ -653,7 +653,7 @@ contains
                   do k = -1, 1
                      if ((dom%has_dir(zdim) .or. periods(zdim)>0) .or. k==0) then
                         oth(:,:) = other(:,:) + reshape([i*periods(xdim), j*periods(ydim), k*periods(zdim), i*periods(xdim), j*periods(ydim), k*periods(zdim)], [ndims, HI])
-                        share = share .or. is_overlap_simple(this, oth)
+                        share = is_overlap_simple(this, oth) .or. share
                      endif
                   enddo
                endif

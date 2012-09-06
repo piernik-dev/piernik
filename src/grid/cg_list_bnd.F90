@@ -126,8 +126,8 @@ contains
       use domain,        only: dom
       use cg_list,       only: cg_list_element
       use grid_cont,     only: grid_container, segment
-      use mpi,           only: MPI_COMM_NULL, MPI_DOUBLE_PRECISION
-      use mpisetup,      only: comm, mpi_err, req, status, inflate_req
+      use mpi,           only: MPI_COMM_NULL, MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
+      use mpisetup,      only: comm, mpi_err, req, inflate_req
       use named_array_list, only: wna
 
       implicit none
@@ -147,6 +147,7 @@ contains
       real, dimension(:,:,:,:), pointer     :: pa4d
       logical :: active
       type(segment), pointer :: i_seg, o_seg !< shortcuts
+      integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
 
       if (cdd%comm3d /= MPI_COMM_NULL) then
          call warn("[cg_list_bnd:internal_boundaries] comm3d is implemented somewhere else.")
@@ -275,7 +276,9 @@ contains
          cgl => cgl%nxt
       enddo
 
-      call MPI_Waitall(nr, req(:nr), status(:,:nr), mpi_err)
+      allocate(mpistatus(MPI_STATUS_SIZE, nr))
+      call MPI_Waitall(nr, req(:nr), mpistatus, mpi_err)
+      deallocate(mpistatus)
 
       ! Move the received data from buffers to the right place. Deallocate buffers
       cgl => this%first
@@ -488,7 +491,7 @@ contains
                enddo
             endif
             !> \warning outside xdim-zdim loop MPI_Waitall may change the operations order and as a result may leave mpi-corners uninitialized
-            if (cdd%comm3d /= MPI_COMM_NULL) call MPI_Waitall(size(req(:)), req(:), status(:,:), mpi_err)
+            if (cdd%comm3d /= MPI_COMM_NULL) call MPI_Waitall(size(req), req, status, mpi_err)
          enddo
 
          cgl => cgl%nxt

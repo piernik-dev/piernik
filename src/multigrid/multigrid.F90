@@ -41,12 +41,6 @@
 module multigrid
 ! pulled by MULTIGRID
 
-#if defined(__INTEL_COMPILER)
-   !! \deprecated remove this clause as soon as Intel Compiler gets required
-   !! features and/or bug fixes
-   use cg_list  ! QA_WARN required for ifort-12.1.x
-#endif /* __INTEL_COMPILER */
-
    implicit none
 
    private

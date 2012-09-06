@@ -44,11 +44,6 @@ module multigrid_gravity
 
    use constants,        only: cbuff_len, ndims
    use multigrid_vstats, only: vcycle_stats
-#if defined(__INTEL_COMPILER)
-   !! \deprecated remove this clause as soon as Intel Compiler gets required
-   !! features and/or bug fixes
-   use named_array ! QA_WARN required for ifort-12.1.x
-#endif /* __INTEL_COMPILER */
 
    implicit none
 
@@ -687,9 +682,6 @@ contains
 
    subroutine init_solution(history)
 
-#if defined(__INTEL_COMPILER)
-      use cg_list_level,  only: cg_list_level_T  ! QA_WARN workaround for stupid INTEL compiler
-#endif /* __INTEL_COMPILER */
       use cg_list,        only: ind_val
       use cg_list_bnd,    only: leaves
       use cg_list_level,  only: finest
@@ -781,9 +773,6 @@ contains
    subroutine init_source(i_all_dens)
 
       use cg_list_global, only: all_cg
-#if defined(__INTEL_COMPILER)
-      use cg_list_level,  only: cg_list_level_T    ! QA_WARN workaround for stupid INTEL compiler
-#endif /* __INTEL_COMPILER */
       use cg_list_level,  only: finest
       use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,     only: die
@@ -876,9 +865,6 @@ contains
 
    subroutine store_solution(history)
 
-#if defined(__INTEL_COMPILER)
-      use cg_list_level, only: cg_list_level_T   ! QA_WARN workaround for stupid INTEL compiler
-#endif /* __INTEL_COMPILER */
       use cg_list_bnd,   only: leaves
       use cg_list_level, only: finest
       use constants,     only: BND_XTRAP, BND_REF
