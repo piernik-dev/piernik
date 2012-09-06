@@ -41,13 +41,13 @@ module fluidupdate   ! SPLIT MUSCL HANCOCK
 contains
    subroutine fluid_update
 
+      use cg_list,     only: cg_list_element
+      use cg_list_bnd, only: leaves
+      use constants,   only: xdim, zdim
       use dataio_pub,  only: halfstep
+      use domain,      only: dom
       use global,      only: dt, dtm, t
       use user_hooks,  only: problem_customize_solution
-      use cg_list_bnd, only: leaves
-      use cg_list,     only: cg_list_element
-      use constants,   only: xdim, zdim
-      use domain,      only: dom
 
       implicit none
 
@@ -92,10 +92,11 @@ contains
 !---------------------------------------------------------------------------
    subroutine sweep(cg,dt,ddim)
 
-      use constants,       only: pdims, xdim, zdim, cs_i2_n
-      use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: iarr_all_swp
-      use grid_cont,       only: grid_container
+      use constants,        only: pdims, xdim, zdim, cs_i2_n
+      use fluidboundaries,  only: all_fluid_boundaries
+      use fluidindex,       only: iarr_all_swp
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna, wna
 
       implicit none
 
@@ -181,19 +182,19 @@ contains
 !---------------------------------------------------------------------------
    subroutine sweep1d_mh(u,b,cs2,dtodx)
       use constants,    only: half
-      use fluidtypes,   only: component_fluid
       use fluidindex,   only: flind
+      use fluidtypes,   only: component_fluid
       implicit none
-      real, intent(in)                           :: dtodx
-      real, dimension(:), intent(in), pointer    :: cs2
+      real,                 intent(in)           :: dtodx
+      real, dimension(:),   intent(in), pointer  :: cs2
       real, dimension(:,:), intent(in)           :: b
       real, dimension(:,:), intent(inout)        :: u
 
-      class(component_fluid), pointer             :: fl
+      class(component_fluid), pointer            :: fl
 
       real, dimension(size(u,1),size(u,2)), target :: flux, ql, qr, qgdn
       real, dimension(size(u,1),size(u,2)), target :: du, ul, ur, u_l, u_r
-      real, dimension(:,:), pointer :: p_ql, p_qr, p_q, p_flux
+      real, dimension(:,:), pointer                :: p_ql, p_qr, p_q, p_flux
       integer :: nx, p
 
       nx = size(u,2)
@@ -227,8 +228,8 @@ contains
    function utoq(u,b) result(q)
 
       use constants,  only: half, two
-      use fluidtypes, only: component_fluid
       use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
       use func,       only: ekin
 
       implicit none
@@ -314,11 +315,11 @@ contains
 
       real, parameter    :: smallc = 1.e-8
 
-      integer, intent(in) :: n
-      real, intent(in)    :: gamma
-      real, dimension(:,:), intent(in), pointer     :: qleft,qright
-      real, dimension(:,:), intent(inout), pointer  :: qgdnv,fgdnv
-      real, dimension(:), intent(in)                :: cs2
+      integer,              intent(in)             :: n
+      real,                 intent(in)             :: gamma
+      real, dimension(:,:), intent(in),    pointer :: qleft,qright
+      real, dimension(:,:), intent(inout), pointer :: qgdnv,fgdnv
+      real, dimension(:),   intent(in)             :: cs2
 
       real, dimension(n) :: SL,SR
       real, dimension(n) :: rl,Pl,ul,etotl,ptotl
