@@ -95,9 +95,6 @@ contains
 
       use dataio_pub, only: halfstep
       use global,     only: dt, dtm, t
-#ifdef SN_SRC
-      use snsources,  only: random_sn
-#endif /* SN_SRC */
 
       implicit none
 
@@ -107,11 +104,7 @@ contains
       t=t+dt
       call make_3sweeps(.true.) ! X -> Y -> Z
 
-! Sources ----------------------------------------
-
-#ifdef SN_SRC
-      call random_sn !> \todo hook this to problem_customize_solution
-#endif /* SN_SRC */
+! Sources should be hooked to problem_customize_solution with forward argument
 
       halfstep = .true.
       t=t+dt

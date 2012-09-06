@@ -51,11 +51,13 @@ contains
 
    subroutine problem_pointers
 
-      use gravity, only: grav_accel
+      use gravity,    only: grav_accel
+      use user_hooks, only: problem_customize_solution
 
       implicit none
 
-      grav_accel => galactic_grav_accel
+      grav_accel                 => galactic_grav_accel
+      problem_customize_solution => supernovae_wrapper
 
    end subroutine problem_pointers
 
@@ -238,6 +240,18 @@ contains
       enddo
 
    end subroutine init_prob
+
+   subroutine supernovae_wrapper(forward)
+
+      use snsources, only: random_sn
+
+      implicit none
+
+      logical, intent(in) :: forward
+
+      if (forward) call random_sn
+
+   end subroutine supernovae_wrapper
 
    subroutine my_grav_pot_3d
 

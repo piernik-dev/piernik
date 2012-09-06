@@ -50,7 +50,7 @@
 !!
 !! \b \#define \b "CORIOLIS" - switch on Coriolis force (RTVD only)
 !!
-!! \b \#define \b "SN_SRC" - switch on supernovae insert (RTVD only; hooking to problem_customize_solution is strongly recommended)
+!! \b \#define \b "SN_SRC" - switch on supernovae insert (random_sn routine hooked to problem_customize_solution is required; otherwise only supernovae initialization is called)
 !! @n @n
 !!
 !! \b NUMERICAL \b SCHEMES \b AND \b SOLUTIONS:

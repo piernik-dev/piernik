@@ -51,7 +51,11 @@ contains
 
    subroutine problem_pointers
 
+      use user_hooks, only: problem_customize_solution
+
       implicit none
+
+      problem_customize_solution => supernovae_wrapper
 
    end subroutine problem_pointers
 
@@ -145,7 +149,6 @@ contains
 
       csim2 = fl%cs2*(1.0+alpha)
 
-
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
@@ -202,5 +205,17 @@ contains
       enddo
 
    end subroutine init_prob
+
+   subroutine supernovae_wrapper(forward)
+
+      use snsources, only: random_sn
+
+      implicit none
+
+      logical, intent(in) :: forward
+
+      if (forward) call random_sn
+
+   end subroutine supernovae_wrapper
 
 end module initproblem
