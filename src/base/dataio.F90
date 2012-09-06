@@ -918,3 +918,530 @@ contains
          call cmnlog_s(fmt_loc, 'max(temp)   ', fluid, pr%temp_max)
       endif
       if (pres_tn) then
+         call cmnlog_s(fmt_loc, 'min(pres)   ', fluid, pr%pres_min)
+         call cmnlog_s(fmt_loc, 'max(pres)   ', fluid, pr%pres_max)
+      endif
+
+      call cmnlog_l(fmt_dtloc, 'max(|vx|)   ', fluid, pr%velx_max)
+      call cmnlog_l(fmt_dtloc, 'max(|vy|)   ', fluid, pr%vely_max)
+      call cmnlog_l(fmt_dtloc, 'max(|vz|)   ', fluid, pr%velz_max)
+      if (cs_tn) call cmnlog_l(fmt_dtloc, 'max(c_s)    ', fluid, pr%cs_max)
+
+      if (is_multicg) then
+         call cmnlog_l(fmt_vloc, 'min(dt_vx)   ', fluid, pr%dtvx_min)
+         call cmnlog_l(fmt_vloc, 'min(dt_vy)   ', fluid, pr%dtvy_min)
+         call cmnlog_l(fmt_vloc, 'min(dt_vz)   ', fluid, pr%dtvz_min)
+         if (cs_tn) call cmnlog_l(fmt_vloc, 'min(dt_cs)   ', fluid, pr%dtcs_min)
+      endif
+
+   end subroutine common_shout
+
+!>
+!!  Common log print (short - without assoc value)
+!<
+   subroutine cmnlog_s(fmt_, title, id, ess)
+      use dataio_pub, only: msg, printinfo
+      use domain,     only: dom
+      use types,      only: value
+      implicit none
+      character(len=*), intent(in) :: fmt_, title, id
+      type(value),      intent(in) :: ess
+
+      write(msg, fmt_)  title, id, ess%val, ess%proc, pack(ess%loc,dom%has_dir), pack(ess%coords,dom%has_dir)
+      call printinfo(msg, .false.)
+
+   end subroutine cmnlog_s
+
+!>
+!!  Common log print (long - including assoc value)
+!<
+   subroutine cmnlog_l(fmt_, title, id, ess)
+      use dataio_pub, only: msg, printinfo
+      use domain,     only: dom
+      use types,      only: value
+      implicit none
+      character(len=*), intent(in) :: fmt_, title, id
+      type(value),      intent(in) :: ess
+
+      write(msg, fmt_) title, id, ess%val, ess%assoc, ess%proc, pack(ess%loc,dom%has_dir), pack(ess%coords,dom%has_dir)
+      call printinfo(msg, .false.)
+
+   end subroutine cmnlog_l
+
+   subroutine get_common_vars(fl)
+
+      use types,          only: value                          !QA_WARN: used by get_extremum (intel compiler)
+      use constants,      only: MINL, MAXL, small, xdim, ydim, zdim
+      use domain,         only: is_multicg
+      use fluidtypes,     only: phys_prop, component_fluid
+      use func,           only: ekin
+      use cg_list,        only: cg_list_element
+      use global,         only: cfl
+      use cg_leaves,      only: leaves
+      use mpisetup,       only: master
+      use named_array_list, only: qna
+      use units,          only: mH, kboltz
+#ifndef ISO
+      use constants,      only: ION, DST, half
+      use global,         only: smallp
+#endif /* !ISO */
+
+      implicit none
+
+      class(component_fluid), intent(inout), target :: fl
+
+      type(phys_prop),       pointer :: pr
+      type(cg_list_element), pointer :: cgl
+#ifndef ISO
+      real :: dxmn_safe
+#endif /* !ISO */
+
+      pr => fl%snap
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%wa = cgl%cg%u(fl%idn,:,:,:)
+         cgl => cgl%nxt
+      enddo
+      call leaves%get_extremum(qna%wai, MAXL, pr%dens_max)
+      call leaves%get_extremum(qna%wai, MINL, pr%dens_min)
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%wa = abs(cgl%cg%u(fl%imx,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
+         cgl => cgl%nxt
+      enddo
+      call leaves%get_extremum(qna%wai, MAXL, pr%velx_max, xdim)
+      if (master) pr%velx_max%assoc = cfl * pr%velx_max%assoc / (pr%velx_max%val + small)
+
+      if (is_multicg) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            cgl%cg%wa = cfl * cgl%cg%dx / (cgl%cg%wa +small)
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MINL, pr%dtvx_min, xdim)
+         if (master) pr%dtvx_min%assoc = cfl * pr%dtvx_min%assoc / (pr%dtvx_min%val + small)
+      endif
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%wa = abs(cgl%cg%u(fl%imy,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
+         cgl => cgl%nxt
+      enddo
+      call leaves%get_extremum(qna%wai, MAXL, pr%vely_max, ydim)
+      if (master) pr%vely_max%assoc = cfl * pr%vely_max%assoc / (pr%vely_max%val + small)
+
+      if (is_multicg) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            cgl%cg%wa = cfl * cgl%cg%dy / (cgl%cg%wa +small)
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MINL, pr%dtvy_min, ydim)
+         if (master) pr%dtvy_min%assoc = cfl * pr%dtvy_min%assoc / (pr%dtvy_min%val + small)
+      endif
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%wa = abs(cgl%cg%u(fl%imz,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
+         cgl => cgl%nxt
+      enddo
+      call leaves%get_extremum(qna%wai, MAXL, pr%velz_max, zdim)
+      if (master) pr%velz_max%assoc = cfl * pr%velz_max%assoc / (pr%velz_max%val + small)
+
+      if (is_multicg) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            cgl%cg%wa = cfl * cgl%cg%dz / (cgl%cg%wa +small)
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MINL, pr%dtvz_min, zdim)
+         if (master) pr%dtvz_min%assoc = cfl * pr%dtvz_min%assoc / (pr%dtvz_min%val + small)
+      endif
+
+#ifdef ISO
+      pr%pres_min        = pr%dens_min
+      pr%pres_min%val    = fl%cs2*pr%dens_min%val
+      pr%pres_max        = pr%dens_max
+      pr%pres_max%val    = fl%cs2*pr%dens_max%val
+      pr%cs_max%val      = fl%cs
+      pr%cs_max%loc      = 0
+      pr%cs_max%coords   = 0.0
+      pr%cs_max%proc     = 0
+      pr%temp_min%val    = (mH * fl%cs2)/ (kboltz * fl%gam)
+      pr%temp_min%loc    = 0
+      pr%temp_min%coords = 0.0
+      pr%temp_min%proc   = 0
+      pr%temp_max        = pr%temp_min
+#else /* !ISO */
+      if (fl%tag /= DST) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            cgl%cg%wa(:,:,:) = cgl%cg%u(fl%ien,:,:,:) - ekin(cgl%cg%u(fl%imx,:,:,:), cgl%cg%u(fl%imy,:,:,:), cgl%cg%u(fl%imz,:,:,:), cgl%cg%u(fl%idn,:,:,:)) ! eint
+            if (fl%tag == ION) cgl%cg%wa(:,:,:) = cgl%cg%wa(:,:,:) - half*(sum(cgl%cg%b(:,:,:,:)**2,dim=1))
+            cgl%cg%wa(:,:,:) = max(fl%gam_1*cgl%cg%wa(:,:,:),smallp)  ! pres
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MAXL, pr%pres_max)
+         call leaves%get_extremum(qna%wai, MINL, pr%pres_min)
+
+         cgl => leaves%first
+         do while (associated(cgl))
+            cgl%cg%wa(:,:,:) = fl%gam*cgl%cg%wa(:,:,:)/cgl%cg%u(fl%idn,:,:,:) ! sound speed squared
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MAXL, pr%cs_max)
+         pr%cs_max%val = sqrt(pr%cs_max%val)
+
+         cgl => leaves%first
+         do while (associated(cgl))
+            if (cgl%cg%dxmn >= sqrt(huge(1.0))) then
+               dxmn_safe = sqrt(huge(1.0))
+            else
+               dxmn_safe = cgl%cg%dxmn
+            endif
+            cgl%cg%wa = (cfl * dxmn_safe)**2 / (cgl%cg%wa +small)
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MINL, pr%dtcs_min)
+         pr%dtcs_min%val = sqrt(pr%dtcs_min%val)
+
+         cgl => leaves%first
+         do while (associated(cgl))
+            cgl%cg%wa(:,:,:) = (mH * cgl%cg%wa(:,:,:))/ (kboltz * fl%gam) ! temperature
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MAXL, pr%temp_max)
+         call leaves%get_extremum(qna%wai, MINL, pr%temp_min)
+
+      endif
+#endif /* !ISO */
+
+   end subroutine get_common_vars
+!---------------------------------------------------------------------
+!>
+!! \brief writes timestep diagnostics to the logfile
+!!
+!! \deprecated Quite costly routine due to extensive array searches
+!<
+!---------------------------------------------------------------------
+!
+   subroutine  write_log(tsl)
+
+      use constants,          only: idlen, small, MAXL
+      use dataio_pub,         only: printinfo
+      use fluidindex,         only: flind
+      use fluids_pub,         only: has_dst, has_ion, has_neu
+      use func,               only: L2norm
+      use cg_list,            only: cg_list_element
+      use cg_leaves,          only: leaves
+      use interactions,       only: has_interactions, collfaq
+      use mpisetup,           only: master
+      use named_array_list,   only: qna
+      use types,              only: value
+#ifdef COSM_RAYS
+      use fluidindex,         only: iarr_all_crs
+      use timestepcosmicrays, only: dt_crs
+#endif /* COSM_RAYS */
+#if defined COSM_RAYS || defined MAGNETIC
+      use constants,          only: MINL
+#endif /* COSM_RAYS || MAGNETIC */
+#ifdef MAGNETIC
+      use dataio_pub,         only: msg
+      use func,               only: sq_sum3
+      use global,             only: cfl
+#endif /* MAGNETIC */
+#ifdef RESISTIVE
+      use resistivity,        only: etamax, cu2max, eta1_active
+#ifndef ISO
+      use resistivity,        only: deimin
+#endif /* !ISO */
+#endif /* RESISTIVE */
+#ifdef VARIABLE_GP
+      use constants,          only: gpot_n
+#endif /* VARIABLE_GP */
+#if defined VARIABLE_GP || defined MAGNETIC
+      use constants,          only: xdim, ydim, zdim, HI, idm, ndims
+      use domain,             only: dom
+#endif /* VARIABLE_GP || MAGNETIC */
+
+      implicit none
+
+      type(tsl_container), optional      :: tsl
+      real                               :: dxmn_safe
+      type(cg_list_element), pointer     :: cgl
+      type(value)                        :: drag
+#ifdef MAGNETIC
+      type(value)                        :: b_min, b_max, divb_max, vai_max, cfi_max
+#endif /* MAGNETIC */
+#ifdef COSM_RAYS
+      type(value)                        :: encr_min, encr_max
+#endif /* COSM_RAYS */
+#ifdef VARIABLE_GP
+      type(value)                        :: gpxmax, gpymax, gpzmax
+      integer                            :: var_i
+#endif /* VARIABLE_GP */
+#if defined VARIABLE_GP || defined MAGNETIC
+      integer(kind=4), dimension(ndims,ndims,HI) :: D
+      real, dimension(:,:,:), pointer    :: p
+#endif /* VARIABLE_GP || MAGNETIC */
+      character(len=idlen)               :: id
+
+      id = '' ! suppress compiler warnings if none of the modules requiring the id variable are switched on.
+      dxmn_safe = sqrt(huge(1.0))
+      cgl => leaves%first
+      do while (associated(cgl))
+         dxmn_safe = min(dxmn_safe, cgl%cg%dxmn)
+         cgl => cgl%nxt
+      enddo
+
+   ! Timestep diagnostics
+      if (has_neu) call get_common_vars(flind%neu)
+
+      if (has_ion) then
+         call get_common_vars(flind%ion)
+
+#ifdef MAGNETIC
+         cgl => leaves%first
+         do while (associated(cgl))
+            cgl%cg%wa(:,:,:) = sqrt(sq_sum3(cgl%cg%b(xdim,:,:,:), cgl%cg%b(ydim,:,:,:), cgl%cg%b(zdim,:,:,:)))
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MAXL, b_max)
+         call leaves%get_extremum(qna%wai, MINL, b_min)
+
+         cgl => leaves%first
+         do while (associated(cgl))
+            cgl%cg%wa(:,:,:)  = cgl%cg%wa(:,:,:) / sqrt(cgl%cg%u(flind%ion%idn,:,:,:))
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MAXL, vai_max)
+         vai_max%assoc = cfl*dxmn_safe/(vai_max%val+small)
+         cfi_max%val   = sqrt(flind%ion%snap%cs_max%val**2+vai_max%val**2)
+         cfi_max%assoc = cfl*dxmn_safe/sqrt(cfi_max%val**2+small)
+#endif /* MAGNETIC */
+
+      endif
+
+      if (has_dst) call get_common_vars(flind%dst)
+
+#if defined VARIABLE_GP || defined MAGNETIC
+      D = spread(reshape([dom%D_*idm(xdim,:),dom%D_*idm(ydim,:),dom%D_*idm(zdim,:)],[ndims,ndims]),ndims,HI)
+#endif /* VARIABLE_GP || MAGNETIC */
+#ifdef VARIABLE_GP
+      var_i = qna%ind(gpot_n)
+      cgl => leaves%first
+      do while (associated(cgl))
+         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
+         p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idx)
+         cgl => cgl%nxt ; NULLIFY(p)
+      enddo
+      call leaves%get_extremum(qna%wai, MAXL, gpxmax)
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
+         p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idy)
+         cgl => cgl%nxt ; NULLIFY(p)
+      enddo
+      call leaves%get_extremum(qna%wai, MAXL, gpymax)
+
+      cgl => leaves%first
+      do while (associated(cgl))
+         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
+         p = abs((cgl%cg%q(var_i)%span(cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%q(var_i)%span(cgl%cg%ijkse))*cgl%cg%idz)
+         cgl => cgl%nxt ; NULLIFY(p)
+      enddo
+      call leaves%get_extremum(qna%wai, MAXL, gpzmax)
+#endif /* VARIABLE_GP */
+
+#ifdef MAGNETIC
+      cgl => leaves%first
+      do while (associated(cgl))
+         p => cgl%cg%q(qna%wai)%span(cgl%cg%ijkse)
+         p =   (cgl%cg%b(xdim, cgl%cg%is+dom%D_x:cgl%cg%ie+dom%D_x, cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ) - &
+              & cgl%cg%b(xdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dy*cgl%cg%dz &
+              +(cgl%cg%b(ydim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js+dom%D_y:cgl%cg%je+dom%D_y, cgl%cg%ks        :cgl%cg%ke        ) - &
+              & cgl%cg%b(ydim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dx*cgl%cg%dz &
+              +(cgl%cg%b(zdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks+dom%D_z:cgl%cg%ke+dom%D_z) - &
+              & cgl%cg%b(zdim, cgl%cg%is        :cgl%cg%ie,         cgl%cg%js        :cgl%cg%je,         cgl%cg%ks        :cgl%cg%ke        ))*cgl%cg%dx*cgl%cg%dy
+!         p = (cgl%cg%w(wna%bi)%span(xdim,cgl%cg%ijkse+D(xdim,:,:)) - cgl%cg%w(all_cg%bi)%span(xdim,cgl%cg%ijkse))*cgl%cg%dy*cgl%cg%dz &
+!            +(cgl%cg%w(wna%bi)%span(ydim,cgl%cg%ijkse+D(ydim,:,:)) - cgl%cg%w(all_cg%bi)%span(ydim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dz &
+!            +(cgl%cg%w(wna%bi)%span(zdim,cgl%cg%ijkse+D(zdim,:,:)) - cgl%cg%w(all_cg%bi)%span(zdim,cgl%cg%ijkse))*cgl%cg%dx*cgl%cg%dy
+         cgl%cg%wa = abs(cgl%cg%wa)
+
+         cgl%cg%wa(cgl%cg%ie,:,:) = cgl%cg%wa(cgl%cg%ie-dom%D_x,:,:)
+         cgl%cg%wa(:,cgl%cg%je,:) = cgl%cg%wa(:,cgl%cg%je-dom%D_y,:)
+         cgl%cg%wa(:,:,cgl%cg%ke) = cgl%cg%wa(:,:,cgl%cg%ke-dom%D_z)
+
+         cgl => cgl%nxt ; NULLIFY(p)
+      enddo
+      call leaves%get_extremum(qna%wai, MAXL, divb_max)
+#endif /* MAGNETIC */
+
+#ifdef COSM_RAYS
+      cgl => leaves%first
+      do while (associated(cgl))
+         cgl%cg%wa        = sum(cgl%cg%u(iarr_all_crs,:,:,:),1)
+         cgl => cgl%nxt
+      enddo
+      call leaves%get_extremum(qna%wai, MAXL, encr_max)
+      call leaves%get_extremum(qna%wai, MINL, encr_min)
+      encr_max%assoc = dt_crs
+#endif /* COSM_RAYS */
+
+      if (has_interactions) then
+         cgl => leaves%first
+         do while (associated(cgl))
+            cgl%cg%wa = L2norm(cgl%cg%u(flind%dst%imx,:,:,:),cgl%cg%u(flind%dst%imy,:,:,:),cgl%cg%u(flind%dst%imz,:,:,:),cgl%cg%u(flind%neu%imx,:,:,:),cgl%cg%u(flind%neu%imy,:,:,:),cgl%cg%u(flind%neu%imz,:,:,:) ) * cgl%cg%u(flind%dst%idn,:,:,:)
+            cgl => cgl%nxt
+         enddo
+         call leaves%get_extremum(qna%wai, MAXL, drag)
+         drag%assoc = flind%neu%cs/(maxval(collfaq) * drag%val + small)
+      endif
+
+      if (master)  then
+         if (.not.present(tsl)) then
+            call printinfo('================================================================================================================', .false.)
+            if (has_ion) then
+               call common_shout(flind%ion%snap,'ION',.true.,.true.,.true.)
+#ifdef MAGNETIC
+               id = "ION"
+               write(msg, fmt_dtloc) 'max(c_f)    ', id, cfi_max%val, cfi_max%assoc ; call printinfo(msg, .false.)
+               call cmnlog_l(fmt_dtloc, 'max(v_a)    ', id, vai_max)
+               id = "MAG"
+               call cmnlog_s(fmt_loc, 'min(|b|)    ', id, b_min)
+               call cmnlog_s(fmt_loc, 'max(|b|)    ', id, b_max)
+               call cmnlog_s(fmt_loc, 'max(|divb|) ', id, divb_max)
+#else /* !MAGNETIC */
+!               if (csi_max%val > 0.) write(msg, fmtff8) 'max(c_s )   ION  =', sqrt(csi_max%val**2), 'dt=',cfl*dxmn_safe/sqrt(csi_max%val**2)
+!               call printinfo(msg, .false.)
+#endif /* !MAGNETIC */
+            endif
+            if (has_neu) call common_shout(flind%neu%snap,'NEU',.true.,.true.,.true.)
+            if (has_dst) call common_shout(flind%dst%snap,'DST',.false.,.false.,.false.)
+            if (has_interactions) call cmnlog_l(fmt_dtloc, 'max(drag)   ', "INT", drag)
+#ifdef COSM_RAYS
+            id = "CRS"
+            call cmnlog_s(fmt_loc,   'min(encr)   ', id, encr_min)
+            call cmnlog_l(fmt_dtloc, 'max(encr)   ', id, encr_max)
+#endif /* COSM_RAYS */
+#ifdef RESISTIVE
+            if (eta1_active) then
+               id = "RES"
+               call cmnlog_l(fmt_dtloc, 'max(eta)    ', id, etamax)
+               call cmnlog_l(fmt_dtloc, 'max(cu2)    ', id, cu2max)
+#ifndef ISO
+               call cmnlog_l(fmt_dtloc, 'min(dei)    ', id, deimin)
+#endif /* !ISO */
+            endif
+#endif /* RESISTIVE */
+#ifdef VARIABLE_GP
+            id = "GPT"
+            call cmnlog_s(fmt_loc, 'max(|gpx|)  ', id, gpxmax)
+            call cmnlog_s(fmt_loc, 'max(|gpy|)  ', id, gpymax)
+            call cmnlog_s(fmt_loc, 'max(|gpz|)  ', id, gpzmax)
+#endif /* VARIABLE_GP */
+            call printinfo('================================================================================================================', .false.)
+         else
+#ifdef MAGNETIC
+            tsl%b_min = b_min%val
+            tsl%b_max = b_max%val
+            tsl%divb_max = divb_max%val
+            tsl%vai_max  = vai_max%val
+#endif /* MAGNETIC */
+
+#ifdef COSM_RAYS
+            tsl%encr_min = encr_min%val
+            tsl%encr_max = encr_max%val
+#endif /* COSM_RAYS */
+
+#ifdef RESISTIVE
+            if (eta1_active) tsl%etamax = etamax%val
+#endif /* RESISTIVE */
+
+#ifdef VARIABLE_GP
+            tsl%gpxmax = gpxmax%val
+            tsl%gpymax = gpymax%val
+            tsl%gpzmax = gpzmax%val
+#endif /* VARIABLE_GP */
+         endif
+      endif
+
+   end subroutine write_log
+!------------------------------------------------------------------------
+   subroutine read_file_msg
+!-------------------------------------------------------------------------
+!     configurable parameters: problem.par
+!-------------------------------------------------------------------------
+!      user_message_file           ! 1st (user) message file (eg.'./msg')
+!      system_message_file         ! 2nd (ups)  message file (eg.'/etc/ups/user/msg')
+!-------------------------------------------------------------------------
+
+!> \todo process multiple commands at once
+      use constants,     only: cwdlen
+      use dataio_pub,    only: msg, printinfo, warn
+      use mpisetup,      only: master
+#if defined(__INTEL_COMPILER)
+      use ifport,        only: unlink, stat
+#endif /* __INTEL_COMPILER */
+
+      implicit none
+
+#if defined(__PGI)
+      include "lib3f.h"
+#endif /* __PGI */
+
+      integer, parameter                                   :: n_msg_origin = 2
+      integer                                              :: msg_lun
+      character(len=*), parameter, dimension(n_msg_origin) :: msg_origin = [ "user  ", "system" ]
+
+      character(len=cwdlen), dimension(n_msg_origin), save :: fname
+      integer                                              :: unlink_stat, io, sz, sts, i
+      integer, dimension(13)                               :: stat_buff
+      logical                                              :: msg_param_read = .false., ex
+      integer, dimension(n_msg_origin), save               :: last_msg_stamp
+
+      umsg=''
+      umsg_param = 0.0
+      sz = -1
+      fname = [ user_message_file, system_message_file ]
+
+      do i = 1, n_msg_origin
+         inquire(FILE=fname(i), EXIST=ex)
+         if (ex .and. sz<=0) then ! process only one message file at a time, user_message_file first
+            ! I think system file is more important, but current logic prevents reading user_message_file when system_message_file is present
+
+            sts = stat(fname(i), stat_buff)
+            if (last_msg_stamp(i) == stat_buff(10)) exit
+            last_msg_stamp(i) = stat_buff(10)
+
+            open(newunit=msg_lun, file=fname(i), status='old')
+            read(msg_lun, *, iostat=io) umsg, umsg_param
+            if (io/=0) then
+               rewind(msg_lun)
+               read(msg_lun, *, iostat=io) umsg
+               if (io/=0) then
+                  write(msg, '(5a)'   )"[dataio:read_file_msg] ",trim(msg_origin(i))," message: '",trim(umsg),"'"
+               else
+                  write(msg, '(3a)'   )"[dataio:read_file_msg] No value provided in ",trim(msg_origin(i))," message."
+                  call warn(msg)
+                  msg=''
+               endif
+            else
+               msg_param_read = .true.
+               write(msg, '(5a,g15.7)')"[dataio:read_file_msg] ",trim(msg_origin(i))," message: '",trim(umsg),"', with parameter = ", umsg_param
+            endif
+            close(msg_lun)
+
+            if (len_trim(msg) > 0 .and. master) call printinfo(msg)
+
+            sz = len_trim(msg)
+            if (fname(i) == user_message_file) unlink_stat = unlink(user_message_file)
+
+         endif
+      enddo
+
+   end subroutine read_file_msg
+!------------------------------------------------------------------------
+end module dataio
