@@ -211,11 +211,11 @@ contains
          case ("mgso")
             if (associated(cg%sgp))  tab(:,:,:) = real(cg%sgp(RNG),  kind=4)
          case ("level")
-            tab(:,:,:) = cg%level_id
+            tab(:,:,:) = real(cg%level_id, kind=4)
          case ("grid_id")
-            tab(:,:,:) = cg%grid_id
+            tab(:,:,:) = real(cg%grid_id, kind=4)
          case ("proc")
-            tab(:,:,:) = proc
+            tab(:,:,:) = real(proc, kind=4)
          case default
             ierrh = -1
       end select
