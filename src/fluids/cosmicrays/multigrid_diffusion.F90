@@ -352,7 +352,7 @@ contains
       use cg_list_level,  only: finest
       use dataio_pub,     only: die
       use cg_list,        only: ind_val, dirty_label
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use initcosmicrays, only: iarr_crs
       use multigridvars,  only: source, defect, correction
       use named_array_list, only: qna, wna
@@ -392,7 +392,7 @@ contains
       use cg_list_level,  only: cg_list_level_T  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
       use cg_list_level,  only: finest
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use initcosmicrays, only: iarr_crs
       use multigridvars,  only: solution
       use named_array_list, only: wna
@@ -420,7 +420,7 @@ contains
       use cg_list_level,  only: cg_list_level_T, coarsest, finest
       use constants,      only: I_ONE, xdim, zdim, HI, LO, BND_REF
       use domain,         only: dom
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element, dirty_label
       use grid_cont,      only: grid_container
       use named_array,    only: p3, p4
@@ -477,7 +477,7 @@ contains
       use dataio_pub,     only: msg, warn
       use cg_list,        only: ind_val, dirty_label
       use global,         only: do_ascii_dump
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use initcosmicrays, only: iarr_crs
       use mpisetup,       only: master
       use multigridvars,  only: source, defect, solution, correction, ts, tot_ts

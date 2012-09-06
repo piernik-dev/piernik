@@ -88,7 +88,7 @@ contains
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
       use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use mpisetup,       only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
       use named_array_list, only: qna
 
@@ -182,7 +182,7 @@ contains
       use domain,      only: dom, is_multicg
       use func,        only: ekin, emag
       use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use grid_cont,   only: grid_container
       use mpisetup,    only: piernik_MPI_Bcast
       use named_array_list, only: qna
@@ -383,7 +383,7 @@ contains
       use domain,         only: dom
       use cg_list,        only: cg_list_element
       use global,         only: dt
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use grid_cont,      only: grid_container
       use magboundaries,  only: bnd_emf
       use named_array_list, only: qna, wna

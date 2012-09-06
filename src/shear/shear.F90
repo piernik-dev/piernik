@@ -171,7 +171,7 @@ contains
 #endif /* FFTW */
       use dataio_pub,  only: die
       use domain,      only: dom, is_multicg
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use grid_cont,   only: grid_container
 
       implicit none
@@ -206,7 +206,7 @@ contains
       use constants,   only: dpi, xdim
       use dataio_pub,  only: die
       use domain,      only: dom, is_multicg
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use grid_cont,   only: grid_container
 
       implicit none
@@ -278,7 +278,7 @@ contains
       use constants,   only: xdim, half
       use dataio_pub,  only: die
       use domain,      only: dom, is_multicg
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use grid_cont,   only: grid_container
 
       implicit none

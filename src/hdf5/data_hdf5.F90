@@ -144,6 +144,7 @@ contains
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
       use grid_cont,   only: grid_container
+      use mpisetup,    only: proc
 #ifndef ISO
       use constants,   only: ydim, zdim
 #endif /* !ISO */
@@ -209,6 +210,12 @@ contains
             if (associated(cg%gpot)) tab(:,:,:) = real(cg%gpot(RNG), kind=4)
          case ("mgso")
             if (associated(cg%sgp))  tab(:,:,:) = real(cg%sgp(RNG),  kind=4)
+         case ("level")
+            tab(:,:,:) = cg%level_id
+         case ("grid_id")
+            tab(:,:,:) = cg%grid_id
+         case ("proc")
+            tab(:,:,:) = proc
          case default
             ierrh = -1
       end select
@@ -286,7 +293,7 @@ contains
       use dataio_pub,  only: die, nproc_io, can_i_write
       use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use mpi,         only: MPI_REAL, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
@@ -497,6 +504,7 @@ contains
       use cg_list_level, only: finest
       use common_hdf5,   only: nhdf_vars, hdf_vars
       use constants,     only: ndims
+      use dataio_pub,    only: die
       use domain,        only: is_multicg !, is_uneven
       use grid_cont,     only: grid_container
       use hdf5,          only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, &
@@ -560,6 +568,7 @@ contains
 
          !! \todo if there are fine levels restrict the data first and write warning that v2 should be used instead
          cgl => finest%first
+         if (.not. associated(cgl)) call die("[data_hdf5:h5_write_to_single_file_v1] I/O v1 cannot handle empty cg lists.")
          do while (associated(cgl))
             cg => cgl%cg
 
@@ -618,7 +627,7 @@ contains
       use common_hdf5, only: nhdf_vars, hdf_vars
       use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, last_hdf_time, piernik_hdf5_version
       use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use grid_cont,   only: grid_container
       use h5lt,        only: h5ltmake_dataset_float_f, h5ltmake_dataset_double_f
       use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, &

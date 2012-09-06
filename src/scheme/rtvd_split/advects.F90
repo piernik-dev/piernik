@@ -57,7 +57,7 @@ contains
       use fluidindex,     only: flind
       use cg_list,        only: cg_list_element
       use global,         only: dt
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use grid_cont,      only: grid_container
       use magboundaries,  only: bnd_emf
       use named_array_list, only: qna, wna

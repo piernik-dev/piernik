@@ -148,7 +148,7 @@ contains
    subroutine init_prob
 
       use cg_list,           only: cg_list_element
-      use cg_list_bnd,       only: leaves
+      use cg_leaves,         only: leaves
       use constants,         only: pi, xdim, ydim, zdim, I_ONE
       use dataio_pub,        only: msg, die, warn, printinfo
       use domain,            only: dom, is_multicg
@@ -445,7 +445,7 @@ contains
    subroutine virialCheck(tol)
 
       use cg_list,       only: cg_list_element
-      use cg_list_bnd,   only: leaves
+      use cg_leaves,     only: leaves
       use dataio_pub,    only: msg, die, warn, printinfo
       use fluidindex,    only: flind
       use grid_cont,     only: grid_container
@@ -512,7 +512,7 @@ contains
    subroutine totalMEnthalpic(C, totME, mode)
 
       use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use constants,   only: I_ONE
       use fluidindex,  only: flind
       use grid_cont,   only: grid_container

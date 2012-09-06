@@ -228,8 +228,10 @@ contains
                call die(msg)
             endif
 
-            if (any(cg%n_b(:) * refinement_factor**(finest%level_id - curl%level_id) /= finest%first%cg%n_b(:) .and. dom%has_dir(:)) .and. &
-                 (.not. associated(curl, coarsest) .or. .not. single_base)) is_mg_uneven = .true.
+            if (associated(finest%first)) then
+               if (any(cg%n_b(:) * refinement_factor**(finest%level_id - curl%level_id) /= finest%first%cg%n_b(:) .and. dom%has_dir(:)) .and. &
+                    (.not. associated(curl, coarsest) .or. .not. single_base)) is_mg_uneven = .true.
+            endif
 
             ! data storage
             if ( allocated(cg%mg%bnd_x) .or. allocated(cg%mg%bnd_y) .or. allocated(cg%mg%bnd_z)) &

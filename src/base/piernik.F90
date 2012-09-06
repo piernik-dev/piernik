@@ -50,6 +50,7 @@ program piernik
    use timer,           only: timer_start, timer_stop
 #endif /* PERFMON */
 #ifdef DEBUG
+   use list_of_cg_lists,  only: all_lists
    use named_array_list,  only: qna, wna
 #endif /* DEBUG */
 
@@ -71,6 +72,9 @@ program piernik
 
    call all_cg%check_na
    !call all_cg%check_for_dirt
+#ifdef DEBUG
+   call all_lists%print
+#endif /* DEBUG */
 
    call piernik_MPI_Barrier
 !-------------------------------- MAIN LOOP ----------------------------------

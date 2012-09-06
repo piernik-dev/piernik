@@ -132,7 +132,7 @@ contains
    subroutine init_prob
 
       use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use constants,      only: xdim, ydim, zdim, I_ONE
       use dataio_pub,     only: msg, warn, printinfo, die
       use domain,         only: dom, is_multicg

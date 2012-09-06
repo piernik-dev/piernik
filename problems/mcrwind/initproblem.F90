@@ -124,7 +124,7 @@ contains
    subroutine init_prob
 
       use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use constants,      only: xdim, ydim, zdim
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
@@ -335,7 +335,7 @@ contains
    subroutine cr_sn_beware(pos)
 
       use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use constants,      only: xdim, ydim, zdim, ndims
       use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
       use domain,         only: dom

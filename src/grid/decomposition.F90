@@ -44,6 +44,7 @@ module decomposition
    private
    public :: cleanup_decomposition, init_decomposition, box_T, cuboid
 
+   !> \deprecated not to be confused with cg_list_level::cuboid
    type :: cuboid
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se !< grid piece
       integer(kind=8) :: id                              !< piece number (set e.g. by Hilbert ordering)
@@ -747,7 +748,7 @@ contains
       if (present(n_cg)) nseg = n_cg
 
       if (allocated(patch%pse)) call die("[decomposition:allocate_pse] pse already allocated")
-      allocate(patch%pse(nseg))
+      allocate(patch%pse(nseg)) ! valgrind shows memory leak here
       do p = lbound(patch%pse, dim=1), ubound(patch%pse, dim=1)
          patch%pse(p)%se(:, :) = 0
       enddo

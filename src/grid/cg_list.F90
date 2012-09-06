@@ -31,6 +31,7 @@
 
 module cg_list
 
+   use constants, only: dsetnamelen
    use grid_cont, only: grid_container
 
    implicit none
@@ -42,6 +43,8 @@ module cg_list
    !! \brief A grid container with two links to other cg_list_elements
    !!
    !! \details the prv and nxt pointers are not elements of the grid_container type to allow membership in several lists simultaneously
+   !!
+   !! \todo Consider splitting this module into a "bare" list and list with arithmeric
    !<
    type cg_list_element
       type(grid_container),  pointer :: cg       !< the current grid container
@@ -54,21 +57,17 @@ module cg_list
       type(cg_list_element), pointer :: first !< first element of the chain of grid containers, the most important one
       type(cg_list_element), pointer :: last  !< last element of the chain - useful for quick expanding and merging lists
       integer :: cnt                          !< number of chain links
-
+      character(len=dsetnamelen) :: label     !< name of the list for diagnostic and identification purposes
     contains
 
       ! List management
 !      procedure :: init_el
       procedure :: init_new                          !< A constructor for an empty list
-      generic, public :: init => init_new!, init_el  !< All constructors of a new list
       procedure :: add_new                           !< Add new element to the list
       generic, public :: add => add_new              !< All methods of adding a new element
-      procedure :: del_lnk                           !< Destroy the element
       procedure :: del_lst                           !< Destroy the list
-      generic, public :: delete => del_lnk, del_lst  !< All methods of destroying
-
       procedure :: un_link                           !< Un-link the element
-      procedure :: clear                             !< Clear the list, don't touch cg's
+      generic, public :: delete => un_link, del_lst  !< All methods of destroying
 
       ! Misc
       procedure :: get_extremum                      !< Find minimum or maximum value over a s list
@@ -92,7 +91,9 @@ module cg_list
       procedure :: norm_sq                           !< calculate L2 norm
 
       ! Multigrid
-      procedure :: zero_boundaries                   !< Clear boundary values
+      generic, public :: reset_boundaries => zero_boundaries, dirty_boundaries
+      procedure, private :: zero_boundaries                   !< Clear boundary values
+      procedure, private :: dirty_boundaries                  !< Set boundary values
 !> \todo merge lists
 
    end type cg_list_T
@@ -109,15 +110,17 @@ module cg_list
 contains
 
 !> \brief a constructor for an empty list
-   subroutine init_new(this)
+   subroutine init_new(this, label)
 
       implicit none
 
-      class(cg_list_T), intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_list_T), intent(inout) :: this  !< object invoking type-bound procedure
+      character(len=*), intent(in)    :: label !< name of the list
 
       this%first => null()
-      this%last => null()
-      this%cnt = 0
+      this%last  => null()
+      this%cnt   =  0
+      this%label =  trim(label)
 
    end subroutine init_new
 
@@ -161,39 +164,15 @@ contains
 
    end subroutine add_new
 
-!> \brief destroy the element
-   subroutine del_lnk(this, cgle)
-
-      use constants,  only: INVALID
-      use dataio_pub, only: warn
-
-      implicit none
-
-      class(cg_list_T), intent(inout) :: this !< object invoking type-bound procedure
-      type(cg_list_element), pointer, intent(inout) :: cgle !< the element to be eradicated
-
-      if (.not. associated(cgle)) then
-         call warn("[cg_list:del_lnk] tried to remove null() element")
-         return
-      endif
-
-      call this%un_link(cgle)
-      if (associated(cgle%cg)) then
-         if (cgle%cg%grid_id > INVALID) then ! dirty trick
-            call cgle%cg%cleanup
-!            deallocate(cgle%cg) ! if we deallocate now, we won't be able to determine this in the other lists
-         endif
-      endif
-      deallocate(cgle)
-
-   end subroutine del_lnk
-
 !> \brief destroy the list
    subroutine del_lst(this)
 
+      use dataio_pub, only: die
+
       implicit none
 
       class(cg_list_T), intent(inout) :: this !< object invoking type-bound procedure
+
       type(cg_list_element), pointer :: cgl
 
       do while (associated(this%first))
@@ -201,63 +180,34 @@ contains
          call this%delete(cgl) ! cannot just pass this%last because if will change after un_link and wrong element will be deallocated
       enddo
 
+      if (this%cnt > 0) call die("[cg_list:del_lst] The list is still not empty")
+      nullify(this%first)
+      nullify(this%last)
+      this%cnt = 0
+
    end subroutine del_lst
 
-   subroutine clear(this)
+!> \brief Remove the element from the list, keep its contents
 
-      implicit none
-
-      class(cg_list_T), intent(inout) :: this !< object invoking type-bound procedure
-
-      type(cg_list_element), pointer :: cgl
-
-      do while (associated(this%first))
-         cgl => this%last
-         call this%un_link(cgl)
-         deallocate(cgl)
-      enddo
-
-   end subroutine clear
-
-!> \brief remove the element from the list, keep its contents
    subroutine un_link(this, cgle)
 
-      use dataio_pub, only: warn, die
+      use dataio_pub, only: die
 
       implicit none
 
-      class(cg_list_T), intent(inout) :: this !< object invoking type-bound procedure
-      type(cg_list_element), pointer, intent(in) :: cgle !< the element to be unlinked
+      class(cg_list_T),               intent(inout) :: this !< object invoking type-bound procedure
+      type(cg_list_element), pointer, intent(inout) :: cgle !< the element to be unlinked
 
-      type(cg_list_element), pointer :: cur
-      integer :: cnt
-
-      if (.not. associated(cgle)) then
-         call warn("[cg_list:un_link] tried to remove null() element")
-         return
-      endif
-
-      cur => this%first
-      cnt = this%cnt
-
+      if (.not. associated(cgle)) call die("[cg_list:un_link] tried to remove null() element")
       if (.not. associated(this%first)) call die("[cg_list:un_link] Cannot remove anything from an empty list")
-      if (cnt <= 0) call die("[cg_list:un_link] this%cnt <=0 .and. associated(this%first)")
+      if (this%cnt <= 0) call die("[cg_list:un_link] this%cnt <=0 .and. associated(this%first)")
 
-      do while (associated(cur))
-         if (associated(cur, cgle)) then
-            if (associated(this%first, cgle)) this%first => this%first%nxt
-            if (associated(this%last,  cgle)) this%last  => this%last%prv
-            if (associated(cur%prv)) cur%prv%nxt => cur%nxt
-            if (associated(cur%nxt)) cur%nxt%prv => cur%prv
-            nullify(cur%nxt, cur%prv)
-            this%cnt = this%cnt - 1
-            exit
-         endif
-
-         cur => cur%nxt
-      enddo
-
-      if (this%cnt == cnt) call warn("[cg_list:un_link] element not found on the list")
+      if (associated(this%first, cgle)) this%first => this%first%nxt
+      if (associated(this%last,  cgle)) this%last  => this%last%prv
+      if (associated(cgle%prv)) cgle%prv%nxt => cgle%nxt
+      if (associated(cgle%nxt)) cgle%nxt%prv => cgle%prv
+      deallocate(cgle)
+      this%cnt = this%cnt - 1
 
    end subroutine un_link
 
@@ -340,7 +290,7 @@ contains
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_STATUS_IGNORE, MPI_2DOUBLE_PRECISION, MPI_MINLOC, MPI_MAXLOC, MPI_IN_PLACE
       use mpisetup,    only: comm, mpi_err, master, proc, FIRST
-      use named_array_list, only: qna
+!      use named_array_list, only: qna
       use types,       only: value
 
       implicit none
@@ -352,7 +302,8 @@ contains
       integer(kind=4), optional, intent(in)  :: dir     !< order the cell size in dir direction
 
 
-      type(grid_container),   pointer :: cg, cg_x
+      type(grid_container),   pointer :: cg_x => null()
+      type(grid_container),   pointer :: cg => null()
       type(cg_list_element),  pointer :: cgl
       real, dimension(:,:,:), pointer :: tab
       integer,                       parameter :: tag1 = 11, tag2 = tag1 + 1, tag3 = tag2 + 1
@@ -371,35 +322,40 @@ contains
          case (MAXL)
             prop%val = -huge(1.)
          case default
+            prop%val = 0.0   !! set dummy value
             write(msg,*) "[cg_list:get_extremum]: I don't know what to do with minmax = ", minmax
             call warn(msg)
       end select
 
-      nullify(cg_x)
-      cgl => this%first
-      if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[cg_list:get_extremum] Wrong index")
-      do while (associated(cgl))
-         cg => cgl%cg
+      if (associated(this%first)) then
+         cgl => this%first
+         if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[cg_list:get_extremum] Wrong index")
+         do while (associated(cgl))
+            cg => cgl%cg
 
-         tab => cg%q(ind)%span(cg%ijkse)
-         select case (minmax)
-            case (MINL)
-               if (minval(tab) < prop%val) then
-                  prop%val = minval(tab)
-                  prop%loc = minloc(tab) + dom%nb
-                  cg_x => cg
-               endif
-            case (MAXL)
-               if (maxval(tab) > prop%val) then
-                  prop%val = maxval(tab)
-                  prop%loc = maxloc(tab) + dom%nb
-                  cg_x => cg
-               endif
-         end select
-         cgl => cgl%nxt
-      enddo
+            tab => cg%q(ind)%span(cg%ijkse)
+            select case (minmax)
+               case (MINL)
+                  if (minval(tab) < prop%val) then
+                     prop%val = minval(tab)
+                     prop%loc = minloc(tab) + dom%nb
+                     cg_x => cg
+                  endif
+               case (MAXL)
+                  if (maxval(tab) > prop%val) then
+                     prop%val = maxval(tab)
+                     prop%loc = maxloc(tab) + dom%nb
+                     cg_x => cg
+                  endif
+            end select
+            cgl => cgl%nxt
+         enddo
+         v_red(I_V) = prop%val;
+      else
+         v_red(I_V) = -prop%val   !! No cgl means nothing to do there
+      endif
 
-      v_red(I_V) = prop%val; v_red(I_P) = real(proc)
+      v_red(I_P) = real(proc)
 
       call MPI_Allreduce(MPI_IN_PLACE, v_red, I_ONE, MPI_2DOUBLE_PRECISION, op(minmax), comm, mpi_err)
 
@@ -413,10 +369,9 @@ contains
             if (dom%has_dir(ydim)) prop%coords(ydim) = cg_x%y(prop%loc(ydim))
             if (dom%has_dir(zdim)) prop%coords(zdim) = cg_x%z(prop%loc(zdim))
             if (present(dir))      prop%assoc        = cg_x%dl(dir)
-            ! else prop%assoc = minval(cg_x%dl(:)) ???
-         else
-            write(msg,'(a,a)') "[cg_list:get_extremum] cg_x not associated for q array name ", qna%lst(ind)%name
-            call die(msg)
+!         else
+!            write(msg,'(a,a)') "[cg_list:get_extremum] cg_x not associated for q array name ", qna%lst(ind)%name
+!            call die(msg)
          endif
       endif
 
@@ -725,6 +680,27 @@ contains
       enddo
 
    end subroutine zero_boundaries
+
+!> \brief Mark boundary values with given value
+
+   subroutine dirty_boundaries(this, value)
+
+      implicit none
+
+      class(cg_list_T), intent(inout) :: this   !< list for which clear the boundary values (typically a single level)
+      real,             intent(in)    :: value  !< value to pollute
+
+      type(cg_list_element), pointer :: cgl
+
+      cgl => this%first
+      do while (associated(cgl))
+         cgl%cg%mg%bnd_x(:,:,:) = value
+         cgl%cg%mg%bnd_y(:,:,:) = value
+         cgl%cg%mg%bnd_z(:,:,:) = value
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine dirty_boundaries
 
 !> \brief Construct name of emergency ASCII dump
 

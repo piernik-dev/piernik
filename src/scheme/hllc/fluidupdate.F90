@@ -42,7 +42,7 @@ contains
    subroutine fluid_update
 
       use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use constants,   only: xdim, zdim
       use dataio_pub,  only: halfstep
       use domain,      only: dom

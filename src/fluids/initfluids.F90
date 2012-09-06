@@ -202,7 +202,7 @@ contains
       use func,        only: ekin, emag
       use cg_list,     only: cg_list_element
       use global,      only: smalld, smallp
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use grid_cont,   only: grid_container
       use mpi,         only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_MAX
       use mpisetup,    only: master, comm, mpi_err

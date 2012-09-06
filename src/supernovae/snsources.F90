@@ -162,7 +162,7 @@ contains
 
       use constants,      only: xdim, ydim, zdim
       use domain,         only: dom
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS_SOURCES
@@ -244,7 +244,7 @@ contains
       use constants,   only: xdim, ydim, zdim, LO
       use domain,      only: dom
 #ifdef SHEAR
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use grid_cont,   only: grid_container
       use shear,       only: delj, eps
 #endif /* SHEAR */

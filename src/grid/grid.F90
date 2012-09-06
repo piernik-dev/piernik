@@ -43,11 +43,13 @@ contains
 
    subroutine init_grid
 
-      use cg_list_global, only: all_cg
-      use cg_list_level,  only: base_lev
-      use constants,      only: PIERNIK_INIT_DOMAIN, I_ZERO, base_level_offset
-      use dataio_pub,     only: printinfo, die, code_progress
-      use domain,         only: dom
+      use cg_leaves,        only: leaves
+      use cg_list_global,   only: all_cg, all_cg_n
+      use cg_list_level,    only: base_lev
+      use constants,        only: PIERNIK_INIT_DOMAIN, I_ZERO, base_level_offset
+      use dataio_pub,       only: printinfo, die, code_progress
+      use domain,           only: dom
+      use list_of_cg_lists, only: all_lists
 
       implicit none
 
@@ -60,7 +62,7 @@ contains
       ! Create the empty main lists for base level only.
       ! Refinement lists will be added by iterating the initproblem::init_prob routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update
       ! Underground levels will be added in multigrid::init_multigrid
-      call all_cg%init
+      call all_lists%register(all_cg, all_cg_n)
       all_cg%ord_prolong_nb = I_ZERO
       call base_lev%add_level(dom%n_d(:))
 
@@ -68,7 +70,7 @@ contains
 
       call base_lev%init_all_new_cg
 
-      call all_cg%update_leaves
+      call leaves%update
 
 #ifdef VERBOSE
       call printinfo("[grid:init_grid]: cg finished. \o/")
@@ -83,28 +85,30 @@ contains
 !> \brief deallocate everything
    subroutine cleanup_grid
 
-      use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
-      use cg_list_global, only: all_cg
-      use cg_list_level,  only: cg_list_level_T, coarsest, finest, base_lev
+      use cg_leaves,        only: leaves
+      use cg_list_global,   only: all_cg
+      use cg_list_level,    only: cg_list_level_T, coarsest, finest, base_lev
+      use list_of_cg_lists, only: all_lists
       use named_array_list, only: qna, wna
 
       implicit none
 
-      type(cg_list_element), pointer :: cgle
       type(cg_list_level_T), pointer :: curl
-      integer :: p
 
-      call leaves%clear
+      curl => coarsest
+      do while (associated(curl))
+         if (allocated(curl%pse)) deallocate(curl%pse)        ! curl%pse(:)%c should be deallocated automagically
+         if (allocated(curl%patches)) deallocate(curl%patches)! curl%patches(:)%pse should be deallocated automagically
+         curl => curl%finer
+      enddo
+
+      call all_cg%delete_all
+      call all_cg%delete
+      call leaves%delete
+
       curl => coarsest
       do while (associated(curl))
          call curl%delete
-         if (allocated(curl%pse)) deallocate(curl%pse) ! curl%pse(:)%c should be deallocated automagically
-         do p = lbound(curl%patches, dim=1), ubound(curl%patches, dim=1)
-            deallocate(curl%patches(p)%pse) ! curl%patches(p)%pse(:)%c should be deallocated automagically
-         enddo
-         deallocate(curl%patches)
-
          curl => curl%finer
          if (associated(curl)) then
             if (associated(curl%coarser) .and. .not. associated(curl%coarser, base_lev)) deallocate(curl%coarser)
@@ -112,15 +116,10 @@ contains
       enddo
       if (.not. associated(finest, base_lev)) deallocate(finest)
 
-      ! manually deallocate all grid containers first
-      cgle => all_cg%first
-      do while (associated(cgle))
-         deallocate(cgle%cg)
-         cgle => cgle%nxt
-      enddo
       if (allocated(qna%lst)) deallocate(qna%lst)
       if (allocated(wna%lst)) deallocate(wna%lst)
-      call all_cg%delete
+
+      if (allocated(all_lists%entries)) deallocate(all_lists%entries)
 
    end subroutine cleanup_grid
 

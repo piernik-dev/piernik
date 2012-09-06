@@ -31,12 +31,18 @@
 
 module cg_list_global
 
+#if defined(__INTEL_COMPILER)
+   !! \deprecated remove this clause as soon as Intel Compiler gets required
+   !! features and/or bug fixes
+   use cg_list,     only: cg_list_T   ! QA_WARN ICE is the alternative :)
+#endif /*__INTEL_COMPILER) */
    use cg_list_bnd, only: cg_list_bnd_T
+   use constants,   only: dsetnamelen
 
    implicit none
 
    private
-   public :: all_cg
+   public :: all_cg, all_cg_n
 
    !>
    !! \brief A list of grid containers that are supposed to have the same variables registered
@@ -56,16 +62,43 @@ module cg_list_global
       integer(kind=4) :: ord_prolong_nb                !< Maximum number of boundary cells required for prolongation
 
     contains
-      procedure :: reg_var         !< Add a variable (cg%q or cg%w) to all grid containers
-      procedure :: register_fluids !< Register all crucial fields, which we cannot live without
-      procedure :: check_na        !< Check if all named arrays are consistently registered
-
-      procedure :: update_leaves   !< Select grids that should be listed on leaves list
+      procedure :: reg_var           !< Add a variable (cg%q or cg%w) to all grid containers
+      procedure :: register_fluids   !< Register all crucial fields, which we cannot live without
+      procedure :: check_na          !< Check if all named arrays are consistently registered
+      procedure :: delete_all        !< Delete the grid container from all lists
    end type cg_list_global_T
 
    type(cg_list_global_T) :: all_cg   !< all grid containers; \todo restore protected
+   character(len=dsetnamelen), parameter :: all_cg_n = "all_cg" !< name of the all_cg list
 
 contains
+
+!> \brief destroy the global list, all grid containers and all lists
+
+   subroutine delete_all(this)
+
+      use dataio_pub,       only: die
+      use grid_cont,        only: grid_container
+      use list_of_cg_lists, only: all_lists
+
+      implicit none
+
+      class(cg_list_global_T), intent(inout) :: this           !< object invoking type-bound procedure
+
+      type(grid_container),  pointer :: cg
+
+      !> \todo implement what is said in the description
+
+      do while (associated(this%first))
+         if (associated(this%last%cg)) then
+            cg => this%last%cg
+            call all_lists%forget(cg)
+         else
+            call die("[cg_list_global:delete_from_all] Attempted to remove an empty element")
+         endif
+      enddo
+
+   end subroutine delete_all
 
 !>
 !! \brief Use this routine to add a variable (cg%q or cg%w) to all grid containers.
@@ -84,7 +117,7 @@ contains
 
       implicit none
 
-      class(cg_list_global_T),                     intent(inout) :: this          !< object invoking type-bound procedure
+      class(cg_list_global_T),                 intent(inout) :: this          !< object invoking type-bound procedure
       character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
       logical,                       optional, intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
       integer(kind=4),               optional, intent(in)    :: restart_mode  !< Write to the restart if not AT_IGNORE. Several write modes can be supported.
@@ -206,9 +239,9 @@ contains
 
    subroutine check_na(this)
 
-      use constants,   only: INVALID, base_level_id
-      use dataio_pub,  only: msg, die
-      use cg_list,     only: cg_list_element
+      use constants,        only: INVALID, base_level_id
+      use dataio_pub,       only: msg, die
+      use cg_list,          only: cg_list_element
       use named_array_list, only: qna, wna
 
       implicit none
@@ -221,76 +254,54 @@ contains
 
       cgl => this%first
       do while (associated(cgl))
-         if (allocated(qna%lst) .neqv. allocated(cgl%cg%q)) then
-            write(msg,'(2(a,l2))')"[cg_list_global:check_na] allocated(qna%lst) .neqv. allocated(cgl%cg%q):",allocated(qna%lst)," .neqv. ",allocated(cgl%cg%q)
-            call die(msg)
-         else if (allocated(qna%lst)) then
-            if (size(qna%lst(:)) /= size(cgl%cg%q)) then
-               write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(qna) /= size(cgl%cg%q)",size(qna%lst(:))," /= ",size(cgl%cg%q)
+         if (associated(cgl%cg)) then
+            if (allocated(qna%lst) .neqv. allocated(cgl%cg%q)) then
+               write(msg,'(2(a,l2))')"[cg_list_global:check_na] allocated(qna%lst) .neqv. allocated(cgl%cg%q):",allocated(qna%lst)," .neqv. ",allocated(cgl%cg%q)
                call die(msg)
-            else
-               do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-                  if (qna%lst(i)%dim4 /= INVALID) then
-                     write(msg,'(3a,i10)')"[cg_list_global:check_na] qna%lst(",i,"_, named '",qna%lst(i)%name,"' has dim4 set to ",qna%lst(i)%dim4
-                     call die(msg)
-                  endif
-                  if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%level_id < base_level_id .and. .not. qna%lst(i)%multigrid) then
-                     write(msg,'(a,i3,3a)')"[cg_list_global:check_na] non-multigrid cgl%cg%q(",i,"), named '",qna%lst(i)%name,"' allocated on coarse level"
-                     call die(msg)
-                  endif
-               enddo
+            else if (allocated(qna%lst)) then
+               if (size(qna%lst(:)) /= size(cgl%cg%q)) then
+                  write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(qna) /= size(cgl%cg%q)",size(qna%lst(:))," /= ",size(cgl%cg%q)
+                  call die(msg)
+               else
+                  do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
+                     if (qna%lst(i)%dim4 /= INVALID) then
+                        write(msg,'(3a,i10)')"[cg_list_global:check_na] qna%lst(",i,"_, named '",qna%lst(i)%name,"' has dim4 set to ",qna%lst(i)%dim4
+                        call die(msg)
+                     endif
+                     if (associated(cgl%cg%q(i)%arr) .and. cgl%cg%level_id < base_level_id .and. .not. qna%lst(i)%multigrid) then
+                        write(msg,'(a,i3,3a)')"[cg_list_global:check_na] non-multigrid cgl%cg%q(",i,"), named '",qna%lst(i)%name,"' allocated on coarse level"
+                        call die(msg)
+                     endif
+                  enddo
+               endif
             endif
-         endif
-         if (allocated(wna%lst) .neqv. allocated(cgl%cg%w)) then
-            write(msg,'(2(a,l2))')"[cg_list_global:check_na] allocated(wna%lst) .neqv. allocated(cgl%cg%w)",allocated(wna%lst)," .neqv. ",allocated(cgl%cg%w)
-            call die(msg)
-         else if (allocated(wna%lst)) then
-            if (size(wna%lst(:)) /= size(cgl%cg%w)) then
-               write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(wna) /= size(cgl%cg%w)",size(wna%lst(:))," /= ",size(cgl%cg%w)
+            if (allocated(wna%lst) .neqv. allocated(cgl%cg%w)) then
+               write(msg,'(2(a,l2))')"[cg_list_global:check_na] allocated(wna%lst) .neqv. allocated(cgl%cg%w)",allocated(wna%lst)," .neqv. ",allocated(cgl%cg%w)
                call die(msg)
-            else
-               do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
-                  bad = .false.
-                  if (associated(cgl%cg%w(i)%arr)) bad = wna%lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%level_id >= base_level_id
-                  if (wna%lst(i)%dim4 <= 0 .or. bad) then
-                     write(msg,'(a,i3,2a,2(a,i7))')"[cg_list_global:check_na] wna%lst(",i,"_ named '",wna%lst(i)%name,"' has inconsistent dim4: ",&
-                          &         wna%lst(i)%dim4," /= ",size(cgl%cg%w(i)%arr, dim=1)
-                     call die(msg)
-                  endif
-                  if (associated(cgl%cg%w(i)%arr) .and. cgl%cg%level_id < base_level_id) then
-                     write(msg,'(a,i3,3a)')"[cg_list_global:check_na] cgl%cg%w(",i,"), named '",wna%lst(i)%name,"' allocated on coarse level"
-                     call die(msg)
-                  endif
-               enddo
+            else if (allocated(wna%lst)) then
+               if (size(wna%lst(:)) /= size(cgl%cg%w)) then
+                  write(msg,'(2(a,i5))')"[cg_list_global:check_na] size(wna) /= size(cgl%cg%w)",size(wna%lst(:))," /= ",size(cgl%cg%w)
+                  call die(msg)
+               else
+                  do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
+                     bad = .false.
+                     if (associated(cgl%cg%w(i)%arr)) bad = wna%lst(i)%dim4 /= size(cgl%cg%w(i)%arr, dim=1) .and. cgl%cg%level_id >= base_level_id
+                     if (wna%lst(i)%dim4 <= 0 .or. bad) then
+                        write(msg,'(a,i3,2a,2(a,i7))')"[cg_list_global:check_na] wna%lst(",i,"_ named '",wna%lst(i)%name,"' has inconsistent dim4: ",&
+                             &         wna%lst(i)%dim4," /= ",size(cgl%cg%w(i)%arr, dim=1)
+                        call die(msg)
+                     endif
+                     if (associated(cgl%cg%w(i)%arr) .and. cgl%cg%level_id < base_level_id) then
+                        write(msg,'(a,i3,3a)')"[cg_list_global:check_na] cgl%cg%w(",i,"), named '",wna%lst(i)%name,"' allocated on coarse level"
+                        call die(msg)
+                     endif
+                  enddo
+               endif
             endif
          endif
          cgl => cgl%nxt
       enddo
 
    end subroutine check_na
-
-!> \brief Select grids that should be listed on leaves list
-
-   subroutine update_leaves(this)
-
-      use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
-
-      implicit none
-
-      class(cg_list_global_T), intent(in) :: this          !< object invoking type-bound procedure
-
-      type(cg_list_element), pointer :: cgl
-
-      call leaves%clear
-
-      call leaves%init
-      cgl => this%first
-      do while (associated(cgl))
-         if (cgl%cg%level_id >=0) call leaves%add(cgl%cg)
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine update_leaves
 
 end module cg_list_global

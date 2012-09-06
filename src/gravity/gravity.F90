@@ -151,7 +151,7 @@ contains
       use constants,      only: PIERNIK_INIT_GRID, AT_OUT_B, gp_n, gpot_n, hgpot_n
       use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
       use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use named_array_list, only: qna
       use units,          only: newtong
 #ifdef SELF_GRAV
@@ -310,7 +310,7 @@ contains
       use dataio_pub,        only: die
       use fluidindex,        only: iarr_all_sg
       use cg_list,           only: cg_list_element
-      use cg_list_bnd,       only: leaves
+      use cg_leaves,         only: leaves
       use grid_cont,         only: grid_container
       use named_array_list,  only: qna
 #ifdef POISSON_FFT
@@ -371,7 +371,7 @@ contains
 
       use constants,   only: gp_n, gpot_n, hgpot_n
       use cg_list,     only: ind_val
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use named_array_list, only: qna
 #ifdef SELF_GRAV
       use constants,   only: one, half, sgp_n, sgpm_n
@@ -668,7 +668,7 @@ contains
       use constants,   only: GEO_XYZ
       use dataio_pub,  only: die, warn
       use domain,      only: dom
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
@@ -833,7 +833,7 @@ contains
       use dataio_pub,     only: die
       use cart_comm,      only: cdd
       use domain,         only: is_mpi_noncart, is_multicg, dom
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use grid_cont,      only: grid_container
       use mpi,            only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
       use mpisetup,       only: master, nproc, FIRST, LAST, comm, mpi_err, have_mpi

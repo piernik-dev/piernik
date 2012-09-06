@@ -157,7 +157,7 @@ contains
    subroutine init_prob
 
       use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use constants,   only: GEO_XYZ, GEO_RPZ
       use dataio_pub,  only: die
       use domain,      only: dom
@@ -264,7 +264,7 @@ contains
    subroutine compute_maclaurin_potential
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use cg_list_global,   only: all_cg
       use constants,        only: pi, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: warn, die
@@ -368,7 +368,7 @@ contains
    subroutine finalize_problem_maclaurin
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use constants,        only: GEO_RPZ, I_ONE, I_TWO
       use dataio_pub,       only: msg, printinfo, warn
       use domain,           only: dom

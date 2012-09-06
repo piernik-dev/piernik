@@ -114,10 +114,11 @@ contains
    subroutine init_multipole
 
       use cg_list_level, only: base_lev, finest
-      use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI
+      use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
       use dataio_pub,    only: die, warn
       use domain,        only: dom
-      use mpisetup,      only: master
+      use mpi,           only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
+      use mpisetup,      only: master, comm, mpi_err
 
       implicit none
 
@@ -186,9 +187,24 @@ contains
          if (allocated(rn) .or. allocated(irn) .or. allocated(sfac) .or. allocated(cfac)) call die("[multipole:init_multipole] rn, irn, sfac or cfac already allocated")
          allocate(rn(0:lmax), irn(0:lmax), sfac(0:mmax), cfac(0:mmax))
 
+         if (associated(lmpole%first)) then
+            !> \warning With refinement lmpole might no longer be a single level
+            select case (dom%geometry_type)
+               !> \warning With refinement lmpole might no longer be a single level
+               case (GEO_XYZ)
+                  drq = minval(lmpole%first%cg%dl(:), mask=dom%has_dir(:)) / 2.
+               case (GEO_RPZ)
+                  drq = min(lmpole%first%cg%dx, dom%C_(xdim)*lmpole%first%cg%dy, lmpole%first%cg%dz) / 2.
+               case default
+                  call die("[multipole:init_multipole] Unsupported geometry.")
+            end select
+         else
+            drq = maxval(dom%L_(:))
+         endif
+         call MPI_Allreduce(MPI_IN_PLACE, drq, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
+
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               drq = minval(lmpole%first%cg%dl(:), mask=dom%has_dir(:)) / 2.
                rqbin = int(sqrt(sum(dom%L_(:)**2))/drq) + 1
                ! arithmetic average of the closest and farthest points of computational domain with respect to its center
                !>
@@ -197,7 +213,6 @@ contains
                !<
                rscale = ( minval(dom%L_(:)) + sqrt(sum(dom%L_(:)**2)) )/4.
             case (GEO_RPZ)
-               drq = min(lmpole%first%cg%dx, dom%C_(xdim)*lmpole%first%cg%dy, lmpole%first%cg%dz) / 2.
                rqbin = int(sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2)/drq) + 1
                rscale = ( min(2.*dom%edge(xdim, HI), dom%L_(zdim)) + sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2) )/4.
             case default
@@ -271,11 +286,9 @@ contains
       type(cg_list_level_T), pointer :: curl
 
       if (dirty_debug) then
-         lmpole%first%cg%mg%bnd_x(:, :, :) = dirtyH
-         lmpole%first%cg%mg%bnd_y(:, :, :) = dirtyH
-         lmpole%first%cg%mg%bnd_z(:, :, :) = dirtyH
+         call lmpole%reset_boundaries(dirtyH)
       else
-         call lmpole%zero_boundaries
+         call lmpole%reset_boundaries
       endif
 
       if (.not. associated(lmpole, finest)) then

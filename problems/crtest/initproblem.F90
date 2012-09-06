@@ -143,7 +143,7 @@ contains
    subroutine init_prob
 
       use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use constants,      only: xdim, ydim, zdim, HI
       use dataio_pub,     only: die
       use domain,         only: dom
@@ -221,7 +221,7 @@ contains
    subroutine compute_analytic_ecr1
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use dataio_pub,       only: die
       use global,           only: t
       use grid_cont,        only: grid_container
@@ -302,7 +302,7 @@ contains
    subroutine check_norm
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use constants,        only: PIERNIK_FINISHED, I_ONE, I_TWO
       use dataio_pub,       only: code_progress, halfstep, msg, die, printinfo
       use global,           only: nstep

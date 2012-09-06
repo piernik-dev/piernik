@@ -42,7 +42,7 @@ contains
    subroutine bnd_a(A)
 
       use cart_comm,     only: cdd
-      use cg_list_bnd,   only: leaves
+      use cg_leaves,     only: leaves
       use constants,     only: MAG, xdim, zdim, LO, HI, BND, BLK, I_ONE, I_FOUR, I_FIVE, I_TEN
       use dataio_pub,    only: die
       use domain,        only: is_mpi_noncart, is_multicg, dom
@@ -468,7 +468,7 @@ contains
 
       use cart_comm,        only: cdd
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use cg_list_global,   only: all_cg
       use constants,        only: xdim, zdim
       use domain,           only: dom

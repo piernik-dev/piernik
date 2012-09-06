@@ -482,12 +482,12 @@ contains
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
       if (grav_bnd == bnd_periodic .and. (nproc == 1 .or. (associated(curl, coarsest) .and. single_base) ) ) then
-         call curl%zero_boundaries
+         call curl%reset_boundaries
       else
          if (.not. associated(curl, coarsest)) then
             call prolong_faces(curl, soln)
          else
-            if (grav_bnd /= bnd_givenval) call curl%zero_boundaries
+            if (grav_bnd /= bnd_givenval) call curl%reset_boundaries
             call warn("m:mfb WTF?")
          endif
       endif

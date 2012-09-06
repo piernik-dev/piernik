@@ -154,7 +154,7 @@ contains
    subroutine init_prob
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use constants,        only: xdim, ydim, zdim
       use fluidindex,       only: flind
       use global,           only: smallei
@@ -241,7 +241,7 @@ contains
    subroutine calculate_error_norm
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use constants,        only: I_ONE, I_TWO, PIERNIK_FINISHED
       use dataio_pub,       only: code_progress, halfstep, msg, printinfo, warn
       use fluidindex,       only: flind
@@ -310,7 +310,7 @@ contains
    subroutine analytic_solution(t)
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use constants,        only: xdim, zdim, ndims
       use dataio_pub,       only: warn
       use domain,           only: dom

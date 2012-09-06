@@ -530,7 +530,7 @@ contains
 
       use dataio_pub,     only: die
       use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use grid_cont,      only: grid_container
 
       implicit none
@@ -624,7 +624,7 @@ contains
       use gdf,            only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets, &
          & gdf_root_datasets_T, gdf_parameters_T
       use global,         only: t
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use hdf5,           only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
          & h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
          & h5zfilter_avail_f

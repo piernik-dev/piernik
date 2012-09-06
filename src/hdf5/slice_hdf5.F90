@@ -239,7 +239,7 @@ contains
       use dataio_user,   only: user_plt_hdf5, user_plt_attrs
       use domain,        only: dom, is_multicg
       use global,        only: t
-      use cg_list_bnd,   only: leaves
+      use cg_leaves,     only: leaves
       use grid_cont,     only: grid_container!, cg_list_element
       use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
       use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f

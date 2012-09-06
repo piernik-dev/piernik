@@ -345,7 +345,7 @@ contains
 
       use cart_comm,        only: cdd
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use cg_list_global,   only: all_cg
       use constants,        only: xdim, zdim
       use domain,           only: dom

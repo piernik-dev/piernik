@@ -33,7 +33,6 @@ module cg_list_level
 
    use cg_list_bnd,   only: cg_list_bnd_T
    use constants,     only: ndims, LO, HI
-   use constants,     only: ndims
    use decomposition, only: box_T
 
    implicit none
@@ -47,8 +46,10 @@ module cg_list_level
 #endif /* __INTEL_COMPILER */
 
    !> \brief A single grid piece plus auxiliary data
+   !> \deprecated not to be confused with decomposition::cuboid
    type :: cuboid
-      integer(kind=8), dimension(ndims, LO:HI) :: se !< a single grid piece
+      integer(kind=8), dimension(ndims, LO:HI) :: se !< absolute index of grid segmenent on its refinement level wrt
+                                                     !< [0,0,0]
       logical :: is_new                              !< a flag that marks newly added grid pieces
    end type cuboid
 
@@ -61,6 +62,8 @@ module cg_list_level
    !! \brief A list of all cg of the same resolution.
    !!
    !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg ("islands: made of one or more cg: cg_list_patch).
+   !!
+   !! \todo consider splitting this type into "bare" level (bunch of grids within a cuboid) and connected level before this module grows to 2000+ lines
    !<
    type, extends(cg_list_bnd_T) :: cg_list_level_T
 
@@ -103,6 +106,8 @@ module cg_list_level
    end type cg_list_level_T
 
    type(cg_list_level_T), target  :: base_lev             !< base level grid containers
+
+   !! \todo finest and coarsest together with subroutine add_lev can go to separate module
 #if defined(__INTEL_COMPILER)
    !! \deprecated remove this clause as soon as Intel Compiler gets required
    !! features and/or bug fixes
@@ -128,9 +133,10 @@ contains
 
    subroutine add_lev_base(this, n_d)
 
-      use constants,  only: INVALID, base_level_id, fft_none
-      use dataio_pub, only: die
-      use domain,     only: dom
+      use constants,        only: INVALID, base_level_id, fft_none
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use list_of_cg_lists, only: all_lists
 
       implicit none
 
@@ -147,7 +153,7 @@ contains
       this%finer => null()
       this%ord_prolong_set = INVALID
       this%fft_type = fft_none
-      call this%init
+      call all_lists%register(this, "Base level")
 
    end subroutine add_lev_base
 
@@ -155,10 +161,11 @@ contains
 
    subroutine add_lev(this, coarse)
 
-      use constants,  only: INVALID, I_ONE, refinement_factor, fft_none
-      use dataio_pub, only: die, msg
-      use domain,     only: dom
-      use mpisetup,   only: master
+      use constants,        only: INVALID, I_ONE, refinement_factor, fft_none
+      use dataio_pub,       only: die, msg
+      use domain,           only: dom
+      use mpisetup,         only: master
+      use list_of_cg_lists, only: all_lists
 
       implicit none
 
@@ -209,7 +216,8 @@ contains
       new_lev%ord_prolong_set = INVALID
       this%ord_prolong_set = INVALID
       new_lev%fft_type = fft_none
-      call new_lev%init
+      write(msg, '(a,i3)')"level ",this%level_id
+      call all_lists%register(new_lev, msg)
 
    end subroutine add_lev
 
@@ -1144,18 +1152,20 @@ contains
       enddo
       filled(:) = 0
 
-      do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-         do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
-            do i = FIRST, LAST
-               if (this%patches(p)%pse(s)%id >= min_id(i) .and. this%patches(p)%pse(s)%id <= max_id(i)) then
-                  filled(i) = filled(i) + 1
-                  if (filled(i) > size(this%pse(i)%c(:))) call die("[cg_list_level:distribute] overflow")
-                  this%pse(i)%c(filled(i)) = cuboid(this%patches(p)%pse(s)%se(:,:), .true.) ! The is_new flag will be fixed in mark_new subroutine
-                  exit
-               endif
+      if (allocated(this%patches)) then
+         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
+            do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
+               do i = FIRST, LAST
+                  if (this%patches(p)%pse(s)%id >= min_id(i) .and. this%patches(p)%pse(s)%id <= max_id(i)) then
+                     filled(i) = filled(i) + 1
+                     if (filled(i) > size(this%pse(i)%c(:))) call die("[cg_list_level:distribute] overflow")
+                     this%pse(i)%c(filled(i)) = cuboid(this%patches(p)%pse(s)%se(:,:), .true.) ! The is_new flag will be fixed in mark_new subroutine
+                     exit
+                  endif
+               enddo
             enddo
          enddo
-      enddo
+      endif
 
       call this%update_decomposition_properties
 
@@ -1204,12 +1214,16 @@ contains
       integer(kind=8) :: id
 
       id = 0
-      do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-         do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
-            this%patches(p)%pse(s)%id = id
-            id = id + 1
+      if (allocated(this%patches)) then
+         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
+            if (allocated(this%patches(p)%pse)) then
+               do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
+                  this%patches(p)%pse(s)%id = id
+                  id = id + 1
+               enddo
+            endif
          enddo
-      enddo
+      endif
 
       this%tot_se = int(id, kind=4) ! obsoletes update_tot_se ?
 
@@ -1463,7 +1477,7 @@ contains
          allocate(this%patches(1))
       else
          allocate(tmp(lbound(this%patches(:),dim=1):ubound(this%patches(:), dim=1) + 1))
-         tmp(:ubound(this%patches(:), dim=1)) = this%patches(:)
+         tmp(:ubound(this%patches(:), dim=1)) = this%patches(:) ! valgrind shows memory leak here
          call move_alloc(from=tmp, to=this%patches)
       endif
 

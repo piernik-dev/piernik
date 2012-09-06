@@ -201,7 +201,6 @@ contains
 
    subroutine setsize_req(nreq)
 
-      use dataio_pub, only: warn, msg
       use mpi,        only: MPI_STATUS_SIZE
 
       implicit none
@@ -213,8 +212,6 @@ contains
       if (allocated(req)) then
          sreq = size(req)
          if (sreq < nreq) then
-            write(msg, '(2(a,i6))')"[mpisetup:setsize_req] reallocating req and status from ",sreq," to ",nreq
-            if (master) call warn(msg)
             deallocate(req)
             if (allocated(status)) deallocate(status)
          endif

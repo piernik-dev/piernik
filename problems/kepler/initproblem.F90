@@ -217,7 +217,7 @@ contains
    subroutine add_sine
 
       use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use constants,   only: dpi, xdim, zdim
       use dataio_pub,  only: printinfo, warn
       use domain,      only: dom
@@ -268,7 +268,7 @@ contains
    subroutine add_random_noise
 
       use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: printinfo
       use grid_cont,   only: grid_container
@@ -311,7 +311,7 @@ contains
    subroutine init_prob
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use cg_list_level,    only: base_lev
       use constants,        only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
       use dataio_pub,       only: msg, printinfo, die
@@ -558,7 +558,7 @@ contains
    subroutine kepler_problem_post_restart
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use constants,        only: b0_n
       use fluidboundaries,  only: all_fluid_boundaries
       use named_array_list, only: wna
@@ -625,7 +625,7 @@ contains
    subroutine problem_customize_solution_kepler(forward)
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use constants,        only: xdim, ydim, zdim, I_ONE
       use dataio_pub,       only: die!, warn, msg
       use domain,           only: is_multicg
@@ -768,7 +768,7 @@ contains
    subroutine my_grav_pot_3d
 
       use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use constants,   only: xdim, zdim
       use gravity,     only: ptmass, sum_potential
       use grid_cont,   only: grid_container

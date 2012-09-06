@@ -50,7 +50,7 @@ contains
 #endif /* SHEAR */
       use dataio_pub,  only: die
       use domain,      only: dom, is_multicg
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use grid_cont,   only: grid_container
 
       implicit none

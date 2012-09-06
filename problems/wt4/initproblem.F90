@@ -191,7 +191,7 @@ contains
 
    subroutine read_IC_file
 
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use constants,   only: xdim, ydim, zdim , LO, HI
       use dataio_pub,  only: msg, die
       use domain,      only: is_multicg
@@ -283,7 +283,7 @@ contains
    subroutine init_prob
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use cg_list_global,   only: all_cg
       use constants,        only: small, xdim, ydim, zdim, AT_NO_B
       use dataio_pub,       only: warn, printinfo, msg, die
@@ -459,7 +459,7 @@ contains
    subroutine problem_customize_solution_wt4(forward)
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use constants,        only: xdim, ydim, zdim
       use dataio_pub,       only: warn
       use fluidindex,       only: flind

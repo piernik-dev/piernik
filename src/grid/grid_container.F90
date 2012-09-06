@@ -208,6 +208,7 @@ module grid_cont
       real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
       integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
       integer :: grid_id                                         !< index of own segment in own level decomposition, e.g. my_se(:,:) = base_lev%pse(proc)%c(grid_id)%se(:,:)
+      integer :: membership                                      !< How many cg lists use this grid piece?
 
    contains
 
@@ -263,6 +264,7 @@ contains
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init] MPI not initialized.")
 
+      this%membership = 1
       this%grid_id    = grid_id
       this%my_se(:,:) = my_se(:, :)
       this%off(:)     = this%my_se(:, LO)
@@ -537,8 +539,6 @@ contains
       integer, parameter :: nseg = 2*2
       type(tgt_list), dimension(nseg) :: rpio_tgt
 
-      if (this%grid_id <= INVALID) return ! very dirty workaround for inability to determine whether a given cg was already deallocated
-
       if (allocated(this%x))     deallocate(this%x)
       if (allocated(this%xl))    deallocate(this%xl)
       if (allocated(this%xr))    deallocate(this%xr)
@@ -620,8 +620,6 @@ contains
       if (allocated(this%mg%bnd_x))   deallocate(this%mg%bnd_x)
       if (allocated(this%mg%bnd_y))   deallocate(this%mg%bnd_y)
       if (allocated(this%mg%bnd_z))   deallocate(this%mg%bnd_z)
-
-      this%grid_id = INVALID
 
    end subroutine cleanup
 

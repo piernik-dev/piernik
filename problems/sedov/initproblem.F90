@@ -130,7 +130,7 @@ contains
    subroutine init_prob
 
       use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use constants,   only: ION, DST, xdim, ydim, zdim
       use dataio_pub,  only: msg, die, printinfo
       use fluidindex,  only: flind

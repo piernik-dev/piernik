@@ -376,7 +376,7 @@ contains
       use dataio_pub,          only: die, warn, printinfo, msg
       use cart_comm,           only: cdd
       use domain,              only: dom
-      use cg_list_bnd,         only: leaves
+      use cg_leaves,           only: leaves
       use grid_cont,           only: grid_container
       use mpi,                 only: MPI_COMM_NULL
       use mpisetup,            only: master, nproc
@@ -683,7 +683,7 @@ contains
    subroutine init_solution(history)
 
       use cg_list,        only: ind_val
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use cg_list_level,  only: finest
       use cg_list_global, only: all_cg
       use constants,      only: INVALID, O_INJ, O_LIN, O_I2
@@ -778,7 +778,7 @@ contains
       use dataio_pub,     only: die
       use domain,         only: dom
       use cg_list,        only: cg_list_element
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use grid_cont,      only: grid_container
       use multigridvars,  only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
       use units,          only: fpiG
@@ -808,7 +808,6 @@ contains
          call leaves%set_q_value(source, 0.)
       endif
 
-      cg => leaves%first%cg
       select case (grav_bnd)
          case (bnd_periodic) ! probably also bnd_neumann
             call leaves%subtract_average(source)
@@ -865,7 +864,7 @@ contains
 
    subroutine store_solution(history)
 
-      use cg_list_bnd,   only: leaves
+      use cg_leaves,     only: leaves
       use cg_list_level, only: finest
       use constants,     only: BND_XTRAP, BND_REF
       use domain,        only: dom
@@ -905,7 +904,7 @@ contains
 
    subroutine multigrid_solve_grav(i_all_dens)
 
-      use cg_list_bnd,   only: leaves
+      use cg_leaves,     only: leaves
       use constants,     only: sgp_n
       use multigridvars, only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
       use multipole,     only: multipole_solver
@@ -965,7 +964,7 @@ contains
 
    subroutine vcycle_hg(history)
 
-      use cg_list_bnd,    only: leaves
+      use cg_leaves,      only: leaves
       use cg_list_global, only: all_cg
       use cg_list_level,  only: cg_list_level_T, finest, coarsest
       use constants,      only: cbuff_len, fft_none
@@ -1566,7 +1565,9 @@ contains
 
       type(grid_container), pointer :: cg
 
-      if (associated(finest%first%nxt)) call die("[multigrid_gravity:fft_solve_roof] multicg not possible")
+      if (associated(finest%first)) then
+         if (associated(finest%first%nxt)) call die("[multigrid_gravity:fft_solve_roof] multicg not possible")
+      endif
 
       if (finest%fft_type == fft_none) return
 

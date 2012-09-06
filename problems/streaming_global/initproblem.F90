@@ -165,7 +165,7 @@ contains
    subroutine add_sine
 
       use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use constants,   only: dpi, xdim, zdim
       use dataio_pub,  only: printinfo, warn
       use domain,      only: dom
@@ -217,7 +217,7 @@ contains
    subroutine add_random_noise
 
       use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use constants,   only: xdim, ydim, zdim
       use dataio_pub,  only: printinfo
       use fluidindex,  only: flind
@@ -261,7 +261,7 @@ contains
 
       use cart_comm,        only: cdd
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use constants,        only: DST, GEO_RPZ, xdim, ydim, zdim
       use dataio_pub,       only: msg, printinfo, die
       use domain,           only: dom, is_multicg
@@ -383,7 +383,7 @@ contains
    subroutine problem_customize_solution_kepler(forward)
 
       use cg_list,          only: cg_list_element
-      use cg_list_bnd,      only: leaves
+      use cg_leaves,        only: leaves
       use constants,        only: dpi, xdim, ydim, zdim
       use dataio_pub,       only: die
       use domain,           only: is_multicg, dom
@@ -476,7 +476,7 @@ contains
    subroutine my_grav_pot_3d
 
       use cg_list,     only: cg_list_element
-      use cg_list_bnd, only: leaves
+      use cg_leaves,   only: leaves
       use gravity,     only: sum_potential
       use grid_cont,   only: grid_container
       use types,       only: axes
