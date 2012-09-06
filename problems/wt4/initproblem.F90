@@ -456,7 +456,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-   subroutine problem_customize_solution_wt4
+   subroutine problem_customize_solution_wt4(forward)
 
       use cg_list,          only: cg_list_element
       use cg_list_bnd,      only: leaves
@@ -469,6 +469,7 @@ contains
 
       implicit none
 
+      logical, intent(in)               :: forward
       integer                           :: i, j, k
       real, allocatable, dimension(:)   :: mod_str
       real, parameter                   :: max_ambient = 100. ! do not modify solution if density is above max_ambient * ambient_density
@@ -557,6 +558,9 @@ contains
 
          cgl => cgl%nxt
       enddo
+
+      return
+      if (.false. .and. forward) i = j ! suppress compiler warnings on unused arguments
 
    end subroutine problem_customize_solution_wt4
 

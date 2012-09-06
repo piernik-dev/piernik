@@ -380,7 +380,7 @@ contains
 
    end subroutine init_prob
 !-----------------------------------------------------------------------------
-   subroutine problem_customize_solution_kepler
+   subroutine problem_customize_solution_kepler(forward)
 
       use cg_list,          only: cg_list_element
       use cg_list_bnd,      only: leaves
@@ -402,6 +402,7 @@ contains
 
       implicit none
 
+      logical, intent(in)                     :: forward
       integer                                 :: j, k
       logical,                           save :: frun = .true.
       real, dimension(:,:), allocatable, save :: funcR
@@ -466,6 +467,9 @@ contains
       enddo
 
       call all_fluid_boundaries
+
+      return
+      if (forward) j = k ! suppress compiler warnings on unused arguments
 
    end subroutine problem_customize_solution_kepler
 !-----------------------------------------------------------------------------

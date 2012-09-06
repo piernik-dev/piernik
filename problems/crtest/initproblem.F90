@@ -55,7 +55,7 @@ contains
 
       implicit none
 
-      problem_customize_solution => check_norm
+      problem_customize_solution => check_norm_wrapper
       finalize_problem           => check_norm
       user_vars_hdf5             => crtest_analytic_ecr1
 
@@ -290,6 +290,15 @@ contains
 
 !-----------------------------------------------------------------------------
 
+   subroutine check_norm_wrapper(forward)
+      implicit none
+      logical, intent(in) :: forward
+      call check_norm
+      return
+      if (.false. .and. forward) d0 = 0.0 ! suppress compiler warnings on unused arguments
+   end subroutine check_norm_wrapper
+
+!-----------------------------------------------------------------------------
    subroutine check_norm
 
       use cg_list,          only: cg_list_element

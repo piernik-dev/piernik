@@ -50,19 +50,19 @@ contains
 
    subroutine repeat_fluidstep
 
-      use constants,   only: I_ONE, u0_n, b0_n
-      use dataio_pub,  only: warn
-      use cg_list,     only: cg_list_element
-      use global,      only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
-      use cg_list_bnd, only: leaves
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: master
+      use cg_list,          only: cg_list_element
+      use cg_list_bnd,      only: leaves
+      use constants,        only: I_ONE, u0_n, b0_n
+      use dataio_pub,       only: warn
+      use global,           only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: master
       use named_array_list, only: wna
 
       implicit none
 
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       if (.not.repeat_step) return
 
@@ -183,7 +183,7 @@ contains
             if (.not.skip_sweep(s)) call make_sweep(s, forward)
          enddo
       endif
-      if (associated(problem_customize_solution)) call problem_customize_solution
+      if (associated(problem_customize_solution)) call problem_customize_solution(forward)
 
    end subroutine make_3sweeps
 

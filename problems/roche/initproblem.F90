@@ -178,7 +178,7 @@ contains
    end subroutine init_prob
 !-----------------------------------------------------------------------------
 
-   subroutine impose_inflow
+   subroutine impose_inflow(forward)
 
       use cg_list,     only: cg_list_element
       use cg_list_bnd, only: leaves
@@ -191,6 +191,7 @@ contains
 
       implicit none
 
+      logical, intent(in)             :: forward
       class(component_fluid), pointer :: fl
       integer                         :: i, j, k
       real                            :: xi, yj, zk, r1, r2, dntemp, vx, vy, vz, dnold, enold, entemp, csaim, enaim, coolfac
@@ -285,6 +286,9 @@ contains
 
          cgl => cgl%nxt
       enddo
+
+      return
+      if (forward) i = j ! suppress compiler warnings on unused arguments
 
    end subroutine impose_inflow
 

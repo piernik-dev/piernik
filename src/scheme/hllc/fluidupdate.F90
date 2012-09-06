@@ -69,7 +69,7 @@ contains
          do ddim = xdim, zdim, 1
             if (dom%has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
          enddo
-         if (associated(problem_customize_solution)) call problem_customize_solution
+         if (associated(problem_customize_solution)) call problem_customize_solution(.true.)
          cgl => cgl%nxt
       enddo
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -82,7 +82,7 @@ contains
          do ddim = zdim, xdim, -1
             if (dom%has_dir(ddim)) call sweep(cgl%cg,dt,ddim)
          enddo
-         if (associated(problem_customize_solution)) call problem_customize_solution
+         if (associated(problem_customize_solution)) call problem_customize_solution(.false.)
          cgl => cgl%nxt
       enddo
 

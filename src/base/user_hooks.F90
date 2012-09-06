@@ -60,17 +60,22 @@ module user_hooks
          integer, dimension(:), intent(out) :: area
       end subroutine user_area
 
+      subroutine logical_arg(forward)
+         implicit none
+         logical, intent(in) :: forward
+      end subroutine logical_arg
+
    end interface
 
-   procedure(no_args),   pointer :: problem_customize_solution => NULL()
-   procedure(no_args),   pointer :: problem_grace_passed       => NULL()
-   procedure(no_args),   pointer :: user_vars_arr_in_restart   => NULL()
-   procedure(no_args),   pointer :: problem_post_restart       => NULL()
-   procedure(no_args),   pointer :: finalize_problem           => NULL()
-   procedure(no_args),   pointer :: cleanup_problem            => NULL()
-   procedure(no_args),   pointer :: problem_refine_derefine    => NULL()
-   procedure(tab_args),  pointer :: custom_emf_bnd             => NULL()
-   procedure(indx_args), pointer :: at_user_dims_settings      => NULL()
-   procedure(user_area), pointer :: at_user_area_settings      => NULL()
+   procedure(logical_arg), pointer :: problem_customize_solution => NULL()
+   procedure(no_args),     pointer :: problem_grace_passed       => NULL()
+   procedure(no_args),     pointer :: user_vars_arr_in_restart   => NULL()
+   procedure(no_args),     pointer :: problem_post_restart       => NULL()
+   procedure(no_args),     pointer :: finalize_problem           => NULL()
+   procedure(no_args),     pointer :: cleanup_problem            => NULL()
+   procedure(no_args),     pointer :: problem_refine_derefine    => NULL()
+   procedure(tab_args),    pointer :: custom_emf_bnd             => NULL()
+   procedure(indx_args),   pointer :: at_user_dims_settings      => NULL()
+   procedure(user_area),   pointer :: at_user_area_settings      => NULL()
 
 end module user_hooks

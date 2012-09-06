@@ -63,7 +63,7 @@ contains
       finalize_problem           => calculate_error_norm
       user_vars_hdf5             => inid_var_hdf5
       user_reg_var_restart       => register_user_var
-      problem_customize_solution => calculate_error_norm
+      problem_customize_solution => calculate_error_norm_wrapper
 
    end subroutine problem_pointers
 
@@ -225,6 +225,16 @@ contains
       call all_cg%reg_var(inid_n, restart_mode = AT_NO_B)
 
    end subroutine register_user_var
+
+!-----------------------------------------------------------------------------
+
+   subroutine calculate_error_norm_wrapper(forward)
+      implicit none
+      logical, intent(in) :: forward
+      call calculate_error_norm
+      return
+      if (.false. .and. forward) pulse_size = 0.0 ! suppress compiler warnings on unused arguments
+   end subroutine calculate_error_norm_wrapper
 
 !-----------------------------------------------------------------------------
 
