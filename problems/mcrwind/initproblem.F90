@@ -141,6 +141,9 @@ contains
 #ifdef GRAV
       use gravity,        only: grav_pot_3d
 #endif /* GRAV */
+#ifdef COSM_RAYS_SOURCES
+      use cr_data,        only: eCRSP, cr_sigma, cr_table, icr_N14, icr_O16
+#endif /* COSM_RAYS_SOURCES */
       implicit none
 
       class(component_fluid), pointer :: fl
@@ -149,6 +152,12 @@ contains
       real, dimension(3)              :: sn_pos
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+
+#ifdef COSM_RAYS_SOURCES
+! really workaround for the gold
+      if (eCRSP(icr_N14)) cr_sigma(cr_table(icr_N14),:) = 0.0
+      if (eCRSP(icr_O16)) cr_sigma(cr_table(icr_O16),:) = 0.0
+#endif /* COSM_RAYS_SOURCES */
 
       call grav_pot_3d
 

@@ -98,7 +98,6 @@
  $CR_SPECIES
     eN14 = .true.
     eO16 = .true.
-    eLi7 = .true.
  /
 
  $SHEARING
