@@ -337,9 +337,8 @@ contains
       use cg_list,        only: cg_list_element
       use cg_leaves,      only: leaves
       use constants,      only: xdim, ydim, zdim, ndims
-      use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
+      use cr_data,        only: cr_table, cr_primary, eCRSP, icr_H1, icr_C12 !, icr_N14, icr_O16
       use domain,         only: dom
-      use fluidindex,     only: flind
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn
       use snsources,      only: r_sn
@@ -348,7 +347,7 @@ contains
 
       real, dimension(ndims), intent(in) :: pos
 
-      integer                            :: i, j, k, ipm, jpm, icr
+      integer                            :: i, j, k, ipm, jpm
       real                               :: decr, xsn, ysn, zsn, ysna !, ysni, ysno
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
@@ -376,23 +375,15 @@ contains
                      do jpm=-1,1
 
 !                     decr = amp_ecr_sn * ethu  &
-                        decr = amp_cr  &
-                             * exp(-((cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2  &
-                             + (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2  &
-                             + (cg%z(k)-zsn)**2)/r_sn**2)
+                        decr = amp_cr * exp(-((cg%x(i)-xsn +real(ipm)*dom%L_(xdim))**2  &
+                             +                (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2  &
+                             +                (cg%z(k)-zsn)**2)/r_sn**2)
 !                     cg%u(iarr_crn,i,j,k) = cg%u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
-                        do icr = 1, flind%crn%all
-                           select case (icr)
-                              case (icr_H1)
-                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + decr
-                              case (icr_C12)
-                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + primary_C12*12*decr
-                              case (icr_N14)
-                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + primary_N14*14*decr
-                              case (icr_O16)
-                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + primary_O16*16*decr
-                           end select
-                        enddo
+                        if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
+                        if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12))*12*decr
+                        !> \deprecated BEWERA: following lines are inconsistent with the gold for some reason
+!                        if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
+!                        if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
 
                      enddo ! jpm
                   enddo ! ipm

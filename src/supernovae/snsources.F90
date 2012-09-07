@@ -166,21 +166,17 @@ contains
       use cg_list,        only: cg_list_element
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS_SOURCES
+      use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, cr_table, cr_primary, eCRSP
       use initcosmicrays, only: iarr_crn
-      use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, primary_C12, primary_N14, primary_O16
-      use fluidindex,     only: flind
 #endif /* COSM_RAYS_SOURCES */
 
       implicit none
 
       real, dimension(3), intent(in) :: pos
-      integer  :: i, j, k, ipm, jpm
-      real     :: decr, xsn, ysn, zsn
+      integer                        :: i, j, k, ipm, jpm
+      real                           :: decr, xsn, ysn, zsn
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
-#ifdef COSM_RAYS_SOURCES
-      integer  :: icr
-#endif /* COSM_RAYS_SOURCES */
+      type(grid_container),  pointer :: cg
 
       xsn = pos(1)
       ysn = pos(2)
@@ -202,24 +198,15 @@ contains
 
                      do jpm=-1,1
 
-                        decr = amp_ecr_sn * ethu  &
-                             * exp(-((cg%x(i)-xsn +real(ipm)*dom%L_(xdim))**2  &
-                             + (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2  &
-                             + (cg%z(k)-zsn)**2)/r_sn**2)
+                        decr = amp_ecr_sn * ethu * exp(-((cg%x(i)-xsn +real(ipm)*dom%L_(xdim))**2  &
+                             +                           (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2  &
+                             +                           (cg%z(k)-zsn)**2)/r_sn**2)
 
 #ifdef COSM_RAYS_SOURCES
-                        do icr=1,flind%crn%all
-                           select case (icr)
-                              case (icr_H1 )
-                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + decr
-                              case (icr_C12)
-                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + primary_C12*12*decr
-                              case (icr_N14)
-                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + primary_N14*14*decr
-                              case (icr_O16)
-                                 cg%u(iarr_crn(icr),i,j,k) = cg%u(iarr_crn(icr),i,j,k) + primary_O16*16*decr
-                           end select
-                        enddo
+                        if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
+                        if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + cr_primary(icr_C12)*12*decr
+                        if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(icr_N14)*14*decr
+                        if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(icr_O16)*16*decr
 #endif /* COSM_RAYS_SOURCES */
 
                      enddo ! jpm
