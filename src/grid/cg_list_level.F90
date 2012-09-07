@@ -39,11 +39,6 @@ module cg_list_level
 
    private
    public :: cg_list_level_T, base_lev, finest, coarsest
-#if defined(__INTEL_COMPILER)
-   !! \deprecated remove this clause as soon as Intel Compiler gets required
-   !! features and/or bug fixes
-   public :: intel_init_cg_list_level
-#endif /* __INTEL_COMPILER */
 
    !> \brief A single grid piece plus auxiliary data
    !> \deprecated not to be confused with decomposition::cuboid
