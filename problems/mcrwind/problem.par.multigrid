@@ -96,6 +96,9 @@
     use_split   = .false.
  /
 
+ $CR_SPECIES
+ /
+
  $MULTIGRID_SOLVER
 !    stdout = .true.
     level_max = 2

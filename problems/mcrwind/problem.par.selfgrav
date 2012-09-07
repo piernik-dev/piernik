@@ -55,7 +55,7 @@
  $FLUID_IONIZED
     gamma = 1.66666667
     cs_iso  =  7.0            ! sound speed
-    SELFGRAV_ION=T    
+    SELFGRAV_ION=T
  /
 
  $NUMERICAL_SETUP
@@ -96,6 +96,9 @@
     K_crn_perp(1)  = 0
     smallecr       = 0.e-2
     use_split   = .false.
+ /
+
+ $CR_SPECIES
  /
 
  $MULTIGRID_SOLVER

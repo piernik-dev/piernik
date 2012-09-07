@@ -89,6 +89,9 @@
     smallecr     = 1.e-2    ! lower limit & outflow boundary value for ecr
  /
 
+ $CR_SPECIES
+ /
+
  $GALACTIC_PARAMS
     h_sn         = 100.0    ! polowkowa szerokosc rozkladu gauss. wybuchow w "z"
     r_sn         =  50.0    ! promien pojedyncz. wybuchu (f. gaussa)

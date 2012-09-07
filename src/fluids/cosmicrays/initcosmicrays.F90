@@ -107,6 +107,9 @@ contains
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
       use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
+#ifdef COSM_RAYS_SOURCES
+      use cr_data,         only: init_crsources
+#endif /* COSM_RAYS_SOURCES */
 
       implicit none
 
@@ -249,6 +252,10 @@ contains
       call my_allocate(iarr_cre, ma1d)
       ma1d = [ncrs]
       call my_allocate(iarr_crs, ma1d)
+
+#ifdef COSM_RAYS_SOURCES
+      call init_crsources(ncrn)
+#endif /* COSM_RAYS_SOURCES */
 
    end subroutine init_cosmicrays
 

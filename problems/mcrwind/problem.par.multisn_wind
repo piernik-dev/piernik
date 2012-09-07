@@ -96,6 +96,9 @@
     use_split   = .false.
  /
 
+ $CR_SPECIES
+ /
+
  $SHEARING
     omega        = 0.0      ! angular freq.
     qshear       = 1.0      ! shearing param. q: vy=q*omega*x

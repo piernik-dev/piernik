@@ -79,6 +79,9 @@
     divv_scheme = "6lp"
  /
 
+ $CR_SPECIES
+ /
+
  $MULTIGRID_SOLVER
 !    stdout = .true.
     level_max = 5

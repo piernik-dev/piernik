@@ -95,6 +95,12 @@
     use_split   = .false.
  /
 
+ $CR_SPECIES
+    eN14 = .true.
+    eO16 = .true.
+    eLi7 = .true.
+ /
+
  $SHEARING
     omega        = 0.0      ! angular freq.
     qshear       = 1.0      ! shearing param. q: vy=q*omega*x
