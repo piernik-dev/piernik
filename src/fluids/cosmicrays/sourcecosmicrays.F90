@@ -33,7 +33,6 @@
 !!
 !!
 !<
-
 module sourcecosmicrays
 ! pulled by COSM_RAYS_SOURCES
    implicit none
@@ -58,33 +57,39 @@ contains
       real, dimension(flind%crn%all,n), intent(out) :: decrn
 
 ! locals
-      real, allocatable       :: dgas(:)
-      real,         parameter :: gamma_lor = 10.
+      real, dimension(n)      :: dgas
+      real, dimension(n)      :: dcr
+      real,         parameter :: gamma_lor = 10.0
       real(kind=8), parameter :: speed_of_light = 3e10*1e6*365.*24.*60.*60. !< cm/Myr \deprecated BEWARE: this line breaks unit consistency, move it to units.F90 and use scaling
-      real,         parameter :: ndim = 2.
+      real,         parameter :: ndim = 2.0
+      real,         parameter :: c_n = speed_of_light / ndim
+      real,         parameter :: gn = 1.0 / gamma_lor / ndim
 
       integer               :: i, j
 
-      allocate(dgas(n))
-
-      dgas(:) = 0.0
-      if (has_ion) dgas(:) = dgas(:) + uu(flind%ion%idn,:)
-      if (has_neu) dgas(:) = dgas(:) + uu(flind%neu%idn,:)
-      dgas(:) = 1./ndim*dgas(:)*speed_of_light
+      dgas = 0.0
+      if (has_ion) dgas = dgas + uu(flind%ion%idn,:)
+      if (has_neu) dgas = dgas + uu(flind%neu%idn,:)
+      dgas = c_n*dgas
 
       decrn(:,:) = 0.0
 
-      if (eCRSP(icr_Be10)) decrn(cr_table(icr_Be10),:) = decrn(cr_table(icr_Be10),:) - 1./ndim*uu(flind%crn%beg-1+cr_table(icr_Be10),:)/gamma_lor/cr_tau(cr_table(icr_Be10))
+      if (eCRSP(icr_Be10)) decrn(cr_table(icr_Be10), :) = decrn(cr_table(icr_Be10), :) - gn*uu(flind%crn%beg - 1 + cr_table(icr_Be10), :) / cr_tau(cr_table(icr_Be10))
 
-      do i = 1, 3
-         if (eCRSP(icrH(i))) then
-            do j = 1, 3
-               if (eCRSP(icrL(j))) then
-                  decrn(cr_table(icrH(i)),:) = decrn(cr_table(icrH(i)),:) - dgas(:)*cr_sigma(cr_table(icrH(i)),cr_table(icrL(j)))*uu(flind%crn%beg-1+cr_table(icrH(i)),:)
-                  decrn(cr_table(icrL(j)),:) = decrn(cr_table(icrL(j)),:) + dgas(:)*cr_sigma(cr_table(icrH(i)),cr_table(icrL(j)))*uu(flind%crn%beg-1+cr_table(icrH(i)),:)
-               endif
-            enddo
+      do i = lbound(icrH, 1), ubound(icrH, 1)
+         associate( Hi => icrH(i) )
+            if (eCRSP(Hi)) then
+               do j = lbound(icrL, 1), ubound(icrL, 1)
+               associate( Lj => icrL(j) )
+                  if (eCRSP(Lj)) then
+                     dcr = cr_sigma(cr_table(Hi), cr_table(Lj)) * dgas * uu(flind%crn%beg - 1 + cr_table(Hi), :)
+                     decrn(cr_table(Hi), :) = decrn(cr_table(Hi), :) - dcr
+                     decrn(cr_table(Lj), :) = decrn(cr_table(Lj), :) + dcr
+                  endif
+               end associate
+               enddo
          endif
+         end associate
       enddo
 
    end subroutine src_crn
