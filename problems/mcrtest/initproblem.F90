@@ -144,7 +144,7 @@ contains
       use mpi,            only: MPI_IN_PLACE, MPI_INTEGER, MPI_MAX
       use mpisetup,       only: comm, mpi_err, master
 #ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: icr_H1, icr_C12
+      use cr_data,        only: icr_H1, icr_C12, cr_table
 #endif /* COSM_RAYS_SOURCES */
 
       implicit none
@@ -218,9 +218,9 @@ contains
                            do kpm=-1,1
 
                               r2 = (cg%x(i)-xsn+real(ipm)*dom%L_(xdim))**2+(cg%y(j)-ysn+real(jpm)*dom%L_(ydim))**2+(cg%z(k)-zsn+real(kpm)*dom%L_(zdim))**2
-                              if (icr == icr_H1) then
+                              if (icr == cr_table(icr_H1)) then
                                  cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
-                              elseif (icr == icr_C12) then
+                              elseif (icr == cr_table(icr_C12)) then
                                  cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
                               else
                                  cg%u(iarr_crn(icr), i, j, k) = 0.0

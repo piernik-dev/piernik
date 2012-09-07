@@ -49,21 +49,21 @@ contains
 
       use fluids_pub,    only: has_ion, has_neu
       use fluidindex,    only: flind
-      use cr_data, only: icr_Be10, icr_Be9, icr_C12, sigma_c12_be10, sigma_c12_be9, tau_Be10
+      use cr_data,       only: eCRSP, cr_table, cr_tau, cr_sigma, icr_C12, icr_Be9, icr_Be10
+      ! icr_Be10, icr_Be9, icr_C12, sigma_c12_be10, sigma_c12_be9, tau_Be10
       ! icr_Li7, icr_N14, icr_O16, sigma_c12_li7, sigma_n14_li7, sigma_o16_be10, sigma_o16_be9, sigma_o16_li7
 
       implicit none
 
-      integer(kind=4), intent(in) :: n
-      real, dimension(flind%all,n), intent(in)     :: uu
+      integer(kind=4),                  intent(in)  :: n
+      real, dimension(flind%all,n),     intent(in)  :: uu
       real, dimension(flind%crn%all,n), intent(out) :: decrn
 
 ! locals
-      real, allocatable               :: dgas(:)
-
-      real, parameter  :: gamma_lor = 10.
-      real(kind=8), parameter :: speed_of_light = 3e10*1e6*365.*24.*60.*60. !< cm/Myr \deprecated BEWARE: this line breaks unit consistency, move it to constants.F90 and use scaling
-      real, parameter  :: ndim = 2.
+      real, allocatable       :: dgas(:)
+      real,         parameter :: gamma_lor = 10.
+      real(kind=8), parameter :: speed_of_light = 3e10*1e6*365.*24.*60.*60. !< cm/Myr \deprecated BEWARE: this line breaks unit consistency, move it to units.F90 and use scaling
+      real,         parameter :: ndim = 2.
 
       allocate(dgas(n))
 
@@ -74,15 +74,20 @@ contains
 
       decrn(:,:) = 0.0
 
-      decrn(icr_C12,:)  = -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(flind%crn%beg-1+icr_C12,:) &
-           &              -1./ndim*dgas(:)*speed_of_light*sigma_C12_Be10*uu(flind%crn%beg-1+icr_C12,:)
-
-      decrn(icr_Be9,:)  =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be9*uu(flind%crn%beg-1+icr_C12,:) )!&
+      if (eCRSP(icr_C12)) then
+         if (eCRSP(icr_Be9)) then
+            decrn(cr_table(icr_C12 ),:) = decrn(cr_table(icr_C12 ),:) - 1./ndim*dgas(:)*speed_of_light*cr_sigma(cr_table(icr_C12),cr_table(icr_Be9 ))*uu(flind%crn%beg-1+cr_table(icr_C12),:)
+            decrn(cr_table(icr_Be9 ),:) = decrn(cr_table(icr_Be9 ),:) + 1./ndim*dgas(:)*speed_of_light*cr_sigma(cr_table(icr_C12),cr_table(icr_Be9 ))*uu(flind%crn%beg-1+cr_table(icr_C12),:)
 !          &               +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be9*uu(flind%crn%beg-1+icr_O16,:)  )
-
-      decrn(icr_Be10,:) =(  1./ndim*dgas(:)*speed_of_light*sigma_C12_Be10*uu(flind%crn%beg-1+icr_C12,:) &
+         endif
+         if (eCRSP(icr_Be10)) then
+            decrn(cr_table(icr_C12 ),:) = decrn(cr_table(icr_C12 ),:) - 1./ndim*dgas(:)*speed_of_light*cr_sigma(cr_table(icr_C12),cr_table(icr_Be10))*uu(flind%crn%beg-1+cr_table(icr_C12),:)
+            decrn(cr_table(icr_Be10),:) = decrn(cr_table(icr_Be10),:) + 1./ndim*dgas(:)*speed_of_light*cr_sigma(cr_table(icr_C12),cr_table(icr_Be10))*uu(flind%crn%beg-1+cr_table(icr_C12),:)
 !          &               +1./ndim*dgas(:)*speed_of_light*sigma_O16_Be10*uu(flind%crn%beg-1+icr_O16,:) &
-           &               -1./ndim*uu(flind%crn%beg-1+icr_Be10,:)/gamma_lor/tau_Be10 )
+         endif
+      endif
+
+      if (eCRSP(icr_Be10)) decrn(cr_table(icr_Be10),:) = decrn(cr_table(icr_Be10),:) - 1./ndim*uu(flind%crn%beg-1+cr_table(icr_Be10),:)/gamma_lor/cr_tau(cr_table(icr_Be10))
 
 !                        -1./ndim*dgas(:)*speed_of_light*sigma_C12_Li7*uu(flind%crn%beg-1+icr_C12,:)
 !    decrn(icr_Li7,:)  =( 1./ndim*dgas(:)*speed_of_light*sigma_C12_Li7*uu(flind%crn%beg-1+icr_C12,:) !&
