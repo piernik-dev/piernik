@@ -204,7 +204,7 @@ module grid_cont
       ! Misc
 
       type(mg_arr) :: mg                                         !< multigrid arrays (without multigrid will remain unallocated)
-      real :: vol                                                !< volume of the grid; BEWARE: for cylindrical geometry it need to be multiplied by appropriate x(:) to get real volume
+      real :: vol                                                !< volume of the grid; BEWARE: for cylindrical geometry it needs to be integrated over x(:) to get real volume
       real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
       integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction
       integer :: grid_id                                         !< index of own segment in own level decomposition, e.g. my_se(:,:) = base_lev%pse(proc)%c(grid_id)%se(:,:)
@@ -399,6 +399,7 @@ contains
       this%idy = 1./this%dy
       this%idz = 1./this%dz
 
+      !> \deprecated this%n[xyz]b are almost unused. \todo remove it
       this%nxb = this%n_b(xdim)
       this%nyb = this%n_b(ydim)
       this%nzb = this%n_b(zdim)

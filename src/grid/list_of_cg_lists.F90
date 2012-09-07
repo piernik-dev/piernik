@@ -65,7 +65,7 @@ contains
 
       implicit none
 
-      class(all_cg_lists), intent(inout) :: this!< object invoking type-bound procedure
+      class(all_cg_lists), intent(inout) :: this !< object invoking type-bound procedure
 
       integer :: i, g_cnt
 
@@ -130,7 +130,7 @@ contains
       implicit none
 
       class(all_cg_lists),           intent(inout) :: this  !< object invoking type-bound procedure
-      type(grid_container), pointer, intent(inout) :: cg
+      type(grid_container), pointer, intent(inout) :: cg    !< grid piece deemed to be forgotten
 
       type(cg_list_element), pointer :: cgl, aux
       integer :: i
@@ -143,7 +143,7 @@ contains
                aux => cgl
                cgl => cgl%nxt
                if (associated(cg,aux%cg)) call this%entries(i)%lp%delete(aux)
-               ! allow multiple occurences on the same list
+               ! do not call exit here because it is safer to not assume single occurence on a list
             enddo
          endif
       enddo

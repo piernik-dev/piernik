@@ -26,10 +26,9 @@
 !    For full list of developers see $PIERNIK_HOME/license/pdt.txt
 !
 #include "piernik.h"
-#include "macros.h"
-!>
-!! \brief Module containing lists of grid containers for computational mesh and initialization and cleanup routines
-!<
+
+!> \brief Initializes the crucial grid lists and provides a cleanup routine.
+
 module grid
 
    implicit none
@@ -59,16 +58,16 @@ contains
       call printinfo("[grid:init_grid]: commencing...")
 #endif /* VERBOSE */
 
-      ! Create the empty main lists for base level only.
-      ! Refinement lists will be added by iterating the initproblem::init_prob routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update
-      ! Underground levels will be added in multigrid::init_multigrid
+      ! Create the empty main lists.with the base level
+
       call all_lists%register(all_cg, all_cg_n)
       all_cg%ord_prolong_nb = I_ZERO
+
       call base_lev%add_level(dom%n_d(:))
-
       call base_lev%add_patch(dom%n_d(:), base_level_offset)
-
       call base_lev%init_all_new_cg
+      ! Refinement lists will be added by iterating the initproblem::init_prob routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update
+      ! Underground levels will be added in multigrid::init_multigrid
 
       call leaves%update
 
@@ -78,11 +77,8 @@ contains
 
    end subroutine init_grid
 
-! \brief Update the list of leaves
-! subroutine update leaves
-! end subroutine update leaves
+!> \brief Deallocate everything
 
-!> \brief deallocate everything
    subroutine cleanup_grid
 
       use cg_leaves,        only: leaves
@@ -115,6 +111,7 @@ contains
          endif
       enddo
       if (.not. associated(finest, base_lev)) deallocate(finest)
+      !> \todo move the above level-list deletions to list_of_all_lists (make base_lev allocatable)
 
       if (allocated(qna%lst)) deallocate(qna%lst)
       if (allocated(wna%lst)) deallocate(wna%lst)

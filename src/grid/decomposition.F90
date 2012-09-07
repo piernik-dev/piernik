@@ -31,7 +31,7 @@
 !>
 !! \brief Domain decomposition routines and variables
 !!
-!! \details This module contains everything closely related to grid redistribution over processes
+!! \details This module contains everything closely related to decomposing a grid to smaller pieces to be distributed among processes
 !<
 
 module decomposition
@@ -246,7 +246,7 @@ contains
 !>
 !! \brief Decomposes the domain into topologically Cartesian grid
 !!
-!! \details Each process gets a single piece of the grid. There are at most 6 neighbours; each boundary is either external boundary or is shared with one neighbour.
+!! \details Produce specified number of pieces of the grid. On each piece boundary there is either external boundary or a neighbour (another piece)
 !<
 
    subroutine cartesian_tiling(patch, p_size, pieces)
@@ -306,10 +306,10 @@ contains
    end subroutine cartesian_tiling
 
 !>
-!! \brief Less structured domain decomposition.
+!! \brief A domain decomposition that is less tructured than cartesian_tiling
 !!
-!! \details Each process gets a single piece of the grid. Each non-external boundary can be shared wit one or more processes.
-!! When pieces == product(p_size(:)), the decomposition is identical to the result of cartesian_tiling.
+!! \details Each non-external boundary can be shared with one or more processes.
+!! When pieces == product(p_size(:)), the decomposition can be identical to the result of cartesian_tiling.
 !>
 
    subroutine choppy_tiling(patch, p_size, pieces)
@@ -621,7 +621,14 @@ contains
 
    end subroutine decompose_patch_slices
 
-!> \brief Divide the domain into lots of identical blocks
+!>
+!! \brief Divide the domain into lots of identical blocks
+!!
+!! \todo convert it into a call to cartesian_decomposition
+!!
+!! Is it really important to us to have all pieces of equal size?
+!! The answer wil depend on how we implement load balancing and block redistribution
+!<
 
    subroutine stamp_cg(patch)
 
@@ -727,7 +734,7 @@ contains
    end function is_not_too_small
 
 !>
-!! \brief allocate the segment list
+!! \brief Allocate the segment list
 !!
 !! \details Allocate one cuboid spec per process by default or the amount passed in n_cg argument
 !<

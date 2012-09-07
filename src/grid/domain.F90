@@ -87,7 +87,7 @@ module domain
 
    end type domain_container
 
-   type(domain_container), target  :: dom !< complete description of base level domain \todo protect it
+   type(domain_container), protected :: dom !< complete description of base level domain
 
    logical :: is_uneven          !< .true. when n_b(:) depend on process rank \todo protect it
    logical :: is_mpi_noncart     !< .true. when there exist a process that has more than one neighbour in any direction \todo protect it
@@ -323,7 +323,7 @@ contains
 
    end subroutine init_domain
 
-!-----------------------------------------------------------------------------
+!> \brief Cleanup. Nothing special to do here at the moment.
 
    subroutine cleanup_domain
 

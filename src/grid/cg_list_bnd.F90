@@ -182,6 +182,7 @@ contains
                      i_seg => cg%i_bnd(d, n)%seg(g)
                      o_seg => cg%o_bnd(d, n)%seg(g)
 
+                     !> \deprecated: A lot of semi-duplicated code below
                      if (tgt3d) then
                         if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:internal_boundaries] wrong 3d index")
 
