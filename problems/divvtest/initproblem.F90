@@ -125,33 +125,31 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,      only: xdim, ydim, zdim, pi, I_ONE
+      use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-#ifdef COSM_RAYS_SOURCES
-      use cr_data,        only: icr_H1, icr_C12
-#endif /* COSM_RAYS_SOURCES */
+      use constants,      only: xdim, ydim, zdim, pi, I_ONE
       use crhelpers,      only: div_v
       use dataio_pub,     only: warn
       use domain,         only: dom
       use fluidindex,     only: flind
       use fluidtypes,     only: component_fluid
       use func,           only: emag, ekin
-      use cg_leaves,      only: leaves
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn, iarr_crs, gamma_crn, K_crn_paral, K_crn_perp
+#ifdef COSM_RAYS_SOURCES
+      use cr_data,        only: icr_H1, icr_C12, cr_table
+#endif /* COSM_RAYS_SOURCES */
 
       implicit none
 
-      class(component_fluid), pointer :: fl
-      integer :: i, j, k, icr
-      real    :: cs_iso
-      real    :: r
-      real    :: r2
-      integer :: ipm, jpm, kpm
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      class(component_fluid), pointer  :: fl
+      integer                          :: i, j, k, icr, ipm, jpm, kpm
+      real                             :: cs_iso, r, r2
+      type(cg_list_element),  pointer  :: cgl
+      type(grid_container),   pointer  :: cg
 #ifndef COSM_RAYS_SOURCES
-      integer, parameter :: icr_H1 = 1, icr_C12 = 2
+      integer, parameter               :: icr_H1 = 1, icr_C12 = 2
+      integer, parameter, dimension(2) :: cr_table = [1,2]
 #endif /* !COSM_RAYS_SOURCES */
 
       fl => flind%ion
@@ -221,9 +219,9 @@ contains
                               r2 = (cg%x(i) - sn_pos(xdim) + real(ipm) * dom%L_(xdim))**2 + &
                                  & (cg%y(j) - sn_pos(ydim) + real(jpm) * dom%L_(ydim))**2 + &
                                  & (cg%z(k) - sn_pos(zdim) + real(kpm) * dom%L_(zdim))**2
-                              if (icr == icr_H1) then
+                              if (icr == cr_table(icr_H1)) then
                                  cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*exp(-r2/r0**2)
-                              elseif (icr == icr_C12) then
+                              elseif (icr == cr_table(icr_C12)) then
                                  cg%u(iarr_crn(icr), i, j, k) = cg%u(iarr_crn(icr), i, j, k) + amp_cr*0.1*exp(-r2/r0**2) ! BEWARE: magic number
                               else
                                  cg%u(iarr_crn(icr), i, j, k) = 0.0
