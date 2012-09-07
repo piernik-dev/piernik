@@ -13,6 +13,7 @@
 !! \copydetails piernikdebug::init_piernikdebug
 !! \copydetails gravity::init_grav
 !! \copydetails initcosmicrays::init_cosmicrays
+!! \copydetails cr_data::init_crsources
 !! \copydetails initdust::init_dust
 !! \copydetails initionized::init_ionized
 !! \copydetails initneutral::init_neutral
