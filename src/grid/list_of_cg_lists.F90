@@ -48,6 +48,7 @@ module list_of_cg_lists
       procedure :: print    !< Print all cg lists for diagnostic purposes
       procedure :: register !< Reset (initialize) the given list and add it to the table if unique
       procedure :: forget   !< Erase given cg from all known lists
+      procedure :: delete   !< Delete all lists
    end type all_cg_lists
 
    type(all_cg_lists) :: all_lists
@@ -152,5 +153,22 @@ contains
       deallocate(cg)
 
    end subroutine forget
+
+!> \brief Delete all lists
+
+   subroutine delete(this)
+
+      implicit none
+
+      class(all_cg_lists), intent(inout) :: this  !< object invoking type-bound procedure
+
+      integer :: i
+
+      do i = lbound(this%entries(:),dim=1), ubound(this%entries(:), dim=1)
+         call this%entries(i)%lp%delete
+      enddo
+      if (allocated(all_lists%entries)) deallocate(all_lists%entries)
+
+   end subroutine delete
 
 end module list_of_cg_lists

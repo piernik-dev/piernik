@@ -44,7 +44,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list_global,   only: all_cg, all_cg_n
-      use cg_list_level,    only: base_lev
+      use cg_list_level,    only: base_lev, finest, coarsest
       use constants,        only: PIERNIK_INIT_DOMAIN, I_ZERO, base_level_offset
       use dataio_pub,       only: printinfo, die, code_progress
       use domain,           only: dom
@@ -63,9 +63,13 @@ contains
       call all_lists%register(all_cg, all_cg_n)
       all_cg%ord_prolong_nb = I_ZERO
 
+      allocate(base_lev)
       call base_lev%add_level(dom%n_d(:))
       call base_lev%add_patch(dom%n_d(:), base_level_offset)
       call base_lev%init_all_new_cg
+      finest => base_lev
+      coarsest => base_lev
+
       ! Refinement lists will be added by iterating the initproblem::init_prob routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update
       ! Underground levels will be added in multigrid::init_multigrid
 
@@ -81,9 +85,8 @@ contains
 
    subroutine cleanup_grid
 
-      use cg_leaves,        only: leaves
       use cg_list_global,   only: all_cg
-      use cg_list_level,    only: cg_list_level_T, coarsest, finest, base_lev
+      use cg_list_level,    only: cg_list_level_T, coarsest
       use list_of_cg_lists, only: all_lists
       use named_array_list, only: qna, wna
 
@@ -99,24 +102,10 @@ contains
       enddo
 
       call all_cg%delete_all
-      call all_cg%delete
-      call leaves%delete
-
-      curl => coarsest
-      do while (associated(curl))
-         call curl%delete
-         curl => curl%finer
-         if (associated(curl)) then
-            if (associated(curl%coarser) .and. .not. associated(curl%coarser, base_lev)) deallocate(curl%coarser)
-         endif
-      enddo
-      if (.not. associated(finest, base_lev)) deallocate(finest)
-      !> \todo move the above level-list deletions to list_of_all_lists (make base_lev allocatable)
+      call all_lists%delete
 
       if (allocated(qna%lst)) deallocate(qna%lst)
       if (allocated(wna%lst)) deallocate(wna%lst)
-
-      if (allocated(all_lists%entries)) deallocate(all_lists%entries)
 
    end subroutine cleanup_grid
 

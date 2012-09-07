@@ -105,30 +105,14 @@ module cg_list_level
       ! fine-coarse boundary exchanges may also belong to this type
    end type cg_list_level_T
 
-   type(cg_list_level_T), target  :: base_lev             !< base level grid containers
+   type(cg_list_level_T), pointer  :: base_lev             !< base level grid containers
 
    !! \todo finest and coarsest together with subroutine add_lev can go to separate module
-#if defined(__INTEL_COMPILER)
-   !! \deprecated remove this clause as soon as Intel Compiler gets required
-   !! features and/or bug fixes
    type(cg_list_level_T), pointer :: finest               !< finest level of refinement
    type(cg_list_level_T), pointer :: coarsest             !< coarsest level of refinement
-#else /* !__INTEL_COMPILER */
-   type(cg_list_level_T), pointer :: finest   => base_lev !< finest level of refinement
-   type(cg_list_level_T), pointer :: coarsest => base_lev !< coarsest level of refinement
-#endif /* !__INTEL_COMPILER */
 
 contains
 
-#if defined(__INTEL_COMPILER)
-   !! \deprecated remove this clause as soon as Intel Compiler gets required
-   !! features and/or bug fixes
-   subroutine intel_init_cg_list_level
-      implicit none
-      finest => base_lev
-      coarsest => base_lev
-   end subroutine intel_init_cg_list_level
-#endif /* __INTEL_COMPILER */
 !> \brief initialize the base level
 
    subroutine add_lev_base(this, n_d)
