@@ -44,7 +44,7 @@ contains
 
 !==========================================================================================
 
-   subroutine src_crn(uu, n, decrn)
+   subroutine src_crn(uu, n, decrn, rk_coeff)
 
       use cr_data,       only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icrH, icrL
       use fluids_pub,    only: has_ion, has_neu
@@ -54,6 +54,7 @@ contains
 
       integer(kind=4),                  intent(in)  :: n
       real, dimension(flind%all,n),     intent(in)  :: uu
+      real, intent(in)                              :: rk_coeff   !< coeffecient used in RK step, while computing source term
       real, dimension(flind%crn%all,n), intent(out) :: decrn
 
 ! locals
@@ -74,15 +75,22 @@ contains
 
       decrn(:,:) = 0.0
 
-      if (eCRSP(icr_Be10)) decrn(cr_table(icr_Be10), :) = decrn(cr_table(icr_Be10), :) - gn*uu(flind%crn%beg - 1 + cr_table(icr_Be10), :) / cr_tau(cr_table(icr_Be10))
+      if (eCRSP(icr_Be10)) then
+         decrn(cr_table(icr_Be10), :) = decrn(cr_table(icr_Be10), :) - &
+            & gn * uu(flind%crn%beg - 1 + cr_table(icr_Be10), :) / cr_tau(cr_table(icr_Be10))
+      endif
 
       do i = lbound(icrH, 1), ubound(icrH, 1)
          associate( Hi => icrH(i) )
             if (eCRSP(Hi)) then
                do j = lbound(icrL, 1), ubound(icrL, 1)
-               associate( Lj => icrL(j) )
+               associate( &
+                  Lj => icrL(j), &
+                  idx => flind%crn%beg - 1 + cr_table(Hi) &
+               )
                   if (eCRSP(Lj)) then
-                     dcr = cr_sigma(cr_table(Hi), cr_table(Lj)) * dgas * uu(flind%crn%beg - 1 + cr_table(Hi), :)
+                     dcr = cr_sigma(cr_table(Hi), cr_table(Lj)) * dgas * uu(idx, :)
+                     dcr = min(uu(idx,:)/rk_coeff, dcr)  ! Don't decay more elements than available
                      decrn(cr_table(Hi), :) = decrn(cr_table(Hi), :) - dcr
                      decrn(cr_table(Lj), :) = decrn(cr_table(Lj), :) + dcr
                   endif

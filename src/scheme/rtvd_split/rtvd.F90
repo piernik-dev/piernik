@@ -477,8 +477,8 @@ contains
       u1(iarr_all_mx(flind%ion%pos),:) = u1(iarr_all_mx(flind%ion%pos),:) - rk2coef(integration_order,istep)*grad_pcr*dt
 
 #ifdef COSM_RAYS_SOURCES
-      call src_crn(u1,n, srccrn) ! n safe
-      u1(iarr_crn,:)  = u1(iarr_crn,:) +  rk2coef(integration_order,istep)*srccrn(:,:)*dt
+      call src_crn(u1,n, srccrn, rk2coef(integration_order, istep) * dt) ! n safe
+      u1(iarr_crn,:)  = u1(iarr_crn,:) +  rk2coef(integration_order, istep)*srccrn(:,:)*dt
 #endif /* COSM_RAYS_SOURCES */
    ! ---- 2 ----------------------
 #else /* !(COSM_RAYS && IONIZED) */
