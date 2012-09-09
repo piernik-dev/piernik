@@ -44,7 +44,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list_global,   only: all_cg, all_cg_n
-      use cg_list_level,    only: base_lev, finest, coarsest
+      use cg_level_connected,    only: base_lev, finest, coarsest
       use constants,        only: PIERNIK_INIT_DOMAIN, I_ZERO, base_level_offset
       use dataio_pub,       only: printinfo, die, code_progress
       use domain,           only: dom
@@ -86,13 +86,13 @@ contains
    subroutine cleanup_grid
 
       use cg_list_global,   only: all_cg
-      use cg_list_level,    only: cg_list_level_T, coarsest
+      use cg_level_connected,    only: cg_level_connected_T, coarsest
       use list_of_cg_lists, only: all_lists
       use named_array_list, only: qna, wna
 
       implicit none
 
-      type(cg_list_level_T), pointer :: curl
+      type(cg_level_connected_T), pointer :: curl
 
       curl => coarsest
       do while (associated(curl))

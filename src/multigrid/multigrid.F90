@@ -75,7 +75,7 @@ contains
 
       use cg_list,             only: cg_list_element
       use cg_list_global,      only: all_cg
-      use cg_list_level,       only: cg_list_level_T, base_lev, finest, coarsest
+      use cg_level_connected,       only: cg_level_connected_T, base_lev, finest, coarsest
       use constants,           only: PIERNIK_INIT_GRID, LO, HI, I_ONE, O_INJ, O_LIN, O_I2, refinement_factor, dirtyH, base_level_offset
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
@@ -103,7 +103,7 @@ contains
       integer(kind=4)       :: j
       logical, save         :: frun = .true.          !< First run flag
       type(cg_list_element), pointer :: cgl
-      type(cg_list_level_T), pointer :: curl          !< current level (a pointer sliding along the linked list) and temporary level
+      type(cg_level_connected_T), pointer :: curl          !< current level (a pointer sliding along the linked list) and temporary level
       type(grid_container),  pointer :: cg            !< current grid container
 
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug

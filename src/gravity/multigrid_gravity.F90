@@ -371,7 +371,7 @@ contains
 
       use cg_list,             only: cg_list_element
       use cg_list_global,      only: all_cg
-      use cg_list_level,       only: cg_list_level_T, finest, coarsest
+      use cg_level_connected,       only: cg_level_connected_T, finest, coarsest
       use constants,           only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, dsetnamelen, xdim, ydim, zdim
       use dataio_pub,          only: die, warn, printinfo, msg
       use cart_comm,           only: cdd
@@ -389,7 +389,7 @@ contains
 
       real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
       integer :: i, j
-      type(cg_list_level_T), pointer :: curl
+      type(cg_level_connected_T), pointer :: curl
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
       character(len=dsetnamelen) :: FFTn
@@ -684,7 +684,7 @@ contains
 
       use cg_list_dataop, only: ind_val
       use cg_leaves,      only: leaves
-      use cg_list_level,  only: finest
+      use cg_level_connected,  only: finest
       use cg_list_global, only: all_cg
       use constants,      only: INVALID, O_INJ, O_LIN, O_I2
       use dataio_pub,     only: msg, die, printinfo
@@ -773,7 +773,7 @@ contains
    subroutine init_source(i_all_dens)
 
       use cg_list_global, only: all_cg
-      use cg_list_level,  only: finest
+      use cg_level_connected,  only: finest
       use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,     only: die
       use domain,         only: dom
@@ -865,7 +865,7 @@ contains
    subroutine store_solution(history)
 
       use cg_leaves,     only: leaves
-      use cg_list_level, only: finest
+      use cg_level_connected, only: finest
       use constants,     only: BND_XTRAP, BND_REF
       use domain,        only: dom
       use global,        only: t
@@ -966,7 +966,7 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list_global, only: all_cg
-      use cg_list_level,  only: cg_list_level_T, finest, coarsest
+      use cg_level_connected,  only: cg_level_connected_T, finest, coarsest
       use constants,      only: cbuff_len, fft_none
       use dataio_pub,     only: msg, die, warn, printinfo
       use global,         only: do_ascii_dump
@@ -986,7 +986,7 @@ contains
       integer, parameter       :: fmtlen = 32
       character(len=fmtlen)    :: fmt
       character(len=cbuff_len) :: dname
-      type(cg_list_level_T), pointer :: curl
+      type(cg_level_connected_T), pointer :: curl
       integer, dimension(4) :: mg_fields
 
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
@@ -1117,13 +1117,13 @@ contains
 
    subroutine residual(curl, src, soln, def)
 
-      use cg_list_level, only: cg_list_level_T
+      use cg_level_connected, only: cg_level_connected_T
       use constants,     only: O_I2, O_I4
       use dataio_pub,    only: die
 
       implicit none
 
-      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                        intent(in) :: src  !< index of source in cg%q(:)
       integer,                        intent(in) :: soln !< index of solution in cg%q(:)
       integer,                        intent(in) :: def  !< index of defect in cg%q(:)
@@ -1144,7 +1144,7 @@ contains
    subroutine residual2(curl, src, soln, def)
 
       use cg_list,       only: cg_list_element
-      use cg_list_level, only: cg_list_level_T
+      use cg_level_connected, only: cg_level_connected_T
       use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, half, I_ONE, BND_NEGREF
       use dataio_pub,    only: die
       use domain,        only: dom
@@ -1153,7 +1153,7 @@ contains
 
       implicit none
 
-      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                        intent(in) :: src  !< index of source in cg%q(:)
       integer,                        intent(in) :: soln !< index of solution in cg%q(:)
       integer,                        intent(in) :: def  !< index of defect in cg%q(:)
@@ -1263,7 +1263,7 @@ contains
    subroutine residual4(curl, src, soln, def)
 
       use cg_list,       only: cg_list_element
-      use cg_list_level, only: cg_list_level_T
+      use cg_level_connected, only: cg_level_connected_T
       use constants,     only: I_TWO, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom
@@ -1274,7 +1274,7 @@ contains
 
       implicit none
 
-      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                        intent(in) :: src  !< index of source in cg%q(:)
       integer,                        intent(in) :: soln !< index of solution in cg%q(:)
       integer,                        intent(in) :: def  !< index of defect in cg%q(:)
@@ -1362,13 +1362,13 @@ contains
 
    subroutine approximate_solution(curl, src, soln)
 
-      use cg_list_level,       only: cg_list_level_T
+      use cg_level_connected,       only: cg_level_connected_T
       use constants,           only: fft_none
       use multigrid_fftapprox, only: approximate_solution_fft
 
       implicit none
 
-      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                      intent(in) :: src  !< index of source in cg%q(:)
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
@@ -1394,7 +1394,7 @@ contains
    subroutine approximate_solution_rbgs(curl, src, soln)
 
       use cg_list,       only: cg_list_element, dirty_label
-      use cg_list_level, only: cg_list_level_T, coarsest
+      use cg_level_connected, only: cg_level_connected_T, coarsest
       use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
       use dataio_pub,    only: die
       use domain,        only: dom
@@ -1404,7 +1404,7 @@ contains
 
       implicit none
 
-      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                        intent(in) :: src  !< index of source in cg%q(:)
       integer,                        intent(in) :: soln !< index of solution in cg%q(:)
 
@@ -1553,7 +1553,7 @@ contains
 
    subroutine fft_solve_roof
 
-      use cg_list_level,       only: finest
+      use cg_level_connected,       only: finest
       use constants,           only: fft_none
       use dataio_pub,          only: die
       use grid_cont,           only: grid_container

@@ -233,7 +233,7 @@ contains
 
    subroutine write_plot_hdf5(var, plane, nimg)
 
-      use cg_list_level, only: base_lev
+      use cg_level_connected, only: base_lev
       use constants,     only: xdim, ydim, zdim, dsetnamelen, cwdlen, LO, HI
       use dataio_pub,    only: vizit, log_file, msg, die, warn
       use dataio_user,   only: user_plt_hdf5, user_plt_attrs

@@ -312,7 +312,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use cg_list_level,    only: base_lev
+      use cg_level_connected,    only: base_lev
       use constants,        only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
       use dataio_pub,       only: msg, printinfo, die
       use domain,           only: dom, is_multicg

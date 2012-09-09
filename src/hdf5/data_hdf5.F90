@@ -501,7 +501,7 @@ contains
    subroutine h5_write_to_single_file_v1(fname)
 
       use cg_list,       only: cg_list_element
-      use cg_list_level, only: finest
+      use cg_level_connected, only: finest
       use common_hdf5,   only: nhdf_vars, hdf_vars
       use constants,     only: ndims
       use dataio_pub,    only: die

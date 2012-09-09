@@ -27,50 +27,23 @@
 !
 #include "piernik.h"
 
-!> \brief This module contains grid container level list and related methods
+!> \brief This module extends a refinement level with connections to other levels.
 
-module cg_list_level
+module cg_level_connected
 
-   use cg_list_bnd,   only: cg_list_bnd_T
-   use constants,     only: ndims, LO, HI
-   use decomposition, only: box_T
+   use cg_level,      only: cg_level_T
 
    implicit none
 
    private
-   public :: cg_list_level_T, base_lev, finest, coarsest
+   public :: cg_level_connected_T, base_lev, finest, coarsest
 
-   !> \brief A single grid piece plus auxiliary data
-   !> \deprecated not to be confused with decomposition::cuboid
-   type :: cuboid
-      integer(kind=8), dimension(ndims, LO:HI) :: se !< absolute index of grid segmenent on its refinement level wrt
-                                                     !< [0,0,0]
-      logical :: is_new                              !< a flag that marks newly added grid pieces
-   end type cuboid
+   !! \brief A list of all cg of the same resolution with links to coarser and finer levels
+   type, extends(cg_level_T) :: cg_level_connected_T
 
-   !> \brief A list of grid pieces (typically used as a list of all grids residing on a given process)
-   type :: cuboids
-      type(cuboid), allocatable, dimension(:) :: c !< an array of grid piece
-   end type cuboids
-
-   !>
-   !! \brief A list of all cg of the same resolution.
-   !!
-   !! \details For positive refinement levels the list may be composed of several disconnected subsets of cg ("islands: made of one or more cg: cg_list_patch).
-   !!
-   !! \todo consider splitting this type into "bare" level (bunch of grids within a cuboid) and connected level before this module grows to 2000+ lines
-   !<
-   type, extends(cg_list_bnd_T) :: cg_list_level_T
-
-      integer(kind=4) :: level_id                       !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
-      integer(kind=8), dimension(ndims) :: n_d          !< maximum number of grid cells in each direction (size of fully occupied level)
-      type(cuboids), dimension(:), allocatable :: pse   !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
-      integer :: tot_se                                 !< global number of segments on the level
-      type(cg_list_level_T), pointer :: coarser         !< coarser level cg set or null()
-      type(cg_list_level_T), pointer :: finer           !< finer level cg set or null()
-      integer(kind=4) :: ord_prolong_set                !< Number of boundary cells for prolongation used in last update of cg_list_level_T%vertical_prep
-      integer :: fft_type                               !< type of FFT to employ in some multigrid solvers (depending on boundaries)
-      type(box_T), dimension(:), allocatable :: patches !< list of patches that exist on the current level
+      type(cg_level_connected_T), pointer :: coarser    !< coarser level cg set or null()
+      type(cg_level_connected_T), pointer :: finer      !< finer level cg set or null()
+      integer(kind=4) :: ord_prolong_set                !< Number of boundary cells for prolongation used in last update of cg_level_connected_T%vertical_prep
 
     contains
 
@@ -78,19 +51,9 @@ module cg_list_level
       procedure :: add_lev                                  !< add a finer or coarser level
       procedure :: add_lev_base                             !< initialize the base level
       generic, public :: add_level => add_lev, add_lev_base
-      procedure :: init_all_new_cg                          !< initialize newest grid container
-      procedure, private :: mpi_bnd_types                   !< create MPI types for boundary exchanges
-      procedure :: print_segments                           !< print detailed information about current level decomposition
-      procedure :: add_patch                                !< add a new piece of grid to the current level and decompose it
-      procedure, private :: update_decomposition_properties !< Update some flags in domain module
-      procedure, private :: distribute                      !< Get all decomposed patches and compute which pieces go to which process
-      procedure, private :: calc_ord_range                  !< Compute which id\'s should belong to which process
-      procedure, private :: simple_ordering                 !< This is just counting, not ordering
-      procedure, private :: mark_new                        !< Detect which grid containers are new
 
       ! Prolongation and restriction
       procedure, private :: vertical_prep                   !< initialize prolongation and restriction targets
-      procedure, private :: update_tot_se                   !< count all cg on current level for computing tags in vertical_prep
       procedure :: prolong                                  !< interpolate the grid data which has the flag vital set to this%finer level
       procedure :: restrict                                 !< interpolate the grid data which has the flag vital set from this%coarser level
       procedure :: prolong_q_1var                           !< interpolate the grid data in specified q field to this%finer level
@@ -98,13 +61,13 @@ module cg_list_level
       procedure :: restrict_to_floor_q_1var                 !< restrict specified q field as much as possible
 
       ! fine-coarse boundary exchanges may also belong to this type
-   end type cg_list_level_T
+   end type cg_level_connected_T
 
-   type(cg_list_level_T), pointer  :: base_lev             !< base level grid containers
+   type(cg_level_connected_T), pointer  :: base_lev             !< base level grid containers
 
    !! \todo finest and coarsest together with subroutine add_lev can go to separate module
-   type(cg_list_level_T), pointer :: finest               !< finest level of refinement
-   type(cg_list_level_T), pointer :: coarsest             !< coarsest level of refinement
+   type(cg_level_connected_T), pointer :: finest               !< finest level of refinement
+   type(cg_level_connected_T), pointer :: coarsest             !< coarsest level of refinement
 
 contains
 
@@ -112,18 +75,18 @@ contains
 
    subroutine add_lev_base(this, n_d)
 
-      use constants,        only: INVALID, base_level_id, fft_none
+      use constants,        only: INVALID, base_level_id, fft_none, ndims
       use dataio_pub,       only: die
       use domain,           only: dom
       use list_of_cg_lists, only: all_lists
 
       implicit none
 
-      class(cg_list_level_T),            intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_connected_T),            intent(inout) :: this   !< object invoking type bound procedure
       integer(kind=4), dimension(ndims), intent(in)    :: n_d    !< size of global base grid in cells
 
-      if (any(n_d(:) < 1)) call die("[cg_list_level:add_lev_base] non-positive base grid sizes")
-      if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_list_level:add_lev_base] base grid size incompatible with has_dir masks")
+      if (any(n_d(:) < 1)) call die("[cg_level_connected:add_lev_base] non-positive base grid sizes")
+      if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_connected:add_lev_base] base grid size incompatible with has_dir masks")
 
       this%level_id = base_level_id
       this%n_d(:) = n_d(:)
@@ -148,10 +111,10 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), target, intent(inout) :: this    !< lowest or highest refinement level
+      class(cg_level_connected_T), target, intent(inout) :: this    !< lowest or highest refinement level
       logical,                        intent(in)    :: coarse  !< if .true. then add a level below base level
 
-      type(cg_list_level_T), pointer :: new_lev !< fresh refinement level to be added
+      type(cg_level_connected_T), pointer :: new_lev !< fresh refinement level to be added
 
       allocate(new_lev)
       new_lev%n_d(:) = 1
@@ -160,30 +123,30 @@ contains
       new_lev%finer => null()
 
       if (coarse) then
-         if (associated(this%coarser)) call die("[cg_list_level:add_lev] coarser level already exists")
+         if (associated(this%coarser)) call die("[cg_level_connected:add_lev] coarser level already exists")
          select type(this)
-            type is (cg_list_level_T)
+            type is (cg_level_connected_T)
                this%coarser => new_lev
                new_lev%finer => this
             class default
-               call die("[cg_list_level:add_lev] cannot call this routine for derivatives of cg_list_level (coarse)")
+               call die("[cg_level_connected:add_lev] cannot call this routine for derivatives of cg_level_connected (coarse)")
          end select
 
          coarsest => new_lev
          new_lev%level_id = this%level_id - I_ONE
          where (dom%has_dir(:)) new_lev%n_d(:) = this%n_d(:) / refinement_factor
          if (master .and. any(new_lev%n_d(:)*refinement_factor /= this%n_d(:) .and. dom%has_dir(:))) then
-            write(msg, '(a,3f10.1,a,i3)')"[cg_list_level:add_lev] Fractional number of domain cells: ", this%n_d(:)/real(refinement_factor), " at level ",new_lev%level_id
+            write(msg, '(a,3f10.1,a,i3)')"[cg_level_connected:add_lev] Fractional number of domain cells: ", this%n_d(:)/real(refinement_factor), " at level ",new_lev%level_id
             call die(msg)
          endif
       else
-         if (associated(this%finer)) call die("[cg_list_level:add_lev] finer level already exists")
+         if (associated(this%finer)) call die("[cg_level_connected:add_lev] finer level already exists")
          select type(this)
-            type is (cg_list_level_T)
+            type is (cg_level_connected_T)
                this%finer => new_lev
                new_lev%coarser => this
             class default
-               call die("[cg_list_level:add_lev] cannot call this routine for derivatives of cg_list_level (fine)")
+               call die("[cg_level_connected:add_lev] cannot call this routine for derivatives of cg_level_connected (fine)")
          end select
 
          finest => new_lev
@@ -259,7 +222,7 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_connected_T), intent(inout) :: this   !< object invoking type bound procedure
 
       integer :: g, j, jf, fmax, tag
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
@@ -267,7 +230,7 @@ contains
       type(pr_segment), pointer :: seg
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
-      type(cg_list_level_T), pointer :: fine, coarse  !< shortcut
+      type(cg_level_connected_T), pointer :: fine, coarse  !< shortcut
       type :: int_pair
          integer :: proc
          integer :: n_se
@@ -323,7 +286,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (ri)")
+               if (tag /= int(seg%tag)) call die("[cg_level_connected:vertical_prep] tag overflow (ri)")
             enddo
 
             ! When fine and coarse pieces are within prolongation stencil length, but there is no direct overlap we rely on guardcell update on coarse side
@@ -344,7 +307,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = cg%grid_id + this%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
-               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow po)")
+               if (tag /= int(seg%tag)) call die("[cg_level_connected:vertical_prep] tag overflow po)")
             enddo
 
             if (allocated(ps)) deallocate(ps)
@@ -400,7 +363,7 @@ contains
                seg%se(:, HI) = min(cg%my_se(:, HI), coarsened(:, HI))
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (ro)")
+               if (tag /= int(seg%tag)) call die("[cg_level_connected:vertical_prep] tag overflow (ro)")
             enddo
 
             do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
@@ -416,7 +379,7 @@ contains
                     &           seg%se(zdim, HI)-seg%se(zdim, LO) + 1))
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
-               if (tag /= int(seg%tag)) call die("[cg_list_level:vertical_prep] tag overflow (pi)")
+               if (tag /= int(seg%tag)) call die("[cg_level_connected:vertical_prep] tag overflow (pi)")
             enddo
 
             if (allocated(ps)) deallocate(ps)
@@ -443,7 +406,7 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
 
       integer :: i, iw, iwa
 
@@ -455,7 +418,7 @@ contains
 
       do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id >= base_level_id)) then
-            if (wna%lst(i)%multigrid) call warn("[cg_list_level:prolong] mg set for cg%w ???")
+            if (wna%lst(i)%multigrid) call warn("[cg_level_connected:prolong] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, iwa)
                call this%prolong_q_1var(iwa)
@@ -479,7 +442,7 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
 
       integer :: i, iw, iwa
 
@@ -491,7 +454,7 @@ contains
 
       do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
          if (wna%lst(i)%vital .and. (wna%lst(i)%multigrid .or. this%level_id > base_level_id)) then
-            if (wna%lst(i)%multigrid) call warn("[cg_list_level:restrict] mg set for cg%w ???")
+            if (wna%lst(i)%multigrid) call warn("[cg_level_connected:restrict] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, iwa)
                call this%restrict_q_1var(iwa)
@@ -508,7 +471,7 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
       integer,                        intent(in)    :: iv   !< variable to be restricted
 
       if (.not. associated(this%coarser)) return
@@ -539,10 +502,10 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
       integer,                        intent(in)    :: iv   !< variable to be restricted
 
-      type(cg_list_level_T), pointer :: coarse
+      type(cg_level_connected_T), pointer :: coarse
       integer :: g
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: fse, cse ! shortcuts for fine segment and coarse segment
       integer(kind=8) :: i, j, k, ic, jc, kc
@@ -555,7 +518,7 @@ contains
 
       coarse => this%coarser
       if (.not. associated(coarse)) then ! can't restrict base level
-         write(msg,'(a,i3)')"[cg_list_level:restrict_q_1var] no coarser level than ", this%level_id
+         write(msg,'(a,i3)')"[cg_level_connected:restrict_q_1var] no coarser level than ", this%level_id
          call warn(msg)
          return
       endif
@@ -710,10 +673,10 @@ contains
 
       implicit none
 
-      class(cg_list_level_T), target, intent(inout) :: this !< object invoking type-bound procedure
+      class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
       integer,                        intent(in)    :: iv   !< variable to be prolonged
 
-      type(cg_list_level_T), pointer :: fine
+      type(cg_level_connected_T), pointer :: fine
       integer :: g
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: fse, cse ! shortcuts for fine segment and coarse segment
       integer(kind=8) :: iec, jec, kec
@@ -727,7 +690,7 @@ contains
 
       fine => this%finer
       if (.not. associated(fine)) then ! can't prolong finest level
-         write(msg,'(a,i3)')"[cg_list_level:prolong_q_1var] no finer level than: ", this%level_id
+         write(msg,'(a,i3)')"[cg_level_connected:prolong_q_1var] no finer level than: ", this%level_id
          call warn(msg)
          return
       endif
@@ -755,7 +718,7 @@ contains
          case (O_I4)
             P_2 = 3./128.;   P_1 = -11./64.;    P0 = 1.;          P1 = 11./64.;    P2 = -3./128.
          case default
-            call die("[cg_list_level:prolong_q_1var] Unsupported order")
+            call die("[cg_level_connected:prolong_q_1var] Unsupported order")
             return
       end select
 
@@ -874,7 +837,7 @@ contains
                        + P1 * cg%prolong_(cg%is+odd(xdim)+  D(xdim):iec-dom%D_x+odd(xdim)+  D(xdim), cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
                        + P2 * cg%prolong_(cg%is+odd(xdim)+2*D(xdim):iec-dom%D_x+odd(xdim)+2*D(xdim), cg%js-2*dom%D_y:jec+2*dom%D_y, cg%ks-2*dom%D_z:kec+2*dom%D_z)
                case default
-                  call die("[cg_list_level:prolong_q_1var] unsupported stencil size")
+                  call die("[cg_level_connected:prolong_q_1var] unsupported stencil size")
             end select
 
             select case (stencil_range*dom%D_y)
@@ -907,7 +870,7 @@ contains
                        + P1 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)+  D(ydim):jec-dom%D_y+odd(ydim)+  D(ydim), cg%ks-2*dom%D_z:kec+2*dom%D_z)   &
                        + P2 * cg%prolong_x(cg%is:cg%ie, cg%js+odd(ydim)+2*D(ydim):jec-dom%D_y+odd(ydim)+2*D(ydim), cg%ks-2*dom%D_z:kec+2*dom%D_z)
                case default
-                  call die("[cg_list_level:prolong_q_1var] unsupported stencil size")
+                  call die("[cg_level_connected:prolong_q_1var] unsupported stencil size")
             end select
 
             select case (stencil_range*dom%D_z)
@@ -940,7 +903,7 @@ contains
                        + P1 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)+  D(zdim):kec-dom%D_z+odd(zdim)+  D(zdim))   &
                        + P2 * cg%prolong_xy(cg%is:cg%ie, cg%js:cg%je, cg%ks+odd(zdim)+2*D(zdim):kec-dom%D_z+odd(zdim)+2*D(zdim))
                case default
-                  call die("[cg_list_level:prolong_q_1var] unsupported stencil size")
+                  call die("[cg_level_connected:prolong_q_1var] unsupported stencil size")
             end select
             ! Alternatively, an FFT convolution may be employed after injection. No idea at what stencil size the FFT is faster. It is finite size for sure :-)
          endif
@@ -951,520 +914,4 @@ contains
 
    end subroutine prolong_q_1var
 
-!> \brief Print detailed information about current level decomposition
-
-   subroutine print_segments(this)
-
-      use cg_list,    only: cg_list_element
-      use constants,  only: LO, HI
-      use dataio_pub, only: printinfo, msg, warn
-      use mpisetup,   only: FIRST, LAST, master, nproc, proc
-
-      implicit none
-
-      class(cg_list_level_T), intent(in) :: this   !< object invoking type bound procedure
-
-      integer :: p, i, hl, tot_cg
-      integer(kind=8) :: ccnt
-      real, allocatable, dimension(:) :: maxcnt
-      type(cg_list_element), pointer :: cgl
-#ifdef VERBOSE
-      character(len=len(msg)) :: header
-#endif /* VERBOSE */
-
-      i = 0
-      cgl => this%first
-      do while (associated(cgl))
-         i = i + 1
-         cgl => cgl%nxt
-      enddo
-      if (i /= this%cnt .or. this%cnt /= size(this%pse(proc)%c(:)) .or. size(this%pse(proc)%c(:)) /= i) then
-         write(msg, '(2(a,i4),a,3i7)')"[cg_list_level:print_segments] Uncertain number of grid pieces @PE ",proc," on level ", this%level_id, &
-              &                       " : ",i,this%cnt,size(this%pse(proc)%c(:))
-         call warn(msg)
-
-         cgl => this%first
-         do while (associated(cgl))
-            write(msg,'(2(a,i7),2(a,3i10),a)')" @",proc," #",cgl%cg%grid_id," : [", cgl%cg%my_se(:, LO), "] : [", cgl%cg%my_se(:, HI)," ]"
-            call printinfo(msg)
-            cgl => cgl%nxt
-         enddo
-      endif
-
-      if (.not. master) return
-
-      !call dom%print_me
-
-      ! print segments according to list of patches
-      allocate(maxcnt(FIRST:LAST))
-      maxcnt(:) = 0
-      tot_cg = 0
-      do p = FIRST, LAST
-         hl = 0
-         tot_cg = tot_cg + size(this%pse(p)%c(:))
-         do i = lbound(this%pse(p)%c(:), dim=1), ubound(this%pse(p)%c(:), dim=1)
-            ccnt = product(this%pse(p)%c(i)%se(:, HI) - this%pse(p)%c(i)%se(:, LO) + 1)
-            maxcnt(p) = maxcnt(p) + ccnt
-#ifdef VERBOSE
-            if (i == 1) then
-               write(header, '(a,i4)')"[cg_list_level:print_segments] segment @", p
-               hl = len_trim(header)
-            else
-               header = repeat(" ", hl)
-            endif
-            if (maxval(this%n_d(:)) < 1000000) then
-               write(msg,'(2a,2(3i7,a),i8,a)') header(:hl), " : [", this%pse(p)%c(i)%se(:, LO), "] : [", this%pse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
-            else if (maxval(this%n_d(:)) < 1000000000) then
-               write(msg,'(2a,2(3i10,a),i8,a)') header(:hl), " : [", this%pse(p)%c(i)%se(:, LO), "] : [", this%pse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
-            else
-               write(msg,'(2a,2(3i18,a),i8,a)') header(:hl), " : [", this%pse(p)%c(i)%se(:, LO), "] : [", this%pse(p)%c(i)%se(:, HI), "] #", ccnt, " cells"
-            endif
-            call printinfo(msg)
-#endif /* VERBOSE */
-         enddo
-      enddo
-
-      write(msg, '(a,i3,a,f5.1,a,i5,a,f8.5)')"[cg_list_level:print_segments] Level ", this%level_id, " filled in ",(100.*sum(maxcnt(:)))/product(real(this%n_d(:))), &
-           &                                 "%, ",tot_cg," grid(s), load balance : ", sum(maxcnt(:))/(nproc*maxval(maxcnt(:)))
-      !> \todo add calculation of total internal boundary surface in cells
-      call printinfo(msg)
-      deallocate(maxcnt)
-
-   end subroutine print_segments
-
-!> \brief Initialize all grid containers on a new grid level
-
-   subroutine init_all_new_cg(this)
-
-      use cg_list_global, only: all_cg
-      use grid_cont,      only: grid_container
-      use mpisetup,       only: proc
-
-      implicit none
-
-      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
-
-      integer :: i, gr_id
-      type(grid_container), pointer :: cg
-
-      call this%distribute
-      call this%mark_new
-
-      gr_id = 0
-      if (associated(this%last)) gr_id = this%last%cg%grid_id
-
-      do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
-         if (this%pse(proc)%c(i)%is_new) then
-            gr_id = gr_id + 1
-            call this%add
-            cg => this%last%cg
-            call cg%init(this%n_d, this%pse(proc)%c(i)%se(:, :), gr_id, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
-            call this%mpi_bnd_types(cg)                                                ! require access to whole this%pse(:)%c(:)%se(:,:)
-            call cg%add_all_na                                                         ! require mpi_bnd_types properly calculated
-            call all_cg%add(cg)
-         endif
-      enddo
-
-      call this%update_req ! Perhaps this%mpi_bnd_types added some new entries
-      call this%update_tot_se
-      call this%print_segments
-
-   end subroutine init_all_new_cg
-
-!> \brief Detect which grid containers are new
-
-   subroutine mark_new(this)
-
-      use cg_list,    only: cg_list_element
-      use dataio_pub, only: warn
-      use mpisetup,   only: proc
-
-      implicit none
-
-      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
-
-      type(cg_list_element), pointer :: cgl
-      integer :: i, occured
-
-      cgl => this%first
-      do while (associated(cgl))
-
-         occured = 0
-         do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
-            if (all(this%pse(proc)%c(i)%se(:,:) == cgl%cg%my_se(:,:))) then
-               this%pse(proc)%c(i)%is_new = .false.
-               occured = occured + 1
-            endif
-         enddo
-
-         if (occured <= 0) then
-            call warn("[cg_list_level:mark_new] Existing cg not found in new list")
-         else if (occured > 1) then
-            call warn("[cg_list_level:mark_new] Existing cg found multiple times in new list")
-         endif
-
-         cgl => cgl%nxt
-      enddo
-
-   end subroutine mark_new
-
-!> \brief Get all decomposed patches and compute which pieces go to which process
-
-   subroutine distribute(this)
-
-      use dataio_pub,     only: die
-      use mpisetup,       only: FIRST, LAST
-
-      implicit none
-
-      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
-
-      integer :: i, p, s
-      integer(kind=8), dimension(FIRST:LAST) :: min_id, max_id, pieces, filled
-
-      call this%simple_ordering
-      call this%calc_ord_range(min_id, max_id, pieces)
-      if (.not. allocated(this%pse)) allocate(this%pse(FIRST:LAST))
-      do i = FIRST, LAST
-         if (allocated(this%pse(i)%c)) deallocate(this%pse(i)%c) !> \todo recycle previous list somehow?
-         allocate(this%pse(i)%c(pieces(i)))
-      enddo
-      filled(:) = 0
-
-      if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-            do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
-               do i = FIRST, LAST
-                  if (this%patches(p)%pse(s)%id >= min_id(i) .and. this%patches(p)%pse(s)%id <= max_id(i)) then
-                     filled(i) = filled(i) + 1
-                     if (filled(i) > size(this%pse(i)%c(:))) call die("[cg_list_level:distribute] overflow")
-                     this%pse(i)%c(filled(i)) = cuboid(this%patches(p)%pse(s)%se(:,:), .true.) ! The is_new flag will be fixed in mark_new subroutine
-                     exit
-                  endif
-               enddo
-            enddo
-         enddo
-      endif
-
-      call this%update_decomposition_properties
-
-   end subroutine distribute
-
-!>
-!! \brief Compute which id\'s should belong to which process
-!!
-!! \todo Reduce assumptions on the set of id only to uniqueness (i.e. some id might be absent, some might be <0 or >this%tot_se, perform partial sort (qsort? shell sort?))
-!<
-
-   subroutine calc_ord_range(this, min_id, max_id, pieces)
-
-      use mpisetup, only: nproc, FIRST, LAST
-
-      implicit none
-
-      class(cg_list_level_T),                 intent(inout) :: this   !< object invoking type bound procedure
-      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: min_id !< \todo comment me
-      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: max_id !< \todo comment me
-      integer(kind=8), dimension(FIRST:LAST), intent(out)   :: pieces !< \todo comment me
-
-      integer :: p
-
-      ! At the moment all id are in [0 .. this%tot_se-1] range. This will change in future
-      !> \todo implement different weights of pieces
-
-      do p = FIRST, LAST
-         min_id(p) = ( p      * this%tot_se) / nproc
-         max_id(p) = ((p + 1) * this%tot_se) / nproc - 1
-      enddo
-      pieces(:) = max_id(:) - min_id(:) + 1
-
-   end subroutine calc_ord_range
-
-!> \brief OMG! This is just counting, not ordering!
-!> \todo Implement anything better. Peano-Hilbert ordering will appear here sooner or later :-)
-
-   subroutine simple_ordering(this)
-
-      implicit none
-
-      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
-
-      integer :: p, s
-      integer(kind=8) :: id
-
-      id = 0
-      if (allocated(this%patches)) then
-         do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
-            if (allocated(this%patches(p)%pse)) then
-               do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)
-                  this%patches(p)%pse(s)%id = id
-                  id = id + 1
-               enddo
-            endif
-         enddo
-      endif
-
-      this%tot_se = int(id, kind=4) ! obsoletes update_tot_se ?
-
-   end subroutine simple_ordering
-
-!> \brief Update some flags in domain module [ is_uneven, is_mpi_noncart, is_refined, is_multicg ]
-
-   subroutine update_decomposition_properties(this)
-
-      use cart_comm,  only: cdd
-      use constants,  only: I_ONE
-      use dataio_pub, only: warn, die
-      use domain,     only: is_mpi_noncart, is_multicg, is_refined, is_uneven
-      use mpi,        only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
-      use mpisetup,   only: proc, comm, mpi_err
-
-      implicit none
-
-      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
-
-      is_multicg = is_multicg .or. (ubound(this%pse(proc)%c(:), dim=1) > 1)
-      call MPI_Allreduce(MPI_IN_PLACE, is_multicg, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
-      if (is_multicg .and. cdd%comm3d /= MPI_COMM_NULL) call die("[cg_list_level:update_decomposition_properties] is_multicg cannot be used with comm3d")
-
-      ! if (.not. associated(this%finer)) ! is_refined == "top level is partial"
-      if (is_refined) then
-         is_mpi_noncart = .true.
-         is_multicg = .true.
-         call warn("[cg_list_level:update_decomposition_properties] Refinements are not implemented")
-      endif
-      if (is_mpi_noncart) is_uneven = .true.
-
-   end subroutine update_decomposition_properties
-
-!> \brief Count all cg on current level. Useful for computing tags in vertical_prep
-
-   subroutine update_tot_se(this)
-
-      use mpisetup, only: FIRST, LAST
-
-      implicit none
-
-      class(cg_list_level_T), intent(inout) :: this   !< object invoking type bound procedure
-
-      integer :: p
-
-      this%tot_se = 0
-      do p = FIRST, LAST
-         this%tot_se = this%tot_se + ubound(this%pse(p)%c(:), dim=1)
-      enddo
-   end subroutine update_tot_se
-
-!>
-!! \brief Create MPI types for boundary exchanges
-!!
-!! \details this type can be a member of grid container type if we pass this%pse(:)%c(:) as an argument.
-!! It would simplify dependencies and this%init_all_new_cg, but it could be quite a big object.
-!! \todo Put this%pse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
-!<
-
-   subroutine mpi_bnd_types(this, cg)
-
-      use cart_comm,      only: cdd
-      use constants,      only: FLUID, MAG, CR, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE, wcr_n
-      use dataio_pub,     only: die
-      use domain,         only: dom
-      use grid_cont,      only: grid_container, is_overlap
-      use mpi,            only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,       only: mpi_err, FIRST, LAST, procmask
-      use named_array_list, only: wna
-
-      implicit none
-
-      class(cg_list_level_T), intent(in)  :: this    !< object invoking type bound procedure
-      type(grid_container), intent(inout) :: cg      !< grid container that we are currently working on
-
-      integer(kind=4), dimension(:), allocatable :: sizes, subsizes, starts
-      integer :: t, g, j, b
-      integer(kind=4) :: d, dd, hl, lh, ib
-      integer(kind=4), parameter, dimension(FLUID:ARR) :: dims = [ I_ONE+ndims, I_ONE+ndims, I_ONE+ndims, ndims ] !< dimensionality of arrays
-      integer(kind=4), dimension(FLUID:ARR) :: nc
-      integer(kind=8), dimension(xdim:zdim) :: ijks, per
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer, bp_layer, poff
-
-      if (cg%level_id /= this%level_id) call die("[cg_list_level:mpi_bnd_types] Level mismatch")
-
-      if (allocated(cg%i_bnd) .or. allocated(cg%o_bnd)) call die("[cg_list_level:mpi_bnd_types] cg%i_bnd or cg%o_bnd already allocated")
-      allocate(cg%i_bnd(xdim:zdim, dom%nb), cg%o_bnd(xdim:zdim, dom%nb))
-
-      ! There are two completely different approaches: Very general and the old one. Can be put into separate routines.
-      if (cdd%comm3d == MPI_COMM_NULL) then
-
-         ! assume that cuboids fill the domain and don't collide
-
-         ijks(:) = cg%ijkse(:, LO) - cg%off(:)
-         per(:) = 0
-         where (dom%periodic(:)) per(:) = this%n_d(:)
-
-         do d = xdim, zdim
-            if (dom%has_dir(d)) then
-
-               ! identify processes with interesting neighbour data
-               procmask(:) = 0
-               do lh = LO, HI
-                  hl = LO+HI-lh ! HI for LO, LO for HI
-                  b_layer(:,:) = cg%my_se(:, :)
-                  b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
-                  b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell wide, without corners
-                  do j = FIRST, LAST
-                     do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
-                        if (is_overlap(b_layer(:,:), this%pse(j)%c(b)%se(:,:), per(:))) procmask(j) = procmask(j) + 1 ! count how many boundaries we share with that process
-                     enddo
-                  enddo
-               enddo
-               do ib = 1, dom%nb
-                  allocate(cg%i_bnd(d, ib)%seg(sum(procmask(:))), cg%o_bnd(d, ib)%seg(sum(procmask(:))))
-               enddo
-
-               ! set up segments to be sent or received
-               g = 0
-               do j = FIRST, LAST
-                  if (procmask(j) /= 0) then
-                     do lh = LO, HI
-                        hl = LO+HI-lh
-                        do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
-                           b_layer(:,:) = cg%my_se(:, :)
-                           b_layer(d, lh) = b_layer(d, lh) + lh-hl
-                           b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell wide, without corners
-                           bp_layer(:, :) = b_layer(:, :)
-                           where (per(:) > 0)
-                              bp_layer(:, LO) = mod(b_layer(:, LO) + per(:), per(:))
-                              bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:)) ! adjacent boundary layer, 1 cell wide, without corners, corrected for periodicity
-                           endwhere
-                           !> \todo save b_layer(:,:) and bp_layer(:,:) and move above calculations outside the b loop
-
-                           if (is_overlap(bp_layer(:,:), this%pse(j)%c(b)%se(:,:))) then
-                              poff(:,:) = bp_layer(:,:) - b_layer(:,:) ! displacement due to periodicity
-                              bp_layer(:, LO) = max(bp_layer(:, LO), this%pse(j)%c(b)%se(:, LO))
-                              bp_layer(:, HI) = min(bp_layer(:, HI), this%pse(j)%c(b)%se(:, HI))
-                              b_layer(:,:) = bp_layer(:,:) - poff(:,:)
-                              g = g + 1
-                              do ib = 1, dom%nb
-                                 cg%i_bnd(d, ib)%seg(g)%proc = j
-                                 cg%i_bnd(d, ib)%seg(g)%se(:,LO) = b_layer(:, LO) + ijks(:)
-                                 cg%i_bnd(d, ib)%seg(g)%se(:,HI) = b_layer(:, HI) + ijks(:)
-                                 if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) < 0)) &
-                                      cg%i_bnd(d, ib)%seg(g)%se(d, :) = cg%i_bnd(d, ib)%seg(g)%se(d, :) + this%n_d(d)
-                                 if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) > cg%n_b(d) + 2*dom%nb)) &
-                                      cg%i_bnd(d, ib)%seg(g)%se(d, :) = cg%i_bnd(d, ib)%seg(g)%se(d, :) - this%n_d(d)
-
-                                 ! expand to cover corners (requires separate MPI_Waitall for each direction)
-                                 !! \todo create separate %mbc for corner-less exchange with one MPI_Waitall (can scale better)
-                                 !! \warning edges and corners will be filled multiple times
-                                 do dd = xdim, zdim
-                                    if (dd /= d .and. dom%has_dir(dd)) then
-                                       cg%i_bnd(d, ib)%seg(g)%se(dd, LO) = cg%i_bnd(d, ib)%seg(g)%se(dd, LO) - ib
-                                       cg%i_bnd(d, ib)%seg(g)%se(dd, HI) = cg%i_bnd(d, ib)%seg(g)%se(dd, HI) + ib
-                                    endif
-                                 enddo
-                                 cg%o_bnd(d, ib)%seg(g) = cg%i_bnd(d, ib)%seg(g)
-                                 cg%i_bnd(d, ib)%seg(g)%tag = int(HI*ndims*b          + (HI*d+lh-LO), kind=4) ! Assume that we won't mix communication with different ib
-                                 cg%o_bnd(d, ib)%seg(g)%tag = int(HI*ndims*cg%grid_id + (HI*d+hl-LO), kind=4)
-                                 select case (lh)
-                                    case (LO)
-                                       cg%i_bnd(d, ib)%seg(g)%se(d, LO) = cg%i_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)
-                                       cg%o_bnd(d, ib)%seg(g)%se(d, LO) = cg%i_bnd(d, ib)%seg(g)%se(d, HI) + 1
-                                       cg%o_bnd(d, ib)%seg(g)%se(d, HI) = cg%o_bnd(d, ib)%seg(g)%se(d, LO) + (ib - 1)
-                                    case (HI)
-                                       cg%i_bnd(d, ib)%seg(g)%se(d, HI) = cg%i_bnd(d, ib)%seg(g)%se(d, LO) + (ib - 1)
-                                       cg%o_bnd(d, ib)%seg(g)%se(d, HI) = cg%i_bnd(d, ib)%seg(g)%se(d, LO) - 1
-                                       cg%o_bnd(d, ib)%seg(g)%se(d, LO) = cg%o_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)
-                                 end select
-
-                              enddo
-                           endif
-                        enddo
-                     enddo
-                  endif
-               enddo
-            endif
-         enddo
-
-      else
-
-         !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
-         nc(:) = I_ONE ! set at least one component, even if there is none at all
-         if (wna%fi        > 0) nc(FLUID) = wna%lst(wna%fi)%dim4
-         if (wna%bi        > 0) nc(MAG)   = wna%lst(wna%bi)%dim4
-         if (wna%exists(wcr_n)) nc(CR)    = wna%lst(wna%ind(wcr_n))%dim4
-
-         do d = xdim, zdim
-            if (dom%has_dir(d)) then
-               do t = FLUID, ARR  ! fluid, Bfield, wcr, grav
-
-                  allocate(sizes(dims(t)), subsizes(dims(t)), starts(dims(t)))
-                  if (dims(t) == 1+ndims) sizes(1) = nc(t)
-                  sizes(dims(t)-zdim+xdim:dims(t)) = cg%n_(:)
-
-                  do ib = 1, dom%nb
-
-                     subsizes(:) = sizes(:)
-                     subsizes(dims(t)-zdim+d) = ib
-                     starts(:) = 0
-
-                     starts(dims(t)-zdim+d) = dom%nb-ib
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BND, ib), mpi_err)
-                     call MPI_Type_commit(cg%mbc(t, d, LO, BND, ib), mpi_err)
-
-                     starts(dims(t)-zdim+d) = dom%nb
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BLK, ib), mpi_err)
-                     call MPI_Type_commit(cg%mbc(t, d, LO, BLK, ib), mpi_err)
-
-                     starts(dims(t)-zdim+d) = cg%n_b(d) + dom%nb - ib
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BLK, ib), mpi_err)
-                     call MPI_Type_commit(cg%mbc(t, d, HI, BLK, ib), mpi_err)
-
-                     starts(dims(t)-zdim+d) = cg%ijkse(d, HI)
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BND, ib), mpi_err)
-                     call MPI_Type_commit(cg%mbc(t, d, HI, BND, ib), mpi_err)
-
-                  enddo
-
-                  deallocate(sizes, subsizes, starts)
-
-               enddo
-            endif
-         enddo
-
-      endif
-
-   end subroutine mpi_bnd_types
-
-!> \brief Add a new piece of grid to the list of patches on current refinement level and decompose it
-
-   subroutine add_patch(this, n_d, off, n_pieces)
-
-      use constants,     only: ndims
-      use dataio_pub,    only: msg, die
-      use decomposition, only: box_T
-
-      implicit none
-
-      class(cg_list_level_T), target,    intent(inout) :: this     !< current level
-      integer(kind=4), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
-      integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level)
-      integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
-
-      type(box_T), dimension(:), allocatable :: tmp
-
-      if (.not. allocated(this%patches)) then
-         allocate(this%patches(1))
-      else
-         allocate(tmp(lbound(this%patches(:),dim=1):ubound(this%patches(:), dim=1) + 1))
-         tmp(:ubound(this%patches(:), dim=1)) = this%patches(:) ! valgrind shows memory leak here
-         call move_alloc(from=tmp, to=this%patches)
-      endif
-
-      if (.not. this%patches(ubound(this%patches(:), dim=1))%decompose_patch(n_d(:), off(:), n_pieces)) then
-         write(msg,'(a,i4)')"[cg_list_level:add_patch] Coarse domain decomposition failed at level ",this%level_id
-         call die(msg)
-      endif
-
-   end subroutine add_patch
-
-end module cg_list_level
+end module cg_level_connected

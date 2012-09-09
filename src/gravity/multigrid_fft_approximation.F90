@@ -58,7 +58,7 @@ contains
 !!
 !! \todo implement also prolongation of coarsened multipoles
 !!
-!! \todo move this to cg_list_level_T
+!! \todo move this to cg_level_connected_T
 !<
 
    subroutine mpi_multigrid_prep_grav
@@ -66,7 +66,7 @@ contains
       use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG, zero, one, half, O_INJ, O_LIN, O_I2, INT4
       use dataio_pub,    only: warn, die
       use domain,        only: dom
-      use cg_list_level, only: cg_list_level_T, coarsest
+      use cg_level_connected, only: cg_level_connected_T, coarsest
       use cg_list,       only: cg_list_element
       use grid_cont,     only: pr_segment, grid_container, is_overlap
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req
@@ -83,7 +83,7 @@ contains
       logical, dimension(xdim:zdim) :: dmask
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened, b_layer
       type(pr_segment), pointer :: seg
-      type(cg_list_level_T), pointer   :: curl        !< current level (a pointer sliding along the linked list)
+      type(cg_level_connected_T), pointer   :: curl        !< current level (a pointer sliding along the linked list)
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
       logical :: is_internal_fine
@@ -304,7 +304,7 @@ contains
 
    subroutine approximate_solution_fft(curl, src, soln)
 
-      use cg_list_level, only: cg_list_level_T, coarsest
+      use cg_level_connected, only: cg_level_connected_T, coarsest
       use constants,     only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2, BND_NEGREF, fft_none, fft_dst, dirtyL
       use dataio_pub,    only: die, warn
       use domain,        only: dom
@@ -316,7 +316,7 @@ contains
 
       implicit none
 
-      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                      intent(in) :: src  !< index of source in cg%q(:)
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
@@ -471,14 +471,14 @@ contains
 
    subroutine make_face_boundaries(curl, soln)
 
-      use cg_list_level, only: cg_list_level_T, coarsest
+      use cg_level_connected, only: cg_level_connected_T, coarsest
       use dataio_pub,    only: warn
       use mpisetup,      only: nproc
       use multigridvars, only: single_base, bnd_periodic, bnd_givenval, grav_bnd
 
       implicit none
 
-      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
       if (grav_bnd == bnd_periodic .and. (nproc == 1 .or. (associated(curl, coarsest) .and. single_base) ) ) then
@@ -501,12 +501,12 @@ contains
       use constants,   only: fft_rcr, fft_dst
       use dataio_pub,  only: die
       use cg_list,     only: cg_list_element
-      use cg_list_level, only: cg_list_level_T
+      use cg_level_connected, only: cg_level_connected_T
       use grid_cont,   only: grid_container
 
       implicit none
 
-      type(cg_list_level_T), pointer, intent(in) :: curl !< pointer to a level at which make the convolution
+      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level at which make the convolution
 
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
@@ -541,14 +541,14 @@ contains
 !! The tests were performed on uniform grid, where the interpolation affects only convergence factors.
 !! On a refinement step the interpolation type affects also sulution by influencing the way how fine and coarse grids are coupled.
 !!
-!! \todo move to cg_list_level_T or multigrid_gravity
+!! \todo move to cg_level_connected_T or multigrid_gravity
 !!
 !! OPT: completely unoptimized
 !<
 
    subroutine prolong_faces(fine, soln)
 
-      use cg_list_level, only: cg_list_level_T, coarsest
+      use cg_level_connected, only: cg_level_connected_T, coarsest
       use constants,     only: xdim, ydim, zdim, LO, HI, LONG, I_ONE, half, O_INJ, O_LIN, O_D2, O_I2, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom, is_multicg
@@ -559,11 +559,11 @@ contains
 
       implicit none
 
-      type(cg_list_level_T), pointer, intent(in) :: fine !< level for which approximate the solution
+      type(cg_level_connected_T), pointer, intent(in) :: fine !< level for which approximate the solution
       integer,                      intent(in) :: soln !< index of solution in cg%q(:) ! \todo change the name
 
       integer                       :: i, j, k, d, lh, g, ib, jb, ibh, jbh, l
-      type(cg_list_level_T), pointer           :: coarse
+      type(cg_level_connected_T), pointer           :: coarse
       integer, parameter            :: s_wdth  = 3           ! interpolation stencil width
       integer(kind=4), parameter    :: s_rng = (s_wdth-1)/2  ! stencil range around 0
       real, parameter, dimension(s_wdth) :: p0  = [ 0.,       1.,     0.     ] ! injection
@@ -622,7 +622,7 @@ contains
             ! Implement ord_prolong_face_par /= O_INJ if and only if it improves the coupling between fine and coarse solutions
          endif
 
-         do lh = LO, HI ! \todo convert cg_list_level_T%mg%bnd_[xyz] to an array and make obsolete the following pointer assignments
+         do lh = LO, HI ! \todo convert cg_level_connected_T%mg%bnd_[xyz] to an array and make obsolete the following pointer assignments
             p_bnd(xdim, lh)%bnd => fine%first%cg%mg%bnd_x(:, :, lh)
             p_bnd(ydim, lh)%bnd => fine%first%cg%mg%bnd_y(:, :, lh)
             p_bnd(zdim, lh)%bnd => fine%first%cg%mg%bnd_z(:, :, lh)

@@ -41,7 +41,7 @@ module multipole
 ! pulled by MULTIGRID && GRAV
    ! needed for global vars in this module
    use constants,   only: ndims
-   use cg_list_level, only: cg_list_level_T
+   use cg_level_connected, only: cg_level_connected_T
 
    implicit none
 
@@ -68,7 +68,7 @@ module multipole
    integer                   :: irmin                            !< minimum Q(:, :, r) index in use
    integer                   :: irmax                            !< maximum Q(:, :, r) index in use
 
-   type(cg_list_level_T), pointer :: lmpole                        !< pointer to the level where multipoles are evaluated
+   type(cg_level_connected_T), pointer :: lmpole                        !< pointer to the level where multipoles are evaluated
    real, dimension(0:ndims)  :: CoM                              !< Total mass and center of mass coordinates
    logical                   :: zaxis_inside                     !< true when z-axis belongs to the inner radial boundary in polar coordinates
 
@@ -113,7 +113,7 @@ contains
 
    subroutine init_multipole
 
-      use cg_list_level, only: base_lev, finest
+      use cg_level_connected, only: base_lev, finest
       use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
       use dataio_pub,    only: die, warn
       use domain,        only: dom
@@ -276,14 +276,14 @@ contains
 
    subroutine multipole_solver
 
-      use cg_list_level, only: cg_list_level_T, finest
+      use cg_level_connected, only: cg_level_connected_T, finest
       use constants,     only: dirtyH
       use global,        only: dirty_debug
       use multigridvars, only: solution
 
       implicit none
 
-      type(cg_list_level_T), pointer :: curl
+      type(cg_level_connected_T), pointer :: curl
 
       if (dirty_debug) then
          call lmpole%reset_boundaries(dirtyH)
@@ -536,14 +536,14 @@ contains
 
    subroutine prolong_ext_bnd(coarse)
 
-      use cg_list_level, only: cg_list_level_T
+      use cg_level_connected, only: cg_level_connected_T
       use constants,     only: ndims, O_INJ, O_D2, O_I2
       use dataio_pub,    only: die
       use domain,        only: dom
 
       implicit none
 
-      type(cg_list_level_T), pointer, intent(in) :: coarse !< level to prolong from
+      type(cg_level_connected_T), pointer, intent(in) :: coarse !< level to prolong from
 
       if (dom%eff_dim<ndims) call die("[multigridmultipole:prolong_ext_bnd0] 1D and 2D not finished")
       if (abs(ord_prolong_mpole) > maxval(abs([O_D2, O_I2]))) call die("[multipole:prolong_ext_bnd] interpolation order too high")
@@ -564,16 +564,16 @@ contains
 
    subroutine prolong_ext_bnd0(coarse)
 
-      use cg_list_level, only: cg_list_level_T
+      use cg_level_connected, only: cg_level_connected_T
       use constants,     only: HI, LO, xdim, ydim, zdim
       use dataio_pub,    only: die
       use domain,        only: is_multicg
 
       implicit none
 
-      type(cg_list_level_T), pointer, intent(in) :: coarse !< level to prolong from
+      type(cg_level_connected_T), pointer, intent(in) :: coarse !< level to prolong from
 
-      type(cg_list_level_T), pointer :: fine
+      type(cg_level_connected_T), pointer :: fine
       integer :: lh
 
       if (is_multicg) call die("[multigridmultipole:prolong_ext_bnd0] multicg not implemented yet") ! fine%first%cg%mg%bnd_[xyz]
@@ -612,16 +612,16 @@ contains
 
    subroutine prolong_ext_bnd2(coarse)
 
-      use cg_list_level, only: cg_list_level_T
+      use cg_level_connected, only: cg_level_connected_T
       use constants,     only: HI, LO, xdim, ydim, zdim, O_INJ, O_LIN, O_D2, O_I2
       use dataio_pub,    only: die
       use domain,        only: is_multicg
 
       implicit none
 
-      type(cg_list_level_T), pointer, intent(in) :: coarse !< level to prolong from
+      type(cg_level_connected_T), pointer, intent(in) :: coarse !< level to prolong from
 
-      type(cg_list_level_T), pointer :: fine
+      type(cg_level_connected_T), pointer :: fine
 
       integer                       :: i, j, k, lh
       real, parameter, dimension(3) :: p0  = [ 0.,       1.,     0.     ] ! injection

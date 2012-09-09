@@ -353,7 +353,7 @@ contains
 
    subroutine set_common_attributes_v1(file_id)
 
-      use cg_list_level, only: finest
+      use cg_level_connected, only: finest
       use constants,     only: cbuff_len, xdim, ydim, zdim, I_ONE
       use dataio_pub,    only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
          &                     last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump

@@ -63,7 +63,7 @@ contains
    subroutine update(this)
 
       use cg_list,          only: cg_list_element
-      use cg_list_level,    only: base_lev, cg_list_level_T
+      use cg_level_connected,    only: base_lev, cg_level_connected_T
       use constants,        only: I_ONE
       use dataio_pub,       only: msg, printinfo
       use list_of_cg_lists, only: all_lists
@@ -74,7 +74,7 @@ contains
 
       class(cg_leaves_T), intent(inout) :: this          !< object invoking type-bound procedure
 
-      type(cg_list_level_T), pointer :: curl
+      type(cg_level_connected_T), pointer :: curl
       type(cg_list_element), pointer :: cgl
 
       integer :: g_cnt
