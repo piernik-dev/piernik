@@ -682,7 +682,7 @@ contains
 
    subroutine init_solution(history)
 
-      use cg_list,        only: ind_val
+      use cg_list_dataop, only: ind_val
       use cg_leaves,      only: leaves
       use cg_list_level,  only: finest
       use cg_list_global, only: all_cg

@@ -351,7 +351,8 @@ contains
 #endif /* __INTEL_COMPILER */
       use cg_list_level,  only: finest
       use dataio_pub,     only: die
-      use cg_list,        only: ind_val, dirty_label
+      use cg_list,        only: dirty_label
+      use cg_list_dataop, only: ind_val
       use cg_leaves,      only: leaves
       use initcosmicrays, only: iarr_crs
       use multigridvars,  only: source, defect, correction
@@ -475,7 +476,8 @@ contains
       use cg_list_global, only: all_cg
       use cg_list_level,  only: cg_list_level_T, coarsest, finest
       use dataio_pub,     only: msg, warn
-      use cg_list,        only: ind_val, dirty_label
+      use cg_list,        only: dirty_label
+      use cg_list_dataop, only: ind_val
       use global,         only: do_ascii_dump
       use cg_leaves,      only: leaves
       use initcosmicrays, only: iarr_crs
@@ -663,7 +665,8 @@ contains
       use cg_list_level,  only: cg_list_level_T
       use constants,      only: xdim, ydim, zdim, I_ONE, ndims, LO, HI
       use domain,         only: dom
-      use cg_list,        only: cg_list_element, ind_val
+      use cg_list,        only: cg_list_element
+      use cg_list_dataop, only: ind_val
       use global,         only: dt
       use grid_cont,      only: grid_container
       use named_array,    only: p3

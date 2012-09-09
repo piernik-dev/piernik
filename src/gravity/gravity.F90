@@ -369,13 +369,13 @@ contains
 
    subroutine sum_potential
 
-      use constants,   only: gp_n, gpot_n, hgpot_n
-      use cg_list,     only: ind_val
-      use cg_leaves,   only: leaves
+      use constants,        only: gp_n, gpot_n, hgpot_n
+      use cg_list_dataop,   only: ind_val
+      use cg_leaves,        only: leaves
       use named_array_list, only: qna
 #ifdef SELF_GRAV
-      use constants,   only: one, half, sgp_n, sgpm_n
-      use global,      only: dt, dtm
+      use constants,        only: one, half, sgp_n, sgpm_n
+      use global,           only: dt, dtm
 #endif /* SELF_GRAV */
 
       implicit none

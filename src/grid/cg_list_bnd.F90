@@ -43,15 +43,17 @@
 !<
 
 module cg_list_bnd
+
 ! pulled by ANY
-   use cg_list,   only: cg_list_T
+
+   use cg_list_dataop, only: cg_list_dataop_T
 
    implicit none
 
    private
    public :: cg_list_bnd_T
 
-   type, extends(cg_list_T) :: cg_list_bnd_T
+   type, extends(cg_list_dataop_T) :: cg_list_bnd_T
     contains
       procedure          :: internal_boundaries_3d  !< A wrapper that calls internal_boundaries for 3D arrays stored in cg%q(:)
       procedure          :: internal_boundaries_4d  !< A wrapper that calls internal_boundaries for 4D arrays stored in cg%w(:)
