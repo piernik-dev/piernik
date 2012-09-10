@@ -35,21 +35,24 @@ module snsources
    implicit none
    private
    public ::  random_sn, init_snsources, r_sn
+#ifdef SHEAR
+   public :: sn_shear
 
-   real          :: epsi, epso
-   real          :: ysna, ysni, ysno
-   integer, save :: nsn, nsn_last
-   real,    save :: dt_sn_prev, ecr_supl, decr_supl
-   real,    save :: gset
-   integer, save :: irand, iset
+   real, dimension(3) :: ysnoi
+#endif /* SHEAR */
+   real               :: ysna
+   integer, save      :: nsn, nsn_last
+   real,    save      :: dt_sn_prev, ecr_supl, decr_supl
+   real,    save      :: gset
+   integer, save      :: irand, iset
 
-   real, parameter :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    ! thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
+   real, parameter    :: ethu = 7.0**2/(5.0/3.0-1.0) * 1.0    !< thermal energy unit=0.76eV/cm**3 for c_si= 7km/s, n=1/cm^3 gamma=5/3
 
-   real            :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
-   real            :: f_sn                !< frequency of SN
-   real            :: f_sn_kpc2           !< frequency of SN per kpc^2
-   real            :: h_sn                !< galactic height in SN gaussian distribution ?
-   real            :: r_sn                !< radius of SN
+   real               :: amp_ecr_sn          !< cosmic ray explosion amplitude in units: e_0 = 1/(5/3-1)*rho_0*c_s0**2  rho_0=1.67e-24g/cm**3, c_s0 = 7km/s
+   real               :: f_sn                !< frequency of SN
+   real               :: f_sn_kpc2           !< frequency of SN per kpc^2
+   real               :: h_sn                !< galactic height in SN gaussian distribution ?
+   real               :: r_sn                !< radius of SN
 
 !   namelist /SN_SOURCES/ amp_ecr_sn, f_sn, h_sn, r_sn, f_sn_kpc2
    namelist /SN_SOURCES/ h_sn, r_sn, f_sn_kpc2
@@ -193,9 +196,11 @@ contains
 
                   do ipm=-1,1
 
-                     if (ipm == -1) ysna = ysno
-                     if (ipm ==  0) ysna = ysn
-                     if (ipm ==  1) ysna = ysni
+#ifdef SHEAR
+                     ysna = ysnoi(ipm+2)
+#else /* !SHEAR */
+                     ysna = ysn
+#endif /* !SHEAR */
 
                      do jpm=-1,1
 
@@ -234,19 +239,16 @@ contains
 #ifdef SHEAR
       use cg_leaves,   only: leaves
       use grid_cont,   only: grid_container
-      use shear,       only: delj, eps
 #endif /* SHEAR */
 
       implicit none
 
 #ifdef SHEAR
-      integer :: jsn,jremap
-      real :: dysn
-      type(grid_container), pointer :: cg
+      type(grid_container), pointer   :: cg
 #endif /* SHEAR */
       real, dimension(3), intent(out) :: pos
-      real, dimension(4) :: rand
-      real :: xsn,ysn,zsn,znorm
+      real, dimension(4)              :: rand
+      real                            :: xsn, ysn, zsn, znorm
 
       call random_number(rand)
       xsn = dom%edge(xdim, LO)+ dom%L_(xdim)*rand(1)
@@ -262,31 +264,9 @@ contains
 
 #ifdef SHEAR
       cg => leaves%first%cg
-      if (is_multicg) call die("[snsources:rand_coords] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
-
-      jsn  = js+int((ysn-dom%edge(ydim, LO))*cg%idy)
-      dysn  = dmod(ysn, cg%dy)
-
-      epsi   = eps*cg%dy
-      epso   = -epsi
-
-!  outer boundary
-      jremap = jsn - delj
-      jremap = mod(mod(jremap, cg%nyb)+cg%nyb, cg%nyb)
-      if (jremap <= (js-1)) jremap = jremap + cg%nyb
-
-      ysno = cg%y(jremap) + epso + dysn
-
-!  inner boundary
-      jremap = jsn + delj
-      jremap = mod(jremap, cg%nyb)+cg%nyb
-      if (jremap >= (je+1)) jremap = jremap - cg%nyb
-
-      ysni = cg%y(jremap) + epsi + dysn
-#else /* !SHEAR */
-      ysno = ysn
-      ysni = ysn
-#endif /* !SHEAR */
+      ysnoi = 0.0 ; ysnoi(2) = ysn
+      call sn_shear(cg, ysnoi)
+#endif /* SHEAR */
 
       pos(1) = xsn
       pos(2) = ysn
@@ -295,6 +275,47 @@ contains
 
    end subroutine rand_coords
 
+!-----------------------------------------------------------------------
+#ifdef SHEAR
+   subroutine sn_shear(cg, ysnoi)
+
+      use constants,   only: ydim, LO
+      use dataio_pub,  only: die
+      use domain,      only: is_multicg, dom
+      use grid_cont,   only: grid_container
+      use shear,       only: delj, eps
+
+      implicit none
+
+      type(grid_container), pointer     :: cg
+      real, dimension(3), intent(inout) :: ysnoi
+      integer                           :: jsn, jremap
+      real                              :: dysn, epsi, epso
+
+      if (is_multicg) call die("[snsources:sn_shear] multiple grid pieces per procesor not implemented yet") !nontrivial SHEAR
+
+      jsn  = cg%js+int((ysnoi(2)-dom%edge(ydim, LO))*cg%idy)
+      dysn  = mod(ysnoi(2), cg%dy)
+
+      epsi   = eps*cg%dy
+      epso   = -epsi
+
+!  outer boundary
+      jremap = jsn - delj
+      jremap = mod(mod(jremap, cg%nyb)+cg%nyb, cg%nyb)
+      if (jremap <= (cg%js-1)) jremap = jremap + cg%nyb
+
+      ysnoi(1) = cg%y(jremap) + epso + dysn
+
+!  inner boundary
+      jremap = jsn + delj
+      jremap = mod(jremap, cg%nyb)+cg%nyb
+      if (jremap >= (cg%je+1)) jremap = jremap - cg%nyb
+
+      ysnoi(3) = cg%y(jremap) + epsi + dysn
+
+   end subroutine sn_shear
+#endif /* SHEAR */
 !-----------------------------------------------------------------------
 
 !>
