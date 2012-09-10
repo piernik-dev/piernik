@@ -92,7 +92,9 @@ contains
       !! \deprecated remove this clause as soon as Intel Compiler gets required
       !! features and/or bug fixes
       use timestep,              only: init_time_step
+#ifdef COSM_RAYS
       use crhelpers,             only: init_div_v
+#endif /* COSM_RAYS */
 #endif /* __INTEL_COMPILER */
 
       implicit none

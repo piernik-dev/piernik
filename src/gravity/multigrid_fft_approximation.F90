@@ -40,6 +40,11 @@
 
 module multigrid_fftapprox
 ! pulled by MULTIGRID && GRAV
+#if defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
+   use cg_list_bnd,   only: cg_list_bnd_T   ! QA_WARN intel
+#endif /* __INTEL_COMPILER */
 
    implicit none
 
@@ -66,8 +71,8 @@ contains
       use constants,     only: xdim, ydim, zdim, ndims, LO, HI, LONG, zero, one, half, O_INJ, O_LIN, O_I2, INT4
       use dataio_pub,    only: warn, die
       use domain,        only: dom
-      use cg_level_connected, only: cg_level_connected_T, coarsest
       use cg_list,       only: cg_list_element
+      use cg_level_connected, only: cg_level_connected_T, coarsest
       use grid_cont,     only: pr_segment, grid_container, is_overlap
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req
       use multigridvars, only: ord_prolong_face_norm, need_general_pf

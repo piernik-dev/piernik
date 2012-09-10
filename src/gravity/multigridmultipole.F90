@@ -41,6 +41,11 @@ module multipole
 ! pulled by MULTIGRID && GRAV
    ! needed for global vars in this module
    use constants,   only: ndims
+#if defined(__INTEL_COMPILER)
+      !! \deprecated remove this clause as soon as Intel Compiler gets required
+      !! features and/or bug fixes
+   use cg_list_bnd,   only: cg_list_bnd_T   ! QA_WARN intel
+#endif /* __INTEL_COMPILER */
    use cg_level_connected, only: cg_level_connected_T
 
    implicit none
