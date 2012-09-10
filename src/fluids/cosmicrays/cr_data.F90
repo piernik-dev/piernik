@@ -130,7 +130,8 @@ contains
 
       implicit none
 
-      integer, intent(in)                        :: ncrn
+      integer(kind=4), intent(in) :: ncrn
+
       integer                                    :: icr, i
       character(len=specieslen), dimension(nicr) :: eCRSP_names
 
