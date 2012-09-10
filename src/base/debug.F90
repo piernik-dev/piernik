@@ -73,6 +73,7 @@ contains
 !!   <tr><td>aux_L            </td><td>.false.</td><td>5-element logical array</td><td>\copydoc piernikdebug::aux_l            </td></tr>
 !!   <tr><td>aux_S            </td><td>""     </td><td>5-element string array </td><td>\copydoc piernikdebug::aux_s            </td></tr>
 !! </table>
+!! The list is active while DEBUG is defined.
 !! \n \n
 !<
 

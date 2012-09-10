@@ -67,6 +67,7 @@ contains
 !! <tr><td>r_sn     </td><td>0.0  </td><td>real value</td><td>\copydoc snsources::r_sn     </td></tr>
 !! <tr><td>f_sn_kpc2</td><td>0.0  </td><td>real value</td><td>\copydoc snsources::f_sn_kpc2</td></tr>
 !! </table>
+!! The list is active while SN_SRC is defined.
 !! \n \n
 !<
    subroutine init_snsources

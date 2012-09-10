@@ -96,6 +96,7 @@ contains
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>selfgrav  </td><td>.false.</td><td>logical   </td><td>\copydoc initdust::selfgrav  </td></tr>
 !! </table>
+!! The list is active while DUST is defined.
 !! \n \n
 !<
    subroutine init_dust

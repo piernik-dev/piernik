@@ -153,6 +153,7 @@ contains
 !! <tr><td>cs_iso    </td><td>1.0     </td><td>real value </td><td>\copydoc initionized::cs_iso   </td></tr>
 !! <tr><td>selfgrav  </td><td>.false. </td><td>logical    </td><td>\copydoc initionized::selfgrav </td></tr>
 !! </table>
+!! The list is active while IONIZED is defined.
 !! \n \n
 !<
    subroutine init_ionized

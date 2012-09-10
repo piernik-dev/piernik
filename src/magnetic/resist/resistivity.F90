@@ -78,6 +78,7 @@ contains
 !! <tr><td>j_crit    </td><td>1.0e6</td><td>real value   </td><td>\copydoc resistivity::j_crit   </td></tr>
 !! <tr><td>deint_max </td><td>0.01 </td><td>real value   </td><td>\copydoc resistivity::deint_max</td></tr>
 !! </table>
+!! The list is active while RESISTIVE is defined.
 !! \n \n
 !<
    subroutine init_resistivity

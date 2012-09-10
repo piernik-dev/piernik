@@ -54,12 +54,13 @@ contains
 !! \brief Routine to set parameter values from namelist FLUID_DUST
 !!
 !! \n \n
-!! @b FLUID_DUST
+!! @b FLUID_TRACER
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>selfgrav_trc  </td><td>.false.</td><td>logical   </td><td>\copydoc initdust::selfgrav_trc  </td></tr>
+!! <tr><td>tracers</td><td>0</td><td>10-element integer array</td><td>\copydoc inittracer::tracers</td></tr>
 !! </table>
+!! The list is active while TRACER is defined.
 !! \n \n
 !<
    subroutine init_tracer

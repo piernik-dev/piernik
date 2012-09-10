@@ -101,6 +101,7 @@ contains
 !! <tr><td>allow_explicit</td><td>.true. </td><td>logical        </td><td>\copydoc multigrid_diffusion::allow_explicit</td></tr>
 !! <tr><td>diff_bnd_str  </td><td>"zero" </td><td>string of chars</td><td>\copydoc multigrid_diffusion::diff_bnd_str  </td></tr>
 !! </table>
+!! The list is active while COSM_RAYS and MULTIGRID are defined.
 !! \n \n
 !<
    subroutine init_multigrid_diff

@@ -64,6 +64,7 @@ contains
 !! <tr><td>eta_gas</td><td>0.0  </td><td>real value</td><td>\copydoc shear::eta_gas</td></tr>
 !! <tr><td>csvk   </td><td>1.0  </td><td>real value</td><td>\copydoc shear::csvk   </td></tr>
 !! </table>
+!! The list is active while SHEAR is defined.
 !! \n \n
 !<
    subroutine init_shear

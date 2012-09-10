@@ -69,6 +69,7 @@ contains
 !! <tr><td>do_ascii_dump        </td><td>.false.</td><td>logical       </td><td>\copydoc global::do_ascii_dump               </td></tr>
 !! <tr><td>dirty_debug          </td><td>.false.</td><td>logical       </td><td>\copydoc global::dirty_debug                 </td></tr>
 !! </table>
+!! The list is active while MULTIGRID is defined.
 !! \n \n
 !<
    subroutine init_multigrid

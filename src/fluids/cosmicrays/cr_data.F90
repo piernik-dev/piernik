@@ -58,14 +58,20 @@ module cr_data
 
    integer, parameter                                      :: nicr = icr_LAST - 1
 
-   logical                                                 :: eH1, eLi7, eBe9, eBe10, eC12, eN14, eO16
-   logical,                                dimension(nicr) :: eCRSP
-   integer, parameter                                      :: specieslen = 6
-   character(len=specieslen), allocatable, dimension(:)    :: cr_names
-   integer,                   allocatable, dimension(:)    :: cr_table
-   real,                      allocatable, dimension(:,:)  :: cr_sigma
-   real,                      allocatable, dimension(:)    :: cr_tau
-   real,                      allocatable, dimension(:)    :: cr_primary
+   logical                                                 :: eH1                !< presence of H1 isotope
+   logical                                                 :: eLi7               !< presence of Li7 isotope
+   logical                                                 :: eBe9               !< presence of Be9 isotope
+   logical                                                 :: eBe10              !< presence of Be10 isotope
+   logical                                                 :: eC12               !< presence of C12 isotope
+   logical                                                 :: eN14               !< presence of N14 isotope
+   logical                                                 :: eO16               !< presence of O16 isotope
+   logical,                                dimension(nicr) :: eCRSP              !< table of all isotopes presences
+   integer, parameter                                      :: specieslen = 6     !< length of species names
+   character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
+   integer,                   allocatable, dimension(:)    :: cr_table           !< table of flind indices for CR species
+   real,                      allocatable, dimension(:,:)  :: cr_sigma           !< table of cross sections for spallation
+   real,                      allocatable, dimension(:)    :: cr_tau             !< table of decay half live times
+   real,                      allocatable, dimension(:)    :: cr_primary         !< table of initial source abundances
 
 !<====Cross sections for spallation from Garcia-Munoz 1987 (see also Longair)====>
 
@@ -97,6 +103,23 @@ module cr_data
 contains
 
 !>
+!! \brief Routine to set parameters values from namelist CR_SPECIES and auxiliary CR species arrays
+!!
+!! \n \n
+!! @b CR_SPECIES
+!! \n \n
+!! <table border="+1">
+!! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
+!! <tr><td>eH1  </td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::eH1  </td></tr>
+!! <tr><td>eLi7 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::eLi7 </td></tr>
+!! <tr><td>eBe9 </td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::eBe9 </td></tr>
+!! <tr><td>eBe10</td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::eBe10</td></tr>
+!! <tr><td>eC12 </td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::eC12 </td></tr>
+!! <tr><td>eN14 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::eN14 </td></tr>
+!! <tr><td>eO16 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::eO16 </td></tr>
+!! </table>
+!! The list is active while COSM_RAYS_SOURCES is defined.
+!! \n \n
 !! \todo add user species possibility
 !<
    subroutine init_crsources(ncrn)

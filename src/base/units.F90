@@ -154,21 +154,24 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>units_set </td><td>'scaled'</td><td>string of characters</td><td>type of units set     </td></tr>
-!! <tr><td>miu0      </td><td>4*pi    </td><td>real                </td><td>\copydoc units::miu0  </td></tr>
-!! <tr><td>kelvin    </td><td>1       </td><td>real                </td><td>\copydoc units::kelvin</td></tr>
-!! <tr><td>cm        </td><td>1       </td><td>real                </td><td>\copydoc units::cm    </td></tr>
-!! <tr><td>gram      </td><td>1       </td><td>real                </td><td>\copydoc units::gram  </td></tr>
-!! <tr><td>sek       </td><td>1       </td><td>real                </td><td>\copydoc units::sek   </td></tr>
+!! <tr><td>units_set </td><td>'scaled'    </td><td>string of characters</td><td>type of units set       </td></tr>
+!! <tr><td>miu0      </td><td>4*pi        </td><td>real                </td><td>\copydoc units::miu0    </td></tr>
+!! <tr><td>kelvin    </td><td>1           </td><td>real                </td><td>\copydoc units::kelvin  </td></tr>
+!! <tr><td>cm        </td><td>1           </td><td>real                </td><td>\copydoc units::cm      </td></tr>
+!! <tr><td>gram      </td><td>1           </td><td>real                </td><td>\copydoc units::gram    </td></tr>
+!! <tr><td>sek       </td><td>1           </td><td>real                </td><td>\copydoc units::sek     </td></tr>
+!! <tr><td>s_len_u   </td><td>' undefined'</td><td>string of characters</td><td>\copydoc units::s_len_u </td></tr>
+!! <tr><td>s_time_u  </td><td>' undefined'</td><td>string of characters</td><td>\copydoc units::s_time_u</td></tr>
+!! <tr><td>s_mass_u  </td><td>' undefined'</td><td>string of characters</td><td>\copydoc units::s_mass_u</td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_units
 
       use constants,  only: one, pi, fpi, small, PIERNIK_INIT_MPI
-      use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
       use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub, only: warn, printinfo, msg, die, code_progress
+      use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
 

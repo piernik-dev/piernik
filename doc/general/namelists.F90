@@ -11,6 +11,7 @@
 !! \copydetails dataio::init_dataio
 !! \copydetails global::init_global
 !! \copydetails piernikdebug::init_piernikdebug
+!! \copydetails piernikiodebug:init_piernikiodebug
 !! \copydetails gravity::init_grav
 !! \copydetails initcosmicrays::init_cosmicrays
 !! \copydetails cr_data::init_crsources
@@ -18,6 +19,7 @@
 !! \copydetails initionized::init_ionized
 !! \copydetails initneutral::init_neutral
 !! \copydetails interactions::init_interactions
+!! \copydetails inittracer::init_tracer
 !! \copydetails resistivity::init_resistivity
 !! \copydetails shear::init_shear
 !! \copydetails snsources::init_snsources
