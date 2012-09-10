@@ -117,8 +117,8 @@ contains
          if (have_mpi .and. is_mpi_noncart) call die("[magboundaries:bnd_b] is_mpi_noncart is not implemented") !procn, procxyl, procyxl, psize, pcoords
 #ifdef SHEAR
          if (dir == xdim) then
-            allocate(send_left(3, dom%nb, cg%ny, cg%nz),send_right(3, dom%nb, cg%ny, cg%nz), &
-                 &   recv_left(3, dom%nb, cg%ny, cg%nz),recv_right(3, dom%nb, cg%ny, cg%nz))
+            allocate(send_left(3, dom%nb, cg%n_(ydim), cg%n_(zdim)),send_right(3, dom%nb, cg%n_(ydim), cg%n_(zdim)), &
+                 &   recv_left(3, dom%nb, cg%n_(ydim), cg%n_(zdim)),recv_right(3, dom%nb, cg%n_(ydim), cg%n_(zdim)))
 
             send_left (:,:,:,:)  = cg%b(:, cg%is:cg%isb,:,:)
             send_right(:,:,:,:)  = cg%b(:, cg%ieb:cg%ie,:,:)
@@ -129,7 +129,7 @@ contains
 !
                send_left (:,:,  cg%js:cg%je,:) = cshift(send_left (:,:, cg%js :cg%je, :),dim=3,shift= delj)
                send_left (:,:,      1:dom%nb,:) =        send_left (:,:, cg%jeb:cg%je, :)
-               send_left (:,:,cg%je+1:cg%ny,:) =        send_left (:,:, cg%js :cg%jsb,:)
+               send_left (:,:,cg%je+1:cg%n_(ydim),:) =        send_left (:,:, cg%js :cg%jsb,:)
 !
 ! remapujemy  - interpolacja kwadratowa
 !
@@ -144,7 +144,7 @@ contains
 !
                send_right (:,:,  cg%js:cg%je,:) = cshift(send_right(:,:, cg%js :cg%je, :),dim=3,shift=-delj)
                send_right (:,:,      1:dom%nb,:) =        send_right(:,:, cg%jeb:cg%je, :)
-               send_right (:,:,cg%je+1:cg%ny,:) =        send_right(:,:, cg%js :cg%jsb,:)
+               send_right (:,:,cg%je+1:cg%n_(ydim),:) =        send_right(:,:, cg%js :cg%jsb,:)
 !
 ! remapujemy - interpolacja kwadratowa
 !
@@ -155,10 +155,10 @@ contains
 !
 ! wysylamy na drugi brzeg
 !
-            call MPI_Isend(send_left , 3*cg%ny*cg%nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag1, comm, req(1), mpi_err)
-            call MPI_Isend(send_right, 3*cg%ny*cg%nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag2, comm, req(3), mpi_err)
-            call MPI_Irecv(recv_left , 3*cg%ny*cg%nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), mpi_err)
-            call MPI_Irecv(recv_right, 3*cg%ny*cg%nz*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), mpi_err)
+            call MPI_Isend(send_left , 3*cg%n_(ydim)*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag1, comm, req(1), mpi_err)
+            call MPI_Isend(send_right, 3*cg%n_(ydim)*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag2, comm, req(3), mpi_err)
+            call MPI_Irecv(recv_left , 3*cg%n_(ydim)*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,LO), tag2, comm, req(2), mpi_err)
+            call MPI_Irecv(recv_right, 3*cg%n_(ydim)*cg%n_(zdim)*dom%nb, MPI_DOUBLE_PRECISION, cdd%procn(dir,HI), tag1, comm, req(4), mpi_err)
 
             call MPI_Waitall(I_FOUR,req(:),status(:,:),mpi_err)
 
