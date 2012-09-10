@@ -351,13 +351,19 @@ contains
       use grid_cont,      only: grid_container
       use initcosmicrays, only: iarr_crn
       use snsources,      only: r_sn
+#ifdef SHEAR
+      use snsources,      only: sn_shear
+#endif /* SHEAR */
 
       implicit none
 
       real, dimension(ndims), intent(in) :: pos
 
       integer                            :: i, j, k, ipm, jpm
-      real                               :: decr, xsn, ysn, zsn, ysna !, ysni, ysno
+      real                               :: decr, xsn, ysn, zsn, ysna
+#ifdef SHEAR
+      real, dimension(3)                 :: ysnoi
+#endif /* SHEAR */
       type(cg_list_element), pointer     :: cgl
       type(grid_container),  pointer     :: cg
 
@@ -369,17 +375,22 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
+#ifdef SHEAR
+         ysnoi(2) = ysn
+         call sn_shear(cg, ysnoi)
+#endif /* !SHEAR */
+
          do k=1, cg%n_(zdim)
             do j=1, cg%n_(ydim)
                do i=1, cg%n_(xdim)
 
                   do ipm=-1,1
 
+#ifdef SHEAR
+                     ysna = ysnoi(ipm+2)
+#else /* !SHEAR */
                      ysna = ysn
-! ToDo: when implementing SHEAR, use select case construct or an assignment like this: ysna = ysn_array(ipm)
-!                  if (ipm == -1) ysna = ysn   ! if (SHEAR) => ysna = ysno
-!                  if (ipm == 0) ysna = ysn
-!                  if (ipm == 1) ysna = ysn   ! if (SHEAR) => ysna = ysni
+#endif /* !SHEAR */
 
                      do jpm=-1,1
 

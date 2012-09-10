@@ -22,7 +22,7 @@
 #define SN_SRC
 
 /* numerical solutions and limitations */
-#undef SHEAR
+/* #undef SHEAR */
 
 /* include multigrid for diffusion */
 #define MULTIGRID
