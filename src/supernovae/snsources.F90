@@ -40,7 +40,6 @@ module snsources
 
    real, dimension(3) :: ysnoi
 #endif /* SHEAR */
-   real               :: ysna
    integer, save      :: nsn, nsn_last
    real,    save      :: dt_sn_prev, ecr_supl, decr_supl
    real,    save      :: gset
@@ -178,7 +177,7 @@ contains
 
       real, dimension(3), intent(in) :: pos
       integer                        :: i, j, k, ipm, jpm
-      real                           :: decr, xsn, ysn, zsn
+      real                           :: decr, xsn, ysn, zsn, ysna, zr
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
@@ -191,36 +190,34 @@ contains
          cg => cgl%cg
 
          do k=1, cg%n_(zdim)
+            zr = (cg%z(k)-zsn)**2
             do j=1, cg%n_(ydim)
                do i=1, cg%n_(xdim)
 
+                  decr = 0.0
                   do ipm=-1,1
-
 #ifdef SHEAR
                      ysna = ysnoi(ipm+2)
 #else /* !SHEAR */
                      ysna = ysn
 #endif /* !SHEAR */
-
                      do jpm=-1,1
-
-                        decr = amp_ecr_sn * ethu * exp(-((cg%x(i)-xsn +real(ipm)*dom%L_(xdim))**2  &
-                             +                           (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2  &
-                             +                           (cg%z(k)-zsn)**2)/r_sn**2)
+                        decr = decr + exp(-((cg%x(i)-xsn +real(ipm)*dom%L_(xdim))**2  &
+                             +              (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2 + zr)/r_sn**2)
+                     enddo
+                  enddo
+                  decr = decr * amp_ecr_sn *ethu
 
 #ifdef COSM_RAYS_SOURCES
-                        if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
-                        if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12))*12*decr
-                        if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
-                        if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
+                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
+                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12))*12*decr
+                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
+                  if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
 #endif /* COSM_RAYS_SOURCES */
 
-                     enddo ! jpm
-                  enddo ! ipm
-
-               enddo ! i
-            enddo ! j
-         enddo ! k
+               enddo
+            enddo
+         enddo
 
          cgl => cgl%nxt
       enddo

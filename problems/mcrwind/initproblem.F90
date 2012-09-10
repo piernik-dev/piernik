@@ -358,14 +358,13 @@ contains
       implicit none
 
       real, dimension(ndims), intent(in) :: pos
-
       integer                            :: i, j, k, ipm, jpm
-      real                               :: decr, xsn, ysn, zsn, ysna
+      real                               :: decr, xsn, ysn, zsn, ysna, zr
+      type(cg_list_element), pointer     :: cgl
+      type(grid_container),  pointer     :: cg
 #ifdef SHEAR
       real, dimension(3)                 :: ysnoi
 #endif /* SHEAR */
-      type(cg_list_element), pointer     :: cgl
-      type(grid_container),  pointer     :: cg
 
       xsn = pos(xdim)
       ysn = pos(ydim)
@@ -381,32 +380,32 @@ contains
 #endif /* !SHEAR */
 
          do k=1, cg%n_(zdim)
+            zr = (cg%z(k)-zsn)**2
             do j=1, cg%n_(ydim)
                do i=1, cg%n_(xdim)
 
+                  decr = 0.0
                   do ipm=-1,1
-
 #ifdef SHEAR
                      ysna = ysnoi(ipm+2)
 #else /* !SHEAR */
                      ysna = ysn
 #endif /* !SHEAR */
-
                      do jpm=-1,1
 
 !                     decr = amp_ecr_sn * ethu  &
-                        decr = amp_cr * exp(-((cg%x(i)-xsn +real(ipm)*dom%L_(xdim))**2  &
-                             +                (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2  &
-                             +                (cg%z(k)-zsn)**2)/r_sn**2)
-!                     cg%u(iarr_crn,i,j,k) = cg%u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
-                        if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
-                        if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12))*12*decr
-                        !> \deprecated BEWARE: following lines are inconsistent with the gold for some reason
-!                        if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
-!                        if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
+                        decr = decr + exp(-((cg%x(i)-xsn +real(ipm)*dom%L_(xdim))**2  &
+                             +              (cg%y(j)-ysna+real(jpm)*dom%L_(ydim))**2 + zr)/r_sn**2)
 
                      enddo ! jpm
                   enddo ! ipm
+                  decr = decr * amp_cr
+!                     cg%u(iarr_crn,i,j,k) = cg%u(iarr_crn,i,j,k) + max(decr,1e-10) * [1., primary_C12*12., primary_N14*14., primary_O16*16.]
+                  if (eCRSP(icr_H1 )) cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) = cg%u(iarr_crn(cr_table(icr_H1 )),i,j,k) + decr
+                  if (eCRSP(icr_C12)) cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) = cg%u(iarr_crn(cr_table(icr_C12)),i,j,k) + cr_primary(cr_table(icr_C12))*12*decr
+                  !> \deprecated BEWARE: following lines are inconsistent with the gold for some reason
+!                  if (eCRSP(icr_N14)) cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) = cg%u(iarr_crn(cr_table(icr_N14)),i,j,k) + cr_primary(cr_table(icr_N14))*14*decr
+!                  if (eCRSP(icr_O16)) cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) = cg%u(iarr_crn(cr_table(icr_O16)),i,j,k) + cr_primary(cr_table(icr_O16))*16*decr
 
                enddo ! i
             enddo ! j
