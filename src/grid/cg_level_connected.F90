@@ -48,6 +48,7 @@ module cg_level_connected
     contains
 
       ! Level management
+      procedure, private :: init_level                      !< common initialization for base level and other levels
       procedure :: add_lev                                  !< add a finer or coarser level
       procedure :: add_lev_base                             !< initialize the base level
       generic, public :: add_level => add_lev, add_lev_base
@@ -71,39 +72,53 @@ module cg_level_connected
 
 contains
 
-!> \brief initialize the base level
+!> \brief Common initialization for base level and other levels
+
+   subroutine init_level(this)
+
+      use constants, only: INVALID, fft_none
+
+      implicit none
+
+      class(cg_level_connected_T), intent(inout) :: this   !< object invoking type bound procedure
+
+      this%coarser => null()
+      this%finer => null()
+      this%tot_se = 0
+      this%ord_prolong_set = INVALID
+      this%fft_type = fft_none
+
+   end subroutine init_level
+
+!> \brief Initialize the base level
 
    subroutine add_lev_base(this, n_d)
 
-      use constants,        only: INVALID, base_level_id, fft_none, ndims
+      use constants,        only: base_level_id, ndims
       use dataio_pub,       only: die
       use domain,           only: dom
       use list_of_cg_lists, only: all_lists
 
       implicit none
 
-      class(cg_level_connected_T),            intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_connected_T),       intent(inout) :: this   !< object invoking type bound procedure
       integer(kind=4), dimension(ndims), intent(in)    :: n_d    !< size of global base grid in cells
 
       if (any(n_d(:) < 1)) call die("[cg_level_connected:add_lev_base] non-positive base grid sizes")
       if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_connected:add_lev_base] base grid size incompatible with has_dir masks")
 
+      call this%init_level
       this%level_id = base_level_id
       this%n_d(:) = n_d(:)
-      this%tot_se = 0
-      this%coarser => null()
-      this%finer => null()
-      this%ord_prolong_set = INVALID
-      this%fft_type = fft_none
       call all_lists%register(this, "Base level")
 
    end subroutine add_lev_base
 
-!> \brief add a fine or coarse level to a existing one
+!> \brief Add a fine or coarse level to a existing one
 
    subroutine add_lev(this, coarse)
 
-      use constants,        only: INVALID, I_ONE, refinement_factor, fft_none
+      use constants,        only: INVALID, I_ONE, refinement_factor
       use dataio_pub,       only: die, msg
       use domain,           only: dom
       use mpisetup,         only: master
@@ -112,15 +127,13 @@ contains
       implicit none
 
       class(cg_level_connected_T), target, intent(inout) :: this    !< lowest or highest refinement level
-      logical,                        intent(in)    :: coarse  !< if .true. then add a level below base level
+      logical,                             intent(in)    :: coarse  !< if .true. then add a level below base level
 
       type(cg_level_connected_T), pointer :: new_lev !< fresh refinement level to be added
 
       allocate(new_lev)
+      call new_lev%init_level
       new_lev%n_d(:) = 1
-      new_lev%tot_se = 0
-      new_lev%coarser => null()
-      new_lev%finer => null()
 
       if (coarse) then
          if (associated(this%coarser)) call die("[cg_level_connected:add_lev] coarser level already exists")
@@ -155,9 +168,7 @@ contains
       endif
 
       !! make sure that vertical_prep will be called where necessary
-      new_lev%ord_prolong_set = INVALID
       this%ord_prolong_set = INVALID
-      new_lev%fft_type = fft_none
       write(msg, '(a,i3)')"level ",this%level_id
       call all_lists%register(new_lev, msg)
 
