@@ -188,8 +188,10 @@ contains
             icr = icr + 1
             cr_table(i)   = icr
             cr_names(icr) = eCRSP_names(i)
-            write(msg,'(a,a)') eCRSP_names(i), 'CR species is present'
-            call printinfo(msg)
+            if (master) then
+               write(msg,'(a,a)') eCRSP_names(i), 'CR species is present'
+               call printinfo(msg)
+            endif
          endif
       enddo
 
