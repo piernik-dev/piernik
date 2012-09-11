@@ -165,6 +165,8 @@ contains
 !! <tr><td>s_mass_u  </td><td>' undefined'</td><td>string of characters</td><td>\copydoc units::s_mass_u</td></tr>
 !! </table>
 !! \n \n
+!! \deprecated BEWARE: miu0 and kelvin may be overwritten by values from problem.par even though we choose units_set value one of the following
+!! nevertheless, they are not used so far (r3612)
 !<
    subroutine init_units
 
@@ -231,10 +233,6 @@ contains
       to_stdout = .true.
 #endif /* VERBOSE */
 
-!>
-!! \deprecated BEWARE: miu0 and kelvin may be overwritten by values from problem.par even though we choose units_set value one of the following
-!! nevertheless, they are not used so far (r3612)
-!<
       select case (trim(units_set))
          case ("PSM", "psm")
             ! PSM  uses: length --> pc,     mass --> Msun,        time --> myr,        miu0 --> 4*pi,    temperature --> kelvin

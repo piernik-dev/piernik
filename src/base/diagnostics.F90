@@ -100,6 +100,15 @@ contains
 
    end subroutine check_environment
 
+!>
+!! \todo Decide are we using lhs realloc or not
+!! \n   Against:
+!! \n     * the whole code needs to be reviewed for possible unintentional usage
+!! \n     * requires heightened awareness, i.e. BE C4R3FUL WH4T Y0U TYP3 !!
+!! \n   In favour:
+!! \n     * it can be handy (especially in mc module)
+!! \n     * supported by both gcc and intel
+!<
    subroutine check_lhs_realloc
       use dataio_pub,   only: die
       implicit none
@@ -111,14 +120,6 @@ contains
       ivec  = [(i,i=1,n+1)]       ! valgrind: Invalid write of size 4 \deprecated BEWARE: lhs reallocation
       nsize = abs(n-size(ivec))
       deallocate(ivec)
-
-      ! \todo Decide are we using lhs realloc or not
-      !   Against:
-      !     * the whole code needs to be reviewed for possible unintentional usage
-      !     * requires heightened awareness, i.e. BE C4R3FUL WH4T Y0U TYP3 !!
-      !   In favour:
-      !     * it can be handy (especially in mc module)
-      !     * supported by both gcc and intel
 
 !      if (nsize == 0) call die("[diagnostics:check_lhs_realloc]: No lhs realloc!")
       if (nsize /= 0) call die("[diagnostics:check_lhs_realloc]: LHS realloc detected.")

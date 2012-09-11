@@ -36,6 +36,8 @@ module initpiernik
 contains
 !>
 !! Meta subroutine responsible for initializing all piernik modules
+!! \deprecated remove the "__INTEL_COMPILER" clauses as soon as Intel Compiler gets required
+!! features and/or bug fixes
 !<
    subroutine init_piernik
 

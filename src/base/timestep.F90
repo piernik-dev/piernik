@@ -29,6 +29,8 @@
 
 !>
 !! \brief This module gathers all applicable timestep limits and computes next timestep.
+!! \deprecated remove "__INTEL_COMPILER" clauses as soon as Intel Compiler gets required
+!! features and/or bug fixes
 !<
 
 module timestep
@@ -58,6 +60,8 @@ contains
 !! \brief Initialization routine
 !!
 !! \details This routine sets cfl_manager according to global::cflcontrol parameter.
+!! \deprecated remove "__INTEL_COMPILER" clause as soon as Intel Compiler gets required
+!! features and/or bug fixes
 !<
 
    subroutine init_time_step

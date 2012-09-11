@@ -226,18 +226,21 @@ module fluidtypes
 
       end subroutine printinfo_component_fluid
 
+!>
+!! \deprecated repeated magic integers
+!<
       subroutine set_fluid_index(this, flind, is_magnetized, is_selfgrav, has_energy, cs_iso, gamma_, tag)
-         use constants,    only: xdim, ydim, zdim, ndims, I_ONE
-         use diagnostics,  only: ma1d, ma2d, my_allocate
+         use constants,   only: xdim, ydim, zdim, ndims, I_ONE
+         use diagnostics, only: ma1d, ma2d, my_allocate
 
          implicit none
 
          class(component_fluid), intent(inout) :: this
-         type(var_numbers), intent(inout) :: flind
+         type(var_numbers),      intent(inout) :: flind
 
-         logical, intent(in) :: is_selfgrav, is_magnetized, has_energy
-         real, intent(in) :: cs_iso, gamma_
-         integer(kind=4) :: tag
+         logical,                intent(in)    :: is_selfgrav, is_magnetized, has_energy
+         real,                   intent(in)    :: cs_iso, gamma_
+         integer(kind=4)                       :: tag
 
          this%beg    = flind%all + I_ONE
 
@@ -260,7 +263,6 @@ module fluidtypes
          ma2d = [ndims, this%all]
          call my_allocate(this%iarr_swp, ma2d)
 
-         !\deprecated repeated magic integers
          this%iarr(1:4)           = [this%idn, this%imx, this%imy, this%imz]
          this%iarr_swp(xdim, 1:4) = [this%idn, this%imx, this%imy, this%imz]
          this%iarr_swp(ydim, 1:4) = [this%idn, this%imy, this%imx, this%imz]
