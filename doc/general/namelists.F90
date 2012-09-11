@@ -11,7 +11,7 @@
 !! \copydetails dataio::init_dataio
 !! \copydetails global::init_global
 !! \copydetails piernikdebug::init_piernikdebug
-!! \copydetails piernikiodebug:init_piernikiodebug
+!! \copydetails piernikiodebug::init_piernikiodebug
 !! \copydetails gravity::init_grav
 !! \copydetails initcosmicrays::init_cosmicrays
 !! \copydetails cr_data::init_crsources

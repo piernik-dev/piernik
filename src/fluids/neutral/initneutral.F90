@@ -120,7 +120,7 @@ contains
 !! <tr><td>cs_iso    </td><td>1.0     </td><td>real value </td><td>\copydoc initneutral::cs_iso   </td></tr>
 !! <tr><td>selfgrav  </td><td>.false. </td><td>logical    </td><td>\copydoc initneutral::selfgrav </td></tr>
 !! </table>
-!! The list is active while NEUTRAL is defined.
+!! The list is active while \b "NEUTRAL" is defined.
 !! \n \n
 !<
    subroutine init_neutral

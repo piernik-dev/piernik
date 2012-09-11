@@ -58,7 +58,7 @@ contains
 !!   <tr><td>force_allbnd_dump</td><td>       </td><td>logical value          </td><td>\copydoc piernikiodebug::force_allbnd_dump</td></tr>
 !!   <tr><td>force_log_dump   </td><td>       </td><td>logical value          </td><td>\copydoc piernikiodebug::force_log_dump   </td></tr>
 !! </table>
-!! The list is active while DEBUG is defined.
+!! The list is active while \b "DEBUG" is defined.
 !! \n \n
 !<
 

@@ -98,7 +98,7 @@ contains
 !! <tr><td>K_cre_perp  </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::k_cre_perp </td></tr>
 !! <tr><td>divv_scheme </td><td>''    </td><td>string    </td><td>\copydoc initcosmicrays::divv_scheme</td></tr>
 !! </table>
-!! The list is active while COSM_RAYS is defined.
+!! The list is active while \b "COSM_RAYS" is defined.
 !! \n \n
 !<
    subroutine init_cosmicrays

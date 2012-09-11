@@ -60,7 +60,7 @@ contains
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
 !! <tr><td>tracers</td><td>0</td><td>10-element integer array</td><td>\copydoc inittracer::tracers</td></tr>
 !! </table>
-!! The list is active while TRACER is defined.
+!! The list is active while \b "TRACER" is defined.
 !! \n \n
 !<
    subroutine init_tracer

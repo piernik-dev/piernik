@@ -141,7 +141,7 @@ contains
 !! <tr><td>variable_gp  </td><td>.false.</td><td>logical          </td><td>\copydoc gravity::variable_gp  </td></tr>
 !! <tr><td>gprofs_target</td><td>'extgp'</td><td>string of chars  </td><td>\copydoc gravity::gprofs_target</td></tr>
 !! </table>
-!! The list is active while GRAV is defined.
+!! The list is active while \b "GRAV" is defined.
 !! \n \n
 !<
    subroutine init_grav

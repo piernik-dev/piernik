@@ -28,7 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 !>
-!! \brief A place for global constants related to cosmic rays
+!! \brief A place for global constants and parameters related to cosmic rays species
 !!
 !! Cross sections for spallation from Garcia-Munoz 1987 (see also Longair)
 !!
@@ -37,6 +37,7 @@
 !! Initial source abundances (in numer density) relative to hydrogen (compare e.g. Longair)
 !!
 !! \todo make units in this module consistent with units module
+!! \todo add user species possibility
 !<
 module cr_data
 
@@ -122,9 +123,8 @@ contains
 !! <tr><td>eN14 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::en14 </td></tr>
 !! <tr><td>eO16 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::eo16 </td></tr>
 !! </table>
-!! The list is active while COSM_RAYS_SOURCES is defined.
+!! The list is active while \b "COSM_RAYS_SOURCES" is defined.
 !! \n \n
-!! \todo add user species possibility
 !<
    subroutine init_crsources(ncrn)
 

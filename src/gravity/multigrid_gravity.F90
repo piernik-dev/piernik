@@ -132,7 +132,7 @@ contains
 !! <tr><td>multidim_code_3D      </td><td>.false.</td><td>logical        </td><td>\copydoc multigridvars::multidim_code_3d          </td></tr>
 !! <tr><td>grav_bnd_str          </td><td>"periodic"/"dirichlet"</td><td>string of chars</td><td>\copydoc multigrid_gravity::grav_bnd_str          </td></tr>
 !! </table>
-!! The list is active while GRAV and MULTIGRID are defined.
+!! The list is active while \b "GRAV" and \b "MULTIGRID" are defined.
 !! \n \n
 !<
    subroutine init_multigrid_grav

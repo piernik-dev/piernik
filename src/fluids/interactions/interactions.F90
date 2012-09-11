@@ -83,7 +83,7 @@ contains
 !! <tr><td>has_interactions</td><td>.false.</td><td>logical value              </td><td>\copydoc interactions::has_interactions</td></tr>
 !! <tr><td>grain_size      </td><td>10.0   </td><td>real value                 </td><td>\copydoc interactions::grain_size      </td></tr>
 !! <tr><td>grain_dens      </td><td>1.6    </td><td>real value                 </td><td>\copydoc interactions::grain_dens      </td></tr>
-!! <tr><td>interactions_type</td><td>'none'</td><td>'none'/'aerodrag'/'aerodrag_ep'/'dragforce_dw'/'balsara'</td><td>\copydoc interactions::interactions_type</td></tr>
+!! <tr><td>interactions_type</td><td>'none'</td><td>'none' \n 'aerodrag' \n 'aerodrag_ep' \n 'dragforce_dw' \n 'balsara'</td><td>\copydoc interactions::interactions_type</td></tr>
 !! </table>
 !! \n \n
 !<
