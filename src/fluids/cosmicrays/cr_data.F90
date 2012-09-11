@@ -114,13 +114,13 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>eH1  </td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::eH1  </td></tr>
-!! <tr><td>eLi7 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::eLi7 </td></tr>
-!! <tr><td>eBe9 </td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::eBe9 </td></tr>
-!! <tr><td>eBe10</td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::eBe10</td></tr>
-!! <tr><td>eC12 </td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::eC12 </td></tr>
-!! <tr><td>eN14 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::eN14 </td></tr>
-!! <tr><td>eO16 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::eO16 </td></tr>
+!! <tr><td>eH1  </td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::eh1  </td></tr>
+!! <tr><td>eLi7 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::eli7 </td></tr>
+!! <tr><td>eBe9 </td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::ebe9 </td></tr>
+!! <tr><td>eBe10</td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::ebe10</td></tr>
+!! <tr><td>eC12 </td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::ec12 </td></tr>
+!! <tr><td>eN14 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::en14 </td></tr>
+!! <tr><td>eO16 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::eo16 </td></tr>
 !! </table>
 !! The list is active while COSM_RAYS_SOURCES is defined.
 !! \n \n
