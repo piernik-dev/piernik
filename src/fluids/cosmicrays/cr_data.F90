@@ -29,10 +29,14 @@
 #include "macros.h"
 !>
 !! \brief A place for global constants related to cosmic rays
-!! \todo make units in this module consistent with units module
+!!
 !! Cross sections for spallation from Garcia-Munoz 1987 (see also Longair)
+!!
 !! Decay half live times from Garcia-Munoz 1987
+!!
 !! Initial source abundances (in numer density) relative to hydrogen (compare e.g. Longair)
+!!
+!! \todo make units in this module consistent with units module
 !<
 module cr_data
 
@@ -52,7 +56,7 @@ module cr_data
       enumerator :: icr_Be10
       enumerator :: icr_N14      !< from decay of Be7 with tau of 0.3 years
       enumerator :: icr_O16
-      enumerator :: icr_Li7      !< \deprecated BEWARE: ncrn should be set up gerater than maximum isotope numeber, which should be smaller than ncr_max (<10 currently)
+      enumerator :: icr_Li7
       enumerator :: icr_LAST     !< should be used nowhere despite with nicr
    end enum
 

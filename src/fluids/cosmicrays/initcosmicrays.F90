@@ -44,12 +44,12 @@ module initcosmicrays
    public ! QA_WARN no secrets are kept here
    private :: cbuff_len ! QA_WARN prevent reexport
 
-   integer, parameter                  :: ncr_max = 9  !< maximum number of CR nuclear and electron components
+   integer, parameter                  :: ncr_max = 9  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
 
    ! namelist parameters
-   integer(kind=4)                     :: ncrn         !< number of CR nuclear  components
-   integer(kind=4)                     :: ncre         !< number of CR electron components
-   integer(kind=4)                     :: ncrs         !< number of all CR components
+   integer(kind=4)                     :: ncrn         !< number of CR nuclear  components (\deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9)
+   integer(kind=4)                     :: ncre         !< number of CR electron components (\deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9)
+   integer(kind=4)                     :: ncrs         !< number of all CR components (\deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9)
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
@@ -226,8 +226,6 @@ contains
       ncrs = ncre + ncrn
 
       if (any([ncrs, ncrn, ncre] > ncr_max) .or. any([ncrs, ncrn, ncre] < 0)) call die("[initcosmicrays:init_cosmicrays] ncr[nes] > ncr_max or ncr[nes] < 0")
-      !> \warning higher ncr_max limit would require changes in names of components in common_hdf5
-
       if (ncrs ==0) call warn("[initcosmicrays:init_cosmicrays] ncrs == 0")
 
       ma1d = [ncrs]
@@ -262,7 +260,7 @@ contains
 
    subroutine cosmicray_index(flind)
 
-      use constants,    only: I_ONE !, I_ZERO
+      use constants,    only: I_ONE
       use fluidtypes,   only: var_numbers
 
       implicit none
