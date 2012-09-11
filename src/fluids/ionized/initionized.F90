@@ -36,7 +36,6 @@
 !! In this module following namelist of parameters is specified:
 !! \copydetails initionized::init_ionized
 !! \deprecated This module should not export any variables
-!! \deprecated cs_ion has been obsoleted
 !<
 
 module initionized
@@ -49,7 +48,6 @@ module initionized
 
    real    :: gamma       !< adiabatic index for the ionized gas component
    real    :: cs_iso      !< isothermal sound speed (p = cs_iso<sup>2</sup>\f$\rho\f$), active only if ionized gas is \ref isothermal
-!   real    :: cs_ion      !< unimplemented, unused
    logical :: selfgrav    !< true if ionized gas is selfgravitating
 
    type, extends(component_fluid) :: ion_fluid
