@@ -455,19 +455,17 @@ contains
    !> \todo move to a proper module
       grad_pcr(:) = 0.0
       if (full_dim) then
-         if (flind%crs%all > 0) then !> \deprecated BEWARE: quick hack
-            do icr = 1, flind%crs%all
-               ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
-               decr(:)                = -1./real(dom%eff_dim)*(gamma_crs(icr)-1.)*u1(iarr_crs(icr),:)*divv(:)*dt
-               u1  (iarr_crs(icr),:)  = u1(iarr_crs(icr),:) + rk2coef(integration_order,istep)*decr(:)
-               u1  (iarr_crs(icr),:)  = max(smallecr,u1(iarr_crs(icr),:))
+         do icr = 1, flind%crs%all
+            ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
+            decr(:)                = -1./real(dom%eff_dim)*(gamma_crs(icr)-1.)*u1(iarr_crs(icr),:)*divv(:)*dt
+            u1  (iarr_crs(icr),:)  = u1(iarr_crs(icr),:) + rk2coef(integration_order,istep)*decr(:)
+            u1  (iarr_crs(icr),:)  = max(smallecr,u1(iarr_crs(icr),:))
 
-               ecr                    = u1(iarr_crs(icr),:)
-               grad_pcr(2:n-1) = grad_pcr(2:n-1) + cr_active*(gamma_crs(icr) -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx)
+            ecr                    = u1(iarr_crs(icr),:)
+            grad_pcr(2:n-1) = grad_pcr(2:n-1) + cr_active*(gamma_crs(icr) -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx)
 
-            enddo
-            grad_pcr(1:2)   = 0.0 ; grad_pcr(n-1:n) = 0.0
-         endif
+         enddo
+         grad_pcr(1:2)   = 0.0 ; grad_pcr(n-1:n) = 0.0
       endif
 #ifndef ISO
       !> \deprecated BEWARE: u1(imx)/u1(idn) was changed to vx, CHECK VALIDITY!
