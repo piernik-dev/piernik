@@ -231,7 +231,7 @@ contains
 
    subroutine relaxing_tvd(n, u, u0, bb, divv, cs_iso2, istep, sweep, i1, i2, dx, dt, cg)
 
-      use constants,        only: one, zero, half, onet, GEO_XYZ
+      use constants,        only: one, zero, half, GEO_XYZ
       use dataio_pub,       only: msg, die
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn, iarr_all_mx, flind, nmag
@@ -452,13 +452,13 @@ contains
 
 #if defined COSM_RAYS && defined IONIZED
    ! ---- 2 -----------------------
-   ! \todo move to a proper module
+   !> \todo move to a proper module
       grad_pcr(:) = 0.0
       if (full_dim) then
          if (flind%crs%all > 0) then !> \deprecated BEWARE: quick hack
             do icr = 1, flind%crs%all
-               decr(:)                = -onet*(gamma_crs(icr)-1.)*u1(iarr_crs(icr),:)*divv(:)*dt !!! BEWARE: 1./3.(onet) is because we compute the p_cr*dv in every sweep (3 times in 3D)
-                                                                                                 !!! should be 1./2. in 2D and 1. in 1D experiments
+               ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
+               decr(:)                = -1./real(dom%eff_dim)*(gamma_crs(icr)-1.)*u1(iarr_crs(icr),:)*divv(:)*dt
                u1  (iarr_crs(icr),:)  = u1(iarr_crs(icr),:) + rk2coef(integration_order,istep)*decr(:)
                u1  (iarr_crs(icr),:)  = max(smallecr,u1(iarr_crs(icr),:))
 

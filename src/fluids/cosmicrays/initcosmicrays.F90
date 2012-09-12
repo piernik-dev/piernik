@@ -47,9 +47,9 @@ module initcosmicrays
    integer, parameter                  :: ncr_max = 9  !< maximum number of CR nuclear and electron components (\warning higher ncr_max limit would require changes in names of components in common_hdf5)
 
    ! namelist parameters
-   integer(kind=4)                     :: ncrn         !< number of CR nuclear  components (\deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9)
-   integer(kind=4)                     :: ncre         !< number of CR electron components (\deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9)
-   integer(kind=4)                     :: ncrs         !< number of all CR components (\deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9)
+   integer(kind=4)                     :: ncrn         !< number of CR nuclear  components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
+   integer(kind=4)                     :: ncre         !< number of CR electron components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
+   integer(kind=4)                     :: ncrs         !< number of all CR components \deprecated BEWARE: ncrs (sum of ncrn and ncre) should not be higher than ncr_max = 9
    real                                :: cfl_cr       !< CFL number for diffusive CR transport
    real                                :: smallecr     !< floor value for CR energy density
    real                                :: cr_active    !< parameter specifying whether CR pressure gradient is (when =1.) or isn't (when =0.) included in the gas equation of motion
