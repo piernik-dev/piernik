@@ -129,7 +129,7 @@ contains
    subroutine init_crsources(ncrn)
 
       use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
-      use dataio_pub,      only: msg, printinfo
+      use dataio_pub,      only: msg, printinfo, die
       use mpisetup,        only: lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none
@@ -187,6 +187,7 @@ contains
       cr_primary(:) = 0.0
 
       icr = 0
+      if (count(eCRSP) > ncrn) call die("[cr_data:init_crsources] You have specified more CR species present than is set by ncrn. Check your CR_SPECIES and COSMIC_RAYS namelists parameters")
       do i = 1, size(eCRSP)
          if (eCRSP(i)) then
             icr = icr + 1
