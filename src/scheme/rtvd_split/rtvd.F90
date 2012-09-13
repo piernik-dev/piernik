@@ -310,7 +310,7 @@ contains
       real, dimension(flind%fluids,n), target      :: density            !< gas density
       real, dimension(flind%fluids,n), target      :: vel_sweep          !< velocity in the direction of current sweep
       real, dimension(:,:),            pointer     :: dens, vx
-      logical :: full_dim
+      logical                                      :: full_dim
 
 #ifdef COSM_RAYS
       real, dimension(n)                           :: grad_pcr
@@ -426,17 +426,15 @@ contains
       acc = acc + coriolis_force(sweep,u) ! n safe
 #endif /* CORIOLIS */
 
-#ifdef GRAV
       if (full_dim) then
+#ifdef GRAV
          call grav_pot2accel(sweep, i1, i2, n, gravacc, istep, cg)
 
          do ind = 1, flind%fluids
             acc(ind,:) =  acc(ind,:) + gravacc(:)
          enddo
-      endif
 #endif /* !GRAV */
 
-      if (full_dim) then
          acc(:,n)   = acc(:,n-1)
          acc(:,1) = acc(:,2)
       endif
@@ -450,14 +448,16 @@ contains
 
 #if defined COSM_RAYS && defined IONIZED
       !> \deprecated BEWARE: decr and grad_pcr are computed based on u1 (shall it be u?)
-      call src_gpcr(u1, n, dx, divv, full_dim, decr, grad_pcr)
-      u1(iarr_crs(:),               :) = u1(iarr_crs(:),               :) + rk2coef(integration_order,istep)*decr(:,:)*dt
-      u1(iarr_crs(:),               :) = max(smallecr, u1(iarr_crs(:),:))
-      u1(iarr_all_mx(flind%ion%pos),:) = u1(iarr_all_mx(flind%ion%pos),:) + rk2coef(integration_order,istep)*grad_pcr*dt
+      if (full_dim) then
+         call src_gpcr(u1, n, dx, divv, decr, grad_pcr)
+         u1(iarr_crs(:),               :) = u1(iarr_crs(:),               :) + rk2coef(integration_order,istep)*decr(:,:)*dt
+         u1(iarr_crs(:),               :) = max(smallecr, u1(iarr_crs(:),:))
+         u1(iarr_all_mx(flind%ion%pos),:) = u1(iarr_all_mx(flind%ion%pos),:) + rk2coef(integration_order,istep)*grad_pcr*dt
 #ifndef ISO
-      !> \deprecated BEWARE: u1(imx)/u1(idn) was changed to vx, CHECK VALIDITY!
-      u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:) + rk2coef(integration_order,istep)*vx(flind%ion%pos,:)*grad_pcr*dt
+         !> \deprecated BEWARE: u1(imx)/u1(idn) was changed to vx, CHECK VALIDITY!
+         u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:) + rk2coef(integration_order,istep)*vx(flind%ion%pos,:)*grad_pcr*dt
 #endif /* !ISO */
+      endif
 #ifdef COSM_RAYS_SOURCES
       call src_crn(u1, n, srccrn, rk2coef(integration_order, istep) * dt) ! n safe
       u1(iarr_crn,:)  = u1(iarr_crn,:) +  rk2coef(integration_order, istep)*srccrn(:,:)*dt
