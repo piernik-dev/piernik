@@ -39,7 +39,7 @@ module func
    implicit none
 
    private
-   public :: ekin, emag, L2norm, sq_sum3, resample_gauss
+   public :: ekin, emag, L2norm, sq_sum3, resample_gauss, piernik_fnum
 
 contains
 

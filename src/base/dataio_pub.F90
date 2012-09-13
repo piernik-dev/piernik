@@ -117,6 +117,15 @@ module dataio_pub
    character(len=ansilen)      :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
    character(len=*),parameter  :: tmr_hdf = "hdf_dump"
    real                        :: thdf                           !< hdf dump wallclock
+   ! Declare the interface for POSIX fsync function
+   interface
+      function fsync (fd) bind(c,name="fsync")
+         use iso_c_binding, only: c_int
+         implicit none
+         integer(c_int), value :: fd
+         integer(c_int) :: fsync
+      end function fsync
+   end interface
 
 contains
 !-----------------------------------------------------------------------------
@@ -124,6 +133,7 @@ contains
 
       use constants, only: stdout, stderr, idlen
       use mpi,       only: MPI_COMM_WORLD
+      use func,      only: piernik_fnum
 
       implicit none
 
@@ -198,6 +208,8 @@ contains
       endif
       if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
       write(log_lun,'(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
+      flush(log_lun)
+      if (fsync(piernik_fnum(log_lun)) /= 0) print *, ("[dataio_pub:colormessage] Error calling FSYNC")
       close(log_lun)
 
    end subroutine colormessage

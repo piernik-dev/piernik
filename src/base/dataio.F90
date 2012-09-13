@@ -101,6 +101,16 @@ module dataio
 #endif /* VARIABLE_GP */
    end type tsl_container
 
+   ! Declare the interface for POSIX fsync function
+   interface
+      function fsync (fd) bind(c,name="fsync")
+         use iso_c_binding, only: c_int
+         implicit none
+         integer(c_int), value :: fd
+         integer(c_int) :: fsync
+      end function fsync
+   end interface
+
    namelist /END_CONTROL/     nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
    namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, plt_plane, &
@@ -710,14 +720,14 @@ contains
    subroutine write_timeslice
 
       use constants,      only: cwdlen, xdim, ydim, zdim, DST
-      use dataio_pub,     only: wd_wr
+      use dataio_pub,     only: wd_wr, warn
       use dataio_user,    only: user_tsl
       use diagnostics,    only: pop_vector
       use domain,         only: dom
       use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluids_pub,     only: has_ion, has_dst, has_neu
       use fluidtypes,     only: phys_prop
-      use func,           only: ekin, emag
+      use func,           only: ekin, emag, piernik_fnum
       use cg_list,        only: cg_list_element
       use global,         only: t, dt, smalld, nstep
       use cg_leaves,      only: leaves
@@ -892,8 +902,9 @@ contains
 
       if (master) then
          write(tsl_lun, '(1x,i8,100(1x,es15.8))') nstep, tsl_vars
-
-! some quantities computed in "write_log".One can add more, or change.
+         ! some quantities computed in "write_log".One can add more, or change.
+         flush(tsl_lun)
+         if (fsync(piernik_fnum(tsl_lun)) /= 0) call warn("[dataio:write_timeslice] Error calling FSYNC")
          close(tsl_lun)
          deallocate(tsl_vars)
       endif
