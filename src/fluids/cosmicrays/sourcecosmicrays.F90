@@ -34,16 +34,53 @@
 !!
 !<
 module sourcecosmicrays
-! pulled by COSM_RAYS_SOURCES
+! pulled by COSM_RAYS
    implicit none
 
    private
+   public :: src_gpcr
+#ifdef COSM_RAYS_SOURCES
    public :: src_crn
+#endif /* COSM_RAYS_SOURCES */
 
 contains
 
+!>
+!! \brief
+!! \deprecated BEWARE decr and grad_pcr are computed based on u1 (shall it be u?)
+!<
+   subroutine src_gpcr(uu, nn, dx, divv, full_dim, decr, grad_pcr)
+
+      use domain,         only: dom
+      use fluidindex,     only: flind
+      use initcosmicrays, only: iarr_crs, gamma_crs, cr_active
+
+      implicit none
+
+      integer(kind=4),                   intent(in)  :: nn                 !< array size
+      real, dimension(flind%all,nn),     intent(in)  :: uu                 !< vector of conservative variables
+      real, dimension(:), pointer,       intent(in)  :: divv               !< vector of velocity divergence used in cosmic ray advection
+      real,                              intent(in)  :: dx                 !< cell length
+      logical,                           intent(in)  :: full_dim
+      real, dimension(nn),               intent(out) :: grad_pcr
+      real, dimension(flind%crs%all,nn), intent(out) :: decr
+      integer                                       :: icr
+
+      grad_pcr(:) = 0.0
+      if (full_dim) then
+         do icr = 1, flind%crs%all
+            ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
+            decr(icr,:)             = -1./real(dom%eff_dim)*(gamma_crs(icr)-1.)*uu(iarr_crs(icr),:)*divv(:)
+            grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(icr)-1.)*(uu(iarr_crs(icr),3:nn)-uu(iarr_crs(icr),1:nn-2))/(2.*dx)
+         enddo
+         grad_pcr(1:2)   = 0.0 ; grad_pcr(nn-1:nn) = 0.0
+      endif
+
+   end subroutine src_gpcr
+
 !==========================================================================================
 
+#ifdef COSM_RAYS_SOURCES
    subroutine src_crn(uu, n, decrn, rk_coeff)
 
       use cr_data,       only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icrH, icrL
@@ -101,5 +138,5 @@ contains
       enddo
 
    end subroutine src_crn
-
+#endif /* COSM_RAYS_SOURCES */
 end module sourcecosmicrays

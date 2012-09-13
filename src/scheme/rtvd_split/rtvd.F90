@@ -259,7 +259,8 @@ contains
       use gravity,          only: grav_pot2accel
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      use initcosmicrays,   only: iarr_crs, gamma_crs, cr_active, smallecr
+      use initcosmicrays,   only: iarr_crs, smallecr
+      use sourcecosmicrays, only: src_gpcr
 #ifdef COSM_RAYS_SOURCES
       use initcosmicrays,   only: iarr_crn
       use sourcecosmicrays, only: src_crn
@@ -312,10 +313,10 @@ contains
       logical :: full_dim
 
 #ifdef COSM_RAYS
-      integer                                      :: icr
-      real, dimension(n)                           :: grad_pcr, ecr, decr
+      real, dimension(n)                           :: grad_pcr
+      real, dimension(flind%crs%all,n)             :: decr
 #ifdef COSM_RAYS_SOURCES
-      real                                         :: srccrn(flind%crn%all,n)
+      real, dimension(flind%crn%all,n)             :: srccrn
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS */
 
@@ -330,13 +331,10 @@ contains
 
       real, dimension(2,2), parameter              :: rk2coef = reshape( [ one, half, zero, one ], [ 2, 2 ] )
 
-#if !defined(GRAV) || !(defined COSM_RAYS && defined IONIZED)
+#if !(defined COSM_RAYS && defined IONIZED)
       integer                                      :: dummy
-      if (.false.) dummy = i1 + i2 ! suppress compiler warnings on unused arguments
-#endif /* !GRAV || !(COSM_RAYS && IONIZED) */
-#if !defined(SHEAR) && !defined(GRAV) && !(defined COSM_RAYS && defined IONIZED)
-      if (.false.) dummy = sweep
-#endif /* !SHEAR && !GRAV && !(COSM_RAYS && IONIZED) */
+      if (.false.) dummy = size(divv(:)) ! suppress compiler warnings
+#endif /* !(COSM_RAYS && IONIZED) */
 
       !OPT: try to avoid these explicit initializations of u1(:,:) and u0(:,:)
       dtx       = dt / dx
@@ -451,37 +449,18 @@ contains
 ! --------------------------------------------------
 
 #if defined COSM_RAYS && defined IONIZED
-   ! ---- 2 -----------------------
-   !> \todo move to a proper module
-      grad_pcr(:) = 0.0
-      if (full_dim) then
-         do icr = 1, flind%crs%all
-            ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
-            decr(:)                = -1./real(dom%eff_dim)*(gamma_crs(icr)-1.)*u1(iarr_crs(icr),:)*divv(:)*dt
-            u1  (iarr_crs(icr),:)  = u1(iarr_crs(icr),:) + rk2coef(integration_order,istep)*decr(:)
-            u1  (iarr_crs(icr),:)  = max(smallecr,u1(iarr_crs(icr),:))
-
-            ecr                    = u1(iarr_crs(icr),:)
-            grad_pcr(2:n-1) = grad_pcr(2:n-1) + cr_active*(gamma_crs(icr) -1.)*(ecr(3:n)-ecr(1:n-2))/(2.*dx)
-
-         enddo
-         grad_pcr(1:2)   = 0.0 ; grad_pcr(n-1:n) = 0.0
-      endif
+      call src_gpcr(u1, n, dx, divv, full_dim, decr, grad_pcr)
+      u1(iarr_crs(:),               :) = u1(iarr_crs(:),               :) + rk2coef(integration_order,istep)*decr(:,:)*dt
+      u1(iarr_crs(:),               :) = max(smallecr, u1(iarr_crs(:),:))
+      u1(iarr_all_mx(flind%ion%pos),:) = u1(iarr_all_mx(flind%ion%pos),:) - rk2coef(integration_order,istep)*grad_pcr*dt
 #ifndef ISO
       !> \deprecated BEWARE: u1(imx)/u1(idn) was changed to vx, CHECK VALIDITY!
-      u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:) &
-                        - rk2coef(integration_order,istep)*vx(flind%ion%pos,:)*grad_pcr*dt
+      u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:) - rk2coef(integration_order,istep)*vx(flind%ion%pos,:)*grad_pcr*dt
 #endif /* !ISO */
-
-      u1(iarr_all_mx(flind%ion%pos),:) = u1(iarr_all_mx(flind%ion%pos),:) - rk2coef(integration_order,istep)*grad_pcr*dt
-
 #ifdef COSM_RAYS_SOURCES
-      call src_crn(u1,n, srccrn, rk2coef(integration_order, istep) * dt) ! n safe
+      call src_crn(u1, n, srccrn, rk2coef(integration_order, istep) * dt) ! n safe
       u1(iarr_crn,:)  = u1(iarr_crn,:) +  rk2coef(integration_order, istep)*srccrn(:,:)*dt
 #endif /* COSM_RAYS_SOURCES */
-   ! ---- 2 ----------------------
-#else /* !(COSM_RAYS && IONIZED) */
-      if (.false.) dummy = size(divv(:)) ! suppress compiler warnings
 #endif /* COSM_RAYS && IONIZED */
 
 #if defined IONIZED || defined NEUTRAL
