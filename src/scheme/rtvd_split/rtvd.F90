@@ -460,12 +460,11 @@ contains
       endif
 #ifdef COSM_RAYS_SOURCES
       call src_crn(u1, n, srccrn, rk2coef(integration_order, istep) * dt) ! n safe
-      u1(iarr_crn,:)  = u1(iarr_crn,:) +  rk2coef(integration_order, istep)*srccrn(:,:)*dt
+      u1(iarr_crn,:) = u1(iarr_crn,:) +  rk2coef(integration_order, istep)*srccrn(:,:)*dt
 #endif /* COSM_RAYS_SOURCES */
 #endif /* COSM_RAYS && IONIZED */
 
-#if defined IONIZED || defined NEUTRAL
-#ifndef ISO
+#if !defined ISO && (defined IONIZED || defined NEUTRAL)
       ekin = half*( u1(iarr_all_mx,:)**2 + u1(iarr_all_my,:)**2 + u1(iarr_all_mz,:)**2 ) /u1(iarr_all_dn,:)
       eint = u1(iarr_all_en,:) - ekin
 #if defined IONIZED && defined MAGNETIC
@@ -479,8 +478,7 @@ contains
 #if defined IONIZED && defined MAGNETIC
       u1(iarr_all_en(flind%ion%pos),:) = u1(iarr_all_en(flind%ion%pos),:)+emag
 #endif /* IONIZED && MAGNETIC */
-#endif /* !ISO */
-#endif /*  defined IONIZED || defined NEUTRAL  */
+#endif /* !ISO && (IONIZED || NEUTRAL)  */
 
       u(:,:) = u1(:,:)
 
