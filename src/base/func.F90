@@ -145,4 +145,24 @@ contains
       enddo
    end function crude_cosh
 
+!>
+!! \brief Returns the file descriptor associated with a specified unit.
+!<
+   function piernik_fnum(lunit)
+#if defined(__INTEL_COMPILER)
+      use ifposix, only: pxffileno
+#endif /* __INTEL_COMPILER */
+      implicit none
+      integer, intent(in) :: lunit  !< Fortran logical unit
+      integer(kind=4) :: piernik_fnum
+
+#if defined(__INTEL_COMPILER)
+      integer :: fd, ierror
+      call pxffileno(lunit, fd, ierror)
+      piernik_fnum = fd
+#else /* __INTEL_COMPILER */
+      piernik_fnum = fnum(lunit)
+#endif /* !__INTEL_COMPILER */
+   end function piernik_fnum
+
 end module func
