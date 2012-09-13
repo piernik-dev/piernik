@@ -29,7 +29,7 @@
 #define RNG 2:n-1
 
 !>
-!! \brief Computation of Cosmic Ray sources
+!! \brief Computation of Cosmic Ray sources and pcr gradient pcr
 !!
 !!
 !<
@@ -46,8 +46,7 @@ module sourcecosmicrays
 contains
 
 !>
-!! \brief
-!! \deprecated BEWARE decr and grad_pcr are computed based on u1 (shall it be u?)
+!! \brief Computation of Cosmic ray pressure gradient and pcr div v
 !<
    subroutine src_gpcr(uu, nn, dx, divv, full_dim, decr, grad_pcr)
 
@@ -64,16 +63,16 @@ contains
       logical,                           intent(in)  :: full_dim
       real, dimension(nn),               intent(out) :: grad_pcr
       real, dimension(flind%crs%all,nn), intent(out) :: decr
-      integer                                       :: icr
+      integer                                        :: icr
 
       grad_pcr(:) = 0.0
       if (full_dim) then
          do icr = 1, flind%crs%all
             ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
-            decr(icr,:)             = -1./real(dom%eff_dim)*(gamma_crs(icr)-1.)*uu(iarr_crs(icr),:)*divv(:)
-            grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(icr)-1.)*(uu(iarr_crs(icr),3:nn)-uu(iarr_crs(icr),1:nn-2))/(2.*dx)
+            decr(icr,:)      = -1./real(dom%eff_dim)*(gamma_crs(icr)-1.)*uu(iarr_crs(icr),:)*divv(:)
+            grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(icr)-1.)*(uu(iarr_crs(icr),1:nn-2)-uu(iarr_crs(icr),3:nn))/(2.*dx)
          enddo
-         grad_pcr(1:2)   = 0.0 ; grad_pcr(nn-1:nn) = 0.0
+         grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
       endif
 
    end subroutine src_gpcr
@@ -81,6 +80,10 @@ contains
 !==========================================================================================
 
 #ifdef COSM_RAYS_SOURCES
+!>
+!! \brief Computation of Cosmic ray particles spallation and decay
+!! \deprecated BEWARE: several lines in this routine break unit consistency, move it to units.F90 and use scaling
+!<
    subroutine src_crn(uu, n, decrn, rk_coeff)
 
       use cr_data,       only: eCRSP, cr_table, cr_tau, cr_sigma, icr_Be10, icrH, icrL
@@ -91,7 +94,7 @@ contains
 
       integer(kind=4),                  intent(in)  :: n
       real, dimension(flind%all,n),     intent(in)  :: uu
-      real, intent(in)                              :: rk_coeff   !< coeffecient used in RK step, while computing source term
+      real,                             intent(in)  :: rk_coeff   !< coeffecient used in RK step, while computing source term
       real, dimension(flind%crn%all,n), intent(out) :: decrn
 
 ! locals
