@@ -53,6 +53,7 @@ module multigrid_vstats
 
        procedure :: init                             !< Initialize vcycle_stats
        procedure :: brief_v_log                      !< Assembles one-line log of V-cycle achievements
+       procedure :: cleanup                          !< Free the memory
 
    end type vcycle_stats
 
@@ -82,6 +83,19 @@ contains
       this%cprefix    = ""
 
    end subroutine init
+
+!> \brief Free the memory
+
+   subroutine cleanup(this)
+
+      implicit none
+
+      class(vcycle_stats), intent(inout) :: this
+
+      if (allocated(this%factor)) deallocate(this%factor)
+      if (allocated(this%time)) deallocate(this%time)
+
+   end subroutine cleanup
 
 !> \brief Assembles one-line log of V-cycle achievements
 

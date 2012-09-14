@@ -640,9 +640,7 @@ contains
       type(cg_list_element), pointer :: cgl
 
       call cleanup_multipole
-
-      if (allocated(vstat%factor)) deallocate(vstat%factor)
-      if (allocated(vstat%time)) deallocate(vstat%time)
+      call vstat%cleanup
 
       cgl => all_cg%first
       do while (associated(cgl))

@@ -255,8 +255,7 @@ contains
 
       implicit none
 
-      if (allocated(vstat%factor)) deallocate(vstat%factor)
-      if (allocated(vstat%time)) deallocate(vstat%time)
+      call vstat%cleanup
       if (allocated(norm_was_zero)) deallocate(norm_was_zero)
 
    end subroutine cleanup_multigrid_diff
