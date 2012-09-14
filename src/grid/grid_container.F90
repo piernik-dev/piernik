@@ -143,8 +143,8 @@ module grid_cont
       integer(kind=4) :: isb, ieb, jsb, jeb, ksb, keb            !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkse         !< [[is,  js,  ks ], [ie,  je,  ke ]]
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkseb        !< [[isb, jsb, ksb], [ieb, jeb, keb]]
-      integer(kind=8), dimension(ndims) :: h_cor1                !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:)
-      integer(kind=4), dimension(ndims) :: n_                    !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
+      integer(kind=8), dimension(ndims)         :: h_cor1        !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:)
+      integer(kind=4), dimension(ndims)         :: n_            !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
       integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
                                                                  !! my_se(:,LO) = 0; my_se(:,HI) = finest%n_d(:) -1 would cover entire domain on the most refined level
 
@@ -163,11 +163,11 @@ module grid_cont
 
       ! External boundary conditions and internal boundaries
 
-      integer(kind=4), dimension(ndims, LO:HI)  :: bnd           !< type of boundary conditions coded in integers
-      integer(kind=4), allocatable, dimension(:,:,:,:,:) :: mbc  !< MPI Boundary conditions Container for comm3d-based communication
-      type(bnd_list), dimension(:,:), allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim, nb)
-      type(bnd_list), dimension(:,:), allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim, nb)
-      logical, dimension(xdim:zdim, LO:HI) :: ext_bnd            !< .false. for BND_PER and BND_MPI
+      integer(kind=4), dimension(ndims, LO:HI)           :: bnd         !< type of boundary conditions coded in integers
+      integer(kind=4), dimension(:,:,:,:,:), allocatable :: mbc         !< MPI Boundary conditions Container for comm3d-based communication
+      type(bnd_list),  dimension(:,:),       allocatable :: i_bnd       !< description of incoming boundary data, the shape is (xdim:zdim, nb)
+      type(bnd_list),  dimension(:,:),       allocatable :: o_bnd       !< description of outgoing boundary data, the shape is (xdim:zdim, nb)
+      logical,         dimension(xdim:zdim, LO:HI)       :: ext_bnd     !< .false. for BND_PER and BND_MPI
 
       ! Prolongation and restriction
 
@@ -237,18 +237,16 @@ contains
 
    subroutine init(this, n_d, my_se, grid_id, level_id)
 
+      use cart_comm,     only: cdd
       use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float,refinement_factor, &
            &                   FLUID, ARR, LO, HI, BND, BLK, INVALID, I_ONE, I_TWO, BND_MPI, BND_COR
       use dataio_pub,    only: die, warn, msg, code_progress
-      use cart_comm,     only: cdd
       use domain,        only: dom
       use mpi,           only: MPI_COMM_NULL
       use mpisetup,      only: nproc, inflate_req
-#ifdef SHEAR_BND
-#ifndef FFTW
+#if defined(SHEAR_BND) && !defined(FFTW)
       use constants,     only: BND_SHE
-#endif /* !FTTW */
-#endif /* SHEAR_BND */
+#endif /* SHEAR_BND && !FFTW */
 
       implicit none
 
@@ -319,12 +317,11 @@ contains
          if (cdd%pcoords(xdim) == psize(xdim)-1) this%bnd(xdim, HI) = BND_SHE
 #endif /* !FFTW */
 #endif /* SHEAR_BND */
-      endif
 
-      !> \todo allocate this conditionally, only when comm3d is in use
-      if (allocated(this%mbc)) call die("[grid_container:init] this%mbc already allocated")
-      allocate(this%mbc(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK, 1:dom%nb))
-      this%mbc(:, :, :, :, :) = INVALID
+         if (allocated(this%mbc)) call die("[grid_container:init] this%mbc already allocated")
+         allocate(this%mbc(FLUID:ARR, xdim:zdim, LO:HI, BND:BLK, 1:dom%nb))
+         this%mbc(:, :, :, :, :) = INVALID
+      endif
 
       do i = xdim, zdim
          if (dom%has_dir(i)) then
