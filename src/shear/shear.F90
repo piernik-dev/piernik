@@ -69,11 +69,11 @@ contains
 !<
    subroutine init_shear
 
+      use constants,      only: PIERNIK_INIT_GRID
       use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,     only: printinfo, die, code_progress
-      use constants,      only: PIERNIK_INIT_GRID
-      use mpisetup,       only: master, slave, rbuff, piernik_MPI_Bcast
       use fluidindex,     only: flind
+      use mpisetup,       only: master, slave, rbuff, piernik_MPI_Bcast
 
       implicit none
       integer       :: i
@@ -129,7 +129,7 @@ contains
       implicit none
 
       real, dimension(:,:), intent(in)        :: u
-      integer(kind=4), intent(in)             :: sweep
+      integer(kind=4),      intent(in)        :: sweep
 
       real, dimension(2)                      :: df                 !< \deprecated  additional acceleration term used in streaming problem
       real, dimension(flind%fluids,size(u,2)) :: vy0
@@ -166,13 +166,13 @@ contains
 
    subroutine yshift(ts,dts)
 
+      use cg_leaves,   only: leaves
       use constants,   only: xdim
 #ifdef FFTW
       use constants,   only: ydim
 #endif /* FFTW */
       use dataio_pub,  only: die
       use domain,      only: dom, is_multicg
-      use cg_leaves,   only: leaves
       use grid_cont,   only: grid_container
 
       implicit none
@@ -204,30 +204,30 @@ contains
 #ifdef FFTW
    function unshear_fft(qty,x,ddy,inv)
 
+      use cg_leaves,   only: leaves
       use constants,   only: dpi, xdim
       use dataio_pub,  only: die
       use domain,      only: dom, is_multicg
-      use cg_leaves,   only: leaves
       use grid_cont,   only: grid_container
 
       implicit none
 
       !integer, parameter :: FFTW_ESTIMATE=64
 
-      real, intent(in) :: ddy
-      logical, optional               :: inv
-      real, dimension(:,:,:)          :: qty
-      real, dimension(:), intent(in)  :: x
+      real,                   intent(in) :: ddy
+      real, dimension(:),     intent(in) :: x
+      real, dimension(:,:,:), intent(in) :: qty
+      logical,                optional   :: inv
       real, dimension(size(qty,1),size(qty,2),size(qty,3)) :: unshear_fft
       integer :: nx,ny,nz,p,np,q
       real    :: St
 
-      integer(kind=8) :: planf,planb
+      integer(kind=8)                            :: planf, planb
 
       complex(kind=8), dimension(:), allocatable :: ctmp
       real(kind=8),    dimension(:), allocatable :: rtmp
       real(kind=8),    dimension(:), allocatable :: ky
-      type(grid_container), pointer :: cg
+      type(grid_container), pointer              :: cg
 
       cg => leaves%first%cg
       if (is_multicg) call die("[shear:unshear_fft] multiple grid pieces per procesor not implemented yet") !nontrivial
@@ -276,21 +276,21 @@ contains
 !--------------------------------------------------------------------------------------------------
    function unshear(qty,x,inv)
 
+      use cg_leaves,   only: leaves
       use constants,   only: xdim, half
       use dataio_pub,  only: die
       use domain,      only: dom, is_multicg
-      use cg_leaves,   only: leaves
       use grid_cont,   only: grid_container
 
       implicit none
 
-      logical, optional               :: inv
-      real, dimension(:,:,:)          :: qty
-      real, dimension(:), intent(in)  :: x
+      real, dimension(:,:,:), intent(in) :: qty
+      real, dimension(:),     intent(in) :: x
+      logical,                optional   :: inv
       real, dimension(size(qty,1),size(qty,2),size(qty,3)) :: unshear
-      real, dimension(:,:), allocatable:: temp
-      integer :: i,sg,my,nx,ny,nz,ndl
-      real    :: fx,dl,ddl
+      real, dimension(:,:), allocatable  :: temp
+      integer :: i, sg, my, nx, ny, nz, ndl
+      real    :: fx, dl, ddl
       type(grid_container), pointer :: cg
 
       nx = size(qty,1)

@@ -50,8 +50,8 @@ contains
 
    subroutine repeat_fluidstep
 
-      use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use constants,        only: I_ONE, u0_n, b0_n
       use dataio_pub,       only: warn
       use global,           only: dt, dtm, t, cfl_violated, nstep, dt_max_grow, repeat_step
@@ -122,12 +122,12 @@ contains
       use global,              only: skip_sweep
       use user_hooks,          only: problem_customize_solution
 #ifdef SHEAR
+      use cg_leaves,           only: leaves
       use constants,           only: ydim
       use dataio_pub,          only: die
       use domain,              only: dom, is_multicg
       use fluidboundaries,     only: bnd_u
       use global,              only: t, dt
-      use cg_leaves,           only: leaves
       use grid_cont,           only: grid_container
       use shear,               only: yshift
 #endif /* SHEAR */
@@ -186,8 +186,8 @@ contains
    subroutine make_sweep(dir, forward)
 
       use domain,         only: dom
-      use sweeps,         only: sweep
       use global,         only: geometry25D
+      use sweeps,         only: sweep
 #ifdef COSM_RAYS
       use crdiffusion,    only: cr_diff
       use initcosmicrays, only: use_split
@@ -330,7 +330,7 @@ contains
       implicit none
 
       real, dimension(:,:,:), intent(inout) :: tab
-      integer(kind=4), intent(in) :: d
+      integer(kind=4),        intent(in)    :: d
 
       integer :: ll
       real, dimension(size(tab,1),size(tab,2),size(tab,3)) :: pshift
@@ -371,7 +371,7 @@ contains
       implicit none
 
       real, dimension(:,:,:), intent(inout) :: tab
-      integer(kind=4) :: d
+      integer(kind=4),        intent(in)    :: d
 
       integer :: ll
       real, dimension(size(tab,1) , size(tab,2) , size(tab,3)) :: mshift

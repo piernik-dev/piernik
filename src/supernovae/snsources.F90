@@ -163,10 +163,10 @@ contains
 !<
    subroutine cr_sn(pos)
 
-      use constants,      only: xdim, ydim, zdim
-      use domain,         only: dom
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim
+      use domain,         only: dom
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS_SOURCES
       use cr_data,        only: icr_H1, icr_C12, icr_N14, icr_O16, cr_table, cr_primary, eCRSP

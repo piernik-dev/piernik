@@ -40,22 +40,22 @@ contains
 !------------------------------------------------------------------------------------------
    function interpolate_mag_field(cdim, cg, i1, i2) result (b)
 
-      use constants,      only: pdims, xdim, ydim, zdim, half
-      use fluidindex,     only: iarr_mag_swp, nmag
-      use domain,         only: dom
-      use grid_cont,      only: grid_container
+      use constants,        only: pdims, xdim, ydim, zdim, half
+      use domain,           only: dom
+      use fluidindex,       only: iarr_mag_swp, nmag
+      use grid_cont,        only: grid_container
       use named_array_list, only: wna
 
       implicit none
 
-      integer(kind=4), intent(in)                  :: cdim
+      integer(kind=4),               intent(in)    :: cdim
       type(grid_container), pointer, intent(inout) :: cg
-      integer, intent(in)                          :: i1, i2
+      integer,                       intent(in)    :: i1, i2
       real, dimension(nmag, cg%n_(cdim))           :: b
 
-      real, dimension(:), pointer :: pb, pb1
-      integer(kind=4)                         :: ibx, iby, ibz
-      integer                                 :: i1p, i2p
+      real, dimension(:), pointer                  :: pb, pb1
+      integer(kind=4)                              :: ibx, iby, ibz
+      integer                                      :: i1p, i2p
 
       !> OPTIMIZE ME
 
@@ -93,41 +93,41 @@ contains
 !------------------------------------------------------------------------------------------
    subroutine sweep(cdim)
 
-      use constants,       only: pdims, LO, HI, ydim, zdim, uh_n, cs_i2_n
-      use domain,          only: dom
-      use fluidboundaries, only: all_fluid_boundaries
-      use fluidindex,      only: flind, iarr_all_swp, nmag
-#ifdef MAGNETIC
-      use fluidindex,      only: iarr_mag_swp
-#endif /* MAGNETIC */
-      use cg_list,         only: cg_list_element
-      use global,          only: dt, integration_order
-      use cg_leaves,       only: leaves
-      use grid_cont,       only: grid_container
-      use gridgeometry,    only: set_geo_coeffs
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: pdims, LO, HI, ydim, zdim, uh_n, cs_i2_n
+      use domain,           only: dom
+      use fluidboundaries,  only: all_fluid_boundaries
+      use fluidindex,       only: flind, iarr_all_swp, nmag
+      use global,           only: dt, integration_order
+      use grid_cont,        only: grid_container
+      use gridgeometry,     only: set_geo_coeffs
       use named_array_list, only: qna, wna
-      use rtvd,            only: relaxing_tvd
+      use rtvd,             only: relaxing_tvd
 #ifdef COSM_RAYS
-      use crhelpers,       only: div_v, set_div_v1d
+      use crhelpers,        only: div_v, set_div_v1d
 #endif /* COSM_RAYS */
+#ifdef MAGNETIC
+      use fluidindex,       only: iarr_mag_swp
+#endif /* MAGNETIC */
 
       implicit none
 
-      integer(kind=4), intent(in)                  :: cdim
+      integer(kind=4), intent(in)       :: cdim
 
-      real, dimension(:,:), allocatable :: b
-      real, dimension(:,:), allocatable :: u, u0
-      real, dimension(:,:), pointer     :: pu, pu0
-#ifdef MAGNETIC
-      real, dimension(:,:), pointer     :: pb
-#endif /* MAGNETIC */
-      real, dimension(:), pointer       :: div_v1d => null(), cs2
       integer                           :: i1, i2, uhi
       integer                           :: istep
       integer                           :: i_cs_iso2
       logical                           :: full_dim
+      real, dimension(:,:), allocatable :: b
+      real, dimension(:,:), allocatable :: u, u0
+      real, dimension(:,:),  pointer    :: pu, pu0
+#ifdef MAGNETIC
+      real, dimension(:,:),  pointer    :: pb
+#endif /* MAGNETIC */
+      real, dimension(:),    pointer    :: div_v1d => null(), cs2
       type(cg_list_element), pointer    :: cgl
-      type(grid_container), pointer     :: cg
+      type(grid_container),  pointer    :: cg
 
       full_dim = dom%has_dir(cdim)
       uhi = wna%ind(uh_n)

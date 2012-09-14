@@ -110,26 +110,26 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: n !< array size
-      real, intent(in)    :: dt      !< time step
-      real, intent(in)    :: idi     !< cell length, depends on direction x, y or z
-      real, dimension(:), pointer, intent(inout)    :: vibj    !< face-centered electromotive force components (b*vg)
-      real, dimension(:), pointer, intent(in)     :: b       !< magnetic field
-      real, dimension(n)  :: vg      !< velocity in the center of cell boundary
+      integer(kind=4),             intent(in)    :: n       !< array size
+      real,                        intent(in)    :: dt      !< time step
+      real,                        intent(in)    :: idi     !< cell length, depends on direction x, y or z
+      real, dimension(:), pointer, intent(inout) :: vibj    !< face-centered electromotive force components (b*vg)
+      real, dimension(:), pointer, intent(in)    :: b       !< magnetic field
+      real, dimension(n),          intent(in)    :: vg      !< velocity in the center of cell boundary
 ! locals
-      real, dimension(n)  :: b1      !< magnetic field
-      real, dimension(n)  :: vibj1   !< face-centered electromotive force (EMF) components (b*vg)
-      real, dimension(n)  :: vh      !< velocity interpolated to the cell edges
-      real :: dti                    !< dt/di
-      real :: v                      !< auxiliary variable to compute EMF
-      real :: w                      !< EMF component
-      real :: dw                     !< The second-order correction to EMF component
-      real :: dwm                    !< face centered EMF interpolated to left cell-edge
-      real :: dwp                    !< face centered EMF interpolated to right cell-edge
-      integer :: i                   !< auxiliary array indicator
-      integer :: ip                  !< i+1
-      integer :: ipp                 !< i+2
-      integer :: im                  !< i-1
+      real, dimension(n)                         :: b1      !< magnetic field
+      real, dimension(n)                         :: vibj1   !< face-centered electromotive force (EMF) components (b*vg)
+      real, dimension(n)                         :: vh      !< velocity interpolated to the cell edges
+      real                                       :: dti     !< dt/di
+      real                                       :: v       !< auxiliary variable to compute EMF
+      real                                       :: w       !< EMF component
+      real                                       :: dw      !< The second-order correction to EMF component
+      real                                       :: dwm     !< face centered EMF interpolated to left cell-edge
+      real                                       :: dwp     !< face centered EMF interpolated to right cell-edge
+      integer                                    :: i       !< auxiliary array indicator
+      integer                                    :: ip      !< i+1
+      integer                                    :: ipp     !< i+2
+      integer                                    :: im      !< i-1
 
 ! unlike the B field, the vibj lives on the right cell boundary
       vh = 0.0

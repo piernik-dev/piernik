@@ -51,17 +51,17 @@ contains
 !<
    subroutine advectb(bdir, vdir)
 
-      use constants,      only: xdim, ydim, zdim, LO, HI, ndims, INT4
-      use dataio_pub,     only: die
-      use domain,         only: dom
-      use fluidindex,     only: flind
-      use cg_list,        only: cg_list_element
-      use global,         only: dt
-      use cg_leaves,      only: leaves
-      use grid_cont,      only: grid_container
-      use magboundaries,  only: bnd_emf
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, LO, HI, ndims, INT4
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use fluidindex,       only: flind
+      use global,           only: dt
+      use grid_cont,        only: grid_container
+      use magboundaries,    only: bnd_emf
       use named_array_list, only: qna, wna
-      use rtvd,           only: tvdb
+      use rtvd,             only: tvdb
 
       implicit none
 
@@ -70,12 +70,12 @@ contains
       integer, dimension(ndims), target :: ii, im
       integer                           :: rdir, i, j
       integer(kind=4)                   :: imom                   !< index of vdir momentum
+      integer(kind=4)                   :: dir
+      integer(kind=4), dimension(ndims) :: emf
       real, dimension(:), allocatable   :: vv, vv0 !< \todo workaround for bug in gcc-4.6, REMOVE ME
       real, dimension(:),    pointer    :: pm1, pm2, pd1, pd2
       type(cg_list_element), pointer    :: cgl
       type(grid_container),  pointer    :: cg
-      integer(kind=4)                   :: dir
-      integer(kind=4), dimension(ndims) :: emf
 
       imom = flind%ion%idn + int(vdir, kind=4)
       rdir = sum([xdim,ydim,zdim]) - bdir - vdir
