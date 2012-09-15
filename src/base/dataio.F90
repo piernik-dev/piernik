@@ -69,7 +69,6 @@ module dataio
    integer                  :: iv                    !< work index to count successive variables to dump in hdf files
    character(len=dsetnamelen), dimension(nvarsmx) :: vars !< array of 4-character strings standing for variables to dump in hdf files
 
-   integer                  :: tsl_lun               !< logical unit number for timeslice file
    integer                  :: nhdf_start            !< number of hdf file for the first hdf dump in simulation run
    integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
    real                     :: t_start               !< time in simulation of start simulation run
@@ -100,16 +99,6 @@ module dataio
       real :: gpxmax, gpymax, gpzmax
 #endif /* VARIABLE_GP */
    end type tsl_container
-
-   ! Declare the interface for POSIX fsync function
-   interface
-      function fsync (fd) bind(c,name="fsync")
-         use iso_c_binding, only: c_int
-         implicit none
-         integer(c_int), value :: fd
-         integer(c_int) :: fsync
-      end function fsync
-   end interface
 
    namelist /END_CONTROL/     nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
@@ -720,14 +709,14 @@ contains
    subroutine write_timeslice
 
       use constants,      only: cwdlen, xdim, ydim, zdim, DST
-      use dataio_pub,     only: wd_wr, warn
+      use dataio_pub,     only: wd_wr, tsl_file, tsl_lun
       use dataio_user,    only: user_tsl
       use diagnostics,    only: pop_vector
       use domain,         only: dom
       use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
       use fluids_pub,     only: has_ion, has_dst, has_neu
       use fluidtypes,     only: phys_prop
-      use func,           only: ekin, emag, piernik_fnum
+      use func,           only: ekin, emag
       use cg_list,        only: cg_list_element
       use global,         only: t, dt, smalld, nstep
       use cg_leaves,      only: leaves
@@ -752,7 +741,7 @@ contains
 
       implicit none
 
-      character(len=cwdlen)                               :: tsl_file, head_fmt
+      character(len=cwdlen)                               :: head_fmt
       character(len=cbuff_len), dimension(:), allocatable :: tsl_names
       real,                     dimension(:), allocatable :: tsl_vars
       real, dimension(:,:,:,:), pointer                   :: pu, pb
@@ -821,8 +810,6 @@ contains
             write(tsl_lun, '(a1)') '#'
             deallocate(tsl_names)
             tsl_firstcall = .false.
-         else
-            open(newunit=tsl_lun, file=tsl_file, position='append')
          endif
       endif
 
@@ -903,9 +890,6 @@ contains
       if (master) then
          write(tsl_lun, '(1x,i8,100(1x,es15.8))') nstep, tsl_vars
          ! some quantities computed in "write_log".One can add more, or change.
-         flush(tsl_lun)
-         if (fsync(piernik_fnum(tsl_lun)) /= 0) call warn("[dataio:write_timeslice] Error calling FSYNC")
-         close(tsl_lun)
          deallocate(tsl_vars)
       endif
 

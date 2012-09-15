@@ -63,6 +63,8 @@ module dataio_pub
    real                        :: wend                           !< wall clock time to end (in hours)
 
    integer                     :: lun                            !< current free logical unit
+   integer                     :: tsl_lun                        !< logical unit number for timeslice file
+   integer                     :: log_lun                        !< logical unit number for log file
    integer(kind=4)             :: nend                           !< number of the step to end simulation
    integer                     :: nstep_start                    !< number of start timestep
    integer(kind=4)             :: nhdf                           !< current number of hdf file
@@ -76,6 +78,7 @@ module dataio_pub
    character(len=cwdlen), save :: wd_wr = "./"                   !< path where output is written
    character(len=msglen), save :: cmdl_nml =" "                  !< buffer for namelist supplied via commandline
    character(len=cwdlen)       :: log_file                       !< path to the current log file
+   character(len=cwdlen)       :: tsl_file                       !< path to the current tsl file
    character(len=cwdlen)       :: tmp_log_file                   !< path to the temporary log file
    character(len=cwdlen)       :: par_file                       !< path to the parameter file
    ! Handy variables
@@ -97,6 +100,7 @@ module dataio_pub
 
    logical, save               :: halfstep = .false.             !< true when X-Y-Z sweeps are done and Z-Y-X are not
    logical, save               :: log_file_initialized = .false. !< logical to mark initialization of logfile
+   logical, save               :: log_file_opened = .false.      !< logical to mark opening of logfile
    integer(kind=4), save       :: require_init_prob = 0          !< 1 will call initproblem::init_prob on restart
 
    logical                     :: vizit = .false.                !< perform "live" visualization using pgplot
@@ -117,15 +121,6 @@ module dataio_pub
    character(len=ansilen)      :: ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, ansi_white
    character(len=*),parameter  :: tmr_hdf = "hdf_dump"
    real                        :: thdf                           !< hdf dump wallclock
-   ! Declare the interface for POSIX fsync function
-   interface
-      function fsync (fd) bind(c,name="fsync")
-         use iso_c_binding, only: c_int
-         implicit none
-         integer(c_int), value :: fd
-         integer(c_int) :: fsync
-      end function fsync
-   end interface
 
 contains
 !-----------------------------------------------------------------------------
@@ -133,14 +128,12 @@ contains
 
       use constants, only: stdout, stderr, idlen
       use mpi,       only: MPI_COMM_WORLD
-      use func,      only: piernik_fnum
 
       implicit none
 
       character(len=*),  intent(in) :: nm
       integer,           intent(in) :: mode
 
-      integer                       :: log_lun                !< logical unit number for log file
       character(len=ansilen)        :: ansicolor
       integer, parameter            :: msg_type_len = len("Warning")
       character(len=msg_type_len)   :: msg_type_str
@@ -202,15 +195,16 @@ contains
       endif
 
       if (log_file_initialized) then
-         open(newunit=log_lun, file=log_file, position='append')
+         if (.not.log_file_opened) then
+            open(newunit=log_lun, file=log_file, position='append')
+            log_file_opened = .true.
+         endif
       else
          open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append')   ! BEWARE: possible race condition
       endif
       if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
       write(log_lun,'(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
-      flush(log_lun)
-      if (fsync(piernik_fnum(log_lun)) /= 0) print *, ("[dataio_pub:colormessage] Error calling FSYNC")
-      close(log_lun)
+      if (.not. log_file_initialized) close(log_lun)
 
    end subroutine colormessage
 !-----------------------------------------------------------------------------
@@ -400,7 +394,28 @@ contains
       stat = 0
    end function move_file
 !-----------------------------------------------------------------------------
+   subroutine close_txt_file(lfile, llun)
+      implicit none
+      integer, intent(in)                 :: llun     !< logical unit number for txt file
+      character(len=cwdlen), intent(in)   :: lfile    !< path to txt file
 
+      logical :: lopen
+
+      inquire(file=lfile, opened=lopen)
+      if (lopen) then
+         flush(llun)
+         close(llun)
+      endif
+
+   end subroutine close_txt_file
+
+   subroutine close_logs
+      implicit none
+      logical :: lopen
+
+      call close_txt_file(log_file, log_lun)
+      call close_txt_file(tsl_file, tsl_lun)
+   end subroutine close_logs
 !>
 !! \brief Sanitize a file name
 !!

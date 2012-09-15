@@ -259,7 +259,7 @@ contains
 
    subroutine cleanup_mpi
 
-      use dataio_pub, only: printinfo
+      use dataio_pub, only: printinfo, close_logs
       use mpisignals, only: sig
 
       implicit none
@@ -275,6 +275,7 @@ contains
          call report_to_master(sig%clean_exit)
          call MPI_Comm_disconnect(intercomm, mpi_err)
       endif
+      call close_logs
       call MPI_Finalize(mpi_err)
 
    end subroutine cleanup_mpi
