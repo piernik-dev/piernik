@@ -601,7 +601,7 @@ while True:
         break
 
 # assing color to boxes according to their location in source tree
-colors = { 'src': 'red', 'src/base': 'green', 'src/grid': 'magenta', 'src/fluids': 'yellow', 'src/hdf5': 'cyan', 'problems': 'blue' }
+colors = { 'src': 'red', 'src/base': 'green', 'src/grid': 'magenta', 'src/fluids': 'yellow', 'src/IO': 'cyan', 'problems': 'blue' }
 
 # create dictionary that maps file to directories
 dirs = {}
