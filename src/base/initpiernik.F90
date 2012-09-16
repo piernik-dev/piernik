@@ -53,6 +53,7 @@ contains
       use fluidindex,            only: flind
       use global,                only: init_global
       use grid,                  only: init_grid
+      use grid_container_ext,    only: ext_ptrs
       use gridgeometry,          only: init_geometry
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use interactions,          only: init_interactions
@@ -71,7 +72,7 @@ contains
       use hydrostatic,           only: cleanup_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
-      use multigrid,             only: init_multigrid
+      use multigrid,             only: init_multigrid, init_multigrid_ext
 #endif /* MULTIGRID */
 #ifdef SN_SRC
       use snsources,             only: init_snsources
@@ -119,6 +120,8 @@ contains
       call init_piernikiodebug
 #endif /* DEBUG */
 
+      call ext_ptrs%epa_init
+
       call init_dataio_parameters ! Required very early to call colormessage without side-effects
 
       call problem_pointers ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
@@ -150,6 +153,10 @@ contains
       code_progress = PIERNIK_INIT_DOMAIN ! Base domain is known and initial domain decomposition is known
 
       call init_decomposition
+#ifdef MULTIGRID
+      call init_multigrid_ext ! Has to be called before init_grid
+#endif /* MULTIGRID */
+
       call init_grid         ! Most of the cg's vars are now initialized, only arrays left
       code_progress = PIERNIK_INIT_GRID      ! Now we can initialize things that depend on all the above fundamental calls
 

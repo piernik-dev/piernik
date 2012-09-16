@@ -125,8 +125,9 @@ contains
 
    subroutine forget(this, cg)
 
-      use cg_list,   only: cg_list_element
-      use grid_cont, only: grid_container
+      use cg_list,            only: cg_list_element
+      use grid_cont,          only: grid_container
+      use grid_container_ext, only: ext_ptrs
 
       implicit none
 
@@ -134,7 +135,7 @@ contains
       type(grid_container), pointer, intent(inout) :: cg    !< grid piece deemed to be forgotten
 
       type(cg_list_element), pointer :: cgl, aux
-      integer :: i
+      integer :: i, ep
 
       ! scan all lists and remove the element if found
       do i = lbound(this%entries(:),dim=1), ubound(this%entries(:), dim=1)
@@ -150,6 +151,9 @@ contains
       enddo
 
       call cg%cleanup
+      do ep = lbound(ext_ptrs%ext, dim=1), ubound(ext_ptrs%ext, dim=1)
+         if (associated(ext_ptrs%ext(ep)%cleanup)) call ext_ptrs%ext(ep)%cleanup(cg)
+      enddo
       deallocate(cg)
 
    end subroutine forget

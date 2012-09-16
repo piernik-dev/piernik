@@ -44,7 +44,7 @@ module multigrid
    implicit none
 
    private
-   public :: init_multigrid, cleanup_multigrid
+   public :: init_multigrid, cleanup_multigrid, init_multigrid_ext
 
 contains
 
@@ -76,8 +76,8 @@ contains
 
       use cg_list,             only: cg_list_element
       use cg_list_global,      only: all_cg
-      use cg_level_connected,       only: cg_level_connected_T, base_lev, finest, coarsest
-      use constants,           only: PIERNIK_INIT_GRID, LO, HI, I_ONE, O_INJ, O_LIN, O_I2, refinement_factor, dirtyH, base_level_offset
+      use cg_level_connected,  only: cg_level_connected_T, base_lev, finest, coarsest
+      use constants,           only: PIERNIK_INIT_GRID, I_ONE, O_INJ, O_LIN, O_I2, refinement_factor, base_level_offset
       use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: printinfo, warn, die, code_progress
       use cart_comm,           only: cdd
@@ -234,22 +234,6 @@ contains
                     (.not. associated(curl, coarsest) .or. .not. single_base)) is_mg_uneven = .true.
             endif
 
-            ! data storage
-            if ( allocated(cg%mg%bnd_x) .or. allocated(cg%mg%bnd_y) .or. allocated(cg%mg%bnd_z)) &
-                 call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
-            allocate(cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, LO:HI))
-            allocate(cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, LO:HI))
-            allocate(cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, LO:HI))
-
-            ! array initialization
-            if (dirty_debug) then
-               cg%mg%bnd_x(:, :, :) = dirtyH
-               cg%mg%bnd_y(:, :, :) = dirtyH
-               cg%mg%bnd_z(:, :, :) = dirtyH
-            endif
-
-            if (.not. associated(cg%wa)) cg%wa => cg%q(qna%wai)%arr ! required for CR diffusion
-
             cgl => cgl%nxt
          enddo
 
@@ -292,6 +276,64 @@ contains
       endif
 
    end subroutine init_multigrid
+
+   subroutine init_multigrid_ext
+
+      use grid_container_ext, only: cg_ext, ext_ptrs
+
+      implicit none
+
+      procedure(cg_ext), pointer :: mg_cg_init_p, mg_cg_cleanup_p
+
+      mg_cg_init_p => mg_cg_init
+      mg_cg_cleanup_p => mg_cg_cleanup
+      call ext_ptrs%extend(mg_cg_init_p, mg_cg_cleanup_p, "multigrid")
+
+   end subroutine init_multigrid_ext
+
+!> \brief Allocate some multigrid-specific arrays
+
+   subroutine mg_cg_init(cg)
+
+      use constants,        only: LO, HI, dirtyH
+      use dataio_pub,       only: die
+      use global,           only: dirty_debug
+      use grid_cont,        only: grid_container
+
+      implicit none
+
+      type(grid_container), pointer,  intent(inout) :: cg
+
+      ! data storage
+      if ( allocated(cg%mg%bnd_x) .or. allocated(cg%mg%bnd_y) .or. allocated(cg%mg%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
+      allocate(cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, LO:HI))
+      allocate(cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, LO:HI))
+      allocate(cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, LO:HI))
+
+      ! array initialization
+      if (dirty_debug) then
+         cg%mg%bnd_x(:, :, :) = dirtyH
+         cg%mg%bnd_y(:, :, :) = dirtyH
+         cg%mg%bnd_z(:, :, :) = dirtyH
+      endif
+
+   end subroutine mg_cg_init
+
+!> \brief Deallocate what was allocated in mg_cg_init
+
+   subroutine mg_cg_cleanup(cg)
+
+      use grid_cont, only: grid_container
+
+      implicit none
+
+      type(grid_container), pointer,  intent(inout) :: cg
+
+      if (allocated(cg%mg%bnd_x)) deallocate(cg%mg%bnd_x)
+      if (allocated(cg%mg%bnd_y)) deallocate(cg%mg%bnd_y)
+      if (allocated(cg%mg%bnd_z)) deallocate(cg%mg%bnd_z)
+
+   end subroutine mg_cg_cleanup
 
 !> \brief Deallocate, destroy, demolish ...
 

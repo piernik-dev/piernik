@@ -42,26 +42,27 @@ contains
 !<
    subroutine cleanup_piernik
 
-      use dataio,        only: cleanup_dataio
-      use decomposition, only: cleanup_decomposition
-      use diagnostics,   only: cleanup_diagnostics
-      use domain,        only: cleanup_domain
-      use fluidindex,    only: cleanup_fluidindex
-      use global,        only: cleanup_global
-      use grid,          only: cleanup_grid
-      use initfluids,    only: cleanup_fluids
-      use interactions,  only: cleanup_interactions
-      use mpisetup,      only: cleanup_mpi
-      use timer,         only: cleanup_timers
-      use user_hooks,    only: cleanup_problem
+      use dataio,             only: cleanup_dataio
+      use decomposition,      only: cleanup_decomposition
+      use diagnostics,        only: cleanup_diagnostics
+      use domain,             only: cleanup_domain
+      use fluidindex,         only: cleanup_fluidindex
+      use global,             only: cleanup_global
+      use grid,               only: cleanup_grid
+      use grid_container_ext, only: ext_ptrs
+      use initfluids,         only: cleanup_fluids
+      use interactions,       only: cleanup_interactions
+      use mpisetup,           only: cleanup_mpi
+      use timer,              only: cleanup_timers
+      use user_hooks,         only: cleanup_problem
 #ifdef RESISTIVE
-      use resistivity,   only: cleanup_resistivity
+      use resistivity,        only: cleanup_resistivity
 #endif /* RESISTIVE */
 #ifdef MULTIGRID
-      use multigrid,     only: cleanup_multigrid
+      use multigrid,          only: cleanup_multigrid
 #endif /* MULTIGRID */
 #ifdef PIERNIK_OPENCL
-      use piernikcl,     only: cleanup_opencl
+      use piernikcl,          only: cleanup_opencl
 #endif /* PIERNIK_OPENCL */
       implicit none
 
@@ -82,6 +83,7 @@ contains
       call cleanup_fluidindex;    call nextdot(.false., print_t = .true.)
       call cleanup_timers;        call nextdot(.false.)
       call cleanup_diagnostics;   call nextdot(.false.)
+      call ext_ptrs%epa_cleanup;  call nextdot(.false.)
 #ifdef PIERNIK_OPENCL
       call cleanup_opencl;        call nextdot(.false.)
 #endif /* PIERNIK_OPENCL */

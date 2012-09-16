@@ -172,15 +172,16 @@ contains
 
    subroutine init_all_new_cg(this)
 
-      use cg_list_global, only: all_cg
-      use grid_cont,      only: grid_container
-      use mpisetup,       only: proc
+      use cg_list_global,     only: all_cg
+      use grid_cont,          only: grid_container
+      use grid_container_ext, only: ext_ptrs
+      use mpisetup,           only: proc
 
       implicit none
 
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
-      integer :: i, gr_id
+      integer :: i, ep, gr_id
       type(grid_container), pointer :: cg
 
       call this%distribute
@@ -197,6 +198,9 @@ contains
             call cg%init(this%n_d, this%pse(proc)%c(i)%se(:, :), gr_id, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
             call this%mpi_bnd_types(cg)                                                ! require access to whole this%pse(:)%c(:)%se(:,:)
             call cg%add_all_na                                                         ! require mpi_bnd_types properly calculated
+            do ep = lbound(ext_ptrs%ext, dim=1), ubound(ext_ptrs%ext, dim=1)
+               if (associated(ext_ptrs%ext(ep)%init))  call ext_ptrs%ext(ep)%init(cg)
+            enddo
             call all_cg%add(cg)
          endif
       enddo

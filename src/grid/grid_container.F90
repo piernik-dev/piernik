@@ -615,9 +615,6 @@ contains
       if (allocated(this%prolong_xy)) deallocate(this%prolong_xy)
       if (allocated(this%prolong_x))  deallocate(this%prolong_x)
       if (allocated(this%prolong_))   deallocate(this%prolong_)
-      if (allocated(this%mg%bnd_x))   deallocate(this%mg%bnd_x)
-      if (allocated(this%mg%bnd_y))   deallocate(this%mg%bnd_y)
-      if (allocated(this%mg%bnd_z))   deallocate(this%mg%bnd_z)
 
    end subroutine cleanup
 
