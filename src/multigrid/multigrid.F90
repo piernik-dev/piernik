@@ -295,17 +295,16 @@ contains
 
    subroutine mg_cg_init(cg)
 
-      use constants,        only: LO, HI, dirtyH
-      use dataio_pub,       only: die
-      use global,           only: dirty_debug
-      use grid_cont,        only: grid_container
+      use constants, only: LO, HI, dirtyH
+      use global,    only: dirty_debug
+      use grid_cont, only: grid_container
 
       implicit none
 
       type(grid_container), pointer,  intent(inout) :: cg
 
-      ! data storage
-      if ( allocated(cg%mg%bnd_x) .or. allocated(cg%mg%bnd_y) .or. allocated(cg%mg%bnd_z)) call die("[multigrid:init_multigrid] multigrid boundary arrays already allocated")
+      allocate(cg%mg)
+
       allocate(cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, LO:HI))
       allocate(cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, LO:HI))
       allocate(cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, LO:HI))
@@ -332,6 +331,7 @@ contains
       if (allocated(cg%mg%bnd_x)) deallocate(cg%mg%bnd_x)
       if (allocated(cg%mg%bnd_y)) deallocate(cg%mg%bnd_y)
       if (allocated(cg%mg%bnd_z)) deallocate(cg%mg%bnd_z)
+      deallocate(cg%mg)
 
    end subroutine mg_cg_cleanup
 

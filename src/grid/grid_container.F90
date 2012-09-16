@@ -203,7 +203,7 @@ module grid_cont
 
       ! Misc
 
-      type(mg_arr) :: mg                                         !< multigrid arrays (without multigrid will remain unallocated)
+      type(mg_arr), pointer :: mg                                !< multigrid arrays
       real :: vol                                                !< volume of the grid; BEWARE: for cylindrical geometry it needs to be integrated over x(:) to get real volume
       real :: dxmn                                               !< the smallest length of the %grid cell (among dx, dy, and dz)
       integer(kind=4) :: maxxyz                                  !< maximum number of %grid cells in any direction

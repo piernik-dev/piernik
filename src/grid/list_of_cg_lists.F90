@@ -151,7 +151,7 @@ contains
       enddo
 
       call cg%cleanup
-      do ep = lbound(ext_ptrs%ext, dim=1), ubound(ext_ptrs%ext, dim=1)
+      do ep = ubound(ext_ptrs%ext, dim=1), lbound(ext_ptrs%ext, dim=1), -1
          if (associated(ext_ptrs%ext(ep)%cleanup)) call ext_ptrs%ext(ep)%cleanup(cg)
       enddo
       deallocate(cg)
