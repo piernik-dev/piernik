@@ -44,7 +44,10 @@ module multigrid
    implicit none
 
    private
-   public :: init_multigrid, cleanup_multigrid, init_multigrid_ext
+   public :: multigrid_par, init_multigrid, cleanup_multigrid, init_multigrid_ext
+
+   integer, parameter    :: level_incredible = 50  !< Increase this value only if your base domain contains much more than 10^15 cells in any active direction ;-)
+   integer(kind=4)       :: level_max              !< Maximum allowed levels of base grid coarsening
 
 contains
 
@@ -72,44 +75,29 @@ contains
 !! The list is active while \b "MULTIGRID" is defined.
 !! \n \n
 !<
-   subroutine init_multigrid
+   subroutine multigrid_par
 
-      use cg_list,             only: cg_list_element
-      use cg_list_global,      only: all_cg
-      use cg_level_connected,  only: cg_level_connected_T, base_lev, finest, coarsest
-      use constants,           only: PIERNIK_INIT_GRID, I_ONE, O_INJ, O_LIN, O_I2, refinement_factor, base_level_offset
-      use dataio_pub,          only: msg, par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
-      use dataio_pub,          only: printinfo, warn, die, code_progress
-      use cart_comm,           only: cdd
-      use domain,              only: dom, is_uneven, minsize
+      use constants,           only: PIERNIK_INIT_DOMAIN, O_INJ, O_LIN, O_I2
+      use dataio_pub,          only: par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
+      use dataio_pub,          only: warn, die, code_progress
+      use domain,              only: dom
       use global,              only: dirty_debug, do_ascii_dump
-      use grid_cont,           only: grid_container
-      use mpi,                 only: MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_COMM_NULL
-      use mpisetup,            only: comm, mpi_err, master, slave, nproc, ibuff, lbuff, piernik_MPI_Bcast
-      use multigridvars,       only: single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, &
-           &                         ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, is_mg_uneven
-      use named_array_list,    only: qna
+      use mpisetup,            only: master, slave, nproc, ibuff, lbuff, piernik_MPI_Bcast
+      use multigridvars,       only: single_base, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle
 #ifdef GRAV
-      use multigrid_gravity,   only: init_multigrid_grav, init_multigrid_grav_post
+      use multigrid_gravity,   only: multigrid_grav_par
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      use multigrid_diffusion, only: init_multigrid_diff, init_multigrid_diff_post
+      use multigrid_diffusion, only: multigrid_diff_par
 #endif /* COSM_RAYS */
 
       implicit none
 
-      integer, parameter    :: level_incredible = 50  !< Increase this value only if your base domain contains much more than 10^15 cells in any active direction ;-)
-      integer(kind=4)       :: level_max              !< Maximum allowed levels of base grid coarsening
-
-      integer(kind=4)       :: j
       logical, save         :: frun = .true.          !< First run flag
-      type(cg_list_element), pointer :: cgl
-      type(cg_level_connected_T), pointer :: curl          !< current level (a pointer sliding along the linked list) and temporary level
-      type(grid_container),  pointer :: cg            !< current grid container
 
       namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug
 
-      if (code_progress < PIERNIK_INIT_GRID) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
+      if (code_progress < PIERNIK_INIT_DOMAIN) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
       ! This check is too weak (geometry), arrays are required only for multigrid_gravity
 
       if (.not.frun) call die("[multigrid:init_multigrid] Called more than once.")
@@ -167,10 +155,10 @@ contains
 
 !! \todo Make an array of subroutine pointers
 #ifdef GRAV
-      call init_multigrid_grav
+      call multigrid_grav_par
 #endif /* GRAV */
 #ifdef COSM_RAYS
-      call init_multigrid_diff
+      call multigrid_diff_par
 #endif /* COSM_RAYS */
 
       !! Sanity checks
@@ -180,6 +168,40 @@ contains
       endif
 
       if (ord_prolong == -1) ord_prolong = O_LIN
+
+   end subroutine multigrid_par
+
+   subroutine init_multigrid
+
+      use cg_list,             only: cg_list_element
+      use cg_list_global,      only: all_cg
+      use cg_level_connected,  only: cg_level_connected_T, base_lev, finest, coarsest
+      use constants,           only: PIERNIK_INIT_GRID, I_ONE, O_INJ, refinement_factor, base_level_offset
+      use dataio_pub,          only: printinfo, warn, die, code_progress, msg
+      use cart_comm,           only: cdd
+      use domain,              only: dom, is_uneven, minsize
+      use grid_cont,           only: grid_container
+      use mpi,                 only: MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_COMM_NULL
+      use mpisetup,            only: comm, mpi_err, master
+      use multigridvars,       only: single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, ord_prolong, tot_ts, is_mg_uneven
+      use named_array_list,    only: qna
+#ifdef GRAV
+      use multigrid_gravity,   only: init_multigrid_grav
+#endif /* GRAV */
+#ifdef COSM_RAYS
+      use multigrid_diffusion, only: init_multigrid_diff
+#endif /* COSM_RAYS */
+
+      implicit none
+
+      integer(kind=4)       :: j
+
+      type(cg_list_element), pointer :: cgl
+      type(cg_level_connected_T), pointer :: curl          !< current level (a pointer sliding along the linked list) and temporary level
+      type(grid_container),  pointer :: cg            !< current grid container
+
+      if (code_progress < PIERNIK_INIT_GRID) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
+      ! This check is too weak (geometry), arrays are required only for multigrid_gravity
 
       if (level_max <= 0) then
          if (master) call warn("[multigrid:init_multigrid] level_max < 1: solving on a single grid may be extremely slow")
@@ -262,10 +284,10 @@ contains
       tot_ts = 0.
 
 #ifdef GRAV
-      call init_multigrid_grav_post
-#endif /* !GRAV */
+      call init_multigrid_grav
+#endif /* GRAV */
 #ifdef COSM_RAYS
-      call init_multigrid_diff_post
+      call init_multigrid_diff
 #endif /* COSM_RAYS */
 
       ! summary
@@ -277,17 +299,31 @@ contains
 
    end subroutine init_multigrid
 
+!> set up pointers for cg%mg initialization
+
    subroutine init_multigrid_ext
 
+      use constants,          only: dsetnamelen
       use grid_container_ext, only: cg_ext, ext_ptrs
+#ifdef GRAV
+      use multigrid_gravity,  only: init_multigrid_grav_ext
+#endif /* GRAV */
 
       implicit none
 
       procedure(cg_ext), pointer :: mg_cg_init_p, mg_cg_cleanup_p
+      character(len=dsetnamelen), parameter :: mg_ext_name = "multigrid"
 
       mg_cg_init_p => mg_cg_init
       mg_cg_cleanup_p => mg_cg_cleanup
-      call ext_ptrs%extend(mg_cg_init_p, mg_cg_cleanup_p, "multigrid")
+      call ext_ptrs%extend(mg_cg_init_p, mg_cg_cleanup_p, mg_ext_name)
+
+#ifdef GRAV
+      call init_multigrid_grav_ext(mg_ext_name)
+#endif /* GRAV */
+!!$#ifdef COSM_RAYS
+!!$      call init_multigrid_cr_ext(mg_ext_name)
+!!$#endif /* COSM_RAYS */
 
    end subroutine init_multigrid_ext
 

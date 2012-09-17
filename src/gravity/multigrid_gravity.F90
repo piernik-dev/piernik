@@ -48,7 +48,7 @@ module multigrid_gravity
    implicit none
 
    private
-   public :: init_multigrid_grav, init_multigrid_grav_post, cleanup_multigrid_grav, multigrid_solve_grav
+   public :: multigrid_grav_par, init_multigrid_grav, cleanup_multigrid_grav, multigrid_solve_grav, init_multigrid_grav_ext
 
    include "fftw3.f"
    ! constants from fftw3.f
@@ -135,7 +135,7 @@ contains
 !! The list is active while \b "GRAV" and \b "MULTIGRID" are defined.
 !! \n \n
 !<
-   subroutine init_multigrid_grav
+   subroutine multigrid_grav_par
 
       use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
@@ -158,7 +158,7 @@ contains
            &                       coarsen_multipole, lmax, mmax, ord_prolong_mpole, use_point_monopole, interp_pt2mom, interp_mom2pot, multidim_code_3D, &
            &                       grav_bnd_str
 
-      if (.not.frun) call die("[multigrid_gravity:init_multigrid_grav] Called more than once.")
+      if (.not.frun) call die("[multigrid_gravity:multigrid_grav_par] Called more than once.")
       frun = .false.
 
       ! Default values for namelist variables
@@ -183,7 +183,7 @@ contains
 
       use_point_monopole     = .false.
       trust_fft_solution     = .true.
-      base_no_fft            = is_multicg
+      base_no_fft            = .true. !> \todo restore .false. when it will be possible
       prefer_rbgs_relaxation = .true. !> \warning it seems that FFT local solver is broken somewhere. \todo restore .false. as a default
       fft_full_relax         = .false.
       fft_patient            = .false.
@@ -205,7 +205,7 @@ contains
 
          ! FIXME when ready
          if (dom%geometry_type == GEO_RPZ) then
-            call warn("[multigrid_gravity:init_multigrid_grav] cylindrical geometry support is under development.")
+            call warn("[multigrid_gravity:multigrid_grav_par] cylindrical geometry support is under development.")
             ! switch off FFT-related bits
             base_no_fft = .true.
             prefer_rbgs_relaxation = .true.
@@ -213,17 +213,17 @@ contains
             L4_strength = 0.
             ! ord_prolong_mpole = O_INJ
          else if (dom%geometry_type /= GEO_XYZ) then
-            call die("[multigrid_gravity:init_multigrid_grav] non-cartesian geometry not implemented yet.")
+            call die("[multigrid_gravity:multigrid_grav_par] non-cartesian geometry not implemented yet.")
          endif
 
          if (is_multicg .and. .not. base_no_fft) then
-            call warn("[multigrid_gravity:init_multigrid_grav] base_no_fft set to .true. for multicg configuration")
+            call warn("[multigrid_gravity:multigrid_grav_par] base_no_fft set to .true. for multicg configuration")
             base_no_fft = .true.
          endif
 
          if (.not. prefer_rbgs_relaxation .and. nproc > 1) then
             prefer_rbgs_relaxation = .true.
-            call warn("[multigrid_gravity:init_multigrid_grav] FFT local solver disabled for multithreaded runs due to unresolved incompatibilities with mew grid features")
+            call warn("[multigrid_gravity:multigrid_grav_par] FFT local solver disabled for multithreaded runs due to unresolved incompatibilities with mew grid features")
          endif
 
          rbuff(1) = norm_tol
@@ -306,19 +306,19 @@ contains
             grav_bnd = bnd_isolated
          case ("periodic", "per")
             if (any(dom%bnd(:,:) /= BND_PER)) &
-                 call die("[multigrid_gravity:init_multigrid_grav] cannot enforce periodic boundaries for gravity on a not fully periodic domain")
+                 call die("[multigrid_gravity:multigrid_grav_par] cannot enforce periodic boundaries for gravity on a not fully periodic domain")
             grav_bnd = bnd_periodic
          case ("dirichlet", "dir")
             grav_bnd = bnd_dirichlet
          case default
-            call die("[multigrid_gravity:init_multigrid_grav] Non-recognized boundary description.")
+            call die("[multigrid_gravity:multigrid_grav_par] Non-recognized boundary description.")
       end select
 
       if (periodic_bnd_cnt == dom%eff_dim) then ! fully periodic domain
-         if (grav_bnd /= bnd_periodic .and. master) call warn("[multigrid_gravity:init_multigrid_grav] Ignoring non-periodic boundary conditions for gravity on a fully periodic domain.")
+         if (grav_bnd /= bnd_periodic .and. master) call warn("[multigrid_gravity:multigrid_grav_par] Ignoring non-periodic boundary conditions for gravity on a fully periodic domain.")
          grav_bnd = bnd_periodic
       else if (periodic_bnd_cnt > 0 .and. periodic_bnd_cnt < dom%eff_dim) then
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav] Mixing periodic and non-periodic boundary conditions for gravity is experimental.")
+         if (master) call warn("[multigrid_gravity:multigrid_grav_par] Mixing periodic and non-periodic boundary conditions for gravity is experimental.")
          prefer_rbgs_relaxation = .true.
          base_no_fft = .true.
       endif
@@ -328,56 +328,55 @@ contains
 !!$         case (bnd_isolated, bnd_dirichlet, bnd_givenval)
 !!$            grav_extbnd_mode = BND_NEGREF
 !!$         case default
-!!$            call die("[multigrid_gravity:init_multigrid_grav] Unsupported grav_bnd.")
+!!$            call die("[multigrid_gravity:multigrid_grav_par] Unsupported grav_bnd.")
 !!$            !grav_extbnd_mode = BND_NONE
 !!$      end select
 
       if (.not. (grav_bnd == bnd_periodic .or. grav_bnd == bnd_dirichlet .or. grav_bnd == bnd_isolated) .and. .not. base_no_fft) then
          base_no_fft = .true.
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav] Use of FFT not allowed by current boundary type/combination.")
+         if (master) call warn("[multigrid_gravity:multigrid_grav_par] Use of FFT not allowed by current boundary type/combination.")
       endif
 
       ! something is a bit messed up here
       if (cdd%comm3d /= MPI_COMM_NULL .and. .not. base_no_fft) then
          base_no_fft = .true.
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav] cdd%comm3d disables use of FFT at coarsest level")
+         if (master) call warn("[multigrid_gravity:multigrid_grav_par] cdd%comm3d disables use of FFT at coarsest level")
       endif
 
       single_base = .not. base_no_fft
 
       if (.not. prefer_rbgs_relaxation .and. any([ overrelax, overrelax_xyz(:) ] /= 1.)) then
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav] Overrelaxation is disabled for FFT local solver.")
+         if (master) call warn("[multigrid_gravity:multigrid_grav_par] Overrelaxation is disabled for FFT local solver.")
          overrelax = 1.
          overrelax_xyz(:) = 1.
       endif
 
       if (master) then
          if ((Jacobi_damp <= 0. .or. Jacobi_damp>1.)) then
-            write(msg, '(a,g12.5,a)')"[multigrid_gravity:init_multigrid_grav] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
+            write(msg, '(a,g12.5,a)')"[multigrid_gravity:multigrid_grav_par] Jacobi_damp = ",Jacobi_damp," is outside (0, 1] interval."
             call warn(msg)
          endif
          if (overrelax /= 1. .or. any(overrelax_xyz(:) /= 1.)) then
-            write(msg, '(a,f8.5,a,3f8.5,a)')"[multigrid_gravity:init_multigrid_grav] Overrelaxation factors: global = ", overrelax, ", directional = [", overrelax_xyz(:), "]"
+            write(msg, '(a,f8.5,a,3f8.5,a)')"[multigrid_gravity:multigrid_grav_par] Overrelaxation factors: global = ", overrelax, ", directional = [", overrelax_xyz(:), "]"
             call warn(msg)
          endif
       endif
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
 
-   end subroutine init_multigrid_grav
+   end subroutine multigrid_grav_par
 
 !> \brief Initialization - continued after allocation of everything interesting
 
-   subroutine init_multigrid_grav_post
+   subroutine init_multigrid_grav
 
-      use cg_list,             only: cg_list_element
-      use cg_list_global,      only: all_cg
-      use cg_level_connected,       only: cg_level_connected_T, finest, coarsest
-      use constants,           only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, dsetnamelen, xdim, ydim, zdim
-      use dataio_pub,          only: die, warn, printinfo, msg
       use cart_comm,           only: cdd
-      use domain,              only: dom
       use cg_leaves,           only: leaves
+      use cg_level_connected,  only: cg_level_connected_T, finest, coarsest
+      use cg_list,             only: cg_list_element
+      use constants,           only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, dsetnamelen
+      use dataio_pub,          only: die, warn, printinfo, msg
+      use domain,              only: dom
       use grid_cont,           only: grid_container
       use mpi,                 only: MPI_COMM_NULL
       use mpisetup,            only: master, nproc
@@ -399,7 +398,7 @@ contains
 
       if (need_general_pf .and. coarsen_multipole /= 0) then
          coarsen_multipole = 0
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] multipole coarsening on uneven domains or with cdd%comm3d == MPI_COMM_NULL is not implemented yet.")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav] multipole coarsening on uneven domains or with cdd%comm3d == MPI_COMM_NULL is not implemented yet.")
       endif
 
       ! solution recycling
@@ -411,28 +410,6 @@ contains
       endif
 
       call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
-
-      ! this should work correctly also when dom%eff_dim < 3
-      cgl => all_cg%first
-      do while (associated(cgl))
-         cg => cgl%cg
-
-         cg%mg%r  = overrelax   / 2.
-         cg%mg%rx = cg%dvol2 * cg%idx2
-         cg%mg%ry = cg%dvol2 * cg%idy2
-         cg%mg%rz = cg%dvol2 * cg%idz2
-         cg%mg%r  = cg%mg%r  / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
-         cg%mg%rx = overrelax_xyz(xdim)* cg%mg%rx * cg%mg%r
-         cg%mg%ry = overrelax_xyz(ydim)* cg%mg%ry * cg%mg%r
-         cg%mg%rz = overrelax_xyz(zdim)* cg%mg%rz * cg%mg%r
-         cg%mg%r  = cg%mg%r  * cg%dvol2
-         !>
-         !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
-         !! and overrelaxation factors are required to get any convergence (often poor)
-         !<
-
-         cgl => cgl%nxt
-      enddo
 
       curl => coarsest
       do while (associated(curl))
@@ -463,7 +440,7 @@ contains
             coarsest%fft_type = fft_dst
          case default
             coarsest%fft_type = fft_none
-            if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] base_no_fft unset but no suitable boundary conditions found. Reverting to RBGS relaxation.")
+            if (master) call warn("[multigrid_gravity:init_multigrid_grav] base_no_fft unset but no suitable boundary conditions found. Reverting to RBGS relaxation.")
          end select
       endif
 
@@ -483,7 +460,7 @@ contains
 
                require_FFT = .true.
 
-               if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav_post] FFT is not allowed in non-cartesian coordinates.")
+               if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav] FFT is not allowed in non-cartesian coordinates.")
 
                select case (curl%fft_type)
                   case (fft_rcr)
@@ -491,10 +468,10 @@ contains
                   case (fft_dst)
                      cg%mg%nxc = cg%nxb
                   case default
-                     call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
+                     call die("[multigrid_gravity:init_multigrid_grav] Unknown FFT type.")
                end select
 
-               if (allocated(cg%mg%Green3D) .or. allocated(cg%mg%src)) call die("[multigrid_gravity:init_multigrid_grav_post] Green3D or src arrays already allocated")
+               if (allocated(cg%mg%Green3D) .or. allocated(cg%mg%src)) call die("[multigrid_gravity:init_multigrid_grav] Green3D or src arrays already allocated")
                allocate(cg%mg%Green3D(cg%mg%nxc, cg%nyb, cg%nzb))
                allocate(cg%mg%src    (cg%nxb,    cg%nyb, cg%nzb))
 
@@ -509,7 +486,7 @@ contains
                   ! call dfftw_execute(cg%mg%planf); cg%mg%fftr(:, :, :) = cg%mg%fftr(:, :, :) * cg%mg%fft_norm ; call dfftw_execute(cg%mg%plani)
 
                   case (fft_rcr)
-                     if (allocated(cg%mg%fft)) call die("[multigrid_gravity:init_multigrid_grav_post] fft or Green3D array already allocated")
+                     if (allocated(cg%mg%fft)) call die("[multigrid_gravity:init_multigrid_grav] fft or Green3D array already allocated")
                      allocate(cg%mg%fft(cg%mg%nxc, cg%nyb, cg%nzb))
 
                      cg%mg%fft_norm = one / real( product(cg%n_b(:), mask=dom%has_dir(:)) ) ! No 4 pi G factor here because the source was already multiplied by it
@@ -530,7 +507,7 @@ contains
 
                   case (fft_dst)
 
-                     if (allocated(cg%mg%fftr)) call die("[multigrid_gravity:init_multigrid_grav_post] fftr array already allocated")
+                     if (allocated(cg%mg%fftr)) call die("[multigrid_gravity:init_multigrid_grav] fftr array already allocated")
                      allocate(cg%mg%fftr(cg%mg%nxc, cg%nyb, cg%nzb))
 
                      cg%mg%fft_norm = one / (8. * real( product(cg%n_b(:), mask=dom%has_dir(:)) ))
@@ -541,7 +518,7 @@ contains
                      call dfftw_plan_r2r_3d(cg%mg%plani, cg%nxb, cg%nyb, cg%nzb, cg%mg%fftr, cg%mg%src,  FFTW_RODFT01, FFTW_RODFT01, FFTW_RODFT01, fftw_flags)
 
                   case default
-                     call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
+                     call die("[multigrid_gravity:init_multigrid_grav] Unknown FFT type.")
                end select
 
                ! compute Green's function for 7-point 3D discrete laplacian
@@ -569,9 +546,9 @@ contains
                case (fft_none)
                   FFTn="none"
                case default
-                  call die("[multigrid_gravity:init_multigrid_grav_post] Unknown FFT type.")
+                  call die("[multigrid_gravity:init_multigrid_grav] Unknown FFT type.")
             end select
-            write(msg,'(a,i3,2a)')"[multigrid_gravity:init_multigrid_grav_post] Level ",curl%level_id,", FFT: ", trim(FFTn)
+            write(msg,'(a,i3,2a)')"[multigrid_gravity:init_multigrid_grav] Level ",curl%level_id,", FFT: ", trim(FFTn)
             call printinfo(msg)
          endif
 
@@ -581,7 +558,7 @@ contains
       if (require_FFT) call mpi_multigrid_prep_grav !supplement to mpi_multigrid_prep
 
       if (finest%fft_type == fft_none .and. trust_fft_solution) then
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav_post] cannot trust FFT solution on the finest level.")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav] cannot trust FFT solution on the finest level.")
          trust_fft_solution = .false.
       endif
 
@@ -593,7 +570,7 @@ contains
 
       call vstat%init(max_cycles)
 
-   end subroutine init_multigrid_grav_post
+   end subroutine init_multigrid_grav
 
 !> \brief Initialize structure for keeping historical potential fields
 
@@ -668,6 +645,64 @@ contains
       call dfftw_cleanup
 
    end subroutine cleanup_multigrid_grav
+
+!> set up pointers for cg%mg initialization
+
+   subroutine init_multigrid_grav_ext(after_label)
+
+      use grid_container_ext, only: cg_ext, ext_ptrs
+
+      implicit none
+
+      character(len=*), intent(in) :: after_label
+
+      procedure(cg_ext), pointer :: mgg_cg_init_p, mgg_cg_cleanup_p
+
+      mgg_cg_init_p => mgg_cg_init
+      mgg_cg_cleanup_p => null() !mgg_cg_cleanup
+      call ext_ptrs%extend(mgg_cg_init_p, mgg_cg_cleanup_p, "multigrid_gravity", after_label)
+
+   end subroutine init_multigrid_grav_ext
+
+!> \brief Allocate some multigrid-specific arrays
+
+   subroutine mgg_cg_init(cg)
+
+      use constants, only: xdim, ydim, zdim
+      use grid_cont, only: grid_container
+
+      implicit none
+
+      type(grid_container), pointer,  intent(inout) :: cg
+
+      ! this should work correctly also when dom%eff_dim < 3
+      cg%mg%r  = overrelax / 2.
+      cg%mg%rx = cg%dvol2 * cg%idx2
+      cg%mg%ry = cg%dvol2 * cg%idy2
+      cg%mg%rz = cg%dvol2 * cg%idz2
+      cg%mg%r  = cg%mg%r / (cg%mg%rx + cg%mg%ry + cg%mg%rz)
+      cg%mg%rx = overrelax_xyz(xdim) * cg%mg%rx * cg%mg%r
+      cg%mg%ry = overrelax_xyz(ydim) * cg%mg%ry * cg%mg%r
+      cg%mg%rz = overrelax_xyz(zdim) * cg%mg%rz * cg%mg%r
+      cg%mg%r  = cg%mg%r * cg%dvol2
+      !>
+      !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
+      !! and overrelaxation factors are required to get any convergence (often poor)
+      !<
+
+   end subroutine mgg_cg_init
+
+!!$!> \brief Deallocate what was allocated in mg_cg_init
+!!$
+!!$   subroutine mgg_cg_cleanup(cg)
+!!$
+!!$      use grid_cont, only: grid_container
+!!$
+!!$      implicit none
+!!$
+!!$      type(grid_container), pointer,  intent(inout) :: cg
+!!$
+!!$   end subroutine mgg_cg_cleanup
 
 !>
 !! \brief This routine tries to construct first guess of potential based on previously obtained solution, if any.

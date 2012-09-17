@@ -72,7 +72,7 @@ contains
       use hydrostatic,           only: cleanup_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
-      use multigrid,             only: init_multigrid, init_multigrid_ext
+      use multigrid,             only: init_multigrid, init_multigrid_ext, multigrid_par
 #endif /* MULTIGRID */
 #ifdef SN_SRC
       use snsources,             only: init_snsources
@@ -155,6 +155,7 @@ contains
       call init_decomposition
 #ifdef MULTIGRID
       call init_multigrid_ext ! Has to be called before init_grid
+      call multigrid_par
 #endif /* MULTIGRID */
 
       call init_grid         ! Most of the cg's vars are now initialized, only arrays left

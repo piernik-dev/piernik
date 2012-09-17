@@ -47,7 +47,7 @@ module multigrid_diffusion
    implicit none
 
    private
-   public :: init_multigrid_diff, init_multigrid_diff_post, cleanup_multigrid_diff, multigrid_solve_diff
+   public :: multigrid_diff_par, init_multigrid_diff, cleanup_multigrid_diff, multigrid_solve_diff
    public :: diff_tstep_fac, diff_explicit, diff_dt_crs_orig
 
    ! namelist parameters
@@ -104,7 +104,7 @@ contains
 !! The list is active while \b "COSM_RAYS" and \b "MULTIGRID" are defined.
 !! \n \n
 !<
-   subroutine init_multigrid_diff
+   subroutine multigrid_diff_par
 
       use cg_list_global, only: all_cg
       use constants,      only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one
@@ -122,9 +122,9 @@ contains
       namelist /MULTIGRID_DIFFUSION/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, overrelax, &
            &                         diff_theta, diff_tstep_fac, diff_explicit, allow_explicit, diff_bnd_str
 
-      if (.not.frun) call die("[multigrid_diffusion:init_multigrid_diff] Called more than once.")
+      if (.not.frun) call die("[multigrid_diffusion:multigrid_diff_par] Called more than once.")
       frun = .false.
-      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_gravdiffusion:init_multigrid_diff] non-cartesian geometry not implemented yet.")
+      if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_gravdiffusion:multigrid_diff_par] non-cartesian geometry not implemented yet.")
 
       ! Default values for namelist variables
       norm_tol       = 1.e-2
@@ -194,7 +194,7 @@ contains
          case ("zero", "cold", "antireflecting")
             diff_extbnd = BND_NEGREF
          case default
-            write(msg,'(3a)')"[multigrid_diffusion:init_multigrid_diff] Non-recognized boundary description '",diff_bnd_str,"'"
+            write(msg,'(3a)')"[multigrid_diffusion:multigrid_diff_par] Non-recognized boundary description '",diff_bnd_str,"'"
             call die(msg)
       end select
 
@@ -208,12 +208,12 @@ contains
       endif
 
       if (overrelax /= 1 .and. master) then
-         write(msg, '(a,f8.5)')"[multigrid_diffusion:init_multigrid_diff] Overrelaxation factor = ", overrelax
+         write(msg, '(a,f8.5)')"[multigrid_diffusion:multigrid_diff_par] Overrelaxation factor = ", overrelax
          call warn(msg)
       endif
 
       if (single_base .and. nproc > 1) then
-         call warn("[multigrid_diffusion:init_multigrid_diff] single_base disabled just in case")
+         call warn("[multigrid_diffusion:multigrid_diff_par] single_base disabled just in case")
          single_base = (nproc == 1)
       endif
 
@@ -224,27 +224,27 @@ contains
       idiffb(ydim) = qna%ind(diff_by_n)
       idiffb(zdim) = qna%ind(diff_bz_n)
 
-   end subroutine init_multigrid_diff
+   end subroutine multigrid_diff_par
 
 !!$ ============================================================================
 !>
 !! \brief Initialization - continued after allocation of everything interesting
 !<
 
-   subroutine init_multigrid_diff_post
+   subroutine init_multigrid_diff
 
       use dataio_pub,         only: die
       use fluidindex,         only: flind
 
       implicit none
 
-      if (allocated(norm_was_zero)) call die("[multigrid_diffusion:init_multigrid] norm_was_zero already allocated")
+      if (allocated(norm_was_zero)) call die("[multigrid_diffusion:init_multigrid_diff] norm_was_zero already allocated")
       allocate(norm_was_zero(flind%crs%all))
       norm_was_zero(:) = .false.
 
       call vstat%init(max_cycles)
 
-   end subroutine init_multigrid_diff_post
+   end subroutine init_multigrid_diff
 
 !!$ ============================================================================
 !>
