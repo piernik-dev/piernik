@@ -53,7 +53,7 @@ contains
       use fluidindex,            only: flind
       use global,                only: init_global
       use grid,                  only: init_grid
-      use grid_container_ext,    only: ext_ptrs
+      use grid_container_ext,    only: cg_extptrs
       use gridgeometry,          only: init_geometry
       use initfluids,            only: init_fluids, sanitize_smallx_checks
       use interactions,          only: init_interactions
@@ -120,7 +120,7 @@ contains
       call init_piernikiodebug
 #endif /* DEBUG */
 
-      call ext_ptrs%epa_init
+      call cg_extptrs%epa_init
 
       call init_dataio_parameters ! Required very early to call colormessage without side-effects
 

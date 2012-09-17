@@ -127,7 +127,7 @@ contains
 
       use cg_list,            only: cg_list_element
       use grid_cont,          only: grid_container
-      use grid_container_ext, only: ext_ptrs
+      use grid_container_ext, only: cg_extptrs
 
       implicit none
 
@@ -151,8 +151,8 @@ contains
       enddo
 
       call cg%cleanup
-      do ep = ubound(ext_ptrs%ext, dim=1), lbound(ext_ptrs%ext, dim=1), -1
-         if (associated(ext_ptrs%ext(ep)%cleanup)) call ext_ptrs%ext(ep)%cleanup(cg)
+      do ep = ubound(cg_extptrs%ext, dim=1), lbound(cg_extptrs%ext, dim=1), -1
+         if (associated(cg_extptrs%ext(ep)%cleanup)) call cg_extptrs%ext(ep)%cleanup(cg)
       enddo
       deallocate(cg)
 

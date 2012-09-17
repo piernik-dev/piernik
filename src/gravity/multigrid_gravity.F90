@@ -569,7 +569,7 @@ contains
 
    subroutine init_multigrid_grav_ext(after_label)
 
-      use grid_container_ext, only: cg_ext, ext_ptrs
+      use grid_container_ext, only: cg_ext, cg_extptrs
 
       implicit none
 
@@ -579,7 +579,7 @@ contains
 
       mgg_cg_init_p => mgg_cg_init
       mgg_cg_cleanup_p => null() !mgg_cg_cleanup
-      call ext_ptrs%extend(mgg_cg_init_p, mgg_cg_cleanup_p, "multigrid_gravity", after_label)
+      call cg_extptrs%extend(mgg_cg_init_p, mgg_cg_cleanup_p, "multigrid_gravity", after_label)
 
    end subroutine init_multigrid_grav_ext
 

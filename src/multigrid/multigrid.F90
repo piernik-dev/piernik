@@ -304,7 +304,7 @@ contains
    subroutine init_multigrid_ext
 
       use constants,          only: dsetnamelen
-      use grid_container_ext, only: cg_ext, ext_ptrs
+      use grid_container_ext, only: cg_ext, cg_extptrs
 #ifdef GRAV
       use multigrid_gravity,  only: init_multigrid_grav_ext
 #endif /* GRAV */
@@ -316,7 +316,7 @@ contains
 
       mg_cg_init_p => mg_cg_init
       mg_cg_cleanup_p => mg_cg_cleanup
-      call ext_ptrs%extend(mg_cg_init_p, mg_cg_cleanup_p, mg_ext_name)
+      call cg_extptrs%extend(mg_cg_init_p, mg_cg_cleanup_p, mg_ext_name)
 
 #ifdef GRAV
       call init_multigrid_grav_ext(mg_ext_name)

@@ -36,7 +36,7 @@ module grid_container_ext
    implicit none
 
    private
-   public :: cg_ext, ext_ptrs
+   public :: cg_ext, cg_extptrs
 
    interface
 
@@ -68,7 +68,7 @@ module grid_container_ext
       procedure :: extend_dependent   !< Add a new entry that must be called after an existing one
    end type ext_ptr_array
 
-   type(ext_ptr_array) :: ext_ptrs
+   type(ext_ptr_array) :: cg_extptrs
 
 contains
 

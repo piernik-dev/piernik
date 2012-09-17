@@ -49,7 +49,7 @@ contains
       use fluidindex,         only: cleanup_fluidindex
       use global,             only: cleanup_global
       use grid,               only: cleanup_grid
-      use grid_container_ext, only: ext_ptrs
+      use grid_container_ext, only: cg_extptrs
       use initfluids,         only: cleanup_fluids
       use interactions,       only: cleanup_interactions
       use mpisetup,           only: cleanup_mpi
@@ -83,7 +83,7 @@ contains
       call cleanup_fluidindex;    call nextdot(.false., print_t = .true.)
       call cleanup_timers;        call nextdot(.false.)
       call cleanup_diagnostics;   call nextdot(.false.)
-      call ext_ptrs%epa_cleanup;  call nextdot(.false.)
+      call cg_extptrs%epa_cleanup;  call nextdot(.false.)
 #ifdef PIERNIK_OPENCL
       call cleanup_opencl;        call nextdot(.false.)
 #endif /* PIERNIK_OPENCL */
