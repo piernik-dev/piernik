@@ -482,21 +482,11 @@ contains
 
    subroutine zero_boundaries(this)
 
-      use cg_list, only: cg_list_element
-
       implicit none
 
       class(cg_list_dataop_T), intent(inout) :: this  !< list for which clear the boundary values (typically a single level)
 
-      type(cg_list_element), pointer :: cgl
-
-      cgl => this%first
-      do while (associated(cgl))
-         cgl%cg%mg%bnd_x(:,:,:) = 0.
-         cgl%cg%mg%bnd_y(:,:,:) = 0.
-         cgl%cg%mg%bnd_z(:,:,:) = 0.
-         cgl => cgl%nxt
-      enddo
+      call this%dirty_boundaries(0.)
 
    end subroutine zero_boundaries
 

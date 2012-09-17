@@ -276,11 +276,6 @@ contains
       defect     = qna%ind(defect_n)
       correction = qna%ind(correction_n)
 
-      call all_cg%set_dirty(source)
-      call all_cg%set_dirty(solution)
-      call all_cg%set_dirty(defect)
-      call all_cg%set_dirty(correction)
-
       tot_ts = 0.
 
 #ifdef GRAV
@@ -331,8 +326,7 @@ contains
 
    subroutine mg_cg_init(cg)
 
-      use constants, only: LO, HI, dirtyH
-      use global,    only: dirty_debug
+      use constants, only: LO, HI
       use grid_cont, only: grid_container
 
       implicit none
@@ -344,13 +338,6 @@ contains
       allocate(cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, LO:HI))
       allocate(cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, LO:HI))
       allocate(cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, LO:HI))
-
-      ! array initialization
-      if (dirty_debug) then
-         cg%mg%bnd_x(:, :, :) = dirtyH
-         cg%mg%bnd_y(:, :, :) = dirtyH
-         cg%mg%bnd_z(:, :, :) = dirtyH
-      endif
 
    end subroutine mg_cg_init
 

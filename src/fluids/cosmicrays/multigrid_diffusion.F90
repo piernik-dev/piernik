@@ -274,7 +274,7 @@ contains
       use fluidindex,    only: flind
       use global,        only: dt
       use mpisetup,      only: master
-      use multigridvars, only: ts, tot_ts, stdout
+      use multigridvars, only: ts, tot_ts, stdout, all_dirty
       use timer,         only: set_timer
 
       implicit none
@@ -283,6 +283,7 @@ contains
       integer       :: cr_id         ! maybe we should make this variable global in the module and do not pass it as an argument?
 
       ts =  set_timer("multigrid_diffusion", .true.)
+      call all_dirty
 
       if (diff_explicit .or. (allow_explicit .and. dt/diff_dt_crs_orig<1)) then
 

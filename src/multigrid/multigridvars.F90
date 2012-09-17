@@ -82,4 +82,29 @@ module multigridvars
    end enum
    integer            :: grav_bnd                                     !< boundary type for computational domain
 
+ contains
+
+!>
+!! \brief Put insane FP values into all multigrid working arrays
+!!
+!! \details If there are any uninitialized values used in the solver under certain circumstances, the dirtyH will most likely propagate and be easily detectable.
+!<
+
+   subroutine all_dirty
+
+      use cg_list_global, only: all_cg
+      use constants,      only: dirtyH
+      use global,         only: dirty_debug
+
+      implicit none
+
+      call all_cg%set_dirty(source)
+      call all_cg%set_dirty(solution)
+      call all_cg%set_dirty(defect)
+      call all_cg%set_dirty(correction)
+
+      if (dirty_debug) call all_cg%reset_boundaries(dirtyH)
+
+   end subroutine all_dirty
+
 end module multigridvars

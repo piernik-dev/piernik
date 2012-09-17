@@ -947,12 +947,12 @@ contains
 
    subroutine multigrid_solve_grav(i_all_dens)
 
-      use cg_leaves,     only: leaves
-      use constants,     only: sgp_n
-      use multigridvars, only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated
-      use multipole,     only: multipole_solver
+      use cg_leaves,        only: leaves
+      use constants,        only: sgp_n
+      use multigridvars,    only: solution, tot_ts, ts, grav_bnd, bnd_dirichlet, bnd_givenval, bnd_isolated, all_dirty
+      use multipole,        only: multipole_solver
       use named_array_list, only: qna
-      use timer,         only: set_timer
+      use timer,            only: set_timer
 
       implicit none
 
@@ -962,6 +962,9 @@ contains
       integer(kind=4), dimension(0) :: empty_array !< trick to avoid compiler warnings on possibly uninitialized i_all_dens.0 in init_source
 
       ts =  set_timer("multigrid", .true.)
+
+      call all_dirty
+
       grav_bnd_global = grav_bnd
 
       if (grav_bnd_global == bnd_isolated) then
