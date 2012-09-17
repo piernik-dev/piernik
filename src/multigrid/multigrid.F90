@@ -177,14 +177,12 @@ contains
       use cg_list,             only: cg_list_element
       use cg_list_global,      only: all_cg
       use cg_level_connected,  only: cg_level_connected_T, base_lev, finest, coarsest
-      use constants,           only: PIERNIK_INIT_GRID, I_ONE, O_INJ, refinement_factor, base_level_offset
+      use constants,           only: PIERNIK_INIT_GRID, I_ONE, refinement_factor, base_level_offset
       use dataio_pub,          only: printinfo, warn, die, code_progress, msg
-      use cart_comm,           only: cdd
-      use domain,              only: dom, is_uneven, minsize
+      use domain,              only: dom, minsize
       use grid_cont,           only: grid_container
-      use mpi,                 only: MPI_LOGICAL, MPI_IN_PLACE, MPI_LOR, MPI_COMM_NULL
-      use mpisetup,            only: comm, mpi_err, master
-      use multigridvars,       only: single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, ord_prolong, is_mg_uneven
+      use mpisetup,            only: master
+      use multigridvars,       only: single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, ord_prolong
       use named_array_list,    only: qna
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav
@@ -246,7 +244,6 @@ contains
          curl => curl%coarser
       enddo
 
-      is_mg_uneven = is_uneven
       curl => finest
       do while (associated(curl))
 
@@ -260,20 +257,11 @@ contains
                call die(msg)
             endif
 
-            if (associated(finest%first)) then
-               if (any(cg%n_b(:) * refinement_factor**(finest%level_id - curl%level_id) /= finest%first%cg%n_b(:) .and. dom%has_dir(:)) .and. &
-                    (.not. associated(curl, coarsest) .or. .not. single_base)) is_mg_uneven = .true.
-            endif
-
             cgl => cgl%nxt
          enddo
 
          curl => curl%coarser ! descend until null() is encountered
       enddo
-      call MPI_Allreduce(MPI_IN_PLACE, is_mg_uneven, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
-
-      if ((is_mg_uneven .or. is_uneven .or. cdd%comm3d == MPI_COMM_NULL) .and. ord_prolong /= O_INJ .and. master) &
-           call warn("[multigrid:init_multigrid] prolongation order /= injection may not work correctly on uneven or noncartesian domains yet.")
 
 #ifdef GRAV
       call init_multigrid_grav

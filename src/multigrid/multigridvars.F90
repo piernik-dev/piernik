@@ -63,9 +63,7 @@ module multigridvars
    ! miscellaneous
    real                    :: ts                                      !< time for runtime profiling
    real                    :: tot_ts                                  !< total multigrid time
-   logical                 :: is_mg_uneven                            !< .true. when domain shapes differ across procesors, even on the coarsest grids
    logical                 :: single_base                             !< .true. when the whole base level is located on a single cpu
-   logical                 :: need_general_pf                         !< .false. only for most regular domain decomposition
    logical                 :: fft_full_relax                          !< Perform full or boundary relaxation after local FFT solve
    integer(kind=4)         :: nsmool                                  !< smoothing cycles per call
    integer(kind=4)         :: nsmoof                                  !< FFT iterations per call

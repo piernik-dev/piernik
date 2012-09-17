@@ -380,16 +380,14 @@ contains
 
    subroutine init_multigrid_grav
 
-      use cart_comm,           only: cdd
       use cg_leaves,           only: leaves
       use cg_level_connected,  only: cg_level_connected_T, finest, coarsest
       use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen
       use dataio_pub,          only: die, warn, printinfo, msg
       use domain,              only: dom
-      use mpi,                 only: MPI_COMM_NULL
       use mpisetup,            only: master, nproc
       use multigrid_fftapprox, only: mpi_multigrid_prep_grav
-      use multigridvars,       only: is_mg_uneven, need_general_pf, single_base, bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
+      use multigridvars,       only: bnd_periodic, bnd_dirichlet, bnd_isolated, grav_bnd
       use multipole,           only: init_multipole, coarsen_multipole
       use named_array_list,    only: qna
 
@@ -398,11 +396,9 @@ contains
       type(cg_level_connected_T), pointer :: curl
       character(len=dsetnamelen) :: FFTn
 
-      need_general_pf = cdd%comm3d == MPI_COMM_NULL .or. single_base .or. is_mg_uneven
-
-      if (need_general_pf .and. coarsen_multipole /= 0) then
+      if (coarsen_multipole /= 0) then
          coarsen_multipole = 0
-         if (master) call warn("[multigrid_gravity:init_multigrid_grav] multipole coarsening on uneven domains or with cdd%comm3d == MPI_COMM_NULL is not implemented yet.")
+         if (master) call warn("[multigrid_gravity:init_multigrid_grav] multipole coarsening temporarily disabled")
       endif
 
       call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution

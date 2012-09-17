@@ -75,7 +75,7 @@ contains
       use cg_level_connected, only: cg_level_connected_T, coarsest
       use grid_cont,     only: pr_segment, grid_container, is_overlap
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req
-      use multigridvars, only: ord_prolong_face_norm, need_general_pf
+      use multigridvars, only: ord_prolong_face_norm
 #ifdef DEBUG
       use constants,     only: two
       use piernikdebug,  only: aux_R
@@ -95,7 +95,8 @@ contains
       integer, parameter :: max_opfn = 2
       real, dimension(0:max_opfn) :: opfn_c_ff, opfn_c_cf
 
-      if (.not. need_general_pf) return
+      call warn("[multigrid_fft_approximation:mpi_multigrid_prep_grav] FFT in multigrid temporarily disabled")
+      return
 
       call inflate_req(size([LO, HI]) * 2 * nproc * ndims)
 
@@ -560,7 +561,7 @@ contains
       use grid_cont,     only: pr_segment
       use mpi,           only: MPI_DOUBLE_PRECISION
       use mpisetup,      only: comm, mpi_err, req, status, master, inflate_req
-      use multigridvars, only: ord_prolong_face_norm, ord_prolong_face_par, need_general_pf
+      use multigridvars, only: ord_prolong_face_norm, ord_prolong_face_par
 
       implicit none
 
@@ -618,7 +619,9 @@ contains
       coarse => fine%coarser
       if (.not. associated(coarse)) call die("[multigrid_fft_approximation:prolong_faces] coarse == null()")
 
-      if (need_general_pf) then
+      if (.true.) then
+
+         call warn("[multigrid_fft_approximation:prolong_faces] temporarily disabled")
 
          if (ord_prolong_face_par /= O_INJ) then
             ord_prolong_face_par = O_INJ
