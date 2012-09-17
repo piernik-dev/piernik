@@ -62,6 +62,7 @@ module cg_list_global
       integer(kind=4) :: ord_prolong_nb                !< Maximum number of boundary cells required for prolongation
 
     contains
+      procedure :: init              !< Initialize
       procedure :: reg_var           !< Add a variable (cg%q or cg%w) to all grid containers
       procedure :: register_fluids   !< Register all crucial fields, which we cannot live without
       procedure :: check_na          !< Check if all named arrays are consistently registered
@@ -72,6 +73,22 @@ module cg_list_global
    character(len=dsetnamelen), parameter :: all_cg_n = "all_cg" !< name of the all_cg list
 
 contains
+
+!> \brief Initialize
+
+   subroutine init(this)
+
+      use constants,        only: I_ZERO
+      use list_of_cg_lists, only: all_lists
+
+      implicit none
+
+      class(cg_list_global_T), intent(inout) :: this           !< object invoking type-bound procedure
+
+      call all_lists%register(this, all_cg_n)
+      this%ord_prolong_nb = I_ZERO
+
+   end subroutine init
 
 !> \brief destroy the global list, all grid containers and all lists
 

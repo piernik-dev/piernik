@@ -742,6 +742,7 @@ contains
          !> \todo some variables may need special care on external boundaries
          call this%arr3d_boundaries(iv, bnd_type = BND_REF, corners = .true.) ! nb =  int(stencil_range, kind=4) ! not needed for injection
       endif
+      call this%check_dirty(iv, "prolong-")
 
       nr = 0
       ! be ready to receive everything into right buffers

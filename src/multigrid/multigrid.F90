@@ -77,13 +77,16 @@ contains
 !<
    subroutine multigrid_par
 
+      use cg_list_global,      only: all_cg
       use constants,           only: PIERNIK_INIT_DOMAIN, O_INJ, O_LIN, O_I2
       use dataio_pub,          only: par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: dom
       use global,              only: dirty_debug, do_ascii_dump
       use mpisetup,            only: master, slave, nproc, ibuff, lbuff, piernik_MPI_Bcast
-      use multigridvars,       only: single_base, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts
+      use multigridvars,       only: single_base, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, &
+           &                         source_n, solution_n, defect_n, correction_n, source, solution, defect, correction
+      use named_array_list,    only: qna
 #ifdef GRAV
       use multigrid_gravity,   only: multigrid_grav_par
 #endif /* GRAV */
@@ -170,20 +173,28 @@ contains
 
       tot_ts = 0.
 
+      call all_cg%reg_var(source_n,     ord_prolong = ord_prolong, multigrid = .true.)
+      call all_cg%reg_var(solution_n,   ord_prolong = ord_prolong, multigrid = .true.)
+      call all_cg%reg_var(defect_n,     ord_prolong = ord_prolong, multigrid = .true.)
+      call all_cg%reg_var(correction_n, ord_prolong = ord_prolong, multigrid = .true.)
+
+      source     = qna%ind(source_n)
+      solution   = qna%ind(solution_n)
+      defect     = qna%ind(defect_n)
+      correction = qna%ind(correction_n)
+
    end subroutine multigrid_par
 
    subroutine init_multigrid
 
       use cg_list,             only: cg_list_element
-      use cg_list_global,      only: all_cg
       use cg_level_connected,  only: cg_level_connected_T, base_lev, finest, coarsest
       use constants,           only: PIERNIK_INIT_GRID, I_ONE, refinement_factor, base_level_offset
       use dataio_pub,          only: printinfo, warn, die, code_progress, msg
       use domain,              only: dom, minsize
       use grid_cont,           only: grid_container
       use mpisetup,            only: master
-      use multigridvars,       only: single_base, source_n, solution_n, defect_n, correction_n, source, solution, defect, correction, ord_prolong
-      use named_array_list,    only: qna
+      use multigridvars,       only: single_base
 #ifdef GRAV
       use multigrid_gravity,   only: init_multigrid_grav
 #endif /* GRAV */
@@ -199,16 +210,6 @@ contains
       if (code_progress < PIERNIK_INIT_GRID) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
       ! This check is too weak (geometry), arrays are required only for multigrid_gravity
 
-      ! Cannot move these calls to all_cg%reg_var to multigrid_par routine, because the variables would not be properly registered before init_grid was called
-      call all_cg%reg_var(source_n,     ord_prolong = ord_prolong, multigrid = .true.)
-      call all_cg%reg_var(solution_n,   ord_prolong = ord_prolong, multigrid = .true.)
-      call all_cg%reg_var(defect_n,     ord_prolong = ord_prolong, multigrid = .true.)
-      call all_cg%reg_var(correction_n, ord_prolong = ord_prolong, multigrid = .true.)
-
-      source     = qna%ind(source_n)
-      solution   = qna%ind(solution_n)
-      defect     = qna%ind(defect_n)
-      correction = qna%ind(correction_n)
 
       if (level_max <= 0) then
          if (master) call warn("[multigrid:init_multigrid] level_max < 1: solving on a single grid may be extremely slow")

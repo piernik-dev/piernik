@@ -1384,9 +1384,9 @@ contains
 
    subroutine approximate_solution(curl, src, soln)
 
-      use cg_level_connected,       only: cg_level_connected_T
-      use constants,           only: fft_none
-      use multigrid_fftapprox, only: approximate_solution_fft
+      use cg_level_connected,  only: cg_level_connected_T
+!!$      use constants,           only: fft_none
+!!$      use multigrid_fftapprox, only: approximate_solution_fft
 
       implicit none
 
@@ -1396,11 +1396,11 @@ contains
 
       call curl%check_dirty(src, "approx_soln src-")
 
-      if (curl%fft_type /= fft_none) then
-         call approximate_solution_fft(curl, src, soln)
-      else
+!!$      if (curl%fft_type /= fft_none) then
+!!$         call approximate_solution_fft(curl, src, soln)
+!!$      else
          call approximate_solution_rbgs(curl, src, soln)
-      endif
+!!$      endif
 
       call curl%check_dirty(soln, "approx_soln soln+")
 

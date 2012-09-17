@@ -42,13 +42,11 @@ contains
 
    subroutine init_grid
 
-      use cg_leaves,        only: leaves
-      use cg_list_global,   only: all_cg, all_cg_n
-      use cg_level_connected,    only: base_lev, finest, coarsest
-      use constants,        only: PIERNIK_INIT_DOMAIN, I_ZERO, base_level_offset
-      use dataio_pub,       only: printinfo, die, code_progress
-      use domain,           only: dom
-      use list_of_cg_lists, only: all_lists
+      use cg_leaves,          only: leaves
+      use cg_level_connected, only: base_lev, finest, coarsest
+      use constants,          only: PIERNIK_INIT_DOMAIN, base_level_offset
+      use dataio_pub,         only: printinfo, die, code_progress
+      use domain,             only: dom
 
       implicit none
 
@@ -59,9 +57,6 @@ contains
 #endif /* VERBOSE */
 
       ! Create the empty main lists.with the base level
-
-      call all_lists%register(all_cg, all_cg_n)
-      all_cg%ord_prolong_nb = I_ZERO
 
       allocate(base_lev)
       finest => base_lev
