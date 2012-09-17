@@ -161,7 +161,7 @@ contains
       call pxffileno(lunit, fd, ierror)
       piernik_fnum = fd
 #else /* __INTEL_COMPILER */
-      piernik_fnum = fnum(lunit)
+      piernik_fnum = int(fnum(lunit), kind=4)
 #endif /* !__INTEL_COMPILER */
    end function piernik_fnum
 
