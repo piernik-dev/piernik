@@ -374,7 +374,7 @@ contains
       use cg_leaves,           only: leaves
       use cg_level_connected,  only: cg_level_connected_T, finest, coarsest
       use cg_list,             only: cg_list_element
-      use constants,           only: pi, dpi, GEO_XYZ, one, zero, half, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, dsetnamelen
+      use constants,           only: GEO_XYZ, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, dsetnamelen
       use dataio_pub,          only: die, warn, printinfo, msg
       use domain,              only: dom
       use grid_cont,           only: grid_container
@@ -387,8 +387,6 @@ contains
 
       implicit none
 
-      real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
-      integer :: i, j
       type(cg_level_connected_T), pointer :: curl
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
@@ -453,85 +451,10 @@ contains
          cgl => curl%first
          do while (associated(cgl))
             cg => cgl%cg
-            cg%mg%planf = 0
-            cg%mg%plani = 0
 
             if (curl%fft_type /= fft_none) then
-
                require_FFT = .true.
-
                if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav] FFT is not allowed in non-cartesian coordinates.")
-
-               select case (curl%fft_type)
-                  case (fft_rcr)
-                     cg%mg%nxc = cg%nxb / 2 + 1
-                  case (fft_dst)
-                     cg%mg%nxc = cg%nxb
-                  case default
-                     call die("[multigrid_gravity:init_multigrid_grav] Unknown FFT type.")
-               end select
-
-               if (allocated(cg%mg%Green3D) .or. allocated(cg%mg%src)) call die("[multigrid_gravity:init_multigrid_grav] Green3D or src arrays already allocated")
-               allocate(cg%mg%Green3D(cg%mg%nxc, cg%nyb, cg%nzb))
-               allocate(cg%mg%src    (cg%nxb,    cg%nyb, cg%nzb))
-
-               if (allocated(kx)) deallocate(kx)
-               if (allocated(ky)) deallocate(ky)
-               if (allocated(kz)) deallocate(kz)
-               allocate(kx(cg%mg%nxc), ky(cg%nyb), kz(cg%nzb))
-
-               select case (curl%fft_type)
-
-                  ! cg%mg%fft_norm is set such that the following sequence gives identity:
-                  ! call dfftw_execute(cg%mg%planf); cg%mg%fftr(:, :, :) = cg%mg%fftr(:, :, :) * cg%mg%fft_norm ; call dfftw_execute(cg%mg%plani)
-
-                  case (fft_rcr)
-                     if (allocated(cg%mg%fft)) call die("[multigrid_gravity:init_multigrid_grav] fft or Green3D array already allocated")
-                     allocate(cg%mg%fft(cg%mg%nxc, cg%nyb, cg%nzb))
-
-                     cg%mg%fft_norm = one / real( product(cg%n_b(:), mask=dom%has_dir(:)) ) ! No 4 pi G factor here because the source was already multiplied by it
-
-                     ! FFT local solver initialization for 2nd order (3-point) Laplacian
-                     ! sin(k*x-d) - 2.*sin(k*x) + sin(k*x+d) = 2 * (cos(d)-1) * sin(k*x) = -4 * sin(d/2)**2 * sin(k*x)
-                     ! For 4th order: a*sin(k*x) + b*(sin(k*x-d) + sin(k*x+d)) + c*(sin(k*x-2*d) + sin(k*x+2*d)), a+2*b+2*c == 0 it would be:
-                     ! 4*(a+b+(a+2*b)*cos(d)) * sin(d/2)**2 * sin(k*x)
-                     ! For 6th order: a*sin(k*x) + b*(sin(k*x-d) + sin(k*x+d)) + c*(sin(k*x-2*d) + sin(k*x+2*d)) + e*(sin(k*x-3*d) + sin(k*x+3*d)), a+2*b+2*c+2*e == 0 it would be:
-                     ! 2*(3*a+4*b+2*c+4*(a+2*b+c)*cos(d)+2*(a+2*(b+c))*cos(2*d)) * sin(d/2)**2 * sin(k*x)
-                     ! asymptotically: -d**2/2 for d<pi
-
-                     kx(:) = cg%idx2 * (cos(dpi/cg%nxb*[( j, j=0, cg%mg%nxc-1 )]) - one)
-                     ky(:) = cg%idy2 * (cos(dpi/cg%nyb*[( j, j=0, cg%nyb-1 )]) - one)
-                     kz(:) = cg%idz2 * (cos(dpi/cg%nzb*[( j, j=0, cg%nzb-1 )]) - one)
-                     call dfftw_plan_dft_r2c_3d(cg%mg%planf, cg%nxb, cg%nyb, cg%nzb, cg%mg%src, cg%mg%fft, fftw_flags)
-                     call dfftw_plan_dft_c2r_3d(cg%mg%plani, cg%nxb, cg%nyb, cg%nzb, cg%mg%fft, cg%mg%src, fftw_flags)
-
-                  case (fft_dst)
-
-                     if (allocated(cg%mg%fftr)) call die("[multigrid_gravity:init_multigrid_grav] fftr array already allocated")
-                     allocate(cg%mg%fftr(cg%mg%nxc, cg%nyb, cg%nzb))
-
-                     cg%mg%fft_norm = one / (8. * real( product(cg%n_b(:), mask=dom%has_dir(:)) ))
-                     kx(:) = cg%idx2 * (cos(pi/cg%nxb*[( j, j=1, cg%mg%nxc )]) - one)
-                     ky(:) = cg%idy2 * (cos(pi/cg%nyb*[( j, j=1, cg%nyb )]) - one)
-                     kz(:) = cg%idz2 * (cos(pi/cg%nzb*[( j, j=1, cg%nzb )]) - one)
-                     call dfftw_plan_r2r_3d(cg%mg%planf, cg%nxb, cg%nyb, cg%nzb, cg%mg%src,  cg%mg%fftr, FFTW_RODFT10, FFTW_RODFT10, FFTW_RODFT10, fftw_flags)
-                     call dfftw_plan_r2r_3d(cg%mg%plani, cg%nxb, cg%nyb, cg%nzb, cg%mg%fftr, cg%mg%src,  FFTW_RODFT01, FFTW_RODFT01, FFTW_RODFT01, fftw_flags)
-
-                  case default
-                     call die("[multigrid_gravity:init_multigrid_grav] Unknown FFT type.")
-               end select
-
-               ! compute Green's function for 7-point 3D discrete laplacian
-               do i = 1, cg%mg%nxc
-                  do j = 1, cg%nyb
-                     where ( (kx(i) + ky(j) + kz(:)) /= 0 )
-                        cg%mg%Green3D(i,j,:) = half * cg%mg%fft_norm / (kx(i) + ky(j) + kz(:))
-                     elsewhere
-                        cg%mg%Green3D(i,j,:) = zero
-                     endwhere
-                  enddo
-               enddo
-
             endif
 
             cgl => cgl%nxt
@@ -561,10 +484,6 @@ contains
          if (master) call warn("[multigrid_gravity:init_multigrid_grav] cannot trust FFT solution on the finest level.")
          trust_fft_solution = .false.
       endif
-
-      if (allocated(kx)) deallocate(kx)
-      if (allocated(ky)) deallocate(ky)
-      if (allocated(kz)) deallocate(kz)
 
       if (grav_bnd == bnd_isolated) call init_multipole
 
@@ -668,12 +587,18 @@ contains
 
    subroutine mgg_cg_init(cg)
 
-      use constants, only: xdim, ydim, zdim
-      use grid_cont, only: grid_container
+      use cg_level_connected, only: cg_level_connected_T, coarsest
+      use constants,          only: xdim, ydim, zdim, fft_rcr, fft_dst, fft_none, pi, dpi, zero, half, one
+      use dataio_pub,         only: die
+      use domain,             only: dom
+      use grid_cont,          only: grid_container
 
       implicit none
 
       type(grid_container), pointer,  intent(inout) :: cg
+      type(cg_level_connected_T), pointer :: curl
+      real, allocatable, dimension(:)  :: kx, ky, kz             !< FFT kernel directional components for convolution
+      integer :: i, j
 
       ! this should work correctly also when dom%eff_dim < 3
       cg%mg%r  = overrelax / 2.
@@ -689,6 +614,90 @@ contains
       !! \deprecated BEWARE: some of the above invariants may be not optimally defined - the convergence ratio drops when dx /= dy or dy /= dz or dx /= dz
       !! and overrelaxation factors are required to get any convergence (often poor)
       !<
+
+      ! FFT solver storage and data
+      curl => coarsest
+      do while (associated(curl))
+         if (cg%level_id == curl%level_id) exit
+         curl => curl%finer
+      enddo
+
+      if (.not. associated(curl)) call die("[multigrid_gravity:mgg_cg_init] level not found")
+      if (cg%level_id /= curl%level_id) call die("[multigrid_gravity:mgg_cg_init] wrong level found")
+
+      cg%mg%planf = 0
+      cg%mg%plani = 0
+
+      if (curl%fft_type /= fft_none) then
+
+         select case (curl%fft_type)
+            case (fft_rcr)
+               cg%mg%nxc = cg%nxb / 2 + 1
+            case (fft_dst)
+               cg%mg%nxc = cg%nxb
+            case default
+               call die("[multigrid_gravity:mgg_cg_init] Unknown FFT type.")
+         end select
+
+         if (allocated(cg%mg%Green3D) .or. allocated(cg%mg%src)) call die("[multigrid_gravity:mgg_cg_init] Green3D or src arrays already allocated")
+         allocate(cg%mg%Green3D(cg%mg%nxc, cg%nyb, cg%nzb))
+         allocate(cg%mg%src    (cg%nxb,    cg%nyb, cg%nzb))
+
+         allocate(kx(cg%mg%nxc), ky(cg%nyb), kz(cg%nzb))
+
+         select case (curl%fft_type)
+
+            ! cg%mg%fft_norm is set such that the following sequence gives identity:
+            ! call dfftw_execute(cg%mg%planf); cg%mg%fftr(:, :, :) = cg%mg%fftr(:, :, :) * cg%mg%fft_norm ; call dfftw_execute(cg%mg%plani)
+
+            case (fft_rcr)
+               if (allocated(cg%mg%fft)) call die("[multigrid_gravity:mgg_cg_init] fft or Green3D array already allocated")
+               allocate(cg%mg%fft(cg%mg%nxc, cg%nyb, cg%nzb))
+
+               cg%mg%fft_norm = one / real( product(cg%n_b(:), mask=dom%has_dir(:)) ) ! No 4 pi G factor here because the source was already multiplied by it
+
+               ! FFT local solver initialization for 2nd order (3-point) Laplacian
+               ! sin(k*x-d) - 2.*sin(k*x) + sin(k*x+d) = 2 * (cos(d)-1) * sin(k*x) = -4 * sin(d/2)**2 * sin(k*x)
+               ! For 4th order: a*sin(k*x) + b*(sin(k*x-d) + sin(k*x+d)) + c*(sin(k*x-2*d) + sin(k*x+2*d)), a+2*b+2*c == 0 it would be:
+               ! 4*(a+b+(a+2*b)*cos(d)) * sin(d/2)**2 * sin(k*x)
+               ! For 6th order: a*sin(k*x) + b*(sin(k*x-d) + sin(k*x+d)) + c*(sin(k*x-2*d) + sin(k*x+2*d)) + e*(sin(k*x-3*d) + sin(k*x+3*d)), a+2*b+2*c+2*e == 0 it would be:
+               ! 2*(3*a+4*b+2*c+4*(a+2*b+c)*cos(d)+2*(a+2*(b+c))*cos(2*d)) * sin(d/2)**2 * sin(k*x)
+               ! asymptotically: -d**2/2 for d<pi
+
+               kx(:) = cg%idx2 * (cos(dpi/cg%nxb*[( j, j=0, cg%mg%nxc-1 )]) - one)
+               ky(:) = cg%idy2 * (cos(dpi/cg%nyb*[( j, j=0, cg%nyb-1 )]) - one)
+               kz(:) = cg%idz2 * (cos(dpi/cg%nzb*[( j, j=0, cg%nzb-1 )]) - one)
+               call dfftw_plan_dft_r2c_3d(cg%mg%planf, cg%nxb, cg%nyb, cg%nzb, cg%mg%src, cg%mg%fft, fftw_flags)
+               call dfftw_plan_dft_c2r_3d(cg%mg%plani, cg%nxb, cg%nyb, cg%nzb, cg%mg%fft, cg%mg%src, fftw_flags)
+
+            case (fft_dst)
+
+               if (allocated(cg%mg%fftr)) call die("[multigrid_gravity:mgg_cg_init] fftr array already allocated")
+               allocate(cg%mg%fftr(cg%mg%nxc, cg%nyb, cg%nzb))
+
+               cg%mg%fft_norm = one / (8. * real( product(cg%n_b(:), mask=dom%has_dir(:)) ))
+               kx(:) = cg%idx2 * (cos(pi/cg%nxb*[( j, j=1, cg%mg%nxc )]) - one)
+               ky(:) = cg%idy2 * (cos(pi/cg%nyb*[( j, j=1, cg%nyb )]) - one)
+               kz(:) = cg%idz2 * (cos(pi/cg%nzb*[( j, j=1, cg%nzb )]) - one)
+               call dfftw_plan_r2r_3d(cg%mg%planf, cg%nxb, cg%nyb, cg%nzb, cg%mg%src,  cg%mg%fftr, FFTW_RODFT10, FFTW_RODFT10, FFTW_RODFT10, fftw_flags)
+               call dfftw_plan_r2r_3d(cg%mg%plani, cg%nxb, cg%nyb, cg%nzb, cg%mg%fftr, cg%mg%src,  FFTW_RODFT01, FFTW_RODFT01, FFTW_RODFT01, fftw_flags)
+
+            case default
+               call die("[multigrid_gravity:mgg_cg_init] Unknown FFT type.")
+         end select
+
+         ! compute Green's function for 7-point 3D discrete laplacian
+         do i = 1, cg%mg%nxc
+            do j = 1, cg%nyb
+               where ( (kx(i) + ky(j) + kz(:)) /= 0 )
+                  cg%mg%Green3D(i,j,:) = half * cg%mg%fft_norm / (kx(i) + ky(j) + kz(:))
+               elsewhere
+                  cg%mg%Green3D(i,j,:) = zero
+               endwhere
+            enddo
+         enddo
+
+      endif
 
    end subroutine mgg_cg_init
 
@@ -1587,11 +1596,11 @@ contains
 
    subroutine fft_solve_roof
 
-      use cg_level_connected,       only: finest
+      use cg_level_connected,  only: finest
       use constants,           only: fft_none
       use dataio_pub,          only: die
       use grid_cont,           only: grid_container
-      use multigrid_fftapprox, only:  fft_convolve
+      use multigrid_fftapprox, only: fft_convolve
       use multigridvars,       only: source, solution
       use named_array,         only: p3
 
