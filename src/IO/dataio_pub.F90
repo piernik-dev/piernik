@@ -411,7 +411,6 @@ contains
 
    subroutine close_logs
       implicit none
-      logical :: lopen
 
       call close_txt_file(log_file, log_lun)
       call close_txt_file(tsl_file, tsl_lun)
