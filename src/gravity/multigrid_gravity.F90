@@ -137,7 +137,7 @@ contains
 !<
    subroutine multigrid_grav_par
 
-      use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2
+      use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2, I_ONE
       use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
       use cart_comm,     only: cdd
@@ -364,6 +364,16 @@ contains
 
       if (fft_patient) fftw_flags = FFTW_PATIENT
 
+      ! solution recycling
+      ord_time_extrap = min(nold_max-I_ONE, max(-I_ONE, ord_time_extrap))
+      nold = ord_time_extrap + 1
+      if (nold > 0) then
+         call inner%init_history(nold, "i")
+         if (grav_bnd == bnd_isolated) call outer%init_history(nold, "o")
+      endif
+
+      call vstat%init(max_cycles)
+
    end subroutine multigrid_grav_par
 
 !> \brief Initialization - continued after allocation of everything interesting
@@ -373,11 +383,9 @@ contains
       use cart_comm,           only: cdd
       use cg_leaves,           only: leaves
       use cg_level_connected,  only: cg_level_connected_T, finest, coarsest
-      use cg_list,             only: cg_list_element
-      use constants,           only: GEO_XYZ, sgp_n, I_ONE, fft_none, fft_dst, fft_rcr, dsetnamelen
+      use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen
       use dataio_pub,          only: die, warn, printinfo, msg
       use domain,              only: dom
-      use grid_cont,           only: grid_container
       use mpi,                 only: MPI_COMM_NULL
       use mpisetup,            only: master, nproc
       use multigrid_fftapprox, only: mpi_multigrid_prep_grav
@@ -388,8 +396,6 @@ contains
       implicit none
 
       type(cg_level_connected_T), pointer :: curl
-      type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
       character(len=dsetnamelen) :: FFTn
 
       need_general_pf = cdd%comm3d == MPI_COMM_NULL .or. single_base .or. is_mg_uneven
@@ -397,14 +403,6 @@ contains
       if (need_general_pf .and. coarsen_multipole /= 0) then
          coarsen_multipole = 0
          if (master) call warn("[multigrid_gravity:init_multigrid_grav] multipole coarsening on uneven domains or with cdd%comm3d == MPI_COMM_NULL is not implemented yet.")
-      endif
-
-      ! solution recycling
-      ord_time_extrap = min(nold_max-I_ONE, max(-I_ONE, ord_time_extrap))
-      nold = ord_time_extrap + 1
-      if (nold > 0) then
-         call inner%init_history(nold, "i")
-         if (grav_bnd == bnd_isolated) call outer%init_history(nold, "o")
       endif
 
       call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
@@ -448,17 +446,10 @@ contains
       curl => coarsest
       do while (associated(curl))
 
-         cgl => curl%first
-         do while (associated(cgl))
-            cg => cgl%cg
-
-            if (curl%fft_type /= fft_none) then
-               require_FFT = .true.
-               if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav] FFT is not allowed in non-cartesian coordinates.")
-            endif
-
-            cgl => cgl%nxt
-         enddo
+         if (curl%fft_type /= fft_none) then
+            require_FFT = .true.
+            if (dom%geometry_type /= GEO_XYZ) call die("[multigrid_gravity:init_multigrid_grav] FFT is not allowed in non-cartesian coordinates.")
+         endif
 
          if (master) then
             select case (curl%fft_type)
@@ -486,8 +477,6 @@ contains
       endif
 
       if (grav_bnd == bnd_isolated) call init_multipole
-
-      call vstat%init(max_cycles)
 
    end subroutine init_multigrid_grav
 
@@ -522,45 +511,12 @@ contains
 
    subroutine cleanup_multigrid_grav
 
-!!$      use constants,     only: LO, HI, ndims
-      use cg_list,        only: cg_list_element
-      use cg_list_global, only: all_cg
-!!$      use grid_cont,   only: tgt_list
       use multipole,      only: cleanup_multipole
 
       implicit none
 
-!!$      integer :: g, ib
-!!$      integer, parameter :: nseg = 2*(HI-LO+1)*ndims
-!!$      type(tgt_list), dimension(nseg) :: io_tgt
-      type(cg_list_element), pointer :: cgl
-
       call cleanup_multipole
       call vstat%cleanup
-
-      cgl => all_cg%first
-      do while (associated(cgl))
-         if (allocated(cgl%cg%mg%fft))     deallocate(cgl%cg%mg%fft)
-         if (allocated(cgl%cg%mg%fftr))    deallocate(cgl%cg%mg%fftr)
-         if (allocated(cgl%cg%mg%src))     deallocate(cgl%cg%mg%src)
-         if (allocated(cgl%cg%mg%Green3D)) deallocate(cgl%cg%mg%Green3D)
-
-         if (cgl%cg%mg%planf /= 0) call dfftw_destroy_plan(cgl%cg%mg%planf)
-         if (cgl%cg%mg%plani /= 0) call dfftw_destroy_plan(cgl%cg%mg%plani)
-
-!!$            io_tgt(1:nseg) = [ cgl%cg%mg%pfc_tgt, cgl%cg%mg%pff_tgt ]
-!!$            do ib = 1, nseg
-!!$               if (allocated(io_tgt(ib)%seg)) then
-!!$                  do g = lbound(io_tgt(ib)%seg, dim=1), ubound(io_tgt(ib)%seg, dim=1)
-!!$                     if (allocated(io_tgt(ib)%seg(g)%buf)) deallocate(io_tgt(ib)%seg(g)%buf)
-!!$                     if (allocated(io_tgt(ib)%seg(g)%f_lay)) deallocate(io_tgt(ib)%seg(g)%f_lay)
-!!$                  enddo
-!!$                  deallocate(io_tgt(ib)%seg)
-!!$               endif
-!!$            enddo
-         cgl => cgl%nxt
-      enddo
-
       call dfftw_cleanup
 
    end subroutine cleanup_multigrid_grav
@@ -577,8 +533,8 @@ contains
 
       procedure(cg_ext), pointer :: mgg_cg_init_p, mgg_cg_cleanup_p
 
-      mgg_cg_init_p => mgg_cg_init
-      mgg_cg_cleanup_p => null() !mgg_cg_cleanup
+      mgg_cg_init_p    => mgg_cg_init
+      mgg_cg_cleanup_p => mgg_cg_cleanup
       call cg_extptrs%extend(mgg_cg_init_p, mgg_cg_cleanup_p, "multigrid_gravity", after_label)
 
    end subroutine init_multigrid_grav_ext
@@ -701,17 +657,41 @@ contains
 
    end subroutine mgg_cg_init
 
-!!$!> \brief Deallocate what was allocated in mg_cg_init
-!!$
-!!$   subroutine mgg_cg_cleanup(cg)
-!!$
-!!$      use grid_cont, only: grid_container
-!!$
-!!$      implicit none
-!!$
-!!$      type(grid_container), pointer,  intent(inout) :: cg
-!!$
-!!$   end subroutine mgg_cg_cleanup
+!> \brief Deallocate what was allocated in mg_cg_init
+
+   subroutine mgg_cg_cleanup(cg)
+
+      use grid_cont, only: grid_container
+!!$      use constants,     only: LO, HI, ndims
+!!$      use grid_cont,   only: tgt_list
+
+      implicit none
+
+      type(grid_container), pointer,  intent(inout) :: cg
+!!$      integer :: g, ib
+!!$      integer, parameter :: nseg = 2*(HI-LO+1)*ndims
+!!$      type(tgt_list), dimension(nseg) :: io_tgt
+
+      if (allocated(cg%mg%fft))     deallocate(cg%mg%fft)
+      if (allocated(cg%mg%fftr))    deallocate(cg%mg%fftr)
+      if (allocated(cg%mg%src))     deallocate(cg%mg%src)
+      if (allocated(cg%mg%Green3D)) deallocate(cg%mg%Green3D)
+
+      if (cg%mg%planf /= 0) call dfftw_destroy_plan(cg%mg%planf)
+      if (cg%mg%plani /= 0) call dfftw_destroy_plan(cg%mg%plani)
+
+!!$         io_tgt(1:nseg) = [ cgl%cg%mg%pfc_tgt, cgl%cg%mg%pff_tgt ]
+!!$            do ib = 1, nseg
+!!$               if (allocated(io_tgt(ib)%seg)) then
+!!$                  do g = lbound(io_tgt(ib)%seg, dim=1), ubound(io_tgt(ib)%seg, dim=1)
+!!$                     if (allocated(io_tgt(ib)%seg(g)%buf)) deallocate(io_tgt(ib)%seg(g)%buf)
+!!$                     if (allocated(io_tgt(ib)%seg(g)%f_lay)) deallocate(io_tgt(ib)%seg(g)%f_lay)
+!!$                  enddo
+!!$                  deallocate(io_tgt(ib)%seg)
+!!$               endif
+!!$            enddo
+
+   end subroutine mgg_cg_cleanup
 
 !>
 !! \brief This routine tries to construct first guess of potential based on previously obtained solution, if any.

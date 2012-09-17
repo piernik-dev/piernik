@@ -47,7 +47,7 @@ module multigrid_diffusion
    implicit none
 
    private
-   public :: multigrid_diff_par, init_multigrid_diff, cleanup_multigrid_diff, multigrid_solve_diff
+   public :: multigrid_diff_par, cleanup_multigrid_diff, multigrid_solve_diff
    public :: diff_tstep_fac, diff_explicit, diff_dt_crs_orig
 
    ! namelist parameters
@@ -106,13 +106,14 @@ contains
 !<
    subroutine multigrid_diff_par
 
-      use cg_list_global, only: all_cg
-      use constants,      only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one
-      use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
-      use dataio_pub,     only: die, warn, msg
-      use domain,         only: dom
-      use mpisetup,       only: master, slave, nproc, ibuff, rbuff, lbuff, cbuff, piernik_MPI_Bcast
-      use multigridvars,  only: single_base
+      use cg_list_global,   only: all_cg
+      use constants,        only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one
+      use dataio_pub,       only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use dataio_pub,       only: die, warn, msg
+      use domain,           only: dom
+      use fluidindex,       only: flind
+      use mpisetup,         only: master, slave, nproc, ibuff, rbuff, lbuff, cbuff, piernik_MPI_Bcast
+      use multigridvars,    only: single_base
       use named_array_list, only: qna
 
       implicit none
@@ -224,27 +225,13 @@ contains
       idiffb(ydim) = qna%ind(diff_by_n)
       idiffb(zdim) = qna%ind(diff_bz_n)
 
-   end subroutine multigrid_diff_par
-
-!!$ ============================================================================
-!>
-!! \brief Initialization - continued after allocation of everything interesting
-!<
-
-   subroutine init_multigrid_diff
-
-      use dataio_pub,         only: die
-      use fluidindex,         only: flind
-
-      implicit none
-
       if (allocated(norm_was_zero)) call die("[multigrid_diffusion:init_multigrid_diff] norm_was_zero already allocated")
       allocate(norm_was_zero(flind%crs%all))
       norm_was_zero(:) = .false.
 
       call vstat%init(max_cycles)
 
-   end subroutine init_multigrid_diff
+   end subroutine multigrid_diff_par
 
 !!$ ============================================================================
 !>
