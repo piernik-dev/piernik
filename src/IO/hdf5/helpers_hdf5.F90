@@ -68,7 +68,8 @@ contains
 !! \todo check if HDF5 library has been already initialized
 !<
    subroutine create_corefile(fname, f_id, incr, bstore)
-      use hdf5,          only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DEFAULT_F
+      use hdf5,          only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DEFAULT_F, h5open_f, h5pcreate_f, &
+         & h5pset_fapl_core_f, h5fcreate_f
       implicit none
       character(len=*), intent(in)  :: fname   !< Filename
       integer(HID_T), intent(inout) :: f_id    !< File id
@@ -90,15 +91,15 @@ contains
 
       ! Create a property list for file access
       call h5pcreate_f(H5P_FILE_ACCESS_F, faplist_id, hdferr)
-      if (hdferr /= 0) call die("[helpers_hdf5:create_corefile] Failed to create property list")
+!      if (hdferr /= 0) call die("[helpers_hdf5:create_corefile] Failed to create property list")
 
       ! Use magical "core"
       call h5pset_fapl_core_f(faplist_id, increment, backing_store, hdferr)
-      if (hdferr /= 0) call die("[helpers_hdf5:create_corefile] Failed to use core driver")
+!      if (hdferr /= 0) call die("[helpers_hdf5:create_corefile] Failed to use core driver")
 
       ! Create the file with the property list
       call h5fcreate_f(fname, H5F_ACC_TRUNC_F, f_id, hdferr, H5P_DEFAULT_F, faplist_id)
-      if (hdferr /= 0) call die("[helpers_hdf5:create_corefile] Failed to create file in memory")
+!      if (hdferr /= 0) call die("[helpers_hdf5:create_corefile] Failed to create file in memory")
       return
    end subroutine create_corefile
 
