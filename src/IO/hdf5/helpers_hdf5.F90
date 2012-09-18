@@ -33,6 +33,8 @@
 !<
 module helpers_hdf5
 
+   use hdf5, only: SIZE_T
+
    implicit none
 
    private
@@ -42,8 +44,9 @@ module helpers_hdf5
       enumerator :: I_ONE = 1, I_TWO
    end enum
 
-   integer, parameter :: default_increment = 1024**2   !< Specifies the increment by which allocated memory is to be
-                                                       !< increased each time more memory is required in core file.
+   integer(kind=SIZE_T), parameter :: default_increment = 1024**2 !< Specifies the increment by which allocated
+                                                                  !< memory is to be increased each time more
+                                                                  !< memory is required in core file.
    logical, parameter :: default_backing_store = .false.  !< Flag to indicate that entire file contents are flushed to
                                                           !< a file with the same name as the core file
 
@@ -69,15 +72,15 @@ contains
 !<
    subroutine create_corefile(fname, f_id, incr, bstore)
       use hdf5,          only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DEFAULT_F, h5open_f, h5pcreate_f, &
-         & h5pset_fapl_core_f, h5fcreate_f
+         & h5pset_fapl_core_f, h5fcreate_f, SIZE_T
       implicit none
       character(len=*), intent(in)  :: fname   !< Filename
       integer(HID_T), intent(inout) :: f_id    !< File id
-      integer, intent(in), optional :: incr    !< \copydoc helpers_hdf5::default_increment
+      integer(kind=SIZE_T), intent(in), optional :: incr    !< \copydoc helpers_hdf5::default_increment
       logical, intent(in), optional :: bstore  !< \copydoc helpers_hdf5::default_backing_store
 
       integer(hid_t) :: faplist_id
-      integer :: increment
+      integer(kind=SIZE_T) :: increment
       logical :: backing_store
       integer(kind=4) :: hdferr
 
