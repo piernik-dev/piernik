@@ -36,11 +36,16 @@ module helpers_hdf5
    implicit none
 
    private
-   public :: create_attribute, create_dataset
+   public :: create_attribute, create_dataset, create_corefile
 
    enum, bind(C)
       enumerator :: I_ONE = 1, I_TWO
    end enum
+
+   integer, parameter :: default_increment = 1024**2   !< Specifies the increment by which allocated memory is to be
+                                                       !< increased each time more memory is required in core file.
+   logical, parameter :: default_backing_store = .false.  !< Flag to indicate that entire file contents are flushed to
+                                                          !< a file with the same name as the core file
 
 !> \brief Add an attribute (1D array) to the given _id and initialize its value
    interface create_attribute
@@ -57,6 +62,45 @@ module helpers_hdf5
    end interface
 
 contains
+
+!>
+!! \brief Creates file in memory using "core" driver
+!! \todo check if HDF5 library has been already initialized
+!<
+   subroutine create_corefile(fname, f_id, incr, bstore)
+      use hdf5,          only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DEFAULT_F
+      implicit none
+      character(len=*), intent(in)  :: fname   !< Filename
+      integer(HID_T), intent(inout) :: f_id    !< File id
+      integer, intent(in), optional :: incr    !< \copydoc helpers_hdf5::default_increment
+      logical, intent(in), optional :: bstore  !< \copydoc helpers_hdf5::default_backing_store
+
+      integer(hid_t) :: faplist_id
+      integer :: increment
+      logical :: backing_store
+      integer(kind=4) :: hdferr
+
+      increment = default_increment
+      backing_store = default_backing_store
+      if (present(incr)) increment = incr
+      if (present(bstore)) backing_store = bstore
+
+      ! HDF5 library initialization
+      call h5open_f(hdferr)
+
+      ! Create a property list for file access
+      call h5pcreate_f(H5P_FILE_ACCESS_F, faplist_id, hdferr)
+      if (hdferr /= 0) call die("[helpers_hdf5:create_corefile] Failed to create property list")
+
+      ! Use magical "core"
+      call h5pset_fapl_core_f(faplist_id, increment, backing_store, hdferr)
+      if (hdferr /= 0) call die("[helpers_hdf5:create_corefile] Failed to use core driver")
+
+      ! Create the file with the property list
+      call h5fcreate_f(fname, H5F_ACC_TRUNC_F, f_id, hdferr, H5P_DEFAULT_F, faplist_id)
+      if (hdferr /= 0) call die("[helpers_hdf5:create_corefile] Failed to create file in memory")
+      return
+   end subroutine create_corefile
 
 !> \brief Create 32-bit integer dataset (rank-2 array) in the given place_id.
 !
