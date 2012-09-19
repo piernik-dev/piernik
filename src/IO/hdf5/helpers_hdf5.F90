@@ -81,7 +81,7 @@ contains
 
       integer(hid_t) :: faplist_id
       integer(kind=SIZE_T) :: increment
-      logical :: backing_store
+      logical(kind=4) :: backing_store
       integer(kind=4) :: hdferr
 
       increment = default_increment
