@@ -123,6 +123,8 @@ module fluidtypes
       type(component) :: crs         !< numbers of variables in all cosmic ray components
       type(component) :: crn         !< numbers of variables in cosmic ray nuclear components
       type(component) :: cre         !< numbers of variables in cosmic ray electron components
+   contains
+      procedure :: any_fluid_is_selfgrav
    end type var_numbers
 
    abstract interface
@@ -291,5 +293,20 @@ module fluidtypes
          this%is_selfgrav   = is_selfgrav
          this%is_magnetized = is_magnetized
       end subroutine set_fluid_index
+
+!>
+!! \brief returns True value if any fluid is selfgravitating
+!<
+      function any_fluid_is_selfgrav(this) result(tf)
+         implicit none
+         class(var_numbers), intent(in) :: this
+         logical :: tf
+         integer :: ifl
+
+         tf = .false.
+         do ifl = lbound(this%all_fluids, 1), ubound(this%all_fluids, 1)
+            tf = tf .or. this%all_fluids(ifl)%fl%is_selfgrav
+         enddo
+      end function any_fluid_is_selfgrav
 
 end module fluidtypes
