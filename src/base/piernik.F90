@@ -194,8 +194,13 @@ contains
 
       integer(kind=4), intent(in) :: nstep
       character(len=*), parameter :: fmt900 = "('   nstep = ',i7,'   dt = ',es23.16,'   t = ',es23.16,'   dWallClock = ',f10.2,' s')"
+      logical, save :: first_run = .true.
+
 
       if (master) then
+         if (first_run) then
+            first_run = (set_timer(tmr_fu) < 0.0)
+         endif
          write(msg, fmt900) nstep, dt, t, set_timer(tmr_fu)
          call printinfo(msg, .true.)
       endif
