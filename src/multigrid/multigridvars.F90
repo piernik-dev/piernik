@@ -86,10 +86,13 @@ module multigridvars
 !! \brief Put insane FP values into all multigrid working arrays
 !!
 !! \details If there are any uninitialized values used in the solver under certain circumstances, the dirtyH will most likely propagate and be easily detectable.
+!! \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
 !<
 
    subroutine all_dirty
-
+#if defined(__INTEL_COMPILER)
+      use cg_list_bnd,    only: cg_list_bnd_T  ! QA_WARN intel
+#endif /* __INTEL_COMPILER */
       use cg_list_global, only: all_cg
       use constants,      only: dirtyH
       use global,         only: dirty_debug
