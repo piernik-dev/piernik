@@ -128,7 +128,7 @@ contains
 !<
    subroutine init_crsources(ncrn)
 
-      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
+      use dataio_pub,      only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
       use dataio_pub,      only: msg, printinfo, die
       use mpisetup,        only: lbuff, master, slave, piernik_MPI_Bcast
 

@@ -108,7 +108,7 @@ contains
 
       use cg_list_global,   only: all_cg
       use constants,        only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one
-      use dataio_pub,       only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use dataio_pub,       only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use dataio_pub,       only: die, warn, msg
       use domain,           only: dom
       use fluidindex,       only: flind

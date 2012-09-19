@@ -58,7 +58,7 @@ contains
    subroutine read_problem_par
 
       use constants,  only: I_TEN
-      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun ! QA_WARN required for diff_nml
+      use dataio_pub, only: ierrh, par_file, namelist_errh, errstr, compare_namelist, cmdl_nml, lun ! QA_WARN required for diff_nml
       use dataio_pub, only: die
       use domain,     only: dom
       use mpisetup,   only: ibuff, rbuff, master, slave, piernik_MPI_Bcast

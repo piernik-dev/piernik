@@ -84,6 +84,7 @@ module dataio_pub
    ! Handy variables
    integer(kind=4)             :: ierrh                          !< variable for iostat error on reading namelists (see macros.h)
    integer(kind=4)             :: mpi_err                        !< variable for error code in MPI calls (should we export it to mpisetup?)
+   character(len=cwdlen)       :: errstr                         !< string for storing error messages
 
    real                        :: last_log_time                  !< time in simulation of the recent dump of statistics into a log file
    real                        :: last_tsl_time                  !< time in simulation of the recent timeslice dump
@@ -312,23 +313,26 @@ contains
             call warn("    * A subscript or substring specifier of the variable was not an integer constant.")
             call warn("    * An attempt was made to specify a substring by using an unsubscripted array variable.")
             write(msg,'(3a)') "severe (19): Invalid reference to variable in the ",trim(nm)," namelist"
-            call die(msg)
+            call warn(msg)
+            call die(errstr)
          case (-1)
             if (present(skip_eof)) then
                if (skip_eof) return
             endif
-            write(msg,'(3a)') "Namelist: ",trim(nm)," not found in problem.par"
-            call die(msg)
+            write(msg,'(3a)') "Namelist: ",trim(nm)," not found in problem.par. Assuming defaults."
+            call printinfo(msg)
          case (239, 5010)
-            write(msg,'(3a)') "One of the variables found in problem.par doesn't belong to the ",trim(nm)," namelist"
-            call die(msg)
+            write(msg,'(3a)') "A problem with one of the variables that belong to the ",trim(nm)," namelist was found in problem.par:"
+            call warn(msg)
+            call die(errstr)
          case (0)
          case default
             write(msg, *)'Unknown error (', ierrh,') in namelist ',trim(nm)
+            call warn(msg)
             if (present(skip_eof)) then
                if (skip_eof) return
             endif
-            call die(msg)
+            call die(errstr)
       endselect
 
    end subroutine namelist_errh

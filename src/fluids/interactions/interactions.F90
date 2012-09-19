@@ -90,7 +90,7 @@ contains
    subroutine init_interactions
 
       use constants,     only: PIERNIK_INIT_FLUIDS, cbuff_len
-      use dataio_pub,    only: die, code_progress, par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use dataio_pub,    only: die, code_progress, par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use fluidindex,    only: flind
       use mpisetup,      only: master, slave, cbuff, lbuff, rbuff, piernik_MPI_Bcast
       use units,         only: cm, gram

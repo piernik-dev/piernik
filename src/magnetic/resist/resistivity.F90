@@ -85,7 +85,7 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: PIERNIK_INIT_GRID, zdim, xdim, ydim, wcu_n
-      use dataio_pub,     only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
+      use dataio_pub,     only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, code_progress
       use domain,         only: dom
       use cg_list,        only: cg_list_element

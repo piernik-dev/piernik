@@ -105,7 +105,7 @@ contains
 
       use constants,       only: cbuff_len
       use diagnostics,     only: ma1d, my_allocate
-      use dataio_pub,      only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
+      use dataio_pub,      only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
       use mpisetup,        only: ibuff, rbuff, lbuff, cbuff, master, slave, piernik_MPI_Bcast
 #ifdef COSM_RAYS_SOURCES

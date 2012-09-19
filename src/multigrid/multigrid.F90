@@ -79,7 +79,7 @@ contains
 
       use cg_list_global,      only: all_cg
       use constants,           only: PIERNIK_INIT_DOMAIN, O_INJ, O_LIN, O_I2
-      use dataio_pub,          only: par_file, namelist_errh, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
+      use dataio_pub,          only: par_file, namelist_errh, errstr, compare_namelist, cmdl_nml, lun, ierrh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: dom
       use global,              only: dirty_debug, do_ascii_dump

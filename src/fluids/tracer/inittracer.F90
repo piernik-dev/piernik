@@ -66,7 +66,7 @@ contains
    subroutine init_tracer
 
       use constants,  only: INT4
-      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
+      use dataio_pub, only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub, only: warn
       use mpisetup,   only: master, slave, ibuff, piernik_MPI_Bcast
 

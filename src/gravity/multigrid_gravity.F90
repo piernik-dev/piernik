@@ -138,7 +138,7 @@ contains
    subroutine multigrid_grav_par
 
       use constants,     only: GEO_XYZ, GEO_RPZ, BND_PER, O_LIN, O_D2, O_I2, I_ONE
-      use dataio_pub,    only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
+      use dataio_pub,    only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
       use cart_comm,     only: cdd
       use domain,        only: dom, is_uneven, is_multicg

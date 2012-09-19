@@ -117,7 +117,7 @@ contains
 
       use constants,  only: big_float, PIERNIK_INIT_MPI
       use dataio_pub, only: die, msg, warn, code_progress
-      use dataio_pub, only: par_file, ierrh, namelist_errh, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
+      use dataio_pub, only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
 
       implicit none

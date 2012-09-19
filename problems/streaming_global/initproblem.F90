@@ -80,7 +80,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine read_problem_par
 
-      use dataio_pub, only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use dataio_pub, only: ierrh, par_file, namelist_errh, errstr, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
       use mpisetup,   only: rbuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none

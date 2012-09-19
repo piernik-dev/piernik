@@ -147,7 +147,7 @@ contains
    subroutine init_grav
 
       use cg_list_global, only: all_cg
-      use dataio_pub,     only: ierrh, par_file, namelist_errh, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
+      use dataio_pub,     only: ierrh, par_file, namelist_errh, errstr, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
       use dataio_pub,     only: printinfo, warn, die, code_progress
       use constants,      only: PIERNIK_INIT_GRID, AT_OUT_B, gp_n, gpot_n, hgpot_n
       use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
