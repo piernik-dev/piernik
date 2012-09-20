@@ -65,7 +65,7 @@ contains
 
    subroutine read_problem_par
 
-      use dataio_pub, only: ierrh, par_file, namelist_errh, errstr, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
       use mpisetup,   only: rbuff, master, slave, piernik_MPI_Bcast
 #ifdef GRAV
       use gravity,    only: grav_pot_3d, user_grav

@@ -6,24 +6,25 @@
 
 
   Requires:
-    use dataio_pub, only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun, get_lun  ! QA_WARN required for diff_nml
+    use dataio_pub, only: nh ! QA_WARN required for diff_nml
 
 
   It does not work with cpp -traditional-cpp (the default way gfortran calls cpp).
 
  */
 #define diff_nml(namelist)\
-  open(newunit=lun, file="temp1.dat", status="unknown");\
-  write(lun,nml=namelist);\
-  close(lun);\
-  open(newunit=lun, file=par_file);\
-  errstr="";\
-  read(unit=lun, nml=namelist, iostat=ierrh, iomsg=errstr);\
-  close(lun);\
-  call namelist_errh(ierrh, #namelist);\
-  read(cmdl_nml,nml=namelist, iostat=ierrh);\
-  call namelist_errh(ierrh, #namelist, .true.);\
-  open(newunit=lun, file="temp2.dat", status="unknown");\
-  write(lun,nml=namelist);\
-  close(lun);\
-  call compare_namelist("temp1.dat", "temp2.dat")
+  if (.not.nh%initialized) call nh%init();\
+  open(newunit=nh%lun, file="temp1.dat", status="unknown");\
+  write(nh%lun,nml=namelist);\
+  close(nh%lun);\
+  open(newunit=nh%lun, file=nh%par_file);\
+  nh%errstr="";\
+  read(unit=nh%lun, nml=namelist, iostat=nh%ierrh, iomsg=nh%errstr);\
+  close(nh%lun);\
+  call nh%namelist_errh(nh%ierrh, #namelist);\
+  read(nh%cmdl_nml,nml=namelist, iostat=nh%ierrh);\
+  call nh%namelist_errh(nh%ierrh, #namelist, .true.);\
+  open(newunit=nh%lun, file="temp2.dat", status="unknown");\
+  write(nh%lun,nml=namelist);\
+  close(nh%lun);\
+  call nh%compare_namelist("temp1.dat", "temp2.dat")

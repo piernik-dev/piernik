@@ -37,7 +37,8 @@ module dataio_pub
 
    public  ! QA_WARN most variables are not secrets here
    private :: mpi_err, colormessage, T_PLAIN, T_ERR, T_WARN, T_INFO, T_IO, T_SILENT, & ! QA_WARN no need to use these symbols outside dataio_pub
-        &     ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan    ! QA_WARN
+        &     ansi_red, ansi_green, ansi_yellow, ansi_blue, ansi_magenta, ansi_cyan, & ! QA_WARN
+        &     namelist_handler_T                                                       ! QA_WARN
    private :: cbuff_len, domlen, idlen, cwdlen ! QA_WARN prevent re-exporting
    !mpisetup uses: ansi_white and ansi_black
 
@@ -62,7 +63,7 @@ module dataio_pub
    real                        :: tend                           !< simulation time to end
    real                        :: wend                           !< wall clock time to end (in hours)
 
-   integer                     :: lun                            !< current free logical unit
+   integer, target             :: lun                            !< current free logical unit
    integer                     :: tsl_lun                        !< logical unit number for timeslice file
    integer                     :: log_lun                        !< logical unit number for log file
    integer(kind=4)             :: nend                           !< number of the step to end simulation
@@ -76,15 +77,15 @@ module dataio_pub
    ! Buffers for global use
    character(len=cwdlen), save :: wd_rd = "./"                   !< path to problem.par and/or restarts
    character(len=cwdlen), save :: wd_wr = "./"                   !< path where output is written
-   character(len=msglen), save :: cmdl_nml =" "                  !< buffer for namelist supplied via commandline
+   character(len=msglen), save, target :: cmdl_nml =" "          !< buffer for namelist supplied via commandline
    character(len=cwdlen)       :: log_file                       !< path to the current log file
    character(len=cwdlen)       :: tsl_file                       !< path to the current tsl file
    character(len=cwdlen)       :: tmp_log_file                   !< path to the temporary log file
-   character(len=cwdlen)       :: par_file                       !< path to the parameter file
+   character(len=cwdlen), target :: par_file                     !< path to the parameter file
    ! Handy variables
-   integer(kind=4)             :: ierrh                          !< variable for iostat error on reading namelists (see macros.h)
+   integer(kind=4), target     :: ierrh                          !< variable for iostat error on reading namelists (see macros.h)
    integer(kind=4)             :: mpi_err                        !< variable for error code in MPI calls (should we export it to mpisetup?)
-   character(len=cwdlen)       :: errstr                         !< string for storing error messages
+   character(len=cwdlen), target :: errstr                       !< string for storing error messages
 
    real                        :: last_log_time                  !< time in simulation of the recent dump of statistics into a log file
    real                        :: last_tsl_time                  !< time in simulation of the recent timeslice dump
@@ -123,7 +124,52 @@ module dataio_pub
    character(len=*),parameter  :: tmr_hdf = "hdf_dump"
    real                        :: thdf                           !< hdf dump wallclock
 
+   interface
+      subroutine namelist_errh_P(ierrh, nm, skip_eof)
+         implicit none
+         integer(kind=4),   intent(in) :: ierrh
+         character(len=*),  intent(in) :: nm
+         logical, optional, intent(in) :: skip_eof
+      end subroutine namelist_errh_P
+
+      subroutine compare_namelist_P(nml_bef, nml_aft)
+         implicit none
+         character(len=*), intent(in)     :: nml_bef, nml_aft
+      end subroutine compare_namelist_P
+   end interface
+
+   type :: namelist_handler_T
+      character(len=msglen), pointer :: cmdl_nml   !< buffer for namelist supplied via commandline
+      character(len=cwdlen), pointer :: par_file   !< path to the parameter file
+      character(len=cwdlen), pointer :: errstr     !< string for storing error messages
+      integer(kind=4), pointer       :: ierrh      !< variable for iostat error on reading namelists (see macros.h)
+      integer, pointer               :: lun        !< current free logical unit
+      procedure(namelist_errh_P), nopass, pointer    :: namelist_errh
+      procedure(compare_namelist_P), nopass, pointer :: compare_namelist
+      logical :: initialized = .false.
+      contains
+         procedure :: init => namelist_handler_T_init
+   end type namelist_handler_T
+
+   type(namelist_handler_T) :: nh
+
 contains
+
+   subroutine namelist_handler_T_init(this)
+      implicit none
+      class(namelist_handler_T), intent(inout) :: this
+
+      this%cmdl_nml => cmdl_nml
+      this%par_file => par_file
+      this%errstr => errstr
+      this%ierrh => ierrh
+      this%lun => lun
+
+      this%namelist_errh => namelist_errh
+      this%compare_namelist => compare_namelist
+
+      this%initialized = .true.
+   end subroutine namelist_handler_T_init
 !-----------------------------------------------------------------------------
    subroutine colormessage(nm, mode)
 

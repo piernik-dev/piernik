@@ -60,7 +60,7 @@ contains
    subroutine read_problem_par
 
       use constants,   only: xdim, ydim, zdim, pi
-      use dataio_pub,  only: ierrh, par_file, namelist_errh, errstr, compare_namelist, cmdl_nml, lun    ! QA_WARN required for diff_nml
+      use dataio_pub,  only: nh    ! QA_WARN required for diff_nml
       use dataio_pub,  only: tend, msg, die, warn, printinfo
       use domain,      only: dom
       use fluidindex,  only: flind

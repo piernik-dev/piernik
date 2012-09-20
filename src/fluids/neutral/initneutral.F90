@@ -125,7 +125,7 @@ contains
 !<
    subroutine init_neutral
 
-      use dataio_pub, only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh ! QA_WARN required for diff_nml
       use mpisetup,   only: rbuff, lbuff, master, slave, piernik_MPI_Bcast
 
       implicit none

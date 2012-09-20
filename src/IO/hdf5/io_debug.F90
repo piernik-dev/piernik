@@ -65,7 +65,7 @@ contains
    subroutine init_piernikiodebug
 
       use constants,             only: PIERNIK_INIT_MPI
-      use dataio_pub,            only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
+      use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,            only: code_progress, die
       use mpisetup,              only: master, slave, lbuff, piernik_MPI_Bcast
 

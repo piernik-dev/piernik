@@ -181,7 +181,7 @@ contains
 
       use constants,  only: xdim, zdim, LO, HI, PIERNIK_INIT_MPI, I_ONE, I_ZERO, INVALID, big_float
       use dataio_pub, only: die, warn, code_progress
-      use dataio_pub, only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast, have_mpi
 
       implicit none

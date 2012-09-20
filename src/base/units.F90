@@ -171,7 +171,7 @@ contains
    subroutine init_units
 
       use constants,  only: one, pi, fpi, small, PIERNIK_INIT_MPI
-      use dataio_pub, only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
+      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use dataio_pub, only: warn, printinfo, msg, die, code_progress
       use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 

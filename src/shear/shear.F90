@@ -70,7 +70,7 @@ contains
    subroutine init_shear
 
       use constants,      only: PIERNIK_INIT_GRID
-      use dataio_pub,     only: par_file, ierrh, namelist_errh, errstr, compare_namelist, cmdl_nml, lun  ! QA_WARN required for diff_nml
+      use dataio_pub,     only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,     only: printinfo, die, code_progress
       use fluidindex,     only: flind
       use mpisetup,       only: master, slave, rbuff, piernik_MPI_Bcast

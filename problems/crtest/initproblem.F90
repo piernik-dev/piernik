@@ -67,7 +67,7 @@ contains
 
       use cg_list_global, only: all_cg
       use constants,      only: I_ONE, I_TEN, AT_NO_B
-      use dataio_pub,     only: ierrh, par_file, namelist_errh, errstr, compare_namelist, cmdl_nml, lun      ! QA_WARN required for diff_nml
+      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
       use dataio_pub,     only: die
       use domain,         only: dom
       use mpisetup,       only: ibuff, rbuff, master, slave, piernik_MPI_Bcast
