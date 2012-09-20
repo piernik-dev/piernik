@@ -165,7 +165,7 @@ contains
       use constants,  only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_MPI, I_ONE, I_TWO
       use dataio_pub, only: nres, nrestart, last_hdf_time, last_plt_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                tmp_log_file, printinfo, printio, warn, msg, nhdf, nimg, die, code_progress, wd_wr, wd_rd, &
-           &                move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write
+           &                move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write, ierrh, par_file
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use domain,     only: dom
       use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier
