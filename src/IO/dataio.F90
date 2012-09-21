@@ -1002,7 +1002,11 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%wa = abs(cgl%cg%u(fl%imx,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
+         where (cgl%cg%u(fl%idn,:, :, :) /= 0.)
+            cgl%cg%wa = abs(cgl%cg%u(fl%imx,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
+         elsewhere
+            cgl%cg%wa = 0.
+         endwhere
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, pr%velx_max, xdim)
@@ -1020,7 +1024,11 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%wa = abs(cgl%cg%u(fl%imy,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
+         where (cgl%cg%u(fl%idn,:, :, :) /= 0.)
+            cgl%cg%wa = abs(cgl%cg%u(fl%imy,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
+         elsewhere
+            cgl%cg%wa = 0.
+         endwhere
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, pr%vely_max, ydim)
@@ -1038,7 +1046,11 @@ contains
 
       cgl => leaves%first
       do while (associated(cgl))
-         cgl%cg%wa = abs(cgl%cg%u(fl%imz,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
+         where (cgl%cg%u(fl%idn,:, :, :) /= 0.)
+            cgl%cg%wa = abs(cgl%cg%u(fl%imz,:, :, :)/cgl%cg%u(fl%idn,:, :, :))
+         elsewhere
+            cgl%cg%wa = 0.
+         endwhere
          cgl => cgl%nxt
       enddo
       call leaves%get_extremum(qna%wai, MAXL, pr%velz_max, zdim)
