@@ -801,6 +801,7 @@ contains
       use grid_cont,      only: grid_container
       use multigridvars,  only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
       use units,          only: fpiG
+      use particle_types, only: pset
 #ifdef JEANS_PROBLEM
       use problem_pub,    only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
@@ -826,6 +827,7 @@ contains
       else
          call leaves%set_q_value(source, 0.)
       endif
+      call pset%map(source, fpiG)
 
       select case (grav_bnd)
          case (bnd_periodic) ! probably also bnd_neumann
