@@ -1157,8 +1157,10 @@ contains
          call residual2(curl, src, soln, def)
       case (O_I4)
          call residual4(curl, src, soln, def)
+      case (-O_I4)
+         call residual_Mehrstellen(curl, src, soln, def)
       case default
-         call die("[multigrid_gravity:residual] The parameter 'ord_laplacian' must be 2 or 4")
+         call die("[multigrid_gravity:residual] The parameter 'ord_laplacian' must be 2 or 4 or -4")
       end select
 
    end subroutine residual
@@ -1378,6 +1380,104 @@ contains
       enddo
 
    end subroutine residual4
+
+!>
+!! \brief Compute the residual using compact, 4th order Mehrstellen formula
+!!
+!! \warning The implementation is somehow incomplete - perhaps additional operations are required in RBGS relaxation
+!! and/or the data has to be interpreted in slightly different way.
+!<
+
+   subroutine residual_Mehrstellen(curl, src, soln, def)
+
+      use cg_list,       only: cg_list_element
+      use cg_level_connected, only: cg_level_connected_T
+      use constants,     only: I_ONE, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
+      use dataio_pub,    only: die, warn
+      use domain,        only: dom
+      use grid_cont,     only: grid_container
+      use mpisetup,      only: master
+      use multigridvars, only: grav_bnd, bnd_givenval
+      use named_array,   only: p3
+
+      implicit none
+
+      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
+      integer,                        intent(in) :: src  !< index of source in cg%q(:)
+      integer,                        intent(in) :: soln !< index of solution in cg%q(:)
+      integer,                        intent(in) :: def  !< index of defect in cg%q(:)
+
+      real                :: c21
+      real                :: L0, Lx, Ly, Lz
+      integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
+
+      logical, save       :: firstcall = .true.
+      integer             :: i, j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
+
+      if (dom%eff_dim<ndims) call die("[multigrid_gravity:residual_Mehrstellen] Only 3D is implemented")
+
+      if (firstcall) then
+         if (master) call warn("[multigrid_gravity:residual_Mehrstellen] residual order 4 is experimental.")
+         firstcall = .false.
+      endif
+
+      call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
+      call curl%arr3d_boundaries(src,  nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
+
+      c21 = 1.
+
+      cgl => curl%first
+      do while (associated(cgl))
+         cg => cgl%cg
+
+         if (any(cg%idx2 /= [ cg%idy2, cg%idz2 ])) call die("[multigrid_gravity:residual_Mehrstellen] No support for unequal grids yet")
+
+         !> \deprecated BEWARE: cylindrical factors go here
+         p3 => cg%q(def)%span(cg%ijkse)
+         p3 = 1./12.* (6.*cg%q(src)%span(cg%ijkse) + &
+              &           cg%q(src)%span(cg%ijkse-idm2(xdim,:,:)) + cg%q(src)%span(cg%ijkse+idm2(xdim,:,:)) + &
+              &           cg%q(src)%span(cg%ijkse-idm2(ydim,:,:)) + cg%q(src)%span(cg%ijkse+idm2(ydim,:,:)) + &
+              &           cg%q(src)%span(cg%ijkse-idm2(zdim,:,:)) + cg%q(src)%span(cg%ijkse+idm2(zdim,:,:)) ) - &
+              & 1./6.* cg%idx2 *( -24. * cg%q(soln)%span(cg%ijkse) + &
+              &                     2. * ( cg%q(soln)%span(cg%ijkse-idm2(xdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(xdim,:,:)) + &
+              &                            cg%q(soln)%span(cg%ijkse-idm2(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(ydim,:,:)) + &
+              &                            cg%q(soln)%span(cg%ijkse-idm2(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(zdim,:,:)) ) + &
+              &                     cg%q(soln)%span(cg%ijkse-idm2(xdim,:,:)-idm2(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm2(xdim,:,:)+idm2(ydim,:,:)) + &
+              &                     cg%q(soln)%span(cg%ijkse+idm2(xdim,:,:)-idm2(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(xdim,:,:)+idm2(ydim,:,:)) + &
+              &                     cg%q(soln)%span(cg%ijkse-idm2(zdim,:,:)-idm2(ydim,:,:)) + cg%q(soln)%span(cg%ijkse-idm2(zdim,:,:)+idm2(ydim,:,:)) + &
+              &                     cg%q(soln)%span(cg%ijkse+idm2(zdim,:,:)-idm2(ydim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(zdim,:,:)+idm2(ydim,:,:)) + &
+              &                     cg%q(soln)%span(cg%ijkse-idm2(xdim,:,:)-idm2(zdim,:,:)) + cg%q(soln)%span(cg%ijkse-idm2(xdim,:,:)+idm2(zdim,:,:)) + &
+              &                     cg%q(soln)%span(cg%ijkse+idm2(xdim,:,:)-idm2(zdim,:,:)) + cg%q(soln)%span(cg%ijkse+idm2(xdim,:,:)+idm2(zdim,:,:)) )
+
+         ! WARNING: not optimized
+         if (grav_bnd == bnd_givenval) then ! probably also in some other cases
+            ! Use L2 Laplacian in two layers of cells next to the boundary because L4 seems to be incompatible with present image mass construction
+            !> \todo try to fix this
+            Lx = c21 * cg%idx2
+            Ly = c21 * cg%idy2
+            Lz = c21 * cg%idz2
+            L0 = -2. * (Lx + Ly + Lz)
+
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
+                     if ( i<cg%is+L2w .or. i>cg%ie-L2w .or. j<cg%js+L2w .or. j>cg%je-L2w .or. k<cg%ks+L2w .or. k>cg%ke-L2w) then
+                        cg%q(def)%arr        (i,   j,   k)   = cg%q(src)%arr (i,   j,   k)         - &
+                             ( cg%q(soln)%arr(i-1, j,   k)   + cg%q(soln)%arr(i+1, j,   k))   * Lx - &
+                             ( cg%q(soln)%arr(i,   j-1, k)   + cg%q(soln)%arr(i,   j+1, k))   * Ly - &
+                             ( cg%q(soln)%arr(i,   j,   k-1) + cg%q(soln)%arr(i,   j,   k+1)) * Lz - &
+                             & cg%q(soln)%arr(i,   j,   k)                                    * L0
+                     endif
+                  enddo
+               enddo
+            enddo
+         endif
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine residual_Mehrstellen
 
 !!$ ============================================================================
 !>
