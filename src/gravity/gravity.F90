@@ -146,20 +146,21 @@ contains
 !<
    subroutine init_grav
 
-      use cg_list_global, only: all_cg
-      use dataio_pub,     only: nh    ! QA_WARN required for diff_nml
-      use dataio_pub,     only: printinfo, warn, die, code_progress
-      use constants,      only: PIERNIK_INIT_GRID, AT_OUT_B, gp_n, gpot_n, hgpot_n
-      use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
-      use cg_list,        only: cg_list_element
-      use cg_leaves,      only: leaves
+      use cg_leaves,        only: leaves
+      use cg_list_global,   only: all_cg
+      use cg_list,          only: cg_list_element
+      use constants,        only: PIERNIK_INIT_GRID, AT_OUT_B, gp_n, gpot_n, hgpot_n
+      use dataio_pub,       only: nh    ! QA_WARN required for diff_nml
+      use dataio_pub,       only: printinfo, warn, die, code_progress
+      use mpisetup,         only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
       use named_array_list, only: qna
-      use units,          only: newtong
+      use particle_types,   only: pset
+      use units,            only: newtong
 #ifdef SELF_GRAV
-      use constants,      only: sgp_n, sgpm_n
+      use constants,        only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
 #ifdef CORIOLIS
-      use coriolis,       only: set_omega
+      use coriolis,         only: set_omega
 #endif /* CORIOLIS */
 
       implicit none
@@ -301,6 +302,8 @@ contains
          if (master) call warn("[gravity:init_grav] user_grav is set to false. Using default grav_pot_3d.")
 #endif /* VERBOSE */
       endif
+
+      call pset%init
 
    end subroutine init_grav
 

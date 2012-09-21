@@ -150,7 +150,6 @@ contains
          nsub = maxsub
       endif
 
-      call pset%init !< \deprecated this definitely should go somewhere else (init_grav ?)
       if (a1 == 0.) call pset%add(d0, [ x0, y0, z0 ])
 
       call compute_maclaurin_potential
