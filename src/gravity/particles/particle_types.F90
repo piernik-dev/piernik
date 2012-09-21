@@ -164,7 +164,7 @@ contains
 
          do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
             ijkp(:) = floor(this%p(p)%position(:)/cgl%cg%dl(:)) - cgl%cg%off(:)
-            if (all(ijkp >= cgl%cg%ijkse(:,LO)) .and. all(ijkp >= cgl%cg%ijkse(:,HI))) &
+            if (all(ijkp >= cgl%cg%ijkse(:,LO)) .and. all(ijkp <= cgl%cg%ijkse(:,HI))) &
                  cgl%cg%q(iv)%arr(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = cgl%cg%q(iv)%arr(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * this%p(p)%mass / cgl%cg%dvol
          enddo
 
