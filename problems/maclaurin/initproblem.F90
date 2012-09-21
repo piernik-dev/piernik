@@ -38,13 +38,20 @@ module initproblem
    public :: read_problem_par, init_prob, problem_pointers
 
    ! namelist parameters
-   real            :: x0, y0, z0, d0, a1, e
-   integer(kind=4) :: nsub
+   real :: x0     !< X-position of the spheroid
+   real :: y0     !< Y-position of the spheroid
+   real :: z0     !< Z-position of the spherodi
+   real :: d0     !< density of the spheroid
+   real :: a1     !< equatorial radius of the spheroid
+   real :: e      !< polar eccentricity of the spheroid; e>0 gives oblate object, e<0 gives prolate object
+   integer(kind=4) :: nsub !< subsampling on the grid
    namelist /PROBLEM_CONTROL/ x0, y0, z0, d0, a1, e, nsub
 
    ! private data
-   real :: d1, p0, a3
-   character(len=dsetnamelen), parameter :: apot_n = "apot"
+   real :: d1 !< ambient density
+   real :: p0 !< pressure
+   real :: a3 !< length of polar radius of the spheroid
+   character(len=dsetnamelen), parameter :: apot_n = "apot" !< name of the analytical potential field
 
 contains
 
@@ -67,12 +74,13 @@ contains
 
    subroutine read_problem_par
 
-      use constants,  only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
-      use dataio_pub, only: nh      ! QA_WARN required for diff_nml
-      use dataio_pub, only: die, warn, msg, printinfo
-      use domain,     only: dom
-      use global,     only: smalld
-      use mpisetup,   only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
+      use constants,      only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
+      use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
+      use dataio_pub,     only: die, warn, msg, printinfo
+      use domain,         only: dom
+      use global,         only: smalld
+      use mpisetup,       only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
+      use particle_types, only: pset
 
       implicit none
 
@@ -118,6 +126,11 @@ contains
 
       endif
 
+      if (a1 <= 0.) then ! point-like source
+         a1 = 0.
+         e = 0.
+      endif
+
       if (abs(e) >= 1.) call die("[initproblem:read_problem_par] |e|>=1.")
       if (e >= 0.) then            ! vertical axis
          a3 = a1 * sqrt(1. - e**2) ! oblate Maclaurin spheroid
@@ -137,16 +150,27 @@ contains
          nsub = maxsub
       endif
 
+      call pset%init !< \deprecated this definitely should go somewhere else (init_grav ?)
+      if (a1 == 0.) call pset%add(d0, [ x0, y0, z0 ])
+
       call compute_maclaurin_potential
 
       if (master) then
-         write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
+         if (a1 > 0.) then
+            write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
+         else
+            write(msg, '(a)')"[initproblem:init_prob] Set up point-like mass"
+         endif
          call printinfo(msg, .true.)
          if (x0-a1<dom%edge(xdim, LO) .or. x0+a1>dom%edge(xdim, HI)) call warn("[initproblem:init_prob] Part of the spheroid is outside the domain in the X-direction.")
          if ( (dom%geometry_type == GEO_XYZ .and. (y0-a1<dom%edge(ydim, LO) .or. y0+a1>dom%edge(ydim, HI))) .or. &
               (dom%geometry_type == GEO_RPZ .and. (atan2(a1,x0) > minval([y0-dom%edge(ydim, LO), dom%edge(ydim, HI)-y0]))) ) & ! will fail when some one adds 2*k*pi to y0
               call warn("[initproblem:init_prob] Part of the spheroid is outside the domain")
-         write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
+         if (a1 > 0.) then
+            write(msg,'(2(a,g12.5))')   "[initproblem:init_prob] Density = ", d0, " mass = ", 4./3.*pi * a1**2 * a3 * d0
+         else
+            write(msg,'(a,g12.5)')   "[initproblem:init_prob] Mass = ", d0
+         endif
          call printinfo(msg, .true.)
       endif
 
@@ -179,36 +203,44 @@ contains
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
 
-                  !< \todo use subsampling only near the surface of the spheroid
-                  dm = 0.
-                  do kk = -nsub+1, nsub-1, 2
-                     zz = ((cg%z(k) + kk*cg%dz/(2.*nsub) - z0)/a3)**2
-                     do jj = -nsub+1, nsub-1, 2
-                        do ii = -nsub+1, nsub-1, 2
+                  if (a1 > 0.) then
+                     !< \todo use subsampling only near the surface of the spheroid
+                     dm = 0.
+                     do kk = -nsub+1, nsub-1, 2
+                        zz = ((cg%z(k) + kk*cg%dz/(2.*nsub) - z0)/a3)**2
+                        do jj = -nsub+1, nsub-1, 2
+                           do ii = -nsub+1, nsub-1, 2
 
-                           select case (dom%geometry_type)
-                              case (GEO_XYZ)
-                                 yy = ((cg%y(j) + jj*cg%dy/(2.*nsub) - y0)/a1)**2
-                                 xx = ((cg%x(i) + ii*cg%dx/(2.*nsub) - x0)/a1)**2
-                                 rr = xx + yy + zz
-                              case (GEO_RPZ)
-                                 yy = cg%y(j) + jj*cg%dy/(2.*nsub) - y0
-                                 xx = cg%x(i) + ii*cg%dx/(2.*nsub)
-                                 rr = (xx**2 + x0**2 - 2. * xx * x0 * cos(yy))/a1**2 + zz
-                              case default
-                                 call die("[initproblem:init_prob] Unsupported dom%geometry_type")
-                                 rr = 0.
-                           end select
+                              select case (dom%geometry_type)
+                                 case (GEO_XYZ)
+                                    yy = ((cg%y(j) + jj*cg%dy/(2.*nsub) - y0)/a1)**2
+                                    xx = ((cg%x(i) + ii*cg%dx/(2.*nsub) - x0)/a1)**2
+                                    rr = xx + yy + zz
+                                 case (GEO_RPZ)
+                                    yy = cg%y(j) + jj*cg%dy/(2.*nsub) - y0
+                                    xx = cg%x(i) + ii*cg%dx/(2.*nsub)
+                                    rr = (xx**2 + x0**2 - 2. * xx * x0 * cos(yy))/a1**2 + zz
+                                 case default
+                                    call die("[initproblem:init_prob] Unsupported dom%geometry_type")
+                                    rr = 0.
+                              end select
 
-                           if (rr <= 1.) then
-                              dm = dm + d0
-                           else
-                              dm = dm + d1
-                           endif
+                              if (rr <= 1.) then
+                                 dm = dm + d0
+                              else
+                                 dm = dm + d1
+                              endif
 
+                           enddo
                         enddo
                      enddo
-                  enddo
+                  else ! point-like
+                     if (x0>cg%xl(i) .and. x0<=cg%xr(i) .and. y0>cg%yl(j) .and. y0<=cg%yr(j) .and. z0>cg%zl(k) .and. z0<=cg%zr(k)) then
+                        dm = d0 * nsub**3 / cg%dvol
+                     else
+                        dm = 0.
+                     endif
+                  endif
                   cg%u(iarr_all_dn, i, j, k) = dm / nsub**3
 
                enddo
@@ -311,21 +343,37 @@ contains
             z02 = (cg%z(k)-z0)**2
             do j = cg%js, cg%je
                do i = cg%is, cg%ie
-                  select case (dom%geometry_type)
-                     case (GEO_XYZ)
-                        y02 = (cg%y(j)-y0)**2
-                        x02 = (cg%x(i)-x0)**2
-                        r2 = (x02+y02)/a12 + z02/a32
-                     case (GEO_RPZ)
-                        cdphi = cos(cg%y(j)-y0)
-                        r2 = (cg%x(i)**2 + x0**2 - 2. * cg%x(i) * x0 * cdphi)/a12 + z02/a32
-                        x02 = r2 * cdphi**2
-                        y02 = r2 - x02
-                     case default
-                        call die("[initproblem:compute_maclaurin_potential] Invalid dom%geometry_type.")
-                        r2 = 0 ; x02 = 0 ; y02 = 0 ! suppress compiler warnings
-                  end select
-                  rr = r2 * a12
+                  if (a12 /= 0.) then
+                     select case (dom%geometry_type)
+                        case (GEO_XYZ)
+                           y02 = (cg%y(j)-y0)**2
+                           x02 = (cg%x(i)-x0)**2
+                           r2 = (x02+y02)/a12 + z02/a32
+                        case (GEO_RPZ)
+                           cdphi = cos(cg%y(j)-y0)
+                           r2 = (cg%x(i)**2 + x0**2 - 2. * cg%x(i) * x0 * cdphi)/a12 + z02/a32
+                           x02 = r2 * cdphi**2
+                           y02 = r2 - x02
+                        case default
+                           call die("[initproblem:compute_maclaurin_potential] Invalid dom%geometry_type.")
+                           r2 = 0 ; x02 = 0 ; y02 = 0 ! suppress compiler warnings
+                     end select
+                     rr = r2 * a12
+                  else
+                     e = 0.
+                     r2 = huge(1.) ; x02 = 0. ; y02 = 0. ; rr = 0. ! suppress compiler warnings
+                     select case (dom%geometry_type)
+                        case (GEO_XYZ)
+                           y02 = (cg%y(j)-y0)**2
+                           x02 = (cg%x(i)-x0)**2
+                           rr = x02 + y02 + z02
+                        case (GEO_RPZ)
+                           cdphi = cos(cg%y(j)-y0)
+                           rr = (cg%x(i)**2 + x0**2 - 2. * cg%x(i) * x0 * cos(cg%y(j)-y0)) + z02
+                        case default
+                           call die("[initproblem:compute_maclaurin_potential] Invalid dom%geometry_type.")
+                     end select
+                  endif
                   if (r2 > 1.) then
                      if (e > small_e) then
                         lam = 0.5 * (a12 + a32 - (x02 + y02 + z02))
@@ -341,7 +389,11 @@ contains
                              &      (2.*(a32 - a12) + x02 + y02 - 2.*z02)/sqrt(a32 - a12) * log(h + sqrt(1. + h**2)) - &
                              &      (x02 + y02) * sqrt(a32 + lam)/(a12 + lam) + 2.*z02 / sqrt(a32 + lam) )
                      else
-                        potential = - 4./3. * a1**3 / sqrt(rr)
+                        if (a1 == 0.) then
+                           potential = - 1. / (pi * sqrt(rr)) ! A bit dirty: we interpret d0 as a mass for point-like sources
+                        else
+                           potential = - 4./3. * a1**3 / sqrt(rr)
+                        endif
                      endif
                   else
                      if (abs(e) > small_e) then
