@@ -198,11 +198,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do k = cg%ks, cg%ke
-            do j = cg%js, cg%je
-               do i = cg%is, cg%ie
+         if (a1 > 0.) then
+            do k = cg%ks, cg%ke
+               do j = cg%js, cg%je
+                  do i = cg%is, cg%ie
 
-                  if (a1 > 0.) then
                      !< \todo use subsampling only near the surface of the spheroid
                      dm = 0.
                      do kk = -nsub+1, nsub-1, 2
@@ -233,18 +233,14 @@ contains
                            enddo
                         enddo
                      enddo
-                  else ! point-like
-                     if (x0>cg%xl(i) .and. x0<=cg%xr(i) .and. y0>cg%yl(j) .and. y0<=cg%yr(j) .and. z0>cg%zl(k) .and. z0<=cg%zr(k)) then
-                        dm = d0 * nsub**3 / cg%dvol
-                     else
-                        dm = 0.
-                     endif
-                  endif
-                  cg%u(iarr_all_dn, i, j, k) = dm / nsub**3
+                     cg%u(iarr_all_dn, i, j, k) = dm / nsub**3
 
+                  enddo
                enddo
             enddo
-         enddo
+         else
+            cg%u(iarr_all_dn, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
+         endif
 
          cg%u(iarr_all_mx, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
          cg%u(iarr_all_my, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0.0
@@ -389,7 +385,13 @@ contains
                              &      (x02 + y02) * sqrt(a32 + lam)/(a12 + lam) + 2.*z02 / sqrt(a32 + lam) )
                      else
                         if (a1 == 0.) then
-                           potential = - 1. / (pi * sqrt(rr)) ! A bit dirty: we interpret d0 as a mass for point-like sources
+                           if (rr /= 0) then
+                              potential = - 1. / (pi * sqrt(rr)) ! A bit dirty: we interpret d0 as a mass for point-like sources
+                           else
+                              potential = - sqrt(sum(cg%idl2))*0.5
+                              ! The factor of 0.5 was guessed. It gives small departures of potential in the cell containing the particle for 4th order Laplacian.
+                              ! For 2nd order Laplacian (default) 0.58 looks a bit better because it compensates 4th order errors of the operator.
+                           endif
                         else
                            potential = - 4./3. * a1**3 / sqrt(rr)
                         endif
@@ -505,6 +507,12 @@ contains
             tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse), 4)
          case ("errp")
             tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
+         case ("relerr")
+            where (cg%q(qna%ind(apot_n))%span(cg%ijkse) /= 0.)
+               tab(:,:,:) = real(cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke)/cg%q(qna%ind(apot_n))%span(cg%ijkse), 4)
+            elsewhere
+               tab(:,:,:) = 0.
+            endwhere
          case default
             ierrh = -1
       end select

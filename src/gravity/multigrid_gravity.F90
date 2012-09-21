@@ -824,10 +824,10 @@ contains
             cg%q(source)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = fpiG * sum(cg%u(i_all_dens, cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), dim=1)
             cgl => cgl%nxt
          enddo
+         call pset%map(source, fpiG)
       else
          call leaves%set_q_value(source, 0.)
       endif
-      call pset%map(source, fpiG)
 
       select case (grav_bnd)
          case (bnd_periodic) ! probably also bnd_neumann
