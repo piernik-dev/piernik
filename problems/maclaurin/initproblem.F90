@@ -150,7 +150,7 @@ contains
          nsub = maxsub
       endif
 
-      if (a1 == 0.) call pset%add(d0, [ x0, y0, z0 ])
+      if (a1 == 0.) call pset%add(d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
 
       call compute_maclaurin_potential
 

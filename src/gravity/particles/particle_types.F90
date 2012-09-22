@@ -44,21 +44,24 @@ module particle_types
    !!
    !! \todo Extend it a bit
    !<
-   type particle
+   type :: particle
       real                   :: mass       !< mass of the particle
       real, dimension(ndims) :: position   !< physical position
+      real, dimension(ndims) :: vel        !< particle velocity
    end type particle
 
    !> \brief A list of particles and some associated methods
 
-   type particle_set
+   type :: particle_set
       type(particle), allocatable, dimension(:) :: p !< the list of particles
    contains
       procedure :: init   !< initialize the list
-      procedure :: add    !< add a particle
       procedure :: remove !< remove a particle
       procedure :: merge  !< merge two particles
       procedure :: map    !< project particles onto grid
+      procedure :: add_using_basic_types   !< add a particle
+      procedure :: add_using_derived_type  !< add a particle
+      generic, public :: add => add_using_basic_types, add_using_derived_type
    end type particle_set
 
    type(particle_set) :: pset !< default particle list
@@ -81,8 +84,28 @@ contains
    end subroutine init
 
 !> \brief Add a particle to the list
+!> \todo Consider using lhs-realloc
 
-   subroutine add(this, mass, position)
+   subroutine add_using_derived_type(this, part)
+
+      implicit none
+
+      class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
+      type(particle), intent(in) :: part             !< new particle
+
+      type(particle), allocatable, dimension(:)  :: new_p
+      allocate(new_p(size(this%p, dim=1) + 1))
+      new_p(:size(this%p, dim=1)) = this%p(:)
+      new_p(ubound(new_p, dim=1)) = part
+      call move_alloc(from=new_p, to=this%p)
+
+      ! this%p = [this%p, particle]  ! LHS-realloc
+
+   end subroutine add_using_derived_type
+
+!> \brief Add a particle to the list
+
+   subroutine add_using_basic_types(this, mass, position, vel)
 
       use constants, only: ndims
 
@@ -91,19 +114,18 @@ contains
       class(particle_set),    intent(inout) :: this     !< an object invoking the type-bound procedure
       real,                   intent(in)    :: mass     !< mass of the particle (negative values are allowed just in case someone wants to calculate electric potential)
       real, dimension(ndims), intent(in)    :: position !< physical position
+      real, dimension(ndims), intent(in)    :: vel      !< particle velosity
 
-      type(particle), allocatable, dimension(:)  :: new_p
+      call this%add(particle(mass, position, vel))
 
-      allocate(new_p(size(this%p, dim=1) + 1))
-      new_p(:size(this%p, dim=1)) = this%p(:)
-      new_p(ubound(new_p, dim=1)) = particle(mass, position)
-      call move_alloc(from=new_p, to=this%p)
-
-   end subroutine add
+   end subroutine add_using_basic_types
 
 !> \brief Remove a partilce number id from the list
+!> \todo Consider using lhs-realloc
 
    subroutine remove(this, id)
+
+      use dataio_pub, only: msg, warn
 
       implicit none
 
@@ -111,12 +133,27 @@ contains
       integer,             intent(in)    :: id   !< position in the array of particles
 
       type(particle), allocatable, dimension(:)  :: new_p
+      integer :: i
+
+      if (id > size(this%p, dim=1)) then
+         write(msg, '("[particle_set:remove] Id = ",I6," is greater than total number of particles: ",I6)') id, size(this%p, dim=1)
+         call warn(msg)
+         call warn("[particle_set:remove] I'll remove last particle instead")
+      endif
+
+      i = min(id, size(this%p, dim=1))  ! Sanitize id
 
       allocate(new_p(size(this%p, dim=1) - 1))
-      new_p(:id-1) = this%p(:id-1)
-      new_p(id:)   = this%p(id+1:)
+      new_p(:i-1) = this%p(:i-1)
+      if (i < size(this%p, dim=1)) new_p(i:) = this%p(i+1:)
       call move_alloc(from=new_p, to=this%p)
 
+      ! if (id >= size(this%p, dim=1) then
+      !    ... copy warns ...
+      !    this%p = this%p(:size(this%p, dim=1) - 1)  ! LHS-realloc
+      ! else
+      !    this%p = [this%p(:id-1), this%p(id+1:)]  ! LHS-realloc
+      ! endif
    end subroutine remove
 
 !>
