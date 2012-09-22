@@ -419,7 +419,7 @@ contains
 !         csi2b = maxval(flind%all_fluids(:)%fl%cs2)   !> \deprecated BEWARE should be fluid dependent
          csi2b = 0.0
          do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
-            csi2b = max(csi2b, flind%all_fluids(ifl)%fl%cs2)
+            csi2b(:,:,:) = max(csi2b(:,:,:), flind%all_fluids(ifl)%fl%cs2)
          enddo
 #else /* !ISO */
          ekb(:,:,:) = ekin(cg%u(iarr_all_mx,:,:,kb),cg%u(iarr_all_my,:,:,kb),cg%u(iarr_all_mz,:,:,kb),db)
