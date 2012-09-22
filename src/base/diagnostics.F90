@@ -121,8 +121,8 @@ contains
       nsize = abs(n-size(ivec))
       deallocate(ivec)
 
-!      if (nsize == 0) call die("[diagnostics:check_lhs_realloc]: No lhs realloc!")
-      if (nsize /= 0) call die("[diagnostics:check_lhs_realloc]: LHS realloc detected.")
+      if (nsize == 0) call die("[diagnostics:check_lhs_realloc]: No lhs realloc!")
+!      if (nsize /= 0) call die("[diagnostics:check_lhs_realloc]: LHS realloc detected.")
 
    end subroutine check_lhs_realloc
 
