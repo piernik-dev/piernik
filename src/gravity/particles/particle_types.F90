@@ -46,7 +46,7 @@ module particle_types
    !<
    type :: particle
       real                   :: mass       !< mass of the particle
-      real, dimension(ndims) :: position   !< physical position
+      real, dimension(ndims) :: pos        !< physical position
       real, dimension(ndims) :: vel        !< particle velocity
    end type particle
 
@@ -55,12 +55,14 @@ module particle_types
    type :: particle_set
       type(particle), allocatable, dimension(:) :: p !< the list of particles
    contains
-      procedure :: init   !< initialize the list
-      procedure :: remove !< remove a particle
-      procedure :: merge  !< merge two particles
-      procedure :: map    !< project particles onto grid
+      procedure :: init        !< initialize the list
+      procedure :: remove      !< remove a particle
+      procedure :: merge_parts !< merge two particles
+      procedure :: map         !< project particles onto grid
       procedure :: add_using_basic_types   !< add a particle
       procedure :: add_using_derived_type  !< add a particle
+      generic, public :: exists => particle_with_id_exists
+      procedure :: particle_with_id_exists  !< Check if particle no. "i" exists
       generic, public :: add => add_using_basic_types, add_using_derived_type
    end type particle_set
 
@@ -84,7 +86,6 @@ contains
    end subroutine init
 
 !> \brief Add a particle to the list
-!> \todo Consider using lhs-realloc
 
    subroutine add_using_derived_type(this, part)
 
@@ -93,19 +94,13 @@ contains
       class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
       type(particle), intent(in) :: part             !< new particle
 
-      type(particle), allocatable, dimension(:)  :: new_p
-      allocate(new_p(size(this%p, dim=1) + 1))
-      new_p(:size(this%p, dim=1)) = this%p(:)
-      new_p(ubound(new_p, dim=1)) = part
-      call move_alloc(from=new_p, to=this%p)
-
-      ! this%p = [this%p, particle]  ! LHS-realloc
+      this%p = [this%p, part]  ! LHS-realloc
 
    end subroutine add_using_derived_type
 
 !> \brief Add a particle to the list
 
-   subroutine add_using_basic_types(this, mass, position, vel)
+   subroutine add_using_basic_types(this, mass, pos, vel)
 
       use constants, only: ndims
 
@@ -113,47 +108,32 @@ contains
 
       class(particle_set),    intent(inout) :: this     !< an object invoking the type-bound procedure
       real,                   intent(in)    :: mass     !< mass of the particle (negative values are allowed just in case someone wants to calculate electric potential)
-      real, dimension(ndims), intent(in)    :: position !< physical position
+      real, dimension(ndims), intent(in)    :: pos      !< physical position
       real, dimension(ndims), intent(in)    :: vel      !< particle velosity
 
-      call this%add(particle(mass, position, vel))
+      call this%add(particle(mass, pos, vel))
 
    end subroutine add_using_basic_types
 
 !> \brief Remove a partilce number id from the list
-!> \todo Consider using lhs-realloc
 
    subroutine remove(this, id)
 
-      use dataio_pub, only: msg, warn
+      use dataio_pub, only: msg, die
 
       implicit none
 
       class(particle_set), intent(inout) :: this !< an object invoking the type-bound procedure
       integer,             intent(in)    :: id   !< position in the array of particles
 
-      type(particle), allocatable, dimension(:)  :: new_p
-      integer :: i
-
-      if (id > size(this%p, dim=1)) then
-         write(msg, '("[particle_set:remove] Id = ",I6," is greater than total number of particles: ",I6)') id, size(this%p, dim=1)
-         call warn(msg)
-         call warn("[particle_set:remove] I'll remove last particle instead")
+      if (.not. this%exists(id)) then
+         write(msg, '("[particle_set:remove] Particle no Id = ",I6," does not exist")') id
+         call die(msg)
       endif
 
-      i = min(id, size(this%p, dim=1))  ! Sanitize id
-
-      allocate(new_p(size(this%p, dim=1) - 1))
-      new_p(:i-1) = this%p(:i-1)
-      if (i < size(this%p, dim=1)) new_p(i:) = this%p(i+1:)
-      call move_alloc(from=new_p, to=this%p)
-
-      ! if (id >= size(this%p, dim=1) then
-      !    ... copy warns ...
-      !    this%p = this%p(:size(this%p, dim=1) - 1)  ! LHS-realloc
-      ! else
-      !    this%p = [this%p(:id-1), this%p(id+1:)]  ! LHS-realloc
-      ! endif
+      this%p = [this%p(:id-1), this%p(id+1:)]   ! LHS-realloc, please note  that if id == lbound(this%p, 1)
+                                                ! or id == ubound(this%p, 1) it does not cause out of bound
+                                                ! access in p
    end subroutine remove
 
 !>
@@ -162,7 +142,7 @@ contains
 !! \todo consider implementation as overloading of the (+) operator
 !<
 
-   subroutine merge(this, id1, id2)
+   subroutine merge_parts(this, id1, id2)
 
       implicit none
 
@@ -172,13 +152,13 @@ contains
 
       type(particle) :: merger
 
-      merger%mass     = this%p(id1)%mass + this%p(id2)%mass
-      merger%position = (this%p(id1)%mass*this%p(id1)%position + this%p(id2)%mass*this%p(id2)%position) / merger%mass ! CoM
+      merger%mass = this%p(id1)%mass + this%p(id2)%mass
+      merger%pos  = (this%p(id1)%mass*this%p(id1)%pos + this%p(id2)%mass*this%p(id2)%pos) / merger%mass ! CoM
 
       this%p(id1) = merger
       call this%remove(id2)
 
-   end subroutine merge
+   end subroutine merge_parts
 
    subroutine map(this, iv, factor)
 
@@ -200,7 +180,7 @@ contains
       do while (associated(cgl))
 
          do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
-            ijkp(:) = floor((this%p(p)%position(:)-cgl%cg%fbnd(:, LO))/cgl%cg%dl(:)) + cgl%cg%ijkse(:, LO)
+            ijkp(:) = floor((this%p(p)%pos(:)-cgl%cg%fbnd(:, LO))/cgl%cg%dl(:)) + cgl%cg%ijkse(:, LO)
             if (all(ijkp >= cgl%cg%ijkse(:,LO)) .and. all(ijkp <= cgl%cg%ijkse(:,HI))) &
                  cgl%cg%q(iv)%arr(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = cgl%cg%q(iv)%arr(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * this%p(p)%mass / cgl%cg%dvol
          enddo
@@ -208,7 +188,17 @@ contains
          cgl => cgl%nxt
       enddo
 
-
    end subroutine map
+
+   function particle_with_id_exists(this, id) result (tf)
+      implicit none
+      class(particle_set), intent(inout) :: this
+      integer, intent(in) :: id
+      logical :: tf
+
+      tf = .true.
+      if (id > ubound(this%p, dim=1) .or. id < lbound(this%p, dim=1)) &
+         tf = .false.
+   end function particle_with_id_exists
 
 end module particle_types
