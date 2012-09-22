@@ -192,7 +192,7 @@ contains
          iarr_mag_swp(xdim,:) = [xdim,ydim,zdim]
          iarr_mag_swp(ydim,:) = [ydim,xdim,zdim]
          iarr_mag_swp(zdim,:) = [zdim,ydim,xdim]
-         iarr_all_mag         = [xdim,ydim,zdim]
+         iarr_all_mag(:)      = [xdim,ydim,zdim]
 
          ! Compute index arrays for the ionized fluid
          call set_fluidindex_arrays(flind%ion,.true.)

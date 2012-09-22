@@ -83,8 +83,8 @@ contains
       enddo
 
       ! Gather the primes into a table
-      allocate(this%tab(count(numb /= 0)))
-      this%tab = pack(numb, numb /= 0) !> \deprecated BEWARE: lhs reallocation
+      allocate(this%tab(0))
+      this%tab = pack(numb, numb /= 0) ! BEWARE: lhs reallocation
       this%max = n
 
 #ifdef DEBUG

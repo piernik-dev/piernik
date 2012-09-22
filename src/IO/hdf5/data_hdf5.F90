@@ -326,7 +326,7 @@ contains
       if (nproc_io == 1) then ! perform serial write
          ! write all cg, one by one
          do ncg = 1, cg_desc%tot_cg_n
-            dims = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
+            dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
             call recycle_data(dims, cg_all_n_b, ncg, data)
 
             if (master) then
@@ -362,7 +362,7 @@ contains
             do while (associated(cgl))
                n = n + 1
                ncg = cg_desc%offsets(proc) + n
-               dims = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
+               dims(:) = [ cg_all_n_b(xdim, ncg), cg_all_n_b(ydim, ncg), cg_all_n_b(zdim, ncg) ]
                call recycle_data(dims, cg_all_n_b, ncg, data)
                cg => cgl%cg
 
@@ -381,7 +381,7 @@ contains
             !! \todo there should be something like H5S_NONE as a contradiction to H5S_ALL, yet I cannot find it...
             !<
 
-            dims = [ cg_all_n_b(xdim, 1), cg_all_n_b(ydim, 1), cg_all_n_b(zdim, 1) ]
+            dims(:) = [ cg_all_n_b(xdim, 1), cg_all_n_b(ydim, 1), cg_all_n_b(zdim, 1) ]
 
             ! completely bogus values, only to make HDF5 happy
             call h5screate_simple_f(rank, dims, filespace_id, error)

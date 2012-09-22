@@ -402,7 +402,7 @@ contains
                edge(side) = edge(side) + HI - side ; nbcells(side) = nbcells(side) + HI - side
 !               l(dir,:) = sidebase(side)+HI-side ; r(dir,:) = l(dir,:)-1 original
                l(dir,:) = edge(side)+HI-side ; r(dir,:) = l(dir,:) - I_ONE
-               dvar = var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) - var(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
+               dvar(:,:,:) = var(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) - var(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                r(dir,:) = edge(side)
                do ib=1,nbcells(side)
                   l(dir,:) = sbase(side) + ib

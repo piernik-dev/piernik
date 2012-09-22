@@ -690,9 +690,9 @@ contains
          if (.not.allocated(ax%x)) allocate(ax%x(size(cg%x)))
          if (.not.allocated(ax%y)) allocate(ax%y(size(cg%y)))
          if (.not.allocated(ax%z)) allocate(ax%z(size(cg%z)))
-         ax%x = cg%x
-         ax%y = cg%y
-         ax%z = cg%z
+         ax%x(:) = cg%x(:)
+         ax%y(:) = cg%y(:)
+         ax%z(:) = cg%z(:)
 
          gp_status = ''
 
@@ -939,13 +939,13 @@ contains
       py = cdd%pcoords(ydim)
       pz = cdd%pcoords(zdim)
 
-      ddgph  = gpwork(1,1,1)-gpwork(cg%is,cg%js,cg%ks)
-      gpwork = gpwork + ddgp(px,py,pz) + ddgph
+      ddgph  = gpwork(1,1,1) - gpwork(cg%is,cg%js,cg%ks)
+      gpwork(:,:,:) = gpwork(:,:,:) + ddgp(px,py,pz) + ddgph
       cg%wa(:,:,:) = gpwork(:,:,:)
       call leaves%get_extremum(qna%wai, MAXL, gp_max)
 
       call MPI_Bcast(gp_max%val, I_ONE, MPI_DOUBLE_PRECISION, gp_max%proc, comm, mpi_err)
-      gpwork = gpwork - gp_max%val
+      gpwork(:,:,:) = gpwork(:,:,:) - gp_max%val
 
       cg%gp = gpwork
       if (allocated(gpwork)) deallocate(gpwork)

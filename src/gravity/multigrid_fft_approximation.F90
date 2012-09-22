@@ -526,9 +526,9 @@ contains
 
          select case (curl%fft_type)
             case (fft_rcr)
-               cg%mg%fft  = cg%mg%fft  * cg%mg%Green3D
+               cg%mg%fft(:,:,:)  = cg%mg%fft(:,:,:)  * cg%mg%Green3D(:,:,:)
             case (fft_dst)
-               cg%mg%fftr = cg%mg%fftr * cg%mg%Green3D
+               cg%mg%fftr(:,:,:) = cg%mg%fftr(:,:,:) * cg%mg%Green3D(:,:,:)
             case default
                call die("[multigrid_gravity:fft_convolve] Unknown FFT type.")
          end select

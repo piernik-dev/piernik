@@ -175,7 +175,7 @@ contains
       pos(:) = VAR_CENTER
       if (present(position)) then
          if (any(size(position) == [1, nvar])) then
-            pos = position  !> \deprecated BEWARE: lhs reallocation
+            pos(:) = position(:)
          else
             write(msg,'(2(a,i3))')"[cg_list_global:reg_var] position should be an array of 1 or ",nvar," values. Got ",size(position)
             call die(msg)

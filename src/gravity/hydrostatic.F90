@@ -90,7 +90,7 @@ contains
 
       sdprof = 1.0
       call hydrostatic_zeq_densmid(iia, jja, sdprof, csim2, sd)
-      dprof = dprof * coldens / sd
+      dprof(:) = dprof(:) * coldens / sd
 
    end subroutine hydrostatic_zeq_coldens
 
@@ -263,7 +263,7 @@ contains
       ia = min(hscg%n_(xdim), int(max(1, iia), kind=4))
       ja = min(hscg%n_(ydim), int(max(1, jja), kind=4))
       call grav_accel(zdim, ia, ja, zs, nstot, gprofs)
-      gprofs = tune_zeq*gprofs
+      gprofs(:) = tune_zeq*gprofs(:)
 
    end subroutine get_gprofs_accel
 
@@ -295,7 +295,7 @@ contains
       ax%z(nstot1)  = ax%z(nstot) + dzs
       call grav_type(gpots,ax)
       gprofs(1:nstot) = (gpots(1,1,1:nstot) - gpots(1,1,2:nstot1))/dzs
-      gprofs = tune_zeq*gprofs
+      gprofs(:) = tune_zeq*gprofs(:)
       if (associated(gpots)) deallocate(gpots)
       if (allocated(ax%x))   deallocate(ax%x)
       if (allocated(ax%y))   deallocate(ax%y)
@@ -339,7 +339,7 @@ contains
          zs(ksub) = hsmin + (real(ksub)-half)*dzs
       enddo
       call get_gprofs(iia, jja)
-      gprofs = gprofs / csim2 *dzs
+      gprofs(:) = gprofs(:) / csim2 *dzs
       call hydrostatic_main(sd)
 
    end subroutine start_hydrostatic
@@ -413,8 +413,8 @@ contains
          kk = kb + ssign
          zs(:) = cg%z(kb) + dzs*(real([(ksub,ksub=1,nstot)])+real(nsub-3)*half)
 
-         db = cg%u(iarr_all_dn,:,:,kb)
-         db = max(db,smalld)
+         db(:,:,:) = cg%u(iarr_all_dn,:,:,kb)
+         db(:,:,:) = max(db(:,:,:), smalld)
 #ifdef ISO
 !         csi2b = maxval(flind%all_fluids(:)%fl%cs2)   !> \deprecated BEWARE should be fluid dependent
          csi2b = 0.0
@@ -422,9 +422,9 @@ contains
             csi2b = max(csi2b, flind%all_fluids(ifl)%fl%cs2)
          enddo
 #else /* !ISO */
-         ekb = ekin(cg%u(iarr_all_mx,:,:,kb),cg%u(iarr_all_my,:,:,kb),cg%u(iarr_all_mz,:,:,kb),db)
-         eib = cg%u(iarr_all_en,:,:,kb) - ekb
-         eib = max(eib,smallei)
+         ekb(:,:,:) = ekin(cg%u(iarr_all_mx,:,:,kb),cg%u(iarr_all_my,:,:,kb),cg%u(iarr_all_mz,:,:,kb),db)
+         eib(:,:,:) = cg%u(iarr_all_en,:,:,kb) - ekb(:,:,:)
+         eib(:,:,:) = max(eib(:,:,:), smallei)
          do ifl = lbound(flind%all_fluids, dim=1), ubound(flind%all_fluids, dim=1)
             csi2b(ifl,:,:) = (flind%all_fluids(ifl)%fl%gam_1)*eib(ifl,:,:)/db(ifl,:,:)
          enddo
@@ -434,7 +434,7 @@ contains
             do i=1, cg%n_(xdim)
 
                call get_gprofs(i,j)
-               gprofs = tune_zeq_bnd * gprofs
+               gprofs(:) = tune_zeq_bnd * gprofs(:)
                dprofs(:,1) = dbr(:,i,j)
                do ksub=1, nstot-1
                   factor = (2.0 + dzs*gprofs(ksub)/csi2b(:,i,j)) / (2.0 - dzs*gprofs(ksub)/csi2b(:,i,j))     !> \todo use hzeq_scheme here
@@ -475,8 +475,8 @@ contains
                endif
             endif
 #ifndef ISO
-            ekb = ekin(cg%u(iarr_all_mx,:,:,kk),cg%u(iarr_all_my,:,:,kk),cg%u(iarr_all_mz,:,:,kk),db)
-            cg%u(iarr_all_en,:,:,kk) = ekb + eib
+            ekb(:,:,:) = ekin(cg%u(iarr_all_mx,:,:,kk),cg%u(iarr_all_my,:,:,kk),cg%u(iarr_all_mz,:,:,kk),db)
+            cg%u(iarr_all_en,:,:,kk) = ekb(:,:,:) + eib(:,:,:)
 #endif /* !ISO */
 #ifdef COSM_RAYS
             cg%u(iarr_all_crs,:,:,kk) = smallecr

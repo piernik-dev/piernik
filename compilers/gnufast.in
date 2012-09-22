@@ -4,5 +4,4 @@ USE_GNUCPP = yes
 F90       = mpif90
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none 
 F90FLAGS += -O2 -funroll-loops
-F90FLAGS += -fno-realloc-lhs
 LDFLAGS   = -Wl,--as-needed -Wl,-O1

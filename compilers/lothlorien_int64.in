@@ -17,7 +17,6 @@ PROG     = piernik
 F90      = h5pfc -shlib
 F90FLAGS  = -fdefault-real-8 -fdefault-integer-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none 
 F90FLAGS += -O3 -funroll-loops
-F90FLAGS += -fno-realloc-lhs
 F90FLAGS += -Wall -Wextra -W -fbacktrace -ggdb -pedantic
 F90FLAGS += -fbounds-check -frange-check -Wsurprising -Wcharacter-truncation
 #F90FLAGS +=  -ffpe-trap=invalid,zero,overflow,denormal 

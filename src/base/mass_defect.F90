@@ -76,7 +76,7 @@ contains
       local_magic_mass(:) = 0.0
 
       if (master) then
-         magic_mass = magic_mass + magic_mass0
+         magic_mass(:) = magic_mass(:) + magic_mass0(:)
 
          if (present(tsl)) then
             do ifl = 1, flind%fluids
