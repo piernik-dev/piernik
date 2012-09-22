@@ -37,7 +37,7 @@ module particle_types
    implicit none
 
    private
-   public :: pset
+   public :: pset, particle_set
 
    !>
    !! \brief simple particle: just mass and position
