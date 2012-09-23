@@ -127,18 +127,21 @@ contains
       use dataio_pub,          only: die
       use domain,              only: dom, is_multicg
       use fluidboundaries,     only: bnd_u
-      use global,              only: t, dt
       use grid_cont,           only: grid_container
       use shear,               only: yshift
 #endif /* SHEAR */
 #ifdef GRAV
       use gravity,             only: source_terms_grav
+      use particle_pub,        only: pset, psolver
 #endif /* GRAV */
 #if defined(COSM_RAYS) && defined(MULTIGRID)
       use initcosmicrays,      only: use_split
       use fluidboundaries,     only: all_fluid_boundaries
       use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* COSM_RAYS && MULTIGRID */
+#if defined(SHEAR) || defined(GRAV)
+      use global,              only: t, dt
+#endif /* SHEAR || GRAV */
 
       implicit none
 
@@ -177,6 +180,9 @@ contains
          enddo
       endif
       if (associated(problem_customize_solution)) call problem_customize_solution(forward)
+#ifdef GRAV
+      if (associated(psolver)) call pset%evolve(psolver, t-dt, dt)
+#endif /* GRAV */
 
    end subroutine make_3sweeps
 
