@@ -801,7 +801,7 @@ contains
       use grid_cont,      only: grid_container
       use multigridvars,  only: source, bnd_periodic, bnd_dirichlet, bnd_givenval, grav_bnd
       use units,          only: fpiG
-      use particle_types, only: pset
+      use particle_pub,   only: pset
 #ifdef JEANS_PROBLEM
       use problem_pub,    only: jeans_d0, jeans_mode ! hack for tests
 #endif /* JEANS_PROBLEM */
