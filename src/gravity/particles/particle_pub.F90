@@ -36,7 +36,7 @@
 !<
 
 module particle_pub
-
+! pulled by GRAV
    use particle_types,  only: particle_set, particle_solver_T
 
    implicit none
