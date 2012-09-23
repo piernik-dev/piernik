@@ -29,6 +29,7 @@
 
  $END_CONTROL
     tend   = 10.0
+    nend   = 100
  /
 
  $OUTPUT_CONTROL
