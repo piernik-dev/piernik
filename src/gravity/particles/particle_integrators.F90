@@ -32,9 +32,19 @@
 
 module particle_integrators
 ! pulled by GRAV
+   use particle_types, only: particle_solver_T
+
    implicit none
+
    private
-   public :: hermit_4ord
+   public :: hermit4
+
+   type, extends(particle_solver_T) :: hermit4_T
+   contains
+      procedure, nopass :: evolve => hermit_4ord
+   end type hermit4_T
+
+   type(hermit4_T), target :: hermit4
 
 contains
 
@@ -47,7 +57,7 @@ contains
       use constants, only: ndims, xdim, zdim
       use particle_types, only: particle_set
       implicit none
-      type(particle_set), intent(inout) :: pset  !< particle list
+      class(particle_set), intent(inout) :: pset  !< particle list
       real, intent(in) :: t_glob, dt_tot
 
       real, parameter :: dt_param = 0.03        ! control parameter to determine time step size

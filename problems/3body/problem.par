@@ -73,3 +73,7 @@
 
  $AMR
  /
+
+ $PARTICLES
+   time_integrator = 'hermit4'
+ /

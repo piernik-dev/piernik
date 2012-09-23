@@ -63,14 +63,14 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,   only: xdim, ydim, zdim
-      use cg_list,     only: cg_list_element
-      use cg_leaves,   only: leaves
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use grid_cont,   only: grid_container
-      use particle_types, only: pset
-      use particle_integrators, only: hermit_4ord
+      use constants,    only: xdim, ydim, zdim
+      use cg_list,      only: cg_list_element
+      use cg_leaves,    only: leaves
+      use dataio_pub,   only: printinfo
+      use fluidindex,   only: flind
+      use fluidtypes,   only: component_fluid
+      use grid_cont,    only: grid_container
+      use particle_pub, only: pset, psolver
 
       implicit none
 
@@ -105,7 +105,8 @@ contains
       call pset%add(1.0, [ 0.9700436,  -0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
       call pset%add(1.0, [-0.9700436,   0.24308753,  0.0], [ 0.466203685,  0.43236573, 0.0])
       call pset%add(1.0, [ 0.0,         0.0,         0.0], [-0.932407370, -0.86473146, 0.0])
-      call hermit_4ord(pset, 0.0, 10.0)
+      if (associated(psolver)) call pset%evolve(psolver, 0.0, 10.0)   !! move it somewhere into main code
+      call printinfo('To see results type: gnuplot -p -e ''plot "nbody_out.log" u 2:3'' ')
 
    end subroutine init_prob
 !-----------------------------------------------------------------------------

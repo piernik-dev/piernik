@@ -37,7 +37,7 @@ module particle_types
    implicit none
 
    private
-   public :: pset, particle_set
+   public :: particle_set, particle_solver_T
 
    !>
    !! \brief simple particle: just mass and position
@@ -59,6 +59,7 @@ module particle_types
       procedure :: remove      !< remove a particle
       procedure :: merge_parts !< merge two particles
       procedure :: map         !< project particles onto grid
+      procedure :: evolve => particle_set_evolve !< perform time integration with n-body solver
       procedure :: add_using_basic_types   !< add a particle
       procedure :: add_using_derived_type  !< add a particle
       generic, public :: exists => particle_with_id_exists
@@ -66,7 +67,22 @@ module particle_types
       generic, public :: add => add_using_basic_types, add_using_derived_type
    end type particle_set
 
-   type(particle_set) :: pset !< default particle list
+   type, abstract :: particle_solver_T
+      ! additional data goes here in extended types
+      ! evolve need to have "pass" keyword to access them
+   contains
+      procedure(particle_solver_P), nopass, deferred :: evolve
+   end type particle_solver_T
+
+   abstract interface
+      subroutine particle_solver_P(pset, t_glob, dt_tot)
+         import :: particle_set
+         class(particle_set), intent(inout) :: pset
+         real, intent(in) :: t_glob, dt_tot
+      end subroutine particle_solver_P
+   end interface
+
+   type(particle_set), target :: pset !< default particle list
 
 contains
 
@@ -200,5 +216,15 @@ contains
       if (id > ubound(this%p, dim=1) .or. id < lbound(this%p, dim=1)) &
          tf = .false.
    end function particle_with_id_exists
+
+   subroutine particle_set_evolve(this, func, t, dt)
+      implicit none
+      class(particle_set), intent(inout) :: this
+      class(particle_solver_T), intent(inout) :: func
+      real, intent(in) :: t
+      real, intent(in) :: dt
+
+      call func%evolve(this, t, dt)
+   end subroutine particle_set_evolve
 
 end module particle_types

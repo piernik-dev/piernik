@@ -80,7 +80,7 @@ contains
       use domain,         only: dom
       use global,         only: smalld
       use mpisetup,       only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
-      use particle_types, only: pset
+      use particle_pub,   only: pset
 
       implicit none
 

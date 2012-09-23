@@ -154,7 +154,7 @@ contains
       use dataio_pub,       only: printinfo, warn, die, code_progress
       use mpisetup,         only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
       use named_array_list, only: qna
-      use particle_types,   only: pset
+      use particle_pub,     only: init_particles
       use units,            only: newtong
 #ifdef SELF_GRAV
       use constants,        only: sgp_n, sgpm_n
@@ -303,7 +303,7 @@ contains
 #endif /* VERBOSE */
       endif
 
-      call pset%init
+      call init_particles
 
    end subroutine init_grav
 
