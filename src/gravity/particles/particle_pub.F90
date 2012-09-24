@@ -52,15 +52,17 @@ contains
 
       use constants,             only: cbuff_len
       use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub,            only: msg, die
       use mpisetup,              only: master, slave, cbuff, piernik_mpi_bcast
       use particle_integrators,  only: hermit4
 
       implicit none
       character(len=cbuff_len) :: time_integrator
+      character(len=cbuff_len), parameter :: default_ti = "none"
 
       namelist /PARTICLES/ time_integrator
 
-      time_integrator = "none"
+      time_integrator = default_ti
 
       if (master) then
          diff_nml(PARTICLES)
@@ -74,11 +76,14 @@ contains
          time_integrator = cbuff(1)
       endif
 
+      psolver => null()
       select case (trim(time_integrator))
          case ('hermit4')
             psolver => hermit4
+         case (default_ti) ! be quiet
          case default
-            psolver => null()
+            write(msg, '(3a)')"[particle_pub:init_particles] Unknown integrator '",trim(time_integrator),"'"
+            call die(msg)
       end select
 
       call pset%init()

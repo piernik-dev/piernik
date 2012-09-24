@@ -365,7 +365,7 @@ contains
             if (present(skip_eof)) then
                if (skip_eof) return
             endif
-            write(msg,'(3a)') "Namelist: ",trim(nm)," not found in problem.par. Assuming defaults."
+            write(msg,'(3a)') "Namelist: ",trim(nm)," not found in problem.par. Assuming defaults." ! Can happen also when there is no EOL after the namelist in problem.par
             call printinfo(msg)
          case (239, 5010)
             write(msg,'(3a)') "A problem with one of the variables that belong to the ",trim(nm)," namelist was found in problem.par:"

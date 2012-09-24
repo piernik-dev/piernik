@@ -176,6 +176,17 @@ contains
 
    end subroutine merge_parts
 
+!>
+!! \brief Project the particles onto density map
+!!
+!! \details With the help of multigrid self-gravity solver the gravitational potential of the particle set can be found
+!!
+!! \warning Current implementation of the multipole solver isn't aware of particles, co if any of them exist outside of the domain, their potential will be ignored.
+!! \todo Fix the multipole solver
+!!
+!! \todo Add an option for less compact mapping that nullifies self-forces
+!<
+
    subroutine map(this, iv, factor)
 
       use cg_leaves, only: leaves
@@ -207,24 +218,30 @@ contains
    end subroutine map
 
    function particle_with_id_exists(this, id) result (tf)
+
       implicit none
+
       class(particle_set), intent(inout) :: this
-      integer, intent(in) :: id
+      integer,             intent(in)    :: id
+
       logical :: tf
 
-      tf = .true.
-      if (id > ubound(this%p, dim=1) .or. id < lbound(this%p, dim=1)) &
-         tf = .false.
+      tf = allocated(this%p)
+      if (tf) tf = (id >= lbound(this%p, dim=1)) .and. (id <= ubound(this%p, dim=1))
+
    end function particle_with_id_exists
 
    subroutine particle_set_evolve(this, func, t, dt)
+
       implicit none
-      class(particle_set), intent(inout) :: this
+
+      class(particle_set),      intent(inout) :: this
       class(particle_solver_T), intent(inout) :: func
-      real, intent(in) :: t
-      real, intent(in) :: dt
+      real,                     intent(in)    :: t
+      real,                     intent(in)    :: dt
 
       call func%evolve(this, t, dt)
+
    end subroutine particle_set_evolve
 
 end module particle_types

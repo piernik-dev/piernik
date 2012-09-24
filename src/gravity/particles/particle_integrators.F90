@@ -140,7 +140,6 @@ contains
             real, dimension(n), intent(in) :: mass
             real, dimension(n, ndims), intent(in) :: pos, vel, acc, jerk
 
-            integer :: i, k
             real :: ekin, etot
 
             ekin = sum(0.5 * mass(:) * sum(vel(:,:)**2, dim=2))
@@ -153,6 +152,8 @@ contains
                & " , E_tot = ", etot
             write(lun_err, *) "                absolute energy error: E_tot - E_init = ", etot - einit
             write(lun_err, *) "                relative energy error: (E_tot - E_init) / E_init = ", (etot - einit) / einit
+
+            if (.false.) write(lun_err, *) pos, acc, jerk ! suppress compiler warnings
 
          end subroutine write_diagnostics
 
