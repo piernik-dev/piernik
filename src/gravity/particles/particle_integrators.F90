@@ -112,7 +112,7 @@ contains
          if (t >= t_out) then
             write(lun_out, *) "#", t
             do i = 1, n
-               write(lun_out, *) mass(i), pos(i,:), vel(i,:)
+               write(lun_out, '(7(E13.6,1X))') mass(i), pos(i,:), vel(i,:)
             enddo
             t_out = t_out + dt_out
          endif
@@ -273,7 +273,8 @@ contains
             jerk(i,:) = jerk(i,:) + mass(j) * dj(:)
             jerk(j,:) = jerk(j,:) - mass(i) * dj(:)
 
-            coll_time_q = min(coll_time_q, r2**2 / v2**2) ! first collision time estimate, based on unaccelerated linear motion
+            if (v2 > 0.0) &
+               coll_time_q = min(coll_time_q, r2**2 / v2**2) ! first collision time estimate, based on unaccelerated linear motion
 
             da2 = sum(da**2) * (mass(i) + mass(j))**2  ! square of the pair-wise acceleration between particles i and j
             coll_time_q = min(coll_time_q, r2 / da2)   ! second collision time estimate, based on free fall
