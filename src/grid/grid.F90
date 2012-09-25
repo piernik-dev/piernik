@@ -87,7 +87,7 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer :: curl
+      type(cg_level_connected_T), pointer :: curl, aux
 
       curl => coarsest
       do while (associated(curl))
@@ -98,6 +98,13 @@ contains
 
       call all_cg%delete_all
       call all_lists%delete
+
+      curl => coarsest
+      do while (associated(curl))
+         aux => curl
+         curl => curl%finer
+         deallocate(aux)
+      enddo
 
       if (allocated(qna%lst)) deallocate(qna%lst)
       if (allocated(wna%lst)) deallocate(wna%lst)
