@@ -53,6 +53,7 @@ contains
       use initfluids,         only: cleanup_fluids
       use interactions,       only: cleanup_interactions
       use mpisetup,           only: cleanup_mpi
+      use particle_pub,       only: cleanup_particles
       use timer,              only: cleanup_timers
       use user_hooks,         only: cleanup_problem
 #ifdef RESISTIVE
@@ -77,6 +78,7 @@ contains
 #endif /* MULTIGRID */
       call cleanup_grid;          call nextdot(.false.)
       call cleanup_fluids;        call nextdot(.false.)
+      call cleanup_particles;     call nextdot(.false.)
       call cleanup_global;        call nextdot(.false.)
       call cleanup_decomposition; call nextdot(.false.)
       call cleanup_domain;        call nextdot(.false.)

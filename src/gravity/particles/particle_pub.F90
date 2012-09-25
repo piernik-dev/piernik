@@ -41,12 +41,14 @@ module particle_pub
 
    implicit none
    private
-   public :: pset, psolver, init_particles
+   public :: pset, psolver, init_particles, cleanup_particles
 
    type(particle_set) :: pset !< default particle list
    class(particle_solver_T), pointer :: psolver
 
 contains
+
+!> \brief Read namelist and initialize pset with 0 particles
 
    subroutine init_particles
 
@@ -89,5 +91,15 @@ contains
       call pset%init()
 
    end subroutine init_particles
+
+!> \brief Deallocate pset
+
+   subroutine cleanup_particles
+
+     implicit none
+
+     call pset%cleanup
+
+   end subroutine cleanup_particles
 
 end module particle_pub

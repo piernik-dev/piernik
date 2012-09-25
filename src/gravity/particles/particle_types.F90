@@ -56,6 +56,7 @@ module particle_types
       type(particle), allocatable, dimension(:) :: p !< the list of particles
    contains
       procedure :: init        !< initialize the list
+      procedure :: cleanup     !< delete the list
       procedure :: remove      !< remove a particle
       procedure :: merge_parts !< merge two particles
       procedure :: map         !< project particles onto grid
@@ -94,12 +95,24 @@ contains
 
       implicit none
 
-      class(particle_set),    intent(inout) :: this     !< an object invoking the type-bound procedure
+      class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
 
       if (allocated(this%p)) call die("[particle_types:init] already initialized")
       allocate(this%p(0))
 
    end subroutine init
+
+!> \brief delete the list
+
+   subroutine cleanup(this)
+
+      implicit none
+
+      class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
+
+      if (allocated(this%p)) deallocate(this%p)
+
+    end subroutine cleanup
 
 !> \brief Add a particle to the list
 
