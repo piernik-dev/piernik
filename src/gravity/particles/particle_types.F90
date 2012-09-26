@@ -102,7 +102,8 @@ contains
 
       class(particle), intent(inout) :: this     !< an object invoking the type-bound procedure
 
-      this%outside = any(dom%has_dir(:) .and. (this%pos(:) < dom%edge(:, LO) .or. this%pos(:) > dom%edge(:, HI)))
+      this%outside = any(dom%has_dir(:) .and. (this%pos(:) < dom%edge(:, LO) .or. this%pos(:) >= dom%edge(:, HI)))
+      ! Inequalities above must match the rounding function used in map routine (floor() includes bottom edge, but excludes top edge)
 
    end subroutine is_outside
 
@@ -240,6 +241,8 @@ contains
 !! \todo Fix the multipole solver
 !!
 !! \todo Add an option for less compact mapping that nullifies self-forces
+!!
+!! \warning Particles outside periodic domain are ignored
 !<
 
    subroutine map(this, iv, factor)

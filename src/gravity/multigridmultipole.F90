@@ -119,15 +119,16 @@ contains
    subroutine init_multipole
 
       use cg_level_connected, only: base_lev, finest
-      use constants,     only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
-      use dataio_pub,    only: die, warn
-      use domain,        only: dom
-      use mpi,           only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
-      use mpisetup,      only: master, comm, mpi_err
+      use constants,          only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
+      use dataio_pub,         only: die, warn
+      use domain,             only: dom
+      use mpi,                only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
+      use mpisetup,           only: master, comm, mpi_err
+      use particle_pub,       only: pset
 
       implicit none
 
-      integer :: l, m
+      integer :: l, m, i
 
       ! assume that Center of Mass is approximately in the center of computational domain by default
       CoM(0) = 1.
@@ -224,10 +225,19 @@ contains
                call die("[multipole:init_multipole] Unsupported geometry.")
          end select
 
+         do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+            !> \warning Not updated when particles are moving
+            !> \warning This does not work because particles are registered later
+            !> \todo split this routine and update some things on each entry (also required for AMR)
+            !> \warning this is not optimal, when domain is placed far away form the origin
+            !> \warning a factor of up to 2 may be required if we use CoM as the origin
+            if (pset%p(i)%outside) rqbin = max(rqbin, int(sqrt(sum(pset%p(i)%pos**2))/drq) + 1)
+         enddo
+
          if (allocated(k12) .or. allocated(ofact) .or. allocated(Q)) call die("[multipole:init_multipole] k12, ofact or Q already allocated")
          allocate(k12(2, 1:lmax, 0:mmax), ofact(0:lm(int(lmax), int(2*mmax))), Q(0:lm(int(lmax), int(2*mmax)), INSIDE:OUTSIDE, 0:rqbin))
 
-         ofact(:) = 0. ! prevent FPE spurious exceptions in multipole:img_mass2moments
+         ofact(:) = 0. ! prevent spurious FP exceptions in multipole:img_mass2moments
          do l = 1, lmax
             do m = 0, min(l, int(mmax))
                if (m == 0) then
@@ -393,20 +403,21 @@ contains
 
    subroutine find_img_CoM
 
-      use cg_list,    only: cg_list_element
-      use constants,  only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, I_ONE !, GEO_RPZ
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,   only: comm, mpi_err
+      use cg_list,      only: cg_list_element
+      use constants,    only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, I_ONE !, GEO_RPZ
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
+      use mpi,          only: MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,     only: comm, mpi_err
+      use particle_pub, only: pset
 
       implicit none
 
       real, dimension(0:ndims) :: lsum, dsum
-      integer :: lh
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
+      integer :: lh, i
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:find_img_CoM] non-cartesian geometry not implemented yet")
 
@@ -439,6 +450,12 @@ contains
             endif
          enddo
          cgl => cgl%nxt
+      enddo
+
+      ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
+      !> \warning Do we need to use the fppiG factor here?
+      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+         if (pset%p(i)%outside) lsum(:) = lsum(:) + [ pset%p(i)%mass, pset%p(i)%mass * pset%p(i)%pos(:) ]
       enddo
 
       call MPI_Allreduce(lsum(0:ndims), CoM(0:ndims), ndims+I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
@@ -709,13 +726,15 @@ contains
 
    subroutine img_mass2moments
 
-      use cg_list,    only: cg_list_element
-      use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
-      use mpisetup,   only: comm, mpi_err
+      use cg_list,      only: cg_list_element
+      use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
+      use dataio_pub,   only: die
+      use domain,       only: dom
+      use grid_cont,    only: grid_container
+      use mpi,          only: MPI_DOUBLE_PRECISION, MPI_INTEGER, MPI_SUM, MPI_MIN, MPI_MAX, MPI_IN_PLACE
+      use mpisetup,     only: comm, mpi_err
+      use particle_pub, only: pset
+      use units,        only: fpiG
 
       implicit none
 
@@ -768,6 +787,11 @@ contains
             enddo
          endif
          cgl => cgl%nxt
+      enddo
+
+      ! Add only those particles, which are placed outside the domain. Particles inside the domain were already mapped on the grid.
+      do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+         if (pset%p(i)%outside) call point2moments(fpiG*pset%p(i)%mass, pset%p(i)%pos(xdim), pset%p(i)%pos(ydim), pset%p(i)%pos(zdim))
       enddo
 
       call MPI_Allreduce(MPI_IN_PLACE, irmin, I_ONE, MPI_INTEGER, MPI_MIN, comm, mpi_err)
