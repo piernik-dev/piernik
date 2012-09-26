@@ -68,8 +68,10 @@ contains
       do icr = 1, flind%crs%all
          ! 1/eff_dim is because we compute the p_cr*dv in every sweep (3 times in 3D, twice in 2D and once in 1D experiments)
          decr(icr,:)      = -1./real(dom%eff_dim)*(gamma_crs(icr)-1.)*uu(iarr_crs(icr),:)*divv(:)
-         grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(icr)-1.)*(uu(iarr_crs(icr),1:nn-2)-uu(iarr_crs(icr),3:nn))/(2.*dx)
       enddo
+         ! Only protons (p+) are dynamically important, we can neglect grad_pcr from heavier nuclei
+         ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
+      grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(1)-1.)*(uu(iarr_crs(1),1:nn-2)-uu(iarr_crs(icr),3:nn))/(2.*dx)
       grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
 
    end subroutine src_gpcr
