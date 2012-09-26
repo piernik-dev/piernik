@@ -71,7 +71,7 @@ contains
       enddo
          ! Only protons (p+) are dynamically important, we can neglect grad_pcr from heavier nuclei
          ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
-      grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(1)-1.)*(uu(iarr_crs(1),1:nn-2)-uu(iarr_crs(icr),3:nn))/(2.*dx)
+      grad_pcr(2:nn-1) = grad_pcr(2:nn-1) + cr_active*(gamma_crs(1)-1.)*(uu(iarr_crs(1),1:nn-2)-uu(iarr_crs(1),3:nn))/(2.*dx)
       grad_pcr(1:2) = 0.0 ; grad_pcr(nn-1:nn) = 0.0
 
    end subroutine src_gpcr
