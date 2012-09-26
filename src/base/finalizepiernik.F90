@@ -53,43 +53,48 @@ contains
       use initfluids,         only: cleanup_fluids
       use interactions,       only: cleanup_interactions
       use mpisetup,           only: cleanup_mpi
-      use particle_pub,       only: cleanup_particles
       use timer,              only: cleanup_timers
       use user_hooks,         only: cleanup_problem
-#ifdef RESISTIVE
-      use resistivity,        only: cleanup_resistivity
-#endif /* RESISTIVE */
 #ifdef MULTIGRID
       use multigrid,          only: cleanup_multigrid
 #endif /* MULTIGRID */
+#ifdef GRAV
+      use particle_pub,       only: cleanup_particles
+#endif/* GRAV */
 #ifdef PIERNIK_OPENCL
       use piernikcl,          only: cleanup_opencl
 #endif /* PIERNIK_OPENCL */
+#ifdef RESISTIVE
+      use resistivity,        only: cleanup_resistivity
+#endif /* RESISTIVE */
+
       implicit none
 
       if (associated(cleanup_problem)) call cleanup_problem; call nextdot(.false.)
-      call cleanup_interactions;  call nextdot(.false.)
-      call cleanup_dataio;        call nextdot(.false.)
+      call cleanup_interactions;   call nextdot(.false.)
+      call cleanup_dataio;         call nextdot(.false.)
 #ifdef RESISTIVE
-      call cleanup_resistivity;   call nextdot(.false.)
+      call cleanup_resistivity;    call nextdot(.false.)
 #endif /* RESISTIVE */
 #ifdef MULTIGRID
-      call cleanup_multigrid;     call nextdot(.false.)
+      call cleanup_multigrid;      call nextdot(.false.)
 #endif /* MULTIGRID */
-      call cleanup_grid;          call nextdot(.false.)
-      call cleanup_fluids;        call nextdot(.false.)
-      call cleanup_particles;     call nextdot(.false.)
-      call cleanup_global;        call nextdot(.false.)
-      call cleanup_decomposition; call nextdot(.false.)
-      call cleanup_domain;        call nextdot(.false.)
-      call cleanup_fluidindex;    call nextdot(.false., print_t = .true.)
-      call cleanup_timers;        call nextdot(.false.)
-      call cleanup_diagnostics;   call nextdot(.false.)
-      call cg_extptrs%epa_cleanup;  call nextdot(.false.)
+      call cleanup_grid;           call nextdot(.false.)
+      call cleanup_fluids;         call nextdot(.false.)
+#ifdef GRAV
+      call cleanup_particles;      call nextdot(.false.)
+#endif/* GRAV */
+      call cleanup_global;         call nextdot(.false.)
+      call cleanup_decomposition;  call nextdot(.false.)
+      call cleanup_domain;         call nextdot(.false.)
+      call cleanup_fluidindex;     call nextdot(.false., print_t = .true.)
+      call cleanup_timers;         call nextdot(.false.)
+      call cleanup_diagnostics;    call nextdot(.false.)
+      call cg_extptrs%epa_cleanup; call nextdot(.false.)
 #ifdef PIERNIK_OPENCL
-      call cleanup_opencl;        call nextdot(.false.)
+      call cleanup_opencl;         call nextdot(.false.)
 #endif /* PIERNIK_OPENCL */
-      call cleanup_mpi;           call nextdot(.true.)
+      call cleanup_mpi;            call nextdot(.true.)
 
    end subroutine cleanup_piernik
 
