@@ -48,6 +48,9 @@ module particle_types
       real                   :: mass       !< mass of the particle
       real, dimension(ndims) :: pos        !< physical position
       real, dimension(ndims) :: vel        !< particle velocity
+      logical                :: outside    !< this flag is true if the particle is outside the domain
+   contains
+      procedure :: is_outside              !< compute the outside flag
    end type particle
 
    !> \brief A list of particles and some associated methods
@@ -56,6 +59,7 @@ module particle_types
       type(particle), allocatable, dimension(:) :: p !< the list of particles
    contains
       procedure :: init        !< initialize the list
+      procedure :: print       !< print the list
       procedure :: cleanup     !< delete the list
       procedure :: remove      !< remove a particle
       procedure :: merge_parts !< merge two particles
@@ -87,6 +91,21 @@ module particle_types
 
 contains
 
+!> \brief compute the outside flag
+
+   subroutine is_outside(this)
+
+      use constants, only: LO, HI
+      use domain,    only: dom
+
+      implicit none
+
+      class(particle), intent(inout) :: this     !< an object invoking the type-bound procedure
+
+      this%outside = any(dom%has_dir(:) .and. (this%pos(:) < dom%edge(:, LO) .or. this%pos(:) > dom%edge(:, HI)))
+
+   end subroutine is_outside
+
 !> \brief initialize the list with 0 elements
 
    subroutine init(this)
@@ -101,6 +120,26 @@ contains
       allocate(this%p(0))
 
    end subroutine init
+
+!> \brief print the list
+
+   subroutine print(this)
+
+      use dataio_pub, only: msg, printinfo
+
+      implicit none
+
+      class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
+
+      integer :: i
+
+      write(msg, '(a,a12,2(a,a36),2a)')" #number   : ","mass"," [ ","position"," ] [ ","velocity"," ] is_outside"
+      call printinfo(msg)
+      do i = lbound(this%p, dim=1), ubound(this%p, dim=1)
+         write(msg, '(a,i7,a,g12.3,2(a,3g12.3),a,l2)')" # ",i," : ",this%p(i)%mass," [ ",this%p(i)%pos," ] [ ",this%p(i)%vel," ] ",this%p(i)%outside
+         call printinfo(msg)
+      enddo
+   end subroutine print
 
 !> \brief delete the list
 
@@ -121,9 +160,11 @@ contains
       implicit none
 
       class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
-      type(particle), intent(in) :: part             !< new particle
+      type(particle),      intent(in) :: part     !< new particle
 
+! Cannot just do "call part%is_outside" because this will require changes of intent here and in add_using_basic_types, which we don\'t want to do
       this%p = [this%p, part]  ! LHS-realloc
+      call this%p(ubound(this%p, dim=1))%is_outside
 
    end subroutine add_using_derived_type
 
@@ -140,7 +181,7 @@ contains
       real, dimension(ndims), intent(in)    :: pos      !< physical position
       real, dimension(ndims), intent(in)    :: vel      !< particle velosity
 
-      call this%add(particle(mass, pos, vel))
+      call this%add(particle(mass, pos, vel, .false.))
 
    end subroutine add_using_basic_types
 
@@ -185,6 +226,7 @@ contains
       merger%pos  = (this%p(id1)%mass*this%p(id1)%pos + this%p(id2)%mass*this%p(id2)%pos) / merger%mass ! CoM
 
       this%p(id1) = merger
+      call this%p(id1)%is_outside
       call this%remove(id2)
 
    end subroutine merge_parts
@@ -205,6 +247,7 @@ contains
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
       use constants, only: xdim, ydim, zdim, ndims, LO, HI
+      use domain,    only: dom
 
       implicit none
 
@@ -219,8 +262,9 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
 
+         ijkp(:) = cgl%cg%ijkse(:,LO)
          do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
-            ijkp(:) = floor((this%p(p)%pos(:)-cgl%cg%fbnd(:, LO))/cgl%cg%dl(:)) + cgl%cg%ijkse(:, LO)
+            where (dom%has_dir(:)) ijkp(:) = floor((this%p(p)%pos(:)-cgl%cg%fbnd(:, LO))/cgl%cg%dl(:)) + cgl%cg%ijkse(:, LO)
             if (all(ijkp >= cgl%cg%ijkse(:,LO)) .and. all(ijkp <= cgl%cg%ijkse(:,HI))) &
                  cgl%cg%q(iv)%arr(ijkp(xdim), ijkp(ydim), ijkp(zdim)) = cgl%cg%q(iv)%arr(ijkp(xdim), ijkp(ydim), ijkp(zdim)) + factor * this%p(p)%mass / cgl%cg%dvol
          enddo
