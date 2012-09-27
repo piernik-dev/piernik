@@ -181,8 +181,6 @@ contains
 
    subroutine add_using_basic_types(this, mass, pos, vel)
 
-      use constants, only: ndims
-
       implicit none
 
       class(particle_set),    intent(inout) :: this     !< an object invoking the type-bound procedure
