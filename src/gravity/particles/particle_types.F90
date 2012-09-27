@@ -57,13 +57,15 @@ module particle_types
 
    type :: particle_set
       type(particle), allocatable, dimension(:) :: p !< the list of particles
+      procedure(map_scheme), pointer :: map
    contains
       procedure :: init        !< initialize the list
       procedure :: print       !< print the list
       procedure :: cleanup     !< delete the list
       procedure :: remove      !< remove a particle
       procedure :: merge_parts !< merge two particles
-      procedure :: map         !< project particles onto grid
+      procedure :: set_map
+      procedure :: map_ngc     !< project particles onto grid
       procedure :: evolve => particle_set_evolve !< perform time integration with n-body solver
       procedure :: add_using_basic_types   !< add a particle
       procedure :: add_using_derived_type  !< add a particle
@@ -85,6 +87,14 @@ module particle_types
          class(particle_set), intent(inout) :: pset
          real, intent(in) :: t_glob, dt_tot
       end subroutine particle_solver_P
+
+      subroutine map_scheme(this, iv, factor)
+         import :: particle_set
+         implicit none
+         class(particle_set), intent(in)    :: this   !< an object invoking the type-bound procedure
+         integer,             intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
+         real,                intent(in)    :: factor !< typically fpiG
+      end subroutine map_scheme
    end interface
 
    type(particle_set), target :: pset !< default particle list
@@ -239,6 +249,32 @@ contains
    end subroutine merge_parts
 
 !>
+!! \brief Set function that projects particles onto grid
+!<
+
+   subroutine set_map(this, ischeme)
+      use constants,    only: I_NGP, I_CIC, I_TSC
+      use dataio_pub,   only: die
+
+      implicit none
+      class(particle_set), intent(inout) :: this    !< an object invoking the type-bound procedure
+      integer(kind=4),     intent(in)    :: ischeme !< index of interpolation scheme
+
+      select case (ischeme)
+         case (I_NGP)
+            this%map => map_ngc
+         case (I_CIC)
+            !this%map => map_cic
+            call die("[particle_types:set_map] Cloud in cell is not implemented yet...")
+         case (I_TSC)
+            !this%map => map_tsc
+            call die("[particle_types:set_map] Triangular shaped cloud is not implemented yet...")
+         case default
+            call die("[particle_types:set] Interpolation scheme selector's logic in particle_pub:init_particles is broken. Go fix it!")
+      end select
+   end subroutine set_map
+
+!>
 !! \brief Project the particles onto density map
 !!
 !! \details With the help of multigrid self-gravity solver the gravitational potential of the particle set can be found
@@ -251,7 +287,7 @@ contains
 !! \warning Particles outside periodic domain are ignored
 !<
 
-   subroutine map(this, iv, factor)
+   subroutine map_ngc(this, iv, factor)
 
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
@@ -260,7 +296,7 @@ contains
 
       implicit none
 
-      class(particle_set), intent(inout) :: this   !< an object invoking the type-bound procedure
+      class(particle_set), intent(in)    :: this   !< an object invoking the type-bound procedure
       integer,             intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
       real,                intent(in)    :: factor !< typically fpiG
 
@@ -281,7 +317,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine map
+   end subroutine map_ngc
 
    function particle_with_id_exists(this, id) result (tf)
 

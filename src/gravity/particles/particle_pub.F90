@@ -52,7 +52,7 @@ contains
 
    subroutine init_particles
 
-      use constants,             only: cbuff_len
+      use constants,             only: cbuff_len, I_NGP, I_CIC, I_TSC
       use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,            only: msg, die
       use mpisetup,              only: master, slave, cbuff, piernik_mpi_bcast
@@ -60,22 +60,27 @@ contains
 
       implicit none
       character(len=cbuff_len) :: time_integrator
+      character(len=cbuff_len) :: interpolation_scheme
       character(len=cbuff_len), parameter :: default_ti = "none"
+      character(len=cbuff_len), parameter :: default_is = "ngp"
 
-      namelist /PARTICLES/ time_integrator
+      namelist /PARTICLES/ time_integrator, interpolation_scheme
 
       time_integrator = default_ti
+      interpolation_scheme = default_is
 
       if (master) then
          diff_nml(PARTICLES)
 
          cbuff(1) = time_integrator
+         cbuff(2) = interpolation_scheme
       endif
 
       call piernik_MPI_Bcast(cbuff, cbuff_len)
 
       if (slave) then
          time_integrator = cbuff(1)
+         interpolation_scheme = cbuff(2)
       endif
 
       psolver => null()
@@ -85,6 +90,17 @@ contains
          case (default_ti) ! be quiet
          case default
             write(msg, '(3a)')"[particle_pub:init_particles] Unknown integrator '",trim(time_integrator),"'"
+            call die(msg)
+      end select
+      select case (trim(interpolation_scheme))
+         case ('ngp', 'NGP', 'neareast grid point')
+            call pset%set_map(I_NGP)
+         case ('cic', 'CIC', 'cloud in cell')
+            call pset%set_map(I_CIC)
+         case ('tsc', 'TSC', 'triangular shaped cloud')
+            call pset%set_map(I_TSC)
+         case default
+            write(msg, '(3a)')"[particle_pub:init_particles] Unknown interpolation scheme '",trim(interpolation_scheme),"'"
             call die(msg)
       end select
 

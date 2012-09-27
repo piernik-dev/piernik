@@ -223,6 +223,13 @@ module constants
       enumerator :: fft_none = -1 !< none
    end enum
 
+   ! particle interpolation scheme
+   enum, bind(C)
+      enumerator :: I_NGP   ! Nearest grid point
+      enumerator :: I_CIC   ! Cloud in cell
+      enumerator :: I_TSC   ! Triangular shaped cloud
+   end enum
+
    ! misc
    enum, bind(C)
       enumerator :: MINL, MAXL                           !< constants for func::get_extremum
