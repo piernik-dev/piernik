@@ -33,7 +33,7 @@
 module grid_cont
 
    use constants,   only: xdim, zdim, ndims, LO, HI
-   use types,       only: axes
+   use types,       only: axes, coord_T
    use named_array, only: named_array4d, named_array3d
 
    implicit none
@@ -150,6 +150,7 @@ module grid_cont
 
       ! Physical size and coordinates
 
+      type(coord_T), dimension(ndims) :: coord
       real, dimension(ndims, LO:HI) :: fbnd                      !< current block boundary positions
       real, allocatable, dimension(:) :: inv_x                   !< array of invert x-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_y                   !< array of invert y-positions of %grid cells centers
@@ -499,26 +500,35 @@ contains
 
       select case (d)
          case (xdim)
-            if (allocated(this%x) .or. allocated(this%xl) .or. allocated(this%xr) .or. allocated(this%inv_x)) call die("[grid_container:set_axis] x-coordinates already allocated")
-            call move_alloc(a0, this%x)
+            if (associated(this%x) .or. allocated(this%xl) .or. allocated(this%xr) .or. allocated(this%inv_x)) call die("[grid_container:set_axis] x-coordinates already allocated")
+            allocate(this%x(size(a0)))
+            this%x(:) = a0(:)
             call move_alloc(al, this%xl)
             call move_alloc(ar, this%xr)
             call move_alloc(ia, this%inv_x)
          case (ydim)
-            if (allocated(this%y) .or. allocated(this%yl) .or. allocated(this%yr) .or. allocated(this%inv_y)) call die("[grid_container:set_axis] y-coordinates already allocated")
-            call move_alloc(a0, this%y)
+            if (associated(this%y) .or. allocated(this%yl) .or. allocated(this%yr) .or. allocated(this%inv_y)) call die("[grid_container:set_axis] y-coordinates already allocated")
+            allocate(this%y(size(a0)))
+            this%y(:) = a0(:)
             call move_alloc(al, this%yl)
             call move_alloc(ar, this%yr)
             call move_alloc(ia, this%inv_y)
          case (zdim)
-            if (allocated(this%z) .or. allocated(this%zl) .or. allocated(this%zr) .or. allocated(this%inv_z)) call die("[grid_container:set_axis] z-coordinates already allocated")
-            call move_alloc(a0, this%z)
+            if (associated(this%z) .or. allocated(this%zl) .or. allocated(this%zr) .or. allocated(this%inv_z)) call die("[grid_container:set_axis] z-coordinates already allocated")
+            allocate(this%y(size(a0)))
+            this%z(:) = a0(:)
             call move_alloc(al, this%zl)
             call move_alloc(ar, this%zr)
             call move_alloc(ia, this%inv_z)
          case default
             call die("[grid_container:set_axis] invalid direction")
       end select
+
+      if (allocated(a0)) deallocate(a0)
+
+      this%coord(xdim)%r => this%x
+      this%coord(ydim)%r => this%y
+      this%coord(zdim)%r => this%z
 
    end subroutine set_axis
 
@@ -537,15 +547,15 @@ contains
       integer, parameter :: nseg = 2*2
       type(tgt_list), dimension(nseg) :: rpio_tgt
 
-      if (allocated(this%x))     deallocate(this%x)
+      if (associated(this%x))     nullify(this%x)
       if (allocated(this%xl))    deallocate(this%xl)
       if (allocated(this%xr))    deallocate(this%xr)
       if (allocated(this%inv_x)) deallocate(this%inv_x)
-      if (allocated(this%y))     deallocate(this%y)
+      if (associated(this%y))     nullify(this%y)
       if (allocated(this%yl))    deallocate(this%yl)
       if (allocated(this%yr))    deallocate(this%yr)
       if (allocated(this%inv_y)) deallocate(this%inv_y)
-      if (allocated(this%z))     deallocate(this%z)
+      if (associated(this%z))     nullify(this%z)
       if (allocated(this%zl))    deallocate(this%zl)
       if (allocated(this%zr))    deallocate(this%zr)
       if (allocated(this%inv_z)) deallocate(this%inv_z)

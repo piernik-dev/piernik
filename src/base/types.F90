@@ -36,7 +36,7 @@ module types
    implicit none
 
    private
-   public :: axes, value
+   public :: axes, value, coord_T
 
    type :: value
       real                      :: val
@@ -47,9 +47,13 @@ module types
    end type value
 
    type :: axes
-      real, allocatable, dimension(:) :: x      !< array of x-positions of %grid cells centers
-      real, allocatable, dimension(:) :: y      !< array of y-positions of %grid cells centers
-      real, allocatable, dimension(:) :: z      !< array of z-positions of %grid cells centers
+      real, pointer, dimension(:) :: x      !< array of x-positions of %grid cells centers
+      real, pointer, dimension(:) :: y      !< array of y-positions of %grid cells centers
+      real, pointer, dimension(:) :: z      !< array of z-positions of %grid cells centers
    end type axes
+
+   type :: coord_T
+      real, dimension(:), pointer :: r
+   end type coord_T
 
 end module types
