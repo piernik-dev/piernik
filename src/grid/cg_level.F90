@@ -591,12 +591,17 @@ contains
       integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
       type(box_T), dimension(:), allocatable :: tmp
+      integer :: i
 
       if (.not. allocated(this%patches)) then
          allocate(this%patches(1))
       else
          allocate(tmp(lbound(this%patches(:),dim=1):ubound(this%patches(:), dim=1) + 1))
-         tmp(:ubound(this%patches(:), dim=1)) = this%patches(:) ! valgrind shows memory leak here
+         tmp(:ubound(this%patches(:), dim=1)) = this%patches(:)
+         ! manually deallocate arrays inside user-types, as it seems that move_alloc is unable to do that
+         do i = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
+            if (allocated(this%patches(i)%pse)) deallocate(this%patches(i)%pse)
+         enddo
          call move_alloc(from=tmp, to=this%patches)
       endif
 

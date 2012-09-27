@@ -162,6 +162,7 @@ contains
       type(na_var),       intent(in)    :: element
 
       type(na_var), dimension(:), allocatable :: tmp
+      integer :: i
 
       if (this%exists(element%name)) then
          write(msg, '(3a)')"[named_array_list:add2lst] An array '",trim(element%name),"' was already registered in this list."
@@ -173,8 +174,11 @@ contains
       else
          allocate(tmp(lbound(this%lst(:),dim=1):ubound(this%lst(:), dim=1) + 1))
          tmp(:ubound(this%lst(:), dim=1)) = this%lst(:)
+         ! manually deallocate arrays inside user-types, as it seems that move_alloc is unable to do that
+         do i = lbound(this%lst(:), dim=1), ubound(this%lst(:), dim=1)
+            if (allocated(this%lst(i)%position)) deallocate(this%lst(i)%position)
+         enddo
          call move_alloc(from=tmp, to=this%lst)
-         !! \warning slight memory leak here, e.g. in use at exit: 572 bytes in 115 blocks, perhaps associated with na_var%position
       endif
       this%lst(ubound(this%lst(:), dim=1)) = element
 
