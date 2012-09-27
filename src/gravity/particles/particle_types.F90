@@ -127,6 +127,7 @@ contains
    subroutine print(this)
 
       use dataio_pub, only: msg, printinfo
+      use mpisetup,   only: slave
 
       implicit none
 
@@ -134,12 +135,19 @@ contains
 
       integer :: i
 
-      write(msg, '(a,a12,2(a,a36),2a)')" #number   : ","mass"," [ ","position"," ] [ ","velocity"," ] is_outside"
+      !> \ todo communicate particles that aren't known to the master
+      if (slave) return
+
+      if (size(this%p) <= 0) return
+
+      call printinfo("[particle_types:print] Known particles:")
+      write(msg, '(a,a12,2(a,a36),2a)')" #number   : ","mass"," [ ","position"," ] [ ","velocity"," ]  is_outside"
       call printinfo(msg)
       do i = lbound(this%p, dim=1), ubound(this%p, dim=1)
          write(msg, '(a,i7,a,g12.3,2(a,3g12.3),a,l2)')" # ",i," : ",this%p(i)%mass," [ ",this%p(i)%pos," ] [ ",this%p(i)%vel," ] ",this%p(i)%outside
          call printinfo(msg)
       enddo
+
    end subroutine print
 
 !> \brief delete the list

@@ -36,7 +36,7 @@ module cg_list_dataop
    implicit none
 
    private
-   public :: cg_list_dataop_T, ind_val
+   public :: cg_list_dataop_T, ind_val, dirty_label
 
    !> \brief Arbitrary list of grid containers
    type, extends(cg_list_T) :: cg_list_dataop_T
@@ -540,12 +540,12 @@ contains
 
    subroutine check_dirty(this, iv, label, expand)
 
-      use cg_list,     only: cg_list_element
-      use constants,   only: dirtyL, LO
-      use dataio_pub,  only: warn, msg, die
-      use domain,      only: dom
-      use global,      only: dirty_debug
-      use mpisetup,    only: proc
+      use cg_list,          only: cg_list_element
+      use constants,        only: dirtyL, LO
+      use dataio_pub,       only: warn, msg, die
+      use domain,           only: dom
+      use global,           only: dirty_debug, show_n_dirtys
+      use mpisetup,         only: proc
       use named_array_list, only: qna
 
       implicit none
@@ -572,10 +572,16 @@ contains
                do i = cgl%cg%is-ng*dom%D_x, cgl%cg%ie+ng*dom%D_x
                   if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
                      ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
-                     write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') "[cg_list:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, &
-                          &                                          " cg#", cgl%cg%grid_id, " '", trim(qna%lst(iv)%name), "'(", &
-                          &                                          [ i, j, k ] - cgl%cg%ijkse(:, LO) + cgl%cg%off(:), ") = ", cgl%cg%q(iv)%arr(i, j, k)
-                     call warn(msg)
+                     if (cnt <= show_n_dirtys) then
+                        if (cnt < show_n_dirtys) then
+                           write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') "[cg_list:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, &
+                                &                                          " cg#", cgl%cg%grid_id, " '", trim(qna%lst(iv)%name), "'(", &
+                                &                                          [ i, j, k ] - cgl%cg%ijkse(:, LO) + cgl%cg%off(:), ") = ", cgl%cg%q(iv)%arr(i, j, k)
+                        else
+                           msg="[cg_list:check_dirty] and so on ... "
+                        endif
+                        call warn(msg)
+                     endif
                      cnt = cnt + 1
                      ! endif
                   endif

@@ -1517,14 +1517,15 @@ contains
 
    subroutine approximate_solution_rbgs(curl, src, soln)
 
-      use cg_list,       only: cg_list_element, dirty_label
       use cg_level_connected, only: cg_level_connected_T, coarsest
-      use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
-      use dataio_pub,    only: die
-      use domain,        only: dom
-      use global,        only: dirty_debug
-      use grid_cont,     only: grid_container
-      use multigridvars, only: correction, multidim_code_3D, nsmool
+      use cg_list,            only: cg_list_element
+      use cg_list_dataop,     only: dirty_label
+      use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF
+      use dataio_pub,         only: die
+      use domain,             only: dom
+      use global,             only: dirty_debug
+      use grid_cont,          only: grid_container
+      use multigridvars,      only: correction, multidim_code_3D, nsmool
 
       implicit none
 

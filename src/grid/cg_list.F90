@@ -37,7 +37,7 @@ module cg_list
    implicit none
 
    private
-   public :: cg_list_T, cg_list_element, dirty_label
+   public :: cg_list_T, cg_list_element
 
    !>
    !! \brief A grid container with two links to other cg_list_elements
@@ -78,9 +78,6 @@ module cg_list
 !> \todo merge lists
 
    end type cg_list_T
-
-   integer, parameter    :: dl_len = 64 !< length of label buffer
-   character(len=dl_len) :: dirty_label !< buffer for label for check_dirty subroutine
 
 contains
 

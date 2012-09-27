@@ -36,7 +36,7 @@ module cg_level_connected
    implicit none
 
    private
-   public :: cg_level_connected_T, base_lev, finest, coarsest
+   public :: cg_level_connected_T, base_lev, finest, coarsest, equalize_finest
 
    !! \brief A list of all cg of the same resolution with links to coarser and finer levels
    type, extends(cg_level_T) :: cg_level_connected_T
@@ -71,6 +71,32 @@ module cg_level_connected
    type(cg_level_connected_T), pointer :: coarsest             !< coarsest level of refinement
 
 contains
+
+!>
+!! \brief It is not allowed for different processes to have different height of level hierarchy, so let's add some empty levels, where necessary
+!!
+!! \details Multigrid levels are always created on all processes, so no need to fix anything on the bottom of the hierarchy
+!!
+!! \todo When global top level do not have any blocks then destroy it.
+!<
+
+   subroutine equalize_finest
+
+      use constants, only: I_ONE
+      use mpi,       only: MPI_INTEGER, MPI_MAX
+      use mpisetup,  only: comm, mpi_err
+
+      implicit none
+
+      integer(kind=4) :: g_finest_id
+
+      call MPI_Allreduce(finest%level_id, g_finest_id, I_ONE, MPI_INTEGER, MPI_MAX, comm, mpi_err)
+
+      do while (g_finest_id > finest%level_id)
+         call finest%add_level(coarse = .false.)
+      enddo
+
+   end subroutine equalize_finest
 
 !> \brief Common initialization for base level and other levels
 
@@ -169,7 +195,7 @@ contains
 
       !! make sure that vertical_prep will be called where necessary
       this%ord_prolong_set = INVALID
-      write(msg, '(a,i3)')"level ",this%level_id
+      write(msg, '(a,i3)')"level ",new_lev%level_id
       call all_lists%register(new_lev, msg)
 
    end subroutine add_lev

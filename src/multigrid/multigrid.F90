@@ -82,7 +82,7 @@ contains
       use dataio_pub,          only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,          only: warn, die, code_progress
       use domain,              only: dom
-      use global,              only: dirty_debug, do_ascii_dump
+      use global,              only: dirty_debug, do_ascii_dump, show_n_dirtys !< \warning: alien variables go to local namelist
       use mpisetup,            only: master, slave, nproc, ibuff, lbuff, piernik_MPI_Bcast
       use multigridvars,       only: single_base, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, tot_ts, &
            &                         source_n, solution_n, defect_n, correction_n, source, solution, defect, correction
@@ -98,7 +98,7 @@ contains
 
       logical, save         :: frun = .true.          !< First run flag
 
-      namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug
+      namelist /MULTIGRID_SOLVER/ level_max, ord_prolong, ord_prolong_face_norm, ord_prolong_face_par, stdout, verbose_vcycle, do_ascii_dump, dirty_debug, show_n_dirtys
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[multigrid:init_multigrid] grid, geometry, constants or arrays not initialized")
       ! This check is too weak (geometry), arrays are required only for multigrid_gravity
@@ -111,6 +111,7 @@ contains
       ord_prolong           = O_INJ
       ord_prolong_face_norm = O_I2
       ord_prolong_face_par  = O_INJ
+      show_n_dirtys         = 16
       ! May all the logical parameters be .false. by default
       stdout                = .false.
       verbose_vcycle        = .false.
@@ -125,6 +126,7 @@ contains
          ibuff(2) = ord_prolong
          ibuff(3) = ord_prolong_face_norm
          ibuff(4) = ord_prolong_face_par
+         ibuff(5) = show_n_dirtys
 
          lbuff(1) = stdout
          lbuff(2) = verbose_vcycle
@@ -142,6 +144,7 @@ contains
          ord_prolong           = int(ibuff(2), kind=4)
          ord_prolong_face_norm = int(ibuff(3), kind=4)
          ord_prolong_face_par  = int(ibuff(4), kind=4)
+         show_n_dirtys         = ibuff(5)
 
          stdout           = lbuff(1)
          verbose_vcycle   = lbuff(2)

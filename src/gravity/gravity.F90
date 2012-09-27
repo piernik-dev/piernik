@@ -43,7 +43,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_pot_3d_called, grav_type, get_gprofs, grav_accel2pot, sum_potential
+   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_pot_3d_called, grav_type, get_gprofs, grav_accel2pot, sum_potential
    public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gp_status, gprofs_target, ptmass2, ptm2_x
 
    integer, parameter         :: gp_stat_len   = 9
@@ -146,14 +146,11 @@ contains
 !<
    subroutine init_grav
 
-      use cg_leaves,        only: leaves
       use cg_list_global,   only: all_cg
-      use cg_list,          only: cg_list_element
-      use constants,        only: PIERNIK_INIT_GRID, AT_OUT_B, gp_n, gpot_n, hgpot_n
+      use constants,        only: PIERNIK_INIT_MPI, AT_OUT_B, gp_n, gpot_n, hgpot_n
       use dataio_pub,       only: nh    ! QA_WARN required for diff_nml
       use dataio_pub,       only: printinfo, warn, die, code_progress
       use mpisetup,         only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
-      use named_array_list, only: qna
       use particle_pub,     only: init_particles
       use units,            only: newtong
 #ifdef SELF_GRAV
@@ -165,12 +162,10 @@ contains
 
       implicit none
 
-      type(cg_list_element), pointer :: cgl
-
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
                 nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target, variable_gp
 
-      if (code_progress < PIERNIK_INIT_GRID) call die("[gravity:init_grav] units or arrays not initialized.")
+      if (code_progress < PIERNIK_INIT_MPI) call die("[gravity:init_grav] mpi not initialized.")
 
 #ifdef VERBOSE
       if (master) call printinfo("[gravity:init_grav] Commencing gravity module initialization")
@@ -283,19 +278,6 @@ contains
       call all_cg%reg_var(sgpm_n)
 #endif /* SELF_GRAV */
 
-      cgl => leaves%first
-      do while (associated(cgl))
-         cgl%cg%gpot  => cgl%cg%q(qna%ind( gpot_n))%arr
-         cgl%cg%gpot(:,:,:) = 0.0
-         cgl%cg%hgpot => cgl%cg%q(qna%ind(hgpot_n))%arr
-         cgl%cg%gp    => cgl%cg%q(qna%ind(   gp_n))%arr
-#ifdef SELF_GRAV
-         cgl%cg%sgp   => cgl%cg%q(qna%ind(  sgp_n))%arr
-         cgl%cg%sgpm  => cgl%cg%q(qna%ind( sgpm_n))%arr
-#endif /* SELF_GRAV */
-         cgl => cgl%nxt
-      enddo
-
       if (.not.user_grav) then
          grav_pot_3d => default_grav_pot_3d
 #ifdef VERBOSE
@@ -306,6 +288,53 @@ contains
       call init_particles
 
    end subroutine init_grav
+
+!> Register gravity-specific initialization of cg
+
+   subroutine init_grav_ext
+
+      use grid_container_ext, only: cg_ext, cg_extptrs
+
+      implicit none
+
+      procedure(cg_ext), pointer :: g_cg_init_p, g_cg_cleanup_p
+
+      g_cg_init_p => g_cg_init
+      g_cg_cleanup_p => null()
+      call cg_extptrs%extend(g_cg_init_p, g_cg_cleanup_p, "gravity")
+
+   end subroutine init_grav_ext
+
+!> \brief Associate gravity-specific pointers
+
+   subroutine g_cg_init(cg)
+
+      use constants,        only: base_level_id, gp_n, gpot_n, hgpot_n
+      use grid_cont,        only: grid_container
+      use named_array_list, only: qna
+#ifdef SELF_GRAV
+      use constants,        only: sgp_n, sgpm_n
+#endif /* SELF_GRAV */
+
+      implicit none
+
+      type(grid_container), pointer,  intent(inout) :: cg
+
+      if (cg%level_id >= base_level_id) then
+
+         cg%gpot  => cg%q(qna%ind( gpot_n))%arr
+         cg%gpot(:,:,:) = 0.0
+         cg%hgpot => cg%q(qna%ind(hgpot_n))%arr
+         cg%gp    => cg%q(qna%ind(   gp_n))%arr
+         !> \todo move the following to multigrid?
+#ifdef SELF_GRAV
+         cg%sgp   => cg%q(qna%ind(  sgp_n))%arr
+         cg%sgpm  => cg%q(qna%ind( sgpm_n))%arr
+#endif /* SELF_GRAV */
+
+      endif
+
+   end subroutine g_cg_init
 
    subroutine source_terms_grav
 

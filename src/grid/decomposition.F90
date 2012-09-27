@@ -105,10 +105,6 @@ contains
 
    logical function decompose_patch(this, n_d, off, n_pieces) result(patch_divided)
 
-      use constants, only: I_ONE
-      use mpi,       only: MPI_IN_PLACE, MPI_LOGICAL, MPI_LAND
-      use mpisetup,  only: comm, mpi_err
-
       implicit none
 
       class(box_T),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
@@ -121,7 +117,6 @@ contains
 
       call this%decompose_patch_int(patch_divided, n_pieces)
       if (patch_divided) patch_divided = this%is_not_too_small("not catched anywhere")
-      call MPI_Allreduce(MPI_IN_PLACE, patch_divided, I_ONE, MPI_LOGICAL, MPI_LAND, comm, mpi_err)
 
    end function decompose_patch
 
@@ -691,11 +686,10 @@ contains
 
    logical function is_not_too_small(this, label) result(patch_divided)
 
-      use constants,  only: I_ONE, LO, HI
+      use constants,  only: LO, HI
       use dataio_pub, only: warn, msg
       use domain,     only: dom, minsize
-      use mpi,        only: MPI_IN_PLACE, MPI_LOGICAL, MPI_LAND
-      use mpisetup,   only: comm, mpi_err, master
+      use mpisetup,   only: master
 
       implicit none
 
@@ -727,7 +721,6 @@ contains
          write(msg,'(3a)')"[decomposition:is_not_too_small] ",label," no pse"
          call warn(msg)
       endif
-      call MPI_Allreduce(MPI_IN_PLACE, patch_divided, I_ONE, MPI_LOGICAL, MPI_LAND, comm, mpi_err)
 
       if (allocated(this%pse) .and. .not. patch_divided) deallocate(this%pse)
 

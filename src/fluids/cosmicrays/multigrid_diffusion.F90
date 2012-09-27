@@ -333,18 +333,17 @@ contains
 
    subroutine init_source(cr_id)
 
-      use cg_list_global, only: all_cg
+      use cg_leaves,          only: leaves
 #if defined(__INTEL_COMPILER)
-      use cg_level_connected,  only: cg_level_connected_T  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use cg_level_connected,  only: finest
-      use dataio_pub,     only: die
-      use cg_list,        only: dirty_label
-      use cg_list_dataop, only: ind_val
-      use cg_leaves,      only: leaves
-      use initcosmicrays, only: iarr_crs
-      use multigridvars,  only: source, defect, correction
-      use named_array_list, only: qna, wna
+      use cg_level_connected, only: finest
+      use cg_list_dataop,     only: ind_val, dirty_label
+      use cg_list_global,     only: all_cg
+      use dataio_pub,         only: die
+      use initcosmicrays,     only: iarr_crs
+      use multigridvars,      only: source, defect, correction
+      use named_array_list,   only: qna, wna
 
       implicit none
 
@@ -405,15 +404,16 @@ contains
 
    subroutine init_b
 
-      use cg_list_global, only: all_cg
-      use cg_level_connected,  only: cg_level_connected_T, coarsest, finest
-      use constants,      only: I_ONE, xdim, zdim, HI, LO, BND_REF
-      use domain,         only: dom
-      use cg_leaves,      only: leaves
-      use cg_list,        only: cg_list_element, dirty_label
-      use grid_cont,      only: grid_container
-      use named_array,    only: p3, p4
-      use named_array_list, only: wna
+      use cg_leaves,          only: leaves
+      use cg_level_connected, only: cg_level_connected_T, coarsest, finest
+      use cg_list,            only: cg_list_element
+      use cg_list_dataop,     only: dirty_label
+      use cg_list_global,     only: all_cg
+      use constants,          only: I_ONE, xdim, zdim, HI, LO, BND_REF
+      use domain,             only: dom
+      use grid_cont,          only: grid_container
+      use named_array,        only: p3, p4
+      use named_array_list,   only: wna
 
       implicit none
 
@@ -461,18 +461,17 @@ contains
 
    subroutine vcycle_hg(cr_id)
 
-      use cg_list_global, only: all_cg
-      use cg_level_connected,  only: cg_level_connected_T, coarsest, finest
-      use dataio_pub,     only: msg, warn
-      use cg_list,        only: dirty_label
-      use cg_list_dataop, only: ind_val
-      use global,         only: do_ascii_dump
-      use cg_leaves,      only: leaves
-      use initcosmicrays, only: iarr_crs
-      use mpisetup,       only: master
-      use multigridvars,  only: source, defect, solution, correction, ts, tot_ts
-      use named_array_list, only: wna
-      use timer,          only: set_timer
+      use cg_leaves,          only: leaves
+      use cg_level_connected, only: cg_level_connected_T, coarsest, finest
+      use cg_list_dataop,     only: ind_val, dirty_label
+      use cg_list_global,     only: all_cg
+      use dataio_pub,         only: msg, warn
+      use global,             only: do_ascii_dump
+      use initcosmicrays,     only: iarr_crs
+      use mpisetup,           only: master
+      use multigridvars,      only: source, defect, solution, correction, ts, tot_ts
+      use named_array_list,   only: wna
+      use timer,              only: set_timer
 
       implicit none
 

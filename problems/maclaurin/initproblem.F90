@@ -28,6 +28,8 @@
 #include "piernik.h"
 #include "macros.h"
 
+!> \brief Implementation of selfgravitating spheroid, for which an analytical solution of the gravitational potential is known.
+
 module initproblem
 
    use constants, only: dsetnamelen
@@ -55,7 +57,7 @@ module initproblem
 
 contains
 
-!-----------------------------------------------------------------------------
+!> \brief Set up custom pointers to tweak the code execution according to our needs
 
    subroutine problem_pointers
 
@@ -70,7 +72,7 @@ contains
 
    end subroutine problem_pointers
 
-!-----------------------------------------------------------------------------
+!> \brief Read the runtime parameters specified in the namelist and set up some auxiliary values
 
    subroutine read_problem_par
 
@@ -85,6 +87,7 @@ contains
       implicit none
 
       integer, parameter :: maxsub = 10  !< upper limit for subsampling
+      d1 = smalld                  ! ambient density
 
       ! namelist default parameter values
       x0           = 0.0                 !< x-coordinate of the spheroid center
@@ -137,7 +140,6 @@ contains
       else
          a3 = a1 / sqrt(1. - e**2) ! prolate spheroid
       endif
-      d1 = smalld                  ! ambient density
       p0 = 100.*tiny(d1)           ! pressure
 
       if (d0 < 0.) call die("[initproblem:read_problem_par] Negative average density.")
@@ -175,7 +177,7 @@ contains
 
    end subroutine read_problem_par
 
-!-----------------------------------------------------------------------------
+!> \brief Set up the initial conditions. Note that this routine can be called multiple times during initial iterations of refinement structure
 
    subroutine init_prob
 
@@ -234,6 +236,8 @@ contains
                         enddo
                      enddo
                      cg%u(iarr_all_dn, i, j, k) = dm / nsub**3
+                     !> \warning What if more than one fluid is in use?
+                     !> \warning What if some of the fluids are not selfgravitating?
 
                   enddo
                enddo
@@ -255,10 +259,7 @@ contains
 
    end subroutine init_prob
 
-!-----------------------------------------------------------------------------
-!
-! This routine provides parameters useful for python/maclaurin.py
-!
+!> \brief Provides parameters useful for python/maclaurin.py in .h5 files
 
    subroutine init_prob_attrs(file_id)
 
@@ -283,11 +284,13 @@ contains
 
    end subroutine init_prob_attrs
 
-!-----------------------------------------------------------------------------
-!
-! Oblate potential formula from Ricker_2008ApJS..176..293R
-! Prolate potential formula from http://scienceworld.wolfram.com/physics/ProlateSpheroidGravitationalPotential.html
-!
+!>
+!! \brief Calculate analytical potential for given spheroid.
+!!
+!! \details We assume that the spheroid is fully contained in the computational domain here.
+!! Oblate potential formula from Ricker_2008ApJS..176..293R
+!! Prolate potential formula from http://scienceworld.wolfram.com/physics/ProlateSpheroidGravitationalPotential.html
+!<
    subroutine compute_maclaurin_potential
 
       use cg_list,          only: cg_list_element
@@ -413,10 +416,7 @@ contains
 
    end subroutine compute_maclaurin_potential
 
-!-----------------------------------------------------------------------------
-!
-! Here we compute the L2 error norm of the error of computed potential with respect to the analytical solution
-!
+!> \brief Compute the L2 error norm of the error of computed potential with respect to the analytical solution
 
    subroutine finalize_problem_maclaurin
 
@@ -479,12 +479,13 @@ contains
 
    end subroutine finalize_problem_maclaurin
 
-!-----------------------------------------------------------------------------
-!
-! This routine provides the "apot" and "errp" variablesvalues to be dumped to the .h5 file
-! "apot" is the analytical potential solution for cell centers
-! "errp" is the difference between analytical potential and computed potential
-!
+!>
+!! \brief This routine provides the "apot" and "errp" variablesvalues to be dumped to the .h5 file
+!!
+!! \details
+!! * "apot" is the analytical potential solution for cell centers
+!! * "errp" is the difference between analytical potential and computed potential
+!<
 
    subroutine maclaurin_error_vars(var, tab, ierrh, cg)
 
@@ -503,8 +504,6 @@ contains
 
       ierrh = 0
       select case (trim(var))
-         case ("apot")
-            tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse), 4)
          case ("errp")
             tab(:,:,:) = real(cg%q(qna%ind(apot_n))%span(cg%ijkse) - cg%sgp(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke), 4)
          case ("relerr")

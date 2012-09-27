@@ -68,7 +68,7 @@ contains
       use shear,                 only: init_shear
 #endif /* SHEAR */
 #ifdef GRAV
-      use gravity,               only: init_grav, grav_pot_3d, grav_pot_3d_called, source_terms_grav, sum_potential
+      use gravity,               only: init_grav, init_grav_ext, grav_pot_3d, grav_pot_3d_called, source_terms_grav, sum_potential
       use hydrostatic,           only: cleanup_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
@@ -154,6 +154,10 @@ contains
       code_progress = PIERNIK_INIT_DOMAIN ! Base domain is known and initial domain decomposition is known
 
       call init_decomposition
+#ifdef GRAV
+      call init_grav ! Has to be called before init_grid
+      call init_grav_ext
+#endif /* GRAV */
 #ifdef MULTIGRID
       call init_multigrid_ext ! Has to be called before init_grid
       call multigrid_par
@@ -173,7 +177,6 @@ contains
 #endif /* RESISTIVE */
 
 #ifdef GRAV
-      call init_grav ! depends on units and arrays
 !> \deprecated It is only temporary solution, but grav_pot_3d must be called after init_prob due to csim2,c_si,alpha clash!!!
       if (associated(grav_pot_3d)) then
          call grav_pot_3d ! depends on grav

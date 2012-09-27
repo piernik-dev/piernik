@@ -668,8 +668,8 @@ contains
 
       implicit none
 
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: this  !< this box
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: other !< the other box
+      integer(kind=8), dimension(:, :), intent(in) :: this  !< this box
+      integer(kind=8), dimension(:, :), intent(in) :: other !< the other box
 
       integer :: d
 

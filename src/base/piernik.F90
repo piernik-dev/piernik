@@ -52,7 +52,9 @@ program piernik
 #ifdef DEBUG
    use list_of_cg_lists,  only: all_lists
    use named_array_list,  only: qna, wna
+#ifdef GRAV
    use particle_pub,      only: pset
+#endif /* GRAV */
 #endif /* DEBUG */
 
    implicit none
@@ -75,7 +77,9 @@ program piernik
    !call all_cg%check_for_dirt
 #ifdef DEBUG
    call all_lists%print
+#ifdef GRAV
    call pset%print
+#endif /* GRAV */
 #endif /* DEBUG */
 
    call piernik_MPI_Barrier
