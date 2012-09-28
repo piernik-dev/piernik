@@ -53,7 +53,7 @@ module types
    end type axes
 
    type :: real_vec_T
-      real, dimension(:), pointer :: r
+      real, dimension(:), pointer :: r => null()
    contains
       procedure :: associated => real_vec_T_associated
       procedure :: allocate => real_vec_T_allocate
