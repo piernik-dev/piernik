@@ -42,6 +42,7 @@
     dt_tsl  = 0.0
     vars(1) = 'ngp'
     vars(2) = 'cic'
+    vars(3) = 'tsc'
  /
 
  $FLUID_IONIZED

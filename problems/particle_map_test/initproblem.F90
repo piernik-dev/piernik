@@ -75,16 +75,18 @@ contains
       real(kind=4), dimension(:,:,:), intent(inout) :: tab
       integer,                        intent(inout) :: ierrh
       type(grid_container), pointer,  intent(in)    :: cg
-      real, dimension(size(tab,1), size(tab,2), size(tab,3)) :: foo
 
       ierrh = 0
       select case (trim(var))
          case ("ngp")
             call pset%map_ngp(qna%ind(ngp_n), 1.0)
-            tab(:,:,:) = real(cg%q(qna%ind(ngp_n))%arr, kind=4)
+            tab(:,:,:) = real(cg%q(qna%ind(ngp_n))%span(cg%ijkse), kind=4)
          case ("cic")
             call pset%map_cic(qna%ind(cic_n), 1.0)
-            tab(:,:,:) = real(cg%q(qna%ind(cic_n))%arr, kind=4)
+            tab(:,:,:) = real(cg%q(qna%ind(cic_n))%span(cg%ijkse), kind=4)
+         case ("tsc")
+            call pset%map_tsc(qna%ind(tsc_n), 1.0)
+            tab(:,:,:) = real(cg%q(qna%ind(tsc_n))%span(cg%ijkse), kind=4)
          case default
             ierrh = -1
       end select
@@ -107,7 +109,7 @@ contains
 
       integer                         :: i, j, k, p
       type(cg_list_element),  pointer :: cgl
-      integer :: io, ncg_i, cic_i, tsc_i
+      integer :: ncg_i, cic_i, tsc_i
 
       real, parameter, dimension(185) :: px = [ &
          -4.264752, -4.264106, -4.263515, -4.263066, -4.252018, -4.251456, -4.281534, -4.260255, -4.249320, -4.229333, -4.250500, &

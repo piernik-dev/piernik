@@ -67,6 +67,7 @@ module particle_types
       procedure :: set_map
       procedure :: map_ngp     !< project particles onto grid
       procedure :: map_cic     !< project particles onto grid
+      procedure :: map_tsc     !< project particles onto grid
       procedure :: evolve => particle_set_evolve !< perform time integration with n-body solver
       procedure :: add_using_basic_types   !< add a particle
       procedure :: add_using_derived_type  !< add a particle
@@ -267,8 +268,7 @@ contains
          case (I_CIC)
             this%map => map_cic
          case (I_TSC)
-            !this%map => map_tsc
-            call die("[particle_types:set_map] Triangular shaped cloud is not implemented yet...")
+            this%map => map_tsc
          case default
             call die("[particle_types:set] Interpolation scheme selector's logic in particle_pub:init_particles is broken. Go fix it!")
       end select
@@ -333,10 +333,11 @@ contains
       real,                intent(in)    :: factor !< typically fpiG
 
       type(cg_list_element), pointer :: cgl
-      integer :: p, cdim, i, j, k
-      integer(kind=8) :: i1, i2
+      integer :: p, cdim
+      integer(kind=8) :: cn, i, j, k
       integer(kind=8), dimension(ndims, LO:HI) :: ijkp
-      real :: rp, weight
+      integer(kind=8), dimension(ndims) :: cur_ind
+      real :: weight
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -344,13 +345,20 @@ contains
          do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
             associate( &
                   field => cgl%cg%q(iv)%arr, &
-                  part  => this%p(p) &
+                  coord => cgl%cg%coord, &
+                  part  => this%p(p), &
+                  idl   => cgl%cg%idl &
             )
                if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     ijkp(cdim, LO) = count(cgl%cg%coord(cdim)%r < part%pos(cdim))
+                     cn = nint((part%pos(cdim) - coord(cdim)%r(1))*cgl%cg%idl(cdim)) + 1
+                     if (coord(cdim)%r(cn) > part%pos(cdim)) then
+                        ijkp(cdim, LO) = cn - 1
+                     else
+                        ijkp(cdim, LO) = cn
+                     endif
                      ijkp(cdim, HI) = ijkp(cdim, LO) + 1
                   else
                      ijkp(cdim, :) = 1
@@ -359,14 +367,85 @@ contains
                do i = ijkp(xdim, LO), ijkp(xdim, HI)
                   do j = ijkp(ydim, LO), ijkp(ydim, HI)
                      do k = ijkp(zdim, LO), ijkp(zdim, HI)
-                        weight = part%mass * factor / cgl%cg%dvol
-                        if (dom%has_dir(xdim)) &
-                           weight = weight*( 1.0-abs(part%pos(xdim) - cgl%cg%x(i))/cgl%cg%dl(xdim) )
-                        if (dom%has_dir(ydim)) &
-                           weight = weight*( 1.0-abs(part%pos(ydim) - cgl%cg%y(j))/cgl%cg%dl(ydim) )
-                        if (dom%has_dir(zdim)) &
-                           weight = weight*( 1.0-abs(part%pos(zdim) - cgl%cg%z(k))/cgl%cg%dl(zdim) )
-                        field(i,j,k) = field(i,j,k) + weight
+                        weight = factor * part%mass / cgl%cg%dvol
+                        cur_ind(:) = [i, j, k]
+                        do cdim = xdim, zdim
+                           if (dom%has_dir(cdim)) &
+                              weight = weight*( 1.0 - abs(part%pos(cdim) - coord(cdim)%r(cur_ind(cdim)))*idl(cdim) )
+                        enddo
+                        field(i,j,k) = field(i,j,k) +  weight
+                      enddo
+                  enddo
+               enddo
+            end associate
+         enddo
+         print *, sum(cgl%cg%q(iv)%arr)
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine map_cic
+
+   subroutine map_tsc(this, iv, factor)
+
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI
+      use domain,    only: dom
+
+      implicit none
+
+      class(particle_set), intent(in)    :: this   !< an object invoking the type-bound procedure
+      integer,             intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,                intent(in)    :: factor !< typically fpiG
+
+      type(cg_list_element), pointer :: cgl
+      integer :: p, cdim
+      integer(kind=8) :: i, j, k
+      integer(kind=8), dimension(ndims, -1:1) :: ijkp
+      integer(kind=8), dimension(ndims) :: cur_ind
+      real :: weight, delta_x, a, weight_tmp
+
+      cgl => leaves%first
+      do while (associated(cgl))
+
+         do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
+            associate( &
+                  field => cgl%cg%q(iv)%arr, &
+                  coord => cgl%cg%coord, &
+                  part  => this%p(p), &
+                  idl   => cgl%cg%idl &
+            )
+               if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
+
+               do cdim = xdim, zdim
+                  if (dom%has_dir(cdim)) then
+                     ijkp(cdim,  0) = nint((part%pos(cdim) - coord(cdim)%r(1))*cgl%cg%idl(cdim)) + 1
+                     ijkp(cdim, -1) = ijkp(cdim, 0) - 1
+                     ijkp(cdim,  1) = ijkp(cdim, 0) + 1
+                  else
+                     ijkp(cdim, :) = 1
+                  endif
+               enddo
+               a = 0.0
+               do i = ijkp(xdim, -1), ijkp(xdim, 1)
+                  do j = ijkp(ydim, -1), ijkp(ydim, 1)
+                     do k = ijkp(zdim, -1), ijkp(zdim, 1)
+
+                        cur_ind(:) = [i, j, k]
+                        weight = 1.0
+
+                        do cdim = xdim, zdim
+                           if (.not.dom%has_dir(cdim)) cycle
+                           delta_x = ( part%pos(cdim) - coord(cdim)%r(cur_ind(cdim)) ) * idl(cdim)
+                           if (cur_ind(cdim) /= ijkp(cdim, 0)) then
+                              weight_tmp = 1.125 - 1.5 * abs(delta_x) + 0.5 * delta_x**2
+                           else
+                              weight_tmp = 0.75 - delta_x**2
+                           endif
+                           weight = weight_tmp * weight
+                        enddo
+
+                        field(i, j, k) = field(i, j, k) + factor * (part%mass / cgl%cg%dvol) * weight
                       enddo
                   enddo
                enddo
@@ -376,7 +455,7 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine map_cic
+   end subroutine map_tsc
 
    function particle_with_id_exists(this, id) result (tf)
 
