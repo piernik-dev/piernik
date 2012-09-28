@@ -49,7 +49,7 @@ module global
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
-   integer         :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
+   integer(kind=4) :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
    logical         :: do_ascii_dump                      !< to dump, or not to dump: that is a question (ascii)
    integer(kind=4) :: nstep
    real            :: t, dt, dt_old, dtm
