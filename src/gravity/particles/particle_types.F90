@@ -216,7 +216,7 @@ contains
       integer,             intent(in)    :: id   !< position in the array of particles
 
       if (.not. this%exists(id)) then
-         write(msg, '("[particle_set:remove] Particle no Id = ",I6," does not exist")') id
+         write(msg, '("[particle_types:remove] Particle no Id = ",I6," does not exist")') id
          call die(msg)
       endif
 

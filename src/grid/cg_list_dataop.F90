@@ -125,13 +125,13 @@ contains
             prop%val = -huge(1.)
          case default
             prop%val = 0.0   !! set dummy value
-            write(msg,*) "[cg_list:get_extremum]: I don't know what to do with minmax = ", minmax
+            write(msg,*) "[cg_list_dataop:get_extremum]: I don't know what to do with minmax = ", minmax
             call warn(msg)
       end select
 
       if (associated(this%first)) then
          cgl => this%first
-         if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[cg_list:get_extremum] Wrong index")
+         if (ind > ubound(cgl%cg%q(:), dim=1) .or. ind < lbound(cgl%cg%q(:), dim=1)) call die("[cg_list_dataop:get_extremum] Wrong index")
          do while (associated(cgl))
             cg => cgl%cg
 
@@ -172,7 +172,7 @@ contains
             if (dom%has_dir(zdim)) prop%coords(zdim) = cg_x%z(prop%loc(zdim))
             if (present(dir))      prop%assoc        = cg_x%dl(dir)
 !         else
-!            write(msg,'(a,a)') "[cg_list:get_extremum] cg_x not associated for q array name ", qna%lst(ind)%name
+!            write(msg,'(a,a)') "[cg_list_dataop:get_extremum] cg_x not associated for q array name ", qna%lst(ind)%name
 !            call die(msg)
          endif
       endif
@@ -353,7 +353,7 @@ contains
       type(cg_list_element), pointer :: cgl
 
       if (size(iv) <= 0) then
-         call warn("[cg_list::q_lin_comb] Nothing to do")
+         call warn("[cg_list_dataop::q_lin_comb] Nothing to do")
          return
       endif
 
@@ -362,7 +362,7 @@ contains
       swapped =.false.
       do i = lbound(iv, dim=1)+1, ubound(iv, dim=1)
          if (ind == iv(i)%ind) then
-            if (swapped) call die("[cg_list::q_lin_comb] Cannot use own field twice due to side effects")
+            if (swapped) call die("[cg_list_dataop::q_lin_comb] Cannot use own field twice due to side effects")
             iv_safe(lbound(iv, dim=1)) = iv(i)
             iv_safe(i) = iv(lbound(iv, dim=1))
             swapped = .true.
@@ -419,7 +419,7 @@ contains
                   avg = avg + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol * cg%x(i)
                enddo
             case default
-               call die("[cg_list:subtract_average] Unsupported geometry.")
+               call die("[cg_list_dataop:subtract_average] Unsupported geometry.")
          end select
          vol = vol + cg%vol
          cgl => cgl%nxt
@@ -469,7 +469,7 @@ contains
                   norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2) * cg%dvol * cg%x(i)
                enddo
             case default
-               call die("[cg_list:norm_sq] Unsupported geometry.")
+               call die("[cg_list_dataop:norm_sq] Unsupported geometry.")
          end select
          cgl => cgl%nxt
       enddo
@@ -559,7 +559,7 @@ contains
       type(cg_list_element), pointer :: cgl
 
       if (.not. dirty_debug) return
-      if (iv < lbound(qna%lst, dim=1) .or. iv > ubound(qna%lst, dim=1)) call die("[cg_list:check_dirty] Invalid variable index.")
+      if (iv < lbound(qna%lst, dim=1) .or. iv > ubound(qna%lst, dim=1)) call die("[cg_list_dataop:check_dirty] Invalid variable index.")
 
       ng = 0
       if (present(expand)) ng = min(dom%nb, expand)
@@ -574,11 +574,11 @@ contains
                      ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
                      if (cnt <= show_n_dirtys) then
                         if (cnt < show_n_dirtys) then
-                           write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') "[cg_list:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, &
+                           write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, &
                                 &                                          " cg#", cgl%cg%grid_id, " '", trim(qna%lst(iv)%name), "'(", &
                                 &                                          [ i, j, k ] - cgl%cg%ijkse(:, LO) + cgl%cg%off(:), ") = ", cgl%cg%q(iv)%arr(i, j, k)
                         else
-                           msg="[cg_list:check_dirty] and so on ... "
+                           msg="[cg_list_dataop:check_dirty] and so on ... "
                         endif
                         call warn(msg)
                      endif
@@ -592,7 +592,7 @@ contains
       enddo
 
       if (cnt /= 0) then
-         write(msg,'(a,i8,a,i5)')"[cg_list:check_dirty] Found ", cnt, " dirty value @ process ", proc
+         write(msg,'(a,i8,a,i5)')"[cg_list_dataop:check_dirty] Found ", cnt, " dirty value @ process ", proc
          call die(msg)
       endif
 
@@ -618,14 +618,14 @@ contains
       do while (associated(cgl))
          do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
             if (cgl%cg%q(i)%check()) then
-               write(msg,'(3a,I12,a)') "[cg_list_global:check_for_dirt] Array ", trim(qna%lst(i)%name), " has ", &
+               write(msg,'(3a,I12,a)') "[cg_list_dataop:check_for_dirt] Array ", trim(qna%lst(i)%name), " has ", &
                   & count(cgl%cg%q(i)%arr >= big_float), " wrong values."
                call warn(msg)
             endif
          enddo
          do i = lbound(wna%lst(:), dim=1), ubound(wna%lst(:), dim=1)
             if (cgl%cg%w(i)%check()) then
-               write(msg,'(3a,I12,a)') "[cg_list_global:check_for_dirt] Array ", trim(wna%lst(i)%name), " has ", &
+               write(msg,'(3a,I12,a)') "[cg_list_dataop:check_for_dirt] Array ", trim(wna%lst(i)%name), " has ", &
                   & count(cgl%cg%w(i)%arr >= big_float), " wrong values."
                call warn(msg)
             endif

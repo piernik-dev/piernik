@@ -269,10 +269,10 @@ contains
          if (maxdens > mindens) span = log10(maxdens/mindens)
          mindens = mindens * safety_factor
          if (master) then
-            write(msg,'(A,ES11.4)') "[func:sanitize_smallx_checks] adjusted smalld to ", smalld
+            write(msg,'(A,ES11.4)') "[initfluids:sanitize_smallx_checks] adjusted smalld to ", smalld
             call warn(msg)
             if (span > max_dens_span) then
-               write(msg,'(A,I3,A)') "[func:sanitize_smallx_checks] density spans over ", int(span), " orders of magnitude!"
+               write(msg,'(A,I3,A)') "[initfluids:sanitize_smallx_checks] density spans over ", int(span), " orders of magnitude!"
                call warn(msg)
             endif
          endif
@@ -282,12 +282,12 @@ contains
          minpres = minpres * safety_factor
          call MPI_Allreduce(minpres, smallp, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
          if (smallp < 0.) then
-            write(msg,'(A,ES11.4,A)') "[func:sanitize_smallx_checks] Negative smallp detected! smallp=",smallp," may indicate nonphysical initial conditions."
+            write(msg,'(A,ES11.4,A)') "[initfluids:sanitize_smallx_checks] Negative smallp detected! smallp=",smallp," may indicate nonphysical initial conditions."
             if (master) call warn(msg)
             smallp = tiny(1.)
          endif
          if (master) then
-            write(msg,'(A,ES11.4)') "[func:sanitize_smallx_checks] adjusted smallp to ", smallp
+            write(msg,'(A,ES11.4)') "[initfluids:sanitize_smallx_checks] adjusted smallp to ", smallp
             call warn(msg)
          endif
       endif

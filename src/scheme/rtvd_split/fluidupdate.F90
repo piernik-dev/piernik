@@ -355,7 +355,7 @@ contains
       else if (d==3) then
          pshift(:,:,1:ll-1) = tab(:,:,2:ll); pshift(:,:,ll) = tab(:,:,1)
       else
-         call warn('[func:pshift]: Dim ill defined in pshift!')
+         call warn('[fluidupdate:pshift]: Dim ill defined in pshift!')
       endif
 
       return
@@ -396,7 +396,7 @@ contains
       else if (d==3) then
          mshift(:,:,2:ll) = tab(:,:,1:ll-1); mshift(:,:,1) = tab(:,:,ll)
       else
-         call warn('[func:mshift]: Dim ill defined in mshift!')
+         call warn('[fluidupdate:mshift]: Dim ill defined in mshift!')
       endif
 
       return

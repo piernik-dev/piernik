@@ -151,19 +151,19 @@ contains
             CoM(zdim) = dom%C_(zdim)
             zaxis_inside = dom%edge(xdim, LO) <= base_lev%first%cg%dx !! \warning this check should be done on highest refinement level
             if (master) then
-               if (zaxis_inside) call warn("[multipole:init_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
-               if (use_point_monopole) call warn("[multipole:init_multipole] Point-like monopole is not implemented.")
+               if (zaxis_inside) call warn("[multigridmultipole:init_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
+               if (use_point_monopole) call warn("[multigridmultipole:init_multipole] Point-like monopole is not implemented.")
             endif
             use_point_monopole = .false.
          case default
-            call die("[multipole:init_multipole] Unsupported geometry.")
+            call die("[multigridmultipole:init_multipole] Unsupported geometry.")
       end select
 
-      if (dom%eff_dim /= ndims) call die("[multipole:init_multipole] Only 3D is supported") !> \todo add support for 2D RZ
+      if (dom%eff_dim /= ndims) call die("[multigridmultipole:init_multipole] Only 3D is supported") !> \todo add support for 2D RZ
 
       !multipole moments
       if (mmax > lmax) then
-         if (master) call warn("[multipole:init_multipole] mmax reduced to lmax")
+         if (master) call warn("[multigridmultipole:init_multipole] mmax reduced to lmax")
          mmax = lmax
       endif
       if (mmax < 0) mmax = lmax
@@ -173,24 +173,24 @@ contains
          if (associated(lmpole%coarser)) then
             lmpole => lmpole%coarser
          else
-            if (master) call warn("[multipole:init_multipole] too deep multipole coarsening.")
+            if (master) call warn("[multigridmultipole:init_multipole] too deep multipole coarsening.")
          endif
       enddo
 
       if (coarsen_multipole > 0) then
          if (interp_pt2mom) then
-            call warn("[multipole:init_multipole] coarsen_multipole > 0 disables interp_pt2mom.")
+            call warn("[multigridmultipole:init_multipole] coarsen_multipole > 0 disables interp_pt2mom.")
             interp_pt2mom = .false.
          endif
          if (interp_mom2pot) then
-            call warn("[multipole:init_multipole] coarsen_multipole > 0 disables interp_mom2pot.")
+            call warn("[multigridmultipole:init_multipole] coarsen_multipole > 0 disables interp_mom2pot.")
             interp_mom2pot = .false.
          endif
       endif
 
       if (.not. use_point_monopole) then
 
-         if (allocated(rn) .or. allocated(irn) .or. allocated(sfac) .or. allocated(cfac)) call die("[multipole:init_multipole] rn, irn, sfac or cfac already allocated")
+         if (allocated(rn) .or. allocated(irn) .or. allocated(sfac) .or. allocated(cfac)) call die("[multigridmultipole:init_multipole] rn, irn, sfac or cfac already allocated")
          allocate(rn(0:lmax), irn(0:lmax), sfac(0:mmax), cfac(0:mmax))
 
          if (associated(lmpole%first)) then
@@ -202,7 +202,7 @@ contains
                case (GEO_RPZ)
                   drq = min(lmpole%first%cg%dx, dom%C_(xdim)*lmpole%first%cg%dy, lmpole%first%cg%dz) / 2.
                case default
-                  call die("[multipole:init_multipole] Unsupported geometry.")
+                  call die("[multigridmultipole:init_multipole] Unsupported geometry.")
             end select
          else
             drq = maxval(dom%L_(:))
@@ -222,7 +222,7 @@ contains
                rqbin = int(sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2)/drq) + 1
                rscale = ( min(2.*dom%edge(xdim, HI), dom%L_(zdim)) + sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2) )/4.
             case default
-               call die("[multipole:init_multipole] Unsupported geometry.")
+               call die("[multigridmultipole:init_multipole] Unsupported geometry.")
          end select
 
          do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
@@ -234,7 +234,7 @@ contains
             if (pset%p(i)%outside) rqbin = max(rqbin, int(sqrt(sum(pset%p(i)%pos**2))/drq) + 1)
          enddo
 
-         if (allocated(k12) .or. allocated(ofact) .or. allocated(Q)) call die("[multipole:init_multipole] k12, ofact or Q already allocated")
+         if (allocated(k12) .or. allocated(ofact) .or. allocated(Q)) call die("[multigridmultipole:init_multipole] k12, ofact or Q already allocated")
          allocate(k12(2, 1:lmax, 0:mmax), ofact(0:lm(int(lmax), int(2*mmax))), Q(0:lm(int(lmax), int(2*mmax)), INSIDE:OUTSIDE, 0:rqbin))
 
          ofact(:) = 0. ! prevent spurious FP exceptions in multipole:img_mass2moments
@@ -463,7 +463,7 @@ contains
       if (CoM(0) /= 0.) then
          CoM(xdim:zdim) = CoM(xdim:zdim) / CoM(0)
       else
-         call die("[multipole:find_img_CoM] Total mass == 0")
+         call die("[multigridmultipole:find_img_CoM] Total mass == 0")
       endif
 
    end subroutine find_img_CoM
@@ -568,7 +568,7 @@ contains
       type(cg_level_connected_T), pointer, intent(in) :: coarse !< level to prolong from
 
       if (dom%eff_dim<ndims) call die("[multigridmultipole:prolong_ext_bnd0] 1D and 2D not finished")
-      if (abs(ord_prolong_mpole) > maxval(abs([O_D2, O_I2]))) call die("[multipole:prolong_ext_bnd] interpolation order too high")
+      if (abs(ord_prolong_mpole) > maxval(abs([O_D2, O_I2]))) call die("[multigridmultipole:prolong_ext_bnd] interpolation order too high")
 
       !> \deprecated BEWARE: do we need cylindrical factors for prolongation?
       if (ord_prolong_mpole == O_INJ) then
@@ -743,7 +743,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multigridmultipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
 
       ! reset the multipole data
       Q(:, :, :) = 0.
@@ -929,7 +929,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
 
-      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
+      if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multigridmultipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
 
       cgl => lmpole%first
       do while (associated(cgl))
@@ -1108,7 +1108,7 @@ contains
          delta = 0
       endif
       if (ir > rqbin .or. ir < 0) then
-         write(msg,'(2(a,i7),a)')"[multipole:geomfac4moments] radial index = ",ir," outside Q(:, :, ",rqbin,") range"
+         write(msg,'(2(a,i7),a)')"[multigridmultipole:geomfac4moments] radial index = ",ir," outside Q(:, :, ",rqbin,") range"
          call die(msg)
       endif
       irmax = max(irmax, ir)

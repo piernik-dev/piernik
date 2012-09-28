@@ -511,10 +511,10 @@ contains
       do d = xdim, zdim
          if ((any(this%bnd(d, :) == BND_PER) .or. (d==xdim .and. any(this%bnd(d, :) == BND_SHE))) .and. this%has_dir(d)) then
             this%periodic(d) = .true.
-            if (this%bnd(d, LO) /= this%bnd(d, HI)) call die("[types:set_derived] Periodic BC do not match")
+            if (this%bnd(d, LO) /= this%bnd(d, HI)) call die("[domain:set_derived] Periodic BC do not match")
          endif
       enddo
-      if (any(this%bnd(ydim:zdim, :) == BND_SHE)) call die("[types:set_derived] Shearing BC not allowed for y- and z-direction")
+      if (any(this%bnd(ydim:zdim, :) == BND_SHE)) call die("[domain:set_derived] Shearing BC not allowed for y- and z-direction")
 
       ! auxiliary lengths
       this%L_(:) = this%edge(:, HI) - this%edge(:, LO)

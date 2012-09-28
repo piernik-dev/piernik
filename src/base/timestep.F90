@@ -72,7 +72,7 @@ contains
 
       implicit none
 
-      if (code_progress < PIERNIK_INIT_GLOBAL) call die("[grid:init_grid] globals not initialized.")
+      if (code_progress < PIERNIK_INIT_GLOBAL) call die("[timestep:init_time_step] globals not initialized.")
 
       select case (cflcontrol)
          case ('warn')

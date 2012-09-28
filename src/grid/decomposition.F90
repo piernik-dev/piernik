@@ -640,12 +640,12 @@ contains
       integer(kind=4) :: tot_bl, bx, by, bz, b
 
       if (any(bsize(xdim:zdim) <=0)) then
-         if (master) call warn("[initproblem:stamp_cg] some(bsize(1:3)) <=0")
+         if (master) call warn("[decomposition:stamp_cg] some(bsize(1:3)) <=0")
          return
       endif
 
       if (any(mod(patch%n_d(:), int(bsize(xdim:zdim), kind=4)) /= 0 .and. dom%has_dir(:))) then
-         write(msg,'(a,3f10.3,a)')"[initproblem:stamp_cg] Fractional number of blocks: n_d(:)/bsize(1:3) = [",patch%n_d(:)/real(bsize(xdim:zdim)),"]"
+         write(msg,'(a,3f10.3,a)')"[decomposition:stamp_cg] Fractional number of blocks: n_d(:)/bsize(1:3) = [",patch%n_d(:)/real(bsize(xdim:zdim)),"]"
          if (master) call warn(msg)
          return
       endif

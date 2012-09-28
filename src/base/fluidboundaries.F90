@@ -63,30 +63,30 @@ contains
                   ! Do nothing
                case (BND_COR)
                   if (dir == zdim) then
-                     write(msg,'("[fluid_boundaries:bnd_u]: corner ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                     write(msg,'("[fluidboundaries:bnd_u]: corner ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
                      call warn(msg)
                   endif
                case (BND_SHE)
                   if (dir /= xdim) then
-                     write(msg,'("[fluid_boundaries:bnd_u]: shear ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                     write(msg,'("[fluidboundaries:bnd_u]: shear ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
                      call warn(msg)
                   endif
                case (BND_OUTH)
                   if (dir == zdim) then
-                     if (is_multicg) call die("[fluid_boundaries:bnd_u] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet") !nontrivial not really checked
+                     if (is_multicg) call die("[fluidboundaries:bnd_u] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet") !nontrivial not really checked
                   else
-                     write(msg,'("[fluid_boundaries:bnd_u]: outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                     write(msg,'("[fluidboundaries:bnd_u]: outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
                      call warn(msg)
                   endif
                case (BND_OUTHD)
                   if (dir == zdim) then
-                     if (is_multicg) call die("[fluid_boundaries:bnd_u] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet") !nontrivial not really checked
+                     if (is_multicg) call die("[fluidboundaries:bnd_u] hydrostatic:outh_bnd with multiple grid pieces per processor not implemented yet") !nontrivial not really checked
                   else
-                     write(msg,'("[fluid_boundaries:bnd_u]: outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                     write(msg,'("[fluidboundaries:bnd_u]: outflow hydrostatic ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
                      call warn(msg)
                   endif
                case default
-                  write(msg,'("[fluid_boundaries:bnd_u]: unknown ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+                  write(msg,'("[fluidboundaries:bnd_u]: unknown ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
                   call warn(msg)
             end select
          enddo
@@ -333,7 +333,7 @@ contains
             if (dir == zdim) call outh_bnd(side, cg, .true.)
 #endif /* GRAV */
          case default
-            write(msg,'("[fluid_boundaries:bnd_u]: Unrecognized ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
+            write(msg,'("[fluidboundaries:bnd_u]: Unrecognized ",i1," boundary condition ",i3," not implemented in ",i1,"-direction")') side, cg%bnd(dir, side), dir
             call warn(msg)
          end select
 

@@ -312,7 +312,7 @@ contains
          if (any(dom%bnd(zdim, :) == BND_COR)) call die("[grid_container:init] Corner BC not allowed for z-direction")
 
 #ifdef SHEAR_BND
-         if (cdd%psize(ydim) > 1) call die("[domain:initmpi] Shear-pediodic boundary conditions do not permit psize(ydim) > 1")
+         if (cdd%psize(ydim) > 1) call die("[grid_container:initmpi] Shear-pediodic boundary conditions do not permit psize(ydim) > 1")
          ! This is possible to be implemented with mpi_noncart
 
 #ifndef FFTW

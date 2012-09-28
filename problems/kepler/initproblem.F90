@@ -479,7 +479,7 @@ contains
             do p = 1, flind%fluids
                fl => flind%all_fluids(p)%fl
                if (fl%tag /= DST .and. master) then
-                  write(msg,'(A,F9.5)') "[init_problem:initprob] cs2 used = ", fl%cs2
+                  write(msg,'(A,F9.5)') "[initproblem:initprob] cs2 used = ", fl%cs2
                   call printinfo(msg)
                endif
 

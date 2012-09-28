@@ -112,7 +112,7 @@ contains
       integer(kind=4), dimension(ndims) :: pc
 
       this%psize(:) = p_size(:)
-      if (is_mpi_noncart .or. is_refined) call die("[decomposition:cartesian_tiling] MPI_Cart_create cannot be used for non-rectilinear or AMR domains")
+      if (is_mpi_noncart .or. is_refined) call die("[cart_comm:cartesian_tiling] MPI_Cart_create cannot be used for non-rectilinear or AMR domains")
 
       call MPI_Cart_create(comm, ndims, this%psize, dom%periodic, reorder, this%comm3d, mpi_err)
       call MPI_Cart_coords(this%comm3d, proc, ndims, this%pcoords, mpi_err)
@@ -133,7 +133,7 @@ contains
          endif
       endif
 
-      if (any(dom%bnd(xdim:ydim, HI) == BND_COR)) call die("[decomposition:cartesian_tiling] Corner boundary on the right side not implemented anywhere")
+      if (any(dom%bnd(xdim:ydim, HI) == BND_COR)) call die("[cart_comm:cartesian_tiling] Corner boundary on the right side not implemented anywhere")
 
    end subroutine init_cart
 

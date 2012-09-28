@@ -281,7 +281,7 @@ contains
       vx(RNG)=uu(imx,RNG)/uu(idn,RNG); vx(1) = vx(2); vx(n) = vx(nm)
 
 #ifndef ISO
-      if (associated(cs_iso2)) call die("[fluxonized:flux_ion] cs_iso2 should not be present")
+      if (associated(cs_iso2)) call die("[initionized:flux_ion] cs_iso2 should not be present")
 #endif /* !ISO */
 
 #ifdef ISO

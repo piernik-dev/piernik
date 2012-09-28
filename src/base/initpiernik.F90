@@ -183,7 +183,7 @@ contains
          grav_pot_3d_called = .true.
       else
 #ifdef VERBOSE
-         call warn("[piernik:init_piernik] grav_pot_3d is not associated! Will try to call it once more after init_problem.")
+         call warn("[initpiernik:init_piernik] grav_pot_3d is not associated! Will try to call it once more after init_problem.")
 #endif /* VERBOSE */
       endif
 #endif /* GRAV */
@@ -232,11 +232,11 @@ contains
       !> \warning Set initial conditions by hand when starting from scratch or read them from a restart file. Do not use both unless you REALLY need to do so.
       if (nrestart > 0 .and. require_init_prob /= 1) then
          if (master) then
-            write(msg,'(a,i4,a)') "[piernik:init_piernik] Restart file #",nrestart," read. Skipping init_prob."
+            write(msg,'(a,i4,a)') "[initpiernik:init_piernik] Restart file #",nrestart," read. Skipping init_prob."
             call printio(msg)
          endif
          if (associated(problem_post_restart)) then
-            if (master) call printinfo("[piernik:init_piernik] Calling problem specific, post restart procedure")
+            if (master) call printinfo("[initpiernik:init_piernik] Calling problem specific, post restart procedure")
             call problem_post_restart
          endif
       else
@@ -248,7 +248,7 @@ contains
                call grav_pot_3d
                grav_pot_3d_called = .true.
             else
-               call die("[piernik:init_piernik] grav_pot_3d failed for the 2nd time!")
+               call die("[initpiernik:init_piernik] grav_pot_3d failed for the 2nd time!")
             endif
          endif
          call source_terms_grav ! make sure that all contributions to the gravitational potential are computed before first dump
