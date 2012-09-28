@@ -79,9 +79,12 @@ contains
 
       ierrh = 0
       select case (trim(var))
-         case ("ngp")  ! Totally bogus quantity, just to check user_vars_hdf5 works
-            call pset%map(qna%ind(ngp_n), 1.0)
+         case ("ngp")
+            call pset%map_ngp(qna%ind(ngp_n), 1.0)
             tab(:,:,:) = real(cg%q(qna%ind(ngp_n))%arr, kind=4)
+         case ("cic")
+            call pset%map_cic(qna%ind(cic_n), 1.0)
+            tab(:,:,:) = real(cg%q(qna%ind(cic_n))%arr, kind=4)
          case default
             ierrh = -1
       end select

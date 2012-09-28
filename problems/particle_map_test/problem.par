@@ -41,6 +41,7 @@
     dt_log  = 0.0
     dt_tsl  = 0.0
     vars(1) = 'ngp'
+    vars(2) = 'cic'
  /
 
  $FLUID_IONIZED
@@ -77,4 +78,5 @@
 
  $PARTICLES
    time_integrator = 'none'
+   interpolation_scheme = 'cic'
  /

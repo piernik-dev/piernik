@@ -65,7 +65,8 @@ module particle_types
       procedure :: remove      !< remove a particle
       procedure :: merge_parts !< merge two particles
       procedure :: set_map
-      procedure :: map_ngc     !< project particles onto grid
+      procedure :: map_ngp     !< project particles onto grid
+      procedure :: map_cic     !< project particles onto grid
       procedure :: evolve => particle_set_evolve !< perform time integration with n-body solver
       procedure :: add_using_basic_types   !< add a particle
       procedure :: add_using_derived_type  !< add a particle
@@ -262,10 +263,9 @@ contains
 
       select case (ischeme)
          case (I_NGP)
-            this%map => map_ngc
+            this%map => map_ngp
          case (I_CIC)
-            !this%map => map_cic
-            call die("[particle_types:set_map] Cloud in cell is not implemented yet...")
+            this%map => map_cic
          case (I_TSC)
             !this%map => map_tsc
             call die("[particle_types:set_map] Triangular shaped cloud is not implemented yet...")
@@ -287,7 +287,7 @@ contains
 !! \warning Particles outside periodic domain are ignored
 !<
 
-   subroutine map_ngc(this, iv, factor)
+   subroutine map_ngp(this, iv, factor)
 
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
@@ -317,7 +317,66 @@ contains
          cgl => cgl%nxt
       enddo
 
-   end subroutine map_ngc
+   end subroutine map_ngp
+
+   subroutine map_cic(this, iv, factor)
+
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI
+      use domain,    only: dom
+
+      implicit none
+
+      class(particle_set), intent(in)    :: this   !< an object invoking the type-bound procedure
+      integer,             intent(in)    :: iv     !< index in cg%q array, where we want the particles to be projected
+      real,                intent(in)    :: factor !< typically fpiG
+
+      type(cg_list_element), pointer :: cgl
+      integer :: p, cdim, i, j, k
+      integer(kind=8) :: i1, i2
+      integer(kind=8), dimension(ndims, LO:HI) :: ijkp
+      real :: rp, weight
+
+      cgl => leaves%first
+      do while (associated(cgl))
+
+         do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
+            associate( &
+                  field => cgl%cg%q(iv)%arr, &
+                  part  => this%p(p) &
+            )
+               if (any(part%pos < cgl%cg%fbnd(:,LO)) .or. any(part%pos > cgl%cg%fbnd(:,HI))) cycle
+
+               do cdim = xdim, zdim
+                  if (dom%has_dir(cdim)) then
+                     ijkp(cdim, LO) = count(cgl%cg%coord(cdim)%r < part%pos(cdim))
+                     ijkp(cdim, HI) = ijkp(cdim, LO) + 1
+                  else
+                     ijkp(cdim, :) = 1
+                  endif
+               enddo
+               do i = ijkp(xdim, LO), ijkp(xdim, HI)
+                  do j = ijkp(ydim, LO), ijkp(ydim, HI)
+                     do k = ijkp(zdim, LO), ijkp(zdim, HI)
+                        weight = part%mass * factor / cgl%cg%dvol
+                        if (dom%has_dir(xdim)) &
+                           weight = weight*( 1.0-abs(part%pos(xdim) - cgl%cg%x(i))/cgl%cg%dl(xdim) )
+                        if (dom%has_dir(ydim)) &
+                           weight = weight*( 1.0-abs(part%pos(ydim) - cgl%cg%y(j))/cgl%cg%dl(ydim) )
+                        if (dom%has_dir(zdim)) &
+                           weight = weight*( 1.0-abs(part%pos(zdim) - cgl%cg%z(k))/cgl%cg%dl(zdim) )
+                        field(i,j,k) = field(i,j,k) + weight
+                      enddo
+                  enddo
+               enddo
+            end associate
+         enddo
+
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine map_cic
 
    function particle_with_id_exists(this, id) result (tf)
 
