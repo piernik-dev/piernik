@@ -225,6 +225,7 @@ contains
 
       use constants, only: xdim, ydim, zdim
       use grid_cont, only: grid_container
+      use mpisetup,  only: proc
 
       implicit none
 
@@ -237,10 +238,10 @@ contains
 
       ierrh = 0
       select case (var)
-         case ("fooo")   ! Totally bogus quantity, just to check user_plt_hdf5 works
-            if (ij==xdim) tab(:,:) = cg%u(2, xn, cg%js:cg%je, cg%ks:cg%ke)*cg%u(3, xn, cg%js:cg%je, cg%ks:cg%ke)* .123456789
-            if (ij==ydim) tab(:,:) = cg%u(2, cg%is:cg%ie, xn, cg%ks:cg%ke)*cg%u(3, cg%is:cg%ie, xn, cg%ks:cg%ke)* .123456789
-            if (ij==zdim) tab(:,:) = cg%u(2, cg%is:cg%ie, cg%js:cg%je, xn)*cg%u(3, cg%is:cg%ie, cg%js:cg%je, xn)* .123456789
+         case ("fooo")   ! Processor number, check if fancy domain division and user_vars_hdf5 works
+            if (ij==xdim) tab(:,:) = proc + 1e-10*cg%u(2, xn, cg%js:cg%je, cg%ks:cg%ke)
+            if (ij==ydim) tab(:,:) = proc + 1e-10*cg%u(2, cg%is:cg%ie, xn, cg%ks:cg%ke)
+            if (ij==zdim) tab(:,:) = proc + 1e-10*cg%u(2, cg%is:cg%ie, cg%js:cg%je, xn)
          case default
             ierrh = -1
       end select
@@ -249,6 +250,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_vars_hdf5(var, tab, ierrh, cg)
 
+      use mpisetup,  only: proc
       use grid_cont, only: grid_container
 
       implicit none
@@ -260,8 +262,8 @@ contains
 
       ierrh = 0
       select case (trim(var))
-         case ("fooo")  ! Totally bogus quantity, just to check user_vars_hdf5 works
-            tab(:,:,:) = real(.123456789, kind=4)
+         case ("fooo")  ! Processor number, check if fancy domain division and user_vars_hdf5 works
+            tab(:,:,:) = proc
          case default
             ierrh = -1
       end select

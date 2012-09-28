@@ -32,22 +32,22 @@
 program piernik
 ! pulled by ANY
 
-   use cg_list_global,  only: all_cg
-   use constants,       only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL
-   use dataio,          only: write_data, user_msg_handler, check_log, check_tsl, dump
-   use dataio_pub,      only: nend, tend, msg, printinfo, warn, die, code_progress
-   use finalizepiernik, only: cleanup_piernik
-   use fluidindex,      only: flind
-   use fluidupdate,     only: fluid_update
-   use global,          only: t, nstep, dt, dtm, cfl_violated
-   use initpiernik,     only: init_piernik
-   use mpisetup,        only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
-   use timer,           only: time_left, set_timer, tmr_fu
-   use timestep,        only: time_step
-   use user_hooks,      only: finalize_problem
+   use cg_list_global,    only: all_cg
+   use constants,         only: PIERNIK_START, PIERNIK_INITIALIZED, PIERNIK_FINISHED, PIERNIK_CLEANUP, fplen, stdout, I_ONE, CHK, FINAL
+   use dataio,            only: write_data, user_msg_handler, check_log, check_tsl, dump
+   use dataio_pub,        only: nend, tend, msg, printinfo, warn, die, code_progress
+   use finalizepiernik,   only: cleanup_piernik
+   use fluidindex,        only: flind
+   use fluidupdate,       only: fluid_update
+   use global,            only: t, nstep, dt, dtm, cfl_violated
+   use initpiernik,       only: init_piernik
+   use mpisetup,          only: master, piernik_MPI_Barrier, piernik_MPI_Bcast
+   use timer,             only: time_left, set_timer, tmr_fu
+   use timestep,          only: time_step
+   use user_hooks,        only: finalize_problem
 #ifdef PERFMON
-   use domain,          only: dom
-   use timer,           only: timer_start, timer_stop
+   use domain,            only: dom
+   use timer,             only: timer_start, timer_stop
 #endif /* PERFMON */
 #ifdef DEBUG
    use list_of_cg_lists,  only: all_lists

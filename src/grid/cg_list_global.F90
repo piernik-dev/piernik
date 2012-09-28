@@ -134,14 +134,14 @@ contains
 
       implicit none
 
-      class(cg_list_global_T),                 intent(inout) :: this          !< object invoking type-bound procedure
-      character(len=*),                        intent(in)    :: name          !< Name of the variable to be registered
-      logical,                       optional, intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
-      integer(kind=4),               optional, intent(in)    :: restart_mode  !< Write to the restart if not AT_IGNORE. Several write modes can be supported.
-      integer(kind=4),               optional, intent(in)    :: ord_prolong   !< Prolongation order for the variable
-      integer(kind=4),               optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
-      integer(kind=4), dimension(:), optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
-      logical,                       optional, intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
+      class(cg_list_global_T),                          intent(inout) :: this          !< object invoking type-bound procedure
+      character(len=*),                                 intent(in)    :: name          !< Name of the variable to be registered
+      logical,                                optional, intent(in)    :: vital         !< .false. for arrays that don't need to be prolonged or restricted automatically
+      integer(kind=4),                        optional, intent(in)    :: restart_mode  !< Write to the restart if not AT_IGNORE. Several write modes can be supported.
+      integer(kind=4),                        optional, intent(in)    :: ord_prolong   !< Prolongation order for the variable
+      integer(kind=4),                        optional, intent(in)    :: dim4          !< If present then register the variable in the cg%w array.
+      integer(kind=4), dimension(:), pointer, optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
+      logical,                                optional, intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
 
       type(cg_list_element), pointer :: cgl
       logical :: mg, vit
@@ -175,7 +175,7 @@ contains
       pos(:) = VAR_CENTER
       if (present(position)) then
          if (any(size(position) == [1, nvar])) then
-            pos(:) = position(:)
+            pos = position
          else
             write(msg,'(2(a,i3))')"[cg_list_global:reg_var] position should be an array of 1 or ",nvar," values. Got ",size(position)
             call die(msg)
@@ -234,17 +234,21 @@ contains
       class(cg_list_global_T), intent(inout) :: this          !< object invoking type-bound procedure
       integer(kind=4),     intent(in)    :: nfluids       !< number of components in the main array of fluids (should be flind%all)
 
-      integer(kind=4), parameter, dimension(ndims) :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
+      integer(kind=4), save, dimension(ndims), target :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
+      integer(kind=4), dimension(:), pointer :: pia
+      ! the pia pointer above is used as a workaround for compiler warnings about possibly uninitialized variable in reg_var
+
+      pia => xyz_face
 
       if (code_progress < PIERNIK_INIT_FLUIDS) call die("[cg_list_global:register_fluids] Fluids are not yet initialized")
 
       call this%reg_var(wa_n,                                                           multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
       call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = nfluids)                  !! Main array of all fluids' components, "u"
       call this%reg_var(uh_n,                                             dim4 = nfluids)                  !! Main array of all fluids' components (for t += dt/2)
-      call this%reg_var(mag_n,   vital = .true., restart_mode = AT_OUT_B, dim4 = ndims, position=xyz_face) !! Main array of magnetic field's components, "b"
+      call this%reg_var(mag_n,   vital = .true., restart_mode = AT_OUT_B, dim4 = ndims, position=pia)      !! Main array of magnetic field's components, "b"
       if (repeat_step) then
          call this%reg_var(u0_n,                                          dim4 = nfluids)                  !! Copy of main array of all fluids' components
-         call this%reg_var(b0_n,                                          dim4 = ndims, position=xyz_face) !! Copy of main array of magnetic field's components
+         call this%reg_var(b0_n,                                          dim4 = ndims, position=pia)      !! Copy of main array of magnetic field's components
       endif
 #ifdef ISO
       call all_cg%reg_var(cs_i2_n, vital = .true., restart_mode = AT_NO_B)
