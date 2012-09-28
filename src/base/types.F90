@@ -36,7 +36,7 @@ module types
    implicit none
 
    private
-   public :: axes, value
+   public :: axes, value, real_vec_T
 
    type :: value
       real                      :: val
@@ -51,5 +51,43 @@ module types
       real, allocatable, dimension(:) :: y      !< array of y-positions of %grid cells centers
       real, allocatable, dimension(:) :: z      !< array of z-positions of %grid cells centers
    end type axes
+
+   type :: real_vec_T
+      real, dimension(:), pointer :: r
+   contains
+      procedure :: associated => real_vec_T_associated
+      procedure :: allocate => real_vec_T_allocate
+      procedure :: deallocate => real_vec_T_deallocate
+   end type real_vec_T
+
+contains
+
+   logical function real_vec_T_associated(this)
+
+      implicit none
+      class(real_vec_T), intent(in) :: this
+
+      real_vec_T_associated = associated(this%r)
+   end function real_vec_T_associated
+
+   subroutine real_vec_T_allocate(this, n)
+
+      implicit none
+      class(real_vec_T), intent(inout) :: this
+      integer, intent(in) :: n
+
+      allocate(this%r(n))
+
+   end subroutine real_vec_T_allocate
+
+   subroutine real_vec_T_deallocate(this)
+
+      implicit none
+      class(real_vec_T), intent(inout) :: this
+
+      deallocate(this%r)
+      nullify(this%r)
+
+   end subroutine real_vec_T_deallocate
 
 end module types

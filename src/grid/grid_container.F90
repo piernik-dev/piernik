@@ -33,8 +33,8 @@
 module grid_cont
 
    use constants,   only: xdim, zdim, ndims, LO, HI
-   use types,       only: axes
    use named_array, only: named_array4d, named_array3d
+   use types,       only: real_vec_T
 
    implicit none
 
@@ -102,7 +102,7 @@ module grid_cont
    end type bnd_list
 
    !> \brief Everything required for autonomous computation of a single sweep on a portion of the domain on a single process
-   type, extends(axes) :: grid_container
+   type :: grid_container
 
       ! Cell properties
 
@@ -151,6 +151,10 @@ module grid_cont
       ! Physical size and coordinates
 
       real, dimension(ndims, LO:HI) :: fbnd                      !< current block boundary positions
+      type(real_vec_T), dimension(ndims) :: coord
+      real, pointer, dimension(:) :: x
+      real, pointer, dimension(:) :: y
+      real, pointer, dimension(:) :: z
       real, allocatable, dimension(:) :: inv_x                   !< array of invert x-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_y                   !< array of invert y-positions of %grid cells centers
       real, allocatable, dimension(:) :: inv_z                   !< array of invert z-positions of %grid cells centers
@@ -499,20 +503,32 @@ contains
 
       select case (d)
          case (xdim)
-            if (allocated(this%x) .or. allocated(this%xl) .or. allocated(this%xr) .or. allocated(this%inv_x)) call die("[grid_container:set_axis] x-coordinates already allocated")
-            call move_alloc(a0, this%x)
+            if (this%coord(xdim)%associated() .or. allocated(this%xl) .or. allocated(this%xr) .or. allocated(this%inv_x)) &
+               call die("[grid_container:set_axis] x-coordinates already allocated")
+            call this%coord(xdim)%allocate(size(a0))
+            this%coord(xdim)%r = a0
+            deallocate(a0)
+            this%x => this%coord(xdim)%r
             call move_alloc(al, this%xl)
             call move_alloc(ar, this%xr)
             call move_alloc(ia, this%inv_x)
          case (ydim)
-            if (allocated(this%y) .or. allocated(this%yl) .or. allocated(this%yr) .or. allocated(this%inv_y)) call die("[grid_container:set_axis] y-coordinates already allocated")
-            call move_alloc(a0, this%y)
+            if (this%coord(ydim)%associated() .or. allocated(this%yl) .or. allocated(this%yr) .or. allocated(this%inv_y)) &
+               call die("[grid_container:set_axis] y-coordinates already allocated")
+            call this%coord(ydim)%allocate(size(a0))
+            this%coord(ydim)%r = a0
+            deallocate(a0)
+            this%y => this%coord(ydim)%r
             call move_alloc(al, this%yl)
             call move_alloc(ar, this%yr)
             call move_alloc(ia, this%inv_y)
          case (zdim)
-            if (allocated(this%z) .or. allocated(this%zl) .or. allocated(this%zr) .or. allocated(this%inv_z)) call die("[grid_container:set_axis] z-coordinates already allocated")
-            call move_alloc(a0, this%z)
+            if (this%coord(zdim)%associated() .or. allocated(this%zl) .or. allocated(this%zr) .or. allocated(this%inv_z)) &
+               call die("[grid_container:set_axis] z-coordinates already allocated")
+            call this%coord(zdim)%allocate(size(a0))
+            this%coord(zdim)%r = a0
+            deallocate(a0)
+            this%z => this%coord(zdim)%r
             call move_alloc(al, this%zl)
             call move_alloc(ar, this%zr)
             call move_alloc(ia, this%inv_z)
@@ -533,19 +549,22 @@ contains
       implicit none
 
       class(grid_container), intent(inout) :: this
-      integer :: d, t, g, b
+      integer :: d, t, g, b, cdim
       integer, parameter :: nseg = 2*2
       type(tgt_list), dimension(nseg) :: rpio_tgt
 
-      if (allocated(this%x))     deallocate(this%x)
+      if (associated(this%x))     nullify(this%x)
+      if (associated(this%y))     nullify(this%y)
+      if (associated(this%z))     nullify(this%z)
+      do cdim = xdim, zdim
+         call this%coord(cdim)%deallocate()
+      enddo
       if (allocated(this%xl))    deallocate(this%xl)
       if (allocated(this%xr))    deallocate(this%xr)
       if (allocated(this%inv_x)) deallocate(this%inv_x)
-      if (allocated(this%y))     deallocate(this%y)
       if (allocated(this%yl))    deallocate(this%yl)
       if (allocated(this%yr))    deallocate(this%yr)
       if (allocated(this%inv_y)) deallocate(this%inv_y)
-      if (allocated(this%z))     deallocate(this%z)
       if (allocated(this%zl))    deallocate(this%zl)
       if (allocated(this%zr))    deallocate(this%zr)
       if (allocated(this%inv_z)) deallocate(this%inv_z)
