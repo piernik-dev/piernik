@@ -389,7 +389,7 @@ contains
 
       use cg_leaves, only: leaves
       use cg_list,   only: cg_list_element
-      use constants, only: xdim, ydim, zdim, ndims, LO, HI
+      use constants, only: xdim, ydim, zdim, ndims, LO, HI, IM, I0, IP
       use domain,    only: dom
 
       implicit none
@@ -401,7 +401,7 @@ contains
       type(cg_list_element), pointer :: cgl
       integer :: p, cdim
       integer(kind=8) :: i, j, k
-      integer(kind=8), dimension(ndims, -1:1) :: ijkp
+      integer(kind=8), dimension(ndims, IM:IP) :: ijkp
       integer(kind=8), dimension(ndims) :: cur_ind
       real :: weight, delta_x, a, weight_tmp
 
@@ -419,17 +419,17 @@ contains
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     ijkp(cdim,  0) = nint((part%pos(cdim) - coord(cdim)%r(1))*cgl%cg%idl(cdim)) + 1
-                     ijkp(cdim, -1) = ijkp(cdim, 0) - 1
-                     ijkp(cdim,  1) = ijkp(cdim, 0) + 1
+                     ijkp(cdim, I0) = nint((part%pos(cdim) - coord(cdim)%r(1))*cgl%cg%idl(cdim)) + 1
+                     ijkp(cdim, IM) = ijkp(cdim, I0) - 1
+                     ijkp(cdim, IP) = ijkp(cdim, I0) + 1
                   else
                      ijkp(cdim, :) = 1
                   endif
                enddo
                a = 0.0
-               do i = ijkp(xdim, -1), ijkp(xdim, 1)
-                  do j = ijkp(ydim, -1), ijkp(ydim, 1)
-                     do k = ijkp(zdim, -1), ijkp(zdim, 1)
+               do i = ijkp(xdim, IM), ijkp(xdim, IP)
+                  do j = ijkp(ydim, IM), ijkp(ydim, IP)
+                     do k = ijkp(zdim, IM), ijkp(zdim, IP)
 
                         cur_ind(:) = [i, j, k]
                         weight = 1.0
