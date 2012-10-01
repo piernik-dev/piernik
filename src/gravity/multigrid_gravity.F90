@@ -755,12 +755,15 @@ contains
             call all_cg%set_q_value(solution, 0.)
             history%old(:)%time = -huge(1.0)
          case (O_INJ)
+            call finest%check_dirty(history%old(p0)%i_hist, "history0")
             call leaves%q_copy(history%old(p0)%i_hist, solution)
             if (master .and. ord_time_extrap > ordt) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] No extrapolation of ",trim(vstat%cprefix),"solution."
                call printinfo(msg, stdout)
             endif
          case (O_LIN)
+            call finest%check_dirty(history%old(p0)%i_hist, "history0")
+            call finest%check_dirty(history%old(p1)%i_hist, "history1")
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p0)%time - history%old(p1)%time)
             call leaves%q_lin_comb( [ ind_val(history%old(p0)%i_hist, (1.+dt_fac(1))), &
                  &                    ind_val(history%old(p1)%i_hist,    -dt_fac(1) ) ], solution )
@@ -769,6 +772,9 @@ contains
                call printinfo(msg, stdout)
             endif
          case (O_I2)
+            call finest%check_dirty(history%old(p0)%i_hist, "history0")
+            call finest%check_dirty(history%old(p1)%i_hist, "history1")
+            call finest%check_dirty(history%old(p0)%i_hist, "history2")
             dt_fac(:) = (t - history%old([ p0, p1, p2 ])%time) / (history%old([ p1, p2, p0 ])%time - history%old([ p2, p0, p1 ])%time)
             call leaves%q_lin_comb([ ind_val(history%old(p0)%i_hist, -dt_fac(2)*dt_fac(3)), &
                  &                   ind_val(history%old(p1)%i_hist, -dt_fac(1)*dt_fac(3)), &
@@ -1058,9 +1064,9 @@ contains
       do v = 0, max_cycles
 
          call all_cg%set_dirty(defect)
-         call residual(finest, source, solution, defect) !leaves
+         call residual(leaves, source, solution, defect)
+         call leaves%check_dirty(defect, "residual")
          if (grav_bnd == bnd_periodic) call leaves%subtract_average(defect)
-         call finest%check_dirty(defect, "residual") !leaves
 
          norm_lhs = leaves%norm_sq(defect)
          ts = set_timer("multigrid")
@@ -1141,16 +1147,16 @@ contains
 
    subroutine residual(curl, src, soln, def)
 
-      use cg_level_connected, only: cg_level_connected_T
-      use constants,     only: O_I2, O_I4
-      use dataio_pub,    only: die
+      use cg_list_bnd, only: cg_list_bnd_T
+      use constants,   only: O_I2, O_I4
+      use dataio_pub,  only: die
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,                        intent(in) :: src  !< index of source in cg%q(:)
-      integer,                        intent(in) :: soln !< index of solution in cg%q(:)
-      integer,                        intent(in) :: def  !< index of defect in cg%q(:)
+      class(cg_list_bnd_T), intent(in) :: curl !< pointer to a level for which we approximate the solution
+      integer,              intent(in) :: src  !< index of source in cg%q(:)
+      integer,              intent(in) :: soln !< index of solution in cg%q(:)
+      integer,              intent(in) :: def  !< index of defect in cg%q(:)
 
       select case (ord_laplacian)
       case (O_I2)
@@ -1170,7 +1176,7 @@ contains
    subroutine residual2(curl, src, soln, def)
 
       use cg_list,       only: cg_list_element
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_list_bnd,   only: cg_list_bnd_T
       use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, half, I_ONE, BND_NEGREF
       use dataio_pub,    only: die
       use domain,        only: dom
@@ -1179,10 +1185,10 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,                        intent(in) :: src  !< index of source in cg%q(:)
-      integer,                        intent(in) :: soln !< index of solution in cg%q(:)
-      integer,                        intent(in) :: def  !< index of defect in cg%q(:)
+      class(cg_list_bnd_T), intent(in) :: curl !< pointer to a level for which we approximate the solution
+      integer,              intent(in) :: src  !< index of source in cg%q(:)
+      integer,              intent(in) :: soln !< index of solution in cg%q(:)
+      integer,              intent(in) :: def  !< index of defect in cg%q(:)
 
       integer                         :: i, j, k
       real                            :: L0, Lx, Ly, Lz
@@ -1289,7 +1295,7 @@ contains
    subroutine residual4(curl, src, soln, def)
 
       use cg_list,       only: cg_list_element
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_list_bnd,   only: cg_list_bnd_T
       use constants,     only: I_TWO, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom
@@ -1300,10 +1306,10 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,                        intent(in) :: src  !< index of source in cg%q(:)
-      integer,                        intent(in) :: soln !< index of solution in cg%q(:)
-      integer,                        intent(in) :: def  !< index of defect in cg%q(:)
+      class(cg_list_bnd_T), intent(in) :: curl !< pointer to a level for which we approximate the solution
+      integer,              intent(in) :: src  !< index of source in cg%q(:)
+      integer,              intent(in) :: soln !< index of solution in cg%q(:)
+      integer,              intent(in) :: def  !< index of defect in cg%q(:)
 
       real, parameter     :: L4_scaling = 1./12. ! with L4_strength = 1. this gives an L4 approximation for finite differences approach
       integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
@@ -1391,7 +1397,7 @@ contains
    subroutine residual_Mehrstellen(curl, src, soln, def)
 
       use cg_list,       only: cg_list_element
-      use cg_level_connected, only: cg_level_connected_T
+      use cg_list_bnd,   only: cg_list_bnd_T
       use constants,     only: I_ONE, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom
@@ -1402,10 +1408,10 @@ contains
 
       implicit none
 
-      type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,                        intent(in) :: src  !< index of source in cg%q(:)
-      integer,                        intent(in) :: soln !< index of solution in cg%q(:)
-      integer,                        intent(in) :: def  !< index of defect in cg%q(:)
+      class(cg_list_bnd_T), intent(in) :: curl !< pointer to a level for which we approximate the solution
+      integer,              intent(in) :: src  !< index of source in cg%q(:)
+      integer,              intent(in) :: soln !< index of solution in cg%q(:)
+      integer,              intent(in) :: def  !< index of defect in cg%q(:)
 
       real                :: c21
       real                :: L0, Lx, Ly, Lz

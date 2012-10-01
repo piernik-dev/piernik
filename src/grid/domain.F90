@@ -40,7 +40,7 @@ module domain
    implicit none
 
    private
-   public :: cleanup_domain, init_domain, domain_container, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, &
+   public :: cleanup_domain, init_domain, translate_ints_to_bnds, domain_container, dom, is_uneven, is_mpi_noncart, is_refined, is_multicg, &
         &    psize, bsize, minsize, allow_noncart, allow_uneven, dd_unif_quality, dd_rect_quality, use_comm3d, reorder! temporary export
 
 ! AMR: There will be at least one domain container for the base grid.
@@ -331,11 +331,7 @@ contains
 
    end subroutine cleanup_domain
 
-!>
-!! \brief An interpreter of string-defined boundary types
-!!
-!! \todo Write a routine that does the reverse transformation - can be useful for easy-to-interpret messages
-!<
+!> \brief An interpreter of string-defined boundary types
 
    subroutine translate_bnds_to_ints(this, bnds)
 
@@ -377,6 +373,47 @@ contains
          enddo
       enddo
    end subroutine translate_bnds_to_ints
+
+!> \brief Convert integer-defined boundary type to human-readable string
+
+   elemental function translate_ints_to_bnds(ibnd) result(bstr)
+
+      use constants, only: dsetnamelen, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER, BND_INVALID
+
+      implicit none
+
+      integer, intent(in) :: ibnd !< integer boundary
+
+      character(len=dsetnamelen) :: bstr !< output string boundary
+
+      select case (ibnd)
+         case (BND_PER)
+            bstr = 'periodic'
+         case (BND_REF)
+            bstr = 'reflecting'
+         case (BND_OUT)
+            bstr = 'out'
+         case (BND_OUTD)
+            bstr = 'outd'
+         case (BND_OUTH)
+            bstr = 'outh'
+         case (BND_OUTHD)
+            bstr = 'outhd'
+         case (BND_SHE)
+            bstr = 'shearing'
+         case (BND_COR)
+            bstr = 'corner'
+         case (BND_MPI)
+            bstr = 'mpi'
+         case (BND_USER)
+            bstr = 'user'
+         case (BND_INVALID)
+            bstr = 'invalid'
+         case default
+            bstr = 'HORRIBLE!'
+      end select
+
+   end function translate_ints_to_bnds
 
 !> \brief Print computational domain details
 

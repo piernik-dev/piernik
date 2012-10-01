@@ -384,13 +384,15 @@ contains
 !! \brief Compute the average value over a list and subtract it
 !!
 !! \details Typically it is used on a list of leaves or on a single level
+!!
+!! \warning Need a real leaves, not the current implementation
 !<
 
    subroutine subtract_average(this, iv)
 
       use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, GEO_RPZ, I_ONE
-      use dataio_pub, only: die
+      use constants,  only: GEO_XYZ, GEO_RPZ, I_ONE, base_level_id
+      use dataio_pub, only: die, warn
       use domain,     only: dom
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_IN_PLACE
@@ -405,12 +407,17 @@ contains
       integer :: i
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      logical, save :: warned = .false.
 
       avg = 0.
       vol = 0.
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
+         if (cg%level_id > base_level_id .and. .not. warned) then
+            call warn("[cg_list_dataop:subtract_average] Need a real leaves")
+            warned = .true.
+         endif
          select case (dom%geometry_type)
             case (GEO_XYZ)
                avg = avg + sum(cg%q(iv)%span(cg%ijkse)) * cg%dvol
@@ -436,6 +443,8 @@ contains
 !! \brief Calculate L2 norm
 !!
 !! \todo modify the code for reusing in subtract_average?
+!!
+!! \warning Need a real leaves, not the current implementation
 !<
 
    real function norm_sq(this, iv) result (norm)
@@ -544,7 +553,7 @@ contains
       use constants,        only: dirtyL, LO
       use dataio_pub,       only: warn, msg, die
       use domain,           only: dom
-      use global,           only: dirty_debug, show_n_dirtys
+      use global,           only: dirty_debug, show_n_dirtys, no_dirty_checks
       use mpisetup,         only: proc
       use named_array_list, only: qna
 
@@ -558,7 +567,7 @@ contains
       integer :: i, j, k, ng, cnt
       type(cg_list_element), pointer :: cgl
 
-      if (.not. dirty_debug) return
+      if (.not. dirty_debug .or. no_dirty_checks) return
       if (iv < lbound(qna%lst, dim=1) .or. iv > ubound(qna%lst, dim=1)) call die("[cg_list_dataop:check_dirty] Invalid variable index.")
 
       ng = 0

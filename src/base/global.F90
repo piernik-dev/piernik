@@ -44,13 +44,15 @@ module global
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
         &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, nstep, &
         &    integration_order, limiter, smalld, smallei, smallp, use_smalld, &
-        &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, dirty_debug, do_ascii_dump, show_n_dirtys
+        &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
+        &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
    logical         :: dirty_debug              !< Allow initializing arrays with some insane values and checking if these values can propagate
    integer(kind=4) :: show_n_dirtys            !< use to limit the amount of printed messages on dirty values found
-   logical         :: do_ascii_dump                      !< to dump, or not to dump: that is a question (ascii)
+   logical         :: do_ascii_dump            !< to dump, or not to dump: that is a question (ascii)
+   logical         :: no_dirty_checks          !< Temporarily disable dirty checks
    integer(kind=4) :: nstep
    real            :: t, dt, dt_old, dtm
 
@@ -133,6 +135,7 @@ contains
       cflcontrol  = 'warn'
       repeat_step = .true.
       geometry25D = .false.
+      no_dirty_checks = .false.
 
       cfl         = 0.7
       cfl_max     = 0.9

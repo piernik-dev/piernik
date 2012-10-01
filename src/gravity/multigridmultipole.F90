@@ -325,6 +325,7 @@ contains
          call moments2bnd_potential
       endif
 
+      !> \todo The approach with lmpole should be reworked completely. With AMR use only current level and reinitialize some things if refinements have changed
       if (.not. associated(lmpole, finest)) then
          curl => lmpole
          do while (associated(curl) .and. .not. associated(curl, finest)) ! do lev = lmpole%first%cg%level_id, finest%level_id - 1
