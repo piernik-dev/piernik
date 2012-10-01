@@ -230,6 +230,13 @@ module constants
       enumerator :: I_TSC   ! Triangular shaped cloud
    end enum
 
+   ! -1, 0, 1
+   enum, bind(C)
+      enumerator :: IM = -1
+      enumerator :: I0
+      enumerator :: IP
+   end enum
+
    ! misc
    enum, bind(C)
       enumerator :: MINL, MAXL                           !< constants for func::get_extremum
