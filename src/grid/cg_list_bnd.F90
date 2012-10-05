@@ -407,9 +407,10 @@ contains
                end select
             enddo
 
-         endif
          !> \warning outside xdim-zdim loop MPI_Waitall may change the operations order and as a result may leave mpi-corners uninitialized
          call MPI_Waitall(size(req), req, status, mpi_err)
+
+         endif
       enddo
 
    end subroutine internal_boundaries_comm3d
