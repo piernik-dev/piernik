@@ -239,6 +239,14 @@ module constants
       enumerator :: IP
    end enum
 
+   ! coordinate positions
+   enum, bind(C)
+      enumerator :: LEFT = -1
+      enumerator :: CENTER
+      enumerator :: RIGHT
+      enumerator :: INV_CENTER
+   end enum
+
    ! misc
    enum, bind(C)
       enumerator :: MINL, MAXL                           !< constants for func::get_extremum

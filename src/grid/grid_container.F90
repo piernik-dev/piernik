@@ -32,7 +32,7 @@
 
 module grid_cont
 
-   use constants,   only: xdim, zdim, ndims, LO, HI
+   use constants,   only: xdim, zdim, ndims, LO, HI, LEFT, INV_CENTER
    use named_array, only: named_array4d, named_array3d
    use types,       only: real_vec_T
 
@@ -151,19 +151,21 @@ module grid_cont
       ! Physical size and coordinates
 
       real, dimension(ndims, LO:HI) :: fbnd                      !< current block boundary positions
-      type(real_vec_T), dimension(ndims) :: coord
-      real, pointer, dimension(:) :: x
-      real, pointer, dimension(:) :: y
-      real, pointer, dimension(:) :: z
-      real, allocatable, dimension(:) :: inv_x                   !< array of invert x-positions of %grid cells centers
-      real, allocatable, dimension(:) :: inv_y                   !< array of invert y-positions of %grid cells centers
-      real, allocatable, dimension(:) :: inv_z                   !< array of invert z-positions of %grid cells centers
-      real, allocatable, dimension(:) :: xl                      !< array of x-positions of %grid cells left borders
-      real, allocatable, dimension(:) :: yl                      !< array of y-positions of %grid cells left borders
-      real, allocatable, dimension(:) :: zl                      !< array of z-positions of %grid cells left borders
-      real, allocatable, dimension(:) :: xr                      !< array of x-positions of %grid cells right borders
-      real, allocatable, dimension(:) :: yr                      !< array of y-positions of %grid cells right borders
-      real, allocatable, dimension(:) :: zr                      !< array of z-positions of %grid cells right borders
+
+      type(real_vec_T), dimension(LEFT:INV_CENTER, ndims) :: coord !< all coordinates
+      ! shortcuts
+      real, pointer, dimension(:) :: x                             !< array of x-positions of %grid cells centers
+      real, pointer, dimension(:) :: y                             !< array of x-positions of %grid cells centers
+      real, pointer, dimension(:) :: z                             !< array of x-positions of %grid cells centers
+      real, pointer, dimension(:) :: inv_x                         !< array of invert x-positions of %grid cells centers
+      real, pointer, dimension(:) :: inv_y                         !< array of invert y-positions of %grid cells centers
+      real, pointer, dimension(:) :: inv_z                         !< array of invert z-positions of %grid cells centers
+      real, pointer, dimension(:) :: xl                            !< array of x-positions of %grid cells left borders
+      real, pointer, dimension(:) :: yl                            !< array of y-positions of %grid cells left borders
+      real, pointer, dimension(:) :: zl                            !< array of z-positions of %grid cells left borders
+      real, pointer, dimension(:) :: xr                            !< array of x-positions of %grid cells right borders
+      real, pointer, dimension(:) :: yr                            !< array of y-positions of %grid cells right borders
+      real, pointer, dimension(:) :: zr                            !< array of z-positions of %grid cells right borders
 
       ! External boundary conditions and internal boundaries
 
@@ -218,7 +220,7 @@ module grid_cont
 
       procedure :: init                                          !< Initialization
       procedure :: cleanup                                       !< Deallocate all internals
-      procedure :: set_axis                                      !< Calculate arrays of coordinates along a given direction
+      procedure :: set_coords                                    !< Calculate arrays of coordinates along a given direction
       procedure :: add_all_na                                    !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
       procedure :: add_na                                        !< Register a new 3D entry in current cg with given name.
       procedure :: add_na_4d                                     !< Register a new 4D entry in current cg with given name.
@@ -383,9 +385,7 @@ contains
 
       this%maxxyz = maxval(this%n_(:), mask=dom%has_dir(:))
 
-      do i = xdim, zdim
-         call this%set_axis(i)
-      enddo
+      call this%set_coords
 
       this%dxmn = minval(this%dl(:), mask=dom%has_dir(:))
 
@@ -465,84 +465,69 @@ contains
 
 !> \brief Calculate arrays of coordinates along a given direction
 
-   subroutine set_axis(this, d)
+   subroutine set_coords(this)
 
-      use constants,  only: LO, HI, half, one, zero, xdim, ydim, zdim
+      use constants,  only: LO, HI, half, one, zero, xdim, ydim, zdim, LEFT, CENTER, RIGHT, INV_CENTER
       use dataio_pub, only: die
       use domain,     only: dom
 
       implicit none
 
       class(grid_container), intent(inout) :: this !< grid container, where the arrays have to be set
-      integer,               intent(in)    :: d    !< direction
 
-      real, dimension(:), allocatable :: a0, al, ar, ia
-      integer :: i
+      integer :: d, i
 
-      allocate(a0(this%n_(d)), al(this%n_(d)), ar(this%n_(d)), ia(this%n_(d)))
+      do d = xdim, zdim
+         do i = LEFT, INV_CENTER
+            if (this%coord(i, d)%associated()) call die("[grid_container:set_coords] a coordinate already allocated")
+            call this%coord(i, d)%allocate(this%n_(d))
+         enddo
 
-      if (dom%has_dir(d)) then
-         a0(:) = dom%edge(d, LO) + this%dl(d) * ([(i, i=1, this%n_(d))] - half - dom%nb + this%off(d))
-      else
-         a0(:) = half*(this%fbnd(d, LO) + this%fbnd(d, HI))
-      endif
+         if (dom%has_dir(d)) then
+            this%coord(CENTER, d)%r(:) = dom%edge(d, LO) + this%dl(d) * ([(i, i=1, this%n_(d))] - half - dom%nb + this%off(d))
+         else
+            this%coord(CENTER, d)%r(:) = half*(this%fbnd(d, LO) + this%fbnd(d, HI))
+         endif
 
-      al(:) = a0(:) - half*this%dl(d)
-      ar(:) = a0(:) + half*this%dl(d)
+         this%coord(LEFT,  d)%r(:) = this%coord(CENTER, d)%r(:) - half*this%dl(d)
+         this%coord(RIGHT, d)%r(:) = this%coord(CENTER, d)%r(:) + half*this%dl(d)
 
-      where ( a0(:) /= zero )
-         ia(:) = one/a0(:)
-      elsewhere
-         ia(:) = zero
-      endwhere
+         where ( this%coord(CENTER, d)%r(:) /= zero )
+            this%coord(INV_CENTER, d)%r(:) = one/this%coord(CENTER, d)%r(:)
+         elsewhere
+            this%coord(INV_CENTER, d)%r(:) = zero
+         endwhere
 
-!--- Assignments -----------------------------------------------------------
-         ! left zone boundaries:  xl, yl, zl
-         ! zone centers:          x,  y,  z
-         ! right zone boundaries: xr, yr, zr
+      enddo
 
-      select case (d)
-         case (xdim)
-            if (this%coord(xdim)%associated() .or. allocated(this%xl) .or. allocated(this%xr) .or. allocated(this%inv_x)) &
-               call die("[grid_container:set_axis] x-coordinates already allocated")
-            call this%coord(xdim)%allocate(size(a0))
-            this%coord(xdim)%r = a0
-            deallocate(a0)
-            this%x => this%coord(xdim)%r
-            call move_alloc(al, this%xl)
-            call move_alloc(ar, this%xr)
-            call move_alloc(ia, this%inv_x)
-         case (ydim)
-            if (this%coord(ydim)%associated() .or. allocated(this%yl) .or. allocated(this%yr) .or. allocated(this%inv_y)) &
-               call die("[grid_container:set_axis] y-coordinates already allocated")
-            call this%coord(ydim)%allocate(size(a0))
-            this%coord(ydim)%r = a0
-            deallocate(a0)
-            this%y => this%coord(ydim)%r
-            call move_alloc(al, this%yl)
-            call move_alloc(ar, this%yr)
-            call move_alloc(ia, this%inv_y)
-         case (zdim)
-            if (this%coord(zdim)%associated() .or. allocated(this%zl) .or. allocated(this%zr) .or. allocated(this%inv_z)) &
-               call die("[grid_container:set_axis] z-coordinates already allocated")
-            call this%coord(zdim)%allocate(size(a0))
-            this%coord(zdim)%r = a0
-            deallocate(a0)
-            this%z => this%coord(zdim)%r
-            call move_alloc(al, this%zl)
-            call move_alloc(ar, this%zr)
-            call move_alloc(ia, this%inv_z)
-         case default
-            call die("[grid_container:set_axis] invalid direction")
-      end select
+      !--- Shortcuts --------------------
+      ! left zone boundaries:  xl, yl, zl
+      ! zone centers:          x,  y,  z
+      ! right zone boundaries: xr, yr, zr
 
-   end subroutine set_axis
+      this%x     => this%coord(CENTER,     xdim)%r
+      this%y     => this%coord(CENTER,     ydim)%r
+      this%z     => this%coord(CENTER,     zdim)%r
+
+      this%xl    => this%coord(LEFT,       xdim)%r
+      this%yl    => this%coord(LEFT,       ydim)%r
+      this%zl    => this%coord(LEFT,       zdim)%r
+
+      this%xr    => this%coord(RIGHT,      xdim)%r
+      this%yr    => this%coord(RIGHT,      ydim)%r
+      this%zr    => this%coord(RIGHT,      zdim)%r
+
+      this%inv_x => this%coord(INV_CENTER, xdim)%r
+      this%inv_y => this%coord(INV_CENTER, ydim)%r
+      this%inv_z => this%coord(INV_CENTER, zdim)%r
+
+   end subroutine set_coords
 
 !> \brief Routines that deallocates all internals of the grid container
 
    subroutine cleanup(this)
 
-      use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, BLK, INVALID
+      use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, BLK, INVALID, LEFT, INV_CENTER
       use domain,    only: dom
       use mpisetup,  only: mpi_err
 
@@ -557,17 +542,19 @@ contains
       if (associated(this%y))     nullify(this%y)
       if (associated(this%z))     nullify(this%z)
       do cdim = xdim, zdim
-         call this%coord(cdim)%deallocate()
+         do b = LEFT, INV_CENTER
+            call this%coord(b, cdim)%deallocate()
+         enddo
       enddo
-      if (allocated(this%xl))    deallocate(this%xl)
-      if (allocated(this%xr))    deallocate(this%xr)
-      if (allocated(this%inv_x)) deallocate(this%inv_x)
-      if (allocated(this%yl))    deallocate(this%yl)
-      if (allocated(this%yr))    deallocate(this%yr)
-      if (allocated(this%inv_y)) deallocate(this%inv_y)
-      if (allocated(this%zl))    deallocate(this%zl)
-      if (allocated(this%zr))    deallocate(this%zr)
-      if (allocated(this%inv_z)) deallocate(this%inv_z)
+      if (associated(this%xl))    nullify(this%xl)
+      if (associated(this%xr))    nullify(this%xr)
+      if (associated(this%inv_x)) nullify(this%inv_x)
+      if (associated(this%yl))    nullify(this%yl)
+      if (associated(this%yr))    nullify(this%yr)
+      if (associated(this%inv_y)) nullify(this%inv_y)
+      if (associated(this%zl))    nullify(this%zl)
+      if (associated(this%zr))    nullify(this%zr)
+      if (associated(this%inv_z)) nullify(this%inv_z)
 
       if (allocated(this%gc_xdim)) deallocate(this%gc_xdim)
       if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)
