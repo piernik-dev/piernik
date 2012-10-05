@@ -531,7 +531,7 @@ contains
 
    subroutine clear_boundaries(this, ind)
 
-      use constants, only: ndims, xdim, zdim, LO, HI, BND_MPI, BND_FC, BND_MPI_FC
+      use constants, only: ndims, xdim, zdim, LO, HI, I_TWO, BND_MPI, BND_FC, BND_MPI_FC
       use domain,    only: dom
       use cg_list,   only: cg_list_element
       use grid_cont, only: grid_container
@@ -559,7 +559,7 @@ contains
                   if (any(cg%bnd(d, lh) == [ BND_MPI, BND_FC, BND_MPI_FC ])) then
                      clh = LO + HI - lh
                      l(d,HI) = ubound(cg%q(ind)%arr, dim=d, kind=4) ! restore after lh==LO case
-                     l(d,clh) = cg%ijkse(d,lh) + 2*lh-(LO+HI)
+                     l(d,clh) = cg%ijkse(d,lh) + I_TWO*lh-(LO+HI)
                      pa3d => cg%q(ind)%span(l)
                      pa3d = 0.
                   endif
