@@ -32,7 +32,7 @@
 
 module grid_cont
 
-   use constants,   only: xdim, zdim, ndims, LO, HI, LEFT, INV_CENTER
+   use constants,   only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
    use named_array, only: named_array4d, named_array3d
    use types,       only: real_vec_T
 
@@ -152,7 +152,7 @@ module grid_cont
 
       real, dimension(ndims, LO:HI) :: fbnd                      !< current block boundary positions
 
-      type(real_vec_T), dimension(LEFT:INV_CENTER, ndims) :: coord !< all coordinates
+      type(real_vec_T), dimension(CENTER:INV_CENTER, ndims) :: coord !< all coordinates (CENTER, LEFT, RIGHT, INV_CENTER)
       ! shortcuts
       real, pointer, dimension(:) :: x                             !< array of x-positions of %grid cells centers
       real, pointer, dimension(:) :: y                             !< array of x-positions of %grid cells centers
@@ -160,12 +160,6 @@ module grid_cont
       real, pointer, dimension(:) :: inv_x                         !< array of invert x-positions of %grid cells centers
       real, pointer, dimension(:) :: inv_y                         !< array of invert y-positions of %grid cells centers
       real, pointer, dimension(:) :: inv_z                         !< array of invert z-positions of %grid cells centers
-      real, pointer, dimension(:) :: xl                            !< array of x-positions of %grid cells left borders
-      real, pointer, dimension(:) :: yl                            !< array of y-positions of %grid cells left borders
-      real, pointer, dimension(:) :: zl                            !< array of z-positions of %grid cells left borders
-      real, pointer, dimension(:) :: xr                            !< array of x-positions of %grid cells right borders
-      real, pointer, dimension(:) :: yr                            !< array of y-positions of %grid cells right borders
-      real, pointer, dimension(:) :: zr                            !< array of z-positions of %grid cells right borders
 
       ! External boundary conditions and internal boundaries
 
@@ -467,7 +461,7 @@ contains
 
    subroutine set_coords(this)
 
-      use constants,  only: LO, HI, half, one, zero, xdim, ydim, zdim, LEFT, CENTER, RIGHT, INV_CENTER
+      use constants,  only: LO, HI, half, one, zero, xdim, ydim, zdim, CENTER, LEFT, RIGHT, INV_CENTER
       use dataio_pub, only: die
       use domain,     only: dom
 
@@ -478,7 +472,7 @@ contains
       integer :: d, i
 
       do d = xdim, zdim
-         do i = LEFT, INV_CENTER
+         do i = CENTER, INV_CENTER
             if (this%coord(i, d)%associated()) call die("[grid_container:set_coords] a coordinate already allocated")
             call this%coord(i, d)%allocate(this%n_(d))
          enddo
@@ -509,14 +503,6 @@ contains
       this%y     => this%coord(CENTER,     ydim)%r
       this%z     => this%coord(CENTER,     zdim)%r
 
-      this%xl    => this%coord(LEFT,       xdim)%r
-      this%yl    => this%coord(LEFT,       ydim)%r
-      this%zl    => this%coord(LEFT,       zdim)%r
-
-      this%xr    => this%coord(RIGHT,      xdim)%r
-      this%yr    => this%coord(RIGHT,      ydim)%r
-      this%zr    => this%coord(RIGHT,      zdim)%r
-
       this%inv_x => this%coord(INV_CENTER, xdim)%r
       this%inv_y => this%coord(INV_CENTER, ydim)%r
       this%inv_z => this%coord(INV_CENTER, zdim)%r
@@ -541,20 +527,14 @@ contains
       if (associated(this%x))     nullify(this%x)
       if (associated(this%y))     nullify(this%y)
       if (associated(this%z))     nullify(this%z)
+      if (associated(this%inv_x)) nullify(this%inv_x)
+      if (associated(this%inv_y)) nullify(this%inv_y)
+      if (associated(this%inv_z)) nullify(this%inv_z)
       do cdim = xdim, zdim
          do b = LEFT, INV_CENTER
             call this%coord(b, cdim)%deallocate()
          enddo
       enddo
-      if (associated(this%xl))    nullify(this%xl)
-      if (associated(this%xr))    nullify(this%xr)
-      if (associated(this%inv_x)) nullify(this%inv_x)
-      if (associated(this%yl))    nullify(this%yl)
-      if (associated(this%yr))    nullify(this%yr)
-      if (associated(this%inv_y)) nullify(this%inv_y)
-      if (associated(this%zl))    nullify(this%zl)
-      if (associated(this%zr))    nullify(this%zr)
-      if (associated(this%inv_z)) nullify(this%inv_z)
 
       if (allocated(this%gc_xdim)) deallocate(this%gc_xdim)
       if (allocated(this%gc_ydim)) deallocate(this%gc_ydim)

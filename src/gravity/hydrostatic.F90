@@ -128,7 +128,7 @@ contains
 !<
    subroutine set_default_hsparams(cg)
 
-      use constants,   only: zdim, LO, HI, I_ONE
+      use constants,   only: zdim, LO, HI, I_ONE, LEFT, RIGHT
       use diagnostics, only: my_allocate, my_deallocate
       use domain,      only: dom
       use gravity,     only: nsub
@@ -149,8 +149,8 @@ contains
       call my_allocate(dprof, [cg%n_(zdim)], "dprof")
       if (allocated(hsl)) call my_deallocate(hsl)
       call my_allocate(hsl, [hsbn+I_ONE], "hsl")
-      hsl(1:hsbn) = cg%zl(1:hsbn)
-      hsl(hsbn+1) = cg%zr(hsbn)
+      hsl(1:hsbn) = cg%coord(LEFT,  zdim)%r(1:hsbn)
+      hsl(hsbn+1) = cg%coord(RIGHT, zdim)%r(hsbn)
 
    end subroutine set_default_hsparams
 
@@ -359,7 +359,7 @@ contains
 
    subroutine outh_bnd(side, cg, diode)
 
-      use constants,      only: xdim, ydim, zdim, half, HI, INT4
+      use constants,      only: xdim, ydim, zdim, half, HI, INT4, LEFT, RIGHT
       use dataio_pub,     only: die
       use domain,         only: dom
       use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
@@ -444,7 +444,7 @@ contains
                db(:,i,j) = 0.0
                lksub = 0
                do ksub=1, nstot
-                  if (zs(ksub) > cg%zl(kk) .and. zs(ksub) < cg%zr(kk)) then
+                  if (zs(ksub) > cg%coord(LEFT, zdim)%r(kk) .and. zs(ksub) < cg%coord(RIGHT, zdim)%r(kk)) then
                      db(:,i,j) = db(:,i,j) + dprofs(:,ksub)/real(nsub)
                      lksub = ksub
                   endif

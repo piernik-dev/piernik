@@ -239,10 +239,11 @@ module constants
       enumerator :: IP
    end enum
 
-   ! coordinate positions
+   ! coordinate positions;
+   !> \warning gridgeometry depends on the sequence
    enum, bind(C)
-      enumerator :: LEFT = -1
       enumerator :: CENTER
+      enumerator :: LEFT
       enumerator :: RIGHT
       enumerator :: INV_CENTER
    end enum

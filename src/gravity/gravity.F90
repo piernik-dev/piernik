@@ -862,7 +862,7 @@ contains
 !<
    subroutine grav_accel2pot
 
-      use constants,      only: xdim, ydim, zdim, ndims, MAXL, I_ONE
+      use constants,      only: xdim, ydim, zdim, ndims, MAXL, I_ONE, RIGHT
       use dataio_pub,     only: die
       use cart_comm,      only: cdd
       use domain,         only: is_mpi_noncart, is_multicg, dom
@@ -897,13 +897,13 @@ contains
       allocate(gpwork(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
       gpwork(1,1,1) = 0.0
 
-      call grav_accel(xdim, 1, 1, cg%xr(:), cg%n_(xdim), gravrx)
+      call grav_accel(xdim, 1, 1, cg%coord(RIGHT, xdim)%r(:), cg%n_(xdim), gravrx)
       do i = 1, cg%n_(xdim)-1
          gpwork(i+1,1,1) = gpwork(i,1,1) - gravrx(i)*cg%dl(xdim)
       enddo
 
       do i=1, cg%n_(xdim)
-         call grav_accel(ydim, 1, i, cg%yr(:), cg%n_(ydim), gravry)
+         call grav_accel(ydim, 1, i, cg%coord(RIGHT, ydim)%r(:), cg%n_(ydim), gravry)
          do j = 1, cg%n_(ydim)-1
             gpwork(i,j+1,1) = gpwork(i,j,1) - gravry(j)*cg%dl(ydim)
          enddo
@@ -911,7 +911,7 @@ contains
 
       do i=1, cg%n_(xdim)
          do j=1, cg%n_(ydim)
-            call grav_accel(zdim, i, j, cg%zr(:), cg%n_(zdim), gravrz)
+            call grav_accel(zdim, i, j, cg%coord(RIGHT, zdim)%r(:), cg%n_(zdim), gravrz)
             do k = 1, cg%n_(zdim)-1
                gpwork(i,j,k+1) = gpwork(i,j,k) - gravrz(k)*cg%dl(zdim)
             enddo
