@@ -82,7 +82,7 @@ contains
 
       use cart_comm,     only: cdd
       use constants,     only: MAG, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
-           &                   BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
+           &                   BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
       use dataio_pub,    only: msg, warn, die
       use domain,        only: is_mpi_noncart, is_multicg, dom
       use grid_cont,     only: grid_container
@@ -287,6 +287,8 @@ contains
          select case (cg%bnd(dir, side))
             case (BND_MPI, BND_REF)
                ! Do nothing
+            case (BND_FC, BND_MPI_FC)
+               call die("[magboundaries:bnd_b] fine-coarse interfaces not implemented yet")
             case (BND_COR)
                if (dir == zdim) then
                   write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
@@ -325,8 +327,8 @@ contains
    subroutine bnd_emf(var, emfdir, dir, cg)
 
       use constants,  only: ndims, xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, &
-                            BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
-      use dataio_pub, only: msg, warn
+                            BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
+      use dataio_pub, only: msg, warn, die
       use grid_cont,  only: grid_container
       use mpisetup,   only: master
 
@@ -371,6 +373,8 @@ contains
          select case (cg%bnd(dir, side))
             case (BND_MPI, BND_PER)
                ! Do nothing
+            case (BND_FC, BND_MPI_FC)
+               call die("[magboundaries:bnd_emf] fine-coarse interfaces not implemented yet")
             case (BND_COR)
                if (dir == zdim) then
                   write(msg,'(a,i3,a,i1,a,i3)') "[magboundaries:bnd_emf]: Boundary condition ",cg%bnd(dir, side)," not implemented for ",emfdir, " in ", dir

@@ -335,7 +335,7 @@ contains
 
    subroutine translate_bnds_to_ints(this, bnds)
 
-      use constants, only: xdim, zdim, ndims, LO, HI, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER, BND_INVALID
+      use constants, only: xdim, zdim, ndims, LO, HI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER, BND_INVALID
 
       implicit none
 
@@ -363,8 +363,6 @@ contains
                   this%bnd(d, lh) = BND_SHE
                case ('cor', 'corner')
                   this%bnd(d, lh) = BND_COR
-               case ('mpi')
-                  this%bnd(d, lh) = BND_MPI
                case ('user')
                   this%bnd(d, lh) = BND_USER
                case default
@@ -378,7 +376,7 @@ contains
 
    elemental function translate_ints_to_bnds(ibnd) result(bstr)
 
-      use constants, only: dsetnamelen, BND_MPI, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER, BND_INVALID
+      use constants, only: dsetnamelen, BND_MPI, BND_FC, BND_MPI_FC,BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE, BND_USER, BND_INVALID
 
       implicit none
 
@@ -405,6 +403,10 @@ contains
             bstr = 'corner'
          case (BND_MPI)
             bstr = 'mpi'
+         case (BND_FC)
+            bstr = "FC"
+         case (BND_MPI_FC)
+            bstr = "mpi/FC"
          case (BND_USER)
             bstr = 'user'
          case (BND_INVALID)

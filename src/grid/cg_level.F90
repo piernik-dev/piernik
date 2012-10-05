@@ -192,18 +192,18 @@ contains
 
       do i = lbound(this%pse(proc)%c(:), dim=1), ubound(this%pse(proc)%c(:), dim=1)
          if (this%pse(proc)%c(i)%is_new) then
-            gr_id = gr_id + 1
             call this%add
             cg => this%last%cg
-            call cg%init(this%n_d, this%pse(proc)%c(i)%se(:, :), gr_id, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
-            call this%mpi_bnd_types(cg)                                                ! require access to whole this%pse(:)%c(:)%se(:,:)
-            call cg%add_all_na                                                         ! require mpi_bnd_types properly calculated
+            call cg%init(this%n_d, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
+            call cg%add_all_na                                                     ! require mpi_bnd_types properly calculated
             do ep = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
                if (associated(cg_extptrs%ext(ep)%init))  call cg_extptrs%ext(ep)%init(cg)
             enddo
             call all_cg%add(cg)
          endif
       enddo
+
+      call this%mpi_bnd_types                                                          ! require access to whole this%pse(:)%c(:)%se(:,:)
 
       call this%update_req ! Perhaps this%mpi_bnd_types added some new entries
       call this%update_tot_se
@@ -403,11 +403,11 @@ contains
 !! \todo Put this%pse into a separate type and pass a pointer to it or even a pointer to pre-filtered segment list
 !<
 
-   subroutine mpi_bnd_types(this, cg)
+   subroutine mpi_bnd_types(this)
 
       use cart_comm,      only: cdd
-      use constants,      only: FLUID, MAG, CR, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE, wcr_n
-      use dataio_pub,     only: die
+      use cg_list,        only: cg_list_element
+      use constants,      only: FLUID, MAG, CR, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE, wcr_n, BND_MPI_FC, BND_FC
       use domain,         only: dom
       use grid_cont,      only: grid_container, is_overlap
       use mpi,            only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
@@ -416,162 +416,187 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(in)  :: this    !< object invoking type bound procedure
-      type(grid_container), intent(inout) :: cg      !< grid container that we are currently working on
+      class(cg_level_T), intent(inout) :: this    !< object invoking type bound procedure
 
+      type(grid_container), pointer :: cg      !< grid container that we are currently working on
+      type(cg_list_element), pointer :: cgl
       integer(kind=4), dimension(:), allocatable :: sizes, subsizes, starts
       integer :: t, g, j, b
+      integer(kind=8) :: n_tot_face_cells
+      integer(kind=8), dimension(LO:HI) :: n_lbnd_face_cells
       integer(kind=4) :: d, dd, hl, lh, ib
       integer(kind=4), parameter, dimension(FLUID:ARR) :: dims = [ I_ONE+ndims, I_ONE+ndims, I_ONE+ndims, ndims ] !< dimensionality of arrays
       integer(kind=4), dimension(FLUID:ARR) :: nc
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer, bp_layer, poff
 
-      if (cg%level_id /= this%level_id) call die("[cg_level:mpi_bnd_types] Level mismatch")
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
 
-      if (allocated(cg%i_bnd) .or. allocated(cg%o_bnd)) call die("[cg_level:mpi_bnd_types] cg%i_bnd or cg%o_bnd already allocated")
-      allocate(cg%i_bnd(xdim:zdim, dom%nb), cg%o_bnd(xdim:zdim, dom%nb))
+         if (allocated(cg%i_bnd)) deallocate(cg%i_bnd)
+         if (allocated(cg%o_bnd)) deallocate(cg%o_bnd)
+         allocate(cg%i_bnd(xdim:zdim, dom%nb), cg%o_bnd(xdim:zdim, dom%nb))
 
-      ! There are two completely different approaches: Very general and the old one. Can be put into separate routines.
-      if (cdd%comm3d == MPI_COMM_NULL) then
+         ! There are two completely different approaches: Very general and the old one. Can be put into separate routines.
+         if (cdd%comm3d == MPI_COMM_NULL) then
 
-         ! assume that cuboids fill the domain and don't collide
+            ! assume that cuboids fill the domain and don't collide
 
-         ijks(:) = cg%ijkse(:, LO) - cg%off(:)
-         per(:) = 0
-         where (dom%periodic(:)) per(:) = this%n_d(:)
+            ijks(:) = cg%ijkse(:, LO) - cg%off(:)
+            per(:) = 0
+            where (dom%periodic(:)) per(:) = this%n_d(:)
 
-         do d = xdim, zdim
-            if (dom%has_dir(d)) then
+            do d = xdim, zdim
+               if (dom%has_dir(d)) then
 
-               ! identify processes with interesting neighbour data
-               procmask(:) = 0
-               do lh = LO, HI
-                  hl = LO+HI-lh ! HI for LO, LO for HI
-                  b_layer(:,:) = cg%my_se(:, :)
-                  b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
-                  b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell wide, without corners
-                  do j = FIRST, LAST
-                     do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
-                        if (is_overlap(b_layer(:,:), this%pse(j)%c(b)%se(:,:), per(:))) procmask(j) = procmask(j) + 1 ! count how many boundaries we share with that process
-                     enddo
-                  enddo
-               enddo
-               do ib = 1, dom%nb
-                  allocate(cg%i_bnd(d, ib)%seg(sum(procmask(:))), cg%o_bnd(d, ib)%seg(sum(procmask(:))))
-               enddo
-
-               ! set up segments to be sent or received
-               g = 0
-               do j = FIRST, LAST
-                  if (procmask(j) /= 0) then
-                     do lh = LO, HI
-                        hl = LO+HI-lh
+                  ! identify processes with interesting neighbour data
+                  procmask(:) = 0
+                  do lh = LO, HI
+                     hl = LO+HI-lh ! HI for LO, LO for HI
+                     b_layer(:,:) = cg%my_se(:, :)
+                     b_layer(d, lh) = b_layer(d, lh) + lh-hl ! -1 for LO, +1 for HI
+                     b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell wide, without corners
+                     do j = FIRST, LAST
                         do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
-                           b_layer(:,:) = cg%my_se(:, :)
-                           b_layer(d, lh) = b_layer(d, lh) + lh-hl
-                           b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell wide, without corners
-                           bp_layer(:, :) = b_layer(:, :)
-                           where (per(:) > 0)
-                              bp_layer(:, LO) = mod(b_layer(:, LO) + per(:), per(:))
-                              bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:)) ! adjacent boundary layer, 1 cell wide, without corners, corrected for periodicity
-                           endwhere
-                           !> \todo save b_layer(:,:) and bp_layer(:,:) and move above calculations outside the b loop
-
-                           if (is_overlap(bp_layer(:,:), this%pse(j)%c(b)%se(:,:))) then
-                              poff(:,:) = bp_layer(:,:) - b_layer(:,:) ! displacement due to periodicity
-                              bp_layer(:, LO) = max(bp_layer(:, LO), this%pse(j)%c(b)%se(:, LO))
-                              bp_layer(:, HI) = min(bp_layer(:, HI), this%pse(j)%c(b)%se(:, HI))
-                              b_layer(:,:) = bp_layer(:,:) - poff(:,:)
-                              g = g + 1
-                              do ib = 1, dom%nb
-                                 cg%i_bnd(d, ib)%seg(g)%proc = j
-                                 cg%i_bnd(d, ib)%seg(g)%se(:,LO) = b_layer(:, LO) + ijks(:)
-                                 cg%i_bnd(d, ib)%seg(g)%se(:,HI) = b_layer(:, HI) + ijks(:)
-                                 if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) < 0)) &
-                                      cg%i_bnd(d, ib)%seg(g)%se(d, :) = cg%i_bnd(d, ib)%seg(g)%se(d, :) + this%n_d(d)
-                                 if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) > cg%n_b(d) + 2*dom%nb)) &
-                                      cg%i_bnd(d, ib)%seg(g)%se(d, :) = cg%i_bnd(d, ib)%seg(g)%se(d, :) - this%n_d(d)
-
-                                 ! expand to cover corners (requires separate MPI_Waitall for each direction)
-                                 !! \todo create separate %mbc for corner-less exchange with one MPI_Waitall (can scale better)
-                                 !! \warning edges and corners will be filled multiple times
-                                 do dd = xdim, zdim
-                                    if (dd /= d .and. dom%has_dir(dd)) then
-                                       cg%i_bnd(d, ib)%seg(g)%se(dd, LO) = cg%i_bnd(d, ib)%seg(g)%se(dd, LO) - ib
-                                       cg%i_bnd(d, ib)%seg(g)%se(dd, HI) = cg%i_bnd(d, ib)%seg(g)%se(dd, HI) + ib
-                                    endif
-                                 enddo
-                                 cg%o_bnd(d, ib)%seg(g) = cg%i_bnd(d, ib)%seg(g)
-                                 cg%i_bnd(d, ib)%seg(g)%tag = int(HI*ndims*b          + (HI*d+lh-LO), kind=4) ! Assume that we won't mix communication with different ib
-                                 cg%o_bnd(d, ib)%seg(g)%tag = int(HI*ndims*cg%grid_id + (HI*d+hl-LO), kind=4)
-                                 select case (lh)
-                                    case (LO)
-                                       cg%i_bnd(d, ib)%seg(g)%se(d, LO) = cg%i_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)
-                                       cg%o_bnd(d, ib)%seg(g)%se(d, LO) = cg%i_bnd(d, ib)%seg(g)%se(d, HI) + 1
-                                       cg%o_bnd(d, ib)%seg(g)%se(d, HI) = cg%o_bnd(d, ib)%seg(g)%se(d, LO) + (ib - 1)
-                                    case (HI)
-                                       cg%i_bnd(d, ib)%seg(g)%se(d, HI) = cg%i_bnd(d, ib)%seg(g)%se(d, LO) + (ib - 1)
-                                       cg%o_bnd(d, ib)%seg(g)%se(d, HI) = cg%i_bnd(d, ib)%seg(g)%se(d, LO) - 1
-                                       cg%o_bnd(d, ib)%seg(g)%se(d, LO) = cg%o_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)
-                                 end select
-
-                              enddo
-                           endif
+                           if (is_overlap(b_layer(:,:), this%pse(j)%c(b)%se(:,:), per(:))) procmask(j) = procmask(j) + 1 ! count how many boundaries we share with that process
                         enddo
                      enddo
-                  endif
-               enddo
-            endif
-         enddo
-
-      else
-
-         !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
-         nc(:) = I_ONE ! set at least one component, even if there is none at all
-         if (wna%fi        > 0) nc(FLUID) = wna%lst(wna%fi)%dim4
-         if (wna%bi        > 0) nc(MAG)   = wna%lst(wna%bi)%dim4
-         if (wna%exists(wcr_n)) nc(CR)    = wna%lst(wna%ind(wcr_n))%dim4
-
-         do d = xdim, zdim
-            if (dom%has_dir(d)) then
-               do t = FLUID, ARR  ! fluid, Bfield, wcr, grav
-
-                  allocate(sizes(dims(t)), subsizes(dims(t)), starts(dims(t)))
-                  if (dims(t) == 1+ndims) sizes(1) = nc(t)
-                  sizes(dims(t)-zdim+xdim:dims(t)) = cg%n_(:)
-
+                  enddo
                   do ib = 1, dom%nb
-
-                     subsizes(:) = sizes(:)
-                     subsizes(dims(t)-zdim+d) = ib
-                     starts(:) = 0
-
-                     starts(dims(t)-zdim+d) = dom%nb-ib
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BND, ib), mpi_err)
-                     call MPI_Type_commit(cg%mbc(t, d, LO, BND, ib), mpi_err)
-
-                     starts(dims(t)-zdim+d) = dom%nb
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BLK, ib), mpi_err)
-                     call MPI_Type_commit(cg%mbc(t, d, LO, BLK, ib), mpi_err)
-
-                     starts(dims(t)-zdim+d) = cg%n_b(d) + dom%nb - ib
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BLK, ib), mpi_err)
-                     call MPI_Type_commit(cg%mbc(t, d, HI, BLK, ib), mpi_err)
-
-                     starts(dims(t)-zdim+d) = cg%ijkse(d, HI)
-                     call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BND, ib), mpi_err)
-                     call MPI_Type_commit(cg%mbc(t, d, HI, BND, ib), mpi_err)
-
+                     allocate(cg%i_bnd(d, ib)%seg(sum(procmask(:))), cg%o_bnd(d, ib)%seg(sum(procmask(:))))
                   enddo
 
-                  deallocate(sizes, subsizes, starts)
+                  ! set up segments to be sent or received
+                  g = 0
+                  do j = FIRST, LAST
+                     if (procmask(j) /= 0) then
+                        do lh = LO, HI
+                           hl = LO+HI-lh
+                           do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
+                              b_layer(:,:) = cg%my_se(:, :)
+                              b_layer(d, lh) = b_layer(d, lh) + lh-hl
+                              b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell wide, without corners
+                              bp_layer(:, :) = b_layer(:, :)
+                              where (per(:) > 0)
+                                 bp_layer(:, LO) = mod(b_layer(:, LO) + per(:), per(:))
+                                 bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:)) ! adjacent boundary layer, 1 cell wide, without corners, corrected for periodicity
+                              endwhere
+                              !> \todo save b_layer(:,:) and bp_layer(:,:) and move above calculations outside the b loop
 
-               enddo
-            endif
-         enddo
+                              if (is_overlap(bp_layer(:,:), this%pse(j)%c(b)%se(:,:))) then
+                                 poff(:,:) = bp_layer(:,:) - b_layer(:,:) ! displacement due to periodicity
+                                 bp_layer(:, LO) = max(bp_layer(:, LO), this%pse(j)%c(b)%se(:, LO))
+                                 bp_layer(:, HI) = min(bp_layer(:, HI), this%pse(j)%c(b)%se(:, HI))
+                                 b_layer(:,:) = bp_layer(:,:) - poff(:,:)
+                                 g = g + 1
+                                 do ib = 1, dom%nb
+                                    cg%i_bnd(d, ib)%seg(g)%proc = j
+                                    cg%i_bnd(d, ib)%seg(g)%se(:,LO) = b_layer(:, LO) + ijks(:)
+                                    cg%i_bnd(d, ib)%seg(g)%se(:,HI) = b_layer(:, HI) + ijks(:)
+                                    if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) < 0)) &
+                                         cg%i_bnd(d, ib)%seg(g)%se(d, :) = cg%i_bnd(d, ib)%seg(g)%se(d, :) + this%n_d(d)
+                                    if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) > cg%n_b(d) + 2*dom%nb)) &
+                                         cg%i_bnd(d, ib)%seg(g)%se(d, :) = cg%i_bnd(d, ib)%seg(g)%se(d, :) - this%n_d(d)
 
-      endif
+                                    ! expand to cover corners (requires separate MPI_Waitall for each direction)
+                                    !! \todo create separate %mbc for corner-less exchange with one MPI_Waitall (can scale better)
+                                    !! \warning edges and corners will be filled multiple times
+                                    do dd = xdim, zdim
+                                       if (dd /= d .and. dom%has_dir(dd)) then
+                                          cg%i_bnd(d, ib)%seg(g)%se(dd, LO) = cg%i_bnd(d, ib)%seg(g)%se(dd, LO) - ib
+                                          cg%i_bnd(d, ib)%seg(g)%se(dd, HI) = cg%i_bnd(d, ib)%seg(g)%se(dd, HI) + ib
+                                       endif
+                                    enddo
+                                    cg%o_bnd(d, ib)%seg(g) = cg%i_bnd(d, ib)%seg(g)
+                                    cg%i_bnd(d, ib)%seg(g)%tag = int(HI*ndims*b          + (HI*d+lh-LO), kind=4) ! Assume that we won't mix communication with different ib
+                                    cg%o_bnd(d, ib)%seg(g)%tag = int(HI*ndims*cg%grid_id + (HI*d+hl-LO), kind=4)
+                                    select case (lh)
+                                       case (LO)
+                                          cg%i_bnd(d, ib)%seg(g)%se(d, LO) = cg%i_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)
+                                          cg%o_bnd(d, ib)%seg(g)%se(d, LO) = cg%i_bnd(d, ib)%seg(g)%se(d, HI) + 1
+                                          cg%o_bnd(d, ib)%seg(g)%se(d, HI) = cg%o_bnd(d, ib)%seg(g)%se(d, LO) + (ib - 1)
+                                       case (HI)
+                                          cg%i_bnd(d, ib)%seg(g)%se(d, HI) = cg%i_bnd(d, ib)%seg(g)%se(d, LO) + (ib - 1)
+                                          cg%o_bnd(d, ib)%seg(g)%se(d, HI) = cg%i_bnd(d, ib)%seg(g)%se(d, LO) - 1
+                                          cg%o_bnd(d, ib)%seg(g)%se(d, LO) = cg%o_bnd(d, ib)%seg(g)%se(d, HI) - (ib - 1)
+                                    end select
+
+                                 enddo
+                              endif
+                           enddo
+                        enddo
+                     endif
+                  enddo
+
+                  ! Detect fine-coarse boundaries and update boundary types
+                  b_layer(:,:) = cg%my_se(:, :)
+                  b_layer(d, HI) = b_layer(d, LO)
+                  n_tot_face_cells = product( b_layer(:, HI) - b_layer(:, LO) + 1 )
+
+                  n_lbnd_face_cells = 0
+                  do g = lbound(cg%i_bnd(d, I_ONE)%seg, dim=1), ubound(cg%i_bnd(d, I_ONE)%seg, dim=1)
+                     lh = LO
+                     if (cg%i_bnd(d, I_ONE)%seg(g)%se(d, HI) > cg%ijkse(d, LO)) lh = HI
+                     n_lbnd_face_cells(lh) = n_lbnd_face_cells(lh) + product( cg%i_bnd(d, I_ONE)%seg(g)%se(:, HI) - cg%i_bnd(d, I_ONE)%seg(g)%se(:, LO) + 1)
+                  enddo
+                  where (.not. cg%ext_bnd(d, :))
+                     where (n_lbnd_face_cells(:) <  n_tot_face_cells) cg%bnd(d, :) = BND_MPI_FC
+                     where (n_lbnd_face_cells(:) == 0)                cg%bnd(d, :) = BND_FC
+                  endwhere
+               endif
+            enddo
+
+         else
+
+            !< number of fluids, magnetic field components, CRs, and 1 for a rank-3 array
+            nc(:) = I_ONE ! set at least one component, even if there is none at all
+            if (wna%fi        > 0) nc(FLUID) = wna%lst(wna%fi)%dim4
+            if (wna%bi        > 0) nc(MAG)   = wna%lst(wna%bi)%dim4
+            if (wna%exists(wcr_n)) nc(CR)    = wna%lst(wna%ind(wcr_n))%dim4
+
+            do d = xdim, zdim
+               if (dom%has_dir(d)) then
+                  do t = FLUID, ARR  ! fluid, Bfield, wcr, grav
+
+                     allocate(sizes(dims(t)), subsizes(dims(t)), starts(dims(t)))
+                     if (dims(t) == 1+ndims) sizes(1) = nc(t)
+                     sizes(dims(t)-zdim+xdim:dims(t)) = cg%n_(:)
+
+                     do ib = 1, dom%nb
+
+                        subsizes(:) = sizes(:)
+                        subsizes(dims(t)-zdim+d) = ib
+                        starts(:) = 0
+
+                        starts(dims(t)-zdim+d) = dom%nb-ib
+                        call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BND, ib), mpi_err)
+                        call MPI_Type_commit(cg%mbc(t, d, LO, BND, ib), mpi_err)
+
+                        starts(dims(t)-zdim+d) = dom%nb
+                        call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, LO, BLK, ib), mpi_err)
+                        call MPI_Type_commit(cg%mbc(t, d, LO, BLK, ib), mpi_err)
+
+                        starts(dims(t)-zdim+d) = cg%n_b(d) + dom%nb - ib
+                        call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BLK, ib), mpi_err)
+                        call MPI_Type_commit(cg%mbc(t, d, HI, BLK, ib), mpi_err)
+
+                        starts(dims(t)-zdim+d) = cg%ijkse(d, HI)
+                        call MPI_Type_create_subarray(dims(t), sizes, subsizes, starts, MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, cg%mbc(t, d, HI, BND, ib), mpi_err)
+                        call MPI_Type_commit(cg%mbc(t, d, HI, BND, ib), mpi_err)
+
+                     enddo
+
+                     deallocate(sizes, subsizes, starts)
+
+                  enddo
+               endif
+            enddo
+
+         endif
+
+         cgl => cgl%nxt
+      enddo
 
    end subroutine mpi_bnd_types
 

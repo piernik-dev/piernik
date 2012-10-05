@@ -60,7 +60,8 @@ module cg_level_connected
       procedure :: prolong_q_1var                           !< interpolate the grid data in specified q field to this%finer level
       procedure :: restrict_q_1var                          !< interpolate the grid data in specified q field from this%coarser level
       procedure :: restrict_to_floor_q_1var                 !< restrict specified q field as much as possible
-
+      procedure :: restrict_to_base_q_1var                  !< restrict specified q field to the base level
+      procedure :: arr3d_boundaries                         !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
       ! fine-coarse boundary exchanges may also belong to this type
    end type cg_level_connected_T
 
@@ -254,7 +255,7 @@ contains
       use dataio_pub,     only: die
       use domain,         only: dom
       use cg_list,        only: cg_list_element
-      use grid_cont,      only: pr_segment, grid_container, is_overlap
+      use grid_cont,      only: grid_container, is_overlap
       use mpisetup,       only: FIRST, LAST
 
       implicit none
@@ -264,7 +265,6 @@ contains
       integer :: g, j, jf, fmax, tag
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
       integer, dimension(xdim:zdim, LO:HI) :: enlargement
-      type(pr_segment), pointer :: seg
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
       type(cg_level_connected_T), pointer :: fine, coarse  !< shortcut
@@ -311,7 +311,7 @@ contains
 
             !! \todo fuse the following two loops back into one
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
-               seg => cg%ri_tgt%seg(g)
+               associate ( seg => cg%ri_tgt%seg(g) )
                if (allocated(seg%buf)) call die("cll:vp fr seg%buf a a")
                seg%proc = ps(g)%proc
                ! find cross-section of own segment with coarsened fine segment
@@ -324,6 +324,7 @@ contains
                tag = cg%grid_id + this%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
                if (tag /= int(seg%tag)) call die("[cg_level_connected:vertical_prep] tag overflow (ri)")
+               end associate
             enddo
 
             ! When fine and coarse pieces are within prolongation stencil length, but there is no direct overlap we rely on guardcell update on coarse side
@@ -332,7 +333,7 @@ contains
             !
             ! When the overlap is one fine cell (half coarse cell), not all communications are necessary, but we don't want to complicate the code too much at the moment
             do g = lbound(cg%po_tgt%seg(:), dim=1), ubound(cg%po_tgt%seg(:), dim=1)
-               seg => cg%po_tgt%seg(g)
+               associate ( seg => cg%po_tgt%seg(g) )
                if (allocated(seg%buf)) call die("cll:vp fp seg%buf a a")
                seg%proc = ps(g)%proc
                ! find cross-section of own segment with enlarged coarsened fine segment
@@ -345,6 +346,7 @@ contains
                tag = cg%grid_id + this%tot_se * ps(g)%n_se
                seg%tag = int(tag, kind=4) ! assumed that there is only one piece to be communicated from grid to grid (i.e. grids are not periodically wrapped around)
                if (tag /= int(seg%tag)) call die("[cg_level_connected:vertical_prep] tag overflow po)")
+               end associate
             enddo
 
             if (allocated(ps)) deallocate(ps)
@@ -385,7 +387,7 @@ contains
 
             !! \todo fuse the following two loops back into one
             do g = lbound(cg%ro_tgt%seg(:), dim=1), ubound(cg%ro_tgt%seg(:), dim=1)
-               seg => cg%ro_tgt%seg(g)
+               associate ( seg => cg%ro_tgt%seg(g) )
                if (allocated(seg%buf)) call die("cll:vp cr seg%buf a a")
                seg%proc = ps(g)%proc
                ! find cross-section of coarsened own segment with coarse segment
@@ -401,10 +403,11 @@ contains
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
                if (tag /= int(seg%tag)) call die("[cg_level_connected:vertical_prep] tag overflow (ro)")
+               end associate
             enddo
 
             do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
-               seg => cg%pi_tgt%seg(g)
+               associate ( seg => cg%pi_tgt%seg(g) )
                if (allocated(seg%buf)) call die("cll:vp cp seg%buf a a")
                seg%proc = ps(g)%proc
                ! find cross-section of coarsened own segment with enlarged coarse segment
@@ -417,6 +420,7 @@ contains
                tag = ps(g)%n_se + coarse%tot_se * cg%grid_id
                seg%tag = int(tag, kind=4)
                if (tag /= int(seg%tag)) call die("[cg_level_connected:vertical_prep] tag overflow (pi)")
+               end associate
             enddo
 
             if (allocated(ps)) deallocate(ps)
@@ -508,14 +512,29 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
-      integer,                        intent(in)    :: iv   !< variable to be restricted
+      class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
+      integer,                     intent(in)    :: iv   !< variable to be restricted
 
       if (.not. associated(this%coarser)) return
       call this%restrict_q_1var(iv)
       call this%coarser%restrict_to_floor_q_1var(iv)
 
    end subroutine restrict_to_floor_q_1var
+
+!> \brief Restrict to the base level
+
+   recursive subroutine restrict_to_base_q_1var(this, iv)
+
+      implicit none
+
+      class(cg_level_connected_T), intent(inout) :: this !< object invoking type-bound procedure
+      integer,                     intent(in)    :: iv   !< variable to be restricted
+
+      if (this%level_id == base_lev%level_id) return
+      call this%restrict_q_1var(iv)
+      call this%coarser%restrict_to_base_q_1var(iv)
+
+   end subroutine restrict_to_base_q_1var
 
 !>
 !! \brief Simplest restriction (averaging).
@@ -699,13 +718,13 @@ contains
 
    subroutine prolong_q_1var(this, iv)
 
-      use constants,      only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, BND_REF, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4, refinement_factor
-      use dataio_pub,     only: msg, warn, die
-      use domain,         only: dom
-      use cg_list,        only: cg_list_element
-      use grid_cont,      only: grid_container
-      use mpisetup,       only: comm, mpi_err, req, status, inflate_req
-      use mpi,            only: MPI_DOUBLE_PRECISION
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, BND_REF, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4, refinement_factor
+      use dataio_pub,       only: msg, warn, die
+      use domain,           only: dom
+      use cg_list,          only: cg_list_element
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: comm, mpi_err, req, status, inflate_req
+      use mpi,              only: MPI_DOUBLE_PRECISION
       use named_array_list, only: qna
 
       implicit none
@@ -715,7 +734,7 @@ contains
 
       type(cg_level_connected_T), pointer :: fine
       integer :: g
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: fse, cse ! shortcuts for fine segment and coarse segment
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: cse ! shortcuts for fine segment and coarse segment
       integer(kind=8) :: iec, jec, kec
       integer(kind=8), dimension(xdim:zdim) :: off, odd, D
       integer(kind=4) :: nr
@@ -775,13 +794,15 @@ contains
       cgl => fine%first
       do while (associated(cgl))
          cg => cgl%cg
+         associate( seg => cg%pi_tgt%seg )
          if (allocated(cg%pi_tgt%seg)) then
-            do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
+            do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
                nr = nr + I_ONE
                if (nr > size(req, dim=1)) call inflate_req
-               call MPI_Irecv(cg%pi_tgt%seg(g)%buf(1, 1, 1), size(cg%pi_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%pi_tgt%seg(g)%proc, cg%pi_tgt%seg(g)%tag, comm, req(nr), mpi_err)
+               call MPI_Irecv(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
             enddo
          endif
+         end associate
          cgl => cgl%nxt
       enddo
 
@@ -789,17 +810,19 @@ contains
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
-         do g = lbound(cg%po_tgt%seg(:), dim=1), ubound(cg%po_tgt%seg(:), dim=1)
+         associate( seg => cg%po_tgt%seg )
+         do g = lbound(seg(:), dim=1), ubound(seg(:), dim=1)
 
-            cse(:, LO) = cg%po_tgt%seg(g)%se(:,LO) - cg%off(:) + cg%ijkse(:, LO)
-            cse(:, HI) = cg%po_tgt%seg(g)%se(:,HI) - cg%off(:) + cg%ijkse(:, LO)
+            cse(:, LO) = seg(g)%se(:,LO) - cg%off(:) + cg%ijkse(:, LO)
+            cse(:, HI) = seg(g)%se(:,HI) - cg%off(:) + cg%ijkse(:, LO)
 
             nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-!            cg%po_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%span(cse)
-            cg%po_tgt%seg(g)%buf(:, :, :) = cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
-            call MPI_Isend(cg%po_tgt%seg(g)%buf(1, 1, 1), size(cg%po_tgt%seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, cg%po_tgt%seg(g)%proc, cg%po_tgt%seg(g)%tag, comm, req(nr), mpi_err)
+!            seg(g)%buf(:, :, :) = cg%q(iv)%span(cse)
+            seg(g)%buf(:, :, :) = cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+            call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
          enddo
+         end associate
          cgl => cgl%nxt
       enddo
 
@@ -815,9 +838,8 @@ contains
          if (allocated(cg%pi_tgt%seg)) then
 
             do g = lbound(cg%pi_tgt%seg(:), dim=1), ubound(cg%pi_tgt%seg(:), dim=1)
-               fse(:,:) = cg%pi_tgt%seg(g)%se(:,:)
 
-               off(:) = fse(:,LO) - cg%off(:)/refinement_factor + cg%ijkse(:,LO)
+               off(:) = cg%pi_tgt%seg(g)%se(:,LO) - cg%off(:)/refinement_factor + cg%ijkse(:,LO)
                cg%prolong_(off(xdim):off(xdim)+ubound(cg%pi_tgt%seg(g)%buf, dim=1)-1, &
                     &      off(ydim):off(ydim)+ubound(cg%pi_tgt%seg(g)%buf, dim=2)-1, &
                     &      off(zdim):off(zdim)+ubound(cg%pi_tgt%seg(g)%buf, dim=3)-1) = cg%pi_tgt%seg(g)%buf(:,:,:)
@@ -951,5 +973,24 @@ contains
       call fine%check_dirty(iv, "prolong+")
 
    end subroutine prolong_q_1var
+
+!> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
+
+   subroutine arr3d_boundaries(this, ind, nb, area_type, bnd_type, corners)
+
+      implicit none
+
+      class(cg_level_connected_T), intent(in) :: this       !< the list on which to perform the boundary exchange
+      integer,                     intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4), optional,   intent(in) :: nb         !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional,   intent(in) :: area_type  !< defines how do we treat boundaries
+      integer(kind=4), optional,   intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
+                                                            !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
+      logical,         optional,   intent(in) :: corners    !< When present and .true. then call internal_boundaries_3d for each direction separately
+
+      call this%clear_boundaries(ind) ! Apply BND_ZERO as long as there is no coarse-to-fine interpolation
+      call this%level_3d_boundaries(ind, nb, area_type, bnd_type, corners)
+
+   end subroutine arr3d_boundaries
 
 end module cg_level_connected

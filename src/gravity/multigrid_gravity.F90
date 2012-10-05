@@ -1008,16 +1008,16 @@ contains
 
       type(soln_history), intent(inout) :: history !< inner or outer potential history used for initializing first guess
 
-      real,    parameter :: suspicious_factor = 1.05 !> \deprecated If the norm decreases too slowly then dump diagnostic output (BEWARE: this option is for tests only)
-      integer            :: v
-      real               :: norm_rhs, norm_lhs, norm_old, norm_lowest
-      logical            :: dump_every_step, dump_result
+      integer :: v
+      real    :: norm_rhs, norm_lhs, norm_old, norm_lowest
+      logical :: dump_every_step, dump_result
       logical, save      :: norm_was_zero = .false.
-      integer, parameter       :: fmtlen = 32
+      real,    parameter :: suspicious_factor = 1.05 !> \deprecated If the norm decreases too slowly then dump diagnostic output (BEWARE: this option is for tests only)
+      integer, parameter :: fmtlen = 32
       character(len=fmtlen)    :: fmt
       character(len=cbuff_len) :: dname
+      integer, dimension(4)    :: mg_fields
       type(cg_level_connected_T), pointer :: curl
-      integer, dimension(4) :: mg_fields
 
       inquire(file = "_dump_every_step_", EXIST=dump_every_step) ! use for debug only
       inquire(file = "_dump_result_", EXIST=dump_result)
@@ -1145,26 +1145,26 @@ contains
 
 !> \brief Calculate the residuum for the Poisson equation.
 
-   subroutine residual(curl, src, soln, def)
+   subroutine residual(cg_llst, src, soln, def)
 
-      use cg_list_bnd, only: cg_list_bnd_T
-      use constants,   only: O_I2, O_I4
-      use dataio_pub,  only: die
+      use cg_leaves,  only: cg_leaves_T
+      use constants,  only: O_I2, O_I4
+      use dataio_pub, only: die
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,              intent(in) :: src  !< index of source in cg%q(:)
-      integer,              intent(in) :: soln !< index of solution in cg%q(:)
-      integer,              intent(in) :: def  !< index of defect in cg%q(:)
+      class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
+      integer,            intent(in) :: src     !< index of source in cg%q(:)
+      integer,            intent(in) :: soln    !< index of solution in cg%q(:)
+      integer,            intent(in) :: def     !< index of defect in cg%q(:)
 
       select case (ord_laplacian)
       case (O_I2)
-         call residual2(curl, src, soln, def)
+         call residual2(cg_llst, src, soln, def)
       case (O_I4)
-         call residual4(curl, src, soln, def)
+         call residual4(cg_llst, src, soln, def)
       case (-O_I4)
-         call residual_Mehrstellen(curl, src, soln, def)
+         call residual_Mehrstellen(cg_llst, src, soln, def)
       case default
          call die("[multigrid_gravity:residual] The parameter 'ord_laplacian' must be 2 or 4 or -4")
       end select
@@ -1173,10 +1173,10 @@ contains
 
 !> \brief 2nd order Laplacian
 
-   subroutine residual2(curl, src, soln, def)
+   subroutine residual2(cg_llst, src, soln, def)
 
       use cg_list,       only: cg_list_element
-      use cg_list_bnd,   only: cg_list_bnd_T
+      use cg_leaves,     only: cg_leaves_T
       use constants,     only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, half, I_ONE, BND_NEGREF
       use dataio_pub,    only: die
       use domain,        only: dom
@@ -1185,10 +1185,10 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,              intent(in) :: src  !< index of source in cg%q(:)
-      integer,              intent(in) :: soln !< index of solution in cg%q(:)
-      integer,              intent(in) :: def  !< index of defect in cg%q(:)
+      class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
+      integer,            intent(in) :: src     !< index of source in cg%q(:)
+      integer,            intent(in) :: soln    !< index of solution in cg%q(:)
+      integer,            intent(in) :: def     !< index of defect in cg%q(:)
 
       integer                         :: i, j, k
       real                            :: L0, Lx, Ly, Lz
@@ -1196,12 +1196,12 @@ contains
       type(cg_list_element), pointer  :: cgl
       type(grid_container),  pointer  :: cg
 
-      call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
+      call cg_llst%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
       ! corners are required for non-cartesian decompositions because current implementation of arr3d_boundaries may use overlapping buffers at triple points
 
       ! Possible optimization candidate: reduce cache misses (secondary importance, cache-aware implementation required)
       ! Explicit loop over k gives here better performance than array operation due to less cache misses (at least on 32^3 and 64^3 arrays)
-      cgl => curl%first
+      cgl => cg_llst%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -1292,10 +1292,10 @@ contains
 !! There also exists more compact Mehrstellen scheme.
 !<
 
-   subroutine residual4(curl, src, soln, def)
+   subroutine residual4(cg_llst, src, soln, def)
 
       use cg_list,       only: cg_list_element
-      use cg_list_bnd,   only: cg_list_bnd_T
+      use cg_leaves,     only: cg_leaves_T
       use constants,     only: I_TWO, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom
@@ -1306,10 +1306,10 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,              intent(in) :: src  !< index of source in cg%q(:)
-      integer,              intent(in) :: soln !< index of solution in cg%q(:)
-      integer,              intent(in) :: def  !< index of defect in cg%q(:)
+      class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
+      integer,            intent(in) :: src     !< index of source in cg%q(:)
+      integer,            intent(in) :: soln    !< index of solution in cg%q(:)
+      integer,            intent(in) :: def     !< index of defect in cg%q(:)
 
       real, parameter     :: L4_scaling = 1./12. ! with L4_strength = 1. this gives an L4 approximation for finite differences approach
       integer, parameter  :: L2w = 2             ! #layers of boundary cells for L2 operator
@@ -1329,7 +1329,7 @@ contains
          firstcall = .false.
       endif
 
-      call curl%arr3d_boundaries(soln, nb = I_TWO, bnd_type = BND_NEGREF) ! no corners required
+      call cg_llst%arr3d_boundaries(soln, nb = I_TWO, bnd_type = BND_NEGREF) ! no corners required
 
       c21 = 1.
       c42 = - L4_scaling * L4_strength
@@ -1337,7 +1337,7 @@ contains
       !c20 = -2.
       !c40 = c20 - 6. * L4_strength
 
-      cgl => curl%first
+      cgl => cg_llst%first
       do while (associated(cgl))
          cg => cgl%cg
 
@@ -1394,10 +1394,10 @@ contains
 !! and/or the data has to be interpreted in slightly different way.
 !<
 
-   subroutine residual_Mehrstellen(curl, src, soln, def)
+   subroutine residual_Mehrstellen(cg_llst, src, soln, def)
 
       use cg_list,       only: cg_list_element
-      use cg_list_bnd,   only: cg_list_bnd_T
+      use cg_leaves,     only: cg_leaves_T
       use constants,     only: I_ONE, ndims, idm2, xdim, ydim, zdim, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom
@@ -1408,10 +1408,10 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: curl !< pointer to a level for which we approximate the solution
-      integer,              intent(in) :: src  !< index of source in cg%q(:)
-      integer,              intent(in) :: soln !< index of solution in cg%q(:)
-      integer,              intent(in) :: def  !< index of defect in cg%q(:)
+      class(cg_leaves_T), intent(in) :: cg_llst !< pointer to a level for which we approximate the solution
+      integer,            intent(in) :: src     !< index of source in cg%q(:)
+      integer,            intent(in) :: soln    !< index of solution in cg%q(:)
+      integer,            intent(in) :: def     !< index of defect in cg%q(:)
 
       real                :: c21
       real                :: L0, Lx, Ly, Lz
@@ -1429,12 +1429,12 @@ contains
          firstcall = .false.
       endif
 
-      call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
-      call curl%arr3d_boundaries(src,  nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
+      call cg_llst%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
+      call cg_llst%arr3d_boundaries(src,  nb = I_ONE, bnd_type = BND_NEGREF, corners = .true.)
 
       c21 = 1.
 
-      cgl => curl%first
+      cgl => cg_llst%first
       do while (associated(cgl))
          cg => cgl%cg
 

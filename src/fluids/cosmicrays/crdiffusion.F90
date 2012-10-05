@@ -74,7 +74,7 @@ contains
    subroutine all_wcr_boundaries
 
       use cg_list_global, only: all_cg
-      use constants,      only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, I_ONE, wcr_n
+      use constants,      only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_ONE, wcr_n
       use dataio_pub,     only: die
       use cart_comm,      only: cdd
       use domain,         only: dom
@@ -118,7 +118,7 @@ contains
                            r(d,clh) = cg%ijkse (d,clh)
                            wcr(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = wcr(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                         endif
-                     case (BND_MPI)
+                     case (BND_MPI) !, BND_MPI_FC)
                         if (cdd%comm3d /= MPI_COMM_NULL) then
                            if (cdd%psize(d) > 1) then
                               call MPI_Isend(wcr(1,1,1,1), I_ONE, cg%mbc(CR, d, lh, BLK, dom%nb), cdd%procn(d, lh), int(2*d+(LO+HI-lh), kind=4), cdd%comm3d, req(4*(d-xdim)+1+2*(lh-LO)), mpi_err)
@@ -127,6 +127,8 @@ contains
                               call die("[crdiffusion:all_wcr_boundaries] bnd_[xyz][lr] == 'mpi' && psize(:) <= 1")
                            endif
                         endif
+                     case (BND_FC, BND_MPI_FC)
+                        call die("[crdiffusion:all_wcr_boundaries] fine-coarse interfaces are not implemented here")
                      case default ! Set gradient == 0 on the external boundaries
                         r(d,:) = cg%ijkse(d,lh) ; l(d,:) = cg%ijkse(d,lh)*(lh-LO)
                         do i = 1, dom%nb

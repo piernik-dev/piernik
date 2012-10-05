@@ -67,7 +67,8 @@ module cg_list_bnd
       procedure, private :: internal_boundaries        !< Exchanges guardcells for BND_MPI and BND_PER boundaries (internal and periodic external boundaries)
       procedure, private :: internal_boundaries_comm3d !< Exchanges guardcells for BND_MPI and BND_PER boundaries for cartesian communicator
       procedure, private :: external_boundaries        !< Set up external boundary values
-      procedure          :: arr3d_boundaries           !< This routine sets up all guardcells (internal and external) for given rank-3 arrays.
+      procedure          :: clear_boundaries           !< Clear (set to 0) all boundaries
+      procedure          :: level_3d_boundaries        !< Perform internal boundary exchanges and external boundary extrapolations on 3D named arrays
       !> \todo move routines for external guardcells for rank-4 arrays here as well (fluidboundaries and magboundaries)
    end type cg_list_bnd_T
 
@@ -340,7 +341,7 @@ contains
 
    subroutine internal_boundaries_comm3d(this, ind, nb, area_type)
 
-      use constants,  only: ARR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, BND_PER, BND_MPI
+      use constants,  only: ARR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, BND_PER, BND_MPI, BND_FC, BND_MPI_FC
       use dataio_pub, only: die
       use cart_comm,  only: cdd
       use domain,     only: dom
@@ -401,6 +402,8 @@ contains
                      else
                         call die("[cg_list_bnd:internal_boundaries_comm3d] bnd_[xyz][lr] == 'mpi' && cdd%psize([xyz]dim) <= 1")
                      endif
+                  case (BND_FC, BND_MPI_FC)
+                     call die("[cg_list_bnd:internal_boundaries_comm3d] fine-coarse interfaces not allowed for cartesian communicator")
                end select
             enddo
 
@@ -421,7 +424,7 @@ contains
    subroutine external_boundaries(this, ind, area_type, bnd_type)
 
       use constants,  only: ndims, xdim, ydim, zdim, LO, HI, AT_NO_B, I_ONE, I_TWO, I_THREE, &
-           &                BND_PER, BND_MPI, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
+           &                BND_PER, BND_MPI, BND_FC, BND_MPI_FC, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
       use dataio_pub, only: die, msg
       use domain,     only: dom
       use cg_list,    only: cg_list_element
@@ -459,7 +462,7 @@ contains
                do lh = LO, HI
 
                   select case (cg%bnd(d, lh))
-                     case (BND_PER, BND_MPI) ! Already done in internal_bnd or arr3d_boundaries
+                     case (BND_PER, BND_MPI, BND_FC, BND_MPI_FC) ! Already done in internal_bnd or arr3d_boundaries
                      case (BND_SHE) !> \todo move appropriate code from poissonsolver::poisson_solve or do nothing. or die until someone really needs SHEAR.
                         write(msg,*) "[cg_list_bnd:external_boundaries] 'she' not implemented"
                         dodie = .true.
@@ -523,13 +526,58 @@ contains
 
    end subroutine external_boundaries
 
+
+!> \brief Set zero to all boundaries (will defeat any attemts of use of dirty checks on boundaries)
+
+   subroutine clear_boundaries(this, ind)
+
+      use constants, only: ndims, xdim, zdim, LO, HI, BND_MPI, BND_FC, BND_MPI_FC
+      use domain,    only: dom
+      use cg_list,   only: cg_list_element
+      use grid_cont, only: grid_container
+
+      implicit none
+
+      class(cg_list_bnd_T), intent(in) :: this !< the list on which to perform the boundary exchange
+      integer,              intent(in) :: ind  !< Negative value: index of cg%q(:) 3d array
+
+      integer(kind=4)                         :: lh, clh, d
+      integer(kind=4), dimension(ndims,LO:HI) :: l
+      type(cg_list_element),  pointer         :: cgl
+      type(grid_container),   pointer         :: cg
+      real, dimension(:,:,:), pointer         :: pa3d
+
+      !> \todo fill corners with big_float ?
+
+      cgl => this%first
+      do while (associated(cgl))
+         cg => cgl%cg
+         do d = xdim, zdim
+            if (dom%has_dir(d)) then
+               l = reshape([lbound(cg%q(ind)%arr, kind=4),ubound(cg%q(ind)%arr, kind=4)],shape=[ndims,HI])
+               do lh = LO, HI
+                  if (any(cg%bnd(d, lh) == [ BND_MPI, BND_FC, BND_MPI_FC ])) then
+                     clh = LO + HI - lh
+                     l(d,HI) = ubound(cg%q(ind)%arr, dim=d, kind=4) ! restore after lh==LO case
+                     l(d,clh) = cg%ijkse(d,lh) + 2*lh-(LO+HI)
+                     pa3d => cg%q(ind)%span(l)
+                     pa3d = 0.
+                  endif
+               enddo
+            endif
+         enddo
+         cgl => cgl%nxt
+      enddo
+
+   end subroutine clear_boundaries
+
 !>
 !! \brief This routine sets up all guardcells (internal and external) for given rank-3 arrays.
 !!
-!! \todo move this to cg_level_connected as it requires to communicate also the fine/coarse interface
+!! \details No fine-coarse exchanges can be done here, see cg_level_connested::arr3d_boundaries for that feature
 !<
 
-   subroutine arr3d_boundaries(this, ind, nb, area_type, bnd_type, corners)
+   subroutine level_3d_boundaries(this, ind, nb, area_type, bnd_type, corners)
 
       use constants, only: xdim, zdim, AT_NO_B
       use cart_comm, only: cdd
@@ -577,6 +625,6 @@ contains
 
       call this%external_boundaries(ind, area_type, bnd_type)
 
-   end subroutine arr3d_boundaries
+   end subroutine level_3d_boundaries
 
 end module cg_list_bnd

@@ -35,16 +35,27 @@
 
 module cg_leaves
 
-   use cg_list_bnd, only: cg_list_bnd_T
+   use cg_level_connected, only: cg_level_connected_T
+   use cg_list_bnd,        only: cg_list_bnd_T
 
    implicit none
 
    private
-   public :: leaves
+   public :: leaves, cg_leaves_T
+
+   !>
+   !! \brief Special list of grid containers that does not include fully-covered multigrid levels
+   !!
+   !! \todo Exclude also non-multigrid levels when fully covered
+   !<
 
    type, extends(cg_list_bnd_T) :: cg_leaves_T
-    contains
-      procedure :: update !> Select grids that should be included on leaves list
+      type(cg_level_connected_T), pointer :: coarsest
+   contains
+      procedure :: update           !< Select grids that should be included on leaves list
+      procedure :: arr3d_boundaries !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
+                                    !< \warning the name 'arr3d_boundaries' intentionally collides with cg_level_connested::arr3d_boundaries
+                                    !< \todo unite this routine with cg_level_connested::arr3d_boundaries somehow
    end type cg_leaves_T
 
    !>
@@ -62,13 +73,13 @@ contains
 
    subroutine update(this)
 
-      use cg_list,          only: cg_list_element
-      use cg_level_connected,    only: base_lev, cg_level_connected_T
-      use constants,        only: I_ONE
-      use dataio_pub,       only: msg, printinfo
-      use list_of_cg_lists, only: all_lists
-      use mpi,              only: MPI_INTEGER, MPI_SUM
-      use mpisetup,         only: master, comm, mpi_err
+      use cg_list,            only: cg_list_element
+      use cg_level_connected, only: base_lev, cg_level_connected_T
+      use constants,          only: I_ONE
+      use dataio_pub,         only: msg, printinfo
+      use list_of_cg_lists,   only: all_lists
+      use mpi,                only: MPI_INTEGER, MPI_SUM
+      use mpisetup,           only: master, comm, mpi_err
 
       implicit none
 
@@ -85,6 +96,7 @@ contains
 
       msg = "[cg_leaves:update] Leaves on levels: "
       curl => base_lev
+      this%coarsest => curl !> \todo Start from first not fully covered level
       do while (associated(curl))
          cgl => curl%first
          do while (associated(cgl))
@@ -100,5 +112,31 @@ contains
       if (master) call printinfo(msg)
 
    end subroutine update
+
+!> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
+
+   subroutine arr3d_boundaries(this, ind, nb, area_type, bnd_type, corners)
+
+      use cg_level_connected, only: cg_level_connected_T
+
+      implicit none
+
+      class(cg_leaves_T),        intent(in) :: this       !< the list on which to perform the boundary exchange
+      integer,                   intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4), optional, intent(in) :: nb         !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
+      integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
+                                                          !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
+      logical,         optional, intent(in) :: corners    !< When present and .true. then call internal_boundaries_3d for each direction separately
+
+      type(cg_level_connected_T), pointer :: curl
+
+      curl => this%coarsest
+      do while (associated(curl))
+         call curl%arr3d_boundaries(ind, nb, area_type, bnd_type, corners)
+         curl => curl%finer
+      enddo
+
+   end subroutine arr3d_boundaries
 
 end module cg_leaves
