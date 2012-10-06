@@ -87,7 +87,7 @@ contains
 
       use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
-      use constants,   only: pi, dpi, fpi, xdim, ydim, zdim
+      use constants,   only: pi, dpi, fpi, xdim, ydim, zdim, LEFT
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
@@ -120,7 +120,7 @@ contains
 
          do j=1, cg%n_(ydim)
             do i = 1, cg%n_(xdim)
-               A(i,j,1) = b0*(cos(fpi*cg%xl(i))/fpi + cos(dpi*cg%yl(j))/dpi)
+               A(i,j,1) = b0*(cos(fpi*cg%coord(LEFT, xdim)%r(i))/fpi + cos(dpi*cg%coord(LEFT, ydim)%r(j))/dpi)
             enddo
          enddo
 
