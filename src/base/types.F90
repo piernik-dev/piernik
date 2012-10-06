@@ -74,7 +74,7 @@ contains
 
       implicit none
       class(real_vec_T), intent(inout) :: this
-      integer, intent(in) :: n
+      integer(kind=4), intent(in) :: n
 
       allocate(this%r(n))
 
