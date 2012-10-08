@@ -250,14 +250,22 @@ contains
 
       if (log_file_initialized) then
          if (.not.log_file_opened) then
+#if defined(__INTEL_COMPILER)
             open(newunit=log_lun, file=log_file, position='append', &
               &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
+#else /* __INTEL_COMPILER */
+            open(newunit=log_lun, file=log_file, position='append')
+#endif /* !__INTEL_COMPILER */
             log_file_opened = .true.
          endif
       else
          ! BEWARE: possible race condition
+#if defined(__INTEL_COMPILER)
          open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', &
            &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
+#else /* __INTEL_COMPILER */
+         open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append')
+#endif /* !__INTEL_COMPILER */
       endif
       if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
       write(log_lun,'(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
