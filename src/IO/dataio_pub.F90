@@ -124,6 +124,13 @@ module dataio_pub
    character(len=*),parameter  :: tmr_hdf = "hdf_dump"
    real                        :: thdf                           !< hdf dump wallclock
 
+   ! Per suggestion of ZEUS sysops:
+   ! http://www.fz-juelich.de/ias/jsc/EN/Expertise/Supercomputers/JUROPA/UserInfo/IO_Tuning.htm
+   integer, parameter               :: io_par = 4
+   character(len=io_par), parameter :: io_buffered = "yes"
+   integer, parameter               :: io_blocksize = 1048576
+   integer, parameter               :: io_buffno = 1
+
    interface
       subroutine namelist_errh_P(ierrh, nm, skip_eof)
          implicit none
@@ -243,11 +250,14 @@ contains
 
       if (log_file_initialized) then
          if (.not.log_file_opened) then
-            open(newunit=log_lun, file=log_file, position='append')
+            open(newunit=log_lun, file=log_file, position='append', &
+              &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
             log_file_opened = .true.
          endif
       else
-         open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append')   ! BEWARE: possible race condition
+         ! BEWARE: possible race condition
+         open(newunit=log_lun, file=tmp_log_file, status='unknown', position='append', &
+           &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
       endif
       if (proc == 0 .and. mode == T_ERR) write(log_lun,'(/,a,/)')"###############     Crashing     ###############"
       write(log_lun,'(2a,i5,2a)') msg_type_str," @", proc, ': ', trim(nm)
