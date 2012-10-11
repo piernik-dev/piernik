@@ -513,7 +513,7 @@ contains
 
    subroutine cleanup(this)
 
-      use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, BLK, INVALID, LEFT, INV_CENTER
+      use constants, only: FLUID, ARR, xdim, zdim, LO, HI, BND, BLK, INVALID, CENTER, INV_CENTER
       use domain,    only: dom
       use mpisetup,  only: mpi_err
 
@@ -531,7 +531,7 @@ contains
       if (associated(this%inv_y)) nullify(this%inv_y)
       if (associated(this%inv_z)) nullify(this%inv_z)
       do cdim = xdim, zdim
-         do b = LEFT, INV_CENTER
+         do b = CENTER, INV_CENTER
             call this%coord(b, cdim)%deallocate()
          enddo
       enddo
