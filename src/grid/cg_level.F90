@@ -407,7 +407,7 @@ contains
 
       use cart_comm,      only: cdd
       use cg_list,        only: cg_list_element
-      use constants,      only: FLUID, MAG, CR, ARR, xdim, zdim, ndims, LO, HI, BND, BLK, I_ONE, wcr_n, BND_MPI_FC, BND_FC
+      use constants,      only: FLUID, MAG, CR, ARR, xdim, ydim, zdim, ndims, LO, HI, BND, BLK, I_ONE, wcr_n, BND_MPI_FC, BND_FC
       use domain,         only: dom
       use grid_cont,      only: grid_container, is_overlap
       use mpi,            only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
@@ -429,6 +429,7 @@ contains
       integer(kind=4), dimension(FLUID:ARR) :: nc
       integer(kind=8), dimension(xdim:zdim) :: ijks, per
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer, bp_layer, poff
+      logical, allocatable, dimension(:,:,:,:) :: facemap
 
       cgl => this%first
       do while (associated(cgl))
@@ -476,11 +477,11 @@ contains
                            do b = lbound(this%pse(j)%c(:), dim=1), ubound(this%pse(j)%c(:), dim=1)
                               b_layer(:,:) = cg%my_se(:, :)
                               b_layer(d, lh) = b_layer(d, lh) + lh-hl
-                              b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell wide, without corners
+                              b_layer(d, hl) = b_layer(d, lh) ! adjacent boundary layer, 1 cell thick, without corners
                               bp_layer(:, :) = b_layer(:, :)
                               where (per(:) > 0)
                                  bp_layer(:, LO) = mod(b_layer(:, LO) + per(:), per(:))
-                                 bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:)) ! adjacent boundary layer, 1 cell wide, without corners, corrected for periodicity
+                                 bp_layer(:, HI) = mod(b_layer(:, HI) + per(:), per(:)) ! adjacent boundary layer, 1 cell thick, without corners, corrected for periodicity
                               endwhere
                               !> \todo save b_layer(:,:) and bp_layer(:,:) and move above calculations outside the b loop
 
@@ -530,20 +531,30 @@ contains
                   enddo
 
                   ! Detect fine-coarse boundaries and update boundary types
+
                   b_layer(:,:) = cg%my_se(:, :)
                   b_layer(d, HI) = b_layer(d, LO)
                   n_tot_face_cells = product( b_layer(:, HI) - b_layer(:, LO) + 1 )
+                  allocate(facemap(b_layer(xdim,LO):b_layer(xdim,HI), b_layer(ydim,LO):b_layer(ydim,HI), b_layer(zdim,LO):b_layer(zdim,HI), LO:HI))
 
+                  facemap = .false.
                   n_lbnd_face_cells = 0
-                  do g = lbound(cg%i_bnd(d, I_ONE)%seg, dim=1), ubound(cg%i_bnd(d, I_ONE)%seg, dim=1)
+                  do g = lbound(cg%o_bnd(d, I_ONE)%seg, dim=1), ubound(cg%o_bnd(d, I_ONE)%seg, dim=1)
+                     bp_layer(:, LO) = max(cg%o_bnd(d, I_ONE)%seg(g)%se(:, LO) - cg%ijkse(:, LO) + cg%off, cg%my_se(:, LO))
+                     bp_layer(:, HI) = min(cg%o_bnd(d, I_ONE)%seg(g)%se(:, HI) - cg%ijkse(:, LO) + cg%off, cg%my_se(:, HI))
                      lh = LO
-                     if (cg%i_bnd(d, I_ONE)%seg(g)%se(d, HI) > cg%ijkse(d, LO)) lh = HI
-                     n_lbnd_face_cells(lh) = n_lbnd_face_cells(lh) + product( cg%i_bnd(d, I_ONE)%seg(g)%se(:, HI) - cg%i_bnd(d, I_ONE)%seg(g)%se(:, LO) + 1)
+                     if (cg%o_bnd(d, I_ONE)%seg(g)%se(d, HI) > cg%ijkse(d, LO)) lh = HI
+                     bp_layer(d, :) = b_layer(d, :)
+                     facemap(bp_layer(xdim,LO):bp_layer(xdim,HI), bp_layer(ydim,LO):bp_layer(ydim,HI), bp_layer(zdim,LO):bp_layer(zdim,HI), lh) = .true.
+                  enddo
+                  do g = LO, HI
+                     n_lbnd_face_cells(g) = count(facemap(:, :, :, g))
                   enddo
                   where (.not. cg%ext_bnd(d, :))
                      where (n_lbnd_face_cells(:) <  n_tot_face_cells) cg%bnd(d, :) = BND_MPI_FC
                      where (n_lbnd_face_cells(:) == 0)                cg%bnd(d, :) = BND_FC
                   endwhere
+                  deallocate(facemap)
                endif
             enddo
 

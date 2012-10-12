@@ -384,19 +384,21 @@ contains
 !! \brief Compute the average value over a list and subtract it
 !!
 !! \details Typically it is used on a list of leaves or on a single level
-!!
-!! \warning Need a real leaves, not the current implementation
 !<
 
    subroutine subtract_average(this, iv)
 
       use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, GEO_RPZ, I_ONE, base_level_id
-      use dataio_pub, only: die, warn
+      use constants,  only: GEO_XYZ, GEO_RPZ, I_ONE
+      use dataio_pub, only: die
       use domain,     only: dom
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_IN_PLACE
       use mpisetup,   only: comm, mpi_err
+#ifdef DEBUG
+      use dataio_pub,       only: msg, printinfo
+      use named_array_list, only: qna
+#endif
 
       implicit none
 
@@ -407,28 +409,24 @@ contains
       integer :: i
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
-      logical, save :: warned = .false.
 
       avg = 0.
       vol = 0.
       cgl => this%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (cg%level_id > base_level_id .and. .not. warned) then
-            call warn("[cg_list_dataop:subtract_average] Need a real leaves")
-            warned = .true.
-         endif
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               avg = avg + sum(cg%q(iv)%span(cg%ijkse)) * cg%dvol
+               avg = avg + sum(cg%q(iv)%span(cg%ijkse), mask=cg%leafmap) * cg%dvol
+               vol = vol + count(cg%leafmap) * cg%dvol
             case (GEO_RPZ)
                do i = cg%is, cg%ie
-                  avg = avg + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol * cg%x(i)
+                  avg = avg + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap(i, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol * cg%x(i)
+                  vol = vol + count(cg%leafmap(i, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol * cg%x(i)
                enddo
             case default
                call die("[cg_list_dataop:subtract_average] Unsupported geometry.")
          end select
-         vol = vol + cg%vol
          cgl => cgl%nxt
       enddo
       call MPI_Allreduce(MPI_IN_PLACE, avg, I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
@@ -437,14 +435,17 @@ contains
 
       call this%q_add_val(iv, -avg)
 
+#ifdef DEBUG
+      write(msg, '(2a,2(a,g15.7))')"[cg_list_dataop:subtract_average] Average of '",qna%lst(iv)%name,"' over volume ",vol," is ",avg
+      call printinfo(msg)
+#endif
+
    end subroutine subtract_average
 
 !>
 !! \brief Calculate L2 norm
 !!
 !! \todo modify the code for reusing in subtract_average?
-!!
-!! \warning Need a real leaves, not the current implementation
 !<
 
    real function norm_sq(this, iv) result (norm)
@@ -472,10 +473,10 @@ contains
          cg => cgl%cg
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               norm = norm + sum(cg%q(iv)%span(cg%ijkse)**2) * cg%dvol
+               norm = norm + sum(cg%q(iv)%span(cg%ijkse)**2, mask=cg%leafmap) * cg%dvol
             case (GEO_RPZ)
                do i = cg%is, cg%ie
-                  norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2) * cg%dvol * cg%x(i)
+                  norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap(i, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol * cg%x(i)
                enddo
             case default
                call die("[cg_list_dataop:norm_sq] Unsupported geometry.")

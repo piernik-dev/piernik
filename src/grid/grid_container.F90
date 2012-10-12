@@ -176,6 +176,7 @@ module grid_cont
       type(tgt_list) :: pi_tgt                                    !< description of incoming prolongation data
       type(tgt_list) :: po_tgt                                    !< description of outgoing prolongation data
       real, allocatable, dimension(:,:,:) :: prolong_, prolong_x, prolong_xy !< auxiliary prolongation arrays
+      logical, allocatable, dimension(:,:,:) :: leafmap           !< .true. when a cell is not covered by finer cells, .falase. otherwise
 
       ! Non-cartesian geometrical factors
 
@@ -218,6 +219,7 @@ module grid_cont
       procedure :: add_all_na                                    !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
       procedure :: add_na                                        !< Register a new 3D entry in current cg with given name.
       procedure :: add_na_4d                                     !< Register a new 4D entry in current cg with given name.
+      procedure :: update_leafmap                                !< Check if the grid container has any parts covered by finer grids and update appropriate map
 
    end type grid_container
 
@@ -447,13 +449,15 @@ contains
       elsewhere
          n2(:) = 1
       endwhere
-      allocate(this%prolong_  (     n2(xdim),      n2(ydim), n2(zdim)), &
-           &   this%prolong_x (this%n_(xdim),      n2(ydim), n2(zdim)), &
-           &   this%prolong_xy(this%n_(xdim), this%n_(ydim), n2(zdim)))
+      allocate(this%prolong_  (      n2(xdim),       n2(ydim),       n2(zdim)), &
+           &   this%prolong_x ( this%n_(xdim),       n2(ydim),       n2(zdim)), &
+           &   this%prolong_xy( this%n_(xdim),  this%n_(ydim),       n2(zdim)), &
+           &   this%leafmap   (this%n_b(xdim), this%n_b(ydim), this%n_b(zdim)))
 
       this%prolong_  (:, :, :) = big_float
       this%prolong_x (:, :, :) = big_float
       this%prolong_xy(:, :, :) = big_float
+      this%leafmap   (:, :, :) = .true.
 
    end subroutine init
 
@@ -601,6 +605,7 @@ contains
       if (allocated(this%prolong_xy)) deallocate(this%prolong_xy)
       if (allocated(this%prolong_x))  deallocate(this%prolong_x)
       if (allocated(this%prolong_))   deallocate(this%prolong_)
+      if (allocated(this%leafmap))    deallocate(this%leafmap)
 
    end subroutine cleanup
 
@@ -762,5 +767,29 @@ contains
       if (this%level_id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [n, this%n_(:)] )
 
    end subroutine add_na_4d
+
+!> \brief Check if the grid container has any parts covered by finer grids and update appropriate map
+
+   subroutine update_leafmap(this)
+
+      use constants, only: xdim, ydim, zdim, LO, HI
+
+      implicit none
+
+      class(grid_container), intent(inout) :: this
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: se
+      integer :: g
+
+      this%leafmap = .true.
+      if (allocated(this%ri_tgt%seg)) then
+         do g = lbound(this%ri_tgt%seg(:), dim=1), ubound(this%ri_tgt%seg(:), dim=1)
+            se(:, LO) = this%ri_tgt%seg(g)%se(:, LO)-this%off(:)+1
+            se(:, HI) = this%ri_tgt%seg(g)%se(:, HI)-this%off(:)+1
+            this%leafmap(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI)) = .false.
+         enddo
+      endif
+
+   end subroutine update_leafmap
 
 end module grid_cont

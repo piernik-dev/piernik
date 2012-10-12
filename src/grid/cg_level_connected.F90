@@ -350,6 +350,9 @@ contains
             enddo
 
             if (allocated(ps)) deallocate(ps)
+
+            call cg%update_leafmap
+
             cgl => cgl%nxt
          enddo
       endif
@@ -424,6 +427,9 @@ contains
             enddo
 
             if (allocated(ps)) deallocate(ps)
+
+            call cg%update_leafmap
+
             cgl => cgl%nxt
          enddo
       endif
@@ -980,13 +986,13 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer,                     intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional,   intent(in) :: nb         !< number of grid cells to exchange (not implemented for comm3d)
-      integer(kind=4), optional,   intent(in) :: area_type  !< defines how do we treat boundaries
-      integer(kind=4), optional,   intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
-                                                            !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
-      logical,         optional,   intent(in) :: corners    !< When present and .true. then call internal_boundaries_3d for each direction separately
+      class(cg_level_connected_T), intent(inout) :: this      !< the list on which to perform the boundary exchange
+      integer,                     intent(in)    :: ind       !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4), optional,   intent(in)    :: nb        !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional,   intent(in)    :: area_type !< defines how do we treat boundaries
+      integer(kind=4), optional,   intent(in)    :: bnd_type  !< Override default boundary type on external boundaries (useful in multigrid solver).
+                                                              !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
+      logical,         optional,   intent(in)    :: corners   !< When present and .true. then call internal_boundaries_3d for each direction separately
 
       call this%clear_boundaries(ind) ! Apply BND_ZERO as long as there is no coarse-to-fine interpolation
       call this%level_3d_boundaries(ind, nb, area_type, bnd_type, corners)
