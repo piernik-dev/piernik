@@ -702,7 +702,7 @@ contains
       allocate(cg_all_n_b(ndims, cg_cnt))
 
       if (master) then
-         if (otype == O_OUT) call rd%init(cg_cnt)
+         call rd%init(cg_cnt)
 
          ! Open the HDF5 file only in master process and create all groups required for cg storage.
          ! Create also all related datasets and attributes. Do not write big datasets yet.
@@ -837,7 +837,7 @@ contains
          call h5fclose_f(file_id, error)
          call h5close_f(error)
 
-         if (otype == O_OUT) call rd%cleanup()
+         call rd%cleanup()
       else ! send all the necessary information to the master
          !! \deprecated some duplicated code here
          allocate(cg_rl(leaves%cnt), cg_n_b(leaves%cnt, ndims), cg_off(leaves%cnt, ndims))
