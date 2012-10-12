@@ -73,6 +73,8 @@ module dataio
    integer                  :: nres_start            !< number of restart file for the first restart dump in simulation run
    real                     :: t_start               !< time in simulation of start simulation run
    logical                  :: tsl_firstcall         !< logical value to start a new timeslice file
+   logical                  :: tsl_with_mom          !< place momentum integrals in timeslice file
+   logical                  :: tsl_with_ptc          !< place pressure, temperature and sound speed extrema in timeslice file (even if ISO while they are constant or only density dependent)
    logical                  :: initial_hdf_dump      !< force initial hdf dump
    logical, dimension(RES:TSL) :: dump = .false.     !< logical values for all dump types to restrict to only one dump of each type a step
 
@@ -102,7 +104,7 @@ module dataio
 
    namelist /END_CONTROL/     nend, tend, wend
    namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
-   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, plt_plane, &
+   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, plt_plane, tsl_with_mom, tsl_with_ptc, &
                               domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
                               multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump
 
@@ -143,6 +145,8 @@ contains
 !! <tr><td>dt_tsl             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_tsl           </td></tr>
 !! <tr><td>dt_log             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_log           </td></tr>
 !! <tr><td>dt_plt             </td><td>0.0                </td><td>real      </td><td>\copydoc dataio::dt_plt           </td></tr>
+!! <tr><td>tsl_with_mom       </td><td>.true.             </td><td>logical   </td><td>\copydoc dataio::plt_with_mom     </td></tr>
+!! <tr><td>tsl_with_ptc       </td><td>if ISO .false. else .true.</td><td>logical   </td><td>\copydoc dataio::plt_with_ptc      </td></tr>
 !! <tr><td>plt_plane          </td><td>(nxd, nyd, nzd)/2  </td><td>integer(3)</td><td>\copydoc dataio::plt_plane        </td></tr>
 !! <tr><td>domain_dump        </td><td>'phys_domain'      </td><td>'phys_domain' or 'full_domain'                       </td><td>\copydoc dataio_pub::domain_dump</td></tr>
 !! <tr><td>vars               </td><td>''                 </td><td>'dens', 'velx', 'vely', 'velz', 'ener' and some more </td><td>\copydoc dataio::vars  </td></tr>
@@ -196,6 +200,12 @@ contains
 
       plt_plane = max(I_ONE, dom%n_d(:)/I_TWO)
 
+      tsl_with_mom     = .true.
+#ifdef ISO
+      tsl_with_ptc     = .false.
+#else /* !ISO */
+      tsl_with_ptc     = .true.
+#endif /* !ISO */
       initial_hdf_dump = .false.
 
       domain_dump       = 'phys_domain'
@@ -249,24 +259,24 @@ contains
             gzip_level = 9
          endif
 
-!  namelist /END_CONTROL/ nend, tend, wend
+
+!   namelist /END_CONTROL/     nend, tend, wend
          ibuff(1)  = nend
 
          rbuff(1)  = tend
          rbuff(2)  = wend
 
-!  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
 
+!   namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
          cbuff(20) = restart
          cbuff(21) = new_id
 
          ibuff(20) = nrestart
          ibuff(21) = resdel
 
-!   namelist /OUTPUT_CONTROL/ problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, plt_plane, &
-!                             domain_dump, vars, mag_center, vizit, fmin, fmax, &
-!                             user_message_file, system_message_file, multiple_h5files, use_v2_io, nproc_io
-
+!   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, plt_plane, tsl_with_mom, tsl_with_ptc, &
+!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
+!                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump
          ibuff(40:42) = plt_plane
          ibuff(43) = nproc_io
          ibuff(44) = gzip_level
@@ -284,6 +294,8 @@ contains
          lbuff(3)  = use_v2_io
          lbuff(4)  = mag_center
          lbuff(5)  = initial_hdf_dump
+         lbuff(6)  = tsl_with_mom
+         lbuff(7)  = tsl_with_ptc
 
          cbuff(31) = problem_name
          cbuff(32) = run_id
@@ -305,22 +317,22 @@ contains
 
       if (slave) then
 
-!  namelist /END_CONTROL/ nend, tend, wend
+!   namelist /END_CONTROL/     nend, tend, wend
          nend                = ibuff(1)
 
          tend                = rbuff(1)
          wend                = rbuff(2)
-!  namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
 
+!   namelist /RESTART_CONTROL/ restart, new_id, nrestart, resdel
          restart             = trim(cbuff(20))
          new_id              = trim(cbuff(21))
 
          nrestart            = int(ibuff(20), kind=4)
          resdel              = ibuff(21)
 
-!  namelist /OUTPUT_CONTROL/ dt_hdf, dt_res, dt_tsl, domain, vars, mag_center, &
-!                            ix, iy, iz, user_message_file, system_message_file
-
+!   namelist /OUTPUT_CONTROL/  problem_name, run_id, dt_hdf, dt_res, dt_tsl, dt_log, dt_plt, plt_plane, tsl_with_mom, tsl_with_ptc, &
+!                              domain_dump, vars, mag_center, vizit, fmin, fmax, user_message_file, system_message_file, &
+!                              multiple_h5files, use_v2_io, nproc_io, enable_compression, gzip_level, initial_hdf_dump
          plt_plane           = ibuff(40:42)
          nproc_io            = int(ibuff(43), kind=4)
          gzip_level          = int(ibuff(44), kind=4)
@@ -338,6 +350,8 @@ contains
          use_v2_io           = lbuff(3)
          mag_center          = lbuff(4)
          initial_hdf_dump    = lbuff(5)
+         tsl_with_mom        = lbuff(6)
+         tsl_with_ptc        = lbuff(7)
 
          problem_name        = cbuff(31)
          run_id              = cbuff(32)(1:idlen)
@@ -708,35 +722,35 @@ contains
 
    subroutine write_timeslice
 
-      use constants,      only: cwdlen, xdim, ydim, zdim, DST
-      use dataio_pub,     only: wd_wr, tsl_file, tsl_lun
-      use dataio_user,    only: user_tsl
-      use diagnostics,    only: pop_vector
-      use domain,         only: dom
-      use fluidindex,     only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
-      use fluids_pub,     only: has_ion, has_dst, has_neu
-      use fluidtypes,     only: phys_prop
-      use func,           only: ekin, emag
-      use cg_list,        only: cg_list_element
-      use global,         only: t, dt, smalld, nstep
-      use cg_leaves,      only: leaves
-      use grid_cont,      only: grid_container
-      use mass_defect,    only: update_magic_mass
-      use mpi,            only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
-      use mpisetup,       only: master, comm, mpi_err
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: cwdlen, xdim, ydim, zdim, DST
+      use dataio_pub,       only: wd_wr, tsl_file, tsl_lun
+      use dataio_user,      only: user_tsl
+      use diagnostics,      only: pop_vector
+      use domain,           only: dom
+      use fluidindex,       only: flind, iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use fluids_pub,       only: has_ion, has_dst, has_neu
+      use fluidtypes,       only: phys_prop
+      use func,             only: ekin, emag
+      use global,           only: t, dt, smalld, nstep
+      use grid_cont,        only: grid_container
+      use mass_defect,      only: update_magic_mass
+      use mpi,              only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_SUM
+      use mpisetup,         only: master, comm, mpi_err
       use named_array_list, only: wna
 #ifdef GRAV
-      use constants,      only: gpot_n
+      use constants,        only: gpot_n
       use named_array_list, only: qna
 #endif /* GRAV */
 #ifndef ISO
-      use fluidindex,     only: iarr_all_en
+      use fluidindex,       only: iarr_all_en
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use fluidindex,     only: iarr_all_crs
+      use fluidindex,       only: iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef RESISTIVE
-      use resistivity,    only: eta1_active
+      use resistivity,      only: eta1_active
 #endif /* RESISTIVE */
 
       implicit none
@@ -753,7 +767,10 @@ contains
       enum, bind(C)
          enumerator :: T_MASS                                  !< total mass
          enumerator :: T_MOMX, T_MOMY, T_MOMZ                  !< total momenta
-         enumerator :: T_ENER, T_EINT, T_EKIN, T_EMAG, T_EPOT  !< total energies
+         enumerator :: T_ENER, T_EINT, T_EKIN, T_EMAG          !< total energies
+#ifdef GRAV
+         enumerator :: T_EPOT                                  !< total gravitational potential energy
+#endif /* GRAV */
          enumerator :: T_MFLX, T_MFLY, T_MFLZ                  !< total magnetic fluxes
 #ifdef COSM_RAYS
          enumerator :: T_ENCR                                  !< total CR energy
@@ -775,12 +792,15 @@ contains
          write(tsl_file,'(a,a1,a,a1,a3,a1,i3.3,a4)') trim(wd_wr),'/',trim(problem_name),'_', run_id,'_',nrestart,'.tsl'
 
          if (tsl_firstcall) then
-            call pop_vector(tsl_names, cbuff_len, ["nstep   ", "time    ", "timestep"])
-            call pop_vector(tsl_names, cbuff_len, ["mass", "momx", "momy", "momz", "ener", "epot", "eint", "ekin"])
-
+            call pop_vector(tsl_names, cbuff_len, ["nstep   ", "time    ", "timestep", "mass    "])
+            if (tsl_with_mom) &
+          & call pop_vector(tsl_names, cbuff_len, ["momx", "momy", "momz"])
+            call pop_vector(tsl_names, cbuff_len, ["ener", "eint", "ekin"])
+#ifdef GRAV
+            call pop_vector(tsl_names, cbuff_len, ["epot"])
+#endif /* GRAV */
 #ifdef MAGNETIC
-            call pop_vector(tsl_names, cbuff_len, ["emag   ", "mflx   ", "mfly   ", "mflz   ", "vai_max", "b_min  ", "b_max  "])
-            call pop_vector(tsl_names, cbuff_len, ["divb_max"])
+            call pop_vector(tsl_names, cbuff_len, ["emag    ", "mflx    ", "mfly    ", "mflz    ", "vai_max ", "b_min   ", "b_max   ", "divb_max"])
 #ifdef RESISTIVE
             if (eta1_active) call pop_vector(tsl_names, cbuff_len, ["eta_max"])
 #endif /* RESISTIVE */
@@ -790,11 +810,15 @@ contains
 #endif /* COSM_RAYS */
             ! \todo: replicated code, simplify me
             if (has_ion) then
-               call pop_vector(tsl_names, cbuff_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max ", "prei_min", "prei_max", "temi_min", "temi_max", "csi_max "])
+               call pop_vector(tsl_names, cbuff_len, ["deni_min", "deni_max", "vxi_max ", "vyi_max ", "vzi_max "])
+               if (tsl_with_ptc) &
+             & call pop_vector(tsl_names, cbuff_len, ["prei_min", "prei_max", "temi_min", "temi_max", "csi_max "])
                call pop_vector(tsl_names, cbuff_len, ["ion_mmass_cur", "ion_mmass_cum"])
             endif
             if (has_neu) then
-               call pop_vector(tsl_names, cbuff_len, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max ", "pren_min", "pren_max", "temn_min", "temn_max", "csn_max "])
+               call pop_vector(tsl_names, cbuff_len, ["denn_min", "denn_max", "vxn_max ", "vyn_max ", "vzn_max "])
+               if (tsl_with_ptc) &
+             & call pop_vector(tsl_names, cbuff_len, ["pren_min", "pren_max", "temn_min", "temn_max", "csn_max "])
                call pop_vector(tsl_names, cbuff_len, ["neu_mmass_cur", "neu_mmass_cum"])
             endif
             if (has_dst) then
@@ -822,9 +846,11 @@ contains
          pb => cg%w(wna%bi)%span(cg%ijkse)
 
          tot_q(T_MASS) = tot_q(T_MASS) + cg%dvol * sum(pu(iarr_all_dn,:,:,:))
-         tot_q(T_MOMX) = tot_q(T_MOMX) + cg%dvol * sum(pu(iarr_all_mx,:,:,:))
-         tot_q(T_MOMY) = tot_q(T_MOMY) + cg%dvol * sum(pu(iarr_all_my,:,:,:))
-         tot_q(T_MOMZ) = tot_q(T_MOMZ) + cg%dvol * sum(pu(iarr_all_mz,:,:,:))
+         if (tsl_with_mom) then
+            tot_q(T_MOMX) = tot_q(T_MOMX) + cg%dvol * sum(pu(iarr_all_mx,:,:,:))
+            tot_q(T_MOMY) = tot_q(T_MOMY) + cg%dvol * sum(pu(iarr_all_my,:,:,:))
+            tot_q(T_MOMZ) = tot_q(T_MOMZ) + cg%dvol * sum(pu(iarr_all_mz,:,:,:))
+         endif
 #ifdef GRAV
          tot_q(T_EPOT) = tot_q(T_EPOT) + cg%dvol * sum(sum(pu(iarr_all_dn(:),:,:,:),dim=1) * cg%q(qna%ind(gpot_n))%span(cg%ijkse))
 #endif /* GRAV */
@@ -863,7 +889,13 @@ contains
       call update_magic_mass(tsl=.true.)
 
       if (master) then
-         call pop_vector(tsl_vars, [t, dt, tot_q(T_MASS), tot_q(T_MOMX), tot_q(T_MOMY), tot_q(T_MOMZ), tot_q(T_ENER), tot_q(T_EPOT), tot_q(T_EINT), tot_q(T_EKIN)])
+         call pop_vector(tsl_vars, [t, dt, tot_q(T_MASS)])
+         if (tsl_with_mom) &
+       & call pop_vector(tsl_vars, [tot_q(T_MOMX), tot_q(T_MOMY), tot_q(T_MOMZ)])
+         call pop_vector(tsl_vars, [tot_q(T_ENER), tot_q(T_EINT), tot_q(T_EKIN)])
+#ifdef GRAV
+         call pop_vector(tsl_vars, [tot_q(T_EPOT)])
+#endif /* GRAV */
 #ifdef MAGNETIC
          call pop_vector(tsl_vars, [tot_q(T_EMAG), tot_q(T_MFLX), tot_q(T_MFLY), tot_q(T_MFLZ), tsl%vai_max, tsl%b_min, tsl%b_max, tsl%divb_max])
 #ifdef RESISTIVE
@@ -877,9 +909,8 @@ contains
          do ifl = lbound(flind%all_fluids, 1, kind=4), ubound(flind%all_fluids, 1, kind=4)
             sn => flind%all_fluids(ifl)%fl%snap
             call pop_vector(tsl_vars, [sn%dens_min%val, sn%dens_max%val, sn%velx_max%val, sn%vely_max%val, sn%velz_max%val])
-            if (flind%all_fluids(ifl)%fl%tag /= DST) then
-               call pop_vector(tsl_vars, [sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val])
-            endif
+            if (tsl_with_ptc .and. flind%all_fluids(ifl)%fl%tag /= DST) &
+          & call pop_vector(tsl_vars, [sn%pres_min%val, sn%pres_max%val, sn%temp_min%val, sn%temp_max%val, sn%cs_max%val  ])
             call pop_vector(tsl_vars, [sn%mmass_cur, sn%mmass_cum])
          enddo
 
@@ -965,20 +996,20 @@ contains
 
    subroutine get_common_vars(fl)
 
-      use types,          only: value                          !QA_WARN: used by get_extremum (intel compiler)
-      use constants,      only: MINL, MAXL, small, xdim, ydim, zdim
-      use domain,         only: is_multicg
-      use fluidtypes,     only: phys_prop, component_fluid
-      use func,           only: ekin
-      use cg_list,        only: cg_list_element
-      use global,         only: cfl
-      use cg_leaves,      only: leaves
-      use mpisetup,       only: master
+      use types,            only: value                          !QA_WARN: used by get_extremum (intel compiler)
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: MINL, MAXL, small, xdim, ydim, zdim
+      use domain,           only: is_multicg
+      use fluidtypes,       only: phys_prop, component_fluid
+      use func,             only: ekin
+      use global,           only: cfl
+      use mpisetup,         only: master
       use named_array_list, only: qna
-      use units,          only: mH, kboltz
+      use units,            only: mH, kboltz
 #ifndef ISO
-      use constants,      only: ION, DST, half
-      use global,         only: smallp
+      use constants,        only: ION, DST, half
+      use global,           only: smallp
 #endif /* !ISO */
 
       implicit none
@@ -1135,13 +1166,13 @@ contains
 !
    subroutine  write_log(tsl)
 
+      use cg_leaves,          only: leaves
+      use cg_list,            only: cg_list_element
       use constants,          only: idlen, small, MAXL
       use dataio_pub,         only: printinfo
       use fluidindex,         only: flind
       use fluids_pub,         only: has_dst, has_ion, has_neu
       use func,               only: L2norm
-      use cg_list,            only: cg_list_element
-      use cg_leaves,          only: leaves
       use interactions,       only: has_interactions, collfaq
       use mpisetup,           only: master
       use named_array_list,   only: qna
