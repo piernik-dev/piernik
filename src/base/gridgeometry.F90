@@ -38,9 +38,12 @@ module gridgeometry
    implicit none
 
    private
-   public   :: gc, init_geometry, set_geo_coeffs, geometry_source_terms
+   public   :: gc, GC1, GC2, GC3, init_geometry, set_geo_coeffs, geometry_source_terms
 
    real, dimension(:,:,:), pointer :: gc            !< array of geometrical coefficients, \todo move it to the grid container
+   enum, bind(C)
+      enumerator :: GC1, GC2, GC3                   !< \todo change to a some meaningful names
+   end enum
 
    interface
       !>
@@ -123,7 +126,7 @@ contains
 !<
    subroutine geo_coeffs_arrays(flind, cg)
 
-      use constants,  only: xdim, ydim, zdim, LEFT, INV_CENTER
+      use constants,  only: xdim, ydim, zdim
       use dataio_pub, only: die
       use fluidtypes, only: var_numbers
       use grid_cont,  only: grid_container
@@ -136,9 +139,9 @@ contains
       if ( any( [allocated(cg%gc_xdim), allocated(cg%gc_ydim), allocated(cg%gc_zdim)] ) ) then
          call die("[gridgeometry:geo_coeffs_arrays] double allocation")
       else
-         allocate(cg%gc_xdim(LEFT:INV_CENTER, flind%all, cg%n_(xdim)))
-         allocate(cg%gc_ydim(LEFT:INV_CENTER, flind%all, cg%n_(ydim)))
-         allocate(cg%gc_zdim(LEFT:INV_CENTER, flind%all, cg%n_(zdim)))
+         allocate(cg%gc_xdim(GC1:GC3, flind%all, cg%n_(xdim)))
+         allocate(cg%gc_ydim(GC1:GC3, flind%all, cg%n_(ydim)))
+         allocate(cg%gc_zdim(GC1:GC3, flind%all, cg%n_(zdim)))
       endif
 
    end subroutine geo_coeffs_arrays
@@ -166,7 +169,7 @@ contains
 !<
    subroutine set_cyl_coeffs(sweep, flind, i1, i2, cg)
 
-      use constants,  only: xdim, ydim, zdim, LEFT, RIGHT, INV_CENTER
+      use constants,  only: xdim, ydim, zdim, INV_CENTER, LEFT, RIGHT
       use dataio_pub, only: die, msg
       use domain,     only: is_multicg
       use fluidtypes, only: var_numbers
@@ -179,7 +182,7 @@ contains
       integer, intent(in)           :: i1, i2
       type(grid_container), pointer :: cg
 
-      integer                        :: i, p
+      integer                        :: i
       logical, save                  :: frun = .true.
 
       if (is_multicg) call die("[gridgeometry:set_cyl_coeffs] multiple grid pieces per procesor not implemented yet") ! move gc to grid_container%, fix initialization
@@ -188,16 +191,16 @@ contains
       if (frun) then
          call geo_coeffs_arrays(flind, cg)
 
-         do p = LEFT, INV_CENTER
-            cg%gc_xdim(p,:,:) = spread( cg%coord(p, xdim)%r(:), 1, flind%all)
-         enddo
+         cg%gc_xdim(GC1,:,:) = spread( cg%coord(INV_CENTER, xdim)%r(:), 1, flind%all)
+         cg%gc_xdim(GC2,:,:) = spread( cg%coord(RIGHT, xdim)%r(:),      1, flind%all)
+         cg%gc_xdim(GC3,:,:) = spread( cg%coord(LEFT, xdim)%r(:),       1, flind%all)
 
          do i = lbound(flind%all_fluids,1), ubound(flind%all_fluids,1)
-            do p = LEFT, INV_CENTER
-               cg%gc_xdim(p, flind%all_fluids(i)%fl%imy, :) = cg%gc_xdim(INV_CENTER, flind%all_fluids(i)%fl%imy, :) * cg%coord(p, xdim)%r(:)
-            enddo
+            cg%gc_xdim(GC1, flind%all_fluids(i)%fl%imy, :) = cg%gc_xdim(GC1, flind%all_fluids(i)%fl%imy, :) * cg%coord(INV_CENTER, xdim)%r(:)
+            cg%gc_xdim(GC2, flind%all_fluids(i)%fl%imy, :) = cg%gc_xdim(GC2, flind%all_fluids(i)%fl%imy, :) * cg%coord(RIGHT, xdim)%r(:)
+            cg%gc_xdim(GC3, flind%all_fluids(i)%fl%imy, :) = cg%gc_xdim(GC3, flind%all_fluids(i)%fl%imy, :) * cg%coord(LEFT, xdim)%r(:)
          enddo
-         cg%gc_ydim(LEFT:RIGHT,:,:) = 1.0     ! [ 1/r , 1 , 1]
+         cg%gc_ydim(GC2:GC3,:,:) = 1.0     ! [ 1/r , 1 , 1]
 
          cg%gc_zdim(:,:,:) = 1.0           ! [ 1, 1, 1]
 
@@ -208,7 +211,7 @@ contains
          case (xdim)
             gc => cg%gc_xdim
          case (ydim)
-            cg%gc_ydim(INV_CENTER,:,:)   = cg%inv_x(i2)
+            cg%gc_ydim(GC1,:,:)   = cg%inv_x(i2)
             gc => cg%gc_ydim
          case (zdim)
             gc => cg%gc_zdim
