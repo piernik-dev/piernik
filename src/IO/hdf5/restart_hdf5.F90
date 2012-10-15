@@ -41,7 +41,10 @@ module restart_hdf5
    private
    public :: read_restart_hdf5, write_restart_hdf5, read_arr_from_restart
 
-   integer,          parameter :: STAT_OK = 0
+   enum, bind(C)
+      enumerator :: STAT_OK = 0
+      enumerator :: STAT_INV = -1
+   end enum
 
    type cg_essentials                            !< All vital attributes of a cg in one place
       integer(kind=4), dimension(ndims) :: n_b
@@ -121,6 +124,7 @@ contains
 
       integer :: status_v2
 
+      status_v2 = STAT_INV
       if (use_v2_io) call read_restart_hdf5_v2(status_v2)
       if (status_v2 /= STAT_OK .or. .not. use_v2_io) call read_restart_hdf5_v1
 
