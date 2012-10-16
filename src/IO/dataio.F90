@@ -166,13 +166,11 @@ contains
 !<
    subroutine init_dataio_parameters
 
-      use constants,  only: idlen, cwdlen, cbuff_len, PIERNIK_INIT_MPI, I_ONE, I_TWO
+      use constants,  only: cwdlen, PIERNIK_INIT_MPI
       use dataio_pub, only: nres, nrestart, last_hdf_time, last_plt_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
-           &                tmp_log_file, printinfo, printio, warn, msg, nhdf, nimg, die, code_progress, wd_wr, wd_rd, &
-           &                move_file, multiple_h5files, parfile, parfilelines, log_file, maxparfilelines, can_i_write, ierrh, par_file
-      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
-      use domain,     only: dom
-      use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier
+           &                tmp_log_file, printinfo, printio, warn, msg, die, code_progress, wd_wr, &
+           &                move_file, parfile, parfilelines, log_file, maxparfilelines, can_i_write, ierrh, par_file
+      use mpisetup,   only: master, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier
 
       implicit none
 
@@ -183,6 +181,66 @@ contains
 #endif /* VERBOSE */
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[dataio:init_dataio_parameters] Some physics modules are not initialized.")
+
+      call dataio_par_io
+
+      if (master) then
+         open(newunit=par_lun,file=par_file)
+         ierrh = 0
+         do while (ierrh == 0 .and. parfilelines<maxparfilelines)
+            read(unit=par_lun, fmt='(a)', iostat=ierrh) parfile(parfilelines+1)
+            if (ierrh == 0) then
+               parfilelines = parfilelines + 1
+               i = len_trim(parfile(parfilelines))
+               if (i >= len(parfile(parfilelines))) call warn("[dataio:init_dataio_parameters] problem.par contains very long lines. The copy in the logfile and HDF dumps can be truncated.")
+            endif
+         enddo
+         close(par_lun)
+         if (parfilelines == maxparfilelines) call warn("[dataio:init_dataio_parameters] problem.par has too many lines. The copy in the logfile and HDF dumps can be truncated.")
+      endif
+
+
+      can_i_write = mod( proc*nproc_io, nproc) < nproc_io
+      if (can_i_write) then
+         write(msg,'(a,i6,a)')"Process ",proc," can write"
+         call printio(msg)
+      endif
+
+      last_log_time = -dt_log
+      last_tsl_time = -dt_tsl
+      last_hdf_time = -dt_hdf
+      last_plt_time = -dt_plt
+      last_res_time = 0.0
+
+      if (master .and. restart == 'last') call find_last_restart(nrestart)
+      call piernik_MPI_Barrier
+      call piernik_MPI_Bcast(nrestart)
+
+      if (master) then
+         write(log_file,'(6a,i3.3,a)') trim(wd_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
+!> \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
+         system_status = move_file(trim(tmp_log_file), trim(log_file))
+         if (system_status /= 0) then
+            write(msg,'(2a)')"[dataio:init_dataio_parameters] The log must be stored in ",tmp_log_file
+            call warn(msg)
+            log_file_initialized = .false.
+         else
+            log_file_initialized = .true.
+         endif
+      endif
+      call piernik_MPI_Bcast(log_file, cwdlen)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
+      call piernik_MPI_Bcast(log_file_initialized)
+
+   end subroutine init_dataio_parameters
+
+   subroutine dataio_par_io
+      use constants,  only: idlen, cbuff_len, I_ONE, I_TWO
+      use dataio_pub, only: nres, nrestart, warn, msg, nhdf, nimg, wd_rd, multiple_h5files
+      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+      use domain,     only: dom
+      use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, proc, piernik_MPI_Bcast
+
+      implicit none
 
       problem_name = "nameless"
       run_id       = "___"
@@ -230,19 +288,6 @@ contains
 
       if (master) then
 
-         open(newunit=par_lun,file=par_file)
-         ierrh = 0
-         do while (ierrh == 0 .and. parfilelines<maxparfilelines)
-            read(unit=par_lun, fmt='(a)', iostat=ierrh) parfile(parfilelines+1)
-            if (ierrh == 0) then
-               parfilelines = parfilelines + 1
-               i = len_trim(parfile(parfilelines))
-               if (i >= len(parfile(parfilelines))) call warn("[dataio:init_dataio_parameters] problem.par contains very long lines. The copy in the logfile and HDF dumps can be truncated.")
-            endif
-         enddo
-         close(par_lun)
-         if (parfilelines == maxparfilelines) call warn("[dataio:init_dataio_parameters] problem.par has too many lines. The copy in the logfile and HDF dumps can be truncated.")
-
          diff_nml(OUTPUT_CONTROL)
          diff_nml(RESTART_CONTROL)
          diff_nml(END_CONTROL)
@@ -258,7 +303,6 @@ contains
             call warn("[dataio:init_dataio_parameters] invalid compression level")
             gzip_level = 9
          endif
-
 
 !   namelist /END_CONTROL/     nend, tend, wend
          ibuff(1)  = nend
@@ -364,39 +408,7 @@ contains
          system_message_file = trim(cbuff(91))
 
       endif
-
-      can_i_write = mod( proc*nproc_io, nproc) < nproc_io
-      if (can_i_write) then
-         write(msg,'(a,i6,a)')"Process ",proc," can write"
-         call printio(msg)
-      endif
-
-      last_log_time = -dt_log
-      last_tsl_time = -dt_tsl
-      last_hdf_time = -dt_hdf
-      last_plt_time = -dt_plt
-      last_res_time = 0.0
-
-      if (master .and. restart == 'last') call find_last_restart(nrestart)
-      call piernik_MPI_Barrier
-      call piernik_MPI_Bcast(nrestart)
-
-      if (master) then
-         write(log_file,'(6a,i3.3,a)') trim(wd_wr),'/',trim(problem_name),'_',trim(run_id),'_',nrestart,'.log'
-!> \todo if the simulation is restarted then save previous log_file (if exists) under a different, unique name
-         system_status = move_file(trim(tmp_log_file), trim(log_file))
-         if (system_status /= 0) then
-            write(msg,'(2a)')"[dataio:init_dataio_parameters] The log must be stored in ",tmp_log_file
-            call warn(msg)
-            log_file_initialized = .false.
-         else
-            log_file_initialized = .true.
-         endif
-      endif
-      call piernik_MPI_Bcast(log_file, cwdlen)          ! BEWARE: every msg issued by slaves before this sync may lead to race condition on tmp_log_file
-      call piernik_MPI_Bcast(log_file_initialized)
-
-   end subroutine init_dataio_parameters
+   end subroutine dataio_par_io
 
 !> \brief Initialize these I/O variables that may depend on any other modules (called at the end of init_piernik)
 
