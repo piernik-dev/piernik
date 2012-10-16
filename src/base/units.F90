@@ -171,62 +171,17 @@ contains
    subroutine init_units
 
       use constants,  only: one, pi, fpi, small, PIERNIK_INIT_MPI
-      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use dataio_pub, only: warn, printinfo, msg, die, code_progress
-      use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
+      use mpisetup,   only: master
 
       implicit none
 
       logical, save            :: scale_me = .false.
       logical                  :: to_stdout
 
-      namelist /UNITS/ units_set, miu0, kelvin, cm, gram, sek, s_len_u, s_time_u, s_mass_u
-
       if (code_progress < PIERNIK_INIT_MPI) call die("[units:init_units] MPI not initialized.")
 
-      units_set='scaled'
-      s_len_u  = ' undefined'; s_time_u = s_len_u; s_mass_u = s_len_u
-
-      miu0   = fpi
-      kelvin = one
-      cm     = small
-      gram   = small
-      sek    = small
-
-      if (master) then
-
-         diff_nml(UNITS)
-
-         cbuff(1) = units_set
-         cbuff(2) = s_len_u
-         cbuff(3) = s_time_u
-         cbuff(4) = s_mass_u
-
-         rbuff(1) = miu0
-         rbuff(2) = kelvin
-         rbuff(3) = cm
-         rbuff(4) = gram
-         rbuff(5) = sek
-
-      endif
-
-      call piernik_MPI_Bcast(cbuff, cbuff_len)
-      call piernik_MPI_Bcast(rbuff)
-
-      if (slave) then
-
-         units_set = cbuff(1)
-         s_len_u   = cbuff(2)
-         s_time_u  = cbuff(3)
-         s_mass_u  = cbuff(4)
-
-         miu0   = rbuff(1)
-         kelvin = rbuff(2)
-         cm     = rbuff(3)
-         gram   = rbuff(4)
-         sek    = rbuff(5)
-
-      endif
+      call units_par_io
 
       to_stdout = .false.
 #ifdef VERBOSE
@@ -406,5 +361,63 @@ contains
       endif
 
    end subroutine init_units
+
+   subroutine units_par_io
+
+      use constants,  only: one, pi, fpi, small
+      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+      use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
+
+      implicit none
+
+      namelist /UNITS/ units_set, miu0, kelvin, cm, gram, sek, s_len_u, s_time_u, s_mass_u
+
+      units_set = 'scaled'
+      s_len_u   = ' undefined'
+      s_time_u  = s_len_u
+      s_mass_u  = s_len_u
+
+      miu0   = fpi
+      kelvin = one
+      cm     = small
+      gram   = small
+      sek    = small
+
+      if (master) then
+
+         diff_nml(UNITS)
+
+         cbuff(1) = units_set
+         cbuff(2) = s_len_u
+         cbuff(3) = s_time_u
+         cbuff(4) = s_mass_u
+
+         rbuff(1) = miu0
+         rbuff(2) = kelvin
+         rbuff(3) = cm
+         rbuff(4) = gram
+         rbuff(5) = sek
+
+      endif
+
+      call piernik_MPI_Bcast(cbuff, cbuff_len)
+      call piernik_MPI_Bcast(rbuff)
+
+      if (slave) then
+
+         units_set = cbuff(1)
+         s_len_u   = cbuff(2)
+         s_time_u  = cbuff(3)
+         s_mass_u  = cbuff(4)
+
+         miu0   = rbuff(1)
+         kelvin = rbuff(2)
+         cm     = rbuff(3)
+         gram   = rbuff(4)
+         sek    = rbuff(5)
+
+      endif
+
+   end subroutine units_par_io
 
 end module units
