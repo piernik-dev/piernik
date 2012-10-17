@@ -62,6 +62,9 @@ module initcosmicrays
    real, dimension(ncr_max)            :: K_cre_paral  !< array containing parallel diffusion coefficients of all CR electron components
    real, dimension(ncr_max)            :: K_cre_perp   !< array containing perpendicular diffusion coefficients of all CR electron components
    character(len=cbuff_len)            :: divv_scheme  !< scheme used to calculate div(v), see crhelpers for more details
+   logical, dimension(ncr_max)         :: crn_gpcr_ess !< if CRn species/energy-bin is essential for grad_pcr calculation
+   logical, dimension(ncr_max)         :: cre_gpcr_ess !< if CRe species/energy-bin is essential for grad_pcr calculation
+   integer(kind=4), allocatable, dimension(:) :: gpcr_essential !< crs indexes of essentials for grad_pcr calculation
 
    ! public component data
    integer(kind=4), allocatable, dimension(:) :: iarr_crn !< array of indexes pointing to all CR nuclear components
@@ -97,6 +100,8 @@ contains
 !! <tr><td>K_cre_paral </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::k_cre_paral</td></tr>
 !! <tr><td>K_cre_perp  </td><td>0     </td><td>real array</td><td>\copydoc initcosmicrays::k_cre_perp </td></tr>
 !! <tr><td>divv_scheme </td><td>''    </td><td>string    </td><td>\copydoc initcosmicrays::divv_scheme</td></tr>
+!! <tr><td>crn_gpcr_ess</td><td>(1): .true.; (>2):.false.</td><td>logical</td><td>\copydoc initcosmicrays::crn_gpcr_ess</td></tr>
+!! <tr><td>cre_gpcr_ess</td><td>.false.                  </td><td>logical</td><td>\copydoc initcosmicrays::cre_gpcr_ess</td></tr>
 !! </table>
 !! The list is active while \b "COSM_RAYS" is defined.
 !! \n \n
@@ -114,7 +119,7 @@ contains
 
       implicit none
 
-      integer(kind=4) :: nn
+      integer(kind=4) :: nn, icr, jcr
       integer         :: ne
 
       namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_split, &
@@ -138,6 +143,10 @@ contains
       gamma_cre(:)   = 4./3.
       K_cre_paral(:) = 0.0
       K_cre_perp(:)  = 0.0
+
+      crn_gpcr_ess(:) = .false.
+      crn_gpcr_ess(1) = .true.       ! in most cases protons are the first ingredient of CRs and they are essential
+      cre_gpcr_ess(:) = .false.
 
       divv_scheme = ''
 
@@ -177,12 +186,16 @@ contains
             rbuff(nn+1       :nn+  ncrn) = gamma_crn  (1:ncrn)
             rbuff(nn+1+  ncrn:nn+2*ncrn) = K_crn_paral(1:ncrn)
             rbuff(nn+1+2*ncrn:nn+3*ncrn) = K_crn_perp (1:ncrn)
+
+            lbuff(2:ncrn+1) = crn_gpcr_ess(1:ncrn)
          endif
 
          if (ncre > 0) then
             rbuff(ne+1       :ne+  ncre) = gamma_cre  (1:ncre)
             rbuff(ne+1+  ncre:ne+2*ncre) = K_cre_paral(1:ncre)
             rbuff(ne+1+2*ncre:ne+3*ncre) = K_cre_perp (1:ncre)
+
+            lbuff(ncrn+2:ncrn+ncre+1) = cre_gpcr_ess(1:ncre)
          endif
 
       endif
@@ -213,12 +226,16 @@ contains
             gamma_crn  (1:ncrn) = rbuff(nn+1       :nn+  ncrn)
             K_crn_paral(1:ncrn) = rbuff(nn+1+  ncrn:nn+2*ncrn)
             K_crn_perp (1:ncrn) = rbuff(nn+1+2*ncrn:nn+3*ncrn)
+
+            crn_gpcr_ess(1:ncrn) = lbuff(2:ncrn+1)
          endif
 
          if (ncre > 0) then
             gamma_cre  (1:ncre) = rbuff(ne+1       :ne+  ncre)
             K_cre_paral(1:ncre) = rbuff(ne+1+  ncre:ne+2*ncre)
             K_cre_perp (1:ncre) = rbuff(ne+1+2*ncre:ne+3*ncre)
+
+            cre_gpcr_ess(1:ncre) = lbuff(ncrn+2:ncrn+ncre+1)
          endif
 
       endif
@@ -253,8 +270,24 @@ contains
       call my_allocate(iarr_crs, ma1d)
 
 #ifdef COSM_RAYS_SOURCES
-      call init_crsources(ncrn)
+      call init_crsources(ncrn, crn_gpcr_ess)
 #endif /* COSM_RAYS_SOURCES */
+
+      ma1d = [count(crn_gpcr_ess) + count(cre_gpcr_ess)]
+      call my_allocate(gpcr_essential, ma1d)
+      jcr = 0
+      do icr = 1, ncrn
+         if (crn_gpcr_ess(icr)) then
+            jcr = jcr + 1
+            gpcr_essential(jcr) = icr
+         endif
+      enddo
+      do icr = 1, ncre
+         if (cre_gpcr_ess(icr)) then
+            jcr = jcr + 1
+            gpcr_essential(jcr) = icr + ncrn
+         endif
+      enddo
 
    end subroutine init_cosmicrays
 

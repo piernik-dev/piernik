@@ -60,16 +60,20 @@ module cr_data
       enumerator :: icr_Li7
       enumerator :: icr_LAST     !< should be used nowhere despite with nicr
    end enum
+   enum, bind(C)
+      enumerator :: PRES = 1     !< index for presence of the isotope
+      enumerator :: ESS          !< index for grad_pcr essenciality of the isotope
+   end enum
 
    integer, parameter                                      :: nicr = icr_LAST - 1
 
-   logical                                                 :: eH1                !< presence of H1 isotope
-   logical                                                 :: eLi7               !< presence of Li7 isotope
-   logical                                                 :: eBe9               !< presence of Be9 isotope
-   logical                                                 :: eBe10              !< presence of Be10 isotope
-   logical                                                 :: eC12               !< presence of C12 isotope
-   logical                                                 :: eN14               !< presence of N14 isotope
-   logical                                                 :: eO16               !< presence of O16 isotope
+   logical, dimension(PRES:ESS)                            :: eH1                !< presence and grad_pcr essenciality of H1 isotope
+   logical, dimension(PRES:ESS)                            :: eLi7               !< presence and grad_pcr essenciality of Li7 isotope
+   logical, dimension(PRES:ESS)                            :: eBe9               !< presence and grad_pcr essenciality of Be9 isotope
+   logical, dimension(PRES:ESS)                            :: eBe10              !< presence and grad_pcr essenciality of Be10 isotope
+   logical, dimension(PRES:ESS)                            :: eC12               !< presence and grad_pcr essenciality of C12 isotope
+   logical, dimension(PRES:ESS)                            :: eN14               !< presence and grad_pcr essenciality of N14 isotope
+   logical, dimension(PRES:ESS)                            :: eO16               !< presence and grad_pcr essenciality of O16 isotope
    logical,                                dimension(nicr) :: eCRSP              !< table of all isotopes presences
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
@@ -115,18 +119,18 @@ contains
 !! \n \n
 !! <table border="+1">
 !! <tr><td width="150pt"><b>parameter</b></td><td width="135pt"><b>default value</b></td><td width="200pt"><b>possible values</b></td><td width="315pt"> <b>description</b></td></tr>
-!! <tr><td>eH1  </td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::eh1  </td></tr>
-!! <tr><td>eLi7 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::eli7 </td></tr>
-!! <tr><td>eBe9 </td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::ebe9 </td></tr>
-!! <tr><td>eBe10</td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::ebe10</td></tr>
-!! <tr><td>eC12 </td><td>.true. </td><td>logical value</td><td>\copydoc cr_data::ec12 </td></tr>
-!! <tr><td>eN14 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::en14 </td></tr>
-!! <tr><td>eO16 </td><td>.false.</td><td>logical value</td><td>\copydoc cr_data::eo16 </td></tr>
+!! <tr><td>eH1  </td><td>.true.           </td><td>2 logical values</td><td>\copydoc cr_data::eh1  </td></tr>
+!! <tr><td>eLi7 </td><td>.false.          </td><td>2 logical values</td><td>\copydoc cr_data::eli7 </td></tr>
+!! <tr><td>eBe9 </td><td>[.true., .false.]</td><td>2 logical values</td><td>\copydoc cr_data::ebe9 </td></tr>
+!! <tr><td>eBe10</td><td>[.true., .false.]</td><td>2 logical values</td><td>\copydoc cr_data::ebe10</td></tr>
+!! <tr><td>eC12 </td><td>[.true., .false.]</td><td>2 logical values</td><td>\copydoc cr_data::ec12 </td></tr>
+!! <tr><td>eN14 </td><td>.false.          </td><td>2 logical values</td><td>\copydoc cr_data::en14 </td></tr>
+!! <tr><td>eO16 </td><td>.false.          </td><td>2 logical values</td><td>\copydoc cr_data::eo16 </td></tr>
 !! </table>
 !! The list is active while \b "COSM_RAYS_SOURCES" is defined.
 !! \n \n
 !<
-   subroutine init_crsources(ncrn)
+   subroutine init_crsources(ncrn, crness)
 
       use dataio_pub,      only: nh   ! QA_WARN required for diff_nml
       use dataio_pub,      only: msg, printinfo, die
@@ -134,32 +138,38 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in) :: ncrn
+      integer(kind=4),       intent(in)    :: ncrn
+      logical, dimension(:), intent(inout) :: crness
 
       integer                                    :: icr, i
       character(len=specieslen), dimension(nicr) :: eCRSP_names
+      logical,                   dimension(nicr) :: eCRSP_ess
 
       namelist /CR_SPECIES/ eH1, eLi7, eBe9, eBe10, eC12, eN14, eO16
 
+      ! Only protons (p+) are dynamically important, we can neglect grad_pcr from heavier nuclei
+      ! because of their lower abundancies: n(alpha) ~ 0.1 n(p+), other elements less abundant by orders of magnitude
       eH1   = .true.
       eLi7  = .false.
-      eBe9  = .true.
-      eBe10 = .true.
-      eC12  = .true.
+      eBe9  = [.true., .false.]
+      eBe10 = [.true., .false.]
+      eC12  = [.true., .false.]
       eN14  = .false.
       eO16  = .false.
+
+#define VS *2-1:2*
 
       if (master) then
 
          diff_nml(CR_SPECIES) ! Do not use one-line if here!
 
-         lbuff(icr_H1)   = eH1
-         lbuff(icr_C12)  = eC12
-         lbuff(icr_Be9)  = eBe9
-         lbuff(icr_Be10) = eBe10
-         lbuff(icr_N14)  = eN14
-         lbuff(icr_O16)  = eO16
-         lbuff(icr_Li7)  = eLi7
+         lbuff(icr_H1   VS icr_H1  )   = eH1
+         lbuff(icr_C12  VS icr_C12 )  = eC12
+         lbuff(icr_Be9  VS icr_Be9 )  = eBe9
+         lbuff(icr_Be10 VS icr_Be10) = eBe10
+         lbuff(icr_N14  VS icr_N14 )  = eN14
+         lbuff(icr_O16  VS icr_O16 )  = eO16
+         lbuff(icr_Li7  VS icr_Li7 )  = eLi7
 
       endif
 
@@ -167,18 +177,21 @@ contains
 
       if (slave) then
 
-         eH1   = lbuff(icr_H1)
-         eC12  = lbuff(icr_C12)
-         eBe9  = lbuff(icr_Be9)
-         eBe10 = lbuff(icr_Be10)
-         eN14  = lbuff(icr_N14)
-         eO16  = lbuff(icr_O16)
-         eLi7  = lbuff(icr_Li7)
+         eH1   = lbuff(icr_H1   VS icr_H1  )
+         eC12  = lbuff(icr_C12  VS icr_C12 )
+         eBe9  = lbuff(icr_Be9  VS icr_Be9 )
+         eBe10 = lbuff(icr_Be10 VS icr_Be10)
+         eN14  = lbuff(icr_N14  VS icr_N14 )
+         eO16  = lbuff(icr_O16  VS icr_O16 )
+         eLi7  = lbuff(icr_Li7  VS icr_Li7 )
 
       endif
 
-      eCRSP(1:7)       = [eH1, eC12, eBe9, eBe10, eN14, eO16, eLi7]
+#undef VS
+
       eCRSP_names(1:7) = ['H1  ','C12 ','Be9 ','Be10','N14 ','O16 ','Li7 ']
+      eCRSP      (1:7) = [eH1(PRES), eC12(PRES), eBe9(PRES), eBe10(PRES), eN14(PRES), eO16(PRES), eLi7(PRES)]
+      eCRSP_ess  (1:7) = [eH1(ESS) , eC12(ESS) , eBe9(ESS) , eBe10(ESS) , eN14(ESS) , eO16(ESS) , eLi7(ESS) ]
       allocate(cr_names(ncrn), cr_table(nicr), cr_sigma(ncrn,ncrn), cr_tau(ncrn), cr_primary(ncrn))
       cr_names(:)   = ''
       cr_table(:)   = 0
@@ -193,12 +206,19 @@ contains
             icr = icr + 1
             cr_table(i)   = icr
             cr_names(icr) = eCRSP_names(i)
+            crness(icr)   = eCRSP_ess(i)
             if (master) then
-               write(msg,'(a,a)') eCRSP_names(i), 'CR species is present'
+               write(msg,'(a,a,l2)') eCRSP_names(i), 'CR species is present; taken into account for grad_pcr: ', crness(icr)
                call printinfo(msg)
             endif
          endif
       enddo
+      if (master .and. icr < ncrn) then
+         do i = icr+1, ncrn
+            write(msg,'(a,i2,a,l2)') 'user nucleon-based CR species no: ', i,' is present; taken into account for grad_pcr: ', crness(icr)
+            call printinfo(msg)
+         enddo
+      endif
 
       if (eCRSP(icr_C12)) then
          cr_primary(cr_table(icr_C12)) = primary_C12
