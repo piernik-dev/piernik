@@ -231,7 +231,7 @@ contains
             else
                write(g_lun,'(a)')'set xrange [ * : * ]'
             endif
-            write(g_lun,'(a)') 'plot "jeans_ts1_000.tsl" u ($2/T):($11) w p t "calculated", "" u ($2/T):($11) smoo cspl t "" w l lt 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$11)) t "10 * difference" w lp, 0 t "" w l lt 0'
+            write(g_lun,'(a)') 'plot "jeans_ts1_000.tsl" u ($2/T):($10) w p t "calculated", "" u ($2/T):($10) smoo cspl t "" w l lt 1, y(x*T) t "analytical", "" u ($2/T):(10*(y($2)-$10)) t "10 * difference" w lp, 0 t "" w l lt 0'
          else
 
             write(g_lun,'(a,g13.5)') "a = ", amp**2 * omg**2 * 800000. !BEWARE: stronger dependence on omg, magic number 800000
@@ -239,7 +239,7 @@ contains
             write(g_lun,'(a,g13.5)') "T = 2*pi/b"
             write(g_lun,'(a,g13.5)') "y(x) = a * exp(b*x)"
             write(g_lun,'(3(a,/),a)') 'set key left Left reverse top', 'set log y', 'set xlabel "time"', 'set xrange [ * : * ]'
-            write(g_lun,'(a)') 'plot "jeans_ts1_000.tsl" u ($2):($11) w p t "calculated", y(x) t "exp(2 om T)"'
+            write(g_lun,'(a)') 'plot "jeans_ts1_000.tsl" u ($2):($10) w p t "calculated", y(x) t "exp(2 om T)"'
          endif
          close(g_lun)
       endif
