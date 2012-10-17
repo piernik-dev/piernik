@@ -108,7 +108,7 @@ contains
 !<
    subroutine init_cosmicrays
 
-      use constants,       only: cbuff_len
+      use constants,       only: cbuff_len, I_ONE
       use diagnostics,     only: ma1d, my_allocate
       use dataio_pub,      only: nh   ! QA_WARN required for diff_nml
       use dataio_pub,      only: die, warn
@@ -273,18 +273,18 @@ contains
       call init_crsources(ncrn, crn_gpcr_ess)
 #endif /* COSM_RAYS_SOURCES */
 
-      ma1d = [count(crn_gpcr_ess) + count(cre_gpcr_ess)]
+      ma1d = [ int(count(crn_gpcr_ess) + count(cre_gpcr_ess), kind=4) ]
       call my_allocate(gpcr_essential, ma1d)
       jcr = 0
       do icr = 1, ncrn
          if (crn_gpcr_ess(icr)) then
-            jcr = jcr + 1
+            jcr = jcr + I_ONE
             gpcr_essential(jcr) = icr
          endif
       enddo
       do icr = 1, ncre
          if (cre_gpcr_ess(icr)) then
-            jcr = jcr + 1
+            jcr = jcr + I_ONE
             gpcr_essential(jcr) = icr + ncrn
          endif
       enddo
