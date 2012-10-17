@@ -345,7 +345,6 @@ contains
          do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
             associate( &
                   field => cgl%cg%q(iv)%arr, &
-                  coord => cgl%cg%coord, &
                   part  => this%p(p), &
                   idl   => cgl%cg%idl &
             )
@@ -353,8 +352,8 @@ contains
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     cn = nint((part%pos(cdim) - coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
-                     if (coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
+                     cn = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
+                     if (cgl%cg%coord(CENTER, cdim)%r(cn) > part%pos(cdim)) then
                         ijkp(cdim, LO) = cn - 1
                      else
                         ijkp(cdim, LO) = cn
@@ -371,7 +370,7 @@ contains
                         cur_ind(:) = [i, j, k]
                         do cdim = xdim, zdim
                            if (dom%has_dir(cdim)) &
-                              weight = weight*( 1.0 - abs(part%pos(cdim) - coord(CENTER, cdim)%r(cur_ind(cdim)))*idl(cdim) )
+                              weight = weight*( 1.0 - abs(part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(cur_ind(cdim)))*idl(cdim) )
                         enddo
                         field(i,j,k) = field(i,j,k) +  weight
                       enddo
@@ -411,7 +410,6 @@ contains
          do p = lbound(this%p, dim=1), ubound(this%p, dim=1)
             associate( &
                   field => cgl%cg%q(iv)%arr, &
-                  coord => cgl%cg%coord, &
                   part  => this%p(p), &
                   idl   => cgl%cg%idl &
             )
@@ -419,7 +417,7 @@ contains
 
                do cdim = xdim, zdim
                   if (dom%has_dir(cdim)) then
-                     ijkp(cdim, I0) = nint((part%pos(cdim) - coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
+                     ijkp(cdim, I0) = nint((part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(1))*cgl%cg%idl(cdim)) + 1
                      ijkp(cdim, IM) = ijkp(cdim, I0) - 1
                      ijkp(cdim, IP) = ijkp(cdim, I0) + 1
                   else
@@ -436,7 +434,7 @@ contains
 
                         do cdim = xdim, zdim
                            if (.not.dom%has_dir(cdim)) cycle
-                           delta_x = ( part%pos(cdim) - coord(CENTER, cdim)%r(cur_ind(cdim)) ) * idl(cdim)
+                           delta_x = ( part%pos(cdim) - cgl%cg%coord(CENTER, cdim)%r(cur_ind(cdim)) ) * idl(cdim)
                            if (cur_ind(cdim) /= ijkp(cdim, 0)) then
                               weight_tmp = 1.125 - 1.5 * abs(delta_x) + 0.5 * delta_x**2
                            else
