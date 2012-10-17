@@ -170,7 +170,7 @@ contains
 !<
    subroutine init_units
 
-      use constants,  only: one, pi, fpi, small, PIERNIK_INIT_MPI
+      use constants,  only: pi, fpi, small, PIERNIK_INIT_MPI
       use dataio_pub, only: warn, printinfo, msg, die, code_progress
       use mpisetup,   only: master
 
@@ -364,7 +364,7 @@ contains
 
    subroutine units_par_io
 
-      use constants,  only: one, pi, fpi, small
+      use constants,  only: one, fpi, small
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, rbuff, master, slave, piernik_MPI_Bcast
 
