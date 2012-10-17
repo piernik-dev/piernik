@@ -738,6 +738,9 @@ contains
       use cg_list,          only: cg_list_element
       use constants,        only: cwdlen, xdim, ydim, zdim, DST
       use dataio_pub,       only: wd_wr, tsl_file, tsl_lun
+#if defined(__INTEL_COMPILER)
+      use dataio_pub,       only: io_blocksize, io_buffered, io_buffno
+#endif /* __INTEL_COMPILER */
       use dataio_user,      only: user_tsl
       use diagnostics,      only: pop_vector
       use domain,           only: dom
@@ -841,7 +844,12 @@ contains
             if (associated(user_tsl)) call user_tsl(tsl_vars, tsl_names)
             write(head_fmt,'(A,I2,A)') "(a1,a8,",size(tsl_names)-1,"a16)"
 
+#if defined(__INTEL_COMPILER)
+            open(newunit=tsl_lun, file=tsl_file, &
+              &  blocksize=io_blocksize, buffered=io_buffered, buffercount=io_buffno)
+#else /* !__INTEL_COMPILER */
             open(newunit=tsl_lun, file=tsl_file)
+#endif /* !__INTEL_COMPILER */
             write(tsl_lun,fmt=head_fmt) "#",tsl_names
             write(tsl_lun, '(a1)') '#'
             deallocate(tsl_names)
