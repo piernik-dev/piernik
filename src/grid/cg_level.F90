@@ -38,7 +38,7 @@ module cg_level
    !! features and/or bug fixes, it's needed for 12.1, fixed in 13.0 but the
    !! latter is broken and we cannot use it yet
    use cg_list,       only: cg_list_T   ! QA_WARN intel
-#endif /* __INTEL_COMPILER)
+#endif /* __INTEL_COMPILER */
    use cg_list_bnd,   only: cg_list_bnd_T
    use constants,     only: ndims, LO, HI
    use decomposition, only: box_T
