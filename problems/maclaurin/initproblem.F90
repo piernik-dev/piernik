@@ -76,6 +76,7 @@ contains
 
    subroutine read_problem_par
 
+      use cg_list_global, only: all_cg
       use constants,      only: pi, GEO_XYZ, GEO_RPZ, xdim, ydim, LO, HI
       use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, warn, msg, printinfo
@@ -154,8 +155,6 @@ contains
 
       if (a1 == 0.) call pset%add(d0, [ x0, y0, z0 ], [0.0, 0.0, 0.0])
 
-      call compute_maclaurin_potential
-
       if (master) then
          if (a1 > 0.) then
             write(msg, '(3(a,g12.5),a)')"[initproblem:init_prob] Set up spheroid with a1 and a3 axes = ", a1, ", ", a3, " (eccentricity = ", e, ")"
@@ -174,6 +173,8 @@ contains
          endif
          call printinfo(msg, .true.)
       endif
+
+      call all_cg%reg_var(apot_n)
 
    end subroutine read_problem_par
 
@@ -195,6 +196,8 @@ contains
       real                           :: xx, yy, zz, rr, dm
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+
+      call compute_maclaurin_potential
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -295,7 +298,6 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use cg_list_global,   only: all_cg
       use constants,        only: pi, GEO_XYZ, GEO_RPZ
       use dataio_pub,       only: warn, die
       use domain,           only: dom
@@ -330,7 +332,6 @@ contains
       a12 = a1**2
       a32 = a3**2
 
-      call all_cg%reg_var(apot_n)
       apot_i = qna%ind(apot_n)
 
       cgl => leaves%first

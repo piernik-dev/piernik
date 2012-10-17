@@ -276,6 +276,7 @@ contains
       enddo
       filled(:) = 0
 
+      ! write the new grid pieces description to the pse array
       if (allocated(this%patches)) then
          do p = lbound(this%patches(:), dim=1), ubound(this%patches(:), dim=1)
             do s = lbound(this%patches(p)%pse, dim=1), ubound(this%patches(p)%pse, dim=1)

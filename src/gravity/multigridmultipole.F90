@@ -28,7 +28,6 @@
 
 #include "piernik.h"
 
-!!$ ============================================================================
 !>
 !! \brief Multipole solver for isolated boundaries
 !!
@@ -40,13 +39,13 @@
 module multipole
 ! pulled by MULTIGRID && GRAV
    ! needed for global vars in this module
-   use constants,   only: ndims
+   use constants,   only: ndims, xdim
 #if defined(__INTEL_COMPILER)
       !! \deprecated remove this clause as soon as Intel Compiler gets required
       !! features and/or bug fixes
    use cg_list_bnd,   only: cg_list_bnd_T   ! QA_WARN intel
 #endif /* __INTEL_COMPILER */
-   use cg_level_connected, only: cg_level_connected_T
+!   use cg_level_connected, only: cg_level_connected_T
 
    implicit none
 
@@ -73,9 +72,11 @@ module multipole
    integer                   :: irmin                            !< minimum Q(:, :, r) index in use
    integer                   :: irmax                            !< maximum Q(:, :, r) index in use
 
-   type(cg_level_connected_T), pointer :: lmpole                        !< pointer to the level where multipoles are evaluated
-   real, dimension(0:ndims)  :: CoM                              !< Total mass and center of mass coordinates
-   logical                   :: zaxis_inside                     !< true when z-axis belongs to the inner radial boundary in polar coordinates
+!> \todo OPT derive a special set of leaves and coarsened leaves that can be safely used here
+!   type(cg_level_connected_T), pointer :: lmpole                 !< pointer to the level where multipoles are evaluated
+   integer, parameter                  :: imass = xdim-1         !< index for mass in CoM(:)
+   real, dimension(imass:ndims)        :: CoM                    !< Total mass and center of mass coordinates
+   logical                             :: zaxis_inside           !< true when z-axis belongs to the inner radial boundary in polar coordinates
 
    ! multipoles and auxiliary factors
    real, dimension(:,:,:), allocatable :: Q                      !< The whole moment array with dependence on radius
@@ -88,7 +89,6 @@ module multipole
 
 contains
 
-!!$ ============================================================================
 !>
 !! \brief This function returns array index for "compressed" Q(:, inout, r) array replacing "plain" Q(l, m, inout, r) array
 !! \details Originally there were separate indices for l and m multipole numbers in Q and ofact arrays. Since there are no Y_{l,m} harmonics for l<|m|, approximately half of the Q array
@@ -111,131 +111,38 @@ contains
 
    end function lm
 
-!!$ ============================================================================
-!>
-!! \brief Initialization routine, called from init_multigrid
-!<
+!> \brief Initialization routine, called once, from init_multigrid
 
    subroutine init_multipole
 
-      use cg_level_connected, only: base_lev, finest
-      use constants,          only: small, pi, xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
-      use dataio_pub,         only: die, warn
-      use domain,             only: dom
-      use mpi,                only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
-      use mpisetup,           only: master, comm, mpi_err
-      use particle_pub,       only: pset
+      use constants,  only: ndims
+      use dataio_pub, only: die, warn
+      use domain,     only: dom
+      use mpisetup,   only: master
 
       implicit none
 
-      integer :: l, m, i
-
-      ! assume that Center of Mass is approximately in the center of computational domain by default
-      CoM(0) = 1.
-
-      select case (dom%geometry_type)
-         case (GEO_XYZ)
-            CoM(xdim:zdim) = dom%C_(xdim:zdim)
-            zaxis_inside = .false.
-         case (GEO_RPZ)
-            if (dom%L_(ydim) >= (2.-small)*pi) then
-               CoM(xdim) = 0.
-               CoM(ydim) = 0.
-            else
-!!$               CoM(xdim) = 2./3. * (dom%edge(xdim, HI)**3-dom%edge(xdim, LO)**3)/(dom%edge(xdim, HI)**2-dom%edge(xdim, LO)**2)
-!!$               if (dom%L_(ydim) /= 0.) CoM(xdim) = CoM(xdim) * sin(dom%L_(ydim)/2.)/(dom%L_(ydim)/2.)
-!!$               CoM(ydim) = dom%C_(ydim)
-               CoM(xdim) = 0.
-               CoM(ydim) = 0.
-            endif
-            CoM(zdim) = dom%C_(zdim)
-            zaxis_inside = dom%edge(xdim, LO) <= base_lev%first%cg%dx !! \warning this check should be done on highest refinement level
-            if (master) then
-               if (zaxis_inside) call warn("[multigridmultipole:init_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
-               if (use_point_monopole) call warn("[multigridmultipole:init_multipole] Point-like monopole is not implemented.")
-            endif
-            use_point_monopole = .false.
-         case default
-            call die("[multigridmultipole:init_multipole] Unsupported geometry.")
-      end select
+      integer :: l, m
 
       if (dom%eff_dim /= ndims) call die("[multigridmultipole:init_multipole] Only 3D is supported") !> \todo add support for 2D RZ
 
-      !multipole moments
+      !fixup multipole moments
       if (mmax > lmax) then
          if (master) call warn("[multigridmultipole:init_multipole] mmax reduced to lmax")
          mmax = lmax
       endif
       if (mmax < 0) mmax = lmax
 
-      lmpole => finest
-      do l = 1, coarsen_multipole
-         if (associated(lmpole%coarser)) then
-            lmpole => lmpole%coarser
-         else
-            if (master) call warn("[multigridmultipole:init_multipole] too deep multipole coarsening.")
-         endif
-      enddo
-
-      if (coarsen_multipole > 0) then
-         if (interp_pt2mom) then
-            call warn("[multigridmultipole:init_multipole] coarsen_multipole > 0 disables interp_pt2mom.")
-            interp_pt2mom = .false.
-         endif
-         if (interp_mom2pot) then
-            call warn("[multigridmultipole:init_multipole] coarsen_multipole > 0 disables interp_mom2pot.")
-            interp_mom2pot = .false.
-         endif
-      endif
-
       if (.not. use_point_monopole) then
 
-         if (allocated(rn) .or. allocated(irn) .or. allocated(sfac) .or. allocated(cfac)) call die("[multigridmultipole:init_multipole] rn, irn, sfac or cfac already allocated")
-         allocate(rn(0:lmax), irn(0:lmax), sfac(0:mmax), cfac(0:mmax))
+         if (allocated(k12) .or. allocated(ofact)) call die("[multigridmultipole:init_multipole] k12 or ofact already allocated")
+         allocate(k12(2, 1:lmax, 0:mmax), ofact(0:lm(int(lmax), int(2*mmax))))
 
-         if (associated(lmpole%first)) then
-            !> \warning With refinement lmpole might no longer be a single level
-            select case (dom%geometry_type)
-               !> \warning With refinement lmpole might no longer be a single level
-               case (GEO_XYZ)
-                  drq = minval(lmpole%first%cg%dl(:), mask=dom%has_dir(:)) / 2.
-               case (GEO_RPZ)
-                  drq = min(lmpole%first%cg%dx, dom%C_(xdim)*lmpole%first%cg%dy, lmpole%first%cg%dz) / 2.
-               case default
-                  call die("[multigridmultipole:init_multipole] Unsupported geometry.")
-            end select
-         else
-            drq = maxval(dom%L_(:))
-         endif
-         call MPI_Allreduce(MPI_IN_PLACE, drq, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
+         if (allocated(sfac) .or. allocated(cfac)) call die("[multigridmultipole:init_multipole] sfac or cfac already allocated")
+         allocate(sfac(0:mmax), cfac(0:mmax))
 
-         select case (dom%geometry_type)
-            case (GEO_XYZ)
-               rqbin = int(sqrt(sum(dom%L_(:)**2))/drq) + 1
-               ! arithmetic average of the closest and farthest points of computational domain with respect to its center
-               !>
-               !!\todo check what happens if there are points that are really close to the domain center (maybe we should use a harmonic average?)
-               !! Issue a warning or error if it is known that given lmax leads to FP overflows in rn(:) and irn(:)
-               !<
-               rscale = ( minval(dom%L_(:)) + sqrt(sum(dom%L_(:)**2)) )/4.
-            case (GEO_RPZ)
-               rqbin = int(sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2)/drq) + 1
-               rscale = ( min(2.*dom%edge(xdim, HI), dom%L_(zdim)) + sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2) )/4.
-            case default
-               call die("[multigridmultipole:init_multipole] Unsupported geometry.")
-         end select
-
-         do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
-            !> \warning Not updated when particles are moving
-            !> \warning This does not work because particles are registered later
-            !> \todo split this routine and update some things on each entry (also required for AMR)
-            !> \warning this is not optimal, when domain is placed far away form the origin
-            !> \warning a factor of up to 2 may be required if we use CoM as the origin
-            if (pset%p(i)%outside) rqbin = max(rqbin, int(sqrt(sum(pset%p(i)%pos**2))/drq) + 1)
-         enddo
-
-         if (allocated(k12) .or. allocated(ofact) .or. allocated(Q)) call die("[multigridmultipole:init_multipole] k12, ofact or Q already allocated")
-         allocate(k12(2, 1:lmax, 0:mmax), ofact(0:lm(int(lmax), int(2*mmax))), Q(0:lm(int(lmax), int(2*mmax)), INSIDE:OUTSIDE, 0:rqbin))
+         if (allocated(rn) .or. allocated(irn)) call die("[multigridmultipole:init_multipole] rn or irn already allocated")
+         allocate(rn(0:lmax), irn(0:lmax))
 
          ofact(:) = 0. ! prevent spurious FP exceptions in multipole:img_mass2moments
          do l = 1, lmax
@@ -261,10 +168,128 @@ contains
 
    end subroutine init_multipole
 
-!!$ ============================================================================
 !>
-!! \brief Multipole cleanup
+!! \brief Initialization routine, called once per entry to the multipole solver.
+!!
+!! \details This routine reinitializes everything that may need reinitialization due to AMR activity
+!!
+!! \todo OPT: Detect only changes in highest required level
 !<
+
+   subroutine refresh_multipole
+
+      use cg_level_connected, only: finest
+      use constants,          only: small, pi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
+      use dataio_pub,         only: die, warn
+      use domain,             only: dom
+      use mpi,                only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
+      use mpisetup,           only: master, comm, mpi_err
+      use particle_pub,       only: pset
+
+      implicit none
+
+      integer :: i !, l
+
+      ! Multipole coarsening may significantly improve performance at a cost of accuracy
+      ! It requires a lot of new code to work fully on irregularly refined grids made by AMR
+!!$      lmpole => finest
+!!$      !> \todo find finest grid at the external outer boundary (i.e. non-reflecting, not periodic, ...), which might be significantly coarser than the globally finest grid.
+!!$      do l = 1, coarsen_multipole
+!!$         call die("[multigridmultipole:refresh_multipole] multipole coarsening is temporrarily disabled")
+!!$         if (associated(lmpole%coarser)) then
+!!$            lmpole => lmpole%coarser
+!!$         else
+!!$            if (master) call warn("[multigridmultipole:refresh_multipole] too deep multipole coarsening.")
+!!$         endif
+!!$      enddo
+
+      if (coarsen_multipole > 0) then
+         if (interp_pt2mom) then
+            call warn("[multigridmultipole:refresh_multipole] coarsen_multipole > 0 disables interp_pt2mom.")
+            interp_pt2mom = .false.
+         endif
+         if (interp_mom2pot) then
+            call warn("[multigridmultipole:refresh_multipole] coarsen_multipole > 0 disables interp_mom2pot.")
+            interp_mom2pot = .false.
+         endif
+      endif
+
+      ! assume that Center of Mass is approximately in the center of computational domain by default
+      CoM(imass) = 1.
+
+      select case (dom%geometry_type)
+         case (GEO_XYZ)
+            CoM(xdim:zdim) = dom%C_(xdim:zdim)
+            zaxis_inside = .false.
+         case (GEO_RPZ)
+            if (dom%L_(ydim) >= (2.-small)*pi) then
+               CoM(xdim) = 0.
+               CoM(ydim) = 0.
+            else
+!!$               CoM(xdim) = 2./3. * (dom%edge(xdim, HI)**3-dom%edge(xdim, LO)**3)/(dom%edge(xdim, HI)**2-dom%edge(xdim, LO)**2)
+!!$               if (dom%L_(ydim) /= 0.) CoM(xdim) = CoM(xdim) * sin(dom%L_(ydim)/2.)/(dom%L_(ydim)/2.)
+!!$               CoM(ydim) = dom%C_(ydim)
+               CoM(xdim) = 0.
+               CoM(ydim) = 0.
+            endif
+            CoM(zdim) = dom%C_(zdim)
+            zaxis_inside = dom%edge(xdim, LO) <= dom%L_(xdim)/finest%n_d(xdim) ! lmpole
+            if (master) then
+               if (zaxis_inside) call warn("[multigridmultipole:refresh_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
+               if (use_point_monopole) call warn("[multigridmultipole:refresh_multipole] Point-like monopole is not implemented.")
+            endif
+            use_point_monopole = .false.
+         case default
+            call die("[multigridmultipole:refresh_multipole] Unsupported geometry.")
+      end select
+
+      if (.not. use_point_monopole) then
+
+         if (associated(finest%first)) then
+            select case (dom%geometry_type)
+               !> \warning With refinement lmpole might no longer be a single level
+               case (GEO_XYZ)
+                  drq = minval(finest%first%cg%dl(:), mask=dom%has_dir(:)) / 2.
+               case (GEO_RPZ)
+                  drq = min(finest%first%cg%dx, dom%C_(xdim)*finest%first%cg%dy, finest%first%cg%dz) / 2.
+               case default
+                  call die("[multigridmultipole:refresh_multipole] Unsupported geometry.")
+            end select
+         else
+            drq = maxval(dom%L_(:))
+         endif
+         call MPI_Allreduce(MPI_IN_PLACE, drq, I_ONE, MPI_DOUBLE_PRECISION, MPI_MIN, comm, mpi_err)
+
+         select case (dom%geometry_type)
+            case (GEO_XYZ)
+               rqbin = int(sqrt(sum(dom%L_(:)**2))/drq) + 1
+               ! arithmetic average of the closest and farthest points of computational domain with respect to its center
+               !>
+               !!\todo check what happens if there are points that are really close to the domain center (maybe we should use a harmonic average?)
+               !! Issue a warning or error if it is known that given lmax leads to FP overflows in rn(:) and irn(:)
+               !<
+               rscale = ( minval(dom%L_(:)) + sqrt(sum(dom%L_(:)**2)) )/4.
+            case (GEO_RPZ)
+               rqbin = int(sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2)/drq) + 1
+               rscale = ( min(2.*dom%edge(xdim, HI), dom%L_(zdim)) + sqrt((2.*dom%edge(xdim, HI))**2 + dom%L_(zdim)**2) )/4.
+            case default
+               call die("[multigridmultipole:refresh_multipole] Unsupported geometry.")
+         end select
+
+         do i = lbound(pset%p, dim=1), ubound(pset%p, dim=1)
+            !> \warning this is not optimal, when domain is placed far away form the origin
+            !> \warning a factor of up to 2 may be required if we use CoM as the origin
+            if (pset%p(i)%outside) rqbin = max(rqbin, int(sqrt(sum(pset%p(i)%pos**2))/drq) + 1)
+         enddo
+
+         if (allocated(Q)) deallocate(Q)
+         allocate(Q(0:lm(int(lmax), int(2*mmax)), INSIDE:OUTSIDE, 0:rqbin))
+
+      endif
+
+   end subroutine refresh_multipole
+
+!> \brief Multipole cleanup
 
    subroutine cleanup_multipole
 
@@ -280,7 +305,6 @@ contains
 
    end subroutine cleanup_multipole
 
-!!$ ============================================================================
 !>
 !! \brief Multipole solver
 !!
@@ -291,28 +315,34 @@ contains
 
    subroutine multipole_solver
 
-      use cg_level_connected, only: cg_level_connected_T, finest
-      use constants,     only: dirtyH
-      use global,        only: dirty_debug
-      use multigridvars, only: solution
+      use cg_leaves,          only: leaves
+!!$      use cg_level_connected, only: finest !, cg_level_connected_T
+      use constants,          only: dirtyH
+!!$      use dataio_pub,         only: die
+      use global,             only: dirty_debug
+!!$      use multigridvars,      only: solution
 
       implicit none
 
-      type(cg_level_connected_T), pointer :: curl
+!!$      type(cg_level_connected_T), pointer :: curl
+
+      call refresh_multipole
+
+!      if (.not. associated(lmpole, finest)) call die("[multigridmultipole:multipole_solver] lmpole /= finest requires a lot of work")
 
       if (dirty_debug) then
-         call lmpole%reset_boundaries(dirtyH)
+         call leaves%reset_boundaries(dirtyH)
       else
-         call lmpole%reset_boundaries
+         call leaves%reset_boundaries
       endif
 
-      if (.not. associated(lmpole, finest)) then
-         curl => finest
-         do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = finest%level_id, lmpole%first%cg%level_id + 1, -1
-            call curl%restrict_q_1var(solution)  ! Overkill, only some layers next to external boundary are needed.
-            curl => curl%coarser
-         enddo                                ! An alternative: do potential2img_mass on the finest and restrict bnd_[xyz] data.
-      endif
+!!$      if (.not. associated(lmpole, finest)) then
+!!$         curl => finest
+!!$         do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = finest%level_id, lmpole%first%cg%level_id + 1, -1
+!!$            call curl%restrict_q_1var(solution)  ! Overkill, only some layers next to external boundary are needed.
+!!$            curl => curl%coarser
+!!$         enddo                                ! An alternative: do potential2img_mass on the finest and restrict bnd_[xyz] data.
+!!$      endif
       call potential2img_mass
 
       if (use_point_monopole) then
@@ -326,17 +356,16 @@ contains
       endif
 
       !> \todo The approach with lmpole should be reworked completely. With AMR use only current level and reinitialize some things if refinements have changed
-      if (.not. associated(lmpole, finest)) then
-         curl => lmpole
-         do while (associated(curl) .and. .not. associated(curl, finest)) ! do lev = lmpole%first%cg%level_id, finest%level_id - 1
-            call prolong_ext_bnd(curl)
-            curl => curl%finer
-         enddo
-      endif
+!!$      if (.not. associated(lmpole, finest)) then
+!!$         curl => lmpole
+!!$         do while (associated(curl) .and. .not. associated(curl, finest)) ! do lev = lmpole%first%cg%level_id, finest%level_id - 1
+!!$            call prolong_ext_bnd(curl)
+!!$            curl => curl%finer
+!!$         enddo
+!!$      endif
 
    end subroutine multipole_solver
 
-!!$ ============================================================================
 !>
 !! \brief Set boundary potential from monopole source. Fill lmpole%first%cg%mg%bnd_[xyz] arrays with expected values of the gravitational potential at external face of computational domain.
 !! \details This is a simplified approach that can be used for tests and as a fast replacement for the
@@ -347,6 +376,7 @@ contains
    subroutine isolated_monopole
 
       use cg_list,    only: cg_list_element
+      use cg_leaves,  only: leaves
       use constants,  only: xdim, ydim, zdim, LO, HI, GEO_XYZ !, GEO_RPZ
       use dataio_pub, only: die
       use domain,     only: dom
@@ -362,7 +392,7 @@ contains
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:isolated_monopole] non-cartesian geometry not implemented yet")
 
-      cgl => lmpole%first
+      cgl => leaves%first ! lmpole
       do while (associated(cgl))
          cg => cgl%cg
          do lh = LO, HI
@@ -370,7 +400,7 @@ contains
                do j = cg%js, cg%je
                   do k = cg%ks, cg%ke
                      r2 = (cg%y(j)-CoM(ydim))**2 + (cg%z(k) - CoM(zdim))**2
-                     cg%mg%bnd_x(j, k, lh) = - newtong * CoM(0) / sqrt(r2 + (cg%fbnd(xdim, lh)-CoM(xdim))**2)
+                     cg%mg%bnd_x(j, k, lh) = - newtong * CoM(imass) / sqrt(r2 + (cg%fbnd(xdim, lh)-CoM(xdim))**2)
                   enddo
                enddo
             endif
@@ -378,7 +408,7 @@ contains
                do i = cg%is, cg%ie
                   do k = cg%ks, cg%ke
                      r2 = (cg%x(i)-CoM(xdim))**2 + (cg%z(k) - CoM(zdim))**2
-                     cg%mg%bnd_y(i, k, lh) = - newtong * CoM(0) / sqrt(r2 + (cg%fbnd(ydim, lh)-CoM(ydim))**2)
+                     cg%mg%bnd_y(i, k, lh) = - newtong * CoM(imass) / sqrt(r2 + (cg%fbnd(ydim, lh)-CoM(ydim))**2)
                   enddo
                enddo
             endif
@@ -386,7 +416,7 @@ contains
                do i = cg%is, cg%ie
                   do j = cg%js, cg%je
                      r2 = (cg%x(i)-CoM(xdim))**2 + (cg%y(j) - CoM(ydim))**2
-                     cg%mg%bnd_z(i, j, lh) = - newtong * CoM(0) / sqrt(r2 + (cg%fbnd(zdim, lh)-CoM(zdim))**2)
+                     cg%mg%bnd_z(i, j, lh) = - newtong * CoM(imass) / sqrt(r2 + (cg%fbnd(zdim, lh)-CoM(zdim))**2)
                   enddo
                enddo
             endif
@@ -396,14 +426,15 @@ contains
 
    end subroutine isolated_monopole
 
-!!$ ============================================================================
 !>
 !! \brief Find total mass and its center
+!!
 !! \details This routine does the summation only on external boundaries
 !<
 
    subroutine find_img_CoM
 
+      use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use constants,    only: ndims, xdim, ydim, zdim, LO, HI, GEO_XYZ, I_ONE !, GEO_RPZ
       use dataio_pub,   only: die
@@ -412,42 +443,53 @@ contains
       use mpi,          only: MPI_DOUBLE_PRECISION, MPI_SUM
       use mpisetup,     only: comm, mpi_err
       use particle_pub, only: pset
+#ifdef DEBUG
+      use dataio_pub,   only: msg, printinfo
+      use mpisetup,     only: master
+      use units,        only: fpiG
+#endif
 
       implicit none
 
-      real, dimension(0:ndims) :: lsum, dsum
+      real, dimension(imass:ndims) :: lsum, dsum
       type(cg_list_element), pointer :: cgl
       type(grid_container), pointer :: cg
-      integer :: lh, i
+      integer :: lh, i, d
 
       if (dom%geometry_type /= GEO_XYZ) call die("[multigridmultipole:find_img_CoM] non-cartesian geometry not implemented yet")
 
       lsum(:) = 0.
 
-      cgl => lmpole%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          do lh = LO, HI
             if (cg%ext_bnd(xdim, lh)) then
-               dsum(0)    =      sum( cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, lh) )
-               dsum(xdim) = dsum(0) * cg%fbnd(xdim, lh)
-               dsum(ydim) = sum( sum( cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, lh),  dim=2) * cg%y(cg%js:cg%je) )
-               dsum(zdim) = sum( sum( cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, lh),  dim=1) * cg%z(cg%ks:cg%ke) )
-               lsum(:)    = lsum(:) + dsum(:) * cg%dyz
+               d = 1
+               if (lh == HI) d = cg%n_b(xdim)
+               dsum(imass)     =        sum( cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, lh), mask=cg%leafmap(d, :, :) )
+               dsum(xdim:zdim) = [ dsum(imass) * cg%fbnd(xdim, lh), &
+                    &              sum( sum( cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, lh), mask=cg%leafmap(d, :, :), dim=2) * cg%y(cg%js:cg%je) ), &
+                    &              sum( sum( cg%mg%bnd_x(cg%js:cg%je, cg%ks:cg%ke, lh), mask=cg%leafmap(d, :, :), dim=1) * cg%z(cg%ks:cg%ke) ) ]
+               lsum(:)         = lsum(:) + dsum(:) * cg%dyz
             endif
             if (cg%ext_bnd(ydim, lh)) then
-               dsum(0)    =      sum( cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, lh) )
-               dsum(xdim) = sum( sum( cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, lh),  dim=2) * cg%x(cg%is:cg%ie) )
-               dsum(ydim) = dsum(0) * cg%fbnd(ydim, lh)
-               dsum(zdim) = sum( sum( cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, lh),  dim=1) * cg%z(cg%ks:cg%ke) )
-               lsum(:)    = lsum(:) + dsum(:) * cg%dxz
+               d = 1
+               if (lh == HI) d = cg%n_b(ydim)
+               dsum(imass)     =        sum( cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, lh), mask=cg%leafmap(:, d, :) )
+               dsum(xdim:zdim) = [ sum( sum( cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, lh), mask=cg%leafmap(:, d, :), dim=2) * cg%x(cg%is:cg%ie) ), &
+                    &              dsum(imass) * cg%fbnd(ydim, lh), &
+                    &              sum( sum( cg%mg%bnd_y(cg%is:cg%ie, cg%ks:cg%ke, lh), mask=cg%leafmap(:, d, :), dim=1) * cg%z(cg%ks:cg%ke) ) ]
+               lsum(:)         = lsum(:) + dsum(:) * cg%dxz
             endif
             if (cg%ext_bnd(zdim, lh)) then
-               dsum(0)    =      sum( cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, lh) )
-               dsum(xdim) = sum( sum( cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, lh),  dim=2) * cg%x(cg%is:cg%ie) )
-               dsum(ydim) = sum( sum( cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, lh),  dim=1) * cg%z(cg%ks:cg%ke) )
-               dsum(zdim) = dsum(0) * cg%fbnd(zdim, lh)
-               lsum(:)    = lsum(:) + dsum(:) * cg%dxy
+               d = 1
+               if (lh == HI) d = cg%n_b(zdim)
+               dsum(imass)     =        sum( cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, lh), mask=cg%leafmap(:, :, d) )
+               dsum(xdim:zdim) = [ sum( sum( cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, lh), mask=cg%leafmap(:, :, d), dim=2) * cg%x(cg%is:cg%ie) ), &
+                    &              sum( sum( cg%mg%bnd_z(cg%is:cg%ie, cg%js:cg%je, lh), mask=cg%leafmap(:, :, d), dim=1) * cg%y(cg%js:cg%je) ), &
+                    &              dsum(imass) * cg%fbnd(zdim, lh) ]
+               lsum(:)         = lsum(:) + dsum(:) * cg%dxy
             endif
          enddo
          cgl => cgl%nxt
@@ -459,24 +501,31 @@ contains
          if (pset%p(i)%outside) lsum(:) = lsum(:) + [ pset%p(i)%mass, pset%p(i)%mass * pset%p(i)%pos(:) ]
       enddo
 
-      call MPI_Allreduce(lsum(0:ndims), CoM(0:ndims), ndims+I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
+      call MPI_Allreduce(lsum(imass:ndims), CoM(imass:ndims), ndims+I_ONE, MPI_DOUBLE_PRECISION, MPI_SUM, comm, mpi_err)
 
-      if (CoM(0) /= 0.) then
-         CoM(xdim:zdim) = CoM(xdim:zdim) / CoM(0)
+      if (CoM(imass) /= 0.) then
+         CoM(xdim:zdim) = CoM(xdim:zdim) / CoM(imass)
       else
          call die("[multigridmultipole:find_img_CoM] Total mass == 0")
       endif
+#ifdef DEBUG
+      if (master) then
+         write(msg, '(a,g14.6,a,3g14.6,a)')"[multigridmultipole:find_img_CoM] Total mass = ", CoM(imass)/fpiG," at (",CoM(xdim:zdim),")"
+         call printinfo(msg)
+      endif
+#endif
 
    end subroutine find_img_CoM
 
-!!$ ============================================================================
 !>
 !! \brief Convert potential into image mass. This way we reduce a 3D problem to a 2D one.
+!!
 !! \details There will be work imbalance here because different PEs may operate on different amount of external boundary data
 !<
 
    subroutine potential2img_mass
 
+      use cg_leaves,     only: leaves
       use cg_list,       only: cg_list_element
       use constants,     only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use domain,        only: dom
@@ -493,7 +542,7 @@ contains
       ! a1 = -1., a2 = -1./3. seems to do the best job,
       !> \todo: find out how and why
 
-      cgl => lmpole%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          associate( &
@@ -552,10 +601,7 @@ contains
 
    end subroutine potential2img_mass
 
-!!$ ============================================================================
-!>
-!! \brief Prolong boundaries wrapper
-!<
+!> \brief Prolong boundaries wrapper
 
    subroutine prolong_ext_bnd(coarse)
 
@@ -568,7 +614,10 @@ contains
 
       type(cg_level_connected_T), pointer, intent(in) :: coarse !< level to prolong from
 
-      if (dom%eff_dim<ndims) call die("[multigridmultipole:prolong_ext_bnd0] 1D and 2D not finished")
+
+      call die("[multigridmultipole:prolong_ext_bnd] prolong_ext_bnd is severely outdated and thus unusable at the moment")
+
+      if (dom%eff_dim<ndims) call die("[multigridmultipole:prolong_ext_bnd] 1D and 2D not finished")
       if (abs(ord_prolong_mpole) > maxval(abs([O_D2, O_I2]))) call die("[multigridmultipole:prolong_ext_bnd] interpolation order too high")
 
       !> \deprecated BEWARE: do we need cylindrical factors for prolongation?
@@ -580,10 +629,7 @@ contains
 
    end subroutine prolong_ext_bnd
 
-!!$ ============================================================================
-!>
-!! \brief Prolong boundaries by injection.
-!<
+!> \brief Prolong boundaries by injection.
 
    subroutine prolong_ext_bnd0(coarse)
 
@@ -625,7 +671,6 @@ contains
 
    end subroutine prolong_ext_bnd0
 
-!!$ ============================================================================
 !>
 !! \brief Prolong boundaries by linear or quadratic interpolation.
 !!
@@ -719,14 +764,15 @@ contains
 
    end subroutine prolong_ext_bnd2
 
-!!$ ============================================================================
 !>
 !! \brief Compute multipole moments for image mass
+!!
 !! \todo distribute excess of work more evenly (important only for large number of PEs, ticket:43)
 !<
 
    subroutine img_mass2moments
 
+      use cg_leaves,    only: leaves
       use cg_list,      only: cg_list_element
       use constants,    only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
       use dataio_pub,   only: die
@@ -755,16 +801,17 @@ contains
 
       !OPT: try to exchange loops i < j < k -> k < j < i
       ! scan
-      cgl => lmpole%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          if (any(cg%ext_bnd(xdim, :))) then
             if (dom%geometry_type == GEO_RPZ) geofac(:) = [ cg%fbnd(xdim, LO), cg%fbnd(xdim, HI) ]
             do j = cg%js, cg%je
                do k = cg%ks, cg%ke
-                  if (cg%ext_bnd(xdim, LO) .and. (dom%geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
+                  if (cg%leafmap(1,            j-cg%js+1, k-cg%ks+1) .and. cg%ext_bnd(xdim, LO) .and. (dom%geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
                        call point2moments(cg%mg%bnd_x(j, k, LO)*cg%dyz*geofac(LO), cg%fbnd(xdim, LO)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
-                  if (cg%ext_bnd(xdim, HI)) call point2moments(cg%mg%bnd_x(j, k, HI)*cg%dyz*geofac(HI), cg%fbnd(xdim, HI)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
+                  if (cg%leafmap(cg%n_b(xdim), j-cg%js+1, k-cg%ks+1) .and. cg%ext_bnd(xdim, HI)) &
+                       call point2moments(cg%mg%bnd_x(j, k, HI)*cg%dyz*geofac(HI), cg%fbnd(xdim, HI)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
                enddo
             enddo
          endif
@@ -772,8 +819,10 @@ contains
          if (any(cg%ext_bnd(ydim, :))) then
             do i = cg%is, cg%ie
                do k = cg%ks, cg%ke
-                  if (cg%ext_bnd(ydim, LO)) call point2moments(cg%mg%bnd_y(i, k, LO)*cg%dxz, cg%x(i)-CoM(xdim), cg%fbnd(ydim, LO)-CoM(ydim), cg%z(k)-CoM(zdim))
-                  if (cg%ext_bnd(ydim, HI)) call point2moments(cg%mg%bnd_y(i, k, HI)*cg%dxz, cg%x(i)-CoM(xdim), cg%fbnd(ydim, HI)-CoM(ydim), cg%z(k)-CoM(zdim))
+                  if (cg%leafmap(i-cg%is+1, 1,            k-cg%ks+1) .and. cg%ext_bnd(ydim, LO)) &
+                       call point2moments(cg%mg%bnd_y(i, k, LO)*cg%dxz, cg%x(i)-CoM(xdim), cg%fbnd(ydim, LO)-CoM(ydim), cg%z(k)-CoM(zdim))
+                  if (cg%leafmap(i-cg%is+1, cg%n_b(ydim), k-cg%ks+1) .and. cg%ext_bnd(ydim, HI)) &
+                       call point2moments(cg%mg%bnd_y(i, k, HI)*cg%dxz, cg%x(i)-CoM(xdim), cg%fbnd(ydim, HI)-CoM(ydim), cg%z(k)-CoM(zdim))
                enddo
             enddo
          endif
@@ -782,8 +831,10 @@ contains
             do i = cg%is, cg%ie
                if (dom%geometry_type == GEO_RPZ) geofac(LO) = cg%x(i)
                do j = cg%js, cg%je
-                  if (cg%ext_bnd(zdim, LO)) call point2moments(cg%mg%bnd_z(i, j, LO)*cg%dxy*geofac(LO), cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, LO)-CoM(zdim))
-                  if (cg%ext_bnd(zdim, HI)) call point2moments(cg%mg%bnd_z(i, j, HI)*cg%dxy*geofac(LO), cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, HI)-CoM(zdim))
+                  if (cg%leafmap(i-cg%is+1, j-cg%js+1, 1)            .and. cg%ext_bnd(zdim, LO)) &
+                       call point2moments(cg%mg%bnd_z(i, j, LO)*cg%dxy*geofac(LO), cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, LO)-CoM(zdim))
+                  if (cg%leafmap(i-cg%is+1, j-cg%js+1, cg%n_b(zdim)) .and. cg%ext_bnd(zdim, HI)) &
+                       call point2moments(cg%mg%bnd_z(i, j, HI)*cg%dxy*geofac(LO), cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, HI)-CoM(zdim))
                enddo
             enddo
          endif
@@ -814,7 +865,6 @@ contains
 
    end subroutine img_mass2moments
 
-!!$ ============================================================================
 !>
 !! \brief Compute multipole moments for a single point
 !!
@@ -909,7 +959,6 @@ contains
 
    end subroutine point2moments
 
-!!$ ============================================================================
 !>
 !! \brief Compute infinite-boundary potential from multipole moments
 !!
@@ -918,6 +967,7 @@ contains
 
    subroutine moments2bnd_potential
 
+      use cg_leaves,  only: leaves
       use cg_list,    only: cg_list_element
       use constants,  only: xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI
       use dataio_pub, only: die
@@ -932,7 +982,7 @@ contains
 
       if (dom%geometry_type /= GEO_XYZ .and. any(CoM(xdim:zdim) /= 0.)) call die("[multigridmultipole:img_mass2moments] CoM not allowed for non-cartesian geometry")
 
-      cgl => lmpole%first
+      cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
          if (any(cg%ext_bnd(xdim, :))) then
@@ -967,7 +1017,6 @@ contains
 
    end subroutine moments2bnd_potential
 
-!!$ ============================================================================
 !>
 !! \brief Compute potential from multipole moments at a single point
 !!
@@ -1056,9 +1105,9 @@ contains
 
    end subroutine moments2pot
 
-!!$ ============================================================================
 !>
 !! \brief This routine calculates various geometrical numbers required for multipole evaluation
+!!
 !! \details It modifies the rn(:), irn(:), cfac(:) and sfac(:) arrays. Scalars are passed through argument list.
 !<
 
@@ -1159,7 +1208,6 @@ contains
 
    end subroutine geomfac4moments
 
-!!$ ============================================================================
 !>
 !! \brief HEAVY_DEBUG marks routines that normally are never called, but at some point
 !! were useful to test correctness or something.
@@ -1168,7 +1216,6 @@ contains
 !#define HEAVY_DEBUG
 #ifdef HEAVY_DEBUG
 
-!!$ ============================================================================
 !>
 !! \brief Quick test for correctness of the multipole solver.
 !! \details cphi should agree well with phi with largest errors at r = sqrt(sum(p(1:3)**2))

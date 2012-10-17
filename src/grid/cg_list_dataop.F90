@@ -397,6 +397,7 @@ contains
       use mpisetup,   only: comm, mpi_err
 #ifdef DEBUG
       use dataio_pub,       only: msg, printinfo
+      use mpisetup,         only: master
       use named_array_list, only: qna
 #endif
 
@@ -421,8 +422,8 @@ contains
                vol = vol + count(cg%leafmap) * cg%dvol
             case (GEO_RPZ)
                do i = cg%is, cg%ie
-                  avg = avg + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap(i, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol * cg%x(i)
-                  vol = vol + count(cg%leafmap(i, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol * cg%x(i)
+                  avg = avg + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap(i-cg%is+1, :, :)) * cg%dvol * cg%x(i)
+                  vol = vol + count(cg%leafmap(i-cg%is+1, :, :)) * cg%dvol * cg%x(i)
                enddo
             case default
                call die("[cg_list_dataop:subtract_average] Unsupported geometry.")
@@ -436,8 +437,10 @@ contains
       call this%q_add_val(iv, -avg)
 
 #ifdef DEBUG
-      write(msg, '(2a,2(a,g15.7))')"[cg_list_dataop:subtract_average] Average of '",qna%lst(iv)%name,"' over volume ",vol," is ",avg
-      call printinfo(msg)
+      if (master) then
+         write(msg, '(2a,2(a,g15.7))')"[cg_list_dataop:subtract_average] Average of '",qna%lst(iv)%name,"' over volume ",vol," is ",avg
+         call printinfo(msg)
+      endif
 #endif
 
    end subroutine subtract_average
@@ -446,9 +449,11 @@ contains
 !! \brief Calculate L2 norm
 !!
 !! \todo modify the code for reusing in subtract_average?
+!!
+!! \todo move to cg_leaves and use select type instead of the nomask parameter
 !<
 
-   real function norm_sq(this, iv) result (norm)
+   real function norm_sq(this, iv, nomask) result (norm)
 
       use cg_list,    only: cg_list_element
       use constants,  only: GEO_XYZ, GEO_RPZ, I_ONE
@@ -460,12 +465,19 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T), intent(in) :: this !< list for which we want to calculate the L2 norm
-      integer,                 intent(in)  :: iv   !< index of variable in cg%q(:) for which we want to find the norm
+      class(cg_list_dataop_T), intent(in) :: this   !< list for which we want to calculate the L2 norm
+      integer,                 intent(in) :: iv     !< index of variable in cg%q(:) for which we want to find the norm
+      logical, optional,       intent(in) :: nomask !<Treat the list as a complete level and do not use leafmask
 
       integer :: i
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
+      logical :: mask
+
+      mask = .true.
+      if (present(nomask)) then
+         if (nomask) mask = .false.
+      endif
 
       norm = 0.
       cgl => this%first
@@ -473,10 +485,18 @@ contains
          cg => cgl%cg
          select case (dom%geometry_type)
             case (GEO_XYZ)
-               norm = norm + sum(cg%q(iv)%span(cg%ijkse)**2, mask=cg%leafmap) * cg%dvol
+               if (mask) then
+                  norm = norm + sum(cg%q(iv)%span(cg%ijkse)**2, mask=cg%leafmap) * cg%dvol
+               else
+                  norm = norm + sum(cg%q(iv)%span(cg%ijkse)**2) * cg%dvol
+               endif
             case (GEO_RPZ)
                do i = cg%is, cg%ie
-                  norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap(i, cg%js:cg%je, cg%ks:cg%ke)) * cg%dvol * cg%x(i)
+                  if (mask) then
+                     norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap(i-cg%is+1, :, :)) * cg%dvol * cg%x(i)
+                  else
+                     norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2) * cg%dvol * cg%x(i)
+                  endif
                enddo
             case default
                call die("[cg_list_dataop:norm_sq] Unsupported geometry.")

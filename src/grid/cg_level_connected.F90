@@ -643,7 +643,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
          if (allocated(cg%ri_tgt%seg)) then
-            cg%q(iv)%arr(:,:,:) = 0. ! disables check_dirty
+            where (.not. cg%leafmap(:,:,:)) cg%q(iv)%arr(cg%is:cg%ie, cg%js:cg%je, cg%ks:cg%ke) = 0. ! disables check_dirty
             do g = lbound(cg%ri_tgt%seg(:), dim=1), ubound(cg%ri_tgt%seg(:), dim=1)
                cse(:,:) = cg%ri_tgt%seg(g)%se(:,:)
                cse(:, LO) = cse(:, LO) - cg%off(:) + cg%ijkse(:, LO)

@@ -89,6 +89,8 @@ module domain
 
    type(domain_container), protected :: dom !< complete description of base level domain
 
+   ! This set of flags can be useful to gently disable modules that does not support certain grid improvements yet
+   !> \todo Get rid of them as soon as all important modules are updated
    logical :: is_uneven          !< .true. when n_b(:) depend on process rank \todo protect it
    logical :: is_mpi_noncart     !< .true. when there exist a process that has more than one neighbour in any direction \todo protect it
    logical :: is_refined         !< .true. when AMR or static refinement is employed \todo protect it

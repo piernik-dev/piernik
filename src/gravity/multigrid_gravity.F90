@@ -141,7 +141,7 @@ contains
       use dataio_pub,    only: nh  ! QA_WARN required for diff_nml
       use dataio_pub,    only: msg, die, warn
       use cart_comm,     only: cdd
-      use domain,        only: dom, is_uneven, is_multicg
+      use domain,        only: dom, is_multicg !, is_uneven
       use mpi,           only: MPI_COMM_NULL
       use mpisetup,      only: master, slave, ibuff, cbuff, rbuff, lbuff, nproc, piernik_MPI_Bcast
       use multigridvars, only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof
@@ -169,8 +169,8 @@ contains
       vcycle_abort           = 2.
       L4_strength            = 1.0
 
-      coarsen_multipole      = 1
-      if (is_uneven) coarsen_multipole = 0
+      coarsen_multipole      = 0
+!      if (is_uneven) coarsen_multipole = 0
       lmax                   = 16
       mmax                   = -1 ! will be automatically set to lmax unless explicitly limited in problem.par
       max_cycles             = 20
@@ -703,7 +703,6 @@ contains
 
       use cg_list_dataop, only: ind_val
       use cg_leaves,      only: leaves
-      use cg_level_connected,  only: finest
       use cg_list_global, only: all_cg
       use constants,      only: INVALID, O_INJ, O_LIN, O_I2
       use dataio_pub,     only: msg, die, printinfo
@@ -755,15 +754,15 @@ contains
             call all_cg%set_q_value(solution, 0.)
             history%old(:)%time = -huge(1.0)
          case (O_INJ)
-            call finest%check_dirty(history%old(p0)%i_hist, "history0")
+            call leaves%check_dirty(history%old(p0)%i_hist, "history0")
             call leaves%q_copy(history%old(p0)%i_hist, solution)
             if (master .and. ord_time_extrap > ordt) then
                write(msg, '(3a)')"[multigrid_gravity:init_solution] No extrapolation of ",trim(vstat%cprefix),"solution."
                call printinfo(msg, stdout)
             endif
          case (O_LIN)
-            call finest%check_dirty(history%old(p0)%i_hist, "history0")
-            call finest%check_dirty(history%old(p1)%i_hist, "history1")
+            call leaves%check_dirty(history%old(p0)%i_hist, "history0")
+            call leaves%check_dirty(history%old(p1)%i_hist, "history1")
             dt_fac(1) = (t - history%old(p0)%time) / (history%old(p0)%time - history%old(p1)%time)
             call leaves%q_lin_comb( [ ind_val(history%old(p0)%i_hist, (1.+dt_fac(1))), &
                  &                    ind_val(history%old(p1)%i_hist,    -dt_fac(1) ) ], solution )
@@ -772,9 +771,9 @@ contains
                call printinfo(msg, stdout)
             endif
          case (O_I2)
-            call finest%check_dirty(history%old(p0)%i_hist, "history0")
-            call finest%check_dirty(history%old(p1)%i_hist, "history1")
-            call finest%check_dirty(history%old(p0)%i_hist, "history2")
+            call leaves%check_dirty(history%old(p0)%i_hist, "history0")
+            call leaves%check_dirty(history%old(p1)%i_hist, "history1")
+            call leaves%check_dirty(history%old(p0)%i_hist, "history2")
             dt_fac(:) = (t - history%old([ p0, p1, p2 ])%time) / (history%old([ p1, p2, p0 ])%time - history%old([ p2, p0, p1 ])%time)
             call leaves%q_lin_comb([ ind_val(history%old(p0)%i_hist, -dt_fac(2)*dt_fac(3)), &
                  &                   ind_val(history%old(p1)%i_hist, -dt_fac(1)*dt_fac(3)), &
@@ -783,7 +782,7 @@ contains
             call die("[multigrid_gravity:init_solution] Extrapolation order not implemented")
       end select
 
-      call finest%check_dirty(solution, "init_soln")
+      call leaves%check_dirty(solution, "init_soln")
 
    end subroutine init_solution
 
@@ -798,7 +797,6 @@ contains
    subroutine init_source(i_all_dens)
 
       use cg_list_global, only: all_cg
-      use cg_level_connected,  only: finest
       use constants,      only: GEO_RPZ, LO, HI, xdim, ydim, zdim
       use dataio_pub,     only: die
       use domain,         only: dom
@@ -883,7 +881,7 @@ contains
             call die("[multigrid_gravity:init_source] Unknown boundary type")
       end select
 
-      call finest%check_dirty(source, "init_src")
+      call leaves%check_dirty(source, "init_src")
 
    end subroutine init_source
 
@@ -892,7 +890,6 @@ contains
    subroutine store_solution(history)
 
       use cg_leaves,     only: leaves
-      use cg_level_connected, only: finest
       use constants,     only: BND_XTRAP, BND_REF
       use domain,        only: dom
       use global,        only: t
@@ -917,9 +914,9 @@ contains
       ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
       ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
       if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
-         call finest%arr3d_boundaries(solution, nb = dom%nb, bnd_type = BND_XTRAP)
+         call leaves%arr3d_boundaries(solution, nb = dom%nb, bnd_type = BND_XTRAP)
       else
-         call finest%arr3d_boundaries(solution, nb = dom%nb, bnd_type = BND_REF)
+         call leaves%arr3d_boundaries(solution, nb = dom%nb, bnd_type = BND_REF)
       endif
 
    end subroutine store_solution
@@ -1129,6 +1126,9 @@ contains
 
       enddo
 
+#ifdef DEBUG
+      call residual(leaves, source, solution, defect)
+#endif
       if (v > max_cycles) then
          if (master .and. norm_lhs/norm_rhs > norm_tol) call warn("[multigrid_gravity:vcycle_hg] Not enough V-cycles to achieve convergence.")
          v = max_cycles
@@ -1137,7 +1137,7 @@ contains
       vstat%norm_final = norm_lhs/norm_rhs
       if (.not. verbose_vcycle) call vstat%brief_v_log
 
-      call finest%check_dirty(solution, "final_solution")
+      call leaves%check_dirty(solution, "final_solution")
 
       call store_solution(history)
 
