@@ -94,14 +94,9 @@
     K_crn_perp(1)  = 0
     smallecr       = 0.e-2
     use_split   = .false.
-    crn_gpcr_ess = .true.
  /
 
-  $CR_SPECIES
-    eH1   = .true.
-    eC12  = .true.
-    eBe9  = .true.
-    eBe10 = .true.
+ $CR_SPECIES
  /
 
  $SHEARING

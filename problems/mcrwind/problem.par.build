@@ -93,11 +93,16 @@
     K_crn_perp(1)  = 0
     ncre        = 0
     use_split   = .false.
+    crn_gpcr_ess = .true.
  /
 
  $CR_SPECIES
-    eN14 = .true.
-    eO16 = .true.
+    eH1   = .true., .true.
+    eC12  = .true., .true.
+    eBe9  = .true., .true.
+    eBe10 = .true., .true.
+    eN14  = .true., .true.
+    eO16  = .true., .true.
  /
 
  $SHEARING
