@@ -167,7 +167,7 @@ contains
    subroutine init_dataio_parameters
 
       use constants,  only: cwdlen, PIERNIK_INIT_MPI
-      use dataio_pub, only: nres, nrestart, last_hdf_time, last_plt_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
+      use dataio_pub, only: nrestart, last_hdf_time, last_plt_time, last_res_time, last_tsl_time, last_log_time, log_file_initialized, &
            &                tmp_log_file, printinfo, printio, warn, msg, die, code_progress, wd_wr, &
            &                move_file, parfile, parfilelines, log_file, maxparfilelines, can_i_write, ierrh, par_file
       use mpisetup,   only: master, nproc, proc, piernik_MPI_Bcast, piernik_MPI_Barrier
@@ -235,10 +235,10 @@ contains
 
    subroutine dataio_par_io
       use constants,  only: idlen, cbuff_len, I_ONE, I_TWO
-      use dataio_pub, only: nres, nrestart, warn, msg, nhdf, nimg, wd_rd, multiple_h5files
+      use dataio_pub, only: nres, nrestart, warn, nhdf, nimg, wd_rd, multiple_h5files
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use domain,     only: dom
-      use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, proc, piernik_MPI_Bcast
+      use mpisetup,   only: lbuff, ibuff, rbuff, cbuff, master, slave, nproc, piernik_MPI_Bcast
 
       implicit none
 
