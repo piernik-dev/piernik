@@ -125,7 +125,7 @@ contains
       namelist /COSMIC_RAYS/ cfl_cr, smallecr, cr_active, cr_eff, use_split, &
            &                 ncrn, gamma_crn, K_crn_paral, K_crn_perp, &
            &                 ncre, gamma_cre, K_cre_paral, K_cre_perp, &
-           &                 divv_scheme
+           &                 divv_scheme, crn_gpcr_ess, cre_gpcr_ess
 
       cfl_cr     = 0.9
       smallecr   = 0.0

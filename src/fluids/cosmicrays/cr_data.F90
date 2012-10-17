@@ -62,18 +62,18 @@ module cr_data
    end enum
    enum, bind(C)
       enumerator :: PRES = 1     !< index for presence of the isotope
-      enumerator :: ESS          !< index for grad_pcr essenciality of the isotope
+      enumerator :: ESS          !< index for grad_pcr essentiality of the isotope
    end enum
 
    integer, parameter                                      :: nicr = icr_LAST - 1
 
-   logical, dimension(PRES:ESS)                            :: eH1                !< presence and grad_pcr essenciality of H1 isotope
-   logical, dimension(PRES:ESS)                            :: eLi7               !< presence and grad_pcr essenciality of Li7 isotope
-   logical, dimension(PRES:ESS)                            :: eBe9               !< presence and grad_pcr essenciality of Be9 isotope
-   logical, dimension(PRES:ESS)                            :: eBe10              !< presence and grad_pcr essenciality of Be10 isotope
-   logical, dimension(PRES:ESS)                            :: eC12               !< presence and grad_pcr essenciality of C12 isotope
-   logical, dimension(PRES:ESS)                            :: eN14               !< presence and grad_pcr essenciality of N14 isotope
-   logical, dimension(PRES:ESS)                            :: eO16               !< presence and grad_pcr essenciality of O16 isotope
+   logical, dimension(PRES:ESS)                            :: eH1                !< presence and grad_pcr essentiality of H1 isotope
+   logical, dimension(PRES:ESS)                            :: eLi7               !< presence and grad_pcr essentiality of Li7 isotope
+   logical, dimension(PRES:ESS)                            :: eBe9               !< presence and grad_pcr essentiality of Be9 isotope
+   logical, dimension(PRES:ESS)                            :: eBe10              !< presence and grad_pcr essentiality of Be10 isotope
+   logical, dimension(PRES:ESS)                            :: eC12               !< presence and grad_pcr essentiality of C12 isotope
+   logical, dimension(PRES:ESS)                            :: eN14               !< presence and grad_pcr essentiality of N14 isotope
+   logical, dimension(PRES:ESS)                            :: eO16               !< presence and grad_pcr essentiality of O16 isotope
    logical,                                dimension(nicr) :: eCRSP              !< table of all isotopes presences
    integer, parameter                                      :: specieslen = 6     !< length of species names
    character(len=specieslen), allocatable, dimension(:)    :: cr_names           !< table of species names
