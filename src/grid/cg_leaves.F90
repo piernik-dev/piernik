@@ -35,6 +35,12 @@
 
 module cg_leaves
 
+#if defined(__INTEL_COMPILER)
+   !! \deprecated remove this clause as soon as Intel Compiler gets required
+   !! features and/or bug fixes, it's needed for 12.1, fixed in 13.0 but the
+   !! latter is broken and we cannot use it yet
+   use cg_list,            only: cg_list_T   ! QA_WARN intel
+#endif /* __INTEL_COMPILER)
    use cg_level_connected, only: cg_level_connected_T
    use cg_list_bnd,        only: cg_list_bnd_T
 
