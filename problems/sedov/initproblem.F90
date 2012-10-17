@@ -28,7 +28,7 @@
 #include "piernik.h"
 #include "macros.h"
 #define RNG is:ie, js:je, ks:ke
-module initproblem2
+module initproblem
 
 ! Initial condition for Sedov-Taylor explosion
 ! Written by: M. Hanasz, March 2006
