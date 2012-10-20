@@ -181,7 +181,7 @@ contains
       implicit none
 
       class(particle_set), intent(inout) :: this     !< an object invoking the type-bound procedure
-      type(particle),      intent(in) :: part     !< new particle
+      type(particle),      intent(in)    :: part     !< new particle
 
 ! Cannot just do "call part%is_outside" because this will require changes of intent here and in add_using_basic_types, which we don\'t want to do
       this%p = [this%p, part]  ! LHS-realloc
