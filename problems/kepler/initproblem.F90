@@ -444,19 +444,18 @@ contains
 
             middle_of_nx = cg%n_(xdim)/2 + 1
             n_x_cut      = maxloc(cg%x, mask=cg%x<=x_cut)
+#ifdef FGSL
             if (densfile /= "") then
                allocate(gdens(dom%n_d(xdim)+dom%nb*2))
                if (master) call read_dens_profile(densfile,gdens)
                call MPI_Bcast(gdens, size(gdens), MPI_DOUBLE_PRECISION, FIRST, comm, mpi_err)
-
                dens_prof(:) = gdens( base_lev%pse(proc)%c(cg%grid_id)%se(xdim, LO)+1:base_lev%pse(proc)%c(cg%grid_id)%se(xdim, HI)+1+dom%nb*2)
-
                deallocate(gdens)
-            else
-!              dens_prof = get_lcutoff2(cg%x(:), x_cut, a_cut)
-               dens_prof = dens_prof(:)*(1.0-get_lcutoff2(cg%x(:), x_cut, a_cut)) + dens_max*get_lcutoff2(cg%x(:), x_cut, a_cut)
-!               dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, int(middle_of_nx - n_x_cut(1), kind=4), cg%n_(xdim), 0.0, 1.0) + dens_amb
             endif
+#endif /* FGSL */
+!              dens_prof = get_lcutoff2(cg%x(:), x_cut, a_cut)
+!              dens_prof = dens_prof(:)*(1.0-get_lcutoff2(cg%x(:), x_cut, a_cut)) + dens_max*get_lcutoff2(cg%x(:), x_cut, a_cut)
+!              dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, int(middle_of_nx - n_x_cut(1), kind=4), cg%n_(xdim), 0.0, 1.0) + dens_amb
 
             !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
             ln_dens_der  = log(dens_prof)
@@ -962,6 +961,7 @@ contains
 
    end subroutine prob_vars_hdf5
 !-----------------------------------------------------------------------------
+#ifdef FGSL
    subroutine read_dens_profile(densfile,gdens)
 
       use dataio_pub, only: printinfo, msg, warn
@@ -1024,6 +1024,7 @@ contains
       deallocate(x,y)
       return
    end subroutine read_dens_profile
+#endif /* FGSL */
 !-----------------------------------------------------------------------------
    elemental function signum(a) result (b)
       implicit none
