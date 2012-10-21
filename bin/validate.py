@@ -37,13 +37,15 @@ if os.path.exists('.jenkins'):
    PASSWORD = f.readline().strip()
    f.close()
 else:
-   print("You need to create .jenkins file with format:")
+   print("You need to create .jenkins file with:")
    print("user")
    print("pass")
+   sys.exit(-1)
 
 
+svn = pysvn.Client()
 f = tempfile.NamedTemporaryFile(delete=False)
-diff_data = pysvn.Client().diff('.', '.')
+diff_data = svn.diff('.', '.')
 f.write(diff_data)
 f.close()
 
@@ -56,7 +58,14 @@ hash_file = open('.diff_hash', 'w')
 hash_file.write(diff_hash.hexdigest())
 hash_file.close()
 
-JENKINS="http://ladon:8080/job/compile.trunk.setup/build"
+entry = svn.info('.')
+url = entry.url.replace(entry.repos+'/','')
+if url.find('branches') == -1:
+   branch = url.partition("piernik/")[2].partition("/")[0]
+else:
+   branch = url.partition("branches/")[2].partition("/")[0]
+
+JENKINS="http://ladon:8080/job/compile.%s.setup/build" % branch
 
 file_param={'name': 'patch.diff', 'file': 'file0'}
 prob_param={'name': 'problem_name', 'value': "".join(args.setup_args)}
