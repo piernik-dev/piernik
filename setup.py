@@ -4,6 +4,8 @@ import os
 import re
 import shutil
 import sys
+sys.path.append("python/")
+from DirWalk import DirectoryWalker
 import subprocess as sp
 import tempfile
 from optparse import OptionParser
@@ -221,37 +223,6 @@ def get_stdout(cmd):
         [cmd], stdout=sp.PIPE, shell="/bin/bash", stderr=nul_f)
     nul_f.close()
     return process.communicate()[0]
-
-
-class DirectoryWalker:
-    # a forward iterator that traverses a directory tree
-
-    def __init__(self, directory):
-        self.stack = [directory]
-        self.files = []
-        self.index = 0
-
-    def __getitem__(self, index):
-        while 1:
-            try:
-                file = self.files[self.index]
-                self.index = self.index + 1
-            except IndexError:
-                # pop next directory from stack
-                self.directory = self.stack.pop()
-                try:
-                    self.files = os.listdir(self.directory)
-                    self.index = 0
-                except OSError:
-                    print "\033[91mCannot open problem directory '%s'." % \
-                        self.directory + '\033[0m'
-                    sys.exit()
-            else:
-                # got a filename
-                fullname = os.path.join(self.directory, file)
-                if os.path.isdir(fullname) and not os.path.islink(fullname):
-                    self.stack.append(fullname)
-                return fullname
 
 
 epilog_help = "Frequently used options (like --linkexe, --laconic or \
