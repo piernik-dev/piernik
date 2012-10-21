@@ -9,7 +9,7 @@ Examples:
    svnci.py . "doxygen comment"
 """
 from optparse import OptionParser
-import pysvn
+import pysvn, hashlib, sys
 import qa
 
 def print_files(list,action):
@@ -19,6 +19,20 @@ def print_files(list,action):
    else:
       for file in list:
          print "  "+file
+
+
+def check_if_validated():
+   diff_data = pysvn.Client().diff('.', '.')
+   tab = diff_data.split()
+   tab.sort()
+   diff_hash = hashlib.md5()
+   diff_hash.update("".join(tab))
+   hash_file = open('.diff_hash', 'r')
+   old_hash = hash_file.readline().strip()
+   hash_file.close()
+   validated = (diff_hash.hexdigest() == old_hash)
+   return validated
+
 
 def main():
    usage = "usage: %prog [-vqpf] PATH -m COMMENT"
@@ -70,6 +84,10 @@ def main():
    print "Commiting..."
    if options.force:
       comment += " (forced commit)"
+   else:
+      if not check_if_validated():
+         print qa.give_err("You haven't run bin/validate.py on your changes!")
+         sys.exit(-1)
    if (options.pretend):
       print "Just kiddin', you used pretend option!"
       print comment

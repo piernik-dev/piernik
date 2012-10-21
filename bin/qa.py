@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import pysvn
-import re, sys
+import re, sys, hashlib
 import subprocess as sp
 import numpy as np
 

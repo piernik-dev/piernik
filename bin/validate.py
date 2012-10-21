@@ -10,6 +10,7 @@ import sys
 import os
 import json
 import tempfile
+import hashlib
 try:
    import requests
 except ImportError:
@@ -32,9 +33,19 @@ else:
    print("pass")
 
 f = tempfile.NamedTemporaryFile(delete=False)
-svn = pysvn.Client()
-f.write(svn.diff('.', '.'))
+diff_data = pysvn.Client().diff('.', '.')
+f.write(diff_data)
 f.close()
+
+diff_hash = hashlib.md5()
+tab = diff_data.split()
+tab.sort()
+diff_hash = hashlib.md5()
+diff_hash.update("".join(tab))
+hash_file = open('.diff_hash', 'w')
+hash_file.write(diff_hash.hexdigest())
+hash_file.close()
+
 JENKINS="http://ladon:8080/job/compile.trunk.setup/build"
 
 file_param={'name': 'patch.diff', 'file': 'file0'}
