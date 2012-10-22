@@ -1,4 +1,4 @@
-! $Id: initproblem.F90 6802 2012-10-20 07:46:04Z xarth $
+! $Id$
 !
 ! PIERNIK Code Copyright (C) 2006 Michal Hanasz
 !
