@@ -638,7 +638,11 @@ contains
          max_vx = maxval( abs(cg%u(flind%neu%imx,:,:,:))/cg%u(flind%neu%idn,:,:,:) )
          call MPI_Allreduce(MPI_IN_PLACE, max_vx, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
 
-         adjust = abs(cg%u(flind%dst%imx,:,:,:))/cg%u(flind%dst%idn,:,:,:) >= max_vx
+         where (abs(cg%u(flind%dst%imx,:,:,:))/cg%u(flind%dst%idn,:,:,:) >= max_vx)
+            adjust = .true.
+         elsewhere
+            adjust = .false.
+         endwhere
          if ( any(adjust) ) then
             where (adjust)
                vx_sign = signum(cg%u(flind%dst%imx,:,:,:))
