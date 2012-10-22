@@ -40,9 +40,10 @@ module real_vector
    type :: real_vec_T
       real, dimension(:), pointer :: r => null()
    contains
-      procedure       :: associated => real_vec_T_associated
-      procedure       :: real_vec_T_allocate, real_vec_T_allocate2
+      procedure       :: real_vec_T_allocate
+      procedure       :: real_vec_T_allocate2
       generic, public :: allocate   => real_vec_T_allocate, real_vec_T_allocate2
+      procedure       :: associated => real_vec_T_associated
       procedure       :: deallocate => real_vec_T_deallocate
    end type real_vec_T
 
