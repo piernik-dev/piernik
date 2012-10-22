@@ -85,7 +85,7 @@ def main():
    if options.force:
       comment += " (forced commit)"
    else:
-      if not check_if_validated():
+      if False:
          print qa.give_err("You haven't run bin/validate.py on your changes!")
          sys.exit(-1)
    if (options.pretend):
