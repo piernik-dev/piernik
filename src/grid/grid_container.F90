@@ -34,7 +34,7 @@ module grid_cont
 
    use constants,   only: xdim, zdim, ndims, LO, HI, CENTER, INV_CENTER
    use named_array, only: named_array4d, named_array3d
-   use types,       only: real_vec_T
+   use real_vector, only: real_vec_T
 
    implicit none
 
