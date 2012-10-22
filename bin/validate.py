@@ -13,16 +13,24 @@ import json
 import tempfile
 import hashlib
 import argparse
+import time
+import base64, getpass
 from DirWalk import DirectoryWalker
 try:
     import requests
 except ImportError:
-    print "You need request: http://pypi.python.org/pypi/requests"
+    print "You need to install requests: http://pypi.python.org/pypi/requests"
+    print "You can do it using your favourite pkg manager:"
+    print "  emerge -1 dev-python/requests"
+    print "  yum install python-requests"
     sys.exit(-1)
 try:
     import pysvn
 except ImportError:
-    print "You need pysvn"
+    print "You need to install pysvn"
+    print "You can do it using your favourite pkg manager:"
+    print "  emerge -1 dev-python/pysvn"
+    print "  yum install pysvn"
     sys.exit(-1)
 
 
@@ -50,17 +58,19 @@ parser.add_argument('-p', '--pretend', action='store_true')
 parser.add_argument('-a', '--all', action='store_true')
 args = parser.parse_args()
 
-if os.path.exists('.jenkins'):
+if os.path.isfile('.jenkins'):
     f = open('.jenkins', 'rb')
-    USER = f.readline().strip()
-    PASSWORD = f.readline().strip()
+    USER = base64.b64decode(f.readline().strip())
+    PASSWORD = base64.b64decode(f.readline().strip())
     f.close()
 else:
-    print("You need to create .jenkins file with:")
-    print("user")
-    print("pass")
-    sys.exit(-1)
-
+    f = open('.jenkins', 'w')
+    print("What is your username @jenkins: ")
+    USER = sys.stdin.readline().strip()
+    f.write(base64.b64encode(USER)+'\n')
+    PASSWORD = getpass.getpass("What is your password: ").strip()
+    f.write(base64.b64encode(PASSWORD)+'\n')
+    f.close()
 
 svn = pysvn.Client()
 f = tempfile.NamedTemporaryFile(delete=False)
@@ -96,6 +106,7 @@ else:
                     arg = "%s %s" % (os.path.split(
                         directory)[-1], args.setup_args)
                     run_jenkins_job(branch, arg)
+                    time.sleep(0.1)
     else:
         if args.setup_args == '':
             args.setup_args = "sedov"
