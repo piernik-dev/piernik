@@ -9,9 +9,8 @@
 #define LOCAL_FR_SPEED
 
 /* physics including */
-#ifdef IONIZED
-#define MAGNETIC
-#endif
-#define GRAV
 #define BALSARA
+
+/* gravity type choosing */
+#define GRAV
 #define RTVD
