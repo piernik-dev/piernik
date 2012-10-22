@@ -141,8 +141,12 @@ module grid_cont
       integer(kind=4) :: ks                                      !< index of the first %grid cell of physical domain in z-direction
       integer(kind=4) :: ke                                      !< index of the last %grid cell of physical domain in z-direction
       integer(kind=4) :: isb, ieb, jsb, jeb, ksb, keb            !< auxiliary indices for exchanging boundary data, (e.g. is:isb -> ie+1:nx, ieb:ie -> 1:nb)
+!      integer(kind=4) :: il1, ih1, jl1, jh1, kl1, kh1            !< index of the first guardcell, adjacent to the active interior of the grid, l for low/left, h for high/right side
+!      integer(kind=4) :: iln, ihn, jln, jhn, kln, khn            !< index of the n-th guardcell, furthest from the active interior of the grid, l for low/left, h for high/right side
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkse         !< [[is,  js,  ks ], [ie,  je,  ke ]]
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkseb        !< [[isb, jsb, ksb], [ieb, jeb, keb]]
+      integer(kind=4), dimension(ndims, LO:HI)  :: lh1        !< [[il1, jl1, kl1], [ih1, jh1, kh1]]
+      integer(kind=4), dimension(ndims, LO:HI)  :: lhn        !< [[iln, jln, kln], [ihn, jhn, khn]]
       integer(kind=8), dimension(ndims)         :: h_cor1        !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:)
       integer(kind=4), dimension(ndims)         :: n_            !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
       integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
@@ -336,8 +340,12 @@ contains
          this%n_(:)        = this%n_b(:) + I_TWO * dom%nb       ! Block total grid size with guardcells
          this%ijkse(:, LO) = dom%nb + I_ONE
          this%ijkse(:, HI) = dom%nb + this%n_b(:)
-         this%ijkseb(:,LO) = I_TWO*dom%nb
-         this%ijkseb(:,HI) = this%n_b(:)+I_ONE
+         this%ijkseb(:,LO) = this%ijkse(:, LO) + dom%nb - I_ONE
+         this%ijkseb(:,HI) = this%ijkse(:, HI) - dom%nb + I_ONE
+         this%lh1(:,LO)    = this%ijkse(:, LO) - I_ONE
+         this%lh1(:,HI)    = this%ijkse(:, HI) + I_ONE
+         this%lhn(:,LO)    = this%ijkse(:, LO) - dom%nb
+         this%lhn(:,HI)    = this%ijkse(:, HI) + dom%nb
          this%dl(:)        = dom%L_(:) / n_d(:)
          this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * this%off(:)
          this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * this%h_cor1(:)
@@ -347,6 +355,10 @@ contains
          this%ijkse(:, HI) = 1
          this%ijkseb(:,LO) = 1
          this%ijkseb(:,HI) = 1
+         this%lh1(:,LO)    = 1
+         this%lh1(:,HI)    = 1
+         this%lhn(:,LO)    = 1
+         this%lhn(:,HI)    = 1
          this%dl(:)        = 1.0
          this%fbnd(:, LO)  = dom%edge(:, LO)
          this%fbnd(:, HI)  = dom%edge(:, HI)
@@ -478,7 +490,7 @@ contains
       do d = xdim, zdim
          do i = CENTER, INV_CENTER
             if (this%coord(i, d)%associated()) call die("[grid_container:set_coords] a coordinate already allocated")
-            call this%coord(i, d)%allocate(this%n_(d))
+            call this%coord(i, d)%allocate(this%lhn(d, LO), this%lhn(d, HI))
          enddo
 
          if (dom%has_dir(d)) then
