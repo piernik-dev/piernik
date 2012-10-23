@@ -55,14 +55,13 @@ contains
 
    subroutine problem_pointers
 
-      use dataio_user, only: user_vars_hdf5, user_reg_var_restart
+      use dataio_user, only: user_vars_hdf5
       use user_hooks,  only: finalize_problem, problem_customize_solution
 
       implicit none
 
       finalize_problem           => calculate_error_norm
       user_vars_hdf5             => inid_var_hdf5
-      user_reg_var_restart       => register_user_var
       problem_customize_solution => calculate_error_norm_wrapper
 
    end subroutine problem_pointers
@@ -141,7 +140,7 @@ contains
 
       if (norm_step <= 0) norm_step = huge(I_ONE)
 
-      ! Create the initial density arrays
+      ! Create the initial density arrays (it is called before reading restart file, so there is no need to associate user_reg_var_restart)
       call register_user_var
 
       ! Initialize the initial density arrays
