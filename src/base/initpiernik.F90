@@ -45,7 +45,7 @@ contains
       use cg_list_global,        only: all_cg
       use constants,             only: PIERNIK_INIT_MPI, PIERNIK_INIT_GLOBAL, PIERNIK_INIT_FLUIDS, PIERNIK_INIT_DOMAIN, PIERNIK_INIT_GRID, PIERNIK_INIT_IO_IC, INCEPTIVE
       use dataio,                only: init_dataio, init_dataio_parameters, write_data
-      use dataio_pub,            only: nrestart, wd_wr, wd_rd, par_file, tmp_log_file, msg, printio, die, warn, printinfo, require_init_prob, problem_name, run_id, code_progress
+      use dataio_pub,            only: nrestart, wd_wr, wd_rd, par_file, tmp_log_file, msg, printio, printinfo, require_init_prob, problem_name, run_id, code_progress
       use decomposition,         only: init_decomposition
       use domain,                only: init_domain
       use diagnostics,           only: diagnose_arrays, check_environment
@@ -68,7 +68,7 @@ contains
       use shear,                 only: init_shear
 #endif /* SHEAR */
 #ifdef GRAV
-      use gravity,               only: init_grav, init_grav_ext, grav_pot_3d, grav_pot_3d_called, source_terms_grav, sum_potential
+      use gravity,               only: init_grav, init_grav_ext, manage_grav_pot_3d, sum_potential
       use hydrostatic,           only: cleanup_hydrostatic
 #endif /* GRAV */
 #ifdef MULTIGRID
@@ -178,14 +178,7 @@ contains
 
 #ifdef GRAV
 !> \deprecated It is only temporary solution, but grav_pot_3d must be called after init_prob due to csim2,c_si,alpha clash!!!
-      if (associated(grav_pot_3d)) then
-         call grav_pot_3d ! depends on grav
-         grav_pot_3d_called = .true.
-      else
-#ifdef VERBOSE
-         call warn("[initpiernik:init_piernik] grav_pot_3d is not associated! Will try to call it once more after init_problem.")
-#endif /* VERBOSE */
-      endif
+      call manage_grav_pot_3d(.true.)
 #endif /* GRAV */
 
 #ifdef CORIOLIS
@@ -243,16 +236,7 @@ contains
          call init_prob ! may depend on anything
          call all_bnd !> \warning Never assume that init_prob set guardcells correctly
 #ifdef GRAV
-         if (.not.grav_pot_3d_called) then
-            if (associated(grav_pot_3d)) then
-               call grav_pot_3d
-               grav_pot_3d_called = .true.
-            else
-               call die("[initpiernik:init_piernik] grav_pot_3d failed for the 2nd time!")
-            endif
-         endif
-         call source_terms_grav ! make sure that all contributions to the gravitational potential are computed before first dump
-         ! Possible side-effects: if variable_gp then grav_pot_3d may be called twice (second call from source_terms_grav)
+         call manage_grav_pot_3d(.false.)
          call cleanup_hydrostatic
 #endif /* GRAV */
       endif

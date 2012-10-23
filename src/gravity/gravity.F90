@@ -43,7 +43,7 @@ module gravity
    implicit none
 
    private
-   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_pot_3d_called, grav_type, get_gprofs, grav_accel2pot, sum_potential
+   public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_pot_3d_called, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d
    public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gp_status, gprofs_target, ptmass2, ptm2_x
 
    integer, parameter         :: gp_stat_len   = 9
@@ -335,6 +335,31 @@ contains
       endif
 
    end subroutine g_cg_init
+
+   subroutine manage_grav_pot_3d(first_approach)
+
+      use dataio_pub, only: die, warn
+
+      implicit none
+
+      logical, intent(in) :: first_approach
+
+      if (associated(grav_pot_3d)) then
+         if (first_approach .or. .not.grav_pot_3d_called) then
+            call grav_pot_3d
+            grav_pot_3d_called = .true.
+         endif
+      else
+#ifdef VERBOSE
+         if (first_approach) call warn("[gravity:manage_grav_pot_3d] grav_pot_3d is not associated! Will try to call it once more after init_problem.")
+#endif /* VERBOSE */
+         if (.not.grav_pot_3d_called) call die("[gravity:manage_grav_pot_3d] grav_pot_3d failed for the 2nd time!")
+      endif
+
+      if (.not.first_approach) call source_terms_grav ! make sure that all contributions to the gravitational potential are computed before first dump
+         ! Possible side-effects: if variable_gp then grav_pot_3d may be called twice (second call from source_terms_grav)
+
+   end subroutine manage_grav_pot_3d
 
    subroutine source_terms_grav
 
