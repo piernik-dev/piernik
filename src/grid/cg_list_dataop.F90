@@ -399,7 +399,7 @@ contains
       use dataio_pub,       only: msg, printinfo
       use mpisetup,         only: master
       use named_array_list, only: qna
-#endif
+#endif /* DEBUG */
 
       implicit none
 
@@ -441,7 +441,7 @@ contains
          write(msg, '(2a,2(a,g15.7))')"[cg_list_dataop:subtract_average] Average of '",qna%lst(iv)%name,"' over volume ",vol," is ",avg
          call printinfo(msg)
       endif
-#endif
+#endif /* DEBUG */
 
    end subroutine subtract_average
 

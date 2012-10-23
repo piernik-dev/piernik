@@ -1128,7 +1128,7 @@ contains
 
 #ifdef DEBUG
       call residual(leaves, source, solution, defect)
-#endif
+#endif /* DEBUG */
       if (v > max_cycles) then
          if (master .and. norm_lhs/norm_rhs > norm_tol) call warn("[multigrid_gravity:vcycle_hg] Not enough V-cycles to achieve convergence.")
          v = max_cycles

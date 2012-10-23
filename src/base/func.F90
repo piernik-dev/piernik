@@ -133,7 +133,7 @@ contains
       real, parameter, dimension(3) :: cosh_coef = [0.5, 0.041666666666666664, 0.001388888888888889]
 #else /* !__INTEL_COMPILER */
       real, parameter, dimension(*) :: cosh_coef = [0.5, 0.041666666666666664, 0.001388888888888889]
-#endif
+#endif /* !__INTEL_COMPILER */
       real :: res, x2
       integer :: i
 

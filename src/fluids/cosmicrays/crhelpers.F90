@@ -41,7 +41,7 @@ module crhelpers
       !! \deprecated remove this clause as soon as Intel Compiler gets required
       !! features and/or bug fixes
    public :: init_div_v
-#endif
+#endif /* __INTEL_COMPILER */
 
    interface
       subroutine div_v_func(ifluid, cg)

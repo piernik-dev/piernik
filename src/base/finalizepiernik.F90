@@ -60,7 +60,7 @@ contains
 #endif /* MULTIGRID */
 #ifdef GRAV
       use particle_pub,       only: cleanup_particles
-#endif/* GRAV */
+#endif /* GRAV */
 #ifdef PIERNIK_OPENCL
       use piernikcl,          only: cleanup_opencl
 #endif /* PIERNIK_OPENCL */
@@ -83,7 +83,7 @@ contains
       call cleanup_fluids;         call nextdot(.false.)
 #ifdef GRAV
       call cleanup_particles;      call nextdot(.false.)
-#endif/* GRAV */
+#endif /* GRAV */
       call cleanup_global;         call nextdot(.false.)
       call cleanup_decomposition;  call nextdot(.false.)
       call cleanup_domain;         call nextdot(.false.)

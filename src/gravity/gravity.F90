@@ -392,9 +392,7 @@ contains
          frun = .false.
       endif
 #endif /* SELF_GRAV */
-      if (variable_gp) then
-         call grav_pot_3d
-      endif
+      if (variable_gp) call grav_pot_3d
 
       call sum_potential
 

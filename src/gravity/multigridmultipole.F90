@@ -447,7 +447,7 @@ contains
       use dataio_pub,   only: msg, printinfo
       use mpisetup,     only: master
       use units,        only: fpiG
-#endif
+#endif /* DEBUG */
 
       implicit none
 
@@ -513,7 +513,7 @@ contains
          write(msg, '(a,g14.6,a,3g14.6,a)')"[multigridmultipole:find_img_CoM] Total mass = ", CoM(imass)/fpiG," at (",CoM(xdim:zdim),")"
          call printinfo(msg)
       endif
-#endif
+#endif /* DEBUG */
 
    end subroutine find_img_CoM
 
