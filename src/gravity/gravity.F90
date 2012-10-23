@@ -48,31 +48,31 @@ module gravity
 
    integer, parameter         :: gp_stat_len   = 9
    integer, parameter         :: gproft_len    = 5
-   character(len=gp_stat_len) :: gp_status       !< variable set as 'undefined' in grav_pot_3d when grav_accel is supposed to use
-   character(len=gproft_len)  :: gprofs_target   !< variable set pointing gravity routine in hydrostatic_zeq ('accel' or ready gp array 'extgp')
-   character(len=cbuff_len)   :: external_gp     !< variable allowing to choose external gravitational potential
-   real, dimension(ndims)     :: g_dir           !< vector used by GRAV_UNIFORM and GRAV_LINEAR type of %gravity
-   real    :: r_gc                  !< galactocentric radius of the local simulation region used by local Galactic type of %gravity in grav_accel
-   real    :: ptmass                !< mass value of point %gravity source used by GRAV_PTMASS, GRAV_PTMASSSTIFF, GRAV_PTMASSPURE, GRAV_PTFLAT type of %gravity
-   real    :: ptm_x                 !< point mass position x-component
-   real    :: ptm_y                 !< point mass position y-component
-   real    :: ptm_z                 !< point mass position z-component
-   real    :: r_smooth              !< smoothing radius in point mass %types of %gravity
-   integer(kind=4) :: nsub          !< number of subcells while additionally cell division in z-direction is present during establishment of hydrostatic equilibrium
-   real    :: h_grav                !< altitude of acceleration cut used when n_gravh is set to non-zero
-   real    :: r_grav                !< radius of gravitational potential cut used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
-   integer(kind=4) :: n_gravh       !< index of hyperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
-   integer(kind=4) :: n_gravr       !< index of hyperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
-   real    :: tune_zeq              !< z-component of %gravity tuning factor used by hydrostatic_zeq
-   real    :: tune_zeq_bnd          !< z-component of %gravity tuning factor supposed to be used in boundaries
-   real    :: ptmass2               !< mass of the secondary for Roche potential
-   real    :: ptm2_x                !< x-position of the secondary for Roche potential (y and z positions are assumed to be 0)
-   real    :: cmass_x               !< center of mass for Roche potential
-   real    :: Omega                 !< corotational angular velocity for Roche potential
+   character(len=gp_stat_len) :: gp_status             !< variable set as 'undefined' in grav_pot_3d when grav_accel is supposed to use
+   character(len=gproft_len)  :: gprofs_target         !< variable set pointing gravity routine in hydrostatic_zeq ('accel' or ready gp array 'extgp')
+   character(len=cbuff_len)   :: external_gp           !< variable allowing to choose external gravitational potential
+   real, dimension(ndims)     :: g_dir                 !< vector used by GRAV_UNIFORM and GRAV_LINEAR type of %gravity
+   real                       :: r_gc                  !< galactocentric radius of the local simulation region used by local Galactic type of %gravity in grav_accel
+   real                       :: ptmass                !< mass value of point %gravity source used by GRAV_PTMASS, GRAV_PTMASSSTIFF, GRAV_PTMASSPURE, GRAV_PTFLAT type of %gravity
+   real                       :: ptm_x                 !< point mass position x-component
+   real                       :: ptm_y                 !< point mass position y-component
+   real                       :: ptm_z                 !< point mass position z-component
+   real                       :: r_smooth              !< smoothing radius in point mass %types of %gravity
+   integer(kind=4)            :: nsub                  !< number of subcells while additionally cell division in z-direction is present during establishment of hydrostatic equilibrium
+   integer(kind=4)            :: n_gravh               !< index of hyperbolic-cosinusoidal cutting of acceleration; used when set to non-zero
+   integer(kind=4)            :: n_gravr               !< index of hyperbolic-cosinusoidal cutting of gravitational potential used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
+   real                       :: h_grav                !< altitude of acceleration cut used when n_gravh is set to non-zero
+   real                       :: r_grav                !< radius of gravitational potential cut used by GRAV_PTMASS, GRAV_PTFLAT type of %gravity
+   real                       :: tune_zeq              !< z-component of %gravity tuning factor used by hydrostatic_zeq
+   real                       :: tune_zeq_bnd          !< z-component of %gravity tuning factor supposed to be used in boundaries
+   real                       :: ptmass2               !< mass of the secondary for Roche potential
+   real                       :: ptm2_x                !< x-position of the secondary for Roche potential (y and z positions are assumed to be 0)
+   real                       :: cmass_x               !< center of mass for Roche potential
+   real                       :: Omega                 !< corotational angular velocity for Roche potential
 
-   logical :: grav_pot_3d_called = .false.
-   logical :: user_grav             !< use user defined grav_pot_3d
-   logical :: variable_gp           !< .true. if arrays::gp must be evaluated at every step
+   logical                    :: grav_pot_3d_called = .false.
+   logical                    :: user_grav             !< use user defined grav_pot_3d
+   logical                    :: variable_gp           !< .true. if arrays::gp must be evaluated at every step
 
    interface
 
@@ -83,8 +83,8 @@ module gravity
 
       subroutine gprofs_default(iia, jja)
          implicit none
-         integer, intent(in) :: iia                    !< COMMENT ME
-         integer, intent(in) :: jja                    !< COMMENT ME
+         integer, intent(in) :: iia                         !< COMMENT ME
+         integer, intent(in) :: jja                         !< COMMENT ME
       end subroutine gprofs_default
 
       subroutine grav_types(gp,ax,flatten)
@@ -97,10 +97,10 @@ module gravity
 
       subroutine user_grav_accel(sweep, i1,i2, xsw, n, grav)
          implicit none
-         integer(kind=4), intent(in)    :: sweep            !< COMMENT ME
-         integer, intent(in)            :: i1               !< COMMENT ME
-         integer, intent(in)            :: i2               !< COMMENT ME
-         integer(kind=4), intent(in)    :: n                !< COMMENT ME
+         integer(kind=4),   intent(in)  :: sweep            !< COMMENT ME
+         integer,           intent(in)  :: i1               !< COMMENT ME
+         integer,           intent(in)  :: i2               !< COMMENT ME
+         integer(kind=4),   intent(in)  :: n                !< COMMENT ME
          real, dimension(n),intent(in)  :: xsw              !< COMMENT ME
          real, dimension(n),intent(out) :: grav             !< COMMENT ME
       end subroutine user_grav_accel
@@ -163,7 +163,7 @@ contains
       implicit none
 
       namelist /GRAVITY/ g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, external_gp, ptmass2, ptm2_x, &
-                nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target, variable_gp
+                         nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gprofs_target, variable_gp
 
       if (code_progress < PIERNIK_INIT_MPI) call die("[gravity:init_grav] mpi not initialized.")
 
@@ -171,29 +171,29 @@ contains
       if (master) call printinfo("[gravity:init_grav] Commencing gravity module initialization")
 #endif /* VERBOSE */
 
-      g_dir   = 0.0
-      r_gc    = 8500
-      ptmass  = 0.0
-      ptm_x   = 0.0
-      ptm_y   = 0.0
-      ptm_z   = 0.0
-      r_smooth= 0.0
-      nsub    = 10
-      tune_zeq     = 1.0
-      tune_zeq_bnd = 1.0
-      h_grav = 1.e6
-      r_grav = 1.e6
-      ptmass2 = 0.0
-      ptm2_x = -1.0
+      g_dir         = 0.0
+      r_gc          = 8500
+      ptmass        = 0.0
+      ptm_x         = 0.0
+      ptm_y         = 0.0
+      ptm_z         = 0.0
+      r_smooth      = 0.0
+      nsub          = 10
+      tune_zeq      = 1.0
+      tune_zeq_bnd  = 1.0
+      h_grav        = 1.e6
+      r_grav        = 1.e6
+      ptmass2       = 0.0
+      ptm2_x        = -1.0
 
-      n_gravr = 0
-      n_gravh = 0
+      n_gravr       = 0
+      n_gravh       = 0
 
       gprofs_target = 'extgp'
       external_gp   = 'null'
 
-      user_grav = .false.
-      variable_gp = .false.
+      user_grav     = .false.
+      variable_gp   = .false.
 
       if (master) then
 
@@ -209,7 +209,7 @@ contains
          rbuff(6)   = ptm_x
          rbuff(7)   = ptm_y
          rbuff(8)   = ptm_z
-         rbuff(9)  = tune_zeq
+         rbuff(9)   = tune_zeq
          rbuff(10)  = tune_zeq_bnd
          rbuff(11)  = r_smooth
          rbuff(12)  = h_grav
@@ -232,29 +232,29 @@ contains
 
       if (slave) then
 
-         nsub                = int(ibuff(1), kind=4)
-         n_gravr             = ibuff(2)
-         n_gravh             = ibuff(3)
+         nsub          = int(ibuff(1), kind=4)
+         n_gravr       = ibuff(2)
+         n_gravh       = ibuff(3)
 
-         g_dir               = rbuff(1:3)
-         r_gc                = rbuff(4)
-         ptmass              = rbuff(5)
-         ptm_x               = rbuff(6)
-         ptm_y               = rbuff(7)
-         ptm_z               = rbuff(8)
-         tune_zeq            = rbuff(9)
-         tune_zeq_bnd        = rbuff(10)
-         r_smooth            = rbuff(11)
-         h_grav              = rbuff(12)
-         r_grav              = rbuff(13)
-         ptmass2             = rbuff(14)
-         ptm2_x              = rbuff(15)
+         g_dir         = rbuff(1:3)
+         r_gc          = rbuff(4)
+         ptmass        = rbuff(5)
+         ptm_x         = rbuff(6)
+         ptm_y         = rbuff(7)
+         ptm_z         = rbuff(8)
+         tune_zeq      = rbuff(9)
+         tune_zeq_bnd  = rbuff(10)
+         r_smooth      = rbuff(11)
+         h_grav        = rbuff(12)
+         r_grav        = rbuff(13)
+         ptmass2       = rbuff(14)
+         ptm2_x        = rbuff(15)
 
-         user_grav           = lbuff(1)
-         variable_gp         = lbuff(2)
+         user_grav     = lbuff(1)
+         variable_gp   = lbuff(2)
 
-         gprofs_target       = cbuff(1)(1:gproft_len)
-         external_gp         = cbuff(2)
+         gprofs_target = cbuff(1)(1:gproft_len)
+         external_gp   = cbuff(2)
 
       endif
 
@@ -339,11 +339,11 @@ contains
    subroutine source_terms_grav
 
 #ifdef SELF_GRAV
+      use cg_leaves,         only: leaves
+      use cg_list,           only: cg_list_element
       use constants,         only: sgp_n, sgpm_n
       use dataio_pub,        only: die
       use fluidindex,        only: iarr_all_sg
-      use cg_list,           only: cg_list_element
-      use cg_leaves,         only: leaves
       use grid_cont,         only: grid_container
       use named_array_list,  only: qna
 #ifdef POISSON_FFT
@@ -361,7 +361,7 @@ contains
       logical, save :: frun = .true.
 #ifdef POISSON_FFT
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 #endif /* POISSON_FFT */
 
       call leaves%q_copy(qna%ind(sgp_n), qna%ind(sgpm_n))
@@ -402,9 +402,9 @@ contains
 
    subroutine sum_potential
 
-      use constants,        only: gp_n, gpot_n, hgpot_n
-      use cg_list_dataop,   only: ind_val
       use cg_leaves,        only: leaves
+      use cg_list_dataop,   only: ind_val
+      use constants,        only: gp_n, gpot_n, hgpot_n
       use named_array_list, only: qna
 #ifdef SELF_GRAV
       use constants,        only: one, half, sgp_n, sgpm_n
@@ -439,9 +439,9 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), pointer       :: gp
-      type(axes), intent(in)                :: ax
-      logical, intent(in), optional         :: flatten
+      real, dimension(:,:,:), pointer  :: gp
+      type(axes), intent(in)           :: ax
+      logical,    intent(in), optional :: flatten
 
       gp = 0.0
 
@@ -455,10 +455,10 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), pointer       :: gp
-      type(axes), intent(in)                :: ax
-      logical, intent(in), optional         :: flatten
-      integer :: i, j, k
+      real, dimension(:,:,:), pointer  :: gp
+      type(axes), intent(in)           :: ax
+      logical,    intent(in), optional :: flatten
+      integer                          :: i, j, k
 
       do i = lbound(gp,1), ubound(gp,1)
          do j = lbound(gp,2), ubound(gp,2)
@@ -479,10 +479,10 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), pointer       :: gp
-      type(axes), intent(in)                :: ax
-      logical, intent(in), optional         :: flatten
-      integer :: i, j, k
+      real, dimension(:,:,:), pointer  :: gp
+      type(axes), intent(in)           :: ax
+      logical,    intent(in), optional :: flatten
+      integer                          :: i, j, k
 
       do i = lbound(gp,1), ubound(gp,1)
          do j = lbound(gp,2), ubound(gp,2)
@@ -503,13 +503,13 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), pointer       :: gp
-      type(axes), intent(in)                :: ax
-      logical, intent(in), optional         :: flatten
+      real, dimension(:,:,:), pointer  :: gp
+      type(axes), intent(in)           :: ax
+      logical,    intent(in), optional :: flatten
 
-      integer             :: i, j
-      real                :: rc2, GM, x2
-      logical             :: do_flatten
+      integer                          :: i, j
+      real                             :: rc2, GM, x2
+      logical                          :: do_flatten
 
       if (present(flatten)) then
          do_flatten = flatten
@@ -517,7 +517,7 @@ contains
          do_flatten = .false.
       endif
 
-      GM        = newtong*ptmass
+      GM = newtong*ptmass
 
       do i = lbound(gp,1), ubound(gp,1)
          x2 = (ax%x(i) - ptm_x)**2
@@ -547,14 +547,13 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), pointer       :: gp
-      type(axes), intent(in)                :: ax
-      logical, intent(in), optional         :: flatten
+      real, dimension(:,:,:), pointer  :: gp
+      type(axes), intent(in)           :: ax
+      logical,    intent(in), optional :: flatten
 
-      integer             :: i, j, ifl
-      real                :: rc2, r_smooth2, GM, fr, x2
-      real                :: cs_iso2
-      logical             :: do_flatten
+      integer                          :: i, j, ifl
+      real                             :: rc2, r_smooth2, GM, fr, x2, cs_iso2
+      logical                          :: do_flatten
 
       if (present(flatten)) then
          do_flatten = flatten
@@ -602,13 +601,12 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), pointer       :: gp
-      type(axes), intent(in)                :: ax
-      logical, intent(in), optional         :: flatten
+      real, dimension(:,:,:), pointer  :: gp
+      type(axes), intent(in)           :: ax
+      logical,    intent(in), optional :: flatten
 
-      integer :: j, k
-      real    :: r_smooth2
-      real    :: GM1, GM2, z2, yz2
+      integer                          :: j, k
+      real                             :: GM1, GM2, z2, yz2, r_smooth2
 
       r_smooth2 = r_smooth**2
       GM1 =  newtong * ptmass
@@ -628,6 +626,9 @@ contains
 
    end subroutine grav_roche
 
+!>
+!! \details promote stiff-body rotation inside smoothing length, don't affect the global potential outside
+!<
    subroutine grav_ptmass_stiff(gp, ax, flatten)
 
       use constants, only: half
@@ -636,13 +637,12 @@ contains
 
       implicit none
 
-      real, dimension(:,:,:), pointer       :: gp
-      type(axes), intent(in)                :: ax
-      logical, intent(in), optional         :: flatten
+      real, dimension(:,:,:), pointer  :: gp
+      type(axes), intent(in)           :: ax
+      logical,    intent(in), optional :: flatten
 
-      integer :: i, j, k
-      real    :: r_smooth2, r2, gmr, gm, z2, yz2
-      ! promote stiff-body rotation inside smoothing length, don't affect the global potential outside
+      integer                          :: i, j, k
+      real                             :: r_smooth2, r2, gmr, gm, z2, yz2
 
       r_smooth2 = r_smooth**2
       gm =  - newtong * ptmass
@@ -698,11 +698,11 @@ contains
 
    subroutine default_grav_pot_3d
 
+      use cg_leaves,   only: leaves
+      use cg_list,     only: cg_list_element
       use constants,   only: GEO_XYZ
       use dataio_pub,  only: die, warn
       use domain,      only: dom
-      use cg_leaves,   only: leaves
-      use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
       use types,       only: axes
@@ -786,6 +786,7 @@ contains
 
 !>
 !! \brief Routine that compute values of gravitational acceleration using gravitational potential array gp
+!! \todo offer high order gradient as an option in parameter file
 !<
    subroutine grav_pot2accel(sweep, i1, i2, n, grav, istep, cg)
 
@@ -794,15 +795,14 @@ contains
 
       implicit none
 
-      integer(kind=4), intent(in)    :: sweep      !< string of characters that points out the current sweep direction
-      integer, intent(in)            :: i1         !< number of column in the first direction after one pointed out by sweep
-      integer, intent(in)            :: i2         !< number of column in the second direction after one pointed out by sweep
-      integer(kind=4), intent(in)    :: n          !< number of elements of returned array grav
-      real, dimension(n),intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
-      integer, intent(in)            :: istep      !< istep=1 for halfstep, istep=2 for fullstep
-      type(grid_container), pointer, intent(in) :: cg !< current grid_container
+      integer(kind=4),               intent(in)  :: sweep      !< string of characters that points out the current sweep direction
+      integer,                       intent(in)  :: i1         !< number of column in the first direction after one pointed out by sweep
+      integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
+      integer(kind=4),               intent(in)  :: n          !< number of elements of returned array grav
+      real, dimension(n),            intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
+      integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
+      type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
 
-!> \todo offer high order gradient as an option in parameter file
 !      real, parameter :: onetw = 1./12.
 
 ! Gravitational acceleration is computed on right cell boundaries
@@ -862,28 +862,28 @@ contains
 !<
    subroutine grav_accel2pot
 
-      use constants,      only: xdim, ydim, zdim, ndims, MAXL, I_ONE, RIGHT
-      use dataio_pub,     only: die
-      use cart_comm,      only: cdd
-      use domain,         only: is_mpi_noncart, is_multicg, dom
-      use cg_leaves,      only: leaves
-      use grid_cont,      only: grid_container
-      use mpi,            only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,       only: master, nproc, FIRST, LAST, comm, mpi_err, have_mpi
+      use cart_comm,        only: cdd
+      use cg_leaves,        only: leaves
+      use constants,        only: xdim, ydim, zdim, ndims, MAXL, I_ONE, RIGHT
+      use dataio_pub,       only: die
+      use domain,           only: is_mpi_noncart, is_multicg, dom
+      use grid_cont,        only: grid_container
+      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_COMM_NULL
+      use mpisetup,         only: master, nproc, FIRST, LAST, comm, mpi_err, have_mpi
       use named_array_list, only: qna
-      use types,          only: value
+      use types,            only: value
 
       implicit none
 
-      integer                                                          :: i, j, k, ip, px, py, pz
-      integer(kind=4), dimension(ndims)                                :: pc
-      real, allocatable, dimension(:,:,:), target                      :: gpwork
-      real, dimension(:), allocatable                                  :: gravrx, gravry, gravrz
-      real                                                             :: dgpx_proc, dgpy_proc, dgpz_proc, ddgph
-      real, dimension(FIRST:LAST)                                      :: dgpx_all,  dgpy_all,  dgpz_all
+      integer                                                                      :: i, j, k, ip, px, py, pz
+      integer(kind=4),   dimension(ndims)                                          :: pc
+      real, allocatable, dimension(:,:,:), target                                  :: gpwork
+      real, allocatable, dimension(:)                                              :: gravrx, gravry, gravrz
+      real                                                                         :: dgpx_proc, dgpy_proc, dgpz_proc, ddgph
+      real, dimension(FIRST:LAST)                                                  :: dgpx_all,  dgpy_all,  dgpz_all
       real, dimension(0:cdd%psize(xdim)-1,0:cdd%psize(ydim)-1,0:cdd%psize(zdim)-1) :: dgpx,      dgpy,      dgpz,     ddgp
-      type(value)                                                      :: gp_max
-      type(grid_container), pointer :: cg
+      type(value)                                                                  :: gp_max
+      type(grid_container), pointer                                                :: cg
 
       cg => leaves%first%cg
       if (is_multicg) call die("[gravity:grav_accel2pot] multiple grid pieces per procesor not implemented yet") !nontrivial
