@@ -174,7 +174,7 @@ contains
 !<
    subroutine hydrostatic_main(sd)
 
-      use constants,  only: LO, HI
+      use constants,  only: LO, HI, big_float
       use dataio_pub, only: die
       use gravity,    only: nsub
 
@@ -189,7 +189,13 @@ contains
 
       ksmid = 0
 #ifdef HYDROSTATIC_V2
-      ksmid = minloc(abs(gprofs),1)          ! generally the midplane is where gravity is 0,  practically we want the least gravity absolute value
+      dprofs(1) = gprofs(1)
+      do k = 2, nstot
+         dprofs(k) = dprofs(k-1) + gprofs(k)
+      enddo
+      ksmid = maxloc(dprofs,1)                ! generally the midplane is where gravity is 0, practically we want the least gravity potential value
+      dprofs = big_float
+!      ksmid = minloc(abs(gprofs),1)          ! generally the midplane is where gravity is 0, practically we want the least gravity absolute value (yet it may provide wrong results because of resolution)
       hzeq_scheme => hzeq_scheme_v2
 #else /* !HYDROSTATIC_V2 */
       ksmid = maxloc(zs,1,mask=(zs < 0.0))   ! the midplane is in between ksmid and ksmid+1
