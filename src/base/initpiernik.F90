@@ -36,8 +36,10 @@ module initpiernik
 contains
 !>
 !! Meta subroutine responsible for initializing all piernik modules
-!! \deprecated remove the "__INTEL_COMPILER" clauses as soon as Intel Compiler gets required
-!! features and/or bug fixes
+!! \deprecated remove the "__INTEL_COMPILER" clauses as soon as Intel Compiler gets required features and/or bug fixes
+!! \todo move init_geometry call to init_domain or init_grid
+!! \todo add checks against PIERNIK_INIT_IO_IC to all initproblem::read_problem_par
+!! \todo split init_dataio
 !<
    subroutine init_piernik
 
@@ -92,8 +94,7 @@ contains
       use piernikcl,             only: init_opencl
 #endif /* PIERNIK_OPENCL */
 #if defined(__INTEL_COMPILER)
-      !! \deprecated remove this clause as soon as Intel Compiler gets required
-      !! features and/or bug fixes
+      !> \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
       use timestep,              only: init_time_step
 #ifdef COSM_RAYS
       use crhelpers,             only: init_div_v
@@ -106,9 +107,8 @@ contains
       write(par_file,'(2a)') trim(wd_rd),'problem.par'
       write(tmp_log_file,'(2a)') trim(wd_wr),'tmp.log'
 
-      ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
-      call init_mpi
-      code_progress = PIERNIK_INIT_MPI ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_GRID can be reshuffled when necessary
+      call init_mpi                          ! First, we must initialize the communication (and things that do not depend on init_mpi if there are any)
+      code_progress = PIERNIK_INIT_MPI       ! Now we can initialize grid and everything that depends at most on init_mpi. All calls prior to PIERNIK_INIT_GRID can be reshuffled when necessary
       call check_environment
 
 #ifdef PIERNIK_OPENCL
@@ -116,98 +116,95 @@ contains
 #endif /* PIERNIK_OPENCL */
 
 #ifdef DEBUG
-      call init_piernikdebug ! Make it available as early as possible - right after init_mpi
+      call init_piernikdebug                 ! Make it available as early as possible - right after init_mpi
       call init_piernikiodebug
 #endif /* DEBUG */
 
       call cg_extptrs%epa_init
 
-      call init_dataio_parameters ! Required very early to call colormessage without side-effects
+      call init_dataio_parameters            ! Required very early to call colormessage without side-effects
 
-      call problem_pointers ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
+      call problem_pointers                  ! set up problem-specific pointers as early as possible to allow implementation of problem-specific hacks also during the initialization
 
       call init_units
 
       call init_default_fluidboundaries
 
       call init_global
-      code_progress = PIERNIK_INIT_GLOBAL ! Global parameters are set up
+      code_progress = PIERNIK_INIT_GLOBAL    ! Global parameters are set up
 
       call init_fluids
-      code_progress = PIERNIK_INIT_FLUIDS ! Fluid properties are set up
+      code_progress = PIERNIK_INIT_FLUIDS    ! Fluid properties are set up
 
       call all_cg%register_fluids(flind%all) ! Register named fields for u, b and wa
       call all_cg%init
 
 #ifdef COSM_RAYS
 #if defined(__INTEL_COMPILER)
-      !! \deprecated remove this clause as soon as Intel Compiler gets required
-      !! features and/or bug fixes
+      !> \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
       call init_div_v
 #endif /* __INTEL_COMPILER */
-      call init_crdiffusion(flind%crs%all) ! depends on fluids
+      call init_crdiffusion(flind%crs%all)   ! depends on fluids
 #endif /* COSM_RAYS */
 
-      call init_interactions ! requires flind and units
+      call init_interactions                 ! requires flind and units
 
       call init_domain
-      code_progress = PIERNIK_INIT_DOMAIN ! Base domain is known and initial domain decomposition is known
+      code_progress = PIERNIK_INIT_DOMAIN    ! Base domain is known and initial domain decomposition is known
 
       call init_decomposition
 #ifdef GRAV
-      call init_grav ! Has to be called before init_grid
+      call init_grav                         ! Has to be called before init_grid
       call init_grav_ext
 #endif /* GRAV */
 #ifdef MULTIGRID
-      call init_multigrid_ext ! Has to be called before init_grid
+      call init_multigrid_ext                ! Has to be called before init_grid
       call multigrid_par
 #endif /* MULTIGRID */
 
-      call init_grid         ! Most of the cg's vars are now initialized, only arrays left
+      call init_grid                         ! Most of the cg's vars are now initialized, only arrays left
       code_progress = PIERNIK_INIT_GRID      ! Now we can initialize things that depend on all the above fundamental calls
 
-      call init_geometry ! depends on domain; \todo move this call to init_domain or init_grid
+      call init_geometry                     ! depends on domain; \todo move this call to init_domain or init_grid
 
 #ifdef SHEAR
-      call init_shear ! depends on fluids
+      call init_shear                        ! depends on fluids
 #endif /* SHEAR */
 
 #ifdef RESISTIVE
-      call init_resistivity ! depends on grid
+      call init_resistivity                  ! depends on grid
 #endif /* RESISTIVE */
 
 #ifdef GRAV
-!> \deprecated It is only temporary solution, but grav_pot_3d must be called after init_prob due to csim2,c_si,alpha clash!!!
-      call manage_grav_pot_3d(.true.)
+      call manage_grav_pot_3d(.true.)        !> \deprecated It is only temporary solution, but grav_pot_3d must be called after init_prob due to csim2,c_si,alpha clash!!!
 #endif /* GRAV */
 
 #ifdef CORIOLIS
-      call init_coriolis ! depends on geometry
+      call init_coriolis                     ! depends on geometry
 #endif /* CORIOLIS */
 
 #ifdef SN_SRC
-      call init_snsources ! depends on grid and fluids/cosmicrays
+      call init_snsources                    ! depends on grid and fluids/cosmicrays
 #endif /* SN_SRC */
 
 #ifdef MULTIGRID
-      call init_multigrid ! depends on grid, geometry, units and arrays
+      call init_multigrid                    ! depends on grid, geometry, units and arrays
 #endif /* MULTIGRID */
 
 #if defined(__INTEL_COMPILER)
-      !! \deprecated remove this clause as soon as Intel Compiler gets required
-      !! features and/or bug fixes
+      !> \deprecated remove this clause as soon as Intel Compiler gets required features and/or bug fixes
       call init_time_step
 #endif /* __INTEL_COMPILER */
 
-      code_progress = PIERNIK_INIT_IO_IC       ! Almost everything is initialized: do problem-related stuff here, set-up I/O and create or read the initial conditions.
+      code_progress = PIERNIK_INIT_IO_IC     ! Almost everything is initialized: do problem-related stuff here, set-up I/O and create or read the initial conditions.
 
-      call read_problem_par ! may depend on anything but init_dataio, \todo add checks against PIERNIK_INIT_IO_IC to all initproblem::read_problem_par
+      call read_problem_par                  ! may depend on anything but init_dataio, \todo add checks against PIERNIK_INIT_IO_IC to all initproblem::read_problem_par
 
-      call init_dataio ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
+      call init_dataio                       ! depends on units, fluids (through common_hdf5), fluidboundaries, arrays, grid and shear (through magboundaries::bnd_b or fluidboundaries::bnd_u) \todo split me
 #if defined(GRAV) && !defined(SELF_GRAV)
-      call sum_potential                  ! for the proper tsl&log data gpot array has to be fill in using gp array values after restart read
-                                          !< \todo check and fulfil this requirement for SELF_GRAV defined (should source_terms_grav be called here?)
-                                          !< \deprecated this probably should be guaranteed to be done elsewhere.
+      call sum_potential                     ! for the proper tsl&log data gpot array has to be fill in using gp array values after restart read
+                                             !> \todo check and fulfil this requirement for SELF_GRAV defined (should source_terms_grav be called here?)
+                                             !> \deprecated this probably should be guaranteed to be done elsewhere.
 #endif /* GRAV && !SELF_GRAV */
       if (nrestart /= 0) call all_bnd
 
@@ -233,8 +230,8 @@ contains
             call problem_post_restart
          endif
       else
-         call init_prob ! may depend on anything
-         call all_bnd !> \warning Never assume that init_prob set guardcells correctly
+         call init_prob                      ! may depend on anything
+         call all_bnd                        !> \warning Never assume that init_prob set guardcells correctly
 #ifdef GRAV
          call manage_grav_pot_3d(.false.)
          call cleanup_hydrostatic
@@ -242,15 +239,15 @@ contains
       endif
 
 #ifdef RESISTIVE
-      call compute_resist  ! etamax%val is required by timestep_resist
+      call compute_resist                    ! etamax%val is required by timestep_resist
 #endif /* RESISTIVE */
 #ifdef VERBOSE
-      call diagnose_arrays ! may depend on everything
+      call diagnose_arrays                   ! may depend on everything
 #endif /* VERBOSE */
 
       call write_data(output=INCEPTIVE)
 
-      call sanitize_smallx_checks ! depends on init_prob || init_dataio/read_restart_hdf5
+      call sanitize_smallx_checks            ! depends on init_prob || init_dataio/read_restart_hdf5
 
    end subroutine init_piernik
 !-----------------------------------------------------------------------------
