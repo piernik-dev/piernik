@@ -338,7 +338,10 @@ contains
 
    subroutine manage_grav_pot_3d(first_approach)
 
-      use dataio_pub, only: die, warn
+      use dataio_pub, only: die
+#ifdef VERBOSE
+      use dataio_pub, only: warn
+#endif /* VERBOSE */
 
       implicit none
 
@@ -353,7 +356,7 @@ contains
 #ifdef VERBOSE
          if (first_approach) call warn("[gravity:manage_grav_pot_3d] grav_pot_3d is not associated! Will try to call it once more after init_problem.")
 #endif /* VERBOSE */
-         if (.not.grav_pot_3d_called) call die("[gravity:manage_grav_pot_3d] grav_pot_3d failed for the 2nd time!")
+         if (.not.(first_approach .or. grav_pot_3d_called)) call die("[gravity:manage_grav_pot_3d] grav_pot_3d failed for the 2nd time!")
       endif
 
       if (.not.first_approach) call source_terms_grav ! make sure that all contributions to the gravitational potential are computed before first dump
