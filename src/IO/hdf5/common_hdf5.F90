@@ -689,6 +689,8 @@ contains
       logical(kind=4)                               :: Z_avail !< .true. if HDF5 was compiled with zlib support
       character(len=dsetnamelen)                    :: d_label
       integer(kind=4)                               :: indx
+      real, dimension(LO:HI)                        :: edge
+      real, dimension(ndims)                        :: temp
 
       type(gdf_root_datasets_T) :: rd
       type(gdf_parameters_T) :: gdf_sp
@@ -775,12 +777,16 @@ contains
                call h5gcreate_f(cgl_g_id, n_cg_name(sum(cg_n(:p))-cg_n(p)+g), cg_g_id, error) ! create "/cg/cg_%08d"
 
                call create_attribute(cg_g_id, cg_lev_aname, [ cg_rl(g) ] )                ! create "/cg/cg_%08d/level"
-               call create_attribute(cg_g_id, cg_size_aname, cg_n_b(g, :))                ! create "/cg/cg_%08d/n_b"
+               temp = cg_n_b(g, :)
+               call create_attribute(cg_g_id, cg_size_aname, temp)                        ! create "/cg/cg_%08d/n_b"
                call create_attribute(cg_g_id, cg_offset_aname, int(cg_off(g, :), kind=4)) ! create "/cg/cg_%08d/off"
                if (otype == O_OUT) then
-                  call create_attribute(cg_g_id, cg_ledge_aname, dbuf(cg_le, g, :))  ! create "/cg/cg_%08d/left_edge"
-                  call create_attribute(cg_g_id, cg_redge_aname, dbuf(cg_re, g, :))  ! create "/cg/cg_%08d/right_edge"
-                  call create_attribute(cg_g_id, cg_dl_aname, dbuf(cg_dl, g, :))     ! create "/cg/cg_%08d/dl"
+                  temp(:) = dbuf(cg_le, g, :)
+                  call create_attribute(cg_g_id, cg_ledge_aname, temp)  ! create "/cg/cg_%08d/left_edge"
+                  temp(:) = dbuf(cg_re, g, :)
+                  call create_attribute(cg_g_id, cg_redge_aname, temp)  ! create "/cg/cg_%08d/right_edge"
+                  temp(:) = dbuf(cg_dl, g, :)
+                  call create_attribute(cg_g_id, cg_dl_aname, temp)     ! create "/cg/cg_%08d/dl"
                endif
 
                cg_all_n_b(:, sum(cg_n(:p))-cg_n(p)+g) = cg_n_b(g, :)
@@ -817,7 +823,8 @@ contains
          call create_attribute(dom_g_id, d_size_aname, dom%n_d(:)) ! create "/domains/base/n_d"
          do i = xdim, zdim
             write(d_label, '(2a)') dir_pref(i), d_edge_apname
-            call create_attribute(dom_g_id, d_label, dom%edge(i, :)) ! create "/domains/base/[xyz]-edge_position"
+            edge(:) = dom%edge(i, :)
+            call create_attribute(dom_g_id, d_label, edge) ! create "/domains/base/[xyz]-edge_position"
             write(d_label, '(2a)') dir_pref(i), d_bnd_apname
             ! create "/domains/base/[xyz]-boundary_type"
             call create_attribute(dom_g_id, d_label, int(dom%bnd(i, :), kind=4))
@@ -865,7 +872,6 @@ contains
       endif
 
       call piernik_MPI_Bcast(cg_all_n_b)
-
       ! Reopen the HDF5 file for parallel write
       call h5open_f(error)
       if (can_i_write) then

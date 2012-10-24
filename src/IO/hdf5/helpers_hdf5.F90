@@ -203,23 +203,25 @@ contains
 !
    subroutine create_int_attribute(g_id, name, int_array)
 
-     use hdf5,      only: H5T_NATIVE_INTEGER, HID_T, HSIZE_T, &
-          &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
+      use hdf5,      only: H5T_NATIVE_INTEGER, HID_T, HSIZE_T, &
+           &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
 
-     implicit none
+      implicit none
 
-     integer(HID_T), intent(in)                :: g_id      !< group id where to create the attribute
-     character(len=*), intent(in)              :: name      !< name
-     integer(kind=4), dimension(:), intent(in) :: int_array !< the data
+      integer(HID_T), intent(in)                :: g_id      !< group id where to create the attribute
+      character(len=*), intent(in)              :: name      !< name
+      integer(kind=4), dimension(:), intent(in) :: int_array !< the data
 
-     integer(HID_T)  :: aspace_id, attr_id
-     integer(kind=4) :: error
+      integer(HID_T)  :: aspace_id, attr_id
+      integer(kind=4) :: error
+      integer(HSIZE_T), dimension(I_ONE) :: dims
 
-     call h5screate_simple_f(I_ONE, [ size(int_array, kind=HSIZE_T) ], aspace_id, error)
-     call h5acreate_f(g_id, name, H5T_NATIVE_INTEGER, aspace_id, attr_id, error)
-     call h5awrite_f(attr_id, H5T_NATIVE_INTEGER, int_array, [ size(int_array, kind=HSIZE_T) ], error)
-     call h5aclose_f(attr_id, error)
-     call h5sclose_f(aspace_id, error)
+      dims(I_ONE) = size(int_array, kind=HSIZE_T)
+      call h5screate_simple_f(I_ONE, dims, aspace_id, error)
+      call h5acreate_f(g_id, name, H5T_NATIVE_INTEGER, aspace_id, attr_id, error)
+      call h5awrite_f(attr_id, H5T_NATIVE_INTEGER, int_array, dims, error)
+      call h5aclose_f(attr_id, error)
+      call h5sclose_f(aspace_id, error)
 
    end subroutine create_int_attribute
 
@@ -257,23 +259,25 @@ contains
 !
    subroutine create_real_attribute(g_id, name, real_array)
 
-     use hdf5,      only: H5T_NATIVE_DOUBLE, HID_T, HSIZE_T, &
-          &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
+      use hdf5,      only: H5T_NATIVE_DOUBLE, HID_T, HSIZE_T, &
+           &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
 
-     implicit none
+      implicit none
 
-     integer(HID_T), intent(in)     :: g_id       !< group id where to create the attribute
-     character(len=*), intent(in)   :: name       !< name
-     real(kind=8), dimension(:), intent(in) :: real_array !< the data
+      integer(HID_T), intent(in)     :: g_id       !< group id where to create the attribute
+      character(len=*), intent(in)   :: name       !< name
+      real(kind=8), dimension(:), intent(in) :: real_array !< the data
 
-     integer(HID_T)  :: aspace_id, attr_id
-     integer(kind=4) :: error
+      integer(HID_T)  :: aspace_id, attr_id
+      integer(kind=4) :: error
+      integer(HSIZE_T), dimension(I_ONE) :: dims
 
-     call h5screate_simple_f(I_ONE, [ size(real_array, kind=HSIZE_T) ], aspace_id, error)
-     call h5acreate_f(g_id, name, H5T_NATIVE_DOUBLE, aspace_id, attr_id, error)
-     call h5awrite_f(attr_id, H5T_NATIVE_DOUBLE, real_array, [ size(real_array, kind=HSIZE_T) ], error)
-     call h5aclose_f(attr_id, error)
-     call h5sclose_f(aspace_id, error)
+      dims = shape(real_array)
+      call h5screate_simple_f(I_ONE, dims, aspace_id, error)
+      call h5acreate_f(g_id, name, H5T_NATIVE_DOUBLE, aspace_id, attr_id, error)
+      call h5awrite_f(attr_id, H5T_NATIVE_DOUBLE, real_array, dims, error)
+      call h5aclose_f(attr_id, error)
+      call h5sclose_f(aspace_id, error)
 
    end subroutine create_real_attribute
 
@@ -295,13 +299,15 @@ contains
       integer(HID_T)  :: space, attr_id, memtype, filetype
       integer(kind=4) :: error
       type(c_ptr) :: f_ptr
+      integer(HSIZE_T), dimension(I_ONE) :: dims
 
+      dims = int(1, kind=HSIZE_T)
       call H5Tcopy_f(H5T_C_S1, filetype, error)
       call H5Tset_size_f(filetype, int(len(data)+1, SIZE_T), error)
       call H5Tcopy_f( H5T_FORTRAN_S1, memtype, error)
       call H5Tset_size_f(memtype, int(len(data), SIZE_T), error)
 
-      call h5screate_simple_f(I_ONE, [ int(1, kind=HSIZE_T) ], space, error)
+      call h5screate_simple_f(I_ONE, dims, space, error)
       call H5Acreate_f(g_id, name, filetype, space, attr_id, error)
       f_ptr = C_LOC(data(1:1))
       call H5Awrite_f(attr_id, memtype, f_ptr, error)

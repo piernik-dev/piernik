@@ -1649,21 +1649,24 @@ contains
 
    subroutine read_int_attribute(g_id, name, int_array)
 
-     use hdf5,      only: HID_T, HSIZE_T, H5T_NATIVE_INTEGER, h5aopen_f, h5aclose_f, h5aread_f
+      use constants,  only: I_ONE
+      use hdf5,      only: HID_T, HSIZE_T, H5T_NATIVE_INTEGER, h5aopen_f, h5aclose_f, h5aread_f
 
-     implicit none
+      implicit none
 
-     integer(HID_T), intent(in)     :: g_id          !< group id where to create the attribute
-     character(len=*), intent(in)   :: name          !< name
-     integer(kind=4), dimension(:), intent(out) :: int_array !< the data
+      integer(HID_T), intent(in)     :: g_id          !< group id where to create the attribute
+      character(len=*), intent(in)   :: name          !< name
+      integer(kind=4), dimension(:), intent(out) :: int_array !< the data
 
-     integer(HID_T)  :: attr_id
-     integer(kind=4) :: error
+      integer(HID_T)  :: attr_id
+      integer(kind=4) :: error
+      integer(HSIZE_T), dimension(I_ONE) :: dims
 
-     !> \todo Implement size checks
-     call h5aopen_f(g_id, name, attr_id, error)
-     call h5aread_f(attr_id, H5T_NATIVE_INTEGER, int_array, [ size(int_array, kind=HSIZE_T) ], error)
-     call h5aclose_f(attr_id, error)
+      !> \todo Implement size checks
+      call h5aopen_f(g_id, name, attr_id, error)
+      dims = size(int_array, kind=HSIZE_T)
+      call h5aread_f(attr_id, H5T_NATIVE_INTEGER, int_array, dims, error)
+      call h5aclose_f(attr_id, error)
 
    end subroutine read_int_attribute
 
@@ -1671,21 +1674,24 @@ contains
 
    subroutine read_real_attribute(g_id, name, real_array)
 
-     use hdf5,      only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5aopen_f, h5aclose_f, h5aread_f
+      use constants,  only: I_ONE
+      use hdf5,      only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5aopen_f, h5aclose_f, h5aread_f
 
-     implicit none
+      implicit none
 
-     integer(HID_T), intent(in)     :: g_id        !< group id where to create the attribute
-     character(len=*), intent(in)   :: name        !< name
-     real, dimension(:), intent(out) :: real_array !< the data
+      integer(HID_T), intent(in)     :: g_id        !< group id where to create the attribute
+      character(len=*), intent(in)   :: name        !< name
+      real, dimension(:), intent(out) :: real_array !< the data
 
-     integer(HID_T)  :: attr_id
-     integer(kind=4) :: error
+      integer(HID_T)  :: attr_id
+      integer(kind=4) :: error
+      integer(HSIZE_T), dimension(I_ONE) :: dims
 
-     !> \todo Implement size checks
-     call h5aopen_f(g_id, name, attr_id, error)
-     call h5aread_f(attr_id, H5T_NATIVE_DOUBLE, real_array, [ size(real_array, kind=HSIZE_T) ], error)
-     call h5aclose_f(attr_id, error)
+      !> \todo Implement size checks
+      call h5aopen_f(g_id, name, attr_id, error)
+      dims = size(real_array, kind=HSIZE_T)
+      call h5aread_f(attr_id, H5T_NATIVE_DOUBLE, real_array, dims, error)
+      call h5aclose_f(attr_id, error)
 
    end subroutine read_real_attribute
 
