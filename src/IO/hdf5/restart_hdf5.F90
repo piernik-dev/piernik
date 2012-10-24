@@ -1291,7 +1291,7 @@ contains
             case ("last_tsl_time")
                last_tsl_time = rbuf(1)
             case ("magic_mass")
-               magic_mass(:) = rbuf(:)
+               if (master) magic_mass(:) = rbuf(:)
 !               deallocate(rbuf) ; allocate(rbuf(1)) ! not necessary while magic_mass is the last issue in real_attrs
             case default
                write(msg,'(3a,g15.5,a)')"[restart_hdf5:read_restart_hdf5_v2] Real attribute '",trim(real_attrs(ia)),"' with value = ",rbuf(1)," was ignored"
