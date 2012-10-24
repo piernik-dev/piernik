@@ -44,7 +44,7 @@ module gravity
 
    private
    public :: init_grav, init_grav_ext, grav_accel, source_terms_grav, grav_pot2accel, grav_pot_3d, grav_pot_3d_called, grav_type, get_gprofs, grav_accel2pot, sum_potential, manage_grav_pot_3d
-   public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gp_status, gprofs_target, ptmass2, ptm2_x
+   public :: g_dir, r_gc, ptmass, ptm_x, ptm_y, ptm_z, r_smooth, nsub, tune_zeq, tune_zeq_bnd, h_grav, r_grav, n_gravr, n_gravh, user_grav, gp_status, gprofs_target, ptmass2, ptm2_x, variable_gp
 
    integer, parameter         :: gp_stat_len   = 9
    integer, parameter         :: gproft_len    = 5
@@ -72,7 +72,7 @@ module gravity
 
    logical                    :: grav_pot_3d_called = .false.
    logical                    :: user_grav             !< use user defined grav_pot_3d
-   logical                    :: variable_gp           !< .true. if arrays::gp must be evaluated at every step
+   logical                    :: variable_gp           !< if .true. then cg%gp is evaluated at every step
 
    interface
 
