@@ -1162,7 +1162,7 @@ contains
             cgl => cgl%nxt
          enddo
          call leaves%get_extremum(qna%wai, MINL, pr%dtcs_min)
-         pr%dtcs_min%val = sqrt(pr%dtcs_min%val)
+         if (pr%dtcs_min%val >= 0.) pr%dtcs_min%val = sqrt(pr%dtcs_min%val)
 
          cgl => leaves%first
          do while (associated(cgl))
