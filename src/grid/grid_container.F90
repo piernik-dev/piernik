@@ -217,13 +217,13 @@ module grid_cont
 
    contains
 
-      procedure :: init                                          !< Initialization
-      procedure :: cleanup                                       !< Deallocate all internals
-      procedure :: set_coords                                    !< Calculate arrays of coordinates along a given direction
-      procedure :: add_all_na                                    !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
-      procedure :: add_na                                        !< Register a new 3D entry in current cg with given name.
-      procedure :: add_na_4d                                     !< Register a new 4D entry in current cg with given name.
-      procedure :: update_leafmap                                !< Check if the grid container has any parts covered by finer grids and update appropriate map
+      procedure          :: init                                 !< Initialization
+      procedure          :: cleanup                              !< Deallocate all internals
+      procedure, private :: set_coords                           !< Calculate arrays of coordinates along a given direction
+      procedure, private :: add_all_na                           !< Register all known named arrays for this cg, sey up shortcuts to the crucial fields
+      procedure          :: add_na                               !< Register a new 3D entry in current cg with given name.
+      procedure          :: add_na_4d                            !< Register a new 4D entry in current cg with given name.
+      procedure          :: update_leafmap                       !< Check if the grid container has any parts covered by finer grids and update appropriate map
 
    end type grid_container
 
@@ -453,6 +453,8 @@ contains
       this%prolong_x (:, :, :) = big_float
       this%prolong_xy(:, :, :) = big_float
       this%leafmap   (:, :, :) = .true.
+
+      call this%add_all_na
 
    end subroutine init
 

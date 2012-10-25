@@ -200,7 +200,6 @@ contains
             call this%add
             cg => this%last%cg
             call cg%init(this%n_d, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
-            call cg%add_all_na                                                     ! require mpi_bnd_types properly calculated
             do ep = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
                if (associated(cg_extptrs%ext(ep)%init))  call cg_extptrs%ext(ep)%init(cg)
             enddo
