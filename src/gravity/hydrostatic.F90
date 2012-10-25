@@ -174,9 +174,12 @@ contains
 !<
    subroutine hydrostatic_main(sd)
 
-      use constants,  only: LO, HI, big_float
+      use constants,  only: LO, HI
       use dataio_pub, only: die
       use gravity,    only: nsub
+#ifdef HYDROSTATIC_V2
+      use constants,  only: big_float
+#endif /* !HYDROSTATIC_V2 */
 
       implicit none
 
