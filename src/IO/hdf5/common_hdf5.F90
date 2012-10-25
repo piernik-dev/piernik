@@ -756,7 +756,7 @@ contains
                do while (associated(cgl))
                   cg_rl(g)     = int(cgl%cg%level_id, kind=4)
                   cg_n_b(g, :) = cgl%cg%n_b
-                  cg_off(g, :) = cgl%cg%off
+                  cg_off(g, :) = cgl%cg%my_se(:, LO)
                   if (otype == O_OUT) then
                     dbuf(cg_le, g, :)  = cgl%cg%fbnd(:,LO)
                     dbuf(cg_re, g, :)  = cgl%cg%fbnd(:,HI)
@@ -854,7 +854,7 @@ contains
          do while (associated(cgl))
             cg_rl(g)     = int(cgl%cg%level_id, kind=4)
             cg_n_b(g, :) = cgl%cg%n_b(:)
-            cg_off(g, :) = cgl%cg%off(:)
+            cg_off(g, :) = cgl%cg%my_se(:, LO)
             if (otype == O_OUT) then
                dbuf(cg_le, g, :)  = cgl%cg%fbnd(:,LO)
                dbuf(cg_re, g, :)  = cgl%cg%fbnd(:,HI)

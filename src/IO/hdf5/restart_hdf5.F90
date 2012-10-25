@@ -161,11 +161,11 @@ contains
       lleft(:)  = cg%ijkse(:, LO)
       lright(:) = cg%ijkse(:, HI)
       chnk(:)   = cg%n_b(:)
-      loffs(:)  = cg%off(:)
+      loffs(:)  = cg%my_se(:, LO)
 
       select case (area_type)
          case (AT_OUT_B)                                   ! physical domain with outer boundaries
-            where (cg%off(:) == 0 .and. dom%has_dir(:))
+            where (cg%my_se(:, LO) == 0 .and. dom%has_dir(:))
                lleft(:)  = lleft(:)  - dom%nb
                chnk(:)   = chnk(:)   + dom%nb
             endwhere
@@ -1436,8 +1436,7 @@ contains
          my_box(:,HI) = cg_res(ia)%off(:) + cg_res(ia)%n_b(:) - 1
          cgl => leaves%first
          do while (associated(cgl))
-            other_box(:,LO) = cgl%cg%off(:)
-            other_box(:,HI) = cgl%cg%off(:) + cgl%cg%n_b(:) - 1
+            other_box(:, :) = cgl%cg%my_se(:, :)
             if (is_overlap(my_box, other_box)) call read_cg_from_restart(cgl%cg, cgl_g_id, ia, cg_res(ia))
             cgl => cgl%nxt
          enddo
@@ -1489,8 +1488,7 @@ contains
       real, dimension(:,:,:,:), allocatable :: a4d
 
       ! Find overlap between own cg and restart cg
-      own_box(:, LO) = cg%off(:)
-      own_box(:, HI) = cg%off(:) + cg%n_b(:) - 1
+      own_box(:, :) = cg%my_se(:, :)
       restart_box(:, LO) = cg_r%off(:)
       restart_box(:, HI) = cg_r%off(:) + cg_r%n_b(:) - 1
       if (.not. is_overlap(own_box, restart_box)) call die("[restart_hdf5:read_cg_from_restart] No overlap found") ! this condition should never happen

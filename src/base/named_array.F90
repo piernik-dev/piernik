@@ -96,25 +96,30 @@ contains
 !! \brief Initialize a 4d named array
 !!
 !! \details The mbc component is initialized separately
+!!
+!! \warning Please note that maxloc and minloc return positions as all the declared lower bounds of array were 1, so whenever you plan to use these functions
+!! on this%arr remember to add lbound(this%arr) - 1 to the result
 !<
-   subroutine named_array_init(this, n)
+   subroutine named_array_init(this, n1, n2)
 
       use constants,  only: big_float, ndims, xdim, ydim, zdim, I_ONE
       use dataio_pub, only: die
 
       implicit none
 
-      class(generic_na),          intent(inout) :: this
-      integer(kind=4), dimension(:), intent(in)    :: n
+      class(generic_na),             intent(inout) :: this
+      integer(kind=4), dimension(:), intent(in)    :: n1
+      integer(kind=4), dimension(:), intent(in)    :: n2
 
+      if (size(n1) /= size(n2)) call die("[named_array:array_init] sizes differ")
       select type(this)
          type is (named_array3d)
-            if (size(n) /= ndims) call die("[named_array:array_init] expected 3d shape")
-            if (.not.associated(this%arr)) allocate(this%arr(n(xdim), n(ydim), n(zdim)))
+            if (size(n1) /= ndims) call die("[named_array:array_init] expected 3d shape")
+            if (.not.associated(this%arr)) allocate(this%arr(n1(xdim):n2(xdim), n1(ydim):n2(ydim), n1(zdim):n2(zdim)))
             this%arr = big_float
          type is (named_array4d)
-            if (size(n) /= I_ONE + ndims) call die("[named_array:array_init] expected 4d shape")
-            if (.not.associated(this%arr)) allocate(this%arr(n(I_ONE), n(I_ONE+xdim), n(I_ONE+ydim), n(I_ONE+zdim)))
+            if (size(n1) /= I_ONE + ndims) call die("[named_array:array_init] expected 4d shape")
+            if (.not.associated(this%arr)) allocate(this%arr(n1(I_ONE):n2(I_ONE), n1(I_ONE+xdim):n2(I_ONE+xdim), n1(I_ONE+ydim):n2(I_ONE+ydim), n1(I_ONE+zdim):n2(I_ONE+zdim)))
             this%arr = big_float
          class default
             call die("[named_array:named_array_init] No initialization for generic named array")
@@ -549,7 +554,8 @@ contains
 
    function array4d_span_ijkse8(this,v) result(p3d)
 
-      use constants, only: xdim, ydim, zdim, LO, HI
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use dataio_pub, only: msg, die
 
       implicit none
 
@@ -558,9 +564,17 @@ contains
 
       real,    dimension(:,:,:,:), pointer           :: p3d
 
+      integer :: d
+
       if (.not.associated(this%arr)) then
          p3d => null()
       else
+         do d = xdim, zdim
+            if (v(d, LO) < lbound(this%arr, dim=1+d) .or. v(d, HI) > ubound(this%arr, dim=1+d)) then
+               write(msg,'(2(a,4i6),2(a,3i6),a)')"[named_array:array4d_span_ijkse8] this%arr[",lbound(this%arr),"]..[",ubound(this%arr),"], not embedding v[",v(:,LO),"]..[",v(:,HI),"]"
+               call die(msg) ! we want backtrace
+            endif
+         enddo
          p3d => this%arr(:,v(xdim,LO):v(xdim,HI),v(ydim,LO):v(ydim,HI),v(zdim,LO):v(zdim,HI))
       endif
 

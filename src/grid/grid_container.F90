@@ -273,23 +273,23 @@ contains
       this%my_se(:,:) = my_se(:, :)
       this%off(:)     = this%my_se(:, LO)
       this%h_cor1(:)  = this%my_se(:, HI) + I_ONE
-      this%n_b(:)     = int(this%h_cor1(:) - this%off(:), 4) ! Block 'physical' grid sizes
+      this%n_b(:)     = int(this%my_se(:, HI) - this%my_se(:, LO) + I_ONE, 4) ! Block 'physical' grid sizes
       this%level_id   = level_id
 
       if (any(this%n_b(:) <= 0)) call die("[grid_container:init] Mixed positive and non-positive grid sizes")
 
       ! Inherit the boundaries from the domain, then set MPI or SHEAR boundaries where applicable
       this%bnd(:,:) = dom%bnd(:,:)
-      where (this%off(:)    /= 0)      this%bnd(:, LO) = BND_MPI
+      where (my_se(:, LO)   /= 0)      this%bnd(:, LO) = BND_MPI
       where (this%h_cor1(:) /= n_d(:)) this%bnd(:, HI) = BND_MPI
       ! For periodic boundaries do not set BND_MPI when local domain spans through the whole computational domain in given direction.
-      where (dom%periodic(:) .and. this%h_cor1(:) /= n_d(:)) this%bnd(:, LO) = BND_MPI
-      where (dom%periodic(:) .and. this%off(:)    /= 0)      this%bnd(:, HI) = BND_MPI
+      where (dom%periodic(:) .and. this%h_cor1(:)    /= n_d(:)) this%bnd(:, LO) = BND_MPI
+      where (dom%periodic(:) .and. this%my_se(:, LO) /= 0)      this%bnd(:, HI) = BND_MPI
 
       this%ext_bnd(:, :) = .false.
       do i = xdim, zdim
          if (dom%has_dir(i) .and. .not. dom%periodic(i)) then
-            this%ext_bnd(i, LO) = (this%off(i)    == 0)
+            this%ext_bnd(i, LO) = (my_se(i, LO)   == 0)
             this%ext_bnd(i, HI) = (this%h_cor1(i) == n_d(i)) !! \warning not true on AMR
          endif
       enddo
@@ -347,46 +347,29 @@ contains
          this%lhn(:,LO)    = this%ijkse(:, LO) - dom%nb
          this%lhn(:,HI)    = this%ijkse(:, HI) + dom%nb
          this%dl(:)        = dom%L_(:) / n_d(:)
-         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * this%off(:)
+         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * this%my_se(:, LO)
          this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * this%h_cor1(:)
       elsewhere
          this%n_(:)        = 1
          this%ijkse(:, LO) = 1 ! cannot use this%ijkse(:, :) = 1 due to where shape
          this%ijkse(:, HI) = 1
-         this%ijkseb(:,LO) = 1
-         this%ijkseb(:,HI) = 1
-         this%lh1(:,LO)    = 1
-         this%lh1(:,HI)    = 1
-         this%lhn(:,LO)    = 1
-         this%lhn(:,HI)    = 1
+         this%ijkseb(:,LO) = this%ijkse(:, LO)
+         this%ijkseb(:,HI) = this%ijkse(:, HI)
+         this%lh1(:,LO)    = this%ijkse(:, LO)
+         this%lh1(:,HI)    = this%ijkse(:, HI)
+         this%lhn(:,LO)    = this%ijkse(:, LO)
+         this%lhn(:,HI)    = this%ijkse(:, HI)
          this%dl(:)        = 1.0
          this%fbnd(:, LO)  = dom%edge(:, LO)
          this%fbnd(:, HI)  = dom%edge(:, HI)
       endwhere
 
-      if (dom%has_dir(xdim)) then
-         this%isb   = I_TWO*dom%nb
-         this%ieb   = this%n_b(xdim)+I_ONE
-      else
-         this%isb   = 1
-         this%ieb   = 1
-      endif
-
-      if (dom%has_dir(ydim)) then
-         this%jsb   = I_TWO*dom%nb
-         this%jeb   = this%n_b(ydim)+I_ONE
-      else
-         this%jsb   = 1
-         this%jeb   = 1
-      endif
-
-      if (dom%has_dir(zdim)) then
-         this%ksb   = I_TWO*dom%nb
-         this%keb   = this%n_b(zdim)+I_ONE
-      else
-         this%ksb   = 1
-         this%keb   = 1
-      endif
+      this%isb = this%ijkseb(xdim, LO)
+      this%ieb = this%ijkseb(xdim, HI)
+      this%jsb = this%ijkseb(ydim, LO)
+      this%jeb = this%ijkseb(ydim, HI)
+      this%ksb = this%ijkseb(zdim, LO)
+      this%keb = this%ijkseb(zdim, HI)
 
       this%vol = product(this%fbnd(:, HI)-this%fbnd(:, LO), mask=dom%has_dir(:))
       this%dvol = product(this%dl(:), mask=dom%has_dir(:))
@@ -746,7 +729,7 @@ contains
          call move_alloc(from=tmp, to=this%q)
       endif
 
-      if (multigrid .or. this%level_id >= base_level_id) call this%q(ubound(this%q(:), dim=1))%init(this%n_(:))
+      if (multigrid .or. this%level_id >= base_level_id) call this%q(ubound(this%q(:), dim=1))%init(this%lhn(:, LO), this%lhn(:, HI))
 
    end subroutine add_na
 
@@ -776,7 +759,7 @@ contains
          call move_alloc(from=tmp, to=this%w)
       endif
 
-      if (this%level_id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [n, this%n_(:)] )
+      if (this%level_id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [1, this%lhn(:, LO)], [n, this%lhn(:, HI)] ) !< \deprecated magic integer
 
    end subroutine add_na_4d
 

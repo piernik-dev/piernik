@@ -500,19 +500,19 @@ contains
 
    subroutine h5_write_to_single_file_v1(fname)
 
-      use cg_list,       only: cg_list_element
+      use cg_list,            only: cg_list_element
       use cg_level_connected, only: finest
-      use common_hdf5,   only: nhdf_vars, hdf_vars
-      use constants,     only: ndims
-      use dataio_pub,    only: die
-      use domain,        only: is_multicg !, is_uneven
-      use grid_cont,     only: grid_container
-      use hdf5,          only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, &
-           &                   H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, &
-           &                   h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
-           &                   h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
-      use mpisetup,      only: comm
-      use mpi,           only: MPI_INFO_NULL
+      use common_hdf5,        only: nhdf_vars, hdf_vars
+      use constants,          only: ndims, LO
+      use dataio_pub,         only: die
+      use domain,             only: is_multicg !, is_uneven
+      use grid_cont,          only: grid_container
+      use hdf5,               only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, &
+           &                        H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, &
+           &                        h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
+           &                        h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
+      use mpisetup,           only: comm
+      use mpi,                only: MPI_INFO_NULL
 
       implicit none
 
@@ -582,7 +582,7 @@ contains
             stride(:) = 1
             count(:) =  1
             block(:) = chunk_dims(:)
-            offset(:) = cg%off(:)
+            offset(:) = cg%my_se(:, LO)
 
             ! Select hyperslab in the file.
             call h5sselect_hyperslab_f (filespace, H5S_SELECT_SET_F, offset, count, error, stride, block)
