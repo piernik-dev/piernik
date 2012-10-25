@@ -741,7 +741,7 @@ contains
 !<
    subroutine add_na_4d(this, n)
 
-      use constants,   only: base_level_id
+      use constants,   only: base_level_id, INT4
       use named_array, only: named_array4d
 
       implicit none
@@ -759,7 +759,7 @@ contains
          call move_alloc(from=tmp, to=this%w)
       endif
 
-      if (this%level_id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [1, this%lhn(:, LO)], [n, this%lhn(:, HI)] ) !< \deprecated magic integer
+      if (this%level_id >= base_level_id) call this%w(ubound(this%w(:), dim=1))%init( [1_INT4, this%lhn(:, LO)], [n, this%lhn(:, HI)] ) !< \deprecated magic integer
 
    end subroutine add_na_4d
 
