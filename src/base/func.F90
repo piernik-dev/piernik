@@ -39,7 +39,7 @@ module func
    implicit none
 
    private
-   public :: ekin, emag, L2norm, sq_sum3, resample_gauss, piernik_fnum
+   public :: ekin, emag, L2norm, sq_sum3, resample_gauss, piernik_fnum, f2c, c2f
 
 contains
 
@@ -164,5 +164,42 @@ contains
       piernik_fnum = int(fnum(lunit), kind=4)
 #endif /* !__INTEL_COMPILER */
    end function piernik_fnum
+
+!> \brief Calculate minimal fine grid that completely covers given coarse grid
+
+   pure function c2f(coarse) result (fine)
+
+      use constants, only: xdim, zdim, LO, HI, refinement_factor
+      use domain,    only: dom
+
+      implicit none
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: coarse
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: fine
+
+      fine(:,:) = coarse(:,:) * refinement_factor
+      where (dom%has_dir(:)) fine(:, HI) = fine(:, HI) + refinement_factor - 1
+
+   end function c2f
+
+!> \brief Calculate minimal coarse grid that completely embeds given fine grid
+
+   pure function f2c(fine) result (coarse)
+
+      use constants, only: xdim, zdim, LO, HI, refinement_factor, LONG
+
+      implicit none
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: fine
+
+      integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarse
+
+      integer(kind=8) :: bias !< prevents inconsistencies in arithmetic on integers due to rounding towards 0 (stencil_range should be more than enough)
+
+      bias = max(0_LONG, -minval(fine(:,:)))
+      coarse(:,:) =  (fine(:,:) + bias*refinement_factor) / refinement_factor - bias
+
+   end function f2c
 
 end module func

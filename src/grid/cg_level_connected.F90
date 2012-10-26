@@ -201,43 +201,6 @@ contains
 
    end subroutine add_lev
 
-!> \brief Calculate minimal fine grid that completely covers given coarse grid
-
-   pure function c2f(coarse) result (fine)
-
-      use constants, only: xdim, zdim, LO, HI, refinement_factor
-      use domain,    only: dom
-
-      implicit none
-
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: coarse
-
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: fine
-
-      fine(:,:) = coarse(:,:) * refinement_factor
-      where (dom%has_dir(:)) fine(:, HI) = fine(:, HI) + refinement_factor - 1
-
-   end function c2f
-
-!> \brief Calculate minimal coarse grid that completely embeds given fine grid
-
-   pure function f2c(fine) result (coarse)
-
-      use constants, only: xdim, zdim, LO, HI, refinement_factor, LONG
-
-      implicit none
-
-      integer(kind=8), dimension(xdim:zdim, LO:HI), intent(in) :: fine
-
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarse
-
-      integer(kind=8) :: bias !< prevents inconsistencies in arithmetic on integers due to rounding towards 0 (stencil_range should be more than enough)
-
-      bias = max(0_LONG, -minval(fine(:,:)))
-      coarse(:,:) =  (fine(:,:) + bias*refinement_factor) / refinement_factor - bias
-
-   end function f2c
-
 !>
 !! \brief Initialize prolongation and restriction targets. Called from init_multigrid.
 !!
@@ -250,11 +213,12 @@ contains
 
    subroutine vertical_prep(this)
 
+      use cg_list,        only: cg_list_element
       use cg_list_global, only: all_cg
       use constants,      only: xdim, ydim, zdim, LO, HI
       use dataio_pub,     only: die
       use domain,         only: dom
-      use cg_list,        only: cg_list_element
+      use func,           only: f2c, c2f
       use grid_cont,      only: grid_container, is_overlap
       use mpisetup,       only: FIRST, LAST
 
