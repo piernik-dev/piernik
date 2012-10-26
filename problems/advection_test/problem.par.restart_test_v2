@@ -46,14 +46,11 @@
     plt_plane = 0, 0, 0
     dt_hdf  = 1.0
     dt_res  = 1.0
-    dt_plt  = 0.0
+    dt_plt  = 0.1
     dt_log  = 0.00
     dt_tsl  = 0.00
     vars(1) = 'dens'
-    vars(2) = 'velx'
-    vars(3) = 'vely'
-    vars(4) = 'velz'
-    vars(5) = 'ener'
+    vars(2) = 'inid'
  /
 
  $FLUID_NEUTRAL
