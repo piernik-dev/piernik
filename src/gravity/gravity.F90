@@ -742,9 +742,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (.not.allocated(ax%x)) allocate(ax%x(size(cg%x)))
-         if (.not.allocated(ax%y)) allocate(ax%y(size(cg%y)))
-         if (.not.allocated(ax%z)) allocate(ax%z(size(cg%z)))
+         call ax%allocate_axes([size(cg%x), size(cg%y), size(cg%z)])
          ax%x(:) = cg%x(:)
          ax%y(:) = cg%y(:)
          ax%z(:) = cg%z(:)
@@ -801,9 +799,7 @@ contains
             endif
          endif
 
-         if (allocated(ax%x)) deallocate(ax%x)
-         if (allocated(ax%y)) deallocate(ax%y)
-         if (allocated(ax%z)) deallocate(ax%z)
+         call ax%deallocate_axes
 
          cgl => cgl%nxt
       enddo

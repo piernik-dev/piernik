@@ -295,20 +295,16 @@ contains
 
       nstot1 = nstot + 1
       allocate(gpots(1,1,nstot1))
-      if (.not.allocated(ax%x)) allocate(ax%x(1))
-      if (.not.allocated(ax%y)) allocate(ax%y(1))
-      if (.not.allocated(ax%z)) allocate(ax%z(nstot1))
+      call ax%allocate_axes([1, 1, nstot1])
       ax%x          = hscg%x(iia)
       ax%y          = hscg%y(jja)
       ax%z(1:nstot) = zs - half*dzs
       ax%z(nstot1)  = ax%z(nstot) + dzs
       call grav_type(gpots,ax)
+      call ax%deallocate_axes
       gprofs(1:nstot) = (gpots(1,1,1:nstot) - gpots(1,1,2:nstot1))/dzs
       gprofs(:) = tune_zeq*gprofs(:)
       if (associated(gpots)) deallocate(gpots)
-      if (allocated(ax%x))   deallocate(ax%x)
-      if (allocated(ax%y))   deallocate(ax%y)
-      if (allocated(ax%z))   deallocate(ax%z)
    end subroutine get_gprofs_extgp
 
 !>
