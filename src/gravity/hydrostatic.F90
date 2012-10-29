@@ -282,7 +282,7 @@ contains
 !<
    subroutine get_gprofs_extgp(iia, jja)
 
-      use constants, only: half, INT4
+      use constants, only: half, I_ONE
       use gravity,   only: tune_zeq, grav_type
       use types,     only: axes
 
@@ -293,9 +293,9 @@ contains
       type(axes)                      :: ax
       integer(kind=4)                 :: nstot1
 
-      nstot1 = nstot + 1_INT4
+      nstot1 = nstot + I_ONE
       allocate(gpots(1,1,nstot1))
-      call ax%allocate_axes([1_INT4, 1_INT4, nstot1])
+      call ax%allocate_axes([I_ONE, I_ONE, nstot1])
       ax%x          = hscg%x(iia)
       ax%y          = hscg%y(jja)
       ax%z(1:nstot) = zs - half*dzs
