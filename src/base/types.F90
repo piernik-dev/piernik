@@ -50,6 +50,29 @@ module types
       real, allocatable, dimension(:) :: x      !< array of x-positions of %grid cells centers
       real, allocatable, dimension(:) :: y      !< array of y-positions of %grid cells centers
       real, allocatable, dimension(:) :: z      !< array of z-positions of %grid cells centers
+      contains
+         procedure :: allocate_axes
+         procedure :: deallocate_axes
    end type axes
+
+contains
+
+   subroutine allocate_axes(this, sizes)
+      use constants, only: ndims, xdim, ydim, zdim
+      implicit none
+      class(axes),               intent(inout) :: this
+      integer, dimension(ndims), intent(in)    :: sizes
+      if (.not.allocated(this%x)) allocate(this%x(sizes(xdim)))
+      if (.not.allocated(this%y)) allocate(this%y(sizes(ydim)))
+      if (.not.allocated(this%z)) allocate(this%z(sizes(zdim)))
+   end subroutine allocate_axes
+
+   subroutine deallocate_axes(this)
+      implicit none
+      class(axes), intent(inout) :: this
+      if (allocated(this%x)) deallocate(this%x)
+      if (allocated(this%y)) deallocate(this%y)
+      if (allocated(this%z)) deallocate(this%z)
+   end subroutine deallocate_axes
 
 end module types
