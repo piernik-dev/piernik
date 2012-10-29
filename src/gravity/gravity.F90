@@ -88,7 +88,7 @@ module gravity
       end subroutine gprofs_default
 
       subroutine grav_types(gp,ax,flatten)
-         use types, only: axes
+         use axes_M, only: axes
          implicit none
          real, dimension(:,:,:), pointer       :: gp        !< COMMENT ME
          type(axes),             intent(in)    :: ax        !< COMMENT ME
@@ -461,7 +461,7 @@ contains
 
    subroutine grav_null(gp, ax, flatten)
 
-      use types, only: axes
+      use axes_M, only: axes
 
       implicit none
 
@@ -477,7 +477,7 @@ contains
 
    subroutine grav_uniform(gp, ax, flatten)
 
-      use types, only: axes
+      use axes_M, only: axes
 
       implicit none
 
@@ -501,7 +501,7 @@ contains
    subroutine grav_linear(gp, ax, flatten)
 
       use constants, only: half
-      use types,     only: axes
+      use axes_M, only: axes
 
       implicit none
 
@@ -525,7 +525,7 @@ contains
    subroutine grav_ptmass_pure(gp, ax, flatten)
 
       use units, only: newtong
-      use types, only: axes
+      use axes_M, only: axes
 
       implicit none
 
@@ -568,7 +568,7 @@ contains
 
       use fluidindex, only: flind
       use global,     only: smalld
-      use types,      only: axes
+      use axes_M, only: axes
       use units,      only: newtong
 
       implicit none
@@ -622,7 +622,7 @@ contains
    subroutine grav_roche(gp, ax, flatten)
 
       use constants, only: ydim, zdim, half
-      use types,     only: axes
+      use axes_M, only: axes
       use units,     only: newtong
 
       implicit none
@@ -658,7 +658,7 @@ contains
    subroutine grav_ptmass_stiff(gp, ax, flatten)
 
       use constants, only: half
-      use types,     only: axes
+      use axes_M, only: axes
       use units,     only: newtong
 
       implicit none
@@ -731,7 +731,7 @@ contains
       use domain,      only: dom
       use grid_cont,   only: grid_container
       use mpisetup,    only: master
-      use types,       only: axes
+      use axes_M, only: axes
 
       implicit none
 

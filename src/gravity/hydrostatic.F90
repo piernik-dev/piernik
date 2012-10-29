@@ -278,13 +278,13 @@ contains
 
 !>
 !! \brief Routine that has to offer a z-sweep of external gravity potential with extended z-grid
-!! \warning in case of moving 'use types, only: axes'' behind use gravity there could be gcc(4.5) internal compiler error: in fold_convert_loc, at fold-const.c:2792 (solved in >=gcc-4.6)
+!! \warning in case of moving 'use axes_M, only: axes'' behind use gravity there could be gcc(4.5) internal compiler error: in fold_convert_loc, at fold-const.c:2792 (solved in >=gcc-4.6)
 !<
    subroutine get_gprofs_extgp(iia, jja)
 
       use constants, only: half, I_ONE
       use gravity,   only: tune_zeq, grav_type
-      use types,     only: axes
+      use axes_M, only: axes
 
       implicit none
 

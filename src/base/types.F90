@@ -27,7 +27,9 @@
 !
 #include "piernik.h"
 !>
-!! \brief Definitions of some compound types used in several other modules
+!! \brief Definitions of some types used in several other modules
+!!
+!! \details The definitions here are either hard to categorize or too simple to go to separate file
 !<
 module types
 
@@ -36,7 +38,7 @@ module types
    implicit none
 
    private
-   public :: axes, value
+   public :: value
 
    type :: value
       real                      :: val
@@ -45,34 +47,5 @@ module types
       integer, dimension(ndims) :: loc
       integer                   :: proc
    end type value
-
-   type :: axes
-      real, allocatable, dimension(:) :: x      !< array of x-positions of %grid cells centers
-      real, allocatable, dimension(:) :: y      !< array of y-positions of %grid cells centers
-      real, allocatable, dimension(:) :: z      !< array of z-positions of %grid cells centers
-      contains
-         procedure :: allocate_axes
-         procedure :: deallocate_axes
-   end type axes
-
-contains
-
-   subroutine allocate_axes(this, sizes)
-      use constants, only: ndims, xdim, ydim, zdim
-      implicit none
-      class(axes),                       intent(inout) :: this
-      integer(kind=4), dimension(ndims), intent(in)    :: sizes
-      if (.not.allocated(this%x)) allocate(this%x(sizes(xdim)))
-      if (.not.allocated(this%y)) allocate(this%y(sizes(ydim)))
-      if (.not.allocated(this%z)) allocate(this%z(sizes(zdim)))
-   end subroutine allocate_axes
-
-   subroutine deallocate_axes(this)
-      implicit none
-      class(axes), intent(inout) :: this
-      if (allocated(this%x)) deallocate(this%x)
-      if (allocated(this%y)) deallocate(this%y)
-      if (allocated(this%z)) deallocate(this%z)
-   end subroutine deallocate_axes
 
 end module types
