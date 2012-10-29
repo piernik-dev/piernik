@@ -282,7 +282,7 @@ contains
 !<
    subroutine get_gprofs_extgp(iia, jja)
 
-      use constants, only: half
+      use constants, only: half, INT4
       use gravity,   only: tune_zeq, grav_type
       use types,     only: axes
 
@@ -291,11 +291,11 @@ contains
       integer, intent(in)             :: iia, jja
       real, dimension(:,:,:), pointer :: gpots
       type(axes)                      :: ax
-      integer                         :: nstot1
+      integer(kind=4)                 :: nstot1
 
-      nstot1 = nstot + 1
+      nstot1 = nstot + 1_INT4
       allocate(gpots(1,1,nstot1))
-      call ax%allocate_axes([1, 1, nstot1])
+      call ax%allocate_axes([1_INT4, 1_INT4, nstot1])
       ax%x          = hscg%x(iia)
       ax%y          = hscg%y(jja)
       ax%z(1:nstot) = zs - half*dzs

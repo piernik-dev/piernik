@@ -60,8 +60,8 @@ contains
    subroutine allocate_axes(this, sizes)
       use constants, only: ndims, xdim, ydim, zdim
       implicit none
-      class(axes),               intent(inout) :: this
-      integer, dimension(ndims), intent(in)    :: sizes
+      class(axes),                       intent(inout) :: this
+      integer(kind=4), dimension(ndims), intent(in)    :: sizes
       if (.not.allocated(this%x)) allocate(this%x(sizes(xdim)))
       if (.not.allocated(this%y)) allocate(this%y(sizes(ydim)))
       if (.not.allocated(this%z)) allocate(this%z(sizes(zdim)))
