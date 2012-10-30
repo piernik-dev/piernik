@@ -432,7 +432,7 @@ contains
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:prolong] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, iwa)
-               call this%prolong_q_1var(iwa)
+               call this%prolong_q_1var(iwa, wna%lst(i)%position(iw))
                call this%finer%qw_copy(iwa, i, iw)
             enddo
          endif
@@ -468,7 +468,7 @@ contains
             if (wna%lst(i)%multigrid) call warn("[cg_level_connected:restrict] mg set for cg%w ???")
             do iw = 1, wna%lst(i)%dim4
                call this%wq_copy(i, iw, iwa)
-               call this%restrict_q_1var(iwa)
+               call this%restrict_q_1var(iwa, wna%lst(i)%position(iw))
                call this%coarser%qw_copy(iwa, i, iw)
             enddo
          endif
@@ -515,21 +515,23 @@ contains
 !! Some tests show that purely MPI code without local copies is marginally faster.
 !<
 
-   subroutine restrict_q_1var(this, iv)
+   subroutine restrict_q_1var(this, iv, pos)
 
-      use constants,   only: xdim, ydim, zdim, LO, HI, I_ONE, refinement_factor
+      use constants,   only: xdim, ydim, zdim, LO, HI, I_ONE, refinement_factor, VAR_CENTER
       use dataio_pub,  only: msg, warn
       use domain,      only: dom
       use cg_list,     only: cg_list_element
       use grid_cont,   only: grid_container
-      use mpisetup,    only: comm, mpi_err, req, status, inflate_req
+      use mpisetup,    only: comm, mpi_err, req, status, inflate_req, master
       use mpi,         only: MPI_DOUBLE_PRECISION
       use named_array, only: p3
+      use named_array_list, only: qna
 
       implicit none
 
       class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
-      integer,                        intent(in)    :: iv   !< variable to be restricted
+      integer,                             intent(in)    :: iv   !< variable to be restricted
+      integer(kind=4), optional,           intent(in)    :: pos  !< position of the variable within cell
 
       type(cg_level_connected_T), pointer :: coarse
       integer :: g
@@ -541,6 +543,15 @@ contains
       integer(kind=4), dimension(:,:), pointer :: mpistatus
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg            !< current grid container
+      logical, save :: warned = .false.
+      integer :: position
+
+      position = qna%lst(iv)%position(I_ONE)
+      if (present(pos)) position = pos
+      if (position /= VAR_CENTER .and. .not. warned) then
+         if (master) call warn("[cg_level_connected:restrict_q_1var] Only cell-centered interpolation scheme is implemented. Exprect inaccurate results for variables that are placed on faces or corners")
+         warned = .true.
+      endif
 
       coarse => this%coarser
       if (.not. associated(coarse)) then ! can't restrict base level
@@ -686,21 +697,22 @@ contains
 !! \todo implement high order prolongation. Watch f/c boundaries.
 !<
 
-   subroutine prolong_q_1var(this, iv)
+   subroutine prolong_q_1var(this, iv, pos)
 
-      use constants,        only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, BND_REF, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4, refinement_factor
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, BND_REF, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4, refinement_factor, VAR_CENTER
       use dataio_pub,       only: msg, warn, die
       use domain,           only: dom
       use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
-      use mpisetup,         only: comm, mpi_err, req, status, inflate_req
+      use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
       use mpi,              only: MPI_DOUBLE_PRECISION
       use named_array_list, only: qna
 
       implicit none
 
       class(cg_level_connected_T), target, intent(inout) :: this !< object invoking type-bound procedure
-      integer,                        intent(in)    :: iv   !< variable to be prolonged
+      integer,                             intent(in)    :: iv   !< variable to be prolonged
+      integer(kind=4), optional,           intent(in)    :: pos  !< position of the variable within cell
 
       type(cg_level_connected_T), pointer :: fine
       integer :: g
@@ -713,6 +725,15 @@ contains
       type(grid_container),  pointer :: cg            !< current grid container
       real :: P_2, P_1, P0, P1, P2
       integer :: stencil_range
+      logical, save :: warned = .false.
+      integer :: position
+
+      position = qna%lst(iv)%position(I_ONE)
+      if (present(pos)) position = pos
+      if (position /= VAR_CENTER .and. .not. warned) then
+         if (master) call warn("[cg_level_connected:prolong_q_1var] Only cell-centered interpolation scheme is implemented. Exprect inaccurate results for variables that are placed on faces or corners")
+         warned = .true.
+      endif
 
       fine => this%finer
       if (.not. associated(fine)) then ! can't prolong finest level
