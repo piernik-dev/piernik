@@ -500,8 +500,8 @@ contains
 
    subroutine grav_linear(gp, ax, flatten)
 
+      use axes_M,    only: axes
       use constants, only: half
-      use axes_M, only: axes
 
       implicit none
 
@@ -524,8 +524,8 @@ contains
 
    subroutine grav_ptmass_pure(gp, ax, flatten)
 
-      use units, only: newtong
       use axes_M, only: axes
+      use units,  only: newtong
 
       implicit none
 
@@ -566,9 +566,9 @@ contains
    !<
    subroutine grav_ptmass_softened(gp, ax, flatten)
 
+      use axes_M,     only: axes
       use fluidindex, only: flind
       use global,     only: smalld
-      use axes_M, only: axes
       use units,      only: newtong
 
       implicit none
@@ -621,8 +621,8 @@ contains
 
    subroutine grav_roche(gp, ax, flatten)
 
+      use axes_M,    only: axes
       use constants, only: ydim, zdim, half
-      use axes_M, only: axes
       use units,     only: newtong
 
       implicit none
@@ -657,8 +657,8 @@ contains
 !<
    subroutine grav_ptmass_stiff(gp, ax, flatten)
 
+      use axes_M,    only: axes
       use constants, only: half
-      use axes_M, only: axes
       use units,     only: newtong
 
       implicit none
@@ -724,14 +724,14 @@ contains
 
    subroutine default_grav_pot_3d
 
-      use cg_leaves,   only: leaves
-      use cg_list,     only: cg_list_element
-      use constants,   only: GEO_XYZ
-      use dataio_pub,  only: die, warn
-      use domain,      only: dom
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: master
-      use axes_M, only: axes
+      use axes_M,     only: axes
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: GEO_XYZ
+      use dataio_pub, only: die, warn
+      use domain,     only: dom
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: master
 
       implicit none
 

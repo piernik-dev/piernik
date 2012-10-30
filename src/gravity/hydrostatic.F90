@@ -282,9 +282,9 @@ contains
 !<
    subroutine get_gprofs_extgp(iia, jja)
 
+      use axes_M,    only: axes
       use constants, only: half, I_ONE
       use gravity,   only: tune_zeq, grav_type
-      use axes_M, only: axes
 
       implicit none
 
