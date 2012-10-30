@@ -107,7 +107,7 @@ contains
    subroutine multigrid_diff_par
 
       use cg_list_global,   only: all_cg
-      use constants,        only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one
+      use constants,        only: BND_ZERO, BND_XTRAP, BND_REF, BND_NEGREF, xdim, ydim, zdim, GEO_XYZ, half, zero, one, VAR_XFACE, VAR_YFACE, VAR_ZFACE, I_ONE
       use dataio_pub,       only: nh      ! QA_WARN required for diff_nml
       use dataio_pub,       only: die, warn, msg
       use domain,           only: dom
@@ -119,6 +119,8 @@ contains
       implicit none
 
       logical, save :: frun = .true.          !< First run flag
+      integer(kind=4), dimension(I_ONE), target :: pos
+      integer(kind=4), dimension(:), pointer :: pia      ! the pia pointer is used as a workaround for compiler warnings about possibly uninitialized variable in reg_var
 
       namelist /MULTIGRID_DIFFUSION/ norm_tol, vcycle_abort, max_cycles, nsmool, nsmoob, overrelax, &
            &                         diff_theta, diff_tstep_fac, diff_explicit, allow_explicit, diff_bnd_str
@@ -218,9 +220,11 @@ contains
          single_base = (nproc == 1)
       endif
 
-      call all_cg%reg_var(diff_bx_n, multigrid = .true.)
-      call all_cg%reg_var(diff_by_n, multigrid = .true.)
-      call all_cg%reg_var(diff_bz_n, multigrid = .true.)
+      !> \todo consider adding multigrid = .true. to the b-field (re-register it?)
+      pia => pos
+      pos = VAR_XFACE ; call all_cg%reg_var(diff_bx_n, multigrid = .true., position = pia)
+      pos = VAR_YFACE ; call all_cg%reg_var(diff_by_n, multigrid = .true., position = pia)
+      pos = VAR_ZFACE ; call all_cg%reg_var(diff_bz_n, multigrid = .true., position = pia)
       idiffb(xdim) = qna%ind(diff_bx_n)
       idiffb(ydim) = qna%ind(diff_by_n)
       idiffb(zdim) = qna%ind(diff_bz_n)
