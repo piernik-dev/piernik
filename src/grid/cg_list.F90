@@ -43,8 +43,6 @@ module cg_list
    !! \brief A grid container with two links to other cg_list_elements
    !!
    !! \details the prv and nxt pointers are not elements of the grid_container type to allow membership in several lists simultaneously
-   !!
-   !! \todo Consider splitting this module into a "bare" list and list with arithmetic
    !<
    type cg_list_element
       type(grid_container),  pointer :: cg       !< the current grid container

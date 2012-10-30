@@ -277,8 +277,7 @@ contains
 !===============================================================
 
 ! Non-MPI boundary conditions
-      l = reshape([lbound(cg%u(xdim,:,:,:), kind=4),ubound(cg%u(xdim,:,:,:), kind=4)],shape=[ndims,HI]) ; r = l
-
+      l = cg%lhn ; r = l
       do side = LO, HI
 
          select case (cg%bnd(dir, side))

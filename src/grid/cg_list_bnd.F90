@@ -455,7 +455,7 @@ contains
          cg => cgl%cg
 
          if (ind > ubound(cg%q(:), dim=1) .or. ind < lbound(cg%q(:), dim=1)) call die("[cg_list_bnd:external_boundaries] wrong 3d index")
-         pa3d =>cg%q(ind)%arr
+         pa3d => cg%q(ind)%arr
 
          do d = xdim, zdim
             if (dom%has_dir(d)) then
@@ -507,9 +507,9 @@ contains
                                          - i * pa3d( r(xdim,LO): r(xdim,HI), r(ydim,LO): r(ydim,HI), r(zdim,LO): r(zdim,HI))
                               enddo
                            case default ! BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD
-                              r(d,:) = cg%ijkse(d,lh) ; l(d,:) = cg%ijkse(d,lh)*(lh-LO)
+                              r(d,:) = cg%ijkse(d,lh)
                               do i = 1, dom%nb
-                                 l(d,:) = l(d,:) + I_ONE
+                                 l(d,:) = cg%ijkse(d,lh)   -i     *(I_THREE-I_TWO*lh)
                                  pa3d(l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = pa3d(r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                               enddo
                         end select

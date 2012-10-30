@@ -134,6 +134,7 @@ module grid_cont
       integer :: level_id                                        !< level id (number); do not use it without a good reason, use cg_level_T%lev where possible instead
 
       ! shortcuts
+      !> \todo Change kind from 4 to 8 to allow really deep refinements (effective resolution > 2**31, perhaps the other requirement will be default integer  kind = 8)
       integer(kind=4) :: is                                      !< index of the first %grid cell of physical domain in x-direction
       integer(kind=4) :: ie                                      !< index of the last %grid cell of physical domain in x-direction
       integer(kind=4) :: js                                      !< index of the first %grid cell of physical domain in y-direction
@@ -147,10 +148,11 @@ module grid_cont
       integer(kind=4), dimension(ndims, LO:HI)  :: ijkseb        !< [[isb, jsb, ksb], [ieb, jeb, keb]]
       integer(kind=4), dimension(ndims, LO:HI)  :: lh1        !< [[il1, jl1, kl1], [ih1, jh1, kh1]]
       integer(kind=4), dimension(ndims, LO:HI)  :: lhn        !< [[iln, jln, kln], [ihn, jhn, khn]]
-      integer(kind=8), dimension(ndims)         :: h_cor1        !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:)
+      integer(kind=8), dimension(ndims)         :: h_cor1        !< offsets of the corner opposite to the one defined by off(:) + 1, a shortcut to be compared with dom%n_d(:) DEPRECATED will be equivalent to ijkse(:, HI)+1
       integer(kind=4), dimension(ndims)         :: n_            !< number of %grid cells in one block in x-, y- and z-directions (n_b(:) + 2 * nb)
       integer(kind=8), dimension(ndims, LO:HI) :: my_se          !< own segment. my_se(:,LO) = 0; my_se(:,HI) = dom%n_d(:) - 1 would cover entire domain on a base level
                                                                  !! my_se(:,LO) = 0; my_se(:,HI) = finest%n_d(:) -1 would cover entire domain on the most refined level
+                                                                 !! DEPRECATED: will be equivalent to ijkse(:,:)
 
       ! Physical size and coordinates
 
@@ -264,7 +266,7 @@ contains
       integer(kind=4),                 intent(in) :: level_id
 
       integer :: i
-      integer(kind=8), dimension(ndims) :: n2
+      integer(kind=8), dimension(ndims, LO:HI) :: rn
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid_container:init] MPI not initialized.")
 
@@ -438,16 +440,17 @@ contains
 
       if (allocated(this%prolong_) .or. allocated(this%prolong_x) .or. allocated(this%prolong_xy) ) call die("[grid_container:init] prolong_* arrays already allocated")
       ! size of coarsened grid with guardcells, additional cell is required only when even-sized grid has odd offset
+
+      rn = 1
       where (dom%has_dir(:))
-         n2(:) = (this%n_b(:) + 1 + mod(this%off, int(refinement_factor, kind=8)))/refinement_factor + 2*dom%nb + 1
+         rn(:, LO) = 1
+         rn(:, HI) = (this%n_b(:) + 1 + mod(this%off, int(refinement_factor, kind=8)))/refinement_factor + 2*dom%nb + 1
          ! +1 is because of some simplifications in cg_level::prolong_q_1var in treating grids with odd offsets
-      elsewhere
-         n2(:) = 1
       endwhere
-      allocate(this%prolong_  (      n2(xdim),       n2(ydim),       n2(zdim)), &
-           &   this%prolong_x ( this%n_(xdim),       n2(ydim),       n2(zdim)), &
-           &   this%prolong_xy( this%n_(xdim),  this%n_(ydim),       n2(zdim)), &
-           &   this%leafmap   (this%n_b(xdim), this%n_b(ydim), this%n_b(zdim)))
+      allocate(this%prolong_  (      rn(xdim, LO):      rn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI), rn(zdim, LO):rn(zdim, HI)), &
+           &   this%prolong_x (this%lhn(xdim, LO):this%lhn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI), rn(zdim, LO):rn(zdim, HI)), &
+           &   this%prolong_xy(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), rn(zdim, LO):rn(zdim, HI)))
+      allocate(this%leafmap(this%n_b(xdim), this%n_b(ydim), this%n_b(zdim)))
 
       this%prolong_  (:, :, :) = big_float
       this%prolong_x (:, :, :) = big_float

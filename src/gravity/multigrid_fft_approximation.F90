@@ -158,9 +158,9 @@ contains
                            coarsened(d, hl) = coarsened(d, lh)
                            select case (lh)
                               case (LO)
-                                 if (mod(cg%off(d),    2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1_INT4-ord_prolong_face_norm,        ord_prolong_face_norm ]
+                                 if (mod(cg%my_se(d, LO), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [ -1_INT4-ord_prolong_face_norm,        ord_prolong_face_norm ]
                               case (HI)
-                                 if (mod(cg%h_cor1(d), 2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [        -ord_prolong_face_norm, 1_INT4+ord_prolong_face_norm ]
+                                 if (mod(cg%h_cor1(d),    2_LONG) == 0) coarsened(d, :) = coarsened(d, :) + [        -ord_prolong_face_norm, 1_INT4+ord_prolong_face_norm ]
                            end select
 
                            do j = FIRST, LAST
@@ -656,7 +656,7 @@ contains
          enddo
 
          ! Send own coarse data to others
-         off1(:) = int(mod(fine%first%cg%off(:), 2_LONG), kind=4)
+         off1(:) = int(mod(fine%first%cg%my_se(:, LO), 2_LONG), kind=4)
          do d = xdim, zdim
             do lh = LO, HI
                if (associated(coarse%first)) then !!!
@@ -703,8 +703,8 @@ contains
                                  ii(d2(d)) = j
 
 ! ? + off (0 or 1)
-                                 ib = 2*i - 1 + int(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%se(d1(d), LO), kind=4) - int(mod(fine%first%cg%off(d1(d)), 2_LONG), 4)
-                                 jb = 2*j - 1 + int(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%se(d2(d), LO), kind=4) - int(mod(fine%first%cg%off(d2(d)), 2_LONG), 4)
+                                 ib = 2*i - 1 + int(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%se(d1(d), LO), kind=4) - int(mod(fine%first%cg%my_se(d1(d), LO), 2_LONG), 4)
+                                 jb = 2*j - 1 + int(fine%first%cg%mg%pfc_tgt(d, lh)%seg(g)%se(d2(d), LO), kind=4) - int(mod(fine%first%cg%my_se(d2(d), LO), 2_LONG), 4)
 
                                  ibh = ib
                                  if (dom%has_dir(d1(d)) .and. ubound(p_bnd(d, lh)%bnd(:,:), dim=1) > ib) ibh = ib + 1

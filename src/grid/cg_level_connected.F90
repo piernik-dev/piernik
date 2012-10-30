@@ -585,11 +585,11 @@ contains
          cg => cgl%cg
          do g = lbound(cg%ro_tgt%seg(:), dim=1), ubound(cg%ro_tgt%seg(:), dim=1)
 
+            cg%ro_tgt%seg(g)%buf(:, :, :) = 0.
             fse(:,:) = cg%ro_tgt%seg(g)%se(:,:)
             fse(:, LO) = fse(:, LO) - cg%off(:)
             fse(:, HI) = fse(:, HI) - cg%off(:)
 
-            cg%ro_tgt%seg(g)%buf(:, :, :) = 0.
             off1(:) = mod(cg%ro_tgt%seg(g)%se(:, LO), int(refinement_factor, kind=8))
             do k = fse(zdim, LO), fse(zdim, HI)
                kc = (k-fse(zdim, LO)+off1(zdim))/refinement_factor + 1
@@ -699,10 +699,10 @@ contains
 
    subroutine prolong_q_1var(this, iv, pos)
 
+      use cg_list,          only: cg_list_element
       use constants,        only: xdim, ydim, zdim, LO, HI, I_ZERO, I_ONE, I_TWO, BND_REF, O_INJ, O_LIN, O_D2, O_D3, O_D4, O_I2, O_I3, O_I4, refinement_factor, VAR_CENTER
       use dataio_pub,       only: msg, warn, die
       use domain,           only: dom
-      use cg_list,          only: cg_list_element
       use grid_cont,        only: grid_container
       use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
       use mpi,              only: MPI_DOUBLE_PRECISION
@@ -725,6 +725,7 @@ contains
       type(grid_container),  pointer :: cg            !< current grid container
       real :: P_2, P_1, P0, P1, P2
       integer :: stencil_range
+      real, dimension(:,:,:), pointer :: p3d
       logical, save :: warned = .false.
       integer :: position
 
@@ -809,8 +810,8 @@ contains
 
             nr = nr + I_ONE
             if (nr > size(req, dim=1)) call inflate_req
-!            seg(g)%buf(:, :, :) = cg%q(iv)%span(cse)
-            seg(g)%buf(:, :, :) = cg%q(iv)%arr(cse(xdim, LO):cse(xdim, HI), cse(ydim, LO):cse(ydim, HI), cse(zdim, LO):cse(zdim, HI))
+            p3d => cg%q(iv)%span(cse)
+            seg(g)%buf(:, :, :) = p3d
             call MPI_Isend(seg(g)%buf(1, 1, 1), size(seg(g)%buf(:, :, :)), MPI_DOUBLE_PRECISION, seg(g)%proc, seg(g)%tag, comm, req(nr), mpi_err)
          enddo
          end associate

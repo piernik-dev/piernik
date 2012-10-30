@@ -718,13 +718,13 @@ contains
 
    subroutine approximate_solution(curl, src, soln, cr_id)
 
-      use cg_level_connected,  only: cg_level_connected_T, coarsest
-      use constants,      only: xdim, ydim, zdim, one, half, I_ONE, ndims, BND_NONE
-      use domain,         only: dom
-      use cg_list,        only: cg_list_element
-      use global,         only: dt
-      use grid_cont,      only: grid_container
-      use named_array_list, only: qna
+      use cg_level_connected, only: cg_level_connected_T, coarsest
+      use constants,          only: xdim, ydim, zdim, one, half, I_ONE, ndims, BND_NONE, LO
+      use domain,             only: dom
+      use cg_list,            only: cg_list_element
+      use global,             only: dt
+      use grid_cont,          only: grid_container
+      use named_array_list,   only: qna
 
       implicit none
 
@@ -770,11 +770,11 @@ contains
                kd = RED_BLACK
             endif
 
-            if (kd == RED_BLACK) k1 = cg%ks + int(mod(n+cg%off(zdim), int(RED_BLACK, kind=8)), kind=4)
+            if (kd == RED_BLACK) k1 = cg%ks + int(mod(n+cg%my_se(zdim, LO), int(RED_BLACK, kind=8)), kind=4)
             do k = k1, cg%ke, kd
-               if (jd == RED_BLACK) j1 = cg%js + int(mod(n+k+sum(cg%off(ydim:zdim)), int(RED_BLACK, kind=8)), kind=4)
+               if (jd == RED_BLACK) j1 = cg%js + int(mod(n+k+sum(cg%my_se(ydim:zdim, LO)), int(RED_BLACK, kind=8)), kind=4)
                do j = j1, cg%je, jd
-                  if (id == RED_BLACK) i1 = cg%is + int(mod(n+j+k+sum(cg%off(xdim:zdim)), int(RED_BLACK, kind=8)), kind=4)
+                  if (id == RED_BLACK) i1 = cg%is + int(mod(n+j+k+sum(cg%my_se(xdim:zdim, LO)), int(RED_BLACK, kind=8)), kind=4)
                   do i = i1, cg%ie, id
 
                      temp = cg%q(soln)%arr(i, j, k) - cg%q(src)%arr(i, j, k)
