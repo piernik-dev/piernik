@@ -121,16 +121,8 @@ contains
       use constants,           only: xdim, zdim, I_ONE
       use global,              only: skip_sweep
       use user_hooks,          only: problem_customize_solution
-#ifdef SHEAR
-      use cg_leaves,           only: leaves
-      use constants,           only: ydim
-      use dataio_pub,          only: die
-      use domain,              only: dom, is_multicg
-      use fluidboundaries,     only: bnd_u
-      use grid_cont,           only: grid_container
-      use shear,               only: yshift
-#endif /* SHEAR */
 #ifdef GRAV
+      use global,              only: t, dt
       use gravity,             only: source_terms_grav
       use particle_pub,        only: pset, psolver
 #endif /* GRAV */
@@ -139,24 +131,18 @@ contains
       use fluidboundaries,     only: all_fluid_boundaries
       use multigrid_diffusion, only: multigrid_solve_diff
 #endif /* COSM_RAYS && MULTIGRID */
-#if defined(SHEAR) || defined(GRAV)
-      use global,              only: t, dt
-#endif /* SHEAR || GRAV */
+#ifdef SHEAR
+      use shear,               only: shear_3sweeps
+#endif /* SHEAR */
 
       implicit none
 
       logical, intent(in) :: forward  !< If .true. then do X->Y->Z sweeps, if .false. then reverse that order
 
       integer(kind=4) :: s
+
 #ifdef SHEAR
-      type(grid_container), pointer :: cg
-
-      cg => leaves%first%cg
-      if (is_multicg) call die("[fluidupdate:make_3sweeps] multiple grid pieces per processor not implemented yet") !nontrivial SHEAR
-
-      if (dom%has_dir(ydim)) call yshift(t, dt)
-      if (dom%has_dir(xdim)) call bnd_u(xdim, cg)
-      if (dom%has_dir(ydim)) call bnd_u(ydim, cg)
+      call shear_3sweeps
 #endif /* SHEAR */
 
 #ifdef GRAV

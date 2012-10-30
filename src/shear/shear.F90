@@ -38,7 +38,7 @@ module shear
    implicit none
 
    private
-   public :: csvk, delj, dely, eps, eta_gas, global_gradP, init_shear, omega, qshear, yshift, shear_acc
+   public :: csvk, delj, dely, eps, eta_gas, global_gradP, init_shear, omega, qshear, shear_3sweeps, shear_acc, yshift
 #ifdef FFTW
    public  :: unshear_fft
 #endif /* FFTW */
@@ -120,6 +120,30 @@ contains
       enddo
 
    end subroutine init_shear
+!--------------------------------------------------------------------------------------------------
+
+   subroutine shear_3sweeps
+
+      use cg_leaves,           only: leaves
+      use constants,           only: xdim, ydim
+      use dataio_pub,          only: die
+      use domain,              only: dom, is_multicg
+      use fluidboundaries,     only: bnd_u
+      use global,              only: t, dt
+      use grid_cont,           only: grid_container
+
+      implicit none
+      type(grid_container), pointer :: cg
+
+      cg => leaves%first%cg
+      if (is_multicg) call die("[shear:shear_3sweeps] multiple grid pieces per processor not implemented yet") !nontrivial SHEAR
+
+      if (dom%has_dir(ydim)) call yshift(t, dt)
+      if (dom%has_dir(xdim)) call bnd_u(xdim, cg)
+      if (dom%has_dir(ydim)) call bnd_u(ydim, cg)
+
+   end subroutine shear_3sweeps
+
 !--------------------------------------------------------------------------------------------------
    function shear_acc(sweep,u) result(rotacc)
 
