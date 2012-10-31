@@ -44,18 +44,18 @@ module resistivity
    public  :: init_resistivity, timestep_resist, cleanup_resistivity, dt_resist, etamax,   &
         &     diffuseb,cu2max, deimin, eta1_active, compute_resist
 
-   real    :: cfl_resist                     !< CFL factor for resistivity effect
-   real    :: eta_0                          !< uniform resistivity
-   real    :: eta_1                          !< anomalous resistivity
-   real    :: j_crit                         !< critical value of current density
-   real    :: jc2                            !< squared critical value of current density
-   real    :: deint_max                      !< COMMENT ME
-   integer(kind=4) :: eta_scale              !< COMMENT ME
-   real    :: dt_resist, dt_eint
-   real(kind=8)                            :: d_eta_factor
-   type(value)                             :: etamax, cu2max, deimin
-   logical, save                           :: eta1_active = .true.       !< resistivity off-switcher while eta_1 == 0.0
-   character(len=dsetnamelen), parameter   :: eta_n = "eta", wb_n = "wb", eh_n = "eh", dbx_n = "dbx", dby_n = "dby", dbz_n = "dbz"
+   real                                  :: cfl_resist                     !< CFL factor for resistivity effect
+   real                                  :: eta_0                          !< uniform resistivity
+   real                                  :: eta_1                          !< anomalous resistivity
+   real                                  :: j_crit                         !< critical value of current density
+   real                                  :: jc2                            !< squared critical value of current density
+   real                                  :: deint_max                      !< COMMENT ME
+   integer(kind=4)                       :: eta_scale                      !< COMMENT ME
+   real                                  :: dt_resist, dt_eint
+   real(kind=8)                          :: d_eta_factor
+   type(value)                           :: etamax, cu2max, deimin
+   logical, save                         :: eta1_active = .true.           !< resistivity off-switcher while eta_1 == 0.0
+   character(len=dsetnamelen), parameter :: eta_n = "eta", wb_n = "wb", eh_n = "eh", dbx_n = "dbx", dby_n = "dby", dbz_n = "dbz"
 
 contains
 
@@ -83,31 +83,31 @@ contains
 !<
    subroutine init_resistivity
 
-      use cg_list_global, only: all_cg
-      use constants,      only: PIERNIK_INIT_GRID, zdim, xdim, ydim, wcu_n
-      use dataio_pub,     only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,     only: die, code_progress
-      use domain,         only: dom
-      use cg_list,        only: cg_list_element
-      use cg_leaves,      only: leaves
-      use mpisetup,       only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use cg_list_global,   only: all_cg
+      use constants,        only: PIERNIK_INIT_GRID, zdim, xdim, ydim, wcu_n
+      use dataio_pub,       only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub,       only: die, code_progress
+      use domain,           only: dom
+      use mpisetup,         only: rbuff, ibuff, master, slave, piernik_MPI_Bcast
       use named_array_list, only: qna
 
       implicit none
 
-      real :: dims_twice
-      type(cg_list_element),  pointer :: cgl
+      real                           :: dims_twice
+      type(cg_list_element), pointer :: cgl
 
       namelist /RESISTIVITY/ cfl_resist, eta_0, eta_1, eta_scale, j_crit, deint_max
 
       if (code_progress < PIERNIK_INIT_GRID) call die("[resistivity:init_resistivity] grid not initialized.")
 
-      cfl_resist   = 0.4
-      eta_0        = 0.0
-      eta_1        = 0.0
-      eta_scale    = 4
-      j_crit       = 1.0e6
-      deint_max    = 0.01
+      cfl_resist = 0.4
+      eta_0      = 0.0
+      eta_1      = 0.0
+      eta_scale  = 4
+      j_crit     = 1.0e6
+      deint_max  = 0.01
 
       if (master) then
 
@@ -128,13 +128,13 @@ contains
 
       if (slave) then
 
-         eta_scale          = ibuff(1)
+         eta_scale  = ibuff(1)
 
-         cfl_resist         = rbuff(1)
-         eta_0              = rbuff(2)
-         eta_1              = rbuff(3)
-         j_crit             = rbuff(4)
-         deint_max          = rbuff(5)
+         cfl_resist = rbuff(1)
+         eta_0      = rbuff(2)
+         eta_1      = rbuff(3)
+         j_crit     = rbuff(4)
+         deint_max  = rbuff(5)
 
       endif
 
@@ -176,20 +176,24 @@ contains
 
    end subroutine init_resistivity
 
+!>
+!! \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array - should change  with rev. 3893
+!! \deprecated BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
+!<
    subroutine compute_resist
 
-      use constants,   only: xdim, ydim, zdim, MAXL, oneq
-      use dataio_pub,  only: die
-      use domain,      only: dom, is_multicg
-      use func,        only: ekin, emag
-      use cg_list,     only: cg_list_element
-      use cg_leaves,   only: leaves
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: piernik_MPI_Bcast
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, MAXL, oneq
+      use dataio_pub,       only: die
+      use domain,           only: dom, is_multicg
+      use func,             only: ekin, emag
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: piernik_MPI_Bcast
       use named_array_list, only: qna
 #ifndef ISO
-      use constants,   only: small, MINL
-      use fluidindex,  only: flind
+      use constants,        only: small, MINL
+      use fluidindex,       only: flind
 #endif /* !ISO */
 
       implicit none
@@ -200,8 +204,6 @@ contains
       real, dimension(:,:,:), pointer :: eta, dbx, dby, dbz, wb, eh
 
       if (.not.eta1_active) return
-!> \deprecated BEWARE: uninitialized values are poisoning the wb(:,:,:) array - should change  with rev. 3893
-!> \deprecated BEWARE: significant differences between single-CPU run and multi-CPU run (due to uninits?)
 !--- square current computing in cell corner step by step
 
       cgl => leaves%first
@@ -330,11 +332,11 @@ contains
 
       implicit none
 
-      real, dimension(:), intent(in)      :: a !< second order correction of left- or right- moving waves flux on the left cell boundary
-      real, dimension(:), intent(in)      :: b !< second order correction of left- or right- moving waves flux on the right cell boundary
-      real, dimension(:), intent(inout)   :: f !< second order flux correction for left- or right- moving waves
+      real, dimension(:), intent(in)    :: a !< second order correction of left- or right- moving waves flux on the left cell boundary
+      real, dimension(:), intent(in)    :: b !< second order correction of left- or right- moving waves flux on the right cell boundary
+      real, dimension(:), intent(inout) :: f !< second order flux correction for left- or right- moving waves
       ! locals
-      real, dimension(size(a,1)) :: c !< a*b
+      real, dimension(size(a,1))        :: c !< a*b
 
       c = a*b                                                                    !> \todo OPTIMIZE ME
       where (c > 0.0)
@@ -348,12 +350,12 @@ contains
       use constants,     only: half
       implicit none
 
-      real, dimension(:), pointer, intent(in)    :: eta1d, b1d
-      real, dimension(:), pointer, intent(out)   :: wcu1d
-      real, intent(in)                           :: idi,dt
+      real, dimension(:), pointer, intent(in)  :: eta1d, b1d
+      real, dimension(:), pointer, intent(out) :: wcu1d
+      real, intent(in)                         :: idi,dt
 
-      real, dimension(size(b1d))                 :: w, wp, wm, b1
-      integer                                    :: n
+      real, dimension(size(b1d))               :: w, wp, wm, b1
+      integer                                  :: n
 
       n = size(b1d)
       w(2:n)    = eta1d(2:n) * ( b1d(2:n) - b1d(1:n-1) )*idi ;  w(1)  = w(2)
@@ -380,24 +382,24 @@ contains
 
    subroutine diffuseb(ibdir, sdir)
 
-      use constants,      only: xdim, ydim, zdim, ndims, half, I_ONE, wcu_n, idm, uv, INT4
-      use domain,         only: dom
-      use cg_list,        only: cg_list_element
-      use global,         only: dt
-      use cg_leaves,      only: leaves
-      use grid_cont,      only: grid_container
-      use magboundaries,  only: bnd_emf
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, ndims, half, I_ONE, wcu_n, idm, uv, INT4
+      use domain,           only: dom
+      use global,           only: dt
+      use grid_cont,        only: grid_container
+      use magboundaries,    only: bnd_emf
       use named_array_list, only: qna, wna
 
       implicit none
 
-      integer(kind=4),  intent(in)   :: ibdir, sdir
-      integer                        :: i1, i2, wcu_i, eta_i
-      integer(kind=4)                :: n1, n2, etadir, dir, emf
+      integer(kind=4),  intent(in)      :: ibdir, sdir
+      integer                           :: i1, i2, wcu_i, eta_i
+      integer(kind=4)                   :: n1, n2, etadir, dir, emf
       integer(kind=4), dimension(ndims) :: idml, idmh
-      real, dimension(:),    pointer :: b1d, eta1d, wcu1d
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
+      real, dimension(:),    pointer    :: b1d, eta1d, wcu1d
+      type(cg_list_element), pointer    :: cgl
+      type(grid_container),  pointer    :: cg
 
       n1 = I_ONE + mod(sdir    ,   ndims)
       n2 = I_ONE + mod(sdir+I_ONE, ndims)
@@ -428,8 +430,8 @@ contains
          do i1 = lbound(cg%q(wcu_i)%arr,n1), ubound(cg%q(wcu_i)%arr,n1)
             do i2 = lbound(cg%q(wcu_i)%arr,n2), ubound(cg%q(wcu_i)%arr,n2)
                b1d   => cg%w(wna%bi)%get_sweep(sdir,ibdir,i1,i2)
-               eta1d => cg%q(eta_i    )%get_sweep(sdir,      i1,i2)
-               wcu1d => cg%q(wcu_i    )%get_sweep(sdir,      i1,i2)
+               eta1d => cg%q(eta_i )%get_sweep(sdir,      i1,i2)
+               wcu1d => cg%q(wcu_i )%get_sweep(sdir,      i1,i2)
                call tvdd_1d(b1d, eta1d, cg%idl(sdir), dt, wcu1d)
             enddo
          enddo
