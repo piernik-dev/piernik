@@ -215,9 +215,11 @@ contains
       call leaves%check_dirty(solution, "init_soln")
 
       if (.not. this%valid) then
-         do h = lbound(this%old, dim=1), ubound(this%old, dim=1)
-            call leaves%set_q_value(this%old(h)%i_hist, 0.) ! set sane values for history to prevent spurious dirty exceptions in prolongation
-         enddo
+         if (allocated(this%old)) then
+            do h = lbound(this%old, dim=1), ubound(this%old, dim=1)
+               call leaves%set_q_value(this%old(h)%i_hist, 0.) ! set sane values for history to prevent spurious dirty exceptions in prolongation
+            enddo
+         endif
       endif
 
    end subroutine init_solution
@@ -236,6 +238,7 @@ contains
 
       class(soln_history), intent(inout) :: this !< inner or outer potential history to store recent solution
 
+      if (.not. allocated(this%old)) return
       if (size(this%old) <= 0) return
 
       if (this%valid) then
