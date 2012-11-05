@@ -154,7 +154,7 @@ module constants
    character(len=dsetnamelen), parameter :: mag_n   = "mag"     !< main array
    character(len=dsetnamelen), parameter :: b0_n    = "b0"      !< backup copy for timestep retrying
    ! gravitational potential
-   character(len=dsetnamelen), parameter :: gp_n    = "gp"      !< static, external field
+   character(len=dsetnamelen), parameter :: gp_n    = "gp"      !< static, external field, must be explicitly set to 0. if no external fields are applied
    character(len=dsetnamelen), parameter :: sgp_n   = "sgp"     !< current field from self-gravity
    character(len=dsetnamelen), parameter :: sgpm_n  = "sgpm"    !< previous field from self-gravity
    character(len=dsetnamelen), parameter :: gpot_n  = "gpot"    !< current sum of fields

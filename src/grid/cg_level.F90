@@ -358,27 +358,28 @@ contains
    subroutine update_decomposition_properties(this)
 
       use cart_comm,  only: cdd
-      use constants,  only: I_ONE
+      use constants,  only: I_ONE, base_level_id
       use dataio_pub, only: warn, die
       use domain,     only: is_mpi_noncart, is_multicg, is_refined, is_uneven
       use mpi,        only: MPI_IN_PLACE, MPI_COMM_NULL, MPI_LOGICAL, MPI_LOR
-      use mpisetup,   only: proc, comm, mpi_err
+      use mpisetup,   only: proc, comm, mpi_err, master
 
       implicit none
 
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
-      is_multicg = is_multicg .or. (ubound(this%pse(proc)%c(:), dim=1) > 1)
-      call MPI_Allreduce(MPI_IN_PLACE, is_multicg, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
-      if (is_multicg .and. cdd%comm3d /= MPI_COMM_NULL) call die("[cg_level:update_decomposition_properties] is_multicg cannot be used with comm3d")
-
-      ! if (.not. associated(this%finer)) ! is_refined == "top level is partial"
+      if (this%level_id > base_level_id) is_refined = .true.
+      call MPI_Allreduce(MPI_IN_PLACE, is_refined, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
       if (is_refined) then
          is_mpi_noncart = .true.
          is_multicg = .true.
-         call warn("[cg_level:update_decomposition_properties] Refinements are not implemented")
+         if (master) call warn("[cg_level:update_decomposition_properties] Refinements are experimental")
       endif
       if (is_mpi_noncart) is_uneven = .true.
+
+      is_multicg = is_multicg .or. (ubound(this%pse(proc)%c(:), dim=1) > 1)
+      call MPI_Allreduce(MPI_IN_PLACE, is_multicg, I_ONE, MPI_LOGICAL, MPI_LOR, comm, mpi_err)
+      if (is_multicg .and. cdd%comm3d /= MPI_COMM_NULL) call die("[cg_level:update_decomposition_properties] is_multicg cannot be used with comm3d")
 
    end subroutine update_decomposition_properties
 

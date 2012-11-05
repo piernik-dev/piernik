@@ -245,7 +245,15 @@ contains
       call this%reg_var(wa_n,                                                           multigrid=.true.)  !! Auxiliary array. Multigrid required only for CR diffusion
       call this%reg_var(fluid_n, vital = .true., restart_mode = AT_NO_B,  dim4 = nfluids)                  !! Main array of all fluids' components, "u"
       call this%reg_var(uh_n,                                             dim4 = nfluids)                  !! Main array of all fluids' components (for t += dt/2)
-      call this%reg_var(mag_n,   vital = .true., restart_mode = AT_OUT_B, dim4 = ndims, position=pia)      !! Main array of magnetic field's components, "b"
+
+!> \todo Do not even allocate magnetic stuff if MAGNETIC is not declared
+      call this%reg_var(mag_n,   vital = &
+#ifdef MAGNETIC
+           .true., &
+#else /* !MAGNETIC */
+           .false., &
+#endif /* MAGNETIC */
+           restart_mode = AT_OUT_B, dim4 = ndims, position=pia)                                            !! Main array of magnetic field's components, "b"
       if (repeat_step) then
          call this%reg_var(u0_n,                                          dim4 = nfluids)                  !! Copy of main array of all fluids' components
          call this%reg_var(b0_n,                                          dim4 = ndims, position=pia)      !! Copy of main array of magnetic field's components

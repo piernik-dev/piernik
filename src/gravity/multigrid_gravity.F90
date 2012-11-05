@@ -42,8 +42,9 @@
 module multigrid_gravity
 ! pulled by MULTIGRID && GRAV
 
-   use constants,        only: cbuff_len, ndims
-   use multigrid_vstats, only: vcycle_stats
+   use constants,          only: cbuff_len, ndims
+   use multigrid_vstats,   only: vcycle_stats
+   use multigrid_old_soln, only: soln_history
 
    implicit none
 
@@ -65,7 +66,6 @@ module multigrid_gravity
    integer(kind=4)    :: max_cycles                                   !< Maximum allowed number of V-cycles
    integer(kind=4)    :: nsmoob                                       !< smoothing cycles on coarsest level when cannot use FFT. (a convergence check would be much better)
    integer(kind=4)    :: ord_laplacian                                !< Laplace operator order; allowed values are 2 (default) and 4 (experimental, not fully implemented)
-   integer(kind=4)    :: ord_time_extrap                              !< Order of temporal extrapolation for solution recycling; -1 means 0-guess, 2 does parabolic interpolation
    logical            :: trust_fft_solution                           !< Bypass the V-cycle, when doing FFT on whole domain, make sure first that FFT is properly set up.
    logical            :: base_no_fft                                  !< Deny solving the coarsest level with FFT. Can be very slow.
    logical            :: prefer_rbgs_relaxation                       !< Prefer relaxation over FFT local solver. Typically faster.
@@ -77,19 +77,6 @@ module multigrid_gravity
    integer            :: fftw_flags = FFTW_MEASURE                    !< or FFTW_PATIENT on request
 
    ! solution recycling
-   integer(kind=4), parameter :: nold_max=3                           !< maximum implemented extrapolation order
-   integer :: nold                                                    !< number of old solutions kept for solution recycling
-   type :: old_soln                                                   !< container for an old solution with its timestamp
-      integer :: i_hist                                               !< index to the old solution
-      real :: time                                                    !< time of the old solution
-   end type old_soln
-   type :: soln_history                                               !< container for a set of several old potential solutions
-      type(old_soln), dimension(nold_max) :: old
-      integer :: last                                                 !< index of the last stored potential
-      logical :: valid                                                !< .true. when old(last) was properly initialized
-    contains
-      procedure :: init_history
-   end type soln_history
    type(soln_history), target :: inner, outer                         !< storage for recycling the inner and outer potentials
 
    ! miscellaneous
@@ -145,6 +132,7 @@ contains
       use mpi,           only: MPI_COMM_NULL
       use mpisetup,      only: master, slave, ibuff, cbuff, rbuff, lbuff, nproc, piernik_MPI_Bcast
       use multigridvars, only: single_base, bnd_invalid, bnd_isolated, bnd_periodic, bnd_dirichlet, grav_bnd, fft_full_relax, multidim_code_3D, nsmool, nsmoof
+      use multigrid_old_soln, only: nold_max, ord_time_extrap
       use multipole,     only: use_point_monopole, lmax, mmax, ord_prolong_mpole, coarsen_multipole, interp_pt2mom, interp_mom2pot
 
       implicit none
@@ -366,11 +354,12 @@ contains
 
       ! solution recycling
       ord_time_extrap = min(nold_max-I_ONE, max(-I_ONE, ord_time_extrap))
-      nold = ord_time_extrap + 1
+      associate (nold => ord_time_extrap + 1)
       if (nold > 0) then
          call inner%init_history(nold, "i")
          if (grav_bnd == bnd_isolated) call outer%init_history(nold, "o")
       endif
+      end associate
 
       call vstat%init(max_cycles)
 
@@ -476,33 +465,6 @@ contains
 
    end subroutine init_multigrid_grav
 
-!> \brief Initialize structure for keeping historical potential fields
-
-   subroutine init_history(this, nold, prefix)
-
-      use cg_list_global, only: all_cg
-      use constants,      only: singlechar, dsetnamelen
-      use named_array_list, only: qna
-
-      implicit none
-
-      class(soln_history),       intent(inout) :: this   !< COMMENT ME
-      integer,                   intent(in)    :: nold   !< how many historic points to store
-      character(len=singlechar), intent(in)    :: prefix !< 'i' for inner, 'o' for outer potential
-
-      integer :: i
-      character(len=dsetnamelen) :: hname
-
-      do i = 1, nold
-         write(hname,'(2a,i2.2)')prefix,"_h_",i
-         call all_cg%reg_var(hname, vital = .true.) ! no need for multigrid attribute here because history is defined only on leaves
-         this%old(i) = old_soln(qna%ind(hname), -huge(1.0))
-      enddo
-      this%valid = .false.
-      this%last  = 1
-
-   end subroutine init_history
-
 !> \brief Cleanup
 
    subroutine cleanup_multigrid_grav
@@ -514,6 +476,8 @@ contains
       call cleanup_multipole
       call vstat%cleanup
       call dfftw_cleanup
+      call inner%cleanup_history
+      call outer%cleanup_history
 
    end subroutine cleanup_multigrid_grav
 
@@ -690,103 +654,6 @@ contains
    end subroutine mgg_cg_cleanup
 
 !>
-!! \brief This routine tries to construct first guess of potential based on previously obtained solution, if any.
-!! If for some reason it is not desired to do the extrapolation (i.e. timestep varies too much) it would be good to have more control on this behavior.
-!!
-!! \details Quadratic extrapolation in time often gives better guess for smooth potentials, but is more risky for sharp-peaked potential fields (like moving self-bound clumps)
-!! Rational extrapolation (1 + a t)(b + c t) can give 2 times better and 10 times worse guess depending on timestep.
-!!
-!! Set history%valid to .false. to force start from scratch.
-!<
-
-   subroutine init_solution(history)
-
-      use cg_list_dataop, only: ind_val
-      use cg_leaves,      only: leaves
-      use cg_list_global, only: all_cg
-      use constants,      only: INVALID, O_INJ, O_LIN, O_I2
-      use dataio_pub,     only: msg, die, printinfo
-      use global,         only: t
-      use mpisetup,       only: master
-      use multigridvars,  only: stdout, solution
-
-      implicit none
-
-      type(soln_history), intent(inout) :: history !< inner or outer potential history for recycling
-
-      integer :: p0, p1, p2, ordt
-      real, dimension(3) :: dt_fac
-
-      call all_cg%set_dirty(solution)
-
-      p0 = history%last
-      if (nold > 0) then
-         p1 = 1 + mod(p0 + nold - 2, nold) ! index of previous save
-         p2 = 1 + mod(p1 + nold - 2, nold)
-      else
-         p1 = p0
-         p2 = p0
-      endif
-
-      ! selfgrav_clump/initproblem.F90 requires monotonic time sequence t > history%old(p0)%time > history%old(p1)%time > history%old(p2)%time
-      ordt = ord_time_extrap
-      if (history%valid) then
-         if ( history%old(p2)%time < history%old(p1)%time .and. &        ! quadratic interpolation
-              history%old(p1)%time < history%old(p0)%time .and. &
-              history%old(p0)%time < t) then
-            ordt = min(O_I2, ord_time_extrap)
-         else if (history%old(p1)%time < history%old(p0)%time .and. &
-              &   history%old(p0)%time < t) then      ! linear extrapolation
-            ordt = min(O_LIN, ord_time_extrap)
-         else                                                            ! simple recycling
-            ordt = min(O_INJ, ord_time_extrap)
-         endif
-      else                                                               ! coldstart
-         ordt = min(INVALID, ord_time_extrap)
-      endif
-
-      select case (ordt)
-         case (:INVALID)
-            if (master .and. ord_time_extrap > ordt) then
-               write(msg, '(3a)')"[multigrid_gravity:init_solution] Clearing ",trim(vstat%cprefix),"solution."
-               call printinfo(msg, stdout)
-            endif
-            call all_cg%set_q_value(solution, 0.)
-            history%old(:)%time = -huge(1.0)
-         case (O_INJ)
-            call leaves%check_dirty(history%old(p0)%i_hist, "history0")
-            call leaves%q_copy(history%old(p0)%i_hist, solution)
-            if (master .and. ord_time_extrap > ordt) then
-               write(msg, '(3a)')"[multigrid_gravity:init_solution] No extrapolation of ",trim(vstat%cprefix),"solution."
-               call printinfo(msg, stdout)
-            endif
-         case (O_LIN)
-            call leaves%check_dirty(history%old(p0)%i_hist, "history0")
-            call leaves%check_dirty(history%old(p1)%i_hist, "history1")
-            dt_fac(1) = (t - history%old(p0)%time) / (history%old(p0)%time - history%old(p1)%time)
-            call leaves%q_lin_comb( [ ind_val(history%old(p0)%i_hist, (1.+dt_fac(1))), &
-                 &                    ind_val(history%old(p1)%i_hist,    -dt_fac(1) ) ], solution )
-            if (master .and. ord_time_extrap > ordt) then
-               write(msg, '(3a)')"[multigrid_gravity:init_solution] Linear extrapolation of ",trim(vstat%cprefix),"solution."
-               call printinfo(msg, stdout)
-            endif
-         case (O_I2)
-            call leaves%check_dirty(history%old(p0)%i_hist, "history0")
-            call leaves%check_dirty(history%old(p1)%i_hist, "history1")
-            call leaves%check_dirty(history%old(p0)%i_hist, "history2")
-            dt_fac(:) = (t - history%old([ p0, p1, p2 ])%time) / (history%old([ p1, p2, p0 ])%time - history%old([ p2, p0, p1 ])%time)
-            call leaves%q_lin_comb([ ind_val(history%old(p0)%i_hist, -dt_fac(2)*dt_fac(3)), &
-                 &                   ind_val(history%old(p1)%i_hist, -dt_fac(1)*dt_fac(3)), &
-                 &                   ind_val(history%old(p2)%i_hist, -dt_fac(1)*dt_fac(2)) ], solution )
-         case default
-            call die("[multigrid_gravity:init_solution] Extrapolation order not implemented")
-      end select
-
-      call leaves%check_dirty(solution, "init_soln")
-
-   end subroutine init_solution
-
-!>
 !! \brief Make a local copy of source (density) and multiply by 4 pi G
 !!
 !! \details Typically i_all_dens is a copy of fluidindex::iarr_all_sg.
@@ -885,42 +752,6 @@ contains
 
    end subroutine init_source
 
-!> \brief This routine manages old copies of potential for recycling.
-
-   subroutine store_solution(history)
-
-      use cg_leaves,     only: leaves
-      use constants,     only: BND_XTRAP, BND_REF
-      use domain,        only: dom
-      use global,        only: t
-      use multigridvars, only: solution, grav_bnd, bnd_isolated, bnd_givenval
-
-      implicit none
-
-      type(soln_history), intent(inout) :: history !< inner or outer potential history to store recent solution
-
-      if (nold <= 0) return
-
-      if (history%valid) then
-         history%last = 1 + mod(history%last, nold)
-      else
-         history%old(:)%time = t ! prevents extrapolation too early
-      endif
-
-      call leaves%q_copy(solution, history%old(history%last)%i_hist)
-      history%old(history%last)%time = t
-      history%valid = .true.
-
-      ! Update guardcells of the solution before leaving. This can be done in higher-level routines that collect all the gravity contributions, but would be less safe.
-      ! Extrapolate isolated boundaries, remember that grav_bnd is messed up by multigrid_solve_*
-      if (grav_bnd == bnd_isolated .or. grav_bnd == bnd_givenval) then
-         call leaves%arr3d_boundaries(solution, nb = dom%nb, bnd_type = BND_XTRAP)
-      else
-         call leaves%arr3d_boundaries(solution, nb = dom%nb, bnd_type = BND_REF)
-      endif
-
-   end subroutine store_solution
-
 !>
 !! \brief Multigrid gravity driver. This is the only multigrid routine intended to be called from the gravity module.
 !! This routine is also responsible for communicating the solution to the rest of world via sgp array.
@@ -991,15 +822,16 @@ contains
 
    subroutine vcycle_hg(history)
 
-      use cg_leaves,      only: leaves
-      use cg_list_global, only: all_cg
+      use cg_leaves,           only: leaves
+      use cg_list_global,      only: all_cg
       use cg_level_connected,  only: cg_level_connected_T, finest, coarsest
-      use constants,      only: cbuff_len, fft_none
-      use dataio_pub,     only: msg, die, warn, printinfo
-      use global,         only: do_ascii_dump
-      use mpisetup,       only: master, nproc
-      use multigridvars,  only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
-      use timer,          only: set_timer
+      use constants,           only: cbuff_len, fft_none
+      use dataio_pub,          only: msg, die, warn, printinfo
+      use global,              only: do_ascii_dump
+      use mpisetup,            only: master, nproc
+      use multigridvars,       only: source, solution, correction, defect, verbose_vcycle, stdout, tot_ts, ts, grav_bnd, bnd_periodic
+      use multigrid_old_soln,  only: soln_history
+      use timer,               only: set_timer
 
       implicit none
 
@@ -1033,7 +865,7 @@ contains
             return
          endif
       else
-         call init_solution(history)
+         call history%init_solution(vstat%cprefix)
       endif
 
       norm_lhs = 0.
@@ -1044,7 +876,7 @@ contains
       if (norm_rhs == 0.) then ! empty domain => potential == 0.
          if (master .and. .not. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] No gravitational potential for an empty space.")
          norm_was_zero = .true.
-         call store_solution(history)
+         call history%store_solution
          return
       else
          if (master .and. norm_was_zero) call warn("[multigrid_gravity:vcycle_hg] Spontaneous mass creation detected!")
@@ -1139,7 +971,7 @@ contains
 
       call leaves%check_dirty(solution, "final_solution")
 
-      call store_solution(history)
+      call history%store_solution
 
    end subroutine vcycle_hg
 

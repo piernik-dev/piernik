@@ -106,12 +106,11 @@ module domain
    logical :: reorder                 !< allows processes reordered for efficiency (a parameter of MPI_Cart_create and MPI_graph_create)
    logical :: allow_uneven            !< allows different values of n_b(:) on different processes
    logical :: allow_noncart           !< allows more than one neighbour on a boundary
-   logical :: allow_AMR               !< allows AMR
    real    :: dd_unif_quality         !< uniform domain decomposition may be rejected it its quality is below this threshold (e.g. very elongated local domains are found)
    real    :: dd_rect_quality         !< rectilinear domain decomposition may be rejected it its quality is below this threshold (not used yet)
    logical :: use_comm3d              !< If .false. then do not call any MPI_Cart_* functions
 
-   namelist /MPI_BLOCKS/ psize, bsize, minsize, reorder, allow_uneven, allow_noncart, allow_AMR, dd_unif_quality, dd_rect_quality, use_comm3d
+   namelist /MPI_BLOCKS/ psize, bsize, minsize, reorder, allow_uneven, allow_noncart, dd_unif_quality, dd_rect_quality, use_comm3d
 
    integer(kind=4), dimension(ndims) :: n_d               !< number of %grid cells in physical domain without boundary cells (where  == 1 then that dimension is reduced to a point with no boundary cells)
    integer(kind=4), protected        :: nb                !< number of boundary cells surrounding the physical domain, same for all directions
@@ -172,7 +171,6 @@ contains
 !!   <tr><td>reorder        </td><td>.false.</td><td>logical</td><td>\copydoc domain::reorder        </td></tr>
 !!   <tr><td>allow_uneven   </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_uneven   </td></tr>
 !!   <tr><td>allow_noncart  </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_noncart  </td></tr>
-!!   <tr><td>allow_AMR      </td><td>.false.</td><td>logical</td><td>\copydoc domain::allow_amr      </td></tr>
 !!   <tr><td>dd_unif_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_unif_quality</td></tr>
 !!   <tr><td>dd_rect_quality</td><td>0.9    </td><td>real   </td><td>\copydoc domain::dd_rect_quality</td></tr>
 !!   <tr><td>use_comm3d     </td><td>.true. </td><td>logical</td><td>\copydoc domain::use_comm3d     </td></tr>
@@ -206,7 +204,6 @@ contains
       reorder       = .false.     !< \todo test it!
       allow_uneven  = .true.
       allow_noncart = .false.     !< experimental implementation
-      allow_AMR     = .false.     !< not implemented yet
       use_comm3d    = .true.      !< \todo make a big benchmark with and without comm3d
 
       bnd_xl = 'per'
@@ -251,8 +248,7 @@ contains
          lbuff(1) = reorder
          lbuff(2) = allow_uneven
          lbuff(3) = allow_noncart
-         lbuff(4) = allow_AMR
-         lbuff(5) = use_comm3d
+         lbuff(4) = use_comm3d
 
       endif
 
@@ -266,8 +262,7 @@ contains
          reorder       = lbuff(1)
          allow_uneven  = lbuff(2)
          allow_noncart = lbuff(3)
-         allow_AMR     = lbuff(4)
-         use_comm3d    = lbuff(5)
+         use_comm3d    = lbuff(4)
 
          xmin            = rbuff(1)
          xmax            = rbuff(2)
@@ -305,16 +300,12 @@ contains
          minsize(:) = 1
       endwhere
 
-#ifdef MULTIGRID
-      if (allow_AMR .and. master) call warn("[domain:init_domain] Multigrid solver is not yet capable of using AMR domains.")
-      allow_AMR = .false.
-#endif /* MULTIGRID */
       if (master) then
          if (have_mpi) then
             if (allow_uneven) call warn("[domain:init_domain] Uneven domain decomposition is experimental.")
             if (allow_noncart) call warn("[domain:init_domain] Non-cartesian domain decomposition is highly experimental.")
          endif
-         if (allow_AMR) call warn("[domain:init_domain allow_AMR is not implemented")
+         if (use_comm3d) call warn("[domain:init_domain] comm3d is deprecated and completely incompatibile with AMR or even some grid decompositions!")
       endif
       is_uneven = .false.
       is_mpi_noncart = .false.

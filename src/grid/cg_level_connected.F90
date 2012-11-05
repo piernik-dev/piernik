@@ -422,7 +422,7 @@ contains
       integer :: i, iw, iwa
 
       do i = lbound(qna%lst(:), dim=1), ubound(qna%lst(:), dim=1)
-         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id > base_level_id)) call this%prolong_q_1var(i)
+         if (qna%lst(i)%vital .and. (qna%lst(i)%multigrid .or. this%level_id >= base_level_id)) call this%prolong_q_1var(i)
       enddo
 
       iwa = qna%ind(wa_n)
@@ -966,7 +966,11 @@ contains
 
    end subroutine prolong_q_1var
 
-!> \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
+!>
+!! \brief This routine sets up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
+!!
+!! \warning No fine-to-coarse data transfer implemented yet
+!<
 
    subroutine arr3d_boundaries(this, ind, nb, area_type, bnd_type, corners)
 

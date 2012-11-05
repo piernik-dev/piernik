@@ -70,9 +70,11 @@ contains
       class(vcycle_stats), intent(out) :: this !< V-cycle statistics variable to be created or reset
       integer(kind=4),     intent(in)  :: size !< size of the vs structure (usually max_cycles); for nonpositive value perform reset only
 
-      if (size > 0) then
+      if (size >= 0) then
          if (allocated(this%factor) .or. allocated(this%time)) call die("[multigrid_vstats:vcycle_stats_init] vcycle_stats already allocated.")
          allocate(this%factor(0:size), this%time(0:size))
+      else
+         call die("[multigrid_vstats:vcycle_stats_init] size < 0")
       endif
 
       this%factor(:)  = 0.

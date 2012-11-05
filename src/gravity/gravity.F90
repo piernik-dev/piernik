@@ -272,7 +272,7 @@ contains
       ! All gravitational potential should be recalculated after refinement changes
       call all_cg%reg_var(gpot_n)
       call all_cg%reg_var(hgpot_n)
-      call all_cg%reg_var(gp_n, restart_mode = AT_OUT_B)
+      call all_cg%reg_var(gp_n, restart_mode = AT_OUT_B) !> \todo register it if and only if it is in use, which should be achievable as long as external_gp doesn't change during simulation
 #ifdef SELF_GRAV
       call all_cg%reg_var(sgp_n)
       call all_cg%reg_var(sgpm_n)
@@ -323,9 +323,9 @@ contains
       if (cg%level_id >= base_level_id) then
 
          cg%gpot  => cg%q(qna%ind( gpot_n))%arr
-         cg%gpot(:,:,:) = 0.0
          cg%hgpot => cg%q(qna%ind(hgpot_n))%arr
          cg%gp    => cg%q(qna%ind(   gp_n))%arr
+         cg%gp(:,:,:) = 0.0
          !> \todo move the following to multigrid?
 #ifdef SELF_GRAV
          cg%sgp   => cg%q(qna%ind(  sgp_n))%arr
