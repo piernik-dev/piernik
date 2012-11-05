@@ -95,7 +95,6 @@ contains
          case ("magx", "magy", "magz")
             f%stag = 1
          case ("cr1" : "cr9")
-         case ("mgso")
          case ("gpot")
          case ("trcr")
       end select
@@ -208,8 +207,6 @@ contains
             tab(:,:,:) = real(cg%b(xdim + i_xyz, RNG), kind=4)
          case ("gpot")
             if (associated(cg%gpot)) tab(:,:,:) = real(cg%gpot(RNG), kind=4)
-         case ("mgso")
-            if (associated(cg%sgp))  tab(:,:,:) = real(cg%sgp(RNG),  kind=4)
          case ("level")
             tab(:,:,:) = real(cg%level_id, kind=4)
          case ("grid_id")
