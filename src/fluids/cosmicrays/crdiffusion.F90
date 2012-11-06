@@ -77,7 +77,7 @@ contains
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
-      use constants,        only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_ONE, wcr_n
+      use constants,        only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_ONE, I_TWO, I_THREE, wcr_n
       use dataio_pub,       only: die
       use domain,           only: dom
       use grid_cont,        only: grid_container
@@ -107,12 +107,12 @@ contains
 
          do d = xdim, zdim
             if (dom%has_dir(d)) then
-               l = reshape([lbound(wcr(xdim,:,:,:), kind=4),ubound(wcr(xdim,:,:,:), kind=4)],shape=[ndims,HI]) ; r = l
+               l = cg%lhn ; r = l
                do lh = LO, HI
                   select case (cg%bnd(d, lh))
                      case (BND_PER)
                         if (cdd%comm3d /= MPI_COMM_NULL) then
-                           l(d,:) = cg%ijkse(d,lh)*(lh-LO) + [I_ONE, dom%nb]
+                           l(d,:) = cg%ijkse(d,lh) + [I_ONE, dom%nb] + (dom%nb+I_ONE)*(lh-HI)
                            clh = LO + HI - lh
                            r(d, lh) = cg%ijkseb(d,clh)
                            r(d,clh) = cg%ijkse (d,clh)
@@ -130,9 +130,9 @@ contains
                      case (BND_FC, BND_MPI_FC)
                         call die("[crdiffusion:all_wcr_boundaries] fine-coarse interfaces are not implemented here")
                      case default ! Set gradient == 0 on the external boundaries
-                        r(d,:) = cg%ijkse(d,lh) ; l(d,:) = cg%ijkse(d,lh)*(lh-LO)
+                        r(d,:) = cg%ijkse(d,lh)
                         do i = 1, dom%nb
-                           l(d,:) = l(d,:) + I_ONE
+                           l(d,:) = r(d,:) + (I_TWO*lh-I_THREE)*i
                            wcr(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = wcr(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                         enddo
                   end select
