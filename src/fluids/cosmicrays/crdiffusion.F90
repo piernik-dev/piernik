@@ -73,16 +73,16 @@ contains
 !<
    subroutine all_wcr_boundaries
 
-      use cg_list_global, only: all_cg
-      use constants,      only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_ONE, wcr_n
-      use dataio_pub,     only: die
-      use cart_comm,      only: cdd
-      use domain,         only: dom
-      use cg_list,        only: cg_list_element
-      use cg_leaves,      only: leaves
-      use grid_cont,      only: grid_container
-      use mpi,            only: MPI_REQUEST_NULL, MPI_COMM_NULL
-      use mpisetup,       only: mpi_err, req, status
+      use cart_comm,        only: cdd
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use cg_list_global,   only: all_cg
+      use constants,        only: CR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, BND_PER, BND_MPI, BND_FC, BND_MPI_FC, I_ONE, wcr_n
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use mpi,              only: MPI_REQUEST_NULL, MPI_COMM_NULL
+      use mpisetup,         only: mpi_err, req, status
       use named_array_list, only: wna
 
       implicit none
@@ -160,16 +160,16 @@ contains
 !<
    subroutine cr_diff(crdim)
 
-      use constants,      only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n, oneq, uv
-      use dataio_pub,     only: die
-      use domain,         only: dom
-      use fluidindex,     only: flind
-      use global,         only: dt
-      use cg_list,        only: cg_list_element
-      use cg_leaves,      only: leaves
-      use grid_cont,      only: grid_container
-      use initcosmicrays, only: iarr_crs, K_crs_paral, K_crs_perp
-      use named_array,    only: p4
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, half, wcr_n, oneq
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use fluidindex,       only: flind
+      use global,           only: dt
+      use grid_cont,        only: grid_container
+      use initcosmicrays,   only: iarr_crs, K_crs_paral, K_crs_perp
+      use named_array,      only: p4
       use named_array_list, only: wna
 
       implicit none
@@ -202,9 +202,9 @@ contains
 
          wcr => cg%w(wcri)%arr
          if (.not. associated(wcr)) call die("[crdiffusion:cr_diff] cannot get wcr")
-                                                                         ! in case of integration with boundaries:
-         ldm        = cg%ijkse(:,LO) ;      ldm(crdim) = 2               ! ldm =           1 + D_
-         hdm        = cg%ijkse(:,HI) ;      hdm(crdim) = cg%n_(crdim)    ! hdm = cg%n_ + idm - D_
+                                                                                               ! in case of integration with boundaries:
+         ldm        = cg%ijkse(:,LO) ;      ldm(crdim) = cg%lhn(crdim,LO) + dom%D_(crdim)      ! ldm =           1 + D_
+         hdm        = cg%ijkse(:,HI) ;      hdm(crdim) = cg%lhn(crdim,HI)                      ! hdm = cg%n_ + idm - D_
 
          do k = ldm(zdim), hdm(zdim)       ; kl = k-1 ; kh = k+1 ; kld = k-idm(zdim)
             do j = ldm(ydim), hdm(ydim)    ; jl = j-1 ; jh = j+1 ; jld = j-idm(ydim)
@@ -253,12 +253,12 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         ndm = cg%n_ - idm
-         hdm = 1 + idm*ndm
+         ndm = cg%lhn(:,HI) - idm
+         hdm = cg%lhn(:,LO) ; hdm(crdim) = cg%lhn(crdim,HI)
          ldm = hdm - idm
-         p4 => cg%w(wna%fi)%span(uv, int(ndm, kind=4))
-         p4(iarr_crs,:,:,:) = p4(iarr_crs,:,:,:) - (cg%w(wcri)%span(int(uv+idm, kind=4), cg%n_) - cg%w(wcri)%span(uv, int(ndm, kind=4)))
-         cg%u(iarr_crs,hdm(xdim):cg%n_(xdim),hdm(ydim):cg%n_(ydim),hdm(zdim):cg%n_(zdim)) = cg%u(iarr_crs,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
+         p4 => cg%w(wna%fi)%span(cg%lhn(:,LO), int(ndm, kind=4))
+         p4(iarr_crs,:,:,:) = p4(iarr_crs,:,:,:) - (cg%w(wcri)%span(int(cg%lhn(:,LO)+idm, kind=4), cg%lhn(:,HI)) - cg%w(wcri)%span(cg%lhn(:,LO), int(ndm, kind=4)))
+         cg%u(iarr_crs,hdm(xdim):cg%lhn(xdim,HI),hdm(ydim):cg%lhn(ydim,HI),hdm(zdim):cg%lhn(zdim,HI)) = cg%u(iarr_crs,ldm(xdim):ndm(xdim),ldm(ydim):ndm(ydim),ldm(zdim):ndm(zdim)) ! for sanity
 
          cgl => cgl%nxt
       enddo
