@@ -284,8 +284,8 @@ contains
 !            print '(2a)', 'cmdline version ', cmdlversion
             call init_version
             allocate(revision(nenv)) ; revision = 0_INT4
-            do j=1,nenv
-               read(env(j),'(a31,1x,i4)') aaa, revision(j)
+            do j=2,nenv
+               read(env(j),'(a31,1x,i4)') aaa(1:31), revision(j)
             enddo
             write(stdout, '(a,i6)') 'code revision: ', maxval(revision)
             deallocate(revision)
