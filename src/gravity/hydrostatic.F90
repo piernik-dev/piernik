@@ -53,9 +53,9 @@ module hydrostatic
    integer(kind=4),                 save :: nstot     !< total number of subgrid cells in a column through all z-blocks
    real,                            save :: dmid      !< density value in a midplane (fixed for hydrostatic_zeq_densmid, overwritten by hydrostatic_zeq_coldens)
    real,                            save :: hsmin     !< lower position limit
-   integer(kind=4),                 save :: hsbn      !< number of cells in proceeded block
+   integer(kind=4),   dimension(2), save :: hsbn      !< first and last cell indices in proceeded block
    real, allocatable, dimension(:), save :: hsl       !< lower borders of cells of proceeded block
-   real, dimension(2),              save :: sdlim     !< edges for sd sum
+   real,              dimension(2), save :: sdlim     !< edges for sd sum
    type(grid_container), pointer,   save :: hscg
 
    interface
@@ -129,7 +129,7 @@ contains
    subroutine set_default_hsparams(cg)
 
       use constants,   only: zdim, LO, HI, I_ONE, LEFT, RIGHT
-      use diagnostics, only: my_allocate, my_deallocate
+      use diagnostics, only: my_deallocate !, my_allocate
       use domain,      only: dom
       use gravity,     only: nsub
       use grid_cont,   only: grid_container
@@ -143,14 +143,16 @@ contains
       nstot = nsub * dom%n_t(zdim)
       dzs   = (dom%edge(zdim, HI)-dom%edge(zdim, LO))/real(nstot-2*dom%nb*nsub)
       hsmin = dom%edge(zdim, LO)-dom%nb*cg%dl(zdim)
-      hsbn  = cg%n_(zdim)
+      hsbn  = cg%lhn(zdim,:)
       sdlim = dom%edge(zdim,:)
       if (allocated(dprof)) call my_deallocate(dprof)
-      call my_allocate(dprof, [cg%n_(zdim)], "dprof")
+!      call my_allocate(dprof, [cg%n_(zdim)], "dprof")
+      allocate(dprof(hsbn(LO):hsbn(HI)))
       if (allocated(hsl)) call my_deallocate(hsl)
-      call my_allocate(hsl, [hsbn+I_ONE], "hsl")
-      hsl(1:hsbn) = cg%coord(LEFT,  zdim)%r(1:hsbn)
-      hsl(hsbn+1) = cg%coord(RIGHT, zdim)%r(hsbn)
+!      call my_allocate(hsl, [hsbn+I_ONE], "hsl")
+      allocate(hsl(hsbn(LO):hsbn(HI)+I_ONE))
+      hsl(hsbn(LO):hsbn(HI)) = cg%coord(LEFT,  zdim)%r(hsbn(LO):hsbn(HI))
+      hsl(hsbn(HI)+I_ONE)    = cg%coord(RIGHT, zdim)%r(hsbn(HI))
 
    end subroutine set_default_hsparams
 
@@ -223,7 +225,7 @@ contains
       endif
 
       dprof(:) = 0.0
-      do k=1, hsbn
+      do k=hsbn(LO), hsbn(HI)
          do ksub=1, nstot
             if (zs(ksub) > hsl(k) .and. zs(ksub) < hsl(k+1)) then
                dprof(k) = dprof(k) + dprofs(ksub)/real(nsub)
