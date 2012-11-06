@@ -184,7 +184,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, MAXL, oneq
+      use constants,        only: xdim, ydim, zdim, MAXL, oneq, LO, HI
       use dataio_pub,       only: die
       use domain,           only: dom, is_multicg
       use func,             only: ekin, emag
@@ -217,33 +217,39 @@ contains
          eh => cg%q(qna%ind(eh_n))%arr
 
          if (dom%has_dir(xdim)) then
-            dbx(2:cg%n_(xdim),:,:) = (cg%b(ydim,2:cg%n_(xdim),:,:)-cg%b(ydim,1:cg%n_(xdim)-1,:,:))*cg%idl(xdim) ; dbx(1,:,:) = dbx(2,:,:)
+            dbx(cg%lhn(xdim,LO)+1:cg%lhn(xdim,HI),:,:) = (cg%b(ydim,cg%lhn(xdim,LO)+1:cg%lhn(xdim,HI),:,:)-cg%b(ydim,cg%lhn(xdim,LO):cg%lhn(xdim,HI)-1,:,:))*cg%idl(xdim)
+            dbx(cg%lhn(xdim,LO),:,:) = dbx(cg%lhn(xdim,LO)+1,:,:)
          endif
          if (dom%has_dir(ydim)) then
-            dby(:,2:cg%n_(ydim),:) = (cg%b(xdim,:,2:cg%n_(ydim),:)-cg%b(xdim,:,1:cg%n_(ydim)-1,:))*cg%idl(ydim) ; dby(:,1,:) = dby(:,2,:)
+            dby(:,cg%lhn(ydim,LO)+1:cg%lhn(ydim,HI),:) = (cg%b(xdim,:,cg%lhn(ydim,LO)+1:cg%lhn(ydim,HI),:)-cg%b(xdim,:,cg%lhn(ydim,LO):cg%lhn(ydim,HI)-1,:))*cg%idl(ydim)
+            dby(:,cg%lhn(ydim,LO),:) = dby(:,cg%lhn(ydim,LO)+1,:)
          endif
          if (dom%has_dir(zdim)) then
-            dbz(:,:,2:cg%n_(zdim)) = (cg%b(ydim,:,:,2:cg%n_(zdim))-cg%b(ydim,:,:,1:cg%n_(zdim)-1))*cg%idl(zdim) ; dbz(:,:,1) = dbz(:,:,2)
+            dbz(:,:,cg%lhn(zdim,LO)+1:cg%lhn(zdim,HI)) = (cg%b(ydim,:,:,cg%lhn(zdim,LO)+1:cg%lhn(zdim,HI))-cg%b(ydim,:,:,cg%lhn(zdim,LO):cg%lhn(zdim,HI)-1))*cg%idl(zdim)
+            dbz(:,:,cg%lhn(zdim,LO)) = dbz(:,:,cg%lhn(zdim,LO)+1)
          endif
 
 !--- current_z **2
          eh = dbx - dby
          if (dom%has_dir(zdim)) then
-            wb(:,:,2:cg%n_(zdim)) =                         oneq*(eh(:,:,2:cg%n_(zdim)) + eh(:,:,1:cg%n_(zdim)-1))**2 ; wb(:,:,1) = wb(:,:,2)
+            wb(:,:,cg%lhn(zdim,LO)+1:cg%lhn(zdim,HI)) =                                             oneq*(eh(:,:,cg%lhn(zdim,LO)+1:cg%lhn(zdim,HI)) + eh(:,:,cg%lhn(zdim,LO):cg%lhn(zdim,HI)-1))**2
+            wb(:,:,cg%lhn(zdim,LO)) = wb(:,:,cg%lhn(zdim,LO)+1)
          else
             wb = eh**2
          endif
 !--- current_x **2
          eh = dby - dbz
          if (dom%has_dir(xdim)) then
-            wb(2:cg%n_(xdim),:,:) = wb(2:cg%n_(xdim),:,:) + oneq*(eh(2:cg%n_(xdim),:,:) + eh(1:cg%n_(xdim)-1,:,:))**2 ; wb(1,:,:) = wb(2,:,:)
+            wb(cg%lhn(xdim,LO)+1:cg%lhn(xdim,HI),:,:) = wb(cg%lhn(xdim,LO)+1:cg%lhn(xdim,HI),:,:) + oneq*(eh(cg%lhn(xdim,LO)+1:cg%lhn(xdim,HI),:,:) + eh(cg%lhn(xdim,LO):cg%lhn(xdim,HI)-1,:,:))**2
+            wb(cg%lhn(xdim,LO),:,:) = wb(cg%lhn(xdim,LO)+1,:,:)
          else
             wb = wb + eh**2
          endif
 !--- current_y **2
          eh = dbz - dbx
          if (dom%has_dir(ydim)) then
-            wb(:,2:cg%n_(ydim),:) = wb(:,2:cg%n_(ydim),:) + oneq*(eh(:,2:cg%n_(ydim),:) + eh(:,1:cg%n_(ydim)-1,:))**2 ; wb(:,1,:) = wb(:,2,:)
+            wb(:,cg%lhn(ydim,LO)+1:cg%lhn(ydim,HI),:) = wb(:,cg%lhn(ydim,LO)+1:cg%lhn(ydim,HI),:) + oneq*(eh(:,cg%lhn(ydim,LO)+1:cg%lhn(ydim,HI),:) + eh(:,cg%lhn(ydim,LO):cg%lhn(ydim,HI)-1,:))**2
+            wb(:,cg%lhn(ydim,LO),:) = wb(:,cg%lhn(ydim,LO)+1,:)
          else
             wb = wb + eh**2
          endif
@@ -252,16 +258,16 @@ contains
 
          eh = 0.0
          if (dom%has_dir(xdim)) then
-            eh(2:cg%n_(xdim)-1,:,:) = eh(2:cg%n_(xdim)-1,:,:) + eta(1:cg%n_(xdim)-2,:,:) + eta(3:cg%n_(xdim),:,:)
-            eh(1,:,:) = eh(2,:,:) ; eh(cg%n_(xdim),:,:) = eh(cg%n_(xdim)-1,:,:)
+            eh(cg%lhn(xdim,LO)+1:cg%lhn(xdim,HI)-1,:,:) = eh(cg%lhn(xdim,LO)+1:cg%lhn(xdim,HI)-1,:,:) + eta(cg%lhn(xdim,LO):cg%lhn(xdim,HI)-2,:,:) + eta(cg%lhn(xdim,LO)+2:cg%lhn(xdim,HI),:,:)
+            eh(cg%lhn(xdim,LO),:,:) = eh(cg%lhn(xdim,LO)+1,:,:) ; eh(cg%lhn(xdim,HI),:,:) = eh(cg%lhn(xdim,HI)-1,:,:)
          endif
          if (dom%has_dir(ydim)) then
-            eh(:,2:cg%n_(ydim)-1,:) = eh(:,2:cg%n_(ydim)-1,:) + eta(:,1:cg%n_(ydim)-2,:) + eta(:,3:cg%n_(ydim),:)
-            eh(:,1,:) = eh(:,2,:) ; eh(:,cg%n_(ydim),:) = eh(:,cg%n_(ydim)-1,:)
+            eh(:,cg%lhn(ydim,LO)+1:cg%lhn(ydim,HI)-1,:) = eh(:,cg%lhn(ydim,LO)+1:cg%lhn(ydim,HI)-1,:) + eta(:,cg%lhn(ydim,LO):cg%lhn(ydim,HI)-2,:) + eta(:,cg%lhn(ydim,LO)+2:cg%lhn(ydim,HI),:)
+            eh(:,cg%lhn(ydim,LO),:) = eh(:,cg%lhn(ydim,LO)+1,:) ; eh(:,cg%lhn(ydim,HI),:) = eh(:,cg%lhn(ydim,HI)-1,:)
          endif
          if (dom%has_dir(zdim)) then
-            eh(:,:,2:cg%n_(zdim)-1) = eh(:,:,2:cg%n_(zdim)-1) + eta(:,:,1:cg%n_(zdim)-2) + eta(:,:,3:cg%n_(zdim))
-            eh(:,:,1) = eh(:,:,2) ; eh(:,:,cg%n_(zdim)) = eh(:,:,cg%n_(zdim)-1)
+            eh(:,:,cg%lhn(zdim,LO)+1:cg%lhn(zdim,HI)-1) = eh(:,:,cg%lhn(zdim,LO)+1:cg%lhn(zdim,HI)-1) + eta(:,:,cg%lhn(zdim,LO):cg%lhn(zdim,HI)-2) + eta(:,:,cg%lhn(zdim,LO)+2:cg%lhn(zdim,HI))
+            eh(:,:,cg%lhn(zdim,LO)) = eh(:,:,cg%lhn(zdim,LO)+1) ; eh(:,:,cg%lhn(zdim,HI)) = eh(:,:,cg%lhn(zdim,HI)-1)
          endif
          eh = real((eh + eta_scale*eta)*d_eta_factor)
 
