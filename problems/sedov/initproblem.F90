@@ -27,7 +27,6 @@
 !
 #include "piernik.h"
 #include "macros.h"
-#define RNG is:ie, js:je, ks:ke
 module initproblem
 
 ! Initial condition for Sedov-Taylor explosion
@@ -129,9 +128,9 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
-      use constants,   only: ION, DST, xdim, ydim, zdim
+      use cg_list,     only: cg_list_element
+      use constants,   only: ION, DST, xdim, ydim, zdim, LO, HI
       use dataio_pub,  only: msg, die, printinfo
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
@@ -163,9 +162,9 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            do k = 1, cg%n_(zdim)
-               do j = 1, cg%n_(ydim)
-                  do i = 1, cg%n_(xdim)
+            do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+               do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+                  do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                      cg%u(fl%idn,i,j,k) = d0
                      cg%u(fl%imx,i,j,k) = 0.0
                      cg%u(fl%imy,i,j,k) = 0.0
@@ -178,9 +177,9 @@ contains
 
 ! Explosion
 
-            do k = 1, cg%n_(zdim)
-               do j = 1, cg%n_(ydim)
-                  do i = 1, cg%n_(xdim)
+            do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+               do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+                  do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                      r = sqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
                      if ( r**2 < r0**2) cg%u(fl%ien,i,j,k)   = cg%u(fl%ien,i,j,k) + Eexpl
                   enddo
@@ -188,9 +187,9 @@ contains
             enddo
 
             if (fl%tag == ION) then
-               do k = 1, cg%n_(zdim)
-                  do j = 1, cg%n_(ydim)
-                     do i = 1, cg%n_(xdim)
+               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+                  do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+                     do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                         cg%b(xdim,i,j,k) = bx0
                         cg%b(ydim,i,j,k) = by0
                         cg%b(zdim,i,j,k) = bz0
@@ -204,9 +203,9 @@ contains
          enddo
 
 #ifdef TRACER
-         do k = 1, cg%n_(zdim)
-            do j = 1, cg%n_(ydim)
-               do i = 1, cg%n_(xdim)
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                   r = sqrt( (cg%x(i)-x0)**2 + (cg%y(j)-y0)**2 + (cg%z(k)-z0)**2 )
                   if ( r**2 < r0**2) then
                      cg%u(flind%trc%pos, i, j, k)   = 1.0
@@ -250,8 +249,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine sedov_vars_hdf5(var, tab, ierrh, cg)
 
-      use mpisetup,  only: proc
       use grid_cont, only: grid_container
+      use mpisetup,  only: proc
 
       implicit none
 
