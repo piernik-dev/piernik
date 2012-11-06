@@ -390,7 +390,7 @@ contains
 
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, half, I_ONE, wcu_n, idm, uv, INT4
+      use constants,        only: xdim, ydim, zdim, ndims, half, I_ONE, wcu_n, idm, INT4, LO, HI
       use domain,           only: dom
       use global,           only: dt
       use grid_cont,        only: grid_container
@@ -419,22 +419,12 @@ contains
          wcu_i = qna%ind(wcu_n)
          eta_i = qna%ind(eta_n)
 
-!         select case (etadir)
-!            case (xdim)
-!               cg%q(eta_i)%arr(1:cg%n_(xdim)-1,:,:) = half*(cg%q(eta_i)%arr(1:cg%n_(xdim)-1,:,:)+cg%q(eta_i)%arr(2:cg%n_(xdim),:,:))
-!            case (ydim)
-!               cg%q(eta_i)%arr(:,1:cg%n_(ydim)-1,:) = half*(cg%q(eta_i)%arr(:,1:cg%n_(ydim)-1,:)+cg%q(eta_i)%arr(:,2:cg%n_(ydim),:))
-!            case (zdim)
-!               cg%q(eta_i)%arr(:,:,1:cg%n_(zdim)-1) = half*(cg%q(eta_i)%arr(:,:,1:cg%n_(zdim)-1)+cg%q(eta_i)%arr(:,:,2:cg%n_(zdim)))
-!         end select
+         idmh(:) = cg%lhn(:,HI) - idm(:,etadir)
+         idml(:) = cg%lhn(:,LO) + idm(:,etadir)
+         cg%q(eta_i)%arr(cg%lhn(xdim,LO):idmh(xdim),cg%lhn(ydim,LO):idmh(ydim),cg%lhn(zdim,LO):idmh(zdim)) = half*(cg%q(eta_i)%span(cg%lhn(:,LO),idmh) + cg%q(eta_i)%span(idml,cg%lhn(:,HI)))
 
-! following solution seems to be a bit faster than former select case
-         idmh(:) = cg%n_(:) - idm(:,etadir)
-         idml(:) = I_ONE + idm(:,etadir)
-         cg%q(eta_i)%arr(:idmh(xdim),:idmh(ydim),:idmh(zdim)) = half*(cg%q(eta_i)%span(uv,idmh) + cg%q(eta_i)%span(idml,cg%n_))
-
-         do i1 = lbound(cg%q(wcu_i)%arr,n1), ubound(cg%q(wcu_i)%arr,n1)
-            do i2 = lbound(cg%q(wcu_i)%arr,n2), ubound(cg%q(wcu_i)%arr,n2)
+         do i1 = cg%lhn(n1,LO), cg%lhn(n1,HI)
+            do i2 = cg%lhn(n2,LO), cg%lhn(n2,HI)
                b1d   => cg%w(wna%bi)%get_sweep(sdir,ibdir,i1,i2)
                eta1d => cg%q(eta_i )%get_sweep(sdir,      i1,i2)
                wcu1d => cg%q(wcu_i )%get_sweep(sdir,      i1,i2)
@@ -449,7 +439,7 @@ contains
       do while (associated(cgl))
          do dir = xdim, zdim
             emf = idm(etadir,dir) + 2_INT4
-            if (dom%has_dir(dir)) call bnd_emf(cg%q(wcu_i)%arr, emf, dir, cgl%cg)
+            if (dom%has_dir(dir)) call bnd_emf(cgl%cg%q(wcu_i)%arr, emf, dir, cgl%cg)
          enddo
          cgl => cgl%nxt
       enddo
