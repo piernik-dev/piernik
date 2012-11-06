@@ -81,7 +81,7 @@ contains
    subroutine bnd_b(dir, cg)
 
       use cart_comm,     only: cdd
-      use constants,     only: MAG, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_FOUR, &
+      use constants,     only: MAG, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, I_ONE, I_TWO, I_THREE, I_FOUR, &
            &                   BND_MPI, BND_FC, BND_MPI_FC, BND_PER, BND_REF, BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD, BND_COR, BND_SHE
       use dataio_pub,    only: msg, warn, die
       use domain,        only: is_mpi_noncart, is_multicg, dom
@@ -281,7 +281,7 @@ contains
 
       if (bnd_not_provided(dir,LO) .and. bnd_not_provided(dir,HI)) return  ! avoid triple case
 
-      l = reshape([lbound(cg%b(xdim,:,:,:), kind=4),ubound(cg%b(xdim,:,:,:), kind=4)],shape=[ndims,HI]) ; r = l
+      l = cg%lhn ; r = l
 
       do side = LO, HI
          select case (cg%bnd(dir, side))
@@ -301,18 +301,15 @@ contains
                endif
             case (BND_PER)
                   if (cdd%comm3d /= MPI_COMM_NULL) then
-                     l(dir,:) = cg%ijkse(dir,side)*(side-LO) + [I_ONE, dom%nb]
+                     l(dir,:) = cg%ijkse(dir,side) + [I_ONE, dom%nb] + (dom%nb+I_ONE)*(side-HI)
                      cside = LO + HI - side
                      r(dir, side) = cg%ijkseb(dir,cside)
                      r(dir,cside) = cg%ijkse (dir,cside)
                      cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
                   endif
             case (BND_OUT, BND_OUTD, BND_OUTH, BND_OUTHD)
-                  if (side == LO) then
-                     l(dir,:) = 1 ; r(dir,:) = 2
-                  else
-                     l(dir,:) = cg%n_(dir) ; r(dir,:) = cg%n_(dir)-I_ONE
-                  endif
+                  l(dir,:) = cg%lhn(dir,side)
+                  r(dir,:) = cg%lhn(dir,side) + I_THREE - I_TWO*side
                   cg%b(:,l(xdim,LO):l(xdim,HI),l(ydim,LO):l(ydim,HI),l(zdim,LO):l(zdim,HI)) = cg%b(:,r(xdim,LO):r(xdim,HI),r(ydim,LO):r(ydim,HI),r(zdim,LO):r(zdim,HI))
             case default
                write(msg,'(2(a,i3))') "[magboundaries:bnd_b]: Boundary condition ",cg%bnd(dir, side)," not implemented in ",dir
