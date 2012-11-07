@@ -262,7 +262,7 @@ contains
 
       use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim
+      use constants,   only: xdim, ydim, zdim, LO, HI
       use dataio_pub,  only: printinfo
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind
@@ -289,8 +289,8 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         allocate(noise(xdim:zdim, lbound(cg%u, 2):ubound(cg%u, 2), &
-            & lbound(cg%u, 3):ubound(cg%u, 3), lbound(cg%u, 4):ubound(cg%u, 4)))
+         allocate(noise(xdim:zdim, cg%lhn(xdim, LO):cg%lhn(xdim, HI), &
+            & cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
          call random_number(noise)
          cg%u(flind%dst%imx,:,:,:) = cg%u(flind%dst%imx,:,:,:) +amp_noise*(1.0-2.0*noise(xdim,:,:,:)) * cg%u(flind%dst%idn,:,:,:)
          cg%u(flind%dst%imy,:,:,:) = cg%u(flind%dst%imy,:,:,:) +amp_noise*(1.0-2.0*noise(ydim,:,:,:)) * cg%u(flind%dst%idn,:,:,:)
