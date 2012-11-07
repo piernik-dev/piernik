@@ -219,8 +219,8 @@ contains
       do i=lbound(cg%u,1),ubound(cg%u,1)
          cg%u(i,:, cg%js:cg%je,:) = unshear_fft( cg%u(i,:, cg%js:cg%je,:), cg%x(:),ddly)
       enddo
-      cg%u(:,:,1:dom%nb,:)             = cg%u(:,:, cg%jeb:cg%je,:)
-      cg%u(:,:, cg%je+1:cg%n_(ydim),:) = cg%u(:,:, cg%js:cg%jsb,:)
+      cg%u(:,:,cg%lhn(ydim, LO):cg%lh1(ydim, LO),:) = cg%u(:,:, cg%jeb:cg%je,:)
+      cg%u(:,:, cg%lh1(ydim, HI):cg%lhn(ydim, HI),:) = cg%u(:,:, cg%js:cg%jsb,:)
 #endif /* FFTW */
 
    end subroutine yshift

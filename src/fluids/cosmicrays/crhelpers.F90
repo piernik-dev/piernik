@@ -137,7 +137,7 @@ contains
 !<
    subroutine div_v_6th_lp(ifluid, cg)
 
-      use constants,        only: xdim, ydim, zdim, pdims, big
+      use constants,        only: xdim, ydim, zdim, pdims, big, LO, HI
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn
       use grid_cont,        only: grid_container
@@ -156,8 +156,8 @@ contains
 
       do dir = xdim, zdim
          if (.not. dom%has_dir(dir)) cycle
-         do i2 = 1, cg%n_(pdims(dir, ydim))
-            do i3 = 1, cg%n_(pdims(dir, zdim))
+         do i2 = cg%lhn(pdims(dir, ydim), LO), cg%lhn(pdims(dir, ydim), HI)
+            do i3 = cg%lhn(pdims(dir, zdim), LO), cg%lhn(pdims(dir, zdim), HI)
                divvel => cg%q(qna%ind(divv_n))%get_sweep(dir, i2, i3)
                mom  => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid) + dir, i2, i3)
                dens => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)      , i2, i3)
@@ -185,7 +185,7 @@ contains
 
    subroutine div_v_1st(ifluid, cg)
 
-      use constants,        only: xdim, ydim, zdim, pdims, half
+      use constants,        only: xdim, ydim, zdim, pdims, half, LO, HI
       use domain,           only: dom
       use fluidindex,       only: iarr_all_dn
       use grid_cont,        only: grid_container
@@ -203,8 +203,8 @@ contains
 
       do dir = xdim, zdim
          if (.not.dom%has_dir(dir)) cycle
-         do i2 = 1, cg%n_(pdims(dir, ydim))
-            do i3 = 1, cg%n_(pdims(dir, zdim))
+         do i2 = cg%lhn(pdims(dir, ydim), LO), cg%lhn(pdims(dir, ydim), HI)
+            do i3 = cg%lhn(pdims(dir, zdim), LO), cg%lhn(pdims(dir, zdim), HI)
                divvel => cg%q(qna%ind(divv_n))%get_sweep(dir, i2, i3)
                mom    => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)+dir, i2, i3)
                dn     => cg%w(wna%fi)%get_sweep(dir, iarr_all_dn(ifluid)    , i2, i3)

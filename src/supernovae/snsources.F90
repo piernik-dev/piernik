@@ -165,7 +165,7 @@ contains
 
       use cg_leaves,      only: leaves
       use cg_list,        only: cg_list_element
-      use constants,      only: xdim, ydim, zdim
+      use constants,      only: xdim, ydim, zdim, LO, HI
       use domain,         only: dom
       use grid_cont,      only: grid_container
 #ifdef COSM_RAYS_SOURCES
@@ -189,10 +189,10 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do k=1, cg%n_(zdim)
+         do k=cg%lhn(zdim, LO), cg%lhn(zdim, HI)
             zr = (cg%z(k)-zsn)**2
-            do j=1, cg%n_(ydim)
-               do i=1, cg%n_(xdim)
+            do j=cg%lhn(ydim, LO), cg%lhn(ydim, HI)
+               do i=cg%lhn(xdim, LO), cg%lhn(xdim, HI)
 
                   decr = 0.0
                   do ipm=-1,1

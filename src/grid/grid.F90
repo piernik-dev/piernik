@@ -44,7 +44,7 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_connected, only: base_lev, finest, coarsest
-      use constants,          only: PIERNIK_INIT_DOMAIN, base_level_offset
+      use constants,          only: PIERNIK_INIT_DOMAIN
       use dataio_pub,         only: printinfo, die, code_progress
       use domain,             only: dom
 
@@ -62,7 +62,7 @@ contains
       finest => base_lev
       coarsest => base_lev
       call base_lev%add_level(dom%n_d)
-      call base_lev%add_patch(dom%n_d, base_level_offset)
+      call base_lev%add_patch
       call base_lev%init_all_new_cg
 
       ! Refinement lists will be added by iterating the initproblem::init_prob routine, in restart_hdf5::read_restart_hdf5 or in not_yet_implemented::refinement_update

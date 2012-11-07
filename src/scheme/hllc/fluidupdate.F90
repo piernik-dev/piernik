@@ -117,8 +117,8 @@ contains
          i_cs_iso2 = -1
       endif
 
-      do i2 = 1, cg%n_(pdims(ddim,3))
-         do i1 = 1, cg%n_(pdims(ddim,2))
+      do i2 = cg%lhn(pdims(ddim,3), LO), cg%lhn(pdims(ddim,3), HI)
+         do i1 = cg%lhn(pdims(ddim,2), LO), cg%lhn(pdims(ddim,2), HI)
             pu => cg%w(wna%fi)%get_sweep(ddim,i1,i2)
             if (i_cs_iso2 > 0) cs2 => cg%q(i_cs_iso2)%get_sweep(ddim,i1,i2)
 

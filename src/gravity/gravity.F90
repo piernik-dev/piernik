@@ -812,7 +812,7 @@ contains
 !<
    subroutine grav_pot2accel(sweep, i1, i2, n, grav, istep, cg)
 
-      use constants, only: xdim, ydim, zdim, half
+      use constants, only: xdim, ydim, zdim, half, LO, HI
       use grid_cont, only: grid_container
 
       implicit none
@@ -820,7 +820,7 @@ contains
       integer(kind=4),               intent(in)  :: sweep      !< string of characters that points out the current sweep direction
       integer,                       intent(in)  :: i1         !< number of column in the first direction after one pointed out by sweep
       integer,                       intent(in)  :: i2         !< number of column in the second direction after one pointed out by sweep
-      integer(kind=4),               intent(in)  :: n          !< number of elements of returned array grav
+      integer(kind=4),               intent(in)  :: n          !< number of elements of returned array grav \todo OPT: would size(grav) be faster a bit?
       real, dimension(n),            intent(out) :: grav       !< 1D array of gravitational acceleration values computed for positions from %xsw and returned by the routine
       integer,                       intent(in)  :: istep      !< istep=1 for halfstep, istep=2 for fullstep
       type(grid_container), pointer, intent(in)  :: cg         !< current grid_container
@@ -853,21 +853,21 @@ contains
       if (istep==1) then
          select case (sweep)
             case (xdim)
-               grav(2:n-1) = half*(cg%hgpot(1:n-2,i1,i2) - cg%hgpot(3:n,i1,i2))/cg%dl(xdim)
+               grav(2:n-1) = half*(cg%hgpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2, i1, i2) - cg%hgpot(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI), i1, i2))/cg%dl(xdim)
             case (ydim)
-               grav(2:n-1) = half*(cg%hgpot(i2,1:n-2,i1) - cg%hgpot(i2,3:n,i1))/cg%dl(ydim)
+               grav(2:n-1) = half*(cg%hgpot(i2, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-2, i1) - cg%hgpot(i2, cg%lhn(ydim, LO)+2:cg%lhn(ydim, HI), i1))/cg%dl(ydim)
             case (zdim)
-               grav(2:n-1) = half*(cg%hgpot(i1,i2,1:n-2) - cg%hgpot(i1,i2,3:n))/cg%dl(zdim)
+               grav(2:n-1) = half*(cg%hgpot(i1, i2, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-2) - cg%hgpot(i1, i2, cg%lhn(zdim, LO)+2:cg%lhn(zdim, HI)))/cg%dl(zdim)
          end select
 
       else
          select case (sweep)
             case (xdim)
-               grav(2:n-1) = half*(cg%gpot(1:n-2,i1,i2) - cg%gpot(3:n,i1,i2))/cg%dl(xdim)
+               grav(2:n-1) = half*(cg%gpot(cg%lhn(xdim, LO):cg%lhn(xdim, HI)-2, i1, i2) - cg%gpot(cg%lhn(xdim, LO)+2:cg%lhn(xdim, HI), i1, i2))/cg%dl(xdim)
             case (ydim)
-               grav(2:n-1) = half*(cg%gpot(i2,1:n-2,i1) - cg%gpot(i2,3:n,i1))/cg%dl(ydim)
+               grav(2:n-1) = half*(cg%gpot(i2, cg%lhn(ydim, LO):cg%lhn(ydim, HI)-2, i1) - cg%gpot(i2, cg%lhn(ydim, LO)+2:cg%lhn(ydim, HI), i1))/cg%dl(ydim)
             case (zdim)
-               grav(2:n-1) = half*(cg%gpot(i1,i2,1:n-2) - cg%gpot(i1,i2,3:n))/cg%dl(zdim)
+               grav(2:n-1) = half*(cg%gpot(i1, i2, cg%lhn(zdim, LO):cg%lhn(zdim, HI)-2) - cg%gpot(i1, i2, cg%lhn(zdim, LO)+2:cg%lhn(zdim, HI)))/cg%dl(zdim)
          end select
       endif
 

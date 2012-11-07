@@ -80,13 +80,15 @@ module cg_level
       procedure :: init_all_new_cg                          !< initialize newest grid container
       procedure, private :: mpi_bnd_types                   !< create MPI types for boundary exchanges
       procedure :: print_segments                           !< print detailed information about current level decomposition
-      procedure :: add_patch                                !< add a new piece of grid to the current level and decompose it
       procedure, private :: update_decomposition_properties !< Update some flags in domain module
       procedure, private :: distribute                      !< Get all decomposed patches and compute which pieces go to which process
       procedure, private :: calc_ord_range                  !< Compute which id\'s should belong to which process
       procedure, private :: simple_ordering                 !< This is just counting, not ordering
       procedure, private :: mark_new                        !< Detect which grid containers are new
       procedure :: update_tot_se                            !< count all cg on current level for computing tags in vertical_prep
+      generic, public :: add_patch => add_patch_fulllevel, add_patch_detailed !< Add a new piece of grid to the current level and decompose it
+      procedure, private :: add_patch_fulllevel             !< Add a whole level to the list of patches
+      procedure, private :: add_patch_detailed              !< Add a new piece of grid to the list of patches
 
    end type cg_level_T
 
@@ -617,9 +619,24 @@ contains
 
    end subroutine mpi_bnd_types
 
+!> \brief Add a whole level to the list of patches on current refinement level and decompose it
+
+   subroutine add_patch_fulllevel(this, n_pieces)
+
+      use constants, only: base_level_offset
+
+      implicit none
+
+      class(cg_level_T), target, intent(inout) :: this     !< current level
+      integer(kind=4), optional, intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
+
+      call this%add_patch_detailed(this%n_d, base_level_offset, n_pieces)
+
+   end subroutine add_patch_fulllevel
+
 !> \brief Add a new piece of grid to the list of patches on current refinement level and decompose it
 
-   subroutine add_patch(this, n_d, off, n_pieces)
+   subroutine add_patch_detailed(this, n_d, off, n_pieces)
 
       use constants,     only: ndims
       use dataio_pub,    only: msg, die
@@ -627,8 +644,8 @@ contains
 
       implicit none
 
-      class(cg_level_T), target,    intent(inout) :: this     !< current level
-      integer(kind=4), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
+      class(cg_level_T), target,         intent(inout) :: this     !< current level
+      integer(kind=8), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level)
       integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
@@ -648,10 +665,10 @@ contains
       endif
 
       if (.not. this%patches(ubound(this%patches(:), dim=1))%decompose_patch(n_d(:), off(:), n_pieces)) then
-         write(msg,'(a,i4)')"[cg_level:add_patch] Coarse domain decomposition failed at level ",this%level_id
+         write(msg,'(a,i4)')"[cg_level:add_patch_detailed] Coarse domain decomposition failed at level ",this%level_id
          call die(msg)
       endif
 
-   end subroutine add_patch
+   end subroutine add_patch_detailed
 
 end module cg_level

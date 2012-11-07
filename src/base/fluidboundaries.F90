@@ -164,7 +164,7 @@ contains
 !   - lower to left
             if (cdd%pcoords(xdim) == 0 .and. cdd%pcoords(ydim) == 0) then
                do i=1, dom%nb
-                  do j=cg%js, cg%n_(ydim)
+                  do j=cg%js, cg%lhn(ydim, HI)
                      cg%u(iarr_all_dn,i,j,:) =  cg%u(iarr_all_dn,j,cg%isb+1-i,:)
                      cg%u(iarr_all_mx,i,j,:) = -cg%u(iarr_all_my,j,cg%isb+1-i,:)
                      cg%u(iarr_all_my,i,j,:) =  cg%u(iarr_all_mx,j,cg%isb+1-i,:)
@@ -189,8 +189,8 @@ contains
 
                call MPI_Waitall(I_TWO,req, status, mpi_err)
 
-               do i=1, dom%nb
-                  do j=1, cg%n_(ydim)
+               do i=cg%lhn(xdim, LO), cg%lh1(xdim, LO)
+                  do j=cg%lhn(ydim, LO), cg%lhn(ydim, HI)
                      cg%u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn,j, cg%is-i,:)
                      cg%u(iarr_all_mx,i,j,:) = -recv_left(iarr_all_my,j, cg%is-i,:)
                      cg%u(iarr_all_my,i,j,:) =  recv_left(iarr_all_mx,j, cg%is-i,:)
@@ -212,8 +212,8 @@ contains
          if (cg%bnd(ydim, LO) == BND_COR) then
 !   - left to lower
             if (cdd%pcoords(ydim) == 0 .and. cdd%pcoords(xdim) == 0 ) then
-               do j=1, dom%nb
-                  do i=cg%is, cg%n_(xdim)
+               do j=cg%lhn(ydim, LO), cg%lh1(ydim, LO)
+                  do i=cg%is, cg%lhn(xdim, HI)
                      cg%u(iarr_all_dn,i,j,:) =  cg%u(iarr_all_dn,cg%isb+1-j,i,:)
                      cg%u(iarr_all_mx,i,j,:) =  cg%u(iarr_all_my,cg%isb+1-j,i,:)
                      cg%u(iarr_all_my,i,j,:) = -cg%u(iarr_all_mx,cg%isb+1-j,i,:)
@@ -227,8 +227,8 @@ contains
                   enddo
                enddo
 !   - interior to corner
-               do j=1, dom%nb
-                  do i=1, dom%nb
+               do j=cg%lhn(ydim, LO), cg%lh1(ydim, LO)
+                  do i=cg%lhn(xdim, LO), cg%lh1(xdim, LO)
                      cg%u(iarr_all_dn,i,j,:) =   cg%u(iarr_all_dn,cg%isb+1-i,cg%jsb+1-j,:)
                      cg%u(iarr_all_mx,i,j,:) =  -cg%u(iarr_all_mx,cg%isb+1-i,cg%jsb+1-j,:)
                      cg%u(iarr_all_my,i,j,:) =  -cg%u(iarr_all_my,cg%isb+1-i,cg%jsb+1-j,:)
@@ -253,8 +253,8 @@ contains
 
                call MPI_Waitall(I_TWO, req, status, mpi_err)
 
-               do j=1, dom%nb
-                  do i=1, cg%n_(xdim)
+               do j=cg%lhn(ydim, LO), cg%lh1(ydim, LO)
+                  do i=cg%lhn(xdim, LO), cg%lhn(xdim, HI)
                      cg%u(iarr_all_dn,i,j,:) =  recv_left(iarr_all_dn, cg%js-j,i,:)
                      cg%u(iarr_all_mx,i,j,:) =  recv_left(iarr_all_my, cg%js-j,i,:)
                      cg%u(iarr_all_my,i,j,:) = -recv_left(iarr_all_mx, cg%js-j,i,:)

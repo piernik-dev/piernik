@@ -39,7 +39,7 @@ module func
    implicit none
 
    private
-   public :: ekin, emag, L2norm, sq_sum3, resample_gauss, piernik_fnum, f2c, c2f
+   public :: ekin, emag, L2norm, sq_sum3, resample_gauss, piernik_fnum, f2c, c2f, f2c_o, c2f_o
 
 contains
 
@@ -178,8 +178,12 @@ contains
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: fine
 
-      fine(:,:) = coarse(:,:) * refinement_factor
-      where (dom%has_dir(:)) fine(:, HI) = fine(:, HI) + refinement_factor - 1
+      fine(:, LO) = c2f_o(coarse(:, LO))
+      where (dom%has_dir(:))
+         fine(:, HI) = c2f_o(coarse(:, HI)) + refinement_factor - 1
+      elsewhere
+         fine(:, HI) = c2f_o(coarse(:, HI))
+      endwhere
 
    end function c2f
 
@@ -187,7 +191,7 @@ contains
 
    pure function f2c(fine) result (coarse)
 
-      use constants, only: xdim, zdim, LO, HI, refinement_factor, LONG
+      use constants, only: xdim, zdim, LO, HI
 
       implicit none
 
@@ -195,11 +199,40 @@ contains
 
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarse
 
-      integer(kind=8) :: bias !< prevents inconsistencies in arithmetic on integers due to rounding towards 0 (stencil_range should be more than enough)
-
-      bias = max(0_LONG, -minval(fine(:,:)))
-      coarse(:,:) =  (fine(:,:) + bias*refinement_factor) / refinement_factor - bias
+      coarse = f2c_o(fine)
 
    end function f2c
+
+!> \brief Calculate refined offset
+
+   elemental function c2f_o(o_coarse) result (o_fine)
+
+      use constants, only: refinement_factor
+
+      implicit none
+
+      integer(kind=8), intent(in) :: o_coarse
+
+      integer(kind=8) :: o_fine
+
+      o_fine = o_coarse * refinement_factor
+
+   end function c2f_o
+
+!> \brief Calculate coarsened offset
+
+   elemental function f2c_o(o_fine) result (o_coarse)
+
+      use constants, only: refinement_factor
+
+      implicit none
+
+      integer(kind=8), intent(in) :: o_fine
+
+      integer(kind=8) :: o_coarse
+
+      o_coarse = floor(o_fine / real(refinement_factor))
+
+   end function f2c_o
 
 end module func

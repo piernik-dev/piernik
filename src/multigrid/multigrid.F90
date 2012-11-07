@@ -192,7 +192,7 @@ contains
 
       use cg_list,             only: cg_list_element
       use cg_level_connected,  only: cg_level_connected_T, base_lev, finest, coarsest
-      use constants,           only: PIERNIK_INIT_GRID, I_ONE, refinement_factor, base_level_offset
+      use constants,           only: PIERNIK_INIT_GRID, I_ONE, refinement_factor
       use dataio_pub,          only: printinfo, warn, die, code_progress, msg
       use domain,              only: dom, minsize
       use grid_cont,           only: grid_container
@@ -239,9 +239,9 @@ contains
          ! create coarser level:
          call curl%add_level(coarse = .true.)
          if (coarsest%level_id == -level_max .and. single_base) then
-            call coarsest%add_patch(int(coarsest%n_d(:), kind=4), base_level_offset, n_pieces=I_ONE)
+            call coarsest%add_patch(n_pieces=I_ONE)
          else
-            call coarsest%add_patch(int(coarsest%n_d(:), kind=4), base_level_offset)
+            call coarsest%add_patch
          endif
          call coarsest%init_all_new_cg
 

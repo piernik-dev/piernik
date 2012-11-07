@@ -97,8 +97,8 @@ contains
          if (any([allocated(vv), allocated(vv0)])) call die("[advects:advectb] vv or vv0 already allocated")
          allocate(vv(cg%n_(vdir)), vv0(cg%n_(vdir)))
 
-         im(bdir) = 1
-         do i = 1 + dom%D_(bdir), cg%n_(bdir)
+         im(bdir) = cg%lhn(bdir, LO)
+         do i = cg%lhn(bdir, LO) + dom%D_(bdir), cg%lhn(bdir, HI)
             ii(bdir) = i
             do j = cg%ijkse(rdir,LO), cg%ijkse(rdir,HI)
                ii(rdir) = j

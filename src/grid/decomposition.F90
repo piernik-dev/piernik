@@ -52,7 +52,7 @@ module decomposition
 
    !> \brief A box (or rectangle) within a certain refinement level to be decomposed into smaller pieces
    type :: box_T
-      integer(kind=4), dimension(ndims) :: n_d          !< number of grid cells
+      integer(kind=8), dimension(ndims) :: n_d          !< number of grid cells
       integer(kind=8), dimension(ndims) :: off          !< offset (with respect to the base level, counted on own level)
       type(cuboid), dimension(:), allocatable :: pse    !< list of grid pieces
 
@@ -108,7 +108,7 @@ contains
       implicit none
 
       class(box_T),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
-      integer(kind=4), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
+      integer(kind=8), dimension(ndims), intent(in)    :: n_d      !< number of grid cells
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level), \todo make use of it
       integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
@@ -156,7 +156,7 @@ contains
 
       ! Try the cartesian decomposition, specified in problem.par
       if (product(psize(:)) == pieces) then
-         if (all(mod(patch%n_d(:), int(psize(:), kind=4)) == 0)) then
+         if (all(mod(patch%n_d(:), int(psize(:), kind=8)) == 0)) then
             if (master .and. have_mpi) then
                write(msg,'(a,3i4,a,3i6,a)')"[decomposition:decompose_patch_int] Domain divided to [",psize(:)," ] pieces, each of [",patch%n_d(:)/psize(:)," ] cells."
                call printinfo(msg)
@@ -222,7 +222,7 @@ contains
          ! Putting the only piece of the grid on master is valid as long as local boundaries (periodic case) are done by copying memory, not mpi communication
          p_size(:) = 1
       else
-         p_size(:) = patch%n_d(:) / minsize(:)
+         p_size(:) = int(patch%n_d(:) / minsize(:), kind=4)
          do while (product(p_size(:)) > nproc)
             ml = maxloc(p_size(:), dim=1)
             if (p_size(ml) > 1) p_size(ml) = p_size(ml) - I_ONE
@@ -379,7 +379,7 @@ contains
       implicit none
 
       integer(kind=4), dimension(ndims), intent(out) :: p_size    !< number of pieces in each direction
-      integer(kind=4), dimension(ndims), intent(in)  :: n_d       !< size of the box to be divided
+      integer(kind=8), dimension(ndims), intent(in)  :: n_d       !< size of the box to be divided
       integer(kind=4),                   intent(in)  :: pieces    !< number of pieces
 
       integer(kind=4) :: n
@@ -452,7 +452,7 @@ contains
       implicit none
 
       integer(kind=4), dimension(ndims), intent(out) :: p_size   !< number of pieces in each direction
-      integer(kind=4), dimension(ndims), intent(in)  :: n_d      !< size of the box to be divided
+      integer(kind=8), dimension(ndims), intent(in)  :: n_d      !< size of the box to be divided
       integer(kind=4),                   intent(in)  :: pieces   !< number of pieces
 
       real, parameter :: b_load_fac = 0.25 ! estimated increase of execution time after doubling the total size of internal boundaries.
@@ -540,7 +540,7 @@ contains
 
       deallocate(fac)
 
-      is_uneven = any(mod(n_d(:), int(p_size(:), kind=4)) /= 0)
+      is_uneven = any(mod(n_d(:), int(p_size(:), kind=8)) /= 0)
 
       if (master) then
 #ifdef DEBUG
@@ -575,7 +575,7 @@ contains
       implicit none
 
       integer(kind=4), dimension(ndims), intent(inout) :: p_size      !< number of pieces in each direction
-      integer(kind=4), dimension(ndims), intent(in)    :: n_d         !< size of the box to be divided
+      integer(kind=8), dimension(ndims), intent(in)    :: n_d         !< size of the box to be divided
       integer(kind=4),                   intent(in)    :: pieces      !< number of pieces
 
       real, parameter :: minfac = 1.3 ! prevent domain division to halves if cell count in a given direction is too low. (not verified for optimality)
@@ -644,7 +644,7 @@ contains
          return
       endif
 
-      if (any(mod(patch%n_d(:), int(bsize(xdim:zdim), kind=4)) /= 0 .and. dom%has_dir(:))) then
+      if (any(mod(patch%n_d(:), int(bsize(xdim:zdim), kind=8)) /= 0 .and. dom%has_dir(:))) then
          write(msg,'(a,3f10.3,a)')"[decomposition:stamp_cg] Fractional number of blocks: n_d(:)/bsize(1:3) = [",patch%n_d(:)/real(bsize(xdim:zdim)),"]"
          if (master) call warn(msg)
          return

@@ -31,7 +31,7 @@
 
 module cg_level_connected
 
-   use cg_level,      only: cg_level_T
+   use cg_level, only: cg_level_T
 
    implicit none
 
@@ -136,7 +136,12 @@ contains
 
       call this%init_level
       this%level_id = base_level_id
-      this%n_d(:) = n_d(:)
+
+      this%n_d(:) = 1
+      where (dom%has_dir(:))
+         this%n_d(:) = n_d(:)
+      endwhere
+
       call all_lists%register(this, "Base level")
 
    end subroutine add_lev_base
