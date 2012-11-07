@@ -289,11 +289,12 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         allocate(noise(3,cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
+         allocate(noise(xdim:zdim, lbound(cg%u, 2):ubound(cg%u, 2), &
+            & lbound(cg%u, 3):ubound(cg%u, 3), lbound(cg%u, 4):ubound(cg%u, 4)))
          call random_number(noise)
-         cg%u(flind%dst%imx,:,:,:) = cg%u(flind%dst%imx,:,:,:) +amp_noise*(1.0-2.0*noise(1,:,:,:)) * cg%u(flind%dst%idn,:,:,:)
-         cg%u(flind%dst%imy,:,:,:) = cg%u(flind%dst%imy,:,:,:) +amp_noise*(1.0-2.0*noise(2,:,:,:)) * cg%u(flind%dst%idn,:,:,:)
-         cg%u(flind%dst%imz,:,:,:) = cg%u(flind%dst%imz,:,:,:) +amp_noise*(1.0-2.0*noise(3,:,:,:)) * cg%u(flind%dst%idn,:,:,:)
+         cg%u(flind%dst%imx,:,:,:) = cg%u(flind%dst%imx,:,:,:) +amp_noise*(1.0-2.0*noise(xdim,:,:,:)) * cg%u(flind%dst%idn,:,:,:)
+         cg%u(flind%dst%imy,:,:,:) = cg%u(flind%dst%imy,:,:,:) +amp_noise*(1.0-2.0*noise(ydim,:,:,:)) * cg%u(flind%dst%idn,:,:,:)
+         cg%u(flind%dst%imz,:,:,:) = cg%u(flind%dst%imz,:,:,:) +amp_noise*(1.0-2.0*noise(zdim,:,:,:)) * cg%u(flind%dst%idn,:,:,:)
          deallocate(noise)
 
          cgl => cgl%nxt
@@ -305,7 +306,6 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use cg_level_connected,    only: base_lev
       use constants,        only: dpi, xdim, ydim, zdim, GEO_RPZ, DST, LO, HI
       use dataio_pub,       only: msg, printinfo, die
       use domain,           only: dom, is_multicg
@@ -314,22 +314,30 @@ contains
       use gravity,          only: r_smooth, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
       use grid_cont,        only: grid_container
       use interactions,     only: epstein_factor
-      use mpi,              only: MPI_DOUBLE_PRECISION
-      use mpisetup,         only: master, comm, mpi_err, FIRST, proc
+      use mpisetup,         only: master
       use named_array_list, only: wna
       use units,            only: newtong, gram, cm, kboltz, mH
+#ifdef FGSL
+      use mpi,                only: MPI_DOUBLE_PRECISION
+      use mpisetup,           only: comm, FIRST, mpi_err, proc
+      use cg_level_connected, only: base_lev
+#endif /* FGSL */
 
       implicit none
 
-      integer                         :: i, j, k, kmid, p, middle_of_nx
-      integer, dimension(1)           :: n_x_cut
-      real                            :: xi, yj, zk, rc, vx, vy, vz, b0, sqr_gm, vr, vphi
-      real                            :: csim2, gprim, H2
+      integer                         :: i, j, k, kmid, p
+      real                            :: xi, yj, zk, rc, vz, sqr_gm, vr, vphi
+      real                            :: gprim, H2
 
-      real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der, gdens
+      real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der
+#ifdef FGSL
+      real, dimension(:), allocatable :: gdens
+#endif /* FGSL */
       class(component_fluid), pointer :: fl
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+
+      integer :: xl, xr
 
 !   Secondary parameters
       call register_user_var
@@ -341,7 +349,7 @@ contains
          if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
          sqr_gm = sqrt(newtong*ptmass)
-         do k = 1, cg%n_(zdim)
+         do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
             if (cg%z(k) < 0.0) kmid = k       ! the midplane is in between ksmid and ksmid+1
          enddo
 
@@ -366,22 +374,21 @@ contains
             endif
             call grav_pot_3d
 
-            if (.not.allocated(grav)) allocate(grav(cg%n_(xdim)))
-            if (.not.allocated(ln_dens_der)) allocate(ln_dens_der(cg%n_(xdim)))
-            if (.not.allocated(dens_prof)) allocate(dens_prof(cg%n_(xdim)))
-            if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(cg%n_(xdim)))
-            if (.not.allocated(tauf)) allocate(tauf(cg%n_(xdim)))
-            if (.not.allocated(taus)) allocate(taus(cg%n_(xdim))) ! not deallocated
+            xl = cg%lhn(xdim, LO)
+            xr = cg%lhn(xdim, HI)
+            if (.not.allocated(grav)) allocate(grav(xl:xr))
+            if (.not.allocated(ln_dens_der)) allocate(ln_dens_der(xl:xr))
+            if (.not.allocated(dens_prof)) allocate(dens_prof(xl:xr))
+            if (.not.allocated(dens_cutoff)) allocate(dens_cutoff(xl:xr))
+            if (.not.allocated(tauf)) allocate(tauf(xl:xr))
+            if (.not.allocated(taus)) allocate(taus(xl:xr)) ! not deallocated
 
             call source_terms_grav
-            call grav_pot2accel(xdim,1,1, cg%n_(xdim), grav, 1, cg)
+            call grav_pot2accel(xdim, cg%lhn(ydim, LO), cg%lhn(zdim, LO), size(grav), grav, 1, cg)
 
             dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
 
             tauf(:) = epstein_factor(flind%neu%pos)/dens_prof(:)
-
-            middle_of_nx = cg%n_(xdim)/2 + 1
-            n_x_cut      = maxloc(cg%x, mask=cg%x<=x_cut)
 #ifdef FGSL
             if (densfile /= "") then
                allocate(gdens(dom%n_d(xdim)+dom%nb*2))
@@ -393,12 +400,11 @@ contains
 #endif /* FGSL */
 !           dens_prof = get_lcutoff2(cg%x(:), x_cut, a_cut)
 !           dens_prof = dens_prof(:)*(1.0-get_lcutoff2(cg%x(:), x_cut, a_cut)) + dens_max*get_lcutoff2(cg%x(:), x_cut, a_cut)
-!           dens_prof    = dens_prof * get_lcutoff(cutoff_ncells, int(middle_of_nx - n_x_cut(1), kind=4), cg%n_(xdim), 0.0, 1.0) + dens_amb
 
             !! \f$ v_\phi = \sqrt{R\left(c_s^2 \partial_R \ln\rho + \partial_R \Phi \right)} \f$
             ln_dens_der  = log(dens_prof)
-            ln_dens_der(2:cg%n_(xdim))  = ( ln_dens_der(2:cg%n_(xdim)) - ln_dens_der(1:cg%n_(xdim)-1) ) / cg%dx
-            ln_dens_der(1)        = ln_dens_der(2)
+            ln_dens_der(xl+1:xr)  = ( ln_dens_der(xl+1:xr) - ln_dens_der(xl:xr-1) ) / cg%dx
+            ln_dens_der(xl)       = ln_dens_der(xl+1)
             T_inner               = dpi*cg%x(cg%is) / sqrt( abs(grav(cg%is)) * cg%x(cg%is) )
             write(msg,*) "T_inner = ", T_inner
             if (master) call printinfo(msg)
@@ -406,7 +412,7 @@ contains
             if (master) call printinfo(msg)
 #ifdef DEBUG
             open(143,file="dens_prof.dat",status="unknown")
-               do p = 1, cg%n_(xdim)
+               do p = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
                   write(143,'(4(ES14.4,1X))') cg%x(p), dens_prof(p), sqrt( max(cg%x(p)*(flind%neu%cs2*ln_dens_der(p) + abs(grav(p))),0.0) ), &
                        sqrt( max(abs(grav(p)) * cg%x(p) - flind%neu%cs2*dens_exp,0.0))
                enddo
@@ -420,9 +426,9 @@ contains
                   call printinfo(msg)
                endif
 
-               do j = 1, cg%n_(ydim)
+               do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
                   yj = cg%y(j)
-                  do i = 1, cg%n_(xdim)
+                  do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
                      xi = cg%x(i)
                      rc = xi + r_smooth
 
@@ -434,7 +440,7 @@ contains
                      endif
 
                      vphi = 0.
-                     do k = 1, cg%n_(zdim)
+                     do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                         zk = cg%z(k)
                         cg%u(fl%idn,i,j,k) = dens_prof(i)
                         if (fl%tag == DST) cg%u(fl%idn,i,j,k) = eps * cg%u(fl%idn,i,j,k)
@@ -467,7 +473,7 @@ contains
             if (allocated(dens_prof)) deallocate(dens_prof)
 #ifdef DEBUG
             open(123,file="tau.dat",status="unknown")
-            do i = 1, cg%n_(xdim)
+            do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
                write(123,*) cg%x(i), tauf(i), taus(i)
             enddo
             close(123)
@@ -536,9 +542,9 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            do k = 1, cg%n_(zdim)
-               do j = 1, cg%n_(ydim)
-                  do i = 1, cg%n_(xdim)
+            do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
+               do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
+                  do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
 
                      cg%u(flind%trc%beg:flind%trc%end, i, j, k)   = &
                           resample_gauss( cg%x(i) - gauss(1), cg%y(j) - gauss(2), cg%z(k) - gauss(3), &
@@ -561,7 +567,7 @@ contains
 
       use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim, I_ONE
+      use constants,        only: xdim, ydim, zdim, I_ONE, LO, HI
       use dataio_pub,       only: die!, warn, msg
       use domain,           only: is_multicg
       use global,           only: dt, relax_time, smalld !, t, grace_period_passed
@@ -591,9 +597,15 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         if (.not.allocated(adjust)) allocate(adjust(cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
-         if (.not.allocated(vx_sign)) allocate(vx_sign(cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
-         if (.not.allocated(vz_sign)) allocate(vz_sign(cg%n_(xdim),cg%n_(ydim),cg%n_(zdim)))
+         if (.not.allocated(adjust)) &
+            & allocate(adjust(cg%lhn(xdim, LO):cg%lhn(xdim, HI), &
+               & cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
+         if (.not.allocated(vx_sign)) &
+            & allocate(vx_sign(cg%lhn(xdim, LO):cg%lhn(xdim, HI), &
+               & cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
+         if (.not.allocated(vz_sign)) &
+            & allocate(vz_sign(cg%lhn(xdim, LO):cg%lhn(xdim, HI), &
+               & cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)))
 
          if (frun) then
             x0 = relax_time + 2.0
@@ -602,7 +614,7 @@ contains
             y1 = drag_min
             a = (y0 - y1)/(x0 - x1)
             b = y0 - a*x0
-            allocate(funcR(size(cg%u,dim=1), cg%n_(xdim)) )
+            allocate(funcR(size(cg%u,dim=1), cg%lhn(xdim, LO):cg%lhn(xdim, HI)) )
 
             funcR(1,:) = -tanh((cg%x(:)-r_in+1.0)**f_in) + 1.0 + max( tanh((cg%x(:)-r_out+1.0)**f_out), 0.0)
 
@@ -613,7 +625,7 @@ contains
             endif
 #ifdef DEBUG
             open(212,file="funcR.dat",status="unknown")
-            do j = 1, cg%n_(xdim)
+            do j = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
                write(212,*) cg%x(j),funcR(1,j)
             enddo
             close(212)
@@ -625,8 +637,8 @@ contains
             call MPI_Allreduce(MPI_IN_PLACE, max_vy, I_ONE, MPI_DOUBLE_PRECISION, MPI_MAX, comm, mpi_err)
          endif
 
-         do j = 1, cg%n_(ydim)
-            do k = 1, cg%n_(zdim)
+         do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
+            do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                cg%u(:,:,j,k) = cg%u(:,:,j,k) - dt*(cg%u(:,:,j,k) - cg%w(wna%ind(inid_n))%arr(:,:,j,k))*funcR(:,:)
             enddo
          enddo
@@ -655,10 +667,10 @@ contains
             endwhere
          endif
 
-         do i = 1, cg%n_(xdim)
-            do j = 1, cg%n_(ydim)
+         do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+            do j = cg%lhn(ydim, LO), cg%lhn(ydim, HI)
                mean_vy = sum( cg%u(flind%dst%imy, i, j, :) /  cg%u(flind%dst%idn, i, j, :) ) / cg%n_(zdim)
-               do k = 1, cg%n_(zdim)
+               do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                   if ( (abs(cg%u(flind%dst%imy, i, j, k) - mean_vy * cg%u(flind%dst%idn, i, j, k)) &
                      / (mean_vy * cg%u(flind%dst%idn, i, j, k)) >= 0.1) .and. &
                          cg%u(flind%dst%idn, i, j, k) < 10.0*smalld ) then
@@ -692,7 +704,7 @@ contains
 
       use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
-      use constants,   only: xdim, zdim
+      use constants,   only: xdim, zdim, LO, HI
       use gravity,     only: ptmass, sum_potential
       use grid_cont,   only: grid_container
       use units,       only: newtong
@@ -710,8 +722,8 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            do i = 1, cg%n_(xdim)
-               do k = 1, cg%n_(zdim)
+            do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+               do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                   r2 = cg%x(i)**2! + cg%z(k)**2
                   cg%gp(i,:,k) = -newtong*ptmass / sqrt(r2)
                enddo
@@ -748,9 +760,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xl(cg)
 
-      use constants,  only: xdim, ydim, zdim
-      use domain,     only: dom
-      use gravity,    only: grav_pot2accel
+      use constants,  only: xdim, ydim, zdim, LO, HI
       use grid_cont,  only: grid_container
       use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz, flind
 #ifndef ISO
@@ -762,8 +772,7 @@ contains
       type(grid_container), pointer, intent(inout) :: cg
 
       integer :: i
-      real, dimension(cg%n_(xdim)) :: grav
-      real, dimension(size(iarr_all_my), cg%n_(ydim), cg%n_(zdim)) :: vy,vym
+      real, dimension(size(iarr_all_my), cg%lhn(ydim, LO):cg%lhn(ydim, HI), cg%lhn(zdim, LO):cg%lhn(zdim, HI)) :: vy, vym
       real, dimension(size(flind%all_fluids))    :: cs2_arr
       integer, dimension(size(flind%all_fluids)) :: ind_cs2
 
@@ -772,9 +781,7 @@ contains
          cs2_arr(i) = flind%all_fluids(i)%fl%cs2
       enddo
 
-      call grav_pot2accel(xdim,1,1, cg%n_(xdim), grav, 1, cg)
-
-      do i = 1, dom%nb
+      do i = cg%lhn(xdim, LO), cg%lh1(xdim, LO)
          cg%u(iarr_all_dn,i,:,:) = cg%u(iarr_all_dn, cg%is,:,:)
          cg%u(iarr_all_mx,i,:,:) = min(0.0,cg%u(iarr_all_mx, cg%is,:,:))
          cg%u(iarr_all_my,i,:,:) = cg%u(iarr_all_my, cg%is,:,:)
@@ -784,7 +791,7 @@ contains
 #endif /* !ISO */
       enddo
 
-      do i = dom%nb,1,-1
+      do i = cg%lh1(xdim, LO), cg%lhn(xdim, LO), -1
          vym(:,:,:) = cg%u(iarr_all_my,i+2,:,:)/cg%u(iarr_all_dn,i+1,:,:)
          vy(:,:,:)  = cg%u(iarr_all_my,i+1,:,:)/cg%u(iarr_all_dn,i+1,:,:)
 !         cg%u(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*cg%u(iarr_all_dn,i,:,:)
@@ -794,7 +801,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xr(cg)
 
-      use constants,        only: xdim
+      use constants,        only: xdim, HI
       use grid_cont,        only: grid_container
       use named_array_list, only: wna
 
@@ -802,7 +809,8 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      cg%u(:, cg%ie+1:cg%n_(xdim),:,:) = cg%w(wna%ind(inid_n))%arr(:,cg%ie+1:cg%n_(xdim),:,:)
+      cg%u(:, cg%lh1(xdim, HI):cg%lhn(xdim, HI), :, :) = &
+         cg%w(wna%ind(inid_n))%arr(:, cg%lh1(xdim, HI):cg%lhn(xdim, HI), :, :)
    end subroutine my_bnd_xr
 !-----------------------------------------------------------------------------
    function get_lcutoff(width, dist, n, vmin, vmax) result(y)
@@ -890,7 +898,6 @@ contains
       use fgsl,       only: fgsl_size_t, fgsl_interp_accel, fgsl_interp, fgsl_int, fgsl_char, fgsl_strmax, fgsl_interp_cspline, &
            &                fgsl_interp_accel_alloc, fgsl_interp_alloc, fgsl_interp_name, fgsl_interp_init, fgsl_interp_eval, fgsl_interp_free, fgsl_interp_accel_free
       !, fgsl_spline
-      use domain,     only: dom
 
       implicit none
 
