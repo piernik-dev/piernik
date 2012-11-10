@@ -225,7 +225,8 @@ def get_stdout(cmd):
     return process.communicate()[0]
 
 
-def setup_piernik(options, args, all_args, sys_args):
+def setup_piernik(data=None):
+    options, args, all_args, sys_args = piernik_parse_args(data)
     if(options.recycle_cmd):
         if(pickle_avail):
             if(os.path.isfile('.lastsetup')):
@@ -707,5 +708,4 @@ def piernik_parse_args(data=None):
 
 
 if __name__ == "__main__":
-    options, args, all_args, sys_args = piernik_parse_args()
-    setup_piernik(options, args, all_args, sys_args)
+    setup_piernik()
