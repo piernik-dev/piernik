@@ -4,7 +4,6 @@ import os
 import re
 import shutil
 import sys
-sys.path.append("python/")
 from DirWalk import DirectoryWalker
 import subprocess as sp
 import tempfile
