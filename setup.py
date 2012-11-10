@@ -225,7 +225,7 @@ def get_stdout(cmd):
     return process.communicate()[0]
 
 
-def setup_piernik(options, args):
+def setup_piernik(options, args, all_args, sys_args):
     if(options.recycle_cmd):
         if(pickle_avail):
             if(os.path.isfile('.lastsetup')):
@@ -294,9 +294,9 @@ def setup_piernik(options, args):
 
     sc = open(objdir + "/.setup.call", "w")
     sc.write(
-        " ".join(sys.argv) +
-        "\n#effective call (after evaluation of .setuprc*):\n#" + sys.argv[0] +
-        " " + " ".join(all_args) + "\n")
+        " ".join(sys_args) +
+        "\n#effective call (after evaluation of .setuprc*):\n#" + "./setup " +
+        " ".join(all_args) + "\n")
     sc.close()
 
     f90files = []
@@ -454,7 +454,7 @@ def setup_piernik(options, args):
         m.write("SILENT = 0\n\n")
     m.write(head_block1)
     m.write(
-        "\t@( $(ECHO) \"%s\"; \\" % (sys.argv[0] + " " + " ".join(all_args)))
+        "\t@( $(ECHO) \"%s\"; \\" % ("./setup " + " ".join(all_args)))
     m.write(head_block2)
 
     for i in range(0, len(files_to_build)):
@@ -645,7 +645,7 @@ def setup_piernik(options, args):
                 args[0], rundir.rstrip('/')) + '\033[0m'
 
 
-if __name__ == "__main__":
+def piernik_parse_args(data=None):
     epilog_help = "Frequently used options (like --linkexe, --laconic or \
     -c <configuration>) can be stored in .setuprc and .setuprc.${HOSTNAME} files"
     usage = "usage: %prog [options] FILES"
@@ -690,14 +690,22 @@ if __name__ == "__main__":
         help="use obj_POSTFIX directory instead of obj/ and \
     runs/<problem>_POSTFIX rather than runs/<problem>")
 
-    all_args = []
-    try:
-        for frc in (".setuprc", ".setuprc." + os.uname()[1]):
-            for line in file(frc):
-                all_args += line.split()
-    except IOError:
-        pass
-    all_args += sys.argv[1:]
-    (options, args) = parser.parse_args(all_args)
+    if data is None:
+        all_args = []
+        try:
+            for frc in (".setuprc", ".setuprc." + os.uname()[1]):
+                for line in file(frc):
+                    all_args += line.split()
+        except IOError:
+            pass
+        all_args += sys.argv[1:]
+        (options, args) = parser.parse_args(all_args)
+        return options, args, all_args, sys.argv
+    else:
+        (options, args) = parser.parse_args(data.split())
+        return options, args, data.split(), []
 
-    setup_piernik(options, args)
+
+if __name__ == "__main__":
+    options, args, all_args, sys_args = piernik_parse_args()
+    setup_piernik(options, args, all_args, sys_args)
