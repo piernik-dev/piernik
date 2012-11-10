@@ -62,7 +62,6 @@ contains
          write_hdf5 => h5_write_to_single_file
       endif
 
-
    end subroutine init_data
 
    function datafields_descr(var) result(f)
@@ -230,7 +229,8 @@ contains
       use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: printio, printinfo, nhdf, thdf, tmr_hdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
          & msg, run_id, problem_name, use_v2_io, last_hdf_time
-      use mpisetup,    only: master, piernik_MPI_Bcast
+      use mpisetup,    only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
+      use mpisignals,  only: sig
       use timer,       only: set_timer
 
       implicit none
@@ -262,6 +262,8 @@ contains
          write(msg,'(a6,f10.2,a2)') ' done ', thdf, ' s'
          call printinfo(msg, .true.)
       endif
+      call report_to_master(sig%hdf_written, only_master=.True.)
+      call report_string_to_master(fname, only_master=.True.)
 
    end subroutine h5_write_to_single_file
 

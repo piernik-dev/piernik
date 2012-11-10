@@ -43,7 +43,8 @@ module mpisetup
    public :: cleanup_mpi, init_mpi, inflate_req, &
         &    buffer_dim, cbuff, ibuff, lbuff, rbuff, req, status, mpi_err, procmask, &
         &    master, slave, nproc, proc, FIRST, LAST, comm, have_mpi, is_spawned, &
-        &    piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master
+        &    piernik_MPI_Barrier, piernik_MPI_Bcast, report_to_master, &
+        &    report_string_to_master
 
    integer(kind=4), protected :: nproc          !< number of processes
    integer(kind=4), protected :: proc           !< rank of my process
@@ -653,4 +654,27 @@ contains
 
       call MPI_Send(ivar4, I_ONE, MPI_INTEGER, FIRST, tag, intercomm, mpi_err)
    end subroutine report_to_master
+
+   subroutine report_string_to_master(str, only_master)
+
+      use constants, only: I_ONE
+      use mpi,       only: MPI_INTEGER, MPI_CHAR
+
+      implicit none
+      character(len=*), intent(in) :: str
+      logical, optional, intent(in) :: only_master
+      integer                       :: tag  !< master scripts accepts ANY_TAG, so it can carry meaningful value too
+      integer(kind=4) :: buf
+
+      if (.not.is_spawned) return
+
+      if (present(only_master)) then
+         if (only_master .and. slave) return
+      endif
+      tag = proc ! use proc number as tag
+      buf = len(str)
+      call MPI_Send(buf, I_ONE, MPI_INTEGER, FIRST, tag, intercomm, mpi_err)
+      call MPI_Send(str, buf, MPI_CHAR, FIRST, tag, intercomm, mpi_err)
+   end subroutine report_string_to_master
+
 end module mpisetup
