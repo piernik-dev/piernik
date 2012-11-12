@@ -1,4 +1,4 @@
-from yt.pmods import load, SlicePlot, parallel_objects
+from yt.mods import load, SlicePlot, parallel_objects
 
 
 def visualize(files):
