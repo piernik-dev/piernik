@@ -310,22 +310,25 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use cg_list,          only: cg_list_element
-      use cg_leaves,        only: leaves
-      use cg_level_connected,    only: base_lev
-      use constants,        only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
-      use dataio_pub,       only: msg, printinfo, die
-      use domain,           only: dom, is_multicg
-      use fluidindex,       only: flind
-      use fluidtypes,       only: component_fluid
-      use gravity,          only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
-      use grid_cont,        only: grid_container
-      use hydrostatic,      only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
-      use interactions,     only: epstein_factor
-      use mpi,              only: MPI_DOUBLE_PRECISION
-      use mpisetup,         only: master, comm, mpi_err, FIRST, proc
-      use named_array_list, only: wna
-      use units,            only: newtong, gram, cm, kboltz, mH
+      use cg_list,            only: cg_list_element
+      use cg_leaves,          only: leaves
+      use constants,          only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
+      use dataio_pub,         only: msg, printinfo, die
+      use domain,             only: dom, is_multicg
+      use fluidindex,         only: flind
+      use fluidtypes,         only: component_fluid
+      use gravity,            only: r_smooth, r_grav, n_gravr, ptmass, source_terms_grav, grav_pot2accel, grav_pot_3d
+      use grid_cont,          only: grid_container
+      use hydrostatic,        only: hydrostatic_zeq_densmid, set_default_hsparams, dprof
+      use interactions,       only: epstein_factor
+      use mpisetup,           only: master
+      use named_array_list,   only: wna
+      use units,              only: newtong, gram, cm, kboltz, mH
+#ifdef FGSL
+      use cg_level_connected, only: base_lev
+      use mpi,                only: MPI_DOUBLE_PRECISION
+      use mpisetup,           only: comm, FIRST, mpi_err, proc
+#endif /* FGSL */
 
       implicit none
 
@@ -334,10 +337,13 @@ contains
       real                            :: xi, yj, zk, rc, vx, vy, vz, b0, sqr_gm, vr, vphi
       real                            :: csim2, gprim, H2
 
-      real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der, gdens
+      real, dimension(:), allocatable :: grav, dens_prof, dens_cutoff, ln_dens_der
       class(component_fluid), pointer :: fl
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
+#ifdef FGSL
+      real, dimension(:), allocatable :: gdens
+#endif /* FGSL */
 
 !   Secondary parameters
       call register_user_var
