@@ -75,6 +75,7 @@
  /
 
   $COSMIC_RAYS
+    ncrn         = 1
     cr_active    = 1.0      ! when 0 grad(p_cr) not taken into account in motion eq.
     cfl_cr       = 0.9      ! Courant's number for CR diffusion
     cr_eff       = 0.1      ! part of SN energy (=10^51 erg) converted to CR
