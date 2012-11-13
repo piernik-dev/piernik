@@ -285,16 +285,16 @@ contains
    subroutine get_gprofs_extgp(iia, jja)
 
       use axes_M,    only: axes
-      use constants, only: half, I_ONE, zdim, LO, HI
+      use constants, only: half, I_ONE, ndims, zdim, LO, HI
       use gravity,   only: tune_zeq, grav_type
 
       implicit none
 
       integer, intent(in)                     :: iia, jja
       integer(kind=4), dimension(ndims,LO:HI) :: lhn
+      integer(kind=4)                         :: nstot1
       real, dimension(:,:,:), pointer         :: gpots
       type(axes)                              :: ax
-      integer(kind=4)                         :: nstot1
 
       nstot1 = nstot + I_ONE
       allocate(gpots(1,1,nstot1))
