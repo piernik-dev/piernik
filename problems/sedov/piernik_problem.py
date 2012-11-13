@@ -10,3 +10,7 @@ def visualize(files):
         slc = SlicePlot(pf, 2, 'enen')
         output += slc.save()
     return output
+
+if __name__ == "__main__":
+    import sys
+    visualize(sys.argv[1:])
