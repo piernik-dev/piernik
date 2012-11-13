@@ -131,9 +131,9 @@ contains
 
    subroutine init_prob
 
-      use cg_list,        only: cg_list_element
       use cg_leaves,      only: leaves
-      use constants,      only: xdim, ydim, zdim, I_ONE
+      use cg_list,        only: cg_list_element
+      use constants,      only: xdim, ydim, zdim, LO, HI, I_ONE
       use dataio_pub,     only: msg, warn, printinfo, die
       use domain,         only: dom, is_multicg
       use fluidindex,     only: flind
@@ -191,9 +191,9 @@ contains
          cg%u(fl%imx:fl%imz, :, :, :) = 0.0
 
 #ifndef ISO
-         do k = 1, cg%n_(zdim)
-            do j = 1, cg%n_(ydim)
-               do i = 1, cg%n_(xdim)
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                   cg%u(fl%ien,i,j,k) = p0/fl%gam_1 + &
                        &               ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                        &               emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))

@@ -85,9 +85,9 @@ contains
 
    subroutine init_prob
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
-      use constants,   only: pi, dpi, fpi, xdim, ydim, zdim, LEFT
+      use cg_list,     only: cg_list_element
+      use constants,   only: pi, dpi, fpi, xdim, ydim, zdim, LO, HI, LEFT
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
@@ -110,7 +110,7 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         if (.not.allocated(A)) allocate(A(cg%n_(xdim), cg%n_(ydim),1))
+         if (.not.allocated(A)) allocate(A(cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI), 1))
 
          rho = 25.0/(36.0*pi)
          pre =  5.0/(12.0*pi)
@@ -118,17 +118,17 @@ contains
          vz  = 0.0
          bz0 = 0.0
 
-         do j=1, cg%n_(ydim)
-            do i = 1, cg%n_(xdim)
+         do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+            do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                A(i,j,1) = b0*(cos(fpi*cg%coord(LEFT, xdim)%r(i))/fpi + cos(dpi*cg%coord(LEFT, ydim)%r(j))/dpi)
             enddo
          enddo
 
-         do j = 1, cg%n_(ydim)
+         do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
             yj = cg%y(j)
-            do i = 1, cg%n_(xdim)
+            do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                xi = cg%x(i)
-               do k = 1, cg%n_(zdim)
+               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   zk = cg%z(k)
 
                   vx  = -sin(dpi*yj)

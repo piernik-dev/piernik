@@ -110,9 +110,9 @@ contains
 
    subroutine init_prob
 
-      use cg_list,      only: cg_list_element
       use cg_leaves,    only: leaves
-      use constants,    only: dpi, xdim, ydim, zdim
+      use cg_list,      only: cg_list_element
+      use constants,    only: dpi, xdim, ydim, zdim, LO, HI
       use dataio_pub,   only: msg, printinfo, run_id
       use domain,       only: dom
       use fluidindex,   only: flind
@@ -212,11 +212,11 @@ contains
 
          allocate(noise(3, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
 
-         do i = 1, cg%n_(xdim)
+         do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
             rcx = cg%x(i)
-            do j = 1, cg%n_(ydim)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                rcy = cg%y(j)
-               do k = 1, cg%n_(zdim)
+               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
 #ifdef NEUTRAL
                   cg%u(neu%idn,i,j,k) = rhog
                   cg%u(neu%imx,i,j,k) = ux * rhog

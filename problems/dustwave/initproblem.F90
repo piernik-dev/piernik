@@ -103,9 +103,9 @@ contains
 
    subroutine init_prob
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
-      use constants,   only: pi, xdim, ydim, zdim
+      use cg_list,     only: cg_list_element
+      use constants,   only: pi, xdim, ydim, zdim, LO, HI
       use domain,      only: dom
       use grid_cont,   only: grid_container
       use fluidindex,  only: flind
@@ -127,9 +127,9 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do i = 1, cg%n_(xdim)
-            do j = 1, cg%n_(ydim)
-               do k = 1, cg%n_(zdim)
+         do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
 
                   cg%u(flind%dst%idn,i,j,k) = d0
                   cg%u(flind%dst%imx,i,j,k) = d0*k_x/k_a*(v0 +v1*sin(k_x*cg%x(i)+k_y*cg%y(j)+k_z*cg%z(k)))

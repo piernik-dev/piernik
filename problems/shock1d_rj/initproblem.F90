@@ -116,9 +116,9 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim
+      use cg_list,     only: cg_list_element
+      use constants,   only: xdim, ydim, zdim, LO, HI
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
@@ -143,11 +143,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do j = 1, cg%n_(ydim)
+         do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
             yj = cg%y(j)
-            do i = 1, cg%n_(xdim)
+            do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                xi = cg%x(i)
-               do k = 1, cg%n_(zdim)
+               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   zk = cg%z(k)
 
                   if ((xi <= 0.5)) then

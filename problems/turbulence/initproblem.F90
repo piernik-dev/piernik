@@ -66,16 +66,16 @@ contains
 
    subroutine init_prob
 
-      use cg_list,     only: cg_list_element
-      use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim, ndims
-      use dataio_pub,  only: msg, printinfo
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use func,        only: resample_gauss, ekin, emag
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: proc
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, ndims, LO, HI
+      use dataio_pub, only: msg, printinfo
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use func,       only: resample_gauss, ekin, emag
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: proc
 
       implicit none
 
@@ -99,11 +99,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         allocate(dv(ndims, cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
+         allocate(dv(ndims, cg%lhn(xdim,LO):cg%lhn(xdim,HI), cg%lhn(ydim,LO):cg%lhn(ydim,HI), cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
 
-         do k = 1, cg%n_(zdim)
-            do j = 1, cg%n_(ydim)
-               do i = 1, cg%n_(xdim)
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                   deltav(:) = 0.0
                   do m=-kp,kp
                      do n = -kp,kp
@@ -140,9 +140,9 @@ contains
          call printinfo(msg, .true.)
          write(msg,'(2(a,g12.5),a,i4)')   "[initproblem:init_prob] c_si = ", c_si, " l = ", l, " on ", proc
          call printinfo(msg, .true.)
-         do k = 1, cg%n_(zdim)
-            do j = 1, cg%n_(ydim)
-               do i = 1, cg%n_(xdim)
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                   cg%u(fl%idn,i,j,k) = d0
                   cg%u(fl%imx,i,j,k) = cg%u(fl%idn,i,j,k) * dv(xdim,i,j,k) * cma
                   cg%u(fl%imy,i,j,k) = cg%u(fl%idn,i,j,k) * dv(ydim,i,j,k) * cma

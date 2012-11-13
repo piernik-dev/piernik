@@ -102,9 +102,9 @@ contains
 
    subroutine init_prob
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
-      use constants,   only: pi, xdim, ydim, zdim, half
+      use cg_list,     only: cg_list_element
+      use constants,   only: pi, xdim, ydim, zdim, LO, HI, half
       use domain,      only: dom
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
@@ -135,9 +135,9 @@ contains
 
          b0 = sqrt(2.*alpha*d0*fl%cs2)
 
-         do k = 1, cg%n_(zdim)
-            do j = 1, cg%n_(ydim)
-               do i = 1, cg%n_(xdim)
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
 
                   vzab = v0*cos(2.*pi*cg%y(j)/dom%L_(ydim))
                   cg%u(fl%imx,i,j,k) = cg%u(fl%idn,i,j,k)*vzab

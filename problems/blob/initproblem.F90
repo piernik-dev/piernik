@@ -110,13 +110,13 @@ contains
 
    subroutine init_prob
 
-      use cg_list,     only: cg_list_element
-      use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use fluidtypes,  only: component_fluid
-      use grid_cont,   only: grid_container
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use fluidtypes, only: component_fluid
+      use grid_cont,  only: grid_container
 
       implicit none
 
@@ -137,11 +137,11 @@ contains
          cg%u(fl%imz, :, :, :) = 0.0
          cg%u(fl%ien, :, :, :) = penv/fl%gam_1
 
-         do i = 1, cg%n_(xdim)
+         do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
             rcx = (cg%x(i)-blobxc)**2
-            do j = 1, cg%n_(ydim)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                rcy = (cg%y(j)-blobyc)**2
-               do k = 1, cg%n_(zdim)
+               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   if (dom%has_dir(zdim)) then
                      rrel = sqrt(rcx + rcy + (cg%z(k)-blobzc)**2)
                   else

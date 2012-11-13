@@ -65,9 +65,9 @@ contains
 !-----------------------------------------------------------------------------
    subroutine map_vars_hdf5(var, tab, ierrh, cg)
 
-      use grid_cont,          only: grid_container
-      use particle_pub,       only: pset
-      use named_array_list,   only: qna
+      use grid_cont,        only: grid_container
+      use particle_pub,     only: pset
+      use named_array_list, only: qna
 
       implicit none
 
@@ -97,10 +97,10 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use constants,        only: xdim, ydim, zdim
-      use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use cg_list_global,   only: all_cg
+      use constants,        only: xdim, ydim, zdim, LO, HI
       use fluidindex,       only: flind
       use named_array_list, only: qna
       use particle_pub,     only: pset
@@ -159,9 +159,9 @@ contains
          cgl => leaves%first
          do while (associated(cgl))
             associate(cg => cgl%cg)
-               do k = 1, cg%n_(zdim)
-                  do j = 1, cg%n_(ydim)
-                     do i = 1, cg%n_(xdim)
+               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+                  do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+                     do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                         associate( fl => flind%all_fluids(p)%fl )
                            cg%u(fl%idn,i,j,k) = 1.0
                            cg%u(fl%imx,i,j,k) = 0.0

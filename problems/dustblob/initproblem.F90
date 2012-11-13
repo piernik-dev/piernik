@@ -107,20 +107,20 @@ contains
 
    subroutine init_prob
 
-      use cg_list,     only: cg_list_element
-      use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use global,      only: smalld
-      use grid_cont,   only: grid_container
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim, LO, HI
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use global,     only: smalld
+      use grid_cont,  only: grid_container
 
       implicit none
 
-      real                            :: xi, yj, zk, rc
-      integer                         :: i, j, k
-      type(cg_list_element),  pointer :: cgl
-      type(grid_container),   pointer :: cg
+      real                           :: xi, yj, zk, rc
+      integer                        :: i, j, k
+      type(cg_list_element), pointer :: cgl
+      type(grid_container),  pointer :: cg
 
       cgl => leaves%first
       do while (associated(cgl))
@@ -128,11 +128,11 @@ contains
 
          if (associated(cg%cs_iso2)) cg%cs_iso2(:,:,:) = flind%neu%cs2
 
-         do i = 1, cg%n_(xdim)
+         do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
             xi = cg%x(i)
-            do j = 1, cg%n_(ydim)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                yj = cg%y(j)
-               do k = 1, cg%n_(zdim)
+               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   if (dom%has_dir(zdim)) then
                      zk = cg%z(k)
                      rc = sqrt((xi-x0)**2+(yj-y0)**2+(zk-z0)**2)
