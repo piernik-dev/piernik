@@ -298,7 +298,7 @@ contains
 
       nstot1 = nstot + I_ONE
       allocate(gpots(1,1,nstot1))
-      lhn = I_ONE ; lhn(zdim,:) = nstot1
+      lhn = I_ONE ; lhn(zdim,HI) = nstot1
       call ax%allocate_axes(lhn)
       ax%x          = hscg%x(iia)
       ax%y          = hscg%y(jja)
