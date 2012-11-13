@@ -122,38 +122,40 @@ contains
 
    subroutine init_prob
 
-      use cg_list,     only: cg_list_element
-      use cg_leaves,   only: leaves
-      use constants,   only: pi, dpi, xdim, ydim, zdim, LO
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use global,      only: smalld
-      use gravity,     only: ptmass
-      use grid_cont,   only: grid_container
-      use units,       only: newtong
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: pi, dpi, xdim, ydim, zdim, LO, HI
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use global,     only: smalld
+      use gravity,    only: ptmass
+      use grid_cont,  only: grid_container
+      use units,      only: newtong
 #ifndef ISO
-      use global,      only: smallei
+      use global,     only: smallei
 #endif /* !ISO */
 
       implicit none
 
-      integer                            :: i,j,k
-      real                               :: xi,yj,zk, rc, H0, sqr_gm, rho0
-      real                               :: n,norm, H, ninv
-      real                               :: gradP, iOmega, ilook, gradgp
-      real, dimension(:, :), allocatable :: noise
-      real, dimension(:),    allocatable :: omega,omegad
-      type(cg_list_element), pointer     :: cgl
-      type(grid_container),  pointer     :: cg
+      integer                           :: i, j, k, mnz
+      real                              :: xi, yj, zk, rc, H0, sqr_gm, rho0
+      real                              :: n,norm, H, ninv
+      real                              :: gradP, iOmega, ilook, gradgp
+      real, dimension(:,:), allocatable :: noise
+      real, dimension(:),   allocatable :: omega,omegad
+      type(cg_list_element), pointer    :: cgl
+      type(grid_container),  pointer    :: cg
 #ifndef ISO
-      real                               :: vx, vy, vz
+      real                              :: vx, vy, vz
 #endif /* !ISO */
 
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
 
-         allocate(omega(cg%n_(xdim)),omegad(cg%n_(xdim)), noise(3, cg%n_(zdim)))
+         mnz = max(cg%lhn(zdim,LO)+cg%n_(zdim)/2-1,1)
+
+         allocate(omega(cg%lhn(xdim,LO):cg%lhn(xdim,HI)),omegad(cg%lhn(xdim,LO):cg%lhn(xdim,HI)), noise(3, cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
 !   Secondary parameters
 
          sqr_gm = sqrt(newtong*ptmass)
@@ -171,11 +173,11 @@ contains
 
          norm = 1. / dens_Rdistr(R0,Rin,n)
 
-         do k = 1, cg%n_(zdim)
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             zk = cg%z(k)
-            do j = 1, cg%n_(ydim)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                yj = cg%y(j)
-               do i = 1, cg%n_(xdim)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                   xi = cg%x(i)
                   rc = sqrt(xi**2+yj**2)
                   H = HtoR * rc
@@ -185,26 +187,26 @@ contains
             enddo
          enddo
 
-         do i = 2, cg%n_(xdim)-1   ! 2d
+         do i = cg%lhn(xdim,LO)+1, cg%lhn(xdim,HI)-1   ! 2d
             rc= cg%x(i)*sqrt(2.0)
-            gradgp=  0.5*(cg%gp(i+1,i+1,max(cg%n_(zdim)/2,1))-cg%gp(i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx/sqrt(2.)
-            gradp = -0.5*(cg%u(flind%neu%idn,i+1,i+1,max(cg%n_(zdim)/2,1))-cg%u(flind%neu%idn,i-1,i-1,max(cg%n_(zdim)/2,1)))/cg%dx /sqrt(2.)*flind%neu%cs2
+            gradgp=  0.5*(cg%gp(i+1,i+1,mnz)-cg%gp(i-1,i-1,mnz))/cg%dx/sqrt(2.)
+            gradp = -0.5*(cg%u(flind%neu%idn,i+1,i+1,mnz)-cg%u(flind%neu%idn,i-1,i-1,mnz))/cg%dx /sqrt(2.)*flind%neu%cs2
             omega(i)  = sqrt( abs( (gradgp-gradp)/rc ) )
             omegad(i) = sqrt( abs(    gradgp/rc      ) )
          enddo
-         omega(1)  = omega(2);  omega(cg%n_(xdim))  = omega(cg%n_(xdim)-1)
-         omegad(1) = omegad(2); omegad(cg%n_(xdim)) = omegad(cg%n_(xdim)-1)
+         omega( cg%lhn(xdim,LO)) = omega( cg%lhn(xdim,LO)+1); omega( cg%lhn(xdim,HI))  = omega(cg%lhn(xdim,HI)-1)
+         omegad(cg%lhn(xdim,LO)) = omegad(cg%lhn(xdim,LO)+1); omegad(cg%lhn(xdim,HI)) = omegad(cg%lhn(xdim,HI)-1)
 
          call random_seed()
 
-         do j = 1, cg%n_(ydim)
+         do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
             yj = cg%y(j)
-            do i = 1, cg%n_(xdim)
+            do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                xi = cg%x(i)
                rc = sqrt(xi**2+yj**2)
                call random_number(noise)
 
-               ilook = (rc-dom%edge(xdim, LO))/cg%dx/sqrt(2.) + 0.5 + dom%nb
+               ilook = (rc-dom%edge(xdim, LO))/cg%dx/sqrt(2.) + 0.5 + dom%nb + cg%lhn(xdim,LO)-1
                iOmega = omega(int(ilook))+(rc-cg%x(int(ilook))*sqrt(2.))*(omega(int(ilook)+1)-omega(int(ilook))) &
                     &   / (cg%x(int(ilook)+1)-cg%x(int(ilook)))/sqrt(2.)
 !

@@ -158,7 +158,7 @@ contains
          call set_default_hsparams(cg)
          i = cg%lhn(xdim,LO)
          j = cg%lhn(ydim,LO)
-         call hydrostatic_zeq_densmid(i,j, d0, csim2)
+         call hydrostatic_zeq_densmid(i, j, d0, csim2)
 
          do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)

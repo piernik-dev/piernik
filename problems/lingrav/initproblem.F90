@@ -97,9 +97,9 @@ contains
 
    subroutine init_prob
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim
+      use cg_list,     only: cg_list_element
+      use constants,   only: xdim, ydim, zdim, LO, HI
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use func,        only: ekin, emag
@@ -132,11 +132,12 @@ contains
          cg%cs_iso2(:,:,:) = fl%cs2
 
          call set_default_hsparams(cg)
-         call hydrostatic_zeq_densmid(1, 1, d0, csim2)
+         i = cg%lhn(xdim,LO) ; j = cg%lhn(ydim,LO)
+         call hydrostatic_zeq_densmid(i, j, d0, csim2)
 
-         do k = 1, cg%n_(zdim)
-            do j = 1, cg%n_(ydim)
-               do i = 1, cg%n_(xdim)
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                   cg%u(fl%idn,i,j,k)   = max(smalld, dprof(k))
 
                   cg%u(fl%imx,i,j,k) = 0.0
@@ -154,9 +155,9 @@ contains
             enddo
          enddo
 
-         do k = 1, cg%n_(zdim)
-            do j = 1, cg%n_(ydim)
-               do i = 1, cg%n_(xdim)
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                   cg%b(xdim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* bxn/sqrt(bxn**2+byn**2+bzn**2)
                   cg%b(ydim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* byn/sqrt(bxn**2+byn**2+bzn**2)
                   cg%b(zdim,i,j,k)   = b0*sqrt(cg%u(fl%idn,i,j,k)/d0)* bzn/sqrt(bxn**2+byn**2+bzn**2)
