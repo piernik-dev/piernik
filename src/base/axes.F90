@@ -53,16 +53,16 @@ contains
 
    subroutine allocate_axes(this, sizes)
 
-      use constants, only: ndims, xdim, ydim, zdim
+      use constants, only: ndims, xdim, ydim, zdim, LO, HI
 
       implicit none
 
-      class(axes),                       intent(inout) :: this
-      integer(kind=4), dimension(ndims), intent(in)    :: sizes
+      class(axes),                             intent(inout) :: this
+      integer(kind=4), dimension(ndims,LO:HI), intent(in)    :: sizes
 
-      if (.not.allocated(this%x)) allocate(this%x(sizes(xdim)))
-      if (.not.allocated(this%y)) allocate(this%y(sizes(ydim)))
-      if (.not.allocated(this%z)) allocate(this%z(sizes(zdim)))
+      if (.not.allocated(this%x)) allocate(this%x(sizes(xdim,LO):sizes(xdim,HI)))
+      if (.not.allocated(this%y)) allocate(this%y(sizes(ydim,LO):sizes(ydim,HI)))
+      if (.not.allocated(this%z)) allocate(this%z(sizes(zdim,LO):sizes(zdim,HI)))
 
    end subroutine allocate_axes
 

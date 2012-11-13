@@ -753,7 +753,7 @@ contains
       cgl => leaves%first
       do while (associated(cgl))
          cg => cgl%cg
-         call ax%allocate_axes(int([size(cg%x), size(cg%y), size(cg%z)],kind=4))
+         call ax%allocate_axes(cg%lhn)
          ax%x(:) = cg%x(:)
          ax%y(:) = cg%y(:)
          ax%z(:) = cg%z(:)
