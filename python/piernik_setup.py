@@ -524,7 +524,7 @@ def setup_piernik(data=None):
         if (cnt == 0):
             break
 
-    # assing color to boxes according to their location in source tree
+    # assign color to boxes according to their location in source tree
     colors = {'src': 'red', 'src/base': 'green', 'src/grid': 'magenta',
               'src/fluids': 'yellow', 'src/IO': 'cyan', 'problems': 'blue'}
 
