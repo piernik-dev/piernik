@@ -302,7 +302,7 @@ contains
       ax%y          = hscg%y(jja)
       ax%z(1:nstot) = zs - half*dzs
       ax%z(nstot1)  = ax%z(nstot) + dzs
-      call grav_type(gpots,ax)
+      call grav_type(gpots, ax, hscg%lhn)
       call ax%deallocate_axes
       gprofs(1:nstot) = (gpots(1,1,1:nstot) - gpots(1,1,2:nstot1))/dzs
       gprofs(:) = tune_zeq*gprofs(:)

@@ -80,10 +80,10 @@ contains
 
    subroutine cleanup_grid
 
-      use cg_list_global,   only: all_cg
-      use cg_level_connected,    only: cg_level_connected_T, coarsest
-      use list_of_cg_lists, only: all_lists
-      use named_array_list, only: qna, wna
+      use cg_level_connected, only: cg_level_connected_T, coarsest
+      use cg_list_global,     only: all_cg
+      use list_of_cg_lists,   only: all_lists
+      use named_array_list,   only: qna, wna
 
       implicit none
 

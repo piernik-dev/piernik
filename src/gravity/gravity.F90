@@ -87,12 +87,14 @@ module gravity
          integer, intent(in) :: jja                         !< COMMENT ME
       end subroutine gprofs_default
 
-      subroutine grav_types(gp,ax,flatten)
-         use axes_M, only: axes
+      subroutine grav_types(gp, ax, lhn, flatten)
+         use axes_M,    only: axes
+         use constants, only: ndims, LO, HI
          implicit none
-         real, dimension(:,:,:), pointer       :: gp        !< COMMENT ME
-         type(axes),             intent(in)    :: ax        !< COMMENT ME
-         logical,      optional, intent(in)    :: flatten   !< COMMENT ME
+         real, dimension(:,:,:), pointer                     :: gp        !< gravitational potential array pointer
+         type(axes),                              intent(in) :: ax        !< axes of cell centers positions
+         integer(kind=4), dimension(ndims,LO:HI), intent(in) :: lhn       !< indices of gp array
+         logical,                       optional, intent(in) :: flatten   !< optional parameter, commonly used to support 2D (alternative) potential version
       end subroutine grav_types
 
       subroutine user_grav_accel(sweep, i1,i2, xsw, n, grav)
@@ -146,18 +148,18 @@ contains
 !<
    subroutine init_grav
 
-      use cg_list_global,   only: all_cg
-      use constants,        only: PIERNIK_INIT_MPI, AT_OUT_B, gp_n, gpot_n, hgpot_n
-      use dataio_pub,       only: nh    ! QA_WARN required for diff_nml
-      use dataio_pub,       only: printinfo, warn, die, code_progress
-      use mpisetup,         only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
-      use particle_pub,     only: init_particles
-      use units,            only: newtong
+      use cg_list_global, only: all_cg
+      use constants,      only: PIERNIK_INIT_MPI, AT_OUT_B, gp_n, gpot_n, hgpot_n
+      use dataio_pub,     only: nh    ! QA_WARN required for diff_nml
+      use dataio_pub,     only: printinfo, warn, die, code_progress
+      use mpisetup,       only: ibuff, rbuff, cbuff, master, slave, lbuff, piernik_MPI_Bcast
+      use particle_pub,   only: init_particles
+      use units,          only: newtong
 #ifdef SELF_GRAV
-      use constants,        only: sgp_n, sgpm_n
+      use constants,      only: sgp_n, sgpm_n
 #endif /* SELF_GRAV */
 #ifdef CORIOLIS
-      use coriolis,         only: set_omega
+      use coriolis,       only: set_omega
 #endif /* CORIOLIS */
 
       implicit none
@@ -459,37 +461,41 @@ contains
 
    end subroutine sum_potential
 
-   subroutine grav_null(gp, ax, flatten)
+   subroutine grav_null(gp, ax, lhn, flatten)
 
-      use axes_M, only: axes
+      use axes_M,    only: axes
+      use constants, only: ndims, LO, HI
 
       implicit none
 
-      real, dimension(:,:,:), pointer  :: gp
-      type(axes), intent(in)           :: ax
-      logical,    intent(in), optional :: flatten
+      real, dimension(:,:,:), pointer                     :: gp
+      type(axes),                              intent(in) :: ax
+      integer(kind=4), dimension(ndims,LO:HI), intent(in) :: lhn
+      logical,                       optional, intent(in) :: flatten
 
       gp = 0.0
 
-      if (.false. .and. flatten) gp(1, 1, 1) = ax%x(1) ! suppress compiler warnings on unused arguments
+      if (.false. .and. flatten) gp(1, 1, 1) = ax%x(1)*real(lhn(1,1)) ! suppress compiler warnings on unused arguments
 
    end subroutine grav_null
 
-   subroutine grav_uniform(gp, ax, flatten)
+   subroutine grav_uniform(gp, ax, lhn, flatten)
 
-      use axes_M, only: axes
+      use axes_M,    only: axes
+      use constants, only: ndims, LO, HI, xdim, ydim, zdim
 
       implicit none
 
-      real, dimension(:,:,:), pointer  :: gp
-      type(axes), intent(in)           :: ax
-      logical,    intent(in), optional :: flatten
-      integer                          :: i, j, k
+      real, dimension(:,:,:), pointer                     :: gp
+      type(axes),                              intent(in) :: ax
+      integer(kind=4), dimension(ndims,LO:HI), intent(in) :: lhn
+      logical,                       optional, intent(in) :: flatten
+      integer                                             :: i, j, k
 
-      do i = lbound(gp,1), ubound(gp,1)
-         do j = lbound(gp,2), ubound(gp,2)
-            do k = lbound(gp,3), ubound(gp,3)
-               gp(i,j,k) = -(g_dir(1)*ax%x(i) + g_dir(2)*ax%y(j) + g_dir(3)*ax%z(k))
+      do i = lhn(xdim,LO), lhn(xdim,HI)
+         do j = lhn(ydim,LO), lhn(ydim,HI)
+            do k = lhn(zdim,LO), lhn(zdim,HI)
+               gp(i,j,k) = -(g_dir(xdim)*ax%x(i) + g_dir(ydim)*ax%y(j) + g_dir(zdim)*ax%z(k))
             enddo
          enddo
       enddo
@@ -498,22 +504,23 @@ contains
 
    end subroutine grav_uniform
 
-   subroutine grav_linear(gp, ax, flatten)
+   subroutine grav_linear(gp, ax, lhn, flatten)
 
       use axes_M,    only: axes
-      use constants, only: half
+      use constants, only: ndims, LO, HI, xdim, ydim, zdim, half
 
       implicit none
 
-      real, dimension(:,:,:), pointer  :: gp
-      type(axes), intent(in)           :: ax
-      logical,    intent(in), optional :: flatten
-      integer                          :: i, j, k
+      real, dimension(:,:,:), pointer                     :: gp
+      type(axes),                              intent(in) :: ax
+      integer(kind=4), dimension(ndims,LO:HI), intent(in) :: lhn
+      logical,                       optional, intent(in) :: flatten
+      integer                                             :: i, j, k
 
-      do i = lbound(gp,1), ubound(gp,1)
-         do j = lbound(gp,2), ubound(gp,2)
-            do k = lbound(gp,3), ubound(gp,3)
-               gp(i,j,k) = -half*(g_dir(1)*ax%x(i)**2 + g_dir(2)*ax%y(j)**2 + g_dir(3)*ax%z(k)**2)
+      do i = lhn(xdim,LO), lhn(xdim,HI)
+         do j = lhn(ydim,LO), lhn(ydim,HI)
+            do k = lhn(zdim,LO), lhn(zdim,HI)
+               gp(i,j,k) = -half*(g_dir(xdim)*ax%x(i)**2 + g_dir(ydim)*ax%y(j)**2 + g_dir(zdim)*ax%z(k)**2)
             enddo
          enddo
       enddo
@@ -522,20 +529,22 @@ contains
 
    end subroutine grav_linear
 
-   subroutine grav_ptmass_pure(gp, ax, flatten)
+   subroutine grav_ptmass_pure(gp, ax, lhn, flatten)
 
-      use axes_M, only: axes
-      use units,  only: newtong
+      use axes_M,    only: axes
+      use constants, only: ndims, LO, HI, xdim, ydim
+      use units,     only: newtong
 
       implicit none
 
-      real, dimension(:,:,:), pointer  :: gp
-      type(axes), intent(in)           :: ax
-      logical,    intent(in), optional :: flatten
+      real, dimension(:,:,:), pointer                     :: gp
+      type(axes),                              intent(in) :: ax
+      integer(kind=4), dimension(ndims,LO:HI), intent(in) :: lhn
+      logical,                       optional, intent(in) :: flatten
 
-      integer                          :: i, j
-      real                             :: rc2, GM, x2
-      logical                          :: do_flatten
+      integer                                             :: i, j
+      real                                                :: rc2, GM, x2
+      logical                                             :: do_flatten
 
       if (present(flatten)) then
          do_flatten = flatten
@@ -545,9 +554,9 @@ contains
 
       GM = newtong*ptmass
 
-      do i = lbound(gp,1), ubound(gp,1)
+      do i = lhn(xdim,LO), lhn(xdim,HI)
          x2 = (ax%x(i) - ptm_x)**2
-         do j = lbound(gp,2), ubound(gp,2)
+         do j = lhn(ydim,LO), lhn(ydim,HI)
             rc2 = x2 + (ax%y(j) - ptm_y)**2
 
             if (do_flatten) then
@@ -564,22 +573,23 @@ contains
    !>
    !! \todo this procedure is incompatible with cg%cs_iso2
    !<
-   subroutine grav_ptmass_softened(gp, ax, flatten)
+   subroutine grav_ptmass_softened(gp, ax, lhn, flatten)
 
       use axes_M,     only: axes
+      use constants,  only: ndims, LO, HI, xdim, ydim
       use fluidindex, only: flind
       use global,     only: smalld
       use units,      only: newtong
 
       implicit none
 
-      real, dimension(:,:,:), pointer  :: gp
-      type(axes), intent(in)           :: ax
-      logical,    intent(in), optional :: flatten
-
-      integer                          :: i, j, ifl
-      real                             :: rc2, r_smooth2, GM, fr, x2, cs_iso2
-      logical                          :: do_flatten
+      real, dimension(:,:,:), pointer                     :: gp
+      type(axes),                              intent(in) :: ax
+      integer(kind=4), dimension(ndims,LO:HI), intent(in) :: lhn
+      logical,                       optional, intent(in) :: flatten
+      integer                                             :: i, j, ifl
+      real                                                :: rc2, r_smooth2, GM, fr, x2, cs_iso2
+      logical                                             :: do_flatten
 
       if (present(flatten)) then
          do_flatten = flatten
@@ -596,9 +606,9 @@ contains
       r_smooth2 = r_smooth**2
       GM        = newtong*ptmass
 
-      do i = lbound(gp,1), ubound(gp,1)
+      do i = lhn(xdim,LO), lhn(xdim,HI)
          x2 = (ax%x(i) - ptm_x)**2
-         do j = lbound(gp,2), ubound(gp,2)
+         do j = lhn(ydim,LO), lhn(ydim,HI)
             rc2 = x2 + (ax%y(j) - ptm_y)**2
             fr  = min( (sqrt(rc2)/r_grav)**n_gravr , 100.0)    !> \deprecated BEWARE: hardcoded value
             fr  = max( 1./cosh(fr), smalld*1.e-2)              !> \deprecated BEWARE: hadrcoded value
@@ -619,28 +629,28 @@ contains
 !! \brief Roche potential for two bodies on circular orbits. The coordinate system corotates with the bodies, so they stay on the X axis forever.
 !<
 
-   subroutine grav_roche(gp, ax, flatten)
+   subroutine grav_roche(gp, ax, lhn, flatten)
 
       use axes_M,    only: axes
-      use constants, only: ydim, zdim, half
+      use constants, only: ndims, LO, HI, ydim, zdim, half
       use units,     only: newtong
 
       implicit none
 
-      real, dimension(:,:,:), pointer  :: gp
-      type(axes), intent(in)           :: ax
-      logical,    intent(in), optional :: flatten
-
-      integer                          :: j, k
-      real                             :: GM1, GM2, z2, yz2, r_smooth2
+      real, dimension(:,:,:), pointer                     :: gp
+      type(axes),                              intent(in) :: ax
+      integer(kind=4), dimension(ndims,LO:HI), intent(in) :: lhn
+      logical,                       optional, intent(in) :: flatten
+      integer                                             :: j, k
+      real                                                :: GM1, GM2, z2, yz2, r_smooth2
 
       r_smooth2 = r_smooth**2
       GM1 =  newtong * ptmass
       GM2 =  newtong * ptmass2
 
-      do k = lbound(gp,zdim), ubound(gp,zdim)
+      do k = lhn(zdim,LO), lhn(zdim,HI)
          z2 = ax%z(k)**2
-         do j = lbound(gp,ydim), ubound(gp,ydim)
+         do j = lhn(ydim,LO), lhn(ydim,HI)
             yz2 = ax%y(j)**2 + z2
             gp(:,j,k) =  - GM1 / sqrt((ax%x(:) - ptm_x)**2  + yz2 + r_smooth2) &
                  &       - GM2 / sqrt((ax%x(:) - ptm2_x)**2 + yz2 + r_smooth2) &
@@ -655,30 +665,31 @@ contains
 !>
 !! \details promote stiff-body rotation inside smoothing length, don't affect the global potential outside
 !<
-   subroutine grav_ptmass_stiff(gp, ax, flatten)
+   subroutine grav_ptmass_stiff(gp, ax, lhn, flatten)
 
       use axes_M,    only: axes
-      use constants, only: half
+      use constants, only: ndims, LO, HI, xdim, ydim, zdim, half
       use units,     only: newtong
 
       implicit none
 
-      real, dimension(:,:,:), pointer  :: gp
-      type(axes), intent(in)           :: ax
-      logical,    intent(in), optional :: flatten
+      real, dimension(:,:,:), pointer                     :: gp
+      type(axes),                              intent(in) :: ax
+      integer(kind=4), dimension(ndims,LO:HI), intent(in) :: lhn
+      logical,                       optional, intent(in) :: flatten
 
-      integer                          :: i, j, k
-      real                             :: r_smooth2, r2, gmr, gm, z2, yz2
+      integer                                             :: i, j, k
+      real                                                :: r_smooth2, r2, gmr, gm, z2, yz2
 
       r_smooth2 = r_smooth**2
       gm =  - newtong * ptmass
       gmr = half * gm / r_smooth
 
-      do k = lbound(gp,3), ubound(gp,3)
+      do k = lhn(zdim,LO), lhn(zdim,HI)
          z2 = (ax%z(k) - ptm_z)**2
-         do j = lbound(gp,2), ubound(gp,2)
+         do j = lhn(ydim,LO), lhn(ydim,HI)
             yz2 = z2 + (ax%y(j) - ptm_y)**2
-            do i = lbound(gp,1), ubound(gp,1)
+            do i = lhn(xdim,LO), lhn(xdim,HI)
                r2 = yz2 + (ax%x(i) - ptm_x)**2
                if (r2 < r_smooth2) then
                   gp(i,j,k) = gmr * (3. - r2/r_smooth2)
@@ -762,26 +773,26 @@ contains
 
          select case (external_gp)
             case ("null", "grav_null", "GRAV_NULL")
-               call grav_null(cg%gp,ax)                    ; grav_type => grav_null
+               call grav_null(cg%gp, ax, cg%lhn)                     ; grav_type => grav_null
             case ("linear", "grav_lin", "GRAV_LINEAR")
-               call grav_linear(cg%gp,ax)                  ; grav_type => grav_linear
+               call grav_linear(cg%gp, ax, cg%lhn)                   ; grav_type => grav_linear
             case ("uniform", "grav_unif", "GRAV_UNIFORM")
-               call grav_uniform(cg%gp,ax)                 ; grav_type => grav_uniform
+               call grav_uniform(cg%gp, ax, cg%lhn)                  ; grav_type => grav_uniform
             case ("softened ptmass", "ptmass_soft", "GRAV_PTMASS")
-               call grav_ptmass_softened(cg%gp,ax,.false.) ; grav_type => grav_ptmass_softened
+               call grav_ptmass_softened(cg%gp, ax, cg%lhn, .false.) ; grav_type => grav_ptmass_softened
             case ("stiff ptmass", "ptmass_stiff", "GRAV_PTMASSSTIFF")
-               call grav_ptmass_stiff(cg%gp,ax)            ; grav_type => grav_ptmass_stiff
+               call grav_ptmass_stiff(cg%gp, ax, cg%lhn)             ; grav_type => grav_ptmass_stiff
             case ("ptmass", "ptmass_pure", "GRAV_PTMASSPURE")
-               call grav_ptmass_pure(cg%gp,ax,.false.)     ; grav_type => grav_ptmass_pure
+               call grav_ptmass_pure(cg%gp, ax, cg%lhn, .false.)     ; grav_type => grav_ptmass_pure
             case ("flat softened ptmass", "flat_ptmass_soft", "GRAV_PTFLAT")
-               call grav_ptmass_softened(cg%gp,ax,.true.)  ; grav_type => grav_ptmass_softened
+               call grav_ptmass_softened(cg%gp, ax, cg%lhn, .true.)  ; grav_type => grav_ptmass_softened
             case ("flat ptmass", "flat_ptmass")
-               call grav_ptmass_pure(cg%gp,ax,.true.)      ; grav_type => grav_ptmass_pure
+               call grav_ptmass_pure(cg%gp, ax, cg%lhn, .true.)      ; grav_type => grav_ptmass_pure
             case ("roche", "grav_roche", "GRAV_ROCHE")
 #ifndef CORIOLIS
                call die("[gravity:default_grav_pot_3d] define CORIOLIS in piernik.def for Roche potential")
 #endif /* !CORIOLIS */
-               call grav_roche(cg%gp,ax)                   ; grav_type => grav_roche
+               call grav_roche(cg%gp, ax, cg%lhn)                    ; grav_type => grav_roche
             case ("user", "grav_user", "GRAV_USER")
                call die("[gravity:default_grav_pot_3d] user 'grav_pot_3d' should be defined in initprob!")
             case default
