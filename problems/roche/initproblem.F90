@@ -127,9 +127,9 @@ contains
 
    subroutine init_prob
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim
+      use cg_list,     only: cg_list_element
+      use constants,   only: xdim, ydim, zdim, LO, HI
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use global,      only: smalld
@@ -149,11 +149,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do j = 1,cg%n_(ydim)
+         do j = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
             yj = cg%y(j)
-            do i = 1,cg%n_(xdim)
+            do i = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                xi = cg%x(i)
-               do k = 1,cg%n_(zdim)
+               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   zk = cg%z(k)
 !blob
                   cg%u(fl%idn,i,j,k) = dnamb + dnblob*exp(-((xi-xblob)**2+(yj-yblob)**2+zk**2)/dblob)
@@ -180,9 +180,9 @@ contains
 
    subroutine impose_inflow(forward)
 
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim
+      use cg_list,     only: cg_list_element
+      use constants,   only: xdim, ydim, zdim, LO, HI
       use fluidindex,  only: flind
       use fluidtypes,  only: component_fluid
       use global,      only: smalld, smallei, dt
@@ -206,11 +206,11 @@ contains
       do while (associated(cgl))
          cg => cgl%cg
 
-         do k = 1,cg%n_(zdim)
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             zk = cg%z(k)
-            do j = 1,cg%n_(ydim)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                yj = cg%y(j)
-               do i = 1,cg%n_(xdim)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                   xi = cg%x(i)
 
 
@@ -245,11 +245,11 @@ contains
          enddo
 
 !imposing inflow
-         do k = 1,cg%n_(zdim)
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             zk = cg%z(k)
-            do j = 1,cg%n_(ydim)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                yj = cg%y(j)
-               do i = 1,cg%n_(xdim)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                   xi = cg%x(i)
 !blob
                   dnold = cg%u(fl%idn,i,j,k)
