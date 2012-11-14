@@ -195,17 +195,18 @@ contains
          if (cg%bnd(xdim, LO) == BND_COR) then
 !   - lower to left
             if (cdd%pcoords(xdim) == 0 .and. cdd%pcoords(ydim) == 0) then
-               do i=1, dom%nb
-                  do j=cg%js, cg%n_(ydim)
-                     cg%b(xdim,i,j,:) = -cg%b(ydim,j,cg%isb+1-i,:)
-                     cg%b(ydim,i,j,:) =  cg%b(xdim,j,cg%isb+1-i,:)
-                     cg%b(zdim,i,j,:) =  cg%b(zdim,j,cg%isb+1-i,:)
+               do i = 0, dom%nb-1
+                  do j = cg%js, cg%lhn(ydim,HI)
+                     cg%b(xdim,cg%lhn(xdim,LO)+i,j,:) = -cg%b(ydim,j,cg%isb-i,:)
+                     cg%b(ydim,cg%lhn(xdim,LO)+i,j,:) =  cg%b(xdim,j,cg%isb-i,:)
+                     cg%b(zdim,cg%lhn(xdim,LO)+i,j,:) =  cg%b(zdim,j,cg%isb-i,:)
                   enddo
                enddo
             endif
 
             if (cdd%procxyl > 0) then
-               allocate(send_left(3, dom%nb, cg%n_(ydim), cg%n_(zdim)), recv_left(3, cg%n_(xdim), dom%nb, cg%n_(zdim)))
+               allocate(send_left(3, dom%nb, cg%lhn(ydim,LO):cg%lhn(ydim,HI), cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
+               allocate(recv_left(3, cg%lhn(xdim,LO):cg%lhn(xdim,HI), dom%nb, cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
 
                send_left(:,:,:,:) = cg%b(:, cg%is:cg%isb,:,:)
 
@@ -214,11 +215,11 @@ contains
 
                call MPI_Waitall(I_TWO,req(:),status(:,:),mpi_err)
 
-               do i=1, dom%nb
-                  do j=1, cg%n_(ydim)
-                     cg%b(xdim,i,j,:) = -recv_left(ydim,j, cg%is-i,:)
-                     cg%b(ydim,i,j,:) =  recv_left(xdim,j, cg%is-i,:)
-                     cg%b(zdim,i,j,:) =  recv_left(zdim,j, cg%is-i,:)
+               do i = 1, dom%nb
+                  do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+                     cg%b(xdim,cg%lhn(xdim,LO)+i-1,j,:) = -recv_left(ydim,j, cg%is-i,:)
+                     cg%b(ydim,cg%lhn(xdim,LO)+i-1,j,:) =  recv_left(xdim,j, cg%is-i,:)
+                     cg%b(zdim,cg%lhn(xdim,LO)+i-1,j,:) =  recv_left(zdim,j, cg%is-i,:)
                   enddo
                enddo
 
@@ -230,38 +231,39 @@ contains
          if (cg%bnd(ydim, LO) == BND_COR) then
 !   - left to lower
             if (cdd%pcoords(ydim) == 0 .and. cdd%pcoords(xdim) == 0 ) then
-               do j=1, dom%nb
-                  do i=cg%is, cg%n_(xdim)
-                     cg%b(xdim,i,j,:) =  cg%b(ydim,cg%isb+1-j,i,:)
-                     cg%b(ydim,i,j,:) = -cg%b(xdim,cg%isb+1-j,i,:)
-                     cg%b(zdim,i,j,:) =  cg%b(zdim,cg%isb+1-j,i,:)
+               do j = 0, dom%nb-1
+                  do i = cg%is, cg%lhn(xdim,HI)
+                     cg%b(xdim,i,cg%lhn(ydim,LO)+j,:) =  cg%b(ydim,cg%isb-j,i,:)
+                     cg%b(ydim,i,cg%lhn(ydim,LO)+j,:) = -cg%b(xdim,cg%isb-j,i,:)
+                     cg%b(zdim,i,cg%lhn(ydim,LO)+j,:) =  cg%b(zdim,cg%isb-j,i,:)
                   enddo
                enddo
 !   - interior to corner
-               do j=1, dom%nb
-                  do i=1, dom%nb
-                     cg%b(xdim,i,j,:) =  -cg%b(xdim,cg%isb+1-i,cg%jsb+1-j,:)
-                     cg%b(ydim,i,j,:) =  -cg%b(ydim,cg%isb+1-i,cg%jsb+1-j,:)
-                     cg%b(zdim,i,j,:) =   cg%b(zdim,cg%isb+1-i,cg%jsb+1-j,:)
+               do j = 0, dom%nb-1
+                  do i = 0, dom%nb-1
+                     cg%b(xdim,cg%lhn(xdim,LO)+i,cg%lhn(ydim,LO)+j,:) =  -cg%b(xdim,cg%isb-i,cg%jsb-j,:)
+                     cg%b(ydim,cg%lhn(xdim,LO)+i,cg%lhn(ydim,LO)+j,:) =  -cg%b(ydim,cg%isb-i,cg%jsb-j,:)
+                     cg%b(zdim,cg%lhn(xdim,LO)+i,cg%lhn(ydim,LO)+j,:) =   cg%b(zdim,cg%isb-i,cg%jsb-j,:)
                   enddo
                enddo
             endif
 
             if (cdd%procyxl > 0) then
-               allocate(send_left(3, cg%n_(xdim), dom%nb, cg%n_(zdim)), recv_left(3, dom%nb, cg%n_(ydim), cg%n_(zdim)))
+               allocate(send_left(3, cg%lhn(xdim,LO):cg%lhn(xdim,HI), dom%nb, cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
+               allocate(recv_left(3, dom%nb, cg%lhn(ydim,LO):cg%lhn(ydim,HI), cg%lhn(zdim,LO):cg%lhn(zdim,HI)))
 
                send_left(:,:,:,:) = cg%b(:,:, cg%js:cg%jsb,:)
 
-               call MPI_Isend   (send_left , 3*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag8, comm, req(1), mpi_err)
-               call MPI_Irecv   (recv_left , 3*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag7, comm, req(2), mpi_err)
+               call MPI_Isend(send_left , 3*cg%n_(xdim)*dom%nb*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag8, comm, req(1), mpi_err)
+               call MPI_Irecv(recv_left , 3*dom%nb*cg%n_(ydim)*cg%n_(zdim), MPI_DOUBLE_PRECISION, cdd%procyxl, tag7, comm, req(2), mpi_err)
 
                call MPI_Waitall(I_TWO,req(:),status(:,:),mpi_err)
 
-               do j=1, dom%nb
-                  do i=1, cg%n_(xdim)
-                     cg%b(xdim,i,j,:) =  recv_left(ydim, cg%js-j,i,:)
-                     cg%b(ydim,i,j,:) = -recv_left(xdim, cg%js-j,i,:)
-                     cg%b(zdim,i,j,:) =  recv_left(zdim, cg%js-j,i,:)
+               do j = 1, dom%nb
+                  do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+                     cg%b(xdim,i,cg%lhn(ydim,LO)+j-1,:) =  recv_left(ydim, cg%js-j,i,:)
+                     cg%b(ydim,i,cg%lhn(ydim,LO)+j-1,:) = -recv_left(xdim, cg%js-j,i,:)
+                     cg%b(zdim,i,cg%lhn(ydim,LO)+j-1,:) =  recv_left(zdim, cg%js-j,i,:)
                   enddo
                enddo
 
