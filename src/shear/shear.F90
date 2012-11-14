@@ -193,7 +193,7 @@ contains
       use cg_leaves,   only: leaves
       use constants,   only: xdim
 #ifdef FFTW
-      use constants,   only: ydim
+      use constants,   only: ydim, LO, HI
 #endif /* FFTW */
       use dataio_pub,  only: die
       use domain,      only: dom, is_multicg
