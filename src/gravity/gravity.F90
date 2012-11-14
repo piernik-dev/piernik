@@ -898,7 +898,7 @@ contains
       use cart_comm,        only: cdd
       use cg_leaves,        only: leaves
       use cg_list,          only: cg_list_element
-      use constants,        only: xdim, ydim, zdim, ndims, MAXL, I_ONE, RIGHT
+      use constants,        only: xdim, ydim, zdim, ndims, LO, HI, MAXL, I_ONE, RIGHT
       use dataio_pub,       only: die
       use domain,           only: is_mpi_noncart, is_multicg, dom
       use grid_cont,        only: grid_container
@@ -909,7 +909,7 @@ contains
 
       implicit none
 
-      integer                                                                      :: i, j, k, ip, px, py, pz
+      integer                                                                      :: i, j, k, ip, px, py, pz, i0, j0, k0
       integer(kind=4),   dimension(ndims)                                          :: pc
       real, allocatable, dimension(:,:,:), target                                  :: gpwork
       real, allocatable, dimension(:)                                              :: gravrx, gravry, gravrz
@@ -948,26 +948,27 @@ contains
          cg => leaves%first%cg
 
          if (any([allocated(gravrx), allocated(gravry), allocated(gravrz)])) call die("[gravity:grav_accel2pot] gravr[xyz] already allocated")
-         allocate(gravrx(cg%n_(xdim)), gravry(cg%n_(ydim)), gravrz(cg%n_(zdim)))
-         allocate(gpwork(cg%n_(xdim), cg%n_(ydim), cg%n_(zdim)))
-         gpwork(1,1,1) = 0.0
+         i0 = cg%lhn(xdim,LO) ; j0 = cg%lhn(ydim,LO) ; k0 = cg%lhn(zdim,LO)
+         allocate(gravrx(cg%lhn(xdim,LO):cg%lhn(xdim,HI)), gravry(j0:cg%lhn(ydim,HI)), gravrz(k0:cg%lhn(zdim,HI)))
+         allocate(gpwork(cg%lhn(xdim,LO):cg%lhn(xdim,HI),         j0:cg%lhn(ydim,HI),         k0:cg%lhn(zdim,HI)))
+         gpwork(i0, j0, k0) = 0.0
 
-         call grav_accel(xdim, 1, 1, cg%coord(RIGHT, xdim)%r(:), cg%n_(xdim), gravrx)
-         do i = 1, cg%n_(xdim)-1
+         call grav_accel(xdim, j0, k0, cg%coord(RIGHT, xdim)%r(:), cg%n_(xdim), gravrx)
+         do i = i0, cg%lhn(xdim,HI)-1
             gpwork(i+1,1,1) = gpwork(i,1,1) - gravrx(i)*cg%dl(xdim)
          enddo
 
-         do i=1, cg%n_(xdim)
-            call grav_accel(ydim, 1, i, cg%coord(RIGHT, ydim)%r(:), cg%n_(ydim), gravry)
-            do j = 1, cg%n_(ydim)-1
+         do i = i0, cg%lhn(xdim,HI)
+            call grav_accel(ydim, k0, i, cg%coord(RIGHT, ydim)%r(:), cg%n_(ydim), gravry)
+            do j = j0, cg%lhn(ydim,HI)-1
                gpwork(i,j+1,1) = gpwork(i,j,1) - gravry(j)*cg%dl(ydim)
             enddo
          enddo
 
-         do i=1, cg%n_(xdim)
-            do j=1, cg%n_(ydim)
+         do i = i0, cg%lhn(xdim,HI)
+            do j = j0, cg%lhn(ydim,HI)
                call grav_accel(zdim, i, j, cg%coord(RIGHT, zdim)%r(:), cg%n_(zdim), gravrz)
-               do k = 1, cg%n_(zdim)-1
+               do k = k0, cg%lhn(zdim,HI)-1
                   gpwork(i,j,k+1) = gpwork(i,j,k) - gravrz(k)*cg%dl(zdim)
                enddo
             enddo
@@ -1023,7 +1024,7 @@ contains
          py = cdd%pcoords(ydim)
          pz = cdd%pcoords(zdim)
 
-         ddgph  = gpwork(1,1,1) - gpwork(cg%is,cg%js,cg%ks)
+         ddgph  = gpwork(i0,j0,k0) - gpwork(cg%is,cg%js,cg%ks)
          gpwork(:,:,:) = gpwork(:,:,:) + ddgp(px,py,pz) + ddgph
          cg%wa(:,:,:) = gpwork(:,:,:)
          call leaves%get_extremum(qna%wai, MAXL, gp_max)
