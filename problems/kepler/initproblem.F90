@@ -216,21 +216,21 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_sine
 
-      use cg_list,     only: cg_list_element
-      use cg_leaves,   only: leaves
-      use constants,   only: dpi, xdim, zdim
-      use dataio_pub,  only: printinfo, warn
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: master
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: dpi, xdim, zdim
+      use dataio_pub, only: printinfo, warn
+      use domain,     only: dom
+      use fluidindex, only: flind
+      use grid_cont,  only: grid_container
+      use mpisetup,   only: master
 
       implicit none
 
-      real :: kx, kz
-      integer :: i, k
+      real                           :: kx, kz
+      integer                        :: i, k
       type(cg_list_element), pointer :: cgl
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
 
       if (.not. associated(flind%dst)) then
          if (master) call warn("[initproblem:add_sine]: Cannot add sine wave perturbation to dust, because there is no dust.")
@@ -267,13 +267,13 @@ contains
 !-----------------------------------------------------------------------------
    subroutine add_random_noise
 
-      use cg_list,     only: cg_list_element
-      use cg_leaves,   only: leaves
-      use constants,   only: xdim, ydim, zdim
-      use dataio_pub,  only: printinfo
-      use grid_cont,   only: grid_container
-      use fluidindex,  only: flind
-      use mpisetup,    only: proc, master
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use constants,  only: xdim, ydim, zdim
+      use dataio_pub, only: printinfo
+      use grid_cont,  only: grid_container
+      use fluidindex, only: flind
+      use mpisetup,   only: proc, master
 
       implicit none
 
@@ -310,8 +310,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine init_prob
 
-      use cg_list,            only: cg_list_element
       use cg_leaves,          only: leaves
+      use cg_list,            only: cg_list_element
       use constants,          only: dpi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, DST, LO, HI
       use dataio_pub,         only: msg, printinfo, die
       use domain,             only: dom, is_multicg
@@ -355,7 +355,7 @@ contains
          if (is_multicg) call die("[initproblem:init_prob] multiple grid pieces per procesor not implemented yet") !nontrivial kmid, allocate
 
          sqr_gm = sqrt(newtong*ptmass)
-         do k = 1, cg%n_(zdim)
+         do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
             if (cg%z(k) < 0.0) kmid = k       ! the midplane is in between ksmid and ksmid+1
          enddo
 
@@ -366,15 +366,15 @@ contains
 
             if (dom%has_dir(zdim)) call set_default_hsparams(cg)
 
-            do j = 1, cg%n_(ydim)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                yj = cg%y(j)
-               do i = 1, cg%n_(xdim)
+               do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                   xi = cg%x(i)
                   rc = sqrt(xi**2+yj**2)
 
                   if (dom%has_dir(zdim)) call hydrostatic_zeq_densmid(i, j, d0, csim2)
 
-                  do k = 1, cg%n_(zdim)
+                  do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
 
                      vx = sqr_gm * (-yj)/(rc**2+r_smooth**2)**0.75
                      vy = sqr_gm * ( xi)/(rc**2+r_smooth**2)**0.75
@@ -488,9 +488,9 @@ contains
                   call printinfo(msg)
                endif
 
-               do j = 1, cg%n_(ydim)
+               do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                   yj = cg%y(j)
-                  do i = 1, cg%n_(xdim)
+                  do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
                      xi = cg%x(i)
                      rc = xi + r_smooth
 
@@ -502,7 +502,7 @@ contains
                      endif
 
                      vphi = 0.
-                     do k = 1, cg%n_(zdim)
+                     do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                         zk = cg%z(k)
 !                     cg%u(fl%idn,i,j,k) = max(d0*(1./cosh((xi/r_max)**10)) * exp(-zk**2/H2),1.e-10))
                         cg%u(fl%idn,i,j,k) = dens_prof(i)
@@ -562,13 +562,13 @@ contains
 !-----------------------------------------------------------------------------
    subroutine kepler_problem_post_restart
 
-      use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
       use constants,        only: b0_n
       use fluidboundaries,  only: all_fluid_boundaries
       use named_array_list, only: wna
 #ifdef TRACER
-      use constants,        only: xdim, ydim, zdim
+      use constants,        only: xdim, ydim, zdim, LO, HI
       use grid_cont,        only: grid_container
       use func,             only: resample_gauss
       use fluidindex,       only: flind
@@ -578,8 +578,8 @@ contains
 
       type(cg_list_element), pointer :: cgl
 #ifdef TRACER
-      type(grid_container), pointer :: cg
-      integer :: i, j, k
+      type(grid_container),  pointer :: cg
+      integer                        :: i, j, k
 #endif /* TRACER */
 
       call my_grav_pot_3d   ! reset gp, to get right values on the boundaries
@@ -606,9 +606,9 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            do k = 1, cg%n_(zdim)
-               do j = 1, cg%n_(ydim)
-                  do i = 1, cg%n_(xdim)
+            do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
+               do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
+                  do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
 
                      cg%u(flind%trc%beg:flind%trc%end, i, j, k)   = &
                           resample_gauss( cg%x(i) - gauss(1), cg%y(j) - gauss(2), cg%z(k) - gauss(3), &
@@ -629,9 +629,9 @@ contains
 !-----------------------------------------------------------------------------
    subroutine problem_customize_solution_kepler(forward)
 
-      use cg_list,          only: cg_list_element
       use cg_leaves,        only: leaves
-      use constants,        only: xdim, ydim, zdim, I_ONE
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE
       use dataio_pub,       only: die!, warn, msg
       use domain,           only: is_multicg
       use global,           only: dt, relax_time, smalld !, t, grace_period_passed
@@ -737,10 +737,10 @@ contains
             endwhere
          endif
 
-         do i = 1, cg%n_(xdim)
-            do j = 1, cg%n_(ydim)
+         do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+            do j = cg%lhn(ydim,LO), cg%lhn(ydim,HI)
                mean_vy = sum( cg%u(flind%dst%imy, i, j, :) /  cg%u(flind%dst%idn, i, j, :) ) / cg%n_(zdim)
-               do k = 1, cg%n_(zdim)
+               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   if ( (abs(cg%u(flind%dst%imy, i, j, k) - mean_vy * cg%u(flind%dst%idn, i, j, k)) &
                      / (mean_vy * cg%u(flind%dst%idn, i, j, k)) >= 0.1) .and. &
                          cg%u(flind%dst%idn, i, j, k) < 10.0*smalld ) then
@@ -772,12 +772,12 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_grav_pot_3d
 
-      use cg_list,     only: cg_list_element
-      use cg_leaves,   only: leaves
-      use constants,   only: xdim, zdim
-      use gravity,     only: ptmass, sum_potential
-      use grid_cont,   only: grid_container
-      use units,       only: newtong
+      use cg_leaves, only: leaves
+      use cg_list,   only: cg_list_element
+      use constants, only: xdim, zdim, LO, HI
+      use gravity,   only: ptmass, sum_potential
+      use grid_cont, only: grid_container
+      use units,     only: newtong
 
       implicit none
 
@@ -792,8 +792,8 @@ contains
          do while (associated(cgl))
             cg => cgl%cg
 
-            do i = 1, cg%n_(xdim)
-               do k = 1, cg%n_(zdim)
+            do i = cg%lhn(xdim,LO), cg%lhn(xdim,HI)
+               do k = cg%lhn(zdim,LO), cg%lhn(zdim,HI)
                   r2 = cg%x(i)**2! + cg%z(k)**2
                   cg%gp(i,:,k) = -newtong*ptmass / sqrt(r2)
                enddo
@@ -810,8 +810,8 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_fbnd(dir,side,cg)
 
-      use constants,  only: xdim, LO
-      use grid_cont,  only: grid_container
+      use constants, only: xdim, LO
+      use grid_cont, only: grid_container
 
       implicit none
 
@@ -830,7 +830,7 @@ contains
 !-----------------------------------------------------------------------------
    subroutine my_bnd_xl(cg)
 
-      use constants,  only: xdim, ydim, zdim
+      use constants,  only: xdim, ydim, zdim, LO
       use domain,     only: dom
       use gravity,    only: grav_pot2accel
       use grid_cont,  only: grid_container
@@ -843,20 +843,22 @@ contains
 
       type(grid_container), pointer, intent(inout) :: cg
 
-      integer :: i
-      real, dimension(cg%n_(xdim)) :: grav
-      real, dimension(size(iarr_all_my), cg%n_(ydim), cg%n_(zdim)) :: vy,vym
-      real, dimension(size(flind%all_fluids))    :: cs2_arr
-      integer, dimension(size(flind%all_fluids)) :: ind_cs2
+      integer                                                         :: i,j,k
+      real,    dimension(cg%n_(xdim))                                 :: grav
+      real,    dimension(size(iarr_all_my), cg%n_(ydim), cg%n_(zdim)) :: vy,vym
+      real,    dimension(size(flind%all_fluids))                      :: cs2_arr
+      integer, dimension(size(flind%all_fluids))                      :: ind_cs2
 
       do i = 1, size(flind%all_fluids)
          ind_cs2    = i
          cs2_arr(i) = flind%all_fluids(i)%fl%cs2
       enddo
 
-      call grav_pot2accel(xdim,1,1, cg%n_(xdim), grav, 1, cg)
+      j = cg%lhn(ydim,LO)
+      k = cg%lhn(zdim,LO)
+      call grav_pot2accel(xdim, j, k, cg%n_(xdim), grav, 1, cg)
 
-      do i = 1, dom%nb
+      do i = cg%lhn(xdim,LO), cg%lhn(xdim,LO)+dom%nb-1
          cg%u(iarr_all_dn,i,:,:) = cg%u(iarr_all_dn, cg%is,:,:)
          cg%u(iarr_all_mx,i,:,:) = min(0.0,cg%u(iarr_all_mx, cg%is,:,:))
 !         do p = 1, size(flind%all_fluids)
@@ -869,9 +871,9 @@ contains
 #endif /* !ISO */
       enddo
 
-      do i = dom%nb,1,-1
-         vym(:,:,:) = cg%u(iarr_all_my,i+2,:,:)/cg%u(iarr_all_dn,i+1,:,:)
-         vy(:,:,:)  = cg%u(iarr_all_my,i+1,:,:)/cg%u(iarr_all_dn,i+1,:,:)
+      do i = cg%lhn(xdim,LO)+dom%nb,cg%lhn(xdim,LO)+1,-1
+         vym(:,:,:) = cg%u(iarr_all_my,i+1,:,:)/cg%u(iarr_all_dn,i,:,:)
+         vy(:,:,:)  = cg%u(iarr_all_my,i  ,:,:)/cg%u(iarr_all_dn,i,:,:)
 !         cg%u(iarr_all_my,i,:,:) = (vym(:,:,:) + (cg%x(i) - cg%x(i+2)) / (cg%x(i+1) - cg%x(i+2)) * (vy - vym))*cg%u(iarr_all_dn,i,:,:)
       enddo
 
@@ -899,11 +901,11 @@ contains
       integer(kind=4), intent(in) :: n      !< length of the profile array
       real,            intent(in) :: vmin   !< minimal value of the profile
       real,            intent(in) :: vmax   !< maximum value of the profile
-      real, dimension(n)  :: y, x
+      real, dimension(n)          :: y, x
 
-      real, parameter     :: kstep = 1.0 !< iteration step for tanh fit
-      real                :: dv, k
-      integer             :: nn, i
+      real, parameter             :: kstep = 1.0 !< iteration step for tanh fit
+      real                        :: dv, k
+      integer                     :: nn, i
 
       x = [(real(i), i=0,n-1)] / real(n) * 10.0 - 5.0
 
@@ -925,11 +927,11 @@ contains
    end function get_lcutoff
 
    function get_lcutoff2(x, x0, a) result (y)
-      use constants,   only: pi
+      use constants, only: pi
       implicit none
       real, intent(in), dimension(:) :: x
-      real, intent(in) :: x0, a
-      real, dimension(size(x)) :: y
+      real, intent(in)               :: x0, a
+      real, dimension(size(x))       :: y
 
       y = atan(-(x-x0)*a)/pi + 0.5
 
@@ -946,16 +948,16 @@ contains
 !-----------------------------------------------------------------------------
    subroutine prob_vars_hdf5(var,tab, ierrh, cg)
 
-      use grid_cont,  only: grid_container
-      use interactions, only: epstein_factor
       use fluidindex,   only: flind
+      use grid_cont,    only: grid_container
+      use interactions, only: epstein_factor
 
       implicit none
 
-      character(len=*), intent(in)                    :: var
-      real(kind=4), dimension(:,:,:), intent(inout)   :: tab
-      integer, intent(inout)                          :: ierrh
-      type(grid_container), pointer, intent(in)       :: cg
+      character(len=*),               intent(in)    :: var
+      real(kind=4), dimension(:,:,:), intent(inout) :: tab
+      integer,                        intent(inout) :: ierrh
+      type(grid_container), pointer,  intent(in)    :: cg
 
       ierrh = 0
       select case (trim(var))
@@ -979,17 +981,17 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)                   :: densfile
-      real, dimension(:), intent(out)                :: gdens
+      character(len=*),   intent(in)            :: densfile
+      real, dimension(:), intent(out)           :: gdens
 
-      type(fgsl_interp_accel) :: acc
-      type(fgsl_interp) :: a_interp
-      integer(fgsl_int) :: fstatus
+      type(fgsl_interp_accel)                   :: acc
+      type(fgsl_interp)                         :: a_interp
+      integer(fgsl_int)                         :: fstatus
       character(kind=fgsl_char,len=fgsl_strmax) :: fname
-      real, dimension(:), allocatable :: x,y
-      real                            :: xi
-      integer(fgsl_size_t)            :: n, nmax
-      integer(kind=4) :: i, nxd
+      real, dimension(:), allocatable           :: x,y
+      real                                      :: xi
+      integer(fgsl_size_t)                      :: n, nmax
+      integer(kind=4)                           :: i, nxd
 
       write(msg,*) "[initproblem:read_dens_profile] Reading ", trim(densfile)
       open(1,file=densfile, status="old", form='unformatted')
@@ -1035,7 +1037,7 @@ contains
    elemental function signum(a) result (b)
       implicit none
       real, intent(in) :: a
-      real :: b
+      real             :: b
       if (a > 0.0) then
          b = 1.0
       else
