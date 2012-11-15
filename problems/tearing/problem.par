@@ -1,5 +1,5 @@
  $BASE_DOMAIN
-    n_d = 512, 512, 1
+    n_d = 256, 256, 1
     bnd_xl = 'per'
     bnd_xr = 'per'
     bnd_yl = 'per'
@@ -28,17 +28,18 @@
  /
 
  $END_CONTROL
-    tend   = 10.0
-    nend   = 7
+    tend   = 2.5
+    nend   = 1000000
  /
 
  $OUTPUT_CONTROL
+    use_v2_io = .true.
     problem_name = 'tearing'
     run_id       = 'tst'
-    dt_hdf  = 0.01
-    dt_log  = 0.001
+    dt_hdf  = 0.5
+    dt_log  = 0.1
     dt_tsl  = 0.1
-    dt_res  = 3.0
+    dt_res  = 0.0
     vars(1) = 'dens'
     vars(2) = 'velx'
     vars(3) = 'vely'
@@ -50,11 +51,11 @@
  /
 
  $FLUID_IONIZED
-    gamma  = 1.666666666
+    gamma  = 1.6666666667
  /
 
   $NUMERICAL_SETUP
-    cfl    = 0.4
+    cfl    = 0.7
     smalld = 1.e-5
     smallei= 1.e-5
     integration_order  = 2
@@ -65,12 +66,12 @@
  /
 
  $RESISTIVITY
-    eta_scale   =  4
+    eta_scale   =  2
     cfl_resist  =  0.4
-    eta_0       =  0.0
+    eta_0       =  1.0e-5
     eta_1       =  1.0e-4
     j_crit      =  100.0
-    deint_max   =  0.001
+    deint_max   =  0.01
  /
 
  $PROBLEM_CONTROL
