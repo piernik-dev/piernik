@@ -51,33 +51,33 @@ module domain
 
    type :: domain_container
       ! primary parameters, read from /DOMAIN_SIZES/, /BOUNDARIES/ and /DOMAIN_LIMITS/ namelists
-      real, dimension(ndims, LO:HI)            :: edge !< physical domain boundary positions
+      real,            dimension(ndims, LO:HI) :: edge !< physical domain boundary positions
       integer(kind=4), dimension(ndims)        :: n_d  !< number of grid cells in physical domain in x-, y- and z-direction (where equal to 1, the dimension is reduced to a point with no boundary cells)
       integer(kind=4)                          :: nb   !< number of boundary cells surrounding the physical domain, same for all directions
       integer(kind=4), dimension(ndims, LO:HI) :: bnd  !< type of boundary conditions coded in integers
 
       ! derived parameters
-      real, dimension(ndims) :: L_              !< span of the physical domain [ xmax-xmin, ymax-ymin, zmax-zmin ]
-      real, dimension(ndims) :: C_              !< center of the physical domain [ (xmax+xmin)/2., (ymax+ymin)/2., (zmax+zmin)/2. ]
-      real    :: Vol                            !< total volume of the physical domain
+      real, dimension(ndims)    :: L_           !< span of the physical domain [ xmax-xmin, ymax-ymin, zmax-zmin ]
+      real, dimension(ndims)    :: C_           !< center of the physical domain [ (xmax+xmin)/2., (ymax+ymin)/2., (zmax+zmin)/2. ]
+      real                      :: Vol          !< total volume of the physical domain
 
       logical, dimension(ndims) :: periodic     !< .true. for periodic and shearing boundary pairs
 
       ! Do not use n_t(:) in the Piernik source tree without a good reason
       ! Avoid as a plague allocating buffers of that size because it negates benefits of parallelization
       ! \todo move them to another type, that extends domain_container?
-      integer(kind=4), dimension(ndims) :: n_t          !< total number of %grid cells in the whole domain in every direction (n_d(:) + 2* nb for existing directions)
+      integer(kind=4), dimension(ndims) :: n_t  !< total number of %grid cells in the whole domain in every direction (n_d(:) + 2* nb for existing directions)
 
-      integer(kind=8) :: total_ncells !< total number of %grid cells
-      integer :: geometry_type  !< the type of geometry: cartesian: GEO_XYZ, cylindrical: GEO_RPZ, other: GEO_INVALID
-      integer :: D_x                  !< set to 1 when x-direction exists, 0 otherwise
-      integer :: D_y                  !< set to 1 when y-direction exists, 0 otherwise.
-      integer :: D_z                  !< set to 1 when z-direction exists, 0 otherwise.
+      integer(kind=8) :: total_ncells           !< total number of %grid cells
+      integer         :: geometry_type          !< the type of geometry: cartesian: GEO_XYZ, cylindrical: GEO_RPZ, other: GEO_INVALID
+      integer         :: D_x                    !< set to 1 when x-direction exists, 0 otherwise
+      integer         :: D_y                    !< set to 1 when y-direction exists, 0 otherwise.
+      integer         :: D_z                    !< set to 1 when z-direction exists, 0 otherwise.
 
-      integer(kind=4), dimension(ndims) :: D_ !< set to 1 for existing directions, 0 otherwise. Useful for dimensionally-safe indices for difference operators on arrays,
+      integer(kind=4), dimension(ndims) :: D_   !< set to 1 for existing directions, 0 otherwise. Useful for dimensionally-safe indices for difference operators on arrays,
 
-      logical, dimension(ndims) :: has_dir   !< .true. for existing directions
-      integer :: eff_dim                     !< effective dimensionality of the simulation
+      logical, dimension(ndims) :: has_dir      !< .true. for existing directions
+      integer                   :: eff_dim      !< effective dimensionality of the simulation
 
     contains
 
@@ -335,7 +335,7 @@ contains
       class(domain_container),               intent(inout) :: this  !< object invoking type-bound procedure
       character(len=*), dimension(HI*ndims), intent(in)    :: bnds  !< Six strings, describing boundary conditions
 
-      integer :: d, lh
+      integer                                              :: d, lh
 
       do d = xdim, zdim
          do lh = LO, HI
@@ -373,7 +373,7 @@ contains
 
       implicit none
 
-      integer, intent(in) :: ibnd !< integer boundary
+      integer, intent(in)        :: ibnd !< integer boundary
 
       character(len=dsetnamelen) :: bstr !< output string boundary
 
@@ -451,7 +451,7 @@ contains
       real,             dimension(ndims, LO:HI), intent(inout) :: edges    !< physical domain boundaries position
       character(len=*),                          intent(in)    :: geometry !< define system of coordinates: "cartesian" or "cylindrical"
 
-      real :: xmno, ymno, ymxo
+      real    :: xmno, ymno, ymxo
       integer :: d
 
       ! Sanitize input parameters, if possible

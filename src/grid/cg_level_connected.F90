@@ -41,27 +41,27 @@ module cg_level_connected
    !! \brief A list of all cg of the same resolution with links to coarser and finer levels
    type, extends(cg_level_T) :: cg_level_connected_T
 
-      type(cg_level_connected_T), pointer :: coarser    !< coarser level cg set or null()
-      type(cg_level_connected_T), pointer :: finer      !< finer level cg set or null()
-      integer(kind=4) :: ord_prolong_set                !< Number of boundary cells for prolongation used in last update of cg_level_connected_T%vertical_prep
+      type(cg_level_connected_T), pointer :: coarser          !< coarser level cg set or null()
+      type(cg_level_connected_T), pointer :: finer            !< finer level cg set or null()
+      integer(kind=4)                     :: ord_prolong_set  !< Number of boundary cells for prolongation used in last update of cg_level_connected_T%vertical_prep
 
     contains
 
       ! Level management
-      procedure, private :: init_level                      !< common initialization for base level and other levels
-      procedure :: add_lev                                  !< add a finer or coarser level
-      procedure :: add_lev_base                             !< initialize the base level
-      generic, public :: add_level => add_lev, add_lev_base
+      procedure, private :: init_level                               !< common initialization for base level and other levels
+      procedure          :: add_lev                                  !< add a finer or coarser level
+      procedure          :: add_lev_base                             !< initialize the base level
+      generic, public    :: add_level => add_lev, add_lev_base
 
       ! Prolongation and restriction
-      procedure, private :: vertical_prep                   !< initialize prolongation and restriction targets
-      procedure :: prolong                                  !< interpolate the grid data which has the flag vital set to this%finer level
-      procedure :: restrict                                 !< interpolate the grid data which has the flag vital set from this%coarser level
-      procedure :: prolong_q_1var                           !< interpolate the grid data in specified q field to this%finer level
-      procedure :: restrict_q_1var                          !< interpolate the grid data in specified q field from this%coarser level
-      procedure :: restrict_to_floor_q_1var                 !< restrict specified q field as much as possible
-      procedure :: restrict_to_base_q_1var                  !< restrict specified q field to the base level
-      procedure :: arr3d_boundaries                         !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
+      procedure, private :: vertical_prep                            !< initialize prolongation and restriction targets
+      procedure          :: prolong                                  !< interpolate the grid data which has the flag vital set to this%finer level
+      procedure          :: restrict                                 !< interpolate the grid data which has the flag vital set from this%coarser level
+      procedure          :: prolong_q_1var                           !< interpolate the grid data in specified q field to this%finer level
+      procedure          :: restrict_q_1var                          !< interpolate the grid data in specified q field from this%coarser level
+      procedure          :: restrict_to_floor_q_1var                 !< restrict specified q field as much as possible
+      procedure          :: restrict_to_base_q_1var                  !< restrict specified q field to the base level
+      procedure          :: arr3d_boundaries                         !< Set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
       ! fine-coarse boundary exchanges may also belong to this type
    end type cg_level_connected_T
 
@@ -161,7 +161,7 @@ contains
       class(cg_level_connected_T), target, intent(inout) :: this    !< lowest or highest refinement level
       logical,                             intent(in)    :: coarse  !< if .true. then add a level below base level
 
-      type(cg_level_connected_T), pointer :: new_lev !< fresh refinement level to be added
+      type(cg_level_connected_T), pointer                :: new_lev !< fresh refinement level to be added
 
       allocate(new_lev)
       call new_lev%init_level
@@ -229,19 +229,19 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_connected_T), intent(inout)   :: this   !< object invoking type bound procedure
 
-      integer :: g, j, jf, fmax, tag
+      integer                                      :: g, j, jf, fmax, tag
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: coarsened
-      integer, dimension(xdim:zdim, LO:HI) :: enlargement
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg            !< current grid container
-      type(cg_level_connected_T), pointer :: fine, coarse  !< shortcut
+      integer,         dimension(xdim:zdim, LO:HI) :: enlargement
+      type(cg_list_element),      pointer          :: cgl
+      type(grid_container),       pointer          :: cg            !< current grid container
+      type(cg_level_connected_T), pointer          :: fine, coarse  !< shortcut
       type :: int_pair
          integer :: proc
          integer :: n_se
       end type int_pair
-      type(int_pair), dimension(:), allocatable :: ps
+      type(int_pair), dimension(:), allocatable    :: ps
 
       call this%update_tot_se
 
@@ -416,8 +416,8 @@ contains
 !<
    subroutine prolong(this)
 
-      use constants,   only: base_level_id, wa_n
-      use dataio_pub,  only: warn
+      use constants,        only: base_level_id, wa_n
+      use dataio_pub,       only: warn
       use named_array_list, only: qna, wna
 
       implicit none
@@ -452,8 +452,8 @@ contains
 !<
    subroutine restrict(this)
 
-      use constants,   only: base_level_id, wa_n
-      use dataio_pub,  only: warn
+      use constants,        only: base_level_id, wa_n
+      use dataio_pub,       only: warn
       use named_array_list, only: qna, wna
 
       implicit none
@@ -522,14 +522,14 @@ contains
 
    subroutine restrict_q_1var(this, iv, pos)
 
-      use constants,   only: xdim, ydim, zdim, LO, HI, I_ONE, refinement_factor, VAR_CENTER
-      use dataio_pub,  only: msg, warn
-      use domain,      only: dom
-      use cg_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
-      use mpisetup,    only: comm, mpi_err, req, status, inflate_req, master
-      use mpi,         only: MPI_DOUBLE_PRECISION
-      use named_array, only: p3
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, refinement_factor, VAR_CENTER
+      use dataio_pub,       only: msg, warn
+      use domain,           only: dom
+      use cg_list,          only: cg_list_element
+      use grid_cont,        only: grid_container
+      use mpisetup,         only: comm, mpi_err, req, status, inflate_req, master
+      use mpi,              only: MPI_DOUBLE_PRECISION
+      use named_array,      only: p3
       use named_array_list, only: qna
 
       implicit none
@@ -538,18 +538,18 @@ contains
       integer,                             intent(in)    :: iv   !< variable to be restricted
       integer(kind=4), optional,           intent(in)    :: pos  !< position of the variable within cell
 
-      type(cg_level_connected_T), pointer :: coarse
-      integer :: g
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: fse, cse ! shortcuts for fine segment and coarse segment
-      integer(kind=8) :: i, j, k, ic, jc, kc
-      integer(kind=8), dimension(xdim:zdim) :: off1
-      real :: norm
-      integer(kind=4) :: nr
-      integer(kind=4), dimension(:,:), pointer :: mpistatus
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg            !< current grid container
-      logical, save :: warned = .false.
-      integer :: position
+      type(cg_level_connected_T), pointer                :: coarse
+      integer                                            :: g
+      integer(kind=8), dimension(xdim:zdim, LO:HI)       :: fse, cse              !< shortcuts for fine segment and coarse segment
+      integer(kind=8)                                    :: i, j, k, ic, jc, kc
+      integer(kind=8), dimension(xdim:zdim)              :: off1
+      real                                               :: norm
+      integer(kind=4)                                    :: nr
+      integer(kind=4), dimension(:,:), pointer           :: mpistatus
+      type(cg_list_element), pointer                     :: cgl
+      type(grid_container),  pointer                     :: cg                    !< current grid container
+      logical, save                                      :: warned = .false.
+      integer                                            :: position
 
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos
@@ -719,20 +719,20 @@ contains
       integer,                             intent(in)    :: iv   !< variable to be prolonged
       integer(kind=4), optional,           intent(in)    :: pos  !< position of the variable within cell
 
-      type(cg_level_connected_T), pointer :: fine
-      integer :: g
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: cse ! shortcuts for fine segment and coarse segment
-      integer(kind=8) :: iec, jec, kec
-      integer(kind=8), dimension(xdim:zdim) :: off, odd, D
-      integer(kind=4) :: nr
-      integer(kind=4), dimension(:, :), pointer :: mpistatus
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg            !< current grid container
-      real :: P_2, P_1, P0, P1, P2
-      integer :: stencil_range
-      real, dimension(:,:,:), pointer :: p3d
-      logical, save :: warned = .false.
-      integer :: position
+      type(cg_level_connected_T), pointer                :: fine
+      integer                                            :: g
+      integer(kind=8), dimension(xdim:zdim, LO:HI)       :: cse ! shortcuts for fine segment and coarse segment
+      integer(kind=8)                                    :: iec, jec, kec
+      integer(kind=8), dimension(xdim:zdim)              :: off, odd, D
+      integer(kind=4)                                    :: nr
+      integer(kind=4), dimension(:, :), pointer          :: mpistatus
+      type(cg_list_element),            pointer          :: cgl
+      type(grid_container),             pointer          :: cg            !< current grid container
+      real                                               :: P_2, P_1, P0, P1, P2
+      integer                                            :: stencil_range
+      real, dimension(:,:,:),           pointer          :: p3d
+      logical, save                                      :: warned = .false.
+      integer                                            :: position
 
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos

@@ -59,19 +59,19 @@ module cg_list
     contains
 
       ! List management
-!      procedure :: init_el
-      procedure :: init_new                          !< A constructor for an empty list
-      procedure :: add_new                           !< Add new element to the list
-      generic, public :: add => add_new              !< All methods of adding a new element
-      procedure :: del_lst                           !< Destroy the list
-      procedure :: un_link                           !< Un-link the element
-      generic, public :: delete => un_link, del_lst  !< All methods of destroying
+!      procedure       :: init_el
+      procedure       :: init_new                          !< A constructor for an empty list
+      procedure       :: add_new                           !< Add new element to the list
+      generic, public :: add => add_new                    !< All methods of adding a new element
+      procedure       :: del_lst                           !< Destroy the list
+      procedure       :: un_link                           !< Un-link the element
+      generic, public :: delete => un_link, del_lst        !< All methods of destroying
 
       ! Misc
-      procedure :: print_list                        !< Print the list and associated cg ID
-      procedure :: numbered_ascii_dump               !< Construct name of emergency ASCII dump
-      procedure :: ascii_dump                        !< Emergency routine for quick ASCII dumps
-      procedure :: update_req                        !< Update mpisetup::req(:)
+      procedure       :: print_list                        !< Print the list and associated cg ID
+      procedure       :: numbered_ascii_dump               !< Construct name of emergency ASCII dump
+      procedure       :: ascii_dump                        !< Emergency routine for quick ASCII dumps
+      procedure       :: update_req                        !< Update mpisetup::req(:)
 
 !> \todo merge lists
 
@@ -143,7 +143,7 @@ contains
 
       class(cg_list_T), intent(inout) :: this !< object invoking type-bound procedure
 
-      type(cg_list_element), pointer :: cgl
+      type(cg_list_element), pointer  :: cgl
 
       do while (associated(this%first))
          cgl => this%last
@@ -257,12 +257,12 @@ contains
 
       implicit none
 
-      class(cg_list_T),        intent(inout) :: this     !< list for which do the dump (usually all_cg)
+      class(cg_list_T),      intent(inout) :: this     !< list for which do the dump (usually all_cg)
       integer, dimension(:), intent(in)    :: qlst     !< list of scalar fields to be printed
       character(len=*),      intent(in)    :: basename !< first part of the filename
       integer, optional,     intent(in)    :: a        !< additional number
 
-      integer             :: l, n
+      integer                              :: l, n
 
       if (.not. do_ascii_dump) return
 
@@ -291,19 +291,19 @@ contains
 
    subroutine ascii_dump(this, filename, qlst)
 
-      use constants,   only: LO
-      use dataio_pub,  only: msg, printio
+      use constants,        only: LO
+      use dataio_pub,       only: msg, printio
       use named_array_list, only: qna
 
       implicit none
 
-      class(cg_list_T),        intent(inout) :: this     !< list for which do the dump (usually all_cg)
+      class(cg_list_T),      intent(inout) :: this     !< list for which do the dump (usually all_cg)
       character(len=*),      intent(in)    :: filename !< name to write the emergency dump (should be different on each process)
       integer, dimension(:), intent(in)    :: qlst     !< list of scalar fields to be printed
 
-      integer, parameter :: fu=30
-      integer            :: i, j, k, q
-      type(cg_list_element), pointer :: cgl
+      integer, parameter                   :: fu=30
+      integer                              :: i, j, k, q
+      type(cg_list_element), pointer       :: cgl
 
       open(fu, file=filename, status="unknown")
       write(fu, '("#",a3,2a4,a6,3a20)', advance='no')"i", "j", "k", "level", "x(i)", "y(j)", "z(k)"
@@ -348,9 +348,9 @@ contains
 
       implicit none
 
-      class(cg_list_T), intent(in) :: this
+      class(cg_list_T), intent(in)   :: this
 
-      integer :: nrq, d, dr, dp
+      integer                        :: nrq, d, dr, dp
       type(cg_list_element), pointer :: cgl
 
       ! calculate number of boundaries to communicate

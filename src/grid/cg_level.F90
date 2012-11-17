@@ -51,8 +51,8 @@ module cg_level
    !> \brief A single grid piece plus auxiliary data
    !> \deprecated not to be confused with decomposition::cuboid
    type :: cuboid
-      integer(kind=8), dimension(ndims, LO:HI) :: se !< absolute index of grid segmenent on its refinement level wrt [0,0,0]
-      logical :: is_new                              !< a flag that marks newly added grid pieces
+      integer(kind=8), dimension(ndims, LO:HI) :: se     !< absolute index of grid segmenent on its refinement level wrt [0,0,0]
+      logical                                  :: is_new !< a flag that marks newly added grid pieces
    end type cuboid
 
    !> \brief A list of grid pieces (typically used as a list of all grids residing on a given process)
@@ -68,27 +68,27 @@ module cg_level
    !<
    type, extends(cg_list_bnd_T) :: cg_level_T
 
-      integer(kind=4) :: level_id                       !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
-      integer(kind=8), dimension(ndims) :: n_d          !< maximum number of grid cells in each direction (size of fully occupied level)
-      type(cuboids), dimension(:), allocatable :: pse   !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
-      integer :: tot_se                                 !< global number of segments on the level
-      integer :: fft_type                               !< type of FFT to employ in some multigrid solvers (depending on boundaries)
-      type(box_T), dimension(:), allocatable :: patches !< list of patches that exist on the current level
+      integer(kind=4)                            :: level_id  !< level number (relative to base level). For printing, debug, and I/O use only. No arithmetic should depend on it.
+      integer(kind=8), dimension(ndims)          :: n_d       !< maximum number of grid cells in each direction (size of fully occupied level)
+      type(cuboids),   dimension(:), allocatable :: pse       !< lists of grid chunks on each process (FIRST:LAST); Use with care, because this is an antiparallel thing
+      integer                                    :: tot_se    !< global number of segments on the level
+      integer                                    :: fft_type  !< type of FFT to employ in some multigrid solvers (depending on boundaries)
+      type(box_T),     dimension(:), allocatable :: patches   !< list of patches that exist on the current level
 
     contains
 
-      procedure :: init_all_new_cg                          !< initialize newest grid container
-      procedure, private :: mpi_bnd_types                   !< create MPI types for boundary exchanges
-      procedure :: print_segments                           !< print detailed information about current level decomposition
-      procedure, private :: update_decomposition_properties !< Update some flags in domain module
-      procedure, private :: distribute                      !< Get all decomposed patches and compute which pieces go to which process
-      procedure, private :: calc_ord_range                  !< Compute which id\'s should belong to which process
-      procedure, private :: simple_ordering                 !< This is just counting, not ordering
-      procedure, private :: mark_new                        !< Detect which grid containers are new
-      procedure :: update_tot_se                            !< count all cg on current level for computing tags in vertical_prep
-      generic, public :: add_patch => add_patch_fulllevel, add_patch_detailed !< Add a new piece of grid to the current level and decompose it
-      procedure, private :: add_patch_fulllevel             !< Add a whole level to the list of patches
-      procedure, private :: add_patch_detailed              !< Add a new piece of grid to the list of patches
+      procedure          :: init_all_new_cg                   !< initialize newest grid container
+      procedure, private :: mpi_bnd_types                     !< create MPI types for boundary exchanges
+      procedure          :: print_segments                    !< print detailed information about current level decomposition
+      procedure, private :: update_decomposition_properties   !< Update some flags in domain module
+      procedure, private :: distribute                        !< Get all decomposed patches and compute which pieces go to which process
+      procedure, private :: calc_ord_range                    !< Compute which id\'s should belong to which process
+      procedure, private :: simple_ordering                   !< This is just counting, not ordering
+      procedure, private :: mark_new                          !< Detect which grid containers are new
+      procedure          :: update_tot_se                     !< count all cg on current level for computing tags in vertical_prep
+      generic,   public  :: add_patch => add_patch_fulllevel, add_patch_detailed !< Add a new piece of grid to the current level and decompose it
+      procedure, private :: add_patch_fulllevel               !< Add a whole level to the list of patches
+      procedure, private :: add_patch_detailed                !< Add a new piece of grid to the list of patches
 
    end type cg_level_T
 
@@ -105,14 +105,14 @@ contains
 
       implicit none
 
-      class(cg_level_T), intent(in) :: this   !< object invoking type bound procedure
+      class(cg_level_T), intent(in)   :: this   !< object invoking type bound procedure
 
-      integer :: p, i, hl, tot_cg
-      integer(kind=8) :: ccnt
+      integer                         :: p, i, hl, tot_cg
+      integer(kind=8)                 :: ccnt
       real, allocatable, dimension(:) :: maxcnt
-      type(cg_list_element), pointer :: cgl
+      type(cg_list_element), pointer  :: cgl
 #ifdef VERBOSE
-      character(len=len(msg)) :: header
+      character(len=len(msg))         :: header
 #endif /* VERBOSE */
 
       i = 0
@@ -188,8 +188,8 @@ contains
 
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
-      integer :: i, ep, gr_id
-      type(grid_container), pointer :: cg
+      integer                          :: i, ep, gr_id
+      type(grid_container), pointer    :: cg
 
       call this%distribute
       call this%mark_new
@@ -229,8 +229,8 @@ contains
 
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
-      type(cg_list_element), pointer :: cgl
-      integer :: i, occured
+      type(cg_list_element), pointer   :: cgl
+      integer                          :: i, occured
 
       cgl => this%first
       do while (associated(cgl))
@@ -258,14 +258,14 @@ contains
 
    subroutine distribute(this)
 
-      use dataio_pub,     only: die
-      use mpisetup,       only: FIRST, LAST
+      use dataio_pub, only: die
+      use mpisetup,   only: FIRST, LAST
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_T), intent(inout)       :: this   !< object invoking type bound procedure
 
-      integer :: i, p, s
+      integer                                :: i, p, s
       integer(kind=8), dimension(FIRST:LAST) :: min_id, max_id, pieces, filled
 
       call this%simple_ordering
@@ -309,7 +309,7 @@ contains
 
       implicit none
 
-      class(cg_level_T),                 intent(inout) :: this   !< object invoking type bound procedure
+      class(cg_level_T),                      intent(inout) :: this   !< object invoking type bound procedure
       integer(kind=8), dimension(FIRST:LAST), intent(out)   :: min_id !< \todo comment me
       integer(kind=8), dimension(FIRST:LAST), intent(out)   :: max_id !< \todo comment me
       integer(kind=8), dimension(FIRST:LAST), intent(out)   :: pieces !< \todo comment me
@@ -336,8 +336,8 @@ contains
 
       class(cg_level_T), intent(inout) :: this   !< object invoking type bound procedure
 
-      integer :: p, s
-      integer(kind=8) :: id
+      integer                          :: p, s
+      integer(kind=8)                  :: id
 
       id = 0
       if (allocated(this%patches)) then
@@ -413,31 +413,31 @@ contains
 
    subroutine mpi_bnd_types(this)
 
-      use cart_comm,      only: cdd
-      use cg_list,        only: cg_list_element
-      use constants,      only: FLUID, MAG, CR, ARR, xdim, ydim, zdim, ndims, LO, HI, BND, BLK, I_ONE, wcr_n, BND_MPI_FC, BND_FC
-      use domain,         only: dom
-      use grid_cont,      only: grid_container, is_overlap
-      use mpi,            only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
-      use mpisetup,       only: mpi_err, FIRST, LAST, procmask
+      use cart_comm,        only: cdd
+      use cg_list,          only: cg_list_element
+      use constants,        only: FLUID, MAG, CR, ARR, xdim, ydim, zdim, ndims, LO, HI, BND, BLK, I_ONE, wcr_n, BND_MPI_FC, BND_FC
+      use domain,           only: dom
+      use grid_cont,        only: grid_container, is_overlap
+      use mpi,              only: MPI_ORDER_FORTRAN, MPI_DOUBLE_PRECISION, MPI_COMM_NULL
+      use mpisetup,         only: mpi_err, FIRST, LAST, procmask
       use named_array_list, only: wna
 
       implicit none
 
-      class(cg_level_T), intent(inout) :: this    !< object invoking type bound procedure
+      class(cg_level_T), intent(inout)                 :: this    !< object invoking type bound procedure
 
-      type(grid_container), pointer :: cg      !< grid container that we are currently working on
-      type(cg_list_element), pointer :: cgl
-      integer(kind=4), dimension(:), allocatable :: sizes, subsizes, starts
-      integer :: t, g, j, b
-      integer(kind=8) :: n_tot_face_cells
-      integer(kind=8), dimension(LO:HI) :: n_lbnd_face_cells
-      integer(kind=4) :: d, dd, hl, lh, ib
-      integer(kind=4), parameter, dimension(FLUID:ARR) :: dims = [ I_ONE+ndims, I_ONE+ndims, I_ONE+ndims, ndims ] !< dimensionality of arrays
-      integer(kind=4), dimension(FLUID:ARR) :: nc
-      integer(kind=8), dimension(xdim:zdim) :: ijks, per
-      integer(kind=8), dimension(xdim:zdim, LO:HI) :: b_layer, bp_layer, poff
-      logical, allocatable, dimension(:,:,:,:) :: facemap
+      type(grid_container),  pointer                   :: cg      !< grid container that we are currently working on
+      type(cg_list_element), pointer                   :: cgl
+      integer(kind=4), dimension(:), allocatable       :: sizes, subsizes, starts
+      integer                                          :: t, g, j, b
+      integer(kind=8)                                  :: n_tot_face_cells
+      integer(kind=8), dimension(LO:HI)                :: n_lbnd_face_cells
+      integer(kind=4)                                  :: d, dd, hl, lh, ib
+      integer(kind=4), dimension(FLUID:ARR), parameter :: dims = [ I_ONE+ndims, I_ONE+ndims, I_ONE+ndims, ndims ] !< dimensionality of arrays
+      integer(kind=4), dimension(FLUID:ARR)            :: nc
+      integer(kind=8), dimension(xdim:zdim)            :: ijks, per
+      integer(kind=8), dimension(xdim:zdim, LO:HI)     :: b_layer, bp_layer, poff
+      logical,         dimension(:,:,:,:), allocatable :: facemap
 
       cgl => this%first
       do while (associated(cgl))

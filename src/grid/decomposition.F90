@@ -47,14 +47,14 @@ module decomposition
    !> \deprecated not to be confused with cg_level::cuboid
    type :: cuboid
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: se !< grid piece
-      integer(kind=8) :: id                              !< piece number (set e.g. by Hilbert ordering)
+      integer(kind=8)                              :: id !< piece number (set e.g. by Hilbert ordering)
    end type cuboid
 
    !> \brief A box (or rectangle) within a certain refinement level to be decomposed into smaller pieces
    type :: box_T
       integer(kind=8), dimension(ndims) :: n_d          !< number of grid cells
       integer(kind=8), dimension(ndims) :: off          !< offset (with respect to the base level, counted on own level)
-      type(cuboid), dimension(:), allocatable :: pse    !< list of grid pieces
+      type(cuboid),    dimension(:), allocatable :: pse !< list of grid pieces
 
     contains
 
@@ -70,7 +70,7 @@ module decomposition
 
    ! Private variables
    type(primes_T) :: primes
-   real :: ideal_bsize
+   real           :: ideal_bsize
 
 contains
 
@@ -135,10 +135,10 @@ contains
       logical,                   intent(out)   :: patch_divided !< Set to .true. after a successful decomposition
       integer(kind=4), optional, intent(in)    :: n_pieces      !< how many pieces the patch should be divided to?
 
-      real :: quality
-      integer(kind=4), dimension(ndims) :: p_size
-      integer(kind=4) :: pieces
-      integer :: ml
+      real                                     :: quality
+      integer(kind=4), dimension(ndims)        :: p_size
+      integer(kind=4)                          :: pieces
+      integer                                  :: ml
 
       pieces = nproc
       if (present(n_pieces)) pieces = n_pieces
@@ -259,8 +259,8 @@ contains
       integer(kind=4), dimension(ndims), intent(in)    :: p_size  !< number of pieces in each direction
       integer(kind=4),                   intent(in)    :: pieces  !< number of pieces
 
-      integer(kind=4) :: p
-      integer(kind=4), dimension(ndims) :: pc
+      integer(kind=4)                                  :: p
+      integer(kind=4), dimension(ndims)                :: pc
 
       if (product(p_size(:)) /= pieces) call die("[decomposition:cartesian_tiling] product(p_size(:)) /= pieces")
 
@@ -319,8 +319,8 @@ contains
       integer(kind=4), dimension(ndims), intent(in)    :: p_size  !< number of pieces in each direction
       integer(kind=4),                   intent(in)    :: pieces      !< number of pieces
 
-      integer(kind=4) :: p, px, py
-      integer(kind=4), dimension(:), allocatable :: pz_slab, py_slab
+      integer(kind=4)                                  :: p, px, py
+      integer(kind=4), dimension(:), allocatable       :: pz_slab, py_slab
 
       call patch%allocate_pse
 
@@ -382,9 +382,9 @@ contains
       integer(kind=8), dimension(ndims), intent(in)  :: n_d       !< size of the box to be divided
       integer(kind=4),                   intent(in)  :: pieces    !< number of pieces
 
-      integer(kind=4) :: n
-      integer :: j1, j2, j3, jj, p
-      integer(kind=4), dimension(ndims) :: ldom, tmp
+      integer(kind=4)                                :: n
+      integer                                        :: j1, j2, j3, jj, p
+      integer(kind=4), dimension(ndims)              :: ldom, tmp
 
       ldom(xdim:zdim) = int(n_d(zdim:xdim:-1), kind=4) ! Maxloc returns first occurrence of max, reversing direction order (to ZYX) gives better cache utilization.
       n = pieces
@@ -455,15 +455,15 @@ contains
       integer(kind=8), dimension(ndims), intent(in)  :: n_d      !< size of the box to be divided
       integer(kind=4),                   intent(in)  :: pieces   !< number of pieces
 
-      real, parameter :: b_load_fac = 0.25 ! estimated increase of execution time after doubling the total size of internal boundaries.
-      ! \todo estimate this factor for massively parallel runs and for Intel processors
+      real, parameter                                :: b_load_fac = 0.25 ! estimated increase of execution time after doubling the total size of internal boundaries.
+                                                                          ! \todo estimate this factor for massively parallel runs and for Intel processors
 
-      integer(kind=4), allocatable, dimension(:) :: ppow
-      integer(kind=4), allocatable, dimension(:,:) :: fac
-      integer(kind=4), dimension(ndims) :: ldom
-      integer(kind=4) :: p, i, j, k, nf
-      integer :: n, ii, bsize
-      real :: load_balance, best, quality
+      integer(kind=4), allocatable, dimension(:)     :: ppow
+      integer(kind=4), allocatable, dimension(:,:)   :: fac
+      integer(kind=4), dimension(ndims)              :: ldom
+      integer(kind=4)                                :: p, i, j, k, nf
+      integer                                        :: n, ii, bsize
+      real                                           :: load_balance, best, quality
 
       p_size(:) = 1
       if (pieces == 1) return
@@ -578,8 +578,8 @@ contains
       integer(kind=8), dimension(ndims), intent(in)    :: n_d         !< size of the box to be divided
       integer(kind=4),                   intent(in)    :: pieces      !< number of pieces
 
-      real, parameter :: minfac = 1.3 ! prevent domain division to halves if cell count in a given direction is too low. (not verified for optimality)
-      real :: optc
+      real, parameter                                  :: minfac = 1.3 ! prevent domain division to halves if cell count in a given direction is too low. (not verified for optimality)
+      real                                             :: optc
 
       !> \todo Try to make an intelligent guess for slicing, then go down to the local minimum and explore neighbourhood. Exploring all possibilities is an O(pieces)**2 task
       ! The best solution is probably near (pieces/product(real(n_d(:), kind=8)))**(1./dom%eff_dim)*n_d(:)
@@ -634,10 +634,10 @@ contains
 
       implicit none
 
-      class(box_T), intent(inout) :: patch  !< the patch, which we want to be chopped into pieces
+      class(box_T), intent(inout)           :: patch  !< the patch, which we want to be chopped into pieces
 
       integer(kind=4), dimension(xdim:zdim) :: n_bl
-      integer(kind=4) :: tot_bl, bx, by, bz, b
+      integer(kind=4)                       :: tot_bl, bx, by, bz, b
 
       if (any(bsize(xdim:zdim) <=0)) then
          if (master) call warn("[decomposition:stamp_cg] some(bsize(1:3)) <=0")
@@ -693,8 +693,8 @@ contains
 
       implicit none
 
-      class(box_T), intent(inout) :: this
-      character(len=*), intent(in) :: label
+      class(box_T),     intent(inout) :: this
+      character(len=*), intent(in)    :: label
 
       integer :: p, too_small
 
@@ -734,15 +734,15 @@ contains
 
    subroutine allocate_pse(patch, n_cg)
 
-      use dataio_pub,  only: die
-      use mpisetup,    only: nproc
+      use dataio_pub, only: die
+      use mpisetup,   only: nproc
 
       implicit none
 
       class(box_T),              intent(inout) :: patch
       integer(kind=4), optional, intent(in)    :: n_cg        !< how many segments
 
-      integer :: p, nseg
+      integer                                  :: p, nseg
 
       nseg = nproc
       if (present(n_cg)) nseg = n_cg

@@ -69,7 +69,7 @@ module cg_list_global
       procedure :: delete_all        !< Delete the grid container from all lists
    end type cg_list_global_T
 
-   type(cg_list_global_T) :: all_cg   !< all grid containers; \todo restore protected
+   type(cg_list_global_T)                :: all_cg   !< all grid containers; \todo restore protected
    character(len=dsetnamelen), parameter :: all_cg_n = "all_cg" !< name of the all_cg list
 
 contains
@@ -102,7 +102,7 @@ contains
 
       class(cg_list_global_T), intent(inout) :: this           !< object invoking type-bound procedure
 
-      type(grid_container),  pointer :: cg
+      type(grid_container),  pointer         :: cg
 
       !> \todo implement what is said in the description
 
@@ -126,10 +126,10 @@ contains
 
    subroutine reg_var(this, name, vital, restart_mode, ord_prolong, dim4, position, multigrid)
 
-      use constants,   only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4
-      use dataio_pub,  only: die, warn, msg
-      use domain,      only: dom
-      use cg_list,     only: cg_list_element
+      use cg_list,          only: cg_list_element
+      use constants,        only: INVALID, VAR_CENTER, AT_NO_B, AT_IGNORE, I_ZERO, I_ONE, I_TWO, O_INJ, O_LIN, O_I2, O_D2, O_I3, O_I4, O_D3, O_D4
+      use dataio_pub,       only: die, warn, msg
+      use domain,           only: dom
       use named_array_list, only: qna, wna, na_var
 
       implicit none
@@ -143,11 +143,11 @@ contains
       integer(kind=4), dimension(:), pointer, optional, intent(in)    :: position      !< If present then use this value instead of VAR_CENTER
       logical,                                optional, intent(in)    :: multigrid     !< If present and .true. then allocate cg%q(:)%arr and cg%w(:)%arr also below base level
 
-      type(cg_list_element), pointer :: cgl
-      logical :: mg, vit
-      integer :: nvar
-      integer(kind=4) :: op, d4, rm
-      integer(kind=4), allocatable, dimension(:) :: pos
+      type(cg_list_element), pointer                                  :: cgl
+      logical                                                         :: mg, vit
+      integer                                                         :: nvar
+      integer(kind=4)                                                 :: op, d4, rm
+      integer(kind=4), allocatable, dimension(:)                      :: pos
 
       vit = .false.
       if (present(vital)) vit = vital
@@ -231,11 +231,11 @@ contains
 
       implicit none
 
-      class(cg_list_global_T), intent(inout) :: this          !< object invoking type-bound procedure
-      integer(kind=4),     intent(in)    :: nfluids       !< number of components in the main array of fluids (should be flind%all)
+      class(cg_list_global_T), intent(inout)          :: this          !< object invoking type-bound procedure
+      integer(kind=4),         intent(in)             :: nfluids       !< number of components in the main array of fluids (should be flind%all)
 
       integer(kind=4), save, dimension(ndims), target :: xyz_face = [ VAR_XFACE, VAR_YFACE, VAR_ZFACE ]
-      integer(kind=4), dimension(:), pointer :: pia
+      integer(kind=4),       dimension(:), pointer    :: pia
       ! the pia pointer above is used as a workaround for compiler warnings about possibly uninitialized variable in reg_var
 
       pia => xyz_face
@@ -277,9 +277,9 @@ contains
 
       class(cg_list_global_T), intent(in) :: this          !< object invoking type-bound procedure
 
-      integer :: i
-      type(cg_list_element), pointer :: cgl
-      logical :: bad
+      integer                             :: i
+      type(cg_list_element), pointer      :: cgl
+      logical                             :: bad
 
       cgl => this%first
       do while (associated(cgl))

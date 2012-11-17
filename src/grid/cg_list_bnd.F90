@@ -123,33 +123,33 @@ contains
 
    subroutine internal_boundaries(this, ind, tgt3d, nb, dim)
 
-      use constants,     only: xdim, ydim, zdim, LO, HI, I_ONE, I_TWO
-      use dataio_pub,    only: die, warn
-      use cart_comm,     only: cdd
-      use domain,        only: dom
-      use cg_list,       only: cg_list_element
-      use grid_cont,     only: grid_container, segment
-      use mpi,           only: MPI_COMM_NULL, MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
-      use mpisetup,      only: comm, mpi_err, req, inflate_req
+      use cart_comm,        only: cdd
+      use cg_list,          only: cg_list_element
+      use constants,        only: xdim, ydim, zdim, LO, HI, I_ONE, I_TWO
+      use dataio_pub,       only: die, warn
+      use domain,           only: dom
+      use grid_cont,        only: grid_container, segment
+      use mpi,              only: MPI_COMM_NULL, MPI_DOUBLE_PRECISION, MPI_STATUS_SIZE
+      use mpisetup,         only: comm, mpi_err, req, inflate_req
       use named_array_list, only: wna
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this   !< the list on which to perform the boundary exchange
-      integer,                   intent(in) :: ind    !< index of cg%q(:) 3d array or cg%w(:) 4d array
-      logical,                   intent(in) :: tgt3d  !< .true. for cg%q, .false. for cg%w
-      integer(kind=4), optional, intent(in) :: nb     !< number of grid cells to exchange (not implemented for comm3d)
-      integer(kind=4), optional, intent(in) :: dim    !< do the internal boundaries only in the specified dimension
+      class(cg_list_bnd_T),      intent(in)        :: this   !< the list on which to perform the boundary exchange
+      integer,                   intent(in)        :: ind    !< index of cg%q(:) 3d array or cg%w(:) 4d array
+      logical,                   intent(in)        :: tgt3d  !< .true. for cg%q, .false. for cg%w
+      integer(kind=4), optional, intent(in)        :: nb     !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in)        :: dim    !< do the internal boundaries only in the specified dimension
 
-      integer                               :: g, d, n
-      integer(kind=4)                       :: nr     !< index of first free slot in req and status arrays
-      logical, dimension(xdim:zdim)         :: dmask
-      type(grid_container),     pointer     :: cg
-      type(cg_list_element),    pointer     :: cgl
-      real, dimension(:,:,:),   pointer     :: pa3d
-      real, dimension(:,:,:,:), pointer     :: pa4d
-      logical :: active
-      type(segment), pointer :: i_seg, o_seg !< shortcuts
+      integer                                      :: g, d, n
+      integer(kind=4)                              :: nr     !< index of first free slot in req and status arrays
+      logical, dimension(xdim:zdim)                :: dmask
+      type(grid_container),     pointer            :: cg
+      type(cg_list_element),    pointer            :: cgl
+      real, dimension(:,:,:),   pointer            :: pa3d
+      real, dimension(:,:,:,:), pointer            :: pa4d
+      logical                                      :: active
+      type(segment), pointer                       :: i_seg, o_seg !< shortcuts
       integer(kind=4), allocatable, dimension(:,:) :: mpistatus !< status array for MPI_Waitall
 
       if (cdd%comm3d /= MPI_COMM_NULL) then
@@ -341,9 +341,9 @@ contains
 
    subroutine internal_boundaries_comm3d(this, ind, nb, area_type)
 
+      use cart_comm,  only: cdd
       use constants,  only: ARR, ndims, xdim, ydim, zdim, LO, HI, BND, BLK, AT_NO_B, I_ONE, BND_PER, BND_MPI, BND_FC, BND_MPI_FC
       use dataio_pub, only: die
-      use cart_comm,  only: cdd
       use domain,     only: dom
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_REQUEST_NULL
@@ -351,10 +351,10 @@ contains
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer,                   intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: nb         !< number of grid cells to exchange (not implemented for comm3d)
-      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
+      class(cg_list_bnd_T),      intent(in)   :: this       !< the list on which to perform the boundary exchange
+      integer,                   intent(in)   :: ind        !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4), optional, intent(in)   :: nb         !< number of grid cells to exchange (not implemented for comm3d)
+      integer(kind=4), optional, intent(in)   :: area_type  !< defines how do we treat boundaries
 
       integer(kind=4)                         :: lh, clh, d, n
       integer(kind=4), dimension(ndims,LO:HI) :: l, r
@@ -424,22 +424,22 @@ contains
 
    subroutine external_boundaries(this, ind, area_type, bnd_type)
 
+      use cg_list,    only: cg_list_element
       use constants,  only: ndims, xdim, ydim, zdim, LO, HI, AT_NO_B, I_ONE, I_TWO, I_THREE, &
            &                BND_PER, BND_MPI, BND_FC, BND_MPI_FC, BND_SHE, BND_COR, BND_REF, BND_NEGREF, BND_ZERO, BND_XTRAP, BND_NONE
       use dataio_pub, only: die, msg
       use domain,     only: dom
-      use cg_list,    only: cg_list_element
       use grid_cont,  only: grid_container
       use mpi,        only: MPI_IN_PLACE, MPI_LOGICAL, MPI_LOR
       use mpisetup,   only: mpi_err, comm
 
       implicit none
 
-      class(cg_list_bnd_T),      intent(in) :: this       !< the list on which to perform the boundary exchange
-      integer,                   intent(in) :: ind        !< Negative value: index of cg%q(:) 3d array
-      integer(kind=4), optional, intent(in) :: area_type  !< defines how do we treat boundaries
-      integer(kind=4), optional, intent(in) :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
-                                                          !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
+      class(cg_list_bnd_T),      intent(in)   :: this       !< the list on which to perform the boundary exchange
+      integer,                   intent(in)   :: ind        !< Negative value: index of cg%q(:) 3d array
+      integer(kind=4), optional, intent(in)   :: area_type  !< defines how do we treat boundaries
+      integer(kind=4), optional, intent(in)   :: bnd_type   !< Override default boundary type on external boundaries (useful in multigrid solver).
+                                                            !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
 
       integer(kind=4)                         :: lh, clh, d, b_type, i
       integer(kind=4), dimension(ndims,LO:HI) :: l, r, rh
@@ -532,15 +532,15 @@ contains
 
    subroutine clear_boundaries(this, ind)
 
+      use cg_list,   only: cg_list_element
       use constants, only: ndims, xdim, zdim, LO, HI, I_TWO, BND_MPI, BND_FC, BND_MPI_FC
       use domain,    only: dom
-      use cg_list,   only: cg_list_element
       use grid_cont, only: grid_container
 
       implicit none
 
-      class(cg_list_bnd_T), intent(in) :: this !< the list on which to perform the boundary exchange
-      integer,              intent(in) :: ind  !< Negative value: index of cg%q(:) 3d array
+      class(cg_list_bnd_T), intent(in)        :: this !< the list on which to perform the boundary exchange
+      integer,              intent(in)        :: ind  !< Negative value: index of cg%q(:) 3d array
 
       integer(kind=4)                         :: lh, clh, d
       integer(kind=4), dimension(ndims,LO:HI) :: l
@@ -580,8 +580,8 @@ contains
 
    subroutine level_3d_boundaries(this, ind, nb, area_type, bnd_type, corners)
 
-      use constants, only: xdim, zdim, AT_NO_B
       use cart_comm, only: cdd
+      use constants, only: xdim, zdim, AT_NO_B
       use mpi,       only: MPI_COMM_NULL
 
       implicit none
@@ -594,8 +594,8 @@ contains
                                                           !< Note that BND_PER, BND_MPI, BND_SHE and BND_COR aren't external and cannot be overridden
       logical,         optional, intent(in) :: corners    !< When present and .true. then call internal_boundaries_3d for each direction separately
 
-      integer(kind=4)                         :: d
-      logical                                 :: do_permpi, do_cor
+      integer(kind=4)                       :: d
+      logical                               :: do_permpi, do_cor
 
       !> \todo fill corners with big_float ?
 

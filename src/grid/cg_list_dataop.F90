@@ -60,7 +60,7 @@ module cg_list_dataop
       procedure :: norm_sq                           !< calculate L2 norm
 
       ! Multigrid
-      generic, public :: reset_boundaries => zero_boundaries, dirty_boundaries
+      generic,   public  :: reset_boundaries => zero_boundaries, dirty_boundaries
       procedure, private :: zero_boundaries                   !< Clear boundary values
       procedure, private :: dirty_boundaries                  !< Set boundary values
 !> \todo merge lists
@@ -97,17 +97,17 @@ contains
 
       implicit none
 
-      class(cg_list_dataop_T),   intent(in)  :: this    !< object invoking type-bound procedure
-      integer,                   intent(in)  :: ind     !< Index in cg%q(:)
-      integer(kind=4),           intent(in)  :: minmax  !< minimum or maximum ?
-      type(value),               intent(out) :: prop    !< precise location of the extremum to be found
-      integer(kind=4), optional, intent(in)  :: dir     !< order the cell size in dir direction
+      class(cg_list_dataop_T),   intent(in)    :: this    !< object invoking type-bound procedure
+      integer,                   intent(in)    :: ind     !< Index in cg%q(:)
+      integer(kind=4),           intent(in)    :: minmax  !< minimum or maximum ?
+      type(value),               intent(out)   :: prop    !< precise location of the extremum to be found
+      integer(kind=4), optional, intent(in)    :: dir     !< order the cell size in dir direction
 
 
-      type(grid_container),   pointer :: cg_x => null()
-      type(grid_container),   pointer :: cg => null()
-      type(cg_list_element),  pointer :: cgl
-      real, dimension(:,:,:), pointer :: tab
+      type(grid_container),   pointer          :: cg_x => null()
+      type(grid_container),   pointer          :: cg => null()
+      type(cg_list_element),  pointer          :: cgl
+      real, dimension(:,:,:), pointer          :: tab
       integer,                       parameter :: tag1 = 11, tag2 = tag1 + 1, tag3 = tag2 + 1
       integer, dimension(MINL:MAXL), parameter :: op = [ MPI_MINLOC, MPI_MAXLOC ]
       enum, bind(C)
@@ -204,7 +204,7 @@ contains
       integer,                 intent(in) :: ind     !< Index in cg%q(:)
       real,                    intent(in) :: val     !< value to put
 
-      type(cg_list_element), pointer :: cgl
+      type(cg_list_element), pointer      :: cgl
 
       cgl => this%first
       do while (associated(cgl))
@@ -226,7 +226,7 @@ contains
       integer,                 intent(in) :: i_from  !< Index of source in cg%q(:)
       integer,                 intent(in) :: i_to    !< Index of destination in cg%q(:)
 
-      type(cg_list_element), pointer :: cgl
+      type(cg_list_element), pointer      :: cgl
 
       cgl => this%first
       do while (associated(cgl))
@@ -249,7 +249,7 @@ contains
       integer,                 intent(in) :: w_to    !< Index of destination in cg%w(:)
       integer,                 intent(in) :: w_ind   !< First index of destination in cg%w(w_to)%arr(:,:,:,:)
 
-      type(cg_list_element), pointer :: cgl
+      type(cg_list_element), pointer      :: cgl
 
       cgl => this%first
       do while (associated(cgl))
@@ -272,7 +272,7 @@ contains
       integer,                 intent(in) :: w_ind   !< First index of source in cg%w(w_from)%arr(:,:,:,:)
       integer,                 intent(in) :: q_to    !< Index of destination in cg%q(:)
 
-      type(cg_list_element), pointer :: cgl
+      type(cg_list_element), pointer      :: cgl
 
       cgl => this%first
       do while (associated(cgl))
@@ -295,7 +295,7 @@ contains
       integer,                 intent(in) :: i_to    !< Index of field to be modified in cg%q(:)
 
 
-      type(cg_list_element), pointer :: cgl
+      type(cg_list_element), pointer      :: cgl
 
       cgl => this%first
       do while (associated(cgl))
@@ -318,7 +318,7 @@ contains
       real,                    intent(in) :: val     !< Value to be added
 
 
-      type(cg_list_element), pointer :: cgl
+      type(cg_list_element), pointer      :: cgl
 
       cgl => this%first
       do while (associated(cgl))
@@ -338,7 +338,7 @@ contains
 
    subroutine q_lin_comb(this, iv, ind)
 
-      use cg_list, only: cg_list_element
+      use cg_list,    only: cg_list_element
       use dataio_pub, only: die, warn
 
       implicit none
@@ -347,10 +347,10 @@ contains
       type(ind_val), dimension(:), intent(in) :: iv      !< list of (coefficient, index) pairs
       integer,                     intent(in) :: ind     !< Index in cg%q(:)
 
-      integer :: i
-      type(ind_val), dimension(size(iv)) :: iv_safe !< sanitized copy of iv
-      logical :: swapped
-      type(cg_list_element), pointer :: cgl
+      integer                                 :: i
+      type(ind_val), dimension(size(iv))      :: iv_safe !< sanitized copy of iv
+      logical                                 :: swapped
+      type(cg_list_element), pointer          :: cgl
 
       if (size(iv) <= 0) then
          call warn("[cg_list_dataop::q_lin_comb] Nothing to do")
@@ -388,13 +388,13 @@ contains
 
    subroutine subtract_average(this, iv)
 
-      use cg_list,    only: cg_list_element
-      use constants,  only: GEO_XYZ, GEO_RPZ, I_ONE
-      use dataio_pub, only: die
-      use domain,     only: dom
-      use grid_cont,  only: grid_container
-      use mpi,        only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_IN_PLACE
-      use mpisetup,   only: comm, mpi_err
+      use cg_list,          only: cg_list_element
+      use constants,        only: GEO_XYZ, GEO_RPZ, I_ONE
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use grid_cont,        only: grid_container
+      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_SUM, MPI_IN_PLACE
+      use mpisetup,         only: comm, mpi_err
 #ifdef DEBUG
       use dataio_pub,       only: msg, printinfo
       use mpisetup,         only: master
@@ -406,10 +406,10 @@ contains
       class(cg_list_dataop_T), intent(in) :: this !< list for which we want to subtract its average from
       integer,                 intent(in) :: iv   !< index of variable in cg%q(:) which we want to have zero average
 
-      real :: avg, vol
-      integer :: i
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
+      real                                :: avg, vol
+      integer                             :: i
+      type(cg_list_element), pointer      :: cgl
+      type(grid_container),  pointer      :: cg
 
       avg = 0.
       vol = 0.
@@ -469,10 +469,10 @@ contains
       integer,                 intent(in) :: iv     !< index of variable in cg%q(:) for which we want to find the norm
       logical, optional,       intent(in) :: nomask !<Treat the list as a complete level and do not use leafmask
 
-      integer :: i
-      type(cg_list_element), pointer :: cgl
-      type(grid_container),  pointer :: cg
-      logical :: mask
+      integer                             :: i
+      type(cg_list_element), pointer      :: cgl
+      type(grid_container),  pointer      :: cg
+      logical                             :: mask
 
       mask = .true.
       if (present(nomask)) then
@@ -531,7 +531,7 @@ contains
       class(cg_list_dataop_T), intent(inout) :: this   !< list for which clear the boundary values (typically a single level)
       real,                    intent(in)    :: value  !< value to pollute
 
-      type(cg_list_element), pointer :: cgl
+      type(cg_list_element), pointer         :: cgl
 
       cgl => this%first
       do while (associated(cgl))
@@ -585,8 +585,8 @@ contains
       character(len=*),          intent(in)    :: label  !< label to indicate the origin of call
       integer(kind=4), optional, intent(in)    :: expand !< also check guardcells
 
-      integer :: i, j, k, ng, cnt
-      type(cg_list_element), pointer :: cgl
+      integer                                  :: i, j, k, ng, cnt
+      type(cg_list_element), pointer           :: cgl
 
       if (.not. dirty_debug .or. no_dirty_checks) return
       if (iv < lbound(qna%lst, dim=1) .or. iv > ubound(qna%lst, dim=1)) call die("[cg_list_dataop:check_dirty] Invalid variable index.")
@@ -641,8 +641,8 @@ contains
 
       class(cg_list_dataop_T), intent(in) :: this          !< object invoking type-bound procedure
 
-      integer :: i
-      type(cg_list_element), pointer :: cgl
+      integer                             :: i
+      type(cg_list_element), pointer      :: cgl
 
       cgl => this%first
       do while (associated(cgl))
