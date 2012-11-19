@@ -361,12 +361,12 @@ contains
          call leaves%wq_copy(wna%fi, int(iarr_crs(cr_id)), qna%wai)
          call leaves%q_lin_comb( [ ind_val(qna%wai, (1. -1./diff_theta)) ], correction)
          call leaves%q_lin_comb( [ ind_val(qna%wai,     -1./diff_theta ) ], defect)
-         call residual(finest, defect, correction, source, cr_id)
+         call residual(finest%level, defect, correction, source, cr_id)
       else
          call die("[multigrid_diffusion:init_source] diff_theta = 0 not supported.")
       endif
       write(dirty_label, '(a,i2)')"init source#", cr_id
-      call finest%check_dirty(source, dirty_label)
+      call finest%level%check_dirty(source, dirty_label)
 
       vstat%norm_rhs = leaves%norm_sq(source)
 
@@ -395,7 +395,7 @@ contains
 
       call all_cg%set_dirty(solution)
       call leaves%wq_copy(wna%fi, int(iarr_crs(cr_id)), solution)
-      call finest%check_dirty(solution, "init solution")
+      call finest%level%check_dirty(solution, "init solution")
 
    end subroutine init_solution
 
@@ -441,9 +441,9 @@ contains
          ! This works well but copies all guardcells, which is not necessary
          call leaves%wq_copy(wna%bi, ib, idiffb(ib))
 #endif
-         call finest%restrict_to_floor_q_1var(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
+         call finest%level%restrict_to_floor_q_1var(idiffb(ib))             ! Implement correct restriction (and probably also separate inter-process communication) routines
 
-         curl => coarsest
+         curl => coarsest%level
          do while (associated(curl%finer)) ! from coarsest to one level below finest
             call curl%arr3d_boundaries(idiffb(ib), nb = I_ONE, bnd_type = BND_REF, corners = .true.) !> \todo use global boundary type for B
             !>
@@ -502,7 +502,7 @@ contains
 
          call all_cg%set_dirty(defect)
 
-         call residual(finest, source, solution, defect, cr_id)
+         call residual(finest%level, source, solution, defect, cr_id)
          norm_lhs = leaves%norm_sq(defect)
          ts = set_timer("multigrid_diffusion")
          tot_ts = tot_ts + ts
@@ -531,27 +531,27 @@ contains
             endif
          endif
 
-         call finest%restrict_to_floor_q_1var(defect)
+         call finest%level%restrict_to_floor_q_1var(defect)
 
          !call all_cg%set_dirty(correction)
-         call coarsest%set_q_value(correction, 0.)
+         call coarsest%level%set_q_value(correction, 0.)
 
-         curl => coarsest
+         curl => coarsest%level
          do while (associated(curl))
             call approximate_solution(curl, defect, correction, cr_id)
-            if (.not. associated(curl, finest)) call curl%prolong_q_1var(correction)
+            if (.not. associated(curl, finest%level)) call curl%prolong_q_1var(correction)
             curl => curl%finer
          enddo
 
-         call finest%check_dirty(correction, "c_residual")
-         call finest%check_dirty(defect, "d_residual")
+         call finest%level%check_dirty(correction, "c_residual")
+         call finest%level%check_dirty(defect, "d_residual")
          call leaves%q_lin_comb( [ ind_val(solution, 1.), ind_val(correction, -1.) ], solution) ! solution := solution - correction
 
       enddo
 
       if (dump_every_step) call all_cg%numbered_ascii_dump([ source, solution, defect, correction ], dirty_label)
 
-      call finest%check_dirty(solution, "v_soln")
+      call finest%level%check_dirty(solution, "v_soln")
 
       if (v > max_cycles) then
          if (master .and. norm_lhs/norm_rhs > norm_tol) then
@@ -567,7 +567,7 @@ contains
       norm_rhs = leaves%norm_sq(solution)
       norm_lhs = leaves%norm_sq(defect)
 !     Do we need to take care of boundaries here?
-!      call finest%arr3d_boundaries(solution, nb = I_ONE, bnd_type = diff_extbnd)
+!      call finest%level%arr3d_boundaries(solution, nb = I_ONE, bnd_type = diff_extbnd)
 !      cg%u%span(iarr_crs(cr_id),cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_) = cg%q(solution)%span(cg%ijkse(:,LO)-dom%D_,cg%ijkse(:,HI)+dom%D_)
 
       call leaves%qw_copy(solution, wna%fi, int(iarr_crs(cr_id)))
@@ -742,7 +742,7 @@ contains
       type(grid_container), pointer   :: cg
       type(cg_list_element), pointer  :: cgl
 
-      if (associated(curl, coarsest)) then
+      if (associated(curl, coarsest%level)) then
          nsmoo = nsmoob
       else
          nsmoo = nsmool

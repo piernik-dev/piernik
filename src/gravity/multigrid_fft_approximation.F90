@@ -129,7 +129,7 @@ contains
             call die("mg:mmpg opfn_c_[cf]f(:)")
       end select
 
-      curl => coarsest
+      curl => coarsest%level
       do while (associated(curl))
 
          if (ubound(curl%pse(proc)%c(:), dim=1) > 1) call die("[multigrid_fft_approximation:mpi_multigrid_prep_grav] Multiple blocks per process not implemented yet")
@@ -349,7 +349,7 @@ contains
          enddo
 
          if (curl%fft_type == fft_dst) then !correct boundaries on non-periodic local domain
-            if (nf == 1 .and. .not. associated(curl, coarsest)) then
+            if (nf == 1 .and. .not. associated(curl, coarsest%level)) then
                call make_face_boundaries(curl, soln)
             else
                call curl%arr3d_boundaries(soln, nb = I_ONE, bnd_type = BND_NEGREF)
@@ -410,7 +410,7 @@ contains
 
          !> \deprecated BEWARE use dom%has_dir() here in a way that does not degrade performance
 
-         if (associated(curl, coarsest) .and. single_base) then !> do not relax if it is a whole domain (BEWARE: simplified check)
+         if (associated(curl, coarsest%level) .and. single_base) then !> do not relax if it is a whole domain (BEWARE: simplified check)
             nsmoo = 0
          else
             nsmoo = nsmool
@@ -487,10 +487,10 @@ contains
       type(cg_level_connected_T), pointer, intent(in) :: curl !< pointer to a level for which we approximate the solution
       integer,                      intent(in) :: soln !< index of solution in cg%q(:)
 
-      if (grav_bnd == bnd_periodic .and. (nproc == 1 .or. (associated(curl, coarsest) .and. single_base) ) ) then
+      if (grav_bnd == bnd_periodic .and. (nproc == 1 .or. (associated(curl, coarsest%level) .and. single_base) ) ) then
          call curl%reset_boundaries
       else
-         if (.not. associated(curl, coarsest)) then
+         if (.not. associated(curl, coarsest%level)) then
             call prolong_faces(curl, soln)
          else
             if (grav_bnd /= bnd_givenval) call curl%reset_boundaries
@@ -609,7 +609,7 @@ contains
       ! for ord_prolong_face_par = -2 it is ~2.5 (convergence in 8 cycles instead of 10 cycles)
       ! for ord_prolong_face_par =  1 it is ~3.6 (worst convergence, 11 -> 9 cycles)
 
-      if (associated(fine, coarsest)) then
+      if (associated(fine, coarsest%level)) then
          call warn("[multigrid_fft_approximation:prolong_faces] Cannot prolong anything to coarsest level")
          return
       endif

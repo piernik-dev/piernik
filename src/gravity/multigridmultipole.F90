@@ -60,7 +60,7 @@ module multipole
    integer(kind=4)           :: lmax                             !< Maximum l-order of multipole moments
    integer(kind=4)           :: mmax                             !< Maximum m-order of multipole moments. Equal to lmax by default.
    integer(kind=4)           :: ord_prolong_mpole                !< boundary prolongation operator order; allowed values are -2 .. 2
-   integer(kind=4)           :: coarsen_multipole                !< If > 0 then evaluate multipoles at finest%level_id-coarsen_multipole level
+   integer(kind=4)           :: coarsen_multipole                !< If > 0 then evaluate multipoles at finest%level%level_id-coarsen_multipole level
    logical                   :: use_point_monopole               !< Don't evaluate multipole moments, use point-like mass approximation (crudest possible)
    logical                   :: interp_pt2mom                    !< Distribute contribution from a cell between two adjacent radial bins (linear interpolation in radius)
    logical                   :: interp_mom2pot                   !< Compute the potential from moments from two adjacent radial bins (linear interpolation in radius)
@@ -233,7 +233,7 @@ contains
                CoM(ydim) = 0.
             endif
             CoM(zdim) = dom%C_(zdim)
-            zaxis_inside = dom%edge(xdim, LO) <= dom%L_(xdim)/finest%n_d(xdim) ! lmpole
+            zaxis_inside = dom%edge(xdim, LO) <= dom%L_(xdim)/finest%level%n_d(xdim) ! lmpole
             if (master) then
                if (zaxis_inside) call warn("[multigridmultipole:refresh_multipole] Setups with Z-axis at the edge of the domain may not work as expected yet.")
                if (use_point_monopole) call warn("[multigridmultipole:refresh_multipole] Point-like monopole is not implemented.")
@@ -245,13 +245,13 @@ contains
 
       if (.not. use_point_monopole) then
 
-         if (associated(finest%first)) then
+         if (associated(finest%level%first)) then
             select case (dom%geometry_type)
                !> \warning With refinement lmpole might no longer be a single level
                case (GEO_XYZ)
-                  drq = minval(finest%first%cg%dl(:), mask=dom%has_dir(:)) / 2.
+                  drq = minval(finest%level%first%cg%dl(:), mask=dom%has_dir(:)) / 2.
                case (GEO_RPZ)
-                  drq = min(finest%first%cg%dx, dom%C_(xdim)*finest%first%cg%dy, finest%first%cg%dz) / 2.
+                  drq = min(finest%level%first%cg%dx, dom%C_(xdim)*finest%level%first%cg%dy, finest%level%first%cg%dz) / 2.
                case default
                   call die("[multigridmultipole:refresh_multipole] Unsupported geometry.")
             end select
@@ -338,7 +338,7 @@ contains
 
 !!$      if (.not. associated(lmpole, finest)) then
 !!$         curl => finest
-!!$         do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = finest%level_id, lmpole%first%cg%level_id + 1, -1
+!!$         do while (associated(curl) .and. .not. associated(curl, lmpole)) ! do lev = finest%level%level_id, lmpole%first%cg%level_id + 1, -1
 !!$            call curl%restrict_q_1var(solution)  ! Overkill, only some layers next to external boundary are needed.
 !!$            curl => curl%coarser
 !!$         enddo                                ! An alternative: do potential2img_mass on the finest and restrict bnd_[xyz] data.
@@ -358,7 +358,7 @@ contains
       !> \todo The approach with lmpole should be reworked completely. With AMR use only current level and reinitialize some things if refinements have changed
 !!$      if (.not. associated(lmpole, finest)) then
 !!$         curl => lmpole
-!!$         do while (associated(curl) .and. .not. associated(curl, finest)) ! do lev = lmpole%first%cg%level_id, finest%level_id - 1
+!!$         do while (associated(curl) .and. .not. associated(curl, finest)) ! do lev = lmpole%first%cg%level_id, finest%level%level_id - 1
 !!$            call prolong_ext_bnd(curl)
 !!$            curl => curl%finer
 !!$         enddo

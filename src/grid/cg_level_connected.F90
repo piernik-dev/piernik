@@ -68,8 +68,21 @@ module cg_level_connected
    type(cg_level_connected_T), pointer  :: base_lev             !< base level grid containers
 
    !! \todo finest and coarsest together with subroutine add_lev can go to separate module
-   type(cg_level_connected_T), pointer :: finest               !< finest level of refinement
-   type(cg_level_connected_T), pointer :: coarsest             !< coarsest level of refinement
+   type :: cg_level_connected_finest_T
+      type(cg_level_connected_T), pointer :: level
+!    contains
+!      procedure          :: add_finer
+   end type cg_level_connected_finest_T
+
+   type(cg_level_connected_finest_T) :: finest               !< finest level of refinement
+
+   type :: cg_level_connected_coarsest_T
+      type(cg_level_connected_T), pointer :: level
+!    contains
+!      procedure          :: add_coarser
+   end type cg_level_connected_coarsest_T
+
+   type(cg_level_connected_coarsest_T) :: coarsest             !< coarsest level of refinement
 
 contains
 
@@ -91,10 +104,10 @@ contains
 
       integer(kind=4) :: g_finest_id
 
-      call MPI_Allreduce(finest%level_id, g_finest_id, I_ONE, MPI_INTEGER, MPI_MAX, comm, mpi_err)
+      call MPI_Allreduce(finest%level%level_id, g_finest_id, I_ONE, MPI_INTEGER, MPI_MAX, comm, mpi_err)
 
-      do while (g_finest_id > finest%level_id)
-         call finest%add_level(coarse = .false.)
+      do while (g_finest_id > finest%level%level_id)
+         call finest%level%add_level(coarse = .false.)
       enddo
 
    end subroutine equalize_finest
@@ -135,16 +148,20 @@ contains
       if (any(n_d(:) < 1)) call die("[cg_level_connected:add_lev_base] non-positive base grid sizes")
       if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_connected:add_lev_base] base grid size incompatible with has_dir masks")
 
-      call this%init_level
-      this%level_id = base_level_id
+      select type(this)
+         type is (cg_level_connected_T)
+            call this%init_level
+            this%level_id = base_level_id
 
-      this%n_d(:) = 1; this%off(:) = 0
-      where (dom%has_dir(:))
-         this%n_d(:) = n_d(:)
-         this%off(:) = offset(:)
-      endwhere
-
-      call all_lists%register(this, "Base level")
+            this%n_d(:) = 1; this%off(:) = 0
+            where (dom%has_dir(:))
+               this%n_d(:) = n_d(:)
+               this%off(:) = offset(:)
+            endwhere
+            call all_lists%register(this, "Base level")
+         class default
+            call die("[cg_level_connected:add_lev_base] cannot call this routine for derivatives of cg_level_connected")
+      end select
 
    end subroutine add_lev_base
 
@@ -180,7 +197,7 @@ contains
                call die("[cg_level_connected:add_lev] cannot call this routine for derivatives of cg_level_connected (coarse)")
          end select
 
-         coarsest => new_lev
+         coarsest%level => new_lev
          new_lev%level_id = this%level_id - I_ONE
          new_lev%off = f2c_o(this%off)
          if (any(c2f_o(new_lev%off) /= this%off)) then
@@ -202,7 +219,7 @@ contains
                call die("[cg_level_connected:add_lev] cannot call this routine for derivatives of cg_level_connected (fine)")
          end select
 
-         finest => new_lev
+         finest%level => new_lev
          new_lev%level_id = this%level_id + I_ONE
          new_lev%off = c2f_o(this%off)
          where (dom%has_dir(:)) new_lev%n_d(:) = this%n_d(:) * refinement_factor

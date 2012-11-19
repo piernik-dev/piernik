@@ -392,7 +392,7 @@ contains
 
       call leaves%set_q_value(qna%ind(sgp_n), 0.) !Initialize all the guardcells, even those which does not impact the solution
 
-      curl => coarsest
+      curl => coarsest%level
       do while (associated(curl))
 
          if (prefer_rbgs_relaxation) then
@@ -408,19 +408,19 @@ contains
          curl => curl%finer
       enddo
 
-      base_no_fft = base_no_fft .or. (coarsest%tot_se /= 1)
+      base_no_fft = base_no_fft .or. (coarsest%level%tot_se /= 1)
 
       ! data related to local and global base-level FFT solver
       if (base_no_fft) then
-         coarsest%fft_type = fft_none
+         coarsest%level%fft_type = fft_none
       else
          select case (grav_bnd)
          case (bnd_periodic)
-            coarsest%fft_type = fft_rcr
+            coarsest%level%fft_type = fft_rcr
          case (bnd_dirichlet, bnd_isolated)
-            coarsest%fft_type = fft_dst
+            coarsest%level%fft_type = fft_dst
          case default
-            coarsest%fft_type = fft_none
+            coarsest%level%fft_type = fft_none
             if (master) call warn("[multigrid_gravity:init_multigrid_grav] base_no_fft unset but no suitable boundary conditions found. Reverting to RBGS relaxation.")
          end select
       endif
@@ -428,7 +428,7 @@ contains
       require_FFT = .false.
 
       ! FFT solver storage and data
-      curl => coarsest
+      curl => coarsest%level
       do while (associated(curl))
 
          if (curl%fft_type /= fft_none) then
@@ -456,7 +456,7 @@ contains
 
       if (require_FFT) call mpi_multigrid_prep_grav !supplement to mpi_multigrid_prep
 
-      if (finest%fft_type == fft_none .and. trust_fft_solution) then
+      if (finest%level%fft_type == fft_none .and. trust_fft_solution) then
          if (master) call warn("[multigrid_gravity:init_multigrid_grav] cannot trust FFT solution on the finest level.")
          trust_fft_solution = .false.
       endif
@@ -532,7 +532,7 @@ contains
       !<
 
       ! FFT solver storage and data
-      curl => coarsest
+      curl => coarsest%level
       do while (associated(curl))
          if (cg%level_id == curl%level_id) exit
          curl => curl%finer
@@ -856,7 +856,7 @@ contains
       do_ascii_dump = do_ascii_dump .or. dump_every_step .or. dump_result
 
       ! On single CPU use FFT if possible because it is faster. Can be disabled by prefer_rbgs_relaxation = .true.
-      if (nproc == 1 .and. finest%fft_type /= fft_none) then
+      if (nproc == 1 .and. finest%level%fft_type /= fft_none) then
          call all_cg%set_dirty(solution)
          call fft_solve_roof
          if (trust_fft_solution) then
@@ -941,12 +941,12 @@ contains
          norm_old = norm_lhs
 
          ! the Huang-Greengard V-cycle
-         call finest%restrict_to_floor_q_1var(defect)
+         call finest%level%restrict_to_floor_q_1var(defect)
 
          call all_cg%set_dirty(correction)
-         call coarsest%set_q_value(correction, 0.)
+         call coarsest%level%set_q_value(correction, 0.)
 
-         curl => coarsest
+         curl => coarsest%level
          do while (associated(curl))
             call approximate_solution(curl, defect, correction)
             call curl%check_dirty(correction, "Vup relax+")
@@ -1379,7 +1379,7 @@ contains
       type(cg_list_element), pointer :: cgl
       type(grid_container),  pointer :: cg
 
-      if (associated(curl, coarsest)) then
+      if (associated(curl, coarsest%level)) then
          nsmoo = nsmoob
          !> \todo Implement automatic convergence check on coarsest level (not very important when we have a FFT solver for coarsest level)
       else
@@ -1528,16 +1528,16 @@ contains
 
       type(grid_container), pointer :: cg
 
-      if (associated(finest%first)) then
-         if (associated(finest%first%nxt)) call die("[multigrid_gravity:fft_solve_roof] multicg not possible")
+      if (associated(finest%level%first)) then
+         if (associated(finest%level%first%nxt)) call die("[multigrid_gravity:fft_solve_roof] multicg not possible")
       endif
 
-      if (finest%fft_type == fft_none) return
+      if (finest%level%fft_type == fft_none) return
 
-      cg => finest%first%cg
+      cg => finest%level%first%cg
       p3 => cg%q(source)%span(cg%ijkse)
       cg%mg%src(:, :, :) = p3
-      call fft_convolve(finest)
+      call fft_convolve(finest%level)
       p3 => cg%q(solution)%span(cg%ijkse)
       p3 = cg%mg%src(:, :, :)
 

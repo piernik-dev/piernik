@@ -232,24 +232,24 @@ contains
          level_max = j
       endif
 
-      curl => finest
+      curl => finest%level
       do while (associated(curl))
 
          if (curl%level_id <= -level_max) exit
 
          ! create coarser level:
          call curl%add_level(coarse = .true.)
-         if (coarsest%level_id == -level_max .and. single_base) then
-            call coarsest%add_patch(n_pieces=I_ONE)
+         if (coarsest%level%level_id == -level_max .and. single_base) then
+            call coarsest%level%add_patch(n_pieces=I_ONE)
          else
-            call coarsest%add_patch
+            call coarsest%level%add_patch
          endif
-         call coarsest%init_all_new_cg
+         call coarsest%level%init_all_new_cg
 
          curl => curl%coarser
       enddo
 
-      curl => finest
+      curl => finest%level
       do while (associated(curl))
 
          cgl => curl%first
@@ -274,8 +274,8 @@ contains
 
       ! summary
       if (master) then
-         write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", finest%level_id - coarsest%level_id, &
-              &                      " coarse levels, coarse level resolution [ ", coarsest%n_d(:)," ]"
+         write(msg, '(a,i2,a,3i4,a)')"[multigrid:init_multigrid] Initialized ", finest%level%level_id - coarsest%level%level_id, &
+              &                      " coarse levels, coarse level resolution [ ", coarsest%level%n_d(:)," ]"
          call printinfo(msg)
       endif
 

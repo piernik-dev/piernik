@@ -542,7 +542,7 @@ contains
       call h5pclose_f(plist_idf, error)
 
       !! \todo check if finest is complete, if not then find finest complete level
-      dimsf  = finest%n_d(:)    ! Dataset dimensions
+      dimsf  = finest%level%n_d(:)    ! Dataset dimensions
       !
       ! Create the data space for the  dataset.
       !
@@ -566,7 +566,7 @@ contains
          if (.not. is_multicg) call h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, error)
 
          !! \todo if there are fine levels restrict the data first and write warning that v2 should be used instead
-         cgl => finest%first
+         cgl => finest%level%first
          if (.not. associated(cgl)) call die("[data_hdf5:h5_write_to_single_file_v1] I/O v1 cannot handle empty cg lists.")
          do while (associated(cgl))
             cg => cgl%cg

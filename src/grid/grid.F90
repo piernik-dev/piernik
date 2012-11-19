@@ -66,8 +66,8 @@ contains
       ! Create the empty main lists.with the base level
 
       allocate(base_lev)
-      finest => base_lev
-      coarsest => base_lev
+      finest%level => base_lev
+      coarsest%level => base_lev
 
       call base_lev%add_level(dom%n_d, base_level_offset)
       call base_lev%add_patch
@@ -97,7 +97,7 @@ contains
 
       type(cg_level_connected_T), pointer :: curl, aux
 
-      curl => coarsest
+      curl => coarsest%level
       do while (associated(curl))
          if (allocated(curl%pse)) deallocate(curl%pse)        ! curl%pse(:)%c should be deallocated automagically
          if (allocated(curl%patches)) deallocate(curl%patches)! curl%patches(:)%pse should be deallocated automagically
@@ -107,7 +107,7 @@ contains
       call all_cg%delete_all
       call all_lists%delete
 
-      curl => coarsest
+      curl => coarsest%level
       do while (associated(curl))
          aux => curl
          curl => curl%finer
