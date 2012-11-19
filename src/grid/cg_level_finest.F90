@@ -36,14 +36,14 @@ module cg_level_finest
    implicit none
 
    private
-   public :: finest, equalize_finest
+   public :: finest
 
    !> \brief The pointer of the finest refinement level and a method to add a finer one
    type :: cg_level_finest_T
       type(cg_level_connected_T), pointer :: level !< highest refinement level
     contains
       procedure          :: add_finer
-      procedure          :: equalize_finest
+      procedure          :: equalize
       !> \todo Provide delete_finest and use it in cleanup
    end type cg_level_finest_T
 
@@ -59,7 +59,7 @@ contains
 !! \todo When global top level do not have any blocks then destroy it.
 !<
 
-   subroutine equalize_finest(this)
+   subroutine equalize(this)
 
       use constants,  only: I_ONE
       use dataio_pub, only: die
@@ -80,9 +80,9 @@ contains
 
       call MPI_Allreduce(this%level%level_id, g_finest_id, I_ONE, MPI_INTEGER, MPI_MAX, comm, mpi_err)
 
-      if (g_finest_id /= this%level%level_id) call die("[cg_level_finest:equalize_finest] failure")
+      if (g_finest_id /= this%level%level_id) call die("[cg_level_finest:equalize] failure")
 
-   end subroutine equalize_finest
+   end subroutine equalize
 
 !> \brief Add a fine level to the top of existing hierarchy
 
