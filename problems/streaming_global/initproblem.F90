@@ -384,7 +384,7 @@ contains
             if (.not.allocated(taus)) allocate(taus(xl:xr)) ! not deallocated
 
             call source_terms_grav
-            call grav_pot2accel(xdim, cg%lhn(ydim, LO), cg%lhn(zdim, LO), size(grav), grav, 1, cg)
+            call grav_pot2accel(xdim, int(cg%lhn(ydim, LO)), int(cg%lhn(zdim, LO)), int(size(grav), kind=4), grav, 1, cg)
 
             dens_prof(:) = d0 * cg%x(:)**(-dens_exp)  * gram / cm**2
 
