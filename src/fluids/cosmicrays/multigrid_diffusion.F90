@@ -409,7 +409,8 @@ contains
    subroutine init_b
 
       use cg_leaves,          only: leaves
-      use cg_level_connected, only: cg_level_connected_T, coarsest, finest
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T, finest
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
       use cg_list_global,     only: all_cg
@@ -466,7 +467,8 @@ contains
    subroutine vcycle_hg(cr_id)
 
       use cg_leaves,          only: leaves
-      use cg_level_connected, only: cg_level_connected_T, coarsest, finest
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T, finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
       use dataio_pub,         only: msg, warn
@@ -718,7 +720,8 @@ contains
 
    subroutine approximate_solution(curl, src, soln, cr_id)
 
-      use cg_level_connected, only: cg_level_connected_T, coarsest
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T
       use constants,          only: xdim, ydim, zdim, one, half, I_ONE, ndims, BND_NONE, LO
       use domain,             only: dom
       use cg_list,            only: cg_list_element

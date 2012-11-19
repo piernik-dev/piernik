@@ -47,7 +47,8 @@ contains
    subroutine init_grid
 
       use cg_leaves,          only: leaves
-      use cg_level_connected, only: base_lev, finest, coarsest
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: base_lev, finest
       use constants,          only: PIERNIK_INIT_DOMAIN, LONG, ndims
       use dataio_pub,         only: printinfo, die, code_progress
       use domain,             only: dom
@@ -88,7 +89,8 @@ contains
 
    subroutine cleanup_grid
 
-      use cg_level_connected, only: cg_level_connected_T, coarsest
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T
       use cg_list_global,     only: all_cg
       use list_of_cg_lists,   only: all_lists
       use named_array_list,   only: qna, wna

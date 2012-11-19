@@ -370,7 +370,8 @@ contains
    subroutine init_multigrid_grav
 
       use cg_leaves,           only: leaves
-      use cg_level_connected,  only: cg_level_connected_T, finest, coarsest
+      use cg_level_coarsest,   only: coarsest
+      use cg_level_connected,  only: cg_level_connected_T, finest
       use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen
       use dataio_pub,          only: die, warn, printinfo, msg
       use domain,              only: dom
@@ -503,7 +504,8 @@ contains
 
    subroutine mgg_cg_init(cg)
 
-      use cg_level_connected, only: cg_level_connected_T, coarsest
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T
       use constants,          only: xdim, ydim, zdim, fft_rcr, fft_dst, fft_none, pi, dpi, zero, half, one
       use dataio_pub,         only: die
       use domain,             only: dom
@@ -824,7 +826,8 @@ contains
 
       use cg_leaves,           only: leaves
       use cg_list_global,      only: all_cg
-      use cg_level_connected,  only: cg_level_connected_T, finest, coarsest
+      use cg_level_coarsest,   only: coarsest
+      use cg_level_connected,  only: cg_level_connected_T, finest
       use constants,           only: cbuff_len, fft_none
       use dataio_pub,          only: msg, die, warn, printinfo
       use global,              only: do_ascii_dump
@@ -1355,7 +1358,8 @@ contains
 
    subroutine approximate_solution_rbgs(curl, src, soln)
 
-      use cg_level_connected, only: cg_level_connected_T, coarsest
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
       use constants,          only: xdim, ydim, zdim, ndims, GEO_XYZ, GEO_RPZ, I_ONE, BND_NEGREF, LO

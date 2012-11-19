@@ -72,7 +72,8 @@ contains
       use dataio_pub,    only: warn, die
       use domain,        only: dom
       use cg_list,       only: cg_list_element
-      use cg_level_connected, only: cg_level_connected_T, coarsest
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T
       use grid_cont,     only: pr_segment, grid_container, is_overlap
       use mpisetup,      only: proc, nproc, FIRST, LAST, procmask, inflate_req
       use multigridvars, only: ord_prolong_face_norm
@@ -310,7 +311,8 @@ contains
 
    subroutine approximate_solution_fft(curl, src, soln)
 
-      use cg_level_connected, only: cg_level_connected_T, coarsest
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T
       use constants,     only: LO, HI, ndims, xdim, ydim, zdim, GEO_XYZ, half, I_ONE, idm2, BND_NEGREF, fft_none, fft_dst, dirtyL
       use dataio_pub,    only: die, warn
       use domain,        only: dom
@@ -477,7 +479,8 @@ contains
 
    subroutine make_face_boundaries(curl, soln)
 
-      use cg_level_connected, only: cg_level_connected_T, coarsest
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T
       use dataio_pub,    only: warn
       use mpisetup,      only: nproc
       use multigridvars, only: single_base, bnd_periodic, bnd_givenval, grav_bnd
@@ -554,7 +557,8 @@ contains
 
    subroutine prolong_faces(fine, soln)
 
-      use cg_level_connected, only: cg_level_connected_T, coarsest
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T
       use constants,     only: xdim, ydim, zdim, LO, HI, LONG, I_ONE, half, O_INJ, O_LIN, O_D2, O_I2, BND_NEGREF
       use dataio_pub,    only: die, warn
       use domain,        only: dom, is_multicg

@@ -191,7 +191,8 @@ contains
    subroutine init_multigrid
 
       use cg_list,             only: cg_list_element
-      use cg_level_connected,  only: cg_level_connected_T, base_lev, finest, coarsest
+      use cg_level_coarsest,   only: coarsest
+      use cg_level_connected,  only: cg_level_connected_T, base_lev, finest
       use constants,           only: PIERNIK_INIT_GRID, I_ONE, refinement_factor
       use dataio_pub,          only: printinfo, warn, die, code_progress, msg
       use domain,              only: dom, minsize
