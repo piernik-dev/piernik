@@ -235,7 +235,7 @@ contains
       do while (coarsest%level%level_id > -level_max)
 
          ! create coarser level:
-         call coarsest%level%add_level(coarse = .true.)
+         call coarsest%add_coarser
          if (coarsest%level%level_id == -level_max .and. single_base) then
             call coarsest%level%add_patch(n_pieces=I_ONE)
          else

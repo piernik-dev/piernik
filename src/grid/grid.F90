@@ -69,7 +69,7 @@ contains
       finest%level => base_lev
       coarsest%level => base_lev
 
-      call base_lev%add_level(dom%n_d, base_level_offset)
+      call base_lev%set(dom%n_d, base_level_offset)
       call base_lev%add_patch
       call base_lev%init_all_new_cg
 

@@ -49,9 +49,7 @@ module cg_level_connected
 
       ! Level management
       procedure, private :: init_level                               !< common initialization for base level and other levels
-      procedure          :: add_lev                                  !< add a finer or coarser level
-      procedure          :: add_lev_base                             !< initialize the base level
-      generic, public    :: add_level => add_lev, add_lev_base
+      procedure          :: set                                      !< initialize the base level
 
       ! Prolongation and restriction
       procedure, private :: vertical_prep                            !< initialize prolongation and restriction targets
@@ -68,21 +66,21 @@ module cg_level_connected
    type(cg_level_connected_T), pointer  :: base_lev             !< base level grid containers
 
    !! \todo finest and coarsest together with subroutine add_lev can go to separate module
-   type :: cg_level_connected_finest_T
+   type :: cg_level_finest_T
       type(cg_level_connected_T), pointer :: level
-!    contains
-!      procedure          :: add_finer
-   end type cg_level_connected_finest_T
+    contains
+      procedure          :: add_finer
+   end type cg_level_finest_T
 
-   type(cg_level_connected_finest_T) :: finest               !< finest level of refinement
+   type(cg_level_finest_T) :: finest               !< finest level of refinement
 
-   type :: cg_level_connected_coarsest_T
+   type :: cg_level_coarsest_T
       type(cg_level_connected_T), pointer :: level
-!    contains
-!      procedure          :: add_coarser
-   end type cg_level_connected_coarsest_T
+    contains
+      procedure          :: add_coarser
+   end type cg_level_coarsest_T
 
-   type(cg_level_connected_coarsest_T) :: coarsest             !< coarsest level of refinement
+   type(cg_level_coarsest_T) :: coarsest             !< coarsest level of refinement
 
 contains
 
@@ -107,7 +105,7 @@ contains
       call MPI_Allreduce(finest%level%level_id, g_finest_id, I_ONE, MPI_INTEGER, MPI_MAX, comm, mpi_err)
 
       do while (g_finest_id > finest%level%level_id)
-         call finest%level%add_level(coarse = .false.)
+         call finest%add_finer
       enddo
 
    end subroutine equalize_finest
@@ -132,7 +130,7 @@ contains
 
 !> \brief Initialize the base level
 
-   subroutine add_lev_base(this, n_d, offset)
+   subroutine set(this, n_d, offset)
 
       use constants,        only: base_level_id, ndims
       use dataio_pub,       only: die
@@ -145,8 +143,8 @@ contains
       integer(kind=4), dimension(ndims), intent(in)    :: n_d    !< size of global base grid in cells
       integer(kind=8), dimension(ndims), intent(in)    :: offset !< offset of global base grid in cells
 
-      if (any(n_d(:) < 1)) call die("[cg_level_connected:add_lev_base] non-positive base grid sizes")
-      if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_connected:add_lev_base] base grid size incompatible with has_dir masks")
+      if (any(n_d(:) < 1)) call die("[cg_level_connected:set] non-positive base grid sizes")
+      if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_connected:set] base grid size incompatible with has_dir masks")
 
       select type(this)
          type is (cg_level_connected_T)
@@ -160,14 +158,49 @@ contains
             endwhere
             call all_lists%register(this, "Base level")
          class default
-            call die("[cg_level_connected:add_lev_base] cannot call this routine for derivatives of cg_level_connected")
+            call die("[cg_level_connected:set] cannot call this routine for derivatives of cg_level_connected")
       end select
 
-   end subroutine add_lev_base
+   end subroutine set
 
 !> \brief Add a fine or coarse level to a existing one
 
-   subroutine add_lev(this, coarse)
+   subroutine add_finer(this)
+
+      use constants,        only: INVALID, I_ONE, refinement_factor
+      use dataio_pub,       only: die, msg
+      use domain,           only: dom
+      use func,             only: c2f_o
+      use list_of_cg_lists, only: all_lists
+
+      implicit none
+
+      class(cg_level_finest_T), intent(inout) :: this    !< lowest or highest refinement level
+
+      type(cg_level_connected_T), pointer     :: new_lev !< fresh refinement level to be added
+
+      allocate(new_lev)
+      call new_lev%init_level
+      new_lev%n_d(:) = 1
+
+      if (associated(this%level%finer)) call die("[cg_level_connected:add_finer] finer level already exists")
+
+      new_lev%level_id = this%level%level_id + I_ONE
+      new_lev%off = c2f_o(this%level%off)
+      where (dom%has_dir(:)) new_lev%n_d(:) = this%level%n_d(:) * refinement_factor
+
+      !! make sure that vertical_prep will be called where necessary
+      this%level%ord_prolong_set = INVALID
+      write(msg, '(a,i3)')"level ",new_lev%level_id
+      call all_lists%register(new_lev, msg)
+
+      this%level%finer => new_lev
+      new_lev%coarser => this%level
+      this%level => new_lev
+
+   end subroutine add_finer
+
+   subroutine add_coarser(this)
 
       use constants,        only: INVALID, I_ONE, refinement_factor
       use dataio_pub,       only: die, msg
@@ -178,59 +211,38 @@ contains
 
       implicit none
 
-      class(cg_level_connected_T), target, intent(inout) :: this    !< lowest or highest refinement level
-      logical,                             intent(in)    :: coarse  !< if .true. then add a level below base level
+      class(cg_level_coarsest_T), intent(inout) :: this    !< lowest or highest refinement level
 
-      type(cg_level_connected_T), pointer                :: new_lev !< fresh refinement level to be added
+      type(cg_level_connected_T), pointer       :: new_lev !< fresh refinement level to be added
+
+      if (associated(this%level%coarser)) call die("[cg_level_connected:add_coarser] coarser level already exists")
 
       allocate(new_lev)
       call new_lev%init_level
       new_lev%n_d(:) = 1
 
-      if (coarse) then
-         if (associated(this%coarser)) call die("[cg_level_connected:add_lev] coarser level already exists")
-         select type(this)
-            type is (cg_level_connected_T)
-               this%coarser => new_lev
-               new_lev%finer => this
-            class default
-               call die("[cg_level_connected:add_lev] cannot call this routine for derivatives of cg_level_connected (coarse)")
-         end select
-
-         coarsest%level => new_lev
-         new_lev%level_id = this%level_id - I_ONE
-         new_lev%off = f2c_o(this%off)
-         if (any(c2f_o(new_lev%off) /= this%off)) then
-            write(msg, '(a,3f10.1,a,i3)')"[cg_level_connected:add_lev] Fractional offset: ", this%off(:)/real(refinement_factor), " at level ",new_lev%level_id
-            call die(msg)
-         endif
-         where (dom%has_dir(:)) new_lev%n_d(:) = this%n_d(:) / refinement_factor
-         if (master .and. any(new_lev%n_d(:)*refinement_factor /= this%n_d(:) .and. dom%has_dir(:))) then
-            write(msg, '(a,3f10.1,a,i3)')"[cg_level_connected:add_lev] Fractional number of domain cells: ", this%n_d(:)/real(refinement_factor), " at level ",new_lev%level_id
-            call die(msg)
-         endif
-      else
-         if (associated(this%finer)) call die("[cg_level_connected:add_lev] finer level already exists")
-         select type(this)
-            type is (cg_level_connected_T)
-               this%finer => new_lev
-               new_lev%coarser => this
-            class default
-               call die("[cg_level_connected:add_lev] cannot call this routine for derivatives of cg_level_connected (fine)")
-         end select
-
-         finest%level => new_lev
-         new_lev%level_id = this%level_id + I_ONE
-         new_lev%off = c2f_o(this%off)
-         where (dom%has_dir(:)) new_lev%n_d(:) = this%n_d(:) * refinement_factor
+      new_lev%level_id = this%level%level_id - I_ONE
+      new_lev%off = f2c_o(this%level%off)
+      if (any(c2f_o(new_lev%off) /= this%level%off)) then
+         write(msg, '(a,3f10.1,a,i3)')"[cg_level_connected:add_coarser] Fractional offset: ", this%level%off(:)/real(refinement_factor), " at level ",new_lev%level_id
+         call die(msg)
+      endif
+      where (dom%has_dir(:)) new_lev%n_d(:) = this%level%n_d(:) / refinement_factor
+      if (master .and. any(new_lev%n_d(:)*refinement_factor /= this%level%n_d(:) .and. dom%has_dir(:))) then
+         write(msg, '(a,3f10.1,a,i3)')"[cg_level_connected:add_coarser] Fractional number of domain cells: ", this%level%n_d(:)/real(refinement_factor), " at level ",new_lev%level_id
+         call die(msg)
       endif
 
       !! make sure that vertical_prep will be called where necessary
-      this%ord_prolong_set = INVALID
+      this%level%ord_prolong_set = INVALID
       write(msg, '(a,i3)')"level ",new_lev%level_id
       call all_lists%register(new_lev, msg)
 
-   end subroutine add_lev
+      this%level%coarser => new_lev
+      new_lev%finer => this%level
+      this%level => new_lev
+
+   end subroutine add_coarser
 
 !>
 !! \brief Initialize prolongation and restriction targets. Called from init_multigrid.
