@@ -105,6 +105,8 @@ contains
 
    logical function decompose_patch(this, n_d, off, n_pieces) result(patch_divided)
 
+      use domain, only: dom
+
       implicit none
 
       class(box_T),                      intent(inout) :: this     !< the patch, which we want to be chopped into pieces
@@ -112,8 +114,13 @@ contains
       integer(kind=8), dimension(ndims), intent(in)    :: off      !< offset (with respect to the base level, counted on own level), \todo make use of it
       integer(kind=4), optional,         intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
-      this%n_d(:) = n_d(:)
-      this%off(:) = off(:)
+      where (dom%has_dir(:))
+         this%n_d(:) = n_d(:)
+         this%off(:) = off(:)
+      elsewhere
+         this%n_d(:) = 1
+         this%off(:) = 0
+      endwhere
 
       call this%decompose_patch_int(patch_divided, n_pieces)
       if (patch_divided) patch_divided = this%is_not_too_small("not catched anywhere")
