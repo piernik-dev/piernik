@@ -27,7 +27,11 @@
 !
 #include "piernik.h"
 
-!> \brief Initializes the crucial grid lists and provides a cleanup routine.
+!>
+!! \brief Initializes the crucial grid lists and provides a cleanup routine.
+!!
+!! \todo For domains with non-0 offsets (e.g. crawling, expanding) provide some means to communicate offset requirements for multigrid
+!<
 
 module grid
 
@@ -44,11 +48,14 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_connected, only: base_lev, finest, coarsest
-      use constants,          only: PIERNIK_INIT_DOMAIN
+      use constants,          only: PIERNIK_INIT_DOMAIN, LONG, ndims
       use dataio_pub,         only: printinfo, die, code_progress
       use domain,             only: dom
 
       implicit none
+
+      !> \todo Make Multigrid and refinement work properly with non-0, even offset. Odd offsets can remain illegal.
+      integer(kind=8), dimension(ndims), parameter :: base_level_offset = 0_LONG !< Offset of the base domain
 
       if (code_progress < PIERNIK_INIT_DOMAIN) call die("[grid:init_grid] domain not initialized.")
 
@@ -61,7 +68,8 @@ contains
       allocate(base_lev)
       finest => base_lev
       coarsest => base_lev
-      call base_lev%add_level(dom%n_d)
+
+      call base_lev%add_level(dom%n_d, base_level_offset)
       call base_lev%add_patch
       call base_lev%init_all_new_cg
 

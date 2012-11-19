@@ -119,7 +119,7 @@ contains
 
 !> \brief Initialize the base level
 
-   subroutine add_lev_base(this, n_d)
+   subroutine add_lev_base(this, n_d, offset)
 
       use constants,        only: base_level_id, ndims
       use dataio_pub,       only: die
@@ -130,6 +130,7 @@ contains
 
       class(cg_level_connected_T),       intent(inout) :: this   !< object invoking type bound procedure
       integer(kind=4), dimension(ndims), intent(in)    :: n_d    !< size of global base grid in cells
+      integer(kind=8), dimension(ndims), intent(in)    :: offset !< offset of global base grid in cells
 
       if (any(n_d(:) < 1)) call die("[cg_level_connected:add_lev_base] non-positive base grid sizes")
       if (any(dom%has_dir(:) .neqv. (n_d(:) > 1))) call die("[cg_level_connected:add_lev_base] base grid size incompatible with has_dir masks")
@@ -137,9 +138,10 @@ contains
       call this%init_level
       this%level_id = base_level_id
 
-      this%n_d(:) = 1
+      this%n_d(:) = 1; this%off(:) = 0
       where (dom%has_dir(:))
          this%n_d(:) = n_d(:)
+         this%off(:) = offset(:)
       endwhere
 
       call all_lists%register(this, "Base level")
@@ -153,8 +155,9 @@ contains
       use constants,        only: INVALID, I_ONE, refinement_factor
       use dataio_pub,       only: die, msg
       use domain,           only: dom
-      use mpisetup,         only: master
+      use func,             only: f2c_o, c2f_o
       use list_of_cg_lists, only: all_lists
+      use mpisetup,         only: master
 
       implicit none
 
@@ -179,6 +182,11 @@ contains
 
          coarsest => new_lev
          new_lev%level_id = this%level_id - I_ONE
+         new_lev%off = f2c_o(this%off)
+         if (any(c2f_o(new_lev%off) /= this%off)) then
+            write(msg, '(a,3f10.1,a,i3)')"[cg_level_connected:add_lev] Fractional offset: ", this%off(:)/real(refinement_factor), " at level ",new_lev%level_id
+            call die(msg)
+         endif
          where (dom%has_dir(:)) new_lev%n_d(:) = this%n_d(:) / refinement_factor
          if (master .and. any(new_lev%n_d(:)*refinement_factor /= this%n_d(:) .and. dom%has_dir(:))) then
             write(msg, '(a,3f10.1,a,i3)')"[cg_level_connected:add_lev] Fractional number of domain cells: ", this%n_d(:)/real(refinement_factor), " at level ",new_lev%level_id
@@ -196,6 +204,7 @@ contains
 
          finest => new_lev
          new_lev%level_id = this%level_id + I_ONE
+         new_lev%off = c2f_o(this%off)
          where (dom%has_dir(:)) new_lev%n_d(:) = this%n_d(:) * refinement_factor
       endif
 

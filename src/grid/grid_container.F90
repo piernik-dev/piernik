@@ -243,7 +243,7 @@ contains
 !! Things that are related to communication with other grid containers or global properties are set up in cg_level::init_all_new_cg.
 !<
 
-   subroutine init(this, n_d, my_se, grid_id, level_id)
+   subroutine init(this, n_d, off, my_se, grid_id, level_id)
 
       use cart_comm,     only: cdd
       use constants,     only: PIERNIK_INIT_DOMAIN, xdim, ydim, zdim, ndims, big_float,refinement_factor, &
@@ -261,6 +261,7 @@ contains
       class(grid_container), target,   intent(inout) :: this ! intent(out) would silently clear everything, that was already set
                                                              ! (also the fields in types derived from grid_container)
       integer(kind=8), dimension(:),   intent(in) :: n_d     !< max resolution of my level
+      integer(kind=8), dimension(:),   intent(in) :: off     !< offset of my level
       integer(kind=8), dimension(:,:), intent(in) :: my_se   !< my segment
       integer,                         intent(in) :: grid_id
       integer(kind=4),                 intent(in) :: level_id
@@ -291,8 +292,8 @@ contains
       this%ext_bnd(:, :) = .false.
       do i = xdim, zdim
          if (dom%has_dir(i) .and. .not. dom%periodic(i)) then
-            this%ext_bnd(i, LO) = (my_se(i, LO)   == 0)
-            this%ext_bnd(i, HI) = (this%h_cor1(i) == n_d(i)) !! \warning not true on AMR
+            this%ext_bnd(i, LO) = (my_se(i, LO)   == off(i))
+            this%ext_bnd(i, HI) = (this%h_cor1(i) == off(i) + n_d(i)) !! \warning not true on AMR
          endif
       enddo
 
@@ -349,8 +350,8 @@ contains
          this%lhn(:,LO)    = this%ijkse(:, LO) - dom%nb
          this%lhn(:,HI)    = this%ijkse(:, HI) + dom%nb
          this%dl(:)        = dom%L_(:) / n_d(:)
-         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * this%my_se(:, LO)
-         this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * this%h_cor1(:)
+         this%fbnd(:, LO)  = dom%edge(:, LO) + this%dl(:) * (this%my_se(:, LO) - off(:))
+         this%fbnd(:, HI)  = dom%edge(:, LO) + this%dl(:) * (this%h_cor1(:) - off(:))
       elsewhere
          this%n_(:)        = 1
          this%ijkse(:, LO) = 1 ! cannot use this%ijkse(:, :) = 1 due to where shape

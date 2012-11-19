@@ -74,6 +74,7 @@ module cg_level
       integer                                    :: tot_se    !< global number of segments on the level
       integer                                    :: fft_type  !< type of FFT to employ in some multigrid solvers (depending on boundaries)
       type(box_T),     dimension(:), allocatable :: patches   !< list of patches that exist on the current level
+      integer(kind=8), dimension(ndims)          :: off       !< offset of the level
 
     contains
 
@@ -201,7 +202,7 @@ contains
          if (this%pse(proc)%c(i)%is_new) then
             call this%add
             cg => this%last%cg
-            call cg%init(this%n_d, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
+            call cg%init(this%n_d, this%off, this%pse(proc)%c(i)%se(:, :), i, this%level_id) ! we cannot pass "this" as an argument because of circular dependencies
             do ep = lbound(cg_extptrs%ext, dim=1), ubound(cg_extptrs%ext, dim=1)
                if (associated(cg_extptrs%ext(ep)%init))  call cg_extptrs%ext(ep)%init(cg)
             enddo
@@ -503,9 +504,9 @@ contains
                                     cg%i_bnd(d, ib)%seg(g)%proc = j
                                     cg%i_bnd(d, ib)%seg(g)%se(:,LO) = b_layer(:, LO) + ijks(:)
                                     cg%i_bnd(d, ib)%seg(g)%se(:,HI) = b_layer(:, HI) + ijks(:)
-                                    if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) < 0)) &
+                                    if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) < cg%lhn(d, LO))) &
                                          cg%i_bnd(d, ib)%seg(g)%se(d, :) = cg%i_bnd(d, ib)%seg(g)%se(d, :) + this%n_d(d)
-                                    if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) > cg%n_b(d) + 2*dom%nb)) &
+                                    if (any(cg%i_bnd(d, ib)%seg(g)%se(d, :) > cg%lhn(d, HI))) &
                                          cg%i_bnd(d, ib)%seg(g)%se(d, :) = cg%i_bnd(d, ib)%seg(g)%se(d, :) - this%n_d(d)
 
                                     ! expand to cover corners (requires separate MPI_Waitall for each direction)
@@ -623,14 +624,12 @@ contains
 
    subroutine add_patch_fulllevel(this, n_pieces)
 
-      use constants, only: base_level_offset
-
       implicit none
 
       class(cg_level_T), target, intent(inout) :: this     !< current level
       integer(kind=4), optional, intent(in)    :: n_pieces !< how many pieces the patch should be divided to?
 
-      call this%add_patch_detailed(this%n_d, base_level_offset, n_pieces)
+      call this%add_patch_detailed(this%n_d, this%off, n_pieces)
 
    end subroutine add_patch_fulllevel
 
