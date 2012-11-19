@@ -20,6 +20,8 @@ def visualize(files):
         plt.draw()
         fn_out = fn.replace('.h5', '_%s.png' % field)
         plt.savefig(fn_out)
+        plt.clf()
+        plt.close()
         output.append(fn_out)
     return output
 

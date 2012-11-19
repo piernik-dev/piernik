@@ -36,7 +36,7 @@
     use_v2_io = .true.
     problem_name = 'tearing'
     run_id       = 'tst'
-    dt_hdf  = 0.5
+    dt_hdf  = 0.25
     dt_log  = 0.1
     dt_tsl  = 0.1
     dt_res  = 0.0
