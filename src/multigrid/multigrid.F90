@@ -232,13 +232,10 @@ contains
          level_max = j
       endif
 
-      curl => finest%level
-      do while (associated(curl))
-
-         if (curl%level_id <= -level_max) exit
+      do while (coarsest%level%level_id > -level_max)
 
          ! create coarser level:
-         call curl%add_level(coarse = .true.)
+         call coarsest%level%add_level(coarse = .true.)
          if (coarsest%level%level_id == -level_max .and. single_base) then
             call coarsest%level%add_patch(n_pieces=I_ONE)
          else
@@ -246,7 +243,6 @@ contains
          endif
          call coarsest%level%init_all_new_cg
 
-         curl => curl%coarser
       enddo
 
       curl => finest%level
