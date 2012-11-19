@@ -56,7 +56,7 @@ module cg_leaves
    !<
 
    type, extends(cg_list_bnd_T) :: cg_leaves_T
-      type(cg_level_connected_T), pointer :: coarsest
+      type(cg_level_connected_T), pointer :: coarsest_leaves
    contains
       procedure :: update           !< Select grids that should be included on leaves list
       procedure :: arr3d_boundaries !< Wrapper routine to set up all guardcells (internal, external and fine-coarse) for given rank-3 arrays.
@@ -102,7 +102,7 @@ contains
 
       msg = "[cg_leaves:update] Leaves on levels: "
       curl => base_lev
-      this%coarsest => curl !> \todo Start from first not fully covered level
+      this%coarsest_leaves => curl !> \todo Start from first not fully covered level
       do while (associated(curl))
          cgl => curl%first
          do while (associated(cgl))
@@ -137,7 +137,7 @@ contains
 
       type(cg_level_connected_T), pointer :: curl
 
-      curl => this%coarsest
+      curl => this%coarsest_leaves
       do while (associated(curl))
          call curl%arr3d_boundaries(ind, nb, area_type, bnd_type, corners)
          curl => curl%finer
