@@ -371,7 +371,8 @@ contains
 
       use cg_leaves,           only: leaves
       use cg_level_coarsest,   only: coarsest
-      use cg_level_connected,  only: cg_level_connected_T, finest
+      use cg_level_connected,  only: cg_level_connected_T
+      use cg_level_finest,     only: finest
       use constants,           only: GEO_XYZ, sgp_n, fft_none, fft_dst, fft_rcr, dsetnamelen
       use dataio_pub,          only: die, warn, printinfo, msg
       use domain,              only: dom
@@ -827,7 +828,8 @@ contains
       use cg_leaves,           only: leaves
       use cg_list_global,      only: all_cg
       use cg_level_coarsest,   only: coarsest
-      use cg_level_connected,  only: cg_level_connected_T, finest
+      use cg_level_connected,  only: cg_level_connected_T
+      use cg_level_finest,     only: finest
       use constants,           only: cbuff_len, fft_none
       use dataio_pub,          only: msg, die, warn, printinfo
       use global,              only: do_ascii_dump
@@ -1520,7 +1522,7 @@ contains
 
    subroutine fft_solve_roof
 
-      use cg_level_connected,  only: finest
+      use cg_level_finest,     only: finest
       use constants,           only: fft_none
       use dataio_pub,          only: die
       use grid_cont,           only: grid_container

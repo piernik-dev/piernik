@@ -341,7 +341,7 @@ contains
 #if defined(__INTEL_COMPILER)
       use cg_level_connected, only: cg_level_connected_T  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use cg_level_connected, only: finest
+      use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
       use dataio_pub,         only: die
@@ -379,14 +379,14 @@ contains
 
    subroutine init_solution(cr_id)
 
-      use cg_list_global, only: all_cg
+      use cg_list_global,   only: all_cg
 #if defined(__INTEL_COMPILER)
-      use cg_level_connected,  only: cg_level_connected_T  ! QA_WARN workaround for stupid INTEL compiler
+      use cg_level_connected, only: cg_level_connected_T  ! QA_WARN workaround for stupid INTEL compiler
 #endif /* __INTEL_COMPILER */
-      use cg_level_connected,  only: finest
-      use cg_leaves,      only: leaves
-      use initcosmicrays, only: iarr_crs
-      use multigridvars,  only: solution
+      use cg_level_finest,  only: finest
+      use cg_leaves,        only: leaves
+      use initcosmicrays,   only: iarr_crs
+      use multigridvars,    only: solution
       use named_array_list, only: wna
 
       implicit none
@@ -410,7 +410,8 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T, finest
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_finest,    only: finest
       use cg_list,            only: cg_list_element
       use cg_list_dataop,     only: dirty_label
       use cg_list_global,     only: all_cg
@@ -468,7 +469,8 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: cg_level_connected_T, finest
+      use cg_level_connected, only: cg_level_connected_T
+      use cg_level_finest,    only: finest
       use cg_list_dataop,     only: ind_val, dirty_label
       use cg_list_global,     only: all_cg
       use dataio_pub,         only: msg, warn

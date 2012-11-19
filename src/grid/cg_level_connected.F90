@@ -36,7 +36,7 @@ module cg_level_connected
    implicit none
 
    private
-   public :: cg_level_connected_T, base_lev, finest, equalize_finest
+   public :: cg_level_connected_T, base_lev
 
    !! \brief A list of all cg of the same resolution with links to coarser and finer levels
    type, extends(cg_level_T) :: cg_level_connected_T
@@ -65,42 +65,7 @@ module cg_level_connected
 
    type(cg_level_connected_T), pointer  :: base_lev             !< base level grid containers
 
-   !! \todo finest and coarsest together with subroutine add_lev can go to separate module
-   type :: cg_level_finest_T
-      type(cg_level_connected_T), pointer :: level
-    contains
-      procedure          :: add_finer
-   end type cg_level_finest_T
-
-   type(cg_level_finest_T) :: finest               !< finest level of refinement
-
 contains
-
-!>
-!! \brief It is not allowed for different processes to have different height of level hierarchy, so let's add some empty levels, where necessary
-!!
-!! \details Multigrid levels are always created on all processes, so no need to fix anything on the bottom of the hierarchy
-!!
-!! \todo When global top level do not have any blocks then destroy it.
-!<
-
-   subroutine equalize_finest
-
-      use constants, only: I_ONE
-      use mpi,       only: MPI_INTEGER, MPI_MAX
-      use mpisetup,  only: comm, mpi_err
-
-      implicit none
-
-      integer(kind=4) :: g_finest_id
-
-      call MPI_Allreduce(finest%level%level_id, g_finest_id, I_ONE, MPI_INTEGER, MPI_MAX, comm, mpi_err)
-
-      do while (g_finest_id > finest%level%level_id)
-         call finest%add_finer
-      enddo
-
-   end subroutine equalize_finest
 
 !> \brief Common initialization for base level and other levels
 
@@ -154,43 +119,6 @@ contains
       end select
 
    end subroutine set
-
-!> \brief Add a fine or coarse level to a existing one
-
-   subroutine add_finer(this)
-
-      use constants,        only: INVALID, I_ONE, refinement_factor
-      use dataio_pub,       only: die, msg
-      use domain,           only: dom
-      use func,             only: c2f_o
-      use list_of_cg_lists, only: all_lists
-
-      implicit none
-
-      class(cg_level_finest_T), intent(inout) :: this    !< lowest or highest refinement level
-
-      type(cg_level_connected_T), pointer     :: new_lev !< fresh refinement level to be added
-
-      allocate(new_lev)
-      call new_lev%init_level
-      new_lev%n_d(:) = 1
-
-      if (associated(this%level%finer)) call die("[cg_level_connected:add_finer] finer level already exists")
-
-      new_lev%level_id = this%level%level_id + I_ONE
-      new_lev%off = c2f_o(this%level%off)
-      where (dom%has_dir(:)) new_lev%n_d(:) = this%level%n_d(:) * refinement_factor
-
-      !! make sure that vertical_prep will be called where necessary
-      this%level%ord_prolong_set = INVALID
-      write(msg, '(a,i3)')"level ",new_lev%level_id
-      call all_lists%register(new_lev, msg)
-
-      this%level%finer => new_lev
-      new_lev%coarser => this%level
-      this%level => new_lev
-
-   end subroutine add_finer
 
 !>
 !! \brief Initialize prolongation and restriction targets. Called from init_multigrid.

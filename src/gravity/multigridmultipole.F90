@@ -178,13 +178,13 @@ contains
 
    subroutine refresh_multipole
 
-      use cg_level_connected, only: finest
-      use constants,          only: small, pi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
-      use dataio_pub,         only: die, warn
-      use domain,             only: dom
-      use mpi,                only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
-      use mpisetup,           only: master, comm, mpi_err
-      use particle_pub,       only: pset
+      use cg_level_finest, only: finest
+      use constants,       only: small, pi, xdim, ydim, zdim, GEO_XYZ, GEO_RPZ, LO, HI, I_ONE
+      use dataio_pub,      only: die, warn
+      use domain,          only: dom
+      use mpi,             only: MPI_IN_PLACE, MPI_DOUBLE_PRECISION, MPI_MIN
+      use mpisetup,        only: master, comm, mpi_err
+      use particle_pub,    only: pset
 
       implicit none
 

@@ -190,17 +190,18 @@ contains
 
    subroutine init_multigrid
 
-      use cg_list,             only: cg_list_element
-      use cg_level_coarsest,   only: coarsest
-      use cg_level_connected,  only: cg_level_connected_T, base_lev, finest
-      use constants,           only: PIERNIK_INIT_GRID, I_ONE, refinement_factor
-      use dataio_pub,          only: printinfo, warn, die, code_progress, msg
-      use domain,              only: dom, minsize
-      use grid_cont,           only: grid_container
-      use mpisetup,            only: master
-      use multigridvars,       only: single_base
+      use cg_list,            only: cg_list_element
+      use cg_level_coarsest,  only: coarsest
+      use cg_level_connected, only: cg_level_connected_T, base_lev
+      use cg_level_finest,    only: finest
+      use constants,          only: PIERNIK_INIT_GRID, I_ONE, refinement_factor
+      use dataio_pub,         only: printinfo, warn, die, code_progress, msg
+      use domain,             only: dom, minsize
+      use grid_cont,          only: grid_container
+      use mpisetup,           only: master
+      use multigridvars,      only: single_base
 #ifdef GRAV
-      use multigrid_gravity,   only: init_multigrid_grav
+      use multigrid_gravity,  only: init_multigrid_grav
 #endif /* GRAV */
 
       implicit none

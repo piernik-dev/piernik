@@ -27,7 +27,7 @@
 !
 #include "piernik.h"
 
-!> \brief This module creates coarsest levels of refinement
+!> \brief This module manages coarsest levels of refinement
 
 module cg_level_coarsest
 
@@ -40,7 +40,7 @@ module cg_level_coarsest
 
    !> \brief The pointer of the coarsest refinement level and a method to add a coarser one
    type :: cg_level_coarsest_T
-      type(cg_level_connected_T), pointer :: level
+      type(cg_level_connected_T), pointer :: level !< lowest refinement level
     contains
       procedure :: add_coarser
       !> \todo Provide delete_coarsest and use it in cleanup and perhaps also to make it easier for the domain to crawl.
@@ -63,11 +63,12 @@ contains
 
       implicit none
 
-      class(cg_level_coarsest_T), intent(inout) :: this    !< lowest or highest refinement level
+      class(cg_level_coarsest_T), intent(inout) :: this    !< object calling type-bound routine
+
 
       type(cg_level_connected_T), pointer       :: new_lev !< fresh refinement level to be added
 
-      if (associated(this%level%coarser)) call die("[cg_level_connected:add_coarser] coarser level already exists")
+      if (associated(this%level%coarser)) call die("[cg_level_coarsest:add_coarser] coarser level already exists")
 
       allocate(new_lev)
       call new_lev%init_level
@@ -76,12 +77,12 @@ contains
       new_lev%level_id = this%level%level_id - I_ONE
       new_lev%off = f2c_o(this%level%off)
       if (any(c2f_o(new_lev%off) /= this%level%off)) then
-         write(msg, '(a,3f10.1,a,i3)')"[cg_level_connected:add_coarser] Fractional offset: ", this%level%off(:)/real(refinement_factor), " at level ",new_lev%level_id
+         write(msg, '(a,3f10.1,a,i3)')"[cg_level_coarsest:add_coarser] Fractional offset: ", this%level%off(:)/real(refinement_factor), " at level ",new_lev%level_id
          call die(msg)
       endif
       where (dom%has_dir(:)) new_lev%n_d(:) = this%level%n_d(:) / refinement_factor
       if (master .and. any(new_lev%n_d(:)*refinement_factor /= this%level%n_d(:) .and. dom%has_dir(:))) then
-         write(msg, '(a,3f10.1,a,i3)')"[cg_level_connected:add_coarser] Fractional number of domain cells: ", this%level%n_d(:)/real(refinement_factor), " at level ",new_lev%level_id
+         write(msg, '(a,3f10.1,a,i3)')"[cg_level_coarsest:add_coarser] Fractional number of domain cells: ", this%level%n_d(:)/real(refinement_factor), " at level ",new_lev%level_id
          call die(msg)
       endif
 

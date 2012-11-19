@@ -48,7 +48,8 @@ contains
 
       use cg_leaves,          only: leaves
       use cg_level_coarsest,  only: coarsest
-      use cg_level_connected, only: base_lev, finest
+      use cg_level_connected, only: base_lev
+      use cg_level_finest,    only: finest
       use constants,          only: PIERNIK_INIT_DOMAIN, LONG, ndims
       use dataio_pub,         only: printinfo, die, code_progress
       use domain,             only: dom
