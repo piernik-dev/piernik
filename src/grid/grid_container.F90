@@ -450,7 +450,7 @@ contains
       allocate(this%prolong_  (      rn(xdim, LO):      rn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI), rn(zdim, LO):rn(zdim, HI)), &
            &   this%prolong_x (this%lhn(xdim, LO):this%lhn(xdim, HI),       rn(ydim, LO):      rn(ydim, HI), rn(zdim, LO):rn(zdim, HI)), &
            &   this%prolong_xy(this%lhn(xdim, LO):this%lhn(xdim, HI), this%lhn(ydim, LO):this%lhn(ydim, HI), rn(zdim, LO):rn(zdim, HI)))
-      allocate(this%leafmap(this%n_b(xdim), this%n_b(ydim), this%n_b(zdim)))
+      allocate(this%leafmap(this%ijkse(xdim, LO):this%ijkse(xdim, HI), this%ijkse(ydim, LO):this%ijkse(ydim, HI), this%ijkse(zdim, LO):this%ijkse(zdim, HI)))
 
       this%prolong_  (:, :, :) = big_float
       this%prolong_x (:, :, :) = big_float
@@ -784,8 +784,8 @@ contains
       this%leafmap = .true.
       if (allocated(this%ri_tgt%seg)) then
          do g = lbound(this%ri_tgt%seg(:), dim=1), ubound(this%ri_tgt%seg(:), dim=1)
-            se(:, LO) = this%ri_tgt%seg(g)%se(:, LO)-this%off(:)+1
-            se(:, HI) = this%ri_tgt%seg(g)%se(:, HI)-this%off(:)+1
+            se(:, LO) = this%ri_tgt%seg(g)%se(:, LO)-this%off(:)+this%ijkse(:, LO)
+            se(:, HI) = this%ri_tgt%seg(g)%se(:, HI)-this%off(:)+this%ijkse(:, LO)
             this%leafmap(se(xdim, LO):se(xdim, HI), se(ydim, LO):se(ydim, HI), se(zdim, LO):se(zdim, HI)) = .false.
          enddo
       endif

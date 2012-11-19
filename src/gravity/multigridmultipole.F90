@@ -808,9 +808,9 @@ contains
             if (dom%geometry_type == GEO_RPZ) geofac(:) = [ cg%fbnd(xdim, LO), cg%fbnd(xdim, HI) ]
             do j = cg%js, cg%je
                do k = cg%ks, cg%ke
-                  if (cg%leafmap(1,            j-cg%js+1, k-cg%ks+1) .and. cg%ext_bnd(xdim, LO) .and. (dom%geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
+                  if (cg%leafmap(cg%is, j, k) .and. cg%ext_bnd(xdim, LO) .and. (dom%geometry_type /= GEO_RPZ .or. .not. zaxis_inside)) &
                        call point2moments(cg%mg%bnd_x(j, k, LO)*cg%dyz*geofac(LO), cg%fbnd(xdim, LO)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
-                  if (cg%leafmap(cg%n_b(xdim), j-cg%js+1, k-cg%ks+1) .and. cg%ext_bnd(xdim, HI)) &
+                  if (cg%leafmap(cg%ie, j, k) .and. cg%ext_bnd(xdim, HI)) &
                        call point2moments(cg%mg%bnd_x(j, k, HI)*cg%dyz*geofac(HI), cg%fbnd(xdim, HI)-CoM(xdim), cg%y(j)-CoM(ydim), cg%z(k)-CoM(zdim))
                enddo
             enddo
@@ -819,9 +819,9 @@ contains
          if (any(cg%ext_bnd(ydim, :))) then
             do i = cg%is, cg%ie
                do k = cg%ks, cg%ke
-                  if (cg%leafmap(i-cg%is+1, 1,            k-cg%ks+1) .and. cg%ext_bnd(ydim, LO)) &
+                  if (cg%leafmap(i, cg%js, k) .and. cg%ext_bnd(ydim, LO)) &
                        call point2moments(cg%mg%bnd_y(i, k, LO)*cg%dxz, cg%x(i)-CoM(xdim), cg%fbnd(ydim, LO)-CoM(ydim), cg%z(k)-CoM(zdim))
-                  if (cg%leafmap(i-cg%is+1, cg%n_b(ydim), k-cg%ks+1) .and. cg%ext_bnd(ydim, HI)) &
+                  if (cg%leafmap(i, cg%je, k) .and. cg%ext_bnd(ydim, HI)) &
                        call point2moments(cg%mg%bnd_y(i, k, HI)*cg%dxz, cg%x(i)-CoM(xdim), cg%fbnd(ydim, HI)-CoM(ydim), cg%z(k)-CoM(zdim))
                enddo
             enddo
@@ -831,9 +831,9 @@ contains
             do i = cg%is, cg%ie
                if (dom%geometry_type == GEO_RPZ) geofac(LO) = cg%x(i)
                do j = cg%js, cg%je
-                  if (cg%leafmap(i-cg%is+1, j-cg%js+1, 1)            .and. cg%ext_bnd(zdim, LO)) &
+                  if (cg%leafmap(i, j, cg%ks) .and. cg%ext_bnd(zdim, LO)) &
                        call point2moments(cg%mg%bnd_z(i, j, LO)*cg%dxy*geofac(LO), cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, LO)-CoM(zdim))
-                  if (cg%leafmap(i-cg%is+1, j-cg%js+1, cg%n_b(zdim)) .and. cg%ext_bnd(zdim, HI)) &
+                  if (cg%leafmap(i, j, cg%ke) .and. cg%ext_bnd(zdim, HI)) &
                        call point2moments(cg%mg%bnd_z(i, j, HI)*cg%dxy*geofac(LO), cg%x(i)-CoM(xdim), cg%y(j)-CoM(ydim), cg%fbnd(zdim, HI)-CoM(zdim))
                enddo
             enddo

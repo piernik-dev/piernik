@@ -422,8 +422,8 @@ contains
                vol = vol + count(cg%leafmap) * cg%dvol
             case (GEO_RPZ)
                do i = cg%is, cg%ie
-                  avg = avg + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap(i-cg%is+1, :, :)) * cg%dvol * cg%x(i)
-                  vol = vol + count(cg%leafmap(i-cg%is+1, :, :)) * cg%dvol * cg%x(i)
+                  avg = avg + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke), mask=cg%leafmap(i, :, :)) * cg%dvol * cg%x(i)
+                  vol = vol + count(cg%leafmap(i, :, :)) * cg%dvol * cg%x(i)
                enddo
             case default
                call die("[cg_list_dataop:subtract_average] Unsupported geometry.")
@@ -493,7 +493,7 @@ contains
             case (GEO_RPZ)
                do i = cg%is, cg%ie
                   if (mask) then
-                     norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap(i-cg%is+1, :, :)) * cg%dvol * cg%x(i)
+                     norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2, mask=cg%leafmap(i, :, :)) * cg%dvol * cg%x(i)
                   else
                      norm = norm + sum(cg%q(iv)%arr(i, cg%js:cg%je, cg%ks:cg%ke)**2) * cg%dvol * cg%x(i)
                   endif
