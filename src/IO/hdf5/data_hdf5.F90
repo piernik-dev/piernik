@@ -66,13 +66,13 @@ contains
 
    function datafields_descr(var) result(f)
 
-      use gdf,    only: gdf_field_type
-      use units,  only: cm, gram, sek
+      use gdf,   only: gdf_field_type
+      use units, only: cm, gram, sek
 
       implicit none
 
       character(len=*), intent(in) :: var
-      type(gdf_field_type) :: f
+      type(gdf_field_type)         :: f
 
       f%f2cgs = 1.0
       f%stag  = 0
@@ -108,14 +108,14 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in) :: place
+      integer(HID_T), intent(in)             :: place
 
-      integer         :: i
-      integer(kind=4) :: error
-      integer(HID_T)  :: g_id
-      type(gdf_field_type), target :: f
+      integer                                :: i
+      integer(kind=4)                        :: error
+      integer(HID_T)                         :: g_id
+      type(gdf_field_type), target           :: f
       integer(kind=8), pointer, dimension(:) :: ibuf
-      character(len=fmax), pointer :: sbuf
+      character(len=fmax), pointer           :: sbuf
 
       allocate(ibuf(1))
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
@@ -228,15 +228,15 @@ contains
       use common_hdf5, only: set_common_attributes
       use constants,   only: cwdlen, I_ONE
       use dataio_pub,  only: printio, printinfo, nhdf, thdf, tmr_hdf, wd_wr, piernik_hdf5_version, piernik_hdf5_version2, &
-         & msg, run_id, problem_name, use_v2_io, last_hdf_time
+         &                   msg, run_id, problem_name, use_v2_io, last_hdf_time
       use mpisetup,    only: master, piernik_MPI_Bcast, report_to_master, report_string_to_master
       use mpisignals,  only: sig
       use timer,       only: set_timer
 
       implicit none
 
-      character(len=cwdlen)             :: fname
-      real :: phv
+      character(len=cwdlen) :: fname
+      real                  :: phv
 
       thdf = set_timer(tmr_hdf,.true.)
       nhdf = nhdf + I_ONE
@@ -274,7 +274,7 @@ contains
 
       implicit none
 
-      character(len=*), intent(in)      :: fname
+      character(len=*), intent(in) :: fname
 
       call write_to_hdf5_v2(fname, O_OUT, create_empty_cg_datasets_in_output, write_cg_to_output)
 
@@ -287,12 +287,12 @@ contains
 
    subroutine write_cg_to_output(cgl_g_id, cg_n, cg_all_n_b)
 
-      use constants,   only: xdim, ydim, zdim, ndims
-      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars
-      use dataio_pub,  only: die, nproc_io, can_i_write
-      use cg_list,     only: cg_list_element
-      use grid_cont,   only: grid_container
       use cg_leaves,   only: leaves
+      use cg_list,     only: cg_list_element
+      use common_hdf5, only: get_nth_cg, hdf_vars, cg_output, hdf_vars
+      use constants,   only: xdim, ydim, zdim, ndims
+      use dataio_pub,  only: die, nproc_io, can_i_write
+      use grid_cont,   only: grid_container
       use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_REAL, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
       use mpi,         only: MPI_REAL, MPI_STATUS_IGNORE
       use mpisetup,    only: master, FIRST, proc, comm, mpi_err
@@ -303,15 +303,15 @@ contains
       integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !< offset for cg group numbering
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !< all cg sizes
 
-      integer(HID_T)                              :: filespace_id, memspace_id
-      integer(kind=4)                             :: error
-      integer(kind=4), parameter        :: rank = 3
-      integer(HSIZE_T), dimension(:), allocatable :: dims
-      integer                                     :: i, ncg, n
-      type(grid_container), pointer               :: cg
-      type(cg_list_element), pointer              :: cgl
-      real(kind=4), dimension(:,:,:), pointer     :: data
-      type(cg_output) :: cg_desc
+      integer(HID_T)                                       :: filespace_id, memspace_id
+      integer(kind=4)                                      :: error
+      integer(kind=4), parameter                           :: rank = 3
+      integer(HSIZE_T), dimension(:), allocatable          :: dims
+      integer                                              :: i, ncg, n
+      type(grid_container),            pointer             :: cg
+      type(cg_list_element),           pointer             :: cgl
+      real(kind=4), dimension(:,:,:),  pointer             :: data
+      type(cg_output)                                      :: cg_desc
 
       call cg_desc%init(cgl_g_id, cg_n, nproc_io, hdf_vars)
 
@@ -421,10 +421,10 @@ contains
             use constants, only: xdim, ydim, zdim
             use hdf5,      only: HSIZE_T
             implicit none
-            integer(HSIZE_T), dimension(:) :: dims !< shape of current cg
+            integer(HSIZE_T), dimension(:)                       :: dims        !< shape of current cg
             integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !< all cg sizes
-            integer, intent(in) :: i !< no. of cg
-            real(kind=4), dimension(:,:,:), pointer :: data !< temporary storage array used for I/O
+            integer,                                  intent(in) :: i           !< no. of cg
+            real(kind=4), dimension(:,:,:),  pointer             :: data        !< temporary storage array used for I/O
 
             if (associated(data)) then
                if ( any(dims /= shape(data)) ) then
@@ -438,19 +438,19 @@ contains
 
    subroutine get_data_from_cg(hdf_var, cg, tab)
 
-      use dataio_pub,  only: die, msg
-      use dataio_user, only: user_vars_hdf5
-      use grid_cont,   only: grid_container
+      use dataio_pub,       only: die, msg
+      use dataio_user,      only: user_vars_hdf5
+      use grid_cont,        only: grid_container
       use named_array_list, only: qna
 
       implicit none
 
-      character(len=*), intent(in)                           :: hdf_var
-      type(grid_container), pointer, intent(in)              :: cg
+      character(len=*),                        intent(in)    :: hdf_var
+      type(grid_container),           pointer, intent(in)    :: cg
       real(kind=4), dimension(:,:,:), pointer, intent(inout) :: tab
 
-      integer :: ierrh
-      logical :: ok_var
+      integer                                                :: ierrh
+      logical                                                :: ok_var
 
       ierrh = 0
       ok_var = .false.
@@ -485,12 +485,12 @@ contains
 
       implicit none
 
-      integer(HID_T), intent(in)                           :: cg_g_id
+      integer(HID_T),                           intent(in) :: cg_g_id
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
-      logical(kind=4), intent(in)                          :: Z_avail
-      integer, intent(in)                                  :: g
+      logical(kind=4),                          intent(in) :: Z_avail
+      integer,                                  intent(in) :: g
 
-      integer :: i
+      integer                                              :: i
 
       do i = lbound(hdf_vars,1), ubound(hdf_vars,1)
          call create_empty_cg_dataset(cg_g_id, hdf_vars(i), int(cg_n_b(g, :), kind=HSIZE_T), Z_avail)
@@ -499,19 +499,19 @@ contains
 
    subroutine h5_write_to_single_file_v1(fname)
 
-      use cg_list,            only: cg_list_element
-      use cg_level_finest,    only: finest
-      use common_hdf5,        only: nhdf_vars, hdf_vars
-      use constants,          only: ndims, LO
-      use dataio_pub,         only: die
-      use domain,             only: is_multicg !, is_uneven
-      use grid_cont,          only: grid_container
-      use hdf5,               only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, &
-           &                        H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, &
-           &                        h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
-           &                        h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
-      use mpisetup,           only: comm
-      use mpi,                only: MPI_INFO_NULL
+      use cg_level_finest, only: finest
+      use cg_list,         only: cg_list_element
+      use common_hdf5,     only: nhdf_vars, hdf_vars
+      use constants,       only: ndims, LO
+      use dataio_pub,      only: die
+      use domain,          only: is_multicg !, is_uneven
+      use grid_cont,       only: grid_container
+      use hdf5,            only: HID_T, HSIZE_T, H5FD_MPIO_COLLECTIVE_F, H5P_DATASET_CREATE_F, H5P_DATASET_XFER_F, &
+           &                     H5S_SELECT_SET_F, H5T_NATIVE_REAL, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, &
+           &                     h5dwrite_f, h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5sclose_f, h5dget_space_f, h5sselect_hyperslab_f, &
+           &                     h5pset_dxpl_mpio_f, h5dclose_f, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pclose_f, h5pset_fapl_mpio_f !, h5pset_chunk_f
+      use mpisetup,        only: comm
+      use mpi,             only: MPI_INFO_NULL
 
       implicit none
 
@@ -622,11 +622,11 @@ contains
 
    subroutine h5_write_to_multiple_files
 
-      use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
-      use common_hdf5, only: nhdf_vars, hdf_vars
-      use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, last_hdf_time, piernik_hdf5_version
-      use cg_list,     only: cg_list_element
       use cg_leaves,   only: leaves
+      use cg_list,     only: cg_list_element
+      use common_hdf5, only: nhdf_vars, hdf_vars
+      use constants,   only: dsetnamelen, fnamelen, xdim, ydim, zdim, I_ONE
+      use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, last_hdf_time, piernik_hdf5_version
       use grid_cont,   only: grid_container
       use h5lt,        only: h5ltmake_dataset_float_f, h5ltmake_dataset_double_f
       use hdf5,        only: H5F_ACC_TRUNC_F, h5fcreate_f, h5open_f, h5fclose_f, h5close_f, HID_T, h5gcreate_f, &

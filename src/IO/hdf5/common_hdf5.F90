@@ -36,7 +36,7 @@ module common_hdf5
 ! pulled by ANY
 
    use constants, only: singlechar, ndims, dsetnamelen
-   use hdf5, only: HID_T
+   use hdf5,      only: HID_T
 
    implicit none
 
@@ -84,22 +84,22 @@ contains
 
    subroutine init_hdf5(vars)
 
-      use constants,   only: dsetnamelen
-      use fluids_pub,  only: has_ion, has_dst, has_neu
-      use fluidindex,  only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use constants,  only: dsetnamelen
+      use fluidindex, only: iarr_all_dn, iarr_all_mx, iarr_all_my, iarr_all_mz
+      use fluids_pub, only: has_ion, has_dst, has_neu
 #ifdef COSM_RAYS
-      use dataio_pub,  only: warn, msg
-      use fluidindex,  only: iarr_all_crs
+      use dataio_pub, only: warn, msg
+      use fluidindex, only: iarr_all_crs
 #endif /* COSM_RAYS */
 
       implicit none
 
       character(len=dsetnamelen), dimension(:), intent(in) :: vars  !< quantities to be plotted, see dataio::vars
 
-      integer               :: nvars, i, j
+      integer                                              :: nvars, i, j
 #if defined COSM_RAYS
-      integer               :: k
-      character(len=dsetnamelen) :: aux
+      integer                                              :: k
+      character(len=dsetnamelen)                           :: aux
 #endif /* COSM_RAYS */
 
       nvars = 1
@@ -220,7 +220,7 @@ contains
       class(component_fluid), pointer, intent(inout) :: fl_dni
       integer(kind=4),                 intent(out)   :: i_xyz
 
-      character(len=singlechar) :: dc
+      character(len=singlechar)                      :: dc
 
       nullify(fl_dni)
       if (any([ "den", "vlx", "vly", "vlz", "ene" ] == var(1:3))) then
@@ -345,17 +345,17 @@ contains
 
    subroutine set_common_attributes_v1(file_id)
 
-      use cg_level_finest,    only: finest
-      use constants,     only: cbuff_len, xdim, ydim, zdim, I_ONE
-      use dataio_pub,    only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
-         &                     last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
-      use domain,        only: dom
-      use fluidindex,    only: flind
-      use global,        only: t, dt, nstep
-      use hdf5,          only: HID_T, SIZE_T
-      use h5lt,          only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
-      use mass_defect,   only: magic_mass
-      use units,         only: cm, gram, sek, kelvin, miu0
+      use cg_level_finest, only: finest
+      use constants,       only: cbuff_len, xdim, ydim, zdim, I_ONE
+      use dataio_pub,      only: require_init_prob, piernik_hdf5_version, problem_name, run_id, last_hdf_time, &
+         &                       last_res_time, last_plt_time, last_tsl_time, last_log_time, nres, nhdf, nimg, domain_dump
+      use domain,          only: dom
+      use fluidindex,      only: flind
+      use global,          only: t, dt, nstep
+      use hdf5,            only: HID_T, SIZE_T
+      use h5lt,            only: h5ltset_attribute_double_f, h5ltset_attribute_int_f, h5ltset_attribute_string_f
+      use mass_defect,     only: magic_mass
+      use units,           only: cm, gram, sek, kelvin, miu0
 
       implicit none
 
@@ -520,19 +520,19 @@ contains
 
    function get_nth_cg(n) result(cg)
 
-      use dataio_pub,     only: die
-      use cg_list,        only: cg_list_element
-      use cg_leaves,      only: leaves
-      use grid_cont,      only: grid_container
+      use cg_leaves,  only: leaves
+      use cg_list,    only: cg_list_element
+      use dataio_pub, only: die
+      use grid_cont,  only: grid_container
 
       implicit none
 
-      integer, intent(in) :: n
+      integer, intent(in)            :: n
 
-      type(grid_container), pointer :: cg
+      type(grid_container),  pointer :: cg
       type(cg_list_element), pointer :: cgl
 
-      integer :: i
+      integer                        :: i
 
       nullify(cg)
       i = 1
@@ -556,18 +556,18 @@ contains
 
       use dataio_pub, only: enable_compression, gzip_level
       use hdf5,       only: HID_T, HSIZE_T, H5P_DATASET_CREATE_F, H5T_NATIVE_DOUBLE, &
-         & h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, &
-         & h5pset_shuffle_f, h5pset_chunk_f
+         &                  h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5pcreate_f, h5pclose_f, h5pset_deflate_f, &
+         &                  h5pset_shuffle_f, h5pset_chunk_f
 
      implicit none
 
-     integer(HID_T), intent(in)                 :: cg_g_id !< group id where to create the dataset
-     character(len=*), intent(in)               :: name    !< name
+     integer(HID_T),                 intent(in) :: cg_g_id !< group id where to create the dataset
+     character(len=*),               intent(in) :: name    !< name
      integer(HSIZE_T), dimension(:), intent(in) :: ddims   !< dimensionality
-     logical(kind=4), intent(in)                        :: Z_avail !< can use compression?
+     logical(kind=4),                intent(in) :: Z_avail !< can use compression?
 
-     integer(HID_T)  :: prp_id, filespace, dset_id
-     integer(kind=4) :: error
+     integer(HID_T)                             :: prp_id, filespace, dset_id
+     integer(kind=4)                            :: error
 
      call h5pcreate_f(H5P_DATASET_CREATE_F, prp_id, error)
      if (enable_compression .and. Z_avail) then
@@ -608,46 +608,46 @@ contains
 
    subroutine write_to_hdf5_v2(filename, otype, create_empty_cg_datasets, write_cg_to_hdf5)
 
-      use constants,      only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
-      use units,          only: cm, sek
-      use dataio_pub,     only: die, nproc_io, can_i_write, domain_dump
-      use domain,         only: dom
-      use cg_list,        only: cg_list_element
-      use gdf,            only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets, &
-         & gdf_root_datasets_T, gdf_parameters_T
-      use global,         only: t
-      use cg_leaves,      only: leaves
-      use hdf5,           only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
-         & h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
-         & h5zfilter_avail_f
-      use helpers_hdf5,   only: create_attribute!, create_corefile
-      use mpi,            only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
-      use mpisetup,       only: comm, FIRST, LAST, master, mpi_err, piernik_MPI_Bcast
+      use cg_leaves,    only: leaves
+      use cg_list,      only: cg_list_element
+      use constants,    only: cwdlen, dsetnamelen, xdim, zdim, ndims, I_ONE, I_TWO, I_THREE, INT4, LO, HI
+      use dataio_pub,   only: die, nproc_io, can_i_write, domain_dump
+      use domain,       only: dom
+      use gdf,          only: gdf_create_format_stamp, gdf_create_simulation_parameters, gdf_create_root_datasets, &
+         &                    gdf_root_datasets_T, gdf_parameters_T
+      use global,       only: t
+      use hdf5,         only: HID_T, H5F_ACC_RDWR_F, H5P_FILE_ACCESS_F, H5P_GROUP_ACCESS_F, H5Z_FILTER_DEFLATE_F, &
+         &                    h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gcreate_f, h5gopen_f, h5gclose_f, h5pclose_f, &
+         &                    h5zfilter_avail_f
+      use helpers_hdf5, only: create_attribute!, create_corefile
+      use mpi,          only: MPI_INTEGER, MPI_INTEGER8, MPI_STATUS_IGNORE, MPI_REAL8
+      use mpisetup,     only: comm, FIRST, LAST, master, mpi_err, piernik_MPI_Bcast
+      use units,        only: cm, sek
 
       implicit none
 
-      character(len=cwdlen), intent(in)             :: filename         !< Name of the HDF5 file
-      integer(kind=4), intent(in)                   :: otype            !< Output type (restart, data)
+      character(len=cwdlen), intent(in) :: filename         !< Name of the HDF5 file
+      integer(kind=4),       intent(in) :: otype            !< Output type (restart, data)
       interface
          !>
          !! Function resposinble for creating empty datasets, called by master
          !<
          subroutine create_empty_cg_datasets(cgl_g_id, cg_n_b, Z_avail, g)
-            use hdf5,     only: HID_T
+            use hdf5, only: HID_T
             implicit none
-            integer(HID_T), intent(in)                           :: cgl_g_id
+            integer(HID_T),                           intent(in) :: cgl_g_id
             integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
-            logical(kind=4), intent(in)                          :: Z_avail
-            integer, intent(in)                                  :: g
+            logical(kind=4),                          intent(in) :: Z_avail
+            integer,                                  intent(in) :: g
          end subroutine create_empty_cg_datasets
 
          !>
          !! Function that performs actual I/O, called by all
          !<
          subroutine write_cg_to_hdf5(cgl_g_id, cg_n, cg_all_n_b)
-            use hdf5,     only: HID_T
+            use hdf5, only: HID_T
             implicit none
-            integer(HID_T), intent(in)                           :: cgl_g_id
+            integer(HID_T),                           intent(in) :: cgl_g_id
             integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n
             integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b
          end subroutine write_cg_to_hdf5
@@ -684,8 +684,8 @@ contains
       real, dimension(LO:HI)                        :: edge
       real, dimension(ndims)                        :: temp
 
-      type(gdf_root_datasets_T) :: rd
-      type(gdf_parameters_T) :: gdf_sp
+      type(gdf_root_datasets_T)                     :: rd
+      type(gdf_parameters_T)                        :: gdf_sp
 
       ! Create a new file and initialize it
 
@@ -889,10 +889,10 @@ contains
    end subroutine write_to_hdf5_v2
 
    function set_h5_properties(h5p, nproc_io) result (plist_id)
-      use hdf5,         only: HID_T, H5P_FILE_ACCESS_F, h5pcreate_f, h5pset_fapl_mpio_f, &
-                        &  H5FD_MPIO_COLLECTIVE_F, h5pset_dxpl_mpio_f, H5P_DATASET_XFER_F
-      use mpi,          only: MPI_INFO_NULL
-      use mpisetup,     only: comm
+      use hdf5,     only: HID_T, H5P_FILE_ACCESS_F, h5pcreate_f, h5pset_fapl_mpio_f, &
+         &                H5FD_MPIO_COLLECTIVE_F, h5pset_dxpl_mpio_f, H5P_DATASET_XFER_F
+      use mpi,      only: MPI_INFO_NULL
+      use mpisetup, only: comm
 
       implicit none
       integer(kind=4), intent(in) :: h5p
@@ -914,9 +914,9 @@ contains
 
    function output_fname(wr_rd, ext, no, bcast, prefix) result(filename)
 
-      use constants,   only: cwdlen, RD, WR, I_FOUR, fnamelen
-      use dataio_pub,  only: problem_name, run_id, wd_wr, wd_rd, warn, die, msg
-      use mpisetup,    only: master, piernik_MPI_Bcast
+      use constants,  only: cwdlen, RD, WR, I_FOUR, fnamelen
+      use dataio_pub, only: problem_name, run_id, wd_wr, wd_rd, warn, die, msg
+      use mpisetup,   only: master, piernik_MPI_Bcast
 
       implicit none
 
@@ -964,23 +964,23 @@ contains
 
    subroutine initialize_write_cg(this, cgl_g_id, cg_n, nproc_io, dsets)
 
-      use constants,    only: dsetnamelen
-      use hdf5,         only: HID_T, H5P_GROUP_ACCESS_F, H5P_DATASET_ACCESS_F, H5P_DATASET_XFER_F, &
-          & h5gopen_f, h5pclose_f, h5dopen_f
-      use dataio_pub,   only: can_i_write
-      use mpisetup,     only: FIRST, LAST
+      use constants,  only: dsetnamelen
+      use dataio_pub, only: can_i_write
+      use hdf5,       only: HID_T, H5P_GROUP_ACCESS_F, H5P_DATASET_ACCESS_F, H5P_DATASET_XFER_F, &
+          &                 h5gopen_f, h5pclose_f, h5dopen_f
+      use mpisetup,   only: FIRST, LAST
 
       implicit none
 
-      class(cg_output), intent(inout) :: this
-      integer(HID_T), intent(in) :: cgl_g_id
-      integer(kind=4), dimension(:), pointer, intent(in) :: cg_n
-      integer(kind=4), intent(in) :: nproc_io
-      character(len=dsetnamelen), dimension(:), intent(in) :: dsets
+      class(cg_output),                         intent(inout) :: this
+      integer(HID_T),                           intent(in)    :: cgl_g_id
+      integer(kind=4),   pointer, dimension(:), intent(in)    :: cg_n
+      integer(kind=4),                          intent(in)    :: nproc_io
+      character(len=dsetnamelen), dimension(:), intent(in)    :: dsets
 
-      integer :: i, ncg
-      integer(HID_T) :: plist_id
-      integer(kind=4) :: error
+      integer                                                 :: i, ncg
+      integer(HID_T)                                          :: plist_id
+      integer(kind=4)                                         :: error
 
       this%tot_cg_n = sum(cg_n)
       allocate(this%cg_src_p(1:this%tot_cg_n))
@@ -1029,15 +1029,15 @@ contains
 
    subroutine finalize_write_cg(this)
 
-      use hdf5,         only: h5dclose_f, h5gclose_f, h5pclose_f
-      use dataio_pub,   only: can_i_write
+      use hdf5,       only: h5dclose_f, h5gclose_f, h5pclose_f
+      use dataio_pub, only: can_i_write
 
       implicit none
 
       class(cg_output), intent(inout) :: this
 
-      integer :: ncg, i
-      integer(kind=4) :: error
+      integer                         :: ncg, i
+      integer(kind=4)                 :: error
 
       if (can_i_write) then
          do ncg = lbound(this%cg_g_id, 1), ubound(this%cg_g_id, 1)

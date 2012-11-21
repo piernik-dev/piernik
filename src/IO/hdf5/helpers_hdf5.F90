@@ -71,18 +71,18 @@ contains
 !! \todo check if HDF5 library has been already initialized
 !<
    subroutine create_corefile(fname, f_id, incr, bstore)
-      use hdf5,          only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DEFAULT_F, h5open_f, h5pcreate_f, &
-         & h5pset_fapl_core_f, h5fcreate_f, SIZE_T
+      use hdf5, only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_TRUNC_F, H5P_DEFAULT_F, h5open_f, h5pcreate_f, &
+         &            h5pset_fapl_core_f, h5fcreate_f, SIZE_T
       implicit none
-      character(len=*), intent(in)  :: fname   !< Filename
-      integer(HID_T), intent(inout) :: f_id    !< File id
+      character(len=*),     intent(in)           :: fname   !< Filename
+      integer(HID_T),       intent(inout)        :: f_id    !< File id
       integer(kind=SIZE_T), intent(in), optional :: incr    !< \copydoc helpers_hdf5::default_increment
-      logical, intent(in), optional :: bstore  !< \copydoc helpers_hdf5::default_backing_store
+      logical,              intent(in), optional :: bstore  !< \copydoc helpers_hdf5::default_backing_store
 
-      integer(hid_t) :: faplist_id
-      integer(kind=SIZE_T) :: increment
-      logical(kind=4) :: backing_store
-      integer(kind=4) :: hdferr
+      integer(hid_t)                             :: faplist_id
+      integer(kind=SIZE_T)                       :: increment
+      logical(kind=4)                            :: backing_store
+      integer(kind=4)                            :: hdferr
 
       increment = default_increment
       backing_store = default_backing_store
@@ -110,21 +110,21 @@ contains
 !
    subroutine create_dataset_int4_dim2(place, dname, ddata)
 
-      use iso_c_binding, only: c_ptr, c_loc
       use hdf5,          only: HID_T, HSIZE_T, H5T_STD_I32LE, &
           &                    h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5dwrite_f, &
           &                    h5kind_to_type, H5_INTEGER_KIND
+      use iso_c_binding, only: c_ptr, c_loc
 
       implicit none
 
-      integer(HID_T), intent(in)   :: place !< object id where dataset will be created
-      character(len=*), intent(in) :: dname !< name of dataset
+      integer(HID_T),                           intent(in) :: place !< object id where dataset will be created
+      character(len=*),                         intent(in) :: dname !< name of dataset
       integer(kind=4), dimension(:,:), pointer, intent(in) :: ddata !< data used to create dataset
 
-      integer(HID_T)  :: dset, space, mem_type
-      integer(kind=4) :: hdferr
-      integer(HSIZE_T), dimension(2) :: dims
-      type(c_ptr) :: f_ptr
+      integer(HID_T)                                       :: dset, space, mem_type
+      integer(kind=4)                                      :: hdferr
+      integer(HSIZE_T), dimension(2)                       :: dims
+      type(c_ptr)                                          :: f_ptr
 
       dims = shape(ddata)
       call h5screate_simple_f(I_TWO, dims, space, hdferr)
@@ -141,21 +141,21 @@ contains
 !
    subroutine create_dataset_int8_dim2(place, dname, ddata)
 
-      use iso_c_binding, only: c_ptr, c_loc
       use hdf5,          only: HID_T, HSIZE_T, H5T_STD_I64LE, &
           &                    h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5dwrite_f, &
           &                    h5kind_to_type, H5_INTEGER_KIND
+      use iso_c_binding, only: c_ptr, c_loc
 
       implicit none
 
-      integer(HID_T), intent(in)   :: place !< object id where dataset will be created
-      character(len=*), intent(in) :: dname !< name of dataset
+      integer(HID_T),                           intent(in) :: place !< object id where dataset will be created
+      character(len=*),                         intent(in) :: dname !< name of dataset
       integer(kind=8), dimension(:,:), pointer, intent(in) :: ddata !< data used to create dataset
 
-      integer(HID_T)  :: dset, space, mem_type
-      integer(kind=4) :: hdferr
-      integer(HSIZE_T), dimension(2) :: dims
-      type(c_ptr) :: f_ptr
+      integer(HID_T)                                       :: dset, space, mem_type
+      integer(kind=4)                                      :: hdferr
+      integer(HSIZE_T), dimension(2)                       :: dims
+      type(c_ptr)                                          :: f_ptr
 
       dims = shape(ddata)
       call h5screate_simple_f(I_TWO, dims, space, hdferr)
@@ -172,21 +172,21 @@ contains
 !
    subroutine create_dataset_int8_dim1(place, dname, ddata)
 
-      use iso_c_binding, only: c_ptr, c_loc
       use hdf5,          only: HID_T, HSIZE_T, H5T_STD_I64LE, &
           &                    h5dcreate_f, h5dclose_f, h5screate_simple_f, h5sclose_f, h5dwrite_f, &
           &                    h5kind_to_type, H5_INTEGER_KIND
+      use iso_c_binding, only: c_ptr, c_loc
 
       implicit none
 
-      integer(HID_T), intent(in)   :: place !< object id where dataset will be created
-      character(len=*), intent(in) :: dname !< name of dataset
+      integer(HID_T),                         intent(in) :: place !< object id where dataset will be created
+      character(len=*),                       intent(in) :: dname !< name of dataset
       integer(kind=8), dimension(:), pointer, intent(in) :: ddata !< data used to create dataset
 
-      integer(HID_T)  :: dset, space, mem_type
-      integer(kind=4) :: hdferr
-      integer(HSIZE_T), dimension(1) :: dims
-      type(c_ptr) :: f_ptr
+      integer(HID_T)                                     :: dset, space, mem_type
+      integer(kind=4)                                    :: hdferr
+      integer(HSIZE_T), dimension(1)                     :: dims
+      type(c_ptr)                                        :: f_ptr
 
       dims = shape(ddata)
       call h5screate_simple_f(I_ONE, dims, space, hdferr)
@@ -203,18 +203,18 @@ contains
 !
    subroutine create_int_attribute(g_id, name, int_array)
 
-      use hdf5,      only: H5T_NATIVE_INTEGER, HID_T, HSIZE_T, &
-           &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
+      use hdf5, only: H5T_NATIVE_INTEGER, HID_T, HSIZE_T, &
+           &          h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
 
       implicit none
 
-      integer(HID_T), intent(in)                :: g_id      !< group id where to create the attribute
-      character(len=*), intent(in)              :: name      !< name
+      integer(HID_T),                intent(in) :: g_id      !< group id where to create the attribute
+      character(len=*),              intent(in) :: name      !< name
       integer(kind=4), dimension(:), intent(in) :: int_array !< the data
 
-      integer(HID_T)  :: aspace_id, attr_id
-      integer(kind=4) :: error
-      integer(HSIZE_T), dimension(I_ONE) :: dims
+      integer(HID_T)                            :: aspace_id, attr_id
+      integer(kind=4)                           :: error
+      integer(HSIZE_T), dimension(I_ONE)        :: dims
 
       dims(I_ONE) = size(int_array, kind=HSIZE_T)
       call h5screate_simple_f(I_ONE, dims, aspace_id, error)
@@ -229,20 +229,20 @@ contains
 !
    subroutine create_int8_attribute(g_id, name, int_array)
 
+      use hdf5,          only: HID_T, HSIZE_T, h5kind_to_type, H5_INTEGER_KIND, H5T_STD_I64LE, &
+          &                    h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
       use iso_c_binding, only: c_ptr, c_loc
-      use hdf5,      only: HID_T, HSIZE_T, h5kind_to_type, H5_INTEGER_KIND, H5T_STD_I64LE, &
-          &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
 
       implicit none
 
-      integer(HID_T), intent(in)                         :: g_id      !< group id where to create the attribute
-      character(len=*), intent(in)                       :: name      !< name
+      integer(HID_T),                         intent(in) :: g_id      !< group id where to create the attribute
+      character(len=*),                       intent(in) :: name      !< name
       integer(kind=8), dimension(:), pointer, intent(in) :: int_array !< the data
 
-      integer(HID_T)  :: attr, space, mem_type
-      integer(kind=4) :: hdferr
-      integer(HSIZE_T), dimension(I_ONE) :: dims
-      type(c_ptr) :: f_ptr
+      integer(HID_T)                                     :: attr, space, mem_type
+      integer(kind=4)                                    :: hdferr
+      integer(HSIZE_T), dimension(I_ONE)                 :: dims
+      type(c_ptr)                                        :: f_ptr
 
       dims = shape(int_array)
       call h5screate_simple_f(I_ONE, dims, space, hdferr)
@@ -259,18 +259,18 @@ contains
 !
    subroutine create_real_attribute(g_id, name, real_array)
 
-      use hdf5,      only: H5T_NATIVE_DOUBLE, HID_T, HSIZE_T, &
-           &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
+      use hdf5, only: H5T_NATIVE_DOUBLE, HID_T, HSIZE_T, &
+           &          h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f
 
       implicit none
 
-      integer(HID_T), intent(in)     :: g_id       !< group id where to create the attribute
-      character(len=*), intent(in)   :: name       !< name
+      integer(HID_T),             intent(in) :: g_id       !< group id where to create the attribute
+      character(len=*),           intent(in) :: name       !< name
       real(kind=8), dimension(:), intent(in) :: real_array !< the data
 
-      integer(HID_T)  :: aspace_id, attr_id
-      integer(kind=4) :: error
-      integer(HSIZE_T), dimension(I_ONE) :: dims
+      integer(HID_T)                         :: aspace_id, attr_id
+      integer(kind=4)                        :: error
+      integer(HSIZE_T), dimension(I_ONE)     :: dims
 
       dims = shape(real_array)
       call h5screate_simple_f(I_ONE, dims, aspace_id, error)
@@ -285,21 +285,21 @@ contains
 !
    subroutine create_str_attribute(g_id, name, data)
 
+      use hdf5,          only: HID_T, HSIZE_T, SIZE_T, &
+           &                   h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f, &
+           &                   H5Tcopy_f, H5T_C_S1, H5Tset_size_f, H5T_FORTRAN_S1, H5Tset_size_f, H5tclose_f
       use iso_c_binding, only: c_loc, c_ptr
-      use hdf5,      only: HID_T, HSIZE_T, SIZE_T, &
-           &               h5acreate_f, h5aclose_f, h5awrite_f, h5screate_simple_f, h5sclose_f, &
-           &               H5Tcopy_f, H5T_C_S1, H5Tset_size_f, H5T_FORTRAN_S1, H5Tset_size_f, H5tclose_f
 
       implicit none
 
-      integer(HID_T), intent(in)     :: g_id       !< group id where to create the attribute
-      character(len=*), intent(in)   :: name       !< name
+      integer(HID_T),   intent(in)          :: g_id !< group id where to create the attribute
+      character(len=*), intent(in)          :: name !< name
       character(len=*), intent(in), pointer :: data !< the data
 
-      integer(HID_T)  :: space, attr_id, memtype, filetype
-      integer(kind=4) :: error
-      type(c_ptr) :: f_ptr
-      integer(HSIZE_T), dimension(I_ONE) :: dims
+      integer(HID_T)                        :: space, attr_id, memtype, filetype
+      integer(kind=4)                       :: error
+      type(c_ptr)                           :: f_ptr
+      integer(HSIZE_T), dimension(I_ONE)    :: dims
 
       dims = int(1, kind=HSIZE_T)
       call H5Tcopy_f(H5T_C_S1, filetype, error)

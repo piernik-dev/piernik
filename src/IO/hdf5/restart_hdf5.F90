@@ -73,16 +73,16 @@ contains
 
    subroutine write_restart_hdf5
 
-      use constants,   only: I_ONE, cwdlen, WR
       use common_hdf5, only: set_common_attributes, output_fname
+      use constants,   only: I_ONE, cwdlen, WR
       use dataio_pub,  only: msg, printio, printinfo, tmr_hdf, thdf, use_v2_io, nres, piernik_hdf5_version, piernik_hdf5_version2, last_res_time
       use mpisetup,    only: master, piernik_MPI_Barrier
       use timer,       only: set_timer
 
       implicit none
 
-      character(len=cwdlen)         :: filename  ! File name
-      real :: phv
+      character(len=cwdlen) :: filename  ! File name
+      real                  :: phv
 
       nres = nres + I_ONE
 
@@ -230,20 +230,20 @@ contains
 
    subroutine write_restart_hdf5_v1(filename)
 
-      use constants,   only: cwdlen
-      use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
+      use constants,        only: cwdlen
+      use hdf5,             only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDWR_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5pcreate_f, h5pclose_f, h5pset_fapl_mpio_f
       !, H5P_DATASET_XFER_F, h5pset_preserve_f
-      use mpi,         only: MPI_INFO_NULL
-      use mpisetup,    only: comm
+      use mpi,              only: MPI_INFO_NULL
+      use mpisetup,         only: comm
       use named_array_list, only: qna, wna
 
       implicit none
       character(len=cwdlen), intent(in) :: filename      !< HDF File name
 
-      integer(kind=4) :: i
-      integer(HID_T)  :: file_id       !< File identifier
-      integer(HID_T)  :: plist_id      !< Property list identifier
-      integer(kind=4) :: error
+      integer(kind=4)                   :: i
+      integer(HID_T)                    :: file_id       !< File identifier
+      integer(HID_T)                    :: plist_id      !< Property list identifier
+      integer(kind=4)                   :: error
 
       ! Set up a new HDF5 file for parallel write
       call h5open_f(error)
@@ -287,22 +287,20 @@ contains
 
    subroutine write_arr_to_restart(file_id, ind, tgt3d)
 
-      use constants,   only: ndims, AT_IGNORE, LONG, dsetnamelen
-#ifdef INDEPENDENT_ATOUTB
-      use constants,   only: AT_OUT_B
-#endif /* INDEPENDENT_ATOUTB */
-      use dataio_pub,  only: die
-      use domain,      only: is_multicg
-      use cg_list,     only: cg_list_element
-      use cg_leaves,   only: leaves
-      use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f, h5sclose_f, h5pclose_f, h5dclose_f, &
-           &                 H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
-           &                 h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f
-#ifdef INDEPENDENT_ATOUTB
-      use hdf5,        only: H5FD_MPIO_INDEPENDENT_F
-#endif /* INDEPENDENT_ATOUTB */
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: ndims, AT_IGNORE, LONG, dsetnamelen
+      use dataio_pub,       only: die
+      use domain,           only: is_multicg
+      use grid_cont,        only: grid_container
+      use hdf5,             only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dwrite_f, h5sclose_f, h5pclose_f, h5dclose_f, &
+           &                      H5P_DATASET_CREATE_F, H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
+           &                      h5screate_simple_f, h5pcreate_f, h5dcreate_f, h5dget_space_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f
       use named_array_list, only: qna, wna
+#ifdef INDEPENDENT_ATOUTB
+      use constants,        only: AT_OUT_B
+      use hdf5,             only: H5FD_MPIO_INDEPENDENT_F
+#endif /* INDEPENDENT_ATOUTB */
 
       implicit none
 
@@ -431,16 +429,16 @@ contains
 
    subroutine read_arr_from_restart(file_id, ind, tgt3d, alt_area_type, alt_name)
 
-      use constants,   only: ndims, LONG, AT_IGNORE, dsetnamelen
-      use dataio_pub,  only: msg, die
-      use domain,      only: is_multicg
-      use cg_list,     only: cg_list_element
-      use cg_leaves,   only: leaves
-      use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dread_f, h5sclose_f, h5pclose_f, h5dclose_f, &
-           &                 H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
-           &                 h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
-           &                 h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use constants,        only: ndims, LONG, AT_IGNORE, dsetnamelen
+      use dataio_pub,       only: msg, die
+      use domain,           only: is_multicg
+      use grid_cont,        only: grid_container
+      use hdf5,             only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5dread_f, h5sclose_f, h5pclose_f, h5dclose_f, &
+           &                      H5S_SELECT_SET_F, H5P_DATASET_XFER_F, H5FD_MPIO_COLLECTIVE_F, &
+           &                      h5dopen_f, h5sget_simple_extent_ndims_f, h5dget_space_f, &
+           &                      h5pcreate_f, h5pset_dxpl_mpio_f, h5sselect_hyperslab_f, h5screate_simple_f
       use named_array_list, only: qna, wna
 
       implicit none
@@ -571,39 +569,39 @@ contains
 
    subroutine read_restart_hdf5_v1
 
-      use constants,   only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, RD
-      use common_hdf5, only: output_fname
-      use dataio_pub,  only: msg, warn, die, printio, require_init_prob, problem_name, piernik_hdf5_version, fix_string, &
-           &                 domain_dump, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nhdf, nres, nimg, new_id
-      use dataio_user, only: user_reg_var_restart, user_attrs_rd
-      use domain,      only: dom
-      use fluidindex,  only: flind
-      use global,      only: t, dt, nstep
-      use hdf5,        only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
-           &                 h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
-      use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
-      use mass_defect, only: magic_mass
-      use mpi,         only: MPI_INFO_NULL
-      use mpisetup,    only: comm, master, piernik_MPI_Bcast, ibuff, rbuff, cbuff, slave
+      use common_hdf5,      only: output_fname
+      use constants,        only: cwdlen, cbuff_len, domlen, idlen, xdim, ydim, zdim, LO, HI, RD
+      use dataio_pub,       only: msg, warn, die, printio, require_init_prob, problem_name, piernik_hdf5_version, fix_string, &
+           &                      domain_dump, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, nhdf, nres, nimg, new_id
+      use dataio_user,      only: user_reg_var_restart, user_attrs_rd
+      use domain,           only: dom
+      use fluidindex,       only: flind
+      use global,           only: t, dt, nstep
+      use hdf5,             only: HID_T, H5P_FILE_ACCESS_F, H5F_ACC_RDONLY_F, &
+           &                      h5open_f, h5pcreate_f, h5pset_fapl_mpio_f, h5fopen_f, h5pclose_f, h5fclose_f, h5close_f
+      use h5lt,             only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
+      use mass_defect,      only: magic_mass
+      use mpi,              only: MPI_INFO_NULL
+      use mpisetup,         only: comm, master, piernik_MPI_Bcast, ibuff, rbuff, cbuff, slave
       use named_array_list, only: qna, wna
 
       implicit none
 
-      integer                       :: nu
-      integer                       :: i
-      character(len=cwdlen)         :: filename      !< File name
+      integer                                  :: nu
+      integer                                  :: i
+      character(len=cwdlen)                    :: filename      !< File name
 
-      integer(HID_T)                :: file_id       !< File identifier
-      integer(HID_T)                :: plist_id      !< Property list identifier
+      integer(HID_T)                           :: file_id       !< File identifier
+      integer(HID_T)                           :: plist_id      !< Property list identifier
 
-      integer(kind=4)               :: error
-      logical                       :: file_exist
+      integer(kind=4)                          :: error
+      logical                                  :: file_exist
 
-      real,            dimension(1) :: rbuf
+      real,            dimension(1)            :: rbuf
       real,            dimension(flind%fluids) :: rbufm
-      integer(kind=4), dimension(1) :: ibuf
+      integer(kind=4), dimension(1)            :: ibuf
 
-      real                          :: restart_hdf5_version
+      real                                     :: restart_hdf5_version
 
       nu = flind%all
 
@@ -841,12 +839,12 @@ contains
 
    subroutine write_restart_hdf5_v2(filename)
 
-      use constants,   only: cwdlen
       use common_hdf5, only: write_to_hdf5_v2, O_RES
+      use constants,   only: cwdlen
 
       implicit none
 
-      character(len=cwdlen), intent(in)              :: filename
+      character(len=cwdlen), intent(in) :: filename
 
       call write_to_hdf5_v2(filename, O_RES, create_empty_cg_datasets_in_restart, write_cg_to_restart)
 
@@ -856,17 +854,17 @@ contains
 
    subroutine create_empty_cg_datasets_in_restart(cg_g_id, cg_n_b, Z_avail, g)
 
-      use common_hdf5, only: create_empty_cg_dataset
-      use constants,   only: ndims, I_ONE, AT_IGNORE
-      use hdf5,        only: HID_T, HSIZE_T
+      use common_hdf5,      only: create_empty_cg_dataset
+      use constants,        only: ndims, I_ONE, AT_IGNORE
+      use hdf5,             only: HID_T, HSIZE_T
       use named_array_list, only: qna, wna
 
       implicit none
 
-      integer(HID_T), intent(in)                           :: cg_g_id
+      integer(HID_T),                           intent(in) :: cg_g_id
       integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_n_b
-      logical(kind=4), intent(in)                          :: Z_avail
-      integer, intent(in)                                  :: g
+      logical(kind=4),                          intent(in) :: Z_avail
+      integer,                                  intent(in) :: g
 
       integer(kind=4)                                      :: drank
       integer                                              :: i
@@ -901,14 +899,14 @@ contains
 
    subroutine qw_lst(qr_lst, wr_lst)
 
-      use constants,   only: AT_IGNORE
+      use constants,        only: AT_IGNORE
       use named_array_list, only: qna, wna
 
       implicit none
 
       integer, dimension(:), allocatable, intent(out) :: qr_lst, wr_lst
 
-      integer :: i
+      integer                                         :: i
 
       if (allocated(qna%lst)) then
          do i = lbound(qna%lst(:), dim=1, kind=4), ubound(qna%lst(:), dim=1, kind=4)
@@ -930,35 +928,35 @@ contains
 
    subroutine write_cg_to_restart(cgl_g_id, cg_n, cg_all_n_b)
 
-      use constants,   only: xdim, ydim, zdim, ndims, dsetnamelen, I_ONE
-      use common_hdf5, only: get_nth_cg, cg_output
-      use dataio_pub,  only: die, nproc_io, can_i_write
-      use cg_list,     only: cg_list_element
-      use cg_leaves,   only: leaves
-      use grid_cont,   only: grid_container
-      use hdf5,        only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
-      use mpi,         only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
-      use mpisetup,    only: master, FIRST, proc, comm, mpi_err
+      use cg_leaves,        only: leaves
+      use cg_list,          only: cg_list_element
+      use common_hdf5,      only: get_nth_cg, cg_output
+      use constants,        only: xdim, ydim, zdim, ndims, dsetnamelen, I_ONE
+      use dataio_pub,       only: die, nproc_io, can_i_write
+      use grid_cont,        only: grid_container
+      use hdf5,             only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5sclose_f, h5dwrite_f, h5sselect_none_f, h5screate_simple_f
+      use mpi,              only: MPI_DOUBLE_PRECISION, MPI_STATUS_IGNORE
+      use mpisetup,         only: master, FIRST, proc, comm, mpi_err
       use named_array_list, only: qna, wna
 
       implicit none
 
-      integer(HID_T),                           intent(in) :: cgl_g_id    !< cg group identifier
-      integer(kind=4), dimension(:),   pointer, intent(in) :: cg_n        !< offset for cg group numbering
-      integer(kind=4), dimension(:,:), pointer, intent(in) :: cg_all_n_b  !< all cg sizes
+      integer(HID_T),                           intent(in)  :: cgl_g_id    !< cg group identifier
+      integer(kind=4), dimension(:),   pointer, intent(in)  :: cg_n        !< offset for cg group numbering
+      integer(kind=4), dimension(:,:), pointer, intent(in)  :: cg_all_n_b  !< all cg sizes
 
-      integer(HID_T)                              :: filespace_id, memspace_id
-      integer(kind=4)                             :: error
-      integer(kind=4), parameter                  :: rank4 = I_ONE + ndims
-      integer(kind=4), parameter                  :: rank3 = ndims
-      integer(HSIZE_T), dimension(:), allocatable :: dims
-      real, pointer,    dimension(:,:,:)          :: pa3d
-      real, pointer,    dimension(:,:,:,:)        :: pa4d
-      integer                                     :: i, ncg, tot_lst_n, ic, n
-      type(grid_container), pointer               :: cg
-      type(cg_list_element), pointer              :: cgl
-      integer, allocatable, dimension(:)          :: qr_lst, wr_lst
-      type(cg_output) :: cg_desc
+      integer(HID_T)                                        :: filespace_id, memspace_id
+      integer(kind=4)                                       :: error
+      integer(kind=4), parameter                            :: rank4 = I_ONE + ndims
+      integer(kind=4), parameter                            :: rank3 = ndims
+      integer(HSIZE_T), dimension(:), allocatable           :: dims
+      real, pointer,    dimension(:,:,:)                    :: pa3d
+      real, pointer,    dimension(:,:,:,:)                  :: pa4d
+      integer                                               :: i, ncg, tot_lst_n, ic, n
+      type(grid_container),  pointer                        :: cg
+      type(cg_list_element), pointer                        :: cgl
+      integer, allocatable, dimension(:)                    :: qr_lst, wr_lst
+      type(cg_output)                                       :: cg_desc
       character(len=dsetnamelen), dimension(:), allocatable :: dsets
 
       call qw_lst(qr_lst, wr_lst)
@@ -1141,9 +1139,9 @@ contains
       implicit none
 
       integer, dimension(:), allocatable, intent(inout) :: arr
-      integer, intent(in) :: i
+      integer,                            intent(in)    :: i
 
-      integer, allocatable, dimension(:) :: tmp
+      integer, allocatable, dimension(:)                :: tmp
 
       if (allocated(arr)) then
          allocate(tmp(lbound(arr(:), dim=1):ubound(arr(:), dim=1) + 1))
@@ -1184,18 +1182,18 @@ contains
 
    subroutine read_restart_hdf5_v2(status_v2)
 
+      use cg_leaves,   only: leaves
       use cg_list,     only: cg_list_element
-      use constants,   only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, base_level_id, INVALID, RD, LO, HI
       use common_hdf5, only: d_gname, dir_pref, n_cg_name, d_size_aname, d_fc_aname, d_edge_apname, d_bnd_apname, &
            &                 cg_size_aname, cg_offset_aname, cg_lev_aname, base_d_gname, cg_cnt_aname, data_gname, &
            &                 output_fname
+      use constants,   only: cwdlen, dsetnamelen, cbuff_len, ndims, xdim, zdim, base_level_id, INVALID, RD, LO, HI
       use dataio_pub,  only: die, warn, printio, msg, last_hdf_time, last_res_time, last_plt_time, last_log_time, last_tsl_time, problem_name, new_id, domain_dump, &
            &                 require_init_prob, piernik_hdf5_version2, nres, nhdf, nimg, fix_string
       use dataio_user, only: user_reg_var_restart, user_attrs_rd
       use domain,      only: dom
       use fluidindex,  only: flind
       use global,      only: t, dt, nstep
-      use cg_leaves,   only: leaves
       use grid_cont,   only: is_overlap
       use hdf5,        only: HID_T, H5F_ACC_RDONLY_F, h5open_f, h5close_f, h5fopen_f, h5fclose_f, h5gopen_f, h5gclose_f
       use h5lt,        only: h5ltget_attribute_double_f, h5ltget_attribute_int_f, h5ltget_attribute_string_f
@@ -1204,7 +1202,7 @@ contains
 
       implicit none
 
-      integer, intent(out)  :: status_v2
+      integer, intent(out)                              :: status_v2
 
       integer(HID_T)                                    :: file_id              !< File identifier
       integer(HID_T)                                    :: doml_g_id, dom_g_id  !< domain list and domain group identifiers
@@ -1459,13 +1457,13 @@ contains
 !> \brief Read as much as possible from stored cg to own cg
    subroutine read_cg_from_restart(cg, cgl_g_id, ncg, cg_r)
 
-      use common_hdf5, only: n_cg_name
-      use constants,   only: xdim, ydim, zdim, LO, HI, LONG
-      use dataio_pub,  only: die
-      use domain,      only: dom
-      use grid_cont,   only: grid_container, is_overlap
-      use hdf5,        only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
-           &                 h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
+      use common_hdf5,      only: n_cg_name
+      use constants,        only: xdim, ydim, zdim, LO, HI, LONG
+      use dataio_pub,       only: die
+      use domain,           only: dom
+      use grid_cont,        only: grid_container, is_overlap
+      use hdf5,             only: HID_T, HSIZE_T, H5S_SELECT_SET_F, H5T_NATIVE_DOUBLE, &
+           &                      h5dopen_f, h5dclose_f, h5dget_space_f, h5dread_f, h5gopen_f, h5gclose_f, h5screate_simple_f, h5sselect_hyperslab_f
       use named_array_list, only: qna, wna
 
       implicit none
@@ -1475,17 +1473,17 @@ contains
       integer,                       intent(in)    :: ncg       !< number of cg in the restart file
       type(cg_essentials),           intent(in)    :: cg_r      !< cg attributes that do not need to be reread
 
-      integer(HID_T) :: cg_g_id !< cg group identifier
-      integer(HID_T) :: dset_id
-      integer(HID_T) :: filespace, memspace
-      integer(HSIZE_T), dimension(:), allocatable :: dims, off, cnt
-      integer(kind=4) :: error
+      integer(HID_T)                               :: cg_g_id !< cg group identifier
+      integer(HID_T)                               :: dset_id
+      integer(HID_T)                               :: filespace, memspace
+      integer(HSIZE_T), dimension(:), allocatable  :: dims, off, cnt
+      integer(kind=4)                              :: error
       integer(kind=8), dimension(xdim:zdim, LO:HI) :: own_box, restart_box
-      integer(kind=8), dimension(xdim:zdim) :: own_off, restart_off, o_size   ! the position and size of the overlapped region
-      integer, allocatable, dimension(:) :: qr_lst, wr_lst
-      integer :: d, i
-      real, dimension(:,:,:), allocatable :: a3d
-      real, dimension(:,:,:,:), allocatable :: a4d
+      integer(kind=8), dimension(xdim:zdim)        :: own_off, restart_off, o_size   ! the position and size of the overlapped region
+      integer, allocatable, dimension(:)           :: qr_lst, wr_lst
+      integer                                      :: d, i
+      real, dimension(:,:,:),   allocatable        :: a3d
+      real, dimension(:,:,:,:), allocatable        :: a4d
 
       ! Find overlap between own cg and restart cg
       own_box(:, :) = cg%my_se(:, :)
@@ -1574,10 +1572,10 @@ contains
 
       implicit none
 
-      real, dimension(:), intent(in) :: arr
+      real, dimension(:), intent(in)  :: arr
 
       real, dimension(:), allocatable :: aux
-      integer(kind=4), parameter :: tag = 10
+      integer(kind=4), parameter      :: tag = 10
 
       allocate(aux(size(arr(:))))
 
@@ -1602,10 +1600,10 @@ contains
 
       implicit none
 
-      integer(kind=4), dimension(:), intent(in) :: arr
+      integer(kind=4), dimension(:), intent(in)  :: arr
 
       integer(kind=4), dimension(:), allocatable :: aux
-      integer(kind=4), parameter :: tag = 10
+      integer(kind=4), parameter                 :: tag = 10
 
       allocate(aux(size(arr(:))))
 
@@ -1632,8 +1630,8 @@ contains
 
       character(len=*), intent(in) :: str
 
-      character(len=len(str)) :: aux
-      integer(kind=4), parameter :: tag = 10
+      character(len=len(str))      :: aux
+      integer(kind=4), parameter   :: tag = 10
 
       if (proc /= LAST) call MPI_Send(str, len(str, kind=4), MPI_CHARACTER, proc+I_ONE, tag, comm, mpi_err)
       if (slave) then
@@ -1647,18 +1645,18 @@ contains
 
    subroutine read_int_attribute(g_id, name, int_array)
 
-      use constants,  only: I_ONE
+      use constants, only: I_ONE
       use hdf5,      only: HID_T, HSIZE_T, H5T_NATIVE_INTEGER, h5aopen_f, h5aclose_f, h5aread_f
 
       implicit none
 
-      integer(HID_T), intent(in)     :: g_id          !< group id where to create the attribute
-      character(len=*), intent(in)   :: name          !< name
+      integer(HID_T),                intent(in)  :: g_id          !< group id where to create the attribute
+      character(len=*),              intent(in)  :: name          !< name
       integer(kind=4), dimension(:), intent(out) :: int_array !< the data
 
-      integer(HID_T)  :: attr_id
-      integer(kind=4) :: error
-      integer(HSIZE_T), dimension(I_ONE) :: dims
+      integer(HID_T)                             :: attr_id
+      integer(kind=4)                            :: error
+      integer(HSIZE_T), dimension(I_ONE)         :: dims
 
       !> \todo Implement size checks
       call h5aopen_f(g_id, name, attr_id, error)
@@ -1672,17 +1670,17 @@ contains
 
    subroutine read_real_attribute(g_id, name, real_array)
 
-      use constants,  only: I_ONE
+      use constants, only: I_ONE
       use hdf5,      only: HID_T, HSIZE_T, H5T_NATIVE_DOUBLE, h5aopen_f, h5aclose_f, h5aread_f
 
       implicit none
 
-      integer(HID_T), intent(in)     :: g_id        !< group id where to create the attribute
-      character(len=*), intent(in)   :: name        !< name
-      real, dimension(:), intent(out) :: real_array !< the data
+      integer(HID_T),     intent(in)     :: g_id        !< group id where to create the attribute
+      character(len=*),   intent(in)     :: name        !< name
+      real, dimension(:), intent(out)    :: real_array  !< the data
 
-      integer(HID_T)  :: attr_id
-      integer(kind=4) :: error
+      integer(HID_T)                     :: attr_id
+      integer(kind=4)                    :: error
       integer(HSIZE_T), dimension(I_ONE) :: dims
 
       !> \todo Implement size checks

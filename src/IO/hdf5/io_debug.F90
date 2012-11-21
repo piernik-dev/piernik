@@ -64,10 +64,10 @@ contains
 
    subroutine init_piernikiodebug
 
-      use constants,             only: PIERNIK_INIT_MPI
-      use dataio_pub,            only: nh  ! QA_WARN required for diff_nml
-      use dataio_pub,            only: code_progress, die
-      use mpisetup,              only: master, slave, lbuff, piernik_MPI_Bcast
+      use constants,  only: PIERNIK_INIT_MPI
+      use dataio_pub, only: nh  ! QA_WARN required for diff_nml
+      use dataio_pub, only: code_progress, die
+      use mpisetup,   only: master, slave, lbuff, piernik_MPI_Bcast
 
       implicit none
 
@@ -98,11 +98,11 @@ contains
 
    subroutine force_dumps
 
-      use constants,      only: LOGF
-      use dataio,         only: write_data
-      use dataio_pub,     only: warn
-      use data_hdf5,      only: write_hdf5
-      use restart_hdf5,   only: write_restart_hdf5
+      use constants,    only: LOGF
+      use dataio,       only: write_data
+      use dataio_pub,   only: warn
+      use data_hdf5,    only: write_hdf5
+      use restart_hdf5, only: write_restart_hdf5
 
       implicit none
 

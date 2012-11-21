@@ -70,21 +70,21 @@ contains
 !<
    subroutine common_plt_hdf5(var, ij, xn, tab, ierrh, cg)
 
-      use constants,      only: dsetnamelen, xdim, ndims, LO, HI
-      use common_hdf5,    only: common_shortcuts
-      use fluidtypes,     only: component_fluid
-      use func,           only: ekin, emag
-      use grid_cont,      only: grid_container
+      use common_hdf5,      only: common_shortcuts
+      use constants,        only: dsetnamelen, xdim, ndims, LO, HI
+      use fluidtypes,       only: component_fluid
+      use func,             only: ekin, emag
+      use grid_cont,        only: grid_container
       use named_array_list, only: wna
 #ifndef ISO
-      use constants,      only: ydim, zdim
-      use fluidindex,     only: flind
+      use constants,        only: ydim, zdim
+      use fluidindex,       only: flind
 #endif /* !ISO */
 #ifdef COSM_RAYS
-      use fluidindex,     only: iarr_all_crs
+      use fluidindex,       only: iarr_all_crs
 #endif /* COSM_RAYS */
 #ifdef GRAV
-      use constants,      only: gpot_n
+      use constants,        only: gpot_n
       use named_array_list, only: qna
 #endif /* GRAV */
 
@@ -159,8 +159,8 @@ contains
 
    subroutine write_plot
 
-      use constants,   only: cwdlen, xdim, zdim, I_ONE
       use common_hdf5, only: nhdf_vars, hdf_vars
+      use constants,   only: cwdlen, xdim, zdim, I_ONE
       use dataio_pub,  only: log_file, tmr_hdf, thdf, printio, printinfo, msg, nimg, last_plt_time
       use hdf5,        only: HID_T, H5open_f, H5Fcreate_f, H5Gcreate_f, H5F_ACC_TRUNC_F, H5Gclose_f, H5close_f, h5fclose_f
       use mpisetup,    only: master, piernik_MPI_Barrier
@@ -193,7 +193,7 @@ contains
          do d = xdim, zdim
             if (pl_i(d) > 0) then
                call H5Gcreate_f(file_id, pl_id(d), gr_id, error)
-               do i=1, nhdf_vars
+               do i = 1, nhdf_vars
                   call H5Gcreate_f(gr_id, hdf_vars(i), gr2_id, error)
                   call H5Gclose_f(gr2_id, error)
                enddo
@@ -233,28 +233,28 @@ contains
 
    subroutine write_plot_hdf5(var, plane, nimg)
 
+      use cg_leaves,          only: leaves
       use cg_level_connected, only: base_lev
-      use constants,     only: xdim, ydim, zdim, dsetnamelen, cwdlen, LO, HI
-      use dataio_pub,    only: vizit, log_file, msg, die, warn
-      use dataio_user,   only: user_plt_hdf5, user_plt_attrs
-      use domain,        only: dom, is_multicg
-      use global,        only: t
-      use cg_leaves,     only: leaves
-      use grid_cont,     only: grid_container!, cg_list_element
-      use hdf5,          only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
-      use h5lt,          only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
-      use mpi,           only: MPI_DOUBLE_PRECISION
-      use mpisetup,      only: comm, mpi_err, proc, FIRST, LAST, status, master, piernik_MPI_Barrier
+      use constants,          only: xdim, ydim, zdim, dsetnamelen, cwdlen, LO, HI
+      use dataio_pub,         only: vizit, log_file, msg, die, warn
+      use dataio_user,        only: user_plt_hdf5, user_plt_attrs
+      use domain,             only: dom, is_multicg
+      use global,             only: t
+      use grid_cont,          only: grid_container!, cg_list_element
+      use hdf5,               only: HID_T, HSIZE_T, SIZE_T, H5F_ACC_RDWR_F, h5fopen_f, h5gopen_f, h5gclose_f, h5fclose_f
+      use h5lt,               only: h5ltmake_dataset_double_f, h5ltset_attribute_double_f
+      use mpi,                only: MPI_DOUBLE_PRECISION
+      use mpisetup,           only: comm, mpi_err, proc, FIRST, LAST, status, master, piernik_MPI_Barrier
 #ifdef PGPLOT
-      use dataio_pub,    only: fmin, fmax
-      use viz,           only: draw_me
+      use dataio_pub,         only: fmin, fmax
+      use viz,                only: draw_me
 #endif /* PGPLOT */
 
       implicit none
 
-      integer,                    intent(in) :: plane   !< xdim means "yz" and so on
-      character(len=dsetnamelen), intent(in) :: var     !< variable name
-      integer(kind=4),            intent(in) :: nimg    !< no. image
+      integer,                    intent(in)   :: plane   !< xdim means "yz" and so on
+      character(len=dsetnamelen), intent(in)   :: var     !< variable name
+      integer(kind=4),            intent(in)   :: nimg    !< no. image
 
       real, dimension(:,:), allocatable        :: send, img, recv
       integer                                  :: ierrh, p
