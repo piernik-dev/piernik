@@ -32,6 +32,11 @@
 !!
 !! \details The qna(:) and wna(:) lists contain only descriptions of registeres named arrays.
 !! Named arrays themselves are defined in "named_array" module.
+!!
+!! \todo Add array of names attributed to 4D array components and make it available for data dumps
+!! \todo Split this type into generic part, 3D part and 4D part.
+!!       Name and position of the 3D named arrays should be scalar, for 4D arrays should be 1D vectors,
+!!       dim4 should occur only in 4D type
 !<
 
 module named_array_list
@@ -48,6 +53,7 @@ module named_array_list
       character(len=dsetnamelen)                 :: name          !< a user-provided id for the array
       logical                                    :: vital         !< fields that are subject of automatic prolongation and restriction (e.g. state variables)
       integer(kind=4)                            :: restart_mode  !< AT_IGNORE: do not write to restart, AT_NO_B write without ext. boundaries, AT_OUT_B write with ext. boundaries
+                                                                  !< \todo position /= VAR_CENTER should automatically force AT_OUT_B if AT_IGNORE was not chosen
       integer(kind=4)                            :: ord_prolong   !< Prolongation order for the variable
       integer(kind=4), allocatable, dimension(:) :: position      !< VAR_CENTER by default, also possible VAR_CORNER and VAR_[XYZ]FACE
       integer(kind=4)                            :: dim4          !< <=0 for 3D arrays, >0 for 4D arrays
