@@ -1,18 +1,18 @@
  $BASE_DOMAIN
-    n_d = 75, 75, 1
+    n_d = 150, 150, 1
     nb=4
-    bnd_xl = 'cor'
+    bnd_xl = 'out'
     bnd_xr = 'out'
-    bnd_yl = 'cor'
+    bnd_yl = 'out'
     bnd_yr = 'out'
     bnd_zl = 'outd'
     bnd_zr = 'outd'
-    xmin   = 0.0
-    xmax   = 1.5
-    ymin   = 0.0
-    ymax   = 1.5
-    zmin   =-0.5
-    zmax   = 0.5
+    xmin   = -1.5
+    xmax   =  1.5
+    ymin   = -1.5
+    ymax   =  1.5
+    zmin   = -0.5
+    zmax   =  0.5
  /
 
  $MPI_BLOCKS

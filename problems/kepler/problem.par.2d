@@ -1,15 +1,15 @@
  $BASE_DOMAIN
-    n_d = 100, 100, 1
+    n_d = 200, 200, 1
     nb=6
-    bnd_xl = 'cor'
+    bnd_xl = 'outd'
     bnd_xr = 'outd'
-    bnd_yl = 'cor'
+    bnd_yl = 'outd'
     bnd_yr = 'outd'
     bnd_zl = 'outd'
     bnd_zr = 'outd'
-    xmin   =  0.0
+    xmin   = -1.0
     xmax   =  1.0
-    ymin   =  0.0
+    ymin   = -1.0
     ymax   =  1.0
     zmin   =-4.0e-1
     zmax   = 4.0e-1
@@ -61,13 +61,13 @@
 
  $GRAVITY
     external_gp = "GRAV_PTMASS"
-    ptmass  =  1.0
-    ptm_x   =  0.0
-    ptm_y   =  0.0
-    ptm_z   =  0.0
-    r_smooth=  0.2
+    ptmass  = 1.0
+    ptm_x   = 0.0
+    ptm_y   = 0.0
+    ptm_z   = 0.0
+    r_smooth= 0.2
     nsub    = 10
-    r_grav  =  0.7
+    r_grav  = 1.0
     n_gravr = 10
  /
 
