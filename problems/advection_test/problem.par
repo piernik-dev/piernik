@@ -23,7 +23,6 @@
     allow_noncart = .true.
     dd_unif_quality = 1.1
     dd_rect_quality = 1.1
-    use_comm3d  = .false.
  /
 
  $UNITS

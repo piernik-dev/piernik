@@ -20,7 +20,6 @@
     psize = 32, 1, 3
     allow_uneven = .true.
     allow_noncart = .false.
-    use_comm3d = .false.
  /
 
  $UNITS
