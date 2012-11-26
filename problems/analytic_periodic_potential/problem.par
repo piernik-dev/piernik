@@ -7,11 +7,11 @@
     bnd_zl = 'periodic'
     bnd_zr = 'periodic'
     xmin   =  0.
-    xmax   =  3.1415926535897
+    xmax   =  1.
     ymin   =  0.
-    ymax   =  3.1415926535897
+    ymax   =  1.
     zmin   =  0.
-    zmax   =  3.1415926535897
+    zmax   =  1.
  /
 
  $MPI_BLOCKS

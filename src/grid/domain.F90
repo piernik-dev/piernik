@@ -204,7 +204,7 @@ contains
       reorder       = .false.     !< \todo test it!
       allow_uneven  = .true.
       allow_noncart = .false.     !< experimental implementation
-      use_comm3d    = .true.      !< \todo make a big benchmark with and without comm3d
+      use_comm3d    = .false.
 
       bnd_xl = 'per'
       bnd_xr = 'per'

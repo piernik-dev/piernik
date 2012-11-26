@@ -601,20 +601,22 @@ contains
          do k = cgl%cg%ks-ng*dom%D_z, cgl%cg%ke+ng*dom%D_z
             do j = cgl%cg%js-ng*dom%D_y, cgl%cg%je+ng*dom%D_y
                do i = cgl%cg%is-ng*dom%D_x, cgl%cg%ie+ng*dom%D_x
-                  if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
-                     ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
-                     if (cnt <= show_n_dirtys) then
-                        if (cnt < show_n_dirtys) then
-                           write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, &
-                                &                                          " cg#", cgl%cg%grid_id, " '", trim(qna%lst(iv)%name), "'(", &
-                                &                                          i, j, k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
-                        else
-                           msg="[cg_list_dataop:check_dirty] and so on ... "
+                  if (associated(cgl%cg%q(iv)%arr)) then
+                     if (abs(cgl%cg%q(iv)%arr(i, j, k)) > dirtyL) then
+                        ! if (count([i<cgl%cg%is .or. i>cgl%cg%ie, j<cgl%cg%js .or. j>cgl%cg%je, k<cgl%cg%ks .or. k>cgl%cg%ke]) <=1) then ! excludes corners
+                        if (cnt <= show_n_dirtys) then
+                           if (cnt < show_n_dirtys) then
+                              write(msg, '(3a,i4,a,i3,a,i5,3a,3i6,a,g20.12)') "[cg_list_dataop:check_dirty] ", trim(label), "@", proc, " lvl^", cgl%cg%level_id, &
+                                   &                                          " cg#", cgl%cg%grid_id, " '", trim(qna%lst(iv)%name), "'(", &
+                                   &                                          i, j, k, ") = ", cgl%cg%q(iv)%arr(i, j, k)
+                           else
+                              msg="[cg_list_dataop:check_dirty] and so on ... "
+                           endif
+                           call warn(msg)
                         endif
-                        call warn(msg)
+                        cnt = cnt + 1
+                        ! endif
                      endif
-                     cnt = cnt + 1
-                     ! endif
                   endif
                enddo
             enddo

@@ -32,7 +32,7 @@
 
 module initproblem
 
-   use constants, only: cbuff_len, dsetnamelen
+   use constants, only: cbuff_len, dsetnamelen, ndims
 
    implicit none
 
@@ -42,9 +42,10 @@ module initproblem
    ! namelist parameters
    character(len=cbuff_len) :: type !< type of potential
    real :: a                        !< proportionality constant
+   real, dimension(ndims) :: kx     !< wave number
    integer(kind=4) :: n             !< exponent
 
-   namelist /PROBLEM_CONTROL/ type, a, n
+   namelist /PROBLEM_CONTROL/ type, a, n, kx
 
    ! private data
    character(len=dsetnamelen), parameter :: apot_n = "apot" !< name of the analytical potential field
@@ -76,7 +77,7 @@ contains
    subroutine read_problem_par
 
       use cg_list_global, only: all_cg
-      use constants,      only: INVALID, cbuff_len
+      use constants,      only: INVALID, cbuff_len, pi
       use dataio_pub,     only: nh      ! QA_WARN required for diff_nml
       use dataio_pub,     only: die, msg
       use mpisetup,       only: rbuff, ibuff, cbuff, master, slave, piernik_MPI_Bcast
@@ -86,6 +87,7 @@ contains
       ! namelist default parameter values
       type       = "none"
       a          = 0.
+      kx(:)      = pi
       n          = 0
 
       if (master) then
@@ -93,7 +95,10 @@ contains
          diff_nml(PROBLEM_CONTROL)
 
          rbuff(1) = a
+         rbuff(2:4) = kx(:)
+
          ibuff(1) = n
+
          cbuff(1) = type
 
       endif
@@ -104,8 +109,11 @@ contains
 
       if (slave) then
 
-         a    = rbuff(1)
+         a         = rbuff(1)
+         kx(:)     = rbuff(2:4)
+
          n    = ibuff(1)
+
          type = cbuff(1)
 
       endif
@@ -165,14 +173,14 @@ contains
                   select case (itype)
                      case (SIN_MUL)
                         s(:) = 1.
-                        where (dom%has_dir(:)) s(:) = sin([cg%x(i), cg%y(j), cg%z(k)])**n
-                        if (dom%has_dir(xdim)) dens = dens + s(ydim) * s(zdim) * fsinadd(cg%x(i))
-                        if (dom%has_dir(ydim)) dens = dens + s(xdim) * s(zdim) * fsinadd(cg%y(j))
-                        if (dom%has_dir(zdim)) dens = dens + s(xdim) * s(ydim) * fsinadd(cg%z(k))
+                        where (dom%has_dir(:)) s(:) = sin([kx(xdim)*cg%x(i), kx(ydim)*cg%y(j), kx(zdim)*cg%z(k)])**n
+                        if (dom%has_dir(xdim)) dens = dens + kx(xdim)**2*s(ydim) * s(zdim) * fsinadd(kx(xdim)*cg%x(i))
+                        if (dom%has_dir(ydim)) dens = dens + kx(ydim)**2*s(xdim) * s(zdim) * fsinadd(kx(ydim)*cg%y(j))
+                        if (dom%has_dir(zdim)) dens = dens + kx(zdim)**2*s(xdim) * s(ydim) * fsinadd(kx(zdim)*cg%z(k))
                      case (SIN_ADD)
-                        if (dom%has_dir(xdim)) dens = dens + fsinadd(cg%x(i))
-                        if (dom%has_dir(ydim)) dens = dens + fsinadd(cg%y(j))
-                        if (dom%has_dir(zdim)) dens = dens + fsinadd(cg%z(k))
+                        if (dom%has_dir(xdim)) dens = dens + kx(xdim)**2*fsinadd(kx(xdim)*cg%x(i))
+                        if (dom%has_dir(ydim)) dens = dens + kx(ydim)**2*fsinadd(kx(ydim)*cg%y(j))
+                        if (dom%has_dir(zdim)) dens = dens + kx(zdim)**2*fsinadd(kx(zdim)*cg%z(k))
                      case default
                         write(msg, '(3a)')"[initproblem:init_prob] unrecognized potential type '", type, "'."
                         call die(msg)
@@ -253,13 +261,13 @@ contains
                   select case (itype)
                      case (SIN_MUL)
                         pot = 1.
-                        if (dom%has_dir(xdim)) pot = pot * sin(cg%x(i))**n
-                        if (dom%has_dir(ydim)) pot = pot * sin(cg%y(j))**n
-                        if (dom%has_dir(zdim)) pot = pot * sin(cg%z(k))**n
+                        if (dom%has_dir(xdim)) pot = pot * sin(kx(xdim)*cg%x(i))**n
+                        if (dom%has_dir(ydim)) pot = pot * sin(kx(ydim)*cg%y(j))**n
+                        if (dom%has_dir(zdim)) pot = pot * sin(kx(zdim)*cg%z(k))**n
                      case (SIN_ADD)
-                        if (dom%has_dir(xdim)) pot = pot + sin(cg%x(i))**n
-                        if (dom%has_dir(ydim)) pot = pot + sin(cg%y(j))**n
-                        if (dom%has_dir(zdim)) pot = pot + sin(cg%z(k))**n
+                        if (dom%has_dir(xdim)) pot = pot + sin(kx(xdim)*cg%x(i))**n
+                        if (dom%has_dir(ydim)) pot = pot + sin(kx(ydim)*cg%y(j))**n
+                        if (dom%has_dir(zdim)) pot = pot + sin(kx(zdim)*cg%z(k))**n
                      case default
                         write(msg, '(3a)')"[initproblem:init_prob] unrecognized potential type '", type, "'."
                         call die(msg)

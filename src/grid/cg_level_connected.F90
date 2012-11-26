@@ -630,7 +630,7 @@ contains
 
       type(cg_level_connected_T), pointer                :: fine
       integer                                            :: g
-      integer(kind=8), dimension(xdim:zdim, LO:HI)       :: cse ! shortcuts for fine segment and coarse segment
+      integer(kind=8), dimension(xdim:zdim, LO:HI)       :: cse, fse ! shortcuts for fine segment and coarse segment
       integer(kind=8), dimension(xdim:zdim)              :: D
       integer(kind=4)                                    :: nr
       integer(kind=4), dimension(:, :), pointer          :: mpistatus
@@ -641,7 +641,6 @@ contains
       real, dimension(:,:,:),           pointer          :: p3d
       logical, save                                      :: warned = .false.
       integer                                            :: position
-      integer(kind=8), dimension(xdim:zdim, LO:HI)       :: fse
 
       position = qna%lst(iv)%position(I_ONE)
       if (present(pos)) position = pos
